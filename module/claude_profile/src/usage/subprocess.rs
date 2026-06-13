@@ -329,6 +329,95 @@ mod tests
     );
   }
 
+  /// FT-26: `imodel::auto` selects Haiku when 5h absent + 7d running via Some path.
+  ///
+  /// `five_hour=None` → `five_h_running=false`; `seven_day=Some({resets_at:Some(...)})` →
+  /// `d7_running=true` via the `map_or` closure branch (not the default).
+  /// Gate short-circuits at `five_h_running=false`; neither d7 nor son conditions are reached.
+  /// Verifies that the `d7=Some(running)` path combined with `five_h_running=false` → Haiku.
+  ///
+  /// Test Matrix extra row: `five_h=absent, d7=Some(running via Some), son=idle` → Haiku.
+  ///
+  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-26]
+  #[ test ]
+  fn it_imodel_auto_selects_haiku_when_5h_absent_d7_some_running()
+  {
+    // Start from sole-son-trigger base; remove 5h + set d7 to Some(running) to exercise map_or Some-branch.
+    let mut aq = mk_aq_with_son_idle_sole_trigger();
+    if let Ok( ref mut data ) = aq.result
+    {
+      data.five_hour  = None;
+      data.seven_day  = Some( claude_quota::PeriodUsage
+      {
+        utilization : 20.0,
+        resets_at   : Some( "2026-06-15T10:00:00Z".to_string() ),
+      } );
+    }
+    let model    = resolve_model( &aq, SubprocessModel::Auto );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-haiku-4-5-20251001",
+      "imodel::auto must select haiku when five_h_running=false; gate short-circuits regardless of d7/son",
+    );
+  }
+
+  /// FT-27: `imodel::auto` selects Haiku when 7d idle + Sonnet running (`d7_running=false` blocks gate).
+  ///
+  /// `seven_day=Some({resets_at:None})` → `d7_running=false`; `seven_day_sonnet.resets_at=Some(...)` →
+  /// `son_idle=false`. Both d7 and son conditions fail. Gate does NOT fire → Haiku.
+  /// Exercises `d7=Some(idle)` combined with `son=running` (two simultaneous gate failures).
+  ///
+  /// Test Matrix extra row: `five_h=running, d7=Some(idle), son=running` → Haiku.
+  ///
+  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-27]
+  #[ test ]
+  fn it_imodel_auto_selects_haiku_when_d7_idle_and_son_running()
+  {
+    // Start from sole-son-trigger base; set d7=Some(idle) and son=running.
+    let mut aq = mk_aq_with_son_idle_sole_trigger();
+    if let Ok( ref mut data ) = aq.result
+    {
+      data.seven_day = Some( claude_quota::PeriodUsage { utilization: 50.0, resets_at: None } );
+      if let Some( ref mut son ) = data.seven_day_sonnet
+      {
+        son.resets_at = Some( "2026-06-14T10:00:00Z".to_string() );
+      }
+    }
+    let model    = resolve_model( &aq, SubprocessModel::Auto );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-haiku-4-5-20251001",
+      "imodel::auto must select haiku when d7_running=false + son_idle=false; both conditions block the gate",
+    );
+  }
+
+  /// FT-28: `imodel::auto` selects Haiku when 7d idle + Sonnet tier absent.
+  ///
+  /// `seven_day=Some({resets_at:None})` → `d7_running=false`; `seven_day_sonnet=None` →
+  /// `son_idle = None.is_some_and(...) = false`. Both d7 and son block. Gate does NOT fire → Haiku.
+  /// Exercises `d7=Some(idle)` combined with `son=absent(None)` — distinct from FT-24 (which has son=idle).
+  ///
+  /// Test Matrix extra row: `five_h=running, d7=Some(idle), son=absent` → Haiku.
+  ///
+  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-28]
+  #[ test ]
+  fn it_imodel_auto_selects_haiku_when_d7_idle_and_son_absent()
+  {
+    // Start from sole-son-trigger base; set d7=Some(idle) and remove son tier entirely.
+    let mut aq = mk_aq_with_son_idle_sole_trigger();
+    if let Ok( ref mut data ) = aq.result
+    {
+      data.seven_day        = Some( claude_quota::PeriodUsage { utilization: 50.0, resets_at: None } );
+      data.seven_day_sonnet = None;
+    }
+    let model    = resolve_model( &aq, SubprocessModel::Auto );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-haiku-4-5-20251001",
+      "imodel::auto must select haiku when d7_running=false (seven_day idle) + son_idle=false (absent); both block",
+    );
+  }
+
   /// EC-6: `imodel::sonnet` always returns `IsolatedModel::Specific("claude-sonnet-4-6")`.
   ///
   /// Spec: [`tests/docs/cli/param/035_imodel.md` EC-6]

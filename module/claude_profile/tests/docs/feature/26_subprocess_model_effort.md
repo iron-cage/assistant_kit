@@ -31,6 +31,9 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 | FT-23 | `imodel::auto` selects haiku when Sonnet tier absent (`seven_day_sonnet=None`) | AC-01 | Unit |
 | FT-24 | `imodel::auto` selects haiku when 7d timer idle (`seven_day=Some({resets_at:None})`) | AC-01 | Unit |
 | FT-25 | `imodel::auto` selects sonnet when 7d running via explicit Some path | AC-01 | Unit |
+| FT-26 | `imodel::auto` selects haiku when 5h absent + 7d running via Some path | AC-01 | Unit |
+| FT-27 | `imodel::auto` selects haiku when 7d idle + Sonnet running (two gate failures) | AC-01 | Unit |
+| FT-28 | `imodel::auto` selects haiku when 7d idle + Sonnet tier absent | AC-01 | Unit |
 
 ### Test Case Index
 
@@ -61,8 +64,11 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 | FT-23 | imodel::auto selects haiku when son tier absent | AC-01 | Model Auto |
 | FT-24 | imodel::auto selects haiku when d7 idle | AC-01 | Model Auto |
 | FT-25 | imodel::auto selects sonnet when d7 running via Some | AC-01 | Model Auto |
+| FT-26 | imodel::auto selects haiku 5h absent d7 Some running | AC-01 | Model Auto |
+| FT-27 | imodel::auto selects haiku d7 idle son running | AC-01 | Model Auto |
+| FT-28 | imodel::auto selects haiku d7 idle son absent | AC-01 | Model Auto |
 
-**Total:** 25 FT cases
+**Total:** 28 FT cases
 
 ---
 
@@ -338,4 +344,37 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-4-6")`. `d7_running = map_or(true, |p| p.resets_at.is_some()) = true` via closure branch; all three conditions hold: `five_h_running=true AND d7_running=true (Some path) AND son_idle=true` → gate fires → Sonnet.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_selects_sonnet_when_d7_running_explicit` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### FT-26: `imodel::auto` selects haiku when 5h absent + 7d running via Some path
+
+- **Given:** Account where `five_hour=None` (5h absent → `five_h_running=false`) and `seven_day=Some({resets_at:Some(...)})` (7d running via `map_or` Some-branch → `d7_running=true`). `seven_day_sonnet=Some({resets_at:None})` (Sonnet idle).
+- **When:** `resolve_model(&aq, SubprocessModel::Auto)`
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Gate short-circuits at `five_h_running=false`; `&&` stops evaluation. The `d7=Some(running)` Some-branch is exercised but irrelevant — `false && ... = false`. Haiku selected.
+- **Exit:** n/a (unit test)
+- **Source fn:** `it_imodel_auto_selects_haiku_when_5h_absent_d7_some_running` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### FT-27: `imodel::auto` selects haiku when 7d idle + Sonnet running (two gate failures)
+
+- **Given:** Account where `seven_day=Some({resets_at:None})` (7d idle → `d7_running=false`) and `seven_day_sonnet=Some({resets_at:Some(...)})` (Sonnet running → `son_idle=false`). `five_hour=running` (`five_h_running=true`).
+- **When:** `resolve_model(&aq, SubprocessModel::Auto)`
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Both `d7_running=false` and `son_idle=false` block the gate. Haiku selected. Exercises `d7=Some(idle)` with `son=running` — distinct from FT-24 (son=idle) and EC-9b (d7=None).
+- **Exit:** n/a (unit test)
+- **Source fn:** `it_imodel_auto_selects_haiku_when_d7_idle_and_son_running` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### FT-28: `imodel::auto` selects haiku when 7d idle + Sonnet tier absent
+
+- **Given:** Account where `seven_day=Some({resets_at:None})` (7d idle → `d7_running=false`) and `seven_day_sonnet=None` (absent → `son_idle=false`). `five_hour=running`.
+- **When:** `resolve_model(&aq, SubprocessModel::Auto)`
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. `d7_running=false` blocks; `son_idle=false` via `None.is_some_and(...)` also blocks. Both block the gate. Haiku selected. Distinct from FT-24 (son=idle present) and FT-23 (d7=None absent).
+- **Exit:** n/a (unit test)
+- **Source fn:** `it_imodel_auto_selects_haiku_when_d7_idle_and_son_absent` (in `src/usage/subprocess.rs #[cfg(test)]`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
