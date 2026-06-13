@@ -10,7 +10,7 @@ Controls which Claude model is used by isolated subprocesses spawned during `tou
 
 | Value | `--model` injected | Selection logic |
 |-------|-------------------|-----------------|
-| `auto` (default) | `claude-haiku-4-5-20251001` always | Sufficient for keep-alive pings; conserves Sonnet and Opus quota |
+| `auto` (default) | `claude-haiku-4-5-20251001` (general); `claude-sonnet-4-6` when `son_running=false` sole inactive timer | General keep-alive uses Haiku (quota-preserving); Sonnet when only 7d-Sonnet window needs activation — Haiku cannot start it (BUG-289 fix) |
 | `sonnet` | `claude-sonnet-4-6` | Always Sonnet, regardless of quota |
 | `opus` | `claude-opus-4-6` | Always Opus, regardless of quota |
 | `haiku` | `claude-haiku-4-5-20251001` | Always Haiku — lightweight; no extended thinking (effort::auto → no --effort flag) |
@@ -19,7 +19,7 @@ Controls which Claude model is used by isolated subprocesses spawned during `tou
 **Examples:**
 
 ```text
-imodel::auto     → always --model claude-haiku-4-5-20251001 (default; keep-alive pings)
+imodel::auto     → --model claude-haiku-4-5-20251001 (default; general keep-alive) or --model claude-sonnet-4-6 (when son_running=false is sole inactive timer)
 imodel::sonnet   → always --model claude-sonnet-4-6
 imodel::opus     → always --model claude-opus-4-6
 imodel::haiku    → always --model claude-haiku-4-5-20251001
@@ -27,7 +27,7 @@ imodel::keep     → no --model flag injected
 ```
 
 **Notes:**
-- `auto` always selects Haiku — subprocess keep-alive pings don't need expensive models; this conserves Sonnet and Opus quota.
+- `auto` selects Haiku for general keep-alive pings (5h and 7d activation) — conserves Sonnet and Opus quota. **Exception (BUG-289 fix):** selects Sonnet when `seven_day_sonnet.resets_at=None` is the sole inactive timer (`five_h_running=true AND d7_running=true AND son_idle=true`) — the 7d-Sonnet window only activates on Sonnet-family API calls; Haiku cannot start it.
 - On `.usage`: applies to both `touch::` and `refresh::` subprocess calls within the same invocation.
 - On `.account.use`: applies to the single post-switch subprocess spawned when `touch::1` and the target account is idle.
 - Has no effect when no subprocess is spawned (`.usage` with neither `touch::1` nor `refresh::1` active; `.account.use` with `touch::0` or target already active).

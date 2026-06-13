@@ -15,6 +15,8 @@ When `touch::1`, after the initial quota fetch the command identifies accounts w
 
 **Why this works:** The Anthropic API starts session windows on any API call when those windows lack active timers. Sending any prompt — even `"."` — transitions absent timers from `resets_at = None` to active countdown values, making the account immediately available with concrete session tracking across all quota dimensions.
 
+**Model-capability constraint (BUG-289):** The 5h window and 7d general window are model-agnostic — any model call (including Haiku) starts them. The 7d-Sonnet window (`seven_day_sonnet.resets_at`) is model-specific: only Sonnet-family API calls create a `seven_day_sonnet.resets_at` timestamp. When `imodel::auto` selects Haiku for a touch subprocess targeting an account where `son_running=false` (Sonnet window absent, 5h and 7d running), the Haiku subprocess does not start the Sonnet window — `resets_at` remains `None` after the re-fetch, `son_running` stays `false`, and the touch trigger fires again on the next invocation (infinite per-call no-op loop). Fix (BUG-289, TSK-292): `resolve_model(Auto)` now selects Sonnet (`claude-sonnet-4-6`) when `son_running=false` is the sole inactive timer (`five_h_running=true AND d7_running=true AND son_idle=true`) — so the touch subprocess can start the 7d-Sonnet window and break the loop. Implemented in `src/usage/subprocess.rs`; 1124/1124 tests pass.
+
 **Why it matters for account rotation:** Activating idle quota windows ensures accounts have concrete countdown timers for all dimensions (5h, 7d, 7d-Sonnet), making them eligible for the endurance sort strategy (which requires `5h_reset ∈ [15m, 60m]`). Under `live::1`, touch runs each cycle to activate any windows that lost their timers, keeping the full pool available for rotation.
 
 **Algorithm:**
@@ -105,6 +107,7 @@ render results as table
 | `task/claude_profile/bug/214_touch_fires_for_7d_exhausted_accounts.md` | BUG-214 (TSK-217, ✅ Fixed): `apply_touch` fired subprocess for 7d-exhausted accounts — fixed via `seven_day_left()` guard |
 | `task/claude_profile/bug/215_touch_idle_detection_ignores_7d_and_7d_sonnet_timers.md` | BUG-215 (TSK-218, ✅ Fixed): `apply_touch` trigger checked only `five_hour.resets_at`; 7d and 7d-Sonnet timer absence was ignored — fixed via 3-timer `all_running` check |
 | `task/claude_profile/bug/288_account_use_touch_not_confirmed_usage_double_subprocess.md` | BUG-288 🟢 Fixed (Fix A + Fix B): Fix A — `apply_post_switch_touch` re-fetches quota post-subprocess via `write_quota_cache` (AC-03, Feature 027 AC-21). Fix B — `apply_touch` reads `touch_idle=false` cache flag before `all_running` check as defense-in-depth for API propagation lag; dead write at `api.rs:330-332` now has a read site at `touch.rs:59-66` (TSK-291, AC-16) |
+| `task/claude_profile/bug/289_son_running_false_haiku_touch_infinite_loop.md` | BUG-289 🟢 Fixed (TSK-292): `resolve_model(Auto)` now selects Sonnet (`claude-sonnet-4-6`) when `son_running=false` is the sole inactive timer (`five_h_running=true AND d7_running=true AND son_idle=true`); sole-son-trigger gate in `src/usage/subprocess.rs` breaks the infinite per-call loop. |
 
 ### Dependencies
 
