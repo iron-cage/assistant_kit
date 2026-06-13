@@ -94,119 +94,119 @@ incremental = false
 
 [workspace.dependencies.claude_auth]
 path = "module/claude_auth"
-version = "~0.1.0"
+version = "=0.1.0"
 default-features = false
 
 [workspace.dependencies.claude_assets_core]
 path = "module/claude_assets_core"
-version = "~1.1.0"
+version = "=1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_assets]
 path = "module/claude_assets"
-version = "~1.1.0"
+version = "=1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_core]
 path = "module/claude_core"
-version = "~1.1.0"
+version = "=1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_profile_core]
 path = "module/claude_profile_core"
-version = "~1.1.0"
+version = "=1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_version_core]
 path = "module/claude_version_core"
-version = "~1.1.0"
+version = "=1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_storage_core]
 path = "module/claude_storage_core"
-version = "~1.1.0"
+version = "=1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_profile]
 path = "module/claude_profile"
-version = "~1.1.0"
+version = "=1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_runner_core]
 path = "module/claude_runner_core"
-version = "~1.1.0"
+version = "=1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_runner]
 path = "module/claude_runner"
-version = "~1.1.0"
+version = "=1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_version]
 path = "module/claude_version"
-version = "~1.1.0"
+version = "=1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_storage]
 path = "module/claude_storage"
-version = "~1.1.0"
+version = "=1.1.0"
 default-features = false
 
 [workspace.dependencies.dream]
 path = "module/dream"
-version = "~1.2.0"
+version = "=1.2.0"
 default-features = false
 
 [workspace.dependencies.claude_quota]
 path = "module/claude_quota"
-version = "~0.1.0"
+version = "=0.1.0"
 default-features = false
 
 ## External — published companion crates
 
 [workspace.dependencies.error_tools]
-version = "~0.40"
+version = "^0.40"
 default-features = false
 
 [workspace.dependencies.unilang]
-version = "~0.54"
+version = "^0.54"
 features = [ "enabled", "approach_yaml_multi_build" ]
 default-features = false
 
 [workspace.dependencies.cli_fmt]
-# Published companion crate (crates.io: cli_fmt ~0.8). Path removed — use registry version.
-version = "~0.8"
+# Published companion crate (crates.io: cli_fmt ^0.8). Path removed — use registry version.
+version = "^0.8"
 default-features = false
 features = [ "cli_help_template" ]
 
 [workspace.dependencies.data_fmt]
-version = "~0.3"
+version = "^0.3"
 default-features = false
 features = [ "enabled" ]
 
 [workspace.dependencies.ureq]
-version = "~3"
+version = "^3"
 
 ## Dev dependencies
 
 [workspace.dependencies.tempfile]
-version = "~3"
+version = "^3"
 
 [workspace.dependencies.test_tools]
-version = "~0.17"
+version = "^0.17"
 default-features = false
 
 [workspace.dependencies.assert_cmd]
-version = "~2.0"
+version = "^2.0"
 
 [workspace.dependencies.serde_json]
-version = "~1.0"
+version = "^1.0"
 
 [workspace.dependencies.serde_yaml]
-version = "~0.9"
+version = "^0.9"
 
 [workspace.dependencies.libc]
-version = "~0.2"
+version = "^0.2"
 
 [workspace.dependencies.gag]
-version = "~1"
+version = "^1"
