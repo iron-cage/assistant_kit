@@ -65,7 +65,7 @@ invalid values (parse failure → field stays at default).
 | 28 | `CLR_EXPECT` | [`--expect`](param/030_expect.md) | string | Applied when `--expect` absent; same `val1\|val2\|…` syntax |
 | 29 | `CLR_EXPECT_STRATEGY` | [`--expect-strategy`](param/031_expect_strategy.md) | string | Applied when `--expect-strategy` absent; accepts `fail`, `retry`, or `default:<V>` |
 | 30 | `CLR_EXPECT_RETRIES` | [`--expect-retries`](param/032_expect_retries.md) | u8 | Applied when `--expect-retries` absent; invalid values rejected at parse time |
-| 31 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 25) |
+| 31 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 30) |
 | 32 | `CLR_RETRY_ON_RATE_LIMIT` | [`--retry-on-rate-limit`](param/034_retry_on_rate_limit.md) | u8 | Applied when `--retry-on-rate-limit` absent; invalid values silently ignored (parse failure → field stays at default 1) |
 | 33 | `CLR_RETRY_DELAY` | [`--retry-delay`](param/035_retry_delay.md) | u32 | Applied when `--retry-delay` absent; invalid values silently ignored (parse failure → field stays at default 30) |
 | 34 | `CLR_TIMEOUT` | [`--timeout`](param/036_timeout.md) | u32 | Applied when `--timeout` absent; `0` = unlimited (no watchdog); invalid values silently ignored. **Cross-command:** also applies to `isolated`/`refresh` via Section 2 (same semantics: `0` = unlimited) |

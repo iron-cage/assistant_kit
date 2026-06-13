@@ -6,7 +6,7 @@ for up to 100 attempts, then exits with code 1. Setting `0` disables the gate en
 (unlimited sessions, no process scan).
 
 - **Type:** u32
-- **Default:** 25
+- **Default:** 30
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 
 ```sh
@@ -45,8 +45,8 @@ without scanning for active sessions.
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`run`](../command/01_run.md) | 25 | Gate applied before subprocess launch |
-| 5 | [`ask`](../command/05_ask.md) | 25 | Same behavior; pure alias for run |
+| 1 | [`run`](../command/01_run.md) | 30 | Gate applied before subprocess launch |
+| 5 | [`ask`](../command/05_ask.md) | 30 | Same behavior; pure alias for run |
 
 ### Referenced User Stories
 
