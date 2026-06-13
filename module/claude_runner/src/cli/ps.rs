@@ -263,8 +263,14 @@ fn build_queued_table() -> Option< String >
 
   if entries.is_empty() { return None; }
 
-  // Sort by filename (PID) for deterministic output.
-  entries.sort_by_key( std::fs::DirEntry::file_name );
+  // Sort by numeric PID for intuitive output order; string sort mis-orders "1000" < "200".
+  entries.sort_by_key( |e|
+  {
+    e.file_stem()
+     .and_then( |s| s.to_str() )
+     .and_then( |s| s.parse::< u32 >().ok() )
+     .unwrap_or( u32::MAX )
+  } );
 
   let headers = vec![
     "#".to_string(),
