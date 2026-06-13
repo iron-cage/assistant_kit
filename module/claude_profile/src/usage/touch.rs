@@ -568,7 +568,7 @@ mod tests
   /// `write_cache_bool(touch_idle, false)` alone writes
   /// `{ "cache": { "touch_idle": false } }` without a `fetched_at` field.
   /// `read_quota_cache` requires `fetched_at` and returns `None` when absent —
-  /// the touch_idle guard is never entered. The account proceeds to `all_running`.
+  /// the `touch_idle` guard is never entered. The account proceeds to `all_running`.
   ///
   /// This is the pitfall documented in `test_mre_bug288_apply_touch_skips_touch_idle_false`
   /// — test setup MUST call `write_cache_string(fetched_at, ...)` before `write_cache_bool`.
@@ -674,9 +674,9 @@ mod tests
 
   /// CC-B6: Error account with `touch_idle=false` in cache — error guard fires FIRST.
   ///
-  /// Guard ordering: (1) error guard → (2) touch_idle guard → (3) all_running guard.
+  /// Guard ordering: (1) error guard → (2) `touch_idle` guard → (3) `all_running` guard.
   /// An account with `result=Err` must be caught by the error guard before the
-  /// touch_idle guard is even consulted. The trace must say "error account", not "touch_idle=false".
+  /// `touch_idle` guard is even consulted. The trace must say "error account", not "`touch_idle=false`".
   #[ test ]
   fn test_apply_touch_error_account_skips_before_touch_idle_guard()
   {
