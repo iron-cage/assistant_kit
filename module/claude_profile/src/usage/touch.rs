@@ -364,6 +364,407 @@ mod tests
     );
   }
 
+  /// BUG-288-FixB MRE: `apply_touch` must skip when `touch_idle=false` in quota cache.
+  ///
+  /// # Root Cause
+  ///
+  /// `apply_post_switch_touch` writes `touch_idle=false` to the quota cache at
+  /// `api.rs:330-332` after its subprocess activates the account. Before Fix B,
+  /// `apply_touch` never read this flag — the write was a dead write with zero read
+  /// sites. On the next `.usage` call, `apply_touch` saw `five_hour.resets_at=None`
+  /// (API propagation lag — the new session hadn't reached the quota endpoint yet)
+  /// and spawned a redundant second subprocess for an account already activated.
+  ///
+  /// # Why Not Caught
+  ///
+  /// Fix A (BUG-288) addressed the common case: `apply_post_switch_touch` now
+  /// re-fetches quota and writes `resets_at=Some(...)` to cache, so `apply_touch`
+  /// normally sees `all_running=true` and skips. The propagation-lag case (quota
+  /// endpoint returns stale `resets_at=None` even after re-fetch) was not tested.
+  /// `tests/docs/feature/024_session_touch.md` FT-19 was absent until this session.
+  ///
+  /// # Fix Applied
+  ///
+  /// Fix B (TSK-291): added `touch_idle` cache read to `apply_touch` at
+  /// `touch.rs:59-66`. After the error-account guard and before the `all_running`
+  /// timer check, `apply_touch` reads the quota cache; if `touch_idle=Some(false)`,
+  /// the account is skipped with a distinguishable trace line.
+  ///
+  /// # Prevention
+  ///
+  /// Any new coordination flag written by one touch path and consumed by another must
+  /// have both a write-site test and a read-site test. See AC-16 in
+  /// `tests/docs/feature/024_session_touch.md` FT-19.
+  ///
+  /// # Pitfall
+  ///
+  /// `touch_idle=None` (cache absent or field unset) does NOT trigger the skip guard —
+  /// the guard checks `== Some(false)` exclusively. An account with no cache entry
+  /// proceeds to the `all_running` check as normal.
+  ///
+  /// **Test setup — `fetched_at` required by `read_quota_cache`**: calling
+  /// `write_cache_bool(..., "touch_idle", false)` alone writes
+  /// `{ "cache": { "touch_idle": false } }` without a `"fetched_at"` field.
+  /// `read_quota_cache` returns `None` when `"fetched_at"` is absent — the guard
+  /// is never entered and no trace line is emitted. Any test that requires
+  /// `read_quota_cache` to return `Some` must call
+  /// `write_cache_string(..., "fetched_at", &chrono_now_utc())` BEFORE
+  /// `write_cache_bool`. This caused Phase 5 reiteration during BUG-288 Fix B
+  /// implementation (2026-06-13).
+  #[ doc = "bug_reproducer(BUG-288-FixB)" ]
+  #[ test ]
+  fn test_mre_bug288_apply_touch_skips_touch_idle_false()
+  {
+    use std::io::Read;
+
+    let store = tempfile::TempDir::new().unwrap();
+
+    // Simulate apply_post_switch_touch writing touch_idle=false after its subprocess
+    // (api.rs:330-332). The account is "already activated" by that subprocess, but
+    // the quota endpoint hasn't propagated the new session's resets_at yet.
+    // fetched_at must be written first — read_quota_cache returns None if absent.
+    claude_profile_core::account::write_cache_string(
+      store.path(), "test@example.com", "fetched_at",
+      &claude_profile_core::account::chrono_now_utc(),
+    );
+    claude_profile_core::account::write_cache_bool(
+      store.path(), "test@example.com", "touch_idle", false,
+    );
+
+    // Account is idle (resets_at=None) — would qualify for touch by timer state alone.
+    // The touch_idle=false guard must intercept BEFORE the all_running check.
+    let mut aq = mk_aq_with_resets_at( None );
+
+    // Capture stderr — [trace] skip line goes to stderr via eprintln!.
+    let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+
+    // claude_paths=None: subprocess never spawns regardless of guard outcome.
+    // trace=true: "[trace] touch  <name>  skipped (reason: touch_idle=false)" emitted by guard.
+    apply_touch(
+      &mut aq,
+      store.path(),
+      None,
+      true,
+      SubprocessModel::Auto,
+      SubprocessEffort::Auto,
+    );
+
+    let mut captured = String::new();
+    stderr_buf.read_to_string( &mut captured ).unwrap();
+
+    // Fix B: guard fires → "touch_idle=false" in skip trace.
+    // Before Fix B: guard absent → dead write → no "touch_idle=false" in trace.
+    assert!(
+      captured.contains( "touch_idle=false" ),
+      "apply_touch must emit 'touch_idle=false' skip trace for account with \
+       touch_idle=false in cache; got:\n{captured}",
+    );
+  }
+
+  // ── Fix B guard precision corner cases ───────────────────────────────────
+
+  /// CC-B2: `touch_idle=Some(true)` does NOT trigger the skip guard.
+  ///
+  /// The guard checks `cache.touch_idle == Some(false)` exclusively.
+  /// `Some(true)` must not be treated as a skip signal — the guard is
+  /// intentionally narrow so that only the explicit "already activated" flag
+  /// prevents the touch, not any non-`false` truthy value.
+  #[ test ]
+  fn test_apply_touch_touch_idle_true_not_skipped_by_guard()
+  {
+    use std::io::Read;
+
+    let store = tempfile::TempDir::new().unwrap();
+
+    // Write cache with fetched_at + touch_idle=true (NOT false).
+    // read_quota_cache will return Some(cache) with touch_idle=Some(true).
+    claude_profile_core::account::write_cache_string(
+      store.path(), "test@example.com", "fetched_at",
+      &claude_profile_core::account::chrono_now_utc(),
+    );
+    claude_profile_core::account::write_cache_bool(
+      store.path(), "test@example.com", "touch_idle", true,
+    );
+
+    // Idle account — would qualify for touch by timer state.
+    let mut aq = mk_aq_with_resets_at( None );
+
+    let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+
+    // trace=true: guard emits "[trace] touch  <name>  skipped (reason: touch_idle=false)"
+    // only when touch_idle == Some(false). With Some(true) it must NOT emit this line.
+    apply_touch(
+      &mut aq,
+      store.path(),
+      None,
+      true,
+      SubprocessModel::Auto,
+      SubprocessEffort::Auto,
+    );
+
+    let mut captured = String::new();
+    stderr_buf.read_to_string( &mut captured ).unwrap();
+
+    // Guard must NOT fire for touch_idle=Some(true): no "touch_idle" in skip trace.
+    assert!(
+      !captured.contains( "touch_idle" ),
+      "apply_touch must NOT emit touch_idle skip trace for touch_idle=true; \
+       guard checks == Some(false) only; got:\n{captured}",
+    );
+  }
+
+  /// CC-B3: `touch_idle` absent from cache (but `fetched_at` present) does NOT skip.
+  ///
+  /// When `read_quota_cache` returns `Some(cache)` but `cache.touch_idle = None`
+  /// (field was never written), the guard `cache.touch_idle == Some(false)` evaluates
+  /// to `None == Some(false) → false`. The account proceeds to the `all_running` check.
+  /// Absence of the flag must not be treated the same as `false`.
+  #[ test ]
+  fn test_apply_touch_touch_idle_none_in_cache_not_skipped()
+  {
+    use std::io::Read;
+
+    let store = tempfile::TempDir::new().unwrap();
+
+    // Cache has fetched_at so read_quota_cache returns Some(cache),
+    // but no touch_idle field → touch_idle = None.
+    claude_profile_core::account::write_cache_string(
+      store.path(), "test@example.com", "fetched_at",
+      &claude_profile_core::account::chrono_now_utc(),
+    );
+
+    // Verify: read_quota_cache returns Some with touch_idle=None.
+    let entry = claude_profile_core::account::read_quota_cache( store.path(), "test@example.com" );
+    assert!( entry.is_some(), "read_quota_cache must return Some when fetched_at is present" );
+    assert_eq!(
+      entry.unwrap().touch_idle, None,
+      "touch_idle must be None when field was never written",
+    );
+
+    let mut aq = mk_aq_with_resets_at( None );
+    let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+
+    apply_touch(
+      &mut aq,
+      store.path(),
+      None,
+      true,
+      SubprocessModel::Auto,
+      SubprocessEffort::Auto,
+    );
+
+    let mut captured = String::new();
+    stderr_buf.read_to_string( &mut captured ).unwrap();
+
+    // touch_idle=None must NOT trigger the guard.
+    assert!(
+      !captured.contains( "touch_idle" ),
+      "apply_touch must NOT emit touch_idle skip trace when touch_idle is None; got:\n{captured}",
+    );
+  }
+
+  /// CC-B4 (pitfall): `fetched_at` absent → `read_quota_cache` returns `None` → guard bypassed.
+  ///
+  /// `write_cache_bool(touch_idle, false)` alone writes
+  /// `{ "cache": { "touch_idle": false } }` without a `fetched_at` field.
+  /// `read_quota_cache` requires `fetched_at` and returns `None` when absent —
+  /// the touch_idle guard is never entered. The account proceeds to `all_running`.
+  ///
+  /// This is the pitfall documented in `test_mre_bug288_apply_touch_skips_touch_idle_false`
+  /// — test setup MUST call `write_cache_string(fetched_at, ...)` before `write_cache_bool`.
+  #[ test ]
+  fn test_apply_touch_touch_idle_false_fetched_at_absent_guard_bypassed()
+  {
+    use std::io::Read;
+
+    let store = tempfile::TempDir::new().unwrap();
+
+    // Write touch_idle=false WITHOUT fetched_at — read_quota_cache returns None.
+    claude_profile_core::account::write_cache_bool(
+      store.path(), "test@example.com", "touch_idle", false,
+    );
+
+    // Verify: read_quota_cache returns None (fetched_at required).
+    let entry = claude_profile_core::account::read_quota_cache( store.path(), "test@example.com" );
+    assert!(
+      entry.is_none(),
+      "read_quota_cache must return None when fetched_at is absent (even if touch_idle=false present)",
+    );
+
+    let mut aq = mk_aq_with_resets_at( None );
+    let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+
+    apply_touch(
+      &mut aq,
+      store.path(),
+      None,
+      true,
+      SubprocessModel::Auto,
+      SubprocessEffort::Auto,
+    );
+
+    let mut captured = String::new();
+    stderr_buf.read_to_string( &mut captured ).unwrap();
+
+    // Guard bypassed (read_quota_cache returned None) → no "touch_idle" skip trace.
+    assert!(
+      !captured.contains( "touch_idle" ),
+      "apply_touch must NOT emit touch_idle skip trace when fetched_at is absent \
+       (guard bypassed because read_quota_cache returned None); got:\n{captured}",
+    );
+  }
+
+  /// CC-B5: `trace=false` + `touch_idle=Some(false)` → silent skip, zero stderr output.
+  ///
+  /// When `trace=false`, the guard fires (skip is real) but no `[trace]` line is emitted.
+  /// Pre-call assertions confirm the guard WILL fire (conditions fully met), making the
+  /// `captured.is_empty()` assertion non-vacuous: we know the guard fired, yet no output
+  /// was produced. Compare with FT-19 (`test_mre_bug288_apply_touch_skips_touch_idle_false`)
+  /// which proves the guard fires with trace=true.
+  #[ test ]
+  fn test_apply_touch_touch_idle_false_silent_when_trace_disabled()
+  {
+    use std::io::Read;
+
+    let store = tempfile::TempDir::new().unwrap();
+
+    claude_profile_core::account::write_cache_string(
+      store.path(), "test@example.com", "fetched_at",
+      &claude_profile_core::account::chrono_now_utc(),
+    );
+    claude_profile_core::account::write_cache_bool(
+      store.path(), "test@example.com", "touch_idle", false,
+    );
+
+    // Pre-call: verify guard conditions are fully met — cache readable with touch_idle=Some(false).
+    // This confirms the guard WOULD fire (and FT-19 confirms it DOES fire with trace=true).
+    // Combined, the captured.is_empty() assertion below then verifies trace=false suppresses it.
+    let entry = claude_profile_core::account::read_quota_cache( store.path(), "test@example.com" )
+      .expect( "precondition: read_quota_cache must return Some (fetched_at present)" );
+    assert_eq!(
+      entry.touch_idle,
+      Some( false ),
+      "precondition: touch_idle must be Some(false) so the guard will fire",
+    );
+
+    let mut aq = mk_aq_with_resets_at( None );
+    let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+
+    // trace=false: guard fires but emits nothing to stderr.
+    apply_touch(
+      &mut aq,
+      store.path(),
+      None,
+      false, // trace disabled
+      SubprocessModel::Auto,
+      SubprocessEffort::Auto,
+    );
+
+    let mut captured = String::new();
+    stderr_buf.read_to_string( &mut captured ).unwrap();
+
+    // Guard fired (proven by preconditions above + FT-19 with trace=true),
+    // but trace=false suppresses all output → empty stderr.
+    assert!(
+      captured.is_empty(),
+      "apply_touch must emit nothing to stderr when trace=false (even on touch_idle=false skip); \
+       got:\n{captured}",
+    );
+  }
+
+  /// CC-B6: Error account with `touch_idle=false` in cache — error guard fires FIRST.
+  ///
+  /// Guard ordering: (1) error guard → (2) touch_idle guard → (3) all_running guard.
+  /// An account with `result=Err` must be caught by the error guard before the
+  /// touch_idle guard is even consulted. The trace must say "error account", not "touch_idle=false".
+  #[ test ]
+  fn test_apply_touch_error_account_skips_before_touch_idle_guard()
+  {
+    use std::io::Read;
+    use crate::usage::test_support::mk_aq_err;
+
+    let store = tempfile::TempDir::new().unwrap();
+
+    // Cache has touch_idle=false keyed by the error account's name ("bad@example.com").
+    // If the error guard were absent, the touch_idle guard would consult this entry and
+    // emit "touch_idle=false" — making the !captured.contains("touch_idle") assertion
+    // a real guard-ordering test, not a vacuous pass.
+    claude_profile_core::account::write_cache_string(
+      store.path(), "bad@example.com", "fetched_at",
+      &claude_profile_core::account::chrono_now_utc(),
+    );
+    claude_profile_core::account::write_cache_bool(
+      store.path(), "bad@example.com", "touch_idle", false,
+    );
+
+    // Error account: result=Err → error guard fires at top of apply_touch.
+    let mut aq = mk_aq_err();
+
+    let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+
+    apply_touch(
+      &mut aq,
+      store.path(),
+      None,
+      true,
+      SubprocessModel::Auto,
+      SubprocessEffort::Auto,
+    );
+
+    let mut captured = String::new();
+    stderr_buf.read_to_string( &mut captured ).unwrap();
+
+    // Error guard fires first: trace says "error account", not "touch_idle=false".
+    assert!(
+      captured.contains( "error account" ),
+      "apply_touch must emit 'error account' skip for Err result; got:\n{captured}",
+    );
+    assert!(
+      !captured.contains( "touch_idle" ),
+      "apply_touch must NOT reach touch_idle guard for error accounts; got:\n{captured}",
+    );
+  }
+
+  /// CC-A1: `write_quota_cache` preserves `touch_idle=false` written before the call.
+  ///
+  /// Fix A (`apply_post_switch_touch`) calls `write_cache_bool(touch_idle, false)` and
+  /// THEN calls `write_quota_cache`. The two calls must compose correctly:
+  /// `write_quota_cache` reads the existing cache, preserves `touch_idle`, and writes
+  /// the updated quota data. After the call, `read_quota_cache` must still return
+  /// `touch_idle=Some(false)` so Fix B's guard in `apply_touch` can fire.
+  ///
+  /// This is the critical Fix A + Fix B integration invariant.
+  #[ test ]
+  fn test_write_quota_cache_preserves_touch_idle_false()
+  {
+    let store = tempfile::TempDir::new().unwrap();
+
+    // Step 1: write touch_idle=false (as apply_post_switch_touch does at api.rs:339-341).
+    claude_profile_core::account::write_cache_bool(
+      store.path(), "test@example.com", "touch_idle", false,
+    );
+
+    // Step 2: call write_quota_cache (as Fix A does at api.rs:362).
+    // This must read the existing cache, preserve touch_idle=false, and write updated quota.
+    claude_profile_core::account::write_quota_cache(
+      store.path(), "test@example.com",
+      None, // five_hour
+      None, // seven_day
+      None, // seven_day_sonnet
+    );
+
+    // Step 3: read back — touch_idle must survive write_quota_cache.
+    let entry = claude_profile_core::account::read_quota_cache( store.path(), "test@example.com" )
+      .expect( "read_quota_cache must return Some after write_quota_cache (fetched_at is present)" );
+
+    assert_eq!(
+      entry.touch_idle,
+      Some( false ),
+      "write_quota_cache must preserve touch_idle=false written before the call; \
+       Fix A + Fix B integration broken if this fails",
+    );
+  }
+
   // ── apply_touch trigger behavioral tests ─────────────────────────────────
 
   /// BUG-211 AC-02 / FT-02 behavioral: `apply_touch` fires for idle accounts but does NOT call `switch_account`.
