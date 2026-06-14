@@ -144,6 +144,7 @@ pub( crate ) fn attempt_expired_token_refresh(
     renewal_at           : None,
     cached               : false,
     cache_age_secs       : None,
+    is_owned             : true,
   };
   let model     = super::subprocess::resolve_model( &aq, imodel );
   let pre_args  = super::subprocess::effort_pre_args( &model, effort );
@@ -314,6 +315,7 @@ pub( crate ) fn apply_post_switch_touch(
     renewal_at           : None,
     cached               : false,
     cache_age_secs       : None,
+    is_owned             : true,
   };
   let model        = resolve_model( &aq, imodel );
   let effort_val   = resolve_effort( &model, effort );

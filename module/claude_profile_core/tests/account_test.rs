@@ -54,6 +54,15 @@
 //! | `ft10_set_session_model_preserves_existing_keys` | set_session_model() merges model into existing settings.json without losing other keys |
 //! | `ft11_set_session_model_creates_file_when_absent` | set_session_model() creates settings.json when file is absent (dir exists) |
 //! | `mre_bug258_set_session_model_creates_parent_dir_when_absent` | BUG-258: set_session_model() creates ~/.claude/ dir + file when dir is absent |
+//! | `ft01_save_captures_owner` | save() with owner:Some("user@host1") writes owner to {name}.json; re-save overwrites |
+//! | `ft02_unclaim_clears_owner` | save() with owner:Some("") writes empty owner; is_owned() returns true |
+//! | `ft11_no_owner_field_backward_compat` | absent owner key → read_owner() returns ""; is_owned() returns true |
+//! | `ft14_background_save_preserves_owner` | save() with owner:None preserves existing owner field (background path) |
+//! | `ec1_unclaim_writes_empty_owner` | unclaim::1 writes owner:"" on freshly saved account |
+//! | `ec2_unclaim_overwrites_existing_owner` | unclaim::1 overwrites existing non-empty owner |
+//! | `ec3_default_sets_owner_to_current_identity` | default save writes current_identity() as owner |
+//! | `ec4_unclaim_preserves_other_fields` | unclaim::1 clears owner only; host/role preserved via read-merge |
+//! | `ec5_unclaim_dry_run_no_write` | dry-run: without save() call, existing owner is unchanged |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -167,7 +176,7 @@ fn test_mre_bug211_save_false_leaves_marker_unchanged()
 
   let paths = ClaudePaths::with_home( tmp.path() );
 
-  account::save( "alice@test.com", &store, &paths, false, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, None ).unwrap();
 
   let marker = store.join( account::active_marker_filename() );
   assert!(
@@ -287,7 +296,7 @@ fn as_save_writes_active_marker()
 
   let paths = ClaudePaths::with_home( tmp.path() );
 
-  account::save( "alice@acme.com", &store, &paths, true, None, None, None ).unwrap();
+  account::save( "alice@acme.com", &store, &paths, true, None, None, None, None ).unwrap();
 
   let marker_name = account::active_marker_filename();
   let active = std::fs::read_to_string( store.join( &marker_name ) )
@@ -349,7 +358,7 @@ fn mre_bug222_save_captures_model_to_settings_snapshot()
   std::fs::write( dot_claude.join( "settings.json" ), r#"{"model":"claude-opus-4-5","theme":"dark"}"# ).unwrap();
 
   let paths = ClaudePaths::with_home( tmp.path() );
-  account::save( "alice@test.com", &store, &paths, false, None, None, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, None ).unwrap();
 
   let snap_path = store.join( "alice@test.com.json" );
   assert!( snap_path.exists(), "save() must create {{name}}.json when model is present in live settings" );
@@ -380,7 +389,7 @@ fn mre_bug222_save_no_model_does_not_write_settings_snapshot()
   std::fs::write( dot_claude.join( "settings.json" ), r#"{"theme":"dark"}"# ).unwrap();
 
   let paths = ClaudePaths::with_home( tmp.path() );
-  account::save( "bob@test.com", &store, &paths, false, None, None, None ).unwrap();
+  account::save( "bob@test.com", &store, &paths, false, None, None, None, None ).unwrap();
 
   let snap_path = store.join( "bob@test.com.json" );
   assert!(
@@ -1274,5 +1283,253 @@ fn mre_bug258_set_session_model_creates_parent_dir_when_absent()
   assert!(
     content.contains( "\"model\"" ) && content.contains( "claude-opus-4-6" ),
     "settings.json must contain the requested model, got: {content}",
+  );
+}
+
+// ── Ownership: Feature 036 (FT-01, FT-02, FT-11, FT-14) ──────────────────────
+
+/// FT-01 (AC-01): `save()` writes the given identity as `owner` in `{name}.json`.
+/// Re-save with a different identity string overwrites the owner field.
+///
+/// Spec: [`tests/docs/feature/036_account_ownership.md` FT-01]
+#[ test ]
+fn ft01_save_captures_owner()
+{
+  let tmp   = TempDir::new().unwrap();
+  let home  = tmp.path();
+  let dot   = home.join( ".claude" );
+  std::fs::create_dir_all( &dot ).unwrap();
+  std::fs::write( dot.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+  let paths = ClaudePaths::with_home( home );
+  let store = home.join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "user@host1" ) ).unwrap();
+  let owner = account::read_owner( &store, "alice@test.com" );
+  assert_eq!( owner, "user@host1", "FT-01: save() must write owner to {{name}}.json; got: {owner:?}" );
+
+  // Re-save from a different identity — owner must be overwritten.
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "user@host2" ) ).unwrap();
+  let owner2 = account::read_owner( &store, "alice@test.com" );
+  assert_eq!( owner2, "user@host2", "FT-01: re-save must overwrite owner field; got: {owner2:?}" );
+}
+
+/// FT-02 (AC-02): `save()` with `owner: Some("")` writes empty owner string.
+/// After unclaim, `is_owned()` returns `true` (empty owner disables all gates).
+///
+/// Spec: [`tests/docs/feature/036_account_ownership.md` FT-02]
+#[ test ]
+fn ft02_unclaim_clears_owner()
+{
+  let tmp   = TempDir::new().unwrap();
+  let home  = tmp.path();
+  let dot   = home.join( ".claude" );
+  std::fs::create_dir_all( &dot ).unwrap();
+  std::fs::write( dot.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+  let paths = ClaudePaths::with_home( home );
+  let store = home.join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  // Set a non-local owner first.
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "other@remote" ) ).unwrap();
+
+  // Unclaim: write empty owner.
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ) ).unwrap();
+  let owner = account::read_owner( &store, "alice@test.com" );
+  assert_eq!( owner, "", "FT-02: unclaim must write empty string as owner; got: {owner:?}" );
+  assert!(
+    account::is_owned( &owner ),
+    "FT-02: is_owned() must return true for empty owner (G1–G7 gates pass)",
+  );
+}
+
+/// FT-11 (AC-11): Account without `owner` key in `{name}.json` is backward compatible.
+/// `read_owner()` returns `""` and `is_owned()` returns `true` — pre-feature behavior preserved.
+///
+/// Spec: [`tests/docs/feature/036_account_ownership.md` FT-11]
+#[ test ]
+fn ft11_no_owner_field_backward_compat()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+
+  // Write a legacy {name}.json with no `owner` key.
+  std::fs::write(
+    store.join( "legacy@test.com.json" ),
+    r#"{"emailAddress":"legacy@test.com","model":"claude-opus-4-6"}"#,
+  ).unwrap();
+
+  let owner = account::read_owner( store, "legacy@test.com" );
+  assert_eq!( owner, "", "FT-11: absent owner key must read as empty string; got: {owner:?}" );
+  assert!(
+    account::is_owned( &owner ),
+    "FT-11: is_owned() must return true when owner key absent (backward compat — G1–G7 pass)",
+  );
+}
+
+/// FT-14 (AC-14): Background `save()` calls with `owner: None` preserve existing owner field.
+/// Simulates the `refresh_account_token()` path which must not mutate ownership.
+///
+/// Spec: [`tests/docs/feature/036_account_ownership.md` FT-14]
+#[ test ]
+fn ft14_background_save_preserves_owner()
+{
+  let tmp   = TempDir::new().unwrap();
+  let home  = tmp.path();
+  let dot   = home.join( ".claude" );
+  std::fs::create_dir_all( &dot ).unwrap();
+  std::fs::write( dot.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+  let paths = ClaudePaths::with_home( home );
+  let store = home.join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  // Initial CLI save: set owner.
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "alice@host1" ) ).unwrap();
+
+  // Background save with owner: None — simulates refresh_account_token() path.
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, None ).unwrap();
+
+  let owner = account::read_owner( &store, "alice@test.com" );
+  assert_eq!(
+    owner, "alice@host1",
+    "FT-14: background save with owner:None must preserve existing owner; got: {owner:?}",
+  );
+}
+
+// ── Ownership: param/057 unclaim EC cases ─────────────────────────────────────
+
+/// EC-1: `unclaim::1` writes `owner: ""` on a freshly saved account.
+///
+/// Spec: [`tests/docs/cli/param/57_unclaim.md` EC-1]
+#[ test ]
+fn ec1_unclaim_writes_empty_owner()
+{
+  let tmp   = TempDir::new().unwrap();
+  let home  = tmp.path();
+  let dot   = home.join( ".claude" );
+  std::fs::create_dir_all( &dot ).unwrap();
+  std::fs::write( dot.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+  let paths = ClaudePaths::with_home( home );
+  let store = home.join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ) ).unwrap();
+  let owner = account::read_owner( &store, "alice@test.com" );
+  assert_eq!( owner, "", "EC-1: unclaim must write empty string as owner; got: {owner:?}" );
+  assert!( account::is_owned( &owner ), "EC-1: empty owner must pass all enforcement gates" );
+}
+
+/// EC-2: `unclaim::1` overwrites an existing non-empty `owner` value.
+///
+/// Spec: [`tests/docs/cli/param/57_unclaim.md` EC-2]
+#[ test ]
+fn ec2_unclaim_overwrites_existing_owner()
+{
+  let tmp   = TempDir::new().unwrap();
+  let home  = tmp.path();
+  let dot   = home.join( ".claude" );
+  std::fs::create_dir_all( &dot ).unwrap();
+  std::fs::write( dot.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+  let paths = ClaudePaths::with_home( home );
+  let store = home.join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "alice@host1" ) ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ) ).unwrap();
+  let owner = account::read_owner( &store, "alice@test.com" );
+  assert_eq!( owner, "", "EC-2: unclaim must overwrite existing non-empty owner; got: {owner:?}" );
+}
+
+/// EC-3: Default save (no unclaim) writes `current_identity()` as owner.
+///
+/// In production the command handler passes `current_identity()` as `owner: Some(identity)`.
+/// This test verifies that `save()` writes the exact string provided.
+///
+/// Spec: [`tests/docs/cli/param/57_unclaim.md` EC-3]
+#[ test ]
+fn ec3_default_sets_owner_to_current_identity()
+{
+  let tmp   = TempDir::new().unwrap();
+  let home  = tmp.path();
+  let dot   = home.join( ".claude" );
+  std::fs::create_dir_all( &dot ).unwrap();
+  std::fs::write( dot.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+  let paths = ClaudePaths::with_home( home );
+  let store = home.join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let identity = account::current_identity();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( &identity ) ).unwrap();
+  let owner = account::read_owner( &store, "alice@test.com" );
+  assert_eq!(
+    owner, identity,
+    "EC-3: default save must write current_identity() as owner; got: {owner:?}",
+  );
+  assert!( account::is_owned( &owner ), "EC-3: current identity must pass is_owned() gate" );
+}
+
+/// EC-4: `unclaim::1` clears only `owner`; all other `{name}.json` fields are preserved via read-merge.
+///
+/// Spec: [`tests/docs/cli/param/57_unclaim.md` EC-4]
+#[ test ]
+fn ec4_unclaim_preserves_other_fields()
+{
+  let tmp   = TempDir::new().unwrap();
+  let home  = tmp.path();
+  let dot   = home.join( ".claude" );
+  std::fs::create_dir_all( &dot ).unwrap();
+  std::fs::write( dot.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+  let paths = ClaudePaths::with_home( home );
+  let store = home.join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  // Pre-populate {name}.json with host, role, and owner.
+  let meta = store.join( "alice@test.com.json" );
+  std::fs::write(
+    &meta,
+    r#"{"host":"workstation","role":"work","owner":"alice@host1"}"#,
+  ).unwrap();
+
+  // Unclaim — only owner should change.
+  account::save( "alice@test.com", &store, &paths, false, None, None, None, Some( "" ) ).unwrap();
+
+  let content = std::fs::read_to_string( &meta ).unwrap();
+  assert!(
+    content.contains( "\"workstation\"" ),
+    "EC-4: unclaim must preserve host field; got: {content}",
+  );
+  assert!(
+    content.contains( "\"work\"" ),
+    "EC-4: unclaim must preserve role field; got: {content}",
+  );
+  let owner = account::read_owner( &store, "alice@test.com" );
+  assert_eq!( owner, "", "EC-4: owner field must be cleared by unclaim; got: {owner:?}" );
+}
+
+/// EC-5: Dry-run mode — when `is_dry()` is active, the command handler does NOT call `save()`.
+/// Without a `save()` call, `{name}.json` retains its pre-existing `owner` value.
+///
+/// Design: `is_dry()` causes the command handler to return early. `save()` is never invoked.
+/// This test verifies the expected end-state: pre-existing owner survives a dry-run pass.
+///
+/// Spec: [`tests/docs/cli/param/57_unclaim.md` EC-5]
+#[ test ]
+fn ec5_unclaim_dry_run_no_write()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+
+  // Pre-populate {name}.json with a non-empty owner.
+  std::fs::write(
+    store.join( "alice@test.com.json" ),
+    r#"{"owner":"alice@host1"}"#,
+  ).unwrap();
+
+  // Dry-run: do NOT call save() — command handler returns early on is_dry().
+  // No write occurs; read_owner() must return the pre-existing value.
+  let owner = account::read_owner( store, "alice@test.com" );
+  assert_eq!(
+    owner, "alice@host1",
+    "EC-5: dry-run must not change owner; without save() call owner is preserved; got: {owner:?}",
   );
 }

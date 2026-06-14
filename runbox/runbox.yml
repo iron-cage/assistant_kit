@@ -6,7 +6,10 @@ test_user: testuser
 # crate scope for nextest run and cargo chef cook — single source of truth for both
 cmd_scope: --workspace
 # baked into the image default CMD; excludes tests needing external I/O (offline-safe default)
-cmd_filter: "!binary(behavior)"
+# Fix: contract/claude_code (which owns the `behavior` integration test binary) is excluded
+# from the workspace via Cargo.toml `exclude`, so `!binary(behavior)` matches nothing and
+# nextest fails. `all()` is the correct expression when no exclusion is needed.
+cmd_filter: "all()"
 
 # script invoked by `.test` inside the container (path relative to /workspace)
 test_script: verb/test.d/l1

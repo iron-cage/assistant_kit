@@ -1,3 +1,4 @@
+#![ allow( clippy::doc_markdown ) ] // test doc comments use code identifiers in prose
 //! `--retry-on-api-error` and `--api-error-delay` Integration Tests
 //!
 //! ## Purpose

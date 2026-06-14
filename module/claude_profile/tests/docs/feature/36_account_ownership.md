@@ -28,7 +28,7 @@
 ### Notes
 
 - FT-01 and FT-02 are unit tests in `claude_profile_core/tests/account_test.rs` — test `save()` writes the `owner` field and `unclaim::1` writes `""`.
-- FT-03 is structural: `src/lib.rs` registers `unclaim::` but no `owner::` parameter; verified by negative grep `assert!(!registered_params.contains("owner::"))`.
+- FT-03 is structural: `src/registry.rs` registers `unclaim::` but no `owner::` parameter; verified by negative grep `assert!(!registered_params.contains("owner::"))`.
 - FT-04 is a unit test in `src/usage/fetch.rs` — mock-free: verify no `read_token()` call path was exercised and cache JSON is the returned value.
 - FT-05 is a render test in `src/usage/render_tests.rs` — uses `AccountQuota { is_owned: false, cached: true, ... }` and asserts `~` prefix; also tests `cached: false, is_owned: false` giving dashes.
 - FT-06 is a unit test in `src/usage/refresh_predicate.rs` `#[cfg(test)]` module.
@@ -194,4 +194,5 @@
 - **Then:** `alice.json` retains `"owner": "alice@host1"` unchanged after the save. No other `alice.json` fields are affected.
 - **Exit:** Ok(()); owner field preserved
 - **Source fn:** `ft14_background_save_preserves_owner`
+- **Note:** Background callers must pass BOTH `owner: None` (this AC) AND `update_marker=false` (Feature 002 AC-15). See Feature 002 FT-09 for the `update_marker` side of the same requirement.
 - **Source:** [036_account_ownership.md AC-14](../../../docs/feature/036_account_ownership.md)

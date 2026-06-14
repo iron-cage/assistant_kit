@@ -10,11 +10,11 @@
 
 ### Example
 
-For `workspace_test` built with `cmd_scope: --workspace`, `cargo_features: --all-features`, and `cmd_filter: "!binary(behavior)"`, the dockerfile bakes:
+For `workspace_test` built with `cmd_scope: --workspace`, `cargo_features: --all-features`, and `cmd_filter: "all()"`, the dockerfile bakes:
 ```dockerfile
 ARG CMD_SCOPE=--workspace
-ARG CMD_FILTER=!binary(behavior)
-CMD cargo nextest run --workspace --all-features --filter-expr "!binary(behavior)"
+ARG CMD_FILTER=all()
+CMD cargo nextest run --workspace --all-features --filter-expr "all()"
 ```
 `cmd_test_offline()` runs:
 ```bash

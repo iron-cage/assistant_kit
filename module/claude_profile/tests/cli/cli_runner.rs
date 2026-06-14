@@ -349,6 +349,15 @@ pub fn write_account_renewal_json( home : &std::path::Path, name : &str, renewal
   merge_account_meta( home, name, serde_json::json!({ "_renewal_at": renewal_at_iso }) );
 }
 
+/// Write `owner` field into `{credential_store}/{name}.json`.
+///
+/// Used to pre-populate ownership metadata for G5/G6/G7 gate tests.
+#[ inline ]
+pub fn write_account_owner( home : &std::path::Path, name : &str, owner : &str )
+{
+  merge_account_meta( home, name, serde_json::json!({ "owner": owner }) );
+}
+
 /// Check whether an account credential file exists.
 #[ inline ]
 #[ must_use ]

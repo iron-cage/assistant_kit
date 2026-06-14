@@ -15,6 +15,8 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 | FT-07 | After successful login, credential store is updated | AC-07 |
 | FT-08 | Original active account restored after re-authentication | AC-08 |
 | FT-09 | `claude` exits without credential change → diagnostic + exit 3 | AC-09 |
+| FT-10 | Non-owned account: `.account.relogin` exits 1 with ownership violation message | AC-10 |
+| FT-11 | Ownership check fires before `dry::1` — exits 1 even with `dry::1` set | AC-11 |
 
 ### Test Case Index
 
@@ -29,8 +31,10 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 | FT-07 | Credential store updated after successful TTY login | AC-07 | Side Effects |
 | FT-08 | Original active account restored after login | AC-08 | Restore |
 | FT-09 | No credential change → diagnostic stderr + exit 3 | AC-09 | Abandoned Login |
+| FT-10 | Non-owned account exits 1 with ownership violation message | AC-10 | Ownership Guard |
+| FT-11 | Ownership check fires before `dry::1` — exits 1 regardless of dry-run | AC-11 | Ownership Guard |
 
-**Total:** 9 FT cases
+**Total:** 11 FT cases
 
 ---
 
@@ -130,3 +134,27 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 - **Exit:** 3
 - **Source fn:** manual — IT-7 in `tests/manual/readme.md`
 - **Source:** [019_account_relogin.md AC-09](../../../docs/feature/019_account_relogin.md)
+
+---
+
+### FT-10: Non-owned account exits 1 with ownership violation message
+
+- **Given:** Account `alice@corp.com` has `{credential_store}/alice@corp.com.json` with `"owner": "other@remote"`. The current machine's `current_identity()` is `"user1@thishost"` — not equal to `"other@remote"`.
+- **When:** `clp .account.relogin name::alice@corp.com`
+- **Then:** Exits 1. Stderr contains `"ownership violation: this account is owned by other@remote"`. The 6-step relogin procedure is NOT started — no `switch_account()` call, no `claude` spawn, no credential comparison.
+- **Exit:** 1
+- **Source fn:** `ft10_relogin_exits_1_when_not_owned` (in `tests/cli/account_mutations_test.rs`)
+- **Note:** G7 ownership gate from Feature 036 AC-10. Shared with Feature 036 FT-10.
+- **Source:** [019_account_relogin.md AC-10](../../../docs/feature/019_account_relogin.md)
+
+---
+
+### FT-11: Ownership check fires before `dry::1` — exits 1 even with `dry::1` set
+
+- **Given:** Account `alice@corp.com` is owned by `"other@remote"`. Current identity ≠ `"other@remote"`.
+- **When:** `clp .account.relogin name::alice@corp.com dry::1`
+- **Then:** Exits 1. The ownership violation message is printed to stderr. The `[dry-run] would re-authenticate 'alice@corp.com' via browser login` message is NOT printed. No files are modified and no procedure steps are executed.
+- **Exit:** 1
+- **Source fn:** `ft13_dry_run_does_not_skip_ownership` (in `tests/cli/account_mutations_test.rs`)
+- **Note:** G7 + dry-run ordering gate from Feature 036 AC-13. Ownership guard runs before `dry::1` evaluation.
+- **Source:** [019_account_relogin.md AC-11](../../../docs/feature/019_account_relogin.md)

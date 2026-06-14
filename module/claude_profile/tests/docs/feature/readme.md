@@ -13,7 +13,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | File | Responsibility |
 |------|----------------|
-| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 35 feature docs |
+| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 36 feature docs |
 | 01_account_store_init.md | FT cases for Feature 001 — Account Store Initialization |
 | 02_account_save.md | FT cases for Feature 002 — Save Account |
 | 03_account_list.md | FT cases for Feature 003 — Accounts |
@@ -57,14 +57,14 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 |---------|------|-------|--------|
 | doc_structure (collection) | [00_doc_structure.md](00_doc_structure.md) | DT-01 … DT-07 | ✅ |
 | 001_account_store_init | [001_account_store_init.md](01_account_store_init.md) | FT-01 … FT-04 | ✅ |
-| 002_account_save | [002_account_save.md](02_account_save.md) | FT-01 … FT-11 | ✅ |
+| 002_account_save | [002_account_save.md](02_account_save.md) | FT-01 … FT-13 | ✅ |
 | 003_account_list | [003_account_list.md](03_account_list.md) | FT-01 … FT-19 | ✅ |
-| 004_account_use | [004_account_use.md](04_account_use.md) | FT-01 … FT-09 | ✅ |
-| 005_account_delete | [005_account_delete.md](05_account_delete.md) | FT-01 … FT-05 | ✅ |
+| 004_account_use | [004_account_use.md](04_account_use.md) | FT-01 … FT-11 | ✅ |
+| 005_account_delete | [005_account_delete.md](05_account_delete.md) | FT-01 … FT-07 | ✅ |
 | 006_token_status | [006_token_status.md](06_token_status.md) | FT-01 … FT-04 | ✅ |
 | 007_file_topology | [007_file_topology.md](07_file_topology.md) | FT-01 … FT-06 | ✅ |
 | 008_auto_rotate | [008_auto_rotate.md](08_auto_rotate.md) | FT-01 … FT-04 | ✅ |
-| 009_token_usage | [009_token_usage.md](09_token_usage.md) | FT-01 … FT-25 | ✅ |
+| 009_token_usage | [009_token_usage.md](09_token_usage.md) | FT-01 … FT-26 | ✅ |
 | 010_persistent_storage | [010_persistent_storage.md](10_persistent_storage.md) | FT-01 … FT-07 | ✅ |
 | 011_account_status_by_name | [011_account_status_by_name.md](11_account_status_by_name.md) | FT-01 … FT-05 | ✅ |
 | 012_live_credentials_status | [012_live_credentials_status.md](12_live_credentials_status.md) | FT-01 … FT-07 | ✅ |
@@ -74,12 +74,12 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 016_current_account_awareness | [016_current_account_awareness.md](16_current_account_awareness.md) | FT-01 … FT-11 | ✅ |
 | 017_token_refresh | [017_token_refresh.md](17_token_refresh.md) | FT-01 … FT-17 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](18_live_monitor.md) | FT-01 … FT-09 | ✅ |
-| 019_account_relogin | [019_account_relogin.md](19_account_relogin.md) | FT-01 … FT-09 | ✅ |
+| 019_account_relogin | [019_account_relogin.md](19_account_relogin.md) | FT-01 … FT-11 | ✅ |
 | 020_usage_sort_strategies | [020_usage_sort_strategies.md](20_usage_sort_strategies.md) | FT-01 … FT-17 | ✅ |
 | 021_extended_snapshot_fields | [021_extended_snapshot_fields.md](21_extended_snapshot_fields.md) | FT-01 … FT-09 | ✅ |
 | 022_org_identity_snapshot | [022_org_identity_snapshot.md](22_org_identity_snapshot.md) | FT-01 … FT-11 | ✅ |
 | 023_next_account_strategies | [023_next_account_strategies.md](23_next_account_strategies.md) | FT-01 … FT-17 | ✅ |
-| 024_session_touch | [024_session_touch.md](24_session_touch.md) | FT-01 … FT-20 | ✅ |
+| 024_session_touch | [024_session_touch.md](24_session_touch.md) | FT-01 … FT-21 | ✅ |
 | 025_per_machine_active_marker | [025_per_machine_active_marker.md](25_per_machine_active_marker.md) | FT-01 … FT-12 | ✅ |
 | 026_subprocess_model_effort | [026_subprocess_model_effort.md](26_subprocess_model_effort.md) | FT-01 … FT-30 | ✅ |
 | 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](27_account_use_post_switch_touch.md) | FT-01 … FT-21 | ✅ |
@@ -91,7 +91,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 033_quota_cache | [033_quota_cache.md](33_quota_cache.md) | FT-01 … FT-11 | ✅ |
 | 034_explicit_session_model_override | [034_explicit_session_model_override.md](34_explicit_session_model_override.md) | FT-01 … FT-11 | ✅ |
 | 035_model_command | [035_model_command.md](35_model_command.md) | FT-01 … FT-12 | ✅ |
-| 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-14 | ⏳ |
+| 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-14 | ✅ |
 
 **Total:** 37 specs — 36 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 

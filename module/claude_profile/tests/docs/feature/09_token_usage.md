@@ -31,6 +31,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | — |
 | FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | — |
 | FT-25 | `.usage` applies model override for current account when `7d(Son) < 20%` | AC-32 | — |
+| FT-26 | `format::json` output includes `"is_owned"` bool per account object | AC-05 | — |
 
 ### Test Case Index
 
@@ -61,8 +62,9 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | Subscription State |
 | FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | Trace Ordering |
 | FT-25 | `.usage` applies model override for current account when `7d(Son) < 20%` | AC-32 | Model Override |
+| FT-26 | `format::json` includes `"is_owned": bool` per account object | AC-05 | JSON Fields |
 
-**Total:** 25 FT cases
+**Total:** 26 FT cases
 
 ---
 
@@ -404,3 +406,21 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Note:** Fix for BUG-244. The model override was previously only reachable from `.account.use` (`account_ops.rs`). This test verifies the `.usage` path also applies it. Reuses the existing `apply_model_override()` function (tested by BUG-238 MRE) but validates it is called from the `.usage` pipeline.
 - **Source fn:** `mre_bug244_usage_routine_never_calls_apply_model_override` (in `src/usage/api_tests.rs`)
 - **Source:** [009_token_usage.md AC-32](../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-26: `format::json` output includes `"is_owned"` bool per account object
+
+- **Given (unit test):** Two `AccountQuota` entries rendered via `render_json()`:
+  - `alice@x.com`: `is_owned = true` (owned by current identity), `result = Ok(...)`.
+  - `bob@x.com`: `is_owned = false` (owned by a different identity — G1 non-owned path), `result = Err("cached")` (from cache).
+- **When:** `render_json(&[alice_aq, bob_aq])` is called (or equivalent JSON rendering pipeline).
+- **Then:**
+  - The JSON array contains two objects.
+  - The object for `alice@x.com` contains `"is_owned": true`.
+  - The object for `bob@x.com` contains `"is_owned": false`.
+  - `"is_owned"` is present in every account object regardless of result state.
+- **Exit:** n/a (unit test — JSON string assertion)
+- **Source fn:** `ft12_json_output_includes_is_owned` (in `src/usage/render_tests.rs`)
+- **Note:** Feature 036 FT-12 is the definitive test for this behavior. This FT-26 records the same coverage from Feature 009's perspective (AC-05 lists `is_owned (bool — Feature 036)` as a required JSON field). Both specs reference the same source function.
+- **Source:** [009_token_usage.md AC-05](../../../docs/feature/009_token_usage.md)

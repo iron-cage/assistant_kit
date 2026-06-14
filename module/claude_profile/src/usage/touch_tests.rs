@@ -892,3 +892,45 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
     );
   }
 }
+
+// ── G4: non-owned accounts skipped by apply_touch ─────────────────────────
+
+/// FT-07 (AC-07): `apply_touch()` skips non-owned accounts; emits `[trace] ... not owned`.
+///
+/// G4 gate fires when `aq.is_owned == false`:
+/// - No subprocess is spawned.
+/// - With `trace=true`: stderr contains `"[trace] touch  {name}  skipped (reason: not owned)"`.
+///
+/// Pitfall: `mk_aq_with_resets_at` sets `is_owned=true`; must be overridden to `false`.
+///
+/// Spec: [`tests/docs/feature/036_account_ownership.md` FT-07]
+#[ test ]
+fn ft07_touch_skips_non_owned_with_trace()
+{
+  use std::io::Read;
+
+  let store = tempfile::TempDir::new().unwrap();
+
+  // Build idle account (resets_at=None triggers touch normally, but G4 overrides).
+  let mut aq = mk_aq_with_resets_at( None );
+  // G4: override is_owned to false — account owned by a different machine.
+  aq.is_owned = false;
+
+  let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+
+  // trace=true; claude_paths=None so subprocess cannot fire even if G4 is bypassed.
+  apply_touch( &mut aq, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
+
+  let mut captured = String::new();
+  stderr_buf.read_to_string( &mut captured ).unwrap();
+
+  // G4 trace line must be present.
+  assert!(
+    captured.contains( "not owned" ),
+    "FT-07: G4 gate must emit 'not owned' trace line; got:\n{captured}",
+  );
+  assert!(
+    captured.contains( "[trace] touch" ),
+    "FT-07: trace line must start with '[trace] touch'; got:\n{captured}",
+  );
+}

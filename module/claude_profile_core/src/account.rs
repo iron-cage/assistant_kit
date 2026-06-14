@@ -32,7 +32,7 @@
 //! }
 //!
 //! // Save current credentials as "alice@acme.com"
-//! account::save( "alice@acme.com", credential_store, &paths, true, None, None, None ).expect( "failed to save" );
+//! account::save( "alice@acme.com", credential_store, &paths, true, None, None, None, None ).expect( "failed to save" );
 //!
 //! // Switch to "alice@home.com"
 //! account::switch_account( "alice@home.com", credential_store, &paths ).expect( "failed to switch" );
@@ -195,11 +195,16 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
 /// `host` / `role` are profile display metadata; pass `None` from background callers
 /// to preserve existing values via merge.
 ///
+/// `owner` sets the `owner` field in `{name}.json`:
+/// - `Some(s)` — writes `s` as the owner (use `current_identity()` for CLI saves, `""` for unclaim).
+/// - `None` — preserves existing `owner` field unchanged (background callers: refresh, touch paths).
+///
 /// # Errors
 ///
 /// Returns an error if the name is invalid, the credentials file cannot be
 /// read, or the credential store cannot be written.
 #[ inline ]
+#[ allow( clippy::too_many_arguments ) ] // 8th param `owner` added by Feature 036 — all args are independent concerns.
 pub fn save(
   name             : &str,
   credential_store : &Path,
@@ -208,6 +213,7 @@ pub fn save(
   creds            : Option< &[u8] >,
   host             : Option< &str >,
   role             : Option< &str >,
+  owner            : Option< &str >,
 ) -> Result< (), std::io::Error >
 {
   validate_name( name )?;
@@ -276,6 +282,11 @@ pub fn save(
     if let Some( r ) = role
     {
       obj.insert( "role".to_string(), serde_json::Value::String( r.to_string() ) );
+    }
+    // `owner` — write when Some (CLI saves); None preserves existing field (background callers).
+    if let Some( o ) = owner
+    {
+      obj.insert( "owner".to_string(), serde_json::Value::String( o.to_string() ) );
     }
   }
   // Only write {name}.json when there is actual data to store — avoids empty {} files
@@ -744,7 +755,8 @@ pub fn refresh_account_token(
       return None;
     }
     if trace { eprintln!( "[trace] {label}  {name}  write credentials: OK" ); }
-    match save( name, credential_store, p, false, Some( new_creds.as_bytes() ), None, None )
+    // Pass owner: None — background refresh must not mutate the owner field.
+    match save( name, credential_store, p, false, Some( new_creds.as_bytes() ), None, None, None )
     {
       Ok( () ) => { if trace { eprintln!( "[trace] {label}  {name}  save: OK" ); } }
       Err( e ) =>
@@ -813,6 +825,48 @@ pub fn resolve_hostname() -> String
         .trim()
         .to_string()
     } )
+}
+
+/// Return the `"USER@hostname"` identity for the current machine.
+///
+/// Used as the `owner` value written by `.account.save`. Shares the same
+/// fallback chain as [`resolve_hostname`]: `$USER` → `$USERNAME` → `"user"`,
+/// and `$HOSTNAME` → `/etc/hostname` → `"local"`.
+#[ inline ]
+#[ must_use ]
+pub fn current_identity() -> String
+{
+  let user = std::env::var( "USER" )
+    .or_else( |_| std::env::var( "USERNAME" ) )
+    .unwrap_or_else( |_| "user".to_string() );
+  let hostname = resolve_hostname();
+  format!( "{user}@{hostname}" )
+}
+
+/// Read the `owner` field from `{name}.json` in `credential_store`.
+///
+/// Returns an empty string when the file is absent, unparseable, or the
+/// `owner` field is missing — identical behaviour to "no owner" (all gates pass).
+#[ inline ]
+#[ must_use ]
+pub fn read_owner( credential_store : &Path, name : &str ) -> String
+{
+  let path = credential_store.join( format!( "{name}.json" ) );
+  std::fs::read_to_string( &path ).ok()
+    .and_then( |s| parse_string_field( &s, "owner" ) )
+    .unwrap_or_default()
+}
+
+/// Return `true` when `owner` represents "no enforcement" for the current machine.
+///
+/// - Empty string → unowned (all gates pass).
+/// - Matches `current_identity()` → owned by this machine (gates pass).
+/// - Any other non-empty string → owned by a different machine (gates block).
+#[ inline ]
+#[ must_use ]
+pub fn is_owned( owner : &str ) -> bool
+{
+  owner.is_empty() || owner == current_identity()
 }
 
 /// env var first, falls back to `USERNAME`, then to the literal `"user"`.

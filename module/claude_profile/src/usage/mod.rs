@@ -64,6 +64,7 @@ pub( crate ) mod test_support
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
     }
   }
 
@@ -84,6 +85,7 @@ pub( crate ) mod test_support
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
     }
   }
 
@@ -112,6 +114,7 @@ pub( crate ) mod test_support
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
     }
   }
 
@@ -143,6 +146,7 @@ pub( crate ) mod test_support
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
     }
   }
 
@@ -177,6 +181,7 @@ pub( crate ) mod test_support
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
     }
   }
 
@@ -229,6 +234,7 @@ pub( crate ) mod test_support
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
     }
   }
 
@@ -267,6 +273,7 @@ pub( crate ) mod test_support
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
     }
   }
 
@@ -295,6 +302,7 @@ pub( crate ) mod test_support
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
     }
   }
 
@@ -315,6 +323,7 @@ pub( crate ) mod test_support
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
     }
   }
 
@@ -342,6 +351,7 @@ pub( crate ) mod test_support
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
     }
   }
 
@@ -369,6 +379,7 @@ pub( crate ) mod test_support
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
     }
   }
 
@@ -400,6 +411,7 @@ pub( crate ) mod test_support
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
     }
   }
 
@@ -440,6 +452,7 @@ pub( crate ) mod test_support
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
     }
   }
 }
@@ -576,7 +589,7 @@ mod tests
         name : "fail@test.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
         expires_at_ms : 0, result : Err( "auth failed".to_string() ), account : None,
         host : String::new(), role : String::new(), renewal_at : None,
-        cached : false, cache_age_secs : None,
+        cached : false, cache_age_secs : None, is_owned : true,
       },
     ];
     let result = render_json( &accounts );
@@ -594,7 +607,7 @@ mod tests
         name : "test\"@evil.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
         expires_at_ms : 0, result : Err( "fail".to_string() ), account : None,
         host : String::new(), role : String::new(), renewal_at : None,
-        cached : false, cache_age_secs : None,
+        cached : false, cache_age_secs : None, is_owned : true,
       },
     ];
     let result = render_json( &accounts );
@@ -630,6 +643,7 @@ mod tests
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
       },
       AccountQuota
       {
@@ -645,6 +659,7 @@ mod tests
       renewal_at     : None,
       cached         : false,
       cache_age_secs : None,
+      is_owned       : true,
       },
     ];
 

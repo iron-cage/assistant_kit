@@ -448,6 +448,7 @@
       renewal_at        : None,
       cached            : false,
       cache_age_secs    : None,
+      is_owned          : true,
     };
     let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
     assert!(
@@ -484,6 +485,7 @@
       renewal_at        : None,
       cached            : false,
       cache_age_secs    : None,
+      is_owned          : true,
     };
     let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
     assert!(
@@ -526,6 +528,7 @@
       renewal_at        : None,
       cached            : false,
       cache_age_secs    : None,
+      is_owned          : true,
     };
     let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
     assert!(
@@ -584,6 +587,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned      : true,
       }
     };
 
@@ -645,6 +649,7 @@
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -677,6 +682,7 @@
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Sonnet, now );
@@ -708,6 +714,7 @@
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Opus, now );
@@ -735,6 +742,7 @@
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -793,6 +801,7 @@
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
 
     let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -844,6 +853,7 @@
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
 
     let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -1006,6 +1016,7 @@
       renewal_at    : Some( reset_iso_at( now, 3600 ) ),  // exact sub renewal in 1h
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Renew, PreferStrategy::Any, now );
@@ -1061,6 +1072,7 @@
       renewal_at    : None,  // no subscription data
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Renew, PreferStrategy::Any, now );

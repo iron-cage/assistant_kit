@@ -69,6 +69,17 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   crate::account::check_switch_preconditions( &name, &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account use" ) )?;
 
+  // G5: Ownership guard — non-owned accounts cannot be switched to from this machine.
+  // Runs before dry::1 so that dry-run still exits 1 on ownership violation.
+  let owner = crate::account::read_owner( &credential_store, &name );
+  if !crate::account::is_owned( &owner )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "ownership violation: this account is owned by {owner}" ),
+    ) );
+  }
+
   if is_dry( &cmd )
   {
     return Ok( OutputData::new( format!( "[dry-run] would switch to '{name}'\n" ), "text" ) );
@@ -308,9 +319,19 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     _                          => String::new(),
   };
 
-  crate::account::save( &name, &credential_store, &paths, true, None, Some( &host_val ), Some( &role_val ) )
+  // Resolve unclaim:: — when set, writes owner="" (clears enforcement).
+  let unclaim = crate::output::parse_int_flag( &cmd, "unclaim", 0 )? != 0;
+  let owner_str = if unclaim
+  {
+    String::new()
+  }
+  else
+  {
+    crate::account::current_identity()
+  };
+  crate::account::save( &name, &credential_store, &paths, true, None, Some( &host_val ), Some( &role_val ), Some( &owner_str ) )
     .map_err( |e| io_err_to_error_data( &e, "account save" ) )?;
-  if trace { eprintln!( "[trace] account.save  write: OK  host={host_val}  role={role_val}" ) }
+  if trace { eprintln!( "[trace] account.save  write: OK  host={host_val}  role={role_val}  owner={owner_str}" ) }
 
   Ok( OutputData::new( format!( "saved current credentials as '{name}'\n" ), "text" ) )
 }
@@ -335,6 +356,17 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   let name             = resolve_account_name( &raw_name, &credential_store )?;
   crate::account::check_delete_preconditions( &name, &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account delete" ) )?;
+
+  // G6: Ownership guard — non-owned accounts cannot be deleted from this machine.
+  // Runs before dry::1 so that dry-run still exits 1 on ownership violation.
+  let owner = crate::account::read_owner( &credential_store, &name );
+  if !crate::account::is_owned( &owner )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "ownership violation: this account is owned by {owner}" ),
+    ) );
+  }
 
   if is_dry( &cmd )
   {
