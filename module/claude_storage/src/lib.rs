@@ -54,7 +54,7 @@
 //! }
 //! ```
 
-#![ doc( html_root_url = "https://docs.rs/claude_storage/1.1.0/claude_storage/" ) ]
+#![ doc( html_root_url = "https://docs.rs/claude_storage/1.2.0/claude_storage/" ) ]
 #![ deny( missing_docs ) ]
 #![ warn( rust_2018_idioms ) ]
 

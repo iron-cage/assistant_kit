@@ -27,7 +27,7 @@ Most crates inherit this version via `version.workspace = true` in their `Cargo.
 |-------|---------|-----------|
 | `claude_auth` | `0.1.0` | Standalone Layer * primitive; early-stage release; own cadence |
 | `claude_quota` | `0.1.0` | Standalone Layer * primitive; early-stage release; own cadence |
-| `dream` | `1.2.0` | Library facade; minor version ahead of workspace to track its own API additions |
+| `dream` | `1.2.0` | Library facade; explicitly versioned to track its own API additions independently of workspace cadence |
 | `assistant` | `1.2.0` | Super-app binary; version tracks `dream` |
 
 ### Enforcement Mechanism

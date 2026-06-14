@@ -52,7 +52,7 @@ Output:
 
 {
   "name": "claude_profile",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "edition": "2021",
   "language": "rust",
   "package_manager": "cargo",
