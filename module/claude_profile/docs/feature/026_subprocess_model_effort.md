@@ -126,7 +126,7 @@ if let Some(effort) = effort_opt {
 | File | Relationship |
 |------|--------------|
 | `task/claude_profile/bug/289_son_running_false_haiku_touch_infinite_loop.md` | BUG-289 🟢 Fixed (TSK-292): `resolve_model(Auto)` reads `aq.result` and returns Sonnet when `son_idle=true`; Haiku is the default for all other `auto` cases. |
-| `task/claude_profile/bug/290_resolve_model_auto_two_touch_cold_account.md` | BUG-290 🔴 Unverified: BUG-289 fix over-constrained gate (`five_h_running AND d7_running AND son_idle`) forces two-touch warm-up for cold accounts. Fix: simplify gate to `son_idle` alone — remove `five_h_running` and `d7_running` conditions. |
+| `task/claude_profile/bug/290_resolve_model_auto_two_touch_cold_account.md` | BUG-290 🟢 Fixed: over-constrained BUG-289 gate (`five_h_running AND d7_running AND son_idle`) forced two-touch warm-up for cold accounts. Gate simplified to `son_idle` alone — `five_h_running` and `d7_running` conditions removed. |
 
 ### Dependencies
 
