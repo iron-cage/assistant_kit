@@ -131,9 +131,8 @@ pub( crate ) fn apply_touch(
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[ cfg( test ) ]
-mod tests
-{
-  use super::apply_touch;
+#[ path = "touch_tests.rs" ]
+mod tests;
   use crate::usage::types::{ SubprocessModel, SubprocessEffort };
   use crate::usage::test_support::mk_aq_with_resets_at;
   use tempfile::TempDir;

@@ -1,0 +1,38 @@
+[package]
+name              = "assistant_kit"
+version           = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme            = "readme.md"
+documentation     = "https://docs.rs/assistant_kit"
+description       = "Layer 3 library facade re-exporting all Layer 2 full-featured coding agent crates."
+keywords          = [ "ai", "agent", "claude", "toolkit", "library" ]
+categories        = [ "development-tools" ]
+
+[lints]
+workspace = true
+
+[features]
+default = []
+profile = [ "dep:claude_profile", "claude_profile/enabled" ]
+runner  = [ "dep:claude_runner",  "claude_runner/enabled"  ]
+version = [ "dep:claude_version", "claude_version/enabled" ]
+assets  = [ "dep:claude_assets",  "claude_assets/enabled"  ]
+storage = [ "dep:claude_storage", "claude_storage/cli"     ]
+full    = [ "profile", "runner", "version", "assets", "storage" ]
+enabled = [ "full" ]
+
+[dependencies]
+claude_profile = { workspace = true, optional = true }
+claude_runner  = { workspace = true, optional = true }
+claude_version = { workspace = true, optional = true }
+claude_assets  = { workspace = true, optional = true }
+claude_storage = { workspace = true, optional = true }
+
+[[test]]
+name = "integration"
+path = "tests/integration/facade_test.rs"
