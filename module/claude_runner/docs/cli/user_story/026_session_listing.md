@@ -5,7 +5,7 @@
 - **Purpose**: Document `clr ps` as a session inspection tool that lists all running Claude Code processes and queued `clr` waiters with per-session metadata in two plain-style tables.
 - **Responsibility**: Define acceptance criteria for the session listing command: plain-style table output, elapsed column, queued-sessions table, empty-session state, column presence, help discoverability, typo guard, and self-exclusion.
 - **In Scope**: `clr ps` plain-style table output, `#`/`PID`/`Elapsed`/`CPU%`/`RAM`/`State`/`Absolute Path`/`Task` columns, queued CLR processes table (`#`/`PID`/`CWD`/`Waiting`/`Attempt` columns), no-sessions message, `clr --help` listing, typo-guard for `clr p` / `clr pss`, self-PID exclusion, `$PRO` path shortening in Absolute Path and CWD columns, gate state files written by `gate.rs`, `CLR_GATE_DIR` override.
-- **Out of Scope**: Session termination (kill — future task), filtering by state or path, watch/auto-refresh mode, non-Linux platforms.
+- **Out of Scope**: Filtering by state or path, watch/auto-refresh mode, non-Linux platforms. (Session termination implemented as `clr kill` in US-027 / TSK-201.)
 
 ### Persona
 
