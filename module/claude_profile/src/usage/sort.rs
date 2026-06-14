@@ -401,6 +401,7 @@ mod tests
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned      : true,
       }
     };
     let accounts = vec![

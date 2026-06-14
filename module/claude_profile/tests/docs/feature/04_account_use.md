@@ -15,6 +15,8 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 | FT-07 | `oauthAccount.emailAddress` enforced; org fields overridden from `{name}.json` | AC-07 |
 | FT-08 | Model preference restored from `{name}.json`; cleared when absent | AC-08 |
 | FT-09 | emailAddress patched unconditionally even when `{name}.json` absent | AC-09 |
+| FT-10 | Non-owned account: `.account.use` exits 1 with ownership violation message | AC-10 |
+| FT-11 | Ownership check fires before `dry::1` — exits 1 even with `dry::1` set | AC-11 |
 
 ### Test Case Index
 
@@ -29,8 +31,10 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 | FT-07 | `emailAddress` enforced as account name; org fields from `{name}.json` | AC-07 | oauthAccount |
 | FT-08 | Model preference restored from `{name}.json`; cleared when absent | AC-08 | Model Restore |
 | FT-09 | emailAddress patched unconditionally even when `{name}.json` absent | AC-09 | oauthAccount |
+| FT-10 | Non-owned account exits 1 with ownership violation message | AC-10 | Ownership Guard |
+| FT-11 | Ownership check fires before `dry::1` — exits 1 regardless of dry-run | AC-11 | Ownership Guard |
 
-**Total:** 9 FT cases
+**Total:** 11 FT cases
 
 ---
 
@@ -143,3 +147,27 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **Exit:** 0
 - **Source fn:** `mre_bug254_switch_account_patches_email_when_metadata_absent` (core), `aw12_switch_patches_email_when_metadata_absent` (FT)
 - **Source:** [004_account_use.md AC-09](../../../docs/feature/004_account_use.md)
+
+---
+
+### FT-10: Non-owned account exits 1 with ownership violation message
+
+- **Given:** Account `alice@corp.com` has `{credential_store}/alice@corp.com.json` with `"owner": "other@remote"`. The current machine's `current_identity()` is `"user1@thishost"` — not equal to `"other@remote"`.
+- **When:** `clp .account.use name::alice@corp.com`
+- **Then:** Exits 1. Stderr contains `"ownership violation: this account is owned by other@remote"`. `switch_account()` is NOT called — no credential files are modified. The `_active` marker is unchanged.
+- **Exit:** 1
+- **Source fn:** `ft08_use_exits_1_when_not_owned` (in `tests/cli/account_mutations_test.rs`)
+- **Note:** G5 ownership gate from Feature 036 AC-08. Shared with Feature 036 FT-08 — same test function, both specs reference it.
+- **Source:** [004_account_use.md AC-10](../../../docs/feature/004_account_use.md)
+
+---
+
+### FT-11: Ownership check fires before `dry::1` — exits 1 even with `dry::1` set
+
+- **Given:** Account `alice@corp.com` is owned by `"other@remote"`. Current identity ≠ `"other@remote"`.
+- **When:** `clp .account.use name::alice@corp.com dry::1`
+- **Then:** Exits 1. The ownership violation message is printed to stderr. The `[dry-run] would switch to 'alice@corp.com'` message is NOT printed — dry-run output is suppressed when ownership check fails. No files are modified.
+- **Exit:** 1
+- **Source fn:** `ft13_dry_run_does_not_skip_ownership` (in `tests/cli/account_mutations_test.rs`)
+- **Note:** G5 + dry-run ordering gate from Feature 036 AC-13. The ownership guard runs before `dry::1` evaluation — preventing false "would succeed" signals on non-owned accounts.
+- **Source:** [004_account_use.md AC-11](../../../docs/feature/004_account_use.md)

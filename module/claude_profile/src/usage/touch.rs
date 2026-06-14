@@ -41,6 +41,13 @@ pub( crate ) fn apply_touch(
   effort           : SubprocessEffort,
 )
 {
+  // G4: Non-owned accounts are never touched — subprocess spawning on foreign credentials forbidden.
+  if !aq.is_owned
+  {
+    if trace { eprintln!( "[trace] touch  {}  skipped (reason: not owned)", aq.name ); }
+    return;
+  }
+
   // Guard: errored accounts are never touched; trigger requires valid quota data.
   // Fix(BUG-202): bare return produced no trace for error-tier accounts.
   // Root cause: error guard preceded all trace emission points (lines 1506-1510).

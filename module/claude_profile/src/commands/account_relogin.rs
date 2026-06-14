@@ -48,6 +48,17 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   crate::account::check_switch_preconditions( &name, &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account relogin" ) )?;
 
+  // G7: Ownership guard — non-owned accounts cannot be re-authenticated from this machine.
+  // Runs before dry::1 so that dry-run still exits 1 on ownership violation.
+  let owner = crate::account::read_owner( &credential_store, &name );
+  if !crate::account::is_owned( &owner )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "ownership violation: this account is owned by {owner}" ),
+    ) );
+  }
+
   // Snapshot original active — best-effort; None when marker absent.
   let original_active = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) )
     .ok()
@@ -99,7 +110,8 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   if updated
   {
     // Persist the refreshed credentials into the account store.
-    crate::account::save( &name, &credential_store, &paths, true, None, None, None )
+    // Pass owner: None — preserve existing owner field unchanged (background save).
+    crate::account::save( &name, &credential_store, &paths, true, None, None, None, None )
       .map_err( |e| io_err_to_error_data( &e, "account relogin: save" ) )?;
   }
 

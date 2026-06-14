@@ -55,6 +55,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
 
@@ -90,6 +91,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -120,6 +122,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -166,6 +169,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -198,6 +202,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -235,6 +240,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
       AccountQuota
       {
@@ -250,6 +256,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
       AccountQuota
       {
@@ -265,6 +272,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
       AccountQuota
       {
@@ -280,6 +288,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
 
@@ -323,6 +332,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -378,6 +388,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
 
@@ -457,6 +468,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
 
@@ -502,6 +514,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -541,6 +554,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
 
@@ -586,6 +600,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -641,6 +656,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
     // Must not panic — switch_account fails (no cred file), trace logs to stderr.
@@ -766,6 +782,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
     // Must not panic — switch_account succeeds; run_isolated invoked; fails fast (fake creds).
@@ -797,6 +814,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
 
@@ -837,6 +855,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
 
@@ -958,6 +977,7 @@
         renewal_at    : None,
         cached        : false,
         cache_age_secs : None,
+        is_owned       : true,
       },
     ];
 

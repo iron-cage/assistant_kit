@@ -146,13 +146,24 @@
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | mre_bug209 | `mre_bug_209_account_save_uses_active_marker_not_stale_email` | `.account.save` reads `_active` marker, not stale `emailAddress` | P |
+//! | `mre_bug209` | `mre_bug_209_account_save_uses_active_marker_not_stale_email` | `.account.save` reads `_active` marker, not stale email address | P |
+//!
+//! ### AO — Account Ownership (Feature 036)
+//!
+//! | ID | Test Function | Condition | P/N |
+//! |----|---------------|-----------|-----|
+//! | ao01 | `ft03_no_owner_param_registered` | `.account.save.help` lists `unclaim` but NOT `owner::` (structural) | P |
+//! | ao02 | `ft08_use_exits_1_when_not_owned` | `.account.use` with non-owned account → exit 1, "ownership violation" | N |
+//! | ao03 | `ft09_delete_exits_1_when_not_owned` | `.account.delete` with non-owned account → exit 1, "ownership violation" | N |
+//! | ao04 | `ft10_relogin_exits_1_when_not_owned` | `.account.relogin` with non-owned account → exit 1, "ownership violation" | N |
+//! | ao05 | `ft13_dry_run_does_not_skip_ownership` | `dry::1` on use/delete/relogin with non-owned → exit 1 (ownership before dry) | N |
 
 use crate::cli_runner::{
   run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
   write_credentials, write_account, write_claude_json, account_exists,
   write_account_claude_json, write_account_settings_json, write_account_roles_json,
+  write_account_owner,
   live_active_token, write_account_with_token, require_live_api,
   FAR_FUTURE_MS,
 };
@@ -3774,4 +3785,172 @@ fn arc02_clear_preserves_oauth_account_content()
     content.contains( "subscriptionType" ),
     "clear::1 must preserve nested oauthAccount.subscriptionType (051 EC-3), got: {content}",
   );
+}
+
+// ── AO: Account Ownership (Feature 036) ────────────────────────────────────
+
+/// FT-03 (AC-03): No `owner::` CLI parameter exists — only `unclaim::`.
+///
+/// Structural assertion: `.account.save.help` lists `unclaim` but does NOT
+/// expose `owner::` as a user-settable parameter.
+///
+/// Spec: [`tests/docs/feature/036_account_ownership.md` FT-03]
+#[ test ]
+fn ft03_no_owner_param_registered()
+{
+  let out = run_cs( &[ ".account.save.help" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "unclaim" ),
+    "FT-03: help must list `unclaim` parameter; got:\n{text}",
+  );
+  assert!(
+    !text.contains( "owner::" ),
+    "FT-03: help must NOT list `owner::` parameter; got:\n{text}",
+  );
+}
+
+/// FT-08 (AC-08): `.account.use` exits 1 when account not owned.
+///
+/// G5 gate: `read_owner()` returns `"other@remote"`, `is_owned()` returns
+/// `false`, command exits 1 with `"ownership violation"` message.
+///
+/// Spec: [`tests/docs/feature/036_account_ownership.md` FT-08]
+#[ test ]
+fn ft08_use_exits_1_when_not_owned()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "ownership violation" ),
+    "FT-08: stderr must contain 'ownership violation'; got:\n{err}",
+  );
+  assert!(
+    err.contains( "other@remote" ),
+    "FT-08: stderr must name the owning identity; got:\n{err}",
+  );
+}
+
+/// FT-09 (AC-09): `.account.delete` exits 1 when account not owned.
+///
+/// G6 gate: non-owned account cannot be deleted from this machine.
+///
+/// Spec: [`tests/docs/feature/036_account_ownership.md` FT-09]
+#[ test ]
+fn ft09_delete_exits_1_when_not_owned()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  let out = run_cs_with_env(
+    &[ ".account.delete", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "ownership violation" ),
+    "FT-09: stderr must contain 'ownership violation'; got:\n{err}",
+  );
+  assert!(
+    err.contains( "other@remote" ),
+    "FT-09: stderr must name the owning identity; got:\n{err}",
+  );
+  assert!(
+    account_exists( dir.path(), "alice@acme.com" ),
+    "FT-09: credential file must NOT be deleted when ownership check fails",
+  );
+}
+
+/// FT-10 (AC-10): `.account.relogin` exits 1 when account not owned.
+///
+/// G7 gate: non-owned account cannot be re-authenticated from this machine.
+///
+/// Spec: [`tests/docs/feature/036_account_ownership.md` FT-10]
+#[ test ]
+fn ft10_relogin_exits_1_when_not_owned()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  let out = run_cs_with_env(
+    &[ ".account.relogin", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "ownership violation" ),
+    "FT-10: stderr must contain 'ownership violation'; got:\n{err}",
+  );
+  assert!(
+    err.contains( "other@remote" ),
+    "FT-10: stderr must name the owning identity; got:\n{err}",
+  );
+}
+
+/// FT-13 (AC-13): `dry::1` does NOT skip G5/G6/G7 ownership check.
+///
+/// Ownership guard runs BEFORE dry-run logic. All three commands exit 1
+/// with the ownership violation message; the `[dry-run]` acknowledgment
+/// is NOT printed.
+///
+/// Spec: [`tests/docs/feature/036_account_ownership.md` FT-13]
+#[ test ]
+fn ft13_dry_run_does_not_skip_ownership()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  // G5: .account.use dry::1
+  {
+    let o = run_cs_with_env(
+      &[ ".account.use", "name::alice@acme.com", "dry::1" ],
+      &[ ( "HOME", home ) ],
+    );
+    assert_exit( &o, 1 );
+    let msg = stderr( &o );
+    assert!( msg.contains( "ownership violation" ), "FT-13 G5: stderr must contain 'ownership violation'; got:\n{msg}" );
+    assert!( !stdout( &o ).contains( "[dry-run]" ), "FT-13 G5: dry-run acknowledgment must NOT appear" );
+  }
+
+  // G6: .account.delete dry::1
+  {
+    let o = run_cs_with_env(
+      &[ ".account.delete", "name::alice@acme.com", "dry::1" ],
+      &[ ( "HOME", home ) ],
+    );
+    assert_exit( &o, 1 );
+    let msg = stderr( &o );
+    assert!( msg.contains( "ownership violation" ), "FT-13 G6: stderr must contain 'ownership violation'; got:\n{msg}" );
+    assert!( !stdout( &o ).contains( "[dry-run]" ), "FT-13 G6: dry-run acknowledgment must NOT appear" );
+  }
+
+  // G7: .account.relogin dry::1
+  {
+    let o = run_cs_with_env(
+      &[ ".account.relogin", "name::alice@acme.com", "dry::1" ],
+      &[ ( "HOME", home ) ],
+    );
+    assert_exit( &o, 1 );
+    let msg = stderr( &o );
+    assert!( msg.contains( "ownership violation" ), "FT-13 G7: stderr must contain 'ownership violation'; got:\n{msg}" );
+    assert!( !stdout( &o ).contains( "[dry-run]" ), "FT-13 G7: dry-run acknowledgment must NOT appear" );
+  }
 }

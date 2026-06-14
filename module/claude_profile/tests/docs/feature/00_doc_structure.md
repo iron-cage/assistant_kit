@@ -48,7 +48,7 @@ These are grep-executable and manual validation cases, not automated behavioral 
 
 ---
 
-### DT-04: Sources section present in all 33 feature docs
+### DT-04: Sources section present in all 36 feature docs
 
 - **Scope:** All 36 `docs/feature/*.md` files
 - **Command:** `grep -l "### Sources" docs/feature/*.md | wc -l`

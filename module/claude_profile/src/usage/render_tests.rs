@@ -58,6 +58,7 @@
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
     let accounts = vec![ aq ];
     let cols     = ColsVisibility::default_set();
@@ -128,6 +129,7 @@
         renewal_at            : None,
         cached                : false,
         cache_age_secs        : None,
+        is_owned              : true,
       }
     };
 
@@ -220,6 +222,7 @@
       renewal_at            : None,
       cached                : true,
       cache_age_secs        : Some( 300 ),
+      is_owned              : true,
     };
     let accounts = vec![ aq ];
     let cols     = ColsVisibility::default_set();
@@ -277,6 +280,7 @@
       renewal_at            : None,
       cached                : true,
       cache_age_secs        : Some( 720 ),
+      is_owned              : true,
     };
     let accounts = vec![ aq ];
     let json = render_json( &accounts );
@@ -320,6 +324,7 @@
       renewal_at            : None,
       cached                : true,
       cache_age_secs        : Some( 600 ),
+      is_owned              : true,
     };
     let accounts = vec![ aq ];
     let mut cols = ColsVisibility::default_set();
@@ -382,6 +387,7 @@
       renewal_at            : None,
       cached                : false,
       cache_age_secs        : None,
+      is_owned              : true,
     };
     let accounts = vec![ aq ];
     let cols     = ColsVisibility::default_set();
@@ -412,5 +418,140 @@
     assert_eq!(
       renews_val, "\u{2014}",
       "FT-23: TSV ~Renews must be em-dash for billing_type='none'; got: {renews_val:?}",
+    );
+  }
+
+  // ── Non-owned account display ─────────────────────────────────────────────
+
+  /// FT-05 (AC-05): Non-owned account display — `~` prefix when cache present; Err when absent.
+  ///
+  /// Case A: `is_owned=false, cached=true` with quota data → rendered with `~` prefix.
+  /// Case B: `is_owned=false, cached=false` with Err result → no `~` prefix; error shown.
+  ///
+  /// Spec: [`tests/docs/feature/036_account_ownership.md` FT-05]
+  #[ test ]
+  fn ft05_non_owned_display_tilde_or_dashes()
+  {
+    let cols = ColsVisibility::default_set();
+
+    // Case A: non-owned + cache present → tilde prefix on quota cells (same as any cached row).
+    let aq_cached = AccountQuota
+    {
+      name                  : "alice@test.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage { utilization : 30.0, resets_at : None } ),
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : true,
+      cache_age_secs        : Some( 600 ),
+      is_owned              : false,
+    };
+    let text_a = render_text(
+      &[ aq_cached ],
+      SortStrategy::Name, None, PreferStrategy::Any,
+      NextStrategy::Endurance, &cols,
+    );
+    assert!(
+      text_a.contains( '~' ),
+      "FT-05 case A: non-owned cached row must show ~ prefix; got:\n{text_a}",
+    );
+
+    // Case B: non-owned + no cache → Err result; no tilde; error indicator shown.
+    let aq_no_cache = AccountQuota
+    {
+      name                  : "bob@test.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Err( "not owned".to_string() ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : false,
+    };
+    let text_b = render_text(
+      &[ aq_no_cache ],
+      SortStrategy::Name, None, PreferStrategy::Any,
+      NextStrategy::Endurance, &cols,
+    );
+    // No tilde prefix when no cache data.
+    assert!(
+      !text_b.contains( "~🟢" ) && !text_b.contains( "~🟡" ) && !text_b.contains( "~🔴" ),
+      "FT-05 case B: non-owned non-cached must not show ~ tilde on status emoji; got:\n{text_b}",
+    );
+    // Error account renders with 🔴 status.
+    assert!(
+      text_b.contains( "🔴" ),
+      "FT-05 case B: non-owned non-cached Err must show 🔴 status; got:\n{text_b}",
+    );
+  }
+
+  /// FT-12 (AC-12): `format::json` includes `"is_owned": true` or `"is_owned": false`.
+  ///
+  /// Spec: [`tests/docs/feature/036_account_ownership.md` FT-12]
+  #[ test ]
+  fn ft12_json_output_includes_is_owned()
+  {
+    let owned = AccountQuota
+    {
+      name                  : "alice@test.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage { utilization : 20.0, resets_at : None } ),
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : true,
+    };
+    let not_owned = AccountQuota
+    {
+      name                  : "bob@test.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Err( "not owned".to_string() ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : false,
+    };
+
+    let json = render_json( &[ owned, not_owned ] );
+
+    assert!(
+      json.contains( "\"is_owned\":true" ),
+      "FT-12: JSON must include '\"is_owned\":true' for owned account; got:\n{json}",
+    );
+    assert!(
+      json.contains( "\"is_owned\":false" ),
+      "FT-12: JSON must include '\"is_owned\":false' for non-owned account; got:\n{json}",
     );
   }

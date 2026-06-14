@@ -210,6 +210,9 @@ pub( crate ) struct AccountQuota
   pub( crate ) cached                : bool,
   /// Seconds since last successful fetch; present only when `cached == true`.
   pub( crate ) cache_age_secs        : Option< u64 >,
+  /// `true` when `owner` in `{name}.json` is empty or matches `current_identity()`.
+  /// `false` for accounts owned by a different machine — G1–G7 enforcement gates apply.
+  pub( crate ) is_owned              : bool,
 }
 
 // ── Command handler ────────────────────────────────────────────────────────────

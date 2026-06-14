@@ -336,6 +336,7 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
     let is_current_str            = if aq.is_current            { "true" } else { "false" };
     let is_active_str             = if aq.is_active             { "true" } else { "false" };
     let is_occupied_elsewhere_str = if aq.is_occupied_elsewhere { "true" } else { "false" };
+    let is_owned_str              = if aq.is_owned              { "true" } else { "false" };
     let expires_in_secs  = ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs );
     let billing_type_str = aq.account.as_ref()
       .map_or_else( || "null".to_string(), |a| format!( "\"{}\"", json_escape( &a.billing_type ) ) );
@@ -387,7 +388,7 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
         };
         format!(
           "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
-\"is_occupied_elsewhere\":{is_occupied_elsewhere_str},\
+\"is_occupied_elsewhere\":{is_occupied_elsewhere_str},\"is_owned\":{is_owned_str},\
 \"expires_in_secs\":{expires_in_secs},\
 \"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\
 \"renewal_secs\":{renewal_secs_str},\"renewal_is_estimate\":{renewal_is_estimate_str},\
@@ -415,7 +416,7 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
         };
         format!(
           "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
-\"is_occupied_elsewhere\":{is_occupied_elsewhere_str},\
+\"is_occupied_elsewhere\":{is_occupied_elsewhere_str},\"is_owned\":{is_owned_str},\
 \"expires_in_secs\":{expires_in_secs},\
 \"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\
 \"renewal_secs\":{renewal_secs_str},\"renewal_is_estimate\":{renewal_is_estimate_str},\

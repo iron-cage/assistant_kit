@@ -89,6 +89,50 @@ pub( crate ) fn fetch_quota_for_list(
       std::thread::sleep( core::time::Duration::from_millis( 200 + nanos % 1301 ) ); // 200..=1500 ms
     }
 
+    // G1: Non-owned accounts bypass token read + HTTP; read cache directly.
+    // Root cause prevented: token read + API call on a foreign-machine account causes
+    //   credential mutations and quota exhaustion without the owner's knowledge.
+    // Pitfall: always check ownership before any read_token() or HTTP call.
+    let owner = claude_profile_core::account::read_owner( credential_store, &acct.name );
+    if !claude_profile_core::account::is_owned( &owner )
+    {
+      if trace { eprintln!( "[trace] fetch  {}  skipped (reason: not owned)", acct.name ); }
+      let ( host, role )                        = read_profile_metadata( credential_store, &acct.name );
+      let renewal_at                            = read_renewal_at( credential_store, &acct.name );
+      let ( result, cached, cache_age_secs ) = match claude_profile_core::account::read_quota_cache( credential_store, &acct.name )
+      {
+        Some( entry ) =>
+        {
+          let age  = cache_age_from_fetched_at( &entry.fetched_at );
+          let data = claude_quota::OauthUsageData
+          {
+            five_hour        : entry.five_hour.map( |( u, r )| claude_quota::PeriodUsage { utilization : u, resets_at : r } ),
+            seven_day        : entry.seven_day.map( |( u, r )| claude_quota::PeriodUsage { utilization : u, resets_at : r } ),
+            seven_day_sonnet : entry.seven_day_sonnet.map( |( u, r )| claude_quota::PeriodUsage { utilization : u, resets_at : r } ),
+          };
+          ( Ok( data ), true, Some( age ) )
+        }
+        None => ( Err( "not owned".to_string() ), false, None ),
+      };
+      results.push( AccountQuota
+      {
+        name                  : acct.name.clone(),
+        is_current            : false,
+        is_active             : acct.is_active,
+        is_occupied_elsewhere : occupied_elsewhere.contains( &acct.name ),
+        expires_at_ms         : acct.expires_at_ms,
+        result,
+        account               : None,
+        host,
+        role,
+        renewal_at,
+        cached,
+        cache_age_secs,
+        is_owned              : false,
+      } );
+      continue;
+    }
+
     // Determine whether this account's stored token matches the live session.
     let is_current = live_token.as_ref().is_some_and( |live|
     {
@@ -214,6 +258,7 @@ pub( crate ) fn fetch_quota_for_list(
       renewal_at,
       cached,
       cache_age_secs,
+      is_owned              : true,
     } );
   }
 
@@ -279,6 +324,7 @@ fn inject_synthetic_row_if_needed(
     renewal_at            : None,
     cached                : false,
     cache_age_secs        : None,
+    is_owned              : true,
   } );
 }
 
@@ -349,7 +395,7 @@ fn parse_u64_field( path : &std::path::Path, key : &str ) -> Option< u64 >
 #[ cfg( test ) ]
 mod tests
 {
-  use super::{ inject_synthetic_if_new, parse_u64_from_str };
+  use super::{ inject_synthetic_if_new, parse_u64_from_str, fetch_quota_for_list };
   use crate::usage::types::AccountQuota;
   use crate::usage::test_support::FAR_FUTURE_MS;
 
@@ -614,6 +660,7 @@ mod tests
       renewal_at           : None,
       cached               : false,
       cache_age_secs       : None,
+      is_owned             : true,
     };
     let mut results = vec![ stored_row ];
 
@@ -631,6 +678,7 @@ mod tests
       renewal_at           : None,
       cached               : false,
       cache_age_secs       : None,
+      is_owned             : true,
     };
 
     // Fix(BUG-218): guarded injection — only insert when name is absent from results.
@@ -732,6 +780,93 @@ mod tests
       would_override,
       "BUG-236: billing_type=\"none\" + r=Err must trigger override — cancelled account \
        signals agree (billing=no-sub AND usage=err)",
+    );
+  }
+
+  // ── G1: non-owned accounts bypass token + HTTP; read cache ──────────────────
+
+  /// FT-04 (AC-04): G1 gate — non-owned account skips token read + HTTP; reads cache; `is_owned=false`.
+  ///
+  /// When `{name}.json` has `owner` ≠ `current_identity()`, G1 fires:
+  /// - `read_token()` is NOT called (no credentials path exercise).
+  /// - `fetch_oauth_usage()` is NOT called (no HTTP).
+  /// - Returned `AccountQuota` has `is_owned: false` and `cached: true` from cache JSON.
+  ///
+  /// Pitfall: `live_creds_file` is intentionally absent — live token lookup
+  /// must not block the function; graceful degradation sets `is_current = false`.
+  ///
+  /// Spec: [`tests/docs/feature/036_account_ownership.md` FT-04]
+  #[ test ]
+  fn ft04_non_owned_uses_cache_not_http()
+  {
+    let store = tempfile::TempDir::new().unwrap();
+
+    // Write {name}.json with owner != current_identity() AND a quota cache entry.
+    // "other@remote" is guaranteed to differ from current_identity() (USER@hostname).
+    let meta = serde_json::json!(
+    {
+      "owner" : "other@remote",
+      "cache" :
+      {
+        "fetched_at"  : "2026-06-14T10:00:00Z",
+        "status"      : "ok",
+        "five_hour"   : { "left_pct" : 70.0 }
+      }
+    } );
+    std::fs::write(
+      store.path().join( "alice@test.com.json" ),
+      serde_json::to_string( &meta ).unwrap(),
+    ).unwrap();
+
+    // Credentials file must exist for the account struct to be valid.
+    std::fs::write(
+      store.path().join( "alice@test.com.credentials.json" ),
+      r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
+    ).unwrap();
+
+    let accounts = vec![ crate::account::Account
+    {
+      name              : "alice@test.com".to_string(),
+      subscription_type : "pro".to_string(),
+      rate_limit_tier   : String::new(),
+      expires_at_ms     : u64::MAX / 2,
+      is_active         : false,
+      email             : String::new(),
+      display_name      : String::new(),
+      role              : String::new(),
+      billing           : String::new(),
+      model             : String::new(),
+      tagged_id         : String::new(),
+      uuid              : String::new(),
+      capabilities      : Vec::new(),
+      organization_uuid : String::new(),
+      organization_name : String::new(),
+      organization_role : String::new(),
+      workspace_uuid    : String::new(),
+      workspace_name    : String::new(),
+      profile_host      : String::new(),
+      profile_role      : String::new(),
+    } ];
+
+    // live_creds_file absent → graceful degradation; is_current=false for all accounts.
+    let absent_live = store.path().join( ".absent_credentials.json" );
+
+    let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false );
+
+    assert_eq!( results.len(), 1, "FT-04: must return exactly 1 AccountQuota for 1 account" );
+    let aq = &results[ 0 ];
+    assert!(
+      !aq.is_owned,
+      "FT-04: G1 gate must set is_owned=false for non-owned account; got: {:?}", aq.is_owned,
+    );
+    assert!(
+      aq.cached,
+      "FT-04: G1 gate must read cache (cached=true) for non-owned account; got: {:?}", aq.cached,
+    );
+    // result must be Ok (from cache) — not an HTTP error.
+    assert!(
+      aq.result.is_ok(),
+      "FT-04: G1 gate must return Ok(cache_data) when cache present; got: {:?}", aq.result,
     );
   }
 }

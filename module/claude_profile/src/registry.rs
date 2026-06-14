@@ -99,8 +99,9 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       nam(),
       dry(),
       trc(),
-      reg_arg_opt( "host", Kind::String ).with_description( "Machine label for this account (default: auto-capture `$USER@$HOSTNAME`); written to `{name}.json`" ),
-      reg_arg_opt( "role", Kind::String ).with_description( "User-defined role tag (e.g. `work`, `personal`); written to `{name}.json`" ),
+      reg_arg_opt( "host",    Kind::String  ).with_description( "Machine label for this account (default: auto-capture `$USER@$HOSTNAME`); written to `{name}.json`" ),
+      reg_arg_opt( "role",    Kind::String  ).with_description( "User-defined role tag (e.g. `work`, `personal`); written to `{name}.json`" ),
+      reg_arg_opt( "unclaim", Kind::Boolean ).with_description( "Clear account ownership — write `owner: \"\"` so all machines can operate this account (0=default, 1=unclaim)" ),
     ],
     Box::new( account_save_routine    ) );
   // Registered inline (not via reg_cmd) to add per-command examples — required by feature 015

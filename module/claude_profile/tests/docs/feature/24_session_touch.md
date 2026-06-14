@@ -26,6 +26,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-18 | After `apply_post_switch_touch` re-fetches quota (BUG-288 fix), `apply_touch` skips account as already-active; no second subprocess | AC-03 | BUG-288 Cross-Feature |
 | FT-19 | Account with `touch_idle=false` in quota cache skipped before `all_running` check; no subprocess spawned (BUG-288 Fix B defense-in-depth) | AC-16 | BUG-288 Fix B MRE |
 | FT-20 | `son_running=false` (5h+7d running, Sonnet 7d absent) + `imodel::auto` (Haiku) → touch fires both calls; Sonnet window unchanged; touch re-fires on second call (BUG-289 infinite loop MRE) | AC-02, AC-15 | BUG-289 MRE |
+| FT-21 | Non-owned account (`aq.is_owned == false`) skipped by `apply_touch`; trace line emitted when `trace::1` | AC-17 | G4 Ownership Gate |
 
 ### Test Case Index
 
@@ -51,8 +52,9 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-18 | apply_post_switch_touch quota re-fetch prevents double subprocess in apply_touch | AC-03 | BUG-288 Cross-Feature |
 | FT-19 | account with touch_idle=false in cache skipped before all_running check — no subprocess (BUG-288 Fix B) | AC-16 | BUG-288 Fix B MRE |
 | FT-20 | son_running=false + imodel::auto (Haiku) fires touch both calls; Sonnet window unchanged; re-fires on second call (BUG-289 MRE) | AC-02, AC-15 | BUG-289 MRE |
+| FT-21 | Non-owned account skipped by apply_touch; trace line emitted (G4 ownership gate) | AC-17 | G4 Ownership Gate |
 
-**Total:** 20 FT cases
+**Total:** 21 FT cases
 
 ---
 
@@ -288,3 +290,15 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Source fn:** `test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call` (in `src/usage/touch_tests.rs`)
 - **Note:** BUG-289 MRE (two-call non-vacuous pattern). Call A anchors non-vacuity (guard fires for `son_running=false`). Call B proves persistence (trigger not cleared — infinite loop). Uses separate stores to avoid state leakage. `claude_paths=None` keeps the test hermetic (no live API calls). Companion positive test: FT-22 in [tests/docs/feature/26_subprocess_model_effort.md](26_subprocess_model_effort.md) — `it_imodel_auto_selects_sonnet_when_son_idle` asserts `resolve_model` returns Sonnet when `son_idle=true` (Fix BUG-289, BUG-290, TSK-292). ✅ Passing.
 - **Source:** [feature/024_session_touch.md AC-02, AC-15](../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-21: Non-owned account (`aq.is_owned == false`) skipped by `apply_touch`; trace line emitted when `trace::1`
+
+- **Given:** `apply_touch` is called with one account (`alice`) whose `AccountQuota` has `is_owned = false` (set by G1 during fetch — `alice.json` contains `"owner": "other@remote"`). `trace::1` is enabled.
+- **When:** `apply_touch` processes the account list containing `alice`.
+- **Then:** No subprocess is spawned for `alice` (`refresh_account_token` is NOT called). Stderr contains `[trace] touch  alice  skipped (reason: not owned)`. The skip fires before any timer checks — `is_owned` is evaluated as the first guard after the error-account check.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** `ft07_touch_skips_non_owned_with_trace` (in `src/usage/touch.rs` `#[cfg(test)]` module)
+- **Note:** G4 ownership gate from Feature 036 AC-07 / Feature 024 AC-17. Shared with Feature 036 FT-07 — same test function, both specs reference it. Trace format matches other touch skip traces (`skipped (reason: not owned)` — see AC-12 for full list of skip reasons).
+- **Source:** [feature/024_session_touch.md AC-17](../../../docs/feature/024_session_touch.md)

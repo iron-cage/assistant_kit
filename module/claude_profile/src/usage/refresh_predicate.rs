@@ -28,6 +28,9 @@ use super::types::AccountQuota;
 /// hit is legitimate; there is nothing to refresh.
 pub( crate ) fn should_refresh( aq : &AccountQuota, now_secs : u64 ) -> bool
 {
+  // G2: Non-owned accounts must never be refreshed — credential mutation forbidden.
+  if !aq.is_owned { return false; }
+
   if matches!( aq.result, Err( ref e ) if e.contains( "401" ) || e.contains( "403" ) )
   {
     return true;
@@ -90,6 +93,7 @@ mod tests
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
     assert!( should_refresh( &aq, 0 ), "401 must trigger refresh" );
   }
@@ -112,6 +116,7 @@ mod tests
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
     assert!( should_refresh( &aq, 0 ), "403 must trigger refresh" );
   }
@@ -138,6 +143,7 @@ mod tests
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
     assert!(
       should_refresh( &aq, 9_999 ),
@@ -166,6 +172,7 @@ mod tests
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
     assert!(
       !should_refresh( &aq, 0 ),
@@ -194,6 +201,7 @@ mod tests
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
     assert!(
       should_refresh( &aq, 5 ),
@@ -222,6 +230,7 @@ mod tests
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
     assert!(
       !should_refresh( &aq, 5 ),
@@ -248,6 +257,7 @@ mod tests
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
     assert!( !should_refresh( &aq, 9_999 ), "Ok result must not trigger refresh" );
   }
@@ -270,6 +280,7 @@ mod tests
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
     assert!( !should_refresh( &aq, 9_999 ), "generic error must not trigger refresh" );
   }
@@ -321,6 +332,7 @@ mod tests
       renewal_at    : None,
       cached        : false,
       cache_age_secs : None,
+      is_owned      : true,
     };
     assert!(
       should_refresh( &aq, 9_999 ),
@@ -375,6 +387,7 @@ mod tests
       renewal_at            : None,
       cached                : true,  // cache fallback used — Err was converted to Ok
       cache_age_secs        : Some( 3600 ),
+      is_owned              : true,
     };
     assert!(
       should_refresh( &aq, 9_999 ),
@@ -405,10 +418,67 @@ mod tests
       renewal_at            : None,
       cached                : true,
       cache_age_secs        : Some( 60 ),
+      is_owned              : true,
     };
     assert!(
       !should_refresh( &aq, 9_999 ),
       "cached account with valid (non-expired) token must NOT trigger refresh",
+    );
+  }
+
+  // ── G2: non-owned accounts must never be refreshed ────────────────────────
+
+  /// FT-06 (AC-06): `should_refresh()` returns `false` when `aq.is_owned == false`.
+  ///
+  /// G2 gate fires before any other check — ownership enforcement is the first guard.
+  /// Even a 401 or locally-expired non-owned account must not trigger refresh.
+  ///
+  /// Spec: [`tests/docs/feature/036_account_ownership.md` FT-06]
+  #[ test ]
+  fn ft06_should_refresh_false_when_not_owned()
+  {
+    // 401 error + not owned → G2 fires first → false.
+    let aq_401 = AccountQuota
+    {
+      name                  : "alice@test.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : 0,
+      result                : Err( "HTTP 401".to_string() ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : false,
+    };
+    assert!(
+      !should_refresh( &aq_401, 9_999 ),
+      "FT-06: G2 — non-owned account with 401 must NOT trigger refresh",
+    );
+
+    // Locally expired + not owned → G2 fires first → false.
+    let aq_expired = AccountQuota
+    {
+      name                  : "alice@test.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : 0,
+      result                : Err( "token expired (local)".to_string() ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : false,
+    };
+    assert!(
+      !should_refresh( &aq_expired, 9_999 ),
+      "FT-06: G2 — non-owned account with locally-expired token must NOT trigger refresh",
     );
   }
 }

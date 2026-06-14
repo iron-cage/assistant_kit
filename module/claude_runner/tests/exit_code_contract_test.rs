@@ -1,3 +1,4 @@
+#![ allow( clippy::doc_markdown ) ] // test doc comments use code identifiers in prose
 //! CLR-Layer Exit Code Contract Integration Tests
 //!
 //! ## Purpose
