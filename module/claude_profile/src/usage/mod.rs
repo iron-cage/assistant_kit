@@ -403,15 +403,15 @@ pub( crate ) mod test_support
     }
   }
 
-  /// Build an `AccountQuota` with the sole-son-trigger condition active.
+  /// Build an `AccountQuota` with `son_idle=true`.
   ///
-  /// Condition: `five_h_running=true AND d7_running=true AND son_idle=true`
+  /// Produces: `five_h_running=true`, `d7_running=true` (absent), `son_idle=true`.
   /// - `five_hour.resets_at=Some(...)` → `five_h_running=true`
-  /// - `seven_day=None` (absent → `d7_running=true` per `resolve_model` semantics)
+  /// - `seven_day=None` (absent → `d7_running=true` per `map_or` semantics)
   /// - `seven_day_sonnet=Some({resets_at:None})` → `son_idle=true`
   ///
-  /// Used by `resolve_model` BUG-289 fix test (`it_imodel_auto_selects_sonnet_for_sole_son_trigger`).
-  pub( crate ) fn mk_aq_with_son_idle_sole_trigger() -> AccountQuota
+  /// Used by `resolve_model` son_idle gate tests (BUG-289/BUG-290 fix).
+  pub( crate ) fn mk_aq_with_son_idle() -> AccountQuota
   {
     AccountQuota
     {

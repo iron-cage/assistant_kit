@@ -13,8 +13,8 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 | EC-5 | `imodel::bad` exits 1, stderr names all five valid values | Invalid Value |
 | EC-6 | `imodel::sonnet` — args contain `--model claude-sonnet-4-6` | Arg Construction |
 | EC-11 | `imodel::haiku` accepted with empty credential store | Valid Value |
-| EC-13 | `imodel::auto` (general quota) — subprocess uses `--model claude-haiku-4-5-20251001` | Behavioral Divergence |
-| EC-14 | `imodel::auto` (sole-son-trigger) — subprocess uses `--model claude-sonnet-4-6` | Behavioral Divergence |
+| EC-13 | `imodel::auto` (`son_idle=false`) — subprocess uses `--model claude-haiku-4-5-20251001` | Behavioral Divergence |
+| EC-14 | `imodel::auto` (`son_idle=true`) — subprocess uses `--model claude-sonnet-4-6` | Behavioral Divergence |
 
 ---
 
@@ -99,22 +99,22 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 
 ---
 
-### EC-13: `imodel::auto` (general quota) — subprocess uses `--model claude-haiku-4-5-20251001`
+### EC-13: `imodel::auto` (`son_idle=false`) — subprocess uses `--model claude-haiku-4-5-20251001`
 
-- **Given:** One account with `five_hour=None` (`five_h_running=false`); sole-son-trigger gate does not fire. `imodel::auto touch::1`.
+- **Given:** One account with `seven_day_sonnet=None` (Sonnet tier absent → `son_idle=false`). `imodel::auto touch::1`.
 - **When:** `clp .usage imodel::auto touch::1 trace::1`
-- **Then:** Exits 0. `resolve_model()` returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Args passed to `run_isolated()` include `--model claude-haiku-4-5-20251001`. Gate requires `five_h_running=true`; absent 5h window → Haiku selected for quota-conserving keep-alive. Verified via unit test `it_imodel_auto_selects_haiku` in `src/usage/subprocess.rs`.
+- **Then:** Exits 0. `resolve_model()` returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. `son_idle = None.is_some_and(...) = false`; `son_idle` gate does NOT fire. Haiku selected for quota-conserving keep-alive. Verified via unit test `it_imodel_auto_selects_haiku_when_son_tier_absent` in `src/usage/subprocess.rs`.
 - **Exit:** 0
-- **Source fn:** `it_imodel_auto_selects_haiku` (in `src/usage/subprocess.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-01 FT-01](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source fn:** `it_imodel_auto_selects_haiku_when_son_tier_absent` (in `src/usage/subprocess.rs`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01 FT-23](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
-### EC-14: `imodel::auto` (sole-son-trigger) — subprocess uses `--model claude-sonnet-4-6` (BUG-289 fix)
+### EC-14: `imodel::auto` (`son_idle=true`) — subprocess uses `--model claude-sonnet-4-6` (BUG-289/BUG-290 fix)
 
-- **Given:** One account with `five_h_running=true AND d7_running=true AND son_idle=true` (`seven_day_sonnet.resets_at=None` is the sole inactive timer). `imodel::auto touch::1`.
+- **Given:** One account with `son_idle=true` (`seven_day_sonnet=Some({resets_at:None})`); any 5h/7d state. `imodel::auto touch::1`.
 - **When:** `clp .usage imodel::auto touch::1 trace::1`
-- **Then:** Exits 0. `resolve_model()` returns `IsolatedModel::Specific("claude-sonnet-4-6")`. Args passed to `run_isolated()` include `--model claude-sonnet-4-6`. The 7d-Sonnet window activates only on Sonnet-family calls; Haiku cannot start it — `auto` routes to Sonnet to break the infinite per-call no-op loop (BUG-289 fix, TSK-292). Verified via unit test `it_imodel_auto_selects_sonnet_for_sole_son_trigger` in `src/usage/subprocess.rs`.
+- **Then:** Exits 0. `resolve_model()` returns `IsolatedModel::Specific("claude-sonnet-4-6")`. `son_idle=true` → `son_idle` gate fires regardless of 5h/7d state. The 7d-Sonnet window activates only on Sonnet-family calls; a single Sonnet touch opens all idle dimensions simultaneously. Fix(BUG-289, BUG-290, TSK-292). Verified via unit test `it_imodel_auto_selects_sonnet_when_son_idle` in `src/usage/subprocess.rs`.
 - **Exit:** 0
-- **Source fn:** `it_imodel_auto_selects_sonnet_for_sole_son_trigger` (in `src/usage/subprocess.rs`)
+- **Source fn:** `it_imodel_auto_selects_sonnet_when_son_idle` (in `src/usage/subprocess.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01 FT-22](../../../../docs/feature/026_subprocess_model_effort.md)

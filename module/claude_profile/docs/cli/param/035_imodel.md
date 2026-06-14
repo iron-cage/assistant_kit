@@ -10,7 +10,7 @@ Controls which Claude model is used by isolated subprocesses spawned during `tou
 
 | Value | `--model` injected | Selection logic |
 |-------|-------------------|-----------------|
-| `auto` (default) | `claude-haiku-4-5-20251001` (general); `claude-sonnet-4-6` when `son_running=false` sole inactive timer | General keep-alive uses Haiku (quota-preserving); Sonnet when only 7d-Sonnet window needs activation — Haiku cannot start it (BUG-289 fix) |
+| `auto` (default) | `claude-haiku-4-5-20251001` (default); `claude-sonnet-4-6` when `son_idle=true` | Haiku for general session activation; Sonnet whenever Sonnet window present but idle — opens all idle dimensions simultaneously. Fix(BUG-289, BUG-290) |
 | `sonnet` | `claude-sonnet-4-6` | Always Sonnet, regardless of quota |
 | `opus` | `claude-opus-4-6` | Always Opus, regardless of quota |
 | `haiku` | `claude-haiku-4-5-20251001` | Always Haiku — lightweight; no extended thinking (effort::auto → no --effort flag) |
@@ -19,7 +19,7 @@ Controls which Claude model is used by isolated subprocesses spawned during `tou
 **Examples:**
 
 ```text
-imodel::auto     → --model claude-haiku-4-5-20251001 (default; general keep-alive) or --model claude-sonnet-4-6 (when son_running=false is sole inactive timer)
+imodel::auto     → --model claude-haiku-4-5-20251001 (default) or --model claude-sonnet-4-6 (when son_idle=true)
 imodel::sonnet   → always --model claude-sonnet-4-6
 imodel::opus     → always --model claude-opus-4-6
 imodel::haiku    → always --model claude-haiku-4-5-20251001
@@ -27,7 +27,7 @@ imodel::keep     → no --model flag injected
 ```
 
 **Notes:**
-- `auto` selects Haiku for general keep-alive pings (5h and 7d activation) — conserves Sonnet and Opus quota. **Exception (BUG-289 fix):** selects Sonnet when `seven_day_sonnet.resets_at=None` is the sole inactive timer (`five_h_running=true AND d7_running=true AND son_idle=true`) — the 7d-Sonnet window only activates on Sonnet-family API calls; Haiku cannot start it.
+- `auto` selects Haiku by default — conserves Sonnet and Opus quota. **`son_idle` gate (BUG-289/BUG-290 fix):** selects Sonnet whenever `son_idle=true` (`seven_day_sonnet` present AND `resets_at=None`), regardless of 5h or 7d state — the 7d-Sonnet window only activates on Sonnet-family API calls; a single Sonnet touch opens all idle dimensions simultaneously.
 - On `.usage`: applies to both `touch::` and `refresh::` subprocess calls within the same invocation.
 - On `.account.use`: applies to the single post-switch subprocess spawned when `touch::1` and the target account is idle.
 - Has no effect when no subprocess is spawned (`.usage` with neither `touch::1` nor `refresh::1` active; `.account.use` with `touch::0` or target already active).

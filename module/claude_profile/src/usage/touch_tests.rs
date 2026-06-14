@@ -798,17 +798,17 @@ fn it_apply_touch_trigger_skips_resets_at_some()
 /// # Fix Applied
 ///
 /// TSK-292 (BUG-289): `resolve_model` now reads `aq.result` in the `Auto` arm.
-/// When `five_h_running AND d7_running AND son_idle`, returns `Specific("claude-sonnet-4-6")`
-/// instead of Haiku (sole-son-trigger gate). Sonnet-family API calls activate the
+/// When `son_idle=true`, returns `Specific("claude-sonnet-4-6")` instead of Haiku
+/// (`son_idle` gate; Fix: BUG-289, BUG-290). Sonnet-family API calls activate the
 /// 7d-Sonnet window, clearing `son_idle` and breaking the loop.
 ///
 /// # Prevention
 ///
 /// Model-capability interactions must be tested with two-call non-vacuous design: Call A
 /// proves the trigger fires for the given state; Call B proves the state persists (pre-fix
-/// loop proof). The companion test `it_imodel_auto_selects_sonnet_for_sole_son_trigger`
-/// in `subprocess.rs` verifies `resolve_model` returns Sonnet for the sole-son-trigger
-/// condition (BUG-289 positive fix test).
+/// loop proof). The companion test `it_imodel_auto_selects_sonnet_when_son_idle`
+/// in `subprocess.rs` verifies `resolve_model` returns Sonnet when `son_idle=true`
+/// (BUG-289 positive fix test).
 ///
 /// # Pitfall
 ///

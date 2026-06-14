@@ -402,5 +402,5 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - The structural test verifies that `usage_routine()` calls `apply_model_override` after the touch loop for the current account (source position assertion or direct call test).
 - **Exit:** n/a (unit test)
 - **Note:** Fix for BUG-244. The model override was previously only reachable from `.account.use` (`account_ops.rs`). This test verifies the `.usage` path also applies it. Reuses the existing `apply_model_override()` function (tested by BUG-238 MRE) but validates it is called from the `.usage` pipeline.
-- **Source fn:** `mre_bug244_usage_routine_never_calls_apply_model_override` (in `src/usage/api.rs`)
+- **Source fn:** `mre_bug244_usage_routine_never_calls_apply_model_override` (in `src/usage/api_tests.rs`)
 - **Source:** [009_token_usage.md AC-32](../../../docs/feature/009_token_usage.md)

@@ -267,7 +267,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
 - **Then:** Exits 0. `switched to 'alice@home.com'` on stdout. After the switch, `~/.claude/settings.json` contains `"model": "opus"` (shorthand — BUG-257 write-side fix; `override_session_model_to_opus()` now writes the shorthand convention). The BUG-225 Sonnet→Opus override fires even though the account is already active (no subprocess spawned, but model override still applied). Before the BUG-238 fix: model stayed at `"sonnet"` because `pre_switch_touch_ctx()` returned `None` for active accounts, skipping the override.
 - **Exit:** 0
-- **Source fn:** `mre_bug238_model_override_fires_for_active_account` (in `src/usage/api.rs` `#[cfg(test)]` block) — fixture and assertion updated to shorthand as part of TSK-261 (BUG-257 fix)
+- **Source fn:** `mre_bug238_model_override_fires_for_active_account` (in `src/usage/api_tests.rs`) — fixture and assertion updated to shorthand as part of TSK-261 (BUG-257 fix)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-18](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -291,5 +291,5 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When (failure path):** Re-fetch returns `Err(...)`.
 - **Then (failure path):** Pre-subprocess quota data is preserved; function returns without panicking or aborting the switch. The re-fetch failure is non-aborting.
 - **Exit:** n/a (unit test — no exit code)
-- **Source fn:** `mre_bug288_post_switch_touch_refetch_updates_quota` (structural + no-token failure path) + `it_apply_post_switch_touch_cred_file_absent_skips_refetch` (file-absent failure path) — both in `src/usage/api.rs #[cfg(test)]`
+- **Source fn:** `mre_bug288_post_switch_touch_refetch_updates_quota` (structural + no-token failure path) + `it_apply_post_switch_touch_cred_file_absent_skips_refetch` (file-absent failure path) — both in `src/usage/api_tests.rs`
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-21](../../../docs/feature/027_account_use_post_switch_touch.md)
