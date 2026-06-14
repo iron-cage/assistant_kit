@@ -6,7 +6,7 @@ use std::path::PathBuf;
 //
 // $CLR_GATE_DIR is the single test-injection point; tests override it to a temp
 // dir so IT-10/IT-11 never touch the real /tmp/clr-gate on the host.
-fn gate_dir() -> PathBuf
+pub( super ) fn gate_dir() -> PathBuf
 {
   std::env::var( "CLR_GATE_DIR" )
     .ok()
@@ -15,7 +15,7 @@ fn gate_dir() -> PathBuf
 }
 
 // Return current Unix timestamp in seconds.
-fn unix_now() -> u64
+pub( super ) fn unix_now() -> u64
 {
   std::time::SystemTime::now()
     .duration_since( std::time::UNIX_EPOCH )

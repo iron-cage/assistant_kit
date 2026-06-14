@@ -2,8 +2,7 @@
 //! plain-style tables.
 
 use claude_core::process::{ find_claude_processes, ProcessInfo };
-use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Format };
-use std::path::PathBuf;
+use data_fmt::{ RowBuilder, TableFormatter, TableConfig, TableCaption, Format };
 
 /// Dispatch `clr ps`: list active Claude Code sessions and queued `clr` waiters
 /// in two plain-style tables.
@@ -75,11 +74,17 @@ fn build_active_table( procs : &[ ProcessInfo ] ) -> Option< String >
     builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
   }
 
-  let view  = builder.build_view();
+  let view    = builder.build_view();
+  let caption = TableCaption::new( "Active Sessions" )
+    .field( format!( "{} running", procs.len() ) );
   // auto_wrap: false — prevents word-wrapping long paths across continuation rows;
   // table width reflects content naturally (user scrolls if needed).
   let table = Format::format(
-    &TableFormatter::with_config( TableConfig::plain().auto_wrap( false ) ),
+    &TableFormatter::with_config(
+      TableConfig::plain()
+        .auto_wrap( false )
+        .caption( caption )
+    ),
     &view,
   ).unwrap_or_default();
 
@@ -134,18 +139,10 @@ fn shorten_path( path : &str ) -> String
   path.to_string()
 }
 
-// Return current Unix timestamp in seconds.
-fn unix_now_ps() -> u64
-{
-  std::time::SystemTime::now()
-    .duration_since( std::time::UNIX_EPOCH )
-    .map_or( 0, |d| d.as_secs() )
-}
-
 // Format elapsed seconds since `started_at` as a human-readable duration.
 fn elapsed_label( started_at : u64 ) -> String
 {
-  let elapsed = unix_now_ps().saturating_sub( started_at );
+  let elapsed = super::gate::unix_now().saturating_sub( started_at );
   if elapsed < 60
   {
     format!( "{elapsed}s" )
@@ -220,15 +217,6 @@ fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
   Some( truncated )
 }
 
-// Return the gate state directory — $CLR_GATE_DIR or /tmp/clr-gate.
-fn gate_dir_ps() -> PathBuf
-{
-  std::env::var( "CLR_GATE_DIR" )
-    .ok()
-    .filter( |s| !s.is_empty() )
-    .map_or_else( || PathBuf::from( "/tmp/clr-gate" ), PathBuf::from )
-}
-
 // Extract a string value for `key` from a compact JSON object in `content`.
 fn parse_json_str( content : &str, key : &str ) -> Option< String >
 {
@@ -259,7 +247,7 @@ fn parse_json_u64( content : &str, key : &str ) -> Option< u64 >
 // so substring extraction in parse_json_str is safe in practice.
 fn build_queued_table() -> Option< String >
 {
-  let dir = gate_dir_ps();
+  let dir = super::gate::gate_dir();
   let mut entries : Vec< _ > = std::fs::read_dir( &dir )
     .ok()?
     .flatten()
@@ -270,6 +258,8 @@ fn build_queued_table() -> Option< String >
     .collect();
 
   if entries.is_empty() { return None; }
+
+  let count = entries.len();
 
   // Sort by numeric PID for intuitive output order; string sort mis-orders "1000" < "200".
   entries.sort_by_key( |e|
@@ -312,9 +302,15 @@ fn build_queued_table() -> Option< String >
     builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
   }
 
-  let view  = builder.build_view();
+  let view    = builder.build_view();
+  let caption = TableCaption::new( "Queued" )
+    .field( format!( "{count} waiting" ) );
   let table = Format::format(
-    &TableFormatter::with_config( TableConfig::plain().auto_wrap( false ) ),
+    &TableFormatter::with_config(
+      TableConfig::plain()
+        .auto_wrap( false )
+        .caption( caption )
+    ),
     &view,
   ).unwrap_or_default();
 

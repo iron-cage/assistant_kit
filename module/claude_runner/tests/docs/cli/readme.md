@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 6 clr commands, all 36 parameters, all 12 types, all 4 parameter groups, 2 env parameter specs, 26 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 7 clr commands, all 36 parameters, all 12 types, all 4 parameter groups, 2 env parameter specs, 27 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -25,12 +25,12 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
-| Commands | 6 | ≥8 IT each |
+| Commands | 7 | ≥8 IT each |
 | Parameters | 36 | ≥6 EC each |
 | Parameter groups | 4 | ≥4 CC each |
 | Types | 12 | ≥4 TC each |
 | Env params | 2 | ≥6 EC each |
-| User stories | 26 | ≥4 US each |
+| User stories | 27 | ≥4 US each |
 | Dictionary | 1 | ≥4 DT total |
 
 ### Navigation
@@ -42,6 +42,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`refresh`](command/04_refresh.md)
 - [`ask`](command/05_ask.md)
 - [`ps`](command/06_ps.md)
+- [`kill`](command/07_kill.md)
 
 #### Parameters
 - [`[MESSAGE]`](param/01_message.md)
@@ -128,6 +129,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [Enum Output Validation](user_story/24_enum_output_validation.md)
 - [Session Concurrency Gate](user_story/25_concurrency_gate.md)
 - [Session Listing](user_story/26_session_listing.md)
+- [Session Termination](user_story/27_session_termination.md)
 
 #### Env Params
 - [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)

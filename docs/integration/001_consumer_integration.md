@@ -15,8 +15,8 @@ A consumer workspace is a private workspace that depends on one or more assistan
 
 **Consumer workspace `Cargo.toml` declarations:**
 ```toml
-claude_profile     = { path = "../../claude_tools/dev/module/claude_profile",     version = "~1.0.0" }
-claude_runner_core = { path = "../../claude_tools/dev/module/claude_runner_core", version = "~1.0.0" }
+claude_profile     = { path = "../../claude_tools/dev/module/claude_profile",     version = "^1.0" }
+claude_runner_core = { path = "../../claude_tools/dev/module/claude_runner_core", version = "^1.0" }
 ```
 
 **Required co-location:** Both workspaces must be siblings under the same parent directory for these relative paths to resolve:
@@ -60,13 +60,13 @@ If the co-location requirement is not met, `cargo build` in the consumer workspa
 
 **Production publishing path:** When crates are published to crates.io, replace path deps with registry deps:
 ```toml
-claude_profile     = { version = "1.0.0" }
-claude_runner_core = { version = "1.0.0" }
+claude_profile     = { version = "^1.0" }
+claude_runner_core = { version = "^1.0" }
 ```
 
 The path dep is a development convenience. Publishing assistant crates to crates.io removes the co-location requirement for production users.
 
-**Version constraint:** Use `~1.0.0` (patch-level flexibility). Patch updates to dream crates should not require the consumer workspace's Cargo.toml to be updated. Minor and major version bumps require coordination.
+**Version constraint:** Use `^1.0` (caret, minor-level flexibility — the workspace standard per `crate_distribution.rulebook.md § Cargo Organization : External Dependency Version Format`). Minor updates to dream crates are consumed automatically; major bumps require coordination.
 
 ### Cross-References
 

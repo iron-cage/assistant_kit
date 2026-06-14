@@ -9,6 +9,7 @@ pub( crate ) fn print_help()
   println!( "  clr ask      [OPTIONS] [QUESTION]" );
   println!( "  clr isolated --creds <FILE> [--timeout <SECS>] [--trace] [MESSAGE]" );
   println!( "  clr refresh  --creds <FILE> [--timeout <SECS>] [--trace]" );
+  println!( "  clr kill     <PID>" );
   println!( "  clr help" );
   println!();
   println!( "COMMANDS:" );
@@ -20,6 +21,7 @@ pub( crate ) fn print_help()
   println!( "  isolated                           Run Claude with credential-isolated temp HOME" );
   println!( "  refresh                            Refresh OAuth credentials without running a task" );
   println!( "  ps                                 List running Claude Code sessions" );
+  println!( "  kill                               Terminate a running Claude Code session by PID" );
   println!( "  help                               Print usage information and exit" );
   println!();
   println!( "ARGUMENTS:" );
