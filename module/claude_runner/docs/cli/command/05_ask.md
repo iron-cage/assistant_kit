@@ -31,8 +31,11 @@ No behavioral differences exist between `ask` and `run`.
 |------|---------|
 | 0 | Success |
 | 1 | Error (parse failure, execution error) |
+| 2 | Rate-limit passthrough or rate-limit retries exhausted (`--retry-on-rate-limit` depleted) |
 | 3 | Expect mismatch — output did not match `--expect` values after all retries |
+| 4 | CLR-layer watchdog timeout: subprocess exceeded `--timeout`; stderr contains "Error: timeout after Ns" |
 | N | Passthrough from claude subprocess |
+| 128+signal | Subprocess killed by signal; follows POSIX convention (e.g., SIGTERM → 143, SIGKILL → 137) |
 
 **Examples:**
 

@@ -18,4 +18,4 @@ Per-invariant-doc test case indices for `claude_runner`. See [invariant/readme.m
 | `03_command_naming.md` | Test cases for the command naming invariant | ✅ |
 | `04_trace_universality.md` | Test cases for the trace universality invariant | ✅ |
 | `05_isolated_subprocess_defaults.md` | Test cases for the isolated/refresh subprocess defaults invariant | ✅ |
-| `06_exit_codes.md` | Test cases for the exit code contract invariant | ⏳ |
+| `06_exit_codes.md` | Test cases for the exit code contract invariant | ✅ |

@@ -50,6 +50,9 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--retry-on-rate-limit`](../param/034_retry_on_rate_limit.md) | u8 | `1` | Retry count on transient rate-limit exit (0 = no retry; `QuotaExhausted` never retried) |
 | [`--retry-delay`](../param/035_retry_delay.md) | u32 | `30` | Seconds between rate-limit retries (0 = immediate; ignored when `--retry-on-rate-limit` is 0) |
 | [`--timeout`](../param/036_timeout.md) | u32 | `0` | Seconds before watchdog kills subprocess (0 = unlimited, matching isolated/refresh) |
+| [`--retry-on-api-error`](../param/037_retry_on_api_error.md) | u8 | `0` | Retry count on API error (`"API Error: "` pattern); 0 = no retry; `QuotaExhausted` never retried |
+| [`--api-error-delay`](../param/038_api_error_delay.md) | u32 | `30` | Seconds between API error retries; ignored when `--retry-on-api-error` is 0 |
+| [`--retry-on-unknown-error`](../param/039_retry_on_unknown_error.md) | u8 | `0` | Retry count on unclassified error; 0 = no retry; uses `--retry-delay` for cooldown |
 
 **Execution Modes:**
 
@@ -74,9 +77,10 @@ Use `--new-session` to start fresh.
 |------|---------|
 | 0 | Success |
 | 1 | Error (parse failure, print mode without message, execution error, binary not found) |
-| 2 | Rate-limit passthrough from claude (subprocess exited 2); or runner-generated: watchdog timeout (`--timeout` expiry) / rate-limit retries exhausted (`--retry-on-rate-limit` depleted) |
-| N | Passthrough from claude subprocess (print mode propagates the subprocess exit code exactly) |
+| 2 | Rate-limit passthrough from claude (subprocess exited 2); or runner-generated: rate-limit retries exhausted (`--retry-on-rate-limit` depleted) |
 | 3 | Expect mismatch — output did not match `--expect` values after all retries |
+| 4 | CLR-layer watchdog timeout: subprocess exceeded `--timeout`; stderr contains "Error: timeout after Ns" |
+| N | Passthrough from claude subprocess (print mode propagates the subprocess exit code exactly) |
 | 128+signal | Subprocess killed by signal; follows POSIX convention (e.g., SIGTERM → 143, SIGKILL → 137) |
 
 **Examples:**

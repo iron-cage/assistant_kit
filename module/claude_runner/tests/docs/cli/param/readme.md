@@ -49,6 +49,6 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `34_retry_on_rate_limit.md` | Edge cases for `--retry-on-rate-limit` parameter | ✅ |
 | `35_retry_delay.md` | Edge cases for `--retry-delay` parameter | ✅ |
 | `36_timeout.md` | Edge cases for `--timeout` flag (run/ask) | ✅ |
-| `037_retry_on_api_error.md` | Edge cases for `--retry-on-api-error` parameter | ⏳ |
-| `038_api_error_delay.md` | Edge cases for `--api-error-delay` parameter | ⏳ |
-| `039_retry_on_unknown_error.md` | Edge cases for `--retry-on-unknown-error` parameter | ⏳ |
+| `037_retry_on_api_error.md` | Edge cases for `--retry-on-api-error` parameter | ✅ |
+| `038_api_error_delay.md` | Edge cases for `--api-error-delay` parameter | ✅ |
+| `039_retry_on_unknown_error.md` | Edge cases for `--retry-on-unknown-error` parameter | ✅ |
