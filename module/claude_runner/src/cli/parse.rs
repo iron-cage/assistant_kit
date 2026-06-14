@@ -74,9 +74,12 @@ pub( crate ) struct CliArgs
   pub( crate ) expect_strategy      : Option< ExpectStrategy >,
   pub( crate ) expect_retries       : Option< u8 >,
   pub( crate ) max_sessions         : Option< u32 >,
-  pub( crate ) retry_on_rate_limit  : Option< u8 >,
-  pub( crate ) retry_delay          : Option< u32 >,
-  pub( crate ) timeout              : Option< u32 >,
+  pub( crate ) retry_on_rate_limit    : Option< u8 >,
+  pub( crate ) retry_delay            : Option< u32 >,
+  pub( crate ) timeout                : Option< u32 >,
+  pub( crate ) retry_on_api_error     : Option< u8 >,
+  pub( crate ) api_error_delay        : Option< u32 >,
+  pub( crate ) retry_on_unknown_error : Option< u8 >,
 }
 
 /// Consume the next argv element as a flag's value.
@@ -286,6 +289,24 @@ fn parse_runner_value_flag(
         parse_u32_flag( next_value( tokens, next, "--timeout" )?, "--timeout", " (seconds; 0 = unlimited)" )?
       );
     }
+    "--retry-on-api-error" =>
+    {
+      parsed.retry_on_api_error = Some(
+        parse_u8_bounded( next_value( tokens, next, "--retry-on-api-error" )?, "--retry-on-api-error" )?
+      );
+    }
+    "--api-error-delay" =>
+    {
+      parsed.api_error_delay = Some(
+        parse_u32_flag( next_value( tokens, next, "--api-error-delay" )?, "--api-error-delay", " (seconds)" )?
+      );
+    }
+    "--retry-on-unknown-error" =>
+    {
+      parsed.retry_on_unknown_error = Some(
+        parse_u8_bounded( next_value( tokens, next, "--retry-on-unknown-error" )?, "--retry-on-unknown-error" )?
+      );
+    }
     _ => return Ok( false ),
   }
   Ok( true )
@@ -344,9 +365,12 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       expect_strategy      : None,
       expect_retries       : None,
       max_sessions         : None,
-      retry_on_rate_limit  : None,
-      retry_delay          : None,
-      timeout              : None,
+      retry_on_rate_limit    : None,
+      retry_delay            : None,
+      timeout                : None,
+      retry_on_api_error     : None,
+      api_error_delay        : None,
+      retry_on_unknown_error : None,
     } );
   }
 

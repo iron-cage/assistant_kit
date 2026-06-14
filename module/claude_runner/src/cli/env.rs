@@ -138,5 +138,26 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
       parsed.timeout = v.parse::< u32 >().ok();
     }
   }
+  if parsed.retry_on_api_error.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RETRY_ON_API_ERROR" )
+    {
+      parsed.retry_on_api_error = v.parse::< u8 >().ok();
+    }
+  }
+  if parsed.api_error_delay.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_API_ERROR_DELAY" )
+    {
+      parsed.api_error_delay = v.parse::< u32 >().ok();
+    }
+  }
+  if parsed.retry_on_unknown_error.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RETRY_ON_UNKNOWN_ERROR" )
+    {
+      parsed.retry_on_unknown_error = v.parse::< u8 >().ok();
+    }
+  }
   Ok( () )
 }
