@@ -108,7 +108,7 @@ render results as table
 | `task/claude_profile/bug/215_touch_idle_detection_ignores_7d_and_7d_sonnet_timers.md` | BUG-215 (TSK-218, ✅ Fixed): `apply_touch` trigger checked only `five_hour.resets_at`; 7d and 7d-Sonnet timer absence was ignored — fixed via 3-timer `all_running` check |
 | `task/claude_profile/bug/288_account_use_touch_not_confirmed_usage_double_subprocess.md` | BUG-288 🟢 Fixed (Fix A + Fix B): Fix A — `apply_post_switch_touch` re-fetches quota post-subprocess via `write_quota_cache` (AC-03, Feature 027 AC-21). Fix B — `apply_touch` reads `touch_idle=false` cache flag before `all_running` check as defense-in-depth for API propagation lag; dead write at `api.rs:330-332` now has a read site at `touch.rs:59-66` (TSK-291, AC-16) |
 | `task/claude_profile/bug/289_son_running_false_haiku_touch_infinite_loop.md` | BUG-289 🟢 Fixed (TSK-292): `resolve_model(Auto)` selects Sonnet when `son_idle=true`; `son_idle` gate in `src/usage/subprocess.rs` breaks the infinite per-call loop. |
-| `task/claude_profile/bug/290_resolve_model_auto_two_touch_cold_account.md` | BUG-290 🔴 Unverified: over-constrained BUG-289 gate (`five_h_running AND d7_running AND son_idle`) forced two-touch warm-up for cold accounts. Fix: gate simplified to `son_idle` alone — single Sonnet touch opens 5h, 7d, and Son simultaneously. |
+| `task/claude_profile/bug/290_resolve_model_auto_two_touch_cold_account.md` | BUG-290 🟢 Fixed: over-constrained BUG-289 gate (`five_h_running AND d7_running AND son_idle`) forced two-touch warm-up for cold accounts. Gate simplified to `son_idle` alone — single Sonnet touch opens 5h, 7d, and Son simultaneously. |
 
 ### Dependencies
 
