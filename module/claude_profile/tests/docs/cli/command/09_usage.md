@@ -719,7 +719,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-> **Note:** IT-57 removed — unit test of `status_emoji()` not directly observable via clp output — behavior only verifiable at unit-test level. Unit tests live in `src/usage/format.rs` as `test_status_emoji_and_both_ample_green` and `test_status_emoji_and_7d_low_yellow`.
+> **Note:** IT-57 removed — unit test of `status_emoji()` not directly observable via clp output — behavior only verifiable at unit-test level. Unit tests live in `src/usage/format_tests.rs` as `test_status_emoji_and_both_ample_green` and `test_status_emoji_and_7d_low_yellow`.
 
 ---
 

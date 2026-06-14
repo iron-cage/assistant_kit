@@ -310,7 +310,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-22: `imodel::auto` selects sonnet when `son_idle=true` (5h running, 7d absent)
 
-- **Given:** Account quota data where `five_h_running=true` (`five_hour.resets_at=Some(_)`), `d7_running=true` (7d window absent → `map_or(true, ...)=true`), and `seven_day_sonnet.resets_at=None` (`son_idle=true`). Helper: `mk_aq_with_son_idle()` (renamed from `mk_aq_with_son_idle_sole_trigger`).
+- **Given:** Account quota data where `five_h_running=true` (`five_hour.resets_at=Some(_)`), `d7_running=true` (7d window absent → `map_or(true, ...)=true`), and `seven_day_sonnet.resets_at=None` (`son_idle=true`). Helper: `mk_aq_with_son_idle()`.
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-4-6")`. `son_idle=true` → `son_idle` gate fires. The 7d-Sonnet window activates only on Sonnet-family API calls; Haiku cannot start it. Fix(BUG-289, BUG-290, TSK-292).
 - **Exit:** n/a (unit test)

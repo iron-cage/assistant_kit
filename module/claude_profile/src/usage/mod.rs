@@ -410,7 +410,7 @@ pub( crate ) mod test_support
   /// - `seven_day=None` (absent → `d7_running=true` per `map_or` semantics)
   /// - `seven_day_sonnet=Some({resets_at:None})` → `son_idle=true`
   ///
-  /// Used by `resolve_model` son_idle gate tests (BUG-289/BUG-290 fix).
+  /// Used by `resolve_model` `son_idle` gate tests (BUG-289/BUG-290 fix).
   pub( crate ) fn mk_aq_with_son_idle() -> AccountQuota
   {
     AccountQuota

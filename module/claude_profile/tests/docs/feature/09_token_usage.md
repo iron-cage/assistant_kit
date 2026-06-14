@@ -194,7 +194,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** Per-column emoji formatting applied to each value with its dimension's threshold.
 - **Then:** Values above threshold produce `🟢` prefix; values at or below produce `🟡` prefix. Each dimension uses its own threshold independently.
 - **Exit:** n/a (unit test — string return assertion)
-- **Source fn:** `test_ft11_009_per_column_emoji_prefix_three_cases` (in `src/usage/format.rs`)
+- **Source fn:** `test_ft11_009_per_column_emoji_prefix_three_cases` (in `src/usage/format_tests.rs`)
 - **Source:** [009_token_usage.md AC-21](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -275,7 +275,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `renews_label()` called with the above inputs.
 - **Then:** Returns `"in 3h 47m"` — no `~` prefix, exact duration format.
 - **Exit:** n/a (unit test)
-- **Source fn:** `rl_exact_from_renewal_at`, `rl_estimate_from_org_created_at`, `rl_auto_advance_past_renewal_at`, `rl_absent_returns_question` (in `src/usage/format.rs`)
+- **Source fn:** `rl_exact_from_renewal_at`, `rl_estimate_from_org_created_at`, `rl_auto_advance_past_renewal_at`, `rl_absent_returns_question` (in `src/usage/format_tests.rs`)
 - **Source:** [009_token_usage.md AC-27](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -286,7 +286,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `next_event_label()` called with `seven_day_resets_secs = Some(7200)` (2h), `renewal_secs = None`.
 - **Then:** Returns `"in 2h +7d"` — weekly reset is soonest strategic event.
 - **Exit:** n/a (unit test)
-- **Source fn:** `ne_tok_excluded_after_tsk228`, `ne_7d_soonest`, `ne_renewal_soonest_exact`, `ne_renewal_soonest_estimate`, `ne_all_none_returns_dash` (in `src/usage/format.rs`)
+- **Source fn:** `ne_tok_excluded_after_tsk228`, `ne_7d_soonest`, `ne_renewal_soonest_exact`, `ne_renewal_soonest_estimate`, `ne_all_none_returns_dash` (in `src/usage/format_tests.rs`)
 - **Source:** [009_token_usage.md AC-28](../../../docs/feature/009_token_usage.md)
 
 ---

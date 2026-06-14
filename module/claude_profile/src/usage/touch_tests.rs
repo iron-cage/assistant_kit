@@ -824,7 +824,7 @@ fn it_apply_touch_trigger_skips_resets_at_some()
 fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
 {
   use std::io::Read;
-  use crate::usage::test_support::mk_aq_with_son_idle_sole_trigger;
+  use crate::usage::test_support::mk_aq_with_son_idle;
 
   // Call A: prove the trigger fires for son_running=false (non-vacuity anchor).
   // If the guard were absent, touch would be skipped as "already active" (all_running=true)
@@ -839,7 +839,7 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
 
     // Account state: five_h_running=true, d7_running=true, son_running=false.
     // seven_day=Some({resets_at:Some(...)}) — explicit d7_running (not map_or(true) path).
-    let mut aq_a = mk_aq_with_son_idle_sole_trigger();
+    let mut aq_a = mk_aq_with_son_idle();
     if let Ok( ref mut data ) = aq_a.result
     {
       data.seven_day = Some( claude_quota::PeriodUsage
@@ -871,7 +871,7 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
       r#"{"accessToken":"tok-b","expiresAt":9999999999999}"#,
     ).unwrap();
 
-    let mut aq_b = mk_aq_with_son_idle_sole_trigger();
+    let mut aq_b = mk_aq_with_son_idle();
     if let Ok( ref mut data ) = aq_b.result
     {
       data.seven_day = Some( claude_quota::PeriodUsage

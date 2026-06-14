@@ -168,7 +168,7 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 - **When:** `renews_label(renewal_at_opt, org_created_at_opt, now_secs)` for each.
 - **Then:** A returns `"in Xh Ym"` (no `~` prefix); B returns `"~in Xd"` (with `~` prefix); C returns `"?"`.
 - **Exit:** n/a (unit test)
-- **Source fn:** `rl_exact_from_renewal_at`, `rl_estimate_from_org_created_at`, `rl_absent_returns_question` (in `src/usage/format.rs`)
+- **Source fn:** `rl_exact_from_renewal_at`, `rl_estimate_from_org_created_at`, `rl_absent_returns_question` (in `src/usage/format_tests.rs`)
 - **Source:** [030_account_renewal_override.md AC-11](../../../docs/feature/030_account_renewal_override.md)
 
 ---

@@ -21,6 +21,7 @@
 | `sort_next_tests.rs` | Path-referenced tests for sort_next.rs (find_next_for_strategy, strategy_metric). |
 | `touch_tests.rs` | Path-referenced tests for touch.rs (apply_touch). |
 | `api_tests.rs` | Path-referenced tests for api.rs (pre_switch_touch_ctx, apply_model_override). |
+| `format_tests.rs` | Path-referenced tests for format.rs (shorten_error, status_emoji, quota_text_cells). |
 
 ## Inline Test Exception
 
@@ -30,9 +31,9 @@ would ordinarily belong in `tests/`. This exception applies exclusively to `src/
 and is justified by a visibility constraint.
 
 **Two pattern variants in use:**
-- **Inline blocks** (7 files): `#[cfg(test)] mod tests { ... }` — test code written
+- **Inline blocks** (6 files): `#[cfg(test)] mod tests { ... }` — test code written
   directly in the source file.
-- **Path-referenced files** (5 files: `refresh.rs`, `render.rs`, `sort_next.rs`, `touch.rs`, `api.rs`):
+- **Path-referenced files** (6 files: `format.rs`, `refresh.rs`, `render.rs`, `sort_next.rs`, `touch.rs`, `api.rs`):
   `#[cfg(test)] #[path = "*_tests.rs"] mod tests;` — test code lives in a companion
   `*_tests.rs` file in `src/usage/`. Both variants compile the tests as part of the
   crate module (not as external integration tests) so the visibility constraint is satisfied.

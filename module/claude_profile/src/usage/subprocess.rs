@@ -418,7 +418,7 @@ mod tests
   ///
   /// `seven_day_sonnet=None` → `son_idle = None.is_some_and(...) = false`. Gate does NOT fire → Haiku.
   /// `d7_running` state is irrelevant to new gate.
-  /// Exercises `son=absent(None)` combined with `d7=Some(idle)` — distinct from FT-24 (son_idle=true).
+  /// Exercises `son=absent(None)` combined with `d7=Some(idle)` — distinct from FT-24 (`son_idle=true`).
   ///
   /// Test Matrix extra row: `five_h=running, d7=Some(idle), son=absent` → Haiku.
   ///
