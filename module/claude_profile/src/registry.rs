@@ -123,7 +123,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     .examples( vec![ "clp .account.use alice@acme.com".to_string() ] )
     .end();
     registry
-    .command_add_runtime( &def, Box::new( account_use_routine ) )
+    .register_with_routine( &def, Box::new( account_use_routine ) )
     .expect( "internal error: failed to register .account.use" );
   }
   reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                                   vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name to operate on" ), dry(), trc() ], Box::new( account_delete_routine  ) );
@@ -231,6 +231,6 @@ fn reg_cmd(
   .arguments( args )
   .end();
   registry
-  .command_add_runtime( &def, routine )
+  .register_with_routine( &def, routine )
   .expect( "internal error: failed to register command" );
 }

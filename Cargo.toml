@@ -175,7 +175,7 @@ version = "^0.40"
 default-features = false
 
 [workspace.dependencies.unilang]
-version = "^0.54"
+version = "^0.57"
 features = [ "enabled", "approach_yaml_multi_build" ]
 default-features = false
 

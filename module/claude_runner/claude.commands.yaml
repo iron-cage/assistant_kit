@@ -78,7 +78,7 @@
       description: "Claude timeout in milliseconds (default: 7200000 = 2 hours)"
       hint: "Claude timeout (ms)"
       optional: true
-      default: "7200000"
+      default: 7200000
       validation_rules: []
       aliases: []
       tags: []
@@ -88,7 +88,7 @@
       description: "Show command without executing"
       hint: "Dry run mode"
       optional: true
-      default: "false"
+      default: false
       validation_rules: []
       aliases: []
       tags: []
@@ -98,7 +98,7 @@
       description: "Verbosity level: 0=quiet, 1=normal, 2=verbose, 3=debug, 4=trace, 5=maximum"
       hint: "Verbosity level"
       optional: true
-      default: "2"
+      default: 2
       validation_rules: []
       aliases: ["v"]
       tags: []
@@ -108,7 +108,7 @@
       description: "Append ' ultrathink' to message for deeper analysis"
       hint: "Deep thinking mode"
       optional: true
-      default: "true"
+      default: true
       validation_rules: []
       aliases: []
       tags: []
@@ -118,7 +118,7 @@
       description: "Execution mode: false=non-interactive (print and exit), true=interactive session"
       hint: "Interactive mode"
       optional: true
-      default: "false"
+      default: false
       validation_rules: []
       aliases: []
       tags: []

@@ -91,9 +91,8 @@ mod cli
       if let Some( &routine ) = routines.get( *name )
       {
         let cmd : CommandDefinition = ( *static_cmd ).into();
-        #[ allow( deprecated ) ]
         // Silently skip duplicates (e.g., .status already registered by claude_version)
-        let _ = registry.command_add_runtime( &cmd, Box::new( routine ) );
+        let _ = registry.register_with_routine( &cmd, Box::new( routine ) );
       }
     }
   }

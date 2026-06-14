@@ -46,7 +46,7 @@ fn reg_cmd(
   .arguments( args )
   .end();
   registry
-  .command_add_runtime( &def, routine )
+  .register_with_routine( &def, routine )
   .expect( "internal error: failed to register command" );
 }
 

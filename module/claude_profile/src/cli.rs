@@ -45,7 +45,7 @@ pub( super ) fn build_registry() -> CommandRegistry
     .hidden_from_list( true )
     .end();
     registry
-    .command_add_runtime( &def, Box::new( dot_routine ) )
+    .register_with_routine( &def, Box::new( dot_routine ) )
     .expect( "internal error: failed to register ." );
   }
 

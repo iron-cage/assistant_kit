@@ -37,7 +37,6 @@ fn build_command_registry() -> CommandRegistry
     ".session.ensure" => cli::session_ensure_routine,
   };
 
-  #[ allow( deprecated ) ]
   let mut registry = CommandRegistry::new();
 
   for ( name, static_cmd ) in AGGREGATED_COMMANDS.entries()
@@ -45,8 +44,7 @@ fn build_command_registry() -> CommandRegistry
     if let Some( &routine ) = routines.get( *name )
     {
       let cmd : CommandDefinition = ( *static_cmd ).into();
-      #[ allow( deprecated ) ]
-      if let Err( e ) = registry.command_add_runtime( &cmd, Box::new( routine ) )
+      if let Err( e ) = registry.register_with_routine( &cmd, Box::new( routine ) )
       {
         eprintln!( "WARNING: Failed to register routine for {name}: {e}" );
       }
