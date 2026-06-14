@@ -24,7 +24,7 @@ clr [OPTIONS] [MESSAGE]
 | `command_defaults.md` | Cross-command parameter default matrix and isolated/refresh design targets |
 | `env_param.md` | CLR_* env var fallbacks, CLR_GATE_DIR runtime config, and CLAUDE_CODE_* subprocess vars (39 vars) |
 | `param_group/` | Logical parameter groupings (4 groups) |
-| `type/` | Semantic type definitions (12 types) |
+| `type/` | Semantic type definitions (14 types) |
 | `param/` | Individual parameter reference docs (36 parameters) |
 | `user_story/` | User goal and usage pattern docs (27 user stories) |
 
@@ -36,7 +36,7 @@ clr [OPTIONS] [MESSAGE]
 | command/ (7 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param/ (36 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
-| type/ (12 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| type/ (14 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param_group/ (4 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | user_story/ (27 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | env_param.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
@@ -46,7 +46,7 @@ clr [OPTIONS] [MESSAGE]
 | tests/docs/cli/command/ (7 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param/ (36 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param_group/ (4 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/type/ (12 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/type/ (14 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/env_param/ (2 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/user_story/ (27 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 
@@ -58,7 +58,7 @@ clr [OPTIONS] [MESSAGE]
 
 - [Commands](command/readme.md) — command reference (7 commands)
 - [Parameters](param/readme.md) — flag and argument reference (36 parameters)
-- [Types](type/readme.md) — semantic type definitions (12 types)
+- [Types](type/readme.md) — semantic type definitions (14 types)
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (4 groups)
 - [Dictionary](dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — user goals and usage patterns (27 user stories)

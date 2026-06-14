@@ -70,11 +70,20 @@ invalid values (parse failure → field stays at default).
 | 33 | `CLR_RETRY_DELAY` | [`--retry-delay`](param/035_retry_delay.md) | u32 | Applied when `--retry-delay` absent; invalid values silently ignored (parse failure → field stays at default 30) |
 | 34 | `CLR_TIMEOUT` | [`--timeout`](param/036_timeout.md) | u32 | Applied when `--timeout` absent; `0` = unlimited (no watchdog); invalid values silently ignored. **Cross-command:** also applies to `isolated`/`refresh` via Section 2 (same semantics: `0` = unlimited) |
 
-**Precedence:**
+**Precedence (current — 3 tiers):**
 
 1. CLI flag (wins unconditionally when provided)
 2. `CLR_*` env var (applied when CLI field is absent/at default)
 3. Built-in default
+
+**Precedence (target — 4 tiers):**
+
+1. CLI flag (highest — wins unconditionally)
+2. `CLR_*` env var (applied when env var set and CLI field absent)
+3. Config file (applied when env var absent) — **not yet implemented**
+4. Built-in default (lowest)
+
+Config file tier design: keys use `snake_case` matching CLI `--kebab-case` names (e.g., `retry_on_rate_limit = 1`). File path TBD — candidates: `~/.config/clr/config.toml`, `$CLR_CONFIG` override, `.clr.toml` (project-local). All parameters should be configurable at the config file tier. See [`type/14_error_class.md`](type/14_error_class.md) § Configuration Tiers for the full gap analysis.
 
 **Discovery:** Use `--dry-run` or `--trace` to see effective values after env var application.
 
