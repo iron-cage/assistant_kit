@@ -35,6 +35,7 @@ Captures the current active session credentials as a named account profile in th
 | `host::` | Override store host label for multi-machine profiles | No |
 | `role::` | Annotate account with a role label (e.g. `work`, `personal`) | No |
 | `dry::` | Validate without writing files | No |
+| `unclaim::` | Clear `owner` field — return account to shared/unowned mode | No |
 | `trace::` | Emit diagnostic trace output | No |
 
 ### State Transition Pattern
@@ -53,6 +54,7 @@ Captures the current active session credentials as a named account profile in th
 |------|-------------|
 | [feature/001_account_store_init.md](../../feature/001_account_store_init.md) | Credential store initialization before first save |
 | [feature/002_account_save.md](../../feature/002_account_save.md) | Save algorithm and `{name}.json` read-merge semantics |
+| [feature/036_account_ownership.md](../../feature/036_account_ownership.md) | Owner auto-capture at save time; `unclaim::` clears ownership |
 
 ### Referenced Commands
 

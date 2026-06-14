@@ -49,6 +49,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 33_quota_cache.md | FT cases for Feature 033 — Quota Cache Fallback |
 | 34_explicit_session_model_override.md | FT cases for Feature 034 — Explicit Session Model Override |
 | 35_model_command.md | FT cases for Feature 035 — Dedicated Model Get/Set Command |
+| 36_account_ownership.md | FT cases for Feature 036 — Account Ownership |
 
 ### Coverage Summary
 
@@ -90,8 +91,9 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 033_quota_cache | [033_quota_cache.md](33_quota_cache.md) | FT-01 … FT-11 | ✅ |
 | 034_explicit_session_model_override | [034_explicit_session_model_override.md](34_explicit_session_model_override.md) | FT-01 … FT-11 | ✅ |
 | 035_model_command | [035_model_command.md](35_model_command.md) | FT-01 … FT-12 | ✅ |
+| 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-14 | ⏳ |
 
-**Total:** 36 specs — 35 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+**Total:** 37 specs — 36 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 
 ### Cross-Reference Depth
 

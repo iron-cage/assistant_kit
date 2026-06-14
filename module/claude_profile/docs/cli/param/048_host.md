@@ -16,6 +16,8 @@ clp .account.save host::workstation       -> host stored as "workstation"
 clp .account.save host::laptop role::dev  -> host "laptop", role "dev"
 ```
 
+**Note:** `host::` is a display label only — it does not control ownership or access enforcement. The `owner` field in `{name}.json` (always auto-captured from `current_identity()`, never user-specified) is what governs which identity may operate on the account's credentials. See [feature/036_account_ownership.md](../../feature/036_account_ownership.md).
+
 **See Also:** [feature/029_account_host_metadata.md](../../feature/029_account_host_metadata.md) for profile storage and display.
 
 ### Referenced Type

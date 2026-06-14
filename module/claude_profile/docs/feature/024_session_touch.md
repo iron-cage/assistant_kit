@@ -75,6 +75,8 @@ render results as table
 
 **Interaction with `live::`:** In `live::1` mode, `touch::1` applies on every cycle. If any quota timer lapses between cycles (its `resets_at` becomes absent), touch will re-activate it on the next cycle. Accounts where all three timers remain active are not touched again — only accounts with at least one newly-absent timer are re-activated.
 
+**Ownership gate (G4):** When account ownership is enabled (Feature 036), `apply_touch()` skips accounts where `aq.is_owned == false`. When `trace::1`, emits `[trace] touch  <name>  skipped (reason: not owned)` for each skipped non-owned account. Only the owning identity may send subprocesses with that account's credentials.
+
 **Subprocess cost:** Each touch spawns an isolated Claude Code subprocess (~35s timeout). With N idle accounts, this adds up to N * 35s. This is acceptable for the common case (a few idle accounts) but can be slow when many accounts are idle simultaneously. The parameter is on by default (`touch::1`); pass `touch::0` to suppress subprocess spawning when explicit control is needed.
 
 **Feature gate:** Same as refresh — `#[cfg(feature = "enabled")]`. When `enabled` is absent, `touch::1` is accepted but no subprocess is spawned.
@@ -90,7 +92,8 @@ render results as table
 - **AC-07**: If the touch subprocess fails, the account's row shows its original quota data unchanged (touch failure is non-aborting).
 - **AC-08**: `touch::` does not affect `format::json` output structure — touched accounts appear as normal data objects with their re-fetched quota.
 - **AC-09**: When `trace=true`, every account processed by `apply_touch` emits a `[trace] touch` line: touched accounts show subprocess lifecycle steps (`read credentials`, `run_isolated` with elapsed time, `write credentials`, `save`); accounts skipped because they do not qualify (already active, or errored) emit a `[trace] touch  <name>  skipped (reason: ...)` line.
-- **AC-12**: When `trace=true`, accounts skipped by the touch trigger emit a skip-reason trace line covering all skip cases: all three timers running (already active — skip), h-exhausted (skip), 7d-exhausted (skip), `touch_idle=false` (subprocess already activated — Fix B, BUG-288, see AC-16), and Err result (no valid quota). All skip cases are diagnostically distinct and produce a trace line.
+- **AC-12**: When `trace=true`, accounts skipped by the touch trigger emit a skip-reason trace line covering all skip cases: all three timers running (already active — skip), h-exhausted (skip), 7d-exhausted (skip), `touch_idle=false` (subprocess already activated — Fix B, BUG-288, see AC-16), Err result (no valid quota), and `not owned` (G4 ownership gate — Feature 036). All skip cases are diagnostically distinct and produce a trace line.
+- **AC-17**: `apply_touch()` skips accounts where `aq.is_owned == false` (G4 ownership gate). When `trace::1`, emits `[trace] touch  <name>  skipped (reason: not owned)`. No subprocess is spawned for non-owned accounts. (Feature 036 AC-07.)
 - **AC-10**: `touch::` parameter appears in `.usage --help` output with its default value (`1`).
 - **AC-11**: In `live::1` mode with `touch::1` active, touch runs on every cycle. For each cycle where any quota timer is absent (any session window lapsed since last cycle), the touch trigger fires and a new session is started. The trigger does not fire for accounts where all three timers are present (all windows still active).
 - **AC-15**: Touch trigger checks all three quota window timers — `five_hour.resets_at`, `seven_day.resets_at`, and `seven_day_sonnet.resets_at`. An account qualifies for touch if any of these is absent (None), subject to the h-exhausted and 7d-exhausted skip guards. When the `seven_day` or `seven_day_sonnet` field itself is absent (account plan has no weekly-quota tracking), that dimension is treated as "running" and does not trigger touch — only a field-present timer with `resets_at = None` triggers.
@@ -128,6 +131,7 @@ render results as table
 | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | `imodel::` and `effort::` subprocess parameters apply to touch subprocesses |
 | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch touch on `.account.use` — extends the touch concept to account switching |
 | [033_quota_cache.md](033_quota_cache.md) | Quota cache — persists touch state (`last_touch_at`, `touch_idle`) |
+| [036_account_ownership.md](036_account_ownership.md) | G4: non-owned accounts skipped by `apply_touch()` — ownership gate |
 
 ### Invariants
 

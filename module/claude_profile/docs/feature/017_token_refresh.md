@@ -66,6 +66,8 @@ Two other arg combinations are broken and must not be used:
 - **Empty args `[]`** (TSK-168 regression, [BUG-169](../../../../../task/claude_profile/bug/169_refresh_args_interactive_mode_regression.md)): Claude Code in non-TTY mode with no args detects it has nothing to do and exits immediately, without performing startup OAuth token refresh. The subprocess returns exit 0 but never writes to the credentials file — `run_isolated` returns `credentials: None` for every expired account.
 - **`["--print", ".", "--max-tokens", "1"]`** (original issue-151 bug): `--max-tokens 1` triggers an API rejection before the OAuth exchange can occur. Credentials are never written. See [TSK-151](../../../../../task/claude_profile/completed/151_refresh_failure_message.md).
 
+**Ownership gate (G2/G3):** When account ownership is enabled (Feature 036), `should_refresh()` returns `false` for accounts where `aq.is_owned == false` — a non-owned account's token is never refreshed by the owning machine's absence being circumvented. The `apply_refresh()` loop skips non-owned accounts via this predicate. Non-owned accounts remain on the G1 cache path (see Feature 036).
+
 **Feature gate:** The retry logic is compiled only under `#[cfg(feature = "enabled")]`, matching `fetch_oauth_usage`. When `enabled` is absent, `refresh::1` is accepted as a parameter but no refresh attempt is made (offline builds cannot spawn subprocesses).
 
 **Default is on:** `refresh::1` is the default — every `clp .usage` call automatically retries on 401/403. Use `refresh::0` to explicitly disable. `refresh::0` introduces no subprocess spawn and no credential file writes.
@@ -122,6 +124,7 @@ Two other arg combinations are broken and must not be used:
 | [009_token_usage.md](009_token_usage.md) | Baseline `.usage` algorithm that this extends |
 | [018_live_monitor.md](018_live_monitor.md) | Live monitor mode that composites with `refresh::` |
 | [019_account_relogin.md](019_account_relogin.md) | Browser re-authentication fallback when `refresh_account_token` returns `credentials=None` |
+| [036_account_ownership.md](036_account_ownership.md) | G2/G3: non-owned accounts return `false` from `should_refresh()` — no refresh subprocess spawned |
 | [024_session_touch.md](024_session_touch.md) | Session touch — reuses `refresh_account_token()` subprocess infrastructure |
 | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | `imodel::` and `effort::` apply to refresh subprocesses |
 | `claude_runner_core/docs/feature/004_run_isolated.md` | `run_isolated()` API contract |

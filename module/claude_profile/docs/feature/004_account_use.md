@@ -4,7 +4,7 @@
 
 - **Purpose**: Atomically rotate the active credential set to a named account without credential corruption risk.
 - **Responsibility**: Documents the `account::switch_account()` API and `.account.use` CLI command (FR-9).
-- **In Scope**: Atomic write-then-rename, active marker (`_active_{hostname}_{user}`) update, best-effort `oauthAccount` patch in `~/.claude.json`, not-found guard, dry-run.
+- **In Scope**: Atomic write-then-rename, active marker (`_active_{hostname}_{user}`) update, best-effort `oauthAccount` patch in `~/.claude.json`, not-found guard, dry-run, ownership guard (exit 1 when target account is owned by a different identity — G5 gate from [036_account_ownership.md](036_account_ownership.md)).
 - **Out of Scope**: Selecting which account to switch to (→ 008_auto_rotate.md), process termination (caller responsibility), post-switch subprocess activation (→ 027_account_use_post_switch_touch.md).
 
 ### Design
@@ -28,9 +28,11 @@
 
 **Dry-run mode** (`dry::1`): Print `[dry-run] would switch to '{name}'` without modifying any files.
 
+**Ownership guard (G5):** Before executing any switch steps, `account_use_routine()` reads the `owner` field from `{name}.json`. If `owner` is non-empty and does not match `current_identity()`, the command exits 1 with `"ownership violation: this account is owned by {owner}"`. This check runs before `switch_account()` and before `dry::1` dry-run output — a dry-run on a non-owned account still exits 1. See [036_account_ownership.md](036_account_ownership.md).
+
 **Exit codes:**
 - 0: success
-- 1: invalid name characters (usage error)
+- 1: invalid name characters (usage error) or ownership violation
 - 2: account not found (runtime error)
 - 3: account credentials expired — see [027_account_use_post_switch_touch.md AC-17](027_account_use_post_switch_touch.md) for the expired-token guard added to the post-switch touch path
 
@@ -45,6 +47,8 @@
 - **AC-07**: `.account.use name::alice@acme.com` patches `~/.claude.json oauthAccount.emailAddress` to `'alice@acme.com'` regardless of what the `alice@acme.com.json` snapshot contains — the account name always wins over stored snapshot data. Additionally, `oauthAccount.organizationName` and `oauthAccount.organizationUuid` are overridden from org identity metadata in `alice@acme.com.json` when present and non-empty (BUG-219 fix — prevents stale cross-account org identity from propagating to `~/.claude.json`).
 - **AC-08**: `.account.use name::alice@acme.com` when `{credential_store}/alice@acme.com.json` contains `{"model": "sonnet"}` writes `"model": "sonnet"` into `~/.claude/settings.json` while preserving all other keys; when `alice@acme.com.json` lacks `model`, removes the `model` key from `~/.claude/settings.json` (clearing stale model preference from prior account).
 - **AC-09**: `.account.use name::bob@acme.com` when `{credential_store}/bob@acme.com.json` does not exist still patches `~/.claude.json oauthAccount.emailAddress` to `"bob@acme.com"`. All other `oauthAccount` fields and machine-global keys in `~/.claude.json` are preserved. (BUG-254 regression guard.)
+- **AC-10**: `clp .account.use name::alice@corp.com` when `alice@corp.com.json` has `owner` ≠ `current_identity()` exits 1 with `"ownership violation: this account is owned by {owner}"`. No files are modified. (G5 ownership gate — [036_account_ownership.md](036_account_ownership.md) AC-08.)
+- **AC-11**: Ownership check runs before `dry::1` output — `clp .account.use name::alice@corp.com dry::1` with ownership violation exits 1 without printing the dry-run message.
 
 ### Bugs
 
@@ -73,6 +77,7 @@
 | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch subprocess activation of idle 5h session window; AC-17 adds expiry guard before switch |
 | [032_account_assign.md](032_account_assign.md) | Marker-only write for any `USER@MACHINE` pair — contrast with full credential rotation here |
 | [034_explicit_session_model_override.md](034_explicit_session_model_override.md) | Explicit session model override — `set_model::` runs after switch completes |
+| [036_account_ownership.md](036_account_ownership.md) | G5 ownership gate — exit 1 before switch when account is owned by different identity |
 
 ### Invariants
 
