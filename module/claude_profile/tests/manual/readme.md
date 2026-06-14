@@ -2,7 +2,7 @@
 
 | File | Responsibility |
 |------|----------------|
-| `readme.md` | Manual testing plan: live Claude Code account switching. |
+| `readme.md` | Manual testing plan: account switching, limits, relogin, and ownership. |
 
 ## Manual Testing Plan — Account Rotation
 
@@ -28,7 +28,7 @@
    let persist = claude_profile::PersistPaths::new().expect("HOME set");
    let credential_store = persist.credential_store();
    let paths = claude_profile::ClaudePaths::new().expect("HOME set");
-   claude_profile::account::save("work@acme.com", &credential_store, &paths, true, None, None, None).expect("save");
+   claude_profile::account::save("work@acme.com", &credential_store, &paths, true, None, None, None, None).expect("save");
    ```
    Verify: `~/.persistent/claude/credential/work@acme.com.credentials.json` exists and matches active credentials.
 
@@ -56,7 +56,7 @@
    Verify: Returns `Valid` or `ExpiringSoon` (not `Expired`) after a fresh switch.
 
 6. **Delete inactive account**
-   - Save a second account: `account::save("temp@test.com", &credential_store, &paths, true, None, None, None).expect("save")`
+   - Save a second account: `account::save("temp@test.com", &credential_store, &paths, true, None, None, None, None).expect("save")`
    - Delete it: `account::delete("temp@test.com", &credential_store).expect("delete")`
    - Verify: `~/.persistent/claude/credential/temp@test.com.credentials.json` is gone
 
@@ -146,3 +146,90 @@ clp .account.relogin name::carol@example.com
 ```
 
 Expected: stderr diagnostic "credentials unchanged"; exit 3 (not 0 or 2).
+
+---
+
+## Manual Testing Plan — Account Ownership (Feature 036)
+
+**Trigger:** After any change to `account::save` owner handling, `account::read_owner`,
+`account::is_owned`, `account::current_identity`, G1–G7 enforcement gates, or
+the `unclaim::` parameter.
+
+**Automated tests:** FT-01..FT-14, EC-01..EC-05, CC-1..CC-9 cover all code paths
+mechanically. The scenarios below require two physical machines (or two user accounts
+on the same machine) sharing a credential store — cannot be automated.
+
+### Prerequisites
+
+- Two machines (A and B) sharing `~/.persistent/claude/credential/` via file sync
+- Valid `~/.claude/.credentials.json` on machine A with a Claude Max session
+- `clp` binary compiled with `--features enabled` on both machines
+- Machine A identity: `userA@hostA` (verify: `echo "$USER@$(hostname)"`)
+- Machine B identity: `userB@hostB`
+
+### IT-8: Save on machine A → owned by A
+
+```
+# On machine A:
+clp .account.save name::shared@team.com
+cat ~/.persistent/claude/credential/shared@team.com.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('owner','MISSING'))"
+```
+
+Expected: owner field shows `userA@hostA`. Exit 0.
+
+### IT-9: Machine B blocked from `.account.use` on A's account
+
+```
+# On machine B (credential store synced):
+clp .account.use name::shared@team.com
+```
+
+Expected: exit 1. Stderr: `"ownership violation: this account is owned by userA@hostA"`.
+
+### IT-10: Machine B blocked from `.account.delete` on A's account
+
+```
+# On machine B:
+clp .account.delete name::shared@team.com
+```
+
+Expected: exit 1. Stderr: `"ownership violation: this account is owned by userA@hostA"`.
+Credential files remain intact.
+
+### IT-11: `.usage` on machine B shows cached quota for A's account
+
+```
+# On machine B:
+clp .usage
+```
+
+Expected: exit 0. `shared@team.com` row shows `~` prefixed quota values with
+`(Xm ago)` age indicator (from cache). No HTTP call made for this account.
+
+### IT-12: Unclaim on machine A → machine B can use
+
+```
+# On machine A:
+clp .account.save name::shared@team.com unclaim::1
+cat ~/.persistent/claude/credential/shared@team.com.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('owner','MISSING'))"
+# On machine B (after sync):
+clp .account.use name::shared@team.com
+```
+
+Expected: owner shows empty string after unclaim. Machine B `.account.use` succeeds (exit 0).
+
+### IT-13: Re-save on machine B → ownership transfers to B
+
+```
+# On machine B:
+clp .account.save name::shared@team.com
+cat ~/.persistent/claude/credential/shared@team.com.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('owner','MISSING'))"
+```
+
+Expected: owner field now shows `userB@hostB`. Machine A is now blocked.
+
+### Expected Outcome
+
+All scenarios succeed with correct exit codes. Ownership enforcement prevents
+cross-machine credential mutation while allowing cache reads. Unclaim correctly
+disables all enforcement.

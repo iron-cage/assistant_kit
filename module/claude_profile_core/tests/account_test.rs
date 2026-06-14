@@ -63,6 +63,12 @@
 //! | `ec3_default_sets_owner_to_current_identity` | default save writes current_identity() as owner |
 //! | `ec4_unclaim_preserves_other_fields` | unclaim::1 clears owner only; host/role preserved via read-merge |
 //! | `ec5_unclaim_dry_run_no_write` | dry-run: without save() call, existing owner is unchanged |
+//! | `cc1_read_owner_missing_file` | read_owner on missing {name}.json → "" (safe fallback) |
+//! | `cc2_read_owner_empty_file` | read_owner on empty file → "" |
+//! | `cc3_read_owner_corrupt_content` | read_owner on non-JSON content → "" |
+//! | `cc4_read_owner_null_value` | read_owner with "owner": null → "" |
+//! | `cc5_read_owner_numeric_value` | read_owner with "owner": 42 → "" |
+//! | `cc6_background_save_new_account_no_owner` | background save on new account (owner:None) → no owner field |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -1532,4 +1538,112 @@ fn ec5_unclaim_dry_run_no_write()
     owner, "alice@host1",
     "EC-5: dry-run must not change owner; without save() call owner is preserved; got: {owner:?}",
   );
+}
+
+// ── Ownership: corner-case resilience ─────────────────────────────────────────
+
+/// CC-1: `read_owner` with missing `{name}.json` file → returns "".
+///
+/// When the metadata file does not exist, `read_owner` must return an empty
+/// string so that `is_owned()` returns `true` (all gates pass). This prevents
+/// a missing file from blocking operations on legacy accounts that predate
+/// the ownership feature.
+#[ test ]
+fn cc1_read_owner_missing_file()
+{
+  let tmp = TempDir::new().unwrap();
+  // No file created — store is empty.
+  let owner = account::read_owner( tmp.path(), "nonexistent@test.com" );
+  assert_eq!( owner, "", "CC-1: read_owner on missing file must return empty string; got: {owner:?}" );
+  assert!( account::is_owned( &owner ), "CC-1: missing file must pass is_owned() gate" );
+}
+
+/// CC-2: `read_owner` with empty file → returns "".
+///
+/// An empty `{name}.json` has no parseable `owner` field. `parse_string_field`
+/// returns `None` and `read_owner` falls through to the default empty string.
+#[ test ]
+fn cc2_read_owner_empty_file()
+{
+  let tmp = TempDir::new().unwrap();
+  std::fs::write( tmp.path().join( "alice@test.com.json" ), "" ).unwrap();
+  let owner = account::read_owner( tmp.path(), "alice@test.com" );
+  assert_eq!( owner, "", "CC-2: read_owner on empty file must return empty string; got: {owner:?}" );
+  assert!( account::is_owned( &owner ), "CC-2: empty file must pass is_owned() gate" );
+}
+
+/// CC-3: `read_owner` with corrupt (non-JSON) content → returns "".
+///
+/// Binary/garbage content must not panic; `parse_string_field` finds no match
+/// and returns `None`, producing the safe default.
+#[ test ]
+fn cc3_read_owner_corrupt_content()
+{
+  let tmp = TempDir::new().unwrap();
+  std::fs::write( tmp.path().join( "alice@test.com.json" ), "<<<not json at all>>>" ).unwrap();
+  let owner = account::read_owner( tmp.path(), "alice@test.com" );
+  assert_eq!( owner, "", "CC-3: read_owner on corrupt content must return empty string; got: {owner:?}" );
+  assert!( account::is_owned( &owner ), "CC-3: corrupt content must pass is_owned() gate" );
+}
+
+/// CC-4: `read_owner` with `"owner": null` (JSON null) → returns "".
+///
+/// `parse_string_field` checks for a leading `"` after the colon; `null` does
+/// not start with `"`, so it returns `None` → safe default.
+#[ test ]
+fn cc4_read_owner_null_value()
+{
+  let tmp = TempDir::new().unwrap();
+  std::fs::write(
+    tmp.path().join( "alice@test.com.json" ),
+    r#"{"owner": null}"#,
+  ).unwrap();
+  let owner = account::read_owner( tmp.path(), "alice@test.com" );
+  assert_eq!( owner, "", "CC-4: read_owner with null owner must return empty string; got: {owner:?}" );
+  assert!( account::is_owned( &owner ), "CC-4: null owner must pass is_owned() gate" );
+}
+
+/// CC-5: `read_owner` with `"owner": 42` (numeric) → returns "".
+///
+/// A numeric value lacks the leading `"` that `parse_string_field` requires.
+#[ test ]
+fn cc5_read_owner_numeric_value()
+{
+  let tmp = TempDir::new().unwrap();
+  std::fs::write(
+    tmp.path().join( "alice@test.com.json" ),
+    r#"{"owner": 42}"#,
+  ).unwrap();
+  let owner = account::read_owner( tmp.path(), "alice@test.com" );
+  assert_eq!( owner, "", "CC-5: read_owner with numeric owner must return empty string; got: {owner:?}" );
+  assert!( account::is_owned( &owner ), "CC-5: numeric owner must pass is_owned() gate" );
+}
+
+/// CC-6: `save()` with `owner: None` on new account (no pre-existing `{name}.json`).
+///
+/// Background callers (`refresh_account_token`) pass `owner: None` and may be
+/// the first caller to create `{name}.json` for a given account. Since there is
+/// no pre-existing file to read-merge from, the `owner` key must be absent.
+/// `read_owner()` must then return "" → `is_owned()` returns `true`.
+#[ test ]
+fn cc6_background_save_new_account_no_owner()
+{
+  let tmp   = TempDir::new().unwrap();
+  let home  = tmp.path();
+  let dot   = home.join( ".claude" );
+  std::fs::create_dir_all( &dot ).unwrap();
+  std::fs::write( dot.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+  let paths = ClaudePaths::with_home( home );
+  let store = home.join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  // Background save: owner: None, no pre-existing {name}.json.
+  account::save( "new@test.com", &store, &paths, false, None, None, None, None ).unwrap();
+
+  let owner = account::read_owner( &store, "new@test.com" );
+  assert_eq!(
+    owner, "",
+    "CC-6: background save on new account must not create owner field; got: {owner:?}",
+  );
+  assert!( account::is_owned( &owner ), "CC-6: absent owner must pass is_owned() gate" );
 }

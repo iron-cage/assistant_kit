@@ -135,7 +135,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 ### FT-09: `save(update_marker=false)` does not write `_active`; background callers pass `false`
 
 - **Given:** Empty credential store (no `_active` marker file). Valid credentials at `~/.claude/.credentials.json`.
-- **When:** `account::save("alice@test.com", store.path(), &paths, false, None, None, None)` is called (unit test — simulates `refresh_account_token` context).
+- **When:** `account::save("alice@test.com", store.path(), &paths, false, None, None, None, None)` is called (unit test — simulates `refresh_account_token` context).
 - **Then:** The credential file `alice@test.com.credentials.json` is written. The `_active_{hostname}_{user}` marker file does NOT exist — `update_marker=false` suppresses the write. A concurrent `.account.use` switch would be unaffected.
 - **Exit:** N/A (unit test — no exit code)
 - **Source fn:** `test_mre_bug211_save_false_leaves_marker_unchanged` (in `claude_profile_core/tests/account_test.rs`)

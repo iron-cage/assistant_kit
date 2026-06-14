@@ -869,4 +869,68 @@ mod tests
       "FT-04: G1 gate must return Ok(cache_data) when cache present; got: {:?}", aq.result,
     );
   }
+
+  /// CC-7: G1 gate — non-owned account with NO cache → Err("not owned"), cached=false.
+  ///
+  /// When `{name}.json` has a foreign owner but no quota cache, G1 returns
+  /// `Err("not owned")` with `cached=false`. The render shows `—` for all
+  /// quota columns.
+  #[ test ]
+  fn cc7_non_owned_no_cache()
+  {
+    let store = tempfile::TempDir::new().unwrap();
+
+    // owner != current_identity(), NO cache section.
+    let meta = serde_json::json!( { "owner" : "other@remote" } );
+    std::fs::write(
+      store.path().join( "alice@test.com.json" ),
+      serde_json::to_string( &meta ).unwrap(),
+    ).unwrap();
+
+    std::fs::write(
+      store.path().join( "alice@test.com.credentials.json" ),
+      r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
+    ).unwrap();
+
+    let accounts = vec![ crate::account::Account
+    {
+      name              : "alice@test.com".to_string(),
+      subscription_type : "pro".to_string(),
+      rate_limit_tier   : String::new(),
+      expires_at_ms     : u64::MAX / 2,
+      is_active         : false,
+      email             : String::new(),
+      display_name      : String::new(),
+      role              : String::new(),
+      billing           : String::new(),
+      model             : String::new(),
+      tagged_id         : String::new(),
+      uuid              : String::new(),
+      capabilities      : Vec::new(),
+      organization_uuid : String::new(),
+      organization_name : String::new(),
+      organization_role : String::new(),
+      workspace_uuid    : String::new(),
+      workspace_name    : String::new(),
+      profile_host      : String::new(),
+      profile_role      : String::new(),
+    } ];
+
+    let absent_live = store.path().join( ".absent_credentials.json" );
+    let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false );
+
+    assert_eq!( results.len(), 1, "CC-7: must return exactly 1 AccountQuota" );
+    let aq = &results[ 0 ];
+    assert!( !aq.is_owned, "CC-7: G1 gate must set is_owned=false" );
+    assert!( !aq.cached, "CC-7: no cache → cached must be false" );
+    assert!(
+      aq.result.is_err(),
+      "CC-7: no cache → result must be Err; got: {:?}", aq.result,
+    );
+    let err = aq.result.as_ref().unwrap_err();
+    assert!(
+      err.contains( "not owned" ),
+      "CC-7: error message must contain 'not owned'; got: {err}",
+    );
+  }
 }

@@ -3954,3 +3954,32 @@ fn ft13_dry_run_does_not_skip_ownership()
     assert!( !stdout( &o ).contains( "[dry-run]" ), "FT-13 G7: dry-run acknowledgment must NOT appear" );
   }
 }
+
+/// CC-9: G5 passes when account is unclaimed (empty owner).
+///
+/// `write_account_owner(home, name, "")` sets `owner: ""` → `is_owned()` returns
+/// `true` → G5 does NOT fire → `.account.use` proceeds normally (exit 0).
+/// This verifies that `unclaim::1` truly disables all enforcement gates.
+#[ test ]
+fn cc9_unclaimed_account_passes_use_gate()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "" );
+
+  // `.account.use` copies credentials to `~/.claude/.credentials.json` — dir must exist.
+  let dot_claude = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "ownership violation" ),
+    "CC-9: unclaimed account (empty owner) must NOT trigger ownership violation; got:\n{err}",
+  );
+}

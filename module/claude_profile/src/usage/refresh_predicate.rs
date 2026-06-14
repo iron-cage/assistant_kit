@@ -480,5 +480,54 @@ mod tests
       !should_refresh( &aq_expired, 9_999 ),
       "FT-06: G2 — non-owned account with locally-expired token must NOT trigger refresh",
     );
+
+    // CC-8: 429 + locally expired + not owned → G2 fires first → false.
+    let aq_429_expired = AccountQuota
+    {
+      name                  : "alice@test.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : 1_000,   // expired at 1 second
+      result                : Err( "HTTP 429".to_string() ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : false,
+    };
+    assert!(
+      !should_refresh( &aq_429_expired, 9_999 ),
+      "CC-8: G2 — non-owned 429+expired must NOT trigger refresh",
+    );
+
+    // CC-8b: cached + expired + not owned → G2 fires first → false.
+    let aq_cached_expired = AccountQuota
+    {
+      name                  : "alice@test.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : 1_000,
+      result                : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : None,
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : true,
+      cache_age_secs        : Some( 300 ),
+      is_owned              : false,
+    };
+    assert!(
+      !should_refresh( &aq_cached_expired, 9_999 ),
+      "CC-8b: G2 — non-owned cached+expired must NOT trigger refresh",
+    );
   }
 }
