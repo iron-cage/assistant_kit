@@ -45,6 +45,8 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 - The composite status emoji `●` is computed from cached values (same thresholds as live)
 - A row-level age indicator shows time since last successful fetch: `(12m ago)` appended to the error reason column
 
+**Non-owned accounts (Feature 036 interaction):** When account ownership is enabled, non-owned accounts use the quota cache as their **primary** fetch source (G1 gate in Feature 036), not as a fallback. The cache read path, staleness display, and `~` prefix are identical to the error-fallback path — the distinction is only in how the cache-read was triggered. This means `write_quota_cache()` calls by the owning machine populate the cache that non-owner machines then read. Non-owned accounts where no cache exists show `—` for quota columns (same as no-cache graceful degradation).
+
 **Graceful degradation:**
 
 - If `{name}.json` has no `"cache"` key (first-ever fetch for this account, or file predates the feature): display dashes as before (no regression)
@@ -81,6 +83,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 | [024_session_touch.md](024_session_touch.md) | Touch lifecycle — cache persists touch state |
 | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | Model override — cache persists override decision |
 | [029_account_host_metadata.md](029_account_host_metadata.md) | `{name}.json` structure — cache extends the same file |
+| [036_account_ownership.md](036_account_ownership.md) | G1: non-owned accounts use cache as primary source; same display path as cache-fallback |
 
 ### Sources
 

@@ -44,6 +44,7 @@ The `.gitignore` pattern `_active_*` excludes all per-machine marker files from 
 | [015_name_shortcut_syntax.md](015_name_shortcut_syntax.md) | Prefix resolution; AC-11 added for exact-local-part match |
 | [029_account_host_metadata.md](029_account_host_metadata.md) | `resolve_hostname()` fallback chain shared with host auto-capture |
 | [032_account_assign.md](032_account_assign.md) | Marker-only write for any `USER@MACHINE` pair; contrast point for `.account.use` full credential rotation |
+| [036_account_ownership.md](036_account_ownership.md) | `current_identity()` uses the same `resolve_hostname()` fallback chain to form `$USER@<hostname>` |
 
 ### Invariants
 

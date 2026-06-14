@@ -4,7 +4,7 @@
 
 - **Purpose**: Re-authenticate a named account whose `refreshToken` is dead by spawning `claude` with an inherited TTY and capturing the resulting credentials.
 - **Responsibility**: Documents the `.account.relogin` CLI command and its 6-step mechanism for interactive browser re-authentication.
-- **In Scope**: TTY spawn, credential-change detection, store write-back, original-active restoration, dry-run mode.
+- **In Scope**: TTY spawn, credential-change detection, store write-back, original-active restoration, dry-run mode, ownership guard (exit 1 when account is owned by a different identity — G7 gate from [036_account_ownership.md](036_account_ownership.md)).
 - **Out of Scope**: Token refresh via isolated subprocess (→ [017_token_refresh.md](017_token_refresh.md)); browser login mechanics (delegated to `claude` binary).
 
 ### Design
@@ -24,9 +24,11 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 
 **Dry-run mode** (`dry::1`): Prints `[dry-run] would re-authenticate '{name}' via browser login` without executing any of the 6 steps.
 
+**Ownership guard (G7):** Before executing step 1, `account_relogin_routine()` reads the `owner` field from `{name}.json`. If `owner` is non-empty and does not match `current_identity()`, the command exits 1 with `"ownership violation: this account is owned by {owner}"`. This check runs before `dry::1` output — a dry-run on a non-owned account still exits 1. See [036_account_ownership.md](036_account_ownership.md).
+
 **Exit codes:**
 - 0: success — credentials refreshed and saved, original active restored.
-- 1: usage error — empty or invalid characters in `name::` value.
+- 1: usage error — empty or invalid characters in `name::` value; or ownership violation (G7 gate).
 - 2: runtime error — `name::` omitted and no active account; account not found; HOME unset; `claude` binary cannot be spawned; or `save()` fails after credential update.
 - 3 (via `process::exit`): login abandoned — `claude` exited without updating `~/.claude/.credentials.json`. A diagnostic message must be printed to stderr before exiting.
 
@@ -41,6 +43,8 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 - **AC-07**: After successful browser login, the named account's credential file in the store is updated (same as if `.account.save` had been run).
 - **AC-08**: After re-authentication, the original active account is restored — the user's session context is unchanged.
 - **AC-09**: If `claude` exits without updating `~/.claude/.credentials.json`, a diagnostic message is printed to stderr indicating credentials were unchanged, and the process exits 3.
+- **AC-10**: `clp .account.relogin name::alice@corp.com` when `alice@corp.com.json` has `owner` ≠ `current_identity()` exits 1 with `"ownership violation: this account is owned by {owner}"`. No files are modified. (G7 ownership gate — [036_account_ownership.md](036_account_ownership.md) AC-10.)
+- **AC-11**: Ownership check runs before `dry::1` output — `clp .account.relogin name::alice@corp.com dry::1` with ownership violation exits 1 without printing the dry-run message.
 
 ### Commands
 
@@ -53,6 +57,7 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 | File | Relationship |
 |------|--------------|
 | [017_token_refresh.md](017_token_refresh.md) | Automated refresh path — use `.account.relogin` when `refresh::1` returns `credentials=None` |
+| [036_account_ownership.md](036_account_ownership.md) | G7: ownership guard — exit 1 before any relogin steps when account is owned by different identity |
 
 ### Invariants
 

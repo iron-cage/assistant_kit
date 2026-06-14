@@ -5,7 +5,7 @@
 - **Purpose**: Allow accounts to carry host and role labels that identify which machine and workspace context each account belongs to, displayed in `.usage` via opt-in columns.
 - **Responsibility**: Documents the `host::` and `role::` parameters for `.account.save`, auto-capture of `$USER@<hostname>` at save time (hostname via syscall fallback chain), storage in the account profile, and the `cols::+host` / `cols::+role` display columns.
 - **In Scope**: `host::` and `role::` params on `.account.save`, auto-capture from `$USER@<hostname>` when `host::` is omitted (hostname resolved via `resolve_hostname()` — same fallback chain as `active_marker_filename()`), storage in `{name}.json`, `host` and `role` columns in the `cols::` registry (off by default).
-- **Out of Scope**: Account switching (→ 004_account_use.md), column visibility mechanism (→ 033_cols.md), `.usage` row filtering (→ 028_usage_row_filtering.md).
+- **Out of Scope**: Account switching (→ 004_account_use.md), column visibility mechanism (→ 033_cols.md), `.usage` row filtering (→ 028_usage_row_filtering.md), account ownership and access enforcement (→ 036_account_ownership.md — `owner` field is separate from `host` display label).
 
 ### Design
 
@@ -23,6 +23,8 @@ Both values are written to `{credential_store}/{name}.json` as a JSON object:
 This file is created or overwritten on every `save()` invocation (same idempotency semantics as other snapshot files). If `host::` is omitted and all hostname fallbacks resolve (env, file, `"local"` default), the host field is always populated. If `$USER` is also unset, the host field is stored as `"@<hostname>"` — save still succeeds.
 
 **Display via `cols::`:** The `host` and `role` column IDs are off by default in the `cols::` registry. Enable via `cols::+host,+role` in `.usage`. The columns show the values from `{name}.json` if present; empty string if the file is absent or the field is missing.
+
+**`host::` vs `owner`:** The `host::` value is a user-customizable display label that can be any string (e.g., `"workstation"`, `"laptop"`). The `owner` field (Feature 036) is always auto-captured as `$USER@<hostname>` at save time and is never user-specified via CLI parameter. These are separate fields with different semantics: `host::` is for display/identification; `owner` is for access enforcement.
 
 **`.accounts` display:** Host and role fields are also surfaced in `.accounts` output when `host::1` or `role::1` field toggles are active (separate opt-in toggle params, analogous to `uuid::`, `display_name::`, etc.).
 
@@ -60,6 +62,7 @@ This file is created or overwritten on every `save()` invocation (same idempoten
 |------|--------------|
 | [cli/param/033_cols.md](../cli/param/033_cols.md) | `cols::` registry — `host` and `role` column IDs |
 | [cli/param/048_host.md](../cli/param/048_host.md) | `host::` parameter specification for `.account.save` |
+| [036_account_ownership.md](036_account_ownership.md) | `owner` field — access enforcement; separate from `host::` display label |
 
 ### Sources
 
