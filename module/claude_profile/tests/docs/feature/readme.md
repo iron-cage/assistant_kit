@@ -80,7 +80,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 023_next_account_strategies | [023_next_account_strategies.md](23_next_account_strategies.md) | FT-01 … FT-17 | ✅ |
 | 024_session_touch | [024_session_touch.md](24_session_touch.md) | FT-01 … FT-20 | ✅ |
 | 025_per_machine_active_marker | [025_per_machine_active_marker.md](25_per_machine_active_marker.md) | FT-01 … FT-12 | ✅ |
-| 026_subprocess_model_effort | [026_subprocess_model_effort.md](26_subprocess_model_effort.md) | FT-01 … FT-28 | ✅ |
+| 026_subprocess_model_effort | [026_subprocess_model_effort.md](26_subprocess_model_effort.md) | FT-01 … FT-30 | ✅ |
 | 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](27_account_use_post_switch_touch.md) | FT-01 … FT-21 | ✅ |
 | 028_usage_row_filtering | [028_usage_row_filtering.md](28_usage_row_filtering.md) | FT-01 … FT-17 | ✅ |
 | 029_account_host_metadata | [029_account_host_metadata.md](29_account_host_metadata.md) | FT-01 … FT-10 | ✅ |

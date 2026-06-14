@@ -19,7 +19,7 @@ All external dependencies are declared once in `[workspace.dependencies]` and co
 ```toml
 # Correct — publishable because version resolves to crates.io on `cargo publish`
 [workspace.dependencies.cli_fmt]
-version = "~0.8"
+version = "^0.8"
 path = "../../wtools/dev/module/core/cli_fmt"
 
 # Violation — cargo publish rejects path-only deps
@@ -76,3 +76,4 @@ grep -A3 'path = "\.\.' Cargo.toml | grep -v 'version'
 | File | Notes |
 |------|-------|
 | Cargo.toml audit (2026-06-11) | Identified: `cli_fmt` path-only dep; `gag` not centralized; `claude_auth`/`claude_quota` missing publish metadata; 5 stale version constraints |
+| hyg_dep audit (2026-06-13) | Fixed all 26 `~` version format violations in root `Cargo.toml`: external deps → `^X.Y`, internal path deps → `=X.Y.Z`. Tilde banned; external format rule now documented in `crate_distribution.rulebook.md § Cargo Organization : External Dependency Version Format`. |
