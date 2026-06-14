@@ -25,10 +25,10 @@
 ### Notes
 
 - FT-01 through FT-07 are implemented as unit tests in `claude_profile_core/tests/account_test.rs`.
-- FT-03 and FT-09 are implemented as render integration tests in `claude_profile/src/usage/render.rs` (tests module).
+- FT-03 and FT-09 are implemented as render integration tests in `src/usage/render_tests.rs`.
 - FT-08 is structural: cached rows are stored as `result: Ok(data)` with `cached: true` — all sort/strategy/next logic operates on `Ok` rows identically regardless of the `cached` flag.
-- FT-10 is implemented as a unit test in `src/usage/refresh.rs` `#[cfg(test)]` module (private fn test). MRE for BUG-255.
-- FT-11 is a unit test in `src/usage/refresh.rs` `#[cfg(test)]` module. Verifies the retry OK arm clears `aq.cached`/`aq.cache_age_secs` and writes the quota cache file. MRE for BUG-256.
+- FT-10 is implemented as a unit test in `src/usage/refresh_predicate.rs` `#[cfg(test)]` module. MRE for BUG-255.
+- FT-11 is a unit test in `src/usage/refresh_tests.rs`. Verifies the retry OK arm clears `aq.cached`/`aq.cache_age_secs` and writes the quota cache file. MRE for BUG-256.
 
 ---
 

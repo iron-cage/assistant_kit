@@ -8,6 +8,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "module/assistant_kit",
   "module/claude_auth",
   "module/claude_assets_core",
   "module/claude_assets",
@@ -91,6 +92,11 @@ missing_docs_in_private_items = "allow"
 incremental = false
 
 ## Internal workspace dependencies
+
+[workspace.dependencies.assistant_kit]
+path = "module/assistant_kit"
+version = "=0.1.0"
+default-features = false
 
 [workspace.dependencies.claude_auth]
 path = "module/claude_auth"

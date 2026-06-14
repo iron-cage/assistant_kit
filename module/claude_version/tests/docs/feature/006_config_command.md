@@ -22,18 +22,18 @@ Both are valid; the scope of resolution differs.
 
 | FT | AC | Scenario | Source fn |
 |----|----|----------|-----------|
-| FT-01 | AC-01 | `.config` (no params) prints resolved settings in text format | ⏳ `ft01_006_config_show_all_text` |
-| FT-02 | AC-02 | `.config key::K` prints value with source layer annotation | ⏳ `ft02_006_config_get_shows_source` |
-| FT-03 | AC-03 | `.config key::K value::V` writes to user settings.json with type inference | ⏳ `ft03_006_config_set_user_scope` |
-| FT-04 | AC-04 | `.config key::K value::V scope::project` writes to project settings.json | ⏳ `ft04_006_config_set_project_scope` |
-| FT-05 | AC-05 | `.config key::K unset::1` removes key from user settings | ⏳ `ft05_006_config_unset_removes_key` |
-| FT-06 | AC-06 | `.config format::json` returns resolved settings as JSON with source fields | ⏳ `ft06_006_config_show_all_json` |
-| FT-07 | AC-07 | Env var (CLAUDE_MODEL) overrides project and user config for `model` key | ⏳ `ft07_006_config_env_overrides_user` |
-| FT-08 | AC-08 | `.config key::K` absent everywhere → exit 0 with absent indicator | ⏳ `ft08_006_config_get_absent_key` |
-| FT-09 | AC-09 | `.config key::K value::V dry::1` → preview, no file change | ⏳ `ft09_006_config_set_dry_run` |
-| FT-10 | AC-10 | HOME unset → exit 2 for any filesystem operation | ⏳ `ft10_006_config_home_unset_exits_2` |
-| FT-11 | AC-11 | Non-catalog key is accepted and written without error | ⏳ `ft11_006_config_arbitrary_key_accepted` |
-| FT-12 | AC-12 | Catalog default for `model` is `claude-sonnet-4-6` when no env or config | ⏳ `ft12_006_config_catalog_default_model` |
+| FT-01 | AC-01 | `.config` (no params) prints resolved settings in text format | ✅ `ft01_006_config_show_all_text` |
+| FT-02 | AC-02 | `.config key::K` prints value with source layer annotation | ✅ `ft02_006_config_get_shows_source` |
+| FT-03 | AC-03 | `.config key::K value::V` writes to user settings.json with type inference | ✅ `ft03_006_config_set_user_scope` |
+| FT-04 | AC-04 | `.config key::K value::V scope::project` writes to project settings.json | ✅ `ft04_006_config_set_project_scope` |
+| FT-05 | AC-05 | `.config key::K unset::1` removes key from user settings | ✅ `ft05_006_config_unset_removes_key` |
+| FT-06 | AC-06 | `.config format::json` returns resolved settings as JSON with source fields | ✅ `ft06_006_config_show_all_json` |
+| FT-07 | AC-07 | Env var (CLAUDE_MODEL) overrides project and user config for `model` key | ✅ `ft07_006_config_env_overrides_user` |
+| FT-08 | AC-08 | `.config key::K` absent everywhere → exit 0 with absent indicator | ✅ `ft08_006_config_get_absent_key` |
+| FT-09 | AC-09 | `.config key::K value::V dry::1` → preview, no file change | ✅ `ft09_006_config_set_dry_run` |
+| FT-10 | AC-10 | HOME unset → exit 2 for any filesystem operation | ✅ `ft10_006_config_home_unset_exits_2` |
+| FT-11 | AC-11 | Non-catalog key is accepted and written without error | ✅ `ft11_006_config_arbitrary_key_accepted` |
+| FT-12 | AC-12 | Catalog default for `model` is `claude-sonnet-4-6` when no env or config | ✅ `ft12_006_config_catalog_default_model` |
 
 ## Test Coverage Summary
 
@@ -173,15 +173,15 @@ Both are valid; the scope of resolution differs.
 
 | Function | File |
 |----------|------|
-| `ft01_006_config_show_all_text` | ⏳ TBD |
-| `ft02_006_config_get_shows_source` | ⏳ TBD |
-| `ft03_006_config_set_user_scope` | ⏳ TBD |
-| `ft04_006_config_set_project_scope` | ⏳ TBD |
-| `ft05_006_config_unset_removes_key` | ⏳ TBD |
-| `ft06_006_config_show_all_json` | ⏳ TBD |
-| `ft07_006_config_env_overrides_user` | ⏳ TBD |
-| `ft08_006_config_get_absent_key` | ⏳ TBD |
-| `ft09_006_config_set_dry_run` | ⏳ TBD |
-| `ft10_006_config_home_unset_exits_2` | ⏳ TBD |
-| `ft11_006_config_arbitrary_key_accepted` | ⏳ TBD |
-| `ft12_006_config_catalog_default_model` | ⏳ TBD |
+| `ft01_006_config_show_all_text` | ✅ `config_commands_test.rs` |
+| `ft02_006_config_get_shows_source` | ✅ `config_commands_test.rs` |
+| `ft03_006_config_set_user_scope` | ✅ `config_commands_test.rs` |
+| `ft04_006_config_set_project_scope` | ✅ `config_commands_test.rs` |
+| `ft05_006_config_unset_removes_key` | ✅ `config_commands_test.rs` |
+| `ft06_006_config_show_all_json` | ✅ `config_commands_test.rs` |
+| `ft07_006_config_env_overrides_user` | ✅ `config_commands_test.rs` |
+| `ft08_006_config_get_absent_key` | ✅ `config_commands_test.rs` |
+| `ft09_006_config_set_dry_run` | ✅ `config_commands_test.rs` |
+| `ft10_006_config_home_unset_exits_2` | ✅ `config_commands_test.rs` |
+| `ft11_006_config_arbitrary_key_accepted` | ✅ `config_commands_test.rs` |
+| `ft12_006_config_catalog_default_model` | ✅ `config_commands_test.rs` |

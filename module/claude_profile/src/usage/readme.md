@@ -16,13 +16,24 @@
 | `touch.rs` | Session touch/probe: apply_touch, pre_switch_touch_ctx. |
 | `params.rs` | Usage command parameter parsing and validation. |
 | `api.rs` | Public command entry point: usage_routine. |
+| `refresh_tests.rs` | Path-referenced tests for refresh.rs (apply_refresh). |
+| `render_tests.rs` | Path-referenced tests for render.rs (render_text, render_tsv, render_json). |
+| `sort_next_tests.rs` | Path-referenced tests for sort_next.rs (find_next_for_strategy, strategy_metric). |
 
 ## Inline Test Exception
 
 **Exception to `files_structure.rulebook.md § File Type Separation : Absolute Prohibitions`:**
-All 12 source files in this module contain `#[cfg(test)] mod tests` blocks that would
-ordinarily belong in `tests/`. This exception applies exclusively to `src/usage/` and
-is justified by a visibility constraint:
+All 12 source files in this module declare `#[cfg(test)] mod tests` — the test code
+would ordinarily belong in `tests/`. This exception applies exclusively to `src/usage/`
+and is justified by a visibility constraint.
+
+**Two pattern variants in use:**
+- **Inline blocks** (9 files): `#[cfg(test)] mod tests { ... }` — test code written
+  directly in the source file.
+- **Path-referenced files** (3 files: `refresh.rs`, `render.rs`, `sort_next.rs`):
+  `#[cfg(test)] #[path = "*_tests.rs"] mod tests;` — test code lives in a companion
+  `*_tests.rs` file in `src/usage/`. Both variants compile the tests as part of the
+  crate module (not as external integration tests) so the visibility constraint is satisfied.
 
 The functions under test (`pre_switch_touch_ctx`, `apply_model_override`, `apply_touch`,
 `should_refresh`, `resolve_model`, `render_text`, `sort_indices`, etc.) are declared

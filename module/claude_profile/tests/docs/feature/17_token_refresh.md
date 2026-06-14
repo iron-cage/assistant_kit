@@ -223,7 +223,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **When:** `apply_refresh` processes `new_creds` (unit test via `test_apply_refresh_mre_bug170_opaque_token_expires_fallback`)
 - **Then:** `account_quota.expires_at_ms` is set to the `expiresAt` value from `new_creds`; the Expires column shows a future time (not `EXPIRED`); expiry is derived from `parse_u064_field(new_creds, "expiresAt")`, not from JWT decode.
 - **Exit:** 0
-- **Source fn:** `test_jwt_exp_ms_mre_bug170_opaque_returns_none` (in `src/usage/refresh.rs`)
+- **Source fn:** `test_jwt_exp_ms_mre_bug170_opaque_returns_none` (in `src/usage/refresh_tests.rs`)
 - **Note:** Fix for BUG-170 — the TSK-163 fix for BUG-162 introduced this gap: `jwt_exp_ms` silently returns `None` for opaque tokens, leaving `expires_at_ms` stale. The `expiresAt` field in the returned credentials JSON is the authoritative post-refresh expiry for opaque tokens.
 - **Source:** [017_token_refresh.md AC-25](../../../docs/feature/017_token_refresh.md)
 
@@ -234,6 +234,6 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Given:** Active marker contains `"alice@example.com"`; `alice@example.com.credentials.json` exists in the persistent store; `{fake_home}/.claude/` directory exists; one account `"bob@example.com"` has a 401 error but no credential file in the persistent store.
 - **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), true)` is called with `trace=true` (unit test context; equivalent to `clp .usage refresh::1 trace::1`)
 - **Then:** `apply_refresh` returns without calling `switch_account`; `{fake_home}/.claude/.credentials.json` does NOT exist (no restore occurred); `{store}/_active_{hostname}_{user}` is unchanged (`"alice@example.com"`); no `[trace] refresh  {name}  restore switch_account:` line is emitted (restore step no longer exists).
-- **Source fn:** `test_apply_refresh_mre_bug208_restore_trace_emitted` (in `src/usage/refresh.rs #[cfg(test)]`)
+- **Source fn:** `test_apply_refresh_mre_bug208_restore_trace_emitted` (in `src/usage/refresh_tests.rs`)
 - **Note:** Fix for BUG-211 — snapshot+restore removed from `apply_refresh`. Previous BUG-208 fix (restore trace instrumentation) is superseded: the entire restore block is gone, so there is no restore line to emit.
 - **Source:** [017_token_refresh.md AC-28](../../../docs/feature/017_token_refresh.md)

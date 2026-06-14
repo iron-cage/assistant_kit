@@ -71,7 +71,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then-B:** Returns `None` — no `→` placed.
 - **Exit:** n/a (unit test)
 - **Note:** TSK-184 deleted `find_recommendation()`; this case now calls `find_next_for_strategy()` directly.
-- **Source fn:** `test_ft02_023_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `src/usage/sort_next.rs`)
+- **Source fn:** `test_ft02_023_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `src/usage/sort_next_tests.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-02](../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -154,7 +154,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then-A:** Returns a string containing `"39% 7d(Son) left"` (not `"7d left"`). The reset countdown is derived from T2 (`seven_day_sonnet.resets_at`), not T1.
 - **Then-B:** Returns a string containing `"39% 7d left"` (not `"7d(Son) left"`). The reset countdown is derived from T1 (`seven_day.resets_at`), not T2.
 - **Exit:** n/a (unit test)
-- **Source fn:** `mre_bug_216_drain_footer_label_sonnet_binding`, `mre_bug_216_drain_footer_label_7d_binding` (in `src/usage/sort_next.rs`)
+- **Source fn:** `mre_bug_216_drain_footer_label_sonnet_binding`, `mre_bug_216_drain_footer_label_7d_binding` (in `src/usage/sort_next_tests.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-09](../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -167,7 +167,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then-A:** Returns `Some(index_of_weekly_ten)` — both `weekly_zero` (0%) and `weekly_one` (1%) skipped despite ranking first and second in drain sort; threshold is `> 5.0`.
 - **Then-B:** Returns `None` — all candidates are weekly-exhausted, nothing meaningful to drain.
 - **Exit:** n/a (unit test)
-- **Source fn:** `mre_bug_206_drain_skips_prefer_weekly_zero_accounts` (in `src/usage/sort_next.rs`)
+- **Source fn:** `mre_bug_206_drain_skips_prefer_weekly_zero_accounts` (in `src/usage/sort_next_tests.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-04](../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -194,7 +194,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **When-D:** Same three strategies with only `A` and `C` (A occupied, C current — no free candidate).
 - **Then-D:** All return `None` — no eligible candidate exists.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_ft12_023_all_strategies_skip_occupied_elsewhere` (in `src/usage/sort_next.rs`)
+- **Source fn:** `test_ft12_023_all_strategies_skip_occupied_elsewhere` (in `src/usage/sort_next_tests.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-11](../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -209,7 +209,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **When-D:** Same three strategies with only `A` (h-exhausted) and `C` (current) — no healthy candidate.
 - **Then-D:** All return `None` — no eligible candidate.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_ft13_023_all_strategies_skip_h_exhausted` (in `src/usage/sort_next.rs`)
+- **Source fn:** `test_ft13_023_all_strategies_skip_h_exhausted` (in `src/usage/sort_next_tests.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-12](../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -220,7 +220,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **When:** Unit test calls `strategy_metric(&aq, NextStrategy::Endurance, PreferStrategy::Any, now_secs)`.
 - **Then:** Returns a string containing `"80% session"` and `"5h resets in 2h 30m"`. Does NOT contain `"7d left"`, `"expires"`, or `"90%"`.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_ft14_023_endurance_footer_shows_5h_reset` (in `src/usage/sort_next.rs`)
+- **Source fn:** `test_ft14_023_endurance_footer_shows_5h_reset` (in `src/usage/sort_next_tests.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-13](../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -231,7 +231,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **When:** Unit test calls `find_next_for_strategy(&[A, B], NextStrategy::Renew, PreferStrategy::Any, now_secs)`.
 - **Then:** Returns `Some(index_of_A)` — `A` wins because `5h_left=23% < 100%` (more depleted, benefits more from the same renewal event). `B` is not selected despite equal renewal time.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_ft15_023_renew_tiebreaker_prefers_lower_5h_left` (in `src/usage/sort_next.rs`)
+- **Source fn:** `test_ft15_023_renew_tiebreaker_prefers_lower_5h_left` (in `src/usage/sort_next_tests.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-10](../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -242,7 +242,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **When:** Unit test calls `find_next_for_strategy(&[zorro, alice], NextStrategy::Renew, PreferStrategy::Any, now_secs)`.
 - **Then:** Returns `Some(1)` (index of `alice@test`) — alphabetically first name wins when all numeric keys are fully tied. Without a name tiebreaker, `min_by` would return index 0 (`zorro@test`) — input-slice order.
 - **Exit:** n/a (unit test)
-- **Source fn:** `mre_bug260_renew_nondeterministic_when_fully_tied` (in `src/usage/sort_next.rs`)
+- **Source fn:** `mre_bug260_renew_nondeterministic_when_fully_tied` (in `src/usage/sort_next_tests.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-10](../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -259,5 +259,5 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then-B:** Returns `None` — all candidates are weekly-exhausted (≤ 5.0); no eligible account in unqualified tier.
 - **Then-C:** Returns `None` — `prefer_weekly=5.0` is at the boundary; `> 5.0` is exclusive, so `5.0` is skipped.
 - **Exit:** n/a (unit test)
-- **Source fn:** `mre_bug287_endurance_skips_weekly_exhausted_unqualified` (in `src/usage/sort_next.rs`)
+- **Source fn:** `mre_bug287_endurance_skips_weekly_exhausted_unqualified` (in `src/usage/sort_next_tests.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-03](../../../docs/feature/023_next_account_strategies.md)

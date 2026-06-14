@@ -316,7 +316,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - In the `render_tsv()` output: the `~Renews` field contains the expected renewal date string; the TSV renews cell is NOT `(rate limited (429))`.
 - **Exit:** n/a (unit test)
 - **Note:** Fix for BUG-220. The defect had `render_text()` using `last_mut()` positional overwrite (hitting `~Renews` as the last non-host/role column) and `render_tsv()` explicitly pushing `error_str` for the renews cell. Both renderers must preserve `renews_str` (from `OauthAccountData`) regardless of `result` error state.
-- **Source fn:** `mre_bug_220_renews_preserved_for_429_accounts` (in `src/usage/render.rs`)
+- **Source fn:** `mre_bug_220_renews_preserved_for_429_accounts` (in `src/usage/render_tests.rs`)
 - **Source:** [009_token_usage.md AC-03](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -334,7 +334,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - No line contains both `@` and `✓` or both `@` and `*`.
 - **Exit:** n/a (unit test — string content assertion)
 - **Note:** `is_occupied_elsewhere = true` sets `@` only when neither `is_current` nor `is_active` is true (priority: `✓` > `*` > `@` > `→` > blank).
-- **Source fn:** `test_ft21_009_occupied_elsewhere_at_flag` (in `src/usage/render.rs`)
+- **Source fn:** `test_ft21_009_occupied_elsewhere_at_flag` (in `src/usage/render_tests.rs`)
 - **Source:** [009_token_usage.md AC-30](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -352,7 +352,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - `Sub` column (when visible via `cols::+sub`) shows `"—"` (from `sub_label` with `billing_type="none"`).
 - **Exit:** n/a (unit test)
 - **Note:** Fix(BUG-233) Class A: fetch layer now overrides `result` to `Err("no subscription")` after `account_handle.join()` when `billing_type == "none"`. The previous BUG-231 display-layer workaround (`error_label` in `format.rs`) is deleted — superseded by this data-layer fix (AC-31).
-- **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `src/usage/render.rs`); `test_class_a_billing_none_override_predicate` (in `src/usage/fetch.rs`)
+- **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `src/usage/render_tests.rs`); `test_class_a_billing_none_override_predicate` (in `src/usage/fetch.rs`)
 - **Source:** [009_token_usage.md AC-03, AC-31](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -369,7 +369,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - The `~Renews` column cell contains `"—"` (em dash, not `"?"`, not `"~in Nd"`).
   - Despite `org_created_at` being present and parseable, no billing estimate is shown — the subscription is cancelled.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `src/usage/render.rs`)
+- **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `src/usage/render_tests.rs`)
 - **Source:** [009_token_usage.md AC-27, AC-31](../../../docs/feature/009_token_usage.md)
 
 ---

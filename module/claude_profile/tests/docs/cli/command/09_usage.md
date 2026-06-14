@@ -882,4 +882,4 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-> **Note:** IT-73 removed — unit test of `render_text()` / `render_tsv()` not directly observable via clp output — behavior only verifiable at unit-test level. Unit test lives in `src/usage/render.rs` as `mre_bug_220_renews_preserved_for_429_accounts`. Fix for BUG-220 (`~Renews` was overwritten by the 429 error reason in both render functions).
+> **Note:** IT-73 removed — unit test of `render_text()` / `render_tsv()` not directly observable via clp output — behavior only verifiable at unit-test level. Unit test lives in `src/usage/render_tests.rs` as `mre_bug_220_renews_preserved_for_429_accounts`. Fix for BUG-220 (`~Renews` was overwritten by the 429 error reason in both render functions).
