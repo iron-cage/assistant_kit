@@ -17,7 +17,7 @@ must not be confused with those in `20_timeout.md`.
 | EC-4 | `CLR_TIMEOUT=10 --dry-run` → exit 0; env var applied | Env Var |
 | EC-5 | `CLR_TIMEOUT=5 --timeout 60 --dry-run` → CLI 60 wins | CLI-wins |
 | EC-6 | `CLR_TIMEOUT=abc --dry-run` → silently ignored; default 0 (unlimited) | Validation |
-| EC-7 | Fake script sleeps 30; `--timeout 1` → exit 2 within ~2s; stderr contains "timeout" | Integration |
+| EC-7 | Fake script sleeps 30; `--timeout 1` → exit 4 within ~2s; stderr contains "timeout" | Integration |
 | EC-8 | Fake script exits 0 quickly; `--timeout 30` → exit 0; no timeout message | Integration |
 
 ## Test Coverage Summary
@@ -36,7 +36,7 @@ must not be confused with those in `20_timeout.md`.
 The watchdog behavior (SIGKILL after N seconds) requires a live subprocess. EC-7 and EC-8 use
 a fake claude script injected via PATH override (same pattern as `output_file_test.rs` and
 `expect_validation_test.rs`). EC-7 is the primary behavioral integration test: the fake script
-sleeps 30 seconds but the timeout fires after 1 second, producing exit 2 and a stderr message
+sleeps 30 seconds but the timeout fires after 1 second, producing exit 4 and a stderr message
 containing "timeout". EC-8 verifies the no-timeout path: the fake script exits immediately and
 the timeout watchdog is disarmed without firing.
 
@@ -125,12 +125,12 @@ semantics: unlimited (no watchdog). Tests in this file cover `run`/`ask` only;
 
 ---
 
-### EC-7: Timeout fires → exit 2; stderr contains "timeout"
+### EC-7: Timeout fires → exit 4; stderr contains "timeout"
 
 - **Given:** fake claude script that sleeps 30 seconds; `--timeout 1 -p "x"`
 - **When:** `clr --timeout 1 -p "x"` using fake sleeping script
-- **Then:** Exit 2 within ~2 seconds (watchdog kills subprocess after 1s); stderr contains "timeout after 1s" (or equivalent message); no stdout emitted
-- **Exit:** 2
+- **Then:** Exit 4 within ~2 seconds (watchdog kills subprocess after 1s); stderr contains "timeout after 1s" (or equivalent message); no stdout emitted
+- **Exit:** 4
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md)
 - **Commands:** run, ask
 

@@ -432,12 +432,12 @@ cargo run -p claude_runner -- --dry-run --retry-delay 30 "test"
 
 **Expected:** Exit 0. Flag accepted without error.
 
-### TC-55: Help Lists New Retry and Timeout Flags
+### TC-55: Help Lists All Retry, Timeout, and Error Retry Flags
 ```sh
 cargo run -p claude_runner -- --help
 ```
 
-**Expected:** Help output contains `--retry-on-rate-limit`, `--retry-delay`, and `--timeout` (run/ask variant). Exit 0.
+**Expected:** Help output contains `--retry-on-rate-limit`, `--retry-delay`, `--timeout`, `--retry-on-api-error`, `--api-error-delay`, and `--retry-on-unknown-error`. Exit 0.
 
 ### TC-56: CLR_RETRY_ON_RATE_LIMIT Env Var Accepted
 ```sh
@@ -509,9 +509,51 @@ cargo run -p claude_runner -- ps --unknown
 
 **Expected:** stderr error message about unexpected arguments. Exit code 1.
 
+### TC-66: Retry-on-API-Error Dry-Run
+```sh
+cargo run -p claude_runner -- --dry-run --retry-on-api-error 3 "test"
+```
+
+**Expected:** Exit 0. Flag parsed and accepted without error.
+
+### TC-67: API-Error-Delay Dry-Run
+```sh
+cargo run -p claude_runner -- --dry-run --api-error-delay 10 "test"
+```
+
+**Expected:** Exit 0. Flag parsed and accepted without error.
+
+### TC-68: Retry-on-Unknown-Error Dry-Run
+```sh
+cargo run -p claude_runner -- --dry-run --retry-on-unknown-error 2 "test"
+```
+
+**Expected:** Exit 0. Flag parsed and accepted without error.
+
+### TC-69: CLR_RETRY_ON_API_ERROR Env Var Accepted
+```sh
+CLR_RETRY_ON_API_ERROR=2 cargo run -p claude_runner -- --dry-run "test"
+```
+
+**Expected:** Exit 0. Env var applied silently; no error.
+
+### TC-70: CLR_API_ERROR_DELAY Env Var Accepted
+```sh
+CLR_API_ERROR_DELAY=15 cargo run -p claude_runner -- --dry-run "test"
+```
+
+**Expected:** Exit 0. Env var applied silently; no error.
+
+### TC-71: CLR_RETRY_ON_UNKNOWN_ERROR Env Var Accepted
+```sh
+CLR_RETRY_ON_UNKNOWN_ERROR=1 cargo run -p claude_runner -- --dry-run "test"
+```
+
+**Expected:** Exit 0. Env var applied silently; no error.
+
 ## Pass Criteria
 
-All TC-1 through TC-65 must pass without unexpected errors or panics.
+All TC-1 through TC-71 must pass without unexpected errors or panics.
 TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-65 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
 
@@ -652,6 +694,23 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-111:** `--timeout` (missing value, run/ask) → exit 1; error "requires a value"
 - **CC-112:** `clr ask --retry-on-rate-limit 3 --dry-run "q"` == `clr run --retry-on-rate-limit 3 --dry-run "q"` (pure alias parity)
 - Automated in: `retry_rate_limit_test.rs`, `timeout_test.rs`
+
+### New features: retry-on-api-error, api-error-delay, retry-on-unknown-error
+
+- **CC-113:** `--retry-on-api-error 256 --dry-run "test"` → exit 1; error "invalid --retry-on-api-error value: 256" (u8 overflow)
+- **CC-114:** `--retry-on-api-error 255 --dry-run "test"` → exit 0 (u8 max accepted)
+- **CC-115:** `--retry-on-api-error` (missing value) → exit 1; error "requires a value"
+- **CC-116:** `CLR_RETRY_ON_API_ERROR=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-117:** `--api-error-delay 4294967296 --dry-run "test"` → exit 1 (u32 overflow)
+- **CC-118:** `--api-error-delay 4294967295 --dry-run "test"` → exit 0 (u32 max accepted)
+- **CC-119:** `--api-error-delay` (missing value) → exit 1; error "requires a value"
+- **CC-120:** `CLR_API_ERROR_DELAY=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-121:** `--retry-on-unknown-error 256 --dry-run "test"` → exit 1; error "invalid --retry-on-unknown-error value: 256" (u8 overflow)
+- **CC-122:** `--retry-on-unknown-error 255 --dry-run "test"` → exit 0 (u8 max accepted)
+- **CC-123:** `--retry-on-unknown-error` (missing value) → exit 1; error "requires a value"
+- **CC-124:** `CLR_RETRY_ON_UNKNOWN_ERROR=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-125:** `clr ask --retry-on-api-error 1 --dry-run "q"` == `clr run --retry-on-api-error 1 --dry-run "q"` (pure alias parity)
+- Automated in: `retry_api_error_test.rs`, `retry_unknown_error_test.rs`
 
 ---
 

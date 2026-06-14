@@ -2,7 +2,7 @@
 
 Maximum seconds to wait for the Claude subprocess to complete on the `run`/`ask`
 dispatch paths. When the subprocess does not exit within this limit, `clr` sends
-SIGKILL, emits an error message to stderr, and exits with code 2. A value of `0`
+SIGKILL, emits an error message to stderr, and exits with code 4. A value of `0`
 disables the watchdog entirely (unlimited runtime; current default behavior).
 
 - **Type:** u32 (seconds; 0 = unlimited)
@@ -27,7 +27,7 @@ preserves backward compatibility with all existing `clr run`/`clr ask` invocatio
 (no watchdog). All four commands treat `--timeout 0` identically.
 
 **Note:** When the timeout fires, `clr` emits to stderr:
-`"Error: timeout after {N}s"` and exits with code 2. Any partial stdout accumulated
+`"Error: timeout after {N}s"` and exits with code 4. Any partial stdout accumulated
 before the kill is discarded (unlike isolated/refresh which preserve partial output).
 
 **Note:** In `--dry-run` mode, no subprocess is spawned and the watchdog is never

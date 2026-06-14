@@ -36,6 +36,7 @@
 //! - EC-6 (delay): invalid env var silently ignored
 //! - EC-7 (delay): delay=0 causes immediate retry; exit 0
 
+#![ allow( clippy::doc_markdown ) ]
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env };
 use std::process::Command;

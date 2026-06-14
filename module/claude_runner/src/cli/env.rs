@@ -27,6 +27,7 @@ pub( super ) fn env_str( var : &str ) -> Option< String >
 /// (invalid strategy name) and `CLR_EXPECT_RETRIES` (exceeds u8 range).  All other
 /// env var parse failures are silently ignored so operators can set global env vars
 /// safely without breaking unconfigured invocations.
+#[ allow( clippy::too_many_lines ) ]
 pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
 {
   if parsed.message.is_none()              { parsed.message              = env_str( "CLR_MESSAGE" ); }
