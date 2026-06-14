@@ -12,6 +12,7 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 | US-4 | Sessions present: plain-style table with correct headers | AC-001, AC-005 | ✅ |
 | US-5 | `$PRO` prefix replaced by `"$PRO"` literal in Absolute Path column | AC-007 | ✅ |
 | US-6 | Queued CLR session shown when gate file present | AC-008 | ✅ |
+| US-7 | Active table caption contains `Active Sessions` and count suffix | AC-010 | ✅ |
 
 ---
 
@@ -72,3 +73,13 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 - **Then:** Exit 0; stdout contains `PID`, `CWD`, and `Waiting` (queued table headers); stdout contains `12345`
 - **Exit:** 0
 - **Verifies:** AC-008
+
+---
+
+### US-7: Active table caption contains `Active Sessions` and count suffix
+
+- **Given:** ≥1 fake `claude` process running; PATH prepended with fake dir
+- **When:** `clr ps`
+- **Then:** Exit 0; stdout contains `Active Sessions` (caption title) and `running` (count suffix from the caption rule line above the column headers)
+- **Exit:** 0
+- **Verifies:** AC-010

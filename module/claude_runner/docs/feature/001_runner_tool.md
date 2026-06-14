@@ -51,13 +51,15 @@ The gate is also skipped in `--dry-run` mode. Provides deterministic backpressur
 environments with parallel `clr` invocations hitting API rate limits. The gate uses
 `claude_core::process::find_claude_processes()` (Linux `/proc` scanner) for the session count.
 
-**Session listing (`clr ps`):** Prints a unicode-box table of all running Claude Code processes.
-Each row shows `#`, `PID`, `Started`, `CPU%`, `RAM`, `State`, `Absolute Path`, and `Task`.
-Data sources: `/proc/{pid}/stat` (state, CPU jiffies, start time), `/proc/{pid}/status`
-(VmRSS in MB), `~/.claude/projects/` JSONL files (Task column — last user message, truncated
-to 35 chars), `/proc/{pid}/fd/0` symlink (TTY fallback: `interactive (pts/N)`). The current
-`clr ps` process is never listed. When no sessions are found: prints
-`No active Claude Code sessions.` and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
+**Session listing (`clr ps`):** Prints two plain-style tables: active Claude Code sessions
+and queued `clr` waiters (processes blocked at the concurrency gate). Active table columns:
+`#`, `PID`, `Elapsed`, `CPU%`, `RAM`, `State`, `Absolute Path`, `Task`. Data sources:
+`/proc/{pid}/stat` (state, CPU jiffies, start time), `/proc/{pid}/status` (VmRSS in MB),
+`~/.claude/projects/` JSONL files (Task column — last user message, truncated to 35 chars);
+falls back to `"interactive"` when no JSONL found. Queued table reads gate state files from
+`$CLR_GATE_DIR` — columns: `#`, `PID`, `CWD`, `Waiting`, `Attempt`. The current `clr ps`
+process is never listed. When no sessions are found: prints `No active Claude Code sessions.`
+and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
 
 **Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile` (via `--session-dir` flag passthrough or resolved externally).
 
@@ -81,13 +83,18 @@ to 35 chars), `/proc/{pid}/fd/0` symlink (TTY fallback: `interactive (pts/N)`). 
 | File | Relationship |
 |------|--------------|
 | `../../src/lib.rs` | `run_cli()` entry point |
-| `../../src/cli/mod.rs` | Subcommand dispatch, execution dispatch (`run_print_mode`, `run_interactive`), dry-run, guard |
+| `../../src/cli/mod.rs` | Subcommand dispatch, dry-run, guard |
+| `../../src/cli/execution.rs` | `run_print_mode`, `run_interactive`, timeout watchdog, expect validation |
+| `../../src/cli/parse.rs` | CLI argument parsing (`parse_args`, `CliArgs`, `ExpectStrategy`) |
+| `../../src/cli/env.rs` | `apply_env_vars` — CLR_* env-variable fallbacks for all run params |
 | `../../src/cli/help.rs` | Help text printing for all subcommands (`clr`, `ask`, `isolated`, `refresh`) |
 | `../../src/cli/gate.rs` | Session concurrency gate (`wait_for_session_slot`; delegates process scan to `claude_core`) |
-| `../../src/cli/ps.rs` | Session listing (`dispatch_ps`; reads `/proc` metrics, formats unicode-box table) |
+| `../../src/cli/ps.rs` | Session listing (`dispatch_ps`; reads `/proc` metrics, formats plain-style tables) |
+| `../../src/cli/kill.rs` | Session termination (`dispatch_kill`; validates PID, sends SIGTERM) |
 | `../../src/cli/builder.rs` | `build_claude_command()` implementation, `session_exists()` guard, effective-dir resolution |
-| `../../src/cli/parse.rs` | CLI argument parsing, env var fallbacks |
 | `../../src/cli/credential.rs` | Credential-isolated execution (`run_isolated_command`, `run_refresh_command`), trace emission for isolated/refresh |
+| `../../src/cli/cred_parse.rs` | `IsolatedArgs`, `RefreshArgs`, their parsers and env-var fallbacks |
+| `../../src/cli/fence.rs` | `strip_fences` utility — outermost code-fence stripping for `--strip-fences` |
 
 ### Tests
 

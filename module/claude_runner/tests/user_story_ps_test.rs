@@ -12,6 +12,7 @@
 //! | US-4 | Sessions present: plain-style table with headers   | AC-001,005|
 //! | US-5 | `$PRO` prefix shortened in Absolute Path column   | AC-007    |
 //! | US-6 | Queued CLR shown: PID, CWD, Waiting headers       | AC-008    |
+//! | US-7 | Active table caption: `Active Sessions` + `running` | AC-010  |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
@@ -27,7 +28,7 @@ fn us_01_no_sessions()
 {
   let out = run_cli( &[ "ps" ] );
   let stdout = stdout_str( &out );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
   assert!( stdout.contains( "No active Claude Code sessions." ) );
   // Must NOT contain unicode box border when no sessions.
   assert!( !stdout.contains( '\u{250C}' ), "must not contain ┌ when 0 sessions" );
@@ -41,7 +42,7 @@ fn us_02_help_lists_ps()
 {
   let out = run_cli( &[ "--help" ] );
   let stdout = stdout_str( &out );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
   assert!( stdout.contains( "ps" ) );
 }
 
@@ -53,7 +54,7 @@ fn us_03_typo_guard()
 {
   let out = run_cli( &[ "p" ] );
   let stderr = stderr_str( &out );
-  assert!( !out.status.success() );
+  assert!( !out.status.success(), "expected non-zero exit for typo input, got 0" );
   assert!( stderr.contains( "Did you mean" ) );
 }
 
@@ -119,7 +120,7 @@ fn us_05_pro_prefix_shortened_in_path()
   let _ = bg.wait();
 
   let stdout = stdout_str( &out );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
   assert!(
     stdout.contains( "$PRO" ),
     "US-5: Absolute Path column must show $PRO/ prefix. Got:\n{stdout}"
@@ -153,4 +154,37 @@ fn us_06_queued_clr_shows_queued_headers()
   assert!( stdout.contains( "PID" ), "queued table must show PID: {stdout}" );
   assert!( stdout.contains( "CWD" ), "queued table must show CWD: {stdout}" );
   assert!( stdout.contains( "Waiting" ), "queued table must show Waiting: {stdout}" );
+}
+
+// ── US-7: Active table caption ────────────────────────────────────────────────
+
+/// US-7 (AC-010): when ≥1 session is active, `clr ps` prefixes the table with
+/// a titled caption rule containing "Active Sessions · N running" above the
+/// column headers.
+///
+/// The caption is emitted by `TableCaption::new("Active Sessions").field(format!("{} running", n))`.
+/// This test confirms the caption text is present in the rendered output so that
+/// AC-010 is machine-verifiable.
+#[ cfg( unix ) ]
+#[ test ]
+fn us_07_active_table_caption()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+
+  let out = run_clr_ps( &path_val );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( "Active Sessions" ),
+    "US-7: active table caption must contain 'Active Sessions', got: {stdout}"
+  );
+  assert!(
+    stdout.contains( "running" ),
+    "US-7: active table caption must contain 'running' count suffix, got: {stdout}"
+  );
 }

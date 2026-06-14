@@ -93,13 +93,17 @@ pub fn run_cli()
     return;
   }
 
-  // Dispatch subcommands — these functions never return.
-  // Keep in sync with KNOWN_SUBCOMMANDS in cli/mod.rs when adding a subcommand.
-  if tokens.first().map( String::as_str ) == Some( "ask" )      { dispatch_ask( &tokens ); }
-  if tokens.first().map( String::as_str ) == Some( "isolated" ) { dispatch_isolated( &tokens ); }
-  if tokens.first().map( String::as_str ) == Some( "refresh" )  { dispatch_refresh( &tokens ); }
-  if tokens.first().map( String::as_str ) == Some( "ps" )       { dispatch_ps( &tokens ); }
-  if tokens.first().map( String::as_str ) == Some( "kill" )     { dispatch_kill( &tokens ); }
+  // Dispatch subcommands.  All arms are -> ! (process exits inside the handler).
+  // Also update KNOWN_SUBCOMMANDS in cli/mod.rs when adding a subcommand.
+  match tokens.first().map( String::as_str )
+  {
+    Some( "ask" )      => dispatch_ask( &tokens ),
+    Some( "isolated" ) => dispatch_isolated( &tokens ),
+    Some( "refresh" )  => dispatch_refresh( &tokens ),
+    Some( "ps" )       => dispatch_ps( &tokens ),
+    Some( "kill" )     => dispatch_kill( &tokens ),
+    _                  => {}
+  }
 
   guard_unknown_subcommand( &tokens );
 

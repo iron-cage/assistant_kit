@@ -17,6 +17,7 @@
 //! | IT-9  | `$PRO` prefix replaced by `"$PRO"` in path    | Path shortening  |
 //! | IT-10 | Gate file present → queued table with headers  | Queued present   |
 //! | IT-11 | No gate files → no queued table in output      | Queued absent    |
+//! | IT-12 | Active table caption contains `Active Sessions` and `running` | Caption presence |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
@@ -78,7 +79,7 @@ fn it_03_help_lists_ps()
 {
   let out = run_cli( &[ "--help" ] );
   let stdout = stdout_str( &out );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
   assert!(
     stdout.contains( "ps" ),
     "help output must mention ps, got: {stdout}"
@@ -117,7 +118,7 @@ fn it_05_table_headers_present()
   let _ = bg.wait();
 
   let stdout = stdout_str( &out );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
   assert!( stdout.contains( "PID" ), "missing PID header: {stdout}" );
   assert!( stdout.contains( "Elapsed" ), "missing Elapsed header: {stdout}" );
   assert!( stdout.contains( "Absolute Path" ), "missing Absolute Path header: {stdout}" );
@@ -160,7 +161,7 @@ fn it_07_self_exclusion()
   let _ = bg.wait();
 
   let stdout = stdout_str( &out );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
   // The test-runner PID is not a `claude` binary, so it must not appear in the table.
   let self_pid = std::process::id().to_string();
   assert!(
@@ -284,5 +285,38 @@ fn it_11_no_gate_files_no_queued_table()
   assert!(
     !stdout.contains( "Attempt" ),
     "must not contain Attempt header when no gate files: {stdout}"
+  );
+}
+
+// ── IT-12: active table caption ───────────────────────────────────────────────
+
+/// IT-12: with a fake `claude` process running, the active sessions table output
+/// contains the titled caption rule line ("Active Sessions · N running") above
+/// the column headers.
+///
+/// The caption is rendered by `TableCaption::new("Active Sessions").field(format!("{} running", n))`
+/// via `data_fmt`; this test confirms end-to-end that the caption text appears in
+/// the output and is not accidentally dropped by the formatter.
+#[ cfg( unix ) ]
+#[ test ]
+fn it_12_active_table_has_caption()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+
+  let out = run_clr_ps( &path_val );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( "Active Sessions" ),
+    "IT-12: active table caption must contain 'Active Sessions', got: {stdout}"
+  );
+  assert!(
+    stdout.contains( "running" ),
+    "IT-12: active table caption must contain 'running' count suffix, got: {stdout}"
   );
 }

@@ -298,6 +298,7 @@ fn parse_runner_value_flag(
 ///
 /// `--help`/`-h` wins regardless of other flags or unknown tokens: if either appears
 /// anywhere in `tokens`, parsing short-circuits and returns `CliArgs { help: true, .. }`.
+#[ allow( clippy::too_many_lines ) ]
 pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
 {
   // --help/-h always wins — return early before any other token is parsed.
@@ -309,7 +310,44 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
   // in main() exits before any field of CliArgs is consulted.
   if tokens.iter().any( | t | t == "--help" || t == "-h" )
   {
-    return Ok( CliArgs { help : true, ..CliArgs::default() } );
+    return Ok( CliArgs
+    {
+      help                 : true,
+      message              : None,
+      print_mode           : false,
+      interactive          : false,
+      new_session          : false,
+      model                : None,
+      verbose              : false,
+      no_skip_permissions  : false,
+      max_tokens           : None,
+      session_dir          : None,
+      dir                  : None,
+      dry_run              : false,
+      trace                : false,
+      verbosity            : None,
+      system_prompt        : None,
+      append_system_prompt : None,
+      no_ultrathink        : false,
+      effort               : None,
+      no_effort_max        : false,
+      no_chrome            : false,
+      no_persist           : false,
+      json_schema          : None,
+      mcp_config           : Vec::new(),
+      file                 : None,
+      strip_fences         : false,
+      keep_claudecode      : false,
+      subdir               : None,
+      output_file          : None,
+      expect               : None,
+      expect_strategy      : None,
+      expect_retries       : None,
+      max_sessions         : None,
+      retry_on_rate_limit  : None,
+      retry_delay          : None,
+      timeout              : None,
+    } );
   }
 
   let mut parsed = CliArgs::default();

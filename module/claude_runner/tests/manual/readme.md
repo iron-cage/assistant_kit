@@ -486,7 +486,7 @@ cargo run -p claude_runner -- ps
 cargo run -p claude_runner -- ps
 ```
 
-**Expected:** Plain-style table (no `┌` border) with column headers `#`, `PID`, `Elapsed`, `CPU%`, `RAM`, `State`, `Absolute Path`, `Task`. Header line contains `PID` and `Elapsed` but NOT `┌`. Exit code 0. Requires ≥1 live `claude` process.
+**Expected:** Output begins with a titled caption rule line (e.g., `─── Active Sessions · 1 running ──────────────`). The column header row follows: `#`, `PID`, `Elapsed`, `CPU%`, `RAM`, `State`, `Absolute Path`, `Task`. Plain-style (no `┌` border). Exit code 0. Requires ≥1 live `claude` process.
 
 ### TC-63: `clr ps` — Self-Exclusion
 ```sh
@@ -655,7 +655,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 
 ---
 
-## New Corner Cases (NC-1 through NC-14) — Discovered During Manual Testing
+## New Corner Cases (NC-1 through NC-15) — Discovered During Manual Testing
 
 ### NC-1: QuotaExhausted Label (Automated)
 
@@ -767,5 +767,16 @@ CLR_GATE_DIR=/tmp/test-gate cargo run -p claude_runner -- ps
 rm -rf /tmp/test-gate
 ```
 
-**Expected:** Output contains a plain-style queued CLR processes table with headers `PID`, `CWD`, `Waiting`, `Attempt`. PID column shows `99999`. `Waiting` shows a large elapsed value (epoch 1720000000 is in 2024, so format is `Xh Ym`). "No active Claude Code sessions." message also appears above the queued table. Exit code 0. No live `claude` sessions required — works in container.
+**Expected:** "No active Claude Code sessions." message appears first, then a blank line, then the queued table. The queued table begins with a titled caption rule line (e.g., `─── Queued · 1 waiting ──────────────`), followed by column headers `PID`, `CWD`, `Waiting`, `Attempt`. PID column shows `99999`. `Waiting` shows a large elapsed value (epoch 1720000000 is in 2024, so format is `Xh Ym`). Exit code 0. No live `claude` sessions required — works in container.
+
+### NC-15: `clr kill` — Live Claude Session Termination
+
+**Precondition:** At least one live `clr run` or `clr ask` session must be running. Use `clr ps` to find its PID.
+
+```sh
+clr ps                     # note a PID from the output
+clr kill <PID>
+```
+
+**Expected:** `clr kill <PID>` exits 0; stdout contains `"Sent SIGTERM to Claude Code session <PID>."`. The targeted session terminates (verify with a follow-up `clr ps`). No other sessions are affected. Automated analog: `kill_command_test.rs::it_04_successful_sigterm_delivery` (uses fake `claude` ELF process; confirms same code path).
 

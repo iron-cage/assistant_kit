@@ -23,7 +23,7 @@ for a session slot — enabling them to identify stale, stuck, or piled-up sessi
 
 ### Acceptance Criteria
 
-- AC-001: `clr ps` with ≥1 running Claude processes exits 0 and prints a plain-style table whose first line contains the header `PID` without `┌` border characters
+- AC-001: `clr ps` with ≥1 running Claude processes exits 0 and prints a plain-style table containing the column header `PID` without `┌` border characters
 - AC-002: `clr ps` with 0 running Claude processes and no queued processes exits 0 and prints exactly `No active Claude Code sessions.`
 - AC-003: `clr --help` and `clr help` list `ps` among the known subcommands
 - AC-004: `clr p` triggers the "Did you mean 'ps'?" guard and exits 1 with the message on stderr
@@ -32,6 +32,7 @@ for a session slot — enabling them to identify stale, stuck, or piled-up sessi
 - AC-007: When the `PRO` environment variable is set and a session's working directory starts with that path, the `Absolute Path` column shows the path with the `$PRO` prefix replaced by the literal `"$PRO"` string
 - AC-008: When one or more gate state files exist in `$CLR_GATE_DIR`, `clr ps` prints a queued CLR processes table containing column headers `PID`, `CWD`, and `Waiting`
 - AC-009: When no gate state files exist, `clr ps` output does not contain a queued processes table
+- AC-010: Each table rendered by `clr ps` is preceded by a titled caption rule line: the active sessions table shows `Active Sessions · N running` and the queued processes table shows `Queued · N waiting`
 
 ### Referenced Commands
 

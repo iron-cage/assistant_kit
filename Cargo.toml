@@ -180,7 +180,7 @@ default-features = false
 features = [ "cli_help_template" ]
 
 [workspace.dependencies.data_fmt]
-version = "^0.3"
+version = "^0.4"
 default-features = false
 features = [ "enabled" ]
 

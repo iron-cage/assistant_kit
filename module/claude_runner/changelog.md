@@ -5,6 +5,72 @@ All notable changes to claude_runner will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-06-14
+
+### Added
+
+- **`clr kill <pid>` subcommand** — terminate a running Claude Code session by PID (TSK-201)
+  - Sends SIGTERM to the target process; validates PID belongs to a running `claude` process via `find_claude_processes()`
+  - Exits 0 with `"Sent SIGTERM to Claude Code session <PID>."` on success; exits 1 if PID not found or not a `claude` process
+  - Typo guard: `clr kil`, `clr killl` trigger "Did you mean 'kill'?" and exit 1
+  - `clr kill --help` / `clr kill -h` exit 0 with usage info
+  - Documented as command 07, user story 027 (6 acceptance criteria)
+
+- **`clr ps` gate state files** — `gate.rs` writes JSON state to `$CLR_GATE_DIR/{pid}.json` on each polling cycle (TSK-200)
+  - File contains: `cwd`, `since` (Unix timestamp), `attempt` (0-based), `message` (human-readable status)
+  - Deleted when the process acquires a session slot or exhausts its retry budget
+  - `CLR_GATE_DIR` environment variable overrides the default `/tmp/clr-gate/` gate state directory
+
+- **`clr ps` queued CLR processes table** — second table shows `clr` processes blocked in `wait_for_session_slot()` (TSK-200)
+  - Columns: `#`, `PID`, `CWD`, `Waiting`, `Attempt`
+  - Present only when ≥1 gate state file exists in `$CLR_GATE_DIR`
+  - No active sessions + queued waiters: prints "No active Claude Code sessions." sentinel above the queued table for context
+  - `Waiting` column uses same duration format as `Elapsed`: `"45s"` / `"8m 30s"` / `"2h 15m"`
+
+- **`clr ps` titled caption rule lines** — each table is preceded by a caption showing table name and count
+  - Active sessions: `─── Active Sessions · N running ──────`
+  - Queued waiters: `─── Queued · N waiting ──────`
+  - Rendered via `data_fmt::TableCaption`; `data_fmt` dependency updated `^0.3` → `^0.4`
+
+- **`CLAUDE.md` provisioned into isolated subprocess home** — `clr isolated` writes a fresh `CLAUDE.md` to `<temp_home>/.claude/CLAUDE.md` before invoking the subprocess (TSK-022)
+  - Ensures the subprocess receives a clean, governed configuration regardless of host `~/.claude/CLAUDE.md` state
+  - The temp home is isolated from the user's real `$HOME` via `--home <temp_home>` flag
+
+### Changed
+
+- **`clr ps` table style** — unicode-box → plain-style; `Started` column renamed `Elapsed` with duration format (TSK-199, TSK-200)
+  - Plain-style: no outer borders, dash separator under header row, 2-space column gaps
+  - `Elapsed` shows time since process start as `"45s"` / `"8m 30s"` / `"2h 15m"` (was Unix timestamp string)
+  - PIDs sorted numerically (ascending) in both tables; previously unordered
+
+- **`clr ps` `$PRO` path shortening** — `Absolute Path` (active) and `CWD` (queued) columns replace the `$PRO` prefix with the literal `"$PRO"` string when the `PRO` env var is set (TSK-199)
+
+- **Isolated subprocess model upgraded to Claude Opus 4.6** — `ISOLATED_DEFAULT_MODEL` changed from `claude-sonnet-4-6` to `claude-opus-4-6`; effort set to `EffortLevel::Max` (TSK-021)
+  - `--dangerously-skip-permissions` injected when a message is present; `--no-session-persistence` always injected
+  - Rationale: isolated mode runs high-stakes, single-shot tasks requiring maximum capability
+
+- **Refresh subprocess model set to Claude Sonnet 4.6** — new `REFRESH_DEFAULT_MODEL` = `"claude-sonnet-4-6"`; effort set to `EffortLevel::Low`; `--no-chrome` and `--no-session-persistence` always injected (TSK-021)
+  - Rationale: refresh is a lightweight credential-ping task; Sonnet at low effort is sufficient and faster
+
+- **`--max-sessions` default raised 25 → 30** (Plan 011)
+  - Reflects typical parallel workloads; users with stricter limits can still pass `--max-sessions <N>` explicitly
+
+- **Rate-limit retry defaults tightened** — `--retry-on-rate-limit` default 0 → 1; `--retry-delay` default 60 → 30 (Plan 010)
+  - One automatic retry with a 30s backoff is the right default for most automation; `--retry-on-rate-limit 0` disables
+
+### Fixed
+
+- **Isolated subprocess timeout semantics corrected** — `--timeout 0` now means "no deadline" (unlimited) for `clr isolated`, consistent with `clr run`/`clr ask` (TSK-022)
+  - Previously `timeout=0` was passed to `wait_for_output()` which treated 0 as "expire immediately"
+  - Fix: `run_isolated_command` uses `Option<Instant>` for deadline; `None` = no deadline
+
+### Hygiene
+
+- **code_hyg_l1 audit** — test file sizes reduced (all under 500 lines), duplicate helpers consolidated, Fix() doc comments completed
+  - `user_story_test.rs` (1911 lines) split into `user_story_creds_isolated_test.rs` + `user_story_output_test.rs`
+  - `cli_args_test.rs` (1076 lines) split into `cli_args_ext_test.rs`; `env_var_test.rs` (1027 lines) split into `env_var_ext_test.rs`
+  - 7 bare `Fix(BUG-NNN)` source comments in `src/cli/mod.rs` completed with `Root cause:` and `Pitfall:` fields
+
 ## [1.1.0] - 2026-06-07
 
 ### Fixed

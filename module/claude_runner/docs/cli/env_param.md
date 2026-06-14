@@ -23,7 +23,7 @@
 ### Env Param 1: CLR_* Input Parameters — `run` Subcommand
 
 Environment variable fallbacks for all 34 `run` subcommand parameters.
-`apply_env_vars()` in `src/cli/parse.rs` reads these immediately after CLI parsing, before command
+`apply_env_vars()` in `src/cli/env.rs` reads these immediately after CLI parsing, before command
 dispatch. Each variable is applied **only when the corresponding CLI field is still at its
 zero/absent value** — the CLI flag always wins when both are present.
 

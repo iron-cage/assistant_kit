@@ -18,6 +18,23 @@ fn spawn_error_msg( e : &std::io::Error ) -> String
   }
 }
 
+// Poll once in the `Ok(None)` arm of a `try_wait()` loop: check deadline and sleep.
+//
+// When the deadline is reached, kills the child, waits for it, prints the timeout
+// error, and exits 2.  Never returns on timeout.  The caller's loop continues on
+// the next iteration when the child is still running.
+fn poll_timeout( child : &mut std::process::Child, deadline : std::time::Instant, timeout_secs : u32 )
+{
+  if std::time::Instant::now() >= deadline
+  {
+    let _ = child.kill();
+    let _ = child.wait();
+    eprintln!( "Error: timeout after {timeout_secs}s" );
+    std::process::exit( 2 );
+  }
+  std::thread::sleep( core::time::Duration::from_millis( 50 ) );
+}
+
 /// Write `content` to the output file at `path` if present; exit 1 on error.
 fn write_output_file( path : Option< &str >, content : &str )
 {
@@ -140,17 +157,7 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 ) -> Exec
         let stderr = String::from_utf8_lossy( &raw.stderr ).to_string();
         return ExecutionOutput { stdout, stderr, exit_code };
       }
-      Ok( None ) =>
-      {
-        if std::time::Instant::now() >= deadline
-        {
-          let _ = child.kill();
-          let _ = child.wait();
-          eprintln!( "Error: timeout after {timeout_secs}s" );
-          std::process::exit( 2 );
-        }
-        std::thread::sleep( core::time::Duration::from_millis( 50 ) );
-      }
+      Ok( None ) => poll_timeout( &mut child, deadline, timeout_secs ),
       Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
     }
   }
@@ -298,17 +305,7 @@ pub( super ) fn run_interactive( builder : &ClaudeCommand, cli : &CliArgs )
         }
         return;
       }
-      Ok( None ) =>
-      {
-        if std::time::Instant::now() >= deadline
-        {
-          let _ = child.kill();
-          let _ = child.wait();
-          eprintln!( "Error: timeout after {timeout_secs}s" );
-          std::process::exit( 2 );
-        }
-        std::thread::sleep( core::time::Duration::from_millis( 50 ) );
-      }
+      Ok( None ) => poll_timeout( &mut child, deadline, timeout_secs ),
       Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
     }
   }

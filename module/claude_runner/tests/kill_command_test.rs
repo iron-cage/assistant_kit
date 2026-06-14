@@ -138,7 +138,7 @@ fn it_07_help_lists_kill()
 {
   let out    = run_cli( &[ "--help" ] );
   let stdout = stdout_str( &out );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
   assert!(
     stdout.contains( "kill" ),
     "help output must mention 'kill' subcommand, got: {stdout}"

@@ -110,7 +110,7 @@ fn us_05_help_lists_kill()
 {
   let out    = run_cli( &[ "--help" ] );
   let stdout = stdout_str( &out );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
   assert!( stdout.contains( "kill" ), "US-5: help must list 'kill'. Got:\n{stdout}" );
 }
 

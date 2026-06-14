@@ -51,6 +51,23 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
   std::process::exit( 0 );
 }
 
+// Render a completed RowBuilder as a captioned plain-style table string.
+//
+// auto_wrap: false — prevents word-wrapping long paths across continuation rows;
+// table width reflects content naturally (user scrolls if needed).
+fn render_plain_table( builder : RowBuilder, caption : TableCaption ) -> String
+{
+  let view = builder.build_view();
+  Format::format(
+    &TableFormatter::with_config(
+      TableConfig::plain()
+        .auto_wrap( false )
+        .caption( caption )
+    ),
+    &view,
+  ).unwrap_or_default()
+}
+
 // Build the active sessions table, returning None when no sessions are running.
 fn build_active_table( procs : &[ ProcessInfo ] ) -> Option< String >
 {
@@ -74,21 +91,9 @@ fn build_active_table( procs : &[ ProcessInfo ] ) -> Option< String >
     builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
   }
 
-  let view    = builder.build_view();
   let caption = TableCaption::new( "Active Sessions" )
     .field( format!( "{} running", procs.len() ) );
-  // auto_wrap: false — prevents word-wrapping long paths across continuation rows;
-  // table width reflects content naturally (user scrolls if needed).
-  let table = Format::format(
-    &TableFormatter::with_config(
-      TableConfig::plain()
-        .auto_wrap( false )
-        .caption( caption )
-    ),
-    &view,
-  ).unwrap_or_default();
-
-  Some( table )
+  Some( render_plain_table( builder, caption ) )
 }
 
 // Build one table row for the given process.
@@ -302,17 +307,7 @@ fn build_queued_table() -> Option< String >
     builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
   }
 
-  let view    = builder.build_view();
   let caption = TableCaption::new( "Queued" )
     .field( format!( "{count} waiting" ) );
-  let table = Format::format(
-    &TableFormatter::with_config(
-      TableConfig::plain()
-        .auto_wrap( false )
-        .caption( caption )
-    ),
-    &view,
-  ).unwrap_or_default();
-
-  Some( table )
+  Some( render_plain_table( builder, caption ) )
 }
