@@ -15,10 +15,10 @@ Validation tests for the `ErrorClass` taxonomy. `ErrorClass` is a documentation-
 | TC-4 | Runner — output file write error → exit 1 | Runner |
 | TC-5 | Transient — exit 2, no text | Transient |
 | TC-6 | Account — exit 2 + quota text | Account |
-| TC-7 | Process — timeout (CLR watchdog) → exit 2 | Process |
+| TC-7 | Process — timeout (CLR watchdog) → exit 4 | Process |
 | TC-8 | Validation — expect mismatch → exit 3 | Validation |
 | TC-9 | Process — signal → exit > 128 | Process |
-| TC-10 | Exit-2 disambiguation: Timeout vs RateLimit | Disambiguation |
+| TC-10 | Timeout uses exit 4, not exit 2 | Disambiguation |
 | TC-11 | Exit-2 disambiguation: QuotaExhausted vs RateLimit | Disambiguation |
 
 ## Test Coverage Summary
@@ -98,12 +98,12 @@ Validation tests for the `ErrorClass` taxonomy. `ErrorClass` is a documentation-
 
 ---
 
-### TC-7: Process — CLR timeout watchdog → exit 2 + stderr label
+### TC-7: Process — CLR timeout watchdog → exit 4 + stderr label
 
 - **Given:** fake `claude` that sleeps indefinitely; `--timeout 1`
 - **When:** `clr --print --timeout 1 --max-sessions 0 "msg"`
-- **Then:** exit 2; stderr contains `"Error: timeout after 1s"` (Process class — Timeout)
-- **Exit:** 2
+- **Then:** exit 4; stderr contains `"Error: timeout after 1s"` (Process class — Timeout)
+- **Exit:** 4
 - **Source:** [type/14_error_class.md](../../../../docs/cli/type/14_error_class.md)
 
 ---
@@ -128,13 +128,13 @@ Validation tests for the `ErrorClass` taxonomy. `ErrorClass` is a documentation-
 
 ---
 
-### TC-10: Exit-2 disambiguation — Timeout has stderr label
+### TC-10: Timeout uses exit 4, not exit 2
 
 - **Given:** CLR watchdog kills subprocess (Timeout); subprocess rate-limit exits 2 (RateLimit)
-- **When:** both conditions produce exit 2
-- **Then:** Timeout → stderr contains `"Error: timeout after "` prefix; RateLimit → no such prefix on stderr
-- **Exit:** 2 in both cases
-- **Note:** Documentation-level test: verified by TC-7 (Timeout has label) and TC-5 (RateLimit has no label)
+- **When:** both conditions produce their respective exit codes
+- **Then:** Timeout → exit 4 with stderr `"Error: timeout after "` prefix; RateLimit → exit 2 with no such prefix on stderr; no ambiguity
+- **Exit:** 4 (Timeout), 2 (RateLimit)
+- **Note:** Documentation-level test: verified by TC-7 (Timeout exits 4) and TC-5 (RateLimit exits 2)
 - **Source:** [type/14_error_class.md](../../../../docs/cli/type/14_error_class.md)
 
 ---

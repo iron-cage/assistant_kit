@@ -43,6 +43,6 @@
 | 11 | `McpConfigPath` | String | [`--mcp-config`](../param/024_mcp_config.md) | Filesystem path to an MCP configuration JSON file |
 | 12 | `FilePath` | String | [`--file`](../param/025_file.md) | Filesystem path to a readable file piped as subprocess stdin |
 | 13 | `ErrorKind` | enumeration (6 variants) | `classify_error()` return type | Subprocess failure classification: `RateLimit`, `QuotaExhausted`, `AuthError`, `ApiError`, `Signal`, `Unknown` |
-| 14 | `ErrorClass` | taxonomy (7 classes) | documentation type | Caller-facing grouping of all CLI error conditions into semantic response classes |
+| 14 | `ErrorClass` | taxonomy (8 classes) | documentation type | Caller-facing grouping of all CLI error conditions into semantic response classes |
 
 **Total:** 14 types (12 parameter types + 2 output/result types)

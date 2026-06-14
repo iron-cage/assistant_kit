@@ -59,8 +59,11 @@ pub( crate ) fn print_help()
   println!( "  --expect-retries <N>               Retry attempts when --expect-strategy retry (0–255, default: 0)" );
   println!( "  --max-sessions <N>                 Max concurrent claude sessions before blocking (0=unlimited, default: 30)" );
   println!( "  --retry-on-rate-limit <N>          Retry on transient rate limit up to N times (0–255, default: 1; 0 = no retry)" );
-  println!( "  --retry-delay <SECS>               Seconds between rate-limit retries (default: 30; 0 = immediate)" );
+  println!( "  --retry-delay <SECS>               Seconds between rate-limit and unknown-error retries (default: 30; 0 = immediate)" );
   println!( "  --timeout <SECS>                   Kill subprocess after N seconds (0 = unlimited, default: 0)" );
+  println!( "  --retry-on-api-error <N>           Retry on API error up to N times (0–255, default: 0; 0 = no retry)" );
+  println!( "  --api-error-delay <SECS>           Seconds between API error retries (default: 30; 0 = immediate)" );
+  println!( "  --retry-on-unknown-error <N>       Retry on unknown error up to N times (0–255, default: 0; 0 = no retry)" );
   println!( "  -h, --help                         Show this help" );
   println!();
   println!( "CREDENTIAL OPTIONS (isolated, refresh):" );
@@ -156,8 +159,11 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --expect-strategy <STRAT>          Mismatch handling: fail (default), retry, default:<VAL>" );
   println!( "  --expect-retries <N>               Retry attempts when --expect-strategy retry (0–255, default: 0)" );
   println!( "  --retry-on-rate-limit <N>          Retry on transient rate limit up to N times (0–255, default: 1; 0 = no retry)" );
-  println!( "  --retry-delay <SECS>               Seconds between rate-limit retries (default: 30; 0 = immediate)" );
+  println!( "  --retry-delay <SECS>               Seconds between rate-limit and unknown-error retries (default: 30; 0 = immediate)" );
   println!( "  --timeout <SECS>                   Kill subprocess after N seconds (0 = unlimited, default: 0)" );
+  println!( "  --retry-on-api-error <N>           Retry on API error up to N times (0–255, default: 0; 0 = no retry)" );
+  println!( "  --api-error-delay <SECS>           Seconds between API error retries (default: 30; 0 = immediate)" );
+  println!( "  --retry-on-unknown-error <N>       Retry on unknown error up to N times (0–255, default: 0; 0 = no retry)" );
   println!( "  -h, --help                         Show this help" );
   std::process::exit( 0 );
 }

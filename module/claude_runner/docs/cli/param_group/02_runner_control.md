@@ -6,7 +6,7 @@
 
 ### Semantic Coherence Test
 
-"Is this flag consumed by the runner, not Claude?" — YES for all 25.
+"Is this flag consumed by the runner, not Claude?" — YES for all 28.
 
 ### Why NOT X
 
@@ -38,8 +38,8 @@ clr --trace "Fix bug" --dir /project
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 1 | [`run`](../command/01_run.md) | Full | — | All 25 params apply; default command |
-| 5 | [`ask`](../command/05_ask.md) | Full | — | All 25 params apply; identical behavior — pure alias for run |
+| 1 | [`run`](../command/01_run.md) | Full | — | All 28 params apply; default command |
+| 5 | [`ask`](../command/05_ask.md) | Full | — | All 28 params apply; identical behavior — pure alias for run |
 
 ### Referenced Parameters
 
@@ -68,8 +68,11 @@ clr --trace "Fix bug" --dir /project
 | [`--expect-retries`](../param/032_expect_retries.md) | u8 | `0` | Retry cap | Re-invocation cap for `retry` strategy |
 | [`--max-sessions`](../param/033_max_sessions.md) | u32 | 30 | Concurrency gate | Max concurrent Claude Code sessions before blocking; 0 = unlimited |
 | [`--retry-on-rate-limit`](../param/034_retry_on_rate_limit.md) | u8 | `1` | Retry controller | Auto-retry count on transient rate-limit exit; 0 = no retry; `QuotaExhausted` never retried |
-| [`--retry-delay`](../param/035_retry_delay.md) | u32 | `30` | Retry delay | Seconds between rate-limit retries; 0 = immediate; ignored when `--retry-on-rate-limit` is 0 |
+| [`--retry-delay`](../param/035_retry_delay.md) | u32 | `30` | Retry delay | Seconds between rate-limit/unknown retries; 0 = immediate; ignored when both retry counts are 0 |
 | [`--timeout`](../param/036_timeout.md) | u32 | `0` | Execution watchdog | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only; contrast with param 20) |
+| [`--retry-on-api-error`](../param/037_retry_on_api_error.md) | u8 | `0` | Retry controller | Auto-retry count on `ApiError` (`"API Error: "`); 0 = no retry; uses `--api-error-delay` for cooldown |
+| [`--api-error-delay`](../param/038_api_error_delay.md) | u32 | `30` | Retry delay | Seconds between API error retries; 0 = immediate; ignored when `--retry-on-api-error` is 0 |
+| [`--retry-on-unknown-error`](../param/039_retry_on_unknown_error.md) | u8 | `0` | Retry controller | Auto-retry count on `Unknown` error (nonzero, no pattern, exit ≤ 128, ≠ 2); uses `--retry-delay` for cooldown |
 
 ### Referenced Tests
 

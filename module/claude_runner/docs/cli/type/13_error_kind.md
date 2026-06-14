@@ -42,16 +42,12 @@ The following failure conditions are emitted by the CLR runner layer (`module/cl
 
 | Condition | Exit Code | stderr Label | Source |
 |-----------|-----------|--------------|--------|
-| Timeout — subprocess exceeded `--timeout` | 2 ⚠️ | `"Error: timeout after {N}s"` | `execution.rs poll_timeout()` |
+| Timeout — subprocess exceeded `--timeout` | 4 | `"Error: timeout after {N}s"` | `execution.rs poll_timeout()` |
 | Expect mismatch — output did not match `--expect` | 3 | `"Error: output did not match --expect"` | `execution.rs apply_expect_validation()` |
 | Binary not found — `claude` not in PATH | 1 | `"claude binary not found in PATH"` | `execution.rs spawn_error_msg()` |
 | Spawn failed — OS error creating subprocess | 1 | `"Failed to execute Claude Code: {e}"` | `execution.rs spawn_error_msg()` |
 | Gate timeout — waited too long for session slot | 1 | `"Error: session gate timed out"` | `gate.rs wait_for_session_slot()` |
 | Output file write failed | 1 | `"Error: failed to write output file"` | `execution.rs write_output_file()` |
-
-⚠️ **Exit-2 collision:** `Timeout` (CLR-layer) and `RateLimit` (subprocess) both produce exit 2.
-Distinguish them by stderr: a timeout always prints `"Error: timeout after {N}s"` on stderr;
-a rate-limit exit has no such stderr prefix. See [`invariant/006_exit_codes.md`](../../invariant/006_exit_codes.md).
 
 ### Notes on Specific Patterns
 
@@ -70,7 +66,10 @@ a rate-limit exit has no such stderr prefix. See [`invariant/006_exit_codes.md`]
 | # | Parameter | Interaction |
 |---|-----------|-------------|
 | 34 | [`--retry-on-rate-limit`](../param/034_retry_on_rate_limit.md) | triggers retry when `ErrorKind::RateLimit` |
-| 35 | [`--retry-delay`](../param/035_retry_delay.md) | delay between `RateLimit` retries |
+| 35 | [`--retry-delay`](../param/035_retry_delay.md) | delay between `RateLimit` retries; also used for `Unknown` retries |
+| 37 | [`--retry-on-api-error`](../param/037_retry_on_api_error.md) | triggers retry when `ErrorKind::ApiError` |
+| 38 | [`--api-error-delay`](../param/038_api_error_delay.md) | delay between `ApiError` retries |
+| 39 | [`--retry-on-unknown-error`](../param/039_retry_on_unknown_error.md) | triggers retry when `ErrorKind::Unknown` |
 
 ### Cross-References
 

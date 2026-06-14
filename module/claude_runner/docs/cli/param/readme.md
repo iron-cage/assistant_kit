@@ -40,8 +40,11 @@
 | 034_retry_on_rate_limit.md | `--retry-on-rate-limit` parameter spec |
 | 035_retry_delay.md | `--retry-delay` parameter spec |
 | 036_timeout.md | `--timeout` parameter spec (run/ask) |
+| 037_retry_on_api_error.md | `--retry-on-api-error` parameter spec |
+| 038_api_error_delay.md | `--api-error-delay` parameter spec |
+| 039_retry_on_unknown_error.md | `--retry-on-unknown-error` parameter spec |
 
-### All Parameters (36 total)
+### All Parameters (39 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -81,10 +84,13 @@
 | 34 | `--retry-on-rate-limit` | u8 | `1` | 0–255 | Automatic retry count on transient rate-limit exit; 0 = no retry; never retries QuotaExhausted | 2 cmds |
 | 35 | `--retry-delay` | u32 | `30` | 0 to 4294967295 | Seconds to wait between rate-limit retries; ignored when --retry-on-rate-limit is 0 | 2 cmds |
 | 36 | `--timeout` | u32 | `0` | 0 to 4294967295 | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only; contrast with param 20) | 2 cmds |
+| 37 | `--retry-on-api-error` | u8 | `0` | 0–255 | Automatic retry count on API error (`"API Error: "`); 0 = no retry | 2 cmds |
+| 38 | `--api-error-delay` | u32 | `30` | 0 to 4294967295 | Seconds to wait between API error retries; ignored when --retry-on-api-error is 0 | 2 cmds |
+| 39 | `--retry-on-unknown-error` | u8 | `0` | 0–255 | Automatic retry count on unclassified error; 0 = no retry; uses --retry-delay for cooldown | 2 cmds |
 
-**Total:** 36 parameters
+**Total:** 39 parameters
 
-**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, and 36 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md).
+**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, and 39 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md).
 
 ### Navigation
 
@@ -124,6 +130,9 @@
 - [`--retry-on-rate-limit`](034_retry_on_rate_limit.md)
 - [`--retry-delay`](035_retry_delay.md)
 - [`--timeout` (run/ask)](036_timeout.md)
+- [`--retry-on-api-error`](037_retry_on_api_error.md)
+- [`--api-error-delay`](038_api_error_delay.md)
+- [`--retry-on-unknown-error`](039_retry_on_unknown_error.md)
 
 ### Quick Reference
 
@@ -131,4 +140,4 @@
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 34 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.
+**Commands by parameter count:** `run` = 37 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.

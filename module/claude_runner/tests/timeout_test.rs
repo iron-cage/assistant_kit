@@ -133,12 +133,12 @@ fn ec6_clr_timeout_invalid_ignored()
 
 // ── EC-7: Timeout fires → exit 2; stderr contains "timeout" ──────────────────
 
-/// EC-7: fake script sleeps 30s; --timeout 1 → exit 2 within ~2s; stderr has "timeout".
+/// EC-7: fake script sleeps 30s; --timeout 1 → exit 4 within ~2s; stderr has "timeout".
 ///
 /// Root Cause: --timeout watchdog not yet implemented for run/ask
 /// Why Not Caught: feature does not exist yet (TDD red phase)
-/// Fix Applied: will be fixed in mod.rs via `spawn_piped` + `try_wait` polling
-/// Prevention: guard with integration test confirming exit 2 and timeout message
+/// Fix Applied: poll_timeout() in execution.rs calls exit(4) (changed from exit(2), TSK-202)
+/// Prevention: guard with integration test confirming exit 4 and timeout message
 /// Pitfall: polling at 50ms intervals means actual kill may fire up to 50ms after
 ///          the deadline; tests must allow up to 2s total, not exactly 1s
 #[ cfg( unix ) ]
@@ -167,8 +167,8 @@ fn ec7_timeout_fires_kills_subprocess()
 
   assert_eq!(
     out.status.code(),
-    Some( 2 ),
-    "exit must be 2 on timeout. Got: {:?}", out.status.code()
+    Some( 4 ),
+    "exit must be 4 on timeout (TSK-202: timeout uses exit 4, not exit 2). Got: {:?}", out.status.code()
   );
   assert!(
     elapsed.as_secs() < 5,

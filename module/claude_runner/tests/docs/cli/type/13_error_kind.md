@@ -1,6 +1,6 @@
 # Type :: `ErrorKind`
 
-Validation tests for the `ErrorKind` classification type. Tests validate subprocess error classification logic, CLR-layer exit codes, and the exit-2 disambiguation between `Timeout`, `RateLimit`, and `QuotaExhausted`.
+Validation tests for the `ErrorKind` classification type. Tests validate subprocess error classification logic and CLR-layer exit codes.
 
 **Source:** [type/13_error_kind.md](../../../../docs/cli/type/13_error_kind.md)
 **Invariant:** [invariant/006_exit_codes.md](../../../../docs/invariant/006_exit_codes.md)
@@ -18,7 +18,7 @@ Validation tests for the `ErrorKind` classification type. Tests validate subproc
 | TC-7 | Exit 1, no pattern → `Unknown` | Unknown |
 | TC-8 | `QuotaExhausted` takes priority over exit-2 `RateLimit` | Priority Order |
 | TC-9 | `AuthError` takes priority over `ApiError` | Priority Order |
-| TC-10 | CLR timeout → exit 2, stderr `"Error: timeout after {N}s"` | CLR-Layer |
+| TC-10 | CLR timeout → exit 4, stderr `"Error: timeout after {N}s"` | CLR-Layer |
 | TC-11 | `--expect` mismatch → exit 3 | CLR-Layer |
 | TC-12 | `--max-sessions 0`, no gate → still exits 0 on success | CLR-Layer |
 
@@ -130,12 +130,12 @@ Validation tests for the `ErrorKind` classification type. Tests validate subproc
 
 ---
 
-### TC-10: CLR timeout → exit 2 with stderr label
+### TC-10: CLR timeout → exit 4 with stderr label
 
 - **Given:** fake `claude` process running; `clr --timeout 1 "msg"` with 1-second timeout
 - **When:** subprocess does not exit within 1 second
-- **Then:** `clr` exits 2; stderr contains `"Error: timeout after 1s"`
-- **Exit:** 2
+- **Then:** `clr` exits 4; stderr contains `"Error: timeout after 1s"`
+- **Exit:** 4
 - **Platform:** requires fake process that sleeps longer than timeout
 - **Source:** [type/13_error_kind.md](../../../../docs/cli/type/13_error_kind.md)
 

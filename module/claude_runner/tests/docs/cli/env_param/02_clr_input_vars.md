@@ -450,3 +450,39 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Invalid-ignored:** `CLR_TIMEOUT=notanumber` → parse failure silently ignored; default 0 (unlimited) used; dry-run exits 0 normally
 - **Cross-command:** `CLR_TIMEOUT` also applies to `isolated`/`refresh` (same semantics: 0 = unlimited); tested separately in E24
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E38: CLR_RETRY_ON_API_ERROR sets API error retry count
+
+- **Given:** `CLR_RETRY_ON_API_ERROR=2`; no `--retry-on-api-error` on CLI; `--dry-run` set
+- **When:** `CLR_RETRY_ON_API_ERROR=2 clr --dry-run task`
+- **Then:** exit 0; env var applied (retry count would be 2 on an API error in a live run); dry-run exits 0 normally
+- **Exit:** 0
+- **CLI-wins:** `clr --retry-on-api-error 3 --dry-run task` with `CLR_RETRY_ON_API_ERROR=1` → CLI value 3 used; env var 1 ignored
+- **Invalid-ignored:** `CLR_RETRY_ON_API_ERROR=notanumber` → parse failure silently ignored; default 0 used; dry-run exits 0 normally
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E39: CLR_API_ERROR_DELAY sets API error retry delay in seconds
+
+- **Given:** `CLR_API_ERROR_DELAY=10`; no `--api-error-delay` on CLI; `--dry-run` set
+- **When:** `CLR_API_ERROR_DELAY=10 clr --dry-run task`
+- **Then:** exit 0; env var applied (delay between API error retries would be 10s in a live run); dry-run exits 0 normally
+- **Exit:** 0
+- **CLI-wins:** `clr --api-error-delay 30 --dry-run task` with `CLR_API_ERROR_DELAY=10` → CLI value 30 used; env var 10 ignored
+- **Invalid-ignored:** `CLR_API_ERROR_DELAY=notanumber` → parse failure silently ignored; default 30 used; dry-run exits 0 normally
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E40: CLR_RETRY_ON_UNKNOWN_ERROR sets unknown error retry count
+
+- **Given:** `CLR_RETRY_ON_UNKNOWN_ERROR=1`; no `--retry-on-unknown-error` on CLI; `--dry-run` set
+- **When:** `CLR_RETRY_ON_UNKNOWN_ERROR=1 clr --dry-run task`
+- **Then:** exit 0; env var applied (retry count would be 1 on an unknown error in a live run); dry-run exits 0 normally
+- **Exit:** 0
+- **CLI-wins:** `clr --retry-on-unknown-error 2 --dry-run task` with `CLR_RETRY_ON_UNKNOWN_ERROR=1` → CLI value 2 used; env var 1 ignored
+- **Invalid-ignored:** `CLR_RETRY_ON_UNKNOWN_ERROR=bad` → parse failure silently ignored; default 0 used; dry-run exits 0 normally
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)

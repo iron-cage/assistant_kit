@@ -21,7 +21,7 @@ fn spawn_error_msg( e : &std::io::Error ) -> String
 // Poll once in the `Ok(None)` arm of a `try_wait()` loop: check deadline and sleep.
 //
 // When the deadline is reached, kills the child, waits for it, prints the timeout
-// error, and exits 2.  Never returns on timeout.  The caller's loop continues on
+// error, and exits 4.  Never returns on timeout.  The caller's loop continues on
 // the next iteration when the child is still running.
 fn poll_timeout( child : &mut std::process::Child, deadline : std::time::Instant, timeout_secs : u32 )
 {
@@ -30,7 +30,7 @@ fn poll_timeout( child : &mut std::process::Child, deadline : std::time::Instant
     let _ = child.kill();
     let _ = child.wait();
     eprintln!( "Error: timeout after {timeout_secs}s" );
-    std::process::exit( 2 );
+    std::process::exit( 4 );
   }
   std::thread::sleep( core::time::Duration::from_millis( 50 ) );
 }
@@ -109,7 +109,7 @@ fn apply_expect_validation( cli : &CliArgs, builder : &ClaudeCommand, out : Stri
 /// Execute one print-mode subprocess attempt with an optional timeout watchdog.
 ///
 /// Returns the completed `ExecutionOutput`. On spawn failure or timeout, exits the
-/// process directly (timeout → exit 2; spawn error → exit 1).  The caller is
+/// process directly (timeout → exit 4; spawn error → exit 1).  The caller is
 /// responsible for retry logic and success/failure dispatch.
 ///
 /// When `timeout_secs == 0`, `builder.execute()` is used (blocking, no polling overhead).
@@ -175,11 +175,16 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 ) -> Exec
 /// Supports subprocess timeout via `--timeout` (0 = unlimited).
 pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
 {
-  let verbosity    = cli.verbosity.unwrap_or_default();
-  let retry_limit  = cli.retry_on_rate_limit.unwrap_or( 1 ) as usize;
-  let retry_delay  = cli.retry_delay.unwrap_or( 30 );
-  let timeout_secs = cli.timeout.unwrap_or( 0 );
-  let mut attempts = 0usize;
+  let verbosity          = cli.verbosity.unwrap_or_default();
+  let retry_limit        = cli.retry_on_rate_limit.unwrap_or( 1 ) as usize;
+  let retry_delay        = cli.retry_delay.unwrap_or( 30 );
+  let timeout_secs       = cli.timeout.unwrap_or( 0 );
+  let api_retry_limit    = cli.retry_on_api_error.unwrap_or( 0 ) as usize;
+  let api_error_delay    = cli.api_error_delay.unwrap_or( 30 );
+  let unknown_retry_limit = cli.retry_on_unknown_error.unwrap_or( 0 ) as usize;
+  let mut attempts         = 0usize;
+  let mut api_attempts     = 0usize;
+  let mut unknown_attempts = 0usize;
 
   loop
   {
@@ -198,7 +203,9 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
       let kind = output.classify_error();
 
       // Retry on transient RateLimit if retries remain.
-      // QuotaExhausted, AuthError, ApiError, Signal, Unknown: never retry.
+      // QuotaExhausted, AuthError, Signal: never retry.
+      // ApiError: retry if --retry-on-api-error N set.
+      // Unknown: retry if --retry-on-unknown-error N set.
       if let Some( ErrorKind::RateLimit ) = &kind
       {
         if attempts < retry_limit
@@ -219,18 +226,62 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
         }
       }
 
+      // Retry on ApiError if retries remain.
+      if let Some( ErrorKind::ApiError ) = &kind
+      {
+        if api_attempts < api_retry_limit
+        {
+          api_attempts += 1;
+          if verbosity.shows_warnings()
+          {
+            eprintln!(
+              "API error (attempt {api_attempts}/{}); retrying in {api_error_delay}s…",
+              api_retry_limit + 1
+            );
+          }
+          if api_error_delay > 0
+          {
+            std::thread::sleep( core::time::Duration::from_secs( u64::from( api_error_delay ) ) );
+          }
+          continue;
+        }
+      }
+
+      // Retry on Unknown if retries remain.
+      if let Some( ErrorKind::Unknown ) = &kind
+      {
+        if unknown_attempts < unknown_retry_limit
+        {
+          unknown_attempts += 1;
+          if verbosity.shows_warnings()
+          {
+            eprintln!(
+              "Unknown error (attempt {unknown_attempts}/{}); retrying in {retry_delay}s…",
+              unknown_retry_limit + 1
+            );
+          }
+          if retry_delay > 0
+          {
+            std::thread::sleep( core::time::Duration::from_secs( u64::from( retry_delay ) ) );
+          }
+          continue;
+        }
+      }
+
       // Non-retriable error or retries exhausted.
       if verbosity.shows_errors()
       {
         let label = match &kind
         {
-          Some( ErrorKind::RateLimit ) if attempts > 0 => "rate limit retries exhausted",
-          Some( ErrorKind::RateLimit )                 => "rate limit",
-          Some( ErrorKind::QuotaExhausted )            => "quota exhausted",
-          Some( ErrorKind::ApiError )                  => "API error",
-          Some( ErrorKind::AuthError )                 => "auth error",
-          Some( ErrorKind::Signal )                    => "terminated by signal",
-          Some( ErrorKind::Unknown ) | None            => "unknown error",
+          Some( ErrorKind::RateLimit ) if attempts > 0       => "rate limit retries exhausted",
+          Some( ErrorKind::RateLimit )                       => "rate limit",
+          Some( ErrorKind::QuotaExhausted )                  => "quota exhausted",
+          Some( ErrorKind::ApiError ) if api_attempts > 0    => "API error retries exhausted",
+          Some( ErrorKind::ApiError )                        => "API error",
+          Some( ErrorKind::AuthError )                       => "auth error",
+          Some( ErrorKind::Signal )                          => "terminated by signal",
+          Some( ErrorKind::Unknown ) if unknown_attempts > 0 => "unknown error retries exhausted",
+          Some( ErrorKind::Unknown ) | None                  => "unknown error",
         };
         eprintln!( "Error: {label} (exit {})", output.exit_code );
       }

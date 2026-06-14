@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clr parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 36 clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout` (isolated/refresh), `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--subdir`, `--output-file`, `--expect`, `--expect-strategy`, `--expect-retries`, `--max-sessions`, `--retry-on-rate-limit`, `--retry-delay`, `--timeout` (run/ask).
+- **In Scope**: All 39 clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout` (isolated/refresh), `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--subdir`, `--output-file`, `--expect`, `--expect-strategy`, `--expect-retries`, `--max-sessions`, `--retry-on-rate-limit`, `--retry-delay`, `--timeout` (run/ask), `--retry-on-api-error`, `--api-error-delay`, `--retry-on-unknown-error`.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
@@ -49,3 +49,6 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `34_retry_on_rate_limit.md` | Edge cases for `--retry-on-rate-limit` parameter | ✅ |
 | `35_retry_delay.md` | Edge cases for `--retry-delay` parameter | ✅ |
 | `36_timeout.md` | Edge cases for `--timeout` flag (run/ask) | ✅ |
+| `037_retry_on_api_error.md` | Edge cases for `--retry-on-api-error` parameter | ⏳ |
+| `038_api_error_delay.md` | Edge cases for `--api-error-delay` parameter | ⏳ |
+| `039_retry_on_unknown_error.md` | Edge cases for `--retry-on-unknown-error` parameter | ⏳ |

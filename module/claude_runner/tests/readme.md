@@ -42,6 +42,9 @@
 | Bug reproducers BUG-247 | `bug_reproducers_247_test.rs` | Stdout-to-stderr forwarding on subprocess failure |
 | Bug reproducers BUG-248 | `bug_reproducers_248_test.rs` | `--keep-claudecode` warning when CLAUDECODE present |
 | Retry on rate limit (EC-1–EC-9, EC-1–EC-7) | `retry_rate_limit_test.rs` | `--retry-on-rate-limit` and `--retry-delay` parse, env var, retry, exhaustion, quota exclusion |
+| CLR-layer exit codes (EC-1–EC-3) | `exit_code_contract_test.rs` | timeout→exit 4, expect mismatch→exit 3, gate bypass→exit 0 |
+| Retry on API error (EC-1–EC-10, EC-1–EC-7) | `retry_api_error_test.rs` | `--retry-on-api-error` and `--api-error-delay` parse, env var, retry, exhaustion, quota exclusion |
+| Retry on unknown error (EC-1–EC-9) | `retry_unknown_error_test.rs` | `--retry-on-unknown-error` parse, env var, retry, exhaustion, default-0 |
 | Timeout run/ask (EC-1–EC-8) | `timeout_test.rs` | `--timeout` parse, env var, watchdog kill, fast-exit no-fire |
 | User stories (US01–US09) | `user_story_test.rs` | End-to-end user story workflows: core run/ask/model/verbose stories |
 | User stories (US10–US18) | `user_story_creds_isolated_test.rs` | End-to-end user story workflows: credential, isolated, and refresh stories |
@@ -85,7 +88,10 @@
 | `expect_validation_test.rs` | `--expect`/`--expect-strategy`/`--expect-retries` validation loop: match, mismatch, retry, default (T01–T17). |
 | `bug_reproducers_247_test.rs` | Bug reproducer BUG-247: stdout forwarded to stderr on subprocess failure. |
 | `bug_reproducers_248_test.rs` | Bug reproducer BUG-248: `--keep-claudecode` warning when CLAUDECODE is set in env. |
+| `exit_code_contract_test.rs` | CLR-layer exit code contract: timeout→exit 4 (EC-1), expect mismatch→exit 3 (EC-2), gate bypass→exit 0 (EC-3). |
 | `retry_rate_limit_test.rs` | `--retry-on-rate-limit` and `--retry-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion/quota-excluded (EC-1–EC-9 param 34, EC-1–EC-7 param 35). |
+| `retry_api_error_test.rs` | `--retry-on-api-error` and `--api-error-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion/quota-excluded (EC-1–EC-10 param 37, EC-1–EC-7 param 38). |
+| `retry_unknown_error_test.rs` | `--retry-on-unknown-error` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion/default-0 (EC-1–EC-9 param 39). |
 | `timeout_test.rs` | `--timeout` (run/ask) integration: parse, env var, CLI-wins, fake-subprocess watchdog kill and fast-exit no-fire (EC-1–EC-8). |
 | `env_var_test.rs` | CLR_* env var fallback: E01–E17, one per CLR_* variable, CLI-wins verification. |
 | `env_var_ext_test.rs` | CLR_* env var fallback extended: E18–E34, BUG-233 subdir slash validation. |
