@@ -26,7 +26,6 @@
 //! not interfere with the exit code. All tests use `--max-sessions 0` to bypass the session gate.
 
 #![ cfg( unix ) ]
-#![ allow( clippy::doc_markdown ) ]
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ fake_claude_dir, run_with_path };

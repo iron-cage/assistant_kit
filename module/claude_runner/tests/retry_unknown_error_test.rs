@@ -21,8 +21,6 @@
 //! - EC-7: fake exits 42 (no pattern) once then 0; retries=1, delay=0 → exit 0
 //! - EC-8: fake always exits 42 (no pattern); retries=1, delay=0 → nonzero; exhaustion message
 //! - EC-9: no flag, no env var → default=0; fake exits 42 → immediate exit, no retry
-
-#![ allow( clippy::doc_markdown ) ]
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env };
 use std::process::Command;
