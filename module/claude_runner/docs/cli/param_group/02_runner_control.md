@@ -6,7 +6,7 @@
 
 ### Semantic Coherence Test
 
-"Is this flag consumed by the runner, not Claude?" — YES for all 28.
+"Is this flag consumed by the runner, not Claude?" — YES for all 42.
 
 ### Why NOT X
 
@@ -38,8 +38,8 @@ clr --trace "Fix bug" --dir /project
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 1 | [`run`](../command/01_run.md) | Full | — | All 28 params apply; default command |
-| 5 | [`ask`](../command/05_ask.md) | Full | — | All 28 params apply; identical behavior — pure alias for run |
+| 1 | [`run`](../command/01_run.md) | Full | — | All 42 params apply; default command |
+| 5 | [`ask`](../command/05_ask.md) | Full | — | All 42 params apply; identical behavior — pure alias for run |
 
 ### Referenced Parameters
 
@@ -65,14 +65,28 @@ clr --trace "Fix bug" --dir /project
 | [`--output-file`](../param/029_output_file.md) | string | — | Output sink | Write captured stdout to a file (tee behavior) |
 | [`--expect`](../param/030_expect.md) | string | — | Output validator | Pipe-separated enum values; stdout must match one after trim+lowercase |
 | [`--expect-strategy`](../param/031_expect_strategy.md) | enum | `fail` | Mismatch handler | Mismatch handling: exit 3, retry N times, or output fallback value |
-| [`--expect-retries`](../param/032_expect_retries.md) | u8 | `0` | Retry cap | Re-invocation cap for `retry` strategy |
 | [`--max-sessions`](../param/033_max_sessions.md) | u32 | 30 | Concurrency gate | Max concurrent Claude Code sessions before blocking; 0 = unlimited |
-| [`--retry-on-rate-limit`](../param/034_retry_on_rate_limit.md) | u8 | `1` | Retry controller | Auto-retry count on transient rate-limit exit; 0 = no retry; `QuotaExhausted` never retried |
-| [`--retry-delay`](../param/035_retry_delay.md) | u32 | `30` | Retry delay | Seconds between rate-limit/unknown retries; 0 = immediate; ignored when both retry counts are 0 |
-| [`--timeout`](../param/036_timeout.md) | u32 | `0` | Execution watchdog | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only; contrast with param 20) |
-| [`--retry-on-api-error`](../param/037_retry_on_api_error.md) | u8 | `0` | Retry controller | Auto-retry count on `ApiError` (`"API Error: "`); 0 = no retry; uses `--api-error-delay` for cooldown |
-| [`--api-error-delay`](../param/038_api_error_delay.md) | u32 | `30` | Retry delay | Seconds between API error retries; 0 = immediate; ignored when `--retry-on-api-error` is 0 |
-| [`--retry-on-unknown-error`](../param/039_retry_on_unknown_error.md) | u8 | `0` | Retry controller | Auto-retry count on `Unknown` error (nonzero, no pattern, exit ≤ 128, ≠ 2); uses `--retry-delay` for cooldown |
+| [`--retry-on-transient`](../param/034_retry_on_transient.md) | u8 | auto | Retry (Tier 2) | Transient class retry count; effective default = 2 via fallback |
+| [`--transient-delay`](../param/035_transient_delay.md) | u32 | auto | Retry delay (Tier 2) | Transient class delay; effective default = 30 via fallback |
+| [`--timeout`](../param/036_timeout.md) | u32 | `0` | Execution watchdog | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only) |
+| [`--retry-on-account`](../param/040_retry_on_account.md) | u8 | auto | Retry (Tier 2) | Account class retry count |
+| [`--account-delay`](../param/041_account_delay.md) | u32 | auto | Retry delay (Tier 2) | Account class delay |
+| [`--retry-on-auth`](../param/042_retry_on_auth.md) | u8 | auto | Retry (Tier 2) | Auth class retry count |
+| [`--auth-delay`](../param/043_auth_delay.md) | u32 | auto | Retry delay (Tier 2) | Auth class delay |
+| [`--retry-on-service`](../param/044_retry_on_service.md) | u8 | auto | Retry (Tier 2) | Service class retry count |
+| [`--service-delay`](../param/045_service_delay.md) | u32 | auto | Retry delay (Tier 2) | Service class delay |
+| [`--retry-on-process`](../param/046_retry_on_process.md) | u8 | auto | Retry (Tier 2) | Process class retry count |
+| [`--process-delay`](../param/047_process_delay.md) | u32 | auto | Retry delay (Tier 2) | Process class delay |
+| [`--retry-on-validation`](../param/048_retry_on_validation.md) | u8 | auto | Retry (Tier 2) | Validation class retry count (only with `--expect-strategy retry`) |
+| [`--validation-delay`](../param/049_validation_delay.md) | u32 | auto | Retry delay (Tier 2) | Validation class delay |
+| [`--retry-on-runner`](../param/050_retry_on_runner.md) | u8 | auto | Retry (Tier 2) | Runner class retry count |
+| [`--runner-delay`](../param/051_runner_delay.md) | u32 | auto | Retry delay (Tier 2) | Runner class delay |
+| [`--retry-on-unknown`](../param/052_retry_on_unknown.md) | u8 | auto | Retry (Tier 2) | Unknown class retry count |
+| [`--unknown-delay`](../param/053_unknown_delay.md) | u32 | auto | Retry delay (Tier 2) | Unknown class delay |
+| [`--retry-override`](../param/054_retry_override.md) | u8 | auto | Retry (Tier 1) | Forces retry count for all error classes |
+| [`--retry-override-delay`](../param/055_retry_override_delay.md) | u32 | auto | Retry delay (Tier 1) | Forces delay for all error classes |
+| [`--retry-default`](../param/056_retry_default.md) | u8 | `2` | Retry (Tier 3) | Fallback retry count for all unset classes |
+| [`--retry-default-delay`](../param/057_retry_default_delay.md) | u32 | `30` | Retry delay (Tier 3) | Fallback delay for all unset classes |
 
 ### Referenced Tests
 

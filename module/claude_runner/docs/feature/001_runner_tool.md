@@ -38,7 +38,7 @@ error on stderr. In dry-run mode the file is not created. `--output-file` is ort
 **Enum output validation:** `--expect "val1|val2|..."` validates captured stdout against a
 pipe-separated list of expected values (case-insensitive, whitespace-trimmed). The
 `--expect-strategy` parameter controls mismatch handling: `fail` (exit 3, default), `retry`
-(re-invoke up to `--expect-retries` times then exit 3), or `default:<VALUE>` (output fallback
+(re-invoke up to `--retry-on-validation` times then exit 3), or `default:<VALUE>` (output fallback
 and exit 0). Exit code 3 is exclusive to `--expect` mismatch; it does not overlap with
 subprocess exit codes. Both parameters are silently ignored in interactive mode.
 
@@ -106,7 +106,7 @@ and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
 | `../../tests/execution_mode_test.rs` | E01–E13 live mode dispatch via fake claude binary |
 | `../../tests/isolated_test.rs` | Credential-isolated and refresh command execution; trace output for isolated/refresh |
 | `../../tests/output_file_test.rs` | T01–T06 --output-file tee behavior, write errors, dry-run skip |
-| `../../tests/expect_validation_test.rs` | T01–T17 --expect / --expect-strategy / --expect-retries validation loop |
+| `../../tests/expect_validation_test.rs` | T01–T17 --expect / --expect-strategy / --retry-on-validation validation loop |
 | `../../tests/bug_reproducers_247_test.rs` | BUG-247 stdout-to-stderr forwarding on subprocess failure |
 | `../../tests/bug_reproducers_248_test.rs` | BUG-248 --keep-claudecode warning when CLAUDECODE present |
 

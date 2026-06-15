@@ -8,9 +8,9 @@
 //!
 //! | Test | Scenario | Expected stderr |
 //! |------|----------|-----------------|
-//! | T09 | fake-claude exits 2, empty output | `"Error: rate limit (exit 2)"` |
-//! | T10 | fake-claude writes auth pattern to stdout, exits 1 | `"Error: auth error"` |
-//! | T11 | fake-claude writes quota pattern to stderr, exits 1 | `"Error: quota exhausted (exit 1)"` |
+//! | T09 | fake-claude exits 2, empty output | `"Error: [Transient] rate limit (exit 2)"` |
+//! | T10 | fake-claude writes auth pattern to stdout, exits 1 | `"Error: [Auth]"` prefix |
+//! | T11 | fake-claude writes quota pattern to stderr, exits 1 | `"Error: [Account]"` prefix |
 //!
 //! # Root Cause (BUG-037)
 //!
@@ -47,25 +47,26 @@ use cli_binary_test_helpers::{ fake_claude_dir, run_cli_with_env, stderr_str };
 // ── T09 ───────────────────────────────────────────────────────────────────────
 
 /// T09 (BUG-037): fake-claude exits 2 with no output → clr stderr contains
-/// `"Error: rate limit (exit 2)"`.
+/// `"Error: [Transient] rate limit (exit 2)"`.
 ///
 /// Before fix: stderr contained the generic phrase "possible rate limit or quota exhaustion".
-/// After fix: stderr contains the labeled "Error: rate limit (exit 2)".
+/// After fix (3-tier redesign): stderr contains the `[Class]`-prefixed label.
+/// `--retry-override 0` disables all retries so the label fires immediately rather than
+/// after sleeping 30s and emitting "retries exhausted".
 #[ test ]
 #[ doc = "bug_reproducer(BUG-037)" ]
 fn rate_limit_exit2_emits_labeled_message()
 {
   let ( _dir, path_val ) = fake_claude_dir( "exit 2" );
-  // Explicitly disable retry so the rate-limit label fires immediately (default retry=1 would
-  // sleep 30s and emit "retries exhausted" instead; this test targets classification, not retry).
+  // --retry-override 0 disables all error-class retries (overrides the built-in default=2).
   let out = run_cli_with_env(
-    &[ "--print", "--retry-on-rate-limit", "0", "--max-sessions", "0", "test" ],
+    &[ "--print", "--retry-override", "0", "--max-sessions", "0", "test" ],
     &[ ( "PATH", &path_val ) ],
   );
   let err = stderr_str( &out );
   assert!(
-    err.contains( "Error: rate limit (exit 2)" ),
-    "T09 (BUG-037): stderr must contain 'Error: rate limit (exit 2)'; got:\n{err}"
+    err.contains( "Error: [Transient] rate limit (exit 2)" ),
+    "T09 (BUG-037): stderr must contain 'Error: [Transient] rate limit (exit 2)'; got:\n{err}"
   );
   assert!(
     !err.contains( "possible rate limit or quota exhaustion" ),
@@ -76,10 +77,11 @@ fn rate_limit_exit2_emits_labeled_message()
 // ── T10 ───────────────────────────────────────────────────────────────────────
 
 /// T10 (BUG-037): fake-claude writes auth pattern to stdout, exits 1 → clr stderr
-/// contains `"Error: auth error"`.
+/// contains `"Error: [Auth]"` prefix with the original message.
 ///
 /// Validates that `classify_error()` scans stdout as well as stderr — auth failure
 /// text from `claude --print` arrives via stdout, not stderr.
+/// `--retry-override 0` disables Auth-class retry so the label fires immediately.
 #[ test ]
 #[ doc = "bug_reproducer(BUG-037)" ]
 fn auth_error_pattern_in_stdout_emits_labeled_message()
@@ -87,11 +89,18 @@ fn auth_error_pattern_in_stdout_emits_labeled_message()
   let ( _dir, path_val ) = fake_claude_dir(
     "echo 'Your organization does not have access to Claude'; exit 1",
   );
-  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  let out = run_cli_with_env(
+    &[ "--print", "--retry-override", "0", "--max-sessions", "0", "test" ],
+    &[ ( "PATH", &path_val ) ],
+  );
   let err = stderr_str( &out );
   assert!(
-    err.contains( "Error: auth error" ),
-    "T10 (BUG-037): stderr must contain 'Error: auth error'; got:\n{err}"
+    err.contains( "Error: [Auth]" ),
+    "T10 (BUG-037): stderr must contain 'Error: [Auth]' prefix; got:\n{err}"
+  );
+  assert!(
+    err.contains( "Your organization does not have access to Claude" ),
+    "T10 (BUG-037): stderr must contain the original auth message; got:\n{err}"
   );
   assert!(
     !err.contains( "possible rate limit or quota exhaustion" ),
@@ -102,24 +111,32 @@ fn auth_error_pattern_in_stdout_emits_labeled_message()
 // ── T11 ───────────────────────────────────────────────────────────────────────
 
 /// T11 (TSK-253): fake-claude writes quota exhaustion pattern to stderr, exits 1 →
-/// clr stderr contains `"Error: quota exhausted (exit 1)"`.
+/// clr stderr contains `"Error: [Account]"` prefix with the original message.
 ///
-/// Verifies that `QuotaExhausted` is distinct from `RateLimit` at the CLR
-/// output layer — quota exhaustion emits "quota exhausted" not "rate limit".
+/// Verifies that `QuotaExhausted` is distinct from `RateLimit` at the CLR output layer —
+/// quota exhaustion maps to `[Account]` class, NOT `[Transient]`.
+/// `--retry-override 0` disables Account-class retry so the label fires immediately.
 #[ test ]
 fn quota_exhausted_pattern_emits_labeled_message()
 {
   let ( _dir, path_val ) = fake_claude_dir(
     "echo \"You've hit your limit\" >&2; exit 1",
   );
-  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  let out = run_cli_with_env(
+    &[ "--print", "--retry-override", "0", "--max-sessions", "0", "test" ],
+    &[ ( "PATH", &path_val ) ],
+  );
   let err = stderr_str( &out );
   assert!(
-    err.contains( "Error: quota exhausted (exit 1)" ),
-    "T11 (TSK-253): stderr must contain 'Error: quota exhausted (exit 1)'; got:\n{err}"
+    err.contains( "Error: [Account]" ),
+    "T11 (TSK-253): stderr must contain 'Error: [Account]' prefix; got:\n{err}"
   );
   assert!(
-    !err.contains( "rate limit" ),
-    "T11 (TSK-253): 'rate limit' must be absent for quota exhaustion; got:\n{err}"
+    err.contains( "You've hit your limit" ),
+    "T11 (TSK-253): stderr must contain the original quota message; got:\n{err}"
+  );
+  assert!(
+    !err.contains( "[Transient]" ),
+    "T11 (TSK-253): [Transient] must be absent for quota exhaustion; got:\n{err}"
   );
 }

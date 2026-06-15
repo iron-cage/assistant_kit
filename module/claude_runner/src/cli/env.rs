@@ -18,13 +18,13 @@ pub( super ) fn env_str( var : &str ) -> Option< String >
   std::env::var( var ).ok().filter( | v | !v.is_empty() )
 }
 
-/// Apply `CLR_*` environment variable fallbacks for the 36 run parameters.
+/// Apply `CLR_*` environment variable fallbacks for the 51 run parameters.
 ///
 /// Each field is updated only when it is still at its zero/default value — the CLI
 /// flag always wins when both are present (CLI-wins field-default check).
 ///
 /// Returns `Err` for env vars with values that fail validation: `CLR_EXPECT_STRATEGY`
-/// (invalid strategy name) and `CLR_EXPECT_RETRIES` (exceeds u8 range).  All other
+/// (invalid strategy name) and `CLR_RETRY_ON_VALIDATION` (exceeds u8 range).  All other
 /// env var parse failures are silently ignored so operators can set global env vars
 /// safely without breaking unconfigured invocations.
 #[ allow( clippy::too_many_lines ) ] // env-var mapping is inherently wide — one branch per var.
@@ -100,17 +100,6 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
       );
     }
   }
-  if parsed.expect_retries.is_none()
-  {
-    if let Some( v ) = env_str( "CLR_EXPECT_RETRIES" )
-    {
-      parsed.expect_retries = Some(
-        parse_u8_bounded( &v, "--expect-retries" ).map_err( | e |
-          Error::msg( format!( "CLR_EXPECT_RETRIES: {e}" ) )
-        )?
-      );
-    }
-  }
   if parsed.max_sessions.is_none()
   {
     if let Some( v ) = env_str( "CLR_MAX_SESSIONS" )
@@ -118,18 +107,18 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
       parsed.max_sessions = v.parse::< u32 >().ok();
     }
   }
-  if parsed.retry_on_rate_limit.is_none()
+  if parsed.retry_on_transient.is_none()
   {
-    if let Some( v ) = env_str( "CLR_RETRY_ON_RATE_LIMIT" )
+    if let Some( v ) = env_str( "CLR_RETRY_ON_TRANSIENT" )
     {
-      parsed.retry_on_rate_limit = v.parse::< u8 >().ok();
+      parsed.retry_on_transient = v.parse::< u8 >().ok();
     }
   }
-  if parsed.retry_delay.is_none()
+  if parsed.transient_delay.is_none()
   {
-    if let Some( v ) = env_str( "CLR_RETRY_DELAY" )
+    if let Some( v ) = env_str( "CLR_TRANSIENT_DELAY" )
     {
-      parsed.retry_delay = v.parse::< u32 >().ok();
+      parsed.transient_delay = v.parse::< u32 >().ok();
     }
   }
   if parsed.timeout.is_none()
@@ -139,25 +128,134 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
       parsed.timeout = v.parse::< u32 >().ok();
     }
   }
-  if parsed.retry_on_api_error.is_none()
+  if parsed.retry_on_account.is_none()
   {
-    if let Some( v ) = env_str( "CLR_RETRY_ON_API_ERROR" )
+    if let Some( v ) = env_str( "CLR_RETRY_ON_ACCOUNT" )
     {
-      parsed.retry_on_api_error = v.parse::< u8 >().ok();
+      parsed.retry_on_account = v.parse::< u8 >().ok();
     }
   }
-  if parsed.api_error_delay.is_none()
+  if parsed.account_delay.is_none()
   {
-    if let Some( v ) = env_str( "CLR_API_ERROR_DELAY" )
+    if let Some( v ) = env_str( "CLR_ACCOUNT_DELAY" )
     {
-      parsed.api_error_delay = v.parse::< u32 >().ok();
+      parsed.account_delay = v.parse::< u32 >().ok();
     }
   }
-  if parsed.retry_on_unknown_error.is_none()
+  if parsed.retry_on_auth.is_none()
   {
-    if let Some( v ) = env_str( "CLR_RETRY_ON_UNKNOWN_ERROR" )
+    if let Some( v ) = env_str( "CLR_RETRY_ON_AUTH" )
     {
-      parsed.retry_on_unknown_error = v.parse::< u8 >().ok();
+      parsed.retry_on_auth = v.parse::< u8 >().ok();
+    }
+  }
+  if parsed.auth_delay.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_AUTH_DELAY" )
+    {
+      parsed.auth_delay = v.parse::< u32 >().ok();
+    }
+  }
+  if parsed.retry_on_service.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RETRY_ON_SERVICE" )
+    {
+      parsed.retry_on_service = v.parse::< u8 >().ok();
+    }
+  }
+  if parsed.service_delay.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_SERVICE_DELAY" )
+    {
+      parsed.service_delay = v.parse::< u32 >().ok();
+    }
+  }
+  if parsed.retry_on_process.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RETRY_ON_PROCESS" )
+    {
+      parsed.retry_on_process = v.parse::< u8 >().ok();
+    }
+  }
+  if parsed.process_delay.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_PROCESS_DELAY" )
+    {
+      parsed.process_delay = v.parse::< u32 >().ok();
+    }
+  }
+  if parsed.retry_on_validation.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RETRY_ON_VALIDATION" )
+    {
+      parsed.retry_on_validation = Some(
+        parse_u8_bounded( &v, "--retry-on-validation" ).map_err( | e |
+          Error::msg( format!( "CLR_RETRY_ON_VALIDATION: {e}" ) )
+        )?
+      );
+    }
+  }
+  if parsed.validation_delay.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_VALIDATION_DELAY" )
+    {
+      parsed.validation_delay = v.parse::< u32 >().ok();
+    }
+  }
+  if parsed.retry_on_runner.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RETRY_ON_RUNNER" )
+    {
+      parsed.retry_on_runner = v.parse::< u8 >().ok();
+    }
+  }
+  if parsed.runner_delay.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RUNNER_DELAY" )
+    {
+      parsed.runner_delay = v.parse::< u32 >().ok();
+    }
+  }
+  if parsed.retry_on_unknown.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RETRY_ON_UNKNOWN" )
+    {
+      parsed.retry_on_unknown = v.parse::< u8 >().ok();
+    }
+  }
+  if parsed.unknown_delay.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_UNKNOWN_DELAY" )
+    {
+      parsed.unknown_delay = v.parse::< u32 >().ok();
+    }
+  }
+  if parsed.retry_override.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RETRY_OVERRIDE" )
+    {
+      parsed.retry_override = v.parse::< u8 >().ok();
+    }
+  }
+  if parsed.retry_override_delay.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RETRY_OVERRIDE_DELAY" )
+    {
+      parsed.retry_override_delay = v.parse::< u32 >().ok();
+    }
+  }
+  if parsed.retry_default.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RETRY_DEFAULT" )
+    {
+      parsed.retry_default = v.parse::< u8 >().ok();
+    }
+  }
+  if parsed.retry_default_delay.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RETRY_DEFAULT_DELAY" )
+    {
+      parsed.retry_default_delay = v.parse::< u32 >().ok();
     }
   }
   Ok( () )

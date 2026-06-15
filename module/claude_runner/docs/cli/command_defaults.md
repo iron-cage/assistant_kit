@@ -36,7 +36,7 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | `--output-file` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--expect` / `--expect-strategy` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--max-sessions` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
-| `--retry-on-rate-limit` / `--retry-delay` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
+| `--retry-on-transient` / `--transient-delay` (+ all retry params) | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--dir` / `--subdir` / `--session-dir` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--system-prompt` / `--append-system-prompt` | ✅ supported | ✅ supported | via passthrough only | ➖ not supported |
 | `--json-schema` / `--mcp-config` | ✅ supported | ✅ supported | via passthrough only | ➖ not supported |

@@ -4,9 +4,12 @@ Interaction tests for Group 2 (Runner Control): `--no-skip-permissions`, `--inte
 `--new-session`, `--dir`, `--subdir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`,
 `--trace`, `--no-ultrathink`, `--no-effort-max`, `--no-chrome`, `--no-persist`,
 `--file`, `--strip-fences`, `--keep-claudecode`, `--output-file`, `--expect`,
-`--expect-strategy`, `--expect-retries`, `--max-sessions`, `--retry-on-rate-limit`,
-`--retry-delay`, `--timeout` (run/ask), `--retry-on-api-error`, `--api-error-delay`,
-`--retry-on-unknown-error`. Tests validate these twenty-eight flags
+`--expect-strategy`, `--max-sessions`, `--retry-on-transient`, `--transient-delay`,
+`--timeout` (run/ask), `--retry-on-account`, `--account-delay`, `--retry-on-auth`,
+`--auth-delay`, `--retry-on-service`, `--service-delay`, `--retry-on-process`, `--process-delay`,
+`--retry-on-validation`, `--validation-delay`, `--retry-on-runner`, `--runner-delay`,
+`--retry-on-unknown`, `--unknown-delay`, `--retry-override`, `--retry-override-delay`,
+`--retry-default`, `--retry-default-delay`. Tests validate these forty-two flags
 coexist without conflict and are consumed by the runner, not forwarded to claude.
 
 **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)
@@ -65,8 +68,8 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 ### CC-4: All runner control flags together → no conflict
 
 - **Given:** `/tmp/rc_test.txt` exists and is readable; clean environment
-- **When:** `clr --dry-run --no-skip-permissions --interactive --new-session --dir /tmp/test --subdir work --max-tokens 100000 --session-dir /tmp/sessions --verbosity 2 --trace --no-ultrathink --no-effort-max --no-chrome --no-persist --file /tmp/rc_test.txt --strip-fences --keep-claudecode --output-file /tmp/rc_out.txt --expect "yes|no" --expect-strategy fail --expect-retries 2 --max-sessions 5 --retry-on-rate-limit 3 --retry-delay 30 --timeout 60 --retry-on-api-error 1 --api-error-delay 0 --retry-on-unknown-error 1 "Fix bug"`
-- **Then:** Exit 0; all twenty-eight flags accepted without conflict; command assembled correctly; effective dir contains `/tmp/test/-work`; `--chrome` and `--dangerously-skip-permissions` are absent from assembled command; no unknown-flag error for any runner-control flag
+- **When:** `clr --dry-run --no-skip-permissions --interactive --new-session --dir /tmp/test --subdir work --max-tokens 100000 --session-dir /tmp/sessions --verbosity 2 --trace --no-ultrathink --no-effort-max --no-chrome --no-persist --file /tmp/rc_test.txt --strip-fences --keep-claudecode --output-file /tmp/rc_out.txt --expect "yes|no" --expect-strategy fail --max-sessions 5 --retry-on-transient 3 --transient-delay 30 --timeout 60 --retry-on-account 1 --account-delay 0 --retry-on-auth 1 --auth-delay 0 --retry-on-service 1 --service-delay 0 --retry-on-process 1 --process-delay 0 --retry-on-validation 2 --validation-delay 0 --retry-on-runner 0 --runner-delay 0 --retry-on-unknown 1 --unknown-delay 0 --retry-override 3 --retry-override-delay 0 --retry-default 2 --retry-default-delay 30 "Fix bug"`
+- **Then:** Exit 0; all forty-two flags accepted without conflict; command assembled correctly; effective dir contains `/tmp/test/-work`; `--chrome` and `--dangerously-skip-permissions` are absent from assembled command; no unknown-flag error for any runner-control flag
 - **Exit:** 0
 - **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)
 - **Commands:** run, ask

@@ -1,21 +1,22 @@
-//! `--expect` / `--expect-strategy` / `--expect-retries` Integration Tests
+//! `--expect` / `--expect-strategy` Integration Tests
 //!
 //! ## Purpose
 //!
-//! Verify T01–T11 covering the three expect-group parameters:
-//! `30_expect.md`, `31_expect_strategy.md`, `32_expect_retries.md`.
+//! Verify T01–T18 covering the expect-group parameters:
+//! `30_expect.md` and `31_expect_strategy.md`.
 //!
 //! ## Key Design Note
 //!
-//! `--expect-retries` default is **0** (zero retries = 1 total attempt). This was corrected
-//! from an original design of 2; the implementation uses `unwrap_or(0)` throughout. Tests that
-//! exercise the implicit default (no `--expect-retries` flag) expect 1 total attempt.
+//! Retry behavior for expect mismatches is now controlled by `--retry-on-validation`
+//! (param 048) via the 3-tier retry system.  `--expect-strategy retry` must still
+//! be set to enter the retry branch; `--retry-on-validation` supplies the class-specific
+//! count.  Full retry edge-case coverage is in `retry_validation_test.rs`.
 //!
 //! ## Strategy
 //!
 //! Tests T01–T04, T07–T09 use a fake `claude` shell script injected via PATH
 //! manipulation to produce deterministic output without requiring the real binary.
-//! Tests T05, T06, T10, T11 use dry-run or parser validation — no subprocess needed.
+//! Tests T05, T06, T10, T12 use dry-run or parser validation — no subprocess needed.
 //!
 //! ## Test Layout
 //!
@@ -24,19 +25,21 @@
 //! - T03: Case-insensitive match → exit 0
 //! - T04: Leading/trailing whitespace trimmed → exit 0
 //! - T05: `--dry-run` with `--expect` → exit 0 (validation skipped)
-//! - T06: `clr --help` lists `--expect`, `--expect-strategy`, `--expect-retries`
+//! - T06: `clr --help` lists `--expect`, `--expect-strategy`, `--retry-on-validation`
 //! - T07: retry strategy — matches on 2nd attempt → exit 0
 //! - T08: retry strategy — all retries exhausted → exit 3
 //! - T09: `default:<VAL>` strategy → emits fallback, exit 0
 //! - T10: invalid `--expect-strategy` value → exit 1 at parse time
-//! - T11: `--expect-retries 256` → exit 1 at parse time (out of range)
+//! - T12: `--expect-strategy` without `--expect` → silently ignored
+//! - T13: `--retry-on-validation 0 --expect-strategy retry` → single attempt
+//! - T15: `--retry-on-validation` with fail strategy → silently ignored
+//! - T16: `--retry-on-validation 3` → exactly 4 invocations
 //! - T18: `default:` with empty VALUE → accepted at parse time (dry-run exits 0)
 #![ cfg( unix ) ]
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ fake_claude, run_cli, run_with_path };
 use std::os::unix::fs::PermissionsExt;
-use std::process::Command;
 
 // ── T01: Output matches → exit 0 ─────────────────────────────────────────────
 
@@ -127,7 +130,8 @@ fn t05_expect_dry_run_exits_0()
 
 // ── T06: --help lists all three expect params ─────────────────────────────────
 
-/// T06: `clr --help` lists `--expect`, `--expect-strategy`, and `--expect-retries`.
+/// T06: `clr --help` lists `--expect`, `--expect-strategy`, and `--retry-on-validation`;
+/// old flag `--expect-retries` is absent.
 #[ test ]
 fn t06_help_lists_all_expect_params()
 {
@@ -143,14 +147,18 @@ fn t06_help_lists_all_expect_params()
     "--help must list --expect-strategy. Got:\n{stdout}"
   );
   assert!(
-    stdout.contains( "--expect-retries" ),
-    "--help must list --expect-retries. Got:\n{stdout}"
+    stdout.contains( "--retry-on-validation" ),
+    "--help must list --retry-on-validation. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "--expect-retries" ),
+    "--help must NOT list --expect-retries. Got:\n{stdout}"
   );
 }
 
 // ── T07: retry — matches on 2nd attempt → exit 0 ─────────────────────────────
 
-/// T07: With `--expect-strategy retry --expect-retries 1`, a mismatch on the 1st call
+/// T07: With `--expect-strategy retry --retry-on-validation 1`, a mismatch on the 1st call
 /// followed by a match on the 2nd call exits 0.
 ///
 /// Uses a counter file inside the temp dir: first invocation returns `"maybe"`,
@@ -172,7 +180,7 @@ fn t07_retry_matches_on_second_attempt()
   let new_path = format!( "{}:{old_path}", tmp.path().display() );
 
   let out = run_with_path(
-    &[ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "--expect-retries", "1", "answer" ],
+    &[ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "--retry-on-validation", "1", "--validation-delay", "0", "answer" ],
     &new_path,
   );
   assert_eq!(
@@ -187,14 +195,14 @@ fn t07_retry_matches_on_second_attempt()
 
 /// T08: When all retry attempts fail to match, exit 3.
 ///
-/// With `--expect-retries 2` and a fake that always returns `"maybe"`, 3 total
+/// With `--retry-on-validation 2` and a fake that always returns `"maybe"`, 3 total
 /// attempts are made (1 initial + 2 retries) and all fail → exit 3.
 #[ test ]
 fn t08_retry_exhausted_exits_3()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho 'maybe'" );
   let out = run_with_path(
-    &[ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "--expect-retries", "2", "answer" ],
+    &[ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "--retry-on-validation", "2", "--validation-delay", "0", "answer" ],
     &path,
   );
   assert_eq!(
@@ -250,30 +258,6 @@ fn t10_invalid_strategy_exits_1()
   );
 }
 
-// ── T11: --expect-retries 256 → exit 1 ───────────────────────────────────────
-
-/// T11: `--expect-retries` values outside 0–255 are rejected at parse time with exit 1.
-///
-/// Covers 32-EC-3.
-#[ test ]
-fn t11_out_of_range_retries_exits_1()
-{
-  let out = run_cli( &[
-    "--expect",          "yes|no",
-    "--expect-strategy", "retry",
-    "--expect-retries",  "256",
-    "answer",
-  ] );
-  assert_eq!(
-    out.status.code(),
-    Some( 1 ),
-    "retries > 255 must exit 1. Got: {:?}",
-    out.status.code()
-  );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!( !stderr.is_empty(), "stderr must contain error message. Got empty stderr" );
-}
-
 // ── T12: --expect-strategy without --expect → silently ignored (31-EC-6) ─────
 
 /// T12: `--expect-strategy fail` set without `--expect` is silently ignored.
@@ -290,11 +274,11 @@ fn t12_strategy_without_expect_silently_ignored()
   );
 }
 
-// ── T13: --expect-retries 0 → single attempt (32-EC-2) ───────────────────────
+// ── T13: --retry-on-validation 0 → single attempt ────────────────────────────
 
-/// T13: `--expect-retries 0` with `--expect-strategy retry` means exactly 1 invocation.
+/// T13: `--retry-on-validation 0` with `--expect-strategy retry` means exactly 1 invocation.
 ///
-/// Covers 32-EC-2: retries=0 means no retries — subprocess called once, then exit 3.
+/// `resolve_count(None, 0, None) = 0` retries — subprocess called once, then exit 3.
 #[ test ]
 fn t13_retries_0_means_single_attempt()
 {
@@ -312,7 +296,7 @@ fn t13_retries_0_means_single_attempt()
   let new_path = format!( "{}:{old_path}", tmp.path().display() );
 
   let out = run_with_path(
-    &[ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "--expect-retries", "0", "answer" ],
+    &[ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "--retry-on-validation", "0", "answer" ],
     &new_path,
   );
   assert_eq!(
@@ -329,117 +313,34 @@ fn t13_retries_0_means_single_attempt()
   assert_eq!( count, 1, "must invoke exactly 1 time (0 retries). Got: {count}" );
 }
 
-// ── T14: CLR_EXPECT_RETRIES env var applied (32-EC-4) ─────────────────────────
+// ── T15: --retry-on-validation without retry strategy → silently ignored ──────
 
-/// T14: `CLR_EXPECT_RETRIES=3` applies when the CLI flag is absent.
+/// T15: `--retry-on-validation` with `--expect-strategy fail` is silently ignored.
 ///
-/// Covers 32-EC-4: env var equivalent to `--expect-retries 3`; exit 3 after 4 attempts.
-#[ test ]
-fn t14_clr_expect_retries_env_var_applied()
-{
-  let tmp = tempfile::tempdir().expect( "create temp dir" );
-  let count_path = tmp.path().join( "count.txt" );
-  let fake = tmp.path().join( "claude" );
-  let script = format!(
-    "#!/bin/sh\nCF={}\nN=0\n[ -f \"$CF\" ] && N=$(cat \"$CF\")\nN=$((N+1))\necho $N > \"$CF\"\necho 'maybe'\n",
-    count_path.display()
-  );
-  std::fs::write( &fake, &script ).expect( "write fake claude" );
-  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
-    .expect( "chmod fake claude" );
-  let old_path = std::env::var( "PATH" ).unwrap_or_default();
-  let new_path = format!( "{}:{old_path}", tmp.path().display() );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "answer" ] )
-    .env( "PATH", &new_path )
-    .env( "CLR_EXPECT_RETRIES", "3" )
-    .output()
-    .expect( "invoke clr" );
-
-  assert_eq!(
-    out.status.code(),
-    Some( 3 ),
-    "CLR_EXPECT_RETRIES=3 all-fail must exit 3. stderr: {}",
-    String::from_utf8_lossy( &out.stderr )
-  );
-  let count = std::fs::read_to_string( &count_path )
-    .expect( "count file must exist" )
-    .trim()
-    .parse::<u32>()
-    .expect( "count is a number" );
-  assert_eq!( count, 4, "must invoke exactly 4 times (1 initial + 3 env-var retries). Got: {count}" );
-}
-
-// ── T15: --expect-retries without retry strategy → silently ignored (32-EC-5) ─
-
-/// T15: `--expect-retries` with `--expect-strategy fail` is silently ignored.
-///
-/// Covers 32-EC-5: retry count has no effect when strategy is `fail`.
+/// Retry count has no effect when strategy is `fail` — the fail branch
+/// exits 3 immediately without consulting the retry count.
 #[ test ]
 fn t15_retries_without_retry_strategy_ignored()
 {
   let out = run_cli( &[
     "--dry-run",
-    "--expect",          "yes|no",
-    "--expect-strategy", "fail",
-    "--expect-retries",  "5",
+    "--expect",              "yes|no",
+    "--expect-strategy",     "fail",
+    "--retry-on-validation", "5",
     "task",
   ] );
   assert!(
     out.status.success(),
-    "--expect-retries with fail strategy in dry-run must exit 0. stderr: {}",
+    "--retry-on-validation with fail strategy in dry-run must exit 0. stderr: {}",
     String::from_utf8_lossy( &out.stderr )
   );
 }
 
-// ── T17: no --expect-retries flag → default 0 retries → 1 attempt (32-EC-6) ──
+// ── T16: --retry-on-validation 3 → exactly 4 invocations ─────────────────────
 
-/// T17: When `--expect-retries` is absent, the default of 0 retries is used.
+/// T16: `--retry-on-validation 3` with an always-failing fake makes exactly 4 invocations.
 ///
-/// With retry strategy but no explicit retries flag, exactly 1 invocation is made.
-/// Covers 32-EC-6: implicit default is 0, not "unlimited".
-#[ test ]
-fn t17_no_retries_flag_default_zero_means_single_attempt()
-{
-  let tmp = tempfile::tempdir().expect( "create temp dir" );
-  let count_path = tmp.path().join( "count.txt" );
-  let fake = tmp.path().join( "claude" );
-  let script = format!(
-    "#!/bin/sh\nCF={}\nN=0\n[ -f \"$CF\" ] && N=$(cat \"$CF\")\nN=$((N+1))\necho $N > \"$CF\"\necho 'maybe'\n",
-    count_path.display()
-  );
-  std::fs::write( &fake, &script ).expect( "write fake claude" );
-  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
-    .expect( "chmod fake claude" );
-  let old_path = std::env::var( "PATH" ).unwrap_or_default();
-  let new_path = format!( "{}:{old_path}", tmp.path().display() );
-
-  // No --expect-retries: default is 0 (unwrap_or(0) in run_print_mode)
-  let out = run_with_path(
-    &[ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "answer" ],
-    &new_path,
-  );
-  assert_eq!(
-    out.status.code(),
-    Some( 3 ),
-    "default 0 retries must exit 3 on mismatch. stderr: {}",
-    String::from_utf8_lossy( &out.stderr )
-  );
-  let count = std::fs::read_to_string( &count_path )
-    .expect( "count file must exist — subprocess must have run" )
-    .trim()
-    .parse::< u32 >()
-    .expect( "count is a number" );
-  assert_eq!( count, 1, "must invoke exactly 1 time (default 0 retries). Got: {count}" );
-}
-
-// ── T16: --expect-retries 3 → exactly 4 invocations (32-EC-1) ─────────────────
-
-/// T16: `--expect-retries 3` with an always-failing fake makes exactly 4 subprocess invocations.
-///
-/// Covers 32-EC-1: exit 3 after 1 initial + 3 retries = 4 total invocations.
+/// Exit 3 after 1 initial + 3 retries = 4 total invocations.
 #[ test ]
 fn t16_retries_3_makes_4_total_attempts()
 {
@@ -457,7 +358,7 @@ fn t16_retries_3_makes_4_total_attempts()
   let new_path = format!( "{}:{old_path}", tmp.path().display() );
 
   let out = run_with_path(
-    &[ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "--expect-retries", "3", "answer" ],
+    &[ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "--retry-on-validation", "3", "--validation-delay", "0", "answer" ],
     &new_path,
   );
   assert_eq!(

@@ -61,7 +61,7 @@ Edge case coverage for the `--expect-strategy` parameter. See [031_expect_strate
 
 ### EC-3: `retry` — all retries exhausted → exit 3
 
-- **Given:** claude always returns "maybe"; `--expect "yes|no" --expect-strategy retry --expect-retries 2`
+- **Given:** claude always returns "maybe"; `--expect "yes|no" --expect-strategy retry --retry-on-validation 2`
 - **When:** mocked to always return "maybe" (3 total attempts)
 - **Then:** Exit 3 after 3 attempts (1 initial + 2 retries)
 - **Exit:** 3

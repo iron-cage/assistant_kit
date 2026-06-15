@@ -31,7 +31,7 @@ No behavioral differences exist between `ask` and `run`.
 |------|---------|
 | 0 | Success |
 | 1 | Error (parse failure, execution error) |
-| 2 | Rate-limit passthrough or rate-limit retries exhausted (`--retry-on-rate-limit` depleted) |
+| 2 | Rate-limit passthrough or Transient retries exhausted |
 | 3 | Expect mismatch — output did not match `--expect` values after all retries |
 | 4 | CLR-layer watchdog timeout: subprocess exceeded `--timeout`; stderr contains "Error: timeout after Ns" |
 | N | Passthrough from claude subprocess |

@@ -35,16 +35,30 @@
 | 029_output_file.md | `--output-file` parameter spec |
 | 030_expect.md | `--expect` parameter spec |
 | 031_expect_strategy.md | `--expect-strategy` parameter spec |
-| 032_expect_retries.md | `--expect-retries` parameter spec |
 | 033_max_sessions.md | `--max-sessions` parameter spec |
-| 034_retry_on_rate_limit.md | `--retry-on-rate-limit` parameter spec |
-| 035_retry_delay.md | `--retry-delay` parameter spec |
+| 034_retry_on_transient.md | `--retry-on-transient` parameter spec (renamed from --retry-on-rate-limit) |
+| 035_transient_delay.md | `--transient-delay` parameter spec (renamed from --retry-delay) |
 | 036_timeout.md | `--timeout` parameter spec (run/ask) |
-| 037_retry_on_api_error.md | `--retry-on-api-error` parameter spec |
-| 038_api_error_delay.md | `--api-error-delay` parameter spec |
-| 039_retry_on_unknown_error.md | `--retry-on-unknown-error` parameter spec |
+| 040_retry_on_account.md | `--retry-on-account` parameter spec |
+| 041_account_delay.md | `--account-delay` parameter spec |
+| 042_retry_on_auth.md | `--retry-on-auth` parameter spec |
+| 043_auth_delay.md | `--auth-delay` parameter spec |
+| 044_retry_on_service.md | `--retry-on-service` parameter spec (renamed from --retry-on-api-error) |
+| 045_service_delay.md | `--service-delay` parameter spec (renamed from --api-error-delay) |
+| 046_retry_on_process.md | `--retry-on-process` parameter spec |
+| 047_process_delay.md | `--process-delay` parameter spec |
+| 048_retry_on_validation.md | `--retry-on-validation` parameter spec (renamed from --expect-retries) |
+| 049_validation_delay.md | `--validation-delay` parameter spec |
+| 050_retry_on_runner.md | `--retry-on-runner` parameter spec |
+| 051_runner_delay.md | `--runner-delay` parameter spec |
+| 052_retry_on_unknown.md | `--retry-on-unknown` parameter spec (renamed from --retry-on-unknown-error) |
+| 053_unknown_delay.md | `--unknown-delay` parameter spec |
+| 054_retry_override.md | `--retry-override` parameter spec (Tier 1) |
+| 055_retry_override_delay.md | `--retry-override-delay` parameter spec (Tier 1) |
+| 056_retry_default.md | `--retry-default` parameter spec (Tier 3, default=2) |
+| 057_retry_default_delay.md | `--retry-default-delay` parameter spec (Tier 3, default=30) |
 
-### All Parameters (39 total)
+### All Parameters (53 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -79,18 +93,32 @@
 | 29 | `--output-file` | string | — | Any writable path | Write stdout to file in addition to printing (tee behavior) | 2 cmds |
 | 30 | `--expect` | string | — | `val1\|val2\|…` | Pipe-separated enum values; stdout must match one after trim+lowercase | 2 cmds |
 | 31 | `--expect-strategy` | enum | `fail` | `fail`/`retry`/`default:<V>` | Mismatch handling: exit 3, retry N times, or output fallback value | 2 cmds |
-| 32 | `--expect-retries` | u8 | `0` | 0–255 | Re-invocation cap for `retry` strategy | 2 cmds |
 | 33 | `--max-sessions` | u32 | 30 | 0 to 4294967295 | Max concurrent Claude Code sessions before blocking; 0 = unlimited | 2 cmds |
-| 34 | `--retry-on-rate-limit` | u8 | `1` | 0–255 | Automatic retry count on transient rate-limit exit; 0 = no retry; never retries QuotaExhausted | 2 cmds |
-| 35 | `--retry-delay` | u32 | `30` | 0 to 4294967295 | Seconds to wait between rate-limit retries; ignored when --retry-on-rate-limit is 0 | 2 cmds |
+| 34 | `--retry-on-transient` | u8 | auto | 0–255 | Transient class retry count (Tier 2); effective default = 2 via fallback | 2 cmds |
+| 35 | `--transient-delay` | u32 | auto | 0 to 4294967295 | Transient class delay (Tier 2); effective default = 30 via fallback | 2 cmds |
 | 36 | `--timeout` | u32 | `0` | 0 to 4294967295 | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only; contrast with param 20) | 2 cmds |
-| 37 | `--retry-on-api-error` | u8 | `0` | 0–255 | Automatic retry count on API error (`"API Error: "`); 0 = no retry | 2 cmds |
-| 38 | `--api-error-delay` | u32 | `30` | 0 to 4294967295 | Seconds to wait between API error retries; ignored when --retry-on-api-error is 0 | 2 cmds |
-| 39 | `--retry-on-unknown-error` | u8 | `0` | 0–255 | Automatic retry count on unclassified error; 0 = no retry; uses --retry-delay for cooldown | 2 cmds |
+| 40 | `--retry-on-account` | u8 | auto | 0–255 | Account class retry count (Tier 2) | 2 cmds |
+| 41 | `--account-delay` | u32 | auto | 0 to 4294967295 | Account class delay (Tier 2) | 2 cmds |
+| 42 | `--retry-on-auth` | u8 | auto | 0–255 | Auth class retry count (Tier 2) | 2 cmds |
+| 43 | `--auth-delay` | u32 | auto | 0 to 4294967295 | Auth class delay (Tier 2) | 2 cmds |
+| 44 | `--retry-on-service` | u8 | auto | 0–255 | Service class retry count (Tier 2) | 2 cmds |
+| 45 | `--service-delay` | u32 | auto | 0 to 4294967295 | Service class delay (Tier 2) | 2 cmds |
+| 46 | `--retry-on-process` | u8 | auto | 0–255 | Process class retry count (Tier 2) | 2 cmds |
+| 47 | `--process-delay` | u32 | auto | 0 to 4294967295 | Process class delay (Tier 2) | 2 cmds |
+| 48 | `--retry-on-validation` | u8 | auto | 0–255 | Validation class retry count (Tier 2); only with `--expect-strategy retry` | 2 cmds |
+| 49 | `--validation-delay` | u32 | auto | 0 to 4294967295 | Validation class delay (Tier 2) | 2 cmds |
+| 50 | `--retry-on-runner` | u8 | auto | 0–255 | Runner class retry count (Tier 2) | 2 cmds |
+| 51 | `--runner-delay` | u32 | auto | 0 to 4294967295 | Runner class delay (Tier 2) | 2 cmds |
+| 52 | `--retry-on-unknown` | u8 | auto | 0–255 | Unknown class retry count (Tier 2) | 2 cmds |
+| 53 | `--unknown-delay` | u32 | auto | 0 to 4294967295 | Unknown class delay (Tier 2) | 2 cmds |
+| 54 | `--retry-override` | u8 | auto | 0–255 | Tier 1: forces retry count for all error classes | 2 cmds |
+| 55 | `--retry-override-delay` | u32 | auto | 0 to 4294967295 | Tier 1: forces delay for all error classes | 2 cmds |
+| 56 | `--retry-default` | u8 | `2` | 0–255 | Tier 3: fallback retry count for all unset classes | 2 cmds |
+| 57 | `--retry-default-delay` | u32 | `30` | 0 to 4294967295 | Tier 3: fallback delay for all unset classes | 2 cmds |
 
-**Total:** 39 parameters
+**Total:** 53 parameters
 
-**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, and 39 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md).
+**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25–36, 40–57 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md).
 
 ### Navigation
 
@@ -125,14 +153,28 @@
 - [`--output-file`](029_output_file.md)
 - [`--expect`](030_expect.md)
 - [`--expect-strategy`](031_expect_strategy.md)
-- [`--expect-retries`](032_expect_retries.md)
 - [`--max-sessions`](033_max_sessions.md)
-- [`--retry-on-rate-limit`](034_retry_on_rate_limit.md)
-- [`--retry-delay`](035_retry_delay.md)
+- [`--retry-on-transient`](034_retry_on_transient.md)
+- [`--transient-delay`](035_transient_delay.md)
 - [`--timeout` (run/ask)](036_timeout.md)
-- [`--retry-on-api-error`](037_retry_on_api_error.md)
-- [`--api-error-delay`](038_api_error_delay.md)
-- [`--retry-on-unknown-error`](039_retry_on_unknown_error.md)
+- [`--retry-on-account`](040_retry_on_account.md)
+- [`--account-delay`](041_account_delay.md)
+- [`--retry-on-auth`](042_retry_on_auth.md)
+- [`--auth-delay`](043_auth_delay.md)
+- [`--retry-on-service`](044_retry_on_service.md)
+- [`--service-delay`](045_service_delay.md)
+- [`--retry-on-process`](046_retry_on_process.md)
+- [`--process-delay`](047_process_delay.md)
+- [`--retry-on-validation`](048_retry_on_validation.md)
+- [`--validation-delay`](049_validation_delay.md)
+- [`--retry-on-runner`](050_retry_on_runner.md)
+- [`--runner-delay`](051_runner_delay.md)
+- [`--retry-on-unknown`](052_retry_on_unknown.md)
+- [`--unknown-delay`](053_unknown_delay.md)
+- [`--retry-override`](054_retry_override.md)
+- [`--retry-override-delay`](055_retry_override_delay.md)
+- [`--retry-default`](056_retry_default.md)
+- [`--retry-default-delay`](057_retry_default_delay.md)
 
 ### Quick Reference
 
@@ -140,4 +182,4 @@
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 37 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.
+**Commands by parameter count:** `run` = 51 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.

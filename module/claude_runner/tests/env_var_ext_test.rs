@@ -1,7 +1,8 @@
-//! CLR_* Environment Variable Tests — Extended (E18–E37)
+//! CLR_* Environment Variable Tests — Extended (E18–E57)
 //!
 //! Extension of `env_var_test.rs` (E01–E17) covering suppression flags, credentials,
-//! input/output pipeline vars, session/concurrency controls, and retry/timeout vars.
+//! input/output pipeline vars, session/concurrency controls, timeout, and all 20 new
+//! retry system env vars added in the 3-tier retry redesign (Plan TSK-205).
 //!
 //! All tests use `run_cli_with_env()` — no `std::env::set_var`, no thread-global mutation.
 //!
@@ -24,10 +25,27 @@
 //! | E31  | `CLR_OUTPUT_FILE`          | dry-run exit 0; CLI wins over env                           |
 //! | E32  | `CLR_EXPECT`               | dry-run exit 0; CLI wins over env                           |
 //! | E33  | `CLR_EXPECT_STRATEGY`      | dry-run exit 0; CLI wins; invalid value → exit 1            |
-//! | E34  | `CLR_EXPECT_RETRIES`       | dry-run exit 0; CLI wins; out-of-range → exit 1             |
-//! | E35  | `CLR_RETRY_ON_RATE_LIMIT`  | dry-run exit 0; CLI wins; invalid value silently ignored    |
-//! | E36  | `CLR_RETRY_DELAY`          | dry-run exit 0; CLI wins; invalid value silently ignored    |
 //! | E37  | `CLR_TIMEOUT` (run/ask)    | dry-run exit 0; CLI wins; invalid value silently ignored    |
+//! | E38  | `CLR_RETRY_ON_TRANSIENT`   | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E39  | `CLR_TRANSIENT_DELAY`      | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E40  | `CLR_RETRY_ON_ACCOUNT`     | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E41  | `CLR_ACCOUNT_DELAY`        | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E42  | `CLR_RETRY_ON_AUTH`        | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E43  | `CLR_AUTH_DELAY`           | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E44  | `CLR_RETRY_ON_SERVICE`     | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E45  | `CLR_SERVICE_DELAY`        | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E46  | `CLR_RETRY_ON_PROCESS`     | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E47  | `CLR_PROCESS_DELAY`        | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E48  | `CLR_RETRY_ON_VALIDATION`  | dry-run exit 0; invalid value → exit 1 (only validated var) |
+//! | E49  | `CLR_VALIDATION_DELAY`     | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E50  | `CLR_RETRY_ON_RUNNER`      | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E51  | `CLR_RUNNER_DELAY`         | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E52  | `CLR_RETRY_ON_UNKNOWN`     | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E53  | `CLR_UNKNOWN_DELAY`        | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E54  | `CLR_RETRY_OVERRIDE`       | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E55  | `CLR_RETRY_OVERRIDE_DELAY` | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E56  | `CLR_RETRY_DEFAULT`        | dry-run exit 0; CLI wins; invalid silently ignored          |
+//! | E57  | `CLR_RETRY_DEFAULT_DELAY`  | dry-run exit 0; CLI wins; invalid silently ignored          |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli_with_env;
@@ -529,142 +547,6 @@ fn e33_clr_expect_strategy_sets_handler()
   );
 }
 
-// ─── E34: CLR_EXPECT_RETRIES ──────────────────────────────────────────────────
-
-/// E34: `CLR_EXPECT_RETRIES` sets the retry cap.
-///
-/// Valid u8 values accepted; values exceeding 255 → exit 1.
-/// CLI `--expect-retries` wins over env.
-///
-/// Spec: `tests/docs/cli/env_param/02_clr_input_vars.md` E34
-#[ test ]
-fn e34_clr_expect_retries_sets_cap()
-{
-  // Env-alone with valid value: dry-run exits 0
-  let out = run_cli_with_env(
-    &[ "--dry-run", "task" ],
-    &[ ( "CLR_EXPECT_RETRIES", "3" ) ],
-  );
-  assert!(
-    out.status.success(),
-    "CLR_EXPECT_RETRIES=3 + --dry-run must exit 0. stderr: {}",
-    String::from_utf8_lossy( &out.stderr ),
-  );
-
-  // CLI-wins: --expect-retries 5 takes precedence over CLR_EXPECT_RETRIES=3
-  let out2 = run_cli_with_env(
-    &[ "--dry-run", "--expect-retries", "5", "task" ],
-    &[ ( "CLR_EXPECT_RETRIES", "3" ) ],
-  );
-  assert!(
-    out2.status.success(),
-    "CLI --expect-retries with CLR_EXPECT_RETRIES must exit 0. stderr: {}",
-    String::from_utf8_lossy( &out2.stderr ),
-  );
-
-  // Out-of-range: 256 exceeds u8 max (255) → exit 1
-  let out3 = run_cli_with_env(
-    &[ "--dry-run", "task" ],
-    &[ ( "CLR_EXPECT_RETRIES", "256" ) ],
-  );
-  assert_eq!(
-    out3.status.code(),
-    Some( 1 ),
-    "CLR_EXPECT_RETRIES=256 must exit 1 (exceeds u8 max). stderr: {}",
-    String::from_utf8_lossy( &out3.stderr ),
-  );
-}
-
-// ─── E35: CLR_RETRY_ON_RATE_LIMIT ─────────────────────────────────────────────
-
-/// E35: `CLR_RETRY_ON_RATE_LIMIT` sets the rate-limit retry count for run/ask.
-///
-/// Valid u8 values silently accepted; invalid values silently ignored (field stays at default 1).
-/// CLI `--retry-on-rate-limit` wins over env.
-///
-/// Spec: `tests/docs/cli/env_param/02_clr_input_vars.md` E35
-#[ test ]
-fn e35_clr_retry_on_rate_limit_sets_retry_count()
-{
-  // Env-alone with valid value: dry-run exits 0 (env var accepted)
-  let out = run_cli_with_env(
-    &[ "--dry-run", "task" ],
-    &[ ( "CLR_RETRY_ON_RATE_LIMIT", "3" ) ],
-  );
-  assert!(
-    out.status.success(),
-    "CLR_RETRY_ON_RATE_LIMIT=3 + --dry-run must exit 0. stderr: {}",
-    String::from_utf8_lossy( &out.stderr ),
-  );
-
-  // CLI-wins: --retry-on-rate-limit 0 takes precedence over CLR_RETRY_ON_RATE_LIMIT=3
-  let out2 = run_cli_with_env(
-    &[ "--dry-run", "--retry-on-rate-limit", "0", "task" ],
-    &[ ( "CLR_RETRY_ON_RATE_LIMIT", "3" ) ],
-  );
-  assert!(
-    out2.status.success(),
-    "CLI --retry-on-rate-limit with CLR_RETRY_ON_RATE_LIMIT must exit 0. stderr: {}",
-    String::from_utf8_lossy( &out2.stderr ),
-  );
-
-  // Invalid value: parse failure silently ignored → default used; dry-run exits 0
-  let out3 = run_cli_with_env(
-    &[ "--dry-run", "task" ],
-    &[ ( "CLR_RETRY_ON_RATE_LIMIT", "notanumber" ) ],
-  );
-  assert!(
-    out3.status.success(),
-    "CLR_RETRY_ON_RATE_LIMIT=notanumber silently ignored; --dry-run must exit 0. stderr: {}",
-    String::from_utf8_lossy( &out3.stderr ),
-  );
-}
-
-// ─── E36: CLR_RETRY_DELAY ─────────────────────────────────────────────────────
-
-/// E36: `CLR_RETRY_DELAY` sets the delay (seconds) between rate-limit retries for run/ask.
-///
-/// Valid u32 values silently accepted; invalid values silently ignored (field stays at default 30).
-/// CLI `--retry-delay` wins over env.
-///
-/// Spec: `tests/docs/cli/env_param/02_clr_input_vars.md` E36
-#[ test ]
-fn e36_clr_retry_delay_sets_delay()
-{
-  // Env-alone with valid value: dry-run exits 0 (env var accepted)
-  let out = run_cli_with_env(
-    &[ "--dry-run", "task" ],
-    &[ ( "CLR_RETRY_DELAY", "60" ) ],
-  );
-  assert!(
-    out.status.success(),
-    "CLR_RETRY_DELAY=60 + --dry-run must exit 0. stderr: {}",
-    String::from_utf8_lossy( &out.stderr ),
-  );
-
-  // CLI-wins: --retry-delay 5 takes precedence over CLR_RETRY_DELAY=60
-  let out2 = run_cli_with_env(
-    &[ "--dry-run", "--retry-delay", "5", "task" ],
-    &[ ( "CLR_RETRY_DELAY", "60" ) ],
-  );
-  assert!(
-    out2.status.success(),
-    "CLI --retry-delay with CLR_RETRY_DELAY must exit 0. stderr: {}",
-    String::from_utf8_lossy( &out2.stderr ),
-  );
-
-  // Invalid value: parse failure silently ignored → default used; dry-run exits 0
-  let out3 = run_cli_with_env(
-    &[ "--dry-run", "task" ],
-    &[ ( "CLR_RETRY_DELAY", "notanumber" ) ],
-  );
-  assert!(
-    out3.status.success(),
-    "CLR_RETRY_DELAY=notanumber silently ignored; --dry-run must exit 0. stderr: {}",
-    String::from_utf8_lossy( &out3.stderr ),
-  );
-}
-
 // ─── E37: CLR_TIMEOUT (run/ask) ───────────────────────────────────────────────
 
 /// E37: `CLR_TIMEOUT` sets the subprocess timeout for run/ask dispatch paths.
@@ -721,4 +603,231 @@ fn e37_clr_timeout_sets_run_timeout()
     "CLR_TIMEOUT=notanumber silently ignored; --dry-run must exit 0. stderr: {}",
     String::from_utf8_lossy( &out4.stderr ),
   );
+}
+
+// ─── E38–E57: New 3-tier retry env vars (TSK-205) ────────────────────────────
+//
+// All 20 new retry system env vars introduced in the retry system redesign.
+// Each test verifies: (1) valid value accepted in dry-run; (2) CLI wins over env.
+// CLR_RETRY_ON_VALIDATION is unique: invalid value → exit 1 (not silently ignored).
+// All others silently ignore invalid values.
+
+/// E38: `CLR_RETRY_ON_TRANSIENT` — Transient class retry count.
+#[ test ]
+fn e38_clr_retry_on_transient_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_ON_TRANSIENT", "2" ) ] );
+  assert!( out.status.success(), "CLR_RETRY_ON_TRANSIENT=2 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--retry-on-transient", "0", "t" ], &[ ( "CLR_RETRY_ON_TRANSIENT", "2" ) ] );
+  assert!( out2.status.success(), "CLI --retry-on-transient must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+  let out3 = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_ON_TRANSIENT", "bad" ) ] );
+  assert!( out3.status.success(), "CLR_RETRY_ON_TRANSIENT=bad silently ignored; dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out3.stderr ) );
+}
+
+/// E39: `CLR_TRANSIENT_DELAY` — Transient class delay (seconds).
+#[ test ]
+fn e39_clr_transient_delay_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_TRANSIENT_DELAY", "10" ) ] );
+  assert!( out.status.success(), "CLR_TRANSIENT_DELAY=10 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--transient-delay", "5", "t" ], &[ ( "CLR_TRANSIENT_DELAY", "10" ) ] );
+  assert!( out2.status.success(), "CLI --transient-delay must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+}
+
+/// E40: `CLR_RETRY_ON_ACCOUNT` — Account class retry count.
+#[ test ]
+fn e40_clr_retry_on_account_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_ON_ACCOUNT", "1" ) ] );
+  assert!( out.status.success(), "CLR_RETRY_ON_ACCOUNT=1 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--retry-on-account", "0", "t" ], &[ ( "CLR_RETRY_ON_ACCOUNT", "1" ) ] );
+  assert!( out2.status.success(), "CLI --retry-on-account must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+  let out3 = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_ON_ACCOUNT", "bad" ) ] );
+  assert!( out3.status.success(), "CLR_RETRY_ON_ACCOUNT=bad silently ignored. stderr: {}", String::from_utf8_lossy( &out3.stderr ) );
+}
+
+/// E41: `CLR_ACCOUNT_DELAY` — Account class delay (seconds).
+#[ test ]
+fn e41_clr_account_delay_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_ACCOUNT_DELAY", "60" ) ] );
+  assert!( out.status.success(), "CLR_ACCOUNT_DELAY=60 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--account-delay", "5", "t" ], &[ ( "CLR_ACCOUNT_DELAY", "60" ) ] );
+  assert!( out2.status.success(), "CLI --account-delay must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+}
+
+/// E42: `CLR_RETRY_ON_AUTH` — Auth class retry count.
+#[ test ]
+fn e42_clr_retry_on_auth_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_ON_AUTH", "0" ) ] );
+  assert!( out.status.success(), "CLR_RETRY_ON_AUTH=0 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--retry-on-auth", "1", "t" ], &[ ( "CLR_RETRY_ON_AUTH", "0" ) ] );
+  assert!( out2.status.success(), "CLI --retry-on-auth must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+}
+
+/// E43: `CLR_AUTH_DELAY` — Auth class delay (seconds).
+#[ test ]
+fn e43_clr_auth_delay_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_AUTH_DELAY", "30" ) ] );
+  assert!( out.status.success(), "CLR_AUTH_DELAY=30 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--auth-delay", "0", "t" ], &[ ( "CLR_AUTH_DELAY", "30" ) ] );
+  assert!( out2.status.success(), "CLI --auth-delay must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+}
+
+/// E44: `CLR_RETRY_ON_SERVICE` — Service class retry count.
+#[ test ]
+fn e44_clr_retry_on_service_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_ON_SERVICE", "2" ) ] );
+  assert!( out.status.success(), "CLR_RETRY_ON_SERVICE=2 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--retry-on-service", "0", "t" ], &[ ( "CLR_RETRY_ON_SERVICE", "2" ) ] );
+  assert!( out2.status.success(), "CLI --retry-on-service must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+  let out3 = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_ON_SERVICE", "bad" ) ] );
+  assert!( out3.status.success(), "CLR_RETRY_ON_SERVICE=bad silently ignored. stderr: {}", String::from_utf8_lossy( &out3.stderr ) );
+}
+
+/// E45: `CLR_SERVICE_DELAY` — Service class delay (seconds).
+#[ test ]
+fn e45_clr_service_delay_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_SERVICE_DELAY", "15" ) ] );
+  assert!( out.status.success(), "CLR_SERVICE_DELAY=15 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--service-delay", "5", "t" ], &[ ( "CLR_SERVICE_DELAY", "15" ) ] );
+  assert!( out2.status.success(), "CLI --service-delay must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+}
+
+/// E46: `CLR_RETRY_ON_PROCESS` — Process class retry count.
+#[ test ]
+fn e46_clr_retry_on_process_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_ON_PROCESS", "1" ) ] );
+  assert!( out.status.success(), "CLR_RETRY_ON_PROCESS=1 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--retry-on-process", "0", "t" ], &[ ( "CLR_RETRY_ON_PROCESS", "1" ) ] );
+  assert!( out2.status.success(), "CLI --retry-on-process must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+}
+
+/// E47: `CLR_PROCESS_DELAY` — Process class delay (seconds).
+#[ test ]
+fn e47_clr_process_delay_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_PROCESS_DELAY", "10" ) ] );
+  assert!( out.status.success(), "CLR_PROCESS_DELAY=10 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--process-delay", "0", "t" ], &[ ( "CLR_PROCESS_DELAY", "10" ) ] );
+  assert!( out2.status.success(), "CLI --process-delay must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+}
+
+/// E48: `CLR_RETRY_ON_VALIDATION` — Validation class retry count.
+///
+/// Unlike all other per-class retry env vars, `CLR_RETRY_ON_VALIDATION` exits 1
+/// on invalid values — it goes through `parse_u8_bounded` rather than `.parse().ok()`.
+/// Detailed EC coverage in `retry_validation_test.rs`.
+#[ test ]
+fn e48_clr_retry_on_validation_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_ON_VALIDATION", "2" ) ] );
+  assert!( out.status.success(), "CLR_RETRY_ON_VALIDATION=2 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--retry-on-validation", "0", "t" ], &[ ( "CLR_RETRY_ON_VALIDATION", "2" ) ] );
+  assert!( out2.status.success(), "CLI --retry-on-validation must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+  let out3 = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_ON_VALIDATION", "bad" ) ] );
+  assert_eq!( out3.status.code(), Some( 1 ), "CLR_RETRY_ON_VALIDATION=bad must exit 1 (only validated retry env var). stderr: {}", String::from_utf8_lossy( &out3.stderr ) );
+}
+
+/// E49: `CLR_VALIDATION_DELAY` — Validation class delay (seconds).
+#[ test ]
+fn e49_clr_validation_delay_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_VALIDATION_DELAY", "5" ) ] );
+  assert!( out.status.success(), "CLR_VALIDATION_DELAY=5 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--validation-delay", "0", "t" ], &[ ( "CLR_VALIDATION_DELAY", "5" ) ] );
+  assert!( out2.status.success(), "CLI --validation-delay must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+}
+
+/// E50: `CLR_RETRY_ON_RUNNER` — Runner class retry count.
+#[ test ]
+fn e50_clr_retry_on_runner_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_ON_RUNNER", "0" ) ] );
+  assert!( out.status.success(), "CLR_RETRY_ON_RUNNER=0 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--retry-on-runner", "1", "t" ], &[ ( "CLR_RETRY_ON_RUNNER", "0" ) ] );
+  assert!( out2.status.success(), "CLI --retry-on-runner must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+}
+
+/// E51: `CLR_RUNNER_DELAY` — Runner class delay (seconds).
+#[ test ]
+fn e51_clr_runner_delay_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RUNNER_DELAY", "10" ) ] );
+  assert!( out.status.success(), "CLR_RUNNER_DELAY=10 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--runner-delay", "0", "t" ], &[ ( "CLR_RUNNER_DELAY", "10" ) ] );
+  assert!( out2.status.success(), "CLI --runner-delay must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+}
+
+/// E52: `CLR_RETRY_ON_UNKNOWN` — Unknown class retry count.
+#[ test ]
+fn e52_clr_retry_on_unknown_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_ON_UNKNOWN", "1" ) ] );
+  assert!( out.status.success(), "CLR_RETRY_ON_UNKNOWN=1 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--retry-on-unknown", "0", "t" ], &[ ( "CLR_RETRY_ON_UNKNOWN", "1" ) ] );
+  assert!( out2.status.success(), "CLI --retry-on-unknown must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+  let out3 = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_ON_UNKNOWN", "bad" ) ] );
+  assert!( out3.status.success(), "CLR_RETRY_ON_UNKNOWN=bad silently ignored. stderr: {}", String::from_utf8_lossy( &out3.stderr ) );
+}
+
+/// E53: `CLR_UNKNOWN_DELAY` — Unknown class delay (seconds).
+#[ test ]
+fn e53_clr_unknown_delay_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_UNKNOWN_DELAY", "20" ) ] );
+  assert!( out.status.success(), "CLR_UNKNOWN_DELAY=20 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--unknown-delay", "0", "t" ], &[ ( "CLR_UNKNOWN_DELAY", "20" ) ] );
+  assert!( out2.status.success(), "CLI --unknown-delay must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+}
+
+/// E54: `CLR_RETRY_OVERRIDE` — Tier-1 override count (all classes).
+#[ test ]
+fn e54_clr_retry_override_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_OVERRIDE", "3" ) ] );
+  assert!( out.status.success(), "CLR_RETRY_OVERRIDE=3 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--retry-override", "0", "t" ], &[ ( "CLR_RETRY_OVERRIDE", "3" ) ] );
+  assert!( out2.status.success(), "CLI --retry-override must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+  let out3 = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_OVERRIDE", "bad" ) ] );
+  assert!( out3.status.success(), "CLR_RETRY_OVERRIDE=bad silently ignored. stderr: {}", String::from_utf8_lossy( &out3.stderr ) );
+}
+
+/// E55: `CLR_RETRY_OVERRIDE_DELAY` — Tier-1 override delay (all classes).
+#[ test ]
+fn e55_clr_retry_override_delay_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_OVERRIDE_DELAY", "5" ) ] );
+  assert!( out.status.success(), "CLR_RETRY_OVERRIDE_DELAY=5 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--retry-override-delay", "0", "t" ], &[ ( "CLR_RETRY_OVERRIDE_DELAY", "5" ) ] );
+  assert!( out2.status.success(), "CLI --retry-override-delay must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+}
+
+/// E56: `CLR_RETRY_DEFAULT` — Tier-3 fallback retry count (0–255).
+#[ test ]
+fn e56_clr_retry_default_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_DEFAULT", "2" ) ] );
+  assert!( out.status.success(), "CLR_RETRY_DEFAULT=2 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--retry-default", "0", "t" ], &[ ( "CLR_RETRY_DEFAULT", "2" ) ] );
+  assert!( out2.status.success(), "CLI --retry-default must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+  let out3 = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_DEFAULT", "bad" ) ] );
+  assert!( out3.status.success(), "CLR_RETRY_DEFAULT=bad silently ignored. stderr: {}", String::from_utf8_lossy( &out3.stderr ) );
+}
+
+/// E57: `CLR_RETRY_DEFAULT_DELAY` — Tier-3 fallback delay (seconds).
+#[ test ]
+fn e57_clr_retry_default_delay_accepted()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_DEFAULT_DELAY", "30" ) ] );
+  assert!( out.status.success(), "CLR_RETRY_DEFAULT_DELAY=30 dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let out2 = run_cli_with_env( &[ "--dry-run", "--retry-default-delay", "0", "t" ], &[ ( "CLR_RETRY_DEFAULT_DELAY", "30" ) ] );
+  assert!( out2.status.success(), "CLI --retry-default-delay must win over env. stderr: {}", String::from_utf8_lossy( &out2.stderr ) );
+  let out3 = run_cli_with_env( &[ "--dry-run", "t" ], &[ ( "CLR_RETRY_DEFAULT_DELAY", "bad" ) ] );
+  assert!( out3.status.success(), "CLR_RETRY_DEFAULT_DELAY=bad silently ignored. stderr: {}", String::from_utf8_lossy( &out3.stderr ) );
 }

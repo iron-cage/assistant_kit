@@ -13,7 +13,7 @@ meaningful when `--expect` is set; silently ignored otherwise.
 | Value | Behavior |
 |-------|----------|
 | `fail` | Exit 3 immediately on first mismatch |
-| `retry` | Re-invoke the same command up to `--expect-retries` times; exit 3 after all retries exhausted |
+| `retry` | Re-invoke the same command up to `--retry-on-validation` times; exit 3 after all retries exhausted |
 | `default:<VALUE>` | On mismatch, output `<VALUE>` as stdout and exit 0 |
 
 ```sh
@@ -21,7 +21,7 @@ meaningful when `--expect` is set; silently ignored otherwise.
 clr ask "yes or no?" --expect "yes|no" --expect-strategy fail
 
 # Retry up to 3 times before giving up
-clr ask "yes or no?" --expect "yes|no" --expect-strategy retry --expect-retries 3
+clr ask "yes or no?" --expect "yes|no" --expect-strategy retry --retry-on-validation 3
 
 # Fall back to conservative default on mismatch
 clr ask "safe to proceed?" --expect "yes|no" --expect-strategy default:no
@@ -64,7 +64,7 @@ emitted to stdout as-is (no trimming, no suffix).
 ### See Also
 
 - [`--expect`](030_expect.md) — defines the expected values
-- [`--expect-retries`](032_expect_retries.md) — controls retry count for the `retry` strategy
+- [`--retry-on-validation`](048_retry_on_validation.md) — Validation class retry count for the `retry` strategy
 
 ### Referenced User Stories
 

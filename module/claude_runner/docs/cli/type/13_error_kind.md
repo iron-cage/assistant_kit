@@ -43,7 +43,7 @@ The following failure conditions are emitted by the CLR runner layer (`module/cl
 | Condition | Exit Code | stderr Label | Source |
 |-----------|-----------|--------------|--------|
 | Timeout — subprocess exceeded `--timeout` | 4 | `"Error: timeout after {N}s"` | `execution.rs poll_timeout()` |
-| Expect mismatch — output did not match `--expect` | 3 | `"Error: output did not match --expect"` | `execution.rs apply_expect_validation()` |
+| Expect mismatch — output did not match `--expect` | 3 | `"Error: [Validation] expected \"<pat>\", got \"<val>\" (exit 3)"` | `execution.rs apply_expect_validation()` |
 | Binary not found — `claude` not in PATH | 1 | `"claude binary not found in PATH"` | `execution.rs spawn_error_msg()` |
 | Spawn failed — OS error creating subprocess | 1 | `"Failed to execute Claude Code: {e}"` | `execution.rs spawn_error_msg()` |
 | Gate timeout — waited too long for session slot | 1 | `"Error: session gate timed out"` | `gate.rs wait_for_session_slot()` |
@@ -65,11 +65,17 @@ The following failure conditions are emitted by the CLR runner layer (`module/cl
 
 | # | Parameter | Interaction |
 |---|-----------|-------------|
-| 34 | [`--retry-on-rate-limit`](../param/034_retry_on_rate_limit.md) | triggers retry when `ErrorKind::RateLimit` |
-| 35 | [`--retry-delay`](../param/035_retry_delay.md) | delay between `RateLimit` retries; also used for `Unknown` retries |
-| 37 | [`--retry-on-api-error`](../param/037_retry_on_api_error.md) | triggers retry when `ErrorKind::ApiError` |
-| 38 | [`--api-error-delay`](../param/038_api_error_delay.md) | delay between `ApiError` retries |
-| 39 | [`--retry-on-unknown-error`](../param/039_retry_on_unknown_error.md) | triggers retry when `ErrorKind::Unknown` |
+| 34 | [`--retry-on-transient`](../param/034_retry_on_transient.md) | triggers retry when `ErrorKind::RateLimit` (Transient class) |
+| 35 | [`--transient-delay`](../param/035_transient_delay.md) | delay between Transient retries |
+| 40 | [`--retry-on-account`](../param/040_retry_on_account.md) | triggers retry when `ErrorKind::QuotaExhausted` (Account class) |
+| 42 | [`--retry-on-auth`](../param/042_retry_on_auth.md) | triggers retry when `ErrorKind::AuthError` (Auth class) |
+| 44 | [`--retry-on-service`](../param/044_retry_on_service.md) | triggers retry when `ErrorKind::ApiError` (Service class) |
+| 45 | [`--service-delay`](../param/045_service_delay.md) | delay between Service retries |
+| 46 | [`--retry-on-process`](../param/046_retry_on_process.md) | triggers retry when `ErrorKind::Signal` (Process class) |
+| 52 | [`--retry-on-unknown`](../param/052_retry_on_unknown.md) | triggers retry when `ErrorKind::Unknown` (Unknown class) |
+| 54 | [`--retry-override`](../param/054_retry_override.md) | Tier 1: overrides retry count for all error classes |
+| 56 | [`--retry-default`](../param/056_retry_default.md) | Tier 3: fallback retry count (default 2) |
+| 57 | [`--retry-default-delay`](../param/057_retry_default_delay.md) | Tier 3: fallback delay (default 30s) |
 
 ### Cross-References
 

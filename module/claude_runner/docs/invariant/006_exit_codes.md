@@ -16,7 +16,7 @@
 | 0 | Success | Subprocess exited 0; expect validation passed (if set) | subprocess |
 | 1 | Runner Error | Binary not found, spawn OS error, session gate timed out, output file write failed | `execution.rs`, `gate.rs` |
 | 2 | Transient / Account | Subprocess rate-limited (exit 2, no text); or quota exhausted (exit 2 + text) | subprocess |
-| 3 | Validation | `--expect` pattern not matched within `--expect-retries` count | `execution.rs apply_expect_validation()` |
+| 3 | Validation | `--expect` pattern not matched within `--retry-on-validation` count | `execution.rs apply_expect_validation()` |
 | 4 | Timeout | CLR timeout watchdog killed subprocess after `--timeout` seconds | `execution.rs poll_timeout()` |
 | 128+N | Process/Signal | Subprocess killed by signal N (POSIX 128+signal convention) | `claude_runner_core/src/exit_code.rs signal_exit_code()` |
 
@@ -79,6 +79,6 @@ Callers check for `"You've hit your limit"` in stdout/stderr to distinguish quot
 - `claude_runner_core/docs/failure_mode/004_exit_1_ambiguity.md` — exit-1 disambiguation detail
 - [`param/020_timeout.md`](../cli/param/020_timeout.md) — subprocess timeout configuration (kill subcommand)
 - [`param/036_timeout.md`](../cli/param/036_timeout.md) — run/ask timeout configuration (CLR watchdog)
-- [`param/034_retry_on_rate_limit.md`](../cli/param/034_retry_on_rate_limit.md) — automatic retry on `RateLimit`
-- [`param/037_retry_on_api_error.md`](../cli/param/037_retry_on_api_error.md) — automatic retry on `ApiError`
-- [`param/039_retry_on_unknown_error.md`](../cli/param/039_retry_on_unknown_error.md) — automatic retry on `Unknown`
+- [`param/034_retry_on_transient.md`](../cli/param/034_retry_on_transient.md) — automatic retry on `RateLimit` (Transient class)
+- [`param/044_retry_on_service.md`](../cli/param/044_retry_on_service.md) — automatic retry on `ApiError` (Service class)
+- [`param/052_retry_on_unknown.md`](../cli/param/052_retry_on_unknown.md) — automatic retry on `Unknown` (Unknown class)

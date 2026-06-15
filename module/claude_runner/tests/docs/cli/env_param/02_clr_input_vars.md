@@ -1,9 +1,9 @@
 # Env Param :: CLR_* Input Variables
 
-Edge cases for the 37 `CLR_*` input environment variable fallbacks (34 for `run` + 3 for `isolated`/`refresh`).
+Edge cases for the 54 `CLR_*` input environment variable fallbacks (51 for `run` + 3 for `isolated`/`refresh`).
 Source: [`env_param.md`](../../../../docs/cli/env_param.md)
 Implementation: `apply_env_vars()` in `src/cli/env.rs`; `apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/cli/cred_parse.rs`
-Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E18–E37)
+Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E18–E57)
 
 ## Test Case Index
 
@@ -42,23 +42,26 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 | E31 | `CLR_OUTPUT_FILE=<path>` sets output file path | `CLR_OUTPUT_FILE` | dry-run exits 0; CLI flag wins over env var |
 | E32 | `CLR_EXPECT=val1\|val2` sets expect pattern | `CLR_EXPECT` | dry-run exits 0; CLI flag wins; same `|`-separated syntax |
 | E33 | `CLR_EXPECT_STRATEGY=<strategy>` sets mismatch handler | `CLR_EXPECT_STRATEGY` | dry-run exits 0; CLI flag wins; invalid value rejected |
-| E34 | `CLR_EXPECT_RETRIES=N` sets retry cap | `CLR_EXPECT_RETRIES` | dry-run exits 0; CLI flag wins; out-of-range rejected |
-| E35 | `CLR_RETRY_ON_RATE_LIMIT=N` sets retry count | `CLR_RETRY_ON_RATE_LIMIT` | dry-run exits 0; CLI flag wins; invalid value silently ignored |
-| E36 | `CLR_RETRY_DELAY=N` sets retry delay (secs) | `CLR_RETRY_DELAY` | dry-run exits 0; CLI flag wins; invalid value silently ignored |
+| E34 | `CLR_RETRY_ON_VALIDATION=N` sets validation retry cap | `CLR_RETRY_ON_VALIDATION` | dry-run exits 0; CLI flag wins; out-of-range hard-rejected |
+| E35 | `CLR_RETRY_ON_TRANSIENT=N` sets Transient class retry count | `CLR_RETRY_ON_TRANSIENT` | dry-run exits 0; CLI flag wins; invalid value silently ignored |
+| E36 | `CLR_TRANSIENT_DELAY=N` sets Transient class retry delay (secs) | `CLR_TRANSIENT_DELAY` | dry-run exits 0; CLI flag wins; invalid value silently ignored |
 | E37 | `CLR_TIMEOUT=N` sets run/ask subprocess timeout | `CLR_TIMEOUT` | dry-run exits 0; CLI flag wins; `0` = unlimited; invalid silently ignored |
+| E38 | `CLR_RETRY_ON_SERVICE=N` sets Service class retry count | `CLR_RETRY_ON_SERVICE` | dry-run exits 0; CLI flag wins; invalid value silently ignored |
+| E39 | `CLR_SERVICE_DELAY=N` sets Service class retry delay (secs) | `CLR_SERVICE_DELAY` | dry-run exits 0; CLI flag wins; invalid value silently ignored |
+| E40 | `CLR_RETRY_ON_UNKNOWN=N` sets Unknown class retry count | `CLR_RETRY_ON_UNKNOWN` | dry-run exits 0; CLI flag wins; invalid value silently ignored |
 
 ## Test Coverage Summary
 
 - Bool vars (truthy only): E02, E04, E05, E06, E07, E11, E13, E14, E18, E19, E28 (11 tests)
 - String vars: E01, E03, E08, E10, E15, E16, E21, E22, E23, E29, E31, E32, E33 (13 tests)
-- Parsed vars (with silent-ignore): E09, E12, E17, E30, E35, E36, E37 (7 tests)
-- Parsed vars (with rejection): E34 (1 test)
+- Parsed vars (with silent-ignore): E09, E12, E17, E30, E35, E36, E37, E38, E39, E40 (10 tests)
+- Parsed vars (with hard-rejection): E34 (1 test)
 - Negation suppression (suppress default injection): E05, E06, E07, E18, E19 (5 tests)
-- CLI-wins verification: E01, E03, E29, E30, E31, E32, E33, E34, E35, E36, E37 (11 tests)
+- CLI-wins verification: E01, E03, E29, E30, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40 (14 tests)
 - Isolated subcommand: E23, E24 (2 tests)
 - Credential ops (cross-command): E28 (1 test)
 
-**Total:** 37 edge cases (E01–E37)
+**Total:** 40 edge cases (E01–E40)
 
 ## Test Cases
 
@@ -403,38 +406,38 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 
 ---
 
-### E34: CLR_EXPECT_RETRIES sets retry cap
+### E34: CLR_RETRY_ON_VALIDATION sets validation retry cap
 
-- **Given:** `CLR_EXPECT_RETRIES=3`; no `--expect-retries` on CLI; `--dry-run` set
-- **When:** `CLR_EXPECT_RETRIES=3 clr --dry-run task`
+- **Given:** `CLR_RETRY_ON_VALIDATION=3`; no `--retry-on-validation` on CLI; `--dry-run` set
+- **When:** `CLR_RETRY_ON_VALIDATION=3 clr --dry-run task`
 - **Then:** exit 0; env var applied (retry cap would be 3 in a live run with `--expect-strategy retry`); dry-run exits 0 normally
 - **Exit:** 0
-- **CLI-wins:** `clr --expect-retries 5 --dry-run task` with `CLR_EXPECT_RETRIES=3` → CLI value 5 used; env var 3 ignored
-- **Out-of-range:** `CLR_EXPECT_RETRIES=256 clr --dry-run task` → exit 1; stderr contains error about value exceeding u8 range (max 255)
+- **CLI-wins:** `clr --retry-on-validation 5 --dry-run task` with `CLR_RETRY_ON_VALIDATION=3` → CLI value 5 used; env var 3 ignored
+- **Out-of-range:** `CLR_RETRY_ON_VALIDATION=256 clr --dry-run task` → exit 1; stderr contains error about value exceeding u8 range (max 255); note: hard-rejected unlike other retry env vars
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
 
 ---
 
-### E35: CLR_RETRY_ON_RATE_LIMIT sets rate-limit retry count
+### E35: CLR_RETRY_ON_TRANSIENT sets Transient class retry count
 
-- **Given:** `CLR_RETRY_ON_RATE_LIMIT=3`; no `--retry-on-rate-limit` on CLI; `--dry-run` set
-- **When:** `CLR_RETRY_ON_RATE_LIMIT=3 clr --dry-run task`
-- **Then:** exit 0; env var applied (retry count would be 3 on a rate-limit hit in a live run); dry-run exits 0 normally
+- **Given:** `CLR_RETRY_ON_TRANSIENT=3`; no `--retry-on-transient` on CLI; `--dry-run` set
+- **When:** `CLR_RETRY_ON_TRANSIENT=3 clr --dry-run task`
+- **Then:** exit 0; env var applied (Transient class retry count would be 3 in a live run); dry-run exits 0 normally
 - **Exit:** 0
-- **CLI-wins:** `clr --retry-on-rate-limit 0 --dry-run task` with `CLR_RETRY_ON_RATE_LIMIT=3` → CLI value 0 used; env var 3 ignored
-- **Invalid-ignored:** `CLR_RETRY_ON_RATE_LIMIT=notanumber` → parse failure silently ignored; default 1 used; dry-run exits 0 normally
+- **CLI-wins:** `clr --retry-on-transient 0 --dry-run task` with `CLR_RETRY_ON_TRANSIENT=3` → CLI value 0 used; env var 3 ignored
+- **Invalid-ignored:** `CLR_RETRY_ON_TRANSIENT=notanumber` → parse failure silently ignored; effective default (auto → fallback 2) used; dry-run exits 0 normally
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
 
 ---
 
-### E36: CLR_RETRY_DELAY sets retry delay in seconds
+### E36: CLR_TRANSIENT_DELAY sets Transient class retry delay in seconds
 
-- **Given:** `CLR_RETRY_DELAY=60`; no `--retry-delay` on CLI; `--dry-run` set
-- **When:** `CLR_RETRY_DELAY=60 clr --dry-run task`
-- **Then:** exit 0; env var applied (delay between rate-limit retries would be 60s in a live run); dry-run exits 0 normally
+- **Given:** `CLR_TRANSIENT_DELAY=60`; no `--transient-delay` on CLI; `--dry-run` set
+- **When:** `CLR_TRANSIENT_DELAY=60 clr --dry-run task`
+- **Then:** exit 0; env var applied (Transient class delay would be 60s in a live run); dry-run exits 0 normally
 - **Exit:** 0
-- **CLI-wins:** `clr --retry-delay 5 --dry-run task` with `CLR_RETRY_DELAY=60` → CLI value 5 used; env var 60 ignored
-- **Invalid-ignored:** `CLR_RETRY_DELAY=notanumber` → parse failure silently ignored; default 30 used; dry-run exits 0 normally
+- **CLI-wins:** `clr --transient-delay 5 --dry-run task` with `CLR_TRANSIENT_DELAY=60` → CLI value 5 used; env var 60 ignored
+- **Invalid-ignored:** `CLR_TRANSIENT_DELAY=notanumber` → parse failure silently ignored; effective default (auto → fallback 30s) used; dry-run exits 0 normally
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
 
 ---
@@ -453,36 +456,36 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 
 ---
 
-### E38: CLR_RETRY_ON_API_ERROR sets API error retry count
+### E38: CLR_RETRY_ON_SERVICE sets Service class retry count
 
-- **Given:** `CLR_RETRY_ON_API_ERROR=2`; no `--retry-on-api-error` on CLI; `--dry-run` set
-- **When:** `CLR_RETRY_ON_API_ERROR=2 clr --dry-run task`
-- **Then:** exit 0; env var applied (retry count would be 2 on an API error in a live run); dry-run exits 0 normally
+- **Given:** `CLR_RETRY_ON_SERVICE=2`; no `--retry-on-service` on CLI; `--dry-run` set
+- **When:** `CLR_RETRY_ON_SERVICE=2 clr --dry-run task`
+- **Then:** exit 0; env var applied (Service class retry count would be 2 in a live run); dry-run exits 0 normally
 - **Exit:** 0
-- **CLI-wins:** `clr --retry-on-api-error 3 --dry-run task` with `CLR_RETRY_ON_API_ERROR=1` → CLI value 3 used; env var 1 ignored
-- **Invalid-ignored:** `CLR_RETRY_ON_API_ERROR=notanumber` → parse failure silently ignored; default 0 used; dry-run exits 0 normally
+- **CLI-wins:** `clr --retry-on-service 3 --dry-run task` with `CLR_RETRY_ON_SERVICE=1` → CLI value 3 used; env var 1 ignored
+- **Invalid-ignored:** `CLR_RETRY_ON_SERVICE=notanumber` → parse failure silently ignored; effective default (auto → fallback 2) used; dry-run exits 0 normally
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
 
 ---
 
-### E39: CLR_API_ERROR_DELAY sets API error retry delay in seconds
+### E39: CLR_SERVICE_DELAY sets Service class retry delay in seconds
 
-- **Given:** `CLR_API_ERROR_DELAY=10`; no `--api-error-delay` on CLI; `--dry-run` set
-- **When:** `CLR_API_ERROR_DELAY=10 clr --dry-run task`
-- **Then:** exit 0; env var applied (delay between API error retries would be 10s in a live run); dry-run exits 0 normally
+- **Given:** `CLR_SERVICE_DELAY=10`; no `--service-delay` on CLI; `--dry-run` set
+- **When:** `CLR_SERVICE_DELAY=10 clr --dry-run task`
+- **Then:** exit 0; env var applied (Service class delay would be 10s in a live run); dry-run exits 0 normally
 - **Exit:** 0
-- **CLI-wins:** `clr --api-error-delay 30 --dry-run task` with `CLR_API_ERROR_DELAY=10` → CLI value 30 used; env var 10 ignored
-- **Invalid-ignored:** `CLR_API_ERROR_DELAY=notanumber` → parse failure silently ignored; default 30 used; dry-run exits 0 normally
+- **CLI-wins:** `clr --service-delay 30 --dry-run task` with `CLR_SERVICE_DELAY=10` → CLI value 30 used; env var 10 ignored
+- **Invalid-ignored:** `CLR_SERVICE_DELAY=notanumber` → parse failure silently ignored; effective default (auto → fallback 30s) used; dry-run exits 0 normally
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
 
 ---
 
-### E40: CLR_RETRY_ON_UNKNOWN_ERROR sets unknown error retry count
+### E40: CLR_RETRY_ON_UNKNOWN sets Unknown class retry count
 
-- **Given:** `CLR_RETRY_ON_UNKNOWN_ERROR=1`; no `--retry-on-unknown-error` on CLI; `--dry-run` set
-- **When:** `CLR_RETRY_ON_UNKNOWN_ERROR=1 clr --dry-run task`
-- **Then:** exit 0; env var applied (retry count would be 1 on an unknown error in a live run); dry-run exits 0 normally
+- **Given:** `CLR_RETRY_ON_UNKNOWN=1`; no `--retry-on-unknown` on CLI; `--dry-run` set
+- **When:** `CLR_RETRY_ON_UNKNOWN=1 clr --dry-run task`
+- **Then:** exit 0; env var applied (Unknown class retry count would be 1 in a live run); dry-run exits 0 normally
 - **Exit:** 0
-- **CLI-wins:** `clr --retry-on-unknown-error 2 --dry-run task` with `CLR_RETRY_ON_UNKNOWN_ERROR=1` → CLI value 2 used; env var 1 ignored
-- **Invalid-ignored:** `CLR_RETRY_ON_UNKNOWN_ERROR=bad` → parse failure silently ignored; default 0 used; dry-run exits 0 normally
+- **CLI-wins:** `clr --retry-on-unknown 2 --dry-run task` with `CLR_RETRY_ON_UNKNOWN=1` → CLI value 2 used; env var 1 ignored
+- **Invalid-ignored:** `CLR_RETRY_ON_UNKNOWN=bad` → parse failure silently ignored; effective default (auto → fallback 2) used; dry-run exits 0 normally
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)

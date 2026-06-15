@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clr parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 39 clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout` (isolated/refresh), `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--subdir`, `--output-file`, `--expect`, `--expect-strategy`, `--expect-retries`, `--max-sessions`, `--retry-on-rate-limit`, `--retry-delay`, `--timeout` (run/ask), `--retry-on-api-error`, `--api-error-delay`, `--retry-on-unknown-error`.
+- **In Scope**: All 53 clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout` (isolated/refresh), `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--subdir`, `--output-file`, `--expect`, `--expect-strategy`, `--max-sessions`, `--retry-on-transient`, `--transient-delay`, `--timeout` (run/ask), `--retry-on-account`, `--account-delay`, `--retry-on-auth`, `--auth-delay`, `--retry-on-service`, `--service-delay`, `--retry-on-process`, `--process-delay`, `--retry-on-validation`, `--validation-delay`, `--retry-on-runner`, `--runner-delay`, `--retry-on-unknown`, `--unknown-delay`, `--retry-override`, `--retry-override-delay`, `--retry-default`, `--retry-default-delay`.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
@@ -44,11 +44,25 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `29_output_file.md` | Edge cases for `--output-file` parameter | ✅ |
 | `30_expect.md` | Edge cases for `--expect` parameter | ✅ |
 | `31_expect_strategy.md` | Edge cases for `--expect-strategy` parameter | ✅ |
-| `32_expect_retries.md` | Edge cases for `--expect-retries` parameter | ✅ |
 | `33_max_sessions.md` | Edge cases for `--max-sessions` parameter | ✅ |
-| `34_retry_on_rate_limit.md` | Edge cases for `--retry-on-rate-limit` parameter | ✅ |
-| `35_retry_delay.md` | Edge cases for `--retry-delay` parameter | ✅ |
+| `34_retry_on_transient.md` | Edge cases for `--retry-on-transient` parameter | ✅ |
+| `35_transient_delay.md` | Edge cases for `--transient-delay` parameter | ✅ |
 | `36_timeout.md` | Edge cases for `--timeout` flag (run/ask) | ✅ |
-| `037_retry_on_api_error.md` | Edge cases for `--retry-on-api-error` parameter | ✅ |
-| `038_api_error_delay.md` | Edge cases for `--api-error-delay` parameter | ✅ |
-| `039_retry_on_unknown_error.md` | Edge cases for `--retry-on-unknown-error` parameter | ✅ |
+| `040_retry_on_account.md` | Edge cases for `--retry-on-account` parameter | ✅ |
+| `041_account_delay.md` | Edge cases for `--account-delay` parameter | ✅ |
+| `042_retry_on_auth.md` | Edge cases for `--retry-on-auth` parameter | ✅ |
+| `043_auth_delay.md` | Edge cases for `--auth-delay` parameter | ✅ |
+| `044_retry_on_service.md` | Edge cases for `--retry-on-service` parameter | ✅ |
+| `045_service_delay.md` | Edge cases for `--service-delay` parameter | ✅ |
+| `046_retry_on_process.md` | Edge cases for `--retry-on-process` parameter | ✅ |
+| `047_process_delay.md` | Edge cases for `--process-delay` parameter | ✅ |
+| `048_retry_on_validation.md` | Edge cases for `--retry-on-validation` parameter | ✅ |
+| `049_validation_delay.md` | Edge cases for `--validation-delay` parameter | ✅ |
+| `050_retry_on_runner.md` | Edge cases for `--retry-on-runner` parameter | ✅ |
+| `051_runner_delay.md` | Edge cases for `--runner-delay` parameter | ✅ |
+| `052_retry_on_unknown.md` | Edge cases for `--retry-on-unknown` parameter | ✅ |
+| `053_unknown_delay.md` | Edge cases for `--unknown-delay` parameter | ✅ |
+| `054_retry_override.md` | Edge cases for `--retry-override` parameter (Tier 1) | ✅ |
+| `055_retry_override_delay.md` | Edge cases for `--retry-override-delay` parameter (Tier 1) | ✅ |
+| `056_retry_default.md` | Edge cases for `--retry-default` parameter (Tier 3) | ✅ |
+| `057_retry_default_delay.md` | Edge cases for `--retry-default-delay` parameter (Tier 3) | ✅ |

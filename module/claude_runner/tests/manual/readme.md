@@ -399,16 +399,16 @@ cargo run -p claude_runner -- --dry-run --expect "yes|no" --expect-strategy bogu
 
 **Expected:** First three exit 0. Last exits 1 with `Error: invalid --expect-strategy value: bogus`.
 
-### TC-51: Expect-Retries — Range Validation
+### TC-51: Retry-on-Validation — Range Validation
 ```sh
 # Valid: 0-255
-cargo run -p claude_runner -- --dry-run --expect "yes|no" --expect-strategy retry --expect-retries 3 "test"
+cargo run -p claude_runner -- --dry-run --retry-on-validation 3 "test"
 
 # Out of range: 256 → exit 1
-cargo run -p claude_runner -- --dry-run --expect "yes|no" --expect-strategy retry --expect-retries 256 "test"
+cargo run -p claude_runner -- --dry-run --retry-on-validation 256 "test"
 ```
 
-**Expected:** First exits 0. Second exits 1 with `Error: invalid --expect-retries value: 256`.
+**Expected:** First exits 0. Second exits 1 with `Error: invalid --retry-on-validation value: 256`.
 
 ### TC-52: Max-Sessions — Gate Disabled at 0
 ```sh
@@ -418,40 +418,40 @@ cargo run -p claude_runner -- --dry-run --max-sessions 5 "test"
 
 **Expected:** Both exit 0. Neither produces session-gate messages (dry-run bypasses actual execution). When `--max-sessions 0`, the gate is disabled entirely regardless of session count.
 
-### TC-53: Retry-on-Rate-Limit Dry-Run
+### TC-53: Retry-on-Transient Dry-Run
 ```sh
-cargo run -p claude_runner -- --dry-run --retry-on-rate-limit 3 "test"
+cargo run -p claude_runner -- --dry-run --retry-on-transient 3 "test"
 ```
 
 **Expected:** Exit 0. No retry messages on stderr (dry-run skips subprocess). The flag is parsed and accepted without error.
 
-### TC-54: Retry-Delay Dry-Run
+### TC-54: Transient-Delay Dry-Run
 ```sh
-cargo run -p claude_runner -- --dry-run --retry-delay 30 "test"
+cargo run -p claude_runner -- --dry-run --transient-delay 30 "test"
 ```
 
 **Expected:** Exit 0. Flag accepted without error.
 
-### TC-55: Help Lists All Retry, Timeout, and Error Retry Flags
+### TC-55: Help Lists Retry Options (3-Tier System)
 ```sh
 cargo run -p claude_runner -- --help
 ```
 
-**Expected:** Help output contains `--retry-on-rate-limit`, `--retry-delay`, `--timeout`, `--retry-on-api-error`, `--api-error-delay`, and `--retry-on-unknown-error`. Exit 0.
+**Expected:** Help output contains `--retry-on-transient`, `--transient-delay`, `--retry-on-account`, `--account-delay`, `--retry-on-auth`, `--auth-delay`, `--retry-on-service`, `--service-delay`, `--retry-on-process`, `--process-delay`, `--retry-on-validation`, `--validation-delay`, `--retry-on-runner`, `--runner-delay`, `--retry-on-unknown`, `--unknown-delay`, `--retry-override`, `--retry-override-delay`, `--retry-default`, `--retry-default-delay`, and `--timeout`. Does NOT contain `--retry-on-rate-limit`, `--retry-delay`, `--retry-on-api-error`, `--api-error-delay`, or `--retry-on-unknown-error`. Exit 0.
 
-### TC-56: CLR_RETRY_ON_RATE_LIMIT Env Var Accepted
+### TC-56: CLR_RETRY_ON_TRANSIENT Env Var Accepted
 ```sh
-CLR_RETRY_ON_RATE_LIMIT=2 cargo run -p claude_runner -- --dry-run "test"
+CLR_RETRY_ON_TRANSIENT=2 cargo run -p claude_runner -- --dry-run "test"
 ```
 
 **Expected:** Exit 0. Env var applied silently; no error.
 
-### TC-57: Retry-on-Rate-Limit 0 — Explicit Disable (Overrides Default 1)
+### TC-57: Retry-on-Transient 0 — Explicit Disable (Overrides Fallback Default)
 ```sh
-cargo run -p claude_runner -- --dry-run --retry-on-rate-limit 0 "test"
+cargo run -p claude_runner -- --dry-run --retry-on-transient 0 "test"
 ```
 
-**Expected:** Exit 0. No retry logic invoked. `0` explicitly disables retry, overriding the default of `1`.
+**Expected:** Exit 0. No retry logic invoked. `0` explicitly disables Transient retry, overriding the fallback default (2).
 
 ### TC-58: Timeout 0 (Unlimited Default)
 ```sh
@@ -509,44 +509,44 @@ cargo run -p claude_runner -- ps --unknown
 
 **Expected:** stderr error message about unexpected arguments. Exit code 1.
 
-### TC-66: Retry-on-API-Error Dry-Run
+### TC-66: Retry-on-Service Dry-Run
 ```sh
-cargo run -p claude_runner -- --dry-run --retry-on-api-error 3 "test"
+cargo run -p claude_runner -- --dry-run --retry-on-service 3 "test"
 ```
 
 **Expected:** Exit 0. Flag parsed and accepted without error.
 
-### TC-67: API-Error-Delay Dry-Run
+### TC-67: Service-Delay Dry-Run
 ```sh
-cargo run -p claude_runner -- --dry-run --api-error-delay 10 "test"
+cargo run -p claude_runner -- --dry-run --service-delay 10 "test"
 ```
 
 **Expected:** Exit 0. Flag parsed and accepted without error.
 
-### TC-68: Retry-on-Unknown-Error Dry-Run
+### TC-68: Retry-on-Unknown Dry-Run
 ```sh
-cargo run -p claude_runner -- --dry-run --retry-on-unknown-error 2 "test"
+cargo run -p claude_runner -- --dry-run --retry-on-unknown 2 "test"
 ```
 
 **Expected:** Exit 0. Flag parsed and accepted without error.
 
-### TC-69: CLR_RETRY_ON_API_ERROR Env Var Accepted
+### TC-69: CLR_RETRY_ON_SERVICE Env Var Accepted
 ```sh
-CLR_RETRY_ON_API_ERROR=2 cargo run -p claude_runner -- --dry-run "test"
+CLR_RETRY_ON_SERVICE=2 cargo run -p claude_runner -- --dry-run "test"
 ```
 
 **Expected:** Exit 0. Env var applied silently; no error.
 
-### TC-70: CLR_API_ERROR_DELAY Env Var Accepted
+### TC-70: CLR_SERVICE_DELAY Env Var Accepted
 ```sh
-CLR_API_ERROR_DELAY=15 cargo run -p claude_runner -- --dry-run "test"
+CLR_SERVICE_DELAY=15 cargo run -p claude_runner -- --dry-run "test"
 ```
 
 **Expected:** Exit 0. Env var applied silently; no error.
 
-### TC-71: CLR_RETRY_ON_UNKNOWN_ERROR Env Var Accepted
+### TC-71: CLR_RETRY_ON_UNKNOWN Env Var Accepted
 ```sh
-CLR_RETRY_ON_UNKNOWN_ERROR=1 cargo run -p claude_runner -- --dry-run "test"
+CLR_RETRY_ON_UNKNOWN=1 cargo run -p claude_runner -- --dry-run "test"
 ```
 
 **Expected:** Exit 0. Env var applied silently; no error.
@@ -554,7 +554,7 @@ CLR_RETRY_ON_UNKNOWN_ERROR=1 cargo run -p claude_runner -- --dry-run "test"
 ## Pass Criteria
 
 All TC-1 through TC-71 must pass without unexpected errors or panics.
-TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-65 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
+TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-71 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
 
 ---
@@ -644,7 +644,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - Equivalent test: `CLR_MAX_TOKENS=50000 clr ask` → overrides default 200000
 - Automated in: `it_11_clr_effort_env_overrides_ask_default`, `it_12_clr_max_tokens_env_overrides_ask_default`
 
-### New features: output-file, expect, expect-strategy, expect-retries, max-sessions
+### New features: output-file, expect, expect-strategy, retry-on-validation, max-sessions
 
 - **CC-80:** `--output-file /tmp/out.txt --dry-run "test"` → exit 0; runner option not forwarded to claude
 - **CC-81:** `--expect "yes|no" --dry-run "test"` → exit 0; expect is runner-level, dry-run exits before validation
@@ -652,8 +652,8 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-83:** `--expect-strategy retry --dry-run "test"` → exit 0
 - **CC-84:** `--expect-strategy "default:yes" --dry-run "test"` → exit 0
 - **CC-85:** `--expect-strategy bogus --dry-run "test"` → exit 1; error "invalid --expect-strategy value"
-- **CC-86:** `--expect-retries 3 --dry-run "test"` → exit 0
-- **CC-87:** `--expect-retries 256 --dry-run "test"` → exit 1; error "invalid --expect-retries value"
+- **CC-86:** `--retry-on-validation 3 --dry-run "test"` → exit 0
+- **CC-87:** `--retry-on-validation 256 --dry-run "test"` → exit 1; error "invalid --retry-on-validation value"
 - **CC-88:** `--max-sessions 5 --dry-run "test"` → exit 0
 - **CC-89:** `--max-sessions 0 --dry-run "test"` → exit 0 (gate disabled)
 - **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 30 used)
@@ -665,13 +665,13 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-92:** `CLR_EXPECT="yes|no" --dry-run "test"` → exit 0; runner-level, not forwarded
 - **CC-93:** `CLR_EXPECT_STRATEGY=fail --dry-run "test"` → exit 0
 - **CC-94:** `CLR_EXPECT_STRATEGY=bogus --dry-run "test"` → exit 1 with error "CLR_EXPECT_STRATEGY: invalid"
-- **CC-95:** `CLR_EXPECT_RETRIES=5 --dry-run "test"` → exit 0
-- **CC-96:** `CLR_EXPECT_RETRIES=256 --dry-run "test"` → exit 1 with error "CLR_EXPECT_RETRIES: invalid"
+- **CC-95:** `CLR_RETRY_ON_VALIDATION=5 --dry-run "test"` → exit 0
+- **CC-96:** `CLR_RETRY_ON_VALIDATION=256 --dry-run "test"` → exit 1 with error "CLR_RETRY_ON_VALIDATION: invalid" (hard-reject; unlike other retry env vars which silently ignore)
 
 ### expect-strategy edge cases
 
 - **CC-97:** `--expect-strategy "default:" --dry-run "test"` → exit 0; empty-value default is valid (returns `""` on mismatch)
-- **CC-98:** `--expect "yes" --expect-strategy fail --expect-retries 3 --dry-run "test"` → exit 0; retries silently ignored when strategy is `fail`
+- **CC-98:** `--expect "yes" --expect-strategy fail --retry-on-validation 3 --dry-run "test"` → exit 0; retries silently ignored when strategy is `fail`
 
 ### Runner-level flags not forwarded to claude
 
@@ -680,37 +680,37 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-101:** `--keep-claudecode --dry-run "test"` → dry-run shows `claude ...` WITHOUT `env -u CLAUDECODE` prefix
 - Automated in: `user_story_output_test.rs`, `env_var_ext_test.rs`, `fence_test.rs`
 
-### New features: retry-on-rate-limit, retry-delay, timeout (run/ask)
+### New features: retry-on-transient, transient-delay, timeout (run/ask)
 
-- **CC-102:** `--retry-on-rate-limit 256 --dry-run "test"` → exit 1; error "invalid --retry-on-rate-limit value: 256" (u8 overflow)
-- **CC-103:** `CLR_RETRY_ON_RATE_LIMIT=abc --dry-run "test"` → exit 0 (silently ignored; invalid env var values are non-fatal)
-- **CC-104:** `CLR_RETRY_DELAY=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-102:** `--retry-on-transient 256 --dry-run "test"` → exit 1; error "invalid --retry-on-transient value: 256" (u8 overflow)
+- **CC-103:** `CLR_RETRY_ON_TRANSIENT=abc --dry-run "test"` → exit 0 (silently ignored; invalid env var values are non-fatal)
+- **CC-104:** `CLR_TRANSIENT_DELAY=abc --dry-run "test"` → exit 0 (silently ignored)
 - **CC-105:** `CLR_TIMEOUT=abc --dry-run "test"` → exit 0 (silently ignored)
-- **CC-106:** `--retry-on-rate-limit 0 --retry-delay 60 --dry-run "test"` → exit 0 (delay ignored when retry count is 0)
+- **CC-106:** `--retry-on-transient 0 --transient-delay 60 --dry-run "test"` → exit 0 (delay ignored when retry count is 0)
 - **CC-107:** `--timeout 4294967295 --dry-run "test"` → exit 0 (u32 max accepted)
-- **CC-108:** `--retry-on-rate-limit 255 --dry-run "test"` → exit 0 (u8 max accepted)
-- **CC-109:** `--retry-on-rate-limit` (missing value) → exit 1; error "requires a value"
-- **CC-110:** `--retry-delay` (missing value) → exit 1; error "requires a value"
+- **CC-108:** `--retry-on-transient 255 --dry-run "test"` → exit 0 (u8 max accepted)
+- **CC-109:** `--retry-on-transient` (missing value) → exit 1; error "requires a value"
+- **CC-110:** `--transient-delay` (missing value) → exit 1; error "requires a value"
 - **CC-111:** `--timeout` (missing value, run/ask) → exit 1; error "requires a value"
-- **CC-112:** `clr ask --retry-on-rate-limit 3 --dry-run "q"` == `clr run --retry-on-rate-limit 3 --dry-run "q"` (pure alias parity)
-- Automated in: `retry_rate_limit_test.rs`, `timeout_test.rs`
+- **CC-112:** `clr ask --retry-on-transient 3 --dry-run "q"` == `clr run --retry-on-transient 3 --dry-run "q"` (pure alias parity)
+- Automated in: `retry_transient_test.rs`, `timeout_test.rs`
 
-### New features: retry-on-api-error, api-error-delay, retry-on-unknown-error
+### New features: retry-on-service, service-delay, retry-on-unknown, unknown-delay
 
-- **CC-113:** `--retry-on-api-error 256 --dry-run "test"` → exit 1; error "invalid --retry-on-api-error value: 256" (u8 overflow)
-- **CC-114:** `--retry-on-api-error 255 --dry-run "test"` → exit 0 (u8 max accepted)
-- **CC-115:** `--retry-on-api-error` (missing value) → exit 1; error "requires a value"
-- **CC-116:** `CLR_RETRY_ON_API_ERROR=abc --dry-run "test"` → exit 0 (silently ignored)
-- **CC-117:** `--api-error-delay 4294967296 --dry-run "test"` → exit 1 (u32 overflow)
-- **CC-118:** `--api-error-delay 4294967295 --dry-run "test"` → exit 0 (u32 max accepted)
-- **CC-119:** `--api-error-delay` (missing value) → exit 1; error "requires a value"
-- **CC-120:** `CLR_API_ERROR_DELAY=abc --dry-run "test"` → exit 0 (silently ignored)
-- **CC-121:** `--retry-on-unknown-error 256 --dry-run "test"` → exit 1; error "invalid --retry-on-unknown-error value: 256" (u8 overflow)
-- **CC-122:** `--retry-on-unknown-error 255 --dry-run "test"` → exit 0 (u8 max accepted)
-- **CC-123:** `--retry-on-unknown-error` (missing value) → exit 1; error "requires a value"
-- **CC-124:** `CLR_RETRY_ON_UNKNOWN_ERROR=abc --dry-run "test"` → exit 0 (silently ignored)
-- **CC-125:** `clr ask --retry-on-api-error 1 --dry-run "q"` == `clr run --retry-on-api-error 1 --dry-run "q"` (pure alias parity)
-- Automated in: `retry_api_error_test.rs`, `retry_unknown_error_test.rs`
+- **CC-113:** `--retry-on-service 256 --dry-run "test"` → exit 1; error "invalid --retry-on-service value: 256" (u8 overflow)
+- **CC-114:** `--retry-on-service 255 --dry-run "test"` → exit 0 (u8 max accepted)
+- **CC-115:** `--retry-on-service` (missing value) → exit 1; error "requires a value"
+- **CC-116:** `CLR_RETRY_ON_SERVICE=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-117:** `--service-delay 4294967296 --dry-run "test"` → exit 1 (u32 overflow)
+- **CC-118:** `--service-delay 4294967295 --dry-run "test"` → exit 0 (u32 max accepted)
+- **CC-119:** `--service-delay` (missing value) → exit 1; error "requires a value"
+- **CC-120:** `CLR_SERVICE_DELAY=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-121:** `--retry-on-unknown 256 --dry-run "test"` → exit 1; error "invalid --retry-on-unknown value: 256" (u8 overflow)
+- **CC-122:** `--retry-on-unknown 255 --dry-run "test"` → exit 0 (u8 max accepted)
+- **CC-123:** `--retry-on-unknown` (missing value) → exit 1; error "requires a value"
+- **CC-124:** `CLR_RETRY_ON_UNKNOWN=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-125:** `clr ask --retry-on-service 1 --dry-run "q"` == `clr run --retry-on-service 1 --dry-run "q"` (pure alias parity)
+- Automated in: `retry_service_test.rs`, `retry_unknown_test.rs`
 
 ---
 
@@ -763,12 +763,12 @@ clr ask hello
 
 After `run_interactive` signature changed from `_verbosity: VerbosityLevel` to `cli: &CliArgs`, the import became unused. Clippy fired: `unused import: use super::VerbosityLevel`. Removed the orphaned import. Automated regression: `RUSTFLAGS="-D warnings" cargo nextest run` would have caught it.
 
-### NC-8: Clippy Lints in New Test Files (`retry_rate_limit_test.rs`, `timeout_test.rs`)
+### NC-8: Clippy Lints in New Test Files (`retry_transient_test.rs`, `timeout_test.rs`)
 
 Three categories of clippy errors found when running Level 3 (`-D warnings`):
 1. `u32 as u64` casts in `src/cli/mod.rs` — 3 occurrences; fixed with `u64::from(x)` (cast_lossless lint)
 2. `std::time::Duration` instead of `core::time::Duration` — 5 occurrences in `src/cli/mod.rs` (std_instead_of_core lint)
-3. `doc_markdown` errors — 17 in `retry_rate_limit_test.rs`, 8 in `timeout_test.rs`; bare identifiers (`CLR_RETRY_ON_RATE_LIMIT`, `QuotaExhausted`, `classify_error()`, `ERROR_PATTERNS`, `RateLimit`, `CLR_RETRY_DELAY`, `CLR_TIMEOUT`, `spawn_piped`, `try_wait`) in `///` and `//!` doc comments needed backtick wrapping.
+3. `doc_markdown` errors — 17 in `retry_transient_test.rs`, 8 in `timeout_test.rs`; bare identifiers (`CLR_RETRY_ON_TRANSIENT`, `QuotaExhausted`, `classify_error()`, `ERROR_PATTERNS`, `RateLimit`, `CLR_TRANSIENT_DELAY`, `CLR_TIMEOUT`, `spawn_piped`, `try_wait`) in `///` and `//!` doc comments needed backtick wrapping.
 
 Root cause: new test files written without running full clippy sweep. Prevention: run Level 3 immediately after adding doc comments in test files.
 

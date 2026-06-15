@@ -10,7 +10,7 @@ pub( crate ) enum ExpectStrategy
 {
   /// Exit 3 immediately on first mismatch (default).
   Fail,
-  /// Re-invoke the subprocess up to `--expect-retries` more times; exit 3 if exhausted.
+  /// Re-invoke the subprocess up to `--retry-on-validation` more times; exit 3 if exhausted.
   Retry,
   /// Print the fallback value and exit 0 regardless of subprocess output.
   Default( String ),
@@ -72,14 +72,28 @@ pub( crate ) struct CliArgs
   pub( crate ) output_file          : Option< String >,
   pub( crate ) expect               : Option< String >,
   pub( crate ) expect_strategy      : Option< ExpectStrategy >,
-  pub( crate ) expect_retries       : Option< u8 >,
-  pub( crate ) max_sessions         : Option< u32 >,
-  pub( crate ) retry_on_rate_limit    : Option< u8 >,
-  pub( crate ) retry_delay            : Option< u32 >,
-  pub( crate ) timeout                : Option< u32 >,
-  pub( crate ) retry_on_api_error     : Option< u8 >,
-  pub( crate ) api_error_delay        : Option< u32 >,
-  pub( crate ) retry_on_unknown_error : Option< u8 >,
+  pub( crate ) max_sessions            : Option< u32 >,
+  pub( crate ) retry_on_transient      : Option< u8 >,
+  pub( crate ) transient_delay         : Option< u32 >,
+  pub( crate ) timeout                 : Option< u32 >,
+  pub( crate ) retry_on_account        : Option< u8 >,
+  pub( crate ) account_delay           : Option< u32 >,
+  pub( crate ) retry_on_auth           : Option< u8 >,
+  pub( crate ) auth_delay              : Option< u32 >,
+  pub( crate ) retry_on_service        : Option< u8 >,
+  pub( crate ) service_delay           : Option< u32 >,
+  pub( crate ) retry_on_process        : Option< u8 >,
+  pub( crate ) process_delay           : Option< u32 >,
+  pub( crate ) retry_on_validation     : Option< u8 >,
+  pub( crate ) validation_delay        : Option< u32 >,
+  pub( crate ) retry_on_runner         : Option< u8 >,
+  pub( crate ) runner_delay            : Option< u32 >,
+  pub( crate ) retry_on_unknown        : Option< u8 >,
+  pub( crate ) unknown_delay           : Option< u32 >,
+  pub( crate ) retry_override          : Option< u8 >,
+  pub( crate ) retry_override_delay    : Option< u32 >,
+  pub( crate ) retry_default           : Option< u8 >,
+  pub( crate ) retry_default_delay     : Option< u32 >,
 }
 
 /// Consume the next argv element as a flag's value.
@@ -122,7 +136,7 @@ fn parse_expect_strategy( raw : &str ) -> Result< ExpectStrategy >
 
 /// Parse a raw string as a bounded u8 (0–255) with a labeled error message.
 ///
-/// Used for flags like `--expect-retries` and `--retry-on-rate-limit`.
+/// Used for retry count flags like `--retry-on-transient` and `--retry-on-service`.
 pub( crate ) fn parse_u8_bounded( raw : &str, flag_name : &str ) -> Result< u8 >
 {
   raw.parse::< u32 >()
@@ -135,7 +149,7 @@ pub( crate ) fn parse_u8_bounded( raw : &str, flag_name : &str ) -> Result< u8 >
 
 /// Parse a raw string as a u32 flag value with a labeled error message and hint.
 ///
-/// Used for flags like `--max-sessions`, `--retry-delay`, and `--timeout`.
+/// Used for flags like `--max-sessions`, `--transient-delay`, and `--timeout`.
 fn parse_u32_flag( raw : &str, flag_name : &str, hint : &str ) -> Result< u32 >
 {
   raw.parse::< u32 >().map_err( | _ |
@@ -259,28 +273,22 @@ fn parse_runner_value_flag(
         parse_expect_strategy( next_value( tokens, next, "--expect-strategy" )? )?
       );
     }
-    "--expect-retries" =>
-    {
-      parsed.expect_retries = Some(
-        parse_u8_bounded( next_value( tokens, next, "--expect-retries" )?, "--expect-retries" )?
-      );
-    }
     "--max-sessions" =>
     {
       parsed.max_sessions = Some(
         parse_u32_flag( next_value( tokens, next, "--max-sessions" )?, "--max-sessions", " (0 = unlimited)" )?
       );
     }
-    "--retry-on-rate-limit" =>
+    "--retry-on-transient" =>
     {
-      parsed.retry_on_rate_limit = Some(
-        parse_u8_bounded( next_value( tokens, next, "--retry-on-rate-limit" )?, "--retry-on-rate-limit" )?
+      parsed.retry_on_transient = Some(
+        parse_u8_bounded( next_value( tokens, next, "--retry-on-transient" )?, "--retry-on-transient" )?
       );
     }
-    "--retry-delay" =>
+    "--transient-delay" =>
     {
-      parsed.retry_delay = Some(
-        parse_u32_flag( next_value( tokens, next, "--retry-delay" )?, "--retry-delay", " (seconds)" )?
+      parsed.transient_delay = Some(
+        parse_u32_flag( next_value( tokens, next, "--transient-delay" )?, "--transient-delay", " (seconds)" )?
       );
     }
     "--timeout" =>
@@ -289,22 +297,112 @@ fn parse_runner_value_flag(
         parse_u32_flag( next_value( tokens, next, "--timeout" )?, "--timeout", " (seconds; 0 = unlimited)" )?
       );
     }
-    "--retry-on-api-error" =>
+    "--retry-on-account" =>
     {
-      parsed.retry_on_api_error = Some(
-        parse_u8_bounded( next_value( tokens, next, "--retry-on-api-error" )?, "--retry-on-api-error" )?
+      parsed.retry_on_account = Some(
+        parse_u8_bounded( next_value( tokens, next, "--retry-on-account" )?, "--retry-on-account" )?
       );
     }
-    "--api-error-delay" =>
+    "--account-delay" =>
     {
-      parsed.api_error_delay = Some(
-        parse_u32_flag( next_value( tokens, next, "--api-error-delay" )?, "--api-error-delay", " (seconds)" )?
+      parsed.account_delay = Some(
+        parse_u32_flag( next_value( tokens, next, "--account-delay" )?, "--account-delay", " (seconds)" )?
       );
     }
-    "--retry-on-unknown-error" =>
+    "--retry-on-auth" =>
     {
-      parsed.retry_on_unknown_error = Some(
-        parse_u8_bounded( next_value( tokens, next, "--retry-on-unknown-error" )?, "--retry-on-unknown-error" )?
+      parsed.retry_on_auth = Some(
+        parse_u8_bounded( next_value( tokens, next, "--retry-on-auth" )?, "--retry-on-auth" )?
+      );
+    }
+    "--auth-delay" =>
+    {
+      parsed.auth_delay = Some(
+        parse_u32_flag( next_value( tokens, next, "--auth-delay" )?, "--auth-delay", " (seconds)" )?
+      );
+    }
+    "--retry-on-service" =>
+    {
+      parsed.retry_on_service = Some(
+        parse_u8_bounded( next_value( tokens, next, "--retry-on-service" )?, "--retry-on-service" )?
+      );
+    }
+    "--service-delay" =>
+    {
+      parsed.service_delay = Some(
+        parse_u32_flag( next_value( tokens, next, "--service-delay" )?, "--service-delay", " (seconds)" )?
+      );
+    }
+    "--retry-on-process" =>
+    {
+      parsed.retry_on_process = Some(
+        parse_u8_bounded( next_value( tokens, next, "--retry-on-process" )?, "--retry-on-process" )?
+      );
+    }
+    "--process-delay" =>
+    {
+      parsed.process_delay = Some(
+        parse_u32_flag( next_value( tokens, next, "--process-delay" )?, "--process-delay", " (seconds)" )?
+      );
+    }
+    "--retry-on-validation" =>
+    {
+      parsed.retry_on_validation = Some(
+        parse_u8_bounded( next_value( tokens, next, "--retry-on-validation" )?, "--retry-on-validation" )?
+      );
+    }
+    "--validation-delay" =>
+    {
+      parsed.validation_delay = Some(
+        parse_u32_flag( next_value( tokens, next, "--validation-delay" )?, "--validation-delay", " (seconds)" )?
+      );
+    }
+    "--retry-on-runner" =>
+    {
+      parsed.retry_on_runner = Some(
+        parse_u8_bounded( next_value( tokens, next, "--retry-on-runner" )?, "--retry-on-runner" )?
+      );
+    }
+    "--runner-delay" =>
+    {
+      parsed.runner_delay = Some(
+        parse_u32_flag( next_value( tokens, next, "--runner-delay" )?, "--runner-delay", " (seconds)" )?
+      );
+    }
+    "--retry-on-unknown" =>
+    {
+      parsed.retry_on_unknown = Some(
+        parse_u8_bounded( next_value( tokens, next, "--retry-on-unknown" )?, "--retry-on-unknown" )?
+      );
+    }
+    "--unknown-delay" =>
+    {
+      parsed.unknown_delay = Some(
+        parse_u32_flag( next_value( tokens, next, "--unknown-delay" )?, "--unknown-delay", " (seconds)" )?
+      );
+    }
+    "--retry-override" =>
+    {
+      parsed.retry_override = Some(
+        parse_u8_bounded( next_value( tokens, next, "--retry-override" )?, "--retry-override" )?
+      );
+    }
+    "--retry-override-delay" =>
+    {
+      parsed.retry_override_delay = Some(
+        parse_u32_flag( next_value( tokens, next, "--retry-override-delay" )?, "--retry-override-delay", " (seconds)" )?
+      );
+    }
+    "--retry-default" =>
+    {
+      parsed.retry_default = Some(
+        parse_u8_bounded( next_value( tokens, next, "--retry-default" )?, "--retry-default" )?
+      );
+    }
+    "--retry-default-delay" =>
+    {
+      parsed.retry_default_delay = Some(
+        parse_u32_flag( next_value( tokens, next, "--retry-default-delay" )?, "--retry-default-delay", " (seconds)" )?
       );
     }
     _ => return Ok( false ),
@@ -363,14 +461,28 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       output_file          : None,
       expect               : None,
       expect_strategy      : None,
-      expect_retries       : None,
-      max_sessions         : None,
-      retry_on_rate_limit    : None,
-      retry_delay            : None,
-      timeout                : None,
-      retry_on_api_error     : None,
-      api_error_delay        : None,
-      retry_on_unknown_error : None,
+      max_sessions            : None,
+      retry_on_transient      : None,
+      transient_delay         : None,
+      timeout                 : None,
+      retry_on_account        : None,
+      account_delay           : None,
+      retry_on_auth           : None,
+      auth_delay              : None,
+      retry_on_service        : None,
+      service_delay           : None,
+      retry_on_process        : None,
+      process_delay           : None,
+      retry_on_validation     : None,
+      validation_delay        : None,
+      retry_on_runner         : None,
+      runner_delay            : None,
+      retry_on_unknown        : None,
+      unknown_delay           : None,
+      retry_override          : None,
+      retry_override_delay    : None,
+      retry_default           : None,
+      retry_default_delay     : None,
     } );
   }
 

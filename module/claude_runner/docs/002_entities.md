@@ -6,7 +6,7 @@
 |------|---------|-------------|----------:|
 | `api/` | Index of API doc instances covering COMMANDS_YAML, VerbosityLevel, and register_commands contracts | [api/readme.md](api/readme.md) | 1 |
 | `cli/` | Index of CLI reference instances covering commands, params, types, groups, dictionary, user stories, env params | [cli/readme.md](cli/readme.md) | 5 |
-| `cli/param/` | Index of individual parameter reference instances (39 parameters) | [cli/param/readme.md](cli/param/readme.md) | 39 |
+| `cli/param/` | Index of individual parameter reference instances (53 parameters) | [cli/param/readme.md](cli/param/readme.md) | 53 |
 | `cli/user_story/` | Index of user goal and usage pattern instances (27 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 27 |
 | `feature/` | Index of feature doc instances covering the clr binary tool design | [feature/readme.md](feature/readme.md) | 1 |
 | `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, trace universality, isolated/refresh subprocess defaults, and exit code contract | [invariant/readme.md](invariant/readme.md) | 6 |
@@ -52,14 +52,28 @@
 | cli/param | 029 | --output-file | [cli/param/029_output_file.md](cli/param/029_output_file.md) |
 | cli/param | 030 | --expect | [cli/param/030_expect.md](cli/param/030_expect.md) |
 | cli/param | 031 | --expect-strategy | [cli/param/031_expect_strategy.md](cli/param/031_expect_strategy.md) |
-| cli/param | 032 | --expect-retries | [cli/param/032_expect_retries.md](cli/param/032_expect_retries.md) |
 | cli/param | 033 | --max-sessions | [cli/param/033_max_sessions.md](cli/param/033_max_sessions.md) |
-| cli/param | 034 | --retry-on-rate-limit | [cli/param/034_retry_on_rate_limit.md](cli/param/034_retry_on_rate_limit.md) |
-| cli/param | 035 | --retry-delay | [cli/param/035_retry_delay.md](cli/param/035_retry_delay.md) |
+| cli/param | 034 | --retry-on-transient | [cli/param/034_retry_on_transient.md](cli/param/034_retry_on_transient.md) |
+| cli/param | 035 | --transient-delay | [cli/param/035_transient_delay.md](cli/param/035_transient_delay.md) |
 | cli/param | 036 | --timeout (run/ask) | [cli/param/036_timeout.md](cli/param/036_timeout.md) |
-| cli/param | 037 | --retry-on-api-error | [cli/param/037_retry_on_api_error.md](cli/param/037_retry_on_api_error.md) |
-| cli/param | 038 | --api-error-delay | [cli/param/038_api_error_delay.md](cli/param/038_api_error_delay.md) |
-| cli/param | 039 | --retry-on-unknown-error | [cli/param/039_retry_on_unknown_error.md](cli/param/039_retry_on_unknown_error.md) |
+| cli/param | 040 | --retry-on-account | [cli/param/040_retry_on_account.md](cli/param/040_retry_on_account.md) |
+| cli/param | 041 | --account-delay | [cli/param/041_account_delay.md](cli/param/041_account_delay.md) |
+| cli/param | 042 | --retry-on-auth | [cli/param/042_retry_on_auth.md](cli/param/042_retry_on_auth.md) |
+| cli/param | 043 | --auth-delay | [cli/param/043_auth_delay.md](cli/param/043_auth_delay.md) |
+| cli/param | 044 | --retry-on-service | [cli/param/044_retry_on_service.md](cli/param/044_retry_on_service.md) |
+| cli/param | 045 | --service-delay | [cli/param/045_service_delay.md](cli/param/045_service_delay.md) |
+| cli/param | 046 | --retry-on-process | [cli/param/046_retry_on_process.md](cli/param/046_retry_on_process.md) |
+| cli/param | 047 | --process-delay | [cli/param/047_process_delay.md](cli/param/047_process_delay.md) |
+| cli/param | 048 | --retry-on-validation | [cli/param/048_retry_on_validation.md](cli/param/048_retry_on_validation.md) |
+| cli/param | 049 | --validation-delay | [cli/param/049_validation_delay.md](cli/param/049_validation_delay.md) |
+| cli/param | 050 | --retry-on-runner | [cli/param/050_retry_on_runner.md](cli/param/050_retry_on_runner.md) |
+| cli/param | 051 | --runner-delay | [cli/param/051_runner_delay.md](cli/param/051_runner_delay.md) |
+| cli/param | 052 | --retry-on-unknown | [cli/param/052_retry_on_unknown.md](cli/param/052_retry_on_unknown.md) |
+| cli/param | 053 | --unknown-delay | [cli/param/053_unknown_delay.md](cli/param/053_unknown_delay.md) |
+| cli/param | 054 | --retry-override | [cli/param/054_retry_override.md](cli/param/054_retry_override.md) |
+| cli/param | 055 | --retry-override-delay | [cli/param/055_retry_override_delay.md](cli/param/055_retry_override_delay.md) |
+| cli/param | 056 | --retry-default | [cli/param/056_retry_default.md](cli/param/056_retry_default.md) |
+| cli/param | 057 | --retry-default-delay | [cli/param/057_retry_default_delay.md](cli/param/057_retry_default_delay.md) |
 | cli/user_story | 001 | Interactive REPL | [cli/user_story/001_interactive_repl.md](cli/user_story/001_interactive_repl.md) |
 | cli/user_story | 002 | Print Mode Capture | [cli/user_story/002_print_mode_capture.md](cli/user_story/002_print_mode_capture.md) |
 | cli/user_story | 003 | Interactive With Message | [cli/user_story/003_interactive_with_message.md](cli/user_story/003_interactive_with_message.md) |

@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 7 clr commands, all 36 parameters, all 12 types, all 4 parameter groups, 2 env parameter specs, 27 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 7 clr commands, all 53 parameters, all 12 types, all 4 parameter groups, 2 env parameter specs, 27 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -26,7 +26,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
 | Commands | 7 | ≥8 IT each |
-| Parameters | 36 | ≥6 EC each |
+| Parameters | 53 | ≥6 EC each |
 | Parameter groups | 4 | ≥4 CC each |
 | Types | 12 | ≥4 TC each |
 | Env params | 2 | ≥6 EC each |
@@ -76,11 +76,28 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`--output-file`](param/29_output_file.md)
 - [`--expect`](param/30_expect.md)
 - [`--expect-strategy`](param/31_expect_strategy.md)
-- [`--expect-retries`](param/32_expect_retries.md)
 - [`--max-sessions`](param/33_max_sessions.md)
-- [`--retry-on-rate-limit`](param/34_retry_on_rate_limit.md)
-- [`--retry-delay`](param/35_retry_delay.md)
+- [`--retry-on-transient`](param/34_retry_on_transient.md)
+- [`--transient-delay`](param/35_transient_delay.md)
 - [`--timeout` (run/ask)](param/36_timeout.md)
+- [`--retry-on-account`](param/040_retry_on_account.md)
+- [`--account-delay`](param/041_account_delay.md)
+- [`--retry-on-auth`](param/042_retry_on_auth.md)
+- [`--auth-delay`](param/043_auth_delay.md)
+- [`--retry-on-service`](param/044_retry_on_service.md)
+- [`--service-delay`](param/045_service_delay.md)
+- [`--retry-on-process`](param/046_retry_on_process.md)
+- [`--process-delay`](param/047_process_delay.md)
+- [`--retry-on-validation`](param/048_retry_on_validation.md)
+- [`--validation-delay`](param/049_validation_delay.md)
+- [`--retry-on-runner`](param/050_retry_on_runner.md)
+- [`--runner-delay`](param/051_runner_delay.md)
+- [`--retry-on-unknown`](param/052_retry_on_unknown.md)
+- [`--unknown-delay`](param/053_unknown_delay.md)
+- [`--retry-override`](param/054_retry_override.md)
+- [`--retry-override-delay`](param/055_retry_override_delay.md)
+- [`--retry-default`](param/056_retry_default.md)
+- [`--retry-default-delay`](param/057_retry_default_delay.md)
 
 #### Parameter Groups
 - [Claude-Native Flags](param_group/01_claude_native_flags.md)
@@ -133,4 +150,4 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 
 #### Env Params
 - [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)
-- [`CLR_* (37 vars)`](env_param/02_clr_input_vars.md)
+- [`CLR_* (54 vars)`](env_param/02_clr_input_vars.md)

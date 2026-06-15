@@ -47,7 +47,7 @@ the captured stdout against literal values after execution.
 ### See Also
 
 - [`--expect-strategy`](031_expect_strategy.md) — mismatch handling strategy
-- [`--expect-retries`](032_expect_retries.md) — retry cap for the `retry` strategy
+- [`--retry-on-validation`](048_retry_on_validation.md) — Validation class retry count (renamed from `--expect-retries`)
 
 ### Referenced User Stories
 

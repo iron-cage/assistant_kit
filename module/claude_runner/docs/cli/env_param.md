@@ -7,22 +7,22 @@
 - **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (-> param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (42 total)
+### All Env Parameters (56 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
-| Input (CLR_*) — `run` subcommand | 37 | Caller env fallbacks for `run` parameters |
+| Input (CLR_*) — `run` subcommand | 51 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 3 | Caller env fallbacks for credential operation parameters |
 | Runtime config (CLR_*) | 1 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 42 environment variables
+**Total:** 56 environment variables
 
 ---
 
 ### Env Param 1: CLR_* Input Parameters — `run` Subcommand
 
-Environment variable fallbacks for all 37 `run` subcommand parameters.
+Environment variable fallbacks for all 51 `run` subcommand parameters.
 `apply_env_vars()` in `src/cli/env.rs` reads these immediately after CLI parsing, before command
 dispatch. Each variable is applied **only when the corresponding CLI field is still at its
 zero/absent value** — the CLI flag always wins when both are present.
@@ -30,8 +30,8 @@ zero/absent value** — the CLI flag always wins when both are present.
 **Bool variables** accept `"1"` or `"true"` (case-insensitive) as truthy.
 Any other value — including `"yes"`, `"0"`, `"false"`, empty, or absent — resolves to `false`.
 
-**Parsed variables** (`CLR_MAX_TOKENS`, `CLR_VERBOSITY`, `CLR_EFFORT`, `CLR_RETRY_ON_RATE_LIMIT`, `CLR_RETRY_DELAY`, `CLR_TIMEOUT`, `CLR_RETRY_ON_API_ERROR`, `CLR_API_ERROR_DELAY`, `CLR_RETRY_ON_UNKNOWN_ERROR`) silently ignore
-invalid values (parse failure → field stays at default).
+**Parsed variables** (`CLR_MAX_TOKENS`, `CLR_VERBOSITY`, `CLR_EFFORT`, `CLR_TIMEOUT`, and all `CLR_RETRY_*` / `CLR_*_DELAY` variables) silently ignore
+invalid values (parse failure → field stays at default). Exception: `CLR_RETRY_ON_VALIDATION` rejects invalid values at parse time.
 
 | # | Variable | CLI Parameter | Type | Notes |
 |---|----------|---------------|------|-------|
@@ -64,14 +64,28 @@ invalid values (parse failure → field stays at default).
 | 27 | `CLR_OUTPUT_FILE` | [`--output-file`](param/029_output_file.md) | string | Applied when `--output-file` absent; value is the output file path |
 | 28 | `CLR_EXPECT` | [`--expect`](param/030_expect.md) | string | Applied when `--expect` absent; same `val1\|val2\|…` syntax |
 | 29 | `CLR_EXPECT_STRATEGY` | [`--expect-strategy`](param/031_expect_strategy.md) | string | Applied when `--expect-strategy` absent; accepts `fail`, `retry`, or `default:<V>` |
-| 30 | `CLR_EXPECT_RETRIES` | [`--expect-retries`](param/032_expect_retries.md) | u8 | Applied when `--expect-retries` absent; invalid values rejected at parse time |
-| 31 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 30) |
-| 32 | `CLR_RETRY_ON_RATE_LIMIT` | [`--retry-on-rate-limit`](param/034_retry_on_rate_limit.md) | u8 | Applied when `--retry-on-rate-limit` absent; invalid values silently ignored (parse failure → field stays at default 1) |
-| 33 | `CLR_RETRY_DELAY` | [`--retry-delay`](param/035_retry_delay.md) | u32 | Applied when `--retry-delay` absent; invalid values silently ignored (parse failure → field stays at default 30) |
-| 34 | `CLR_TIMEOUT` | [`--timeout`](param/036_timeout.md) | u32 | Applied when `--timeout` absent; `0` = unlimited (no watchdog); invalid values silently ignored. **Cross-command:** also applies to `isolated`/`refresh` via Section 2 (same semantics: `0` = unlimited) |
-| 35 | `CLR_RETRY_ON_API_ERROR` | [`--retry-on-api-error`](param/037_retry_on_api_error.md) | u8 | Applied when `--retry-on-api-error` absent; invalid values silently ignored (parse failure → field stays at default 0) |
-| 36 | `CLR_API_ERROR_DELAY` | [`--api-error-delay`](param/038_api_error_delay.md) | u32 | Applied when `--api-error-delay` absent; invalid values silently ignored (parse failure → field stays at default 30) |
-| 37 | `CLR_RETRY_ON_UNKNOWN_ERROR` | [`--retry-on-unknown-error`](param/039_retry_on_unknown_error.md) | u8 | Applied when `--retry-on-unknown-error` absent; invalid values silently ignored (parse failure → field stays at default 0) |
+| 30 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 30) |
+| 31 | `CLR_RETRY_ON_TRANSIENT` | [`--retry-on-transient`](param/034_retry_on_transient.md) | u8 | Transient class retry count (Tier 2); default auto → fallback |
+| 32 | `CLR_TRANSIENT_DELAY` | [`--transient-delay`](param/035_transient_delay.md) | u32 | Transient class delay (Tier 2); default auto → fallback |
+| 33 | `CLR_TIMEOUT` | [`--timeout`](param/036_timeout.md) | u32 | Applied when `--timeout` absent; `0` = unlimited (no watchdog); invalid values silently ignored. **Cross-command:** also applies to `isolated`/`refresh` via Section 2 (same semantics: `0` = unlimited) |
+| 34 | `CLR_RETRY_ON_ACCOUNT` | [`--retry-on-account`](param/040_retry_on_account.md) | u8 | Account class retry count (Tier 2); default auto → fallback |
+| 35 | `CLR_ACCOUNT_DELAY` | [`--account-delay`](param/041_account_delay.md) | u32 | Account class delay (Tier 2); default auto → fallback |
+| 36 | `CLR_RETRY_ON_AUTH` | [`--retry-on-auth`](param/042_retry_on_auth.md) | u8 | Auth class retry count (Tier 2); default auto → fallback |
+| 37 | `CLR_AUTH_DELAY` | [`--auth-delay`](param/043_auth_delay.md) | u32 | Auth class delay (Tier 2); default auto → fallback |
+| 38 | `CLR_RETRY_ON_SERVICE` | [`--retry-on-service`](param/044_retry_on_service.md) | u8 | Service class retry count (Tier 2); default auto → fallback |
+| 39 | `CLR_SERVICE_DELAY` | [`--service-delay`](param/045_service_delay.md) | u32 | Service class delay (Tier 2); default auto → fallback |
+| 40 | `CLR_RETRY_ON_PROCESS` | [`--retry-on-process`](param/046_retry_on_process.md) | u8 | Process class retry count (Tier 2); default auto → fallback |
+| 41 | `CLR_PROCESS_DELAY` | [`--process-delay`](param/047_process_delay.md) | u32 | Process class delay (Tier 2); default auto → fallback |
+| 42 | `CLR_RETRY_ON_VALIDATION` | [`--retry-on-validation`](param/048_retry_on_validation.md) | u8 | Validation class retry count (Tier 2); invalid values rejected at parse time |
+| 43 | `CLR_VALIDATION_DELAY` | [`--validation-delay`](param/049_validation_delay.md) | u32 | Validation class delay (Tier 2); default auto → fallback |
+| 44 | `CLR_RETRY_ON_RUNNER` | [`--retry-on-runner`](param/050_retry_on_runner.md) | u8 | Runner class retry count (Tier 2); default auto → fallback |
+| 45 | `CLR_RUNNER_DELAY` | [`--runner-delay`](param/051_runner_delay.md) | u32 | Runner class delay (Tier 2); default auto → fallback |
+| 46 | `CLR_RETRY_ON_UNKNOWN` | [`--retry-on-unknown`](param/052_retry_on_unknown.md) | u8 | Unknown class retry count (Tier 2); default auto → fallback |
+| 47 | `CLR_UNKNOWN_DELAY` | [`--unknown-delay`](param/053_unknown_delay.md) | u32 | Unknown class delay (Tier 2); default auto → fallback |
+| 48 | `CLR_RETRY_OVERRIDE` | [`--retry-override`](param/054_retry_override.md) | u8 | Tier 1: forces retry count for all error classes; default auto |
+| 49 | `CLR_RETRY_OVERRIDE_DELAY` | [`--retry-override-delay`](param/055_retry_override_delay.md) | u32 | Tier 1: forces delay for all error classes; default auto |
+| 50 | `CLR_RETRY_DEFAULT` | [`--retry-default`](param/056_retry_default.md) | u8 | Tier 3: fallback retry count for all unset classes; default 2 |
+| 51 | `CLR_RETRY_DEFAULT_DELAY` | [`--retry-default-delay`](param/057_retry_default_delay.md) | u32 | Tier 3: fallback delay for all unset classes; default 30 |
 
 **Precedence (current — 3 tiers):**
 
@@ -86,7 +100,7 @@ invalid values (parse failure → field stays at default).
 3. Config file (applied when env var absent) — **not yet implemented**
 4. Built-in default (lowest)
 
-Config file tier design: keys use `snake_case` matching CLI `--kebab-case` names (e.g., `retry_on_rate_limit = 1`). File path TBD — candidates: `~/.config/clr/config.toml`, `$CLR_CONFIG` override, `.clr.toml` (project-local). All parameters should be configurable at the config file tier. See [`type/14_error_class.md`](type/14_error_class.md) § Configuration Tiers for the full gap analysis.
+Config file tier design: keys use `snake_case` matching CLI `--kebab-case` names (e.g., `retry_on_transient = 2`). File path TBD — candidates: `~/.config/clr/config.toml`, `$CLR_CONFIG` override, `.clr.toml` (project-local). All parameters should be configurable at the config file tier. See [`type/14_error_class.md`](type/14_error_class.md) § Configuration Tiers for the full gap analysis.
 
 **Discovery:** Use `--dry-run` or `--trace` to see effective values after env var application.
 

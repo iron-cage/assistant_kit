@@ -45,14 +45,28 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--output-file`](../param/029_output_file.md) | string | — | Write captured stdout to file in addition to printing (tee behavior) |
 | [`--expect`](../param/030_expect.md) | string | — | Pipe-separated enum values; stdout must match one after trim+lowercase |
 | [`--expect-strategy`](../param/031_expect_strategy.md) | enum | `fail` | Mismatch handling: exit 3 (`fail`), retry (`retry`), or fallback (`default:<V>`) |
-| [`--expect-retries`](../param/032_expect_retries.md) | u8 | `0` | Re-invocation cap when `--expect-strategy retry` is active |
 | [`--max-sessions`](../param/033_max_sessions.md) | u32 | `30` | Max concurrent claude sessions before blocking (0 = unlimited) |
-| [`--retry-on-rate-limit`](../param/034_retry_on_rate_limit.md) | u8 | `1` | Retry count on transient rate-limit exit (0 = no retry; `QuotaExhausted` never retried) |
-| [`--retry-delay`](../param/035_retry_delay.md) | u32 | `30` | Seconds between rate-limit retries (0 = immediate; ignored when `--retry-on-rate-limit` is 0) |
-| [`--timeout`](../param/036_timeout.md) | u32 | `0` | Seconds before watchdog kills subprocess (0 = unlimited, matching isolated/refresh) |
-| [`--retry-on-api-error`](../param/037_retry_on_api_error.md) | u8 | `0` | Retry count on API error (`"API Error: "` pattern); 0 = no retry; `QuotaExhausted` never retried |
-| [`--api-error-delay`](../param/038_api_error_delay.md) | u32 | `30` | Seconds between API error retries; ignored when `--retry-on-api-error` is 0 |
-| [`--retry-on-unknown-error`](../param/039_retry_on_unknown_error.md) | u8 | `0` | Retry count on unclassified error; 0 = no retry; uses `--retry-delay` for cooldown |
+| [`--retry-on-transient`](../param/034_retry_on_transient.md) | u8 | auto | Transient class retry count (Tier 2; effective default = 2 via fallback) |
+| [`--transient-delay`](../param/035_transient_delay.md) | u32 | auto | Transient class delay (Tier 2; effective default = 30 via fallback) |
+| [`--timeout`](../param/036_timeout.md) | u32 | `0` | Seconds before watchdog kills subprocess (0 = unlimited) |
+| [`--retry-on-account`](../param/040_retry_on_account.md) | u8 | auto | Account class retry count (Tier 2) |
+| [`--account-delay`](../param/041_account_delay.md) | u32 | auto | Account class delay (Tier 2) |
+| [`--retry-on-auth`](../param/042_retry_on_auth.md) | u8 | auto | Auth class retry count (Tier 2) |
+| [`--auth-delay`](../param/043_auth_delay.md) | u32 | auto | Auth class delay (Tier 2) |
+| [`--retry-on-service`](../param/044_retry_on_service.md) | u8 | auto | Service class retry count (Tier 2) |
+| [`--service-delay`](../param/045_service_delay.md) | u32 | auto | Service class delay (Tier 2) |
+| [`--retry-on-process`](../param/046_retry_on_process.md) | u8 | auto | Process class retry count (Tier 2) |
+| [`--process-delay`](../param/047_process_delay.md) | u32 | auto | Process class delay (Tier 2) |
+| [`--retry-on-validation`](../param/048_retry_on_validation.md) | u8 | auto | Validation class retry count (Tier 2; only with `--expect-strategy retry`) |
+| [`--validation-delay`](../param/049_validation_delay.md) | u32 | auto | Validation class delay (Tier 2) |
+| [`--retry-on-runner`](../param/050_retry_on_runner.md) | u8 | auto | Runner class retry count (Tier 2) |
+| [`--runner-delay`](../param/051_runner_delay.md) | u32 | auto | Runner class delay (Tier 2) |
+| [`--retry-on-unknown`](../param/052_retry_on_unknown.md) | u8 | auto | Unknown class retry count (Tier 2) |
+| [`--unknown-delay`](../param/053_unknown_delay.md) | u32 | auto | Unknown class delay (Tier 2) |
+| [`--retry-override`](../param/054_retry_override.md) | u8 | auto | Tier 1: forces retry count for all error classes |
+| [`--retry-override-delay`](../param/055_retry_override_delay.md) | u32 | auto | Tier 1: forces delay for all error classes |
+| [`--retry-default`](../param/056_retry_default.md) | u8 | `2` | Tier 3: fallback retry count for all unset classes |
+| [`--retry-default-delay`](../param/057_retry_default_delay.md) | u32 | `30` | Tier 3: fallback delay for all unset classes |
 
 **Execution Modes:**
 
@@ -77,7 +91,7 @@ Use `--new-session` to start fresh.
 |------|---------|
 | 0 | Success |
 | 1 | Error (parse failure, print mode without message, execution error, binary not found) |
-| 2 | Rate-limit passthrough from claude (subprocess exited 2); or runner-generated: rate-limit retries exhausted (`--retry-on-rate-limit` depleted) |
+| 2 | Rate-limit passthrough from claude (subprocess exited 2); or runner-generated: Transient retries exhausted |
 | 3 | Expect mismatch — output did not match `--expect` values after all retries |
 | 4 | CLR-layer watchdog timeout: subprocess exceeded `--timeout`; stderr contains "Error: timeout after Ns" |
 | N | Passthrough from claude subprocess (print mode propagates the subprocess exit code exactly) |
