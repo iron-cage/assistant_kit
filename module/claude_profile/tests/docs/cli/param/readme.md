@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clp parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: 55 active clp parameter edge case files (`name::` through `unclaim::`, params 1–56 except param 2); `current::` (docs param 18) has no dedicated EC file — covered by `command/003_accounts.md` IT tests.
+- **In Scope**: 54 active clp parameter edge case files (params 1–55 except param 2); `current::` (docs param 18) has no dedicated EC file — covered by `command/003_accounts.md` IT tests. Production param 56 (`unclaim::`) was REMOVED — file `57_unclaim.md` is retained as a tombstone with no active test cases.
 - **Numbering note**: Test doc numbering is offset +1 from `docs/cli/param/` starting at position 2 (test `003_format.md` ↔ production `002_format.md`). Test file `002_` does not exist; this is intentional — the offset arose when `current::` was excluded from EC coverage, shifting subsequent test IDs by one.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
@@ -66,4 +66,4 @@
 | 53_for.md | Edge cases for `for::` parameter (`USER@MACHINE` target identity for `.account.assign`) |
 | 54_set_model.md | Edge cases for `set_model::` parameter (explicit session model override) |
 | 55_set.md | Edge cases for `set::` parameter (`.model` mode selector: absent = get, present = set) |
-| 57_unclaim.md | Edge cases for `unclaim::` parameter (`.account.save` ownership clear) |
+| 57_unclaim.md | **REMOVED** — `unclaim::` removed from `.account.save`; see `command/18_account_unclaim.md` |

@@ -15,7 +15,7 @@
 
 | Value | Name | Selection algorithm |
 |-------|------|---------------------|
-| `renew` (default) | Renew Top | First non-current, non-active, non-occupied, non-h-exhausted account from renew sort order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). Tiebreak: lowest `5h_left` (most session-depleted account preferred — benefits more from the same renewal event). |
+| `renew` (default) | Renew Top | First non-current, non-active, non-occupied, non-h-exhausted, non-weekly-exhausted (`prefer_weekly > 5.0`) account from `sort_indices(SortStrategy::Renew)` order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). Tiebreak: lowest `prefer_weekly` ascending (mirrors `sort::renew` — same algorithm for sort and recommendation). Final tiebreak: alphabetical name. |
 | `endurance` | Endurance Top | First non-current, non-active, non-occupied, non-h-exhausted account from endurance sort order (qualified accounts first by weekly desc then reset asc; unqualified by 5h_left desc, tiebreak weekly desc). |
 | `drain` | Drain Top | First non-current, non-active, non-occupied, non-h-exhausted account from drain sort order (`prefer_weekly` ascending; tiebreak `5h_left` asc). |
 
@@ -46,8 +46,8 @@ The account selected by the active `next::` strategy receives the `→` flag in 
 |---|---|---|---|
 | Primary sort key | soonest renewal event (min of `7d_reset`, `subscription renewal`) | qualified-first, then `weekly` desc | `prefer_weekly` asc (lowest 7d Left first) |
 | h-exhausted handling | skipped (5h Left ≤ 15%) | skipped (5h Left ≤ 15%) | skipped (5h Left ≤ 15%) |
-| Secondary sort | `5h_left` asc (lower session = more depleted = preferred on tie) | within qualified: `5h_reset` asc; within unqualified: `weekly` desc | `5h_left` asc |
-| Qualification gate | none (non-current, non-active, non-occupied, non-h-exhausted) | `5h_reset ∈ [15m, 60m]` + `weekly ≥ 30%` (qualified); unqualified fallback: `prefer_weekly > 5.0` | non-h-exhausted + `prefer_weekly > 5.0` |
+| Secondary sort | `prefer_weekly` asc (mirrors `sort::renew` — same algorithm for sort and recommendation; Fix BUG-291) | within qualified: `5h_reset` asc; within unqualified: `weekly` desc | `5h_left` asc |
+| Qualification gate | non-current, non-active, non-occupied, non-h-exhausted, `prefer_weekly > 5.0` | `5h_reset ∈ [15m, 60m]` + `weekly ≥ 30%` (qualified); unqualified fallback: `prefer_weekly > 5.0` | non-h-exhausted + `prefer_weekly > 5.0` |
 | Uses weekly quota | no | yes (gate + rank) | yes (primary sort key) |
 | Picks account with… | soonest quota renewal event (7d reset or subscription) | freshest 5h reset + weekly runway | least weekly quota remaining (skips `prefer_weekly ≤ 5.0`) |
 | Best for | quick context switch to next available account | starting a long 5h+ agent run | active workstation rotation |
@@ -100,7 +100,7 @@ Valid: 8 / 8   ->  Next by strategy:
   drain      d@example.com   7% 7d left, 7d resets in 2d 8h
 ```
 
-(`next::renew` default — `→` on d@example.com (soonest 7d reset = 2d 8h; no subscription data so only 7d timer shown). Endurance picks a@example.com (qualified, soonest 5h_reset + highest weekly). Drain also picks d@example.com (lowest `prefer_weekly > 5.0` = 7%). c, e and f are skipped by drain (prefer_weekly ≤ 5.0 — weekly-exhausted, 3%/0%/0% respectively). Renew and drain agree on d@example.com for different reasons.)
+(`next::renew` default — `→` on d@example.com (soonest 7d reset = 2d 8h; no subscription data so only 7d timer shown). Endurance picks a@example.com (qualified, soonest 5h_reset + highest weekly). Drain also picks d@example.com (lowest `prefer_weekly > 5.0` = 7%). c, e and f are skipped by all three strategies: drain and endurance skip them (`prefer_weekly ≤ 5.0` — weekly-exhausted, 3%/0%/0% respectively); renew also skips them (`prefer_weekly ≤ 5.0` — weekly-floor gate added by BUG-292 fix). Renew and drain agree on d@example.com for different reasons.)
 
 ### Acceptance Criteria
 
@@ -113,7 +113,7 @@ Valid: 8 / 8   ->  Next by strategy:
 - **AC-07**: Footer is omitted when 0 or 1 accounts have valid quota data (same threshold as 009_token_usage.md AC-10).
 - **AC-08**: Footer strategy lines for which no eligible account exists are omitted from the footer rather than showing an empty line.
 - **AC-09**: The drain footer metric label reflects the binding weekly dimension: `"% 7d left"` when overall weekly quota is binding (`7d_left ≤ 7d_son_left`); `"% 7d(Son) left"` when Sonnet weekly quota is binding (`7d_son_left < 7d_left`). The reset countdown sources the same quota's `resets_at` field as the percentage (BUG-216).
-- **AC-10**: `next::renew` (default) places `→` on the top non-current, non-active, non-occupied, non-h-exhausted account from renew sort order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). Tiebreak 1: when two accounts have equal renewal times, the one with lower `5h_left` (more session-depleted) is preferred — it benefits more from the upcoming renewal event and should be used while waiting. Tiebreak 2: when both sort keys are equal, the account whose name sorts first alphabetically is selected — ensuring deterministic output regardless of filesystem iteration order (BUG-260). The renew footer line shows the two renewal countdowns: `7d resets in {d7}, renews in {sub}` (exact subscription date), `7d resets in {d7}, ~renews in {sub}` (estimated subscription date), or `7d resets in {d7}` when no subscription data is available.
+- **AC-10**: `next::renew` (default) places `→` on the top non-current, non-active, non-occupied, non-h-exhausted, non-weekly-exhausted (`prefer_weekly > 5.0`) account from `sort_indices(SortStrategy::Renew)` order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). Tiebreak 1: when two accounts have equal renewal times, the one with lower `prefer_weekly` (ascending) is preferred — mirrors `sort::renew` tiebreaker so that sort position and recommendation always agree (Fix BUG-291). Tiebreak 2: alphabetical name — ensuring deterministic output regardless of filesystem iteration order (BUG-260). Weekly-exhausted accounts (`prefer_weekly ≤ 5.0`) are always skipped — mirrors `next::drain` and `next::endurance` weekly-floor gate (Fix BUG-292). The renew footer line shows the two renewal countdowns: `7d resets in {d7}, renews in {sub}` (exact subscription date), `7d resets in {d7}, ~renews in {sub}` (estimated subscription date), or `7d resets in {d7}` when no subscription data is available.
 - **AC-11**: All three strategies (`renew`, `endurance`, `drain`) skip accounts where `is_occupied_elsewhere == true` — an account parked by another host/user pair is never recommended. When the only remaining eligible candidates are all occupied, the strategy returns no recommendation (same as no eligible candidate).
 - **AC-12**: All three strategies skip h-exhausted accounts (`5h_left ≤ 15%`, i.e., `five_hour.utilization ≥ 85.0`) — switching to a session-exhausted account provides negligible usable capacity. When all remaining eligible candidates are h-exhausted, the strategy returns no recommendation.
 - **AC-13**: The endurance footer metric line shows `{session}% session, 5h resets in {time}` — the session capacity and the 5h reset timing. It does NOT show `7d left` or `expires`; those are available in the main table and irrelevant to long-run scheduling.
@@ -122,9 +122,11 @@ Valid: 8 / 8   ->  Next by strategy:
 
 | File | Relationship |
 |------|--------------|
-| `task/claude_profile/bug/243_renew_strategy_missing_5h_tiebreaker.md` | BUG-243 ✅ Fixed: renew sort uses `five_hour_left` tiebreaker via `f64::total_cmp` on equal renewal time (TSK-248) |
+| `task/claude_profile/bug/243_renew_strategy_missing_5h_tiebreaker.md` | BUG-243 ✅ Fixed: renew sort uses `five_hour_left` tiebreaker via `f64::total_cmp` on equal renewal time (TSK-248) — superseded by BUG-291 which unifies sort and recommendation tiebreaker to `prefer_weekly` ascending |
 | `task/claude_profile/bug/260_renew_next_selection_nondeterministic_when_fully_tied.md` | BUG-260 ✅ Fixed: added `.then_with(name cmp)` at `sort_next.rs:107`; MRE `mre_bug260_renew_nondeterministic_when_fully_tied` (TSK-263) |
-| `task/claude_profile/bug/287_endurance_missing_weekly_floor_gate.md` | BUG-287 🔴 Open (TSK-290): `find_first_eligible` at `sort_next.rs:113` uses `\|_\| true` — no weekly-floor gate on endurance unqualified tier; fix: replace with `\|aq\| prefer_weekly(aq, prefer) > 5.0` (mirrors drain arm BUG-206 fix at line 122). Fix documented in AC-03. |
+| `task/claude_profile/bug/287_endurance_missing_weekly_floor_gate.md` | BUG-287 ✅ Fixed: `find_first_eligible` at `sort_next.rs:113` uses `\|aq\| prefer_weekly(aq, prefer) > 5.0` — endurance weekly-floor gate added (TSK-290) |
+| `task/claude_profile/bug/291_renew_next_uses_parallel_sort_instead_of_sort_indices.md` | BUG-291 ✅ Fixed: `find_next_for_strategy(Renew)` replaced independent `.filter().min_by()` with `sort_indices(SortStrategy::Renew) + find_first_eligible` — sort order and recommendation always use the same algorithm; tiebreaker unified to `prefer_weekly` ascending (2026-06-15) |
+| `task/claude_profile/bug/292_renew_next_recommends_weekly_exhausted_account.md` | BUG-292 ✅ Fixed: weekly-floor gate added to renew arm via `find_first_eligible` extra predicate `\|aq\| prefer_weekly(aq, prefer) > 5.0` — mirrors drain (BUG-206) and endurance (BUG-287) gates; MRE `mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal` (2026-06-15) |
 
 ### Features
 

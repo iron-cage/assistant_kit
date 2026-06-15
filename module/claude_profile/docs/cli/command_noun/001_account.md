@@ -16,27 +16,28 @@ A saved credential profile stored in the per-machine account store (`{credential
 | 8 | `.account.renewal` | renewal | Set or clear billing renewal timestamp override | Yes | No |
 | 9 | `.account.inspect` | inspect | Live multi-endpoint identity and subscription diagnostic | Yes | No |
 | 10 | `.account.assign` | assign | Write per-machine active marker without credential rotation | Yes | No |
+| 11 | `.account.unclaim` | unclaim | Release account ownership by clearing the `owner` field | Yes | No |
 
 ### Parameter Matrix
 
-| Parameter | `.accounts` | `.account.save` | `.account.use` | `.account.delete` | `.account.limits` | `.account.relogin` | `.account.rotate` | `.account.renewal` | `.account.inspect` | `.account.assign` |
-|-----------|------------|----------------|----------------|-------------------|-------------------|--------------------|-------------------|--------------------|--------------------|--------------------|
-| `name::` | optional | optional | **required** | **required** | optional | optional | — | **required** | optional | optional |
-| `dry::` | — | optional | optional | optional | — | optional | optional | optional | — | optional |
-| `format::` | optional | — | — | — | optional | — | — | — | optional | — |
-| `trace::` | optional | optional | optional | optional | optional | optional | optional | optional | optional | — |
-| `touch::` | — | — | optional | — | — | — | — | — | — | — |
-| `refresh::` | — | — | optional | — | — | — | — | — | optional | — |
-| `imodel::` | — | — | optional | — | — | — | — | — | — | — |
-| `effort::` | — | — | optional | — | — | — | — | — | — | — |
-| `set_model::` | — | — | optional | — | — | — | — | — | — | — |
-| `host::` | optional | optional | — | — | — | — | — | — | — | — |
-| `role::` | optional | optional | — | — | — | — | — | — | — | — |
-| `at::` | — | — | — | — | — | — | — | optional | — | — |
-| `from_now::` | — | — | — | — | — | — | — | optional | — | — |
-| `clear::` | — | — | — | — | — | — | — | optional | — | — |
-| `for::` | — | — | — | — | — | — | — | — | — | optional |
-| Field display params (×13) | optional | — | — | — | — | — | — | — | — | — |
+| Parameter | `.accounts` | `.account.save` | `.account.use` | `.account.delete` | `.account.limits` | `.account.relogin` | `.account.rotate` | `.account.renewal` | `.account.inspect` | `.account.assign` | `.account.unclaim` |
+|-----------|------------|----------------|----------------|-------------------|-------------------|--------------------|-------------------|--------------------|--------------------|--------------------|---------------------|
+| `name::` | optional | optional | **required** | **required** | optional | optional | — | **required** | optional | optional | **required** |
+| `dry::` | — | optional | optional | optional | — | optional | optional | optional | — | optional | optional |
+| `format::` | optional | — | — | — | optional | — | — | — | optional | — | — |
+| `trace::` | optional | optional | optional | optional | optional | optional | optional | optional | optional | — | optional |
+| `touch::` | — | — | optional | — | — | — | — | — | — | — | — |
+| `refresh::` | — | — | optional | — | — | — | — | — | optional | — | — |
+| `imodel::` | — | — | optional | — | — | — | — | — | — | — | — |
+| `effort::` | — | — | optional | — | — | — | — | — | — | — | — |
+| `set_model::` | — | — | optional | — | — | — | — | — | — | — | — |
+| `host::` | optional | optional | — | — | — | — | — | — | — | — | — |
+| `role::` | optional | optional | — | — | — | — | — | — | — | — | — |
+| `at::` | — | — | — | — | — | — | — | optional | — | — | — |
+| `from_now::` | — | — | — | — | — | — | — | optional | — | — | — |
+| `clear::` | — | — | — | — | — | — | — | optional | — | — | — |
+| `for::` | — | — | — | — | — | — | — | — | — | optional | — |
+| Field display params (×13) | optional | — | — | — | — | — | — | — | — | — | — |
 
 Field display params on `.accounts`: `active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`.
 
@@ -53,9 +54,10 @@ Field display params on `.accounts`: `active::`, `current::`, `sub::`, `tier::`,
 [saved]  --account.renewal--> [saved]
 [active] --account.renewal--> [active]
 [absent/saved/active] --account.assign--> [same state]
+[saved/active]       --account.unclaim--> [same state, owner: ""]
 ```
 
-An account is created by `save`, activated by `use`, and removed by `delete`. The `active` state is machine-scoped: one account is active per `{hostname}_{user}` pair at any time. `relogin` refreshes credentials in-place without changing lifecycle state. `renewal`, `inspect`, `limits`, and `assign` are non-lifecycle operations (metadata update, read, and marker write).
+An account is created by `save`, activated by `use`, and removed by `delete`. The `active` state is machine-scoped: one account is active per `{hostname}_{user}` pair at any time. `relogin` refreshes credentials in-place without changing lifecycle state. `renewal`, `inspect`, `limits`, and `assign` are non-lifecycle operations (metadata update, read, and marker write). `.account.unclaim` releases ownership without changing lifecycle state.
 
 ### Provider Contract
 
@@ -71,6 +73,7 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | `.account.renewal` | `account::set_renewal_at()` — read-merge write to `{name}.json` `_renewal_at` key |
 | `.account.inspect` | Endpoints 001/002/005 — `fetch_userinfo()`, `fetch_memberships()`, `fetch_roles()` |
 | `.account.assign` | `account::write_active_marker()` — writes `_active_{machine}_{user}` file only |
+| `.account.unclaim` | `account::write_owner()` — writes `owner: ""` to `{name}.json` only |
 
 ### Output Schema
 
@@ -115,6 +118,7 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | exit 1 | Invalid `name::` characters (`/`, `\`, `*`) or missing `@` in email | Use a valid email address |
 | exit 1 | `name::` prefix matches multiple accounts (ambiguous) | Use full email address |
 | exit 1 | `.account.renewal` called without `at::`, `from_now::`, or `clear::` | Provide one operation parameter |
+| exit 1 | Ownership violation on `.account.use`, `.account.delete`, `.account.relogin`, or `.account.unclaim` | Run from the owning machine; or `.account.unclaim` from the owner first |
 | exit 2 | Account not found in credential store | Run `.account.save` to create; check `name::` spelling |
 | exit 2 | Credential store unreadable or `$HOME` unset | Check `$HOME` env and file permissions |
 | exit 2 | No active account for commands that default to active | Run `.account.use name::EMAIL` first |
@@ -140,6 +144,7 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | [feature/030_account_renewal_override.md](../../feature/030_account_renewal_override.md) | `_renewal_at` storage, monthly auto-advance, and `~Renews` rendering |
 | [feature/031_account_inspect.md](../../feature/031_account_inspect.md) | Multi-endpoint inspection with membership selection priority |
 | [feature/032_account_assign.md](../../feature/032_account_assign.md) | Marker-only write semantics and `for::` resolution |
+| [feature/036_account_ownership.md](../../feature/036_account_ownership.md) | Ownership model; G1–G8 enforcement gates; `.account.unclaim` design |
 
 ### Referenced Commands
 
@@ -155,3 +160,4 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | 8 | [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) | Set or clear billing renewal override |
 | 9 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | Live identity and subscription diagnostic |
 | 10 | [`.account.assign`](../command/001_account.md#command--16-accountassign) | Write per-machine active marker |
+| 11 | [`.account.unclaim`](../command/001_account.md#command--17-accountunclaim) | Release account ownership |

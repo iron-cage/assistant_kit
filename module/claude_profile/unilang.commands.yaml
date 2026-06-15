@@ -673,3 +673,265 @@
     - ".account.rotate"
     - ".account.rotate dry::1"
   auto_help_enabled: true
+
+- name: ".account.renewal"
+  namespace: ""
+  description: "Set or clear a billing renewal timestamp override for one or more accounts"
+  hint: "Set/clear renewal override"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "account", "mutation"]
+  permissions: []
+  idempotent: false
+  deprecation_message: ""
+  http_method_hint: "POST"
+
+  arguments:
+    - name: "name"
+      kind: "String"
+      description: "Account name, `all`, or comma-separated list of accounts"
+      hint: "Account name or 'all'"
+      optional: false
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "at"
+      kind: "String"
+      description: "Set exact renewal timestamp (ISO-8601 UTC, e.g. 2026-06-29T21:00:00Z); mutually exclusive with from_now:: and clear::"
+      hint: "Absolute renewal timestamp"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "from_now"
+      kind: "String"
+      description: "Set renewal relative to now (e.g. +1h30m, -30m, +0m); mutually exclusive with at:: and clear::"
+      hint: "Signed duration delta from now"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "clear"
+      kind: "Boolean"
+      description: "Remove the renewal override (restores ~-prefixed estimate in .usage); mutually exclusive with at:: and from_now::"
+      hint: "Clear renewal override"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "dry"
+      kind: "Boolean"
+      description: "Preview operation without writing files"
+      hint: "Dry-run mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z"
+    - ".account.renewal name::all from_now::+0m"
+    - ".account.renewal name::alice@acme.com clear::1"
+    - ".account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1"
+  auto_help_enabled: true
+
+- name: ".account.inspect"
+  namespace: ""
+  description: "Show identity, subscription, and org fields for one account via live endpoints"
+  hint: "Inspect account identity"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "account", "read"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "name"
+      kind: "String"
+      description: "Account name to inspect (omit to use the currently active account)"
+      hint: "Account name"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "refresh"
+      kind: "Boolean"
+      description: "Attempt OAuth token refresh when stored credentials are locally expired (1 = enabled, default; 0 = disabled)"
+      hint: "Refresh token if expired"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format: text (default) or json"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".account.inspect"
+    - ".account.inspect name::alice@acme.com"
+    - ".account.inspect format::json"
+    - ".account.inspect refresh::0"
+  auto_help_enabled: true
+
+- name: ".account.assign"
+  namespace: ""
+  description: "Write the per-machine active-account marker for any host+user pair without credential rotation"
+  hint: "Write active-account marker"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "account", "mutation"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "POST"
+
+  arguments:
+    - name: "name"
+      kind: "String"
+      description: "Account name to assign (omit for a live usage block showing current machine identity and active account)"
+      hint: "Account name"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "for"
+      kind: "String"
+      description: "Target identity as USER@MACHINE (default: current $USER@hostname); split on first '@'; both parts sanitized"
+      hint: "USER@MACHINE target"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "dry"
+      kind: "Boolean"
+      description: "Preview the would-be write without creating or modifying any file"
+      hint: "Dry-run mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".account.assign name::alice@corp.com"
+    - ".account.assign name::alice@corp.com for::bob@laptop"
+    - ".account.assign name::alice@corp.com dry::1"
+  auto_help_enabled: true
+
+- name: ".account.unclaim"
+  namespace: ""
+  description: "Release ownership of a saved account profile (pure metadata; no credential touch)"
+  hint: "Release account ownership"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "account", "mutation"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "POST"
+
+  arguments:
+    - name: "name"
+      kind: "String"
+      description: "Account name to unclaim (required; no inference)"
+      hint: "Account name"
+      optional: false
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "dry"
+      kind: "Boolean"
+      description: "Preview without executing (1=dry-run)"
+      hint: "Dry-run mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "trace"
+      kind: "Integer"
+      description: "Print [trace] lines to stderr for each file read and write step (0 = off, default; 1 = on)"
+      hint: "Trace mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".account.unclaim name::alice@acme.com"
+    - ".account.unclaim name::shared@team.com dry::1"
+  auto_help_enabled: true
+
+- name: ".model"
+  namespace: ""
+  description: "Get or set the Claude Code session model in ~/.claude/settings.json"
+  hint: "Get or set session model"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "settings"]
+  permissions: []
+  idempotent: false
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "set"
+      kind: "String"
+      description: "Set model: `opus` (claude-opus-4-6), `sonnet` (claude-sonnet-4-6), `haiku` (claude-haiku-4-5-20251001), `default` (removes override)"
+      hint: "Model shorthand to set"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format: text (default) or json (get mode only)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".model"
+    - ".model set::opus"
+    - ".model set::default"
+    - ".model format::json"
+  auto_help_enabled: true

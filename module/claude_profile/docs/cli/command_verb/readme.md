@@ -14,8 +14,8 @@ Domain action documentation for the `clp` CLI. Each verb represents an action ap
 | [008_inspect.md](008_inspect.md) | inspect | account | 1 | Yes |
 | [009_assign.md](009_assign.md) | assign | account | 1 | Yes |
 | [010_status.md](010_status.md) | status | token, credentials | 2 | Yes |
-
-**Total:** 10 domain verbs
+| [011_unclaim.md](011_unclaim.md) | unclaim | account | 1 | Yes |
+**Total:** 11 domain verbs
 
 ### Verb Coverage Matrix
 
@@ -31,6 +31,7 @@ Domain action documentation for the `clp` CLI. Each verb represents an action ap
 | inspect | yes | — | — |
 | assign | yes | — | — |
 | status | — | yes | yes |
+| unclaim | yes | — | — |
 
 ### See Also
 

@@ -70,10 +70,3 @@ grep -A3 'path = "\.\.' Cargo.toml | grep -v 'version'
 | invariant | [invariant/001_privacy_invariant.md](001_privacy_invariant.md) | Forbidden dep types (private workspace path deps) |
 | invariant | [invariant/002_versioning_strategy.md](002_versioning_strategy.md) | Shared version policy for workspace members |
 | source | `../../Cargo.toml` | Workspace dependency declarations |
-
-### Sources
-
-| File | Notes |
-|------|-------|
-| Cargo.toml audit (2026-06-11) | Identified: `cli_fmt` path-only dep; `gag` not centralized; `claude_auth`/`claude_quota` missing publish metadata; 5 stale version constraints |
-| hyg_dep audit (2026-06-13) | Fixed all 26 `~` version format violations in root `Cargo.toml`: external deps → `^X.Y`, internal path deps → `=X.Y.Z`. Tilde banned; external format rule now documented in `crate_distribution.rulebook.md § Cargo Organization : External Dependency Version Format`. |

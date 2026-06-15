@@ -869,6 +869,34 @@ pub fn is_owned( owner : &str ) -> bool
   owner.is_empty() || owner == current_identity()
 }
 
+/// Write the `owner` field to `{name}.json` via read-merge.
+///
+/// Reads the existing `{name}.json` (if any), sets `owner` to the given value,
+/// and writes back. All non-`owner` fields are preserved.
+/// Does NOT touch `{name}.credentials.json` or any `~/.claude.*` file.
+///
+/// # Errors
+///
+/// Returns `std::io::Error` if the JSON file cannot be written.
+#[ inline ]
+pub fn write_owner(
+  name             : &str,
+  credential_store : &Path,
+  owner            : &str,
+) -> Result< (), std::io::Error >
+{
+  let path = credential_store.join( format!( "{name}.json" ) );
+  let mut map = std::fs::read_to_string( &path )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .and_then( |v| v.as_object().cloned() )
+    .unwrap_or_default();
+  map.insert( "owner".to_string(), serde_json::Value::String( owner.to_string() ) );
+  let json = serde_json::to_string( &serde_json::Value::Object( map ) )
+    .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e ) )?;
+  std::fs::write( &path, json )
+}
+
 /// env var first, falls back to `USERNAME`, then to the literal `"user"`.
 ///
 /// The per-machine name means that switching accounts on one machine does not

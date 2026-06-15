@@ -2,10 +2,10 @@
 
 ### Scope
 
-- **Purpose**: Allow writing the per-machine active-account marker for any host+user pair without performing a full credential rotation.
-- **Responsibility**: Documents the `.account.assign` CLI command — marker-only write, `for::USER@MACHINE` parameter, live usage block when called without `name::`.
-- **In Scope**: `.account.assign` command; `for::USER@MACHINE` parameter; sanitization rules; dry-run; live usage block output when `name::` absent; marker-file-only write (no `~/.claude.*` side effects).
-- **Out of Scope**: Full credential rotation (→ 004_account_use.md); per-machine marker filename derivation (→ 025_per_machine_active_marker.md); account-save host display label (→ 029_account_host_metadata.md).
+- **Purpose**: Allow writing the per-machine active-account marker for any host+user pair without credential rotation.
+- **Responsibility**: Documents the `.account.assign` CLI command — marker-only write, `for::USER@MACHINE` parameter, dry-run, live usage block when called without `name::`.
+- **In Scope**: `.account.assign` command; `for::USER@MACHINE` parameter; sanitization rules for marker filename; dry-run; live usage block output when `name::` absent; marker write only (no credential copy, no `~/.claude.*` side effects, no `owner` field changes).
+- **Out of Scope**: Full credential rotation (→ 004_account_use.md); per-machine marker filename derivation (→ 025_per_machine_active_marker.md); account-save host display label (→ 029_account_host_metadata.md); credential file access control (enforcement is logical, not filesystem-level); ownership stamp (→ 036_account_ownership.md, managed by `.account.save`).
 
 ### Design
 
@@ -66,14 +66,14 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 
 1. If `name::` absent → emit live usage block; exit 0
 2. Resolve `name::` via `resolve_account_name()` (validates existence and safe characters)
-3. If `for::` provided: split on first `@`; require both parts non-empty; sanitize each component
+3. If `for::` provided: split on first `@`; require both parts non-empty; sanitize each component (alphanumeric, `-`, `.`; others → `_`)
 4. If `for::` absent: user = `$USER`/`$USERNAME`/`"user"` fallback; machine = `resolve_hostname()`
 5. Construct `_active_{machine}_{user}` filename
 6. If `dry::1`: print `[dry-run] would assign {name} for {user}@{machine}  →  _active_{machine}_{user}`; exit 0
 7. Write `{name}` to `{credential_store}/_active_{machine}_{user}`
 8. Print: `Assigned {name} for {user}@{machine}  →  _active_{machine}_{user}`
 
-**No filesystem side effects beyond the marker file write.** `~/.claude/.credentials.json`, `~/.claude.json`, and `~/.claude/settings.json` are never touched.
+**No credential side effects.** `~/.claude/.credentials.json`, `~/.claude.json`, `~/.claude/settings.json`, and `{name}.json` are never touched by `.account.assign`. Only the marker file is written.
 
 #### Exit codes
 
@@ -97,7 +97,6 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 - **AC-10**: Overwriting an existing marker: if `_active_laptop_bob` already contains `old@corp.com`, `.account.assign name::new@corp.com for::bob@laptop` overwrites it; exits 0; file now contains `new@corp.com`.
 - **AC-11**: The command does not invoke `switch_account()` — `~/.claude/.credentials.json` and `~/.claude.json` are left unchanged by a successful assign.
 - **AC-12**: `clp .account.assign name::alice@corp.com for::bob@laptop dry::1` includes `_active_laptop_bob` in the dry-run stdout.
-
 ### Commands
 
 | File | Relationship |
@@ -110,7 +109,8 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 |------|--------------|
 | [004_account_use.md](004_account_use.md) | Full credential rotation (contrast: `.account.assign` is marker-only) |
 | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Marker filename derivation, `active_marker_filename()`, `resolve_hostname()` |
-| [029_account_host_metadata.md](029_account_host_metadata.md) | `host::` on `.account.save` is a display label; `for::` on `.account.assign` is a marker target |
+| [029_account_host_metadata.md](029_account_host_metadata.md) | `host::` on `.account.save` is a display label; `for::` on `.account.assign` is a marker target identity |
+| [036_account_ownership.md](036_account_ownership.md) | Ownership model — ownership stamped by `.account.save`, not `.account.assign` |
 
 ### Parameters
 
@@ -130,8 +130,8 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 
 | File | Relationship |
 |------|--------------|
-| `src/commands/account_assign.rs` | `account_assign_routine()` — CLI handler |
-| `module/claude_profile_core/src/account.rs` | `active_marker_filename()`, `resolve_hostname()`, sanitization logic reused |
+| `src/commands/account_assign.rs` | `account_assign_routine()` — CLI handler; marker write only; does not call `write_owner()` |
+| `claude_profile_core/src/account.rs` | `active_marker_filename()`, `resolve_hostname()` |
 
 ### Tests
 

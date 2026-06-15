@@ -277,6 +277,48 @@ pub( crate ) mod test_support
     }
   }
 
+  /// Build `AccountQuota` with `seven_day.utilization` and `seven_day.resets_at` both set.
+  ///
+  /// Use for `sort::renew` tests needing a weekly-exhausted account with a reset timer.
+  /// `mk_aq_with_7d_reset` hardcodes `seven_day.util=0.0`; this helper lets you specify it.
+  /// Pitfall: do NOT use `mk_aq_with_7d_reset` when testing weekly-exhaustion paths — its
+  /// zero utilization makes every account appear fully available (`prefer_weekly=100.0`).
+  pub( crate ) fn mk_aq_with_7d_reset_util(
+    name              : &str,
+    five_hour_util    : f64,
+    seven_day_util    : f64,
+    now_secs          : u64,
+    reset_offset_secs : u64,
+  ) -> AccountQuota
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : five_hour_util, resets_at : None } ),
+      seven_day        : Some( claude_quota::PeriodUsage
+      {
+        utilization : seven_day_util,
+        resets_at   : Some( reset_iso_at( now_secs, reset_offset_secs ) ),
+      } ),
+      seven_day_sonnet : None,
+    };
+    AccountQuota
+    {
+      name          : name.to_string(),
+      is_current    : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms : FAR_FUTURE_MS,
+      result        : Ok( data ),
+      account       : None,
+      host          : String::new(),
+      role          : String::new(),
+      renewal_at     : None,
+      cached         : false,
+      cache_age_secs : None,
+      is_owned       : true,
+    }
+  }
+
   /// Build a named `AccountQuota` with both `five_hour` and `seven_day` quota.
   ///
   /// Used by three-tier grouping tests where account name matters.

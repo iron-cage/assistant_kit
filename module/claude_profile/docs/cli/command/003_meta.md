@@ -43,7 +43,7 @@ clp .
 **Output (non-TTY, ANSI stripped):**
 
 ```
-Usage: clp <command> [key::value ...]
+Usage: clp <command>
 
 Manage Claude Code account credentials and token state.
 
@@ -55,13 +55,18 @@ Commands:
     .account.use          Switch the active account
     .account.delete       Delete a saved account
     .account.limits       Show rate-limit utilization (one account)
-    .account.relogin      Force browser re-authentication for a named account
+    .account.relogin      Re-authenticate via browser login
+    .account.rotate       Auto-rotate to the best inactive account
+    .account.renewal      Set or clear billing renewal timestamp override
+    .account.inspect      Show identity, subscription, and org fields
+    .account.assign       Write per-machine active-account marker
 
   Status & info
     .credentials.status   Show live credential metadata
     .token.status         Show OAuth token expiry classification
     .paths                Show all resolved ~/.claude/ paths
     .usage                Show live quota for all saved accounts
+    .model                Get or set session model in settings.json
 
 Options:
   format::text|json     Output format (default: text)

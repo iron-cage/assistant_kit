@@ -40,6 +40,7 @@ fn account_assign_usage_block( user : &str, machine : &str, marker : &str, activ
 /// - Exit 1: `for::` value missing `@`, or either component is empty after split.
 /// - Exit 2: account not found.
 #[ inline ]
+#[ allow( clippy::too_many_lines ) ]
 pub fn account_assign_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let trace    = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;

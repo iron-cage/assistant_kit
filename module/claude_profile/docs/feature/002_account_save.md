@@ -4,7 +4,7 @@
 
 - **Purpose**: Snapshot the current active credentials as a named account profile for later restoration.
 - **Responsibility**: Documents the `account::save()` API and the `.account.save` CLI command (FR-7).
-- **In Scope**: Credential copy, `oauthAccount` snapshot from `~/.claude.json`, org identity snapshot (`{name}.json` via endpoint 005), name validation, directory init, CLI dry-run behaviour, idempotent re-save as metadata refresh, `owner` field auto-capture via `current_identity()` at save time, `unclaim::1` parameter to clear ownership.
+- **In Scope**: Credential copy, `oauthAccount` snapshot from `~/.claude.json`, org identity snapshot (`{name}.json` via endpoint 005), name validation, directory init, CLI dry-run behaviour, idempotent re-save as metadata refresh. Ownership stamp: `account_save_routine()` always passes `Some(&current_identity())` to `save()` — writes `current_identity()` as owner on every interactive save. Background refresh callers pass `owner: None`. To release ownership, use `.account.unclaim` (see Feature 036).
 - **Out of Scope**: Account switching (→ 004_account_use.md), store initialization (→ 001_account_store_init.md).
 
 ### Design
@@ -32,9 +32,7 @@
 
 **Model preference capture (BUG-222 fix):** `save()` reads the `model` field from `~/.claude/settings.json` and writes it into `{credential_store}/{name}.json`. This snapshot enables `switch_account()` to restore the per-account model preference on the next switch. If `~/.claude/settings.json` is absent or lacks a `model` field, no model field is written and save still succeeds.
 
-**Owner capture:** When `.account.save` executes, `account_save_routine()` calls `current_identity()` (`$USER@<hostname>`) and passes `owner: Some(current_identity())` into `save()`. The `owner` field is written to `{name}.json` via read-merge-write alongside all other fields. Re-saving an existing account overwrites the `owner` — the last saver owns the account. Background callers (`refresh_account_token()`, touch path) pass `owner: None`, preserving the existing `owner` unchanged.
-
-**`unclaim::1`:** When passed, `account_save_routine()` passes `owner: Some("")` into `save()`, writing an empty `owner` field. An empty owner disables all enforcement gates (G1–G7 from Feature 036), returning the account to shared/unowned mode. See [036_account_ownership.md](036_account_ownership.md) and [cli/param/056_unclaim.md](../cli/param/056_unclaim.md).
+**Ownership stamp:** `account_save_routine()` always passes `Some(&current_identity())` to `save()`, which writes `current_identity()` as the `owner` field in `{name}.json`. To release ownership, use `clp .account.unclaim name::EMAIL` — a dedicated command that calls `write_owner(name, store, "")` directly without touching credentials. Background refresh callers pass `owner: None` (preserves existing owner via read-merge). `.account.assign` is ownership-neutral — marker-only write; does NOT call `write_owner()`. See Feature 036.
 
 **Dry-run mode** (`dry::1`): Print `[dry-run] would save current credentials as '{name}'` without modifying any files.
 
@@ -57,8 +55,7 @@
 - **AC-16**: `clp .account.save` (no `name::`) when `~/.claude.json` contains `oauthAccount.emailAddress = "i5@wbox.pro"` and the per-machine active marker contains `"i2@wbox.pro"` (stale from a prior clp session) saves credentials as `i5@wbox.pro`; `i2@wbox.pro.credentials.json` is NOT created or modified. (BUG-212 regression guard.)
 - **AC-17**: When `{credential_store}/{name}.json` already exists and contains a `_renewal_at` key, re-running `clp .account.save` preserves the `_renewal_at` value in the updated snapshot (read-merge, not full overwrite); the `oauthAccount` key is updated and all other keys are retained.
 - **AC-18**: `clp .account.save name::alice@acme.com` when `~/.claude/settings.json` contains `{"model": "sonnet"}` writes `{"model": "sonnet"}` into `{credential_store}/alice@acme.com.json`. When `~/.claude/settings.json` is absent or has no `model` field, no model field is written to `alice@acme.com.json` and exit code is still 0.
-- **AC-19**: `clp .account.save name::alice@acme.com` writes `owner: "<USER>@<hostname>"` (the `current_identity()` of the machine running the command) into `{credential_store}/alice@acme.com.json` via read-merge-write. Re-running from a different identity overwrites the owner field.
-- **AC-20**: `clp .account.save name::alice@acme.com unclaim::1` writes `owner: ""` into `{credential_store}/alice@acme.com.json`. All G1–G7 ownership gates pass after unclaim — account behaves as unowned.
+- **AC-19**: `clp .account.save name::alice@acme.com` stamps `current_identity()` as `owner` in `alice@acme.com.json` via `account_save_routine()` passing `Some(&current_identity())`. To release ownership, use `clp .account.unclaim name::EMAIL` — calls `write_owner(name, store, "")` directly without touching credentials. Background refresh callers pass `owner: None` (preserves existing `owner`). See Feature 036 AC-01/AC-02/AC-14.
 
 ### Bugs
 
@@ -66,11 +63,11 @@
 |------|--------------|
 | `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json` (step 7); `switch_account()` restores model on switch |
 
-### Parameters
+### Related Commands
 
 | File | Relationship |
 |------|--------------|
-| [cli/param/056_unclaim.md](../cli/param/056_unclaim.md) | `unclaim::` — clear ownership on `.account.save` |
+| [036_account_ownership.md](036_account_ownership.md) | ownership model — `.account.unclaim` clears ownership; G1–G8 enforcement gates |
 
 ### Commands
 
@@ -87,7 +84,8 @@
 | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Org identity metadata lifecycle and org fields in `{name}.json` |
 | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Per-machine marker naming convention used in step 8 |
 | [030_account_renewal_override.md](030_account_renewal_override.md) | `_renewal_at` field written by `.account.renewal`; preserved by `save()` read-merge (AC-17) |
-| [036_account_ownership.md](036_account_ownership.md) | Owner auto-capture and `unclaim::1` — save is the only ownership write point |
+| [036_account_ownership.md](036_account_ownership.md) | Ownership model — `.account.save` stamps `current_identity()` as owner; `.account.unclaim` clears ownership; `.account.assign` is marker-only |
+| [032_account_assign.md](032_account_assign.md) | `.account.assign` — marker-only write; does NOT call `write_owner()`; does NOT modify `owner` field in `{name}.json` |
 
 ### Referenced Commands
 

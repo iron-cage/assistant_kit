@@ -35,6 +35,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 | IT-26 | `trace::bad` exits 1 naming valid values `0`, `1`, `false`, `true` | Validation |
 | IT-27 | `oauthAccount.organizationName` in `~/.claude.json` reflects switched-to account (BUG-219 guard) | Org Identity |
 | IT-29 | `oauthAccount.emailAddress` in `~/.claude.json` patched unconditionally even when `{name}.json` absent (BUG-254 guard) | oauthAccount Email |
+| IT-30 | Positional bare arg after `key::value` param (reversed order) | Positional Syntax |
 
 ### Test Coverage Summary
 
@@ -49,7 +50,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - Atomicity: 1 test
 - Required Param: 1 test
 - Email Consistency: 1 test
-- Positional Syntax: 1 test
+- Positional Syntax: 2 tests
 - Prefix Resolution: 3 tests
 - Touch Subprocess: 4 tests
 - Help Output: 1 test
@@ -58,7 +59,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - Org Identity: 1 test
 - oauthAccount Email: 1 test
 
-**Total:** 29 integration tests
+**Total:** 30 integration tests
 
 ---
 
@@ -367,3 +368,14 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - **Exit:** 0
 - **Source:** [feature/004_account_use.md AC-09](../../../../docs/feature/004_account_use.md)
 - **Source fn:** `mre_bug254_switch_account_patches_email_when_metadata_absent` (core), `aw12_switch_patches_email_when_metadata_absent` (FT)
+
+---
+
+### IT-30: Positional bare arg after `key::value` param (reversed order)
+
+- **Given:** Two accounts saved: `work@acme.com` (active) and `personal@home.com`.
+- **When:** `clp .account.use dry::1 personal@home.com` (key::value before bare positional name)
+- **Then:** Exits 0; dry-run output shows intent for `personal@home.com`. Identical result to `clp .account.use personal@home.com dry::1`. Argument order does not affect positional rewrite.
+- **Exit:** 0
+- **Source:** [015_name_shortcut_syntax.md AC-14](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source fn:** `aw36_positional_after_key_value`

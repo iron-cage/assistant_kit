@@ -18,6 +18,7 @@ Feature behavioral requirement test cases for `docs/feature/032_account_assign.m
 | FT-10 | Overwriting existing marker writes new content | AC-10 |
 | FT-11 | `~/.claude/.credentials.json` untouched after assign | AC-11 |
 | FT-12 | Dry-run output contains marker filename | AC-12 |
+| FT-13 | `.account.assign` does NOT modify `owner` field in `{name}.json` (marker-only) | AC-15 |
 
 ### Test Case Index
 
@@ -35,6 +36,7 @@ Feature behavioral requirement test cases for `docs/feature/032_account_assign.m
 | FT-10 | Second assign to same `for::` overwrites marker content | AC-10 | Idempotency |
 | FT-11 | `~/.claude/.credentials.json` unchanged after `.account.assign` | AC-11 | No Side Effects |
 | FT-12 | `dry::1` output includes `_active_laptop_bob` when `for::bob@laptop` | AC-12 | Dry-Run Detail |
+| FT-13 | `.account.assign` does NOT modify `owner` field in `{name}.json` (marker-only write) | AC-15 | Marker-Only |
 
 ### Test Cases
 
@@ -121,3 +123,12 @@ Feature behavioral requirement test cases for `docs/feature/032_account_assign.m
 **Setup:** `alice@corp.com.credentials.json` exists
 **Expected:** stdout contains `_active_laptop_bob`; exit 0
 **Source fn:** `aa12_dry_run_shows_marker_filename` (in `tests/cli/account_assign_test.rs`)
+
+### FT-13: `.account.assign` does NOT modify `owner` field in `{name}.json`
+
+**Stimulus:** `clp .account.assign name::alice@corp.com` (no `for::`)
+**Setup:** `alice@corp.com.credentials.json` exists; `alice@corp.com.json` has `"owner": "some@machine"`
+**Expected:** `alice@corp.com.json` retains `"owner": "some@machine"` unchanged; only `_active_{machine}_{user}` marker is written; exit 0
+**Source fn:** `ft13_assign_does_not_modify_owner` (in `tests/cli/account_assign_test.rs`)
+
+

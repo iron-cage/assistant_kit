@@ -120,23 +120,31 @@ pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, 
   let command_name = argv[ 0 ].clone();
 
   // Step 5-6: process remaining args as key::value pairs
-  // Positional rewrite (A1): bare first arg → name::{value} for name-taking commands.
-  // Fix(BUG-262):
-  // Root cause: name-taking commands required `name::email` syntax; bare first args were
-  //   rejected as "expected param::value syntax", preventing shortcut forms like `clp .account.use alice`.
-  // Pitfall: Only rewrite when the arg has no `::` and does not start with `-`; never
-  //   rewrite explicit `name::` params or flag-style args.
+  // Positional rewrite (A1): bare arg anywhere in argv[1..] → name::{value}.
+  // Fix(BUG-262, BUG-294):
+  // Root cause (BUG-262): name-taking commands required `name::email` syntax; bare first
+  //   args were rejected as "expected param::value syntax", preventing shortcut forms.
+  // Root cause (BUG-294): rewrite check hardcoded argv[1]; when a key::val param preceded
+  //   the bare name (e.g., `dry::1 alice@example.com`), argv[1] contained "::" so the
+  //   rewrite was skipped and the bare name at argv[2] hit the "::" requirement.
+  // Pitfall: Scan argv[1..] for the first bare token; never hardcode a single index
+  //   position — preceding key::value params shift the bare arg's location.
   let rewritten_args : Option< Vec< String > > =
     if POSITIONAL_NAME_COMMANDS.contains( &command_name.as_str() )
-      && argv.len() > 1
-      && !argv[ 1 ].contains( "::" )
-      && !argv[ 1 ].starts_with( '-' )
     {
-      Some(
-        core::iter::once( format!( "name::{}", argv[ 1 ] ) )
-          .chain( argv[ 2.. ].iter().cloned() )
-          .collect()
-      )
+      argv[ 1.. ].iter()
+        .position( |a| !a.contains( "::" ) && !a.starts_with( '-' ) )
+        .map( |idx|
+        {
+          let name_arg = format!( "name::{}", argv[ idx + 1 ] );
+          core::iter::once( name_arg )
+            .chain(
+              argv[ 1.. ].iter().enumerate()
+                .filter( |( i, _ )| *i != idx )
+                .map( |( _, a )| a.clone() ),
+            )
+            .collect()
+        } )
     }
     else { None };
   let rest : &[ String ] = rewritten_args.as_deref().unwrap_or( &argv[ 1.. ] );

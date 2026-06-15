@@ -12,7 +12,7 @@
 Two complementary shortcuts reduce typing without changing the underlying `name::` parameter:
 
 **Positional argument (adapter layer):**
-When a command that accepts `name::` receives a bare token (no `::`) as its first parameter, the adapter layer (`argv_to_unilang_tokens()`) rewrites it to `name::{value}` before the unilang pipeline. The following commands participate: `.accounts`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`.
+When a command that accepts `name::` receives a bare token (no `::`, not starting with `-`) anywhere in its argument list, the adapter layer (`argv_to_unilang_tokens()`) rewrites the first such token to `name::{value}` before the unilang pipeline. The bare token may appear at any position — before, between, or after `key::value` parameters. The following commands participate: `.accounts`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`.
 
 ```bash
 clp .account.use alice@home.com       # rewritten to: .account.use name::alice@home.com
@@ -44,11 +44,12 @@ Prefix resolution applies AFTER positional rewriting: `clp .account.use car` →
 - **AC-06**: `clp .account.use a` (where `alice@example.com` and `amy@example.com` are saved) exits 1 with an ambiguous-prefix message listing the matches.
 - **AC-07**: `clp .account.use ghost` (no account starts with `ghost`) exits 2 with a not-found error.
 - **AC-08**: Existing `name::EMAIL` explicit form continues to work unchanged on all four commands.
-- **AC-09**: `clp .account.use alice@home.com dry::1` works — positional and `dry::` can be combined.
+- **AC-09**: `clp .account.use alice@home.com dry::1` works — positional and `dry::` can be combined (bare name before key::value).
 - **AC-10**: The `print_usage()` Examples section shows `clp .account.use alice@acme.com` (without `name::` prefix).
 - **AC-11**: `clp .account.use i1` where `i1@wbox.pro`, `i11@wbox.pro`, and `i12@wbox.pro` all exist → exits 0 and switches to `i1@wbox.pro` (exact local-part match wins over longer prefix matches).
 - **AC-12**: `clp .account.renewal name::alice at::2026-07-01T00:00:00Z` (where `alice@acme.com` is the only saved account whose local part is `alice`) → resolves to `alice@acme.com`, writes `_renewal_at`, exits 0.
 - **AC-13**: `clp .account.renewal name::alice,bob at::2026-07-01T00:00:00Z` → resolves each comma token independently via prefix resolution; `alice@acme.com` and `bob@acme.com` both updated; exits 0.
+- **AC-14**: `clp .account.use dry::1 alice@home.com` works — bare positional name after `key::value` parameter produces the same result as AC-09 (`alice@home.com dry::1`). Argument order does not affect positional rewrite.
 
 ### Commands
 
@@ -92,6 +93,6 @@ Prefix resolution applies AFTER positional rewriting: `clp .account.use car` →
 
 | File | Relationship |
 |------|--------------|
-| `tests/cli/account_mutations_test.rs` | account.use (aw13–aw15), account.delete (ad13–ad14), and account.renewal (ar15–ar16) positional, prefix, and comma-list cases |
-| `tests/cli/accounts_test.rs` | accounts (acc29–acc30) positional and prefix cases |
-| `tests/cli/account_limits_test.rs` | account.limits (lim09–lim10) positional and prefix cases |
+| `tests/cli/account_mutations_test.rs` | account.use (aw13–aw15, aw36), account.delete (ad13–ad14, ad16), account.relogin (ar10), and account.renewal (ar15–ar16) positional, prefix, reversed-order, and comma-list cases |
+| `tests/cli/accounts_test.rs` | accounts (acc29–acc30, acc51) positional, prefix, and reversed-order cases |
+| `tests/cli/account_limits_test.rs` | account.limits (lim09–lim11) positional, prefix, and reversed-order cases |

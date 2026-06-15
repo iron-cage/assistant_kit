@@ -22,12 +22,13 @@ for the BV- prefix until a separate rulebook-update task is filed.
 | `08_inspect.md` | inspect | Yes | Reads | BV-1/2/3 |
 | `09_assign.md` | assign | Yes | Accumulates | BV-1/2/3 |
 | `10_status.md` | status | Yes | Reads | BV-1/2/3/4 (2 nouns) |
+| `11_unclaim.md` | unclaim | Yes | Metadata mutation | BV-1/2/3 |
 
 ### Coverage Summary
 
 | Verb Files | Min Cases | Total |
 |------------|-----------|-------|
-| 10 | ≥ 3 each | 31 (9 × 3 + 1 × 4) |
+| 11 | ≥ 3 each | 34 (10 × 3 + 1 × 4) |
 
 ### See Also
 

@@ -152,10 +152,10 @@ Expected: stderr diagnostic "credentials unchanged"; exit 3 (not 0 or 2).
 ## Manual Testing Plan — Account Ownership (Feature 036)
 
 **Trigger:** After any change to `account::save` owner handling, `account::read_owner`,
-`account::is_owned`, `account::current_identity`, G1–G7 enforcement gates, or
-the `unclaim::` parameter.
+`account::is_owned`, `account::current_identity`, G1–G8 enforcement gates, or
+the `.account.unclaim` command.
 
-**Automated tests:** FT-01..FT-14, EC-01..EC-05, CC-1..CC-9 cover all code paths
+**Automated tests:** FT-01..FT-17, CC-1..CC-9 cover all code paths
 mechanically. The scenarios below require two physical machines (or two user accounts
 on the same machine) sharing a credential store — cannot be automated.
 
@@ -175,7 +175,7 @@ clp .account.save name::shared@team.com
 cat ~/.persistent/claude/credential/shared@team.com.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('owner','MISSING'))"
 ```
 
-Expected: owner field shows `userA@hostA`. Exit 0.
+Expected: owner field shows `userA@hostA` (stamped by `.account.save`). Exit 0.
 
 ### IT-9: Machine B blocked from `.account.use` on A's account
 
@@ -210,15 +210,15 @@ Expected: exit 0. `shared@team.com` row shows `~` prefixed quota values with
 
 ```
 # On machine A:
-clp .account.save name::shared@team.com unclaim::1
+clp .account.unclaim name::shared@team.com
 cat ~/.persistent/claude/credential/shared@team.com.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('owner','MISSING'))"
 # On machine B (after sync):
 clp .account.use name::shared@team.com
 ```
 
-Expected: owner shows empty string after unclaim. Machine B `.account.use` succeeds (exit 0).
+Expected: owner shows empty string after unclaim. Machine B `.account.use` succeeds (exit 0). Note: credentials are NOT re-saved by `.account.unclaim` (unlike the old `.account.save unclaim::1` approach).
 
-### IT-13: Re-save on machine B → ownership transfers to B
+### IT-13: Save on machine B → ownership transfers to B
 
 ```
 # On machine B:
@@ -227,6 +227,7 @@ cat ~/.persistent/claude/credential/shared@team.com.json | python3 -c "import sy
 ```
 
 Expected: owner field now shows `userB@hostB`. Machine A is now blocked.
+Note: `.account.save` stamps `current_identity()` as owner on every interactive save. To claim ownership on behalf of another identity, re-save from that machine.
 
 ### Expected Outcome
 

@@ -6,7 +6,7 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IT-1 | `.help` lists all 11 registered visible commands; removed commands absent | Content |
+| IT-1 | `.help` lists all 16 registered visible commands; removed commands absent | Content |
 | IT-2 | `.help` excludes hidden commands (bare `.` and `.help` itself absent from listing) | Visibility |
 | IT-3 | `.help` shows usage line with `<command>` syntax | Content |
 | IT-4 | `.help` exits 0 | Exit Code |
@@ -31,7 +31,7 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 
 - **Given:** clean environment, `clp` on PATH
 - **When:** `clp .help`
-- **Then:** stdout contains all 11 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.credentials.status`, `.token.status`, `.paths`, `.usage`); does NOT contain `.account.list` or `.account.status`
+- **Then:** stdout contains all 16 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.account.renewal`, `.account.inspect`, `.account.assign`, `.account.unclaim`, `.credentials.status`, `.token.status`, `.paths`, `.usage`, `.model`); does NOT contain `.account.list` or `.account.status`
 - **Exit:** 0
 - **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command--2-help)
 
@@ -41,7 +41,7 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 
 - **Given:** clean environment, `clp` on PATH
 - **When:** `clp .help`
-- **Then:** bare `.` is absent from the Commands section; `.help` itself does not appear as a listed command; exactly 11 entries present
+- **Then:** bare `.` is absent from the Commands section; `.help` itself does not appear as a listed command; exactly 16 entries present
 - **Exit:** 0
 - **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command--2-help)
 

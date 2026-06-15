@@ -25,7 +25,7 @@
 | 012 | [Live Credentials Status](012_live_credentials_status.md) | Show credential metadata with no account store dependency | ✅ |
 | 013 | [Account Rate-Limit Utilization](013_account_limits.md) | Show rate-limit utilization via live HTTP response headers | ✅ |
 | 014 | [Rich Account Metadata](014_rich_account_metadata.md) | Expose `oauthAccount` and model fields in `.credentials.status` and `.accounts` | ✅ |
-| 015 | [Account Name Shortcut Syntax](015_name_shortcut_syntax.md) | Positional bare arg and prefix resolution for `name::` on four account commands | ✅ |
+| 015 | [Account Name Shortcut Syntax](015_name_shortcut_syntax.md) | Positional bare arg and prefix resolution for `name::` on five account commands | ✅ |
 | 016 | [Current Account Awareness](016_current_account_awareness.md) | Current account detection via token match; divergence display in `.accounts` and `.usage` | ✅ |
 | 017 | [Expired Token Refresh via Isolated Subprocess](017_token_refresh.md) | `refresh::` parameter; retry-on-auth-error via `account::refresh_account_token()`; credential write-back | ✅ |
 | 018 | [Live Quota Monitor Mode](018_live_monitor.md) | `live::`, `interval::`, `jitter::` parameters; continuous refresh with staggered fetches and countdown footer | ✅ |
@@ -42,8 +42,8 @@
 | 029 | [Account Host and Role Metadata](029_account_host_metadata.md) | Capture host/role labels at `.account.save` time; display via `cols::+host` and `cols::+role` | ✅ |
 | 030 | [Account Billing Renewal Override](030_account_renewal_override.md) | `.account.renewal` command; `_renewal_at` field in `{name}.json`; exact `~Renews` and `→ Next` columns in `.usage` | ✅ |
 | 031 | [Account Inspect](031_account_inspect.md) | `.account.inspect` command; live endpoints 001/002/005; all memberships with selection-priority indicator | ✅ |
-| 032 | [Account Marker Assignment](032_account_assign.md) | `.account.assign` command; marker-only write for any `USER@MACHINE`; live usage block when called without `name::` | ✅ |
+| 032 | [Account Marker Assignment](032_account_assign.md) | `.account.assign` command; marker-only write; no ownership stamp; live usage block when called without `name::` | ✅ |
 | 033 | [Quota Cache Fallback](033_quota_cache.md) | Persist last-known quota in `{name}.json`; display cached values with staleness indicator when API unavailable | ✅ |
 | 034 | [Explicit Session Model Override](034_explicit_session_model_override.md) | `set_model::` parameter on `.account.use` and `.usage`; writes explicit model ID to `~/.claude/settings.json` via `set_session_model()`, bypassing auto-override | ✅ |
 | 035 | [Dedicated Model Get/Set Command](035_model_command.md) | `.model` command for standalone get/set of session model in `settings.json`; `set::` parameter; `get_session_model()` helper; no-duplication via shared `map_model_shorthand()` | ✅ |
-| 036 | [Account Ownership](036_account_ownership.md) | `owner` field in `{name}.json`; `current_identity()` auto-capture at save; `unclaim::1` to clear; seven enforcement gates (G1–G7) preventing non-owner credential operations; cache-as-primary for non-owned fetch | ✅ |
+| 036 | [Account Ownership](036_account_ownership.md) | `owner` field in `{name}.json`; ownership stamped by `.account.save` via `account_save_routine()` passing `Some(&owner_val)`; `.account.unclaim` clears ownership; `.account.assign` is marker-only; eight enforcement gates (G1–G8) preventing non-owner credential operations; cache-as-primary for non-owned fetch | ✅ |

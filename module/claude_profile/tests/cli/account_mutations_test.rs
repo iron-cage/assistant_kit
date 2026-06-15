@@ -152,11 +152,34 @@
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | ao01 | `ft03_no_owner_param_registered` | `.account.save.help` lists `unclaim` but NOT `owner::` (structural) | P |
+//! | ao01 | `ft03_unclaim_param_placement` | `.account.save` does NOT list `unclaim`; `.account.unclaim` lists `name` | P |
 //! | ao02 | `ft08_use_exits_1_when_not_owned` | `.account.use` with non-owned account → exit 1, "ownership violation" | N |
 //! | ao03 | `ft09_delete_exits_1_when_not_owned` | `.account.delete` with non-owned account → exit 1, "ownership violation" | N |
 //! | ao04 | `ft10_relogin_exits_1_when_not_owned` | `.account.relogin` with non-owned account → exit 1, "ownership violation" | N |
 //! | ao05 | `ft13_dry_run_does_not_skip_ownership` | `dry::1` on use/delete/relogin with non-owned → exit 1 (ownership before dry) | N |
+//! | ao06 | `ft01_save_stamps_owner` | `.account.save` stamps `current_identity()` as owner | P |
+//! | ao07 | `ft12_save_stamps_owner` | `.account.save` stamps `current_identity()`; credentials re-saved | P |
+//! | ec3  | `ec3_save_stamps_current_identity` | `.account.save` stamps `current_identity()` | P |
+//!
+//! ### AU — Account Unclaim (Feature 036, Command 17)
+//!
+//! | ID | Test Function | Condition | P/N |
+//! |----|---------------|-----------|-----|
+//! | ft02 | `ft02_unclaim_clears_owner` | `.account.unclaim` → owner `""`, credential mtime unchanged | P |
+//! | ft15 | `ft15_unclaim_not_on_save_or_assign` | `.account.save unclaim::1` exits 1; `.account.assign unclaim::1` exits 1 | N |
+//! | ft16 | `ft16_unclaim_g8_gate` | G8: non-owner exits 1; unowned exits 0 (idempotent) | N/P |
+//! | ft17 | `ft17_unclaim_dry_run` | `dry::1` prints preview; files unchanged | P |
+//! | it01 | `it01_unclaim_clears_owner` | core unclaim — owner cleared to `""` | P |
+//! | it02 | `it02_unclaim_credential_not_touched` | credential file content unchanged | P |
+//! | it03 | `it03_unclaim_marker_not_touched` | active marker unchanged | P |
+//! | it04 | `it04_unclaim_idempotent` | unowned account → exit 0 | P |
+//! | it05 | `it05_unclaim_g8_non_owner` | non-owner → exit 1, "ownership violation" | N |
+//! | it06 | `it06_unclaim_dry_run` | `dry::1` → [dry-run] message, no file change | P |
+//! | it07 | `it07_unclaim_g8_before_dry` | non-owner + `dry::1` → exit 1 before dry-run | N |
+//! | it08 | `it08_unclaim_unknown_account` | unknown account → exit 2 | N |
+//! | it09 | `it09_unclaim_missing_name` | missing `name::` → exit 1 | N |
+//! | it10 | `it10_unclaim_unknown_param` | unknown parameter → exit 1 | N |
+//! | it11 | `it11_unclaim_preserves_renewal_at` | `_renewal_at` preserved via read-merge | P |
 
 use crate::cli_runner::{
   run_cs, run_cs_with_env,
@@ -1293,6 +1316,29 @@ fn ar09_relogin_invalid_chars_exits_1()
   assert_exit( &out, 1 );
 }
 
+// ── ar10 ──────────────────────────────────────────────────────────────────────
+
+#[ test ]
+fn ar10_relogin_positional_after_key_value()
+{
+  // BUG-294: reversed arg order `clp .account.relogin dry::1 work@acme.com` — key::value
+  // before bare name — must rewrite positional arg regardless of argv position.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+
+  let out = run_cs_with_env(
+    &[ ".account.relogin", "dry::1", "work@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "work@acme.com" ),
+    "reversed-order positional must resolve account name for relogin, got:\n{text}",
+  );
+}
+
 // ── ad15 ──────────────────────────────────────────────────────────────────────
 
 #[ test ]
@@ -1311,6 +1357,30 @@ fn ad15_delete_removes_roles_json()
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   assert!( !store.join( "old@archive.com.credentials.json" ).exists(), "credentials must be removed" );
   assert!( !store.join( "old@archive.com.json" ).exists(),       "{{name}}.json snapshot must be removed after delete" );
+}
+
+// ── ad16 ──────────────────────────────────────────────────────────────────────
+
+#[ test ]
+fn ad16_delete_positional_after_key_value()
+{
+  // BUG-294: reversed arg order `clp .account.delete dry::1 alice@home.com` — key::value
+  // before bare name — must rewrite positional arg regardless of argv position.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",  "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "alice@home.com", "max", "tier4",    FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.delete", "dry::1", "alice@home.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "[dry-run] would delete account 'alice@home.com'" ),
+    "reversed-order positional must resolve account for dry-run delete, got:\n{text}",
+  );
 }
 
 // ── as19 ──────────────────────────────────────────────────────────────────────
@@ -2310,6 +2380,32 @@ fn aw35_help_shows_positional_example()
   assert!(
     has_positional,
     ".account.use.help must show a positional example (email without name:: prefix), got:\n{text}",
+  );
+}
+
+// ── aw36 ──────────────────────────────────────────────────────────────────────
+
+#[ test ]
+fn aw36_positional_after_key_value()
+{
+  // AC-14 (FT-14): reversed arg order `clp .account.use dry::1 alice@home.com` works
+  // identically to `clp .account.use alice@home.com dry::1`.
+  // Fix(BUG-294): old adapter hardcoded argv[1] check; key::val at argv[1] suppressed
+  //   the positional rewrite, leaving bare name at argv[2] to fail the "::" requirement.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_account( dir.path(), "alice@home.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "dry::1", "alice@home.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "[dry-run] would switch to 'alice@home.com'" ),
+    "reversed-order positional must resolve account and switch in dry-run mode, got:\n{text}",
   );
 }
 
@@ -3789,25 +3885,45 @@ fn arc02_clear_preserves_oauth_account_content()
 
 // ── AO: Account Ownership (Feature 036) ────────────────────────────────────
 
-/// FT-03 (AC-03): No `owner::` CLI parameter exists — only `unclaim::`.
+/// FT-03 (AC-03): `.account.save` does NOT list `unclaim`; `.account.unclaim` has its own params.
 ///
-/// Structural assertion: `.account.save.help` lists `unclaim` but does NOT
-/// expose `owner::` as a user-settable parameter.
+/// Structural assertion: `.account.save.help` does NOT list `unclaim` (removed).
+/// `.account.assign.help` does NOT list `unclaim` (marker-only).
+/// `.account.unclaim.help` lists `name` as required.
 ///
-/// Spec: [`tests/docs/feature/036_account_ownership.md` FT-03]
+/// Spec: [`tests/docs/feature/36_account_ownership.md` FT-03]
 #[ test ]
-fn ft03_no_owner_param_registered()
+fn ft03_unclaim_param_placement()
 {
-  let out = run_cs( &[ ".account.save.help" ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
+  // .account.save must NOT list unclaim (param removed).
+  let out_save = run_cs( &[ ".account.save.help" ] );
+  assert_exit( &out_save, 0 );
+  let save_text = stdout( &out_save );
   assert!(
-    text.contains( "unclaim" ),
-    "FT-03: help must list `unclaim` parameter; got:\n{text}",
+    !save_text.contains( "unclaim" ),
+    "FT-03: .account.save help must NOT list `unclaim` parameter; got:\n{save_text}",
   );
   assert!(
-    !text.contains( "owner::" ),
-    "FT-03: help must NOT list `owner::` parameter; got:\n{text}",
+    !save_text.contains( "owner::" ),
+    "FT-03: .account.save help must NOT list `owner::` parameter; got:\n{save_text}",
+  );
+
+  // .account.assign must NOT list unclaim (marker-only; no ownership write).
+  let out_assign = run_cs( &[ ".account.assign.help" ] );
+  assert_exit( &out_assign, 0 );
+  let assign_text = stdout( &out_assign );
+  assert!(
+    !assign_text.contains( "unclaim" ),
+    "FT-03: .account.assign help must NOT list `unclaim` parameter; got:\n{assign_text}",
+  );
+
+  // .account.unclaim must list `name` (required).
+  let out_unclaim = run_cs( &[ ".account.unclaim.help" ] );
+  assert_exit( &out_unclaim, 0 );
+  let unclaim_text = stdout( &out_unclaim );
+  assert!(
+    unclaim_text.contains( "name" ),
+    "FT-03: .account.unclaim help must list `name` parameter; got:\n{unclaim_text}",
   );
 }
 
@@ -3981,5 +4097,487 @@ fn cc9_unclaimed_account_passes_use_gate()
   assert!(
     !err.contains( "ownership violation" ),
     "CC-9: unclaimed account (empty owner) must NOT trigger ownership violation; got:\n{err}",
+  );
+}
+
+/// FT-12 (AC-19, Feat 036): `.account.save` stamps `current_identity()` as `owner`.
+///
+/// Pre-seed `{name}.json` with `"owner": "old@host"`. Run `.account.save` with
+/// `USER=testuser HOSTNAME=testmachine`; assert `owner` is overwritten to
+/// `"testuser@testmachine"`. Ownership stamp is written on every interactive save.
+///
+/// Spec: [`tests/docs/feature/02_account_save.md` FT-12]
+#[ test ]
+fn ft12_save_stamps_owner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_owner( dir.path(), "alice@acme.com", "old@host" );
+
+  // .account.save reads from ~/.claude/.credentials.json — must exist.
+  let dot_claude = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  std::fs::write( dot_claude.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  let owner = val[ "owner" ].as_str().unwrap_or( "MISSING" );
+  assert_eq!(
+    owner, "testuser@testmachine",
+    "FT-12: .account.save must stamp current_identity() as owner; got: {owner:?}",
+  );
+}
+
+/// FT-01 (AC-01, Feat 036): `.account.save` stamps `current_identity()` as `owner`.
+///
+/// Pre-seed `{name}.json` with `"owner": "old@host"`. After `.account.save` with
+/// `USER=testuser HOSTNAME=testmachine`, the `owner` field must be `"testuser@testmachine"`.
+/// Ownership is stamped by `account_save_routine()` passing `Some(&owner_val)` to `save()`.
+///
+/// Spec: [`tests/docs/feature/36_account_ownership.md` FT-01]
+#[ test ]
+fn ft01_save_stamps_owner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_owner( dir.path(), "alice@acme.com", "old@host" );
+
+  let dot_claude = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  std::fs::write( dot_claude.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  let owner = val[ "owner" ].as_str().unwrap_or( "MISSING" );
+  assert_eq!(
+    owner, "testuser@testmachine",
+    "FT-01: .account.save must stamp current_identity() as owner; got: {owner:?}",
+  );
+}
+
+
+/// EC-3: `.account.save` stamps `current_identity()` as owner.
+///
+/// After `.account.save`, `{name}.json` contains `"owner": "user1@host1"`
+/// matching the provided USER/HOSTNAME env vars.
+#[ test ]
+fn ec3_save_stamps_current_identity()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::write( store.join( "alice@acme.com.json" ), r#"{"owner":"old@host"}"# ).unwrap();
+  std::fs::write( store.join( "alice@acme.com.credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+
+  let dot_claude = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  std::fs::write( dot_claude.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  let owner = val[ "owner" ].as_str().unwrap_or( "MISSING" );
+  assert_eq!(
+    owner, "user1@host1",
+    "EC-3: .account.save must stamp current_identity(); got: {owner:?}",
+  );
+}
+
+// ── AU: Account Unclaim (Feature 036, Command 17) ───────────────────────────
+
+/// FT-02 (AC-02, Feat 036): `.account.unclaim` writes `owner: ""` — credential file NOT touched.
+///
+/// Pre-seed `{name}.json` with `"owner": "user1@host1"`. Run `.account.unclaim name::alice`.
+/// Owner must be `""`. Credential file mtime must be unchanged (pure metadata operation).
+///
+/// Spec: [`tests/docs/feature/36_account_ownership.md` FT-02]
+#[ test ]
+fn ft02_unclaim_clears_owner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "user1@host1" );
+
+  let store     = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let cred_path = store.join( "alice@acme.com.credentials.json" );
+  let cred_mtime_before = std::fs::metadata( &cred_path ).unwrap().modified().unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  let owner = val[ "owner" ].as_str().unwrap_or( "MISSING" );
+  assert_eq!( owner, "", "FT-02: .account.unclaim must clear owner to \"\"; got: {owner:?}" );
+
+  let cred_mtime_after = std::fs::metadata( &cred_path ).unwrap().modified().unwrap();
+  assert_eq!(
+    cred_mtime_before, cred_mtime_after,
+    "FT-02: credential file must NOT be touched by .account.unclaim",
+  );
+}
+
+/// FT-15 (AC-15, Feat 036): `.account.save unclaim::1` and `.account.assign unclaim::1` both exit 1.
+///
+/// `unclaim::` is NOT registered on `.account.save` or `.account.assign`.
+/// Passing `unclaim::1` must exit 1 (unknown parameter).
+///
+/// Spec: [`tests/docs/feature/36_account_ownership.md` FT-15]
+#[ test ]
+fn ft15_unclaim_not_on_save_or_assign()
+{
+  // .account.save unclaim::1 → exit 1 (unknown param)
+  let out_save = run_cs( &[ ".account.save", "unclaim::1" ] );
+  assert_exit( &out_save, 1 );
+
+  // .account.assign unclaim::1 → exit 1 (unknown param)
+  let out_assign = run_cs( &[ ".account.assign", "unclaim::1" ] );
+  assert_exit( &out_assign, 1 );
+}
+
+/// FT-16 (AC-16, Feat 036): G8 ownership gate on `.account.unclaim`.
+///
+/// Case A: non-owner → exit 1 with "ownership violation".
+/// Case B: unowned (empty owner) → exit 0 (gate passes, idempotent unclaim).
+///
+/// Spec: [`tests/docs/feature/36_account_ownership.md` FT-16]
+#[ test ]
+fn ft16_unclaim_g8_gate()
+{
+  // Case A: non-owner → exit 1
+  {
+    let dir  = TempDir::new().unwrap();
+    let home = dir.path().to_str().unwrap();
+    write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+    write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+    let out = run_cs_with_env(
+      &[ ".account.unclaim", "name::alice@acme.com" ],
+      &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
+    );
+    assert_exit( &out, 1 );
+    let err = stderr( &out );
+    assert!(
+      err.contains( "ownership violation" ),
+      "FT-16A: stderr must contain 'ownership violation'; got:\n{err}",
+    );
+    assert!(
+      err.contains( "other@remote" ),
+      "FT-16A: stderr must name the owning identity; got:\n{err}",
+    );
+  }
+
+  // Case B: unowned (empty owner) → exit 0 (idempotent)
+  {
+    let dir  = TempDir::new().unwrap();
+    let home = dir.path().to_str().unwrap();
+    write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+    write_account_owner( dir.path(), "alice@acme.com", "" );
+
+    let out = run_cs_with_env(
+      &[ ".account.unclaim", "name::alice@acme.com" ],
+      &[ ( "HOME", home ) ],
+    );
+    assert_exit( &out, 0 );
+  }
+}
+
+/// FT-17 (AC-17, Feat 036): `.account.unclaim dry::1` prints preview; files unchanged.
+///
+/// Pre-seed `{name}.json` with `"owner": "user1@host1"`. Run `.account.unclaim dry::1`.
+/// Owner must remain `"user1@host1"` — dry-run must not write.
+///
+/// Spec: [`tests/docs/feature/36_account_ownership.md` FT-17]
+#[ test ]
+fn ft17_unclaim_dry_run()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "user1@host1" );
+
+  let store     = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta_path = store.join( "alice@acme.com.json" );
+  let content_before = std::fs::read_to_string( &meta_path ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.unclaim", "name::alice@acme.com", "dry::1" ],
+    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "[dry-run]" ) && text.contains( "unclaim" ),
+    "FT-17: stdout must contain dry-run preview; got:\n{text}",
+  );
+
+  let content_after = std::fs::read_to_string( &meta_path ).unwrap();
+  assert_eq!(
+    content_before, content_after,
+    "FT-17: dry::1 must not write; file content must be unchanged",
+  );
+}
+
+/// IT-1: core unclaim — owner match clears owner to `""`.
+///
+/// Spec: [`tests/docs/cli/command/18_account_unclaim.md` IT-1]
+#[ test ]
+fn it01_unclaim_clears_owner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "user1@host1" );
+
+  let out = run_cs_with_env(
+    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  assert_eq!( val[ "owner" ].as_str().unwrap_or( "MISSING" ), "", "IT-1: owner must be \"\"" );
+}
+
+/// IT-2: credential file NOT touched.
+///
+/// Spec: [`tests/docs/cli/command/18_account_unclaim.md` IT-2]
+#[ test ]
+fn it02_unclaim_credential_not_touched()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "user1@host1" );
+
+  let store     = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let cred_path = store.join( "alice@acme.com.credentials.json" );
+  let before    = std::fs::read_to_string( &cred_path ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let after = std::fs::read_to_string( &cred_path ).unwrap();
+  assert_eq!( before, after, "IT-2: credential file content must be unchanged" );
+}
+
+/// IT-3: active marker NOT touched.
+///
+/// Spec: [`tests/docs/cli/command/18_account_unclaim.md` IT-3]
+#[ test ]
+fn it03_unclaim_marker_not_touched()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // write_account with make_active=true writes _active_{hostname}_{user} marker.
+  // We set USER/HOSTNAME to known values so we can predict the marker filename.
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account_owner( dir.path(), "alice@acme.com", "user1@host1" );
+
+  // The marker file written by write_account uses the process's current env for hostname,
+  // so just find any _active* file in the store.
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let marker_path = std::fs::read_dir( &store ).unwrap()
+    .filter_map( Result::ok )
+    .map( |e| e.path() )
+    .find( |p| p.file_name().unwrap_or_default().to_string_lossy().starts_with( "_active" ) )
+    .expect( "IT-3 setup: _active marker must exist" );
+  let marker_before = std::fs::read_to_string( &marker_path ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let marker_after = std::fs::read_to_string( &marker_path ).unwrap();
+  assert_eq!( marker_before, marker_after, "IT-3: active marker must be unchanged" );
+}
+
+/// IT-4: idempotent — unclaiming an already-unowned account exits 0.
+///
+/// Spec: [`tests/docs/cli/command/18_account_unclaim.md` IT-4]
+#[ test ]
+fn it04_unclaim_idempotent()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "" );
+
+  let out = run_cs_with_env(
+    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+}
+
+/// IT-5: G8 gate — non-owner exits 1.
+///
+/// Spec: [`tests/docs/cli/command/18_account_unclaim.md` IT-5]
+#[ test ]
+fn it05_unclaim_g8_non_owner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  let out = run_cs_with_env(
+    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!( stderr( &out ).contains( "ownership violation" ), "IT-5: must report ownership violation" );
+}
+
+/// IT-6: dry-run — `dry::1` prints preview, files unchanged.
+///
+/// Spec: [`tests/docs/cli/command/18_account_unclaim.md` IT-6]
+#[ test ]
+fn it06_unclaim_dry_run()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "user1@host1" );
+
+  let store     = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta_path = store.join( "alice@acme.com.json" );
+  let before    = std::fs::read_to_string( &meta_path ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.unclaim", "name::alice@acme.com", "dry::1" ],
+    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+  );
+  assert_exit( &out, 0 );
+  assert!( stdout( &out ).contains( "[dry-run]" ), "IT-6: stdout must contain [dry-run]" );
+
+  let after = std::fs::read_to_string( &meta_path ).unwrap();
+  assert_eq!( before, after, "IT-6: dry-run must not modify files" );
+}
+
+/// IT-7: G8 gate fires before dry-run — non-owner + `dry::1` → exit 1.
+///
+/// Spec: [`tests/docs/cli/command/18_account_unclaim.md` IT-7]
+#[ test ]
+fn it07_unclaim_g8_before_dry()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  let out = run_cs_with_env(
+    &[ ".account.unclaim", "name::alice@acme.com", "dry::1" ],
+    &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!( stderr( &out ).contains( "ownership violation" ), "IT-7: G8 must fire before dry-run" );
+  assert!( !stdout( &out ).contains( "[dry-run]" ), "IT-7: dry-run msg must NOT appear" );
+}
+
+/// IT-8: unknown account → exit 2.
+///
+/// Spec: [`tests/docs/cli/command/18_account_unclaim.md` IT-8]
+#[ test ]
+fn it08_unclaim_unknown_account()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.unclaim", "name::ghost@nowhere.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 2 );
+  assert!( stderr( &out ).contains( "not found" ), "IT-8: stderr must mention 'not found'" );
+}
+
+/// IT-9: missing `name::` → exit 1.
+///
+/// Spec: [`tests/docs/cli/command/18_account_unclaim.md` IT-9]
+#[ test ]
+fn it09_unclaim_missing_name()
+{
+  let out = run_cs( &[ ".account.unclaim" ] );
+  assert_exit( &out, 1 );
+}
+
+/// IT-10: unknown parameter → exit 1.
+///
+/// Spec: [`tests/docs/cli/command/18_account_unclaim.md` IT-10]
+#[ test ]
+fn it10_unclaim_unknown_param()
+{
+  let out = run_cs( &[ ".account.unclaim", "name::test", "bogus::1" ] );
+  assert_exit( &out, 1 );
+}
+
+/// IT-11: read-merge preserves `_renewal_at` across unclaim.
+///
+/// Spec: [`tests/docs/cli/command/18_account_unclaim.md` IT-11]
+#[ test ]
+fn it11_unclaim_preserves_renewal_at()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::write(
+    store.join( "alice@acme.com.json" ),
+    r#"{"_renewal_at":"2026-06-29T21:00:00Z","owner":"user1@host1"}"#,
+  ).unwrap();
+  std::fs::write(
+    store.join( "alice@acme.com.credentials.json" ),
+    r#"{"accessToken":"tok"}"#,
+  ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &content ).unwrap();
+  assert_eq!(
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "",
+    "IT-11: owner must be cleared",
+  );
+  assert_eq!(
+    val[ "_renewal_at" ].as_str().unwrap_or( "MISSING" ), "2026-06-29T21:00:00Z",
+    "IT-11: _renewal_at must be preserved via read-merge in write_owner()",
   );
 }

@@ -16,7 +16,8 @@ List all saved accounts or show a single named account with per-field presence c
 ```bash
 clp .accounts
 clp .accounts name::alice@acme.com
-clp .accounts alice@acme.com         # positional: same as name::alice@acme.com
+clp .accounts alice@acme.com         # positional: bare name at any position
+clp .accounts sub::0 alice@acme.com  # reversed: arg order does not matter
 clp .accounts car                     # prefix: first saved account starting with "car"
 clp .accounts sub::0 tier::0
 clp .accounts display_name::1 role::1 billing::1 model::1
@@ -140,7 +141,7 @@ clp .account.save host::workstation role::personal    # both metadata fields
 1. Resolve `name::`: read `oauthAccount.emailAddress` from `~/.claude.json`; fall back to `_active_{hostname}_{user}` marker; exit 1 if neither present
 2. `(when dry::0)` Copy `~/.claude/.credentials.json` → `{name}.credentials.json` (atomic write)
 3. `(when dry::0)` Read `~/.claude.json` + `~/.claude/settings.json` + call `GET /api/oauth/claude_cli/roles` (best-effort); merge all into unified `{name}.json` (preserves `_renewal_at` and other keys)
-4. `(when dry::0)` Write host/role profile metadata into `{name}.json` (auto-capture `$USER@$HOSTNAME` when `host::` omitted)
+4. `(when dry::0)` Write host, role, and owner into `{name}.json`: `host::` (auto-captured `$USER@$HOSTNAME` when omitted); `role::` via read-merge; `owner` = `current_identity()` always
 5. `(when dry::0)` Write `_active_{hostname}_{user}` = `{name}` (per-machine active marker)
 
 **Examples:**
@@ -160,6 +161,7 @@ clp .account.save host::workstation role::work
 - Also writes `{credential_store}/_active_{hostname}_{user}` = `{name}` on every successful save (per-machine active marker via `active_marker_filename()`).
 - Also calls endpoint 005 (`GET /api/oauth/claude_cli/roles`) and merges result into `{name}.json` (best-effort: failure is silently skipped).
 - **Metadata refresh:** Re-running `.account.save` for an existing name refreshes the unified `{name}.json` and re-fetches endpoint 005 — this is the canonical way to refresh cached org identity without re-login. `{name}.json` is updated via read-merge (not full overwrite): the `oauthAccount` key is replaced but all other keys (e.g., `_renewal_at` set by `.account.renewal`) are preserved.
+- **Ownership stamp:** `.account.save` always writes `current_identity()` as `owner` in `{name}.json` on every interactive save. Background refresh callers pass `owner: None`. To release ownership, use `clp .account.unclaim name::EMAIL` — calls `write_owner(name, store, "")` directly without touching credentials. See [Feature 036](../../feature/036_account_ownership.md).
 
 ### Referenced Features
 
@@ -170,6 +172,7 @@ clp .account.save host::workstation role::work
 | 3 | [Persistent Storage](../../feature/010_persistent_storage.md) | Unified `{name}.json` merge semantics |
 | 4 | [Per-Machine Active Marker](../../feature/025_per_machine_active_marker.md) | `_active_{hostname}_{user}` marker written on save |
 | 5 | [Host Metadata](../../feature/029_account_host_metadata.md) | `host::` and `role::` metadata stored in `{name}.json` |
+| 6 | [Account Ownership](../../feature/036_account_ownership.md) | Ownership model — `.account.save` stamps `current_identity()`; `.account.unclaim` clears ownership; `.account.assign` is marker-only |
 
 ### Referenced User Stories
 
@@ -190,7 +193,8 @@ Atomically overwrites `~/.claude/.credentials.json` with the named account's cre
 
 ```bash
 clp .account.use name::alice@home.com
-clp .account.use alice@home.com               # positional: same as name::alice@home.com
+clp .account.use alice@home.com               # positional: bare name at any position
+clp .account.use dry::1 alice@home.com        # reversed: arg order does not matter
 clp .account.use car                           # prefix: first saved account starting with "car"
 clp .account.use name::alice@home.com dry::1
 clp .account.use name::alice@home.com touch::0
@@ -280,7 +284,8 @@ Removes `{credential_store}/{name}.credentials.json` and `{name}.json` from the 
 
 ```bash
 clp .account.delete name::alice@oldco.com
-clp .account.delete alice@oldco.com         # positional
+clp .account.delete alice@oldco.com          # positional: bare name at any position
+clp .account.delete dry::1 alice@oldco.com   # reversed: arg order does not matter
 clp .account.delete car                      # prefix
 clp .account.delete name::alice@oldco.com dry::1
 ```
@@ -337,7 +342,8 @@ Show rate-limit utilization for the active or named account. Displays session (5
 ```bash
 clp .account.limits
 clp .account.limits name::alice@acme.com
-clp .account.limits alice@acme.com       # positional
+clp .account.limits alice@acme.com            # positional: bare name at any position
+clp .account.limits format::json alice@acme.com  # reversed: arg order does not matter
 clp .account.limits car                   # prefix
 clp .account.limits format::json
 ```
@@ -394,7 +400,8 @@ Force browser-based re-authentication for a named account whose `refreshToken` i
 ```bash
 clp .account.relogin                   # default: active account
 clp .account.relogin name::carol@example.com
-clp .account.relogin carol@example.com       # positional
+clp .account.relogin carol@example.com          # positional: bare name at any position
+clp .account.relogin dry::1 carol@example.com   # reversed: arg order does not matter
 clp .account.relogin car               # prefix
 clp .account.relogin name::carol@example.com dry::1
 clp .account.relogin dry::1            # dry-run for active account
@@ -686,7 +693,7 @@ clp .account.inspect format::json | jq '.memberships | length'
 
 Write (or overwrite) the per-machine active-account marker for any host+user pair without performing a full credential rotation. No `~/.claude.*` files are touched — marker-only write.
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional¹)*, [`for::`](../param/053_for.md), [`dry::`](../param/004_dry.md)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional¹)*, [`for::`](../param/053_for.md), [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success; or live usage block when `name::` absent) | 1 (usage: invalid `name::` chars, `for::` missing `@`, or empty `for::` component) | 2 (runtime: account not found)
 
 ¹ When `name::` is absent the command emits a live usage block instead of an error.
@@ -706,13 +713,14 @@ clp .account.assign name::alice for::bob@laptop            # prefix resolution
 | `name::` | [`AccountName`](../type/001_account_name.md) | *(omit for usage block)* | Account to assign; prefix resolution supported |
 | `for::` | `string` (`USER@MACHINE`) | current `$USER@resolve_hostname()` | Target identity; split on first `@`; both parts required when provided; sanitized per `active_marker_filename()` rules |
 | `dry::` | `bool` | `0` | Preview the would-be write without creating or modifying any file |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for marker write steps |
 
 **Algorithm (5 steps):**
 1. `(when name:: absent)` Emit live usage block with current machine identity and active account; exit 0
 2. Resolve `name::` via `AccountSelector`; validate account exists in credential store
-3. Resolve `for::`: split on first `@` (left = user, right = machine); default to `$USER@resolve_hostname()` when omitted
+3. Resolve `for::`: split on first `@` (left = user, right = machine); validate both parts non-empty; default to `$USER@resolve_hostname()` when omitted
 4. Sanitize each component (alphanumeric, `-`, `.` kept; other chars → `_`); compute target filename `_active_{machine}_{user}`
-5. `(when dry::0)` Write `{credential_store}/_active_{machine}_{user}` = `{name}`
+5. `(when dry::1)` Print `[dry-run] would assign {name} for {user}@{machine}  →  _active_{machine}_{user}`; exit 0. `(else)` Write `{credential_store}/_active_{machine}_{user}` = `{name}`; print `Assigned {name} for {user}@{machine}  →  _active_{machine}_{user}`
 
 **Live usage block (no `name::`):**
 
@@ -748,7 +756,7 @@ clp .account.assign name::alice@corp.com for::bob@laptop dry::1
 ```
 
 **Notes:**
-- Writes only `{credential_store}/_active_{machine}_{user}`; never touches `~/.claude/.credentials.json`, `~/.claude.json`, or `~/.claude/settings.json`.
+- Writes ONLY `{credential_store}/_active_{machine}_{user}` (marker). Never touches `~/.claude/.credentials.json`, `~/.claude.json`, `~/.claude/settings.json`, or `{name}.json`. Ownership is managed by `.account.save`, not `.account.assign` (see [Feature 036](../../feature/036_account_ownership.md)).
 - `for::` is split on the first `@`: left = user component, right = machine component. Each is sanitized: alphanumeric, `-`, `.` kept; all other characters become `_`.
 - Use `.account.use` for full credential rotation (credential copy + `~/.claude.*` patches + post-switch touch). Use `.account.assign` when only the preference marker needs to be set.
 - After `.account.assign` for a remote machine, that machine can run `.account.use name::alice@corp.com` to activate the credentials. The marker set by `.account.assign` is visible via `.accounts` on any machine sharing the same credential store.
@@ -760,9 +768,77 @@ clp .account.assign name::alice@corp.com for::bob@laptop dry::1
 |---|---------|------|
 | 1 | [Account Assign](../../feature/032_account_assign.md) | Marker-only write algorithm and `for::` resolution |
 | 2 | [Per-Machine Active Marker](../../feature/025_per_machine_active_marker.md) | `_active_{machine}_{user}` marker semantics and filename sanitization |
+| 3 | [Account Ownership](../../feature/036_account_ownership.md) | Ownership model; enforcement gates G1–G8; `.account.assign` is marker-only (does NOT stamp ownership); ownership stamped by `.account.save` |
 
 ### Referenced User Stories
 
 | # | User Story | Persona |
 |---|------------|---------|
 | 1 | [Account Onboarding](../user_story/002_onboarding.md) | Pre-configure active account for a remote machine |
+
+---
+
+### Command :: 17. `.account.unclaim`
+
+Release ownership of a saved account by writing `owner: ""` to `{name}.json` via `write_owner()` directly. Pure metadata operation — credentials and active marker are NOT touched.
+
+-- **Parameters:** [`name::`](../param/001_name.md) *(required)*, [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
+-- **Exit:** 0 (success or dry-run) | 1 (usage: missing `name::`, ownership violation) | 2 (runtime: account not found)
+
+**Syntax:**
+
+```bash
+clp .account.unclaim name::alice@acme.com           # unclaim account
+clp .account.unclaim name::alice@acme.com dry::1    # preview without writing
+clp .account.unclaim name::alice@acme.com trace::1  # with trace output
+```
+
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `name::` | [`AccountName`](../type/001_account_name.md) | *(required)* | Account to unclaim; no name inference — must be provided explicitly |
+| `dry::` | `bool` | `0` | Preview the would-be unclaim without modifying any file |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for write_owner steps |
+
+**Algorithm (4 steps):**
+1. Require `name::` (non-empty string); no name inference
+2. Verify `{credential_store}/{name}.json` exists; exit 2 if absent
+3. G8 ownership gate: `read_owner()` → `is_owned()`. Non-owner → exit 1 with `"ownership violation: this account is owned by {owner}"`. Gate runs BEFORE `dry::1` check
+4. `(when dry::1)` Print `[dry-run] would unclaim {name}`; exit 0. `(else)` `write_owner(name, credential_store, "")` → print `unclaimed {name}`; exit 0
+
+**Exit Codes:**
+
+| Code | Condition |
+|------|-----------|
+| 0 | Ownership cleared (or dry-run preview printed) |
+| 1 | Missing `name::` argument; or G8 ownership violation (account owned by another identity) |
+| 2 | Account `{name}.json` does not exist in credential store |
+
+**Examples:**
+
+```bash
+clp .account.unclaim name::alice@acme.com
+# unclaimed alice@acme.com
+
+clp .account.unclaim name::alice@acme.com dry::1
+# [dry-run] would unclaim alice@acme.com
+
+clp .account.unclaim name::alice@acme.com
+# (when owned by bob@laptop) ownership violation: this account is owned by bob@laptop
+```
+
+**Notes:**
+- Pure metadata operation: writes only the `owner` field in `{name}.json` via `write_owner()`. Does NOT read or write `{name}.credentials.json`, does NOT touch `~/.claude/.credentials.json`, does NOT modify the active marker.
+- `name::` is required — no inference from active marker or `oauthAccount.emailAddress`. This prevents accidental unclaim of the wrong account.
+- Idempotent on unowned accounts: if `owner` is already empty, `write_owner()` writes `""` again — no-op semantically.
+- G8 gate evaluates BEFORE `dry::1` — a non-owner gets exit 1 even in dry-run mode, preventing information leakage about whether an unclaim would succeed.
+- See [feature/036_account_ownership.md](../../feature/036_account_ownership.md) for the full ownership model, G1–G8 enforcement gates, and all acceptance criteria.
+
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Account Ownership](../../feature/036_account_ownership.md) | G8 ownership gate; `write_owner()` / `read_owner()` / `is_owned()` API; AC-02/AC-16/AC-17 |
+
+### Referenced User Stories
+
+*None — `.account.unclaim` is an operational maintenance command, not a user-story-driven feature.*

@@ -20,9 +20,11 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 | FT-12 | All strategies skip `is_occupied_elsewhere` accounts | AC-11 | Unit test |
 | FT-13 | All strategies skip h-exhausted accounts (5h Left ≤ 15%) | AC-12 | Unit test |
 | FT-14 | Endurance footer shows `session + 5h_reset` instead of `7d left + expires` | AC-13 | Unit test |
-| FT-15 | `next::renew` prefers lower `5h_left` account on equal renewal time (BUG-243) | AC-10 | Unit test |
+| FT-15 | renew tiebreaker: name ordering when `prefer_weekly` tied (formerly BUG-243 `five_hour_left` — superseded by BUG-291) | AC-10 | Unit test |
 | FT-16 | renew deterministic: alphabetical winner when all numeric keys tied (BUG-260) | AC-10 | Unit test |
 | FT-17 | endurance skips `prefer_weekly ≤ 5.0` accounts in unqualified tier (BUG-287) | AC-03 | Unit test |
+| FT-18 | renew skips weekly-exhausted accounts even with soonest 7d reset (BUG-292) | AC-10 | Unit test |
+| FT-19 | renew next tiebreaker matches `sort_indices` (BUG-291) | AC-10 | Unit test |
 
 ### Test Case Index
 
@@ -42,11 +44,13 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 | FT-12 | All strategies skip `is_occupied_elsewhere` accounts | AC-11 | Eligibility |
 | FT-13 | All strategies skip h-exhausted accounts (5h Left ≤ 15%) | AC-12 | Eligibility |
 | FT-14 | Endurance footer shows `session + 5h_reset` not `7d left + expires` | AC-13 | Footer |
-| FT-15 | renew tiebreaker: prefers lower `5h_left` on equal renewal time | AC-10 | Tiebreaker |
+| FT-15 | renew tiebreaker: name ordering when `prefer_weekly` tied (formerly BUG-243) | AC-10 | Tiebreaker |
 | FT-16 | renew deterministic: alphabetical winner when all numeric keys tied (BUG-260) | AC-10 | Tiebreaker |
 | FT-17 | endurance never recommends `prefer_weekly ≤ 5.0` accounts (BUG-287) | AC-03 | BUG-287 |
+| FT-18 | renew skips weekly-exhausted accounts even with soonest 7d reset (BUG-292) | AC-10 | BUG-292 |
+| FT-19 | renew next tiebreaker matches `sort_indices` (BUG-291) | AC-10 | BUG-291 |
 
-**Total:** 17 FT cases
+**Total:** 19 FT cases
 
 ---
 
@@ -225,11 +229,12 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 
 ---
 
-### FT-15: `next::renew` prefers lower `5h_left` account on equal renewal time (BUG-243)
+### FT-15: renew tiebreaker — name ordering when `prefer_weekly` tied (formerly BUG-243)
 
-- **Given:** Two `AccountQuota` structs: `A` (is_current=false, is_active=false, is_occupied_elsewhere=false, result=Ok, `five_hour.utilization=77.0` → 5h_left=23%, `seven_day.resets_at` = T (same for both), `renewal_at` = R (same for both)); `B` (same flags, `five_hour.utilization=0.0` → 5h_left=100%, `seven_day.resets_at` = T, `renewal_at` = R). Both accounts have identical `renewal_event_secs`.
+- **Given:** Two `AccountQuota` structs via `mk_aq_with_7d_reset`: `a@test.com` (five_hour_util=77.0, seven_day.util=0.0 → prefer_weekly=100.0), `b@test.com` (five_hour_util=0.0, seven_day.util=0.0 → prefer_weekly=100.0). Both have identical `renewal_event_secs` (same 7d reset) and identical `prefer_weekly` (100.0 — both use `mk_aq_with_7d_reset` which hardcodes seven_day.util=0.0).
 - **When:** Unit test calls `find_next_for_strategy(&[A, B], NextStrategy::Renew, PreferStrategy::Any, now_secs)`.
-- **Then:** Returns `Some(index_of_A)` — `A` wins because `5h_left=23% < 100%` (more depleted, benefits more from the same renewal event). `B` is not selected despite equal renewal time.
+- **Then:** Returns `Some(0)` (a@test.com) — renewal tied → prefer_weekly tied (100.0 = 100.0) → name tiebreaker fires ("a" < "b"). Reversed slice order also verified.
+- **Note:** Originally tested BUG-243's `five_hour_left` tiebreaker. After BUG-291 unified renew to `sort_indices(Renew)`, the tiebreaker changed to `prefer_weekly` ascending. Both accounts have identical `prefer_weekly` (100.0), so this test now exercises the name tiebreaker path coincidentally. The actual `prefer_weekly` tiebreaker behavior is covered by FT-19 (BUG-291 MRE).
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_ft15_023_renew_tiebreaker_prefers_lower_5h_left` (in `src/usage/sort_next_tests.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-10](../../../docs/feature/023_next_account_strategies.md)
@@ -261,3 +266,27 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Exit:** n/a (unit test)
 - **Source fn:** `mre_bug287_endurance_skips_weekly_exhausted_unqualified` (in `src/usage/sort_next_tests.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-03](../../../docs/feature/023_next_account_strategies.md)
+
+---
+
+### FT-18: renew skips weekly-exhausted accounts even with soonest 7d reset (BUG-292)
+
+- **Given:** Two `AccountQuota` structs via `mk_aq_with_7d_reset_util`: `exhausted@test.com` (five_hour_util=0.0, seven_day_util=96.0 → `prefer_weekly=4.0` ≤ 5.0, 7d reset in 1h — SOONEST event), `healthy@test.com` (five_hour_util=0.0, seven_day_util=40.0 → `prefer_weekly=60.0` > 5.0, 7d reset in 24h).
+- **When:** `find_next_for_strategy(&[exhausted, healthy], NextStrategy::Renew, PreferStrategy::Any, now)`.
+- **Then:** Returns `Some(1)` (healthy@test.com) — `exhausted` has the soonest 7d reset but `prefer_weekly=4.0 ≤ 5.0` triggers the weekly-floor gate; skipped despite sorting first.
+- **Exit:** n/a (unit test)
+- **Source fn:** `mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal` (in `src/usage/sort_next_tests.rs`)
+- **Source:** [feature/023_next_account_strategies.md AC-10](../../../docs/feature/023_next_account_strategies.md)
+
+---
+
+### FT-19: renew next tiebreaker matches `sort_indices` (BUG-291)
+
+- **Given:** Two `AccountQuota` structs via `mk_aq_with_7d_reset_util`: `alice@test.com` (five_hour_util=80.0 → five_hour_left=20%, seven_day_util=10.0 → prefer_weekly=90.0, 7d reset at now+3600), `bob@test.com` (five_hour_util=20.0 → five_hour_left=80%, seven_day_util=60.0 → prefer_weekly=40.0, 7d reset at now+3600). Identical renewal event → primary key tied; tiebreaker decides. Under `sort_indices(Renew)`, prefer_weekly ascending: bob (40) < alice (90) → bob first. Under old code, five_hour_left ascending: alice (20%) < bob (80%) → alice first.
+- **When-A:** `sort_indices(&[alice, bob], SortStrategy::Renew, None, PreferStrategy::Any, now)`.
+- **When-B:** `find_next_for_strategy(&[alice, bob], NextStrategy::Renew, PreferStrategy::Any, now)`.
+- **Then-A:** `sorted[0] == 1` (bob ranks first — prefer_weekly=40 < 90).
+- **Then-B:** Returns `Some(1)` (bob) — matches sort_indices rank order.
+- **Exit:** n/a (unit test)
+- **Source fn:** `mre_bug291_renew_next_tiebreaker_matches_sort_indices` (in `src/usage/sort_next_tests.rs`)
+- **Source:** [feature/023_next_account_strategies.md AC-10](../../../docs/feature/023_next_account_strategies.md)

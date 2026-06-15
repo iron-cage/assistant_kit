@@ -31,8 +31,16 @@
 //! | aa17 | `aa17_for_only_at_both_empty_exits_1` | FT-06 | `for::@` (only `@`, both components empty) → exit 1 | N |
 //! | ec7  | `ec7_dot_hyphen_in_machine_preserved` | EC-7 | `for::user1@w003.local` → `_active_w003.local_user1` (dot + hyphen kept) | P |
 //! | ec8  | `ec8_multiple_at_splits_on_first` | EC-8 | `for::alice@corp.com@laptop` → split on first `@` → `_active_corp.com_laptop_alice` | P |
+//!
+//! ### AO — Account Assign Ownership (Feature 036)
+//!
+//! | ID | Test Function | FT | Condition | P/N |
+//! |----|---------------|----|-----------|-----|
+//! | ft13 | `ft13_assign_does_not_modify_owner` | FT-13 | `.account.assign` does NOT touch owner (marker-only) | P |
+//! | ft14 | `ft14_assign_for_does_not_modify_owner` | FT-14 | `.account.assign for::bob@laptop` does NOT touch owner | P |
+//! | ft15 | `ft15_assign_rejects_unclaim` | FT-15 | `.account.assign unclaim::1` → exit 1 (not registered; use `.account.unclaim`) | N |
 
-use crate::cli_runner::{ run_cs_with_env, stdout, stderr, assert_exit, write_account };
+use crate::cli_runner::{ run_cs_with_env, stdout, stderr, assert_exit, write_account, write_account_owner };
 use tempfile::TempDir;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -543,4 +551,101 @@ fn aa12_dry_run_shows_marker_filename()
   let out_text = stdout( &out );
   assert!( out_text.contains( "_active_laptop_bob" ),
     "dry-run stdout must name the target marker file: {out_text}" );
+}
+
+// ── AO: Account Assign Ownership (Feature 036) ────────────────────────────
+
+/// Read the `owner` field from `{name}.json` in the test credential store.
+fn read_owner( home : &std::path::Path, name : &str ) -> Option< String >
+{
+  let meta = credential_store( home ).join( format!( "{name}.json" ) );
+  std::fs::read_to_string( &meta )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .and_then( |v| v[ "owner" ].as_str().map( str::to_string ) )
+}
+
+/// FT-13 (AC-15): `.account.assign` does NOT modify `owner` — marker-only.
+///
+/// Pre-seed `{name}.json` with `"owner": "alice@host1"`. After `.account.assign`,
+/// `owner` must remain `"alice@host1"` — assign is marker-only (ownership stamp moved to save).
+///
+/// Spec: [`tests/docs/feature/32_account_assign.md` FT-13]
+#[ test ]
+fn ft13_assign_does_not_modify_owner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+  write_account_owner( dir.path(), "alice@corp.com", "alice@host1" );
+
+  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com" ], &refs );
+  assert_exit( &out, 0 );
+
+  let owner = read_owner( dir.path(), "alice@corp.com" );
+  assert_eq!(
+    owner.as_deref(), Some( "alice@host1" ),
+    "FT-13: .account.assign must NOT modify owner (marker-only); got: {owner:?}",
+  );
+}
+
+/// FT-14: `.account.assign for::bob@laptop` does NOT modify `owner` — marker-only.
+///
+/// Pre-seed `{name}.json` with `"owner": "alice@host1"`. After `.account.assign for::bob@laptop`,
+/// `owner` must remain `"alice@host1"`. Marker written to `_active_laptop_bob`.
+///
+/// Spec: [`tests/docs/feature/32_account_assign.md` FT-13]
+#[ test ]
+fn ft14_assign_for_does_not_modify_owner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+  write_account_owner( dir.path(), "alice@corp.com", "alice@host1" );
+
+  let out = run_cs_with_env(
+    &[ ".account.assign", "name::alice@corp.com", "for::bob@laptop" ],
+    &refs,
+  );
+  assert_exit( &out, 0 );
+
+  let owner = read_owner( dir.path(), "alice@corp.com" );
+  assert_eq!(
+    owner.as_deref(), Some( "alice@host1" ),
+    "FT-14: .account.assign for:: must NOT modify owner (marker-only); got: {owner:?}",
+  );
+}
+
+/// FT-15: `.account.assign unclaim::1` exits 1 — unknown parameter.
+///
+/// `unclaim::` is not registered on `.account.assign` (marker-only). To release
+/// ownership, use `.account.unclaim`. Passing `unclaim::1` here exits 1.
+///
+/// Spec: [`tests/docs/feature/36_account_ownership.md` FT-15]
+#[ test ]
+fn ft15_assign_rejects_unclaim()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+  write_account_owner( dir.path(), "alice@corp.com", "user1@host1" );
+
+  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com", "unclaim::1" ], &refs );
+  assert_exit( &out, 1 );
+
+  // owner must remain unchanged — exit 1 before any write.
+  let owner = read_owner( dir.path(), "alice@corp.com" );
+  assert_eq!(
+    owner.as_deref(), Some( "user1@host1" ),
+    "FT-15: .account.assign unclaim::1 must exit 1; owner unchanged; got: {owner:?}",
+  );
 }
