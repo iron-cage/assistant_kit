@@ -250,6 +250,7 @@ fn parse_value_flag(
 /// Handles flags that control output capture, expect validation, session concurrency,
 /// retry logic, and subprocess timeouts — none of which are forwarded to the claude
 /// command line directly.
+#[ allow( clippy::too_many_lines ) ] // mechanical dispatch — one arm per retry param.
 fn parse_runner_value_flag(
   token  : &str,
   tokens : &[ String ],

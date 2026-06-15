@@ -136,13 +136,15 @@ fn us_05_pro_prefix_shortened_in_path()
 /// US-6 (AC-008): when a gate file exists in `CLR_GATE_DIR`, `clr ps` exits 0
 /// and stdout contains the queued CLR processes table with PID, CWD, Waiting.
 ///
-/// No live `clr` waiter needed — the test writes a gate state file directly.
+/// Uses the test process's own PID so the `/proc/{pid}` liveness filter
+/// passes — gate files with dead PIDs are filtered out (BUG-293).
 #[ test ]
 fn us_06_queued_clr_shows_queued_headers()
 {
   let gate_dir      = tempfile::TempDir::new().expect( "create gate temp dir" );
   let gate_dir_path = gate_dir.path().to_str().expect( "gate dir UTF-8" );
-  let gate_file     = gate_dir.path().join( "88888.json" );
+  let live_pid      = std::process::id();
+  let gate_file     = gate_dir.path().join( format!( "{live_pid}.json" ) );
   std::fs::write(
     &gate_file,
     r#"{"cwd":"/tmp/us6-project","since":1720000000,"attempt":1,"message":"waiting for session slot"}"#,

@@ -22,12 +22,29 @@ pub( super ) fn unix_now() -> u64
     .map_or( 0, |d| d.as_secs() )
 }
 
+// Fix(BUG-293): RAII guard for gate file cleanup.
+// Root cause: wait_for_session_slot() had no Drop impl — abnormal exit
+// (panic, Ctrl+C) left orphaned gate files on disk permanently.
+// Pitfall: Drop does NOT run on SIGKILL (bypasses destructors) — the
+// /proc/{pid} liveness filter in build_queued_table() handles those
+// orphans via self-healing deletion.
+struct GateFile( PathBuf );
+
+impl Drop for GateFile
+{
+  fn drop( &mut self )
+  {
+    let _ = std::fs::remove_file( &self.0 );
+  }
+}
+
 /// Block until fewer than `max` `claude` sessions are running, or until the 100-attempt
 /// limit is exhausted.  `max == 0` means unlimited — returns immediately without checking.
 ///
 /// While waiting, writes a JSON state file to `$CLR_GATE_DIR/{pid}.json` so that
 /// `clr ps` can display this process in its "Queued CLR Processes" table.  The file
-/// is updated each polling iteration and deleted on both exit paths.
+/// is updated each polling iteration and removed automatically by the `GateFile` Drop
+/// guard on both normal and panic exit paths.
 pub( super ) fn wait_for_session_slot( max : u32, verbosity : VerbosityLevel )
 {
   if max == 0 { return; }
@@ -48,17 +65,18 @@ pub( super ) fn wait_for_session_slot( max : u32, verbosity : VerbosityLevel )
     format!( r#"{{"cwd":"{cwd}","since":{since},"attempt":0,"message":"waiting for session slot"}}"# ),
   );
 
+  // Drop guard ensures the gate file is removed on return, panic, or exit(1).
+  let _guard = GateFile( state_path.clone() );
+
   for attempt in 1..=max_attempts
   {
     let count = find_claude_processes().len();
     if u32::try_from( count ).unwrap_or( u32::MAX ) < max
     {
-      let _ = std::fs::remove_file( &state_path );
-      return;
+      return; // _guard.drop() removes the file
     }
     if attempt == max_attempts
     {
-      let _ = std::fs::remove_file( &state_path );
       eprintln!(
         "Error: --max-sessions {count}/{max} active; gave up after {max_attempts} attempts."
       );

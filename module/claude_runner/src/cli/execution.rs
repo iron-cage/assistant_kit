@@ -97,7 +97,7 @@ impl ErrorClass
 }
 
 /// Map an `ErrorKind` (or CLR-layer exit 4) to an `ErrorClass`.
-fn classify_to_class( kind : &Option< ErrorKind >, exit_code : i32 ) -> ErrorClass
+fn classify_to_class( kind : Option< &ErrorKind >, exit_code : i32 ) -> ErrorClass
 {
   if exit_code == 4 { return ErrorClass::Process; }
   match kind
@@ -348,7 +348,7 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
       // Root cause: no error classification existed; all non-zero exits produced identical log output.
       // Pitfall: classify_error() scans stdout AND stderr — rate-limit reason may be in stdout.
       let kind = output.classify_error();
-      let class = classify_to_class( &kind, output.exit_code );
+      let class = classify_to_class( kind.as_ref(), output.exit_code );
       let class_idx = class as usize;
       let label = class.label();
       let ( count_field, delay_field ) = class_fields( cli, class );

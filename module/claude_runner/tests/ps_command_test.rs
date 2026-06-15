@@ -18,6 +18,7 @@
 //! | IT-10 | Gate file present → queued table with headers  | Queued present   |
 //! | IT-11 | No gate files → no queued table in output      | Queued absent    |
 //! | IT-12 | Active table caption contains `Active Sessions` and `running` | Caption presence |
+//! | IT-13 | Orphaned gate file (dead PID) filtered out of queued table    | BUG-293 repro    |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
@@ -240,13 +241,15 @@ fn it_09_pro_prefix_shortened_in_path_column()
 /// IT-10: when a gate JSON file exists in `CLR_GATE_DIR`, `clr ps` exits 0
 /// and stdout contains the queued table headers (PID, CWD, Waiting).
 ///
-/// No live `clr` waiter is needed — the test writes the state file directly.
+/// Uses the test process's own PID so the `/proc/{pid}` liveness filter
+/// passes — gate files with dead PIDs are filtered out (BUG-293).
 #[ test ]
 fn it_10_gate_file_present_shows_queued_table()
 {
   let gate_dir      = tempfile::TempDir::new().expect( "create gate temp dir" );
   let gate_dir_path = gate_dir.path().to_str().expect( "gate dir UTF-8" );
-  let gate_file     = gate_dir.path().join( "99999.json" );
+  let live_pid      = std::process::id();
+  let gate_file     = gate_dir.path().join( format!( "{live_pid}.json" ) );
   std::fs::write(
     &gate_file,
     r#"{"cwd":"/tmp/test-project","since":1720000000,"attempt":3,"message":"waiting for session slot"}"#,
@@ -318,5 +321,64 @@ fn it_12_active_table_has_caption()
   assert!(
     stdout.contains( "running" ),
     "IT-12: active table caption must contain 'running' count suffix, got: {stdout}"
+  );
+}
+
+// ── IT-13: orphaned gate file filtered out (BUG-293) ────────────────────────
+
+/// IT-13 (BUG-293): a gate file whose PID does not exist on the system is
+/// filtered out by `build_queued_table()` and does NOT appear in the queued table.
+///
+/// ## Root Cause
+/// `build_queued_table()` read every `.json` file in the gate directory without
+/// probing `/proc/{pid}` — orphaned files from killed processes displayed as live.
+///
+/// ## Why Not Caught
+/// IT-10/IT-11 tested happy paths only (file present/absent); no test verified
+/// liveness filtering for a non-existent PID.
+///
+/// ## Fix Applied
+/// Added `/proc/{pid}` existence check in the `.filter()` closure of
+/// `build_queued_table()` with self-healing `remove_file` on orphan detection.
+///
+/// ## Prevention
+/// Any table displaying PID-keyed state files must probe OS-level PID existence
+/// before rendering a row.
+///
+/// ## Pitfall
+/// PID 99999999 is safe for testing (far above typical `PID_MAX` of 32768/4194304),
+/// but `/proc/{pid}` probes on live PIDs are racy — only use guaranteed-dead PIDs.
+// test_kind: bug_reproducer(BUG-293)
+#[ test ]
+fn it_13_orphaned_gate_file_filtered_out()
+{
+  let gate_dir      = tempfile::TempDir::new().expect( "create gate temp dir" );
+  let gate_dir_path = gate_dir.path().to_str().expect( "gate dir UTF-8" );
+
+  // PID 99999999 is guaranteed not to exist (/proc/sys/kernel/pid_max is at most 4194304).
+  let orphan_file = gate_dir.path().join( "99999999.json" );
+  std::fs::write(
+    &orphan_file,
+    r#"{"cwd":"/tmp/dead-process","since":1,"attempt":1,"message":"waiting for session slot"}"#,
+  ).expect( "write orphan gate file" );
+
+  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ) ] );
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
+
+  // The queued table must NOT appear — the only gate file is orphaned.
+  assert!(
+    !stdout.contains( "Queued" ),
+    "IT-13 (BUG-293): orphaned gate file must not produce a queued table. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "99999999" ),
+    "IT-13 (BUG-293): orphaned PID must not appear in output. Got:\n{stdout}"
+  );
+
+  // Self-healing: the orphan file must have been deleted by the liveness filter.
+  assert!(
+    !orphan_file.exists(),
+    "IT-13 (BUG-293): orphaned gate file must be deleted by self-healing cleanup"
   );
 }

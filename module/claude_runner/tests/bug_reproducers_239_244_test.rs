@@ -172,7 +172,7 @@ use cli_binary_test_helpers::{ exit_code, fake_claude_dir, run_cli_with_env, std
 fn print_mode_propagates_exit_42()
 {
   let ( _dir, path_val ) = fake_claude_dir( "exit 42" );
-  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  let out = run_cli_with_env( &[ "--print", "--retry-override", "0", "test" ], &[ ( "PATH", &path_val ) ] );
   assert_eq!(
     exit_code( &out ),
     42,
@@ -258,7 +258,7 @@ fn signal_sigterm_exits_143()
   // `kill -TERM $$` sends SIGTERM to the shell itself; it dies by the signal so the
   // parent sees WIFSIGNALED=true, WTERMSIG=15 → signal_exit_code returns 143.
   let ( _dir, path_val ) = fake_claude_dir( "kill -TERM $$" );
-  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  let out = run_cli_with_env( &[ "--print", "--retry-override", "0", "test" ], &[ ( "PATH", &path_val ) ] );
   assert_eq!(
     exit_code( &out ),
     143,
@@ -274,7 +274,7 @@ fn signal_sigterm_exits_143()
 fn signal_sigkill_exits_137()
 {
   let ( _dir, path_val ) = fake_claude_dir( "kill -KILL $$" );
-  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  let out = run_cli_with_env( &[ "--print", "--retry-override", "0", "test" ], &[ ( "PATH", &path_val ) ] );
   assert_eq!(
     exit_code( &out ),
     137,

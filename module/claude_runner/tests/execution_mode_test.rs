@@ -90,7 +90,7 @@ fn e03_interactive_exit_code_propagated()
 fn e04_print_exit_nonzero_stderr_forwarded()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho 'claude error detail' >&2\nexit 3\n" );
-  let out = run_with_path( &[ "-p", "test" ], &path );
+  let out = run_with_path( &[ "-p", "--retry-override", "0", "--max-sessions", "0", "test" ], &path );
   assert!( !out.status.success(), "must exit non-zero" );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
@@ -342,11 +342,11 @@ fn e13_interactive_flag_with_message_uses_interactive_mode()
 fn e14_print_silent_failure_rate_limit_diagnostic()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\nexit 1\n" );
-  let out = run_with_path( &[ "-p", "test" ], &path );
+  let out = run_with_path( &[ "-p", "--retry-override", "0", "--max-sessions", "0", "test" ], &path );
   assert!( !out.status.success(), "must exit non-zero on silent failure" );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Error: unknown error (exit 1)" ),
+    stderr.contains( "Error: [Unknown] unknown error (exit 1)" ),
     "must emit classified diagnostic on silent failure (empty stderr + non-zero exit). Got:\n{stderr}"
   );
   assert!(

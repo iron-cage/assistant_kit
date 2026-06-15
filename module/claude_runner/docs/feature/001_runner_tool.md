@@ -57,7 +57,8 @@ and queued `clr` waiters (processes blocked at the concurrency gate). Active tab
 `/proc/{pid}/stat` (state, CPU jiffies, start time), `/proc/{pid}/status` (VmRSS in MB),
 `~/.claude/projects/` JSONL files (Task column — last user message, truncated to 35 chars);
 falls back to `"interactive"` when no JSONL found. Queued table reads gate state files from
-`$CLR_GATE_DIR` — columns: `#`, `PID`, `CWD`, `Waiting`, `Attempt`. The current `clr ps`
+`$CLR_GATE_DIR` — columns: `#`, `PID`, `CWD`, `Waiting`, `Attempt`; gate files whose PID
+no longer exists are filtered out and self-heal-deleted (BUG-293). The current `clr ps`
 process is never listed. When no sessions are found: prints `No active Claude Code sessions.`
 and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
 
