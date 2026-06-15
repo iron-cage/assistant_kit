@@ -296,6 +296,11 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   let credential_store = require_credential_store()?;
   if trace { eprintln!( "[trace] account.save  reading {}", paths.credentials_file().display() ) }
 
+  // Validate name before dry-run check so dry-run rejects invalid names
+  // instead of reporting "[dry-run] would save" for names that would fail.
+  crate::account::validate_name( &name )
+    .map_err( | e | io_err_to_error_data( &e, "account save" ) )?;
+
   if is_dry( &cmd )
   {
     return Ok( OutputData::new( format!( "[dry-run] would save current credentials as '{name}'\n" ), "text" ) );

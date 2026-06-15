@@ -112,7 +112,7 @@ about credentials. The credential crate knows nothing about execution.
 
 All four library modules — `account`, `token`, `paths`, `persist` — are implemented and
 fully tested. The CLI binary layer adds `adapter`, `output`, and `commands` (16 commands
-behind the `enabled` feature). Functional requirements live in [`docs/feature/`](docs/feature/) (FR-6 through FR-32);
+behind the `enabled` feature). Functional requirements live in [`docs/feature/`](docs/feature/) (FR-6 through FR-36);
 each doc instance maps to named tests via Cross-References sections. All tests pass. No clippy warnings.
 
 The crate is used in production for path resolution and account rotation.

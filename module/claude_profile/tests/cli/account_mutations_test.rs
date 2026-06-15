@@ -99,6 +99,7 @@
 //! | as32 | `as32_role_empty_stores_empty` | `role::` (empty) → `{name}.json` has `"role":""` | P |
 //! | as33 | `as33_role_resave_overwrites` | resave with `role::dev` replaces `role::personal` | P |
 //! | as34 | `as34_role_with_spaces` | `role::dev ops team` stored verbatim in `{name}.json` | P |
+//! | as35 | `as35_save_dry_run_rejects_invalid_name` | `dry::1 name::not-an-email` → exit 1 (validation runs before dry-run) | N |
 //!
 //! ### AR — Account Relogin
 //!
@@ -3698,6 +3699,29 @@ fn as34_role_with_spaces()
   assert!(
     content.contains( r#""role":"dev ops team""# ),
     "role:: value with spaces must be stored verbatim, got: {content}",
+  );
+}
+
+/// `dry::1` with an invalid name (no `@`) exits 1 — validation runs before dry-run.
+///
+/// Previously, `dry::1` returned early with "[dry-run] would save" before
+/// `validate_name()`, so invalid names appeared accepted.
+#[ test ]
+fn as35_save_dry_run_rejects_invalid_name()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::not-an-email", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "not a valid email address" ),
+    "as35: dry-run must reject invalid names; got stderr: {err}",
   );
 }
 

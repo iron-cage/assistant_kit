@@ -25,6 +25,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Account ownership and `.account.unclaim` command** (FR-36)
+  - `owner` field in `{name}.json` — auto-stamped by `.account.save` via `current_identity()`
+    (`$USER@<hostname>` using the same `resolve_hostname()` fallback chain as active markers)
+  - Eight enforcement gates (G1–G8): non-owner machines cannot switch (G5), delete (G6),
+    relogin (G7), or unclaim (G8) the account; fetch (G1), refresh (G2/G3), and touch (G4)
+    are silently skipped — non-owned accounts use quota cache as primary source
+  - `.account.unclaim name::EMAIL` — dedicated command; calls `write_owner(name, store, "")`
+    directly; pure metadata operation (no credential touch, no active marker change)
+  - G8 ownership gate evaluates BEFORE `dry::1` check — non-owner gets exit 1 even in dry-run
+  - `is_owned` field propagated to `format::json` output on `.usage`
+  - Backward compatible: accounts without `owner` field behave identically to pre-feature
+  - `.account.assign` is ownership-neutral — marker-only write, does NOT call `write_owner()`
+  - 15 new tests (ft02, ft15–ft17, it01–it11) covering unclaim, G8 gate, dry-run, idempotency,
+    credential isolation, read-merge preservation, and unknown parameter rejection
+
+- **`.model` — dedicated model get/set command** (FR-35)
+  - `clp .model` (get): reads `~/.claude/settings.json` `model` field; prints shorthand or `(unset)`
+  - `clp .model set::VALUE` (set): writes model to settings via `set_session_model()`;
+    accepts `opus`, `sonnet`, `haiku`, `default` (removes key)
+  - `format::json` returns `{"model": "opus"}` or `{"model": null}`
+  - Shared `map_model_shorthand()` inner function — no duplication with Feature 034 mapping table
+  - `get_session_model()` helper added to `claude_profile_core`
+
+- **`set_model::` — explicit session model override** (FR-34)
+  - New parameter on `.account.use` and `.usage`; writes `~/.claude/settings.json` model key
+  - Precedence: explicit `set_model::` always wins over automatic `apply_model_override()` by ordering
+  - `default` removes the `model` key (reverts Claude Code to built-in default)
+  - Trace line emitted on `.account.use` when `trace::1`
+
+- **Quota cache fallback** (FR-33, TSK-256)
+  - Persists last-known quota data in `{name}.json` under `"cache"` key after every successful fetch
+  - On API error (429, timeout, network): reads cached values and displays with `~` prefix and
+    `(Nm ago)` age indicator instead of dashes
+  - Also persists `model_override` and `last_touch_at` / `touch_idle` state
+  - After successful token refresh retry, cached indicators are cleared and fresh data written
+  - Non-owned accounts (Feature 036) use cache as primary source (G1 gate), not as fallback
+
 - **`.account.assign` — write per-machine active-account marker** (FR-32, TSK-251)
   - New command (Command 16); writes only `_active_{machine}_{user}` for any `USER@MACHINE` pair
   - No credential rotation; `~/.claude/.credentials.json` and `~/.claude.json` are never touched
@@ -73,6 +110,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `display_name::`, `role::`, `billing::` read from `~/.claude.json` `oauthAccount`
   - `model::` reads from `~/.claude/settings.json`
   - All four opt-in (default off); show `N/A` when source file absent or field missing
+
+### Fixed
+
+- **Account switching and credential integrity** (BUG-174, 209, 211–213, 217, 219, 254, 277, 282, 285)
+  - `switch_account()` wholesale overwrite of `~/.claude.json` replaced with surgical JSON-merge
+    preserving global config keys (BUG-174); stale `emailAddress` and org fields no longer
+    written from snapshot (BUG-217, 219, 254); `~/.claude.json` now restored on switch (BUG-277)
+  - `.account.save` active-marker corruption fixed: live email from `~/.claude/.credentials.json`
+    used instead of stale `_active` marker (BUG-209, 212); `save()` now writes `_active` marker (BUG-282)
+  - `apply_refresh`/`apply_touch` restore no longer unconditionally overwrites `_active` — TOCTOU
+    race with concurrent `.account.use` eliminated (BUG-211, 208)
+  - `.account.use` now checks `expiresAt` before switch on fetch error (BUG-213); idle check
+    replaced stale server-side `resets_at` proxy with explicit subprocess tracking (BUG-285)
+
+- **Token refresh lifecycle** (BUG-155, 156, 162, 165, 166, 169–171, 175, 205, 221, 230, 235, 271)
+  - `refresh::` default corrected from 0 to 1 (BUG-155); 429+locally-expired accounts now
+    refreshed (BUG-156, 235); `refresh_account_token()` subprocess writes `expiresAt` (BUG-162)
+  - `apply_refresh` now performs full account lifecycle update after token refresh (BUG-165);
+    `fetch_oauth_account` retried post-refresh to recover `~Renews` column (BUG-171)
+  - `refresh_account_token()` `Some(paths)` branch no longer clobbers live session credentials
+    (BUG-221); `switch_account` before `run_isolated` removed (BUG-175)
+  - Opaque `sk-ant-oat01-*` tokens: `jwt_exp_ms` returns None handled gracefully (BUG-170);
+    HTTP 429 removed from unconditional refresh retry guard (BUG-271)
+  - `.account.use` now attempts OAuth refresh before exit 3 on expired token (BUG-230);
+    `trace::` param and `read credentials: OK` trace step added (BUG-166, 205)
+
+- **Session model override and restoration** (BUG-222, 225, 226, 238, 244, 286, 290)
+  - `switch_account()` now restores per-account `model` preference from snapshot (BUG-222);
+    quota-aware Sonnet→Opus upgrade applied post-restore (BUG-225)
+  - Model override no longer skipped when account is already active (BUG-238); `.usage` now
+    calls `apply_model_override` (BUG-244); full model ID normalized to shorthand (BUG-286)
+  - `resolve_model(Auto)` gate simplified — cold accounts no longer require two-touch warm-up (BUG-290)
+
+- **Touch / subprocess lifecycle** (BUG-176–179, 181, 202, 207, 210, 214, 215, 246, 288, 289)
+  - Touch trigger inverted to fire on idle accounts, not active sessions (BUG-181); h-exhausted
+    (BUG-178) and 7d-exhausted (BUG-214) accounts now skip-guarded
+  - Idle detection expanded to include 7d and 7d-Sonnet timers (BUG-215); post-touch quota
+    re-fetch ungated from `credentials=None` early return (BUG-179)
+  - `only_active::1` now gates touch loop — non-active accounts no longer subprocess-spawned (BUG-246)
+  - Post-switch touch result no longer discarded; redundant `.usage touch` subprocess eliminated
+    (BUG-288); `son_running=false` infinite Haiku loop fixed (BUG-289)
+  - Trace diagnostics: separator added (BUG-176), skip-trace emitted (BUG-177, 202),
+    `trace::` param added to `.account.use` (BUG-207), model/effort trace in skip path (BUG-210)
+
+- **Sort strategies and next-account recommendation** (BUG-173, 206, 223–224, 227–229, 240–243, 287, 291–292)
+  - `renew` strategy criterion corrected to `min(7d_reset, sub_renewal)` (BUG-229); 5h tiebreaker
+    added (BUG-243); `sort::renew` / `~Renews` naming collision resolved (BUG-223)
+  - `sort::expires` and `sort::renews` options added (BUG-224); `sort::renew` / `next::renew`
+    asymmetry eliminated (BUG-228); `next::renew` unified to `sort_indices` (BUG-291, 292)
+  - All `next::` strategies now skip h-exhausted (BUG-240) and occupied-elsewhere (BUG-241) accounts
+  - Endurance: weekly tiebreaker added (BUG-173); weekly-floor gate added (BUG-287);
+    footer metric corrected (BUG-242); drain: weekly-exhausted filter (BUG-206)
+  - `→ Next` column now includes token expiry as a candidate event (BUG-227)
+
+- **Subscription and billing display** (BUG-152, 216, 220, 231–234, 236–237)
+  - Expired subscriptions now show "no subscription" instead of "rate limited (429)" (BUG-231, 233);
+    `~Renews` suppressed for cancelled subscriptions (BUG-232)
+  - `billing_type == "none"` override no longer fires when usage API returns OK (BUG-236);
+    `[trace] result:` emitted after billing_type override (BUG-234)
+  - `parse_oauth_account` now scans all memberships, not just `[0]` (BUG-237);
+    drain footer label corrected for Sonnet-binding scenarios (BUG-216)
+  - HTTP 401 shortening added to `shorten_error` (BUG-152); `~Renews` no longer
+    overwritten by error reason for 429 accounts (BUG-220)
+
+- **Quota cache and fetch pipeline** (BUG-218, 245, 255–256)
+  - Cache fallback no longer converts Err to Ok — `should_refresh()` preserved (BUG-255);
+    `retry OK` now clears `cached` metadata (BUG-256)
+  - `only_active::1` now gates `fetch_all_quota` — single-account query no longer fetches all N (BUG-245)
+  - `fetch_all_quota()` synthetic row collision check added (BUG-218)
+
+- **CLI parameter handling and routing** (BUG-261–267, 272–274, 278, 294)
+  - `fmt::` alias expanded to `format::` (BUG-261); bare positional account name accepted (BUG-262);
+    exact local-part match no longer reported as ambiguous (BUG-264)
+  - Dry-run existence checks added to `.account.use` (BUG-265) and `.account.delete` (BUG-266);
+    `.account.renewal` comma-list names now prefix-resolved (BUG-267)
+  - Boolean params reject out-of-range integers (BUG-272); `.help` token pre-scanned in second
+    position (BUG-273); verbosity range validated per-command, not globally (BUG-274)
+  - Path-unsafe characters (`/`, `\`) in account local-part rejected at validation (BUG-278);
+    positional name rewrite scans `argv[1..]` for first bare token (BUG-294)
+
+- **Infrastructure and environment** (BUG-172, 263, 268, 270, 275, 280–281, 283–284)
+  - 30-second read timeout added to all `ureq::get()` call sites (BUG-172); stale
+    `anthropic-beta: oauth-2023-09-22` header removed (BUG-283)
+  - `$PRO` validation uses `is_dir()` instead of `exists()` (BUG-263); `~/.claude.json` read
+    from correct path (BUG-270); `$HOME` unset handling improved (BUG-268, 280)
+  - Active-account deletion no longer blocked by stale `_active` marker (BUG-275);
+    test runner `$PRO` isolation added (BUG-281); inferred-name save path tested (BUG-284)
+
+- **Help and documentation** (BUG-203, 204, 279)
+  - Per-command `.help` now shows parameter descriptions (BUG-203); required params shown
+    as required, not optional (BUG-204); refresh trigger list corrected (BUG-279)
 
 ### Changed
 

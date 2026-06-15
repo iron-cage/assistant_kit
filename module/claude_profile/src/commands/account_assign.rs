@@ -49,6 +49,8 @@ pub fn account_assign_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   let raw_name = match cmd.arguments.get( "name" )
   {
     Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
+    Some( Value::String( _ ) ) =>
+      return Err( ErrorData::new( ErrorCode::ArgumentMissing, "name:: value cannot be empty".to_string() ) ),
     _ =>
     {
       let user    = std::env::var( "USER" )
