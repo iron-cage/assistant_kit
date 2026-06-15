@@ -97,6 +97,8 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 - **AC-10**: Overwriting an existing marker: if `_active_laptop_bob` already contains `old@corp.com`, `.account.assign name::new@corp.com for::bob@laptop` overwrites it; exits 0; file now contains `new@corp.com`.
 - **AC-11**: The command does not invoke `switch_account()` — `~/.claude/.credentials.json` and `~/.claude.json` are left unchanged by a successful assign.
 - **AC-12**: `clp .account.assign name::alice@corp.com for::bob@laptop dry::1` includes `_active_laptop_bob` in the dry-run stdout.
+- **AC-13**: `.account.assign` does NOT modify the `owner` field in `{name}.json` — marker-only write. `account_assign_routine()` does not call `write_owner()`. Ownership is stamped only by `.account.save` and cleared only by `.account.unclaim` (see [036_account_ownership.md](036_account_ownership.md)).
+
 ### Commands
 
 | File | Relationship |

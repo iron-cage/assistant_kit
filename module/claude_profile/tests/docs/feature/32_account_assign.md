@@ -18,7 +18,7 @@ Feature behavioral requirement test cases for `docs/feature/032_account_assign.m
 | FT-10 | Overwriting existing marker writes new content | AC-10 |
 | FT-11 | `~/.claude/.credentials.json` untouched after assign | AC-11 |
 | FT-12 | Dry-run output contains marker filename | AC-12 |
-| FT-13 | `.account.assign` does NOT modify `owner` field in `{name}.json` (marker-only) | AC-15 |
+| FT-13 | `.account.assign` does NOT modify `owner` field in `{name}.json` (marker-only) | AC-13 |
 
 ### Test Case Index
 
@@ -36,7 +36,7 @@ Feature behavioral requirement test cases for `docs/feature/032_account_assign.m
 | FT-10 | Second assign to same `for::` overwrites marker content | AC-10 | Idempotency |
 | FT-11 | `~/.claude/.credentials.json` unchanged after `.account.assign` | AC-11 | No Side Effects |
 | FT-12 | `dry::1` output includes `_active_laptop_bob` when `for::bob@laptop` | AC-12 | Dry-Run Detail |
-| FT-13 | `.account.assign` does NOT modify `owner` field in `{name}.json` (marker-only write) | AC-15 | Marker-Only |
+| FT-13 | `.account.assign` does NOT modify `owner` field in `{name}.json` (marker-only write) | AC-13 | Marker-Only |
 
 ### Test Cases
 

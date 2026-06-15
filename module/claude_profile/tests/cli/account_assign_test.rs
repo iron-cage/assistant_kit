@@ -31,6 +31,7 @@
 //! | aa17 | `aa17_for_only_at_both_empty_exits_1` | FT-06 | `for::@` (only `@`, both components empty) → exit 1 | N |
 //! | ec7  | `ec7_dot_hyphen_in_machine_preserved` | EC-7 | `for::user1@w003.local` → `_active_w003.local_user1` (dot + hyphen kept) | P |
 //! | ec8  | `ec8_multiple_at_splits_on_first` | EC-8 | `for::alice@corp.com@laptop` → split on first `@` → `_active_corp.com_laptop_alice` | P |
+//! | aa18 | `aa18_empty_name_exits_1` | — | `name::` (empty) → exit 1 "`name::` value cannot be empty" | N |
 //!
 //! ### AO — Account Assign Ownership (Feature 036)
 //!
@@ -647,5 +648,28 @@ fn ft15_assign_rejects_unclaim()
   assert_eq!(
     owner.as_deref(), Some( "user1@host1" ),
     "FT-15: .account.assign unclaim::1 must exit 1; owner unchanged; got: {owner:?}",
+  );
+}
+
+/// `name::` (empty value) exits 1 — not treated as absent.
+///
+/// Previously, `.account.assign name::` fell through to the usage block (exit 0),
+/// treating empty the same as absent. All other commands exit 1 on empty `name::`.
+#[ test ]
+fn aa18_empty_name_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env( &[ ".account.assign", "name::" ], &refs );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "name:: value cannot be empty" ),
+    "aa18: empty name:: must produce 'name:: value cannot be empty'; got stderr: {err}",
   );
 }

@@ -57,7 +57,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 |---------|------|-------|--------|
 | doc_structure (collection) | [00_doc_structure.md](00_doc_structure.md) | DT-01 … DT-07 | ✅ |
 | 001_account_store_init | [001_account_store_init.md](01_account_store_init.md) | FT-01 … FT-04 | ✅ |
-| 002_account_save | [002_account_save.md](02_account_save.md) | FT-01 … FT-13 | ✅ |
+| 002_account_save | [002_account_save.md](02_account_save.md) | FT-01 … FT-12 | ✅ |
 | 003_account_list | [003_account_list.md](03_account_list.md) | FT-01 … FT-19 | ✅ |
 | 004_account_use | [004_account_use.md](04_account_use.md) | FT-01 … FT-11 | ✅ |
 | 005_account_delete | [005_account_delete.md](05_account_delete.md) | FT-01 … FT-07 | ✅ |
@@ -75,10 +75,10 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 017_token_refresh | [017_token_refresh.md](17_token_refresh.md) | FT-01 … FT-17 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](18_live_monitor.md) | FT-01 … FT-09 | ✅ |
 | 019_account_relogin | [019_account_relogin.md](19_account_relogin.md) | FT-01 … FT-11 | ✅ |
-| 020_usage_sort_strategies | [020_usage_sort_strategies.md](20_usage_sort_strategies.md) | FT-01 … FT-17 | ✅ |
+| 020_usage_sort_strategies | [020_usage_sort_strategies.md](20_usage_sort_strategies.md) | FT-01 … FT-18 | ✅ |
 | 021_extended_snapshot_fields | [021_extended_snapshot_fields.md](21_extended_snapshot_fields.md) | FT-01 … FT-09 | ✅ |
 | 022_org_identity_snapshot | [022_org_identity_snapshot.md](22_org_identity_snapshot.md) | FT-01 … FT-11 | ✅ |
-| 023_next_account_strategies | [023_next_account_strategies.md](23_next_account_strategies.md) | FT-01 … FT-17 | ✅ |
+| 023_next_account_strategies | [023_next_account_strategies.md](23_next_account_strategies.md) | FT-01 … FT-19 | ✅ |
 | 024_session_touch | [024_session_touch.md](24_session_touch.md) | FT-01 … FT-21 | ✅ |
 | 025_per_machine_active_marker | [025_per_machine_active_marker.md](25_per_machine_active_marker.md) | FT-01 … FT-12 | ✅ |
 | 026_subprocess_model_effort | [026_subprocess_model_effort.md](26_subprocess_model_effort.md) | FT-01 … FT-30 | ✅ |
@@ -91,7 +91,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 033_quota_cache | [033_quota_cache.md](33_quota_cache.md) | FT-01 … FT-11 | ✅ |
 | 034_explicit_session_model_override | [034_explicit_session_model_override.md](34_explicit_session_model_override.md) | FT-01 … FT-11 | ✅ |
 | 035_model_command | [035_model_command.md](35_model_command.md) | FT-01 … FT-12 | ✅ |
-| 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-15 | ✅ |
+| 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-17 | ✅ |
 
 **Total:** 37 specs — 36 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 
