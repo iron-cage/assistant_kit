@@ -36,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Ensures the subprocess receives a clean, governed configuration regardless of host `~/.claude/CLAUDE.md` state
   - The temp home is isolated from the user's real `$HOME` via `--home <temp_home>` flag
 
+- **3-tier retry hierarchy with 20 parameters** — class-specific retry counts and delays for all 8 error classes (TSK-205)
+  - Tier 1 (`--retry-override`/`--retry-override-delay`): forces retry count/delay for all classes
+  - Tier 2: per-class params (`--retry-on-<class>`/`--<class>-delay`) for Transient, Account, Auth, Service, Process, Validation, Runner, Unknown
+  - Tier 3 (`--retry-default`/`--retry-default-delay`): fallback for unset classes (default: count=2, delay=30s)
+  - Resolution: `resolve_count(override, class_specific, fallback).unwrap_or(2)`
+  - Stderr error labels use `[Class]` prefix: `"Error: [Transient] rate limit (exit 2)"`
+  - Param doc files 040–057; env vars `CLR_RETRY_ON_ACCOUNT` through `CLR_RETRY_DEFAULT_DELAY`
+
 ### Changed
 
 - **`clr ps` table style** — unicode-box → plain-style; `Started` column renamed `Elapsed` with duration format (TSK-199, TSK-200)
