@@ -1540,6 +1540,46 @@ fn ec5_unclaim_dry_run_no_write()
   );
 }
 
+// ── Ownership: write_owner() unit tests ───────────────────────────────────────
+
+/// `write_owner` read-merge: updates owner, preserves all other fields, does not
+/// touch credentials file.
+#[ test ]
+fn test_write_owner_read_merge_preserves_fields()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+
+  // Pre-populate {name}.json with multiple fields including owner.
+  std::fs::write(
+    store.join( "alice@test.com.json" ),
+    r#"{"oauthAccount":{"email":"a@b.com"},"_renewal_at":"2026-01-01T00:00:00Z","owner":"old@host"}"#,
+  ).unwrap();
+
+  account::write_owner( "alice@test.com", store, "new@host2" ).unwrap();
+
+  let content = std::fs::read_to_string( store.join( "alice@test.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &content ).unwrap();
+  assert_eq!(
+    val[ "owner" ].as_str().unwrap(), "new@host2",
+    "write_owner must update owner field; got: {content}",
+  );
+  assert_eq!(
+    val[ "_renewal_at" ].as_str().unwrap(), "2026-01-01T00:00:00Z",
+    "write_owner must preserve _renewal_at; got: {content}",
+  );
+  assert_eq!(
+    val[ "oauthAccount" ][ "email" ].as_str().unwrap(), "a@b.com",
+    "write_owner must preserve oauthAccount; got: {content}",
+  );
+
+  // credentials file must NOT be created.
+  assert!(
+    !store.join( "alice@test.com.credentials.json" ).exists(),
+    "write_owner must not create or touch credentials file",
+  );
+}
+
 // ── Ownership: corner-case resilience ─────────────────────────────────────────
 
 /// CC-1: `read_owner` with missing `{name}.json` file → returns "".

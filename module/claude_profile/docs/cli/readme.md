@@ -50,17 +50,17 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 
 **Current Level:** L4 (Test Structure Complete)
 **Design Completeness:** 100%
-**Implementation Status:** 100% (16/16 commands implemented)
+**Implementation Status:** 100% (17/17 commands implemented)
 
 ### Navigation
 
-- [Commands](command/readme.md) — 16 commands (15 visible + 1 hidden) across 6 namespaces
+- [Commands](command/readme.md) — 17 commands (16 visible + 1 hidden) across 6 namespaces
 - [Parameters](param/readme.md) — 54 individual parameter specifications
 - [Types](type/readme.md) — 4 CLI types (AccountName, OutputFormat, WarningThreshold, AccountSelector)
 - [Parameter Groups](param_group/readme.md) — 6 groups (Output Control, Field Presence, Fetch Behavior, Sort Control, Display Control, Account Targeting)
 - [User Stories](user_story/readme.md) — 5 user stories (Account Rotation, Onboarding, Quota Monitoring, Scripted Automation, Credential Diagnostics)
 - [Command Nouns](command_noun/readme.md) — 3 domain nouns (account, token, credentials)
-- [Command Verbs](command_verb/readme.md) — 10 domain verbs (save, use, delete, limits, relogin, rotate, renewal, inspect, assign, status)
+- [Command Verbs](command_verb/readme.md) — 11 domain verbs (save, use, delete, limits, relogin, rotate, renewal, inspect, assign, status, unclaim)
 - [Workflow Scenarios](workflow_scenario/readme.md) — 10 composed workflows (legacy; content migrating to user_story/)
 - [Output Formats](format/readme.md) — 3 formats (text, json, table)
 - [Environment Parameters](003_env_param.md) — $PRO, $HOME, $USERPROFILE path resolution

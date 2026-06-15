@@ -8,7 +8,7 @@
   use crate::usage::test_support::
   {
     FAR_FUTURE_MS,
-    mk_aq_sort, mk_aq_sort_weekly, mk_aq_with_reset, mk_aq_with_7d_reset,
+    mk_aq_sort, mk_aq_sort_weekly, mk_aq_with_reset, mk_aq_with_7d_reset, mk_aq_with_7d_reset_util,
     reset_iso_at,
   };
 
@@ -1298,5 +1298,118 @@
     assert_eq!(
       idx3.unwrap(), 1,
       "BUG-287: endurance must skip yellow_5 (prefer_weekly=5.0 — boundary: > 5.0 not ≥) and pick green_5 (index 1); got {idx3:?}",
+    );
+  }
+
+  /// # BUG-292 Reproducer
+  ///
+  /// `next::renew` must skip weekly-exhausted accounts (`prefer_weekly` ≤ 5.0) even
+  /// when they have the soonest 7d reset event. Before this fix, a weekly-exhausted
+  /// account with an imminent 7d reset was recommended because the `Renew` arm had no
+  /// `prefer_weekly > 5.0` gate.
+  ///
+  /// # Root Cause
+  /// `find_next_for_strategy(Renew)` lacked the weekly-floor gate present in `Drain`
+  /// (BUG-206) and `Endurance` (BUG-287). The renew arm's qualification predicate did
+  /// not include `prefer_weekly > 5.0`, allowing exhausted accounts with a soonest reset
+  /// to pass all filters and be recommended.
+  ///
+  /// # Why Not Caught
+  /// No test exercised the path where a weekly-exhausted account has a sooner
+  /// `seven_day.resets_at` than a healthy candidate. All prior renew-next tests used
+  /// `mk_aq_with_7d_reset` (hardcoded `seven_day.util=0.0` → `prefer_weekly=100%`) so
+  /// the weekly-exhaustion path was never reached.
+  ///
+  /// # Fix Applied
+  /// Replace the independent `.filter().min_by()` with `sort_indices(Renew)` +
+  /// `find_first_eligible(extra=|aq| prefer_weekly(aq, prefer) > 5.0)`.
+  ///
+  /// # Prevention
+  /// Any new `find_first_eligible` call site must include a weekly-floor gate.
+  /// `|_| true` is not safe when weekly-exhausted accounts can appear in the input.
+  ///
+  /// # Pitfall
+  /// Use `mk_aq_with_7d_reset_util` (not `mk_aq_with_7d_reset`) when a non-zero
+  /// `seven_day.utilization` is needed — the `_7d_reset` variant hardcodes `util=0.0`.
+  ///
+  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-17]
+  #[ doc = "bug_reproducer(BUG-292)" ]
+  #[ test ]
+  fn mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal()
+  {
+    let now = 0u64;
+    // exhausted@test: seven_day_util=96.0 → prefer_weekly=4.0 (≤ 5.0, weekly-exhausted).
+    //   7d reset fires in 1h (SOONEST event) — before fix this account was recommended.
+    //   five_hour_util=0.0 → five_hour_left=100% — NOT h-exhausted; passes all old filters.
+    let exhausted = mk_aq_with_7d_reset_util( "exhausted@test.com", 0.0, 96.0, now, 3_600 );
+    // healthy@test: seven_day_util=40.0 → prefer_weekly=60.0 (> 5.0, qualifies).
+    //   7d reset fires in 24h (later event) — must be selected after fix.
+    let healthy   = mk_aq_with_7d_reset_util( "healthy@test.com",   0.0, 40.0, now, 86_400 );
+
+    let idx = find_next_for_strategy( &[ exhausted, healthy ], NextStrategy::Renew, PreferStrategy::Any, now );
+    assert!( idx.is_some(), "BUG-292: renew must find a candidate (healthy@test.com is eligible)" );
+    assert_eq!(
+      idx.unwrap(), 1,
+      "BUG-292: renew must skip exhausted@test.com (prefer_weekly=4.0 ≤ 5.0) and pick healthy@test.com (index 1); got {idx:?}",
+    );
+  }
+
+  /// # BUG-291 Reproducer
+  ///
+  /// `next::renew` tiebreaker must match `sort::renew` tiebreaker. Before this fix,
+  /// `sort_indices(Renew)` used `prefer_weekly` ascending while `find_next_for_strategy(Renew)`
+  /// used `five_hour_left` ascending — an account with lower hourly depletion (but higher weekly
+  /// capacity) would rank first in sort but second in next selection.
+  ///
+  /// # Root Cause
+  /// BUG-243 added `five_hour_left` as tiebreaker to the independent `find_next_for_strategy(Renew)`
+  /// closure without updating `sort_indices(Renew)`. The two diverged silently; code even
+  /// acknowledged this at the now-removed pitfall comment ("a fix to one never propagates").
+  ///
+  /// # Why Not Caught
+  /// No test exercised the tiebreaker path where two accounts have identical renewal events
+  /// but different `five_hour_left` vs `prefer_weekly` rankings.
+  ///
+  /// # Fix Applied
+  /// Replace the independent `.filter().min_by()` with `sort_indices(Renew)` +
+  /// `find_first_eligible` — sort order and recommendation always use the same algorithm.
+  ///
+  /// # Prevention
+  /// `find_next_for_strategy` arms MUST delegate to `sort_indices` — never implement an
+  /// independent sort closure. Any future change to `sort_indices` propagates automatically.
+  ///
+  /// # Pitfall
+  /// `prefer_weekly` ascending means LOWER weekly capacity is preferred first (account benefits
+  /// more from the upcoming renewal event). This differs from BUG-243's `five_hour_left`
+  /// ascending rationale (more hourly depletion preferred). The two are NOT equivalent.
+  ///
+  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-17]
+  #[ doc = "bug_reproducer(BUG-291)" ]
+  #[ test ]
+  fn mre_bug291_renew_next_tiebreaker_matches_sort_indices()
+  {
+    let now = 0u64;
+    // alice: prefer_weekly=90.0 (d7_util=10.0), five_hour_left=20% (h5_util=80.0).
+    //   LOW five_hour_left → wins OLD BUG-243 tiebreaker. HIGH prefer_weekly → loses sort_indices.
+    // bob:   prefer_weekly=40.0 (d7_util=60.0), five_hour_left=80% (h5_util=20.0).
+    //   LOW prefer_weekly → wins sort_indices(Renew) tiebreaker. HIGH five_hour_left → loses BUG-243.
+    // Both accounts: identical 7d reset at now+3600 → primary key tied, tiebreaker decides.
+
+    // Step 1: sort_indices(Renew) ranks bob first (prefer_weekly 40 < alice 90).
+    let alice_s = mk_aq_with_7d_reset_util( "alice@test.com", 80.0, 10.0, now, 3_600 );
+    let bob_s   = mk_aq_with_7d_reset_util( "bob@test.com",   20.0, 60.0, now, 3_600 );
+    let sorted  = sort_indices( &[ alice_s, bob_s ], SortStrategy::Renew, None, PreferStrategy::Any, now );
+    assert_eq!(
+      sorted[ 0 ], 1,
+      "BUG-291: sort_indices(Renew) must rank bob (prefer_weekly=40) before alice (prefer_weekly=90); got {sorted:?}",
+    );
+
+    // Step 2: find_next_for_strategy(Renew) must agree with sort_indices — selects bob (index 1).
+    let alice_n = mk_aq_with_7d_reset_util( "alice@test.com", 80.0, 10.0, now, 3_600 );
+    let bob_n   = mk_aq_with_7d_reset_util( "bob@test.com",   20.0, 60.0, now, 3_600 );
+    let idx     = find_next_for_strategy( &[ alice_n, bob_n ], NextStrategy::Renew, PreferStrategy::Any, now );
+    assert_eq!(
+      idx, Some( 1 ),
+      "BUG-291: next::renew tiebreaker must match sort::renew — bob (prefer_weekly=40) must win, not alice; got {idx:?}",
     );
   }

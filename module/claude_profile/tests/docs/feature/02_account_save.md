@@ -17,8 +17,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 | FT-09 | `save(update_marker=false)` does not write `_active`; background refresh callers pass `false` | AC-15 | BUG-211 MRE |
 | FT-10 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | AC-16 | Name Inference / Regression |
 | FT-11 | Re-running `.account.save` preserves `_renewal_at` key (read-merge, not overwrite) | AC-17 | Read-Merge |
-| FT-12 | `.account.save` writes `current_identity()` as `owner` in `{name}.json` | AC-19 | Ownership Capture |
-| FT-13 | `.account.save unclaim::1` writes `owner: ""` — all G1–G7 gates pass | AC-20 | Ownership Unclaim |
+| FT-12 | `.account.save` stamps `current_identity()` as `owner` in `{name}.json` | AC-19 | Ownership Stamp |
 
 ### Test Case Index
 
@@ -35,10 +34,9 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 | FT-09 | `save(update_marker=false)` does not write `_active` | AC-15 | BUG-211 MRE |
 | FT-10 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | AC-16 | Name Inference / Regression |
 | FT-11 | Re-running `.account.save` preserves `_renewal_at` (read-merge) | AC-17 | Read-Merge |
-| FT-12 | `.account.save` writes `current_identity()` as `owner` in `{name}.json` | AC-19 | Ownership Capture |
-| FT-13 | `.account.save unclaim::1` writes `owner: ""` — all G1–G7 gates pass | AC-20 | Ownership Unclaim |
+| FT-12 | `.account.save` stamps `current_identity()` as owner in `{name}.json` | AC-19 | Ownership Stamp |
 
-**Total:** 13 FT cases
+**Total:** 12 FT cases
 
 ---
 
@@ -139,7 +137,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Then:** The credential file `alice@test.com.credentials.json` is written. The `_active_{hostname}_{user}` marker file does NOT exist — `update_marker=false` suppresses the write. A concurrent `.account.use` switch would be unaffected.
 - **Exit:** N/A (unit test — no exit code)
 - **Source fn:** `test_mre_bug211_save_false_leaves_marker_unchanged` (in `claude_profile_core/tests/account_test.rs`)
-- **Note:** BUG-211 MRE — verifies the `update_marker` guard in `save()`. Background refresh calls (`refresh_account_token`) pass `false`; user CLI calls (`.account.save`, `.account.relogin`) pass `true`. Background callers must also pass `owner: None` per Feature 036 AC-14 — see Feature 036 FT-14 for the ownership side of the same requirement.
+- **Note:** BUG-211 MRE — verifies the `update_marker` guard in `save()`. Background refresh calls (`refresh_account_token`) pass `false`; user CLI calls (`.account.save`, `.account.relogin`) pass `true`. Background callers pass `owner: None` (preserves existing owner) per Feature 036 AC-14; interactive save passes `Some(&owner_val)` — see Feature 036 FT-14 for the ownership side of the same requirement.
 - **Source:** [feature/002_account_save.md AC-15](../../../docs/feature/002_account_save.md)
 
 ---
@@ -170,24 +168,13 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 
 ---
 
-### FT-12: `.account.save` auto-captures `current_identity()` as `owner` in `{name}.json`
+### FT-12: `.account.save` stamps `current_identity()` as owner
 
-- **Given:** Account `alice@acme.com` does not yet exist in the credential store. The machine running the command has `$USER=user1` and hostname resolves to `host1` via `resolve_hostname()`, making `current_identity() = "user1@host1"`.
+- **Given:** Account `alice@acme.com` exists. `current_identity()` resolves to `"testuser@testmachine"`.
 - **When:** `clp .account.save name::alice@acme.com`
-- **Then:** Exits 0. `{credential_store}/alice@acme.com.json` contains `"owner": "user1@host1"`. When the save is re-run from a machine where `current_identity() = "user2@host2"`, `owner` is overwritten to `"user2@host2"` — the last saver owns the account.
+- **Then:** Exits 0. `{credential_store}/alice@acme.com.json` contains `"owner": "testuser@testmachine"`. `account_save_routine()` passes `Some(&owner_val)` to `save()`. Credentials re-saved.
 - **Exit:** 0
-- **Source fn:** `ft01_save_captures_owner` (in `claude_profile_core/tests/account_test.rs`)
-- **Note:** See also Feature 036 FT-01 for the unit-test counterpart. This FT covers the CLI integration path (account_save_routine → save() with owner: Some(current_identity())).
+- **Source fn:** `ft12_save_stamps_owner` (in `tests/cli/account_mutations_test.rs`)
+- **Note:** AC-19 ownership stamp — `.account.save` always writes `current_identity()` as `owner` on interactive save. `.account.assign` does NOT touch the `owner` field.
 - **Source:** [feature/002_account_save.md AC-19](../../../docs/feature/002_account_save.md)
 
----
-
-### FT-13: `.account.save unclaim::1` writes `owner: ""` — all G1–G7 gates pass after
-
-- **Given:** Account `alice@acme.com` has `{credential_store}/alice@acme.com.json` with `"owner": "user1@host1"`. The current machine's identity is different (`current_identity() ≠ "user1@host1"`), so the account is currently non-owned.
-- **When:** `clp .account.save name::alice@acme.com unclaim::1`
-- **Then:** Exits 0. `{credential_store}/alice@acme.com.json` contains `"owner": ""`. `is_owned("", current_identity())` returns `true` for any caller — all G1–G7 gates pass. Other fields in `alice@acme.com.json` (e.g., `_renewal_at`, `oauthAccount`) are preserved via read-merge.
-- **Exit:** 0
-- **Source fn:** `ft02_unclaim_clears_owner` (in `claude_profile_core/tests/account_test.rs`)
-- **Note:** See also Feature 036 FT-02 for the unit-test counterpart. This FT covers the CLI integration path (account_save_routine → save() with owner: Some("") when unclaim::1).
-- **Source:** [feature/002_account_save.md AC-20](../../../docs/feature/002_account_save.md)

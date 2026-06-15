@@ -9,7 +9,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 | IT-1 | `.` produces identical output to `.help` | Delegation |
 | IT-2 | `.` exits 0 | Exit Code |
 | IT-3 | `.` is hidden from help listing | Visibility |
-| IT-4 | `.` output lists all 11 visible commands; removed commands absent | Content |
+| IT-4 | `.` output lists all 16 visible commands; removed commands absent | Content |
 | IT-5 | `.` output excludes bare `.` from listing | Content |
 | IT-6 | `.` output includes usage line with `<command>` syntax | Content |
 | IT-7 | `.` with trailing unknown param still shows help | Robustness |
@@ -68,7 +68,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 
 - **Given:** clean environment, `clp` on PATH
 - **When:** `clp .`
-- **Then:** stdout contains all 11 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.token.status`, `.paths`, `.usage`, `.credentials.status`); does NOT contain `.account.list` or `.account.status`
+- **Then:** stdout contains all 16 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.account.renewal`, `.account.inspect`, `.account.assign`, `.account.unclaim`, `.credentials.status`, `.token.status`, `.paths`, `.usage`, `.model`); does NOT contain `.account.list` or `.account.status`
 - **Exit:** 0
 - **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
 
@@ -78,7 +78,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 
 - **Given:** clean environment, `clp` on PATH
 - **When:** `clp .`
-- **Then:** the Commands section contains exactly 11 entries; no entry matches a bare `.` standalone command
+- **Then:** the Commands section contains exactly 16 entries; no entry matches a bare `.` standalone command
 - **Exit:** 0
 - **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
 

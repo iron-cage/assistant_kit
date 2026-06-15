@@ -70,7 +70,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 012_live_credentials_status | [012_live_credentials_status.md](12_live_credentials_status.md) | FT-01 … FT-07 | ✅ |
 | 013_account_limits | [013_account_limits.md](13_account_limits.md) | FT-01 … FT-04 | ✅ |
 | 014_rich_account_metadata | [014_rich_account_metadata.md](14_rich_account_metadata.md) | FT-01 … FT-12 | ✅ |
-| 015_name_shortcut_syntax | [015_name_shortcut_syntax.md](15_name_shortcut_syntax.md) | FT-01 … FT-13 | ✅ |
+| 015_name_shortcut_syntax | [015_name_shortcut_syntax.md](15_name_shortcut_syntax.md) | FT-01 … FT-14 | ✅ |
 | 016_current_account_awareness | [016_current_account_awareness.md](16_current_account_awareness.md) | FT-01 … FT-11 | ✅ |
 | 017_token_refresh | [017_token_refresh.md](17_token_refresh.md) | FT-01 … FT-17 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](18_live_monitor.md) | FT-01 … FT-09 | ✅ |
@@ -87,11 +87,11 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 029_account_host_metadata | [029_account_host_metadata.md](29_account_host_metadata.md) | FT-01 … FT-10 | ✅ |
 | 030_account_renewal_override | [030_account_renewal_override.md](30_account_renewal_override.md) | FT-01 … FT-15 | ✅ |
 | 031_account_inspect | [031_account_inspect.md](31_account_inspect.md) | FT-01 … FT-24 | ✅ |
-| 032_account_assign | [032_account_assign.md](32_account_assign.md) | FT-01 … FT-12 | ✅ |
+| 032_account_assign | [032_account_assign.md](32_account_assign.md) | FT-01 … FT-13 | ✅ |
 | 033_quota_cache | [033_quota_cache.md](33_quota_cache.md) | FT-01 … FT-11 | ✅ |
 | 034_explicit_session_model_override | [034_explicit_session_model_override.md](34_explicit_session_model_override.md) | FT-01 … FT-11 | ✅ |
 | 035_model_command | [035_model_command.md](35_model_command.md) | FT-01 … FT-12 | ✅ |
-| 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-14 | ✅ |
+| 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-15 | ✅ |
 
 **Total:** 37 specs — 36 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 

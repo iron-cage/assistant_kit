@@ -6,7 +6,7 @@
 use crate::output::format_duration_secs;
 use super::sort::sort_indices;
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, NextStrategy };
-use super::format::{ five_hour_left, prefer_weekly, renewal_secs };
+use super::format::{ prefer_weekly, renewal_secs };
 
 // ── Next-account recommendation ───────────────────────────────────────────────
 
@@ -37,14 +37,12 @@ where F : Fn( &AccountQuota ) -> bool
 
 /// Find the recommended next account for a specific `next` strategy.
 ///
-/// `Endurance` and `Drain` sort via `sort_indices()` then pick the first
-/// eligible (non-current, non-active, non-occupied, non-h-exhausted,
-/// non-expired, `Ok`) account.
-/// `Drain` additionally skips accounts where `prefer_weekly ≤ 5.0` — a
-/// weekly-exhausted account has too little remaining capacity to drain.
-/// `Renew` picks the eligible account whose minimum renewal event
-/// (min of `7d_resets_at` and `subscription_renewal`) fires soonest. Absent timers
-/// score as `u64::MAX` (account never started — treated as furthest out).
+/// All strategies sort via `sort_indices()` then pick the first eligible
+/// (non-current, non-active, non-occupied, non-h-exhausted, non-expired, `Ok`)
+/// account via `find_first_eligible`.
+/// All strategies skip weekly-exhausted accounts (`prefer_weekly ≤ 5.0`) via
+/// the `extra` predicate — an exhausted account has negligible remaining capacity
+/// regardless of its renewal timing.
 pub( crate ) fn find_next_for_strategy(
   accounts  : &[ AccountQuota ],
   strategy  : NextStrategy,
@@ -56,56 +54,19 @@ pub( crate ) fn find_next_for_strategy(
   {
     NextStrategy::Renew =>
     {
-      // Fix(BUG-229): criterion is min(7d_reset, sub_renewal) — the soonest quota
-      //   renewal event, whether a weekly window reset or a subscription billing cycle.
-      // Root cause: previous code used min(h5, d7); 5h is NOT a renewal event, and
-      //   subscription renewal was completely ignored.
-      // Pitfall: absent timers must score u64::MAX (never fires), not 0 (immediately).
-      let renewal_event_secs_of = |aq : &AccountQuota| -> u64
-      {
-        let Ok( data ) = &aq.result else { return u64::MAX; };
-        let d7 = data.seven_day.as_ref()
-          .and_then( |p| p.resets_at.as_deref() )
-          .and_then( claude_quota::iso_to_unix_secs )
-          .map_or( u64::MAX, |t| t.saturating_sub( now_secs ) );
-        let sub = renewal_secs(
-          aq.renewal_at.as_deref(),
-          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
-          now_secs,
-        ).map_or( u64::MAX, |( s, _ )| s );
-        d7.min( sub )
-      };
-      ( 0..accounts.len() )
-        .filter( |&i|
-        {
-          let aq = &accounts[ i ];
-          let Ok( data ) = &aq.result else { return false; };
-          !aq.is_current && !aq.is_active
-            && !aq.is_occupied_elsewhere
-            && data.five_hour.as_ref().map_or( true, |p| p.utilization < 85.0 )
-            && ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) > 0
-        } )
-        .min_by( |&a, &b|
-        {
-          let ra = renewal_event_secs_of( &accounts[ a ] );
-          let rb = renewal_event_secs_of( &accounts[ b ] );
-          // Fix(BUG-243): composite tiebreaker — lower five_hour_left (more depleted) preferred
-          //   on equal renewal time; depleted account benefits more from the upcoming renewal event.
-          // Root cause: single-key .min_by_key() fell through to input-slice order on ties.
-          // Pitfall: five_hour_left returns 100.0 for None (absent data) — treated as fully loaded,
-          //   so accounts with no session data are deprioritised on tie (conservative).
-          let ha = five_hour_left( &accounts[ a ] );
-          let hb = five_hour_left( &accounts[ b ] );
-          // Fix(BUG-260): add name tiebreaker — when both sort keys tie, min_by fell through to
-          //   input-slice / filesystem order (account::list() read_dir) without this.
-          // Root cause: BUG-259 added the name tiebreaker to sort_indices (sort.rs) but this
-          //   min_by closure is an independent code path not covered by that fix.
-          // Pitfall: sort_indices and find_next_for_strategy(Renew) implement the same sort
-          //   semantics independently — a fix to one never propagates to the other automatically.
-          ra.cmp( &rb )
-            .then_with( || ha.total_cmp( &hb ) )
-            .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
-        } )
+      // Fix(BUG-291): delegate to sort_indices(Renew) — unifies sort order and recommendation.
+      // Root cause: an independent .filter().min_by() used five_hour_left ascending as tiebreaker;
+      //   sort_indices(Renew) uses prefer_weekly ascending. Any fix to sort never propagated here.
+      // Pitfall: prefer_weekly ascending means LOWER weekly capacity is preferred (benefits most
+      //   from the upcoming renewal) — differs from the now-removed BUG-243 five_hour_left rationale.
+      // Fix(BUG-292): weekly-floor gate (prefer_weekly > 5.0) via extra predicate — same floor
+      //   as drain (BUG-206) and endurance (BUG-287) that the renew arm previously lacked.
+      // Root cause: exhausted accounts (prefer_weekly ≤ 5.0) could be recommended by renew when
+      //   they had the soonest 7d reset event, despite having negligible remaining capacity.
+      // Pitfall: a weekly-exhausted account's imminent reset does not make it a useful target —
+      //   skip it regardless of renewal timing.
+      let sorted = sort_indices( accounts, SortStrategy::Renew, None, prefer, now_secs );
+      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 5.0 )
     }
     NextStrategy::Endurance =>
     {

@@ -341,6 +341,39 @@ fn lim10_limits_prefix_resolves()
   );
 }
 
+// ── lim11 ────────────────────────────────────────────────────────────────────
+
+/// lim11: reversed arg order — `format::json` before bare name.
+///
+/// BUG-294: old adapter hardcoded `argv[1]` check; `key::val` at `argv[1]` suppressed the
+/// positional rewrite, leaving bare name at `argv[2]` to fail the `::` requirement → exit 1.
+/// After fix: bare name found by scanning `argv[1..]`, rewritten → account found → exit 2.
+#[ test ]
+fn lim11_limits_positional_after_key_value()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
+  write_account( dir.path(), "alice@acme.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.limits", "format::json", "alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  // Positional rewrite worked → account found → data fetch fails → exit 2.
+  // Before fix: adapter rejected bare arg at argv[2] → exit 1 with "expected param::value".
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "param::value" ),
+    "must not be a positional-rewrite failure, got:\n{err}",
+  );
+  assert!(
+    !err.to_lowercase().contains( "not found" ),
+    "account must be found (not a routing failure), got:\n{err}",
+  );
+}
+
 // ── it_trace_account_limits_accepted ──────────────────────────────────────────
 
 /// EC-10 (023): `trace::1` accepted by `.account.limits` — no "Unknown parameter" error.

@@ -30,6 +30,7 @@ pub use account_ops::{
   account_rotate_routine,
   account_save_routine,
   account_delete_routine,
+  account_unclaim_routine,
 };
 pub use account_relogin::account_relogin_routine;
 pub use account_renewal::account_renewal_routine;

@@ -36,9 +36,10 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 | FT-10 | Usage Examples shows positional form | AC-10 | Documentation |
 | FT-11 | Exact local-part match over ambiguous prefix | AC-11 | Prefix |
 | FT-12 | `.account.renewal` single prefix resolves | AC-12 | Renewal Prefix |
-| FT-13 | `.account.renewal` comma-list each token resolved | AC-13 | Renewal Prefix |
+| FT-13 | `.account.renewal` comma-list each token resolved | AC-13 |
+| FT-14 | Reversed arg order: `key::value` before bare name | AC-14 | Combinations |
 
-**Total:** 13 FT cases
+**Total:** 14 FT cases
 
 ---
 
@@ -182,3 +183,14 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Exit:** 0
 - **Source fn:** `ft18_account_renewal_comma_list_prefix_tokens`
 - **Source:** [015_name_shortcut_syntax.md AC-13](../../../docs/feature/015_name_shortcut_syntax.md)
+
+---
+
+### FT-14: Reversed arg order: `key::value` before bare name
+
+- **Given:** `alice@home.com` is saved in the store.
+- **When:** `clp .account.use dry::1 alice@home.com` (key::value param before bare positional name)
+- **Then:** Exits 0; dry-run output shows intent for `alice@home.com`. Identical result to `clp .account.use alice@home.com dry::1`. Argument order does not affect positional rewrite.
+- **Exit:** 0
+- **Source fn:** `aw36_positional_after_key_value`, `ad16_delete_positional_after_key_value`, `ar10_relogin_positional_after_key_value`, `acc51_accounts_positional_after_key_value`, `lim11_limits_positional_after_key_value`
+- **Source:** [015_name_shortcut_syntax.md AC-14](../../../docs/feature/015_name_shortcut_syntax.md)

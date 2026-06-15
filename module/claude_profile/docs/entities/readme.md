@@ -13,12 +13,12 @@
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](../cli/format/readme.md) | 3 |
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
 | `cli/command_noun/` | Domain noun documentation (account, token, credentials) | [cli/command_noun/readme.md](../cli/command_noun/readme.md) | 3 |
-| `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, assign, status) | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 10 |
+| `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, assign, status, unclaim) | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 11 |
 | `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 6 |
 | `research_interactive/` | Investigation findings on Claude binary behavior | [research_interactive/readme.md](../research_interactive/readme.md) | 1 |
-| `tests/docs/cli/command/` | Per-command integration test case documentation | [tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 18 |
+| `tests/docs/cli/command/` | Per-command integration test case documentation | [tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 19 |
 | `tests/docs/cli/command_noun/` | Per-noun test case documentation | [tests/docs/cli/command_noun/readme.md](../../tests/docs/cli/command_noun/readme.md) | 3 |
-| `tests/docs/cli/command_verb/` | Per-verb test case documentation | [tests/docs/cli/command_verb/readme.md](../../tests/docs/cli/command_verb/readme.md) | 10 |
+| `tests/docs/cli/command_verb/` | Per-verb test case documentation | [tests/docs/cli/command_verb/readme.md](../../tests/docs/cli/command_verb/readme.md) | 11 |
 | `tests/docs/cli/param/` | Per-parameter edge case test documentation | [tests/docs/cli/param/readme.md](../../tests/docs/cli/param/readme.md) | 55 |
 | `tests/docs/cli/param_group/` | Per-group interaction test documentation | [tests/docs/cli/param_group/readme.md](../../tests/docs/cli/param_group/readme.md) | 6 |
 | `tests/docs/cli/type/` | Per-type test case documentation | [tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) | 4 |
@@ -132,7 +132,7 @@
 | param | 053 | `for::` | [cli/param/053_for.md](../cli/param/053_for.md) |
 | param | 054 | `set_model::` | [cli/param/054_set_model.md](../cli/param/054_set_model.md) |
 | param | 055 | `set::` | [cli/param/055_set.md](../cli/param/055_set.md) |
-| param | 056 | `unclaim::` | [cli/param/056_unclaim.md](../cli/param/056_unclaim.md) |
+| param | 056 | `unclaim::` **REMOVED** | [cli/param/056_unclaim.md](../cli/param/056_unclaim.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](../cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](../cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](../cli/param_group/003_fetch_behavior.md) |
@@ -164,6 +164,7 @@
 | command_verb | 008 | inspect | [cli/command_verb/008_inspect.md](../cli/command_verb/008_inspect.md) |
 | command_verb | 009 | assign | [cli/command_verb/009_assign.md](../cli/command_verb/009_assign.md) |
 | command_verb | 010 | status | [cli/command_verb/010_status.md](../cli/command_verb/010_status.md) |
+| command_verb | 011 | unclaim | [cli/command_verb/011_unclaim.md](../cli/command_verb/011_unclaim.md) |
 | invariant | 001 | Zero Third-Party Dependencies | [invariant/001_zero_third_party_deps.md](../invariant/001_zero_third_party_deps.md) |
 | invariant | 002 | Cross-Platform Compatibility | [invariant/002_cross_platform.md](../invariant/002_cross_platform.md) |
 | invariant | 003 | Clear Error Messages | [invariant/003_clear_errors.md](../invariant/003_clear_errors.md) |

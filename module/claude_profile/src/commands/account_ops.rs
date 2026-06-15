@@ -1,4 +1,4 @@
-//! Account mutation command handlers: use, rotate, save, delete.
+//! Account mutation command handlers: use, rotate, save, delete, unclaim.
 
 use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
@@ -313,25 +313,17 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
       format!( "{user}@{hostname}" )
     }
   };
-  let role_val = match cmd.arguments.get( "role" )
+  let role_val  = match cmd.arguments.get( "role" )
   {
     Some( Value::String( s ) ) => s.clone(),
     _                          => String::new(),
   };
-
-  // Resolve unclaim:: — when set, writes owner="" (clears enforcement).
-  let unclaim = crate::output::parse_int_flag( &cmd, "unclaim", 0 )? != 0;
-  let owner_str = if unclaim
-  {
-    String::new()
-  }
-  else
-  {
-    crate::account::current_identity()
-  };
-  crate::account::save( &name, &credential_store, &paths, true, None, Some( &host_val ), Some( &role_val ), Some( &owner_str ) )
+  // Ownership stamp: interactive save always stamps current_identity().
+  // Background refresh callers pass owner: None (preserves existing).
+  let owner_val = crate::account::current_identity();
+  crate::account::save( &name, &credential_store, &paths, true, None, Some( &host_val ), Some( &role_val ), Some( &owner_val ) )
     .map_err( |e| io_err_to_error_data( &e, "account save" ) )?;
-  if trace { eprintln!( "[trace] account.save  write: OK  host={host_val}  role={role_val}  owner={owner_str}" ) }
+  if trace { eprintln!( "[trace] account.save  write: OK  host={host_val}  role={role_val}  owner={owner_val:?}" ) }
 
   Ok( OutputData::new( format!( "saved current credentials as '{name}'\n" ), "text" ) )
 }
@@ -376,4 +368,53 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   crate::account::delete( &name, &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account delete" ) )?;
   Ok( OutputData::new( format!( "deleted account '{name}'\n" ), "text" ) )
+}
+
+/// `.account.unclaim` — release ownership of a saved account profile.
+///
+/// Pure metadata operation: calls `write_owner(name, store, "")` directly.
+/// Does NOT touch `{name}.credentials.json` or any `~/.claude.*` file.
+///
+/// # Errors
+///
+/// Returns `ErrorData` if `name::` is missing/empty, the account does not
+/// exist in the credential store, or the G8 ownership gate blocks (non-owner).
+#[ inline ]
+pub fn account_unclaim_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  let name             = require_nonempty_string_arg( &cmd, "name" )?;
+  let credential_store = require_credential_store()?;
+  let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
+
+  // Verify account exists in credential store.
+  let json_path = credential_store.join( format!( "{name}.json" ) );
+  if !json_path.exists()
+  {
+    return Err( ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "account not found: {name}" ),
+    ) );
+  }
+
+  // G8 ownership gate — evaluates BEFORE dry-run check.
+  // Unowned (empty owner) passes the gate (idempotent unclaim).
+  let owner = crate::account::read_owner( &credential_store, &name );
+  if !crate::account::is_owned( &owner )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "ownership violation: this account is owned by {owner}" ),
+    ) );
+  }
+
+  if is_dry( &cmd )
+  {
+    return Ok( OutputData::new( format!( "[dry-run] would unclaim {name}\n" ), "text" ) );
+  }
+
+  crate::account::write_owner( &name, &credential_store, "" )
+    .map_err( |e| io_err_to_error_data( &e, "account unclaim" ) )?;
+  if trace { eprintln!( "[trace] account.unclaim  write_owner: OK  name={name}" ) }
+
+  Ok( OutputData::new( format!( "unclaimed {name}\n" ), "text" ) )
 }

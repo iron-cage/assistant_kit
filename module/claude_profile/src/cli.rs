@@ -30,7 +30,7 @@ pub( super ) fn exit_code_for( e : &unilang::error::Error ) -> i32
 
 /// Register all `claude_profile` commands with their argument definitions and routines.
 ///
-/// Delegates 14 shared commands to `claude_profile::register_commands()` and
+/// Delegates 16 shared commands to `claude_profile::register_commands()` and
 /// adds the `.` (dot) hidden command inline (binary-specific).
 pub( super ) fn build_registry() -> CommandRegistry
 {
@@ -51,7 +51,7 @@ pub( super ) fn build_registry() -> CommandRegistry
 
   // `.help` is pre-registered by CommandRegistry::new() — do not register again.
 
-  // Register 14 shared commands (credentials, account, token, paths, usage).
+  // Register 16 shared commands (credentials, account, token, paths, usage).
   crate::register_commands( &mut registry );
 
   registry
@@ -63,45 +63,69 @@ pub( super ) fn build_registry() -> CommandRegistry
 /// three options, and four examples. Colour is suppressed when stdout is
 /// not a terminal (TTY detection delegated to `CliHelpStyle::default()`).
 ///
-/// **Maintenance:** this list is manually maintained and decoupled from the
-/// registry in `src/lib.rs`. When adding or removing a command, update both
-/// the registry (`register_commands()`) AND the `CommandEntry` list here.
-/// Also update `tests/cli/dot_test.rs` (`dot04` visible array + `dot05` count).
+/// Entry order within each group is defined by the const ordering arrays;
+/// descriptions are single-sourced from the command registry. Commands added
+/// to the registry that are absent from an ordering array appear automatically
+/// in the appropriate group (`.account*` → "Account management"; others →
+/// "Status & info"), sorted alphabetically within the overflow section.
 pub( super ) fn print_usage( binary : &str )
 {
   use cli_fmt::help::*;
+
+  fn entries_for
+  (
+    names : &[ &str ],
+    cmds  : &std::collections::HashMap< String, CommandDefinition >,
+  ) -> Vec< cli_fmt::help::CommandEntry >
+  {
+    names.iter()
+    .filter_map( |&name|
+      cmds.get( name ).map( |cmd|
+        cli_fmt::help::CommandEntry { name : name.to_string(), desc : cmd.description().to_string() }
+      )
+    )
+    .collect()
+  }
+
+  const ACCOUNT_MGMT : &[ &str ] = &[
+    ".accounts", ".account.save", ".account.use", ".account.delete",
+    ".account.limits", ".account.relogin", ".account.rotate",
+    ".account.renewal", ".account.inspect", ".account.assign",
+  ];
+  const STATUS_INFO : &[ &str ] = &[
+    ".credentials.status", ".token.status", ".paths", ".usage", ".model",
+  ];
+
+  let registry = build_registry();
+  let cmds     = registry.commands();
+
+  let in_ordered = |name : &str|
+    ACCOUNT_MGMT.iter().chain( STATUS_INFO.iter() ).any( |&n| n == name );
+
+  let mut acct_extra : Vec< cli_fmt::help::CommandEntry > = cmds.iter()
+  .filter( |( name, cmd )| !cmd.hidden_from_list() && !in_ordered( name ) && name.starts_with( ".account" ) )
+  .map( |( name, cmd )| cli_fmt::help::CommandEntry { name : name.clone(), desc : cmd.description().to_string() } )
+  .collect();
+  let mut info_extra : Vec< cli_fmt::help::CommandEntry > = cmds.iter()
+  .filter( |( name, cmd )| !cmd.hidden_from_list() && !in_ordered( name ) && !name.starts_with( ".account" ) )
+  .map( |( name, cmd )| cli_fmt::help::CommandEntry { name : name.clone(), desc : cmd.description().to_string() } )
+  .collect();
+  acct_extra.sort_by( |a, b| a.name.cmp( &b.name ) );
+  info_extra.sort_by( |a, b| a.name.cmp( &b.name ) );
+
+  let mut acct_entries = entries_for( ACCOUNT_MGMT, &cmds );
+  let mut info_entries = entries_for( STATUS_INFO,  &cmds );
+  acct_entries.append( &mut acct_extra );
+  info_entries.append( &mut info_extra );
+
   let data = CliHelpData
   {
     binary  : binary.to_string(),
     tagline : "Manage Claude Code account credentials and token state.".to_string(),
     groups  : vec!
     [
-      CommandGroup
-      {
-        name    : "Account management".to_string(),
-        entries : vec!
-        [
-          CommandEntry { name : ".accounts".to_string(),       desc : "List all saved accounts".to_string()                    },
-          CommandEntry { name : ".account.save".to_string(),   desc : "Save current credentials as a named profile".to_string() },
-          CommandEntry { name : ".account.use".to_string(),    desc : "Switch the active account".to_string()                  },
-          CommandEntry { name : ".account.delete".to_string(),  desc : "Delete a saved account".to_string()                    },
-          CommandEntry { name : ".account.limits".to_string(),  desc : "Show rate-limit utilization (one account)".to_string()  },
-          CommandEntry { name : ".account.relogin".to_string(), desc : "Re-authenticate via browser login".to_string()          },
-          CommandEntry { name : ".account.rotate".to_string(),  desc : "Auto-rotate to the best inactive account".to_string()   },
-        ],
-      },
-      CommandGroup
-      {
-        name    : "Status & info".to_string(),
-        entries : vec!
-        [
-          CommandEntry { name : ".credentials.status".to_string(), desc : "Show live credential metadata".to_string()          },
-          CommandEntry { name : ".token.status".to_string(),       desc : "Show OAuth token expiry classification".to_string() },
-          CommandEntry { name : ".paths".to_string(),              desc : "Show all resolved ~/.claude/ paths".to_string()     },
-          CommandEntry { name : ".usage".to_string(),              desc : "Show live quota for all saved accounts".to_string() },
-          CommandEntry { name : ".model".to_string(),              desc : "Get or set session model in settings.json".to_string() },
-        ],
-      },
+      CommandGroup { name : "Account management".to_string(), entries : acct_entries },
+      CommandGroup { name : "Status & info".to_string(),      entries : info_entries },
     ],
     options  : vec!
     [

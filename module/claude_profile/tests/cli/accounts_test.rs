@@ -1460,3 +1460,25 @@ fn acc50_accounts_host_no_profile_json_exits_0()
     "absent profile.json must show Host: N/A (not error), got:\n{text}",
   );
 }
+
+// ── acc51 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+fn acc51_accounts_positional_after_key_value()
+{
+  // BUG-294: reversed arg order `clp .accounts format::json alice@acme.com` — key::value
+  // before bare name — must rewrite positional arg regardless of argv position.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",  "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "alice@acme.com", "max", "tier4",    FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "format::json", "alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "alice@acme.com" ), "reversed-order positional must show alice@acme.com, got:\n{text}" );
+  assert!( !text.contains( "work@acme.com" ), "must not show work@acme.com, got:\n{text}" );
+}

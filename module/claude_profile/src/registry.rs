@@ -14,6 +14,7 @@ use crate::commands::
   account_rotate_routine,
   account_inspect_routine,
   account_assign_routine,
+  account_unclaim_routine,
   model_routine,
   token_status_routine,
   paths_routine,
@@ -22,7 +23,7 @@ use crate::commands::
 
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 15 commands (credentials status, account management including limits, relogin, rotate, renewal, inspect, and assign, model get/set, token status, paths, usage).
+/// Registers 16 commands (credentials status, account management including limits, relogin, rotate, renewal, inspect, assign, and unclaim, model get/set, token status, paths, usage).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -101,7 +102,6 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       trc(),
       reg_arg_opt( "host",    Kind::String  ).with_description( "Machine label for this account (default: auto-capture `$USER@$HOSTNAME`); written to `{name}.json`" ),
       reg_arg_opt( "role",    Kind::String  ).with_description( "User-defined role tag (e.g. `work`, `personal`); written to `{name}.json`" ),
-      reg_arg_opt( "unclaim", Kind::Boolean ).with_description( "Clear account ownership — write `owner: \"\"` so all machines can operate this account (0=default, 1=unclaim)" ),
     ],
     Box::new( account_save_routine    ) );
   // Registered inline (not via reg_cmd) to add per-command examples — required by feature 015
@@ -151,11 +151,18 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".account.assign", "Write the per-machine active-account marker for any host+user pair without credential rotation",
     vec![
       nam(),
-      reg_arg_opt( "for", Kind::String ).with_description( "Target identity as USER@MACHINE (default: current $USER@hostname); split on first '@'; both parts sanitized (alphanumeric, '-', '.' kept)" ),
+      reg_arg_opt( "for",    Kind::String  ).with_description( "Target identity as USER@MACHINE (default: current $USER@hostname); split on first '@'; both parts sanitized (alphanumeric, '-', '.' kept)" ),
       dry(),
       trc(),
     ],
     Box::new( account_assign_routine ) );
+  reg_cmd( registry, ".account.unclaim", "Release ownership of a saved account profile (pure metadata; no credential touch)",
+    vec![
+      reg_arg_req( "name", Kind::String ).with_description( "Account name to unclaim (required; no inference)" ),
+      dry(),
+      trc(),
+    ],
+    Box::new( account_unclaim_routine ) );
   reg_cmd( registry, ".model", "Get or set the Claude Code session model in ~/.claude/settings.json",
     vec![
       reg_arg_opt( "set", Kind::String ).with_description( "Set model: `opus` (claude-opus-4-6), `sonnet` (claude-sonnet-4-6), `haiku` (claude-haiku-4-5-20251001), `default` (removes override)" ),
