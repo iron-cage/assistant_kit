@@ -566,7 +566,7 @@ fn read_owner( home : &std::path::Path, name : &str ) -> Option< String >
     .and_then( |v| v[ "owner" ].as_str().map( str::to_string ) )
 }
 
-/// FT-13 (AC-15): `.account.assign` does NOT modify `owner` — marker-only.
+/// FT-13 (AC-13): `.account.assign` does NOT modify `owner` — marker-only.
 ///
 /// Pre-seed `{name}.json` with `"owner": "alice@host1"`. After `.account.assign`,
 /// `owner` must remain `"alice@host1"` — assign is marker-only (ownership stamp moved to save).
