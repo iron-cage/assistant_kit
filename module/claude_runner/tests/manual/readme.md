@@ -556,6 +556,7 @@ CLR_RETRY_ON_UNKNOWN=1 cargo run -p claude_runner -- --dry-run "test"
 All TC-1 through TC-71 must pass without unexpected errors or panics.
 TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-71 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
+CC-1 through CC-156 are automated — listed for traceability only.
 
 ---
 
@@ -711,6 +712,41 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-124:** `CLR_RETRY_ON_UNKNOWN=abc --dry-run "test"` → exit 0 (silently ignored)
 - **CC-125:** `clr ask --retry-on-service 1 --dry-run "q"` == `clr run --retry-on-service 1 --dry-run "q"` (pure alias parity)
 - Automated in: `retry_service_test.rs`, `retry_unknown_test.rs`
+
+### 3-tier retry system: account, auth, process, validation, runner, override, default (TSK-205)
+
+- **CC-126:** `--retry-on-account 256 --dry-run "test"` → exit 1 (u8 overflow)
+- **CC-127:** `--retry-on-account 0 --dry-run "test"` → exit 0 (disables Account retry)
+- **CC-128:** `CLR_RETRY_ON_ACCOUNT=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-129:** `--retry-on-auth 256 --dry-run "test"` → exit 1 (u8 overflow)
+- **CC-130:** `CLR_RETRY_ON_AUTH=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-131:** `--retry-on-process 256 --dry-run "test"` → exit 1 (u8 overflow)
+- **CC-132:** `CLR_RETRY_ON_PROCESS=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-133:** `--retry-on-runner 256 --dry-run "test"` → exit 1 (u8 overflow)
+- **CC-134:** `CLR_RETRY_ON_RUNNER=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-135:** `--retry-override 256 --dry-run "test"` → exit 1 (u8 overflow)
+- **CC-136:** `--retry-override 0 --dry-run "test"` → exit 0 (disables all retries)
+- **CC-137:** `CLR_RETRY_OVERRIDE=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-138:** `--retry-default 256 --dry-run "test"` → exit 1 (u8 overflow)
+- **CC-139:** `--retry-default 0 --dry-run "test"` → exit 0 (disables fallback retry)
+- **CC-140:** `CLR_RETRY_DEFAULT=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-141:** `--retry-override-delay 4294967296 --dry-run "test"` → exit 1 (u32 overflow)
+- **CC-142:** `--retry-default-delay 4294967296 --dry-run "test"` → exit 1 (u32 overflow)
+- **CC-143:** `CLR_RETRY_OVERRIDE_DELAY=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-144:** `CLR_RETRY_DEFAULT_DELAY=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-145:** `--retry-on-rate-limit 1 --dry-run "test"` → exit 1 (old flag rejected, "unknown option")
+- **CC-146:** `--retry-delay 30 --dry-run "test"` → exit 1 (old flag rejected)
+- **CC-147:** `--expect-retries 1 --dry-run "test"` → exit 1 (old flag rejected)
+- **CC-148:** `--retry-on-api-error 1 --dry-run "test"` → exit 1 (old flag rejected)
+- **CC-149:** `--retry-on-unknown-error 1 --dry-run "test"` → exit 1 (old flag rejected)
+- **CC-150:** Tier 1 (override) beats Tier 2 (class-specific): `--retry-override 1 --retry-on-transient 5` → retries 1x (not 5)
+- **CC-151:** Tier 2 (class-specific) beats Tier 3 (fallback): `--retry-on-transient 1 --retry-default 5` → retries 1x (not 5)
+- **CC-152:** `[Transient]` prefix in error output on rate-limit exit 2
+- **CC-153:** `[Account]` prefix in error output on quota exhaustion
+- **CC-154:** `[Auth]` prefix in error output on auth failure
+- **CC-155:** `[Service]` prefix in error output on API error
+- **CC-156:** `[Process]` prefix in error output on exit 4
+- Automated in: `retry_account_test.rs`, `retry_auth_test.rs`, `retry_process_test.rs`, `retry_runner_test.rs`, `retry_override_test.rs`, `retry_default_test.rs`, `retry_validation_test.rs`, `retry_transient_test.rs`, `error_classification_test.rs`, `env_var_ext_test.rs`
 
 ---
 

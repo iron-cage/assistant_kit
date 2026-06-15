@@ -159,7 +159,7 @@ fn ec7_timeout_fires_kills_subprocess()
 
   let start = std::time::Instant::now();
   let out = Command::new( bin )
-    .args( [ "-p", "--timeout", "1", "--max-sessions", "0", "x" ] )
+    .args( [ "-p", "--timeout", "1", "--max-sessions", "0", "--retry-override", "0", "x" ] )
     .env( "PATH", &new_path )
     .output()
     .expect( "invoke clr" );

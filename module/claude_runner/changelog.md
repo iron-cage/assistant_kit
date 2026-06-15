@@ -36,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Ensures the subprocess receives a clean, governed configuration regardless of host `~/.claude/CLAUDE.md` state
   - The temp home is isolated from the user's real `$HOME` via `--home <temp_home>` flag
 
+- **3-tier retry hierarchy with 20 parameters** — class-specific retry counts and delays for all 8 error classes (TSK-205)
+  - Tier 1 (`--retry-override`/`--retry-override-delay`): forces retry count/delay for all classes
+  - Tier 2: per-class params (`--retry-on-<class>`/`--<class>-delay`) for Transient, Account, Auth, Service, Process, Validation, Runner, Unknown
+  - Tier 3 (`--retry-default`/`--retry-default-delay`): fallback for unset classes (default: count=2, delay=30s)
+  - Resolution: `resolve_count(override, class_specific, fallback).unwrap_or(2)`
+  - Stderr error labels use `[Class]` prefix: `"Error: [Transient] rate limit (exit 2)"`
+  - Param doc files 040–057; env vars `CLR_RETRY_ON_ACCOUNT` through `CLR_RETRY_DEFAULT_DELAY`
+
 ### Changed
 
 - **`clr ps` table style** — unicode-box → plain-style; `Started` column renamed `Elapsed` with duration format (TSK-199, TSK-200)
@@ -55,10 +63,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`--max-sessions` default raised 25 → 30** (Plan 011)
   - Reflects typical parallel workloads; users with stricter limits can still pass `--max-sessions <N>` explicitly
 
-- **Rate-limit retry defaults tightened** — `--retry-on-rate-limit` default 0 → 1; `--retry-delay` default 60 → 30 (Plan 010)
-  - One automatic retry with a 30s backoff is the right default for most automation; `--retry-on-rate-limit 0` disables
+- **Retry param renames** — 6 params renamed to align with error class taxonomy (TSK-205)
+  - `--retry-on-rate-limit` → `--retry-on-transient`; `--retry-delay` → `--transient-delay`
+  - `--retry-on-api-error` → `--retry-on-service`; `--api-error-delay` → `--service-delay`
+  - `--retry-on-unknown-error` → `--retry-on-unknown`; `--expect-retries` → `--retry-on-validation`
+  - Old names rejected at parse time (exit 1)
+
+- **Retry defaults now uniform via fallback tier** — all 8 error classes default to count=2/delay=30s via `--retry-default`/`--retry-default-delay` (TSK-205)
+  - Previously only Transient had retry support (count=1, delay=30); all other classes were immediate-fail
 
 ### Fixed
+
+- **`clr run`/`ask` timeout now exits 4** — disambiguates from rate-limit exit 2 (TSK-202)
+  - `poll_timeout()` in `execution.rs` calls `std::process::exit(4)` instead of `exit(2)`
+  - `clr isolated`/`refresh` timeout still exits 2 (preserves "no credentials refreshed" semantics)
+  - Exit code contract tests added: `exit_code_contract_test.rs` (EC-1/EC-2/EC-3)
+
+- **Stale gate files no longer displayed as live waiting processes in `clr ps`** (BUG-293)
+  - `build_queued_table()` now probes `/proc/{pid}` before rendering; orphaned files self-heal via `remove_file`
+  - `GateFile` RAII struct with `Drop` impl in `gate.rs` ensures cleanup on normal exit and panic unwind
+  - Regression test: IT-13 in `ps_command_test.rs`
 
 - **Isolated subprocess timeout semantics corrected** — `--timeout 0` now means "no deadline" (unlimited) for `clr isolated`, consistent with `clr run`/`clr ask` (TSK-022)
   - Previously `timeout=0` was passed to `wait_for_output()` which treated 0 as "expire immediately"
@@ -142,33 +166,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Documented as param 030, Group 2 (Runner Control)
 
 - **`--expect-strategy <STRAT>` parameter** — mismatch handling: `fail` (default), `retry`, `default:<VAL>`
-  - `fail`: exit 3 immediately; `retry`: re-invoke up to `--expect-retries` times; `default:<VAL>`: substitute value on mismatch
+  - `fail`: exit 3 immediately; `retry`: re-invoke up to `--retry-on-validation` times; `default:<VAL>`: substitute value on mismatch
   - Env var fallback: `CLR_EXPECT_STRATEGY`
   - `--expect-strategy "default:"` (empty VALUE) is valid — substitutes empty string on mismatch
   - Documented as param 031, Group 2 (Runner Control)
 
-- **`--expect-retries <N>` parameter** — retry attempts when `--expect-strategy retry` (0–255, default: 0)
+- **`--retry-on-validation <N>` parameter** — retry count for Validation (expect-mismatch) errors (0–255; Tier 2, falls back to `--retry-default`)
+  - Retries when `--expect-strategy retry` and output mismatches `--expect` pattern
   - Silently ignored when strategy is not `retry`
-  - Env var fallback: `CLR_EXPECT_RETRIES`
-  - Documented as param 032, Group 2 (Runner Control)
+  - Env var fallback: `CLR_RETRY_ON_VALIDATION`
+  - Documented as param 048, Group 2 (Runner Control)
+  - Renamed from `--expect-retries` (TSK-205)
 
 - **`--max-sessions <N>` parameter** — max concurrent claude sessions before blocking (0=unlimited, default: 25)
   - Blocks up to 100 attempts (30s each) polling `/proc/*/cmdline` for running `claude` processes
   - Env var fallback: `CLR_MAX_SESSIONS`
   - Documented as param 033, Group 2 (Runner Control)
 
-- **`--retry-on-rate-limit <N>` parameter** — automatic retry on transient rate-limit exit (0–255, default: 1)
-  - When subprocess exits 2 (`ErrorKind::RateLimit`) and retries remain, waits `--retry-delay` seconds and re-invokes
-  - `QuotaExhausted`, `AuthError`, `ApiError`, `Signal`, `Unknown` are never retried
-  - On exhaustion: emits "rate limit retries exhausted" to stderr, propagates exit 2
-  - Applies to print-mode (`run_print_mode()`) only; interactive mode not retried
-  - Env var fallback: `CLR_RETRY_ON_RATE_LIMIT`
+- **`--retry-on-transient <N>` parameter** — retry count for Transient (rate-limit) errors (0–255; Tier 2 class-specific, falls back to `--retry-default`)
+  - When subprocess exits 2 (`ErrorKind::RateLimit`) and retries remain, waits `--transient-delay` seconds and re-invokes
+  - Applies to print-mode only; interactive mode not retried
+  - Env var fallback: `CLR_RETRY_ON_TRANSIENT`
   - Documented as param 034, Group 2 (Runner Control)
+  - Renamed from `--retry-on-rate-limit` (TSK-205)
 
-- **`--retry-delay <SECS>` parameter** — seconds between rate-limit retries (u32, default: 30)
-  - 0 = immediate retry (no sleep); silently ignored when `--retry-on-rate-limit` is 0
-  - Env var fallback: `CLR_RETRY_DELAY`
+- **`--transient-delay <SECS>` parameter** — seconds between Transient retries (u32; Tier 2, falls back to `--retry-default-delay`)
+  - 0 = immediate retry (no sleep)
+  - Env var fallback: `CLR_TRANSIENT_DELAY`
   - Documented as param 035, Group 2 (Runner Control)
+  - Renamed from `--retry-delay` (TSK-205)
 
 - **`--timeout <SECS>` parameter for `run`/`ask`** — kill subprocess after N seconds (u32, default: 0 = unlimited)
   - Spawns watchdog via `spawn_piped()` + `try_wait()` polling at 50ms intervals; sends SIGKILL on deadline
@@ -176,6 +202,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Semantic contrast with `isolated`/`refresh` where `--timeout 0` means immediate expiry
   - Env var fallback: `CLR_TIMEOUT`
   - Documented as param 036, Group 2 (Runner Control)
+
+- **3-tier retry parameter hierarchy** — 20 retry parameters organized in override/class-specific/fallback tiers (TSK-205)
+  - Tier 1 (Override): `--retry-override` and `--retry-override-delay` beat all class-specific settings
+  - Tier 2 (Class-specific): per-error-class retry count and delay pairs for all 8 error classes
+  - Tier 3 (Fallback): `--retry-default` (default: 2) and `--retry-default-delay` (default: 30s) apply when no class-specific value is set
+  - Resolution: `effective_count(class) = override ?? class_specific ?? fallback`
+
+- **Class-specific retry params** — per-error-class count/delay pairs (TSK-203, TSK-205)
+  - `--retry-on-account`/`--account-delay` (params 040/041) — Account errors
+  - `--retry-on-auth`/`--auth-delay` (params 042/043) — Auth errors
+  - `--retry-on-service`/`--service-delay` (params 044/045) — Service (API) errors
+  - `--retry-on-process`/`--process-delay` (params 046/047) — Process errors
+  - `--validation-delay` (param 049) — delay between Validation retries
+  - `--retry-on-runner`/`--runner-delay` (params 050/051) — Runner errors
+  - `--retry-on-unknown`/`--unknown-delay` (params 052/053) — Unknown errors
+  - All class-specific params use `Option<T>` (absent = defer to fallback tier)
+  - Env var fallbacks: `CLR_RETRY_ON_{CLASS}` / `CLR_{CLASS}_DELAY`
+
+- **Override and fallback tier params** — global retry control (TSK-205)
+  - `--retry-override <N>` / `--retry-override-delay <SECS>` (params 054/055) — Tier 1; beats all class-specific
+  - `--retry-default <N>` / `--retry-default-delay <SECS>` (params 056/057) — Tier 3; default 2/30s
+  - Env var fallbacks: `CLR_RETRY_OVERRIDE`, `CLR_RETRY_OVERRIDE_DELAY`, `CLR_RETRY_DEFAULT`, `CLR_RETRY_DEFAULT_DELAY`
+
+- **`[Class]` prefix in console error and retry output** — all retry progress and terminal error messages include error class (TSK-205)
+  - Retry: `[Transient] <message> — retrying in Xs (attempt M/N)…`
+  - Terminal: `Error: [Transient] <message> (exit N)`
+  - Classes: Transient, Account, Auth, Service, Process, Validation, Runner, Unknown
 
 - **`ErrorKind::QuotaExhausted` variant** — distinct from `ErrorKind::RateLimit`
   - Matched by "You've hit your limit" pattern in subprocess stdout/stderr

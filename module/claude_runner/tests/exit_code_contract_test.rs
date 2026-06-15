@@ -45,7 +45,7 @@ fn ec_01_timeout_exits_4()
   let ( _dir, path_val ) = fake_claude_dir( "sleep 10" );
 
   let out = run_with_path(
-    &[ "-p", "--timeout", "1", "--max-sessions", "0", "x" ],
+    &[ "-p", "--timeout", "1", "--max-sessions", "0", "--retry-override", "0", "x" ],
     &path_val,
   );
 
@@ -58,8 +58,8 @@ fn ec_01_timeout_exits_4()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Error: timeout after 1s" ),
-    "stderr must contain 'Error: timeout after 1s'. Got:\n{stderr}"
+    stderr.contains( "timeout after 1s" ),
+    "stderr must contain 'timeout after 1s'. Got:\n{stderr}"
   );
 }
 

@@ -68,9 +68,9 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 
 ### US-6: Queued CLR session shown when gate file present
 
-- **Given:** temp dir used as `CLR_GATE_DIR`; a gate JSON file written at `<temp_dir>/12345.json` with `cwd`, `since`, `attempt`, `message` fields
+- **Given:** temp dir used as `CLR_GATE_DIR`; a gate JSON file written at `<temp_dir>/{test_process_pid}.json` with `cwd`, `since`, `attempt`, `message` fields. Uses the test process's own PID so the `/proc/{pid}` liveness filter passes (gate files with dead PIDs are filtered out per BUG-293)
 - **When:** `clr ps` with `CLR_GATE_DIR=<temp_dir>` in env
-- **Then:** Exit 0; stdout contains `PID`, `CWD`, and `Waiting` (queued table headers); stdout contains `12345`
+- **Then:** Exit 0; stdout contains `PID`, `CWD`, and `Waiting` (queued table headers)
 - **Exit:** 0
 - **Verifies:** AC-008
 

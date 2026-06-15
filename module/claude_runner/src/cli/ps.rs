@@ -258,7 +258,30 @@ fn build_queued_table() -> Option< String >
     .flatten()
     .filter( |e|
     {
-      e.path().extension().and_then( |x| x.to_str() ) == Some( "json" )
+      if e.path().extension().and_then( |x| x.to_str() ) != Some( "json" )
+      {
+        return false;
+      }
+      // Fix(BUG-293): Liveness filter for gate files.
+      // Root cause: build_queued_table() rendered all gate files without checking
+      // if the owning PID still existed, displaying SIGKILL/crash orphans as
+      // perpetual phantom waiters.
+      // Pitfall: /proc/{pid} is Linux-specific; this entire module is
+      // #[cfg(target_os = "linux")] so the path is guaranteed to exist for live PIDs.
+      let alive = e.path()
+        .file_stem()
+        .and_then( |s| s.to_str() )
+        .and_then( |s| s.parse::< u32 >().ok() )
+        .is_some_and( |pid|
+        {
+          std::path::Path::new( &format!( "/proc/{pid}" ) ).exists()
+        } );
+      if !alive
+      {
+        // Self-heal: remove the orphaned gate file so it doesn't recur.
+        let _ = std::fs::remove_file( e.path() );
+      }
+      alive
     } )
     .collect();
 

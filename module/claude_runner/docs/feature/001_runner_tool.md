@@ -57,9 +57,12 @@ and queued `clr` waiters (processes blocked at the concurrency gate). Active tab
 `/proc/{pid}/stat` (state, CPU jiffies, start time), `/proc/{pid}/status` (VmRSS in MB),
 `~/.claude/projects/` JSONL files (Task column — last user message, truncated to 35 chars);
 falls back to `"interactive"` when no JSONL found. Queued table reads gate state files from
-`$CLR_GATE_DIR` — columns: `#`, `PID`, `CWD`, `Waiting`, `Attempt`. The current `clr ps`
+`$CLR_GATE_DIR` — columns: `#`, `PID`, `CWD`, `Waiting`, `Attempt`; gate files whose PID
+no longer exists are filtered out and self-heal-deleted (BUG-293). The current `clr ps`
 process is never listed. When no sessions are found: prints `No active Claude Code sessions.`
 and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
+
+**3-tier retry hierarchy:** When a subprocess exits with a classifiable error, the runner retries according to a 3-tier resolution: Tier 1 (`--retry-override`) forces count/delay for all classes; Tier 2 (`--retry-on-<class>`/`--<class>-delay`) overrides per error class; Tier 3 (`--retry-default`/`--retry-default-delay`) provides fallback defaults (count=2, delay=30s). The 8 error classes are Transient, Account, Auth, Service, Process, Validation, Runner, and Unknown. Each class maps from `ErrorKind` via `classify_to_class()` in `execution.rs`. Stderr error labels use `[Class]` prefix for traceability (e.g., `"Error: [Transient] rate limit (exit 2)"`). Validation class retries are only active when `--expect-strategy retry` is set. Parameters 040–057 cover all 20 retry flags; each has a `CLR_*` env var fallback.
 
 **Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile` (via `--session-dir` flag passthrough or resolved externally).
 
@@ -109,6 +112,22 @@ and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
 | `../../tests/expect_validation_test.rs` | T01–T17 --expect / --expect-strategy / --retry-on-validation validation loop |
 | `../../tests/bug_reproducers_247_test.rs` | BUG-247 stdout-to-stderr forwarding on subprocess failure |
 | `../../tests/bug_reproducers_248_test.rs` | BUG-248 --keep-claudecode warning when CLAUDECODE present |
+| `../../tests/retry_transient_test.rs` | Transient class retry count, delay, [Class] prefix, old-flag rejection |
+| `../../tests/retry_account_test.rs` | Account class retry count, delay, env fallback |
+| `../../tests/retry_auth_test.rs` | Auth class retry count, delay, env fallback |
+| `../../tests/retry_service_test.rs` | Service class retry count, delay, old-flag rejection |
+| `../../tests/retry_process_test.rs` | Process class retry count, delay |
+| `../../tests/retry_validation_test.rs` | Validation class retry count, old-flag rejection |
+| `../../tests/retry_runner_test.rs` | Runner class retry count, delay |
+| `../../tests/retry_unknown_test.rs` | Unknown class retry count, delay, old-flag rejection |
+| `../../tests/retry_override_test.rs` | Tier 1 override count/delay, tier priority tests |
+| `../../tests/retry_default_test.rs` | Tier 3 fallback count/delay, effective defaults |
+| `../../tests/error_classification_test.rs` | ErrorKind → ErrorClass mapping, [Class] stderr prefix |
+| `../../tests/exit_code_contract_test.rs` | Exit code 4 for timeout (TSK-202) |
+| `../../tests/ps_command_test.rs` | IT-01–IT-13 clr ps tables, gate file rendering, BUG-293 |
+| `../../tests/kill_command_test.rs` | IT-01–IT-09 clr kill SIGTERM delivery and guards |
+| `../../tests/isolated_defaults_test.rs` | ISD-01–ISD-13 isolated subprocess model, effort, flags |
+| `../../tests/isolated_correctness_test.rs` | CT-1–CT-6 isolated correctness invariants |
 
 ### Provenance
 
