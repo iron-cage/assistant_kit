@@ -41,4 +41,4 @@ Cost: purging is destructive. If a different version is needed later, it require
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands.rs` | Binary purge logic in perform_install() |
+| `../../src/commands/version.rs` | Binary purge logic in perform_install() |

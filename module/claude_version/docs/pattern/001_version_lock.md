@@ -69,7 +69,7 @@ This pattern does not apply when tracking `latest` is desired — for `latest`, 
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands.rs` | Lock application in perform_install() |
+| `../../src/commands/version.rs` | Lock application in perform_install() |
 | `../../src/settings_io.rs` | settings.json write for layers 1, 2, 5 |
 | `spec.md` (deleted — migrated here) | FR-15, FR-15a, FR-17 |
 

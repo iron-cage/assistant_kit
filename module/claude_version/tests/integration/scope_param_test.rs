@@ -21,7 +21,7 @@ use crate::helpers::{ assert_exit, run_clm_with_env };
 
 // ─── EC-1: scope::user writes to user settings ────────────────────────────────
 
-/// EC-1: scope::user (explicit) writes key to ~/.claude/settings.json; exit 0
+/// EC-1: `scope::user` (explicit) writes key to `~/.claude/settings.json`; exit 0
 #[ test ]
 fn scope_ec1_user_writes_to_user_settings()
 {
@@ -44,7 +44,7 @@ fn scope_ec1_user_writes_to_user_settings()
 
 // ─── EC-2: scope::project writes to project settings ─────────────────────────
 
-/// EC-2: scope::project writes to {cwd}/.claude/settings.json; user config untouched; exit 0
+/// EC-2: `scope::project` writes to `{cwd}/.claude/settings.json`; user config untouched; exit 0
 #[ test ]
 fn scope_ec2_project_writes_to_project_settings()
 {
@@ -74,7 +74,7 @@ fn scope_ec2_project_writes_to_project_settings()
 
 // ─── EC-3: scope::invalid → exit 1 ──────────────────────────────────────────
 
-/// EC-3: scope::invalid → unknown scope value rejected; exit 1
+/// EC-3: `scope::invalid` → unknown scope value rejected; exit 1
 #[ test ]
 fn scope_ec3_invalid_scope_value_exits_1()
 {
@@ -87,7 +87,7 @@ fn scope_ec3_invalid_scope_value_exits_1()
 
 // ─── EC-4: scope:: (empty value) → exit 1 ────────────────────────────────────
 
-/// EC-4: scope:: (empty value) → invalid scope; exit 1
+/// EC-4: `scope::` (empty value) → invalid scope; exit 1
 #[ test ]
 fn scope_ec4_empty_scope_value_exits_1()
 {
@@ -100,7 +100,7 @@ fn scope_ec4_empty_scope_value_exits_1()
 
 // ─── EC-5: scope::user without key:: and value:: → exit 1 ───────────────────
 
-/// EC-5: scope::user without key:: and value:: → scope applies to writes only; exit 1
+/// EC-5: `scope::user` without `key::` and `value::` → scope applies to writes only; exit 1
 #[ test ]
 fn scope_ec5_scope_without_write_op_exits_1()
 {
@@ -113,7 +113,7 @@ fn scope_ec5_scope_without_write_op_exits_1()
 
 // ─── EC-6: scope::project creates .claude/ directory if absent ───────────────
 
-/// EC-6: scope::project creates .claude/ directory when it does not exist; exit 0
+/// EC-6: `scope::project` creates `.claude/` directory when it does not exist; exit 0
 #[ test ]
 fn scope_ec6_project_creates_directory_when_absent()
 {
@@ -144,7 +144,7 @@ fn scope_ec6_project_creates_directory_when_absent()
 
 // ─── EC-7: scope::project in show-all mode → exit 1 ─────────────────────────
 
-/// EC-7: scope::project with no key:: (show-all mode) → scope applies to writes only; exit 1
+/// EC-7: `scope::project` with no `key::` (show-all mode) → scope applies to writes only; exit 1
 #[ test ]
 fn scope_ec7_project_in_show_all_mode_exits_1()
 {

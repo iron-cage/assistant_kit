@@ -35,4 +35,4 @@ Layer 3 of the version lock pattern applies `chmod 555` to `~/.local/share/claud
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands.rs` | chmod 555/755 transitions in perform_install() |
+| `../../src/commands/version.rs` | chmod 555/755 transitions in perform_install() |

@@ -223,7 +223,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `cm .version.guard dry::1`
 - **Then:** Output references `2.1.74` (current alias value), not `2.1.50` (stale stored value).; Guard uses re-resolved alias value, ignoring stale stored resolution
 - **Exit:** 0
-- **Source:** [commands.rs — guard_once() re-resolution fix](../../../../src/commands.rs)
+- **Source:** [commands/version.rs — guard_once() re-resolution fix](../../../../src/commands/version.rs)
 
 ---
 
@@ -274,7 +274,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **Then:** Process runs until killed by `timeout` (2 seconds); stderr contains `#1` and `#2` iteration headers.; Process survives first install error; daemon continues watching.
 - **Bug:** `return result` in watch loop error branch — fixed by continuing the loop instead
 - **Exit:** 0
-- **Source:** [commands.rs — version_guard_routine watch loop](../../../../src/commands.rs), [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
+- **Source:** [commands/version.rs — version_guard_routine watch loop](../../../../src/commands/version.rs), [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
 
 ---
 
@@ -285,7 +285,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **Then:** stdout contains "no version pin to guard"; exit 0.; latest-override message present.
 - **Note:** Distinct from the settings-driven `preferredVersionSpec = "latest"` case; this test exercises the `version::` override dispatch path exclusively
 - **Exit:** 0
-- **Source:** [commands.rs — version_guard_routine override dispatch](../../../../src/commands.rs)
+- **Source:** [commands/version.rs — version_guard_routine override dispatch](../../../../src/commands/version.rs)
 
 ---
 
@@ -296,7 +296,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **Expected:** `v::0` stdout char count < `v::1` stdout char count.
 - **Then:** v::0 output shorter than v::1 for same guard invocation
 - **Exit:** 0
-- **Source:** [commands.rs — version_guard_routine opts.verbosity](../../../../src/commands.rs)
+- **Source:** [commands/version.rs — version_guard_routine opts.verbosity](../../../../src/commands/version.rs)
 
 ---
 

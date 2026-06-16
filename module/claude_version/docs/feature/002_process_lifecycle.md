@@ -40,7 +40,7 @@ Signal delivery uses `Command::new("kill")` (no `libc`, enforced by `unsafe-code
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands.rs` | Process command routines |
+| `../../src/commands/process.rs` | Process command routines |
 | `spec.md` (deleted — migrated here) | FR-08, FR-09, Command Inventory (commands 7-8), Known Limitations |
 
 ### Tests

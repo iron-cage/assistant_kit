@@ -57,7 +57,7 @@ If no layer supplies a value, the key is absent (not an error). See `algorithm/0
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands.rs` | .config command handler |
+| `../../src/commands/config.rs` | .config command handler |
 | `../../../claude_version_core/src/config_catalog.rs` | Known settings catalog (SettingDef registry) |
 | `../../../claude_version_core/src/config_resolve.rs` | 4-layer resolution engine |
 

@@ -65,7 +65,7 @@ Optional `version::SPEC` overrides the stored preference for a single invocation
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands.rs` | Version command routines |
+| `../../src/commands/version.rs` | Version command routines |
 | `spec.md` (deleted — migrated here) | FR-12 through FR-21, Command Inventory (commands 3-6, 12), Parameter Inventory |
 
 ### Tests

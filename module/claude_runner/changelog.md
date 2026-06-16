@@ -5,6 +5,43 @@ All notable changes to claude_runner will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **`clr ps --help`/`-h`/`help` now exits 0 and prints help** (BUG-294, TSK-206)
+  - `dispatch_ps()` lacked the `--help`/`-h`/`help` intercept present in all peer dispatch
+    functions (`dispatch_kill`, `dispatch_ask`, `dispatch_isolated`, `dispatch_refresh`)
+  - Fix: added help intercept arm; added `print_ps_help()` to `src/cli/help.rs`
+  - `clr ps --unknown` still exits 1 (genuinely unknown flags unaffected)
+  - Tests: IT-14 (`--help`), IT-15 (`-h`), IT-18 (positional `help`), US-8
+
+- **`clr ps` Task column now correctly shows the last human-typed question** (BUG-295/296/297, TSK-207)
+  - Three compounding bugs in `try_jsonl_task()` caused the column to always show "interactive":
+    - (BUG-295) Path encoding replaced `/` with `-` but not `_`; Claude encodes both
+    - (BUG-296) Content marker `"text":"` did not match Claude's actual JSONL field `"content":"`
+    - (BUG-297) Line-selection predicate picked Form B tool_result lines instead of Form A
+  - Fix: three one-line changes in `src/cli/ps.rs` `try_jsonl_task()`
+  - Tests: IT-16 (end-to-end with underscore CWD), IT-17 (Form A preferred over Form B),
+    IT-19 (underscore-free CWD regression)
+
+- **Spawn errors now include `[Runner]` class prefix on all paths** (BUG-298, TSK-208)
+  - `spawn_error_msg()` emitted unclassed errors; three bare `eprintln!("Error: {e}")` sites
+    in `execution.rs` (expect-validation arm, no-timeout print arm, interactive arm)
+    and the gate-timeout message in `gate.rs` all lacked the `[Runner]` prefix
+  - Fix: `spawn_error_msg()` updated; bare arms changed to `eprintln!("Error: [Runner] {e}")`;
+    gate-timeout message updated to `"Error: [Runner] session gate timed out — ..."` per spec
+  - Tests: TC-12 in `error_classification_test.rs`
+
+- **`--retry-on-runner`/`--runner-delay` now have runtime effect** (BUG-299, TSK-209)
+  - Both params were parsed and documented but the `apply_runner_retry()` call site was never
+    built; all Runner-class exits called `std::process::exit(1)` directly, bypassing retry
+  - Fix: `execute_print_attempt()` returns `Result<ExecutionOutput, io::Error>` instead of
+    calling `exit(1)` on spawn failure; `run_print_mode()` calls `apply_runner_retry()` on
+    `Err`; `wait_for_session_slot()` in `gate.rs` accepts `cli: &CliArgs` and calls
+    `apply_runner_retry()` on gate timeout
+  - Tests: EC-7 (retry fires on absent binary), EC-8 (retry disabled with `--retry-on-runner 0`)
+
 ## [1.2.0] - 2026-06-14
 
 ### Added
