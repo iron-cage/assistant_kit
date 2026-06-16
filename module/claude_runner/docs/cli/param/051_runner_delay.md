@@ -1,4 +1,5 @@
 # CLI Parameter: --runner-delay
+<!-- BUG-299: delay has no effect — runner_delay is parsed but never consumed; retry_on_runner is dead configuration -->
 
 Number of seconds to wait between automatic retry attempts when the Runner
 error class (CLR-layer failures, exit code 1) triggers a retry. Has no effect

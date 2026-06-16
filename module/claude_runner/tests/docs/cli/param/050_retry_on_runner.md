@@ -1,4 +1,5 @@
 # Parameter :: `--retry-on-runner`
+<!-- BUG-299: Architectural Constraint (see below) is a known incomplete implementation — filed as bug -->
 
 Edge case coverage for the `--retry-on-runner` parameter (new in retry system redesign).
 See [050_retry_on_runner.md](../../../../docs/cli/param/050_retry_on_runner.md) for specification.

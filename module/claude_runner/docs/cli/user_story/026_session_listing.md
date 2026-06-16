@@ -33,6 +33,7 @@ for a session slot — enabling them to identify stale, stuck, or piled-up sessi
 - AC-008: When one or more gate state files exist in `$CLR_GATE_DIR`, `clr ps` prints a queued CLR processes table containing column headers `PID`, `CWD`, and `Waiting`
 - AC-009: When no gate state files exist, `clr ps` output does not contain a queued processes table
 - AC-010: Each table rendered by `clr ps` is preceded by a titled caption rule line: the active sessions table shows `Active Sessions · N running` and the queued processes table shows `Queued · N waiting`
+- AC-011: `clr ps --help` and `clr ps -h` print subcommand help to stdout and exit 0; the positional token `clr ps help` does the same
 
 ### Referenced Commands
 

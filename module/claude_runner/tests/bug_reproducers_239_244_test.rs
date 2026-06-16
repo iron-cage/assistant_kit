@@ -12,6 +12,7 @@
 //! | `print_mode_propagates_exit_0`         | BUG-239 | `exit(1)` hardcoded | No |
 //! | `spawn_error_visible_at_verbosity_0`   | BUG-240 | Err gated on verbosity | No |
 //! | `binary_not_found_shows_install_hint`  | BUG-241 | Raw OS error emitted | No |
+//! | (none — add spawn format test)         | BUG-298 | [Runner] prefix absent from spawn error output | No |
 //! | `signal_sigterm_exits_143`             | BUG-242 | `unwrap_or(1)` collapsed | No (Unix) |
 //! | `signal_sigkill_exits_137`             | BUG-242 | `unwrap_or(1)` collapsed | No (Unix) |
 //! | `storage_subdir_flag_accepted`         | BUG-244 | storage mirror behind | No |
