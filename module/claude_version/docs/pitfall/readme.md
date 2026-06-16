@@ -9,7 +9,7 @@
 
 ### Overview Table
 
-| ID | Name | Status |
-|----|------|--------|
-| 001 | [Version Lock chmod Side Effects](001_version_lock_chmod.md) | ✅ |
-| 002 | [Auto-Updater Symlink Retarget](002_symlink_retarget.md) | ✅ |
+| ID | Status | Name |
+|----|--------|------|
+| 001 | ✅ | [Version Lock chmod Side Effects](001_version_lock_chmod.md) |
+| 002 | ✅ | [Auto-Updater Symlink Retarget](002_symlink_retarget.md) |

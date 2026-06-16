@@ -21,7 +21,7 @@ use crate::helpers::{ assert_exit, run_clm_with_env, write_settings };
 
 // ─── EC-1: unset::1 removes key from settings ────────────────────────────────
 
-/// EC-1: key::K unset::1 removes key from settings.json; other keys preserved; exit 0
+/// EC-1: `key::K` `unset::1` removes key from settings.json; other keys preserved; exit 0
 #[ test ]
 fn unset_ec1_removes_key_from_settings()
 {
@@ -45,7 +45,7 @@ fn unset_ec1_removes_key_from_settings()
 
 // ─── EC-2: unset::1 for nonexistent key is idempotent ───────────────────────
 
-/// EC-2: key::K unset::1 for nonexistent key → exit 0 (idempotent); existing keys untouched
+/// EC-2: `key::K` `unset::1` for nonexistent key → exit 0 (idempotent); existing keys untouched
 #[ test ]
 fn unset_ec2_nonexistent_key_is_idempotent()
 {
@@ -68,7 +68,7 @@ fn unset_ec2_nonexistent_key_is_idempotent()
 
 // ─── EC-3: unset::1 without key:: → exit 1 ──────────────────────────────────
 
-/// EC-3: unset::1 without key:: → key:: is required for unset; exit 1
+/// EC-3: `unset::1` without `key::` → `key::` is required for unset; exit 1
 #[ test ]
 fn unset_ec3_without_key_exits_1()
 {
@@ -81,7 +81,7 @@ fn unset_ec3_without_key_exits_1()
 
 // ─── EC-4: value::V and unset::1 together → exit 1 ──────────────────────────
 
-/// EC-4: key::K value::V unset::1 → value:: and unset:: are mutually exclusive; exit 1
+/// EC-4: `key::K` `value::V` `unset::1` → `value::` and `unset::` are mutually exclusive; exit 1
 #[ test ]
 fn unset_ec4_value_and_unset_mutually_exclusive_exits_1()
 {
@@ -94,7 +94,7 @@ fn unset_ec4_value_and_unset_mutually_exclusive_exits_1()
 
 // ─── EC-5: unset::0 treated as normal set mode ───────────────────────────────
 
-/// EC-5: unset::0 (explicit disable) → treated as normal set mode; value written; exit 0
+/// EC-5: `unset::0` (explicit disable) → treated as normal set mode; value written; exit 0
 #[ test ]
 fn unset_ec5_zero_treated_as_normal_set_mode()
 {
@@ -115,7 +115,7 @@ fn unset_ec5_zero_treated_as_normal_set_mode()
 
 // ─── EC-6: unset::2 → invalid boolean → exit 1 ──────────────────────────────
 
-/// EC-6: unset::2 → boolean value out of range; exit 1
+/// EC-6: `unset::2` → boolean value out of range; exit 1
 #[ test ]
 fn unset_ec6_invalid_boolean_value_exits_1()
 {
@@ -128,7 +128,7 @@ fn unset_ec6_invalid_boolean_value_exits_1()
 
 // ─── EC-7: dry::1 prevents deletion ──────────────────────────────────────────
 
-/// EC-7: key::K unset::1 dry::1 → preview output; settings.json unchanged; exit 0
+/// EC-7: `key::K` `unset::1` `dry::1` → preview output; settings.json unchanged; exit 0
 #[ test ]
 fn unset_ec7_dry_run_prevents_deletion()
 {

@@ -43,3 +43,12 @@ mod config_identity_test;
 
 #[ path = "integration/user_story_test.rs" ]
 mod user_story_test;
+
+#[ path = "integration/format_surface_test.rs" ]
+mod format_surface_test;
+
+#[ path = "integration/pitfall_surface_test.rs" ]
+mod pitfall_surface_test;
+
+#[ path = "integration/collection_surface_test.rs" ]
+mod collection_surface_test;

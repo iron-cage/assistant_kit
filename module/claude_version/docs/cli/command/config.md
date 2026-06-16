@@ -105,12 +105,6 @@ clv.config key::theme unset::1
 | 2 | [`.settings.get`](settings.md#command--10-settings-get) | Deprecated predecessor (get mode) |
 | 3 | [`.settings.set`](settings.md#command--11-settings-set) | Deprecated predecessor (set mode) |
 
-### Referenced User Stories
-
-| # | User Story | Persona |
-|---|-----------|---------|
-| 4 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
-
 ---
 
 **Category:** config

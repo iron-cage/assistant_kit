@@ -23,6 +23,6 @@
 Adding parameter test spec for `timeout::`:
 
 1. Check `readme.md` Responsibility Table — current highest ID is `010`
-2. Create `011_timeout.md` with edge case index and boundary tests
-3. Add row: `| 011_timeout.md | Edge case tests for timeout:: parameter |`
-4. Add to parent Navigation: `- [timeout::](param/011_timeout.md)`
+2. Create `11_timeout.md` with edge case index and boundary tests
+3. Add row: `| 11_timeout.md | Edge case tests for timeout:: parameter |`
+4. Add to parent Navigation: `- [timeout::](param/11_timeout.md)`

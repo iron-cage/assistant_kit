@@ -3,7 +3,7 @@
 -- **Summary:** Select output format.
 -- **Type:** `OutputFormat`
 -- **Default:** text
--- **Commands:** 10 commands
+-- **Commands:** all commands with format:: support
 -- **Group:** Output Control
 
 Case-sensitive: `text` and `json` only.
@@ -31,6 +31,7 @@ clv.settings.show format::text
 | 8 | [`.processes.kill`](../command/processes.md#command--8-processeskill) |
 | 9 | [`.settings.show`](../command/settings.md#command--9-settingsshow) |
 | 10 | [`.settings.get`](../command/settings.md#command--10-settingsget) |
+| 11 | [`.config`](../command/config.md#command--13-config) |
 
 ### Referenced Parameter Groups
 

@@ -36,7 +36,7 @@
 | 1 | Usage error | Unknown param, bad value, missing required |
 | 2 | Runtime error | `ErrorCode::InternalError` or `CommandNotImplemented` |
 
-**Help listing:** `.help` displays all 13 commands, all parameters, and a usage line. Empty argv also displays help and exits 0. `.help` anywhere in argv triggers help output.
+**Help listing:** `.help` displays all commands, all parameters, and a usage line. Empty argv also displays help and exits 0. `.help` anywhere in argv triggers help output.
 
 **Binary names:** `claude_version` (primary binary) and `clv` (alias binary). Both delegate to `run_cli()`.
 
@@ -51,13 +51,24 @@
 | [feature/003_settings_management.md](003_settings_management.md) | Settings commands handled by this pipeline |
 | [feature/006_config_command.md](006_config_command.md) | Unified .config command handled by this pipeline |
 
+### Collections
+
+| File | Relationship |
+|------|-------------|
+| [collection/001_design_decisions.md](../collection/001_design_decisions.md) | Design decisions this pipeline implements |
+
 ### Sources
 
 | File | Relationship |
 |------|-------------|
 | `../../src/adapter.rs` | Argv to unilang token adapter |
 | `../../src/lib.rs` | run_cli() 5-phase pipeline |
-| `spec.md` (deleted — migrated here) | Architecture, FR-01 through FR-04, FR-10, FR-11, Command/Parameter Inventory |
+
+### Provenance
+
+| Source | Notes |
+|--------|-------|
+| `spec.md` (deleted) | Architecture, FR-01 through FR-04, FR-10, FR-11, Command/Parameter Inventory |
 
 ### Tests
 

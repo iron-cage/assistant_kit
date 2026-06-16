@@ -3,7 +3,7 @@
 -- **Summary:** Display help listing and exit; overrides any command when present anywhere in argv.
 -- **Type:** bool (standalone)
 -- **Default:** false
--- **Commands:** all 12 commands
+-- **Commands:** all commands
 -- **Group:** none
 
 Present anywhere in argv triggers help display and exit, regardless of
@@ -11,7 +11,7 @@ other commands or parameters.
 
 - **Type:** bool (standalone)
 - **Default:** false
-- **Commands:** all 12 commands (universal override)
+- **Commands:** all commands (universal override)
 
 ```sh
 clv.help
@@ -34,13 +34,5 @@ clv.version.install .help    # still shows help, ignores install
 | 10 | [`.settings.show`](../command/settings.md#command--9-settingsshow) |
 | 11 | [`.settings.get`](../command/settings.md#command--10-settingsget) |
 | 12 | [`.settings.set`](../command/settings.md#command--11-settingsset) |
+| 13 | [`.config`](../command/config.md#command--13-config) |
 
-### Referenced User Stories
-
-| # | User Story | Persona |
-|---|-----------|---------|
-| 1 | [001 Environment Check](../user_story/001_environment_check.md) | Developer (new machine setup) |
-| 2 | [002 Version Upgrade](../user_story/002_version_upgrade.md) | Developer (version upgrade) |
-| 3 | [003 Process Lifecycle](../user_story/003_process_lifecycle.md) | Developer (unresponsive session) |
-| 4 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
-| 5 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |

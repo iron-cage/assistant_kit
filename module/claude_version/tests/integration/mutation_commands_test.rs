@@ -345,8 +345,8 @@ fn tc315_processes_kill_no_let_underscore_on_send_sig()
   // Verify at source level that `let _ = send_sig` is absent from commands.rs.
   // This is an AF (anti-faking) check — the only reliable test for a code path
   // that cannot be triggered through the binary without process injection.
-  let src = std::fs::read_to_string( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/commands.rs" ) )
-    .expect( "could not read commands.rs for AF check" );
+  let src = std::fs::read_to_string( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/commands/process.rs" ) )
+    .expect( "could not read commands/process.rs for AF check" );
   assert!(
     !src.contains( "let _ = send_sigterm" ),
     "let _ = send_sigterm must be absent — signal errors must be propagated",

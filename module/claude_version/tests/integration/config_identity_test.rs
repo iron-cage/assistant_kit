@@ -27,7 +27,7 @@ use crate::helpers::{ assert_exit, run_clm_with_env, stdout, write_settings };
 
 // ─── GI-1: key::K value::V → set mode writes to user config ──────────────────
 
-/// GI-1: key::K value::V → set mode; key written to user config; exit 0
+/// GI-1: `key::K` `value::V` → set mode; key written to user config; exit 0
 #[ test ]
 fn config_identity_gi1_set_mode_writes_user_config()
 {
@@ -50,7 +50,7 @@ fn config_identity_gi1_set_mode_writes_user_config()
 
 // ─── GI-2: key::K value::V scope::project → set mode writes to project config ─
 
-/// GI-2: key::K value::V scope::project → set mode writes to project config; user config untouched; exit 0
+/// GI-2: `key::K` `value::V` `scope::project` → set mode writes to project config; user config untouched; exit 0
 #[ test ]
 fn config_identity_gi2_set_mode_project_scope()
 {
@@ -79,7 +79,7 @@ fn config_identity_gi2_set_mode_project_scope()
 
 // ─── GI-3: key::K unset::1 → unset mode removes key from user config ─────────
 
-/// GI-3: key::K unset::1 → unset mode removes key from user config; other keys preserved; exit 0
+/// GI-3: `key::K` `unset::1` → unset mode removes key from user config; other keys preserved; exit 0
 #[ test ]
 fn config_identity_gi3_unset_mode_removes_from_user_config()
 {
@@ -103,7 +103,7 @@ fn config_identity_gi3_unset_mode_removes_from_user_config()
 
 // ─── GI-4: key::K unset::1 scope::project → unset from project config ─────────
 
-/// GI-4: key::K unset::1 scope::project → key removed from project config; exit 0
+/// GI-4: `key::K` `unset::1` `scope::project` → key removed from project config; exit 0
 #[ test ]
 fn config_identity_gi4_unset_mode_project_scope()
 {
@@ -141,7 +141,7 @@ fn config_identity_gi4_unset_mode_project_scope()
 
 // ─── GI-5: key::K value::V unset::1 → mutual exclusion; exit 1 ──────────────
 
-/// GI-5: key::K value::V unset::1 → value:: and unset:: are mutually exclusive; exit 1
+/// GI-5: `key::K` `value::V` `unset::1` → `value::` and `unset::` are mutually exclusive; exit 1
 #[ test ]
 fn config_identity_gi5_value_unset_mutual_exclusion_exits_1()
 {
@@ -154,7 +154,7 @@ fn config_identity_gi5_value_unset_mutual_exclusion_exits_1()
 
 // ─── GI-6: value::V without key::K → key required; exit 1 ────────────────────
 
-/// GI-6: value::V without key::K → key:: is required when value:: is provided; exit 1
+/// GI-6: `value::V` without `key::K` → `key::` is required when `value::` is provided; exit 1
 #[ test ]
 fn config_identity_gi6_value_without_key_exits_1()
 {
@@ -167,7 +167,7 @@ fn config_identity_gi6_value_without_key_exits_1()
 
 // ─── GI-7: unset::1 without key::K → key required; exit 1 ───────────────────
 
-/// GI-7: unset::1 without key::K → key:: is required when unset::1; exit 1
+/// GI-7: `unset::1` without `key::K` → `key::` is required when `unset::1`; exit 1
 #[ test ]
 fn config_identity_gi7_unset_without_key_exits_1()
 {
@@ -180,7 +180,7 @@ fn config_identity_gi7_unset_without_key_exits_1()
 
 // ─── GI-8: scope::project without write operation → exit 1 ───────────────────
 
-/// GI-8: scope::project without write operation → scope applies to writes only; exit 1
+/// GI-8: `scope::project` without write operation → scope applies to writes only; exit 1
 #[ test ]
 fn config_identity_gi8_scope_without_write_exits_1()
 {
@@ -193,7 +193,7 @@ fn config_identity_gi8_scope_without_write_exits_1()
 
 // ─── GI-9: key::K alone → get mode; value printed ───────────────────────────
 
-/// GI-9: key::K alone → get mode; resolved value printed with source annotation; exit 0
+/// GI-9: `key::K` alone → get mode; resolved value printed with source annotation; exit 0
 #[ test ]
 fn config_identity_gi9_key_alone_get_mode()
 {
@@ -213,7 +213,7 @@ fn config_identity_gi9_key_alone_get_mode()
 
 // ─── GI-10: key::K value::V dry::1 → preview; no file modification ────────────
 
-/// GI-10: key::K value::V dry::1 → cross-group: preview output; settings.json unchanged; exit 0
+/// GI-10: `key::K` `value::V` `dry::1` → cross-group: preview output; settings.json unchanged; exit 0
 #[ test ]
 fn config_identity_gi10_dry_run_no_file_modification()
 {

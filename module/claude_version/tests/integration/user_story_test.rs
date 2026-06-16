@@ -386,12 +386,17 @@ fn us05_005_version_show_confirms_active()
   }
 }
 
-// US-6: .version.guard watches for drift; verified via dry mode with interval param; exit 0
+// US-6: .version.guard watches for drift; verified via dry one-shot mode; exit 0
+//
+// Uses interval::0 (one-shot) — interval::N > 0 enters an infinite watch loop
+// that only exits on signal, making synchronous test execution impossible.
+// Fix(issue-415) changed watch-mode errors from `return result` to logged-and-continue,
+// which means errors no longer terminate the loop; one-shot is the safe test form.
 #[ test ]
 fn us06_005_version_guard_drift_watch()
 {
   let out = run_clm_with_env(
-    &[ ".version.guard", "interval::5", "dry::1" ],
+    &[ ".version.guard", "interval::0", "dry::1" ],
     &[],
   );
   assert_exit( &out, 0 );

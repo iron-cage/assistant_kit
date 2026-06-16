@@ -40,7 +40,7 @@ Output fields differ per command. Common patterns:
 | 8 | [`.processes.kill`](../command/processes.md#command--8-processeskill) |
 | 9 | [`.settings.show`](../command/settings.md#command--9-settingsshow) |
 | 10 | [`.settings.get`](../command/settings.md#command--10-settingsget) |
-| 11 | [`.settings.set`](../command/settings.md#command--11-settingsset) |
+| 11 | [`.config`](../command/config.md#command--13-config) |
 
 ### Referenced User Stories
 

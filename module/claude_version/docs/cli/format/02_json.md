@@ -49,6 +49,7 @@ Field names are stable snake_case JSON keys. Common fields:
 | 8 | [`.processes.kill`](../command/processes.md#command--8-processeskill) |
 | 9 | [`.settings.show`](../command/settings.md#command--9-settingsshow) |
 | 10 | [`.settings.get`](../command/settings.md#command--10-settingsget) |
+| 11 | [`.config`](../command/config.md#command--13-config) |
 
 ### Referenced User Stories
 

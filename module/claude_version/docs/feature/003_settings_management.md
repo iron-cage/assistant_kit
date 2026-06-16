@@ -47,7 +47,12 @@
 | File | Relationship |
 |------|-------------|
 | `../../src/settings_io.rs` | Settings JSON read/write implementation |
-| `spec.md` (deleted — migrated here) | FR-06, FR-15a, Command Inventory (commands 9-11), Parameter Inventory |
+
+### Provenance
+
+| Source | Notes |
+|--------|-------|
+| `spec.md` (deleted) | FR-06, FR-15a, Command Inventory (commands 9-11), Parameter Inventory |
 
 ### Tests
 

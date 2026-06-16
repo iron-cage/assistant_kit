@@ -30,8 +30,3 @@ clv.config key::theme unset::1 dry::1     # previews removal without changing fi
 |---|-------|
 | 1 | [Config Identity](../param_group/04_config_identity.md) |
 
-### Referenced User Stories
-
-| # | User Story | Persona |
-|---|-----------|---------|
-| 1 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |

@@ -40,6 +40,7 @@ clv .processes format::json v::2
 | 8 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Partial (`v::`, `format::`) |
 | 9 | [`.settings.show`](../command/settings.md#command--9-settingsshow) | Partial (`v::`, `format::`) |
 | 10 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Partial (`v::`, `format::`) |
+| 11 | [`.config`](../command/config.md#command--13-config) | Partial (`v::`, `format::`) |
 
 ### Referenced User Stories
 

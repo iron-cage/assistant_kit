@@ -3,7 +3,7 @@
 -- **Summary:** Preview the action that would be performed without executing side effects.
 -- **Type:** bool
 -- **Default:** false (0)
--- **Commands:** `.version.install`, `.version.guard`, `.processes.kill`, `.settings.set`
+-- **Commands:** `.version.install`, `.version.guard`, `.processes.kill`, `.settings.set`, `.config`
 -- **Group:** Execution Control
 
 Output is prefixed with `[dry-run] would ...`.
@@ -27,6 +27,7 @@ clv.settings.set key::theme value::dark dry::1
 | 2 | [`.version.guard`](../command/version.md#command--5-versionguard) |
 | 3 | [`.processes.kill`](../command/processes.md#command--8-processeskill) |
 | 4 | [`.settings.set`](../command/settings.md#command--11-settingsset) |
+| 5 | [`.config`](../command/config.md#command--13-config) |
 
 ### Referenced Parameter Groups
 

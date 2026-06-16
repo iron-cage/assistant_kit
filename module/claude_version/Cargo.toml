@@ -56,4 +56,5 @@ unilang             = { workspace = true, optional = true }
 error_tools         = { workspace = true, optional = true }
 
 [dev-dependencies]
-tempfile = { workspace = true }
+tempfile            = { workspace = true }
+claude_version_core = { workspace = true }

@@ -11,19 +11,19 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| 001_environment_check.md | US- acceptance tests for environment verification via `.status` | ✅ |
-| 002_version_upgrade.md | US- acceptance tests for version upgrade workflow | ✅ |
-| 003_process_lifecycle.md | US- acceptance tests for process inspection and termination | ✅ |
-| 004_settings_management.md | US- acceptance tests for settings read/write workflow | ✅ |
-| 005_version_pinning.md | US- acceptance tests for team-wide version pinning | ✅ |
+| 01_environment_check.md | US- acceptance tests for environment verification via `.status` | ✅ |
+| 02_version_upgrade.md | US- acceptance tests for version upgrade workflow | ✅ |
+| 03_process_lifecycle.md | US- acceptance tests for process inspection and termination | ✅ |
+| 04_settings_management.md | US- acceptance tests for settings read/write workflow | ✅ |
+| 05_version_pinning.md | US- acceptance tests for team-wide version pinning | ✅ |
 
 ### Navigation
 
-- [Environment Check](001_environment_check.md) -- `.status` verification
-- [Version Upgrade](002_version_upgrade.md) -- install/guard/history workflow
-- [Process Lifecycle](003_process_lifecycle.md) -- `.processes` / `.processes.kill`
-- [Settings Management](004_settings_management.md) -- `.settings.*` read/write
-- [Version Pinning](005_version_pinning.md) -- team version alignment
+- [Environment Check](01_environment_check.md) -- `.status` verification
+- [Version Upgrade](02_version_upgrade.md) -- install/guard/history workflow
+- [Process Lifecycle](03_process_lifecycle.md) -- `.processes` / `.processes.kill`
+- [Settings Management](04_settings_management.md) -- `.settings.*` read/write
+- [Version Pinning](05_version_pinning.md) -- team version alignment
 
 ### See Also
 
