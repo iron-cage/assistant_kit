@@ -1,6 +1,6 @@
 //! Isolated subprocess runner tests: `IsolatedRunResult` and `RunnerError`.
 //!
-//! T01–T09 are offline (no `lim_it`) — struct construction, Display, and type contracts.
+//! T01–T06, T09–T12 are offline (no `lim_it`) — struct construction, Display, and type contracts.
 //! T07–T08 are live (`lim_it`) — actual subprocess execution with real Claude binary.
 //!
 //! ## Test Matrix
