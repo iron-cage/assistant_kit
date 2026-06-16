@@ -158,9 +158,9 @@
 //! | ao03 | `ft09_delete_exits_1_when_not_owned` | `.account.delete` with non-owned account → exit 1, "ownership violation" | N |
 //! | ao04 | `ft10_relogin_exits_1_when_not_owned` | `.account.relogin` with non-owned account → exit 1, "ownership violation" | N |
 //! | ao05 | `ft13_dry_run_does_not_skip_ownership` | `dry::1` on use/delete/relogin with non-owned → exit 1 (ownership before dry) | N |
-//! | ao06 | `ft01_save_stamps_owner` | `.account.save` stamps `current_identity()` as owner | P |
-//! | ao07 | `ft12_save_stamps_owner` | `.account.save` stamps `current_identity()`; credentials re-saved | P |
-//! | ec3  | `ec3_save_stamps_current_identity` | `.account.save` stamps `current_identity()` | P |
+//! | ao06 | `ft01_save_does_not_stamp_owner` | `.account.save` does NOT modify `owner` — passes `owner: None`; existing value preserved | P |
+//! | ao07 | `ft12_save_does_not_stamp_owner` | `.account.save` does NOT modify `owner`; existing value preserved via read-merge | P |
+//! | ec3  | `as_save_does_not_modify_owner` | `.account.save` preserves existing `owner` field unchanged (IT-20) | P |
 //!
 //! ### AU — Account Unclaim (Feature 036 + 037; via `.accounts unclaim::1`)
 //!
@@ -4124,15 +4124,15 @@ fn cc9_unclaimed_account_passes_use_gate()
   );
 }
 
-/// FT-12 (AC-19, Feat 036): `.account.save` stamps `current_identity()` as `owner`.
+/// FT-12 (AC-19, Feat 036): `.account.save` does NOT modify the `owner` field — ownership-neutral.
 ///
-/// Pre-seed `{name}.json` with `"owner": "old@host"`. Run `.account.save` with
-/// `USER=testuser HOSTNAME=testmachine`; assert `owner` is overwritten to
-/// `"testuser@testmachine"`. Ownership stamp is written on every interactive save.
+/// Pre-seed `{name}.json` with `"owner": "old@host"`. Run `.account.save`; assert
+/// `owner` is UNCHANGED — `account_save_routine()` passes `owner: None` to `save()`,
+/// preserving the existing value via read-merge.
 ///
 /// Spec: [`tests/docs/feature/02_account_save.md` FT-12]
 #[ test ]
-fn ft12_save_stamps_owner()
+fn ft12_save_does_not_stamp_owner()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -4154,20 +4154,20 @@ fn ft12_save_stamps_owner()
   let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
   let owner = val[ "owner" ].as_str().unwrap_or( "MISSING" );
   assert_eq!(
-    owner, "testuser@testmachine",
-    "FT-12: .account.save must stamp current_identity() as owner; got: {owner:?}",
+    owner, "old@host",
+    "FT-12: .account.save must NOT modify owner — existing value must be preserved; got: {owner:?}",
   );
 }
 
-/// FT-01 (AC-01, Feat 036): `.account.save` stamps `current_identity()` as `owner`.
+/// FT-01 (AC-01, Feat 036): `.account.save` does NOT modify the `owner` field — ownership-neutral.
 ///
-/// Pre-seed `{name}.json` with `"owner": "old@host"`. After `.account.save` with
-/// `USER=testuser HOSTNAME=testmachine`, the `owner` field must be `"testuser@testmachine"`.
-/// Ownership is stamped by `account_save_routine()` passing `Some(&owner_val)` to `save()`.
+/// Pre-seed `{name}.json` with `"owner": "old@host"`. After `.account.save`, the
+/// `owner` field must remain `"old@host"` — `account_save_routine()` passes `owner: None`
+/// to `save()`, preserving the existing value via read-merge.
 ///
 /// Spec: [`tests/docs/feature/36_account_ownership.md` FT-01]
 #[ test ]
-fn ft01_save_stamps_owner()
+fn ft01_save_does_not_stamp_owner()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -4188,25 +4188,28 @@ fn ft01_save_stamps_owner()
   let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
   let owner = val[ "owner" ].as_str().unwrap_or( "MISSING" );
   assert_eq!(
-    owner, "testuser@testmachine",
-    "FT-01: .account.save must stamp current_identity() as owner; got: {owner:?}",
+    owner, "old@host",
+    "FT-01: .account.save must NOT modify owner — existing value must be preserved; got: {owner:?}",
   );
 }
 
 
-/// EC-3: `.account.save` stamps `current_identity()` as owner.
+/// IT-20 (AC-19, Feat 002): `.account.save` does NOT modify the `owner` field.
 ///
-/// After `.account.save`, `{name}.json` contains `"owner": "user1@host1"`
-/// matching the provided USER/HOSTNAME env vars.
+/// Pre-seed `{name}.json` with `"owner": "user1@host1"`. After `.account.save`,
+/// `owner` must remain `"user1@host1"` — `account_save_routine()` passes `owner: None`
+/// to `save()`, preserving the existing value via read-merge.
+///
+/// Spec: [`tests/docs/cli/command/04_account_save.md` IT-20]
 #[ test ]
-fn ec3_save_stamps_current_identity()
+fn as_save_does_not_modify_owner()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::create_dir_all( &store ).unwrap();
-  std::fs::write( store.join( "alice@acme.com.json" ), r#"{"owner":"old@host"}"# ).unwrap();
+  std::fs::write( store.join( "alice@acme.com.json" ), r#"{"owner":"user1@host1"}"# ).unwrap();
   std::fs::write( store.join( "alice@acme.com.credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
 
   let dot_claude = dir.path().join( ".claude" );
@@ -4215,7 +4218,7 @@ fn ec3_save_stamps_current_identity()
 
   let out = run_cs_with_env(
     &[ ".account.save", "name::alice@acme.com" ],
-    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
+    &[ ( "HOME", home ), ( "USER", "other" ), ( "HOSTNAME", "machine2" ) ],
   );
   assert_exit( &out, 0 );
 
@@ -4224,7 +4227,7 @@ fn ec3_save_stamps_current_identity()
   let owner = val[ "owner" ].as_str().unwrap_or( "MISSING" );
   assert_eq!(
     owner, "user1@host1",
-    "EC-3: .account.save must stamp current_identity(); got: {owner:?}",
+    "IT-20: .account.save must NOT modify owner — existing value must be preserved; got: {owner:?}",
   );
 }
 

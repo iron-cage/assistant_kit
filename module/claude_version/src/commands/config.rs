@@ -90,6 +90,13 @@ pub fn config_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resul
     other => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch,
       format!( "unknown scope '{other}': expected user or project" ) ) ),
   }
+  let scope_explicit = cmd.arguments.contains_key( "scope" );
+  let is_write       = key_opt.is_some() && ( value_opt.is_some() || is_unset );
+  if scope_explicit && !is_write
+  {
+    return Err( ErrorData::new( ErrorCode::ArgumentMissing,
+      "scope:: applies to write operations only (key:: + value:: or key:: + unset::1)".to_string() ) );
+  }
 
   // ── Mode dispatch ─────────────────────────────────────────────────────────
   match ( key_opt.as_deref(), value_opt.as_deref(), is_unset )

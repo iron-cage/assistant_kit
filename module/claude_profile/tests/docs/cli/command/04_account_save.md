@@ -25,6 +25,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 | IT-17 | Save writes org identity to `{name}.json` when endpoint 005 returns org identity | Org Identity Snapshot |
 | IT-18 | Save succeeds even when endpoint 005 call fails — no org fields in `{name}.json`, no error | Org Identity Snapshot / Best-Effort |
 | IT-19 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | Name Inference / Regression |
+| IT-20 | Save does NOT modify `owner` field — passes `owner: None`; existing value preserved via read-merge | Ownership Neutral |
 
 ### Test Coverage Summary
 
@@ -43,8 +44,9 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - Org Identity Snapshot: 1 test
 - Org Identity Snapshot / Best-Effort: 1 test
 - Name Inference / Regression: 1 test
+- Ownership Neutral: 1 test
 
-**Total:** 19 integration tests
+**Total:** 20 integration tests
 
 ---
 
@@ -236,3 +238,14 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **Exit:** 0
 - **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [002_account_save.md AC-16](../../../../docs/feature/002_account_save.md)
+
+---
+
+### IT-20: Save does NOT modify `owner` field — `owner: None` passed to `save()`
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `{credential_store}/work@acme.com.json` already exists and contains `"owner": "user1@host1"`.
+- **When:** `clp .account.save name::work@acme.com`
+- **Then:** Exit 0. stdout: `saved current credentials as 'work@acme.com'`. `{credential_store}/work@acme.com.json` still contains `"owner": "user1@host1"` — unchanged. `account_save_routine()` passes `owner: None` to `save()`; the `owner` field is preserved via read-merge.
+- **Exit:** 0
+- **Source fn:** `as_save_does_not_modify_owner`
+- **Source:** [002_account_save.md AC-19](../../../../docs/feature/002_account_save.md)

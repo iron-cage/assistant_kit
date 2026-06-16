@@ -20,7 +20,7 @@
 //! | IT-12 | Active table caption contains `Active Sessions` and `running` | Caption presence |
 //! | IT-13 | Orphaned gate file (dead PID) filtered out of queued table    | BUG-293 repro    |
 //! | IT-16 | Task column extracts Form A content for underscore CWD         | BUG-295/296/297  |
-//! | IT-17 | Task column selects Form A over Form B tool_result lines        | BUG-297 repro    |
+//! | IT-17 | Task column selects Form A over Form B `tool_result` lines      | BUG-297 repro    |
 //! | IT-19 | Task column works for CWD with no underscores (regression)     | BUG-295 regression|
 
 mod cli_binary_test_helpers;

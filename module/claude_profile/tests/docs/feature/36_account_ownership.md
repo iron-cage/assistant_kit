@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Test cases for account ownership enforcement — owner stamp via `.account.save`, `.account.unclaim` command with G8 gate, eight enforcement gates (G1–G8), backward compatibility, and `is_owned` JSON field.
+- **Purpose**: Test cases for account ownership enforcement — ownership-neutral `.account.save` and `.account.assign`, `.accounts unclaim::1` with G8 gate, eight enforcement gates (G1–G8), backward compatibility, and `is_owned` JSON field.
 - **Source**: `docs/feature/036_account_ownership.md`
 - **Covers**: AC-01 through AC-21
 
@@ -10,7 +10,7 @@
 
 | FT | AC | Scenario | Source fn |
 |----|----|----------|-----------|
-| FT-01 | AC-01 | `.account.save` stamps `current_identity()` as `owner` in `{name}.json` | `ft01_save_stamps_owner` |
+| FT-01 | AC-01 | `.account.save` does NOT modify `owner` — `account_save_routine()` passes `owner: None`; existing value preserved | `ft01_save_does_not_stamp_owner` |
 | FT-02 | AC-02 | `.account.unclaim name::alice` exits 0; writes `owner: ""`; `write_owner()` called directly — no credential re-save | `ft02_unclaim_clears_owner` |
 | FT-03 | AC-03 | No `owner::` CLI param; `unclaim::` NOT on `.account.save`; `.account.unclaim` lists `name::`, `dry::`, `trace::`; `.account.assign` does NOT list `unclaim` | `ft03_unclaim_param_placement` |
 | FT-04 | AC-04 | Non-owned account: `fetch_quota_for_list` skips token read + HTTP; reads cache; `aq.is_owned = false` | `ft04_non_owned_uses_cache_not_http` |
@@ -34,7 +34,7 @@
 
 ### Notes
 
-- FT-01 is an integration test — calls `clp .account.save name::alice` and asserts `owner` is stamped as `current_identity()` (`account_save_routine()` passes `Some(&owner_val)` to `save()`).
+- FT-01 is an integration test — calls `clp .account.save name::alice` and asserts existing `owner` field is UNCHANGED (`account_save_routine()` passes `owner: None`; ownership-neutral).
 - FT-02 is an integration test — calls `clp .account.unclaim name::alice` and asserts exit 0, `owner: ""` written, and credential file NOT re-saved (`alice.credentials.json` mtime unchanged).
 - FT-03 is structural with three cases: (a) `.account.save` help does NOT list `unclaim`; (b) `.account.unclaim` help DOES list `name::`, `dry::`, `trace::`; (c) `.account.assign` help does NOT list `unclaim`.
 - FT-04 is a unit test in `src/usage/fetch.rs` — mock-free: verify no `read_token()` call path was exercised and cache JSON is the returned value.
@@ -45,20 +45,20 @@
 - FT-11 is a unit test in `claude_profile_core/tests/account_test.rs` — `{name}.json` with no `owner` key reads as `is_owned = true`.
 - FT-12 is a render test in `src/usage/render_tests.rs` — verifies `"is_owned": true`/`"is_owned": false` in JSON object.
 - FT-13 exercises G5/G6/G7 with `dry::1` flag set — ownership guard runs first; exit 1 regardless.
-- FT-14 is a unit test in `claude_profile_core/tests/account_test.rs` — background `save()` with `owner: None` (e.g. `refresh_account_token`) on an account with `owner: "alice@host"` leaves `owner: "alice@host"` in `{name}.json`. Background callers pass `owner: None` (preserves existing); interactive `account_save_routine()` passes `Some(&owner_val)` (stamps owner). `account_assign_routine()` does NOT call `write_owner()`.
+- FT-14 is a unit test in `claude_profile_core/tests/account_test.rs` — background `save()` with `owner: None` (e.g. `refresh_account_token`) on an account with `owner: "alice@host"` leaves `owner: "alice@host"` in `{name}.json`. All `save()` callers pass `owner: None` (preserves existing owner) — both background refresh and interactive `account_save_routine()` are ownership-neutral. `account_assign_routine()` does NOT call `write_owner()`.
 - FT-18 through FT-20 are integration tests via `./verb/test` — verify exit 0 and that the expected mutation (switch/delete/relogin) proceeds despite non-owned account.
 - FT-21 is an integration test via `./verb/test` — three sub-cases (use, delete, relogin), each verifying: exit 0, `[dry-run]` line printed, no files modified. The G8 case (force+dry on unclaim) is deferred to Feature 037 tests (`37_accounts_usage_param_unification.md`).
 - FT-18–21 require `force::` (`058`) to be registered on `.account.use`, `.account.delete`, `.account.relogin` — Task 002 prerequisite.
 
 ---
 
-### FT-01: `.account.save` stamps `current_identity()` as `owner`
+### FT-01: `.account.save` does NOT modify `owner` field — ownership-neutral
 
-- **Given:** Account `alice` exists in credential store. `current_identity()` resolves to `"testuser@testmachine"`.
-- **When:** `clp .account.save name::alice` — `account_save_routine()` passes `Some(&owner_val)` to `save()` where `owner_val = current_identity()`.
-- **Then:** `alice.json` contains `"owner": "testuser@testmachine"`. Credentials re-saved. Owner field is always written on interactive save.
+- **Given:** Account `alice` exists in credential store. `alice.json` contains `"owner": "testuser@testmachine"`. `current_identity()` resolves to `"testuser@testmachine"`.
+- **When:** `clp .account.save name::alice` — `account_save_routine()` passes `owner: None` to `save()`.
+- **Then:** `alice.json` still contains `"owner": "testuser@testmachine"` — unchanged. Credentials re-saved. The `owner` field is preserved via read-merge; `account_save_routine()` does NOT call `write_owner()` or pass `Some(...)` for owner.
 - **Exit:** 0
-- **Source fn:** `ft01_save_stamps_owner`
+- **Source fn:** `ft01_save_does_not_stamp_owner`
 - **Source:** [036_account_ownership.md AC-01](../../../docs/feature/036_account_ownership.md)
 
 ---
@@ -209,7 +209,7 @@
 - **Then:** `alice.json` retains `"owner": "alice@host1"` unchanged after the save. No other `alice.json` fields are affected.
 - **Exit:** Ok(()); owner field preserved
 - **Source fn:** `ft14_background_save_preserves_owner`
-- **Note:** Background `save()` callers pass `owner: None` (preserves existing owner); interactive `account_save_routine()` passes `Some(&owner_val)`. `account_assign_routine()` does NOT call `write_owner()`. See Feature 002 FT-09 for the `update_marker` side.
+- **Note:** All `save()` callers pass `owner: None` (preserves existing owner) — both background refresh and interactive `account_save_routine()` are ownership-neutral. `account_assign_routine()` does NOT call `write_owner()`. See Feature 002 FT-09 for the `update_marker` side.
 - **Source:** [036_account_ownership.md AC-14](../../../docs/feature/036_account_ownership.md)
 
 ---

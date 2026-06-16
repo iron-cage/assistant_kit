@@ -50,7 +50,7 @@ clv.config [key::K] [value::V] [scope::SCOPE] [format::FMT] [v::N] [dry::1] [uns
 | `value::V` without `key::K` | exit 1: `key:: is required when value:: is provided` |
 | `unset::1` without `key::K` | exit 1: `key:: is required when unset::1` |
 | `value::V` and `unset::1` together | exit 1: `value:: and unset:: are mutually exclusive` |
-| `scope::project` without `key::K value::V` or `key::K unset::1` | exit 1: `scope:: only applies to write operations` |
+| `scope::` (any value) without a write operation (`key:: + value::` or `key:: + unset::1`) | exit 1: `scope:: applies to write operations only (key:: + value:: or key:: + unset::1)` |
 
 **Algorithm (4 steps):**
 1. Determine operating mode from parameter combination: show-all (no key), get (key only), set (key+value), unset (key+unset::1); exit 1 on invalid combination.

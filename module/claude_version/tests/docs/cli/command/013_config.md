@@ -53,6 +53,7 @@ Integration test planning for `.config`. See [command/config.md](../../../../doc
 | value:: without key:: | Invalid: exit 1 |
 | unset::1 without key:: | Invalid: exit 1 |
 | value:: and unset::1 together | Invalid: exit 1 |
+| scope:: (any value) without write operation | Invalid: exit 1 — covered by scope param tests EC-5, EC-7 (see `../param/011_scope.md`) and config identity GI-8 |
 
 ### Factor 6: HOME environment
 

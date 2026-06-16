@@ -32,6 +32,8 @@ If no layer supplies a value, the key is absent (not an error). See `algorithm/0
 - `scope::user` (default) — writes to `~/.claude/settings.json`
 - `scope::project` — writes to `{cwd}/.claude/settings.json` (creates directory and file if absent)
 
+Providing `scope::` without a write operation (without `key:: + value::` or `key:: + unset::1`) exits 1 with `"scope:: applies to write operations only (key:: + value:: or key:: + unset::1)"`. `scope::` in show-all or get mode is always an error — regardless of which scope value was provided.
+
 **Type inference:** The `value::` parameter is type-inferred before writing, using the same algorithm as `.settings.set`. See `algorithm/001_settings_type_inference.md`.
 
 **Known settings catalog:** Defines the `model` key with env override; see `algorithm/002_config_resolution.md` § Catalog for the full list. `.config` accepts any arbitrary key in addition to catalog keys — unknown keys have no env mapping or default.
