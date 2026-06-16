@@ -5,7 +5,7 @@
 - **Purpose**: Document the clv command-line interface for Claude Code version and settings management.
 - **Responsibility**: Reference documentation for commands, parameters, types, output formats, and user stories.
 - **In Scope**: commands, params, types, parameter groups, dictionary, user stories, output formats, environment parameters, config parameters, parameter interactions.
-- **Out of Scope**: Implementation design and behavioral contracts — validation rules, exit code semantics, pipeline architecture (→ `feature/`), design rationale (→ `001_design_decisions.md`), test planning (→ `tests/docs/cli/`).
+- **Out of Scope**: Implementation design and behavioral contracts — validation rules, exit code semantics, pipeline architecture (→ `feature/`), design rationale (→ `collection/001_design_decisions.md`), test planning (→ `tests/docs/cli/`).
 
 Manage Claude Code installation: versions, processes, and settings.
 
@@ -24,7 +24,7 @@ clv <.command> [param::value ...]
 | param/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete (12 files) |
 | type/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete (7 files) |
 | param_group/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete (5 files) |
-| 002_dictionary.md | ➖ | ✅ | ➖ | ➖ | ➖ | Complete |
+| dictionary.md | ➖ | ✅ | ➖ | ➖ | ➖ | Complete |
 | 004_parameter_interactions.md | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | env_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
 | config_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
@@ -43,7 +43,7 @@ clv <.command> [param::value ...]
 - [Types](type/readme.md) — semantic type definitions
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings
 - [Parameter Interactions](004_parameter_interactions.md) — cross-parameter constraints
-- [Dictionary](002_dictionary.md) — domain vocabulary
+- [Dictionary](dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — persona-goal scenarios
 - [Formats](format/readme.md) — output format catalog
 - [Environment Parameters](env_param.md) — environment variable reference
@@ -52,5 +52,5 @@ clv <.command> [param::value ...]
 ### See Also
 
 - [feature/001_version_management.md](../feature/001_version_management.md) — version management, architecture, constraints
-- [001_design_decisions.md](../001_design_decisions.md) — CLI redesign rationale
+- [collection/001_design_decisions.md](../collection/001_design_decisions.md) — CLI redesign rationale
 - [tests/docs/cli/](../../tests/docs/cli/readme.md) — test case planning (commands, params, groups)

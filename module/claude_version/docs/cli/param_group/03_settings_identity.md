@@ -22,8 +22,8 @@ Both parameters specify the target of a settings read or write.
 **Typical usage:**
 
 ```sh
-cm .settings.get key::theme
-cm .settings.set key::theme value::dark
+clv .settings.get key::theme
+clv .settings.set key::theme value::dark
 ```
 
 ### Referenced Commands

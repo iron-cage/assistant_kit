@@ -2,7 +2,7 @@
 
 ### Trigger
 
-Add a new file when a new named output format (`format::value`) is introduced to the cm CLI.
+Add a new file when a new named output format (`format::value`) is introduced to the clv CLI.
 
 ### Steps
 

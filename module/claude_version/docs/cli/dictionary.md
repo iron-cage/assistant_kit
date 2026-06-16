@@ -5,7 +5,7 @@
 - **Purpose**: Domain vocabulary for the clv CLI.
 - **Responsibility**: Term definitions for commands, modes, types, and architecture concepts.
 - **In Scope**: All domain terms used across clv documentation.
-- **Out of Scope**: Command reference (→ `001_commands.md`), parameter reference (→ `005_params.md`).
+- **Out of Scope**: Command reference (→ `command/readme.md`), parameter reference (→ `param/readme.md`).
 
 ### Commands
 
@@ -23,6 +23,7 @@
 | `.settings.show` | Print all key-value pairs from `~/.claude/settings.json` |
 | `.settings.get` | Read a single setting by key |
 | `.settings.set` | Write a single setting atomically via temp-file rename |
+| `.config` | Inspect or modify settings with 4-layer resolution (env var → project → user → catalog default); supports show-all, get, set, and unset modes |
 
 ### Modes
 
@@ -40,6 +41,7 @@
 | VersionSpec | Release target: `stable`, `month`, `latest`, or semver string (e.g., `1.2.3`) |
 | SettingsKey | JSON object key in `~/.claude/settings.json`; dot is literal, not a path separator |
 | SettingsValue | Value auto-typed for JSON: `"true"`/`"false"` -> bool, numbers -> number, else -> string |
+| ConfigScope | Write target for `.config`: `user` (default, `~/.claude/settings.json`) or `project` (`.claude/settings.local.json`) |
 
 ### Architecture
 
@@ -53,3 +55,4 @@
 | signal sequence | Normal kill: SIGTERM -> 2 second wait -> SIGKILL survivors |
 | last-wins | When a parameter appears multiple times, the last occurrence takes effect |
 | CmdError | Two-variant error enum: `Usage` (exit 1) and `Runtime` (exit 2) |
+| 4-layer resolution | Config resolution order: env var > project config > user config > catalog default |

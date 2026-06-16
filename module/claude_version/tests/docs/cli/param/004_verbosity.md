@@ -14,17 +14,17 @@ Edge case coverage for the `v::` alias and `verbosity::` canonical key. See [005
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| TC-097 | `.status v::0` → 3 bare lines | Explicit 0 |
-| TC-098 | `.status v::1` → labeled lines | Explicit 1 |
-| TC-108 | `.version.show v::0` → bare semver | Explicit 0 |
-| TC-109 | `.version.show v::1` → "Version: X.Y.Z" | Explicit 1 |
-| TC-118 | `.version.list v::0` → names only | Explicit 0 |
-| TC-119 | `.version.list v::1` → names + descriptions | Explicit 1 |
-| TC-164 | `.settings.show v::0` → `key=value` format | Explicit 0 |
-| TC-179 | `.settings.get v::0` → bare value only | Explicit 0 |
+| EC-12 | `.status v::0` → 3 bare lines | Explicit 0 |
+| EC-13 | `.status v::1` → labeled lines | Explicit 1 |
+| EC-14 | `.version.show v::0` → bare semver | Explicit 0 |
+| EC-15 | `.version.show v::1` → "Version: X.Y.Z" | Explicit 1 |
+| EC-16 | `.version.list v::0` → names only | Explicit 0 |
+| EC-17 | `.version.list v::1` → names + descriptions | Explicit 1 |
+| EC-18 | `.settings.show v::0` → `key=value` format | Explicit 0 |
+| EC-19 | `.settings.get v::0` → bare value only | Explicit 0 |
 | EC-1 | Last `v::` wins when duplicated | Duplication |
-| TC-428 | `.version.history v::0` → bare version+date | Explicit 0 |
-| TC-430 | `.version.history v::2` → full changelog | Explicit 2 |
+| EC-20 | `.version.history v::0` → bare version+date | Explicit 0 |
+| EC-21 | `.version.history v::2` → full changelog | Explicit 2 |
 | EC-5 | Default (absent) resolves to `v::1` | Default Behavior |
 | EC-6 | `v::0` consistently minimal across all commands | Cross-Command |
 | EC-7 | `v::3` → exit 1, out of range | Invalid: out-of-range |
@@ -53,7 +53,7 @@ Edge case coverage for the `v::` alias and `verbosity::` canonical key. See [005
 
 **Total:** 20 edge cases
 
-**Behavioral Divergence Pair:** TC-097 (`.status v::0` → 3 bare lines, exit 0) ↔ TC-098 (`.status v::1` → labeled lines, exit 0)
+**Behavioral Divergence Pair:** EC-12 (`.status v::0` → 3 bare lines, exit 0) ↔ EC-13 (`.status v::1` → labeled lines, exit 0)
 
 ---
 

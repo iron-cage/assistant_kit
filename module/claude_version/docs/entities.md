@@ -27,7 +27,7 @@
 | algorithm | 001 | Settings Type Inference | [algorithm/001_settings_type_inference.md](algorithm/001_settings_type_inference.md) |
 | algorithm | 002 | Config Resolution | [algorithm/002_config_resolution.md](algorithm/002_config_resolution.md) |
 | cli | 001 | Commands | [cli/command/readme.md](cli/command/readme.md) |
-| cli | 002 | Dictionary | [cli/002_dictionary.md](cli/002_dictionary.md) |
+| cli | 002 | Dictionary | [cli/dictionary.md](cli/dictionary.md) |
 | cli | 003 | Parameter Groups | [cli/param_group/readme.md](cli/param_group/readme.md) |
 | cli | 004 | Parameter Interactions | [cli/004_parameter_interactions.md](cli/004_parameter_interactions.md) |
 | cli | 005 | Parameters | [cli/param/readme.md](cli/param/readme.md) |

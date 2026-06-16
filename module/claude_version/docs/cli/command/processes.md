@@ -29,6 +29,10 @@ clv.processes [v::N] [format::FMT]
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
+**Algorithm (2 steps):**
+1. Scan `/proc/*/cmdline` for entries where `basename(argv[0]) == "claude"`.
+2. Render the list of matching PIDs and working directories in the requested format.
+
 **Examples:**
 
 ```sh
@@ -40,8 +44,8 @@ clv.processes format::json
 
 | # | Format | Role |
 |---|--------|------|
-| 1 | [text](../format/001_text.md) | Default human-readable output |
-| 2 | [json](../format/002_json.md) | Machine-readable structured output |
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
 
 ### Referenced Parameter Groups
 
@@ -94,6 +98,12 @@ clv.processes.kill [dry::1] [force::1] [v::N] [format::FMT]
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
+**Algorithm (4 steps):**
+1. Scan `/proc` for running Claude Code PIDs (same discovery as `.processes`).
+2. Send SIGTERM to all discovered PIDs; wait 2 seconds for graceful exit (skip if `force::1`).
+3. SIGKILL any processes still alive after the grace period (or SIGKILL all immediately if `force::1`).
+4. Wait 500ms, then verify all target PIDs have exited from `/proc`; report termination result.
+
 **Examples:**
 
 ```sh
@@ -106,8 +116,8 @@ clv.processes.kill force::1  # SIGKILL immediately
 
 | # | Format | Role |
 |---|--------|------|
-| 1 | [text](../format/001_text.md) | Default human-readable output |
-| 2 | [json](../format/002_json.md) | Machine-readable structured output |
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
 
 ### Referenced Parameter Groups
 

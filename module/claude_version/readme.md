@@ -10,7 +10,8 @@ Claude Code version manager: install, upgrade, and session lifecycle.
 | `src/` | Binary and library source code |
 | `tests/` | Unit and integration test suite |
 | `Cargo.toml` | Crate manifest |
-| `unilang.commands.yaml` | YAML command metadata for all 11 manager commands (not aggregated by build.rs) |
+| `unilang.commands.yaml` | YAML command metadata for all 12 manager commands (not aggregated by build.rs) |
 | `changelog.md` | Notable changes by version |
 | `verb/` | Shell scripts for each `do` protocol verb. |
 | `runbox/` | Shell scripts for container-orchestrated operations. |
+| `task/` | Work items and action plans for the claude_version crate. |

@@ -71,8 +71,8 @@ Integration test planning for the `.settings.show` command. See [001_commands.md
 |----|-------------|-----|------|---------|--------|
 | IT-2 | Empty `{}` → empty output, exit 0 | P | 0 | F3=empty | [read_commands_test.rs] |
 | IT-3 | Valid settings → keys shown, exit 0 | P | 0 | F3=valid | [read_commands_test.rs] |
-| TC-164 | `v::0` → `key=value` format | P | 0 | F1=0, F3=valid | [read_commands_test.rs] |
-| TC-167 | `format::json` → valid JSON object | P | 0 | F2=json, F3=valid | [read_commands_test.rs] |
+| IT-9 | `v::0` → `key=value` format | P | 0 | F1=0, F3=valid | [read_commands_test.rs] |
+| IT-10 | `format::json` → valid JSON object | P | 0 | F2=json, F3=valid | [read_commands_test.rs] |
 | IT-4 | `format::json` preserves bool/number types | P | 0 | F2=json, F5=boolean | [read_commands_test.rs] |
 
 ### Negative Tests
@@ -80,8 +80,8 @@ Integration test planning for the `.settings.show` command. See [001_commands.md
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
 | IT-1 | File missing → exit 2 | N | 2 | F3=missing | [read_commands_test.rs] |
-| TC-170 | Malformed JSON → exit 2 | N | 2 | F3=malformed | [read_commands_test.rs] |
-| TC-171 | HOME not set → exit 2 | N | 2 | F4=empty | [read_commands_test.rs] |
+| IT-11 | Malformed JSON → exit 2 | N | 2 | F3=malformed | [read_commands_test.rs] |
+| IT-12 | HOME not set → exit 2 | N | 2 | F4=empty | [read_commands_test.rs] |
 | IT-5 | `bogus::x` → exit 1 | N | 1 | F6=present | new |
 | IT-6 | `format::xml` → exit 1 | N | 1 | F2=xml | new |
 | IT-7 | `v::3` → exit 1, out of range | N | 1 | F1=3 | new |
@@ -91,7 +91,7 @@ Integration test planning for the `.settings.show` command. See [001_commands.md
 
 - **Total:** 12 tests (6 positive, 6 negative)
 - **Negative ratio:** 50.0% ✅ (≥40%)
-- **TC range:** IT-1 to IT-8
+- **IT range:** IT-1 to IT-12
 
 ---
 
@@ -101,9 +101,9 @@ Integration test planning for the `.settings.show` command. See [001_commands.md
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success | IT-2, IT-3, TC-164, TC-167, IT-4 |
+| 0 | Success | IT-2, IT-3, IT-4, IT-9, IT-10 |
 | 1 | Invalid arguments | IT-5, IT-6, IT-7 |
-| 2 | Runtime error (missing file, bad JSON, no HOME) | IT-1, TC-170, TC-171 |
+| 2 | Runtime error (missing file, bad JSON, no HOME) | IT-1, IT-11, IT-12 |
 
 ### Settings File State Coverage
 
@@ -111,8 +111,8 @@ Integration test planning for the `.settings.show` command. See [001_commands.md
 |-------|-------|
 | Missing | IT-1 (exit 2) |
 | Empty `{}` | IT-2 (exit 0, empty output) |
-| Valid with keys | IT-3, TC-164, TC-167 |
-| Malformed | TC-170 (exit 2) |
+| Valid with keys | IT-3, IT-9, IT-10 |
+| Malformed | IT-11 (exit 2) |
 
 ---
 
@@ -125,7 +125,7 @@ Integration test planning for the `.settings.show` command. See [001_commands.md
 - **Given:** `HOME=<tmp>` with no `.claude/settings.json`.
 - **When:**
   `cm .settings.show`
-  **Expected:** Exit 2.
+- **Expected:** Exit 2.
 - **Then:** see spec
 - **Exit:** 2
 
@@ -136,7 +136,7 @@ Integration test planning for the `.settings.show` command. See [001_commands.md
 - **Given:** `HOME=<tmp>`; `settings.json` = `{}`.
 - **When:**
   `cm .settings.show`
-  **Expected:** Exit 0; stdout is empty.
+- **Expected:** Exit 0; stdout is empty.
 - **Then:** no output
 - **Exit:** 0
 
@@ -147,7 +147,7 @@ Integration test planning for the `.settings.show` command. See [001_commands.md
 - **Given:** `HOME=<tmp>`; `settings.json` has `myKey = "myValue"`.
 - **When:**
   `cm .settings.show`
-  **Expected:** Exit 0; output contains "myKey" and "myValue".
+- **Expected:** Exit 0; output contains "myKey" and "myValue".
 - **Then:** key/value visible
 - **Exit:** 0
 
@@ -158,7 +158,7 @@ Integration test planning for the `.settings.show` command. See [001_commands.md
 - **Given:** `HOME=<tmp>`; settings has boolean and integer values.
 - **When:**
   `cm .settings.show format::json`
-  **Expected:** Exit 0; JSON output has `true`/`false` booleans and numeric integers (not quoted strings).
+- **Expected:** Exit 0; JSON output has `true`/`false` booleans and numeric integers (not quoted strings).
 - **Then:** type preservation
 - **Exit:** 0
 
@@ -169,7 +169,7 @@ Integration test planning for the `.settings.show` command. See [001_commands.md
 - **Given:** clean environment
 - **When:**
   `cm .settings.show bogus::x`
-  **Expected:** Exit 1.
+- **Expected:** Exit 1.
 - **Then:** see spec
 - **Exit:** 1
 
@@ -180,7 +180,7 @@ Integration test planning for the `.settings.show` command. See [001_commands.md
 - **Given:** clean environment
 - **When:**
   `cm .settings.show format::xml`
-  **Expected:** Exit 1.
+- **Expected:** Exit 1.
 - **Then:** see spec
 - **Exit:** 1
 
@@ -191,7 +191,7 @@ Integration test planning for the `.settings.show` command. See [001_commands.md
 - **Given:** clean environment
 - **When:**
   `cm .settings.show v::3`
-  **Expected:** Exit 1.
+- **Expected:** Exit 1.
 - **Then:** see spec
 - **Exit:** 1
 

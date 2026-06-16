@@ -15,12 +15,12 @@ Check what version aliases resolve to, install the pinned team version, and veri
 
 ### Acceptance Criteria
 
-- `cm .version.list` shows stable, month, and latest aliases with their resolved versions.
-- `cm .version.install version::month dry::1` shows the install plan for the monthly baseline.
-- `cm .version.install version::month` installs and applies 5-layer lock.
+- `clv .version.list` shows stable, month, and latest aliases with their resolved versions.
+- `clv .version.install version::month dry::1` shows the install plan for the monthly baseline.
+- `clv .version.install version::month` installs and applies 5-layer lock.
 - If currently at the pinned version, install is a no-op (exits 0).
-- `cm .version.show` after install confirms the pinned version is active.
-- `cm .version.guard interval::N` can watch for drift and restore the pinned version automatically.
+- `clv .version.show` after install confirms the pinned version is active.
+- `clv .version.guard interval::N` can watch for drift and restore the pinned version automatically.
 
 ### Referenced Commands
 

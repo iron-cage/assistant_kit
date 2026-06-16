@@ -31,3 +31,15 @@ mod feature_surface_test;
 
 #[ path = "integration/algorithm_surface_test.rs" ]
 mod algorithm_surface_test;
+
+#[ path = "integration/scope_param_test.rs" ]
+mod scope_param_test;
+
+#[ path = "integration/unset_param_test.rs" ]
+mod unset_param_test;
+
+#[ path = "integration/config_identity_test.rs" ]
+mod config_identity_test;
+
+#[ path = "integration/user_story_test.rs" ]
+mod user_story_test;

@@ -14,8 +14,8 @@ separators.
 - **Validation:** `"key:: is required"` if missing; `"key:: value cannot be empty"` if empty
 
 ```sh
-cm .settings.get key::theme
-cm .settings.get key::api.endpoint   # dot is literal
+clv .settings.get key::theme
+clv .settings.get key::api.endpoint   # dot is literal
 ```
 
 ### Referenced Parameters
