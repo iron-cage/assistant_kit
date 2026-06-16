@@ -45,7 +45,11 @@ impl Drop for GateFile
 /// `clr ps` can display this process in its "Queued CLR Processes" table.  The file
 /// is updated each polling iteration and removed automatically by the `GateFile` Drop
 /// guard on both normal and panic exit paths.
-pub( super ) fn wait_for_session_slot( max : u32, verbosity : VerbosityLevel )
+///
+/// When the 100-attempt limit is reached, applies Runner-class retry via
+/// `apply_runner_retry()` — the entire 100-attempt polling sequence is retried
+/// `--retry-on-runner N` times before giving up.
+pub( super ) fn wait_for_session_slot( max : u32, verbosity : VerbosityLevel, cli : &super::parse::CliArgs )
 {
   if max == 0 { return; }
   let poll         = core::time::Duration::from_secs( 30 );
@@ -66,33 +70,41 @@ pub( super ) fn wait_for_session_slot( max : u32, verbosity : VerbosityLevel )
   );
 
   // Drop guard ensures the gate file is removed on return, panic, or exit(1).
-  let _guard = GateFile( state_path.clone() );
+  let _guard         = GateFile( state_path.clone() );
+  let mut runner_attempt = 0u32;
 
-  for attempt in 1..=max_attempts
+  // Outer loop: each iteration is one full 100-poll-attempt sequence.
+  // apply_runner_retry() either returns (retries the sequence) or exits.
+  loop
   {
-    let count = find_claude_processes().len();
-    if u32::try_from( count ).unwrap_or( u32::MAX ) < max
+    for attempt in 1..=max_attempts
     {
-      return; // _guard.drop() removes the file
-    }
-    if attempt == max_attempts
-    {
-      // BUG-299: gate timeout exits without runner retry wrapper — see task/claude_runner/bug/299_runner_retry_params_dead_configuration.md
-      eprintln!(
-        "Error: --max-sessions {count}/{max} active; gave up after {max_attempts} attempts."
+      let count = find_claude_processes().len();
+      if u32::try_from( count ).unwrap_or( u32::MAX ) < max
+      {
+        return; // _guard.drop() removes the file
+      }
+      if attempt == max_attempts
+      {
+        // Fix(BUG-298): add [Runner] prefix + correct message text to match 14_error_class.md.
+        // Fix(BUG-299): wrap gate-timeout in runner retry instead of unconditional exit(1).
+        let e = std::io::Error::other(
+          format!( "session gate timed out — {count} active sessions, max-sessions={max}" )
+        );
+        super::execution::apply_runner_retry( cli, &e, &mut runner_attempt );
+        break; // non-exhaustion path: restart outer poll loop
+      }
+      if verbosity.shows_warnings()
+      {
+        eprintln!(
+          "Info: {count}/{max} sessions active; waiting 30s for a slot... (attempt {attempt}/{max_attempts})"
+        );
+      }
+      let _ = std::fs::write(
+        &state_path,
+        format!( r#"{{"cwd":"{cwd}","since":{since},"attempt":{attempt},"message":"waiting for session slot"}}"# ),
       );
-      std::process::exit( 1 );
+      std::thread::sleep( poll );
     }
-    if verbosity.shows_warnings()
-    {
-      eprintln!(
-        "Info: {count}/{max} sessions active; waiting 30s for a slot... (attempt {attempt}/{max_attempts})"
-      );
-    }
-    let _ = std::fs::write(
-      &state_path,
-      format!( r#"{{"cwd":"{cwd}","since":{since},"attempt":{attempt},"message":"waiting for session slot"}}"# ),
-    );
-    std::thread::sleep( poll );
   }
 }

@@ -11,11 +11,11 @@ fn spawn_error_msg( e : &std::io::Error ) -> String
 {
   if e.kind() == std::io::ErrorKind::NotFound
   {
-    "claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code".to_string()
+    "[Runner] claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code".to_string()
   }
   else
   {
-    format!( "Failed to execute Claude Code: {e}" )
+    format!( "[Runner] Failed to execute Claude Code: {e}" )
   }
 }
 
@@ -204,7 +204,7 @@ fn apply_expect_validation( cli : &CliArgs, builder : &ClaudeCommand, out : Stri
         let retry_output = match builder.execute()
         {
           Ok( o )  => o,
-          Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+          Err( e ) => { eprintln!( "Error: [Runner] {e}" ); std::process::exit( 1 ); }
         };
         if !retry_output.stderr.is_empty() { eprint!( "{}", retry_output.stderr ); }
         if retry_output.exit_code != 0 { std::process::exit( retry_output.exit_code ); }
@@ -249,34 +249,48 @@ fn apply_expect_validation( cli : &CliArgs, builder : &ClaudeCommand, out : Stri
 
 /// Execute one print-mode subprocess attempt with an optional timeout watchdog.
 ///
-/// Returns the completed `ExecutionOutput`. On spawn failure exits the process
-/// directly (exit 1). On timeout returns a synthetic `ExecutionOutput` with
-/// exit 4 so the caller's retry loop can apply Process-class retry logic.
+/// Returns `Ok(ExecutionOutput)` on success or timeout (exit 4 for timeout).
+/// Returns `Err(io::Error)` on spawn failure so `run_print_mode()` can apply
+/// Runner-class retry logic via `apply_runner_retry()`.
 ///
 /// When `timeout_secs == 0`, `builder.execute()` is used (blocking, no polling overhead).
 /// When `timeout_secs > 0`, `spawn_piped()` + `try_wait()` polling is used, mirroring the
 /// established pattern in `claude_runner_core::isolated`.
-fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 ) -> ExecutionOutput
+fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
+  -> Result< ExecutionOutput, std::io::Error >
 {
   if timeout_secs == 0
   {
     // Fix(BUG-240): always emit fatal spawn errors regardless of verbosity.
     // Root cause: Err(e) branch was inside `if verbosity.shows_errors()`; verbosity 0 swallowed fatal errors.
     // Pitfall: verbosity gates runner diagnostics only — never fatal errors.
+    // Fix(BUG-299): return Err instead of exit so run_print_mode() can apply runner retry.
     return match builder.execute()
     {
-      Ok( o )  => o,
-      Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+      Ok( o )  => Ok( o ),
+      Err( e ) => Err( std::io::Error::other( e.to_string() ) ),
     };
   }
 
   // Timeout path: spawn and poll with try_wait(), mirroring isolated.rs BUG-243 fix.
   // Pitfall: keep the Child in scope so child.kill() + child.wait() can recover output
   //   and prevent the subprocess from becoming an orphan.
+  // Fix(BUG-299): return Err with descriptive message so run_print_mode() can apply runner retry.
   let mut child = match builder.spawn_piped()
   {
     Ok( c )  => c,
-    Err( e ) => { eprintln!( "Error: {}", spawn_error_msg( &e ) ); std::process::exit( 1 ); }
+    Err( e ) =>
+    {
+      let msg = if e.kind() == std::io::ErrorKind::NotFound
+      {
+        "claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code".to_string()
+      }
+      else
+      {
+        format!( "Failed to execute Claude Code: {e}" )
+      };
+      return Err( std::io::Error::other( msg ) );
+    }
   };
 
   let deadline = std::time::Instant::now()
@@ -296,23 +310,62 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 ) -> Exec
         let exit_code = signal_exit_code( &raw.status );
         let stdout = String::from_utf8_lossy( &raw.stdout ).to_string();
         let stderr = String::from_utf8_lossy( &raw.stderr ).to_string();
-        return ExecutionOutput { stdout, stderr, exit_code };
+        return Ok( ExecutionOutput { stdout, stderr, exit_code } );
       }
       Ok( None ) =>
       {
         if check_timeout( &mut child, deadline )
         {
-          return ExecutionOutput
+          return Ok( ExecutionOutput
           {
             stdout   : String::new(),
             stderr   : format!( "timeout after {timeout_secs}s" ),
             exit_code : 4,
-          };
+          } );
         }
       }
       Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
     }
   }
+}
+
+/// Apply Runner-class retry logic for spawn failures.
+///
+/// On non-final attempt: emits a `[Runner]` retry message, sleeps the configured
+/// delay, and returns `()` so the caller can re-attempt the spawn.
+/// On exhaustion: emits a `[Runner]` error message and calls `std::process::exit(1)`.
+/// Visibility `pub(super)` so gate.rs (sibling under `cli/`) can call it for gate timeouts.
+///
+/// # Fix(BUG-299)
+/// Root cause: `--retry-on-runner`/`--runner-delay` params were parsed but never wired to
+///   any retry call site — all spawn-error arms called `exit(1)` directly, bypassing the system.
+/// Pitfall: Runner retry is caller-driven (Option B): `run_print_mode()` owns the outer loop
+///   and calls `execute_print_attempt()` again after `apply_runner_retry()` returns `()`.
+///   Unlike `apply_expect_validation()` (owns its loop), this function only decides+waits.
+pub( super ) fn apply_runner_retry( cli : &CliArgs, err : &std::io::Error, attempt : &mut u32 )
+{
+  let count = resolve_count( cli.retry_override, cli.retry_on_runner, cli.retry_default );
+  let delay = resolve_delay( cli.retry_override_delay, cli.runner_delay, cli.retry_default_delay );
+  let msg   = err.to_string();
+
+  if *attempt < u32::from( count )
+  {
+    *attempt += 1;
+    let suf = delay_suffix( delay );
+    eprintln!(
+      "[Runner] {msg} — retrying{suf} (attempt {}/{})…",
+      *attempt,
+      u32::from( count ) + 1
+    );
+    if delay > 0
+    {
+      std::thread::sleep( core::time::Duration::from_secs( u64::from( delay ) ) );
+    }
+    return;
+  }
+
+  eprintln!( "Error: [Runner] {msg} — retries exhausted (exit 1)" );
+  std::process::exit( 1 );
 }
 
 /// Execute in non-interactive print mode (captures output).
@@ -333,13 +386,20 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
   let timeout_secs = cli.timeout.unwrap_or( 0 );
   // Per-class attempt counters: [Transient, Account, Auth, Service, Process, Unknown]
   let mut attempts = [ 0usize; 6 ];
+  // Fix(BUG-299): Runner retry counter — tracks spawn failure attempts separately from class retries.
+  let mut runner_attempt = 0u32;
 
   loop
   {
     // Fix(BUG-240): spawn errors always emitted regardless of verbosity (inside execute_print_attempt).
     // Root cause: Err(e) branch was guarded by verbosity check; verbosity 0 swallowed fatal spawn errors.
     // Pitfall: verbosity gates diagnostics only — fatal errors must surface regardless of verbosity level.
-    let output = execute_print_attempt( builder, timeout_secs );
+    // Fix(BUG-299): handle Err(spawn_err) from execute_print_attempt() via apply_runner_retry().
+    let output = match execute_print_attempt( builder, timeout_secs )
+    {
+      Ok( o )  => o,
+      Err( e ) => { apply_runner_retry( cli, &e, &mut runner_attempt ); continue; }
+    };
 
     if !output.stderr.is_empty() { eprint!( "{}", output.stderr ); }
 
@@ -428,7 +488,7 @@ pub( super ) fn run_interactive( builder : &ClaudeCommand, cli : &CliArgs )
     let status = match builder.execute_interactive()
     {
       Ok( s )  => s,
-      Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+      Err( e ) => { eprintln!( "Error: [Runner] {e}" ); std::process::exit( 1 ); }
     };
     if !status.success()
     {

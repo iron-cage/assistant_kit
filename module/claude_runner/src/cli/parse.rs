@@ -86,7 +86,6 @@ pub( crate ) struct CliArgs
   pub( crate ) process_delay           : Option< u32 >,
   pub( crate ) retry_on_validation     : Option< u8 >,
   pub( crate ) validation_delay        : Option< u32 >,
-  // BUG-299: retry_on_runner/runner_delay parsed and stored but never consumed at runtime — see task/claude_runner/bug/299_runner_retry_params_dead_configuration.md
   pub( crate ) retry_on_runner         : Option< u8 >,
   pub( crate ) runner_delay            : Option< u32 >,
   pub( crate ) retry_on_unknown        : Option< u8 >,

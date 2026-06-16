@@ -11,11 +11,18 @@ use data_fmt::{ RowBuilder, TableFormatter, TableConfig, TableCaption, Format };
 /// exits 1 on any unexpected argument.
 pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
 {
-  // `ps` takes no flags or positional arguments.
-  if let Some( tok ) = tokens.get( 1 )
+  // `ps` takes no flags or positional arguments — but intercepts help tokens.
+  if let Some( arg ) = tokens.get( 1 )
   {
-    eprintln!( "Error: unexpected argument: {tok}\nRun 'clr --help' for usage." );
-    std::process::exit( 1 );
+    match arg.as_str()
+    {
+      "--help" | "-h" | "help" => { super::help::print_ps_help(); }
+      _ =>
+      {
+        eprintln!( "clr ps: unexpected argument `{arg}`\nRun 'clr --help' for usage." );
+        std::process::exit( 1 );
+      }
+    }
   }
 
   let procs        = find_claude_processes();
@@ -186,7 +193,12 @@ fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
 {
   let home    = std::env::var( "HOME" ).ok()?;
   let cwd_str = proc.cwd.to_str()?;
-  let encoded = cwd_str.replace( '/', "-" );
+  // Fix(BUG-295): Claude encodes both '/' and '_' as '-' in project directory names.
+  // Root cause: only '/' was replaced; underscore-containing CWDs produced a mismatched
+  //   directory name, causing read_dir() to fail silently (None → "interactive").
+  // Pitfall: Claude's project path encoding is not "replace slashes only" — any code
+  //   constructing a ~/.claude/projects/ path must also convert underscores to dashes.
+  let encoded = cwd_str.replace( '/', "-" ).replace( '_', "-" );
   let dir     = std::path::Path::new( &home )
     .join( ".claude" )
     .join( "projects" )
@@ -206,13 +218,33 @@ fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
     } )?
     .path();
 
-  // Scan for the last line containing `"type":"user"`.
+  // Scan for the last Form A user line.
+  //
+  // Fix(BUG-297): The previous predicate (`l.contains(r#""type":"user""#)`) picked
+  //   the last "type":"user" line regardless of form. In active sessions that line
+  //   is always a Form B tool_result entry (content array), not the human question.
+  // Root cause: Claude JSONL stores both human messages (Form A: bare string content)
+  //   and tool_result callbacks (Form B: content array) as "type":"user". The last
+  //   "type":"user" line in an active session is nearly always Form B.
+  // Pitfall: "type":"user" does NOT mean human-authored — it means user-role. Always
+  //   discriminate by content structure: Form A has `"content":"`, Form B has `"content":[`.
+  //
+  // Fix(BUG-296): The extraction marker was `"text":"` but Form A content is stored
+  //   in the `"content"` field, not `"text"`. The wrong marker always returned None.
+  // Root cause: Form A structure is `{"content":"<text>"}` not `{"text":"<text>"}`.
+  // Pitfall: Do not confuse the inner tool_result `text` field with the outer message
+  //   `content` field — they are at different nesting levels.
   let content   = std::fs::read_to_string( jsonl_path ).ok()?;
   let last_user = content.lines().rev()
-    .find( | l | l.contains( r#""type":"user""# ) )?;
+    .find( | l |
+    {
+      l.contains( r#""type":"user""# )
+        && l.contains( r#""content":""# ) // Form A: bare string content
+        && !l.contains( r#""content":["# ) // exclude Form B: array content
+    } )?;
 
-  // Extract the `"text":"..."` value with a simple substring search.
-  let marker     = r#""text":""#;
+  // Extract the `"content":"..."` value with a simple substring search.
+  let marker     = r#""content":""#;
   let text_start = last_user.find( marker ).map( | i | i + marker.len() )?;
   let rest       = &last_user[ text_start .. ];
   let text_end   = rest.find( '"' )?;
