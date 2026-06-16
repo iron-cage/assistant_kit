@@ -40,6 +40,7 @@ use crate::cli_runner::{
   run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
   write_credentials, write_account,
+  live_active_token,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -232,6 +233,11 @@ fn lim05_existing_named_account_exits_2_with_data_unavailable()
 #[ test ]
 fn lim_it1_active_account_exits_0_with_utilization_text()
 {
+  if live_active_token().is_none()
+  {
+    eprintln!( "lim_it1: no live token — skipping" );
+    return;
+  }
   let out = run_cs( &[ ".account.limits" ] );
   assert_exit( &out, 0 );
   let output = stdout( &out );
@@ -261,6 +267,11 @@ fn lim_it1_active_account_exits_0_with_utilization_text()
 #[ test ]
 fn lim_it3_json_format_exits_0_with_valid_json()
 {
+  if live_active_token().is_none()
+  {
+    eprintln!( "lim_it3: no live token — skipping" );
+    return;
+  }
   let out = run_cs( &[ ".account.limits", "format::json" ] );
   assert_exit( &out, 0 );
   let output = stdout( &out );

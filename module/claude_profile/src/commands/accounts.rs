@@ -9,6 +9,118 @@ use data_fmt::{ RowBuilder, TableFormatter, Format };
 use crate::output::{ OutputFormat, OutputOptions, json_escape, format_duration_secs };
 use super::shared::{ require_credential_store, io_err_to_error_data, resolve_account_name, caps_to_json };
 
+// ── Column visibility ─────────────────────────────────────────────────────────
+
+/// Column visibility set for `.accounts` text/table output.
+///
+/// Default set (default-on): account, owner, active, current, sub, tier, expires, email.
+/// Opt-in: `display_name`, host, role, billing, model, uuid, capabilities, `org_uuid`, `org_name`.
+///
+/// Constructed via [`IdentityCols::default_set()`] or parsed from a `cols::` modifier string
+/// (comma-separated `+col_id` / `-col_id` tokens) via [`IdentityCols::parse()`].
+// IdentityCols is a pure column-visibility bitfield; all 17 flags are intentional.
+#[ allow( clippy::struct_excessive_bools ) ]
+#[ derive( Clone, Debug ) ]
+struct IdentityCols
+{
+  account      : bool,
+  owner        : bool,
+  active       : bool,
+  current      : bool,
+  sub          : bool,
+  tier         : bool,
+  expires      : bool,
+  email        : bool,
+  display_name : bool,
+  host         : bool,
+  role         : bool,
+  billing      : bool,
+  model        : bool,
+  uuid         : bool,
+  capabilities : bool,
+  org_uuid     : bool,
+  org_name     : bool,
+}
+
+impl IdentityCols
+{
+  fn default_set() -> Self
+  {
+    Self
+    {
+      account      : true,
+      owner        : true,
+      active       : true,
+      current      : true,
+      sub          : true,
+      tier         : true,
+      expires      : true,
+      email        : true,
+      display_name : false,
+      host         : false,
+      role         : false,
+      billing      : false,
+      model        : false,
+      uuid         : false,
+      capabilities : false,
+      org_uuid     : false,
+      org_name     : false,
+    }
+  }
+
+  /// Parse a `cols::` modifier string into an `IdentityCols`.
+  ///
+  /// Starts from [`default_set()`] and applies each `+col_id` / `-col_id` token.
+  /// Returns `Err` on unknown col IDs or tokens missing `+`/`-` prefix.
+  fn parse( s : &str ) -> Result< Self, unilang::data::ErrorData >
+  {
+    let mut cols = Self::default_set();
+    for token in s.split( ',' ).map( str::trim ).filter( |t| !t.is_empty() )
+    {
+      let ( flag, name ) = if let Some( n ) = token.strip_prefix( '+' )
+      {
+        ( true, n )
+      }
+      else if let Some( n ) = token.strip_prefix( '-' )
+      {
+        ( false, n )
+      }
+      else
+      {
+        return Err( unilang::data::ErrorData::new(
+          unilang::data::ErrorCode::ArgumentTypeMismatch,
+          format!( "cols:: token '{token}' must start with '+' or '-'" ),
+        ) );
+      };
+      match name
+      {
+        "account"      => cols.account      = flag,
+        "owner"        => cols.owner        = flag,
+        "active"       => cols.active       = flag,
+        "current"      => cols.current      = flag,
+        "sub"          => cols.sub          = flag,
+        "tier"         => cols.tier         = flag,
+        "expires"      => cols.expires      = flag,
+        "email"        => cols.email        = flag,
+        "display_name" => cols.display_name = flag,
+        "host"         => cols.host         = flag,
+        "role"         => cols.role         = flag,
+        "billing"      => cols.billing      = flag,
+        "model"        => cols.model        = flag,
+        "uuid"         => cols.uuid         = flag,
+        "capabilities" => cols.capabilities = flag,
+        "org_uuid"     => cols.org_uuid     = flag,
+        "org_name"     => cols.org_name     = flag,
+        _ => return Err( unilang::data::ErrorData::new(
+          unilang::data::ErrorCode::ArgumentTypeMismatch,
+          format!( "unknown cols:: column id '{name}'; valid: account, owner, active, current, sub, tier, expires, email, display_name, host, role, billing, model, uuid, capabilities, org_uuid, org_name" ),
+        ) ),
+      }
+    }
+    Ok( cols )
+  }
+}
+
 // ── Single-consumer helpers ───────────────────────────────────────────────────
 
 /// Detect which saved account matches the live session token.
@@ -40,50 +152,44 @@ fn detect_current_account(
   None
 }
 
-/// Render an account list in text format with field-presence control.
+/// Render an account list in text format controlled by [`IdentityCols`].
 ///
 /// Returns `"(no accounts configured)\n"` when `accounts` is empty.
-/// When any field flag is `true`, each account block is followed by its fields
-/// and separated from the next account by a blank line.
-// Conditional rendering for 18 optional account fields; extraction into a helper
-// would require passing all booleans again — no readability gain.
-#[ allow( clippy::fn_params_excessive_bools, clippy::too_many_arguments, clippy::too_many_lines ) ]
+/// When any field in `cols` is enabled, each account block is followed by its
+/// field lines and separated from the next account by a blank line.
+/// `owners` must be parallel to `accounts` (one owner string per account);
+/// pass an empty slice when `cols.owner` is false.
+#[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 fn render_accounts_text(
-  accounts          : &[ &crate::account::Account ],
-  show_active       : bool,
-  show_current      : bool,
-  current_name      : Option< &str >,
-  show_sub          : bool,
-  show_tier         : bool,
-  show_expires      : bool,
-  show_email        : bool,
-  show_display_name : bool,
-  show_host         : bool,
-  show_role         : bool,
-  show_billing      : bool,
-  show_model        : bool,
-  show_uuid         : bool,
-  show_capabilities : bool,
-  show_org_uuid     : bool,
-  show_org_name     : bool,
+  accounts     : &[ &crate::account::Account ],
+  owners       : &[ String ],
+  cols         : &IdentityCols,
+  current_name : Option< &str >,
 ) -> String
 {
   if accounts.is_empty() { return "(no accounts configured)\n".to_string(); }
-  // show_current is false when current::0 or when creds file is unreadable (current_name=None).
-  let emit_current = show_current && current_name.is_some();
-  let any_field = show_active || emit_current || show_sub || show_tier || show_expires || show_email
-    || show_display_name || show_host || show_role || show_billing || show_model || show_uuid
-    || show_capabilities || show_org_uuid || show_org_name;
-  let mut out   = String::new();
-  let last_idx  = accounts.len() - 1;
+  // emit_current is false when cols.current is false or when current_name is None.
+  let emit_current = cols.current && current_name.is_some();
+  let any_field = cols.owner || cols.active || emit_current || cols.sub || cols.tier
+    || cols.expires || cols.email || cols.display_name || cols.host || cols.role
+    || cols.billing || cols.model || cols.uuid || cols.capabilities || cols.org_uuid
+    || cols.org_name;
+  let mut out  = String::new();
+  let last_idx = accounts.len() - 1;
   for ( idx, a ) in accounts.iter().enumerate()
   {
     out.push_str( &a.name );
     out.push( '\n' );
     if any_field
     {
-      if show_active
+      if cols.owner
+      {
+        let owner_raw = owners.get( idx ).map_or( "", String::as_str );
+        let owner_val = if owner_raw.is_empty() { "\u{2014}" } else { owner_raw };
+        let _ = writeln!( out, "  Owner:   {owner_val}" );
+      }
+      if cols.active
       {
         let active_str = if a.is_active { "yes" } else { "no" };
         let _ = writeln!( out, "  Active:  {active_str}" );
@@ -93,17 +199,17 @@ fn render_accounts_text(
         let current_str = if current_name == Some( a.name.as_str() ) { "yes" } else { "no" };
         let _ = writeln!( out, "  Current: {current_str}" );
       }
-      if show_sub
+      if cols.sub
       {
         let sub = if a.subscription_type.is_empty() { "N/A" } else { &a.subscription_type };
         let _ = writeln!( out, "  Sub:     {sub}" );
       }
-      if show_tier
+      if cols.tier
       {
         let tier = if a.rate_limit_tier.is_empty() { "N/A" } else { &a.rate_limit_tier };
         let _ = writeln!( out, "  Tier:    {tier}" );
       }
-      if show_expires
+      if cols.expires
       {
         let ts  = claude_profile_core::token::classify_ms( a.expires_at_ms, crate::token::WARNING_THRESHOLD_SECS );
         let exp = match &ts
@@ -119,42 +225,42 @@ fn render_accounts_text(
         };
         let _ = writeln!( out, "  Expires: {exp}" );
       }
-      if show_email
+      if cols.email
       {
         let email = if a.email.is_empty() { "N/A" } else { &a.email };
         let _ = writeln!( out, "  Email:   {email}" );
       }
-      if show_display_name
+      if cols.display_name
       {
         let dn = if a.display_name.is_empty() { "N/A" } else { &a.display_name };
         let _ = writeln!( out, "  Display: {dn}" );
       }
-      if show_host
+      if cols.host
       {
         let host = if a.profile_host.is_empty() { "N/A" } else { &a.profile_host };
         let _ = writeln!( out, "  Host:    {host}" );
       }
-      if show_role
+      if cols.role
       {
         let role = if a.profile_role.is_empty() { "N/A" } else { &a.profile_role };
         let _ = writeln!( out, "  Role:    {role}" );
       }
-      if show_billing
+      if cols.billing
       {
         let billing = if a.billing.is_empty() { "N/A" } else { &a.billing };
         let _ = writeln!( out, "  Billing: {billing}" );
       }
-      if show_model
+      if cols.model
       {
         let model = if a.model.is_empty() { "N/A" } else { &a.model };
         let _ = writeln!( out, "  Model:   {model}" );
       }
-      if show_uuid
+      if cols.uuid
       {
         let id_val = if a.tagged_id.is_empty() { "N/A" } else { &a.tagged_id };
         let _ = writeln!( out, "  ID:      {id_val}" );
       }
-      if show_capabilities
+      if cols.capabilities
       {
         let cap_val = if a.capabilities.is_empty()
         {
@@ -166,12 +272,12 @@ fn render_accounts_text(
         };
         let _ = writeln!( out, "  Capabilities: {cap_val}" );
       }
-      if show_org_uuid
+      if cols.org_uuid
       {
         let val = if a.organization_uuid.is_empty() { "N/A" } else { &a.organization_uuid };
         let _ = writeln!( out, "  Org ID:  {val}" );
       }
-      if show_org_name
+      if cols.org_name
       {
         let val = if a.organization_name.is_empty() { "N/A" } else { &a.organization_name };
         let _ = writeln!( out, "  Org:     {val}" );
@@ -224,11 +330,14 @@ fn render_accounts_json( accounts : &[ &crate::account::Account ], current_name 
 
 /// Render a slice of accounts as a `data_fmt` ASCII table.
 ///
-/// Columns: flag (active/current marker), Account, Active, Sub, Tier, Expires.
-/// `current_name` is matched against account names to populate the flag column;
-/// `✓` = current, `*` = active-but-not-current, blank otherwise.
+/// Columns respect `cols`: flag (active/current marker), Account, Owner (when `cols.owner`),
+/// Active (when `cols.active`), Sub, Tier, Expires. `current_name` populates the flag
+/// column (`✓` = current, `*` = active-but-not-current, blank otherwise).
+/// `owners` must be parallel to `accounts`; pass an empty slice when `cols.owner` is false.
 fn render_accounts_table(
   accounts     : &[ &crate::account::Account ],
+  owners       : &[ String ],
+  cols         : &IdentityCols,
   current_name : Option< &str >,
 ) -> String
 {
@@ -241,17 +350,15 @@ fn render_accounts_table(
     .unwrap_or_default()
     .as_secs();
 
-  let headers = vec![
-    String::new(),
-    "Account".to_string(),
-    "Active".to_string(),
-    "Sub".to_string(),
-    "Tier".to_string(),
-    "Expires".to_string(),
-  ];
+  let mut headers = vec![ String::new(), "Account".to_string() ];
+  if cols.owner  { headers.push( "Owner".to_string()  ); }
+  if cols.active { headers.push( "Active".to_string() ); }
+  headers.push( "Sub".to_string() );
+  headers.push( "Tier".to_string() );
+  headers.push( "Expires".to_string() );
 
   let mut builder = RowBuilder::new( headers );
-  for acct in accounts
+  for ( idx, acct ) in accounts.iter().enumerate()
   {
     let is_current = current_name == Some( acct.name.as_str() );
     let flag_cell  = if is_current { "✓".to_string() }
@@ -268,14 +375,19 @@ fn render_accounts_table(
       format!( "in {}", format_duration_secs( remaining ) )
     };
 
-    builder = builder.add_row( vec![
-      flag_cell.into(),
-      acct.name.clone().into(),
-      if acct.is_active { "yes" } else { "no" }.into(),
-      acct.subscription_type.clone().into(),
-      acct.rate_limit_tier.clone().into(),
-      expires_cell.into(),
-    ] );
+    let mut row = vec![ flag_cell.into(), acct.name.clone().into() ];
+    if cols.owner
+    {
+      let owner_raw = owners.get( idx ).map_or( "", String::as_str );
+      let owner_val = if owner_raw.is_empty() { "\u{2014}".to_string() } else { owner_raw.to_string() };
+      row.push( owner_val.into() );
+    }
+    if cols.active { row.push( if acct.is_active { "yes" } else { "no" }.into() ); }
+    row.push( acct.subscription_type.clone().into() );
+    row.push( acct.rate_limit_tier.clone().into() );
+    row.push( expires_cell.into() );
+
+    builder = builder.add_row( row );
   }
 
   let view  = builder.build_view();
@@ -373,6 +485,14 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
 
     if name_arg.is_empty()
     {
+      // Distinguish name:: provided-empty (error) from name:: absent (usage block).
+      if cmd.arguments.contains_key( "name" )
+      {
+        return Err( ErrorData::new(
+          ErrorCode::ArgumentMissing,
+          "name:: value cannot be empty".to_string(),
+        ) );
+      }
       // No name:: → emit live usage block showing current machine identity.
       let user    = std::env::var( "USER" )
         .or_else( |_| std::env::var( "USERNAME" ) )
@@ -534,21 +654,61 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
     return Ok( OutputData::new( format!( "unclaimed {name_arg}\n" ), "text" ) );
   }
 
-  let show_active       = matches!( cmd.arguments.get( "active"       ), Some( Value::Boolean( true ) ) | None );
-  let show_current      = matches!( cmd.arguments.get( "current"      ), Some( Value::Boolean( true ) ) | None );
-  let show_sub          = matches!( cmd.arguments.get( "sub"          ), Some( Value::Boolean( true ) ) | None );
-  let show_tier         = matches!( cmd.arguments.get( "tier"         ), Some( Value::Boolean( true ) ) | None );
-  let show_expires      = matches!( cmd.arguments.get( "expires"      ), Some( Value::Boolean( true ) ) | None );
-  let show_email        = matches!( cmd.arguments.get( "email"        ), Some( Value::Boolean( true ) ) | None );
-  let show_display_name = matches!( cmd.arguments.get( "display_name" ), Some( Value::Boolean( true ) ) );
-  let show_host         = crate::output::parse_int_flag( &cmd, "host",         0 )? != 0;
-  let show_role         = matches!( cmd.arguments.get( "role"         ), Some( Value::Boolean( true ) ) );
-  let show_billing      = matches!( cmd.arguments.get( "billing"      ), Some( Value::Boolean( true ) ) );
-  let show_model        = matches!( cmd.arguments.get( "model"        ), Some( Value::Boolean( true ) ) );
-  let show_uuid         = crate::output::parse_int_flag( &cmd, "uuid",         0 )? != 0;
-  let show_capabilities = crate::output::parse_int_flag( &cmd, "capabilities", 0 )? != 0;
-  let show_org_uuid     = crate::output::parse_int_flag( &cmd, "org_uuid",     0 )? != 0;
-  let show_org_name     = crate::output::parse_int_flag( &cmd, "org_name",     0 )? != 0;
+  // ── Legacy field-toggle rejection (Feature 037 — removed; use cols:: instead) ─
+  // Params remain registered so the framework routes to this routine; the routine
+  // rejects them explicitly to provide a helpful migration message.
+  const REMOVED_TOGGLES : &[ ( &str, &str ) ] = &[
+    ( "active",       "-active" ),
+    ( "current",      "-current" ),
+    ( "sub",          "-sub" ),
+    ( "tier",         "-tier" ),
+    ( "expires",      "-expires" ),
+    ( "email",        "-email" ),
+    ( "display_name", "+display_name" ),
+    ( "host",         "+host" ),
+    ( "role",         "+role" ),
+    ( "billing",      "+billing" ),
+    ( "model",        "+model" ),
+    ( "uuid",         "+uuid" ),
+    ( "capabilities", "+capabilities" ),
+    ( "org_uuid",     "+org_uuid" ),
+    ( "org_name",     "+org_name" ),
+  ];
+  for ( param, suggestion ) in REMOVED_TOGGLES
+  {
+    if cmd.arguments.contains_key( *param )
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        format!( "parameter '{param}' removed — use 'cols::{suggestion}' instead" ),
+      ) );
+    }
+  }
+
+  // ── Parse cols:: modifier string into IdentityCols ────────────────────────────
+  let cols_raw = match cmd.arguments.get( "cols" )
+  {
+    Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
+    _ => String::new(),
+  };
+  let cols = if cols_raw.is_empty()
+  {
+    IdentityCols::default_set()
+  }
+  else
+  {
+    IdentityCols::parse( &cols_raw )?
+  };
+
+  // Compute owner strings for display (skipped when cols.owner is false to avoid I/O).
+  let owners : Vec< String > = if cols.owner
+  {
+    accounts.iter().map( |a| crate::account::read_owner( &credential_store, &a.name ) ).collect()
+  }
+  else
+  {
+    Vec::new()
+  };
 
   // Detect which account matches the live session token (graceful: None when creds absent).
   let live_creds = crate::ClaudePaths::new()
@@ -560,18 +720,11 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
     OutputFormat::Json => render_accounts_json( &accounts, current_name.as_deref() ),
     OutputFormat::Text =>
     {
-      render_accounts_text(
-        &accounts,
-        show_active, show_current, current_name.as_deref(),
-        show_sub, show_tier, show_expires, show_email,
-        show_display_name, show_host, show_role, show_billing, show_model,
-        show_uuid, show_capabilities,
-        show_org_uuid, show_org_name,
-      )
+      render_accounts_text( &accounts, &owners, &cols, current_name.as_deref() )
     }
     OutputFormat::Table =>
     {
-      render_accounts_table( &accounts, current_name.as_deref() )
+      render_accounts_table( &accounts, &owners, &cols, current_name.as_deref() )
     }
   };
   Ok( OutputData::new( content, "text" ) )

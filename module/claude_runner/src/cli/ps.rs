@@ -186,7 +186,13 @@ fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
 {
   let home    = std::env::var( "HOME" ).ok()?;
   let cwd_str = proc.cwd.to_str()?;
-  let encoded = cwd_str.replace( '/', "-" );
+
+  // Fix(BUG-295): Claude encodes both `/` and `_` as `-` in project directory names.
+  // Root cause: the original `replace('/', "-")` only handled slashes; underscore-
+  //   containing paths produced a wrong encoded key, so the JSONL dir was never found.
+  // Pitfall: Claude's encoding maps both `/` and `_` to `-` in one pass, producing a
+  //   flat lowercase-hyphen-only directory name.
+  let encoded = cwd_str.replace( [ '/', '_' ], "-" );
   let dir     = std::path::Path::new( &home )
     .join( ".claude" )
     .join( "projects" )
@@ -206,13 +212,24 @@ fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
     } )?
     .path();
 
-  // Scan for the last line containing `"type":"user"`.
+  // Scan for the last Form A user line (string `"content"`, not array).
+  //
+  // Fix(BUG-297): the old predicate `.find(| l | l.contains(r#""type":"user""#))`
+  //   returned the last `"type":"user"` line, which in any active session is a
+  //   Form B tool_result entry with `"content":[...]` — not the human's question.
+  // Fix: additionally require `"content":"` (string value) and exclude `"content":[`
+  //   (array value). Form B always serialises the outer content as a JSON array.
   let content   = std::fs::read_to_string( jsonl_path ).ok()?;
   let last_user = content.lines().rev()
-    .find( | l | l.contains( r#""type":"user""# ) )?;
+    .find( | l |
+      l.contains( r#""type":"user""# )
+        && l.contains( r#""content":""# )
+        && !l.contains( r#""content":["# )
+    )?;
 
-  // Extract the `"text":"..."` value with a simple substring search.
-  let marker     = r#""text":""#;
+  // Fix(BUG-296): Claude's Form A stores the human message in `"content":"..."`, not
+  //   `"text":"..."`. The old marker matched nothing, silently returning `None`.
+  let marker     = r#""content":""#;
   let text_start = last_user.find( marker ).map( | i | i + marker.len() )?;
   let rest       = &last_user[ text_start .. ];
   let text_end   = rest.find( '"' )?;

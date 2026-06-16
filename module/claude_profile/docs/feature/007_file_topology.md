@@ -49,6 +49,12 @@ All methods return `PathBuf` computed from `HOME`. No filesystem access is perfo
 |------|--------------|
 | [command/004_paths.md](../cli/command/004_paths.md#command--8-paths) | CLI command specification |
 
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [007_json_storage_format.md](../invariant/007_json_storage_format.md) | Files written at these paths (`credentials_file()`, `settings_file()`, `claude_json_file()`) must use 2-space pretty-printed JSON with trailing newline |
+
 ### Features
 
 | File | Relationship |

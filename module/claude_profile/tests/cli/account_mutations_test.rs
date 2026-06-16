@@ -162,11 +162,11 @@
 //! | ao07 | `ft12_save_stamps_owner` | `.account.save` stamps `current_identity()`; credentials re-saved | P |
 //! | ec3  | `ec3_save_stamps_current_identity` | `.account.save` stamps `current_identity()` | P |
 //!
-//! ### AU — Account Unclaim (Feature 036, Command 17)
+//! ### AU — Account Unclaim (Feature 036 + 037; via `.accounts unclaim::1`)
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | ft02 | `ft02_unclaim_clears_owner` | `.account.unclaim` → owner `""`, credential mtime unchanged | P |
+//! | ft02 | `ft02_unclaim_clears_owner` | `.accounts unclaim::1 name::X` → owner `""`, credential mtime unchanged | P |
 //! | ft15 | `ft15_unclaim_not_on_save_or_assign` | `.account.save unclaim::1` exits 1; `.account.assign unclaim::1` exits 1 | N |
 //! | ft16 | `ft16_unclaim_g8_gate` | G8: non-owner exits 1; unowned exits 0 (idempotent) | N/P |
 //! | ft17 | `ft17_unclaim_dry_run` | `dry::1` prints preview; files unchanged | P |
@@ -178,7 +178,7 @@
 //! | it06 | `it06_unclaim_dry_run` | `dry::1` → [dry-run] message, no file change | P |
 //! | it07 | `it07_unclaim_g8_before_dry` | non-owner + `dry::1` → exit 1 before dry-run | N |
 //! | it08 | `it08_unclaim_unknown_account` | unknown account → exit 2 | N |
-//! | it09 | `it09_unclaim_missing_name` | missing `name::` → exit 1 | N |
+//! | it09 | `it09_unclaim_missing_name` | `.accounts unclaim::1` (no name) → batch empty store → exit 0 | P |
 //! | it10 | `it10_unclaim_unknown_param` | unknown parameter → exit 1 | N |
 //! | it11 | `it11_unclaim_preserves_renewal_at` | `_renewal_at` preserved via read-merge | P |
 
@@ -649,7 +649,7 @@ fn ad08_delete_then_list_absent()
 
   let _ = run_cs_with_env( &[ ".account.delete", "name::alice@oldco.com" ], &[ ( "HOME", home ) ] );
 
-  let out = run_cs_with_env( &[ ".accounts", "active::0", "sub::0", "tier::0", "expires::0", "email::0" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
   let text = stdout( &out );
   assert!( !text.contains( "alice@oldco.com" ), "deleted account must not appear in list, got:\n{text}" );
   assert!( text.contains( "keep@example.com" ), "kept account must still appear, got:\n{text}" );
@@ -985,11 +985,11 @@ fn aw12_switch_patches_email_when_metadata_absent()
   // After switch: emailAddress must be patched to bob even though bob@acme.com.json is absent.
   let claude_json = std::fs::read_to_string( &claude_json_path ).unwrap();
   assert!(
-    claude_json.contains( r#""emailAddress":"bob@acme.com""# ),
+    claude_json.contains( r#""emailAddress": "bob@acme.com""# ),
     "BUG-254: emailAddress must be 'bob@acme.com' after switch, got:\n{claude_json}",
   );
   assert!(
-    !claude_json.contains( r#""emailAddress":"alice@acme.com""# ),
+    !claude_json.contains( r#""emailAddress": "alice@acme.com""# ),
     "BUG-254: stale emailAddress 'alice@acme.com' must not remain, got:\n{claude_json}",
   );
 
@@ -2484,17 +2484,17 @@ fn mre_bug_217_switch_account_enforces_emailaddress()
   // BUG-217: before fix, actual = "i1@wbox.pro" (verbatim from snapshot).
   let claude_json = std::fs::read_to_string( &claude_json_path ).unwrap();
   assert!(
-    claude_json.contains( r#""emailAddress":"i7@wbox.pro""# ),
+    claude_json.contains( r#""emailAddress": "i7@wbox.pro""# ),
     "BUG-217: expected emailAddress='i7@wbox.pro' in ~/.claude.json after switch, got:\n{claude_json}",
   );
   assert!(
-    !claude_json.contains( r#""emailAddress":"i1@wbox.pro""# ),
+    !claude_json.contains( r#""emailAddress": "i1@wbox.pro""# ),
     "BUG-217: stale emailAddress 'i1@wbox.pro' must not appear in ~/.claude.json, got:\n{claude_json}",
   );
 
   // Global keys must be preserved — switch must not wholesale overwrite ~/.claude.json.
   assert!(
-    claude_json.contains( "\"someGlobalKey\":true" ),
+    claude_json.contains( "\"someGlobalKey\": true" ),
     "switch_account must preserve global keys in ~/.claude.json, got:\n{claude_json}",
   );
 }
@@ -2523,7 +2523,7 @@ fn ft01_account_renewal_at_writes_renewal_at()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
+    content.contains( r#""_renewal_at": "2026-06-29T21:00:00Z""# ),
     "must write exact _renewal_at value, got: {content}",
   );
   assert!(
@@ -2550,12 +2550,12 @@ fn ft02_account_renewal_from_now_positive()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""_renewal_at":"202"# ),
+    content.contains( r#""_renewal_at": "202"# ),
     "must write ISO-8601 timestamp starting with 202x in _renewal_at, got: {content}",
   );
   // from_now::+1h30m must not produce the same value as a clearly-past year
   assert!(
-    !content.contains( r#""_renewal_at":"200"# ),
+    !content.contains( r#""_renewal_at": "200"# ),
     "_renewal_at from from_now::+1h30m must not start with 200x, got: {content}",
   );
 }
@@ -2579,12 +2579,12 @@ fn ft03_account_renewal_from_now_negative()
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   // from_now::-30m on 2026-05-29 still gives a 2026 timestamp
   assert!(
-    content.contains( r#""_renewal_at":"202"# ),
+    content.contains( r#""_renewal_at": "202"# ),
     "must write ISO-8601 past timestamp in _renewal_at, got: {content}",
   );
   // Must not be auto-advanced to far future at write time
   assert!(
-    !content.contains( r#""_renewal_at":"2099"# ),
+    !content.contains( r#""_renewal_at": "2099"# ),
     "past timestamp must not be auto-advanced at write time, got: {content}",
   );
 }
@@ -2640,11 +2640,11 @@ fn ft05_account_renewal_name_all_updates_all()
   let alice = std::fs::read_to_string( store.join( "alice@a.com.json" ) ).unwrap();
   let bob   = std::fs::read_to_string( store.join( "bob@a.com.json" ) ).unwrap();
   assert!(
-    alice.contains( r#""_renewal_at":"202"# ),
+    alice.contains( r#""_renewal_at": "202"# ),
     "alice must have _renewal_at after name::all, got: {alice}",
   );
   assert!(
-    bob.contains( r#""_renewal_at":"202"# ),
+    bob.contains( r#""_renewal_at": "202"# ),
     "bob must have _renewal_at after name::all, got: {bob}",
   );
 }
@@ -2818,11 +2818,11 @@ fn ft12_account_renewal_comma_list_updates_both()
   let alice = std::fs::read_to_string( store.join( "alice@a.com.json" ) ).unwrap();
   let bob   = std::fs::read_to_string( store.join( "bob@a.com.json" ) ).unwrap();
   assert!(
-    alice.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
+    alice.contains( r#""_renewal_at": "2026-06-29T21:00:00Z""# ),
     "alice must have exact _renewal_at after comma-list, got: {alice}",
   );
   assert!(
-    bob.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
+    bob.contains( r#""_renewal_at": "2026-06-29T21:00:00Z""# ),
     "bob must have exact _renewal_at after comma-list, got: {bob}",
   );
 }
@@ -2854,7 +2854,7 @@ fn ft13_account_renewal_partial_comma_list()
   // alice must still be processed despite the partial failure
   let alice = std::fs::read_to_string( store.join( "alice@a.com.json" ) ).unwrap();
   assert!(
-    alice.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
+    alice.contains( r#""_renewal_at": "2026-06-29T21:00:00Z""# ),
     "alice must have _renewal_at even in partial failure, got: {alice}",
   );
 }
@@ -2877,7 +2877,7 @@ fn ft14_account_renewal_past_at_accepted()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""_renewal_at":"2020-01-01T00:00:00Z""# ),
+    content.contains( r#""_renewal_at": "2020-01-01T00:00:00Z""# ),
     "past at:: must be stored verbatim without auto-advance at write time, got: {content}",
   );
 }
@@ -2929,7 +2929,7 @@ fn ft16_account_renewal_creates_new_claude_json()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
+    content.contains( r#""_renewal_at": "2026-06-29T21:00:00Z""# ),
     "must create {{name}}.json with _renewal_at when file did not exist before, got: {content}",
   );
 }
@@ -2954,7 +2954,7 @@ fn ft17_account_renewal_single_prefix_resolves()
 
   let content = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""_renewal_at":"2026-07-01T00:00:00Z""# ),
+    content.contains( r#""_renewal_at": "2026-07-01T00:00:00Z""# ),
     "single prefix must resolve to full email and write _renewal_at, got: {content}",
   );
 }
@@ -2981,11 +2981,11 @@ fn ft18_account_renewal_comma_list_prefix_tokens()
   let alice = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
   let bob   = std::fs::read_to_string( store.join( "bob@acme.com.json" ) ).unwrap();
   assert!(
-    alice.contains( r#""_renewal_at":"2026-07-01T00:00:00Z""# ),
+    alice.contains( r#""_renewal_at": "2026-07-01T00:00:00Z""# ),
     "alice@acme.com must have _renewal_at after comma-list prefix resolution, got: {alice}",
   );
   assert!(
-    bob.contains( r#""_renewal_at":"2026-07-01T00:00:00Z""# ),
+    bob.contains( r#""_renewal_at": "2026-07-01T00:00:00Z""# ),
     "bob@acme.com must have _renewal_at after comma-list prefix resolution, got: {bob}",
   );
 }
@@ -3032,7 +3032,7 @@ fn as22_save_preserves_renewal_at()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
+    content.contains( r#""_renewal_at": "2026-06-29T21:00:00Z""# ),
     "second .account.save must preserve _renewal_at via read-merge (not overwrite), got: {content}",
   );
   assert!(
@@ -3040,7 +3040,7 @@ fn as22_save_preserves_renewal_at()
     "oauthAccount must remain in {{name}}.json after second save, got: {content}",
   );
   assert!(
-    content.contains( "\"subscriptionType\":\"pro\"" ),
+    content.contains( "\"subscriptionType\": \"pro\"" ),
     "oauthAccount must be updated with new content from ~/.claude.json on second save, got: {content}",
   );
 }
@@ -3073,11 +3073,11 @@ fn as_save_writes_profile_json()
   );
   let content = std::fs::read_to_string( &profile_path ).unwrap();
   assert!(
-    content.contains( r#""host":"testbox""# ),
+    content.contains( r#""host": "testbox""# ),
     "{{name}}.json must contain host value, got: {content}",
   );
   assert!(
-    content.contains( r#""role":"dev""# ),
+    content.contains( r#""role": "dev""# ),
     "{{name}}.json must contain role value, got: {content}",
   );
 }
@@ -3279,7 +3279,7 @@ fn arn21_at_invalid_iso_stored_verbatim()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""_renewal_at":"not-a-date""# ),
+    content.contains( r#""_renewal_at": "not-a-date""# ),
     "malformed at:: value must be stored verbatim, got: {content}",
   );
 }
@@ -3307,7 +3307,7 @@ fn as24_host_auto_capture_user_hostname()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""host":"alice@workstation""# ),
+    content.contains( r#""host": "alice@workstation""# ),
     "omitting host:: must auto-capture USER@HOSTNAME, got: {content}",
   );
 }
@@ -3334,7 +3334,7 @@ fn as25_host_empty_triggers_auto_capture()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""host":"bob@laptop""# ),
+    content.contains( r#""host": "bob@laptop""# ),
     "empty host:: must auto-capture USER@HOSTNAME same as omitting it, got: {content}",
   );
 }
@@ -3370,7 +3370,7 @@ fn as26_host_resave_overwrites()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""host":"newbox""# ),
+    content.contains( r#""host": "newbox""# ),
     "re-save must overwrite old host value with newbox, got: {content}",
   );
   assert!(
@@ -3401,7 +3401,7 @@ fn as27_host_with_spaces()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""host":"my work laptop""# ),
+    content.contains( r#""host": "my work laptop""# ),
     "host:: value with spaces must be stored verbatim, got: {content}",
   );
 }
@@ -3439,11 +3439,11 @@ fn as28_host_missing_user_stores_at_resolved_hostname()
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   // host starts with "@" (USER absent) but has a non-empty resolved hostname (not bare "@").
   assert!(
-    content.contains( r#""host":"@"# ),
+    content.contains( r#""host": "@"# ),
     "USER absent must produce host starting with '@', got: {content}",
   );
   assert!(
-    !content.contains( r#""host":"@""# ),
+    !content.contains( r#""host": "@""# ),
     "hostname must not be empty when resolved via fallback chain (BUG-239), got: {content}",
   );
 }
@@ -3503,7 +3503,7 @@ fn mre_bug239_hostname_resolved_when_env_absent()
   // Before BUG-239 fix: host = "alice@" (empty hostname).
   // After fix: host = "alice@<resolved>" (non-empty, from /etc/hostname or "local").
   assert!(
-    !content.contains( r#""host":"alice@""# ),
+    !content.contains( r#""host": "alice@""# ),
     "hostname must not be empty when $HOSTNAME env is absent — resolve_hostname() must use fallback chain, got: {content}",
   );
   assert!(
@@ -3550,7 +3550,7 @@ fn as29_resave_credentials_unchanged()
 
   let profile = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    profile.contains( r#""host":"newbox""# ),
+    profile.contains( r#""host": "newbox""# ),
     "{{name}}.json must be updated to newbox, got: {profile}",
   );
 }
@@ -3577,7 +3577,7 @@ fn as30_role_writes_profile_json()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""role":"work""# ),
+    content.contains( r#""role": "work""# ),
     "explicit role::work must be stored in {{name}}.json, got: {content}",
   );
 }
@@ -3604,7 +3604,7 @@ fn as31_role_omit_stores_empty()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""role":"""# ),
+    content.contains( r#""role": """# ),
     "omitting role:: must store empty string role in {{name}}.json, got: {content}",
   );
 }
@@ -3631,7 +3631,7 @@ fn as32_role_empty_stores_empty()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""role":"""# ),
+    content.contains( r#""role": """# ),
     "empty role:: must store empty string in {{name}}.json, got: {content}",
   );
 }
@@ -3666,7 +3666,7 @@ fn as33_role_resave_overwrites()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""role":"dev""# ),
+    content.contains( r#""role": "dev""# ),
     "re-save must overwrite old role value with dev, got: {content}",
   );
   assert!(
@@ -3697,7 +3697,7 @@ fn as34_role_with_spaces()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""role":"dev ops team""# ),
+    content.contains( r#""role": "dev ops team""# ),
     "role:: value with spaces must be stored verbatim, got: {content}",
   );
 }
@@ -3816,12 +3816,12 @@ fn arn24_from_now_zero_delta_writes_current_time()
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   // from_now::+0m must write a present-year ISO timestamp
   assert!(
-    content.contains( r#""_renewal_at":"202"# ),
+    content.contains( r#""_renewal_at": "202"# ),
     "from_now::+0m must write ISO-8601 timestamp starting with 202x, got: {content}",
   );
   // Must not be a far-future or far-past timestamp
   assert!(
-    !content.contains( r#""_renewal_at":"2099"# ),
+    !content.contains( r#""_renewal_at": "2099"# ),
     "_renewal_at from from_now::+0m must not be far future, got: {content}",
   );
 }
@@ -3849,12 +3849,12 @@ fn arn25_from_now_single_day_unit_accepted()
 
   let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
-    content.contains( r#""_renewal_at":"202"# ),
+    content.contains( r#""_renewal_at": "202"# ),
     "from_now::+1d must write ISO-8601 future timestamp starting with 202x, got: {content}",
   );
   // +1d must not produce a clearly-past year
   assert!(
-    !content.contains( r#""_renewal_at":"200"# ),
+    !content.contains( r#""_renewal_at": "200"# ),
     "_renewal_at from from_now::+1d must not start with 200x, got: {content}",
   );
 }
@@ -4230,9 +4230,9 @@ fn ec3_save_stamps_current_identity()
 
 // ── AU: Account Unclaim (Feature 036, Command 17) ───────────────────────────
 
-/// FT-02 (AC-02, Feat 036): `.account.unclaim` writes `owner: ""` — credential file NOT touched.
+/// FT-02 (AC-02, Feat 036/037): `.accounts unclaim::1 name::X` writes `owner: ""` — credential file NOT touched.
 ///
-/// Pre-seed `{name}.json` with `"owner": "user1@host1"`. Run `.account.unclaim name::alice`.
+/// Pre-seed `{name}.json` with `"owner": "user1@host1"`. Run `.accounts unclaim::1 name::alice`.
 /// Owner must be `""`. Credential file mtime must be unchanged (pure metadata operation).
 ///
 /// Spec: [`tests/docs/feature/36_account_ownership.md` FT-02]
@@ -4249,7 +4249,7 @@ fn ft02_unclaim_clears_owner()
   let cred_mtime_before = std::fs::metadata( &cred_path ).unwrap().modified().unwrap();
 
   let out = run_cs_with_env(
-    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );
@@ -4257,12 +4257,12 @@ fn ft02_unclaim_clears_owner()
   let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
   let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
   let owner = val[ "owner" ].as_str().unwrap_or( "MISSING" );
-  assert_eq!( owner, "", "FT-02: .account.unclaim must clear owner to \"\"; got: {owner:?}" );
+  assert_eq!( owner, "", "FT-02: .accounts unclaim::1 must clear owner to \"\"; got: {owner:?}" );
 
   let cred_mtime_after = std::fs::metadata( &cred_path ).unwrap().modified().unwrap();
   assert_eq!(
     cred_mtime_before, cred_mtime_after,
-    "FT-02: credential file must NOT be touched by .account.unclaim",
+    "FT-02: credential file must NOT be touched by .accounts unclaim::1",
   );
 }
 
@@ -4301,7 +4301,7 @@ fn ft16_unclaim_g8_gate()
     write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
 
     let out = run_cs_with_env(
-      &[ ".account.unclaim", "name::alice@acme.com" ],
+      &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
       &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
     );
     assert_exit( &out, 1 );
@@ -4324,16 +4324,16 @@ fn ft16_unclaim_g8_gate()
     write_account_owner( dir.path(), "alice@acme.com", "" );
 
     let out = run_cs_with_env(
-      &[ ".account.unclaim", "name::alice@acme.com" ],
+      &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
       &[ ( "HOME", home ) ],
     );
     assert_exit( &out, 0 );
   }
 }
 
-/// FT-17 (AC-17, Feat 036): `.account.unclaim dry::1` prints preview; files unchanged.
+/// FT-17 (AC-17, Feat 036/037): `.accounts unclaim::1 name::X dry::1` prints preview; files unchanged.
 ///
-/// Pre-seed `{name}.json` with `"owner": "user1@host1"`. Run `.account.unclaim dry::1`.
+/// Pre-seed `{name}.json` with `"owner": "user1@host1"`. Run `.accounts unclaim::1 name::X dry::1`.
 /// Owner must remain `"user1@host1"` — dry-run must not write.
 ///
 /// Spec: [`tests/docs/feature/36_account_ownership.md` FT-17]
@@ -4350,7 +4350,7 @@ fn ft17_unclaim_dry_run()
   let content_before = std::fs::read_to_string( &meta_path ).unwrap();
 
   let out = run_cs_with_env(
-    &[ ".account.unclaim", "name::alice@acme.com", "dry::1" ],
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com", "dry::1" ],
     &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );
@@ -4379,7 +4379,7 @@ fn it01_unclaim_clears_owner()
   write_account_owner( dir.path(), "alice@acme.com", "user1@host1" );
 
   let out = run_cs_with_env(
-    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );
@@ -4406,7 +4406,7 @@ fn it02_unclaim_credential_not_touched()
   let before    = std::fs::read_to_string( &cred_path ).unwrap();
 
   let out = run_cs_with_env(
-    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );
@@ -4439,7 +4439,7 @@ fn it03_unclaim_marker_not_touched()
   let marker_before = std::fs::read_to_string( &marker_path ).unwrap();
 
   let out = run_cs_with_env(
-    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );
@@ -4460,7 +4460,7 @@ fn it04_unclaim_idempotent()
   write_account_owner( dir.path(), "alice@acme.com", "" );
 
   let out = run_cs_with_env(
-    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -4478,7 +4478,7 @@ fn it05_unclaim_g8_non_owner()
   write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
 
   let out = run_cs_with_env(
-    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
   );
   assert_exit( &out, 1 );
@@ -4501,7 +4501,7 @@ fn it06_unclaim_dry_run()
   let before    = std::fs::read_to_string( &meta_path ).unwrap();
 
   let out = run_cs_with_env(
-    &[ ".account.unclaim", "name::alice@acme.com", "dry::1" ],
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com", "dry::1" ],
     &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );
@@ -4523,7 +4523,7 @@ fn it07_unclaim_g8_before_dry()
   write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
 
   let out = run_cs_with_env(
-    &[ ".account.unclaim", "name::alice@acme.com", "dry::1" ],
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com", "dry::1" ],
     &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
   );
   assert_exit( &out, 1 );
@@ -4541,21 +4541,27 @@ fn it08_unclaim_unknown_account()
   let home = dir.path().to_str().unwrap();
 
   let out = run_cs_with_env(
-    &[ ".account.unclaim", "name::ghost@nowhere.com" ],
+    &[ ".accounts", "unclaim::1", "name::ghost@nowhere.com" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 2 );
   assert!( stderr( &out ).contains( "not found" ), "IT-8: stderr must mention 'not found'" );
 }
 
-/// IT-9: missing `name::` → exit 1.
+/// IT-9: no `name::` → batch unclaim all owned accounts; empty store → exit 0.
+///
+/// Feature 037 moved unclaim into `.accounts unclaim::1`. Without `name::`, the
+/// batch path runs: iterates all accounts, finds none owned → exits 0 with message.
 ///
 /// Spec: [`tests/docs/cli/command/18_account_unclaim.md` IT-9]
 #[ test ]
 fn it09_unclaim_missing_name()
 {
-  let out = run_cs( &[ ".account.unclaim" ] );
-  assert_exit( &out, 1 );
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let out = run_cs_with_env( &[ ".accounts", "unclaim::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  assert!( stdout( &out ).contains( "no owned accounts" ), "IT-9: must report 'no owned accounts'" );
 }
 
 /// IT-10: unknown parameter → exit 1.
@@ -4564,7 +4570,7 @@ fn it09_unclaim_missing_name()
 #[ test ]
 fn it10_unclaim_unknown_param()
 {
-  let out = run_cs( &[ ".account.unclaim", "name::test", "bogus::1" ] );
+  let out = run_cs( &[ ".accounts", "unclaim::1", "name::test", "bogus::1" ] );
   assert_exit( &out, 1 );
 }
 
@@ -4589,7 +4595,7 @@ fn it11_unclaim_preserves_renewal_at()
   ).unwrap();
 
   let out = run_cs_with_env(
-    &[ ".account.unclaim", "name::alice@acme.com" ],
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "host1" ) ],
   );
   assert_exit( &out, 0 );

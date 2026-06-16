@@ -3,10 +3,14 @@ image: claude_profile_test
 
 # non-root so chmod-000 file-permission tests fail correctly (root bypasses checks)
 test_user: testuser
-# crate scope for cargo chef cook — workspace-wide ensures all transitive dev-deps are
-# pre-cooked (nextest workspace metadata resolves assert_cmd → anstyle regardless of scope).
+# crate scope for cargo chef cook — scoped to claude_profile to avoid pre-compiling test
+# binaries for all 15 workspace crates (--workspace peaks at 107 GB of intermediate
+# artifacts and exhausts the 109 GB free disk). claude_profile's transitive deps (including
+# all dev-dep chains like assert_cmd → anstyle) are fully pre-cooked at this scope.
+# nextest workspace metadata uses the full registry populated by `cargo fetch` in the
+# test stage, so --offline cargo metadata succeeds regardless of cook scope.
 # Test execution is controlled by test_script (l1), not this field.
-cmd_scope: --workspace
+cmd_scope: -p claude_profile
 # baked into the image default CMD; all() runs every test — lim_it tests skip automatically without credentials
 cmd_filter: "all()"
 

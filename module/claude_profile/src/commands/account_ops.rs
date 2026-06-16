@@ -379,53 +379,20 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   Ok( OutputData::new( format!( "deleted account '{name}'\n" ), "text" ) )
 }
 
-/// `.account.unclaim` — release ownership of a saved account profile.
+/// `.account.unclaim` redirect stub — Feature 037 absorbed this command into `.accounts unclaim::1`.
 ///
-/// Pure metadata operation: calls `write_owner(name, store, "")` directly.
-/// Does NOT touch `{name}.credentials.json` or any `~/.claude.*` file.
+/// Always exits 1 with an actionable error message directing callers to the new interface.
+/// The routine is called regardless of params because the framework routes before param dispatch.
 ///
 /// # Errors
 ///
-/// Returns `ErrorData` if `name::` is missing/empty, the account does not
-/// exist in the credential store, or the G8 ownership gate blocks (non-owner).
+/// Always returns `Err(ArgumentTypeMismatch)` with a redirect message.
 #[ inline ]
-pub fn account_unclaim_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+pub fn account_unclaim_redirect( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let name             = require_nonempty_string_arg( &cmd, "name" )?;
-  let credential_store = require_credential_store()?;
-  let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
-
-  // Verify account exists in credential store.
-  let json_path = credential_store.join( format!( "{name}.json" ) );
-  if !json_path.exists()
-  {
-    return Err( ErrorData::new(
-      ErrorCode::InternalError,
-      format!( "account not found: {name}" ),
-    ) );
-  }
-
-  // G8 ownership gate — evaluates BEFORE dry-run check.
-  // Unowned (empty owner) passes the gate (idempotent unclaim).
-  // force::1 bypasses the guard (Feature 036 AC-18).
-  let force = crate::output::parse_int_flag( &cmd, "force", 0 )? != 0;
-  let owner = crate::account::read_owner( &credential_store, &name );
-  if !force && !crate::account::is_owned( &owner )
-  {
-    return Err( ErrorData::new(
-      ErrorCode::ArgumentTypeMismatch,
-      format!( "ownership violation: this account is owned by {owner}" ),
-    ) );
-  }
-
-  if is_dry( &cmd )
-  {
-    return Ok( OutputData::new( format!( "[dry-run] would unclaim {name}\n" ), "text" ) );
-  }
-
-  crate::account::write_owner( &name, &credential_store, "" )
-    .map_err( |e| io_err_to_error_data( &e, "account unclaim" ) )?;
-  if trace { eprintln!( "[trace] account.unclaim  write_owner: OK  name={name}" ) }
-
-  Ok( OutputData::new( format!( "unclaimed {name}\n" ), "text" ) )
+  Err( ErrorData::new(
+    ErrorCode::ArgumentTypeMismatch,
+    "unknown command '.account.unclaim' — use '.accounts unclaim::1 name::X' instead".to_string(),
+  ) )
 }
+
