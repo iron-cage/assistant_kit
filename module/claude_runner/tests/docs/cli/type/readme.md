@@ -4,7 +4,7 @@
 
 - **Purpose**: Document validation edge cases for clr semantic types.
 - **Responsibility**: Index of per-type validation test files covering type-level parsing and constraint enforcement.
-- **In Scope**: All 12 clr semantic types: `MessageText`, `DirectoryPath`, `TokenLimit`, `ModelName`, `VerbosityLevel`, `SystemPromptText`, `EffortLevel`, `CredentialsFilePath`, `TimeoutSecs`, `JsonSchemaText`, `McpConfigPath`, `FilePath`.
+- **In Scope**: All 14 clr semantic types: `MessageText`, `DirectoryPath`, `TokenLimit`, `ModelName`, `VerbosityLevel`, `SystemPromptText`, `EffortLevel`, `CredentialsFilePath`, `TimeoutSecs`, `JsonSchemaText`, `McpConfigPath`, `FilePath`, `ErrorKind`, `ErrorClass`.
 - **Out of Scope**: Command-level tests (→ `command/`), per-parameter tests (→ `param/`).
 
 Per-type validation test indices for `clr`. See [type/readme.md](../../../../docs/cli/type/readme.md) for specification.
@@ -25,3 +25,5 @@ Per-type validation test indices for `clr`. See [type/readme.md](../../../../doc
 | `10_json_schema_text.md` | Validation tests for `JsonSchemaText` type | ✅ |
 | `11_mcp_config_path.md` | Validation tests for `McpConfigPath` type | ✅ |
 | `12_file_path.md` | Validation tests for `FilePath` type | ✅ |
+| `13_error_kind.md` | Classification tests for `ErrorKind` type | ✅ |
+| `14_error_class.md` | Classification tests for `ErrorClass` type | ✅ |
