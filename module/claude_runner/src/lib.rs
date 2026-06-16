@@ -73,10 +73,14 @@ pub fn run_cli()
 
   // Fix(BUG-212): strip the leading "run" token before any subcommand checks so that
   //   `clr run msg` does not treat "run" as the message argument.
-  // Fix(BUG-215): stripping first also means the single help check below covers both
-  //   `clr help` and `clr run help` — no need for two separate checks.
   // Root cause: `clr run msg` treated "run" as the message argument — silent wrong behavior.
   // Pitfall: strip only the leading "run" token; remaining args are passed normally.
+  //
+  // Fix(BUG-215): stripping first also means the single help check below covers both
+  //   `clr help` and `clr run help` — no need for two separate checks.
+  // Root cause: `clr run help` bypassed the help dispatcher because `tokens[0]` was "run",
+  //   not "help" — the help check never fired for the `clr run help` form.
+  // Pitfall: the help check must run after stripping, not before; reversing the order re-breaks both bugs.
   let tokens : Vec< String > = if tokens.first().map( String::as_str ) == Some( "run" )
   {
     tokens[ 1.. ].to_vec()

@@ -18,6 +18,9 @@ use cred_parse::{
 };
 pub use fence::strip_fences;
 use credential::{ run_isolated_command, run_refresh_command };
+
+const CREDS_PATH_ERROR : &str =
+  "Error: cannot resolve credentials path: HOME is not set; provide --creds or set CLR_CREDS\nRun with --help for usage.";
 use help::print_ask_help;
 use gate::wait_for_session_slot;
 pub( super ) use ps::dispatch_ps;
@@ -250,7 +253,7 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
   apply_isolated_env_vars( &mut cli );
   if cli.creds_path.is_empty()
   {
-    eprintln!( "Error: cannot resolve credentials path: HOME is not set; provide --creds or set CLR_CREDS\nRun with --help for usage." );
+    eprintln!( "{CREDS_PATH_ERROR}" );
     std::process::exit( 1 );
   }
   run_isolated_command(
@@ -278,7 +281,7 @@ pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
   apply_refresh_env_vars( &mut cli );
   if cli.creds_path.is_empty()
   {
-    eprintln!( "Error: cannot resolve credentials path: HOME is not set; provide --creds or set CLR_CREDS\nRun with --help for usage." );
+    eprintln!( "{CREDS_PATH_ERROR}" );
     std::process::exit( 1 );
   }
   run_refresh_command( &cli.creds_path, cli.timeout_secs, cli.trace )
