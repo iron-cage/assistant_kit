@@ -82,9 +82,9 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 | Function | File |
 |----------|------|
-| `ac01_002_env_overrides_user` | ⏳ TBD |
-| `ac02_002_user_config_wins_without_env` | ⏳ TBD |
-| `ac03_002_project_config_key` | ⏳ TBD |
-| `ac04_002_catalog_default_returned` | ⏳ TBD |
-| `ac05_002_all_layers_absent` | ⏳ TBD |
-| `ac06_002_project_overrides_user` | ⏳ TBD |
+| `ac01_002_env_overrides_user` | ⏳ `integration/algorithm_surface_test.rs` |
+| `ac02_002_user_config_wins_without_env` | ⏳ `integration/algorithm_surface_test.rs` |
+| `ac03_002_project_config_key` | ⏳ `integration/algorithm_surface_test.rs` |
+| `ac04_002_catalog_default_returned` | ⏳ `integration/algorithm_surface_test.rs` |
+| `ac05_002_all_layers_absent` | ⏳ `integration/algorithm_surface_test.rs` |
+| `ac06_002_project_overrides_user` | ⏳ `integration/algorithm_surface_test.rs` |
