@@ -22,7 +22,7 @@
 //! | IT-14 | `clr ps --help` → exit 0, stdout non-empty                    | BUG-294 help     |
 //! | IT-15 | `clr ps -h` → exit 0, stdout non-empty                       | BUG-294 short    |
 //! | IT-16 | Task column extracts Form A content for underscore CWD         | BUG-295/296/297  |
-//! | IT-17 | Task column selects Form A over Form B tool_result lines        | BUG-297 repro    |
+//! | IT-17 | Task column selects Form A over Form B `tool_result` lines      | BUG-297 repro    |
 //! | IT-18 | `clr ps help` (positional) → exit 0, stdout non-empty         | BUG-294 positional|
 //! | IT-19 | Task column works for CWD with no underscores (regression)     | BUG-295 regression|
 

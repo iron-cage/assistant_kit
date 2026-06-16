@@ -42,3 +42,9 @@ Cost: purging is destructive. If a different version is needed later, it require
 | File | Relationship |
 |------|-------------|
 | `../../src/commands/version.rs` | Binary purge logic in perform_install() |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [`../../tests/docs/pitfall/002_symlink_retarget.md`](../../tests/docs/pitfall/002_symlink_retarget.md) | Regression test spec |

@@ -2,15 +2,15 @@
 
 ### Scope
 
-- **Purpose**: Test cases for account ownership enforcement — owner stamp via `.account.save`, `.account.unclaim` command with G8 gate, eight enforcement gates (G1–G8), backward compatibility, and `is_owned` JSON field.
+- **Purpose**: Test cases for account ownership enforcement — ownership-neutral `.account.save` and `.account.assign`, `.accounts unclaim::1` with G8 gate, eight enforcement gates (G1–G8), backward compatibility, and `is_owned` JSON field.
 - **Source**: `docs/feature/036_account_ownership.md`
-- **Covers**: AC-01 through AC-21
+- **Covers**: AC-01 through AC-22
 
 ### Test Cases
 
 | FT | AC | Scenario | Source fn |
 |----|----|----------|-----------|
-| FT-01 | AC-01 | `.account.save` stamps `current_identity()` as `owner` in `{name}.json` | `ft01_save_stamps_owner` |
+| FT-01 | AC-01 | `.account.save` does NOT modify `owner` — `account_save_routine()` passes `owner: None`; existing value preserved | `ft01_save_does_not_stamp_owner` |
 | FT-02 | AC-02 | `.account.unclaim name::alice` exits 0; writes `owner: ""`; `write_owner()` called directly — no credential re-save | `ft02_unclaim_clears_owner` |
 | FT-03 | AC-03 | No `owner::` CLI param; `unclaim::` NOT on `.account.save`; `.account.unclaim` lists `name::`, `dry::`, `trace::`; `.account.assign` does NOT list `unclaim` | `ft03_unclaim_param_placement` |
 | FT-04 | AC-04 | Non-owned account: `fetch_quota_for_list` skips token read + HTTP; reads cache; `aq.is_owned = false` | `ft04_non_owned_uses_cache_not_http` |
@@ -31,10 +31,11 @@
 | FT-19 | AC-19 | `.account.delete name::X force::1` when X owned by different identity bypasses G6; exits 0; files deleted | `ft19_delete_force_bypasses_g6` |
 | FT-20 | AC-20 | `.account.relogin name::X force::1` when X owned by different identity bypasses G7; exits 0; 6-step relogin proceeds | `ft20_relogin_force_bypasses_g7` |
 | FT-21 | AC-21 | `force::1 dry::1` on G5/G6/G7 commands bypasses ownership gate but previews without writing; exits 0; `[dry-run]` printed | `ft21_force_dry_bypasses_gate_previews` |
+| FT-22 | AC-22 | `apply_refresh()` emits `[trace] refresh  <name>  should_retry=false (reason: not owned)` when `trace::1` and `aq.is_owned == false` — reason is `"not owned"`, not `"ok"` (BUG-295) | `mre_bug295_apply_refresh_trace_reason_not_owned` |
 
 ### Notes
 
-- FT-01 is an integration test — calls `clp .account.save name::alice` and asserts `owner` is stamped as `current_identity()` (`account_save_routine()` passes `Some(&owner_val)` to `save()`).
+- FT-01 is an integration test — calls `clp .account.save name::alice` and asserts existing `owner` field is UNCHANGED (`account_save_routine()` passes `owner: None`; ownership-neutral).
 - FT-02 is an integration test — calls `clp .account.unclaim name::alice` and asserts exit 0, `owner: ""` written, and credential file NOT re-saved (`alice.credentials.json` mtime unchanged).
 - FT-03 is structural with three cases: (a) `.account.save` help does NOT list `unclaim`; (b) `.account.unclaim` help DOES list `name::`, `dry::`, `trace::`; (c) `.account.assign` help does NOT list `unclaim`.
 - FT-04 is a unit test in `src/usage/fetch.rs` — mock-free: verify no `read_token()` call path was exercised and cache JSON is the returned value.
@@ -45,20 +46,21 @@
 - FT-11 is a unit test in `claude_profile_core/tests/account_test.rs` — `{name}.json` with no `owner` key reads as `is_owned = true`.
 - FT-12 is a render test in `src/usage/render_tests.rs` — verifies `"is_owned": true`/`"is_owned": false` in JSON object.
 - FT-13 exercises G5/G6/G7 with `dry::1` flag set — ownership guard runs first; exit 1 regardless.
-- FT-14 is a unit test in `claude_profile_core/tests/account_test.rs` — background `save()` with `owner: None` (e.g. `refresh_account_token`) on an account with `owner: "alice@host"` leaves `owner: "alice@host"` in `{name}.json`. Background callers pass `owner: None` (preserves existing); interactive `account_save_routine()` passes `Some(&owner_val)` (stamps owner). `account_assign_routine()` does NOT call `write_owner()`.
+- FT-14 is a unit test in `claude_profile_core/tests/account_test.rs` — background `save()` with `owner: None` (e.g. `refresh_account_token`) on an account with `owner: "alice@host"` leaves `owner: "alice@host"` in `{name}.json`. All `save()` callers pass `owner: None` (preserves existing owner) — both background refresh and interactive `account_save_routine()` are ownership-neutral. `account_assign_routine()` does NOT call `write_owner()`.
 - FT-18 through FT-20 are integration tests via `./verb/test` — verify exit 0 and that the expected mutation (switch/delete/relogin) proceeds despite non-owned account.
 - FT-21 is an integration test via `./verb/test` — three sub-cases (use, delete, relogin), each verifying: exit 0, `[dry-run]` line printed, no files modified. The G8 case (force+dry on unclaim) is deferred to Feature 037 tests (`37_accounts_usage_param_unification.md`).
 - FT-18–21 require `force::` (`058`) to be registered on `.account.use`, `.account.delete`, `.account.relogin` — Task 002 prerequisite.
+- FT-22 is a unit test in `src/usage/refresh.rs` `#[cfg(test)]` module — uses `gag::BufferRedirect::stderr()` for trace capture. Reproduces BUG-295: verifies `apply_refresh()` emits `reason: not owned` (not `reason: ok`) when `aq.is_owned == false`.
 
 ---
 
-### FT-01: `.account.save` stamps `current_identity()` as `owner`
+### FT-01: `.account.save` does NOT modify `owner` field — ownership-neutral
 
-- **Given:** Account `alice` exists in credential store. `current_identity()` resolves to `"testuser@testmachine"`.
-- **When:** `clp .account.save name::alice` — `account_save_routine()` passes `Some(&owner_val)` to `save()` where `owner_val = current_identity()`.
-- **Then:** `alice.json` contains `"owner": "testuser@testmachine"`. Credentials re-saved. Owner field is always written on interactive save.
+- **Given:** Account `alice` exists in credential store. `alice.json` contains `"owner": "testuser@testmachine"`. `current_identity()` resolves to `"testuser@testmachine"`.
+- **When:** `clp .account.save name::alice` — `account_save_routine()` passes `owner: None` to `save()`.
+- **Then:** `alice.json` still contains `"owner": "testuser@testmachine"` — unchanged. Credentials re-saved. The `owner` field is preserved via read-merge; `account_save_routine()` does NOT call `write_owner()` or pass `Some(...)` for owner.
 - **Exit:** 0
-- **Source fn:** `ft01_save_stamps_owner`
+- **Source fn:** `ft01_save_does_not_stamp_owner`
 - **Source:** [036_account_ownership.md AC-01](../../../docs/feature/036_account_ownership.md)
 
 ---
@@ -209,7 +211,7 @@
 - **Then:** `alice.json` retains `"owner": "alice@host1"` unchanged after the save. No other `alice.json` fields are affected.
 - **Exit:** Ok(()); owner field preserved
 - **Source fn:** `ft14_background_save_preserves_owner`
-- **Note:** Background `save()` callers pass `owner: None` (preserves existing owner); interactive `account_save_routine()` passes `Some(&owner_val)`. `account_assign_routine()` does NOT call `write_owner()`. See Feature 002 FT-09 for the `update_marker` side.
+- **Note:** All `save()` callers pass `owner: None` (preserves existing owner) — both background refresh and interactive `account_save_routine()` are ownership-neutral. `account_assign_routine()` does NOT call `write_owner()`. See Feature 002 FT-09 for the `update_marker` side.
 - **Source:** [036_account_ownership.md AC-14](../../../docs/feature/036_account_ownership.md)
 
 ---
@@ -298,3 +300,15 @@
 - **Source fn:** `ft21_force_dry_bypasses_gate_previews`
 - **Note:** G8 (unclaim + force + dry) is tested in `37_accounts_usage_param_unification.md` FT-18 (AC-18 there maps to Feature 037 AC-18). Force always runs before dry — gate bypassed, write suppressed.
 - **Source:** [036_account_ownership.md AC-21](../../../docs/feature/036_account_ownership.md)
+
+---
+
+### FT-22: `apply_refresh()` emits `reason: not owned` when `aq.is_owned == false` (BUG-295)
+
+- **Given:** `AccountQuota` with `is_owned: false` and `result: Ok(cached_data)` (non-owned cache path, as set by G1 in `fetch.rs`). Env var `TRACE=1` (or `trace::1`) active.
+- **When:** `apply_refresh()` is called with this `aq`.
+- **Then:** stderr contains `[trace] refresh  <name>  should_retry=false (reason: not owned)`. The reason string is `"not owned"` — derived from the ownership gate check (`!aq.is_owned`), NOT from `aq.result.err()`.
+- **Exit:** reason = `"not owned"` (not `"ok"`)
+- **Source fn:** `mre_bug295_apply_refresh_trace_reason_not_owned`
+- **Note:** Reproduces BUG-295. Before fix: `aq.result = Ok(cached_data)` for non-owned accounts causes `.err()` to return `None`, yielding `reason: ok`. After fix: ownership gate checked first; emits `"not owned"` before consulting `aq.result`. Consistent with AC-07 / FT-07 (`apply_touch` trace pattern).
+- **Source:** [036_account_ownership.md AC-22](../../../docs/feature/036_account_ownership.md)

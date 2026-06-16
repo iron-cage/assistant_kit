@@ -210,7 +210,7 @@ fn print_mode_propagates_exit_0()
 fn spawn_error_visible_at_verbosity_0()
 {
   let out = run_cli_with_env(
-    &[ "--print", "--retry-on-runner", "0", "test" ],
+    &[ "--print", "--retry-override", "0", "test" ],
     &[ ( "PATH", "/tmp" ), ( "CLR_VERBOSITY", "0" ) ],
   );
   assert_ne!( exit_code( &out ), 0, "BUG-240: must exit non-zero when binary absent" );
@@ -232,7 +232,7 @@ fn spawn_error_visible_at_verbosity_0()
 #[ doc = "bug_reproducer(BUG-241)" ]
 fn binary_not_found_shows_install_hint()
 {
-  let out = run_cli_with_env( &[ "--print", "--retry-on-runner", "0", "test" ], &[ ( "PATH", "/tmp" ) ] );
+  let out = run_cli_with_env( &[ "--print", "--retry-override", "0", "test" ], &[ ( "PATH", "/tmp" ) ] );
   assert_ne!( exit_code( &out ), 0, "BUG-241: must exit non-zero when binary absent" );
   let err = stderr_str( &out );
   assert!(

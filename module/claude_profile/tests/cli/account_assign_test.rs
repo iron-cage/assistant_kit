@@ -8,9 +8,8 @@
 //! No network access required. HOME isolation via `TempDir` + `USER=testuser`
 //! + `HOSTNAME=testmachine` ensures deterministic marker filenames.
 //!
-//! Feature 037 absorbed `.account.assign` into `.accounts assign::1`. All tests that
-//! previously used `.account.assign name::X` now use `.accounts assign::1 name::X`.
-//! Test `ft15` verifies the redirect stub: `.account.assign` exits 1 with redirect message.
+//! Feature 037 absorbed `.account.assign` into `.accounts assign::1`. All tests use
+//! `.accounts assign::1 name::X`. The `.account.assign` command is fully removed.
 //!
 //! ## Test Matrix
 //!
@@ -43,7 +42,6 @@
 //! |----|---------------|----|-----------|-----|
 //! | ft13 | `ft13_assign_does_not_modify_owner` | FT-08 | `.accounts assign::1` does NOT touch owner (marker-only) | P |
 //! | ft14 | `ft14_assign_for_does_not_modify_owner` | FT-09 | `.accounts assign::1 for::bob@laptop` does NOT touch owner | P |
-//! | ft15 | `ft15_assign_removed` | FT-12 | `.account.assign name::X` → exit 1 (redirect: command absorbed into `.accounts`) | N |
 
 use crate::cli_runner::{ run_cs_with_env, stdout, stderr, assert_exit, write_account, write_account_owner };
 use tempfile::TempDir;
@@ -630,39 +628,6 @@ fn ft14_assign_for_does_not_modify_owner()
   );
 }
 
-/// FT-12: `.account.assign name::X` exits 1 — command absorbed into `.accounts` (redirect stub).
-///
-/// Feature 037 removed `.account.assign` as a standalone command; it now routes to a redirect
-/// stub that exits 1 with an actionable error message directing callers to `.accounts assign::1`.
-///
-/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-12]
-#[ test ]
-fn ft15_assign_removed()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let env  = test_env( home );
-  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
-
-  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
-  write_account_owner( dir.path(), "alice@corp.com", "user1@host1" );
-
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com" ], &refs );
-  assert_exit( &out, 1 );
-
-  let err_text = stderr( &out );
-  assert!(
-    err_text.contains( ".account.assign" ) && err_text.contains( ".accounts assign::1" ),
-    "FT-12: .account.assign must emit redirect message; got stderr: {err_text}",
-  );
-
-  // Redirect fires before any write — owner must remain unchanged.
-  let owner = read_owner( dir.path(), "alice@corp.com" );
-  assert_eq!(
-    owner.as_deref(), Some( "user1@host1" ),
-    "FT-12: redirect must not modify owner; got: {owner:?}",
-  );
-}
 
 /// `name::` (empty value) exits 1 — not treated as absent.
 ///

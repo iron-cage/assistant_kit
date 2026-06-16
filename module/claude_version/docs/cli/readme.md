@@ -20,21 +20,20 @@ clv <.command> [param::value ...]
 | File | L1 | L2 | L3 | L4 | L5 | Status |
 |------|----|----|----|----|----|--------|
 | readme.md | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
-| command/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete (6 files) |
-| param/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete (12 files) |
-| type/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete (7 files) |
-| param_group/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete (5 files) |
+| command/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| param/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| type/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| param_group/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
 | dictionary.md | ➖ | ✅ | ➖ | ➖ | ➖ | Complete |
 | 004_parameter_interactions.md | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | env_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
 | config_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
-| user_story/ | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity (5 instances) |
-| format/ | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity (2 instances) |
-| format/procedure.md | ➖ | ➖ | ➖ | ➖ | ➖ | Entity Infrastructure |
+| user_story/ | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
+| format/ | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
 
-**Current Level:** L5 (Bidirectionally Complete)
+**Current Level:** L5 (Test Detail Complete)
 **Design Completeness:** 100%
-**Implementation Status:** Complete (12 commands implemented)
+**Implementation Status:** Complete
 
 ### Navigation
 
@@ -54,3 +53,11 @@ clv <.command> [param::value ...]
 - [feature/001_version_management.md](../feature/001_version_management.md) — version management, architecture, constraints
 - [collection/001_design_decisions.md](../collection/001_design_decisions.md) — CLI redesign rationale
 - [tests/docs/cli/](../../tests/docs/cli/readme.md) — test case planning (commands, params, groups)
+
+### Exception Records
+
+**Exception to `cli_doc_des.rulebook.md § Architecture : Entity Type Classes` (format test mirror):**
+Project retains `tests/docs/cli/format/` as a dedicated testing tier. Rationale: format rendering contracts (verbosity interaction, JSON validity, field presence invariants) are not fully captured by command integration tests alone; a dedicated format test layer makes format contract changes reviewable in isolation.
+
+**Exception to `cli_doc_des.rulebook.md § Completion Levels : Level 3` (`command_noun` / `command_verb` entities):**
+The clv CLI uses a hybrid command pattern: namespace-qualified commands (`.version.*`, `.processes.*`, `.settings.*`) coexist with pure operation commands (`.help`, `.status`, `.config`). `command_noun` and `command_verb` entities are deferred because domain noun lifecycle and verb behavioral contracts are already captured within `command/<namespace>.md` files; a separate `command_noun/` layer would duplicate that content without adding structure.

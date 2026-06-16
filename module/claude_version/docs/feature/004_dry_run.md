@@ -36,7 +36,12 @@
 | File | Relationship |
 |------|-------------|
 | `../../src/commands/mod.rs` | dry-run branches in mutation routines |
-| `spec.md` (deleted — migrated here) | FR-05, Command Inventory (dry:: parameter), Parameter Inventory |
+
+### Provenance
+
+| Source | Notes |
+|--------|-------|
+| `spec.md` (deleted) | FR-05, Command Inventory (dry:: parameter), Parameter Inventory |
 
 ### Tests
 

@@ -94,7 +94,7 @@ fn unset_ec4_value_and_unset_mutually_exclusive_exits_1()
 
 // ─── EC-5: unset::0 treated as normal set mode ───────────────────────────────
 
-/// EC-5: unset::0 (explicit disable) → treated as normal set mode; value written; exit 0
+/// EC-5: `unset::0` (explicit disable) → treated as normal set mode; value written; exit 0
 #[ test ]
 fn unset_ec5_zero_treated_as_normal_set_mode()
 {
@@ -115,7 +115,7 @@ fn unset_ec5_zero_treated_as_normal_set_mode()
 
 // ─── EC-6: unset::2 → invalid boolean → exit 1 ──────────────────────────────
 
-/// EC-6: unset::2 → boolean value out of range; exit 1
+/// EC-6: `unset::2` → boolean value out of range; exit 1
 #[ test ]
 fn unset_ec6_invalid_boolean_value_exits_1()
 {
@@ -128,7 +128,7 @@ fn unset_ec6_invalid_boolean_value_exits_1()
 
 // ─── EC-7: dry::1 prevents deletion ──────────────────────────────────────────
 
-/// EC-7: key::K unset::1 dry::1 → preview output; settings.json unchanged; exit 0
+/// EC-7: `key::K` `unset::1` `dry::1` → preview output; settings.json unchanged; exit 0
 #[ test ]
 fn unset_ec7_dry_run_prevents_deletion()
 {

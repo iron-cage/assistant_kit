@@ -36,3 +36,9 @@ Layer 3 of the version lock pattern applies `chmod 555` to `~/.local/share/claud
 | File | Relationship |
 |------|-------------|
 | `../../src/commands/version.rs` | chmod 555/755 transitions in perform_install() |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [`../../tests/docs/pitfall/001_version_lock_chmod.md`](../../tests/docs/pitfall/001_version_lock_chmod.md) | Regression test spec |

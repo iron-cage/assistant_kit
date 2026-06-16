@@ -11,8 +11,8 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| 001_output_control.md | Interaction tests for Group 1 (Output Control) | ✅ |
-| 002_execution_control.md | Interaction tests for Group 2 (Execution Control) | ✅ |
-| 003_settings_identity.md | Interaction tests for Group 3 (Settings Identity) | ✅ |
-| 004_config_identity.md | Interaction tests for Group 4 (Config Identity) | ✅ |
+| 01_output_control.md | Interaction tests for Group 1 (Output Control) | ✅ |
+| 02_execution_control.md | Interaction tests for Group 2 (Execution Control) | ✅ |
+| 03_settings_identity.md | Interaction tests for Group 3 (Settings Identity) | ✅ |
+| 04_config_identity.md | Interaction tests for Group 4 (Config Identity) | ✅ |
 | procedure.md | Workflow for creating and updating parameter group test specs | ✅ |

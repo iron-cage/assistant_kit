@@ -13,4 +13,3 @@
 |----|------|---------|--------|
 | 001 | [Settings Type Inference](001_settings_type_inference.md) | Type inference rules for value:: parameter in settings.set | ✅ |
 | 002 | [Config Resolution](002_config_resolution.md) | 4-layer resolution: env → project → user → catalog default | ✅ |
-| — | [procedure.md](procedure.md) | Workflow for creating and updating algorithm doc instances | ✅ |

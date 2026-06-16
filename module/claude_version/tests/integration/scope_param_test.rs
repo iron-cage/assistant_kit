@@ -21,7 +21,7 @@ use crate::helpers::{ assert_exit, run_clm_with_env };
 
 // ─── EC-1: scope::user writes to user settings ────────────────────────────────
 
-/// EC-1: `scope::user` (explicit) writes key to `~/.claude/settings.json`; exit 0
+/// EC-1: `scope::user` (explicit) writes key to ~/.claude/settings.json; exit 0
 #[ test ]
 fn scope_ec1_user_writes_to_user_settings()
 {
@@ -44,7 +44,7 @@ fn scope_ec1_user_writes_to_user_settings()
 
 // ─── EC-2: scope::project writes to project settings ─────────────────────────
 
-/// EC-2: `scope::project` writes to `{cwd}/.claude/settings.json`; user config untouched; exit 0
+/// EC-2: `scope::project` writes to {cwd}/.claude/settings.json; user config untouched; exit 0
 #[ test ]
 fn scope_ec2_project_writes_to_project_settings()
 {
@@ -113,7 +113,7 @@ fn scope_ec5_scope_without_write_op_exits_1()
 
 // ─── EC-6: scope::project creates .claude/ directory if absent ───────────────
 
-/// EC-6: `scope::project` creates `.claude/` directory when it does not exist; exit 0
+/// EC-6: `scope::project` creates .claude/ directory when it does not exist; exit 0
 #[ test ]
 fn scope_ec6_project_creates_directory_when_absent()
 {

@@ -17,7 +17,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 | FT-09 | `save(update_marker=false)` does not write `_active`; background refresh callers pass `false` | AC-15 | BUG-211 MRE |
 | FT-10 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | AC-16 | Name Inference / Regression |
 | FT-11 | Re-running `.account.save` preserves `_renewal_at` key (read-merge, not overwrite) | AC-17 | Read-Merge |
-| FT-12 | `.account.save` stamps `current_identity()` as `owner` in `{name}.json` | AC-19 | Ownership Stamp |
+| FT-12 | `.account.save` does NOT modify `owner` field — `account_save_routine()` passes `owner: None` | AC-19 | Ownership Neutral |
 | FT-13 | `name::` (empty) exits 1 with `account name must not be empty` | AC-02 | Validation |
 | FT-14 | `name::notanemail` (no `@`) exits 1 — `validate_name()` rejects before dry-run | AC-03 | Validation |
 | FT-15 | `~/.claude.json` absent — save succeeds; no `oauthAccount` snapshot written | AC-07 | Best-Effort |
@@ -41,7 +41,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 | FT-09 | `save(update_marker=false)` does not write `_active` | AC-15 | BUG-211 MRE |
 | FT-10 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | AC-16 | Name Inference / Regression |
 | FT-11 | Re-running `.account.save` preserves `_renewal_at` (read-merge) | AC-17 | Read-Merge |
-| FT-12 | `.account.save` stamps `current_identity()` as owner in `{name}.json` | AC-19 | Ownership Stamp |
+| FT-12 | `.account.save` does NOT modify `owner` in `{name}.json` — passes `owner: None` | AC-19 | Ownership Neutral |
 | FT-13 | `name::` (empty) exits 1 | AC-02 | Validation |
 | FT-14 | `name::notanemail` (no `@`) exits 1 — validation before dry-run | AC-03 | Validation |
 | FT-15 | `~/.claude.json` absent — save succeeds, no `oauthAccount` snapshot | AC-07 | Best-Effort |
@@ -148,7 +148,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Then:** The credential file `alice@test.com.credentials.json` is written. The `_active_{hostname}_{user}` marker file does NOT exist — `update_marker=false` suppresses the write. A concurrent `.account.use` switch would be unaffected.
 - **Exit:** N/A (unit test — no exit code)
 - **Source fn:** `test_mre_bug211_save_false_leaves_marker_unchanged` (in `claude_profile_core/tests/account_test.rs`)
-- **Note:** BUG-211 MRE — verifies the `update_marker` guard in `save()`. Background refresh calls (`refresh_account_token`) pass `false`; user CLI calls (`.account.save`, `.account.relogin`) pass `true`. Background callers pass `owner: None` (preserves existing owner) per Feature 036 AC-14; interactive save passes `Some(&owner_val)` — see Feature 036 FT-14 for the ownership side of the same requirement.
+- **Note:** BUG-211 MRE — verifies the `update_marker` guard in `save()`. Background refresh calls (`refresh_account_token`) pass `false`; user CLI calls (`.account.save`, `.account.relogin`) pass `true`. All callers pass `owner: None` (preserves existing owner) per Feature 036 AC-14 — see Feature 036 FT-14 for the ownership side of the same requirement.
 - **Source:** [feature/002_account_save.md AC-15](../../../docs/feature/002_account_save.md)
 
 ---
@@ -179,14 +179,14 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 
 ---
 
-### FT-12: `.account.save` stamps `current_identity()` as owner
+### FT-12: `.account.save` does NOT modify `owner` field — ownership-neutral
 
-- **Given:** Account `alice@acme.com` exists. `current_identity()` resolves to `"testuser@testmachine"`.
+- **Given:** Account `alice@acme.com` exists. `{credential_store}/alice@acme.com.json` contains `"owner": "testuser@testmachine"`. Current identity = `"testuser@testmachine"`.
 - **When:** `clp .account.save name::alice@acme.com`
-- **Then:** Exits 0. `{credential_store}/alice@acme.com.json` contains `"owner": "testuser@testmachine"`. `account_save_routine()` passes `Some(&owner_val)` to `save()`. Credentials re-saved.
+- **Then:** Exits 0. `{credential_store}/alice@acme.com.json` still contains `"owner": "testuser@testmachine"` — unchanged. `account_save_routine()` passes `owner: None` to `save()`, preserving the existing value via read-merge. Credentials re-saved; all other fields updated normally.
 - **Exit:** 0
-- **Source fn:** `ft12_save_stamps_owner` (in `tests/cli/account_mutations_test.rs`)
-- **Note:** AC-19 ownership stamp — `.account.save` always writes `current_identity()` as `owner` on interactive save. `.account.assign` does NOT touch the `owner` field.
+- **Source fn:** `ft12_save_does_not_stamp_owner` (in `tests/cli/account_mutations_test.rs`)
+- **Note:** AC-19 — `.account.save` is ownership-neutral. Existing `owner` field is preserved unchanged on every save. An account with no `owner` field retains no `owner` field after save (read-merge: absent key stays absent).
 - **Source:** [feature/002_account_save.md AC-19](../../../docs/feature/002_account_save.md)
 
 ---

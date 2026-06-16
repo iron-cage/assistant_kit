@@ -58,7 +58,7 @@ pub fn config_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resul
     Some( Value::String( s ) ) if !s.is_empty() => Some( s.clone() ),
     _                                            => None,
   };
-  let is_unset      = matches!( cmd.arguments.get( "unset" ), Some( Value::Boolean( true ) ) );
+  let is_unset  = matches!( cmd.arguments.get( "unset" ), Some( Value::Boolean( true ) ) );
   let scope_explicit = cmd.arguments.contains_key( "scope" );
   let scope_str = match cmd.arguments.get( "scope" )
   {
@@ -83,6 +83,14 @@ pub fn config_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resul
     return Err( ErrorData::new( ErrorCode::ArgumentMissing,
       "value:: and unset::1 are mutually exclusive".to_string() ) );
   }
+  // scope:: is only meaningful for write operations (set or unset).
+  // Passing scope:: in show-all or get mode is a user error.
+  let is_write = key_opt.is_some() && ( value_opt.is_some() || is_unset );
+  if scope_explicit && !is_write
+  {
+    return Err( ErrorData::new( ErrorCode::ArgumentMissing,
+      "scope:: applies to write operations only; provide key:: with value:: or unset::1".to_string() ) );
+  }
 
   // ── Validate scope value ──────────────────────────────────────────────────
   match scope_str.as_str()
@@ -90,14 +98,6 @@ pub fn config_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resul
     "user" | "project" => {}
     other => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch,
       format!( "unknown scope '{other}': expected user or project" ) ) ),
-  }
-  // scope:: is only meaningful for write operations (set / unset).
-  // Accepting it silently in read modes would mislead callers into thinking
-  // the scope filter was applied when it was not.
-  if scope_explicit && value_opt.is_none() && !is_unset
-  {
-    return Err( ErrorData::new( ErrorCode::ArgumentMissing,
-      "scope:: applies to write operations only; provide key:: and value:: or unset::1".to_string() ) );
   }
 
   // ── Mode dispatch ─────────────────────────────────────────────────────────

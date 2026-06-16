@@ -40,6 +40,7 @@ clv .processes format::json v::2
 | 8 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Partial (`v::`, `format::`) |
 | 9 | [`.settings.show`](../command/settings.md#command--9-settingsshow) | Partial (`v::`, `format::`) |
 | 10 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Partial (`v::`, `format::`) |
+| 11 | [`.config`](../command/config.md#command--13-config) | Partial (`v::`, `format::`) |
 
 ### Referenced User Stories
 
@@ -50,3 +51,4 @@ clv .processes format::json v::2
 | 3 | [003 Process Lifecycle](../user_story/003_process_lifecycle.md) | Developer (unresponsive session) |
 | 4 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
 | 5 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
+| 6 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |
