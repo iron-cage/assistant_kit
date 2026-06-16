@@ -11,11 +11,18 @@ use data_fmt::{ RowBuilder, TableFormatter, TableConfig, TableCaption, Format };
 /// exits 1 on any unexpected argument.
 pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
 {
-  // `ps` takes no flags or positional arguments.
-  if let Some( tok ) = tokens.get( 1 )
+  // `ps` takes no flags or positional arguments — but intercepts help tokens.
+  if let Some( arg ) = tokens.get( 1 )
   {
-    eprintln!( "Error: unexpected argument: {tok}\nRun 'clr --help' for usage." );
-    std::process::exit( 1 );
+    match arg.as_str()
+    {
+      "--help" | "-h" | "help" => { super::help::print_ps_help(); }
+      _ =>
+      {
+        eprintln!( "clr ps: unexpected argument `{arg}`\nRun 'clr --help' for usage." );
+        std::process::exit( 1 );
+      }
+    }
   }
 
   let procs        = find_claude_processes();

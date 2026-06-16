@@ -7,6 +7,13 @@
 - **In Scope**: text (human-readable) and json (machine-readable) output formats.
 - **Out of Scope**: Command-specific output (-> `../command/`), behavioral rules (-> `../../feature/`).
 
+### Responsibility Table
+
+| File | Responsibility |
+|------|---------------|
+| readme.md | Index, scope, and Overview Table for format instances |
+| procedure.md | Steps for adding, updating, or removing format instances |
+
 ### Overview Table
 
 | File | Format | Purpose |

@@ -1,19 +1,19 @@
 #![ allow( clippy::doc_markdown ) ] // test doc comments use code identifiers in prose
-//! `--retry-on-runner` and `--runner-delay` Parse Tests
+//! `--retry-on-runner` and `--runner-delay` Parse and Retry Tests
 //!
 //! ## Purpose
 //!
 //! Verify EC-1 through EC-6 from `tests/docs/cli/param/050_retry_on_runner.md` and
-//! EC-1 through EC-6 from `tests/docs/cli/param/051_runner_delay.md`.
+//! EC-1 through EC-6 from `tests/docs/cli/param/051_runner_delay.md`,
+//! plus EC-7 and EC-8 (runtime retry integration tests added by TSK-209/BUG-299).
 //!
 //! Both parameter specs share this test file.
 //!
 //! ## Test Layout
 //!
 //! - EC-1..EC-6 (param 50), EC-1..EC-6 (param 51): parser/dry-run — no subprocess
-//! - No integration tests: Runner class errors (binary not found, spawn failed, gate
-//!   timeout) exit before the retry loop is entered, so `--retry-on-runner` has no
-//!   runtime effect in the current implementation
+//! - EC-7: binary absent + `--retry-on-runner 1 --runner-delay 0` → retry fires (BUG-299)
+//! - EC-8: binary absent + `--retry-on-runner 0 --retry-override 0` → no retry (BUG-299)
 //!
 //! ## Corner Cases Covered
 //!
@@ -34,7 +34,7 @@
 //! - EC-6 (delay): invalid env var silently ignored
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ run_cli, run_cli_with_env };
+use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str };
 
 // ── Param 50 — --retry-on-runner ──────────────────────────────────────────────
 
@@ -227,5 +227,80 @@ fn ec6_clr_runner_delay_invalid_ignored()
     out.status.success(),
     "invalid CLR_RUNNER_DELAY must be silently ignored. stderr: {}",
     String::from_utf8_lossy( &out.stderr )
+  );
+}
+
+// ── EC-7: binary absent + retry fires (BUG-299) ───────────────────────────────
+
+/// EC-7 (BUG-299): when `claude` is absent from PATH and `--retry-on-runner 1
+/// --runner-delay 0` is set, `apply_runner_retry()` fires once before exhausting —
+/// stderr contains `"retrying"`.
+///
+/// ## Root Cause (BUG-299)
+/// `--retry-on-runner`/`--runner-delay` were parsed but had no runtime effect;
+/// all spawn-error arms called `exit(1)` directly, bypassing the retry system.
+///
+/// ## Fix Applied
+/// `execute_print_attempt()` now returns `Result<ExecutionOutput, io::Error>` on
+/// spawn failure; `run_print_mode()` calls `apply_runner_retry()` on `Err`.
+///
+/// ## Pitfall
+/// Do NOT include `--retry-override` in EC-7 — it short-circuits to its value
+/// (0 would prevent any retry). EC-7 drives retry via the class-specific param only.
+// test_kind: bug_reproducer(BUG-299)
+#[ test ]
+fn ec7_runner_retry_fires_on_absent_binary()
+{
+  // Empty temp dir: no `claude` binary present → spawn fails with NotFound.
+  let empty_path = tempfile::TempDir::new().expect( "create empty PATH dir" );
+  let path_val   = empty_path.path().to_str().expect( "path UTF-8" ).to_string();
+
+  let out = run_cli_with_env(
+    &[ "--print", "--max-sessions", "0", "--retry-on-runner", "1", "--runner-delay", "0", "msg" ],
+    &[ ( "PATH", &path_val ) ],
+  );
+  let err = stderr_str( &out );
+
+  assert!(
+    !out.status.success(),
+    "EC-7 (BUG-299): expected non-zero exit when binary absent; got 0"
+  );
+  assert!(
+    err.contains( "retrying" ),
+    "EC-7 (BUG-299): stderr must contain 'retrying' when retry fires; got:\n{err}"
+  );
+}
+
+// ── EC-8: retry disabled explicitly — no retry fires ─────────────────────────
+
+/// EC-8 (BUG-299): when `claude` is absent and `--retry-on-runner 0 --retry-override 0`
+/// is set, no retry fires — stderr does NOT contain `"retrying"`; exit 1 immediately.
+///
+/// `--retry-override 0` suppresses the default fallback (2 retries), ensuring the
+/// zero class-specific count is not overridden by the default.
+// test_kind: bug_reproducer(BUG-299)
+#[ test ]
+fn ec8_runner_retry_disabled_no_retry()
+{
+  let empty_path = tempfile::TempDir::new().expect( "create empty PATH dir" );
+  let path_val   = empty_path.path().to_str().expect( "path UTF-8" ).to_string();
+
+  let out = run_cli_with_env(
+    &[
+      "--print", "--max-sessions", "0",
+      "--retry-on-runner", "0", "--retry-override", "0",
+      "msg",
+    ],
+    &[ ( "PATH", &path_val ) ],
+  );
+  let err = stderr_str( &out );
+
+  assert!(
+    !out.status.success(),
+    "EC-8 (BUG-299): expected non-zero exit when binary absent; got 0"
+  );
+  assert!(
+    !err.contains( "retrying" ),
+    "EC-8 (BUG-299): stderr must NOT contain 'retrying' when retry disabled; got:\n{err}"
   );
 }

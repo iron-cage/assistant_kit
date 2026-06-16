@@ -132,11 +132,19 @@ _build()
     _bc_abspath="$( cd "$CONFIG_DIR/$_bc_relpath" && pwd )"
     _extra_ctx_args=( "--build-context" "${_bc_name}=${_bc_abspath}" )
   fi
+  # --jobs 1 is Podman-specific (limits parallel build layers to avoid storage
+  # oscillation on rootless fuse-overlayfs). Docker BuildKit does not accept
+  # this flag and controls parallelism internally, so skip it for Docker.
+  local _jobs_flag=()
+  if [[ "${CONTAINER_CMD##*/}" == podman* ]]; then
+    _jobs_flag=( "--jobs" "1" )
+  fi
   local _hash
   _hash=$( _content_hash )
   # shellcheck disable=SC2086
   "$CONTAINER_CMD" build \
     --rm=false \
+    "${_jobs_flag[@]+"${_jobs_flag[@]}"}" \
     -f "$DOCKERFILE" \
     --build-arg "BASE_IMAGE=$BASE_IMAGE" \
     --build-arg "TEST_USER=$TEST_USER" \

@@ -19,8 +19,11 @@
 //! | IT-11 | No gate files → no queued table in output      | Queued absent    |
 //! | IT-12 | Active table caption contains `Active Sessions` and `running` | Caption presence |
 //! | IT-13 | Orphaned gate file (dead PID) filtered out of queued table    | BUG-293 repro    |
+//! | IT-14 | `clr ps --help` → exit 0, stdout non-empty                    | BUG-294 help     |
+//! | IT-15 | `clr ps -h` → exit 0, stdout non-empty                       | BUG-294 short    |
 //! | IT-16 | Task column extracts Form A content for underscore CWD         | BUG-295/296/297  |
 //! | IT-17 | Task column selects Form A over Form B `tool_result` lines      | BUG-297 repro    |
+//! | IT-18 | `clr ps help` (positional) → exit 0, stdout non-empty         | BUG-294 positional|
 //! | IT-19 | Task column works for CWD with no underscores (regression)     | BUG-295 regression|
 
 mod cli_binary_test_helpers;
@@ -396,6 +399,41 @@ fn it_13_orphaned_gate_file_filtered_out()
   );
 }
 
+// ── IT-14: `clr ps --help` → exit 0 ──────────────────────────────────────────
+
+/// IT-14 (BUG-294): `clr ps --help` must exit 0 and print help text.
+///
+/// Before fix: `dispatch_ps()` rejected `--help` as "unexpected argument" (exit 1).
+/// After fix: matches `"--help" | "-h" | "help"` and calls `print_ps_help()`.
+// test_kind: bug_reproducer(BUG-294)
+#[ test ]
+fn it_14_ps_help_flag()
+{
+  let out    = run_cli( &[ "ps", "--help" ] );
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-14: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    !stdout.is_empty(),
+    "IT-14: stdout must contain help text, got empty output"
+  );
+}
+
+// ── IT-15: `clr ps -h` → exit 0 ──────────────────────────────────────────────
+
+/// IT-15 (BUG-294): `clr ps -h` must exit 0 and print help text.
+// test_kind: bug_reproducer(BUG-294)
+#[ test ]
+fn it_15_ps_h_flag()
+{
+  let out    = run_cli( &[ "ps", "-h" ] );
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-15: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    !stdout.is_empty(),
+    "IT-15: stdout must contain help text, got empty output"
+  );
+}
+
 // ── IT-16: Task column — Form A extraction with underscore CWD ────────────────
 
 /// IT-16: `clr ps` Task column shows Form A content for a session whose CWD
@@ -559,6 +597,22 @@ fn it_17_task_column_form_a_over_form_b()
   );
 }
 
+// ── IT-18: `clr ps help` (positional) → exit 0 ───────────────────────────────
+
+/// IT-18 (BUG-294): `clr ps help` (positional token) must exit 0 and print help text.
+// test_kind: bug_reproducer(BUG-294)
+#[ test ]
+fn it_18_ps_help_positional()
+{
+  let out    = run_cli( &[ "ps", "help" ] );
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-18: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    !stdout.is_empty(),
+    "IT-18: stdout must contain help text, got empty output"
+  );
+}
+
 // ── IT-19: Task column — no-underscore CWD regression ────────────────────────
 
 /// IT-19: `clr ps` Task column works for a session whose CWD contains no
@@ -627,7 +681,7 @@ fn it_19_task_column_no_underscores()
   let _ = bg.wait();
 
   let stdout = stdout_str( &out );
-  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
+  assert!( out.status.success(), "IT-19: exit 0 expected, got {:?}", out.status.code() );
   assert!(
     stdout.contains( "no underscores task" ),
     "IT-19 (BUG-295 regression): Task column must show Form A content for underscore-free CWD. Got:\n{stdout}"

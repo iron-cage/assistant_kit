@@ -161,9 +161,11 @@ fn ec_3_count_2_rejected()
 #[ test ]
 fn ec_4_count_yes_accepted()
 {
+  // CLAUDE_STORAGE_ROOT isolation: see ec_4_agent_yes_accepted comment.
   let out = common::clg_cmd()
     .arg( ".list" )
     .arg( "count::yes" )
+    .env( "CLAUDE_STORAGE_ROOT", "/tmp/claude_tests_empty" )
     .output()
     .unwrap();
 

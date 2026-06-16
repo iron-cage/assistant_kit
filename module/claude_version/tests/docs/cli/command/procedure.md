@@ -23,6 +23,6 @@
 Adding command test spec for `.version.prune`:
 
 1. Check `readme.md` Responsibility Table — current highest ID is `012`
-2. Create `013_version_prune.md` with test factor analysis and test case index
-3. Add row: `| 013_version_prune.md | Integration tests for .version.prune command |`
-4. Add to parent Navigation: `- [.version.prune](command/013_version_prune.md)`
+2. Create `13_version_prune.md` with test factor analysis and test case index
+3. Add row: `| 13_version_prune.md | Integration tests for .version.prune command |`
+4. Add to parent Navigation: `- [.version.prune](command/13_version_prune.md)`

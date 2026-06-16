@@ -11,12 +11,14 @@ use std::env;
 #[ test ]
 fn test_list_path_dot_integration()
 {
-  // Change to claude_storage directory (where this project's storage should be)
+  // CLAUDE_STORAGE_ROOT isolation: container's /workspace/.claude/projects is
+  // bind-mounted 0700; unreadable by test user. Empty storage root returns an
+  // empty list instead of a permission error, letting the path resolution test pass.
   let test_dir = env::current_dir().unwrap();
 
-  // Run: cargo run -- .list path::.
   let output = common::clg_cmd()
     .args( [ ".list", "path::." ] )
+    .env( "CLAUDE_STORAGE_ROOT", "/tmp/claude_tests_empty" )
     .current_dir( &test_dir )
     .output()
     .expect( "Failed to execute claude_storage" );
@@ -56,6 +58,7 @@ fn test_list_path_dotdot_integration()
 
   let output = common::clg_cmd()
     .args( [ ".list", "path::.." ] )
+    .env( "CLAUDE_STORAGE_ROOT", "/tmp/claude_tests_empty" )
     .current_dir( &test_dir )
     .output()
     .expect( "Failed to execute claude_storage" );
@@ -84,6 +87,7 @@ fn test_list_path_tilde_integration()
 
   let output = common::clg_cmd()
     .args( [ ".list", "path::~" ] )
+    .env( "CLAUDE_STORAGE_ROOT", "/tmp/claude_tests_empty" )
     .current_dir( &test_dir )
     .output()
     .expect( "Failed to execute claude_storage" );
@@ -113,6 +117,7 @@ fn test_list_path_pattern_backward_compat()
   // Verify backward compatibility: pattern matching still works
   let output = common::clg_cmd()
     .args( [ ".list", "path::claude_tools" ] )
+    .env( "CLAUDE_STORAGE_ROOT", "/tmp/claude_tests_empty" )
     .current_dir( &test_dir )
     .output()
     .expect( "Failed to execute claude_storage" );
@@ -142,6 +147,7 @@ fn test_list_path_tilde_slash_integration()
 
   let output = common::clg_cmd()
     .args( [ ".list", "path::~/pro" ] )
+    .env( "CLAUDE_STORAGE_ROOT", "/tmp/claude_tests_empty" )
     .current_dir( &test_dir )
     .output()
     .expect( "Failed to execute claude_storage" );
@@ -173,6 +179,7 @@ fn test_list_path_absolute_integration()
 
   let output = common::clg_cmd()
     .args( [ ".list", &format!( "path::{abs_path}" ) ] )
+    .env( "CLAUDE_STORAGE_ROOT", "/tmp/claude_tests_empty" )
     .current_dir( &test_dir )
     .output()
     .expect( "Failed to execute claude_storage" );

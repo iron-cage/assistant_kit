@@ -83,3 +83,9 @@ When `v::` appears multiple times, the last value wins. Simplifies script compos
 | File | Relationship |
 |------|-------------|
 | [feature/005_cli_design.md](../feature/005_cli_design.md) | CLI pipeline design implementing these decisions |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [`../../tests/docs/collection/001_design_decisions.md`](../../tests/docs/collection/001_design_decisions.md) | Decision implementation test spec |

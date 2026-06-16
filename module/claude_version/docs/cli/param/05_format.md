@@ -3,7 +3,7 @@
 -- **Summary:** Select output format.
 -- **Type:** `OutputFormat`
 -- **Default:** text
--- **Commands:** 10 commands
+-- **Commands:** all commands with format:: support
 -- **Group:** Output Control
 
 Case-sensitive: `text` and `json` only.
@@ -31,6 +31,7 @@ clv.settings.show format::text
 | 8 | [`.processes.kill`](../command/processes.md#command--8-processeskill) |
 | 9 | [`.settings.show`](../command/settings.md#command--9-settingsshow) |
 | 10 | [`.settings.get`](../command/settings.md#command--10-settingsget) |
+| 11 | [`.config`](../command/config.md#command--13-config) |
 
 ### Referenced Parameter Groups
 
@@ -53,3 +54,4 @@ clv.settings.show format::text
 | 3 | [003 Process Lifecycle](../user_story/003_process_lifecycle.md) | Developer (unresponsive session) |
 | 4 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
 | 5 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
+| 6 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |

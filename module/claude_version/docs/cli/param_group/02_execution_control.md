@@ -13,7 +13,7 @@ Both parameters modify the execution mode of destructive operations.
 | [`dry::`](../param/02_dry.md) | bool | Preview without executing |
 | [`force::`](../param/03_force.md) | bool | Bypass safety guards |
 
-**Partial implementors:** `.settings.set` implements `dry::` only (no `force::`).
+**Partial implementors:** `.settings.set` and `.config` implement `dry::` only (no `force::`).
 
 **Why NOT in this group:**
 - `version::`: specifies *what* to install, not *whether* to install
@@ -37,6 +37,7 @@ clv .processes.kill dry::1 force::1  # preview forced kill
 | 2 | [`.version.guard`](../command/version.md#command--5-versionguard) | Full (`dry::`, `force::`) |
 | 3 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Full (`dry::`, `force::`) |
 | 4 | [`.settings.set`](../command/settings.md#command--11-settingsset) | Partial (`dry::` only) |
+| 5 | [`.config`](../command/config.md#command--13-config) | Partial (`dry::` only) |
 
 ### Referenced User Stories
 
@@ -46,3 +47,4 @@ clv .processes.kill dry::1 force::1  # preview forced kill
 | 2 | [003 Process Lifecycle](../user_story/003_process_lifecycle.md) | Developer (unresponsive session) |
 | 3 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
 | 4 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
+| 5 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |

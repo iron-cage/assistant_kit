@@ -23,6 +23,6 @@
 Adding parameter group test spec for Credential Control:
 
 1. Check `readme.md` Responsibility Table — current highest ID is `003`
-2. Create `004_credential_control.md` with interaction test index
-3. Add row: `| 004_credential_control.md | Interaction tests for Group 4 (Credential Control) |`
-4. Add to parent Navigation: `- [Credential Control](param_group/004_credential_control.md)`
+2. Create `04_credential_control.md` with interaction test index
+3. Add row: `| 04_credential_control.md | Interaction tests for Group 4 (Credential Control) |`
+4. Add to parent Navigation: `- [Credential Control](param_group/04_credential_control.md)`

@@ -4,7 +4,7 @@
 
 - **Purpose**: Semantic type definitions for clv parameter values.
 - **Responsibility**: Type name, base type, format rules, and validation constraints.
-- **In Scope**: 7 semantic types used by clv parameters.
+- **In Scope**: semantic types used by clv parameters.
 - **Out of Scope**: Parameter reference (→ `../param/`), type inference algorithm (→ `../../algorithm/`).
 
 ### Responsibility Table
@@ -21,7 +21,7 @@
 | 06_config_scope.md | `ConfigScope` — enum user\|project, write target for `.config` |
 | 07_config_key.md | `ConfigKey` — String with catalog context; known + arbitrary keys |
 
-### All Types (7 total)
+### All Types
 
 | # | Type | Base | Used By | Purpose |
 |---|------|------|---------|---------|

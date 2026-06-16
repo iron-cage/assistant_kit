@@ -102,9 +102,14 @@ fn test_list_type_parameter_validation()
 #[ test ]
 fn test_list_type_parameter_valid_values()
 {
+  // CLAUDE_STORAGE_ROOT isolation: container's /workspace/.claude/projects is
+  // bind-mounted with 0700 (host uid), unreadable by the test user. Point to a
+  // non-existent path so list_projects() returns empty list instead of an error.
+
   // type::uuid
   let output = common::clg_cmd()
     .args( [ ".list", "type::uuid" ] )
+    .env( "CLAUDE_STORAGE_ROOT", "/tmp/claude_tests_empty" )
     .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
     .output()
     .expect( "Failed to execute command" );
@@ -113,6 +118,7 @@ fn test_list_type_parameter_valid_values()
   // type::path
   let output = common::clg_cmd()
     .args( [ ".list", "type::path" ] )
+    .env( "CLAUDE_STORAGE_ROOT", "/tmp/claude_tests_empty" )
     .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
     .output()
     .expect( "Failed to execute command" );
@@ -121,6 +127,7 @@ fn test_list_type_parameter_valid_values()
   // type::all
   let output = common::clg_cmd()
     .args( [ ".list", "type::all" ] )
+    .env( "CLAUDE_STORAGE_ROOT", "/tmp/claude_tests_empty" )
     .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
     .output()
     .expect( "Failed to execute command" );
@@ -293,9 +300,12 @@ fn test_count_target_invalid_value()
 #[ test ]
 fn test_count_target_valid_values()
 {
+  // CLAUDE_STORAGE_ROOT isolation: see test_list_type_parameter_valid_values.
+
   // target::projects (default) - should always succeed
   let output = common::clg_cmd()
     .args( [ ".count" ] )
+    .env( "CLAUDE_STORAGE_ROOT", "/tmp/claude_tests_empty" )
     .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
     .output()
     .expect( "Failed to execute command" );
@@ -305,6 +315,7 @@ fn test_count_target_valid_values()
   // target::projects (explicit) - should succeed
   let output = common::clg_cmd()
     .args( [ ".count", "target::projects" ] )
+    .env( "CLAUDE_STORAGE_ROOT", "/tmp/claude_tests_empty" )
     .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
     .output()
     .expect( "Failed to execute command" );
@@ -314,6 +325,7 @@ fn test_count_target_valid_values()
   // target::sessions — counts all sessions globally; no project required
   let output = common::clg_cmd()
     .args( [ ".count", "target::sessions" ] )
+    .env( "CLAUDE_STORAGE_ROOT", "/tmp/claude_tests_empty" )
     .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
     .output()
     .expect( "Failed to execute command" );

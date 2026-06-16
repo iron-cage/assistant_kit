@@ -109,7 +109,7 @@ clv.config key::theme unset::1
 
 | # | User Story | Persona |
 |---|-----------|---------|
-| 4 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
+| 1 | [006 Config Management](../user_story/006_config_management.md) | Developer (config inspection/modification) |
 
 ---
 

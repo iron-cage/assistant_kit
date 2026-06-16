@@ -140,3 +140,64 @@ fn quota_exhausted_pattern_emits_labeled_message()
     "T11 (TSK-253): [Transient] must be absent for quota exhaustion; got:\n{err}"
   );
 }
+
+// ── TC-12 ──────────────────────────────────────────────────────────────────────
+
+/// TC-12 (BUG-298): when `claude` binary exists but is `chmod 000` (no execute
+/// permission), `clr --print` must exit 1 with `"[Runner]"` on stderr.
+///
+/// ## Root Cause
+/// `spawn_error_msg()` did not prepend `[Runner]` to either branch; the no-timeout
+/// spawn arm in `execute_print_attempt()` bypassed `spawn_error_msg()` entirely and
+/// emitted bare `{e}` with no class tag.
+///
+/// ## Why Not Caught
+/// Existing T09/T10/T11 tests drove fake-claude shell scripts (executable); none tested
+/// a binary whose permissions deny execution. The EACCES path was never exercised.
+///
+/// ## Fix Applied
+/// `spawn_error_msg()` now prepends `"[Runner]"` to both branches. The no-timeout
+/// arm now calls the helper (or prepends `[Runner]` directly via `eprintln!("Error: [Runner] {e}")`).
+///
+/// ## Prevention
+/// For each error class, add an integration test that exercises the CLR binary with
+/// a trigger for that class and asserts the `[Class]` prefix on stderr.
+///
+/// ## Pitfall
+/// Do NOT use `fake_claude_binary_dir()` — it sets `chmod 0o755` (executable).
+/// TC-12 needs `chmod 000` to trigger EACCES. Copy the binary, then call
+/// `fs::set_permissions()` to deny execution.
+// test_kind: bug_reproducer(BUG-298)
+#[ test ]
+fn tc_12_runner_spawn_failed_prefix()
+{
+  use std::os::unix::fs::PermissionsExt;
+
+  let dir      = tempfile::TempDir::new().expect( "create temp dir for chmod 000 test" );
+  let claude   = dir.path().join( "claude" );
+  std::fs::copy( "/bin/sleep", &claude ).expect( "copy sleep as claude" );
+  std::fs::set_permissions( &claude, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "set 755 on claude copy" );
+  // Now deny all execution to trigger EACCES on spawn.
+  std::fs::set_permissions( &claude, std::fs::Permissions::from_mode( 0o000 ) )
+    .expect( "set 000 on claude (deny execute)" );
+
+  let path_val = dir.path().to_str().expect( "dir UTF-8" ).to_string();
+  let out      = run_cli_with_env(
+    &[ "--print", "--max-sessions", "0", "--retry-override", "0", "msg" ],
+    &[ ( "PATH", &path_val ) ],
+  );
+  let err = stderr_str( &out );
+
+  // Restore permissions so TempDir cleanup can delete the file.
+  let _ = std::fs::set_permissions( &claude, std::fs::Permissions::from_mode( 0o644 ) );
+
+  assert!(
+    !out.status.success(),
+    "TC-12 (BUG-298): expected non-zero exit for chmod 000 binary; got 0"
+  );
+  assert!(
+    err.contains( "[Runner]" ),
+    "TC-12 (BUG-298): stderr must contain '[Runner]' prefix; got:\n{err}"
+  );
+}

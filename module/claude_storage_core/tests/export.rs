@@ -9,7 +9,7 @@ use std::io::Cursor;
 #[test]
 fn export_markdown_basic()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
   let projects = storage.list_projects().expect( "Failed to list projects" );
 
   if projects.is_empty()
@@ -62,7 +62,7 @@ fn export_markdown_basic()
 #[test]
 fn export_json_basic()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
   let projects = storage.list_projects().expect( "Failed to list projects" );
 
   if projects.is_empty()
@@ -102,7 +102,7 @@ fn export_json_basic()
 #[test]
 fn export_text_basic()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
   let projects = storage.list_projects().expect( "Failed to list projects" );
 
   if projects.is_empty()
@@ -210,7 +210,7 @@ fn export_format_extension()
 #[test]
 fn export_to_file()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
   let projects = storage.list_projects().expect( "Failed to list projects" );
 
   if projects.is_empty()
@@ -255,7 +255,7 @@ fn export_to_file()
 #[test]
 fn export_markdown_with_thinking()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
   let projects = storage.list_projects().expect( "Failed to list projects" );
 
   if projects.is_empty()
@@ -321,7 +321,7 @@ fn export_with_metadata_entries()
 {
   use std::io::Cursor;
 
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
   let projects = storage.list_projects().expect( "Failed to list projects" );
 
   if projects.is_empty()

@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Per-namespace command reference for all 13 clvcommands.
+- **Purpose**: Per-namespace command reference for all clvcommands.
 - **Responsibility**: Command syntax, parameters, exit codes, examples, and cross-references grouped by namespace.
-- **In Scope**: All 13 clvcommands, organized by dot-namespace cluster.
+- **In Scope**: All clvcommands, organized by dot-namespace cluster.
 - **Out of Scope**: Parameter details (→ `../param/`), type definitions (→ `../type/`), behavioral contracts (→ `../../feature/`).
 
 ### Responsibility Table
@@ -14,12 +14,12 @@
 | readme.md | Index and navigation for command namespace files |
 | procedure.md | Steps for adding, updating, or removing command instances |
 | root.md | Root-namespace commands: `.help`, `.status` |
-| version.md | Version-namespace commands: `.version.*` (5 commands) |
+| version.md | Version-namespace commands: `.version.*` |
 | processes.md | Process-namespace commands: `.processes`, `.processes.kill` |
-| settings.md | Settings-namespace commands: `.settings.*` (3 commands, deprecated) |
+| settings.md | Settings-namespace commands: `.settings.*` (deprecated) |
 | config.md | Config command: `.config` (unified settings inspection and modification) |
 
-### All Commands (13 total)
+### All Commands
 
 | # | Command | Namespace | File |
 |---|---------|-----------|------|

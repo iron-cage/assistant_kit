@@ -59,6 +59,7 @@ pub fn config_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resul
     _                                            => None,
   };
   let is_unset  = matches!( cmd.arguments.get( "unset" ), Some( Value::Boolean( true ) ) );
+  let scope_explicit = cmd.arguments.contains_key( "scope" );
   let scope_str = match cmd.arguments.get( "scope" )
   {
     Some( Value::String( s ) ) => s.clone(),
@@ -81,6 +82,14 @@ pub fn config_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resul
   {
     return Err( ErrorData::new( ErrorCode::ArgumentMissing,
       "value:: and unset::1 are mutually exclusive".to_string() ) );
+  }
+  // scope:: is only meaningful for write operations (set or unset).
+  // Passing scope:: in show-all or get mode is a user error.
+  let is_write = key_opt.is_some() && ( value_opt.is_some() || is_unset );
+  if scope_explicit && !is_write
+  {
+    return Err( ErrorData::new( ErrorCode::ArgumentMissing,
+      "scope:: applies to write operations only; provide key:: with value:: or unset::1".to_string() ) );
   }
 
   // ── Validate scope value ──────────────────────────────────────────────────

@@ -39,4 +39,4 @@ clv.config key::model value::claude-haiku-4-5-20251001 scope::project  # writes 
 
 | # | User Story | Persona |
 |---|-----------|---------|
-| 1 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
+| 1 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |

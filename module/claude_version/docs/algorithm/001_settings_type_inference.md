@@ -63,7 +63,12 @@ The inference is applied in strict priority order. The first matching rule wins:
 | File | Relationship |
 |------|-------------|
 | `../../src/settings_io.rs` | Type inference implementation |
-| `spec.md` (deleted — migrated here) | FR-07 (type inference for value::) |
+
+### Provenance
+
+| Source | Notes |
+|--------|-------|
+| `spec.md` (deleted) | FR-07 (type inference for value::) |
 
 ### Tests
 

@@ -5,9 +5,11 @@
 //!
 //! # Test Strategy
 //!
-//! Tests create real storage directories under `~/.claude/projects/` using
+//! Tests create real storage directories under a temporary home directory using
 //! the canonical `encode_path` encoding, write fixture files, run detection,
-//! then clean up. This exercises the full detection path against real filesystem.
+//! and verify the result. `HOME` is overridden per-test via `set_var` (safe
+//! because nextest runs each test in its own process). This exercises the full
+//! detection path against real filesystem without touching the host `~/.claude/`.
 //!
 //! # Encoding Note
 //!
@@ -68,26 +70,28 @@ fn check_continuation_returns_false_for_nonexistent_directory()
 fn check_continuation_returns_false_without_conversation_files()
 {
   let temp_dir = TempDir::new().unwrap();
+  let home_dir = TempDir::new().unwrap();
+  std::env::set_var( "HOME", home_dir.path() );
   let session_dir = temp_dir.path().join( "test-session" );
   std::fs::create_dir_all( &session_dir ).unwrap();
 
-  let claude_storage = make_claude_storage( &session_dir );
+  let claude_storage = make_claude_storage( &session_dir, home_dir.path() );
   std::fs::create_dir_all( &claude_storage ).unwrap();
 
   // No conversation files — should return false
   assert!( !continuation::check_continuation( &session_dir ) );
-
-  let _ = std::fs::remove_dir_all( &claude_storage );
 }
 
 #[ test ]
 fn check_continuation_returns_true_with_jsonl_conversation_file()
 {
   let temp_dir = TempDir::new().unwrap();
+  let home_dir = TempDir::new().unwrap();
+  std::env::set_var( "HOME", home_dir.path() );
   let session_dir = temp_dir.path().join( "test-session" );
   std::fs::create_dir_all( &session_dir ).unwrap();
 
-  let claude_storage = make_claude_storage( &session_dir );
+  let claude_storage = make_claude_storage( &session_dir, home_dir.path() );
   std::fs::create_dir_all( &claude_storage ).unwrap();
   std::fs::write(
     claude_storage.join( "ce2efe82-3c31-40d9-a6b1-33c22c13aea5.jsonl" ),
@@ -95,8 +99,6 @@ fn check_continuation_returns_true_with_jsonl_conversation_file()
   ).unwrap();
 
   assert!( continuation::check_continuation( &session_dir ) );
-
-  let _ = std::fs::remove_dir_all( &claude_storage );
 }
 
 // ============================================================================
@@ -107,10 +109,12 @@ fn check_continuation_returns_true_with_jsonl_conversation_file()
 fn check_continuation_skips_agent_definition_files()
 {
   let temp_dir = TempDir::new().unwrap();
+  let home_dir = TempDir::new().unwrap();
+  std::env::set_var( "HOME", home_dir.path() );
   let session_dir = temp_dir.path().join( "test-session-agent" );
   std::fs::create_dir_all( &session_dir ).unwrap();
 
-  let claude_storage = make_claude_storage( &session_dir );
+  let claude_storage = make_claude_storage( &session_dir, home_dir.path() );
   std::fs::create_dir_all( &claude_storage ).unwrap();
   std::fs::write(
     claude_storage.join( "agent-custom.jsonl" ),
@@ -119,18 +123,18 @@ fn check_continuation_skips_agent_definition_files()
 
   // Agent definition files don't count as conversations
   assert!( !continuation::check_continuation( &session_dir ) );
-
-  let _ = std::fs::remove_dir_all( &claude_storage );
 }
 
 #[ test ]
 fn check_continuation_skips_empty_files()
 {
   let temp_dir = TempDir::new().unwrap();
+  let home_dir = TempDir::new().unwrap();
+  std::env::set_var( "HOME", home_dir.path() );
   let session_dir = temp_dir.path().join( "test-session-empty" );
   std::fs::create_dir_all( &session_dir ).unwrap();
 
-  let claude_storage = make_claude_storage( &session_dir );
+  let claude_storage = make_claude_storage( &session_dir, home_dir.path() );
   std::fs::create_dir_all( &claude_storage ).unwrap();
   std::fs::write(
     claude_storage.join( "empty.jsonl" ),
@@ -139,8 +143,6 @@ fn check_continuation_skips_empty_files()
 
   // Empty files don't count as valid conversations
   assert!( !continuation::check_continuation( &session_dir ) );
-
-  let _ = std::fs::remove_dir_all( &claude_storage );
 }
 
 // ============================================================================
@@ -151,10 +153,12 @@ fn check_continuation_skips_empty_files()
 fn check_continuation_detects_conversation_json()
 {
   let temp_dir = TempDir::new().unwrap();
+  let home_dir = TempDir::new().unwrap();
+  std::env::set_var( "HOME", home_dir.path() );
   let session_dir = temp_dir.path().join( "test-session-conv-json" );
   std::fs::create_dir_all( &session_dir ).unwrap();
 
-  let claude_storage = make_claude_storage( &session_dir );
+  let claude_storage = make_claude_storage( &session_dir, home_dir.path() );
   std::fs::create_dir_all( &claude_storage ).unwrap();
   std::fs::write(
     claude_storage.join( "conversation.json" ),
@@ -162,18 +166,18 @@ fn check_continuation_detects_conversation_json()
   ).unwrap();
 
   assert!( continuation::check_continuation( &session_dir ), "conversation.json should be detected" );
-
-  let _ = std::fs::remove_dir_all( &claude_storage );
 }
 
 #[ test ]
 fn check_continuation_detects_claude_dotfile()
 {
   let temp_dir = TempDir::new().unwrap();
+  let home_dir = TempDir::new().unwrap();
+  std::env::set_var( "HOME", home_dir.path() );
   let session_dir = temp_dir.path().join( "test-session-claude-dotfile" );
   std::fs::create_dir_all( &session_dir ).unwrap();
 
-  let claude_storage = make_claude_storage( &session_dir );
+  let claude_storage = make_claude_storage( &session_dir, home_dir.path() );
   std::fs::create_dir_all( &claude_storage ).unwrap();
   std::fs::write(
     claude_storage.join( ".claude_history" ),
@@ -181,22 +185,19 @@ fn check_continuation_detects_claude_dotfile()
   ).unwrap();
 
   assert!( continuation::check_continuation( &session_dir ), ".claude* file should be detected" );
-
-  let _ = std::fs::remove_dir_all( &claude_storage );
 }
 
 // ============================================================================
 // Helper
 // ============================================================================
 
-/// Build the `~/.claude/projects/{encoded}` path for a given session directory.
+/// Build the `{home_dir}/.claude/projects/{encoded}` path for a given session directory.
 ///
 /// Uses `encode_path()` (v1 lossy encoding: only `/` and `_` → `-`).
-fn make_claude_storage( session_dir : &Path ) -> PathBuf
+fn make_claude_storage( session_dir : &Path, home_dir : &Path ) -> PathBuf
 {
-  let home_dir = std::env::var( "HOME" ).expect( "HOME must be set" );
   let encoded = encode_path( session_dir ).expect( "path must be encodable" );
-  PathBuf::from( home_dir )
+  home_dir
     .join( ".claude" )
     .join( "projects" )
     .join( encoded )

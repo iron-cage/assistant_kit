@@ -61,12 +61,23 @@ Optional `version::SPEC` overrides the stored preference for a single invocation
 |------|-------------|
 | [pattern/001_version_lock.md](../pattern/001_version_lock.md) | 5-layer lock applied after successful install |
 
+### Pitfalls
+
+| File | Relationship |
+|------|-------------|
+| [pitfall/002_symlink_retarget.md](../pitfall/002_symlink_retarget.md) | Symlink retarget bypass that .version.install mitigates |
+
 ### Sources
 
 | File | Relationship |
 |------|-------------|
 | `../../src/commands.rs` | Version command routines |
-| `spec.md` (deleted — migrated here) | FR-12 through FR-21, Command Inventory (commands 3-6, 12), Parameter Inventory |
+
+### Provenance
+
+| Source | Notes |
+|--------|-------|
+| `spec.md` (deleted) | FR-12 through FR-21, Command Inventory (commands 3-6, 12), Parameter Inventory |
 
 ### Tests
 

@@ -134,7 +134,7 @@ pub( super ) fn run_built_command( builder : &ClaudeCommand, cli : &CliArgs )
   // Concurrency gate: block before subprocess launch when max active claude sessions is reached.
   // Default limit is 30; 0 = unlimited.  dry-run is bypassed by caller (never reaches here).
   let max_sessions = cli.max_sessions.unwrap_or( 30 );
-  wait_for_session_slot( max_sessions, verbosity );
+  wait_for_session_slot( max_sessions, verbosity, cli );
 
   if cli.trace || verbosity.shows_verbose_detail()
   {
