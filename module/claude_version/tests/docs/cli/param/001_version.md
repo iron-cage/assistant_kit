@@ -14,17 +14,17 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| TC-301 | `version::stable dry::1` → resolves to stable alias | Named Alias |
-| TC-309 | `version::month dry::1` → resolves to pinned semver | Named Alias |
-| TC-350 | `version::latest dry::1` → no-lock unlock mode | Named Alias (special) |
-| TC-302 | `version::1.2.3 dry::1` → exact semver accepted | Valid Semver |
-| TC-352 | `version::2.1.50 dry::1` → older semver accepted | Valid Semver |
-| TC-355 | `version::0.0.0 dry::1` → zero-patch semver valid | Boundary |
+| EC-10 | `version::stable dry::1` → resolves to stable alias | Named Alias |
+| EC-11 | `version::month dry::1` → resolves to pinned semver | Named Alias |
+| EC-12 | `version::latest dry::1` → no-lock unlock mode | Named Alias (special) |
+| EC-13 | `version::1.2.3 dry::1` → exact semver accepted | Valid Semver |
+| EC-14 | `version::2.1.50 dry::1` → older semver accepted | Valid Semver |
+| EC-15 | `version::0.0.0 dry::1` → zero-patch semver valid | Boundary |
 | EC-1 | Absent `version::` → defaults to `stable` | Default Behavior |
 | EC-2 | `version::STABLE` → wrong case, exit 1 | Invalid: case |
 | EC-3 | `version::` (empty) → exit 1 | Invalid: empty |
 | EC-4 | `version::1.2` → two-part semver, exit 1 | Invalid: format |
-| TC-307 | `version::x` → unknown alias, exit 1 | Invalid: unknown |
+| EC-16 | `version::x` → unknown alias, exit 1 | Invalid: unknown |
 | EC-5 | `version::01.02.03` → leading zeros, exit 1 | Invalid: format |
 | EC-6 | `version::1.2.3.4` (four-part) → exit 1 | Invalid: format |
 | EC-7 | `version::LATEST` → wrong case, exit 1 | Invalid: case |
@@ -44,7 +44,7 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 
 **Total:** 16 edge cases
 
-**Behavioral Divergence Pair:** TC-301 (`version::stable dry::1` → output contains "2.1.78", exit 0) ↔ TC-309 (`version::month dry::1` → output contains "2.1.74", exit 0)
+**Behavioral Divergence Pair:** EC-10 (`version::stable dry::1` → output contains "2.1.78", exit 0) ↔ EC-11 (`version::month dry::1` → output contains "2.1.74", exit 0)
 
 ---
 

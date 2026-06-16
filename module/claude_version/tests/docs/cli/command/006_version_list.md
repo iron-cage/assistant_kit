@@ -48,15 +48,15 @@ Every invocation exits 0 in a valid environment. No runtime failures exist.
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
 | IT-1 | `.version.list` exits 0 | P | 0 | F1=absent, F2=absent | [read_commands_test.rs] |
-| TC-116 | Output includes "stable" alias | P | 0 | F1=absent | [read_commands_test.rs] |
-| TC-117 | Output includes "latest" alias | P | 0 | F1=absent | [read_commands_test.rs] |
+| IT-9 | Output includes "stable" alias | P | 0 | F1=absent | [read_commands_test.rs] |
+| IT-10 | Output includes "latest" alias | P | 0 | F1=absent | [read_commands_test.rs] |
 | IT-2 | `v::0` → names only, no descriptions | P | 0 | F1=0 | [read_commands_test.rs] |
-| TC-119 | `v::1` → aliases with descriptions | P | 0 | F1=1 | [read_commands_test.rs] |
+| IT-11 | `v::1` → aliases with descriptions | P | 0 | F1=1 | [read_commands_test.rs] |
 | IT-3 | Output is deterministic on two calls | P | 0 | F1=absent | [read_commands_test.rs] |
-| TC-121 | `format::json` → valid JSON array or object | P | 0 | F2=json | [read_commands_test.rs] |
-| TC-122 | Output includes "month" alias | P | 0 | F1=absent | [read_commands_test.rs] |
-| TC-123 | `v::1` shows pinned versions in parens `(vX.Y.Z)` | P | 0 | F1=1 | [read_commands_test.rs] |
-| TC-124 | `format::json` has `"value"` field | P | 0 | F2=json | [read_commands_test.rs] |
+| IT-12 | `format::json` → valid JSON array or object | P | 0 | F2=json | [read_commands_test.rs] |
+| IT-13 | Output includes "month" alias | P | 0 | F1=absent | [read_commands_test.rs] |
+| IT-14 | `v::1` shows pinned versions in parens `(vX.Y.Z)` | P | 0 | F1=1 | [read_commands_test.rs] |
+| IT-15 | `format::json` has `"value"` field | P | 0 | F2=json | [read_commands_test.rs] |
 | IT-7 | `format::json` → valid JSON output | P | 0 | F2=json | new |
 | IT-8 | Output is stable across repeated invocations | P | 0 | F1=absent | new |
 
@@ -71,8 +71,8 @@ Every invocation exits 0 in a valid environment. No runtime failures exist.
 ### Summary
 
 - **Total:** 15 tests (12 positive, 3 negative)
-- **Negative ratio:** 20.0% command-local; 40.0% combined with cross-cutting TC-242 to TC-244 ✅
-- **TC range:** IT-1 to IT-8
+- **Negative ratio:** 20.0% command-local; 40.0% combined with cross-cutting `tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1` in `read_commands_test.rs` ✅
+- **IT range:** IT-1 to IT-15
 
 ---
 
@@ -82,19 +82,19 @@ Every invocation exits 0 in a valid environment. No runtime failures exist.
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success (always) | IT-1 through TC-124 |
+| 0 | Success (always) | IT-1 through IT-3, IT-7 through IT-15 |
 | 1 | Invalid arguments | IT-4 through IT-6 |
 | 2 | Not applicable (compile-time data, no runtime failures) | — |
 
 ### Alias Completeness
 
-All three aliases must appear in output: `stable` (TC-116), `latest` (TC-117), `month` (TC-122).
-Pinned values for `stable` and `month` must appear in `v::1` output (TC-123).
+All three aliases must appear in output: `stable` (IT-9), `latest` (IT-10), `month` (IT-13).
+Pinned values for `stable` and `month` must appear in `v::1` output (IT-14).
 
 ### JSON Field Requirements
 
 `format::json` must include at minimum: `"name"` or `"alias"`, and `"value"` (pinned semver or null).
-TC-121 verifies array structure. TC-124 verifies `"value"` field presence.
+IT-12 verifies array structure. IT-15 verifies `"value"` field presence.
 
 ---
 

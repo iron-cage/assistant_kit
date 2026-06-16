@@ -785,7 +785,7 @@ fn assign_bv1_reassigning_same_account_idempotent()
 
   // First assign (marker already set)
   let out1 = run_cs_with_env(
-    &[ ".account.assign", "name::alice@acme.com" ],
+    &[ ".accounts", "assign::1", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out1, 0 );
@@ -797,7 +797,7 @@ fn assign_bv1_reassigning_same_account_idempotent()
 
   // Second assign with same account
   let out2 = run_cs_with_env(
-    &[ ".account.assign", "name::alice@acme.com" ],
+    &[ ".accounts", "assign::1", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out2, 0 );
@@ -826,7 +826,7 @@ fn assign_bv2_writes_marker_without_touching_credential_files()
   let mtime_live_before = mtime_ms( &live_creds );
 
   let out = run_cs_with_env(
-    &[ ".account.assign", "name::alice@acme.com" ],
+    &[ ".accounts", "assign::1", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 0 );
@@ -861,7 +861,7 @@ fn assign_bv3_nonexistent_account_exits_2()
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
 
   let out = run_cs_with_env(
-    &[ ".account.assign", "name::nobody@acme.com" ],
+    &[ ".accounts", "assign::1", "name::nobody@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 2 );

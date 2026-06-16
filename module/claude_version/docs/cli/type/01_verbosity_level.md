@@ -24,9 +24,9 @@ Range 0–2 with different semantics from claude_runner's 0–5 range.
 | 2 | verbose | Diagnostic details, extra context |
 
 ```sh
-cm .status v::0       # minimal
-cm .status v::2       # verbose
-cm .status v::3       # error: out of range
+clv .status v::0       # minimal
+clv .status v::2       # verbose
+clv .status v::3       # error: out of range
 ```
 
 ### Referenced Parameters

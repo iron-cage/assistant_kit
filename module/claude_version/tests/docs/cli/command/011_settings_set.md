@@ -70,26 +70,26 @@ Integration test planning for the `.settings.set` command. See [001_commands.md]
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
 | IT-1 | `value::true` → stores boolean `true` | P | 0 | F1=set, F2=true | [mutation_commands_test.rs] |
-| TC-323 | `value::false` → stores boolean `false` | P | 0 | F1=set, F2=false | [mutation_commands_test.rs] |
+| IT-9 | `value::false` → stores boolean `false` | P | 0 | F1=set, F2=false | [mutation_commands_test.rs] |
 | IT-2 | `value::0` → stores number `0` (NOT boolean) | P | 0 | F1=set, F2=0 | [mutation_commands_test.rs] |
-| TC-325 | `value::42` → stores integer `42` | P | 0 | F1=set, F2=int | [mutation_commands_test.rs] |
-| TC-326 | `value::hello` → stores quoted `"hello"` | P | 0 | F1=set, F2=string | [mutation_commands_test.rs] |
-| TC-327 | `value::""` → stores empty string `""` | P | 0 | F1=set, F2=empty-string | [mutation_commands_test.rs] |
-| TC-328 | Creates file when settings.json absent | P | 0 | F4=missing | [mutation_commands_test.rs] |
-| TC-329 | Updates existing key without duplication | P | 0 | F4=existing-with-key | [mutation_commands_test.rs] |
+| IT-10 | `value::42` → stores integer `42` | P | 0 | F1=set, F2=int | [mutation_commands_test.rs] |
+| IT-11 | `value::hello` → stores quoted `"hello"` | P | 0 | F1=set, F2=string | [mutation_commands_test.rs] |
+| IT-12 | `value::""` → stores empty string `""` | P | 0 | F1=set, F2=empty-string | [mutation_commands_test.rs] |
+| IT-13 | Creates file when settings.json absent | P | 0 | F4=missing | [mutation_commands_test.rs] |
+| IT-14 | Updates existing key without duplication | P | 0 | F4=existing-with-key | [mutation_commands_test.rs] |
 | IT-3 | `dry::1` → shows preview, no file change | P | 0 | F3=1 | [mutation_commands_test.rs] |
-| TC-333 | Adds new key to existing file | P | 0 | F4=existing-without-key | [mutation_commands_test.rs] |
+| IT-15 | Adds new key to existing file | P | 0 | F4=existing-without-key | [mutation_commands_test.rs] |
 
 ### Negative Tests
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| TC-238 | Without `key::` → error mentions `key::` | N | 1 | F1=absent | [read_commands_test.rs] |
-| TC-239 | `key::foo` without `value::` → error mentions `value::` | N | 1 | F2=absent | [read_commands_test.rs] |
-| TC-320 | No `key::` → exit 1 | N | 1 | F1=absent | [mutation_commands_test.rs] |
-| TC-321 | `key::` present but no `value::` → exit 1 | N | 1 | F1=set, F2=absent | [mutation_commands_test.rs] |
-| TC-331 | HOME not set → exit 2 | N | 2 | F5=empty | [mutation_commands_test.rs] |
-| TC-332 | `key::""` (empty key) → exit 1 | N | 1 | F1=empty | [mutation_commands_test.rs] |
+| IT-16 | Without `key::` → error mentions `key::` | N | 1 | F1=absent | [read_commands_test.rs] |
+| IT-17 | `key::foo` without `value::` → error mentions `value::` | N | 1 | F2=absent | [read_commands_test.rs] |
+| IT-18 | No `key::` → exit 1 | N | 1 | F1=absent | [mutation_commands_test.rs] |
+| IT-19 | `key::` present but no `value::` → exit 1 | N | 1 | F1=set, F2=absent | [mutation_commands_test.rs] |
+| IT-20 | HOME not set → exit 2 | N | 2 | F5=empty | [mutation_commands_test.rs] |
+| IT-21 | `key::""` (empty key) → exit 1 | N | 1 | F1=empty | [mutation_commands_test.rs] |
 | IT-4 | `dry::2` → exit 1, out-of-range boolean | N | 1 | F3=2 | new |
 | IT-5 | `bogus::x` → exit 1, unknown param | N | 1 | F6=present | new |
 | IT-6 | `key::foo` without `value::` → exit 1, value required | N | 1 | F2=absent | new |
@@ -100,7 +100,7 @@ Integration test planning for the `.settings.set` command. See [001_commands.md]
 
 - **Total:** 21 tests (12 positive, 9 negative)
 - **Negative ratio:** 42.9% ✅ (≥40%)
-- **TC range:** TC-238 to IT-8
+- **IT range:** IT-1 to IT-21
 
 ---
 
@@ -110,20 +110,20 @@ Integration test planning for the `.settings.set` command. See [001_commands.md]
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success (write or dry-run) | IT-1 through IT-3, TC-333 |
-| 1 | Invalid arguments | TC-238, TC-239, TC-320, TC-321, TC-332, IT-4, IT-5 |
-| 2 | Runtime error (HOME missing) | TC-331 |
+| 0 | Success (write or dry-run) | IT-1 through IT-3, IT-7 through IT-15 |
+| 1 | Invalid arguments | IT-4 through IT-6, IT-16 through IT-19, IT-21 |
+| 2 | Runtime error (HOME missing) | IT-20 |
 
 ### Type Inference Coverage (FR-07)
 
 | Input string | JSON type | Test |
 |-------------|-----------|------|
 | `"true"` | boolean `true` | IT-1 |
-| `"false"` | boolean `false` | TC-323 |
+| `"false"` | boolean `false` | IT-9 |
 | `"0"` | integer `0` | IT-2 |
-| `"42"` | integer `42` | TC-325 |
-| `"hello"` | string `"hello"` | TC-326 |
-| `""` | string `""` | TC-327 |
+| `"42"` | integer `42` | IT-10 |
+| `"hello"` | string `"hello"` | IT-11 |
+| `""` | string `""` | IT-12 |
 
 **Type precedence** (FR-07): boolean check → i64 check → f64 check → string.
 `"0"` is integer not boolean because i64 check precedes boolean check for numeric strings.
@@ -131,8 +131,8 @@ Integration test planning for the `.settings.set` command. See [001_commands.md]
 ### Atomic Write Requirement (FR-06)
 
 Writes use temp-file rename (`settings.json.tmp` → `settings.json`).
-TC-329 verifies no duplication on update (not two copies of key).
-TC-333 verifies append to existing file without corruption.
+IT-14 verifies no duplication on update (not two copies of key).
+IT-15 verifies append to existing file without corruption.
 
 ---
 
@@ -145,7 +145,7 @@ TC-333 verifies append to existing file without corruption.
 - **Given:** `HOME=<tmp>`; settings absent.
 - **When:**
   `cm .settings.set key::flag value::true`
-  **Expected:** Exit 0; `settings.json` has `"flag": true` (unquoted).
+- **Expected:** Exit 0; `settings.json` has `"flag": true` (unquoted).
 - **Then:** boolean stored
 - **Exit:** 0
 
@@ -156,7 +156,7 @@ TC-333 verifies append to existing file without corruption.
 - **Given:** `HOME=<tmp>`.
 - **When:**
   `cm .settings.set key::n value::0`
-  **Expected:** Exit 0; `settings.json` has `"n": 0` (integer).
+- **Expected:** Exit 0; `settings.json` has `"n": 0` (integer).
 - **Then:** integer stored
 - **Exit:** 0
 
@@ -167,7 +167,7 @@ TC-333 verifies append to existing file without corruption.
 - **Given:** `HOME=<tmp>`; settings absent.
 - **When:**
   `cm .settings.set key::k value::v dry::1`
-  **Expected:** Exit 0; stdout contains `[dry-run]`; settings.json not created.
+- **Expected:** Exit 0; stdout contains `[dry-run]`; settings.json not created.
 - **Then:** no side effects
 - **Exit:** 0
 
@@ -178,7 +178,7 @@ TC-333 verifies append to existing file without corruption.
 - **Given:** clean environment
 - **When:**
   `cm .settings.set key::k value::v dry::2`
-  **Expected:** Exit 1.
+- **Expected:** Exit 1.
 - **Then:** see spec
 - **Exit:** 1
 
@@ -189,7 +189,7 @@ TC-333 verifies append to existing file without corruption.
 - **Given:** clean environment
 - **When:**
   `cm .settings.set key::k value::v bogus::x`
-  **Expected:** Exit 1.
+- **Expected:** Exit 1.
 - **Then:** see spec
 - **Exit:** 1
 

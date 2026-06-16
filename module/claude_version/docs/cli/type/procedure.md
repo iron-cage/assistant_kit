@@ -3,13 +3,13 @@
 ### Scope
 
 - **Purpose**: Operational steps for managing type instance files in this directory.
-- **Responsibility**: Procedures for adding, updating, or removing cm type documentation.
+- **Responsibility**: Procedures for adding, updating, or removing clv type documentation.
 
 ---
 
 ### Procedure :: 1. Add a New Type
 
-**Trigger:** A new semantic type is introduced for a cm parameter.
+**Trigger:** A new semantic type is introduced for a clv parameter.
 
 1. Assign the next sequential number (NN) to the new type.
 2. Create `NN_type_name.md` with:

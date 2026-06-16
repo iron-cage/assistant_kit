@@ -39,6 +39,12 @@
 - **AC-06**: `$PRO` set to an existing directory → `credential_store()` returns `$PRO/.persistent/claude/credential/`.
 - **AC-07**: `$PRO` unset → `credential_store()` uses `$HOME/.persistent/claude/credential/`.
 
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [007_json_storage_format.md](../invariant/007_json_storage_format.md) | Credential snapshot files under `credential_store()` must be written as 2-space pretty-printed JSON with trailing newline |
+
 ### Features
 
 | File | Relationship |

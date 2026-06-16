@@ -19,18 +19,12 @@
 //! | IT-11 | No gate files → no queued table in output      | Queued absent    |
 //! | IT-12 | Active table caption contains `Active Sessions` and `running` | Caption presence |
 //! | IT-13 | Orphaned gate file (dead PID) filtered out of queued table    | BUG-293 repro    |
-//! | IT-14 | `clr ps --help` → exit 0, stdout non-empty                   | BUG-294 repro    |
-//! | IT-15 | `clr ps -h` → exit 0, stdout non-empty                       | BUG-294 repro    |
-//! | IT-16 | Form A JSONL with underscore CWD → Task shows content         | BUG-295/296/297  |
-//! | IT-17 | Form A preferred over Form B in JSONL                         | BUG-297 repro    |
-//! | IT-18 | `clr ps help` (positional) → exit 0, stdout non-empty        | BUG-294 repro    |
-//! | IT-19 | No-underscore CWD regression guard for BUG-295 fix            | BUG-295 regression|
-//! | IT-14 | `clr ps --help` → exit 0, stdout non-empty                   | BUG-294 help     |
+//! | IT-14 | `clr ps --help` → exit 0, stdout non-empty                    | BUG-294 help     |
 //! | IT-15 | `clr ps -h` → exit 0, stdout non-empty                       | BUG-294 short    |
-//! | IT-16 | Form A content shown in Task column (underscore CWD)          | BUG-295/296/297  |
-//! | IT-17 | Form A preferred over Form B in Task column                   | BUG-297          |
+//! | IT-16 | Task column extracts Form A content for underscore CWD         | BUG-295/296/297  |
+//! | IT-17 | Task column selects Form A over Form B tool_result lines        | BUG-297 repro    |
 //! | IT-18 | `clr ps help` (positional) → exit 0, stdout non-empty         | BUG-294 positional|
-//! | IT-19 | Form A in Task column, no-underscore CWD (regression)         | BUG-295 regression|
+//! | IT-19 | Task column works for CWD with no underscores (regression)     | BUG-295 regression|
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
@@ -440,126 +434,166 @@ fn it_15_ps_h_flag()
   );
 }
 
-// ── IT-16: Task column — Form A with underscore CWD ───────────────────────────
+// ── IT-16: Task column — Form A extraction with underscore CWD ────────────────
 
-/// IT-16 (BUG-295/296/297): `clr ps` Task column shows Form A content value for
-/// a session whose CWD contains underscores.
+/// IT-16: `clr ps` Task column shows Form A content for a session whose CWD
+/// contains underscores.
 ///
-/// Synthetic JSONL at the correctly-encoded project path (`/` and `_` → `-`) is
-/// read by `try_jsonl_task()` and the Form A `"content"` value appears in the Task column.
+/// ## Root Cause (BUG-295, BUG-296, BUG-297)
+/// Three compounding bugs in `try_jsonl_task()`:
+/// BUG-295 — path encoding only replaced `/` with `-`, missing `_`;
+/// BUG-296 — content marker was `"text":"` but Claude uses `"content":"` in Form A;
+/// BUG-297 — `.find()` predicate matched the last `"type":"user"` line regardless of
+/// whether it was a Form A (human text) or Form B (`tool_result` array) entry.
+///
+/// ## Why Not Caught
+/// No test verified end-to-end Task column content for a real underscore-containing CWD.
+///
+/// ## Fix Applied
+/// BUG-295: `replace('/', "-").replace('_', "-")`;
+/// BUG-296: marker changed to `"content":"`;
+/// BUG-297: predicate requires `"content":"` and excludes `"content":[`.
+///
+/// ## Prevention
+/// Use `replace('/', "-").replace('_', "-")` for all CWD-to-project-dir encoding.
+/// Always verify the JSONL field name against Claude's actual serialization format.
+///
+/// ## Pitfall
+/// `run_clr_ps()` only sets PATH; use `std::process::Command` directly to inject HOME.
+// test_kind: bug_reproducer(BUG-295, BUG-296, BUG-297)
 #[ cfg( unix ) ]
 #[ test ]
 fn it_16_task_column_form_a()
 {
-  // Temp dir with underscores in path (e.g., <base>/wip_core/my_proj).
-  let base     = tempfile::TempDir::new().expect( "create base temp dir" );
-  let cwd_dir  = base.path().join( "wip_core" ).join( "my_proj" );
-  std::fs::create_dir_all( &cwd_dir ).expect( "create cwd with underscores" );
-  let cwd_str  = cwd_dir.to_str().expect( "cwd UTF-8" );
-
-  // Encode CWD: both '/' and '_' → '-'.
-  let encoded = cwd_str.replace( '/', "-" ).replace( '_', "-" );
-
-  // Synthetic HOME with JSONL at the encoded project path.
-  let home_dir  = tempfile::TempDir::new().expect( "create temp HOME" );
-  let jsonl_dir = home_dir.path().join( ".claude" ).join( "projects" ).join( &encoded );
-  std::fs::create_dir_all( &jsonl_dir ).expect( "create encoded project dir" );
-  std::fs::write(
-    jsonl_dir.join( "conversation.jsonl" ),
-    r#"{"type":"user","message":{"role":"user","content":"fix the auth module"}}"#,
-  ).expect( "write synthetic JSONL" );
-
-  // Spawn fake `claude` in the underscore CWD.
   let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+
+  // CWD with underscores — triggers BUG-295 without the fix.
+  let proj_tmp = tempfile::TempDir::new().expect( "create project tmp" );
+  let cwd      = proj_tmp.path().join( "wip_core" ).join( "proj" );
+  std::fs::create_dir_all( &cwd ).expect( "create CWD with underscores" );
+  let cwd_str  = cwd.to_str().expect( "CWD UTF-8" );
+
+  // Spawn fake claude in the underscore CWD and wait for it to appear in /proc.
   let mut bg = std::process::Command::new( "claude" )
-    .env( "PATH", &path_val )
     .arg( "30" )
-    .current_dir( &cwd_dir )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::null() )
-    .spawn()
-    .expect( "spawn fake claude in underscore cwd" );
-  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
-
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = std::process::Command::new( bin )
-    .arg( "ps" )
     .env( "PATH", &path_val )
-    .env( "HOME", home_dir.path() )
-    .output()
-    .expect( "run clr ps with HOME injected" );
-
-  let _ = bg.kill();
-  let _ = bg.wait();
-
-  let stdout = stdout_str( &out );
-  assert!( out.status.success(), "IT-16: exit 0 expected, got {:?}", out.status.code() );
-  assert!(
-    stdout.contains( "fix the auth module" ),
-    "IT-16: Task column must show Form A content; got:\n{stdout}"
-  );
-}
-
-// ── IT-17: Task column — Form A preferred over Form B ─────────────────────────
-
-/// IT-17 (BUG-297): when JSONL contains both Form A (human question) and Form B
-/// (tool_result), `try_jsonl_task()` must pick Form A.
-///
-/// Form B outer `content` is an array `[...]`, excluded by `!l.contains(r#""content":["#)`.
-/// Form A `content` is a bare string.
-#[ cfg( unix ) ]
-#[ test ]
-fn it_17_task_column_form_a_over_form_b()
-{
-  let base     = tempfile::TempDir::new().expect( "create base temp dir" );
-  let cwd_dir  = base.path().join( "wip" ).join( "proj" );
-  std::fs::create_dir_all( &cwd_dir ).expect( "create cwd" );
-  let cwd_str  = cwd_dir.to_str().expect( "cwd UTF-8" );
-  let encoded  = cwd_str.replace( '/', "-" ).replace( '_', "-" );
-
-  let home_dir  = tempfile::TempDir::new().expect( "create temp HOME" );
-  let jsonl_dir = home_dir.path().join( ".claude" ).join( "projects" ).join( &encoded );
-  std::fs::create_dir_all( &jsonl_dir ).expect( "create encoded project dir" );
-
-  // Two lines: Form A (human question) then Form B (tool_result with content array).
-  let jsonl = concat!(
-    r#"{"type":"user","message":{"role":"user","content":"the actual task"}}"#, "\n",
-    r#"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu_abc","content":[{"type":"text","text":"claude command::some_skill"}]}]}}"#,
-  );
-  std::fs::write( jsonl_dir.join( "conversation.jsonl" ), jsonl )
-    .expect( "write synthetic JSONL" );
-
-  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
-  let mut bg = std::process::Command::new( "claude" )
-    .env( "PATH", &path_val )
-    .arg( "30" )
-    .current_dir( &cwd_dir )
+    .current_dir( &cwd )
     .stdout( std::process::Stdio::null() )
     .stderr( std::process::Stdio::null() )
     .spawn()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  // Build synthetic JSONL at the correctly-encoded project path.
+  let encoded      = cwd_str.replace( ['/', '_'], "-" );
+  let home_tmp     = tempfile::TempDir::new().expect( "create temp HOME" );
+  let project_path = home_tmp.path()
+    .join( ".claude" ).join( "projects" ).join( &encoded );
+  std::fs::create_dir_all( &project_path ).expect( "create project path" );
+  std::fs::write(
+    project_path.join( "session.jsonl" ),
+    r#"{"type":"user","message":{"role":"user","content":"fix the auth module"}}"#,
+  ).expect( "write JSONL" );
+
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
-    .env( "HOME", home_dir.path() )
+    .env( "HOME", home_tmp.path() )
     .output()
-    .expect( "run clr ps with HOME injected" );
+    .expect( "run clr ps" );
 
   let _ = bg.kill();
   let _ = bg.wait();
 
   let stdout = stdout_str( &out );
-  assert!( out.status.success(), "IT-17: exit 0 expected, got {:?}", out.status.code() );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( "fix the auth module" ),
+    "IT-16 (BUG-295/296/297): Task column must show Form A content. Got:\n{stdout}"
+  );
+}
+
+// ── IT-17: Task column — Form A selected over Form B ─────────────────────────
+
+/// IT-17: When JSONL contains a Form A entry followed by Form B `tool_result` lines,
+/// `clr ps` Task column shows the Form A content, not the Form B text.
+///
+/// ## Root Cause (BUG-297)
+/// See IT-16. Without the Form A predicate, `.rev().find()` returns the last
+/// `"type":"user"` line, which is the Form B `tool_result` entry in any active session.
+///
+/// ## Why Not Caught
+/// No test verified Form A vs Form B line selection in the presence of both.
+///
+/// ## Fix Applied
+/// Same as IT-16 (BUG-297 predicate fix).
+///
+/// ## Prevention
+/// Always test with a JSONL containing both Form A and Form B entries.
+///
+/// ## Pitfall
+/// Form B outer `"content"` is always a JSON array `[...]`; inner `tool_result` `content`
+/// may be a string or array — the exclusion `"content":[` targets the outer form only.
+// test_kind: bug_reproducer(BUG-297)
+#[ cfg( unix ) ]
+#[ test ]
+fn it_17_task_column_form_a_over_form_b()
+{
+  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+
+  let proj_tmp = tempfile::TempDir::new().expect( "create project tmp" );
+  let cwd      = proj_tmp.path().join( "wip_core" ).join( "proj" );
+  std::fs::create_dir_all( &cwd ).expect( "create CWD" );
+  let cwd_str  = cwd.to_str().expect( "CWD UTF-8" );
+
+  let mut bg = std::process::Command::new( "claude" )
+    .arg( "30" )
+    .env( "PATH", &path_val )
+    .current_dir( &cwd )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn fake claude" );
+  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+
+  let encoded      = cwd_str.replace( ['/', '_'], "-" );
+  let home_tmp     = tempfile::TempDir::new().expect( "create temp HOME" );
+  let project_path = home_tmp.path()
+    .join( ".claude" ).join( "projects" ).join( &encoded );
+  std::fs::create_dir_all( &project_path ).expect( "create project path" );
+
+  // Form A (line 1) followed by Form B tool_result (line 2) — Form A must win.
+  let jsonl = "{\
+    \"type\":\"user\",\
+    \"message\":{\"role\":\"user\",\"content\":\"the actual task\"}}\n\
+    {\"type\":\"user\",\
+    \"message\":{\"role\":\"user\",\"content\":[\
+      {\"type\":\"tool_result\",\"tool_use_id\":\"tu_abc\",\
+       \"content\":[{\"type\":\"text\",\"text\":\"claude command::some_skill\"}]}]}}";
+  std::fs::write( project_path.join( "session.jsonl" ), jsonl )
+    .expect( "write JSONL" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .arg( "ps" )
+    .env( "PATH", &path_val )
+    .env( "HOME", home_tmp.path() )
+    .output()
+    .expect( "run clr ps" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
   assert!(
     stdout.contains( "the actual task" ),
-    "IT-17: Task column must show Form A content; got:\n{stdout}"
+    "IT-17 (BUG-297): Task must show Form A content. Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "some_skill" ),
-    "IT-17: Form B text must not appear in Task column; got:\n{stdout}"
+    "IT-17 (BUG-297): Form B tool_result text must not appear. Got:\n{stdout}"
   );
 }
 
@@ -579,48 +613,69 @@ fn it_18_ps_help_positional()
   );
 }
 
-// ── IT-19: Task column — no-underscore CWD (regression guard for BUG-295 fix) ─
+// ── IT-19: Task column — no-underscore CWD regression ────────────────────────
 
-/// IT-19 (BUG-295 regression): `clr ps` Task column shows Form A content for a CWD
-/// with NO underscores — the `_` → `-` encoding step must not break plain paths.
+/// IT-19: `clr ps` Task column works for a session whose CWD contains no
+/// underscores — regression guard for the BUG-295 fix.
+///
+/// ## Root Cause
+/// The BUG-295 fix adds `replace('_', "-")`. This test verifies the fix does not
+/// break paths that encoded correctly with slash-only replacement.
+///
+/// ## Why Not Caught
+/// IT-16 only covered underscore-containing paths; the no-underscore path was
+/// never exercised end-to-end after BUG-295 fix.
+///
+/// ## Fix Applied
+/// No fix needed — regression test only. Verifies the two-step replacement chain
+/// is idempotent for paths without underscores.
+///
+/// ## Prevention
+/// Always include a no-underscore regression test alongside any path-encoding fix.
+///
+/// ## Pitfall
+/// The encoded path for a no-underscore CWD is identical whether you apply the
+/// `replace('_', "-")` step or not — so this test confirms there is no regression.
 #[ cfg( unix ) ]
 #[ test ]
 fn it_19_task_column_no_underscores()
 {
-  let base     = tempfile::TempDir::new().expect( "create base temp dir" );
-  let cwd_dir  = base.path().join( "work" ).join( "proj" );
-  std::fs::create_dir_all( &cwd_dir ).expect( "create cwd without underscores" );
-  let cwd_str  = cwd_dir.to_str().expect( "cwd UTF-8" );
-
-  // No underscores in path: only '/' → '-' encoding applies.
-  let encoded = cwd_str.replace( '/', "-" ).replace( '_', "-" );
-
-  let home_dir  = tempfile::TempDir::new().expect( "create temp HOME" );
-  let jsonl_dir = home_dir.path().join( ".claude" ).join( "projects" ).join( &encoded );
-  std::fs::create_dir_all( &jsonl_dir ).expect( "create encoded project dir" );
-  std::fs::write(
-    jsonl_dir.join( "conversation.jsonl" ),
-    r#"{"type":"user","message":{"role":"user","content":"no underscore task"}}"#,
-  ).expect( "write synthetic JSONL" );
-
   let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+
+  // CWD with no underscores — regression guard.
+  let proj_tmp = tempfile::TempDir::new().expect( "create project tmp" );
+  let cwd      = proj_tmp.path().join( "work" ).join( "proj" );
+  std::fs::create_dir_all( &cwd ).expect( "create CWD without underscores" );
+  let cwd_str  = cwd.to_str().expect( "CWD UTF-8" );
+
   let mut bg = std::process::Command::new( "claude" )
-    .env( "PATH", &path_val )
     .arg( "30" )
-    .current_dir( &cwd_dir )
+    .env( "PATH", &path_val )
+    .current_dir( &cwd )
     .stdout( std::process::Stdio::null() )
     .stderr( std::process::Stdio::null() )
     .spawn()
-    .expect( "spawn fake claude in no-underscore cwd" );
+    .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+
+  // Encode with only '/' → '-' (no underscores to replace; result is same as before fix).
+  let encoded      = cwd_str.replace( '/', "-" );
+  let home_tmp     = tempfile::TempDir::new().expect( "create temp HOME" );
+  let project_path = home_tmp.path()
+    .join( ".claude" ).join( "projects" ).join( &encoded );
+  std::fs::create_dir_all( &project_path ).expect( "create project path" );
+  std::fs::write(
+    project_path.join( "session.jsonl" ),
+    r#"{"type":"user","message":{"role":"user","content":"no underscores task"}}"#,
+  ).expect( "write JSONL" );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
-    .env( "HOME", home_dir.path() )
+    .env( "HOME", home_tmp.path() )
     .output()
-    .expect( "run clr ps with HOME injected" );
+    .expect( "run clr ps" );
 
   let _ = bg.kill();
   let _ = bg.wait();
@@ -628,7 +683,7 @@ fn it_19_task_column_no_underscores()
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "IT-19: exit 0 expected, got {:?}", out.status.code() );
   assert!(
-    stdout.contains( "no underscore task" ),
-    "IT-19: Task column must show Form A content for no-underscore CWD; got:\n{stdout}"
+    stdout.contains( "no underscores task" ),
+    "IT-19 (BUG-295 regression): Task column must show Form A content for underscore-free CWD. Got:\n{stdout}"
   );
 }

@@ -102,21 +102,21 @@ Boundary set: `0.0.0`, `latest`, two-part, leading-zeros.
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
 | IT-1 | `dry::1` → `[dry-run]` prefix, exit 0 | P | 0 | F2=1 | [mutation_commands_test.rs] |
-| TC-301 | `version::stable dry::1` → preview shows `stable` | P | 0 | F1=stable, F2=1 | [mutation_commands_test.rs] |
-| TC-302 | `version::1.2.3 dry::1` → preview shows exact version | P | 0 | F1=semver, F2=1 | [mutation_commands_test.rs] |
+| IT-9 | `version::stable dry::1` → preview shows `stable` | P | 0 | F1=stable, F2=1 | [mutation_commands_test.rs] |
+| IT-10 | `version::1.2.3 dry::1` → preview shows exact version | P | 0 | F1=semver, F2=1 | [mutation_commands_test.rs] |
 | IT-2 | `dry::1 force::1` → dry wins | P | 0 | F2=1, F3=1, F4 | [mutation_commands_test.rs] |
-| TC-308 | Absent `version::` with `dry::1` → uses `stable` | P | 0 | F1=absent, F2=1 | [mutation_commands_test.rs] |
-| TC-309 | `version::month dry::1` → resolves to pinned semver (2.1.74) | P | 0 | F1=month, F2=1 | [mutation_commands_test.rs] |
-| TC-350 | `version::latest dry::1` → autoUpdates=true in preview | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_commands_test.rs] |
-| TC-351 | `version::stable dry::1` → autoUpdates=false in preview | P | 0 | F1=stable, F2=1, F5=lock | [mutation_commands_test.rs] |
-| TC-352 | `version::2.1.50 dry::1` → autoUpdates=false in preview | P | 0 | F1=semver, F2=1, F5=lock | [mutation_commands_test.rs] |
-| TC-353 | `version::latest dry::1` → previews unlock actions | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_commands_test.rs] |
-| TC-355 | `version::0.0.0 dry::1` → single-zero parts valid | P | 0 | F1=0.0.0, F2=1 | [mutation_commands_test.rs] |
-| TC-356 | `dry::1` output mentions preferred version storage | P | 0 | F2=1, F6 | [mutation_commands_test.rs] |
-| TC-357 | `dry::1` does NOT write preference keys | P | 0 | F2=1, F6=no-write | [mutation_commands_test.rs] |
-| TC-358 | Idempotent skip still stores preference | P | 0 | F6=idempotent | [mutation_commands_test.rs] |
-| TC-359 | `version::stable dry::1` → output includes purge line | P | 0 | F2=1, F5=layer4 | [mutation_commands_test.rs] |
-| TC-360 | `version::latest dry::1` → output does NOT contain "purge" | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_commands_test.rs] |
+| IT-11 | Absent `version::` with `dry::1` → uses `stable` | P | 0 | F1=absent, F2=1 | [mutation_commands_test.rs] |
+| IT-12 | `version::month dry::1` → resolves to pinned semver (2.1.74) | P | 0 | F1=month, F2=1 | [mutation_commands_test.rs] |
+| IT-13 | `version::latest dry::1` → autoUpdates=true in preview | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_commands_test.rs] |
+| IT-14 | `version::stable dry::1` → autoUpdates=false in preview | P | 0 | F1=stable, F2=1, F5=lock | [mutation_commands_test.rs] |
+| IT-15 | `version::2.1.50 dry::1` → autoUpdates=false in preview | P | 0 | F1=semver, F2=1, F5=lock | [mutation_commands_test.rs] |
+| IT-16 | `version::latest dry::1` → previews unlock actions | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_commands_test.rs] |
+| IT-17 | `version::0.0.0 dry::1` → single-zero parts valid | P | 0 | F1=0.0.0, F2=1 | [mutation_commands_test.rs] |
+| IT-18 | `dry::1` output mentions preferred version storage | P | 0 | F2=1, F6 | [mutation_commands_test.rs] |
+| IT-19 | `dry::1` does NOT write preference keys | P | 0 | F2=1, F6=no-write | [mutation_commands_test.rs] |
+| IT-20 | Idempotent skip still stores preference | P | 0 | F6=idempotent | [mutation_commands_test.rs] |
+| IT-21 | `version::stable dry::1` → output includes purge line | P | 0 | F2=1, F5=layer4 | [mutation_commands_test.rs] |
+| IT-22 | `version::latest dry::1` → output does NOT contain "purge" | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_commands_test.rs] |
 | IT-6 | `dry::1 format::json` → JSON object output, exit 0 | P | 0 | F2=1, F9=json | [mutation_commands_test.rs] |
 
 ### Negative Tests
@@ -124,9 +124,9 @@ Boundary set: `0.0.0`, `latest`, two-part, leading-zeros.
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
 | IT-3 | `version::STABLE` → wrong case, exit 1 | N | 1 | F1=STABLE | [mutation_commands_test.rs] |
-| TC-305 | `version::` (empty) → exit 1 | N | 1 | F1=empty | [mutation_commands_test.rs] |
-| TC-306 | `version::1.2` → two-part semver, exit 1 | N | 1 | F1=1.2 | [mutation_commands_test.rs] |
-| TC-307 | `version::x` → unknown alias, exit 1 | N | 1 | F1=x | [mutation_commands_test.rs] |
+| IT-23 | `version::` (empty) → exit 1 | N | 1 | F1=empty | [mutation_commands_test.rs] |
+| IT-24 | `version::1.2` → two-part semver, exit 1 | N | 1 | F1=1.2 | [mutation_commands_test.rs] |
+| IT-25 | `version::x` → unknown alias, exit 1 | N | 1 | F1=x | [mutation_commands_test.rs] |
 | IT-4 | `version::01.02.03` → leading zeros, exit 1 | N | 1 | F1=leading-zeros | [mutation_commands_test.rs] |
 | IT-5 | `bogus::x` → unknown param, exit 1 | N | 1 | F7=present | new |
 | IT-7 | `format::JSON` (uppercase) → exit 1 | N | 1 | F9=JSON | [mutation_commands_test.rs] |
@@ -135,9 +135,9 @@ Boundary set: `0.0.0`, `latest`, two-part, leading-zeros.
 ### Summary
 
 - **Total:** 25 tests (17 positive, 8 negative)
-- **Negative ratio:** 32.0% — supplemented by cross-cutting TC-242 to TC-244, TC-261
+- **Negative ratio:** 32.0% — supplemented by cross-cutting `tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`, `tc261_version_install_format_json_accepted` in `read_commands_test.rs` / `cross_cutting_test.rs`
 - **Combined with cross-cutting:** 11/26 = 42.3% ✅
-- **TC range:** IT-1 to IT-7, IT-5 to IT-8
+- **IT range:** IT-1 to IT-25
 
 ---
 
@@ -147,31 +147,31 @@ Boundary set: `0.0.0`, `latest`, two-part, leading-zeros.
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success (dry-run or real) | IT-1 through IT-2, TC-308, TC-309, TC-350 to TC-358 |
-| 1 | Invalid arguments | IT-3 through TC-307, IT-4, IT-5, IT-8 |
-| 2 | Runtime error (install failure) | Real-install tests only (not in automated suite; covered by TC-444 pattern) |
+| 0 | Success (dry-run or real) | IT-1 through IT-2, IT-6, IT-9 through IT-22 |
+| 1 | Invalid arguments | IT-3, IT-4, IT-5, IT-7, IT-8, IT-23, IT-24, IT-25 |
+| 2 | Runtime error (install failure) | Real-install tests only (not in automated suite) |
 
 ### Dry-Run Parity Requirement (FR-05)
 
 `[dry-run] would install X (Y)` must exactly mirror actual install message.
 IT-1 through IT-2 verify dry-run prefix and content consistency.
-TC-357 verifies dry-run has zero side effects on settings.
+IT-19 verifies dry-run has zero side effects on settings.
 
 ### Version Lock / Unlock Coverage (FR-15)
 
 | Scenario | Lock Status | Test |
 |----------|-------------|------|
-| pinned semver (2.1.50) | 5-layer lock | TC-352, TC-359 (layers 1–4), TC-356 (layer 5) |
-| stable alias | 5-layer lock | TC-351, TC-359 (layers 1–4), TC-356 (layer 5) |
-| latest alias | Remove all locks | TC-350, TC-353 |
+| pinned semver (2.1.50) | 5-layer lock | IT-15, IT-21 (layers 1–4), IT-18 (layer 5) |
+| stable alias | 5-layer lock | IT-14, IT-21 (layers 1–4), IT-18 (layer 5) |
+| latest alias | Remove all locks | IT-13, IT-16 |
 
 ### Preference Storage Coverage (FR-17)
 
 | Scenario | Written? | Test |
 |----------|----------|------|
-| dry::1 | No | TC-357 |
-| real install (idempotent skip) | Yes | TC-358 |
-| dry::1 (preview mentions storage) | Preview only | TC-356 |
+| dry::1 | No | IT-19 |
+| real install (idempotent skip) | Yes | IT-20 |
+| dry::1 (preview mentions storage) | Preview only | IT-18 |
 
 ---
 
@@ -259,7 +259,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-301: `version::stable dry::1` → preview shows `stable`
+### IT-9: `version::stable dry::1` → preview shows `stable`
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::stable dry::1`
@@ -269,7 +269,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-302: `version::1.2.3 dry::1` → preview shows exact version
+### IT-10: `version::1.2.3 dry::1` → preview shows exact version
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::1.2.3 dry::1`
@@ -279,7 +279,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-305: `version::` (empty) → exit 1
+### IT-23: `version::` (empty) → exit 1
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::`
@@ -289,7 +289,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-306: `version::1.2` → two-part semver, exit 1
+### IT-24: `version::1.2` → two-part semver, exit 1
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::1.2`
@@ -299,7 +299,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-307: `version::x` → unknown alias, exit 1
+### IT-25: `version::x` → unknown alias, exit 1
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::x`
@@ -309,7 +309,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-308: Absent `version::` with `dry::1` → defaults to `stable`
+### IT-11: Absent `version::` with `dry::1` → defaults to `stable`
 
 - **Given:** clean environment
 - **When:** `cm .version.install dry::1` (no `version::` parameter)
@@ -319,7 +319,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-309: `version::month dry::1` → resolves to pinned semver
+### IT-12: `version::month dry::1` → resolves to pinned semver
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::month dry::1`
@@ -329,7 +329,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-350: `version::latest dry::1` → autoUpdates=true in preview
+### IT-13: `version::latest dry::1` → autoUpdates=true in preview
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::latest dry::1`
@@ -339,7 +339,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-351: `version::stable dry::1` → autoUpdates=false in preview
+### IT-14: `version::stable dry::1` → autoUpdates=false in preview
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::stable dry::1`
@@ -349,7 +349,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-352: `version::2.1.50 dry::1` → autoUpdates=false in preview
+### IT-15: `version::2.1.50 dry::1` → autoUpdates=false in preview
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::2.1.50 dry::1`
@@ -359,7 +359,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-353: `version::latest dry::1` → previews unlock actions
+### IT-16: `version::latest dry::1` → previews unlock actions
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::latest dry::1`
@@ -369,7 +369,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-355: `version::0.0.0 dry::1` → single-zero parts valid
+### IT-17: `version::0.0.0 dry::1` → single-zero parts valid
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::0.0.0 dry::1`
@@ -379,7 +379,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-356: `dry::1` output mentions preferred version storage
+### IT-18: `dry::1` output mentions preferred version storage
 
 - **Given:** clean environment
 - **When:** `cm .version.install dry::1`
@@ -389,7 +389,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-357: `dry::1` does NOT write preference keys
+### IT-19: `dry::1` does NOT write preference keys
 
 - **Given:** `HOME=<tmp>`; `settings.json` starts empty
 - **When:** `cm .version.install version::stable dry::1`
@@ -399,7 +399,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-358: Idempotent skip still stores preference
+### IT-20: Idempotent skip still stores preference
 
 - **Given:** `HOME=<tmp>`; target version already installed
 - **When:** `cm .version.install version::stable`
@@ -409,7 +409,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-359: `version::stable dry::1` → output includes purge line
+### IT-21: `version::stable dry::1` → output includes purge line
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::stable dry::1`
@@ -419,7 +419,7 @@ TC-357 verifies dry-run has zero side effects on settings.
 
 ---
 
-### TC-360: `version::latest dry::1` → output does NOT contain "purge"
+### IT-22: `version::latest dry::1` → output does NOT contain "purge"
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::latest dry::1`

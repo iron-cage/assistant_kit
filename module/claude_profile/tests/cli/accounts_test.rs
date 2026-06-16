@@ -26,7 +26,7 @@
 //! | acc04 | `acc04_name_scopes_to_single_block` | `name::EMAIL` → only that account's block | P |
 //! | acc05 | `acc05_name_not_found_exits_2` | valid but unknown name → exit 2 | N |
 //! | acc06 | `acc06_name_invalid_exits_1` | `name::a/b` (path-unsafe prefix) → exit 1 | N |
-//! | acc07 | `acc07_field_presence_suppresses_lines` | `sub::0 tier::0` → Sub/Tier absent | P |
+//! | acc07 | `acc07_field_presence_suppresses_lines` | `cols::-sub,-tier` → Sub/Tier absent | P |
 //! | acc08 | `acc08_all_fields_off_bare_names` | all fields off → bare name list | P |
 //! | acc09 | `acc09_json_format_array` | `format::json` → valid JSON array | P |
 //! | acc10 | `acc10_json_ignores_field_presence` | `format::json` always includes all fields | P |
@@ -39,10 +39,10 @@
 //! | acc17 | `acc17_json_format_empty_store` | `format::json` + absent store → `[]` | P |
 //! | acc18 | `acc18_single_account_no_trailing_blank` | single account text → no trailing blank line | P |
 //! | acc19 | `acc19_missing_expires_at_shows_expired` | missing expiresAt in file → Expires: expired | P |
-//! | acc20 | `acc20_display_name_shows_from_snapshot` | `display_name::1` → Display: from saved snapshot | P |
-//! | acc21 | `acc21_role_billing_model_from_snapshots` | `role::1 billing::1 model::1` → 3 lines from snapshots | P |
+//! | acc20 | `acc20_display_name_shows_from_snapshot` | `cols::+display_name` → Display: from saved snapshot | P |
+//! | acc21 | `acc21_role_billing_model_from_snapshots` | `cols::+role,+billing,+model` → 3 lines from snapshots | P |
 //! | acc22 | `acc22_no_snapshot_shows_na_for_new_fields` | no snapshot → N/A for new fields when enabled | P |
-//! | acc23 | `acc23_json_includes_new_fields` | `format::json` → includes display_name, role, billing, model | P |
+//! | acc23 | `acc23_json_includes_new_fields` | `format::json` → includes `display_name`, role, billing, model | P |
 //! | acc24 | `acc24_new_fields_absent_by_default` | no opt-in → Display/Role/Billing/Model absent | P |
 //! | acc25 | `acc25_email_reads_from_snapshot` | Email: default-on → real email from snapshot | P |
 //! | acc26 | `acc26_save_creates_snapshot_files` | `save` creates `{name}.json` when model present (BUG-222) | P |
@@ -52,24 +52,40 @@
 //! | acc30 | `acc30_accounts_prefix_resolves` | prefix `alice` resolves to `alice@acme.com` | P |
 //! | acc31 | `acc31_accounts_shows_current_yes_no` | live creds match work@acme.com → `Current: yes` on work, `Current: no` on alice | P |
 //! | acc32 | `acc32_accounts_suppresses_current_when_creds_absent` | no live creds → no `Current:` line | P |
-//! | acc33 | `acc33_accounts_current_param_and_json` | `current::0` → no `Current:`; `format::json` → `is_current` field | P |
+//! | acc33 | `acc33_accounts_current_param_and_json` | `cols::-current` → no `Current:`; `format::json` → `is_current` field | P |
 //! | acc34 | `acc34_accounts_table_format` | `format::table` → exit 0, output contains column headers | P |
-//! | acc35 | `acc35_uuid_shows_id_from_snapshot` | `uuid::1` → ID: line from saved snapshot | P |
-//! | acc36 | `acc36_uuid_absent_by_default` | no `uuid::` → ID: absent | P |
-//! | acc37 | `acc37_json_includes_tagged_id` | `format::json` → tagged_id key always present | P |
-//! | acc38 | `acc38_capabilities_shows_list_from_snapshot` | `capabilities::1` → Capabilities: from snapshot | P |
-//! | acc39 | `acc39_capabilities_absent_by_default` | no `capabilities::` → Capabilities: absent | P |
+//! | acc35 | `acc35_uuid_shows_id_from_snapshot` | `cols::+uuid` → ID: line from saved snapshot | P |
+//! | acc36 | `acc36_uuid_absent_by_default` | no `cols::+uuid` → ID: absent | P |
+//! | acc37 | `acc37_json_includes_tagged_id` | `format::json` → `tagged_id` key always present | P |
+//! | acc38 | `acc38_capabilities_shows_list_from_snapshot` | `cols::+capabilities` → Capabilities: from snapshot | P |
+//! | acc39 | `acc39_capabilities_absent_by_default` | no `cols::+capabilities` → Capabilities: absent | P |
 //! | acc40 | `acc40_json_includes_capabilities` | `format::json` → capabilities key always present | P |
 //! | acc41 | `acc41_no_snapshot_uuid_capabilities_na` | no snapshot → uuid/capabilities show N/A | P |
-//! | acc42 | `acc42_org_uuid_shows_from_roles_json` | `org_uuid::1` → Org ID: line from roles.json | P |
-//! | acc43 | `acc43_org_uuid_absent_by_default` | no `org_uuid::` → Org ID: absent | P |
-//! | acc44 | `acc44_org_uuid_missing_roles_json_na` | `org_uuid::1`, no roles.json → Org ID: N/A | P |
-//! | acc45 | `acc45_json_includes_org_uuid` | `format::json` → organization_uuid key always present | P |
-//! | acc46 | `acc46_org_name_shows_from_roles_json` | `org_name::1` → Org: line from roles.json | P |
-//! | acc47 | `acc47_org_name_absent_by_default` | no `org_name::` → Org: absent | P |
-//! | acc48 | `acc48_org_name_missing_roles_json_na` | `org_name::1`, no roles.json → Org: N/A | P |
-//! | acc49 | `acc49_accounts_host_role_shows_profile_metadata` | `host::1 role::1` → Host/Role from profile.json | P |
+//! | acc42 | `acc42_org_uuid_shows_from_roles_json` | `cols::+org_uuid` → Org ID: line from roles.json | P |
+//! | acc43 | `acc43_org_uuid_absent_by_default` | no `cols::+org_uuid` → Org ID: absent | P |
+//! | acc44 | `acc44_org_uuid_missing_roles_json_na` | `cols::+org_uuid`, no roles.json → Org ID: N/A | P |
+//! | acc45 | `acc45_json_includes_org_uuid` | `format::json` → `organization_uuid` key always present | P |
+//! | acc46 | `acc46_org_name_shows_from_roles_json` | `cols::+org_name` → Org: line from roles.json | P |
+//! | acc47 | `acc47_org_name_absent_by_default` | no `cols::+org_name` → Org: absent | P |
+//! | acc48 | `acc48_org_name_missing_roles_json_na` | `cols::+org_name`, no roles.json → Org: N/A | P |
+//! | acc49 | `acc49_accounts_host_role_shows_profile_metadata` | `cols::+host,+role` → Host/Role from profile.json | P |
 //! | acc50 | `acc50_accounts_host_no_profile_json_exits_0` | absent profile.json → no non-zero exit, Host: N/A | P |
+//!
+//! ### FT — Feature 037 Param Unification Tests
+//!
+//! | ID | Test Function | Condition | P/N |
+//! |----|---------------|-----------|-----|
+//! | ft01 | `ft01_accounts_accepts_32_params` | `.accounts` accepts all 32 registered params without error | P |
+//! | ft03 | `ft03_accounts_default_profile` | `.accounts` default output includes Owner column | P |
+//! | ft07 | `ft07_accounts_unclaim_batch` | `unclaim::1` no name → clears all owned accounts, exits 0 | P |
+//! | ft11 | `ft11_account_unclaim_removed` | `.account.unclaim name::X` → exit 1 + redirect message | N |
+//! | ft12 | `ft12_account_assign_removed` | `.account.assign name::X` → exit 1 + redirect message | N |
+//! | ft13 | `ft13_accounts_legacy_toggles_rejected` | removed toggle param → exit 1 + migration message | N |
+//! | ft14 | `ft14_accounts_cols_modifier` | `cols::+display_name` → Display: line present | P |
+//! | ft15 | `lim_it_ft15_accounts_refresh_live` | `refresh::1` with live token → account appears in output | P |
+//! | ft19 | `ft19_owner_column_default_visible` | Owner: line visible by default in text output | P |
+//! | ft20 | `ft20_accounts_unclaim_force_bypasses_g8` | `unclaim::1 force::1` → clears owner regardless of owner identity | P |
+//! | ft21 | `ft21_force_no_effect_without_unclaim` | `force::1` alone (no unclaim) → accepted, no mutation | P |
 
 use crate::cli_runner::{
   run_cs, run_cs_with_env,
@@ -77,6 +93,7 @@ use crate::cli_runner::{
   write_account, write_account_with_token, write_credentials, write_claude_json_full, write_settings_json,
   write_account_claude_json, write_account_settings_json, write_live_credentials_with_token,
   write_account_claude_json_extended, write_account_roles_json, write_account_profile_json,
+  write_account_owner, live_active_token, require_live_api,
   FAR_FUTURE_MS, PAST_MS,
 };
 use tempfile::TempDir;
@@ -277,17 +294,17 @@ fn acc06_name_invalid_exits_1()
 #[ test ]
 fn acc07_field_presence_suppresses_lines()
 {
-  // IT-7: sub::0 tier::0 → Sub/Tier absent; Active/Expires/Email remain.
+  // IT-7: cols::-sub,-tier → Sub/Tier absent; Active/Expires/Email remain.
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "work@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
 
-  let out  = run_cs_with_env( &[ ".accounts", "sub::0", "tier::0" ], &[ ( "HOME", home ) ] );
+  let out  = run_cs_with_env( &[ ".accounts", "cols::-sub,-tier" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!(  text.contains( "Active:" ),  "Active: must remain when sub::0 tier::0, got:\n{text}" );
-  assert!(  text.contains( "Expires:" ), "Expires: must remain when sub::0 tier::0, got:\n{text}" );
-  assert!(  text.contains( "Email:" ),   "Email: must remain when sub::0 tier::0, got:\n{text}"  );
+  assert!(  text.contains( "Active:" ),  "Active: must remain when cols::-sub,-tier, got:\n{text}" );
+  assert!(  text.contains( "Expires:" ), "Expires: must remain when cols::-sub,-tier, got:\n{text}" );
+  assert!(  text.contains( "Email:" ),   "Email: must remain when cols::-sub,-tier, got:\n{text}"  );
   assert!( !text.contains( "Sub:" ),     "Sub: must be suppressed, got:\n{text}" );
   assert!( !text.contains( "Tier:" ),    "Tier: must be suppressed, got:\n{text}" );
 }
@@ -295,14 +312,15 @@ fn acc07_field_presence_suppresses_lines()
 #[ test ]
 fn acc08_all_fields_off_bare_names()
 {
-  // IT-8: all field params off → bare name per line, no indented fields.
+  // IT-8: all default-on fields off → bare name per line, no indented fields.
+  // cols::-active,-owner,-current,-sub,-tier,-expires,-email suppresses the entire default set.
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "work@acme.com",     "max", "tier4",    FAR_FUTURE_MS, true  );
   write_account( dir.path(), "personal@home.com", "pro", "standard", FAR_FUTURE_MS, false );
 
   let out  = run_cs_with_env(
-    &[ ".accounts", "active::0", "sub::0", "tier::0", "expires::0", "email::0" ],
+    &[ ".accounts", "cols::-active,-owner,-current,-sub,-tier,-expires,-email" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -310,6 +328,7 @@ fn acc08_all_fields_off_bare_names()
   let lines : Vec< &str > = text.lines().filter( | l | !l.is_empty() ).collect();
   assert_eq!( lines.len(), 2, "all fields off must produce exactly 2 lines (names), got:\n{text}" );
   assert!( !text.contains( "Active:" ),  "Active: must be absent, got:\n{text}" );
+  assert!( !text.contains( "Owner:" ),   "Owner: must be absent, got:\n{text}" );
   assert!( !text.contains( "Sub:" ),     "Sub: must be absent, got:\n{text}" );
   assert!( !text.contains( "Tier:" ),    "Tier: must be absent, got:\n{text}" );
   assert!( !text.contains( "Expires:" ), "Expires: must be absent, got:\n{text}" );
@@ -345,14 +364,14 @@ fn acc10_json_ignores_field_presence()
   write_account( dir.path(), "work@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
 
   let out  = run_cs_with_env(
-    &[ ".accounts", "sub::0", "tier::0", "active::0", "format::json" ],
+    &[ ".accounts", "cols::-sub,-tier,-active", "format::json" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "\"subscription_type\"" ), "JSON must include subscription_type despite sub::0, got:\n{text}" );
-  assert!( text.contains( "\"rate_limit_tier\"" ),   "JSON must include rate_limit_tier despite tier::0, got:\n{text}" );
-  assert!( text.contains( "\"is_active\"" ),          "JSON must include is_active despite active::0, got:\n{text}" );
+  assert!( text.contains( "\"subscription_type\"" ), "JSON must include subscription_type despite cols::-sub, got:\n{text}" );
+  assert!( text.contains( "\"rate_limit_tier\"" ),   "JSON must include rate_limit_tier despite cols::-tier, got:\n{text}" );
+  assert!( text.contains( "\"is_active\"" ),          "JSON must include is_active despite cols::-active, got:\n{text}" );
 }
 
 #[ test ]
@@ -382,7 +401,7 @@ fn acc12_sorted_alphabetically()
   write_account( dir.path(), "mike@acme.com",  "pro", "standard", FAR_FUTURE_MS, false );
 
   let out  = run_cs_with_env(
-    &[ ".accounts", "active::0", "sub::0", "tier::0", "expires::0", "email::0" ],
+    &[ ".accounts", "cols::-active,-owner,-current,-sub,-tier,-expires,-email" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -649,12 +668,12 @@ fn acc20_display_name_shows_from_snapshot()
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
   write_account_claude_json( dir.path(), "alice@acme.com", "alice@acme.com", "Alice K", "admin", "stripe" );
 
-  let out  = run_cs_with_env( &[ ".accounts", "display_name::1" ], &[ ( "HOME", home ) ] );
+  let out  = run_cs_with_env( &[ ".accounts", "cols::+display_name" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
     text.contains( "Display: Alice K" ),
-    "display_name::1 must render Display: line from snapshot, got:\n{text}",
+    "cols::+display_name must render Display: line from snapshot, got:\n{text}",
   );
 }
 
@@ -688,14 +707,14 @@ fn acc21_role_billing_model_from_snapshots()
   write_account_profile_json( dir.path(), "alice@acme.com", None, Some( "admin" ) );
 
   let out  = run_cs_with_env(
-    &[ ".accounts", "role::1", "billing::1", "model::1" ],
+    &[ ".accounts", "cols::+role,+billing,+model" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "Role:    admin"         ), "role::1 must render Role: from profile.json, got:\n{text}"  );
-  assert!( text.contains( "Billing: stripe_sub"    ), "billing::1 must render Billing: from snapshot, got:\n{text}" );
-  assert!( text.contains( "Model:   claude-sonnet" ), "model::1 must render Model: from snapshot, got:\n{text}"  );
+  assert!( text.contains( "Role:    admin"         ), "cols::+role must render Role: from profile.json, got:\n{text}"  );
+  assert!( text.contains( "Billing: stripe_sub"    ), "cols::+billing must render Billing: from snapshot, got:\n{text}" );
+  assert!( text.contains( "Model:   claude-sonnet" ), "cols::+model must render Model: from snapshot, got:\n{text}"  );
 }
 
 /// acc22 (T05): when no snapshot files exist, opt-in fields show `N/A`.
@@ -718,7 +737,7 @@ fn acc22_no_snapshot_shows_na_for_new_fields()
   // No snapshot files written — all new fields must fall back to N/A.
 
   let out  = run_cs_with_env(
-    &[ ".accounts", "display_name::1", "role::1", "billing::1", "model::1" ],
+    &[ ".accounts", "cols::+display_name,+role,+billing,+model" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -1077,13 +1096,13 @@ fn acc33_accounts_current_param_and_json()
   write_account_with_token( dir.path(), "alice@acme.com", "tok-alice", false );
   write_live_credentials_with_token( dir.path(), "tok-alice" );
 
-  // (a) current::0 must suppress the Current: line.
-  let out_off = run_cs_with_env( &[ ".accounts", "current::0" ], &[ ( "HOME", home ) ] );
+  // (a) cols::-current must suppress the Current: line.
+  let out_off = run_cs_with_env( &[ ".accounts", "cols::-current" ], &[ ( "HOME", home ) ] );
   assert_exit( &out_off, 0 );
   let text_off = stdout( &out_off );
   assert!(
     !text_off.contains( "Current:" ),
-    "current::0 must suppress Current: line, got:\n{text_off}",
+    "cols::-current must suppress Current: line, got:\n{text_off}",
   );
 
   // (b) format::json must include is_current boolean field.
@@ -1154,10 +1173,10 @@ fn acc35_uuid_shows_id_from_snapshot()
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
   write_account_claude_json_extended( dir.path(), "alice@acme.com", "user_abc123", "some-uuid", &[ "claude_code" ] );
 
-  let out  = run_cs_with_env( &[ ".accounts", "uuid::1" ], &[ ( "HOME", home ) ] );
+  let out  = run_cs_with_env( &[ ".accounts", "cols::+uuid" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "ID:" ),         "uuid::1 must emit ID: line, got:\n{text}" );
+  assert!( text.contains( "ID:" ),         "cols::+uuid must emit ID: line, got:\n{text}" );
   assert!( text.contains( "user_abc123" ), "ID: must show taggedId from snapshot, got:\n{text}" );
 }
 
@@ -1201,10 +1220,10 @@ fn acc38_capabilities_shows_list_from_snapshot()
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
   write_account_claude_json_extended( dir.path(), "alice@acme.com", "", "", &[ "claude_max", "chat" ] );
 
-  let out  = run_cs_with_env( &[ ".accounts", "capabilities::1" ], &[ ( "HOME", home ) ] );
+  let out  = run_cs_with_env( &[ ".accounts", "cols::+capabilities" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "Capabilities:" ), "capabilities::1 must emit Capabilities: line, got:\n{text}" );
+  assert!( text.contains( "Capabilities:" ), "cols::+capabilities must emit Capabilities: line, got:\n{text}" );
   assert!( text.contains( "claude_max" ),    "Capabilities: must list claude_max, got:\n{text}" );
   assert!( text.contains( "chat" ),          "Capabilities: must list chat, got:\n{text}" );
 }
@@ -1249,10 +1268,10 @@ fn acc41_no_snapshot_uuid_capabilities_na()
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
   // No snapshot files written.
 
-  let out  = run_cs_with_env( &[ ".accounts", "uuid::1", "capabilities::1" ], &[ ( "HOME", home ) ] );
+  let out  = run_cs_with_env( &[ ".accounts", "cols::+uuid,+capabilities" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "ID:" ),           "ID: line must appear with uuid::1, got:\n{text}" );
+  assert!( text.contains( "ID:" ),           "ID: line must appear with cols::+uuid, got:\n{text}" );
   assert!( text.contains( "Capabilities:" ), "Capabilities: line must appear, got:\n{text}" );
   assert!( text.contains( "N/A" ),           "absent snapshot must show N/A for new fields, got:\n{text}" );
 }
@@ -1268,10 +1287,10 @@ fn acc42_org_uuid_shows_from_roles_json()
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
   write_account_roles_json( dir.path(), "alice@acme.com", "org-xyz-789", "Acme Corp", "admin" );
 
-  let out  = run_cs_with_env( &[ ".accounts", "org_uuid::1" ], &[ ( "HOME", home ) ] );
+  let out  = run_cs_with_env( &[ ".accounts", "cols::+org_uuid" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "Org ID:" ),    "org_uuid::1 must emit Org ID: line, got:\n{text}" );
+  assert!( text.contains( "Org ID:" ),    "cols::+org_uuid must emit Org ID: line, got:\n{text}" );
   assert!( text.contains( "org-xyz-789" ), "Org ID: must show organization_uuid from roles.json, got:\n{text}" );
 }
 
@@ -1303,10 +1322,10 @@ fn acc44_org_uuid_missing_roles_json_na()
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
   // No roles.json written.
 
-  let out  = run_cs_with_env( &[ ".accounts", "org_uuid::1" ], &[ ( "HOME", home ) ] );
+  let out  = run_cs_with_env( &[ ".accounts", "cols::+org_uuid" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "Org ID:" ), "Org ID: line must appear with org_uuid::1, got:\n{text}" );
+  assert!( text.contains( "Org ID:" ), "Org ID: line must appear with cols::+org_uuid, got:\n{text}" );
   assert!( text.contains( "N/A" ),     "absent roles.json must show N/A, got:\n{text}" );
 }
 
@@ -1339,10 +1358,10 @@ fn acc46_org_name_shows_from_roles_json()
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
   write_account_roles_json( dir.path(), "alice@acme.com", "org-xyz-789", "Acme Corp", "admin" );
 
-  let out  = run_cs_with_env( &[ ".accounts", "org_name::1" ], &[ ( "HOME", home ) ] );
+  let out  = run_cs_with_env( &[ ".accounts", "cols::+org_name" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "Org:" ),      "org_name::1 must emit Org: line, got:\n{text}" );
+  assert!( text.contains( "Org:" ),      "cols::+org_name must emit Org: line, got:\n{text}" );
   assert!( text.contains( "Acme Corp" ), "Org: must show organization_name from roles.json, got:\n{text}" );
 }
 
@@ -1374,10 +1393,10 @@ fn acc48_org_name_missing_roles_json_na()
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
   // No roles.json written.
 
-  let out  = run_cs_with_env( &[ ".accounts", "org_name::1" ], &[ ( "HOME", home ) ] );
+  let out  = run_cs_with_env( &[ ".accounts", "cols::+org_name" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "Org:" ), "Org: line must appear with org_name::1, got:\n{text}" );
+  assert!( text.contains( "Org:" ), "Org: line must appear with cols::+org_name, got:\n{text}" );
   assert!( text.contains( "N/A" ),  "absent roles.json must show N/A, got:\n{text}" );
 }
 
@@ -1418,18 +1437,18 @@ fn acc49_accounts_host_role_shows_profile_metadata()
   write_account_profile_json( dir.path(), "test@example.com", Some( "mybox" ), Some( "work" ) );
 
   let out  = run_cs_with_env(
-    &[ ".accounts", "host::1", "role::1" ],
+    &[ ".accounts", "cols::+host,+role" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
     text.contains( "Host:    mybox" ),
-    "host::1 must show Host: from profile.json, got:\n{text}",
+    "cols::+host must show Host: from profile.json, got:\n{text}",
   );
   assert!(
     text.contains( "Role:    work" ),
-    "role::1 must show Role: from profile.json, got:\n{text}",
+    "cols::+role must show Role: from profile.json, got:\n{text}",
   );
 }
 
@@ -1450,7 +1469,7 @@ fn acc50_accounts_host_no_profile_json_exits_0()
   // No profile.json written — must be treated as optional metadata.
 
   let out  = run_cs_with_env(
-    &[ ".accounts", "host::1" ],
+    &[ ".accounts", "cols::+host" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -1481,4 +1500,423 @@ fn acc51_accounts_positional_after_key_value()
   let text = stdout( &out );
   assert!( text.contains( "alice@acme.com" ), "reversed-order positional must show alice@acme.com, got:\n{text}" );
   assert!( !text.contains( "work@acme.com" ), "must not show work@acme.com, got:\n{text}" );
+}
+
+// ── FT-11 / FT-12: Feature 037 redirect stubs ─────────────────────────────────
+
+#[ test ]
+/// FT-11: `.account.unclaim` standalone removed — exits 1 with redirect message.
+///
+/// Feature 037 absorbed `.account.unclaim` into `.accounts unclaim::1`. The old command
+/// path now routes to a redirect stub that exits 1 with an actionable error message.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-11]
+fn ft11_account_unclaim_removed()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".account.unclaim", "name::alice" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+
+  let err_text = stderr( &out );
+  assert!(
+    err_text.contains( ".account.unclaim" ) && err_text.contains( ".accounts unclaim::1" ),
+    "FT-11: .account.unclaim must emit redirect message; got stderr: {err_text}",
+  );
+}
+
+#[ test ]
+/// FT-12: `.account.assign` standalone removed — exits 1 with redirect message.
+///
+/// Feature 037 absorbed `.account.assign` into `.accounts assign::1`. The old command
+/// path now routes to a redirect stub that exits 1 with an actionable error message.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-12]
+fn ft12_account_assign_removed()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".account.assign", "name::alice" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+
+  let err_text = stderr( &out );
+  assert!(
+    err_text.contains( ".account.assign" ) && err_text.contains( ".accounts assign::1" ),
+    "FT-12: .account.assign must emit redirect message; got stderr: {err_text}",
+  );
+}
+
+// ── FT-01 / FT-03 / FT-07 / FT-13 / FT-14 / FT-19 / FT-20 / FT-21 ──────────
+
+#[ test ]
+/// FT-01 (AC-01): `.accounts` accepts all 32 unified params; unknown param exits 1.
+///
+/// Structural registration test: each of the 32 unified params must not produce
+/// "unknown parameter" errors. Mutation params are gated with `dry::1` to
+/// prevent side-effects in the offline test environment.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-01]
+fn ft01_accounts_accepts_32_params()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  // Display and filter params (offline-safe; no network, no writes).
+  let out = run_cs_with_env(
+    &[
+      ".accounts",
+      "trace::1",
+      "format::text",
+      "cols::+uuid,-tier",
+      "sort::name",
+      "desc::0",
+      "no_color::1",
+      "count::10",
+      "offset::0",
+      "only_active::0",
+      "only_next::0",
+      "min_5h::0",
+      "min_7d::0",
+      "only_valid::0",
+      "exclude_exhausted::0",
+      "abs::0",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  // prefer/next/imodel/effort accepted (no-op when refresh::0).
+  let out = run_cs_with_env(
+    &[ ".accounts", "prefer::any", "next::renew", "imodel::auto", "effort::auto" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  // assign/unclaim/force/for accepted; dry::1 suppresses writes.
+  let out = run_cs_with_env(
+    &[ ".accounts", "assign::1", "name::alice@acme.com", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  // Unknown parameter exits 1.
+  let out = run_cs_with_env(
+    &[ ".accounts", "unknown_foobar_xyz::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+}
+
+#[ test ]
+/// FT-03 (AC-03): `.accounts` default — no HTTP fetch, no subprocess, identity column set.
+///
+/// With `trace::1`, no `[trace] fetch` or `[trace] touch` lines should appear.
+/// Owner column (default-on) must be present in output.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-03]
+fn ft03_accounts_default_profile()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "testuser@testmachine" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "[trace] fetch" ),
+    "FT-03: default .accounts must NOT produce [trace] fetch lines (no network call); got stderr:\n{err}",
+  );
+  assert!(
+    !err.contains( "[trace] touch" ),
+    "FT-03: default .accounts must NOT produce [trace] touch lines; got stderr:\n{err}",
+  );
+
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Owner:" ),
+    "FT-03: Owner column must appear by default (identity set); got:\n{text}",
+  );
+  assert!(
+    text.contains( "testuser@testmachine" ),
+    "FT-03: owner value must appear for alice; got:\n{text}",
+  );
+}
+
+#[ test ]
+/// FT-07 (AC-07): `.accounts unclaim::1` batch — applies to all filtered accounts; G8 per-account.
+///
+/// alice (owned by testuser@testmachine = current identity) → unclaimed; `alice.json` gets `"owner": ""`.
+/// bob (owned by other@remote ≠ current identity) → skipped; stdout shows `"skip bob: owned by other@remote"`.
+/// Overall exit 0 (best-effort batch — skips are logged, not failures).
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-07]
+fn ft07_accounts_unclaim_batch()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "testuser@testmachine" );
+
+  write_account( dir.path(), "bob@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "bob@acme.com", "other@remote" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "unclaim::1" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  assert!(
+    text.contains( "unclaimed alice@acme.com" ),
+    "FT-07: alice must be unclaimed; got stdout:\n{text}",
+  );
+  assert!(
+    text.contains( "skip bob@acme.com" ) || text.contains( "other@remote" ),
+    "FT-07: bob must be skipped with ownership note; got stdout:\n{text}",
+  );
+
+  let store    = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let alice_meta = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let alice_val : serde_json::Value = serde_json::from_str( &alice_meta ).unwrap();
+  assert_eq!(
+    alice_val[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "",
+    "FT-07: alice owner must be cleared",
+  );
+
+  let bob_meta = std::fs::read_to_string( store.join( "bob@acme.com.json" ) ).unwrap();
+  let bob_val : serde_json::Value = serde_json::from_str( &bob_meta ).unwrap();
+  assert_eq!(
+    bob_val[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "other@remote",
+    "FT-07: bob owner must be unchanged",
+  );
+}
+
+#[ test ]
+/// FT-13 (AC-13): `.accounts` rejects all 15 legacy field-toggle params with `cols::` migration message.
+///
+/// Each legacy param (active, current, sub, tier, expires, email, `display_name`, host, role, billing,
+/// model, uuid, capabilities, `org_uuid`, `org_name`) exits 1 and the error references `cols::`.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-13]
+fn ft13_accounts_legacy_toggles_rejected()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let toggles = [
+    "active", "current", "sub", "tier", "expires", "email",
+    "display_name", "host", "role", "billing", "model",
+    "uuid", "capabilities", "org_uuid", "org_name",
+  ];
+  for toggle in toggles
+  {
+    let param = format!( "{toggle}::1" );
+    let out   = run_cs_with_env( &[ ".accounts", &param ], &[ ( "HOME", home ) ] );
+    assert_exit( &out, 1 );
+    let err = stderr( &out );
+    assert!(
+      err.contains( "cols::" ),
+      "FT-13: '{toggle}::1' must reject with a cols:: migration message; got stderr:\n{err}",
+    );
+  }
+}
+
+#[ test ]
+/// FT-14 (AC-14): `.accounts cols::+host,-tier` adds host column, removes tier from identity set.
+///
+/// After applying the modifier: Host line present, Tier line absent.
+/// All other default identity columns (Owner, Sub, Expires, Email) still present.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-14]
+fn ft14_accounts_cols_modifier()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_profile_json( dir.path(), "alice@acme.com", Some( "work-laptop" ), None );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "cols::+host,-tier" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  assert!(  text.contains( "Host:" ),  "FT-14: Host: must appear with cols::+host; got:\n{text}"        );
+  assert!( !text.contains( "Tier:" ),  "FT-14: Tier: must be absent with cols::-tier; got:\n{text}"     );
+  assert!(  text.contains( "Owner:" ), "FT-14: Owner: must remain (default-on); got:\n{text}"           );
+  assert!(  text.contains( "Sub:" ),   "FT-14: Sub: must remain (default-on); got:\n{text}"             );
+  assert!(  text.contains( "Expires:" ), "FT-14: Expires: must remain (default-on); got:\n{text}"       );
+}
+
+#[ test ]
+/// FT-15 (AC-15, `lim_it`): `.accounts refresh::1` uses same fetch algorithm as `.usage`.
+///
+/// Requires live API access. With a valid token, `[trace] fetch` lines appear in stderr.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-15]
+fn lim_it_ft15_accounts_refresh_live()
+{
+  if !require_live_api( "ft15" ) { return; }
+  let Some( token ) = live_active_token() else { return };
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "live@test.com", &token, true );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "refresh::1", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  assert!(
+    text.contains( "live@test.com" ),
+    "FT-15: refresh::1 with live token must show account; got stdout:\n{text}",
+  );
+}
+
+#[ test ]
+/// FT-19 (AC-19): Owner column visible by default; shows owner from `{name}.json`; `cols::-owner` hides it.
+///
+/// Case A: `.accounts` — Owner: present, alice shows owner identity, bob shows em dash (—).
+/// Case B: `.accounts cols::-owner` — no Owner: line.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-19]
+fn ft19_owner_column_default_visible()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "testuser@testmachine" );
+
+  write_account( dir.path(), "bob@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "bob@acme.com", "" );
+
+  // Case A: default — Owner column present.
+  {
+    let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+    assert_exit( &out, 0 );
+    let text = stdout( &out );
+    assert!(
+      text.contains( "Owner:" ),
+      "FT-19A: Owner: must appear by default; got:\n{text}",
+    );
+    assert!(
+      text.contains( "testuser@testmachine" ),
+      "FT-19A: alice's owner must appear; got:\n{text}",
+    );
+    assert!(
+      text.contains( "\u{2014}" ),
+      "FT-19A: bob's empty owner must show em dash (—); got:\n{text}",
+    );
+  }
+
+  // Case B: cols::-owner — Owner column hidden.
+  {
+    let out  = run_cs_with_env( &[ ".accounts", "cols::-owner" ], &[ ( "HOME", home ) ] );
+    assert_exit( &out, 0 );
+    let text = stdout( &out );
+    assert!(
+      !text.contains( "Owner:" ),
+      "FT-19B: Owner: must be hidden with cols::-owner; got:\n{text}",
+    );
+  }
+}
+
+#[ test ]
+/// FT-20 (AC-20): `force::1` bypasses G8 gate — unclaims even when caller ≠ stored owner.
+///
+/// alice is owned by "other@remote"; caller identity is "local@local" (G8 would fail without force).
+/// With `force::1`: exits 0, alice.json has `"owner": ""`.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-20]
+fn ft20_accounts_unclaim_force_bypasses_g8()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  // Without force: G8 blocks.
+  let out_blocked = run_cs_with_env(
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
+  );
+  assert_exit( &out_blocked, 1 );
+
+  // With force::1: G8 bypassed.
+  let out = run_cs_with_env(
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com", "force::1" ],
+    &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store    = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta     = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  assert_eq!(
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "",
+    "FT-20: force::1 must clear owner regardless of caller identity",
+  );
+}
+
+#[ test ]
+/// FT-21 (AC-21): `force::1` without `unclaim::1` is silently ignored — no error.
+///
+/// Case A: `.accounts force::1` (no mutation) → exits 0, lists accounts normally.
+/// Case B: `.accounts force::1 assign::1 name::alice` → exits 0, marker written; force is a no-op on assign.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-21]
+fn ft21_force_no_effect_without_unclaim()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  // Case A: force alone → normal list.
+  {
+    let out = run_cs_with_env(
+      &[ ".accounts", "force::1" ],
+      &[ ( "HOME", home ) ],
+    );
+    assert_exit( &out, 0 );
+    let text = stdout( &out );
+    assert!(
+      text.contains( "alice@acme.com" ),
+      "FT-21A: force::1 alone must not suppress output; got:\n{text}",
+    );
+  }
+
+  // Case B: force + assign → marker written, no error.
+  {
+    let out = run_cs_with_env(
+      &[ ".accounts", "force::1", "assign::1", "name::alice@acme.com" ],
+      &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+    );
+    assert_exit( &out, 0 );
+
+    let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+    let marker = std::fs::read_to_string( store.join( "_active_testmachine_testuser" ) )
+      .expect( "FT-21B: marker must be written with force::1 + assign::1" );
+    assert_eq!( marker.trim(), "alice@acme.com", "FT-21B: marker must contain alice@acme.com" );
+  }
 }

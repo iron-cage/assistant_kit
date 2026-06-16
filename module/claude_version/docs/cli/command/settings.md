@@ -31,6 +31,10 @@ clv.settings.show [v::N] [format::FMT]
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
+**Algorithm (2 steps):**
+1. Read and parse `~/.claude/settings.json`; exit 2 on read or parse error.
+2. Render all key-value pairs in the requested format.
+
 **Examples:**
 
 ```sh
@@ -42,8 +46,8 @@ clv.settings.show format::json
 
 | # | Format | Role |
 |---|--------|------|
-| 1 | [text](../format/001_text.md) | Default human-readable output |
-| 2 | [json](../format/002_json.md) | Machine-readable structured output |
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
 
 ### Referenced Parameter Groups
 
@@ -95,6 +99,11 @@ clv.settings.get key::<KEY> [v::N] [format::FMT]
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
+**Algorithm (3 steps):**
+1. Validate `key::` is present; exit 1 if absent.
+2. Read and parse `~/.claude/settings.json`; look up the key; exit 2 on file error or missing key.
+3. Render the key-value pair in the requested format.
+
 **Examples:**
 
 ```sh
@@ -106,8 +115,8 @@ clv.settings.get key::autoUpdate format::json
 
 | # | Format | Role |
 |---|--------|------|
-| 1 | [text](../format/001_text.md) | Default human-readable output |
-| 2 | [json](../format/002_json.md) | Machine-readable structured output |
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
 
 ### Referenced Parameter Groups
 
@@ -159,6 +168,12 @@ clv.settings.set key::<KEY> value::<VALUE> [dry::1]
 | [`key::`](../param/06_key.md) | [`SettingsKey`](../type/04_settings_key.md) | — | Yes | Setting to write |
 | [`value::`](../param/07_value.md) | [`SettingsValue`](../type/05_settings_value.md) | — | Yes | Value to write (type-inferred) |
 | [`dry::`](../param/02_dry.md) | bool | false | No | Preview without writing |
+
+**Algorithm (4 steps):**
+1. Validate both `key::` and `value::` are present; exit 1 if either absent.
+2. Infer value type: `"true"`/`"false"` → bool, numeric string → number, anything else → string.
+3. Atomically read-modify-write `~/.claude/settings.json` via temp-file rename (upsert semantics).
+4. Render confirmation in the requested format.
 
 **Examples:**
 

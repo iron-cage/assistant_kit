@@ -98,4 +98,9 @@ Acceptance tests for User Story 002. See [user_story/002_version_upgrade.md](../
 
 | Function | File | Status |
 |----------|------|--------|
-| -- | -- | ⏳ (pending implementation) |
+| `us01_002_version_install_dry_preview` | `integration/user_story_test.rs` | ✅ |
+| `us02_002_version_install_plan_accepted` | `integration/user_story_test.rs` | ✅ |
+| `us03_002_version_install_idempotent` | `integration/user_story_test.rs` | ✅ |
+| `us04_002_version_show_exits_0` | `integration/user_story_test.rs` | ✅ |
+| `us05_002_version_history_exits_0` | `integration/user_story_test.rs` | ✅ |
+| `us06_002_version_guard_exits_0` | `integration/user_story_test.rs` | ✅ |

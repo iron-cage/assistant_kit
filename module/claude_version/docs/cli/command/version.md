@@ -29,6 +29,10 @@ clv.version.show [v::N] [format::FMT]
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
+**Algorithm (2 steps):**
+1. Invoke `claude --version` to detect the installed binary version string.
+2. Render the version string in the requested format.
+
 **Examples:**
 
 ```sh
@@ -40,8 +44,8 @@ clv.version.show format::json
 
 | # | Format | Role |
 |---|--------|------|
-| 1 | [text](../format/001_text.md) | Default human-readable output |
-| 2 | [json](../format/002_json.md) | Machine-readable structured output |
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
 
 ### Referenced Parameter Groups
 
@@ -99,6 +103,13 @@ clv.version.install [version::VER] [dry::1] [force::1] [v::N] [format::FMT]
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
+**Algorithm (5 steps):**
+1. Resolve `version::` alias (`stable`, `latest`, `month`) or validate the semver string against known patterns.
+2. Compare resolved target against installed version; exit 0 (no-op) if equal and `force::0`.
+3. Apply all 5 version-lock layers (chmod 555, symlink guard, preference storage, etc.).
+4. Execute the official curl installer for the resolved version.
+5. Verify installed version matches target; store preferred version for `.version.guard` recovery.
+
 **Examples:**
 
 ```sh
@@ -122,8 +133,8 @@ clv.version.install version::latest
 
 | # | Format | Role |
 |---|--------|------|
-| 1 | [text](../format/001_text.md) | Default human-readable output |
-| 2 | [json](../format/002_json.md) | Machine-readable structured output |
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
 
 ### Referenced Parameter Groups
 
@@ -183,6 +194,14 @@ clv.version.guard [version::SPEC] [dry::1] [force::1] [interval::N] [v::N] [form
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
+**Algorithm (6 steps):**
+1. Read stored preferred version from settings (or apply `version::` override for this run only).
+2. Invoke `claude --version` to detect the currently installed version.
+3. Compare installed vs. preferred; skip restore if equal and `force::0`.
+4. If drift detected (or `force::1`): invoke `.version.install` logic for the preferred version.
+5. Verify post-install version matches preferred; report restore result.
+6. In watch mode (`interval::N>0`): sleep N seconds, loop back to step 2; log transient errors to stderr without terminating.
+
 **Examples:**
 
 ```sh
@@ -206,8 +225,8 @@ clv.version.guard force::1
 
 | # | Format | Role |
 |---|--------|------|
-| 1 | [text](../format/001_text.md) | Default human-readable output |
-| 2 | [json](../format/002_json.md) | Machine-readable structured output |
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
 
 ### Referenced Parameter Groups
 
@@ -261,6 +280,10 @@ clv.version.list [v::N] [format::FMT]
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
+**Algorithm (2 steps):**
+1. Load the compile-time version alias table (`stable`, `month`, `latest` → pinned semver values).
+2. Render the alias-to-version mapping in the requested format.
+
 **Examples:**
 
 ```sh
@@ -272,8 +295,8 @@ clv.version.list format::json
 
 | # | Format | Role |
 |---|--------|------|
-| 1 | [text](../format/001_text.md) | Default human-readable output |
-| 2 | [json](../format/002_json.md) | Machine-readable structured output |
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
 
 ### Referenced Parameter Groups
 
@@ -326,6 +349,11 @@ clv.version.history [count::N] [v::N] [format::FMT]
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
+**Algorithm (3 steps):**
+1. Check local 1-hour cache for GitHub Releases API response; fetch from `anthropics/claude-code` releases endpoint if stale or absent.
+2. Select the `count::N` most recent releases from the response payload.
+3. Render each release (tag, date, changelog summary) in the requested format.
+
 **Examples:**
 
 ```sh
@@ -349,8 +377,8 @@ clv.version.history format::json count::5
 
 | # | Format | Role |
 |---|--------|------|
-| 1 | [text](../format/001_text.md) | Default human-readable output |
-| 2 | [json](../format/002_json.md) | Machine-readable structured output |
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
 
 ### Referenced Parameter Groups
 

@@ -15,9 +15,9 @@ Run one command to see installed version, active session count, and active accou
 
 ### Acceptance Criteria
 
-- `cm .status` outputs version, session count, and active account in a single view.
-- `cm .status format::json` returns the same fields as a JSON object for scripting.
-- `cm .status v::2` shows additional diagnostic context.
+- `clv .status` outputs version, session count, and active account in a single view.
+- `clv .status format::json` returns the same fields as a JSON object for scripting.
+- `clv .status v::2` shows additional diagnostic context.
 - Missing HOME exits 2; all other failures also exit 2.
 
 ### Referenced Commands

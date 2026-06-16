@@ -55,7 +55,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 | IT-20 | watch loop continues after install error, not terminated | Watch Resilience |
 | IT-21 | `version::latest dry::1` override → "no version pin to guard" | Version Override |
 | IT-22 | `dry::1 v::0` → output shorter than `v::1` | Output Control |
-| TC-418 | `format::json dry::1` → JSON object output, exit 0 | Format |
+| IT-23 | `format::json dry::1` → JSON object output, exit 0 | Format |
 
 ## Test Coverage Summary
 
@@ -272,7 +272,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **Given:** `~/.claude/settings.json` contains `preferredVersionSpec="9.9.9"` / `preferredVersionResolved="9.9.9"`; no claude binary installed; empty `PATH` (forces install failure).
 - **When:** `timeout 2 cm .version.guard interval::1`
 - **Then:** Process runs until killed by `timeout` (2 seconds); stderr contains `#1` and `#2` iteration headers.; Process survives first install error; daemon continues watching.
-**Bug:** `return result` in watch loop error branch — fixed by continuing the loop instead
+- **Bug:** `return result` in watch loop error branch — fixed by continuing the loop instead
 - **Exit:** 0
 - **Source:** [commands.rs — version_guard_routine watch loop](../../../../src/commands.rs), [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
 
@@ -283,7 +283,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **Given:** Empty settings (no `preferredVersionSpec` — override must not read from settings per FR-21).
 - **When:** `cm .version.guard version::latest dry::1`
 - **Then:** stdout contains "no version pin to guard"; exit 0.; latest-override message present.
-**Note:** Distinct from TC-403 (settings-driven `preferredVersionSpec = "latest"`); this test exercises the `version::` override dispatch path exclusively
+- **Note:** Distinct from the settings-driven `preferredVersionSpec = "latest"` case; this test exercises the `version::` override dispatch path exclusively
 - **Exit:** 0
 - **Source:** [commands.rs — version_guard_routine override dispatch](../../../../src/commands.rs)
 
@@ -292,12 +292,21 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 ### IT-22: `dry::1 v::0` → output shorter than `v::1`
 
 - **Given:** Empty settings (no preference → defaults to stable).
-- **When:**
-  `cm .version.guard dry::1 v::0` vs `cm .version.guard dry::1 v::1`
-  **Expected:** `v::0` stdout char count < `v::1` stdout char count.
+- **When:** `cm .version.guard dry::1 v::0` vs `cm .version.guard dry::1 v::1`
+- **Expected:** `v::0` stdout char count < `v::1` stdout char count.
 - **Then:** v::0 output shorter than v::1 for same guard invocation
 - **Exit:** 0
 - **Source:** [commands.rs — version_guard_routine opts.verbosity](../../../../src/commands.rs)
+
+---
+
+### IT-23: `format::json dry::1` → JSON object output, exit 0
+
+- **Given:** clean environment (no stored preference)
+- **When:** `cm .version.guard format::json dry::1`
+- **Then:** exit 0; stdout starts with `{`; valid JSON object output
+- **Exit:** 0
+- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/001_commands.md#command--15-versionguard)
 
 ---
 
@@ -319,3 +328,4 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 | `tc415_watch_loop_continues_after_install_error` | `integration/mutation_commands_test.rs` |
 | `tc416_guard_version_latest_override_dry` | `integration/mutation_commands_test.rs` |
 | `tc417_guard_v0_shorter_than_v1` | `integration/mutation_commands_test.rs` |
+| `tc418_guard_format_json_dry` | `integration/mutation_commands_test.rs` |

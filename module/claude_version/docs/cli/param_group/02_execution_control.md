@@ -23,10 +23,10 @@ Both parameters modify the execution mode of destructive operations.
 **Typical usage:**
 
 ```sh
-cm .version.install dry::1          # preview
-cm .version.install force::1        # bypass idempotency
-cm .version.guard dry::1 force::1   # preview forced guard
-cm .processes.kill dry::1 force::1  # preview forced kill
+clv .version.install dry::1          # preview
+clv .version.install force::1        # bypass idempotency
+clv .version.guard dry::1 force::1   # preview forced guard
+clv .processes.kill dry::1 force::1  # preview forced kill
 ```
 
 ### Referenced Commands

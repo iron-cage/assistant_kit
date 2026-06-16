@@ -63,8 +63,8 @@ Integration test planning for the `.settings.get` command. See [001_commands.md]
 |----|-------------|-----|------|---------|--------|
 | IT-2 | `key::existing` → value returned, exit 0 | P | 0 | F1=existing | [read_commands_test.rs] |
 | IT-4 | `v::0` → bare value only | P | 0 | F1=existing, F2=0 | [read_commands_test.rs] |
-| TC-180 | `v::1` → `key: value` labeled | P | 0 | F1=existing, F2=1 | [read_commands_test.rs] |
-| TC-182 | `format::json` → `{"key":"..","value":".."}` | P | 0 | F1=existing, F3=json | [read_commands_test.rs] |
+| IT-9 | `v::1` → `key: value` labeled | P | 0 | F1=existing, F2=1 | [read_commands_test.rs] |
+| IT-10 | `format::json` → `{"key":"..","value":".."}` | P | 0 | F1=existing, F3=json | [read_commands_test.rs] |
 
 ### Negative Tests
 
@@ -72,8 +72,8 @@ Integration test planning for the `.settings.get` command. See [001_commands.md]
 |----|-------------|-----|------|---------|--------|
 | IT-1 | No `key::` → exit 1, required parameter | N | 1 | F1=absent | [read_commands_test.rs] |
 | IT-3 | `key::nonexistent` → exit 2, key not found | N | 2 | F1=missing | [read_commands_test.rs] |
-| TC-184 | File missing → exit 2 | N | 2 | F4=missing | [read_commands_test.rs] |
-| TC-237 | Without `key::` → error mentions `key::` | N | 1 | F1=absent | [read_commands_test.rs] |
+| IT-11 | File missing → exit 2 | N | 2 | F4=missing | [read_commands_test.rs] |
+| IT-12 | Without `key::` → error mentions `key::` | N | 1 | F1=absent | [read_commands_test.rs] |
 | IT-5 | `key::` (empty value) → exit 1 | N | 1 | F1=empty | new |
 | IT-6 | `format::xml` → exit 1 | N | 1 | F3=xml | new |
 | IT-7 | `bogus::x` → exit 1 | N | 1 | F5=present | new |
@@ -83,7 +83,7 @@ Integration test planning for the `.settings.get` command. See [001_commands.md]
 
 - **Total:** 12 tests (4 positive, 8 negative)
 - **Negative ratio:** 66.7% ✅ (≥40%)
-- **TC range:** IT-1 to IT-8
+- **IT range:** IT-1 to IT-12
 
 ---
 
@@ -93,13 +93,13 @@ Integration test planning for the `.settings.get` command. See [001_commands.md]
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Key found and returned | IT-2, IT-4, TC-180, TC-182 |
-| 1 | Invalid arguments | IT-1, TC-237, IT-5, IT-6, IT-7, IT-8 |
-| 2 | Key not found or file missing | IT-3, TC-184 |
+| 0 | Key found and returned | IT-2, IT-4, IT-9, IT-10 |
+| 1 | Invalid arguments | IT-1, IT-5, IT-6, IT-7, IT-8, IT-12 |
+| 2 | Key not found or file missing | IT-3, IT-11 |
 
 ### Required Parameter Enforcement (FR-04)
 
-`key::` is semantically required. Absence → exit 1 "key is required" (IT-1, TC-237).
+`key::` is semantically required. Absence → exit 1 "key is required" (IT-1, IT-12).
 Empty value → exit 1 "key value cannot be empty" (IT-5).
 
 ### v::0 Output Format
@@ -118,7 +118,7 @@ This is critical for script consumption.
 - **Given:** `HOME=<tmp>` with valid settings.
 - **When:**
   `cm .settings.get`
-  **Expected:** Exit 1; stderr mentions `key::`.
+- **Expected:** Exit 1; stderr mentions `key::`.
 - **Then:** descriptive error
 - **Exit:** 1
 
@@ -129,7 +129,7 @@ This is critical for script consumption.
 - **Given:** `HOME=<tmp>`; settings has `myKey = "myValue"`.
 - **When:**
   `cm .settings.get key::myKey`
-  **Expected:** Exit 0; output contains "myValue".
+- **Expected:** Exit 0; output contains "myValue".
 - **Then:** value shown
 - **Exit:** 0
 
@@ -140,7 +140,7 @@ This is critical for script consumption.
 - **Given:** `HOME=<tmp>`; settings has different key.
 - **When:**
   `cm .settings.get key::nosuchkey`
-  **Expected:** Exit 2.
+- **Expected:** Exit 2.
 - **Then:** see spec
 - **Exit:** 2
 
@@ -151,7 +151,7 @@ This is critical for script consumption.
 - **Given:** `HOME=<tmp>`; settings has `k = "thevalue"`.
 - **When:**
   `cm .settings.get key::k v::0`
-  **Expected:** Exit 0; stdout trimmed equals "thevalue" exactly.
+- **Expected:** Exit 0; stdout trimmed equals "thevalue" exactly.
 - **Then:** exact bare value
 - **Exit:** 0
 
@@ -162,7 +162,7 @@ This is critical for script consumption.
 - **Given:** clean environment
 - **When:**
   `cm .settings.get key::`
-  **Expected:** Exit 1; stderr mentions empty key.
+- **Expected:** Exit 1; stderr mentions empty key.
 - **Then:** see spec
 - **Exit:** 1
 
@@ -173,7 +173,7 @@ This is critical for script consumption.
 - **Given:** clean environment
 - **When:**
   `cm .settings.get format::xml key::foo`
-  **Expected:** Exit 1.
+- **Expected:** Exit 1.
 - **Then:** see spec
 - **Exit:** 1
 
@@ -184,7 +184,7 @@ This is critical for script consumption.
 - **Given:** clean environment
 - **When:**
   `cm .settings.get bogus::x`
-  **Expected:** Exit 1.
+- **Expected:** Exit 1.
 - **Then:** see spec
 - **Exit:** 1
 
@@ -195,7 +195,7 @@ This is critical for script consumption.
 - **Given:** clean environment
 - **When:**
   `cm .settings.get v::3 key::foo`
-  **Expected:** Exit 1.
+- **Expected:** Exit 1.
 - **Then:** see spec
 - **Exit:** 1
 

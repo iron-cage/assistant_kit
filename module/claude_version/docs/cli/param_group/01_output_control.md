@@ -22,8 +22,8 @@ changing behavior.
 **Typical usage:**
 
 ```sh
-cm .status v::0 format::json
-cm .processes format::json v::2
+clv .status v::0 format::json
+clv .processes format::json v::2
 ```
 
 ### Referenced Commands

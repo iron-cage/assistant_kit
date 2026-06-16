@@ -28,7 +28,7 @@ metadata-only write behavior (no credential touch), and G8 ownership gate enforc
 ### BV-1: Re-unclaiming an already-unowned account is idempotent
 
 - **Given:** `alice@acme.com` exists in credential store. `alice.json` already contains `"owner": ""` (unowned). Current identity = `testuser@testmachine`.
-- **When:** `clp .account.unclaim name::alice@acme.com`
+- **When:** `clp .accounts unclaim::1 name::alice@acme.com`
 - **Then:** Exit 0. `alice.json` still contains `"owner": ""` (unchanged). `alice.credentials.json` unmodified. No error output.
 - **Exit:** 0
 - **Source:** [011_unclaim.md — Idempotency](../../../../docs/cli/command_verb/011_unclaim.md#idempotency)
@@ -38,7 +38,7 @@ metadata-only write behavior (no credential touch), and G8 ownership gate enforc
 ### BV-2: Unclaim writes `owner: ""` without touching credential files
 
 - **Given:** `alice@acme.com` exists. `alice.json` has `"owner": "testuser@testmachine"`. `current_identity()` = `testuser@testmachine`. Record mtime of `alice.credentials.json` and `~/.claude/.credentials.json`.
-- **When:** `clp .account.unclaim name::alice@acme.com`
+- **When:** `clp .accounts unclaim::1 name::alice@acme.com`
 - **Then:** Exit 0. `alice.json` contains `"owner": ""`. mtime of `alice.credentials.json` unchanged. mtime of `~/.claude/.credentials.json` unchanged (no credential rotation). Active marker `_active_{hostname}_{user}` unchanged.
 - **Exit:** 0
 - **Source:** [011_unclaim.md — State Transition Pattern](../../../../docs/cli/command_verb/011_unclaim.md#state-transition-pattern)
@@ -48,7 +48,7 @@ metadata-only write behavior (no credential touch), and G8 ownership gate enforc
 ### BV-3: Unclaim on account owned by different identity exits 1
 
 - **Given:** `alice@acme.com` exists. `alice.json` has `"owner": "other@remote"`. Current identity ≠ `other@remote`.
-- **When:** `clp .account.unclaim name::alice@acme.com`
+- **When:** `clp .accounts unclaim::1 name::alice@acme.com`
 - **Then:** Exit 1. Stderr contains `ownership violation: this account is owned by other@remote`. `alice.json` unchanged (`owner` remains `"other@remote"`). No file written.
 - **Exit:** 1
 - **Source:** [011_unclaim.md — Ownership Gate (G8)](../../../../docs/cli/command_verb/011_unclaim.md#ownership-gate-g8)

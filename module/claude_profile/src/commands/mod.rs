@@ -30,12 +30,12 @@ pub use account_ops::{
   account_rotate_routine,
   account_save_routine,
   account_delete_routine,
-  account_unclaim_routine,
+  account_unclaim_redirect,
 };
 pub use account_relogin::account_relogin_routine;
 pub use account_renewal::account_renewal_routine;
 pub use account_inspect::account_inspect_routine;
-pub use account_assign::account_assign_routine;
+pub use account_assign::{ account_assign_routine, account_assign_redirect };
 pub use limits::account_limits_routine;
 pub use model::model_routine;
 pub use token_paths::{ token_status_routine, paths_routine };

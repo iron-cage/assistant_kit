@@ -193,12 +193,13 @@ fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
 {
   let home    = std::env::var( "HOME" ).ok()?;
   let cwd_str = proc.cwd.to_str()?;
-  // Fix(BUG-295): Claude encodes both '/' and '_' as '-' in project directory names.
-  // Root cause: only '/' was replaced; underscore-containing CWDs produced a mismatched
-  //   directory name, causing read_dir() to fail silently (None → "interactive").
-  // Pitfall: Claude's project path encoding is not "replace slashes only" — any code
-  //   constructing a ~/.claude/projects/ path must also convert underscores to dashes.
-  let encoded = cwd_str.replace( '/', "-" ).replace( '_', "-" );
+
+  // Fix(BUG-295): Claude encodes both `/` and `_` as `-` in project directory names.
+  // Root cause: the original `replace('/', "-")` only handled slashes; underscore-
+  //   containing paths produced a wrong encoded key, so the JSONL dir was never found.
+  // Pitfall: Claude's encoding maps both `/` and `_` to `-` in one pass, producing a
+  //   flat lowercase-hyphen-only directory name.
+  let encoded = cwd_str.replace( [ '/', '_' ], "-" );
   let dir     = std::path::Path::new( &home )
     .join( ".claude" )
     .join( "projects" )
@@ -218,32 +219,23 @@ fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
     } )?
     .path();
 
-  // Scan for the last Form A user line.
+  // Scan for the last Form A user line (string `"content"`, not array).
   //
-  // Fix(BUG-297): The previous predicate (`l.contains(r#""type":"user""#)`) picked
-  //   the last "type":"user" line regardless of form. In active sessions that line
-  //   is always a Form B tool_result entry (content array), not the human question.
-  // Root cause: Claude JSONL stores both human messages (Form A: bare string content)
-  //   and tool_result callbacks (Form B: content array) as "type":"user". The last
-  //   "type":"user" line in an active session is nearly always Form B.
-  // Pitfall: "type":"user" does NOT mean human-authored — it means user-role. Always
-  //   discriminate by content structure: Form A has `"content":"`, Form B has `"content":[`.
-  //
-  // Fix(BUG-296): The extraction marker was `"text":"` but Form A content is stored
-  //   in the `"content"` field, not `"text"`. The wrong marker always returned None.
-  // Root cause: Form A structure is `{"content":"<text>"}` not `{"text":"<text>"}`.
-  // Pitfall: Do not confuse the inner tool_result `text` field with the outer message
-  //   `content` field — they are at different nesting levels.
+  // Fix(BUG-297): the old predicate `.find(| l | l.contains(r#""type":"user""#))`
+  //   returned the last `"type":"user"` line, which in any active session is a
+  //   Form B tool_result entry with `"content":[...]` — not the human's question.
+  // Fix: additionally require `"content":"` (string value) and exclude `"content":[`
+  //   (array value). Form B always serialises the outer content as a JSON array.
   let content   = std::fs::read_to_string( jsonl_path ).ok()?;
   let last_user = content.lines().rev()
     .find( | l |
-    {
       l.contains( r#""type":"user""# )
-        && l.contains( r#""content":""# ) // Form A: bare string content
-        && !l.contains( r#""content":["# ) // exclude Form B: array content
-    } )?;
+        && l.contains( r#""content":""# )
+        && !l.contains( r#""content":["# )
+    )?;
 
-  // Extract the `"content":"..."` value with a simple substring search.
+  // Fix(BUG-296): Claude's Form A stores the human message in `"content":"..."`, not
+  //   `"text":"..."`. The old marker matched nothing, silently returning `None`.
   let marker     = r#""content":""#;
   let text_start = last_user.find( marker ).map( | i | i + marker.len() )?;
   let rest       = &last_user[ text_start .. ];

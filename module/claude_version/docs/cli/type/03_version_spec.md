@@ -24,9 +24,9 @@ zeros are rejected.
 | `latest` | Latest available release |
 
 ```sh
-cm .version.install version::stable
-cm .version.install version::1.2.3
-cm .version.install version::1.2.3.4  # error: 4-part rejected
+clv .version.install version::stable
+clv .version.install version::1.2.3
+clv .version.install version::1.2.3.4  # error: 4-part rejected
 ```
 
 ### Referenced Parameters

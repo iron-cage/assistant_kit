@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Inspect and terminate running Claude Code processes.
-- **Responsibility**: Persona, goal, and acceptance criteria for process management via cm.
+- **Responsibility**: Persona, goal, and acceptance criteria for process management via clv.
 
 ### Persona
 
@@ -15,12 +15,12 @@ Identify all running Claude Code processes and terminate them safely — with a 
 
 ### Acceptance Criteria
 
-- `cm .processes` lists all running Claude Code PIDs and their working directories.
-- `cm .processes format::json` returns the same as a JSON array.
-- `cm .processes.kill dry::1` prints what would be killed without sending signals.
-- `cm .processes.kill` sends SIGTERM, waits 2 seconds, then SIGKILLs survivors.
-- `cm .processes.kill force::1` sends SIGKILL directly.
-- After a successful kill, `cm .processes` returns an empty list (exit 0).
+- `clv .processes` lists all running Claude Code PIDs and their working directories.
+- `clv .processes format::json` returns the same as a JSON array.
+- `clv .processes.kill dry::1` prints what would be killed without sending signals.
+- `clv .processes.kill` sends SIGTERM, waits 2 seconds, then SIGKILLs survivors.
+- `clv .processes.kill force::1` sends SIGKILL directly.
+- After a successful kill, `clv .processes` returns an empty list (exit 0).
 
 ### Referenced Commands
 

@@ -14,14 +14,14 @@ Edge case coverage for the `count::` parameter. See [005_params.md](../../../../
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| TC-426 | `count::3` → ≤3 version entries in output | Nominal |
+| EC-12 | `count::3` → ≤3 version entries in output | Nominal |
 | EC-1 | `count::0` → empty output, exit 0 | Boundary: minimum |
-| TC-433 | `count::1 v::0` → exactly 1 bare line | Boundary: min useful |
+| EC-13 | `count::1 v::0` → exactly 1 bare line | Boundary: min useful |
 | EC-2 | Absent `count::` → default 10 entries | Default Behavior |
 | EC-3 | `count::100` → all available (capped by data) | Boundary: max |
-| TC-439 | `count::0 format::json` → empty array `[]` | Boundary: empty JSON |
+| EC-14 | `count::0 format::json` → empty array `[]` | Boundary: empty JSON |
 | EC-4 | `count::-1` → parse error → exit 1 | Invalid: negative |
-| TC-447 | `v::abc` → exit 1 (type mismatch) | (companion: v:: type) |
+| EC-15 | `v::abc` → exit 1 (type mismatch) | (companion: v:: type) |
 | EC-5 | `count::abc` → exit 1 (type mismatch) | Invalid: type |
 | EC-8 | `count::0` exits 0 (empty is not an error) | Empty vs Error |
 | EC-9 | `count::` (empty) → exit 1 | Empty Value |

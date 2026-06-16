@@ -19,7 +19,7 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 
 ### US-1: No sessions — no-sessions message
 
-- **Given:** No `claude` processes running (test container has 0 sessions)
+- **Given:** No `claude` processes visible — empty temp dir set as `CLR_PROC_DIR` so `find_claude_processes()` returns no results regardless of host sessions
 - **When:** `clr ps`
 - **Then:** Exit 0; stdout = `No active Claude Code sessions.`; stdout does not contain `┌`
 - **Exit:** 0

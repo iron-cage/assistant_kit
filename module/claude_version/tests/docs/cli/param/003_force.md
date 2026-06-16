@@ -15,8 +15,8 @@ Edge case coverage for the `force::` parameter. See [005_params.md](../../../../
 | ID | Test Name | Category |
 |----|-----------|----------|
 | EC-1 | `dry::1 force::1` → dry wins, no install | Interaction (dry wins) |
-| TC-312 | `dry::1 force::1` on `.processes.kill` → dry wins | Interaction (dry wins) |
-| TC-406 | `.version.guard force::1 dry::1` → dry wins | Interaction (dry wins) |
+| EC-10 | `dry::1 force::1` on `.processes.kill` → dry wins | Interaction (dry wins) |
+| EC-11 | `.version.guard force::1 dry::1` → dry wins | Interaction (dry wins) |
 | EC-2 | `force::1` on `.version.guard` → reinstalls despite match | Explicit True |
 | EC-8 | Default (absent) → `force::0` (guard active) | Default Behavior |
 | EC-9 | `force::0` explicit → same as absent | Explicit False |

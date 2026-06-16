@@ -295,7 +295,7 @@ pub fn save(
   // Existing {name}.json is always non-empty (read-merged above), so this never drops data.
   if snapshot.as_object().is_some_and( |obj| !obj.is_empty() )
   {
-    let _ = std::fs::write( &meta_path, serde_json::to_string( &snapshot ).unwrap_or_default() );
+    let _ = std::fs::write( &meta_path, serde_json::to_string_pretty( &snapshot ).map( | s | s + "\n" ).unwrap_or_default() );
   }
 
   // Clean up old satellite files (migration to unified {name}.json).
@@ -386,7 +386,7 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
           oa_obj.insert( "emailAddress".to_string(), serde_json::Value::String( name.to_string() ) );
         }
       }
-      let _ = std::fs::write( &live_path, serde_json::to_string( &live_val ).unwrap_or_default() );
+      let _ = std::fs::write( &live_path, serde_json::to_string_pretty( &live_val ).map( | s | s + "\n" ).unwrap_or_default() );
     }
 
     let meta_path = credential_store.join( format!( "{name}.json" ) );
@@ -426,7 +426,7 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
         {
           obj.insert( "oauthAccount".to_string(), oauth );
         }
-        let _ = std::fs::write( live_path, serde_json::to_string( &live_val ).unwrap_or_default() );
+        let _ = std::fs::write( live_path, serde_json::to_string_pretty( &live_val ).map( | s | s + "\n" ).unwrap_or_default() );
       }
     }
 
@@ -445,7 +445,7 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
         None      => { obj.remove( "model" ); }
       }
     }
-    let _ = std::fs::write( live_settings_path, serde_json::to_string( &live_settings ).unwrap_or_default() );
+    let _ = std::fs::write( live_settings_path, serde_json::to_string_pretty( &live_settings ).map( | s | s + "\n" ).unwrap_or_default() );
   }
 
   Ok( () )
@@ -539,7 +539,7 @@ pub fn override_session_model_to_opus( paths : &ClaudePaths ) -> bool
   if current.contains( "sonnet" ) || current == "claude-opus-4-6" || current.is_empty()
   {
     obj.insert( "model".to_string(), serde_json::Value::String( "opus".to_string() ) );
-    let _ = std::fs::write( path, serde_json::to_string( &live ).unwrap_or_default() );
+    let _ = std::fs::write( path, serde_json::to_string_pretty( &live ).map( | s | s + "\n" ).unwrap_or_default() );
     true
   }
   else
@@ -580,7 +580,7 @@ pub fn set_session_model( paths : &ClaudePaths, model_id : Option< &str > )
     Some( id ) => { obj.insert( "model".to_string(), serde_json::Value::String( id.to_string() ) ); }
     None       => { obj.remove( "model" ); }
   }
-  let _ = std::fs::write( path, serde_json::to_string( &live ).unwrap_or_default() );
+  let _ = std::fs::write( path, serde_json::to_string_pretty( &live ).map( | s | s + "\n" ).unwrap_or_default() );
 }
 
 /// Read the current session model from `~/.claude/settings.json`.
@@ -893,7 +893,8 @@ pub fn write_owner(
     .and_then( |v| v.as_object().cloned() )
     .unwrap_or_default();
   map.insert( "owner".to_string(), serde_json::Value::String( owner.to_string() ) );
-  let json = serde_json::to_string( &serde_json::Value::Object( map ) )
+  let json = serde_json::to_string_pretty( &serde_json::Value::Object( map ) )
+    .map( | s | s + "\n" )
     .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e ) )?;
   std::fs::write( &path, json )
 }
@@ -1022,7 +1023,8 @@ pub fn account_renewal(
     return Ok( format!( "[dry-run] {name}: would {status_str}\n" ) );
   }
 
-  let new_json = serde_json::to_string( &val )
+  let new_json = serde_json::to_string_pretty( &val )
+    .map( | s | s + "\n" )
     .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e.to_string() ) )?;
   std::fs::write( &meta_path, new_json )?;
   Ok( format!( "{name}: {status_str}\n" ) )
@@ -1354,7 +1356,7 @@ pub fn write_quota_cache(
     }
     obj.insert( "cache".to_string(), cache );
   }
-  let _ = std::fs::write( &meta_path, serde_json::to_string( &snapshot ).unwrap_or_default() );
+  let _ = std::fs::write( &meta_path, serde_json::to_string_pretty( &snapshot ).map( | s | s + "\n" ).unwrap_or_default() );
 }
 
 /// Read cached quota from `{name}.json`.
@@ -1405,7 +1407,7 @@ pub fn write_cache_field(
       co.insert( key.to_string(), value );
     }
   }
-  let _ = std::fs::write( &meta_path, serde_json::to_string( &snapshot ).unwrap_or_default() );
+  let _ = std::fs::write( &meta_path, serde_json::to_string_pretty( &snapshot ).map( | s | s + "\n" ).unwrap_or_default() );
 }
 
 /// Write a string value into the cache object (typed convenience wrapper).

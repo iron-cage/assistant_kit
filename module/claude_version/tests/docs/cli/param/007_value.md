@@ -15,13 +15,13 @@ Edge case coverage for the `value::` parameter. See [005_params.md](../../../../
 | ID | Test Name | Category |
 |----|-----------|----------|
 | EC-1 | `value::true` → JSON boolean `true` | Type Inference |
-| TC-323 | `value::false` → JSON boolean `false` | Type Inference |
+| EC-11 | `value::false` → JSON boolean `false` | Type Inference |
 | EC-2 | `value::0` → JSON integer `0` (not boolean false) | Type Inference |
-| TC-325 | `value::42` → JSON integer `42` | Type Inference |
-| TC-326 | `value::hello` → JSON string `"hello"` | Type Inference |
+| EC-12 | `value::42` → JSON integer `42` | Type Inference |
+| EC-13 | `value::hello` → JSON string `"hello"` | Type Inference |
 | EC-3 | `value::""` → JSON string `""` (empty string valid) | Type Inference |
-| TC-321 | `key::k` present but no `value::` → exit 1 | Absent (required) |
-| TC-239 | Without `value::` → error message mentions `value::` | Error Content |
+| EC-14 | `key::k` present but no `value::` → exit 1 | Absent (required) |
+| EC-15 | Without `value::` → error message mentions `value::` | Error Content |
 | EC-5 | `value::1.5` → JSON float (parseable as f64 but not i64) | Type Inference |
 | EC-6 | `value::NaN` → JSON string (not number, NaN is not finite) | Type Inference (edge) |
 | EC-8 | `value::Infinity` → JSON string (not float, infinite) | Type Inference (edge) |

@@ -25,3 +25,6 @@ Unit and integration tests for `claude_version`.
 | `integration/mutation_commands_test.rs` | 4 mutation command integration tests |
 | `integration/cross_cutting_test.rs` | Cross-cutting: dry+force, verbosity parity, format parity |
 | `integration/error_messages_test.rs` | Error message content and format validation |
+| `integration/algorithm_surface_test.rs` | Algorithm behavior surface tests |
+| `integration/config_commands_test.rs` | `.config` command integration tests |
+| `integration/feature_surface_test.rs` | Feature-level surface tests |
