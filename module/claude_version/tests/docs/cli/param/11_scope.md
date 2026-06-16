@@ -34,3 +34,73 @@ Edge case coverage for the `scope::` parameter. See [param/11_scope.md](../../..
 **Total:** 7 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (`scope::user` -> writes to user config) <-> EC-2 (`scope::project` -> writes to project config)
+
+---
+
+### EC-1: `scope::user` (default) writes to `~/.claude/settings.json`
+
+- **Given:** HOME is set; `~/.claude/settings.json` accessible
+- **When:** `clv .config key::theme value::dark scope::user`
+- **Then:** exit 0; `~/.claude/settings.json` updated with `"theme": "dark"`; project config unchanged
+- **Exit:** 0
+- **Source:** [param/11_scope.md](../../../../docs/cli/param/11_scope.md)
+
+---
+
+### EC-2: `scope::project` writes to `{cwd}/.claude/settings.json`
+
+- **Given:** cwd has `.claude/` directory; HOME is set
+- **When:** `clv .config key::theme value::dark scope::project`
+- **Then:** exit 0; `.claude/settings.json` in cwd updated with `"theme": "dark"`; `~/.claude/settings.json` unchanged
+- **Exit:** 0
+- **Source:** [param/11_scope.md](../../../../docs/cli/param/11_scope.md)
+
+---
+
+### EC-3: `scope::invalid` -> exit 1, unknown scope
+
+- **Given:** valid `key::` and `value::` supplied
+- **When:** `clv .config key::theme value::dark scope::invalid`
+- **Then:** exit 1; error message references unknown scope value; no file modified
+- **Exit:** 1
+- **Source:** [param/11_scope.md](../../../../docs/cli/param/11_scope.md)
+
+---
+
+### EC-4: `scope::` (empty value) -> exit 1
+
+- **Given:** valid `key::` and `value::` supplied
+- **When:** `clv .config key::theme value::dark scope::`
+- **Then:** exit 1; error: empty value not accepted for `scope::`; no file modified
+- **Exit:** 1
+- **Source:** [param/11_scope.md](../../../../docs/cli/param/11_scope.md)
+
+---
+
+### EC-5: `scope::user` without `key::` and `value::` -> exit 1
+
+- **Given:** no `key::` or `value::` supplied (show-all invocation)
+- **When:** `clv .config scope::user`
+- **Then:** exit 1; error: `scope::` only applies to write operations; no output
+- **Exit:** 1
+- **Source:** [param/11_scope.md](../../../../docs/cli/param/11_scope.md)
+
+---
+
+### EC-6: `scope::project` with `key::K value::V` creates `.claude/` directory if absent
+
+- **Given:** cwd has no `.claude/` subdirectory
+- **When:** `clv .config key::theme value::dark scope::project`
+- **Then:** exit 0; `.claude/` directory created in cwd; `.claude/settings.json` created with `"theme": "dark"`
+- **Exit:** 0
+- **Source:** [param/11_scope.md](../../../../docs/cli/param/11_scope.md)
+
+---
+
+### EC-7: `scope::project` in show-all mode (no key::) -> exit 1
+
+- **Given:** no `key::` supplied; `scope::project` present
+- **When:** `clv .config scope::project`
+- **Then:** exit 1; error: `scope::` requires a write operation (`key::` + `value::` or `unset::1`)
+- **Exit:** 1
+- **Source:** [param/11_scope.md](../../../../docs/cli/param/11_scope.md)

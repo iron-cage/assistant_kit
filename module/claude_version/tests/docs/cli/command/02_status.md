@@ -7,7 +7,7 @@
 - **In Scope**: Verbosity levels, output formats, PATH/HOME scenarios, degradation semantics.
 - **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`).
 
-Integration test planning for the `.status` command. See [001_commands.md](../../../../docs/cli/command/readme.md) for specification.
+Integration test planning for the `.status` command. See [command/readme.md](../../../../docs/cli/command/readme.md) for specification.
 
 ## Test Factor Analysis
 

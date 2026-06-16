@@ -7,7 +7,7 @@
 - **In Scope**: SIGTERM/SIGKILL sequence, force mode, dry-run, post-kill verification.
 - **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`).
 
-Integration test planning for the `.processes.kill` command. See [001_commands.md](../../../../docs/cli/command/readme.md) for specification.
+Integration test planning for the `.processes.kill` command. See [command/readme.md](../../../../docs/cli/command/readme.md) for specification.
 
 ## Test Factor Analysis
 

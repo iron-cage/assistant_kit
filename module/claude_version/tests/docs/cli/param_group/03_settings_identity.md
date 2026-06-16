@@ -10,7 +10,7 @@ Interaction tests for Group 3 (Settings Identity): `key::` and `value::`. Tests 
 - **In Scope**: Multi-parameter interactions within the group, missing-value errors, read-only override.
 - **Out of Scope**: Individual parameter edge cases (→ `../param/`), command behavior (→ `../command/`).
 
-**Source:** [003_parameter_groups.md#group--3-settings-identity](../../../../docs/cli/param_group/readme.md#group--3-settings-identity)
+**Source:** [param_group/readme.md#group--3-settings-identity](../../../../docs/cli/param_group/readme.md#group--3-settings-identity)
 
 ## Behavioral Divergence Pair
 
@@ -47,7 +47,7 @@ Both are valid invocations; the direction of data flow differs (write vs read).
 - **When:** `clv .settings.set key::theme value::dark`
 - **Then:** setting `theme=dark` written to `settings.json`; exit 0
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#group--3-settings-identity](../../../../docs/cli/param_group/readme.md#group--3-settings-identity)
+- **Source:** [param_group/readme.md#group--3-settings-identity](../../../../docs/cli/param_group/readme.md#group--3-settings-identity)
 
 ---
 
@@ -57,7 +57,7 @@ Both are valid invocations; the direction of data flow differs (write vs read).
 - **When:** `clv .settings.set key::theme`
 - **Then:** exit 1; error indicating `value::` is required for `.settings.set`
 - **Exit:** 1
-- **Source:** [003_parameter_groups.md#group--3-settings-identity](../../../../docs/cli/param_group/readme.md#group--3-settings-identity)
+- **Source:** [param_group/readme.md#group--3-settings-identity](../../../../docs/cli/param_group/readme.md#group--3-settings-identity)
 
 ---
 
@@ -67,7 +67,7 @@ Both are valid invocations; the direction of data flow differs (write vs read).
 - **When:** `clv .settings.get key::theme`
 - **Then:** current value of `theme` printed; exit 0
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#group--3-settings-identity](../../../../docs/cli/param_group/readme.md#group--3-settings-identity)
+- **Source:** [param_group/readme.md#group--3-settings-identity](../../../../docs/cli/param_group/readme.md#group--3-settings-identity)
 
 ---
 
@@ -77,7 +77,7 @@ Both are valid invocations; the direction of data flow differs (write vs read).
 - **When:** `clv .settings.get key::theme value::dark`
 - **Then:** current setting value read and printed; `value::dark` has no effect on get operation
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#group--3-settings-identity](../../../../docs/cli/param_group/readme.md#group--3-settings-identity)
+- **Source:** [param_group/readme.md#group--3-settings-identity](../../../../docs/cli/param_group/readme.md#group--3-settings-identity)
 
 ---
 

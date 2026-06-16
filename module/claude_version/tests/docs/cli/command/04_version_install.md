@@ -7,7 +7,7 @@
 - **In Scope**: Version aliases, semver validation, dry-run, force, idempotency, 5-layer lock.
 - **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`).
 
-Integration test planning for the `.version.install` command. See [001_commands.md](../../../../docs/cli/command/readme.md) for specification.
+Integration test planning for the `.version.install` command. See [command/readme.md](../../../../docs/cli/command/readme.md) for specification.
 
 ## Test Factor Analysis
 
@@ -315,7 +315,7 @@ IT-19 verifies dry-run has zero side effects on settings.
 - **When:** `clv .version.install dry::1` (no `version::` parameter)
 - **Then:** exit 0; stdout mentions `stable` as the resolved default version
 - **Exit:** 0
-- **Source:** [005_params.md — version:: default: stable](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — version:: default: stable](../../../../docs/cli/param/readme.md)
 
 ---
 

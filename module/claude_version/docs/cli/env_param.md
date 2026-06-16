@@ -5,9 +5,9 @@
 - **Purpose**: Environment variable reference for the clv CLI.
 - **Responsibility**: All environment variables that affect clv behavior — names, types, defaults, and consuming commands.
 - **In Scope**: All env vars read by clv at startup or during command execution.
-- **Out of Scope**: CLI parameter reference (→ `005_params.md`), config file parameters (→ `config_param.md`).
+- **Out of Scope**: CLI parameter reference (→ `param/`), config file parameters (→ `config_param.md`).
 
-### All Environment Variables (2 total)
+### All Environment Variables
 
 | # | Variable | Type | Default | Purpose |
 |---|----------|------|---------|---------|

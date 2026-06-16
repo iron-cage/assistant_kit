@@ -1,7 +1,7 @@
 # Test: Output Control Group
 
 Interaction tests for the `v::` (verbosity) and `format::` parameter group.
-See [003_parameter_groups.md](../../../../docs/cli/param_group/readme.md) and [004_parameter_interactions.md](../../../../docs/cli/004_parameter_interactions.md).
+See [param_group/readme.md](../../../../docs/cli/param_group/readme.md) and [004_parameter_interactions.md](../../../../docs/cli/004_parameter_interactions.md).
 
 ### Scope
 
@@ -94,7 +94,7 @@ Both are valid invocations; the format of the output differs.
 - **When:** `clv .status v::0`, `clv .version.list v::0`, `clv .settings.get key::k v::0`
 - **Then:** each produces compact, label-free output; consistent minimum-output behavior across commands
 - **Exit:** 0
-- **Source:** [006_types.md — verbosity levels](../../../../docs/cli/type/readme.md)
+- **Source:** [type/readme.md — verbosity levels](../../../../docs/cli/type/readme.md)
 
 ---
 
@@ -114,7 +114,7 @@ Both are valid invocations; the format of the output differs.
 - **When:** `clv .version.list v::1 format::text`
 - **Then:** output is identical to bare `clv .version.list`; explicitly setting both parameters to their defaults produces no behavioral change
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md — Output Control](../../../../docs/cli/param_group/readme.md)
+- **Source:** [param_group/readme.md — Output Control](../../../../docs/cli/param_group/readme.md)
 
 ---
 
@@ -154,7 +154,7 @@ Both are valid invocations; the format of the output differs.
 - **When:** `clv .version.list`
 - **Then:** output is labeled text (not JSON, not bare names); default behavior: labeled text output
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md — Output Control](../../../../docs/cli/param_group/readme.md)
+- **Source:** [param_group/readme.md — Output Control](../../../../docs/cli/param_group/readme.md)
 
 ---
 

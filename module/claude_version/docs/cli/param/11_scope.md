@@ -35,3 +35,8 @@ clv.config key::model value::claude-haiku-4-5-20251001 scope::project  # writes 
 |---|------|
 | 1 | [`ConfigScope`](../type/06_config_scope.md) |
 
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|-----------|---------|
+| 1 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |

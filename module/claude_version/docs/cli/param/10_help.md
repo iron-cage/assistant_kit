@@ -36,3 +36,9 @@ clv.version.install .help    # still shows help, ignores install
 | 12 | [`.settings.set`](../command/settings.md#command--11-settingsset) |
 | 13 | [`.config`](../command/config.md#command--13-config) |
 
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|-----------|---------|
+| 1 | [002 Version Upgrade](../user_story/002_version_upgrade.md) | Developer (version upgrade) |
+| 2 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |

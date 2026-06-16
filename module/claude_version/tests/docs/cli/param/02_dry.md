@@ -1,6 +1,6 @@
 # Test: `dry::`
 
-Edge case coverage for the `dry::` parameter. See [005_params.md](../../../../docs/cli/param/readme.md) for specification.
+Edge case coverage for the `dry::` parameter. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
 
 ### Scope
 
@@ -82,7 +82,7 @@ Edge case coverage for the `dry::` parameter. See [005_params.md](../../../../do
 - **When:** `clv .version.install` (no `dry::` parameter present)
 - **Then:** install proceeds as real action; no `[dry-run]` prefix; behavior identical to explicit `dry::0`
 - **Exit:** 0
-- **Source:** [005_params.md — dry:: default: 0](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — dry:: default: 0](../../../../docs/cli/param/readme.md)
 
 ---
 
@@ -92,7 +92,7 @@ Edge case coverage for the `dry::` parameter. See [005_params.md](../../../../do
 - **When:** `clv .version.guard dry::0`
 - **Then:** Behavior identical to `clv .version.guard`; no `[dry-run]` prefix.; explicit zero equals absent
 - **Exit:** 0
-- **Source:** [005_params.md — dry:: default: 0](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — dry:: default: 0](../../../../docs/cli/param/readme.md)
 
 ---
 
@@ -102,7 +102,7 @@ Edge case coverage for the `dry::` parameter. See [005_params.md](../../../../do
 - **When:** `clv .version.install dry::2`
 - **Then:** exit code 1.
 - **Exit:** 1
-- **Source:** [005_params.md — dry:: type: Boolean (0/1)](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — dry:: type: Boolean (0/1)](../../../../docs/cli/param/readme.md)
 
 ---
 
@@ -112,7 +112,7 @@ Edge case coverage for the `dry::` parameter. See [005_params.md](../../../../do
 - **When:** `clv .version.install dry::-1`
 - **Then:** exit code 1.
 - **Exit:** 1
-- **Source:** [005_params.md — dry:: type: Boolean (0/1)](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — dry:: type: Boolean (0/1)](../../../../docs/cli/param/readme.md)
 
 ---
 
@@ -122,7 +122,7 @@ Edge case coverage for the `dry::` parameter. See [005_params.md](../../../../do
 - **When:** `clv .version.install dry::abc`
 - **Then:** exit code 1.
 - **Exit:** 1
-- **Source:** [005_params.md — dry:: type: Boolean (0/1)](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — dry:: type: Boolean (0/1)](../../../../docs/cli/param/readme.md)
 
 ---
 
@@ -143,6 +143,36 @@ Edge case coverage for the `dry::` parameter. See [005_params.md](../../../../do
 - **Then:** exit code 1; "unknown parameter" or similar.
 - **Exit:** 1
 - **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+
+---
+
+### EC-11: `dry::1` on `.processes.kill` → no kill
+
+- **Given:** clean environment
+- **When:** `clv .processes.kill dry::1`
+- **Then:** exit 0; output contains `[dry-run]`; no process actually killed
+- **Exit:** 0
+- **Source:** [feature/004_dry_run.md](../../../../docs/feature/004_dry_run.md)
+
+---
+
+### EC-12: `dry::1` on `.settings.set` → no file change
+
+- **Given:** `HOME=<tmp>`; settings absent
+- **When:** `clv .settings.set key::theme value::dark dry::1`
+- **Then:** exit 0; output contains `[dry-run]`; settings.json not created or modified
+- **Exit:** 0
+- **Source:** [feature/004_dry_run.md](../../../../docs/feature/004_dry_run.md)
+
+---
+
+### EC-13: `dry::1 force::1` on `.processes.kill` → dry wins
+
+- **Given:** clean environment
+- **When:** `clv .processes.kill dry::1 force::1`
+- **Then:** exit 0; output contains `[dry-run]`; no process killed regardless of force flag
+- **Exit:** 0
+- **Source:** [004_parameter_interactions.md — dry+force precedence](../../../../docs/cli/004_parameter_interactions.md)
 
 ---
 

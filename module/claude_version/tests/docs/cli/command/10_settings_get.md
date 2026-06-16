@@ -7,7 +7,7 @@
 - **In Scope**: Key lookup, missing key, verbosity levels, output formats, file state.
 - **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`).
 
-Integration test planning for the `.settings.get` command. See [001_commands.md](../../../../docs/cli/command/readme.md) for specification.
+Integration test planning for the `.settings.get` command. See [command/readme.md](../../../../docs/cli/command/readme.md) for specification.
 
 ## Test Factor Analysis
 
@@ -198,6 +198,46 @@ This is critical for script consumption.
 - **Expected:** Exit 1.
 - **Then:** see spec
 - **Exit:** 1
+
+---
+
+### IT-9: `v::1` → `key: value` labeled
+
+- **Given:** `HOME=<tmp>`; settings.json contains `myKey = "myValue"`
+- **When:** `clv .settings.get key::myKey v::1`
+- **Then:** exit 0; stdout is in `key: value` format (e.g., `myKey: myValue`)
+- **Exit:** 0
+- **Source:** [command/settings.md](../../../../docs/cli/command/settings.md)
+
+---
+
+### IT-10: `format::json` → `{"key":"..","value":".."}` object
+
+- **Given:** `HOME=<tmp>`; settings.json contains `myKey = "myValue"`
+- **When:** `clv .settings.get key::myKey format::json`
+- **Then:** exit 0; stdout is a valid JSON object with `"key"` and `"value"` fields
+- **Exit:** 0
+- **Source:** [command/settings.md](../../../../docs/cli/command/settings.md)
+
+---
+
+### IT-11: File missing → exit 2
+
+- **Given:** `HOME=<tmp>` with no `.claude/settings.json`
+- **When:** `clv .settings.get key::anyKey`
+- **Then:** exit 2; error references missing file or settings path
+- **Exit:** 2
+- **Source:** [command/settings.md](../../../../docs/cli/command/settings.md)
+
+---
+
+### IT-12: Without `key::` → error mentions `key::`
+
+- **Given:** `HOME=<tmp>` with valid settings.json
+- **When:** `clv .settings.get`
+- **Then:** exit 1; error message contains the string `key::`
+- **Exit:** 1
+- **Source:** [command/settings.md](../../../../docs/cli/command/settings.md)
 
 ---
 

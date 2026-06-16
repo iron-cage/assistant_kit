@@ -7,7 +7,7 @@
 - **In Scope**: `/proc` scanning, PID reporting, verbosity levels, output formats.
 - **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`).
 
-Integration test planning for the `.processes` command. See [001_commands.md](../../../../docs/cli/command/readme.md) for specification.
+Integration test planning for the `.processes` command. See [command/readme.md](../../../../docs/cli/command/readme.md) for specification.
 
 ## Test Factor Analysis
 
@@ -183,7 +183,7 @@ The empty-processes path (`{"processes":[]}`) is explicitly covered by IT-4.
 - **When:** `clv .processes`
 - **Then:** stdout is non-empty; stderr is empty
 - **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/command/readme.md)
+- **Source:** [command/readme.md](../../../../docs/cli/command/readme.md)
 
 ---
 

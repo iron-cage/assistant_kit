@@ -1,6 +1,6 @@
 # Test: `.version.history`
 
-Integration test planning for the `.version.history` command. See [001_commands.md](../../../../docs/cli/command/readme.md) for specification.
+Integration test planning for the `.version.history` command. See [command/readme.md](../../../../docs/cli/command/readme.md) for specification.
 
 ### Scope
 

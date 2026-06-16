@@ -7,7 +7,7 @@
 - **In Scope**: Key-value output, verbosity levels, output formats, missing file handling.
 - **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`).
 
-Integration test planning for the `.settings.show` command. See [001_commands.md](../../../../docs/cli/command/readme.md) for specification.
+Integration test planning for the `.settings.show` command. See [command/readme.md](../../../../docs/cli/command/readme.md) for specification.
 
 ## Test Factor Analysis
 
@@ -203,7 +203,47 @@ Integration test planning for the `.settings.show` command. See [001_commands.md
 - **When:** `clv .settings.show`
 - **Then:** stdout is non-empty; stderr is empty
 - **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/command/readme.md)
+- **Source:** [command/readme.md](../../../../docs/cli/command/readme.md)
+
+---
+
+### IT-9: `v::0` → `key=value` format
+
+- **Given:** `HOME=<tmp>`; settings.json has at least one key
+- **When:** `clv .settings.show v::0`
+- **Then:** exit 0; each output line is in compact `key=value` format (no spaces around `=`, no label prefix)
+- **Exit:** 0
+- **Source:** [command/settings.md](../../../../docs/cli/command/settings.md)
+
+---
+
+### IT-10: `format::json` → valid JSON object
+
+- **Given:** `HOME=<tmp>`; settings.json has at least one key
+- **When:** `clv .settings.show format::json`
+- **Then:** exit 0; stdout is valid JSON object; top-level is `{}`; keys match settings file keys
+- **Exit:** 0
+- **Source:** [command/settings.md](../../../../docs/cli/command/settings.md)
+
+---
+
+### IT-11: Malformed JSON → exit 2
+
+- **Given:** `HOME=<tmp>`; settings.json contains invalid JSON
+- **When:** `clv .settings.show`
+- **Then:** exit 2; error message references parse failure or invalid settings file
+- **Exit:** 2
+- **Source:** [command/settings.md](../../../../docs/cli/command/settings.md)
+
+---
+
+### IT-12: HOME not set → exit 2
+
+- **Given:** HOME environment variable is unset
+- **When:** `clv .settings.show`
+- **Then:** exit 2; error message references HOME or settings path resolution failure
+- **Exit:** 2
+- **Source:** [command/settings.md](../../../../docs/cli/command/settings.md)
 
 ---
 

@@ -28,7 +28,7 @@ use claude_storage_core::{ Storage, SessionFilter, ProjectFilter, StringMatcher 
 #[test]
 fn session_filter_agent_only()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
 
   // Get first project with sessions
   let projects = storage.list_projects().expect( "Failed to list projects" );
@@ -61,7 +61,7 @@ fn session_filter_agent_only()
 #[test]
 fn session_filter_min_entries()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
 
   let projects = storage.list_projects().expect( "Failed to list projects" );
   if projects.is_empty()
@@ -94,7 +94,7 @@ fn session_filter_min_entries()
 #[test]
 fn session_filter_id_substring()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
 
   let projects = storage.list_projects().expect( "Failed to list projects" );
   if projects.is_empty()
@@ -142,7 +142,7 @@ fn session_filter_id_substring()
 #[test]
 fn session_filter_and_composition()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
 
   let projects = storage.list_projects().expect( "Failed to list projects" );
   if projects.is_empty()
@@ -176,7 +176,7 @@ fn session_filter_and_composition()
 #[test]
 fn project_filter_path_substring()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
 
   // Filter for projects with "claude_tools" in path
   let filter = ProjectFilter
@@ -201,7 +201,7 @@ fn project_filter_path_substring()
 #[test]
 fn project_filter_min_sessions()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
 
   // Filter for projects with 5+ sessions
   let filter = ProjectFilter
@@ -225,7 +225,7 @@ fn project_filter_min_sessions()
 #[test]
 fn default_filter_matches_all()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
 
   let all_projects = storage.list_projects().expect( "Failed to list projects" );
 
@@ -243,7 +243,7 @@ fn default_filter_matches_all()
 #[test]
 fn filter_with_no_matches()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
 
   // Filter for projects with impossible substring
   let filter = ProjectFilter

@@ -1,6 +1,6 @@
 # Test: `force::`
 
-Edge case coverage for the `force::` parameter. See [005_params.md](../../../../docs/cli/param/readme.md) for specification.
+Edge case coverage for the `force::` parameter. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
 
 ### Scope
 
@@ -69,7 +69,7 @@ Edge case coverage for the `force::` parameter. See [005_params.md](../../../../
 - **When:** `clv .version.install force::2`
 - **Then:** exit code 1.
 - **Exit:** 1
-- **Source:** [005_params.md — force:: type: Boolean (0/1)](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — force:: type: Boolean (0/1)](../../../../docs/cli/param/readme.md)
 
 ---
 
@@ -79,7 +79,7 @@ Edge case coverage for the `force::` parameter. See [005_params.md](../../../../
 - **When:** `clv .version.install force::-1`
 - **Then:** exit code 1.
 - **Exit:** 1
-- **Source:** [005_params.md — force:: type: Boolean (0/1)](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — force:: type: Boolean (0/1)](../../../../docs/cli/param/readme.md)
 
 ---
 
@@ -89,7 +89,7 @@ Edge case coverage for the `force::` parameter. See [005_params.md](../../../../
 - **When:** `clv .version.install force::abc`
 - **Then:** exit code 1.
 - **Exit:** 1
-- **Source:** [005_params.md — force:: type: Boolean (0/1)](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — force:: type: Boolean (0/1)](../../../../docs/cli/param/readme.md)
 
 ---
 
@@ -119,7 +119,7 @@ Edge case coverage for the `force::` parameter. See [005_params.md](../../../../
 - **When:** `clv .version.guard dry::1`
 - **Then:** output shows guard check passed; no forced reinstall; force::0 is the default
 - **Exit:** 0
-- **Source:** [005_params.md — force:: default: 0](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — force:: default: 0](../../../../docs/cli/param/readme.md)
 
 ---
 
@@ -129,7 +129,27 @@ Edge case coverage for the `force::` parameter. See [005_params.md](../../../../
 - **When:** `clv .version.guard force::0 dry::1`
 - **Then:** behavior identical to `clv .version.guard dry::1`; explicitly zero equals absent
 - **Exit:** 0
-- **Source:** [005_params.md — force:: default: 0](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — force:: default: 0](../../../../docs/cli/param/readme.md)
+
+---
+
+### EC-10: `dry::1 force::1` on `.processes.kill` → dry wins
+
+- **Given:** clean environment
+- **When:** `clv .processes.kill dry::1 force::1`
+- **Then:** exit 0; output contains `[dry-run]`; no process killed; force flag overridden by dry
+- **Exit:** 0
+- **Source:** [004_parameter_interactions.md — dry+force precedence](../../../../docs/cli/004_parameter_interactions.md)
+
+---
+
+### EC-11: `.version.guard force::1 dry::1` → dry wins
+
+- **Given:** preferred version installed; version matches
+- **When:** `clv .version.guard force::1 dry::1`
+- **Then:** exit 0; output contains `[dry-run]`; no reinstall occurs
+- **Exit:** 0
+- **Source:** [004_parameter_interactions.md — dry+force precedence](../../../../docs/cli/004_parameter_interactions.md)
 
 ---
 

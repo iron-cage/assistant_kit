@@ -7,7 +7,7 @@
 - **In Scope**: Installed binary detection, verbosity levels, output formats.
 - **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`).
 
-Integration test planning for the `.version.show` command. See [001_commands.md](../../../../docs/cli/command/readme.md) for specification.
+Integration test planning for the `.version.show` command. See [command/readme.md](../../../../docs/cli/command/readme.md) for specification.
 
 ## Test Factor Analysis
 
@@ -184,7 +184,7 @@ IT-1 is the inverse: it explicitly removes claude from PATH to force the exit 2 
 - **When:** `clv .version.show`
 - **Then:** stdout is non-empty; stderr is empty
 - **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/command/readme.md)
+- **Source:** [command/readme.md](../../../../docs/cli/command/readme.md)
 
 ---
 

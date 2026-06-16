@@ -7,7 +7,7 @@
 - **In Scope**: One-shot mode, watch mode, preference override, dry-run, force, drift restoration.
 - **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`).
 
-Integration test planning for the `.version.guard` command. See [001_commands.md](../../../../docs/cli/command/readme.md#command--15-versionguard) for specification.
+Integration test planning for the `.version.guard` command. See [command/readme.md](../../../../docs/cli/command/readme.md#command--15-versionguard) for specification.
 
 ## Parameter Analysis
 
@@ -83,7 +83,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard`
 - **Then:** output contains "stable"; guard defaults to stable channel
 - **Exit:** 0
-- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
 
 ---
 
@@ -93,7 +93,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard dry::1`
 - **Then:** output contains "stable"; defaults to stable regardless of dry flag
 - **Exit:** 0
-- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
 
 ---
 
@@ -103,7 +103,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard`
 - **Then:** `version X matches preferred ...`; match message present
 - **Exit:** 0
-- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
 
 ---
 
@@ -113,7 +113,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard`
 - **Then:** Drift message followed by restoration confirmation.; preferred version restored
 - **Exit:** 0
-- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
 
 ---
 
@@ -123,7 +123,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard dry::1`
 - **Then:** `[dry-run] drift detected: ...` and `[dry-run] would reinstall ...`; dry-run markers present; no side effects
 - **Exit:** 0
-- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
 
 ---
 
@@ -133,7 +133,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard force::1`
 - **Then:** Install proceeds despite version match.
 - **Exit:** 0
-- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
 
 ---
 
@@ -153,7 +153,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard; echo $?`
 - **Then:** `0` on the last line.; Exit code 0
 - **Exit:** 0
-- **Source:** [001_commands.md — Exit: 0](../../../../docs/cli/command/readme.md#command--15-versionguard)
+- **Source:** [command/readme.md — Exit: 0](../../../../docs/cli/command/readme.md#command--15-versionguard)
 
 ---
 
@@ -163,7 +163,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard`
 - **Then:** output contains "stable"; graceful degradation with stable default
 - **Exit:** 0
-- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
 
 ---
 
@@ -173,7 +173,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard interval::0`
 - **Then:** Same as one-shot mode.; one-shot behavior
 - **Exit:** 0
-- **Source:** [005_params.md — interval::](../../../../docs/cli/param/readme.md#parameter--9-interval)
+- **Source:** [param/readme.md — interval::](../../../../docs/cli/param/readme.md#parameter--9-interval)
 
 ---
 
@@ -183,7 +183,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard`
 - **Then:** Message about latest preference and auto-update status.; latest-specific behavior
 - **Exit:** 0
-- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
 
 ---
 
@@ -193,7 +193,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard dry::1`
 - **Then:** Message about latest preference, no side effects.; informational output only
 - **Exit:** 0
-- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
 
 ---
 
@@ -203,7 +203,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard`
 - **Then:** "no preferred version set" or error message; no crash.; No crash; clean exit
 - **Exit:** 0
-- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
 
 ---
 
@@ -213,7 +213,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard`
 - **Then:** Guard treats resolved as absent and handles accordingly.; Graceful handling; no panic
 - **Exit:** 0
-- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
 
 ---
 
@@ -233,7 +233,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard version::9.9.9 dry::1`
 - **Then:** Output mentions `9.9.9`.; override version appears in output
 - **Exit:** 0
-- **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md), [001_commands.md — Command :: 5](../../../../docs/cli/command/readme.md#command--5-versionguard)
+- **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md), [command/readme.md — Command :: 5](../../../../docs/cli/command/readme.md#command--5-versionguard)
 
 ---
 
@@ -306,7 +306,7 @@ Integration test planning for the `.version.guard` command. See [001_commands.md
 - **When:** `clv .version.guard format::json dry::1`
 - **Then:** exit 0; stdout starts with `{`; valid JSON object output
 - **Exit:** 0
-- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--15-versionguard)
 
 ---
 

@@ -47,3 +47,4 @@ clv .processes.kill dry::1 force::1  # preview forced kill
 | 2 | [003 Process Lifecycle](../user_story/003_process_lifecycle.md) | Developer (unresponsive session) |
 | 3 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
 | 4 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
+| 5 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |

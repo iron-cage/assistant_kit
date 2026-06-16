@@ -1,6 +1,6 @@
 # Test: `.settings.set`
 
-Integration test planning for the `.settings.set` command. See [001_commands.md](../../../../docs/cli/command/readme.md) for specification.
+Integration test planning for the `.settings.set` command. See [command/readme.md](../../../../docs/cli/command/readme.md) for specification.
 
 ### Scope
 
@@ -201,7 +201,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key::foo`
 - **Then:** Exit 1; error message indicates `value::` is required
 - **Exit:** 1
-- **Source:** [001_commands.md](../../../../docs/cli/command/readme.md)
+- **Source:** [command/readme.md](../../../../docs/cli/command/readme.md)
 
 ---
 
@@ -211,7 +211,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key::theme value::dark`
 - **Then:** Exit 0; settings.json created at `~/.claude/settings.json`; contains `"theme": "dark"`
 - **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/command/readme.md)
+- **Source:** [command/readme.md](../../../../docs/cli/command/readme.md)
 
 ---
 
@@ -221,7 +221,137 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key::theme value::dark`
 - **Then:** Exit 0; settings.json now contains `"theme": "dark"` exactly once (no duplication)
 - **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/command/readme.md)
+- **Source:** [command/readme.md](../../../../docs/cli/command/readme.md)
+
+---
+
+### IT-9: `value::false` → boolean `false`
+
+- **Given:** `HOME=<tmp>`; settings absent
+- **When:** `clv .settings.set key::flag value::false`
+- **Then:** exit 0; settings.json has `"flag": false` (unquoted boolean)
+- **Exit:** 0
+- **Source:** [mutation_commands_test.rs]
+
+---
+
+### IT-10: `value::42` → integer `42`
+
+- **Given:** `HOME=<tmp>`; settings absent
+- **When:** `clv .settings.set key::count value::42`
+- **Then:** exit 0; settings.json has `"count": 42` (unquoted integer)
+- **Exit:** 0
+- **Source:** [mutation_commands_test.rs]
+
+---
+
+### IT-11: `value::hello` → string `"hello"`
+
+- **Given:** `HOME=<tmp>`; settings absent
+- **When:** `clv .settings.set key::name value::hello`
+- **Then:** exit 0; settings.json has `"name": "hello"` (quoted string)
+- **Exit:** 0
+- **Source:** [mutation_commands_test.rs]
+
+---
+
+### IT-12: `value::""` → empty string `""`
+
+- **Given:** `HOME=<tmp>`; settings absent
+- **When:** `clv .settings.set key::empty value::""`
+- **Then:** exit 0; settings.json has `"empty": ""` (valid empty string)
+- **Exit:** 0
+- **Source:** [mutation_commands_test.rs]
+
+---
+
+### IT-13: Creates file when settings.json absent
+
+- **Given:** `HOME=<tmp>` with no `.claude/` directory or settings.json
+- **When:** `clv .settings.set key::theme value::dark`
+- **Then:** exit 0; settings.json created at `~/.claude/settings.json`; contains `"theme": "dark"`
+- **Exit:** 0
+- **Source:** [mutation_commands_test.rs]
+
+---
+
+### IT-14: Updates existing key without duplication
+
+- **Given:** `HOME=<tmp>`; settings.json contains `"theme": "light"` and another key
+- **When:** `clv .settings.set key::theme value::dark`
+- **Then:** exit 0; settings.json has `"theme": "dark"` exactly once; other keys unchanged
+- **Exit:** 0
+- **Source:** [mutation_commands_test.rs]
+
+---
+
+### IT-15: Adds new key to existing file
+
+- **Given:** `HOME=<tmp>`; settings.json exists with one key
+- **When:** `clv .settings.set key::newKey value::newVal`
+- **Then:** exit 0; settings.json has both old key and `"newKey": "newVal"`; no corruption
+- **Exit:** 0
+- **Source:** [mutation_commands_test.rs]
+
+---
+
+### IT-16: Without `key::` → error mentions `key::`
+
+- **Given:** `HOME=<tmp>` with valid settings.json
+- **When:** `clv .settings.set value::dark`
+- **Then:** exit 1; error message contains the string `key::`
+- **Exit:** 1
+- **Source:** [read_commands_test.rs]
+
+---
+
+### IT-17: `key::foo` without `value::` → error mentions `value::`
+
+- **Given:** `HOME=<tmp>` with valid settings.json
+- **When:** `clv .settings.set key::foo`
+- **Then:** exit 1; error message contains the string `value::`
+- **Exit:** 1
+- **Source:** [read_commands_test.rs]
+
+---
+
+### IT-18: No `key::` → exit 1
+
+- **Given:** clean environment
+- **When:** `clv .settings.set`
+- **Then:** exit 1; error: `key::` is required
+- **Exit:** 1
+- **Source:** [mutation_commands_test.rs]
+
+---
+
+### IT-19: `key::` present but no `value::` → exit 1
+
+- **Given:** clean environment
+- **When:** `clv .settings.set key::theme`
+- **Then:** exit 1; error: `value::` is required
+- **Exit:** 1
+- **Source:** [mutation_commands_test.rs]
+
+---
+
+### IT-20: HOME not set → exit 2
+
+- **Given:** HOME environment variable is unset
+- **When:** `clv .settings.set key::theme value::dark`
+- **Then:** exit 2; error references HOME or settings path resolution failure
+- **Exit:** 2
+- **Source:** [mutation_commands_test.rs]
+
+---
+
+### IT-21: `key::""` (empty key) → exit 1
+
+- **Given:** clean environment
+- **When:** `clv .settings.set key:: value::dark`
+- **Then:** exit 1; error: key value cannot be empty
+- **Exit:** 1
+- **Source:** [mutation_commands_test.rs]
 
 ---
 

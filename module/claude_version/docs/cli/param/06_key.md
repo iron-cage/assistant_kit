@@ -43,3 +43,4 @@ clv.settings.set key::theme value::dark
 | # | User Story | Persona |
 |---|-----------|---------|
 | 1 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
+| 2 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |

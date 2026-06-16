@@ -35,3 +35,103 @@ Interaction tests for Parameter Group 4 (Config Identity). See [param_group/04_c
 - Cross-group (dry run): 1 test
 
 **Total:** 10 interaction tests
+
+---
+
+### GI-1: `key::K value::V` -> set mode, writes to user config
+
+- **Given:** HOME set; `~/.claude/settings.json` accessible
+- **When:** `clv .config key::theme value::dark`
+- **Then:** exit 0; `~/.claude/settings.json` updated with `"theme": "dark"` at user scope
+- **Exit:** 0
+- **Source:** [param_group/04_config_identity.md](../../../../docs/cli/param_group/04_config_identity.md)
+
+---
+
+### GI-2: `key::K value::V scope::project` -> set mode, writes to project config
+
+- **Given:** cwd accessible; HOME set; user settings unchanged
+- **When:** `clv .config key::theme value::dark scope::project`
+- **Then:** exit 0; `.claude/settings.json` in cwd updated with `"theme": "dark"`; `~/.claude/settings.json` unchanged
+- **Exit:** 0
+- **Source:** [param_group/04_config_identity.md](../../../../docs/cli/param_group/04_config_identity.md)
+
+---
+
+### GI-3: `key::K unset::1` -> unset mode, removes key from user config
+
+- **Given:** HOME set; `~/.claude/settings.json` contains key `K`
+- **When:** `clv .config key::K unset::1`
+- **Then:** exit 0; key `K` removed from `~/.claude/settings.json`; other keys unchanged
+- **Exit:** 0
+- **Source:** [param_group/04_config_identity.md](../../../../docs/cli/param_group/04_config_identity.md)
+
+---
+
+### GI-4: `key::K unset::1 scope::project` -> unset mode, removes from project config
+
+- **Given:** cwd has `.claude/settings.json` with key `K`; user settings unchanged
+- **When:** `clv .config key::K unset::1 scope::project`
+- **Then:** exit 0; key `K` removed from `.claude/settings.json` in cwd; `~/.claude/settings.json` unchanged
+- **Exit:** 0
+- **Source:** [param_group/04_config_identity.md](../../../../docs/cli/param_group/04_config_identity.md)
+
+---
+
+### GI-5: `key::K value::V unset::1` -> exit 1, mutual exclusion
+
+- **Given:** any invocation with `value::V` and `unset::1` both present
+- **When:** `clv .config key::theme value::dark unset::1`
+- **Then:** exit 1; error states `value::` and `unset::` are mutually exclusive; no file modified
+- **Exit:** 1
+- **Source:** [param_group/04_config_identity.md](../../../../docs/cli/param_group/04_config_identity.md)
+
+---
+
+### GI-6: `value::V` without `key::K` -> exit 1, key required
+
+- **Given:** `value::V` supplied without `key::`
+- **When:** `clv .config value::dark`
+- **Then:** exit 1; error: `key::` is required; no file modified
+- **Exit:** 1
+- **Source:** [param_group/04_config_identity.md](../../../../docs/cli/param_group/04_config_identity.md)
+
+---
+
+### GI-7: `unset::1` without `key::K` -> exit 1, key required
+
+- **Given:** `unset::1` supplied without `key::`
+- **When:** `clv .config unset::1`
+- **Then:** exit 1; error: `key::` is required when `unset::1`; no file modified
+- **Exit:** 1
+- **Source:** [param_group/04_config_identity.md](../../../../docs/cli/param_group/04_config_identity.md)
+
+---
+
+### GI-8: `scope::project` without write operation -> exit 1
+
+- **Given:** `scope::project` supplied with no `key::`, `value::`, or `unset::`
+- **When:** `clv .config scope::project`
+- **Then:** exit 1; error: `scope::` only applies to write operations
+- **Exit:** 1
+- **Source:** [param_group/04_config_identity.md](../../../../docs/cli/param_group/04_config_identity.md)
+
+---
+
+### GI-9: `key::K` alone -> get mode (no write), scope:: ignored
+
+- **Given:** HOME set; `~/.claude/settings.json` contains key `K`
+- **When:** `clv .config key::K`
+- **Then:** exit 0; effective value for `K` shown with source annotation; no write occurs
+- **Exit:** 0
+- **Source:** [param_group/04_config_identity.md](../../../../docs/cli/param_group/04_config_identity.md)
+
+---
+
+### GI-10: `key::K value::V dry::1` -> preview, no file modification
+
+- **Given:** HOME set; `~/.claude/settings.json` accessible
+- **When:** `clv .config key::theme value::dark dry::1`
+- **Then:** exit 0; output shows `[dry-run]` preview of the write; settings file not modified
+- **Exit:** 0
+- **Source:** [param_group/04_config_identity.md](../../../../docs/cli/param_group/04_config_identity.md)

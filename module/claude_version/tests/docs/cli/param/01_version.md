@@ -1,6 +1,6 @@
 # Test: `version::`
 
-Edge case coverage for the `version::` parameter. See [005_params.md](../../../../docs/cli/param/readme.md) and [006_types.md](../../../../docs/cli/type/readme.md) for specification.
+Edge case coverage for the `version::` parameter. See [param/readme.md](../../../../docs/cli/param/readme.md) and [type/readme.md](../../../../docs/cli/type/readme.md) for specification.
 
 ### Scope
 
@@ -54,7 +54,7 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 - **When:** `clv .version.install dry::1`
 - **Then:** output contains "stable".; Correct default applied
 - **Exit:** 0
-- **Source:** [005_params.md — version:: default: stable](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — version:: default: stable](../../../../docs/cli/param/readme.md)
 
 ---
 
@@ -64,7 +64,7 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 - **When:** `clv .version.install version::STABLE`
 - **Then:** exit code 1.
 - **Exit:** 1
-- **Source:** [006_types.md — VersionSpec case-sensitive](../../../../docs/cli/type/readme.md)
+- **Source:** [type/readme.md — VersionSpec case-sensitive](../../../../docs/cli/type/readme.md)
 
 ---
 
@@ -84,7 +84,7 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 - **When:** `clv .version.install version::1.2`
 - **Then:** exit code 1.
 - **Exit:** 1
-- **Source:** [006_types.md — VersionSpec semver format](../../../../docs/cli/type/readme.md)
+- **Source:** [type/readme.md — VersionSpec semver format](../../../../docs/cli/type/readme.md)
 
 ---
 
@@ -94,7 +94,7 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 - **When:** `clv .version.install version::01.02.03`
 - **Then:** exit code 1.
 - **Exit:** 1
-- **Source:** [006_types.md — VersionSpec no leading zeros](../../../../docs/cli/type/readme.md)
+- **Source:** [type/readme.md — VersionSpec no leading zeros](../../../../docs/cli/type/readme.md)
 
 ---
 
@@ -104,7 +104,7 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 - **When:** `clv .version.install version::1.2.3.4`
 - **Then:** exit code 1.
 - **Exit:** 1
-- **Source:** [006_types.md — VersionSpec format](../../../../docs/cli/type/readme.md)
+- **Source:** [type/readme.md — VersionSpec format](../../../../docs/cli/type/readme.md)
 
 ---
 
@@ -133,6 +133,76 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 - **Then:** exit code 1; "unknown parameter 'version::'" or similar.
 - **Exit:** 1
 - **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+
+---
+
+### EC-10: `version::stable dry::1` → resolves to stable alias
+
+- **Given:** clean environment
+- **When:** `clv .version.install version::stable dry::1`
+- **Then:** exit 0; output references the `stable` alias or its pinned semver; no actual install
+- **Exit:** 0
+- **Source:** [param/01_version.md](../../../../docs/cli/param/01_version.md)
+
+---
+
+### EC-11: `version::month dry::1` → resolves to pinned semver
+
+- **Given:** clean environment
+- **When:** `clv .version.install version::month dry::1`
+- **Then:** exit 0; output references the `month` alias or its pinned semver value; no actual install
+- **Exit:** 0
+- **Source:** [param/01_version.md](../../../../docs/cli/param/01_version.md)
+
+---
+
+### EC-12: `version::latest dry::1` → no-lock unlock mode
+
+- **Given:** clean environment
+- **When:** `clv .version.install version::latest dry::1`
+- **Then:** exit 0; output references `latest`; preview shows unlock/no-pin behavior
+- **Exit:** 0
+- **Source:** [param/01_version.md](../../../../docs/cli/param/01_version.md)
+
+---
+
+### EC-13: `version::1.2.3 dry::1` → exact semver accepted
+
+- **Given:** clean environment
+- **When:** `clv .version.install version::1.2.3 dry::1`
+- **Then:** exit 0; output contains `1.2.3`; dry-run marker present
+- **Exit:** 0
+- **Source:** [type/readme.md — VersionSpec semver format](../../../../docs/cli/type/readme.md)
+
+---
+
+### EC-14: `version::2.1.50 dry::1` → older semver accepted
+
+- **Given:** clean environment
+- **When:** `clv .version.install version::2.1.50 dry::1`
+- **Then:** exit 0; output contains `2.1.50`; dry-run marker present
+- **Exit:** 0
+- **Source:** [type/readme.md — VersionSpec semver format](../../../../docs/cli/type/readme.md)
+
+---
+
+### EC-15: `version::0.0.0 dry::1` → zero-patch semver valid
+
+- **Given:** clean environment
+- **When:** `clv .version.install version::0.0.0 dry::1`
+- **Then:** exit 0; `0.0.0` accepted as valid semver; dry-run marker present
+- **Exit:** 0
+- **Source:** [type/readme.md — VersionSpec boundary](../../../../docs/cli/type/readme.md)
+
+---
+
+### EC-16: `version::x` → unknown alias, exit 1
+
+- **Given:** clean environment
+- **When:** `clv .version.install version::x`
+- **Then:** exit 1; error references unknown alias or invalid version spec
+- **Exit:** 1
+- **Source:** [type/readme.md — VersionSpec valid values](../../../../docs/cli/type/readme.md)
 
 ---
 

@@ -10,7 +10,7 @@ Edge case tests for the `.help` parameter. Tests validate help trigger behavior,
 - **In Scope**: Single-parameter edge cases, argv position independence, output verification.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
-**Source:** [005_params.md](../../../../docs/cli/param/readme.md#parameter--10-help)
+**Source:** [param/readme.md](../../../../docs/cli/param/readme.md#parameter--10-help)
 
 ## Test Case Index
 
@@ -45,7 +45,7 @@ Edge case tests for the `.help` parameter. Tests validate help trigger behavior,
 - **When:** `clv .help`
 - **Then:** Help listing printed to stdout; exit 0
 - **Exit:** 0
-- **Source:** [005_params.md](../../../../docs/cli/param/readme.md#parameter--10-help)
+- **Source:** [param/readme.md](../../../../docs/cli/param/readme.md#parameter--10-help)
 ---
 
 ### EC-2: Without `.help` → normal command processing:
@@ -54,7 +54,7 @@ Edge case tests for the `.help` parameter. Tests validate help trigger behavior,
 - **When:** `clv .status`
 - **Then:** `.status` output shown (not help); exit 0
 - **Exit:** 0
-- **Source:** [005_params.md](../../../../docs/cli/param/readme.md#parameter--10-help)
+- **Source:** [param/readme.md](../../../../docs/cli/param/readme.md#parameter--10-help)
 ---
 
 ### EC-3: `.help` anywhere in argv triggers help:
@@ -63,7 +63,7 @@ Edge case tests for the `.help` parameter. Tests validate help trigger behavior,
 - **When:** `clv .status .help`
 - **Then:** Help output shown; `.status` command NOT executed
 - **Exit:** 0
-- **Source:** [005_params.md](../../../../docs/cli/param/readme.md#parameter--10-help)
+- **Source:** [param/readme.md](../../../../docs/cli/param/readme.md#parameter--10-help)
 ---
 
 ### EC-4: `.help` output to stdout; stderr empty:
@@ -72,7 +72,7 @@ Edge case tests for the `.help` parameter. Tests validate help trigger behavior,
 - **When:** `clv .help`
 - **Then:** stdout is non-empty; stderr is empty
 - **Exit:** 0
-- **Source:** [005_params.md](../../../../docs/cli/param/readme.md#parameter--10-help)
+- **Source:** [param/readme.md](../../../../docs/cli/param/readme.md#parameter--10-help)
 ---
 
 ### EC-5: `.help` output stable across invocations:
@@ -81,7 +81,7 @@ Edge case tests for the `.help` parameter. Tests validate help trigger behavior,
 - **When:** `clv .help` (run 3 times)
 - **Then:** All 3 stdout captures are byte-identical
 - **Exit:** 0
-- **Source:** [005_params.md](../../../../docs/cli/param/readme.md#parameter--10-help)
+- **Source:** [param/readme.md](../../../../docs/cli/param/readme.md#parameter--10-help)
 ---
 
 ### EC-6: `.help` not in its own listing:
@@ -90,7 +90,7 @@ Edge case tests for the `.help` parameter. Tests validate help trigger behavior,
 - **When:** `clv .help`
 - **Then:** The command listing does NOT contain a `.help` entry
 - **Exit:** 0
-- **Source:** [005_params.md](../../../../docs/cli/param/readme.md#parameter--10-help)
+- **Source:** [param/readme.md](../../../../docs/cli/param/readme.md#parameter--10-help)
 
 ---
 

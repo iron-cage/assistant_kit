@@ -1,6 +1,6 @@
 # Test: `key::`
 
-Edge case coverage for the `key::` parameter. See [005_params.md](../../../../docs/cli/param/readme.md) for specification.
+Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
 
 ### Scope
 
@@ -48,7 +48,7 @@ Edge case coverage for the `key::` parameter. See [005_params.md](../../../../do
 - **When:** `clv .settings.get key::myKey`
 - **Then:** exit 0; output contains "myValue".; correct value returned
 - **Exit:** 0
-- **Source:** [001_commands.md — .settings.get](../../../../docs/cli/command/readme.md)
+- **Source:** [command/readme.md — .settings.get](../../../../docs/cli/command/readme.md)
 
 ---
 
@@ -102,6 +102,16 @@ Edge case coverage for the `key::` parameter. See [005_params.md](../../../../do
 
 ---
 
+### EC-7: `key::a b c` (key with spaces) → behavior defined
+
+- **Given:** `HOME=<tmp>`; no existing settings
+- **When:** `clv .settings.set "key::a b c" value::x`
+- **Then:** behavior is defined by spec — either accepted as opaque key string or rejected; exit code is consistent with spec
+- **Exit:** 0
+- **Source:** [param/06_key.md](../../../../docs/cli/param/06_key.md)
+
+---
+
 ### EC-8: `key::foo.bar` (dot in key name)
 
 - **Given:** `HOME=<tmp>`; no existing settings.
@@ -109,6 +119,36 @@ Edge case coverage for the `key::` parameter. See [005_params.md](../../../../do
 - **Then:** `baz` returned for key `foo.bar`.; key round-trips correctly.
 **Note:** Tests that the key is treated as an opaque string, not a nested path
 - **Exit:** 0
+
+---
+
+### EC-9: `key::foo bar` (space in key) → stored as given
+
+- **Given:** `HOME=<tmp>`; no existing settings
+- **When:** `clv .settings.set "key::foo bar" value::baz`
+- **Then:** exit 0 (or per-spec); key `foo bar` treated as opaque string; round-trip get returns same value
+- **Exit:** 0
+- **Source:** [param/06_key.md](../../../../docs/cli/param/06_key.md)
+
+---
+
+### EC-10: Without `key::` → error message mentions `key::`
+
+- **Given:** `HOME=<tmp>` with valid settings.json
+- **When:** `clv .settings.get`
+- **Then:** exit 1; error message contains the string `key::`
+- **Exit:** 1
+- **Source:** [param/06_key.md](../../../../docs/cli/param/06_key.md)
+
+---
+
+### EC-11: Without `key::` on `.settings.set` → error mentions `key::`
+
+- **Given:** `HOME=<tmp>` with valid settings.json
+- **When:** `clv .settings.set value::dark`
+- **Then:** exit 1; error message contains the string `key::`
+- **Exit:** 1
+- **Source:** [param/06_key.md](../../../../docs/cli/param/06_key.md)
 
 ---
 

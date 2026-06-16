@@ -1,7 +1,7 @@
 # Test: Execution Control Group
 
 Interaction tests for the `dry::`, `force::`, and `interval::` parameter group.
-See [003_parameter_groups.md](../../../../docs/cli/param_group/readme.md) and [004_parameter_interactions.md](../../../../docs/cli/004_parameter_interactions.md).
+See [param_group/readme.md](../../../../docs/cli/param_group/readme.md) and [004_parameter_interactions.md](../../../../docs/cli/004_parameter_interactions.md).
 
 ### Scope
 
@@ -94,7 +94,7 @@ Both are valid invocations; the dry-run flag presence in output differs.
 - **When:** `clv .version.guard dry::1 interval::0`
 - **Then:** exit 0; `[dry-run]` present; process exits immediately (one-shot mode)
 - **Exit:** 0
-- **Source:** [005_params.md — interval::0](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — interval::0](../../../../docs/cli/param/readme.md)
 
 ---
 

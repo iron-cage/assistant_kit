@@ -7,7 +7,7 @@
 - **In Scope**: Alias resolution, verbosity levels, output formats.
 - **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`).
 
-Integration test planning for the `.version.list` command. See [001_commands.md](../../../../docs/cli/command/readme.md) for specification.
+Integration test planning for the `.version.list` command. See [command/readme.md](../../../../docs/cli/command/readme.md) for specification.
 
 ## Test Factor Analysis
 
@@ -162,7 +162,7 @@ IT-12 verifies array structure. IT-15 verifies `"value"` field presence.
 - **When:** `clv .version.list format::json`
 - **Then:** stdout is valid JSON containing version alias entries
 - **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/command/readme.md)
+- **Source:** [command/readme.md](../../../../docs/cli/command/readme.md)
 
 ---
 
@@ -172,7 +172,77 @@ IT-12 verifies array structure. IT-15 verifies `"value"` field presence.
 - **When:** `clv .version.list` (run 3 times)
 - **Then:** All 3 stdout captures are byte-identical
 - **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/command/readme.md)
+- **Source:** [command/readme.md](../../../../docs/cli/command/readme.md)
+
+---
+
+### IT-9: Output includes "stable" alias
+
+- **Given:** clean environment
+- **When:** `clv .version.list`
+- **Then:** exit 0; stdout contains the string `stable`
+- **Exit:** 0
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
+
+---
+
+### IT-10: Output includes "latest" alias
+
+- **Given:** clean environment
+- **When:** `clv .version.list`
+- **Then:** exit 0; stdout contains the string `latest`
+- **Exit:** 0
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
+
+---
+
+### IT-11: `v::1` → aliases with descriptions
+
+- **Given:** clean environment
+- **When:** `clv .version.list v::1`
+- **Then:** exit 0; each alias line includes a description separator (` — ` or equivalent); at least one non-empty description present
+- **Exit:** 0
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
+
+---
+
+### IT-12: `format::json` → valid JSON array or object
+
+- **Given:** clean environment
+- **When:** `clv .version.list format::json`
+- **Then:** exit 0; stdout is valid JSON (parseable); top-level structure is an array or object containing alias entries
+- **Exit:** 0
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
+
+---
+
+### IT-13: Output includes "month" alias
+
+- **Given:** clean environment
+- **When:** `clv .version.list`
+- **Then:** exit 0; stdout contains the string `month`
+- **Exit:** 0
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
+
+---
+
+### IT-14: `v::1` shows pinned versions in parens `(vX.Y.Z)`
+
+- **Given:** clean environment; `stable` and `month` aliases have pinned semver values
+- **When:** `clv .version.list v::1`
+- **Then:** exit 0; output for `stable` and/or `month` contains a parenthesized version string matching `(v\d+\.\d+\.\d+)`
+- **Exit:** 0
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
+
+---
+
+### IT-15: `format::json` has `"value"` field
+
+- **Given:** clean environment
+- **When:** `clv .version.list format::json`
+- **Then:** exit 0; parsed JSON contains at least one entry with a `"value"` key (pinned semver string or null)
+- **Exit:** 0
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
 
 ---
 

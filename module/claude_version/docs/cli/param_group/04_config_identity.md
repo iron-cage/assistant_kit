@@ -44,3 +44,9 @@ clv .config key::theme unset::1
 |---|---------|-----------|
 | 1 | [`.config`](../command/config.md#command--13-config) | Full (`key::`, `value::`, `scope::`, `unset::`) |
 
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|-----------|---------|
+| 1 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |
+

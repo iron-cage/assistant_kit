@@ -1,6 +1,6 @@
 # Test: `format::`
 
-Edge case coverage for the `format::` parameter. See [005_params.md](../../../../docs/cli/param/readme.md) for specification.
+Edge case coverage for the `format::` parameter. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
 
 ### Scope
 
@@ -58,7 +58,7 @@ Edge case coverage for the `format::` parameter. See [005_params.md](../../../..
 - **When:** `clv .version.guard format::json dry::1`
 - **Then:** exit code 0; stdout starts with `{`.; JSON output
 - **Exit:** 0
-- **Source:** [001_commands.md — .version.guard](../../../../docs/cli/command/readme.md#command--5-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--5-versionguard)
 
 ---
 
@@ -108,7 +108,7 @@ Edge case coverage for the `format::` parameter. See [005_params.md](../../../..
 - **When:** `clv .status`
 - **Then:** Human-readable text (not JSON).; Output does not start with `{`
 - **Exit:** 0
-- **Source:** [005_params.md — format:: default: text](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — format:: default: text](../../../../docs/cli/param/readme.md)
 
 ---
 
@@ -118,7 +118,7 @@ Edge case coverage for the `format::` parameter. See [005_params.md](../../../..
 - **When:** `clv .status format::text`
 - **Then:** Behavior identical to `clv .status`; no JSON output.; explicit text equals absent
 - **Exit:** 0
-- **Source:** [005_params.md — format:: default: text](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — format:: default: text](../../../../docs/cli/param/readme.md)
 
 ---
 
@@ -148,7 +148,97 @@ Edge case coverage for the `format::` parameter. See [005_params.md](../../../..
 - **When:** `clv .status format::json` and `clv .version.list format::json`
 - **Then:** `.status` output starts with `{`; `.version.list` output starts with `[`; both parse as valid JSON
 - **Exit:** 0
-- **Source:** [005_params.md](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md](../../../../docs/cli/param/readme.md)
+
+---
+
+### EC-11: `.status format::json` → JSON object
+
+- **Given:** clean environment with valid Claude installation
+- **When:** `clv .status format::json`
+- **Then:** exit 0; stdout is valid JSON starting with `{`; contains version-related fields
+- **Exit:** 0
+- **Source:** [command/readme.md — .status](../../../../docs/cli/command/readme.md)
+
+---
+
+### EC-12: `.version.show format::json` → `{"version":"..."}`
+
+- **Given:** clean environment
+- **When:** `clv .version.show format::json`
+- **Then:** exit 0; stdout is valid JSON object containing a `"version"` key with semver string value
+- **Exit:** 0
+- **Source:** [command/version.md — .version.show](../../../../docs/cli/command/version.md)
+
+---
+
+### EC-13: `.version.list format::json` → JSON array
+
+- **Given:** clean environment
+- **When:** `clv .version.list format::json`
+- **Then:** exit 0; stdout is valid JSON starting with `[`; contains alias entries
+- **Exit:** 0
+- **Source:** [command/version.md — .version.list](../../../../docs/cli/command/version.md)
+
+---
+
+### EC-14: `.processes format::json` → `{"processes":[...]}`
+
+- **Given:** clean environment
+- **When:** `clv .processes format::json`
+- **Then:** exit 0; stdout is valid JSON object; contains `"processes"` array key
+- **Exit:** 0
+- **Source:** [command/readme.md — .processes](../../../../docs/cli/command/readme.md)
+
+---
+
+### EC-15: `.settings.show format::json` → JSON object
+
+- **Given:** `HOME=<tmp>`; settings.json has at least one key
+- **When:** `clv .settings.show format::json`
+- **Then:** exit 0; stdout is valid JSON object mirroring the settings file; top-level is `{}`
+- **Exit:** 0
+- **Source:** [command/settings.md — .settings.show](../../../../docs/cli/command/settings.md)
+
+---
+
+### EC-16: `.settings.get format::json` → `{"key":"..","value":..}`
+
+- **Given:** `HOME=<tmp>`; settings.json contains `myKey = "myValue"`
+- **When:** `clv .settings.get key::myKey format::json`
+- **Then:** exit 0; stdout is valid JSON object with `"key"` and `"value"` fields
+- **Exit:** 0
+- **Source:** [command/settings.md — .settings.get](../../../../docs/cli/command/settings.md)
+
+---
+
+### EC-17: `.version.history format::json` → version/date/summary fields
+
+- **Given:** network available
+- **When:** `clv .version.history format::json count::3`
+- **Then:** exit 0; stdout is a valid JSON array; each element has at minimum `version`, `date`, and `summary` fields
+- **Exit:** 0
+- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+
+---
+
+### EC-18: `.version.history format::xml` → exit 1
+
+- **Given:** clean environment
+- **When:** `clv .version.history format::xml`
+- **Then:** exit 1; error message references unknown format value
+- **Exit:** 1
+- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+
+---
+
+### EC-19: `.version.history format::JSON` (uppercase) → exit 1
+
+- **Given:** clean environment
+- **When:** `clv .version.history format::JSON`
+- **Then:** exit 1; same error as unknown format; `format::` is case-sensitive
+- **Exit:** 1
+- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
 
 ---
 

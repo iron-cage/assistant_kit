@@ -1,6 +1,6 @@
 # Test: `count::`
 
-Edge case coverage for the `count::` parameter. See [005_params.md](../../../../docs/cli/param/readme.md) and [feature/001_version_management.md](../../../../docs/feature/001_version_management.md) for specification.
+Edge case coverage for the `count::` parameter. See [param/readme.md](../../../../docs/cli/param/readme.md) and [feature/001_version_management.md](../../../../docs/feature/001_version_management.md) for specification.
 
 ### Scope
 
@@ -64,7 +64,7 @@ Edge case coverage for the `count::` parameter. See [005_params.md](../../../../
 - **When:** `clv .version.history`
 - **Then:** ≤10 version lines.; default applied
 - **Exit:** 0
-- **Source:** [005_params.md — count:: default: 10](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — count:: default: 10](../../../../docs/cli/param/readme.md)
 
 ---
 
@@ -84,7 +84,7 @@ Edge case coverage for the `count::` parameter. See [005_params.md](../../../../
 - **When:** `clv .version.history count::-1`
 - **Then:** exit code 1 (adapter rejects negative as type error).
 - **Exit:** 1
-- **Source:** [005_params.md — count:: type: u64](../../../../docs/cli/param/readme.md)
+- **Source:** [param/readme.md — count:: type: u64](../../../../docs/cli/param/readme.md)
 **Note:** Negative integers cannot be stored in u64; unilang adapter exits 1 on parse failure.
 
 ---
@@ -156,6 +156,46 @@ Edge case coverage for the `count::` parameter. See [005_params.md](../../../../
 - **Then:** exit code 0; output lines ≤ API data size.; (command succeeds; validation does not reject the boundary value)
 - **Exit:** 0
 - **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+
+---
+
+### EC-12: `count::3` → ≤3 version entries in output
+
+- **Given:** network available
+- **When:** `clv .version.history count::3`
+- **Then:** exit 0; stdout contains at most 3 version entries
+- **Exit:** 0
+- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+
+---
+
+### EC-13: `count::1 v::0` → exactly 1 bare line
+
+- **Given:** network available
+- **When:** `clv .version.history count::1 v::0`
+- **Then:** exit 0; stdout has exactly 1 line in `{semver}  {YYYY-MM-DD}` bare format
+- **Exit:** 0
+- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+
+---
+
+### EC-14: `count::0 format::json` → empty array `[]`
+
+- **Given:** network available (or irrelevant if zero truncates before fetch)
+- **When:** `clv .version.history count::0 format::json`
+- **Then:** exit 0; stdout is exactly `[]` (empty JSON array)
+- **Exit:** 0
+- **Source:** [command/version.md — .version.history](../../../../docs/cli/command/version.md)
+
+---
+
+### EC-15: `v::abc` → exit 1 (type mismatch)
+
+- **Given:** clean environment
+- **When:** `clv .version.history v::abc`
+- **Then:** exit 1; error references type mismatch for Integer parameter
+- **Exit:** 1
+- **Source:** [param/04_verbosity.md — type validation](../../../../docs/cli/param/04_v.md)
 
 ---
 

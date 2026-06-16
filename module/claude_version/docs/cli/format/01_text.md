@@ -51,3 +51,4 @@ Output fields differ per command. Common patterns:
 | 3 | [003 Process Lifecycle](../user_story/003_process_lifecycle.md) | Developer (unresponsive session) |
 | 4 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
 | 5 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
+| 6 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |

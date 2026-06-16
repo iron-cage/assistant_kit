@@ -1,6 +1,6 @@
 # Test: `value::`
 
-Edge case coverage for the `value::` parameter. See [005_params.md](../../../../docs/cli/param/readme.md) and [algorithm/001_settings_type_inference.md](../../../../docs/algorithm/001_settings_type_inference.md) for specification.
+Edge case coverage for the `value::` parameter. See [param/readme.md](../../../../docs/cli/param/readme.md) and [algorithm/001_settings_type_inference.md](../../../../docs/algorithm/001_settings_type_inference.md) for specification.
 
 ### Scope
 
@@ -131,6 +131,86 @@ as empty string, exit 0 with `"s": ""`. Check FR-04 vs FR-07 interaction.; Consi
 - **Then:** `.settings.get` output contains `hello`; the value stored and retrieved is identical
 - **Exit:** 0
 - **Source:** [feature/003_settings_management.md](../../../../docs/feature/003_settings_management.md)
+
+---
+
+### EC-8: `value::Infinity` → JSON string
+
+- **Given:** `HOME=<tmp>`
+- **When:** `clv .settings.set key::x value::Infinity`
+- **Then:** exit 0; settings.json has `"x": "Infinity"` (quoted string; infinite float not stored as number)
+- **Exit:** 0
+- **Source:** [algorithm/001_settings_type_inference.md](../../../../docs/algorithm/001_settings_type_inference.md)
+
+---
+
+### EC-9: `value::true false` (space in value) → JSON string
+
+- **Given:** `HOME=<tmp>`
+- **When:** `clv .settings.set key::x "value::true false"`
+- **Then:** exit 0; settings.json has `"x": "true false"` (treated as string since not a pure token)
+- **Exit:** 0
+- **Source:** [algorithm/001_settings_type_inference.md](../../../../docs/algorithm/001_settings_type_inference.md)
+
+---
+
+### EC-10: `value::` (empty) → exit 1
+
+- **Given:** clean environment
+- **When:** `clv .settings.set key::theme value::`
+- **Then:** exit 1; error: empty value not accepted for `value::`; no file modified
+- **Exit:** 1
+- **Source:** [param/07_value.md](../../../../docs/cli/param/07_value.md)
+
+---
+
+### EC-11: `value::false` → boolean `false`
+
+- **Given:** `HOME=<tmp>`; settings absent
+- **When:** `clv .settings.set key::flag value::false`
+- **Then:** exit 0; settings.json has `"flag": false` (unquoted boolean)
+- **Exit:** 0
+- **Source:** [algorithm/001_settings_type_inference.md](../../../../docs/algorithm/001_settings_type_inference.md)
+
+---
+
+### EC-12: `value::42` → integer `42`
+
+- **Given:** `HOME=<tmp>`; settings absent
+- **When:** `clv .settings.set key::count value::42`
+- **Then:** exit 0; settings.json has `"count": 42` (unquoted integer)
+- **Exit:** 0
+- **Source:** [algorithm/001_settings_type_inference.md](../../../../docs/algorithm/001_settings_type_inference.md)
+
+---
+
+### EC-13: `value::hello` → string `"hello"`
+
+- **Given:** `HOME=<tmp>`; settings absent
+- **When:** `clv .settings.set key::name value::hello`
+- **Then:** exit 0; settings.json has `"name": "hello"` (quoted string)
+- **Exit:** 0
+- **Source:** [algorithm/001_settings_type_inference.md](../../../../docs/algorithm/001_settings_type_inference.md)
+
+---
+
+### EC-14: `key::k` present but no `value::` → exit 1
+
+- **Given:** clean environment
+- **When:** `clv .settings.set key::theme`
+- **Then:** exit 1; error: `value::` is required; no file modified
+- **Exit:** 1
+- **Source:** [param/07_value.md](../../../../docs/cli/param/07_value.md)
+
+---
+
+### EC-15: Without `value::` → error mentions `value::`
+
+- **Given:** `HOME=<tmp>` with valid settings.json
+- **When:** `clv .settings.set key::theme`
+- **Then:** exit 1; error message contains the string `value::`
+- **Exit:** 1
+- **Source:** [param/07_value.md](../../../../docs/cli/param/07_value.md)
 
 ---
 

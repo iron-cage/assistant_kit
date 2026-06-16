@@ -4,7 +4,7 @@
 
 - **Purpose**: Logical groupings of clv parameters by shared purpose.
 - **Responsibility**: Group membership, semantics, and per-group parameter and command tables.
-- **In Scope**: 4 parameter groups — Output Control, Execution Control, Settings Identity, Config Identity.
+- **In Scope**: Output Control, Execution Control, Settings Identity, Config Identity.
 - **Out of Scope**: Individual parameter details (→ `../param/`), cross-parameter constraints (→ `../004_parameter_interactions.md`).
 
 **Boundary note:** This directory documents group *membership* (which parameters belong together and why). It does not document what happens when parameters from different groups are combined — that is the responsibility of `../004_parameter_interactions.md`.
@@ -20,7 +20,7 @@
 | 03_settings_identity.md | Settings Identity group — key::, value:: |
 | 04_config_identity.md | Config Identity group — key::, value::, scope::, unset:: |
 
-### All Groups (4 total)
+### All Groups
 
 | # | Group | Parameters | Purpose |
 |---|-------|------------|---------|

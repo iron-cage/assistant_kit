@@ -7,7 +7,7 @@ use claude_storage_core::{ Storage, SearchFilter, EntryType };
 #[test]
 fn search_basic_case_insensitive()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
   let projects = storage.list_projects().expect( "Failed to list projects" );
 
   if projects.is_empty()
@@ -46,7 +46,7 @@ fn search_basic_case_insensitive()
 #[test]
 fn search_case_sensitive()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
   let projects = storage.list_projects().expect( "Failed to list projects" );
 
   if projects.is_empty()
@@ -81,7 +81,7 @@ fn search_case_sensitive()
 #[test]
 fn search_filter_by_entry_type()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
   let projects = storage.list_projects().expect( "Failed to list projects" );
 
   if projects.is_empty()
@@ -125,7 +125,7 @@ fn search_filter_by_entry_type()
 #[test]
 fn search_no_matches()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
   let projects = storage.list_projects().expect( "Failed to list projects" );
 
   if projects.is_empty()
@@ -156,7 +156,7 @@ fn search_no_matches()
 #[test]
 fn search_match_metadata()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
   let projects = storage.list_projects().expect( "Failed to list projects" );
 
   if projects.is_empty()
@@ -218,7 +218,7 @@ fn search_match_metadata()
 #[test]
 fn search_empty_query()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
   let projects = storage.list_projects().expect( "Failed to list projects" );
 
   if projects.is_empty()
@@ -275,7 +275,7 @@ fn search_empty_query()
 #[test]
 fn search_multiple_sessions()
 {
-  let storage = Storage::new().expect( "Failed to create storage" );
+  let storage = Storage::with_root( "/tmp/claude_tests_empty" );
   let projects = storage.list_projects().expect( "Failed to list projects" );
 
   if projects.is_empty()
