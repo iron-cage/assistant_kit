@@ -46,7 +46,7 @@ Writes the per-machine active marker (`_active_{machine}_{user}`) for a named ac
 ### Migration (Feature 037)
 
 > `.account.assign` has been removed as a standalone working command (Feature 037). Its behavior is absorbed into `.accounts` and `.usage` as the `assign::1` mutation param.
-> - `clp .account.assign name::X` → exits 1 with redirect message directing to new syntax
+> - `clp .account.assign name::X` → exits 1 with generic "unknown command" error (fully deregistered)
 > - `clp .accounts assign::1 name::X` → writes marker (same behavior)
 > - `clp .accounts assign::1 name::X for::U@M` → targeted machine marker (same behavior)
 >

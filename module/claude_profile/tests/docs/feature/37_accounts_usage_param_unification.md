@@ -20,6 +20,8 @@
 | FT-08 | AC-08 | `.accounts assign::1 name::X` writes marker file; `{name}.json`, credentials, `~/.claude.json` unchanged | `aa01_current_machine_marker_written (account_assign_test.rs)` |
 | FT-09 | AC-09 | `.accounts assign::1 name::X for::bob@laptop` writes `_active_laptop_bob`; sanitization identical to former `.account.assign` | `aa02_remote_machine_marker_written (account_assign_test.rs)` |
 | FT-10 | AC-10 | `.accounts assign::1` (no `name::`) emits live usage block with machine identity and copy-paste examples; exits 0 | `aa04_no_name_emits_usage_block (account_assign_test.rs)` |
+| FT-11 | AC-11 | `.account.unclaim name::alice` exits 1 with generic "unknown command" error — command fully deregistered, not a redirect stub | `ft11_account_unclaim_fully_deregistered` |
+| FT-12 | AC-12 | `.account.assign name::alice` exits 1 with generic "unknown command" error — command fully deregistered, not a redirect stub | `ft12_account_assign_fully_deregistered` |
 | FT-13 | AC-13 | `.accounts` rejects all 15 legacy field toggles (`active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`); each exits 1 directing to `cols::` | `ft13_accounts_legacy_toggles_rejected` |
 | FT-14 | AC-14 | `.accounts cols::+host,-tier` adds host column and removes tier from identity default set | `ft14_accounts_cols_modifier` |
 | FT-15 | AC-15 | `.accounts refresh::1` fetches live quota; `.accounts touch::1` activates idle sessions — same algorithm as `.usage` | `lim_it_ft15_accounts_refresh_live (accounts_test.rs)` |
@@ -40,7 +42,7 @@
 - FT-07 is an integration test: set up two accounts (alice owned by current, bob owned by other). `.accounts unclaim::1` with no `name::` applies unclaim to alice (G8 passes, owner cleared); emits `"skip bob: owned by other@remote"` for bob and continues. Exit 0 always (best-effort batch — per-account G8 violations produce skip messages, not failures).
 - FT-08 verifies that only the marker file is written — mtime of `{name}.credentials.json`, `{name}.json`, and `~/.claude.json` are all unchanged after `.accounts assign::1 name::X`.
 - FT-09 verifies `for::` sanitization: `for::bob@my-laptop` → marker `_active_my-laptop_bob` (dashes and dots preserved, other specials → `_`).
-- FT-11 and FT-12 are integration tests via `./verb/test` — verify exit 1 and exact error message text.
+- FT-11 and FT-12 are integration tests via `./verb/test` — verify exit 1 and that the error message is a generic "unknown command" error (NOT the former redirect-stub migration message). These commands are fully deregistered: calling them is indistinguishable from calling any other unrecognized command.
 - FT-13 uses one sub-case per legacy toggle — 15 invocations; each exits 1 with a message mentioning `cols::`.
 - FT-14 is a render test verifying column set modification: identity default is Account, Owner, Active, Current, Sub, Tier, Expires, Email. After `cols::+host,-tier`: Tier removed, Host added.
 - FT-15 is an integration test: `.accounts refresh::1` must produce live quota output matching what `.usage` produces for the same accounts.
@@ -168,6 +170,27 @@
 
 ---
 
+### FT-11: `.account.unclaim` produces generic "unknown command" error — fully deregistered
+
+- **Given:** Any environment.
+- **When:** `clp .account.unclaim name::alice` is executed.
+- **Then:** Exits 1. Error output contains a generic "unknown command" error — identical to calling any unregistered command (e.g., `.account.nonexistent`). Does NOT contain the former redirect-stub migration message. No `alice.json` modification.
+- **Exit:** 1
+- **Source fn:** `ft11_account_unclaim_fully_deregistered` ⏳
+- **Source:** [037_accounts_usage_param_unification.md AC-11](../../../docs/feature/037_accounts_usage_param_unification.md)
+
+---
+
+### FT-12: `.account.assign` produces generic "unknown command" error — fully deregistered
+
+- **Given:** Any environment.
+- **When:** `clp .account.assign name::alice` is executed.
+- **Then:** Exits 1. Error output contains a generic "unknown command" error — identical to calling any unregistered command. Does NOT contain the former redirect-stub migration message. No marker file written.
+- **Exit:** 1
+- **Source fn:** `ft12_account_assign_fully_deregistered` ⏳
+- **Source:** [037_accounts_usage_param_unification.md AC-12](../../../docs/feature/037_accounts_usage_param_unification.md)
+
+---
 
 ### FT-13: `.accounts` rejects all 15 legacy field toggle parameters
 

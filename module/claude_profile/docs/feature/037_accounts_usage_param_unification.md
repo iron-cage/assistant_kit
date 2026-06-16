@@ -97,10 +97,8 @@ The identity set (`.accounts` default) includes: Account, Owner, Active, Current
 
 | File | Relationship |
 |------|--------------|
-| `src/registry.rs` | Command registration — unified param set for `.accounts` and `.usage` |
-| `src/commands/accounts.rs` | `.accounts` handler — absorbs unclaim and assign logic |
-| `src/commands/account_ops.rs` | `account_unclaim_redirect()` — redirect stub (exits 1 with migration error message per AC-11); unclaim logic absorbed inline into `accounts_routine()` |
-| `src/commands/account_assign.rs` | `account_assign_redirect()` — redirect stub (exits 1 with migration error message per AC-12); `account_assign_routine()` retained, delegated from accounts handler |
+| `src/registry.rs` | Command registration — unified param set for `.accounts` and `.usage`; `.account.unclaim` (Command 17) and `.account.assign` (Command 16) fully deregistered (not listed) |
+| `src/commands/accounts.rs` | `.accounts` handler — unclaim and assign logic inline; G8 gate for unclaim path; `.account.unclaim` and `.account.assign` produce generic "unknown command" error (deregistered, not redirect stubs) |
 | `src/usage/api.rs` | `.usage` handler (`usage_routine()`) — gains mutation param dispatch |
 
 ### Tests
@@ -108,5 +106,5 @@ The identity set (`.accounts` default) includes: Account, Owner, Active, Current
 | File | Relationship |
 |------|--------------|
 | `tests/cli/accounts_test.rs` | Integration tests for `.accounts` — absorbs assign and unclaim test cases |
-| `tests/cli/account_assign_test.rs` | Updated to verify redirect-stub behavior (exit 1 + migration error message per AC-12) |
+| `tests/cli/account_assign_test.rs` | Integration tests for `.accounts assign::1` — verifies marker-only write behavior per AC-08/AC-09/AC-10 |
 | `tests/cli/usage_test.rs` | Integration tests for `.usage` — gains mutation param tests |

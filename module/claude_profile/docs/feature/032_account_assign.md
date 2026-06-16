@@ -7,7 +7,7 @@
 - **In Scope**: `.account.assign` command; `for::USER@MACHINE` parameter; sanitization rules for marker filename; dry-run; live usage block output when `name::` absent; marker write only (no credential copy, no `~/.claude.*` side effects, no `owner` field changes).
 - **Out of Scope**: Full credential rotation (→ 004_account_use.md); per-machine marker filename derivation (→ 025_per_machine_active_marker.md); account-save host display label (→ 029_account_host_metadata.md); credential file access control (enforcement is logical, not filesystem-level); ownership stamp (→ 036_account_ownership.md, managed by `.account.save`).
 
-> **CLI surface migration (Feature 037):** This feature's behavior is being absorbed into `.accounts` as `assign::` and `for::` parameters. The standalone `.account.assign` command will be removed. All acceptance criteria below remain valid — they apply via `clp .accounts assign::1 name::X` instead of `clp .account.assign name::X`. See [037_accounts_usage_param_unification.md](037_accounts_usage_param_unification.md).
+> **CLI surface migration (Feature 037 — shipped):** This feature's behavior has been absorbed into `.accounts` as `assign::` and `for::` parameters. The standalone `.account.assign` command **has been removed** (deregistered from the command registry — produces generic 'unknown command' error). All acceptance criteria below apply via `clp .accounts assign::1 name::X`. See [037_accounts_usage_param_unification.md](037_accounts_usage_param_unification.md).
 
 ### Design
 
@@ -99,7 +99,7 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 - **AC-10**: Overwriting an existing marker: if `_active_laptop_bob` already contains `old@corp.com`, `.account.assign name::new@corp.com for::bob@laptop` overwrites it; exits 0; file now contains `new@corp.com`.
 - **AC-11**: The command does not invoke `switch_account()` — `~/.claude/.credentials.json` and `~/.claude.json` are left unchanged by a successful assign.
 - **AC-12**: `clp .account.assign name::alice@corp.com for::bob@laptop dry::1` includes `_active_laptop_bob` in the dry-run stdout.
-- **AC-13**: `.account.assign` does NOT modify the `owner` field in `{name}.json` — marker-only write. `account_assign_routine()` does not call `write_owner()`. Ownership is stamped only by `.account.save` and cleared only by `.account.unclaim` (see [036_account_ownership.md](036_account_ownership.md)).
+- **AC-13**: `.accounts assign::1` does NOT modify the `owner` field in `{name}.json` — marker-only write. The `assign::1` path in `accounts_routine()` does not call `write_owner()`. Ownership is stamped only by `.account.save` and cleared only by `.accounts unclaim::1` (see [036_account_ownership.md](036_account_ownership.md)).
 
 ### Commands
 
@@ -128,13 +128,13 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.assign`](../cli/command/001_account.md#command--16-accountassign) | CLI surface for this feature |
+| 1 | `.accounts assign::1` | CLI surface for this feature (`.account.assign` removed — see Feature 037) |
 
 ### Sources
 
 | File | Relationship |
 |------|--------------|
-| `src/commands/account_assign.rs` | `account_assign_routine()` — CLI handler; marker write only; does not call `write_owner()` |
+| `src/commands/accounts.rs` | `accounts_routine()` assign path — marker write only; does not call `write_owner()` |
 | `claude_profile_core/src/account.rs` | `active_marker_filename()`, `resolve_hostname()` |
 
 ### Tests
