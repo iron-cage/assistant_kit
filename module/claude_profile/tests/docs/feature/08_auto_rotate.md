@@ -64,5 +64,5 @@ Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` 
 - **When:** `account::auto_rotate(credential_store, paths)` is called.
 - **Then:** Returns the name of `b` (expires_at_ms=9000). Account `c` is not selected despite being inactive with higher expiry than `a`.
 - **Exit:** Ok("b")
-- **Source fn:** `auto_rotate_picks_max_from_multiple_candidates`
+- **Source fn:** `auto_rotate_picks_account_with_highest_expires_at` (in `tests/account_tests.rs`)
 - **Source:** [008_auto_rotate.md AC-01](../../../docs/feature/008_auto_rotate.md)

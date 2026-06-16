@@ -32,6 +32,17 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | — |
 | FT-25 | `.usage` applies model override for current account when `7d(Son) < 20%` | AC-32 | — |
 | FT-26 | `format::json` output includes `"is_owned"` bool per account object | AC-05 | — |
+| — | Table output rendered by `data_fmt` crate (`use data_fmt::…` in `render.rs`) | AC-04 | Structural (code review — all render paths use `data_fmt`) |
+| — | `Expires` column: `"in Xh Ym"` / `"EXPIRED"` from `compute_expires_cell()` | AC-07 | IT-003, IT-010 (command-level coverage) |
+| — | `5h Left`, `7d Left`, `7d(Son)`, `5h Reset`, `7d Reset` from `OauthUsageData` | AC-08 | Indirect — FT-07/FT-08/FT-11/FT-14/FT-15/FT-16 all depend on these columns |
+| — | Footer appended when ≥2 valid accounts; absent when 0 or 1 | AC-10 | Live-only (IT-012); IT-036 covers no-footer offline |
+| — | Synthetic row for unsaved live credentials | AC-11 | Cross-feature: Feature 016 FT-09 |
+| — | Credentials unreadable → no `✓` on any row | AC-12 | Cross-feature: Feature 016 FT-07 |
+| — | `*` marks active-marker divergence from current | AC-13 | Cross-feature: Feature 016 FT-06 |
+| — | Current = active → only `✓`; no `*` emitted | AC-14 | Cross-feature: Feature 016 FT-05 (implicit) |
+| — | Credentials unreadable → no `✓`; `*` still emitted for active | AC-15 | Cross-feature: Feature 016 FT-07 |
+| — | `format::json` uses `is_current` + `is_active`; no `active` field | AC-16 | Cross-feature: Feature 016 FT-08 |
+| — | `7d(Son)` populated when `seven_day_sonnet` is `Some`; `—` when `None` | AC-17 | IT-004 (JSON field); structural (table `—` default) |
 
 ### Test Case Index
 
@@ -249,7 +260,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `format_duration_secs(n)` for each input.
 - **Then:** Returns `"1d 1h"` (minutes dropped; 2 units shown), `"3h 19m"` (seconds dropped; 2 units shown), `"23m"` (1 unit — within the cap). No input produces a 3-component string.
 - **Exit:** n/a (unit test — string return assertion)
-- **Source fn:** `test_format_duration_secs_caps_at_two_units` (in `src/output.rs`)
+- **Source fn:** `dur_90060s_shows_1d_1h_capped` (in `tests/cli_adapter_test.rs` — module `format_duration`, D-11: 2-unit cap drops minutes)
 - **Source:** [009_token_usage.md AC-25](../../../docs/feature/009_token_usage.md)
 
 ---

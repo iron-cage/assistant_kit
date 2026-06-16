@@ -19,6 +19,7 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 | FT-11 | Exact local-part match wins over longer prefix matches | AC-11 |
 | FT-12 | `.account.renewal name::alice` (single prefix) resolves and writes `_renewal_at` | AC-12 |
 | FT-13 | `.account.renewal name::alice,bob` (comma-list) resolves each token independently | AC-13 |
+| FT-14 | Reversed arg order: `key::value` before bare name | AC-14 |
 
 ### Test Case Index
 

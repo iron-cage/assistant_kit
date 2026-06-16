@@ -58,6 +58,7 @@ These headers are never cached locally — no local file contains them. `stats-c
 |------|--------------|
 | [009_token_usage.md](009_token_usage.md) | Related: all-accounts live quota table (distinct from single-account limits) |
 | [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account selection pattern via `name::` |
+| [031_account_inspect.md](031_account_inspect.md) | Merged: `.account.inspect` now includes 5h/7d/Sonnet utilization via endpoint 001 (`GET /api/oauth/usage`) — superset of `.account.limits` data |
 
 ### Referenced Commands
 
@@ -77,4 +78,4 @@ These headers are never cached locally — no local file contains them. `stats-c
 |------|--------------|
 | `tests/cli/account_limits_test.rs` | Error-path coverage: not-found, no credentials, data unavailable, invalid chars, existing-account data-unavailable |
 | `tests/cli/account_limits_test.rs` — `lim_it1`, `lim_it3` | Automated live API tests: default text, JSON format |
-| [tests/docs/cli/command/011_account_limits.md](../../tests/docs/cli/command/011_account_limits.md) | Integration test case planning |
+| [tests/docs/cli/command/11_account_limits.md](../../tests/docs/cli/command/11_account_limits.md) | Integration test case planning |

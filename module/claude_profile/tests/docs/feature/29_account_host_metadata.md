@@ -64,7 +64,7 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 - **When:** `clp .account.save name::test@example.com` (no `host::` param)
 - **Then:** Exits 0. `{credential_store}/test@example.com.json` contains `"host": "@<hostname>"` (user portion empty, hostname always resolved). No error.
 - **Exit:** 0
-- **Source fn:** `as28_host_missing_user_hostname_stores_empty` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as28_host_missing_user_stores_at_resolved_hostname` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-03](../../../docs/feature/029_account_host_metadata.md)
 
 ---

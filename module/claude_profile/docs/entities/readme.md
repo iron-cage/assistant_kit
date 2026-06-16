@@ -4,7 +4,7 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 36 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 37 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](../cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 7 |
 | `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 56 |
@@ -66,6 +66,7 @@
 | feature | 034 | Explicit Session Model Override | [feature/034_explicit_session_model_override.md](../feature/034_explicit_session_model_override.md) |
 | feature | 035 | Dedicated Model Get/Set Command | [feature/035_model_command.md](../feature/035_model_command.md) |
 | feature | 036 | Account Ownership | [feature/036_account_ownership.md](../feature/036_account_ownership.md) |
+| feature | 037 | Accounts/Usage Param Unification | [feature/037_accounts_usage_param_unification.md](../feature/037_accounts_usage_param_unification.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](../cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](../cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](../cli/003_env_param.md) |

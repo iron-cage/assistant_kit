@@ -13,7 +13,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | File | Responsibility |
 |------|----------------|
-| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 36 feature docs |
+| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 37 feature docs |
 | 01_account_store_init.md | FT cases for Feature 001 — Account Store Initialization |
 | 02_account_save.md | FT cases for Feature 002 — Save Account |
 | 03_account_list.md | FT cases for Feature 003 — Accounts |
@@ -57,7 +57,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 |---------|------|-------|--------|
 | doc_structure (collection) | [00_doc_structure.md](00_doc_structure.md) | DT-01 … DT-07 | ✅ |
 | 001_account_store_init | [001_account_store_init.md](01_account_store_init.md) | FT-01 … FT-04 | ✅ |
-| 002_account_save | [002_account_save.md](02_account_save.md) | FT-01 … FT-12 | ✅ |
+| 002_account_save | [002_account_save.md](02_account_save.md) | FT-01 … FT-16 | ✅ |
 | 003_account_list | [003_account_list.md](03_account_list.md) | FT-01 … FT-19 | ✅ |
 | 004_account_use | [004_account_use.md](04_account_use.md) | FT-01 … FT-11 | ✅ |
 | 005_account_delete | [005_account_delete.md](05_account_delete.md) | FT-01 … FT-07 | ✅ |
@@ -72,10 +72,10 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 014_rich_account_metadata | [014_rich_account_metadata.md](14_rich_account_metadata.md) | FT-01 … FT-12 | ✅ |
 | 015_name_shortcut_syntax | [015_name_shortcut_syntax.md](15_name_shortcut_syntax.md) | FT-01 … FT-14 | ✅ |
 | 016_current_account_awareness | [016_current_account_awareness.md](16_current_account_awareness.md) | FT-01 … FT-11 | ✅ |
-| 017_token_refresh | [017_token_refresh.md](17_token_refresh.md) | FT-01 … FT-17 | ✅ |
+| 017_token_refresh | [017_token_refresh.md](17_token_refresh.md) | FT-01 … FT-18 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](18_live_monitor.md) | FT-01 … FT-09 | ✅ |
 | 019_account_relogin | [019_account_relogin.md](19_account_relogin.md) | FT-01 … FT-11 | ✅ |
-| 020_usage_sort_strategies | [020_usage_sort_strategies.md](20_usage_sort_strategies.md) | FT-01 … FT-18 | ✅ |
+| 020_usage_sort_strategies | [020_usage_sort_strategies.md](20_usage_sort_strategies.md) | FT-01 … FT-20 | ✅ |
 | 021_extended_snapshot_fields | [021_extended_snapshot_fields.md](21_extended_snapshot_fields.md) | FT-01 … FT-09 | ✅ |
 | 022_org_identity_snapshot | [022_org_identity_snapshot.md](22_org_identity_snapshot.md) | FT-01 … FT-11 | ✅ |
 | 023_next_account_strategies | [023_next_account_strategies.md](23_next_account_strategies.md) | FT-01 … FT-19 | ✅ |
@@ -86,7 +86,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 028_usage_row_filtering | [028_usage_row_filtering.md](28_usage_row_filtering.md) | FT-01 … FT-17 | ✅ |
 | 029_account_host_metadata | [029_account_host_metadata.md](29_account_host_metadata.md) | FT-01 … FT-10 | ✅ |
 | 030_account_renewal_override | [030_account_renewal_override.md](30_account_renewal_override.md) | FT-01 … FT-15 | ✅ |
-| 031_account_inspect | [031_account_inspect.md](31_account_inspect.md) | FT-01 … FT-24 | ✅ |
+| 031_account_inspect | [031_account_inspect.md](31_account_inspect.md) | FT-01 … FT-31 | ✅ |
 | 032_account_assign | [032_account_assign.md](32_account_assign.md) | FT-01 … FT-13 | ✅ |
 | 033_quota_cache | [033_quota_cache.md](33_quota_cache.md) | FT-01 … FT-11 | ✅ |
 | 034_explicit_session_model_override | [034_explicit_session_model_override.md](34_explicit_session_model_override.md) | FT-01 … FT-11 | ✅ |

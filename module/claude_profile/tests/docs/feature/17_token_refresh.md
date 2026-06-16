@@ -23,6 +23,8 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-15 | `trace::1` propagated to `refresh_account_token`; lifecycle steps logged to stderr; no panic | AC-26 | test_apply_refresh_lifecycle_l010_trace_run_isolated_invoked_no_panic, art_some_paths_run_isolated_invoked_trace_no_panic |
 | FT-16 | `expires_at_ms` from `expiresAt` field when JWT decode returns `None` (opaque token) | AC-25 | test_parse_u064_from_str_mre_bug170_extracts_expires_at, test_jwt_exp_ms_mre_bug170_opaque_returns_none |
 | FT-17 | No `switch_account` in `apply_refresh`; `_active` unchanged confirms no restore occurred | AC-28 | test_apply_refresh_mre_bug208_restore_trace_emitted |
+| FT-18 | After refresh re-fetch succeeds, `aq.account` re-populated via `fetch_oauth_account()` | AC-27 | mre_bug_171_account_populated_after_refresh |
+| FT-13+ | `apply_refresh` does not write `~/.claude/.credentials.json`; file unchanged after cycle | AC-29 | (structural — FT-06/AC-20 mechanism + FT-13/FT-17 verification) |
 
 ### Test Case Index
 
@@ -45,8 +47,9 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-15 | `trace::1` propagates to `refresh_account_token`; lifecycle steps logged; no panic | AC-26 | Trace Propagation |
 | FT-16 | Post-refresh `expires_at_ms` from `expiresAt` field for opaque `sk-ant-oat01-*` token | AC-25 | JWT Expiry (Opaque) |
 | FT-17 | No `switch_account` in `apply_refresh`; `_active` unchanged confirms no restore occurred | AC-28 | Restore Absent |
+| FT-18 | After refresh, `aq.account` re-populated via `fetch_oauth_account(new_token)` | AC-27 | BUG-171 MRE |
 
-**Total:** 17 FT cases
+**Total:** 18 FT cases
 
 ---
 
@@ -237,3 +240,15 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Source fn:** `test_apply_refresh_mre_bug208_restore_trace_emitted` (in `src/usage/refresh_tests.rs`)
 - **Note:** Fix for BUG-211 — snapshot+restore removed from `apply_refresh`. Previous BUG-208 fix (restore trace instrumentation) is superseded: the entire restore block is gone, so there is no restore line to emit.
 - **Source:** [017_token_refresh.md AC-28](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-18: After refresh, `aq.account` re-populated via `fetch_oauth_account(new_token)` (BUG-171 MRE)
+
+- **Given:** `apply_refresh()` has successfully re-fetched quota for one account (i.e., `account_quota.result` transitioned from `Err(auth_error)` to `Ok(quota_data)`).
+- **When:** The `Fix(BUG-171)` code path runs: `if let Ok( acct ) = claude_quota::fetch_oauth_account( &token ) { aq.account = Some( acct ); }`.
+- **Then:** `account_quota.account` is `Some(...)` — `~Renews` and `Sub` columns show current data for the refreshed account, not stale `?`. If `fetch_oauth_account` fails, the original `aq.account` value is preserved (non-aborting).
+- **Exit:** n/a (structural — verifies `Fix(BUG-171)` presence in production code)
+- **Source fn:** `mre_bug_171_account_populated_after_refresh` (in `tests/cli/usage_test.rs`)
+- **Note:** BUG-171 fix — before fix, `aq.account` remained `None` after refresh because the initial fetch used the expired token and the retry path never re-populated account data.
+- **Source:** [017_token_refresh.md AC-27](../../../docs/feature/017_token_refresh.md)

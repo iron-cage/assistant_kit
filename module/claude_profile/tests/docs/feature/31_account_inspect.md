@@ -6,14 +6,14 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 
 | FT | Criterion | AC |
 |----|-----------|-----|
-| FT-01 | Active account shows identity fields from endpoint 001 | AC-01 |
+| FT-01 | Active account shows identity fields from endpoint 002 | AC-01 |
 | FT-02 | All memberships shown with index, billing_type, has_max, capabilities | AC-02 |
 | FT-03 | Multi-membership: selected marker on highest-priority membership | AC-03 |
 | FT-04 | Single-membership: no selected marker | AC-04 |
 | FT-05 | Org fields shown from endpoint 005 | AC-05 |
 | FT-06 | Billing and Has Max taken from selected membership (not index 0) | AC-06 |
 | FT-07 | Endpoint 002 failure falls back to snapshot for Billing/Has Max | AC-07 |
-| FT-08 | Endpoint 001 failure falls back to snapshot for Tagged ID/UUID | AC-08 |
+| FT-08 | Endpoint 002 failure falls back to snapshot for Tagged ID/UUID | AC-08 |
 | FT-09 | Endpoint 005 failure falls back to snapshot for org fields | AC-09 |
 | FT-10 | refresh::1 (default): locally-expired token triggers refresh attempt | AC-10 |
 | FT-11 | refresh::0: locally-expired token NOT refreshed; all endpoints get stale token | AC-11 |
@@ -30,19 +30,26 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 | FT-22 | Malformed credentials JSON (missing `oauthAccount`) shows unknown status, exits 0 | AC-19 |
 | FT-23 | `format` parameter is case-sensitive — uppercase `JSON` rejected, exits 1 | AC-13 |
 | FT-24 | Token with `expiresAt=0` (Unix epoch) shows status "expired", exits 0 | AC-01 |
+| FT-25 | Name and Email fields shown from endpoint 002 | AC-20 |
+| FT-26 | Name field omitted when full_name and display_name are empty | AC-20 |
+| FT-27 | Capabilities and Tier fields from selected membership | AC-21 |
+| FT-28 | Usage data shown when endpoint 001 available | AC-22 |
+| FT-29 | Usage section omitted when endpoint 001 unavailable | AC-23 |
+| FT-30 | JSON output includes usage and identity extension fields | AC-24 |
+| FT-31 | Identity fields sourced from endpoint 002, not fabricated userinfo (BUG-295) | AC-25 |
 
 ### Test Case Index
 
 | ID | Test Name | AC | Category |
 |----|-----------|-----|----------|
-| FT-01 | Active account shows Account, Status, Tagged ID, UUID from endpoint 001 | AC-01 | Identity |
+| FT-01 | Active account shows Account, Status, Tagged ID, UUID from endpoint 002 | AC-01 | Identity |
 | FT-02 | All memberships shown with index, billing_type, has_max, capabilities | AC-02 | Memberships |
 | FT-03 | Multi-membership selected marker on stripe_subscription+claude_max membership | AC-03 | Memberships |
 | FT-04 | Single-membership shows no selected marker | AC-04 | Memberships |
 | FT-05 | Org, Org UUID, Org Role, Workspace fields from endpoint 005 | AC-05 | Org Identity |
 | FT-06 | Billing and Has Max from priority-selected membership, not memberships[0] | AC-06 | Selection Priority |
 | FT-07 | Endpoint 002 failure: Memberships shows error; Billing falls back with (snapshot) | AC-07 | Endpoint Fallback |
-| FT-08 | Endpoint 001 failure: Tagged ID and UUID fall back with (snapshot) | AC-08 | Endpoint Fallback |
+| FT-08 | Endpoint 002 failure: Tagged ID and UUID fall back with (snapshot) | AC-08 | Endpoint Fallback |
 | FT-09 | Endpoint 005 failure: org fields fall back with (snapshot) | AC-09 | Endpoint Fallback |
 | FT-10 | Locally-expired token with refresh::1 triggers refresh_account_token() | AC-10 | Token Refresh |
 | FT-11 | Locally-expired token with refresh::0: all endpoints fail; full snapshot fallback | AC-11 | Token Refresh |
@@ -59,18 +66,25 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 | FT-22 | Malformed credentials JSON (missing `oauthAccount`) shows unknown status, exits 0 | AC-19 | Error Handling |
 | FT-23 | `format` parameter is case-sensitive — uppercase `JSON` rejected, exits 1 | AC-13 | Format |
 | FT-24 | Token with `expiresAt=0` (Unix epoch) shows status "expired", exits 0 | AC-01 | Status |
+| FT-25 | Name and Email from endpoint 002 with differing full_name/display_name | AC-20 | Identity |
+| FT-26 | Name field omitted when full_name and display_name empty | AC-20 | Identity |
+| FT-27 | Capabilities and Tier from selected membership | AC-21 | Subscription |
+| FT-28 | Usage data (5h/7d/Sonnet) shown when endpoint 001 available | AC-22 | Usage |
+| FT-29 | Usage section omitted when endpoint 001 unavailable | AC-23 | Usage |
+| FT-30 | JSON includes email, name, capabilities, tier, usage fields | AC-24 | JSON Format |
+| FT-31 | Identity from endpoint 002, not fabricated userinfo (BUG-295) | AC-25 | Identity |
 
-**Total:** 24 FT cases
+**Total:** 31 FT cases
 
 ---
 
-### FT-01: Active account shows Account, Status, Tagged ID, UUID from endpoint 001
+### FT-01: Active account shows Account, Status, Tagged ID, UUID from endpoint 002
 
-- **Given:** An active account `alice@acme.com` with a valid access token (not locally expired); endpoint 001 returns `taggedId: "user_01abc"`, `uuid: "aaaa-bbbb"`.
+- **Given:** An active account `alice@acme.com` with a valid access token (not locally expired); endpoint 002 returns `tagged_id: "user_01abc"`, `uuid: "aaaa-bbbb"`.
 - **When:** `clp .account.inspect` (no name:: — uses active account)
 - **Then:** Output contains `Account: alice@acme.com`, `Status: 🟢 valid (expires in ...)`; `Tagged ID: user_01abc`; `UUID: aaaa-bbbb`. Exit 0.
 - **Exit:** 0
-- **Source fn:** `lim_it_ai14_identity_fields_from_endpoint_001`
+- **Source fn:** `lim_it_ai14_identity_fields_from_endpoint_002`
 - **Source:** [031_account_inspect.md AC-01](../../../docs/feature/031_account_inspect.md)
 
 ---
@@ -141,11 +155,11 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 
 ---
 
-### FT-08: Endpoint 001 failure: Tagged ID and UUID fall back with (snapshot)
+### FT-08: Endpoint 002 failure: Tagged ID and UUID fall back with (snapshot)
 
-- **Given:** An account with a valid token; endpoint 001 returns HTTP 500; `{name}.json` snapshot contains `taggedId: "user_01abc"` and `uuid: "aaaa"`.
+- **Given:** An account with a valid token; endpoint 002 returns HTTP 500; `{name}.json` snapshot contains `tagged_id: "user_01abc"` and `uuid: "aaaa"`.
 - **When:** `clp .account.inspect`
-- **Then:** `Tagged ID: user_01abc (snapshot)`; `UUID: aaaa (snapshot)`. Other fields (from endpoints 002 and 005) show live data. Exit 0.
+- **Then:** `Tagged ID: user_01abc (snapshot)`; `UUID: aaaa (snapshot)`. Other fields (from endpoints 005 and 001) show live data. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ai09_snapshot_all_fields_when_no_token`
 - **Source:** [031_account_inspect.md AC-08](../../../docs/feature/031_account_inspect.md)
@@ -335,3 +349,80 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Exit:** 0
 - **Source fn:** `ai31_expires_at_zero_shows_expired_status`
 - **Source:** [031_account_inspect.md AC-01](../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-25: Name and Email fields shown from endpoint 002
+
+- **Given:** An active account `alice@acme.com` with a valid access token; endpoint 002 returns `full_name: "Alice Smith"`, `display_name: "Alice"`, `email_address: "alice@acme.com"`.
+- **When:** `clp .account.inspect`
+- **Then:** Output contains `Name: Alice Smith (Alice)` and `Email: alice@acme.com`. Exit 0.
+- **Exit:** 0
+- **Source fn:** `lim_it_ai22_name_and_email_from_endpoint_002`, `ai33_name_email_from_snapshot`, `ai34_name_shows_display_name_when_different`
+- **Source:** [031_account_inspect.md AC-20](../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-26: Name field omitted when full_name and display_name are empty
+
+- **Given:** An active account whose endpoint 002 response has `full_name: ""`, `display_name: ""`, `email_address: "bob@test.com"`.
+- **When:** `clp .account.inspect`
+- **Then:** Output does NOT contain `Name:` line. `Email: bob@test.com` is shown. Exit 0.
+- **Exit:** 0
+- **Source fn:** `ai36_name_omitted_when_names_empty`
+- **Source:** [031_account_inspect.md AC-20](../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-27: Capabilities and Tier fields from selected membership
+
+- **Given:** An account whose endpoint 002 returns a membership with `capabilities: ["claude_max", "chat"]` and `rate_limit_tier: "default_claude_max_20x"`.
+- **When:** `clp .account.inspect`
+- **Then:** Output contains `Capabilities: [claude_max, chat]` and `Tier: default_claude_max_20x`. Exit 0.
+- **Exit:** 0
+- **Source fn:** `lim_it_ai23_capabilities_and_tier_from_membership`
+- **Source:** [031_account_inspect.md AC-21](../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-28: Usage data shown when endpoint 001 available
+
+- **Given:** An active account with a valid token; endpoint 001 (`GET /api/oauth/usage`) returns `utilization_5h: 0.45`, `utilization_7d: 0.33`, `sonnet_utilization_7d: 0.53`.
+- **When:** `clp .account.inspect`
+- **Then:** Output contains `Session (5h):` line with `45%`, `Weekly (7d):` line with `33%`, `Sonnet (7d):` line with `53%`. Exit 0.
+- **Exit:** 0
+- **Source fn:** `lim_it_ai24_usage_data_from_endpoint_001`
+- **Source:** [031_account_inspect.md AC-22](../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-29: Usage section omitted when endpoint 001 unavailable
+
+- **Given:** An active account with a valid token; endpoint 001 returns HTTP 500 or times out.
+- **When:** `clp .account.inspect`
+- **Then:** Output does NOT contain `Session (5h):` or `Weekly (7d):` or `Sonnet (7d):` lines. Other sections (identity, memberships, org) are unaffected. Exit 0.
+- **Exit:** 0
+- **Source fn:** `ai32_usage_absent_when_offline`
+- **Source:** [031_account_inspect.md AC-23](../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-30: JSON output includes usage and identity extension fields
+
+- **Given:** An active account; all three endpoints succeed.
+- **When:** `clp .account.inspect format::json`
+- **Then:** JSON output contains `email_address`, `full_name`, `display_name`, `capabilities`, `rate_limit_tier`, `session_5h_pct`, `session_5h_reset_ts`, `weekly_7d_pct`, `weekly_7d_reset_ts`, `sonnet_7d_pct`, `sonnet_7d_reset_ts` fields. Exit 0.
+- **Exit:** 0
+- **Source fn:** `ai11_json_all_required_fields`
+- **Source:** [031_account_inspect.md AC-24](../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-31: Identity fields sourced from endpoint 002, not fabricated userinfo endpoint (BUG-295)
+
+- **Given:** An active account with a valid token; endpoint 002 (`GET /api/oauth/account`) returns `tagged_id`, `uuid`, `email_address`. The code does NOT call `/api/oauth/userinfo` (removed per BUG-295).
+- **When:** `clp .account.inspect`
+- **Then:** `Tagged ID:` and `UUID:` values match endpoint 002 response. No HTTP request is made to `/api/oauth/userinfo`. Exit 0.
+- **Exit:** 0
+- **Source fn:** `ai35_no_userinfo_endpoint_reference`, `lim_it_ai14_identity_fields_from_endpoint_002`
+- **Source:** [031_account_inspect.md AC-25](../../../docs/feature/031_account_inspect.md)

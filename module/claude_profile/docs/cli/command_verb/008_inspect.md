@@ -1,6 +1,6 @@
 # Verb :: inspect
 
-Performs a live multi-endpoint identity and subscription diagnostic for a named account. Fetches data from three API endpoints (`fetch_userinfo()`, `fetch_memberships()`, `fetch_roles()`), consolidates the results, and reports identity, subscription tier, billing type, membership list, and capabilities. Does not modify local state unless `refresh::1` triggers a token refresh subprocess.
+Performs a unified live account diagnostic — identity, subscription, org, and quota utilization for a named account. Fetches data from three API endpoints (`GET /api/oauth/account`, `GET /api/oauth/claude_cli/roles`, `GET /api/oauth/usage`), consolidates the results, and reports identity fields (tagged_id, uuid, email, name), subscription tier, billing type, membership list, capabilities, rate-limit tier, and 5h/7d/Sonnet quota utilization with reset countdowns. Does not modify local state unless `refresh::1` triggers a token refresh subprocess.
 
 ### Nouns
 
@@ -16,17 +16,17 @@ Performs a live multi-endpoint identity and subscription diagnostic for a named 
 - `$HOME` environment variable set
 
 **Post-conditions:**
-- Identity, subscription, billing, membership, and capability data reported
+- Identity, subscription, billing, membership, capability, and quota utilization data reported
 - No local files written or modified (unless `refresh::1` and token expired)
 
 **Side effects:**
-- Makes HTTP requests to endpoints 001, 002, and 005
+- Makes HTTP requests to endpoints 002, 005, and 001
 - If `refresh::1` and token is expired, isolated subprocess attempts token refresh before fetching
 - No persistent state changes from the diagnostic reads themselves
 
 ### Idempotency
 
-**Yes.** Pure diagnostic read across three live API endpoints. Repeated calls return current API state; no side effects accumulate.
+**Yes.** Pure diagnostic read across three live API endpoints (002, 005, 001). Repeated calls return current API state; no side effects accumulate.
 
 ### Common Parameters
 
@@ -49,7 +49,8 @@ Performs a live multi-endpoint identity and subscription diagnostic for a named 
 
 | File | Relationship |
 |------|-------------|
-| [feature/031_account_inspect.md](../../feature/031_account_inspect.md) | Multi-endpoint inspection with membership selection priority |
+| [feature/031_account_inspect.md](../../feature/031_account_inspect.md) | Unified account diagnostic — identity, subscription, org, and quota utilization |
+| [feature/013_account_limits.md](../../feature/013_account_limits.md) | Rate-limit utilization (merged — inspect now includes quota data from endpoint 001) |
 | [feature/017_token_refresh.md](../../feature/017_token_refresh.md) | Token refresh via isolated subprocess (when `refresh::1`) |
 
 ### Referenced Commands

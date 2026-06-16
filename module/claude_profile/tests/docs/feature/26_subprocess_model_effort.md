@@ -159,7 +159,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_effort(&IsolatedModel::Specific("claude-sonnet-4-6"), "auto")`
 - **Then:** Returns `Some("low")`. The arg slice prepended before `["--print", "."]` contains `["--effort", "low"]`. `low` prevents extended thinking which would cause isolated subprocess timeouts.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_effort_auto_sonnet_path` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it_effort_auto_uniform_low` (in `src/usage/subprocess.rs` — unified test covering both Sonnet and Opus paths)
 - **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -170,7 +170,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-4-6"), "auto")`
 - **Then:** Returns `Some("low")`. The arg slice contains `["--effort", "low"]`. Same as FT-08: `effort::auto` always produces `low` regardless of whether the model is Sonnet or Opus.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_effort_auto_opus_path` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it_effort_auto_uniform_low` (in `src/usage/subprocess.rs` — unified test covering both Sonnet and Opus paths)
 - **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -214,7 +214,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `grep -n "resolve_model\|resolve_effort" src/usage/subprocess.rs`
 - **Then:** Both call sites are present; at least 2 hits for each function.
 - **Exit:** n/a (structural test)
-- **Source fn:** `it_imodel_and_effort_both_paths_structural` (in `tests/cli/usage_test.rs`)
+- **Source fn:** TBD (structural grep test not yet implemented)
 - **Source:** [feature/026_subprocess_model_effort.md AC-08](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -226,7 +226,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When-B:** `clp .usage imodel::opus effort::max format::json`
 - **Then-A and Then-B:** Both produce JSON arrays with identical schema. `imodel::` and `effort::` affect only subprocess invocation, not output rendering.
 - **Exit:** 0 both cases
-- **Source fn:** `it_imodel_effort_json_format_unaffected` (in `tests/cli/usage_test.rs`)
+- **Source fn:** TBD (JSON format invariance test not yet implemented)
 - **Source:** [feature/026_subprocess_model_effort.md AC-09](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---

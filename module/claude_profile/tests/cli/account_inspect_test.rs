@@ -4,11 +4,11 @@
 //!
 //! ## Scope
 //!
-//! Fixture-based tests (ai01–ai13) run entirely offline — credentials lack
+//! Fixture-based tests (ai01–ai36) run entirely offline — credentials lack
 //! `accessToken` so all three endpoint calls return "no token" immediately.
 //! No network access required.
 //!
-//! Live tests (names contain `lim_it`, ai14–ai21) require a real Anthropic
+//! Live tests (names contain `lim_it`, ai14–ai24) require a real Anthropic
 //! OAuth access token. They are excluded from Docker CI by the nextest default
 //! filter `!test(lim_it)` in `.config/nextest.toml`. They skip automatically
 //! when no token is present or the API is rate-limited.
@@ -44,7 +44,12 @@
 //! | ai29 | `ai29_malformed_credentials_json_shows_unknown_status` | AC-19 | Status | P | no |
 //! | ai30 | `ai30_format_case_sensitive_uppercase_exits_1` | AC-13 | Format | N | no |
 //! | ai31 | `ai31_expires_at_zero_shows_expired_status` | AC-01 | Status | P | no |
-//! | ai14 | `lim_it_ai14_identity_fields_from_endpoint_001` | AC-01 | Identity | P | yes |
+//! | ai32 | `ai32_usage_absent_when_offline` | AC-23 | Usage | N | no |
+//! | ai33 | `ai33_name_email_from_snapshot` | AC-20 | Identity | P | no |
+//! | ai34 | `ai34_name_shows_display_name_when_different` | AC-20 | Identity | P | no |
+//! | ai35 | `ai35_no_userinfo_endpoint_reference` | AC-25 | Structural | P | no |
+//! | ai36 | `ai36_name_omitted_when_names_empty` | AC-20 | Identity | N | no |
+//! | ai14 | `lim_it_ai14_identity_fields_from_endpoint_002` | AC-01 | Identity | P | yes |
 //! | ai15 | `lim_it_ai15_memberships_shown_with_count` | AC-02 | Memberships | P | yes |
 //! | ai16 | `lim_it_ai16_selected_marker_multi_membership` | AC-03,04 | Memberships | P | yes |
 //! | ai17 | `lim_it_ai17_org_fields_from_endpoint_005` | AC-05 | Org Identity | P | yes |
@@ -52,6 +57,9 @@
 //! | ai19 | `lim_it_ai19_valid_token_live_data_source_json` | AC-01,13 | JSON | P | yes |
 //! | ai20 | `lim_it_ai20_refresh_attempted_on_expired_token` | AC-10 | Refresh | P | yes |
 //! | ai21 | `lim_it_ai21_trace_endpoint_lines_on_live_account` | AC-14 | Trace | P | yes |
+//! | ai22 | `lim_it_ai22_name_and_email_from_endpoint_002` | AC-20 | Identity | P | yes |
+//! | ai23 | `lim_it_ai23_capabilities_and_tier_from_membership` | AC-21 | Subscription | P | yes |
+//! | ai24 | `lim_it_ai24_usage_data_from_endpoint_001` | AC-22 | Usage | P | yes |
 
 use crate::cli_runner::{
   run_cs_with_env,
@@ -72,22 +80,27 @@ fn credential_store( home : &std::path::Path ) -> std::path::PathBuf
 
 /// Write `{credential_store}/{name}.json` with all inspect-relevant fields.
 ///
-/// Combines `billingType`, `taggedId`, `uuid`, and `capabilities` in one file,
-/// which none of the standard helpers provide in combination.
+/// Combines `billingType`, `taggedId`, `uuid`, `emailAddress`, `fullName`,
+/// `displayName`, `capabilities`, and `rateLimitTier` in one file, which none
+/// of the standard helpers provide in combination.
+#[ allow( clippy::too_many_arguments ) ]
 fn write_inspect_claude_json(
-  home      : &std::path::Path,
-  name      : &str,
-  billing   : &str,
-  tagged_id : &str,
-  uuid      : &str,
-  has_max   : bool,
+  home            : &std::path::Path,
+  name            : &str,
+  billing         : &str,
+  tagged_id       : &str,
+  uuid            : &str,
+  has_max         : bool,
+  full_name       : &str,
+  display_name    : &str,
+  rate_limit_tier : &str,
 )
 {
   let store   = credential_store( home );
   std::fs::create_dir_all( &store ).unwrap();
   let caps    = if has_max { "[\"claude_max\",\"chat\"]" } else { "[\"chat\"]" };
   let content = format!(
-    "{{\"oauthAccount\":{{\"billingType\":\"{billing}\",\"taggedId\":\"{tagged_id}\",\"uuid\":\"{uuid}\",\"emailAddress\":\"{name}\",\"capabilities\":{caps}}}}}",
+    "{{\"oauthAccount\":{{\"billingType\":\"{billing}\",\"taggedId\":\"{tagged_id}\",\"uuid\":\"{uuid}\",\"emailAddress\":\"{name}\",\"fullName\":\"{full_name}\",\"displayName\":\"{display_name}\",\"capabilities\":{caps},\"rateLimitTier\":\"{rate_limit_tier}\"}}}}",
   );
   std::fs::write( store.join( format!( "{name}.json" ) ), content ).unwrap();
 }
@@ -243,7 +256,7 @@ fn ai09_snapshot_all_fields_when_no_token()
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", PAST_MS, false );
-  write_inspect_claude_json( dir.path(), "alice@acme.com", "stripe_subscription", "user_01abc", "aaaa-bbbb", true );
+  write_inspect_claude_json( dir.path(), "alice@acme.com", "stripe_subscription", "user_01abc", "aaaa-bbbb", true, "Alice", "Alice", "default" );
   write_account_roles_json( dir.path(), "alice@acme.com", "org-uuid-1", "alice's Org", "admin" );
 
   let out   = run_inspect( home, &[ "name::alice@acme.com", "refresh::0" ] );
@@ -291,8 +304,14 @@ fn ai11_json_all_required_fields()
 
   for field in &[
     "\"account\"", "\"status\"", "\"expires_in_secs\"",
-    "\"tagged_id\"", "\"uuid\"", "\"memberships\"",
+    "\"tagged_id\"", "\"uuid\"",
+    "\"email_address\"", "\"full_name\"", "\"display_name\"",
+    "\"memberships\"",
     "\"billing_type\"", "\"has_max\"",
+    "\"capabilities\"", "\"rate_limit_tier\"",
+    "\"session_5h_pct\"", "\"session_5h_reset_ts\"",
+    "\"weekly_7d_pct\"", "\"weekly_7d_reset_ts\"",
+    "\"sonnet_7d_pct\"", "\"sonnet_7d_reset_ts\"",
     "\"organization_name\"", "\"organization_uuid\"",
     "\"organization_role\"", "\"workspace_uuid\"",
     "\"workspace_name\"", "\"data_source\"",
@@ -637,6 +656,125 @@ fn ai31_expires_at_zero_shows_expired_status()
   );
 }
 
+#[ test ]
+/// AC-23: No usage lines appear when endpoint 001 is unavailable (no token → offline).
+///
+/// All endpoints fail with "no token". Usage section (Session/Weekly/Sonnet) must be
+/// entirely absent — not shown as N/A. Other sections (Memberships, Billing) may show
+/// snapshot fallback, but usage has no snapshot.
+///
+/// Source: `tests/docs/feature/031_account_inspect.md § FT-29`
+fn ai32_usage_absent_when_offline()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", PAST_MS, false );
+  let out   = run_inspect( home, &[ "name::alice@acme.com", "refresh::0" ] );
+  assert_exit( &out, 0 );
+  let text  = stdout( &out );
+  assert!(
+    !text.contains( "Session (5h):" ),
+    "Session (5h): must be absent when endpoint 001 unavailable, got:\n{text}",
+  );
+  assert!(
+    !text.contains( "Weekly (7d):" ),
+    "Weekly (7d): must be absent when endpoint 001 unavailable, got:\n{text}",
+  );
+  assert!(
+    !text.contains( "Sonnet (7d):" ),
+    "Sonnet (7d): must be absent when endpoint 001 unavailable, got:\n{text}",
+  );
+}
+
+#[ test ]
+/// AC-20: Name and Email from snapshot show `(snapshot)` suffix in text output.
+///
+/// Credentials lack `accessToken` so endpoint 002 fails; `{name}.json` provides
+/// `fullName`, `displayName`, and `emailAddress` as snapshot fallback.
+///
+/// Source: `tests/docs/feature/031_account_inspect.md § FT-25`
+fn ai33_name_email_from_snapshot()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", PAST_MS, false );
+  write_inspect_claude_json( dir.path(), "alice@acme.com", "stripe_subscription", "user_01abc", "aaaa-bbbb", true, "Alice Smith", "Alice", "default" );
+  let out   = run_inspect( home, &[ "name::alice@acme.com", "refresh::0" ] );
+  assert_exit( &out, 0 );
+  let text  = stdout( &out );
+  assert!(
+    text.contains( "Name:" ) && text.contains( "Alice Smith" ) && text.contains( "(snapshot)" ),
+    "Name: must show full_name with (snapshot) suffix, got:\n{text}",
+  );
+  assert!(
+    text.contains( "Email:" ) && text.contains( "alice@acme.com" ) && text.contains( "(snapshot)" ),
+    "Email: must show email with (snapshot) suffix, got:\n{text}",
+  );
+}
+
+#[ test ]
+/// AC-20: When `full_name` and `display_name` differ, both are shown as `"FullName (DisplayName)"`.
+///
+/// Source: `tests/docs/feature/031_account_inspect.md § FT-25`
+fn ai34_name_shows_display_name_when_different()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  write_account( dir.path(), "bob@test.com", "pro", "standard", PAST_MS, false );
+  write_inspect_claude_json( dir.path(), "bob@test.com", "stripe_subscription", "user_02xyz", "cccc-dddd", false, "Robert Smith", "Bob", "default" );
+  let out   = run_inspect( home, &[ "name::bob@test.com", "refresh::0" ] );
+  assert_exit( &out, 0 );
+  let text  = stdout( &out );
+  assert!(
+    text.contains( "Robert Smith (Bob)" ),
+    "Name: must show 'FullName (DisplayName)' when they differ, got:\n{text}",
+  );
+}
+
+#[ test ]
+/// AC-25/BUG-295: Source code contains no reference to the fabricated `userinfo` endpoint.
+///
+/// Structural assertion: `account_inspect.rs` must not contain the string "userinfo"
+/// anywhere — the fabricated `/api/oauth/userinfo` endpoint was removed per BUG-295.
+///
+/// Source: `tests/docs/feature/031_account_inspect.md § FT-31`
+fn ai35_no_userinfo_endpoint_reference()
+{
+  let source = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) )
+    .join( "src" ).join( "commands" ).join( "account_inspect.rs" );
+  let content = std::fs::read_to_string( &source )
+    .unwrap_or_else( | e | panic!( "cannot read {}: {e}", source.display() ) );
+  assert!(
+    !content.contains( "userinfo" ),
+    "account_inspect.rs must not reference 'userinfo' (BUG-295: fabricated endpoint removed)",
+  );
+}
+
+#[ test ]
+/// AC-20: Name line omitted when both `full_name` and `display_name` are empty.
+///
+/// Email is still shown. Only the Name: line is suppressed.
+///
+/// Source: `tests/docs/feature/031_account_inspect.md § FT-26`
+fn ai36_name_omitted_when_names_empty()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  write_account( dir.path(), "bob@test.com", "pro", "standard", PAST_MS, false );
+  write_inspect_claude_json( dir.path(), "bob@test.com", "stripe_subscription", "user_02xyz", "cccc-dddd", false, "", "", "default" );
+  let out   = run_inspect( home, &[ "name::bob@test.com", "refresh::0" ] );
+  assert_exit( &out, 0 );
+  let text  = stdout( &out );
+  assert!(
+    !text.contains( "Name:" ),
+    "Name: must be absent when full_name and display_name are empty, got:\n{text}",
+  );
+  assert!(
+    text.contains( "Email:" ),
+    "Email: must still appear even when names are empty, got:\n{text}",
+  );
+}
+
 // ── AI lim_it: live-endpoint tests ───────────────────────────────────────────
 //
 // These tests require a real Anthropic OAuth access token from the host HOME.
@@ -645,10 +783,10 @@ fn ai31_expires_at_zero_shows_expired_status()
 // returns without asserting if no token is available or the API is rate-limited.
 
 #[ test ]
-/// AC-01: Identity fields (Tagged ID, UUID) come from endpoint 001 with a live token.
+/// AC-01: Identity fields (Tagged ID, UUID) come from endpoint 002 with a live token.
 ///
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-01`
-fn lim_it_ai14_identity_fields_from_endpoint_001()
+fn lim_it_ai14_identity_fields_from_endpoint_002()
 {
   let Some( token ) = live_active_token() else { return; };
   if !require_live_api( "lim_it_ai14" ) { return; }
@@ -662,10 +800,10 @@ fn lim_it_ai14_identity_fields_from_endpoint_001()
   assert!( text.contains( "Status:" ),    "must show Status label, got:\n{text}" );
   assert!( text.contains( "Tagged ID:" ), "must show Tagged ID label, got:\n{text}" );
   assert!( text.contains( "UUID:" ),      "must show UUID label, got:\n{text}" );
-  // Endpoint 001 returned a real value — neither N/A nor (snapshot) suffix.
+  // Endpoint 002 returned a real value — neither N/A nor (snapshot) suffix.
   assert!(
     !text.contains( "Tagged ID: N/A" ),
-    "Tagged ID must not be N/A when endpoint 001 succeeds, got:\n{text}",
+    "Tagged ID must not be N/A when endpoint 002 succeeds, got:\n{text}",
   );
 }
 
@@ -843,10 +981,89 @@ fn lim_it_ai21_trace_endpoint_lines_on_live_account()
   let out  = run_inspect( home, &[ "trace::1" ] );
   assert_exit( &out, 0 );
   let err  = stderr( &out );
-  // Expect one [trace] line per endpoint (userinfo, subscriptions, roles).
+  // Expect one [trace] line per endpoint (account, roles, usage).
   let trace_count = err.lines().filter( | l | l.contains( "[trace]" ) ).count();
   assert!(
     trace_count >= 3,
     "trace::1 must emit at least 3 [trace] lines (one per endpoint), got {trace_count}:\n{err}",
+  );
+}
+
+#[ test ]
+/// AC-20: Name and Email fields shown from live endpoint 002 (not snapshot).
+///
+/// Source: `tests/docs/feature/031_account_inspect.md § FT-25`
+fn lim_it_ai22_name_and_email_from_endpoint_002()
+{
+  let Some( token ) = live_active_token() else { return; };
+  if !require_live_api( "lim_it_ai22" ) { return; }
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "live@test.com", &token, true );
+  let out  = run_inspect( home, &[] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // Email must be present from live endpoint (not snapshot).
+  assert!( text.contains( "Email:" ), "must show Email label from live endpoint, got:\n{text}" );
+  let email_line = text.lines().find( | l | l.contains( "Email:" ) ).unwrap();
+  assert!(
+    !email_line.contains( "(snapshot)" ),
+    "Email must not show (snapshot) with live endpoint 002, got:\n{text}",
+  );
+  // Name may or may not be present (depends on user profile), but if present, no (snapshot).
+  if let Some( name_line ) = text.lines().find( | l | l.contains( "Name:" ) )
+  {
+    assert!(
+      !name_line.contains( "(snapshot)" ),
+      "Name must not show (snapshot) with live endpoint 002, got:\n{text}",
+    );
+  }
+}
+
+#[ test ]
+/// AC-21: Capabilities and Tier fields from live selected membership.
+///
+/// Source: `tests/docs/feature/031_account_inspect.md § FT-27`
+fn lim_it_ai23_capabilities_and_tier_from_membership()
+{
+  let Some( token ) = live_active_token() else { return; };
+  if !require_live_api( "lim_it_ai23" ) { return; }
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "live@test.com", &token, true );
+  let out  = run_inspect( home, &[] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Capabilities:" ), "must show Capabilities label, got:\n{text}" );
+  let caps_line = text.lines().find( | l | l.contains( "Capabilities:" ) ).unwrap();
+  assert!(
+    caps_line.contains( '[' ),
+    "Capabilities must show array format, got: {caps_line}",
+  );
+  assert!( text.contains( "Tier:" ), "must show Tier label from live membership, got:\n{text}" );
+}
+
+#[ test ]
+/// AC-22: Usage data (Session/Weekly/Sonnet) shown when endpoint 001 returns utilization.
+///
+/// Source: `tests/docs/feature/031_account_inspect.md § FT-28`
+fn lim_it_ai24_usage_data_from_endpoint_001()
+{
+  let Some( token ) = live_active_token() else { return; };
+  if !require_live_api( "lim_it_ai24" ) { return; }
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "live@test.com", &token, true );
+  let out  = run_inspect( home, &[] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Session (5h):" ),
+    "must show Session (5h): with live usage data, got:\n{text}",
+  );
+  let session_line = text.lines().find( | l | l.contains( "Session (5h):" ) ).unwrap();
+  assert!(
+    session_line.chars().any( | c | c.is_ascii_digit() ),
+    "Session line must contain a percentage digit, got: {session_line}",
   );
 }

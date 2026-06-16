@@ -24,6 +24,9 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-16 | `sort::endurance` unqualified tiebreak by highest weekly when session quotas tied | AC-02 | Unit test |
 | FT-17 | `sort::next` delegates to active `next::` strategy; `→` winner appears at row 1 | AC-15 | Integration |
 | FT-18 | `sort::renew` alphabetical when all numeric sort keys tied (BUG-259) | AC-04 | Tiebreaker |
+| FT-19 | `sort::expires` sorts by `expires_at_ms` ascending; unknown expiry (0) placed last | AC-16 | Unit test |
+| FT-20 | `sort::renews` sorts by renewal timer ascending; no renewal data placed last | AC-17 | Unit test |
+| — | `sort::` + `live::1` stable within each cycle | AC-12 | Live-only (requires `live::1` + real credentials) |
 
 ### Test Case Index
 
@@ -47,8 +50,10 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-16 | sort::endurance unqualified tiebreak by weekly | AC-02 | Tiebreak |
 | FT-17 | sort::next delegates to active next:: strategy | AC-15 | Meta-Strategy |
 | FT-18 | sort::renew alphabetical tiebreaker when all numeric keys tied | AC-04 | Tiebreaker |
+| FT-19 | sort::expires ascending; unknown expiry last | AC-16 | Expires Sort |
+| FT-20 | sort::renews ascending; no renewal data last | AC-17 | Renews Sort |
 
-**Total:** 18 FT cases
+**Total:** 20 FT cases
 
 ---
 
@@ -262,3 +267,25 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Exit:** n/a (unit test — name assertion on `accounts[idx[0]].name`)
 - **Source fn:** ✅ `mre_bug259_sort_renew_alphabetical_when_all_keys_tied` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-04](../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### FT-19: `sort::expires` sorts by `expires_at_ms` ascending; unknown expiry placed last
+
+- **Given:** Three `AccountQuota` structs: `soon@test.com` (`expires_at_ms=1_700_000_000_000` — soonest), `later@test.com` (`expires_at_ms=1_800_000_000_000`), `unknown@test.com` (`expires_at_ms=0` — unknown).
+- **When:** `sort_indices(&accounts, SortStrategy::Expires, None, PreferStrategy::Any, 0)`
+- **Then:** Order: `soon@test.com` (soonest expiry), `later@test.com`, `unknown@test.com` (unknown = `u64::MAX`, placed last). Default `desc::0`.
+- **Exit:** n/a (unit test — index assertion)
+- **Source fn:** `test_sort_expires_ascending` (in `src/usage/sort_next_tests.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-16](../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### FT-20: `sort::renews` sorts by renewal timer ascending; no renewal data placed last
+
+- **Given:** Three `AccountQuota` structs: `soon_renew@test.com` (`renewal_at=now+3600s` — renews in 1h), `later_renew@test.com` (`renewal_at=now+86400s`), `no_renew@test.com` (no `renewal_at` — scores `u64::MAX`).
+- **When:** `sort_indices(&accounts, SortStrategy::Renews, None, PreferStrategy::Any, now)`
+- **Then:** Order: `soon_renew@test.com` (soonest renewal), `later_renew@test.com`, `no_renew@test.com` (no data, placed last). Default `desc::0`.
+- **Exit:** n/a (unit test — index assertion)
+- **Source fn:** `test_sort_renews_ascending` (in `src/usage/sort_next_tests.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-17](../../../docs/feature/020_usage_sort_strategies.md)

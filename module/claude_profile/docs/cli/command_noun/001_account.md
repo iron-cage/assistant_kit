@@ -71,7 +71,7 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | `.account.relogin` | TTY subprocess sequence: switch → spawn `claude` → detect credential change → save → restore |
 | `.account.rotate` | `account::auto_rotate()` — selects highest `expiresAt` among inactive accounts |
 | `.account.renewal` | `account::set_renewal_at()` — read-merge write to `{name}.json` `_renewal_at` key |
-| `.account.inspect` | Endpoints 001/002/005 — `fetch_userinfo()`, `fetch_memberships()`, `fetch_roles()` |
+| `.account.inspect` | Endpoints 002/005/001 — `fetch_oauth_account()`, `fetch_claude_cli_roles()`, `fetch_oauth_usage()` |
 | `.account.assign` | `account::write_active_marker()` — writes `_active_{machine}_{user}` file only |
 | `.account.unclaim` | `account::write_owner()` — writes `owner: ""` to `{name}.json` only |
 
@@ -101,13 +101,30 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
   "status": "valid",
   "expires_in_secs": 13920,
   "tagged_id": "user_01ABCdef",
-  "organization_uuid": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+  "uuid": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+  "email_address": "alice@acme.com",
+  "full_name": "Alice",
+  "display_name": "Alice",
+  "memberships": [
+    { "index": 0, "billing_type": "none", "has_max": false, "capabilities": ["chat"], "selected": false },
+    { "index": 1, "billing_type": "stripe_subscription", "has_max": true, "capabilities": ["claude_max", "chat"], "selected": true }
+  ],
   "billing_type": "stripe_subscription",
   "has_max": true,
-  "memberships": [
-    { "billing_type": "none", "has_max": false, "capabilities": ["chat"] },
-    { "billing_type": "stripe_subscription", "has_max": true, "capabilities": ["claude_max", "chat"] }
-  ]
+  "capabilities": ["claude_max", "chat"],
+  "rate_limit_tier": "default_claude_max_20x",
+  "session_5h_pct": 45,
+  "session_5h_reset_ts": 1750089000,
+  "weekly_7d_pct": 33,
+  "weekly_7d_reset_ts": 1750180000,
+  "sonnet_7d_pct": 53,
+  "sonnet_7d_reset_ts": 1750180000,
+  "organization_name": "alice@acme.com's Organization",
+  "organization_uuid": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+  "organization_role": "admin",
+  "workspace_uuid": "",
+  "workspace_name": "",
+  "data_source": "live"
 }
 ```
 

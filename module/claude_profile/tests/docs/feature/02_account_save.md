@@ -8,7 +8,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 |----|-----------|----|-------|
 | FT-01 | `clp .account.save name::alice@acme.com` exits 0 and creates credential file | AC-01 | Integration |
 | FT-02 | `dry::1` prints preview message; no file created | AC-04 | Integration |
-| FT-03 | `oauthAccount` + model snapshot created alongside credential file | AC-05 | Integration |
+| FT-03 | `oauthAccount` + model snapshot created alongside credential file | AC-05, AC-18 | Integration |
 | FT-04 | No `name::` with valid `_active` marker — name inferred, save succeeds | AC-08 | Integration (BUG-209) |
 | FT-05 | No `name::` with no `_active` marker — exits 1 with clear error | AC-09 | Integration (BUG-209) |
 | FT-06 | Active marker written after save — `.credentials.status` shows account | AC-10 | Integration |
@@ -18,6 +18,13 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 | FT-10 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | AC-16 | Name Inference / Regression |
 | FT-11 | Re-running `.account.save` preserves `_renewal_at` key (read-merge, not overwrite) | AC-17 | Read-Merge |
 | FT-12 | `.account.save` stamps `current_identity()` as `owner` in `{name}.json` | AC-19 | Ownership Stamp |
+| FT-13 | `name::` (empty) exits 1 with `account name must not be empty` | AC-02 | Validation |
+| FT-14 | `name::notanemail` (no `@`) exits 1 — `validate_name()` rejects before dry-run | AC-03 | Validation |
+| FT-15 | `~/.claude.json` absent — save succeeds; no `oauthAccount` snapshot written | AC-07 | Best-Effort |
+| FT-16 | `settings.json` absent — save succeeds; no `model` field written to `{name}.json` | AC-18 | Best-Effort |
+| — | Endpoint 005 success → org identity fields written to `{name}.json` | AC-12 | Live-only (requires real credentials + network) |
+| — | Endpoint 005 failure → no org identity; save still exits 0 | AC-13 | Structural (feature-gated; offline builds never call endpoint 005) |
+| — | Re-save overwrites org identity fields with fresh endpoint 005 response | AC-14 | Live-only (idempotency mechanism; structurally covered by FT-03) |
 
 ### Test Case Index
 
@@ -25,7 +32,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 |----|-----------|-----|----------|
 | FT-01 | Core save creates credential file | AC-01 | Basic Invocation |
 | FT-02 | dry::1 previews without writing | AC-04 | Dry Run |
-| FT-03 | `oauthAccount` + model snapshot created in `{name}.json` | AC-05 | Metadata Snapshot |
+| FT-03 | `oauthAccount` + model snapshot created in `{name}.json` | AC-05, AC-18 | Metadata Snapshot |
 | FT-04 | Name inferred from per-machine active marker | AC-08 | Name Inference |
 | FT-05 | Missing marker exits 1 with actionable error | AC-09 | Inference Failure |
 | FT-06 | Active marker written after save | AC-10 | Active Marker |
@@ -35,8 +42,12 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 | FT-10 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | AC-16 | Name Inference / Regression |
 | FT-11 | Re-running `.account.save` preserves `_renewal_at` (read-merge) | AC-17 | Read-Merge |
 | FT-12 | `.account.save` stamps `current_identity()` as owner in `{name}.json` | AC-19 | Ownership Stamp |
+| FT-13 | `name::` (empty) exits 1 | AC-02 | Validation |
+| FT-14 | `name::notanemail` (no `@`) exits 1 — validation before dry-run | AC-03 | Validation |
+| FT-15 | `~/.claude.json` absent — save succeeds, no `oauthAccount` snapshot | AC-07 | Best-Effort |
+| FT-16 | `settings.json` absent — save succeeds, no `model` field written | AC-18 | Best-Effort |
 
-**Total:** 12 FT cases
+**Total:** 16 FT cases
 
 ---
 
@@ -177,4 +188,48 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Source fn:** `ft12_save_stamps_owner` (in `tests/cli/account_mutations_test.rs`)
 - **Note:** AC-19 ownership stamp — `.account.save` always writes `current_identity()` as `owner` on interactive save. `.account.assign` does NOT touch the `owner` field.
 - **Source:** [feature/002_account_save.md AC-19](../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-13: `name::` (empty) exits 1 with `account name must not be empty`
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials.
+- **When:** `clp .account.save name::`
+- **Then:** Exits 1. stderr contains `account name must not be empty`. No credential file created.
+- **Exit:** 1
+- **Source fn:** `as06_save_empty_name_exits_1` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/002_account_save.md AC-02](../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-14: `name::notanemail` (no `@`) exits 1 — `validate_name()` rejects before dry-run
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials.
+- **When:** `clp .account.save name::not-an-email dry::1`
+- **Then:** Exits 1. stderr contains `not a valid email address`. The `[dry-run]` message is NOT printed — `validate_name()` fires before dry-run evaluation. No files created.
+- **Exit:** 1
+- **Source fn:** `as35_save_dry_run_rejects_invalid_name` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/002_account_save.md AC-03](../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-15: `~/.claude.json` absent — save succeeds; no `oauthAccount` snapshot written
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` does NOT exist (no `oauthAccount` data available).
+- **When:** `clp .account.save name::alice@acme.com`
+- **Then:** Exits 0. `{credential_store}/alice@acme.com.credentials.json` is created. `{credential_store}/alice@acme.com.json` is created but does NOT contain `oauthAccount` key (no source data).
+- **Exit:** 0
+- **Source fn:** `acc27_save_succeeds_without_claude_json` (in `tests/cli/accounts_test.rs`)
+- **Source:** [feature/002_account_save.md AC-07](../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-16: `settings.json` absent — save succeeds; no `model` field written to `{name}.json`
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` exists with `oauthAccount` data. `~/.claude/settings.json` does NOT exist (no model preference source).
+- **When:** `clp .account.save name::alice@acme.com`
+- **Then:** Exits 0. `{credential_store}/alice@acme.com.json` is created with `oauthAccount` content but no `model` field. Save still succeeds when model source is absent.
+- **Exit:** 0
+- **Source fn:** `acc28_save_succeeds_without_settings_json` (in `tests/cli/accounts_test.rs`)
+- **Source:** [feature/002_account_save.md AC-18](../../../docs/feature/002_account_save.md)
 

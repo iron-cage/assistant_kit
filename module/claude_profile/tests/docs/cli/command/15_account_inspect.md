@@ -1,6 +1,6 @@
 # Command :: 15. `.account.inspect` — Integration Tests
 
-Live diagnostic inspection of identity, subscription, and org fields for one account via endpoints 001, 002, and 005.
+Unified live account diagnostic — identity, subscription, org, and quota utilization for one account via endpoints 002 (account), 005 (roles), and 001 (usage).
 
 | # | Test | Conditions | Exit |
 |---|------|-----------|------|
@@ -16,3 +16,7 @@ Live diagnostic inspection of identity, subscription, and org fields for one acc
 | IT-10 | Prefix resolves to full account name | Account `alice@acme.com` in credential store; `name::alice`; output shows `Account: alice@acme.com` | 0 |
 | IT-11 | `format::json` membership array length matches text output count | Account with two memberships; `format::json | jq '.memberships | length'` returns `2` | 0 |
 | IT-12 | `refresh::1` (default) attempts token refresh when locally expired | Account with expired `expiresAt`; `refresh::1` (default); refresh subprocess spawned; output present | 0 |
+| IT-13 | Output includes `Name:` and `Email:` from endpoint 002 | Active account; endpoint 002 returns `full_name`, `display_name`, `email_address`; output contains `Name:` and `Email:` | 0 |
+| IT-14 | Output includes `Capabilities:` and `Tier:` from selected membership | Active account; endpoint 002 returns membership with capabilities and rate_limit_tier; output contains `Capabilities:` and `Tier:` | 0 |
+| IT-15 | Output includes usage data from endpoint 001 | Active account; endpoint 001 returns utilization; output contains `Session (5h):`, `Weekly (7d):`, `Sonnet (7d):` | 0 |
+| IT-16 | `format::json` includes extended fields | Active account; `format::json`; JSON contains `email_address`, `full_name`, `capabilities`, `rate_limit_tier`, `session_5h_pct`, `weekly_7d_pct`, `sonnet_7d_pct` | 0 |

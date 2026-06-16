@@ -7,6 +7,8 @@
 - **In Scope**: `.account.assign` command; `for::USER@MACHINE` parameter; sanitization rules for marker filename; dry-run; live usage block output when `name::` absent; marker write only (no credential copy, no `~/.claude.*` side effects, no `owner` field changes).
 - **Out of Scope**: Full credential rotation (→ 004_account_use.md); per-machine marker filename derivation (→ 025_per_machine_active_marker.md); account-save host display label (→ 029_account_host_metadata.md); credential file access control (enforcement is logical, not filesystem-level); ownership stamp (→ 036_account_ownership.md, managed by `.account.save`).
 
+> **CLI surface migration (Feature 037):** This feature's behavior is being absorbed into `.accounts` as `assign::` and `for::` parameters. The standalone `.account.assign` command will be removed. All acceptance criteria below remain valid — they apply via `clp .accounts assign::1 name::X` instead of `clp .account.assign name::X`. See [037_accounts_usage_param_unification.md](037_accounts_usage_param_unification.md).
+
 ### Design
 
 `.account.assign` writes (or overwrites) the per-machine active-account marker file for any host+user pair in the credential store, without performing a credential rotation or touching any `~/.claude.*` file.

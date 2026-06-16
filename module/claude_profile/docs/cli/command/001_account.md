@@ -589,7 +589,7 @@ clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
 
 ### Command :: 15. `.account.inspect`
 
-Live diagnostic inspection of identity, subscription, and org fields for one account. Calls endpoints 001 (userinfo), 002 (subscriptions/memberships), and 005 (roles) and renders all fields including ALL membership entries with a selection-priority indicator. Primary use case: diagnosing unexpected subscription display when an account has multiple memberships (see BUG-237 / feature 031).
+Unified live account diagnostic — identity, subscription, org, and quota utilization for one account. Calls endpoints 002 (`GET /api/oauth/account`), 005 (`GET /api/oauth/claude_cli/roles`), and 001 (`GET /api/oauth/usage`) and renders identity fields (tagged_id, uuid, email, name), ALL membership entries with a selection-priority indicator, capabilities, rate-limit tier, and 5h/7d/Sonnet quota utilization with reset countdowns. Primary use case: diagnosing account state and remaining quota (see BUG-237 / feature 031).
 
 -- **Parameters:** [`name::`](../param/001_name.md), [`refresh::`](../param/019_refresh.md), [`trace::`](../param/023_trace.md), [`format::`](../param/002_format.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid param) | 2 (runtime: account not found or credential store unreadable)
@@ -615,7 +615,7 @@ clp .account.inspect trace::1          # show [trace] endpoint calls to stderr
 **Algorithm (5 steps):**
 1. Resolve `name::` (omit → active account from `_active_{hostname}_{user}` marker); load credentials
 2. `(when refresh::1 + locally expired)` Call `refresh_account_token()` to obtain a fresh token
-3. Call endpoint 001 (`GET /api/oauth/userinfo`), endpoint 002 (`GET /api/oauth/claude_cli/memberships`), and endpoint 005 (`GET /api/oauth/claude_cli/roles`) — each independently; failure falls back to local snapshots with `(snapshot)` suffix per field
+3. Call endpoint 002 (`GET /api/oauth/account`), endpoint 005 (`GET /api/oauth/claude_cli/roles`), and endpoint 001 (`GET /api/oauth/usage`) — each independently; failure falls back to local snapshots with `(snapshot)` suffix per field (quota fields show `N/A` with no snapshot fallback)
 4. Apply membership selection priority: `billing_type=stripe_subscription + claude_max` > `billing_type=stripe_subscription` > `memberships[0]`
 5. Render all fields in requested `format::`
 
@@ -623,6 +623,8 @@ clp .account.inspect trace::1          # show [trace] endpoint calls to stderr
 
 ```
 Account:         alice@acme.com
+Name:            Alice (Alice)
+Email:           alice@acme.com
 Status:          🟢 valid (expires in 3h 52m)
 Tagged ID:       user_01abc...def
 UUID:            aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
@@ -633,6 +635,13 @@ Memberships:     2
 
 Billing:         stripe_subscription
 Has Max:         yes
+Capabilities:    [claude_max, chat]
+Tier:            default_claude_max_20x
+
+Session (5h):    45% consumed, resets in 12m
+Weekly (7d):     33% consumed, resets in 1d 5h
+Sonnet (7d):     53% consumed, resets in 1d 5h
+
 Org:             alice@acme.com's Organization
 Org UUID:        aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
 Org Role:        admin
@@ -670,16 +679,15 @@ clp .account.inspect format::json | jq '.memberships | length'
 ```
 
 **Notes:**
-- Endpoints 001, 002, and 005 are called independently. A failure on one endpoint falls back to the local snapshot from `{name}.json` with a `(snapshot)` suffix per field; other endpoints still contribute live data.
+- Endpoints 002, 005, and 001 are called independently. A failure on one endpoint falls back to the local snapshot from `{name}.json` with a `(snapshot)` suffix per field; quota fields (endpoint 001) have no snapshot fallback and are omitted when unavailable.
 - `refresh::1` (default) behaves identically to `.usage`'s `refresh::1`: calls `refresh_account_token()` once when `expiresAt` is locally expired; retries endpoint calls with the fresh token.
-- This command does NOT show quota data (5h/7d utilization) — use `.usage` for that.
 - See [feature/031_account_inspect.md](../../feature/031_account_inspect.md) for full design, graceful fallback semantics, and all acceptance criteria.
 
 ### Referenced Features
 
 | # | Feature | Role |
 |---|---------|------|
-| 1 | [Account Inspect](../../feature/031_account_inspect.md) | Multi-endpoint inspection with membership selection priority |
+| 1 | [Account Inspect](../../feature/031_account_inspect.md) | Unified account diagnostic — identity, subscription, org, and quota utilization |
 
 ### Referenced User Stories
 

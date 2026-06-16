@@ -476,9 +476,17 @@ mod tests
     // billing_type="none" (cancelled) → predicate fires → override to Err("no subscription").
     let cancelled = Some( claude_quota::OauthAccountData
     {
-      billing_type   : "none".to_string(),
-      has_max        : false,
-      org_created_at : "2024-01-01T00:00:00Z".to_string(),
+      tagged_id       : String::new(),
+      uuid            : String::new(),
+      email_address   : String::new(),
+      full_name       : String::new(),
+      display_name    : String::new(),
+      billing_type    : "none".to_string(),
+      has_max         : false,
+      capabilities    : vec![],
+      rate_limit_tier : String::new(),
+      org_created_at  : "2024-01-01T00:00:00Z".to_string(),
+      memberships     : vec![],
     } );
     assert!(
       cancelled.as_ref().is_some_and( |a| a.billing_type == "none" ),
@@ -488,9 +496,17 @@ mod tests
     // billing_type="stripe_subscription" (active) → predicate does NOT fire → result unchanged.
     let active = Some( claude_quota::OauthAccountData
     {
-      billing_type   : "stripe_subscription".to_string(),
-      has_max        : false,
-      org_created_at : "2024-01-01T00:00:00Z".to_string(),
+      tagged_id       : String::new(),
+      uuid            : String::new(),
+      email_address   : String::new(),
+      full_name       : String::new(),
+      display_name    : String::new(),
+      billing_type    : "stripe_subscription".to_string(),
+      has_max         : false,
+      capabilities    : vec![],
+      rate_limit_tier : String::new(),
+      org_created_at  : "2024-01-01T00:00:00Z".to_string(),
+      memberships     : vec![],
     } );
     assert!(
       !active.as_ref().is_some_and( |a| a.billing_type == "none" ),
@@ -740,9 +756,17 @@ mod tests
     // billing_type="none" + r=Ok → second condition (r.is_err()) is false → NO override.
     let account_data = Some( claude_quota::OauthAccountData
     {
-      billing_type   : "none".to_string(),
-      has_max        : false,
-      org_created_at : "2024-01-01T00:00:00Z".to_string(),
+      tagged_id       : String::new(),
+      uuid            : String::new(),
+      email_address   : String::new(),
+      full_name       : String::new(),
+      display_name    : String::new(),
+      billing_type    : "none".to_string(),
+      has_max         : false,
+      capabilities    : vec![],
+      rate_limit_tier : String::new(),
+      org_created_at  : "2024-01-01T00:00:00Z".to_string(),
+      memberships     : vec![],
     } );
     let r : Result< claude_quota::OauthUsageData, String > = Ok( claude_quota::OauthUsageData
     {
@@ -769,9 +793,17 @@ mod tests
   {
     let account_data = Some( claude_quota::OauthAccountData
     {
-      billing_type   : "none".to_string(),
-      has_max        : false,
-      org_created_at : "2024-01-01T00:00:00Z".to_string(),
+      tagged_id       : String::new(),
+      uuid            : String::new(),
+      email_address   : String::new(),
+      full_name       : String::new(),
+      display_name    : String::new(),
+      billing_type    : "none".to_string(),
+      has_max         : false,
+      capabilities    : vec![],
+      rate_limit_tier : String::new(),
+      org_created_at  : "2024-01-01T00:00:00Z".to_string(),
+      memberships     : vec![],
     } );
     let r : Result< claude_quota::OauthUsageData, String > = Err( "HTTP 429".to_string() );
     // Replicate the fixed predicate from fetch_all_quota.

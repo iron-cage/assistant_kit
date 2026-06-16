@@ -735,7 +735,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-> **Note:** IT-59 removed — unit test of `format_duration_secs()` not directly observable via clp output — behavior only verifiable at unit-test level. Unit test lives in `src/output.rs` as `test_format_duration_secs_caps_at_two_units`.
+> **Note:** IT-59 removed — unit test of `format_duration_secs()` not directly observable via clp output — behavior only verifiable at unit-test level. Unit test lives in `tests/cli_adapter_test.rs` module `format_duration` (D-11: `dur_90060s_shows_1d_1h_capped`).
 
 ---
 

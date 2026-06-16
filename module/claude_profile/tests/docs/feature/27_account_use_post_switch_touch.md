@@ -26,6 +26,8 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-18 | `touch::1` + fetch Err + expired `expiresAt` + `refresh::0` → exits 3 immediately; no refresh attempt | AC-20 | Integration (BUG-230) |
 | FT-19 | Active account + 7d(Son) < 20% → model override fires after switch | AC-18 | Integration (BUG-238 MRE) |
 | FT-20 | `override_session_model_to_opus()` fires for shorthand `"sonnet"` input, writes `"opus"` | AC-18 | Unit (BUG-257 MRE) |
+| FT-21 | Post-subprocess re-fetch updates in-memory quota; failure preserves pre-subprocess data | AC-21 | Unit (BUG-288 MRE) |
+| — | `trace::1` + model override fires → `model override: sonnet→opus` trace line emitted | AC-19 | Live-only (requires `trace::1` + `7d(Son) < 20%` + Sonnet model in snapshot) |
 
 ### Test Case Index
 
