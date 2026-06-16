@@ -1,5 +1,4 @@
 # Parameter :: `--runner-delay`
-<!-- BUG-299: runner_delay has no runtime effect — runner retry call site never built; see 050_retry_on_runner.md Architectural Constraint -->
 
 Edge case coverage for the `--runner-delay` parameter (new in retry system redesign).
 See [051_runner_delay.md](../../../../docs/cli/param/051_runner_delay.md) for specification.
@@ -24,12 +23,6 @@ See [051_runner_delay.md](../../../../docs/cli/param/051_runner_delay.md) for sp
 - Validation: 1 test (EC-6)
 
 **Total:** 6 edge cases
-
-## Architectural Constraint
-
-Runner class errors exit before the retry loop, so `--runner-delay` has no runtime effect
-in the current implementation. These tests verify parse and env-var behavior only via dry-run.
-See `50_retry_on_runner.md` Architectural Constraint for full explanation.
 
 ## Implementation Notes
 

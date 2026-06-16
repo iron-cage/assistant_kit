@@ -1,18 +1,12 @@
-# Command :: 16. `.account.assign` — Integration Tests
+# Command :: 16. `.account.assign` — Redirect Stub Tests
 
-Write the per-machine active-account marker for any host+user pair without credential rotation. Marker-only write — no `~/.claude.*` side effects.
+`.account.assign` was removed as a standalone working command by Feature 037. It is now a redirect
+stub that exits 1 with a migration error message. All marker-write behavior moved to
+`.accounts assign::1` — see `03_accounts.md` IT-43 through IT-46 for those test cases.
 
 | # | Test | Conditions | Exit |
 |---|------|-----------|------|
-| IT-1 | Default (no `for::`) writes current-machine marker | `name::alice@corp.com`; no `for::`; `_active_{hostname}_{user}` created = `alice@corp.com` | 0 |
-| IT-2 | `for::bob@laptop` writes `_active_laptop_bob` | Account exists; `for::bob@laptop`; `_active_laptop_bob` = account name in credential store | 0 |
-| IT-3 | Dry-run prints `[dry-run]` line; no file written | `dry::1`; no `_active_*` file present afterward | 0 |
-| IT-4 | No `name::` emits live usage block | No arguments; stdout contains `Current machine:` and `Ready to copy:` | 0 |
-| IT-5 | Unknown account name exits 2 | `name::nobody@example.com` not in credential store | 2 |
-| IT-6 | `for::` without `@` exits 1 | `for::badvalue` — no `@` separator | 1 |
-| IT-7 | Empty `for::` component exits 1 | `for::@laptop` (empty user) or `for::bob@` (empty machine) | 1 |
-| IT-8 | `~/.claude/.credentials.json` unchanged after assign | Run `.account.assign`; verify mtime of credentials file unchanged | 0 |
-| IT-9 | Prefix resolution via `name::alice` | `alice@corp.com` only account with prefix `alice`; `_active_*` = `alice@corp.com` | 0 |
-| IT-10 | Overwrite existing marker | `_active_laptop_bob` exists with old account; command writes new account name | 0 |
-| IT-11 | Unknown parameter rejected | `clp .account.assign unknown::x` | 1 |
-| IT-12 | Dry-run with `for::` shows target marker filename | `for::bob@laptop dry::1`; stdout contains `_active_laptop_bob` | 0 |
+| IT-1 | Redirect stub exits 1 with migration message | `clp .account.assign name::alice@acme.com`; stdout or stderr contains `unknown command '.account.assign' — use '.accounts assign::1 name::X' instead` | 1 |
+
+**Source:** [feature/037_accounts_usage_param_unification.md AC-12](../../../../docs/feature/037_accounts_usage_param_unification.md),
+[cli/command_verb/009_assign.md — Migration (Feature 037)](../../../../docs/cli/command_verb/009_assign.md#migration-feature-037)

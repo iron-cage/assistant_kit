@@ -137,6 +137,7 @@ _build()
   # shellcheck disable=SC2086
   "$CONTAINER_CMD" build \
     --rm=false \
+    --jobs 1 \
     -f "$DOCKERFILE" \
     --build-arg "BASE_IMAGE=$BASE_IMAGE" \
     --build-arg "TEST_USER=$TEST_USER" \

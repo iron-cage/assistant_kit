@@ -611,11 +611,11 @@ fn test_bug174_mre_switch_preserves_machine_global_commands()
     .expect( "read .claude.json after switch" );
 
   assert!(
-    after_switch.contains( r#""emailAddress":"a@x.com"# ),
+    after_switch.contains( r#""emailAddress": "a@x.com"# ),
     "oauthAccount must be patched to A's data; got: {after_switch}",
   );
   assert!(
-    after_switch.contains( r#""foo":99"# ),
+    after_switch.contains( r#""foo": 99"# ),
     "BUG-174: commands.foo must be preserved (99, not 42); got: {after_switch}",
   );
   assert!(

@@ -26,12 +26,22 @@
 //! |-------|-------------------------------------------------|-------|-------|
 //! | f18ft01 | `f18_ft01_live_0_single_fetch`                | AC-24 | no    |
 //! | f18ft06 | `f18_ft06_live_stagger_per_account_trace`     | AC-29 | no    |
+//!
+//! ### Feature 037 — Accounts/Usage Param Unification
+//!
+//! | ID      | Test Function                         | AC    | Live? |
+//! |---------|---------------------------------------|-------|-------|
+//! | f37ft02 | `f37_ft02_usage_accepts_32_params`    | AC-02 | no    |
+//! | f37ft04 | `f37_ft04_usage_default_profile`      | AC-04 | no    |
+//! | f37ft16 | `f37_ft16_usage_unclaim_mirrors_accounts` | AC-16 | no |
+//! | f37ft17 | `f37_ft17_usage_assign_mirrors_accounts`  | AC-17 | no |
 
 use crate::cli_runner::{
   BIN,
   run_cs_with_env,
   stdout, stderr, assert_exit,
   write_account, write_account_with_token,
+  write_account_owner,
   write_live_credentials_with_token, require_live_api,
   FAR_FUTURE_MS, PAST_MS,
 };
@@ -343,5 +353,159 @@ fn f18_ft06_live_stagger_per_account_trace()
   assert!(
     err.contains( "beta@test.com" ),
     "trace must include beta@test.com, got:\n{err}",
+  );
+}
+
+// ── Feature 037: Accounts/Usage Param Unification ─────────────────────────────
+
+#[ test ]
+/// f37-FT-02 (AC-02): `.usage` accepts all 32 unified params; unknown param exits 1.
+///
+/// Structural registration test: each unified param must be accepted without a
+/// "unknown parameter" error. Mutation params gated with `dry::1`.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-02]
+fn f37_ft02_usage_accepts_32_params()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, false );
+
+  // Display and filter params (offline-safe).
+  // cols:: values must be valid for .usage (accounts-specific cols like uuid/tier are invalid).
+  let out = run_cs_with_env(
+    &[
+      ".usage",
+      "trace::1",
+      "format::text",
+      "cols::+host,-sub",
+      "sort::name",
+      "desc::0",
+      "no_color::1",
+      "count::10",
+      "offset::0",
+      "only_active::0",
+      "only_next::0",
+      "min_5h::0",
+      "min_7d::0",
+      "only_valid::0",
+      "exclude_exhausted::0",
+      "abs::0",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  // prefer/next/imodel/effort accepted.
+  let out = run_cs_with_env(
+    &[ ".usage", "prefer::any", "next::renew", "imodel::auto", "effort::auto" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  // Mutation params accepted when dry::1 suppresses writes.
+  let out = run_cs_with_env(
+    &[ ".usage", "assign::1", "name::alice@acme.com", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  // Unknown param exits 1.
+  let out = run_cs_with_env(
+    &[ ".usage", "unknown_foobar_xyz::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+}
+
+#[ test ]
+/// f37-FT-04 (AC-04): `.usage` default — Owner column visible; owner value from `{name}.json`.
+///
+/// Owner column is part of the default quota set for `.usage`. The owner value
+/// comes from the local metadata file, independent of network quota fetch results.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-04]
+fn f37_ft04_usage_default_profile()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "testuser@testmachine" );
+
+  // .usage defaults: refresh::1, touch::1 (network calls fail gracefully offline).
+  // Owner column must be present regardless of fetch result.
+  let out = run_cs_with_env(
+    &[ ".usage" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Owner" ),
+    "f37-FT-04: Owner column must appear in default .usage output; got:\n{text}",
+  );
+  assert!(
+    text.contains( "testuser@testmachine" ),
+    "f37-FT-04: owner value must appear for alice; got:\n{text}",
+  );
+}
+
+#[ test ]
+/// f37-FT-16 (AC-16): `.usage unclaim::1 name::X` clears owner — identical to `.accounts unclaim::1 name::X`.
+///
+/// alice is owned by testuser@testmachine (G8 passes). After `.usage unclaim::1`,
+/// `alice.json` has `"owner": ""`.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-16]
+fn f37_ft16_usage_unclaim_mirrors_accounts()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "testuser@testmachine" );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "unclaim::1", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  assert_eq!(
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "",
+    "f37-FT-16: .usage unclaim::1 must clear owner to \"\"",
+  );
+}
+
+#[ test ]
+/// f37-FT-17 (AC-17): `.usage assign::1 name::X` writes marker — identical to `.accounts assign::1 name::X`.
+///
+/// After `.usage assign::1 name::alice`, the per-machine marker file exists and
+/// contains the account name.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-17]
+fn f37_ft17_usage_assign_mirrors_accounts()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "assign::1", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store   = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let content = std::fs::read_to_string( store.join( "_active_testmachine_testuser" ) )
+    .expect( "f37-FT-17: .usage assign::1 must write per-machine marker" );
+  assert_eq!(
+    content.trim(),
+    "alice@acme.com",
+    "f37-FT-17: marker must contain alice@acme.com",
   );
 }

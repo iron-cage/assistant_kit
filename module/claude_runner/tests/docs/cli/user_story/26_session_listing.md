@@ -13,13 +13,13 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 | US-5 | `$PRO` prefix replaced by `"$PRO"` literal in Absolute Path column | AC-007 | ✅ |
 | US-6 | Queued CLR session shown when gate file present | AC-008 | ✅ |
 | US-7 | Active table caption contains `Active Sessions` and count suffix | AC-010 | ✅ |
-| US-8 | `clr ps --help` prints help and exits 0 | AC-011 | ⏳ |
+| US-8 | `clr ps --help` prints help and exits 0 | AC-011 | ✅ |
 
 ---
 
 ### US-1: No sessions — no-sessions message
 
-- **Given:** No `claude` processes running (test container has 0 sessions)
+- **Given:** No `claude` processes visible — empty temp dir set as `CLR_PROC_DIR` so `find_claude_processes()` returns no results regardless of host sessions
 - **When:** `clr ps`
 - **Then:** Exit 0; stdout = `No active Claude Code sessions.`; stdout does not contain `┌`
 - **Exit:** 0
@@ -94,4 +94,3 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 - **Then:** Exit 0; stdout contains help text (e.g. column descriptions or `Active Sessions`)
 - **Exit:** 0
 - **Verifies:** AC-011
-- **Note:** ⏳ Not yet implemented — BUG-294 tracks the fix

@@ -13,6 +13,7 @@
 //! | US-5 | `$PRO` prefix shortened in Absolute Path column   | AC-007    |
 //! | US-6 | Queued CLR shown: PID, CWD, Waiting headers       | AC-008    |
 //! | US-7 | Active table caption: `Active Sessions` + `running` | AC-010  |
+//! | US-8 | `clr ps --help` → exit 0, stdout contains help text  | AC-011  |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
@@ -193,5 +194,25 @@ fn us_07_active_table_caption()
   assert!(
     stdout.contains( "running" ),
     "US-7: active table caption must contain 'running' count suffix, got: {stdout}"
+  );
+}
+
+// ── US-8: `clr ps --help` ─────────────────────────────────────────────────────
+
+/// US-8 (AC-011): `clr ps --help` must exit 0 and print ps help text.
+///
+/// Before fix (BUG-294): `dispatch_ps()` had no help intercept — `--help` was
+/// treated as an unknown argument and rejected with exit 1.
+/// After fix: `print_ps_help()` is called, process exits 0 with help on stdout.
+// test_kind: bug_reproducer(BUG-294)
+#[ test ]
+fn us_08_ps_help()
+{
+  let out    = run_cli( &[ "ps", "--help" ] );
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "US-8 (AC-011): exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    !stdout.is_empty(),
+    "US-8 (AC-011): stdout must contain ps help text, got empty output"
   );
 }

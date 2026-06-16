@@ -57,7 +57,7 @@ This matches the pattern of G5/G6/G7 — gate evaluates before any mutation.
 
 ### Migration (Feature 037)
 
-> `.account.unclaim` is being removed as a standalone command. Its behavior is absorbed into `.accounts` and `.usage` as the `unclaim::1` mutation param. After Feature 037 ships:
+> `.account.unclaim` has been removed as a standalone working command (Feature 037). Its behavior is absorbed into `.accounts` and `.usage` as the `unclaim::1` mutation param.
 > - `clp .account.unclaim name::X` → exits 1 with redirect message directing to new syntax
 > - `clp .accounts unclaim::1 name::X` → clears owner field (same behavior)
 > - `clp .accounts unclaim::1 name::X force::1` → bypasses G8; clears owner regardless of caller identity

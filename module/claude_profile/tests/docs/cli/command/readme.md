@@ -27,6 +27,6 @@
 | 13_account_rotate.md | Test cases for `.account.rotate` command |
 | 14_account_renewal.md | Test cases for `.account.renewal` command |
 | 15_account_inspect.md | Test cases for `.account.inspect` command |
-| 16_account_assign.md | Test cases for `.account.assign` command |
+| 16_account_assign.md | Redirect stub test for `.account.assign` (Feature 037 — exits 1 with migration hint; actual assign tests in `03_accounts.md`) |
 | 17_model.md | Test cases for `.model` command |
-| 18_account_unclaim.md | Test cases for `.account.unclaim` command |
+| 18_account_unclaim.md | Redirect stub test for `.account.unclaim` (Feature 037 — exits 1 with migration hint; actual unclaim tests in `03_accounts.md`) |

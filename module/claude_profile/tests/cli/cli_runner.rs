@@ -241,7 +241,7 @@ fn merge_account_meta( home : &std::path::Path, name : &str, pairs : serde_json:
   {
     for ( k, v ) in src { dst.insert( k.clone(), v.clone() ); }
   }
-  std::fs::write( meta_path, serde_json::to_string( &val ).unwrap() ).unwrap();
+  std::fs::write( meta_path, serde_json::to_string_pretty( &val ).map( | s | s + "\n" ).unwrap() ).unwrap();
 }
 
 /// Write `oauthAccount` snapshot into `{credential_store}/{name}.json`.

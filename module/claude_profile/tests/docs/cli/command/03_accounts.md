@@ -34,17 +34,24 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 | IT-26 | Account matching live `accessToken` shows `Current:  yes`; others show `Current:  no` | Current Account |
 | IT-27 | `Current:` line suppressed when `~/.claude/.credentials.json` is unreadable | Current Account |
 | IT-28 | `current::0` suppresses `Current:` line; `format::json` includes `is_current` field | Current Account |
-| IT-29 | `uuid::1` shows `ID:` line from `taggedId` in saved `{name}.json` snapshot | Extended Snapshot |
-| IT-30 | `capabilities::1` shows `Capabilities:` line as comma-separated list | Extended Snapshot |
+| IT-29 | `cols::+uuid` shows `ID:` line from `taggedId` in saved `{name}.json` snapshot | Extended Snapshot |
+| IT-30 | `cols::+capabilities` shows `Capabilities:` line as comma-separated list | Extended Snapshot |
 | IT-31 | Empty capabilities array in snapshot → `Capabilities: N/A` | Extended Snapshot / Edge Case |
 | IT-32 | Account without `{name}.json` snapshot → `ID: N/A`, `Capabilities: N/A` | Extended Snapshot / Edge Case |
-| IT-33 | `org_uuid::1` shows `Org ID:` line from saved `{name}.json` | Org Identity |
-| IT-34 | `org_name::1` shows `Org:` line from saved `{name}.json` | Org Identity |
+| IT-33 | `cols::+org_uuid` shows `Org ID:` line from saved `{name}.json` | Org Identity |
+| IT-34 | `cols::+org_name` shows `Org:` line from saved `{name}.json` | Org Identity |
 | IT-35 | Account without org fields in `{name}.json` → `Org ID: N/A`, `Org: N/A` | Org Identity / Edge Case |
 | IT-36 | `format::json` includes `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` | Extended Snapshot / JSON |
-| IT-37 | `uuid::`, `capabilities::`, `org_uuid::`, `org_name::` all absent by default | Extended Snapshot / Default |
-| IT-38 | `host::1` shows `Host:` line from saved `{name}.json` | Host Metadata |
-| IT-39 | `role::1` shows user-defined role label from saved `{name}.json` | Host Metadata |
+| IT-37 | Extended snapshot columns absent from default output | Extended Snapshot / Default |
+| IT-38 | `cols::+host` shows `Host:` line from saved `{name}.json` | Host Metadata |
+| IT-39 | `cols::+role` shows user-defined role label from saved `{name}.json` | Host Metadata |
+| IT-40 | Owner column present by default; `—` when unowned | Feature 037 — Owner Column |
+| IT-41 | `cols::-owner` hides Owner column | Feature 037 — Owner Column |
+| IT-42 | Unknown parameter exits 1 | Feature 037 — Param Validation |
+| IT-43 | `assign::1 name::X` writes active marker; no other files changed | Feature 037 — assign mutation |
+| IT-44 | `unclaim::1 name::X` clears owner field when G8 passes | Feature 037 — unclaim mutation |
+| IT-45 | `unclaim::1 name::X` exits 1 with ownership violation when G8 fails | Feature 037 — unclaim mutation |
+| IT-46 | `force::1 unclaim::1 name::X` bypasses G8 and clears owner | Feature 037 — force bypass |
 
 ### Test Coverage Summary
 
@@ -52,26 +59,29 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - Output Format: 3 tests (IT-2, IT-9, IT-13)
 - Empty State: 1 test (IT-3)
 - Named Account: 3 tests (IT-4, IT-5, IT-6)
-- Field Presence: 2 tests (IT-7, IT-8)
-- Interaction: 1 test (IT-10)
+- Column Control (cols::): 2 tests (IT-7, IT-10)
+- Legacy Param Rejection: 1 test (IT-8)
 - Edge Case: 4 tests (IT-11, IT-15, IT-16, IT-19)
 - Output Order: 1 test (IT-12)
 - Bug Reproducer: 1 test (IT-14)
 - Rich Metadata: 4 tests (IT-17, IT-18, IT-20, IT-21)
-- Rich Metadata / Email: 1 test (IT-22)
+- Email Display: 1 test (IT-22)
 - Table Format: 1 test (IT-23)
 - Positional Syntax: 1 test (IT-24)
 - Prefix Resolution: 1 test (IT-25)
 - Current Account: 3 tests (IT-26, IT-27, IT-28)
 - Extended Snapshot: 4 tests (IT-29, IT-30, IT-31, IT-32)
-- Extended Snapshot / Edge Case: 2 tests (IT-31, IT-32)
-- Org Identity: 2 tests (IT-33, IT-34)
-- Org Identity / Edge Case: 1 test (IT-35)
+- Org Identity: 3 tests (IT-33, IT-34, IT-35)
 - Extended Snapshot / JSON: 1 test (IT-36)
 - Extended Snapshot / Default: 1 test (IT-37)
 - Host Metadata: 2 tests (IT-38, IT-39)
+- Feature 037 — Owner Column: 2 tests (IT-40, IT-41)
+- Feature 037 — Param Validation: 1 test (IT-42)
+- Feature 037 — assign mutation: 1 test (IT-43)
+- Feature 037 — unclaim mutation: 2 tests (IT-44, IT-45)
+- Feature 037 — force bypass: 1 test (IT-46)
 
-**Total:** 39 integration tests
+**Total:** 46 integration tests
 
 ---
 
@@ -79,7 +89,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 - **Given:** Create `~/.persistent/claude/credential/` with two credential files: `work@acme.com.credentials.json` and `personal@home.com.credentials.json`. Set `work@acme.com` as the active account via the per-machine active marker.
 - **When:** `clp .accounts`
-- **Then:** Output contains two indented blocks, one starting with `work@acme.com` and one with `personal@home.com`. Each block has `Active:`, `Sub:`, `Tier:`, `Expires:`, `Email:` lines.; both accounts listed as indented key-val blocks
+- **Then:** Output contains two indented blocks, one starting with `work@acme.com` and one with `personal@home.com`. Each block has `Owner:`, `Active:`, `Sub:`, `Tier:`, `Expires:`, `Email:` lines.; both accounts listed as indented key-val blocks with Owner column in default set
 - **Exit:** 0
 - **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
 
@@ -135,23 +145,23 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-7: Field presence — suppressing individual lines
+### IT-7: Column suppression via `cols::` — hiding Sub and Tier
 
 - **Given:** `work@acme.com` is the active account.
-- **When:** `clp .accounts sub::0 tier::0`
-- **Then:** Blocks contain `Active:`, `Expires:`, `Email:` lines but NOT `Sub:` or `Tier:` lines.; suppressed field lines are absent; non-suppressed lines remain
+- **When:** `clp .accounts cols::-sub,-tier`
+- **Then:** Blocks contain `Owner:`, `Active:`, `Expires:`, `Email:` lines but NOT `Sub:` or `Tier:` lines.; suppressed columns are absent; remaining identity-set columns present
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
-### IT-8: All field params off — bare name list
+### IT-8: Legacy field-toggle params rejected — exits 1 with cols:: hint
 
 - **Given:** Two accounts exist: `work@acme.com` (active) and `personal@home.com`.
-- **When:** `clp .accounts active::0 sub::0 tier::0 expires::0 email::0`
-- **Then:** Two bare name lines, no indented fields, no blank-line separators between them.; bare name list when all fields off
-- **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **When:** `clp .accounts active::0`
+- **Then:** Exit 1. Error message references `cols::` syntax.; individual field toggle params removed in Feature 037 — `active::`, `sub::`, `tier::`, `expires::`, `email::`, etc. all rejected
+- **Exit:** 1
+- **Source:** [feature/037_accounts_usage_param_unification.md AC-13](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
@@ -165,11 +175,11 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-10: JSON overrides field-presence params
+### IT-10: JSON output unaffected by cols:: exclusions
 
 - **Given:** `work@acme.com` exists.
-- **When:** `clp .accounts sub::0 tier::0 active::0 format::json`
-- **Then:** Valid JSON array where each object still contains `subscription_type`, `rate_limit_tier`, `is_active` fields despite the presence params being disabled.; field-presence params do not strip JSON keys
+- **When:** `clp .accounts cols::-sub,-tier,-active format::json`
+- **Then:** Valid JSON array where each object still contains `subscription_type`, `rate_limit_tier`, `is_active` fields despite those columns being excluded from text output.; `cols::` exclusions do not strip JSON keys
 - **Exit:** 0
 - **Source:** [004_parameter_interactions.md — Interaction 3](../../../../docs/cli/004_parameter_interactions.md#interaction--3-formatjson-overrides-field-presence-params)
 
@@ -188,8 +198,8 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 ### IT-12: Alphabetical ordering
 
 - **Given:** Create accounts: `zed@acme.com`, `alice@acme.com`, `mike@acme.com` in non-alphabetical creation order.
-- **When:** `clp .accounts active::0 sub::0 tier::0 expires::0 email::0`
-- **Then:** Three bare names in alphabetical order: `alice@acme.com`, `mike@acme.com`, `zed@acme.com`.; accounts sorted alphabetically regardless of creation order
+- **When:** `clp .accounts`
+- **Then:** Account blocks appear in alphabetical order: `alice@acme.com` block first, then `mike@acme.com`, then `zed@acme.com`.; accounts sorted alphabetically regardless of creation order
 - **Exit:** 0
 - **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
 
@@ -235,33 +245,33 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-17: `display_name::1` shows Display line from saved snapshot
+### IT-17: `cols::+display_name` shows Display line from saved snapshot
 
 - **Given:** `work@acme.com` with saved `{name}.json` containing `{"oauthAccount":{"displayName":"alice"}}`. Active account.
-- **When:** `clp .accounts display_name::1`
-- **Then:** Stdout contains `Display: alice`.; display name rendered from saved snapshot
+- **When:** `clp .accounts cols::+display_name`
+- **Then:** Stdout contains `Display: alice`.; display name rendered from saved snapshot via cols:: addition
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
-### IT-18: `role::1 billing::1 model::1` shows corresponding lines
+### IT-18: `cols::+role,+billing,+model` shows corresponding lines
 
 - **Given:** `work@acme.com` with saved `{name}.json` containing `{"oauthAccount":{"organizationRole":"admin","billingType":"stripe_subscription"}, "model":"sonnet"}`.
-- **When:** `clp .accounts role::1 billing::1 model::1`
-- **Then:** Stdout contains `Role:    admin`, `Billing: stripe_subscription`, `Model:   sonnet`.; all 3 metadata fields rendered
+- **When:** `clp .accounts cols::+role,+billing,+model`
+- **Then:** Stdout contains `Role:    admin`, `Billing: stripe_subscription`, `Model:   sonnet`.; all 3 metadata fields rendered via cols:: addition
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
-### IT-19: Account without saved metadata → N/A for new fields
+### IT-19: Account without saved metadata → N/A for non-default columns
 
 - **Given:** `work@acme.com` with credential file only (no `{name}.json` snapshot).
-- **When:** `clp .accounts display_name::1 role::1 billing::1 model::1`
+- **When:** `clp .accounts cols::+display_name,+role,+billing,+model`
 - **Then:** Stdout contains `Display: N/A`, `Role:    N/A`, `Billing: N/A`, `Model:   N/A`.; absent snapshots degrade gracefully
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
@@ -275,13 +285,13 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-21: New metadata fields absent by default
+### IT-21: Non-default columns absent from default output
 
-- **Given:** `work@acme.com` with saved `{name}.json` snapshot containing `oauthAccount` rich metadata and `model` field (BUG-222 fix).
+- **Given:** `work@acme.com` with saved `{name}.json` snapshot containing `oauthAccount` rich metadata and `model` field.
 - **When:** `clp .accounts`
-- **Then:** Stdout does NOT contain `Display:`, `Role:`, `Billing:`, `Model:` lines.; opt-in fields absent by default
+- **Then:** Stdout does NOT contain `Display:`, `Role:`, `Billing:`, `Model:` lines.; these columns are not in the default identity set — must be added via `cols::+display_name` etc.
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [feature/037_accounts_usage_param_unification.md AC-03](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
@@ -345,83 +355,83 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-28: `current::0` suppresses line; JSON includes `is_current`
+### IT-28: `cols::-current` suppresses Current line; JSON includes `is_current`
 
 - **Given:** Two accounts saved. Live `~/.claude/.credentials.json` matches one of them.
-- **When (a):** `clp .accounts current::0` → stdout must NOT contain `Current:` line.
+- **When (a):** `clp .accounts cols::-current` → stdout must NOT contain `Current:` line.
 - **When (b):** `clp .accounts format::json` → valid JSON array; each object contains `is_current` boolean field.
 - **Exit:** 0
-- **Source:** [016_current_account_awareness.md AC-03, AC-04](../../../../docs/feature/016_current_account_awareness.md)
+- **Source:** [016_current_account_awareness.md AC-03, AC-04](../../../../docs/feature/016_current_account_awareness.md), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
-### IT-29: `uuid::1` shows `ID:` line from taggedId
+### IT-29: `cols::+uuid` shows `ID:` line from taggedId
 
 - **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"oauthAccount":{"taggedId":"user_abc123"}}`.
-- **When:** `clp .accounts uuid::1`
+- **When:** `clp .accounts cols::+uuid`
 - **Then:** Output block for `work@acme.com` contains `ID:      user_abc123`.
 - **Exit:** 0
-- **Source:** [021_extended_snapshot_fields.md AC-03](../../../../docs/feature/021_extended_snapshot_fields.md)
+- **Source:** [021_extended_snapshot_fields.md AC-03](../../../../docs/feature/021_extended_snapshot_fields.md), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
-### IT-30: `capabilities::1` shows `Capabilities:` as comma-separated list
+### IT-30: `cols::+capabilities` shows `Capabilities:` as comma-separated list
 
 - **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"oauthAccount":{"capabilities":["claude_code","pro"]}}`.
-- **When:** `clp .accounts capabilities::1`
+- **When:** `clp .accounts cols::+capabilities`
 - **Then:** Output block contains `Capabilities: claude_code, pro`.
 - **Exit:** 0
-- **Source:** [021_extended_snapshot_fields.md AC-04](../../../../docs/feature/021_extended_snapshot_fields.md)
+- **Source:** [021_extended_snapshot_fields.md AC-04](../../../../docs/feature/021_extended_snapshot_fields.md), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
 ### IT-31: Empty capabilities array → `Capabilities: N/A`
 
 - **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"oauthAccount":{"capabilities":[]}}`.
-- **When:** `clp .accounts capabilities::1`
+- **When:** `clp .accounts cols::+capabilities`
 - **Then:** Output block contains `Capabilities: N/A`.
 - **Exit:** 0
-- **Source:** [021_extended_snapshot_fields.md AC-09](../../../../docs/feature/021_extended_snapshot_fields.md)
+- **Source:** [021_extended_snapshot_fields.md AC-09](../../../../docs/feature/021_extended_snapshot_fields.md), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
 ### IT-32: Account without `{name}.json` snapshot → N/A for uuid and capabilities
 
 - **Given:** `work@acme.com` with credential file only — no `{credential_store}/work@acme.com.json` snapshot.
-- **When:** `clp .accounts uuid::1 capabilities::1`
+- **When:** `clp .accounts cols::+uuid,+capabilities`
 - **Then:** Output block contains `ID:      N/A` and `Capabilities: N/A`.
 - **Exit:** 0
-- **Source:** [021_extended_snapshot_fields.md AC-07](../../../../docs/feature/021_extended_snapshot_fields.md)
+- **Source:** [021_extended_snapshot_fields.md AC-07](../../../../docs/feature/021_extended_snapshot_fields.md), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
-### IT-33: `org_uuid::1` shows `Org ID:` from `{name}.json`
+### IT-33: `cols::+org_uuid` shows `Org ID:` from `{name}.json`
 
 - **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`.
-- **When:** `clp .accounts org_uuid::1`
+- **When:** `clp .accounts cols::+org_uuid`
 - **Then:** Output block contains `Org ID:  org-xyz-789`.
 - **Exit:** 0
-- **Source:** [022_org_identity_snapshot.md AC-05](../../../../docs/feature/022_org_identity_snapshot.md)
+- **Source:** [022_org_identity_snapshot.md AC-05](../../../../docs/feature/022_org_identity_snapshot.md), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
-### IT-34: `org_name::1` shows `Org:` from `{name}.json`
+### IT-34: `cols::+org_name` shows `Org:` from `{name}.json`
 
 - **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`.
-- **When:** `clp .accounts org_name::1`
+- **When:** `clp .accounts cols::+org_name`
 - **Then:** Output block contains `Org:     Acme Corp`.
 - **Exit:** 0
-- **Source:** [022_org_identity_snapshot.md AC-06](../../../../docs/feature/022_org_identity_snapshot.md)
+- **Source:** [022_org_identity_snapshot.md AC-06](../../../../docs/feature/022_org_identity_snapshot.md), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
 ### IT-35: Account without org fields in `{name}.json` → N/A for org fields
 
 - **Given:** `work@acme.com` saved with credential file only — no org identity fields in `{credential_store}/work@acme.com.json` snapshot.
-- **When:** `clp .accounts org_uuid::1 org_name::1`
+- **When:** `clp .accounts cols::+org_uuid,+org_name`
 - **Then:** Output block contains `Org ID:  N/A` and `Org:     N/A`.
 - **Exit:** 0
-- **Source:** [022_org_identity_snapshot.md AC-05, AC-06](../../../../docs/feature/022_org_identity_snapshot.md)
+- **Source:** [022_org_identity_snapshot.md AC-05, AC-06](../../../../docs/feature/022_org_identity_snapshot.md), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
@@ -445,20 +455,90 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-38: `host::1` shows Host line from `{name}.json`
+### IT-38: `cols::+host` shows Host line from `{name}.json`
 
 - **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"host":"workstation","role":"dev"}`.
-- **When:** `clp .accounts host::1`
-- **Then:** Output block for `work@acme.com` contains `Host:    workstation`. No `Host:` line appears in default output without `host::1`.
+- **When:** `clp .accounts cols::+host`
+- **Then:** Output block for `work@acme.com` contains `Host:    workstation`. No `Host:` line appears in default output without `cols::+host`.
 - **Exit:** 0
-- **Source:** [feature/029_account_host_metadata.md FT-08](../../../../docs/feature/029_account_host_metadata.md), [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [feature/029_account_host_metadata.md FT-08](../../../../docs/feature/029_account_host_metadata.md), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
-### IT-39: `role::1` shows user-defined role label from `{name}.json`
+### IT-39: `cols::+role` shows user-defined role label from `{name}.json`
 
 - **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"host":"workstation","role":"dev"}`.
-- **When:** `clp .accounts role::1`
+- **When:** `clp .accounts cols::+role`
 - **Then:** Output block for `work@acme.com` contains `Role:    dev`. Label is sourced from the `role` field in `{name}.json` (written by `.account.save role::`) — not from `organizationRole` in the `oauthAccount` subtree.
 - **Exit:** 0
-- **Source:** [feature/029_account_host_metadata.md FT-08](../../../../docs/feature/029_account_host_metadata.md), [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [feature/029_account_host_metadata.md FT-08](../../../../docs/feature/029_account_host_metadata.md), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
+
+---
+
+### IT-40: Owner column present by default; `—` when unowned
+
+- **Given:** `alice@acme.com` with `alice.json` containing `"owner": "testuser@testmachine"`. `bob@acme.com` with `bob.json` containing `"owner": ""`.
+- **When:** `clp .accounts`
+- **Then:** `alice@acme.com` block contains `Owner:   testuser@testmachine`. `bob@acme.com` block contains `Owner:   —`. Owner column is in the default identity set — no `cols::` modifier required.
+- **Exit:** 0
+- **Source:** [feature/037_accounts_usage_param_unification.md AC-19](../../../../docs/feature/037_accounts_usage_param_unification.md)
+
+---
+
+### IT-41: `cols::-owner` hides Owner column
+
+- **Given:** `alice@acme.com` with `alice.json` containing `"owner": "testuser@testmachine"`.
+- **When:** `clp .accounts cols::-owner`
+- **Then:** Stdout does NOT contain `Owner:` line in any account block.
+- **Exit:** 0
+- **Source:** [feature/037_accounts_usage_param_unification.md AC-19](../../../../docs/feature/037_accounts_usage_param_unification.md)
+
+---
+
+### IT-42: Unknown parameter exits 1
+
+- **Given:** `work@acme.com` exists.
+- **When:** `clp .accounts unknown_param::1`
+- **Then:** Exit 1. Error message references the unknown parameter name.
+- **Exit:** 1
+- **Source:** [feature/037_accounts_usage_param_unification.md AC-01](../../../../docs/feature/037_accounts_usage_param_unification.md)
+
+---
+
+### IT-43: `assign::1 name::X` writes active marker; no other files changed
+
+- **Given:** `alice@acme.com` exists. Record mtime of `alice.json`, `alice.credentials.json`, `~/.claude.json`.
+- **When:** `clp .accounts assign::1 name::alice@acme.com`
+- **Then:** Exit 0. `_active_{machine}_{user}` in credential store contains `alice@acme.com`. mtime of `alice.json`, `alice.credentials.json`, and `~/.claude.json` unchanged.
+- **Exit:** 0
+- **Source:** [feature/037_accounts_usage_param_unification.md AC-08](../../../../docs/feature/037_accounts_usage_param_unification.md)
+
+---
+
+### IT-44: `unclaim::1 name::X` clears owner field when G8 passes
+
+- **Given:** `alice@acme.com` with `alice.json` containing `"owner": "testuser@testmachine"`. Current identity = `testuser@testmachine`.
+- **When:** `clp .accounts unclaim::1 name::alice@acme.com`
+- **Then:** Exit 0. `alice.json` contains `"owner": ""`. `alice.credentials.json` mtime unchanged. Active marker unchanged.
+- **Exit:** 0
+- **Source:** [feature/037_accounts_usage_param_unification.md AC-05](../../../../docs/feature/037_accounts_usage_param_unification.md)
+
+---
+
+### IT-45: `unclaim::1 name::X` exits 1 with ownership violation when G8 fails
+
+- **Given:** `alice@acme.com` with `alice.json` containing `"owner": "other@remote"`. Current identity ≠ `other@remote`.
+- **When:** `clp .accounts unclaim::1 name::alice@acme.com`
+- **Then:** Exit 1. stdout contains `ownership violation: this account is owned by other@remote`. `alice.json` unchanged.
+- **Exit:** 1
+- **Source:** [feature/037_accounts_usage_param_unification.md AC-06](../../../../docs/feature/037_accounts_usage_param_unification.md)
+
+---
+
+### IT-46: `force::1 unclaim::1 name::X` bypasses G8 and clears owner
+
+- **Given:** `alice@acme.com` with `alice.json` containing `"owner": "other@remote"`. Current identity ≠ `other@remote`.
+- **When:** `clp .accounts unclaim::1 name::alice@acme.com force::1`
+- **Then:** Exit 0. G8 gate bypassed. `alice.json` contains `"owner": ""`. stdout contains `unclaimed alice@acme.com`.
+- **Exit:** 0
+- **Source:** [feature/037_accounts_usage_param_unification.md AC-20](../../../../docs/feature/037_accounts_usage_param_unification.md)

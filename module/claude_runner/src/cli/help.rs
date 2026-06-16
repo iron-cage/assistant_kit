@@ -137,6 +137,40 @@ pub( crate ) fn print_refresh_help() -> !
   std::process::exit( 0 );
 }
 
+/// Print help for the `ps` subcommand and exit 0.
+pub( crate ) fn print_ps_help() -> !
+{
+  println!( "clr ps — List running Claude Code sessions" );
+  println!();
+  println!( "USAGE:" );
+  println!( "  clr ps" );
+  println!();
+  println!( "ACTIVE SESSIONS TABLE:" );
+  println!( "  #                                  Row index" );
+  println!( "  PID                                Process ID" );
+  println!( "  Elapsed                            Time since session started" );
+  println!( "  CPU%                               CPU usage percentage" );
+  println!( "  RAM                                Resident memory (K or M suffix)" );
+  println!( "  State                              Process state (R/S/Z…)" );
+  println!( "  Absolute Path                      Working directory (\\$PRO prefix shortened when PRO is set)" );
+  println!( "  Task                               Last human message extracted from session JSONL (≤35 chars)" );
+  println!();
+  println!( "QUEUED CLR PROCESSES TABLE (shown when gate files exist in CLR_GATE_DIR):" );
+  println!( "  #                                  Row index" );
+  println!( "  PID                                Process ID of the waiting clr process" );
+  println!( "  CWD                                Working directory of the waiting process" );
+  println!( "  Waiting                            Time spent waiting for a session slot" );
+  println!( "  Attempt                            Number of polling attempts so far" );
+  println!();
+  println!( "EXIT CODES:" );
+  println!( "  0    Success (table printed or empty-state message shown)" );
+  println!( "  1    Error (unexpected argument)" );
+  println!();
+  println!( "ENVIRONMENT:" );
+  println!( "  CLR_GATE_DIR                       Directory for CLR gate state files (default: /tmp/clr-gate)" );
+  std::process::exit( 0 );
+}
+
 /// Print help for the `ask` subcommand and exit 0.
 ///
 /// Called when `--help` or `-h` is detected in `dispatch_ask` before delegating to `dispatch_run`.

@@ -1,5 +1,4 @@
 # Parameter :: `--retry-on-runner`
-<!-- BUG-299: Architectural Constraint (see below) is a known incomplete implementation — filed as bug -->
 
 Edge case coverage for the `--retry-on-runner` parameter (new in retry system redesign).
 See [050_retry_on_runner.md](../../../../docs/cli/param/050_retry_on_runner.md) for specification.
@@ -14,6 +13,8 @@ See [050_retry_on_runner.md](../../../../docs/cli/param/050_retry_on_runner.md) 
 | EC-4 | `CLR_RETRY_ON_RUNNER=2 --dry-run` → exit 0; env var applied | Env Var |
 | EC-5 | `CLR_RETRY_ON_RUNNER=1 --retry-on-runner 3 --dry-run` → CLI 3 wins | CLI-wins |
 | EC-6 | `CLR_RETRY_ON_RUNNER=notanumber --dry-run` → silently ignored | Validation |
+| EC-7 | Binary absent + `--retry-on-runner 1 --runner-delay 0` → stderr contains `"retrying"` | Runtime retry (BUG-299) |
+| EC-8 | Binary absent + `--retry-on-runner 0 --retry-override 0` → no retry fires | Runtime no-retry (BUG-299) |
 
 ## Test Coverage Summary
 
@@ -22,16 +23,9 @@ See [050_retry_on_runner.md](../../../../docs/cli/param/050_retry_on_runner.md) 
 - Env Var: 1 test (EC-4)
 - CLI-wins: 1 test (EC-5)
 - Validation: 1 test (EC-6)
+- Runtime retry (BUG-299): 2 tests (EC-7, EC-8)
 
-**Total:** 6 edge cases
-
-## Architectural Constraint
-
-Runner class errors (binary not found, spawn failed, gate timeout) cause the runner to exit
-before the retry loop is entered. `--retry-on-runner` is accepted at parse time and stored,
-but has NO runtime effect in the current implementation. Integration tests demonstrating
-retry behavior for this class cannot be constructed. These tests verify parse and env-var
-behavior only.
+**Total:** 8 edge cases
 
 ## Implementation Notes
 
@@ -43,6 +37,8 @@ behavior only.
 | EC-4 | `ec4_clr_retry_on_runner_env_var_accepted` | `retry_runner_test.rs` |
 | EC-5 | `ec5_retry_on_runner_cli_wins_over_env` | `retry_runner_test.rs` |
 | EC-6 | `ec6_clr_retry_on_runner_invalid_ignored` | `retry_runner_test.rs` |
+| EC-7 | `ec7_runner_retry_fires_on_absent_binary` | `retry_runner_test.rs` |
+| EC-8 | `ec8_runner_retry_disabled_no_retry` | `retry_runner_test.rs` |
 
 ---
 
@@ -109,3 +105,27 @@ behavior only.
 - **Exit:** 0
 - **Source:** [050_retry_on_runner.md](../../../../docs/cli/param/050_retry_on_runner.md)
 - **Commands:** run, ask
+
+---
+
+### EC-7: binary absent + `--retry-on-runner 1 --runner-delay 0` → retry fires (BUG-299)
+
+- **Given:** empty temp dir as PATH (no `claude` binary); `--retry-on-runner 1`, `--runner-delay 0`, `--max-sessions 0`
+- **When:** `clr --print --max-sessions 0 --retry-on-runner 1 --runner-delay 0 "msg"` with empty PATH
+- **Then:** Exit non-zero; stderr contains `"retrying"` — `apply_runner_retry()` fires once before exhaustion
+- **Exit:** 1
+- **Source:** [050_retry_on_runner.md](../../../../docs/cli/param/050_retry_on_runner.md)
+- **Commands:** run, ask
+- **Note:** test_kind: bug_reproducer(BUG-299). Drive via class-specific param only — do NOT include `--retry-override` (would short-circuit)
+
+---
+
+### EC-8: retry disabled explicitly — no retry fires (BUG-299)
+
+- **Given:** empty temp dir as PATH (no `claude` binary); `--retry-on-runner 0`, `--retry-override 0`, `--max-sessions 0`
+- **When:** `clr --print --max-sessions 0 --retry-on-runner 0 --retry-override 0 "msg"` with empty PATH
+- **Then:** Exit 1; stderr does NOT contain `"retrying"` — immediate failure, no retry
+- **Exit:** 1
+- **Source:** [050_retry_on_runner.md](../../../../docs/cli/param/050_retry_on_runner.md)
+- **Commands:** run, ask
+- **Note:** test_kind: bug_reproducer(BUG-299). `--retry-override 0` suppresses the default fallback (2 retries)

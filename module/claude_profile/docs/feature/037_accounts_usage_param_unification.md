@@ -4,7 +4,7 @@
 
 - **Purpose**: Make `.accounts` and `.usage` symmetric commands sharing 32 parameters with different defaults, absorbing `.account.unclaim` and `.account.assign` as mutation parameters, and introducing `force::` to bypass ownership enforcement on unclaim.
 - **Responsibility**: Documents the unified 32-parameter set, default differentiation, `cols::` replacement of 15 field toggles, `unclaim::` and `assign::`/`for::` mutation params, `force::` bypass param, and removal of `.account.unclaim` and `.account.assign` as standalone commands.
-- **In Scope**: 32-param unified parameter set; `.accounts` default profile (local/identity view: `refresh::0`, `touch::0`, `sort::name`); `.usage` default profile (live/quota view: `refresh::1`, `touch::1`, `sort::renew`); `cols::` syntax on `.accounts` replacing 15 individual field toggles (`active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`); `unclaim::` mutation param; `assign::`/`for::` mutation params; `force::` bypass param (bypasses G8 ownership check when used with `unclaim::1`); removal of standalone `.account.unclaim` (Command 17) and `.account.assign` (Command 16); command count reduction 18→16.
+- **In Scope**: 32-param unified parameter set; `.accounts` default profile (local/identity view: `refresh::0`, `touch::0`, `sort::name`); `.usage` default profile (live/quota view: `refresh::1`, `touch::1`, `sort::renew`); `cols::` syntax on `.accounts` replacing 15 individual field toggles (`active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`); `unclaim::` mutation param; `assign::`/`for::` mutation params; `force::` bypass param (bypasses G8 ownership check when used with `unclaim::1`); `.account.unclaim` (Command 17) and `.account.assign` (Command 16) converted to redirect stubs (remain registered, exit 1 with migration error message).
 - **Out of Scope**: New quota fetching features; changes to `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.account.renewal`, `.account.inspect`, `.model`, or any non-account command; G1–G4 read-side gates (behavior unchanged — `force::` does not bypass them); adding `force::` to `.account.use`/`.account.delete`/`.account.relogin` (G5–G7 bypass → Feature 036 implementation).
 
 ### Design
@@ -32,7 +32,7 @@ The identity set (`.accounts` default) includes: Account, Owner, Active, Current
 **Command absorption — `.account.assign` → `assign::` + `for::` params.**
 `clp .accounts assign::1 name::X` writes the per-machine active-account marker — identical to the former `clp .account.assign name::X`. `for::USER@MACHINE` targets a specific machine's marker (default: current machine). When `name::` is absent and `assign::1`, emits the live usage block (current machine identity + copy-paste examples). `dry::1` previews without writing.
 
-**Standalone command removal.** `.account.unclaim` and `.account.assign` are removed as standalone commands. `clp .account.unclaim ...` and `clp .account.assign ...` exit 1 with an error directing to the new syntax. Command count: 18→16 (16 registered → 14 registered; `.`/`.help` hardcoded, not registered).
+**Standalone command removal.** `.account.unclaim` and `.account.assign` are converted to redirect stubs — they remain registered but exit 1 with an error directing to the new syntax. `clp .account.unclaim ...` exits 1 with `"unknown command '.account.unclaim' — use '.accounts unclaim::1 name::X' instead"`. `clp .account.assign ...` exits 1 with `"unknown command '.account.assign' — use '.accounts assign::1 name::X' instead"`. Command count unchanged — `.account.assign` and `.account.unclaim` remain registered as redirect stubs alongside the 14 working commands and 2 hardcoded (`.`/`.help`) entries.
 
 **`force::` ownership bypass.** `force::1` bypasses the G8 ownership check when used with `unclaim::1`. It allows any machine/user identity to release ownership of an account, regardless of whether `current_identity()` matches the stored owner. `force::1` without `unclaim::1` has no effect (silently ignored). `force::1` with `assign::1` has no effect (assign has no ownership gate). `force::1` does NOT bypass `dry::1` — dry-run preview still applies when both are set.
 
@@ -99,8 +99,8 @@ The identity set (`.accounts` default) includes: Account, Owner, Active, Current
 |------|--------------|
 | `src/registry.rs` | Command registration — unified param set for `.accounts` and `.usage` |
 | `src/commands/accounts.rs` | `.accounts` handler — absorbs unclaim and assign logic |
-| `src/commands/account_ops.rs` | `account_unclaim_routine()` moves to accounts handler |
-| `src/commands/account_assign.rs` | `account_assign_routine()` moves to accounts handler; file deleted |
+| `src/commands/account_ops.rs` | `account_unclaim_redirect()` — redirect stub (exits 1 with migration error message per AC-11); unclaim logic absorbed inline into `accounts_routine()` |
+| `src/commands/account_assign.rs` | `account_assign_redirect()` — redirect stub (exits 1 with migration error message per AC-12); `account_assign_routine()` retained, delegated from accounts handler |
 | `src/usage/api.rs` | `.usage` handler (`usage_routine()`) — gains mutation param dispatch |
 
 ### Tests
@@ -108,5 +108,5 @@ The identity set (`.accounts` default) includes: Account, Owner, Active, Current
 | File | Relationship |
 |------|--------------|
 | `tests/cli/accounts_test.rs` | Integration tests for `.accounts` — absorbs assign and unclaim test cases |
-| `tests/cli/account_assign_test.rs` | Tests migrated to `accounts_test.rs`; file deleted |
+| `tests/cli/account_assign_test.rs` | Updated to verify redirect-stub behavior (exit 1 + migration error message per AC-12) |
 | `tests/cli/usage_test.rs` | Integration tests for `.usage` — gains mutation param tests |

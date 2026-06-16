@@ -852,7 +852,7 @@ mod tests
     } );
     std::fs::write(
       store.path().join( "alice@test.com.json" ),
-      serde_json::to_string( &meta ).unwrap(),
+      serde_json::to_string_pretty( &meta ).map( | s | s + "\n" ).unwrap(),
     ).unwrap();
 
     // Credentials file must exist for the account struct to be valid.
@@ -921,7 +921,7 @@ mod tests
     let meta = serde_json::json!( { "owner" : "other@remote" } );
     std::fs::write(
       store.path().join( "alice@test.com.json" ),
-      serde_json::to_string( &meta ).unwrap(),
+      serde_json::to_string_pretty( &meta ).map( | s | s + "\n" ).unwrap(),
     ).unwrap();
 
     std::fs::write(

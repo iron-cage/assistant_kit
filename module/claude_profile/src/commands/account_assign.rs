@@ -30,6 +30,24 @@ fn account_assign_usage_block( user : &str, machine : &str, marker : &str, activ
   )
 }
 
+/// `.account.assign` redirect — exits 1 with a message directing users to `.accounts assign::1`.
+///
+/// Feature 037 removed `.account.assign` as a standalone command; its functionality was
+/// absorbed into `.accounts assign::1`. This redirect stub is registered in its place so
+/// callers receive an actionable error message instead of a generic "unknown command".
+///
+/// # Errors
+///
+/// Always returns `Err(ArgumentTypeMismatch)` with a redirect message.
+#[ inline ]
+pub fn account_assign_redirect( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  Err( ErrorData::new(
+    ErrorCode::ArgumentTypeMismatch,
+    "unknown command '.account.assign' — use '.accounts assign::1 name::X' instead".to_string(),
+  ) )
+}
+
 /// `.account.assign` — write the per-machine active-account marker for any host+user pair without credential rotation.
 ///
 /// Marker-only write: no `~/.claude.*` side effects. When `name::` is absent, emits a live

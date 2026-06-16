@@ -6,101 +6,122 @@ Account management commands: list, save, use, delete, limits, and relogin.
 
 ### Command :: 3. `.accounts`
 
-List all saved accounts or show a single named account with per-field presence control. Without `name::`: shows every account in the credential store as an indented key-val block; with `name::EMAIL`: shows that account's block only.
+List all saved accounts (identity view) or run per-account mutations (`assign::1`, `unclaim::1`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email). When data-source params are active (`refresh::1`, `touch::1`), fetches live quota using the same pipeline as `.usage` — defaults to local-only read with no HTTP fetch.
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`active::`](../param/013_active.md), [`current::`](../param/018_current.md), [`sub::`](../param/006_sub.md), [`tier::`](../param/007_tier.md), [`expires::`](../param/009_expires.md), [`email::`](../param/010_email.md), [`display_name::`](../param/014_display_name.md), [`host::`](../param/048_host.md), [`role::`](../param/015_role.md), [`billing::`](../param/016_billing.md), [`model::`](../param/017_model.md), [`uuid::`](../param/028_uuid.md), [`capabilities::`](../param/029_capabilities.md), [`org_uuid::`](../param/030_org_uuid.md), [`org_name::`](../param/031_org_name.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found or credential store unreadable)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`cols::`](../param/033_cols.md), [`assign::`](../param/057_assign.md), [`unclaim::`](../param/056_unclaim.md), [`force::`](../param/058_force.md), [`for::`](../param/053_for.md), [`dry::`](../param/004_dry.md), [`set_model::`](../param/054_set_model.md), [`refresh::`](../param/019_refresh.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`next::`](../param/032_next.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`abs::`](../param/046_abs.md), [`no_color::`](../param/047_no_color.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars, legacy field-toggle param used, unknown `cols::` id, `for::` missing `@`, G8 ownership violation on `unclaim::1`) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
 
 ```bash
 clp .accounts
 clp .accounts name::alice@acme.com
-clp .accounts alice@acme.com         # positional: bare name at any position
-clp .accounts sub::0 alice@acme.com  # reversed: arg order does not matter
-clp .accounts car                     # prefix: first saved account starting with "car"
-clp .accounts sub::0 tier::0
-clp .accounts display_name::1 role::1 billing::1 model::1
+clp .accounts alice@acme.com                         # positional: bare name at any position
+clp .accounts car                                     # prefix: first saved account starting with "car"
+clp .accounts cols::+host,-tier                      # add host column, remove tier column
+clp .accounts cols::-owner                            # hide owner column
+clp .accounts unclaim::1 name::alice@acme.com        # clear ownership (G8 gate)
+clp .accounts unclaim::1 name::alice@acme.com force::1  # bypass G8
+clp .accounts assign::1 name::alice@acme.com         # write active-account marker
+clp .accounts assign::1                               # emit live usage block (no name::)
+clp .accounts refresh::1                              # fetch live quota (HTTP)
+clp .accounts refresh::1 sort::renew                 # sorted by renewal, live data
 clp .accounts format::json
 clp .accounts format::table
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `name::` | [`AccountName`](../type/001_account_name.md) | *(omit to list all)* | Show a single named account instead of listing all |
-| `active::` | `bool` | `1` | Show active/inactive status line |
-| `current::` | `bool` | `1` | Show current (live) account line; suppressed when `~/.claude/.credentials.json` is unreadable |
-| `sub::` | `bool` | `1` | Show subscription type line |
-| `tier::` | `bool` | `1` | Show rate-limit tier line |
-| `expires::` | `bool` | `1` | Show token expiry duration line |
-| `email::` | `bool` | `1` | Show email address from saved `{name}.json` snapshot |
-| `display_name::` | `bool` | `0` | Show display name from saved `{name}.json` snapshot (opt-in) |
-| `host::` | `bool` | `0` | Show host/machine label from saved `{name}.json` (opt-in) |
-| `role::` | `bool` | `0` | Show user-defined role label from saved `{name}.json` (opt-in) |
-| `billing::` | `bool` | `0` | Show billing type from saved `{name}.json` snapshot (opt-in) |
-| `model::` | `bool` | `0` | Show active model from saved `{name}.json` snapshot (opt-in) |
-| `uuid::` | `bool` | `0` | Show stable user ID (`taggedId`) from saved `{name}.json` snapshot (opt-in) |
-| `capabilities::` | `bool` | `0` | Show product capabilities list from saved `{name}.json` snapshot (opt-in) |
-| `org_uuid::` | `bool` | `0` | Show organisation UUID from saved `{name}.json` snapshot (opt-in) |
-| `org_name::` | `bool` | `0` | Show organisation display name from saved `{name}.json` snapshot (opt-in) |
-| `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each credential file read |
+| `name::` | [`AccountName`](../type/001_account_name.md) | *(omit to list all)* | Show or operate on a single named account; prefix resolution supported |
+| `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to identity default set (`account`, `owner`, `active`, `current`, `sub`, `tier`, `expires`, `email`); opt-in: `display_name`, `host`, `role`, `billing`, `model`, `uuid`, `capabilities`, `org_uuid`, `org_name` |
+| `unclaim::` | `bool` | `0` | Release ownership of `name::` account; writes `owner: ""` to `{name}.json`; G8 gate runs before write even when `dry::1`; when `name::` absent, batch-unclaims filtered set |
+| `assign::` | `bool` | `0` | Write per-machine active-account marker for `name::` account; when `name::` absent, emits live usage block |
+| `force::` | `bool` | `0` | Bypass G8 ownership gate on `unclaim::1`; allows any identity to release ownership; ignored without `unclaim::1` |
+| `for::` | `string` (`USER@MACHINE`) | current `$USER@hostname` | Target machine identity for `assign::1`; split on first `@`; both components required when provided |
+| `dry::` | `bool` | `0` | Preview mutations without writing; G8 gate still runs on `unclaim::1 dry::1` |
+| `set_model::` | `enum` | *(omit)* | Write session model to `settings.json`: `opus`, `sonnet`, `haiku`, `default` |
+| `refresh::` | `bool` | **`0`** | Attempt OAuth token refresh via subprocess (default `0`; differs from `.usage` default of `1`) |
+| `touch::` | `bool` | **`0`** | Activate idle 5h session windows via subprocess (default `0`; differs from `.usage` default of `1`) |
+| `imodel::` | `enum` | `auto` | Subprocess model: `auto`, `sonnet`, `opus`, `haiku`, `keep` |
+| `effort::` | `enum` | `auto` | Subprocess effort: `auto`, `low`, `normal`, `high`, `max` |
+| `sort::` | `enum` | **`name`** | Row ordering: `name` (default for `.accounts`), `renew`, `endurance`, `drain`, `next` |
+| `desc::` | `bool` | `0` | Sort direction: 0 = ascending, 1 = descending |
+| `prefer::` | `enum` | `any` | Weekly quota preference for sort strategies: `any`, `opus`, `sonnet` |
+| `next::` | `enum` | `renew` | Recommendation strategy: `renew`, `endurance`, `drain` |
+| `count::` | `u64` | `0` | Max rows to display (0 = all) |
+| `offset::` | `u64` | `0` | Skip first N rows |
+| `only_active::` | `bool` | `0` | Show only the per-machine active account |
+| `only_next::` | `bool` | `0` | Show only the recommended next account |
+| `min_5h::` | `f64` | `0` | Hide accounts with `5h Left` below this percentage |
+| `min_7d::` | `f64` | `0` | Hide accounts with `7d Left` below this percentage |
+| `only_valid::` | `bool` | `0` | Hide 🔴 (invalid/expired) rows |
+| `exclude_exhausted::` | `bool` | `0` | Hide 🟡 and 🔴 rows |
+| `get::` | `string` | `""` | Extract bare field value for first row |
+| `abs::` | `bool` | `0` | Show absolute token counts instead of percentages |
+| `no_color::` | `bool` | `0` | Strip emoji and ANSI colors |
+| `live::` | `bool` | `0` | Continuous monitor mode |
+| `interval::` | `u64` | `30` | Seconds between live refresh cycles (≥ 30) |
+| `jitter::` | `u64` | `0` | Max random seconds added to interval |
+| `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format: `text`, `json`, `table` |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr |
 
-**Algorithm (4 steps):**
-1. Enumerate `{credential_store}/*.credentials.json` alphabetically; build account list
-2. `(when name:: provided)` Resolve via `AccountSelector`; filter list to single match
-3. For each matched account: read credential JSON + `_active_{hostname}_{user}` marker + snapshot files per enabled field params
-4. Render in requested `format::`
+**Algorithm (5 steps):**
+1. Resolve credential store; graceful degradation on unavailability (returns `(no accounts configured)` with exit 0)
+2. List all accounts; resolve and filter by `name::` when provided
+3. **Mutation dispatch:** `assign::1` → write per-machine marker or emit usage block (when `name::` absent); `unclaim::1` → evaluate G8 gate then write `owner: ""` or batch-unclaim filtered set; legacy field-toggle param present → exit 1 with `cols::` migration hint
+4. Parse `cols::` modifiers; read `owner` from `{name}.json` per account (when `cols.owner`); detect current account via token comparison (when `cols.current`)
+5. Apply sort/filter; render in `format::`
 
 **Examples:**
 
 ```bash
 clp .accounts
 # alice@acme.com
+#   Owner:   user1@w003
 #   Active:  yes
 #   Current: no
 #   Sub:     max
 #   Tier:    default_claude_max_20x
 #   Expires: in 2h 11m
 #   Email:   alice@acme.com
-#
-# alice@home.com
-#   Active:  no
-#   Current: yes
-#   Sub:     pro
-#   Tier:    default_claude_pro
-#   Expires: in 5h 30m
-#   Email:   N/A
 
 clp .accounts format::table
 # Accounts
 #
-#    Account         Sub   Tier                     Expires     Email
-# -  --------------  ----  -----------------------  ----------  ----------------
-# ✓  alice@acme.com  max   default_claude_max_20x   in 2h 11m   alice@acme.com
-#    alice@home.com  pro   default_claude_pro        in 5h 30m   N/A
+#    Account         Owner        Active  Sub   Tier                     Expires
+# -  --------------  -----------  ------  ----  -----------------------  ---------
+# ✓  alice@acme.com  user1@w003   yes     max   default_claude_max_20x   in 2h 11m
+
+clp .accounts unclaim::1 name::alice@acme.com
+# unclaimed alice@acme.com
+
+clp .accounts assign::1 name::alice@acme.com for::bob@laptop
+# Assigned alice@acme.com for bob@laptop  →  _active_laptop_bob
 ```
 
 **Notes:**
-- Without `name::`: all accounts listed as indented blocks, separated by blank lines. Empty store → `(no accounts configured)`.
-- Field params affect text output only; `format::json` always includes all fields regardless of presence params.
-- `format::table` renders a compact one-row-per-account table with fixed columns (flag, Account, Sub, Tier, Expires, Email) — field-presence params are ignored in table mode.
-- `current::` shows `Current: yes` for the account whose `accessToken` matches `~/.claude/.credentials.json`. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
-- `host::`, `role::` source from `{name}.json` (written by `.account.save host::` / `role::`) — `N/A` when no metadata exists. See [feature/029_account_host_metadata.md](../../feature/029_account_host_metadata.md).
-- `uuid::`, `capabilities::` source from `{name}.json` snapshot — `N/A` when snapshot absent. See [feature/021_extended_snapshot_fields.md](../../feature/021_extended_snapshot_fields.md).
-- `org_uuid::`, `org_name::` source from `{name}.json` snapshot (written by `.account.save` via endpoint 005) — `N/A` when snapshot absent. See [feature/022_org_identity_snapshot.md](../../feature/022_org_identity_snapshot.md).
+- `cols::` replaces the 15 former field-toggle params (`active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`). Using any exits 1 with a `cols::` migration hint.
+- Owner column is in the identity default set — shows `USER@MACHINE` when owned, `—` when unowned. Hide with `cols::-owner`.
+- `format::json` always includes all fields regardless of `cols::`.
+- `format::table` columns: flag, Account, Owner (when enabled), Active, Sub, Tier, Expires.
+- Data-source params (`refresh::`, `touch::`) default to `0` — `.accounts` is local-only by default; set to `1` to activate the same live pipeline as `.usage`.
+- `assign::` and `unclaim::` are also available on `.usage` (same behavior). See [Feature 037](../../feature/037_accounts_usage_param_unification.md).
+- G8 ownership gate evaluates BEFORE `dry::1` on `unclaim::1` — a non-owner gets exit 1 even in dry-run mode.
+- `current::` field (in text mode) shows `Current: yes` for the account whose `accessToken` matches `~/.claude/.credentials.json`. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
 
 ### Referenced Features
 
 | # | Feature | Role |
 |---|---------|------|
 | 1 | [Account List](../../feature/003_account_list.md) | Account enumeration and per-account block rendering |
-| 2 | [Rich Account Metadata](../../feature/014_rich_account_metadata.md) | Extended metadata fields shown per account |
+| 2 | [Rich Account Metadata](../../feature/014_rich_account_metadata.md) | Extended metadata fields |
 | 3 | [Name Shortcut Syntax](../../feature/015_name_shortcut_syntax.md) | Prefix and positional `name::` resolution |
-| 4 | [Current Account Awareness](../../feature/016_current_account_awareness.md) | `current::` field and `✓` flag column |
-| 5 | [Extended Snapshot Fields](../../feature/021_extended_snapshot_fields.md) | Opt-in snapshot fields (`uuid::`, `capabilities::`) |
-| 6 | [Org Identity Snapshot](../../feature/022_org_identity_snapshot.md) | Org identity fields (`org_uuid::`, `org_name::`) |
-| 7 | [Host Metadata](../../feature/029_account_host_metadata.md) | `host::` and `role::` fields from saved snapshot |
+| 4 | [Current Account Awareness](../../feature/016_current_account_awareness.md) | Token-based current account detection (`cols.current`) |
+| 5 | [Extended Snapshot Fields](../../feature/021_extended_snapshot_fields.md) | Opt-in snapshot fields via `cols::+uuid` / `+capabilities` |
+| 6 | [Org Identity Snapshot](../../feature/022_org_identity_snapshot.md) | Org fields via `cols::+org_uuid` / `+org_name` |
+| 7 | [Host Metadata](../../feature/029_account_host_metadata.md) | `cols::+host` / `+role` from saved snapshot |
+| 8 | [Account Ownership](../../feature/036_account_ownership.md) | G8 gate for `unclaim::1`; `force::` bypass |
+| 9 | [Accounts/Usage Param Unification](../../feature/037_accounts_usage_param_unification.md) | 32-param unified interface; `cols::` replacing field toggles; mutation params |
 
 ### Referenced User Stories
 
@@ -697,86 +718,34 @@ clp .account.inspect format::json | jq '.memberships | length'
 
 ---
 
-### Command :: 16. `.account.assign`
+### Command :: 16. `.account.assign` *(REMOVED — redirect stub)*
 
-Write (or overwrite) the per-machine active-account marker for any host+user pair without performing a full credential rotation. No `~/.claude.*` files are touched — marker-only write.
+**Removed as of Feature 037.** This command exits 1 with a migration message. Use `.accounts assign::1 name::X` instead.
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional¹)*, [`for::`](../param/053_for.md), [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success; or live usage block when `name::` absent) | 1 (usage: invalid `name::` chars, `for::` missing `@`, or empty `for::` component) | 2 (runtime: account not found)
+-- **Parameters:** [`name::`](../param/001_name.md) *(accepted but ignored)*, [`for::`](../param/053_for.md) *(accepted but ignored)*, [`dry::`](../param/004_dry.md) *(accepted but ignored)*, [`trace::`](../param/023_trace.md) *(accepted but ignored)*
+-- **Exit:** 1 always — `"unknown command '.account.assign' — use '.accounts assign::1 name::X' instead"`
 
-¹ When `name::` is absent the command emits a live usage block instead of an error.
-
-**Syntax:**
+**Migration:**
 
 ```bash
-clp .account.assign                                         # live usage block (current machine + active account)
-clp .account.assign name::alice@corp.com                   # assign to current machine
-clp .account.assign name::alice@corp.com for::bob@laptop   # assign to remote machine
-clp .account.assign name::alice@corp.com dry::1            # preview without writing
-clp .account.assign name::alice for::bob@laptop            # prefix resolution
-```
-
-| Parameter | Type | Default | Purpose |
-|-----------|------|---------|---------|
-| `name::` | [`AccountName`](../type/001_account_name.md) | *(omit for usage block)* | Account to assign; prefix resolution supported |
-| `for::` | `string` (`USER@MACHINE`) | current `$USER@resolve_hostname()` | Target identity; split on first `@`; both parts required when provided; sanitized per `active_marker_filename()` rules |
-| `dry::` | `bool` | `0` | Preview the would-be write without creating or modifying any file |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for marker write steps |
-
-**Algorithm (5 steps):**
-1. `(when name:: absent)` Emit live usage block with current machine identity and active account; exit 0
-2. Resolve `name::` via `AccountSelector`; validate account exists in credential store
-3. Resolve `for::`: split on first `@` (left = user, right = machine); validate both parts non-empty; default to `$USER@resolve_hostname()` when omitted
-4. Sanitize each component (alphanumeric, `-`, `.` kept; other chars → `_`); compute target filename `_active_{machine}_{user}`
-5. `(when dry::1)` Print `[dry-run] would assign {name} for {user}@{machine}  →  _active_{machine}_{user}`; exit 0. `(else)` Write `{credential_store}/_active_{machine}_{user}` = `{name}`; print `Assigned {name} for {user}@{machine}  →  _active_{machine}_{user}`
-
-**Live usage block (no `name::`):**
-
-```
-.account.assign — write the active-account marker for any machine without credential rotation.
-
-  name::   account to assign (required)
-  for::    USER@MACHINE to target  (default: current machine)
-  dry::1   preview without writing
-
-Current machine:  user1@w003  (→ _active_w003_user1)
-Active account:   alice@corp.com
-
-Ready to copy:
-  clp .account.assign name::alice@corp.com
-  clp .account.assign name::alice@corp.com for::user1@w003
-  clp .account.assign name::alice@corp.com for::otheruser@othermachine dry::1
-```
-
-The `Current machine:` and `Active account:` lines are resolved at runtime. When no active account is set, `Active account:` shows `(none)` and the `Ready to copy:` section is omitted.
-
-**Examples:**
-
-```bash
-clp .account.assign name::alice@corp.com for::bob@laptop
-# Assigned alice@corp.com for bob@laptop  →  _active_laptop_bob
-
+# Before Feature 037:
 clp .account.assign name::alice@corp.com
-# Assigned alice@corp.com for user1@w003  →  _active_w003_user1
+clp .account.assign name::alice@corp.com for::bob@laptop
 
-clp .account.assign name::alice@corp.com for::bob@laptop dry::1
-# [dry-run] would assign alice@corp.com for bob@laptop  →  _active_laptop_bob
+# After Feature 037 (use .accounts assign::1):
+clp .accounts assign::1 name::alice@corp.com
+clp .accounts assign::1 name::alice@corp.com for::bob@laptop
+clp .accounts assign::1                        # live usage block (no name::)
 ```
 
-**Notes:**
-- Writes ONLY `{credential_store}/_active_{machine}_{user}` (marker). Never touches `~/.claude/.credentials.json`, `~/.claude.json`, `~/.claude/settings.json`, or `{name}.json`. Ownership is managed by `.account.save`, not `.account.assign` (see [Feature 036](../../feature/036_account_ownership.md)).
-- `for::` is split on the first `@`: left = user component, right = machine component. Each is sanitized: alphanumeric, `-`, `.` kept; all other characters become `_`.
-- Use `.account.use` for full credential rotation (credential copy + `~/.claude.*` patches + post-switch touch). Use `.account.assign` when only the preference marker needs to be set.
-- After `.account.assign` for a remote machine, that machine can run `.account.use name::alice@corp.com` to activate the credentials. The marker set by `.account.assign` is visible via `.accounts` on any machine sharing the same credential store.
-- See [feature/032_account_assign.md](../../feature/032_account_assign.md) for full design and all acceptance criteria.
+**Implementation note:** The command remains registered as a redirect stub (rather than deregistered) so callers receive this specific error message instead of a generic "unknown command" from the framework. The full original logic is in `account_assign_routine()` in `src/commands/account_assign.rs`.
 
 ### Referenced Features
 
 | # | Feature | Role |
 |---|---------|------|
-| 1 | [Account Assign](../../feature/032_account_assign.md) | Marker-only write algorithm and `for::` resolution |
-| 2 | [Per-Machine Active Marker](../../feature/025_per_machine_active_marker.md) | `_active_{machine}_{user}` marker semantics and filename sanitization |
-| 3 | [Account Ownership](../../feature/036_account_ownership.md) | Ownership model; enforcement gates G1–G8; `.account.assign` is marker-only (does NOT stamp ownership); ownership stamped by `.account.save` |
+| 1 | [Account Assign](../../feature/032_account_assign.md) | Original marker-write algorithm — now absorbed as `.accounts assign::1` |
+| 2 | [Accounts/Usage Param Unification](../../feature/037_accounts_usage_param_unification.md) | Feature that absorbed assign as mutation param and removed the standalone command |
 
 ### Referenced User Stories
 
@@ -786,67 +755,36 @@ clp .account.assign name::alice@corp.com for::bob@laptop dry::1
 
 ---
 
-### Command :: 17. `.account.unclaim`
+### Command :: 17. `.account.unclaim` *(REMOVED — redirect stub)*
 
-Release ownership of a saved account by writing `owner: ""` to `{name}.json` via `write_owner()` directly. Pure metadata operation — credentials and active marker are NOT touched.
+**Removed as of Feature 037.** This command exits 1 with a migration message. Use `.accounts unclaim::1 name::X` instead.
 
--- **Parameters:** [`name::`](../param/001_name.md) *(required)*, [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success or dry-run) | 1 (usage: missing `name::`, ownership violation) | 2 (runtime: account not found)
+-- **Parameters:** [`name::`](../param/001_name.md) *(accepted but ignored)*, [`dry::`](../param/004_dry.md) *(accepted but ignored)*, [`trace::`](../param/023_trace.md) *(accepted but ignored)*
+-- **Exit:** 1 always — `"unknown command '.account.unclaim' — use '.accounts unclaim::1 name::X' instead"`
 
-**Syntax:**
-
-```bash
-clp .account.unclaim name::alice@acme.com           # unclaim account
-clp .account.unclaim name::alice@acme.com dry::1    # preview without writing
-clp .account.unclaim name::alice@acme.com trace::1  # with trace output
-```
-
-| Parameter | Type | Default | Purpose |
-|-----------|------|---------|---------|
-| `name::` | [`AccountName`](../type/001_account_name.md) | *(required)* | Account to unclaim; no name inference — must be provided explicitly |
-| `dry::` | `bool` | `0` | Preview the would-be unclaim without modifying any file |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for write_owner steps |
-
-**Algorithm (4 steps):**
-1. Require `name::` (non-empty string); no name inference
-2. Verify `{credential_store}/{name}.json` exists; exit 2 if absent
-3. G8 ownership gate: `read_owner()` → `is_owned()`. Non-owner → exit 1 with `"ownership violation: this account is owned by {owner}"`. Gate runs BEFORE `dry::1` check
-4. `(when dry::1)` Print `[dry-run] would unclaim {name}`; exit 0. `(else)` `write_owner(name, credential_store, "")` → print `unclaimed {name}`; exit 0
-
-**Exit Codes:**
-
-| Code | Condition |
-|------|-----------|
-| 0 | Ownership cleared (or dry-run preview printed) |
-| 1 | Missing `name::` argument; or G8 ownership violation (account owned by another identity) |
-| 2 | Account `{name}.json` does not exist in credential store |
-
-**Examples:**
+**Migration:**
 
 ```bash
+# Before Feature 037:
 clp .account.unclaim name::alice@acme.com
-# unclaimed alice@acme.com
-
 clp .account.unclaim name::alice@acme.com dry::1
-# [dry-run] would unclaim alice@acme.com
 
-clp .account.unclaim name::alice@acme.com
-# (when owned by bob@laptop) ownership violation: this account is owned by bob@laptop
+# After Feature 037 (use .accounts unclaim::1):
+clp .accounts unclaim::1 name::alice@acme.com
+clp .accounts unclaim::1 name::alice@acme.com dry::1
+clp .accounts unclaim::1 name::alice@acme.com force::1  # bypass G8
+clp .accounts unclaim::1                                 # batch-unclaim filtered set
 ```
 
-**Notes:**
-- Pure metadata operation: writes only the `owner` field in `{name}.json` via `write_owner()`. Does NOT read or write `{name}.credentials.json`, does NOT touch `~/.claude/.credentials.json`, does NOT modify the active marker.
-- `name::` is required — no inference from active marker or `oauthAccount.emailAddress`. This prevents accidental unclaim of the wrong account.
-- Idempotent on unowned accounts: if `owner` is already empty, `write_owner()` writes `""` again — no-op semantically.
-- G8 gate evaluates BEFORE `dry::1` — a non-owner gets exit 1 even in dry-run mode, preventing information leakage about whether an unclaim would succeed.
-- See [feature/036_account_ownership.md](../../feature/036_account_ownership.md) for the full ownership model, G1–G8 enforcement gates, and all acceptance criteria.
+**Implementation note:** The command remains registered as a redirect stub so callers receive this specific error message instead of a generic "unknown command". The unclaim logic lives in `accounts_routine()` in `src/commands/accounts.rs`.
 
 ### Referenced Features
 
 | # | Feature | Role |
 |---|---------|------|
-| 1 | [Account Ownership](../../feature/036_account_ownership.md) | G8 ownership gate; `write_owner()` / `read_owner()` / `is_owned()` API; AC-02/AC-16/AC-17 |
+| 1 | [Account Ownership](../../feature/036_account_ownership.md) | Original unclaim algorithm (G8 gate, `write_owner()`) — now absorbed as `.accounts unclaim::1` |
+| 2 | [Accounts/Usage Param Unification](../../feature/037_accounts_usage_param_unification.md) | Feature that absorbed unclaim as mutation param and removed the standalone command |
 
 ### Referenced User Stories
 
-*None — `.account.unclaim` is an operational maintenance command, not a user-story-driven feature.*
+*None — ownership maintenance; no user-story-driven feature.*

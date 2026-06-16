@@ -1,45 +1,49 @@
-//! Integration tests: AA (Account Assign) — `.account.assign` command.
+//! Integration tests: AA (Account Assign) — `.accounts assign::1` mutation param.
 //!
 //! Tests invoke the compiled `clp` binary as a subprocess via `CARGO_BIN_EXE_clp`.
 //!
 //! ## Scope
 //!
-//! All tests (aa01–aa12) are fixture-based and run entirely offline.
+//! All tests (aa01–aa18, ec7–ec8, ft13–ft15) are fixture-based and run entirely offline.
 //! No network access required. HOME isolation via `TempDir` + `USER=testuser`
 //! + `HOSTNAME=testmachine` ensures deterministic marker filenames.
+//!
+//! Feature 037 absorbed `.account.assign` into `.accounts assign::1`. All tests that
+//! previously used `.account.assign name::X` now use `.accounts assign::1 name::X`.
+//! Test `ft15` verifies the redirect stub: `.account.assign` exits 1 with redirect message.
 //!
 //! ## Test Matrix
 //!
 //! | ID | Test Function | FT | Condition | P/N |
 //! |----|---------------|----|-----------|-----|
-//! | aa01 | `aa01_current_machine_marker_written` | FT-01 | No `for::` → `_active_testmachine_testuser` created = account name | P |
-//! | aa02 | `aa02_remote_machine_marker_written` | FT-02 | `for::bob@laptop` → `_active_laptop_bob` created = account name | P |
-//! | aa03 | `aa03_dry_run_no_write` | FT-03 | `dry::1` → no `_active_*` file; stdout contains `[dry-run] would assign` | P |
-//! | aa04 | `aa04_no_name_emits_usage_block` | FT-04 | No `name::` (active account set) → preamble + machine + active account name + `Ready to copy:` | P |
-//! | aa05 | `aa05_unknown_account_exits_2` | FT-05 | Unknown account name (`@`-form) → exit 2 | N |
-//! | aa06 | `aa06_for_without_at_exits_1` | FT-06 | `for::badvalue` (no `@`) → exit 1 | N |
-//! | aa07 | `aa07_empty_for_component_exits_1` | FT-07 | `for::@laptop` or `for::bob@` → exit 1 | N |
-//! | aa08 | `aa08_special_chars_sanitized` | FT-08 | `for::alice@my laptop` → `_active_my_laptop_alice` (space → `_`) | P |
-//! | aa09 | `aa09_prefix_resolution` | FT-09 | `name::alice` prefix resolves to `alice@corp.com` | P |
-//! | aa10 | `aa10_overwrite_existing_marker` | FT-10 | Overwrites existing `_active_laptop_bob` with new account name | P |
-//! | aa11 | `aa11_no_credentials_json_side_effect` | FT-11 | `~/.claude/.credentials.json` content unchanged after assign | P |
-//! | aa12 | `aa12_dry_run_shows_marker_filename` | FT-12 | `dry::1` + `for::bob@laptop` → stdout contains `_active_laptop_bob` | P |
-//! | aa13 | `aa13_dry_run_unknown_account_exits_2` | FT-05 | `dry::1` + unknown account → exit 2 (existence validated before dry-run) | N |
-//! | aa14 | `aa14_usage_block_no_active_marker_shows_none` | FT-04 | No `name::`, no marker file → `Active account: (none)`, no `Ready to copy:` | P |
-//! | aa15 | `aa15_ambiguous_prefix_exits_1` | FT-05 | `name::alice` matches two accounts → exit 1 (ambiguous, not exit 2) | N |
-//! | aa16 | `aa16_exact_local_part_beats_prefix_ambiguity` | FT-09 | `name::i1` when `i1@host` + `i11@host` exist → resolves to `i1@host` (exact wins) | P |
-//! | aa17 | `aa17_for_only_at_both_empty_exits_1` | FT-06 | `for::@` (only `@`, both components empty) → exit 1 | N |
-//! | ec7  | `ec7_dot_hyphen_in_machine_preserved` | EC-7 | `for::user1@w003.local` → `_active_w003.local_user1` (dot + hyphen kept) | P |
-//! | ec8  | `ec8_multiple_at_splits_on_first` | EC-8 | `for::alice@corp.com@laptop` → split on first `@` → `_active_corp.com_laptop_alice` | P |
-//! | aa18 | `aa18_empty_name_exits_1` | — | `name::` (empty) → exit 1 "`name::` value cannot be empty" | N |
+//! | aa01 | `aa01_current_machine_marker_written` | FT-08 | No `for::` → `_active_testmachine_testuser` created = account name | P |
+//! | aa02 | `aa02_remote_machine_marker_written` | FT-09 | `for::bob@laptop` → `_active_laptop_bob` created = account name | P |
+//! | aa03 | `aa03_dry_run_no_write` | FT-08 | `dry::1` → no `_active_*` file; stdout contains `[dry-run] would assign` | P |
+//! | aa04 | `aa04_no_name_emits_usage_block` | FT-10 | No `name::` (active account set) → preamble + machine + active account name + `Ready to copy:` | P |
+//! | aa05 | `aa05_unknown_account_exits_2` | FT-08 | Unknown account name (`@`-form) → exit 2 | N |
+//! | aa06 | `aa06_for_without_at_exits_1` | FT-09 | `for::badvalue` (no `@`) → exit 1 | N |
+//! | aa07 | `aa07_empty_for_component_exits_1` | FT-09 | `for::@laptop` or `for::bob@` → exit 1 | N |
+//! | aa08 | `aa08_special_chars_sanitized` | FT-09 | `for::alice@my laptop` → `_active_my_laptop_alice` (space → `_`) | P |
+//! | aa09 | `aa09_prefix_resolution` | FT-08 | `name::alice` prefix resolves to `alice@corp.com` | P |
+//! | aa10 | `aa10_overwrite_existing_marker` | FT-08 | Overwrites existing `_active_laptop_bob` with new account name | P |
+//! | aa11 | `aa11_no_credentials_json_side_effect` | FT-08 | `~/.claude/.credentials.json` content unchanged after assign | P |
+//! | aa12 | `aa12_dry_run_shows_marker_filename` | FT-08 | `dry::1` + `for::bob@laptop` → stdout contains `_active_laptop_bob` | P |
+//! | aa13 | `aa13_dry_run_unknown_account_exits_2` | FT-08 | `dry::1` + unknown account → exit 2 (existence validated before dry-run) | N |
+//! | aa14 | `aa14_usage_block_no_active_marker_shows_none` | FT-10 | No `name::`, no marker file → `Active account: (none)`, no `Ready to copy:` | P |
+//! | aa15 | `aa15_ambiguous_prefix_exits_1` | FT-08 | `name::alice` matches two accounts → exit 1 (ambiguous, not exit 2) | N |
+//! | aa16 | `aa16_exact_local_part_beats_prefix_ambiguity` | FT-08 | `name::i1` when `i1@host` + `i11@host` exist → resolves to `i1@host` (exact wins) | P |
+//! | aa17 | `aa17_for_only_at_both_empty_exits_1` | FT-09 | `for::@` (only `@`, both components empty) → exit 1 | N |
+//! | ec7  | `ec7_dot_hyphen_in_machine_preserved` | FT-09 | `for::user1@w003.local` → `_active_w003.local_user1` (dot + hyphen kept) | P |
+//! | ec8  | `ec8_multiple_at_splits_on_first` | FT-09 | `for::alice@corp.com@laptop` → split on first `@` → `_active_corp.com_laptop_alice` | P |
+//! | aa18 | `aa18_empty_name_exits_1` | FT-08 | `name::` (empty) → exit 1 "`name::` value cannot be empty" | N |
 //!
-//! ### AO — Account Assign Ownership (Feature 036)
+//! ### AO — Account Assign Ownership (Feature 036 / 037)
 //!
 //! | ID | Test Function | FT | Condition | P/N |
 //! |----|---------------|----|-----------|-----|
-//! | ft13 | `ft13_assign_does_not_modify_owner` | FT-13 | `.account.assign` does NOT touch owner (marker-only) | P |
-//! | ft14 | `ft14_assign_for_does_not_modify_owner` | FT-14 | `.account.assign for::bob@laptop` does NOT touch owner | P |
-//! | ft15 | `ft15_assign_rejects_unclaim` | FT-15 | `.account.assign unclaim::1` → exit 1 (not registered; use `.account.unclaim`) | N |
+//! | ft13 | `ft13_assign_does_not_modify_owner` | FT-08 | `.accounts assign::1` does NOT touch owner (marker-only) | P |
+//! | ft14 | `ft14_assign_for_does_not_modify_owner` | FT-09 | `.accounts assign::1 for::bob@laptop` does NOT touch owner | P |
+//! | ft15 | `ft15_assign_removed` | FT-12 | `.account.assign name::X` → exit 1 (redirect: command absorbed into `.accounts`) | N |
 
 use crate::cli_runner::{ run_cs_with_env, stdout, stderr, assert_exit, write_account, write_account_owner };
 use tempfile::TempDir;
@@ -91,7 +95,7 @@ fn aa01_current_machine_marker_written()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com" ], &refs );
   assert_exit( &out, 0 );
 
   let store    = credential_store( dir.path() );
@@ -115,7 +119,7 @@ fn aa02_remote_machine_marker_written()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com", "for::bob@laptop" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::bob@laptop" ], &refs );
   assert_exit( &out, 0 );
 
   let store   = credential_store( dir.path() );
@@ -135,7 +139,7 @@ fn aa03_dry_run_no_write()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com", "dry::1" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "dry::1" ], &refs );
   assert_exit( &out, 0 );
 
   let out_text = stdout( &out );
@@ -168,7 +172,7 @@ fn aa04_no_name_emits_usage_block()
   let store = credential_store( dir.path() );
   std::fs::write( store.join( DEFAULT_MARKER ), "alice@corp.com" ).unwrap();
 
-  let out = run_cs_with_env( &[ ".account.assign" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1" ], &refs );
   assert_exit( &out, 0 );
 
   let out_text = stdout( &out );
@@ -189,7 +193,7 @@ fn aa05_unknown_account_exits_2()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::nobody@example.com" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::nobody@example.com" ], &refs );
   assert_exit( &out, 2 );
 }
 
@@ -204,7 +208,7 @@ fn aa06_for_without_at_exits_1()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com", "for::badvalue" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::badvalue" ], &refs );
   assert_exit( &out, 1 );
 
   let err_text = stderr( &out );
@@ -224,11 +228,11 @@ fn aa07_empty_for_component_exits_1()
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
   // Empty user component (left of @).
-  let out_a = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com", "for::@laptop" ], &refs );
+  let out_a = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::@laptop" ], &refs );
   assert_exit( &out_a, 1 );
 
   // Empty machine component (right of @).
-  let out_b = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com", "for::bob@" ], &refs );
+  let out_b = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::bob@" ], &refs );
   assert_exit( &out_b, 1 );
 }
 
@@ -244,7 +248,7 @@ fn aa08_special_chars_sanitized()
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
   // "alice@my laptop" — space in machine component must sanitize to `_`.
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com", "for::alice@my laptop" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::alice@my laptop" ], &refs );
   assert_exit( &out, 0 );
 
   let store   = credential_store( dir.path() );
@@ -264,7 +268,7 @@ fn aa09_prefix_resolution()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice" ], &refs );
   assert_exit( &out, 0 );
 
   let store   = credential_store( dir.path() );
@@ -290,7 +294,7 @@ fn aa10_overwrite_existing_marker()
   std::fs::write( store.join( "_active_laptop_bob" ), "old@account.com" ).unwrap();
 
   // Overwrite with alice@corp.com.
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com", "for::bob@laptop" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::bob@laptop" ], &refs );
   assert_exit( &out, 0 );
 
   let content = std::fs::read_to_string( store.join( "_active_laptop_bob" ) ).unwrap();
@@ -298,7 +302,7 @@ fn aa10_overwrite_existing_marker()
 }
 
 #[ test ]
-/// AC-11: `.account.assign` must not modify `~/.claude/.credentials.json`.
+/// AC-11: `.accounts assign::1` must not modify `~/.claude/.credentials.json`.
 fn aa11_no_credentials_json_side_effect()
 {
   let dir  = TempDir::new().unwrap();
@@ -315,11 +319,11 @@ fn aa11_no_credentials_json_side_effect()
   let before      = r#"{"sentinel":"must-not-change"}"#;
   std::fs::write( &creds_path, before ).unwrap();
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com" ], &refs );
   assert_exit( &out, 0 );
 
   let after = std::fs::read_to_string( &creds_path ).unwrap();
-  assert_eq!( after, before, "~/.claude/.credentials.json must be unchanged after .account.assign" );
+  assert_eq!( after, before, "~/.claude/.credentials.json must be unchanged after .accounts assign::1" );
 }
 
 // ── AA13 — Dry-run with unknown @-account exits 2 ─────────────────────────────
@@ -342,8 +346,8 @@ fn aa11_no_credentials_json_side_effect()
 ///
 /// ## Fix Applied
 ///
-/// Added existence guard before the dry-run branch in `account_assign_routine()`:
-/// `check_account_exists()` now runs unconditionally — the dry-run flag only suppresses
+/// Added existence guard before the dry-run branch in `accounts_routine()` assign path:
+/// existence check now runs unconditionally — the dry-run flag only suppresses
 /// the write step, never the precondition checks.
 ///
 /// ## Prevention
@@ -354,7 +358,7 @@ fn aa11_no_credentials_json_side_effect()
 /// ## Pitfall
 ///
 /// `resolve_account_name` `@`-fast-path bypasses store validation intentionally (full email
-/// → no prefix expansion needed), but callers must still call `check_account_exists()` after
+/// → no prefix expansion needed), but callers must still check existence after
 /// resolution. Never assume a resolved name is a valid stored account.
 fn aa13_dry_run_unknown_account_exits_2()
 {
@@ -365,7 +369,7 @@ fn aa13_dry_run_unknown_account_exits_2()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::ghost@example.com", "dry::1" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::ghost@example.com", "dry::1" ], &refs );
   assert_exit( &out, 2 );
   let out_text = stdout( &out );
   assert!(
@@ -391,7 +395,7 @@ fn aa14_usage_block_no_active_marker_shows_none()
   let store = credential_store( dir.path() );
   std::fs::create_dir_all( &store ).unwrap();
 
-  let out = run_cs_with_env( &[ ".account.assign" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1" ], &refs );
   assert_exit( &out, 0 );
 
   let out_text = stdout( &out );
@@ -421,7 +425,7 @@ fn aa15_ambiguous_prefix_exits_1()
   write_account( dir.path(), "alice@corp.com",  "max", "tier4", 9_999_999_999_999, false );
   write_account( dir.path(), "alice@other.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice" ], &refs );
   assert_exit( &out, 1 );
 
   let err_text = stderr( &out );
@@ -449,7 +453,7 @@ fn aa16_exact_local_part_beats_prefix_ambiguity()
   write_account( dir.path(), "i1@host",  "max", "tier4", 9_999_999_999_999, false );
   write_account( dir.path(), "i11@host", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::i1" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::i1" ], &refs );
   assert_exit( &out, 0 );
 
   let store   = credential_store( dir.path() );
@@ -472,7 +476,7 @@ fn aa17_for_only_at_both_empty_exits_1()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com", "for::@" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::@" ], &refs );
   assert_exit( &out, 1 );
 
   let store = credential_store( dir.path() );
@@ -495,7 +499,7 @@ fn ec7_dot_hyphen_in_machine_preserved()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com", "for::user1@w003.local" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::user1@w003.local" ], &refs );
   assert_exit( &out, 0 );
 
   let store   = credential_store( dir.path() );
@@ -524,7 +528,7 @@ fn ec8_multiple_at_splits_on_first()
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
   let out = run_cs_with_env(
-    &[ ".account.assign", "name::alice@corp.com", "for::alice@corp.com@laptop" ],
+    &[ ".accounts", "assign::1", "name::alice@corp.com", "for::alice@corp.com@laptop" ],
     &refs,
   );
   assert_exit( &out, 0 );
@@ -546,7 +550,10 @@ fn aa12_dry_run_shows_marker_filename()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com", "for::bob@laptop", "dry::1" ], &refs );
+  let out = run_cs_with_env(
+    &[ ".accounts", "assign::1", "name::alice@corp.com", "for::bob@laptop", "dry::1" ],
+    &refs,
+  );
   assert_exit( &out, 0 );
 
   let out_text = stdout( &out );
@@ -554,7 +561,7 @@ fn aa12_dry_run_shows_marker_filename()
     "dry-run stdout must name the target marker file: {out_text}" );
 }
 
-// ── AO: Account Assign Ownership (Feature 036) ────────────────────────────
+// ── AO: Account Assign Ownership (Feature 036 / 037) ──────────────────────────
 
 /// Read the `owner` field from `{name}.json` in the test credential store.
 fn read_owner( home : &std::path::Path, name : &str ) -> Option< String >
@@ -566,12 +573,12 @@ fn read_owner( home : &std::path::Path, name : &str ) -> Option< String >
     .and_then( |v| v[ "owner" ].as_str().map( str::to_string ) )
 }
 
-/// FT-13 (AC-13): `.account.assign` does NOT modify `owner` — marker-only.
+/// FT-08 (AC-08): `.accounts assign::1` does NOT modify `owner` — marker-only.
 ///
-/// Pre-seed `{name}.json` with `"owner": "alice@host1"`. After `.account.assign`,
-/// `owner` must remain `"alice@host1"` — assign is marker-only (ownership stamp moved to save).
+/// Pre-seed `{name}.json` with `"owner": "alice@host1"`. After `.accounts assign::1`,
+/// `owner` must remain `"alice@host1"` — assign is marker-only (ownership stamp on save only).
 ///
-/// Spec: [`tests/docs/feature/32_account_assign.md` FT-13]
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-08]
 #[ test ]
 fn ft13_assign_does_not_modify_owner()
 {
@@ -583,22 +590,22 @@ fn ft13_assign_does_not_modify_owner()
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
   write_account_owner( dir.path(), "alice@corp.com", "alice@host1" );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com" ], &refs );
   assert_exit( &out, 0 );
 
   let owner = read_owner( dir.path(), "alice@corp.com" );
   assert_eq!(
     owner.as_deref(), Some( "alice@host1" ),
-    "FT-13: .account.assign must NOT modify owner (marker-only); got: {owner:?}",
+    "FT-08: .accounts assign::1 must NOT modify owner (marker-only); got: {owner:?}",
   );
 }
 
-/// FT-14: `.account.assign for::bob@laptop` does NOT modify `owner` — marker-only.
+/// FT-09 (AC-09): `.accounts assign::1 for::bob@laptop` does NOT modify `owner` — marker-only.
 ///
-/// Pre-seed `{name}.json` with `"owner": "alice@host1"`. After `.account.assign for::bob@laptop`,
+/// Pre-seed `{name}.json` with `"owner": "alice@host1"`. After `.accounts assign::1 for::bob@laptop`,
 /// `owner` must remain `"alice@host1"`. Marker written to `_active_laptop_bob`.
 ///
-/// Spec: [`tests/docs/feature/32_account_assign.md` FT-13]
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-09]
 #[ test ]
 fn ft14_assign_for_does_not_modify_owner()
 {
@@ -611,7 +618,7 @@ fn ft14_assign_for_does_not_modify_owner()
   write_account_owner( dir.path(), "alice@corp.com", "alice@host1" );
 
   let out = run_cs_with_env(
-    &[ ".account.assign", "name::alice@corp.com", "for::bob@laptop" ],
+    &[ ".accounts", "assign::1", "name::alice@corp.com", "for::bob@laptop" ],
     &refs,
   );
   assert_exit( &out, 0 );
@@ -619,18 +626,18 @@ fn ft14_assign_for_does_not_modify_owner()
   let owner = read_owner( dir.path(), "alice@corp.com" );
   assert_eq!(
     owner.as_deref(), Some( "alice@host1" ),
-    "FT-14: .account.assign for:: must NOT modify owner (marker-only); got: {owner:?}",
+    "FT-09: .accounts assign::1 for:: must NOT modify owner (marker-only); got: {owner:?}",
   );
 }
 
-/// FT-15: `.account.assign unclaim::1` exits 1 — unknown parameter.
+/// FT-12: `.account.assign name::X` exits 1 — command absorbed into `.accounts` (redirect stub).
 ///
-/// `unclaim::` is not registered on `.account.assign` (marker-only). To release
-/// ownership, use `.account.unclaim`. Passing `unclaim::1` here exits 1.
+/// Feature 037 removed `.account.assign` as a standalone command; it now routes to a redirect
+/// stub that exits 1 with an actionable error message directing callers to `.accounts assign::1`.
 ///
-/// Spec: [`tests/docs/feature/36_account_ownership.md` FT-15]
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-12]
 #[ test ]
-fn ft15_assign_rejects_unclaim()
+fn ft15_assign_removed()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -640,14 +647,20 @@ fn ft15_assign_rejects_unclaim()
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
   write_account_owner( dir.path(), "alice@corp.com", "user1@host1" );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com", "unclaim::1" ], &refs );
+  let out = run_cs_with_env( &[ ".account.assign", "name::alice@corp.com" ], &refs );
   assert_exit( &out, 1 );
 
-  // owner must remain unchanged — exit 1 before any write.
+  let err_text = stderr( &out );
+  assert!(
+    err_text.contains( ".account.assign" ) && err_text.contains( ".accounts assign::1" ),
+    "FT-12: .account.assign must emit redirect message; got stderr: {err_text}",
+  );
+
+  // Redirect fires before any write — owner must remain unchanged.
   let owner = read_owner( dir.path(), "alice@corp.com" );
   assert_eq!(
     owner.as_deref(), Some( "user1@host1" ),
-    "FT-15: .account.assign unclaim::1 must exit 1; owner unchanged; got: {owner:?}",
+    "FT-12: redirect must not modify owner; got: {owner:?}",
   );
 }
 
@@ -665,7 +678,7 @@ fn aa18_empty_name_exits_1()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".account.assign", "name::" ], &refs );
+  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::" ], &refs );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(

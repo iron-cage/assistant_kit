@@ -874,8 +874,8 @@ fn cache_write_preserves_existing_fields()
   );
 
   let content = std::fs::read_to_string( &meta ).unwrap();
-  assert!( content.contains( r#""host":"wbox""# ), "host preserved: {content}" );
-  assert!( content.contains( r#""role":"dev""# ), "role preserved: {content}" );
+  assert!( content.contains( r#""host": "wbox""# ), "host preserved: {content}" );
+  assert!( content.contains( r#""role": "dev""# ), "role preserved: {content}" );
   assert!( content.contains( r#""cache""# ), "cache key present: {content}" );
   assert!( content.contains( r#""fetched_at""# ), "fetched_at present: {content}" );
   assert!( content.contains( r#""left_pct""# ), "left_pct present: {content}" );
@@ -1083,7 +1083,7 @@ fn cache_field_creates_file_from_scratch()
   claude_profile_core::account::write_cache_string( store.path(), name, "model_override", "sonnet" );
   assert!( meta.exists(), "write_cache_string must create file" );
   let content = std::fs::read_to_string( &meta ).unwrap();
-  assert!( content.contains( r#""model_override":"sonnet""# ), "field must be in file: {content}" );
+  assert!( content.contains( r#""model_override": "sonnet""# ), "field must be in file: {content}" );
   // read_quota_cache returns None because no fetched_at.
   assert!(
     claude_profile_core::account::read_quota_cache( store.path(), name ).is_none(),
