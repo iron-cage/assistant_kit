@@ -71,7 +71,7 @@ Optional `version::SPEC` overrides the stored preference for a single invocation
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands.rs` | Version command routines |
+| `../../src/commands/version.rs` | Version command routines |
 
 ### Provenance
 

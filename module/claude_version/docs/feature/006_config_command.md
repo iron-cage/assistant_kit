@@ -59,7 +59,7 @@ Providing `scope::` without a write operation (without `key:: + value::` or `key
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands.rs` | .config command handler |
+| `../../src/commands/config.rs` | .config command handler |
 | `../../../claude_version_core/src/config_catalog.rs` | Known settings catalog (SettingDef registry) |
 | `../../../claude_version_core/src/config_resolve.rs` | 4-layer resolution engine |
 

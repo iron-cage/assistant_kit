@@ -40,7 +40,7 @@ Signal delivery uses `Command::new("kill")` (no `libc`, enforced by `unsafe-code
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands.rs` | Process command routines |
+| `../../src/commands/process.rs` | Process command routines |
 
 ### Provenance
 

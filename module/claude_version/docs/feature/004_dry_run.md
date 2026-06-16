@@ -35,7 +35,7 @@
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands.rs` | dry-run branches in mutation routines |
+| `../../src/commands/mod.rs` | dry-run branches in mutation routines |
 
 ### Provenance
 
