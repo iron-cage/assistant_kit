@@ -1,10 +1,13 @@
-# user_story/
+# User Story Doc Entity
 
 ### Scope
 
-**Responsibility:** User story catalog for the cm CLI.
+- **Purpose**: Document persona-goal scenarios for the clv CLI.
+- **Responsibility**: User story catalog with acceptance criteria for each scenario.
+- **In Scope**: Developer and team lead personas; version, process, settings, and environment workflows.
+- **Out of Scope**: Command reference (-> `../command/`), behavioral contracts (-> `../../feature/`).
 
-### User Story Index
+### Overview Table
 
 | File | ID | Title | Persona | Primary Commands |
 |------|----|-------|---------|-----------------|

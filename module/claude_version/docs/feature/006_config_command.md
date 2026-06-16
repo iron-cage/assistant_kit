@@ -38,38 +38,31 @@ If no layer supplies a value, the key is absent (not an error). See `algorithm/0
 
 **Deprecation:** `.settings.show`, `.settings.get`, and `.settings.set` are deprecated in favor of `.config`. They continue to operate as before (no breaking change) but will be removed in a future version.
 
-### Acceptance Criteria
+### Algorithms
 
-| ID | Criterion |
-|----|-----------|
-| AC-01 | `.config` (no params) prints all resolved settings across all 4 layers in text format; exit 0 |
-| AC-02 | `.config key::K` prints the resolved effective value for key K with the source layer (env/project/user/default/absent); exit 0 |
-| AC-03 | `.config key::K value::V` writes K→V to `~/.claude/settings.json` with type inference; exit 0 |
-| AC-04 | `.config key::K value::V scope::project` writes K→V to `{cwd}/.claude/settings.json`; exit 0 |
-| AC-05 | `.config key::K unset::1` removes key K from the scope target settings file; exit 0 |
-| AC-06 | `.config format::json` outputs resolved settings as a JSON object including source metadata per key |
-| AC-07 | Resolution priority: env var → project config → user config → catalog default; each layer overrides the next |
-| AC-08 | `.config key::K` exits 0 and prints an absent indicator when K has no value in any layer and no catalog default |
-| AC-09 | `.config key::K value::V dry::1` prints the preview without modifying any file; exit 0 |
-| AC-10 | HOME unset → exit 2 for any operation requiring `~/.claude/settings.json` access |
-| AC-11 | `.config key::K value::V` for a non-catalog key writes the value without error (arbitrary key support) |
-| AC-12 | Known settings catalog exposes: `model` (env: `CLAUDE_MODEL`, default: `claude-sonnet-4-6`), `preferredVersionSpec` (default: `stable`), `autoUpdates` (bool, default: `true`), `theme` (default: `system`), `hasCompletedOnboarding` (bool, default: `false`), `env.DISABLE_AUTOUPDATER` (default: absent) |
+| File | Relationship |
+|------|-------------|
+| [algorithm/001_settings_type_inference.md](../algorithm/001_settings_type_inference.md) | Type inference rules for value:: writes |
+| [algorithm/002_config_resolution.md](../algorithm/002_config_resolution.md) | 4-layer resolution algorithm and catalog |
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [feature/003_settings_management.md](003_settings_management.md) | Deprecated `.settings.*` commands; I/O atomics |
-| doc | [algorithm/001_settings_type_inference.md](../algorithm/001_settings_type_inference.md) | Type inference rules for value:: |
-| doc | [algorithm/002_config_resolution.md](../algorithm/002_config_resolution.md) | 4-layer resolution algorithm and catalog |
-| doc | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode semantics |
-| doc | [feature/005_cli_design.md](005_cli_design.md) | CLI routing and required parameter validation |
-| source | `../../src/commands.rs` | `.config` command handler |
-| source | `../../../claude_version_core/src/config_catalog.rs` | Known settings catalog (SettingDef registry) |
-| source | `../../../claude_version_core/src/config_resolve.rs` | 4-layer resolution engine |
+| File | Relationship |
+|------|-------------|
+| [feature/003_settings_management.md](003_settings_management.md) | Deprecated .settings.* commands; I/O atomics |
+| [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode semantics |
+| [feature/005_cli_design.md](005_cli_design.md) | CLI routing and required parameter validation |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
-| User design session 2026-06-09 | `.config` replaces `.settings.*`; resolution chain; catalog; scope param; unset param |
+| File | Relationship |
+|------|-------------|
+| `../../src/commands.rs` | .config command handler |
+| `../../../claude_version_core/src/config_catalog.rs` | Known settings catalog (SettingDef registry) |
+| `../../../claude_version_core/src/config_resolve.rs` | 4-layer resolution engine |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [tests/docs/feature/006_config_command.md](../../tests/docs/feature/006_config_command.md) | Feature test spec |

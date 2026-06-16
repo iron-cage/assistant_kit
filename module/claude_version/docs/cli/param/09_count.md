@@ -14,9 +14,9 @@ available releases return all available.
 - **Validation:** must be a non-negative integer; values exceeding available releases return all available
 
 ```sh
-cm .version.history count::1       # most recent release only
-cm .version.history count::3       # 3 most recent releases
-cm .version.history count::0       # empty output (valid, exit 0)
+clv.version.history count::1       # most recent release only
+clv.version.history count::3       # 3 most recent releases
+clv.version.history count::0       # empty output (valid, exit 0)
 ```
 
 ### Referenced Commands

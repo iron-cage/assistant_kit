@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the type inference rules applied to the `value::` parameter in `.settings.set`.
 - **Responsibility**: Specify the 4-step inference order, precedence rules, and edge cases (NaN, infinity, large integers).
-- **In Scope**: bool inference, i64 inference, f64 inference, string fallback, NaN/infinity handling.
+- **In Scope**: bool inference, i64 inference, f64 inference, string fallback, NaN/infinity handling. Used by `.settings.set` and `.config` set/unset.
 - **Out of Scope**: Settings JSON read/write mechanics (→ `feature/003_settings_management.md`), CLI parameter validation (→ `feature/005_cli_design.md`).
 
 ### Abstract
@@ -51,15 +51,22 @@ The inference is applied in strict priority order. The first matching rule wins:
 | `"hello"` | `"hello"` | Step 4 |
 | `"it's"` | `"it's"` | Step 4 |
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [feature/003_settings_management.md](../feature/003_settings_management.md) | .settings.set that applies this inference |
-| source | `../../src/settings_io.rs` | Type inference implementation |
+| File | Relationship |
+|------|-------------|
+| [feature/003_settings_management.md](../feature/003_settings_management.md) | .settings.set uses this algorithm |
+| [feature/006_config_command.md](../feature/006_config_command.md) | .config set/unset uses this algorithm |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
+| File | Relationship |
+|------|-------------|
+| `../../src/settings_io.rs` | Type inference implementation |
 | `spec.md` (deleted — migrated here) | FR-07 (type inference for value::) |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [tests/docs/algorithm/001_settings_type_inference.md](../../tests/docs/algorithm/001_settings_type_inference.md) | Algorithm test spec |

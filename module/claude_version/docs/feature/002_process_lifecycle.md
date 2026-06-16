@@ -29,16 +29,22 @@ Signal delivery uses `Command::new("kill")` (no `libc`, enforced by `unsafe-code
 
 **Dry-run:** `dry::1` prints `[dry-run] would kill N process(es)` without sending any signals.
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .processes.kill |
-| doc | [feature/005_cli_design.md](005_cli_design.md) | CLI routing and exit code mapping |
-| source | `../../src/commands.rs` | Process command routines |
+| File | Relationship |
+|------|-------------|
+| [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .processes.kill |
+| [feature/005_cli_design.md](005_cli_design.md) | CLI routing and exit code mapping |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
-| `spec.md` (deleted — migrated here) | FR-08, FR-09, Command Inventory (commands 7-8), Known Limitations (Linux-only, kill via Command::new) |
+| File | Relationship |
+|------|-------------|
+| `../../src/commands.rs` | Process command routines |
+| `spec.md` (deleted — migrated here) | FR-08, FR-09, Command Inventory (commands 7-8), Known Limitations |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [tests/docs/feature/002_process_lifecycle.md](../../tests/docs/feature/002_process_lifecycle.md) | Feature test spec |

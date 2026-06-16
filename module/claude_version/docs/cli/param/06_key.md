@@ -13,8 +13,8 @@ Required for `.settings.get` and `.settings.set`. Optional for `.config` — abs
 - **Validation:** when present, must not be empty; `key::` (empty) -> exit 1
 
 ```sh
-cm .settings.get key::theme
-cm .settings.set key::theme value::dark
+clv.settings.get key::theme
+clv.settings.set key::theme value::dark
 ```
 
 ### Referenced Commands
