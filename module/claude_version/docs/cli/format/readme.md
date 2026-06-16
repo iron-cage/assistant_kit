@@ -1,10 +1,13 @@
-# format/
+# Output Formats
 
 ### Scope
 
-**Responsibility:** Named output format catalog for the cm CLI.
+- **Purpose**: Define the named output format catalog for the clv CLI.
+- **Responsibility**: One file per named format type with structure and example.
+- **In Scope**: text (human-readable) and json (machine-readable) output formats.
+- **Out of Scope**: Command-specific output (-> `../command/`), behavioral rules (-> `../../feature/`).
 
-### Format File Index
+### Overview Table
 
 | File | Format | Purpose |
 |------|--------|---------|

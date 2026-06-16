@@ -11,5 +11,4 @@ Source code for the `claude_version` crate (binary + library).
 | `bin/` | Alias binary entry points (`clv`) |
 | `output.rs` | `OutputOptions`, `OutputFormat`; text/json formatting utilities |
 | `adapter.rs` | Argv-to-unilang token conversion: alias expansion, bool/int validation |
-| `commands.rs` | 12 command routines returning `Result<OutputData, ErrorData>` |
-| `settings_io.rs` | Atomic read/write of Claude's `settings.json` |
+| `commands/` | 12 command routines returning `Result<OutputData, ErrorData>` |

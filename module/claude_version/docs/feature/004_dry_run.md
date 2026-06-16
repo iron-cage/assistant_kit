@@ -23,17 +23,23 @@
 
 **Note:** `dry::1` on read-only commands (`.settings.show`, `.version.show`, etc.) is not supported — those commands have no mutations to preview.
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [feature/001_version_management.md](001_version_management.md) | Version mutation commands supporting dry::1 |
-| doc | [feature/002_process_lifecycle.md](002_process_lifecycle.md) | Kill command supporting dry::1 |
-| doc | [feature/003_settings_management.md](003_settings_management.md) | Settings set command supporting dry::1 |
-| source | `../../src/commands.rs` | dry-run branches in mutation routines |
+| File | Relationship |
+|------|-------------|
+| [feature/001_version_management.md](001_version_management.md) | Version mutation commands supporting dry::1 |
+| [feature/002_process_lifecycle.md](002_process_lifecycle.md) | Kill command supporting dry::1 |
+| [feature/003_settings_management.md](003_settings_management.md) | Settings set command supporting dry::1 |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
-| `spec.md` (deleted — migrated here) | FR-05, Command Inventory (dry:: parameter), Parameter Inventory (dry:: — Boolean 0/1) |
+| File | Relationship |
+|------|-------------|
+| `../../src/commands.rs` | dry-run branches in mutation routines |
+| `spec.md` (deleted — migrated here) | FR-05, Command Inventory (dry:: parameter), Parameter Inventory |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [tests/docs/feature/004_dry_run.md](../../tests/docs/feature/004_dry_run.md) | Feature test spec |

@@ -13,9 +13,9 @@ Required for `.settings.set`. Optional for `.config` (when present alongside `ke
 - **Validation:** must not be empty; `value::` (empty) -> exit 1
 
 ```sh
-cm .settings.set key::theme value::dark      # -> "dark" (string)
-cm .settings.set key::timeout value::30      # -> 30 (number)
-cm .settings.set key::autoUpdate value::true  # -> true (bool)
+clv.settings.set key::theme value::dark      # -> "dark" (string)
+clv.settings.set key::timeout value::30      # -> 30 (number)
+clv.settings.set key::autoUpdate value::true  # -> true (bool)
 ```
 
 ### Referenced Commands

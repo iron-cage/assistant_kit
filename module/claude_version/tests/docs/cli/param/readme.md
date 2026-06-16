@@ -4,8 +4,8 @@
 
 - **Purpose**: Document edge case coverage for individual cm parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 10 cm parameter test files.
-- **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
+- **In Scope**: All 12 cm parameter test files.
+- **Out of Scope**: Command-level tests (-> `command/`), parameter group interactions (-> `param_group/`).
 
 ### Overview Table
 
@@ -21,4 +21,6 @@
 | 008_interval.md | Edge case tests for `interval::` parameter | ✅ |
 | 009_count.md | Edge case tests for `count::` parameter | ✅ |
 | 010_help_param.md | Edge case tests for `.help` parameter | ✅ |
+| 011_scope.md | Edge case tests for `scope::` parameter | ✅ |
+| 012_unset.md | Edge case tests for `unset::` parameter | ✅ |
 | procedure.md | Workflow for creating and updating parameter test specs | ✅ |

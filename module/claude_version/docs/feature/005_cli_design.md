@@ -42,19 +42,25 @@
 
 **`#[inline]` requirement:** Workspace lint `missing_inline_in_public_items = "warn"` with `-D warnings` requires `#[inline]` on every `pub fn`, `pub` method, and trait impl (`Display::fmt`, `Default::default`).
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [feature/001_version_management.md](001_version_management.md) | Version commands handled by this pipeline |
-| doc | [feature/002_process_lifecycle.md](002_process_lifecycle.md) | Process commands handled by this pipeline |
-| doc | [feature/003_settings_management.md](003_settings_management.md) | Settings commands handled by this pipeline |
-| doc | [feature/006_config_command.md](006_config_command.md) | Unified `.config` command handled by this pipeline |
-| source | `../../src/lib.rs` | run_cli() 5-phase pipeline |
-| source | `../../src/adapter.rs` | Argv → unilang token adapter |
+| File | Relationship |
+|------|-------------|
+| [feature/001_version_management.md](001_version_management.md) | Version commands handled by this pipeline |
+| [feature/002_process_lifecycle.md](002_process_lifecycle.md) | Process commands handled by this pipeline |
+| [feature/003_settings_management.md](003_settings_management.md) | Settings commands handled by this pipeline |
+| [feature/006_config_command.md](006_config_command.md) | Unified .config command handled by this pipeline |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
-| `spec.md` (deleted — migrated here) | Architecture, FR-01 through FR-04, FR-10, FR-11, Command Inventory, Parameter Inventory |
+| File | Relationship |
+|------|-------------|
+| `../../src/adapter.rs` | Argv to unilang token adapter |
+| `../../src/lib.rs` | run_cli() 5-phase pipeline |
+| `spec.md` (deleted — migrated here) | Architecture, FR-01 through FR-04, FR-10, FR-11, Command/Parameter Inventory |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [tests/docs/feature/005_cli_design.md](../../tests/docs/feature/005_cli_design.md) | Feature test spec |

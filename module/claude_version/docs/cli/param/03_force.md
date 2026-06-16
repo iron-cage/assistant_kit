@@ -14,9 +14,9 @@ For `.processes.kill`: SIGKILL directly (no SIGTERM first).
 - **Validation:** strictly `0` or `1`; `true`, `yes`, `TRUE` etc. rejected with exit 1
 
 ```sh
-cm .version.install force::1          # reinstall even if current
-cm .version.guard force::1            # reinstall even if matching
-cm .processes.kill force::1           # SIGKILL immediately
+clv.version.install force::1          # reinstall even if current
+clv.version.guard force::1            # reinstall even if matching
+clv.processes.kill force::1           # SIGKILL immediately
 ```
 
 ### Referenced Commands

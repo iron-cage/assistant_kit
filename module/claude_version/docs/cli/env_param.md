@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Environment variable reference for the cm CLI.
-- **Responsibility**: All environment variables that affect cm behavior — names, types, defaults, and consuming commands.
-- **In Scope**: All env vars read by cm at startup or during command execution.
+- **Purpose**: Environment variable reference for the clv CLI.
+- **Responsibility**: All environment variables that affect clv behavior — names, types, defaults, and consuming commands.
+- **In Scope**: All env vars read by clv at startup or during command execution.
 - **Out of Scope**: CLI parameter reference (→ `005_params.md`), config file parameters (→ `config_param.md`).
 
 ### All Environment Variables (2 total)
@@ -18,7 +18,7 @@
 
 ### Variable :: 1. `HOME`
 
-Standard Unix home directory path. cm uses this to resolve:
+Standard Unix home directory path. clv uses this to resolve:
 - `~/.claude/settings.json` — settings read/write target
 - `~/.persistent/claude/credential/_active` — active account marker (or `$HOME/.persistent/...`)
 

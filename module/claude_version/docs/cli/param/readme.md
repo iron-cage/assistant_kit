@@ -1,10 +1,10 @@
-# param/ — cm Parameter Reference
+# param/ — clvParameter Reference
 
 ### Scope
 
-- **Purpose**: Per-parameter reference for all 12 cm parameters.
+- **Purpose**: Per-parameter reference for all 12 clvparameters.
 - **Responsibility**: Parameter type, default, validation, and cross-references.
-- **In Scope**: All 12 cm parameters.
+- **In Scope**: All 12 clvparameters.
 - **Out of Scope**: Command reference (→ `../command/`), type definitions (→ `../type/`), parameter interactions (→ `../004_parameter_interactions.md`).
 
 ### Responsibility Table

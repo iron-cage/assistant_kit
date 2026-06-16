@@ -13,10 +13,10 @@ Output is prefixed with `[dry-run] would ...`.
 - **Validation:** strictly `0` or `1`; `true`, `yes`, `TRUE` etc. rejected with exit 1
 
 ```sh
-cm .version.install dry::1
-cm .version.guard dry::1
-cm .processes.kill dry::1
-cm .settings.set key::theme value::dark dry::1
+clv.version.install dry::1
+clv.version.guard dry::1
+clv.processes.kill dry::1
+clv.settings.set key::theme value::dark dry::1
 ```
 
 ### Referenced Commands

@@ -3,13 +3,13 @@
 ### Scope
 
 - **Purpose**: Operational steps for managing command instance files in this directory.
-- **Responsibility**: Procedures for adding, updating, or removing cm command documentation.
+- **Responsibility**: Procedures for adding, updating, or removing clvcommand documentation.
 
 ---
 
 ### Procedure :: 1. Add a New Command
 
-**Trigger:** A new cm command is implemented and requires documentation.
+**Trigger:** A new clvcommand is implemented and requires documentation.
 
 1. Identify the namespace (root, version, processes, settings, or new namespace).
 2. Open the appropriate namespace file (`root.md`, `version.md`, `processes.md`, `settings.md`).
@@ -43,7 +43,7 @@
 
 ### Procedure :: 3. Remove a Command
 
-**Trigger:** A cm command is deprecated and removed.
+**Trigger:** A clvcommand is deprecated and removed.
 
 1. Remove the `### Command :: N. .name` section from the namespace file.
 2. Remove the command row from the `### All Commands` table in `readme.md`.

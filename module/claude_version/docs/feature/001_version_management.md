@@ -48,17 +48,28 @@ Optional `version::SPEC` overrides the stored preference for a single invocation
 
 **Release history:** `.version.history` fetches from the GitHub Releases API (`anthropics/claude-code`). Response cached in `~/.claude/.transient/` for 1 hour. `count::N` limits output (default 10). `count::0` produces empty output, exits 0. Verbosity: `v::0` (bare version+date), `v::1` (version+date+summary), `v::2` (full changelog).
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [pattern/001_version_lock.md](../pattern/001_version_lock.md) | 5-layer lock applied after successful install |
-| doc | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .version.install and .version.guard |
-| doc | [feature/005_cli_design.md](005_cli_design.md) | CLI routing, parameter parsing, exit codes |
-| source | `../../src/commands.rs` | Version command routines |
+| File | Relationship |
+|------|-------------|
+| [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .version.install and .version.guard |
+| [feature/005_cli_design.md](005_cli_design.md) | CLI routing, parameter parsing, exit codes |
+
+### Patterns
+
+| File | Relationship |
+|------|-------------|
+| [pattern/001_version_lock.md](../pattern/001_version_lock.md) | 5-layer lock applied after successful install |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
-| `spec.md` (deleted — migrated here) | FR-12 through FR-21, Command Inventory (commands 3-6, 12), Parameter Inventory (version::, interval::, count::) |
+| File | Relationship |
+|------|-------------|
+| `../../src/commands.rs` | Version command routines |
+| `spec.md` (deleted — migrated here) | FR-12 through FR-21, Command Inventory (commands 3-6, 12), Parameter Inventory |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [tests/docs/feature/001_version_management.md](../../tests/docs/feature/001_version_management.md) | Feature test spec |

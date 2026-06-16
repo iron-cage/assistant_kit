@@ -91,17 +91,27 @@ Text output annotates each key with its source layer in parentheses: `(env)`, `(
 
 JSON output includes a `source` field per key in the output object.
 
-### Cross-References
+### Algorithms
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [feature/006_config_command.md](../feature/006_config_command.md) | `.config` command using this algorithm |
-| doc | [algorithm/001_settings_type_inference.md](001_settings_type_inference.md) | Type inference for set operations |
-| source | `../../../claude_version_core/src/config_resolve.rs` | Resolution engine implementation |
-| source | `../../../claude_version_core/src/config_catalog.rs` | Catalog registry (SettingDef) |
+| File | Relationship |
+|------|-------------|
+| [algorithm/001_settings_type_inference.md](001_settings_type_inference.md) | Type inference for set operations |
+
+### Features
+
+| File | Relationship |
+|------|-------------|
+| [feature/006_config_command.md](../feature/006_config_command.md) | .config command using this algorithm |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
-| User design session 2026-06-09 | 4-layer resolution: env → project → user → catalog default |
+| File | Relationship |
+|------|-------------|
+| `../../../claude_version_core/src/config_catalog.rs` | Catalog registry (SettingDef) |
+| `../../../claude_version_core/src/config_resolve.rs` | Resolution engine implementation |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [tests/docs/algorithm/002_config_resolution.md](../../tests/docs/algorithm/002_config_resolution.md) | Algorithm test spec |

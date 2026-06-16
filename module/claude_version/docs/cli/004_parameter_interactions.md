@@ -7,7 +7,7 @@
 - **In Scope**: Pairwise and group-level parameter interactions.
 - **Out of Scope**: Individual parameter details (→ `param/`), group membership (→ `param_group/`).
 
-How cm parameters interact when combined. See [param/](param/readme.md) and [param_group/](param_group/readme.md) for individual parameter specifications.
+How clv parameters interact when combined. See [param/](param/readme.md) and [param_group/](param_group/readme.md) for individual parameter specifications.
 
 ### Interaction Table
 

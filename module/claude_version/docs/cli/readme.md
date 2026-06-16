@@ -1,8 +1,8 @@
-# cm CLI Documentation
+# clv CLI Documentation
 
 ### Scope
 
-- **Purpose**: Document the cm command-line interface for Claude Code version and settings management.
+- **Purpose**: Document the clv command-line interface for Claude Code version and settings management.
 - **Responsibility**: Reference documentation for commands, parameters, types, output formats, and user stories.
 - **In Scope**: commands, params, types, parameter groups, dictionary, user stories, output formats, environment parameters, config parameters, parameter interactions.
 - **Out of Scope**: Implementation design and behavioral contracts — validation rules, exit code semantics, pipeline architecture (→ `feature/`), design rationale (→ `001_design_decisions.md`), test planning (→ `tests/docs/cli/`).
@@ -12,7 +12,7 @@ Manage Claude Code installation: versions, processes, and settings.
 ### Usage
 
 ```sh
-cm <.command> [param::value ...]
+clv <.command> [param::value ...]
 ```
 
 ### Completion Matrix
