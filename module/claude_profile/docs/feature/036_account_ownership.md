@@ -27,16 +27,16 @@ An account is "owned by this machine" when: (a) owner is empty or absent (no enf
 
 **Enforcement gates (G1–G8):**
 
-| Gate | Location | Action when `!is_owned` |
-|------|----------|------------------------|
-| G1 | `fetch_quota_for_list()` in `fetch.rs` | Skip `read_token()` and HTTP fetch; read quota from cache (`read_quota_cache()`) directly; set `aq.is_owned = false` |
-| G2 | `should_refresh()` in `refresh_predicate.rs` | Return `false` early — no refresh attempt |
-| G3 | `apply_refresh()` loop in `refresh.rs` | Skip account — `should_refresh()` already returns `false` via G2 |
-| G4 | `apply_touch()` in `touch.rs` | Skip account — emit trace `"skipped (reason: not owned)"` when `trace::1` |
-| G5 | `account_use_routine()` in `account_ops.rs` | Exit 1 with `"ownership violation: this account is owned by {owner}"` |
-| G6 | `account_delete_routine()` in `account_ops.rs` | Exit 1 with `"ownership violation: this account is owned by {owner}"` |
-| G7 | `account_relogin_routine()` in `account_relogin.rs` | Exit 1 with `"ownership violation: this account is owned by {owner}"` |
-| G8 | `account_unclaim_routine()` in `account_ops.rs` | Exit 1 with `"ownership violation: this account is owned by {owner}"` |
+| Gate | Location | Action when `!is_owned` | `force::1` bypass |
+|------|----------|------------------------|-------------------|
+| G1 | `fetch_quota_for_list()` in `fetch.rs` | Skip `read_token()` and HTTP fetch; read quota from cache (`read_quota_cache()`) directly; set `aq.is_owned = false` | No bypass — read-side gate; `force::` not accepted by fetch path |
+| G2 | `should_refresh()` in `refresh_predicate.rs` | Return `false` early — no refresh attempt | No bypass — read-side gate |
+| G3 | `apply_refresh()` loop in `refresh.rs` | Skip account — `should_refresh()` already returns `false` via G2 | No bypass — read-side gate |
+| G4 | `apply_touch()` in `touch.rs` | Skip account — emit trace `"skipped (reason: not owned)"` when `trace::1` | No bypass — read-side gate |
+| G5 | `account_use_routine()` in `account_ops.rs` | Exit 1 with `"ownership violation: this account is owned by {owner}"` | Yes — `force::1` skips gate; proceeds to `switch_account()` |
+| G6 | `account_delete_routine()` in `account_ops.rs` | Exit 1 with `"ownership violation: this account is owned by {owner}"` | Yes — `force::1` skips gate; proceeds to deletion |
+| G7 | `account_relogin_routine()` in `account_relogin.rs` | Exit 1 with `"ownership violation: this account is owned by {owner}"` | Yes — `force::1` skips gate; proceeds to 6-step relogin |
+| G8 | `accounts_routine()` (`unclaim::1` path) in `commands/accounts.rs` (Feature 037) | Exit 1 with `"ownership violation: this account is owned by {owner}"` | Yes — `force::1` skips gate; proceeds to `write_owner(name, store, "")` |
 
 **G1 detail (cache-as-primary for non-owned accounts):** When `is_owned = false`, `fetch_quota_for_list()` skips `read_token()` (avoids touching the credential file) and skips the HTTP call to `fetch_oauth_usage`. Instead, it calls `read_quota_cache(credential_store, name)` and returns the cached values if present — the same path as Feature 033 cache-fallback, but triggered by ownership rather than API failure. The row is rendered with `~` prefix and age indicator identical to the cache-fallback path. If no cache exists, the row shows `—` for all quota columns. `aq.is_owned = false` is set in all cases. `aq.cached = true` is set when cache data is used.
 
@@ -46,7 +46,9 @@ An account is "owned by this machine" when: (a) owner is empty or absent (no enf
 
 **No `host::` collision:** The `host::` parameter (Feature 029) is a user-customizable display label (e.g., `"workstation"`, `"laptop"`). It is independent of `owner`. The `owner` field is set by `.account.save` (via `account_save_routine()` passing `Some(&owner_val)`) and cleared via `.account.unclaim` (calls `write_owner(name, store, "")`); it is never user-specified as a direct value via CLI parameter. Both fields coexist in `{name}.json` without ambiguity.
 
-**Dry-run interaction:** G5, G6, G7, G8 check ownership BEFORE evaluating `dry::1` — ownership violation exits 1 even in dry-run mode. This prevents information leakage (a dry-run would still reveal that a switch is possible, which is incorrect if the caller isn't the owner).
+**`force::` bypass:** All commands enforcing G5–G8 accept a `force::1` parameter that bypasses the ownership check. When `force::1` is present, the gate is skipped regardless of whether `current_identity() == owner`. `force::1` does not affect G1–G4 (read-side gates — touch and refresh are intentionally suppressed for non-owned accounts even with force). `force::1` always runs BEFORE `dry::1` evaluation — when both are set, the ownership check is bypassed but the mutation is still previewed without file writes.
+
+**Dry-run interaction:** G5, G6, G7, G8 check ownership BEFORE evaluating `dry::1` — ownership violation exits 1 even in dry-run mode (unless `force::1` is also set). This prevents information leakage (a dry-run would still reveal that a switch is possible, which is incorrect if the caller isn't the owner).
 
 **Trace interaction:** G4 emits a `[trace] touch  <name>  skipped (reason: not owned)` line when `trace::1` — identical format to other touch skip traces. G1 emits `[trace] fetch  <name>  skipped (reason: not owned)` when `trace::1`.
 
@@ -69,6 +71,10 @@ An account is "owned by this machine" when: (a) owner is empty or absent (no enf
 - **AC-15**: `clp .account.save name::X` stamps `current_identity()` as `owner` in `{name}.json`. `clp .account.unclaim name::X` writes `owner: ""` to `{name}.json` via `write_owner()` — credentials NOT touched. Both `.account.save` and `.account.assign` reject `unclaim::1` (exits 1 on unknown parameter). `clp .account.assign name::X` writes only the per-machine marker file `_active_{machine}_{user}` — the `owner` field in `{name}.json` is untouched.
 - **AC-16**: `clp .account.unclaim name::X` evaluates G8 ownership gate: `read_owner()` → `is_owned()`. If non-owner → exit 1 with `"ownership violation: this account is owned by {owner}"`. Gate runs BEFORE `dry::1` check. If account is unowned (`owner == ""`), gate passes — `write_owner()` writes `""` again (idempotent no-op).
 - **AC-17**: `clp .account.unclaim name::X dry::1` prints `[dry-run] would unclaim X` and exits 0. No files modified. G8 gate still runs before dry-run check — non-owner gets exit 1 even in dry-run mode.
+- **AC-18**: `clp .account.use name::X force::1` when `X` is owned by a different identity bypasses G5 — proceeds to `switch_account()` and exits 0. `force::1` is registered on `.account.use` as a `bool` param defaulting to `0`.
+- **AC-19**: `clp .account.delete name::X force::1` when `X` is owned by a different identity bypasses G6 — proceeds with deletion and exits 0. `force::1` is registered on `.account.delete` as a `bool` param defaulting to `0`.
+- **AC-20**: `clp .account.relogin name::X force::1` when `X` is owned by a different identity bypasses G7 — proceeds with the 6-step relogin procedure and exits 0. `force::1` is registered on `.account.relogin` as a `bool` param defaulting to `0`.
+- **AC-21**: `force::1` with `dry::1` on any G5–G8 command bypasses the ownership gate (no exit 1) but still previews without writing — `[dry-run]` message is printed and exits 0. Ownership check is bypassed; write suppression is not.
 
 ### Bugs
 
@@ -92,11 +98,17 @@ An account is "owned by this machine" when: (a) owner is empty or absent (no enf
 | [029_account_host_metadata.md](029_account_host_metadata.md) | `{name}.json` structure — `owner` field extends the same file; `host::` is display label, not ownership |
 | [033_quota_cache.md](033_quota_cache.md) | G1 non-owned path uses quota cache as primary source; same display as cache-fallback |
 
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/058_force.md](../cli/param/058_force.md) | `force::` — bypass G5–G8 ownership enforcement on mutation commands |
+
 ### Commands
 
 | File | Relationship |
 |------|--------------|
-| [cli/command/001_account.md](../cli/command/001_account.md) | `.account.save` — Command 4; `.account.unclaim` — Command 17 |
+| [cli/command/001_account.md](../cli/command/001_account.md) | `.account.save` — Command 4; `.account.unclaim` — Command 17; `.account.use` (G5 + force::); `.account.delete` (G6 + force::); `.account.relogin` (G7 + force::) |
 
 ### Sources
 

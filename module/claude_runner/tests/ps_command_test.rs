@@ -30,12 +30,14 @@ use cli_binary_test_helpers::{ fake_claude_binary_dir, run_clr_ps, spawn_fake_cl
 
 /// IT-1: `clr ps` with 0 sessions → exit 0, no-sessions message.
 ///
-/// In the test container no live `claude` processes are running; the scanner
-/// returns an empty vec and the output must be the sentinel string.
+/// `CLR_PROC_DIR` is set to an empty temp dir so `find_claude_processes()`
+/// sees no entries, regardless of live Claude sessions on the host.
 #[ test ]
 fn it_01_no_sessions_shows_message()
 {
-  let out = run_cli( &[ "ps" ] );
+  let empty_proc = tempfile::TempDir::new().expect( "create empty proc dir" );
+  let proc_dir   = empty_proc.path().to_str().expect( "proc dir UTF-8" );
+  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_PROC_DIR", proc_dir ) ] );
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "exit code must be 0, got {:?}", out.status.code() );
   assert!(
@@ -267,14 +269,22 @@ fn it_10_gate_file_present_shows_queued_table()
 
 /// IT-11: when `CLR_GATE_DIR` points to an empty temp dir, `clr ps` exits 0
 /// and stdout does NOT contain queued table headers.
+///
+/// `CLR_PROC_DIR` is set to a separate empty temp dir so the active-session
+/// scanner returns zero results regardless of live host sessions.
 #[ test ]
 fn it_11_no_gate_files_no_queued_table()
 {
   let gate_dir      = tempfile::TempDir::new().expect( "create gate temp dir" );
   let gate_dir_path = gate_dir.path().to_str().expect( "gate dir UTF-8" );
-  // Dir is intentionally empty — no .json files.
+  let empty_proc    = tempfile::TempDir::new().expect( "create empty proc dir" );
+  let proc_dir      = empty_proc.path().to_str().expect( "proc dir UTF-8" );
+  // Both dirs are intentionally empty.
 
-  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ) ] );
+  let out    = run_cli_with_env(
+    &[ "ps" ],
+    &[ ( "CLR_GATE_DIR", gate_dir_path ), ( "CLR_PROC_DIR", proc_dir ) ],
+  );
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
   assert!(

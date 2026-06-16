@@ -1,6 +1,6 @@
 # Doc Structure Validation — Feature Collection
 
-Structural compliance validation cases for the `docs/feature/` collection (36 files). Validates that all feature doc instances conform to the per-type H3 section format required by doc.rulebook.md § Feature Documentation : Rule 9a.
+Structural compliance validation cases for the `docs/feature/` collection (37 files). Validates that all feature doc instances conform to the per-type H3 section format required by doc.rulebook.md § Feature Documentation : Rule 9a.
 
 These are grep-executable and manual validation cases, not automated behavioral tests. They are the verification surface for the Rule 9a cross-references format migration.
 
@@ -11,7 +11,7 @@ These are grep-executable and manual validation cases, not automated behavioral 
 | DT-01 | No unified `### Cross-References` heading in any feature doc | Format |
 | DT-02 | No `| Type |` column header surviving in any feature doc | Format |
 | DT-03 | No `| Responsibility |` column header surviving in any feature doc | Format |
-| DT-04 | `### Sources` section present in all 33 feature docs | Structure |
+| DT-04 | `### Sources` section present in all 37 feature docs | Structure |
 | DT-05 | `### Tests` section present in all feature docs that had test entries | Structure |
 | DT-06 | Section ordering valid — alphabetical body; `### Sources` and `### Tests` always last | Structure |
 | DT-07 | Bidirectionality — 6 high-connectivity A↔B pairs each have both directions present | Structure |
@@ -22,7 +22,7 @@ These are grep-executable and manual validation cases, not automated behavioral 
 
 ### DT-01: No unified Cross-References heading in any feature doc
 
-- **Scope:** All 36 `docs/feature/*.md` files
+- **Scope:** All 37 `docs/feature/*.md` files
 - **Command:** `grep -rc "### Cross-References" docs/feature/*.md | grep -v ":0$"`
 - **Expected:** Empty output — every file returns `:0`
 - **Failure:** Any file path appears in output — that file still contains the unified heading
@@ -31,7 +31,7 @@ These are grep-executable and manual validation cases, not automated behavioral 
 
 ### DT-02: No Type column header surviving
 
-- **Scope:** All 36 `docs/feature/*.md` files
+- **Scope:** All 37 `docs/feature/*.md` files
 - **Command:** `grep -rc "| Type | File | Responsibility |" docs/feature/*.md | grep -v ":0$"`
 - **Expected:** Empty output
 - **Failure:** Any file still has the 3-column table header from the old format
@@ -40,7 +40,7 @@ These are grep-executable and manual validation cases, not automated behavioral 
 
 ### DT-03: No Responsibility column header surviving
 
-- **Scope:** All 36 `docs/feature/*.md` files
+- **Scope:** All 37 `docs/feature/*.md` files
 - **Command:** `grep -rc "| Responsibility |" docs/feature/*.md | grep -v ":0$"`
 - **Expected:** Empty output
 - **Failure:** Any file still uses `Responsibility` instead of `Relationship` as the column header
@@ -48,19 +48,19 @@ These are grep-executable and manual validation cases, not automated behavioral 
 
 ---
 
-### DT-04: Sources section present in all 36 feature docs
+### DT-04: Sources section present in all 37 feature docs
 
-- **Scope:** All 36 `docs/feature/*.md` files
+- **Scope:** All 37 `docs/feature/*.md` files
 - **Command:** `grep -l "### Sources" docs/feature/*.md | wc -l`
-- **Expected:** `36`
-- **Failure:** Count less than 36 — at least one feature doc is missing `### Sources`
+- **Expected:** `37`
+- **Failure:** Count less than 37 — at least one feature doc is missing `### Sources`
 - **Note:** Every feature doc references source files; `### Sources` must be present after migration
 
 ---
 
 ### DT-05: Tests section present in expected files
 
-- **Scope:** Feature docs that reference test files (approximately 22 of 36)
+- **Scope:** Feature docs that reference test files (approximately 22 of 37)
 - **Command:** `grep -l "### Tests" docs/feature/*.md | wc -l`
 - **Expected:** ≥ 22
 - **Failure:** Count below 22 — files with test entries are missing `### Tests`

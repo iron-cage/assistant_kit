@@ -274,7 +274,8 @@ pub( crate ) fn apply_model_override(
       );
       if trace
       {
-        eprintln!( "[trace] {label}  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)" );
+        use std::io::Write as _;
+        let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)" );
       }
     }
   }

@@ -29,14 +29,21 @@ pub struct ProcessInfo
 /// Entries whose cmdline basename is not exactly `"claude"` are skipped.
 /// The current process is always excluded.
 /// All I/O errors are silently ignored.
+///
+/// The `CLR_PROC_DIR` environment variable overrides the proc root (default
+/// `/proc`). Set it to an empty directory in tests to simulate zero sessions
+/// without depending on the ambient host process table.
 #[ inline ]
 #[ must_use ]
 pub fn find_claude_processes() -> Vec< ProcessInfo >
 {
-  let self_pid = std::process::id();
+  let self_pid  = std::process::id();
   let mut result = vec![];
 
-  let Ok( proc_dir ) = std::fs::read_dir( "/proc" ) else { return result; };
+  let proc_root = std::env::var( "CLR_PROC_DIR" )
+    .unwrap_or_else( |_| "/proc".to_string() );
+
+  let Ok( proc_dir ) = std::fs::read_dir( &proc_root ) else { return result; };
 
   for entry in proc_dir
   {
@@ -51,7 +58,7 @@ pub fn find_claude_processes() -> Vec< ProcessInfo >
     if pid == self_pid { continue; }
 
     // Read cmdline (NUL-delimited).
-    let cmdline_path = format!( "/proc/{pid}/cmdline" );
+    let cmdline_path = format!( "{proc_root}/{pid}/cmdline" );
     let Ok( cmdline_raw ) = std::fs::read( &cmdline_path ) else { continue; };
 
     // First NUL-delimited field is the executable path.
@@ -65,7 +72,7 @@ pub fn find_claude_processes() -> Vec< ProcessInfo >
     if binary_name != "claude" { continue; }
 
     // Read CWD (may fail if deleted or unreadable).
-    let cwd_path = format!( "/proc/{pid}/cwd" );
+    let cwd_path = format!( "{proc_root}/{pid}/cwd" );
     let cwd = std::fs::read_link( &cwd_path ).unwrap_or_default();
 
     // Build human-readable cmdline (NUL → space).

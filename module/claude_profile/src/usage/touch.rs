@@ -5,6 +5,7 @@
 //! `apply_touch` activates an idle 5h (or 7d) session window by spawning an isolated
 //! subprocess, then re-fetches the quota so the table reflects the concrete timer value.
 
+use std::io::Write as _;
 use super::types::{ AccountQuota, SubprocessModel, SubprocessEffort };
 use super::subprocess::{ resolve_model, effort_pre_args };
 use super::fetch::{ read_token, parse_u64_from_str };
@@ -44,7 +45,7 @@ pub( crate ) fn apply_touch(
   // G4: Non-owned accounts are never touched — subprocess spawning on foreign credentials forbidden.
   if !aq.is_owned
   {
-    if trace { eprintln!( "[trace] touch  {}  skipped (reason: not owned)", aq.name ); }
+    if trace { let _ = writeln!( std::io::stderr(), "[trace] touch  {}  skipped (reason: not owned)", aq.name ); }
     return;
   }
 
@@ -54,7 +55,7 @@ pub( crate ) fn apply_touch(
   // Pitfall: multiple early-return guards each need their own trace emission.
   let Ok( ref data ) = aq.result else
   {
-    if trace { eprintln!( "[trace] touch  {}  skipped (reason: error account)", aq.name ); }
+    if trace { let _ = writeln!( std::io::stderr(), "[trace] touch  {}  skipped (reason: error account)", aq.name ); }
     return;
   };
 
@@ -69,7 +70,7 @@ pub( crate ) fn apply_touch(
   {
     if cache.touch_idle == Some( false )
     {
-      if trace { eprintln!( "[trace] touch  {}  skipped (reason: touch_idle=false)", aq.name ) }
+      if trace { let _ = writeln!( std::io::stderr(), "[trace] touch  {}  skipped (reason: touch_idle=false)", aq.name ); }
       return;
     }
   }
@@ -98,7 +99,7 @@ pub( crate ) fn apply_touch(
       let reason = if all_running    { "already active" }
         else if h_left  <= 15.0     { "h-exhausted"    }
         else                         { "7d-exhausted"   };
-      eprintln!( "[trace] touch  {}  skipped (reason: {})", aq.name, reason );
+      let _ = writeln!( std::io::stderr(), "[trace] touch  {}  skipped (reason: {})", aq.name, reason );
     }
     return;
   }

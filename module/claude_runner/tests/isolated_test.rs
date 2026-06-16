@@ -20,8 +20,8 @@
 //! | EC-timeout-3 | `--timeout 3600` → accepted | No |
 //! | IT-1 | Happy path: valid creds, message → exit 0 | **Yes** (`lim_it`) |
 //! | IT-3 | Timeout 0, no creds refresh → exit 2 | **Yes** (`lim_it`) |
-//! | IT-4 | Timeout 0, creds refresh → exit 0 | **Yes** (`lim_it`) |
-//! | IT-5 | No message → interactive mode attempted | **Yes** (`lim_it`) |
+//! | IT-4 | Credential write-back after startup refresh → exit 0 | **Yes** (`lim_it`) |
+//! | IT-5 | No message → Claude rejects piped non-TTY context | **Yes** (`lim_it`) |
 //! | IT-6 | `-- --version` passthrough → version in stdout | **Yes** (`lim_it`) |
 //! | EC-creds-1 | Valid file path → subprocess runs | **Yes** (`lim_it`) |
 //! | EC-creds-2 | Absolute path → resolved correctly | **Yes** (`lim_it`) |
@@ -358,12 +358,15 @@ fn it3_lim_it_timeout_no_refresh()
   );
 }
 
-/// IT-4: `--timeout 0` with creds refresh at startup → exit 0, creds updated.
+/// IT-4: Credential write-back after startup refresh.
 ///
-/// This test verifies the creds write-back path. With a fresh OAuth token,
-/// Claude may refresh at startup before blocking — the updated creds are
-/// written back to `--creds` and `clr isolated` exits 0.
-/// If no refresh occurs within the 0-second window, exit 2 is also acceptable.
+/// Verifies the creds write-back path: Claude may refresh the OAuth token at
+/// startup before processing the prompt. The refreshed credentials are written
+/// back to `--creds` and `clr isolated` exits 0. If no refresh occurs within
+/// the run window, exit 0 (normal completion) is also acceptable.
+///
+/// A minimal prompt `"."` is required: the Claude CLI auto-enters `--print`
+/// mode when stdin is piped (non-TTY) and rejects runs without a prompt.
 ///
 /// Source: tests/docs/cli/command/03_isolated.md#it-4
 #[ test ]
@@ -375,28 +378,26 @@ fn it4_lim_it_timeout_with_refresh()
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
   };
   let content_before = std::fs::read_to_string( &path ).unwrap_or_default();
-  let out            = run_isolated( &[ "--creds", &path, "--timeout", "0" ] );
-  let code           = exit_code( &out );
-  // Both exit 0 (refreshed) and exit 2 (plain timeout) are valid outcomes.
+  // Minimal prompt "." — same as refresh uses; Claude CLI requires a prompt
+  // when stdin is piped (auto-activates --print mode in non-TTY contexts).
+  let out  = run_isolated( &[ "--creds", &path, "--timeout", "0", "." ] );
+  let code = exit_code( &out );
   assert!(
-    code == 0 || code == 2,
-    "expected exit 0 or 2; got {code}; stderr: {}", stderr_str( &out )
+    code == 0,
+    "expected exit 0; got {code}; stderr: {}", stderr_str( &out )
   );
-  // If refreshed (exit 0), the creds file must have been updated in-place.
-  if code == 0
-  {
-    let content_after = std::fs::read_to_string( &path ).unwrap_or_default();
-    assert!( !content_after.is_empty(), "creds file should not be empty after refresh" );
-    // The updated content must be a valid non-empty JSON blob.
-    let _ = ( content_before, content_after, tmp );
-  }
+  // Credentials file must still be non-empty after the run.
+  let content_after = std::fs::read_to_string( &path ).unwrap_or_default();
+  assert!( !content_after.is_empty(), "creds file should not be empty after run" );
+  let _ = ( content_before, content_after, tmp );
 }
 
-/// IT-5: No message → interactive mode in isolated subprocess.
+/// IT-5: No message → Claude subprocess rejects non-interactive piped context.
 ///
-/// Without a TTY, Claude may exit with an error or be killed by timeout.
-/// We only assert no parse-level error is emitted (i.e. exit is not 1 from
-/// a missing/invalid arg error and stderr contains no "missing required" text).
+/// The Claude CLI auto-enters `--print` mode when stdin is piped (non-TTY)
+/// and exits 1 with a prompt-required message. This is expected — `clr` itself
+/// must not produce a parse-level error. We assert no `clr`-specific parse
+/// error is emitted (no "missing required" or "invalid --timeout").
 ///
 /// Source: tests/docs/cli/command/03_isolated.md#it-5
 #[ test ]

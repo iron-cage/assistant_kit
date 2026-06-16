@@ -41,6 +41,7 @@
 //! account::delete( "alice@oldco.com", credential_store ).expect( "failed to delete" );
 //! ```
 
+use std::io::Write as _;
 use std::path::Path;
 use claude_core::ClaudePaths;
 
@@ -718,28 +719,28 @@ pub fn refresh_account_token(
     //   the unnecessary global write is only visible in concurrent multi-account batch scenarios
     let creds_json = match std::fs::read_to_string( credential_store.join( format!( "{name}.credentials.json" ) ) )
     {
-      Ok( s )  => { if trace { eprintln!( "[trace] {label}  {name}  read credentials: OK" ); } s }
+      Ok( s )  => { if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  read credentials: OK" ); } s }
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] {label}  {name}  read credentials: Err({e})" ); }
+        if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  read credentials: Err({e})" ); }
         return None;
       }
     };
     let t_run = std::time::Instant::now();
-    if trace { eprintln!( "[trace] {label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
+    if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
     let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, model )
     {
       Ok( r )  => r,
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] {label}  {name}  run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
+        if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
         return None;
       }
     };
     if trace
     {
       let creds_status = if isolated.credentials.is_some() { "Some" } else { "None" };
-      eprintln!( "[trace] {label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
+      let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
     }
     let new_creds = isolated.credentials?;
     // Fix(BUG-221): write refreshed credentials directly to the credential store, not to
@@ -751,17 +752,17 @@ pub fn refresh_account_token(
     let store_cred_path = credential_store.join( format!( "{name}.credentials.json" ) );
     if let Err( e ) = std::fs::write( &store_cred_path, &new_creds )
     {
-      if trace { eprintln!( "[trace] {label}  {name}  write credentials: Err({e})" ); }
+      if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write credentials: Err({e})" ); }
       return None;
     }
-    if trace { eprintln!( "[trace] {label}  {name}  write credentials: OK" ); }
+    if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write credentials: OK" ); }
     // Pass owner: None — background refresh must not mutate the owner field.
     match save( name, credential_store, p, false, Some( new_creds.as_bytes() ), None, None, None )
     {
-      Ok( () ) => { if trace { eprintln!( "[trace] {label}  {name}  save: OK" ); } }
+      Ok( () ) => { if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  save: OK" ); } }
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] {label}  {name}  save: Err({e})" ); }
+        if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  save: Err({e})" ); }
         return None;
       }
     }
@@ -772,36 +773,36 @@ pub fn refresh_account_token(
     let path = credential_store.join( format!( "{name}.credentials.json" ) );
     let creds_json = match std::fs::read_to_string( &path )
     {
-      Ok( s )  => { if trace { eprintln!( "[trace] {label}  {name}  read credentials: OK" ); } s }
+      Ok( s )  => { if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  read credentials: OK" ); } s }
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] {label}  {name}  read credentials: Err({e})" ); }
+        if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  read credentials: Err({e})" ); }
         return None;
       }
     };
     let t_run = std::time::Instant::now();
-    if trace { eprintln!( "[trace] {label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
+    if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
     let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, model )
     {
       Ok( r )  => r,
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] {label}  {name}  run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
+        if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
         return None;
       }
     };
     if trace
     {
       let creds_status = if isolated.credentials.is_some() { "Some" } else { "None" };
-      eprintln!( "[trace] {label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
+      let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
     }
     let new_creds = isolated.credentials?;
     if let Err( e ) = std::fs::write( &path, &new_creds )
     {
-      if trace { eprintln!( "[trace] {label}  {name}  write credentials: Err({e})" ); }
+      if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write credentials: Err({e})" ); }
       return None;
     }
-    if trace { eprintln!( "[trace] {label}  {name}  write credentials: OK" ); }
+    if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write credentials: OK" ); }
     Some( new_creds )
   }
 }

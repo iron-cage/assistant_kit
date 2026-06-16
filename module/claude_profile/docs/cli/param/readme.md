@@ -59,9 +59,11 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [053_for.md](053_for.md) | `for::` — `USER@MACHINE` target identity for `.account.assign` |
 | [054_set_model.md](054_set_model.md) | `set_model::` — explicit Claude Code session model write to `settings.json` |
 | [055_set.md](055_set.md) | `set::` — model shorthand to write on `.model`; absent = get mode |
-| [056_unclaim.md](056_unclaim.md) | `unclaim::` — **REMOVED** — superseded by `.account.unclaim` command |
+| [056_unclaim.md](056_unclaim.md) | `unclaim::` — **REMOVED** — superseded by `.account.unclaim` command (re-activated as mutation param on `.accounts`/`.usage` in Feature 037) |
+| [057_assign.md](057_assign.md) | `assign::` — write per-machine active-account marker (mutation param on `.accounts`/`.usage`, Feature 037) |
+| [058_force.md](058_force.md) | `force::` — bypass G5–G8 ownership enforcement on mutation commands |
 
-**Total:** 55 active parameters (param 056 REMOVED)
+**Total:** 57 active parameters (param 056 re-activated in Feature 037; 057–058 new)
 
 ### Overview Table
 
@@ -122,7 +124,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 53 | `for::` | `string` | `$USER@resolve_hostname()` | `USER@MACHINE` | Target host+user identity for `.account.assign` | 1 cmd |
 | 54 | `set_model::` | `enum` | *(omit)* | `opus`, `sonnet`, `haiku`, `default` | Explicit session model write to `settings.json` | 2 cmds |
 | 55 | `set::` | `enum` | *(omit)* | `opus`, `sonnet`, `haiku`, `default` | Mode selector on `.model`: absent = get, present = set | 1 cmd |
-| 56 | `unclaim::` | — | — | — | **REMOVED** — superseded by `.account.unclaim` command | — |
+| 56 | `unclaim::` | `bool` | `0` | `0`, `1` | Release ownership of named account (mutation param on `.accounts`/`.usage`; Feature 037) | `.accounts`, `.usage` |
+| 57 | `assign::` | `bool` | `0` | `0`, `1` | Write per-machine active-account marker (mutation param on `.accounts`/`.usage`; Feature 037) | `.accounts`, `.usage` |
+| 58 | `force::` | `bool` | `0` | `0`, `1`, `false`, `true` | Bypass G5–G8 ownership enforcement on mutation commands | `.account.use`, `.account.delete`, `.account.relogin`, `.accounts` |
 
 *Param 1 = cross-command account selector (no formal group); params 48, 52 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = ungrouped (`.model`-specific); param 56 = REMOVED; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file)*
 

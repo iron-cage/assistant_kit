@@ -2,16 +2,16 @@
 
 ### Scope
 
-- **Purpose**: Make `.accounts` and `.usage` symmetric commands sharing 31 parameters with different defaults, absorbing `.account.unclaim` and `.account.assign` as mutation parameters.
-- **Responsibility**: Documents the unified 31-parameter set, default differentiation, `cols::` replacement of 15 field toggles, `unclaim::` and `assign::`/`for::` mutation params, and removal of `.account.unclaim` and `.account.assign` as standalone commands.
-- **In Scope**: 31-param unified parameter set; `.accounts` default profile (local/identity view: `refresh::0`, `touch::0`, `sort::name`); `.usage` default profile (live/quota view: `refresh::1`, `touch::1`, `sort::renew`); `cols::` syntax on `.accounts` replacing 15 individual field toggles (`active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`); `unclaim::` mutation param; `assign::`/`for::` mutation params; removal of standalone `.account.unclaim` (Command 17) and `.account.assign` (Command 16); command count reduction 18→16.
-- **Out of Scope**: New quota fetching features; changes to `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.account.renewal`, `.account.inspect`, `.model`, or any non-account command; changes to the ownership enforcement gates G1–G8 (behavior preserved, CLI surface changes).
+- **Purpose**: Make `.accounts` and `.usage` symmetric commands sharing 32 parameters with different defaults, absorbing `.account.unclaim` and `.account.assign` as mutation parameters, and introducing `force::` to bypass ownership enforcement on unclaim.
+- **Responsibility**: Documents the unified 32-parameter set, default differentiation, `cols::` replacement of 15 field toggles, `unclaim::` and `assign::`/`for::` mutation params, `force::` bypass param, and removal of `.account.unclaim` and `.account.assign` as standalone commands.
+- **In Scope**: 32-param unified parameter set; `.accounts` default profile (local/identity view: `refresh::0`, `touch::0`, `sort::name`); `.usage` default profile (live/quota view: `refresh::1`, `touch::1`, `sort::renew`); `cols::` syntax on `.accounts` replacing 15 individual field toggles (`active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`); `unclaim::` mutation param; `assign::`/`for::` mutation params; `force::` bypass param (bypasses G8 ownership check when used with `unclaim::1`); removal of standalone `.account.unclaim` (Command 17) and `.account.assign` (Command 16); command count reduction 18→16.
+- **Out of Scope**: New quota fetching features; changes to `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.account.renewal`, `.account.inspect`, `.model`, or any non-account command; G1–G4 read-side gates (behavior unchanged — `force::` does not bypass them); adding `force::` to `.account.use`/`.account.delete`/`.account.relogin` (G5–G7 bypass → Feature 036 implementation).
 
 ### Design
 
-**Symmetric commands.** `.accounts` and `.usage` become two views of the same underlying account data, sharing an identical 31-parameter interface. The only difference is defaults — `.accounts` is a local/identity view (no fetching, no touching, sorted by name), while `.usage` is a live/quota view (fetch + touch enabled, sorted by renewal).
+**Symmetric commands.** `.accounts` and `.usage` become two views of the same underlying account data, sharing an identical 32-parameter interface. The only difference is defaults — `.accounts` is a local/identity view (no fetching, no touching, sorted by name), while `.usage` is a live/quota view (fetch + touch enabled, sorted by renewal).
 
-**Unified parameter set (31 params):**
+**Unified parameter set (32 params):**
 
 | Category | Parameters | `.accounts` default | `.usage` default |
 |----------|-----------|---------------------|------------------|
@@ -20,7 +20,7 @@
 | Sort & filter | `sort::`, `desc::`, `prefer::`, `next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::` | **name**, 0, any, renew, 0, 0, 0, 0 | **renew**, 0, any, renew, 0, 0, 0, 0 |
 | Columns | `cols::` | **identity set** | **quota set** |
 | Output | `format::`, `get::`, `abs::`, `no_color::`, `trace::` | text, —, 0, 0, 0 | text, —, 0, 0, 0 |
-| Mutations | `dry::`, `unclaim::`, `assign::`, `for::`, `set_model::` | 0, 0, 0, current, — | 0, 0, 0, current, — |
+| Mutations | `dry::`, `unclaim::`, `assign::`, `for::`, `set_model::`, `force::` | 0, 0, 0, current, —, 0 | 0, 0, 0, current, —, 0 |
 
 **Default column sets.** `cols::` replaces the 15 individual field toggles on `.accounts`. Both default sets include the `Owner` column — showing the `owner` field from `{name}.json` (`USER@MACHINE` identity or `—` when unowned). This overrides the Feature 036 out-of-scope exclusion for owner display.
 
@@ -34,12 +34,14 @@ The identity set (`.accounts` default) includes: Account, Owner, Active, Current
 
 **Standalone command removal.** `.account.unclaim` and `.account.assign` are removed as standalone commands. `clp .account.unclaim ...` and `clp .account.assign ...` exit 1 with an error directing to the new syntax. Command count: 18→16 (16 registered → 14 registered; `.`/`.help` hardcoded, not registered).
 
-**`.usage` mutation params.** `.usage` gains the same mutation params (`dry::`, `unclaim::`, `assign::`, `for::`, `set_model::`) since both commands share the full parameter set. `set_model::` was already on `.usage`.
+**`force::` ownership bypass.** `force::1` bypasses the G8 ownership check when used with `unclaim::1`. It allows any machine/user identity to release ownership of an account, regardless of whether `current_identity()` matches the stored owner. `force::1` without `unclaim::1` has no effect (silently ignored). `force::1` with `assign::1` has no effect (assign has no ownership gate). `force::1` does NOT bypass `dry::1` — dry-run preview still applies when both are set.
+
+**`.usage` mutation params.** `.usage` gains the same mutation params (`dry::`, `unclaim::`, `assign::`, `for::`, `set_model::`, `force::`) since both commands share the full parameter set. `set_model::` was already on `.usage`.
 
 ### Acceptance Criteria
 
-- **AC-01**: `.accounts` accepts all 31 parameters from the unified set. Unknown parameters exit 1.
-- **AC-02**: `.usage` accepts all 31 parameters from the unified set. Unknown parameters exit 1.
+- **AC-01**: `.accounts` accepts all 32 parameters from the unified set. Unknown parameters exit 1.
+- **AC-02**: `.usage` accepts all 32 parameters from the unified set. Unknown parameters exit 1.
 - **AC-03**: `.accounts` defaults: `refresh::0`, `touch::0`, `sort::name`, `cols::` = identity set (Account, Owner, Active, Current, Sub, Tier, Expires, Email). No HTTP fetch or subprocess spawn when invoked without explicit `refresh::1` or `touch::1`.
 - **AC-04**: `.usage` defaults: `refresh::1`, `touch::1`, `sort::renew`, `cols::` = quota set (Status, Account, Owner, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, ~Renews, → Next). Owner column added to default; all other behavior unchanged.
 - **AC-05**: `.accounts unclaim::1 name::X` exits 0 and writes `owner: ""` to `{name}.json` when G8 passes. Credentials NOT touched. Active marker NOT changed. Identical observable behavior to the former `.account.unclaim name::X`.
@@ -57,6 +59,8 @@ The identity set (`.accounts` default) includes: Account, Owner, Active, Current
 - **AC-17**: `.usage assign::1 name::X` writes marker — identical to `.accounts assign::1 name::X`.
 - **AC-18**: `.accounts dry::1 unclaim::1 name::X` prints `[dry-run] would unclaim X` and exits 0. No files modified. G8 gate still runs.
 - **AC-19**: Owner column visible by default on both `.accounts` and `.usage`. Shows `owner` field from `{name}.json` — `USER@MACHINE` when owned, `—` when unowned (empty or absent). `cols::-owner` hides it. Overrides Feature 036 out-of-scope exclusion for owner display column.
+- **AC-20**: `.accounts unclaim::1 name::X force::1` clears the owner field even when `current_identity() ≠ stored_owner` — G8 gate is bypassed. Exits 0. Output: `unclaimed X`. G8 enforcement (exit 1 with ownership violation message) is suppressed only when `force::1` is present.
+- **AC-21**: `.accounts force::1` without `unclaim::1`, or `.accounts force::1 assign::1 name::X`, silently ignores `force::1` — no error, no change to behavior. `force::` is a mutation-scoped bypass with no standalone meaning.
 
 ### Features
 
@@ -80,6 +84,14 @@ The identity set (`.accounts` default) includes: Account, Owner, Active, Current
 |------|--------------|
 | [cli/command/001_account.md](../cli/command/001_account.md) | `.accounts` — Command 3; `.account.assign` (Command 16) and `.account.unclaim` (Command 17) removed |
 | [cli/command/006_usage.md](../cli/command/006_usage.md) | `.usage` — Command 9; gains mutation params |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/056_unclaim.md](../cli/param/056_unclaim.md) | `unclaim::` — mutation param; clears owner field (re-activated from REMOVED) |
+| [cli/param/057_assign.md](../cli/param/057_assign.md) | `assign::` — mutation param; writes per-machine active-account marker |
+| [cli/param/058_force.md](../cli/param/058_force.md) | `force::` — bypass G8 ownership check when used with `unclaim::1` |
 
 ### Sources
 

@@ -23,10 +23,15 @@ use cli_binary_test_helpers::{ fake_claude_binary_dir, run_clr_ps, spawn_fake_cl
 // ── US-1: No sessions ─────────────────────────────────────────────────────────
 
 /// US-1 (AC-002): No `claude` processes → exit 0, "No active Claude Code sessions.".
+///
+/// Passes an empty temp dir as `CLR_PROC_DIR` so `find_claude_processes()` sees
+/// no entries regardless of how many real Claude sessions are running on the host.
 #[ test ]
 fn us_01_no_sessions()
 {
-  let out = run_cli( &[ "ps" ] );
+  let empty_proc = tempfile::TempDir::new().expect( "create empty proc dir" );
+  let proc_dir   = empty_proc.path().to_str().expect( "proc dir UTF-8" );
+  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_PROC_DIR", proc_dir ) ] );
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
   assert!( stdout.contains( "No active Claude Code sessions." ) );

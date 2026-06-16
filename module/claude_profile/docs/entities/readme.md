@@ -7,7 +7,7 @@
 | `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 37 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](../cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 7 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 56 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 58 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](../cli/param_group/readme.md) | 6 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 4 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](../cli/format/readme.md) | 3 |
@@ -133,7 +133,9 @@
 | param | 053 | `for::` | [cli/param/053_for.md](../cli/param/053_for.md) |
 | param | 054 | `set_model::` | [cli/param/054_set_model.md](../cli/param/054_set_model.md) |
 | param | 055 | `set::` | [cli/param/055_set.md](../cli/param/055_set.md) |
-| param | 056 | `unclaim::` **REMOVED** | [cli/param/056_unclaim.md](../cli/param/056_unclaim.md) |
+| param | 056 | `unclaim::` (re-activated in Feature 037 as mutation param on `.accounts`/`.usage`) | [cli/param/056_unclaim.md](../cli/param/056_unclaim.md) |
+| param | 057 | `assign::` (mutation param on `.accounts`/`.usage`, Feature 037) | [cli/param/057_assign.md](../cli/param/057_assign.md) |
+| param | 058 | `force::` (bypass G5–G8 ownership enforcement) | [cli/param/058_force.md](../cli/param/058_force.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](../cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](../cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](../cli/param_group/003_fetch_behavior.md) |

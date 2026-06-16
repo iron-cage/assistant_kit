@@ -14,7 +14,7 @@
 //! | T05 | `RunnerError::Timeout { secs }` Display               | contains "timed out" + secs value    | no    |
 //! | T06 | `RunnerError::Io(String)` Display                     | contains the reason string           | no    |
 //! | T07 | `run_isolated()` with valid creds → exit_code -1/0    | `IsolatedRunResult` returned         | yes   |
-//! | T08 | `run_isolated()` with timeout 0 → `Err(TimeoutWithOutput)` | `secs: 0`, `partial_stdout: ""`  | yes   |
+//! | T08 | `run_isolated()` with `timeout_secs=0` (unlimited, Fix I2) | `Ok`, `exit_code >= -1`          | yes   |
 //! | T09 | timeout-with-credentials sentinel: `exit_code = -1`   | `Ok` with `credentials: Some(...)`   | no    |
 //! | T10 | `IsolatedModel::model_id()` all 3 variants + constant | correct `Option<&str>` per variant   | no    |
 //! | T11 | `ISOLATED_CLAUDE_MD` keyword content (AC-42)          | contains expected instruction terms   | no    |
@@ -155,13 +155,17 @@ fn t07_lim_it_run_isolated_returns_result()
 
 // ── T08 ───────────────────────────────────────────────────────────────────────
 
-/// T08 (`lim_it`): `run_isolated()` with timeout 0 returns `Err(RunnerError::TimeoutWithOutput)`.
+/// T08 (`lim_it`): `run_isolated()` with `timeout_secs=0` returns `Ok` — 0 means unlimited.
 ///
-/// A 0-second timeout should expire before any subprocess can complete.
-/// After BUG-243 fix, timeout always returns `TimeoutWithOutput` (`partial_stdout` may be empty).
+/// Fix(I2): `timeout_secs=0` was changed to mean "no deadline" (no watchdog), matching
+/// `run`/`ask` semantics where 0 means unlimited.  The old behaviour computed a deadline of
+/// `Instant::now() + 0s`, which fired on the very first poll tick and killed the subprocess
+/// immediately, making an unlimited timeout impossible to express.
+///
+/// `claude --version` is fast and completes normally when no deadline is set.
 #[ cfg( feature = "enabled" ) ]
 #[ test ]
-fn t08_lim_it_run_isolated_timeout()
+fn t08_lim_it_run_isolated_timeout_zero_is_unlimited()
 {
   use claude_runner_core::run_isolated;
 
@@ -179,14 +183,13 @@ fn t08_lim_it_run_isolated_timeout()
 
   let creds = r#"{"accessToken":"tok-test","refreshToken":"rtok-test","expiresAt":9999999999}"#;
   let result = run_isolated( creds, vec![ "--version".to_string() ], 0, IsolatedModel::Default );
-  match result
-  {
-    Err( RunnerError::TimeoutWithOutput { secs, .. } ) =>
-    {
-      assert_eq!( secs, 0, "Timeout secs must match the given timeout, got: {secs}" );
-    }
-    other => panic!( "expected Err(TimeoutWithOutput), got: {other:?}" ),
-  }
+  assert!(
+    result.is_ok(),
+    "timeout_secs=0 means unlimited — --version must complete; got: {:?}",
+    result.err()
+  );
+  let out = result.unwrap();
+  assert!( out.exit_code >= -1, "exit_code must be -1 or higher, got: {}", out.exit_code );
 }
 
 // ── T09 ───────────────────────────────────────────────────────────────────────

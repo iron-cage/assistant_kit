@@ -497,6 +497,15 @@ pub( crate ) mod test_support
       is_owned       : true,
     }
   }
+
+  /// Mutex serializing tests that redirect the process-global stderr fd via `gag`.
+  ///
+  /// `gag::BufferRedirect::stderr()` redirects fd 2 via `dup2`; concurrent captures from
+  /// different test threads corrupt each other. Acquire this lock before every
+  /// `gag::BufferRedirect::stderr()` call; the guard is dropped automatically when
+  /// the test or block ends. Uses `unwrap_or_else(|e| e.into_inner())` to ignore
+  /// mutex poison from a prior panicking test and prevent cascade failures.
+  pub( crate ) static STDERR_LOCK : std::sync::Mutex< () > = std::sync::Mutex::new( () );
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

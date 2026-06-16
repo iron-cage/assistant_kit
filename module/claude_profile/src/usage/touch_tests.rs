@@ -132,6 +132,7 @@ fn test_mre_bug214_apply_touch_skips_7d_exhausted_account()
   }
 
   // Capture stderr — [trace] skip lines go to stderr via eprintln!.
+  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // claude_paths=None: subprocess never spawns (no binary path) even if guard misses.
@@ -211,6 +212,7 @@ fn test_mre_bug215_apply_touch_fires_when_7d_timer_absent()
   }
 
   // Capture stderr — [trace] skip lines go to stderr via eprintln!.
+  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // claude_paths=None: no subprocess spawns regardless of guard outcome.
@@ -307,6 +309,7 @@ fn test_mre_bug288_apply_touch_skips_touch_idle_false()
   let mut aq = mk_aq_with_resets_at( None );
 
   // Capture stderr — [trace] skip line goes to stderr via eprintln!.
+  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // claude_paths=None: subprocess never spawns regardless of guard outcome.
@@ -360,6 +363,7 @@ fn test_apply_touch_touch_idle_true_not_skipped_by_guard()
       store_a.path(), "test@example.com", "touch_idle", false,
     );
     let mut aq = mk_aq_with_resets_at( None );
+    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto,
@@ -383,6 +387,7 @@ fn test_apply_touch_touch_idle_true_not_skipped_by_guard()
       store_b.path(), "test@example.com", "touch_idle", true,
     );
     let mut aq = mk_aq_with_resets_at( None );
+    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto,
@@ -426,6 +431,7 @@ fn test_apply_touch_touch_idle_none_in_cache_not_skipped()
       store_a.path(), "test@example.com", "touch_idle", false,
     );
     let mut aq = mk_aq_with_resets_at( None );
+    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto,
@@ -454,6 +460,7 @@ fn test_apply_touch_touch_idle_none_in_cache_not_skipped()
       "precondition: touch_idle must be None when field was never written",
     );
     let mut aq = mk_aq_with_resets_at( None );
+    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto,
@@ -502,6 +509,7 @@ fn test_apply_touch_touch_idle_false_fetched_at_absent_guard_bypassed()
       store_a.path(), "test@example.com", "touch_idle", false,
     );
     let mut aq = mk_aq_with_resets_at( None );
+    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto,
@@ -528,6 +536,7 @@ fn test_apply_touch_touch_idle_false_fetched_at_absent_guard_bypassed()
       "precondition: read_quota_cache must return None when fetched_at is absent",
     );
     let mut aq = mk_aq_with_resets_at( None );
+    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto,
@@ -579,6 +588,7 @@ fn test_apply_touch_touch_idle_false_silent_when_trace_disabled()
   // Without this, the silence assertion in call 2 would be vacuously true (guard deleted
   // → subprocess path → trace=false → empty stderr regardless).
   {
+    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq,
@@ -598,6 +608,7 @@ fn test_apply_touch_touch_idle_false_silent_when_trace_disabled()
 
   // Call 2: trace=false — same cache state, same aq; guard fires but emits nothing.
   {
+    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq,
@@ -645,6 +656,7 @@ fn test_apply_touch_error_account_skips_before_touch_idle_guard()
   // Error account: result=Err → error guard fires at top of apply_touch.
   let mut aq = mk_aq_err();
 
+  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   apply_touch(
@@ -849,6 +861,7 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
       } );
     }
 
+    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch( &mut aq_a, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
     let mut captured_a = String::new();
@@ -881,6 +894,7 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
       } );
     }
 
+    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch( &mut aq_b, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
     let mut captured_b = String::new();
@@ -916,6 +930,7 @@ fn ft07_touch_skips_non_owned_with_trace()
   // G4: override is_owned to false — account owned by a different machine.
   aq.is_owned = false;
 
+  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // trace=true; claude_paths=None so subprocess cannot fire even if G4 is bypassed.
