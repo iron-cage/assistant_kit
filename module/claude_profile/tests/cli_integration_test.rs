@@ -24,7 +24,7 @@
 //! | `dot_test` | `.` / `.help` help output | dot |
 //! | `param_help_test` | convenience closure param descriptions + optionality | phd, pho |
 //! | `account_inspect_test` | .account.inspect diagnostic command | AI |
-//! | `account_assign_test` | .account.assign marker-only write | AA |
+//! | `account_assign_test` | `.accounts assign::1` marker write | AA |
 //! | `set_model_test` | `set_model::` explicit session model override | FT, EC |
 //! | `model_test` | `.model` get/set command (Feature 035) | FT |
 //! | `type_test` | CLI type boundary contracts (`AccountName`, `OutputFormat`, `WarningThreshold`, `AccountSelector`) | TC |

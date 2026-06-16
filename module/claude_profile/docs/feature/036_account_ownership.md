@@ -31,7 +31,7 @@ An account is "owned by this machine" when: (a) owner is empty or absent (no enf
 |------|----------|------------------------|-------------------|
 | G1 | `fetch_quota_for_list()` in `fetch.rs` | Skip `read_token()` and HTTP fetch; read quota from cache (`read_quota_cache()`) directly; set `aq.is_owned = false` | No bypass — read-side gate; `force::` not accepted by fetch path |
 | G2 | `should_refresh()` in `refresh_predicate.rs` | Return `false` early — no refresh attempt | No bypass — read-side gate |
-| G3 | `apply_refresh()` loop in `refresh.rs` | Skip account — `should_refresh()` already returns `false` via G2 | No bypass — read-side gate |
+| G3 | `apply_refresh()` loop in `refresh.rs` | Skip account — `should_refresh()` returns `false` via G2; emit trace `should_retry=false (reason: not owned)` when `trace::1` (Fix(BUG-295)) | No bypass — read-side gate |
 | G4 | `apply_touch()` in `touch.rs` | Skip account — emit trace `"skipped (reason: not owned)"` when `trace::1` | No bypass — read-side gate |
 | G5 | `account_use_routine()` in `account_ops.rs` | Exit 1 with `"ownership violation: this account is owned by {owner}"` | Yes — `force::1` skips gate; proceeds to `switch_account()` |
 | G6 | `account_delete_routine()` in `account_ops.rs` | Exit 1 with `"ownership violation: this account is owned by {owner}"` | Yes — `force::1` skips gate; proceeds to deletion |
@@ -50,7 +50,7 @@ An account is "owned by this machine" when: (a) owner is empty or absent (no enf
 
 **Dry-run interaction:** G5, G6, G7, G8 check ownership BEFORE evaluating `dry::1` — ownership violation exits 1 even in dry-run mode (unless `force::1` is also set). This prevents information leakage (a dry-run would still reveal that a switch is possible, which is incorrect if the caller isn't the owner).
 
-**Trace interaction:** G4 emits a `[trace] touch  <name>  skipped (reason: not owned)` line when `trace::1` — identical format to other touch skip traces. G1 emits `[trace] fetch  <name>  skipped (reason: not owned)` when `trace::1`.
+**Trace interaction:** G4 emits a `[trace] touch  <name>  skipped (reason: not owned)` line when `trace::1` — identical format to other touch skip traces. G1 emits `[trace] fetch  <name>  skipped (reason: not owned)` when `trace::1`. G3 emits `[trace] refresh  <name>  should_retry=false (reason: not owned)` when `trace::1` and `aq.is_owned == false` — Fix(BUG-295): reason is derived from the ownership gate, not from `aq.result`. All three gates agree on the reason for non-owned accounts.
 
 ### Acceptance Criteria
 
@@ -75,12 +75,13 @@ An account is "owned by this machine" when: (a) owner is empty or absent (no enf
 - **AC-19**: `clp .account.delete name::X force::1` when `X` is owned by a different identity bypasses G6 — proceeds with deletion and exits 0. `force::1` is registered on `.account.delete` as a `bool` param defaulting to `0`.
 - **AC-20**: `clp .account.relogin name::X force::1` when `X` is owned by a different identity bypasses G7 — proceeds with the 6-step relogin procedure and exits 0. `force::1` is registered on `.account.relogin` as a `bool` param defaulting to `0`.
 - **AC-21**: `force::1` with `dry::1` on any G5–G8 command bypasses the ownership gate (no exit 1) but still previews without writing — `[dry-run]` message is printed and exits 0. Ownership check is bypassed; write suppression is not.
+- **AC-22**: `apply_refresh()` emits `[trace] refresh  <name>  should_retry=false (reason: not owned)` when `trace::1` is set and `aq.is_owned == false`. The reason string is `"not owned"` — derived from the ownership gate decision, not from `aq.result`. Consistent with AC-07 (`apply_touch` trace pattern).
 
 ### Bugs
 
 | File | Relationship |
 |------|--------------|
-| *(none filed yet)* | — |
+| [bug/295_refresh_trace_misleads_reason_ok_for_not_owned.md](../../../../task/claude_profile/bug/295_refresh_trace_misleads_reason_ok_for_not_owned.md) | BUG-295: `apply_refresh` emits `reason: ok` instead of `reason: not owned` when `aq.is_owned == false` — `aq.result` is Ok(cached) for non-owned accounts, defeating the reason derivation at `refresh.rs:55` |
 
 ### Features
 

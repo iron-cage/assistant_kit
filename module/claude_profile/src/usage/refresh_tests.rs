@@ -1099,3 +1099,73 @@
     );
   }
 
+  // ── BUG-295 MRE: non-owned trace reason must be "not owned", not "ok" ────────
+
+  /// MRE for BUG-295: `apply_refresh` emits `reason: not owned` (not `reason: ok`) when
+  /// `aq.is_owned == false` and `aq.result` is `Ok(cached_data)`.
+  ///
+  /// # Root Cause
+  /// For non-owned accounts, G1 in `fetch.rs` sets `aq.result = Ok(cached_data)` — the cache
+  /// read succeeds. The original trace line derived the reason via
+  /// `aq.result.as_ref().err().map_or("ok", String::as_str)` — for `Ok(...)`, `.err()` returns
+  /// `None`, yielding `"ok"`. The actual reason the account is skipped is `"not owned"` (via
+  /// `should_refresh()` returning `false` because `!aq.is_owned`), not the result value.
+  ///
+  /// # Why Not Caught
+  /// No test captured the trace reason string for non-owned accounts. The misleading `reason: ok`
+  /// was only visible during manual trace inspection.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-295): before consulting `aq.result.err()`, check `!aq.is_owned`. When `is_owned`
+  /// is `false`, emit `"not owned"` as the reason regardless of `aq.result`.
+  ///
+  /// # Prevention
+  /// This test captures stderr from `apply_refresh(trace=true)` for a non-owned account with
+  /// `result: Ok(cached_data)`. Asserts `reason: not owned` present and `reason: ok` absent.
+  ///
+  /// # Pitfall
+  /// Hold `STDERR_LOCK` before `gag::BufferRedirect::stderr()` — concurrent gag captures
+  /// corrupt each other via the shared fd 2.
+  #[ doc = "bug_reproducer(BUG-295)" ]
+  #[ test ]
+  fn mre_bug295_apply_refresh_trace_reason_not_owned()
+  {
+    let store  = TempDir::new().unwrap();
+    let cached = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name                  : "alice@remote.com".to_string(),
+        is_current            : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
+        expires_at_ms         : FAR_FUTURE_MS,
+        result                : Ok( cached ),
+        account               : None,
+        host                  : String::new(),
+        role                  : String::new(),
+        renewal_at            : None,
+        cached                : true,
+        cache_age_secs        : Some( 120 ),
+        is_owned              : false,
+        owner                 : "other@remote".to_string(),
+      },
+    ];
+
+    use std::io::Read;
+    let _lock = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let mut buf = gag::BufferRedirect::stderr().unwrap();
+    apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
+    let mut output = String::new();
+    buf.read_to_string( &mut output ).unwrap();
+
+    assert!(
+      output.contains( "reason: not owned" ),
+      "BUG-295: trace must emit 'reason: not owned' for non-owned account; got: {output}",
+    );
+    assert!(
+      !output.contains( "reason: ok" ),
+      "BUG-295: trace must NOT emit 'reason: ok' for non-owned account (misleading); got: {output}",
+    );
+  }
+

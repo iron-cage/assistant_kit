@@ -90,7 +90,7 @@ pub( super ) fn print_usage( binary : &str )
   const ACCOUNT_MGMT : &[ &str ] = &[
     ".accounts", ".account.save", ".account.use", ".account.delete",
     ".account.limits", ".account.relogin", ".account.rotate",
-    ".account.renewal", ".account.inspect", ".account.assign",
+    ".account.renewal", ".account.inspect",
   ];
   const STATUS_INFO : &[ &str ] = &[
     ".credentials.status", ".token.status", ".paths", ".usage", ".model",

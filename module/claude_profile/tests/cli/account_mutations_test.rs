@@ -153,7 +153,7 @@
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | ao01 | `ft03_unclaim_param_placement` | `.account.save` does NOT list `unclaim`; `.account.unclaim` lists `name` | P |
+//! | ao01 | `ft03_unclaim_param_placement` | `.account.save` does NOT list `unclaim` or `owner::` | P |
 //! | ao02 | `ft08_use_exits_1_when_not_owned` | `.account.use` with non-owned account → exit 1, "ownership violation" | N |
 //! | ao03 | `ft09_delete_exits_1_when_not_owned` | `.account.delete` with non-owned account → exit 1, "ownership violation" | N |
 //! | ao04 | `ft10_relogin_exits_1_when_not_owned` | `.account.relogin` with non-owned account → exit 1, "ownership violation" | N |
@@ -167,7 +167,7 @@
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
 //! | ft02 | `ft02_unclaim_clears_owner` | `.accounts unclaim::1 name::X` → owner `""`, credential mtime unchanged | P |
-//! | ft15 | `ft15_unclaim_not_on_save_or_assign` | `.account.save unclaim::1` exits 1; `.account.assign unclaim::1` exits 1 | N |
+//! | ft15 | `ft15_unclaim_not_on_save_or_assign` | `.account.save unclaim::1` exits 1 — `unclaim::` never on save | N |
 //! | ft16 | `ft16_unclaim_g8_gate` | G8: non-owner exits 1; unowned exits 0 (idempotent) | N/P |
 //! | ft17 | `ft17_unclaim_dry_run` | `dry::1` prints preview; files unchanged | P |
 //! | it01 | `it01_unclaim_clears_owner` | core unclaim — owner cleared to `""` | P |
@@ -3909,11 +3909,12 @@ fn arc02_clear_preserves_oauth_account_content()
 
 // ── AO: Account Ownership (Feature 036) ────────────────────────────────────
 
-/// FT-03 (AC-03): `.account.save` does NOT list `unclaim`; `.account.unclaim` has its own params.
+/// FT-03 (AC-03): `.account.save` does NOT list `unclaim` or `owner::`.
 ///
-/// Structural assertion: `.account.save.help` does NOT list `unclaim` (removed).
-/// `.account.assign.help` does NOT list `unclaim` (marker-only).
-/// `.account.unclaim.help` lists `name` as required.
+/// Structural assertion: `.account.save.help` does NOT list `unclaim` (param removed)
+/// and does NOT list `owner::` (ownership is not user-specified). The former
+/// `.account.assign` and `.account.unclaim` standalone commands are fully removed
+/// (Feature 037) — their behavior lives in `.accounts assign::1` and `.accounts unclaim::1`.
 ///
 /// Spec: [`tests/docs/feature/36_account_ownership.md` FT-03]
 #[ test ]
@@ -3930,24 +3931,6 @@ fn ft03_unclaim_param_placement()
   assert!(
     !save_text.contains( "owner::" ),
     "FT-03: .account.save help must NOT list `owner::` parameter; got:\n{save_text}",
-  );
-
-  // .account.assign must NOT list unclaim (marker-only; no ownership write).
-  let out_assign = run_cs( &[ ".account.assign.help" ] );
-  assert_exit( &out_assign, 0 );
-  let assign_text = stdout( &out_assign );
-  assert!(
-    !assign_text.contains( "unclaim" ),
-    "FT-03: .account.assign help must NOT list `unclaim` parameter; got:\n{assign_text}",
-  );
-
-  // .account.unclaim must list `name` (required).
-  let out_unclaim = run_cs( &[ ".account.unclaim.help" ] );
-  assert_exit( &out_unclaim, 0 );
-  let unclaim_text = stdout( &out_unclaim );
-  assert!(
-    unclaim_text.contains( "name" ),
-    "FT-03: .account.unclaim help must list `name` parameter; got:\n{unclaim_text}",
   );
 }
 
@@ -4269,10 +4252,10 @@ fn ft02_unclaim_clears_owner()
   );
 }
 
-/// FT-15 (AC-15, Feat 036): `.account.save unclaim::1` and `.account.assign unclaim::1` both exit 1.
+/// FT-15 (AC-15, Feat 036): `.account.save unclaim::1` exits 1 — `unclaim::` not registered.
 ///
-/// `unclaim::` is NOT registered on `.account.save` or `.account.assign`.
-/// Passing `unclaim::1` must exit 1 (unknown parameter).
+/// `unclaim::` is NOT registered on `.account.save`. The former `.account.assign` command
+/// is fully removed (Feature 037) — `unclaim::` never existed on it either.
 ///
 /// Spec: [`tests/docs/feature/36_account_ownership.md` FT-15]
 #[ test ]
@@ -4281,10 +4264,6 @@ fn ft15_unclaim_not_on_save_or_assign()
   // .account.save unclaim::1 → exit 1 (unknown param)
   let out_save = run_cs( &[ ".account.save", "unclaim::1" ] );
   assert_exit( &out_save, 1 );
-
-  // .account.assign unclaim::1 → exit 1 (unknown param)
-  let out_assign = run_cs( &[ ".account.assign", "unclaim::1" ] );
-  assert_exit( &out_assign, 1 );
 }
 
 /// FT-16 (AC-16, Feat 036): G8 ownership gate on `.account.unclaim`.

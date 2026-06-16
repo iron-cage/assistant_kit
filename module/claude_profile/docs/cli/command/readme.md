@@ -5,14 +5,14 @@
 | File | Responsibility |
 |------|----------------|
 | [003_meta.md](003_meta.md) | Meta-commands: `.`, `.help`, `--version` flag |
-| [001_account.md](001_account.md) | Account namespace: `.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.account.renewal`, `.account.inspect`, `.account.assign`, `.account.unclaim` |
+| [001_account.md](001_account.md) | Account namespace: `.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.account.renewal`, `.account.inspect` |
 | [005_token.md](005_token.md) | Token namespace: `.token.status` |
 | [002_credentials.md](002_credentials.md) | Credentials namespace: `.credentials.status` |
 | [006_usage.md](006_usage.md) | Usage namespace: `.usage` |
 | [004_paths.md](004_paths.md) | Paths namespace: `.paths` |
 | [007_model.md](007_model.md) | Model namespace: `.model` |
 
-**Total:** 18 commands (17 visible + 1 hidden)
+**Total:** 16 commands (15 visible + 1 hidden)
 
 ### All Commands
 
@@ -33,14 +33,12 @@
 | 13 | `.account.rotate` | Auto-rotate to the best inactive account by token expiry | 2 | `clp .account.rotate` |
 | 14 | `.account.renewal` | Set/clear billing renewal timestamp override for one or all accounts | 6 | `clp .account.renewal name::alice@acme.com from_now::+0m` |
 | 15 | `.account.inspect` | Live diagnostic inspection of identity, subscription, and org fields | 4 | `clp .account.inspect` |
-| 16 | `.account.assign` | Write the per-machine active-account marker for any `USER@MACHINE` without credential rotation | 3 | `clp .account.assign name::alice@corp.com` |
-| 17 | `.account.unclaim` | Release ownership of a saved account profile (pure metadata; no credential touch) | 3 | `clp .account.unclaim name::alice@acme.com` |
-| 18 | `.model` | Get or set the Claude Code session model in `~/.claude/settings.json` | 2 | `clp .model set::opus` |
+| 16 | `.model` | Get or set the Claude Code session model in `~/.claude/settings.json` | 2 | `clp .model set::opus` |
 
 ### Quick Reference
 
 **Required Parameters:**
-- `name::` — required on `.account.use`, `.account.delete`, `.account.relogin`, `.account.renewal`, `.account.unclaim`; optional on `.account.save` (inferred), `.accounts`, `.account.limits`, `.account.inspect` (defaults to active account).
+- `name::` — required on `.account.use`, `.account.delete`, `.account.relogin`, `.account.renewal`; optional on `.account.save` (inferred), `.accounts`, `.account.limits`, `.account.inspect` (defaults to active account). For unclaim, use `.accounts unclaim::1 name::X`.
 
 **Most-Used Parameters:**
 - `format::` — 7 commands (`.accounts`, `.token.status`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`, `.account.inspect`)
@@ -51,7 +49,7 @@
 |-------|----------|
 | 0 | `.`, `.help` |
 | 2 | `.account.rotate`, `.model` |
-| 3 | `.paths`, `.account.delete`, `.token.status`, `.account.limits`, `.account.relogin`, `.account.assign`, `.account.unclaim` |
+| 3 | `.paths`, `.account.delete`, `.token.status`, `.account.limits`, `.account.relogin` |
 | 4 | `.account.inspect` |
 | 5 | `.account.save` |
 | 6 | `.account.renewal` |

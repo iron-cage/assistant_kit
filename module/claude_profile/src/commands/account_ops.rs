@@ -378,20 +378,4 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   Ok( OutputData::new( format!( "deleted account '{name}'\n" ), "text" ) )
 }
 
-/// `.account.unclaim` redirect stub — Feature 037 absorbed this command into `.accounts unclaim::1`.
-///
-/// Always exits 1 with an actionable error message directing callers to the new interface.
-/// The routine is called regardless of params because the framework routes before param dispatch.
-///
-/// # Errors
-///
-/// Always returns `Err(ArgumentTypeMismatch)` with a redirect message.
-#[ inline ]
-pub fn account_unclaim_redirect( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
-{
-  Err( ErrorData::new(
-    ErrorCode::ArgumentTypeMismatch,
-    "unknown command '.account.unclaim' — use '.accounts unclaim::1 name::X' instead".to_string(),
-  ) )
-}
 

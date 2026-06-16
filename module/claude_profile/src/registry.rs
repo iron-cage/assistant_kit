@@ -13,8 +13,6 @@ use crate::commands::
   account_renewal_routine,
   account_rotate_routine,
   account_inspect_routine,
-  account_assign_redirect,
-  account_unclaim_redirect,
   model_routine,
   token_status_routine,
   paths_routine,
@@ -23,7 +21,7 @@ use crate::commands::
 
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 16 commands (credentials status, account management including limits, relogin, rotate, renewal, inspect, assign, and unclaim, model get/set, token status, paths, usage).
+/// Registers 14 commands (credentials status, account management including limits, relogin, rotate, renewal, and inspect, model get/set, token status, paths, usage).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -182,21 +180,6 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       fmt(),
     ],
     Box::new( account_inspect_routine ) );
-  reg_cmd( registry, ".account.assign", "REMOVED — use '.accounts assign::1 name::X' instead",
-    vec![
-      nam(),
-      reg_arg_opt( "for", Kind::String ).with_description( "REMOVED — use .accounts assign::1 for:: instead" ),
-      dry(),
-      trc(),
-    ],
-    Box::new( account_assign_redirect ) );
-  reg_cmd( registry, ".account.unclaim", "REMOVED — use '.accounts unclaim::1 name::X' instead",
-    vec![
-      nam(),
-      dry(),
-      trc(),
-    ],
-    Box::new( account_unclaim_redirect ) );
   reg_cmd( registry, ".model", "Get or set the Claude Code session model in ~/.claude/settings.json",
     vec![
       reg_arg_opt( "set", Kind::String ).with_description( "Set model: `opus` (claude-opus-4-6), `sonnet` (claude-sonnet-4-6), `haiku` (claude-haiku-4-5-20251001), `default` (removes override)" ),
