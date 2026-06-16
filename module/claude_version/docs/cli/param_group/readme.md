@@ -1,8 +1,8 @@
-# param_group/ — cm Parameter Groups
+# param_group/ — clv Parameter Groups
 
 ### Scope
 
-- **Purpose**: Logical groupings of cm parameters by shared purpose.
+- **Purpose**: Logical groupings of clv parameters by shared purpose.
 - **Responsibility**: Group membership, semantics, and per-group parameter and command tables.
 - **In Scope**: 4 parameter groups — Output Control, Execution Control, Settings Identity, Config Identity.
 - **Out of Scope**: Individual parameter details (→ `../param/`), cross-parameter constraints (→ `../004_parameter_interactions.md`).

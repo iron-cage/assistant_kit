@@ -1,10 +1,10 @@
-# type/ — cm Type Reference
+# type/ — clv Type Reference
 
 ### Scope
 
-- **Purpose**: Semantic type definitions for cm parameter values.
+- **Purpose**: Semantic type definitions for clv parameter values.
 - **Responsibility**: Type name, base type, format rules, and validation constraints.
-- **In Scope**: 7 semantic types used by cm parameters.
+- **In Scope**: 7 semantic types used by clv parameters.
 - **Out of Scope**: Parameter reference (→ `../param/`), type inference algorithm (→ `../../algorithm/`).
 
 ### Responsibility Table

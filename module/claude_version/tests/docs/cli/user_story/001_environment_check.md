@@ -74,4 +74,7 @@ Acceptance tests for User Story 001. See [user_story/001_environment_check.md](.
 
 | Function | File | Status |
 |----------|------|--------|
-| -- | -- | ⏳ (pending implementation) |
+| `us01_001_status_exits_0` | `integration/user_story_test.rs` | ✅ |
+| `us02_001_status_json_format` | `integration/user_story_test.rs` | ✅ |
+| `us03_001_status_verbose` | `integration/user_story_test.rs` | ✅ |
+| `us04_001_status_no_home_graceful` | `integration/user_story_test.rs` | ✅ |

@@ -32,10 +32,10 @@ These parameters together specify what to read or write (key, value) and where t
 **Typical usage:**
 
 ```sh
-cm .config key::model
-cm .config key::theme value::dark
-cm .config key::theme value::dark scope::project
-cm .config key::theme unset::1
+clv .config key::model
+clv .config key::theme value::dark
+clv .config key::theme value::dark scope::project
+clv .config key::theme unset::1
 ```
 
 ### Referenced Commands

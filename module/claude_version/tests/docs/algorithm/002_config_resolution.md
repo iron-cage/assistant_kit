@@ -11,20 +11,20 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ## Test Case Index
 
-| AT | Scenario | Source fn |
+| AC | Scenario | Source fn |
 |----|----------|-----------|
-| AT-01 | Env var present → source=Env, overrides user config | ⏳ `at01_002_env_overrides_user` |
-| AT-02 | Env var absent, key in user config → source=User | ⏳ `at02_002_user_config_wins_without_env` |
-| AT-03 | Key in project config, not in user config → source=Project | ⏳ `at03_002_project_config_key` |
-| AT-04 | Key only in catalog defaults → source=Default | ⏳ `at04_002_catalog_default_returned` |
-| AT-05 | Key absent everywhere → source=Absent, value=None | ⏳ `at05_002_all_layers_absent` |
-| AT-06 | Project config overrides user config when both have key | ⏳ `at06_002_project_overrides_user` |
+| AC-1 | Env var present → source=Env, overrides user config | ⏳ `ac01_002_env_overrides_user` |
+| AC-2 | Env var absent, key in user config → source=User | ⏳ `ac02_002_user_config_wins_without_env` |
+| AC-3 | Key in project config, not in user config → source=Project | ⏳ `ac03_002_project_config_key` |
+| AC-4 | Key only in catalog defaults → source=Default | ⏳ `ac04_002_catalog_default_returned` |
+| AC-5 | Key absent everywhere → source=Absent, value=None | ⏳ `ac05_002_all_layers_absent` |
+| AC-6 | Project config overrides user config when both have key | ⏳ `ac06_002_project_overrides_user` |
 
 **Total:** 6 tests
 
 ---
 
-### AT-01: env var overrides user config
+### AC-1: env var overrides user config
 
 - **Given:** `CLAUDE_MODEL=claude-opus-4-6`; user settings has `{"model": "claude-sonnet-4-6"}`
 - **When:** resolve(`model`)
@@ -33,7 +33,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ---
 
-### AT-02: user config wins when env absent
+### AC-2: user config wins when env absent
 
 - **Given:** `CLAUDE_MODEL` unset; user settings has `{"model": "claude-haiku-4-5-20251001"}`
 - **When:** resolve(`model`)
@@ -42,7 +42,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ---
 
-### AT-03: project config key returned
+### AC-3: project config key returned
 
 - **Given:** `CLAUDE_MODEL` unset; project settings has `{"model": "claude-opus-4-6"}`; user settings empty
 - **When:** resolve(`model`)
@@ -51,7 +51,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ---
 
-### AT-04: catalog default returned when all layers absent
+### AC-4: catalog default returned when all layers absent
 
 - **Given:** `CLAUDE_MODEL` unset; no project config; user settings empty
 - **When:** resolve(`model`)
@@ -60,7 +60,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ---
 
-### AT-05: absent everywhere → None
+### AC-5: absent everywhere → None
 
 - **Given:** no env mapping; no project config; no user config; no catalog default for key
 - **When:** resolve(`myArbitraryKey`)
@@ -69,7 +69,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ---
 
-### AT-06: project config overrides user config
+### AC-6: project config overrides user config
 
 - **Given:** `CLAUDE_MODEL` unset; project settings has `{"theme": "dark"}`; user settings has `{"theme": "light"}`
 - **When:** resolve(`theme`)
@@ -82,9 +82,9 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 | Function | File |
 |----------|------|
-| `at01_002_env_overrides_user` | ⏳ TBD |
-| `at02_002_user_config_wins_without_env` | ⏳ TBD |
-| `at03_002_project_config_key` | ⏳ TBD |
-| `at04_002_catalog_default_returned` | ⏳ TBD |
-| `at05_002_all_layers_absent` | ⏳ TBD |
-| `at06_002_project_overrides_user` | ⏳ TBD |
+| `ac01_002_env_overrides_user` | ⏳ TBD |
+| `ac02_002_user_config_wins_without_env` | ⏳ TBD |
+| `ac03_002_project_config_key` | ⏳ TBD |
+| `ac04_002_catalog_default_returned` | ⏳ TBD |
+| `ac05_002_all_layers_absent` | ⏳ TBD |
+| `ac06_002_project_overrides_user` | ⏳ TBD |

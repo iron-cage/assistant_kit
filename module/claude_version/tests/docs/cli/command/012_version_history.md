@@ -194,13 +194,13 @@ Boundary set: 0, 1, 10 (default), 66 (current release count), 100 (API limit).
 
 | .version.list test | Coverage dimension | .version.history equivalent |
 |--------------------|-------------------|-----------------------------|
-| TC-115 (exit 0) | Basic invocation | IT-1 |
-| TC-116/117 (content presence) | Content validation | IT-5 (summary) |
-| TC-118 (v::0 minimal) | Bare output | IT-4 |
-| TC-119 (v::1 descriptions) | Labeled output | IT-5 |
-| TC-120 (idempotency) | Repeat stability | IT-13 |
-| TC-121 (format::json array) | JSON structure | IT-7 |
-| TC-124 (JSON field presence) | JSON fields | IT-7, IT-8 |
+| IT-1 (exit 0) | Basic invocation | IT-1 |
+| IT-9/IT-10 (content presence) | Content validation | IT-5 (summary) |
+| IT-2 (v::0 minimal) | Bare output | IT-4 |
+| IT-11 (v::1 descriptions) | Labeled output | IT-5 |
+| IT-3/IT-8 (idempotency) | Repeat stability | IT-13 |
+| IT-12 (format::json array) | JSON structure | IT-7 |
+| IT-15 (JSON field presence) | JSON fields | IT-7, IT-8 |
 
 ---
 

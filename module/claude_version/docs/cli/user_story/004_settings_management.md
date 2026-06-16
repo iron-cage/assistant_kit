@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Read and write Claude Code settings via cm.
+- **Purpose**: Read and write Claude Code settings via clv.
 - **Responsibility**: Persona, goal, and acceptance criteria for settings inspection and modification.
 
 ### Persona
@@ -15,11 +15,11 @@ Inspect all settings or read/write a specific setting — with type inference an
 
 ### Acceptance Criteria
 
-- `cm .settings.show` prints all key-value pairs from `~/.claude/settings.json`.
-- `cm .settings.show format::json` returns the full settings object as JSON.
-- `cm .settings.get key::X` prints the current value of key X; exits 2 if key absent.
-- `cm .settings.set key::X value::V dry::1` previews the write without modifying the file.
-- `cm .settings.set key::X value::V` writes the value with type inference and atomic rename.
+- `clv .settings.show` prints all key-value pairs from `~/.claude/settings.json`.
+- `clv .settings.show format::json` returns the full settings object as JSON.
+- `clv .settings.get key::X` prints the current value of key X; exits 2 if key absent.
+- `clv .settings.set key::X value::V dry::1` previews the write without modifying the file.
+- `clv .settings.set key::X value::V` writes the value with type inference and atomic rename.
 - Boolean strings (`true`/`false`), integers, and floats are inferred to their JSON types.
 
 ### Referenced Commands

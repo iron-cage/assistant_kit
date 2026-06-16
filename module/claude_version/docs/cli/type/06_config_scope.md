@@ -20,8 +20,8 @@ Selects which settings file is the write target. Read/show operations always con
 | `project` | `{cwd}/.claude/settings.json` (creates dir + file if absent) |
 
 ```sh
-cm .config key::model value::claude-opus-4-6 scope::user
-cm .config key::model value::claude-haiku-4-5-20251001 scope::project
+clv .config key::model value::claude-opus-4-6 scope::user
+clv .config key::model value::claude-haiku-4-5-20251001 scope::project
 ```
 
 ### Referenced Parameters

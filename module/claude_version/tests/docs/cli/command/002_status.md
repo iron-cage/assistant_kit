@@ -92,8 +92,8 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 ### Summary
 
 - **Total:** 12 tests (9 positive, 3 negative)
-- **Negative ratio:** 25.0% — below ≥40% threshold; covered by cross-cutting TC-242 to TC-244 and TC-245 in `read_commands_test.rs` which apply to `.status` among other commands
-- **Existing cross-cutting negatives applying to `.status`:** TC-242 (`format::xml`), TC-243 (`format::JSON`), TC-244 (`format::`), TC-245 (`v::` duplication)
+- **Negative ratio:** 25.0% — below ≥40% threshold; covered by cross-cutting `tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`, `tc245_last_occurrence_wins_for_verbosity` in `read_commands_test.rs` which apply to `.status` among other commands
+- **Existing cross-cutting negatives applying to `.status`:** `tc242` (`format::xml`), `tc243` (`format::JSON`), `tc244` (`format::`), `tc245` (`v::` duplication)
 - **Combined negative count (command-specific + cross-cutting):** 7/16 = 43.8% ✅
 - **TC range:** IT-1 to IT-12
 

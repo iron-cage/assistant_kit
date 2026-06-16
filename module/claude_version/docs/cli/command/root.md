@@ -75,6 +75,11 @@ clv.status [v::N] [format::FMT]
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
+**Algorithm (3 steps):**
+1. Invoke `claude --version` to detect the currently installed binary version.
+2. Scan `/proc/*/cmdline` for running Claude Code processes and count matches.
+3. Render aggregated status view (version, process count, active account) in the requested format.
+
 **Examples:**
 
 ```sh
@@ -87,8 +92,8 @@ clv.status v::2
 
 | # | Format | Role |
 |---|--------|------|
-| 1 | [text](../format/001_text.md) | Default human-readable output |
-| 2 | [json](../format/002_json.md) | Machine-readable structured output |
+| 1 | [text](../format/01_text.md) | Default human-readable output |
+| 2 | [json](../format/02_json.md) | Machine-readable structured output |
 
 ### Referenced Parameter Groups
 

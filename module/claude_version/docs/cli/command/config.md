@@ -52,6 +52,12 @@ clv.config [key::K] [value::V] [scope::SCOPE] [format::FMT] [v::N] [dry::1] [uns
 | `value::V` and `unset::1` together | exit 1: `value:: and unset:: are mutually exclusive` |
 | `scope::project` without `key::K value::V` or `key::K unset::1` | exit 1: `scope:: only applies to write operations` |
 
+**Algorithm (4 steps):**
+1. Determine operating mode from parameter combination: show-all (no key), get (key only), set (key+value), unset (key+unset::1); exit 1 on invalid combination.
+2. **show-all / get**: Resolve effective value(s) by querying all 4 layers in priority order (env var → project config → user config → catalog default); annotate each value with its source layer.
+3. **set**: Infer value type (`"true"`/`"false"` → bool, numeric → number, else → string); atomically write key→value to target scope file via temp-file rename. **unset**: Delete the key from target scope file.
+4. Render result (all resolved settings, single value with source annotation, or write confirmation) in the requested format.
+
 **Examples:**
 
 ```sh

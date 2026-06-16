@@ -25,9 +25,9 @@ A `ConfigKey` is any non-empty UTF-8 string. Known keys have registered defaults
 | `env.DISABLE_AUTOUPDATER` | — | (absent) |
 
 ```sh
-cm .config key::model              # catalog key — resolves env + default
-cm .config key::theme              # catalog key — resolves user config + default
-cm .config key::myCustomSetting    # arbitrary key — resolves user/project config only
+clv .config key::model              # catalog key — resolves env + default
+clv .config key::theme              # catalog key — resolves user config + default
+clv .config key::myCustomSetting    # arbitrary key — resolves user/project config only
 ```
 
 ### Referenced Parameters

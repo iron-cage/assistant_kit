@@ -98,4 +98,9 @@ Type compliance and validation tests for `ConfigScope`. See [type/06_config_scop
 
 | Function | File | Status |
 |----------|------|--------|
-| — | — | ⏳ (pending implementation) |
+| `tc01_006_scope_user_accepted` | `integration/config_commands_test.rs` | ✅ |
+| `tc02_006_scope_project_accepted` | `integration/config_commands_test.rs` | ✅ |
+| `tc03_006_scope_absent_defaults_to_user` | `integration/config_commands_test.rs` | ✅ |
+| `tc04_006_scope_global_exits_1` | `integration/config_commands_test.rs` | ✅ |
+| `tc05_006_scope_wrong_case_exits_1` | `integration/config_commands_test.rs` | ✅ |
+| `tc06_006_scope_empty_exits_1` | `integration/config_commands_test.rs` | ✅ |

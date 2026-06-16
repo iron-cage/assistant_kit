@@ -14,20 +14,20 @@ Edge case coverage for the `format::` parameter. See [005_params.md](../../../..
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| TC-100 | `.status format::json` → `{"version":...}` | Explicit json |
-| TC-111 | `.version.show format::json` → `{"version":"..."}` | Explicit json |
-| TC-121 | `.version.list format::json` → JSON array | Explicit json |
-| TC-144 | `.processes format::json` → `{"processes":[...]}` | Explicit json |
-| TC-167 | `.settings.show format::json` → JSON object | Explicit json |
-| TC-182 | `.settings.get format::json` → `{"key":..,"value":..}` | Explicit json |
+| EC-11 | `.status format::json` → `{"version":...}` | Explicit json |
+| EC-12 | `.version.show format::json` → `{"version":"..."}` | Explicit json |
+| EC-13 | `.version.list format::json` → JSON array | Explicit json |
+| EC-14 | `.processes format::json` → `{"processes":[...]}` | Explicit json |
+| EC-15 | `.settings.show format::json` → JSON object | Explicit json |
+| EC-16 | `.settings.get format::json` → `{"key":..,"value":..}` | Explicit json |
 | EC-5 | `format::json` preserves bool/number types | Type Fidelity |
-| TC-431 | `.version.history format::json` → version/date/summary fields | Explicit json |
+| EC-17 | `.version.history format::json` → version/date/summary fields | Explicit json |
 | EC-1 | `.version.guard format::json dry::1` → JSON output, exit 0 | Explicit json |
 | EC-2 | `format::xml` → exit 1, unknown format | Invalid |
 | EC-3 | `format::JSON` (uppercase) → exit 1 | Invalid (case) |
 | EC-4 | `format::` (empty) → exit 1 | Empty Value |
-| TC-440 | `.version.history format::xml` → exit 1 | Invalid |
-| TC-441 | `.version.history format::JSON` → exit 1 | Invalid (case) |
+| EC-18 | `.version.history format::xml` → exit 1 | Invalid |
+| EC-19 | `.version.history format::JSON` → exit 1 | Invalid (case) |
 | EC-6 | Default (absent) → `format::text` | Default Behavior |
 | EC-7 | `format::text` explicit → same as absent | Explicit text |
 | EC-8 | `format::csv` → exit 1 | Invalid |

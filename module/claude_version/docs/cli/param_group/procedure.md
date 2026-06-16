@@ -9,7 +9,7 @@
 
 ### Procedure :: 1. Add a New Parameter Group
 
-**Trigger:** A new logical grouping of cm parameters is identified.
+**Trigger:** A new logical grouping of clv parameters is identified.
 
 1. Assign the next sequential number (NN) to the new group.
 2. Create `NN_group_name.md` with:

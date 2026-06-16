@@ -3,6 +3,8 @@
 //! Implements test cases from:
 //! - `tests/docs/cli/command/013_config.md` (IT-1 through IT-17)
 //! - `tests/docs/feature/006_config_command.md` (FT-01 through FT-12)
+//! - `tests/docs/cli/type/006_config_scope.md` (TC-1 through TC-6)
+//! - `tests/docs/cli/type/007_config_key.md` (TC-1 through TC-6)
 //!
 //! # Test Matrix (IT)
 //!
@@ -649,4 +651,231 @@ fn ft12_006_config_catalog_default_model()
   let text = stdout( &out );
   assert!( text.contains( "claude-sonnet-4-6" ), "must show catalog default: {text}" );
   assert!( text.contains( "(default)" ), "must show (default) source annotation: {text}" );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ConfigScope type tests (tests/docs/cli/type/006_config_scope.md)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── TC-1: scope::user accepted ──────────────────────────────────────────────
+
+// TC-1: scope::user → exit 0; value written to ~/.claude/settings.json
+#[ test ]
+fn tc01_006_scope_user_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+
+  let out = run_clm_with_env(
+    &[ ".config", "key::theme", "value::dark", "scope::user" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let content = std::fs::read_to_string(
+    dir.path().join( ".claude/settings.json" )
+  ).unwrap();
+  assert!( content.contains( "\"theme\"" ), "user settings.json must contain theme: {content}" );
+  assert!( content.contains( "dark" ), "user settings.json must contain value: {content}" );
+}
+
+// ─── TC-2: scope::project accepted ───────────────────────────────────────────
+
+// TC-2: scope::project → exit 0; {cwd}/.claude/settings.json created; user config unchanged
+#[ test ]
+fn tc02_006_scope_project_accepted()
+{
+  let home_dir    = TempDir::new().unwrap();
+  let project_dir = TempDir::new().unwrap();
+  let home        = home_dir.path().to_str().unwrap();
+  let bin         = env!( "CARGO_BIN_EXE_claude_version" );
+
+  let out = std::process::Command::new( bin )
+    .args( [ ".config", "key::theme", "value::dark", "scope::project" ] )
+    .env( "HOME", home )
+    .current_dir( project_dir.path() )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let proj_settings = project_dir.path().join( ".claude/settings.json" );
+  assert!( proj_settings.exists(), "project settings.json must be created" );
+  let content = std::fs::read_to_string( &proj_settings ).unwrap();
+  assert!( content.contains( "dark" ), "project settings must contain value: {content}" );
+  assert!( !home_dir.path().join( ".claude/settings.json" ).exists(),
+    "user settings.json must not be created by project scope write" );
+}
+
+// ─── TC-3: absent scope:: defaults to user ───────────────────────────────────
+
+// TC-3: no scope:: → defaults to user scope; writes to ~/.claude/settings.json; exit 0
+#[ test ]
+fn tc03_006_scope_absent_defaults_to_user()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_clm_with_env(
+    &[ ".config", "key::theme", "value::dark" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let user_settings = dir.path().join( ".claude/settings.json" );
+  assert!( user_settings.exists(), "user settings.json must be created by default scope" );
+  let content = std::fs::read_to_string( &user_settings ).unwrap();
+  assert!( content.contains( "dark" ), "user settings must contain written value: {content}" );
+}
+
+// ─── TC-4: scope::global → exit 1, unknown variant ──────────────────────────
+
+// TC-4: scope::global → unrecognised scope value; exit 1
+#[ test ]
+fn tc04_006_scope_global_exits_1()
+{
+  let out = run_clm_with_env(
+    &[ ".config", "key::theme", "value::dark", "scope::global" ],
+    &[ ( "HOME", "/tmp" ) ],
+  );
+  assert_exit( &out, 1 );
+}
+
+// ─── TC-5: scope::USER → exit 1, case-sensitive ──────────────────────────────
+
+// TC-5: scope::USER → wrong case; rejected; exit 1
+#[ test ]
+fn tc05_006_scope_wrong_case_exits_1()
+{
+  let out = run_clm_with_env(
+    &[ ".config", "key::theme", "value::dark", "scope::USER" ],
+    &[ ( "HOME", "/tmp" ) ],
+  );
+  assert_exit( &out, 1 );
+}
+
+// ─── TC-6: scope:: (empty) → exit 1 ─────────────────────────────────────────
+
+// TC-6: scope:: (empty value) → exit 1
+#[ test ]
+fn tc06_006_scope_empty_exits_1()
+{
+  let out = run_clm_with_env(
+    &[ ".config", "key::theme", "value::dark", "scope::" ],
+    &[ ( "HOME", "/tmp" ) ],
+  );
+  assert_exit( &out, 1 );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ConfigKey type tests (tests/docs/cli/type/007_config_key.md)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── TC-1: key::model → catalog key resolves default ─────────────────────────
+
+// TC-1: key::model with no env/config → catalog default claude-sonnet-4-6; exit 0
+//
+// Uses isolated cwd to avoid project config walk finding container-mounted settings.
+#[ test ]
+fn tc01_007_config_key_catalog_default()
+{
+  let dir = TempDir::new().unwrap();
+  let bin = env!( "CARGO_BIN_EXE_claude_version" );
+
+  let out = std::process::Command::new( bin )
+    .args( [ ".config", "key::model" ] )
+    .env( "HOME", dir.path().to_str().unwrap() )
+    .env( "CLAUDE_MODEL", "" )
+    .current_dir( dir.path() )
+    .output()
+    .expect( "failed to execute claude_version binary" );
+
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "claude-sonnet-4-6" ), "must show catalog default: {text}" );
+  assert!( text.contains( "(default)" ), "must show (default) source annotation: {text}" );
+}
+
+// ─── TC-2: key::myCustomSetting → arbitrary key, absent ──────────────────────
+
+// TC-2: key::myCustomSetting with no config → arbitrary key accepted; exit 0
+#[ test ]
+fn tc02_007_config_key_arbitrary_absent()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_clm_with_env(
+    &[ ".config", "key::myCustomSetting" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+}
+
+// ─── TC-3: key::theme → catalog key resolves user config ─────────────────────
+
+// TC-3: key::theme with user config {theme:dark} → shows dark with (user); exit 0
+#[ test ]
+fn tc03_007_config_key_catalog_user_config()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
+
+  let out = run_clm_with_env(
+    &[ ".config", "key::theme" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "dark" ), "must show user config value: {text}" );
+  assert!( text.contains( "(user)" ), "must show (user) source annotation: {text}" );
+}
+
+// ─── TC-4: key::a.b.c → dot treated as literal ───────────────────────────────
+
+// TC-4: key::a.b.c with user config {a.b.c:test} → dot is literal; exit 0
+#[ test ]
+fn tc04_007_config_key_dot_literal()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[ ( "a.b.c", "test" ) ] );
+
+  let out = run_clm_with_env(
+    &[ ".config", "key::a.b.c" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "test" ), "must show value for dot-literal key: {text}" );
+}
+
+// ─── TC-5: absent key:: → show-all mode ──────────────────────────────────────
+
+// TC-5: .config with no key:: → show-all mode lists resolved settings; exit 0
+#[ test ]
+fn tc05_007_config_key_absent_show_all()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
+
+  let out = run_clm_with_env(
+    &[ ".config" ],
+    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "theme" ), "show-all must include user keys: {text}" );
+}
+
+// ─── TC-6: key:: (empty) → exit 1 ───────────────────────────────────────────
+
+// TC-6: key:: (empty value) → exit 1
+#[ test ]
+fn tc06_007_config_key_empty_exits_1()
+{
+  let out = run_clm_with_env(
+    &[ ".config", "key::" ],
+    &[ ( "HOME", "/tmp" ) ],
+  );
+  assert_exit( &out, 1 );
 }

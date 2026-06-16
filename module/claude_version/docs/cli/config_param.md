@@ -11,4 +11,4 @@
 
 clv has no config file. All behavior is controlled via CLI parameters passed at invocation time. There are no persistent configuration files specific to clv itself.
 
-**Settings file:** `~/.claude/settings.json` is the *target* that cm reads and writes via `.settings.get` / `.settings.set` / `.settings.show`. It is not a config file for cm — it is the data store operated on by cm.
+**Settings file:** `~/.claude/settings.json` is the *target* that clv reads and writes via `.settings.get` / `.settings.set` / `.settings.show`. It is not a config file for clv — it is the data store operated on by clv.

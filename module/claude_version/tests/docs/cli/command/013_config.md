@@ -122,8 +122,198 @@ Integration test planning for `.config`. See [command/config.md](../../../../doc
 
 ---
 
+## Test Case Details
+
+---
+
+### IT-1: No params → show-all with source labels
+
+- **Given:** `HOME=<tmp>` with `~/.claude/settings.json` containing at least one setting
+- **When:** `cm .config`
+- **Then:** exit 0; output lists all settings with source labels (e.g., `theme: dark (user)`)
+- **Exit:** 0
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-2: `key::theme` → get with source annotation
+
+- **Given:** `HOME=<tmp>` with `~/.claude/settings.json` containing `{"theme": "dark"}`
+- **When:** `cm .config key::theme`
+- **Then:** exit 0; output contains `dark` and a source annotation (e.g., `(user)`)
+- **Exit:** 0
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-3: `key::theme value::dark` → set user config
+
+- **Given:** `HOME=<tmp>` with `~/.claude/settings.json` existing (may be empty)
+- **When:** `cm .config key::theme value::dark`
+- **Then:** exit 0; `~/.claude/settings.json` contains `"theme": "dark"`
+- **Exit:** 0
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-4: `key::model value::claude-opus-4-6 scope::project` → project write
+
+- **Given:** `HOME=<tmp>`; cwd accessible for `.claude/settings.json` write
+- **When:** `cm .config key::model value::claude-opus-4-6 scope::project`
+- **Then:** exit 0; `{cwd}/.claude/settings.json` contains `"model": "claude-opus-4-6"`; user config unchanged
+- **Exit:** 0
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-5: `key::theme unset::1` → key removed from user settings
+
+- **Given:** `HOME=<tmp>` with `~/.claude/settings.json` containing `{"theme": "dark"}`
+- **When:** `cm .config key::theme unset::1`
+- **Then:** exit 0; `~/.claude/settings.json` no longer contains `"theme"` key
+- **Exit:** 0
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-6: `format::json` → JSON with source fields
+
+- **Given:** `HOME=<tmp>` with `~/.claude/settings.json` containing at least one setting
+- **When:** `cm .config format::json`
+- **Then:** exit 0; stdout is valid JSON; each entry includes key, value, and source fields
+- **Exit:** 0
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-7: `key::model` with `CLAUDE_MODEL` set → shows env value
+
+- **Given:** `HOME=<tmp>`; `CLAUDE_MODEL=claude-opus-4-6` in environment; user config omits `model`
+- **When:** `cm .config key::model`
+- **Then:** exit 0; output shows `claude-opus-4-6` with source annotation `(env)` or `(environment)`
+- **Exit:** 0
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-8: `key::unknownArbitraryKey value::v` → accepted, written
+
+- **Given:** `HOME=<tmp>` with `~/.claude/settings.json` containing `{}`
+- **When:** `cm .config key::unknownArbitraryKey value::v`
+- **Then:** exit 0; `~/.claude/settings.json` contains `"unknownArbitraryKey": "v"`; unknown keys accepted without error
+- **Exit:** 0
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-9: `key::model` no env/config → shows catalog default
+
+- **Given:** `HOME=<tmp>` with empty `~/.claude/settings.json`; `CLAUDE_MODEL` unset
+- **When:** `cm .config key::model`
+- **Then:** exit 0; output shows `claude-sonnet-4-6` (catalog default) with source annotation `(default)`
+- **Exit:** 0
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-10: `key::theme value::dark dry::1` → preview, no write
+
+- **Given:** `HOME=<tmp>` with `~/.claude/settings.json` containing `{}`
+- **When:** `cm .config key::theme value::dark dry::1`
+- **Then:** exit 0; stdout shows preview with `[dry-run]` marker; `settings.json` unchanged
+- **Exit:** 0
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-11: `value::v` without `key::` → exit 1
+
+- **Given:** clean environment
+- **When:** `cm .config value::v`
+- **Then:** exit 1; error indicates `key::` is required when `value::` is provided
+- **Exit:** 1
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-12: `unset::1` without `key::` → exit 1
+
+- **Given:** clean environment
+- **When:** `cm .config unset::1`
+- **Then:** exit 1; error indicates `key::` is required when `unset::` is provided
+- **Exit:** 1
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-13: `value::v unset::1 key::k` → exit 1 (mutually exclusive)
+
+- **Given:** clean environment
+- **When:** `cm .config key::k value::v unset::1`
+- **Then:** exit 1; error indicates `value::` and `unset::` are mutually exclusive
+- **Exit:** 1
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-14: `scope::global` → exit 1 (invalid value)
+
+- **Given:** clean environment
+- **When:** `cm .config scope::global`
+- **Then:** exit 1; error indicates `scope::` must be `user` or `project`
+- **Exit:** 1
+- **Source:** [type/06_config_scope.md](../../../../docs/cli/type/06_config_scope.md)
+
+---
+
+### IT-15: `format::xml` → exit 1
+
+- **Given:** clean environment
+- **When:** `cm .config format::xml`
+- **Then:** exit 1; error references invalid format value
+- **Exit:** 1
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-16: `HOME` unset → exit 2
+
+- **Given:** `HOME` environment variable unset or empty
+- **When:** `cm .config`
+- **Then:** exit 2; error indicates HOME is required to resolve settings path
+- **Exit:** 2
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
+### IT-17: `dry::2` → exit 1, out-of-range
+
+- **Given:** clean environment
+- **When:** `cm .config dry::2`
+- **Then:** exit 1; error indicates `dry::` value is out of range (must be 0 or 1)
+- **Exit:** 1
+- **Source:** [command/config.md](../../../../docs/cli/command/config.md)
+
+---
+
 ### Source Functions
 
 | Function | File |
 |----------|------|
-| (all pending) | ⏳ TBD — integration/config_commands_test.rs |
+| `it01_config_show_all_source_labels` | `integration/config_commands_test.rs` |
+| `it02_config_get_shows_source_annotation` | `integration/config_commands_test.rs` |
+| `it03_config_set_user_scope` | `integration/config_commands_test.rs` |
+| `it04_config_set_project_scope` | `integration/config_commands_test.rs` |
+| `it05_config_unset_removes_key` | `integration/config_commands_test.rs` |
+| `it06_config_show_all_json_format` | `integration/config_commands_test.rs` |
+| `it07_config_get_env_override` | `integration/config_commands_test.rs` |
+| `it08_config_arbitrary_key_accepted` | `integration/config_commands_test.rs` |
+| `it09_config_catalog_default_model` | `integration/config_commands_test.rs` |
+| `it10_config_set_dry_run_no_write` | `integration/config_commands_test.rs` |
+| `it11_config_value_without_key_exits_1` | `integration/config_commands_test.rs` |
+| `it12_config_unset_without_key_exits_1` | `integration/config_commands_test.rs` |
+| `it13_config_value_and_unset_together_exits_1` | `integration/config_commands_test.rs` |
+| `it14_config_invalid_scope_exits_1` | `integration/config_commands_test.rs` |
+| `it15_config_invalid_format_exits_1` | `integration/config_commands_test.rs` |
+| `it16_config_home_unset_exits_2` | `integration/config_commands_test.rs` |
+| `it17_config_dry_out_of_range_exits_1` | `integration/config_commands_test.rs` |

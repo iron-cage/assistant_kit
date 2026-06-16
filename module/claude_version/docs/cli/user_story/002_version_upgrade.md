@@ -15,12 +15,12 @@ Preview exactly what will happen, then install the target version with version l
 
 ### Acceptance Criteria
 
-- `cm .version.install version::X dry::1` shows the full install plan without executing.
-- `cm .version.install version::X` installs, applies 5-layer version lock, and exits 0.
+- `clv .version.install version::X dry::1` shows the full install plan without executing.
+- `clv .version.install version::X` installs, applies 5-layer version lock, and exits 0.
 - Already-at-target is a no-op (exits 0) unless `force::1` is set.
-- `cm .version.show` after install prints the newly installed version.
-- `cm .version.history` shows recent releases with summaries to aid version selection.
-- `cm .version.guard` after install detects drift and restores preferred version if needed.
+- `clv .version.show` after install prints the newly installed version.
+- `clv .version.history` shows recent releases with summaries to aid version selection.
+- `clv .version.guard` after install detects drift and restores preferred version if needed.
 
 ### Referenced Commands
 

@@ -25,11 +25,11 @@ classified as strings because they are not valid JSON number literals.
 Special characters (`"`, `\`) in string values are properly escaped.
 
 ```sh
-cm .settings.set key::autoUpdate value::true    # -> true (bool)
-cm .settings.set key::timeout value::30         # -> 30 (number)
-cm .settings.set key::theme value::dark         # -> "dark" (string)
-cm .settings.set key::rate value::3.14          # -> 3.14 (number)
-cm .settings.set key::special value::NaN        # -> "NaN" (string)
+clv .settings.set key::autoUpdate value::true    # -> true (bool)
+clv .settings.set key::timeout value::30         # -> 30 (number)
+clv .settings.set key::theme value::dark         # -> "dark" (string)
+clv .settings.set key::rate value::3.14          # -> 3.14 (number)
+clv .settings.set key::special value::NaN        # -> "NaN" (string)
 ```
 
 ### Referenced Parameters

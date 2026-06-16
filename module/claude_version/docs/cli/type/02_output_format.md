@@ -15,9 +15,9 @@ Case-sensitive matching. `Text`, `JSON`, `Json` are all rejected.
 - **Validation errors:** `"unknown format '{raw}': expected text or json"`
 
 ```sh
-cm .status format::text       # human-readable
-cm .status format::json       # machine-readable
-cm .status format::JSON       # error: case-sensitive
+clv .status format::text       # human-readable
+clv .status format::json       # machine-readable
+clv .status format::JSON       # error: case-sensitive
 ```
 
 ### Referenced Parameters
