@@ -214,7 +214,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `grep -n "resolve_model\|resolve_effort" src/usage/subprocess.rs`
 - **Then:** Both call sites are present; at least 2 hits for each function.
 - **Exit:** n/a (structural test)
-- **Source fn:** TBD (structural grep test not yet implemented)
+- **Source fn:** `it_ft026_13_imodel_effort_both_paths_structural` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-08](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -226,7 +226,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When-B:** `clp .usage imodel::opus effort::max format::json`
 - **Then-A and Then-B:** Both produce JSON arrays with identical schema. `imodel::` and `effort::` affect only subprocess invocation, not output rendering.
 - **Exit:** 0 both cases
-- **Source fn:** TBD (JSON format invariance test not yet implemented)
+- **Source fn:** `it_ft026_14_imodel_effort_no_effect_on_json_schema` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-09](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---

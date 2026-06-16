@@ -94,6 +94,7 @@ mod tests
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
     assert!( should_refresh( &aq, 0 ), "401 must trigger refresh" );
   }
@@ -117,6 +118,7 @@ mod tests
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
     assert!( should_refresh( &aq, 0 ), "403 must trigger refresh" );
   }
@@ -144,6 +146,7 @@ mod tests
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
     assert!(
       should_refresh( &aq, 9_999 ),
@@ -173,6 +176,7 @@ mod tests
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
     assert!(
       !should_refresh( &aq, 0 ),
@@ -202,6 +206,7 @@ mod tests
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
     assert!(
       should_refresh( &aq, 5 ),
@@ -231,6 +236,7 @@ mod tests
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
     assert!(
       !should_refresh( &aq, 5 ),
@@ -258,6 +264,7 @@ mod tests
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
     assert!( !should_refresh( &aq, 9_999 ), "Ok result must not trigger refresh" );
   }
@@ -281,6 +288,7 @@ mod tests
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
     assert!( !should_refresh( &aq, 9_999 ), "generic error must not trigger refresh" );
   }
@@ -333,6 +341,7 @@ mod tests
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
     assert!(
       should_refresh( &aq, 9_999 ),
@@ -388,6 +397,7 @@ mod tests
       cached                : true,  // cache fallback used — Err was converted to Ok
       cache_age_secs        : Some( 3600 ),
       is_owned              : true,
+      owner                : String::new(),
     };
     assert!(
       should_refresh( &aq, 9_999 ),
@@ -419,6 +429,7 @@ mod tests
       cached                : true,
       cache_age_secs        : Some( 60 ),
       is_owned              : true,
+      owner                : String::new(),
     };
     assert!(
       !should_refresh( &aq, 9_999 ),
@@ -453,6 +464,7 @@ mod tests
       cached                : false,
       cache_age_secs        : None,
       is_owned              : false,
+      owner                : String::new(),
     };
     assert!(
       !should_refresh( &aq_401, 9_999 ),
@@ -475,6 +487,7 @@ mod tests
       cached                : false,
       cache_age_secs        : None,
       is_owned              : false,
+      owner                : String::new(),
     };
     assert!(
       !should_refresh( &aq_expired, 9_999 ),
@@ -497,6 +510,7 @@ mod tests
       cached                : false,
       cache_age_secs        : None,
       is_owned              : false,
+      owner                : String::new(),
     };
     assert!(
       !should_refresh( &aq_429_expired, 9_999 ),
@@ -524,6 +538,7 @@ mod tests
       cached                : true,
       cache_age_secs        : Some( 300 ),
       is_owned              : false,
+      owner                : String::new(),
     };
     assert!(
       !should_refresh( &aq_cached_expired, 9_999 ),

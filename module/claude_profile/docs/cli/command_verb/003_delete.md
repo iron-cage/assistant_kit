@@ -33,6 +33,7 @@ Removes an account profile from the credential store. Deletes `{name}.credential
 | Parameter | Semantics | Required |
 |-----------|-----------|----------|
 | `name::` | Account to delete (email or unambiguous prefix) | Yes |
+| `force::` | Bypass G6 ownership gate; allow deleting a non-owned account | No |
 | `dry::` | Validate target exists without deleting | No |
 | `trace::` | Emit diagnostic trace output | No |
 
@@ -50,6 +51,7 @@ Removes an account profile from the credential store. Deletes `{name}.credential
 | File | Relationship |
 |------|-------------|
 | [feature/005_account_delete.md](../../feature/005_account_delete.md) | File removal sequence and legacy satellite cleanup |
+| [feature/036_account_ownership.md](../../feature/036_account_ownership.md) | G6 ownership gate — exits 1 when account owned by different identity; `force::1` bypasses G6 |
 
 ### Referenced Commands
 

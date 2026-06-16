@@ -95,6 +95,7 @@ pub( crate ) fn render_text(
   if cols.renews       { headers.push( "~Renews".to_string() ); }
   if cols.host         { headers.push( "Host".to_string() ); }
   if cols.role         { headers.push( "Role".to_string() ); }
+  if cols.owner        { headers.push( "Owner".to_string() ); }
   if cols.next         { headers.push( "\u{2192} Next".to_string() ); }
 
   let mut builder = RowBuilder::new( headers );
@@ -207,6 +208,7 @@ pub( crate ) fn render_text(
         if cols.renews       { row.push( renews_str ); }
         if cols.host         { row.push( aq.host.clone() ); }
         if cols.role         { row.push( aq.role.clone() ); }
+        if cols.owner        { row.push( aq.owner.clone() ); }
         if cols.next         { row.push( next_cell ); }
         builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
       }
@@ -231,6 +233,7 @@ pub( crate ) fn render_text(
         if cols.renews       { row.push( renews_str ); }
         if cols.host         { row.push( aq.host.clone() ); }
         if cols.role         { row.push( aq.role.clone() ); }
+        if cols.owner        { row.push( aq.owner.clone() ); }
         if cols.next         { row.push( "\u{2014}".to_string() ); }
         // Fix(BUG-220): only the last visible quota-data column carries error_str — non-quota
         //   metadata columns (expires, sub, renews) are sourced independently and must be preserved.
@@ -337,6 +340,7 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
     let is_active_str             = if aq.is_active             { "true" } else { "false" };
     let is_occupied_elsewhere_str = if aq.is_occupied_elsewhere { "true" } else { "false" };
     let is_owned_str              = if aq.is_owned              { "true" } else { "false" };
+    let owner_esc                 = json_escape( &aq.owner );
     let expires_in_secs  = ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs );
     let billing_type_str = aq.account.as_ref()
       .map_or_else( || "null".to_string(), |a| format!( "\"{}\"", json_escape( &a.billing_type ) ) );
@@ -389,7 +393,7 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
         format!(
           "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
 \"is_occupied_elsewhere\":{is_occupied_elsewhere_str},\"is_owned\":{is_owned_str},\
-\"expires_in_secs\":{expires_in_secs},\
+\"owner\":\"{owner_esc}\",\"expires_in_secs\":{expires_in_secs},\
 \"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\
 \"renewal_secs\":{renewal_secs_str},\"renewal_is_estimate\":{renewal_is_estimate_str},\
 \"next_event_type\":{next_type_str},\"next_event_secs\":{next_secs_str},\
@@ -417,7 +421,7 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
         format!(
           "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
 \"is_occupied_elsewhere\":{is_occupied_elsewhere_str},\"is_owned\":{is_owned_str},\
-\"expires_in_secs\":{expires_in_secs},\
+\"owner\":\"{owner_esc}\",\"expires_in_secs\":{expires_in_secs},\
 \"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\
 \"renewal_secs\":{renewal_secs_str},\"renewal_is_estimate\":{renewal_is_estimate_str},\
 \"next_event_type\":{next_type_str},\"next_event_secs\":{next_secs_str},\
@@ -470,6 +474,7 @@ pub( crate ) fn render_tsv(
   if cols.renews       { headers.push( "renews".to_string() ); }
   if cols.host         { headers.push( "host".to_string() ); }
   if cols.role         { headers.push( "role".to_string() ); }
+  if cols.owner        { headers.push( "owner".to_string() ); }
   if cols.next         { headers.push( "next".to_string() ); }
   let mut out = headers.join( "\t" );
   out.push( '\n' );
@@ -552,6 +557,7 @@ pub( crate ) fn render_tsv(
         if cols.renews       { row.push( renews_str ); }
         if cols.host         { row.push( aq.host.clone() ); }
         if cols.role         { row.push( aq.role.clone() ); }
+        if cols.owner        { row.push( aq.owner.clone() ); }
         if cols.next         { row.push( next_str ); }
       }
       Err( reason ) =>
@@ -571,6 +577,7 @@ pub( crate ) fn render_tsv(
         if cols.renews  { row.push( renews_str ); }  // Fix: was error_str
         if cols.host    { row.push( aq.host.clone() ); }
         if cols.role    { row.push( aq.role.clone() ); }
+        if cols.owner   { row.push( aq.owner.clone() ); }
         if cols.next    { row.push( "\u{2014}".to_string() ); }
       }
     }

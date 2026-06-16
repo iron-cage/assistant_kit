@@ -43,6 +43,15 @@ Writes the per-machine active marker (`_active_{machine}_{user}`) for a named ac
 [absent/saved/active] --account.assign--> [same state]  (marker written; {name}.json unchanged; credentials unchanged)
 ```
 
+### Migration (Feature 037)
+
+> `.account.assign` is being removed as a standalone command. Its behavior is absorbed into `.accounts` and `.usage` as the `assign::1` mutation param. After Feature 037 ships:
+> - `clp .account.assign name::X` → exits 1 with redirect message directing to new syntax
+> - `clp .accounts assign::1 name::X` → writes marker (same behavior)
+> - `clp .accounts assign::1 name::X for::U@M` → targeted machine marker (same behavior)
+>
+> See [feature/037_accounts_usage_param_unification.md](../../feature/037_accounts_usage_param_unification.md) AC-08 through AC-12.
+
 ### Cross-References
 
 | File | Relationship |
@@ -50,9 +59,10 @@ Writes the per-machine active marker (`_active_{machine}_{user}`) for a named ac
 | [feature/032_account_assign.md](../../feature/032_account_assign.md) | Marker write, `for::` resolution, sanitization rules |
 | [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md) | `_active_{machine}_{user}` marker semantics |
 | [feature/036_account_ownership.md](../../feature/036_account_ownership.md) | Ownership model; enforcement gates G1–G8; ownership is stamped by `.account.save`, not `.account.assign` |
+| [feature/037_accounts_usage_param_unification.md](../../feature/037_accounts_usage_param_unification.md) | `assign::` absorbed as mutation param; `.account.assign` standalone removed; `for::` retained |
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.assign`](../command/001_account.md#command--16-accountassign) | Write per-machine active marker without credential rotation |
+| 1 | [`.account.assign`](../command/001_account.md#command--16-accountassign) | Write per-machine active marker without credential rotation (removed in Feature 037 — use `.accounts assign::1`) |

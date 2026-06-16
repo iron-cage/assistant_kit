@@ -43,6 +43,7 @@ This matches the pattern of G5/G6/G7 — gate evaluates before any mutation.
 |-----------|-----------|----------|
 | `name::` | Account name (full email address); no name inference | Yes |
 | `dry::` | Validate and print intent without writing | No |
+| `force::` | Bypass G8 ownership gate; allow any identity to unclaim | No |
 | `trace::` | Emit `[trace]` diagnostic lines to stderr | No |
 
 ### State Transition Pattern
@@ -54,15 +55,26 @@ This matches the pattern of G5/G6/G7 — gate evaluates before any mutation.
 [saved/active, unowned] --account.unclaim--> [same state, owner: ""]  (idempotent)
 ```
 
+### Migration (Feature 037)
+
+> `.account.unclaim` is being removed as a standalone command. Its behavior is absorbed into `.accounts` and `.usage` as the `unclaim::1` mutation param. After Feature 037 ships:
+> - `clp .account.unclaim name::X` → exits 1 with redirect message directing to new syntax
+> - `clp .accounts unclaim::1 name::X` → clears owner field (same behavior)
+> - `clp .accounts unclaim::1 name::X force::1` → bypasses G8; clears owner regardless of caller identity
+> - Batch unclaim: `clp .accounts unclaim::1` (no `name::`) → applies to all filtered accounts
+>
+> See [feature/037_accounts_usage_param_unification.md](../../feature/037_accounts_usage_param_unification.md) AC-05 through AC-11.
+
 ### Cross-References
 
 | File | Relationship |
 |------|-------------|
-| [feature/036_account_ownership.md](../../feature/036_account_ownership.md) | Ownership model, G8 gate, `write_owner()` implementation, AC-02/AC-16/AC-17 |
-| [feature/002_account_save.md](../../feature/002_account_save.md) | `.account.save` always stamps `current_identity()` — use `.account.unclaim` to clear |
+| [feature/036_account_ownership.md](../../feature/036_account_ownership.md) | Ownership model, G8 gate, `write_owner()` implementation, AC-02/AC-16–AC-21 (including `force::` bypass) |
+| [feature/002_account_save.md](../../feature/002_account_save.md) | `.account.save` always stamps `current_identity()` — use `.accounts unclaim::1` to clear (post-Feature 037) |
+| [feature/037_accounts_usage_param_unification.md](../../feature/037_accounts_usage_param_unification.md) | `unclaim::` absorbed as mutation param; `.account.unclaim` standalone removed; batch unclaim added |
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.unclaim`](../command/001_account.md#command--17-accountunclaim) | Release ownership of saved account profile |
+| 1 | [`.account.unclaim`](../command/001_account.md#command--17-accountunclaim) | Release ownership of saved account profile (removed in Feature 037 — use `.accounts unclaim::1`) |

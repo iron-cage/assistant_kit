@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clp parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: 54 active clp parameter edge case files (params 1–55 except param 2); `current::` (docs param 18) has no dedicated EC file — covered by `command/003_accounts.md` IT tests. Production param 56 (`unclaim::`) was REMOVED — file `57_unclaim.md` is retained as a tombstone with no active test cases.
+- **In Scope**: 56 active clp parameter edge case files (params 1–58 with gaps); `current::` (docs param 18) has no dedicated EC file — covered by `command/003_accounts.md` IT tests. Production param 56 (`unclaim::`) was previously REMOVED — file `57_unclaim.md` is retained as a tombstone for the old `.account.save unclaim::` removal; param 56 (`unclaim::`) has been re-activated on `.accounts`/`.usage` in Feature 037. New test files `58_assign.md` and `59_force.md` cover params 057 (`assign::`) and 058 (`force::`) introduced in Feature 037.
 - **Numbering note**: Test doc numbering is offset +1 from `docs/cli/param/` starting at position 2 (test `003_format.md` ↔ production `002_format.md`). Test file `002_` does not exist; this is intentional — the offset arose when `current::` was excluded from EC coverage, shifting subsequent test IDs by one.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
@@ -66,4 +66,6 @@
 | 53_for.md | Edge cases for `for::` parameter (`USER@MACHINE` target identity for `.account.assign`) |
 | 54_set_model.md | Edge cases for `set_model::` parameter (explicit session model override) |
 | 55_set.md | Edge cases for `set::` parameter (`.model` mode selector: absent = get, present = set) |
-| 57_unclaim.md | **REMOVED** — `unclaim::` removed from `.account.save`; see `command/18_account_unclaim.md` |
+| 57_unclaim.md | **TOMBSTONE** — `unclaim::` removed from `.account.save` (Feature 036); param 056 re-activated on `.accounts`/`.usage` in Feature 037; see `37_accounts_usage_param_unification.md` |
+| 58_assign.md | Edge cases for `assign::` parameter (`.accounts`/`.usage` marker write mutation — Feature 037) |
+| 59_force.md | Edge cases for `force::` parameter (G5–G8 ownership gate bypass — Feature 036/037) |

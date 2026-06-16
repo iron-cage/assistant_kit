@@ -402,6 +402,7 @@ mod tests
         cached        : false,
         cache_age_secs : None,
         is_owned      : true,
+        owner                : String::new(),
       }
     };
     let accounts = vec![

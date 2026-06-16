@@ -67,6 +67,7 @@
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
     let accounts = vec![ aq ];
     let cols     = ColsVisibility::default_set();
@@ -138,6 +139,7 @@
         cached                : false,
         cache_age_secs        : None,
         is_owned              : true,
+        owner                : String::new(),
       }
     };
 
@@ -231,6 +233,7 @@
       cached                : true,
       cache_age_secs        : Some( 300 ),
       is_owned              : true,
+      owner                : String::new(),
     };
     let accounts = vec![ aq ];
     let cols     = ColsVisibility::default_set();
@@ -289,6 +292,7 @@
       cached                : true,
       cache_age_secs        : Some( 720 ),
       is_owned              : true,
+      owner                : String::new(),
     };
     let accounts = vec![ aq ];
     let json = render_json( &accounts );
@@ -333,6 +337,7 @@
       cached                : true,
       cache_age_secs        : Some( 600 ),
       is_owned              : true,
+      owner                : String::new(),
     };
     let accounts = vec![ aq ];
     let mut cols = ColsVisibility::default_set();
@@ -404,6 +409,7 @@
       cached                : false,
       cache_age_secs        : None,
       is_owned              : true,
+      owner                : String::new(),
     };
     let accounts = vec![ aq ];
     let cols     = ColsVisibility::default_set();
@@ -471,6 +477,7 @@
       cached                : true,
       cache_age_secs        : Some( 600 ),
       is_owned              : false,
+      owner                : String::new(),
     };
     let text_a = render_text(
       &[ aq_cached ],
@@ -498,6 +505,7 @@
       cached                : false,
       cache_age_secs        : None,
       is_owned              : false,
+      owner                : String::new(),
     };
     let text_b = render_text(
       &[ aq_no_cache ],
@@ -542,6 +550,7 @@
       cached                : false,
       cache_age_secs        : None,
       is_owned              : true,
+      owner                : String::new(),
     };
     let not_owned = AccountQuota
     {
@@ -558,6 +567,7 @@
       cached                : false,
       cache_age_secs        : None,
       is_owned              : false,
+      owner                : String::new(),
     };
 
     let json = render_json( &[ owned, not_owned ] );

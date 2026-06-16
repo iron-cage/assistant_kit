@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for account ownership enforcement — owner stamp via `.account.save`, `.account.unclaim` command with G8 gate, eight enforcement gates (G1–G8), backward compatibility, and `is_owned` JSON field.
 - **Source**: `docs/feature/036_account_ownership.md`
-- **Covers**: AC-01 through AC-17
+- **Covers**: AC-01 through AC-21
 
 ### Test Cases
 
@@ -27,6 +27,10 @@
 | FT-15 | AC-15 | `.account.save unclaim::1` exits 1 — `unclaim::` removed from `.account.save`; `.account.assign unclaim::1` exits 1 — unknown parameter | `ft15_unclaim_not_on_save_or_assign` |
 | FT-16 | AC-16 | `.account.unclaim` with account owned by different identity exits 1 with ownership violation; already-unowned account exits 0 | `ft16_unclaim_g8_gate` |
 | FT-17 | AC-17 | `.account.unclaim name::alice dry::1` prints `[dry-run]` line; `alice.json` unchanged | `ft17_unclaim_dry_run` |
+| FT-18 | AC-18 | `.account.use name::X force::1` when X owned by different identity bypasses G5; exits 0; `switch_account()` called | `ft18_use_force_bypasses_g5` |
+| FT-19 | AC-19 | `.account.delete name::X force::1` when X owned by different identity bypasses G6; exits 0; files deleted | `ft19_delete_force_bypasses_g6` |
+| FT-20 | AC-20 | `.account.relogin name::X force::1` when X owned by different identity bypasses G7; exits 0; 6-step relogin proceeds | `ft20_relogin_force_bypasses_g7` |
+| FT-21 | AC-21 | `force::1 dry::1` on G5/G6/G7 commands bypasses ownership gate but previews without writing; exits 0; `[dry-run]` printed | `ft21_force_dry_bypasses_gate_previews` |
 
 ### Notes
 
@@ -42,6 +46,9 @@
 - FT-12 is a render test in `src/usage/render_tests.rs` — verifies `"is_owned": true`/`"is_owned": false` in JSON object.
 - FT-13 exercises G5/G6/G7 with `dry::1` flag set — ownership guard runs first; exit 1 regardless.
 - FT-14 is a unit test in `claude_profile_core/tests/account_test.rs` — background `save()` with `owner: None` (e.g. `refresh_account_token`) on an account with `owner: "alice@host"` leaves `owner: "alice@host"` in `{name}.json`. Background callers pass `owner: None` (preserves existing); interactive `account_save_routine()` passes `Some(&owner_val)` (stamps owner). `account_assign_routine()` does NOT call `write_owner()`.
+- FT-18 through FT-20 are integration tests via `./verb/test` — verify exit 0 and that the expected mutation (switch/delete/relogin) proceeds despite non-owned account.
+- FT-21 is an integration test via `./verb/test` — three sub-cases (use, delete, relogin), each verifying: exit 0, `[dry-run]` line printed, no files modified. The G8 case (force+dry on unclaim) is deferred to Feature 037 tests (`37_accounts_usage_param_unification.md`).
+- FT-18–21 require `force::` (`058`) to be registered on `.account.use`, `.account.delete`, `.account.relogin` — Task 002 prerequisite.
 
 ---
 
@@ -242,3 +249,52 @@
 - **Exit:** 0
 - **Source fn:** `ft17_unclaim_dry_run`
 - **Source:** [036_account_ownership.md AC-17](../../../docs/feature/036_account_ownership.md)
+
+---
+
+### FT-18: `.account.use force::1` bypasses G5 when account is non-owned
+
+- **Given:** Account `alice` has `alice.json` with `"owner": "other@remote"`. Current identity ≠ `"other@remote"`.
+- **When:** `clp .account.use name::alice force::1` is executed.
+- **Then:** Exits 0. G5 ownership gate is bypassed — no exit 1 with ownership violation. `switch_account()` is called; `~/.claude/.credentials.json` is updated to `alice`'s credentials. Active marker updated.
+- **Exit:** 0
+- **Source fn:** `ft18_use_force_bypasses_g5`
+- **Source:** [036_account_ownership.md AC-18](../../../docs/feature/036_account_ownership.md)
+
+---
+
+### FT-19: `.account.delete force::1` bypasses G6 when account is non-owned
+
+- **Given:** Account `alice` has `alice.json` with `"owner": "other@remote"`. Current identity ≠ `"other@remote"`.
+- **When:** `clp .account.delete name::alice force::1` is executed.
+- **Then:** Exits 0. G6 ownership gate is bypassed — no exit 1 with ownership violation. Deletion proceeds: `alice.credentials.json` and `alice.json` are removed from the credential store.
+- **Exit:** 0
+- **Source fn:** `ft19_delete_force_bypasses_g6`
+- **Source:** [036_account_ownership.md AC-19](../../../docs/feature/036_account_ownership.md)
+
+---
+
+### FT-20: `.account.relogin force::1` bypasses G7 when account is non-owned
+
+- **Given:** Account `alice` has `alice.json` with `"owner": "other@remote"`. Current identity ≠ `"other@remote"`.
+- **When:** `clp .account.relogin name::alice force::1` is executed.
+- **Then:** Exits 0. G7 ownership gate is bypassed — no exit 1 with ownership violation. The 6-step relogin procedure is initiated (switch, spawn claude binary, detect credential change, save, restore session).
+- **Exit:** 0
+- **Source fn:** `ft20_relogin_force_bypasses_g7`
+- **Source:** [036_account_ownership.md AC-20](../../../docs/feature/036_account_ownership.md)
+
+---
+
+### FT-21: `force::1 dry::1` bypasses ownership gate but previews without writing
+
+- **Given:** Account `alice` has `alice.json` with `"owner": "other@remote"`. Current identity ≠ `"other@remote"`.
+- **When (case A):** `clp .account.use name::alice force::1 dry::1` is executed.
+- **Then (case A):** Exits 0. Ownership gate bypassed (no exit 1). stdout contains `[dry-run]` preview line. `~/.claude/.credentials.json` is NOT modified. Active marker NOT updated.
+- **When (case B):** `clp .account.delete name::alice force::1 dry::1` is executed.
+- **Then (case B):** Exits 0. Ownership gate bypassed. stdout contains `[dry-run]` preview line. No files deleted.
+- **When (case C):** `clp .account.relogin name::alice force::1 dry::1` is executed.
+- **Then (case C):** Exits 0. Ownership gate bypassed. stdout contains `[dry-run]` preview line. No relogin procedure initiated.
+- **Exit:** 0 (all cases)
+- **Source fn:** `ft21_force_dry_bypasses_gate_previews`
+- **Note:** G8 (unclaim + force + dry) is tested in `37_accounts_usage_param_unification.md` FT-18 (AC-18 there maps to Feature 037 AC-18). Force always runs before dry — gate bypassed, write suppressed.
+- **Source:** [036_account_ownership.md AC-21](../../../docs/feature/036_account_ownership.md)

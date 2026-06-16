@@ -92,6 +92,11 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfs( "org_name",     "Show organisation display name from saved `{name}.json` snapshot (opt-in)"                   ),
       trc(),
       fmt(),
+      bfs( "assign",  "Write per-machine active marker (1 = write; 0 = off, default); when name:: absent, emits usage block" ),
+      bfs( "unclaim", "Release ownership of named account (1 = unclaim; 0 = off, default); when name:: absent, batch-unclaims filtered set" ),
+      bfs( "force",   "Bypass G8 ownership gate on unclaim::1 (default 0)" ),
+      reg_arg_opt( "cols", Kind::String ).with_description( "Column visibility modifiers for table format (comma-separated `+col_id`/`-col_id`)" ),
+      reg_arg_opt( "for",  Kind::String ).with_description( "Target identity as USER@MACHINE for assign::1 (default: current $USER@hostname)" ),
     ],
     Box::new( accounts_routine ) );
   reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), fmt(), trc() ], Box::new( account_limits_routine ) );
@@ -120,6 +125,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "effort",    Kind::String ).with_description( "Subprocess effort level: `auto` (default, low for any model), `low`, `normal`, `high`, `max`" ),
       reg_arg_opt( "set_model", Kind::String ).with_description( "Set Claude Code session model: `opus` (claude-opus-4-6), `sonnet` (claude-sonnet-4-6), `haiku` (claude-haiku-4-5-20251001), `default` (removes override)" ),
       reg_arg_opt( "trace",     Kind::String ).with_description( "Print [trace] lines to stderr for each internal operation (0 = off, default; 1 = on)" ),
+      bfs( "force", "Bypass G5 ownership gate; allow switching to a non-owned account" ),
     ] )
     .examples( vec![ "clp .account.use alice@acme.com".to_string() ] )
     .end();
@@ -127,8 +133,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     .register_with_routine( &def, Box::new( account_use_routine ) )
     .expect( "internal error: failed to register .account.use" );
   }
-  reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                                   vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name to operate on" ), dry(), trc() ], Box::new( account_delete_routine  ) );
-  reg_cmd( registry, ".account.relogin", "Force browser re-authentication for a named account with dead refreshToken",     vec![ nam(), dry(), trc() ], Box::new( account_relogin_routine ) );
+  reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                                   vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name to operate on" ), dry(), trc(), bfs( "force", "Bypass G6 ownership gate; allow deleting a non-owned account" ) ], Box::new( account_delete_routine  ) );
+  reg_cmd( registry, ".account.relogin", "Force browser re-authentication for a named account with dead refreshToken",     vec![ nam(), dry(), trc(), bfs( "force", "Bypass G7 ownership gate; allow re-authenticating a non-owned account" ) ], Box::new( account_relogin_routine ) );
   reg_cmd( registry, ".account.renewal", "Set or clear a billing renewal timestamp override for one or more accounts",
     vec![
       reg_arg_req( "name",     Kind::String ).with_description( "Account name, `all`, or comma-separated list of accounts" ),
@@ -161,6 +167,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_req( "name", Kind::String ).with_description( "Account name to unclaim (required; no inference)" ),
       dry(),
       trc(),
+      bfs( "force", "Bypass G8 ownership gate; allow unclaiming a non-owned account" ),
     ],
     Box::new( account_unclaim_routine ) );
   reg_cmd( registry, ".model", "Get or set the Claude Code session model in ~/.claude/settings.json",
@@ -207,6 +214,13 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "abs",       Kind::String  ).with_description( "Replace percentage columns with absolute token counts where available (0 = off, default; 1 = on)" ),
       reg_arg_opt( "no_color",  Kind::String  ).with_description( "Strip emoji and ANSI sequences; status shows `ok`/`warn`/`err` (0 = off, default; 1 = on)" ),
       reg_arg_opt( "set_model", Kind::String  ).with_description( "Set Claude Code session model: `opus` (claude-opus-4-6), `sonnet` (claude-sonnet-4-6), `haiku` (claude-haiku-4-5-20251001), `default` (removes override)" ),
+      // Mutation params (Feature 037 — unified with .accounts)
+      nam(),
+      dry(),
+      bfs( "assign",  "Write per-machine active marker (1 = write; 0 = off, default); when name:: absent, emits usage block" ),
+      bfs( "unclaim", "Release ownership of named account (1 = unclaim; 0 = off, default); when name:: absent, batch-unclaims filtered set" ),
+      bfs( "force",   "Bypass G8 ownership gate on unclaim::1 (default 0)" ),
+      reg_arg_opt( "for", Kind::String ).with_description( "Target identity as USER@MACHINE for assign::1 (default: current $USER@hostname)" ),
     ],
     Box::new( usage_routine          ) );
 }

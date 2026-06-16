@@ -109,6 +109,8 @@ pub( crate ) struct ColsVisibility
   pub( crate ) host         : bool,
   /// `Role` user-defined role tag column (default OFF).
   pub( crate ) role         : bool,
+  /// `Owner` account owner identity column (default ON).
+  pub( crate ) owner        : bool,
   /// `→ Next` soonest upcoming event column (default ON).
   pub( crate ) next         : bool,
 }
@@ -131,6 +133,7 @@ impl ColsVisibility
       d7_son_reset : false,
       host         : false,
       role         : false,
+      owner        : true,
       next         : true,
     }
   }
@@ -163,9 +166,10 @@ impl ColsVisibility
       "7d_son_reset" => self.d7_son_reset = show,
       "host"         => self.host         = show,
       "role"         => self.role         = show,
+      "owner"        => self.owner        = show,
       "next"         => self.next         = show,
       _              => return Err( format!(
-        "cols:: unknown column {id:?}: valid IDs are `status`, `expires`, `sub`, `renews`, `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `7d_son_reset`, `host`, `role`, `next`",
+        "cols:: unknown column {id:?}: valid IDs are `status`, `expires`, `sub`, `renews`, `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `7d_son_reset`, `host`, `role`, `owner`, `next`",
       ) ),
     }
     Ok( () )
@@ -213,6 +217,8 @@ pub( crate ) struct AccountQuota
   /// `true` when `owner` in `{name}.json` is empty or matches `current_identity()`.
   /// `false` for accounts owned by a different machine — G1–G7 enforcement gates apply.
   pub( crate ) is_owned              : bool,
+  /// Raw owner identity string from `{name}.json`; empty when unset.
+  pub( crate ) owner                 : String,
 }
 
 // ── Command handler ────────────────────────────────────────────────────────────

@@ -50,6 +50,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 34_explicit_session_model_override.md | FT cases for Feature 034 — Explicit Session Model Override |
 | 35_model_command.md | FT cases for Feature 035 — Dedicated Model Get/Set Command |
 | 36_account_ownership.md | FT cases for Feature 036 — Account Ownership |
+| 37_accounts_usage_param_unification.md | FT cases for Feature 037 — Accounts/Usage Parameter Set Unification |
 
 ### Coverage Summary
 
@@ -91,9 +92,10 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 033_quota_cache | [033_quota_cache.md](33_quota_cache.md) | FT-01 … FT-11 | ✅ |
 | 034_explicit_session_model_override | [034_explicit_session_model_override.md](34_explicit_session_model_override.md) | FT-01 … FT-11 | ✅ |
 | 035_model_command | [035_model_command.md](35_model_command.md) | FT-01 … FT-12 | ✅ |
-| 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-17 | ✅ |
+| 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-21 | ✅ |
+| 037_accounts_usage_param_unification | [037_accounts_usage_param_unification.md](37_accounts_usage_param_unification.md) | FT-01 … FT-21 | ⏳ |
 
-**Total:** 37 specs — 36 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+**Total:** 38 specs — 37 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 
 ### Cross-Reference Depth
 

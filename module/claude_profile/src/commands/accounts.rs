@@ -307,6 +307,7 @@ fn render_accounts_table(
 //   they are different code paths. The graceful fallback must be at require_credential_store()
 //   level, not at list() level.
 #[ inline ]
+#[ allow( clippy::too_many_lines ) ]
 pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts             = OutputOptions::from_cmd( &cmd )?;
@@ -357,6 +358,181 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
     }
     found
   };
+
+  // ── Mutation dispatch ──────────────────────────────────────────────────────
+  use super::shared::is_dry;
+  let assign_flag  = crate::output::parse_int_flag( &cmd, "assign",  0 )? != 0;
+  let unclaim_flag = crate::output::parse_int_flag( &cmd, "unclaim", 0 )? != 0;
+
+  if assign_flag
+  {
+    let san = | s : &str | -> String
+    {
+      s.chars().map( | c | if c.is_alphanumeric() || c == '-' || c == '.' { c } else { '_' } ).collect()
+    };
+
+    if name_arg.is_empty()
+    {
+      // No name:: → emit live usage block showing current machine identity.
+      let user    = std::env::var( "USER" )
+        .or_else( |_| std::env::var( "USERNAME" ) )
+        .unwrap_or_else( |_| "user".to_string() );
+      let machine = crate::account::resolve_hostname();
+      let marker  = format!( "_active_{}_{}", san( &machine ), san( &user ) );
+      let active  = std::fs::read_to_string( credential_store.join( &marker ) )
+        .ok()
+        .map( | s | s.trim().to_string() )
+        .filter( | s | !s.is_empty() )
+        .unwrap_or_else( || "(none)".to_string() );
+      let ready = if active == "(none)"
+      {
+        String::new()
+      }
+      else
+      {
+        format!(
+          "\nReady to copy:\n  clp .accounts assign::1 name::{active}\n  clp .accounts assign::1 name::{active} for::{user}@{machine}\n"
+        )
+      };
+      let block = format!(
+        ".accounts assign::1 \u{2014} write the active-account marker for any machine.\n\n\
+         \x20 name::   account to assign (required)\n\
+         \x20 for::    USER@MACHINE to target  (default: current machine)\n\
+         \x20 dry::1   preview without writing\n\n\
+         Current machine:  {user}@{machine}  (\u{2192} {marker})\n\
+         Active account:   {active}\n{ready}"
+      );
+      return Ok( OutputData::new( block, "text" ) );
+    }
+
+    // name:: present → write per-machine active marker.
+    // BUG-247: validate credentials exist (resolve_account_name @-path skips existence check).
+    let cred_path = credential_store.join( format!( "{name_arg}.credentials.json" ) );
+    if !cred_path.exists()
+    {
+      return Err( ErrorData::new(
+        ErrorCode::InternalError,
+        format!( "account '{name_arg}' not found in credential store" ),
+      ) );
+    }
+
+    let ( marker, for_display ) = match cmd.arguments.get( "for" )
+    {
+      Some( Value::String( s ) ) if !s.is_empty() =>
+      {
+        let ( usr, mch ) = s.split_once( '@' ).ok_or_else( || ErrorData::new(
+          ErrorCode::ArgumentTypeMismatch,
+          "for:: must be USER@MACHINE format (no '@' found)".to_string(),
+        ) )?;
+        if usr.is_empty()
+        {
+          return Err( ErrorData::new(
+            ErrorCode::ArgumentTypeMismatch,
+            "for:: user component (left of '@') must not be empty".to_string(),
+          ) );
+        }
+        if mch.is_empty()
+        {
+          return Err( ErrorData::new(
+            ErrorCode::ArgumentTypeMismatch,
+            "for:: machine component (right of '@') must not be empty".to_string(),
+          ) );
+        }
+        let su = san( usr );
+        let sm = san( mch );
+        ( format!( "_active_{sm}_{su}" ), format!( "{su}@{sm}" ) )
+      }
+      _ =>
+      {
+        let user    = std::env::var( "USER" )
+          .or_else( |_| std::env::var( "USERNAME" ) )
+          .unwrap_or_else( |_| "user".to_string() );
+        let machine = crate::account::resolve_hostname();
+        let su = san( &user );
+        let sm = san( &machine );
+        ( format!( "_active_{sm}_{su}" ), format!( "{su}@{sm}" ) )
+      }
+    };
+    if trace { eprintln!( "[trace] accounts assign  marker: {marker}" ) }
+
+    if is_dry( &cmd )
+    {
+      return Ok( OutputData::new(
+        format!( "[dry-run] would assign {name_arg} for {for_display}  \u{2192}  {marker}\n" ),
+        "text",
+      ) );
+    }
+
+    std::fs::write( credential_store.join( &marker ), name_arg.as_bytes() )
+      .map_err( | e | io_err_to_error_data( &e, "accounts assign" ) )?;
+
+    return Ok( OutputData::new(
+      format!( "Assigned {name_arg} for {for_display}  \u{2192}  {marker}\n" ),
+      "text",
+    ) );
+  }
+
+  if unclaim_flag
+  {
+    let force = crate::output::parse_int_flag( &cmd, "force", 0 )? != 0;
+
+    if name_arg.is_empty()
+    {
+      // No name:: → batch unclaim all accounts in the filtered set.
+      let mut out = String::new();
+      for a in &accounts
+      {
+        let owner = crate::account::read_owner( &credential_store, &a.name );
+        if owner.is_empty() { continue; }
+        if !force && !crate::account::is_owned( &owner )
+        {
+          let _ = writeln!( out, "skip {}: owned by {owner}", a.name );
+          continue;
+        }
+        if is_dry( &cmd )
+        {
+          let _ = writeln!( out, "[dry-run] would unclaim {}", a.name );
+          continue;
+        }
+        crate::account::write_owner( &a.name, &credential_store, "" )
+          .map_err( |e| io_err_to_error_data( &e, "accounts unclaim" ) )?;
+        let _ = writeln!( out, "unclaimed {}", a.name );
+      }
+      if out.is_empty() { out.push_str( "no owned accounts to unclaim\n" ); }
+      return Ok( OutputData::new( out, "text" ) );
+    }
+
+    // name:: present → unclaim single account.
+    let json_path = credential_store.join( format!( "{name_arg}.json" ) );
+    if !json_path.exists()
+    {
+      return Err( ErrorData::new(
+        ErrorCode::InternalError,
+        format!( "account not found: {name_arg}" ),
+      ) );
+    }
+
+    // G8 ownership gate.
+    let owner = crate::account::read_owner( &credential_store, &name_arg );
+    if !force && !crate::account::is_owned( &owner )
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        format!( "ownership violation: this account is owned by {owner}" ),
+      ) );
+    }
+
+    if is_dry( &cmd )
+    {
+      return Ok( OutputData::new( format!( "[dry-run] would unclaim {name_arg}\n" ), "text" ) );
+    }
+
+    crate::account::write_owner( &name_arg, &credential_store, "" )
+      .map_err( |e| io_err_to_error_data( &e, "accounts unclaim" ) )?;
+    if trace { eprintln!( "[trace] accounts unclaim  write_owner: OK  name={name_arg}" ) }
+
+    return Ok( OutputData::new( format!( "unclaimed {name_arg}\n" ), "text" ) );
+  }
 
   let show_active       = matches!( cmd.arguments.get( "active"       ), Some( Value::Boolean( true ) ) | None );
   let show_current      = matches!( cmd.arguments.get( "current"      ), Some( Value::Boolean( true ) ) | None );

@@ -71,8 +71,10 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
 
   // G5: Ownership guard — non-owned accounts cannot be switched to from this machine.
   // Runs before dry::1 so that dry-run still exits 1 on ownership violation.
+  // force::1 bypasses the guard (Feature 036 AC-18).
+  let force = crate::output::parse_int_flag( &cmd, "force", 0 )? != 0;
   let owner = crate::account::read_owner( &credential_store, &name );
-  if !crate::account::is_owned( &owner )
+  if !force && !crate::account::is_owned( &owner )
   {
     return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,
@@ -356,8 +358,10 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
 
   // G6: Ownership guard — non-owned accounts cannot be deleted from this machine.
   // Runs before dry::1 so that dry-run still exits 1 on ownership violation.
+  // force::1 bypasses the guard (Feature 036 AC-19).
+  let force = crate::output::parse_int_flag( &cmd, "force", 0 )? != 0;
   let owner = crate::account::read_owner( &credential_store, &name );
-  if !crate::account::is_owned( &owner )
+  if !force && !crate::account::is_owned( &owner )
   {
     return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,
@@ -403,8 +407,10 @@ pub fn account_unclaim_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   // G8 ownership gate — evaluates BEFORE dry-run check.
   // Unowned (empty owner) passes the gate (idempotent unclaim).
+  // force::1 bypasses the guard (Feature 036 AC-18).
+  let force = crate::output::parse_int_flag( &cmd, "force", 0 )? != 0;
   let owner = crate::account::read_owner( &credential_store, &name );
-  if !crate::account::is_owned( &owner )
+  if !force && !crate::account::is_owned( &owner )
   {
     return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,

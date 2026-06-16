@@ -449,6 +449,7 @@
       cached            : false,
       cache_age_secs    : None,
       is_owned          : true,
+      owner                : String::new(),
     };
     let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
     assert!(
@@ -486,6 +487,7 @@
       cached            : false,
       cache_age_secs    : None,
       is_owned          : true,
+      owner                : String::new(),
     };
     let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
     assert!(
@@ -529,6 +531,7 @@
       cached            : false,
       cache_age_secs    : None,
       is_owned          : true,
+      owner                : String::new(),
     };
     let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
     assert!(
@@ -588,6 +591,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned      : true,
+        owner                : String::new(),
       }
     };
 
@@ -650,6 +654,7 @@
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -683,6 +688,7 @@
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Sonnet, now );
@@ -715,6 +721,7 @@
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Opus, now );
@@ -743,6 +750,7 @@
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -802,6 +810,7 @@
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
 
     let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -854,6 +863,7 @@
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
 
     let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -1017,6 +1027,7 @@
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Renew, PreferStrategy::Any, now );
@@ -1073,6 +1084,7 @@
       cached        : false,
       cache_age_secs : None,
       is_owned      : true,
+      owner                : String::new(),
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Renew, PreferStrategy::Any, now );

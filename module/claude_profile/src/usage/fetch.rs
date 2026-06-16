@@ -129,6 +129,7 @@ pub( crate ) fn fetch_quota_for_list(
         cached,
         cache_age_secs,
         is_owned              : false,
+        owner                 : owner.clone(),
       } );
       continue;
     }
@@ -259,6 +260,7 @@ pub( crate ) fn fetch_quota_for_list(
       cached,
       cache_age_secs,
       is_owned              : true,
+      owner,
     } );
   }
 
@@ -325,6 +327,7 @@ fn inject_synthetic_row_if_needed(
     cached                : false,
     cache_age_secs        : None,
     is_owned              : true,
+    owner                 : String::new(),
   } );
 }
 
@@ -677,6 +680,7 @@ mod tests
       cached               : false,
       cache_age_secs       : None,
       is_owned             : true,
+      owner                : String::new(),
     };
     let mut results = vec![ stored_row ];
 
@@ -695,6 +699,7 @@ mod tests
       cached               : false,
       cache_age_secs       : None,
       is_owned             : true,
+      owner                : String::new(),
     };
 
     // Fix(BUG-218): guarded injection — only insert when name is absent from results.

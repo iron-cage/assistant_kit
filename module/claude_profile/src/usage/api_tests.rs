@@ -316,7 +316,7 @@ fn t08_model_override_trace_label_is_usage()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
   };
-  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( |e| e.into_inner() );
+  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
   let mut buf = gag::BufferRedirect::stderr().unwrap();
   apply_model_override( &quota, &paths, true, "usage", "test-account" );
   let mut output = String::new();

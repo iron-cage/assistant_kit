@@ -50,8 +50,10 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   // G7: Ownership guard — non-owned accounts cannot be re-authenticated from this machine.
   // Runs before dry::1 so that dry-run still exits 1 on ownership violation.
+  // force::1 bypasses the guard (Feature 036 AC-20).
+  let force = crate::output::parse_int_flag( &cmd, "force", 0 )? != 0;
   let owner = crate::account::read_owner( &credential_store, &name );
-  if !crate::account::is_owned( &owner )
+  if !force && !crate::account::is_owned( &owner )
   {
     return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,

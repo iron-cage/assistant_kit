@@ -56,6 +56,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
 
@@ -92,6 +93,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -123,6 +125,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -170,6 +173,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -203,6 +207,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -241,6 +246,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
       AccountQuota
       {
@@ -257,6 +263,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
       AccountQuota
       {
@@ -273,6 +280,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
       AccountQuota
       {
@@ -289,6 +297,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
 
@@ -333,6 +342,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -389,6 +399,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
 
@@ -469,6 +480,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
 
@@ -515,6 +527,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -555,6 +568,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
 
@@ -601,6 +615,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -657,6 +672,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
     // Must not panic — switch_account fails (no cred file), trace logs to stderr.
@@ -783,6 +799,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
     // Must not panic — switch_account succeeds; run_isolated invoked; fails fast (fake creds).
@@ -815,6 +832,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
 
@@ -856,6 +874,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
 
@@ -978,6 +997,7 @@
         cached        : false,
         cache_age_secs : None,
         is_owned       : true,
+        owner                : String::new(),
       },
     ];
 

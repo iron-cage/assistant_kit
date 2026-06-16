@@ -37,6 +37,7 @@ Forces browser re-authentication for an account whose OAuth refresh token has ex
 | Parameter | Semantics | Required |
 |-----------|-----------|----------|
 | `name::` | Account to re-authenticate; defaults to active account | No |
+| `force::` | Bypass G7 ownership gate; allow re-authenticating a non-owned account | No |
 | `dry::` | Validate without executing browser flow | No |
 | `trace::` | Emit diagnostic trace output | No |
 
@@ -54,6 +55,7 @@ Forces browser re-authentication for an account whose OAuth refresh token has ex
 | File | Relationship |
 |------|-------------|
 | [feature/019_account_relogin.md](../../feature/019_account_relogin.md) | TTY subprocess sequence and credential change detection |
+| [feature/036_account_ownership.md](../../feature/036_account_ownership.md) | G7 ownership gate — exits 1 when account owned by different identity; `force::1` bypasses G7 |
 
 ### Referenced Commands
 

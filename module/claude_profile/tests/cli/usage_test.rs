@@ -118,6 +118,8 @@
 //! | it129 | `it129_imodel_keep_accepted_empty_store_exits_0`    | `imodel::keep` accepted; empty store exits 0 (EC-4) | P | no |
 //! | it130 | `it130_effort_high_accepted_empty_store_exits_0`    | `effort::high` accepted; empty store exits 0 | P | no |
 //! | it131 | `it131_effort_max_accepted_empty_store_exits_0`     | `effort::max` accepted; empty store exits 0 | P | no |
+//! | it_ft026_13 | `it_ft026_13_imodel_effort_both_paths_structural` | `resolve_model`/`effort_pre_args` present in both touch.rs and refresh.rs (026 FT-13 AC-08) | P | no |
+//! | it_ft026_14 | `it_ft026_14_imodel_effort_no_effect_on_json_schema` | `imodel::opus effort::max format::json` produces identical JSON to default (026 FT-14 AC-09) | P | no |
 //! | it132 | `it132_apply_touch_trigger_is_is_none_structural`   | apply_touch uses `is_none()` trigger (BUG-181 fix AC-02 structural) | P | no |
 //! | it133 | `it133_refresh_account_token_has_label_param_structural` | `refresh_account_token` uses label var not hardcoded "refresh" (TSK-192 AC-09 structural) | P | no |
 //! | it134 | `it134_apply_touch_passes_touch_label_structural`   | `apply_touch` call site passes `"touch"` label (TSK-192 AC-09 structural) | P | no |
@@ -3789,6 +3791,78 @@ fn it131_effort_max_accepted_empty_store_exits_0()
 
   let out = run_cs_with_env( &[ ".usage", "effort::max" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
+}
+
+// ── 026: imodel/effort structural and JSON invariance ─────────────────────────
+
+/// `it_ft026_13` (026 FT-13 / AC-08 structural): `resolve_model` and `effort_pre_args` appear
+/// in both the touch path (`touch.rs`) and the refresh path (`refresh.rs`).
+///
+/// AC-08: `imodel::` and `effort::` parameters must route through the shared
+/// `resolve_model()`/`effort_pre_args()` functions in both subprocess dispatch paths.
+/// This structural test guards against either path accidentally bypassing model/effort control.
+///
+/// RED:   one of the four assertions fails (function absent from a path file).
+/// GREEN: all four assertions pass (both functions present in both files).
+///
+/// Spec: [`tests/docs/feature/26_subprocess_model_effort.md` FT-13]
+///       [`docs/feature/026_subprocess_model_effort.md` AC-08]
+#[ test ]
+fn it_ft026_13_imodel_effort_both_paths_structural()
+{
+  let touch   = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs"   ) );
+  let refresh = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/refresh.rs" ) );
+  assert!(
+    touch.contains( "resolve_model(" ),
+    "026 AC-08: touch.rs must call resolve_model() so imodel:: applies to the touch path",
+  );
+  assert!(
+    touch.contains( "effort_pre_args(" ),
+    "026 AC-08: touch.rs must call effort_pre_args() so effort:: applies to the touch path",
+  );
+  assert!(
+    refresh.contains( "resolve_model(" ),
+    "026 AC-08: refresh.rs must call resolve_model() so imodel:: applies to the refresh path",
+  );
+  assert!(
+    refresh.contains( "effort_pre_args(" ),
+    "026 AC-08: refresh.rs must call effort_pre_args() so effort:: applies to the refresh path",
+  );
+}
+
+/// `it_ft026_14` (026 FT-14 / AC-09): `imodel::` and `effort::` do not affect `format::json` schema.
+///
+/// Both default `.usage format::json` and `.usage imodel::opus effort::max format::json`
+/// must produce identical JSON output. Model/effort selection affects only subprocess
+/// invocation; the JSON rendering path is independent.
+///
+/// Uses a single error account (no accessToken) to get a deterministic offline JSON response.
+/// Comparing two invocations on the same fixed credential store guarantees schema identity.
+///
+/// RED:   params alter JSON output structure (e.g. inject extra keys or change shape).
+/// GREEN: both invocations produce byte-identical JSON.
+///
+/// Spec: [`tests/docs/feature/26_subprocess_model_effort.md` FT-14]
+///       [`docs/feature/026_subprocess_model_effort.md` AC-09]
+#[ test ]
+fn it_ft026_14_imodel_effort_no_effect_on_json_schema()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Error account (no accessToken) → deterministic offline JSON response.
+  write_account( dir.path(), "a@x.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out_default  = run_cs_with_env( &[ ".usage", "format::json" ], &[ ( "HOME", home ) ] );
+  let out_override = run_cs_with_env(
+    &[ ".usage", "imodel::opus", "effort::max", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out_default,  0 );
+  assert_exit( &out_override, 0 );
+  assert_eq!(
+    stdout( &out_default ), stdout( &out_override ),
+    "026 AC-09: format::json output must be identical regardless of imodel::/effort:: values",
+  );
 }
 
 // ── BUG-181: trigger inversion fix + structural gates ─────────────────────────
