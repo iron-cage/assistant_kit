@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Reference for the `.config` cm command.
+- **Purpose**: Reference for the `.config` clvcommand.
 - **Responsibility**: Command syntax, parameters, exit codes, examples, and cross-references for `.config`.
 - **In Scope**: `.config` (show-all / get / set / unset modes).
 - **Out of Scope**: Deprecated `.settings.*` commands (→ [settings.md](settings.md)), version commands (→ [version.md](version.md)), process commands (→ [processes.md](processes.md)).
@@ -28,7 +28,7 @@ The operating mode is determined by the parameter combination:
 **Syntax:**
 
 ```sh
-cm .config [key::K] [value::V] [scope::SCOPE] [format::FMT] [v::N] [dry::1] [unset::1]
+clv.config [key::K] [value::V] [scope::SCOPE] [format::FMT] [v::N] [dry::1] [unset::1]
 ```
 
 **Parameters:**
@@ -56,24 +56,24 @@ cm .config [key::K] [value::V] [scope::SCOPE] [format::FMT] [v::N] [dry::1] [uns
 
 ```sh
 # Show all resolved settings with source annotations
-cm .config
+clv.config
 
 # Get the effective value of a key
-cm .config key::model
-cm .config key::theme format::json
+clv.config key::model
+clv.config key::theme format::json
 
 # Set a value in user settings (default scope)
-cm .config key::theme value::dark
-cm .config key::model value::claude-opus-4-6
+clv.config key::theme value::dark
+clv.config key::model value::claude-opus-4-6
 
 # Set a value in project settings
-cm .config key::model value::claude-haiku-4-5-20251001 scope::project
+clv.config key::model value::claude-haiku-4-5-20251001 scope::project
 
 # Preview a write (no file change)
-cm .config key::theme value::dark dry::1
+clv.config key::theme value::dark dry::1
 
 # Remove a key from user settings
-cm .config key::theme unset::1
+clv.config key::theme unset::1
 ```
 
 ### Referenced Formats

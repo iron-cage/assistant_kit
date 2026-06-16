@@ -15,9 +15,9 @@ until interrupted.
 - **Validation:** must be a non-negative integer
 
 ```sh
-cm .version.guard interval::0      # one-shot (default)
-cm .version.guard interval::60     # check every 60 seconds
-cm .version.guard interval::3600   # check every hour
+clv.version.guard interval::0      # one-shot (default)
+clv.version.guard interval::60     # check every 60 seconds
+clv.version.guard interval::3600   # check every hour
 ```
 
 ### Referenced Commands

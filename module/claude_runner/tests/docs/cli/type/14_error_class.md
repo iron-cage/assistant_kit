@@ -20,18 +20,19 @@ Validation tests for the `ErrorClass` taxonomy. `ErrorClass` is a documentation-
 | TC-9 | Process — signal → exit > 128 | Process |
 | TC-10 | Timeout uses exit 4, not exit 2 | Disambiguation |
 | TC-11 | Exit-2 disambiguation: QuotaExhausted vs RateLimit | Disambiguation |
+| TC-12 | Runner — spawn failed → stderr contains `[Runner]` prefix | Runner (BUG-298) |
 
 ## Test Coverage Summary
 
 - Success: 1 test (TC-1)
-- Runner: 3 tests (TC-2, TC-3, TC-4)
+- Runner: 4 tests (TC-2, TC-3, TC-4, TC-12)
 - Transient: 1 test (TC-5)
 - Account: 1 test (TC-6)
 - Process: 2 tests (TC-7, TC-9)
 - Validation: 1 test (TC-8)
 - Disambiguation: 2 tests (TC-10, TC-11)
 
-**Total:** 11 test cases
+**Total:** 12 test cases
 
 ## Test Cases
 
@@ -146,4 +147,15 @@ Validation tests for the `ErrorClass` taxonomy. `ErrorClass` is a documentation-
 - **Then:** QuotaExhausted → stdout/stderr contains `"You've hit your limit"`; RateLimit → no such text
 - **Exit:** 2 in both cases
 - **Note:** Documentation-level test: verified by TC-6 (Account has text) and TC-5 (Transient has none)
+- **Source:** [type/14_error_class.md](../../../../docs/cli/type/14_error_class.md)
+
+---
+
+### TC-12: Runner — spawn failed → stderr contains `[Runner]` prefix
+
+- **Given:** `claude` binary exists at the PATH location but has no execute permission (`chmod 000`)
+- **When:** `clr --print "msg"` with `--max-sessions 0`
+- **Then:** exit 1; stderr contains `"[Runner]"` prefix before the error message (e.g. `Error: [Runner] failed to execute Claude Code: permission denied (os error 13) (exit 1)`)
+- **Exit:** 1
+- **Note:** test_kind: bug_reproducer(BUG-298). Validates that `spawn_error_msg()` and all spawn-error call sites prepend `[Runner]` as specified in § Console Output Format. Currently failing — fix tracked in BUG-298.
 - **Source:** [type/14_error_class.md](../../../../docs/cli/type/14_error_class.md)

@@ -1,11 +1,56 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_version
   node_count: 23
-  edge_count: 40
+  edge_count: 48
   component_count: 1
-  generated: 2026-05-23
+  generated: 2026-06-16
 
 nodes:
+  - id: algorithm/001
+    file: algorithm/001_settings_type_inference.md
+    label: Settings Type Inference
+    entity: algorithm
+
+  - id: algorithm/002
+    file: algorithm/002_config_resolution.md
+    label: Config Resolution
+    entity: algorithm
+
+  - id: cli/001
+    file: cli/command/readme.md
+    label: Commands
+    entity: cli
+
+  - id: cli/002
+    file: cli/002_dictionary.md
+    label: Dictionary
+    entity: cli
+
+  - id: cli/003
+    file: cli/param_group/readme.md
+    label: Parameter Groups
+    entity: cli
+
+  - id: cli/004
+    file: cli/004_parameter_interactions.md
+    label: Parameter Interactions
+    entity: cli
+
+  - id: cli/005
+    file: cli/param/readme.md
+    label: Parameters
+    entity: cli
+
+  - id: cli/006
+    file: cli/type/readme.md
+    label: Types
+    entity: cli
+
+  - id: collection/001
+    file: collection/001_design_decisions.md
+    label: Design Decisions
+    entity: collection
+
   - id: feature/001
     file: feature/001_version_management.md
     label: Version Management
@@ -31,60 +76,25 @@ nodes:
     label: CLI Design
     entity: feature
 
+  - id: feature/006
+    file: feature/006_config_command.md
+    label: Config Command
+    entity: feature
+
   - id: pattern/001
     file: pattern/001_version_lock.md
     label: Version Lock
     entity: pattern
 
-  - id: algorithm/001
-    file: algorithm/001_settings_type_inference.md
-    label: Settings Type Inference
-    entity: algorithm
+  - id: pitfall/001
+    file: pitfall/001_version_lock_chmod.md
+    label: Version Lock chmod Side Effects
+    entity: pitfall
 
-  - id: design_decisions/001
-    file: 001_design_decisions.md
-    label: Design Decisions
-    entity: standalone
-
-  - id: cli/001
-    file: cli/001_commands.md
-    label: Commands
-    entity: cli
-
-  - id: cli/002
-    file: cli/002_dictionary.md
-    label: Dictionary
-    entity: cli
-
-  - id: cli/003
-    file: cli/003_parameter_groups.md
-    label: Parameter Groups
-    entity: cli
-
-  - id: cli/004
-    file: cli/004_parameter_interactions.md
-    label: Parameter Interactions
-    entity: cli
-
-  - id: cli/005
-    file: cli/005_params.md
-    label: Parameters
-    entity: cli
-
-  - id: cli/006
-    file: cli/006_types.md
-    label: Types
-    entity: cli
-
-  - id: cli/env_param
-    file: cli/env_param.md
-    label: Environment Parameters
-    entity: cli
-
-  - id: cli/config_param
-    file: cli/config_param.md
-    label: Config Parameters
-    entity: cli
+  - id: pitfall/002
+    file: pitfall/002_symlink_retarget.md
+    label: Auto-Updater Symlink Retarget
+    entity: pitfall
 
   - id: user_story/001
     file: cli/user_story/001_environment_check.md
@@ -111,176 +121,217 @@ nodes:
     label: "US: Version Pinning"
     entity: user_story
 
-  - id: format/001
-    file: cli/format/001_text.md
-    label: "Format: text"
-    entity: format
-
-  - id: format/002
-    file: cli/format/002_json.md
-    label: "Format: json"
-    entity: format
-
 edges:
+  # feature/001 Version Management
+  - from: feature/001
+    to: feature/004
+    via: features
+
+  - from: feature/001
+    to: feature/005
+    via: features
+
   - from: feature/001
     to: pattern/001
-    via: cross_references
+    via: patterns
 
-  - from: feature/001
-    to: feature/004
-    via: cross_references
-
-  - from: feature/001
-    to: feature/005
-    via: cross_references
-
+  # feature/002 Process Lifecycle
   - from: feature/002
     to: feature/004
-    via: cross_references
+    via: features
 
   - from: feature/002
     to: feature/005
-    via: cross_references
+    via: features
 
+  # feature/003 Settings Management
   - from: feature/003
     to: algorithm/001
-    via: cross_references
+    via: algorithms
 
   - from: feature/003
     to: feature/004
-    via: cross_references
+    via: features
 
   - from: feature/003
     to: feature/005
-    via: cross_references
+    via: features
 
+  - from: feature/003
+    to: feature/006
+    via: features
+
+  # feature/004 Dry Run
   - from: feature/004
     to: feature/001
-    via: cross_references
+    via: features
 
   - from: feature/004
     to: feature/002
-    via: cross_references
+    via: features
 
   - from: feature/004
     to: feature/003
-    via: cross_references
+    via: features
 
+  # feature/005 CLI Design
   - from: feature/005
     to: feature/001
-    via: cross_references
+    via: features
 
   - from: feature/005
     to: feature/002
-    via: cross_references
+    via: features
 
   - from: feature/005
     to: feature/003
-    via: cross_references
+    via: features
 
   - from: feature/005
-    to: cli/001
-    via: cross_references
+    to: feature/006
+    via: features
 
-  - from: feature/005
-    to: cli/005
-    via: cross_references
+  # feature/006 Config Command
+  - from: feature/006
+    to: algorithm/001
+    via: algorithms
 
-  - from: pattern/001
-    to: feature/001
-    via: cross_references
+  - from: feature/006
+    to: algorithm/002
+    via: algorithms
 
+  - from: feature/006
+    to: feature/003
+    via: features
+
+  - from: feature/006
+    to: feature/004
+    via: features
+
+  - from: feature/006
+    to: feature/005
+    via: features
+
+  # algorithm/001 Settings Type Inference
   - from: algorithm/001
     to: feature/003
-    via: cross_references
+    via: features
 
-  - from: design_decisions/001
+  - from: algorithm/001
+    to: feature/006
+    via: features
+
+  # algorithm/002 Config Resolution
+  - from: algorithm/002
+    to: algorithm/001
+    via: algorithms
+
+  - from: algorithm/002
+    to: feature/006
+    via: features
+
+  # pattern/001 Version Lock
+  - from: pattern/001
+    to: feature/001
+    via: features
+
+  - from: pattern/001
+    to: pitfall/001
+    via: pitfalls
+
+  - from: pattern/001
+    to: pitfall/002
+    via: pitfalls
+
+  # collection/001 Design Decisions
+  - from: collection/001
     to: feature/005
-    via: cross_references
+    via: features
 
-  - from: feature/005
-    to: design_decisions/001
-    via: cross_references
+  # pitfall/001 Version Lock chmod Side Effects
+  - from: pitfall/001
+    to: pattern/001
+    via: patterns
 
+  # pitfall/002 Auto-Updater Symlink Retarget
+  - from: pitfall/002
+    to: pattern/001
+    via: patterns
+
+  - from: pitfall/002
+    to: feature/001
+    via: features
+
+  # cli/001 Commands
   - from: cli/001
     to: feature/001
-    via: cross_references
+    via: features
 
   - from: cli/001
     to: feature/002
-    via: cross_references
+    via: features
 
   - from: cli/001
     to: feature/003
-    via: cross_references
+    via: features
 
+  # cli/002 Dictionary
   - from: cli/002
     to: cli/001
-    via: cross_references
+    via: references
 
+  # cli/003 Parameter Groups
   - from: cli/003
     to: cli/005
-    via: cross_references
+    via: references
 
+  # cli/004 Parameter Interactions
   - from: cli/004
     to: cli/003
-    via: cross_references
+    via: references
 
   - from: cli/004
     to: cli/005
-    via: cross_references
+    via: references
 
+  # cli/005 Parameters
   - from: cli/005
     to: feature/001
-    via: cross_references
+    via: features
 
   - from: cli/005
     to: feature/003
-    via: cross_references
+    via: features
 
   - from: cli/005
     to: feature/004
-    via: cross_references
+    via: features
 
+  # cli/006 Types
   - from: cli/006
     to: cli/005
-    via: cross_references
+    via: references
 
+  # user_story/001-005 → commands
   - from: user_story/001
     to: cli/001
-    via: cross_references
+    via: commands
 
   - from: user_story/002
     to: cli/001
-    via: cross_references
+    via: commands
 
   - from: user_story/003
     to: cli/001
-    via: cross_references
+    via: commands
 
   - from: user_story/004
     to: cli/001
-    via: cross_references
+    via: commands
 
   - from: user_story/005
     to: cli/001
-    via: cross_references
-
-  - from: format/001
-    to: cli/001
-    via: cross_references
-
-  - from: format/002
-    to: cli/001
-    via: cross_references
-
-  - from: format/001
-    to: cli/005
-    via: cross_references
-
-  - from: format/002
-    to: cli/005
-    via: cross_references
+    via: commands
 
 components:
   - id: 1
@@ -288,28 +339,28 @@ components:
     size: 23
     isolated: false
     nodes:
-      - feature/001
-      - feature/002
-      - feature/003
-      - feature/004
-      - feature/005
-      - pattern/001
       - algorithm/001
+      - algorithm/002
       - cli/001
       - cli/002
       - cli/003
       - cli/004
       - cli/005
       - cli/006
-      - cli/env_param
-      - cli/config_param
+      - collection/001
+      - feature/001
+      - feature/002
+      - feature/003
+      - feature/004
+      - feature/005
+      - feature/006
+      - pattern/001
+      - pitfall/001
+      - pitfall/002
       - user_story/001
       - user_story/002
       - user_story/003
       - user_story/004
       - user_story/005
-      - format/001
-      - format/002
-      - design_decisions/001
 
 dangling_refs: []

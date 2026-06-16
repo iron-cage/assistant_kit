@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Reference for version-namespace cm commands.
+- **Purpose**: Reference for version-namespace clvcommands.
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for all `.version.*` commands.
 - **In Scope**: `.version.show`, `.version.install`, `.version.guard`, `.version.list`, `.version.history`.
 - **Out of Scope**: Root commands (→ [root.md](root.md)), process commands (→ [processes.md](processes.md)), settings commands (→ [settings.md](settings.md)).
@@ -19,7 +19,7 @@ Print the currently installed Claude Code version by querying `claude --version`
 **Syntax:**
 
 ```sh
-cm .version.show [v::N] [format::FMT]
+clv.version.show [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -32,8 +32,8 @@ cm .version.show [v::N] [format::FMT]
 **Examples:**
 
 ```sh
-cm .version.show
-cm .version.show format::json
+clv.version.show
+clv.version.show format::json
 ```
 
 ### Referenced Formats
@@ -86,7 +86,7 @@ Download and install a Claude Code version via the official installer (curl). Su
 **Syntax:**
 
 ```sh
-cm .version.install [version::VER] [dry::1] [force::1] [v::N] [format::FMT]
+clv.version.install [version::VER] [dry::1] [force::1] [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -103,19 +103,19 @@ cm .version.install [version::VER] [dry::1] [force::1] [v::N] [format::FMT]
 
 ```sh
 # Install the pinned stable version (default)
-cm .version.install
+clv.version.install
 
 # Dry-run shows all 5 lock layers
-cm .version.install version::stable dry::1
+clv.version.install version::stable dry::1
 
 # Idempotent skip: already at target, stores preference and exits 0
-cm .version.install version::stable
+clv.version.install version::stable
 
 # Force reinstall even if already at target version
-cm .version.install force::1
+clv.version.install force::1
 
 # Install latest (no version pin — resolves dynamically)
-cm .version.install version::latest
+clv.version.install version::latest
 ```
 
 ### Referenced Formats
@@ -169,7 +169,7 @@ Check for version drift and restore the preferred version if it was changed. Ope
 **Syntax:**
 
 ```sh
-cm .version.guard [version::SPEC] [dry::1] [force::1] [interval::N] [v::N] [format::FMT]
+clv.version.guard [version::SPEC] [dry::1] [force::1] [interval::N] [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -187,19 +187,19 @@ cm .version.guard [version::SPEC] [dry::1] [force::1] [interval::N] [v::N] [form
 
 ```sh
 # One-shot: check and restore if drifted
-cm .version.guard
+clv.version.guard
 
 # Dry-run preview
-cm .version.guard dry::1
+clv.version.guard dry::1
 
 # Override preference for this run only (no settings.json change)
-cm .version.guard version::stable dry::1
+clv.version.guard version::stable dry::1
 
 # Watch mode: check every 60 seconds
-cm .version.guard interval::60
+clv.version.guard interval::60
 
 # Force reinstall regardless of drift
-cm .version.guard force::1
+clv.version.guard force::1
 ```
 
 ### Referenced Formats
@@ -251,7 +251,7 @@ List all named version aliases (`stable`, `month`, `latest`) with their currentl
 **Syntax:**
 
 ```sh
-cm .version.list [v::N] [format::FMT]
+clv.version.list [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -264,8 +264,8 @@ cm .version.list [v::N] [format::FMT]
 **Examples:**
 
 ```sh
-cm .version.list
-cm .version.list format::json
+clv.version.list
+clv.version.list format::json
 ```
 
 ### Referenced Formats
@@ -315,7 +315,7 @@ Fetch and display recent Claude Code release history from the GitHub Releases AP
 **Syntax:**
 
 ```sh
-cm .version.history [count::N] [v::N] [format::FMT]
+clv.version.history [count::N] [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -330,19 +330,19 @@ cm .version.history [count::N] [v::N] [format::FMT]
 
 ```sh
 # Default: 10 most recent releases with one-line summaries
-cm .version.history
+clv.version.history
 
 # Show 3 most recent releases
-cm .version.history count::3
+clv.version.history count::3
 
 # Minimal output: version and date only
-cm .version.history v::0
+clv.version.history v::0
 
 # Full changelog per release
-cm .version.history count::1 v::2
+clv.version.history count::1 v::2
 
 # JSON format for scripting
-cm .version.history format::json count::5
+clv.version.history format::json count::5
 ```
 
 ### Referenced Formats

@@ -14,8 +14,8 @@ other commands or parameters.
 - **Commands:** all 12 commands (universal override)
 
 ```sh
-cm .help
-cm .version.install .help    # still shows help, ignores install
+clv.help
+clv.version.install .help    # still shows help, ignores install
 ```
 
 ### Referenced Commands

@@ -2,28 +2,42 @@
 
 ## Execution State
 
-- **State:** ✅ (Complete)
-- **Executor:** dev
-- **Created:** 2026-05-24
-- **Completed:** 2026-05-24
-
-## Scope
-
-- **In Scope:** Implement 21 test functions marked ⏳ in `tests/docs/cli/type/001_*`–`005_*.md`; all tests go into `tests/cli_args_test.rs` (16 tests) or `tests/integration/mutation_commands_test.rs` (5 tests); after implementation, update Source Functions tables in each spec file to replace ⏳ markers with ✅ entries.
-- **Out of Scope:** Changes to `src/` production code; changes to test spec files beyond removing ⏳ markers; adding tests beyond the 21 specified; new type definitions or CLI parameters.
+- **State:** ✅ (Completed)
+- **Executor Type:** any
+- **Actor:** null
+- **Claimed At:** null
+- **Reopen Count:** 0
+- **Priority:** 0
+- **Value:** 8
+- **Easiness:** 6
+- **Safety:** 8
+- **Advisability:** 0
+- **Dir:** .
+- **Validated By:** claude-sonnet-4
+- **Validation Date:** 2026-05-24
+- **Blocked Reason:** null
+- **Closes:** null
 
 ## MOST Goal
 
 - **Motivated:** `tests/docs/cli/type/001_*`–`005_*.md` define 21 test functions that are specified but unimplemented — each marked ⏳ in its Source Functions table. The type test surface is the agreed contract for validating CLI type parsing and validation; leaving it incomplete means type regressions will go undetected in CI.
-- **Observable:** After this task: (1) all 21 ⏳ entries in `tests/docs/cli/type/001_*`–`005_*.md` are replaced with implemented function rows; (2) `w3 .test level::3` passes in Docker with zero failures and zero warnings.
+- **Observable:** After this task: (1) all 21 ⏳ entries in `tests/docs/cli/type/001_*`–`005_*.md` are replaced with implemented function rows; (2) `verb/test l::3` passes in Docker with zero failures and zero warnings.
 - **Scoped:** Two test files (`tests/cli_args_test.rs` and `tests/integration/mutation_commands_test.rs`) and five test spec files (`tests/docs/cli/type/001_*`–`005_*.md`). No production source changes.
-- **Testable:** `w3 .test level::3` in Docker passes; running each new test individually in nextest produces PASS; no ⏳ markers remain in the 5 type spec files.
+- **Testable:** `verb/test l::3` in Docker passes; running each new test individually in nextest produces PASS; no ⏳ markers remain in the 5 type spec files.
 
 ## Null Hypothesis
 
 > The existing integration tests (tc258, tc260, tc304, tc305, tc245, tc410, etc.) already cover type validation adequately; the ⏳ tests are redundant.
 
 Disproved: the existing integration tests verify type behavior incidentally through command-level fixtures. The ⏳ tests target type-level boundary conditions (empty values, out-of-range integers, wrong-case strings, absent required parameters) at the argument-parsing layer in `cli_args_test.rs` — a different exercise layer not covered by integration tests. Type validation failures at the argument-parsing layer currently have no dedicated regression coverage.
+
+## In Scope
+
+- Implement 21 test functions marked ⏳ in `tests/docs/cli/type/001_*`–`005_*.md`; all tests go into `tests/cli_args_test.rs` (16 tests) or `tests/integration/mutation_commands_test.rs` (5 tests); after implementation, update Source Functions tables in each spec file to replace ⏳ markers with ✅ entries.
+
+## Out of Scope
+
+- Changes to `src/` production code; changes to test spec files beyond removing ⏳ markers; adding tests beyond the 21 specified; new type definitions or CLI parameters.
 
 ## Work Procedure
 
@@ -39,7 +53,7 @@ Disproved: the existing integration tests verify type behavior incidentally thro
 10. Read `tests/docs/cli/type/005_settings_value.md` cases; implement `tc_settings_value_bool_true_inferred`, `tc_settings_value_bool_false_inferred`, `tc_settings_value_integer_inferred`, `tc_settings_value_float_inferred`, `tc_settings_value_string_fallback`, `tc_settings_value_nan_as_string` in `mutation_commands_test.rs`; implement `tc_settings_value_empty_exits_1`, `tc_settings_value_absent_exits_1` in `cli_args_test.rs`.
 11. Run targeted nextest for settings value tests; iterate to GREEN.
 12. Update Source Functions tables in `tests/docs/cli/type/001_*`–`005_*.md`: replace ⏳ markers with implemented function rows; remove task reference line from each file.
-13. Run full `w3 .test level::3` in Docker; confirm zero failures and zero warnings.
+13. Run full `verb/test l::3` in Docker; confirm zero failures and zero warnings.
 
 ## Test Matrix
 
@@ -70,7 +84,7 @@ Disproved: the existing integration tests verify type behavior incidentally thro
 ## Acceptance Criteria
 
 - AC-1: All 21 ⏳ entries in `tests/docs/cli/type/001_*`–`005_*.md` are replaced with implemented function names.
-- AC-2: `w3 .test level::3` passes in Docker with zero test failures and zero clippy warnings.
+- AC-2: `verb/test l::3` passes in Docker with zero test failures and zero clippy warnings.
 - AC-3: No ⏳ markers remain in any of the 5 type spec files.
 
 ## Related Documentation
@@ -83,16 +97,26 @@ Disproved: the existing integration tests verify type behavior incidentally thro
 - `docs/cli/type/readme.md` — authoritative type definitions
 - `docs/feature/003_settings_management.md` — SettingsValue type-inference rules
 
+## Outcomes
+
+All 21 pending test functions were implemented: 16 in `tests/cli_args_test.rs` and 6 in `tests/integration/mutation_commands_test.rs` (total 22 — `tc_output_format_xml_rejected` renamed from the spec's `format::XML` entry to use snake_case). Source Functions tables in all 5 type spec files (`001_*` through `005_*.md`) were updated to replace ⏳ markers with implemented function names. The type validation test surface is now fully covered at the argument-parsing layer, independent from command-level integration tests. Level 3 verification passed (303/303 tests, 0 Clippy warnings). The null hypothesis — that existing integration tests adequately cover type validation — was disproved: the new tests target boundary conditions at the argument-parsing layer that integration tests exercise only incidentally.
+
+### Validation Results
+
+- AC-1: PASS — all 21 ⏳ entries replaced with implemented function names (22 actual implementations due to rename).
+- AC-2: PASS — Level 3 passes with zero test failures and zero Clippy warnings (303/303).
+- AC-3: PASS — no ⏳ markers remain in any of the 5 type spec files.
+
 ## History
 
 - **[2026-05-24]** `CREATED` — Implement 21 pending CLI type test functions across 5 type spec files to close the type validation test surface gap.
-- **[2026-05-24]** `COMPLETE` — All 21 test functions implemented (16 in `cli_args_test.rs`, 6 in `mutation_commands_test.rs` — total 22 counting `tc_output_format_xml_rejected` renamed from spec's `format::XML`); Source Functions tables updated in all 5 type spec files; Level 3 passes (303/303, 0 clippy warnings).
+- **[2026-05-24]** `COMPLETED` — Validated by claude-sonnet-4. All 21 test functions implemented (16 in `cli_args_test.rs`, 6 in `mutation_commands_test.rs` — 22 total); Source Functions tables updated in all 5 type spec files; Level 3 passes (303/303, 0 clippy warnings).
 
 ## Verification Record
 
 All 4 dimensions passed independent Agent subagent review (2026-05-24):
 
 - **Scope Coherence:** PASS — In Scope names 21 specific test functions across 2 test files + 5 spec file updates; Out of Scope excludes production code, extra tests, and new type definitions.
-- **MOST Goal Quality:** PASS — Motivated (21 ⏳ functions in authoritative spec files, type regressions undetected in CI), Observable (all ⏳ replaced, `w3 .test level::3` passes), Scoped (2 test files + 5 spec files only), Testable (nextest per function + Level 3 verification).
+- **MOST Goal Quality:** PASS — Motivated (21 ⏳ functions in authoritative spec files, type regressions undetected in CI), Observable (all ⏳ replaced, `verb/test l::3` passes), Scoped (2 test files + 5 spec files only), Testable (nextest per function + Level 3 verification).
 - **Value / YAGNI:** PASS — Null hypothesis (existing integration tests sufficient) disproved; ⏳ tests target argument-parsing layer boundary conditions not covered by command-level integration tests.
 - **Implementation Readiness:** PASS — 13 numbered executable steps with explicit per-type implementation and verification cycles; Test Matrix has 21 rows covering all pending cases; Acceptance Criteria AC-1–AC-3 present; Related Documentation references all 5 type spec files; History has CREATED event.

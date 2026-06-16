@@ -2,9 +2,21 @@
 
 ## Execution State
 
-- **State:** ✅ (Done)
-- **Executor:** AI
-- **Scope:** package (claude_version + claude_version_core)
+- **State:** 🎯 (Verified)
+- **Executor Type:** any
+- **Actor:** null
+- **Claimed At:** null
+- **Reopen Count:** 0
+- **Priority:** 2
+- **Value:** 8
+- **Easiness:** 4
+- **Safety:** 7
+- **Advisability:** 448
+- **Dir:** .
+- **Validated By:** null
+- **Validation Date:** null
+- **Blocked Reason:** null
+- **Closes:** Q-01, Q-02
 
 ## MOST Goal
 
@@ -12,8 +24,6 @@
 - **Observable:** `cm .config` prints all resolved settings with source annotations; `cm .config key::model` prints the effective model value (env var if set, else user config, else `claude-sonnet-4-6` default); `cm .config key::theme value::dark` writes atomically to user settings; `cm .config key::theme unset::1` removes the key. All 17 integration tests in `tests/docs/cli/command/013_config.md` pass. All 12 FT cases in `tests/docs/feature/006_config_command.md` pass. Level 3 clean.
 - **Scoped:** Changes confined to `claude_version_core/src/` (two new modules) and `claude_version/src/` (command handler + lib.rs registration). No changes to `render.rs`, `adapter.rs`, `output.rs`, or any other crate.
 - **Testable:** `bash verb/test l::3` passes. `cm .config key::model` executed locally shows `claude-sonnet-4-6 (default)` when `CLAUDE_MODEL` is unset. `cm .config key::model` shows env value when `CLAUDE_MODEL=claude-opus-4-6`.
-
-**Closes:** Q-01, Q-02
 
 ## In Scope
 
@@ -113,6 +123,20 @@
 | `cm .config key::autoUpdates value::false` | type inference | `settings.json` contains `"autoUpdates": false` (JSON bool, not string); exit 0 |
 | `cm .config` (HOME set, no config files, no env) | show-all absent keys | keys with no value show `(absent)` annotation; catalog keys show `(default)` annotation |
 
+## Acceptance Criteria
+
+- AC-1: `cm .config` with no key/value params prints all resolved settings with source annotations (env/project/user/default/absent).
+- AC-2: `cm .config key::<name>` prints the effective value with correct source layer for each of the 4 resolution layers.
+- AC-3: `cm .config key::<name> value::<val>` writes atomically to user settings (`~/.claude/settings.json`); exit 0.
+- AC-4: `cm .config key::<name> value::<val> scope::project` writes to project-level config (`{cwd}/.claude/settings.json`); user file unchanged.
+- AC-5: `cm .config key::<name> unset::1` removes the key from settings; exit 0.
+- AC-6: `cm .config format::json` produces valid JSON output with `source` field per key.
+- AC-7: Invalid param combinations (`value::` without `key::`, `value::` + `unset::1`) exit 1 with specific error message.
+- AC-8: All 17 integration tests in `tests/docs/cli/command/013_config.md` pass.
+- AC-9: All 12 FT cases in `tests/docs/feature/006_config_command.md` pass.
+- AC-10: All 6 AT tests in `tests/docs/algorithm/002_config_resolution.md` pass.
+- AC-11: Level 3 verification passes (nextest + doc tests + Clippy, zero warnings).
+
 ## Affected Entities
 
 None (no doc entity directories introduced by this task — implementation only).
@@ -137,6 +161,7 @@ None (no doc entity directories introduced by this task — implementation only)
 
 - **[2026-06-09]** `CREATED` — Implement `.config` command with 4-layer resolution in claude_version and claude_version_core.
 - **[2026-06-09]** `VERIFY ROUND 1 FAIL` — Implementation Readiness FAIL. Fixed: (1) git-boundary stop condition added to Phase 2 project config walk; (2) settings_io ambiguity resolved — handler uses claude_version/src/settings_io.rs, resolver uses claude_version_core/src/settings_io.rs; (3) param binding guidance added for key::/value:: extension; (4) missing steps added (readme updates, lib.rs doc update); (5) test matrix rows strengthened (arbitrary key unset, type inference observable, show-all absent keys). Re-verification scheduled.
+- **[2026-06-09]** `VERIFIED` — Round 2 MAAV all 4 dimensions PASS; task is 🎯 (Verified) and ready to claim.
 
 ## Verification Record
 
@@ -149,12 +174,3 @@ Round 2 — 2026-06-09 — All 4 MAAV dimensions PASS.
 | Value / YAGNI | Independent subagent | PASS | Concrete committed need; no speculative work; one advisory (AC-12 catalog count 6 vs algorithm doc 7 — algorithm doc is authoritative) |
 | Implementation Readiness | Independent subagent (Round 2) | PASS | All 6 questions pass after fixes; three minor observations (git boundary detail, unset/project scope test row, unset handler approach) — non-blocking |
 
-## Verification Findings
-
-Round 1 (2026-06-09) — Implementation Readiness FAIL — issues since addressed:
-
-1. **RESOLVED** — Algorithm spec/task mismatch on project config walk: task said "stop at root" but algorithm doc specifies "stop at git repository boundary or root." Fixed: Step 4 now includes the git-boundary stop condition.
-2. **RESOLVED** — `settings_io` ambiguity: two files exist. Fixed: Step 8 explicitly names `claude_version/src/settings_io.rs` for the handler, `claude_version_core/src/settings_io.rs` for the resolver, with pitfall note.
-3. **RESOLVED** — Param binding guidance missing for `key::`/`value::` extension. Fixed: Step 9 now instructs developer to inspect existing registration pattern before writing code.
-4. **RESOLVED** — Missing readme update steps. Fixed: Steps 10, 11, 12 added for readme and lib.rs doc updates.
-5. **RESOLVED** — Weak test matrix rows. Fixed: type inference row now names expected JSON content; arbitrary key unset row added; show-all absent keys row added.

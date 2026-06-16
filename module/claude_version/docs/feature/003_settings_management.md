@@ -28,18 +28,29 @@
 
 **HOME dependency:** `ClaudePaths::new()` returns `None` when `HOME` is unset. Every settings handler must treat `None` as an error → exit 2.
 
-### Cross-References
+### Algorithms
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [algorithm/001_settings_type_inference.md](../algorithm/001_settings_type_inference.md) | Type inference rules for value:: |
-| doc | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .settings.set |
-| doc | [feature/005_cli_design.md](005_cli_design.md) | CLI routing and required parameter validation |
-| doc | [feature/006_config_command.md](006_config_command.md) | Unified `.config` command replacing `.settings.*` |
-| source | `../../src/settings_io.rs` | Settings JSON read/write implementation |
+| File | Relationship |
+|------|-------------|
+| [algorithm/001_settings_type_inference.md](../algorithm/001_settings_type_inference.md) | Type inference rules for value:: |
+
+### Features
+
+| File | Relationship |
+|------|-------------|
+| [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .settings.set |
+| [feature/005_cli_design.md](005_cli_design.md) | CLI routing and required parameter validation |
+| [feature/006_config_command.md](006_config_command.md) | Unified `.config` command replacing `.settings.*` |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
-| `spec.md` (deleted — migrated here) | FR-06, FR-15a, Command Inventory (commands 9-11), Parameter Inventory (key::, value::), Known Limitations |
+| File | Relationship |
+|------|-------------|
+| `../../src/settings_io.rs` | Settings JSON read/write implementation |
+| `spec.md` (deleted — migrated here) | FR-06, FR-15a, Command Inventory (commands 9-11), Parameter Inventory |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [tests/docs/feature/003_settings_management.md](../../tests/docs/feature/003_settings_management.md) | Feature test spec |

@@ -10,11 +10,15 @@ Task work items scoped to the `claude_version` crate.
 |------|----------------|
 | `bug/` | Filed bug reports for claude_version |
 | `unverified/` | Task files pending Verification Gate review |
+| `completed/` | Task files in Completed state |
+| `cancelled/` | Task files in Cancelled state |
+| `actors/` | Actor registry — canonical identity records |
+| `action_plan/` | Per-actor ordered action plans |
 
 ### Tasks Index
 
-| ID | Slug | State | Goal Summary |
-|----|------|-------|--------------|
-| 001 | `001_bug001_guard_doc_comment.md` | ✅ Complete | Fix `guard_once_pinned` doc comment — `resolved` advisory semantics |
-| 002 | `002_cli_type_test_surface.md` | ✅ Complete | Implement 21 pending CLI type test functions |
-| 003 | `003_config_command.md` | 🎯 Verified | Implement `.config` command with 4-layer resolution and catalog |
+| Order | ID | Advisability | Value | Easiness | Safety | Priority | State | Executor | Dir | Task | Purpose |
+|-------|----|-------------|-------|----------|--------|----------|-------|----------|-----|------|---------|
+| 1 | 003 | 448 | 8 | 4 | 7 | 2 | 🎯 (Verified) | any | . | [003_config_command.md](003_config_command.md) | Implement `.config` command with 4-layer resolution and catalog |
+| 2 | 001 | 0 | 5 | 9 | 9 | 0 | ✅ (Completed) | any | . | [001_bug001_guard_doc_comment.md](completed/001_bug001_guard_doc_comment.md) | Fix `guard_once_pinned` doc comment — `resolved` advisory semantics |
+| 3 | 002 | 0 | 8 | 6 | 8 | 0 | ✅ (Completed) | any | . | [002_cli_type_test_surface.md](completed/002_cli_type_test_surface.md) | Implement 21 pending CLI type test surface functions |

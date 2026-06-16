@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Reference for root-namespace cm commands.
+- **Purpose**: Reference for root-namespace clvcommands.
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for `.help` and `.status`.
 - **In Scope**: `.help`, `.status`.
 - **Out of Scope**: Version commands (→ [version.md](version.md)), process commands (→ [processes.md](processes.md)), settings commands (→ [settings.md](settings.md)).
@@ -18,10 +18,10 @@ Display the full command listing, all parameters, and usage examples. Triggered 
 **Syntax:**
 
 ```sh
-cm .help
-cm              # empty argv also shows help
-cm .            # bare dot is a help alias
-cm .status .help  # .help anywhere in argv triggers help (FR-02)
+clv.help
+clv             # empty argv also shows help
+clv.            # bare dot is a help alias
+clv.status .help  # .help anywhere in argv triggers help (FR-02)
 ```
 
 **Parameters:** none
@@ -65,7 +65,7 @@ Aggregates the three most important operational signals — installed version, r
 **Syntax:**
 
 ```sh
-cm .status [v::N] [format::FMT]
+clv.status [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -78,9 +78,9 @@ cm .status [v::N] [format::FMT]
 **Examples:**
 
 ```sh
-cm .status
-cm .status format::json
-cm .status v::2
+clv.status
+clv.status format::json
+clv.status v::2
 ```
 
 ### Referenced Formats

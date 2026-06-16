@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Reference for process-namespace cm commands.
+- **Purpose**: Reference for process-namespace clvcommands.
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for `.processes` and `.processes.kill`.
 - **In Scope**: `.processes`, `.processes.kill`.
 - **Out of Scope**: Version commands (→ [version.md](version.md)), settings commands (→ [settings.md](settings.md)).
@@ -19,7 +19,7 @@ List all running Claude Code processes detected via `/proc` scanning. Reports PI
 **Syntax:**
 
 ```sh
-cm .processes [v::N] [format::FMT]
+clv.processes [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -32,8 +32,8 @@ cm .processes [v::N] [format::FMT]
 **Examples:**
 
 ```sh
-cm .processes
-cm .processes format::json
+clv.processes
+clv.processes format::json
 ```
 
 ### Referenced Formats
@@ -82,7 +82,7 @@ Terminate all running Claude Code processes. Normal mode: SIGTERM, wait 2 second
 **Syntax:**
 
 ```sh
-cm .processes.kill [dry::1] [force::1] [v::N] [format::FMT]
+clv.processes.kill [dry::1] [force::1] [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -97,9 +97,9 @@ cm .processes.kill [dry::1] [force::1] [v::N] [format::FMT]
 **Examples:**
 
 ```sh
-cm .processes.kill dry::1    # preview without sending signals
-cm .processes.kill           # SIGTERM -> 2s wait -> SIGKILL survivors
-cm .processes.kill force::1  # SIGKILL immediately
+clv.processes.kill dry::1    # preview without sending signals
+clv.processes.kill           # SIGTERM -> 2s wait -> SIGKILL survivors
+clv.processes.kill force::1  # SIGKILL immediately
 ```
 
 ### Referenced Formats

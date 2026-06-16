@@ -13,8 +13,8 @@ Case-sensitive: `text` and `json` only.
 - **Validation:** `text` or `json` only; `TEXT`, `Json` etc. -> exit 1
 
 ```sh
-cm .status format::json
-cm .settings.show format::text
+clv.status format::json
+clv.settings.show format::text
 ```
 
 ### Referenced Commands

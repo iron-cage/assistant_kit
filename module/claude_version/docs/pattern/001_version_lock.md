@@ -52,16 +52,29 @@ This pattern does not apply when tracking `latest` is desired — for `latest`, 
 - `chmod 555` on the versions directory blocks not just the auto-updater but also manual operations — the user must `chmod 755` before manual work and restore afterwards
 - Layer 4 (purging cached binaries) is destructive: it permanently removes cached binaries, requiring a full re-download if a different version is needed
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [feature/001_version_management.md](../feature/001_version_management.md) | .version.install and .version.guard that apply/read the lock |
-| source | `../../src/commands.rs` | Lock application in perform_install() |
-| source | `../../src/settings_io.rs` | settings.json write for layers 1, 2, 5 |
+| File | Relationship |
+|------|-------------|
+| [feature/001_version_management.md](../feature/001_version_management.md) | .version.install and .version.guard that apply/read the lock |
+
+### Pitfalls
+
+| File | Relationship |
+|------|-------------|
+| [pitfall/001_version_lock_chmod.md](../pitfall/001_version_lock_chmod.md) | chmod 555 side effects on manual operations |
+| [pitfall/002_symlink_retarget.md](../pitfall/002_symlink_retarget.md) | Cached binary retarget bypass vector |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
-| `spec.md` (deleted — migrated here) | FR-15 (5-layer version lock), FR-15a (nested JSON preservation), FR-17 (preferred version persistence) |
+| File | Relationship |
+|------|-------------|
+| `../../src/commands.rs` | Lock application in perform_install() |
+| `../../src/settings_io.rs` | settings.json write for layers 1, 2, 5 |
+| `spec.md` (deleted — migrated here) | FR-15, FR-15a, FR-17 |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [tests/docs/pattern/001_version_lock.md](../../tests/docs/pattern/001_version_lock.md) | Pattern test spec |

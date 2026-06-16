@@ -4,7 +4,7 @@
 
 ### Scope
 
-- **Purpose**: Reference for settings-namespace cm commands (deprecated).
+- **Purpose**: Reference for settings-namespace clvcommands (deprecated).
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for `.settings.show`, `.settings.get`, and `.settings.set`.
 - **In Scope**: `.settings.show`, `.settings.get`, `.settings.set`.
 - **Out of Scope**: Version commands (→ [version.md](version.md)), process commands (→ [processes.md](processes.md)), unified config command (→ [config.md](config.md)).
@@ -21,7 +21,7 @@ Print all key-value pairs from `~/.claude/settings.json`. Use this to inspect th
 **Syntax:**
 
 ```sh
-cm .settings.show [v::N] [format::FMT]
+clv.settings.show [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -34,8 +34,8 @@ cm .settings.show [v::N] [format::FMT]
 **Examples:**
 
 ```sh
-cm .settings.show
-cm .settings.show format::json
+clv.settings.show
+clv.settings.show format::json
 ```
 
 ### Referenced Formats
@@ -84,7 +84,7 @@ Read a single setting from `~/.claude/settings.json` by key. Exits 2 if the key 
 **Syntax:**
 
 ```sh
-cm .settings.get key::<KEY> [v::N] [format::FMT]
+clv.settings.get key::<KEY> [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -98,8 +98,8 @@ cm .settings.get key::<KEY> [v::N] [format::FMT]
 **Examples:**
 
 ```sh
-cm .settings.get key::theme
-cm .settings.get key::autoUpdate format::json
+clv.settings.get key::theme
+clv.settings.get key::autoUpdate format::json
 ```
 
 ### Referenced Formats
@@ -149,7 +149,7 @@ Write a single setting atomically to `~/.claude/settings.json`. The value is typ
 **Syntax:**
 
 ```sh
-cm .settings.set key::<KEY> value::<VALUE> [dry::1]
+clv.settings.set key::<KEY> value::<VALUE> [dry::1]
 ```
 
 **Parameters:**
@@ -163,10 +163,10 @@ cm .settings.set key::<KEY> value::<VALUE> [dry::1]
 **Examples:**
 
 ```sh
-cm .settings.set key::theme value::dark
-cm .settings.set key::timeout value::30       # stored as number
-cm .settings.set key::autoUpdate value::true  # stored as bool
-cm .settings.set key::theme value::dark dry::1
+clv.settings.set key::theme value::dark
+clv.settings.set key::timeout value::30       # stored as number
+clv.settings.set key::autoUpdate value::true  # stored as bool
+clv.settings.set key::theme value::dark dry::1
 ```
 
 ### Referenced Parameter Groups

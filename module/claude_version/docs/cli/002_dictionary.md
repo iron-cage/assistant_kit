@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Domain vocabulary for the cm CLI.
+- **Purpose**: Domain vocabulary for the clv CLI.
 - **Responsibility**: Term definitions for commands, modes, types, and architecture concepts.
-- **In Scope**: All domain terms used across cm documentation.
+- **In Scope**: All domain terms used across clv documentation.
 - **Out of Scope**: Command reference (→ `001_commands.md`), parameter reference (→ `005_params.md`).
 
 ### Commands

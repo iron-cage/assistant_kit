@@ -3,13 +3,13 @@
 ### Scope
 
 - **Purpose**: Operational steps for managing parameter instance files in this directory.
-- **Responsibility**: Procedures for adding, updating, or removing cm parameter documentation.
+- **Responsibility**: Procedures for adding, updating, or removing clvparameter documentation.
 
 ---
 
 ### Procedure :: 1. Add a New Parameter
 
-**Trigger:** A new cm parameter is implemented and requires documentation.
+**Trigger:** A new clvparameter is implemented and requires documentation.
 
 1. Assign the next sequential number (NN) to the new parameter.
 2. Create `NN_name.md` with:
@@ -38,7 +38,7 @@
 
 ### Procedure :: 3. Remove a Parameter
 
-**Trigger:** A cm parameter is deprecated and removed.
+**Trigger:** A clvparameter is deprecated and removed.
 
 1. Delete the `NN_name.md` file.
 2. Remove the parameter row from the `### All Parameters` table in `readme.md`.

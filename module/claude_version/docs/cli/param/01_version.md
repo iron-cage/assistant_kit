@@ -15,10 +15,10 @@ without writing to `settings.json`.
 - **Validation:** rejects 4-part semver (e.g., `1.2.3.4`), leading zeros (e.g., `01.02.03`), empty value
 
 ```sh
-cm .version.install version::stable
-cm .version.install version::1.2.3
-cm .version.guard version::stable dry::1
-cm .version.guard version::month
+clv.version.install version::stable
+clv.version.install version::1.2.3
+clv.version.guard version::stable dry::1
+clv.version.guard version::month
 ```
 
 ### Referenced Commands

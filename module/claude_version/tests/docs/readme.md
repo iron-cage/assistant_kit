@@ -9,7 +9,7 @@
 
 | Directory | Responsibility |
 |-----------|----------------|
-| `cli/` | CLI test planning: per-command, per-parameter, and per-group test case indices |
+| `cli/` | CLI test planning: per-command, per-parameter, per-type, per-group, and per-user-story test case indices |
 | `feature/` | Feature test surface: per-feature FT- test case specifications |
 | `pattern/` | Pattern test surface: per-pattern PT- test case specifications |
 | `algorithm/` | Algorithm test surface: per-algorithm AC- test case specifications |

@@ -1,4 +1,5 @@
 # Parameter :: `--runner-delay`
+<!-- BUG-299: runner_delay has no runtime effect — runner retry call site never built; see 050_retry_on_runner.md Architectural Constraint -->
 
 Edge case coverage for the `--runner-delay` parameter (new in retry system redesign).
 See [051_runner_delay.md](../../../../docs/cli/param/051_runner_delay.md) for specification.
