@@ -11,6 +11,6 @@
 | `gate.rs` | Session count check and blocking wait for concurrent-session limit. |
 | `ps.rs` | `clr ps` dispatch — active sessions and queued waiters in two plain-style tables. |
 | `help.rs` | Help text printing for all subcommands (clr, ask, isolated, refresh). |
-| `execution.rs` | `run_print_mode`, `run_interactive`, timeout watchdog, expect validation. |
+| `execution.rs` | `run_print_mode`, `run_interactive`, timeout watchdog, expect validation, 3-tier retry resolution. |
 | `env.rs` | `env_bool`, `env_str`, `apply_env_vars` — CLR_* env-variable fallbacks. |
 | `kill.rs` | `dispatch_kill`, `print_kill_help` — SIGTERM delivery to a validated claude PID. |

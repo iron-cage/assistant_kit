@@ -6,6 +6,7 @@ use super::fence::strip_fences;
 //
 // Distinguishes the common "not found" case (claude not installed) from other OS errors
 // so callers can surface an actionable install hint without duplicating the check.
+// Fix(BUG-298): [Runner] prefix missing from all branches — see task/claude_runner/bug/298_spawn_error_missing_runner_class_prefix.md
 fn spawn_error_msg( e : &std::io::Error ) -> String
 {
   if e.kind() == std::io::ErrorKind::NotFound

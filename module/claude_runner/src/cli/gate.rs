@@ -77,6 +77,7 @@ pub( super ) fn wait_for_session_slot( max : u32, verbosity : VerbosityLevel )
     }
     if attempt == max_attempts
     {
+      // BUG-299: gate timeout exits without runner retry wrapper — see task/claude_runner/bug/299_runner_retry_params_dead_configuration.md
       eprintln!(
         "Error: --max-sessions {count}/{max} active; gave up after {max_attempts} attempts."
       );

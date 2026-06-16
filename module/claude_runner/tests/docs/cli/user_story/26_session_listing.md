@@ -13,6 +13,7 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 | US-5 | `$PRO` prefix replaced by `"$PRO"` literal in Absolute Path column | AC-007 | ✅ |
 | US-6 | Queued CLR session shown when gate file present | AC-008 | ✅ |
 | US-7 | Active table caption contains `Active Sessions` and count suffix | AC-010 | ✅ |
+| US-8 | `clr ps --help` prints help and exits 0 | AC-011 | ⏳ |
 
 ---
 
@@ -83,3 +84,14 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 - **Then:** Exit 0; stdout contains `Active Sessions` (caption title) and `running` (count suffix from the caption rule line above the column headers)
 - **Exit:** 0
 - **Verifies:** AC-010
+
+---
+
+### US-8: `clr ps --help` prints help
+
+- **Given:** Developer wants documentation for the `ps` subcommand
+- **When:** `clr ps --help`
+- **Then:** Exit 0; stdout contains help text (e.g. column descriptions or `Active Sessions`)
+- **Exit:** 0
+- **Verifies:** AC-011
+- **Note:** ⏳ Not yet implemented — BUG-294 tracks the fix

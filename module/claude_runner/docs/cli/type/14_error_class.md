@@ -227,6 +227,7 @@ Error: [Runner] claude binary not found in PATH — install with: npm i -g @anth
 ```
 
 **Runner / SpawnFailed** (exit 1 — OS spawn error, no subprocess):
+<!-- BUG-298: actual output missing [Runner] prefix — spawn_error_msg() emits bare "Failed to execute Claude Code: {e}" -->
 ```
 Error: [Runner] failed to execute Claude Code: permission denied (os error 13) (exit 1)
 ```
