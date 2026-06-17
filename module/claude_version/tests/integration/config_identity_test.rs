@@ -23,7 +23,7 @@
 
 use tempfile::TempDir;
 
-use crate::helpers::{ assert_exit, run_clm_with_env, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clm_with_env, stdout, write_settings };
 
 // ─── GI-1: key::K value::V → set mode writes to user config ──────────────────
 

@@ -7,7 +7,7 @@
 - **In Scope**: `.version.install`, `.version.guard`, alias resolution (stable/month/latest), idempotency, preference persistence.
 - **Out of Scope**: 5-layer version lock (-> `../../pattern/01_version_lock.md`), dry-run semantics (-> `04_dry_run.md`).
 
-Feature test surface for version management. See [feature/001_version_management.md](../../../../docs/feature/001_version_management.md) for specification.
+Feature test surface for version management. See [feature/001_version_management.md](../../../docs/feature/001_version_management.md) for specification.
 
 ## Behavioral Divergence Pair
 
@@ -47,7 +47,7 @@ Both are valid invocations; the resolved semver strings differ.
 - **When:** `clv .version.install version::stable dry::1`
 - **Then:** stdout contains `"2.1.78"`; exit 0
 - **Exit:** 0
-- **Source:** [feature/001_version_management.md — Version aliases](../../../../docs/feature/001_version_management.md)
+- **Source:** [feature/001_version_management.md — Version aliases](../../../docs/feature/001_version_management.md)
 
 ---
 
@@ -57,7 +57,7 @@ Both are valid invocations; the resolved semver strings differ.
 - **When:** `clv .version.install version::month dry::1`
 - **Then:** stdout contains `"2.1.74"`; exit 0
 - **Exit:** 0
-- **Source:** [feature/001_version_management.md — Version aliases](../../../../docs/feature/001_version_management.md)
+- **Source:** [feature/001_version_management.md — Version aliases](../../../docs/feature/001_version_management.md)
 
 ---
 
@@ -67,7 +67,7 @@ Both are valid invocations; the resolved semver strings differ.
 - **When:** `clv .version.guard dry::1`
 - **Then:** stdout contains `"stable"`; exit 0
 - **Exit:** 0
-- **Source:** [feature/001_version_management.md — Version guard](../../../../docs/feature/001_version_management.md)
+- **Source:** [feature/001_version_management.md — Version guard](../../../docs/feature/001_version_management.md)
 
 ---
 
@@ -77,7 +77,7 @@ Both are valid invocations; the resolved semver strings differ.
 - **When:** `clv .version.guard dry::1`
 - **Then:** stdout contains text indicating no version pin to guard; exit 0
 - **Exit:** 0
-- **Source:** [feature/001_version_management.md — Version guard](../../../../docs/feature/001_version_management.md)
+- **Source:** [feature/001_version_management.md — Version guard](../../../docs/feature/001_version_management.md)
 
 ---
 
@@ -87,7 +87,7 @@ Both are valid invocations; the resolved semver strings differ.
 - **When:** `clv .version.install version::stable dry::1`
 - **Then:** `settings.json` does not contain `"preferredVersionSpec"`; exit 0
 - **Exit:** 0
-- **Source:** [feature/001_version_management.md — Preferred version persistence](../../../../docs/feature/001_version_management.md)
+- **Source:** [feature/001_version_management.md — Preferred version persistence](../../../docs/feature/001_version_management.md)
 
 ---
 
@@ -97,7 +97,7 @@ Both are valid invocations; the resolved semver strings differ.
 - **When:** `clv .version.guard dry::1`
 - **Then:** stdout contains the current alias semver (not `"2.1.50"`); exit 0; stale stored value ignored
 - **Exit:** 0
-- **Source:** [feature/001_version_management.md — Version guard (alias re-resolution)](../../../../docs/feature/001_version_management.md)
+- **Source:** [feature/001_version_management.md — Version guard (alias re-resolution)](../../../docs/feature/001_version_management.md)
 
 ---
 

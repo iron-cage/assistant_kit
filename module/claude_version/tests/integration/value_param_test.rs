@@ -4,7 +4,7 @@
 
 use tempfile::TempDir;
 
-use crate::helpers::{ assert_exit, run_clm, run_clm_with_env, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stdout };
 
 fn read_settings_json( home_dir : &std::path::Path ) -> String
 {
@@ -213,7 +213,7 @@ fn value_ec15_missing_value_error_mentions_value_token()
 {
   let out = run_clm( &[ ".settings.set", "key::theme" ] );
   assert_exit( &out, 1 );
-  let err = crate::helpers::stderr( &out );
+  let err = crate::subprocess_helpers::stderr( &out );
   assert!(
     err.contains( "value::" ),
     "error must mention 'value::' token: {err}"

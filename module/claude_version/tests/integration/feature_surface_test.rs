@@ -16,7 +16,7 @@
 
 use tempfile::TempDir;
 
-use crate::helpers::{ assert_exit, run_clm, run_clm_with_env, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stdout };
 
 // ─── FT-3 (feature/003_settings_management.md): set+get round-trip ───────────
 

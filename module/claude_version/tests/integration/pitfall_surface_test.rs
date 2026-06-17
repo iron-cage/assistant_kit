@@ -16,7 +16,7 @@
 
 use tempfile::TempDir;
 
-use crate::helpers::{ assert_exit, run_clm, run_clm_with_env, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stdout };
 
 // ─── PF-1 (pitfall/001_version_lock_chmod.md): install handles chmod automatically
 

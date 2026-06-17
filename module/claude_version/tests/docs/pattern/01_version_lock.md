@@ -7,7 +7,7 @@
 - **In Scope**: Layer 1 (`autoUpdates`), Layer 2 (`DISABLE_AUTOUPDATER`), Layer 4 (purge preview), lock inversion for `latest`.
 - **Out of Scope**: Actual file writes and chmod operations (-> source integration tests), guard recovery behavior (-> `../feature/01_version_management.md`).
 
-Pattern test surface for version lock. See [pattern/001_version_lock.md](../../../../docs/pattern/001_version_lock.md) for specification.
+Pattern test surface for version lock. See [pattern/001_version_lock.md](../../../docs/pattern/001_version_lock.md) for specification.
 
 ## Behavioral Divergence Pair
 
@@ -42,7 +42,7 @@ Both are valid invocations; the `autoUpdates` value in the preview is opposite.
 - **When:** `clv .version.install version::stable dry::1`
 - **Then:** stdout contains `"autoUpdates"` and `"false"`; exit 0
 - **Exit:** 0
-- **Source:** [pattern/001_version_lock.md — Layer 1](../../../../docs/pattern/001_version_lock.md)
+- **Source:** [pattern/001_version_lock.md — Layer 1](../../../docs/pattern/001_version_lock.md)
 
 ---
 
@@ -52,7 +52,7 @@ Both are valid invocations; the `autoUpdates` value in the preview is opposite.
 - **When:** `clv .version.install version::latest dry::1`
 - **Then:** stdout contains `"autoUpdates"` and `"true"`; exit 0
 - **Exit:** 0
-- **Source:** [pattern/001_version_lock.md — Lock inversion for latest](../../../../docs/pattern/001_version_lock.md)
+- **Source:** [pattern/001_version_lock.md — Lock inversion for latest](../../../docs/pattern/001_version_lock.md)
 
 ---
 
@@ -62,7 +62,7 @@ Both are valid invocations; the `autoUpdates` value in the preview is opposite.
 - **When:** `clv .version.install version::stable dry::1`
 - **Then:** stdout contains text indicating cached binary purge; exit 0
 - **Exit:** 0
-- **Source:** [pattern/001_version_lock.md — Layer 4](../../../../docs/pattern/001_version_lock.md)
+- **Source:** [pattern/001_version_lock.md — Layer 4](../../../docs/pattern/001_version_lock.md)
 
 ---
 

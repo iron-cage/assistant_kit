@@ -16,7 +16,7 @@
 //! | cli/format/02_json.md | FM-3 | `fm03_02_json_case_sensitive` |
 //! | cli/format/02_json.md | FM-4 | `fm04_02_json_v0_primary_key` |
 
-use crate::helpers::{ assert_exit, run_clm, stderr, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clm, stderr, stdout };
 
 // ─── FM-1 (cli/format/01_text.md): default text format is labeled ─────────────
 

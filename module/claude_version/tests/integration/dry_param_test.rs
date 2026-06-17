@@ -6,7 +6,7 @@
 
 use tempfile::TempDir;
 
-use crate::helpers::{ assert_exit, run_clm, run_clm_with_env, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stdout };
 
 /// EC-10: `dry::` only for mutation commands — rejected on `.version.list`
 #[ test ]
