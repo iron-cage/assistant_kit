@@ -120,8 +120,12 @@ Type compliance and validation tests for `VerbosityLevel`. See [type/01_verbosit
 
 | Function | File |
 |----------|------|
-| `tc245_last_occurrence_wins_for_verbosity` | `integration/read_commands_test.rs` |
 | `tc_verbosity_level_0_minimal` | `cli_args_test.rs` |
+| `tc098_status_v1_has_labels` | `integration/read_commands_test.rs` |
 | `tc_verbosity_level_2_verbose` | `cli_args_test.rs` |
+| `verbosity_ec5_absent_defaults_to_1` | `cli_args_test.rs` |
 | `tc_verbosity_level_3_out_of_range` | `cli_args_test.rs` |
+| `tc005_verbosity_empty_value` | `cli_args_test.rs` |
 | `tc_verbosity_level_abc_non_integer` | `cli_args_test.rs` |
+| `verbosity_ec8_negative_exits_1` | `cli_args_test.rs` |
+| `tc245_last_occurrence_wins_for_verbosity` | `integration/read_commands_test.rs` |

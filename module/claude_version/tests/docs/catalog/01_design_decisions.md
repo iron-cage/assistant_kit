@@ -1,4 +1,4 @@
-# Collection Test: Design Decisions
+# Catalog Test: Design Decisions
 
 ### Scope
 
@@ -7,7 +7,7 @@
 - **In Scope**: Testable decisions: D3, D4, D7, D8.
 - **Out of Scope**: Architectural decisions without directly observable test surface (D1, D2, D5, D6).
 
-Collection test surface for design decisions. See [collection/001_design_decisions.md](../../../docs/collection/001_design_decisions.md) for specification.
+Catalog test surface for design decisions. See [catalog/001_design_decisions.md](../../../docs/catalog/001_design_decisions.md) for specification.
 
 ## Test Case Index
 

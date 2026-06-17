@@ -68,9 +68,9 @@
 //! | `force_ec3_2_exits_1` | `03_force` | `force::2` → exit 1 (out of range) | N |
 //! | `force_ec4_negative_exits_1` | `03_force` | `force::-1` → exit 1 (negative) | N |
 //! | `force_ec6_empty_exits_1` | `03_force` | `force::` → exit 1 (empty) | N |
-//! | `verbosity_ec5_absent_defaults_to_1` | `04_verbosity` | absent `v::` ≡ `v::1` | P |
-//! | `verbosity_ec8_negative_exits_1` | `04_verbosity` | `v::-1` → exit 1 | N |
-//! | `verbosity_ec11_command_scope_settings_set` | `04_verbosity` | `.settings.set` `v::1` → exit 1 | N |
+//! | `verbosity_ec5_absent_defaults_to_1` | `04_v` | absent `v::` ≡ `v::1` | P |
+//! | `verbosity_ec8_negative_exits_1` | `04_v` | `v::-1` → exit 1 | N |
+//! | `verbosity_ec11_command_scope_settings_set` | `04_v` | `.settings.set` `v::1` → exit 1 | N |
 //! | `format_ec6_absent_defaults_to_text` | `05_format` | absent `format::` → text | P |
 //! | `format_ec7_text_explicit_same_as_absent` | `05_format` | `format::text` ≡ absent | P |
 //! | `format_ec8_csv_exits_1` | `05_format` | `format::csv` → exit 1 | N |
@@ -1187,7 +1187,7 @@ fn force_ec6_empty_exits_1()
   assert_eq!( code( &out ), 1, "force:: (empty) must exit 1" );
 }
 
-// ─── 04_verbosity.md EC-5, EC-8, EC-11 ──────────────────────────────────────
+// ─── 04_v.md EC-5, EC-8, EC-11 ──────────────────────────────────────────────
 
 /// EC-5: absent `v::` defaults to `v::1` (output identical to explicit `v::1`)
 #[ test ]
