@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Describe how Claude Code organizes conversation data, settings, and metadata on disk within the `~/.claude/` root.
-- **Responsibility**: Master file for the `storage` doc entity — lists all 3 storage area instances, defines the conceptual model, and declares scope boundaries.
+- **Responsibility**: Master file for the `storage` collection — lists all 3 storage area instances, defines the conceptual model, and declares scope boundaries.
 - **In Scope**: Storage root layout, project/session/entry containment hierarchy, agent storage layouts (flat and hierarchical), directory purposes, access patterns, growth characteristics, security considerations, design principles.
 - **Out of Scope**: Entry-level JSONL field schema (→ [`../jsonl/`](../jsonl/readme.md)); settings and credentials file format internals (→ [`../settings/`](../settings/readme.md), [`../formats/`](../formats/readme.md)); runtime filesystem paths managed by claude_version (→ [`../filesystem/`](../filesystem/readme.md)).
 
@@ -78,7 +78,7 @@ All `storage` doc instances must include:
 4. **Contents** (H3): Purpose, format, and growth characteristics of each item
 5. **Cross-References** (H3): Flat table with `Type | File | Responsibility` columns
 
-### Cross-Doc Entity Dependencies
+### Cross-Collection Dependencies
 
 **This entity depends on**:
 - `../jsonl/` — entry schema for session JSONL files

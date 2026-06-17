@@ -1,4 +1,4 @@
-# Integration Doc Entity
+# Integration Collection
 
 ### Scope
 

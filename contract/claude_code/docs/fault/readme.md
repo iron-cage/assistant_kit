@@ -1,4 +1,4 @@
-# Fault Doc Entity
+# Fault Collection
 
 ### Scope
 
@@ -79,7 +79,7 @@ When `claude` exits non-zero, detection MUST follow this priority order (higher 
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| doc entity | [`../../../../docs/error/readme.md`](../../../../docs/error/readme.md) | Error doc entity — 6 terminal error instances |
-| doc entity | [`../../../../module/claude_runner_core/docs/failure_mode/readme.md`](../../../../module/claude_runner_core/docs/failure_mode/readme.md) | Failure mode doc entity — 4 silent failure instances |
-| doc entity | [`../behavior/readme.md`](../behavior/readme.md) | Behavior doc entity — 25 observed behaviors (B1-B24 + B16h) |
+| collection | [`../../../../docs/error/readme.md`](../../../../docs/error/readme.md) | Error collection — 6 terminal error instances |
+| collection | [`../../../../module/claude_runner_core/docs/failure_mode/readme.md`](../../../../module/claude_runner_core/docs/failure_mode/readme.md) | Failure mode collection — 4 silent failure instances |
+| collection | [`../behavior/readme.md`](../behavior/readme.md) | Behavior collection — 25 observed behaviors (B1-B24 + B16h) |
 | source | `../../../../module/claude_runner_core/src/types.rs` | `ErrorKind` enum, `classify_error()` implementation |

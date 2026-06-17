@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Define the four-level concept hierarchy (Project / Conversation / Session / Entry) used throughout `claude_storage` and its CLI.
-- **Responsibility**: Master file for the `taxonomy` doc entity — lists all 3 taxonomy instances covering the concept definitions, pairwise relationships, and current vs future implementation mapping.
+- **Responsibility**: Master file for the `taxonomy` collection — lists all 3 taxonomy instances covering the concept definitions, pairwise relationships, and current vs future implementation mapping.
 - **In Scope**: Concept definitions, cardinality rules, pairwise relationship descriptions, containment diagram, user-facing vs storage-layer distinction, current and future implementation notes.
 - **Out of Scope**: Concrete field schemas (→ [`../jsonl/`](../jsonl/readme.md)); filesystem paths and directory layout (→ [`../storage/`](../storage/readme.md)); CLI command reference (→ `../../../../module/claude_storage/docs/cli/`).
 
@@ -66,7 +66,7 @@ All `taxonomy` doc instances must include:
 3. **Content** (H3): Definitions, cardinalities, diagrams, or implementation notes for this group
 4. **Cross-References** (H3): Flat table with `Type | File | Responsibility` columns
 
-### Cross-Doc Entity Dependencies
+### Cross-Collection Dependencies
 
 **This entity depends on**:
 - `../storage/` — Session and Entry storage correspondence

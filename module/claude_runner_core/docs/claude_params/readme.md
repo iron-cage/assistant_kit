@@ -1,4 +1,4 @@
-# claude_params Doc Entity
+# claude_params Collection
 
 ### Scope
 

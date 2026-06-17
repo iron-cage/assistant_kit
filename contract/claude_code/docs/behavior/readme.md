@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Catalog observed and confirmed external behaviors of the `claude` binary relevant to session lifecycle and storage.
-- **Responsibility**: Master file for the `behavior` doc entity — lists all 25 behavior instances (B1–B24 + B16h), provides the shared evidence table (E1–E46), and links to invalidation test files.
+- **Responsibility**: Master file for the `behavior` collection — lists all 25 behavior instances (B1–B24 + B16h), provides the shared evidence table (E1–E46), and links to invalidation test files.
 - **In Scope**: Session continuation, flag semantics, agent layouts, entry threading, storage path encoding, cross-session relationship absence (conversation chain foundations).
 - **Out of Scope**: Entry-level JSONL schema (→ [`../jsonl/`](../jsonl/readme.md)); storage directory architecture (→ [`../storage/`](../storage/readme.md)); filesystem paths (→ [`../filesystem/`](../filesystem/readme.md)); settings format (→ [`../settings/`](../settings/readme.md)); ancillary file formats (→ [`../formats/`](../formats/readme.md)); concept taxonomy (→ [`../taxonomy/`](../taxonomy/readme.md)).
 
@@ -185,7 +185,7 @@ All `behavior` doc instances must include:
 4. **Evidence** (H3): Subset of the master evidence table (rows from this readme that support this behavior)
 5. **Cross-References** (H3): Flat table with `Type | File | Responsibility` columns
 
-### Cross-Doc Entity Dependencies
+### Cross-Collection Dependencies
 
 **This entity depends on**:
 - `../storage/` — storage architecture concepts referenced in Continuation/Storage category behaviors

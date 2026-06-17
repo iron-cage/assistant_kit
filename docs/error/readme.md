@@ -1,4 +1,4 @@
-# Error Doc Entity
+# Error Collection
 
 ### Scope
 

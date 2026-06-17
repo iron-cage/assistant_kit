@@ -1,4 +1,4 @@
-# Collection: Design Decisions
+# Catalog: Design Decisions
 
 ### Scope
 
