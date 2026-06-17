@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Specify the file formats for ancillary Claude Code storage files that are not part of the primary session JSONL or settings docs.
-- **Responsibility**: Master file for the `formats` doc entity — lists all 6 ancillary format instances covering history, credentials, debug logs, shell snapshots, todos, and command definitions.
+- **Responsibility**: Master file for the `formats` collection — lists all 6 ancillary format instances covering history, credentials, debug logs, shell snapshots, todos, and command definitions.
 - **In Scope**: history.jsonl entry structure, .credentials.json structure, debug log format, shell snapshot format, todos JSON format, command definition markdown format.
 - **Out of Scope**: Session JSONL format (→ [`../jsonl/`](../jsonl/readme.md)); settings.json structure (→ [`../settings/`](../settings/readme.md)); directory layout and storage areas (→ [`../storage/`](../storage/readme.md)).
 
@@ -40,7 +40,7 @@ All `formats` doc instances must include:
 5. **Growth** (H3): How the file grows over time and maintenance guidance
 6. **Cross-References** (H3): Flat table with `Type | File | Responsibility` columns
 
-### Cross-Doc Entity Dependencies
+### Cross-Collection Dependencies
 
 **This entity depends on**:
 - `../storage/` — directory locations for all ancillary format files

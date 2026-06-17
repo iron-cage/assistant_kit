@@ -1,4 +1,4 @@
-# Collection Test Surface
+# Catalog Test Surface
 
 ### Scope
 

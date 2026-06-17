@@ -71,10 +71,10 @@ nodes:
     label: JSON Format
     entity: format
 
-  - id: collection/001
-    file: collection/001_design_decisions.md
+  - id: catalog/001
+    file: catalog/001_design_decisions.md
     label: Design Decisions
-    entity: collection
+    entity: catalog
 
   - id: feature/001
     file: feature/001_version_management.md
@@ -268,8 +268,8 @@ edges:
     to: pitfall/002
     via: pitfalls
 
-  # collection/001 Design Decisions
-  - from: collection/001
+  # catalog/001 Design Decisions
+  - from: catalog/001
     to: feature/005
     via: features
 
@@ -426,7 +426,7 @@ components:
       - cli/004
       - cli/005
       - cli/006
-      - collection/001
+      - catalog/001
       - feature/001
       - feature/002
       - feature/003

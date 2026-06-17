@@ -1,6 +1,6 @@
 # Fault Tests
 
-Fault classification behavioral test cases for the `contract/claude_code` fault doc entity. Each file covers one aspect of the fault taxonomy documented in `docs/fault/readme.md`.
+Fault classification behavioral test cases for the `contract/claude_code` fault collection. Each file covers one aspect of the fault taxonomy documented in `docs/fault/readme.md`.
 
 ### Scope
 
