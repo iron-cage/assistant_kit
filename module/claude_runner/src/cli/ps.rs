@@ -60,16 +60,30 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
 
 // Render a completed RowBuilder as a captioned plain-style table string.
 //
-// auto_wrap: false — prevents word-wrapping long paths across continuation rows;
-// table width reflects content naturally (user scrolls if needed).
+// Two-pass render: first probe measures the actual body width so the caption
+// rule line spans the full table rather than the terminal fallback (120 cols).
+// auto_wrap: false — prevents word-wrapping long paths across continuation rows.
 fn render_plain_table( builder : RowBuilder, caption : TableCaption ) -> String
 {
   let view = builder.build_view();
+
+  // Probe render (no caption) to measure actual table body width.
+  let probe = Format::format(
+    &TableFormatter::with_config( TableConfig::plain().auto_wrap( false ) ),
+    &view,
+  ).unwrap_or_default();
+  let body_width = probe
+    .lines()
+    .find( |l| !l.trim().is_empty() )
+    .map_or( 120, |l| l.chars().count() );
+
+  // Final render with caption anchored to measured body width.
   Format::format(
     &TableFormatter::with_config(
       TableConfig::plain()
         .auto_wrap( false )
-        .caption( caption )
+        .terminal_width( Some( body_width ) )
+        .caption( caption ),
     ),
     &view,
   ).unwrap_or_default()
@@ -79,6 +93,18 @@ fn render_plain_table( builder : RowBuilder, caption : TableCaption ) -> String
 fn build_active_table( procs : &[ ProcessInfo ] ) -> Option< String >
 {
   if procs.is_empty() { return None; }
+
+  // Sort oldest-first (AC-012): smallest started_at = longest running = row #1.
+  #[ cfg( target_os = "linux" ) ]
+  let sorted : Vec< &ProcessInfo > = {
+    use claude_core::process::read_process_metrics;
+    let mut v : Vec< &ProcessInfo > = procs.iter().collect();
+    v.sort_by_key( |p| read_process_metrics( p.pid )
+      .map_or( u64::MAX, |m| m.started_at ) );
+    v
+  };
+  #[ cfg( not( target_os = "linux" ) ) ]
+  let sorted : Vec< &ProcessInfo > = procs.iter().collect();
 
   let headers = vec![
     "#".to_string(),
@@ -92,7 +118,7 @@ fn build_active_table( procs : &[ ProcessInfo ] ) -> Option< String >
   ];
 
   let mut builder = RowBuilder::new( headers );
-  for ( idx, proc ) in procs.iter().enumerate()
+  for ( idx, proc ) in sorted.iter().enumerate()
   {
     let row = build_row( idx + 1, proc );
     builder = builder.add_row( row.into_iter().map( Into::into ).collect() );

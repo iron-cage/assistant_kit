@@ -31,6 +31,7 @@
 //! - BUG-212: `clr run <message>` → leading `run` token stripped
 //! - BUG-215: `clr run help` → output identical to `clr help`
 //! - T48: `--no-skip-permissions --new-session` combo → no `-c`, no skip-permissions
+//! - BUG-302: `clr is` (common word, `"isolated".starts_with("is")`) does NOT trigger guard
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli;
@@ -604,5 +605,104 @@ fn bug_reproducer_215_run_help_dispatches_help()
   assert_eq!(
     out_run.trim(), String::from_utf8_lossy( &bare_help.stdout ).trim(),
     "`clr run help` output must be identical to `clr help`"
+  );
+}
+
+// ── BUG-302: prefix guard false-positive on short common words ───────────────
+
+/// BUG-302: `clr is` must NOT exit 1 via the unknown-subcommand guard.
+///
+/// ## Root Cause
+/// `guard_unknown_subcommand()` fired `"isolated".starts_with("is")` = true with
+/// no minimum-length gate on `first`, causing any two-letter word whose chars
+/// happen to start a subcommand name to trigger "Did you mean 'isolated'?".
+///
+/// ## Why Not Caught
+/// All guard tests exercised genuine typos (truncations, insertions).  No test
+/// verified that common short words with subcommand prefixes pass through.
+///
+/// ## Fix Applied
+/// Added `first.len() >= 4` to the `sub.starts_with(first)` branch; removed
+/// `first.starts_with(sub)` (morphological extensions are not typos; `is_close_typo`
+/// covers all 1-char edits including short truncations like "kil").
+///
+/// ## Prevention
+/// Every new subcommand name must be accompanied by false-positive tests for
+/// any common English word that shares a ≥2-char prefix with the new name.
+///
+/// ## Pitfall
+/// Removing `first.starts_with(sub)` does NOT break "pss" / "assk" detection:
+/// those are caught by `is_close_typo` (edit distance 1).  Short truncations like
+/// "kil" (len 3 < 4) are also caught by `is_close_typo`, not by `starts_with`.
+// test_kind: bug_reproducer(BUG-302)
+#[ test ]
+fn bug_reproducer_302_prefix_guard_false_positive_is()
+{
+  // "is" shares a 2-char prefix with "isolated" — must NOT trigger the guard.
+  let out    = run_cli( &[ "is", "it", "so?" ] );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "unknown subcommand" ),
+    "BUG-302: `clr is it so?` must not emit 'unknown subcommand'. stderr:\n{stderr}"
+  );
+  assert!(
+    out.status.code() != Some( 1 ) || !stderr.contains( "Did you mean" ),
+    "BUG-302: `clr is it so?` must not exit 1 via guard. stderr:\n{stderr}"
+  );
+}
+
+/// False-positive guard: short common words with subcommand prefixes must pass through.
+#[ test ]
+fn bug_reproducer_302_false_positive_prevention()
+{
+  // "is": prefix of "isolated".
+  for word in &[ "is", "asked", "running", "he", "a" ]
+  {
+    let out    = run_cli( &[ word, "--dry-run" ] );
+    let stderr = String::from_utf8_lossy( &out.stderr );
+    assert!(
+      !stderr.contains( "unknown subcommand" ),
+      "BUG-302: `clr {word}` must not be rejected by the guard. stderr:\n{stderr}"
+    );
+  }
+}
+
+/// True-positive guard: "kil" is a genuine truncation typo caught by `is_close_typo`.
+///
+/// After the BUG-302 fix, `"kill".starts_with("kil")` no longer fires because
+/// `"kil".len()` = 3 < 4 (below the new minimum-length threshold).  The guard
+/// still rejects "kil" via `is_close_typo("kil", "kill")` = true (deletion, `abs_diff=1`).
+#[ test ]
+fn bug_302_regression_kil_still_caught_by_close_typo()
+{
+  let out    = run_cli( &[ "kil" ] );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    out.status.code() == Some( 1 ),
+    "regression: `clr kil` must still exit 1 via is_close_typo after BUG-302 fix. stderr:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "Did you mean" ),
+    "regression: `clr kil` must still emit 'Did you mean'. stderr:\n{stderr}"
+  );
+}
+
+/// True-positive guard (IN-8): "isolat" is a genuine prefix truncation caught by
+/// `starts_with` with minimum-length threshold (`"isolat".len()` = 6 ≥ 4).
+///
+/// Confirms the BUG-302 fix does NOT break true-positive detection for subcommand
+/// truncations that satisfy the minimum-length requirement.
+#[ test ]
+fn bug_302_regression_isolat_still_caught_by_prefix()
+{
+  let out    = run_cli( &[ "isolat" ] );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    out.status.code() == Some( 1 ),
+    "regression (IN-8): `clr isolat` must still exit 1 via prefix guard after BUG-302 fix. stderr:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "Did you mean" ) && stderr.contains( "isolated" ),
+    "regression (IN-8): `clr isolat` must emit 'Did you mean ... isolated'. stderr:\n{stderr}"
   );
 }
