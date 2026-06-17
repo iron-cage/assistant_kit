@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Reference for version-namespace clvcommands.
+- **Purpose**: Reference for version-namespace clv commands.
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for all `.version.*` commands.
 - **In Scope**: `.version.show`, `.version.install`, `.version.guard`, `.version.list`, `.version.history`.
 - **Out of Scope**: Root commands (→ [root.md](root.md)), process commands (→ [processes.md](processes.md)), settings commands (→ [settings.md](settings.md)).
@@ -67,8 +67,8 @@ clv.version.show format::json
 
 | # | User Story | Persona |
 |---|-----------|---------|
-| 2 | [002 Version Upgrade](../user_story/002_version_upgrade.md) | Developer (version upgrade) |
-| 5 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
+| 1 | [002 Version Upgrade](../user_story/002_version_upgrade.md) | Developer (version upgrade) |
+| 2 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
 
 ---
 
@@ -156,8 +156,8 @@ clv.version.install version::latest
 
 | # | User Story | Persona |
 |---|-----------|---------|
-| 2 | [002 Version Upgrade](../user_story/002_version_upgrade.md) | Developer (version upgrade) |
-| 5 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
+| 1 | [002 Version Upgrade](../user_story/002_version_upgrade.md) | Developer (version upgrade) |
+| 2 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
 
 ---
 
@@ -247,8 +247,8 @@ clv.version.guard force::1
 
 | # | User Story | Persona |
 |---|-----------|---------|
-| 2 | [002 Version Upgrade](../user_story/002_version_upgrade.md) | Developer (version upgrade) |
-| 5 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
+| 1 | [002 Version Upgrade](../user_story/002_version_upgrade.md) | Developer (version upgrade) |
+| 2 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
 
 ---
 
@@ -316,7 +316,7 @@ clv.version.list format::json
 
 | # | User Story | Persona |
 |---|-----------|---------|
-| 5 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
+| 1 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
 
 ---
 
@@ -397,7 +397,7 @@ clv.version.history format::json count::5
 
 | # | User Story | Persona |
 |---|-----------|---------|
-| 2 | [002 Version Upgrade](../user_story/002_version_upgrade.md) | Developer (version upgrade) |
+| 1 | [002 Version Upgrade](../user_story/002_version_upgrade.md) | Developer (version upgrade) |
 
 ---
 

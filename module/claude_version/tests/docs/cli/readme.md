@@ -66,7 +66,7 @@
 - [`value::`](param/07_value.md)
 - [`interval::`](param/08_interval.md)
 - [`count::`](param/09_count.md)
-- [`.help`](param/10_help_param.md)
+- [`.help`](param/10_help.md)
 - [`scope::`](param/11_scope.md)
 - [`unset::`](param/12_unset.md)
 

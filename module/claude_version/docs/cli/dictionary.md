@@ -41,7 +41,8 @@
 | VersionSpec | Release target: `stable`, `month`, `latest`, or semver string (e.g., `1.2.3`) |
 | SettingsKey | JSON object key in `~/.claude/settings.json`; dot is literal, not a path separator |
 | SettingsValue | Value auto-typed for JSON: `"true"`/`"false"` -> bool, numbers -> number, else -> string |
-| ConfigScope | Write target for `.config`: `user` (default, `~/.claude/settings.json`) or `project` (`.claude/settings.local.json`) |
+| ConfigKey | Name of a config key in the 4-layer resolution chain — either a known catalog key (with env var mapping and catalog default) or an arbitrary user-defined key |
+| ConfigScope | Write target for `.config`: `user` (default, `~/.claude/settings.json`) or `project` (`{cwd}/.claude/settings.json`) |
 
 ### Architecture
 

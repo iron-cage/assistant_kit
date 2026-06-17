@@ -135,3 +135,20 @@ Acceptance tests for User Story 006. See [user_story/006_config_management.md](.
 - **Then:** exit 1; error message states `value::` and `unset::` are mutually exclusive; no file modified
 - **Exit:** 1
 - **Source:** [user_story/006 — AC10](../../../../docs/cli/user_story/006_config_management.md)
+
+---
+
+### Source Functions
+
+| Function | File |
+|----------|------|
+| `at01_006_config_show_all_source_annotations` | `integration/user_story_test.rs` |
+| `at02_006_config_single_key_shows_source` | `integration/user_story_test.rs` |
+| `at03_006_config_key_format_json` | `integration/user_story_test.rs` |
+| `at04_006_config_write_type_inference` | `integration/user_story_test.rs` |
+| `at05_006_config_write_project_scope` | `integration/user_story_test.rs` |
+| `at06_006_config_dry_run_no_write` | `integration/user_story_test.rs` |
+| `at07_006_config_unset_user_key` | `integration/user_story_test.rs` |
+| `at08_006_config_unset_project_key` | `integration/user_story_test.rs` |
+| `at09_006_config_type_inference` | `integration/user_story_test.rs` |
+| `at10_006_config_value_and_unset_exclusive` | `integration/user_story_test.rs` |

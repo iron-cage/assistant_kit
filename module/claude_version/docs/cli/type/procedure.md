@@ -20,7 +20,7 @@
    - Code examples
    - Cross-reference sections: Referenced Parameters → Referenced User Stories
 3. Update the `### All Types` index table in `readme.md`.
-4. Link the type from its parameter file (`### Referenced Types` table).
+4. Link the type from its parameter file (`### Referenced Type` table).
 5. Update `../readme.md` Completion Matrix if level changes.
 
 ---
@@ -41,4 +41,4 @@
 
 1. Delete the `NN_type_name.md` file.
 2. Remove the type row from the `### All Types` table in `readme.md`.
-3. Remove `### Referenced Types` link from the associated parameter file.
+3. Remove `### Referenced Type` link from the associated parameter file.

@@ -50,14 +50,3 @@ When `dry::1` and `force::1` are both present, `dry::` takes precedence:
 - `format::json` controls the structure of those fields
 - Combining them applies both transformations independently
 
-### Parameter Applicability
-
-`version::` applies to: [`.version.install`](command/version.md#command--4-versioninstall), [`.version.guard`](command/version.md#command--5-versionguard) (override-only on guard; stored preference unchanged).
-
-`dry::` applies to: [`.version.install`](command/version.md#command--4-versioninstall), [`.version.guard`](command/version.md#command--5-versionguard), [`.processes.kill`](command/processes.md#command--8-processeskill), [`.settings.set`](command/settings.md#command--11-settingsset).
-
-`force::` applies to: [`.version.install`](command/version.md#command--4-versioninstall), [`.version.guard`](command/version.md#command--5-versionguard), [`.processes.kill`](command/processes.md#command--8-processeskill).
-
-`v::` applies to: [`.status`](command/root.md#command--2-status), [`.version.show`](command/version.md#command--3-versionshow), [`.version.install`](command/version.md#command--4-versioninstall), [`.version.list`](command/version.md#command--6-versionlist), [`.version.guard`](command/version.md#command--5-versionguard), [`.version.history`](command/version.md#command--12-versionhistory), [`.processes`](command/processes.md#command--7-processes), [`.processes.kill`](command/processes.md#command--8-processeskill), [`.settings.show`](command/settings.md#command--9-settingsshow), [`.settings.get`](command/settings.md#command--10-settingsget).
-
-`format::` applies to: [`.status`](command/root.md#command--2-status), [`.version.show`](command/version.md#command--3-versionshow), [`.version.install`](command/version.md#command--4-versioninstall), [`.version.list`](command/version.md#command--6-versionlist), [`.version.guard`](command/version.md#command--5-versionguard), [`.version.history`](command/version.md#command--12-versionhistory), [`.processes`](command/processes.md#command--7-processes), [`.processes.kill`](command/processes.md#command--8-processeskill), [`.settings.show`](command/settings.md#command--9-settingsshow), [`.settings.get`](command/settings.md#command--10-settingsget).

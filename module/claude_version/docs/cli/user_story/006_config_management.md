@@ -22,8 +22,8 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.config`](../command/config.md#command--13-config) | Primary command: inspect and modify settings |
-| 2 | [`.help`](../command/root.md#command--1-help) | Provides discovery of config modes and parameters |
+| 1 | [`.help`](../command/root.md#command--1-help) | Provides discovery of config modes and parameters |
+| 2 | [`.config`](../command/config.md#command--13-config) | Primary command: inspect and modify settings |
 
 ### Referenced Formats
 
@@ -44,11 +44,11 @@
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`key::`](../param/06_key.md) | Identifies the setting key to read or write |
-| 2 | [`value::`](../param/07_value.md) | Provides the value to write with type inference |
-| 3 | [`scope::`](../param/11_scope.md) | Selects write target: user or project |
-| 4 | [`unset::`](../param/12_unset.md) | Deletes the key from target scope instead of writing |
-| 5 | [`dry::`](../param/02_dry.md) | Previews write or unset without modifying any file |
-| 6 | [`v::`](../param/04_v.md) | Controls diagnostic detail level |
-| 7 | [`format::`](../param/05_format.md) | Selects text or JSON rendering |
-| 8 | [`.help`](../param/10_help.md) | Universal help override for any command |
+| 1 | [`dry::`](../param/02_dry.md) | Previews write or unset without modifying any file |
+| 2 | [`v::`](../param/04_v.md) | Controls diagnostic detail level |
+| 3 | [`format::`](../param/05_format.md) | Selects text or JSON rendering |
+| 4 | [`key::`](../param/06_key.md) | Identifies the setting key to read or write |
+| 5 | [`value::`](../param/07_value.md) | Provides the value to write with type inference |
+| 6 | [`.help`](../param/10_help.md) | Universal help override for any command |
+| 7 | [`scope::`](../param/11_scope.md) | Selects write target: user or project |
+| 8 | [`unset::`](../param/12_unset.md) | Deletes the key from target scope instead of writing |

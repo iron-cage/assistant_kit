@@ -44,11 +44,11 @@ Field names are stable snake_case JSON keys. Common fields:
 | 3 | [`.version.install`](../command/version.md#command--4-versioninstall) |
 | 4 | [`.version.guard`](../command/version.md#command--5-versionguard) |
 | 5 | [`.version.list`](../command/version.md#command--6-versionlist) |
-| 6 | [`.version.history`](../command/version.md#command--12-versionhistory) |
-| 7 | [`.processes`](../command/processes.md#command--7-processes) |
-| 8 | [`.processes.kill`](../command/processes.md#command--8-processeskill) |
-| 9 | [`.settings.show`](../command/settings.md#command--9-settingsshow) |
-| 10 | [`.settings.get`](../command/settings.md#command--10-settingsget) |
+| 6 | [`.processes`](../command/processes.md#command--7-processes) |
+| 7 | [`.processes.kill`](../command/processes.md#command--8-processeskill) |
+| 8 | [`.settings.show`](../command/settings.md#command--9-settingsshow) |
+| 9 | [`.settings.get`](../command/settings.md#command--10-settingsget) |
+| 10 | [`.version.history`](../command/version.md#command--12-versionhistory) |
 | 11 | [`.config`](../command/config.md#command--13-config) |
 
 ### Referenced User Stories

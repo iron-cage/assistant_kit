@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Reference for the `.config` clvcommand.
+- **Purpose**: Reference for the `.config` clv command.
 - **Responsibility**: Command syntax, parameters, exit codes, examples, and cross-references for `.config`.
 - **In Scope**: `.config` (show-all / get / set / unset modes).
 - **Out of Scope**: Deprecated `.settings.*` commands (→ [settings.md](settings.md)), version commands (→ [version.md](version.md)), process commands (→ [processes.md](processes.md)).
@@ -35,7 +35,7 @@ clv.config [key::K] [value::V] [scope::SCOPE] [format::FMT] [v::N] [dry::1] [uns
 
 | Parameter | Type | Default | Required | Purpose |
 |-----------|------|---------|----------|---------|
-| [`key::`](../param/06_key.md) | [`SettingsKey`](../type/04_settings_key.md) | — | No | Setting key to read or write |
+| [`key::`](../param/06_key.md) | [`ConfigKey`](../type/07_config_key.md) | — | No | Config key to read or write |
 | [`value::`](../param/07_value.md) | [`SettingsValue`](../type/05_settings_value.md) | — | No | Value to write (type-inferred) |
 | [`scope::`](../param/11_scope.md) | [`ConfigScope`](../type/06_config_scope.md) | user | No | Write target: user or project |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
@@ -95,7 +95,7 @@ clv.config key::theme unset::1
 |---|-------|-----------|----------------|
 | 1 | [Output Control](../param_group/01_output_control.md) | Partial | `count::` |
 | 2 | [Execution Control](../param_group/02_execution_control.md) | Partial | `force::` |
-| 4 | [Config Identity](../param_group/04_config_identity.md) | Full | — |
+| 3 | [Config Identity](../param_group/04_config_identity.md) | Full | — |
 
 ### Related Commands
 

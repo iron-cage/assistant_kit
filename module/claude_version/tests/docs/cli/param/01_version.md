@@ -220,3 +220,11 @@ Edge case coverage for the `version::` parameter. See [param/readme.md](../../..
 | `tc016_version_param_empty_value` | `cli_args_test.rs` |
 | `tc028_four_part_semver_rejected` | `cli_args_test.rs` |
 | `tc029_leading_zero_semver_rejected` | `cli_args_test.rs` |
+| `version_ec7_latest_wrong_case_exits_1` | `integration/version_param_test.rs` |
+| `version_ec8_month_wrong_case_exits_1` | `integration/version_param_test.rs` |
+| `version_ec9_command_scope_rejects_on_processes` | `integration/version_param_test.rs` |
+| `version_ec10_stable_alias_dry` | `integration/version_param_test.rs` |
+| `version_ec11_month_alias_dry` | `integration/version_param_test.rs` |
+| `version_ec12_latest_alias_dry` | `integration/version_param_test.rs` |
+| `version_ec13_exact_semver_dry` | `integration/version_param_test.rs` |
+| `version_ec14_older_semver_dry` | `integration/version_param_test.rs` |

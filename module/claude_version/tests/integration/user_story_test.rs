@@ -6,6 +6,7 @@
 //! - `tests/docs/cli/user_story/003_process_lifecycle.md` (US-1 through US-6)
 //! - `tests/docs/cli/user_story/004_settings_management.md` (US-1 through US-6)
 //! - `tests/docs/cli/user_story/005_version_pinning.md` (US-1 through US-6)
+//! - `tests/docs/cli/user_story/006_config_management.md` (AT-1 through AT-10)
 
 use tempfile::TempDir;
 
@@ -406,4 +407,240 @@ fn us06_005_version_guard_drift_watch()
     &[],
   );
   assert_exit( &out, 0 );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// US-006: Config Management
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// AT-1: `.config` shows all settings with source annotations
+#[ test ]
+fn at01_006_config_show_all_source_annotations()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
+
+  let out = run_clm_with_env(
+    &[ ".config" ],
+    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(user)" ) || text.contains( "(default)" ),
+    "show-all must include source annotations: {text}"
+  );
+  assert!( text.contains( "theme" ), "show-all must include written key: {text}" );
+}
+
+/// AT-2: `.config key::theme` shows effective value with source layer `[user]`
+#[ test ]
+fn at02_006_config_single_key_shows_source()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
+
+  let out = run_clm_with_env(
+    &[ ".config", "key::theme" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "dark" ), "must show effective value: {text}" );
+  assert!( text.contains( "(user)" ), "must annotate with source (user): {text}" );
+}
+
+/// AT-3: `.config key::theme format::json` returns value as JSON
+#[ test ]
+fn at03_006_config_key_format_json()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
+
+  let out = run_clm_with_env(
+    &[ ".config", "key::theme", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.trim_start().starts_with( '{' ), "JSON output must start with {{: {text}" );
+  assert!( text.contains( "dark" ), "JSON must contain effective value: {text}" );
+}
+
+/// AT-4: `.config key::theme value::dark` writes with type inference
+#[ test ]
+fn at04_006_config_write_type_inference()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_clm_with_env(
+    &[ ".config", "key::theme", "value::dark" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let content = std::fs::read_to_string(
+    dir.path().join( ".claude/settings.json" )
+  ).unwrap();
+  assert!( content.contains( "\"theme\"" ), "must write theme key: {content}" );
+  assert!( content.contains( "dark" ), "must write value dark: {content}" );
+}
+
+/// AT-5: `.config key::theme value::dark scope::project` writes to project settings
+#[ test ]
+fn at05_006_config_write_project_scope()
+{
+  let home_dir    = TempDir::new().unwrap();
+  let project_dir = TempDir::new().unwrap();
+  let home        = home_dir.path().to_str().unwrap();
+
+  let bin = env!( "CARGO_BIN_EXE_claude_version" );
+  let out = std::process::Command::new( bin )
+    .args( [ ".config", "key::theme", "value::dark", "scope::project" ] )
+    .env( "HOME", home )
+    .current_dir( project_dir.path() )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let proj_settings = project_dir.path().join( ".claude/settings.json" );
+  assert!( proj_settings.exists(), "project settings.json must be created" );
+  let content = std::fs::read_to_string( &proj_settings ).unwrap();
+  assert!( content.contains( "dark" ), "project settings must contain written value: {content}" );
+  // User settings must NOT be modified
+  assert!(
+    !home_dir.path().join( ".claude/settings.json" ).exists(),
+    "user settings must not be created by scope::project write"
+  );
+}
+
+/// AT-6: `.config key::theme value::dark dry::1` previews without writing
+#[ test ]
+fn at06_006_config_dry_run_no_write()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[ ( "theme", "light" ) ] );
+
+  let out = run_clm_with_env(
+    &[ ".config", "key::theme", "value::dark", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "[dry-run]" ), "must show [dry-run] preview: {text}" );
+  let content = std::fs::read_to_string(
+    dir.path().join( ".claude/settings.json" )
+  ).unwrap();
+  assert!( content.contains( "light" ), "settings.json must remain unchanged after dry-run: {content}" );
+}
+
+/// AT-7: `.config key::theme unset::1` removes key from user settings
+#[ test ]
+fn at07_006_config_unset_user_key()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[ ( "theme", "dark" ), ( "autoUpdates", "true" ) ] );
+
+  let out = run_clm_with_env(
+    &[ ".config", "key::theme", "unset::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let content = std::fs::read_to_string(
+    dir.path().join( ".claude/settings.json" )
+  ).unwrap();
+  assert!( !content.contains( "\"theme\"" ), "theme key must be removed: {content}" );
+}
+
+/// AT-8: `.config key::model unset::1 scope::project` removes from project settings
+#[ test ]
+fn at08_006_config_unset_project_key()
+{
+  let home_dir    = TempDir::new().unwrap();
+  let project_dir = TempDir::new().unwrap();
+  let home        = home_dir.path().to_str().unwrap();
+
+  // Create project settings with a model key to remove
+  let proj_claude = project_dir.path().join( ".claude" );
+  std::fs::create_dir_all( &proj_claude ).unwrap();
+  std::fs::write(
+    proj_claude.join( "settings.json" ),
+    r#"{"model":"claude-opus-4-6"}"#,
+  ).unwrap();
+
+  let bin = env!( "CARGO_BIN_EXE_claude_version" );
+  let out = std::process::Command::new( bin )
+    .args( [ ".config", "key::model", "unset::1", "scope::project" ] )
+    .env( "HOME", home )
+    .current_dir( project_dir.path() )
+    .output()
+    .unwrap();
+  assert_exit( &out, 0 );
+  let content = std::fs::read_to_string( proj_claude.join( "settings.json" ) ).unwrap();
+  assert!( !content.contains( "\"model\"" ), "model must be removed from project settings: {content}" );
+  // User settings must remain unaffected
+  assert!(
+    !home_dir.path().join( ".claude/settings.json" ).exists(),
+    "user settings must not be modified by project unset"
+  );
+}
+
+/// AT-9: type inference — "true" → bool, "42" → number, "hello" → string
+#[ test ]
+fn at09_006_config_type_inference()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  assert_exit( &run_clm_with_env(
+    &[ ".config", "key::enabled", "value::true" ],
+    &[ ( "HOME", home ) ],
+  ), 0 );
+  assert_exit( &run_clm_with_env(
+    &[ ".config", "key::count", "value::42" ],
+    &[ ( "HOME", home ) ],
+  ), 0 );
+  assert_exit( &run_clm_with_env(
+    &[ ".config", "key::label", "value::hello" ],
+    &[ ( "HOME", home ) ],
+  ), 0 );
+
+  let content = std::fs::read_to_string(
+    dir.path().join( ".claude/settings.json" )
+  ).unwrap();
+  assert!(
+    content.contains( "\"enabled\": true" ) || content.contains( "\"enabled\":true" ),
+    "true must be stored as boolean not string: {content}"
+  );
+  assert!(
+    content.contains( "\"count\": 42" ) || content.contains( "\"count\":42" ),
+    "42 must be stored as number not string: {content}"
+  );
+  assert!(
+    content.contains( "\"label\": \"hello\"" ) || content.contains( "\"label\":\"hello\"" ),
+    "hello must be stored as quoted string: {content}"
+  );
+}
+
+/// AT-10: `value::V unset::1` → exit 1 (mutually exclusive params)
+#[ test ]
+fn at10_006_config_value_and_unset_exclusive()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_clm_with_env(
+    &[ ".config", "key::theme", "value::dark", "unset::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  // No file must be created on error
+  assert!(
+    !dir.path().join( ".claude/settings.json" ).exists(),
+    "settings.json must not be created when command fails"
+  );
 }

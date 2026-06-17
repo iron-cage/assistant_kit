@@ -214,3 +214,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 | `tc448_version_history_count_abc_exits_1` | `integration/read_commands_test.rs` |
 | `tc487_count_u64_max_rejected_with_clear_error` | `cli_args_test.rs` |
 | `tc488_count_i64_max_accepted` | `cli_args_test.rs` |
+| `count_ec12_count_3_at_most_3_entries` | `integration/count_param_test.rs` |
+| `count_ec13_count_1_v0_exactly_one_line` | `integration/count_param_test.rs` |
+| `count_ec14_count_0_json_empty_array` | `integration/count_param_test.rs` |
+| `count_ec15_v_abc_type_mismatch_exits_1` | `integration/count_param_test.rs` |

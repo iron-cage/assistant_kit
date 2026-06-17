@@ -28,12 +28,12 @@ clv.version.install .help    # still shows help, ignores install
 | 4 | [`.version.install`](../command/version.md#command--4-versioninstall) |
 | 5 | [`.version.guard`](../command/version.md#command--5-versionguard) |
 | 6 | [`.version.list`](../command/version.md#command--6-versionlist) |
-| 7 | [`.version.history`](../command/version.md#command--12-versionhistory) |
-| 8 | [`.processes`](../command/processes.md#command--7-processes) |
-| 9 | [`.processes.kill`](../command/processes.md#command--8-processeskill) |
-| 10 | [`.settings.show`](../command/settings.md#command--9-settingsshow) |
-| 11 | [`.settings.get`](../command/settings.md#command--10-settingsget) |
-| 12 | [`.settings.set`](../command/settings.md#command--11-settingsset) |
+| 7 | [`.processes`](../command/processes.md#command--7-processes) |
+| 8 | [`.processes.kill`](../command/processes.md#command--8-processeskill) |
+| 9 | [`.settings.show`](../command/settings.md#command--9-settingsshow) |
+| 10 | [`.settings.get`](../command/settings.md#command--10-settingsget) |
+| 11 | [`.settings.set`](../command/settings.md#command--11-settingsset) |
+| 12 | [`.version.history`](../command/version.md#command--12-versionhistory) |
 | 13 | [`.config`](../command/config.md#command--13-config) |
 
 ### Referenced User Stories

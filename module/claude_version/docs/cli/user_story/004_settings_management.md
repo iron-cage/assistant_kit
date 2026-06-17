@@ -18,10 +18,10 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.settings.show`](../command/settings.md#command--9-settingsshow) | Displays all current settings key-value pairs |
-| 2 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Reads a specific setting value by key |
-| 3 | [`.settings.set`](../command/settings.md#command--11-settingsset) | Writes a setting with type inference and atomic rename |
-| 4 | [`.help`](../command/root.md#command--1-help) | Provides discovery of available commands |
+| 1 | [`.help`](../command/root.md#command--1-help) | Provides discovery of available commands |
+| 2 | [`.settings.show`](../command/settings.md#command--9-settingsshow) | Displays all current settings key-value pairs |
+| 3 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Reads a specific setting value by key |
+| 4 | [`.settings.set`](../command/settings.md#command--11-settingsset) | Writes a setting with type inference and atomic rename |
 
 ### Referenced Formats
 
@@ -34,16 +34,16 @@
 
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 1 | [Execution Control](../param_group/02_execution_control.md) | Controls dry-run behavior for .settings.set |
-| 2 | [Output Control](../param_group/01_output_control.md) | Controls verbosity and output format |
+| 1 | [Output Control](../param_group/01_output_control.md) | Controls verbosity and output format |
+| 2 | [Execution Control](../param_group/02_execution_control.md) | Controls dry-run behavior for .settings.set |
 | 3 | [Settings Identity](../param_group/03_settings_identity.md) | Identifies the setting key and value to read or write |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`key::`](../param/06_key.md) | Identifies the setting key to read or write |
-| 2 | [`value::`](../param/07_value.md) | Provides the value to write with type inference |
-| 3 | [`dry::`](../param/02_dry.md) | Previews write without modifying the file |
-| 4 | [`v::`](../param/04_v.md) | Controls diagnostic detail level |
-| 5 | [`format::`](../param/05_format.md) | Selects text or JSON rendering |
+| 1 | [`dry::`](../param/02_dry.md) | Previews write without modifying the file |
+| 2 | [`v::`](../param/04_v.md) | Controls diagnostic detail level |
+| 3 | [`format::`](../param/05_format.md) | Selects text or JSON rendering |
+| 4 | [`key::`](../param/06_key.md) | Identifies the setting key to read or write |
+| 5 | [`value::`](../param/07_value.md) | Provides the value to write with type inference |

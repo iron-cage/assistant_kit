@@ -12,3 +12,4 @@
 | Name | Purpose | Status |
 |------|---------|--------|
 | 01_design_decisions.md | DD- test cases verifying key design decisions are implemented correctly | ✅ |
+| procedure.md | Workflow for creating and updating collection test specs | ✅ |

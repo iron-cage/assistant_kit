@@ -42,6 +42,11 @@
 //! | TC-122 | `.version.list` includes "month" alias | P | 0 |
 //! | TC-123 | `.version.list v::1` shows pinned version in parens | P | 0 |
 //! | TC-124 | `.version.list format::json` has "value" field | P | 0 |
+//! | IT-4 | `bogus::x` → exit 1, unknown parameter | N | 1 |
+//! | IT-5 | `format::xml` → exit 1, unknown format | N | 1 |
+//! | IT-6 | `v::3` → exit 1, out of range | N | 1 |
+//! | IT-7 | `format::json` → valid JSON output | P | 0 |
+//! | IT-8 | Output stable across 3 invocations | P | 0 |
 //!
 //! ## E6 — `.processes`
 //! | TC | Description | P/N | Exit |
@@ -61,6 +66,10 @@
 //! | TC-167 | `.settings.show format::json` → valid JSON | P | 0 |
 //! | TC-170 | `.settings.show` malformed file → exit 2 | N | 2 |
 //! | TC-171 | `.settings.show` HOME not set → exit 2 | N | 2 |
+//! | IT-5 | `bogus::x` → exit 1, unknown parameter | N | 1 |
+//! | IT-6 | `format::xml` → exit 1, unknown format | N | 1 |
+//! | IT-7 | `v::3` → exit 1, out of range | N | 1 |
+//! | IT-8 | stdout non-empty; stderr empty | P | 0 |
 //!
 //! ## E9 — `.settings.get`
 //! | TC | Description | P/N | Exit |
@@ -230,12 +239,14 @@ fn tc104_status_v0_fewer_lines_than_v1()
 #[ test ]
 fn tc105_status_no_home_shows_unknown_account()
 {
-  let out = run_clm_with_env( &[ ".status" ], &[ ( "HOME", "" ) ] );
+  // get_active_account() checks $PRO before $HOME; both must be cleared to force
+  // "unknown" — clearing only HOME still resolves the account via $PRO on dev machines.
+  let out = run_clm_with_env( &[ ".status" ], &[ ( "HOME", "" ), ( "PRO", "" ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
     text.contains( "unknown" ),
-    "expected 'unknown' account with no HOME, got: {text}"
+    "expected 'unknown' account with no HOME or PRO, got: {text}"
   );
 }
 
@@ -402,6 +413,61 @@ fn tc124_version_list_json_has_value_field()
   assert!( text.contains( "\"value\"" ), "JSON must have 'value' field for pinned aliases: {text}" );
 }
 
+// IT-4: `bogus::x` → exit 1, unknown parameter
+#[ test ]
+fn it04_version_list_bogus_param_exits_1()
+{
+  let out = run_clm( &[ ".version.list", "bogus::x" ] );
+  assert_exit( &out, 1 );
+}
+
+// IT-5: `format::xml` → exit 1, unknown format
+#[ test ]
+fn it05_version_list_format_xml_exits_1()
+{
+  let out = run_clm( &[ ".version.list", "format::xml" ] );
+  assert_exit( &out, 1 );
+}
+
+// IT-6: `v::3` → exit 1, out of range
+#[ test ]
+fn it06_version_list_v3_exits_1()
+{
+  let out = run_clm( &[ ".version.list", "v::3" ] );
+  assert_exit( &out, 1 );
+}
+
+// IT-7: `format::json` → valid JSON output (starts with `[` or `{`)
+#[ test ]
+fn it07_version_list_format_json_valid()
+{
+  let out = run_clm( &[ ".version.list", "format::json" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let t = text.trim_start();
+  assert!(
+    t.starts_with( '[' ) || t.starts_with( '{' ),
+    "format::json output must be valid JSON array or object: {text}"
+  );
+}
+
+// IT-8: output is stable across 3 successive invocations
+#[ test ]
+fn it08_version_list_output_stable()
+{
+  let out1 = run_clm( &[ ".version.list" ] );
+  let out2 = run_clm( &[ ".version.list" ] );
+  let out3 = run_clm( &[ ".version.list" ] );
+  assert_exit( &out1, 0 );
+  assert_exit( &out2, 0 );
+  assert_exit( &out3, 0 );
+  let t1 = stdout( &out1 );
+  let t2 = stdout( &out2 );
+  let t3 = stdout( &out3 );
+  assert_eq!( t1, t2, "version.list must be deterministic on consecutive calls" );
+  assert_eq!( t2, t3, "version.list must be deterministic on consecutive calls" );
+}
+
 // ─── E6: processes ────────────────────────────────────────────────────────────
 
 // TC-137
@@ -544,6 +610,44 @@ fn tc171_settings_show_no_home_exits_2()
 {
   let out = run_clm_with_env( &[ ".settings.show" ], &[ ( "HOME", "" ) ] );
   assert_exit( &out, 2 );
+}
+
+// IT-5: `bogus::x` → exit 1 (unknown parameter)
+#[ test ]
+fn it05_settings_show_bogus_param_exits_1()
+{
+  let out = run_clm( &[ ".settings.show", "bogus::x" ] );
+  assert_exit( &out, 1 );
+}
+
+// IT-6: `format::xml` → exit 1 (unknown format)
+#[ test ]
+fn it06_settings_show_format_xml_exits_1()
+{
+  let out = run_clm( &[ ".settings.show", "format::xml" ] );
+  assert_exit( &out, 1 );
+}
+
+// IT-7: `v::3` → exit 1 (out of range)
+#[ test ]
+fn it07_settings_show_v3_exits_1()
+{
+  let out = run_clm( &[ ".settings.show", "v::3" ] );
+  assert_exit( &out, 1 );
+}
+
+// IT-8: stdout is non-empty; stderr is empty on successful invocation
+#[ test ]
+fn it08_settings_show_stdout_only()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
+
+  let out = run_clm_with_env( &[ ".settings.show" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  assert!( !stdout( &out ).is_empty(), "stdout must be non-empty for valid settings" );
+  assert!( stderr( &out ).is_empty(), "stderr must be empty on success: {}", stderr( &out ) );
 }
 
 // ─── E9: settings get ────────────────────────────────────────────────────────

@@ -35,11 +35,11 @@ clv .processes format::json v::2
 | 3 | [`.version.install`](../command/version.md#command--4-versioninstall) | Partial (`v::`, `format::`) |
 | 4 | [`.version.guard`](../command/version.md#command--5-versionguard) | Partial (`v::`, `format::`) |
 | 5 | [`.version.list`](../command/version.md#command--6-versionlist) | Partial (`v::`, `format::`) |
-| 6 | [`.version.history`](../command/version.md#command--12-versionhistory) | Full (`v::`, `format::`, `count::`) |
-| 7 | [`.processes`](../command/processes.md#command--7-processes) | Partial (`v::`, `format::`) |
-| 8 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Partial (`v::`, `format::`) |
-| 9 | [`.settings.show`](../command/settings.md#command--9-settingsshow) | Partial (`v::`, `format::`) |
-| 10 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Partial (`v::`, `format::`) |
+| 6 | [`.processes`](../command/processes.md#command--7-processes) | Partial (`v::`, `format::`) |
+| 7 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Partial (`v::`, `format::`) |
+| 8 | [`.settings.show`](../command/settings.md#command--9-settingsshow) | Partial (`v::`, `format::`) |
+| 9 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Partial (`v::`, `format::`) |
+| 10 | [`.version.history`](../command/version.md#command--12-versionhistory) | Full (`v::`, `format::`, `count::`) |
 | 11 | [`.config`](../command/config.md#command--13-config) | Partial (`v::`, `format::`) |
 
 ### Referenced User Stories

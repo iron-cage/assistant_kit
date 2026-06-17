@@ -13,6 +13,12 @@
 |------|---------------|
 | readme.md | Index, scope, and Overview Table for user story instances |
 | procedure.md | Steps for adding, updating, or removing user story instances |
+| 001_environment_check.md | Verify environment state at a glance |
+| 002_version_upgrade.md | Upgrade installed Claude Code version |
+| 003_process_lifecycle.md | Inspect and terminate running processes |
+| 004_settings_management.md | Read and write settings via deprecated commands |
+| 005_version_pinning.md | Pin team-wide Claude Code version |
+| 006_config_management.md | Inspect and modify config via `.config` |
 
 ### Overview Table
 

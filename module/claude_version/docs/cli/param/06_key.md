@@ -32,11 +32,12 @@ clv.settings.set key::theme value::dark
 | 1 | [Settings Identity](../param_group/03_settings_identity.md) |
 | 2 | [Config Identity](../param_group/04_config_identity.md) |
 
-### Referenced Types
+### Referenced Type
 
 | # | Type |
 |---|------|
 | 1 | [`SettingsKey`](../type/04_settings_key.md) |
+| 2 | [`ConfigKey`](../type/07_config_key.md) |
 
 ### Referenced User Stories
 

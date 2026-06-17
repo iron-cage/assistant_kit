@@ -1,10 +1,10 @@
 //! Integration tests for the `.config` command.
 //!
 //! Implements test cases from:
-//! - `tests/docs/cli/command/013_config.md` (IT-1 through IT-17)
+//! - `tests/docs/cli/command/13_config.md` (IT-1 through IT-17)
 //! - `tests/docs/feature/006_config_command.md` (FT-01 through FT-12)
-//! - `tests/docs/cli/type/006_config_scope.md` (TC-1 through TC-6)
-//! - `tests/docs/cli/type/007_config_key.md` (TC-1 through TC-6)
+//! - `tests/docs/cli/type/06_config_scope.md` (TC-1 through TC-6)
+//! - `tests/docs/cli/type/07_config_key.md` (TC-1 through TC-6)
 //!
 //! # Test Matrix (IT)
 //!
@@ -654,7 +654,7 @@ fn ft12_006_config_catalog_default_model()
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ConfigScope type tests (tests/docs/cli/type/006_config_scope.md)
+// ConfigScope type tests (tests/docs/cli/type/06_config_scope.md)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ─── TC-1: scope::user accepted ──────────────────────────────────────────────
@@ -765,7 +765,7 @@ fn tc06_006_scope_empty_exits_1()
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ConfigKey type tests (tests/docs/cli/type/007_config_key.md)
+// ConfigKey type tests (tests/docs/cli/type/07_config_key.md)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ─── TC-1: key::model → catalog key resolves default ─────────────────────────

@@ -4,43 +4,43 @@
 
 ```
 docs/
-├── algorithm/            — 2 instances
+├── algorithm/
 ├── cli/
 │   ├── command/          — namespace, governed by cli_doc_des.rulebook.md
-│   ├── format/           — 2 instances
+│   ├── format/
 │   ├── param/
 │   ├── param_group/
 │   ├── type/
-│   └── user_story/       — 5 instances
-├── collection/           — 1 instance
-├── feature/              — 6 instances
-├── pattern/              — 1 instance
-└── pitfall/              — 2 instances
+│   └── user_story/
+├── collection/
+├── feature/
+├── pattern/
+└── pitfall/
 ```
 
 ## Master Doc Entities Table
 
-| Type | Purpose | Master File | Instances |
-|------|---------|-------------|----------:|
-| `algorithm/` | Documented algorithms with step-by-step procedures | [algorithm/readme.md](algorithm/readme.md) | 2 |
-| `cli/` | CLI reference: commands, parameters, types, groups | [cli/readme.md](cli/readme.md) | 8 |
-| `collection/` | Design decision registry | [collection/readme.md](collection/readme.md) | 1 |
-| `feature/` | Behavioral requirements for claude_version capabilities | [feature/readme.md](feature/readme.md) | 6 |
-| `format/` | Named output format catalog | [cli/format/readme.md](cli/format/readme.md) | 2 |
-| `pattern/` | Reusable design patterns applied in the crate | [pattern/readme.md](pattern/readme.md) | 1 |
-| `pitfall/` | Confirmed design traps discovered through implementation | [pitfall/readme.md](pitfall/readme.md) | 2 |
-| `tests/docs/algorithm/` | Per-algorithm test case specifications | [../../tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) | 2 |
-| `tests/docs/cli/command/` | Per-command test case specifications | [../../tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 13 |
-| `tests/docs/cli/format/` | Per-format output rendering test specifications | [../../tests/docs/cli/format/readme.md](../../tests/docs/cli/format/readme.md) | 2 |
-| `tests/docs/cli/param/` | Per-parameter edge case test specifications | [../../tests/docs/cli/param/readme.md](../../tests/docs/cli/param/readme.md) | 12 |
-| `tests/docs/cli/param_group/` | Per-group interaction test specifications | [../../tests/docs/cli/param_group/readme.md](../../tests/docs/cli/param_group/readme.md) | 4 |
-| `tests/docs/cli/type/` | Per-type test case specifications | [../../tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) | 7 |
-| `tests/docs/cli/user_story/` | Per-user-story acceptance test specifications | [../../tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) | 5 |
-| `tests/docs/collection/` | Per-decision implementation test case specifications | [../../tests/docs/collection/readme.md](../../tests/docs/collection/readme.md) | 1 |
-| `tests/docs/feature/` | Per-feature test case specifications | [../../tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 6 |
-| `tests/docs/pattern/` | Per-pattern test case specifications | [../../tests/docs/pattern/readme.md](../../tests/docs/pattern/readme.md) | 1 |
-| `tests/docs/pitfall/` | Per-pitfall regression test case specifications | [../../tests/docs/pitfall/readme.md](../../tests/docs/pitfall/readme.md) | 2 |
-| `user_story/` | User story catalog with persona-goal scenarios | [cli/user_story/readme.md](cli/user_story/readme.md) | 5 |
+| Type | Purpose | Master File |
+|------|---------|-------------|
+| `algorithm/` | Documented algorithms with step-by-step procedures | [algorithm/readme.md](algorithm/readme.md) |
+| `cli/` | CLI reference: commands, parameters, types, groups | [cli/readme.md](cli/readme.md) |
+| `cli/format/` | Named output format catalog | [cli/format/readme.md](cli/format/readme.md) |
+| `cli/user_story/` | User story catalog with persona-goal scenarios | [cli/user_story/readme.md](cli/user_story/readme.md) |
+| `collection/` | Design decision registry | [collection/readme.md](collection/readme.md) |
+| `feature/` | Behavioral requirements for claude_version capabilities | [feature/readme.md](feature/readme.md) |
+| `pattern/` | Reusable design patterns applied in the crate | [pattern/readme.md](pattern/readme.md) |
+| `pitfall/` | Confirmed design traps discovered through implementation | [pitfall/readme.md](pitfall/readme.md) |
+| `tests/docs/algorithm/` | Per-algorithm test case specifications | [../../tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) |
+| `tests/docs/cli/command/` | Per-command test case specifications | [../../tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) |
+| `tests/docs/cli/format/` | Per-format output rendering test specifications | [../../tests/docs/cli/format/readme.md](../../tests/docs/cli/format/readme.md) |
+| `tests/docs/cli/param/` | Per-parameter edge case test specifications | [../../tests/docs/cli/param/readme.md](../../tests/docs/cli/param/readme.md) |
+| `tests/docs/cli/param_group/` | Per-group interaction test specifications | [../../tests/docs/cli/param_group/readme.md](../../tests/docs/cli/param_group/readme.md) |
+| `tests/docs/cli/type/` | Per-type test case specifications | [../../tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) |
+| `tests/docs/cli/user_story/` | Per-user-story acceptance test specifications | [../../tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) |
+| `tests/docs/collection/` | Per-decision implementation test case specifications | [../../tests/docs/collection/readme.md](../../tests/docs/collection/readme.md) |
+| `tests/docs/feature/` | Per-feature test case specifications | [../../tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) |
+| `tests/docs/pattern/` | Per-pattern test case specifications | [../../tests/docs/pattern/readme.md](../../tests/docs/pattern/readme.md) |
+| `tests/docs/pitfall/` | Per-pitfall regression test case specifications | [../../tests/docs/pitfall/readme.md](../../tests/docs/pitfall/readme.md) |
 
 ## Master Doc Instances Table
 
@@ -73,3 +73,4 @@ docs/
 | user_story | 003 | Process Lifecycle | ✅ | [cli/user_story/003_process_lifecycle.md](cli/user_story/003_process_lifecycle.md) |
 | user_story | 004 | Settings Management | ✅ | [cli/user_story/004_settings_management.md](cli/user_story/004_settings_management.md) |
 | user_story | 005 | Version Pinning | ✅ | [cli/user_story/005_version_pinning.md](cli/user_story/005_version_pinning.md) |
+| user_story | 006 | Config Management | ✅ | [cli/user_story/006_config_management.md](cli/user_story/006_config_management.md) |

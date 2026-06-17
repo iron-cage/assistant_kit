@@ -80,6 +80,9 @@
 //! | 332 | `key::""` (empty key) → exit 1 | N | 1 |
 //! | 333 | adds new key to existing file | P | 0 |
 //! | 334 | `dry::1` + `value::` empty → exit 1 (validation before dry-run) | N | 1 |
+//! | IT-4 | `dry::2` → exit 1, out-of-range boolean | N | 1 |
+//! | IT-5 | `bogus::x` → exit 1, unknown param | N | 1 |
+//! | IT-6 | `key::foo` without `value::` → exit 1, value required | N | 1 |
 //!
 //!
 //! # Lessons Learned
@@ -1250,4 +1253,42 @@ fn tc_settings_value_nan_as_string()
     dir.path().join( ".claude/settings.json" )
   ).unwrap();
   assert!( content.contains( "\"special\": \"NaN\"" ), "NaN must be stored as string: {content}" );
+}
+
+// ─── settings.set IT-4..IT-6: negative edge cases ────────────────────────────
+
+// IT-4: `dry::2` → exit 1 (out-of-range boolean value)
+#[ test ]
+fn it04_settings_set_dry2_exits_1()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_clm_with_env(
+    &[ ".settings.set", "key::k", "value::v", "dry::2" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+}
+
+// IT-5: `bogus::x` → exit 1 (unknown parameter)
+#[ test ]
+fn it05_settings_set_bogus_param_exits_1()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_clm_with_env(
+    &[ ".settings.set", "key::k", "value::v", "bogus::x" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+}
+
+// IT-6: `key::foo` without `value::` → exit 1 (value required)
+#[ test ]
+fn it06_settings_set_key_without_value_exits_1()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_clm_with_env(
+    &[ ".settings.set", "key::foo" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
 }

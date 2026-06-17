@@ -13,3 +13,4 @@
 |------|---------|--------|
 | 01_text.md | FM- test cases for human-readable text format rendering | ✅ |
 | 02_json.md | FM- test cases for machine-readable JSON format rendering | ✅ |
+| procedure.md | Workflow for creating and updating format test specs | ✅ |

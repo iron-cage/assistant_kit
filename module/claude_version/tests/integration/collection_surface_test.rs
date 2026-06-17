@@ -49,8 +49,12 @@ fn dd02_001_last_v_wins()
 #[ test ]
 fn dd03_001_cmd_not_implemented_exit2()
 {
-  // Clearing PATH means get_installed_version() returns None → InternalError → exit 2
-  let out = run_clm_with_env( &[ ".version.show" ], &[ ( "PATH", "" ) ] );
+  // get_installed_version() has two paths:
+  //   1. get_version_from_symlink() — reads $HOME/.local/bin/claude (no PATH needed)
+  //   2. get_claude_version_raw()   — runs `bash -c "claude --version"` (needs PATH)
+  // Clearing PATH alone is insufficient when a symlink exists; HOME must also be cleared
+  // so that get_version_from_symlink() fails, guaranteeing InternalError → exit 2.
+  let out = run_clm_with_env( &[ ".version.show" ], &[ ( "HOME", "" ), ( "PATH", "" ) ] );
   assert_exit( &out, 2 );
 }
 

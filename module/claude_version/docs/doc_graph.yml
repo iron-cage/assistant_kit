@@ -1,8 +1,8 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_version
-  node_count: 23
-  edge_count: 48
-  component_count: 1
+  node_count: 28
+  edge_count: 61
+  component_count: 3
   generated: 2026-06-16
 
 nodes:
@@ -22,7 +22,7 @@ nodes:
     entity: cli
 
   - id: cli/002
-    file: cli/002_dictionary.md
+    file: cli/dictionary.md
     label: Dictionary
     entity: cli
 
@@ -45,6 +45,31 @@ nodes:
     file: cli/type/readme.md
     label: Types
     entity: cli
+
+  - id: cli/007
+    file: cli/env_param.md
+    label: Environment Parameters
+    entity: cli
+
+  - id: cli/008
+    file: cli/config_param.md
+    label: Config Parameters
+    entity: cli
+
+  - id: user_story/006
+    file: cli/user_story/006_config_management.md
+    label: "US: Config Management"
+    entity: user_story
+
+  - id: format/01
+    file: cli/format/01_text.md
+    label: Text Format
+    entity: format
+
+  - id: format/02
+    file: cli/format/02_json.md
+    label: JSON Format
+    entity: format
 
   - id: collection/001
     file: collection/001_design_decisions.md
@@ -312,7 +337,57 @@ edges:
     to: cli/005
     via: references
 
-  # user_story/001-005 → commands
+  # format/01 Text Format → user stories
+  - from: format/01
+    to: user_story/001
+    via: user_stories
+
+  - from: format/01
+    to: user_story/002
+    via: user_stories
+
+  - from: format/01
+    to: user_story/003
+    via: user_stories
+
+  - from: format/01
+    to: user_story/004
+    via: user_stories
+
+  - from: format/01
+    to: user_story/005
+    via: user_stories
+
+  - from: format/01
+    to: user_story/006
+    via: user_stories
+
+  # format/02 JSON Format → user stories
+  - from: format/02
+    to: user_story/001
+    via: user_stories
+
+  - from: format/02
+    to: user_story/002
+    via: user_stories
+
+  - from: format/02
+    to: user_story/003
+    via: user_stories
+
+  - from: format/02
+    to: user_story/004
+    via: user_stories
+
+  - from: format/02
+    to: user_story/005
+    via: user_stories
+
+  - from: format/02
+    to: user_story/006
+    via: user_stories
+
+  # user_story/001-006 → commands
   - from: user_story/001
     to: cli/001
     via: commands
@@ -333,10 +408,14 @@ edges:
     to: cli/001
     via: commands
 
+  - from: user_story/006
+    to: cli/001
+    via: commands
+
 components:
   - id: 1
     label: Main corpus
-    size: 23
+    size: 26
     isolated: false
     nodes:
       - algorithm/001
@@ -354,6 +433,8 @@ components:
       - feature/004
       - feature/005
       - feature/006
+      - format/01
+      - format/02
       - pattern/001
       - pitfall/001
       - pitfall/002
@@ -362,5 +443,20 @@ components:
       - user_story/003
       - user_story/004
       - user_story/005
+      - user_story/006
+
+  - id: 2
+    label: Environment Parameters
+    size: 1
+    isolated: true
+    nodes:
+      - cli/007
+
+  - id: 3
+    label: Config Parameters
+    size: 1
+    isolated: true
+    nodes:
+      - cli/008
 
 dangling_refs: []

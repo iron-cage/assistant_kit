@@ -52,6 +52,29 @@
 //! | TC-494 | `dry::1 dry::0` last-wins → `dry::0` wins, file actually written | P |
 //! | TC-495 | `format::text format::json` last-wins → json output | P |
 //!
+//! ## Spec Edge Case Tests (EC-N)
+//!
+//! | Function | Spec | Description | Kind |
+//! |----------|------|-------------|------|
+//! | `ec3_help_without_command` | `10_help` | `.help` alone → help output, exit 0 | P |
+//! | `ec4_help_in_second_position` | `10_help` | `.help` after command → exit 0 | P |
+//! | `ec5_help_after_params` | `10_help` | `.help` after params → exit 0 | P |
+//! | `ec6_help_overrides_format_json` | `10_help` | `.help` ignores `format::json` | P |
+//! | `ec7_help_overrides_v0` | `10_help` | `.help` ignores `v::0` | P |
+//! | `ec8_help_wins_over_params` | `10_help` | `.help` wins over all params | P |
+//! | `dry_ec6_2_exits_1` | `02_dry` | `dry::2` → exit 1 (out of range) | N |
+//! | `dry_ec7_negative_exits_1` | `02_dry` | `dry::-1` → exit 1 (negative) | N |
+//! | `dry_ec9_empty_exits_1` | `02_dry` | `dry::` → exit 1 (empty) | N |
+//! | `force_ec3_2_exits_1` | `03_force` | `force::2` → exit 1 (out of range) | N |
+//! | `force_ec4_negative_exits_1` | `03_force` | `force::-1` → exit 1 (negative) | N |
+//! | `force_ec6_empty_exits_1` | `03_force` | `force::` → exit 1 (empty) | N |
+//! | `verbosity_ec5_absent_defaults_to_1` | `04_verbosity` | absent `v::` ≡ `v::1` | P |
+//! | `verbosity_ec8_negative_exits_1` | `04_verbosity` | `v::-1` → exit 1 | N |
+//! | `verbosity_ec11_command_scope_settings_set` | `04_verbosity` | `.settings.set` `v::1` → exit 1 | N |
+//! | `format_ec6_absent_defaults_to_text` | `05_format` | absent `format::` → text | P |
+//! | `format_ec7_text_explicit_same_as_absent` | `05_format` | `format::text` ≡ absent | P |
+//! | `format_ec8_csv_exits_1` | `05_format` | `format::csv` → exit 1 | N |
+//!
 //! ## Type Surface Tests
 //!
 //! | Function | Type | Category |
@@ -1012,4 +1035,238 @@ fn tc_settings_value_absent_exits_1()
 {
   let out = run( &[ ".settings.set", "key::probe" ] );
   assert_eq!( code( &out ), 1, "missing value:: must exit 1" );
+}
+
+// ─── 10_help.md EC-3..EC-8 ───────────────────────────────────────────────────
+
+// EC-3: `.help` combined with mutation command → no side effects (settings.json not created)
+#[ test ]
+fn ec3_help_mutation_no_side_effects()
+{
+  let dir = tempfile::TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let bin = env!( "CARGO_BIN_EXE_claude_version" );
+  let out = std::process::Command::new( bin )
+    .args( [ ".settings.set", "key::theme", "value::dark", ".help" ] )
+    .env( "HOME", home )
+    .output()
+    .expect( "failed to run" );
+  assert_eq!( code( &out ), 0, ".help must exit 0 even with mutation command: {}", out_stderr( &out ) );
+  let stdout = out_stdout( &out );
+  assert!( stdout.contains( "Available commands:" ), "must show help: {stdout}" );
+  // settings.json must NOT be created — mutation suppressed by .help
+  assert!(
+    !dir.path().join( ".claude/settings.json" ).exists(),
+    "settings.json must not be created when .help is present"
+  );
+}
+
+// EC-4: `.help` position independence — works as first arg
+#[ test ]
+fn ec4_help_position_first_arg()
+{
+  let out = run( &[ ".help", ".version.list" ] );
+  assert_eq!( code( &out ), 0, "`.help .version.list` must exit 0" );
+  let stdout = out_stdout( &out );
+  assert!( stdout.contains( "Available commands:" ), "must show help: {stdout}" );
+}
+
+// EC-5: absent `.help` → command executes normally, NOT help output
+#[ test ]
+fn ec5_absent_help_not_triggered()
+{
+  let out = run( &[ ".version.list" ] );
+  assert_eq!( code( &out ), 0, ".version.list must exit 0 without .help" );
+  let stdout = out_stdout( &out );
+  assert!( stdout.contains( "stable" ), ".version.list must show aliases not help: {stdout}" );
+  // help text must NOT appear (that would mean .help was incorrectly triggered)
+  assert!(
+    !stdout.contains( "Available commands:" ),
+    "help must NOT appear when .help is absent: {stdout}"
+  );
+}
+
+// EC-6: `.help` output contains recognized command names or usage text
+#[ test ]
+fn ec6_help_output_contains_commands()
+{
+  let out = run( &[ ".help" ] );
+  assert_eq!( code( &out ), 0 );
+  let stdout = out_stdout( &out );
+  // Must contain at least one recognized command name or usage keyword
+  assert!(
+    stdout.contains( ".status" ) || stdout.contains( ".version" ) || stdout.contains( "usage" ) || stdout.contains( "commands" ),
+    "help output must contain command names or usage text: {stdout}"
+  );
+}
+
+// EC-7: `.help` universally accepted by `.settings.show`, `.processes`, `.config`
+#[ test ]
+fn ec7_help_accepted_by_all_commands()
+{
+  for args in &[
+    vec![ ".settings.show", ".help" ],
+    vec![ ".processes", ".help" ],
+    vec![ ".config", ".help" ],
+  ]
+  {
+    let out = run( args );
+    assert_eq!( code( &out ), 0, ".help must exit 0 for {args:?}" );
+    let stdout = out_stdout( &out );
+    assert!(
+      stdout.contains( "Available commands:" ),
+      ".help must show help for {args:?}: {stdout}"
+    );
+  }
+}
+
+// EC-8: `.help` with other params — help wins, output is not a JSON array
+#[ test ]
+fn ec8_help_wins_over_params()
+{
+  let out = run( &[ ".version.list", "format::json", "v::0", ".help" ] );
+  assert_eq!( code( &out ), 0, "`.version.list format::json v::0 .help` must exit 0" );
+  let stdout = out_stdout( &out );
+  // .help must override format::json — output must NOT be a JSON array
+  assert!(
+    !stdout.trim_start().starts_with( '[' ),
+    "output must not be a JSON array when .help is present: {stdout}"
+  );
+  assert!( stdout.contains( "Available commands:" ), "must show help: {stdout}" );
+}
+
+// ─── 02_dry.md EC-6, EC-7, EC-9 ────────────────────────────────────────────
+
+/// EC-6: `dry::2` → exit 1 (out of range; valid values: 0 and 1)
+#[ test ]
+fn dry_ec6_2_exits_1()
+{
+  let out = run( &[ ".version.install", "dry::2" ] );
+  assert_eq!( code( &out ), 1, "dry::2 must exit 1 (out of range)" );
+}
+
+/// EC-7: `dry::-1` → exit 1 (negative value; valid values: 0 and 1)
+#[ test ]
+fn dry_ec7_negative_exits_1()
+{
+  let out = run( &[ ".version.install", "dry::-1" ] );
+  assert_eq!( code( &out ), 1, "dry::-1 must exit 1 (out of range)" );
+}
+
+/// EC-9: `dry::` (empty) → exit 1
+#[ test ]
+fn dry_ec9_empty_exits_1()
+{
+  let out = run( &[ ".version.install", "dry::" ] );
+  assert_eq!( code( &out ), 1, "dry:: (empty) must exit 1" );
+}
+
+// ─── 03_force.md EC-3, EC-4, EC-6 ───────────────────────────────────────────
+
+/// EC-3: `force::2` → exit 1 (out of range; valid values: 0 and 1)
+#[ test ]
+fn force_ec3_2_exits_1()
+{
+  let out = run( &[ ".version.install", "force::2" ] );
+  assert_eq!( code( &out ), 1, "force::2 must exit 1 (out of range)" );
+}
+
+/// EC-4: `force::-1` → exit 1 (negative value; valid values: 0 and 1)
+#[ test ]
+fn force_ec4_negative_exits_1()
+{
+  let out = run( &[ ".version.install", "force::-1" ] );
+  assert_eq!( code( &out ), 1, "force::-1 must exit 1 (out of range)" );
+}
+
+/// EC-6: `force::` (empty) → exit 1
+#[ test ]
+fn force_ec6_empty_exits_1()
+{
+  let out = run( &[ ".version.install", "force::" ] );
+  assert_eq!( code( &out ), 1, "force:: (empty) must exit 1" );
+}
+
+// ─── 04_verbosity.md EC-5, EC-8, EC-11 ──────────────────────────────────────
+
+/// EC-5: absent `v::` defaults to `v::1` (output identical to explicit `v::1`)
+#[ test ]
+fn verbosity_ec5_absent_defaults_to_1()
+{
+  let absent   = run( &[ ".version.list" ] );
+  let explicit = run( &[ ".version.list", "v::1" ] );
+  assert_eq!( code( &absent ),   0, ".version.list must exit 0" );
+  assert_eq!( code( &explicit ), 0, ".version.list v::1 must exit 0" );
+  assert_eq!(
+    out_stdout( &absent ),
+    out_stdout( &explicit ),
+    "absent v:: must produce same output as v::1"
+  );
+}
+
+/// EC-8: `v::-1` → exit 1 (negative verbosity value)
+#[ test ]
+fn verbosity_ec8_negative_exits_1()
+{
+  let out = run( &[ ".version.list", "v::-1" ] );
+  assert_eq!( code( &out ), 1, "v::-1 must exit 1" );
+}
+
+/// EC-11: `.settings.set` `v::1` → exit 1 (`v::` not accepted by mutation commands)
+#[ test ]
+fn verbosity_ec11_command_scope_settings_set()
+{
+  let out = run( &[ ".settings.set", "v::1" ] );
+  assert_eq!( code( &out ), 1, ".settings.set must not accept v:: param" );
+}
+
+// ─── 05_format.md EC-6, EC-7, EC-8 ─────────────────────────────────────────
+
+/// EC-6: absent `format::` → text output; stdout does not start with `{`
+#[ test ]
+fn format_ec6_absent_defaults_to_text()
+{
+  let out = run( &[ ".status" ] );
+  assert_eq!( code( &out ), 0, ".status must exit 0" );
+  let text = out_stdout( &out );
+  assert!(
+    !text.trim_start().starts_with( '{' ),
+    "absent format:: must produce text output (not JSON): {text}"
+  );
+}
+
+/// EC-7: `format::text` explicit → same as absent `format::`
+#[ test ]
+fn format_ec7_text_explicit_same_as_absent()
+{
+  let absent   = run( &[ ".status" ] );
+  let explicit = run( &[ ".status", "format::text" ] );
+  assert_eq!( code( &absent ),   0, ".status must exit 0" );
+  assert_eq!( code( &explicit ), 0, ".status format::text must exit 0" );
+  let absent_out   = out_stdout( &absent );
+  let explicit_out = out_stdout( &explicit );
+  // Neither must be JSON output.
+  assert!( !absent_out.trim_start().starts_with( '{' ),   "absent format:: must be text: {absent_out}" );
+  assert!( !explicit_out.trim_start().starts_with( '{' ), "format::text must be text: {explicit_out}" );
+  // Compare field labels only — dynamic values (e.g., live Processes count) differ
+  // between sequential invocations and must not drive the structural comparison.
+  let labels = | s : &str | -> Vec< String >
+  {
+    s.lines()
+    .map( | l | l.split( ':' ).next().unwrap_or( "" ).trim().to_string() )
+    .collect()
+  };
+  assert_eq!(
+    labels( &absent_out ),
+    labels( &explicit_out ),
+    "format::text must produce same field structure as absent format::"
+  );
+}
+
+/// EC-8: `format::csv` → exit 1 (unknown format value)
+#[ test ]
+fn format_ec8_csv_exits_1()
+{
+  let out = run( &[ ".status", "format::csv" ] );
+  assert_eq!( code( &out ), 1, "format::csv must exit 1 (unknown format)" );
 }

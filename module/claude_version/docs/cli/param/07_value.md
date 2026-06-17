@@ -32,7 +32,7 @@ clv.settings.set key::autoUpdate value::true  # -> true (bool)
 | 1 | [Settings Identity](../param_group/03_settings_identity.md) |
 | 2 | [Config Identity](../param_group/04_config_identity.md) |
 
-### Referenced Types
+### Referenced Type
 
 | # | Type |
 |---|------|

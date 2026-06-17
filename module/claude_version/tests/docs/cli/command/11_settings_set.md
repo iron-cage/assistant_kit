@@ -377,4 +377,7 @@ IT-15 verifies append to existing file without corruption.
 | `tc238_settings_set_missing_key_error_format` | `integration/read_commands_test.rs` |
 | `tc239_settings_set_missing_value_error_format` | `integration/read_commands_test.rs` |
 | `tc252_settings_set_dry_no_write` | `integration/cross_cutting_test.rs` |
+| `it04_settings_set_dry2_exits_1` | `integration/mutation_commands_test.rs` |
+| `it05_settings_set_bogus_param_exits_1` | `integration/mutation_commands_test.rs` |
+| `it06_settings_set_key_without_value_exits_1` | `integration/mutation_commands_test.rs` |
 | `tc506_settings_set_missing_value_error_contains_value` | `integration/error_messages_test.rs` |

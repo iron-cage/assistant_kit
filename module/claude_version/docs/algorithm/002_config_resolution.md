@@ -114,4 +114,4 @@ JSON output includes a `source` field per key in the output object.
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/algorithm/002_config_resolution.md](../../tests/docs/algorithm/002_config_resolution.md) | Algorithm test spec |
+| [tests/docs/algorithm/02_config_resolution.md](../../tests/docs/algorithm/02_config_resolution.md) | Algorithm test spec |

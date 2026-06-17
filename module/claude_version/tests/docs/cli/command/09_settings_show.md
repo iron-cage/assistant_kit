@@ -259,5 +259,9 @@ Integration test planning for the `.settings.show` command. See [command/readme.
 | `tc170_settings_show_malformed_file_exits_2` | `integration/read_commands_test.rs` |
 | `tc171_settings_show_no_home_exits_2` | `integration/read_commands_test.rs` |
 | `tc241_settings_show_json_preserves_types` | `integration/read_commands_test.rs` |
+| `it05_settings_show_bogus_param_exits_1` | `integration/read_commands_test.rs` |
+| `it06_settings_show_format_xml_exits_1` | `integration/read_commands_test.rs` |
+| `it07_settings_show_v3_exits_1` | `integration/read_commands_test.rs` |
+| `it08_settings_show_stdout_only` | `integration/read_commands_test.rs` |
 | `tc507_settings_show_no_home_error_mentions_home` | `integration/error_messages_test.rs` |
 | `tc508_settings_show_home_unset_error_mentions_home` | `integration/error_messages_test.rs` |

@@ -189,3 +189,10 @@ Edge case coverage for the `dry::` parameter. See [param/readme.md](../../../../
 | `tc300_version_install_dry_shows_prefix` | `integration/mutation_commands_test.rs` |
 | `tc301_version_install_dry_stable` | `integration/mutation_commands_test.rs` |
 | `tc252_settings_set_dry_no_write` | `integration/cross_cutting_test.rs` |
+| `dry_ec6_2_exits_1` | `cli_args_test.rs` |
+| `dry_ec7_negative_exits_1` | `cli_args_test.rs` |
+| `dry_ec9_empty_exits_1` | `cli_args_test.rs` |
+| `dry_ec10_command_scope_rejects_on_read` | `integration/dry_param_test.rs` |
+| `dry_ec11_processes_kill_dry_run` | `integration/dry_param_test.rs` |
+| `dry_ec12_settings_set_dry_no_file` | `integration/dry_param_test.rs` |
+| `dry_ec13_processes_kill_dry_wins_over_force` | `integration/dry_param_test.rs` |

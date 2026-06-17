@@ -28,7 +28,7 @@ clv.version.guard version::month
 | 1 | [`.version.install`](../command/version.md#command--4-versioninstall) |
 | 2 | [`.version.guard`](../command/version.md#command--5-versionguard) |
 
-### Referenced Types
+### Referenced Type
 
 | # | Type |
 |---|------|

@@ -19,8 +19,10 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 | AC-4 | Key only in catalog defaults → source=Default | ✅ `ac04_002_catalog_default_returned` |
 | AC-5 | Key absent everywhere → source=Absent, value=None | ✅ `ac05_002_all_layers_absent` |
 | AC-6 | Project config overrides user config when both have key | ✅ `ac06_002_project_overrides_user` |
+| AC-7 | home_dir has no user config → catalog default returned | ✅ |
+| AC-8 | project config found in ancestor directory → source=Project | ✅ |
 
-**Total:** 6 tests
+**Total:** 8 tests
 
 ---
 
@@ -78,6 +80,24 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 ---
 
+### AC-7: home_dir has no user config → catalog default returned
+
+- **Given:** `CLAUDE_MODEL` env var absent; `home_dir` parameter has no `.claude/settings.json`; no `.claude/settings.json` in cwd or any ancestor directory
+- **When:** `resolve("theme", home_dir, cwd, catalog)`
+- **Then:** `ResolvedValue { value: Some("system"), source: Default }`
+- **Note:** `resolve()` reads user config from `home_dir/.claude/settings.json` (parameter, not `HOME` env var). When that file is absent, Step 3 produces no value and Step 4 returns the catalog default (`"system"` for `theme`). CLI layer is responsible for deriving `home_dir` from `HOME` before calling `resolve()`.
+
+---
+
+### AC-8: project config found in ancestor directory
+
+- **Given:** `CLAUDE_MODEL` unset; cwd has no `.claude/settings.json`; parent directory of cwd has `.claude/settings.json` with `{"preferredVersionSpec": "beta"}`; user settings empty
+- **When:** `resolve("preferredVersionSpec")` from cwd
+- **Then:** `ResolvedValue { value: Some("beta"), source: Project }`
+- **Note:** Step 2 walks up from cwd searching for `.claude/settings.json`; finds it one level up in the parent directory
+
+---
+
 ### Source Functions
 
 | Function | File |
@@ -88,3 +108,5 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 | `ac04_002_catalog_default_returned` | ✅ `integration/algorithm_surface_test.rs` |
 | `ac05_002_all_layers_absent` | ✅ `integration/algorithm_surface_test.rs` |
 | `ac06_002_project_overrides_user` | ✅ `integration/algorithm_surface_test.rs` |
+| `ac07_002_home_unset_skips_user_config` | ✅ `integration/algorithm_surface_test.rs` |
+| `ac08_002_ancestor_project_config_found` | ✅ `integration/algorithm_surface_test.rs` |

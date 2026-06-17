@@ -4,7 +4,7 @@
 
 ### Scope
 
-- **Purpose**: Reference for settings-namespace clvcommands (deprecated).
+- **Purpose**: Reference for settings-namespace clv commands (deprecated).
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for `.settings.show`, `.settings.get`, and `.settings.set`.
 - **In Scope**: `.settings.show`, `.settings.get`, `.settings.set`.
 - **Out of Scope**: Version commands (→ [version.md](version.md)), process commands (→ [processes.md](processes.md)), unified config command (→ [config.md](config.md)).
@@ -66,7 +66,7 @@ clv.settings.show format::json
 
 | # | User Story | Persona |
 |---|-----------|---------|
-| 4 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
+| 1 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
 
 ---
 
@@ -123,7 +123,7 @@ clv.settings.get key::autoUpdate format::json
 | # | Group | Membership | Excluded Params |
 |---|-------|-----------|----------------|
 | 1 | [Output Control](../param_group/01_output_control.md) | Partial | `count::` |
-| 3 | [Settings Identity](../param_group/03_settings_identity.md) | Partial | `value::` |
+| 2 | [Settings Identity](../param_group/03_settings_identity.md) | Partial | `value::` |
 
 ### Related Commands
 
@@ -136,7 +136,7 @@ clv.settings.get key::autoUpdate format::json
 
 | # | User Story | Persona |
 |---|-----------|---------|
-| 4 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
+| 1 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
 
 ---
 
@@ -173,7 +173,7 @@ clv.settings.set key::<KEY> value::<VALUE> [dry::1]
 1. Validate both `key::` and `value::` are present; exit 1 if either absent.
 2. Infer value type: `"true"`/`"false"` → bool, numeric string → number, anything else → string.
 3. Atomically read-modify-write `~/.claude/settings.json` via temp-file rename (upsert semantics).
-4. Render confirmation in the requested format.
+4. Print confirmation line showing the key and its new stored value.
 
 **Examples:**
 
@@ -188,8 +188,8 @@ clv.settings.set key::theme value::dark dry::1
 
 | # | Group | Membership | Excluded Params |
 |---|-------|-----------|----------------|
-| 2 | [Execution Control](../param_group/02_execution_control.md) | Partial | `force::` |
-| 3 | [Settings Identity](../param_group/03_settings_identity.md) | Full | — |
+| 1 | [Execution Control](../param_group/02_execution_control.md) | Partial | `force::` |
+| 2 | [Settings Identity](../param_group/03_settings_identity.md) | Full | — |
 
 ### Related Commands
 
@@ -202,7 +202,7 @@ clv.settings.set key::theme value::dark dry::1
 
 | # | User Story | Persona |
 |---|-----------|---------|
-| 4 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
+| 1 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
 
 ---
 

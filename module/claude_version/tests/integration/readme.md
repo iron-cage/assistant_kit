@@ -15,3 +15,4 @@ Module files for integration tests. All files are included by `tests/integration
 | `config_commands_test.rs` | Integration tests for `.config` command (IT + FT) |
 | `cross_cutting_test.rs` | Cross-cutting: dry+force interaction, verbosity parity, format parity |
 | `error_messages_test.rs` | Error message content and format validation |
+| `process_isolation_test.rs` | Kill-isolation regression: guard does not send kill signals to processes |

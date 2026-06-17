@@ -1,10 +1,10 @@
-# command/ — clvCommand Reference
+# command/ — clv Command Reference
 
 ### Scope
 
-- **Purpose**: Per-namespace command reference for all clvcommands.
+- **Purpose**: Per-namespace command reference for all clv commands.
 - **Responsibility**: Command syntax, parameters, exit codes, examples, and cross-references grouped by namespace.
-- **In Scope**: All clvcommands, organized by dot-namespace cluster.
+- **In Scope**: All clv commands, organized by dot-namespace cluster.
 - **Out of Scope**: Parameter details (→ `../param/`), type definitions (→ `../type/`), behavioral contracts (→ `../../feature/`).
 
 ### Responsibility Table

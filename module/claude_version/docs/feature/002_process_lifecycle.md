@@ -25,6 +25,8 @@
 
 Signal delivery uses `Command::new("kill")` (no `libc`, enforced by `unsafe-code = "deny"` workspace lint).
 
+**Kill isolation invariant:** Kill signals are delivered only when a user explicitly invokes `.processes.kill`. The `.version.guard` and `.version.install` flows interact with running processes exclusively via `hot_swap_binary()` (unlink of the binary path), which allows running sessions to continue from their open file descriptor. No automatic path — guard, install, daemon, or interval-watch mode — ever reaches `send_kill_signals()` or any `libc::kill` call.
+
 **Post-kill verification:** After the kill sequence completes, the process list is re-scanned. Any surviving processes cause exit code 2. This verification applies to both normal and force kill modes.
 
 **Dry-run:** `dry::1` prints `[dry-run] would kill N process(es)` without sending any signals.
@@ -40,7 +42,7 @@ Signal delivery uses `Command::new("kill")` (no `libc`, enforced by `unsafe-code
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands.rs` | Process command routines |
+| `../../src/commands/process.rs` | Process command routines |
 
 ### Provenance
 
@@ -52,4 +54,4 @@ Signal delivery uses `Command::new("kill")` (no `libc`, enforced by `unsafe-code
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/feature/002_process_lifecycle.md](../../tests/docs/feature/002_process_lifecycle.md) | Feature test spec |
+| [tests/docs/feature/02_process_lifecycle.md](../../tests/docs/feature/02_process_lifecycle.md) | Feature test spec |

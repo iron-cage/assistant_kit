@@ -13,3 +13,4 @@
 |------|---------|--------|
 | 01_version_lock_chmod.md | PF- test cases verifying chmod side-effect trap is avoided by install/guard | ✅ |
 | 02_symlink_retarget.md | PF- test cases verifying symlink retarget bypass is neutralized by Layer 4 purge | ✅ |
+| procedure.md | Workflow for creating and updating pitfall test specs | ✅ |

@@ -20,7 +20,7 @@
 | 07_value.md | Edge case tests for `value::` parameter | ✅ |
 | 08_interval.md | Edge case tests for `interval::` parameter | ✅ |
 | 09_count.md | Edge case tests for `count::` parameter | ✅ |
-| 10_help_param.md | Edge case tests for `.help` parameter | ✅ |
+| 10_help.md | Edge case tests for `.help` parameter | ✅ |
 | 11_scope.md | Edge case tests for `scope::` parameter | ✅ |
 | 12_unset.md | Edge case tests for `unset::` parameter | ✅ |
 | procedure.md | Workflow for creating and updating parameter test specs | ✅ |

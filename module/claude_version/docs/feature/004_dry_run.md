@@ -35,7 +35,9 @@
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands.rs` | dry-run branches in mutation routines |
+| `../../src/commands/version.rs` | dry-run branches in install/guard |
+| `../../src/commands/process.rs` | dry-run branch in kill command |
+| `../../src/commands/settings.rs` | dry-run branch in settings set |
 
 ### Provenance
 
@@ -47,4 +49,4 @@
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/feature/004_dry_run.md](../../tests/docs/feature/004_dry_run.md) | Feature test spec |
+| [tests/docs/feature/04_dry_run.md](../../tests/docs/feature/04_dry_run.md) | Feature test spec |

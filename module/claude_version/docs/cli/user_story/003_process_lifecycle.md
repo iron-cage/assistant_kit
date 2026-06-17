@@ -18,9 +18,9 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.processes`](../command/processes.md#command--7-processes) | Lists all running Claude Code PIDs |
-| 2 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Terminates detected processes via signal sequence |
-| 3 | [`.help`](../command/root.md#command--1-help) | Provides discovery of available commands |
+| 1 | [`.help`](../command/root.md#command--1-help) | Provides discovery of available commands |
+| 2 | [`.processes`](../command/processes.md#command--7-processes) | Lists all running Claude Code PIDs |
+| 3 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Terminates detected processes via signal sequence |
 
 ### Referenced Formats
 
@@ -33,8 +33,8 @@
 
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 1 | [Execution Control](../param_group/02_execution_control.md) | Controls dry-run and force kill behavior |
-| 2 | [Output Control](../param_group/01_output_control.md) | Controls verbosity and output format |
+| 1 | [Output Control](../param_group/01_output_control.md) | Controls verbosity and output format |
+| 2 | [Execution Control](../param_group/02_execution_control.md) | Controls dry-run and force kill behavior |
 
 ### Referenced Parameters
 

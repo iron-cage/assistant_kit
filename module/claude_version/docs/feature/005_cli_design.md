@@ -15,7 +15,7 @@
 1. Adapter — converts argv to unilang tokens; handles `v::`/`verbosity::` alias expansion, bool/integer validation, overflow guards
 2. Parser — tokenizes unilang input
 3. Analyzer — validates command and parameter names, required params, value constraints
-4. Interpreter — dispatches to command routines in `commands.rs`
+4. Interpreter — dispatches to command routines in `commands/`
 5. Stdout/stderr — formats output and writes results
 
 **Parameter rules:**
@@ -74,4 +74,4 @@
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/feature/005_cli_design.md](../../tests/docs/feature/005_cli_design.md) | Feature test spec |
+| [tests/docs/feature/05_cli_design.md](../../tests/docs/feature/05_cli_design.md) | Feature test spec |

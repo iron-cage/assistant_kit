@@ -29,7 +29,7 @@ clv.config key::model value::claude-haiku-4-5-20251001 scope::project  # writes 
 |---|-------|
 | 1 | [Config Identity](../param_group/04_config_identity.md) |
 
-### Referenced Types
+### Referenced Type
 
 | # | Type |
 |---|------|

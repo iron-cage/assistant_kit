@@ -222,6 +222,17 @@ pub fn version_history_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     _                           => 10,
   };
 
+  // count::0 needs no network call — return the appropriate empty response immediately.
+  if count == 0
+  {
+    let content = match opts.format
+    {
+      OutputFormat::Json => "[]\n".to_string(),
+      OutputFormat::Text => String::new(),
+    };
+    return Ok( OutputData::new( content, "text" ) );
+  }
+
   let paths = super::require_claude_paths()?;
   let json  = fetch_releases_json( paths.base() )?;
   let mut releases = extract_releases( &json );

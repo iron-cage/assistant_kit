@@ -69,7 +69,7 @@ This pattern does not apply when tracking `latest` is desired — for `latest`, 
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands.rs` | Lock application in perform_install() |
+| `../../src/commands/version.rs` | Lock application in perform_install() |
 | `../../src/settings_io.rs` | settings.json write for layers 1, 2, 5 |
 
 ### Provenance
@@ -82,4 +82,4 @@ This pattern does not apply when tracking `latest` is desired — for `latest`, 
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/pattern/001_version_lock.md](../../tests/docs/pattern/001_version_lock.md) | Pattern test spec |
+| [tests/docs/pattern/01_version_lock.md](../../tests/docs/pattern/01_version_lock.md) | Pattern test spec |

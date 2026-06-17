@@ -9,6 +9,23 @@
 
 Manage Claude Code installation: versions, processes, and settings.
 
+### Responsibility Table
+
+| File | Responsibility |
+|------|---------------|
+| readme.md | Index, completion matrix, and navigation for the CLI doc |
+| procedure.md | Steps for adding, updating, or removing CLI doc entities |
+| 004_parameter_interactions.md | Cross-parameter constraints and dependency rules |
+| dictionary.md | Domain vocabulary for all CLI concepts |
+| env_param.md | Environment variable reference |
+| config_param.md | Config file reference (null — clv has no config file) |
+| command/ | Command namespace reference files |
+| param/ | Parameter reference files |
+| type/ | Semantic type definition files |
+| param_group/ | Parameter group files |
+| format/ | Output format specification files |
+| user_story/ | User story scenario files |
+
 ### Usage
 
 ```sh
@@ -26,10 +43,11 @@ clv <.command> [param::value ...]
 | param_group/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
 | dictionary.md | ➖ | ✅ | ➖ | ➖ | ➖ | Complete |
 | 004_parameter_interactions.md | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| procedure.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
 | env_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
 | config_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
-| user_story/ | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
-| format/ | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
+| user_story/ | ➖ | ➖ | ✅ | ✅ | ✅ | Complete |
+| format/ | ➖ | ➖ | ✅ | ✅ | ✅ | Complete |
 
 **Current Level:** L5 (Test Detail Complete)
 **Design Completeness:** 100%

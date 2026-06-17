@@ -282,3 +282,16 @@ Edge case coverage for the `v::` alias and `verbosity::` canonical key. See [par
 | `tc486_verbosity_canonical_zero_accepted` | `cli_args_test.rs` |
 | `tc245_last_occurrence_wins_for_verbosity` | `integration/read_commands_test.rs` |
 | `tc503_verbosity_out_of_range_error_message` | `integration/error_messages_test.rs` |
+| `verbosity_ec5_absent_defaults_to_1` | `cli_args_test.rs` |
+| `verbosity_ec8_negative_exits_1` | `cli_args_test.rs` |
+| `verbosity_ec11_command_scope_settings_set` | `cli_args_test.rs` |
+| `verbosity_ec12_status_v0_bare_lines` | `integration/verbosity_param_test.rs` |
+| `verbosity_ec13_status_v1_labeled_lines` | `integration/verbosity_param_test.rs` |
+| `verbosity_ec14_version_show_v0_bare_semver` | `integration/verbosity_param_test.rs` |
+| `verbosity_ec15_version_show_v1_labeled` | `integration/verbosity_param_test.rs` |
+| `verbosity_ec16_version_list_v0_names_only` | `integration/verbosity_param_test.rs` |
+| `verbosity_ec17_version_list_v1_with_descriptions` | `integration/verbosity_param_test.rs` |
+| `verbosity_ec18_settings_show_v0_compact_format` | `integration/verbosity_param_test.rs` |
+| `verbosity_ec19_settings_get_v0_bare_value` | `integration/verbosity_param_test.rs` |
+| `verbosity_ec20_history_v0_bare_lines` | `integration/verbosity_param_test.rs` |
+| `verbosity_ec21_history_v2_full_changelog` | `integration/verbosity_param_test.rs` |

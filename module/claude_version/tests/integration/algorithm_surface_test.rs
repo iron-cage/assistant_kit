@@ -25,6 +25,8 @@
 //! | AC-4  | `ac04_002_catalog_default_returned` |
 //! | AC-5  | `ac05_002_all_layers_absent` |
 //! | AC-6  | `ac06_002_project_overrides_user` |
+//! | AC-7  | `ac07_002_home_unset_skips_user_config` |
+//! | AC-8  | `ac08_002_ancestor_project_config_found` |
 
 use tempfile::TempDir;
 use claude_version_core::config_catalog;
@@ -152,4 +154,39 @@ fn ac06_002_project_overrides_user()
   let r = resolve( "theme", home_dir.path(), cwd.path(), config_catalog::catalog() );
   assert_eq!( r.source, Layer::Project,            "project must beat user for same key: got {:?}", r.source );
   assert_eq!( r.value,  Some( "dark".to_string() ), "wrong value: {:?}", r.value );
+}
+
+// AC-7: HOME unset → user config layer absent → catalog default returned
+// resolve() takes home_dir as a parameter; when home_dir has no .claude/settings.json
+// (the state the CLI produces when HOME is unset), Step 3 is skipped and Step 4
+// returns the catalog default.
+#[ test ]
+fn ac07_002_home_unset_skips_user_config()
+{
+  let home_dir = TempDir::new().unwrap();
+  let cwd      = TempDir::new().unwrap();
+  // No .claude/settings.json written to home_dir — simulates absent HOME at CLI layer.
+  // No project config in cwd.
+  std::env::remove_var( "CLAUDE_MODEL" );
+  let r = resolve( "theme", home_dir.path(), cwd.path(), config_catalog::catalog() );
+  assert_eq!( r.source, Layer::Default,                "absent user config must fall through to Default: got {:?}", r.source );
+  assert_eq!( r.value,  Some( "system".to_string() ),  "catalog default for 'theme' must be \"system\": {:?}", r.value );
+}
+
+// AC-8: project config found in ancestor directory
+// find_project_config_file walks upward from cwd; project settings written to parent.
+// cwd is a subdirectory of parent with no local .claude/settings.json.
+#[ test ]
+fn ac08_002_ancestor_project_config_found()
+{
+  let parent   = TempDir::new().unwrap();
+  let home_dir = TempDir::new().unwrap();
+  crate::helpers::write_settings( parent.path(), &[ ( "preferredVersionSpec", "beta" ) ] );
+  // child is a subdirectory of parent — it has no .claude/settings.json of its own.
+  let child = parent.path().join( "subdir" );
+  std::fs::create_dir_all( &child ).unwrap();
+  std::env::remove_var( "CLAUDE_MODEL" );
+  let r = resolve( "preferredVersionSpec", home_dir.path(), &child, config_catalog::catalog() );
+  assert_eq!( r.source, Layer::Project,              "ancestor project config must supply value: got {:?}", r.source );
+  assert_eq!( r.value,  Some( "beta".to_string() ),  "ancestor config value must be returned: {:?}", r.value );
 }

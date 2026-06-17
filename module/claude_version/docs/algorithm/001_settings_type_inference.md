@@ -74,4 +74,4 @@ The inference is applied in strict priority order. The first matching rule wins:
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/algorithm/001_settings_type_inference.md](../../tests/docs/algorithm/001_settings_type_inference.md) | Algorithm test spec |
+| [tests/docs/algorithm/01_settings_type_inference.md](../../tests/docs/algorithm/01_settings_type_inference.md) | Algorithm test spec |

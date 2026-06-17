@@ -18,11 +18,11 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.version.show`](../command/version.md#command--3-versionshow) | Confirms installed version before and after install |
-| 2 | [`.version.install`](../command/version.md#command--4-versioninstall) | Installs target version with 5-layer lock |
-| 3 | [`.version.guard`](../command/version.md#command--5-versionguard) | Detects and restores preferred version on drift |
-| 4 | [`.version.history`](../command/version.md#command--12-versionhistory) | Lists recent releases for version selection |
-| 5 | [`.help`](../command/root.md#command--1-help) | Provides discovery of available commands |
+| 1 | [`.help`](../command/root.md#command--1-help) | Provides discovery of available commands |
+| 2 | [`.version.show`](../command/version.md#command--3-versionshow) | Confirms installed version before and after install |
+| 3 | [`.version.install`](../command/version.md#command--4-versioninstall) | Installs target version with 5-layer lock |
+| 4 | [`.version.guard`](../command/version.md#command--5-versionguard) | Detects and restores preferred version on drift |
+| 5 | [`.version.history`](../command/version.md#command--12-versionhistory) | Lists recent releases for version selection |
 
 ### Referenced Formats
 
@@ -35,8 +35,8 @@
 
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 1 | [Execution Control](../param_group/02_execution_control.md) | Controls dry-run and force behavior |
-| 2 | [Output Control](../param_group/01_output_control.md) | Controls verbosity and output format |
+| 1 | [Output Control](../param_group/01_output_control.md) | Controls verbosity and output format |
+| 2 | [Execution Control](../param_group/02_execution_control.md) | Controls dry-run and force behavior |
 
 ### Referenced Parameters
 

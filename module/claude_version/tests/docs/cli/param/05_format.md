@@ -256,3 +256,15 @@ Edge case coverage for the `format::` parameter. See [param/readme.md](../../../
 | `tc260_format_uppercase_rejected` | `integration/cross_cutting_test.rs` |
 | `tc261_version_install_format_json_accepted` | `integration/cross_cutting_test.rs` |
 | `tc504_format_unknown_error_mentions_valid` | `integration/error_messages_test.rs` |
+| `format_ec11_status_format_json_object` | `integration/format_param_test.rs` |
+| `format_ec12_version_show_format_json_has_version_key` | `integration/format_param_test.rs` |
+| `format_ec13_version_list_format_json_array` | `integration/format_param_test.rs` |
+| `format_ec14_processes_format_json_has_processes_key` | `integration/format_param_test.rs` |
+| `format_ec15_settings_show_format_json_object` | `integration/format_param_test.rs` |
+| `format_ec16_settings_get_format_json_has_key_value` | `integration/format_param_test.rs` |
+| `format_ec17_history_format_json_fields` | `integration/format_param_test.rs` |
+| `format_ec18_history_format_xml_exits_1` | `integration/format_param_test.rs` |
+| `format_ec19_history_format_json_uppercase_exits_1` | `integration/format_param_test.rs` |
+| `format_ec6_absent_defaults_to_text` | `cli_args_test.rs` |
+| `format_ec7_text_explicit_same_as_absent` | `cli_args_test.rs` |
+| `format_ec8_csv_exits_1` | `cli_args_test.rs` |

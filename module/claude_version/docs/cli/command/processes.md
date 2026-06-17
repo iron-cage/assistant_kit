@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Reference for process-namespace clvcommands.
+- **Purpose**: Reference for process-namespace clv commands.
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for `.processes` and `.processes.kill`.
 - **In Scope**: `.processes`, `.processes.kill`.
 - **Out of Scope**: Version commands (→ [version.md](version.md)), settings commands (→ [settings.md](settings.md)).
@@ -64,7 +64,7 @@ clv.processes format::json
 
 | # | User Story | Persona |
 |---|-----------|---------|
-| 3 | [003 Process Lifecycle](../user_story/003_process_lifecycle.md) | Developer (unresponsive session) |
+| 1 | [003 Process Lifecycle](../user_story/003_process_lifecycle.md) | Developer (unresponsive session) |
 
 ---
 
@@ -79,6 +79,8 @@ clv.processes format::json
 ### Command :: 8. `.processes.kill`
 
 Terminate all running Claude Code processes. Normal mode: SIGTERM, wait 2 seconds, then SIGKILL survivors. Force mode (`force::1`): SIGKILL directly. Performs 500ms post-kill verification to confirm termination.
+
+**Invocation invariant:** This command must be explicitly invoked by the user. It is never called automatically by `.version.guard`, `.version.install`, or any scheduled path. Automatic flows (guard, install, daemon watch) interact with running processes exclusively via `hot_swap_binary()` — not via kill signals.
 
 -- **Parameters:** dry::, force::, v::, format::
 -- **Exit Codes:** 0 (success) | 2 (signal delivery failed)
@@ -137,7 +139,7 @@ clv.processes.kill force::1  # SIGKILL immediately
 
 | # | User Story | Persona |
 |---|-----------|---------|
-| 3 | [003 Process Lifecycle](../user_story/003_process_lifecycle.md) | Developer (unresponsive session) |
+| 1 | [003 Process Lifecycle](../user_story/003_process_lifecycle.md) | Developer (unresponsive session) |
 
 ---
 

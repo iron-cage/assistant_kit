@@ -260,3 +260,8 @@ IT-12 verifies array structure. IT-15 verifies `"value"` field presence.
 | `tc122_version_list_includes_month` | `integration/read_commands_test.rs` |
 | `tc123_version_list_v1_shows_pinned_versions` | `integration/read_commands_test.rs` |
 | `tc124_version_list_json_has_value_field` | `integration/read_commands_test.rs` |
+| `it04_version_list_bogus_param_exits_1` | `integration/read_commands_test.rs` |
+| `it05_version_list_format_xml_exits_1` | `integration/read_commands_test.rs` |
+| `it06_version_list_v3_exits_1` | `integration/read_commands_test.rs` |
+| `it07_version_list_format_json_valid` | `integration/read_commands_test.rs` |
+| `it08_version_list_output_stable` | `integration/read_commands_test.rs` |

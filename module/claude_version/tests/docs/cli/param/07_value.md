@@ -222,3 +222,14 @@ as empty string, exit 0 with `"s": ""`. Check FR-04 vs FR-07 interaction.; Consi
 | `tc327_settings_set_empty_value_rejected` | `integration/mutation_commands_test.rs` |
 | `tc239_settings_set_missing_value_error_format` | `integration/read_commands_test.rs` |
 | `tc506_settings_set_missing_value_error_contains_value` | `integration/error_messages_test.rs` |
+| `value_ec1_true_stored_as_boolean` | `integration/value_param_test.rs` |
+| `value_ec2_zero_stored_as_integer_not_boolean` | `integration/value_param_test.rs` |
+| `value_ec4_command_scope_rejects_on_get` | `integration/value_param_test.rs` |
+| `value_ec5_float_stored_as_json_float` | `integration/value_param_test.rs` |
+| `value_ec6_nan_stored_as_string` | `integration/value_param_test.rs` |
+| `value_ec7_round_trip_set_get` | `integration/value_param_test.rs` |
+| `value_ec8_infinity_stored_as_string` | `integration/value_param_test.rs` |
+| `value_ec9_space_in_value_stored_as_string` | `integration/value_param_test.rs` |
+| `value_ec11_false_stored_as_boolean` | `integration/value_param_test.rs` |
+| `value_ec12_integer_stored_unquoted` | `integration/value_param_test.rs` |
+| `value_ec13_string_stored_quoted` | `integration/value_param_test.rs` |

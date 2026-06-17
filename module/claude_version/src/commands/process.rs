@@ -61,6 +61,9 @@ pub fn processes_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Re
 
 /// Deliver SIGTERM+SIGKILL (with 2 s wait) or bare SIGKILL to a process list.
 ///
+/// Called only from `processes_kill_routine` (`.processes.kill` explicit user command).
+/// MUST NOT be called from guard routines, install routines, or any scheduled path.
+///
 /// `force == true` → immediate SIGKILL; `force == false` → SIGTERM first, then
 /// SIGKILL any survivors after a 2-second grace period.
 fn send_kill_signals( procs : &[ ProcessInfo ], force : bool ) -> Result< (), ErrorData >
@@ -104,6 +107,8 @@ fn send_kill_signals( procs : &[ ProcessInfo ], force : bool ) -> Result< (), Er
 }
 
 /// `.processes.kill` — terminate all Claude Code processes.
+///
+/// Handler for explicit user command `.processes.kill`. Never invoke from automatic paths.
 ///
 /// # Errors
 ///

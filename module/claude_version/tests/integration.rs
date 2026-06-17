@@ -52,3 +52,30 @@ mod pitfall_surface_test;
 
 #[ path = "integration/collection_surface_test.rs" ]
 mod collection_surface_test;
+
+#[ path = "integration/version_param_test.rs" ]
+mod version_param_test;
+
+#[ path = "integration/dry_param_test.rs" ]
+mod dry_param_test;
+
+#[ path = "integration/force_param_test.rs" ]
+mod force_param_test;
+
+#[ path = "integration/verbosity_param_test.rs" ]
+mod verbosity_param_test;
+
+#[ path = "integration/format_param_test.rs" ]
+mod format_param_test;
+
+#[ path = "integration/key_param_test.rs" ]
+mod key_param_test;
+
+#[ path = "integration/value_param_test.rs" ]
+mod value_param_test;
+
+#[ path = "integration/count_param_test.rs" ]
+mod count_param_test;
+
+#[ path = "integration/process_isolation_test.rs" ]
+mod process_isolation_test;
