@@ -1,6 +1,6 @@
 # Collections
 
-## Entity Tree
+## Collection Tree
 
 ```
 docs/
@@ -18,7 +18,7 @@ docs/
 └── pitfall/
 ```
 
-## Master Doc Entities Table
+## Master Collections Table
 
 | Type | Purpose | Master File |
 |------|---------|-------------|
@@ -44,8 +44,8 @@ docs/
 
 ## Master Doc Instances Table
 
-| Entity | ID | Name | Status | File |
-|--------|----|------|--------|------|
+| Collection | ID | Name | Status | File |
+|------------|-----|------|--------|------|
 | algorithm | 001 | Settings Type Inference | ✅ | [algorithm/001_settings_type_inference.md](algorithm/001_settings_type_inference.md) |
 | algorithm | 002 | Config Resolution | ✅ | [algorithm/002_config_resolution.md](algorithm/002_config_resolution.md) |
 | cli | 001 | Commands | ✅ | [cli/command/readme.md](cli/command/readme.md) |
