@@ -1,5 +1,7 @@
 # Test: Feature 008 — Auto Rotate
 
+> **DEPRECATED** — `auto_rotate()` and `.account.rotate` removed. Tests superseded by `tests/docs/feature/38_usage_strategy_rotate.md`.
+
 Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` (FR-13). Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

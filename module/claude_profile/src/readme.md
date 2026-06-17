@@ -7,7 +7,7 @@
 | `cli.rs` | CLI pipeline: adapter → parser → semantic analysis → execution. |
 | `paths.rs` | ClaudePaths — all `~/.claude/` canonical paths from HOME. |
 | `token.rs` | TokenStatus — read expiresAt, classify Valid/ExpiringSoon/Expired. |
-| `account.rs` | Account CRUD: save, list, switch, delete, auto_rotate; _active marker. |
+| `account.rs` | Account CRUD: save, list, switch, delete; _active marker. |
 | `main.rs` | CLI binary entry point; delegates to `run_cli()`. |
 | `adapter.rs` | Argv-to-unilang token conversion, alias expansion, validation. |
 | `output.rs` | Output format extraction, JSON string escaping, and duration display. |

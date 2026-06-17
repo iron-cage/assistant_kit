@@ -76,6 +76,12 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-71 | `→ Next` column shows soonest upcoming event label + duration | Next Event Column |
 | IT-72 | `format::json` new fields: `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | JSON Schema |
 | IT-74 | Owner column visible by default; `cols::-owner` hides it | Owner Column |
+| IT-75 | `rotate::1 live::1` exits 1 with mutual exclusion message | Rotate Param |
+| IT-76 | `rotate::1` with no eligible candidate exits 1; table still rendered | Rotate Param |
+| IT-77 | `rotate::1 dry::1` previews target; no switch executed; exit 0 | Rotate Param |
+| IT-78 | `rotate::1` executes switch; output ends with `switched to '{name}'` | Rotate Param |
+| IT-79 | `rotate::1 next::endurance` and `rotate::1 next::drain` use strategy winner | Rotate Param |
+| IT-80 | `rotate::1 force::1` bypasses G5 gate; non-owned account eligible | Rotate Param |
 
 ### Test Coverage Summary
 
@@ -114,8 +120,9 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - effort Param: 2 tests (IT-68, IT-69)
 - Next Event Column: 1 test (IT-71)
 - Owner Column: 1 test (IT-74)
+- Rotate Param: 6 tests (IT-75, IT-76, IT-77, IT-78, IT-79, IT-80)
 
-**Total:** 81 spec entries (IT-43, IT-57, IT-59, IT-60, IT-73 removed — unit tests not observable via clp output); IT-65 added for `sort::next`; IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); IT-71–IT-72 added by Plan 012 (`→ Next` column and JSON new fields); IT-74 added by Feature 037 (Owner column default-visible in `.usage`); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/19_refresh.md`–`23_trace.md` (param EC edge cases, not command spec)
+**Total:** 87 spec entries (IT-43, IT-57, IT-59, IT-60, IT-73 removed — unit tests not observable via clp output); IT-65 added for `sort::next`; IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); IT-71–IT-72 added by Plan 012 (`→ Next` column and JSON new fields); IT-74 added by Feature 037 (Owner column default-visible in `.usage`); IT-75–IT-80 added by Feature 038 (`rotate::` parameter group); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/19_refresh.md`–`23_trace.md` (param EC edge cases, not command spec)
 
 ---
 
@@ -898,3 +905,74 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Exit:** 0
 - **Source fn:** `it248_owner_column_visible_by_default` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/037_accounts_usage_param_unification.md AC-19](../../../../docs/feature/037_accounts_usage_param_unification.md)
+
+---
+
+### IT-75: `rotate::1 live::1` exits 1 with mutual exclusion message
+
+- **Given:** Any environment (empty credential store is sufficient).
+- **When:** `clp .usage rotate::1 live::1`
+- **Then:** Exits 1 before any account fetch. Stderr contains a message indicating `rotate::1` and `live::1` are mutually exclusive. No table is rendered.
+- **Exit:** 1
+- **Source fn:** `it249_rotate_live_mutual_exclusion_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/038_usage_strategy_rotate.md AC-04](../../../../docs/feature/038_usage_strategy_rotate.md)
+
+---
+
+### IT-76: `rotate::1` with no eligible candidate exits 1; table still rendered
+
+- **Given:** One account that is the current (active, live) account — no non-current owned account exists.
+- **When:** `clp .usage rotate::1`
+- **Then:** Exits 1. Stdout contains the quota table (table IS rendered before the error). Stderr or stdout contains `"no eligible account to rotate to"`. No `switched to` line appears.
+- **Exit:** 1
+- **Source fn:** `it250_rotate_no_eligible_exits_1_table_rendered` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/038_usage_strategy_rotate.md AC-03](../../../../docs/feature/038_usage_strategy_rotate.md)
+
+---
+
+### IT-77: `rotate::1 dry::1` previews target; no switch executed; exit 0
+
+- **Given:** Two accounts: `primary@acme.com` (current, active) and `secondary@acme.com` (owned, non-current, non-active, not h-exhausted, not expired, has quota). `next::renew` default selects `secondary@acme.com` as `→` winner.
+- **When:** `clp .usage rotate::1 dry::1`
+- **Then:** Exits 0. Table is rendered; `→` appears on `secondary@acme.com`. Output ends with `[dry-run] would switch to 'secondary@acme.com'`. Credential store is NOT modified (credentials file unchanged).
+- **Exit:** 0
+- **Source fn:** `it251_rotate_dry_preview_no_switch` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/038_usage_strategy_rotate.md AC-02](../../../../docs/feature/038_usage_strategy_rotate.md)
+
+---
+
+### IT-78: `rotate::1` executes switch; output ends with `switched to '{name}'`
+
+- **Given:** Two accounts: `primary@acme.com` (current, active) and `secondary@acme.com` (owned, non-current, non-active, has quota). Live test environment.
+- **When:** `clp .usage rotate::1`
+- **Then:** Exits 0. Table is rendered with `→` on `secondary@acme.com`. Output ends with `switched to 'secondary@acme.com'`. The active marker in the credential store now points to `secondary@acme.com`.
+- **Exit:** 0
+- **Live:** yes
+- **Source fn:** `it252_lim_it_rotate_core_switch_switches_account` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/038_usage_strategy_rotate.md AC-01](../../../../docs/feature/038_usage_strategy_rotate.md)
+
+---
+
+### IT-79: `rotate::1 next::endurance` and `rotate::1 next::drain` use strategy winner
+
+- **Given:** Two eligible non-current accounts with differing quota levels. Live test environment.
+- **When (Case A):** `clp .usage rotate::1 next::endurance`
+- **Then (Case A):** Exits 0. Switches to the endurance winner (most 5h quota remaining). Output ends with `switched to '{name}'`.
+- **When (Case B):** `clp .usage rotate::1 next::drain`
+- **Then (Case B):** Exits 0. Switches to the drain winner (least non-zero weekly quota). Output ends with `switched to '{name}'`.
+- **Exit:** 0
+- **Live:** yes
+- **Source fn:** `it253_lim_it_rotate_strategy_selection` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/038_usage_strategy_rotate.md AC-07, AC-08](../../../../docs/feature/038_usage_strategy_rotate.md)
+
+---
+
+### IT-80: `rotate::1 force::1` bypasses G5 gate; non-owned account eligible
+
+- **Given:** Two non-current accounts: `owned@acme.com` (owned) and `foreign@acme.com` (non-owned). Without `force::1`, only `owned@acme.com` is eligible. Live test environment.
+- **When:** `clp .usage rotate::1 force::1`
+- **Then:** Exits 0. Both accounts are eligible rotation targets (non-owned `foreign@acme.com` may be selected if it wins the strategy). Output ends with `switched to '{name}'`. No ownership-violation error.
+- **Exit:** 0
+- **Live:** yes
+- **Source fn:** `it254_lim_it_rotate_force_bypasses_g5` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/038_usage_strategy_rotate.md AC-06](../../../../docs/feature/038_usage_strategy_rotate.md)

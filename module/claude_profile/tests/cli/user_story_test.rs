@@ -13,11 +13,11 @@
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | UA-1 | `rotation_ua1_rotate_selects_highest_expiry_inactive` | alice (T+7h) beats carol (T+3h) | P |
-//! | UA-2 | `rotation_ua2_switch_is_atomic` | rotate exits 0; credentials fully replaced | P |
-//! | UA-3 | `rotation_ua3_dry_run_previews_without_switching` | `dry::1` → creds unchanged | P |
+//! | UA-1 | `rotation_ua1_rotate_selects_highest_expiry_inactive` | deprecated → exits 1 | N |
+//! | UA-2 | `rotation_ua2_switch_is_atomic` | deprecated → exits 1; credentials unchanged | N |
+//! | UA-3 | `rotation_ua3_dry_run_previews_without_switching` | deprecated → exits 1 | N |
 //! | UA-4 | `rotation_ua4_manual_use_switches_account` | `.account.use` manual rotation | P |
-//! | UA-5 | `rotation_ua5_no_inactive_accounts_exits_2` | single active account → exit 2 | N |
+//! | UA-5 | `rotation_ua5_no_inactive_accounts_exits_2` | deprecated → exits 1 (not 2) | N |
 //!
 //! ### Story 2 — Account Onboarding and Lifecycle Management (UA-1..6)
 //!
@@ -71,100 +71,57 @@ use super::cli_runner::
 
 // ── Story 1: Automatic Account Rotation ──────────────────────────────────────
 
-// UA-1: .account.rotate selects the inactive account with the highest remaining expiry
+// UA-1: `.account.rotate` is deprecated — always exits 1.
 #[ test ]
 fn rotation_ua1_rotate_selects_highest_expiry_inactive()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
-
-  let alice_exp : u64 = FAR_FUTURE_MS;             // T+7h equivalent (highest)
-  let carol_exp : u64 = FAR_FUTURE_MS - 14_400_000; // 4h less (lower expiry)
-  write_account( dir.path(), "alice@acme.com", "max", "default", alice_exp, false );
-  write_account( dir.path(), "carol@acme.com", "max", "default", carol_exp, false );
-  write_account( dir.path(), "bob@acme.com",   "max", "default", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS,              false );
+  write_account( dir.path(), "bob@acme.com",   "max", "default", FAR_FUTURE_MS - 14_400_000, true  );
 
   let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-
-  // After rotation, active credentials must be alice's (highest expiry)
-  let creds = std::fs::read_to_string(
-    dir.path().join( ".claude" ).join( ".credentials.json" ),
-  ).unwrap();
-  assert!(
-    creds.contains( &alice_exp.to_string() ),
-    "alice (highest expiry) must be activated; got creds: {creds}",
-  );
+  assert_exit( &out, 1 );
 }
 
-// UA-2: Rotation switch is atomic via write-then-rename
-//
-// Live credentials (write_credentials) use bob's lower expiry so they differ from alice's.
-// After rotate, alice (higher expiry) becomes active — the file content changes.
+// UA-2: `.account.rotate` is deprecated — exits 1; credentials file is not modified.
 #[ test ]
 fn rotation_ua2_switch_is_atomic()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-
-  let alice_exp : u64 = FAR_FUTURE_MS;
-  let bob_exp   : u64 = FAR_FUTURE_MS - 3_600_000; // bob has lower expiry
-
-  // Live creds start as bob's expiry; alice is inactive with higher expiry
+  let bob_exp : u64 = FAR_FUTURE_MS - 3_600_000;
   write_credentials( dir.path(), "max", "default", bob_exp );
-  write_account( dir.path(), "alice@acme.com", "max", "default", alice_exp, false );
-  write_account( dir.path(), "bob@acme.com",   "max", "default", bob_exp,   true  );
+  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "bob@acme.com",   "max", "default", bob_exp,       true  );
 
-  let creds_path = dir.path().join( ".claude" ).join( ".credentials.json" );
-  let content_before = std::fs::read_to_string( &creds_path ).unwrap();
+  let creds_path      = dir.path().join( ".claude" ).join( ".credentials.json" );
+  let content_before  = std::fs::read_to_string( &creds_path ).unwrap();
 
   let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
+  assert_exit( &out, 1 );
 
-  // Credentials must have been replaced (alice_exp ≠ bob_exp → content differs)
+  // Credentials must be unchanged — redirector does not switch.
   let content_after = std::fs::read_to_string( &creds_path ).unwrap();
-  assert_ne!(
+  assert_eq!(
     content_before, content_after,
-    "rotate must replace credentials content (atomic switch to alice, alice_exp={alice_exp} ≠ bob_exp={bob_exp})",
+    "deprecated `.account.rotate` must not modify credentials",
   );
-  // The new credentials must be valid JSON (no partial write)
-  let parsed : serde_json::Value = serde_json::from_str( &content_after )
-    .expect( ".credentials.json must be valid JSON after atomic rotate" );
-  assert!( parsed.is_object(), "credentials after rotate must be a JSON object" );
 }
 
-// UA-3: dry::1 previews selected account without switching
+// UA-3: `.account.rotate dry::1` is deprecated — exits 1 regardless of dry flag.
 #[ test ]
 fn rotation_ua3_dry_run_previews_without_switching()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
-
-  let alice_exp : u64 = FAR_FUTURE_MS;
-  write_account( dir.path(), "alice@acme.com", "max", "default", alice_exp, false );
-  write_account( dir.path(), "bob@acme.com",   "max", "default", FAR_FUTURE_MS - 3_600_000, true );
-
-  let creds_path = dir.path().join( ".claude" ).join( ".credentials.json" );
-  let content_before = std::fs::read_to_string( &creds_path ).unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS,              false );
+  write_account( dir.path(), "bob@acme.com",   "max", "default", FAR_FUTURE_MS - 3_600_000,  true  );
 
   let out = run_cs_with_env( &[ ".account.rotate", "dry::1" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-
-  // Credentials must be unchanged (dry run)
-  let content_after = std::fs::read_to_string( &creds_path ).unwrap();
-  assert_eq!(
-    content_before, content_after,
-    "dry::1 must not modify ~/.claude/.credentials.json",
-  );
-
-  // stdout must identify alice as the selection
-  let out_text = stdout( &out );
-  assert!(
-    out_text.contains( "alice@acme.com" ) || out_text.contains( "dry" ),
-    "dry::1 stdout must preview the selected account: {out_text}",
-  );
+  // Deprecated redirector accepts no params — exits 1.
+  assert_exit( &out, 1 );
 }
 
 // UA-4: .account.use name::X enables manual rotation to a known account
@@ -195,19 +152,19 @@ fn rotation_ua4_manual_use_switches_account()
   );
 }
 
-// UA-5: Exit 2 when no inactive accounts are available
+// UA-5: `.account.rotate` is deprecated — exits 1 (not 2) even with single active account.
 #[ test ]
 fn rotation_ua5_no_inactive_accounts_exits_2()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
   write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, true );
 
   let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 2 );
+  // Deprecated redirector always exits 1 — "no inactive" condition is never reached.
+  assert_exit( &out, 1 );
   let err_text = stderr( &out );
-  assert!( !err_text.is_empty(), "error message must be present when no inactive accounts" );
+  assert!( !err_text.is_empty(), "deprecation message must be present" );
 }
 
 // ── Story 2: Account Onboarding and Lifecycle Management ─────────────────────

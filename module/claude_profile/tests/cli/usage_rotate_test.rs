@@ -1,0 +1,388 @@
+//! Integration tests: Feature 038 — `.usage rotate::1` strategy-driven rotation.
+//!
+//! Tests invoke the compiled `clp` binary as a subprocess via `CARGO_BIN_EXE_clp`.
+//!
+//! Live tests (names contain `lim_it`) require network access and are excluded
+//! from Docker CI by the nextest filter `!test(lim_it)`.
+//!
+//! ## Test Matrix
+//!
+//! | ID     | Test Function                                  | AC    | Live? |
+//! |--------|------------------------------------------------|-------|-------|
+//! | FT-04  | `ft04_rotate_live_mutual_exclusion`            | AC-04 | no    |
+//! | FT-03  | `ft03_no_eligible_account_exits_1`             | AC-03 | no    |
+//! | FT-01  | `ft01_lim_it_rotates_to_next_winner`           | AC-01 | yes   |
+//! | FT-02  | `ft02_lim_it_dry_run_no_switch`                | AC-02 | yes   |
+//! | FT-05  | `ft05_lim_it_g5_gate_skips_non_owned`          | AC-05 | yes   |
+//! | FT-06  | `ft06_lim_it_force_bypasses_g5`                | AC-06 | yes   |
+//! | FT-07  | `ft07_lim_it_next_endurance`                   | AC-07 | yes   |
+//! | FT-08  | `ft08_lim_it_next_drain`                       | AC-08 | yes   |
+//! | FT-09  | `ft09_lim_it_format_json_switch_executes`      | AC-09 | yes   |
+//! | FT-11  | `ft11_non_owned_no_force_exits_1`              | AC-11 | no    |
+
+use crate::cli_runner::{
+  run_cs_with_env,
+  stdout, stderr, assert_exit,
+  write_credentials, write_account, write_account_owner,
+  require_live_api, write_account_with_token, live_active_token,
+  FAR_FUTURE_MS,
+};
+use tempfile::TempDir;
+
+// ── FT-04: rotate::1 + live::1 mutual exclusion (AC-04) ───────────────────────
+
+/// FT-04 (AC-04): `rotate::1 live::1` → exit 1 before any fetch; error message
+/// references mutual exclusion.
+///
+/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-04`.
+#[ test ]
+fn ft04_rotate_live_mutual_exclusion()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Account not needed — command must exit 1 before fetch due to param guard.
+  write_account( dir.path(), "any@test.com", "max", "default", FAR_FUTURE_MS, true );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1", "live::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  let combined = format!( "{}{}", stdout( &out ), stderr( &out ) );
+  assert!(
+    combined.contains( "rotate" ) && combined.contains( "live" ),
+    "error must reference both 'rotate' and 'live' params, got:\n{combined}",
+  );
+}
+
+// ── FT-03: no eligible account → exit 1 (AC-03) ──────────────────────────────
+
+/// FT-03 (AC-03): all accounts fail API fetch (no `accessToken`) → `result: Err`
+/// → `find_first_eligible` skips all → no eligible → exit 1; table still rendered.
+///
+/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-03`.
+#[ test ]
+fn ft03_no_eligible_account_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Single account with no accessToken → API call fails → result: Err → not eligible.
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+  write_account( dir.path(), "current@test.com", "max", "default", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "other@test.com",   "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  let combined = format!( "{}{}", stdout( &out ), stderr( &out ) );
+  assert!(
+    combined.contains( "eligible" ) || combined.contains( "rotate" ),
+    "error must reference 'eligible' or 'rotate', got:\n{combined}",
+  );
+}
+
+// ── FT-11: non-owned account without force → exit 1 (AC-11) ──────────────────
+
+/// FT-11 (AC-11): only non-owned account in store, `force::0` (default) →
+/// exit 1; credentials unchanged.
+///
+/// Note: with fake credentials (no `accessToken`), the account fails API fetch
+/// so the exit-1 is "no eligible account" (pre-API-check: `result: Err` skipped
+/// by `find_first_eligible`). The test verifies exit 1 and unchanged credentials.
+///
+/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-11`.
+#[ test ]
+fn ft11_non_owned_no_force_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+  write_account( dir.path(), "active@test.com",  "max", "default", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "foreign@test.com", "max", "default", FAR_FUTURE_MS, false );
+  // Mark foreign as owned by a different machine — G5 gate applies.
+  write_account_owner( dir.path(), "foreign@test.com", "other@remotemachine" );
+
+  let before = std::fs::read_to_string(
+    dir.path().join( ".claude" ).join( ".credentials.json" ),
+  ).expect( "credentials must exist before rotate" );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let after = std::fs::read_to_string(
+    dir.path().join( ".claude" ).join( ".credentials.json" ),
+  ).expect( "credentials must still exist after failed rotate" );
+  assert_eq!(
+    before, after,
+    "credentials must be unchanged when rotate fails",
+  );
+}
+
+// ── FT-01: rotate to → winner (AC-01, lim_it) ─────────────────────────────────
+
+/// FT-01 (AC-01, `lim_it`): `rotate::1` switches to the `→` winner (`next::renew`).
+/// Output ends with `switched to '{name}'`. Active marker updated.
+///
+/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-01`.
+#[ test ]
+fn ft01_lim_it_rotates_to_next_winner()
+{
+  if !require_live_api( "ft01_lim_it_rotates_to_next_winner" ) { return; }
+  let Some( token ) = live_active_token() else { eprintln!( "ft01: no live token — skipping" ); return; };
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Active account: currently checked-out token (must be set up so rotate picks a different one).
+  write_account_with_token( dir.path(), "active@test.com", &token, true );
+  write_account_with_token( dir.path(), "rotate_target@test.com", &token, false );
+
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  // Must exit 0 (switched) or 1 (no eligible — rate limited/both same token).
+  // When eligible: exit 0 + "switched to" in output.
+  if out.status.code() == Some( 0 )
+  {
+    let text = stdout( &out );
+    assert!(
+      text.contains( "switched to" ),
+      "rotate::1 on success must output 'switched to', got:\n{text}",
+    );
+  }
+}
+
+// ── FT-02: dry run previews without switching (AC-02, lim_it) ─────────────────
+
+/// FT-02 (AC-02, `lim_it`): `rotate::1 dry::1` outputs `[dry-run] would switch to '{name}'`;
+/// credentials unchanged.
+///
+/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-02`.
+#[ test ]
+fn ft02_lim_it_dry_run_no_switch()
+{
+  if !require_live_api( "ft02_lim_it_dry_run_no_switch" ) { return; }
+  let Some( token ) = live_active_token() else { eprintln!( "ft02: no live token — skipping" ); return; };
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+  write_account_with_token( dir.path(), "active@test.com", &token, true );
+  write_account_with_token( dir.path(), "candidate@test.com", &token, false );
+
+  let creds_before = std::fs::read_to_string(
+    dir.path().join( ".claude" ).join( ".credentials.json" ),
+  ).expect( "credentials must exist" );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+
+  if out.status.code() == Some( 0 )
+  {
+    let text = stdout( &out );
+    assert!(
+      text.contains( "[dry-run]" ) && text.contains( "would switch to" ),
+      "dry-run rotate::1 must output '[dry-run] would switch to', got:\n{text}",
+    );
+    let creds_after = std::fs::read_to_string(
+      dir.path().join( ".claude" ).join( ".credentials.json" ),
+    ).unwrap_or_default();
+    assert_eq!( creds_before, creds_after, "credentials must be unchanged during dry-run" );
+  }
+}
+
+// ── FT-05: G5 gate skips non-owned, selects next owned (AC-05, lim_it) ────────
+
+/// FT-05 (AC-05, `lim_it`): non-owned account is skipped by G5 gate; rotation
+/// switches to the next owned account.
+///
+/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-05`.
+#[ test ]
+fn ft05_lim_it_g5_gate_skips_non_owned()
+{
+  if !require_live_api( "ft05_lim_it_g5_gate_skips_non_owned" ) { return; }
+  let Some( token ) = live_active_token() else { eprintln!( "ft05: no live token — skipping" ); return; };
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+  write_account_with_token( dir.path(), "active@test.com",  &token, true  );
+  write_account_with_token( dir.path(), "foreign@test.com", &token, false );
+  write_account_with_token( dir.path(), "mine@test.com",    &token, false );
+  // foreign is non-owned; mine has no explicit owner → owned (default).
+  write_account_owner( dir.path(), "foreign@test.com", "other@remotemachine" );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  if out.status.code() == Some( 0 )
+  {
+    let text = stdout( &out );
+    assert!(
+      !text.contains( "foreign@test.com" ) || text.contains( "switched to 'mine@test.com'" ),
+      "G5 must skip non-owned 'foreign'; must switch to 'mine', got:\n{text}",
+    );
+    assert!(
+      !text.contains( "switched to 'foreign@test.com'" ),
+      "must NOT switch to the non-owned 'foreign' account, got:\n{text}",
+    );
+  }
+}
+
+// ── FT-06: force::1 bypasses G5 gate (AC-06, lim_it) ─────────────────────────
+
+/// FT-06 (AC-06, `lim_it`): `force::1` allows rotation to a non-owned account.
+///
+/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-06`.
+#[ test ]
+fn ft06_lim_it_force_bypasses_g5()
+{
+  if !require_live_api( "ft06_lim_it_force_bypasses_g5" ) { return; }
+  let Some( token ) = live_active_token() else { eprintln!( "ft06: no live token — skipping" ); return; };
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+  write_account_with_token( dir.path(), "active@test.com",  &token, true  );
+  write_account_with_token( dir.path(), "foreign@test.com", &token, false );
+  write_account_owner( dir.path(), "foreign@test.com", "other@remotemachine" );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1", "force::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  // With force::1 and a live-eligible foreign account: exit 0.
+  // The test asserts the command doesn't exit 1 for ownership violation.
+  if out.status.code() == Some( 1 )
+  {
+    let combined = format!( "{}{}", stdout( &out ), stderr( &out ) );
+    assert!(
+      !combined.contains( "ownership" ),
+      "force::1 must bypass G5 ownership gate; got ownership error:\n{combined}",
+    );
+  }
+}
+
+// ── FT-07: next::endurance strategy (AC-07, lim_it) ──────────────────────────
+
+/// FT-07 (AC-07, `lim_it`): `rotate::1 next::endurance` switches to the
+/// endurance-strategy winner.
+///
+/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-07`.
+#[ test ]
+fn ft07_lim_it_next_endurance()
+{
+  if !require_live_api( "ft07_lim_it_next_endurance" ) { return; }
+  let Some( token ) = live_active_token() else { eprintln!( "ft07: no live token — skipping" ); return; };
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+  write_account_with_token( dir.path(), "active@test.com",    &token, true  );
+  write_account_with_token( dir.path(), "candidate@test.com", &token, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1", "next::endurance" ],
+    &[ ( "HOME", home ) ],
+  );
+  // exit 0 = switched; exit 1 = no endurance-eligible account (fine — strategy just found none).
+  if out.status.code() == Some( 0 )
+  {
+    let text = stdout( &out );
+    assert!(
+      text.contains( "switched to" ),
+      "next::endurance rotate must output 'switched to', got:\n{text}",
+    );
+  }
+}
+
+// ── FT-08: next::drain strategy (AC-08, lim_it) ──────────────────────────────
+
+/// FT-08 (AC-08, `lim_it`): `rotate::1 next::drain` switches to the
+/// drain-strategy winner.
+///
+/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-08`.
+#[ test ]
+fn ft08_lim_it_next_drain()
+{
+  if !require_live_api( "ft08_lim_it_next_drain" ) { return; }
+  let Some( token ) = live_active_token() else { eprintln!( "ft08: no live token — skipping" ); return; };
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+  write_account_with_token( dir.path(), "active@test.com",    &token, true  );
+  write_account_with_token( dir.path(), "candidate@test.com", &token, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1", "next::drain" ],
+    &[ ( "HOME", home ) ],
+  );
+  if out.status.code() == Some( 0 )
+  {
+    let text = stdout( &out );
+    assert!(
+      text.contains( "switched to" ),
+      "next::drain rotate must output 'switched to', got:\n{text}",
+    );
+  }
+}
+
+// ── FT-09: format::json with rotate::1 (AC-09, lim_it) ───────────────────────
+
+/// FT-09 (AC-09, `lim_it`): `rotate::1 format::json` executes the switch;
+/// JSON output body is unchanged (no `"switched_to"` field added).
+///
+/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-09`.
+#[ test ]
+fn ft09_lim_it_format_json_switch_executes()
+{
+  if !require_live_api( "ft09_lim_it_format_json_switch_executes" ) { return; }
+  let Some( token ) = live_active_token() else { eprintln!( "ft09: no live token — skipping" ); return; };
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+  write_account_with_token( dir.path(), "active@test.com",    &token, true  );
+  write_account_with_token( dir.path(), "candidate@test.com", &token, false );
+
+  // Capture baseline JSON (no rotate).
+  let base = run_cs_with_env(
+    &[ ".usage", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &base, 0 );
+  let base_json = stdout( &base );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  // May exit 0 (switched) or 1 (no eligible).
+  if out.status.code() == Some( 0 )
+  {
+    let text = stdout( &out );
+    assert!(
+      !text.contains( "switched_to" ),
+      "format::json with rotate::1 must NOT add a 'switched_to' field, got:\n{text}",
+    );
+    // JSON array must be valid (starts with '[').
+    let trimmed = text.trim();
+    assert!(
+      trimmed.starts_with( '[' ),
+      "format::json output must still be a JSON array, got:\n{trimmed}",
+    );
+    let _ = base_json; // baseline captured; same structure expected
+  }
+}

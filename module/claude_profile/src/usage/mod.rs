@@ -547,7 +547,7 @@ mod tests
     let aq = mk_aq_err();
     let output = render_text(
       &[ aq ], SortStrategy::Name, None, PreferStrategy::Any,
-      NextStrategy::Endurance, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(), false, false,
     );
     assert!( output.contains( "🔴" ), "Err account must show 🔴. Got:\n{output}" );
   }
@@ -559,7 +559,7 @@ mod tests
     let aq = mk_aq_ok( 10.0 );
     let output = render_text(
       &[ aq ], SortStrategy::Name, None, PreferStrategy::Any,
-      NextStrategy::Endurance, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(), false, false,
     );
     assert!( output.contains( "🟢" ), "90% left must show 🟢. Got:\n{output}" );
   }
@@ -571,7 +571,7 @@ mod tests
     let aq = mk_aq_ok( 97.0 );
     let output = render_text(
       &[ aq ], SortStrategy::Name, None, PreferStrategy::Any,
-      NextStrategy::Endurance, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(), false, false,
     );
     assert!( output.contains( "🟡" ), "3% left must show 🟡. Got:\n{output}" );
   }
@@ -585,11 +585,11 @@ mod tests
     let aq_15_1pct = mk_aq_ok( 84.9 );
     let out_15   = render_text(
       &[ aq_15pct ], SortStrategy::Name, None, PreferStrategy::Any,
-      NextStrategy::Endurance, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(), false, false,
     );
     let out_15_1 = render_text(
       &[ aq_15_1pct ], SortStrategy::Name, None, PreferStrategy::Any,
-      NextStrategy::Endurance, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(), false, false,
     );
     assert!( out_15.contains( "🟡" ),   "exactly 15% left must show 🟡. Got:\n{out_15}" );
     assert!( out_15_1.contains( "🟢" ), "15.1% left must show 🟢. Got:\n{out_15_1}" );
@@ -604,7 +604,7 @@ mod tests
     aq.name = "(current session)".to_string();
     let output = render_text(
       &[ aq ], SortStrategy::Name, None, PreferStrategy::Any,
-      NextStrategy::Endurance, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(), false, false,
     );
     assert!( output.contains( "🟢" ), "80% left synthetic row must show 🟢. Got:\n{output}" );
   }
@@ -629,7 +629,7 @@ mod tests
   {
     let result = render_text(
       &[], SortStrategy::Name, None, PreferStrategy::Any,
-      NextStrategy::Endurance, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(), false, false,
     );
     assert!( result.contains( "no accounts configured" ), "empty must say no accounts, got: {result}" );
   }
@@ -800,7 +800,7 @@ mod tests
 
     let output = render_text(
       &accounts, SortStrategy::Drain, None, PreferStrategy::Any,
-      NextStrategy::Endurance, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(), false, false,
     );
 
     assert!( output.contains( "a@x.com" ), "output must contain a@x.com; got:\n{output}" );
@@ -833,7 +833,7 @@ mod tests
     let accounts = vec![ a, b, c ];
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      NextStrategy::Endurance, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(), false, false,
     );
     let pos_a = output.find( "a@x.com" ).expect( "a@x.com must appear in output" );
     let pos_b = output.find( "b@x.com" ).expect( "b@x.com must appear in output" );
@@ -857,7 +857,7 @@ mod tests
 
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      NextStrategy::Endurance, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(), false, false,
     );
 
     let pos_d = output.find( "d@x.com" ).expect( "d@x.com must appear" );
@@ -887,7 +887,7 @@ mod tests
 
     let output = render_text(
       &accounts, SortStrategy::Name, Some( true ), PreferStrategy::Any,
-      NextStrategy::Endurance, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(), false, false,
     );
 
     let pos_c = output.find( "c@x.com" ).expect( "c@x.com must appear" );
@@ -917,7 +917,7 @@ mod tests
 
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      NextStrategy::Endurance, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(), false, false,
     );
 
     assert!( !output.contains( "endurance" ),        "footer must omit endurance line when no eligible candidate (FT-08/023), got:\n{output}" );

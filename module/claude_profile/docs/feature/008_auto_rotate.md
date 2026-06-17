@@ -1,5 +1,7 @@
 # Feature: Auto Rotate
 
+> **DEPRECATED** — Removed in favor of `.usage rotate::1`. The `auto_rotate()` API and `.account.rotate` CLI command have been dropped. Use `clp .usage rotate::1` (with optional `next::` strategy) to execute strategy-driven account rotation. See [feature/038_usage_strategy_rotate.md](038_usage_strategy_rotate.md).
+
 ### Scope
 
 - **Purpose**: Enable one-call account rotation for automation that needs to swap accounts without writing selection logic.
@@ -59,10 +61,7 @@
 
 ### Sources
 
-| File | Relationship |
-|------|--------------|
-| `src/account.rs` | `auto_rotate()` implementation |
-| `src/commands/account_ops.rs` | `account_rotate_routine()` — CLI handler for `.account.rotate` |
+> Sources removed — `auto_rotate()` deleted from `src/account.rs` and `account_rotate_routine()` deleted from `src/commands/account_ops.rs` as part of Feature 038 migration.
 
 ### Tests
 

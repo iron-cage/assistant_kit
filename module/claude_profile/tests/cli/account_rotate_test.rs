@@ -1,109 +1,62 @@
-//! Integration tests: ROT (Account Rotate).
+//! Integration tests: ROT (Account Rotate — deprecated redirector).
+//!
+//! `.account.rotate` is deprecated (Feature 038). All invocations exit 1 with
+//! a message directing users to `.usage rotate::1`.
 //!
 //! Tests invoke the compiled `clp` binary as a subprocess via `CARGO_BIN_EXE_clp`.
 //!
 //! ## Test Matrix
 //!
-//! ### ROT — Account Rotate
+//! ### ROT — Account Rotate redirector
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | rot01 | `rot01_empty_store_exits_2` | empty credential store → exit 2 | N |
-//! | rot02 | `rot02_single_active_exits_2` | only one account and it is active → exit 2 | N |
-//! | rot03 | `rot03_rotates_to_best_inactive` | two accounts; rotates to inactive; `_active` changes | P |
-//! | rot04 | `rot04_selects_highest_expires_at` | three accounts; selects highest `expiresAt` inactive | P |
-//! | rot05 | `rot05_dry_no_mutation` | `dry::1` shows candidate; `_active` unchanged | P |
-//! | rot06 | `rot06_dry_output_prefix` | `dry::1` output contains `[dry-run]` | P |
-//! | rot07 | `rot07_output_confirms_name` | output contains `rotated to` + account name | P |
-//! | rot08 | `rot08_unknown_param_exits_1` | unknown parameter → exit 1 | N |
+//! | rot01 | `rot01_always_exits_1` | any invocation → exit 1 | N |
+//! | rot02 | `rot02_message_contains_usage_rotate` | stderr/stdout contains `.usage rotate` | N |
+//! | rot03 | `rot03_no_mutation_on_exit_1` | _active file unchanged after deprecated call | N |
 
 use crate::cli_runner::{
   run_cs_with_env,
   stdout, stderr, assert_exit,
-  write_credentials, write_account,
+  write_account,
   FAR_FUTURE_MS, PAST_MS,
 };
 use tempfile::TempDir;
 
-// ── ROT: Account Rotate ───────────────────────────────────────────────────────
+// ── ROT: Account Rotate redirector ────────────────────────────────────────────
 
 #[ test ]
-fn rot01_empty_store_exits_2()
+fn rot01_always_exits_1()
 {
-  // IT-1: no credential files at all → auto_rotate finds no inactive accounts → exit 2.
+  // IT-1: `.account.rotate` is a deprecated redirector — always exits 1.
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
   let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 2 );
+  assert_exit( &out, 1 );
 }
 
 #[ test ]
-fn rot02_single_active_exits_2()
+fn rot02_message_contains_usage_rotate()
 {
-  // IT-2: only one account; it is active → no inactive candidates → exit 2.
+  // IT-2: redirector error message directs users to `.usage rotate::1`.
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "solo@example.com", "pro", "standard", FAR_FUTURE_MS, true );
 
   let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 2 );
-}
+  assert_exit( &out, 1 );
 
-#[ test ]
-fn rot03_rotates_to_best_inactive()
-{
-  // IT-3: two accounts; inactive has higher expiresAt; _active must change to inactive account.
-  // write_credentials creates ~/.claude/ so switch_account can write .credentials.json there.
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "pro", "standard", PAST_MS );
-  write_account( dir.path(), "active@work.com",    "pro", "standard", PAST_MS,       true  );
-  write_account( dir.path(), "best@candidate.com", "max", "tier4",    FAR_FUTURE_MS, false );
-
-  let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-
-  let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  let active = std::fs::read_to_string( store.join( claude_profile::account::active_marker_filename() ) )
-    .expect( "_active must exist after rotate" );
-  assert_eq!(
-    active.trim(),
-    "best@candidate.com",
-    "_active must change to the best inactive account",
+  let combined = format!( "{}{}", stdout( &out ), stderr( &out ) );
+  assert!(
+    combined.contains( ".usage rotate" ),
+    "error output must reference '.usage rotate', got:\n{combined}",
   );
 }
 
 #[ test ]
-fn rot04_selects_highest_expires_at()
+fn rot03_no_mutation_on_exit_1()
 {
-  // IT-4: three accounts — one active, two inactive with different expiresAt;
-  // the account with the highest expiresAt among inactive accounts wins.
-  // write_credentials creates ~/.claude/ so switch_account can write .credentials.json there.
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_account( dir.path(), "current@work.com", "pro", "standard", FAR_FUTURE_MS, true  );
-  write_account( dir.path(), "lower@acme.com",   "pro", "standard", PAST_MS,       false );
-  write_account( dir.path(), "higher@acme.com",  "max", "tier4",    FAR_FUTURE_MS, false );
-
-  let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-
-  let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  let active = std::fs::read_to_string( store.join( claude_profile::account::active_marker_filename() ) )
-    .expect( "_active must exist after rotate" );
-  assert_eq!(
-    active.trim(),
-    "higher@acme.com",
-    "must select the inactive account with the highest expiresAt",
-  );
-}
-
-#[ test ]
-fn rot05_dry_no_mutation()
-{
-  // IT-5: dry::1 shows the candidate but does NOT switch _active.
+  // IT-3: deprecated call exits 1 and leaves _active unchanged.
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "active@work.com",    "pro", "standard", PAST_MS,       true  );
@@ -111,99 +64,16 @@ fn rot05_dry_no_mutation()
 
   let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   let before = std::fs::read_to_string( store.join( claude_profile::account::active_marker_filename() ) )
-    .expect( "_active must exist before dry-run" );
+    .expect( "_active must exist before deprecated call" );
 
-  let out = run_cs_with_env( &[ ".account.rotate", "dry::1" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
+  let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
 
   let after = std::fs::read_to_string( store.join( claude_profile::account::active_marker_filename() ) )
-    .expect( "_active must still exist after dry-run" );
+    .expect( "_active must still exist after deprecated call" );
   assert_eq!(
     before.trim(),
     after.trim(),
-    "_active must not change during dry-run",
-  );
-}
-
-#[ test ]
-fn rot06_dry_output_prefix()
-{
-  // IT-6: dry::1 output contains the `[dry-run]` prefix.
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "active@work.com",    "pro", "standard", PAST_MS,       true  );
-  write_account( dir.path(), "best@candidate.com", "max", "tier4",    FAR_FUTURE_MS, false );
-
-  let out = run_cs_with_env( &[ ".account.rotate", "dry::1" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!(
-    text.contains( "[dry-run] would rotate to 'best@candidate.com'" ),
-    "dry-run output must print full rotate message, got:\n{text}",
-  );
-}
-
-#[ test ]
-fn rot07_output_confirms_name()
-{
-  // IT-7: live rotation output contains "rotated to" and the selected account name.
-  // write_credentials creates ~/.claude/ so switch_account can write .credentials.json there.
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "pro", "standard", PAST_MS );
-  write_account( dir.path(), "active@work.com",    "pro", "standard", PAST_MS,       true  );
-  write_account( dir.path(), "best@candidate.com", "max", "tier4",    FAR_FUTURE_MS, false );
-
-  let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!(
-    text.contains( "rotated to" ),
-    "output must confirm rotation with 'rotated to', got:\n{text}",
-  );
-  assert!(
-    text.contains( "best@candidate.com" ),
-    "output must name the selected account, got:\n{text}",
-  );
-}
-
-#[ test ]
-fn rot08_unknown_param_exits_1()
-{
-  // IT-8: `.account.rotate` only accepts `dry::` — any other param is rejected with exit 1.
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "active@work.com", "pro", "standard", FAR_FUTURE_MS, true );
-
-  let out = run_cs_with_env(
-    &[ ".account.rotate", "unknown::x" ],
-    &[ ( "HOME", home ) ],
-  );
-  assert_exit( &out, 1 );
-}
-
-// ── it_trace_account_rotate_accepted ──────────────────────────────────────────
-
-/// EC-15 (023): `trace::1` accepted by `.account.rotate` — no "Unknown parameter" error.
-/// TSK-210 RED gate: fails before `trace::` is registered (exit 1 + Unknown parameter).
-#[ test ]
-fn it_trace_account_rotate_accepted()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "active@work.com", "pro", "standard", FAR_FUTURE_MS, true );
-
-  let out = run_cs_with_env(
-    &[ ".account.rotate", "dry::1", "trace::1" ],
-    &[ ( "HOME", home ) ],
-  );
-  let err = stderr( &out );
-  assert!(
-    !err.contains( "Unknown parameter" ),
-    "trace::1 must be accepted by .account.rotate, got stderr:\n{err}",
-  );
-  assert!(
-    err.contains( "[trace]" ),
-    "trace::1 must emit [trace] lines to stderr for .account.rotate, got:\n{err}",
+    "_active must not change when deprecated command exits 1",
   );
 }

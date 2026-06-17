@@ -48,13 +48,13 @@
 //! | BV-2 | `relogin_bv2_lim_it_updates_in_place_state_preserved` | in-place update (`lim_it` — skipped; needs TTY) | P |
 //! | BV-3 | `relogin_bv3_absent_account_exits_1` | absent account → exit 1 | N |
 //!
-//! ### `verb::rotate` (BV-1..3)
+//! ### `verb::rotate` (BV-1..3) — deprecated redirector
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | BV-1 | `rotate_bv1_non_idempotent_outcome_changes_with_expiry` | second rotate picks different account | P |
-//! | BV-2 | `rotate_bv2_activates_highest_expiry_inactive_account` | best-expiry account activated | P |
-//! | BV-3 | `rotate_bv3_no_inactive_accounts_exits_2` | single active account → exit 2 | N |
+//! | BV-1 | `rotate_bv1_non_idempotent_outcome_changes_with_expiry` | deprecated → always exit 1 | N |
+//! | BV-2 | `rotate_bv2_activates_highest_expiry_inactive_account` | deprecated → message references `.usage rotate` | N |
+//! | BV-3 | `rotate_bv3_no_inactive_accounts_exits_2` | deprecated → always exit 1 (not exit 2) | N |
 //!
 //! ### `verb::renewal` (BV-1..3)
 //!
@@ -97,7 +97,7 @@ use super::cli_runner::
   write_account_profile_json,
   live_active_token, require_live_api,
   write_account_with_token,
-  FAR_FUTURE_MS, PAST_MS,
+  FAR_FUTURE_MS,
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -477,96 +477,47 @@ fn relogin_bv3_absent_account_exits_1()
 // BV-1: Second rotate picks different account once first account's token expires (non-idempotent)
 //
 // Setup: bob (active, lowest expiry), alice (inactive, highest), carol (inactive, middle).
-// First rotate: alice wins (highest expiry among inactive).
-// Expire alice in the stored credential → alice no longer a valid candidate.
-// Second rotate: carol > bob by expiry → carol wins.
+// BV-1: `.account.rotate` is deprecated — always exits 1 regardless of account state.
 #[ test ]
 fn rotate_bv1_non_idempotent_outcome_changes_with_expiry()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "bob@acme.com",   "max", "default", FAR_FUTURE_MS, true  );
 
-  let alice_exp : u64 = FAR_FUTURE_MS;
-  let carol_exp : u64 = FAR_FUTURE_MS - 7_200_000;  // middle expiry
-  let bob_exp   : u64 = FAR_FUTURE_MS - 14_400_000; // lowest expiry (active)
-
-  write_credentials( dir.path(), "max", "default", bob_exp ); // live creds = bob's
-  write_account( dir.path(), "alice@acme.com", "max", "default", alice_exp, false );
-  write_account( dir.path(), "carol@acme.com", "max", "default", carol_exp, false );
-  write_account( dir.path(), "bob@acme.com",   "max", "default", bob_exp,   true  );
-
-  // First rotate — alice wins (highest expiry among inactive)
-  let out1 = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out1, 0 );
-
-  // Expire alice's stored credential so she becomes unusable
-  let alice_cred_file = dir.path()
-    .join( ".persistent" ).join( "claude" ).join( "credential" )
-    .join( "alice@acme.com.credentials.json" );
-  let expired_cred = format!(
-    r#"{{"oauthAccount":{{"subscriptionType":"max","rateLimitTier":"default"}},"expiresAt":{PAST_MS}}}"#,
-  );
-  std::fs::write( &alice_cred_file, &expired_cred ).unwrap();
-
-  // Second rotate — carol wins (alice expired; carol_exp > bob_exp)
-  let out2 = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out2, 0 );
-
-  let current_creds = std::fs::read_to_string(
-    dir.path().join( ".claude" ).join( ".credentials.json" ),
-  ).unwrap();
-  assert!(
-    current_creds.contains( &carol_exp.to_string() ),
-    "after second rotate, carol's credentials should be active (carol_exp={carol_exp}): {current_creds}",
-  );
+  let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
 }
 
-// BV-2: Rotate activates highest-expiry inactive account
+// BV-2: `.account.rotate` error message references `.usage rotate`.
 #[ test ]
 fn rotate_bv2_activates_highest_expiry_inactive_account()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
-  // alice: highest expiry, carol: lower expiry, bob: active
-  let alice_exp : u64 = FAR_FUTURE_MS;
-  let carol_exp : u64 = FAR_FUTURE_MS - 7_200_000;
-  write_account( dir.path(), "alice@acme.com", "max", "default", alice_exp, false );
-  write_account( dir.path(), "carol@acme.com", "max", "default", carol_exp, false );
-  write_account( dir.path(), "bob@acme.com",   "max", "default", FAR_FUTURE_MS, true );
-
   let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
+  assert_exit( &out, 1 );
 
-  // alice (highest expiry) must be active
-  let current_creds = std::fs::read_to_string(
-    dir.path().join( ".claude" ).join( ".credentials.json" ),
-  ).unwrap();
+  let combined = format!( "{}{}", stdout( &out ), stderr( &out ) );
   assert!(
-    current_creds.contains( &alice_exp.to_string() ),
-    "rotate must activate alice (highest expiry={alice_exp}): {current_creds}",
+    combined.contains( ".usage rotate" ),
+    "deprecated `.account.rotate` must reference `.usage rotate`, got: {combined}",
   );
-
-  // bob's stored file must remain
-  let bob_file = dir.path()
-    .join( ".persistent" ).join( "claude" ).join( "credential" )
-    .join( "bob@acme.com.credentials.json" );
-  assert!( bob_file.exists(), "bob's stored credentials must remain after rotation" );
 }
 
-// BV-3: Rotate with no inactive accounts exits 2
+// BV-3: `.account.rotate` exits 1 (not 2) even when no inactive accounts exist.
 #[ test ]
 fn rotate_bv3_no_inactive_accounts_exits_2()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
-  // Only one account, it's active — no inactive candidates
   write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, true );
 
   let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 2 );
+  // Deprecated redirector always exits 1 — the "no inactive" condition is never evaluated.
+  assert_exit( &out, 1 );
 }
 
 // ── verb::renewal ─────────────────────────────────────────────────────────────

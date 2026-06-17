@@ -44,10 +44,11 @@ where F : Fn( &AccountQuota ) -> bool
 /// the `extra` predicate — an exhausted account has negligible remaining capacity
 /// regardless of its renewal timing.
 pub( crate ) fn find_next_for_strategy(
-  accounts  : &[ AccountQuota ],
-  strategy  : NextStrategy,
-  prefer    : PreferStrategy,
-  now_secs  : u64,
+  accounts       : &[ AccountQuota ],
+  strategy       : NextStrategy,
+  prefer         : PreferStrategy,
+  now_secs       : u64,
+  gate_ownership : bool,
 ) -> Option< usize >
 {
   match strategy
@@ -66,7 +67,7 @@ pub( crate ) fn find_next_for_strategy(
       // Pitfall: a weekly-exhausted account's imminent reset does not make it a useful target —
       //   skip it regardless of renewal timing.
       let sorted = sort_indices( accounts, SortStrategy::Renew, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 5.0 )
+      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 5.0 && ( !gate_ownership || aq.is_owned ) )
     }
     NextStrategy::Endurance =>
     {
@@ -78,7 +79,7 @@ pub( crate ) fn find_next_for_strategy(
       //   arm was a parallel gap not fixed at the time.
       // Pitfall: any new find_first_eligible call site must include a weekly-floor
       //   gate — |_| true is not safe when weekly-exhausted accounts can appear.
-      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 5.0 )
+      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 5.0 && ( !gate_ownership || aq.is_owned ) )
     }
     NextStrategy::Drain =>
     {
@@ -87,7 +88,7 @@ pub( crate ) fn find_next_for_strategy(
       // Root cause: Round 1 used > 0.0 gate; correct boundary is > 5.0 (aligns with status_emoji 🟢/🟡 threshold).
       // Pitfall: ascending sort + > 0.0 gate naturally selects lowest non-zero (1-5%) accounts first;
       //   eligibility gate must use the UI tier boundary (> 5.0), not the mathematical zero.
-      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 5.0 )
+      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 5.0 && ( !gate_ownership || aq.is_owned ) )
     }
   }
 }

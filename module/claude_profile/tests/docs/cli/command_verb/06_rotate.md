@@ -1,5 +1,7 @@
 # Test: verb::rotate
 
+> **DEPRECATED** — `rotate` verb removed. Behavioral contract superseded by `tests/docs/feature/38_usage_strategy_rotate.md`.
+
 Behavioral contract tests for the `rotate` verb. Verifies non-idempotency, best-inactive
 selection state transition, and pre-condition enforcement as defined in
 [docs/cli/command_verb/006_rotate.md](../../../../docs/cli/command_verb/006_rotate.md).

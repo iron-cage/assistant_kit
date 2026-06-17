@@ -553,7 +553,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
     if unclaim_flag
     {
-      let force = crate::output::parse_int_flag( &cmd, "force", 0 )? != 0;
+      let force = params.force;
 
       let raw_name = match cmd.arguments.get( "name" )
       {
@@ -700,7 +700,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     // only_next: retain only the account that received the → marker.
     if params.only_next
     {
-      let best_opt = find_next_for_strategy( &accounts, params.next, params.prefer, now_secs );
+      let best_opt = find_next_for_strategy( &accounts, params.next, params.prefer, now_secs, params.rotate && !params.force );
       accounts = match best_opt
       {
         Some( i ) => { let w = accounts.swap_remove( i ); vec![ w ] }
@@ -755,9 +755,9 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   {
     UsageOutputFormat::Json  => render_json( &accounts ),
     UsageOutputFormat::Tsv   => render_tsv( &accounts, params.sort, params.desc, params.prefer, &params.cols ),
-    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, params.next, &params.cols ),
+    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, params.next, &params.cols, params.rotate, params.force ),
     UsageOutputFormat::Value => String::new(),
-    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, params.next, &params.cols ),
+    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, params.next, &params.cols, params.rotate, params.force ),
   };
 
   let content = if params.no_color && params.format != UsageOutputFormat::Tsv
@@ -768,6 +768,48 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   {
     content
   };
+
+  // ── Rotation dispatch (Feature 038 — AC-01..AC-09) ────────────────────────
+  // Post-render: find winner → no-eligible check → dry-run → switch → touch → emit.
+  // Guard ensures non-rotate invocations are completely unaffected.
+  if params.rotate
+  {
+    use std::time::{ SystemTime, UNIX_EPOCH };
+    use crate::commands::shared::{ is_dry, io_err_to_error_data };
+
+    let now_secs       = SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().as_secs();
+    // gate_ownership: true when rotate::1 without force::1 — G5 applies (AC-05).
+    let gate_ownership = !params.force;
+    let winner_opt     = find_next_for_strategy( &accounts, params.next, params.prefer, now_secs, gate_ownership );
+    let Some( winner_idx ) = winner_opt
+    else
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        "no eligible account to rotate to".to_string(),
+      ) );
+    };
+    let winner_name = accounts[ winner_idx ].name.clone();
+
+    if is_dry( &cmd )
+    {
+      let msg = format!( "{content}\n[dry-run] would switch to '{winner_name}'\n" );
+      return Ok( OutputData::new( msg, "text" ) );
+    }
+
+    let claude_paths = crate::ClaudePaths::new().ok_or_else( || ErrorData::new(
+      ErrorCode::InternalError,
+      "$HOME is not set; cannot switch account".to_string(),
+    ) )?;
+
+    crate::account::switch_account( &winner_name, &credential_store, &claude_paths )
+      .map_err( |e| io_err_to_error_data( &e, "usage rotate" ) )?;
+
+    apply_touch( &mut accounts[ winner_idx ], &credential_store, Some( &claude_paths ), params.trace, params.imodel, params.effort );
+
+    let msg = format!( "{content}\nswitched to '{winner_name}'\n" );
+    return Ok( OutputData::new( msg, "text" ) );
+  }
 
   Ok( OutputData::new( content, "text" ) )
 }

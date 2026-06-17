@@ -1,5 +1,7 @@
 # Verb :: rotate
 
+> **DEPRECATED** — The `rotate` verb and `.account.rotate` command have been removed. Use `clp .usage rotate::1` (with optional `next::` strategy) instead. See [feature/038_usage_strategy_rotate.md](../../feature/038_usage_strategy_rotate.md).
+
 Selects the inactive saved account with the highest `expiresAt` timestamp and activates it. Designed for automated rotation workflows where maintaining a valid active session is critical. Skips the currently active account and any accounts with exhausted or expired tokens.
 
 ### Nouns

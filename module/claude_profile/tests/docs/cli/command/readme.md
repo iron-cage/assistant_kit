@@ -24,7 +24,7 @@
 | 10_credentials_status.md | Test cases for `.credentials.status` command |
 | 11_account_limits.md | Test cases for `.account.limits` command |
 | 12_account_relogin.md | Test cases for `.account.relogin` command |
-| 13_account_rotate.md | Test cases for `.account.rotate` command |
+| 13_account_rotate.md | DEPRECATED — `.account.rotate` replaced by `.usage rotate::1` (Feature 038); historical test cases retained |
 | 14_account_renewal.md | Test cases for `.account.renewal` command |
 | 15_account_inspect.md | Test cases for `.account.inspect` command |
 | 16_account_assign.md | Removed — `.account.assign` command fully removed (Feature 037); tests live in `03_accounts.md` |

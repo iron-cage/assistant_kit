@@ -26,7 +26,6 @@ pub use credentials::credentials_status_routine;
 pub use accounts::accounts_routine;
 pub use account_ops::{
   account_use_routine,
-  account_rotate_routine,
   account_save_routine,
   account_delete_routine,
 };

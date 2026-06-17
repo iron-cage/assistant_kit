@@ -6,7 +6,7 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IT-1 | `.help` lists all 16 registered visible commands; removed commands absent | Content |
+| IT-1 | `.help` lists all 14 registered visible commands; removed/deprecated commands absent | Content |
 | IT-2 | `.help` excludes hidden commands (bare `.` and `.help` itself absent from listing) | Visibility |
 | IT-3 | `.help` shows usage line with `<command>` syntax | Content |
 | IT-4 | `.help` exits 0 | Exit Code |
@@ -31,7 +31,7 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 
 - **Given:** clean environment, `clp` on PATH
 - **When:** `clp .help`
-- **Then:** stdout contains all 14 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.account.renewal`, `.account.inspect`, `.credentials.status`, `.token.status`, `.paths`, `.usage`, `.model`); does NOT contain `.account.list`, `.account.status`, `.account.assign`, or `.account.unclaim`
+- **Then:** stdout contains all 13 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.renewal`, `.account.inspect`, `.credentials.status`, `.token.status`, `.paths`, `.usage`, `.model`); does NOT contain `.account.list`, `.account.status`, `.account.assign`, `.account.unclaim`, or `.account.rotate` (deprecated redirector)
 - **Exit:** 0
 - **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command--2-help)
 

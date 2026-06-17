@@ -27,7 +27,7 @@
     let c = mk_aq_sort( "c@test.com", 60.0, FAR_FUTURE_MS );  // 40% left
     let accounts = vec![ a, b, c ];
 
-    let winner_a = find_next_for_strategy( &accounts, NextStrategy::Endurance, PreferStrategy::Any, now );
+    let winner_a = find_next_for_strategy( &accounts, NextStrategy::Endurance, PreferStrategy::Any, now, false );
     assert!( winner_a.is_some(), "find_next_for_strategy must return Some when eligible candidates exist" );
     let winner_idx = winner_a.unwrap();
     assert_eq!(
@@ -43,7 +43,7 @@
     c2.is_current = true;
     let all_current = vec![ a2, b2, c2 ];
 
-    let winner_b = find_next_for_strategy( &all_current, NextStrategy::Endurance, PreferStrategy::Any, now );
+    let winner_b = find_next_for_strategy( &all_current, NextStrategy::Endurance, PreferStrategy::Any, now, false );
     assert!( winner_b.is_none(), "find_next_for_strategy must return None when all accounts are is_current" );
   }
 
@@ -60,7 +60,7 @@
     let b = mk_aq_sort( "b@x.com", 50.0, now_ms + 3_600_000 );  // 1h expiry
     let accounts = vec![ a, b ];
 
-    let idx = find_next_for_strategy( &accounts, NextStrategy::Endurance, PreferStrategy::Any, now_secs );
+    let idx = find_next_for_strategy( &accounts, NextStrategy::Endurance, PreferStrategy::Any, now_secs, false );
     assert_eq!( idx, Some( 0 ), "endurance tiebreaker must pick a@x.com (higher expiry); got: {idx:?}" );
     assert_eq!( accounts[ idx.unwrap() ].name, "a@x.com", "winner must be a@x.com" );
   }
@@ -74,7 +74,7 @@
     let b = mk_aq_sort( "b@test.com", 20.0, FAR_FUTURE_MS );  // 80% left — non-exhausted
     let accounts = vec![ b, a ];  // intentionally reversed to confirm sort
 
-    let idx = find_next_for_strategy( &accounts, NextStrategy::Drain, PreferStrategy::Any, now );
+    let idx = find_next_for_strategy( &accounts, NextStrategy::Drain, PreferStrategy::Any, now, false );
     assert!( idx.is_some(), "drain must find a winner among two non-exhausted accounts" );
     assert_eq!(
       accounts[ idx.unwrap() ].name, "a@test.com",
@@ -91,7 +91,7 @@
     let healthy   = mk_aq_sort( "healthy@test.com",   20.0, FAR_FUTURE_MS );  // 80% left — non-exhausted
     let accounts  = vec![ exhausted, healthy ];
 
-    let idx = find_next_for_strategy( &accounts, NextStrategy::Drain, PreferStrategy::Any, now );
+    let idx = find_next_for_strategy( &accounts, NextStrategy::Drain, PreferStrategy::Any, now, false );
     assert!( idx.is_some(), "drain must find a winner when at least one non-exhausted account exists" );
     assert_eq!(
       accounts[ idx.unwrap() ].name, "healthy@test.com",
@@ -131,7 +131,7 @@
     let weekly_ten  = mk_aq_sort_weekly( "weekly_ten@test.com",  0.0, 85.0, 90.0 );
     let accounts    = vec![ weekly_zero, weekly_ten ];
 
-    let idx = find_next_for_strategy( &accounts, NextStrategy::Drain, PreferStrategy::Any, now );
+    let idx = find_next_for_strategy( &accounts, NextStrategy::Drain, PreferStrategy::Any, now, false );
     assert!( idx.is_some(), "BUG-206: drain must find weekly_ten (10%) even when weekly_zero (0%) exists" );
     assert_eq!(
       accounts[ idx.unwrap() ].name, "weekly_ten@test.com",
@@ -142,7 +142,7 @@
     let zero_b  = mk_aq_sort_weekly( "zero_b@test.com", 0.0, 99.0, 100.0 );
     let all_zero = vec![ zero_a, zero_b ];
 
-    let idx2 = find_next_for_strategy( &all_zero, NextStrategy::Drain, PreferStrategy::Any, now );
+    let idx2 = find_next_for_strategy( &all_zero, NextStrategy::Drain, PreferStrategy::Any, now, false );
     assert!(
       idx2.is_none(),
       "BUG-206: drain must return None when all accounts have prefer_weekly=0; got {idx2:?}",
@@ -154,7 +154,7 @@
     let weekly_ten_r  = mk_aq_sort_weekly( "weekly_ten_r@test.com",  0.0, 85.0,  90.0 );  // 10%
     let accounts_r    = vec![ weekly_zero_r, weekly_one, weekly_ten_r ];
 
-    let idx3 = find_next_for_strategy( &accounts_r, NextStrategy::Drain, PreferStrategy::Any, now );
+    let idx3 = find_next_for_strategy( &accounts_r, NextStrategy::Drain, PreferStrategy::Any, now, false );
     assert!( idx3.is_some(), "BUG-206 reopen: drain must find weekly_ten_r (10%)" );
     assert_eq!(
       accounts_r[ idx3.unwrap() ].name, "weekly_ten_r@test.com",
@@ -165,7 +165,7 @@
     let lo_b   = mk_aq_sort_weekly( "lo_b@test.com", 0.0, 99.0,  99.0 );  // 1%
     let all_lo = vec![ lo_a, lo_b ];
 
-    let idx4 = find_next_for_strategy( &all_lo, NextStrategy::Drain, PreferStrategy::Any, now );
+    let idx4 = find_next_for_strategy( &all_lo, NextStrategy::Drain, PreferStrategy::Any, now, false );
     assert!(
       idx4.is_none(),
       "BUG-206 reopen: drain must return None when all accounts have prefer_weekly ≤ 5.0; got {idx4:?}",
@@ -191,7 +191,7 @@
     let accounts = vec![ a, b, c ];
     for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
     {
-      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now );
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
       assert_eq!(
         result, Some( 1 ),
         "{strategy:?}: must pick free@test.com (index 1), skipping occupied@test.com",
@@ -206,7 +206,7 @@
     let no_free = vec![ a2, c2 ];
     for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
     {
-      let result = find_next_for_strategy( &no_free, strategy, PreferStrategy::Any, now );
+      let result = find_next_for_strategy( &no_free, strategy, PreferStrategy::Any, now, false );
       assert!(
         result.is_none(),
         "{strategy:?}: must return None when only occupied + current remain",
@@ -232,7 +232,7 @@
     let accounts = vec![ a, b, c ];
     for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
     {
-      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now );
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
       assert_eq!(
         result, Some( 1 ),
         "{strategy:?}: must pick healthy@test.com (index 1), skipping h-exhausted (8% left)",
@@ -247,7 +247,7 @@
     let boundary_accounts = vec![ boundary, b2, c2 ];
     for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
     {
-      let result = find_next_for_strategy( &boundary_accounts, strategy, PreferStrategy::Any, now );
+      let result = find_next_for_strategy( &boundary_accounts, strategy, PreferStrategy::Any, now, false );
       assert_eq!(
         result, Some( 1 ),
         "{strategy:?}: utilization=85.0 (exactly 15% left) must be treated as h-exhausted",
@@ -261,7 +261,7 @@
     let no_healthy = vec![ a3, c3 ];
     for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
     {
-      let result = find_next_for_strategy( &no_healthy, strategy, PreferStrategy::Any, now );
+      let result = find_next_for_strategy( &no_healthy, strategy, PreferStrategy::Any, now, false );
       assert!(
         result.is_none(),
         "{strategy:?}: must return None when only h-exhausted + current remain",
@@ -285,7 +285,7 @@
     let accounts = vec![ a, b ];
     for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
     {
-      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now );
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
       assert_eq!(
         result, Some( 0 ),
         "{strategy:?}: five_hour=None must NOT be treated as h-exhausted",
@@ -304,7 +304,7 @@
     let accounts = vec![ a, b ];
     for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
     {
-      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now );
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
       assert_eq!(
         result, Some( 0 ),
         "{strategy:?}: utilization=84.9 (15.1% left) must be eligible — only >= 85.0 is h-exhausted",
@@ -325,7 +325,7 @@
     let accounts = vec![ a, b, c ];
     for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
     {
-      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now );
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
       assert_eq!(
         result, Some( 1 ),
         "{strategy:?}: account with both occupied + h-exhausted must be skipped",
@@ -350,7 +350,7 @@
       data.seven_day = Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } );
     }
 
-    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
+    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now);
     assert!(
       metric.contains( "80% session" ),
       "endurance metric must contain '80% session'; got: {metric}",
@@ -399,6 +399,7 @@
       NextStrategy::Renew,
       PreferStrategy::Any,
       now_secs,
+      false,
     );
     assert_eq!(
       result_ab,
@@ -416,6 +417,7 @@
       NextStrategy::Renew,
       PreferStrategy::Any,
       now_secs,
+      false,
     );
     assert_eq!(
       result_ba,
@@ -451,7 +453,7 @@
       is_owned          : true,
       owner                : String::new(),
     };
-    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
+    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now);
     assert!(
       metric.contains( "0% session" ),
       "five_hour=None → session_pct must be 0%; got: {metric}",
@@ -489,7 +491,7 @@
       is_owned          : true,
       owner                : String::new(),
     };
-    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
+    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now);
     assert!(
       metric.contains( "70% session" ),
       "utilization=30 → 70% session; got: {metric}",
@@ -533,7 +535,7 @@
       is_owned          : true,
       owner                : String::new(),
     };
-    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
+    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now);
     assert!(
       metric.contains( "60% session" ),
       "utilization=40 → 60% session; got: {metric}",
@@ -657,7 +659,7 @@
       owner                : String::new(),
     };
 
-    let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
+    let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now);
 
     assert!( metric.contains( "7d(Son) left" ),     "drain footer must show binding label: {metric}" );
     assert!( metric.contains( "7d(Son) resets in" ), "drain footer must show binding reset: {metric}" );
@@ -753,7 +755,7 @@
       owner                : String::new(),
     };
 
-    let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
+    let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now);
 
     assert!( metric.contains( "100% 7d left" ), "no-data drain must show 100%%: {metric}" );
     assert!( metric.contains( "\u{2014}" ),      "no-data drain must show em-dash for reset: {metric}" );
@@ -813,7 +815,7 @@
       owner                : String::new(),
     };
 
-    let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
+    let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now);
 
     assert!(
       result.contains( "39% 7d(Son) left" ),
@@ -866,7 +868,7 @@
       owner                : String::new(),
     };
 
-    let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
+    let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now);
 
     assert!(
       result.contains( "39% 7d left" ),
@@ -918,7 +920,7 @@
     acct_b.renewal_at = Some( reset_iso_at( now, 1800 ) );
 
     let accounts = vec![ acct_a, acct_b ];
-    let indices  = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, now );
+    let indices  = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, now);
 
     assert_eq!(
       accounts[ indices[ 0 ] ].name, "b@test.com",
@@ -967,7 +969,7 @@
     let acct_c = mk_aq_with_7d_reset( "c@test.com", 30.0, now, 3600 );
 
     let accounts = vec![ acct_a, acct_b, acct_c ];
-    let winner   = find_next_for_strategy( &accounts, NextStrategy::Renew, PreferStrategy::Any, now );
+    let winner   = find_next_for_strategy( &accounts, NextStrategy::Renew, PreferStrategy::Any, now, false );
 
     assert_eq!(
       winner, Some( 1 ),
@@ -1030,7 +1032,7 @@
       owner                : String::new(),
     };
 
-    let metric = strategy_metric( &aq, NextStrategy::Renew, PreferStrategy::Any, now );
+    let metric = strategy_metric( &aq, NextStrategy::Renew, PreferStrategy::Any, now);
 
     assert!(
       metric.contains( "7d resets in" ),
@@ -1087,7 +1089,7 @@
       owner                : String::new(),
     };
 
-    let metric = strategy_metric( &aq, NextStrategy::Renew, PreferStrategy::Any, now );
+    let metric = strategy_metric( &aq, NextStrategy::Renew, PreferStrategy::Any, now);
 
     assert!(
       metric.contains( "7d resets in" ),
@@ -1177,7 +1179,7 @@
     let acct_none = mk_aq_sort( "no_renew@test.com", 50.0, FAR_FUTURE_MS );
 
     let accounts = vec![ acct_later, acct_none, acct_soon ];
-    let idx = sort_indices( &accounts, SortStrategy::Renews, None, PreferStrategy::Any, now );
+    let idx = sort_indices( &accounts, SortStrategy::Renews, None, PreferStrategy::Any, now);
     assert_eq!(
       accounts[ idx[ 0 ] ].name, "soon_renew@test.com",
       "sort::renews: soonest renewal must be first",
@@ -1236,6 +1238,7 @@
       NextStrategy::Renew,
       PreferStrategy::Any,
       now_secs,
+      false,
     );
     assert_eq!(
       result,
@@ -1283,7 +1286,7 @@
     let yellow_0 = mk_aq_sort_weekly( "yellow_0@test.com", 10.0, 100.0, 100.0 );
     let green_0  = mk_aq_sort_weekly( "green_0@test.com",  50.0,  40.0,  40.0 );
 
-    let idx = find_next_for_strategy( &[ yellow_0, green_0 ], NextStrategy::Endurance, PreferStrategy::Any, now );
+    let idx = find_next_for_strategy( &[ yellow_0, green_0 ], NextStrategy::Endurance, PreferStrategy::Any, now, false );
     assert!( idx.is_some(), "BUG-287: endurance must find green_0 even when yellow_0 (prefer_weekly=0.0) sorts first" );
     assert_eq!(
       idx.unwrap(), 1,
@@ -1294,7 +1297,7 @@
     let yellow_3 = mk_aq_sort_weekly( "yellow_3@test.com", 10.0, 97.0, 97.0 );
     let green_3  = mk_aq_sort_weekly( "green_3@test.com",  50.0, 40.0, 40.0 );
 
-    let idx2 = find_next_for_strategy( &[ yellow_3, green_3 ], NextStrategy::Endurance, PreferStrategy::Any, now );
+    let idx2 = find_next_for_strategy( &[ yellow_3, green_3 ], NextStrategy::Endurance, PreferStrategy::Any, now, false );
     assert!( idx2.is_some(), "BUG-287: endurance must find green_3 even when yellow_3 (prefer_weekly=3.0) sorts first" );
     assert_eq!(
       idx2.unwrap(), 1,
@@ -1305,7 +1308,7 @@
     let yellow_5 = mk_aq_sort_weekly( "yellow_5@test.com", 10.0, 95.0, 95.0 );
     let green_5  = mk_aq_sort_weekly( "green_5@test.com",  50.0, 40.0, 40.0 );
 
-    let idx3 = find_next_for_strategy( &[ yellow_5, green_5 ], NextStrategy::Endurance, PreferStrategy::Any, now );
+    let idx3 = find_next_for_strategy( &[ yellow_5, green_5 ], NextStrategy::Endurance, PreferStrategy::Any, now, false );
     assert!( idx3.is_some(), "BUG-287: endurance must find green_5 even when yellow_5 (prefer_weekly=5.0) sorts first" );
     assert_eq!(
       idx3.unwrap(), 1,
@@ -1358,7 +1361,7 @@
     //   7d reset fires in 24h (later event) — must be selected after fix.
     let healthy   = mk_aq_with_7d_reset_util( "healthy@test.com",   0.0, 40.0, now, 86_400 );
 
-    let idx = find_next_for_strategy( &[ exhausted, healthy ], NextStrategy::Renew, PreferStrategy::Any, now );
+    let idx = find_next_for_strategy( &[ exhausted, healthy ], NextStrategy::Renew, PreferStrategy::Any, now, false );
     assert!( idx.is_some(), "BUG-292: renew must find a candidate (healthy@test.com is eligible)" );
     assert_eq!(
       idx.unwrap(), 1,
@@ -1410,7 +1413,7 @@
     // Step 1: sort_indices(Renew) ranks bob first (prefer_weekly 40 < alice 90).
     let alice_s = mk_aq_with_7d_reset_util( "alice@test.com", 80.0, 10.0, now, 3_600 );
     let bob_s   = mk_aq_with_7d_reset_util( "bob@test.com",   20.0, 60.0, now, 3_600 );
-    let sorted  = sort_indices( &[ alice_s, bob_s ], SortStrategy::Renew, None, PreferStrategy::Any, now );
+    let sorted  = sort_indices( &[ alice_s, bob_s ], SortStrategy::Renew, None, PreferStrategy::Any, now);
     assert_eq!(
       sorted[ 0 ], 1,
       "BUG-291: sort_indices(Renew) must rank bob (prefer_weekly=40) before alice (prefer_weekly=90); got {sorted:?}",
@@ -1419,7 +1422,7 @@
     // Step 2: find_next_for_strategy(Renew) must agree with sort_indices — selects bob (index 1).
     let alice_n = mk_aq_with_7d_reset_util( "alice@test.com", 80.0, 10.0, now, 3_600 );
     let bob_n   = mk_aq_with_7d_reset_util( "bob@test.com",   20.0, 60.0, now, 3_600 );
-    let idx     = find_next_for_strategy( &[ alice_n, bob_n ], NextStrategy::Renew, PreferStrategy::Any, now );
+    let idx     = find_next_for_strategy( &[ alice_n, bob_n ], NextStrategy::Renew, PreferStrategy::Any, now, false );
     assert_eq!(
       idx, Some( 1 ),
       "BUG-291: next::renew tiebreaker must match sort::renew — bob (prefer_weekly=40) must win, not alice; got {idx:?}",

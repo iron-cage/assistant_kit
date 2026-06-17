@@ -33,20 +33,6 @@
 //! }
 //! ```
 //!
-//! ## Rotate Account
-//!
-//! ```no_run
-//! use std::path::Path;
-//! use claude_profile::{ account, ClaudePaths, PersistPaths };
-//!
-//! let persist = PersistPaths::new().expect( "PRO or HOME must be set" );
-//! let credential_store = persist.credential_store();
-//! let paths = ClaudePaths::new().expect( "HOME must be set" );
-//! // One-liner: pick the inactive account with the highest expiry and switch
-//! let switched_to = account::auto_rotate( &credential_store, &paths ).expect( "no inactive account available" );
-//! println!( "switched to {switched_to}" );
-//! ```
-//!
 //! ## Inspect and Switch Manually
 //!
 //! ```no_run

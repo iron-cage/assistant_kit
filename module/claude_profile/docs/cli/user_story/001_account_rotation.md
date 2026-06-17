@@ -7,17 +7,17 @@
 
 ### Acceptance Criteria
 
-- [ ] `clp .account.rotate` automatically selects the inactive account with the highest remaining expiry
+- [ ] `clp .usage rotate::1` selects the best account using the active `next::` strategy (default: `renew` — soonest 7d quota reset)
 - [ ] The switch is atomic — `~/.claude/.credentials.json` replaced via write-then-rename
-- [ ] `dry::1` previews the selected account without switching
+- [ ] `dry::1` previews the selected account without switching: `clp .usage rotate::1 dry::1`
 - [ ] `clp .account.use name::X` enables manual rotation when the target is already known
-- [ ] Exit 2 when no inactive accounts are available
+- [ ] Exit 1 when no eligible accounts are available; quota table still rendered
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.rotate`](../command/001_account.md#command--13-accountrotate) | Primary: automatic selection and atomic switch |
+| 1 | [`.usage rotate::1`](../command/006_usage.md) | Primary: strategy-based selection and switch after quota table render |
 | 2 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Secondary: manual switch to a known account |
 | 3 | [`.accounts`](../command/001_account.md#command--3-accounts) | Supporting: verify account list before rotation |
 
@@ -25,16 +25,16 @@
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`dry::`](../param/004_dry.md) | Preview rotation target without executing |
-| 2 | [`touch::`](../param/034_touch.md) | Activate idle 5h window on target after switch |
-| 3 | [`imodel::`](../param/035_imodel.md) | Model for post-switch activation subprocess |
-| 4 | [`effort::`](../param/036_effort.md) | Effort for post-switch activation subprocess |
-| 5 | [`trace::`](../param/023_trace.md) | Diagnose rotation selection and switch steps |
-| 6 | [`refresh::`](../param/019_refresh.md) | Refresh expired token before refusing exit 3 |
-| 7 | [`set_model::`](../param/054_set_model.md) | Set session model after switch |
-| 8 | [`active::`](../param/013_active.md) | Show active/inactive status in account list |
-| 9 | [`current::`](../param/018_current.md) | Show which account is currently live |
-| 10 | [`expires::`](../param/009_expires.md) | Show token expiry to decide rotation timing |
+| 1 | [`rotate::`](../param/059_rotate.md) | Trigger strategy-based rotation after quota table render |
+| 2 | [`dry::`](../param/004_dry.md) | Preview rotation target without executing |
+| 3 | [`next::`](../param/032_next.md) | Strategy selector: `renew` (default), `endurance`, `drain` |
+| 4 | [`force::`](../param/058_force.md) | Bypass G5 ownership gate on rotation eligibility |
+| 5 | [`touch::`](../param/034_touch.md) | Activate idle 5h window on target after switch |
+| 6 | [`imodel::`](../param/035_imodel.md) | Model for post-switch activation subprocess |
+| 7 | [`effort::`](../param/036_effort.md) | Effort for post-switch activation subprocess |
+| 8 | [`trace::`](../param/023_trace.md) | Diagnose rotation selection and switch steps |
+| 9 | [`refresh::`](../param/019_refresh.md) | Refresh expired token before refusing exit 3 |
+| 10 | [`set_model::`](../param/054_set_model.md) | Set session model after switch |
 
 ### Referenced Parameter Groups
 

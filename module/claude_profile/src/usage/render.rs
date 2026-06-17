@@ -24,7 +24,7 @@ use super::sort::{ sort_indices, find_next_for_strategy, strategy_metric };
 /// when ≥2 accounts have valid quota — shows `renew`, `endurance`, and `drain` lines.
 /// The `→` marker in the table body points to the active-strategy winner.
 /// Footer is omitted when < 2 accounts have valid quota data.
-#[ allow( clippy::too_many_lines ) ]
+#[ allow( clippy::too_many_lines, clippy::too_many_arguments ) ]
 pub( crate ) fn render_text(
   accounts : &[ AccountQuota ],
   sort     : SortStrategy,
@@ -32,6 +32,8 @@ pub( crate ) fn render_text(
   prefer   : PreferStrategy,
   next     : NextStrategy,
   cols     : &ColsVisibility,
+  rotate   : bool,
+  force    : bool,
 ) -> String
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
@@ -47,7 +49,7 @@ pub( crate ) fn render_text(
     .as_secs();
 
   // Compute the winner for the active strategy; placed as → marker in the table body.
-  let best_idx       = find_next_for_strategy( accounts, next, prefer, now_secs );
+  let best_idx       = find_next_for_strategy( accounts, next, prefer, now_secs, rotate && !force );
   let sorted_indices = sort_indices( accounts, sort, desc, prefer, now_secs );
 
   // Three-tier grouping: sort order preserved within each tier (🟢 → 🟡 → 🔴).
@@ -267,7 +269,7 @@ pub( crate ) fn render_text(
     let mut lines  = String::new();
     for ( strategy, name ) in strategies.iter().zip( names.iter() )
     {
-      if let Some( idx ) = find_next_for_strategy( accounts, *strategy, prefer, now_secs )
+      if let Some( idx ) = find_next_for_strategy( accounts, *strategy, prefer, now_secs, false )
       {
         let rec      = &accounts[ idx ];
         let metric   = strategy_metric( rec, *strategy, prefer, now_secs );
@@ -594,6 +596,7 @@ pub( crate ) fn render_tsv(
 /// Render quota results as plain text (same as `render_text` with emoji replaced).
 ///
 /// `🟢`→`ok`, `🟡`→`warn`, `🔴`→`err`, `→`→`->`, `✓`→`*`.
+#[ allow( clippy::too_many_arguments ) ]
 pub( crate ) fn render_plain(
   accounts : &[ AccountQuota ],
   sort     : SortStrategy,
@@ -601,9 +604,11 @@ pub( crate ) fn render_plain(
   prefer   : PreferStrategy,
   next     : NextStrategy,
   cols     : &ColsVisibility,
+  rotate   : bool,
+  force    : bool,
 ) -> String
 {
-  let raw = render_text( accounts, sort, desc, prefer, next, cols );
+  let raw = render_text( accounts, sort, desc, prefer, next, cols, rotate, force );
   raw
     .replace( "🟢", "ok" )
     .replace( "🟡", "warn" )
