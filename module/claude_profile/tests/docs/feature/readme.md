@@ -93,7 +93,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 034_explicit_session_model_override | [034_explicit_session_model_override.md](34_explicit_session_model_override.md) | FT-01 … FT-11 | ✅ |
 | 035_model_command | [035_model_command.md](35_model_command.md) | FT-01 … FT-12 | ✅ |
 | 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-21 | ✅ |
-| 037_accounts_usage_param_unification | [037_accounts_usage_param_unification.md](37_accounts_usage_param_unification.md) | FT-01 … FT-21 | ⏳ |
+| 037_accounts_usage_param_unification | [037_accounts_usage_param_unification.md](37_accounts_usage_param_unification.md) | FT-01 … FT-21 | ✅ |
 
 **Total:** 38 specs — 37 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 

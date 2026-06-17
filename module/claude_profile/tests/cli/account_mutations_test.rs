@@ -3932,6 +3932,32 @@ fn ft03_unclaim_param_placement()
     !save_text.contains( "owner::" ),
     "FT-03: .account.save help must NOT list `owner::` parameter; got:\n{save_text}",
   );
+
+  // Case B: .account.unclaim and .account.assign are fully deregistered —
+  // generic unknown command error (no migration hint).
+  let out_unclaim = run_cs( &[ ".account.unclaim", "name::alice@acme.com" ] );
+  assert_exit( &out_unclaim, 1 );
+  let unclaim_err = stderr( &out_unclaim );
+  assert!(
+    !unclaim_err.is_empty(),
+    "FT-03 case B: .account.unclaim must produce a non-empty error; got empty stderr",
+  );
+  assert!(
+    !unclaim_err.contains( "unclaim::1" ) && !unclaim_err.contains( "moved to" ),
+    "FT-03 case B: .account.unclaim error must be generic (no migration hint); got:\n{unclaim_err}",
+  );
+
+  let out_assign = run_cs( &[ ".account.assign", "name::alice@acme.com" ] );
+  assert_exit( &out_assign, 1 );
+  let assign_err = stderr( &out_assign );
+  assert!(
+    !assign_err.is_empty(),
+    "FT-03 case B: .account.assign must produce a non-empty error; got empty stderr",
+  );
+  assert!(
+    !assign_err.contains( "assign::1" ) && !assign_err.contains( "moved to" ),
+    "FT-03 case B: .account.assign error must be generic (no migration hint); got:\n{assign_err}",
+  );
 }
 
 /// FT-08 (AC-08): `.account.use` exits 1 when account not owned.

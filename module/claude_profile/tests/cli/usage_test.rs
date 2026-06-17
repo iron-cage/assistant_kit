@@ -217,12 +217,13 @@
 //! | it244 | `it244_get_host_absent_profile_json_empty_stdout`   | `get::host` on account without profile.json — empty stdout | P | no |
 //! | it245 | `it245_min_7d_get_account_err_passes_returns_name`  | `min_7d::1 get::account` on Err account — returns name (absent passes) | P | no |
 //! | it246 | `it246_min_7d_only_valid_removes_err_account`       | `min_7d::1 only_valid::1` — Err passes `min_7d` but `only_valid` removes it | P | no |
+//! | it248 | `it248_owner_column_visible_by_default`             | Owner column visible by default; `cols::-owner` hides it (037 IT-74/AC-19) | P | no |
 
 use crate::cli_runner::{
   BIN,
   run_cs, run_cs_with_env, run_cs_without_home, run_cs_bytes_for_secs,
   stdout, stderr, assert_exit,
-  write_account, write_account_with_token, write_claude_json, live_active_token,
+  write_account, write_account_with_token, write_claude_json, live_active_token, write_account_owner,
   write_live_credentials_with_token, write_account_renewal_json, write_account_profile_json,
   require_live_api,
   FAR_FUTURE_MS, PAST_MS,
@@ -7173,4 +7174,56 @@ fn it_ft028_17_only_active_single_http_fetch()
      {} found — non-active accounts must be skipped; trace:\n{err}",
     result_lines.len(),
   );
+}
+
+// ── it248: Feature 037 Owner column in .usage (IT-74) ────────────────────────
+
+/// it248 (IT-74, AC-19): Owner column visible by default on `.usage`; `cols::-owner` hides it.
+///
+/// Case A: `.usage` — "Owner" column header present; owned account shows owner identity;
+/// unowned account shows em dash (—).
+/// Case B: `.usage cols::-owner` — "Owner" column header absent.
+///
+/// Spec: [`tests/docs/cli/command/09_usage.md` IT-74]
+#[ test ]
+fn it248_owner_column_visible_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "testuser@testmachine" );
+
+  write_account( dir.path(), "bob@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "bob@acme.com", "" );
+
+  // Case A: default — Owner column header and values present.
+  {
+    let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+    assert_exit( &out, 0 );
+    let text = stdout( &out );
+    assert!(
+      text.contains( "Owner" ),
+      "IT-74A: Owner column header must appear by default in .usage table; got:\n{text}",
+    );
+    assert!(
+      text.contains( "testuser@testmachine" ),
+      "IT-74A: alice's owner identity must appear in Owner column; got:\n{text}",
+    );
+    assert!(
+      text.contains( "\u{2014}" ),
+      "IT-74A: bob's empty owner must show em dash (—) in Owner column; got:\n{text}",
+    );
+  }
+
+  // Case B: cols::-owner — Owner column header absent.
+  {
+    let out  = run_cs_with_env( &[ ".usage", "cols::-owner" ], &[ ( "HOME", home ) ] );
+    assert_exit( &out, 0 );
+    let text = stdout( &out );
+    assert!(
+      !text.contains( "Owner" ),
+      "IT-74B: Owner column header must be hidden with cols::-owner; got:\n{text}",
+    );
+  }
 }

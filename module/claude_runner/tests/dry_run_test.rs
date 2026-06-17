@@ -523,6 +523,11 @@ fn trace_with_dry_run_emits_no_stderr()
 // Per-project sessions live at $HOME/.claude/projects/{encoded(project_dir)}/.
 // Any check for "has prior session" must look at the encoded project path, not the global home.
 //
+// CLR_DIR env var (if set in the ambient shell) overrides the working directory used for session
+// detection — it is inherited by subprocesses unless explicitly removed.  Always unset CLR_DIR
+// and CLR_SESSION_DIR when spawning clr in tests that assert -c is NOT injected; otherwise the
+// test fails whenever the host shell has CLR_DIR pointing to a directory with a prior session.
+//
 // test_kind: bug_reproducer(BUG-214)
 #[ test ]
 fn bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag()
@@ -530,11 +535,16 @@ fn bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag()
   // Run --dry-run from a fresh temp dir that has NO prior Claude session.
   // The session check must look at $HOME/.claude/projects/{encoded(tmp_dir)}/ which does not
   // exist, so -c must NOT appear in the output.
+  //
+  // CLR_DIR and CLR_SESSION_DIR are removed so the subprocess uses current_dir (tmp_dir)
+  // for session detection instead of any ambient shell value.
   let tmp = tempfile::TempDir::new().expect( "create temp dir" );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "--dry-run", "Fix bug" ] )
     .current_dir( tmp.path() )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
     .output()
     .expect( "invoke clr --dry-run" );
   let stdout = String::from_utf8_lossy( &out.stdout );

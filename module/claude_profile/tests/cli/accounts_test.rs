@@ -78,6 +78,8 @@
 //! | ft01 | `ft01_accounts_accepts_32_params` | `.accounts` accepts all 32 registered params without error | P |
 //! | ft03 | `ft03_accounts_default_profile` | `.accounts` default output includes Owner column | P |
 //! | ft07 | `ft07_accounts_unclaim_batch` | `unclaim::1` no name → clears all owned accounts, exits 0 | P |
+//! | ft11 | `ft11_account_unclaim_fully_deregistered` | `.account.unclaim` → exit 1 + generic error, no migration hint | N |
+//! | ft12 | `ft12_account_assign_fully_deregistered` | `.account.assign` → exit 1 + generic error, no migration hint | N |
 //! | ft13 | `ft13_accounts_legacy_toggles_rejected` | removed toggle param → exit 1 + migration message | N |
 //! | ft14 | `ft14_accounts_cols_modifier` | `cols::+display_name` → Display: line present | P |
 //! | ft15 | `lim_it_ft15_accounts_refresh_live` | `refresh::1` with live token → account appears in output | P |
@@ -1654,6 +1656,52 @@ fn ft07_accounts_unclaim_batch()
     bob_val[ "owner" ].as_str().unwrap_or( "MISSING" ),
     "other@remote",
     "FT-07: bob owner must be unchanged",
+  );
+}
+
+#[ test ]
+/// FT-11 (AC-11): `.account.unclaim` is fully deregistered — generic "unknown command" error, no migration hint.
+///
+/// `.account.unclaim` was removed in Feature 037 with no redirect stub.
+/// Calling it is indistinguishable from calling any other unregistered command:
+/// exits 1 with a generic error; stderr must NOT contain `"unclaim::1"` or `"moved to"`.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-11]
+fn ft11_account_unclaim_fully_deregistered()
+{
+  let out = run_cs( &[ ".account.unclaim", "name::alice@acme.com" ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    !err.is_empty(),
+    "FT-11: .account.unclaim must produce a non-empty error on stderr",
+  );
+  assert!(
+    !err.contains( "unclaim::1" ) && !err.contains( "moved to" ),
+    "FT-11: error must be generic (no migration hint to .accounts unclaim::1); got:\n{err}",
+  );
+}
+
+#[ test ]
+/// FT-12 (AC-12): `.account.assign` is fully deregistered — generic "unknown command" error, no migration hint.
+///
+/// `.account.assign` was removed in Feature 037 with no redirect stub.
+/// Calling it is indistinguishable from calling any other unregistered command:
+/// exits 1 with a generic error; stderr must NOT contain `"assign::1"` or `"moved to"`.
+///
+/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-12]
+fn ft12_account_assign_fully_deregistered()
+{
+  let out = run_cs( &[ ".account.assign", "name::alice@acme.com" ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    !err.is_empty(),
+    "FT-12: .account.assign must produce a non-empty error on stderr",
+  );
+  assert!(
+    !err.contains( "assign::1" ) && !err.contains( "moved to" ),
+    "FT-12: error must be generic (no migration hint to .accounts assign::1); got:\n{err}",
   );
 }
 
