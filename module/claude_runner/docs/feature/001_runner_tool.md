@@ -56,7 +56,8 @@ and queued `clr` waiters (processes blocked at the concurrency gate). Active tab
 `#`, `PID`, `Elapsed`, `CPU%`, `RAM`, `State`, `Absolute Path`, `Task`. Data sources:
 `/proc/{pid}/stat` (state, CPU jiffies, start time), `/proc/{pid}/status` (VmRSS in MB),
 `~/.claude/projects/` JSONL files (Task column — last user message, truncated to 35 chars);
-falls back to `"interactive"` when no JSONL found. Queued table reads gate state files from
+falls back to `"interactive"` when no JSONL found. Active session rows are ordered
+by start time (oldest first). Queued table reads gate state files from
 `$CLR_GATE_DIR` — columns: `#`, `PID`, `CWD`, `Waiting`, `Attempt`; gate files whose PID
 no longer exists are filtered out and self-heal-deleted (BUG-293). The current `clr ps`
 process is never listed. When no sessions are found: prints `No active Claude Code sessions.`
@@ -124,7 +125,8 @@ and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
 | `../../tests/retry_default_test.rs` | Tier 3 fallback count/delay, effective defaults |
 | `../../tests/error_classification_test.rs` | ErrorKind → ErrorClass mapping, [Class] stderr prefix |
 | `../../tests/exit_code_contract_test.rs` | Exit code 4 for timeout (TSK-202) |
-| `../../tests/ps_command_test.rs` | IT-01–IT-13 clr ps tables, gate file rendering, BUG-293 |
+| `../../tests/ps_command_test.rs` | IT-01–IT-20 clr ps tables, gate file rendering, sort order, BUG-293/294/295/296/297/301 |
+| `../../tests/user_story_ps_test.rs` | US-01–US-09 session listing acceptance criteria |
 | `../../tests/kill_command_test.rs` | IT-01–IT-09 clr kill SIGTERM delivery and guards |
 | `../../tests/isolated_defaults_test.rs` | ISD-01–ISD-13 isolated subprocess model, effort, flags |
 | `../../tests/isolated_correctness_test.rs` | CT-1–CT-6 isolated correctness invariants |

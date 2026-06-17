@@ -14,6 +14,7 @@
 //! | US-6 | Queued CLR shown: PID, CWD, Waiting headers       | AC-008    |
 //! | US-7 | Active table caption: `Active Sessions` + `running` | AC-010  |
 //! | US-8 | `clr ps --help` → exit 0, stdout contains help text  | AC-011  |
+//! | US-9 | Active sessions ordered oldest-first (row #1 = longest elapsed) | AC-012 |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
@@ -214,5 +215,68 @@ fn us_08_ps_help()
   assert!(
     !stdout.is_empty(),
     "US-8 (AC-011): stdout must contain ps help text, got empty output"
+  );
+}
+
+// ── US-9: Active sessions ordered oldest-first ──────────────────────────────
+
+/// US-9 (AC-012): active session rows are ordered by session start time; the
+/// row with the longest elapsed time appears at row `#1`.
+///
+/// Spawns two fake `claude` processes 1 second apart, then verifies the older
+/// process (longer elapsed) appears in an earlier row than the newer one.
+// Verifies: AC-012
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn us_09_active_sessions_ordered_oldest_first()
+{
+  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+
+  let mut bg_a = std::process::Command::new( "claude" )
+    .arg( "30" )
+    .env( "PATH", &path_val )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn fake claude A" );
+  let pid_a = bg_a.id();
+
+  std::thread::sleep( core::time::Duration::from_secs( 1 ) );
+
+  let mut bg_b = std::process::Command::new( "claude" )
+    .arg( "30" )
+    .env( "PATH", &path_val )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn fake claude B" );
+  let pid_b = bg_b.id();
+
+  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+
+  let out = run_clr_ps( &path_val );
+
+  let _ = bg_a.kill();
+  let _ = bg_a.wait();
+  let _ = bg_b.kill();
+  let _ = bg_b.wait();
+
+  let stdout = stdout_str( &out );
+  assert!(
+    out.status.success(),
+    "US-9 (AC-012): exit 0 expected, got {:?}", out.status.code()
+  );
+
+  let older_pid = pid_a.to_string();
+  let newer_pid = pid_b.to_string();
+  let row_a = stdout.lines().position( |l| l.contains( &older_pid ) );
+  let row_b = stdout.lines().position( |l| l.contains( &newer_pid ) );
+  assert!(
+    row_a.is_some() && row_b.is_some(),
+    "US-9 (AC-012): both PIDs must appear in output. A={pid_a}, B={pid_b}\n{stdout}"
+  );
+  assert!(
+    row_a.unwrap() < row_b.unwrap(),
+    "US-9 (AC-012): oldest session (PID {pid_a}) must appear at earlier row than newest (PID {pid_b}).\n{stdout}"
   );
 }

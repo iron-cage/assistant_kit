@@ -14,6 +14,7 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 | US-6 | Queued CLR session shown when gate file present | AC-008 | ✅ |
 | US-7 | Active table caption contains `Active Sessions` and count suffix | AC-010 | ✅ |
 | US-8 | `clr ps --help` prints help and exits 0 | AC-011 | ✅ |
+| US-9 | Active sessions ordered oldest first | AC-012 | ✅ |
 
 ---
 
@@ -94,3 +95,14 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 - **Then:** Exit 0; stdout contains help text (e.g. column descriptions or `Active Sessions`)
 - **Exit:** 0
 - **Verifies:** AC-011
+
+---
+
+### US-9: Active sessions ordered oldest first
+
+- **Given:** ≥2 fake `claude` processes running with different start times; PATH prepended with fake dir
+- **When:** `clr ps`
+- **Then:** Exit 0; the row at `#1` has the longest elapsed time; row `#2` has a shorter elapsed time than row `#1`
+- **Exit:** 0
+- **Verifies:** AC-012
+- **Note:** In typical Linux environments PID allocation is monotonic, so spawn-order correlates with PID order. This test validates that ordering is applied but cannot distinguish age-sort from PID-sort without `/proc` mocking. The behavioral guarantee is: oldest session appears first.

@@ -73,8 +73,17 @@ pub( super ) fn guard_unknown_subcommand( tokens : &[ String ] )
         //   to dispatch_run, treating the typo silently as the message argument to Claude.
         // Pitfall: is_close_typo requires matching first char to avoid false positives for
         //   common English words that happen to be within edit distance 1 (e.g. "task" → "ask").
+        // Fix(BUG-302): add minimum-length threshold to prefix branch; remove extension branch.
+        // Root cause: `sub.starts_with(first)` fired for any prefix with no minimum length
+        //   ("is" matched "isolated"); `first.starts_with(sub)` matched morphological extensions
+        //   ("asked" matched "ask") which are never typos — both caused valid run messages to be
+        //   rejected with "Did you mean?".
+        // Pitfall: short truncations like "kil" (len 3 < 4) are still caught via is_close_typo
+        //   (deletion, abs_diff=1) — the len >= 4 gate only removes the starts_with path, not
+        //   the is_close_typo path. The extension branch must be removed entirely: extensions are
+        //   lexically distinct words, not typos, and is_close_typo already covers 1-char edits.
         if first != sub
-          && ( sub.starts_with( first.as_str() ) || first.starts_with( sub ) || is_close_typo( first, sub ) )
+          && ( ( first.len() >= 4 && sub.starts_with( first.as_str() ) ) || is_close_typo( first, sub ) )
         {
           eprintln!(
             "Error: unknown subcommand: {first}. Did you mean '{sub}'?\nRun with --help for usage."

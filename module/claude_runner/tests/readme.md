@@ -13,7 +13,7 @@
 | ask subcommand (IT-1–IT-8) | `ask_command_test.rs` | `clr ask` pure-alias equivalence, param passthrough, and live-trace path |
 | Trace Universality invariant (IT-1–IT-5) | `invariant_trace_universality_test.rs` | `--trace` on all subprocess-executing commands |
 | CLI flags (T01–T35) | `cli_args_test.rs` | Core flag parsing and builder translation |
-| CLI flags extended (T36–T49, S58–S79, BUG-212, BUG-215) | `cli_args_ext_test.rs` | Positional edge cases, session combos, new flags, bug reproducers |
+| CLI flags extended (T36–T49, S58–S79, BUG-212, BUG-215, BUG-302) | `cli_args_ext_test.rs` | Positional edge cases, session combos, new flags, bug reproducers |
 | Ultrathink (T50–T58) | `ultrathink_args_test.rs` | Message suffix injection and opt-out |
 | Effort flags (T59–T70) | `effort_args_test.rs` | Default max injection, overrides, suppression |
 | Param edge cases (EC-N) | `param_edge_cases_test.rs` | Per-param positive/negative edge cases: help, model, verbose, no-skip-permissions, interactive, new-session, dir, session-dir, dry-run, verbosity, print, system-prompt, append-system-prompt, no-effort-max, invariant |
@@ -58,7 +58,7 @@
 | User stories (US19–US25) | `user_story_output_test.rs` | End-to-end user story workflows: MCP config, output file, concurrency stories |
 | User stories (US26) | `user_story_ps_test.rs` | End-to-end user story workflows: session listing via `clr ps` |
 | User stories (US27) | `user_story_kill_test.rs` | End-to-end user story workflows: session termination via `clr kill` |
-| `clr ps` subcommand (IT-1–IT-13) | `ps_command_test.rs` | `clr ps` table output, no-sessions message, help listing, typo guard, self-exclusion, path shortening, orphan filtering (BUG-293) |
+| `clr ps` subcommand (IT-1–IT-20) | `ps_command_test.rs` | `clr ps` table output, no-sessions message, help listing, typo guard, self-exclusion, path shortening, orphan filtering, sort order (BUG-293/294/295/296/297/301) |
 | `clr kill` subcommand (IT-1–IT-9) | `kill_command_test.rs` | `clr kill` PID validation, SIGTERM delivery, error handling, help text, typo guard |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
@@ -69,7 +69,7 @@
 | `ask_command_test.rs` | `clr ask` subcommand: pure-alias equivalence, param passthrough, and live-trace tests IT-1–IT-8. |
 | `invariant_trace_universality_test.rs` | Trace Universality invariant (INV-004): `--trace` on all subprocess-executing commands IT-1–IT-5. |
 | `cli_args_test.rs` | CLI flag parsing: core flags T01–T35, correct translation to builder calls. |
-| `cli_args_ext_test.rs` | CLI flag parsing extended: T36–T49, S58–S79, BUG-212, BUG-215 reproducers. |
+| `cli_args_ext_test.rs` | CLI flag parsing extended: T36–T49, S58–S79, BUG-212, BUG-215, BUG-302 reproducers. |
 | `ultrathink_args_test.rs` | Ultrathink suffix injection and `--no-ultrathink` opt-out (T50–T58). |
 | `effort_args_test.rs` | Effort flag defaults, overrides, suppression, and corner cases (T59–T70). |
 | `dry_run_test.rs` | Dry-run output: env vars and command line structure. |
@@ -114,7 +114,7 @@
 | `user_story_output_test.rs` | User story end-to-end workflows: US19–US25 (MCP config, output file, concurrency gate). |
 | `user_story_ps_test.rs` | User story end-to-end workflows: US26 (session listing via `clr ps`). |
 | `user_story_kill_test.rs` | User story end-to-end workflows: US27 (session termination via `clr kill`). |
-| `ps_command_test.rs` | `clr ps` subcommand integration tests: table output, no-sessions, help, typo guard, self-exclusion, path shortening, orphan filtering (IT-1–IT-13). |
+| `ps_command_test.rs` | `clr ps` subcommand integration tests: table output, no-sessions, help, typo guard, self-exclusion, path shortening, orphan filtering, sort order (IT-1–IT-20). |
 | `kill_command_test.rs` | `clr kill` subcommand integration tests: PID validation, SIGTERM delivery, error handling, help text, typo guard (IT-1–IT-9). |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |

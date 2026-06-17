@@ -25,6 +25,7 @@
 //! | IT-17 | Task column selects Form A over Form B `tool_result` lines      | BUG-297 repro    |
 //! | IT-18 | `clr ps help` (positional) → exit 0, stdout non-empty         | BUG-294 positional|
 //! | IT-19 | Task column works for CWD with no underscores (regression)     | BUG-295 regression|
+//! | IT-20 | Active sessions ordered oldest-first (row #1 has longest elapsed) | BUG-301 repro   |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
@@ -685,5 +686,89 @@ fn it_19_task_column_no_underscores()
   assert!(
     stdout.contains( "no underscores task" ),
     "IT-19 (BUG-295 regression): Task column must show Form A content for underscore-free CWD. Got:\n{stdout}"
+  );
+}
+
+// ── IT-20: active sessions sorted oldest-first (BUG-301) ────────────────────
+
+/// IT-20 (BUG-301): `build_active_table()` sorts rows by `started_at` so the
+/// oldest session appears at row `#1` with the longest elapsed time.
+///
+/// ## Root Cause
+/// `build_active_table()` iterated `procs.iter().enumerate()` in `/proc` scan
+/// order (PID-ascending) with no sort — PID order only approximates age order
+/// and breaks on PID rollover.
+///
+/// ## Why Not Caught
+/// IT-01–IT-19 checked row presence and content but never verified ordering.
+///
+/// ## Fix Applied
+/// `sort_by_key()` using `read_process_metrics(p.pid).map(|m| m.started_at)`
+/// inserted after the `procs.is_empty()` guard in `build_active_table()`.
+///
+/// ## Prevention
+/// Always add an ordering assertion when implementing a "sorted by X" requirement.
+///
+/// ## Pitfall
+/// PID-ascending order approximates age order on most Linux systems (monotonic
+/// PID allocation), masking the bug until PID rollover.  Use a 1-second sleep
+/// between spawns to guarantee distinct `started_at` values.
+// test_kind: bug_reproducer(BUG-301)
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it_20_active_sessions_sorted_by_age()
+{
+  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+
+  // Spawn process A (oldest session).
+  let mut bg_a = std::process::Command::new( "claude" )
+    .arg( "30" )
+    .env( "PATH", &path_val )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn fake claude A" );
+  let pid_a = bg_a.id();
+
+  // 1-second gap guarantees distinct started_at values in /proc/{pid}/stat.
+  std::thread::sleep( core::time::Duration::from_secs( 1 ) );
+
+  // Spawn process B (newer session).
+  let mut bg_b = std::process::Command::new( "claude" )
+    .arg( "30" )
+    .env( "PATH", &path_val )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn fake claude B" );
+  let pid_b = bg_b.id();
+
+  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+
+  let out = run_clr_ps( &path_val );
+
+  let _ = bg_a.kill();
+  let _ = bg_a.wait();
+  let _ = bg_b.kill();
+  let _ = bg_b.wait();
+
+  let stdout = stdout_str( &out );
+  assert!(
+    out.status.success(),
+    "IT-20: exit 0 expected, got {:?}", out.status.code()
+  );
+
+  // Oldest session (A) must appear before newest (B) in the table output.
+  let older_pid = pid_a.to_string();
+  let newer_pid = pid_b.to_string();
+  let row_a = stdout.lines().position( |l| l.contains( &older_pid ) );
+  let row_b = stdout.lines().position( |l| l.contains( &newer_pid ) );
+  assert!(
+    row_a.is_some() && row_b.is_some(),
+    "IT-20 (BUG-301): both PIDs must appear in output. A={pid_a}, B={pid_b}\n{stdout}"
+  );
+  assert!(
+    row_a.unwrap() < row_b.unwrap(),
+    "IT-20 (BUG-301): oldest session (PID {pid_a}) must appear before newest (PID {pid_b}).\n{stdout}"
   );
 }
