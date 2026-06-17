@@ -228,3 +228,5 @@ Edge case coverage for the `version::` parameter. See [param/readme.md](../../..
 | `version_ec12_latest_alias_dry` | `integration/version_param_test.rs` |
 | `version_ec13_exact_semver_dry` | `integration/version_param_test.rs` |
 | `version_ec14_older_semver_dry` | `integration/version_param_test.rs` |
+| `version_ec15_zero_patch_semver_dry` | `integration/version_param_test.rs` |
+| `version_ec16_unknown_alias_exits_1` | `integration/version_param_test.rs` |

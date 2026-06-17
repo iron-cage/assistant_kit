@@ -1,8 +1,7 @@
 //! EC- edge-case tests for the `version::` parameter.
 //!
 //! Covers gap cases from `tests/docs/cli/param/01_version.md`.
-//! EC-1 through EC-6 and EC-15/EC-16 are already implemented in
-//! `cli_args_test.rs` and `integration/mutation_commands_test.rs`.
+//! EC-1 through EC-6 are in `cli_args_test.rs`.
 
 use crate::helpers::{ assert_exit, run_clm, stdout };
 
@@ -78,4 +77,22 @@ fn version_ec14_older_semver_dry()
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "2.1.50" ), "output must contain 2.1.50: {text}" );
+}
+
+/// EC-15: `version::0.0.0 dry::1` → zero-patch semver is valid
+#[ test ]
+fn version_ec15_zero_patch_semver_dry()
+{
+  let out = run_clm( &[ ".version.install", "version::0.0.0", "dry::1" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "0.0.0" ), "zero-patch semver must appear in dry-run output: {text}" );
+}
+
+/// EC-16: `version::x` → unknown alias, exit 1
+#[ test ]
+fn version_ec16_unknown_alias_exits_1()
+{
+  let out = run_clm( &[ ".version.install", "version::x" ] );
+  assert_exit( &out, 1 );
 }
