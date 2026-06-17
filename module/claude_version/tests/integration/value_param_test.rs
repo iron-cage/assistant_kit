@@ -1,8 +1,6 @@
 //! EC- edge-case tests for the `value::` parameter.
 //!
 //! Covers gap cases from `tests/docs/cli/param/07_value.md`.
-//! EC-10, EC-14, EC-15 are covered in `mutation_commands_test.rs` and
-//! `error_messages_test.rs` (tc321, tc327, tc506).
 
 use tempfile::TempDir;
 
@@ -186,4 +184,38 @@ fn value_ec13_string_stored_quoted()
   assert_exit( &out, 0 );
   let json = read_settings_json( dir.path() );
   assert!( json.contains( "\"hello\"" ), "value::hello must be stored as quoted string: {json}" );
+}
+
+/// EC-10: `value::` (empty) → exit 1; empty value not accepted
+#[ test ]
+fn value_ec10_empty_value_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let out  = run_clm_with_env(
+    &[ ".settings.set", "key::theme", "value::" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+}
+
+/// EC-14: `key::theme` present but no `value::` → exit 1
+#[ test ]
+fn value_ec14_missing_value_exits_1()
+{
+  let out = run_clm( &[ ".settings.set", "key::theme" ] );
+  assert_exit( &out, 1 );
+}
+
+/// EC-15: without `value::` → error message contains the string `value::`
+#[ test ]
+fn value_ec15_missing_value_error_mentions_value_token()
+{
+  let out = run_clm( &[ ".settings.set", "key::theme" ] );
+  assert_exit( &out, 1 );
+  let err = crate::helpers::stderr( &out );
+  assert!(
+    err.contains( "value::" ),
+    "error must mention 'value::' token: {err}"
+  );
 }

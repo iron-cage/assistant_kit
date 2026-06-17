@@ -1,4 +1,4 @@
-# Collections
+# Doc Entities
 
 ## Doc Entity Tree
 
@@ -18,7 +18,7 @@ docs/
 └── pitfall/
 ```
 
-## Master Collections Table
+## Master Doc Entities Table
 
 | Type | Purpose | Master File |
 |------|---------|-------------|
