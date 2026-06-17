@@ -50,8 +50,8 @@ mod format_surface_test;
 #[ path = "integration/pitfall_surface_test.rs" ]
 mod pitfall_surface_test;
 
-#[ path = "integration/collection_surface_test.rs" ]
-mod collection_surface_test;
+#[ path = "integration/catalog_surface_test.rs" ]
+mod catalog_surface_test;
 
 #[ path = "integration/version_param_test.rs" ]
 mod version_param_test;

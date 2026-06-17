@@ -17,7 +17,7 @@
 | `pattern/` | 5-layer version lock design pattern |
 | `pitfall/` | Confirmed design traps: chmod side effects, symlink retarget bypass |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |
-| `entities.md` | Master index of doc entity types and instances |
+| `entities.md` | Master index of collection types and instances |
 
 ### Exception Records
 

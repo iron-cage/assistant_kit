@@ -88,4 +88,4 @@ When `v::` appears multiple times, the last value wins. Simplifies script compos
 
 | File | Relationship |
 |------|-------------|
-| [`../../tests/docs/collection/01_design_decisions.md`](../../tests/docs/collection/01_design_decisions.md) | Decision implementation test spec |
+| [`../../tests/docs/catalog/01_design_decisions.md`](../../tests/docs/catalog/01_design_decisions.md) | Decision implementation test spec |

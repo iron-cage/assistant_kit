@@ -60,7 +60,7 @@
 - [`version::`](param/01_version.md)
 - [`dry::`](param/02_dry.md)
 - [`force::`](param/03_force.md)
-- [`v::` / `verbosity::`](param/04_verbosity.md)
+- [`v::` / `verbosity::`](param/04_v.md)
 - [`format::`](param/05_format.md)
 - [`key::`](param/06_key.md)
 - [`value::`](param/07_value.md)

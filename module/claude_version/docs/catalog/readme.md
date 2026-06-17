@@ -1,4 +1,4 @@
-# Catalog Doc Entity
+# Catalog Collection
 
 ### Scope
 

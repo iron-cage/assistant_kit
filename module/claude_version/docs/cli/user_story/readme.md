@@ -1,4 +1,4 @@
-# User Story Doc Entity
+# User Story Collection
 
 ### Scope
 

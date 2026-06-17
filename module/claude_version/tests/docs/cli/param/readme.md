@@ -14,7 +14,7 @@
 | 01_version.md | Edge case tests for `version::` parameter | ✅ |
 | 02_dry.md | Edge case tests for `dry::` parameter | ✅ |
 | 03_force.md | Edge case tests for `force::` parameter | ✅ |
-| 04_verbosity.md | Edge case tests for `v::` / `verbosity::` parameter | ✅ |
+| 04_v.md | Edge case tests for `v::` / `verbosity::` parameter | ✅ |
 | 05_format.md | Edge case tests for `format::` parameter | ✅ |
 | 06_key.md | Edge case tests for `key::` parameter | ✅ |
 | 07_value.md | Edge case tests for `value::` parameter | ✅ |
