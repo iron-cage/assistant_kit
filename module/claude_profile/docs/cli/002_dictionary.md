@@ -14,11 +14,34 @@
 
 **Token Status** — Classification of the active OAuth access token: `Valid` (more than threshold remaining), `ExpiringSoon` (within warning threshold), or `Expired` (past `expiresAt`).
 
-### Quota State Terms
+### Quota Dimensions
 
-**h-exhausted** — Account with `5h Left ≤ 15%`; the current 5-hour session window is nearly or fully consumed. May still have weekly quota. Within the 🟡 tier, h-exhausted accounts appear before weekly-exhausted accounts.
+**5h quota** — The 5-hour sliding session usage window. Column header: `5h Left`. Exhaustion threshold: `≤ 15%`. Resets on a short cycle (hours). Canonical adjective for below-threshold: **h-exhausted**.
 
-**weekly-exhausted** — Account with `7d Left ≤ 5%`; the rolling 7-day quota is nearly or fully consumed. May still have session (5h) quota available.
+**7d quota** — The 7-day rolling weekly usage quota. Column header: `7d Left`. Exhaustion threshold: `≤ 5%`. Resets on a long cycle (days). Canonical adjective for below-threshold: **weekly-exhausted**.
+
+### Quota Status
+
+**available** — A quota dimension above its exhaustion threshold (usable).
+
+**exhausted** — A quota dimension at or below its exhaustion threshold (unusable until reset).
+
+**h-exhausted** — Account with `5h Left ≤ 15%`; the 5h session window is at or below threshold. Status group 2 when 7d is still available; status group 4 when both dimensions are exhausted.
+
+**weekly-exhausted** — Account with `7d Left ≤ 5%`; the 7d weekly quota is at or below threshold. Status group 3 when 5h is still available; status group 4 when both dimensions are exhausted.
+
+### Status Groups
+
+**status group** — One of four fixed partitions applied to all accounts before any sort strategy runs. Group order is fixed and never reversed by `desc::`. Sorting reorders rows within each group only. Replaces the former "three-tier" terminology.
+
+| Group | Emoji | Name | 5h | 7d | Recovery |
+|-------|-------|------|----|----|----------|
+| 1 | 🟢 | Green | available | available | — |
+| 2 | 🟡 | h-exhausted | exhausted | available | Short-cycle (5h reset) |
+| 3 | 🟡 | weekly-exhausted | available | exhausted | Long-cycle (7d reset) |
+| 4 | 🔴 | Red | — | — | Fully exhausted or error |
+
+Group 2 ranks above group 3 because 5h exhaustion recovers in hours; 7d exhaustion takes days. See [sort::](param/025_sort.md).
 
 ### Technical Terms
 

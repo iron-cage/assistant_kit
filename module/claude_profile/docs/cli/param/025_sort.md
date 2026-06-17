@@ -1,33 +1,45 @@
 # Parameter :: 25. `sort::`
 
-Controls row ordering in the `.usage` quota table. Each value implements a distinct heuristic optimized for a specific operational workflow.
+Controls row ordering in the `.usage` quota table.
 
 - **Default:** `renew`
-- **Constraints:** `name`, `endurance`, `drain`, `renew`, `next`, `expires`, `renews`
+- **Constraints:** `name`, `renew`, `renews`
 - **Purpose:** Select the row sorting strategy for the quota table.
 
 **Values:**
 
-| Value | Purpose | Default `desc::` |
-|-------|---------|-------------------|
-| `name` | Alphabetical — stable layout for `live::1` monitor | `0` (A→Z) |
-| `endurance` | Sustained 5h+ session — qualified accounts first | `1` (best on top) |
-| `drain` | Drain accounts with the lowest 7d weekly quota first | `0` (lowest on top) |
-| `renew` | Use accounts whose next quota renewal event fires soonest (7d reset or billing cycle) | `0` (soonest on top) |
-| `next` | Mirror the active `next::` strategy — `→` winner always appears first | inherits from resolved strategy |
-| `expires` | Sort by token expiry time — accounts expiring soonest appear first | `0` (soonest on top) |
-| `renews` | Sort by subscription renewal timer — accounts whose billing cycle renews soonest appear first | `0` (soonest on top) |
+| Value | Purpose | Primary key | Secondary key | Tertiary key | Exhausted floor | Default `desc::` |
+|-------|---------|-------------|---------------|--------------|-----------------|-------------------|
+| `name` | Alphabetical — stable layout for `live::1` monitor | account name | — | — | `0` (A→Z) |
+| `renew` | Accounts whose next quota event fires soonest | `min(7d_reset, subscription_renewal)` | `prefer_weekly` (lowest %) | name | `0` (soonest on top) |
+| `renews` | Accounts whose billing cycle renews soonest | `subscription_renewal_secs` | name | — | `0` (soonest on top) |
+
+**4-tier grouping (applied before sorting):**
+
+All accounts are partitioned into four status groups before any sort strategy runs. Group order is fixed — sorting only reorders rows within each group.
+
+| Group | Status | 5h Left | 7d Left | Position | Condition |
+|-------|--------|---------|---------|----------|-----------|
+| 1 | 🟢 Green | available | available | top | Fully healthy — both 5h and 7d quota available |
+| 2 | 🟡 Yellow | 🟡 exhausted | 🟢 available | second | 5h session depleted — recovers on short-cycle reset |
+| 3 | 🟡 Yellow | 🟢 available | 🟡 exhausted | third | 7d weekly quota depleted — long recovery |
+| 4 | 🔴 Red | — | — | bottom | Fully exhausted — no quota remaining |
+
+`desc::1` reverses row order within each group but does not change group order. Green always appears above yellow, yellow always above red.
+
+**Sort key details:**
+
+- **`sort::renew` primary key** includes subscription renewal (Fix(BUG-229)) — not just 7d reset. Whichever fires sooner wins.
+- **`sort::renew` secondary key** is governed by `prefer::`: `prefer::opus` → 7d Left %; `prefer::sonnet` → 7d(Son) Left %; `prefer::any` → min(7d, Son) Left %.
+- **`sort::renews`**: accounts without subscription data (`renewal_at` absent and no `org_created_at`) are placed last.
+- **Determinism** (Fix(BUG-259)): all strategies use account name as final tiebreaker.
 
 **Examples:**
 
 ```text
-sort::renew      → use accounts whose next renewal event fires soonest (default)
+sort::renew      → soonest quota event first — 7d reset or subscription renewal (default)
 sort::name       → alphabetical A→Z
-sort::endurance  → best for uninterrupted agent run
-sort::drain      → drain accounts with the lowest 7d weekly quota first
-sort::next       → mirror active next:: strategy (→ winner first)
-sort::expires    → accounts expiring soonest first
-sort::renews     → accounts with soonest billing renewal first
+sort::renews     → soonest billing renewal first
 ```
 
 **See Also:** [feature/020_usage_sort_strategies.md](../../feature/020_usage_sort_strategies.md) for strategy algorithms.

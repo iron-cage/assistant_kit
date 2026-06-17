@@ -91,7 +91,7 @@ clp .usage rotate::1 force::1
 7. Session-model override: `(when set_model:: provided)` write requested model via `set_session_model()`; `(otherwise, when current account has valid quota)` write resolved model via `apply_model_override()`
 8. Post-filter: apply `only_next::`, `only_valid::`, `exclude_exhausted::`, `min_5h::`, `min_7d::`, `count::`, `offset::` predicates
 9. Compute derived fields: status emoji, `→ Next` column, `~Renews`, flag column priority (`✓`/`*`/`@`/`→`)
-10. Three-tier sort (`🟢`→`🟡`→`🔴`); apply `sort::` strategy + `desc::` direction within each tier
+10. Four-group status partition (`🟢`→`🟡 h-exhausted`→`🟡 weekly-exhausted`→`🔴`); apply `sort::` strategy + `desc::` direction within each group
 11. `(when format::text)` Render table + footer; `(when get:: provided)` extract single field from first match; `(when live::1)` loop with `interval::` + `jitter::` delay
 12. `(when rotate::1)` Rotation dispatch: call `find_next_for_strategy()` winner; if no winner → exit 1 (`"no eligible account to rotate to"`); if `dry::1` → append `"[dry-run] would switch to '{name}'"` and exit 0; apply G5 ownership gate (non-owned accounts exit 1 unless `force::1`); call `switch_account(winner)`; apply post-switch touch from in-memory `AccountQuota` (no re-fetch); append `"switched to '{name}'"` to output
 
@@ -124,7 +124,7 @@ clp .usage live::1 interval::60 jitter::10
 **Notes:**
 - Accounts are enumerated from `{credential_store}/*.credentials.json` in alphabetical order.
 - Flag column priority: `✓` = current account, `*` = active-but-not-current (divergence), `@` = occupied on another machine (another machine's `_active_*` marker names this account), `→` = recommended next account. Priority: `✓` > `*` > `@` > `→` > blank. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md) and [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md).
-- Status emoji column (`●`): composite AND of 5h and 7d — `🟢` = valid token + `5h Left > 15%` and `7d Left > 5%`; `🟡` = valid token + either `5h Left ≤ 15%` or `7d Left ≤ 5%`; `🔴` = invalid/missing token. Per-column emoji also embedded in `5h Left` (🟢/🟡 at ≤15% threshold) and `7d Left` (🟢/🟡 at ≤5% threshold). No JSON equivalent.
+- Status emoji column (`●`): composite of 5h and 7d status — `🟢` = both available (`5h Left > 15%` and `7d Left > 5%`); `🟡` = h-exhausted (`5h Left ≤ 15%`, 7d available) or weekly-exhausted (`7d Left ≤ 5%`, 5h available); `🔴` = both exhausted or error. Per-column emoji also embedded in `5h Left` (🟢/🟡 at ≤15% threshold) and `7d Left` (🟢/🟡 at ≤5% threshold). No JSON equivalent.
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails.
 - `Sub` is sourced from `GET /api/oauth/account` (parallel fetch); shows `?` when that fetch fails.
 - `~Renews` shows an exact duration (`in Xh Ym`, no `~`) when `_renewal_at` is set in `{name}.json` (via `.account.renewal`); shows an estimated `~in Xd` from `org_created_at` day-of-month when not set; shows `?` when neither source is available.
@@ -134,7 +134,7 @@ clp .usage live::1 interval::60 jitter::10
 - Empty credential store exits 0 with `(no accounts configured)`.
 - `refresh::1` triggers at most one retry per account per cycle. See [feature/017_token_refresh.md](../../feature/017_token_refresh.md).
 - `live::1 format::json` exits 1 before any fetch. See [feature/018_live_monitor.md](../../feature/018_live_monitor.md).
-- Three-tier display grouping (🟢 → 🟡 → 🔴) applied before sort strategy within each tier. Within 🟡, h-exhausted accounts (`5h Left ≤ 15%`) appear before weekly-exhausted accounts (`5h Left > 15%`, `7d Left ≤ 5%`).
+- Four-group status partition (🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Red) applied before sort strategy. Sort applies within each group only; `desc::1` reverses within groups but never changes group order. See [dictionary](../../cli/002_dictionary.md#status-groups).
 - `Sub` column hidden by default; show via `cols::+sub`. `7d Son Reset` column also hidden by default; show via `cols::+7d_son_reset`.
 - Duration format (`format_duration_secs`) capped to 2 significant units (e.g., `1d 2h` not `1d 2h 45m`).
 - See [feature/009_token_usage.md](../../feature/009_token_usage.md) for the baseline algorithm and AC criteria.

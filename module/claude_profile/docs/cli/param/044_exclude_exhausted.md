@@ -1,6 +1,6 @@
 # Parameter :: 44. `exclude_exhausted::`
 
-Filters the `.usage` table to hide accounts in the 🟡 (exhausted) or 🔴 (invalid) tiers, showing only fully healthy 🟢 accounts.
+Filters the `.usage` table to hide accounts in status groups 2–4 (🟡 h-exhausted, 🟡 weekly-exhausted, 🔴 Red), showing only 🟢 Green accounts.
 
 - **Default:** `0`
 - **Constraints:** `0`, `1`, `false`, `true`
@@ -15,7 +15,7 @@ exclude_exhausted::1           -> only fully healthy accounts
 exclude_exhausted::1 count::1  -> top healthy account (first after sort)
 ```
 
-**See Also:** [feature/028_usage_row_filtering.md](../../feature/028_usage_row_filtering.md), [feature/009_token_usage.md](../../feature/009_token_usage.md) for status emoji tier boundaries.
+**See Also:** [feature/028_usage_row_filtering.md](../../feature/028_usage_row_filtering.md), [feature/009_token_usage.md](../../feature/009_token_usage.md) for status groups, [dictionary](../002_dictionary.md#status-groups) for canonical definitions.
 
 ### Referenced Type
 

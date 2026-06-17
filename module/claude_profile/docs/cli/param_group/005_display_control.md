@@ -75,7 +75,7 @@ Parameters that fail: `sort::`, `next::` (ordering strategy, not display); `form
 **Cross-References**
 
 - [../004_parameter_interactions.md](../004_parameter_interactions.md) — Interaction 8: `cols::` does not affect `format::json` output
-- [../../feature/009_token_usage.md](../../feature/009_token_usage.md) — column definitions, AC-22, AC-23; three-tier grouping
+- [../../feature/009_token_usage.md](../../feature/009_token_usage.md) — column definitions, AC-22, AC-23; four-group status partition
 - [../../feature/028_usage_row_filtering.md](../../feature/028_usage_row_filtering.md) — row filter evaluation order and AND-composition rules
 - [../param/033_cols.md](../param/033_cols.md) — complete column registry with IDs and defaults
 
