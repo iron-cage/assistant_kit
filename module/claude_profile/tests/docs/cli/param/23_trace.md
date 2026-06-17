@@ -22,7 +22,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 | EC-12 | `.account.use trace::1` — accepted; account not found → exit 2; no "Unknown parameter" error | Acceptance: `.account.use` (2) |
 | EC-13 | `.account.delete trace::1 dry::1` — accepted; `[trace]` line emitted for store read | Acceptance: `.account.delete` |
 | EC-14 | `.account.relogin trace::1 dry::1` — accepted; `[trace]` line emitted for store read | Acceptance: `.account.relogin` |
-| EC-15 | `.account.rotate trace::1 dry::1` — accepted; `[trace]` line emitted for store read | Acceptance: `.account.rotate` |
+| EC-15 | DEPRECATED — `.account.rotate` removed; trace acceptance now covered by `.usage trace::1` (EC-1) | Acceptance: removed |
 | EC-16 | `.token.status trace::1` — accepted; `[trace]` line emitted for credential read | Acceptance: `.token.status` |
 | EC-17 | `.paths trace::1` — accepted; `[trace]` line emitted for path resolution | Acceptance: `.paths` |
 
@@ -41,7 +41,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - Acceptance\: `.account.save`: 1 test (EC-11)
 - Acceptance\: `.account.delete`: 1 test (EC-13)
 - Acceptance\: `.account.relogin`: 1 test (EC-14)
-- Acceptance\: `.account.rotate`: 1 test (EC-15)
+- ~~Acceptance\: `.account.rotate`~~: DEPRECATED (EC-15 — command removed)
 - Acceptance\: `.token.status`: 1 test (EC-16)
 - Acceptance\: `.paths`: 1 test (EC-17)
 
@@ -201,14 +201,9 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 
 ---
 
-### EC-15: `.account.rotate trace::1 dry::1` — accepted; trace emitted for store read
+### EC-15: DEPRECATED — `.account.rotate` removed
 
-- **Given:** One active account present; `dry::1` suppresses rotation.
-- **When:** `clp .account.rotate dry::1 trace::1`
-- **Then:** stderr contains `[trace]` line for store read; no "Unknown parameter" error; command may exit 2 (no inactive candidate) but must not exit 1 for unknown-param.
-- **Exit:** 0 or 2
-- **Source fn:** `it_trace_account_rotate_accepted` (in `tests/cli/account_rotate_test.rs`)
-- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+> **DEPRECATED** — `.account.rotate` has been removed (Feature 038). Trace acceptance on the rotation path is covered by `.usage trace::1` (EC-1). The corresponding test `it_trace_account_rotate_accepted` should be removed during implementation.
 
 ---
 

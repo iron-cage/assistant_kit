@@ -13,7 +13,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | File | Responsibility |
 |------|----------------|
-| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 37 feature docs |
+| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 38 feature docs |
 | 01_account_store_init.md | FT cases for Feature 001 — Account Store Initialization |
 | 02_account_save.md | FT cases for Feature 002 — Save Account |
 | 03_account_list.md | FT cases for Feature 003 — Accounts |
@@ -51,6 +51,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 35_model_command.md | FT cases for Feature 035 — Dedicated Model Get/Set Command |
 | 36_account_ownership.md | FT cases for Feature 036 — Account Ownership |
 | 37_accounts_usage_param_unification.md | FT cases for Feature 037 — Accounts/Usage Parameter Set Unification |
+| 38_usage_strategy_rotate.md | FT cases for Feature 038 — Usage Strategy Rotate |
 
 ### Coverage Summary
 
@@ -94,8 +95,9 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 035_model_command | [035_model_command.md](35_model_command.md) | FT-01 … FT-12 | ✅ |
 | 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-21 | ✅ |
 | 037_accounts_usage_param_unification | [037_accounts_usage_param_unification.md](37_accounts_usage_param_unification.md) | FT-01 … FT-21 | ✅ |
+| 038_usage_strategy_rotate | [038_usage_strategy_rotate.md](38_usage_strategy_rotate.md) | FT-01 … FT-11 | ✅ |
 
-**Total:** 38 specs — 37 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+**Total:** 39 specs — 38 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 
 ### Cross-Reference Depth
 

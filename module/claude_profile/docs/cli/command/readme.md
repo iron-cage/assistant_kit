@@ -5,14 +5,14 @@
 | File | Responsibility |
 |------|----------------|
 | [003_meta.md](003_meta.md) | Meta-commands: `.`, `.help`, `--version` flag |
-| [001_account.md](001_account.md) | Account namespace: `.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.account.renewal`, `.account.inspect` |
+| [001_account.md](001_account.md) | Account namespace: `.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.renewal`, `.account.inspect` |
 | [005_token.md](005_token.md) | Token namespace: `.token.status` |
 | [002_credentials.md](002_credentials.md) | Credentials namespace: `.credentials.status` |
 | [006_usage.md](006_usage.md) | Usage namespace: `.usage` |
 | [004_paths.md](004_paths.md) | Paths namespace: `.paths` |
 | [007_model.md](007_model.md) | Model namespace: `.model` |
 
-**Total:** 16 commands (15 visible + 1 hidden)
+**Total:** 16 commands (14 visible + 2 hidden)
 
 ### All Commands
 
@@ -20,17 +20,17 @@
 |---|---------|---------|--------|---------|
 | 1 | `.` | Show help information (hidden dot-shorthand) | 0 | `clp .` |
 | 2 | `.help` | Display command reference and usage examples | 0 | `clp .help` |
-| 3 | `.accounts` | List all saved accounts or show a single named account | 18 | `clp .accounts` |
+| 3 | `.accounts` | List all saved accounts or show a single named account | 32 | `clp .accounts` |
 | 4 | `.account.save` | Save current credentials as a named account profile | 5 | `clp .account.save name::alice@acme.com` |
 | 5 | `.account.use` | Switch active account by name with atomic credential rotation | 7 | `clp .account.use name::alice@home.com` |
 | 6 | `.account.delete` | Delete a saved account from the account store | 3 | `clp .account.delete name::alice@oldco.com` |
 | 7 | `.token.status` | Show active OAuth token expiry classification | 3 | `clp .token.status` |
 | 8 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 3 | `clp .paths` |
-| 9 | `.usage` | Show live rate-limit quota for all saved accounts | 25 | `clp .usage` |
+| 9 | `.usage` | Show live rate-limit quota for all saved accounts | 33 | `clp .usage` |
 | 10 | `.credentials.status` | Show live credential metadata without account store dependency | 18 | `clp .credentials.status` |
 | 11 | `.account.limits` | Show rate-limit utilization for the active or named account | 3 | `clp .account.limits name::alice@acme.com` |
 | 12 | `.account.relogin` | Force browser re-authentication for a named account | 3 | `clp .account.relogin name::carol@example.com` |
-| 13 | `.account.rotate` | Auto-rotate to the best inactive account by token expiry | 2 | `clp .account.rotate` |
+| 13 | `.account.rotate` | **DEPRECATED** — hidden redirector; exits 1 with notice to use `.usage rotate::1` | 0 | `clp .account.rotate` |
 | 14 | `.account.renewal` | Set/clear billing renewal timestamp override for one or all accounts | 6 | `clp .account.renewal name::alice@acme.com from_now::+0m` |
 | 15 | `.account.inspect` | Live diagnostic inspection of identity, subscription, and org fields | 4 | `clp .account.inspect` |
 | 16 | `.model` | Get or set the Claude Code session model in `~/.claude/settings.json` | 2 | `clp .model set::opus` |
@@ -48,15 +48,15 @@
 | Count | Commands |
 |-------|----------|
 | 0 | `.`, `.help` |
-| 2 | `.account.rotate`, `.model` |
+| 2 | `.model` |
 | 3 | `.paths`, `.account.delete`, `.token.status`, `.account.limits`, `.account.relogin` |
 | 4 | `.account.inspect` |
 | 5 | `.account.save` |
 | 6 | `.account.renewal` |
 | 7 | `.account.use` |
-| 18 | `.accounts` |
 | 18 | `.credentials.status` |
-| 25 | `.usage` |
+| 32 | `.accounts` |
+| 33 | `.usage` |
 
 ### See Also
 

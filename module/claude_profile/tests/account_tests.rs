@@ -23,12 +23,6 @@
 //! | A-13 | `delete_removes_credential_file` | delete removes named file | P |
 //! | A-14 | `delete_active_account_succeeds` | active account → succeeds, `_active` cleaned up | P |
 //! | A-15 | `delete_returns_not_found_for_missing_account` | non-existent name → `Err` NotFound | N |
-//! | A-16 | `auto_rotate_switches_to_inactive_account` | inactive account present → switches | P |
-//! | A-17 | `auto_rotate_returns_switched_account_name` | → returns name string | P |
-//! | A-18 | `auto_rotate_picks_account_with_highest_expires_at` | multiple inactive → picks latest expiry | P |
-//! | A-19 | `auto_rotate_fails_when_no_inactive_accounts` | all active → `Err` | N |
-//! | A-20 | `auto_rotate_fails_when_account_store_empty` | no accounts → `Err` | N |
-//! | A-21 | `auto_rotate_with_no_active_marker_picks_highest_expires_at` | no `_active` file → picks latest | P |
 //! | A-22 | `credential_stem_valid` | `.credentials.json` file → `Some(stem)` | P |
 //! | A-23 | `credential_stem_filters_active_marker` | `_active` file → `None` | P |
 //! | A-24 | `credential_stem_filters_plain_json` | non-credentials `.json` → `None` | P |
@@ -331,112 +325,6 @@ fn delete_returns_not_found_for_missing_account()
 }
 
 // ── FR-13: Auto Rotate ────────────────────────────────────────────────────────
-
-// Inactive account with high expires_at_ms — preferred rotation target.
-const CREDENTIALS_EXPIRE_HIGH : &str = r#"{"claudeAiOauth":{"accessToken":"token-hi","refreshToken":"refresh-hi","expiresAt":9000000000000,"scopes":[],"subscriptionType":"max","rateLimitTier":"standard"}}"#;
-
-// Inactive account with low expires_at_ms — non-preferred rotation target.
-const CREDENTIALS_EXPIRE_LOW : &str = r#"{"claudeAiOauth":{"accessToken":"token-lo","refreshToken":"refresh-lo","expiresAt":2000000000000,"scopes":[],"subscriptionType":"pro","rateLimitTier":"light"}}"#;
-
-#[ test ]
-fn auto_rotate_switches_to_inactive_account()
-{
-  //! FR-13: `auto_rotate()` switches to the only inactive account.
-  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
-  let paths = ClaudePaths::new().expect( "HOME set" );
-  std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
-  std::fs::write( credential_store.join( "alice@acme.com.credentials.json" ), CREDENTIALS ).expect( "save alice@acme.com" );
-  std::fs::write( credential_store.join( "alice@home.com.credentials.json" ), CREDENTIALS_B ).expect( "save alice@home.com" );
-  std::fs::write( credential_store.join( account::active_marker_filename() ), "alice@acme.com" ).expect( "_active" );
-
-  account::auto_rotate( &credential_store, &paths ).expect( "auto_rotate" );
-
-  let marker = std::fs::read_to_string( credential_store.join( account::active_marker_filename() ) ).expect( "read _active" );
-  assert_eq!( marker.trim(), "alice@home.com" );
-}
-
-#[ test ]
-fn auto_rotate_returns_switched_account_name()
-{
-  //! FR-13: return value is the name of the account switched to.
-  let ( _dir, credential_store ) = setup_home( CREDENTIALS_B );
-  let paths = ClaudePaths::new().expect( "HOME set" );
-  std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
-  std::fs::write( credential_store.join( "alice@acme.com.credentials.json" ), CREDENTIALS ).expect( "save alice@acme.com" );
-  std::fs::write( credential_store.join( "alice@home.com.credentials.json" ), CREDENTIALS_B ).expect( "save alice@home.com" );
-  std::fs::write( credential_store.join( account::active_marker_filename() ), "alice@home.com" ).expect( "_active" );
-
-  let switched_to = account::auto_rotate( &credential_store, &paths ).expect( "auto_rotate" );
-  assert_eq!( switched_to, "alice@acme.com" );
-}
-
-#[ test ]
-fn auto_rotate_picks_account_with_highest_expires_at()
-{
-  //! FR-13: with multiple inactive accounts, picks the one with the highest
-  //! `expires_at_ms` — the one whose OAuth token lasts longest.
-  //!
-  //! Why: callers use `auto_rotate` to get the best remaining account, not an
-  //! arbitrary one. The selection must be deterministic and optimal.
-  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
-  let paths = ClaudePaths::new().expect( "HOME set" );
-  std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
-  std::fs::write( credential_store.join( "alpha@acme.com.credentials.json" ), CREDENTIALS_EXPIRE_LOW ).expect( "save alpha" );
-  std::fs::write( credential_store.join( "beta@acme.com.credentials.json" ), CREDENTIALS_EXPIRE_HIGH ).expect( "save beta" );
-  std::fs::write( credential_store.join( "current@acme.com.credentials.json" ), CREDENTIALS ).expect( "save current" );
-  std::fs::write( credential_store.join( account::active_marker_filename() ), "current@acme.com" ).expect( "_active" );
-
-  // beta@acme.com has expiresAt=9000000000000 > alpha@acme.com's 2000000000000.
-  let switched_to = account::auto_rotate( &credential_store, &paths ).expect( "auto_rotate" );
-  assert_eq!( switched_to, "beta@acme.com" );
-}
-
-#[ test ]
-fn auto_rotate_fails_when_no_inactive_accounts()
-{
-  //! FR-13: when the only account is the active one, `auto_rotate` fails.
-  //!
-  //! Why: there is no candidate to rotate to — the error surfaces this
-  //! rather than silently succeeding by switching to the same account.
-  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
-  let paths = ClaudePaths::new().expect( "HOME set" );
-  std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
-  std::fs::write( credential_store.join( "solo@example.com.credentials.json" ), CREDENTIALS ).expect( "save solo" );
-  std::fs::write( credential_store.join( account::active_marker_filename() ), "solo@example.com" ).expect( "_active" );
-
-  let err = account::auto_rotate( &credential_store, &paths )
-    .expect_err( "must fail with no inactive accounts" );
-  assert_eq!( err.kind(), std::io::ErrorKind::NotFound );
-}
-
-#[ test ]
-fn auto_rotate_fails_when_account_store_empty()
-{
-  //! FR-13: when no accounts are configured, `auto_rotate` fails with `NotFound`.
-  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
-  let paths = ClaudePaths::new().expect( "HOME set" );
-  // No credential_store directory — list() returns empty vec.
-
-  let err = account::auto_rotate( &credential_store, &paths )
-    .expect_err( "must fail with empty account store" );
-  assert_eq!( err.kind(), std::io::ErrorKind::NotFound );
-}
-
-#[ test ]
-fn auto_rotate_with_no_active_marker_picks_highest_expires_at()
-{
-  //! FR-13: when no _active marker exists all accounts are inactive;
-  //! `auto_rotate` picks the one with the highest `expires_at_ms`.
-  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
-  let paths = ClaudePaths::new().expect( "HOME set" );
-  std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
-  std::fs::write( credential_store.join( "alpha@acme.com.credentials.json" ), CREDENTIALS_EXPIRE_LOW ).expect( "save alpha" );
-  std::fs::write( credential_store.join( "beta@acme.com.credentials.json" ), CREDENTIALS_EXPIRE_HIGH ).expect( "save beta" );
-  // No _active marker — both accounts appear inactive.
-
-  let switched_to = account::auto_rotate( &credential_store, &paths ).expect( "auto_rotate" );
-  assert_eq!( switched_to, "beta@acme.com" );
-}
 
 // ── Private helper unit tests (moved from src/account.rs) ────────────────────
 

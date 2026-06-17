@@ -4,7 +4,7 @@
 //! EC-1 through EC-11 are covered in `cli_args_test.rs` and
 //! `integration/read_commands_test.rs`.
 
-use crate::helpers::{ assert_exit, run_clm, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clm, stdout };
 
 /// EC-12: `count::3` → output has at most 3 version entries
 #[ test ]

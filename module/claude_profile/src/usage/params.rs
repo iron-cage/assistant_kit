@@ -30,11 +30,39 @@ use super::types::{ UsageParams, SortStrategy, PreferStrategy, NextStrategy, Col
 #[ allow( clippy::too_many_lines ) ]
 pub( super ) fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorData >
 {
-  // refresh default is 1 (enabled); live/trace default is 0 (disabled); touch default is 1 (enabled).
+  // refresh default is 1 (enabled); live/trace/rotate default is 0 (disabled); touch default is 1 (enabled).
   let refresh = crate::output::parse_int_flag( cmd, "refresh", 1 )?;
   let live    = crate::output::parse_int_flag( cmd, "live",    0 )?;
   let trace   = crate::output::parse_int_flag( cmd, "trace",   0 )? != 0;
   let touch   = crate::output::parse_int_flag( cmd, "touch",   1 )?;
+  let rotate  = crate::output::parse_int_flag( cmd, "rotate",  0 )? != 0;
+  // P-2: force is a strict-bool string param ("0"/"1"); default 0.
+  let force = match cmd.arguments.get( "force" )
+  {
+    None                       => false,
+    Some( Value::String( s ) ) => match s.as_str()
+    {
+      "1" | "true"  => true,
+      "0" | "false" => false,
+      other => return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        format!( "force:: must be 0 or 1, got {other:?}" ),
+      ) ),
+    },
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "force:: must be a string (0 or 1)".to_string(),
+    ) ),
+  };
+  // AC-04: rotate::1 and live::1 are mutually exclusive — rotation is a one-shot
+  // action incompatible with the continuous-monitor loop.
+  if rotate && live != 0
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "rotate::1 and live::1 are mutually exclusive".to_string(),
+    ) );
+  }
   // Negative values map to 0, which is < 30 and will hit the interval guard.
   let interval = match cmd.arguments.get( "interval" )
   {
@@ -222,5 +250,80 @@ pub( super ) fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsagePar
     refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, next, cols, touch, imodel, effort,
     count, offset, only_active, only_next, min_5h : h5_min, min_7d : d7_min, only_valid, exclude_exhausted,
     format, get, abs, no_color, set_model,
+    rotate, force,
   } )
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+#[ cfg( test ) ]
+mod tests
+{
+  use super::*;
+  use std::collections::HashMap;
+  use unilang::data::CommandDefinition;
+  use unilang::semantic::VerifiedCommand;
+  use unilang::types::Value;
+
+  fn make_cmd( args : Vec< ( &str, Value ) > ) -> VerifiedCommand
+  {
+    let mut arguments = HashMap::new();
+    for ( k, v ) in args { arguments.insert( k.to_string(), v ); }
+    let definition = CommandDefinition::former().name( ".usage" ).description( "test" ).end();
+    VerifiedCommand { definition, arguments }
+  }
+
+  /// PHASE-1 RED GATE: fails to compile until `UsageParams` gains `rotate: bool` in Phase 2.
+  /// After Phase 2 this test verifies that `rotate::1` is parsed to `params.rotate == true`.
+  #[ test ]
+  fn rotate_field_parses_true()
+  {
+    let cmd    = make_cmd( vec![ ( "rotate", Value::Integer( 1 ) ) ] );
+    let params = parse_usage_params( &cmd ).expect( "parse must succeed" );
+    assert!( params.rotate, "rotate::1 must set params.rotate to true" );
+  }
+
+  /// After Phase 2: `rotate::0` (explicit disable) parses to `params.rotate == false`.
+  #[ test ]
+  fn rotate_field_parses_false()
+  {
+    let cmd    = make_cmd( vec![ ( "rotate", Value::Integer( 0 ) ) ] );
+    let params = parse_usage_params( &cmd ).expect( "parse must succeed" );
+    assert!( !params.rotate, "rotate::0 must set params.rotate to false" );
+  }
+
+  /// After Phase 2: omitting `rotate::` defaults to `params.rotate == false`.
+  #[ test ]
+  fn rotate_field_default_false()
+  {
+    let cmd    = make_cmd( vec![] );
+    let params = parse_usage_params( &cmd ).expect( "parse must succeed" );
+    assert!( !params.rotate, "default rotate must be false" );
+  }
+
+  /// After Phase 2: `force::1` is parsed to `params.force == true`.
+  #[ test ]
+  fn force_field_parses_true()
+  {
+    let cmd    = make_cmd( vec![ ( "force", Value::String( "1".to_string() ) ) ] );
+    let params = parse_usage_params( &cmd ).expect( "parse must succeed" );
+    assert!( params.force, "force::1 must set params.force to true" );
+  }
+
+  /// After Phase 2: mutual exclusion guard rejects `rotate::1 live::1`.
+  #[ test ]
+  fn rotate_and_live_mutual_exclusion()
+  {
+    let cmd = make_cmd( vec![
+      ( "rotate", Value::Integer( 1 ) ),
+      ( "live",   Value::Integer( 1 ) ),
+    ] );
+    let result = parse_usage_params( &cmd );
+    assert!( result.is_err(), "rotate::1 + live::1 must return Err (mutual exclusion)" );
+    let err_msg = result.unwrap_err().message;
+    assert!(
+      err_msg.contains( "rotate" ) && err_msg.contains( "live" ),
+      "error message must reference both params, got: {err_msg}",
+    );
+  }
 }

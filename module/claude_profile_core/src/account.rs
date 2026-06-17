@@ -451,48 +451,6 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
   Ok( () )
 }
 
-/// Automatically rotate to the best available inactive account.
-///
-/// Selects the inactive account with the highest `expires_at_ms` and switches
-/// to it. Consolidates the pick-best-account-and-switch pattern so callers
-/// need a single call instead of duplicating the selection loop.
-///
-/// Returns the name of the account switched to.
-///
-/// # Errors
-///
-/// Returns `NotFound` if no accounts are configured or if no inactive account
-/// is available (all accounts are the currently active one).
-///
-/// # Examples
-///
-/// ```no_run
-/// use claude_profile_core::account;
-/// use claude_core::ClaudePaths;
-/// use std::path::Path;
-///
-/// let credential_store = Path::new( "/pro/.persistent/claude/credential" );
-/// let paths = ClaudePaths::new().expect( "HOME must be set" );
-/// let switched_to = account::auto_rotate( credential_store, &paths ).expect( "rotation failed" );
-/// println!( "rotated to: {switched_to}" );
-/// ```
-#[ inline ]
-pub fn auto_rotate( credential_store : &Path, paths : &ClaudePaths ) -> Result< String, std::io::Error >
-{
-  let candidate = list( credential_store )?
-    .into_iter()
-    .filter( | a | !a.is_active )
-    .max_by_key( | a | a.expires_at_ms )
-    .ok_or_else( || std::io::Error::new(
-      std::io::ErrorKind::NotFound,
-      "no inactive account available to rotate to",
-    ) )?;
-
-  let name = candidate.name;
-  switch_account( &name, credential_store, paths )?;
-  Ok( name )
-}
-
 /// Override the session model to Opus in `~/.claude/settings.json` when the current model is Sonnet.
 ///
 /// Returns `true` when the override was written (current model was Sonnet or absent);

@@ -27,7 +27,7 @@
 //! | 261 | `format::json dry::1` on `.version.install` → accepted, JSON output | P | 0 |
 //! | 262 | `v::0` on `.version.guard` → accepted, exit 0 | P | 0 |
 
-use crate::helpers::{ assert_exit, run_clm, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clm, stdout };
 
 // ─── F1: dry + force interaction ────────────────────────────────────────────
 
@@ -59,7 +59,7 @@ fn tc251_processes_kill_dry_force_dry_wins()
 fn tc252_settings_set_dry_no_write()
 {
   let dir = tempfile::TempDir::new().unwrap();
-  let out = crate::helpers::run_clm_with_env(
+  let out = crate::subprocess_helpers::run_clm_with_env(
     &[ ".settings.set", "key::k", "value::v", "dry::1" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -152,7 +152,7 @@ fn tc261_version_install_format_json_accepted()
 fn tc262_version_guard_v0_accepted()
 {
   let dir  = tempfile::TempDir::new().unwrap();
-  let out = crate::helpers::run_clm_with_env(
+  let out = crate::subprocess_helpers::run_clm_with_env(
     &[ ".version.guard", "dry::1", "v::0" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );

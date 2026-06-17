@@ -34,9 +34,11 @@ clp .token.status
 
 **When to use:** Token is `Expired` or `ExpiringSoon` and automation or manual work must continue.
 
-**Shorthand:** When you don't need to pick a specific account, use [`.account.rotate`](../command/001_account.md#command--13-accountrotate) to auto-select the best inactive account in one command:
+**Shorthand:** When you don't need to pick a specific account, use [`.usage rotate::1`](../command/006_usage.md) to auto-select the best account using the active strategy (default: `renew`) in one command:
 
 ```bash
-clp .account.rotate
-# rotated to 'alice@home.com'
+clp .usage rotate::1
+# switched to 'alice@home.com'
 ```
+
+Strategy variants: `clp .usage rotate::1 next::endurance` (most 5h quota), `clp .usage rotate::1 next::drain` (least non-zero weekly quota). Preview with `dry::1`: `clp .usage rotate::1 dry::1`.

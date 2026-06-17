@@ -548,3 +548,82 @@
     - ".settings.set key::theme value::dark"
     - ".settings.set key::autoUpdaterStatus value::disabled dry::1"
   auto_help_enabled: true
+
+- name: ".config"
+  namespace: ""
+  description: "Show, get, set, or unset configuration values from all 4 layers"
+  hint: "Manage configuration"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "config"]
+  permissions: []
+  idempotent: false
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "key"
+      kind: "String"
+      description: "Configuration key to read or write"
+      hint: "Config key"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "value"
+      kind: "String"
+      description: "Value to set (used with key::)"
+      hint: "Config value"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "scope"
+      kind: "String"
+      description: "Scope to target for set/unset (global, local, project, env)"
+      hint: "Config scope"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "unset"
+      kind: "Boolean"
+      description: "Remove key from the target scope (1=unset)"
+      hint: "Unset key"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".config"
+    - ".config key::theme"
+    - ".config key::theme value::dark scope::local"
+    - ".config key::theme unset::1 scope::local"
+    - ".config format::json"
+  auto_help_enabled: true

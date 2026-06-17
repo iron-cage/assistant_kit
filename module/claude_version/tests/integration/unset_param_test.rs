@@ -17,7 +17,7 @@
 
 use tempfile::TempDir;
 
-use crate::helpers::{ assert_exit, run_clm_with_env, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clm_with_env, write_settings };
 
 // ─── EC-1: unset::1 removes key from settings ────────────────────────────────
 

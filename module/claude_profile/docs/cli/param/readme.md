@@ -62,8 +62,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [056_unclaim.md](056_unclaim.md) | `unclaim::` — **REMOVED** — superseded by `.account.unclaim` command (re-activated as mutation param on `.accounts`/`.usage` in Feature 037) |
 | [057_assign.md](057_assign.md) | `assign::` — write per-machine active-account marker (mutation param on `.accounts`/`.usage`, Feature 037) |
 | [058_force.md](058_force.md) | `force::` — bypass G5–G8 ownership enforcement on mutation commands |
+| [059_rotate.md](059_rotate.md) | `rotate::` — after quota table render, switch to the `→` recommended account; mutually exclusive with `live::1`; G5 ownership gate; `dry::1` previews |
 
-**Total:** 57 active parameters (param 056 re-activated in Feature 037; 057–058 new)
+**Total:** 58 active parameters (param 056 re-activated in Feature 037; 057–058 new; 059 new in Feature 038)
 
 ### Overview Table
 
@@ -126,7 +127,8 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 55 | `set::` | `enum` | *(omit)* | `opus`, `sonnet`, `haiku`, `default` | Mode selector on `.model`: absent = get, present = set | 1 cmd |
 | 56 | `unclaim::` | `bool` | `0` | `0`, `1` | Release ownership of named account (mutation param on `.accounts`/`.usage`; Feature 037) | `.accounts`, `.usage` |
 | 57 | `assign::` | `bool` | `0` | `0`, `1` | Write per-machine active-account marker (mutation param on `.accounts`/`.usage`; Feature 037) | `.accounts`, `.usage` |
-| 58 | `force::` | `bool` | `0` | `0`, `1`, `false`, `true` | Bypass G5–G8 ownership enforcement on mutation commands | `.account.use`, `.account.delete`, `.account.relogin`, `.accounts` |
+| 58 | `force::` | `bool` | `0` | `0`, `1`, `false`, `true` | Bypass G5–G8 ownership enforcement on mutation commands | `.account.use`, `.account.delete`, `.account.relogin`, `.accounts`, `.usage` |
+| 59 | `rotate::` | `bool` | `0` | `0`, `1` | After quota table render, switch to `→` recommended account; mutually exclusive with `live::1`; G5 ownership gate | `.usage` |
 
 *Param 1 = cross-command account selector (no formal group); params 48, 52 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = ungrouped (`.model`-specific); param 56 = REMOVED; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file)*
 

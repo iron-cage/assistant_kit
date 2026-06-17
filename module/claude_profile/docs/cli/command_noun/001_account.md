@@ -12,7 +12,7 @@ A saved credential profile stored in the per-machine account store (`{credential
 | 4 | `.account.delete` | delete | Remove account profile from credential store | Conditional | No |
 | 5 | `.account.limits` | limits | Show rate-limit utilization for named account | Yes | No |
 | 6 | `.account.relogin` | relogin | Force browser re-authentication for expired refresh token | No | No |
-| 7 | `.account.rotate` | rotate | Auto-rotate to best inactive account by token expiry | No | No |
+| 7 | `.account.rotate` | rotate | **DEPRECATED** — hidden redirector; exits 1 with notice to use `.usage rotate::1` | No | No |
 | 8 | `.account.renewal` | renewal | Set or clear billing renewal timestamp override | Yes | No |
 | 9 | `.account.inspect` | inspect | Live multi-endpoint identity and subscription diagnostic | Yes | No |
 | 10 | `.account.assign` | assign | Write per-machine active marker without credential rotation | Yes | No |
@@ -23,9 +23,9 @@ A saved credential profile stored in the per-machine account store (`{credential
 | Parameter | `.accounts` | `.account.save` | `.account.use` | `.account.delete` | `.account.limits` | `.account.relogin` | `.account.rotate` | `.account.renewal` | `.account.inspect` | `.account.assign` | `.account.unclaim` |
 |-----------|------------|----------------|----------------|-------------------|-------------------|--------------------|-------------------|--------------------|--------------------|--------------------|---------------------|
 | `name::` | optional | optional | **required** | **required** | optional | optional | — | **required** | optional | optional | **required** |
-| `dry::` | — | optional | optional | optional | — | optional | optional | optional | — | optional | optional |
+| `dry::` | — | optional | optional | optional | — | optional | — | optional | — | optional | optional |
 | `format::` | optional | — | — | — | optional | — | — | — | optional | — | — |
-| `trace::` | optional | optional | optional | optional | optional | optional | optional | optional | optional | — | optional |
+| `trace::` | optional | optional | optional | optional | optional | optional | — | optional | optional | — | optional |
 | `touch::` | — | — | optional | — | — | — | — | — | — | — | — |
 | `refresh::` | — | — | optional | — | — | — | — | — | optional | — | — |
 | `imodel::` | — | — | optional | — | — | — | — | — | — | — | — |
@@ -69,7 +69,7 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | `.account.delete` | `account::delete_account()` — removes `.credentials.json` + `{name}.json` + legacy files |
 | `.account.limits` | `claude_quota::fetch_rate_limits()` — reads `anthropic-ratelimit-unified-*` response headers |
 | `.account.relogin` | TTY subprocess sequence: switch → spawn `claude` → detect credential change → save → restore |
-| `.account.rotate` | `account::auto_rotate()` — selects highest `expiresAt` among inactive accounts |
+| `.account.rotate` | **DEPRECATED** — redirector prints deprecation notice, exits 1; rotation moved to `.usage rotate::1` |
 | `.account.renewal` | `account::set_renewal_at()` — read-merge write to `{name}.json` `_renewal_at` key |
 | `.account.inspect` | Endpoints 002/005/001 — `fetch_oauth_account()`, `fetch_claude_cli_roles()`, `fetch_oauth_usage()` |
 | `.account.assign` | `account::write_active_marker()` — writes `_active_{machine}_{user}` file only |
@@ -173,7 +173,7 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | 4 | [`.account.delete`](../command/001_account.md#command--6-accountdelete) | Delete account from store |
 | 5 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | Show rate-limit utilization |
 | 6 | [`.account.relogin`](../command/001_account.md#command--12-accountrelogin) | Browser re-authentication |
-| 7 | [`.account.rotate`](../command/001_account.md#command--13-accountrotate) | Auto-rotate to best inactive account |
+| 7 | [`.account.rotate`](../command/001_account.md#command--13-accountrotate) | **DEPRECATED** — redirector; use `.usage rotate::1` |
 | 8 | [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) | Set or clear billing renewal override |
 | 9 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | Live identity and subscription diagnostic |
 | 10 | [`.account.assign`](../command/001_account.md#command--16-accountassign) | Write per-machine active marker |

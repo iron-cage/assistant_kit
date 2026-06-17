@@ -82,6 +82,7 @@ impl NextStrategy
 ///
 /// `flag` (first col) and `account` (name) are structural and always visible.
 /// All other columns follow the default set; `cols::` modifiers toggle each one.
+#[ derive( Debug ) ]
 #[ allow( clippy::struct_excessive_bools ) ]
 pub( crate ) struct ColsVisibility
 {
@@ -224,6 +225,7 @@ pub( crate ) struct AccountQuota
 // ── Command handler ────────────────────────────────────────────────────────────
 
 /// Parsed `.usage` parameters extracted from a `VerifiedCommand`.
+#[ derive( Debug ) ]
 #[ allow( clippy::struct_excessive_bools ) ]
 pub( crate ) struct UsageParams
 {
@@ -282,6 +284,11 @@ pub( crate ) struct UsageParams
   /// When `Some`, write this value to `set_session_model` instead of running `apply_model_override`.
   /// String is the raw user-provided value (e.g., `"opus"`, `"default"`); resolve at use site.
   pub( crate ) set_model : Option< String >,
+  // ── Rotation (Feature 038) ─────────────────────────────────────────────────
+  /// When true, switch to the `→` winner after rendering the quota table.
+  pub( crate ) rotate    : bool,
+  /// When true, bypass the G5 ownership gate on the rotate path (and G8 on unclaim).
+  pub( crate ) force     : bool,
 }
 
 // ── Output format ─────────────────────────────────────────────────────────────

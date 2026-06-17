@@ -7,7 +7,7 @@
 - **In Scope**: Step 1 (bool), Step 2 (int), Step 3 (finite float), Step 3 edge case (NaN/inf → string), Step 4 (string fallback).
 - **Out of Scope**: Settings write mechanics (-> `../feature/03_settings_management.md`), CLI parameter validation (-> `../feature/05_cli_design.md`).
 
-Algorithm test surface for settings type inference. See [algorithm/001_settings_type_inference.md](../../../../docs/algorithm/001_settings_type_inference.md) for specification.
+Algorithm test surface for settings type inference. See [algorithm/001_settings_type_inference.md](../../../docs/algorithm/001_settings_type_inference.md) for specification.
 
 ## Behavioral Divergence Pair
 
@@ -47,7 +47,7 @@ Both are valid values; the stored JSON type differs because `"1"` is not `"true"
 - **When:** `clv .settings.set key::flag value::true`
 - **Then:** `settings.json` contains `"flag": true` (unquoted); exit 0
 - **Exit:** 0
-- **Source:** [algorithm/001_settings_type_inference.md — Step 1](../../../../docs/algorithm/001_settings_type_inference.md)
+- **Source:** [algorithm/001_settings_type_inference.md — Step 1](../../../docs/algorithm/001_settings_type_inference.md)
 
 ---
 
@@ -57,7 +57,7 @@ Both are valid values; the stored JSON type differs because `"1"` is not `"true"
 - **When:** `clv .settings.set key::flag value::false`
 - **Then:** `settings.json` contains `"flag": false` (unquoted); exit 0
 - **Exit:** 0
-- **Source:** [algorithm/001_settings_type_inference.md — Step 1](../../../../docs/algorithm/001_settings_type_inference.md)
+- **Source:** [algorithm/001_settings_type_inference.md — Step 1](../../../docs/algorithm/001_settings_type_inference.md)
 
 ---
 
@@ -67,7 +67,7 @@ Both are valid values; the stored JSON type differs because `"1"` is not `"true"
 - **When:** `clv .settings.set key::n value::1`
 - **Then:** `settings.json` contains `"n": 1` (unquoted integer, not `true`); exit 0
 - **Exit:** 0
-- **Source:** [algorithm/001_settings_type_inference.md — Step 2 Note](../../../../docs/algorithm/001_settings_type_inference.md)
+- **Source:** [algorithm/001_settings_type_inference.md — Step 2 Note](../../../docs/algorithm/001_settings_type_inference.md)
 
 ---
 
@@ -77,7 +77,7 @@ Both are valid values; the stored JSON type differs because `"1"` is not `"true"
 - **When:** `clv .settings.set key::pi value::3.14`
 - **Then:** `settings.json` contains `"pi": 3.14` (unquoted float); exit 0
 - **Exit:** 0
-- **Source:** [algorithm/001_settings_type_inference.md — Step 3](../../../../docs/algorithm/001_settings_type_inference.md)
+- **Source:** [algorithm/001_settings_type_inference.md — Step 3](../../../docs/algorithm/001_settings_type_inference.md)
 
 ---
 
@@ -87,7 +87,7 @@ Both are valid values; the stored JSON type differs because `"1"` is not `"true"
 - **When:** `clv .settings.set key::bad value::nan`
 - **Then:** `settings.json` contains `"bad": "nan"` (quoted string); exit 0
 - **Exit:** 0
-- **Source:** [algorithm/001_settings_type_inference.md — Step 3 edge case](../../../../docs/algorithm/001_settings_type_inference.md)
+- **Source:** [algorithm/001_settings_type_inference.md — Step 3 edge case](../../../docs/algorithm/001_settings_type_inference.md)
 
 ---
 
@@ -97,7 +97,7 @@ Both are valid values; the stored JSON type differs because `"1"` is not `"true"
 - **When:** `clv .settings.set key::name value::hello`
 - **Then:** `settings.json` contains `"name": "hello"` (quoted string); exit 0
 - **Exit:** 0
-- **Source:** [algorithm/001_settings_type_inference.md — Step 4](../../../../docs/algorithm/001_settings_type_inference.md)
+- **Source:** [algorithm/001_settings_type_inference.md — Step 4](../../../docs/algorithm/001_settings_type_inference.md)
 
 ---
 

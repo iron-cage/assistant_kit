@@ -47,7 +47,7 @@
 
 use tempfile::TempDir;
 
-use crate::helpers::{ assert_exit, run_clm_with_env, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clm_with_env, stdout, write_settings };
 
 // ─── IT-1: show-all with source labels ───────────────────────────────────────
 

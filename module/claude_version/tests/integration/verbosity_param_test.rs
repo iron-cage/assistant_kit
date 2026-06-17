@@ -6,7 +6,7 @@
 
 use tempfile::TempDir;
 
-use crate::helpers::{ assert_exit, run_clm, run_clm_with_env, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stdout, write_settings };
 
 /// EC-12: `.status v::0` → 3 bare lines with no label prefixes
 #[ test ]

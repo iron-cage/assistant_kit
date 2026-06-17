@@ -18,7 +18,7 @@
 //! | 511 | `.settings.get key::absent` → stderr mentions key name | N | 2 |
 //! | 512 | First arg `::value` → exit 1 | N | 1 |
 
-use crate::helpers::{ assert_exit, run_clm, run_clm_with_env, stderr };
+use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr };
 
 // TC-500: unknown command → stderr mentions "unknown command"
 #[ test ]

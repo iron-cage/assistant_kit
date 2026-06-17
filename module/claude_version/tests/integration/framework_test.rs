@@ -13,7 +13,7 @@
 //! | TC-094 | `.help` exits 0 and shows commands | 0 |
 //! | TC-095 | All 11 non-help commands appear in help output | 0 |
 
-use crate::helpers::{ run_clm, stdout, assert_exit };
+use crate::subprocess_helpers::{ run_clm, stdout, assert_exit };
 
 const VISIBLE_COMMANDS : &[ &str ] = &[
   ".status",

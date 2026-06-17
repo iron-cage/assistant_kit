@@ -7,7 +7,7 @@
 - **In Scope**: `.settings.show`, `.settings.get`, `.settings.set`, round-trip, atomic creation, nested object pass-through, HOME=unset error.
 - **Out of Scope**: Type inference algorithm (-> `../../algorithm/01_settings_type_inference.md`), dry-run semantics (-> `04_dry_run.md`).
 
-Feature test surface for settings management. See [feature/003_settings_management.md](../../../../docs/feature/003_settings_management.md) for specification.
+Feature test surface for settings management. See [feature/003_settings_management.md](../../../docs/feature/003_settings_management.md) for specification.
 
 ## Behavioral Divergence Pair
 
@@ -45,7 +45,7 @@ Both are valid invocations; the stored JSON type differs.
 - **When:** `clv .settings.set key::flag value::true`
 - **Then:** `settings.json` contains `"flag": true` (unquoted boolean); exit 0
 - **Exit:** 0
-- **Source:** [feature/003_settings_management.md — Commands](../../../../docs/feature/003_settings_management.md), [algorithm/001_settings_type_inference.md](../../../../docs/algorithm/001_settings_type_inference.md)
+- **Source:** [feature/003_settings_management.md — Commands](../../../docs/feature/003_settings_management.md), [algorithm/001_settings_type_inference.md](../../../docs/algorithm/001_settings_type_inference.md)
 
 ---
 
@@ -55,7 +55,7 @@ Both are valid invocations; the stored JSON type differs.
 - **When:** `clv .settings.set key::count value::42`
 - **Then:** `settings.json` contains `"count": 42` (unquoted integer); exit 0
 - **Exit:** 0
-- **Source:** [feature/003_settings_management.md — Commands](../../../../docs/feature/003_settings_management.md), [algorithm/001_settings_type_inference.md](../../../../docs/algorithm/001_settings_type_inference.md)
+- **Source:** [feature/003_settings_management.md — Commands](../../../docs/feature/003_settings_management.md), [algorithm/001_settings_type_inference.md](../../../docs/algorithm/001_settings_type_inference.md)
 
 ---
 
@@ -65,7 +65,7 @@ Both are valid invocations; the stored JSON type differs.
 - **When:** `clv .settings.set key::color value::blue` then `clv .settings.get key::color`
 - **Then:** `settings.get` stdout contains `"blue"`; exit 0 on both commands
 - **Exit:** 0
-- **Source:** [feature/003_settings_management.md — Commands](../../../../docs/feature/003_settings_management.md)
+- **Source:** [feature/003_settings_management.md — Commands](../../../docs/feature/003_settings_management.md)
 
 ---
 
@@ -75,7 +75,7 @@ Both are valid invocations; the stored JSON type differs.
 - **When:** `clv .settings.set key::x value::1`
 - **Then:** `settings.json` is created and contains `"x": 1`; exit 0
 - **Exit:** 0
-- **Source:** [feature/003_settings_management.md — Atomic write](../../../../docs/feature/003_settings_management.md)
+- **Source:** [feature/003_settings_management.md — Atomic write](../../../docs/feature/003_settings_management.md)
 
 ---
 
@@ -85,7 +85,7 @@ Both are valid invocations; the stored JSON type differs.
 - **When:** `clv .settings.set key::x value::1`
 - **Then:** exit 2 (runtime error, HOME missing)
 - **Exit:** 2
-- **Source:** [feature/003_settings_management.md — HOME dependency](../../../../docs/feature/003_settings_management.md)
+- **Source:** [feature/003_settings_management.md — HOME dependency](../../../docs/feature/003_settings_management.md)
 
 ---
 

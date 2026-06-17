@@ -211,37 +211,6 @@ fn check_expiry_and_refresh(
   std::process::exit( 3 );
 }
 
-/// `.account.rotate` — auto-rotate to the highest-expiry inactive account.
-///
-/// # Errors
-///
-/// Returns `ErrorData` if HOME is unset, the credential store cannot be read,
-/// or no inactive account is available to rotate to.
-#[ inline ]
-pub fn account_rotate_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
-{
-  let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
-  let credential_store = require_credential_store()?;
-  if trace { eprintln!( "[trace] account.rotate  reading store: {}", credential_store.display() ) }
-  let paths            = require_claude_paths()?;
-  if is_dry( &cmd )
-  {
-    let candidate = crate::account::list( &credential_store )
-      .map_err( |e| io_err_to_error_data( &e, "account rotate" ) )?
-      .into_iter()
-      .filter( |a| !a.is_active )
-      .max_by_key( |a| a.expires_at_ms )
-      .ok_or_else( || ErrorData::new(
-        ErrorCode::InternalError,
-        "no inactive account available to rotate to".to_string(),
-      ) )?;
-    return Ok( OutputData::new( format!( "[dry-run] would rotate to '{}'\n", candidate.name ), "text" ) );
-  }
-  let name = crate::account::auto_rotate( &credential_store, &paths )
-    .map_err( |e| io_err_to_error_data( &e, "account rotate" ) )?;
-  Ok( OutputData::new( format!( "rotated to '{name}'\n" ), "text" ) )
-}
-
 /// `.account.save` — save current credentials as a named account profile.
 ///
 /// # Errors

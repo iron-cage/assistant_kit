@@ -12,7 +12,7 @@
 //! | collection/001_design_decisions.md | DD-3 | D4 | `dd03_001_cmd_not_implemented_exit2` |
 //! | collection/001_design_decisions.md | DD-4 | D7 | `dd04_001_per_cmd_validation` |
 
-use crate::helpers::{ assert_exit, run_clm, run_clm_with_env, stderr, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr, stdout };
 
 // ─── DD-1 (D3): boolean parameters use 0/1 only ───────────────────────────────
 

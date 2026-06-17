@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the functional capabilities of `claude_profile` — account credential management and the `clp` CLI.
 - **Responsibility**: Documents all functional requirements with their design, acceptance criteria, and test references.
-- **In Scope**: feature/001 through feature/037 — full functional capability set for claude_profile and the clp CLI.
+- **In Scope**: feature/001 through feature/038 — full functional capability set for claude_profile and the clp CLI.
 - **Out of Scope**: Quality constraints (→ invariant/), CLI design (→ cli/).
 
 ### Overview Table
@@ -48,3 +48,4 @@
 | 035 | [Dedicated Model Get/Set Command](035_model_command.md) | `.model` command for standalone get/set of session model in `settings.json`; `set::` parameter; `get_session_model()` helper; no-duplication via shared `map_model_shorthand()` | ✅ |
 | 036 | [Account Ownership](036_account_ownership.md) | `owner` field in `{name}.json`; ownership-neutral `.account.save` (`account_save_routine()` passes `owner: None`); `.accounts unclaim::1` clears ownership via `write_owner()`; `.account.assign` is marker-only; eight enforcement gates (G1–G8) preventing non-owner credential operations; cache-as-primary for non-owned fetch | ✅ |
 | 037 | [Accounts/Usage Param Unification](037_accounts_usage_param_unification.md) | Unify `.accounts` and `.usage` to 32 shared params with different defaults; absorb `.account.unclaim` as `unclaim::` and `.account.assign` as `assign::`/`for::` params; replace 15 field toggles with `cols::`; reduce commands 18→16 | ✅ |
+| 038 | [Usage Strategy Rotate](038_usage_strategy_rotate.md) | `rotate::1` on `.usage`: switch to `→` winner after quota table render; G5 ownership gate; dry-run preview; touch reuse from in-memory quota; deprecates `.account.rotate` | ✅ |

@@ -7,7 +7,7 @@
 - **In Scope**: Unknown parameter exit 1, missing value exit 1, last-wins for repeated params, empty argv → help, `.help` anywhere → help.
 - **Out of Scope**: Individual command semantics (-> other feature/ instances), type inference (-> `../../algorithm/`).
 
-Feature test surface for CLI design. See [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md) for specification.
+Feature test surface for CLI design. See [feature/005_cli_design.md](../../../docs/feature/005_cli_design.md) for specification.
 
 ## Behavioral Divergence Pair
 
@@ -46,7 +46,7 @@ Both are valid invocations; output length differs.
 - **When:** `clv .status bogus::x`
 - **Then:** exit 1; stderr contains `"bogus"`
 - **Exit:** 1
-- **Source:** [feature/005_cli_design.md — Parameter rules](../../../../docs/feature/005_cli_design.md)
+- **Source:** [feature/005_cli_design.md — Parameter rules](../../../docs/feature/005_cli_design.md)
 
 ---
 
@@ -56,7 +56,7 @@ Both are valid invocations; output length differs.
 - **When:** `clv .version.install dry::`
 - **Then:** exit 1; stderr or stdout contains error about `"dry"`
 - **Exit:** 1
-- **Source:** [feature/005_cli_design.md — Parameter rules](../../../../docs/feature/005_cli_design.md)
+- **Source:** [feature/005_cli_design.md — Parameter rules](../../../docs/feature/005_cli_design.md)
 
 ---
 
@@ -66,7 +66,7 @@ Both are valid invocations; output length differs.
 - **When:** `clv .version.install version::stable version::month dry::1`
 - **Then:** stdout contains `"2.1.74"` (month resolution wins); exit 0
 - **Exit:** 0
-- **Source:** [feature/005_cli_design.md — Parameter rules: last occurrence wins](../../../../docs/feature/005_cli_design.md)
+- **Source:** [feature/005_cli_design.md — Parameter rules: last occurrence wins](../../../docs/feature/005_cli_design.md)
 
 ---
 
@@ -76,7 +76,7 @@ Both are valid invocations; output length differs.
 - **When:** `cm` (no arguments)
 - **Then:** stdout is non-empty help text; exit 0
 - **Exit:** 0
-- **Source:** [feature/005_cli_design.md — Help listing](../../../../docs/feature/005_cli_design.md)
+- **Source:** [feature/005_cli_design.md — Help listing](../../../docs/feature/005_cli_design.md)
 
 ---
 
@@ -86,7 +86,7 @@ Both are valid invocations; output length differs.
 - **When:** `clv .status .help`
 - **Then:** stdout shows help output (not `.status` output); exit 0
 - **Exit:** 0
-- **Source:** [feature/005_cli_design.md — Help listing](../../../../docs/feature/005_cli_design.md)
+- **Source:** [feature/005_cli_design.md — Help listing](../../../docs/feature/005_cli_design.md)
 
 ---
 

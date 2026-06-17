@@ -4,7 +4,7 @@
 //! EC-1, EC-3..EC-6, EC-10, EC-11 are covered in `cli_args_test.rs`,
 //! `mutation_commands_test.rs`, and `cross_cutting_test.rs`.
 
-use crate::helpers::{ assert_exit, run_clm, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clm, stdout };
 
 /// EC-7: `force::` only for `.version.install`, `.version.guard`, `.processes.kill`
 #[ test ]

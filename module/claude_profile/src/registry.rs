@@ -1,6 +1,9 @@
 //! Command registration: argument definitions and routines for the `claude_profile` CLI.
 
-use unilang::data::Kind;
+use unilang::data::{ Kind, ErrorData, ErrorCode };
+use unilang::data::OutputData;
+use unilang::interpreter::ExecutionContext;
+use unilang::semantic::VerifiedCommand;
 use crate::commands::
 {
   credentials_status_routine,
@@ -11,7 +14,6 @@ use crate::commands::
   account_delete_routine,
   account_relogin_routine,
   account_renewal_routine,
-  account_rotate_routine,
   account_inspect_routine,
   model_routine,
   token_status_routine,
@@ -19,9 +21,22 @@ use crate::commands::
   usage_routine,
 };
 
+/// DEPRECATED redirector: `.account.rotate` exits 1 with migration notice.
+///
+/// Rotation moved to `.usage rotate::1` (Feature 038). This function satisfies
+/// the `CommandRoutine` type signature while always returning a descriptive error.
+fn account_rotate_redirector( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  Err( ErrorData::new(
+    ErrorCode::ArgumentTypeMismatch,
+    "'.account.rotate' is deprecated — use '.usage rotate::1' instead".to_string(),
+  ) )
+}
+
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 14 commands (credentials status, account management including limits, relogin, rotate, renewal, and inspect, model get/set, token status, paths, usage).
+/// Registers 14 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set, token status, paths, usage).
+/// `.account.rotate` is registered as a deprecated redirector (always exits 1 with migration notice).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -171,7 +186,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       trc(),
     ],
     Box::new( account_renewal_routine ) );
-  reg_cmd( registry, ".account.rotate", "Auto-rotate to the best inactive account (highest remaining token expiry)",       vec![ dry(), trc() ], Box::new( account_rotate_routine ) );
+  reg_cmd( registry, ".account.rotate", "DEPRECATED — use '.usage rotate::1' for strategy-driven account rotation",        vec![],               Box::new( account_rotate_redirector ) );
   reg_cmd( registry, ".account.inspect", "Show identity, subscription, and org fields for one account via live endpoints",
     vec![
       nam(),
@@ -229,8 +244,10 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       dry(),
       bfs( "assign",  "Write per-machine active marker (1 = write; 0 = off, default); when name:: absent, emits usage block" ),
       bfs( "unclaim", "Release ownership of named account (1 = unclaim; 0 = off, default); when name:: absent, batch-unclaims filtered set" ),
-      bfs( "force",   "Bypass G8 ownership gate on unclaim::1 (default 0)" ),
+      bfs( "force",   "Bypass ownership gate: G5 on rotate::1, G8 on unclaim::1 (default 0)" ),
       reg_arg_opt( "for", Kind::String ).with_description( "Target identity as USER@MACHINE for assign::1 (default: current $USER@hostname)" ),
+      // Rotation param (Feature 038)
+      reg_arg_opt( "rotate", Kind::Integer ).with_description( "Switch to the → winner after rendering the quota table (0 = off, default; 1 = on); mutually exclusive with live::1" ),
     ],
     Box::new( usage_routine          ) );
 }

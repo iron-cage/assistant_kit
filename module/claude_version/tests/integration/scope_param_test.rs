@@ -17,7 +17,7 @@
 
 use tempfile::TempDir;
 
-use crate::helpers::{ assert_exit, run_clm_with_env };
+use crate::subprocess_helpers::{ assert_exit, run_clm_with_env };
 
 // ─── EC-1: scope::user writes to user settings ────────────────────────────────
 

@@ -61,11 +61,12 @@ tests/
 │   ├── cli_runner.rs                     # shared binary runner + fixtures
 │   ├── accounts_test.rs                  # help output and .accounts command
 │   ├── account_mutations_test.rs         # account save, use, delete
-│   ├── account_rotate_test.rs            # .account.rotate auto-rotation (rot01–rot08)
+│   ├── account_rotate_test.rs            # .account.rotate deprecated redirector (rot01–rot03)
 │   ├── token_paths_test.rs               # token status + paths commands
 │   ├── cross_cutting_test.rs             # idempotency, param order, exit codes
 │   ├── usage_test.rs                     # .usage command tests (IT-1–IT-37, 36 fns)
 │   ├── usage_feature_test.rs             # .usage feature AC coverage (FT-01–FT-05)
+│   ├── usage_rotate_test.rs             # .usage rotate::1 strategy-driven rotation (FT-01–FT-11)
 │   ├── persist_test.rs                   # PersistPaths resolution tests
 │   ├── credentials_test.rs               # .credentials.status command tests
 │   ├── credentials_status_help_test.rs   # .credentials.status help descriptions
@@ -92,7 +93,7 @@ tests/
 
 | Domain | Test Location | What It Tests |
 |--------|---------------|---------------|
-| Account CRUD (library) | `account_tests.rs` | save, list, switch, delete, auto_rotate, helpers |
+| Account CRUD (library) | `account_tests.rs` | save, list, switch, delete, helpers |
 | Token classification (library) | `token_tests.rs` | status, status_with_threshold, parse_expires_at |
 | Path resolution (library) | `paths_tests.rs` | ClaudePaths construction and all path methods |
 | Library exports | `lib_test.rs` | COMMANDS_YAML, register_commands, command presence |
@@ -101,11 +102,12 @@ tests/
 | Help CLI | `cli/accounts_test.rs` (H series) | --help, .help, no-args, unknown command |
 | Accounts CLI | `cli/accounts_test.rs` (acc series) | list text/json, empty dir, sorted, field-presence, named-account |
 | Account save/use/delete CLI | `cli/account_mutations_test.rs` | save, use, delete with all edge cases |
-| Account rotate CLI | `cli/account_rotate_test.rs` | .account.rotate auto-rotation, rot01–rot08 |
+| Account rotate CLI | `cli/account_rotate_test.rs` | .account.rotate deprecated redirector, rot01–rot03 |
 | Token status + paths CLI | `cli/token_paths_test.rs` | .token.status and .paths all verbosity/format |
 | Cross-cutting CLI | `cli/cross_cutting_test.rs` | idempotency, param order, exit code contracts, env |
 | Usage CLI | `cli/usage_test.rs` | .usage live quota table, JSON output, error paths |
 | Usage feature AC | `cli/usage_feature_test.rs` | .usage acceptance criteria (AC-01–AC-06) |
+| Usage rotate CLI | `cli/usage_rotate_test.rs` | .usage rotate::1 strategy-driven rotation, FT-01–FT-11 |
 | Persist paths | `cli/persist_test.rs` | PersistPaths PRO/HOME resolution, ensure_exists |
 | Credentials status CLI | `cli/credentials_test.rs` | .credentials.status without account store |
 | Credentials status help CLI | `cli/credentials_status_help_test.rs` | .credentials.status help descriptions |
