@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Specify the JSONL format used by Claude Code to store conversation entries in session files.
-- **Responsibility**: Master file for the `jsonl` doc entity — lists all 10 format concept instances covering entry types, content blocks, usage tracking, and threading model.
+- **Responsibility**: Master file for the `jsonl` collection — lists all 10 format concept instances covering entry types, content blocks, usage tracking, and threading model.
 - **In Scope**: User entry fields, assistant entry fields, content block types (text, thinking, tool_use, tool_result), usage object, conversation threading via `parentUuid`, sidechain/agent entry format.
 - **Out of Scope**: Storage directory layout and file naming (→ [`../storage/`](../storage/readme.md)); ancillary formats (history.jsonl, todos, shell-snapshots, commands) (→ [`../formats/`](../formats/readme.md)); settings file format (→ [`../settings/`](../settings/readme.md)).
 
@@ -53,7 +53,7 @@ JSONL files should be parsed line-by-line:
 
 For large sessions: stream line-by-line instead of loading entire file.
 
-### Cross-Doc Entity Dependencies
+### Cross-Collection Dependencies
 
 **This entity depends on**:
 - `../storage/` — file location and naming conventions for session JSONL files

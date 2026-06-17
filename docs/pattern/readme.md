@@ -1,4 +1,4 @@
-# Pattern Doc Entity
+# Pattern Collection
 
 ### Scope
 

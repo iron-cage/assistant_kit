@@ -195,7 +195,7 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 - **When:** `clv .version.history v::abc`
 - **Then:** exit 1; error references type mismatch for Integer parameter
 - **Exit:** 1
-- **Source:** [param/04_verbosity.md — type validation](../../../../docs/cli/param/04_v.md)
+- **Source:** [param/04_v.md — type validation](../../../../docs/cli/param/04_v.md)
 
 ---
 

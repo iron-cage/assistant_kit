@@ -1,6 +1,6 @@
-//! Collection surface tests (DD- prefix) for `claude_version`.
+//! Catalog surface tests (DD- prefix) for `claude_version`.
 //!
-//! Implements test cases from `tests/docs/collection/` spec files.
+//! Implements test cases from `tests/docs/catalog/` spec files.
 //! Each function maps to one DD- case verifying a design decision is implemented.
 //!
 //! # Coverage Map

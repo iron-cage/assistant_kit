@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Centralized reference for all filesystem paths that `claude_version` reads, writes, or inspects at runtime.
-- **Responsibility**: Master file for the `filesystem` doc entity — lists all 4 filesystem location cluster instances and provides the authoritative directory tree and path reference table.
+- **Responsibility**: Master file for the `filesystem` collection — lists all 4 filesystem location cluster instances and provides the authoritative directory tree and path reference table.
 - **In Scope**: Every filesystem path accessed by claude_version commands and the `/proc/` scanner: `~/.claude/`, `~/.local/`, `{credential_store}`, and `/proc/{pid}/`.
 - **Out of Scope**: File format internals and write protocols (→ [`../settings/`](../settings/readme.md), [`../formats/`](../formats/readme.md)); paths internal to the Claude Code binary (npm cache, node internals); storage directory organization and containment model (→ [`../storage/`](../storage/readme.md)).
 
@@ -80,7 +80,7 @@ All `filesystem` doc instances must include:
 4. **Resolution** (H3): How paths are resolved (env vars, fallbacks, `ClaudePaths` methods)
 5. **Cross-References** (H3): Flat table with `Type | File | Responsibility` columns
 
-### Cross-Doc Entity Dependencies
+### Cross-Collection Dependencies
 
 **This entity depends on**:
 - `../settings/` — write protocols for `settings.json` and `settings.json.tmp`

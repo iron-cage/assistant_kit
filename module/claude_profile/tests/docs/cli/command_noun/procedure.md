@@ -1,1 +1,1 @@
-See doc.rulebook.md § Doc Entity : Doc Instance Lifecycle.
+See doc.rulebook.md § Collection : Doc Instance Lifecycle.

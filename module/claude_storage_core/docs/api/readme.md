@@ -1,4 +1,4 @@
-# API Doc Entity
+# API Collection
 
 ### Scope
 

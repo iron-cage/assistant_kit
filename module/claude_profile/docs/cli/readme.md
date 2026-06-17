@@ -7,7 +7,7 @@
 - **In Scope**: commands, params, types, parameter groups, output formats, env params, workflow scenarios, dictionary.
 - **Out of Scope**: Implementation design (→ `feature/`), quality constraints (→ `invariant/`), test planning (→ `tests/docs/cli/`).
 
-> **Dual purpose.** This directory serves two functions: (1) container for CLI sub-entity directories (command/, param/, type/, param_group/, user_story/, workflow_scenario/, command_noun/, command_verb/, format/); (2) standalone doc entity for cross-cutting CLI reference docs (001–004). Governing authority for sub-entities: individual sub-entity readme.md files. Governing authority for standalone docs: this readme.md.
+> **Dual purpose.** This directory serves two functions: (1) container for CLI sub-entity directories (command/, param/, type/, param_group/, user_story/, workflow_scenario/, command_noun/, command_verb/, format/); (2) standalone collection for cross-cutting CLI reference docs (001–004). Governing authority for sub-entities: individual sub-entity readme.md files. Governing authority for standalone docs: this readme.md.
 
 Manage Claude Code account credentials: save, list, use, and delete named profiles; check token status; discover ~/.claude/ file paths.
 

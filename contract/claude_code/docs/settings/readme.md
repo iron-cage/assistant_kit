@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Document the structure and write semantics for settings files managed by claude_version.
-- **Responsibility**: Master file for the `settings` doc entity — lists all 3 settings file instances covering global user settings, project-level settings, and the version lock protocol.
+- **Responsibility**: Master file for the `settings` collection — lists all 3 settings file instances covering global user settings, project-level settings, and the version lock protocol.
 - **In Scope**: settings.json structure, atomic write protocol, project-level settings, version lock operations, preferred version storage, type inference rules, settings config parameter table.
 - **Out of Scope**: Filesystem paths and directory layout (→ [`../filesystem/`](../filesystem/readme.md)); credential file format (→ [`../formats/002_credentials.md`](../formats/002_credentials.md)); account active marker (→ [`../filesystem/003_credential_store.md`](../filesystem/003_credential_store.md)).
 
@@ -61,7 +61,7 @@ All `settings` doc instances must include:
 4. **Key Rules** (H3): Type inference, write protocol, or lock operations specific to this instance
 5. **Cross-References** (H3): Flat table with `Type | File | Responsibility` columns
 
-### Cross-Doc Entity Dependencies
+### Cross-Collection Dependencies
 
 **This entity depends on**:
 - `../filesystem/` — path locations for settings.json and settings.json.tmp

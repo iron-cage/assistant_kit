@@ -55,7 +55,7 @@
 
 | File | Relationship |
 |------|-------------|
-| [collection/001_design_decisions.md](../collection/001_design_decisions.md) | Design decisions this pipeline implements |
+| [catalog/001_design_decisions.md](../catalog/001_design_decisions.md) | Design decisions this pipeline implements |
 
 ### Sources
 

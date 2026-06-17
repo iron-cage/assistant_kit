@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Authoritative wire contract for every Anthropic HTTP endpoint consumed by or observable from workspace crates.
-- **Responsibility**: Master file for the `endpoint` doc entity — lists all 10 instances, declares scope boundaries, and links to supplementary cross-endpoint reference material.
+- **Responsibility**: Master file for the `endpoint` collection — lists all 10 instances, declares scope boundaries, and links to supplementary cross-endpoint reference material.
 - **In Scope**: All endpoints callable or observed via `strings $(which claude) | grep "^https://"` — whether actively implemented or partially blocked.
 - **Out of Scope**: Anthropic public inference API contract (→ Anthropic docs); internal Rust parsing implementation (→ respective crate `src/lib.rs`); caller command design (→ respective crate `docs/feature/`).
 
@@ -37,7 +37,7 @@ All `endpoint` doc instances must include:
 5. **Error Codes** (H3): HTTP status code table
 6. **Cross-References** (H3): Flat table with `Type | File | Responsibility` columns
 
-### Cross-Doc Entity Dependencies
+### Cross-Collection Dependencies
 
 **Implemented by**:
 - `module/claude_quota/src/lib.rs` — endpoints 001, 002, 003

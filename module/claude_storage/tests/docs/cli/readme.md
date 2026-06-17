@@ -1,4 +1,4 @@
-# CLI Testing Doc Entity
+# CLI Testing Collection
 
 ### Scope
 

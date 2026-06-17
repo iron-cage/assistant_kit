@@ -1,6 +1,6 @@
 //! EC- edge-case tests for the `v::` / `verbosity::` parameter.
 //!
-//! Covers gap cases EC-12 through EC-21 from `tests/docs/cli/param/04_verbosity.md`.
+//! Covers gap cases EC-12 through EC-21 from `tests/docs/cli/param/04_v.md`.
 //! EC-1 through EC-11 are covered in `cli_args_test.rs`, `read_commands_test.rs`,
 //! and `error_messages_test.rs`.
 

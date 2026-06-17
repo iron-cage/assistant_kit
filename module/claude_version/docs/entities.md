@@ -1,4 +1,4 @@
-# Doc Entities
+# Collections
 
 ## Entity Tree
 
@@ -12,7 +12,7 @@ docs/
 │   ├── param_group/
 │   ├── type/
 │   └── user_story/
-├── collection/
+├── catalog/
 ├── feature/
 ├── pattern/
 └── pitfall/
@@ -26,7 +26,7 @@ docs/
 | `cli/` | CLI reference: commands, parameters, types, groups | [cli/readme.md](cli/readme.md) |
 | `cli/format/` | Named output format catalog | [cli/format/readme.md](cli/format/readme.md) |
 | `cli/user_story/` | User story catalog with persona-goal scenarios | [cli/user_story/readme.md](cli/user_story/readme.md) |
-| `collection/` | Design decision registry | [collection/readme.md](collection/readme.md) |
+| `catalog/` | Design decision registry | [catalog/readme.md](catalog/readme.md) |
 | `feature/` | Behavioral requirements for claude_version capabilities | [feature/readme.md](feature/readme.md) |
 | `pattern/` | Reusable design patterns applied in the crate | [pattern/readme.md](pattern/readme.md) |
 | `pitfall/` | Confirmed design traps discovered through implementation | [pitfall/readme.md](pitfall/readme.md) |
@@ -37,7 +37,7 @@ docs/
 | `tests/docs/cli/param_group/` | Per-group interaction test specifications | [../../tests/docs/cli/param_group/readme.md](../../tests/docs/cli/param_group/readme.md) |
 | `tests/docs/cli/type/` | Per-type test case specifications | [../../tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) |
 | `tests/docs/cli/user_story/` | Per-user-story acceptance test specifications | [../../tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) |
-| `tests/docs/collection/` | Per-decision implementation test case specifications | [../../tests/docs/collection/readme.md](../../tests/docs/collection/readme.md) |
+| `tests/docs/catalog/` | Per-decision implementation test case specifications | [../../tests/docs/catalog/readme.md](../../tests/docs/catalog/readme.md) |
 | `tests/docs/feature/` | Per-feature test case specifications | [../../tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) |
 | `tests/docs/pattern/` | Per-pattern test case specifications | [../../tests/docs/pattern/readme.md](../../tests/docs/pattern/readme.md) |
 | `tests/docs/pitfall/` | Per-pitfall regression test case specifications | [../../tests/docs/pitfall/readme.md](../../tests/docs/pitfall/readme.md) |
@@ -56,7 +56,7 @@ docs/
 | cli | 006 | Types | ✅ | [cli/type/readme.md](cli/type/readme.md) |
 | cli | 007 | Environment Parameters | ✅ | [cli/env_param.md](cli/env_param.md) |
 | cli | 008 | Config Parameters | ✅ | [cli/config_param.md](cli/config_param.md) |
-| collection | 001 | Design Decisions | ✅ | [collection/001_design_decisions.md](collection/001_design_decisions.md) |
+| catalog | 001 | Design Decisions | ✅ | [catalog/001_design_decisions.md](catalog/001_design_decisions.md) |
 | feature | 001 | Version Management | ✅ | [feature/001_version_management.md](feature/001_version_management.md) |
 | feature | 002 | Process Lifecycle | ✅ | [feature/002_process_lifecycle.md](feature/002_process_lifecycle.md) |
 | feature | 003 | Settings Management | ✅ | [feature/003_settings_management.md](feature/003_settings_management.md) |
