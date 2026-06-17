@@ -1,12 +1,12 @@
-# Command :: 18. `.account.unclaim` — Redirect Stub Tests
+# Command :: 18. `.account.unclaim` — Fully Deregistered
 
-`.account.unclaim` was removed as a standalone working command by Feature 037. It is now a redirect
-stub that exits 1 with a migration error message. All ownership-release behavior moved to
-`.accounts unclaim::1` — see `03_accounts.md` IT-44 through IT-45 and `09_usage.md` for those test cases.
+`.account.unclaim` has been **fully deregistered** from the command registry by Feature 037 (shipped).
+It produces a generic "unknown command" error — the same error as any unregistered command.
+All ownership-release behavior is in `.accounts unclaim::1` — see `03_accounts.md` IT-44 through IT-45.
 
 | # | Test | Conditions | Exit |
 |---|------|-----------|------|
-| IT-1 | Redirect stub exits 1 with migration message | `clp .account.unclaim name::alice@acme.com`; stdout or stderr contains `unknown command '.account.unclaim' — use '.accounts unclaim::1 name::X' instead` | 1 |
+| IT-1 | Fully deregistered — generic "unknown command" error | `clp .account.unclaim name::alice@acme.com`; stdout or stderr contains generic "unknown command" error; does NOT contain migration message `"use '.accounts unclaim::1'"` | 1 |
 
 **Source:** [feature/037_accounts_usage_param_unification.md AC-11](../../../../docs/feature/037_accounts_usage_param_unification.md),
 [cli/command_verb/011_unclaim.md — Migration (Feature 037)](../../../../docs/cli/command_verb/011_unclaim.md#migration-feature-037)

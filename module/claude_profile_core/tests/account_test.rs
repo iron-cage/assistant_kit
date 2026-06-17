@@ -1294,10 +1294,12 @@ fn mre_bug258_set_session_model_creates_parent_dir_when_absent()
 
 // ── Ownership: Feature 036 (FT-01, FT-02, FT-11, FT-14) ──────────────────────
 
-/// FT-01 (AC-01): `save()` writes the given identity as `owner` in `{name}.json`.
-/// Re-save with a different identity string overwrites the owner field.
+/// Unit: `save()` with `Some(identity)` writes owner; re-save with different identity overwrites.
 ///
-/// Spec: [`tests/docs/feature/036_account_ownership.md` FT-01]
+/// Tests the `save()` primitive API: `owner: Some(s)` always writes the given string.
+/// (FT-01 in the integration test suite covers the command-level ownership-neutral behavior.)
+///
+/// Spec: [`tests/docs/feature/036_account_ownership.md` FT-01 (unit-level API contract)]
 #[ test ]
 fn ft01_save_captures_owner()
 {
@@ -1446,10 +1448,11 @@ fn ec2_unclaim_overwrites_existing_owner()
   assert_eq!( owner, "", "EC-2: unclaim must overwrite existing non-empty owner; got: {owner:?}" );
 }
 
-/// EC-3: Default save (no unclaim) writes `current_identity()` as owner.
+/// EC-3: `save()` with `Some(identity)` writes the provided identity as `owner`.
 ///
-/// In production the command handler passes `current_identity()` as `owner: Some(identity)`.
-/// This test verifies that `save()` writes the exact string provided.
+/// Unit test of the `save()` primitive: when called with `owner: Some(identity)`,
+/// the exact string is written to `{name}.json`. (The command handler passes
+/// `owner: None` in production — see `account_ops.rs` `account_save_routine()`.)
 ///
 /// Spec: [`tests/docs/cli/param/57_unclaim.md` EC-3]
 #[ test ]

@@ -325,12 +325,11 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     Some( Value::String( s ) ) => s.clone(),
     _                          => String::new(),
   };
-  // Ownership stamp: interactive save always stamps current_identity().
-  // Background refresh callers pass owner: None (preserves existing).
-  let owner_val = crate::account::current_identity();
-  crate::account::save( &name, &credential_store, &paths, true, None, Some( &host_val ), Some( &role_val ), Some( &owner_val ) )
+  // Ownership-neutral: preserves existing owner via read-merge.
+  // Owner can only be set by write_owner() — no CLI-exposed set path.
+  crate::account::save( &name, &credential_store, &paths, true, None, Some( &host_val ), Some( &role_val ), None )
     .map_err( |e| io_err_to_error_data( &e, "account save" ) )?;
-  if trace { eprintln!( "[trace] account.save  write: OK  host={host_val}  role={role_val}  owner={owner_val:?}" ) }
+  if trace { eprintln!( "[trace] account.save  write: OK  host={host_val}  role={role_val}" ) }
 
   Ok( OutputData::new( format!( "saved current credentials as '{name}'\n" ), "text" ) )
 }
@@ -379,20 +378,4 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   Ok( OutputData::new( format!( "deleted account '{name}'\n" ), "text" ) )
 }
 
-/// `.account.unclaim` redirect stub — Feature 037 absorbed this command into `.accounts unclaim::1`.
-///
-/// Always exits 1 with an actionable error message directing callers to the new interface.
-/// The routine is called regardless of params because the framework routes before param dispatch.
-///
-/// # Errors
-///
-/// Always returns `Err(ArgumentTypeMismatch)` with a redirect message.
-#[ inline ]
-pub fn account_unclaim_redirect( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
-{
-  Err( ErrorData::new(
-    ErrorCode::ArgumentTypeMismatch,
-    "unknown command '.account.unclaim' — use '.accounts unclaim::1 name::X' instead".to_string(),
-  ) )
-}
 

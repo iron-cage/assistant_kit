@@ -26,7 +26,7 @@ Releases ownership of a saved account profile by writing `owner: ""` to `{name}.
 
 ### Ownership Gate (G8)
 
-Before any write (including before the dry-run check), `account_unclaim_routine()` reads the current `owner` field from `{name}.json` and evaluates `is_owned(&owner)`:
+Before any write (including before the dry-run check), the `accounts_routine()` unclaim path reads the current `owner` field from `{name}.json` and evaluates `is_owned(&owner)`:
 
 - `owner` empty or matches `current_identity()` → gate passes; proceed
 - `owner` non-empty and does NOT match `current_identity()` → exit 1 with `"ownership violation: this account is owned by {owner}"`
@@ -58,7 +58,7 @@ This matches the pattern of G5/G6/G7 — gate evaluates before any mutation.
 ### Migration (Feature 037)
 
 > `.account.unclaim` has been removed as a standalone working command (Feature 037). Its behavior is absorbed into `.accounts` and `.usage` as the `unclaim::1` mutation param.
-> - `clp .account.unclaim name::X` → exits 1 with redirect message directing to new syntax
+> - `clp .account.unclaim name::X` → exits 1 with generic "unknown command" error (fully deregistered)
 > - `clp .accounts unclaim::1 name::X` → clears owner field (same behavior)
 > - `clp .accounts unclaim::1 name::X force::1` → bypasses G8; clears owner regardless of caller identity
 > - Batch unclaim: `clp .accounts unclaim::1` (no `name::`) → applies to all filtered accounts

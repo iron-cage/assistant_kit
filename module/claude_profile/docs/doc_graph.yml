@@ -387,7 +387,7 @@ edges:
   # ── feature/036: Account Ownership ────────────────────────────────────────
 
   # 036 outbound: gates on all 9 affected features
-  - {from: feature/036, to: feature/002, label: "owner auto-captured at .account.save time"}
+  - {from: feature/036, to: feature/002, label: ".account.save is ownership-neutral — account_save_routine() passes owner: None; owner field preserved via read-merge"}
   - {from: feature/036, to: feature/004, label: "G5: .account.use exits 1 when not owned"}
   - {from: feature/036, to: feature/005, label: "G6: .account.delete exits 1 when not owned"}
   - {from: feature/036, to: feature/009, label: "G1: non-owned accounts use cache as primary fetch source; is_owned JSON field"}
@@ -399,7 +399,7 @@ edges:
   - {from: feature/036, to: feature/033, label: "G1 non-owned path uses quota cache as primary; same display as cache-fallback"}
 
   # 036 inbound: back-references from affected features
-  - {from: feature/002, to: feature/036, label: "save stamps owner via account_save_routine() passing Some(&owner_val); .account.unclaim clears ownership; .account.assign is marker-only — does NOT call write_owner()"}
+  - {from: feature/002, to: feature/036, label: "save is ownership-neutral — account_save_routine() passes owner: None to save(); .accounts unclaim::1 clears ownership via write_owner(); .account.assign is marker-only — does NOT call write_owner()"}
   - {from: feature/004, to: feature/036, label: "G5 ownership guard before switch_account()"}
   - {from: feature/005, to: feature/036, label: "G6 ownership guard before credential deletion"}
   - {from: feature/009, to: feature/036, label: "G1 non-owned fetch bypass; is_owned propagated to JSON output"}

@@ -247,6 +247,7 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
   }
 
   // Watch mode: loop until interrupted (Ctrl+C).
+  // Exception: dry mode runs one iteration and exits — preview mode must not run a daemon.
   let mut iterations : u64 = 0;
   loop
   {
@@ -254,12 +255,13 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
     let now    = current_timestamp();
     let result = guard_once( dry, force, version_override.as_deref(), opts.verbosity, opts.format );
 
-    match &result
+    match result
     {
       Ok( out ) =>
       {
         let status = out.content.trim_end();
         eprintln!( "[{now}] #{iterations} {status}" );
+        if dry { return Ok( out ); }
       }
       Err( e ) =>
       {
@@ -270,6 +272,7 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
         // Pitfall: one-shot mode (interval==0) returns before this loop and still
         //   propagates errors normally — do NOT add a continue/return here.
         eprintln!( "[{now}] #{iterations} error: {e}" );
+        if dry { return Err( e ); }
       }
     }
     std::thread::sleep( core::time::Duration::from_secs( interval_secs ) );

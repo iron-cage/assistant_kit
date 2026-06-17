@@ -1,13 +1,13 @@
 # Test: `unclaim::` Parameter — REMOVED
 
 > **REMOVED**: The `unclaim::` parameter on `.account.save` has been removed (production param 056).
-> The ownership clear operation is now a dedicated command: `.account.unclaim name::EMAIL`.
-> See [command/18_account_unclaim.md](../command/18_account_unclaim.md) for current test coverage.
+> The ownership clear operation is now `.accounts unclaim::1 name::EMAIL` (Feature 037 absorbed `.account.unclaim` into `.accounts`; `.account.unclaim` is fully deregistered).
+> See [command/18_account_unclaim.md](../command/18_account_unclaim.md) for current deregistration test coverage.
 > See [param/056_unclaim.md](../../../../docs/cli/param/056_unclaim.md) for the removal notice.
 
 All EC test cases in this file (EC-1 through EC-5) are **invalid** — the `unclaim::` parameter
-no longer exists on `.account.save`. The test functions (`ec1_*` through `ec5_*`) must be
-removed or replaced during the implementation task that adds `.account.unclaim`.
+no longer exists on `.account.save`. The test functions (`ec1_*` through `ec5_*`) are superseded
+by tests in `account_mutations_test.rs` covering `.accounts unclaim::1`.
 
 ### Superseded Test Case Index (DO NOT IMPLEMENT)
 

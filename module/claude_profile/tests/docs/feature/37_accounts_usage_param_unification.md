@@ -11,22 +11,22 @@
 | FT | AC | Scenario | Source fn |
 |----|----|----------|-----------|
 | FT-01 | AC-01 | `.accounts` accepts all 32 unified params; unknown param exits 1 | `ft01_accounts_accepts_32_params` |
-| FT-02 | AC-02 | `.usage` accepts all 32 unified params; unknown param exits 1 | `f37_ft02_usage_accepts_32_params` |
+| FT-02 | AC-02 | `.usage` accepts all 32 unified params; unknown param exits 1 | `f37_ft02_usage_accepts_32_params` (`usage_feature_test.rs`) |
 | FT-03 | AC-03 | `.accounts` defaults: `refresh::0`, `touch::0`, `sort::name`, `cols::` = identity set; no HTTP fetch or subprocess without explicit flags | `ft03_accounts_default_profile` |
-| FT-04 | AC-04 | `.usage` defaults: `refresh::1`, `touch::1`, `sort::renew`, `cols::` = quota set with Owner column | `f37_ft04_usage_default_profile` |
+| FT-04 | AC-04 | `.usage` defaults: `refresh::1`, `touch::1`, `sort::renew`, `cols::` = quota set with Owner column | `f37_ft04_usage_default_profile` (`usage_feature_test.rs`) |
 | FT-05 | AC-05 | `.accounts unclaim::1 name::X` exits 0; writes `owner: ""`; credentials and active marker unchanged | `it01_unclaim_clears_owner (account_mutations_test.rs)` |
 | FT-06 | AC-06 | `.accounts unclaim::1 name::X` exits 1 with ownership violation when G8 fails; gate runs before `dry::1` | `ft16_unclaim_g8_gate (account_mutations_test.rs)` |
 | FT-07 | AC-07 | `.accounts unclaim::1` (no `name::`) applies unclaim to all filtered accounts; each evaluated against G8 | `ft07_accounts_unclaim_batch` |
 | FT-08 | AC-08 | `.accounts assign::1 name::X` writes marker file; `{name}.json`, credentials, `~/.claude.json` unchanged | `aa01_current_machine_marker_written (account_assign_test.rs)` |
 | FT-09 | AC-09 | `.accounts assign::1 name::X for::bob@laptop` writes `_active_laptop_bob`; sanitization identical to former `.account.assign` | `aa02_remote_machine_marker_written (account_assign_test.rs)` |
 | FT-10 | AC-10 | `.accounts assign::1` (no `name::`) emits live usage block with machine identity and copy-paste examples; exits 0 | `aa04_no_name_emits_usage_block (account_assign_test.rs)` |
-| FT-11 | AC-11 | `clp .account.unclaim name::X` exits 1 with `"unknown command '.account.unclaim' — use '.accounts unclaim::1 name::X' instead"` | `ft11_account_unclaim_removed` |
-| FT-12 | AC-12 | `clp .account.assign name::X` exits 1 with `"unknown command '.account.assign' — use '.accounts assign::1 name::X' instead"` | `ft12_account_assign_removed` |
+| FT-11 | AC-11 | `.account.unclaim name::alice` exits 1 with generic "unknown command" error — command fully deregistered, not a redirect stub | `ft11_account_unclaim_fully_deregistered` (`accounts_test.rs`) |
+| FT-12 | AC-12 | `.account.assign name::alice` exits 1 with generic "unknown command" error — command fully deregistered, not a redirect stub | `ft12_account_assign_fully_deregistered` (`accounts_test.rs`) |
 | FT-13 | AC-13 | `.accounts` rejects all 15 legacy field toggles (`active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`); each exits 1 directing to `cols::` | `ft13_accounts_legacy_toggles_rejected` |
 | FT-14 | AC-14 | `.accounts cols::+host,-tier` adds host column and removes tier from identity default set | `ft14_accounts_cols_modifier` |
 | FT-15 | AC-15 | `.accounts refresh::1` fetches live quota; `.accounts touch::1` activates idle sessions — same algorithm as `.usage` | `lim_it_ft15_accounts_refresh_live (accounts_test.rs)` |
-| FT-16 | AC-16 | `.usage unclaim::1 name::X` clears owner field — identical result to `.accounts unclaim::1 name::X` | `f37_ft16_usage_unclaim_mirrors_accounts` |
-| FT-17 | AC-17 | `.usage assign::1 name::X` writes marker — identical result to `.accounts assign::1 name::X` | `f37_ft17_usage_assign_mirrors_accounts` |
+| FT-16 | AC-16 | `.usage unclaim::1 name::X` clears owner field — identical result to `.accounts unclaim::1 name::X` | `f37_ft16_usage_unclaim_mirrors_accounts` (`usage_feature_test.rs`) |
+| FT-17 | AC-17 | `.usage assign::1 name::X` writes marker — identical result to `.accounts assign::1 name::X` | `f37_ft17_usage_assign_mirrors_accounts` (`usage_feature_test.rs`) |
 | FT-18 | AC-18 | `.accounts dry::1 unclaim::1 name::X` prints `[dry-run] would unclaim X`; exits 0; no files modified; G8 gate runs | `ft17_unclaim_dry_run (account_mutations_test.rs)` |
 | FT-19 | AC-19 | Owner column visible by default on `.accounts` and `.usage`; shows owner from `{name}.json`; `cols::-owner` hides it | `ft19_owner_column_default_visible` |
 | FT-20 | AC-20 | `.accounts unclaim::1 name::X force::1` bypasses G8; clears owner even when caller ≠ stored owner; exits 0 | `ft20_accounts_unclaim_force_bypasses_g8` |
@@ -42,7 +42,7 @@
 - FT-07 is an integration test: set up two accounts (alice owned by current, bob owned by other). `.accounts unclaim::1` with no `name::` applies unclaim to alice (G8 passes, owner cleared); emits `"skip bob: owned by other@remote"` for bob and continues. Exit 0 always (best-effort batch — per-account G8 violations produce skip messages, not failures).
 - FT-08 verifies that only the marker file is written — mtime of `{name}.credentials.json`, `{name}.json`, and `~/.claude.json` are all unchanged after `.accounts assign::1 name::X`.
 - FT-09 verifies `for::` sanitization: `for::bob@my-laptop` → marker `_active_my-laptop_bob` (dashes and dots preserved, other specials → `_`).
-- FT-11 and FT-12 are integration tests via `./verb/test` — verify exit 1 and exact error message text.
+- FT-11 and FT-12 are integration tests via `./verb/test` — verify exit 1 and that the error message is a generic "unknown command" error (NOT the former redirect-stub migration message). These commands are fully deregistered: calling them is indistinguishable from calling any other unrecognized command.
 - FT-13 uses one sub-case per legacy toggle — 15 invocations; each exits 1 with a message mentioning `cols::`.
 - FT-14 is a render test verifying column set modification: identity default is Account, Owner, Active, Current, Sub, Tier, Expires, Email. After `cols::+host,-tier`: Tier removed, Host added.
 - FT-15 is an integration test: `.accounts refresh::1` must produce live quota output matching what `.usage` produces for the same accounts.
@@ -74,7 +74,7 @@
 - **When:** `.usage unknown_param::1` called.
 - **Then:** Exits 1 with error message referencing the unknown parameter.
 - **Exit:** 0 (32 valid cases), 1 (unknown param)
-- **Source fn:** `f37_ft02_usage_accepts_32_params`
+- **Source fn:** `f37_ft02_usage_accepts_32_params` (`usage_feature_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-02](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -96,7 +96,7 @@
 - **When:** `clp .usage trace::1` is executed.
 - **Then:** Exits 0. `[trace] fetch` lines appear (live fetch active). Output columns include Status, Account, Owner, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, ~Renews, → Next (quota set). Owner column shows owner identity. Rows sorted by `~Renews` (soonest first).
 - **Exit:** 0
-- **Source fn:** `f37_ft04_usage_default_profile`
+- **Source fn:** `f37_ft04_usage_default_profile` (`usage_feature_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-04](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
@@ -170,24 +170,24 @@
 
 ---
 
-### FT-11: `.account.unclaim` standalone removed — exits 1 with redirect message
+### FT-11: `.account.unclaim` produces generic "unknown command" error — fully deregistered
 
-- **Given:** Any credential store.
+- **Given:** Any environment.
 - **When:** `clp .account.unclaim name::alice` is executed.
-- **Then:** Exits 1. stdout or stderr contains exactly: `unknown command '.account.unclaim' — use '.accounts unclaim::1 name::X' instead`.
+- **Then:** Exits 1. Error output contains a generic "unknown command" error — identical to calling any unregistered command (e.g., `.account.nonexistent`). Does NOT contain the former redirect-stub migration message. No `alice.json` modification.
 - **Exit:** 1
-- **Source fn:** `ft11_account_unclaim_removed`
+- **Source fn:** `ft11_account_unclaim_fully_deregistered` (`accounts_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-11](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
-### FT-12: `.account.assign` standalone removed — exits 1 with redirect message
+### FT-12: `.account.assign` produces generic "unknown command" error — fully deregistered
 
-- **Given:** Any credential store.
+- **Given:** Any environment.
 - **When:** `clp .account.assign name::alice` is executed.
-- **Then:** Exits 1. stdout or stderr contains exactly: `unknown command '.account.assign' — use '.accounts assign::1 name::X' instead`.
+- **Then:** Exits 1. Error output contains a generic "unknown command" error — identical to calling any unregistered command. Does NOT contain the former redirect-stub migration message. No marker file written.
 - **Exit:** 1
-- **Source fn:** `ft12_account_assign_removed`
+- **Source fn:** `ft12_account_assign_fully_deregistered` (`accounts_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-12](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---

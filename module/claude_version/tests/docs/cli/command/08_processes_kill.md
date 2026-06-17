@@ -83,7 +83,7 @@ and non-empty /proc results gracefully.
 | IT-2 | `dry::1` no processes → "no active processes" | P | 0 | F1=1, F4=none | [mutation_commands_test.rs] |
 | IT-3 | `dry::1 force::1` no processes → "no active processes" | P | 0 | F1=1, F2=1, F3, F4=none | [mutation_commands_test.rs] |
 | IT-4 | `v::0` → accepted, exit 0 | P | 0 | F6=0 | [mutation_commands_test.rs] |
-| IT-6 | Source-level AF: `let _ = send_sig` absent from commands.rs | P | 0 | — | [mutation_commands_test.rs] |
+| IT-6 | Source-level AF: `let _ = send_sig` absent from commands/process.rs | P | 0 | — | [mutation_commands_test.rs] |
 | IT-7 | `dry::1 format::json` → JSON object output, exit 0 | P | 0 | F1=1, F7=json | [mutation_commands_test.rs] |
 
 ### Negative Tests
@@ -192,7 +192,7 @@ live claude processes and are manual-only tests.
 - **Given:** clean environment
 - **When:**
   Code inspection via `std::fs::read_to_string`.
-  **Expected:** `let _ = send_sigterm` and `let _ = send_sigkill` absent from `commands.rs`.
+  **Expected:** `let _ = send_sigterm` and `let _ = send_sigkill` absent from `commands/process.rs`.
 - **Then:** Both `let _` patterns absent.
 **Note:** This is an anti-faking check for TSK-101. The signal-error path cannot be triggered through the binary without process injection; source inspection is the only reliable verification
 - **Exit:** 0

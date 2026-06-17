@@ -75,6 +75,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-70 | `.usage.help` lists `imodel` and `effort` params with default `auto` | Help Output |
 | IT-71 | `→ Next` column shows soonest upcoming event label + duration | Next Event Column |
 | IT-72 | `format::json` new fields: `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | JSON Schema |
+| IT-74 | Owner column visible by default; `cols::-owner` hides it | Owner Column |
 
 ### Test Coverage Summary
 
@@ -112,8 +113,9 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - imodel Param: 2 tests (IT-66, IT-67)
 - effort Param: 2 tests (IT-68, IT-69)
 - Next Event Column: 1 test (IT-71)
+- Owner Column: 1 test (IT-74)
 
-**Total:** 80 spec entries (IT-43, IT-57, IT-59, IT-60, IT-73 removed — unit tests not observable via clp output); IT-65 added for `sort::next`; IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); IT-71–IT-72 added by Plan 012 (`→ Next` column and JSON new fields); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/19_refresh.md`–`23_trace.md` (param EC edge cases, not command spec)
+**Total:** 81 spec entries (IT-43, IT-57, IT-59, IT-60, IT-73 removed — unit tests not observable via clp output); IT-65 added for `sort::next`; IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); IT-71–IT-72 added by Plan 012 (`→ Next` column and JSON new fields); IT-74 added by Feature 037 (Owner column default-visible in `.usage`); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/19_refresh.md`–`23_trace.md` (param EC edge cases, not command spec)
 
 ---
 
@@ -883,3 +885,16 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 ---
 
 > **Note:** IT-73 removed — unit test of `render_text()` / `render_tsv()` not directly observable via clp output — behavior only verifiable at unit-test level. Unit test lives in `src/usage/render_tests.rs` as `mre_bug_220_renews_preserved_for_429_accounts`. Fix for BUG-220 (`~Renews` was overwritten by the 429 error reason in both render functions).
+
+---
+
+### IT-74: Owner column visible by default; `cols::-owner` hides it
+
+- **Given:** Two accounts: `alice@acme.com` with owner `testuser@testmachine`; `bob@acme.com` with empty owner. Neither has a live token.
+- **When (Case A):** `clp .usage`
+- **Then (Case A):** Exit 0. Stdout contains `Owner` column header. Contains `testuser@testmachine`. Contains `—` (em dash U+2014) for bob's unowned slot.
+- **When (Case B):** `clp .usage cols::-owner`
+- **Then (Case B):** Exit 0. Stdout does NOT contain `Owner` column header.
+- **Exit:** 0
+- **Source fn:** `it248_owner_column_visible_by_default` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/037_accounts_usage_param_unification.md AC-19](../../../../docs/feature/037_accounts_usage_param_unification.md)

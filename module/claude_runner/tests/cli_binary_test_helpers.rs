@@ -40,6 +40,12 @@ use std::process::Command;
 /// Used for both success-path and expected-failure cases — callers check
 /// `output.status` or inspect `output.stdout`/`output.stderr` directly.
 ///
+/// `CLR_DIR` and `CLR_SESSION_DIR` are removed from the subprocess environment so that
+/// ambient shell values do not affect tests that assert the absence of a `cd` prefix
+/// line or `-c` flag (e.g., `s18_dir_absent_from_default_output`).  Tests that
+/// explicitly exercise `CLR_DIR`/`CLR_SESSION_DIR` behavior use `run_cli_with_env`
+/// instead, which adds those vars explicitly.
+///
 /// # Panics
 ///
 /// Panics if the `clr` binary cannot be launched (process spawn failure).
@@ -51,6 +57,8 @@ pub fn run_cli( args : &[ &str ] ) -> std::process::Output
   let bin = env!( "CARGO_BIN_EXE_clr" );
   Command::new( bin )
     .args( args )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
     .output()
     .expect( "Failed to invoke clr binary" )
 }
@@ -321,6 +329,9 @@ pub fn fake_claude( script : &str ) -> ( tempfile::TempDir, String )
 /// Prepends `--dry-run` to the given args, invokes the binary, asserts success,
 /// and returns the captured stdout. The caller need not add `--dry-run` themselves.
 ///
+/// `CLR_DIR` and `CLR_SESSION_DIR` are removed for the same reason as `run_cli` — see
+/// that function's doc comment for the rationale.
+///
 /// # Panics
 ///
 /// Panics if the subprocess cannot be launched or exits non-zero.
@@ -334,6 +345,8 @@ pub fn run_dry( args : &[ &str ] ) -> String
   full.extend_from_slice( args );
   let out = Command::new( bin )
     .args( &full )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
     .output()
     .expect( "Failed to invoke clr binary" );
   assert!(

@@ -50,9 +50,13 @@ pub( crate ) fn apply_refresh(
   for aq in accounts
   {
     let should_retry = should_refresh( aq, now_secs );
+    // Fix(BUG-295): reason derived from aq.result.err() silently fell through to "ok"
+    //   for non-owned accounts (G1 sets result=Ok(cached_data) for them).
+    //   Root cause: ownership gate fires before result is ever an error for non-owned accts.
+    //   Pitfall: check !aq.is_owned BEFORE consulting aq.result.err() at trace sites.
     if trace
     {
-      let reason = aq.result.as_ref().err().map_or( "ok", String::as_str );
+      let reason = if aq.is_owned { aq.result.as_ref().err().map_or( "ok", String::as_str ) } else { "not owned" };
       eprintln!( "[trace] refresh  {}  should_retry={} (reason: {})", aq.name, should_retry, reason );
     }
     if !should_retry { continue; }

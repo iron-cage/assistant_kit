@@ -345,7 +345,7 @@ fn tc312_processes_kill_dry_force_mentions_sigkill()
 #[ test ]
 fn tc315_processes_kill_no_let_underscore_on_send_sig()
 {
-  // Verify at source level that `let _ = send_sig` is absent from commands.rs.
+  // Verify at source level that `let _ = send_sig` is absent from commands/process.rs.
   // This is an AF (anti-faking) check — the only reliable test for a code path
   // that cannot be triggered through the binary without process injection.
   let src = std::fs::read_to_string( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/commands/process.rs" ) )

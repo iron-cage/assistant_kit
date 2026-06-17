@@ -74,7 +74,7 @@ fn dot03_dot_hidden_from_listing()
   );
 }
 
-// ── dot04 — all 16 visible commands present; removed names absent ─────────────
+// ── dot04 — all 14 visible commands present; removed names absent ─────────────
 
 #[ test ]
 fn dot04_all_visible_commands_present()
@@ -92,8 +92,6 @@ fn dot04_all_visible_commands_present()
     ".account.rotate",
     ".account.renewal",
     ".account.inspect",
-    ".account.assign",
-    ".account.unclaim",
     ".credentials.status",
     ".token.status",
     ".paths",
@@ -107,9 +105,11 @@ fn dot04_all_visible_commands_present()
 
   assert!( !text.contains( ".account.list"   ), ".account.list must not appear (removed)" );
   assert!( !text.contains( ".account.status" ), ".account.status must not appear (removed)" );
+  assert!( !text.contains( ".account.assign"  ), ".account.assign must not appear (removed)" );
+  assert!( !text.contains( ".account.unclaim" ), ".account.unclaim must not appear (removed)" );
 }
 
-// ── dot05 — exactly 16 command rows in listing ────────────────────────────────
+// ── dot05 — exactly 14 command rows in listing ────────────────────────────────
 
 #[ test ]
 fn dot05_exactly_sixteen_command_rows()
@@ -117,7 +117,7 @@ fn dot05_exactly_sixteen_command_rows()
   let out   = run_cs( &[ "." ] );
   let text  = stdout( &out );
   let count = text.lines().filter( |l| l.starts_with( "    ." ) ).count();
-  assert_eq!( count, 16, "expected 16 command rows starting with '    .', got {count}" );
+  assert_eq!( count, 14, "expected 14 command rows starting with '    .', got {count}" );
 }
 
 // ── dot06 — usage line includes `<command>` syntax ───────────────────────────
