@@ -51,7 +51,7 @@
 | [feature/003_settings_management.md](003_settings_management.md) | Settings commands handled by this pipeline |
 | [feature/006_config_command.md](006_config_command.md) | Unified .config command handled by this pipeline |
 
-### Collections
+### Catalogs
 
 | File | Relationship |
 |------|-------------|

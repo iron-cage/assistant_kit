@@ -1,4 +1,4 @@
-# Pitfall Collection
+# Pitfall Doc Entity
 
 ### Scope
 

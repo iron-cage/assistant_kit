@@ -233,3 +233,6 @@ as empty string, exit 0 with `"s": ""`. Check FR-04 vs FR-07 interaction.; Consi
 | `value_ec11_false_stored_as_boolean` | `integration/value_param_test.rs` |
 | `value_ec12_integer_stored_unquoted` | `integration/value_param_test.rs` |
 | `value_ec13_string_stored_quoted` | `integration/value_param_test.rs` |
+| `value_ec10_empty_value_exits_1` | `integration/value_param_test.rs` |
+| `value_ec14_missing_value_exits_1` | `integration/value_param_test.rs` |
+| `value_ec15_missing_value_error_mentions_value_token` | `integration/value_param_test.rs` |

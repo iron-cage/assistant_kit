@@ -1,4 +1,4 @@
-# Algorithm Collection
+# Algorithm Doc Entity
 
 ### Scope
 
