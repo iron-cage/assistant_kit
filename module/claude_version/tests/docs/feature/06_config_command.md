@@ -7,7 +7,7 @@
 - **In Scope**: All four `.config` modes, resolution chain, catalog keys, scope:: parameter, unset:: parameter, dry::1, format::json, exit codes.
 - **Out of Scope**: Type inference algorithm (→ `../../algorithm/01_settings_type_inference.md`), resolution algorithm step-by-step (→ `../../algorithm/02_config_resolution.md`), deprecated `.settings.*` commands (→ `03_settings_management.md`).
 
-Feature test surface for `.config`. See [feature/006_config_command.md](../../../../docs/feature/006_config_command.md) for specification.
+Feature test surface for `.config`. See [feature/006_config_command.md](../../../docs/feature/006_config_command.md) for specification.
 
 ## Behavioral Divergence Pair
 
@@ -55,7 +55,7 @@ Both are valid; the scope of resolution differs.
 - **When:** `clv .config`
 - **Then:** stdout contains `model` with default value `claude-sonnet-4-6` (source: default) and `theme` with value `dark` (source: user); exit 0
 - **Exit:** 0
-- **Source:** [feature/006_config_command.md — AC-01](../../../../docs/feature/006_config_command.md)
+- **Source:** [feature/006_config_command.md — AC-01](../../../docs/feature/006_config_command.md)
 
 ---
 
@@ -65,7 +65,7 @@ Both are valid; the scope of resolution differs.
 - **When:** `clv .config key::theme`
 - **Then:** stdout contains `light` and `(user)` source annotation; exit 0
 - **Exit:** 0
-- **Source:** [feature/006_config_command.md — AC-02](../../../../docs/feature/006_config_command.md)
+- **Source:** [feature/006_config_command.md — AC-02](../../../docs/feature/006_config_command.md)
 
 ---
 
@@ -75,7 +75,7 @@ Both are valid; the scope of resolution differs.
 - **When:** `clv .config key::autoUpdates value::false`
 - **Then:** `settings.json` contains `"autoUpdates": false` (JSON bool); exit 0
 - **Exit:** 0
-- **Source:** [feature/006_config_command.md — AC-03](../../../../docs/feature/006_config_command.md)
+- **Source:** [feature/006_config_command.md — AC-03](../../../docs/feature/006_config_command.md)
 
 ---
 
@@ -85,7 +85,7 @@ Both are valid; the scope of resolution differs.
 - **When:** `clv .config key::model value::claude-haiku-4-5-20251001 scope::project`
 - **Then:** `{cwd}/.claude/settings.json` contains `"model": "claude-haiku-4-5-20251001"`; user `~/.claude/settings.json` unchanged; exit 0
 - **Exit:** 0
-- **Source:** [feature/006_config_command.md — AC-04](../../../../docs/feature/006_config_command.md)
+- **Source:** [feature/006_config_command.md — AC-04](../../../docs/feature/006_config_command.md)
 
 ---
 
@@ -95,7 +95,7 @@ Both are valid; the scope of resolution differs.
 - **When:** `clv .config key::theme unset::1`
 - **Then:** `settings.json` no longer contains `theme` key; other keys preserved; exit 0
 - **Exit:** 0
-- **Source:** [feature/006_config_command.md — AC-05](../../../../docs/feature/006_config_command.md)
+- **Source:** [feature/006_config_command.md — AC-05](../../../docs/feature/006_config_command.md)
 
 ---
 
@@ -105,7 +105,7 @@ Both are valid; the scope of resolution differs.
 - **When:** `clv .config format::json`
 - **Then:** stdout is valid JSON object containing `"model"` with `"source": "default"` and `"theme"` with `"source": "user"`; exit 0
 - **Exit:** 0
-- **Source:** [feature/006_config_command.md — AC-06](../../../../docs/feature/006_config_command.md)
+- **Source:** [feature/006_config_command.md — AC-06](../../../docs/feature/006_config_command.md)
 
 ---
 
@@ -115,7 +115,7 @@ Both are valid; the scope of resolution differs.
 - **When:** `clv .config key::model`
 - **Then:** stdout shows `claude-opus-4-6` with `(env)` source annotation; exit 0
 - **Exit:** 0
-- **Source:** [feature/006_config_command.md — AC-07](../../../../docs/feature/006_config_command.md)
+- **Source:** [feature/006_config_command.md — AC-07](../../../docs/feature/006_config_command.md)
 
 ---
 
@@ -125,7 +125,7 @@ Both are valid; the scope of resolution differs.
 - **When:** `clv .config key::hasCompletedOnboarding`
 - **Then:** stdout shows `false` with `(default)` source annotation (catalog default); exit 0
 - **Exit:** 0
-- **Source:** [feature/006_config_command.md — AC-08](../../../../docs/feature/006_config_command.md)
+- **Source:** [feature/006_config_command.md — AC-08](../../../docs/feature/006_config_command.md)
 
 ---
 
@@ -135,7 +135,7 @@ Both are valid; the scope of resolution differs.
 - **When:** `clv .config key::theme value::dark dry::1`
 - **Then:** stdout contains preview indicator; `settings.json` still contains `"theme": "light"`; exit 0
 - **Exit:** 0
-- **Source:** [feature/006_config_command.md — AC-09](../../../../docs/feature/006_config_command.md)
+- **Source:** [feature/006_config_command.md — AC-09](../../../docs/feature/006_config_command.md)
 
 ---
 
@@ -145,7 +145,7 @@ Both are valid; the scope of resolution differs.
 - **When:** `clv .config key::theme`
 - **Then:** exit 2 (runtime error, HOME missing)
 - **Exit:** 2
-- **Source:** [feature/006_config_command.md — AC-10](../../../../docs/feature/006_config_command.md)
+- **Source:** [feature/006_config_command.md — AC-10](../../../docs/feature/006_config_command.md)
 
 ---
 
@@ -155,7 +155,7 @@ Both are valid; the scope of resolution differs.
 - **When:** `clv .config key::myCustomKey value::customValue`
 - **Then:** `settings.json` contains `"myCustomKey": "customValue"`; exit 0
 - **Exit:** 0
-- **Source:** [feature/006_config_command.md — AC-11](../../../../docs/feature/006_config_command.md)
+- **Source:** [feature/006_config_command.md — AC-11](../../../docs/feature/006_config_command.md)
 
 ---
 
@@ -165,7 +165,7 @@ Both are valid; the scope of resolution differs.
 - **When:** `clv .config key::model`
 - **Then:** stdout shows `claude-sonnet-4-6` with `(default)` annotation; exit 0
 - **Exit:** 0
-- **Source:** [feature/006_config_command.md — AC-12](../../../../docs/feature/006_config_command.md)
+- **Source:** [feature/006_config_command.md — AC-12](../../../docs/feature/006_config_command.md)
 
 ---
 

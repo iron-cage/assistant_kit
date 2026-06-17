@@ -14,4 +14,3 @@ Claude Code version manager: install, upgrade, and session lifecycle.
 | `changelog.md` | Notable changes by version |
 | `verb/` | Shell scripts for each `do` protocol verb. |
 | `runbox/` | Shell scripts for container-orchestrated operations. |
-| `task/` | Work items and action plans for the claude_version crate. |

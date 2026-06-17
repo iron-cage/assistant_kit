@@ -6,7 +6,7 @@
 
 use tempfile::TempDir;
 
-use crate::helpers::{ assert_exit, run_clm, run_clm_with_env, stderr, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr, stdout, write_settings };
 
 /// EC-1: `key::existing` on `.settings.get` → returns value, exit 0
 #[ test ]

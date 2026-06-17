@@ -7,7 +7,7 @@
 - **In Scope**: `.processes`, `.processes.kill`, no-process output, `dry::1`, `force::1`, `dry::1 force::1` precedence.
 - **Out of Scope**: Signal delivery internals (non-observable in subprocess tests), `/proc` scanner unit behavior (-> source tests).
 
-Feature test surface for process lifecycle. See [feature/002_process_lifecycle.md](../../../../docs/feature/002_process_lifecycle.md) for specification.
+Feature test surface for process lifecycle. See [feature/002_process_lifecycle.md](../../../docs/feature/002_process_lifecycle.md) for specification.
 
 ## Behavioral Divergence Pair
 
@@ -44,7 +44,7 @@ Both are valid invocations; the output prefix differs.
 - **When:** `clv .processes.kill`
 - **Then:** stdout contains `"no active processes"`; exit 0
 - **Exit:** 0
-- **Source:** [feature/002_process_lifecycle.md — Process detection](../../../../docs/feature/002_process_lifecycle.md)
+- **Source:** [feature/002_process_lifecycle.md — Process detection](../../../docs/feature/002_process_lifecycle.md)
 
 ---
 
@@ -54,7 +54,7 @@ Both are valid invocations; the output prefix differs.
 - **When:** `clv .processes.kill dry::1`
 - **Then:** stdout contains `"[dry-run]"`; exit 0
 - **Exit:** 0
-- **Source:** [feature/002_process_lifecycle.md — Dry-run](../../../../docs/feature/002_process_lifecycle.md)
+- **Source:** [feature/002_process_lifecycle.md — Dry-run](../../../docs/feature/002_process_lifecycle.md)
 
 ---
 
@@ -64,7 +64,7 @@ Both are valid invocations; the output prefix differs.
 - **When:** `clv .processes.kill dry::1 force::1`
 - **Then:** stdout contains `"[dry-run]"`; dry-run takes precedence over force; exit 0
 - **Exit:** 0
-- **Source:** [feature/002_process_lifecycle.md](../../../../docs/feature/002_process_lifecycle.md), [feature/004_dry_run.md — Precedence](../../../../docs/feature/004_dry_run.md)
+- **Source:** [feature/002_process_lifecycle.md](../../../docs/feature/002_process_lifecycle.md), [feature/004_dry_run.md — Precedence](../../../docs/feature/004_dry_run.md)
 
 ---
 
@@ -74,7 +74,7 @@ Both are valid invocations; the output prefix differs.
 - **When:** `clv .processes.kill force::1`
 - **Then:** stdout contains `"no active processes"`; exit 0
 - **Exit:** 0
-- **Source:** [feature/002_process_lifecycle.md — Kill sequence force mode](../../../../docs/feature/002_process_lifecycle.md)
+- **Source:** [feature/002_process_lifecycle.md — Kill sequence force mode](../../../docs/feature/002_process_lifecycle.md)
 
 ---
 

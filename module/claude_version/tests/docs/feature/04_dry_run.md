@@ -7,7 +7,7 @@
 - **In Scope**: `dry::1` on `.version.install`, `.processes.kill`, `.settings.set`; parity requirement; `dry::1 force::1` precedence.
 - **Out of Scope**: Individual command normal-mode behavior (-> `01_version_management.md`, `02_process_lifecycle.md`, `03_settings_management.md`).
 
-Feature test surface for dry-run mode. See [feature/004_dry_run.md](../../../../docs/feature/004_dry_run.md) for specification.
+Feature test surface for dry-run mode. See [feature/004_dry_run.md](../../../docs/feature/004_dry_run.md) for specification.
 
 ## Behavioral Divergence Pair
 
@@ -42,7 +42,7 @@ Both are valid invocations; the `[dry-run]` prefix presence differs.
 - **When:** `clv .version.install dry::1`
 - **Then:** stdout contains `"[dry-run]"`; no installer process spawned; exit 0
 - **Exit:** 0
-- **Source:** [feature/004_dry_run.md — Affected commands](../../../../docs/feature/004_dry_run.md)
+- **Source:** [feature/004_dry_run.md — Affected commands](../../../docs/feature/004_dry_run.md)
 
 ---
 
@@ -52,7 +52,7 @@ Both are valid invocations; the `[dry-run]` prefix presence differs.
 - **When:** `clv .settings.set key::x value::1 dry::1`
 - **Then:** stdout contains `"[dry-run]"`; `settings.json` is unchanged; exit 0
 - **Exit:** 0
-- **Source:** [feature/004_dry_run.md — Affected commands](../../../../docs/feature/004_dry_run.md)
+- **Source:** [feature/004_dry_run.md — Affected commands](../../../docs/feature/004_dry_run.md)
 
 ---
 
@@ -62,7 +62,7 @@ Both are valid invocations; the `[dry-run]` prefix presence differs.
 - **When:** `clv .processes.kill dry::1`
 - **Then:** stdout contains `"[dry-run]"`; exit 0
 - **Exit:** 0
-- **Source:** [feature/004_dry_run.md — Affected commands](../../../../docs/feature/004_dry_run.md)
+- **Source:** [feature/004_dry_run.md — Affected commands](../../../docs/feature/004_dry_run.md)
 
 ---
 
@@ -72,7 +72,7 @@ Both are valid invocations; the `[dry-run]` prefix presence differs.
 - **When:** `clv .version.install dry::1 force::1`
 - **Then:** stdout contains `"[dry-run]"`; `force::1` does not override dry-run; exit 0
 - **Exit:** 0
-- **Source:** [feature/004_dry_run.md — Precedence](../../../../docs/feature/004_dry_run.md)
+- **Source:** [feature/004_dry_run.md — Precedence](../../../docs/feature/004_dry_run.md)
 
 ---
 

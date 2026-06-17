@@ -98,7 +98,7 @@
 
 use tempfile::TempDir;
 
-use crate::helpers::{ assert_exit, run_clm, run_clm_with_env, stderr, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr, stdout, write_settings };
 
 // ─── E5: version install ─────────────────────────────────────────────────────
 
@@ -650,7 +650,7 @@ fn tc334_settings_set_empty_value_with_dry_still_rejected()
     "settings.json must not be created on empty-value rejection"
   );
   assert!(
-    !crate::helpers::stdout( &out ).contains( "[dry-run]" ),
+    !crate::subprocess_helpers::stdout( &out ).contains( "[dry-run]" ),
     "dry-run output must not appear when value:: is empty"
   );
 }

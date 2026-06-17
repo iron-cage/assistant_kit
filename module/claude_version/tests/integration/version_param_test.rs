@@ -3,7 +3,7 @@
 //! Covers gap cases from `tests/docs/cli/param/01_version.md`.
 //! EC-1 through EC-6 are in `cli_args_test.rs`.
 
-use crate::helpers::{ assert_exit, run_clm, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clm, stdout };
 
 /// EC-7: `version::LATEST` → wrong case, exit 1
 #[ test ]

@@ -5,8 +5,8 @@
 //!
 //! Add new integration test modules here as phases progress.
 
-#[ path = "integration/helpers.rs" ]
-pub mod helpers;
+#[ path = "integration/subprocess_helpers.rs" ]
+pub mod subprocess_helpers;
 
 #[ path = "integration/framework_test.rs" ]
 mod framework_test;

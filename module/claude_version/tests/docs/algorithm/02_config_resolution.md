@@ -7,7 +7,7 @@
 - **In Scope**: All 4 resolution layers, absent-key semantics, show-all union, source annotation values.
 - **Out of Scope**: `.config` command handler integration (→ `../../feature/06_config_command.md`), type inference (→ `01_settings_type_inference.md`).
 
-Test surface for `claude_version_core::config_resolve`. See [algorithm/002_config_resolution.md](../../../../docs/algorithm/002_config_resolution.md) for specification.
+Test surface for `claude_version_core::config_resolve`. See [algorithm/002_config_resolution.md](../../../docs/algorithm/002_config_resolution.md) for specification.
 
 ## Test Case Index
 
@@ -31,7 +31,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 - **Given:** `CLAUDE_MODEL=claude-opus-4-6`; user settings has `{"model": "claude-sonnet-4-6"}`
 - **When:** resolve(`model`)
 - **Then:** `ResolvedValue { value: Some("claude-opus-4-6"), source: Env }`
-- **Source:** [algorithm/002_config_resolution.md — Step 1](../../../../docs/algorithm/002_config_resolution.md)
+- **Source:** [algorithm/002_config_resolution.md — Step 1](../../../docs/algorithm/002_config_resolution.md)
 
 ---
 
@@ -40,7 +40,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 - **Given:** `CLAUDE_MODEL` unset; user settings has `{"model": "claude-haiku-4-5-20251001"}`
 - **When:** resolve(`model`)
 - **Then:** `ResolvedValue { value: Some("claude-haiku-4-5-20251001"), source: User }`
-- **Source:** [algorithm/002_config_resolution.md — Step 3](../../../../docs/algorithm/002_config_resolution.md)
+- **Source:** [algorithm/002_config_resolution.md — Step 3](../../../docs/algorithm/002_config_resolution.md)
 
 ---
 
@@ -49,7 +49,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 - **Given:** `CLAUDE_MODEL` unset; project settings has `{"model": "claude-opus-4-6"}`; user settings empty
 - **When:** resolve(`model`)
 - **Then:** `ResolvedValue { value: Some("claude-opus-4-6"), source: Project }`
-- **Source:** [algorithm/002_config_resolution.md — Step 2](../../../../docs/algorithm/002_config_resolution.md)
+- **Source:** [algorithm/002_config_resolution.md — Step 2](../../../docs/algorithm/002_config_resolution.md)
 
 ---
 
@@ -58,7 +58,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 - **Given:** `CLAUDE_MODEL` unset; no project config; user settings empty
 - **When:** resolve(`model`)
 - **Then:** `ResolvedValue { value: Some("claude-sonnet-4-6"), source: Default }`
-- **Source:** [algorithm/002_config_resolution.md — Step 4](../../../../docs/algorithm/002_config_resolution.md)
+- **Source:** [algorithm/002_config_resolution.md — Step 4](../../../docs/algorithm/002_config_resolution.md)
 
 ---
 
@@ -67,7 +67,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 - **Given:** no env mapping; no project config; no user config; no catalog default for key
 - **When:** resolve(`myArbitraryKey`)
 - **Then:** `ResolvedValue { value: None, source: Absent }`
-- **Source:** [algorithm/002_config_resolution.md — Step 4](../../../../docs/algorithm/002_config_resolution.md)
+- **Source:** [algorithm/002_config_resolution.md — Step 4](../../../docs/algorithm/002_config_resolution.md)
 
 ---
 
@@ -76,7 +76,7 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 - **Given:** `CLAUDE_MODEL` unset; project settings has `{"theme": "dark"}`; user settings has `{"theme": "light"}`
 - **When:** resolve(`theme`)
 - **Then:** `ResolvedValue { value: Some("dark"), source: Project }`
-- **Source:** [algorithm/002_config_resolution.md — Step 2](../../../../docs/algorithm/002_config_resolution.md)
+- **Source:** [algorithm/002_config_resolution.md — Step 2](../../../docs/algorithm/002_config_resolution.md)
 
 ---
 
