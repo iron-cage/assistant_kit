@@ -7,15 +7,16 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT | Criterion | AC | Notes |
 |----|-----------|-----|-------|
 | FT-01 | `sort::name` preserves alphabetical order | AC-01 | Unit test |
-| FT-02 | `sort::renew` sinks h-exhausted; non-exhausted sorted by `7d Reset` ascending | AC-04 | Unit test |
-| FT-03 | `format::json` order unaffected by `sort::` | AC-13 | Integration |
-| FT-04 | Invalid `sort::` value exits 1 naming valid values | AC-09 | Integration |
-| FT-05 | Invalid `prefer::` value exits 1 naming valid values | AC-10 | Integration |
-| FT-06 | Four-group status partition: 🟢 above 🟡h above 🟡w above 🔴 | AC-14 | Unit test |
+| FT-02 | `sort::renew` sinks h-exhausted; non-exhausted sorted by `7d Reset` ascending | AC-01 | Unit test |
+| FT-03 | `format::json` order unaffected by `sort::` | AC-11 | Integration |
+| FT-04 | Invalid `sort::` value exits 1 naming valid values | AC-07 | Integration |
+| FT-05 | Invalid `prefer::` value exits 1 naming valid values | AC-08 | Integration |
+| FT-06 | Four-group status partition: 🟢 above 🟡h above 🟡w above 🔴 | AC-12 | Unit test |
 | FT-07 | `sort::renew` is default when `sort::` omitted | AC-01 | Unit test |
-| FT-08 | Within 🟡: h-exhausted before weekly-exhausted; `desc::` doesn't swap sub-groups | AC-14 | Unit test |
-| FT-09 | `sort::renew` alphabetical when all numeric sort keys tied (BUG-259) | AC-04 | Tiebreaker |
-| FT-10 | `sort::renews` sorts by renewal timer ascending; no renewal data placed last | AC-17 | Unit test |
+| FT-08 | Within 🟡: h-exhausted before weekly-exhausted; `desc::` doesn't swap sub-groups | AC-12 | Unit test |
+| FT-09 | `sort::renew` alphabetical when all numeric sort keys tied (BUG-259) | AC-01 | Tiebreaker |
+| FT-10 | `sort::renews` sorts by renewal timer ascending; no renewal data placed last | AC-02 | Unit test |
+| FT-11 | h-exhausted + `7d(Son) ≤ 5%` → HExhausted under `prefer::any` (BUG-299) | AC-12 | Group Boundary |
 | — | `sort::` + `live::1` stable within each cycle | AC-12 | Live-only (requires `live::1` + real credentials) |
 
 ### Test Case Index
@@ -23,17 +24,18 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | ID | Test Name | AC | Category |
 |----|-----------|-----|----------|
 | FT-01 | sort::name alphabetical | AC-01 | Sorting |
-| FT-02 | sort::renew h-exhausted sunk | AC-04 | Sorting |
-| FT-03 | JSON output alphabetical regardless of sort | AC-13 | JSON No-op |
-| FT-04 | Invalid sort value rejected | AC-09 | Validation |
-| FT-05 | Invalid prefer value rejected | AC-10 | Validation |
-| FT-06 | Four-group partition: 🟢 above 🟡h above 🟡w above 🔴 | AC-14 | Tier Grouping |
+| FT-02 | sort::renew h-exhausted sunk | AC-01 | Sorting |
+| FT-03 | JSON output alphabetical regardless of sort | AC-11 | JSON No-op |
+| FT-04 | Invalid sort value rejected | AC-07 | Validation |
+| FT-05 | Invalid prefer value rejected | AC-08 | Validation |
+| FT-06 | Four-group partition: 🟢 above 🟡h above 🟡w above 🔴 | AC-12 | Tier Grouping |
 | FT-07 | `sort::renew` is default when `sort::` omitted | AC-01 | Default |
-| FT-08 | Within 🟡: h-exhausted before weekly-exhausted; sub-grouping not reversed by `desc::` | AC-14 | Yellow Sub-Grouping |
-| FT-09 | sort::renew alphabetical tiebreaker when all numeric keys tied | AC-04 | Tiebreaker |
-| FT-10 | sort::renews ascending; no renewal data last | AC-17 | Renews Sort |
+| FT-08 | Within 🟡: h-exhausted before weekly-exhausted; sub-grouping not reversed by `desc::` | AC-12 | Yellow Sub-Grouping |
+| FT-09 | sort::renew alphabetical tiebreaker when all numeric keys tied | AC-01 | Tiebreaker |
+| FT-10 | sort::renews ascending; no renewal data last | AC-02 | Renews Sort |
+| FT-11 | h-exhausted account with 7d_son ≤ 5% lands in HExhausted (not Red) under prefer::any (BUG-299) | AC-12 | Group Boundary |
 
-**Total:** 10 FT cases
+**Total:** 11 FT cases
 
 ---
 
@@ -55,7 +57,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then:** Order: `A`, `B`, `C`, then `D` (sunk). Non-h-exhausted sorted by soonest `7d Reset` countdown first.
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_sort_renew_soonest_first_exhausted_last` (in `src/usage/sort.rs`)
-- **Source:** [feature/020_usage_sort_strategies.md AC-04](../../../docs/feature/020_usage_sort_strategies.md)
+- **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
 
@@ -66,7 +68,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then:** JSON output preserves input order — `zzz@test.com` appears before `aaa@test.com`, confirming `render_json` does not re-sort.
 - **Exit:** n/a (unit test against `render_json`)
 - **Source fn:** `test_json_unaffected_by_sort` (in `src/usage/mod.rs`)
-- **Source:** [feature/020_usage_sort_strategies.md AC-13](../../../docs/feature/020_usage_sort_strategies.md)
+- **Source:** [feature/020_usage_sort_strategies.md AC-11](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
 
@@ -77,7 +79,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then:** Exits 1. Stderr names the three valid values: `name`, `renew`, `renews`.
 - **Exit:** 1
 - **Source fn:** `it057_sort_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_sort_strategy_parse_invalid_rejected` (in `src/usage/mod.rs`)
-- **Source:** [feature/020_usage_sort_strategies.md AC-09](../../../docs/feature/020_usage_sort_strategies.md)
+- **Source:** [feature/020_usage_sort_strategies.md AC-07](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
 
@@ -88,7 +90,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then:** Exits 1. Stderr names the three valid values: `any`, `opus`, `sonnet`.
 - **Exit:** 1
 - **Source fn:** `it058_prefer_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_prefer_strategy_parse_invalid_rejected` (in `src/usage/mod.rs`)
-- **Source:** [feature/020_usage_sort_strategies.md AC-10](../../../docs/feature/020_usage_sort_strategies.md)
+- **Source:** [feature/020_usage_sort_strategies.md AC-08](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
 
@@ -99,7 +101,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then:** Output order: `green@test.com` (🟢), then 🟡h before 🟡w, then `red@test.com` (🔴). Four-group partition overrides alphabetical sort.
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_three_tier_grouping_green_before_yellow_before_red` (in `src/usage/mod.rs`)
-- **Source:** [feature/020_usage_sort_strategies.md AC-14](../../../docs/feature/020_usage_sort_strategies.md)
+- **Source:** [feature/020_usage_sort_strategies.md AC-12](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
 
@@ -126,7 +128,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then-B (desc::1):** Output order: `sess_b@x.com`, `sess_a@x.com` (h-exhausted sub-group reversed), `weekly@x.com` (weekly sub-group last — not moved to front by `desc::1`).
 - **Exit:** n/a (unit test — position assertion via `output.find()`)
 - **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (When-A), `test_ft15_020_yellow_sub_grouping_not_reversed_by_desc` (When-B) (in `src/usage/mod.rs`)
-- **Source:** [feature/020_usage_sort_strategies.md AC-14](../../../docs/feature/020_usage_sort_strategies.md)
+- **Source:** [feature/020_usage_sort_strategies.md AC-12](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
 
@@ -137,7 +139,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then:** `alpha@test.com` ranks first (alphabetical winner when all numeric keys tie). Confirms the final name tiebreaker prevents filesystem-order-dependent non-determinism.
 - **Exit:** n/a (unit test — name assertion on `accounts[idx[0]].name`)
 - **Source fn:** `mre_bug259_sort_renew_alphabetical_when_all_keys_tied` (in `src/usage/sort.rs`)
-- **Source:** [feature/020_usage_sort_strategies.md AC-04](../../../docs/feature/020_usage_sort_strategies.md)
+- **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
 
@@ -148,4 +150,17 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then:** Order: `soon_renew@test.com` (soonest renewal), `later_renew@test.com`, `no_renew@test.com` (no data, placed last). Default `desc::0`.
 - **Exit:** n/a (unit test — index assertion)
 - **Source fn:** `test_sort_renews_ascending` (in `src/usage/sort_next_tests.rs`)
-- **Source:** [feature/020_usage_sort_strategies.md AC-17](../../../docs/feature/020_usage_sort_strategies.md)
+- **Source:** [feature/020_usage_sort_strategies.md AC-02](../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### FT-11: h-exhausted account with `7d(Son) ≤ 5%` lands in HExhausted (not Red) under `prefer::any` (BUG-299)
+
+- **Given:** Two `AccountQuota` structs:
+  - `account-a`: `five_hour_util=100%` (5h_left=0%, h-exhausted), `seven_day_util=68%` (7d_left=32%), `seven_day_sonnet_util=95%` (7d_son_left=5%).
+  - `weekly-exh`: `five_hour_util=10%` (5h_left=90%), `seven_day_util=96%` (7d_left=4%, weekly-exhausted).
+- **When:** `sort_indices(&accounts, SortStrategy::Name, None, PreferStrategy::Any, 0)`
+- **Then:** `account-a` appears before `weekly-exh`. `account-a` is in HExhausted (group 2); `weekly-exh` is in WeeklyExhausted (group 3). Under `prefer::any`, `prefer_weekly(account-a) = min(32%, 5%) = 5.0` — the bug used this value and placed `account-a` in Red; the fix uses `seven_day_left = 32% > 5.0%` → HExhausted.
+- **Exit:** n/a (unit test — position assertion)
+- **Source fn:** `mre_bug299_h_exhausted_misclassified_as_red_prefer_any` (in `src/usage/sort.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-12](../../../docs/feature/020_usage_sort_strategies.md); [bug/299](../../../../task/claude_profile/bug/299_status_group_of_prefer_weekly_boundary.md)

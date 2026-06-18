@@ -50,16 +50,16 @@ Edge case coverage for the `prefer::` parameter on `.usage`. See [param/027_pref
 - **When:** `clp .usage prefer::bogus`
 - **Then:** Exits 1. Stderr contains the three valid values: "any", "opus", "sonnet".
 - **Exit:** 1
-- **Source:** [feature/020_usage_sort_strategies.md AC-10](../../../../docs/feature/020_usage_sort_strategies.md)
+- **Source:** [feature/020_usage_sort_strategies.md AC-08](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
 
 ### EC-5: `prefer::` without `sort::` accepted and does not break default output
 
-- **Behavioral Divergence:** `prefer::sonnet sort::renew` uses `7d(Son)` for the status partition threshold and tiebreak; `prefer::any sort::renew` uses `min(7d Left, 7d(Son))`. The divergence is in which weekly column governs group membership -- not tested here (unit-level); this case just confirms `prefer::` is accepted with `sort::renew` (the default) without error.
+- **Behavioral Note:** `prefer::` affects the `sort::renew` within-group tiebreak key and the `→` recommendation eligibility gate. It does **not** affect the four-group status partition — group membership is always determined by raw `5h Left` and `7d Left` columns (AC-12), independent of `prefer::`. This case confirms `prefer::` is accepted with `sort::renew` (the default) without error.
 - **Given:** Empty credential store.
 - **When:** `clp .usage prefer::sonnet`
-- **Then:** Exits 0 with "(no accounts configured)". `prefer::` is parsed silently — it only affects sort heuristics, not the default renew sort ordering with empty store.
+- **Then:** Exits 0 with "(no accounts configured)". `prefer::` is parsed silently — it only affects tiebreak and recommendation eligibility, not group membership or default renew sort ordering with empty store.
 - **Exit:** 0
 - **Source:** [param/027_prefer.md](../../../../docs/cli/param/027_prefer.md)
 

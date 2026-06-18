@@ -13,7 +13,7 @@
 
 **Four-group status partition:** Regardless of the chosen sort strategy, accounts are first partitioned into four status groups (see [dictionary](../cli/002_dictionary.md#status-groups)): 🟢 Green (both available) → 🟡 h-exhausted (5h exhausted, 7d available) → 🟡 weekly-exhausted (5h available, 7d exhausted) → 🔴 Red (both exhausted or error). Group order is fixed — sort strategy applies within each group only. `desc::1` reverses row order within each group but never changes group order. This ensures healthy accounts always appear above exhausted or errored accounts, regardless of sort direction or strategy.
 
-**The `prefer::` parameter** determines which weekly quota column is used by strategies that reference weekly availability:
+**The `prefer::` parameter** determines which weekly quota column is used by the `sort::renew` within-group tiebreak and the `→` recommendation eligibility gate. It does **not** affect the four-group status partition — group membership always uses raw `7d Left` (AC-12).
 
 | Value | Weekly column used | When |
 |-------|-------------------|------|
@@ -101,6 +101,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 | File | Relationship |
 |------|--------------|
 | `task/claude_profile/bug/259_sort_non_deterministic_when_all_keys_tied.md` | BUG-259 ✅ Fixed: `sort_indices` all `sort_by` closures missing final name tiebreaker — non-deterministic row order when all numeric keys tie |
+| `task/claude_profile/bug/299_status_group_of_prefer_weekly_boundary.md` | BUG-299 ✅ Fixed: `status_group_of()` used `prefer_weekly` for group boundary — fix: `sort.rs:35` changed to `seven_day_left( aq ) > 5.0`; `prefer` param removed from signature (TSK-301) |
 
 ### Sources
 

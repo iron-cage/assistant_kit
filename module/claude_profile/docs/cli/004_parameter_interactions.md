@@ -139,35 +139,36 @@ clp .usage sort::renew desc::1
 
 ---
 
-### Interaction :: 6. `prefer::` selects the weekly column used by all sort heuristics
+### Interaction :: 6. `prefer::` selects the weekly column used by sort tiebreak and recommendation heuristics
 
 **Parameters:** [`sort::`](param/025_sort.md), [`prefer::`](param/027_prefer.md)
 
-**Effect:** `prefer::` determines which weekly quota column is used by sort strategies that reference weekly availability. `prefer::any` (default) uses `min(7d Left, 7d(Son))`; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
+**Effect:** `prefer::` determines which weekly quota column is used by the `sort::renew` within-group tiebreak and the `→` recommendation eligibility gate. `prefer::any` (default) uses `min(7d Left, 7d(Son))`; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
+
+**`prefer::` does NOT affect group membership.** The four-group status partition always uses raw `7d Left` for the weekly boundary (`7d Left > 5%` for Green/h-exhausted vs weekly-exhausted/Red). An account's status group is determined by `5h Left` and `7d Left` columns only — not by `prefer_weekly`. See [AC-12](../../feature/020_usage_sort_strategies.md#acceptance-criteria).
 
 **Affected heuristics:**
-- `sort::renew`: tiebreak key — lowest `weekly(prefer)` ascending; also used in 4-group status partition threshold (`weekly(prefer) > 5%`)
-- `sort::name` / `sort::renews`: 4-group status partition threshold (`weekly(prefer) > 5%`) determines group membership
-- `→ Next` recommendation: inherits `prefer_weekly` from the underlying sort algorithm
+- `sort::renew` tiebreak: lowest `weekly(prefer)` ascending — within a group, among accounts with the same renewal event time, the account with the lower prefer-selected weekly quota ranks first
+- `→` recommendation eligibility: `prefer_weekly > 5.0` required — an account whose `prefer_weekly` is at or below 5% is excluded from recommendation under the active `prefer::` value
 
-**Rationale:** Users who know they intend to run Opus or Sonnet can tell the heuristics which quota matters. `prefer::any` is the safe conservative default.
+**Rationale:** Users who know they intend to run Opus or Sonnet can tell the sort tiebreak and recommendation heuristics which model-specific quota to prefer. Group membership is model-agnostic — it reflects raw quota availability, not a preference about which model to run.
 
 **Commands affected:** [`.usage`](commands.md#command--9-usage)
 
 **Examples:**
 
 ```bash
-# Default: conservative weekly column
+# Default: conservative weekly column for tiebreak
 clp .usage sort::renew
-# renew tiebreak + status partition uses min(7d Left, 7d(Son))
+# renew tiebreak uses min(7d Left, 7d(Son)) — group membership unaffected
 
-# Opus sessions: only overall weekly quota matters
+# Opus sessions: only overall weekly quota matters for tiebreak
 clp .usage sort::renew prefer::opus
-# renew tiebreak + status partition uses 7d Left
+# renew tiebreak uses 7d Left — group membership unaffected
 
-# Sonnet sessions: Sonnet-specific weekly cap is the constraint
+# Sonnet sessions: Sonnet-specific weekly cap matters for tiebreak
 clp .usage sort::renew prefer::sonnet
-# renew tiebreak + status partition uses 7d(Son)
+# renew tiebreak uses 7d(Son) — group membership unaffected
 ```
 
 ---
