@@ -1,6 +1,6 @@
 //! Behavior hypothesis invalidation tests.
 //!
-//! Each file covers exactly one behavior from `docs/behavior/readme.md` (B1..B24).
+//! Each file covers exactly one behavior from `docs/behavior/readme.md` (B1..B26).
 //! Tests inspect real `~/.claude/` storage to verify Claude Code's actual output.
 //! If Claude Code changes behavior, the tests go RED.
 //!
@@ -32,6 +32,8 @@
 //! | `b22_no_session_persistence_flag.rs` | B22 — `--no-session-persistence` disables disk writes; no `.jsonl` created | Storage |
 //! | `b23_session_dir_override.rs` | B23 — `CLAUDE_CODE_SESSION_DIR` redirects session storage directory | Storage |
 //! | `b24_from_pr_flag.rs` | B24 — `--from-pr` resumes session linked to a GitHub pull request | Continuation |
+//! | `b25_auto_compact_window.rs` | B25 — `CLAUDE_CODE_AUTO_COMPACT_WINDOW` env var sets token window for auto-compaction | Flags |
+//! | `b26_autocompact_pct_override.rs` | B26 — `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` env var sets compaction trigger percentage | Flags |
 //! | `b16h_tools_system_prompt.rs` | B16h — tool definitions stay in system prompt even when `--tools ""` disables invocation (❓ live API `lim_it` test) | Flags |
 
 mod b01_default_continues;
@@ -58,6 +60,8 @@ mod b21_fork_session_flag;
 mod b22_no_session_persistence_flag;
 mod b23_session_dir_override;
 mod b24_from_pr_flag;
+mod b25_auto_compact_window;
+mod b26_autocompact_pct_override;
 mod b16h_tools_system_prompt;
 
 // ---------------------------------------------------------------------------

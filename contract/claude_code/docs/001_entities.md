@@ -4,18 +4,18 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `behavior` | Observed external behaviors of the `claude` binary (B1–B24 + B16h) | [behavior/readme.md](behavior/readme.md) | 25 |
+| `behavior` | Observed external behaviors of the `claude` binary (B1–B26 + B16h) | [behavior/readme.md](behavior/readme.md) | 27 |
 | `storage` | `~/.claude/` storage architecture: projects dir, support dirs, root files | [storage/readme.md](storage/readme.md) | 3 |
 | `filesystem` | Runtime filesystem paths accessed by claude_version | [filesystem/readme.md](filesystem/readme.md) | 4 |
 | `jsonl` | Session JSONL entry format: common fields, entry types, content blocks, usage, threading, sidechain | [jsonl/readme.md](jsonl/readme.md) | 10 |
 | `settings` | Settings file structure and protocols: global, project, version lock | [settings/readme.md](settings/readme.md) | 3 |
 | `formats` | Ancillary file formats: history, credentials, debug, shell-snapshots, todos, commands | [formats/readme.md](formats/readme.md) | 6 |
 | `taxonomy` | Four-level concept hierarchy: Project, Conversation, Session, Entry | [taxonomy/readme.md](taxonomy/readme.md) | 3 |
-| `params` | CLI parameter specifications for the `claude` binary | [params/readme.md](params/readme.md) | 73 |
+| `params` | CLI parameter specifications for the `claude` binary | [params/readme.md](params/readme.md) | 75 |
 | `endpoint` | Wire contracts for Anthropic HTTP endpoints consumed by workspace crates | [endpoint/readme.md](endpoint/readme.md) | 10 |
 | `fault` | Aggregated index of all fault conditions: terminal errors (E1–E6), silent failures (F1–F4), and quirks (Q1–Q5) with detection signals and `classify_error()` priority order | [fault/readme.md](fault/readme.md) | 0 |
 
-**Total doc instances**: 137 (25 + 3 + 4 + 10 + 3 + 6 + 3 + 73 + 10)
+**Total doc instances**: 141 (27 + 3 + 4 + 10 + 3 + 6 + 3 + 75 + 10)
 
 ## Master Doc Instances Table
 
@@ -48,6 +48,8 @@
 | B22 | No Session Persistence | [behavior/022_b22_no_session_persistence.md](behavior/022_b22_no_session_persistence.md) |
 | B23 | Session Dir Override | [behavior/023_b23_session_dir_override.md](behavior/023_b23_session_dir_override.md) |
 | B24 | From PR | [behavior/024_b24_from_pr.md](behavior/024_b24_from_pr.md) |
+| B25 | Auto Compact Window | [behavior/025_b25_auto_compact_window.md](behavior/025_b25_auto_compact_window.md) |
+| B26 | Autocompact Pct Override | [behavior/026_b26_autocompact_pct_override.md](behavior/026_b26_autocompact_pct_override.md) |
 
 ### storage/ (3 instances)
 
@@ -123,4 +125,4 @@
 | 009 | CLI Feedback | [endpoint/009_cli_feedback.md](endpoint/009_cli_feedback.md) |
 | 010 | Web Domain Info | [endpoint/010_web_domain_info.md](endpoint/010_web_domain_info.md) |
 
-> `params` instances (73 files) use numbered naming and are enumerated in their master file: [params/readme.md](params/readme.md).
+> `params` instances (75 files) use numbered naming and are enumerated in their master file: [params/readme.md](params/readme.md).

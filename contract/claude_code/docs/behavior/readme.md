@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Catalog observed and confirmed external behaviors of the `claude` binary relevant to session lifecycle and storage.
-- **Responsibility**: Master file for the `behavior` collection — lists all 25 behavior instances (B1–B24 + B16h), provides the shared evidence table (E1–E46), and links to invalidation test files.
+- **Responsibility**: Master file for the `behavior` collection — lists all 27 behavior instances (B1–B26 + B16h), provides the shared evidence table (E1–E51), and links to invalidation test files.
 - **In Scope**: Session continuation, flag semantics, agent layouts, entry threading, storage path encoding, cross-session relationship absence (conversation chain foundations).
 - **Out of Scope**: Entry-level JSONL schema (→ [`../jsonl/`](../jsonl/readme.md)); storage directory architecture (→ [`../storage/`](../storage/readme.md)); filesystem paths (→ [`../filesystem/`](../filesystem/readme.md)); settings format (→ [`../settings/`](../settings/readme.md)); ancillary file formats (→ [`../formats/`](../formats/readme.md)); concept taxonomy (→ [`../taxonomy/`](../taxonomy/readme.md)).
 
@@ -51,6 +51,8 @@ Adapted from hypothesis table format. Status reflects certainty of the observati
 | [B22](022_b22_no_session_persistence.md) | `--no-session-persistence` disables session disk writes; only works with `--print` mode | Storage | 🎯 | 85% | FLAG-VFY | E41, E42 |
 | [B23](023_b23_session_dir_override.md) | `CLAUDE_CODE_SESSION_DIR` env var overrides session storage directory | Storage | 🎯 | 80% | NEG-ONLY | E43, E44 |
 | [B24](024_b24_from_pr.md) | `--from-pr [value]` resumes a session previously linked to a GitHub pull request | Continuation | 🎯 | 75% | FLAG-VFY | E45, E46 |
+| [B25](025_b25_auto_compact_window.md) | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` env var sets the effective token window for auto-compaction calculations | Flags | 🎯 | 85% | NEG-ONLY | E48, E49 |
+| [B26](026_b26_autocompact_pct_override.md) | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` env var overrides the compaction trigger as a percentage of the window | Flags | 🎯 | 80% | NEG-ONLY | E50, E51 |
 
 ---
 
@@ -107,6 +109,10 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | E45 | B24 | Observation | `claude --help` live output | `--from-pr` flag entry | Help text documents `--from-pr [value]` flag for resuming sessions linked to GitHub pull requests |
 | E46 | B24 | Test | `../../tests/behavior/b24_from_pr_flag.rs` | `b24_from_pr_flag_documented_in_help` | `claude --help` output contains `--from-pr` flag |
 | E47 | B1, B2 | Test | `../../tests/behavior/b02_new_session.rs` | `b2_continue_flag_proves_separate_sessions` | `--continue` flag exists in `claude --help` — binary-level proof that new-session is the default; presence of a dedicated resume flag implies sessions are separate by default |
+| E48 | B25 | Doc | Official Claude Code documentation (code.claude.com/docs/en/env-vars) | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` entry | "Set the context capacity in tokens used for auto-compaction calculations. Defaults to the model's context window: 200K for standard models or 1M for extended context models." |
+| E49 | B25 | Test | `../../tests/behavior/b25_auto_compact_window.rs` | `b25_auto_compact_window_env_var_recognized` | Binary exits 0 and does not emit rejection referencing `CLAUDE_CODE_AUTO_COMPACT_WINDOW` when env var is set — negative assertion |
+| E50 | B26 | Doc | Official Claude Code documentation (code.claude.com/docs/en/env-vars) | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` entry | "`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` is applied as a percentage of this value" |
+| E51 | B26 | Test | `../../tests/behavior/b26_autocompact_pct_override.rs` | `b26_autocompact_pct_override_env_var_recognized` | Binary exits 0 and does not emit rejection referencing `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` when env var is set — negative assertion |
 
 ---
 
@@ -115,11 +121,11 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | Status | Count | IDs |
 |--------|-------|-----|
 | ✅ Confirmed | 11 | B1, B2, B3, B6, B7, B9, B10, B12, B13, B14, B16 |
-| 🎯 Observed | 12 | B4, B5, B8, B11, B15, B18, B19, B20, B21, B22, B23, B24 |
+| 🎯 Observed | 14 | B4, B5, B8, B11, B15, B18, B19, B20, B21, B22, B23, B24, B25, B26 |
 | ⚠️ Exception noted | 1 | B17 (self-contained except at context-compaction boundaries; < 0.2% violation rate) |
 | ❓ Uncertain | 1 | B16h |
 
-**Total behaviors:** 25 (B1–B24 + B16h sub-hypothesis; B16h shares B16's row index)
+**Total behaviors:** 27 (B1–B26 + B16h sub-hypothesis; B16h shares B16's row index)
 **Confirmed (≥90% certainty):** 11
 **Lowest certainty:** B5 (60% — current session selection mechanism)
 **Investigation priority:** B5 — can be confirmed by reading Claude Code changelog or source
@@ -129,11 +135,11 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | VALIDATED | 12 | B1, B2, B6, B7, B9, B10, B12, B13, B14, B15, B17, B18 |
 | VALIDATED† | 1 | B5 (distinct mtimes proven; mtime-as-selection-key unproven) |
 | FLAG-VFY | 8 | B3, B4, B16, B19, B20, B21, B22, B24 |
-| NEG-ONLY | 2 | B11, B23 |
+| NEG-ONLY | 4 | B11, B23, B25, B26 |
 | UNVERIFIED | 1 | B8 |
 | MEASURE | 1 | B16h (lim_it; runs by default in container) |
 
-**Validation gap:** 12 of 25 behaviors are fully validated with behavioral assertions.
+**Validation gap:** 12 of 27 behaviors are fully validated with behavioral assertions.
 
 ---
 
@@ -167,6 +173,8 @@ Each behavior instance has a corresponding invalidation test in `contract/claude
 | `b22_no_session_persistence_flag.rs` | B22 | FLAG-VFY |
 | `b23_session_dir_override.rs` | B23 | NEG-ONLY |
 | `b24_from_pr_flag.rs` | B24 | FLAG-VFY |
+| `b25_auto_compact_window.rs` | B25 | NEG-ONLY |
+| `b26_autocompact_pct_override.rs` | B26 | NEG-ONLY |
 | `b16h_tools_system_prompt.rs` | B16h | MEASURE (lim_it; runs by default in container) |
 
 To run:
