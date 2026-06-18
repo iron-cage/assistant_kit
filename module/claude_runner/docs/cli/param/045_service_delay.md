@@ -5,7 +5,7 @@ error class (`ErrorKind::ApiError`) triggers a retry. Has no effect when
 effective retry count for Service is 0.
 
 - **Type:** u32 (seconds)
-- **Default:** `auto` (inherits from `--retry-default-delay`, Tier 3 fallback; effective default = 30)
+- **Default:** `auto` (inherits from `--retry-default-delay`, Tier 3 fallback)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Replaces:** `--api-error-delay` (renamed + renumbered from 038)

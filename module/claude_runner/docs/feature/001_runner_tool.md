@@ -52,8 +52,11 @@ environments with parallel `clr` invocations hitting API rate limits. The gate u
 `claude_core::process::find_claude_processes()` (Linux `/proc` scanner) for the session count.
 
 **Session listing (`clr ps`):** Prints two plain-style tables: active Claude Code sessions
-and queued `clr` waiters (processes blocked at the concurrency gate). Active table columns:
-`#`, `PID`, `Elapsed`, `CPU%`, `RAM`, `State`, `Absolute Path`, `Task`. Data sources:
+and queued `clr` waiters (processes blocked at the concurrency gate). Default active table
+columns: `#`, `PID`, `Elapsed`, `CPU%`, `RAM`, `State`, `Absolute Path`, `Task`; optional
+columns: `Mode`, `Command`, `Binary` (shown via `--wide` or `--columns`). `--mode` filters
+rows by execution mode (interactive/print). `--columns` selects a custom column subset.
+Env vars: `CLR_PS_MODE`, `CLR_PS_COLUMNS`. Data sources:
 `/proc/{pid}/stat` (state, CPU jiffies, start time), `/proc/{pid}/status` (VmRSS in MB),
 `~/.claude/projects/` JSONL files (Task column — last user message, truncated to 35 chars);
 falls back to `"interactive"` when no JSONL found. Active session rows are ordered
@@ -125,8 +128,8 @@ and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
 | `../../tests/retry_default_test.rs` | Tier 3 fallback count/delay, effective defaults |
 | `../../tests/error_classification_test.rs` | ErrorKind → ErrorClass mapping, [Class] stderr prefix |
 | `../../tests/exit_code_contract_test.rs` | Exit code 4 for timeout (TSK-202) |
-| `../../tests/ps_command_test.rs` | IT-01–IT-20 clr ps tables, gate file rendering, sort order, BUG-293/294/295/296/297/301 |
-| `../../tests/user_story_ps_test.rs` | US-01–US-09 session listing acceptance criteria |
+| `../../tests/ps_command_test.rs` | IT-01–IT-29 clr ps tables, gate file rendering, sort order, mode filter, column select, BUG-293/294/295/296/297/301 |
+| `../../tests/user_story_ps_test.rs` | US-01–US-17 session listing acceptance criteria |
 | `../../tests/kill_command_test.rs` | IT-01–IT-09 clr kill SIGTERM delivery and guards |
 | `../../tests/isolated_defaults_test.rs` | ISD-01–ISD-13 isolated subprocess model, effort, flags |
 | `../../tests/isolated_correctness_test.rs` | CT-1–CT-6 isolated correctness invariants |

@@ -274,9 +274,9 @@ fn ec9_old_flag_expect_retries_rejected()
 
 // ── EC-10: Fallback default (2) fires for Validation ─────────────────────────
 
-/// EC-10: No `--retry-on-validation` set; fallback default (2) fires.
+/// EC-10: No `--retry-on-validation` set; fallback default fires.
 ///
-/// `resolve_count(None, None, None).unwrap_or(2) = 2` → 2 retries allowed.
+/// Passes `--retry-default 2` explicitly (non-fragile: does not rely on system default).
 /// Fake mismatches on call 1 then matches on call 2 → exit 0.
 /// Uses `--retry-default-delay 0` to avoid the 30s built-in delay.
 #[ test ]
@@ -301,10 +301,11 @@ fn ec10_validation_fallback_default_fires()
   let out = Command::new( bin )
     .args( [
       "-p",
-      "--expect",            "pass",
-      "--expect-strategy",   "retry",
+      "--expect",              "pass",
+      "--expect-strategy",     "retry",
+      "--retry-default",       "2",
       "--retry-default-delay", "0",
-      "--max-sessions",      "0",
+      "--max-sessions",        "0",
       "x",
     ] )
     .env( "PATH", &new_path )

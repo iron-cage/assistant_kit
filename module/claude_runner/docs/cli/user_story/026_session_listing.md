@@ -3,9 +3,9 @@
 ### Scope
 
 - **Purpose**: Document `clr ps` as a session inspection tool that lists all running Claude Code processes and queued `clr` waiters with per-session metadata in two plain-style tables.
-- **Responsibility**: Define acceptance criteria for the session listing command: plain-style table output, elapsed column, queued-sessions table, empty-session state, column presence, help discoverability, typo guard, and self-exclusion.
-- **In Scope**: `clr ps` plain-style table output, `#`/`PID`/`Elapsed`/`CPU%`/`RAM`/`State`/`Absolute Path`/`Task` columns, queued CLR processes table (`#`/`PID`/`CWD`/`Waiting`/`Attempt` columns), no-sessions message, `clr --help` listing, typo-guard for `clr p` / `clr pss`, self-PID exclusion, `$PRO` path shortening in Absolute Path and CWD columns, gate state files written by `gate.rs`, `CLR_GATE_DIR` override.
-- **Out of Scope**: Filtering by state or path, watch/auto-refresh mode, non-Linux platforms. (Session termination implemented as `clr kill` in US-027 / TSK-201.)
+- **Responsibility**: Define acceptance criteria for the session listing command: plain-style table output, elapsed column, queued-sessions table, empty-session state, column presence, help discoverability, typo guard, self-exclusion, mode filtering, column selection, and wide output.
+- **In Scope**: `clr ps` plain-style table output, default 8 columns (`#`/`PID`/`Elapsed`/`CPU%`/`RAM`/`State`/`Absolute Path`/`Task`), optional 3 columns (`Mode`/`Command`/`Binary`), queued CLR processes table (`#`/`PID`/`CWD`/`Waiting`/`Attempt` columns), no-sessions message, `clr --help` listing, typo-guard for `clr p` / `clr pss`, self-PID exclusion, `$PRO` path shortening, gate state files, `CLR_GATE_DIR` override, `--mode` filtering, `--columns` selection, `--wide` expansion, `CLR_PS_MODE` / `CLR_PS_COLUMNS` env var fallbacks.
+- **Out of Scope**: Watch/auto-refresh mode, non-Linux platforms. (Session termination implemented as `clr kill` in US-027 / TSK-201.)
 
 ### Persona
 
@@ -19,7 +19,8 @@ or `ps aux`.
 Inspect all running Claude Code sessions and queued `clr` waiters at a glance so
 that the developer can understand which sessions are active, how long they have been
 running, what they are doing, and whether any `clr` processes are blocked waiting
-for a session slot — enabling them to identify stale, stuck, or piled-up sessions.
+for a session slot — with full control over which rows and columns are displayed —
+enabling them to identify stale, stuck, or piled-up sessions.
 
 ### Acceptance Criteria
 
@@ -35,6 +36,14 @@ for a session slot — enabling them to identify stale, stuck, or piled-up sessi
 - AC-010: Each table rendered by `clr ps` is preceded by a titled caption rule line: the active sessions table shows `Active Sessions · N running` and the queued processes table shows `Queued · N waiting`
 - AC-011: `clr ps --help` and `clr ps -h` print subcommand help to stdout and exit 0; the positional token `clr ps help` does the same
 - AC-012: Active session rows are ordered by session start time (oldest first); when two or more sessions exist, the row with the longest elapsed time appears at row `#1`
+- AC-013: `clr ps --mode interactive` shows only sessions without `--print`/`-p` in their cmdline arguments; `clr ps --mode print` shows only sessions with `--print`/`-p`; `clr ps --mode all` (default) shows both
+- AC-014: `clr ps --mode bogus` exits 1 with an error message listing valid mode values on stderr
+- AC-015: `clr ps --columns pid,path,task` shows exactly the specified columns in the specified order; column headers match the requested keys
+- AC-016: `clr ps --columns bogus` exits 1 with an error message listing valid column keys on stderr
+- AC-017: `clr ps --wide` shows all 11 columns including `Mode`, `Command`, and `Binary`
+- AC-018: When both `--columns` and `--wide` are specified, `--columns` wins (explicit selection overrides the convenience flag)
+- AC-019: `CLR_PS_MODE=print clr ps` filters to print-mode sessions (env var fallback); `clr ps --mode interactive` with `CLR_PS_MODE=print` shows interactive sessions only (CLI wins)
+- AC-020: `CLR_PS_COLUMNS=pid,elapsed clr ps` shows only PID and Elapsed columns (env var fallback); `clr ps --columns pid,path` with `CLR_PS_COLUMNS=pid,elapsed` shows PID and Path (CLI wins)
 
 ### Referenced Commands
 
@@ -44,11 +53,17 @@ for a session slot — enabling them to identify stale, stuck, or piled-up sessi
 
 ### Referenced Parameter Groups
 
-None. `ps` accepts no parameters.
+| # | Group | Params |
+|---|-------|--------|
+| 5 | [Session Listing](../param_group/05_session_listing.md) | `--mode`, `--columns`, `--wide` |
 
 ### Referenced Parameters
 
-None. `ps` accepts no parameters.
+| # | Parameter | AC |
+|---|-----------|-----|
+| 58 | [`--mode`](../param/058_mode.md) | AC-013, AC-014, AC-019 |
+| 59 | [`--columns`](../param/059_columns.md) | AC-015, AC-016, AC-018, AC-020 |
+| 60 | [`--wide`](../param/060_wide.md) | AC-017, AC-018 |
 
 ### Related User Stories
 

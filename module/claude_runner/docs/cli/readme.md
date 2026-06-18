@@ -22,10 +22,10 @@ clr [OPTIONS] [MESSAGE]
 | `command/` | Command reference: run, ask, isolated, refresh, help, ps, kill (7 commands) |
 | `dictionary.md` | Domain vocabulary for clr CLI concepts |
 | `command_defaults.md` | Cross-command parameter default matrix and isolated/refresh design targets |
-| `env_param.md` | CLR_* env var fallbacks, CLR_GATE_DIR runtime config, and CLAUDE_CODE_* subprocess vars (56 vars) |
-| `param_group/` | Logical parameter groupings (4 groups) |
+| `env_param.md` | CLR_* env var fallbacks, CLR_GATE_DIR runtime config, and CLAUDE_CODE_* subprocess vars (58 vars) |
+| `param_group/` | Logical parameter groupings (5 groups) |
 | `type/` | Semantic type definitions (14 types) |
-| `param/` | Individual parameter reference docs (53 parameters) |
+| `param/` | Individual parameter reference docs (56 parameters) |
 | `user_story/` | User goal and usage pattern docs (27 user stories) |
 
 ### Completion Matrix
@@ -34,18 +34,18 @@ clr [OPTIONS] [MESSAGE]
 |--------|----|----|----|----|----|----|
 | readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | command/ (7 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| param/ (53 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| param/ (56 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | type/ (14 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| param_group/ (4 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| param_group/ (5 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | user_story/ (27 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | env_param.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | config_param.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — no config file mechanism |
 | format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — no named output formats |
 | tests/docs/cli/readme.md | ➖ | ➖ | ➖ | ✅ | ➖ | Complete |
 | tests/docs/cli/command/ (7 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/param/ (53 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/param_group/ (4 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/param/ (56 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/param_group/ (5 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/type/ (14 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/env_param/ (2 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/user_story/ (27 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
@@ -57,12 +57,12 @@ clr [OPTIONS] [MESSAGE]
 ### Navigation
 
 - [Commands](command/readme.md) — command reference (7 commands)
-- [Parameters](param/readme.md) — flag and argument reference (53 parameters)
+- [Parameters](param/readme.md) — flag and argument reference (56 parameters)
 - [Types](type/readme.md) — semantic type definitions (14 types)
-- [Parameter Groups](param_group/readme.md) — logical parameter groupings (4 groups)
+- [Parameter Groups](param_group/readme.md) — logical parameter groupings (5 groups)
 - [Dictionary](dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — user goals and usage patterns (27 user stories)
-- [Env Parameters](env_param.md) — input, runtime config, and subprocess environment variables (56 variables)
+- [Env Parameters](env_param.md) — input, runtime config, and subprocess environment variables (58 variables)
 
 ### See Also
 

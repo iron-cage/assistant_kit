@@ -260,3 +260,13 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
   }
   Ok( () )
 }
+
+/// Read `CLR_PS_MODE` and `CLR_PS_COLUMNS` env-var defaults for `clr ps`.
+///
+/// Returns `(mode, columns)` — each `None` when the var is absent or empty.
+/// The caller applies these as defaults before parsing CLI tokens; CLI values
+/// always overwrite env-var values (CLI-wins).
+pub( super ) fn apply_ps_env_vars() -> ( Option< String >, Option< String > )
+{
+  ( env_str( "CLR_PS_MODE" ), env_str( "CLR_PS_COLUMNS" ) )
+}

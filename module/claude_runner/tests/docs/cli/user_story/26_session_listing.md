@@ -15,6 +15,14 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 | US-7 | Active table caption contains `Active Sessions` and count suffix | AC-010 | ✅ |
 | US-8 | `clr ps --help` prints help and exits 0 | AC-011 | ✅ |
 | US-9 | Active sessions ordered oldest first | AC-012 | ✅ |
+| US-10 | `--mode print` shows only print-mode sessions | AC-013 | ✅ |
+| US-11 | `--mode bogus` exits 1 with error | AC-014 | ✅ |
+| US-12 | `--columns pid,path,task` shows custom column subset | AC-015 | ✅ |
+| US-13 | `--columns bogus` exits 1 with error | AC-016 | ✅ |
+| US-14 | `--wide` shows all 11 columns | AC-017 | ✅ |
+| US-15 | `--columns` overrides `--wide` | AC-018 | ✅ |
+| US-16 | `CLR_PS_MODE` env var filters sessions | AC-019 | ✅ |
+| US-17 | `CLR_PS_COLUMNS` env var selects columns | AC-020 | ✅ |
 
 ---
 
@@ -106,3 +114,83 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 - **Exit:** 0
 - **Verifies:** AC-012
 - **Note:** In typical Linux environments PID allocation is monotonic, so spawn-order correlates with PID order. This test validates that ordering is applied but cannot distinguish age-sort from PID-sort without `/proc` mocking. The behavioral guarantee is: oldest session appears first.
+
+---
+
+### US-10: `--mode print` shows only print-mode sessions
+
+- **Given:** 2 fake `claude` processes running: one with `--print` arg, one without
+- **When:** `clr ps --mode print`
+- **Then:** Exit 0; output contains only the print-mode session PID
+- **Exit:** 0
+- **Verifies:** AC-013
+
+---
+
+### US-11: `--mode bogus` exits 1
+
+- **Given:** Developer passes an invalid mode value
+- **When:** `clr ps --mode bogus`
+- **Then:** Exit 1; stderr contains error with valid values
+- **Exit:** 1
+- **Verifies:** AC-014
+
+---
+
+### US-12: `--columns` selects custom subset
+
+- **Given:** ≥1 fake `claude` process running
+- **When:** `clr ps --columns pid,path,task`
+- **Then:** Exit 0; stdout contains `PID`, `Absolute Path`, `Task`; does NOT contain `CPU%`, `RAM`
+- **Exit:** 0
+- **Verifies:** AC-015
+
+---
+
+### US-13: `--columns bogus` exits 1
+
+- **Given:** Developer passes an invalid column key
+- **When:** `clr ps --columns bogus`
+- **Then:** Exit 1; stderr contains error listing valid keys
+- **Exit:** 1
+- **Verifies:** AC-016
+
+---
+
+### US-14: `--wide` shows all 11 columns
+
+- **Given:** ≥1 fake `claude` process running
+- **When:** `clr ps --wide`
+- **Then:** Exit 0; stdout contains `Mode`, `Command`, `Binary` (plus 8 defaults)
+- **Exit:** 0
+- **Verifies:** AC-017
+
+---
+
+### US-15: `--columns` overrides `--wide`
+
+- **Given:** ≥1 fake `claude` process running
+- **When:** `clr ps --wide --columns pid,task`
+- **Then:** Exit 0; stdout contains `PID`, `Task`; does NOT contain `Mode`, `Command`, `Binary`
+- **Exit:** 0
+- **Verifies:** AC-018
+
+---
+
+### US-16: `CLR_PS_MODE` env var filters sessions
+
+- **Given:** 2 fake `claude` processes running: one print-mode, one interactive
+- **When:** `clr ps` with `CLR_PS_MODE=print` in env
+- **Then:** Exit 0; output contains only the print-mode session PID
+- **Exit:** 0
+- **Verifies:** AC-019
+
+---
+
+### US-17: `CLR_PS_COLUMNS` env var selects columns
+
+- **Given:** ≥1 fake `claude` process running
+- **When:** `clr ps` with `CLR_PS_COLUMNS=pid,elapsed` in env
+- **Then:** Exit 0; stdout contains `PID`, `Elapsed`; does NOT contain `CPU%`, `RAM`, `Task`
+- **Exit:** 0
+- **Verifies:** AC-020

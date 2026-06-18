@@ -1,12 +1,13 @@
 //! Parameter Group Interaction Tests
 //!
-//! Covers CC-N interaction cases for all four parameter groups.
+//! Covers CC-N interaction cases for all five parameter groups.
 //! Source: `tests/docs/cli/param_group/`
 //!
 //! - Group 1 (Claude-Native Flags): G1CC1–G1CC5 (`01_claude_native_flags.md`)
 //! - Group 2 (Runner Control):      G2CC1–G2CC6 (`02_runner_control.md`)
 //! - Group 3 (System Prompt):       G3CC1–G3CC4 (`03_system_prompt.md`)
 //! - Group 4 (Credential Ops):      G4CC6       (`04_credential_operations.md`; CC-1–CC-5 are `lim_it`)
+//! - Group 5 (Session Listing):     G5CC1–G5CC5 (`05_session_listing.md`)
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli;
@@ -445,4 +446,195 @@ fn g4cc6_trace_on_credential_ops()
   assert!( stderr.contains( "# clr isolated" ), "stderr must contain '# clr isolated': {stderr}" );
   assert!( stderr.contains( "# creds:" ),        "stderr must contain '# creds:': {stderr}" );
   assert!( stderr.contains( "# timeout: 30s" ),  "stderr must contain '# timeout: 30s': {stderr}" );
+}
+
+// ─── Group 5: Session Listing ──────────────────────────────────────────────
+// Source: tests/docs/cli/param_group/05_session_listing.md
+
+/// G5CC1: `clr ps --mode all --columns pid,task` succeeds; no subprocess spawned.
+///
+/// `clr ps` is a read-only inspection command — it never spawns a `claude` subprocess.
+/// With ≥1 fake process running, exit 0; no subprocess stderr pollution.
+///
+/// Spec: `05_session_listing.md` G5-CC1
+#[ cfg( unix ) ]
+#[ test ]
+fn g5cc1_ps_consumes_params_no_subprocess()
+{
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--mode", "all", "--columns", "pid,task" ] )
+    .env( "PATH", &path_val )
+    .output()
+    .expect( "run clr ps --mode all --columns pid,task" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  assert!(
+    out.status.success(),
+    "G5CC1: exit 0 expected, got {:?}",
+    out.status.code()
+  );
+}
+
+/// G5CC2: All 3 params accepted by `clr ps` without error.
+///
+/// `--mode all`, `--columns pid,task`, `--wide` are all accepted; `--columns` wins
+/// over `--wide` so only PID and Task are shown.
+///
+/// Spec: `05_session_listing.md` G5-CC2
+#[ cfg( unix ) ]
+#[ test ]
+fn g5cc2_all_three_params_accepted()
+{
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--mode", "all", "--columns", "pid,task", "--wide" ] )
+    .env( "PATH", &path_val )
+    .output()
+    .expect( "run clr ps --mode all --columns pid,task --wide" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    out.status.success(),
+    "G5CC2: exit 0 expected, got {:?}; stderr: {stderr}",
+    out.status.code()
+  );
+  assert!(
+    stderr.is_empty(),
+    "G5CC2: no error on stderr about unknown flags. Got: {stderr}"
+  );
+}
+
+/// G5CC3: `--mode print --columns pid,task --wide` → only print-mode shown; PID + Task only.
+///
+/// `--columns` wins over `--wide`; `--mode print` filters to print-mode rows only.
+///
+/// Spec: `05_session_listing.md` G5-CC3
+#[ cfg( unix ) ]
+#[ test ]
+fn g5cc3_columns_wins_mode_filter_applied()
+{
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude, spawn_print_claude };
+
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg_interactive = spawn_fake_claude( &path_val );
+  let mut bg_print       = spawn_print_claude( &path_val );
+  let     pid_print      = bg_print.id();
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--mode", "print", "--columns", "pid,task", "--wide" ] )
+    .env( "PATH", &path_val )
+    .output()
+    .expect( "run clr ps --mode print --columns pid,task --wide" );
+
+  let _ = bg_interactive.kill();
+  let _ = bg_interactive.wait();
+  let _ = bg_print.kill();
+  let _ = bg_print.wait();
+
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( out.status.success(), "G5CC3: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( &pid_print.to_string() ),
+    "G5CC3: print PID {pid_print} must appear. Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( "PID" ) && stdout.contains( "Task" ),
+    "G5CC3: only PID and Task columns must be visible. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "Mode" ) && !stdout.contains( "Command" ) && !stdout.contains( "Binary" ),
+    "G5CC3: Mode/Command/Binary must NOT appear (--columns wins over --wide). Got:\n{stdout}"
+  );
+}
+
+/// G5CC4: Session Listing params do not appear in `clr run --help` output.
+///
+/// `--mode`, `--columns`, `--wide` are ps-only and must not be listed
+/// in the `run` command's help.
+///
+/// Note: uses `"--mode "` (with trailing space) to avoid matching the
+/// `--model` option which shares `--mode` as a prefix.
+///
+/// Spec: `05_session_listing.md` G5-CC4
+#[ test ]
+fn g5cc4_session_listing_params_not_in_run_help()
+{
+  let out    = run_cli( &[ "run", "--help" ] );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( out.status.success(), "G5CC4: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    !stdout.contains( "--mode " ),
+    "G5CC4: --mode must NOT appear in clr run --help (note: --model is allowed). Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "--columns" ),
+    "G5CC4: --columns must NOT appear in clr run --help. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "--wide" ),
+    "G5CC4: --wide must NOT appear in clr run --help. Got:\n{stdout}"
+  );
+}
+
+/// G5CC5: `CLR_PS_MODE=interactive` + `CLR_PS_COLUMNS=pid,elapsed` env vars respected.
+///
+/// Only interactive sessions shown; only PID and Elapsed columns visible.
+///
+/// Spec: `05_session_listing.md` G5-CC5
+#[ cfg( unix ) ]
+#[ test ]
+fn g5cc5_env_vars_respected()
+{
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude, spawn_print_claude };
+
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg_interactive  = spawn_fake_claude( &path_val );
+  let     pid_interactive = bg_interactive.id();
+  let mut bg_print        = spawn_print_claude( &path_val );
+  let     pid_print       = bg_print.id();
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .arg( "ps" )
+    .env( "PATH", &path_val )
+    .env( "CLR_PS_MODE", "interactive" )
+    .env( "CLR_PS_COLUMNS", "pid,elapsed" )
+    .output()
+    .expect( "run clr ps with CLR_PS_MODE=interactive CLR_PS_COLUMNS=pid,elapsed" );
+
+  let _ = bg_interactive.kill();
+  let _ = bg_interactive.wait();
+  let _ = bg_print.kill();
+  let _ = bg_print.wait();
+
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( out.status.success(), "G5CC5: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( &pid_interactive.to_string() ),
+    "G5CC5: interactive PID {pid_interactive} must appear. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( &pid_print.to_string() ),
+    "G5CC5: print PID {pid_print} must NOT appear. Got:\n{stdout}"
+  );
+  assert!( stdout.contains( "PID" ),     "G5CC5: PID column must appear. Got:\n{stdout}" );
+  assert!( stdout.contains( "Elapsed" ), "G5CC5: Elapsed column must appear. Got:\n{stdout}" );
+  assert!( !stdout.contains( "CPU%" ),   "G5CC5: CPU% must NOT appear. Got:\n{stdout}" );
 }

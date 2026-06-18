@@ -57,8 +57,11 @@
 | 055_retry_override_delay.md | `--retry-override-delay` parameter spec (Tier 1) |
 | 056_retry_default.md | `--retry-default` parameter spec (Tier 3, default=2) |
 | 057_retry_default_delay.md | `--retry-default-delay` parameter spec (Tier 3, default=30) |
+| 058_mode.md | `--mode` parameter spec (ps session filter) |
+| 059_columns.md | `--columns` parameter spec (ps column selector) |
+| 060_wide.md | `--wide` flag spec (ps wide output) |
 
-### All Parameters (53 total)
+### All Parameters (56 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -94,8 +97,8 @@
 | 30 | `--expect` | string | — | `val1\|val2\|…` | Pipe-separated enum values; stdout must match one after trim+lowercase | 2 cmds |
 | 31 | `--expect-strategy` | enum | `fail` | `fail`/`retry`/`default:<V>` | Mismatch handling: exit 3, retry N times, or output fallback value | 2 cmds |
 | 33 | `--max-sessions` | u32 | 30 | 0 to 4294967295 | Max concurrent Claude Code sessions before blocking; 0 = unlimited | 2 cmds |
-| 34 | `--retry-on-transient` | u8 | auto | 0–255 | Transient class retry count (Tier 2); effective default = 2 via fallback | 2 cmds |
-| 35 | `--transient-delay` | u32 | auto | 0 to 4294967295 | Transient class delay (Tier 2); effective default = 30 via fallback | 2 cmds |
+| 34 | `--retry-on-transient` | u8 | auto | 0–255 | Transient class retry count (Tier 2) | 2 cmds |
+| 35 | `--transient-delay` | u32 | auto | 0 to 4294967295 | Transient class delay (Tier 2) | 2 cmds |
 | 36 | `--timeout` | u32 | `0` | 0 to 4294967295 | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only; contrast with param 20) | 2 cmds |
 | 40 | `--retry-on-account` | u8 | 0 | 0–255 | Account class retry count (class default = 0; opt-in only) | 2 cmds |
 | 41 | `--account-delay` | u32 | auto | 0 to 4294967295 | Account class delay (Tier 2) | 2 cmds |
@@ -115,10 +118,13 @@
 | 55 | `--retry-override-delay` | u32 | auto | 0 to 4294967295 | Tier 1: forces delay for all error classes | 2 cmds |
 | 56 | `--retry-default` | u8 | `2` | 0–255 | Tier 3: fallback retry count for all unset classes | 2 cmds |
 | 57 | `--retry-default-delay` | u32 | `30` | 0 to 4294967295 | Tier 3: fallback delay for all unset classes | 2 cmds |
+| 58 | `--mode` | enum | `all` | `all`/`interactive`/`print` | Filter `clr ps` by session execution mode | 1 cmd |
+| 59 | `--columns` | string | 8 default cols | Comma-separated column keys | Select which columns to display in `clr ps` | 1 cmd |
+| 60 | `--wide` | bool | false | present/absent | Show all 11 columns in `clr ps` | 1 cmd |
 
-**Total:** 53 parameters
+**Total:** 56 parameters
 
-**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25–36, 40–57 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md).
+**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25–36, 40–57 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60 form [Session Listing](../param_group/05_session_listing.md).
 
 ### Navigation
 
@@ -175,6 +181,9 @@
 - [`--retry-override-delay`](055_retry_override_delay.md)
 - [`--retry-default`](056_retry_default.md)
 - [`--retry-default-delay`](057_retry_default_delay.md)
+- [`--mode`](058_mode.md)
+- [`--columns`](059_columns.md)
+- [`--wide`](060_wide.md)
 
 ### Quick Reference
 
@@ -182,4 +191,4 @@
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 51 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.
+**Commands by parameter count:** `run` = 51 parameters, `ps` = 3 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.

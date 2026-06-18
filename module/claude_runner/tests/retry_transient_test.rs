@@ -278,9 +278,9 @@ fn ec9_old_flag_name_rejected()
 ///
 /// Root Cause: default was 1 (old retry-on-rate-limit); now auto→fallback(2) via 3-tier system
 /// Why Not Caught: old EC-10 used --retry-delay (old name); default semantics changed
-/// Fix Applied: uses --retry-default-delay 0 (explicit fallback delay) so test doesn't rely
-///              on hardcoded defaults; validates 3-tier resolution fires correctly
-/// Prevention: explicit --retry-default-delay 0 avoids 30s sleep; guards default=2 behavior
+/// Fix Applied: uses --retry-default 2 (explicit count) and --retry-default-delay 0 (explicit
+///              delay) so test does not rely on hardcoded defaults; validates 3-tier resolution
+/// Prevention: explicit --retry-default 2 and --retry-default-delay 0 make test non-fragile
 /// Pitfall: must NOT set --retry-on-transient; if set the test covers explicit value not default
 #[ cfg( unix ) ]
 #[ test ]
@@ -308,7 +308,7 @@ fn ec10_transient_fallback_default_fires_without_flag()
   let bin = env!( "CARGO_BIN_EXE_clr" );
 
   let out = Command::new( bin )
-    .args( [ "-p", "--retry-default-delay", "0", "--max-sessions", "0", "x" ] )
+    .args( [ "-p", "--retry-default", "2", "--retry-default-delay", "0", "--max-sessions", "0", "x" ] )
     .env( "PATH", &new_path )
     .env_remove( "CLR_RETRY_ON_TRANSIENT" )
     .env_remove( "CLR_RETRY_DEFAULT" )

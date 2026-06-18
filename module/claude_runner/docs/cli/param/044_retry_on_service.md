@@ -8,7 +8,7 @@ counter. On exhaustion, `clr` emits an exhaustion message to stderr and
 propagates the subprocess exit code.
 
 - **Type:** u8 (0–255)
-- **Default:** `auto` (inherits from `--retry-default`, Tier 3 fallback; effective default = 2)
+- **Default:** `auto` (inherits from `--retry-default`, Tier 3 fallback)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Replaces:** `--retry-on-api-error` (renamed + renumbered from 037)
