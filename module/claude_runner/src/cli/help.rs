@@ -143,17 +143,33 @@ pub( crate ) fn print_ps_help() -> !
   println!( "clr ps — List running Claude Code sessions" );
   println!();
   println!( "USAGE:" );
-  println!( "  clr ps" );
+  println!( "  clr ps [OPTIONS]" );
   println!();
-  println!( "ACTIVE SESSIONS TABLE:" );
-  println!( "  #                                  Row index" );
-  println!( "  PID                                Process ID" );
-  println!( "  Elapsed                            Time since session started" );
-  println!( "  CPU%                               CPU usage percentage" );
-  println!( "  RAM                                Resident memory (K or M suffix)" );
-  println!( "  State                              Process state (R/S/Z…)" );
-  println!( "  Absolute Path                      Working directory (\\$PRO prefix shortened when PRO is set)" );
-  println!( "  Task                               Last human message extracted from session JSONL (≤35 chars)" );
+  println!( "OPTIONS:" );
+  println!( "  -m, --mode <MODE>                   Filter rows: all (default), print, interactive" );
+  println!( "      --columns <COLS>                Comma-separated column keys (overrides --wide)" );
+  println!( "  -w, --wide                          Show all 11 columns" );
+  println!( "  -h, --help                          Show this help and exit" );
+  println!();
+  // Fix(BUG-303): key names must match COLUMN_KEYS constant (idx, cmd — not num, command).
+  // Root cause: print_ps_help() was authored with num/command names diverging from
+  //   COLUMN_KEYS (idx/cmd); user-visible --help showed invalid --columns keys.
+  // Pitfall: COLUMN_KEYS and print_ps_help() are separate sources with no compile-time link —
+  //   renaming a column key must update both; EC-10 regression test guards this.
+  println!( "COLUMN KEYS (for --columns):" );
+  println!( "  idx        #              Row index" );
+  println!( "  pid        PID            Process ID" );
+  println!( "  elapsed    Elapsed        Time since session started" );
+  println!( "  cpu        CPU%           CPU usage percentage" );
+  println!( "  ram        RAM            Resident memory (K or M suffix)" );
+  println!( "  state      State          Process state (R/S/Z…)" );
+  println!( "  path       Absolute Path  Working directory (\\$PRO prefix shortened when PRO is set)" );
+  println!( "  task       Task           Last human message extracted from session JSONL (≤35 chars)" );
+  println!( "  mode       Mode           Execution mode: print or interactive" );
+  println!( "  cmd        Command        Arguments passed after the binary (flags and values)" );
+  println!( "  binary     Binary         Full executable path of the claude binary" );
+  println!();
+  println!( "DEFAULT COLUMNS: idx, pid, elapsed, cpu, ram, state, path, task" );
   println!();
   println!( "QUEUED CLR PROCESSES TABLE (shown when gate files exist in CLR_GATE_DIR):" );
   println!( "  #                                  Row index" );
@@ -164,9 +180,11 @@ pub( crate ) fn print_ps_help() -> !
   println!();
   println!( "EXIT CODES:" );
   println!( "  0    Success (table printed or empty-state message shown)" );
-  println!( "  1    Error (unexpected argument)" );
+  println!( "  1    Error (unexpected argument, invalid --mode value, or unknown column key)" );
   println!();
   println!( "ENVIRONMENT:" );
+  println!( "  CLR_PS_MODE                        Default value for --mode" );
+  println!( "  CLR_PS_COLUMNS                     Default value for --columns" );
   println!( "  CLR_GATE_DIR                       Directory for CLR gate state files (default: /tmp/clr-gate)" );
   std::process::exit( 0 );
 }
@@ -210,9 +228,9 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --timeout <SECS>                   Kill subprocess after N seconds (0 = unlimited, default: 0)" );
   println!( "  --retry-override <N>               Force retry count for all error classes" );
   println!( "  --retry-default <N>                Fallback retry count (default: 2)" );
-  println!( "  --retry-on-transient <N>           Transient class retry count" );
-  println!( "  --retry-on-service <N>             Service class retry count" );
-  println!( "  --retry-on-unknown <N>             Unknown class retry count" );
+  println!( "  --retry-on-transient <N>           Transient class retry count (default: auto → fallback)" );
+  println!( "  --retry-on-service <N>             Service class retry count (default: auto → fallback)" );
+  println!( "  --retry-on-unknown <N>             Unknown class retry count (default: auto → fallback)" );
   println!( "  -h, --help                         Show this help" );
   println!();
   println!( "See `clr --help` for the full retry option list (20 params, 3-tier hierarchy)." );

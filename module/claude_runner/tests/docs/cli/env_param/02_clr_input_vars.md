@@ -1,6 +1,6 @@
 # Env Param :: CLR_* Input Variables
 
-Edge cases for the 54 `CLR_*` input environment variable fallbacks (51 for `run` + 3 for `isolated`/`refresh`).
+Edge cases for the 56 `CLR_*` input environment variable fallbacks (51 for `run` + 3 for `isolated`/`refresh` + 2 for `ps`).
 Source: [`env_param.md`](../../../../docs/cli/env_param.md)
 Implementation: `apply_env_vars()` in `src/cli/env.rs`; `apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/cli/cred_parse.rs`
 Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E18–E57)

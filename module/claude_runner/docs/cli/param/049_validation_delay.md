@@ -6,7 +6,7 @@ effective retry count for Validation is 0 or when `--expect-strategy` is not
 `retry`.
 
 - **Type:** u32 (seconds)
-- **Default:** `auto` (inherits from `--retry-default-delay`, Tier 3 fallback; effective default = 30)
+- **Default:** `auto` (inherits from `--retry-default-delay`, Tier 3 fallback)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 

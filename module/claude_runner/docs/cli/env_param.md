@@ -7,16 +7,17 @@
 - **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (-> param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (56 total)
+### All Env Parameters (58 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
 | Input (CLR_*) — `run` subcommand | 51 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 3 | Caller env fallbacks for credential operation parameters |
+| Input (CLR_*) — `ps` subcommand | 2 | Caller env fallbacks for session listing display parameters |
 | Runtime config (CLR_*) | 1 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 56 environment variables
+**Total:** 58 environment variables
 
 ---
 
@@ -143,7 +144,31 @@ subcommand. It is a cross-command env var that applies to all three executing co
 
 ---
 
-### Env Param 3: `CLAUDE_CODE_MAX_OUTPUT_TOKENS`
+### Env Param 3: CLR_* Input Parameters — `ps` Subcommand
+
+Environment variable fallbacks for the 2 `ps` session listing display parameters.
+`dispatch_ps()` in `src/cli/ps.rs` reads these before table rendering.
+Each variable is applied **only when the corresponding CLI flag is absent** — the
+CLI flag always wins when both are present.
+
+| # | Variable | CLI Parameter | Type | Notes |
+|---|----------|---------------|------|-------|
+| 1 | `CLR_PS_MODE` | [`--mode`](param/058_mode.md) | string | Parsed as enum (`all`/`interactive`/`print`); invalid values → exit 1 |
+| 2 | `CLR_PS_COLUMNS` | [`--columns`](param/059_columns.md) | string | Comma-separated column keys; applied when `--columns` absent |
+
+**Precedence:**
+
+1. CLI flag (wins unconditionally when provided)
+2. `CLR_PS_*` env var (applied when CLI field absent)
+3. Built-in default (`all` for mode, 8 default columns for columns)
+
+**Note:** `--wide` has no env var equivalent — it is a convenience shorthand only.
+When both `CLR_PS_COLUMNS` and `--wide` are active, `CLR_PS_COLUMNS` wins (explicit
+column selection overrides the convenience flag).
+
+---
+
+### Env Param 4: `CLAUDE_CODE_MAX_OUTPUT_TOKENS`
 
 Set by the `clr` runner immediately before spawning the `claude` subprocess.
 Controls the maximum number of output tokens the Claude Code subprocess may
@@ -170,7 +195,7 @@ clr --max-tokens 50000 --dry-run "test"      # shows: CLAUDE_CODE_MAX_OUTPUT_TOK
 
 ---
 
-### Env Param 4: `CLR_GATE_DIR` — Runtime Configuration
+### Env Param 5: `CLR_GATE_DIR` — Runtime Configuration
 
 Overrides the default gate state directory used by `gate.rs` (write) and `ps.rs` (read).
 

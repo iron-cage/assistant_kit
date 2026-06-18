@@ -18,10 +18,17 @@ pub struct ProcessInfo
 {
   /// The process identifier.
   pub pid     : u32,
-  /// Full cmdline string (NUL bytes replaced with spaces).
+  /// Full cmdline string (NUL bytes joined with spaces).
   pub cmdline : String,
   /// Working directory of the process (empty on error or deleted CWD).
   pub cwd     : PathBuf,
+  /// Individual arguments from the NUL-delimited `/proc/{pid}/cmdline`.
+  ///
+  /// `args[0]` is the executable path; `args[1..]` are the flags and values.
+  /// Populated from the same NUL-split used to extract the binary name — never
+  /// derived by splitting `cmdline` on spaces (which loses boundaries for paths
+  /// that contain spaces).
+  pub args    : Vec< String >,
 }
 
 /// Scan `/proc` for Claude Code processes, returning one `ProcessInfo` per match.
@@ -61,9 +68,15 @@ pub fn find_claude_processes() -> Vec< ProcessInfo >
     let cmdline_path = format!( "{proc_root}/{pid}/cmdline" );
     let Ok( cmdline_raw ) = std::fs::read( &cmdline_path ) else { continue; };
 
-    // First NUL-delimited field is the executable path.
-    let first_field = cmdline_raw.split( | &b | b == 0 ).next().unwrap_or( &[] );
-    let binary_path = core::str::from_utf8( first_field ).unwrap_or( "" );
+    // NUL-delimited fields → individual arguments.  Trailing empty fields
+    // (double-NUL terminator written by the kernel) are filtered out.
+    let args : Vec< String > = cmdline_raw
+    .split( | &b | b == b'\0' )
+    .filter( | s | !s.is_empty() )
+    .map( | s | String::from_utf8_lossy( s ).into_owned() )
+    .collect();
+
+    let binary_path = args.first().map_or( "", String::as_str );
     let binary_name = std::path::Path::new( binary_path )
     .file_name()
     .and_then( | s | s.to_str() )
@@ -75,14 +88,10 @@ pub fn find_claude_processes() -> Vec< ProcessInfo >
     let cwd_path = format!( "{proc_root}/{pid}/cwd" );
     let cwd = std::fs::read_link( &cwd_path ).unwrap_or_default();
 
-    // Build human-readable cmdline (NUL → space).
-    let cmdline = cmdline_raw
-    .iter()
-    .map( | &b | if b == 0 { b' ' } else { b } )
-    .collect::< Vec< u8 > >();
-    let cmdline = String::from_utf8_lossy( &cmdline ).trim_end().to_string();
+    // Human-readable cmdline is the space-join of args.
+    let cmdline = args.join( " " );
 
-    result.push( ProcessInfo { pid, cmdline, cwd } );
+    result.push( ProcessInfo { pid, cmdline, cwd, args } );
   }
 
   result

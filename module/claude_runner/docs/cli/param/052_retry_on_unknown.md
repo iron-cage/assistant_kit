@@ -9,7 +9,7 @@ and re-invokes the subprocess, decrementing the retry counter. On exhaustion,
 exit code.
 
 - **Type:** u8 (0–255)
-- **Default:** `auto` (inherits from `--retry-default`, Tier 3 fallback; effective default = 2)
+- **Default:** `auto` (inherits from `--retry-default`, Tier 3 fallback)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Replaces:** `--retry-on-unknown-error` (renamed + renumbered from 039)

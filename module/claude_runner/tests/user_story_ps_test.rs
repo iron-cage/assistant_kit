@@ -20,7 +20,9 @@ mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
 
 #[ cfg( unix ) ]
-use cli_binary_test_helpers::{ fake_claude_binary_dir, run_clr_ps, spawn_fake_claude };
+use cli_binary_test_helpers::{
+  fake_claude_binary_dir, run_clr_ps, spawn_fake_claude, spawn_print_claude,
+};
 
 // ── US-1: No sessions ─────────────────────────────────────────────────────────
 
@@ -68,8 +70,12 @@ fn us_03_typo_guard()
 // ── US-4: Sessions present ────────────────────────────────────────────────────
 
 /// US-4 (AC-001, AC-005): ≥1 fake `claude` process → exit 0, stdout uses plain
-/// style (no `┌` border) and contains `PID`, `Elapsed`, `Absolute Path`, `Task`
-/// column headers.
+/// style (no `┌` border in caption/header) and contains `PID`, `Elapsed`,
+/// `Absolute Path`, `Task` column headers.
+///
+/// Only the first non-blank line is checked for `┌`: task-column data from real
+/// host sessions may contain unicode box characters; the structural caption line
+/// will never have `┌` in plain style.
 #[ cfg( unix ) ]
 #[ test ]
 fn us_04_sessions_plain_style_with_headers()
@@ -84,7 +90,11 @@ fn us_04_sessions_plain_style_with_headers()
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
-  assert!( !stdout.contains( '\u{250C}' ), "must not contain ┌ border (plain style): {stdout}" );
+  let first_line = stdout.lines().find( |l| !l.trim().is_empty() ).unwrap_or( "" );
+  assert!(
+    !first_line.contains( '\u{250C}' ),
+    "table caption must use plain style — no ┌ border, got first line: {first_line}"
+  );
   assert!( stdout.contains( "PID" ), "missing PID header: {stdout}" );
   assert!( stdout.contains( "Elapsed" ), "missing Elapsed header: {stdout}" );
   assert!( stdout.contains( "Absolute Path" ), "missing Absolute Path header: {stdout}" );
@@ -279,4 +289,229 @@ fn us_09_active_sessions_ordered_oldest_first()
     row_a.unwrap() < row_b.unwrap(),
     "US-9 (AC-012): oldest session (PID {pid_a}) must appear at earlier row than newest (PID {pid_b}).\n{stdout}"
   );
+}
+
+// ── US-10: `--mode print` shows only print-mode sessions ─────────────────────
+
+/// US-10 (AC-013): `clr ps --mode print` shows only print-mode sessions.
+#[ cfg( unix ) ]
+#[ test ]
+fn us_10_mode_print_filters_sessions()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+
+  let mut bg_interactive = spawn_fake_claude( &path_val );
+  let pid_interactive     = bg_interactive.id();
+
+  let mut bg_print = spawn_print_claude( &path_val );
+  let pid_print    = bg_print.id();
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--mode", "print" ] )
+    .env( "PATH", &path_val )
+    .output()
+    .expect( "run clr ps --mode print" );
+
+  let _ = bg_interactive.kill();
+  let _ = bg_interactive.wait();
+  let _ = bg_print.kill();
+  let _ = bg_print.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "US-10 (AC-013): exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( &pid_print.to_string() ),
+    "US-10 (AC-013): print PID {pid_print} must appear. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( &pid_interactive.to_string() ),
+    "US-10 (AC-013): interactive PID {pid_interactive} must NOT appear. Got:\n{stdout}"
+  );
+}
+
+// ── US-11: `--mode bogus` exits 1 ────────────────────────────────────────────
+
+/// US-11 (AC-014): `clr ps --mode bogus` exits 1 with error message.
+#[ test ]
+fn us_11_mode_bogus_exits_1()
+{
+  let out    = run_cli( &[ "ps", "--mode", "bogus" ] );
+  let stderr = stderr_str( &out );
+  assert!( !out.status.success(), "US-11 (AC-014): exit 1 expected, got {:?}", out.status.code() );
+  assert!(
+    stderr.contains( "interactive" ) && stderr.contains( "print" ),
+    "US-11 (AC-014): stderr must list valid mode values. Got: {stderr}"
+  );
+}
+
+// ── US-12: `--columns pid,path,task` shows custom subset ─────────────────────
+
+/// US-12 (AC-015): `clr ps --columns pid,path,task` shows PID, Absolute Path, Task.
+#[ cfg( unix ) ]
+#[ test ]
+fn us_12_columns_custom_subset()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--columns", "pid,path,task" ] )
+    .env( "PATH", &path_val )
+    .output()
+    .expect( "run clr ps --columns" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "US-12 (AC-015): exit 0 expected, got {:?}", out.status.code() );
+  assert!( stdout.contains( "PID" ),           "US-12: PID must be present: {stdout}" );
+  assert!( stdout.contains( "Absolute Path" ), "US-12: Absolute Path must be present: {stdout}" );
+  assert!( stdout.contains( "Task" ),          "US-12: Task must be present: {stdout}" );
+  assert!( !stdout.contains( "CPU%" ), "US-12: CPU% must be absent: {stdout}" );
+  assert!( !stdout.contains( "RAM" ),  "US-12: RAM must be absent: {stdout}" );
+}
+
+// ── US-13: `--columns bogus` exits 1 ─────────────────────────────────────────
+
+/// US-13 (AC-016): `clr ps --columns bogus` exits 1 with error listing valid keys.
+#[ test ]
+fn us_13_columns_bogus_exits_1()
+{
+  let out    = run_cli( &[ "ps", "--columns", "bogus" ] );
+  let stderr = stderr_str( &out );
+  assert!( !out.status.success(), "US-13 (AC-016): exit 1 expected, got {:?}", out.status.code() );
+  assert!(
+    stderr.contains( "bogus" ) && ( stderr.contains( "pid" ) || stderr.contains( "idx" ) ),
+    "US-13 (AC-016): stderr must list valid column keys. Got: {stderr}"
+  );
+}
+
+// ── US-14: `--wide` shows all 11 columns ─────────────────────────────────────
+
+/// US-14 (AC-017): `clr ps --wide` shows all 11 columns including Mode, Command, Binary.
+#[ cfg( unix ) ]
+#[ test ]
+fn us_14_wide_shows_all_columns()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--wide" ] )
+    .env( "PATH", &path_val )
+    .output()
+    .expect( "run clr ps --wide" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "US-14 (AC-017): exit 0 expected, got {:?}", out.status.code() );
+  assert!( stdout.contains( "Mode" ),    "US-14: Mode must be present: {stdout}" );
+  assert!( stdout.contains( "Command" ), "US-14: Command must be present: {stdout}" );
+  assert!( stdout.contains( "Binary" ),  "US-14: Binary must be present: {stdout}" );
+}
+
+// ── US-15: `--columns` overrides `--wide` ────────────────────────────────────
+
+/// US-15 (AC-018): `clr ps --wide --columns pid,task` → only PID and Task visible.
+#[ cfg( unix ) ]
+#[ test ]
+fn us_15_columns_overrides_wide()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--wide", "--columns", "pid,task" ] )
+    .env( "PATH", &path_val )
+    .output()
+    .expect( "run clr ps --wide --columns" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "US-15 (AC-018): exit 0 expected, got {:?}", out.status.code() );
+  assert!( stdout.contains( "PID" ),  "US-15: PID must be present: {stdout}" );
+  assert!( stdout.contains( "Task" ), "US-15: Task must be present: {stdout}" );
+  assert!( !stdout.contains( "Mode" ),    "US-15: Mode must be absent: {stdout}" );
+  assert!( !stdout.contains( "Command" ), "US-15: Command must be absent: {stdout}" );
+  assert!( !stdout.contains( "Binary" ),  "US-15: Binary must be absent: {stdout}" );
+}
+
+// ── US-16: `CLR_PS_MODE` env var filters sessions ────────────────────────────
+
+/// US-16 (AC-019): `CLR_PS_MODE=print` env var shows only print-mode sessions.
+#[ cfg( unix ) ]
+#[ test ]
+fn us_16_clr_ps_mode_env_var()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+
+  let mut bg_interactive = spawn_fake_claude( &path_val );
+  let pid_interactive     = bg_interactive.id();
+
+  let mut bg_print = spawn_print_claude( &path_val );
+  let pid_print    = bg_print.id();
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .arg( "ps" )
+    .env( "PATH", &path_val )
+    .env( "CLR_PS_MODE", "print" )
+    .output()
+    .expect( "run clr ps with CLR_PS_MODE=print" );
+
+  let _ = bg_interactive.kill();
+  let _ = bg_interactive.wait();
+  let _ = bg_print.kill();
+  let _ = bg_print.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "US-16 (AC-019): exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( &pid_print.to_string() ),
+    "US-16 (AC-019): print PID {pid_print} must appear. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( &pid_interactive.to_string() ),
+    "US-16 (AC-019): interactive PID {pid_interactive} must NOT appear. Got:\n{stdout}"
+  );
+}
+
+// ── US-17: `CLR_PS_COLUMNS` env var selects columns ─────────────────────────
+
+/// US-17 (AC-020): `CLR_PS_COLUMNS=pid,elapsed` shows PID and Elapsed only.
+#[ cfg( unix ) ]
+#[ test ]
+fn us_17_clr_ps_columns_env_var()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .arg( "ps" )
+    .env( "PATH", &path_val )
+    .env( "CLR_PS_COLUMNS", "pid,elapsed" )
+    .output()
+    .expect( "run clr ps with CLR_PS_COLUMNS=pid,elapsed" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "US-17 (AC-020): exit 0 expected, got {:?}", out.status.code() );
+  assert!( stdout.contains( "PID" ),     "US-17: PID must be present: {stdout}" );
+  assert!( stdout.contains( "Elapsed" ), "US-17: Elapsed must be present: {stdout}" );
+  assert!( !stdout.contains( "CPU%" ),          "US-17: CPU% must be absent: {stdout}" );
+  assert!( !stdout.contains( "RAM" ),           "US-17: RAM must be absent: {stdout}" );
+  assert!( !stdout.contains( "Task" ),          "US-17: Task must be absent: {stdout}" );
+  assert!( !stdout.contains( "Absolute Path" ), "US-17: Absolute Path must be absent: {stdout}" );
 }

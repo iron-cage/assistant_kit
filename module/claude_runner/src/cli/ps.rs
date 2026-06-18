@@ -4,29 +4,116 @@
 use claude_core::process::{ find_claude_processes, ProcessInfo };
 use data_fmt::{ RowBuilder, TableFormatter, TableConfig, TableCaption, Format };
 
+// Runtime configuration for `clr ps`, assembled from env-var defaults (applied
+// first) then CLI tokens (which overwrite env values — CLI-wins).
+struct PsConfig
+{
+  /// Mode filter: `None` or `"all"` = no filter; `"print"` / `"interactive"` = filter rows.
+  mode    : Option< String >,
+  /// Comma-separated column keys from `--columns`; overrides `--wide` when present.
+  columns : Option< String >,
+  /// When `true` and `columns` is `None`: show all 11 columns.
+  wide    : bool,
+}
+
+// Classify a process's execution mode from its cmdline args.
+//
+// Returns `"print"` when `--print` or `-p` appears as a discrete argument
+// in `args[1..]`; returns `"interactive"` otherwise.
+//
+// Must use `args` (NUL-split) — NOT `cmdline` (space-joined) — because a path
+// component could contain the substring "--print" producing a false positive.
+fn classify_mode( args : &[ String ] ) -> &str
+{
+  if args.iter().any( | a | a == "--print" || a == "-p" )
+  {
+    "print"
+  }
+  else
+  {
+    "interactive"
+  }
+}
+
 /// Dispatch `clr ps`: list active Claude Code sessions and queued `clr` waiters
 /// in two plain-style tables.
 ///
-/// Accepts no arguments.  Exits 0 with the tables (or empty-state messages);
-/// exits 1 on any unexpected argument.
+/// Accepts `--mode`, `--columns`, `--wide` (and their short forms).
+/// Exits 0 with the tables (or empty-state messages); exits 1 on unknown or
+/// invalid arguments.
 pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
 {
-  // `ps` takes no flags or positional arguments — but intercepts help tokens.
-  if let Some( arg ) = tokens.get( 1 )
+  // Env-var defaults applied first; CLI tokens overwrite (CLI-wins).
+  let ( env_mode, env_columns ) = super::env::apply_ps_env_vars();
+  let mut config = PsConfig { mode : env_mode, columns : env_columns, wide : false };
+
+  let mut i = 1_usize; // tokens[0] is "ps"
+  while i < tokens.len()
   {
-    match arg.as_str()
+    match tokens[ i ].as_str()
     {
-      "--help" | "-h" | "help" => { super::help::print_ps_help(); }
-      _ =>
+      "--help" | "-h" | "help" =>
       {
-        eprintln!( "clr ps: unexpected argument `{arg}`\nRun 'clr --help' for usage." );
+        super::help::print_ps_help();
+      }
+      "--mode" | "-m" =>
+      {
+        i += 1;
+        if i >= tokens.len()
+        {
+          eprintln!( "clr ps: `--mode` requires a value (all|interactive|print)" );
+          std::process::exit( 1 );
+        }
+        config.mode = Some( tokens[ i ].clone() );
+      }
+      "--columns" =>
+      {
+        i += 1;
+        if i >= tokens.len()
+        {
+          eprintln!( "clr ps: `--columns` requires a value" );
+          std::process::exit( 1 );
+        }
+        config.columns = Some( tokens[ i ].clone() );
+      }
+      "--wide" | "-w" =>
+      {
+        config.wide = true;
+      }
+      arg =>
+      {
+        eprintln!( "clr ps: unexpected argument `{arg}`\nRun 'clr ps --help' for usage." );
         std::process::exit( 1 );
       }
+    }
+    i += 1;
+  }
+
+  // Validate mode (from CLI or env var) after all tokens are processed.
+  if let Some( ref m ) = config.mode
+  {
+    if !matches!( m.as_str(), "all" | "interactive" | "print" )
+    {
+      eprintln!(
+        "clr ps: invalid --mode value `{m}`; valid values: all, interactive, print"
+      );
+      std::process::exit( 1 );
+    }
+  }
+
+  // Eagerly validate --columns so unknown keys are caught even when no active
+  // sessions exist (build_active_table returns None early for empty proc lists).
+  if let Some( ref csv ) = config.columns
+  {
+    if let Err( msg ) = validate_columns( csv )
+    {
+      eprintln!( "clr ps: {msg}" );
+      std::process::exit( 1 );
     }
   }
 
   let procs        = find_claude_processes();
-  let active_table = build_active_table( &procs );
+  let active_table = build_active_table( &procs, &config );
   let queued_table = build_queued_table();
 
   match ( active_table, queued_table )
@@ -89,48 +176,134 @@ fn render_plain_table( builder : RowBuilder, caption : TableCaption ) -> String
   ).unwrap_or_default()
 }
 
-// Build the active sessions table, returning None when no sessions are running.
-fn build_active_table( procs : &[ ProcessInfo ] ) -> Option< String >
+// All 11 column keys in display order, paired with their table header strings.
+const COLUMN_KEYS : &[ ( &str, &str ) ] = &[
+  ( "idx",     "#" ),
+  ( "pid",     "PID" ),
+  ( "elapsed", "Elapsed" ),
+  ( "cpu",     "CPU%" ),
+  ( "ram",     "RAM" ),
+  ( "state",   "State" ),
+  ( "path",    "Absolute Path" ),
+  ( "task",    "Task" ),
+  ( "mode",    "Mode" ),
+  ( "cmd",     "Command" ),
+  ( "binary",  "Binary" ),
+];
+
+// Default column set (8 columns) shown when neither `--wide` nor `--columns` is given.
+const DEFAULT_COLUMNS : &[ &str ] = &[
+  "idx", "pid", "elapsed", "cpu", "ram", "state", "path", "task",
+];
+
+// Resolve the ordered list of column keys from PsConfig.
+//
+// Precedence: `--columns` wins over `--wide`; `--wide` enables all 11.
+// Returns a vec of `&'static str` keys drawn from `COLUMN_KEYS`.
+// Exits 1 with an error message if any key in `--columns` is unknown.
+fn resolve_columns( config : &PsConfig ) -> Vec< &'static str >
 {
-  if procs.is_empty() { return None; }
+  if let Some( ref csv ) = config.columns
+  {
+    return match validate_columns( csv )
+    {
+      Ok( keys ) => keys,
+      Err( msg ) =>
+      {
+        eprintln!( "clr ps: {msg}" );
+        std::process::exit( 1 );
+      }
+    };
+  }
+  if config.wide
+  {
+    return COLUMN_KEYS.iter().map( | ( k, _ ) | *k ).collect();
+  }
+  DEFAULT_COLUMNS.to_vec()
+}
+
+// Validate a comma-separated column key string against COLUMN_KEYS.
+//
+// Returns ordered `&'static str` keys (from the constant — not slices of the
+// input) so callers have a stable `'static` lifetime regardless of where the
+// input string lives.
+fn validate_columns( csv : &str ) -> Result< Vec< &'static str >, String >
+{
+  let mut out = Vec::new();
+  for raw in csv.split( ',' )
+  {
+    let key = raw.trim();
+    if let Some( ( k, _ ) ) = COLUMN_KEYS.iter().find( | ( k, _ ) | *k == key )
+    {
+      out.push( *k );
+    }
+    else
+    {
+      let valid : Vec< &str > = COLUMN_KEYS.iter().map( | ( k, _ ) | *k ).collect();
+      return Err( format!(
+        "unknown column key `{key}`; valid keys: {}",
+        valid.join( ", " )
+      ) );
+    }
+  }
+  if out.is_empty()
+  {
+    let valid : Vec< &str > = COLUMN_KEYS.iter().map( | ( k, _ ) | *k ).collect();
+    return Err( format!( "no column keys given; valid keys: {}", valid.join( ", " ) ) );
+  }
+  Ok( out )
+}
+
+// Build the active sessions table, returning None when no sessions match.
+fn build_active_table( procs : &[ ProcessInfo ], config : &PsConfig ) -> Option< String >
+{
+  // Apply mode filter before checking emptiness.
+  let mode = config.mode.as_deref().unwrap_or( "all" );
+  let filtered : Vec< &ProcessInfo > = if mode == "all"
+  {
+    procs.iter().collect()
+  }
+  else
+  {
+    procs.iter().filter( | p | classify_mode( &p.args ) == mode ).collect()
+  };
+
+  if filtered.is_empty() { return None; }
 
   // Sort oldest-first (AC-012): smallest started_at = longest running = row #1.
   #[ cfg( target_os = "linux" ) ]
   let sorted : Vec< &ProcessInfo > = {
     use claude_core::process::read_process_metrics;
-    let mut v : Vec< &ProcessInfo > = procs.iter().collect();
+    let mut v : Vec< &ProcessInfo > = filtered;
     v.sort_by_key( |p| read_process_metrics( p.pid )
       .map_or( u64::MAX, |m| m.started_at ) );
     v
   };
   #[ cfg( not( target_os = "linux" ) ) ]
-  let sorted : Vec< &ProcessInfo > = procs.iter().collect();
+  let sorted : Vec< &ProcessInfo > = filtered;
 
-  let headers = vec![
-    "#".to_string(),
-    "PID".to_string(),
-    "Elapsed".to_string(),
-    "CPU%".to_string(),
-    "RAM".to_string(),
-    "State".to_string(),
-    "Absolute Path".to_string(),
-    "Task".to_string(),
-  ];
+  let cols    = resolve_columns( config );
+  let headers : Vec< String > = cols.iter().map( |k|
+  {
+    COLUMN_KEYS.iter()
+      .find( | ( ck, _ ) | ck == k )
+      .map_or_else( || ( *k ).to_string(), | ( _, h ) | ( *h ).to_string() )
+  } ).collect();
 
   let mut builder = RowBuilder::new( headers );
   for ( idx, proc ) in sorted.iter().enumerate()
   {
-    let row = build_row( idx + 1, proc );
+    let row = build_row( idx + 1, proc, &cols );
     builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
   }
 
   let caption = TableCaption::new( "Active Sessions" )
-    .field( format!( "{} running", procs.len() ) );
+    .field( format!( "{} running", sorted.len() ) );
   Some( render_plain_table( builder, caption ) )
 }
 
-// Build one table row for the given process.
-fn build_row( idx : usize, proc : &ProcessInfo ) -> Vec< String >
+// Build one table row for the given process, emitting only the requested columns.
+fn build_row( idx : usize, proc : &ProcessInfo, cols : &[ &str ] ) -> Vec< String >
 {
   let pid = proc.pid;
 
@@ -154,10 +327,27 @@ fn build_row( idx : usize, proc : &ProcessInfo ) -> Vec< String >
   let ( elapsed, cpu, ram, state ) =
     ( "-".to_string(), "-".to_string(), "-".to_string(), "-".to_string() );
 
-  let path = shorten_path( &proc.cwd.display().to_string() );
-  let task = resolve_task( proc );
+  let path    = shorten_path( &proc.cwd.display().to_string() );
+  let task    = resolve_task( proc );
+  let mode    = classify_mode( &proc.args ).to_string();
+  let command = proc.args.get( 1.. ).unwrap_or( &[] ).join( " " );
+  let binary  = proc.args.first().cloned().unwrap_or_default();
 
-  vec![ idx.to_string(), pid.to_string(), elapsed, cpu, ram, state, path, task ]
+  cols.iter().map( |col| match *col
+  {
+    "idx"     => idx.to_string(),
+    "pid"     => pid.to_string(),
+    "elapsed" => elapsed.clone(),
+    "cpu"     => cpu.clone(),
+    "ram"     => ram.clone(),
+    "state"   => state.clone(),
+    "path"    => path.clone(),
+    "task"    => task.clone(),
+    "mode"    => mode.clone(),
+    "cmd"     => command.clone(),
+    "binary"  => binary.clone(),
+    _         => String::new(),
+  } ).collect()
 }
 
 // Replace the $PRO prefix in a path with the literal "$PRO" when the PRO env var is set.

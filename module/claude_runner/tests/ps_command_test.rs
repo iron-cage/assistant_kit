@@ -31,7 +31,9 @@ mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
 
 #[ cfg( unix ) ]
-use cli_binary_test_helpers::{ fake_claude_binary_dir, run_clr_ps, spawn_fake_claude };
+use cli_binary_test_helpers::{
+  fake_claude_binary_dir, run_clr_ps, spawn_fake_claude, spawn_print_claude,
+};
 
 // ── IT-1: 0 sessions ──────────────────────────────────────────────────────────
 
@@ -56,7 +58,12 @@ fn it_01_no_sessions_shows_message()
 // ── IT-2: ≥1 session → plain-style table ──────────────────────────────────────
 
 /// IT-2: with a fake `claude` process running, `clr ps` exits 0 and the
-/// output uses plain style — no unicode box-drawing border character (`┌`).
+/// output uses plain style — no unicode box-drawing border character (`┌`)
+/// in the table structure (caption + header).
+///
+/// Note: only the first non-blank line is checked for `┌` because task-column
+/// data from real host sessions may contain unicode characters; the table
+/// STRUCTURE never has `┌` in plain style (only in box-drawing style).
 #[ cfg( unix ) ]
 #[ test ]
 fn it_02_sessions_present_plain_style()
@@ -75,9 +82,10 @@ fn it_02_sessions_present_plain_style()
     stdout.contains( "PID" ),
     "stdout must contain PID header, got: {stdout}"
   );
+  let first_line = stdout.lines().find( |l| !l.trim().is_empty() ).unwrap_or( "" );
   assert!(
-    !stdout.contains( '\u{250C}' ), // must NOT have ┌
-    "stdout must use plain style — no ┌ border, got: {stdout}"
+    !first_line.contains( '\u{250C}' ), // must NOT have ┌ in the caption/header line
+    "table caption must use plain style — no ┌ border, got first line: {first_line}"
   );
 }
 
@@ -771,4 +779,271 @@ fn it_20_active_sessions_sorted_by_age()
     row_a.unwrap() < row_b.unwrap(),
     "IT-20 (BUG-301): oldest session (PID {pid_a}) must appear before newest (PID {pid_b}).\n{stdout}"
   );
+}
+
+// ── IT-21: `--mode print` shows only print-mode sessions ─────────────────────
+
+/// IT-21: `clr ps --mode print` shows only sessions whose cmdline args include `--print`.
+#[ cfg( unix ) ]
+#[ test ]
+fn it_21_mode_print_shows_only_print_sessions()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+
+  let mut bg_interactive = spawn_fake_claude( &path_val );
+  let pid_interactive     = bg_interactive.id();
+
+  let mut bg_print = spawn_print_claude( &path_val );
+  let pid_print    = bg_print.id();
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--mode", "print" ] )
+    .env( "PATH", &path_val )
+    .output()
+    .expect( "run clr ps --mode print" );
+
+  let _ = bg_interactive.kill();
+  let _ = bg_interactive.wait();
+  let _ = bg_print.kill();
+  let _ = bg_print.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-21: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( &pid_print.to_string() ),
+    "IT-21: print-mode PID {pid_print} must appear with --mode print. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( &pid_interactive.to_string() ),
+    "IT-21: interactive PID {pid_interactive} must NOT appear with --mode print. Got:\n{stdout}"
+  );
+}
+
+// ── IT-22: `--mode interactive` shows only interactive sessions ───────────────
+
+/// IT-22: `clr ps --mode interactive` shows only sessions without `--print` in cmdline.
+#[ cfg( unix ) ]
+#[ test ]
+fn it_22_mode_interactive_shows_only_interactive_sessions()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+
+  let mut bg_interactive = spawn_fake_claude( &path_val );
+  let pid_interactive     = bg_interactive.id();
+
+  let mut bg_print = spawn_print_claude( &path_val );
+  let pid_print    = bg_print.id();
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--mode", "interactive" ] )
+    .env( "PATH", &path_val )
+    .output()
+    .expect( "run clr ps --mode interactive" );
+
+  let _ = bg_interactive.kill();
+  let _ = bg_interactive.wait();
+  let _ = bg_print.kill();
+  let _ = bg_print.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-22: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( &pid_interactive.to_string() ),
+    "IT-22: interactive PID {pid_interactive} must appear with --mode interactive. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( &pid_print.to_string() ),
+    "IT-22: print-mode PID {pid_print} must NOT appear with --mode interactive. Got:\n{stdout}"
+  );
+}
+
+// ── IT-23: `--mode bogus` → exit 1 ───────────────────────────────────────────
+
+/// IT-23: `clr ps --mode bogus` exits 1 with stderr listing valid mode values.
+#[ test ]
+fn it_23_mode_bogus_exits_1()
+{
+  let out    = run_cli( &[ "ps", "--mode", "bogus" ] );
+  let stderr = stderr_str( &out );
+  assert!( !out.status.success(), "IT-23: exit 1 expected, got {:?}", out.status.code() );
+  assert!(
+    stderr.contains( "interactive" ) && stderr.contains( "print" ),
+    "IT-23: stderr must list valid mode values (interactive, print). Got: {stderr}"
+  );
+}
+
+// ── IT-24: `--columns pid,path,task` shows custom column subset ───────────────
+
+/// IT-24: `clr ps --columns pid,path,task` shows PID, Absolute Path, Task
+/// and does NOT show CPU%, RAM, State, Elapsed.
+#[ cfg( unix ) ]
+#[ test ]
+fn it_24_columns_custom_subset()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--columns", "pid,path,task" ] )
+    .env( "PATH", &path_val )
+    .output()
+    .expect( "run clr ps --columns" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-24: exit 0 expected, got {:?}", out.status.code() );
+  assert!( stdout.contains( "PID" ),           "IT-24: PID must be present: {stdout}" );
+  assert!( stdout.contains( "Absolute Path" ), "IT-24: Absolute Path must be present: {stdout}" );
+  assert!( stdout.contains( "Task" ),          "IT-24: Task must be present: {stdout}" );
+  assert!( !stdout.contains( "CPU%" ),    "IT-24: CPU% must be absent: {stdout}" );
+  assert!( !stdout.contains( "RAM" ),     "IT-24: RAM must be absent: {stdout}" );
+  assert!( !stdout.contains( "Elapsed" ), "IT-24: Elapsed must be absent: {stdout}" );
+  assert!( !stdout.contains( "State" ),   "IT-24: State must be absent: {stdout}" );
+}
+
+// ── IT-25: `--columns bogus` → exit 1 ────────────────────────────────────────
+
+/// IT-25: `clr ps --columns bogus` exits 1 with stderr listing valid column keys.
+#[ test ]
+fn it_25_columns_bogus_exits_1()
+{
+  let out    = run_cli( &[ "ps", "--columns", "bogus" ] );
+  let stderr = stderr_str( &out );
+  assert!( !out.status.success(), "IT-25: exit 1 expected, got {:?}", out.status.code() );
+  assert!(
+    stderr.contains( "bogus" ) && ( stderr.contains( "pid" ) || stderr.contains( "idx" ) ),
+    "IT-25: stderr must contain the unknown key and list valid keys. Got: {stderr}"
+  );
+}
+
+// ── IT-26: `--wide` shows all 11 columns ─────────────────────────────────────
+
+/// IT-26: `clr ps --wide` shows all 11 columns including Mode, Command, Binary.
+#[ cfg( unix ) ]
+#[ test ]
+fn it_26_wide_shows_all_columns()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--wide" ] )
+    .env( "PATH", &path_val )
+    .output()
+    .expect( "run clr ps --wide" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-26: exit 0 expected, got {:?}", out.status.code() );
+  assert!( stdout.contains( "Mode" ),    "IT-26: Mode header must be present: {stdout}" );
+  assert!( stdout.contains( "Command" ), "IT-26: Command header must be present: {stdout}" );
+  assert!( stdout.contains( "Binary" ),  "IT-26: Binary header must be present: {stdout}" );
+}
+
+// ── IT-27: `--wide --columns pid,task` → `--columns` wins ────────────────────
+
+/// IT-27: When both `--wide` and `--columns` are given, `--columns` wins.
+#[ cfg( unix ) ]
+#[ test ]
+fn it_27_columns_wins_over_wide()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--wide", "--columns", "pid,task" ] )
+    .env( "PATH", &path_val )
+    .output()
+    .expect( "run clr ps --wide --columns" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-27: exit 0 expected, got {:?}", out.status.code() );
+  assert!( stdout.contains( "PID" ),  "IT-27: PID must be present: {stdout}" );
+  assert!( stdout.contains( "Task" ), "IT-27: Task must be present: {stdout}" );
+  assert!( !stdout.contains( "Mode" ),    "IT-27: Mode must be absent when --columns wins: {stdout}" );
+  assert!( !stdout.contains( "Command" ), "IT-27: Command must be absent when --columns wins: {stdout}" );
+  assert!( !stdout.contains( "Binary" ),  "IT-27: Binary must be absent when --columns wins: {stdout}" );
+}
+
+// ── IT-28: `CLR_PS_MODE=print` env var fallback ──────────────────────────────
+
+/// IT-28: `CLR_PS_MODE=print` env var applies the print mode filter.
+#[ cfg( unix ) ]
+#[ test ]
+fn it_28_clr_ps_mode_env_var()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+
+  let mut bg_interactive = spawn_fake_claude( &path_val );
+  let pid_interactive     = bg_interactive.id();
+
+  let mut bg_print = spawn_print_claude( &path_val );
+  let pid_print    = bg_print.id();
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .arg( "ps" )
+    .env( "PATH", &path_val )
+    .env( "CLR_PS_MODE", "print" )
+    .output()
+    .expect( "run clr ps with CLR_PS_MODE=print" );
+
+  let _ = bg_interactive.kill();
+  let _ = bg_interactive.wait();
+  let _ = bg_print.kill();
+  let _ = bg_print.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-28: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( &pid_print.to_string() ),
+    "IT-28: print PID {pid_print} must appear with CLR_PS_MODE=print. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( &pid_interactive.to_string() ),
+    "IT-28: interactive PID {pid_interactive} must NOT appear with CLR_PS_MODE=print. Got:\n{stdout}"
+  );
+}
+
+// ── IT-29: `CLR_PS_COLUMNS=pid,elapsed` env var fallback ─────────────────────
+
+/// IT-29: `CLR_PS_COLUMNS=pid,elapsed` env var selects PID and Elapsed columns only.
+#[ cfg( unix ) ]
+#[ test ]
+fn it_29_clr_ps_columns_env_var()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .arg( "ps" )
+    .env( "PATH", &path_val )
+    .env( "CLR_PS_COLUMNS", "pid,elapsed" )
+    .output()
+    .expect( "run clr ps with CLR_PS_COLUMNS=pid,elapsed" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-29: exit 0 expected, got {:?}", out.status.code() );
+  assert!( stdout.contains( "PID" ),     "IT-29: PID must be present: {stdout}" );
+  assert!( stdout.contains( "Elapsed" ), "IT-29: Elapsed must be present: {stdout}" );
+  assert!( !stdout.contains( "CPU%" ),          "IT-29: CPU% must be absent: {stdout}" );
+  assert!( !stdout.contains( "RAM" ),           "IT-29: RAM must be absent: {stdout}" );
+  assert!( !stdout.contains( "Task" ),          "IT-29: Task must be absent: {stdout}" );
+  assert!( !stdout.contains( "Absolute Path" ), "IT-29: Absolute Path must be absent: {stdout}" );
 }

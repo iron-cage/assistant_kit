@@ -288,7 +288,8 @@ fn ec9_old_flag_retry_on_unknown_error_rejected()
 ///
 /// Root Cause: old default was 0 (no retry); now auto→fallback(2) via 3-tier system
 /// Why Not Caught: old EC-9 tested default=0; semantics changed in redesign
-/// Fix Applied: uses --retry-default-delay 0 to avoid 30s sleep; validates fallback fires
+/// Fix Applied: uses --retry-default 2 (explicit count) and --retry-default-delay 0 (explicit
+///              delay) to make test non-fragile; validates fallback fires without class flag
 /// Prevention: guard asserting [Unknown] retry fires without explicit --retry-on-unknown
 /// Pitfall: must NOT set --retry-on-unknown; must NOT set CLR_RETRY_ON_UNKNOWN
 #[ cfg( unix ) ]
@@ -317,7 +318,7 @@ fn ec10_unknown_fallback_default_fires()
   let bin = env!( "CARGO_BIN_EXE_clr" );
 
   let out = Command::new( bin )
-    .args( [ "-p", "--retry-default-delay", "0", "--max-sessions", "0", "x" ] )
+    .args( [ "-p", "--retry-default", "2", "--retry-default-delay", "0", "--max-sessions", "0", "x" ] )
     .env( "PATH", &new_path )
     .env_remove( "CLR_RETRY_ON_UNKNOWN" )
     .env_remove( "CLR_RETRY_DEFAULT" )
