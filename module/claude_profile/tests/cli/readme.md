@@ -6,7 +6,7 @@
 | `accounts_test.rs` | Help output and `.accounts` command tests (h01–h07, acc01–acc16). |
 | `account_mutations_test.rs` | Account save, use, and delete tests. |
 | `account_rotate_test.rs` | `.account.rotate` redirector tests (DEPRECATED Feature 038; rot01–rot03). |
-| `usage_rotate_test.rs` | Feature 038 `rotate::1` on `.usage` — strategy-driven rotation (FT-01–FT-11). |
+| `usage_rotate_test.rs` | Feature 038 `rotate::1` on `.usage` — strategy-driven rotation (FT-01–FT-10, EC-05–EC-07). |
 | `token_paths_test.rs` | Token status classification and paths output tests. |
 | `cross_cutting_test.rs` | Cross-cutting and environment behavior tests. |
 | `usage_test.rs` | Live rate-limit quota table display tests (IT-1–IT-37, 36 functions). |

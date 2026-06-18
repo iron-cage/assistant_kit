@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Allow `.usage` to activate idle quota windows by sending a minimal prompt in an isolated subprocess, so accounts with any quota timer absent (no active 5h, 7d, or 7d-Sonnet session window) get sessions started, enabling them to qualify for endurance sort strategy and be available for immediate use.
+- **Purpose**: Allow `.usage` to activate idle quota windows by sending a minimal prompt in an isolated subprocess, so accounts with any quota timer absent (no active 5h, 7d, or 7d-Sonnet session window) get sessions started and are available for immediate use.
 - **Responsibility**: Documents the `touch::` parameter, its trigger condition (any of the three quota timers absent — `five_hour.resets_at`, `seven_day.resets_at`, or `seven_day_sonnet.resets_at`), subprocess invocation via the existing `refresh_account_token()` infrastructure, quota re-fetch after any successful subprocess, `touch_idle` quota cache read guard as defense-in-depth skip before timer checks (AC-16), and skip-reason trace lines for non-qualifying accounts.
 - **In Scope**: `touch::` parameter semantics; trigger condition (account has valid quota data AND at least one quota timer is absent — no active 5h, 7d, or 7d-Sonnet window); subprocess invocation via `account::refresh_account_token()` with `["--print", "."]`; quota re-fetch after any successful subprocess (unconditional on credentials); `touch_idle=false` quota cache read guard before timer checks (AC-16 — defense-in-depth for API propagation lag); skip-reason trace line for non-qualifying accounts; interaction with `refresh::` and `live::`.
 - **Out of Scope**: `run_isolated()` internals (-> `claude_runner_core/docs/feature/004_run_isolated.md`); the refresh trigger logic itself (-> 017_token_refresh.md); sort strategies and `→` recommendation (-> 020_usage_sort_strategies.md).
@@ -17,7 +17,7 @@ When `touch::1`, after the initial quota fetch the command identifies accounts w
 
 **Model-capability constraint (BUG-289):** The 5h window and 7d general window are model-agnostic — any model call (including Haiku) starts them. The 7d-Sonnet window (`seven_day_sonnet.resets_at`) is model-specific: only Sonnet-family API calls create a `seven_day_sonnet.resets_at` timestamp. When `imodel::auto` selects Haiku for a touch subprocess targeting an account where `son_running=false` (Sonnet window absent, 5h and 7d running), the Haiku subprocess does not start the Sonnet window — `resets_at` remains `None` after the re-fetch, `son_running` stays `false`, and the touch trigger fires again on the next invocation (infinite per-call no-op loop). Fix (BUG-289, BUG-290, TSK-292): `resolve_model(Auto)` selects Sonnet (`claude-sonnet-4-6`) whenever `son_idle=true` regardless of 5h or 7d timer state — a single Sonnet touch opens all idle dimensions simultaneously and breaks the loop. Implemented in `src/usage/subprocess.rs`.
 
-**Why it matters for account rotation:** Activating idle quota windows ensures accounts have concrete countdown timers for all dimensions (5h, 7d, 7d-Sonnet), making them eligible for the endurance sort strategy (which requires `5h_reset ∈ [15m, 60m]`). Under `live::1`, touch runs each cycle to activate any windows that lost their timers, keeping the full pool available for rotation.
+**Why it matters for account rotation:** Activating idle quota windows ensures accounts have concrete countdown timers for all dimensions (5h, 7d, 7d-Sonnet), making them available for rotation under `sort::renew`. Under `live::1`, touch runs each cycle to activate any windows that lost their timers, keeping the full pool available for rotation.
 
 **Algorithm:**
 
@@ -126,7 +126,6 @@ render results as table
 |------|--------------|
 | [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm that this extends |
 | [017_token_refresh.md](017_token_refresh.md) | Shared subprocess infrastructure and `refresh_account_token()` design |
-| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Endurance qualification: `5h_reset ∈ [15m, 60m]` + `weekly ≥ 30%` |
 | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies reference quota timers populated by touch |
 | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | `imodel::` and `effort::` subprocess parameters apply to touch subprocesses |
 | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch touch on `.account.use` — extends the touch concept to account switching |

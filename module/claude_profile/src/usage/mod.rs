@@ -124,9 +124,9 @@ pub( crate ) mod test_support
   /// Build an `AccountQuota` with controlled `5h_left` and no weekly data.
   ///
   /// Pitfall: `seven_day=None` → `prefer_weekly=100.0` for all accounts (absent data treated as
-  /// 0% utilization). Tests using this helper for `sort::drain` exercise the TIEBREAK path
-  /// (`5h_left` ascending), not the primary key path (`prefer_weekly` ascending). To test drain
-  /// primary-key behaviour with distinct weekly quotas, use `mk_aq_sort_weekly` instead.
+  /// 0% utilization). Tests using this helper exercise the TIEBREAK path for weekly-sensitive
+  /// strategies. To test `prefer_weekly` primary-key ordering with distinct weekly quotas,
+  /// use `mk_aq_sort_weekly` instead.
   pub( crate ) fn mk_aq_sort( name : &str, five_hour_util : f64, expires_at_ms : u64 ) -> AccountQuota
   {
     let data = claude_quota::OauthUsageData
@@ -156,8 +156,8 @@ pub( crate ) mod test_support
 
   /// Build an `AccountQuota` with controlled `5h_left` AND weekly quota data.
   ///
-  /// Use for `sort::drain` tests that need to exercise the PRIMARY sort key
-  /// (`prefer_weekly` ascending). `resets_at` is None for all periods.
+  /// Use when tests need to exercise `prefer_weekly` ordering (secondary key of `sort::renew`).
+  /// `resets_at` is None for all periods.
   pub( crate ) fn mk_aq_sort_weekly(
     name                  : &str,
     five_hour_util        : f64,
@@ -192,7 +192,7 @@ pub( crate ) mod test_support
 
   /// Build ISO-8601 reset string at `now_secs + offset_secs`.
   ///
-  /// Used by `sort::endurance` / `sort::renew` tests that need concrete `resets_at` values.
+  /// Used by `sort::renew` tests that need concrete `resets_at` values.
   pub( crate ) fn reset_iso_at( now_secs : u64, offset_secs : u64 ) -> String
   {
     let ts = now_secs + offset_secs;
@@ -206,8 +206,9 @@ pub( crate ) mod test_support
 
   /// Build `AccountQuota` with `five_hour.resets_at` set to `now_secs + reset_offset_secs`.
   ///
-  /// Use for `sort::endurance` tests. Pitfall: Do NOT use for `sort::renew` tests — the
-  /// Renew arm reads `seven_day.resets_at`. Use `mk_aq_with_7d_reset` for Renew arm tests.
+  /// Sets only the 5h reset timestamp; `seven_day` is None. Use for tests that need a concrete
+  /// 5h reset value. Pitfall: Do NOT use for `sort::renew` ordering tests — the Renew arm reads
+  /// `seven_day.resets_at`. Use `mk_aq_with_7d_reset` for `sort::renew` ordering tests.
   pub( crate ) fn mk_aq_with_reset(
     name             : &str,
     five_hour_util   : f64,
@@ -247,7 +248,7 @@ pub( crate ) mod test_support
   /// Build `AccountQuota` with `seven_day.resets_at` set to `now_secs + reset_offset_secs`.
   ///
   /// Use for `sort::renew` tests. `seven_day.utilization` is 0.0 (100% left).
-  /// Pitfall: Do NOT use for `sort::endurance` tests — the Endurance arm reads `five_hour.resets_at`.
+  /// Pitfall: Use `mk_aq_with_reset` if you need `five_hour.resets_at` instead.
   pub( crate ) fn mk_aq_with_7d_reset(
     name              : &str,
     five_hour_util    : f64,
@@ -895,11 +896,12 @@ mod tests
 
   // ── Footer: no eligible candidate ─────────────────────────────────────────
 
-  /// FT-08 of feature/023 — footer omits both strategy lines when no eligible candidate exists.
+  /// FT-08 of feature/020 — footer omits the `→ Next` recommendation line when no eligible
+  /// candidate exists (all accounts are `is_current`).
   ///
-  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-08]
+  /// Spec: [`docs/feature/020_usage_sort_strategies.md` AC-09]
   #[ test ]
-  fn test_ft08_023_footer_omits_strategy_lines_when_no_eligible_candidate()
+  fn test_ft08_020_footer_omits_recommendation_when_no_eligible_candidate()
   {
     let mut a = mk_aq_sort( "a@test.com", 30.0, FAR_FUTURE_MS );
     let mut b = mk_aq_sort( "b@test.com", 60.0, FAR_FUTURE_MS );
@@ -912,8 +914,9 @@ mod tests
       &ColsVisibility::default_set(), false, false,
     );
 
-    assert!( !output.contains( "endurance" ),        "footer must omit endurance line when no eligible candidate (FT-08/023), got:\n{output}" );
-    assert!( !output.contains( "drain" ),             "footer must omit drain line when no eligible candidate (FT-08/023), got:\n{output}" );
-    assert!( !output.contains( "Next by strategy:" ), "footer must not show 'Next by strategy:' when lines is empty (FT-08/023), got:\n{output}" );
+    assert!(
+      !output.contains( "→ Next (" ),
+      "footer must omit recommendation line when no eligible candidate (FT-08/020), got:\n{output}",
+    );
   }
 }

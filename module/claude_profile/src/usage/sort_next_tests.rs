@@ -14,11 +14,9 @@
 
   // ── find_next_for_strategy ────────────────────────────────────────────────
 
-  /// FT-02 of feature/023 — `find_next_for_strategy` returns `Some` when eligible; `None` when all current.
-  ///
-  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-02]
+  /// `find_next_for_strategy` returns `Some` when eligible candidates exist; `None` when all accounts are `is_current`.
   #[ test ]
-  fn test_ft02_023_find_next_for_strategy_some_when_eligible_none_when_all_current()
+  fn test_find_next_for_strategy_some_when_eligible_none_when_all_current()
   {
     let now = 0u64;
     let mut a = mk_aq_sort( "a@test.com", 20.0, FAR_FUTURE_MS );
@@ -47,11 +45,9 @@
     assert!( winner_b.is_none(), "find_next_for_strategy must return None when all accounts are is_current" );
   }
 
-  /// FT-12 of feature/023 — all strategies skip `is_occupied_elsewhere` accounts.
-  ///
-  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-12]
+  /// All strategies skip `is_occupied_elsewhere` accounts.
   #[ test ]
-  fn test_ft12_023_all_strategies_skip_occupied_elsewhere()
+  fn test_all_strategies_skip_occupied_elsewhere()
   {
     let now = 0u64;
     // A: occupied (parked on another machine), otherwise eligible
@@ -89,11 +85,9 @@
     }
   }
 
-  /// FT-13 of feature/023 — all strategies skip h-exhausted accounts (5h Left ≤ 15%).
-  ///
-  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-13]
+  /// All strategies skip h-exhausted accounts (5h Left ≤ 15%).
   #[ test ]
-  fn test_ft13_023_all_strategies_skip_h_exhausted()
+  fn test_all_strategies_skip_h_exhausted()
   {
     let now = 0u64;
     // A: h-exhausted (utilization=92.0 → 8% left, well below 15%)
@@ -148,7 +142,7 @@
   ///
   /// All three strategies must treat missing 5h data as eligible.
   #[ test ]
-  fn test_cc_023_five_hour_none_not_h_exhausted()
+  fn test_cc_five_hour_none_not_h_exhausted()
   {
     let now = 0u64;
     // A: five_hour = None (no 5h period data at all)
@@ -170,7 +164,7 @@
 
   /// Corner case: utilization=84.9 (just below 85.0 threshold) → account IS eligible.
   #[ test ]
-  fn test_cc_023_h_exhausted_boundary_below_threshold()
+  fn test_cc_h_exhausted_boundary_below_threshold()
   {
     let now = 0u64;
     let a = mk_aq_sort( "just_below@test.com", 84.9, FAR_FUTURE_MS );
@@ -189,7 +183,7 @@
 
   /// Corner case: account is both occupied AND h-exhausted — first guard rejects it.
   #[ test ]
-  fn test_cc_023_occupied_and_h_exhausted_skipped()
+  fn test_cc_occupied_and_h_exhausted_skipped()
   {
     let now = 0u64;
     let mut a = mk_aq_sort( "both@test.com", 92.0, FAR_FUTURE_MS );
@@ -210,15 +204,15 @@
 
   // ── strategy_metric ───────────────────────────────────────────────────────
 
-  /// FT-15 of feature/023 — `next::renew` uses alphabetical name as tiebreaker on equal renewal time.
+  /// `sort::renew` uses alphabetical name as tiebreaker on equal renewal time (BUG-260/BUG-291).
   ///
   /// When two accounts share an identical `renewal_event_secs_of()` value and identical
   /// `prefer_weekly`, the tiebreaker resolves alphabetically by name — same determinism rule
   /// as `sort_indices(Renew)`.
   ///
-  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-15]
+  /// Spec: [`docs/feature/020_usage_sort_strategies.md` AC-04]
   #[ test ]
-  fn test_ft15_023_renew_tiebreaker_prefers_lower_5h_left()
+  fn test_sort_renew_tiebreaker_alphabetical_when_equal_renewal()
   {
     let now_secs : u64 = 1_700_000_000;
     // Both accounts use reset_offset=10_800 (3h) → identical seven_day.resets_at → identical
@@ -311,15 +305,15 @@
     );
   }
 
-  /// BUG-229 MRE: `next::renew` must pick the account with the soonest subscription
-  /// renewal when it fires before any 7d reset.
+  /// BUG-229 MRE: `sort::renew` (`find_next_for_strategy`) must pick the account with the soonest
+  /// subscription renewal when it fires before any 7d reset.
   ///
   /// # Root Cause
   /// `find_next_for_strategy::Renew` closure used `h5.min(d7)` — 5h is not a renewal
   /// event, and subscription renewal was never consulted.
   ///
   /// # Why Not Caught
-  /// All prior `next::renew` tests set `renewal_at: None`, exercising only the 7d leg.
+  /// All prior `sort::renew` tests set `renewal_at: None`, exercising only the 7d leg.
   ///
   /// # Fix Applied
   /// `renewal_event_secs_of` closure computes `d7.min(sub)` using `renewal_secs`.
@@ -350,7 +344,7 @@
 
     assert_eq!(
       winner, Some( 1 ),
-      "BUG-229: next::renew must pick b (sub 30min < c 7d 1h); got: {winner:?}",
+      "BUG-229: sort::renew must pick b (sub 30min < c 7d 1h); got: {winner:?}",
     );
     assert_eq!( accounts[ winner.unwrap() ].name, "b@test.com",
       "BUG-229: winner name must be b@test.com" );
@@ -364,7 +358,7 @@
   /// criterion timers (d7 + sub) were not shown; session% and 5h are irrelevant to renew.
   ///
   /// # Why Not Caught
-  /// No test asserted the renew metric format; only drain/endurance metric tests existed.
+  /// No test asserted the renew metric format before this fix.
   ///
   /// # Fix Applied
   /// Renew arm now computes `d7_str` and `sub_pair` from `renewal_secs`, producing
@@ -528,7 +522,7 @@
     );
   }
 
-  /// FT-16 of feature/023 — `next::renew` deterministic when all numeric keys tied (BUG-260).
+  /// `sort::renew` (`find_next_for_strategy`) deterministic when all numeric keys tied (BUG-260).
   ///
   /// # Root Cause
   /// `find_next_for_strategy(Renew)` `min_by` at `sort_next.rs:99` had only 2 comparison
@@ -555,7 +549,7 @@
   /// `min_by` the iterator stops at the first minimum found (first in slice order wins on
   /// tie). This makes the missing tiebreaker silently non-deterministic.
   ///
-  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-16]
+  /// Spec: [`docs/feature/020_usage_sort_strategies.md` AC-04]
   #[ doc = "bug_reproducer(BUG-260)" ]
   #[ test ]
   fn mre_bug260_renew_nondeterministic_when_fully_tied()
@@ -583,7 +577,7 @@
 
   /// # BUG-292 Reproducer
   ///
-  /// `next::renew` must skip weekly-exhausted accounts (`prefer_weekly` ≤ 5.0) even
+  /// `sort::renew` must skip weekly-exhausted accounts (`prefer_weekly` ≤ 5.0) even
   /// when they have the soonest 7d reset event. Before this fix, a weekly-exhausted
   /// account with an imminent 7d reset was recommended because the `Renew` arm had no
   /// `prefer_weekly > 5.0` gate.
@@ -612,7 +606,7 @@
   /// Use `mk_aq_with_7d_reset_util` (not `mk_aq_with_7d_reset`) when a non-zero
   /// `seven_day.utilization` is needed — the `_7d_reset` variant hardcodes `util=0.0`.
   ///
-  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-17]
+  /// Spec: [`docs/feature/020_usage_sort_strategies.md` AC-04]
   #[ doc = "bug_reproducer(BUG-292)" ]
   #[ test ]
   fn mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal()
@@ -636,7 +630,7 @@
 
   /// # BUG-291 Reproducer
   ///
-  /// `next::renew` tiebreaker must match `sort::renew` tiebreaker. Before this fix,
+  /// `sort::renew` tiebreaker (`find_next_for_strategy`) must match `sort_indices(Renew)`. Before this fix,
   /// `sort_indices(Renew)` used `prefer_weekly` ascending while `find_next_for_strategy(Renew)`
   /// used `five_hour_left` ascending — an account with lower hourly depletion (but higher weekly
   /// capacity) would rank first in sort but second in next selection.
@@ -663,7 +657,7 @@
   /// more from the upcoming renewal event). This differs from BUG-243's `five_hour_left`
   /// ascending rationale (more hourly depletion preferred). The two are NOT equivalent.
   ///
-  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-17]
+  /// Spec: [`docs/feature/020_usage_sort_strategies.md` AC-04]
   #[ doc = "bug_reproducer(BUG-291)" ]
   #[ test ]
   fn mre_bug291_renew_next_tiebreaker_matches_sort_indices()
@@ -690,6 +684,6 @@
     let idx     = find_next_for_strategy( &[ alice_n, bob_n ], SortStrategy::Renew, PreferStrategy::Any, now, false );
     assert_eq!(
       idx, Some( 1 ),
-      "BUG-291: next::renew tiebreaker must match sort::renew — bob (prefer_weekly=40) must win, not alice; got {idx:?}",
+      "BUG-291: sort::renew tiebreaker must match sort_indices(Renew) — bob (prefer_weekly=40) must win, not alice; got {idx:?}",
     );
   }

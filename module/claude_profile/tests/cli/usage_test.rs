@@ -24,7 +24,7 @@
 //! | it008  | `it008_lim_it_accounts_in_alpha_order`            | 3 accounts written out of order → alpha output                | P   | yes   |
 //! | it009  | `it009_unreadable_credentials_shows_dash`         | credentials chmod 000 → `—` + exit 0                         | P   | no    |
 //! | it010 | `it010_expired_token_shows_expired_in_expires_col` | account with PAST_MS → "EXPIRED" in Expires column           | P   | no    |
-//! | it011 | `it011_lim_it_recommendation_marker_shown`       | 2 accounts + `next::endurance` → `→` on non-active account    | P   | yes   |
+//! | it011 | `it011_lim_it_recommendation_marker_shown`       | 2 accounts → `→` on non-active account (sort::renew default)  | P   | yes   |
 //! | it012 | `it012_lim_it_footer_shows_valid_count`          | 2 accounts with real tokens → footer "Valid: 2" + "Next:"     | P   | yes   |
 //! | it013 | `it013_active_divergence_shows_star`             | live creds=work, _active=alice → `✓` on work, `*` on alice    | P   | no    |
 //! | it014 | `it014_creds_unreadable_no_checkmark_star_shown` | no live creds, _active=alice → no `✓`, `*` on alice           | P   | no    |
@@ -86,21 +86,21 @@
 //! | it070 | `it070_prefer_uppercase_rejected`                   | `prefer::Opus` (uppercase) → exit 1 (case-sensitive)       | N | no |
 //! | it073 | `it073_next_all_rejected_exit_1`                    | `next::all` rejected → exit 1 (TSK-184)                    | N | no |
 //! | it074 | `it074_next_session_rejected_exit_1`                | `next::session` rejected → exit 1 (TSK-184)                | N | no |
-//! | it075 | `it075_next_endurance_accepted`                     | `next::endurance` accepted with empty store → exit 0       | P | no |
-//! | it076 | `it076_next_drain_accepted`                         | `next::drain` accepted with empty store → exit 0           | P | no |
+//! | it075 | `it075_next_endurance_rejected`                     | `next::endurance` rejected → exit 1 (next:: removed)       | N | no |
+//! | it076 | `it076_next_drain_rejected`                         | `next::drain` rejected → exit 1 (next:: removed)           | N | no |
 //! | it077 | `it077_next_reset_rejected_exit_1`                  | `next::reset` rejected → exit 1 (TSK-184)                  | N | no |
-//! | it078 | `it078_next_invalid_value_exit_1`                   | `next::bogus` → exit 1, stderr names renew+endurance+drain | N | no |
-//! | it079 | `it079_next_drain_default_no_arrow_without_valid_accounts` | default renew + no valid accounts → no `→`       | P | no |
+//! | it078 | `it078_next_invalid_value_exit_1`                   | `next::bogus` → exit 1, stderr redirects to sort::         | N | no |
+//! | it079 | `it079_default_sort_renew_no_arrow_without_valid_accounts` | default sort::renew + no valid accounts → no `→`  | P | no |
 //! | it080 | `it080_cols_sub_accepted`                           | `cols::+sub` accepted with empty store → exit 0            | P | no |
 //! | it081 | `it081_cols_sub_shows_sub_column`                   | `cols::+sub` with account → output contains "Sub" header   | P | no |
 //! | it082 | `it082_cols_unknown_id_exit_1`                      | `cols::+bogus_col` → exit 1, stderr names valid IDs        | N | no |
 //! | it083 | `it083_usage_help_shows_next_cols_params`           | `.usage.help` lists `next` and `cols` params               | P | no |
 //! | mre171 | `mre_bug_171_account_populated_after_refresh`      | BUG-171: `Fix(BUG-171)` present → `aq.account` populated  | P | no |
-//! | it092 | `it092_next_all_rejected_exit_1`                    | `next::all` rejected → exit 1, stderr names renew+endurance+drain (TSK-184/TSK-222) | N | no |
+//! | it092 | `it092_next_all_rejected_exit_1`                    | `next::all` rejected → exit 1, stderr redirects to sort::  | N | no |
 //! | it093 | `it093_footer_not_gated_on_next_all_structural`     | `Responsibility(TSK-184-footer)` present; old All-gate absent (TSK-184) | P | no |
-//! | it094 | `it094_next_session_rejected_exit_1`                | `next::session` rejected → exit 1, stderr names renew+endurance+drain (TSK-184/TSK-222) | N | no |
+//! | it094 | `it094_next_session_rejected_exit_1`                | `next::session` rejected → exit 1, stderr redirects to sort:: | N | no |
 //! | it095 | `it095_next_strategy_session_absent_structural`     | `NextStrategy::Session` absent from source (TSK-184) | P | no |
-//! | it096 | `it096_next_drain_json_output_unchanged`             | `format::json next::drain` identical to default JSON (TSK-184) | P | no |
+//! | it096 | `it096_json_unaffected_by_sort_strategy`             | `format::json` output unchanged by sort:: value (020 AC-13) | P | no |
 //! | it097 | `it097_touch_1_empty_store_exits_0`                 | `touch::1` empty store → exit 0, no-accounts message (TSK-185 AC-01) | P | no |
 //! | it098 | `it098_touch_1_errored_account_skipped`             | `touch::1` no-token account → exit 0, row shows `—` (TSK-185 AC-04) | P | no |
 //! | it099 | `it099_apply_touch_fn_exists_structural`             | `fn apply_touch` present in source (TSK-185 AC-02 structural) | P | no |
@@ -132,7 +132,7 @@
 //! | it142 | `it142_imodel_haiku_accepted_empty_store_exits_0`   | `imodel::haiku` accepted; empty store exits 0 (EC-11 / 035) | P | no |
 //! | it143 | `it143_effort_low_accepted_empty_store_exits_0`     | `effort::low` accepted; empty store exits 0 (EC-10 / 036) | P | no |
 //! | it144 | `it144_effort_normal_accepted_empty_store_exits_0`  | `effort::normal` accepted; empty store exits 0 (EC-11 / 036) | P | no |
-//! | it145 | `it145_lim_it_next_renew_places_arrow_on_soonest_refill` | `next::renew` → exit 0, footer shows renew line, `→` placed on winning account (TSK-222) | P | yes |
+//! | it145 | `it145_lim_it_sort_renew_places_arrow_on_soonest_refill` | `sort::renew` (default) → exit 0, footer shows renew line, `→` placed (feature/020) | P | yes |
 //! | ut146 | `ut_filter_only_valid_hides_red_rows`                | `only_valid::1` accepted; empty store exits 0 (TSK-223 RED gate) | P | no |
 //! | it146 | `it146_next_column_visible_by_default`              | `.usage` with account → `→ Next` header visible in default output (FT-18/AC-28) | P | no |
 //! | it147 | `it147_json_renewal_secs_present`                   | `.usage format::json` → JSON has `renewal_secs`, not `next_renewal_est` (FT-19/AC-29) | P | no |
@@ -194,7 +194,7 @@
 //! | it203 | `it203_cols_role_shows_role_column`                 | `cols::+role` shows Role header + profile role value (033 EC-8) | P | no |
 //! | it204 | `it204_cols_bogus_names_host_and_role_in_error`     | `cols::+bogus` exit 1 stderr names `host` and `role` (033 EC-9) | N | no |
 //! | it225 | `it225_lim_it_it71_next_event_cell_shows_label_and_duration` | → Next cell shows event label + duration (009 IT-71) | P | yes |
-//! | it226 | `it226_lim_it_only_next_1_drain_shows_winner`       | `only_next::1 next::drain` shows 1 row with → (040 EC-3) | P | yes |
+//! | it226 | `it226_lim_it_only_next_1_renews_shows_winner`       | `only_next::1 sort::renews` shows 1 row with → (040 EC-3) | P | yes |
 //! | it227 | `it227_lim_it_only_next_true_shows_arrow_row`       | `only_next::true` accepted, shows → row (040 EC-6) | P | yes |
 //! | it228 | `it228_lim_it_only_valid_1_shows_green_hides_red`   | `only_valid::1` shows 🟢 live account, hides 🔴 error (043 EC-1) | P | yes |
 //! | it229 | `it229_lim_it_exclude_exhausted_1_shows_green`      | `exclude_exhausted::1` shows 🟢, hides 🔴 (044 EC-1) | P | yes |
@@ -574,15 +574,15 @@ fn it011_lim_it_recommendation_marker_shown()
   write_account_with_token( dir.path(), "acct-a", &token, true  );
   write_account_with_token( dir.path(), "acct-b", &token, false );
 
-  // Use next::endurance to place → in the table body on the non-active account.
-  let out  = run_cs_with_env( &[ ".usage", "next::endurance" ], &[ ( "HOME", home ) ] );
+  // sort::renew (default) places → on the non-active account (the recommended next).
+  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
   let rec_marked = text.lines().any( |line| line.contains( '→' ) && line.contains( "acct-b" ) );
   assert!(
     rec_marked,
-    "next::endurance: a line must contain both → and non-active account 'acct-b', got:\n{text}",
+    "sort::renew: a line must contain both → and non-active account 'acct-b', got:\n{text}",
   );
   let active_rec = text.lines().any( |line| line.contains( '→' ) && line.contains( "acct-a" ) );
   assert!(
@@ -2090,7 +2090,7 @@ fn it067_prefer_sonnet_accepted()
 /// `render_json` always uses the original alphabetical account slice; `sort::` strategy
 /// only reorders text rendering. Accounts written in non-alpha order (`b@x.com` before
 /// `a@x.com`) are sorted by `account::list()` and stay alphabetical in JSON output
-/// regardless of whether `sort::name` or `sort::endurance` is requested (AC-13).
+/// regardless of whether `sort::name` or `sort::renews` is requested (AC-13).
 /// Source: `tests/docs/cli/param/025_sort.md § CC-1`.
 #[ test ]
 fn it068_sort_json_unaffected_by_sort_strategy()
@@ -2185,7 +2185,7 @@ fn it071_sort_renew_desc1_accepted()
 // it072 (sort::endurance desc::0 accepted) removed after Feature 037/038
 // — SortStrategy::Endurance no longer exists; rejection covered by it249.
 
-// ── next:: parameter acceptance (023_next_account_strategies AC-01/AC-03–AC-07) ─
+// ── next:: parameter migration rejection ─────────────────────────────────────────
 
 /// it073 (AC-01): `next::all` accepted with empty credential store → exit 0.
 ///
@@ -2224,7 +2224,7 @@ fn it074_next_session_rejected_exit_1()
 
 /// it075 (Feature 037/038): `next::endurance` rejected after `next::` parameter removal.
 #[ test ]
-fn it075_next_endurance_accepted()
+fn it075_next_endurance_rejected()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2240,7 +2240,7 @@ fn it075_next_endurance_accepted()
 
 /// it076 (Feature 037/038): `next::drain` rejected after `next::` parameter removal.
 #[ test ]
-fn it076_next_drain_accepted()
+fn it076_next_drain_rejected()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2254,11 +2254,11 @@ fn it076_next_drain_accepted()
   );
 }
 
-/// it077 (AC-06): `next::reset` accepted with empty credential store → exit 0.
+/// it077 (AC-06): `next::reset` rejected — `next::` parameter removed.
 #[ test ]
 fn it077_next_reset_rejected_exit_1()
 {
-  // TSK-184: `next::reset` removed from NextStrategy; only endurance + drain are valid.
+  // `next::` parameter fully removed; all next:: values are rejected.
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
@@ -2301,14 +2301,14 @@ fn it078_next_invalid_value_exit_1()
 /// account has a valid OAuth token, quota fetch returns Err for both; `best_idx`
 /// is None → no `→` marker is placed in any table row.
 #[ test ]
-fn it079_next_drain_default_no_arrow_without_valid_accounts()
+fn it079_default_sort_renew_no_arrow_without_valid_accounts()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "a@x.com", "max", "default", FAR_FUTURE_MS, false );
   write_account( dir.path(), "b@x.com", "max", "default", FAR_FUTURE_MS, false );
 
-  // Default (no next:: param) = next::renew.
+  // Default strategy is sort::renew (no sort:: param needed).
   let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -2318,7 +2318,7 @@ fn it079_next_drain_default_no_arrow_without_valid_accounts()
   let arrow_as_flag = text.lines().any( |l| l.trim_start().starts_with( '\u{2192}' ) );
   assert!(
     !arrow_as_flag,
-    "default next::renew: no eligible account → must not place → flag in any table row, got:\n{text}",
+    "default sort::renew: no eligible account → must not place → flag in any table row, got:\n{text}",
   );
 }
 
@@ -2524,7 +2524,7 @@ fn it089_cols_structural_cols_always_present()
   );
 }
 
-// ── next:: footer threshold (023_next_account_strategies AC-09) ───────────────
+// ── footer threshold (020_usage_sort_strategies AC-09) ───────────────────────────
 
 /// it090 (AC-09): footer absent when < 2 valid accounts.
 ///
@@ -2706,12 +2706,12 @@ fn it095_next_strategy_session_absent_structural()
   );
 }
 
-/// it096 (TSK-184 AC-05): `format::json` with `next::drain` is identical to default.
+/// it096 (TSK-184 AC-05): `format::json` output is identical regardless of `sort::` value.
 ///
-/// `render_json` does not inspect `NextStrategy`; JSON remains the same for any
-/// valid `next::` value. Guards that JSON path is unaffected by the 5→2 reduction.
+/// `render_json` does not vary by sort strategy; JSON remains the same for any
+/// valid `sort::` value.
 #[ test ]
-fn it096_next_drain_json_output_unchanged()
+fn it096_json_unaffected_by_sort_strategy()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2857,15 +2857,15 @@ fn it101_usage_help_shows_touch_param()
   );
 }
 
-/// it102 `lim_it` (IT-51 / FT-03 of feature/023): explicit `next::endurance` places `→` on exactly one account.
+/// it102 `lim_it` (IT-51 / FT-03 of feature/020): `sort::renew` (default) places `→` on exactly one account.
 ///
-/// With ≥2 accounts sharing a live token, the endurance strategy selects one winner.
-/// Exactly one table row gets `→` in the flag column. Footer shows "Next by strategy:".
+/// With ≥2 accounts sharing a live token, the renew strategy selects one winner.
+/// Exactly one table row gets `→` in the flag column.
 ///
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-51]
-///       [`tests/docs/feature/023_next_account_strategies.md` AC-03]
+///       [`tests/docs/feature/020_usage_sort_strategies.md` AC-09]
 #[ test ]
-fn it102_lim_it_next_endurance_places_arrow_on_winner()
+fn it102_lim_it_sort_renew_places_arrow_on_winner()
 {
   let Some( token ) = live_active_token() else
   {
@@ -2878,30 +2878,26 @@ fn it102_lim_it_next_endurance_places_arrow_on_winner()
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
   write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
 
-  let out = run_cs_with_env( &[ ".usage", "next::endurance" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
   let arrow_count = text.lines().filter( |l| l.contains( "→" ) ).count();
   assert_eq!(
     arrow_count, 1,
-    "next::endurance must place exactly one → in table rows (IT-51/FT-03/023), got:\n{text}",
-  );
-  assert!(
-    text.contains( "Next by strategy:" ),
-    "footer must show 'Next by strategy:' (IT-51), got:\n{text}",
+    "sort::renew must place exactly one → in table rows (IT-51/020), got:\n{text}",
   );
 }
 
-/// it103 `lim_it` (IT-52 / FT-04 of feature/023): `next::drain` places `→` on exactly one account.
+/// it103 `lim_it` (IT-52 / feature/020): `sort::renews` places `→` on exactly one account.
 ///
-/// With ≥2 accounts sharing a live token, the drain strategy selects the account with
-/// the lowest non-exhausted `5h_left`. Exactly one `→` appears in the table rows.
+/// With ≥2 accounts sharing a live token, the renews strategy selects the account with
+/// the soonest billing renewal. Exactly one `→` appears in the table rows.
 ///
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-52]
-///       [`tests/docs/feature/023_next_account_strategies.md` AC-04]
+///       [`tests/docs/feature/020_usage_sort_strategies.md` AC-09]
 #[ test ]
-fn it103_lim_it_next_drain_places_arrow_on_winner()
+fn it103_lim_it_sort_renews_places_arrow_on_winner()
 {
   let Some( token ) = live_active_token() else
   {
@@ -2914,30 +2910,26 @@ fn it103_lim_it_next_drain_places_arrow_on_winner()
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
   write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
 
-  let out = run_cs_with_env( &[ ".usage", "next::drain" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage", "sort::renews" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
   let arrow_count = text.lines().filter( |l| l.contains( "→" ) ).count();
   assert_eq!(
     arrow_count, 1,
-    "next::drain must place exactly one → in table rows (IT-52/FT-04/023), got:\n{text}",
-  );
-  assert!(
-    text.contains( "Next by strategy:" ),
-    "footer must show 'Next by strategy:' under next::drain (IT-52), got:\n{text}",
+    "sort::renews must place exactly one → in table rows (IT-52/020), got:\n{text}",
   );
 }
 
-/// it104 `lim_it` (IT-54 / FT-01 of feature/023): footer always shows all three strategy lines.
+/// it104 `lim_it` (IT-54 / feature/020): footer shows one recommendation line for active sort strategy.
 ///
-/// With `next::drain` active, the footer still shows all three lines: renew, endurance, drain.
-/// All lines appear regardless of which strategy is currently selected.
+/// With `sort::renew` (default), the footer shows a single recommendation line
+/// with the `→` winner for the active strategy.
 ///
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-54]
-///       [`tests/docs/feature/023_next_account_strategies.md` AC-01]
+///       [`tests/docs/feature/020_usage_sort_strategies.md` AC-09]
 #[ test ]
-fn it104_lim_it_footer_always_shows_both_strategy_lines()
+fn it104_lim_it_footer_shows_strategy_recommendation()
 {
   let Some( token ) = live_active_token() else
   {
@@ -2950,25 +2942,13 @@ fn it104_lim_it_footer_always_shows_both_strategy_lines()
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
   write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
 
-  let out = run_cs_with_env( &[ ".usage", "next::drain" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
   assert!(
-    text.contains( "Next by strategy:" ),
-    "footer must show 'Next by strategy:' (IT-54/FT-01/023), got:\n{text}",
-  );
-  assert!(
     text.contains( "renew" ),
-    "footer must show renew strategy line regardless of next:: value (TSK-222/FT-01/023), got:\n{text}",
-  );
-  assert!(
-    text.contains( "endurance" ),
-    "footer must show endurance strategy line regardless of next:: value (IT-54/FT-01/023), got:\n{text}",
-  );
-  assert!(
-    text.contains( "drain" ),
-    "footer must show drain strategy line (IT-54/FT-01/023), got:\n{text}",
+    "footer must show renew strategy recommendation line (IT-54/020), got:\n{text}",
   );
 }
 
@@ -3998,21 +3978,17 @@ fn it144_effort_normal_accepted_empty_store_exits_0()
   assert_exit( &out, 0 );
 }
 
-// ── next::renew strategy (TSK-222) ────────────────────────────────────────────
+// ── sort::renew strategy ──────────────────────────────────────────────────────
 
-/// it145 `lim_it` (TSK-222): `next::renew` accepted, footer shows renew line, `→` placed.
+/// it145 `lim_it` (feature/020): `sort::renew` (default) places `→` and shows footer.
 ///
-/// `next::renew` selects the account whose soonest running reset timer (min of 5h and 7d)
-/// fires first. Footer shows 3 lines: renew (first), endurance, drain.
+/// `sort::renew` (default strategy) selects the account whose soonest running reset
+/// timer (min of 5h and 7d) fires first. Footer shows one recommendation line.
 ///
-/// RED:   `next::renew` not recognised → exit 1 (before TSK-222 enum variant is added).
-/// GREEN: renew accepted → exit 0, footer contains "renew".
-///
-/// Spec: [`tests/docs/feature/023_next_account_strategies.md`]
-///       [`docs/feature/023_next_account_strategies.md` AC-10]
+/// Spec: [`docs/feature/020_usage_sort_strategies.md` AC-09]
 #[ doc = "lim_it" ]
 #[ test ]
-fn it145_lim_it_next_renew_places_arrow_on_soonest_refill()
+fn it145_lim_it_sort_renew_places_arrow_on_soonest_refill()
 {
   let Some( token ) = live_active_token() else
   {
@@ -4025,16 +4001,12 @@ fn it145_lim_it_next_renew_places_arrow_on_soonest_refill()
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
   write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
 
-  let out = run_cs_with_env( &[ ".usage", "next::renew" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
     text.contains( "renew" ),
-    "footer must show renew strategy line (TSK-222/AC-10), got:\n{text}",
-  );
-  assert!(
-    text.contains( "Next by strategy:" ),
-    "footer must show 'Next by strategy:' header (TSK-222), got:\n{text}",
+    "footer must show renew strategy line (020/AC-09), got:\n{text}",
   );
 }
 
@@ -6146,9 +6118,9 @@ fn it218_lim_it_ft028_14_no_color_emoji_free()
   );
 }
 
-// ── it219: lim_it filters compose with sort/next/count/cols (028 FT-16) ──────
+// ── it219: lim_it filters compose with sort/count/cols (028 FT-16) ───────────
 
-/// it219 `lim_it` (028 FT-16): `sort::name next::drain only_valid::1 count::2 cols::+sub`
+/// it219 `lim_it` (028 FT-16): `sort::name only_valid::1 count::2 cols::+sub`
 /// composes all filter/sort/col params correctly. At most 2 non-🔴 rows, sorted
 /// alphabetically, Sub column present.
 ///
@@ -6168,7 +6140,7 @@ fn it219_lim_it_ft028_16_filters_compose()
   write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
 
   let out = run_cs_with_env(
-    &[ ".usage", "sort::name", "next::drain", "only_valid::1", "count::2", "cols::+sub" ],
+    &[ ".usage", "sort::name", "only_valid::1", "count::2", "cols::+sub" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -6344,14 +6316,14 @@ fn it225_lim_it_it71_next_event_cell_shows_label_and_duration()
 
 // ── it226–it227: only_next:: live tests (040 EC-3/6) ─────────────────────────
 
-/// it226 `lim_it` (040 EC-3): `only_next::1 next::drain` shows → row from drain strategy.
+/// it226 `lim_it` (040 EC-3): `only_next::1 sort::renews` shows → row from renews strategy.
 ///
-/// With two live accounts sharing the same token, `only_next::1 next::drain`
-/// must show exactly one row — the drain-strategy winner — which has the `→` marker.
+/// With two live accounts sharing the same token, `only_next::1 sort::renews`
+/// must show exactly one row — the renews-strategy winner — which has the `→` marker.
 ///
 /// Spec: [`tests/docs/cli/param/040_only_next.md` EC-3]
 #[ test ]
-fn it226_lim_it_only_next_1_drain_shows_winner()
+fn it226_lim_it_only_next_1_renews_shows_winner()
 {
   let Some( token ) = live_active_token() else
   {
@@ -6365,7 +6337,7 @@ fn it226_lim_it_only_next_1_drain_shows_winner()
   write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
 
   let out = run_cs_with_env(
-    &[ ".usage", "only_next::1", "next::drain" ],
+    &[ ".usage", "only_next::1", "sort::renews" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -6376,14 +6348,14 @@ fn it226_lim_it_only_next_1_drain_shows_winner()
     .count();
   assert_eq!(
     data_rows, 1,
-    "only_next::1 next::drain must show exactly 1 row (040 EC-3), got:\n{text}",
+    "only_next::1 sort::renews must show exactly 1 row (040 EC-3), got:\n{text}",
   );
   let arrow_rows = text.lines()
     .filter( | l | l.contains( "\u{2192}" ) && l.contains( "@test.com" ) )
     .count();
   assert_eq!(
     arrow_rows, 1,
-    "only_next::1 next::drain must show the → account row (040 EC-3), got:\n{text}",
+    "only_next::1 sort::renews must show the → account row (040 EC-3), got:\n{text}",
   );
 }
 

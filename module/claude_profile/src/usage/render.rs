@@ -226,7 +226,7 @@ pub( crate ) fn render_text(
   let table = Format::format( &TableFormatter::with_config( TableConfig::default().auto_wrap( false ) ), &view ).unwrap_or_default();
   let body  = format!( "Quota\n\n{table}\n" );
 
-  // Footer: shown only when ≥2 valid accounts (AC-09 from 023_next_account_strategies.md).
+  // Footer: shown only when ≥2 valid accounts (AC-09 from 020_usage_sort_strategies.md).
   let valid_count = accounts.iter().filter( |aq| aq.result.is_ok() ).count();
   if valid_count < 2 { return body; }
 

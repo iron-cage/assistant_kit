@@ -53,7 +53,7 @@
 | 4 | `.account.inspect` |
 | 5 | `.account.save` |
 | 6 | `.account.renewal` |
-| 7 | `.account.use` |
+| 8 | `.account.use` |
 | 18 | `.credentials.status` |
 | 32 | `.accounts` |
 | 33 | `.usage` |

@@ -12,9 +12,7 @@ clp .usage live::1
 # ✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%   35%      in 4d 23h  in 7h 24m   ~in 6d       in 4d 23h +7d
 #   🔴 dave@example.com     —          —           —        —        —          EXPIRED      ?            —
 #
-# Valid: 2 / 3   ->  Next by strategy:
-#   endurance  bob@example.com     100% session, 5h resets in 4h 58m
-#   drain      bob@example.com     28% 7d left, 7d resets in 6d 14h
+# Valid: 2 / 3   ->  Next (renew): bob@example.com   in 4h 58m +7d
 #
 #   Next update in 0:29 (at 14:32:07 UTC)  [Ctrl-C to exit]
 

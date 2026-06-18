@@ -8,7 +8,7 @@ Edge case coverage for the `only_next::` parameter on `.usage`. See [param/040_o
 |----|-----------|----------|
 | EC-1 | `only_next::1` shows exactly the → row | Behavioral Divergence |
 | EC-2 | `only_next::1` with no eligible candidate shows 0 rows, exits 0 | Empty Result |
-| EC-3 | `only_next::1 next::drain` shows → row from drain strategy | Strategy Composition |
+| EC-3 | `only_next::1 sort::renews` shows → row from renews strategy | Strategy Composition |
 | EC-4 | `only_next::bad` exits 1 naming valid values | Invalid Value |
 | EC-5 | `only_next::0` (default) shows all rows | Behavioral Divergence |
 | EC-6 | `only_next::true` accepted (alias for 1) | Alias Acceptance |
@@ -29,7 +29,7 @@ Edge case coverage for the `only_next::` parameter on `.usage`. See [param/040_o
 
 ### EC-2: `only_next::1` with no eligible candidate shows 0 rows
 
-- **Given:** One account that is `is_current=true` (no eligible candidate for `next::` strategy).
+- **Given:** One account that is `is_current=true` (no eligible candidate for the active sort strategy).
 - **When:** `clp .usage only_next::1`
 - **Then:** Exits 0. Table has 0 data rows. No error.
 - **Exit:** 0
@@ -38,14 +38,14 @@ Edge case coverage for the `only_next::` parameter on `.usage`. See [param/040_o
 
 ---
 
-### EC-3: `only_next::1 next::drain` shows → row from drain strategy
+### EC-3: `only_next::1 sort::renews` shows → row from renews strategy
 
-- **Given:** Two accounts with valid quota; drain strategy winner differs from default renew winner.
-- **When:** `clp .usage only_next::1 next::drain`
-- **Then:** Exits 0. The row shown is the drain strategy winner (not the renew default winner).
+- **Given:** Two accounts with valid quota; renews strategy selects by billing renewal date.
+- **When:** `clp .usage only_next::1 sort::renews`
+- **Then:** Exits 0. Exactly one row shown — the renews-strategy winner — which has the `→` marker.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it226_lim_it_only_next_1_drain_shows_winner` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it226_lim_it_only_next_1_renews_shows_winner` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/040_only_next.md](../../../../docs/cli/param/040_only_next.md)
 
 ---

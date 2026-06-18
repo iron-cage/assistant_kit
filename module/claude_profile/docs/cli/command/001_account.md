@@ -480,7 +480,7 @@ clp .account.relogin name::carol@example.com dry::1
 
 ```bash
 clp .usage rotate::1
-clp .usage rotate::1 next::endurance
+clp .usage rotate::1 sort::renews
 clp .usage rotate::1 dry::1
 ```
 

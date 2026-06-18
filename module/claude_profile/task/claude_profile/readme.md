@@ -10,6 +10,7 @@ Task registry for the `claude_profile` crate.
 | 002 | force_bypass_g5_g6_g7 | 🎯 Verified | Add force::1 bypass to .account.use, .account.delete, .account.relogin for G5–G7 ownership gates |
 | 003 | drop_account_rotate_add_usage_rotate | 🎯 Verified | Drop .account.rotate; add rotate::1 to .usage with strategy-driven rotation, G5 gate, dry-run, touch reuse |
 | 004 | sort_strategy_simplification | 🎯 Verified | Simplify sort to name/renew/renews, remove next:: entirely, implement 4-group status partition |
+| 005 | ft09_usage_rotate_touch_reuse_test | ✅ Completed | Implement FT-09 test: rotate::1 touch::1 post-switch touch reuse (AC-09 of Feature 038) |
 
 ## Responsibility Table
 

@@ -12,7 +12,7 @@
 
 ## Execution State
 
-- **State:** 🎯 (Verified)
+- **State:** ✅ (Completed)
 - **Priority:** 3
 - **Dir:** module/claude_profile
 - **Actor:** null
@@ -179,6 +179,7 @@
 - **[2026-06-17]** `UPDATED` — Passed Verification Gate (4/4 PASS).
 - **[2026-06-18]** `UPDATED` — Extended scope: `next::` parameter removed entirely (not reduced to 1 variant); `NextStrategy` enum removed; `sort::` unifies row ordering and `→` recommendation. All documentation updated to target state.
 - **[2026-06-18]** `UPDATED` — Passed Verification Gate (4/4 PASS) after scope extension.
+- **[2026-06-18]** `COMPLETED` — All phases executed. 64/64 container jobs green, 16/16 crates pass. Consistency pass applied to 9 doc/spec files with stale references. Deprecated/removed test specs trimmed. Task closed.
 
 ## Verification Record
 

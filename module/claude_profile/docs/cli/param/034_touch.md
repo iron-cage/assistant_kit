@@ -4,7 +4,7 @@ Activate idle quota windows by sending a minimal prompt via an isolated subproce
 
 - **Default:** `1` (on — idle accounts are activated automatically)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`; effective only under `#[cfg(feature = "enabled")]` �� in offline builds the parameter is accepted but has no effect
-- **Purpose:** Starts a 5h session for idle accounts (those with no active countdown), making them eligible for endurance sort strategy and immediately available for use.
+- **Purpose:** Starts a 5h session for idle accounts (those with no active countdown), making them immediately available for use with concrete session timers.
 
 **Examples:**
 

@@ -35,9 +35,9 @@
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
 //! | UA-1 | `quota_ua1_usage_shows_all_accounts` | `.usage` exits 0, accounts listed | P |
-//! | UA-2 | `quota_ua2_sort_strategies_exit_0` | `sort::endurance` and `sort::renew` exit 0 | P |
+//! | UA-2 | `quota_ua2_sort_strategies_exit_0` | `sort::renew` and `sort::renews` exit 0 | P |
 //! | UA-3 | `quota_ua3_lim_it_live_mode_produces_output` | `live::1` produces at least one refresh (`lim_it`) | P |
-//! | UA-4 | `quota_ua4_next_recommendation_present` | `next::endurance` exits 0 | P |
+//! | UA-4 | `quota_ua4_next_recommendation_present` | `sort::renew` exits 0, recommendation present | P |
 //! | UA-5 | `quota_ua5_min_5h_filter_exits_0` | `min_5h::40` exits 0 | P |
 //!
 //! ### Story 4 — Scripted Pipeline Automation (UA-1..4)

@@ -80,7 +80,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-76 | `rotate::1` with no eligible candidate exits 1; table still rendered | Rotate Param |
 | IT-77 | `rotate::1 dry::1` previews target; no switch executed; exit 0 | Rotate Param |
 | IT-78 | `rotate::1` executes switch; output ends with `switched to '{name}'` | Rotate Param |
-| IT-79 | `rotate::1 next::endurance` and `rotate::1 next::drain` use strategy winner | Rotate Param |
+| IT-79 | `rotate::1 sort::renews` uses the renews-strategy winner | Rotate Param |
 | IT-80 | `rotate::1 force::1` bypasses G5 gate; non-owned account eligible | Rotate Param |
 
 ### Test Coverage Summary
@@ -897,7 +897,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ### IT-77: `rotate::1 dry::1` previews target; no switch executed; exit 0
 
-- **Given:** Two accounts: `primary@acme.com` (current, active) and `secondary@acme.com` (owned, non-current, non-active, not h-exhausted, not expired, has quota). `next::renew` default selects `secondary@acme.com` as `→` winner.
+- **Given:** Two accounts: `primary@acme.com` (current, active) and `secondary@acme.com` (owned, non-current, non-active, not h-exhausted, not expired, has quota). `sort::renew` (default) selects `secondary@acme.com` as `→` winner.
 - **When:** `clp .usage rotate::1 dry::1`
 - **Then:** Exits 0. Table is rendered; `→` appears on `secondary@acme.com`. Output ends with `[dry-run] would switch to 'secondary@acme.com'`. Credential store is NOT modified (credentials file unchanged).
 - **Exit:** 0
@@ -918,17 +918,15 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-79: `rotate::1 next::endurance` and `rotate::1 next::drain` use strategy winner
+### IT-79: `rotate::1 sort::renews` uses the renews-strategy winner
 
-- **Given:** Two eligible non-current accounts with differing quota levels. Live test environment.
-- **When (Case A):** `clp .usage rotate::1 next::endurance`
-- **Then (Case A):** Exits 0. Switches to the endurance winner (most 5h quota remaining). Output ends with `switched to '{name}'`.
-- **When (Case B):** `clp .usage rotate::1 next::drain`
-- **Then (Case B):** Exits 0. Switches to the drain winner (least non-zero weekly quota). Output ends with `switched to '{name}'`.
+- **Given:** Two eligible non-current accounts. Live test environment.
+- **When:** `clp .usage rotate::1 sort::renews`
+- **Then:** Exits 0. Switches to the account with the soonest billing renewal. Output ends with `switched to '{name}'`.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it253_lim_it_rotate_strategy_selection` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/038_usage_strategy_rotate.md AC-07, AC-08](../../../../docs/feature/038_usage_strategy_rotate.md)
+- **Source fn:** `ft07_lim_it_sort_renews` (in `tests/cli/usage_rotate_test.rs`)
+- **Source:** [feature/038_usage_strategy_rotate.md AC-07](../../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---
 
