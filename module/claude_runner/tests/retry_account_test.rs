@@ -253,6 +253,67 @@ fn ec8_account_retry_exhausted()
   );
 }
 
+// ── EC-9: Account class default = 0 → no retry without explicit opt-in ────────
+
+/// EC-9 (param 40): fake emits `"You've hit your limit"` + exits 2; NO `--retry-on-account`
+/// flag set; class_default_count(Account) = Some(0) takes effect → no retry; exit 2.
+///
+/// Root Cause: Account class default was `auto` (falling through to Tier 3 fallback = 2),
+///   causing a 60-second stall (2 × 30s) on every quota exhaustion with no user benefit,
+///   since quota resets take hours not seconds.
+/// Why Not Caught: EC-7 and EC-8 both test explicit `--retry-on-account N` (opt-in); neither
+///   tested the unset/default behaviour.
+/// Fix Applied: class_default_count(ErrorClass::Account) = Some(0) inserted between class_cli
+///   and fallback in resolve_count() 4-tier resolution.
+/// Prevention: this test asserts absence of "retrying" in stderr when no retry flags are set.
+/// Pitfall: DO NOT use `--retry-override 0` here — that tests Tier 1 override, not the class
+///   default; the old 3-tier code would also return 0 with override 0, masking regressions.
+///   env_remove CLR_RETRY_DEFAULT/CLR_RETRY_OVERRIDE/CLR_RETRY_ON_ACCOUNT for determinism.
+#[ cfg( unix ) ]
+#[ test ]
+fn ec9_account_default_zero_no_retry()
+{
+  let tmp  = tempfile::tempdir().expect( "create temp dir" );
+  let fake = tmp.path().join( "claude" );
+
+  std::fs::write(
+    &fake,
+    b"#!/bin/sh\nprintf \"You've hit your limit\\n\"\nexit 2\n",
+  ).expect( "write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake claude" );
+
+  let old_path = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path = format!( "{}:{old_path}", tmp.path().display() );
+  let bin      = env!( "CARGO_BIN_EXE_clr" );
+
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "0", "x" ] )
+    .env( "PATH", &new_path )
+    .env_remove( "CLR_RETRY_ON_ACCOUNT" )
+    .env_remove( "CLR_RETRY_DEFAULT" )
+    .env_remove( "CLR_RETRY_OVERRIDE" )
+    .output()
+    .expect( "invoke clr" );
+
+  assert_eq!(
+    out.status.code(),
+    Some( 2 ),
+    "Account class_default=0: exit must be 2 with no retry flags. exit={:?} stderr={}",
+    out.status.code(),
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "[Account]" ),
+    "stderr must contain [Account] class label. Got:\n{stderr}"
+  );
+  assert!(
+    !stderr.contains( "retrying" ),
+    "Account class_default=0: no retry progress line must appear in stderr. Got:\n{stderr}"
+  );
+}
+
 // ── Param 41 — --account-delay ────────────────────────────────────────────────
 
 // ── EC-1 (delay): --help lists --account-delay ────────────────────────────────

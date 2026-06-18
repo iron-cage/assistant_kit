@@ -66,7 +66,7 @@ pub( crate ) fn print_help()
   println!( "  --retry-default-delay <SECS>       Fallback delay for unset classes (default: 30; 0 = immediate)" );
   println!( "  --retry-on-transient <N>           Transient (rate limit) retry count (default: auto → fallback)" );
   println!( "  --transient-delay <SECS>           Transient class delay (default: auto → fallback)" );
-  println!( "  --retry-on-account <N>             Account (quota exhausted) retry count (default: auto → fallback)" );
+  println!( "  --retry-on-account <N>             Account (quota exhausted) retry count (default: 0; opt-in only)" );
   println!( "  --account-delay <SECS>             Account class delay (default: auto → fallback)" );
   println!( "  --retry-on-auth <N>                Auth (credential) retry count (default: auto → fallback)" );
   println!( "  --auth-delay <SECS>                Auth class delay (default: auto → fallback)" );

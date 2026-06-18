@@ -42,6 +42,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `apply_runner_retry()` on gate timeout
   - Tests: EC-7 (retry fires on absent binary), EC-8 (retry disabled with `--retry-on-runner 0`)
 
+### Changed
+
+- **Account class (`--retry-on-account`) default retry count changed from `auto` (effective 2) to `0`** (TSK-213)
+  - Quota resets are measured in hours; 30-second retry delays are counterproductive for
+    `QuotaExhausted` errors; retrying immediately after quota exhaustion wastes wall-clock time
+  - Account class is now opt-in only: pass `--retry-on-account N` with a long `--account-delay`
+    only for batch workflows that may span a billing-period boundary
+  - Implementation: `class_default_count(ErrorClass)` returns `Some(0)` for Account, `None`
+    for all others; inserted as new tier between class-specific and fallback in `resolve_count()`
+  - `--retry-override` (Tier 1) still overrides this default when set
+  - Tests: EC-9 (no retry without explicit `--retry-on-account`; Account class_default=0)
+
 ## [1.2.0] - 2026-06-14
 
 ### Added

@@ -134,7 +134,6 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | MEASURE | 1 | B16h (lim_it; runs by default in container) |
 
 **Validation gap:** 12 of 25 behaviors are fully validated with behavioral assertions.
-See `../../-plan/001_behavior_validation_upgrade.plan.md` for the upgrade roadmap.
 
 ---
 
