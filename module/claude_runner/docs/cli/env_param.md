@@ -68,7 +68,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 31 | `CLR_RETRY_ON_TRANSIENT` | [`--retry-on-transient`](param/034_retry_on_transient.md) | u8 | Transient class retry count (Tier 2); default auto → fallback |
 | 32 | `CLR_TRANSIENT_DELAY` | [`--transient-delay`](param/035_transient_delay.md) | u32 | Transient class delay (Tier 2); default auto → fallback |
 | 33 | `CLR_TIMEOUT` | [`--timeout`](param/036_timeout.md) | u32 | Applied when `--timeout` absent; `0` = unlimited (no watchdog); invalid values silently ignored. **Cross-command:** also applies to `isolated`/`refresh` via Section 2 (same semantics: `0` = unlimited) |
-| 34 | `CLR_RETRY_ON_ACCOUNT` | [`--retry-on-account`](param/040_retry_on_account.md) | u8 | Account class retry count (Tier 2); default auto → fallback |
+| 34 | `CLR_RETRY_ON_ACCOUNT` | [`--retry-on-account`](param/040_retry_on_account.md) | u8 | Account class retry count (class default = 0; opt-in only) |
 | 35 | `CLR_ACCOUNT_DELAY` | [`--account-delay`](param/041_account_delay.md) | u32 | Account class delay (Tier 2); default auto → fallback |
 | 36 | `CLR_RETRY_ON_AUTH` | [`--retry-on-auth`](param/042_retry_on_auth.md) | u8 | Auth class retry count (Tier 2); default auto → fallback |
 | 37 | `CLR_AUTH_DELAY` | [`--auth-delay`](param/043_auth_delay.md) | u32 | Auth class delay (Tier 2); default auto → fallback |

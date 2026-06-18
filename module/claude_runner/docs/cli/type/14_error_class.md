@@ -13,12 +13,13 @@ Use this taxonomy to decide the appropriate caller response at the application l
 ### Error Class Table
 
 All retriable classes use a uniform parameter pair: `--retry-on-<class>` (u8, count) and `--<class>-delay` (u32, seconds).
-All defaults are uniform: **retry = 2**, **delay = 30s** (Validation delay = 0s — no server-side throttle).
+Most classes default to **retry = 2**, **delay = 30s** (Validation delay = 0s — no server-side throttle).
+**Exception:** Account defaults to **retry = 0** — quota resets are hours-long, making short-delay retry counterproductive; opt-in only via `--retry-on-account N`.
 
 | Error Class | Detection | Retry Param | Delay Param | Default Retry | Default Delay | Caller Action |
 |-------------|-----------|-------------|-------------|---------------|---------------|---------------|
 | **Transient** | exit 2, no quota text | `--retry-on-transient` | `--transient-delay` | 2 | 30s | Retry with backoff |
-| **Account** | `"You've hit your limit"` in output | `--retry-on-account` | `--account-delay` | 2 | 30s | Retry with backoff; or switch credentials |
+| **Account** | `"You've hit your limit"` in output | `--retry-on-account` | `--account-delay` | 0 | 30s | No retry by default; opt-in with `--retry-on-account N`; or switch credentials |
 | **Auth** | `"Your organization does not have access to Claude"` | `--retry-on-auth` | `--auth-delay` | 2 | 30s | Retry with backoff; or fix credentials |
 | **Service** | `"API Error: "` in output | `--retry-on-service` | `--service-delay` | 2 | 30s | Retry with backoff |
 | **Process** | exit > 128 (signal) or exit 4 (timeout) | `--retry-on-process` | `--process-delay` | 2 | 30s | Retry with backoff; investigate persistent failures |
@@ -30,7 +31,7 @@ All defaults are uniform: **retry = 2**, **delay = 30s** (Validation delay = 0s 
 
 **Transient** — Temporary rate-limiting by the Anthropic API (HTTP 429). The subprocess exits 2 with no distinguishing text. Automatic retry via `--retry-on-transient N` with `--transient-delay SECS` cooldown is the correct response.
 
-**Account** — Period quota exhausted for the current account. Distinguished from `Transient` by the `"You've hit your limit"` text in output; also exits 2. Retrying immediately is futile — wait for the billing period to reset or switch to a different account via `--creds`.
+**Account** — Period quota exhausted for the current account. Distinguished from `Transient` by the `"You've hit your limit"` text in output; also exits 2. Default retry count is 0 (no retry) because quota resets are measured in hours — retrying after a 30-second delay is counterproductive. Use `--retry-on-account N` with a long `--account-delay` only for batch workflows spanning a billing-period boundary, or switch to a different account via `--creds`.
 
 **Service** — API-layer error from the Anthropic backend (HTTP 4xx/5xx). The `"API Error: "` prefix (colon-space, not parenthesis) identifies these. May be transient infrastructure issues. Automatic retry via `--retry-on-service N` with `--service-delay SECS` cooldown.
 
@@ -61,7 +62,7 @@ All defaults are uniform: **retry = 2**, **delay = 30s** (Validation delay = 0s 
 Resolution logic per class per invocation:
 
 ```
-effective_count(class)  = --retry-override        ?? --retry-on-<class>  ?? --retry-default (2)
+effective_count(class)  = --retry-override        ?? --retry-on-<class>  ?? class_default(class) ?? --retry-default (2)
 effective_delay(class)  = --retry-override-delay  ?? --<class>-delay     ?? --retry-default-delay (30s)
 ```
 
@@ -78,12 +79,12 @@ Beats class-specific values when set; default is unset (auto).
 
 #### Tier 2 — Class-Specific
 
-Default is `auto` — inherits from Tier 3 fallback when not explicitly set.
+Default is `auto` — inherits from class default (if any) then Tier 3 fallback when not explicitly set.
 
 | Error Class    | Count Param              | Delay Param              | Default | Env Vars (count / delay)                                      |
 |----------------|--------------------------|--------------------------|---------|---------------------------------------------------------------|
 | **Transient**  | `--retry-on-transient`   | `--transient-delay`      | auto    | `CLR_RETRY_ON_TRANSIENT` / `CLR_TRANSIENT_DELAY`              |
-| **Account**    | `--retry-on-account`     | `--account-delay`        | auto    | `CLR_RETRY_ON_ACCOUNT` / `CLR_ACCOUNT_DELAY`                  |
+| **Account**    | `--retry-on-account`     | `--account-delay`        | 0       | `CLR_RETRY_ON_ACCOUNT` / `CLR_ACCOUNT_DELAY`                  |
 | **Auth**       | `--retry-on-auth`        | `--auth-delay`           | auto    | `CLR_RETRY_ON_AUTH` / `CLR_AUTH_DELAY`                        |
 | **Service**    | `--retry-on-service`     | `--service-delay`        | auto    | `CLR_RETRY_ON_SERVICE` / `CLR_SERVICE_DELAY`                  |
 | **Process**    | `--retry-on-process`     | `--process-delay`        | auto    | `CLR_RETRY_ON_PROCESS` / `CLR_PROCESS_DELAY`                  |

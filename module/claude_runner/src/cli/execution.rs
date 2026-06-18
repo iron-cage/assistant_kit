@@ -112,10 +112,29 @@ fn classify_to_class( kind : Option< &ErrorKind >, exit_code : i32 ) -> ErrorCla
   }
 }
 
-/// 3-tier resolution for retry count: override ?? class-specific ?? fallback (2).
-fn resolve_count( over : Option< u8 >, class : Option< u8 >, fallback : Option< u8 > ) -> u8
+/// Class-level default count for error classes that differ from the Tier 3 fallback.
+///
+/// Returns `Some(0)` for `Account` — quota resets are hours-long; retrying after a
+/// short delay is counterproductive. All other classes return `None` and fall through
+/// to the Tier 3 fallback (default 2).
+fn class_default_count( class : ErrorClass ) -> Option< u8 >
 {
-  over.or( class ).or( fallback ).unwrap_or( 2 )
+  match class
+  {
+    ErrorClass::Account => Some( 0 ),
+    _ => None,
+  }
+}
+
+/// 4-tier resolution for retry count: override ?? class-specific ?? class-default ?? fallback (2).
+fn resolve_count(
+  over         : Option< u8 >,
+  class_cli    : Option< u8 >,
+  class_default : Option< u8 >,
+  fallback     : Option< u8 >,
+) -> u8
+{
+  over.or( class_cli ).or( class_default ).or( fallback ).unwrap_or( 2 )
 }
 
 /// 3-tier resolution for retry delay: override ?? class-specific ?? fallback (30).
@@ -182,6 +201,7 @@ fn apply_expect_validation( cli : &CliArgs, builder : &ClaudeCommand, out : Stri
       let retries = resolve_count(
         cli.retry_override,
         cli.retry_on_validation,
+        None,
         cli.retry_default,
       ) as usize;
       let delay = resolve_delay(
@@ -344,7 +364,7 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
 ///   Unlike `apply_expect_validation()` (owns its loop), this function only decides+waits.
 pub( super ) fn apply_runner_retry( cli : &CliArgs, err : &std::io::Error, attempt : &mut u32 )
 {
-  let count = resolve_count( cli.retry_override, cli.retry_on_runner, cli.retry_default );
+  let count = resolve_count( cli.retry_override, cli.retry_on_runner, None, cli.retry_default );
   let delay = resolve_delay( cli.retry_override_delay, cli.runner_delay, cli.retry_default_delay );
   let msg   = err.to_string();
 
@@ -375,7 +395,7 @@ pub( super ) fn apply_runner_retry( cli : &CliArgs, err : &std::io::Error, attem
 /// output capture makes the content available for programmatic use.
 /// Without `--print`, captured output would be TUI escape codes.
 ///
-/// Uses a 3-tier retry hierarchy: override → class-specific → fallback.
+/// Uses a 4-tier retry hierarchy: override → class-specific → class-default → fallback.
 /// Every error class is retried when its effective count > 0.
 /// Console output uses `[Class] <message>` format on stderr.
 /// Supports subprocess timeout via `--timeout` (0 = unlimited).
@@ -413,7 +433,7 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
       let class_idx = class as usize;
       let label = class.label();
       let ( count_field, delay_field ) = class_fields( cli, class );
-      let limit = resolve_count( cli.retry_override, count_field, cli.retry_default ) as usize;
+      let limit = resolve_count( cli.retry_override, count_field, class_default_count( class ), cli.retry_default ) as usize;
       let delay = resolve_delay( cli.retry_override_delay, delay_field, cli.retry_default_delay );
       let msg = first_message( &output, class );
 
