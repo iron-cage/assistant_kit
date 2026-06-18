@@ -12,11 +12,10 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 | FT-04 | `rotate::1 live::1` → exit 1 before fetch | AC-04 |
 | FT-05 | G5 gate: non-owned account skipped, owned account selected | AC-05 |
 | FT-06 | `force::1` bypasses G5: non-owned account becomes eligible | AC-06 |
-| FT-07 | `rotate::1 next::endurance` switches to endurance winner | AC-07 |
-| FT-08 | `rotate::1 next::drain` switches to drain winner | AC-08 |
-| FT-09 | `rotate::1 format::json` executes switch; JSON unchanged | AC-09 |
-| FT-10 | Post-switch touch uses in-memory quota (no extra API call) | AC-10 |
-| FT-11 | Exit code 1 on ownership violation without force | AC-11 |
+| FT-07 | `rotate::1 sort::renews` switches to soonest billing renewal winner | AC-07 |
+| FT-08 | `rotate::1 format::json` executes switch; JSON unchanged | AC-08 |
+| FT-09 | Post-switch touch uses in-memory quota (no extra API call) | AC-09 |
+| FT-10 | Exit code 1 on ownership violation without force | AC-10 |
 
 ### Test Case Index
 
@@ -28,19 +27,18 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 | FT-04 | `rotate::1 live::1` exits 1 immediately | AC-04 | Mutual Exclusion |
 | FT-05 | G5 gate skips non-owned, selects next owned | AC-05 | Ownership Gate |
 | FT-06 | `force::1` allows rotation to non-owned account | AC-06 | Force Bypass |
-| FT-07 | `rotate::1 next::endurance` — endurance winner selected | AC-07 | Strategy Selection |
-| FT-08 | `rotate::1 next::drain` — drain winner selected | AC-08 | Strategy Selection |
-| FT-09 | `rotate::1 format::json` — switch happens, JSON body unchanged | AC-09 | Format Interaction |
-| FT-10 | Post-switch touch fires without extra quota API call | AC-10 | Touch Reuse |
-| FT-11 | Non-owned target without force → exit 1 ownership violation | AC-11 | Ownership Gate |
+| FT-07 | `rotate::1 sort::renews` — soonest billing renewal winner selected | AC-07 | Strategy Selection |
+| FT-08 | `rotate::1 format::json` — switch happens, JSON body unchanged | AC-08 | Format Interaction |
+| FT-09 | Post-switch touch fires without extra quota API call | AC-09 | Touch Reuse |
+| FT-10 | Non-owned target without force → exit 1 ownership violation | AC-10 | Ownership Gate |
 
-**Total:** 11 FT cases
+**Total:** 10 FT cases
 
 ---
 
 ### FT-01: `rotate::1` switches to → winner, output contains "switched to"
 
-- **Given:** Two owned accounts: `alpha@test.com` (h5_util=20.0, 80% left) and `beta@test.com` (h5_util=70.0, 30% left). Neither is current. `next::renew` (default). `alpha` has soonest 7d renewal.
+- **Given:** Two owned accounts: `alpha@test.com` (h5_util=20.0, 80% left) and `beta@test.com` (h5_util=70.0, 30% left). Neither is current. `sort::renew` (default). `alpha` has soonest 7d renewal.
 - **When:** `clp .usage rotate::1`
 - **Then:** Exit 0. Credentials updated to `alpha@test.com` (renew winner). Output contains `switched to 'alpha@test.com'`. `→` on alpha in table.
 - **Exit:** 0
@@ -60,7 +58,7 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 
 ### FT-03: No eligible account → exit 1, table rendered
 
-- **Given:** All accounts are either current, active, or h-exhausted (no eligible candidate for `next::renew`).
+- **Given:** All accounts are either current, active, or h-exhausted (no eligible candidate for `sort::renew`).
 - **When:** `clp .usage rotate::1`
 - **Then:** Exit 1. Table still rendered. Stderr (or stdout) contains `"no eligible account to rotate to"`. Credentials unchanged.
 - **Exit:** 1
@@ -98,53 +96,43 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 
 ---
 
-### FT-07: `rotate::1 next::endurance` — endurance winner selected
+### FT-07: `rotate::1 sort::renews` — soonest billing renewal winner selected
 
-- **Given:** Two owned accounts: `alpha@test.com` (h5_util=20.0, 80% session left — endurance winner) and `beta@test.com` (h5_util=70.0, 30% session left). Neither current.
-- **When:** `clp .usage rotate::1 next::endurance`
-- **Then:** Exit 0. Switches to `alpha@test.com` (most 5h quota remaining). `→` on alpha. Output: `switched to 'alpha@test.com'`.
+- **Given:** Two owned accounts with different billing renewal dates. Neither current.
+- **When:** `clp .usage rotate::1 sort::renews`
+- **Then:** Exit 0. Switches to the account with the soonest billing renewal. `→` on that account. Output: `switched to '{name}'`.
 - **Exit:** 0
 - **Source:** [038_usage_strategy_rotate.md AC-07](../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---
 
-### FT-08: `rotate::1 next::drain` — drain winner selected
+### FT-08: `rotate::1 format::json` — switch executes, JSON unchanged
 
-- **Given:** Same two accounts as FT-07. `beta@test.com` has least non-zero 5h quota (30% — drain winner).
-- **When:** `clp .usage rotate::1 next::drain`
-- **Then:** Exit 0. Switches to `beta@test.com` (least 5h left, drain strategy). `→` on beta. Output: `switched to 'beta@test.com'`.
-- **Exit:** 0
-- **Source:** [038_usage_strategy_rotate.md AC-08](../../../docs/feature/038_usage_strategy_rotate.md)
-
----
-
-### FT-09: `rotate::1 format::json` — switch executes, JSON unchanged
-
-- **Given:** Two owned accounts; one is the `next::renew` winner.
+- **Given:** Two owned accounts; one is the `sort::renew` winner.
 - **When-A:** `clp .usage format::json`
 - **When-B:** `clp .usage rotate::1 format::json`
 - **Then-A:** Credentials unchanged. JSON array returned alphabetically.
 - **Then-B:** Credentials updated (switch executed). JSON array identical to When-A (no `"switched_to"` or extra field). Exit 0.
 - **Exit:** 0 both cases
-- **Source:** [038_usage_strategy_rotate.md AC-09](../../../docs/feature/038_usage_strategy_rotate.md)
+- **Source:** [038_usage_strategy_rotate.md AC-08](../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---
 
-### FT-10: Post-switch touch fires without extra quota API call
+### FT-09: Post-switch touch fires without extra quota API call
 
 - **Given:** One owned inactive account with no active 5h window (touch trigger condition). `rotate::1 touch::1`.
 - **When:** `clp .usage rotate::1 touch::1`
 - **Then:** Exit 0. Switch executed. Touch fires for the winner using in-memory `AccountQuota` — total API call count equals N accounts (not N+1).
 - **Exit:** 0
 - **Live:** yes (requires API access)
-- **Source:** [038_usage_strategy_rotate.md AC-10](../../../docs/feature/038_usage_strategy_rotate.md)
+- **Source:** [038_usage_strategy_rotate.md AC-09](../../../docs/feature/038_usage_strategy_rotate.md)
 
 ---
 
-### FT-11: Non-owned target without force → exit 1 ownership violation
+### FT-10: Non-owned target without force → exit 1 ownership violation
 
 - **Given:** Only one non-current, non-active account in the store: `foreign@test.com` (is_owned=false). `force::0` (default).
 - **When:** `clp .usage rotate::1`
 - **Then:** Exit 1. Error message contains `"ownership violation"` or `"no eligible account"`. Credentials unchanged.
 - **Exit:** 1
-- **Source:** [038_usage_strategy_rotate.md AC-11](../../../docs/feature/038_usage_strategy_rotate.md)
+- **Source:** [038_usage_strategy_rotate.md AC-10](../../../docs/feature/038_usage_strategy_rotate.md)

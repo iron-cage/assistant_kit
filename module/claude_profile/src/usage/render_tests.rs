@@ -3,7 +3,7 @@
 // without widening their visibility. See src/usage/readme.md § Inline Test Exception.
 
   use super::{ render_text, render_tsv, render_json };
-  use crate::usage::types::{ AccountQuota, SortStrategy, PreferStrategy, NextStrategy, ColsVisibility };
+  use crate::usage::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility };
   use crate::usage::test_support::FAR_FUTURE_MS;
 
   /// FT-20/009 — `~Renews` must retain billing date (not error reason) for 429-errored accounts.
@@ -98,7 +98,7 @@
 
     // Text renderer: the error reason must appear somewhere in output (in a quota column).
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &cols, false, false,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, false, false,
     );
     assert!(
       text.contains( "(rate limited (429))" ),
@@ -153,7 +153,7 @@
 
     // --- text renderer ---
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &cols, false, false,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, false, false,
     );
     let alice_text = text.lines().find( | l | l.contains( "alice@test.com" ) )
       .expect( "FT-21: alice line missing from render_text" );
@@ -238,7 +238,7 @@
     let accounts = vec![ aq ];
     let cols     = ColsVisibility::default_set();
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &cols, false, false,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, false, false,
     );
     assert!(
       text.contains( '~' ),
@@ -343,7 +343,7 @@
     let mut cols = ColsVisibility::default_set();
     cols.d7_son_reset = true;
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &cols, false, false,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, false, false,
     );
     assert!(
       text.contains( "~in " ),
@@ -416,7 +416,7 @@
 
     // text renderer: ~Renews must be "—", NOT "~in Nd"
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &cols, false, false,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, false, false,
     );
     assert!(
       text.contains( "\u{2014}" ),
@@ -482,7 +482,7 @@
     let text_a = render_text(
       &[ aq_cached ],
       SortStrategy::Name, None, PreferStrategy::Any,
-      NextStrategy::Endurance, &cols, false, false,
+      &cols, false, false,
     );
     assert!(
       text_a.contains( '~' ),
@@ -510,7 +510,7 @@
     let text_b = render_text(
       &[ aq_no_cache ],
       SortStrategy::Name, None, PreferStrategy::Any,
-      NextStrategy::Endurance, &cols, false, false,
+      &cols, false, false,
     );
     // No tilde prefix when no cache data.
     assert!(

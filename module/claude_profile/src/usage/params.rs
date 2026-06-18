@@ -6,7 +6,7 @@
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use unilang::data::{ ErrorCode, ErrorData };
-use super::types::{ UsageParams, SortStrategy, PreferStrategy, NextStrategy, ColsVisibility, SubprocessModel, SubprocessEffort, UsageOutputFormat, GetField, validate_set_model };
+use super::types::{ UsageParams, SortStrategy, PreferStrategy, ColsVisibility, SubprocessModel, SubprocessEffort, UsageOutputFormat, GetField, validate_set_model };
 
 // ── Parameter parser ──────────────────────────────────────────────────────────
 
@@ -110,26 +110,15 @@ pub( super ) fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsagePar
       "prefer:: must be a string".to_string(),
     ) ),
   };
-  let next = match cmd.arguments.get( "next" )
+  // next:: parameter has been removed — sort:: now drives both row ordering and → recommendation.
+  // Reject next:: explicitly so users receive a clear migration message.
+  if cmd.arguments.contains_key( "next" )
   {
-    None                       => NextStrategy::Renew,
-    Some( Value::String( s ) ) => NextStrategy::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
-    _ => return Err( ErrorData::new(
+    return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,
-      "next:: must be a string".to_string(),
-    ) ),
-  };
-  // sort::next delegates to the active next:: strategy so the → winner always appears first.
-  let sort = match sort
-  {
-    SortStrategy::Next => match next
-    {
-      NextStrategy::Renew     => SortStrategy::Renew,
-      NextStrategy::Drain     => SortStrategy::Drain,
-      NextStrategy::Endurance => SortStrategy::Endurance,
-    },
-    other => other,
-  };
+      "next:: parameter has been removed; use sort:: instead (valid values: `name`, `renew`, `renews`)".to_string(),
+    ) );
+  }
   let cols = match cmd.arguments.get( "cols" )
   {
     None                       => ColsVisibility::default_set(),
@@ -247,7 +236,7 @@ pub( super ) fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsagePar
   };
   Ok( UsageParams
   {
-    refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, next, cols, touch, imodel, effort,
+    refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, cols, touch, imodel, effort,
     count, offset, only_active, only_next, min_5h : h5_min, min_7d : d7_min, only_valid, exclude_exhausted,
     format, get, abs, no_color, set_model,
     rotate, force,

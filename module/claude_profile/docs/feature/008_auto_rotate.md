@@ -1,6 +1,6 @@
 # Feature: Auto Rotate
 
-> **DEPRECATED** — Removed in favor of `.usage rotate::1`. The `auto_rotate()` API and `.account.rotate` CLI command have been dropped. Use `clp .usage rotate::1` (with optional `next::` strategy) to execute strategy-driven account rotation. See [feature/038_usage_strategy_rotate.md](038_usage_strategy_rotate.md).
+> **DEPRECATED** — Removed in favor of `.usage rotate::1`. The `auto_rotate()` API and `.account.rotate` CLI command have been dropped. Use `clp .usage rotate::1` (with optional `sort::` strategy) to execute strategy-driven account rotation. See [feature/038_usage_strategy_rotate.md](038_usage_strategy_rotate.md).
 
 ### Scope
 

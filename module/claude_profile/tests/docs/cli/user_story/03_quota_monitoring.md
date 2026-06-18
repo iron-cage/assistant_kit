@@ -11,9 +11,9 @@ to one Acceptance Criterion from
 | ID | Test Name | Acceptance Criterion |
 |----|-----------|---------------------|
 | UA-1 | `.usage` shows all saved accounts with quota, expiry, and renewal in one table | AC-1 |
-| UA-2 | `sort::endurance` ranks by most remaining quota; `sort::renew` ranks by soonest renewal | AC-2 |
+| UA-2 | `sort::renew` ranks by soonest renewal event; `sort::renews` ranks by soonest billing renewal | AC-2 |
 | UA-3 | `live::1` continuously refreshes the table at `interval::` seconds | AC-3 |
-| UA-4 | `→ Next` column recommends the best account per the selected `next::` strategy | AC-4 |
+| UA-4 | `→` marker recommends the top eligible account per the active `sort::` strategy | AC-4 |
 | UA-5 | `min_5h::X` and `min_7d::X` filter to accounts meeting minimum quota thresholds | AC-5 |
 
 ### Test Coverage Summary
@@ -38,13 +38,13 @@ to one Acceptance Criterion from
 
 ---
 
-### UA-2: `sort::endurance` ranks by most remaining quota; `sort::renew` ranks by soonest renewal
+### UA-2: `sort::renew` ranks by soonest renewal event; `sort::renews` ranks by soonest billing renewal
 
-- **Given:** Three accounts with different quota levels and renewal dates.
-- **When (a):** `clp .usage sort::endurance`
-- **When (b):** `clp .usage sort::renew`
-- **Then (a):** Exit 0. Rows ordered with highest remaining quota account first.
-- **Then (b):** Exit 0. Rows ordered with soonest renewal account first.
+- **Given:** Two saved accounts with different renewal dates.
+- **When (a):** `clp .usage sort::renew`
+- **When (b):** `clp .usage sort::renews`
+- **Then (a):** Exit 0. Rows ordered with soonest quota renewal account first.
+- **Then (b):** Exit 0. Rows ordered with soonest billing renewal account first.
 - **Exit:** 0
 - **Source:** [003_quota_monitoring.md — AC-2](../../../../docs/cli/user_story/003_quota_monitoring.md)
 
@@ -60,11 +60,11 @@ to one Acceptance Criterion from
 
 ---
 
-### UA-4: `→ Next` column recommends the best account per the selected `next::` strategy
+### UA-4: `→` marker recommends the top eligible account per the active `sort::` strategy
 
-- **Given:** Three accounts with differing quota levels and token expiry.
-- **When:** `clp .usage next::endurance`
-- **Then:** Exit 0. Exactly one row in output has a `→ Next` marker. The marked account has the highest remaining endurance among all accounts. Other rows have no `→ Next` marker.
+- **Given:** Two saved accounts with differing expiry; one is current.
+- **When:** `clp .usage sort::renew`
+- **Then:** Exit 0. Output contains a `→` marker on the non-current account row.
 - **Exit:** 0
 - **Source:** [003_quota_monitoring.md — AC-4](../../../../docs/cli/user_story/003_quota_monitoring.md)
 

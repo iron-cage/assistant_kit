@@ -1,6 +1,6 @@
 # Parameter :: `rotate::`
 
-Execute account rotation after quota fetch — switch to the account marked `→` by the active `next::` strategy.
+Execute account rotation after quota fetch — switch to the account marked `→` by the active `sort::` strategy.
 
 ### Summary
 
@@ -16,7 +16,7 @@ Execute account rotation after quota fetch — switch to the account marked `→
 
 When `rotate::1`, after the quota table is rendered, `.usage` executes a switch to the account selected by `find_next_for_strategy()` (the same account that receives `→` in the table body).
 
-The rotation target is the winner of the active `next::` strategy (default `next::renew`). Combine `rotate::1 next::endurance` or `rotate::1 next::drain` to switch using alternative strategies.
+The rotation target is the top eligible account in the active `sort::` order (default `sort::renew`). Combine `rotate::1 sort::renews` to switch using the billing-renewal strategy.
 
 **Ownership gate (G5):** Only owned accounts are eligible rotation targets. A non-owned account is excluded from `find_first_eligible` when `rotate::1` is active (without `force::1`). This mirrors the ownership gate on `.account.use`.
 
@@ -33,9 +33,8 @@ The rotation target is the winner of the active `next::` strategy (default `next
 ### Examples
 
 ```bash
-clp .usage rotate::1                        # switch using default next::renew strategy
-clp .usage rotate::1 next::endurance        # switch to account with most 5h quota
-clp .usage rotate::1 next::drain            # switch to account closest to exhaustion
+clp .usage rotate::1                        # switch using default sort::renew strategy
+clp .usage rotate::1 sort::renews           # switch to account with soonest billing renewal
 clp .usage rotate::1 dry::1                 # preview without switching
 clp .usage rotate::1 force::1               # bypass G5 ownership gate
 clp .usage rotate::1 trace::1               # emit trace output during rotation
@@ -53,6 +52,6 @@ clp .usage rotate::1 trace::1               # emit trace output during rotation
 | File | Relationship |
 |------|--------------|
 | [feature/038_usage_strategy_rotate.md](../../feature/038_usage_strategy_rotate.md) | Full behavioral specification for rotation |
-| [param/032_next.md](032_next.md) | `next::` selects the rotation target strategy |
+| [param/025_sort.md](025_sort.md) | `sort::` selects the rotation target strategy |
 | [param/058_force.md](058_force.md) | `force::1` bypasses G5 gate |
 | [param/004_dry.md](004_dry.md) | `dry::1` previews rotation target |

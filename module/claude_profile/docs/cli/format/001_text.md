@@ -43,9 +43,7 @@ clp .usage
 # → 🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%   28%      in 6d 14h  in 5h 02m   ~in 30d      in 6d 14h +7d
 # ✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%   35%      in 4d 23h  in 7h 24m   ~in 6d       in 4d 23h +7d
 #
-# Valid: 2 / 2   ->  Next by strategy:
-#   endurance  bob@example.com     100% session, 5h resets in 4h 58m
-#   drain      bob@example.com     28% 7d left, 7d resets in 6d 14h
+# Valid: 2 / 2   ->  Next (renew): bob@example.com   in 4h 58m +7d
 
 clp .token.status
 # valid — 7h24m remaining

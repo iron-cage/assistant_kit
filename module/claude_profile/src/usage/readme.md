@@ -3,7 +3,7 @@
 | File | Responsibility |
 |------|----------------|
 | `mod.rs` | Module declarations, public API re-exports, and shared test support. |
-| `types.rs` | AccountQuota and strategy enums: SortStrategy, PreferStrategy, NextStrategy. |
+| `types.rs` | AccountQuota and strategy enums: SortStrategy, PreferStrategy. |
 | `fetch.rs` | Quota HTTP fetch, token reads, and per-account error formatting. |
 | `format.rs` | Quota metric helpers: five_hour_left, prefer_weekly, renewal_secs. |
 | `sort.rs` | Quota display sort strategies; sort_indices entry point. |

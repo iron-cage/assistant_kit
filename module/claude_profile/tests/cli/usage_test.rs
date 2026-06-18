@@ -24,7 +24,7 @@
 //! | it008  | `it008_lim_it_accounts_in_alpha_order`            | 3 accounts written out of order → alpha output                | P   | yes   |
 //! | it009  | `it009_unreadable_credentials_shows_dash`         | credentials chmod 000 → `—` + exit 0                         | P   | no    |
 //! | it010 | `it010_expired_token_shows_expired_in_expires_col` | account with PAST_MS → "EXPIRED" in Expires column           | P   | no    |
-//! | it011 | `it011_lim_it_recommendation_marker_shown`       | 2 accounts + `next::endurance` → `→` on non-active account    | P   | yes   |
+//! | it011 | `it011_lim_it_recommendation_marker_shown`       | 2 accounts → `→` on non-active account (sort::renew default)  | P   | yes   |
 //! | it012 | `it012_lim_it_footer_shows_valid_count`          | 2 accounts with real tokens → footer "Valid: 2" + "Next:"     | P   | yes   |
 //! | it013 | `it013_active_divergence_shows_star`             | live creds=work, _active=alice → `✓` on work, `*` on alice    | P   | no    |
 //! | it014 | `it014_creds_unreadable_no_checkmark_star_shown` | no live creds, _active=alice → no `✓`, `*` on alice           | P   | no    |
@@ -67,8 +67,8 @@
 //! | it051 | `it051_trace_yes_rejected`                           | `trace::yes` type error → exit 1 (EC-4)                    | N | no |
 //! | it052 | `it052_trace_default_off`                            | no `trace::` → no [trace] lines on stderr (EC-5)           | P | no |
 //! | it053 | `it053_sort_name_accepted`                         | `sort::name` + empty store → exit 0 (IT-44/AC-01)          | P | no |
-//! | it054 | `it054_sort_endurance_accepted`                     | `sort::endurance` + empty store → exit 0 (IT-45/AC-02)     | P | no |
-//! | it055 | `it055_sort_drain_accepted`                         | `sort::drain` + empty store → exit 0 (IT-46/AC-03)         | P | no |
+//! | it054 | ~~`it054_sort_endurance_accepted`~~                 | REMOVED — `sort::endurance` now rejected (see it249)       | - | no |
+//! | it055 | ~~`it055_sort_drain_accepted`~~                     | REMOVED — `sort::drain` now rejected (see it250)           | - | no |
 //! | it056 | `it056_sort_renew_accepted`                         | `sort::renew` + empty store → exit 0 (IT-47/AC-04)         | P | no |
 //! | it057 | `it057_sort_invalid_value_exit_1`                   | `sort::bogus` → exit 1, stderr names valid values (IT-48/AC-09) | N | no |
 //! | it058 | `it058_prefer_invalid_value_exit_1`                 | `prefer::bogus` → exit 1, stderr names valid values (IT-49/AC-10) | N | no |
@@ -86,28 +86,28 @@
 //! | it070 | `it070_prefer_uppercase_rejected`                   | `prefer::Opus` (uppercase) → exit 1 (case-sensitive)       | N | no |
 //! | it073 | `it073_next_all_rejected_exit_1`                    | `next::all` rejected → exit 1 (TSK-184)                    | N | no |
 //! | it074 | `it074_next_session_rejected_exit_1`                | `next::session` rejected → exit 1 (TSK-184)                | N | no |
-//! | it075 | `it075_next_endurance_accepted`                     | `next::endurance` accepted with empty store → exit 0       | P | no |
-//! | it076 | `it076_next_drain_accepted`                         | `next::drain` accepted with empty store → exit 0           | P | no |
+//! | it075 | `it075_next_endurance_rejected`                     | `next::endurance` rejected → exit 1 (next:: removed)       | N | no |
+//! | it076 | `it076_next_drain_rejected`                         | `next::drain` rejected → exit 1 (next:: removed)           | N | no |
 //! | it077 | `it077_next_reset_rejected_exit_1`                  | `next::reset` rejected → exit 1 (TSK-184)                  | N | no |
-//! | it078 | `it078_next_invalid_value_exit_1`                   | `next::bogus` → exit 1, stderr names renew+endurance+drain | N | no |
-//! | it079 | `it079_next_drain_default_no_arrow_without_valid_accounts` | default renew + no valid accounts → no `→`       | P | no |
+//! | it078 | `it078_next_invalid_value_exit_1`                   | `next::bogus` → exit 1, stderr redirects to sort::         | N | no |
+//! | it079 | `it079_default_sort_renew_no_arrow_without_valid_accounts` | default sort::renew + no valid accounts → no `→`  | P | no |
 //! | it080 | `it080_cols_sub_accepted`                           | `cols::+sub` accepted with empty store → exit 0            | P | no |
 //! | it081 | `it081_cols_sub_shows_sub_column`                   | `cols::+sub` with account → output contains "Sub" header   | P | no |
 //! | it082 | `it082_cols_unknown_id_exit_1`                      | `cols::+bogus_col` → exit 1, stderr names valid IDs        | N | no |
 //! | it083 | `it083_usage_help_shows_next_cols_params`           | `.usage.help` lists `next` and `cols` params               | P | no |
 //! | mre171 | `mre_bug_171_account_populated_after_refresh`      | BUG-171: `Fix(BUG-171)` present → `aq.account` populated  | P | no |
-//! | it092 | `it092_next_all_rejected_exit_1`                    | `next::all` rejected → exit 1, stderr names renew+endurance+drain (TSK-184/TSK-222) | N | no |
+//! | it092 | `it092_next_all_rejected_exit_1`                    | `next::all` rejected → exit 1, stderr redirects to sort::  | N | no |
 //! | it093 | `it093_footer_not_gated_on_next_all_structural`     | `Responsibility(TSK-184-footer)` present; old All-gate absent (TSK-184) | P | no |
-//! | it094 | `it094_next_session_rejected_exit_1`                | `next::session` rejected → exit 1, stderr names renew+endurance+drain (TSK-184/TSK-222) | N | no |
+//! | it094 | `it094_next_session_rejected_exit_1`                | `next::session` rejected → exit 1, stderr redirects to sort:: | N | no |
 //! | it095 | `it095_next_strategy_session_absent_structural`     | `NextStrategy::Session` absent from source (TSK-184) | P | no |
-//! | it096 | `it096_next_drain_json_output_unchanged`             | `format::json next::drain` identical to default JSON (TSK-184) | P | no |
+//! | it096 | `it096_json_unaffected_by_sort_strategy`             | `format::json` output unchanged by sort:: value (020 AC-13) | P | no |
 //! | it097 | `it097_touch_1_empty_store_exits_0`                 | `touch::1` empty store → exit 0, no-accounts message (TSK-185 AC-01) | P | no |
 //! | it098 | `it098_touch_1_errored_account_skipped`             | `touch::1` no-token account → exit 0, row shows `—` (TSK-185 AC-04) | P | no |
 //! | it099 | `it099_apply_touch_fn_exists_structural`             | `fn apply_touch` present in source (TSK-185 AC-02 structural) | P | no |
 //! | it100 | `it100_touch_json_format_unaffected`                | `format::json touch::1` empty store → exit 0, output `[]` (TSK-185 AC-08) | P | no |
 //! | it101 | `it101_usage_help_shows_touch_param`                | `.usage.help` contains `touch` (TSK-185 AC-10) | P | no |
 //! | it120 | `it120_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle` | `touch::1` fires for idle accounts (resets_at absent); active skipped after activation (024 FT-12) | P | yes |
-//! | it121 | `it121_sort_next_accepted`                          | `sort::next` accepted → exit 0 (renew default + endurance explicit) (IT-65/AC-15) | P | no |
+//! | it121 | ~~`it121_sort_next_accepted`~~                      | REMOVED — `sort::next` now rejected (see it251)            | - | no |
 //! | it122 | `it122_imodel_auto_accepted_empty_store_exits_0`    | `imodel::auto` accepted; empty store exits 0 (IT-66/EC-1) | P | no |
 //! | it123 | `it123_imodel_bogus_exits_1`                        | `imodel::bogus` → exit 1, stderr names all 5 valid values (IT-67/EC-5) | N | no |
 //! | it124 | `it124_effort_auto_accepted_empty_store_exits_0`    | `effort::auto` accepted; empty store exits 0 (IT-68/EC-1) | P | no |
@@ -126,13 +126,13 @@
 //! | it135 | `it135_apply_refresh_passes_refresh_label_structural` | `apply_refresh` call site passes `"refresh"` label (TSK-192 AC-09 structural) | P | no |
 //! | it136 | `it136_refresh_account_token_has_instant_timing_structural` | `refresh_account_token` uses `Instant::now()` for per-step timing (TSK-192 AC-09 structural) | P | no |
 //! | it137 | `it137_sort_default_is_renew_structural`             | sort default is `SortStrategy::Renew` when no `sort::` arg given (TSK-193/TSK-220 AC-01 structural) | P | no |
-//! | it138 | `it138_sort_next_resolves_to_drain_structural`       | `sort::next` resolves to `SortStrategy::Drain` when `next::drain` (TSK-193 AC-15 structural) | P | no |
-//! | it139 | `it139_sort_next_resolves_to_endurance_structural`   | `sort::next` resolves to `SortStrategy::Endurance` when `next::endurance` (TSK-193 AC-15 structural) | P | no |
+//! | it138 | ~~`it138_sort_next_resolves_to_drain_structural`~~   | REMOVED — `sort::next` and `NextStrategy` removed          | - | no |
+//! | it139 | ~~`it139_sort_next_resolves_to_endurance_structural`~~ | REMOVED — `sort::next` and `NextStrategy` removed        | - | no |
 //! | it141 | `it141_trace_skip_lines_emitted_for_non_qualifying_accounts` | `touch::1 trace::1` errored account → `[trace] touch <name> skipped (reason: error account)` (BUG-202 / 024 FT-14) | P | no |
 //! | it142 | `it142_imodel_haiku_accepted_empty_store_exits_0`   | `imodel::haiku` accepted; empty store exits 0 (EC-11 / 035) | P | no |
 //! | it143 | `it143_effort_low_accepted_empty_store_exits_0`     | `effort::low` accepted; empty store exits 0 (EC-10 / 036) | P | no |
 //! | it144 | `it144_effort_normal_accepted_empty_store_exits_0`  | `effort::normal` accepted; empty store exits 0 (EC-11 / 036) | P | no |
-//! | it145 | `it145_lim_it_next_renew_places_arrow_on_soonest_refill` | `next::renew` → exit 0, footer shows renew line, `→` placed on winning account (TSK-222) | P | yes |
+//! | it145 | `it145_lim_it_sort_renew_places_arrow_on_soonest_refill` | `sort::renew` (default) → exit 0, footer shows renew line, `→` placed (feature/020) | P | yes |
 //! | ut146 | `ut_filter_only_valid_hides_red_rows`                | `only_valid::1` accepted; empty store exits 0 (TSK-223 RED gate) | P | no |
 //! | it146 | `it146_next_column_visible_by_default`              | `.usage` with account → `→ Next` header visible in default output (FT-18/AC-28) | P | no |
 //! | it147 | `it147_json_renewal_secs_present`                   | `.usage format::json` → JSON has `renewal_secs`, not `next_renewal_est` (FT-19/AC-29) | P | no |
@@ -194,7 +194,7 @@
 //! | it203 | `it203_cols_role_shows_role_column`                 | `cols::+role` shows Role header + profile role value (033 EC-8) | P | no |
 //! | it204 | `it204_cols_bogus_names_host_and_role_in_error`     | `cols::+bogus` exit 1 stderr names `host` and `role` (033 EC-9) | N | no |
 //! | it225 | `it225_lim_it_it71_next_event_cell_shows_label_and_duration` | → Next cell shows event label + duration (009 IT-71) | P | yes |
-//! | it226 | `it226_lim_it_only_next_1_drain_shows_winner`       | `only_next::1 next::drain` shows 1 row with → (040 EC-3) | P | yes |
+//! | it226 | `it226_lim_it_only_next_1_renews_shows_winner`       | `only_next::1 sort::renews` shows 1 row with → (040 EC-3) | P | yes |
 //! | it227 | `it227_lim_it_only_next_true_shows_arrow_row`       | `only_next::true` accepted, shows → row (040 EC-6) | P | yes |
 //! | it228 | `it228_lim_it_only_valid_1_shows_green_hides_red`   | `only_valid::1` shows 🟢 live account, hides 🔴 error (043 EC-1) | P | yes |
 //! | it229 | `it229_lim_it_exclude_exhausted_1_shows_green`      | `exclude_exhausted::1` shows 🟢, hides 🔴 (044 EC-1) | P | yes |
@@ -574,15 +574,15 @@ fn it011_lim_it_recommendation_marker_shown()
   write_account_with_token( dir.path(), "acct-a", &token, true  );
   write_account_with_token( dir.path(), "acct-b", &token, false );
 
-  // Use next::endurance to place → in the table body on the non-active account.
-  let out  = run_cs_with_env( &[ ".usage", "next::endurance" ], &[ ( "HOME", home ) ] );
+  // sort::renew (default) places → on the non-active account (the recommended next).
+  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
   let rec_marked = text.lines().any( |line| line.contains( '→' ) && line.contains( "acct-b" ) );
   assert!(
     rec_marked,
-    "next::endurance: a line must contain both → and non-active account 'acct-b', got:\n{text}",
+    "sort::renew: a line must contain both → and non-active account 'acct-b', got:\n{text}",
   );
   let active_rec = text.lines().any( |line| line.contains( '→' ) && line.contains( "acct-a" ) );
   assert!(
@@ -1806,45 +1806,8 @@ fn it053_sort_name_accepted()
   );
 }
 
-/// it054 (IT-45/AC-02): `sort::endurance` accepted with empty credential store → exit 0.
-///
-/// Source: `tests/docs/cli/command/009_usage.md § IT-45`.
-#[ test ]
-fn it054_sort_endurance_accepted()
-{
-  let dir   = TempDir::new().unwrap();
-  let home  = dir.path().to_str().unwrap();
-  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &store ).unwrap();
-
-  let out = run_cs_with_env( &[ ".usage", "sort::endurance" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!(
-    text.contains( "(no accounts configured)" ),
-    "sort::endurance must be accepted and show no-accounts message, got:\n{text}",
-  );
-}
-
-/// it055 (IT-46/AC-03): `sort::drain` accepted with empty credential store → exit 0.
-///
-/// Source: `tests/docs/cli/command/009_usage.md § IT-46`.
-#[ test ]
-fn it055_sort_drain_accepted()
-{
-  let dir   = TempDir::new().unwrap();
-  let home  = dir.path().to_str().unwrap();
-  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &store ).unwrap();
-
-  let out = run_cs_with_env( &[ ".usage", "sort::drain" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!(
-    text.contains( "(no accounts configured)" ),
-    "sort::drain must be accepted and show no-accounts message, got:\n{text}",
-  );
-}
+// it054/it055 (sort::endurance and sort::drain accepted) removed after Feature 037/038
+// — these variants no longer exist. Rejection is verified by it249 and it250.
 
 /// it056 (IT-47/AC-04): `sort::renew` accepted with empty credential store → exit 0.
 ///
@@ -1880,7 +1843,7 @@ fn it057_sort_invalid_value_exit_1()
   );
   assert_exit( &out, 1 );
   let err = stderr( &out );
-  for value in &[ "name", "endurance", "drain", "renew", "next" ]
+  for value in &[ "name", "renew", "renews" ]
   {
     assert!(
       err.contains( value ),
@@ -2127,7 +2090,7 @@ fn it067_prefer_sonnet_accepted()
 /// `render_json` always uses the original alphabetical account slice; `sort::` strategy
 /// only reorders text rendering. Accounts written in non-alpha order (`b@x.com` before
 /// `a@x.com`) are sorted by `account::list()` and stay alphabetical in JSON output
-/// regardless of whether `sort::name` or `sort::endurance` is requested (AC-13).
+/// regardless of whether `sort::name` or `sort::renews` is requested (AC-13).
 /// Source: `tests/docs/cli/param/025_sort.md § CC-1`.
 #[ test ]
 fn it068_sort_json_unaffected_by_sort_strategy()
@@ -2138,13 +2101,13 @@ fn it068_sort_json_unaffected_by_sort_strategy()
   write_account( dir.path(), "b@x.com", "max", "default", FAR_FUTURE_MS, false );
   write_account( dir.path(), "a@x.com", "max", "default", FAR_FUTURE_MS, false );
 
-  let out_name      = run_cs_with_env( &[ ".usage", "sort::name",      "format::json" ], &[ ( "HOME", home ) ] );
-  let out_endurance = run_cs_with_env( &[ ".usage", "sort::endurance", "format::json" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out_name,      0 );
-  assert_exit( &out_endurance, 0 );
+  let out_name   = run_cs_with_env( &[ ".usage", "sort::name",   "format::json" ], &[ ( "HOME", home ) ] );
+  let out_renews = run_cs_with_env( &[ ".usage", "sort::renews", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_name,   0 );
+  assert_exit( &out_renews, 0 );
 
-  let json_name      = stdout( &out_name );
-  let json_endurance = stdout( &out_endurance );
+  let json_name   = stdout( &out_name );
+  let json_renews = stdout( &out_renews );
 
   let a_n = json_name.find( "a@x.com" ).expect( "a@x.com in sort::name json" );
   let b_n = json_name.find( "b@x.com" ).expect( "b@x.com in sort::name json" );
@@ -2153,11 +2116,11 @@ fn it068_sort_json_unaffected_by_sort_strategy()
     "sort::name format::json must place a@x.com before b@x.com (alphabetical), got:\n{json_name}",
   );
 
-  let a_e = json_endurance.find( "a@x.com" ).expect( "a@x.com in sort::endurance json" );
-  let b_e = json_endurance.find( "b@x.com" ).expect( "b@x.com in sort::endurance json" );
+  let a_r = json_renews.find( "a@x.com" ).expect( "a@x.com in sort::renews json" );
+  let b_r = json_renews.find( "b@x.com" ).expect( "b@x.com in sort::renews json" );
   assert!(
-    a_e < b_e,
-    "sort::endurance format::json must place a@x.com before b@x.com (sort:: does not affect JSON, AC-13), got:\n{json_endurance}",
+    a_r < b_r,
+    "sort::renews format::json must place a@x.com before b@x.com (sort:: does not affect JSON, AC-13), got:\n{json_renews}",
   );
 }
 
@@ -2219,28 +2182,10 @@ fn it071_sort_renew_desc1_accepted()
   );
 }
 
-/// it072: `sort::endurance desc::0` accepted with empty credential store → exit 0.
-///
-/// `sort::endurance` has canonical direction `desc::1` (qualified first). `desc::0` explicitly
-/// overrides to ascending — the parser must accept this as a valid direction override.
-#[ test ]
-fn it072_sort_endurance_desc0_accepted()
-{
-  let dir   = TempDir::new().unwrap();
-  let home  = dir.path().to_str().unwrap();
-  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &store ).unwrap();
+// it072 (sort::endurance desc::0 accepted) removed after Feature 037/038
+// — SortStrategy::Endurance no longer exists; rejection covered by it249.
 
-  let out = run_cs_with_env( &[ ".usage", "sort::endurance", "desc::0" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!(
-    text.contains( "(no accounts configured)" ),
-    "sort::endurance desc::0 must be accepted and show no-accounts message, got:\n{text}",
-  );
-}
-
-// ── next:: parameter acceptance (023_next_account_strategies AC-01/AC-03–AC-07) ─
+// ── next:: parameter migration rejection ─────────────────────────────────────────
 
 /// it073 (AC-01): `next::all` accepted with empty credential store → exit 0.
 ///
@@ -2277,45 +2222,43 @@ fn it074_next_session_rejected_exit_1()
   assert_exit( &out, 1 );
 }
 
-/// it075 (AC-04): `next::endurance` accepted with empty credential store → exit 0.
+/// it075 (Feature 037/038): `next::endurance` rejected after `next::` parameter removal.
 #[ test ]
-fn it075_next_endurance_accepted()
+fn it075_next_endurance_rejected()
 {
-  let dir   = TempDir::new().unwrap();
-  let home  = dir.path().to_str().unwrap();
-  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &store ).unwrap();
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
 
   let out = run_cs_with_env( &[ ".usage", "next::endurance" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
   assert!(
-    stdout( &out ).contains( "(no accounts configured)" ),
-    "next::endurance must be accepted",
+    err.contains( "sort::" ),
+    "next::endurance error must mention sort:: redirect, got:\n{err}",
   );
 }
 
-/// it076 (AC-05): `next::drain` accepted with empty credential store → exit 0.
+/// it076 (Feature 037/038): `next::drain` rejected after `next::` parameter removal.
 #[ test ]
-fn it076_next_drain_accepted()
+fn it076_next_drain_rejected()
 {
-  let dir   = TempDir::new().unwrap();
-  let home  = dir.path().to_str().unwrap();
-  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &store ).unwrap();
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
 
   let out = run_cs_with_env( &[ ".usage", "next::drain" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
   assert!(
-    stdout( &out ).contains( "(no accounts configured)" ),
-    "next::drain must be accepted",
+    err.contains( "sort::" ),
+    "next::drain error must mention sort:: redirect, got:\n{err}",
   );
 }
 
-/// it077 (AC-06): `next::reset` accepted with empty credential store → exit 0.
+/// it077 (AC-06): `next::reset` rejected — `next::` parameter removed.
 #[ test ]
 fn it077_next_reset_rejected_exit_1()
 {
-  // TSK-184: `next::reset` removed from NextStrategy; only endurance + drain are valid.
+  // `next::` parameter fully removed; all next:: values are rejected.
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
@@ -2325,15 +2268,13 @@ fn it077_next_reset_rejected_exit_1()
   assert_exit( &out, 1 );
 }
 
-/// it078 (AC-07): unknown `next::` value → exit 1; stderr names all five valid values.
+/// it078 (Feature 037/038): any `next::` value → exit 1; error redirects to `sort::`.
 ///
-/// `NextStrategy::parse` returns an error for unrecognised strings; `parse_usage_params`
-/// converts it to `ArgumentTypeMismatch` → exit 1. The error message must name every
-/// valid value so the operator can correct a typo.
+/// `next::` parameter has been removed entirely. Any value exits 1 with a message
+/// pointing to `sort::` and naming the three valid sort values.
 #[ test ]
 fn it078_next_invalid_value_exit_1()
 {
-  // TSK-184: error message names only the 2 valid values after the 5→2 reduction.
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
     &[ ".usage", "next::bogus" ],
@@ -2341,18 +2282,15 @@ fn it078_next_invalid_value_exit_1()
   );
   assert_exit( &out, 1 );
   let err = stderr( &out );
-  for value in &[ "renew", "endurance", "drain" ]
+  assert!(
+    err.contains( "sort::" ),
+    "next::bogus error must redirect to sort::, got:\n{err}",
+  );
+  for valid in &[ "name", "renew", "renews" ]
   {
     assert!(
-      err.contains( value ),
-      "next::bogus error must name valid value `{value}`, got:\n{err}",
-    );
-  }
-  for old_value in &[ "all", "session", "reset" ]
-  {
-    assert!(
-      !err.contains( old_value ),
-      "next::bogus error must NOT name removed value `{old_value}`, got:\n{err}",
+      err.contains( valid ),
+      "next::bogus error must name valid sort:: value `{valid}`, got:\n{err}",
     );
   }
 }
@@ -2363,14 +2301,14 @@ fn it078_next_invalid_value_exit_1()
 /// account has a valid OAuth token, quota fetch returns Err for both; `best_idx`
 /// is None → no `→` marker is placed in any table row.
 #[ test ]
-fn it079_next_drain_default_no_arrow_without_valid_accounts()
+fn it079_default_sort_renew_no_arrow_without_valid_accounts()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "a@x.com", "max", "default", FAR_FUTURE_MS, false );
   write_account( dir.path(), "b@x.com", "max", "default", FAR_FUTURE_MS, false );
 
-  // Default (no next:: param) = next::renew.
+  // Default strategy is sort::renew (no sort:: param needed).
   let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -2380,7 +2318,7 @@ fn it079_next_drain_default_no_arrow_without_valid_accounts()
   let arrow_as_flag = text.lines().any( |l| l.trim_start().starts_with( '\u{2192}' ) );
   assert!(
     !arrow_as_flag,
-    "default next::renew: no eligible account → must not place → flag in any table row, got:\n{text}",
+    "default sort::renew: no eligible account → must not place → flag in any table row, got:\n{text}",
   );
 }
 
@@ -2586,7 +2524,7 @@ fn it089_cols_structural_cols_always_present()
   );
 }
 
-// ── next:: footer threshold (023_next_account_strategies AC-09) ───────────────
+// ── footer threshold (020_usage_sort_strategies AC-09) ───────────────────────────
 
 /// it090 (AC-09): footer absent when < 2 valid accounts.
 ///
@@ -2625,15 +2563,15 @@ fn it091_next_json_output_unchanged_by_next_param()
     &[ ".usage", "format::json" ],
     &[ ( "HOME", home ) ],
   );
-  let out_drain = run_cs_with_env(
-    &[ ".usage", "format::json", "next::drain" ],
+  let out_renews = run_cs_with_env(
+    &[ ".usage", "format::json", "sort::renews" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out_default, 0 );
-  assert_exit( &out_drain, 0 );
+  assert_exit( &out_renews, 0 );
   assert_eq!(
-    stdout( &out_default ), stdout( &out_drain ),
-    "format::json output must be identical regardless of next:: value",
+    stdout( &out_default ), stdout( &out_renews ),
+    "format::json output must be identical regardless of sort:: value (AC-13)",
   );
 }
 
@@ -2692,80 +2630,60 @@ fn mre_bug_171_account_populated_after_refresh()
 
 // ── tsk_184 — NextStrategy 2-variant reduction ────────────────────────────────
 
-/// it092 (TSK-184 AC-01): `next::all` is rejected after the 5→2 variant reduction.
+/// it092 (Feature 037/038): `next::all` rejected — `next::` parameter fully removed.
 ///
-/// Before TSK-184: `next::all` was valid → exit 0.
-/// After TSK-184:  `next::all` is unrecognised → `ArgumentTypeMismatch` → exit 1.
+/// After Feature 037/038 `next::` is removed entirely; any `next::X` exits 1
+/// with a message redirecting to `sort::`.
 #[ test ]
 fn it092_next_all_rejected_exit_1()
 {
-  let dir   = TempDir::new().unwrap();
-  let home  = dir.path().to_str().unwrap();
-  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &store ).unwrap();
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
 
   let out = run_cs_with_env( &[ ".usage", "next::all" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
-    err.contains( "renew" ) && err.contains( "endurance" ) && err.contains( "drain" ),
-    "next::all error must name all valid values `renew`, `endurance`, and `drain`, got:\n{err}",
+    err.contains( "sort::" ),
+    "next::all error must redirect to sort::, got:\n{err}",
   );
-  for removed in &[ "session", "reset" ]
-  {
-    assert!(
-      !err.contains( removed ),
-      "next::all error must NOT name removed value `{removed}`, got:\n{err}",
-    );
-  }
 }
 
-/// it093 (TSK-184 AC-02): footer block is NOT gated on `next == NextStrategy::All`.
+/// it093 (Feature 037/038): footer driven by `sort::` strategy — no `NextStrategy` dependency.
 ///
-/// Before TSK-184: the footer was wrapped in `if next == NextStrategy::All { ... }`.
-/// After TSK-184:  the footer is unconditional (when `valid_count` >= 2); the
-/// `Responsibility(TSK-184-footer)` marker is present; the old All-gate is absent.
+/// After Feature 037/038 render.rs has no `NextStrategy` references.
+/// Footer is a single-strategy line driven by the active `sort::` strategy.
 ///
-/// This is a structural test that uses `include_str!` to avoid requiring live accounts.
-/// RED:   source has `if next == NextStrategy::All` → assert fails.
-/// GREEN: old gate absent, marker present → assert passes.
+/// Structural test — no credentials required.
 #[ test ]
 fn it093_footer_not_gated_on_next_all_structural()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/render.rs" ) );
 
-  let old_gate = src.contains( "if next == NextStrategy::All" );
   assert!(
-    !old_gate,
-    "TSK-184: footer must not be gated on `next == NextStrategy::All`; \
-     replace with unconditional 2-strategy footer (Endurance, Drain) gated only on valid_count >= 2",
+    !src.contains( "NextStrategy" ),
+    "Feature 037/038: render.rs must not reference NextStrategy; \
+     footer is now driven by SortStrategy from active sort:: param",
   );
-
-  let marker_present = src.contains( "Responsibility(TSK-184-footer)" );
   assert!(
-    marker_present,
-    "TSK-184: source must contain `Responsibility(TSK-184-footer)` marker in the unconditional footer block",
+    !src.contains( "if next ==" ),
+    "Feature 037/038: footer must not be gated on a next== check",
   );
 }
 
-/// it094 (TSK-184 AC-03): `next::session` is rejected after the 5→2 variant reduction.
-///
-/// Before TSK-184: `next::session` was valid → exit 0.
-/// After TSK-184:  `next::session` is unrecognised → exit 1.
+/// it094 (Feature 037/038): `next::session` rejected — `next::` parameter fully removed.
 #[ test ]
 fn it094_next_session_rejected_exit_1()
 {
-  let dir   = TempDir::new().unwrap();
-  let home  = dir.path().to_str().unwrap();
-  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &store ).unwrap();
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
 
   let out = run_cs_with_env( &[ ".usage", "next::session" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
-    err.contains( "renew" ) && err.contains( "endurance" ) && err.contains( "drain" ),
-    "next::session error must name all valid values `renew`, `endurance`, and `drain`, got:\n{err}",
+    err.contains( "sort::" ),
+    "next::session error must redirect to sort::, got:\n{err}",
   );
 }
 
@@ -2788,25 +2706,25 @@ fn it095_next_strategy_session_absent_structural()
   );
 }
 
-/// it096 (TSK-184 AC-05): `format::json` with `next::drain` is identical to default.
+/// it096 (TSK-184 AC-05): `format::json` output is identical regardless of `sort::` value.
 ///
-/// `render_json` does not inspect `NextStrategy`; JSON remains the same for any
-/// valid `next::` value. Guards that JSON path is unaffected by the 5→2 reduction.
+/// `render_json` does not vary by sort strategy; JSON remains the same for any
+/// valid `sort::` value.
 #[ test ]
-fn it096_next_drain_json_output_unchanged()
+fn it096_json_unaffected_by_sort_strategy()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::create_dir_all( &store ).unwrap();
 
-  let out_default = run_cs_with_env( &[ ".usage", "format::json" ],                &[ ( "HOME", home ) ] );
-  let out_drain   = run_cs_with_env( &[ ".usage", "format::json", "next::drain" ], &[ ( "HOME", home ) ] );
+  let out_default = run_cs_with_env( &[ ".usage", "format::json" ],                 &[ ( "HOME", home ) ] );
+  let out_renews  = run_cs_with_env( &[ ".usage", "format::json", "sort::renews" ], &[ ( "HOME", home ) ] );
   assert_exit( &out_default, 0 );
-  assert_exit( &out_drain,   0 );
+  assert_exit( &out_renews,  0 );
   assert_eq!(
-    stdout( &out_default ), stdout( &out_drain ),
-    "format::json output must be identical regardless of next:: value (TSK-184)",
+    stdout( &out_default ), stdout( &out_renews ),
+    "format::json output must be identical regardless of sort:: value (AC-13)",
   );
 }
 
@@ -2939,15 +2857,15 @@ fn it101_usage_help_shows_touch_param()
   );
 }
 
-/// it102 `lim_it` (IT-51 / FT-03 of feature/023): explicit `next::endurance` places `→` on exactly one account.
+/// it102 `lim_it` (IT-51 / FT-03 of feature/020): `sort::renew` (default) places `→` on exactly one account.
 ///
-/// With ≥2 accounts sharing a live token, the endurance strategy selects one winner.
-/// Exactly one table row gets `→` in the flag column. Footer shows "Next by strategy:".
+/// With ≥2 accounts sharing a live token, the renew strategy selects one winner.
+/// Exactly one table row gets `→` in the flag column.
 ///
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-51]
-///       [`tests/docs/feature/023_next_account_strategies.md` AC-03]
+///       [`tests/docs/feature/020_usage_sort_strategies.md` AC-09]
 #[ test ]
-fn it102_lim_it_next_endurance_places_arrow_on_winner()
+fn it102_lim_it_sort_renew_places_arrow_on_winner()
 {
   let Some( token ) = live_active_token() else
   {
@@ -2960,30 +2878,26 @@ fn it102_lim_it_next_endurance_places_arrow_on_winner()
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
   write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
 
-  let out = run_cs_with_env( &[ ".usage", "next::endurance" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
   let arrow_count = text.lines().filter( |l| l.contains( "→" ) ).count();
   assert_eq!(
     arrow_count, 1,
-    "next::endurance must place exactly one → in table rows (IT-51/FT-03/023), got:\n{text}",
-  );
-  assert!(
-    text.contains( "Next by strategy:" ),
-    "footer must show 'Next by strategy:' (IT-51), got:\n{text}",
+    "sort::renew must place exactly one → in table rows (IT-51/020), got:\n{text}",
   );
 }
 
-/// it103 `lim_it` (IT-52 / FT-04 of feature/023): `next::drain` places `→` on exactly one account.
+/// it103 `lim_it` (IT-52 / feature/020): `sort::renews` places `→` on exactly one account.
 ///
-/// With ≥2 accounts sharing a live token, the drain strategy selects the account with
-/// the lowest non-exhausted `5h_left`. Exactly one `→` appears in the table rows.
+/// With ≥2 accounts sharing a live token, the renews strategy selects the account with
+/// the soonest billing renewal. Exactly one `→` appears in the table rows.
 ///
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-52]
-///       [`tests/docs/feature/023_next_account_strategies.md` AC-04]
+///       [`tests/docs/feature/020_usage_sort_strategies.md` AC-09]
 #[ test ]
-fn it103_lim_it_next_drain_places_arrow_on_winner()
+fn it103_lim_it_sort_renews_places_arrow_on_winner()
 {
   let Some( token ) = live_active_token() else
   {
@@ -2996,30 +2910,26 @@ fn it103_lim_it_next_drain_places_arrow_on_winner()
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
   write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
 
-  let out = run_cs_with_env( &[ ".usage", "next::drain" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage", "sort::renews" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
   let arrow_count = text.lines().filter( |l| l.contains( "→" ) ).count();
   assert_eq!(
     arrow_count, 1,
-    "next::drain must place exactly one → in table rows (IT-52/FT-04/023), got:\n{text}",
-  );
-  assert!(
-    text.contains( "Next by strategy:" ),
-    "footer must show 'Next by strategy:' under next::drain (IT-52), got:\n{text}",
+    "sort::renews must place exactly one → in table rows (IT-52/020), got:\n{text}",
   );
 }
 
-/// it104 `lim_it` (IT-54 / FT-01 of feature/023): footer always shows all three strategy lines.
+/// it104 `lim_it` (IT-54 / feature/020): footer shows one recommendation line for active sort strategy.
 ///
-/// With `next::drain` active, the footer still shows all three lines: renew, endurance, drain.
-/// All lines appear regardless of which strategy is currently selected.
+/// With `sort::renew` (default), the footer shows a single recommendation line
+/// with the `→` winner for the active strategy.
 ///
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-54]
-///       [`tests/docs/feature/023_next_account_strategies.md` AC-01]
+///       [`tests/docs/feature/020_usage_sort_strategies.md` AC-09]
 #[ test ]
-fn it104_lim_it_footer_always_shows_both_strategy_lines()
+fn it104_lim_it_footer_shows_strategy_recommendation()
 {
   let Some( token ) = live_active_token() else
   {
@@ -3032,25 +2942,13 @@ fn it104_lim_it_footer_always_shows_both_strategy_lines()
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
   write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
 
-  let out = run_cs_with_env( &[ ".usage", "next::drain" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
   assert!(
-    text.contains( "Next by strategy:" ),
-    "footer must show 'Next by strategy:' (IT-54/FT-01/023), got:\n{text}",
-  );
-  assert!(
     text.contains( "renew" ),
-    "footer must show renew strategy line regardless of next:: value (TSK-222/FT-01/023), got:\n{text}",
-  );
-  assert!(
-    text.contains( "endurance" ),
-    "footer must show endurance strategy line regardless of next:: value (IT-54/FT-01/023), got:\n{text}",
-  );
-  assert!(
-    text.contains( "drain" ),
-    "footer must show drain strategy line (IT-54/FT-01/023), got:\n{text}",
+    "footer must show renew strategy recommendation line (IT-54/020), got:\n{text}",
   );
 }
 
@@ -3580,38 +3478,8 @@ fn it120_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle()
 
 // ── sort::next meta-strategy ──────────────────────────────────────────────────
 
-/// it121 (IT-65/AC-15): `sort::next` accepted with empty credential store → exit 0.
-///
-/// `sort::next` resolves to `sort::renew` (default `next::renew`) at parse time.
-/// Both `sort::next` alone and `sort::next next::endurance` must be accepted without error.
-///
-/// Source: `tests/docs/cli/command/009_usage.md § IT-65`.
-#[ test ]
-fn it121_sort_next_accepted()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &store ).unwrap();
-
-  // sort::next with default next::renew
-  let out = run_cs_with_env( &[ ".usage", "sort::next" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!(
-    text.contains( "(no accounts configured)" ),
-    "sort::next must be accepted and show no-accounts message, got:\n{text}",
-  );
-
-  // sort::next with explicit next::endurance
-  let out2 = run_cs_with_env( &[ ".usage", "sort::next", "next::endurance" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out2, 0 );
-  let text2 = stdout( &out2 );
-  assert!(
-    text2.contains( "(no accounts configured)" ),
-    "sort::next next::endurance must be accepted and show no-accounts message, got:\n{text2}",
-  );
-}
+// it121 (IT-65/AC-15): `sort::next` accepted with empty credential store → exit 0.
+// it121 (sort::next accepted) removed after Feature 037/038 — sort::next no longer exists.
 
 // ── TSK-191 — imodel:: and effort:: parameters ────────────────────────────────
 
@@ -3998,49 +3866,9 @@ fn it137_sort_default_is_renew_structural()
   );
 }
 
-/// it138 (TSK-193 AC-15 structural): `sort::next` resolves to `SortStrategy::Drain` when `next::drain`.
-///
-/// The `SortStrategy::Next => match next` resolution block must map `NextStrategy::Drain`
-/// to `SortStrategy::Drain`. This is the core of the `sort::next` meta-strategy:
-/// it delegates to the concrete strategy matching the active `next::` param.
-///
-/// RED:   `SortStrategy::Next` arm absent or maps to wrong strategy.
-/// GREEN: `NextStrategy::Drain => SortStrategy::Drain` present in resolution block.
-///
-/// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-17]
-///       [`docs/feature/020_usage_sort_strategies.md` AC-15]
-#[ test ]
-fn it138_sort_next_resolves_to_drain_structural()
-{
-  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/params.rs" ) );
-  assert!(
-    src.contains( "NextStrategy::Drain     => SortStrategy::Drain" ),
-    "TSK-193: sort::next must resolve to SortStrategy::Drain when next::drain is active.\n\
-     The resolution block must have `NextStrategy::Drain => SortStrategy::Drain`."
-  );
-}
-
-/// it139 (TSK-193 AC-15 structural): `sort::next` resolves to `SortStrategy::Endurance` when `next::endurance`.
-///
-/// The `SortStrategy::Next => match next` resolution block must map `NextStrategy::Endurance`
-/// to `SortStrategy::Endurance`. Together with it138, this proves the meta-strategy
-/// delegates exhaustively to the active `next::` concrete strategy.
-///
-/// RED:   `NextStrategy::Endurance` arm absent or maps to wrong strategy.
-/// GREEN: `NextStrategy::Endurance => SortStrategy::Endurance` present in resolution block.
-///
-/// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-17]
-///       [`docs/feature/020_usage_sort_strategies.md` AC-15]
-#[ test ]
-fn it139_sort_next_resolves_to_endurance_structural()
-{
-  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/params.rs" ) );
-  assert!(
-    src.contains( "NextStrategy::Endurance => SortStrategy::Endurance" ),
-    "TSK-193: sort::next must resolve to SortStrategy::Endurance when next::endurance is active.\n\
-     The resolution block must have `NextStrategy::Endurance => SortStrategy::Endurance`."
-  );
-}
+// it138 (TSK-193 AC-15 structural): `sort::next` resolves to `SortStrategy::Drain` when `next::drain`.
+// it138/it139 (sort::next resolves to Drain/Endurance structural) removed after Feature 037/038
+// — NextStrategy, SortStrategy::Next, and next:: parameter all removed.
 
 /// it141 (BUG-202 / 024 FT-14): errored account emits skip trace in touch phase.
 ///
@@ -4150,21 +3978,17 @@ fn it144_effort_normal_accepted_empty_store_exits_0()
   assert_exit( &out, 0 );
 }
 
-// ── next::renew strategy (TSK-222) ────────────────────────────────────────────
+// ── sort::renew strategy ──────────────────────────────────────────────────────
 
-/// it145 `lim_it` (TSK-222): `next::renew` accepted, footer shows renew line, `→` placed.
+/// it145 `lim_it` (feature/020): `sort::renew` (default) places `→` and shows footer.
 ///
-/// `next::renew` selects the account whose soonest running reset timer (min of 5h and 7d)
-/// fires first. Footer shows 3 lines: renew (first), endurance, drain.
+/// `sort::renew` (default strategy) selects the account whose soonest running reset
+/// timer (min of 5h and 7d) fires first. Footer shows one recommendation line.
 ///
-/// RED:   `next::renew` not recognised → exit 1 (before TSK-222 enum variant is added).
-/// GREEN: renew accepted → exit 0, footer contains "renew".
-///
-/// Spec: [`tests/docs/feature/023_next_account_strategies.md`]
-///       [`docs/feature/023_next_account_strategies.md` AC-10]
+/// Spec: [`docs/feature/020_usage_sort_strategies.md` AC-09]
 #[ doc = "lim_it" ]
 #[ test ]
-fn it145_lim_it_next_renew_places_arrow_on_soonest_refill()
+fn it145_lim_it_sort_renew_places_arrow_on_soonest_refill()
 {
   let Some( token ) = live_active_token() else
   {
@@ -4177,16 +4001,12 @@ fn it145_lim_it_next_renew_places_arrow_on_soonest_refill()
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
   write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
 
-  let out = run_cs_with_env( &[ ".usage", "next::renew" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
     text.contains( "renew" ),
-    "footer must show renew strategy line (TSK-222/AC-10), got:\n{text}",
-  );
-  assert!(
-    text.contains( "Next by strategy:" ),
-    "footer must show 'Next by strategy:' header (TSK-222), got:\n{text}",
+    "footer must show renew strategy line (020/AC-09), got:\n{text}",
   );
 }
 
@@ -6298,9 +6118,9 @@ fn it218_lim_it_ft028_14_no_color_emoji_free()
   );
 }
 
-// ── it219: lim_it filters compose with sort/next/count/cols (028 FT-16) ──────
+// ── it219: lim_it filters compose with sort/count/cols (028 FT-16) ───────────
 
-/// it219 `lim_it` (028 FT-16): `sort::name next::drain only_valid::1 count::2 cols::+sub`
+/// it219 `lim_it` (028 FT-16): `sort::name only_valid::1 count::2 cols::+sub`
 /// composes all filter/sort/col params correctly. At most 2 non-🔴 rows, sorted
 /// alphabetically, Sub column present.
 ///
@@ -6320,7 +6140,7 @@ fn it219_lim_it_ft028_16_filters_compose()
   write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
 
   let out = run_cs_with_env(
-    &[ ".usage", "sort::name", "next::drain", "only_valid::1", "count::2", "cols::+sub" ],
+    &[ ".usage", "sort::name", "only_valid::1", "count::2", "cols::+sub" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -6496,14 +6316,14 @@ fn it225_lim_it_it71_next_event_cell_shows_label_and_duration()
 
 // ── it226–it227: only_next:: live tests (040 EC-3/6) ─────────────────────────
 
-/// it226 `lim_it` (040 EC-3): `only_next::1 next::drain` shows → row from drain strategy.
+/// it226 `lim_it` (040 EC-3): `only_next::1 sort::renews` shows → row from renews strategy.
 ///
-/// With two live accounts sharing the same token, `only_next::1 next::drain`
-/// must show exactly one row — the drain-strategy winner — which has the `→` marker.
+/// With two live accounts sharing the same token, `only_next::1 sort::renews`
+/// must show exactly one row — the renews-strategy winner — which has the `→` marker.
 ///
 /// Spec: [`tests/docs/cli/param/040_only_next.md` EC-3]
 #[ test ]
-fn it226_lim_it_only_next_1_drain_shows_winner()
+fn it226_lim_it_only_next_1_renews_shows_winner()
 {
   let Some( token ) = live_active_token() else
   {
@@ -6517,7 +6337,7 @@ fn it226_lim_it_only_next_1_drain_shows_winner()
   write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
 
   let out = run_cs_with_env(
-    &[ ".usage", "only_next::1", "next::drain" ],
+    &[ ".usage", "only_next::1", "sort::renews" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -6528,14 +6348,14 @@ fn it226_lim_it_only_next_1_drain_shows_winner()
     .count();
   assert_eq!(
     data_rows, 1,
-    "only_next::1 next::drain must show exactly 1 row (040 EC-3), got:\n{text}",
+    "only_next::1 sort::renews must show exactly 1 row (040 EC-3), got:\n{text}",
   );
   let arrow_rows = text.lines()
     .filter( | l | l.contains( "\u{2192}" ) && l.contains( "@test.com" ) )
     .count();
   assert_eq!(
     arrow_rows, 1,
-    "only_next::1 next::drain must show the → account row (040 EC-3), got:\n{text}",
+    "only_next::1 sort::renews must show the → account row (040 EC-3), got:\n{text}",
   );
 }
 
@@ -7177,6 +6997,184 @@ fn it_ft028_17_only_active_single_http_fetch()
 }
 
 // ── it248: Feature 037 Owner column in .usage (IT-74) ────────────────────────
+
+/// it249 (AC-07 / 020): `sort::endurance` is rejected after strategy reduction to 3 variants.
+///
+/// Before: `sort::endurance` was valid → exit 0.
+/// After:  `sort::endurance` is unrecognised → exit 1, error names `name`, `renew`, `renews`.
+///
+/// RED:   current code accepts `sort::endurance` → `assert_exit(&out, 1)` fails.
+/// GREEN: after Phase 2 removes `Endurance` variant → assert passes.
+///
+/// Spec: [`tests/docs/cli/param/25_sort.md`]
+#[ test ]
+fn it249_sort_endurance_rejected_exit_1()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "sort::endurance" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  for valid in &[ "name", "renew", "renews" ]
+  {
+    assert!(
+      err.contains( valid ),
+      "sort::endurance error must name valid value `{valid}`; got:\n{err}",
+    );
+  }
+  // "endurance" is omitted from the negative check — it naturally appears as the bad value
+  // in the error message `invalid sort:: value "endurance": valid values are ...`.
+  for removed in &[ "drain", "expires", "next" ]
+  {
+    assert!(
+      !err.contains( removed ),
+      "sort::endurance error must NOT name removed value `{removed}`; got:\n{err}",
+    );
+  }
+}
+
+/// it250 (AC-07 / 020): `sort::drain` is rejected after strategy reduction.
+///
+/// RED:   current code accepts `sort::drain` → `assert_exit(&out, 1)` fails.
+/// GREEN: after Phase 2 removes `Drain` variant → assert passes.
+///
+/// Spec: [`tests/docs/cli/param/25_sort.md`]
+#[ test ]
+fn it250_sort_drain_rejected_exit_1()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "sort::drain" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  for valid in &[ "name", "renew", "renews" ]
+  {
+    assert!(
+      err.contains( valid ),
+      "sort::drain error must name valid value `{valid}`; got:\n{err}",
+    );
+  }
+}
+
+/// it251 (AC-07 / 020): `sort::next` is rejected after the alias is removed.
+///
+/// Before: `sort::next` resolved to the active `next::` strategy at parse time.
+/// After:  `sort::next` is unrecognised → exit 1.
+///
+/// RED:   current code resolves `sort::next` → exit 0.
+/// GREEN: after Phase 2 removes Next variant + alias resolution → exit 1.
+///
+/// Spec: [`tests/docs/cli/param/25_sort.md`]
+#[ test ]
+fn it251_sort_next_rejected_exit_1()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "sort::next" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  for valid in &[ "name", "renew", "renews" ]
+  {
+    assert!(
+      err.contains( valid ),
+      "sort::next error must name valid value `{valid}`; got:\n{err}",
+    );
+  }
+}
+
+/// it252 (AC-07 / 020): `sort::expires` is rejected after strategy reduction.
+///
+/// RED:   current code accepts `sort::expires` → `assert_exit(&out, 1)` fails.
+/// GREEN: after Phase 2 removes `Expires` variant → assert passes.
+///
+/// Spec: [`tests/docs/cli/param/25_sort.md`]
+#[ test ]
+fn it252_sort_expires_rejected_exit_1()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "sort::expires" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  for valid in &[ "name", "renew", "renews" ]
+  {
+    assert!(
+      err.contains( valid ),
+      "sort::expires error must name valid value `{valid}`; got:\n{err}",
+    );
+  }
+}
+
+/// it253 (AC-09 / 020): `next::` is rejected as an unknown or removed parameter.
+///
+/// Before: `next::renew` was accepted → exit 0.
+/// After:  `next::` is removed from `.usage`; passing it exits 1.
+///
+/// RED:   current code accepts `next::renew` → `assert_exit(&out, 1)` fails.
+/// GREEN: after Phase 2 removes `next::` parsing → exit 1.
+///
+/// Spec: [`tests/docs/cli/param/32_next.md`] (REMOVED)
+#[ test ]
+fn it253_next_param_removed_exit_1()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "next::renew" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "next" ) || err.contains( "sort" ),
+    "next::renew error must reference `next` or `sort`; got:\n{err}",
+  );
+}
+
+/// it254 (structural): `NextStrategy` enum is absent from source after removal.
+///
+/// RED:   `NextStrategy` exists in `types.rs` → assert fails.
+/// GREEN: after Phase 2 deletes `NextStrategy` entirely → assert passes.
+#[ test ]
+fn it254_next_strategy_enum_absent_structural()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/types.rs" ) );
+  assert!(
+    !src.contains( "enum NextStrategy" ),
+    "NextStrategy enum must be completely removed from types.rs; \
+     check enum declaration and all impl blocks",
+  );
+}
+
+/// it255 (structural): Single-strategy footer — `Next by strategy:` multi-line label absent.
+///
+/// Before: footer iterated 3 strategies and printed `"Next by strategy:\n"` header.
+/// After:  footer shows one line for active `sort::` strategy — no multi-strategy header.
+///
+/// RED:   `render.rs` still contains `"Next by strategy:"` → assert fails.
+/// GREEN: after Phase 4 collapses footer to 1 strategy → assert passes.
+#[ test ]
+fn it255_footer_single_strategy_structural()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/render.rs" ) );
+  assert!(
+    !src.contains( "Next by strategy:" ),
+    "render.rs must not contain `Next by strategy:` — footer must show 1 strategy line; \
+     replace with single-strategy `Next (strategy): account   metric` format",
+  );
+}
 
 /// it248 (IT-74, AC-19): Owner column visible by default on `.usage`; `cols::-owner` hides it.
 ///

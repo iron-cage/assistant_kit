@@ -8,7 +8,7 @@ use claude_quota::OauthUsageData;
 // ── Sort and prefer strategies ─────────────────────────────────────────────────
 
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-pub( crate ) enum SortStrategy { Name, Endurance, Drain, Renew, Next, Expires, Renews }
+pub( crate ) enum SortStrategy { Name, Renew, Renews }
 
 impl SortStrategy
 {
@@ -16,27 +16,21 @@ impl SortStrategy
   {
     match s
     {
-      "name"      => Ok( Self::Name ),
-      "endurance" => Ok( Self::Endurance ),
-      "drain"     => Ok( Self::Drain ),
-      "renew"     => Ok( Self::Renew ),
-      "next"      => Ok( Self::Next ),
-      "expires"   => Ok( Self::Expires ),
-      "renews"    => Ok( Self::Renews ),
-      _           => Err( format!(
-        "invalid sort:: value {s:?}: valid values are `name`, `endurance`, `drain`, `renew`, `next`, `expires`, `renews`",
+      "name"   => Ok( Self::Name ),
+      "renew"  => Ok( Self::Renew ),
+      "renews" => Ok( Self::Renews ),
+      _        => Err( format!(
+        "invalid sort:: value {s:?}: valid values are `name`, `renew`, `renews`",
       ) ),
     }
   }
 
   /// Context-sensitive default `desc` direction for each strategy.
   ///
-  /// `Endurance` defaults to `true` (best on top). All others default to `false`.
-  /// `Next` is always resolved to a concrete strategy before `default_desc` is called
-  /// (see `parse_usage_params`), so this arm is unreachable in practice.
+  /// All strategies default to ascending (`false`).
   pub( crate ) fn default_desc( self ) -> bool
   {
-    matches!( self, SortStrategy::Endurance )
+    match self { Self::Name | Self::Renew | Self::Renews => false }
   }
 }
 
@@ -54,25 +48,6 @@ impl PreferStrategy
       "sonnet" => Ok( Self::Sonnet ),
       _        => Err( format!(
         "invalid prefer:: value {s:?}: valid values are `any`, `opus`, `sonnet`",
-      ) ),
-    }
-  }
-}
-
-#[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-pub( crate ) enum NextStrategy { Renew, Endurance, Drain }
-
-impl NextStrategy
-{
-  pub( crate ) fn parse( s : &str ) -> Result< Self, String >
-  {
-    match s
-    {
-      "renew"     => Ok( Self::Renew ),
-      "endurance" => Ok( Self::Endurance ),
-      "drain"     => Ok( Self::Drain ),
-      _           => Err( format!(
-        "invalid next:: value {s:?}: valid values are `renew`, `endurance`, `drain`",
       ) ),
     }
   }
@@ -245,8 +220,6 @@ pub( crate ) struct UsageParams
   pub( crate ) desc              : Option< bool >,
   /// Weekly quota column selector for strategies that reference weekly availability.
   pub( crate ) prefer            : PreferStrategy,
-  /// Recommendation strategy controlling `→` marker and footer format.
-  pub( crate ) next              : NextStrategy,
   /// Column visibility modifiers applied to the text table.
   pub( crate ) cols              : ColsVisibility,
   /// 1 = activate idle 5h session windows via subprocess (default); 0 = off.

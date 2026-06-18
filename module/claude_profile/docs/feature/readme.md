@@ -30,10 +30,10 @@
 | 017 | [Expired Token Refresh via Isolated Subprocess](017_token_refresh.md) | `refresh::` parameter; retry-on-auth-error via `account::refresh_account_token()`; credential write-back | ✅ |
 | 018 | [Live Quota Monitor Mode](018_live_monitor.md) | `live::`, `interval::`, `jitter::` parameters; continuous refresh with staggered fetches and countdown footer | ✅ |
 | 019 | [Browser Re-Authentication for Named Account](019_account_relogin.md) | `.account.relogin` — spawn `claude` with inherited TTY to refresh a dead `refreshToken`; credential write-back and active restore | ✅ |
-| 020 | [Usage Sort Strategies](020_usage_sort_strategies.md) | Configurable row ordering in `.usage` output — `sort::`, `desc::`, `prefer::` parameters with `renew` (default), `drain`, `name`, `endurance`, `next` strategies | ✅ |
+| 020 | [Usage Sort Strategies](020_usage_sort_strategies.md) | Row ordering and `→` recommendation in `.usage` — `sort::`, `desc::`, `prefer::` with `renew` (default), `name`, `renews` strategies; single-strategy footer | ✅ |
 | 021 | [Extended Snapshot Fields](021_extended_snapshot_fields.md) | `tagged_id`, `uuid`, `capabilities` from existing `{name}.json`; `uuid::` and `capabilities::` opt-in params | ✅ |
 | 022 | [Org Identity Snapshot](022_org_identity_snapshot.md) | Org identity via endpoint 005 at save-time into `{name}.json`; `org_uuid::` and `org_name::` opt-in params | ✅ |
-| 023 | [Next Account Recommendation Strategies](023_next_account_strategies.md) | Configurable account recommendation in `.usage` output — `next::` parameter with `renew` (default), `endurance`, `drain` strategies; always-visible 3-strategy footer | ✅ |
+| 023 | [Next Account Recommendation Strategies](023_next_account_strategies.md) | **DEPRECATED** — absorbed into feature 020; `next::` removed, `→` driven by `sort::` | ⛔ |
 | 024 | [Session Touch via Isolated Subprocess](024_session_touch.md) | Activate idle accounts' 5h session windows by sending minimal prompt via isolated subprocess; `touch::` parameter | ✅ |
 | 025 | [Per-Machine Active Marker](025_per_machine_active_marker.md) | Machine-specific `_active_{hostname}_{user}` marker; exact local-part prefix resolution | ✅ |
 | 026 | [Subprocess Model and Effort Control](026_subprocess_model_effort.md) | `imodel::` and `effort::` parameters; per-account auto model selection (20% threshold); effort resolution | ✅ |

@@ -15,10 +15,13 @@
 //! | FT-02  | `ft02_lim_it_dry_run_no_switch`                | AC-02 | yes   |
 //! | FT-05  | `ft05_lim_it_g5_gate_skips_non_owned`          | AC-05 | yes   |
 //! | FT-06  | `ft06_lim_it_force_bypasses_g5`                | AC-06 | yes   |
-//! | FT-07  | `ft07_lim_it_next_endurance`                   | AC-07 | yes   |
-//! | FT-08  | `ft08_lim_it_next_drain`                       | AC-08 | yes   |
-//! | FT-09  | `ft09_lim_it_format_json_switch_executes`      | AC-09 | yes   |
-//! | FT-11  | `ft11_non_owned_no_force_exits_1`              | AC-11 | no    |
+//! | FT-07  | `ft07_lim_it_sort_renews`                      | AC-07 | yes   |
+//! | FT-08  | `ft08_lim_it_format_json_switch_executes`      | AC-08 | yes   |
+//! | FT-09  | `ft09_lim_it_touch_reuse_no_extra_api_call`    | AC-09 | yes   |
+//! | FT-10  | `ft10_non_owned_no_force_exits_1`              | AC-10 | no    |
+//! | EC-05  | `ec05_rotate_true_rejected_not_integer`         | EC-5  | no    |
+//! | EC-06  | `ec06_rotate_false_rejected_not_integer`        | EC-6  | no    |
+//! | EC-07  | `ec07_rotate_2_rejected_out_of_range`           | EC-7  | no    |
 
 use crate::cli_runner::{
   run_cs_with_env,
@@ -83,18 +86,18 @@ fn ft03_no_eligible_account_exits_1()
   );
 }
 
-// ── FT-11: non-owned account without force → exit 1 (AC-11) ──────────────────
+// ── FT-10: non-owned account without force → exit 1 (AC-10) ──────────────────
 
-/// FT-11 (AC-11): only non-owned account in store, `force::0` (default) →
+/// FT-10 (AC-10): only non-owned account in store, `force::0` (default) →
 /// exit 1; credentials unchanged.
 ///
 /// Note: with fake credentials (no `accessToken`), the account fails API fetch
 /// so the exit-1 is "no eligible account" (pre-API-check: `result: Err` skipped
 /// by `find_first_eligible`). The test verifies exit 1 and unchanged credentials.
 ///
-/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-11`.
+/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-10`.
 #[ test ]
-fn ft11_non_owned_no_force_exits_1()
+fn ft10_non_owned_no_force_exits_1()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -125,7 +128,7 @@ fn ft11_non_owned_no_force_exits_1()
 
 // ── FT-01: rotate to → winner (AC-01, lim_it) ─────────────────────────────────
 
-/// FT-01 (AC-01, `lim_it`): `rotate::1` switches to the `→` winner (`next::renew`).
+/// FT-01 (AC-01, `lim_it`): `rotate::1` switches to the `→` winner (`sort::renew`).
 /// Output ends with `switched to '{name}'`. Active marker updated.
 ///
 /// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-01`.
@@ -274,16 +277,16 @@ fn ft06_lim_it_force_bypasses_g5()
   }
 }
 
-// ── FT-07: next::endurance strategy (AC-07, lim_it) ──────────────────────────
+// ── FT-07: sort::renews strategy (AC-07, lim_it) ─────────────────────────────
 
-/// FT-07 (AC-07, `lim_it`): `rotate::1 next::endurance` switches to the
-/// endurance-strategy winner.
+/// FT-07 (AC-07, `lim_it`): `rotate::1 sort::renews` switches to the account
+/// with the soonest billing renewal.
 ///
 /// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-07`.
 #[ test ]
-fn ft07_lim_it_next_endurance()
+fn ft07_lim_it_sort_renews()
 {
-  if !require_live_api( "ft07_lim_it_next_endurance" ) { return; }
+  if !require_live_api( "ft07_lim_it_sort_renews" ) { return; }
   let Some( token ) = live_active_token() else { eprintln!( "ft07: no live token — skipping" ); return; };
 
   let dir  = TempDir::new().unwrap();
@@ -293,63 +296,31 @@ fn ft07_lim_it_next_endurance()
   write_account_with_token( dir.path(), "candidate@test.com", &token, false );
 
   let out = run_cs_with_env(
-    &[ ".usage", "rotate::1", "next::endurance" ],
+    &[ ".usage", "rotate::1", "sort::renews" ],
     &[ ( "HOME", home ) ],
   );
-  // exit 0 = switched; exit 1 = no endurance-eligible account (fine — strategy just found none).
+  // exit 0 = switched; exit 1 = no eligible account (fine — strategy just found none).
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
     assert!(
       text.contains( "switched to" ),
-      "next::endurance rotate must output 'switched to', got:\n{text}",
+      "sort::renews rotate must output 'switched to', got:\n{text}",
     );
   }
 }
 
-// ── FT-08: next::drain strategy (AC-08, lim_it) ──────────────────────────────
+// ── FT-08: format::json with rotate::1 (AC-08, lim_it) ───────────────────────
 
-/// FT-08 (AC-08, `lim_it`): `rotate::1 next::drain` switches to the
-/// drain-strategy winner.
+/// FT-08 (AC-08, `lim_it`): `rotate::1 format::json` executes the switch;
+/// JSON output body is unchanged (no `"switched_to"` field added).
 ///
 /// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-08`.
 #[ test ]
-fn ft08_lim_it_next_drain()
+fn ft08_lim_it_format_json_switch_executes()
 {
-  if !require_live_api( "ft08_lim_it_next_drain" ) { return; }
+  if !require_live_api( "ft08_lim_it_format_json_switch_executes" ) { return; }
   let Some( token ) = live_active_token() else { eprintln!( "ft08: no live token — skipping" ); return; };
-
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
-  write_account_with_token( dir.path(), "active@test.com",    &token, true  );
-  write_account_with_token( dir.path(), "candidate@test.com", &token, false );
-
-  let out = run_cs_with_env(
-    &[ ".usage", "rotate::1", "next::drain" ],
-    &[ ( "HOME", home ) ],
-  );
-  if out.status.code() == Some( 0 )
-  {
-    let text = stdout( &out );
-    assert!(
-      text.contains( "switched to" ),
-      "next::drain rotate must output 'switched to', got:\n{text}",
-    );
-  }
-}
-
-// ── FT-09: format::json with rotate::1 (AC-09, lim_it) ───────────────────────
-
-/// FT-09 (AC-09, `lim_it`): `rotate::1 format::json` executes the switch;
-/// JSON output body is unchanged (no `"switched_to"` field added).
-///
-/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-09`.
-#[ test ]
-fn ft09_lim_it_format_json_switch_executes()
-{
-  if !require_live_api( "ft09_lim_it_format_json_switch_executes" ) { return; }
-  let Some( token ) = live_active_token() else { eprintln!( "ft09: no live token — skipping" ); return; };
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -385,4 +356,105 @@ fn ft09_lim_it_format_json_switch_executes()
     );
     let _ = base_json; // baseline captured; same structure expected
   }
+}
+
+// ── FT-09: touch reuse after rotate (AC-09, lim_it) ──────────────────────────
+
+/// FT-09 (AC-09, `lim_it`): `rotate::1 touch::1` after a successful switch
+/// reuses the already-fetched `AccountQuota` for the touch; no extra API call.
+///
+/// Black-box verification: command exits 0 and output contains "switched to"
+/// when eligible. The no-extra-API guarantee is verified by code inspection
+/// (`apply_touch(&mut winner_aq)` in `src/usage/mod.rs`) rather than by
+/// counting network requests from a subprocess.
+///
+/// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-09`.
+#[ test ]
+fn ft09_lim_it_touch_reuse_no_extra_api_call()
+{
+  if !require_live_api( "ft09_lim_it_touch_reuse_no_extra_api_call" ) { return; }
+  let Some( token ) = live_active_token() else { eprintln!( "ft09: no live token — skipping" ); return; };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+  write_account_with_token( dir.path(), "active@test.com",   &token, true  );
+  write_account_with_token( dir.path(), "inactive@test.com", &token, false );
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1", "touch::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  if out.status.code() == Some( 0 )
+  {
+    let text = stdout( &out );
+    assert!(
+      text.contains( "switched to" ),
+      "rotate::1 touch::1 on success must output 'switched to', got:\n{text}",
+    );
+  }
+}
+
+// ── EC-05: rotate::true rejected (Kind::Integer) ─────────────────────────────
+
+/// EC-05: `rotate::true` rejected — `rotate::` is `Kind::Integer`; "true" is
+/// not a valid integer literal, so the framework rejects it before the routine.
+///
+/// Source: `tests/docs/cli/param/60_rotate.md § EC-5`.
+#[ test ]
+fn ec05_rotate_true_rejected_not_integer()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::true" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+}
+
+// ── EC-06: rotate::false rejected (Kind::Integer) ────────────────────────────
+
+/// EC-06: `rotate::false` rejected — same as EC-05; "false" is not a valid
+/// integer literal for a `Kind::Integer` param.
+///
+/// Source: `tests/docs/cli/param/60_rotate.md § EC-6`.
+#[ test ]
+fn ec06_rotate_false_rejected_not_integer()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::false" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+}
+
+// ── EC-07: rotate::2 rejected (out of range) ─────────────────────────────────
+
+/// EC-07: `rotate::2` rejected — framework accepts `2` as valid `Kind::Integer`,
+/// but `parse_int_flag` rejects integers outside `{0, 1}`.
+/// Error: `"rotate:: must be 0, 1, false, or true"`.
+///
+/// Source: `tests/docs/cli/param/60_rotate.md § EC-7`.
+#[ test ]
+fn ec07_rotate_2_rejected_out_of_range()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::2" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  let combined = format!( "{}{}", stdout( &out ), stderr( &out ) );
+  assert!(
+    combined.contains( "must be" ) || combined.contains( '0' ),
+    "rotate::2 error must indicate valid range, got:\n{combined}",
+  );
 }

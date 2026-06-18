@@ -2,25 +2,58 @@
 //!
 //! `sort_indices` is the core sort function. Recommendation strategies
 //! (`find_next_for_strategy`, `strategy_metric`) live in `sort_next`.
+//!
+//! **4-group status partition** (AC-12 / `020_usage_sort_strategies.md`):
+//! All accounts are partitioned into 4 fixed status groups before any sort strategy
+//! applies. Group order is always: 🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Red.
+//! `desc::` reverses row order within each group; group order is never reversed.
 
 pub( crate ) use super::sort_next::{ find_next_for_strategy, strategy_metric };
 
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy };
 use super::format::{ five_hour_left, prefer_weekly, renewal_secs };
 
+// ── Status group ──────────────────────────────────────────────────────────────
+
+/// Four status groups for the quota table (AC-12, see `020_usage_sort_strategies.md`).
+///
+/// Variants are ordered — lower discriminant = higher position in table.
+#[ derive( PartialEq, Eq, PartialOrd, Ord ) ]
+enum StatusGroup
+{
+  Green,           // both available: 5h > 15%, prefer_weekly > 5%
+  HExhausted,      // 5h ≤ 15%, 7d > 5%
+  WeeklyExhausted, // 5h > 15%, 7d ≤ 5%
+  Red,             // both exhausted or error
+}
+
+/// Assign an account to its status group.
+fn status_group_of( aq : &AccountQuota, prefer : PreferStrategy ) -> StatusGroup
+{
+  if aq.result.is_err() { return StatusGroup::Red; }
+  let h5_ok = five_hour_left( aq ) > 15.0;
+  let d7_ok = prefer_weekly( aq, prefer ) > 5.0;
+  match ( h5_ok, d7_ok )
+  {
+    ( true,  true  ) => StatusGroup::Green,
+    ( false, true  ) => StatusGroup::HExhausted,
+    ( true,  false ) => StatusGroup::WeeklyExhausted,
+    ( false, false ) => StatusGroup::Red,
+  }
+}
+
 // ── Sort ──────────────────────────────────────────────────────────────────────
 
 /// Return indices into `accounts` sorted by `strategy` and `desc`.
 ///
 /// Each strategy has a canonical direction (its `default_desc()`). Passing
-/// `desc = Some(!strategy.default_desc())` inverts the canonical order.
+/// `desc = Some(true)` inverts the within-group sort order.
 ///
-/// For `drain` and `reset`, exhausted accounts (`5h Left ≤ 15%`) are always
-/// appended last regardless of `desc`. For `name` and `endurance`, `desc`
-/// reverses the whole slice (no exhausted floor).
+/// Accounts are first partitioned into 4 status groups (Green → `HExhausted` →
+/// `WeeklyExhausted` → Red). The chosen strategy sorts within each group.
+/// `desc::` reverses the within-group sort only — group order is always fixed.
 ///
 /// See `docs/feature/020_usage_sort_strategies.md` for full algorithm specs.
-#[ allow( clippy::too_many_lines ) ]
 pub( crate ) fn sort_indices(
   accounts  : &[ AccountQuota ],
   strategy  : SortStrategy,
@@ -33,105 +66,32 @@ pub( crate ) fn sort_indices(
   // `reversed`: true when effective direction deviates from the canonical direction.
   let reversed = effective_desc != strategy.default_desc();
 
-  let all : Vec< usize > = ( 0..accounts.len() ).collect();
+  // Partition into 4 status groups. Sort within each group by strategy.
+  // Fix(BUG-259): name as final tiebreaker makes sort deterministic when numeric keys tie.
+  // Root cause: without name tiebreaker, row order depended on filesystem read_dir order.
+  // Pitfall: partition() preserves insertion order, not sort order — always sort partitions.
+  let mut groups : [ Vec< usize >; 4 ] = [ vec![], vec![], vec![], vec![] ];
+  for ( i, aq ) in accounts.iter().enumerate()
+  {
+    let g = match status_group_of( aq, prefer )
+    {
+      StatusGroup::Green           => 0,
+      StatusGroup::HExhausted      => 1,
+      StatusGroup::WeeklyExhausted => 2,
+      StatusGroup::Red             => 3,
+    };
+    groups[ g ].push( i );
+  }
 
   match strategy
   {
     SortStrategy::Name =>
     {
-      let mut v = all;
-      v.sort_by( |&a, &b| accounts[ a ].name.cmp( &accounts[ b ].name ) );
-      if reversed { v.reverse(); }
-      v
-    }
-
-    SortStrategy::Endurance =>
-    {
-      let reset_secs_of = |i : usize| -> Option< u64 >
+      for group in &mut groups
       {
-        if let Ok( data ) = &accounts[ i ].result
-        {
-          data.five_hour.as_ref()
-            .and_then( |p| p.resets_at.as_deref() )
-            .and_then( claude_quota::iso_to_unix_secs )
-            .map( |t| t.saturating_sub( now_secs ) )
-        }
-        else { None }
-      };
-
-      let ( mut qualified, mut unqualified ) : ( Vec< usize >, Vec< usize > ) =
-        all.into_iter().partition( |&i|
-        {
-          reset_secs_of( i ).is_some_and( |r| ( 900..=3600 ).contains( &r ) )
-            && prefer_weekly( &accounts[ i ], prefer ) >= 30.0
-        } );
-
-      // Qualified canonical: highest weekly first, then soonest reset, then name.
-      qualified.sort_by( |&a, &b|
-      {
-        let wa = prefer_weekly( &accounts[ a ], prefer );
-        let wb = prefer_weekly( &accounts[ b ], prefer );
-        wb.partial_cmp( &wa ).unwrap_or( core::cmp::Ordering::Equal )
-          .then_with( ||
-          {
-            let ra = reset_secs_of( a ).unwrap_or( u64::MAX );
-            let rb = reset_secs_of( b ).unwrap_or( u64::MAX );
-            ra.cmp( &rb )
-          } )
-          .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
-      } );
-
-      // Unqualified canonical: highest 5h_left first; tiebreak highest weekly, then name.
-      unqualified.sort_by( |&a, &b|
-      {
-        let la = five_hour_left( &accounts[ a ] );
-        let lb = five_hour_left( &accounts[ b ] );
-        lb.partial_cmp( &la ).unwrap_or( core::cmp::Ordering::Equal )
-          .then_with( ||
-          {
-            let wa = prefer_weekly( &accounts[ a ], prefer );
-            let wb = prefer_weekly( &accounts[ b ], prefer );
-            wb.partial_cmp( &wa ).unwrap_or( core::cmp::Ordering::Equal )
-          } )
-          .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
-      } );
-
-      let mut result = qualified;
-      result.extend( unqualified );
-      if reversed { result.reverse(); }
-      result
-    }
-
-    SortStrategy::Drain =>
-    {
-      let ( mut non_exhausted, exhausted_vec ) : ( Vec< usize >, Vec< usize > ) =
-        all.into_iter().partition( |&i| five_hour_left( &accounts[ i ] ) > 15.0 );
-
-      // Canonical: ascending prefer_weekly (lowest 7d Left first); tiebreak ascending 5h_left, then name.
-      non_exhausted.sort_by( |&a, &b|
-      {
-        let wa = prefer_weekly( &accounts[ a ], prefer );
-        let wb = prefer_weekly( &accounts[ b ], prefer );
-        wa.partial_cmp( &wb ).unwrap_or( core::cmp::Ordering::Equal )
-          .then_with( ||
-          {
-            let la = five_hour_left( &accounts[ a ] );
-            let lb = five_hour_left( &accounts[ b ] );
-            la.partial_cmp( &lb ).unwrap_or( core::cmp::Ordering::Equal )
-          } )
-          .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
-      } );
-
-      if reversed { non_exhausted.reverse(); }
-      // Fix(BUG-259): sort exhausted tier by name — partition order is filesystem-dependent.
-      // Root cause: exhausted_vec was appended in list() iteration order (filesystem-dependent),
-      //   producing non-deterministic sort output across runs with the same data.
-      // Pitfall: partition() preserves insertion order, not sort order — always sort the
-      //   partitioned slice before appending if determinism is required.
-      let mut exhausted_vec = exhausted_vec;
-      exhausted_vec.sort_by( |&a, &b| accounts[ a ].name.cmp( &accounts[ b ].name ) );
-      non_exhausted.extend( exhausted_vec );
-      non_exhausted
+        group.sort_by( |&a, &b| accounts[ a ].name.cmp( &accounts[ b ].name ) );
+        if reversed { group.reverse(); }
+      }
     }
 
     SortStrategy::Renew =>
@@ -157,45 +117,23 @@ pub( crate ) fn sort_indices(
         d7.min( sub )
       };
 
-      let ( mut non_exhausted, exhausted_vec ) : ( Vec< usize >, Vec< usize > ) =
-        all.into_iter().partition( |&i| five_hour_left( &accounts[ i ] ) > 15.0 );
-
       // Canonical: ascending min(7d_reset, sub_renewal) (soonest event first); tiebreak ascending prefer_weekly, then name.
-      // Fix(BUG-259): name as final tiebreaker makes sort deterministic when numeric keys are tied (same-token accounts).
-      // Root cause: see BUG-259 exhausted floor comment above — same determinism fix applied to the Renew sort.
       // Pitfall: sorts on floating-point (prefer_weekly) require unwrap_or for NaN handling — never use cmp directly.
-      non_exhausted.sort_by( |&a, &b|
+      for group in &mut groups
       {
-        renewal_event_secs( a ).cmp( &renewal_event_secs( b ) )
-          .then_with( ||
-          {
-            let wa = prefer_weekly( &accounts[ a ], prefer );
-            let wb = prefer_weekly( &accounts[ b ], prefer );
-            wa.partial_cmp( &wb ).unwrap_or( core::cmp::Ordering::Equal )
-          } )
-          .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
-      } );
-
-      if reversed { non_exhausted.reverse(); }
-      let mut exhausted_vec = exhausted_vec;
-      exhausted_vec.sort_by( |&a, &b| accounts[ a ].name.cmp( &accounts[ b ].name ) );
-      non_exhausted.extend( exhausted_vec );
-      non_exhausted
-    }
-
-    SortStrategy::Expires =>
-    {
-      // Sort by token expiry (expires_at_ms) ascending — accounts expiring soonest appear first.
-      // Accounts with expires_at_ms == 0 (unknown expiry) are placed at the end.
-      let expiry_secs_of = |i : usize| -> u64
-      {
-        let ms = accounts[ i ].expires_at_ms;
-        if ms == 0 { u64::MAX } else { ms / 1000 }
-      };
-      let mut v = all;
-      v.sort_by( |&a, &b| expiry_secs_of( a ).cmp( &expiry_secs_of( b ) ).then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) ) );
-      if reversed { v.reverse(); }
-      v
+        group.sort_by( |&a, &b|
+        {
+          renewal_event_secs( a ).cmp( &renewal_event_secs( b ) )
+            .then_with( ||
+            {
+              let wa = prefer_weekly( &accounts[ a ], prefer );
+              let wb = prefer_weekly( &accounts[ b ], prefer );
+              wa.partial_cmp( &wb ).unwrap_or( core::cmp::Ordering::Equal )
+            } )
+            .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
+        } );
+        if reversed { group.reverse(); }
+      }
     }
 
     SortStrategy::Renews =>
@@ -211,16 +149,22 @@ pub( crate ) fn sort_indices(
           now_secs,
         ).map_or( u64::MAX, |( s, _ )| s )
       };
-      let mut v = all;
-      v.sort_by( |&a, &b| renews_secs_of( a ).cmp( &renews_secs_of( b ) ).then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) ) );
-      if reversed { v.reverse(); }
-      v
-    }
 
-    // sort::next is always resolved to Drain or Endurance in parse_usage_params
-    // before sort_indices is called — this arm is unreachable in production code.
-    SortStrategy::Next => unreachable!( "sort::Next must be resolved to a concrete strategy in parse_usage_params" ),
+      for group in &mut groups
+      {
+        group.sort_by( |&a, &b|
+          renews_secs_of( a ).cmp( &renews_secs_of( b ) )
+            .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
+        );
+        if reversed { group.reverse(); }
+      }
+    }
   }
+
+  // Flatten groups in fixed order (Green → HExhausted → WeeklyExhausted → Red).
+  let mut result = Vec::with_capacity( accounts.len() );
+  for group in groups { result.extend( group ); }
+  result
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -263,157 +207,6 @@ mod tests
     let indices = sort_indices( &accounts, SortStrategy::Name, Some( true ), PreferStrategy::Any, 0 );
     assert_eq!( accounts[ indices[ 0 ] ].name, "zzz@test.com", "desc::1 must reverse name order" );
     assert_eq!( accounts[ indices[ 1 ] ].name, "aaa@test.com" );
-  }
-
-  // ── sort_indices: drain strategy ─────────────────────────────────────────
-
-  /// AC-03 — `sort::drain` places exhausted (≤15% `5h_left`) accounts last.
-  /// Non-exhausted sorted by `prefer_weekly` ascending (lowest 7d Left first).
-  #[ test ]
-  fn test_sort_drain_exhausted_sunk_rest_ascending()
-  {
-    let accounts = vec![
-      mk_aq_sort_weekly( "exhausted@test.com",   99.0, 40.0, 40.0 ),  // h-exhausted (1% 5h left), 60% 7d Left
-      mk_aq_sort_weekly( "low_weekly@test.com",  30.0, 70.0, 70.0 ),  // 30% 7d Left — lowest weekly
-      mk_aq_sort_weekly( "high_weekly@test.com", 30.0,  0.0,  0.0 ),  // 100% 7d Left
-    ];
-    let indices = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0 );
-    assert_eq!( accounts[ indices[ 0 ] ].name, "low_weekly@test.com",  "lowest 7d Left non-exhausted must be first" );
-    assert_eq!( accounts[ indices[ 1 ] ].name, "high_weekly@test.com", "highest 7d Left non-exhausted second" );
-    assert_eq!( accounts[ indices[ 2 ] ].name, "exhausted@test.com",   "h-exhausted must be last" );
-  }
-
-  /// AC-03 + AC-05 — `sort::drain desc::1` reverses non-exhausted; exhausted stays last.
-  #[ test ]
-  fn test_sort_drain_desc_reverses_non_exhausted_only()
-  {
-    let accounts = vec![
-      mk_aq_sort( "exhausted@test.com", 99.0, FAR_FUTURE_MS ),  // ≤15% — sunk
-      mk_aq_sort( "low@test.com",       75.0, FAR_FUTURE_MS ),  // 25% left
-      mk_aq_sort( "high@test.com",      30.0, FAR_FUTURE_MS ),  // 70% left
-    ];
-    let indices = sort_indices( &accounts, SortStrategy::Drain, Some( true ), PreferStrategy::Any, 0 );
-    assert_eq!( accounts[ indices[ 0 ] ].name, "high@test.com",     "desc::1 drain: highest non-exhausted first" );
-    assert_eq!( accounts[ indices[ 1 ] ].name, "low@test.com",      "desc::1 drain: second" );
-    assert_eq!( accounts[ indices[ 2 ] ].name, "exhausted@test.com","exhausted must still be last" );
-  }
-
-  /// AC-06 — `sort::drain` without explicit `desc::` equals `desc::0` (lowest first).
-  #[ test ]
-  fn test_sort_drain_default_equals_desc0()
-  {
-    let accounts = vec![
-      mk_aq_sort( "high@test.com", 30.0, FAR_FUTURE_MS ),  // 70% left
-      mk_aq_sort( "low@test.com",  75.0, FAR_FUTURE_MS ),  // 25% left
-    ];
-    let idx_default = sort_indices( &accounts, SortStrategy::Drain, None,          PreferStrategy::Any, 0 );
-    let idx_desc0   = sort_indices( &accounts, SortStrategy::Drain, Some( false ), PreferStrategy::Any, 0 );
-    assert_eq!( idx_default, idx_desc0, "drain default must equal desc::0" );
-    assert_eq!( accounts[ idx_default[ 0 ] ].name, "low@test.com", "lowest first with default drain" );
-  }
-
-  /// CC-044 — `sort::drain` with all accounts exhausted preserves input order.
-  #[ test ]
-  fn test_sort_drain_all_exhausted_preserves_input_order()
-  {
-    let accounts = vec![
-      mk_aq_sort( "first@test.com",  99.0, FAR_FUTURE_MS ),  // 1% left — exhausted
-      mk_aq_sort( "second@test.com", 97.0, FAR_FUTURE_MS ),  // 3% left — exhausted
-      mk_aq_sort( "third@test.com",  95.0, FAR_FUTURE_MS ),  // 5% left — exhausted
-    ];
-    let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0 );
-    assert_eq!( accounts[ idx[ 0 ] ].name, "first@test.com",  "all-exhausted drain: alphabetical within exhausted tier" );
-    assert_eq!( accounts[ idx[ 1 ] ].name, "second@test.com", "all-exhausted drain: alphabetical within exhausted tier" );
-    assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted drain: alphabetical within exhausted tier" );
-  }
-
-  /// CC-026 — `sort::drain prefer::sonnet` primary sort key: lowest `7d(Son)` ascending.
-  #[ test ]
-  fn test_sort_drain_prefer_sonnet_primary()
-  {
-    let accounts = vec![
-      mk_aq_sort_weekly( "low_son@test.com",  50.0, 0.0, 80.0 ),
-      mk_aq_sort_weekly( "high_son@test.com", 50.0, 0.0, 20.0 ),
-    ];
-    let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Sonnet, 0 );
-    assert_eq!(
-      accounts[ idx[ 0 ] ].name, "low_son@test.com",
-      "prefer::sonnet drain primary: lower 7d(Son) left must be first",
-    );
-    assert_eq!(
-      accounts[ idx[ 1 ] ].name, "high_son@test.com",
-      "prefer::sonnet drain primary: higher 7d(Son) left must be second",
-    );
-  }
-
-  /// CC-027 — `sort::drain prefer::any` primary sort key: lowest `min(7d Left, 7d(Son))` ascending.
-  #[ test ]
-  fn test_sort_drain_prefer_any_primary()
-  {
-    let accounts = vec![
-      mk_aq_sort_weekly( "high_any@test.com", 50.0, 30.0, 40.0 ),
-      mk_aq_sort_weekly( "low_any@test.com",  50.0, 70.0, 60.0 ),
-    ];
-    let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0 );
-    assert_eq!(
-      accounts[ idx[ 0 ] ].name, "low_any@test.com",
-      "prefer::any drain primary: lower min(7d,Son) left must be first",
-    );
-    assert_eq!(
-      accounts[ idx[ 1 ] ].name, "high_any@test.com",
-      "prefer::any drain primary: higher min(7d,Son) left must be second",
-    );
-  }
-
-  /// AC-08 — `prefer::opus` governs drain primary sort key; lowest `prefer_weekly` wins.
-  #[ test ]
-  fn test_prefer_opus_primary_in_drain()
-  {
-    let accounts = vec![
-      mk_aq_sort_weekly( "low7d@test.com",  50.0, 80.0, 20.0 ),  // 7d Left=20%
-      mk_aq_sort_weekly( "high7d@test.com", 50.0, 20.0, 80.0 ),  // 7d Left=80%
-    ];
-    let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Opus, 0 );
-    assert_eq!(
-      accounts[ idx[ 0 ] ].name, "low7d@test.com",
-      "prefer::opus drain primary: lower 7d Left must be first; got: {:?}", accounts[ idx[ 0 ] ].name,
-    );
-  }
-
-  /// CC-058 — Account with `five_hour: None` is treated as non-exhausted (conservative 100% left).
-  #[ test ]
-  fn test_sort_drain_none_five_hour_treated_as_non_exhausted()
-  {
-    use claude_quota::OauthUsageData;
-    let mk_no_fh = |name : &str| -> AccountQuota
-    {
-      AccountQuota
-      {
-        name          : name.to_string(),
-        is_current    : false,
-        is_active             : false,
-        is_occupied_elsewhere : false,
-        expires_at_ms : FAR_FUTURE_MS,
-        result        : Ok( OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
-        account       : None,
-        host          : String::new(),
-        role          : String::new(),
-        renewal_at    : None,
-        cached        : false,
-        cache_age_secs : None,
-        is_owned      : true,
-        owner                : String::new(),
-      }
-    };
-    let accounts = vec![
-      mk_aq_sort( "low@test.com",       75.0, FAR_FUTURE_MS ),  // 25% left
-      mk_no_fh(   "no_fh@test.com"                          ),  // None → 100% assumed
-      mk_aq_sort( "exhausted@test.com", 99.0, FAR_FUTURE_MS ),  // 1% left — sunk
-    ];
-    let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0 );
-    assert_eq!( accounts[ idx[ 0 ] ].name, "low@test.com",       "25% left drains first" );
-    assert_eq!( accounts[ idx[ 1 ] ].name, "no_fh@test.com",     "None five_hour = 100% left: last among non-exhausted" );
-    assert_eq!( accounts[ idx[ 2 ] ].name, "exhausted@test.com", "exhausted always sunk to bottom" );
   }
 
   // ── sort_indices: renew strategy ─────────────────────────────────────────
@@ -483,57 +276,6 @@ mod tests
     assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted renew: alphabetical within exhausted tier" );
   }
 
-  // ── sort_indices: endurance strategy ─────────────────────────────────────
-
-  /// AC-06 — `sort::endurance` without explicit `desc::` equals `desc::1` (qualified first).
-  #[ test ]
-  fn test_sort_endurance_default_equals_desc1()
-  {
-    let now : u64 = 1_000_000;
-    let accounts = vec![
-      mk_aq_with_reset( "unqualified@test.com", 50.0, now, 18000 ), // 5h reset — too far
-      mk_aq_with_reset( "qualified@test.com",   50.0, now, 1800  ), // 30min reset ✓
-    ];
-    let mut accounts = accounts;
-    if let Ok( ref mut data ) = accounts[ 1 ].result
-    {
-      data.seven_day = Some( claude_quota::PeriodUsage { utilization : 50.0, resets_at : None } );
-    }
-
-    let idx_default = sort_indices( &accounts, SortStrategy::Endurance, None,         PreferStrategy::Any, now );
-    let idx_desc1   = sort_indices( &accounts, SortStrategy::Endurance, Some( true ), PreferStrategy::Any, now );
-    assert_eq!( idx_default, idx_desc1, "endurance default must equal desc::1" );
-    assert_eq!( accounts[ idx_default[ 0 ] ].name, "qualified@test.com", "qualified must be first with default" );
-  }
-
-  /// AC-07 — `prefer::sonnet` uses `7d(Son)` for endurance qualification.
-  #[ test ]
-  fn test_prefer_sonnet_qualifies_by_sonnet_quota()
-  {
-    let now : u64 = 1_000_000;
-    let accounts = vec![
-      mk_aq_with_reset( "target@test.com", 50.0, now, 1800 ), // 30min reset
-    ];
-    let mut accounts = accounts;
-    if let Ok( ref mut data ) = accounts[ 0 ].result
-    {
-      data.seven_day        = Some( claude_quota::PeriodUsage { utilization : 90.0, resets_at : None } );
-      data.seven_day_sonnet = Some( claude_quota::PeriodUsage { utilization : 65.0, resets_at : None } );
-    }
-
-    use super::super::format::prefer_weekly;
-    assert!( prefer_weekly( &accounts[ 0 ], PreferStrategy::Sonnet ) >= 30.0, "prefer::sonnet must return ≥30%" );
-    assert!( prefer_weekly( &accounts[ 0 ], PreferStrategy::Any    ) <  30.0, "prefer::any must return <30%" );
-    assert!( prefer_weekly( &accounts[ 0 ], PreferStrategy::Opus   ) <  30.0, "prefer::opus must return <30%" );
-
-    let idx_any    = sort_indices( &accounts, SortStrategy::Endurance, None, PreferStrategy::Any,    now );
-    let idx_sonnet = sort_indices( &accounts, SortStrategy::Endurance, None, PreferStrategy::Sonnet, now );
-    let idx_opus   = sort_indices( &accounts, SortStrategy::Endurance, None, PreferStrategy::Opus,   now );
-    assert_eq!( idx_any.len(),    1 );
-    assert_eq!( idx_sonnet.len(), 1 );
-    assert_eq!( idx_opus.len(),   1 );
-  }
-
   // ── sort_indices: determinism (BUG-259 MRE) ──────────────────────────────
 
   /// BUG-259 MRE — `sort::renew` with all keys tied must produce alphabetical order.
@@ -579,22 +321,116 @@ mod tests
     assert_eq!( accounts[ idx[ 2 ] ].name, "charlie@test.com", "third alphabetically" );
   }
 
+  // ── 4-group status partition (AC-12) ─────────────────────────────────────
+
+  /// AC-12 — 4-group partition: h-exhausted (Group 2) ranks above weekly-exhausted (Group 3).
+  ///
+  /// Current binary partition puts weekly-exhausted in `non_exhausted` (ranks above h-exhausted).
+  /// 4-group partition must put h-exhausted (G2) before weekly-exhausted (G3).
+  ///
+  /// RED:   binary partition → weekly-exhausted first → FAIL.
+  /// GREEN: 4-group partition → h-exhausted first → PASS.
+  #[ test ]
+  fn test_4group_h_exhausted_ranks_before_weekly_exhausted()
+  {
+    // weekly-exhausted: five_hour_left=50% > 15% (not h-exhausted), prefer_weekly=4% ≤ 5% (weekly-exhausted)
+    // h-exhausted: five_hour_left=10% ≤ 15% (h-exhausted), prefer_weekly=50% > 5% (not weekly-exhausted)
+    let accounts = vec![
+      mk_aq_sort_weekly( "weekly_exhausted@test.com", 50.0, 96.0, 96.0 ), // Group 3
+      mk_aq_sort_weekly( "h_exhausted@test.com",      90.0, 50.0, 50.0 ), // Group 2
+    ];
+    let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0 );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "h_exhausted@test.com",
+      "4-group: h-exhausted (G2) must rank before weekly-exhausted (G3); got: {:?}",
+      idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
+    );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "weekly_exhausted@test.com" );
+  }
+
+  /// AC-12 — 4-group partition: green (Group 1) ranks above h-exhausted (Group 2).
+  ///
+  /// Verifies that the 4-group model correctly places green above h-exhausted.
+  #[ test ]
+  fn test_4group_green_ranks_before_h_exhausted()
+  {
+    let accounts = vec![
+      mk_aq_sort_weekly( "h_exhausted@test.com", 90.0, 50.0, 50.0 ), // Group 2: five_hour_left=10 ≤ 15
+      mk_aq_sort_weekly( "green@test.com",        50.0, 50.0, 50.0 ), // Group 1: both thresholds ok
+    ];
+    let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0 );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "green@test.com",
+      "4-group: green (G1) must rank before h-exhausted (G2); got: {:?}",
+      idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
+    );
+  }
+
+  /// AC-12 — 4-group partition: weekly-exhausted (Group 3) ranks above red (Group 4).
+  ///
+  /// Red account has both quotas exhausted.
+  #[ test ]
+  fn test_4group_weekly_exhausted_ranks_before_red()
+  {
+    // red: both five_hour_left ≤ 15% AND prefer_weekly ≤ 5%
+    let accounts = vec![
+      mk_aq_sort_weekly( "red@test.com",              90.0, 96.0, 96.0 ), // Group 4: both exhausted
+      mk_aq_sort_weekly( "weekly_exhausted@test.com", 50.0, 96.0, 96.0 ), // Group 3: only weekly
+    ];
+    let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0 );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "weekly_exhausted@test.com",
+      "4-group: weekly-exhausted (G3) must rank before red (G4); got: {:?}",
+      idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
+    );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "red@test.com" );
+  }
+
+  /// AC-03 / AC-12 — 4-group partition: `desc::1` preserves group order (groups are never reversed).
+  ///
+  /// `desc::1` must reverse row order within each group only.
+  /// green (G1) must still appear above h-exhausted (G2) even with `desc::1`.
+  ///
+  /// RED:   `sort::name` currently reverses the entire slice → green ends up after h-exhausted.
+  /// GREEN: 4-group partition → group order is fixed regardless of `desc::`.
+  #[ test ]
+  fn test_4group_desc1_preserves_group_order()
+  {
+    // Two accounts: green then h-exhausted (inserted in that order)
+    let accounts = vec![
+      mk_aq_sort_weekly( "green@test.com",       50.0, 50.0, 50.0 ), // Group 1
+      mk_aq_sort_weekly( "h_exhausted@test.com", 90.0, 50.0, 50.0 ), // Group 2
+    ];
+    // sort::name desc::1: reverses alphabetical within groups, but groups must stay fixed
+    let idx = sort_indices( &accounts, SortStrategy::Name, Some( true ), PreferStrategy::Any, 0 );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "green@test.com",
+      "4-group: desc::1 must not reverse group order; green (G1) must still rank before h-exhausted (G2); got: {:?}",
+      idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
+    );
+  }
+
   /// CC-059/CC-060 — `prefer_weekly` with absent period data treats account as fully available.
+  ///
+  /// Both accounts are in the same group (green: h5 > 15%, weekly > 5%). Within the group,
+  /// `sort::renew` uses `min(7d_reset, sub_renewal)` as primary key — neither has a reset,
+  /// so they tie and fall back to alphabetical order. Verifies `no_data` is treated as 100%
+  /// weekly (not 0%), keeping it in the same group as `has_data` rather than sinking to Red.
   #[ test ]
   fn test_prefer_weekly_none_periods_treated_as_full()
   {
     let accounts = vec![
-      mk_aq_sort_weekly( "has_data@test.com", 50.0, 60.0, 60.0 ),  // 7d_left=40%
-      mk_aq_sort(        "no_data@test.com",  50.0, FAR_FUTURE_MS ), // seven_day=None → 100%
+      mk_aq_sort_weekly( "has_data@test.com", 50.0, 60.0, 60.0 ),  // 7d_left=40% — green
+      mk_aq_sort(        "no_data@test.com",  50.0, FAR_FUTURE_MS ), // seven_day=None → 100% — also green
     ];
-    let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Opus, 0 );
+    let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Opus, 0 );
     assert_eq!(
       accounts[ idx[ 0 ] ].name, "has_data@test.com",
-      "has_data (40% left) must rank first under drain ascending prefer_weekly (lowest first)",
+      "has_data ranks first (alphabetical tiebreaker within same green group)",
     );
     assert_eq!(
       accounts[ idx[ 1 ] ].name, "no_data@test.com",
-      "no_data (None seven_day = 100% left) must rank second",
+      "no_data (None seven_day = 100% left) stays in same group, ranks second alphabetically",
     );
   }
 

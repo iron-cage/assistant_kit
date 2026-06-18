@@ -41,4 +41,4 @@ clp .usage rotate::1
 # switched to 'alice@home.com'
 ```
 
-Strategy variants: `clp .usage rotate::1 next::endurance` (most 5h quota), `clp .usage rotate::1 next::drain` (least non-zero weekly quota). Preview with `dry::1`: `clp .usage rotate::1 dry::1`.
+Strategy variants: `clp .usage rotate::1 sort::renews` (soonest billing renewal). Preview with `dry::1`: `clp .usage rotate::1 dry::1`.

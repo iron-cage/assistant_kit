@@ -22,7 +22,7 @@
 | 2 | `.help` | Display command reference and usage examples | 0 | `clp .help` |
 | 3 | `.accounts` | List all saved accounts or show a single named account | 32 | `clp .accounts` |
 | 4 | `.account.save` | Save current credentials as a named account profile | 5 | `clp .account.save name::alice@acme.com` |
-| 5 | `.account.use` | Switch active account by name with atomic credential rotation | 7 | `clp .account.use name::alice@home.com` |
+| 5 | `.account.use` | Switch active account by name with atomic credential rotation | 8 | `clp .account.use name::alice@home.com` |
 | 6 | `.account.delete` | Delete a saved account from the account store | 3 | `clp .account.delete name::alice@oldco.com` |
 | 7 | `.token.status` | Show active OAuth token expiry classification | 3 | `clp .token.status` |
 | 8 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 3 | `clp .paths` |
@@ -53,7 +53,7 @@
 | 4 | `.account.inspect` |
 | 5 | `.account.save` |
 | 6 | `.account.renewal` |
-| 7 | `.account.use` |
+| 8 | `.account.use` |
 | 18 | `.credentials.status` |
 | 32 | `.accounts` |
 | 33 | `.usage` |

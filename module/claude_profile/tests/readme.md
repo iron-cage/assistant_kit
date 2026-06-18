@@ -10,7 +10,7 @@
 | `cli_adapter_test.rs` | Adapter and output module: argv conversion, aliases, bool normalization, validation, json_escape, format_duration_secs. |
 | `cli_clp_alias_test.rs` | Binary alias smoke tests: both `clp` and `claude_profile` aliases run and self-identify. |
 | `cli_integration_test.rs` | CLI binary integration: entry point for cli/ modules. |
-| `cli/` | Split integration test modules (help, accounts, mutations, rotate, token, paths, usage, persist, credentials, limits, param-help, dot, cross-cutting, account-inspect). |
+| `cli/` | Split integration test modules (help, accounts, mutations, rotate, token, paths, usage, persist, credentials, limits, param-help, dot, cross-cutting, account-inspect, set-model, type-contracts, invariants, command-verbs, command-nouns, user-stories). |
 | `manual/` | Manual testing plan: live Claude Code account switching. |
 | `docs/` | Test-lens documentation: per-command, per-parameter, per-group, and per-feature test case indices. |
 
@@ -66,7 +66,7 @@ tests/
 │   ├── cross_cutting_test.rs             # idempotency, param order, exit codes
 │   ├── usage_test.rs                     # .usage command tests (IT-1–IT-37, 36 fns)
 │   ├── usage_feature_test.rs             # .usage feature AC coverage (FT-01–FT-05)
-│   ├── usage_rotate_test.rs             # .usage rotate::1 strategy-driven rotation (FT-01–FT-11)
+│   ├── usage_rotate_test.rs             # .usage rotate::1 strategy-driven rotation (FT-01–FT-10, EC-05–EC-07)
 │   ├── persist_test.rs                   # PersistPaths resolution tests
 │   ├── credentials_test.rs               # .credentials.status command tests
 │   ├── credentials_status_help_test.rs   # .credentials.status help descriptions
@@ -74,7 +74,13 @@ tests/
 │   ├── account_limits_test.rs            # .account.limits error paths
 │   ├── dot_test.rs                       # . / .help output tests
 │   ├── account_assign_test.rs            # .account.assign marker-only write tests
-│   └── account_inspect_test.rs           # .account.inspect command tests
+│   ├── account_inspect_test.rs           # .account.inspect command tests
+│   ├── set_model_test.rs                 # explicit session model override (FT-01..FT-09, EC-1..EC-7)
+│   ├── type_test.rs                      # CLI type boundary contracts (AccountName, OutputFormat, etc.)
+│   ├── invariant_test.rs                 # architectural invariant assertions (IN-1..2 each)
+│   ├── command_verb_test.rs              # command-verb behavioral contracts (10 verbs, BV-1..4)
+│   ├── command_noun_test.rs              # command-noun contracts (account, token, credentials)
+│   └── user_story_test.rs               # user acceptance tests (UA scenarios)
 ├── manual/
 │   └── readme.md                         # manual testing plan
 └── docs/
@@ -82,11 +88,11 @@ tests/
     ├── cli/
     │   ├── readme.md                     # CLI test-lens index
     │   ├── command/                      # per-command test case files (000–016)
-    │   ├── param/                        # per-parameter test case files (001–053)
+    │   ├── param/                        # per-parameter test case files (01–60)
     │   └── param_group/                  # per-group test case files (001–006)
     └── feature/
         ├── readme.md                     # feature test-lens index
-        └── 09_token_usage.md             # FT cases for Feature 009 (FR-14)
+        └── [38 spec files]               # FT cases for Features 001–038 (full index in readme.md)
 ```
 
 ## Domain Map
@@ -107,7 +113,7 @@ tests/
 | Cross-cutting CLI | `cli/cross_cutting_test.rs` | idempotency, param order, exit code contracts, env |
 | Usage CLI | `cli/usage_test.rs` | .usage live quota table, JSON output, error paths |
 | Usage feature AC | `cli/usage_feature_test.rs` | .usage acceptance criteria (AC-01–AC-06) |
-| Usage rotate CLI | `cli/usage_rotate_test.rs` | .usage rotate::1 strategy-driven rotation, FT-01–FT-11 |
+| Usage rotate CLI | `cli/usage_rotate_test.rs` | .usage rotate::1 strategy-driven rotation, FT-01–FT-10, EC-05–EC-07 |
 | Persist paths | `cli/persist_test.rs` | PersistPaths PRO/HOME resolution, ensure_exists |
 | Credentials status CLI | `cli/credentials_test.rs` | .credentials.status without account store |
 | Credentials status help CLI | `cli/credentials_status_help_test.rs` | .credentials.status help descriptions |
@@ -116,6 +122,12 @@ tests/
 | Dot / help CLI | `cli/dot_test.rs` | . and .help output, delegation, ANSI suppression |
 | Account assign CLI | `cli/account_assign_test.rs` | .account.assign marker-only write (aa01–aa12) |
 | Account inspect CLI | `cli/account_inspect_test.rs` | .account.inspect command tests |
+| Session model override CLI | `cli/set_model_test.rs` | set_model:: explicit session model override (FT-01..FT-09, EC-1..EC-7) |
+| Type boundary contracts | `cli/type_test.rs` | AccountName, OutputFormat, WarningThreshold, AccountSelector contracts |
+| Architectural invariants | `cli/invariant_test.rs` | zero-third-party-deps, cross-platform, atomic switching, param defaults |
+| Command-verb contracts | `cli/command_verb_test.rs` | behavioral contracts for 10 command verbs (BV-1..4 each) |
+| Command-noun contracts | `cli/command_noun_test.rs` | account, token, credentials noun contracts (NC-1..3) |
+| User acceptance | `cli/user_story_test.rs` | account rotation, onboarding, quota monitoring, scripted automation (UA scenarios) |
 | Arch boundary | `responsibility_no_process_execution_test.rs` | no std::process in crate source |
 
 ## Adding New Tests

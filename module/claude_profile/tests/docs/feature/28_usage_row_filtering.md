@@ -21,7 +21,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 | FT-13 | `format::tsv` produces tab-separated output with text status labels | AC-13 | Integration |
 | FT-14 | `no_color::1` produces emoji-free output | AC-14 | Integration |
 | FT-15 | Invalid `get::` field ID exits 1 listing valid IDs | AC-15 | Validation |
-| FT-16 | Filters compose with `sort::`, `next::`, `prefer::`, `cols::` | AC-16 | Composability |
+| FT-16 | Filters compose with `sort::`, `prefer::`, `cols::` | AC-16 | Composability |
 | FT-17 | `only_active::1` performs exactly 1 HTTP fetch on N-account store | AC-17 | Pipeline-Constraint |
 
 ### Test Case Index
@@ -43,7 +43,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 | FT-13 | format::tsv tab-separated output | AC-13 | Format |
 | FT-14 | no_color::1 plain output | AC-14 | Format |
 | FT-15 | Invalid get:: field ID rejected | AC-15 | Validation |
-| FT-16 | Filters compose with sort/next/prefer/cols | AC-16 | Composability |
+| FT-16 | Filters compose with sort/prefer/cols | AC-16 | Composability |
 | FT-17 | only_active::1 performs exactly 1 HTTP fetch (N-account store) | AC-17 | Pipeline-Constraint |
 
 **Total:** 17 FT cases
@@ -88,7 +88,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 
 ### FT-04: `only_next::1` shows exactly the → account
 
-- **Given:** Three accounts with valid quota; one receives → from the active `next::` strategy.
+- **Given:** Three accounts with valid quota; one receives → from the active sort strategy.
 - **When:** `clp .usage only_next::1`
 - **Then:** Exits 0. Exactly one data row shown — the → account. All other rows absent.
 - **Exit:** 0
@@ -227,11 +227,11 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 
 ---
 
-### FT-16: Filters compose with `sort::`, `next::`, `prefer::`, `cols::`
+### FT-16: Filters compose with `sort::`, `prefer::`, `cols::`
 
 - **Given:** Four accounts with valid quota data.
-- **When:** `clp .usage sort::name next::drain only_valid::1 count::2 cols::+sub`
-- **Then:** Exits 0. Output shows at most 2 non-🔴 rows, sorted alphabetically, with Sub column present. Footer shows all three strategy recommendations.
+- **When:** `clp .usage sort::name only_valid::1 count::2 cols::+sub`
+- **Then:** Exits 0. Output shows at most 2 non-🔴 rows, sorted alphabetically, with Sub column present.
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it219_lim_it_ft028_16_filters_compose` (in `tests/cli/usage_test.rs`)

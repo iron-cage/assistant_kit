@@ -35,9 +35,9 @@
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
 //! | UA-1 | `quota_ua1_usage_shows_all_accounts` | `.usage` exits 0, accounts listed | P |
-//! | UA-2 | `quota_ua2_sort_strategies_exit_0` | `sort::endurance` and `sort::renew` exit 0 | P |
+//! | UA-2 | `quota_ua2_sort_strategies_exit_0` | `sort::renew` and `sort::renews` exit 0 | P |
 //! | UA-3 | `quota_ua3_lim_it_live_mode_produces_output` | `live::1` produces at least one refresh (`lim_it`) | P |
-//! | UA-4 | `quota_ua4_next_recommendation_present` | `next::endurance` exits 0 | P |
+//! | UA-4 | `quota_ua4_next_recommendation_present` | `sort::renew` exits 0, recommendation present | P |
 //! | UA-5 | `quota_ua5_min_5h_filter_exits_0` | `min_5h::40` exits 0 | P |
 //!
 //! ### Story 4 — Scripted Pipeline Automation (UA-1..4)
@@ -383,7 +383,7 @@ fn quota_ua1_usage_shows_all_accounts()
   assert!( out_text.contains( "carol" ), ".usage must list carol: {out_text}" );
 }
 
-// UA-2: sort::endurance and sort::renew both exit 0
+// UA-2: sort::renew and sort::renews both exit 0
 #[ test ]
 fn quota_ua2_sort_strategies_exit_0()
 {
@@ -396,17 +396,17 @@ fn quota_ua2_sort_strategies_exit_0()
   write_account_renewal_json( dir.path(), "alice@acme.com", "2026-09-01T00:00:00Z" );
   write_account_renewal_json( dir.path(), "bob@acme.com",   "2026-08-01T00:00:00Z" );
 
-  let out_endurance = run_cs_with_env(
-    &[ ".usage", "sort::endurance" ],
-    &[ ( "HOME", home ) ],
-  );
-  assert_exit( &out_endurance, 0 );
-
   let out_renew = run_cs_with_env(
     &[ ".usage", "sort::renew" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out_renew, 0 );
+
+  let out_renews = run_cs_with_env(
+    &[ ".usage", "sort::renews" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out_renews, 0 );
 }
 
 // UA-3: live::1 continuously refreshes the table (lim_it — requires live API + TTY)
@@ -434,7 +434,7 @@ fn quota_ua3_lim_it_live_mode_produces_output()
   );
 }
 
-// UA-4: next::endurance exits 0 with accounts present
+// UA-4: sort::renew exits 0 and footer recommends eligible account
 #[ test ]
 fn quota_ua4_next_recommendation_present()
 {
@@ -445,7 +445,7 @@ fn quota_ua4_next_recommendation_present()
   write_account( dir.path(), "bob@acme.com",   "max", "default", FAR_FUTURE_MS - 3_600_000,   false );
 
   let out = run_cs_with_env(
-    &[ ".usage", "next::endurance" ],
+    &[ ".usage", "sort::renew" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );

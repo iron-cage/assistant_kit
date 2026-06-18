@@ -8,9 +8,9 @@
 ### Acceptance Criteria
 
 - [ ] `clp .usage` shows all saved accounts with 5h/7d quota, expiry, and renewal in a single table
-- [ ] `sort::endurance` ranks by most remaining quota; `sort::renew` by soonest renewal
+- [ ] `sort::renew` ranks by soonest quota renewal event; `sort::renews` by soonest billing renewal
 - [ ] `live::1` continuously refreshes the table at `interval::` seconds
-- [ ] `→ Next` column recommends the best account per the selected `next::` strategy
+- [ ] `→` marker recommends the top eligible account per the active `sort::` strategy
 - [ ] `min_5h::X` and `min_7d::X` filter to accounts meeting minimum quota thresholds
 
 ### Referenced Commands
@@ -27,7 +27,7 @@
 | 1 | [`sort::`](../param/025_sort.md) | Row ordering strategy |
 | 2 | [`desc::`](../param/026_desc.md) | Sort direction override |
 | 3 | [`prefer::`](../param/027_prefer.md) | Weekly quota column for sort heuristics |
-| 4 | [`next::`](../param/032_next.md) | Recommendation strategy for `→ Next` column |
+| 4 | [`sort::`](../param/025_sort.md) | Row ordering strategy and `→` recommendation |
 | 5 | [`live::`](../param/020_live.md) | Continuous quota refresh loop |
 | 6 | [`interval::`](../param/021_interval.md) | Live mode cycle duration |
 | 7 | [`jitter::`](../param/022_jitter.md) | Live mode cycle timing variance |
@@ -41,7 +41,7 @@
 
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 1 | [Sort Control](../param_group/004_sort_control.md) | `sort::`, `desc::`, `prefer::`, `next::` |
+| 1 | [Sort Control](../param_group/004_sort_control.md) | `sort::`, `desc::`, `prefer::` |
 | 2 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `live::`, `interval::`, `jitter::` |
 | 3 | [Display Control](../param_group/005_display_control.md) | Row filtering and column visibility |
 
