@@ -62,7 +62,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 - **AC-05**: The `model_override` field is written to cache after `apply_model_override` executes.
 - **AC-06**: The `last_touch_at` and `touch_idle` fields are written to cache after touch subprocess completion.
 - **AC-07**: Cache write uses read-merge-write on `{name}.json` — existing fields (`host`, `model`, `oauthAccount`, `_renewal_at`) are preserved.
-- **AC-08**: Strategy recommendations (`next::`, sort) operate on cached quota values when live data is unavailable — recommendations remain functional.
+- **AC-08**: Strategy recommendations (`sort::`) operate on cached quota values when live data is unavailable — recommendations remain functional.
 - **AC-09**: `format::json` output includes a `"cached": true` flag and `"cache_age_secs": N` field when displaying cached data.
 - **AC-10**: When cache fallback converts a fetch error to `Ok(cached_data)` (AC-02 path), accounts whose local token is expired (`expires_at_ms / 1000 <= now_secs`) are still flagged for token refresh by `should_refresh()` via the `cached + expired` guard — the `Ok` result does not suppress refresh when `cached = true` and the token is locally expired.
 - **AC-11**: After `apply_refresh()` executes a successful token refresh and quota retry (`retry OK`), `aq.cached` is reset to `false` and `aq.cache_age_secs` is cleared to `None` on the in-memory `AccountQuota`, and the fresh data is written to `{name}.json` via `write_quota_cache()`. The row no longer shows `~` prefix or `(Xh ago)` label, and the next run reads fresh cache data.

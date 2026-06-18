@@ -49,25 +49,25 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-41 | Account with missing token → `🔴` in table row | Status Emoji |
 | IT-42 | `format::json` output does not contain `🔴`, `🟡`, or `🟢` | Status Emoji |
 | IT-44 | `sort::name` accepted with empty store → exit 0 | Sort Acceptance |
-| IT-45 | `sort::endurance` accepted with empty store → exit 0 | Sort Acceptance |
-| IT-46 | `sort::drain` accepted with empty store → exit 0 | Sort Acceptance |
+| IT-45 | ~~`sort::endurance` accepted~~ → REMOVED (now rejected — see `it249`) | Sort Rejection |
+| IT-46 | ~~`sort::drain` accepted~~ → REMOVED (now rejected — see `it250`) | Sort Rejection |
 | IT-47 | `sort::renew` accepted with empty store → exit 0 | Sort Acceptance |
-| IT-48 | `sort::bogus` → exit 1, stderr names all five valid values | Sort Rejection |
-| IT-65 | `sort::next` accepted with empty store → exit 0 | Sort Acceptance |
+| IT-48 | `sort::bogus` → exit 1, stderr names all three valid values | Sort Rejection |
+| IT-65 | ~~`sort::next` accepted~~ → REMOVED (now rejected — see `it251`) | Sort Rejection |
 | IT-49 | `prefer::bogus` → exit 1, stderr names valid values | Sort Rejection |
 | IT-50 | `.usage.help` lists `sort`, `desc`, `prefer` params | Help Output |
-| IT-51 | `next::drain` (default) places `→` on drain winner | Next Strategy |
-| IT-52 | `next::drain` places `→` on drain winner | Next Strategy |
-| IT-53 | `next::bogus` exits 1 naming both valid values | Next Rejection |
-| IT-54 | Footer always shows both strategy lines regardless of `next::` value | Next Footer |
+| IT-51 | ~~`next::drain` default~~ → REMOVED (`next::` parameter removed) | Next Strategy |
+| IT-52 | ~~`next::drain` explicit~~ → REMOVED (`next::` parameter removed) | Next Strategy |
+| IT-53 | ~~`next::bogus` rejection~~ → REMOVED (`next::` parameter removed — see `it253`) | Next Rejection |
+| IT-54 | ~~Footer shows both strategy lines~~ → REMOVED (single-strategy footer) | Next Footer |
 | IT-55 | `cols::+sub` shows Sub column in output | Column Visibility |
 | IT-56 | `cols::+bogus` exits 1 naming valid column IDs | Column Rejection |
 | IT-58 | Per-column emoji in `5h Left` value: `🟢 86%` / `🟡 3%` | Per-Column Emoji |
-| IT-61 | `.usage.help` lists `next`, `cols` params | Help Output |
+| IT-61 | `.usage.help` lists `cols` params (`next` removed) | Help Output |
 | IT-62 | `touch::0` accepted; empty store exits 0 | Touch Param |
 | IT-63 | `touch::1` with no-token accounts — errored accounts never touched | Touch Param |
 | IT-64 | `.usage.help` lists `touch` param with default `1` | Help Output |
-| IT-65 | `sort::next` accepted with empty store → exit 0 | Sort Acceptance |
+| IT-65 | ~~`sort::next` accepted~~ → REMOVED (now rejected — see `it251`) | Sort Rejection |
 | IT-66 | `imodel::auto` accepted; empty store exits 0 | imodel Param |
 | IT-67 | `imodel::bogus` → exit 1, stderr names all five valid values | imodel Param |
 | IT-68 | `effort::auto` accepted; empty store exits 0 | effort Param |
@@ -593,25 +593,15 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-45: `sort::endurance` accepted with empty store → exit 0
+### IT-45: ~~`sort::endurance` accepted~~ → REMOVED
 
-- **Given:** Empty credential store.
-- **When:** `clp .usage sort::endurance`
-- **Then:** Exits 0 with "(no accounts configured)". No unknown-parameter error.
-- **Exit:** 0
-- **Source fn:** `it054_sort_endurance_accepted`
-- **Source:** [feature/020_usage_sort_strategies.md AC-02](../../../../docs/feature/020_usage_sort_strategies.md)
+> `sort::endurance` is now rejected (exits 1). Replaced by `it249_sort_endurance_rejected_exit_1`.
 
 ---
 
-### IT-46: `sort::drain` accepted with empty store → exit 0
+### IT-46: ~~`sort::drain` accepted~~ → REMOVED
 
-- **Given:** Empty credential store.
-- **When:** `clp .usage sort::drain`
-- **Then:** Exits 0 with "(no accounts configured)". No unknown-parameter error.
-- **Exit:** 0
-- **Source fn:** `it055_sort_drain_accepted`
-- **Source:** [feature/020_usage_sort_strategies.md AC-03](../../../../docs/feature/020_usage_sort_strategies.md)
+> `sort::drain` is now rejected (exits 1). Replaced by `it250_sort_drain_rejected_exit_1`.
 
 ---
 
@@ -626,11 +616,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-48: `sort::bogus` → exit 1, stderr names all five valid values
+### IT-48: `sort::bogus` → exit 1, stderr names all three valid values
 
 - **Given:** Any environment (empty credential store).
 - **When:** `clp .usage sort::bogus`
-- **Then:** Exits 1. Stderr contains each of the five valid values: `name`, `endurance`, `drain`, `renew`, `next`.
+- **Then:** Exits 1. Stderr contains each of the three valid values: `name`, `renew`, `renews`.
 - **Exit:** 1
 - **Source fn:** `it057_sort_invalid_value_exit_1`
 - **Source:** [feature/020_usage_sort_strategies.md AC-09](../../../../docs/feature/020_usage_sort_strategies.md)
@@ -659,50 +649,30 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-51: `next::drain` (default) places `→` on drain winner
+### IT-51: ~~`next::drain` default~~ → REMOVED
 
-- **Given:** Two saved accounts with valid tokens and quota data; default `next::drain`.
-- **When:** `clp .usage`
-- **Then:** Exits 0. Exactly one line contains `→` in the flag column — the account selected by the drain strategy (lowest non-exhausted `prefer_weekly` / 7d Left). Footer contains "Next by strategy:" with two lines (endurance and drain).
-- **Exit:** 0
-- **Live:** yes (requires ≥2 accounts with live quota)
-- **Source fn:** `it103_lim_it_next_drain_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/023_next_account_strategies.md AC-04](../../../../docs/feature/023_next_account_strategies.md)
+> `next::` parameter removed entirely. `sort::` now drives the `→` recommendation.
+> Replaced by single-strategy footer tests. See `it253_next_param_removed_exit_1`.
 
 ---
 
-### IT-52: `next::drain` places `→` on drain winner
+### IT-52: ~~`next::drain` explicit~~ → REMOVED
 
-- **Given:** Two saved accounts with valid tokens and quota data; `next::drain`.
-- **When:** `clp .usage next::drain`
-- **Then:** Exits 0. Exactly one line contains `→` — the account selected by the drain strategy (lowest non-exhausted `prefer_weekly` / 7d Left). Footer still contains "Next by strategy:" with both strategy lines.
-- **Exit:** 0
-- **Live:** yes (requires ≥2 accounts with live quota)
-- **Source fn:** `it103_lim_it_next_drain_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/023_next_account_strategies.md AC-04](../../../../docs/feature/023_next_account_strategies.md)
+> See IT-51. `next::` parameter removed.
 
 ---
 
-### IT-53: `next::bogus` exits 1 naming both valid values
+### IT-53: ~~`next::bogus` rejection~~ → REMOVED
 
-- **Given:** Any environment (empty credential store).
-- **When:** `clp .usage next::bogus`
-- **Then:** Exits 1. Stderr contains each of the two valid values: `endurance`, `drain`. Does NOT contain `all`, `session`, or `reset`.
-- **Exit:** 1
-- **Source fn:** `it092_next_all_rejected_exit_1`, `it094_next_session_rejected_exit_1` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/023_next_account_strategies.md AC-05](../../../../docs/feature/023_next_account_strategies.md)
+> `next::` parameter removed. Any `next::` value exits 1 with "next:: parameter has been removed".
+> Replaced by `it253_next_param_removed_exit_1`.
 
 ---
 
-### IT-54: Footer always shows both strategy lines regardless of `next::` value
+### IT-54: ~~Footer shows both strategy lines~~ → REMOVED
 
-- **Given:** At least two accounts with valid tokens and quota data; `next::drain` (non-default).
-- **When:** `clp .usage next::drain`
-- **Then:** Exits 0. Footer contains "Next by strategy:" followed by a line starting "endurance" AND a line starting "drain". Both appear regardless of which strategy is active.
-- **Exit:** 0
-- **Live:** yes (requires ≥2 accounts with live quota)
-- **Source fn:** `it104_lim_it_footer_always_shows_both_strategy_lines` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/023_next_account_strategies.md AC-01](../../../../docs/feature/023_next_account_strategies.md)
+> Footer now shows a single recommendation line for the active `sort::` strategy.
+> Covered by single-strategy footer tests in `020_usage_sort_strategies.md`.
 
 ---
 
@@ -752,11 +722,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-61: `.usage.help` lists `next`, `cols` params
+### IT-61: `.usage.help` lists `cols` param (and `next` column ID)
 
 - **Given:** Standard environment.
 - **When:** `clp .usage.help`
-- **Then:** Exits 0. Stdout contains `"next"` and `"cols"`.
+- **Then:** Exits 0. Stdout contains `"next"` (as a `cols::` column ID for `→ Next`) and `"cols"`. Note: `next::` parameter was removed; `next` here refers to the column name.
 - **Exit:** 0
 - **Source fn:** `it083_usage_help_shows_next_cols_params` (in `tests/cli/usage_test.rs`)
 - **Source:** [009_token_usage.md AC-09](../../../../docs/feature/009_token_usage.md)
@@ -796,14 +766,9 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-65: `sort::next` accepted with empty store → exit 0
+### IT-65: ~~`sort::next` accepted~~ → REMOVED
 
-- **Given:** Empty credential store.
-- **When:** `clp .usage sort::next`
-- **Then:** Exits 0 with "(no accounts configured)". `sort::next` resolves to `sort::drain` (default `next::drain`) and is accepted without error.
-- **Exit:** 0
-- **Source fn:** `it121_sort_next_accepted` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/020_usage_sort_strategies.md AC-15](../../../../docs/feature/020_usage_sort_strategies.md)
+> `sort::next` is now rejected (exits 1). Replaced by `it251_sort_next_rejected_exit_1`.
 
 ---
 

@@ -135,15 +135,10 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ---
 
-### FT-06: Tiebreaker — higher expiry wins when `5h Left` is tied (endurance strategy)
+### FT-06: ~~Tiebreaker — higher expiry wins when `5h Left` is tied (endurance strategy)~~ REMOVED
 
-- **Given:** Two `AccountQuota` structs (unit test): `a@x.com` (`five_hour.utilization=50.0`, `expires_at_ms=now+7200000` — 2h expiry) and `b@x.com` (`five_hour.utilization=50.0`, `expires_at_ms=now+3600000` — 1h expiry). Neither is current. Both `result = Ok(...)`. `next::endurance`.
-- **When:** `find_next_for_strategy(&[a, b], NextStrategy::Endurance, PreferStrategy::Any, now_secs)`
-- **Then:** Returns the index of `a@x.com` (higher expiry wins the tiebreaker when 5h utilization is equal). `b@x.com` is NOT returned.
-- **Exit:** n/a (unit test — function return assertion)
-- **Note:** TSK-184 deleted `find_recommendation()`; tiebreaker now verified via `find_next_for_strategy()` with `NextStrategy::Endurance`.
-- **Source fn:** `test_ft06_009_endurance_tiebreaker_higher_expiry_wins` (in `src/usage/sort.rs`)
-- **Source:** [009_token_usage.md AC-09](../../../docs/feature/009_token_usage.md)
+> Test `test_ft06_009_endurance_tiebreaker_higher_expiry_wins` removed — endurance strategy deleted (Feature 037/038).
+> Tiebreaker behavior for remaining strategies is covered by `sort::renew` tests in `020_usage_sort_strategies.md`.
 
 ---
 
@@ -273,7 +268,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - `c@x.com`: `five_hour.utilization=97.0` (3% left), `seven_day.utilization=50.0` (50% left) → tier 🟡, **h-exhausted** sub-group (5h ≤ 15%)
   - `d@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=10.0` (90% left) → tier 🟢
   - Alpha sort would produce: a → b → c → d. Three-tier would place d (🟢) first, then a, b, c (all 🟡), then any 🔴.
-- **When:** `render_text(&accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set())`
+- **When:** `render_text(&accounts, SortStrategy::Name, None, PreferStrategy::Any, &ColsVisibility::default_set(), false, false)`
 - **Then:** Output row order is: `d@x.com` (🟢), then among 🟡 — `b@x.com` and `c@x.com` (h-exhausted, in alpha order), then `a@x.com` (weekly-exhausted). `a@x.com` must appear AFTER both `b@x.com` and `c@x.com` despite being alpha-first.
 - **Edge case:** An account with both `5h Left ≤ 15%` AND `7d Left ≤ 5%` falls in the h-exhausted sub-group (verified by `c@x.com` if `seven_day.utilization` is set ≥ 95%).
 - **Exit:** n/a (unit test — position assertion via `output.find()`)

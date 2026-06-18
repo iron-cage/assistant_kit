@@ -11,10 +11,10 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 | 3 | `format::table` ignores field-presence params | `format::`, `active::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `role::`, `billing::`, `model::` | Table output uses fixed columns regardless of field-presence param values |
 | 4 | `live::1` is incompatible with `format::json` | `live::`, `format::` | Exits 1 before any fetch with `"live monitor mode is incompatible with format::json"` |
 | 5 | `desc::` default is determined by `sort::` | `sort::`, `desc::` | Each sort strategy has a context-sensitive `desc::` default; explicit `desc::` overrides it |
-| 6 | `prefer::` selects the weekly column used by all sort heuristics | `sort::`, `prefer::` | `prefer::any/opus/sonnet` controls which weekly quota column `endurance`/`drain`/`renew` strategies read |
+| 6 | `prefer::` selects the weekly column used by sort heuristics | `sort::`, `prefer::` | `prefer::any/opus/sonnet` controls which weekly quota column `renew` strategy reads |
 | 7 | `sort::` and `desc::` do not affect `format::json` output | `sort::`, `desc::`, `format::` | JSON array order is always alphabetical regardless of `sort::` or `desc::` (stable schema for pipeline consumers) |
 | 8 | `cols::` does not affect `format::json` output | `cols::`, `format::` | JSON output is unaffected by column visibility modifiers; all schema fields always present |
-| 9 | `next::` does not affect `format::json` output | `next::`, `format::` | JSON array order is always alphabetical and no `→` marker appears regardless of `next::` value |
+| 9 | `sort::` `→` recommendation does not affect `format::json` output | `sort::`, `format::` | JSON array order is always alphabetical and no `→` marker appears regardless of `sort::` value |
 | 10 | `imodel::` and `effort::` do not affect `format::json` output | `imodel::`, `effort::`, `format::` | Subprocess model and effort control only subprocess invocations; JSON output structure is unchanged |
 | 11 | `imodel::keep` + `effort::auto` injects no `--effort` flag | `imodel::`, `effort::` | When `imodel::keep`, no model is known at dispatch time; `effort::auto` resolves to no `--effort` flag to avoid incompatible model/effort combinations |
 
@@ -119,12 +119,8 @@ clp .usage format::json
 | `sort::` value | `desc::` default | Natural order |
 |----------------|-----------------|---------------|
 | `name` | `0` | A→Z |
-| `endurance` | `1` | Best-qualified on top |
-| `drain` | `0` | Lowest quota on top |
 | `renew` | `0` | Soonest reset on top |
-| `expires` | `0` | Soonest token expiry on top |
 | `renews` | `0` | Soonest billing renewal on top |
-| `next` | inherits | Resolved to concrete strategy at parse time; inherits that strategy's `desc::` default |
 
 **Rationale:** Each strategy has a single natural direction that matches its workflow goal. Requiring explicit `desc::` in every invocation would be noisy; the default makes the common case require no extra flag.
 
@@ -133,16 +129,12 @@ clp .usage format::json
 **Examples:**
 
 ```bash
-# sort::endurance — desc::1 is the default (best on top)
-clp .usage sort::endurance
-# same as: clp .usage sort::endurance desc::1
+# sort::renew — desc::0 is the default (soonest reset on top)
+clp .usage sort::renew
+# same as: clp .usage sort::renew desc::0
 
-# sort::drain — desc::0 is the default (lowest quota on top)
-clp .usage sort::drain
-# same as: clp .usage sort::drain desc::0
-
-# Override: reverse drain direction (freshest on top)
-clp .usage sort::drain desc::1
+# Override: reverse renew direction (latest reset on top)
+clp .usage sort::renew desc::1
 ```
 
 ---
@@ -154,10 +146,9 @@ clp .usage sort::drain desc::1
 **Effect:** `prefer::` determines which weekly quota column is used by sort strategies that reference weekly availability. `prefer::any` (default) uses `min(7d Left, 7d(Son))`; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
 
 **Affected heuristics:**
-- `sort::endurance`: qualification threshold `weekly(prefer) ≥ 30%`
-- `sort::drain`: primary sort key — lowest `weekly(prefer)` ascending (lowest 7d quota first)
-- `sort::renew`: tiebreak — lowest `weekly(prefer)` ascending
-- `→ Next` recommendation: both strategies inherit `prefer_weekly` from the underlying sort algorithm (drain: primary sort key + exclusion threshold `> 0`; endurance: qualification gate + within-qualified sort key)
+- `sort::renew`: tiebreak key — lowest `weekly(prefer)` ascending; also used in 4-group status partition threshold (`weekly(prefer) > 5%`)
+- `sort::name` / `sort::renews`: 4-group status partition threshold (`weekly(prefer) > 5%`) determines group membership
+- `→ Next` recommendation: inherits `prefer_weekly` from the underlying sort algorithm
 
 **Rationale:** Users who know they intend to run Opus or Sonnet can tell the heuristics which quota matters. `prefer::any` is the safe conservative default.
 
@@ -167,16 +158,16 @@ clp .usage sort::drain desc::1
 
 ```bash
 # Default: conservative weekly column
-clp .usage sort::endurance
-# endurance qualification uses min(7d Left, 7d(Son))
+clp .usage sort::renew
+# renew tiebreak + status partition uses min(7d Left, 7d(Son))
 
 # Opus sessions: only overall weekly quota matters
-clp .usage sort::endurance prefer::opus
-# endurance qualification uses 7d Left
+clp .usage sort::renew prefer::opus
+# renew tiebreak + status partition uses 7d Left
 
 # Sonnet sessions: Sonnet-specific weekly cap is the constraint
-clp .usage sort::drain prefer::sonnet
-# drain primary sort key uses 7d(Son) ascending
+clp .usage sort::renew prefer::sonnet
+# renew tiebreak + status partition uses 7d(Son)
 ```
 
 ---
@@ -194,12 +185,12 @@ clp .usage sort::drain prefer::sonnet
 **Examples:**
 
 ```bash
-# sort::endurance has no effect on JSON array order
-clp .usage sort::endurance format::json
+# sort::renew has no effect on JSON array order
+clp .usage sort::renew format::json
 # [...array in fetch_all_quota order (alphabetical in practice)...]
 
 # desc::1 has no effect on JSON array order
-clp .usage sort::drain desc::1 format::json
+clp .usage sort::name desc::1 format::json
 # [...array in fetch_all_quota order (alphabetical in practice)...]
 ```
 
@@ -229,24 +220,24 @@ clp .usage cols::-renews format::json
 
 ---
 
-### Interaction :: 9. `next::` does not affect `format::json` output
+### Interaction :: 9. `sort::` `→` recommendation does not affect `format::json` output
 
-**Parameters:** [`next::`](param/032_next.md), [`format::`](param/002_format.md)
+**Parameters:** [`sort::`](param/025_sort.md), [`format::`](param/002_format.md)
 
-**Effect:** When `format::json` is specified, the `next::` recommendation strategy has no effect. The JSON array order is always alphabetical and no `→` markers appear — recommendation control is a text-format display concern.
+**Effect:** When `format::json` is specified, the `sort::` recommendation marker (`→`) has no effect. The JSON array order is always alphabetical and no `→` markers appear — recommendation control is a text-format display concern.
 
-**Rationale:** JSON consumers that parse `.usage` output need a stable, predictable array structure for scripting and automation. Injecting recommendation-strategy-dependent ordering or marker fields into JSON would make scripts fragile to `next::` changes. The recommendation marker and footer are human-readable text affordances; they have no JSON equivalent.
+**Rationale:** JSON consumers that parse `.usage` output need a stable, predictable array structure for scripting and automation. Injecting recommendation-dependent ordering or marker fields into JSON would make scripts fragile to `sort::` changes. The recommendation marker and footer are human-readable text affordances; they have no JSON equivalent.
 
 **Commands affected:** [`.usage`](commands.md#command--9-usage)
 
 **Examples:**
 
 ```bash
-# next::endurance has no effect on JSON array order
-clp .usage next::endurance format::json
+# sort::renews has no effect on JSON array order
+clp .usage sort::renews format::json
 # [...array in fetch_all_quota order (alphabetical in practice)...]
 
-# next::renew (default) has no effect on JSON — no "strategy" fields injected
+# sort::renew (default) has no effect on JSON — no "strategy" fields injected
 clp .usage format::json
 # [...array without recommendation fields...]
 ```

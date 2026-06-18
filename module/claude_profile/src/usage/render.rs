@@ -7,7 +7,7 @@
 
 use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Format };
 use crate::output::{ format_duration_secs, json_escape };
-use super::types::{ AccountQuota, SortStrategy, PreferStrategy, NextStrategy, ColsVisibility, GetField };
+use super::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility, GetField };
 use super::format::{
   compute_expires_cell, sub_label, shorten_error,
   quota_text_cells, status_emoji, renews_label, next_event_label, next_event_raw, renewal_secs,
@@ -20,8 +20,8 @@ use super::sort::{ sort_indices, find_next_for_strategy, strategy_metric };
 ///
 /// Empty store renders `(no accounts configured)` without a table.
 /// Column visibility is controlled by `cols` (structural `flag` and `account`
-/// columns are always shown). Footer (TSK-184): unconditional 3-strategy block
-/// when ≥2 accounts have valid quota — shows `renew`, `endurance`, and `drain` lines.
+/// columns are always shown). Footer: single-strategy recommendation line when
+/// ≥2 accounts have valid quota — shows the `→` winner for the active `sort::`.
 /// The `→` marker in the table body points to the active-strategy winner.
 /// Footer is omitted when < 2 accounts have valid quota data.
 #[ allow( clippy::too_many_lines, clippy::too_many_arguments ) ]
@@ -30,7 +30,6 @@ pub( crate ) fn render_text(
   sort     : SortStrategy,
   desc     : Option< bool >,
   prefer   : PreferStrategy,
-  next     : NextStrategy,
   cols     : &ColsVisibility,
   rotate   : bool,
   force    : bool,
@@ -49,38 +48,10 @@ pub( crate ) fn render_text(
     .as_secs();
 
   // Compute the winner for the active strategy; placed as → marker in the table body.
-  let best_idx       = find_next_for_strategy( accounts, next, prefer, now_secs, rotate && !force );
+  // `sort_indices` already applies the 4-group status partition (AC-12), so sorted_indices
+  // arrives in the correct display order: 🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Red.
+  let best_idx       = find_next_for_strategy( accounts, sort, prefer, now_secs, rotate && !force );
   let sorted_indices = sort_indices( accounts, sort, desc, prefer, now_secs );
-
-  // Three-tier grouping: sort order preserved within each tier (🟢 → 🟡 → 🔴).
-  // Applied after the sort strategy so each tier's internal order reflects the chosen sort.
-  // AC-26: within 🟡, session-exhausted (5h Left ≤ 15%) precedes weekly-exhausted.
-  // Accounts where both 5h Left ≤ 15% AND 7d Left ≤ 5% fall in the session-exhausted sub-group.
-  let ( mut green_indices, mut red_indices ) = ( Vec::new(), Vec::new() );
-  let ( mut session_yellow, mut weekly_yellow ) = ( Vec::new(), Vec::new() );
-  for idx in sorted_indices
-  {
-    match status_emoji( &accounts[ idx ].result )
-    {
-      "🟢" => green_indices.push( idx ),
-      "🟡" =>
-      {
-        let h5_left = if let Ok( data ) = &accounts[ idx ].result
-        {
-          100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization )
-        }
-        else { 100.0 };
-        if h5_left <= 15.0 { session_yellow.push( idx ); }
-        else               { weekly_yellow.push( idx ); }
-      }
-      _    => red_indices.push( idx ),
-    }
-  }
-  let sorted_indices : Vec< usize > = green_indices.into_iter()
-    .chain( session_yellow )
-    .chain( weekly_yellow )
-    .chain( red_indices )
-    .collect();
 
   // Build headers conditionally — structural cols always first and always visible.
   let mut headers = vec![ String::new() ]; // flag col
@@ -259,27 +230,26 @@ pub( crate ) fn render_text(
   let valid_count = accounts.iter().filter( |aq| aq.result.is_ok() ).count();
   if valid_count < 2 { return body; }
 
-  // Responsibility(TSK-184-footer): unconditional 3-strategy footer (Renew, Endurance, Drain).
-  // All three lines shown when valid_count >= 2; NOT gated on next:: value.
-  // The → marker in the table body is already placed on the active-strategy winner.
+  // Footer: single-strategy recommendation line for the active sort:: strategy.
+  // Shows the → winner with a strategy-specific metric string.
+  let strategy_name = match sort
   {
-    use core::fmt::Write as _;
-    let strategies = [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ];
-    let names      = [ "renew", "endurance", "drain" ];
-    let mut lines  = String::new();
-    for ( strategy, name ) in strategies.iter().zip( names.iter() )
-    {
-      if let Some( idx ) = find_next_for_strategy( accounts, *strategy, prefer, now_secs, false )
-      {
-        let rec      = &accounts[ idx ];
-        let metric   = strategy_metric( rec, *strategy, prefer, now_secs );
-        let rec_name = &rec.name;
-        let _ = writeln!( lines, "  {name:<10}{rec_name}   {metric}" );
-      }
-    }
-    if lines.is_empty() { return body; }
-    let total = accounts.len();
-    format!( "{body}Valid: {valid_count} / {total}   ->  Next by strategy:\n{lines}" )
+    SortStrategy::Name   => "name",
+    SortStrategy::Renew  => "renew",
+    SortStrategy::Renews => "renews",
+  };
+  let total = accounts.len();
+  if let Some( idx ) = find_next_for_strategy( accounts, sort, prefer, now_secs, false )
+  {
+    let rec         = &accounts[ idx ];
+    let metric      = strategy_metric( rec, sort, prefer, now_secs );
+    let rec_name    = &rec.name;
+    let metric_part = if metric.is_empty() { String::new() } else { format!( "   {metric}" ) };
+    format!( "{body}Valid: {valid_count} / {total}   ->  Next ({strategy_name}): {rec_name}{metric_part}\n" )
+  }
+  else
+  {
+    body
   }
 }
 
@@ -596,19 +566,17 @@ pub( crate ) fn render_tsv(
 /// Render quota results as plain text (same as `render_text` with emoji replaced).
 ///
 /// `🟢`→`ok`, `🟡`→`warn`, `🔴`→`err`, `→`→`->`, `✓`→`*`.
-#[ allow( clippy::too_many_arguments ) ]
 pub( crate ) fn render_plain(
   accounts : &[ AccountQuota ],
   sort     : SortStrategy,
   desc     : Option< bool >,
   prefer   : PreferStrategy,
-  next     : NextStrategy,
   cols     : &ColsVisibility,
   rotate   : bool,
   force    : bool,
 ) -> String
 {
-  let raw = render_text( accounts, sort, desc, prefer, next, cols, rotate, force );
+  let raw = render_text( accounts, sort, desc, prefer, cols, rotate, force );
   raw
     .replace( "🟢", "ok" )
     .replace( "🟡", "warn" )

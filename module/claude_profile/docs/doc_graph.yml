@@ -123,7 +123,7 @@ nodes:
 
   - id: feature/023
     file: feature/023_next_account_strategies.md
-    label: Next Account Recommendation Strategies
+    label: "Next Account Recommendation Strategies — DEPRECATED"
     entity: feature
 
   - id: feature/024
@@ -291,8 +291,7 @@ edges:
   # ── feature/020: Usage Sort Strategies ───────────────────────────────────
 
   - {from: feature/020, to: feature/009, label: "sort strategies applied to usage output rows"}
-  - {from: feature/020, to: feature/023, label: "sort strategies integrate next recommendation"}
-  - {from: feature/023, to: feature/020, label: "recommendation relies on sort order"}
+  # feature/023 deprecated — recommendation absorbed into feature/020 (sort::)
   - {from: feature/020, to: feature/018, label: "sort strategies apply in live monitor mode"}
   - {from: feature/020, to: feature/008, label: "sort strategies consider auto-rotate candidates"}
 
@@ -311,7 +310,7 @@ edges:
 
   - {from: feature/024, to: feature/009, label: "touch embedded in usage fetch cycle"}
   - {from: feature/024, to: feature/017, label: "touch uses refresh subprocess pattern"}
-  - {from: feature/024, to: feature/023, label: "touch eligible accounts factor into next recommendation"}
+  # feature/023 deprecated — touch→recommendation now via feature/020
   - {from: feature/024, to: feature/020, label: "touch state affects sort strategy output"}
 
   # feature/024 ↔ feature/027: post-switch touch delegates to session touch primitive
@@ -347,7 +346,7 @@ edges:
 
   - {from: feature/028, to: feature/009, label: "row filtering applied to usage output"}
   - {from: feature/028, to: feature/020, label: "filtering interacts with sort strategies"}
-  - {from: feature/028, to: feature/023, label: "filtering interacts with next recommendation"}
+  # feature/023 deprecated — filtering→recommendation now via feature/020
 
   # ── feature/029: Account Host and Role Metadata ───────────────────────────
 

@@ -60,7 +60,7 @@ All 11 members pass:
 - `abs::` — controls value rendering (percentages vs absolute counts)
 - `no_color::` — controls symbol rendering (emoji/ANSI vs plain text)
 
-Parameters that fail: `sort::`, `next::` (ordering strategy, not display); `format::` (serialization format, not row selection); `live::`, `refresh::` (fetch behavior, not display).
+Parameters that fail: `sort::` (ordering strategy + recommendation, not display); `format::` (serialization format, not row selection); `live::`, `refresh::` (fetch behavior, not display).
 
 **Invariants**
 

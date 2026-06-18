@@ -5,7 +5,7 @@
 - **Purpose**: Allow `.usage` to activate idle quota windows by sending a minimal prompt in an isolated subprocess, so accounts with any quota timer absent (no active 5h, 7d, or 7d-Sonnet session window) get sessions started, enabling them to qualify for endurance sort strategy and be available for immediate use.
 - **Responsibility**: Documents the `touch::` parameter, its trigger condition (any of the three quota timers absent — `five_hour.resets_at`, `seven_day.resets_at`, or `seven_day_sonnet.resets_at`), subprocess invocation via the existing `refresh_account_token()` infrastructure, quota re-fetch after any successful subprocess, `touch_idle` quota cache read guard as defense-in-depth skip before timer checks (AC-16), and skip-reason trace lines for non-qualifying accounts.
 - **In Scope**: `touch::` parameter semantics; trigger condition (account has valid quota data AND at least one quota timer is absent — no active 5h, 7d, or 7d-Sonnet window); subprocess invocation via `account::refresh_account_token()` with `["--print", "."]`; quota re-fetch after any successful subprocess (unconditional on credentials); `touch_idle=false` quota cache read guard before timer checks (AC-16 — defense-in-depth for API propagation lag); skip-reason trace line for non-qualifying accounts; interaction with `refresh::` and `live::`.
-- **Out of Scope**: `run_isolated()` internals (-> `claude_runner_core/docs/feature/004_run_isolated.md`); the refresh trigger logic itself (-> 017_token_refresh.md); endurance qualification algorithm (-> 020_usage_sort_strategies.md); recommendation strategies (-> 023_next_account_strategies.md).
+- **Out of Scope**: `run_isolated()` internals (-> `claude_runner_core/docs/feature/004_run_isolated.md`); the refresh trigger logic itself (-> 017_token_refresh.md); sort strategies and `→` recommendation (-> 020_usage_sort_strategies.md).
 
 ### Design
 
@@ -127,7 +127,7 @@ render results as table
 | [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm that this extends |
 | [017_token_refresh.md](017_token_refresh.md) | Shared subprocess infrastructure and `refresh_account_token()` design |
 | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Endurance qualification: `5h_reset ∈ [15m, 60m]` + `weekly ≥ 30%` |
-| [023_next_account_strategies.md](023_next_account_strategies.md) | Endurance strategy requires concrete `5h_reset` — motivation for touch |
+| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies reference quota timers populated by touch |
 | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | `imodel::` and `effort::` subprocess parameters apply to touch subprocesses |
 | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch touch on `.account.use` — extends the touch concept to account switching |
 | [033_quota_cache.md](033_quota_cache.md) | Quota cache — persists touch state (`last_touch_at`, `touch_idle`) |

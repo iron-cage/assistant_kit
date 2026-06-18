@@ -52,7 +52,7 @@
 | feature | 020 | Usage Sort Strategies | [feature/020_usage_sort_strategies.md](../feature/020_usage_sort_strategies.md) |
 | feature | 021 | Extended Snapshot Fields | [feature/021_extended_snapshot_fields.md](../feature/021_extended_snapshot_fields.md) |
 | feature | 022 | Org Identity Snapshot | [feature/022_org_identity_snapshot.md](../feature/022_org_identity_snapshot.md) |
-| feature | 023 | Next Account Recommendation Strategies | [feature/023_next_account_strategies.md](../feature/023_next_account_strategies.md) |
+| feature | 023 | Next Account Recommendation Strategies — DEPRECATED | [feature/023_next_account_strategies.md](../feature/023_next_account_strategies.md) |
 | feature | 024 | Session Touch via Isolated Subprocess | [feature/024_session_touch.md](../feature/024_session_touch.md) |
 | feature | 025 | Per-Machine Active Marker | [feature/025_per_machine_active_marker.md](../feature/025_per_machine_active_marker.md) |
 | feature | 026 | Subprocess Model and Effort Control | [feature/026_subprocess_model_effort.md](../feature/026_subprocess_model_effort.md) |
@@ -110,7 +110,7 @@
 | param | 029 | `capabilities::` | [cli/param/029_capabilities.md](../cli/param/029_capabilities.md) |
 | param | 030 | `org_uuid::` | [cli/param/030_org_uuid.md](../cli/param/030_org_uuid.md) |
 | param | 031 | `org_name::` | [cli/param/031_org_name.md](../cli/param/031_org_name.md) |
-| param | 032 | `next::` | [cli/param/032_next.md](../cli/param/032_next.md) |
+| param | 032 | `next::` — REMOVED | [cli/param/032_next.md](../cli/param/032_next.md) |
 | param | 033 | `cols::` | [cli/param/033_cols.md](../cli/param/033_cols.md) |
 | param | 034 | `touch::` | [cli/param/034_touch.md](../cli/param/034_touch.md) |
 | param | 035 | `imodel::` | [cli/param/035_imodel.md](../cli/param/035_imodel.md) |

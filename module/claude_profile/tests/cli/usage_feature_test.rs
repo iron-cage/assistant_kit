@@ -396,9 +396,9 @@ fn f37_ft02_usage_accepts_32_params()
   );
   assert_exit( &out, 0 );
 
-  // prefer/next/imodel/effort accepted.
+  // prefer/imodel/effort accepted (next:: removed in Feature 037/038).
   let out = run_cs_with_env(
-    &[ ".usage", "prefer::any", "next::renew", "imodel::auto", "effort::auto" ],
+    &[ ".usage", "prefer::any", "imodel::auto", "effort::auto" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );

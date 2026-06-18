@@ -17,7 +17,7 @@
 |----------|-----------|---------------------|------------------|
 | Selection | `name::`, `count::`, `offset::`, `only_active::`, `only_next::` | —, 0, 0, 0, 0 | —, 0, 0, 0, 0 |
 | Data source | `refresh::`, `touch::`, `imodel::`, `effort::`, `live::`, `interval::`, `jitter::` | **0**, **0**, auto, auto, 0, 30, 0 | **1**, **1**, auto, auto, 0, 30, 0 |
-| Sort & filter | `sort::`, `desc::`, `prefer::`, `next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::` | **name**, 0, any, renew, 0, 0, 0, 0 | **renew**, 0, any, renew, 0, 0, 0, 0 |
+| Sort & filter | `sort::`, `desc::`, `prefer::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::` | **name**, 0, any, 0, 0, 0, 0 | **renew**, 0, any, 0, 0, 0, 0 |
 | Columns | `cols::` | **identity set** | **quota set** |
 | Output | `format::`, `get::`, `abs::`, `no_color::`, `trace::` | text, —, 0, 0, 0 | text, —, 0, 0, 0 |
 | Mutations | `dry::`, `unclaim::`, `assign::`, `for::`, `set_model::`, `force::` | 0, 0, 0, current, —, 0 | 0, 0, 0, current, —, 0 |
@@ -72,7 +72,7 @@ The identity set (`.accounts` default) includes: Account, Owner, Active, Current
 | [036_account_ownership.md](036_account_ownership.md) | `.account.unclaim` behavior absorbed as `unclaim::` param; G8 gate preserved |
 | [028_usage_row_filtering.md](028_usage_row_filtering.md) | Row filtering params (`count::`, `offset::`, `only_active::`, etc.) added to `.accounts` |
 | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies (`sort::`, `desc::`, `prefer::`) added to `.accounts` |
-| [023_next_account_strategies.md](023_next_account_strategies.md) | Next recommendation (`next::`) added to `.accounts` |
+| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies and `→` recommendation added to `.accounts` |
 | [024_session_touch.md](024_session_touch.md) | Touch (`touch::`) available on `.accounts` with default `0` |
 | [017_token_refresh.md](017_token_refresh.md) | Refresh (`refresh::`) available on `.accounts` with default `0` |
 | [029_account_host_metadata.md](029_account_host_metadata.md) | `cols::` syntax shared between `.accounts` and `.usage` |

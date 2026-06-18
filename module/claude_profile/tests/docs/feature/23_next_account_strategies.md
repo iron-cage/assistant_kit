@@ -1,4 +1,10 @@
-# Test: Feature 023 — Next Account Recommendation Strategies
+# DEPRECATED — Feature 023 — Next Account Recommendation Strategies
+
+> **DEPRECATED:** `next::` parameter and `NextStrategy` enum removed (Feature 037/038). The
+> `sort::` parameter now drives both row ordering and the `→ Next` footer recommendation.
+> Surviving test cases have been migrated to `tests/docs/feature/20_usage_sort_strategies.md`.
+> Test functions in `src/usage/sort_next_tests.rs` that previously referenced `NextStrategy`
+> now reference `SortStrategy` directly.
 
 Feature behavioral requirement test cases for `docs/feature/023_next_account_strategies.md`. Each FT case maps to one acceptance criterion. Parameter edge cases are in [cli/param/032_next.md](../cli/param/32_next.md). Command-level tests (IT-N) are in [cli/command/009_usage.md](../cli/command/09_usage.md).
 

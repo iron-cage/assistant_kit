@@ -1,6 +1,11 @@
-# Test: `next::` Parameter
+# REMOVED — `next::` Parameter
 
-Edge case coverage for the `next::` parameter on `.usage`. See [param/032_next.md](../../../../docs/cli/param/032_next.md) for specification.
+> **REMOVED:** The `next::` parameter has been removed (Feature 037/038). Passing `next::`
+> to `.usage` exits 1 with "unknown parameter". The `sort::` parameter now drives both
+> row ordering and the `→ Next` footer recommendation. All `next::` test cases below are
+> superseded; the parameter is no longer accepted.
+
+Edge case coverage for the `next::` parameter on `.usage`. See [param/032_next.md](../../../../docs/cli/param/032_next.md) for specification (also marked REMOVED).
 
 ### Test Case Index
 

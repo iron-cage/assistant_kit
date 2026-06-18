@@ -35,7 +35,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [029_capabilities.md](029_capabilities.md) | `capabilities::` — product capabilities list toggle (opt-in) |
 | [030_org_uuid.md](030_org_uuid.md) | `org_uuid::` — organisation UUID field toggle (opt-in) |
 | [031_org_name.md](031_org_name.md) | `org_name::` — organisation display name field toggle (opt-in) |
-| [032_next.md](032_next.md) | `next::` — recommendation strategy selector for quota table |
+| [032_next.md](032_next.md) | `next::` — REMOVED; recommendation driven by `sort::` |
 | [033_cols.md](033_cols.md) | `cols::` — column visibility modifiers for quota table |
 | [034_touch.md](034_touch.md) | `touch::` — activate idle accounts' 5h windows via isolated subprocess |
 | [035_imodel.md](035_imodel.md) | `imodel::` — isolated subprocess model selection (`auto`, `sonnet`, `opus`, `haiku`, `keep`) |
@@ -101,7 +101,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 29 | `capabilities::` | `bool` | `0` | `0`, `1` | Product capabilities list toggle (opt-in) | 2 cmds |
 | 30 | `org_uuid::` | `bool` | `0` | `0`, `1` | Organisation UUID toggle (opt-in) | 2 cmds |
 | 31 | `org_name::` | `bool` | `0` | `0`, `1` | Organisation display name toggle (opt-in) | 2 cmds |
-| 32 | `next::` | `enum` | `renew` | `renew`, `endurance`, `drain` | Recommendation strategy selector | 1 cmd |
+| 32 | `next::` | — | — | — | REMOVED — recommendation driven by `sort::` | — |
 | 33 | `cols::` | `string` | `""` | `+col_id`, `-col_id` modifiers | Column visibility modifiers | 1 cmd |
 | 34 | `touch::` | `bool` | `1` | `0`, `1`, `false`, `true` | Activate idle accounts' 5h windows | 2 cmds |
 | 35 | `imodel::` | `enum` | `auto` | `auto`, `sonnet`, `opus`, `haiku`, `keep` | Isolated subprocess model selection | 2 cmds |

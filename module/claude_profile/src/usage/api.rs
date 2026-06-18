@@ -700,7 +700,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     // only_next: retain only the account that received the → marker.
     if params.only_next
     {
-      let best_opt = find_next_for_strategy( &accounts, params.next, params.prefer, now_secs, params.rotate && !params.force );
+      let best_opt = find_next_for_strategy( &accounts, params.sort, params.prefer, now_secs, params.rotate && !params.force );
       accounts = match best_opt
       {
         Some( i ) => { let w = accounts.swap_remove( i ); vec![ w ] }
@@ -755,9 +755,9 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   {
     UsageOutputFormat::Json  => render_json( &accounts ),
     UsageOutputFormat::Tsv   => render_tsv( &accounts, params.sort, params.desc, params.prefer, &params.cols ),
-    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, params.next, &params.cols, params.rotate, params.force ),
+    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, &params.cols, params.rotate, params.force ),
     UsageOutputFormat::Value => String::new(),
-    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, params.next, &params.cols, params.rotate, params.force ),
+    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, params.rotate, params.force ),
   };
 
   let content = if params.no_color && params.format != UsageOutputFormat::Tsv
@@ -780,7 +780,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     let now_secs       = SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().as_secs();
     // gate_ownership: true when rotate::1 without force::1 — G5 applies (AC-05).
     let gate_ownership = !params.force;
-    let winner_opt     = find_next_for_strategy( &accounts, params.next, params.prefer, now_secs, gate_ownership );
+    let winner_opt     = find_next_for_strategy( &accounts, params.sort, params.prefer, now_secs, gate_ownership );
     let Some( winner_idx ) = winner_opt
     else
     {

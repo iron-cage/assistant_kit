@@ -8,7 +8,7 @@ Account management commands: list, save, use, delete, limits, and relogin.
 
 List all saved accounts (identity view) or run per-account mutations (`assign::1`, `unclaim::1`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email). When data-source params are active (`refresh::1`, `touch::1`), fetches live quota using the same pipeline as `.usage` — defaults to local-only read with no HTTP fetch.
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`cols::`](../param/033_cols.md), [`assign::`](../param/057_assign.md), [`unclaim::`](../param/056_unclaim.md), [`force::`](../param/058_force.md), [`for::`](../param/053_for.md), [`dry::`](../param/004_dry.md), [`set_model::`](../param/054_set_model.md), [`refresh::`](../param/019_refresh.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`next::`](../param/032_next.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`abs::`](../param/046_abs.md), [`no_color::`](../param/047_no_color.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`cols::`](../param/033_cols.md), [`assign::`](../param/057_assign.md), [`unclaim::`](../param/056_unclaim.md), [`force::`](../param/058_force.md), [`for::`](../param/053_for.md), [`dry::`](../param/004_dry.md), [`set_model::`](../param/054_set_model.md), [`refresh::`](../param/019_refresh.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`abs::`](../param/046_abs.md), [`no_color::`](../param/047_no_color.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars, legacy field-toggle param used, unknown `cols::` id, `for::` missing `@`, G8 ownership violation on `unclaim::1`) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
@@ -44,10 +44,9 @@ clp .accounts format::table
 | `touch::` | `bool` | **`0`** | Activate idle 5h session windows via subprocess (default `0`; differs from `.usage` default of `1`) |
 | `imodel::` | `enum` | `auto` | Subprocess model: `auto`, `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Subprocess effort: `auto`, `low`, `normal`, `high`, `max` |
-| `sort::` | `enum` | **`name`** | Row ordering: `name` (default for `.accounts`), `renew`, `endurance`, `drain`, `next` |
+| `sort::` | `enum` | **`name`** | Row ordering and `→` recommendation: `name` (default for `.accounts`), `renew`, `renews` |
 | `desc::` | `bool` | `0` | Sort direction: 0 = ascending, 1 = descending |
-| `prefer::` | `enum` | `any` | Weekly quota preference for sort strategies: `any`, `opus`, `sonnet` |
-| `next::` | `enum` | `renew` | Recommendation strategy: `renew`, `endurance`, `drain` |
+| `prefer::` | `enum` | `any` | Weekly quota column for sort heuristics: `any`, `opus`, `sonnet` |
 | `count::` | `u64` | `0` | Max rows to display (0 = all) |
 | `offset::` | `u64` | `0` | Skip first N rows |
 | `only_active::` | `bool` | `0` | Show only the per-machine active account |
@@ -472,6 +471,20 @@ clp .account.relogin name::carol@example.com dry::1
 | # | User Story | Persona |
 |---|------------|---------|
 | 1 | [Account Onboarding](../user_story/002_onboarding.md) | Re-authenticating an account with expired refresh token |
+
+---
+
+### Command :: 13. `.account.rotate` *(deprecated — Feature 038)*
+
+**DEPRECATED** — hidden redirector; always exits 1. Use `.usage rotate::1` instead.
+
+```bash
+clp .usage rotate::1
+clp .usage rotate::1 next::endurance
+clp .usage rotate::1 dry::1
+```
+
+See [feature/038_usage_strategy_rotate.md](../../feature/038_usage_strategy_rotate.md) for full behavioral specification.
 
 ---
 
