@@ -27,12 +27,14 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-19 | Active account + 7d(Son) < 20% → model override fires after switch | AC-18 | Integration (BUG-238 MRE) |
 | FT-20 | `override_session_model_to_opus()` fires for shorthand `"sonnet"` input, writes `"opus"` | AC-18 | Unit (BUG-257 MRE) |
 | FT-21 | Post-subprocess re-fetch updates in-memory quota; failure preserves pre-subprocess data | AC-21 | Unit (BUG-288 MRE) |
+| FT-22 | `seven_day_sonnet = None` → model override does not fire; absent tier treated as unknown, not exhausted | AC-18 | Unit (BUG-300 MRE) |
 | — | `trace::1` + model override fires → `model override: sonnet→opus` trace line emitted | AC-19 | Live-only (requires `trace::1` + `7d(Son) < 20%` + Sonnet model in snapshot) |
 
 ### Test Case Index
 
 | ID | Test Name | AC | Category |
 |----|-----------|-----|----------|
+| FT-22 | seven_day_sonnet = None → model override does not fire; absent tier treated as unknown | AC-18 | BUG-300 MRE |
 | FT-20 | override_session_model_to_opus fires for shorthand "sonnet" input, writes "opus" | AC-18 | BUG-257 MRE |
 | FT-21 | post-subprocess re-fetch updates in-memory quota; failure preserves pre-subprocess data | AC-21 | BUG-288 MRE |
 | FT-01 | touch::1 idle account dispatches subprocess | AC-01 | Touch Dispatch |
@@ -56,7 +58,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-19 | active account + 7d(Son) < 20% → model override sonnet→opus after switch | AC-18 | BUG-238 MRE |
 | FT-21 | post-subprocess re-fetch updates in-memory quota; failure preserves pre-subprocess data | AC-21 | BUG-288 MRE |
 
-**Total:** 21 FT cases
+**Total:** 22 FT cases
 
 ---
 
@@ -281,6 +283,22 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **Then:** Returns `true`. `~/.claude/settings.json` now contains `"model": "opus"`. Additional scenarios verified in the same test: full-ID input `"claude-sonnet-4-6"` also returns `true` and writes `"opus"`; absent model (empty settings.json) returns `true` and writes `"opus"`; non-Sonnet `"opus"` returns `false`, settings.json unchanged; non-Sonnet `"haiku"` returns `false`, settings.json unchanged; full-ID `"claude-opus-4-6"` returns `true` and writes `"opus"` shorthand — not full ID (Fix(BUG-286)).
 - **Exit:** n/a (unit test)
 - **Source fn:** `mre_bug257_override_shorthand_alias` (in `claude_profile_core/tests/account_test.rs`) — ✅ TSK-261
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-18](../../../docs/feature/027_account_use_post_switch_touch.md)
+
+---
+
+### FT-22: `seven_day_sonnet = None` — model override does not fire (BUG-300 MRE)
+
+- **Given (unit test):** `apply_model_override` called with quota data where `seven_day_sonnet = None` (absent tier):
+  - `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"` (Sonnet — the override would normally fire)
+  - `ClaudePaths` pointing to a temp directory
+- **When:** `apply_model_override(&data, &paths, false, "account.use", "alice@home.com")` called with `seven_day_sonnet = None`.
+- **Then:**
+  - `~/.claude/settings.json` is unchanged (still contains `"claude-sonnet-4-6"`) — override did not fire.
+  - Second scenario (regression guard): same setup with `seven_day_sonnet = Some(PeriodUsage { utilization: 90.0, ... })` (10% left) — settings.json updated to `"claude-opus-4-6"`. Confirms `Some` path still fires correctly.
+- **Exit:** n/a (unit test)
+- **Note:** Fix(BUG-300): `map_or(0.0, ...)` on `seven_day_sonnet` returned `0.0` for `None`, which satisfies `< 20.0`, causing unconditional Opus override. `None` means tier absent (unknown), not exhausted. Fix: `if let Some(ref sonnet) = quota.seven_day_sonnet { if 100.0 - sonnet.utilization < 20.0 { ... } }`.
+- **Source fn:** `mre_bug300_model_override_absent_sonnet_no_override` (in `src/usage/api_tests.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-18](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---

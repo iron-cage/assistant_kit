@@ -11,7 +11,7 @@
 pub( crate ) use super::sort_next::{ find_next_for_strategy, strategy_metric };
 
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy };
-use super::format::{ five_hour_left, prefer_weekly, renewal_secs };
+use super::format::{ five_hour_left, prefer_weekly, seven_day_left, renewal_secs };
 
 // ── Status group ──────────────────────────────────────────────────────────────
 
@@ -21,18 +21,23 @@ use super::format::{ five_hour_left, prefer_weekly, renewal_secs };
 #[ derive( PartialEq, Eq, PartialOrd, Ord ) ]
 enum StatusGroup
 {
-  Green,           // both available: 5h > 15%, prefer_weekly > 5%
+  Green,           // both available: 5h > 15%, 7d Left > 5%
   HExhausted,      // 5h ≤ 15%, 7d > 5%
   WeeklyExhausted, // 5h > 15%, 7d ≤ 5%
   Red,             // both exhausted or error
 }
 
 /// Assign an account to its status group.
-fn status_group_of( aq : &AccountQuota, prefer : PreferStrategy ) -> StatusGroup
+fn status_group_of( aq : &AccountQuota ) -> StatusGroup
 {
   if aq.result.is_err() { return StatusGroup::Red; }
   let h5_ok = five_hour_left( aq ) > 15.0;
-  let d7_ok = prefer_weekly( aq, prefer ) > 5.0;
+  // Fix(BUG-299): use raw seven_day_left for d7_ok — group boundaries are model-agnostic per AC-12.
+  // Root cause: prefer_weekly(any) = min(7d, 7d_son) can be ≤ 5.0 when 7d_son ≤ 5% even if
+  //   seven_day_left > 5%, misclassifying h-exhausted accounts as Red instead of HExhausted.
+  // Pitfall: prefer_weekly is correct for sort::renew tiebreak and → eligibility (model-aware);
+  //   wrong for group boundary predicates — always use raw single-metric functions here.
+  let d7_ok = seven_day_left( aq ) > 5.0;
   match ( h5_ok, d7_ok )
   {
     ( true,  true  ) => StatusGroup::Green,
@@ -73,7 +78,7 @@ pub( crate ) fn sort_indices(
   let mut groups : [ Vec< usize >; 4 ] = [ vec![], vec![], vec![], vec![] ];
   for ( i, aq ) in accounts.iter().enumerate()
   {
-    let g = match status_group_of( aq, prefer )
+    let g = match status_group_of( aq )
     {
       StatusGroup::Green           => 0,
       StatusGroup::HExhausted      => 1,
@@ -333,8 +338,8 @@ mod tests
   #[ test ]
   fn test_4group_h_exhausted_ranks_before_weekly_exhausted()
   {
-    // weekly-exhausted: five_hour_left=50% > 15% (not h-exhausted), prefer_weekly=4% ≤ 5% (weekly-exhausted)
-    // h-exhausted: five_hour_left=10% ≤ 15% (h-exhausted), prefer_weekly=50% > 5% (not weekly-exhausted)
+    // weekly-exhausted: five_hour_left=50% > 15% (not h-exhausted), seven_day_left=4% ≤ 5% (weekly-exhausted)
+    // h-exhausted: five_hour_left=10% ≤ 15% (h-exhausted), seven_day_left=50% > 5% (not weekly-exhausted)
     let accounts = vec![
       mk_aq_sort_weekly( "weekly_exhausted@test.com", 50.0, 96.0, 96.0 ), // Group 3
       mk_aq_sort_weekly( "h_exhausted@test.com",      90.0, 50.0, 50.0 ), // Group 2
@@ -372,7 +377,7 @@ mod tests
   #[ test ]
   fn test_4group_weekly_exhausted_ranks_before_red()
   {
-    // red: both five_hour_left ≤ 15% AND prefer_weekly ≤ 5%
+    // red: both five_hour_left ≤ 15% AND seven_day_left ≤ 5%
     let accounts = vec![
       mk_aq_sort_weekly( "red@test.com",              90.0, 96.0, 96.0 ), // Group 4: both exhausted
       mk_aq_sort_weekly( "weekly_exhausted@test.com", 50.0, 96.0, 96.0 ), // Group 3: only weekly
@@ -408,6 +413,52 @@ mod tests
       "4-group: desc::1 must not reverse group order; green (G1) must still rank before h-exhausted (G2); got: {:?}",
       idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
     );
+  }
+
+  // ── BUG-299 MRE ─────────────────────────────────────────────────────────
+
+  /// BUG-299 MRE — account with 5h=0%, 7d Left=32%, 7d(Son)=5% must be `HExhausted` under `prefer::any`.
+  ///
+  /// # Root Cause
+  /// `status_group_of()` used `prefer_weekly( aq, prefer ) > 5.0` for the weekly boundary.
+  /// Under `prefer::any`, `prefer_weekly = min(7d_left, 7d_son_left) = min(32%, 5%) = 5.0`.
+  /// `5.0 > 5.0` is false → account misclassified as Red instead of `HExhausted`.
+  ///
+  /// # Why Not Caught
+  /// All existing AC-12 tests use accounts where `7d_util == 7d_son_util`, so
+  /// `prefer_weekly(any) = min(x, x) = x`, identical to `seven_day_left`. The
+  /// divergence only appears when `7d_util != 7d_son_util` with `prefer::any`.
+  ///
+  /// # Fix Applied
+  /// Changed `sort.rs:35` from `prefer_weekly( aq, prefer ) > 5.0` to
+  /// `seven_day_left( aq ) > 5.0`. Removed `prefer` param from `status_group_of()`.
+  ///
+  /// # Prevention
+  /// MRE test uses `7d_util != 7d_son_util` to exercise the divergence path.
+  ///
+  /// # Pitfall
+  /// `prefer_weekly(any) = min(7d, 7d_son)` can be strictly less than `seven_day_left`
+  /// when the two weekly quotas differ — even when neither quota individually is low.
+  /// Group boundary must use model-agnostic raw `7d Left` only.
+  #[ doc = "bug_reproducer(BUG-299)" ]
+  #[ test ]
+  fn mre_bug299_h_exhausted_misclassified_as_red_prefer_any()
+  {
+    // account-a: 5h_util=100% (5h Left=0%, h-exhausted), 7d_util=68% (7d Left=32%, NOT weekly-exhausted),
+    //            7d_son_util=95% (7d(Son)=5% left). prefer_weekly(any) = min(32%, 5%) = 5.0 — fails > 5.0.
+    // Bug: status_group_of classified this as Red; fix: seven_day_left=32% > 5.0 → HExhausted.
+    // red-account: both quotas exhausted — always Red.
+    let accounts = vec![
+      mk_aq_sort_weekly( "account-a",   100.0, 68.0, 95.0 ), // must be Group 2 (HExhausted)
+      mk_aq_sort_weekly( "red-account", 100.0, 96.0, 96.0 ), // Group 4 (Red)
+    ];
+    let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0 );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "account-a",
+      "BUG-299: account with 7d Left=32% must be HExhausted (G2), ranking before Red (G4); got: {:?}",
+      idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
+    );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "red-account" );
   }
 
   /// CC-059/CC-060 — `prefer_weekly` with absent period data treats account as fully available.

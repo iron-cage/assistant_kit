@@ -11,7 +11,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-03 | All saved accounts fetched, not only `_active` | AC-01 | IT-1, IT-8 |
 | FT-04 | Live token match governs `✓`, not `_active` marker | AC-02 | IT-2, IT-13 |
 | FT-05 | Missing credential store → exit 2 | AC-06 | IT-6, IT-7 |
-| FT-06 | Endurance strategy tiebreaker: expiry breaks 5h Left tie | AC-09 | IT-11 |
+| ~~FT-06~~ | ~~Endurance strategy tiebreaker: expiry breaks 5h Left tie~~ (REMOVED — endurance strategy deleted) | ~~AC-09~~ | ~~IT-11~~ |
 | FT-07 | Status emoji `🟢`/`🟡`/`🔴` correct per account state | AC-18 | IT-40, IT-41 |
 | FT-08 | Strict boundary: 5h at 15%, 7d at 5% — at boundary → `🟡`; above → `🟢` | AC-19 | — |
 | FT-09 | `format::json` output contains no status emoji | AC-20 | IT-42 |
@@ -19,9 +19,9 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-11 | `5h Left` / `7d Left` values embed per-column emoji prefix | AC-21 | — |
 | FT-12 | `Sub` / `7d Son Reset` hidden by default; `cols::+` reveals them | AC-22 | — |
 | FT-13 | Invalid `cols::` column ID exits 1 with error | AC-23 | — |
-| FT-14 | Three-tier grouping: 🟢 before 🟡 before 🔴 independent of sort | AC-24 | — |
+| FT-14 | Four-group outer ordering: 🟢 before 🟡 before 🔴 independent of sort | AC-24 | — |
 | FT-15 | `format_duration_secs` capped to 2 significant time units | AC-25 | — |
-| FT-16 | Within 🟡 tier: h-exhausted (`5h Left ≤ 15%`) before weekly-exhausted | AC-26 | — |
+| FT-16 | Within 🟡 group: h-exhausted (`5h Left ≤ 15%`) before weekly-exhausted | AC-26 | — |
 | FT-17 | `~Renews` shows exact `in Xh Ym` (no `~`) when `_renewal_at` set | AC-27 | — |
 | FT-18 | `→ Next` column shows soonest upcoming event label and duration | AC-28 | — |
 | FT-19 | JSON includes `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | AC-29 | — |
@@ -32,6 +32,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | — |
 | FT-25 | `.usage` applies model override for current account when `7d(Son) < 20%` | AC-32 | — |
 | FT-26 | `format::json` output includes `"is_owned"` bool per account object | AC-05 | — |
+| FT-27 | `.usage` model override skips when `seven_day_sonnet` is absent (`None`) — absent tier is unknown, not exhausted | AC-32 | — |
 | — | Table output rendered by `data_fmt` crate (`use data_fmt::…` in `render.rs`) | AC-04 | Structural (code review — all render paths use `data_fmt`) |
 | — | `Expires` column: `"in Xh Ym"` / `"EXPIRED"` from `compute_expires_cell()` | AC-07 | IT-003, IT-010 (command-level coverage) |
 | — | `5h Left`, `7d Left`, `7d(Son)`, `5h Reset`, `7d Reset` from `OauthUsageData` | AC-08 | Indirect — FT-07/FT-08/FT-11/FT-14/FT-15/FT-16 all depend on these columns |
@@ -53,7 +54,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-03 | Both accounts appear regardless of `_active` marker | AC-01 | Complete Fetch |
 | FT-04 | `✓` follows live token match, not `_active` marker | AC-02 | Live Detection |
 | FT-05 | Unreadable credential store exits 2 | AC-06 | Error Handling |
-| FT-06 | Tiebreaker: higher expiry wins when 5h Left tied | AC-09 | Recommendation |
+| ~~FT-06~~ | ~~Tiebreaker: higher expiry wins when 5h Left tied~~ (REMOVED) | ~~AC-09~~ | ~~Recommendation~~ |
 | FT-07 | Status emoji correct for each of three account states | AC-18 | Status Emoji |
 | FT-08 | Exhaustion boundary is strict: 5h at 15%, 7d at 5% | AC-19 | Status Emoji |
 | FT-09 | JSON output is emoji-free | AC-20 | Status Emoji |
@@ -61,7 +62,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-11 | Per-column emoji in 5h Left and 7d Left column values | AC-21 | Per-Column Emoji |
 | FT-12 | Sub and 7d Son Reset columns hidden by default; shown via cols::+ | AC-22 | Column Visibility |
 | FT-13 | Invalid cols:: column ID exits 1 | AC-23 | Column Modifiers |
-| FT-14 | Three-tier grouping preserved regardless of sort strategy | AC-24 | Three-Tier Grouping |
+| FT-14 | Four-group outer ordering preserved regardless of sort strategy | AC-24 | Group Ordering |
 | FT-15 | format_duration_secs shows at most 2 time components | AC-25 | Duration Format |
 | FT-16 | h-exhausted (`5h Left ≤ 15%`) 🟡 before weekly-exhausted 🟡 regardless of sort | AC-26 | Yellow Sub-Grouping |
 | FT-17 | `~Renews` exact `in Xh Ym` (no `~`) when `_renewal_at` is set | AC-27 | `~Renews` Format |
@@ -74,8 +75,9 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | Trace Ordering |
 | FT-25 | `.usage` applies model override for current account when `7d(Son) < 20%` | AC-32 | Model Override |
 | FT-26 | `format::json` includes `"is_owned": bool` per account object | AC-05 | JSON Fields |
+| FT-27 | `.usage` model override skips when `seven_day_sonnet = None` (BUG-300 MRE) | AC-32 | Model Override |
 
-**Total:** 26 FT cases
+**Total:** 27 FT cases
 
 ---
 
@@ -232,14 +234,14 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ---
 
-### FT-14: Three-tier grouping: `🟢` before `🟡` before `🔴` regardless of sort strategy
+### FT-14: Four-group outer ordering: `🟢` before `🟡` before `🔴` regardless of sort strategy
 
 - **Given:** Unit test. Three `AccountQuota` entries (alphabetical order: alice → bob → carol):
-  - `alice@x.com`: `result = Err(...)` → 🔴 tier
-  - `bob@x.com`: `result = Ok(data)` where `five_hour.utilization = 97.0` (3% left) → 🟡 tier
-  - `carol@x.com`: `result = Ok(data)` where `five_hour.utilization = 10.0` (90% left) → 🟢 tier
-- **When:** Three-tier grouping applied with alphabetical sort within each tier.
-- **Then:** Output order is `carol@x.com` (🟢) → `bob@x.com` (🟡) → `alice@x.com` (🔴). The tier ordering 🟢 → 🟡 → 🔴 is preserved regardless of alphabetical order.
+  - `alice@x.com`: `result = Err(...)` → 🔴 group
+  - `bob@x.com`: `result = Ok(data)` where `five_hour.utilization = 97.0` (3% left) → 🟡 group
+  - `carol@x.com`: `result = Ok(data)` where `five_hour.utilization = 10.0` (90% left) → 🟢 group
+- **When:** Four-group status partition applied; alphabetical sort within each group.
+- **Then:** Output order is `carol@x.com` (🟢) → `bob@x.com` (🟡) → `alice@x.com` (🔴). Outer group ordering 🟢 → 🟡 → 🔴 is preserved regardless of alphabetical order. (Within-🟡 sub-grouping — h-exhausted before weekly-exhausted — is tested by FT-16.)
 - **Exit:** n/a (unit test — order assertion on sorted list)
 - **Source fn:** `test_three_tier_grouping_green_before_yellow_before_red` (in `src/usage/mod.rs`)
 - **Source:** [009_token_usage.md AC-24](../../../docs/feature/009_token_usage.md)
@@ -262,12 +264,12 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ### FT-16: h-exhausted 🟡 before weekly-exhausted 🟡 regardless of sort
 
-- **Given:** Unit test. Three `AccountQuota` structs all in 🟡 tier (plus one 🟢 as anchor). Input order: alphabetical.
-  - `a@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=98.0` (2% left) → tier 🟡, **weekly-exhausted** sub-group
-  - `b@x.com`: `five_hour.utilization=99.0` (1% left), `seven_day.utilization=30.0` (70% left) → tier 🟡, **h-exhausted** sub-group
-  - `c@x.com`: `five_hour.utilization=97.0` (3% left), `seven_day.utilization=50.0` (50% left) → tier 🟡, **h-exhausted** sub-group (5h ≤ 15%)
-  - `d@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=10.0` (90% left) → tier 🟢
-  - Alpha sort would produce: a → b → c → d. Three-tier would place d (🟢) first, then a, b, c (all 🟡), then any 🔴.
+- **Given:** Unit test. Three `AccountQuota` structs all in 🟡 group (plus one 🟢 as anchor). Input order: alphabetical.
+  - `a@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=98.0` (2% left) → 🟡 group, **weekly-exhausted** sub-group
+  - `b@x.com`: `five_hour.utilization=99.0` (1% left), `seven_day.utilization=30.0` (70% left) → 🟡 group, **h-exhausted** sub-group
+  - `c@x.com`: `five_hour.utilization=97.0` (3% left), `seven_day.utilization=50.0` (50% left) → 🟡 group, **h-exhausted** sub-group (5h ≤ 15%)
+  - `d@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=10.0` (90% left) → 🟢 group
+  - Alpha sort would produce: a → b → c → d. Four-group partition would place d (🟢) first, then a, b, c (all 🟡), then any 🔴.
 - **When:** `render_text(&accounts, SortStrategy::Name, None, PreferStrategy::Any, &ColsVisibility::default_set(), false, false)`
 - **Then:** Output row order is: `d@x.com` (🟢), then among 🟡 — `b@x.com` and `c@x.com` (h-exhausted, in alpha order), then `a@x.com` (weekly-exhausted). `a@x.com` must appear AFTER both `b@x.com` and `c@x.com` despite being alpha-first.
 - **Edge case:** An account with both `5h Left ≤ 15%` AND `7d Left ≤ 5%` falls in the h-exhausted sub-group (verified by `c@x.com` if `seven_day.utilization` is set ≥ 95%).
@@ -411,6 +413,23 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Exit:** n/a (unit test)
 - **Note:** Fix for BUG-244. The model override was previously only reachable from `.account.use` (`account_ops.rs`). This test verifies the `.usage` path also applies it. Reuses the existing `apply_model_override()` function (tested by BUG-238 MRE) but validates it is called from the `.usage` pipeline.
 - **Source fn:** `mre_bug244_usage_routine_never_calls_apply_model_override` (in `src/usage/api_tests.rs`)
+- **Source:** [009_token_usage.md AC-32](../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-27: `.usage` model override skips when `seven_day_sonnet = None` (BUG-300 MRE)
+
+- **Given (unit test):** One `AccountQuota` for the current account (`is_current = true`):
+  - `result = Ok(OauthUsageData)` with `seven_day_sonnet = None` (absent tier — account has no Sonnet weekly quota)
+  - `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"` (or empty)
+  - `ClaudePaths` pointing to a temp directory
+- **When:** `apply_model_override(&data, &paths, false, "usage", "test@example.com")` is called.
+- **Then:**
+  - `~/.claude/settings.json` is NOT modified — still contains `"claude-sonnet-4-6"`. Override did not fire.
+  - A second scenario (regression guard): same setup with `seven_day_sonnet = Some(PeriodUsage { utilization: 90.0, ... })` (10% left) — override DOES fire and `~/.claude/settings.json` is updated to `"claude-opus-4-6"`. Confirms `Some` path still fires correctly.
+- **Exit:** n/a (unit test)
+- **Note:** Fix(BUG-300): `map_or(0.0, ...)` treated `None` as 0% remaining (fully exhausted), causing unconditional Opus override for accounts without a Sonnet tier. `None` must be treated as absent/unknown — not as exhaustion. Guard changed to `if let Some(ref sonnet) = quota.seven_day_sonnet { ... }`.
+- **Source fn:** `mre_bug300_model_override_absent_sonnet_no_override` (in `src/usage/api_tests.rs`)
 - **Source:** [009_token_usage.md AC-32](../../../docs/feature/009_token_usage.md)
 
 ---

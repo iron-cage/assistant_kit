@@ -156,6 +156,50 @@ fn mre_bug286_full_opus_id_normalized_to_shorthand()
   );
 }
 
+/// `mre_bug300` — `apply_model_override()` fires unconditionally when `seven_day_sonnet = None`.
+///
+/// # Root Cause
+/// `apply_model_override()` at `src/usage/api.rs:267` uses
+/// `quota.seven_day_sonnet.as_ref().map_or(0.0, |p| 100.0 - p.utilization)`.
+/// When `seven_day_sonnet = None`, `map_or` returns `0.0`. `0.0 < 20.0` is always true,
+/// so the Opus override fires unconditionally for every account without a Sonnet tier.
+///
+/// # Why Not Caught
+/// All existing tests supply `seven_day_sonnet: Some(PeriodUsage { utilization: 90.0, ... })`.
+/// No test used `None` as input. The buggy `map_or(0.0, ...)` path was invisible in CI.
+///
+/// # Fix Applied
+/// Replace `map_or(0.0, ...)` with `if let Some( ref sonnet ) = quota.seven_day_sonnet { ... }`.
+/// When `None`, the entire override block is skipped.
+/// `None` = "tier absent/unknown", not "quota fully exhausted".
+///
+/// # Prevention
+/// This test catches any regression to `map_or(0.0, ...)` or other "treat None as 0%"
+/// patterns. Observable contract: `settings.json` must NOT be created when `seven_day_sonnet`
+/// is absent, regardless of any threshold comparison.
+///
+/// # Pitfall
+/// `map_or(0.0, ...)` is correct for display (show 0% when tier absent) but WRONG for
+/// conditional gates. `None` = "tier absent/unknown". Always use `if let Some(...)` for
+/// quota-exhaustion logic — never treat absence as exhaustion.
+#[ doc = "bug_reproducer(BUG-300)" ]
+#[ test ]
+fn mre_bug300_model_override_absent_sonnet_no_override()
+{
+  use claude_quota::OauthUsageData;
+  let dir   = TempDir::new().unwrap();
+  let paths = crate::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  // seven_day_sonnet = None: Sonnet tier absent — override must NOT fire.
+  let quota = OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  assert!(
+    !paths.settings_file().exists(),
+    "BUG-300: settings.json must NOT be written when seven_day_sonnet is None \
+     (absent tier is unknown, not exhausted)",
+  );
+}
+
 // ── BUG-244 tests: label param + usage_routine wiring ─────────────────────
 
 #[ test ]

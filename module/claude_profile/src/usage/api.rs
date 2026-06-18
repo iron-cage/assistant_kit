@@ -264,19 +264,26 @@ pub( crate ) fn apply_model_override(
   name  : &str,
 )
 {
-  let sonnet_left = quota.seven_day_sonnet.as_ref().map_or( 0.0, | p | 100.0 - p.utilization );
-  if sonnet_left < 20.0
+  // Fix(BUG-300): map_or(0.0,...) treated seven_day_sonnet=None as 0% left — Opus override fired
+  //   unconditionally for any account without a Sonnet tier.
+  // Root cause: None means "tier absent/unknown", not "fully exhausted"; 0.0 < 20.0 always fires.
+  // Pitfall: guard override on Some(ref sonnet) — absent tier must never trigger quota-exhaustion logic.
+  if let Some( ref sonnet ) = quota.seven_day_sonnet
   {
-    let overrode = crate::account::override_session_model_to_opus( paths );
-    if overrode
+    let sonnet_left = 100.0 - sonnet.utilization;
+    if sonnet_left < 20.0
     {
-      claude_profile_core::account::write_cache_string(
-        paths.base(), name, "model_override", "opus",
-      );
-      if trace
+      let overrode = crate::account::override_session_model_to_opus( paths );
+      if overrode
       {
-        use std::io::Write as _;
-        let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)" );
+        claude_profile_core::account::write_cache_string(
+          paths.base(), name, "model_override", "opus",
+        );
+        if trace
+        {
+          use std::io::Write as _;
+          let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)" );
+        }
       }
     }
   }
