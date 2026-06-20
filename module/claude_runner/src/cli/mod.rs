@@ -9,6 +9,8 @@ mod help;
 mod gate;
 mod ps;
 mod kill;
+mod tools;
+mod summary;
 
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
 use parse::CliArgs;
@@ -25,6 +27,7 @@ use help::print_ask_help;
 use gate::wait_for_session_slot;
 pub( super ) use ps::dispatch_ps;
 pub( super ) use kill::dispatch_kill;
+pub( super ) use tools::dispatch_tools;
 
 pub( super ) use parse::parse_args;
 pub( super ) use env::apply_env_vars;
@@ -49,7 +52,7 @@ pub( super ) fn handle_dry_run( builder : &ClaudeCommand )
 // Fix(BUG-212): `run` was absent; typing `clr running` produced no helpful error.
 // Root cause: list was never updated when `run` became an explicit subcommand.
 // Pitfall: update both this list and the dispatch match in lib.rs when adding a subcommand.
-const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill" ];
+const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill", "tools" ];
 
 // Fix(BUG-225): Guard against typos/truncations of known subcommand names.
 // Root cause: `run_cli()` dispatched subcommands by exact string match only — any

@@ -8,7 +8,7 @@ parameter in this directory.
 
 - **Purpose**: Authoritative flat reference for every parameter the `claude` binary accepts at runtime.
 - **Responsibility**: Master table and per-parameter detail files for CLI flags, env vars, and settings config keys.
-- **In Scope**: All 75 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys.
+- **In Scope**: All 76 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys.
 - **Out of Scope**: Builder-API defaults and Rust `with_*()` methods (→ `module/claude_runner_core/docs/claude_params/`); Claude API protocol (→ Anthropic docs).
 
 ### Responsibility Table
@@ -91,6 +91,7 @@ parameter in this directory.
 | 053_remote_control_at_startup.md | `remoteControlAtStartup` config key — remote-control channel on startup |
 | 074_auto_compact_window.md | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` — context window size for compaction calculations |
 | 075_autocompact_pct_override.md | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` — compaction trigger as percentage of window |
+| 076_max_turns.md | `--max-turns` — max agentic turns per session |
 
 ### Parameter Table
 
@@ -174,6 +175,7 @@ Precedence: CLI arg > env var > settings config.
 | 73 | [remote_control_at_startup](053_remote_control_at_startup.md) | — | — | `remoteControlAtStartup` | bool | `false` | Open remote-control channel on startup |
 | 74 | [auto_compact_window](074_auto_compact_window.md) | — | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | — | integer (tokens) | `200 000` / `1 000 000` | Context window in tokens for auto-compaction threshold; capped at model limit |
 | 75 | [autocompact_pct_override](075_autocompact_pct_override.md) | — | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | — | integer (1–100) | auto | Compaction trigger as percentage of `CLAUDE_CODE_AUTO_COMPACT_WINDOW` |
+| 76 | [max_turns](076_max_turns.md) | `--max-turns <n>` | — | — | integer | — | Max agentic turns per session; unset = unlimited |
 
 ### Cross-References
 

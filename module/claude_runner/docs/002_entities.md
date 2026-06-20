@@ -6,7 +6,7 @@
 |------|---------|-------------|----------:|
 | `api/` | Index of API doc instances covering COMMANDS_YAML, VerbosityLevel, and register_commands contracts | [api/readme.md](api/readme.md) | 1 |
 | `cli/` | Index of CLI reference instances covering commands, params, types, groups, dictionary, user stories, env params | [cli/readme.md](cli/readme.md) | 5 |
-| `cli/param/` | Index of individual parameter reference instances (56 parameters) | [cli/param/readme.md](cli/param/readme.md) | 56 |
+| `cli/param/` | Index of individual parameter reference instances (63 parameters) | [cli/param/readme.md](cli/param/readme.md) | 63 |
 | `cli/user_story/` | Index of user goal and usage pattern instances (27 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 27 |
 | `feature/` | Index of feature doc instances covering the clr binary tool design | [feature/readme.md](feature/readme.md) | 1 |
 | `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, trace universality, isolated/refresh subprocess defaults, and exit code contract | [invariant/readme.md](invariant/readme.md) | 6 |
@@ -77,6 +77,13 @@
 | cli/param | 058 | --mode | [cli/param/058_mode.md](cli/param/058_mode.md) |
 | cli/param | 059 | --columns | [cli/param/059_columns.md](cli/param/059_columns.md) |
 | cli/param | 060 | --wide | [cli/param/060_wide.md](cli/param/060_wide.md) |
+| cli/param | 061 | --output-format | [cli/param/061_output_format.md](cli/param/061_output_format.md) |
+| cli/param | 062 | --max-turns | [cli/param/062_max_turns.md](cli/param/062_max_turns.md) |
+| cli/param | 063 | --allowed-tools | [cli/param/063_allowed_tools.md](cli/param/063_allowed_tools.md) |
+| cli/param | 064 | --disallowed-tools | [cli/param/064_disallowed_tools.md](cli/param/064_disallowed_tools.md) |
+| cli/param | 065 | --max-budget-usd | [cli/param/065_max_budget_usd.md](cli/param/065_max_budget_usd.md) |
+| cli/param | 066 | --add-dir | [cli/param/066_add_dir.md](cli/param/066_add_dir.md) |
+| cli/param | 067 | --fallback-model | [cli/param/067_fallback_model.md](cli/param/067_fallback_model.md) |
 | cli/user_story | 001 | Interactive REPL | [cli/user_story/001_interactive_repl.md](cli/user_story/001_interactive_repl.md) |
 | cli/user_story | 002 | Print Mode Capture | [cli/user_story/002_print_mode_capture.md](cli/user_story/002_print_mode_capture.md) |
 | cli/user_story | 003 | Interactive With Message | [cli/user_story/003_interactive_with_message.md](cli/user_story/003_interactive_with_message.md) |

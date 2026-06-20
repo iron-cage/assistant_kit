@@ -10,6 +10,7 @@ pub( crate ) fn print_help()
   println!( "  clr isolated --creds <FILE> [--timeout <SECS>] [--trace] [MESSAGE]" );
   println!( "  clr refresh  --creds <FILE> [--timeout <SECS>] [--trace]" );
   println!( "  clr kill     <PID>" );
+  println!( "  clr tools" );
   println!( "  clr help" );
   println!();
   println!( "COMMANDS:" );
@@ -22,6 +23,7 @@ pub( crate ) fn print_help()
   println!( "  refresh                            Refresh OAuth credentials without running a task" );
   println!( "  ps                                 List running Claude Code sessions" );
   println!( "  kill                               Terminate a running Claude Code session by PID" );
+  println!( "  tools                              List all Claude Code built-in tools" );
   println!( "  help                               Print usage information and exit" );
   println!();
   println!( "ARGUMENTS:" );
@@ -49,6 +51,13 @@ pub( crate ) fn print_help()
   println!( "  --no-persist                       Disable session persistence (--no-session-persistence)" );
   println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
   println!( "  --mcp-config <PATH>                MCP server config file (repeatable)" );
+  println!( "  --output-format <FMT>              Output format: text, json, stream-json, summary" );
+  println!( "  --max-turns <N>                    Max agentic turns (0 = unlimited)" );
+  println!( "  --allowed-tools <TOOLS>            Comma-separated tool whitelist (e.g. \"Read,Edit\")" );
+  println!( "  --disallowed-tools <TOOLS>         Comma-separated tool blacklist" );
+  println!( "  --max-budget-usd <AMOUNT>          Max API spend in USD for this session" );
+  println!( "  --add-dir <PATH>                   Additional directory Claude may access" );
+  println!( "  --fallback-model <MODEL>           Fallback model when primary is unavailable" );
   println!( "  --file <PATH>                      Pipe file content to subprocess stdin" );
   println!( "  --strip-fences                     Strip outermost markdown code fences from stdout" );
   println!( "  --keep-claudecode                  Preserve CLAUDECODE env var in subprocess (default: removed)" );

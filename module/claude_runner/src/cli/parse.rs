@@ -94,6 +94,13 @@ pub( crate ) struct CliArgs
   pub( crate ) retry_override_delay    : Option< u32 >,
   pub( crate ) retry_default           : Option< u8 >,
   pub( crate ) retry_default_delay     : Option< u32 >,
+  pub( crate ) output_format           : Option< String >,
+  pub( crate ) max_turns               : Option< String >,
+  pub( crate ) allowed_tools           : Option< String >,
+  pub( crate ) disallowed_tools        : Option< String >,
+  pub( crate ) max_budget_usd          : Option< String >,
+  pub( crate ) add_dir                 : Option< String >,
+  pub( crate ) fallback_model          : Option< String >,
 }
 
 /// Consume the next argv element as a flag's value.
@@ -239,6 +246,34 @@ fn parse_value_flag(
     {
       let raw = next_value( tokens, next, "--verbosity" )?;
       parsed.verbosity = Some( raw.parse::< VerbosityLevel >().map_err( Error::msg )? );
+    }
+    "--output-format" =>
+    {
+      parsed.output_format = Some( next_value( tokens, next, "--output-format" )?.to_string() );
+    }
+    "--max-turns" =>
+    {
+      parsed.max_turns = Some( next_value( tokens, next, "--max-turns" )?.to_string() );
+    }
+    "--allowed-tools" =>
+    {
+      parsed.allowed_tools = Some( next_value( tokens, next, "--allowed-tools" )?.to_string() );
+    }
+    "--disallowed-tools" =>
+    {
+      parsed.disallowed_tools = Some( next_value( tokens, next, "--disallowed-tools" )?.to_string() );
+    }
+    "--max-budget-usd" =>
+    {
+      parsed.max_budget_usd = Some( next_value( tokens, next, "--max-budget-usd" )?.to_string() );
+    }
+    "--add-dir" =>
+    {
+      parsed.add_dir = Some( next_value( tokens, next, "--add-dir" )?.to_string() );
+    }
+    "--fallback-model" =>
+    {
+      parsed.fallback_model = Some( next_value( tokens, next, "--fallback-model" )?.to_string() );
     }
     _ => return parse_runner_value_flag( token, tokens, next, parsed ),
   }
@@ -484,6 +519,13 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       retry_override_delay    : None,
       retry_default           : None,
       retry_default_delay     : None,
+      output_format           : None,
+      max_turns               : None,
+      allowed_tools           : None,
+      disallowed_tools        : None,
+      max_budget_usd          : None,
+      add_dir                 : None,
+      fallback_model          : None,
     } );
   }
 

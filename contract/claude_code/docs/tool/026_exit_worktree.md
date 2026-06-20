@@ -1,0 +1,18 @@
+# Tool: ExitWorktree
+
+Exit git worktree isolation.
+
+### Category
+
+Mode
+
+### Description
+
+Returns from the git worktree back to the main working directory. If changes were made in the worktree, the worktree path and branch are preserved for the user to review.
+
+### Cross-References
+
+| Type | File | Responsibility |
+|------|------|----------------|
+| doc | [readme.md](readme.md) | Master tool table |
+| doc | [../params/073_worktree.md](../params/073_worktree.md) | Worktree session parameter |

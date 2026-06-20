@@ -7,23 +7,23 @@
 - **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (-> param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (58 total)
+### All Env Parameters (65 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
-| Input (CLR_*) — `run` subcommand | 51 | Caller env fallbacks for `run` parameters |
+| Input (CLR_*) — `run` subcommand | 58 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 3 | Caller env fallbacks for credential operation parameters |
 | Input (CLR_*) — `ps` subcommand | 2 | Caller env fallbacks for session listing display parameters |
 | Runtime config (CLR_*) | 1 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 58 environment variables
+**Total:** 65 environment variables
 
 ---
 
 ### Env Param 1: CLR_* Input Parameters — `run` Subcommand
 
-Environment variable fallbacks for all 51 `run` subcommand parameters.
+Environment variable fallbacks for all 58 `run` subcommand parameters.
 `apply_env_vars()` in `src/cli/env.rs` reads these immediately after CLI parsing, before command
 dispatch. Each variable is applied **only when the corresponding CLI field is still at its
 zero/absent value** — the CLI flag always wins when both are present.
@@ -87,6 +87,13 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 49 | `CLR_RETRY_OVERRIDE_DELAY` | [`--retry-override-delay`](param/055_retry_override_delay.md) | u32 | Tier 1: forces delay for all error classes; default auto |
 | 50 | `CLR_RETRY_DEFAULT` | [`--retry-default`](param/056_retry_default.md) | u8 | Tier 3: fallback retry count for all unset classes; default 2 |
 | 51 | `CLR_RETRY_DEFAULT_DELAY` | [`--retry-default-delay`](param/057_retry_default_delay.md) | u32 | Tier 3: fallback delay for all unset classes; default 30 |
+| 52 | `CLR_OUTPUT_FORMAT` | [`--output-format`](param/061_output_format.md) | string | Parsed as enum (`text`/`json`/`stream-json`); any string accepted (forwarded as-is to claude) |
+| 53 | `CLR_MAX_TURNS` | [`--max-turns`](param/062_max_turns.md) | string | Forwarded as-is to claude; no parse validation |
+| 54 | `CLR_ALLOWED_TOOLS` | [`--allowed-tools`](param/063_allowed_tools.md) | string | Forwarded as-is to claude |
+| 55 | `CLR_DISALLOWED_TOOLS` | [`--disallowed-tools`](param/064_disallowed_tools.md) | string | Forwarded as-is to claude |
+| 56 | `CLR_MAX_BUDGET_USD` | [`--max-budget-usd`](param/065_max_budget_usd.md) | string | Forwarded as-is to claude; no parse validation |
+| 57 | `CLR_ADD_DIR` | [`--add-dir`](param/066_add_dir.md) | string | Forwarded as-is to claude |
+| 58 | `CLR_FALLBACK_MODEL` | [`--fallback-model`](param/067_fallback_model.md) | string | Forwarded as-is to claude |
 
 **Precedence (current — 3 tiers):**
 

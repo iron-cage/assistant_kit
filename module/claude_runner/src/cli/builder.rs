@@ -70,6 +70,7 @@ fn resolve_effective_dir( cli : &CliArgs ) -> Option< std::path::PathBuf >
 ///
 /// Session continuation (`-c`) is applied by default unless `--new-session` is set
 /// or no prior session exists in the configured storage directory.
+#[ allow( clippy::too_many_lines ) ]
 pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
 {
   let mut builder = ClaudeCommand::new();
@@ -175,6 +176,36 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
       format!( "{msg}\n\nultrathink" )
     };
     builder = builder.with_message( effective_msg );
+  }
+  if let Some( ref fmt ) = cli.output_format
+  {
+    // "summary" is intercepted by the runner; forward "json" to claude so it returns parseable output.
+    let forwarded = if fmt == "summary" { "json" } else { fmt.as_str() };
+    builder = builder.with_arg( "--output-format" ).with_arg( forwarded );
+  }
+  if let Some( ref turns ) = cli.max_turns
+  {
+    builder = builder.with_arg( "--max-turns" ).with_arg( turns.as_str() );
+  }
+  if let Some( ref tools ) = cli.allowed_tools
+  {
+    builder = builder.with_arg( "--allowed-tools" ).with_arg( tools.as_str() );
+  }
+  if let Some( ref tools ) = cli.disallowed_tools
+  {
+    builder = builder.with_arg( "--disallowed-tools" ).with_arg( tools.as_str() );
+  }
+  if let Some( ref budget ) = cli.max_budget_usd
+  {
+    builder = builder.with_arg( "--max-budget-usd" ).with_arg( budget.as_str() );
+  }
+  if let Some( ref dir ) = cli.add_dir
+  {
+    builder = builder.with_arg( "--add-dir" ).with_arg( dir.as_str() );
+  }
+  if let Some( ref model ) = cli.fallback_model
+  {
+    builder = builder.with_arg( "--fallback-model" ).with_arg( model.as_str() );
   }
 
   builder

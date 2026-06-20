@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Specify the file formats for ancillary Claude Code storage files that are not part of the primary session JSONL or settings docs.
-- **Responsibility**: Master file for the `formats` collection — lists all 6 ancillary format instances covering history, credentials, debug logs, shell snapshots, todos, and command definitions.
-- **In Scope**: history.jsonl entry structure, .credentials.json structure, debug log format, shell snapshot format, todos JSON format, command definition markdown format.
+- **Purpose**: Specify data formats produced or consumed by Claude Code — file formats for ancillary storage files and output schemas for CLI response encoding.
+- **Responsibility**: Master file for the `formats` collection — lists all 7 format instances covering history, credentials, debug logs, shell snapshots, todos, command definitions, and JSON response output.
+- **In Scope**: history.jsonl entry structure, .credentials.json structure, debug log format, shell snapshot format, todos JSON format, command definition markdown format, `--output-format json` response schema.
 - **Out of Scope**: Session JSONL format (→ [`../jsonl/`](../jsonl/readme.md)); settings.json structure (→ [`../settings/`](../settings/readme.md)); directory layout and storage areas (→ [`../storage/`](../storage/readme.md)).
 
 ### Overview Table
@@ -17,6 +17,7 @@
 | [004](004_shell_snapshot.md) | Shell Snapshot | `~/.claude/shell-snapshots/{uuid}.sh` — bash script preserving shell environment for session restoration |
 | [005](005_todo.md) | Todo | `~/.claude/todos/{session-uuid}.json` — JSON array of task objects for conversation sessions |
 | [006](006_command_definition.md) | Command Definition | `~/.claude/commands/{name}.md` — markdown documents defining custom slash commands |
+| [007](007_json_response.md) | JSON Response | `--output-format json` stdout — single JSON object with message, content blocks, and usage |
 
 ### Format Comparison
 
@@ -28,6 +29,7 @@
 | `shell-snapshots/*.sh` | 5KB–500KB | Source | Create-once | Environment restore |
 | `todos/*.json` | 1KB–5MB | Full parse | Overwrite | Task tracking |
 | `commands/*.md` | 1KB–50KB | Text | Static | Custom commands |
+| JSON response | 200B–500KB | Full parse | Transient (stdout) | Structured response |
 
 ### Type-Specific Requirements
 

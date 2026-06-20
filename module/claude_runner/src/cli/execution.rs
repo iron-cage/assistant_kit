@@ -481,6 +481,16 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
 
     // Success path — expect validation, file write, stdout.
     let out = if cli.strip_fences { strip_fences( &output.stdout ) } else { output.stdout };
+    // summary format: intercept JSON output, render YAML header + text body.
+    // Falls back to raw output when JSON cannot be parsed.
+    let out = if cli.output_format.as_deref() == Some( "summary" )
+    {
+      super::summary::render_summary( &out ).unwrap_or( out )
+    }
+    else
+    {
+      out
+    };
     let out = apply_expect_validation( cli, builder, out );
     write_output_file( cli.output_file.as_deref(), &out );
     print!( "{out}" );

@@ -551,10 +551,98 @@ CLR_RETRY_ON_UNKNOWN=1 cargo run -p claude_runner -- --dry-run "test"
 
 **Expected:** Exit 0. Env var applied silently; no error.
 
+### TC-72: `--output-format json` Dry-Run
+
+```sh
+cargo run -p claude_runner -- --dry-run --output-format json "test"
+```
+
+**Expected:** Exit 0. Dry-run trace includes `--output-format json` in the forwarded command line.
+
+### TC-73: `--output-format summary` Dry-Run — Intercepted as JSON
+
+```sh
+cargo run -p claude_runner -- --dry-run --output-format summary "test"
+```
+
+**Expected:** Exit 0. Dry-run trace shows `--output-format json` (NOT `summary`) forwarded to claude — the `summary` value is intercepted by the builder and replaced with `json` before forwarding.
+
+### TC-74: `--max-turns 5` Dry-Run
+
+```sh
+cargo run -p claude_runner -- --dry-run --max-turns 5 "test"
+```
+
+**Expected:** Exit 0. Dry-run trace includes `--max-turns 5`.
+
+### TC-75: `--allowed-tools Bash,Read` Dry-Run
+
+```sh
+cargo run -p claude_runner -- --dry-run --allowed-tools "Bash,Read" "test"
+```
+
+**Expected:** Exit 0. Dry-run trace includes `--allowed-tools Bash,Read`.
+
+### TC-76: `--disallowed-tools Write` Dry-Run
+
+```sh
+cargo run -p claude_runner -- --dry-run --disallowed-tools Write "test"
+```
+
+**Expected:** Exit 0. Dry-run trace includes `--disallowed-tools Write`.
+
+### TC-77: `--max-budget-usd 1.00` Dry-Run
+
+```sh
+cargo run -p claude_runner -- --dry-run --max-budget-usd 1.00 "test"
+```
+
+**Expected:** Exit 0. Dry-run trace includes `--max-budget-usd 1.00`.
+
+### TC-78: `--add-dir /tmp/extra` Dry-Run
+
+```sh
+cargo run -p claude_runner -- --dry-run --add-dir /tmp/extra "test"
+```
+
+**Expected:** Exit 0. Dry-run trace includes `--add-dir /tmp/extra`.
+
+### TC-79: `--fallback-model claude-haiku-4-5-20251001` Dry-Run
+
+```sh
+cargo run -p claude_runner -- --dry-run --fallback-model claude-haiku-4-5-20251001 "test"
+```
+
+**Expected:** Exit 0. Dry-run trace includes `--fallback-model claude-haiku-4-5-20251001`.
+
+### TC-80: `clr tools` — Lists All Built-In Tools
+
+```sh
+cargo run -p claude_runner -- tools
+```
+
+**Expected:** Exit 0. Stdout contains a plain table with columns `#`, `Tool`, `Category`, `Description`. All 26 Claude Code built-in tools present (including `Read`, `Write`, `Bash`, `Agent`, `CronCreate`, `EnterPlanMode`). Caption line shows "Claude Code Tools" and "26 built-in".
+
+### TC-81: `clr tools --help` — Help Output
+
+```sh
+cargo run -p claude_runner -- tools --help
+```
+
+**Expected:** Exit 0. Stdout contains "clr tools", usage info, and "No flags or arguments are accepted."
+
+### TC-82: `clr tools <unexpected-arg>` — Rejects Arguments
+
+```sh
+cargo run -p claude_runner -- tools some-arg
+```
+
+**Expected:** Exit 1. Stderr contains "does not accept arguments". Stdout is empty.
+
 ## Pass Criteria
 
-All TC-1 through TC-71 must pass without unexpected errors or panics.
-TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-71 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
+All TC-1 through TC-82 must pass without unexpected errors or panics.
+TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-82 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
 CC-1 through CC-156 are automated — listed for traceability only.
 
@@ -750,7 +838,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 
 ---
 
-## New Corner Cases (NC-1 through NC-15) — Discovered During Manual Testing
+## New Corner Cases (NC-1 through NC-19) — Discovered During Manual Testing
 
 ### NC-1: QuotaExhausted Label (Automated)
 
@@ -874,4 +962,46 @@ clr kill <PID>
 ```
 
 **Expected:** `clr kill <PID>` exits 0; stdout contains `"Sent SIGTERM to Claude Code session <PID>."`. The targeted session terminates (verify with a follow-up `clr ps`). No other sessions are affected. Automated analog: `kill_command_test.rs::it_04_successful_sigterm_delivery` (uses fake `claude` ELF process; confirms same code path).
+
+### NC-16: `clr tools <arg>` — Silent Pass-Through Bug (Fixed)
+
+**Context:** Before the IT-9 fix, `clr tools some-arg` printed the 26-tool table and exited 0 — silently ignoring the unknown argument. Now fixed: exits 1 with "does not accept arguments" on stderr.
+
+```sh
+cargo run -p claude_runner -- tools some-arg
+```
+
+**Expected (post-fix):** Exit 1. Stderr contains "does not accept arguments". Stdout empty. Automated regression: `tools_command_test.rs::it9_tools_rejects_unknown_arg`.
+
+### NC-17: `--output-format summary` Intercept — Builder Substitutes `json`
+
+**Context:** The `summary` value is not a native Claude CLI format — `clr` intercepts it and forwards `--output-format json` to claude, then renders the JSON response as a summary box. In dry-run mode, the substitution is visible in the trace output.
+
+```sh
+cargo run -p claude_runner -- --dry-run --output-format summary "test"
+```
+
+**Expected:** Dry-run trace shows `--output-format json`, NOT `--output-format summary`. The `output_format` field in `CliArgs` holds `"summary"` (stored as-is for post-processing), but the builder arg forwarded is `json`.
+
+### NC-18: `--allowed-tools` Value Is Not Split or Validated
+
+**Context:** All 7 Plan 021 params are pure pass-through with zero validation. `--allowed-tools "Bash,Read,Write"` is forwarded verbatim as a single string — `clr` does not split on commas or validate tool names.
+
+```sh
+cargo run -p claude_runner -- --dry-run --allowed-tools "Bash,Read,FakeToolXYZ" "test"
+```
+
+**Expected:** Exit 0. Dry-run trace shows `--allowed-tools Bash,Read,FakeToolXYZ`. No error from `clr` regardless of invalid tool name — validation is delegated to Claude CLI.
+
+### NC-19: CLR_* Env Var Applies When CLI Flag Absent
+
+**Context:** All 7 Plan 021 params support corresponding `CLR_*` env vars (e.g. `CLR_OUTPUT_FORMAT`, `CLR_MAX_TURNS`, `CLR_ALLOWED_TOOLS`, `CLR_DISALLOWED_TOOLS`, `CLR_MAX_BUDGET_USD`, `CLR_ADD_DIR`, `CLR_FALLBACK_MODEL`). When the env var is set and no CLI flag given, the env var value is applied.
+
+```sh
+CLR_MAX_TURNS=10 cargo run -p claude_runner -- --dry-run "test"
+CLR_ALLOWED_TOOLS=Bash cargo run -p claude_runner -- --dry-run "test"
+CLR_OUTPUT_FORMAT=json cargo run -p claude_runner -- --dry-run "test"
+```
+
+**Expected:** Each dry-run trace includes the forwarded param (e.g. `--max-turns 10`, `--allowed-tools Bash`, `--output-format json`). Automated analog: `output_format_test.rs` EC-3/EC-4/EC-6; `max_turns_test.rs` EC-2; `allowed_tools_test.rs` EC-2.
 
