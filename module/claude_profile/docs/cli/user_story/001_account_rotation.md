@@ -27,7 +27,7 @@
 |---|-----------|------|
 | 1 | [`rotate::`](../param/059_rotate.md) | Trigger strategy-based rotation after quota table render |
 | 2 | [`dry::`](../param/004_dry.md) | Preview rotation target without executing |
-| 3 | [`sort::`](../param/025_sort.md) | Row ordering and `→` recommendation: `renew` (default), `name`, `renews` |
+| 3 | [`sort::`](../param/025_sort.md) | Row ordering and footer recommendation: `renew` (default), `name`, `renews` |
 | 4 | [`force::`](../param/058_force.md) | Bypass G5 ownership gate on rotation eligibility |
 | 5 | [`touch::`](../param/034_touch.md) | Activate idle 5h window on target after switch |
 | 6 | [`imodel::`](../param/035_imodel.md) | Model for post-switch activation subprocess |

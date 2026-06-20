@@ -21,18 +21,17 @@ use super::sort::{ sort_indices, find_next_for_strategy, strategy_metric };
 /// Empty store renders `(no accounts configured)` without a table.
 /// Column visibility is controlled by `cols` (structural `flag` and `account`
 /// columns are always shown). Footer: single-strategy recommendation line when
-/// ≥2 accounts have valid quota — shows the `→` winner for the active `sort::`.
-/// The `→` marker in the table body points to the active-strategy winner.
+/// ≥2 accounts have valid quota — shows the winner for the active `sort::`.
 /// Footer is omitted when < 2 accounts have valid quota data.
 #[ allow( clippy::too_many_lines, clippy::too_many_arguments ) ]
 pub( crate ) fn render_text(
-  accounts : &[ AccountQuota ],
-  sort     : SortStrategy,
-  desc     : Option< bool >,
-  prefer   : PreferStrategy,
-  cols     : &ColsVisibility,
-  rotate   : bool,
-  force    : bool,
+  accounts       : &[ AccountQuota ],
+  sort           : SortStrategy,
+  desc           : Option< bool >,
+  prefer         : PreferStrategy,
+  cols           : &ColsVisibility,
+  session_model  : Option< &str >,
+  session_effort : Option< &str >,
 ) -> String
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
@@ -47,10 +46,8 @@ pub( crate ) fn render_text(
     .unwrap_or_default()
     .as_secs();
 
-  // Compute the winner for the active strategy; placed as → marker in the table body.
-  // `sort_indices` already applies the 4-group status partition (AC-12), so sorted_indices
-  // arrives in the correct display order: 🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Red.
-  let best_idx       = find_next_for_strategy( accounts, sort, prefer, now_secs, rotate && !force );
+  // `sort_indices` applies the 4-group status partition (AC-12):
+  // 🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Red.
   let sorted_indices = sort_indices( accounts, sort, desc, prefer, now_secs );
 
   // Build headers conditionally — structural cols always first and always visible.
@@ -75,7 +72,7 @@ pub( crate ) fn render_text(
   for orig_idx in sorted_indices.iter().copied()
   {
     let aq = &accounts[ orig_idx ];
-    // Five-level priority: ✓ (is_current) > * (is_active, not current) > @ (occupied on another machine) > → (active-strategy winner) > blank.
+    // Four-level priority: ✓ (is_current) > * (is_active, not current) > @ (occupied on another machine) > blank.
     let flag_cell = if aq.is_current
     {
       "✓".to_string()
@@ -87,10 +84,6 @@ pub( crate ) fn render_text(
     else if aq.is_occupied_elsewhere
     {
       "@".to_string()
-    }
-    else if best_idx == Some( orig_idx )
-    {
-      "→".to_string()
     }
     else
     {
@@ -231,7 +224,6 @@ pub( crate ) fn render_text(
   if valid_count < 2 { return body; }
 
   // Footer: single-strategy recommendation line for the active sort:: strategy.
-  // Shows the → winner with a strategy-specific metric string.
   let strategy_name = match sort
   {
     SortStrategy::Name   => "name",
@@ -261,7 +253,14 @@ pub( crate ) fn render_text(
       },
       Err( _ ) => "sonnet",
     };
-    format!( "{body}Valid: {valid_count} / {total}   ->  Next ({strategy_name}): {rec_name}{metric_part}  model: {model_label}\n" )
+    let session_part = match ( session_model, session_effort )
+    {
+      ( Some( sm ), Some( se ) ) => format!( "   session: {sm}  effort: {se}" ),
+      ( Some( sm ), None       ) => format!( "   session: {sm}" ),
+      ( None,       Some( se ) ) => format!( "   effort: {se}" ),
+      ( None,       None       ) => String::new(),
+    };
+    format!( "{body}Valid: {valid_count} / {total}{session_part}\nNext ({strategy_name}): {rec_name}{metric_part}  model: {model_label}\n" )
   }
   else
   {
@@ -583,16 +582,16 @@ pub( crate ) fn render_tsv(
 ///
 /// `🟢`→`ok`, `🟡`→`warn`, `🔴`→`err`, `→`→`->`, `✓`→`*`.
 pub( crate ) fn render_plain(
-  accounts : &[ AccountQuota ],
-  sort     : SortStrategy,
-  desc     : Option< bool >,
-  prefer   : PreferStrategy,
-  cols     : &ColsVisibility,
-  rotate   : bool,
-  force    : bool,
+  accounts       : &[ AccountQuota ],
+  sort           : SortStrategy,
+  desc           : Option< bool >,
+  prefer         : PreferStrategy,
+  cols           : &ColsVisibility,
+  session_model  : Option< &str >,
+  session_effort : Option< &str >,
 ) -> String
 {
-  let raw = render_text( accounts, sort, desc, prefer, cols, rotate, force );
+  let raw = render_text( accounts, sort, desc, prefer, cols, session_model, session_effort );
   raw
     .replace( "🟢", "ok" )
     .replace( "🟡", "warn" )

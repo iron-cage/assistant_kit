@@ -229,7 +229,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "count",             Kind::Integer ).with_description( "Max rows to display; 0 = show all (default)" ),
       reg_arg_opt( "offset",            Kind::Integer ).with_description( "Skip first N rows from the filtered result before display (default 0)" ),
       reg_arg_opt( "only_active",       Kind::String  ).with_description( "Show only the per-machine active account row (0 = off, default; 1 = on)" ),
-      reg_arg_opt( "only_next",         Kind::String  ).with_description( "Show only the row receiving the `→` recommendation marker (0 = off, default; 1 = on)" ),
+      reg_arg_opt( "only_next",         Kind::String  ).with_description( "Show only the recommended next account row (0 = off, default; 1 = on)" ),
       reg_arg_opt( "min_5h",            Kind::Integer ).with_description( "Hide rows where 5h Left is below this percentage 0–100 (default 0 = no filter); rows with no quota also hidden" ),
       reg_arg_opt( "min_7d",            Kind::Integer ).with_description( "Hide rows where 7d Left is below this percentage 0–100 (default 0 = no filter); rows with no quota also hidden" ),
       reg_arg_opt( "only_valid",        Kind::String  ).with_description( "Hide 🔴 rows (invalid/expired token) (0 = off, default; 1 = on)" ),

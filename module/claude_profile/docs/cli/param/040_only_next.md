@@ -1,20 +1,20 @@
 # Parameter :: 40. `only_next::`
 
-Filters the `.usage` table to show only the row that received the `→` marker from the active `sort::` strategy.
+Filters the `.usage` table to show only the row selected as the recommended next account by the active `sort::` strategy.
 
 - **Default:** `0`
 - **Constraints:** `0`, `1`, `false`, `true`
 - **Purpose:** Show only the recommended next account row.
-- **Pipeline Stage:** process — `sort::` strategy evaluation requires per-account quota data; all accounts matching upstream constraints are fetched before the `→` marker is assigned
+- **Pipeline Stage:** process — `sort::` strategy evaluation requires per-account quota data; all accounts matching upstream constraints are fetched before the recommendation is computed
 
 **Behavior:** When `only_next::1`, the result contains at most one row — the top eligible account in the active `sort::` order. When no eligible candidate exists (all accounts are current/active, or no qualifying accounts), the result is empty (0 data rows) and exits 0.
 
 **Examples:**
 
 ```text
-only_next::1              -> one row: the → account
+only_next::1              -> one row: the recommended next account
 only_next::1 get::7d_left -> bare 7d Left value for the recommended next account
-only_next::1 sort::renews -> → row from renews strategy
+only_next::1 sort::renews -> recommended row from renews strategy
 ```
 
 **See Also:** [feature/028_usage_row_filtering.md](../../feature/028_usage_row_filtering.md), [feature/020_usage_sort_strategies.md](../../feature/020_usage_sort_strategies.md).

@@ -949,3 +949,72 @@ fn ft07_touch_skips_non_owned_with_trace()
     "FT-07: trace line must start with '[trace] touch'; got:\n{captured}",
   );
 }
+
+// ── BUG-302 MRE: occupied-elsewhere accounts skipped by apply_touch ────────────
+
+/// FT-22 (AC-17): `apply_touch()` skips owned accounts with `is_occupied_elsewhere=true`;
+/// emits `[trace] ... occupied elsewhere`.
+///
+/// # Root Cause
+/// G4 at `touch.rs:46` checked `!aq.is_owned` only. When `is_owned=true` and
+/// `is_occupied_elsewhere=true`, G4 passed — the idle-timer check ran and fired the touch
+/// subprocess. Two machines sent concurrent prompts through the same credential set:
+/// quota burned at 2× rate with no warning.
+///
+/// # Why Not Caught
+/// `ft07_touch_skips_non_owned_with_trace` only tested the `is_owned=false` case.
+/// The `is_owned=true, is_occupied_elsewhere=true` combination was never tested — G4 was
+/// written before `is_occupied_elsewhere` was introduced (Feature 036 / TSK-293).
+///
+/// # Fix Applied
+/// Fix(BUG-302): added occupancy guard immediately after G4 block:
+/// `if aq.is_occupied_elsewhere { ... return; }` with skip-reason trace.
+/// The guard fires before any timer checks — owned+occupied accounts are treated
+/// identically to non-owned accounts for subprocess invocation.
+///
+/// # Prevention
+/// Any new subprocess-spawning gate must check BOTH `!is_owned` AND `!is_occupied_elsewhere`.
+/// Ownership grants authorization to use credentials; occupancy signals concurrent use.
+///
+/// # Pitfall
+/// `mk_aq_with_resets_at` defaults `is_owned=true, is_occupied_elsewhere=false`. Must explicitly
+/// set `is_occupied_elsewhere=true` to test the occupancy path — NOT `is_owned=false` (that
+/// tests G4, not the occupancy guard).
+#[ doc = "bug_reproducer(BUG-302)" ]
+#[ test ]
+fn ft_touch_skips_occupied_elsewhere_with_trace()
+{
+  use std::io::Read;
+
+  let store = tempfile::TempDir::new().unwrap();
+
+  // Build idle account (resets_at=None triggers touch by timer state alone).
+  let mut aq = mk_aq_with_resets_at( None );
+  // Owned by this machine (passes G4) but occupied by another machine (fires occupancy guard).
+  aq.is_owned = true;
+  aq.is_occupied_elsewhere = true;
+
+  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+  let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+
+  // trace=true; claude_paths=None so subprocess cannot fire even if guard is bypassed.
+  apply_touch( &mut aq, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
+
+  let mut captured = String::new();
+  stderr_buf.read_to_string( &mut captured ).unwrap();
+
+  // Occupancy guard trace line must be present.
+  assert!(
+    captured.contains( "occupied elsewhere" ),
+    "FT-22: occupancy guard must emit 'occupied elsewhere' trace line; got:\n{captured}",
+  );
+  assert!(
+    captured.contains( "[trace] touch" ),
+    "FT-22: trace line must start with '[trace] touch'; got:\n{captured}",
+  );
+  // No subprocess must fire.
+  assert!(
+    !captured.contains( "run_isolated: invoking" ),
+    "FT-22: no subprocess must be spawned for occupied-elsewhere account; got:\n{captured}",
+  );
+}

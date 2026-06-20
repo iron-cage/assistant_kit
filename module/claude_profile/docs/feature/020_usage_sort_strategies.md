@@ -3,17 +3,17 @@
 ### Scope
 
 - **Purpose**: Provide configurable row ordering and account recommendation in `.usage` output, optimized for distinct operational workflows.
-- **Responsibility**: Documents the `sort::`, `desc::`, and `prefer::` parameters on `.usage`, including the 3 sort strategies (`name`, `renew`, `renews`), the `renew` default, the four-group status partition, and the `→` recommendation marker.
-- **In Scope**: Sort strategies (`name`, `renew`, `renews`), direction control (`desc::`), model preference for weekly quota selection (`prefer::`), context-sensitive `desc::` defaults per strategy, four-group status partition (🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Red, applied before sort within each group), `renew` as the default strategy, `→` recommendation marker driven by `sort::` (top eligible account receives `→`), single-strategy footer.
+- **Responsibility**: Documents the `sort::`, `desc::`, and `prefer::` parameters on `.usage`, including the 3 sort strategies (`name`, `renew`, `renews`), the `renew` default, the four-group status partition, and the footer recommendation.
+- **In Scope**: Sort strategies (`name`, `renew`, `renews`), direction control (`desc::`), model preference for weekly quota selection (`prefer::`), context-sensitive `desc::` defaults per strategy, four-group status partition (🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Red, applied before sort within each group), `renew` as the default strategy, footer recommendation driven by `sort::` (top eligible account shown in footer's `Next (strategy):` line), single-strategy footer.
 - **Out of Scope**: Row rendering (→ 009_token_usage.md), `.account.rotate` selection (→ 008_auto_rotate.md), `live::` monitor loop mechanics (→ 018_live_monitor.md).
 
 ### Design
 
-`.usage` accepts a `sort::` parameter to control row ordering and the `→` recommendation marker. The default (`sort::renew`) puts accounts with the soonest quota renewal event at the top — maximizing throughput by consuming quota that will be replenished first. Alphabetical ordering (`sort::name`) is available for positional stability, especially in `live::1` monitor mode. `sort::` is a single parameter — no separate `next::` parameter exists.
+`.usage` accepts a `sort::` parameter to control row ordering and the footer recommendation. The default (`sort::renew`) puts accounts with the soonest quota renewal event at the top — maximizing throughput by consuming quota that will be replenished first. Alphabetical ordering (`sort::name`) is available for positional stability, especially in `live::1` monitor mode. `sort::` is a single parameter — no separate `next::` parameter exists.
 
 **Four-group status partition:** Regardless of the chosen sort strategy, accounts are first partitioned into four status groups (see [dictionary](../cli/002_dictionary.md#status-groups)): 🟢 Green (both available) → 🟡 h-exhausted (5h exhausted, 7d available) → 🟡 weekly-exhausted (5h available, 7d exhausted) → 🔴 Red (both exhausted or error). Group order is fixed — sort strategy applies within each group only. `desc::1` reverses row order within each group but never changes group order. This ensures healthy accounts always appear above exhausted or errored accounts, regardless of sort direction or strategy.
 
-**The `prefer::` parameter** determines which weekly quota column is used by the `sort::renew` within-group tiebreak and the `→` recommendation eligibility gate. It does **not** affect the four-group status partition — group membership always uses raw `7d Left` (AC-12).
+**The `prefer::` parameter** determines which weekly quota column is used by the `sort::renew` within-group tiebreak and the recommendation eligibility gate. It does **not** affect the four-group status partition — group membership always uses raw `7d Left` (AC-12).
 
 | Value | Weekly column used | When |
 |-------|-------------------|------|
@@ -55,15 +55,13 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 **Rationale:** Useful for seeing which accounts will have their full weekly quota restored soonest through a billing cycle.
 
-### `→` Recommendation Marker
+### Recommendation
 
-`sort::` also drives the `→` marker — the top eligible account in the sort order receives `→`. No separate `next::` parameter exists.
+`sort::` drives the footer recommendation — the top eligible account in the sort order is shown in the footer's `Next (strategy):` line. No separate `next::` parameter exists. The flag column shows `✓`, `*`, `@`, or blank.
 
-**Eligibility:** non-current, non-active, non-occupied, not h-exhausted (`5h Left > 15%`), not weekly-exhausted (`prefer_weekly > 5.0`), valid quota data, `expires_in_secs > 0`. When no eligible account exists, no `→` is placed.
+**Eligibility:** non-current, non-active, non-occupied, not h-exhausted (`5h Left > 15%`), not weekly-exhausted (`prefer_weekly > 5.0`), valid quota data, `expires_in_secs > 0`. When no eligible account exists, the footer recommendation line is omitted.
 
 **Footer:** The footer shows one recommendation line for the active `sort::` strategy (omitted when 0 or 1 valid accounts). Format: strategy name, account name, `→ Next` value (soonest strategic event), session model label. The renew footer uses the same `→ Next` format as the table column — `in {duration} +7d` (7d reset is soonest) or `in {duration} $ren` / `~in {duration} $ren` (renewal is soonest). The model label shows the session model after switching: `opus` when the account's `seven_day_sonnet` exists and `sonnet_left < 15%` (override fires); `sonnet` otherwise. See [009_token_usage.md AC-10](009_token_usage.md).
-
-**`→` table marker:** The account selected by the active `sort::` strategy receives the `→` flag in the table body (flag column priority: `✓` > `*` > `@` > `→` > blank). When no eligible candidate exists, no `→` is placed on any row.
 
 ### Acceptance Criteria
 
@@ -75,7 +73,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 - **AC-06**: `prefer::` affects `sort::renew` (secondary tiebreak key).
 - **AC-07**: Invalid `sort::` value exits 1 with an error naming the valid values (`name`, `renew`, `renews`).
 - **AC-08**: Invalid `prefer::` value exits 1 with an error naming the valid values.
-- **AC-09**: `sort::` drives both row ordering and the `→` recommendation marker. The top eligible account in the active sort order receives `→`. The footer shows one recommendation line for the active strategy. No separate `next::` parameter exists.
+- **AC-09**: `sort::` drives both row ordering and the footer recommendation. The top eligible account in the active sort order is shown in the footer's `Next (strategy):` line. The flag column shows `✓`, `*`, `@`, or blank — no `→` marker. The footer shows one recommendation line for the active strategy. No separate `next::` parameter exists.
 - **AC-10**: `sort::` and `desc::` work correctly with `live::1` — sort order is stable within each refresh cycle. Status group order is fixed across cycles.
 - **AC-11**: `format::json` output is NOT affected by `sort::` or `desc::` — `render_json` preserves the input slice order without re-sorting (alphabetical in practice; stable schema for pipeline consumers).
 - **AC-12**: Four-group status partition is applied universally before any sort strategy. Accounts are partitioned into: 🟢 Green (`5h Left > 15%` and `7d Left > 5%`), 🟡 h-exhausted (`5h Left ≤ 15%` and `7d Left > 5%`), 🟡 weekly-exhausted (`5h Left > 15%` and `7d Left ≤ 5%`), 🔴 Red (both exhausted or error). Sort strategy applies within each status group. See [dictionary](../cli/002_dictionary.md#status-groups).

@@ -27,6 +27,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-19 | Account with `touch_idle=false` in quota cache skipped before `all_running` check; no subprocess spawned (BUG-288 Fix B defense-in-depth) | AC-16 | BUG-288 Fix B MRE |
 | FT-20 | `son_running=false` (5h+7d running, Sonnet 7d absent) + `imodel::auto` (Haiku) → touch fires both calls; Sonnet window unchanged; touch re-fires on second call (BUG-289 infinite loop MRE) | AC-02, AC-15 | BUG-289 MRE |
 | FT-21 | Non-owned account (`aq.is_owned == false`) skipped by `apply_touch`; trace line emitted when `trace::1` | AC-17 | G4 Ownership Gate |
+| FT-22 | Owned account with `is_occupied_elsewhere == true` skipped by `apply_touch`; trace line emitted when `trace::1` | AC-17 | G4 Occupancy Guard |
 
 ### Test Case Index
 
@@ -53,8 +54,9 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-19 | account with touch_idle=false in cache skipped before all_running check — no subprocess (BUG-288 Fix B) | AC-16 | BUG-288 Fix B MRE |
 | FT-20 | son_running=false + imodel::auto (Haiku) fires touch both calls; Sonnet window unchanged; re-fires on second call (BUG-289 MRE) | AC-02, AC-15 | BUG-289 MRE |
 | FT-21 | Non-owned account skipped by apply_touch; trace line emitted (G4 ownership gate) | AC-17 | G4 Ownership Gate |
+| FT-22 | Owned account occupied elsewhere skipped by apply_touch; trace line emitted (G4 occupancy guard) | AC-17 | G4 Occupancy Guard |
 
-**Total:** 21 FT cases
+**Total:** 22 FT cases
 
 ---
 
@@ -301,4 +303,16 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Exit:** N/A (unit test — no exit code)
 - **Source fn:** `ft07_touch_skips_non_owned_with_trace` (in `src/usage/touch.rs` `#[cfg(test)]` module)
 - **Note:** G4 ownership gate from Feature 036 AC-07 / Feature 024 AC-17. Shared with Feature 036 FT-07 — same test function, both specs reference it. Trace format matches other touch skip traces (`skipped (reason: not owned)` — see AC-12 for full list of skip reasons).
+- **Source:** [feature/024_session_touch.md AC-17](../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-22: Owned account with `is_occupied_elsewhere == true` skipped by `apply_touch`; trace line emitted when `trace::1`
+
+- **Given:** `apply_touch` is called with one account (`bob`) whose `AccountQuota` has `is_owned = true` (this machine is the credential owner) AND `is_occupied_elsewhere = true` (another machine's `_active_*` marker file names this account). `trace::1` is enabled.
+- **When:** `apply_touch` processes the account list containing `bob`.
+- **Then:** No subprocess is spawned for `bob` (`refresh_account_token` is NOT called). Stderr contains `[trace] touch  bob  skipped (reason: occupied elsewhere)`. The skip fires immediately after the `is_owned` check — `is_occupied_elsewhere` is evaluated as a second gate before any timer checks.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** `ft_touch_skips_occupied_elsewhere_with_trace` (in `src/usage/touch.rs` `#[cfg(test)]` module)
+- **Note:** BUG-302 MRE. Complements FT-21 (non-owned account skip); this tests the occupancy case where ownership is confirmed but concurrent use by another machine prevents the touch subprocess. The two guards are independent: G4 (`!is_owned` → skip) and occupancy guard (`is_occupied_elsewhere` → skip). Trace reason string `"occupied elsewhere"` distinguishes this from the `"not owned"` reason of FT-21.
 - **Source:** [feature/024_session_touch.md AC-17](../../../docs/feature/024_session_touch.md)

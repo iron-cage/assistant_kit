@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for quota cache fallback behavior — write-on-success, read-on-failure, staleness display, and side-effect persistence.
 - **Source**: `docs/feature/033_quota_cache.md`
-- **Covers**: AC-01 through AC-11
+- **Covers**: AC-01 through AC-12
 
 ### Test Cases
 
@@ -21,6 +21,7 @@
 | FT-09 | AC-09 | JSON output includes `"cached"` and `"cache_age_secs"` fields | `ft09_033_render_json_cached_includes_fields` |
 | FT-10 | AC-10 | Cached+expired account triggers `should_refresh()` | `mre_bug255_cache_defeats_refresh` |
 | FT-11 | AC-11 | After retry OK, `cached` flag cleared and cache file written with fresh data | `mre_bug256_retry_ok_stale_cached_metadata` |
+| FT-12 | AC-12 | HTTP 401 / 403 auth errors bypass cache fallback — `Err` propagates | `mre_bug296_cached_non_expired_401_no_refresh` |
 
 ### Notes
 
@@ -29,6 +30,7 @@
 - FT-08 is structural: cached rows are stored as `result: Ok(data)` with `cached: true` — all sort/strategy/next logic operates on `Ok` rows identically regardless of the `cached` flag.
 - FT-10 is implemented as a unit test in `src/usage/refresh_predicate.rs` `#[cfg(test)]` module. MRE for BUG-255.
 - FT-11 is a unit test in `src/usage/refresh_tests.rs`. Verifies the retry OK arm clears `aq.cached`/`aq.cache_age_secs` and writes the quota cache file. MRE for BUG-256.
+- FT-12 is a unit test in `src/usage/fetch.rs`. Verifies that the cache fallback match guard `Err( ref e ) if !e.contains("401") && !e.contains("403")` is present, and that a catch-all `Err` arm propagates auth errors without cache conversion. MRE for BUG-296.
 
 ---
 
@@ -150,3 +152,15 @@
 - **Exit:** Ok(fresh_data) with aq.cached = false
 - **Source fn:** `mre_bug256_retry_ok_stale_cached_metadata`
 - **Source:** [033_quota_cache.md AC-11](../../../docs/feature/033_quota_cache.md)
+
+---
+
+### FT-12: HTTP 401 / 403 auth errors bypass cache fallback
+
+- **Given:** Account `alice` has a valid `cache` sub-object in `alice.json` with quota data from a prior successful fetch; the live quota fetch returns an HTTP 401 auth error for `alice`.
+- **When:** `fetch_all_quota` processes the auth-error result for `alice`.
+- **Then:** The 401 error propagates as `Err` — the cache fallback is NOT triggered; `Ok(cached_data)` is NOT returned. The auth error reaches `should_refresh()` unchanged, which can trigger a token refresh attempt. HTTP 403 is treated identically.
+- **Exit:** `Err("...401...")` (auth error propagates unchanged)
+- **Source fn:** `mre_bug296_cached_non_expired_401_no_refresh` (in `src/usage/fetch.rs`)
+- **Note:** Fix for BUG-296. Auth-error guard: `Err( ref e ) if !e.contains("401") && !e.contains("403") =>` on the cache fallback arm; a catch-all `Err( _ ) =>` arm propagates auth errors unchanged. Only transient errors (429, network, timeout) trigger cache fallback.
+- **Source:** [033_quota_cache.md AC-12](../../../docs/feature/033_quota_cache.md)

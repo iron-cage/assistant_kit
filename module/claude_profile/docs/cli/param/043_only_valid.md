@@ -6,7 +6,7 @@ Filters the `.usage` table to hide accounts with invalid or missing tokens (🔴
 - **Constraints:** `0`, `1`, `false`, `true`
 - **Purpose:** Show only accounts with valid tokens (status ≠ 🔴).
 
-**Behavior:** When `only_valid::1`, rows where the account has an invalid or missing `accessToken` (🔴 composite status) are hidden. 🟢 and 🟡 rows remain visible. The `→` marker and footer recommendation are unaffected by this filter (computed on the full set before filtering).
+**Behavior:** When `only_valid::1`, rows where the account has an invalid or missing `accessToken` (🔴 composite status) are hidden. 🟢 and 🟡 rows remain visible. The footer recommendation is unaffected by this filter (computed on the full set before filtering).
 
 **Examples:**
 

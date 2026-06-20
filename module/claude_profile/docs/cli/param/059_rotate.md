@@ -1,6 +1,6 @@
 # Parameter :: `rotate::`
 
-Execute account rotation after quota fetch — switch to the account marked `→` by the active `sort::` strategy.
+Execute account rotation after quota fetch — switch to the footer-recommended account selected by the active `sort::` strategy.
 
 ### Summary
 
@@ -14,7 +14,7 @@ Execute account rotation after quota fetch — switch to the account marked `→
 
 ### Semantics
 
-When `rotate::1`, after the quota table is rendered, `.usage` executes a switch to the account selected by `find_next_for_strategy()` (the same account that receives `→` in the table body).
+When `rotate::1`, after the quota table is rendered, `.usage` executes a switch to the account selected by `find_next_for_strategy()` (the same account shown in the footer's `Next (strategy):` line).
 
 The rotation target is the top eligible account in the active `sort::` order (default `sort::renew`). Combine `rotate::1 sort::renews` to switch using the billing-renewal strategy.
 
@@ -45,7 +45,7 @@ clp .usage rotate::1 trace::1               # emit trace output during rotation
 | Value | Meaning |
 |-------|---------|
 | `0` (default) | Display-only — no account switch executed |
-| `1` | Execute switch to `→` winner after rendering the table |
+| `1` | Execute switch to footer-recommended account after rendering the table |
 
 ### Cross-References
 

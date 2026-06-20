@@ -49,6 +49,16 @@ pub( crate ) fn apply_touch(
     return;
   }
 
+  // Fix(BUG-302): occupancy guard — owned accounts in use on another machine must not be touched.
+  // Root cause: G4 was written when is_occupied_elsewhere was not yet available (Feature 036).
+  // Pitfall: is_owned and is_occupied_elsewhere are independent — an owned account can also be
+  //   occupied; both guards must fire independently, not as a combined condition.
+  if aq.is_occupied_elsewhere
+  {
+    if trace { let _ = writeln!( std::io::stderr(), "[trace] touch  {}  skipped (reason: occupied elsewhere)", aq.name ); }
+    return;
+  }
+
   // Guard: errored accounts are never touched; trigger requires valid quota data.
   // Fix(BUG-202): bare return produced no trace for error-tier accounts.
   // Root cause: error guard preceded all trace emission points (lines 1506-1510).

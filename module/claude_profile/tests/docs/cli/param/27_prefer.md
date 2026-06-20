@@ -56,7 +56,7 @@ Edge case coverage for the `prefer::` parameter on `.usage`. See [param/027_pref
 
 ### EC-5: `prefer::` without `sort::` accepted and does not break default output
 
-- **Behavioral Note:** `prefer::` affects the `sort::renew` within-group tiebreak key and the `→` recommendation eligibility gate. It does **not** affect the four-group status partition — group membership is always determined by raw `5h Left` and `7d Left` columns (AC-12), independent of `prefer::`. This case confirms `prefer::` is accepted with `sort::renew` (the default) without error.
+- **Behavioral Note:** `prefer::` affects the `sort::renew` within-group tiebreak key and the footer recommendation eligibility gate. It does **not** affect the four-group status partition — group membership is always determined by raw `5h Left` and `7d Left` columns (AC-12), independent of `prefer::`. This case confirms `prefer::` is accepted with `sort::renew` (the default) without error.
 - **Given:** Empty credential store.
 - **When:** `clp .usage prefer::sonnet`
 - **Then:** Exits 0 with "(no accounts configured)". `prefer::` is parsed silently — it only affects tiebreak and recommendation eligibility, not group membership or default renew sort ordering with empty store.

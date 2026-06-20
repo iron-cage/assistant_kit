@@ -29,7 +29,11 @@ use super::types::AccountQuota;
 pub( crate ) fn should_refresh( aq : &AccountQuota, now_secs : u64 ) -> bool
 {
   // G2: Non-owned accounts must never be refreshed — credential mutation forbidden.
-  if !aq.is_owned { return false; }
+  // Fix(BUG-303): add is_occupied_elsewhere guard — credential mutation for owned-but-occupied
+  //   accounts invalidates the live session on the other machine.
+  // Root cause: G2 was written when is_occupied_elsewhere was not yet available (Feature 036).
+  // Pitfall: is_owned and is_occupied_elsewhere are independent flags; both can be true simultaneously.
+  if !aq.is_owned || aq.is_occupied_elsewhere { return false; }
 
   if matches!( aq.result, Err( ref e ) if e.contains( "401" ) || e.contains( "403" ) )
   {
@@ -543,6 +547,64 @@ mod tests
     assert!(
       !should_refresh( &aq_cached_expired, 9_999 ),
       "CC-8b: G2 — non-owned cached+expired must NOT trigger refresh",
+    );
+  }
+
+  // ── BUG-303 MRE: owned+occupied accounts must not trigger should_refresh ──────
+
+  /// MRE for BUG-303: `should_refresh` returns `false` for owned account with `is_occupied_elsewhere == true`.
+  ///
+  /// # Root Cause
+  /// G2 at `refresh_predicate.rs:32` checked `!aq.is_owned` only. When `is_owned=true` and
+  /// `is_occupied_elsewhere=true`, the guard passed — the 401 arm fired and returned `true`,
+  /// triggering `apply_refresh` → `refresh_account_token` → credential write. The other machine
+  /// holds those credentials in its live session; the write invalidates it. No warning emitted.
+  ///
+  /// # Why Not Caught
+  /// `ft06_should_refresh_false_when_not_owned` only tested the `is_owned=false` case.
+  /// The `is_owned=true, is_occupied_elsewhere=true` combination was never tested — G2 was
+  /// written before `is_occupied_elsewhere` was introduced (Feature 036 / TSK-293).
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-303): extended G2 to `if !aq.is_owned || aq.is_occupied_elsewhere { return false; }`.
+  /// The occupancy guard fires before any Err-pattern checks — owned+occupied accounts are
+  /// treated identically to non-owned accounts for the purpose of credential mutation.
+  ///
+  /// # Prevention
+  /// Any new credential-mutation gate must check BOTH `is_owned` AND `!is_occupied_elsewhere`.
+  /// These flags are independent: ownership grants authorization; occupancy denotes concurrent use.
+  ///
+  /// # Pitfall
+  /// Do NOT collapse these into a single `can_mutate_credentials` flag — the two concepts have
+  /// different sources (`owner` field in JSON vs `_active_*` marker file from another machine)
+  /// and different lifecycle semantics (permanent until unclaim vs transient per session).
+  #[ doc = "bug_reproducer(BUG-303)" ]
+  #[ test ]
+  fn mre_bug303_should_refresh_false_for_occupied_elsewhere()
+  {
+    // Owned account with a concurrent active session on another machine.
+    // 401 error would normally trigger refresh — occupancy guard must block it.
+    let aq = AccountQuota
+    {
+      name                  : "alice@example.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : true,   // another machine's _active_* marker names this account
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Err( "HTTP transport error: HTTP 401".to_string() ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : true,   // this machine owns the credentials
+      owner                 : String::new(),
+    };
+    assert!(
+      !should_refresh( &aq, 9_999 ),
+      "BUG-303: owned+occupied account with 401 must NOT trigger should_refresh — \
+       credential mutation while another machine uses this account would invalidate its live session",
     );
   }
 }

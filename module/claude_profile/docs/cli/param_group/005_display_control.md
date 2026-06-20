@@ -10,7 +10,7 @@
 | [`count::`](../param/037_count.md) | `u64` | `0` (all) | Limit rows to N after all filtering; `0` = no limit |
 | [`offset::`](../param/038_offset.md) | `u64` | `0` | Skip first N rows before applying `count::` |
 | [`only_active::`](../param/039_only_active.md) | `bool` | `0` | Keep only the currently active account row |
-| [`only_next::`](../param/040_only_next.md) | `bool` | `0` | Keep only the `→` (next-recommended) row |
+| [`only_next::`](../param/040_only_next.md) | `bool` | `0` | Keep only the recommended next account row |
 | [`min_5h::`](../param/041_min_5h.md) | `u8` | `0` | Keep only rows with 5h quota ≥ N% |
 | [`min_7d::`](../param/042_min_7d.md) | `u8` | `0` | Keep only rows with 7d quota ≥ N% |
 | [`only_valid::`](../param/043_only_valid.md) | `bool` | `0` | Keep only 🟢 rows (non-exhausted, non-expired) |

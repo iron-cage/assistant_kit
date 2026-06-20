@@ -13,7 +13,7 @@ to one Acceptance Criterion from
 | UA-1 | `.usage` shows all saved accounts with quota, expiry, and renewal in one table | AC-1 |
 | UA-2 | `sort::renew` ranks by soonest renewal event; `sort::renews` ranks by soonest billing renewal | AC-2 |
 | UA-3 | `live::1` continuously refreshes the table at `interval::` seconds | AC-3 |
-| UA-4 | `→` marker recommends the top eligible account per the active `sort::` strategy | AC-4 |
+| UA-4 | Footer `Next:` line recommends the top eligible account per the active `sort::` strategy | AC-4 |
 | UA-5 | `min_5h::X` and `min_7d::X` filter to accounts meeting minimum quota thresholds | AC-5 |
 
 ### Test Coverage Summary
@@ -60,11 +60,11 @@ to one Acceptance Criterion from
 
 ---
 
-### UA-4: `→` marker recommends the top eligible account per the active `sort::` strategy
+### UA-4: Footer `Next:` line recommends the top eligible account per the active `sort::` strategy
 
 - **Given:** Two saved accounts with differing expiry; one is current.
 - **When:** `clp .usage sort::renew`
-- **Then:** Exit 0. Output contains a `→` marker on the non-current account row.
+- **Then:** Exit 0. Stdout contains a footer line matching `Next` and the non-current account name. No table data row contains a `→` marker in the flag column.
 - **Exit:** 0
 - **Source:** [003_quota_monitoring.md — AC-4](../../../../docs/cli/user_story/003_quota_monitoring.md)
 

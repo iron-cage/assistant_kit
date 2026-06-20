@@ -16,7 +16,7 @@ Selects which weekly quota column is used by sort strategies and recommendation 
 
 **Affected heuristics:**
 - `sort::renew` secondary key: lowest weekly(prefer) first (ascending)
-- `→` recommendation eligibility: `prefer_weekly > 5.0` required
+- Footer recommendation eligibility: `prefer_weekly > 5.0` required
 
 **Examples:**
 

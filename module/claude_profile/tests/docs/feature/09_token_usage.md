@@ -34,6 +34,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-26 | `format::json` output includes `"is_owned"` bool per account object | AC-05 | — |
 | FT-27 | `.usage` model override skips when `seven_day_sonnet` is absent (`None`) — absent tier is unknown, not exhausted | AC-32 | — |
 | FT-28 | Footer shows session model and `→ Next` metric for recommended account | AC-10 | — |
+| FT-29 | Footer first line shows `session:` and `effort:` when settings provide them; omits them when absent | AC-10 | — |
 | — | Table output rendered by `data_fmt` crate (`use data_fmt::…` in `render.rs`) | AC-04 | Structural (code review — all render paths use `data_fmt`) |
 | — | `Expires` column: `"in Xh Ym"` / `"EXPIRED"` from `compute_expires_cell()` | AC-07 | IT-003, IT-010 (command-level coverage) |
 | — | `5h Left`, `7d Left`, `7d(Son)`, `5h Reset`, `7d Reset` from `OauthUsageData` | AC-08 | Indirect — FT-07/FT-08/FT-11/FT-14/FT-15/FT-16 all depend on these columns |
@@ -78,8 +79,9 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-26 | `format::json` includes `"is_owned": bool` per account object | AC-05 | JSON Fields |
 | FT-27 | `.usage` model override skips when `seven_day_sonnet = None` (BUG-300 MRE) | AC-32 | Model Override |
 | FT-28 | Footer shows session model and `→ Next` metric for recommended account | AC-10 | Footer |
+| FT-29 | Footer first line shows `session:` and `effort:` when set; omits each part when absent | AC-10 | Footer Session/Effort |
 
-**Total:** 28 FT cases
+**Total:** 29 FT cases
 
 ---
 
@@ -272,7 +274,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - `c@x.com`: `five_hour.utilization=97.0` (3% left), `seven_day.utilization=50.0` (50% left) → 🟡 group, **h-exhausted** sub-group (5h ≤ 15%)
   - `d@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=10.0` (90% left) → 🟢 group
   - Alpha sort would produce: a → b → c → d. Four-group partition would place d (🟢) first, then a, b, c (all 🟡), then any 🔴.
-- **When:** `render_text(&accounts, SortStrategy::Name, None, PreferStrategy::Any, &ColsVisibility::default_set(), false, false)`
+- **When:** `render_text(&accounts, SortStrategy::Name, None, PreferStrategy::Any, &ColsVisibility::default_set(), None, None)`
 - **Then:** Output row order is: `d@x.com` (🟢), then among 🟡 — `b@x.com` and `c@x.com` (h-exhausted, in alpha order), then `a@x.com` (weekly-exhausted). `a@x.com` must appear AFTER both `b@x.com` and `c@x.com` despite being alpha-first.
 - **Edge case:** An account with both `5h Left ≤ 15%` AND `7d Left ≤ 5%` falls in the h-exhausted sub-group (verified by `c@x.com` if `seven_day.utilization` is set ≥ 95%).
 - **Exit:** n/a (unit test — position assertion via `output.find()`)
@@ -338,14 +340,14 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Given (unit test):** Two `AccountQuota` structs rendered via `render_text()`:
   - `alice@x.com`: `is_current = true`, `is_active = true`, `is_occupied_elsewhere = false`, `result = Ok(...)`.
   - `bob@x.com`: `is_current = false`, `is_active = false`, `is_occupied_elsewhere = true`, `result = Ok(...)`.
-  - `bob@x.com` is NOT the recommended next account (so `→` does not apply).
+  - `bob@x.com` is NOT the recommended next account.
 - **When:** `render_text()` called with these two accounts and default `ColsVisibility`.
 - **Then:**
   - The line containing `alice@x.com` starts with `✓` in the flag column.
   - The line containing `bob@x.com` starts with `@` in the flag column.
   - No line contains both `@` and `✓` or both `@` and `*`.
 - **Exit:** n/a (unit test — string content assertion)
-- **Note:** `is_occupied_elsewhere = true` sets `@` only when neither `is_current` nor `is_active` is true (priority: `✓` > `*` > `@` > `→` > blank).
+- **Note:** `is_occupied_elsewhere = true` sets `@` only when neither `is_current` nor `is_active` is true (priority: `✓` > `*` > `@` > blank).
 - **Source fn:** `test_ft21_009_occupied_elsewhere_at_flag` (in `src/usage/render_tests.rs`)
 - **Source:** [009_token_usage.md AC-30](../../../docs/feature/009_token_usage.md)
 
@@ -464,3 +466,21 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Source fn:** `ft12_json_output_includes_is_owned` (in `src/usage/render_tests.rs`)
 - **Note:** Feature 036 FT-12 is the definitive test for this behavior. This FT-26 records the same coverage from Feature 009's perspective (AC-05 lists `is_owned (bool — Feature 036)` as a required JSON field). Both specs reference the same source function.
 - **Source:** [009_token_usage.md AC-05](../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-29: Footer first line shows `session:` and `effort:` when set; omits each part when absent
+
+- **Given (unit test):** Three scenarios, each with two valid `AccountQuota` entries rendered via `render_text()`:
+  - **Scenario 1 (both present):** `session_model = Some("claude-sonnet-4-6")`, `session_effort = Some("low")`.
+  - **Scenario 2 (model only):** `session_model = Some("claude-sonnet-4-6")`, `session_effort = None`.
+  - **Scenario 3 (neither):** `session_model = None`, `session_effort = None`.
+- **When:** `render_text(&accounts, SortStrategy::Renew, None, PreferStrategy::Any, &ColsVisibility::default_set(), session_model, session_effort)` is called for each scenario.
+- **Then:**
+  - Scenario 1: footer first line contains `session: claude-sonnet-4-6  effort: low`; the `Valid: N / M` prefix is present on the same line.
+  - Scenario 2: footer first line contains `session: claude-sonnet-4-6`; does NOT contain `effort:`.
+  - Scenario 3: footer first line contains `Valid: N / M`; does NOT contain `session:` or `effort:`.
+  - In all scenarios, footer second line (`Next (renew): ...`) is present and unaffected by session/effort values.
+- **Exit:** n/a (unit test — string content assertions)
+- **Source fn:** `test_ft29_009_footer_session_effort_display` (in `src/usage/render_tests.rs`)
+- **Source:** [009_token_usage.md AC-10](../../../docs/feature/009_token_usage.md)

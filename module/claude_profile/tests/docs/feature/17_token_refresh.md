@@ -25,6 +25,8 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-17 | No `switch_account` in `apply_refresh`; `_active` unchanged confirms no restore occurred | AC-28 | test_apply_refresh_mre_bug208_restore_trace_emitted |
 | FT-18 | After refresh re-fetch succeeds, `aq.account` re-populated via `fetch_oauth_account()` | AC-27 | mre_bug_171_account_populated_after_refresh |
 | FT-13+ | `apply_refresh` does not write `~/.claude/.credentials.json`; file unchanged after cycle | AC-29 | (structural — FT-06/AC-20 mechanism + FT-13/FT-17 verification) |
+| FT-19 | `refresh_account_token` returns `None` (RT expired) → `aq.result = Err("refresh token expired")` before `continue;` | AC-30 | — |
+| FT-20 | `should_refresh()` returns `false` for owned account with `is_occupied_elsewhere == true` | AC-31 | — |
 
 ### Test Case Index
 
@@ -48,8 +50,11 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-16 | Post-refresh `expires_at_ms` from `expiresAt` field for opaque `sk-ant-oat01-*` token | AC-25 | JWT Expiry (Opaque) |
 | FT-17 | No `switch_account` in `apply_refresh`; `_active` unchanged confirms no restore occurred | AC-28 | Restore Absent |
 | FT-18 | After refresh, `aq.account` re-populated via `fetch_oauth_account(new_token)` | AC-27 | BUG-171 MRE |
+| FT-19 | `refresh_account_token` returns `None` → `aq.result = Err("refresh token expired")` (BUG-297 MRE) | AC-30 | BUG-297 MRE |
+| FT-20 | `should_refresh()` returns `false` for owned account with `is_occupied_elsewhere == true` (BUG-303 MRE) | AC-31 | G2 Occupancy Guard |
+| FT-20 | `should_refresh()` returns `false` for owned account with `is_occupied_elsewhere == true` (BUG-303 MRE) | AC-31 | G2 Occupancy Guard |
 
-**Total:** 18 FT cases
+**Total:** 20 FT cases
 
 ---
 
@@ -252,3 +257,26 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Source fn:** `mre_bug_171_account_populated_after_refresh` (in `tests/cli/usage_test.rs`)
 - **Note:** BUG-171 fix — before fix, `aq.account` remained `None` after refresh because the initial fetch used the expired token and the retry path never re-populated account data.
 - **Source:** [017_token_refresh.md AC-27](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-19: `refresh_account_token` returns `None` → `aq.result = Err("refresh token expired")` (BUG-297 MRE)
+
+- **Given:** One `AccountQuota` with `cached: true` and `result: Ok(cached_data)` (cache fallback masked the original auth error); `refresh_account_token` returns `None` — the OAuth refresh token has expired and `run_isolated` exits without writing new credentials.
+- **When:** `apply_refresh(&mut accounts, store.path(), None, false)` processes the account and the `None` branch executes.
+- **Then:** `account_quota.result` is set to `Err("refresh token expired")` before `continue;` — it is NOT left as `Ok(cached_data)`. Downstream phases (`apply_touch`) see `Err` and skip the account, preventing a redundant subprocess on an unrecoverable account.
+- **Source fn:** `mre_bug297_refresh_none_sets_aq_result_err` (in `src/usage/refresh_tests.rs`)
+- **Note:** Fix for BUG-297. Pre-fix: `apply_refresh` left `aq.result=Ok(cached_data)` when refresh returned `None`, causing `apply_touch` to fire a subprocess on an account that cannot recover without manual browser re-authentication.
+- **Source:** [017_token_refresh.md AC-30](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-20: `should_refresh()` returns `false` for owned account with `is_occupied_elsewhere == true` (BUG-303 MRE)
+
+- **Given:** `should_refresh()` is called with one `AccountQuota` where `is_owned = true` (this machine owns the credentials) AND `is_occupied_elsewhere = true` (another machine's `_active_*` marker file names this account as its active account). The account has a 401 error result that would normally trigger refresh.
+- **When:** `should_refresh(&aq)` evaluates the G2 gate.
+- **Then:** `should_refresh` returns `false` — the occupancy guard fires and blocks credential mutation. No `refresh_account_token` call is made. The owned-but-occupied account is skipped as if it were non-owned.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** `mre_bug303_should_refresh_false_for_occupied_elsewhere` (in `src/usage/refresh_predicate.rs` `#[cfg(test)]` module)
+- **Note:** BUG-303 MRE (Critical). Before the fix, G2 at `refresh_predicate.rs:32` only checked `!aq.is_owned`, allowing `should_refresh` to return `true` for owned+occupied accounts. Refreshing an occupied account writes new `accessToken`/`refreshToken` to disk while the other machine is actively using those credentials, invalidating its live session. Fix: `if !aq.is_owned || aq.is_occupied_elsewhere { return false; }`. Mirrors `ft06_should_refresh_false_when_not_owned` — same file, same `#[cfg(test)]` block, occupancy variant. This tests the predicate gate; `apply_refresh` never reaches the refresh body when `should_refresh` returns `false`.
+- **Source:** [017_token_refresh.md AC-31](../../../docs/feature/017_token_refresh.md)

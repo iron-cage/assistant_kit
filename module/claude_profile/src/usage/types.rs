@@ -235,7 +235,7 @@ pub( crate ) struct UsageParams
   pub( crate ) offset            : u64,
   /// When true, show only the per-machine active account row.
   pub( crate ) only_active       : bool,
-  /// When true, show only the row receiving the `→` recommendation marker.
+  /// When true, show only the row selected as the recommended next account.
   pub( crate ) only_next         : bool,
   /// Minimum 5h quota percentage (0–100); rows below threshold are hidden.
   pub( crate ) min_5h            : u8,

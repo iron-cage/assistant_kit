@@ -1,6 +1,6 @@
 # Feature: Next Account Recommendation Strategies — DEPRECATED
 
-> **DEPRECATED** — Absorbed into [020_usage_sort_strategies.md](020_usage_sort_strategies.md). The `next::` parameter has been removed; the `→` recommendation marker is now driven by [`sort::`](../cli/param/025_sort.md) — a single parameter controls both row ordering and the recommendation. The top eligible account in the active sort order receives `→`. The footer shows one recommendation line for the active `sort::` strategy (not three). See [param/032_next.md](../cli/param/032_next.md) for migration notes.
+> **DEPRECATED** — Absorbed into [020_usage_sort_strategies.md](020_usage_sort_strategies.md). The `next::` parameter has been removed; the footer recommendation is now driven by [`sort::`](../cli/param/025_sort.md) — a single parameter controls both row ordering and the recommendation. The top eligible account in the active sort order is shown in the footer's `Next (strategy):` line. The footer shows one recommendation line for the active `sort::` strategy (not three). See [param/032_next.md](../cli/param/032_next.md) for migration notes.
 
 **Migration:**
 - `next::renew` → `sort::renew` (default — no change needed)

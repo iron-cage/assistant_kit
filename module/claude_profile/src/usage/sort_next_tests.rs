@@ -317,11 +317,13 @@
         "{strategy:?} gate_ownership=true: aaa_unowned (is_owned=false) must be skipped; zzz_owned (index 1) must win",
       );
 
-      // gate_ownership=false: aaa_unowned is eligible when ownership gate is off
+      // gate_ownership=false: aaa_unowned (index 0) is selected — ownership gate not enforced
       let no_gate = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
-      assert!(
-        no_gate.is_some(),
-        "{strategy:?} gate_ownership=false: non-owned must be eligible when ownership gate is off",
+      assert_eq!(
+        no_gate, Some( 0 ),
+        "{strategy:?} gate_ownership=false: aaa_unowned (is_owned=false, index 0) must be selected \
+         — gate disabled means unowned accounts pass; if guard were absent, gate_ownership=true \
+         would also return Some(0) instead of Some(1) above",
       );
     }
 
@@ -335,6 +337,86 @@
       assert!(
         result.is_none(),
         "{strategy:?}: all-non-owned with gate_ownership=true must return None",
+      );
+    }
+  }
+
+  /// Corner case: `result = Err(...)` account is skipped via `find_next_for_strategy` integration.
+  ///
+  /// Gate 3 of `find_first_eligible`: `let Ok( data ) = &aq.result else { continue; }`.
+  /// The error account is named "aaa_" so all sort strategies try it first; if gate 3 were
+  /// removed, the error account would be returned as `Some(0)` instead of falling through to
+  /// the valid account at index 1.
+  #[ test ]
+  fn test_cc_err_account_skipped_via_find_next_for_strategy()
+  {
+    let now = 0u64;
+    // A: Err account (named "aaa_" to sort first under all strategies)
+    let mut a = mk_aq_sort( "aaa_error@test.com", 50.0, FAR_FUTURE_MS );
+    a.result = Err( "missing accessToken".to_string() );
+    // B: Ok account — eligible fallback
+    let b = mk_aq_sort( "zzz_valid@test.com", 50.0, FAR_FUTURE_MS );
+
+    let accounts = vec![ a, b ];
+    for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+      assert_eq!(
+        result, Some( 1 ),
+        "{strategy:?}: Err account (aaa_error, index 0) must be skipped by gate 3; zzz_valid (index 1) must win",
+      );
+    }
+  }
+
+  /// Corner case: expired `Ok` account is rejected even with `gate_ownership = true`.
+  ///
+  /// Gate 5 (token expiry) fires before Gate 6 (`extra` / ownership check). Verifies gate
+  /// ordering: an owned account with a stale token is still rejected, and the valid-token
+  /// account is selected even though the ownership gate is also active.
+  #[ test ]
+  fn test_cc_expired_ok_with_gate_ownership_true()
+  {
+    let now_secs : u64 = 2_000;
+    // A: Ok data, owned, token expired — gate 5 must reject before gate 6 evaluates
+    // (named "aaa_" to sort first so the gate ordering is actually exercised)
+    let a = mk_aq_sort( "aaa_expired_owned@test.com", 50.0, 1_000 );  // expires at 1s < now=2000s
+    // B: valid token, owned — eligible under gate_ownership=true
+    let b = mk_aq_sort( "zzz_valid_owned@test.com", 50.0, FAR_FUTURE_MS );
+
+    let accounts = vec![ a, b ];
+    for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now_secs, true );
+      assert_eq!(
+        result, Some( 1 ),
+        "{strategy:?} gate_ownership=true: expired owned account (gate 5) must be skipped; zzz_valid_owned (index 1) must win",
+      );
+    }
+  }
+
+  /// Corner case: `five_hour = None` passes gate 4 even when `gate_ownership = true`.
+  ///
+  /// Gate 4: `data.five_hour.as_ref().is_some_and( |p| p.utilization >= 85.0 )`.
+  /// `None.is_some_and(...)` = false → not skipped. With `gate_ownership = true` and
+  /// `aq.is_owned = true`, the account should pass both gate 4 and gate 6.
+  #[ test ]
+  fn test_cc_five_hour_none_with_gate_ownership_true()
+  {
+    let now = 0u64;
+    // A: five_hour=None, is_owned=true — must pass gate 4 (not h-exhausted) and gate 6 (owned)
+    let mut a = mk_aq_sort( "no5h_owned@test.com", 50.0, FAR_FUTURE_MS );
+    if let Ok( ref mut d ) = a.result { d.five_hour = None; }
+    // B: current (ineligible, provides only contrast)
+    let mut b = mk_aq_sort( "current@test.com", 50.0, FAR_FUTURE_MS );
+    b.is_current = true;
+
+    let accounts = vec![ a, b ];
+    for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, true );
+      assert_eq!(
+        result, Some( 0 ),
+        "{strategy:?}: five_hour=None with gate_ownership=true must be eligible (owned, not h-exhausted)",
       );
     }
   }

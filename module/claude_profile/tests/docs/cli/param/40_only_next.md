@@ -6,20 +6,20 @@ Edge case coverage for the `only_next::` parameter on `.usage`. See [param/040_o
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | `only_next::1` shows exactly the → row | Behavioral Divergence |
+| EC-1 | `only_next::1` shows exactly the recommended account row | Behavioral Divergence |
 | EC-2 | `only_next::1` with no eligible candidate shows 0 rows, exits 0 | Empty Result |
-| EC-3 | `only_next::1 sort::renews` shows → row from renews strategy | Strategy Composition |
+| EC-3 | `only_next::1 sort::renews` shows recommended account row from renews strategy | Strategy Composition |
 | EC-4 | `only_next::bad` exits 1 naming valid values | Invalid Value |
 | EC-5 | `only_next::0` (default) shows all rows | Behavioral Divergence |
 | EC-6 | `only_next::true` accepted (alias for 1) | Alias Acceptance |
 
 ---
 
-### EC-1: `only_next::1` shows exactly the → row
+### EC-1: `only_next::1` shows exactly the recommended account row
 
-- **Given:** Two accounts with valid quota; one receives →.
+- **Given:** Two accounts with valid quota; one is the footer recommendation.
 - **When:** `clp .usage only_next::1`
-- **Then:** Exits 0. Exactly one row shown — the → account. Footer still shown.
+- **Then:** Exits 0. Exactly one row shown — the footer-recommended account. Footer still shown.
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it206_lim_it_ft028_04_only_next_1_shows_arrow` (in `tests/cli/usage_test.rs`)
@@ -38,11 +38,11 @@ Edge case coverage for the `only_next::` parameter on `.usage`. See [param/040_o
 
 ---
 
-### EC-3: `only_next::1 sort::renews` shows → row from renews strategy
+### EC-3: `only_next::1 sort::renews` shows recommended account row from renews strategy
 
 - **Given:** Two accounts with valid quota; renews strategy selects by billing renewal date.
 - **When:** `clp .usage only_next::1 sort::renews`
-- **Then:** Exits 0. Exactly one row shown — the renews-strategy winner — which has the `→` marker.
+- **Then:** Exits 0. Exactly one row shown — the renews-strategy winner — the footer-recommended account.
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it226_lim_it_only_next_1_renews_shows_winner` (in `tests/cli/usage_test.rs`)
@@ -65,7 +65,7 @@ Edge case coverage for the `only_next::` parameter on `.usage`. See [param/040_o
 
 - **Given:** Two accounts with valid quota.
 - **When:** `clp .usage only_next::0`
-- **Then:** Exits 0. Both rows shown — the → account and the non-→ account.
+- **Then:** Exits 0. Both rows shown — the recommended account and the non-recommended account.
 - **Exit:** 0
 - **Source fn:** `it162_only_next_0_shows_all_rows` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/040_only_next.md](../../../../docs/cli/param/040_only_next.md)
@@ -74,7 +74,7 @@ Edge case coverage for the `only_next::` parameter on `.usage`. See [param/040_o
 
 ### EC-6: `only_next::true` accepted as alias for 1
 
-- **Given:** Two accounts with valid quota; one receives →.
+- **Given:** Two accounts with valid quota; one is the footer recommendation.
 - **When:** `clp .usage only_next::true`
 - **Then:** Exits 0. Exactly one row shown — same result as `only_next::1`.
 - **Exit:** 0

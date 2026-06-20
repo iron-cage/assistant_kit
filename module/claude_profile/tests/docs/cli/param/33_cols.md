@@ -115,7 +115,7 @@ Edge case coverage for the `cols::` parameter on `.usage`. See [param/033_cols.m
 
 ### EC-10: `flag` and `account` columns always present regardless of `cols::`
 
-- **Behavioral Invariant:** The first two columns — the flag column (`✓`/`→`/`*` markers) and the account name column — are structural and cannot be removed by `cols::` modifiers. They are always rendered.
+- **Behavioral Invariant:** The first two columns — the flag column (`✓`/`*`/`@` markers) and the account name column — are structural and cannot be removed by `cols::` modifiers. They are always rendered.
 - **Given:** One saved account with a valid credential file (no accessToken).
 - **When:** `clp .usage cols::-renews,-7d_son,-7d_reset`
 - **Then:** Exits 0. Stdout still contains the account name (name column present). No error.

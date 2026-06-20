@@ -14,7 +14,7 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 | 6 | `prefer::` selects the weekly column used by sort heuristics | `sort::`, `prefer::` | `prefer::any/opus/sonnet` controls which weekly quota column `renew` strategy reads |
 | 7 | `sort::` and `desc::` do not affect `format::json` output | `sort::`, `desc::`, `format::` | JSON array order is always alphabetical regardless of `sort::` or `desc::` (stable schema for pipeline consumers) |
 | 8 | `cols::` does not affect `format::json` output | `cols::`, `format::` | JSON output is unaffected by column visibility modifiers; all schema fields always present |
-| 9 | `sort::` `→` recommendation does not affect `format::json` output | `sort::`, `format::` | JSON array order is always alphabetical and no `→` marker appears regardless of `sort::` value |
+| 9 | `sort::` recommendation does not affect `format::json` output | `sort::`, `format::` | JSON array order is always alphabetical; footer recommendation is omitted regardless of `sort::` value |
 | 10 | `imodel::` and `effort::` do not affect `format::json` output | `imodel::`, `effort::`, `format::` | Subprocess model and effort control only subprocess invocations; JSON output structure is unchanged |
 | 11 | `imodel::keep` + `effort::auto` injects no `--effort` flag | `imodel::`, `effort::` | When `imodel::keep`, no model is known at dispatch time; `effort::auto` resolves to no `--effort` flag to avoid incompatible model/effort combinations |
 
@@ -143,13 +143,13 @@ clp .usage sort::renew desc::1
 
 **Parameters:** [`sort::`](param/025_sort.md), [`prefer::`](param/027_prefer.md)
 
-**Effect:** `prefer::` determines which weekly quota column is used by the `sort::renew` within-group tiebreak and the `→` recommendation eligibility gate. `prefer::any` (default) uses `min(7d Left, 7d(Son))`; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
+**Effect:** `prefer::` determines which weekly quota column is used by the `sort::renew` within-group tiebreak and the footer recommendation eligibility gate. `prefer::any` (default) uses `min(7d Left, 7d(Son))`; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
 
 **`prefer::` does NOT affect group membership.** The four-group status partition always uses raw `7d Left` for the weekly boundary (`7d Left > 5%` for Green/h-exhausted vs weekly-exhausted/Red). An account's status group is determined by `5h Left` and `7d Left` columns only — not by `prefer_weekly`. See [AC-12](../../feature/020_usage_sort_strategies.md#acceptance-criteria).
 
 **Affected heuristics:**
 - `sort::renew` tiebreak: lowest `weekly(prefer)` ascending — within a group, among accounts with the same renewal event time, the account with the lower prefer-selected weekly quota ranks first
-- `→` recommendation eligibility: `prefer_weekly > 5.0` required — an account whose `prefer_weekly` is at or below 5% is excluded from recommendation under the active `prefer::` value
+- Footer recommendation eligibility: `prefer_weekly > 5.0` required — an account whose `prefer_weekly` is at or below 5% is excluded from recommendation under the active `prefer::` value
 
 **Rationale:** Users who know they intend to run Opus or Sonnet can tell the sort tiebreak and recommendation heuristics which model-specific quota to prefer. Group membership is model-agnostic — it reflects raw quota availability, not a preference about which model to run.
 
@@ -221,13 +221,13 @@ clp .usage cols::-renews format::json
 
 ---
 
-### Interaction :: 9. `sort::` `→` recommendation does not affect `format::json` output
+### Interaction :: 9. `sort::` recommendation does not affect `format::json` output
 
 **Parameters:** [`sort::`](param/025_sort.md), [`format::`](param/002_format.md)
 
-**Effect:** When `format::json` is specified, the `sort::` recommendation marker (`→`) has no effect. The JSON array order is always alphabetical and no `→` markers appear — recommendation control is a text-format display concern.
+**Effect:** When `format::json` is specified, the `sort::` recommendation has no effect. The JSON array order is always alphabetical and the footer recommendation is omitted — recommendation control is a text-format display concern.
 
-**Rationale:** JSON consumers that parse `.usage` output need a stable, predictable array structure for scripting and automation. Injecting recommendation-dependent ordering or marker fields into JSON would make scripts fragile to `sort::` changes. The recommendation marker and footer are human-readable text affordances; they have no JSON equivalent.
+**Rationale:** JSON consumers that parse `.usage` output need a stable, predictable array structure for scripting and automation. Injecting recommendation-dependent ordering into JSON would make scripts fragile to `sort::` changes. The footer recommendation is a human-readable text affordance; it has no JSON equivalent.
 
 **Commands affected:** [`.usage`](commands.md#command--9-usage)
 

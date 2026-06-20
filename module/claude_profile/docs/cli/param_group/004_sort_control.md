@@ -2,11 +2,11 @@
 
 **Parameters:** `sort::`, `desc::`, `prefer::`
 **Pattern:** Per-invocation display ordering and recommendation control
-**Purpose:** Controls how `.usage` rows are ordered and which account receives the `→` recommendation marker. `sort::` drives both row ordering and the `→` marker — single parameter, no separate `next::`.
+**Purpose:** Controls how `.usage` rows are ordered and which account appears in the footer recommendation. `sort::` drives both row ordering and the footer recommendation — single parameter, no separate `next::`.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| [`sort::`](../param/025_sort.md) | `enum` | `renew` | Row ordering strategy AND `→` recommendation: `name`, `renew`, `renews` |
+| [`sort::`](../param/025_sort.md) | `enum` | `renew` | Row ordering strategy AND footer recommendation: `name`, `renew`, `renews` |
 | [`desc::`](../param/026_desc.md) | `bool` | context-sensitive | Sort direction; default depends on `sort::` strategy |
 | [`prefer::`](../param/027_prefer.md) | `enum` | `any` | Weekly quota column for sort heuristics: `any`, `opus`, `sonnet` |
 
@@ -19,7 +19,7 @@
 **Typical Patterns:**
 
 ```bash
-# Default: sort::renew — soonest quota refill; → on soonest-refill account
+# Default: sort::renew — soonest quota refill; recommends soonest-refill account in footer
 clp .usage
 
 # Alphabetical for live monitor stability
@@ -39,7 +39,7 @@ clp .usage sort::renew desc::1
 
 > "Does parameter X control **how `.usage` orders rows** (strategy, direction, or column selection for heuristics)?"
 
-All 3 members pass: `sort::` (ordering strategy + `→` recommendation), `desc::` (sort direction), `prefer::` (which weekly column the sort heuristics reference). `refresh::` fails (fetch retry strategy, not ordering) and is correctly excluded.
+All 3 members pass: `sort::` (ordering strategy + footer recommendation), `desc::` (sort direction), `prefer::` (which weekly column the sort heuristics reference). `refresh::` fails (fetch retry strategy, not ordering) and is correctly excluded.
 
 **Invariants**
 
@@ -47,12 +47,12 @@ All 3 members pass: `sort::` (ordering strategy + `→` recommendation), `desc::
 - `prefer::` affects `renew` (secondary key) strategy.
 - `sort::` and `desc::` have no effect when `format::json` is specified — JSON array order is always alphabetical.
 - Sort order is preserved within each `live::1` refresh cycle; alphabetical `sort::name` is recommended for monitor mode to prevent rows jumping.
-- `sort::` drives both row ordering and the `→` recommendation marker — no separate `next::` parameter.
+- `sort::` drives both row ordering and the footer recommendation — no separate `next::` parameter.
 
 **Cross-References**
 
 - [../004_parameter_interactions.md](../004_parameter_interactions.md) — interactions 5, 6, 7 govern sort parameter co-dependencies
-- [../../feature/020_usage_sort_strategies.md](../../feature/020_usage_sort_strategies.md) — full strategy algorithm definitions, `→` recommendation, and ACs
+- [../../feature/020_usage_sort_strategies.md](../../feature/020_usage_sort_strategies.md) — full strategy algorithm definitions, footer recommendation, and ACs
 
 ### Referenced User Stories
 

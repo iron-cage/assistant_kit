@@ -5,7 +5,7 @@
 - **Purpose**: Provide row-level filters, count/offset pagination, and single-value extraction for `.usage` table output, enabling scripting and targeted monitoring.
 - **Responsibility**: Documents the filtering parameters (`count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`), the `get::` single-value extraction shorthand, and the associated format extensions (`format::value`, `format::tsv`, `format::plain`, `abs::`, `no_color::`).
 - **In Scope**: Row count limit, row offset, boolean row filters, percentage threshold filters, `get::` field extraction with `format::value` output, `abs::` for absolute values, `no_color::` for plain output.
-- **Out of Scope**: Column visibility (→ 033_cols.md), sort order and `→` recommendation (→ 020_usage_sort_strategies.md), live monitor mode (→ 018_live_monitor.md).
+- **Out of Scope**: Column visibility (→ 033_cols.md), sort order and footer recommendation (→ 020_usage_sort_strategies.md), live monitor mode (→ 018_live_monitor.md).
 
 ### Design
 
@@ -28,7 +28,7 @@
 | `count::` | `u64` | `0` | Maximum rows to display; `0` means show all remaining rows after offset |
 | `offset::` | `u64` | `0` | Skip first N rows from the filtered result before display |
 | `only_active::` | `bool` | `0` | Show only the row whose account matches the per-machine active marker; filesystem-based — gates HTTP fetch (Pipeline-Constraint) |
-| `only_next::` | `bool` | `0` | Show only the row that received the `→` marker from the active `sort::` strategy |
+| `only_next::` | `bool` | `0` | Show only the row selected as the recommended next account by the active `sort::` strategy |
 | `min_5h::` | `f64` | `0` | Hide rows where `5h Left` is below this percentage (0–100); rows with `—` (no valid quota) are also hidden |
 | `min_7d::` | `f64` | `0` | Hide rows where `7d Left` is below this percentage (0–100); rows with `—` are also hidden |
 | `only_valid::` | `bool` | `0` | Hide rows where status is 🔴 (invalid or missing token) |
@@ -75,14 +75,14 @@
 - **AC-01**: `clp .usage count::3` displays at most 3 rows (the first 3 after sort+tier+filter). Header and footer are still shown.
 - **AC-02**: `clp .usage offset::2 count::3` skips the first 2 rows and displays at most the next 3 rows. `count::0` with any `offset::N` skips N rows and shows all remaining.
 - **AC-03**: `clp .usage only_active::1` displays exactly one row — the active account row; exits 0 even when active account has no valid quota.
-- **AC-04**: `clp .usage only_next::1` displays exactly one row — the account receiving `→` from the active `sort::` strategy; exits 0 with 0 rows when no eligible candidate exists.
+- **AC-04**: `clp .usage only_next::1` displays exactly one row — the account selected as recommended by the active `sort::` strategy; exits 0 with 0 rows when no eligible candidate exists.
 - **AC-05**: `clp .usage min_5h::50` hides all rows where `5h Left < 50%` or where `5h Left` is `—`. Rows with `5h Left = 50%` are shown (inclusive boundary).
 - **AC-06**: `clp .usage min_7d::20` hides all rows where `7d Left < 20%` or where `7d Left` is `—`. Rows with `7d Left = 20%` are shown (inclusive boundary).
 - **AC-07**: `clp .usage only_valid::1` hides all 🔴 rows; shows 🟢 and 🟡 rows.
 - **AC-08**: `clp .usage exclude_exhausted::1` hides all 🟡 and 🔴 rows; shows only 🟢 rows.
 - **AC-09**: Multiple row filters combine with AND: `clp .usage only_valid::1 min_7d::30` shows only 🟢/🟡 rows where `7d Left ≥ 30%`.
 - **AC-10**: `clp .usage get::7d_left` outputs the `7d Left` value of the first row (top of sorted, filtered result) as a bare string with no headers, separators, or footer. Exit 0. Implies `format::value`.
-- **AC-11**: `clp .usage only_next::1 get::7d_left` outputs the `7d Left` value for the `→` account. Exit 0.
+- **AC-11**: `clp .usage only_next::1 get::7d_left` outputs the `7d Left` value for the recommended account. Exit 0.
 - **AC-12**: `clp .usage get::status` outputs one of `🟢`, `🟡`, or `🔴` for the first row.
 - **AC-13**: `clp .usage format::tsv` produces tab-separated output with a header row; status column uses `ok`/`warn`/`err` text labels instead of emoji.
 - **AC-14**: `clp .usage no_color::1` produces output with no emoji and no ANSI sequences; status column renders as plain text labels.
@@ -102,7 +102,7 @@
 |------|--------------|
 | [009_token_usage.md](009_token_usage.md) | Base `.usage` rendering and column definitions |
 | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort applied before row filtering |
-| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | `sort::` strategy drives `→` marker used by `only_next::1` |
+| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | `sort::` strategy drives the recommendation used by `only_next::1` |
 | [029_account_host_metadata.md](029_account_host_metadata.md) | `get::host` and `get::role` field extraction |
 
 ### Parameters

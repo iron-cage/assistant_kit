@@ -6,7 +6,7 @@ Strips emoji and ANSI color sequences from `.usage` output, producing plain text
 - **Constraints:** `0`, `1`, `false`, `true`
 - **Purpose:** Produce color-free and emoji-free output.
 
-**Behavior:** When `no_color::1`, all emoji (🟢, 🟡, 🔴, →, ✓, *) are replaced with plain text equivalents and all ANSI escape sequences are stripped. The table structure (columns, alignment, separators) is preserved. Equivalent to `format::plain` for text output.
+**Behavior:** When `no_color::1`, all emoji (🟢, 🟡, 🔴, ✓, *) are replaced with plain text equivalents and all ANSI escape sequences are stripped. The table structure (columns, alignment, separators) is preserved. Equivalent to `format::plain` for text output.
 
 **Plain text equivalents:**
 
@@ -15,7 +15,6 @@ Strips emoji and ANSI color sequences from `.usage` output, producing plain text
 | `🟢` (status ok) | `ok` |
 | `🟡` (status warn) | `warn` |
 | `🔴` (status err) | `err` |
-| `→` (recommended) | `->` |
 | `✓` (current) | `*cur` |
 | `*` (active) | `*act` |
 

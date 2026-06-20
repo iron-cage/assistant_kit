@@ -62,9 +62,12 @@
 
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
+    // Fix(BUG-297): 429+expired fires should_refresh → refresh_account_token returns None
+    //   (no cred file) → result is now Err("refresh token expired"), not the original 429 error.
     assert!(
-      matches!( accounts[ 0 ].result, Err( ref e ) if e == "HTTP transport error: HTTP 429" ),
-      "429 error must be unchanged after apply_refresh; result: {:?}", accounts[ 0 ].result,
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+      "429+expired: no cred file → refresh_account_token returns None → \
+       result must be Err(\"refresh token expired\"); result: {:?}", accounts[ 0 ].result,
     );
   }
 
@@ -177,9 +180,12 @@
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    // Fix(BUG-297): 401 fires should_refresh → refresh_account_token returns None
+    //   (no cred file) → result is now Err("refresh token expired"), not the original 401 error.
     assert!(
-      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
-      "401 with no cred file must be unchanged; result: {:?}", accounts[ 0 ].result,
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+      "401: no cred file → refresh_account_token returns None → \
+       result must be Err(\"refresh token expired\"); result: {:?}", accounts[ 0 ].result,
     );
   }
 
@@ -211,9 +217,12 @@
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    // Fix(BUG-297): 403 fires should_refresh → refresh_account_token returns None
+    //   (no cred file) → result is now Err("refresh token expired"), not the original 403 error.
     assert!(
-      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "403" ) ),
-      "403 with no cred file must be unchanged; result: {:?}", accounts[ 0 ].result,
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+      "403: no cred file → refresh_account_token returns None → \
+       result must be Err(\"refresh token expired\"); result: {:?}", accounts[ 0 ].result,
     );
   }
 
@@ -304,13 +313,17 @@
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
     assert!( accounts[ 0 ].result.is_ok(), "Ok account must remain Ok" );
+    // Fix(BUG-297): 429+expired and 401 both fire should_refresh → refresh_account_token
+    //   returns None (no cred file) → result is now Err("refresh token expired").
     assert!(
-      matches!( accounts[ 1 ].result, Err( ref e ) if e.contains( "429" ) ),
-      "429+expired with no credential file must be unchanged (retry attempted, no cred file → continue)",
+      matches!( accounts[ 1 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+      "429+expired: no cred file → result must be Err(\"refresh token expired\"); result: {:?}",
+      accounts[ 1 ].result,
     );
     assert!(
-      matches!( accounts[ 2 ].result, Err( ref e ) if e.contains( "401" ) ),
-      "401 stays unchanged when no cred file exists",
+      matches!( accounts[ 2 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+      "401: no cred file → result must be Err(\"refresh token expired\"); result: {:?}",
+      accounts[ 2 ].result,
     );
     assert!(
       matches!( accounts[ 3 ].result, Err( ref e ) if e == "connection refused" ),
@@ -405,9 +418,12 @@
 
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
+    // Fix(BUG-297): switch_account fails (no cred file) → refresh_account_token returns None
+    //   → result is now Err("refresh token expired"), not the original 401 error.
     assert!(
-      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
-      "lifecycle path: 401 result must be unchanged when switch_account fails; result: {:?}",
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+      "lifecycle: 401 + switch fails → refresh_account_token None → \
+       result must be Err(\"refresh token expired\"); result: {:?}",
       accounts[ 0 ].result,
     );
   }
@@ -531,9 +547,12 @@
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    // Fix(BUG-297): switch_account fails (no cred file) → refresh_account_token returns None
+    //   → result is now Err("refresh token expired"), not the original 429 error.
     assert!(
-      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
-      "lifecycle: 429+expired result must be unchanged when switch_account fails; result: {:?}",
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+      "lifecycle: 429+expired + switch fails → refresh_account_token None → \
+       result must be Err(\"refresh token expired\"); result: {:?}",
       accounts[ 0 ].result,
     );
   }
@@ -574,9 +593,12 @@
 
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
+    // Fix(BUG-297): switch_account fails (no cred file) → refresh_account_token returns None
+    //   → result is now Err("refresh token expired"), not the original 403 error.
     assert!(
-      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "403" ) ),
-      "lifecycle: 403 result must be unchanged when switch_account fails; result: {:?}",
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+      "lifecycle: 403 + switch fails → refresh_account_token None → \
+       result must be Err(\"refresh token expired\"); result: {:?}",
       accounts[ 0 ].result,
     );
   }
@@ -619,9 +641,12 @@
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    // Fix(BUG-297): fs::copy fails (no .claude/ dir) → switch_account returns Err
+    //   → refresh_account_token returns None → result is now Err("refresh token expired").
     assert!(
-      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
-      "lifecycle: 401 result must be unchanged when fs::copy fails (no .claude/ dir); result: {:?}",
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+      "lifecycle: 401 + fs::copy fails (no .claude/ dir) → refresh_account_token None → \
+       result must be Err(\"refresh token expired\"); result: {:?}",
       accounts[ 0 ].result,
     );
   }
@@ -880,10 +905,12 @@
 
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
-    // No credential file → refresh_account_token returns None → continue → result unchanged.
+    // Fix(BUG-297): no cred file → refresh_account_token returns None → result is now
+    //   Err("refresh token expired"), not the original 429 error.
     assert!(
-      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
-      "429+expired: result must be unchanged when no cred file (refresh path entered but gracefully skipped); result: {:?}",
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+      "429+expired: no cred file → refresh_account_token None → \
+       result must be Err(\"refresh token expired\"); result: {:?}",
       accounts[ 0 ].result,
     );
   }
@@ -1166,6 +1193,168 @@
     assert!(
       !output.contains( "reason: ok" ),
       "BUG-295: trace must NOT emit 'reason: ok' for non-owned account (misleading); got: {output}",
+    );
+  }
+
+  // ── BUG-297 MRE: refresh None must set aq.result=Err ─────────────────────────
+
+  /// # MRE: BUG-297 — `apply_refresh` None branch leaves `aq.result=Ok(cached_data)`, causing
+  /// redundant `apply_touch` subprocess for RT-expired accounts.
+  ///
+  /// # Root Cause
+  /// `refresh.rs:70-77` — the `else { continue; }` branch fires when `refresh_account_token`
+  /// returns `None` (OAuth refresh token expired). Before the fix, it continued without mutating
+  /// `aq.result`. Result stayed `Ok(cached_data)` — identical to a live healthy fetch — so
+  /// `apply_touch` at `touch.rs:56` saw `Ok` and fired a redundant ~1.7s subprocess.
+  ///
+  /// # Why Not Caught
+  /// No test covered the `should_refresh() → refresh_account_token() = None` path. The
+  /// `else { continue; }` branch was only reachable with an unrecoverable RT expiry, which no
+  /// unit test constructed. CI only exercised the happy path (Some(creds)) and the no-retry path
+  /// (`should_refresh=false`).
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-297): added `aq.result = Err("refresh token expired".into());` before `continue;`
+  /// in the None branch. Phase-contract invariant restored: every `continue` path in
+  /// `apply_refresh` must leave `aq.result=Err` when the account cannot proceed.
+  ///
+  /// # Prevention
+  /// This test uses an empty `TempDir` as `credential_store`, so `refresh_account_token` returns
+  /// `None` (no credential file). `should_refresh` fires because `cached=true` and
+  /// `expires_at_ms=0` triggers the BUG-255 guard. After `apply_refresh`, asserts
+  /// `aq.result = Err("refresh token expired")`.
+  ///
+  /// # Pitfall
+  /// The empty `TempDir` means no credential file exists for the account, so
+  /// `read_token(credential_store, &aq.name)` returns `Err`, which makes
+  /// `refresh_account_token` return `None` immediately — no subprocess is spawned.
+  /// `is_owned=true` is required: non-owned accounts are skipped by `should_refresh`.
+  #[ doc = "bug_reproducer(BUG-297)" ]
+  #[ test ]
+  fn mre_bug297_refresh_none_sets_aq_result_err()
+  {
+    let store       = TempDir::new().unwrap();
+    let stale_quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name                  : "rt-expired-acct".to_string(),
+        is_current            : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
+        expires_at_ms         : 0, // locally expired → should_refresh fires (BUG-255 guard)
+        result                : Ok( stale_quota ),
+        account               : None,
+        host                  : String::new(),
+        role                  : String::new(),
+        renewal_at            : None,
+        cached                : true, // cache masking active — result is Ok(stale)
+        cache_age_secs        : Some( 7200 ),
+        is_owned              : true, // required: non-owned accounts are skipped by should_refresh
+        owner                 : String::new(),
+      },
+    ];
+
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+
+    assert!(
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
+      "BUG-297: when refresh_account_token returns None, aq.result must be \
+       Err(\"refresh token expired\"); got: {:?}",
+      accounts[ 0 ].result,
+    );
+  }
+
+  // ── BUG-297 pipeline: refresh None → touch skips (no subprocess) ─────────────
+
+  /// Pipeline integration test for BUG-297 fix: after `apply_refresh` sets
+  /// `aq.result = Err("refresh token expired")`, `apply_touch` must skip the account
+  /// emitting `"skipped (reason: error account)"` and must NOT spawn a subprocess.
+  ///
+  /// # Root Cause
+  /// Before the BUG-297 fix, `apply_refresh` left `aq.result=Ok(cached_data)` when
+  /// `refresh_account_token` returned `None` (RT expired). `apply_touch` at `touch.rs:56`
+  /// guards on `let Ok(ref data) = aq.result` — seeing `Ok`, it fired a redundant
+  /// ~1.7s subprocess that also returned `None` with no useful effect.
+  ///
+  /// # Why Not Caught
+  /// No test exercised the `apply_refresh → apply_touch` pipeline with a None-return path.
+  /// The two phases were tested independently; the cross-phase contract (every `continue`
+  /// path in `apply_refresh` must leave `aq.result=Err`) was untested.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-297): `refresh.rs:76-81` now sets `aq.result = Err("refresh token expired")`
+  /// before `continue;`. `apply_touch` at `touch.rs:56` sees `Err` and emits
+  /// `"skipped (reason: error account)"` without attempting any subprocess.
+  ///
+  /// # Prevention
+  /// This test runs both `apply_refresh` and then `apply_touch` on the same `AccountQuota`
+  /// and asserts: (1) touch emits `"error account"` skip trace; (2) touch does NOT emit
+  /// `"run_isolated: invoking"` (no subprocess spawned).
+  ///
+  /// # Pitfall
+  /// `claude_paths=None` ensures no subprocess can fire regardless (no credential file path
+  /// to switch to). The test confirms the *correct* skip reason fires (`"error account"` from
+  /// the G1 error guard), not a later guard that would also prevent subprocess launch.
+  #[ test ]
+  fn apply_touch_skips_after_refresh_none()
+  {
+    use std::io::Read;
+
+    let store       = TempDir::new().unwrap();
+    let stale_quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name                  : "rt-expired-touch-pipeline".to_string(),
+        is_current            : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
+        expires_at_ms         : 0,
+        result                : Ok( stale_quota ),
+        account               : None,
+        host                  : String::new(),
+        role                  : String::new(),
+        renewal_at            : None,
+        cached                : true,
+        cache_age_secs        : Some( 7200 ),
+        is_owned              : true,
+        owner                 : String::new(),
+      },
+    ];
+
+    // Phase 1: apply_refresh → sets aq.result = Err("refresh token expired").
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+
+    assert!(
+      accounts[ 0 ].result.is_err(),
+      "pipeline precondition: apply_refresh must set Err result; got: {:?}",
+      accounts[ 0 ].result,
+    );
+
+    // Phase 2: apply_touch → must see Err and skip without spawning a subprocess.
+    let _lock = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let mut buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+
+    super::super::touch::apply_touch(
+      &mut accounts[ 0 ],
+      store.path(),
+      None,
+      true,
+      SubprocessModel::Auto,
+      SubprocessEffort::Auto,
+    );
+
+    let mut captured = String::new();
+    buf.read_to_string( &mut captured ).unwrap();
+
+    assert!(
+      captured.contains( "error account" ),
+      "BUG-297 pipeline: apply_touch must emit 'error account' skip after refresh None; got:\n{captured}",
+    );
+    assert!(
+      !captured.contains( "run_isolated: invoking" ),
+      "BUG-297 pipeline: apply_touch must NOT spawn subprocess after refresh None; got:\n{captured}",
     );
   }
 

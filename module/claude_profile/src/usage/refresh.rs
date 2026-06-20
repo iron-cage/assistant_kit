@@ -73,6 +73,12 @@ pub( crate ) fn apply_refresh(
       {
         eprintln!( "[trace] refresh  {}  refresh returned None — skipping retry", aq.name );
       }
+      // Fix(BUG-297): set aq.result to Err so apply_touch skips this account.
+      // Root cause: else-continue left aq.result=Ok(cached_data) when cache masking was active;
+      //   apply_touch at touch.rs:56 guards on Ok and fires a redundant subprocess.
+      // Pitfall: Invariant — every continue path in apply_refresh must leave aq.result=Err
+      //   if the account cannot proceed; apply_touch uses aq.result as its sole recoverability signal.
+      aq.result = Err( "refresh token expired".into() );
       continue;
     };
 

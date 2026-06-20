@@ -98,7 +98,7 @@
 
     // Text renderer: the error reason must appear somewhere in output (in a quota column).
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, false, false,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None,
     );
     assert!(
       text.contains( "(rate limited (429))" ),
@@ -153,7 +153,7 @@
 
     // --- text renderer ---
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, false, false,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None,
     );
     let alice_text = text.lines().find( | l | l.contains( "alice@test.com" ) )
       .expect( "FT-21: alice line missing from render_text" );
@@ -238,7 +238,7 @@
     let accounts = vec![ aq ];
     let cols     = ColsVisibility::default_set();
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, false, false,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None,
     );
     assert!(
       text.contains( '~' ),
@@ -343,7 +343,7 @@
     let mut cols = ColsVisibility::default_set();
     cols.d7_son_reset = true;
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, false, false,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None,
     );
     assert!(
       text.contains( "~in " ),
@@ -416,7 +416,7 @@
 
     // text renderer: ~Renews must be "—", NOT "~in Nd"
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, false, false,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None,
     );
     assert!(
       text.contains( "\u{2014}" ),
@@ -482,7 +482,7 @@
     let text_a = render_text(
       &[ aq_cached ],
       SortStrategy::Name, None, PreferStrategy::Any,
-      &cols, false, false,
+      &cols, None, None,
     );
     assert!(
       text_a.contains( '~' ),
@@ -510,7 +510,7 @@
     let text_b = render_text(
       &[ aq_no_cache ],
       SortStrategy::Name, None, PreferStrategy::Any,
-      &cols, false, false,
+      &cols, None, None,
     );
     // No tilde prefix when no cache data.
     assert!(
@@ -641,7 +641,7 @@
     };
     let output = render_text(
       &[ aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), false, false,
+      &ColsVisibility::default_set(), None, None,
     );
     assert!(
       output.contains( "model: sonnet" ),
@@ -708,10 +708,126 @@
     };
     let output = render_text(
       &[ aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), false, false,
+      &ColsVisibility::default_set(), None, None,
     );
     assert!(
       output.contains( "model: opus" ),
       "FT-28 boundary: footer must show 'model: opus' when sonnet_left ≈ 14.9% (< 15%); got:\n{output}",
     );
+  }
+
+  /// FT-29/009 — footer line 1 shows `session:` and `effort:` only when supplied.
+  ///
+  /// Three scenarios: both present, model only, neither — verifying optional field rendering
+  /// in the footer's first line (`Valid: N / M   session: <model>  effort: <level>`).
+  ///
+  /// Spec: [`tests/docs/feature/09_token_usage.md` FT-29]
+  #[ test ]
+  fn test_ft29_009_footer_session_effort_display()
+  {
+    // Inner helper — builds two valid accounts needed for footer display (≥ 2 valid).
+    fn make_accounts() -> Vec< AccountQuota >
+    {
+      vec![
+        AccountQuota
+        {
+          name                  : "a@x.com".to_string(),
+          is_current            : false,
+          is_active             : false,
+          is_occupied_elsewhere : false,
+          expires_at_ms         : FAR_FUTURE_MS,
+          result                : Ok( claude_quota::OauthUsageData
+          {
+            five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+            seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+            seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 50.0, resets_at : None } ),
+          } ),
+          account               : None,
+          host                  : String::new(),
+          role                  : String::new(),
+          renewal_at            : None,
+          cached                : false,
+          cache_age_secs        : None,
+          is_owned              : true,
+          owner                 : String::new(),
+        },
+        AccountQuota
+        {
+          name                  : "b@x.com".to_string(),
+          is_current            : false,
+          is_active             : false,
+          is_occupied_elsewhere : false,
+          expires_at_ms         : FAR_FUTURE_MS,
+          result                : Ok( claude_quota::OauthUsageData
+          {
+            five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+            seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+            seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 50.0, resets_at : None } ),
+          } ),
+          account               : None,
+          host                  : String::new(),
+          role                  : String::new(),
+          renewal_at            : None,
+          cached                : false,
+          cache_age_secs        : None,
+          is_owned              : true,
+          owner                 : String::new(),
+        },
+      ]
+    }
+
+    // Scenario 1 — both session_model and session_effort supplied.
+    {
+      let accounts = make_accounts();
+      let output = render_text(
+        &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
+        &ColsVisibility::default_set(), Some( "claude-sonnet-4-6" ), Some( "low" ),
+      );
+      assert!(
+        output.contains( "session: claude-sonnet-4-6  effort: low" ),
+        "FT-29 s1: footer line 1 must contain 'session: claude-sonnet-4-6  effort: low'; got:\n{output}",
+      );
+      assert!(
+        output.contains( "Valid:" ),
+        "FT-29 s1: footer line 1 must contain 'Valid:'; got:\n{output}",
+      );
+    }
+
+    // Scenario 2 — session_model only; effort must be absent.
+    {
+      let accounts = make_accounts();
+      let output = render_text(
+        &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
+        &ColsVisibility::default_set(), Some( "claude-sonnet-4-6" ), None,
+      );
+      assert!(
+        output.contains( "session: claude-sonnet-4-6" ),
+        "FT-29 s2: footer line 1 must contain 'session: claude-sonnet-4-6'; got:\n{output}",
+      );
+      assert!(
+        !output.contains( "effort:" ),
+        "FT-29 s2: footer line 1 must not contain 'effort:' when effort is None; got:\n{output}",
+      );
+    }
+
+    // Scenario 3 — neither model nor effort; only Valid: count shown.
+    {
+      let accounts = make_accounts();
+      let output = render_text(
+        &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
+        &ColsVisibility::default_set(), None, None,
+      );
+      assert!(
+        output.contains( "Valid:" ),
+        "FT-29 s3: footer line 1 must contain 'Valid:'; got:\n{output}",
+      );
+      assert!(
+        !output.contains( "session:" ),
+        "FT-29 s3: footer line 1 must not contain 'session:' when model is None; got:\n{output}",
+      );
+      assert!(
+        !output.contains( "effort:" ),
+        "FT-29 s3: footer line 1 must not contain 'effort:' when effort is None; got:\n{output}",
+      );
+    }
   }

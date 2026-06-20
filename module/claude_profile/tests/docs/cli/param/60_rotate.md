@@ -3,7 +3,7 @@
 Edge case coverage for the `rotate::` bool param on `.usage`.
 See [param/059_rotate.md](../../../../docs/cli/param/059_rotate.md) for specification.
 
-`rotate::1` executes an account switch to the `→` winner after the quota table is rendered.
+`rotate::1` executes an account switch to the footer-recommended account after the quota table is rendered.
 The switch uses the same account selected by `find_next_for_strategy()`.
 
 ### Test Case Index
@@ -59,7 +59,7 @@ The switch uses the same account selected by `find_next_for_strategy()`.
 - **When:** `clp .usage rotate::1 dry::1`
 - **Then:** Exits 0 (when an eligible account exists). Output contains `[dry-run] would switch to '{name}'`. Credentials file unchanged (mtime/content identical before and after).
 - **Exit:** 0
-- **Live:** yes (requires real quota data for `→` winner selection)
+- **Live:** yes (requires real quota data for footer-recommended account selection)
 - **Source fn:** `ft02_lim_it_dry_run_no_switch` (in `tests/cli/usage_rotate_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-02](../../../../docs/feature/038_usage_strategy_rotate.md)
 

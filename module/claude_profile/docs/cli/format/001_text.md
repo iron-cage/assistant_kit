@@ -40,10 +40,11 @@ clp .usage
 # Quota
 #
 #   ●  Account              5h Left     5h Reset    7d Left  7d(Son)  7d Reset   Expires     ~Renews      → Next
-# → 🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%   28%      in 6d 14h  in 5h 02m   ~in 30d      in 6d 14h +7d
+#   🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%   28%      in 6d 14h  in 5h 02m   ~in 30d      in 6d 14h +7d
 # ✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%   35%      in 4d 23h  in 7h 24m   ~in 6d       in 4d 23h +7d
 #
-# Valid: 2 / 2   ->  Next (renew): bob@example.com  in 6d 14h +7d  model: sonnet
+# Valid: 2 / 2   session: claude-sonnet-4-6  effort: low
+# Next (renew): bob@example.com  in 6d 14h +7d  model: sonnet
 
 clp .token.status
 # valid — 7h24m remaining

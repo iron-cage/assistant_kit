@@ -92,7 +92,7 @@ pub( crate ) fn execute_live_mode(
     // Fetch with per-account stagger delays (thunder-herd mitigation).
     let accounts = fetch_all_quota( credential_store, live_creds_file, true, params.trace )?;
 
-    let text = render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, false, false );
+    let text = render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, None, None );
     print!( "{text}" );
 
     // Compute next-refresh wall-clock time.

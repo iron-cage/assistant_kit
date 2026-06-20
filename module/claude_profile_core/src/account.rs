@@ -553,6 +553,20 @@ pub fn get_session_model( paths : &ClaudePaths ) -> Option< String >
   parse_string_field( &content, "model" )
 }
 
+/// Read the current effort level from `~/.claude/settings.json`.
+///
+/// Returns `Some(effort)` when `settings.json` exists and contains an `"effortLevel"` key;
+/// `None` when the file is absent, unparseable, or the `"effortLevel"` key is missing.
+/// Note: `effortLevel` is never written by `claude_profile` account rotation — it reflects the
+/// user's persistent Claude Code preference and is unchanged by `.usage rotate::1`.
+#[ must_use ]
+#[ inline ]
+pub fn get_session_effort( paths : &ClaudePaths ) -> Option< String >
+{
+  let content = std::fs::read_to_string( paths.settings_file() ).ok()?;
+  parse_string_field( &content, "effortLevel" )
+}
+
 /// Validate that a named account can be deleted (name valid + file exists).
 ///
 /// Called by both `delete` and the CLI dry-run path so that dry-run
