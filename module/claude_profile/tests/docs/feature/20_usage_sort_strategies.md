@@ -17,6 +17,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-09 | `sort::renew` alphabetical when all numeric sort keys tied (BUG-259) | AC-01 | Tiebreaker |
 | FT-10 | `sort::renews` sorts by renewal timer ascending; no renewal data placed last | AC-02 | Unit test |
 | FT-11 | h-exhausted + `7d(Son) ≤ 5%` → HExhausted under `prefer::any` (BUG-299) | AC-12 | Group Boundary |
+| FT-12 | `prefer::son` + absent Sonnet tier → `prefer_weekly = 0.0` (not 100.0) | AC-05 | Absent-Sonnet fix |
 | — | `sort::` + `live::1` stable within each cycle | AC-12 | Live-only (requires `live::1` + real credentials) |
 
 ### Test Case Index
@@ -34,8 +35,9 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-09 | sort::renew alphabetical tiebreaker when all numeric keys tied | AC-01 | Tiebreaker |
 | FT-10 | sort::renews ascending; no renewal data last | AC-02 | Renews Sort |
 | FT-11 | h-exhausted account with 7d_son ≤ 5% lands in HExhausted (not Red) under prefer::any (BUG-299) | AC-12 | Group Boundary |
+| FT-12 | prefer::son + absent Sonnet tier → prefer_weekly = 0.0 (not 100.0) | AC-05 | Absent-Sonnet fix |
 
-**Total:** 11 FT cases
+**Total:** 12 FT cases
 
 ---
 
@@ -164,3 +166,15 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Exit:** n/a (unit test — position assertion)
 - **Source fn:** `mre_bug299_h_exhausted_misclassified_as_red_prefer_any` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-12](../../../docs/feature/020_usage_sort_strategies.md); [bug/299](../../../../task/claude_profile/bug/299_status_group_of_prefer_weekly_boundary.md)
+
+---
+
+### FT-12: `prefer::son` + absent Sonnet tier → `prefer_weekly = 0.0` (not 100.0)
+
+- **Given:** An `AccountQuota` with `seven_day_sonnet = None` (no Sonnet tier) and `seven_day_util=30%` (7d_left=70%). `prefer::son` in effect.
+- **When:** `prefer_weekly(aq, PreferStrategy::Sonnet)` is called (internally delegates to `relevant_quotas(aq, Sonnet).1`).
+- **Then:** Returns `0.0`. Absent Sonnet tier under `prefer::son` = unknown Sonnet capacity, not 100%. The eligibility gate `prefer_weekly ≤ 5.0` fires (0.0 ≤ 5.0) → account is ineligible for next-account recommendation.
+- **Exit:** n/a (unit test — return value assertion)
+- **Note:** Phase 2 fix from Plan 019. Old code: `map_or(0.0, |p| p.utilization)` returned `100.0 - 0.0 = 100.0`, treating absent tier as fully available. Fix: `if let Some(ref son)` guard returns `0.0` when `seven_day_sonnet = None`.
+- **Source fn:** `test_relevant_quotas_son_no_sonnet` (in `src/usage/format_tests.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-05](../../../docs/feature/020_usage_sort_strategies.md)

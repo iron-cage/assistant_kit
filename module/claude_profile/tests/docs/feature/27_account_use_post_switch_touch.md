@@ -24,11 +24,11 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-16 | `trace::` with bad value exits 1 | AC-16 | Integration |
 | FT-17 | `touch::1` + fetch Err + expired `expiresAt` + `refresh::1` → refresh fails → exits 3; switch NOT executed | AC-17 | Integration (BUG-213 + BUG-230 MRE) |
 | FT-18 | `touch::1` + fetch Err + expired `expiresAt` + `refresh::0` → exits 3 immediately; no refresh attempt | AC-20 | Integration (BUG-230) |
-| FT-19 | Active account + 7d(Son) < 20% → model override fires after switch | AC-18 | Integration (BUG-238 MRE) |
+| FT-19 | Active account + 7d(Son) < 15% → model override fires after switch | AC-18 | Integration (BUG-238 MRE) |
 | FT-20 | `override_session_model_to_opus()` fires for shorthand `"sonnet"` input, writes `"opus"` | AC-18 | Unit (BUG-257 MRE) |
 | FT-21 | Post-subprocess re-fetch updates in-memory quota; failure preserves pre-subprocess data | AC-21 | Unit (BUG-288 MRE) |
 | FT-22 | `seven_day_sonnet = None` → model override does not fire; absent tier treated as unknown, not exhausted | AC-18 | Unit (BUG-300 MRE) |
-| — | `trace::1` + model override fires → `model override: sonnet→opus` trace line emitted | AC-19 | Live-only (requires `trace::1` + `7d(Son) < 20%` + Sonnet model in snapshot) |
+| — | `trace::1` + model override fires → `model override: sonnet→opus` trace line emitted | AC-19 | Live-only (requires `trace::1` + `7d(Son) < 15%` + Sonnet model in snapshot) |
 
 ### Test Case Index
 
@@ -55,7 +55,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-16 | trace:: in .account.use --help with default 0 | AC-16 | Help Output |
 | FT-17 | touch::1 + fetch Err + expired expiresAt + refresh::1 (default) → refresh fails → exits 3 | AC-17 | BUG-213 + BUG-230 MRE |
 | FT-18 | touch::1 + fetch Err + expired expiresAt + refresh::0 → exits 3 immediately, no refresh attempt | AC-20 | BUG-230 |
-| FT-19 | active account + 7d(Son) < 20% → model override sonnet→opus after switch | AC-18 | BUG-238 MRE |
+| FT-19 | active account + 7d(Son) < 15% → model override sonnet→opus after switch | AC-18 | BUG-238 MRE |
 | FT-21 | post-subprocess re-fetch updates in-memory quota; failure preserves pre-subprocess data | AC-21 | BUG-288 MRE |
 
 **Total:** 22 FT cases
@@ -112,7 +112,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 - **Given:** Feature 026 unit tests cover `resolve_model()` exhaustively (FT-01 through FT-07 in [026_subprocess_model_effort.md](026_subprocess_model_effort.md)).
 - **When:** `.account.use` dispatches its post-switch touch subprocess — it calls `resolve_model(&quota, imodel_param)` with the quota fetched for the target account.
-- **Then:** Model selection behavior is identical to `.usage` touch path — `imodel::auto` picks Sonnet when `7d(Son) ≥ 20%`, Opus otherwise. All resolution semantics are governed by Feature 026.
+- **Then:** Model selection behavior is identical to `.usage` touch path — `imodel::auto` uses the `son_idle` gate (Haiku by default; Sonnet when `seven_day_sonnet` is present and `resets_at=None`). All resolution semantics are governed by Feature 026.
 - **Exit:** n/a (structural — no new unit test; coverage via Feature 026 FT-01..FT-07)
 - **Source fn:** (covered by Feature 026 unit tests — `resolve_model` is shared)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-05](../../../docs/feature/027_account_use_post_switch_touch.md)
@@ -265,9 +265,9 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 ---
 
-### FT-19: Active account + 7d(Son) < 20% — model override sonnet→opus fires after switch (BUG-238 MRE)
+### FT-19: Active account + 7d(Son) < 15% — model override sonnet→opus fires after switch (BUG-238 MRE)
 
-- **Given:** Account `alice@home.com` saved with valid OAuth token and an ACTIVE 5h window (`five_hour.resets_at` is set). `seven_day_sonnet.utilization > 80%` (remaining < 20%). The account's `{name}.json` contains `{"model": "sonnet"}` (shorthand — the production convention Claude Code uses in `settings.json`; see BUG-257).
+- **Given:** Account `alice@home.com` saved with valid OAuth token and an ACTIVE 5h window (`five_hour.resets_at` is set). `seven_day_sonnet.utilization > 85%` (remaining < 15%). The account's `{name}.json` contains `{"model": "sonnet"}` (shorthand — the production convention Claude Code uses in `settings.json`; see BUG-257).
 - **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
 - **Then:** Exits 0. `switched to 'alice@home.com'` on stdout. After the switch, `~/.claude/settings.json` contains `"model": "opus"` (shorthand — BUG-257 write-side fix; `override_session_model_to_opus()` now writes the shorthand convention). The BUG-225 Sonnet→Opus override fires even though the account is already active (no subprocess spawned, but model override still applied). Before the BUG-238 fix: model stayed at `"sonnet"` because `pre_switch_touch_ctx()` returned `None` for active accounts, skipping the override.
 - **Exit:** 0
@@ -297,7 +297,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
   - `~/.claude/settings.json` is unchanged (still contains `"claude-sonnet-4-6"`) — override did not fire.
   - Second scenario (regression guard): same setup with `seven_day_sonnet = Some(PeriodUsage { utilization: 90.0, ... })` (10% left) — settings.json updated to `"claude-opus-4-6"`. Confirms `Some` path still fires correctly.
 - **Exit:** n/a (unit test)
-- **Note:** Fix(BUG-300): `map_or(0.0, ...)` on `seven_day_sonnet` returned `0.0` for `None`, which satisfies `< 20.0`, causing unconditional Opus override. `None` means tier absent (unknown), not exhausted. Fix: `if let Some(ref sonnet) = quota.seven_day_sonnet { if 100.0 - sonnet.utilization < 20.0 { ... } }`.
+- **Note:** Fix(BUG-300): `map_or(0.0, ...)` on `seven_day_sonnet` returned `0.0` for `None`, which satisfies the threshold comparison, causing unconditional Opus override for absent-tier accounts. `None` means tier absent (unknown), not exhausted. Fix: `if let Some(ref sonnet) = quota.seven_day_sonnet { if 100.0 - sonnet.utilization < 15.0 { ... } }` (threshold subsequently updated from 20.0 → 15.0 in Plan 019 Phase 1).
 - **Source fn:** `mre_bug300_model_override_absent_sonnet_no_override` (in `src/usage/api_tests.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-18](../../../docs/feature/027_account_use_post_switch_touch.md)
 

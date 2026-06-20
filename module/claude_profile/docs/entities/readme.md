@@ -4,7 +4,7 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 38 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 39 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](../cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 7 |
 | `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 59 |
@@ -68,6 +68,7 @@
 | feature | 036 | Account Ownership | [feature/036_account_ownership.md](../feature/036_account_ownership.md) |
 | feature | 037 | Accounts/Usage Param Unification | [feature/037_accounts_usage_param_unification.md](../feature/037_accounts_usage_param_unification.md) |
 | feature | 038 | Usage Strategy Rotate | [feature/038_usage_strategy_rotate.md](../feature/038_usage_strategy_rotate.md) |
+| feature | 039 | Decision Algorithm Reference | [feature/039_decision_algorithms.md](../feature/039_decision_algorithms.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](../cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](../cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](../cli/003_env_param.md) |

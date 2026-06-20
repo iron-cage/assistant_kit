@@ -245,7 +245,23 @@ pub( crate ) fn render_text(
     let metric      = strategy_metric( rec, sort, prefer, now_secs );
     let rec_name    = &rec.name;
     let metric_part = if metric.is_empty() { String::new() } else { format!( "   {metric}" ) };
-    format!( "{body}Valid: {valid_count} / {total}   ->  Next ({strategy_name}): {rec_name}{metric_part}\n" )
+    // Session model: the model the user will work with after switching.
+    // Mirrors apply_model_override() threshold: sonnet_left < 15% → opus, else sonnet.
+    // seven_day_sonnet = None (absent tier) → treat as unknown, not exhausted → sonnet.
+    let model_label = match &rec.result
+    {
+      Ok( data ) => match &data.seven_day_sonnet
+      {
+        Some( sonnet ) =>
+        {
+          let sonnet_left = 100.0 - sonnet.utilization;
+          if sonnet_left < 15.0 { "opus" } else { "sonnet" }
+        }
+        None => "sonnet",
+      },
+      Err( _ ) => "sonnet",
+    };
+    format!( "{body}Valid: {valid_count} / {total}   ->  Next ({strategy_name}): {rec_name}{metric_part}  model: {model_label}\n" )
   }
   else
   {

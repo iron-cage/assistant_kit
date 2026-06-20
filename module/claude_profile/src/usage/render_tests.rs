@@ -581,3 +581,137 @@
       "FT-12: JSON must include '\"is_owned\":false' for non-owned account; got:\n{json}",
     );
   }
+
+  /// FT-28 boundary — footer shows `model: sonnet` when `seven_day_sonnet` utilization = 85.0
+  /// (exactly 15% left). Threshold is strict `< 15%`, so 15.0% must NOT trigger the opus override.
+  ///
+  /// In RED (before fix): `15.0 < 20.0 == true` → footer shows `model: opus` → this test FAILS.
+  /// In GREEN (after fix at render.rs:258): `15.0 < 15.0 == false` → footer shows `model: sonnet`.
+  ///
+  /// Spec: [`tests/docs/feature/09_token_usage.md` FT-28]
+  #[ test ]
+  fn test_render_footer_model_label_at_15pct_no_override()
+  {
+    // a@x.com: non-current, alphabetically first → footer winner with sort::Name.
+    // son_util = 85.0 → sonnet_left = 15.0% — exactly at the 15% threshold.
+    let aq_a = AccountQuota
+    {
+      name                  : "a@x.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+        seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+        seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 85.0, resets_at : None } ),
+      } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : true,
+      owner                 : String::new(),
+    };
+    // b@x.com: second valid account required for footer (≥ 2 valid triggers footer display).
+    let aq_b = AccountQuota
+    {
+      name                  : "b@x.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+        seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+        seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 50.0, resets_at : None } ),
+      } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : true,
+      owner                 : String::new(),
+    };
+    let output = render_text(
+      &[ aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), false, false,
+    );
+    assert!(
+      output.contains( "model: sonnet" ),
+      "FT-28 boundary: footer must show 'model: sonnet' when sonnet_left = 15.0% (not < 15%); got:\n{output}",
+    );
+  }
+
+  /// FT-28 boundary — footer shows `model: opus` when `seven_day_sonnet` utilization = 85.1
+  /// (~14.9% left, strictly below the 15% threshold).
+  ///
+  /// Regression guard: both old (`< 20.0`) and new (`< 15.0`) code fire at 14.9% — opus must
+  /// appear before and after the fix. Ensures the fix doesn't break below-threshold behaviour.
+  ///
+  /// Spec: [`tests/docs/feature/09_token_usage.md` FT-28]
+  #[ test ]
+  fn test_render_footer_model_label_below_15pct_opus()
+  {
+    // a@x.com: non-current, alphabetically first → footer winner with sort::Name.
+    // son_util = 85.1 → sonnet_left ≈ 14.9% — strictly below 15% threshold.
+    let aq_a = AccountQuota
+    {
+      name                  : "a@x.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+        seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+        seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 85.1, resets_at : None } ),
+      } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : true,
+      owner                 : String::new(),
+    };
+    // b@x.com: second valid account required for footer (≥ 2 valid triggers footer display).
+    let aq_b = AccountQuota
+    {
+      name                  : "b@x.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+        seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+        seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 50.0, resets_at : None } ),
+      } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : true,
+      owner                 : String::new(),
+    };
+    let output = render_text(
+      &[ aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), false, false,
+    );
+    assert!(
+      output.contains( "model: opus" ),
+      "FT-28 boundary: footer must show 'model: opus' when sonnet_left ≈ 14.9% (< 15%); got:\n{output}",
+    );
+  }

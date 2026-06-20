@@ -245,7 +245,7 @@ pub( crate ) fn pre_switch_touch_ctx(
 /// Quota-aware Sonnet→Opus session model override (BUG-225 fix).
 ///
 /// Called AFTER `switch_account()` for every fetch-succeeded case — both idle and
-/// already-active accounts. When `seven_day_sonnet` remaining is below 20% and the
+/// already-active accounts. When `seven_day_sonnet` remaining is below 15% and the
 /// current session model is Sonnet (or empty), overrides `~/.claude/settings.json`
 /// to `claude-opus-4-6`.
 ///
@@ -271,7 +271,7 @@ pub( crate ) fn apply_model_override(
   if let Some( ref sonnet ) = quota.seven_day_sonnet
   {
     let sonnet_left = 100.0 - sonnet.utilization;
-    if sonnet_left < 20.0
+    if sonnet_left < 15.0
     {
       let overrode = crate::account::override_session_model_to_opus( paths );
       if overrode

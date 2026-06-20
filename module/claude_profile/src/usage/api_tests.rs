@@ -81,8 +81,8 @@ fn test_pre_switch_touch_ctx_model_effort_absent_on_fetch_failure()
 /// `PreSwitchOutcome` variant that carries `OauthUsageData` must wire in `apply_model_override`.
 ///
 /// # Pitfall
-/// `apply_model_override` only fires when `sonnet_left < 20.0`. Test input must push
-/// `utilization` to ≥ 80.0 (leaving < 20%). Also: the `.claude/` parent dir must exist
+/// `apply_model_override` only fires when `sonnet_left < 15.0`. Test input must push
+/// `utilization` to > 85.0 (leaving < 15%). Also: the `.claude/` parent dir must exist
 /// before the write or `override_session_model_to_opus` silently no-ops.
 #[ doc = "bug_reproducer(BUG-238)" ]
 #[ test ]
@@ -326,23 +326,23 @@ fn t06_model_override_skips_for_non_current_account()
 }
 
 #[ test ]
-fn t07_model_override_skips_at_exact_20pct_boundary()
+fn t07_model_override_skips_at_and_above_15pct_boundary()
 {
   use claude_quota::{ OauthUsageData, PeriodUsage };
   let dir   = TempDir::new().unwrap();
   let paths = crate::ClaudePaths::with_home( dir.path() );
   std::fs::create_dir_all( paths.base() ).unwrap();
-  // utilization=80.0 → sonnet_left = 100.0 - 80.0 = 20.0; 20.0 < 20.0 == false.
+  // utilization=85.0 → sonnet_left = 100.0 - 85.0 = 15.0; 15.0 < 15.0 == false.
   let quota = OauthUsageData
   {
     five_hour        : None,
     seven_day        : None,
-    seven_day_sonnet : Some( PeriodUsage { utilization : 80.0, resets_at : None } ),
+    seven_day_sonnet : Some( PeriodUsage { utilization : 85.0, resets_at : None } ),
   };
   apply_model_override( &quota, &paths, false, "usage", "test-account" );
   assert!(
     !paths.settings_file().exists(),
-    "must NOT write at exact 20% boundary (utilization=80.0)",
+    "must NOT write at exact 15% boundary (utilization=85.0)",
   );
 }
 

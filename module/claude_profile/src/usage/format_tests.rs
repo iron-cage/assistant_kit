@@ -4,7 +4,8 @@
 // without widening their visibility. See src/usage/readme.md § Inline Test Exception.
 
 use super::*;
-use crate::usage::test_support::mk_aq_ok_both;
+use crate::usage::test_support::{ mk_aq_ok_both, mk_aq_sort_weekly, mk_aq_err };
+use crate::usage::types::PreferStrategy;
 
 // ── shorten_error ──────────────────────────────────────────────────────────
 
@@ -520,4 +521,102 @@ fn ne_all_none_returns_dash()
 {
   let result = next_event_label( None, None, false );
   assert_eq!( result, "\u{2014}", "all absent → em-dash, got: {result}" );
+}
+
+// ── relevant_quotas ────────────────────────────────────────────────────────
+
+/// `prefer::any` + absent Sonnet → `relevant_7d_left` equals raw `seven_day_left`.
+///
+/// When `seven_day_sonnet = None`, `prefer::any` must fall back to `seven_day_left`
+/// (cannot take min with an absent value). Bug: old `prefer_weekly` computed
+/// `min(7d_left, 100.0 - map_or(0.0, ...))` = `min(7d_left, 100.0)` = `7d_left` —
+/// accidentally correct for `prefer::any`. Verified here as an explicit contract.
+#[ test ]
+fn test_relevant_quotas_any_no_sonnet()
+{
+  // h5_util=20.0, d7_util=30.0 → five_h_left=80.0, d7_left=70.0, seven_day_sonnet=None.
+  let aq     = mk_aq_ok_both( 20.0, 30.0 );
+  let quotas = relevant_quotas( &aq, PreferStrategy::Any );
+  assert!(
+    ( quotas.1 - 70.0 ).abs() < 1e-9,
+    "prefer::any + absent Sonnet → relevant_7d_left must equal d7_left (70.0); got: {}",
+    quotas.1,
+  );
+}
+
+/// `prefer::son` + absent Sonnet → `relevant_7d_left = 0.0` (absent = unknown, not 100%).
+///
+/// # Root Cause (Phase 2 bug fix)
+/// Old `prefer_weekly` computed `100.0 - map_or(0.0, ...)`. When `seven_day_sonnet = None`,
+/// `map_or(0.0, ...)` yields `0.0`, so the result is `100.0 - 0.0 = 100.0`. An absent
+/// Sonnet tier was treated as 100% remaining — silently inflating `prefer_weekly` and making
+/// h-exhausted accounts appear eligible for `sort::renew` despite unknown Sonnet capacity.
+///
+/// # Fix Applied
+/// `relevant_quotas` uses `if let Some(ref son)` — when `None`, returns `0.0`. Absent = unknown;
+/// unknown Sonnet is treated as unavailable for `prefer::son` eligibility purposes.
+///
+/// # Pitfall
+/// `map_or(0.0, ...)` is correct for DISPLAY (show 0% when tier absent). It is WRONG for
+/// quota-eligibility gates — absent is not the same as exhausted, but for preference purposes
+/// where the user explicitly requests Sonnet, absent Sonnet must be treated as ineligible.
+#[ test ]
+fn test_relevant_quotas_son_no_sonnet()
+{
+  // d7_util=30.0, seven_day_sonnet=None — the bug case.
+  let aq     = mk_aq_ok_both( 20.0, 30.0 );
+  let quotas = relevant_quotas( &aq, PreferStrategy::Sonnet );
+  assert!(
+    quotas.1.abs() < 1e-9,
+    "prefer::son + absent Sonnet → relevant_7d_left must be 0.0 (absent = unknown); got: {}",
+    quotas.1,
+  );
+}
+
+/// `prefer::son` + present Sonnet → `relevant_7d_left` = 100.0 - utilization.
+///
+/// Standard case: Sonnet tier present with 70% utilization → 30% remaining.
+#[ test ]
+fn test_relevant_quotas_son_with_sonnet()
+{
+  // mk_aq_sort_weekly: h5=20.0, d7=30.0, son=70.0 → son_left = 30.0.
+  let aq     = mk_aq_sort_weekly( "t@x.com", 20.0, 30.0, 70.0 );
+  let quotas = relevant_quotas( &aq, PreferStrategy::Sonnet );
+  assert!(
+    ( quotas.1 - 30.0 ).abs() < 1e-9,
+    "prefer::son + son_util=70.0 → relevant_7d_left must be 30.0; got: {}",
+    quotas.1,
+  );
+}
+
+/// `prefer::opus` → `relevant_7d_left` = raw `seven_day_left`, Sonnet tier irrelevant.
+///
+/// Opus intent uses only the overall 7d quota; Sonnet cap is not a constraint.
+/// Even with a nearly-exhausted Sonnet tier (`son_util=95.0`), the result is raw `d7_left`.
+#[ test ]
+fn test_relevant_quotas_opus()
+{
+  // d7_util=40.0 → d7_left=60.0; son_util=95.0 (high, but irrelevant for Opus).
+  let aq     = mk_aq_sort_weekly( "t@x.com", 20.0, 40.0, 95.0 );
+  let quotas = relevant_quotas( &aq, PreferStrategy::Opus );
+  assert!(
+    ( quotas.1 - 60.0 ).abs() < 1e-9,
+    "prefer::opus → relevant_7d_left must equal raw d7_left (60.0), ignoring Sonnet; got: {}",
+    quotas.1,
+  );
+}
+
+/// `Err` result → sentinel `(-1.0, 0.0)`.
+///
+/// Error accounts have no quota data; `relevant_quotas` must return the ineligibility
+/// sentinel without panicking or accessing unavailable data.
+#[ test ]
+fn test_relevant_quotas_err()
+{
+  let aq     = mk_aq_err();
+  let quotas = relevant_quotas( &aq, PreferStrategy::Any );
+  assert!(
+    ( quotas.0 - ( -1.0 ) ).abs() < 1e-9 && quotas.1.abs() < 1e-9,
+    "Err result → relevant_quotas must return (-1.0, 0.0); got: {quotas:?}",
+  );
 }
