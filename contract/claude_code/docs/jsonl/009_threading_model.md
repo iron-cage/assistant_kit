@@ -37,6 +37,10 @@ The `parentUuid` chain within one session file is closed for the vast majority o
 
 New sessions start with `parentUuid: null` — no field references the prior session. Cross-session conversation chains must be inferred by heuristics (temporal proximity, content context). See behavior B18 and [`../taxonomy/003_implementation.md`](../taxonomy/003_implementation.md).
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

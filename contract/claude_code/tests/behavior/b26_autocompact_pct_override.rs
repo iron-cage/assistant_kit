@@ -11,6 +11,8 @@
 //! Invalidation: binary exits non-zero with the env var set, OR prints a rejection
 //! referencing `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` on stderr.
 
+use crate::skip_if_version_before;
+
 /// B26: binary exits successfully and does not reject `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`.
 ///
 /// Two assertions provide invalidation power:
@@ -23,6 +25,9 @@
 #[ test ]
 fn b26_autocompact_pct_override_env_var_recognized()
 {
+  // B26 requires claude >= v2.1.75; skip gracefully on older binaries.
+  skip_if_version_before!( "2.1.75" );
+
   let Some( claude ) = super::find_claude_binary() else
   {
     eprintln!( "skip: `claude` binary not found on PATH" );

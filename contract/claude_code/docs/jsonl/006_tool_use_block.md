@@ -36,6 +36,10 @@
 
 **`input` schema**: Tool-specific. `Bash` has `command` and optionally `description`; `Edit` has `file_path`, `old_string`, `new_string`; `Read` has `file_path`; etc.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

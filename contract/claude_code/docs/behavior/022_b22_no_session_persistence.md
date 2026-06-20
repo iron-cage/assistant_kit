@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: FLAG-VFY | **Evidence**: E41, E42
+**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: FLAG-VFY | **Since**: pre-v1.0 | **Evidence**: E41, E42
 
 `--no-session-persistence` disables session disk writes; no `.jsonl` file is created and the session cannot be resumed. Only works with `--print` mode (non-interactive), since interactive mode requires session persistence for the terminal UI.
 

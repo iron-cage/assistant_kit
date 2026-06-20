@@ -18,6 +18,10 @@ object
 
 `{}`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Defines per-project tool permission rules as three lists. Written by Claude Code when the user grants or denies a tool permission during a session. Stored in project-level `.claude/settings.json` or `.claude/settings.local.json`; not typically set in the user-global `~/.claude/settings.json`.

@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: FLAG-VFY | **Evidence**: E35, E36
+**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: FLAG-VFY | **Since**: pre-v1.0 | **Evidence**: E35, E36
 
 `--resume <session-id>` (shorthand `-r`) selects a specific `.jsonl` file to resume by UUID rather than using the most recently modified file. This is the explicit override for B5's mtime-based selection.
 

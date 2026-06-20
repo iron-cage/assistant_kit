@@ -18,6 +18,10 @@ string[] (space-separated `file_id:relative_path` specs)
 
 —
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Downloads Anthropic Files API resources at startup and makes them available to Claude in the session. Each spec is `file_id:relative_path`, e.g. `--file file_abc123:context.txt`. The file is fetched and written to the specified relative path before Claude processes the first message. Useful for injecting large context documents without embedding them in the prompt.

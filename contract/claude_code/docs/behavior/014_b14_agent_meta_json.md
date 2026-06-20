@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: ✅ Confirmed | **Certainty**: 90% | **Tier**: VALIDATED | **Evidence**: E24, E28
+**Status**: ✅ Confirmed | **Certainty**: 90% | **Tier**: VALIDATED | **Since**: pre-v1.0 | **Evidence**: E24, E28
 
 Each agent JSONL file may have a sibling `.meta.json` file containing agent metadata:
 

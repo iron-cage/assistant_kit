@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: VALIDATED | **Evidence**: E6, E17
+**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: VALIDATED | **Since**: pre-v1.0 | **Evidence**: E6, E17
 
 Agent sessions are stored as `agent-*.jsonl` files with `isSidechain: true` in every entry; they are siblings of main sessions in the same project directory, not children.
 

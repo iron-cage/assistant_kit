@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: VALIDATED | **Evidence**: E8, E19
+**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: VALIDATED | **Since**: pre-v1.0 | **Evidence**: E8, E19
 
 Claude Code stores project sessions at `~/.claude/projects/{path-encoded}/` where the encoded name is derived from the working directory path:
 

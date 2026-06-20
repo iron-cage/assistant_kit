@@ -18,6 +18,10 @@ string[] (space or comma separated)
 
 `default`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Overrides the full set of available tools. `default` (the default value) enables all built-in tools. `""` (empty string) disables every tool — Claude cannot read files, run bash, or use any other tool. Named tools can be listed to use exactly that set. This is a coarser override than `--allowed-tools`/`--disallowed-tools`.

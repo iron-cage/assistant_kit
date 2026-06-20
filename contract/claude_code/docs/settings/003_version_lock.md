@@ -38,6 +38,10 @@ Two keys written by `.version.install` on every successful exit (including idemp
 3. Write `preferredVersionSpec` and `preferredVersionResolved` to settings
 4. If pinned: apply Layer 1 (`autoUpdates: false`), Layer 2 (`DISABLE_AUTOUPDATER=1`), and re-lock Layer 3 (`chmod 555`)
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

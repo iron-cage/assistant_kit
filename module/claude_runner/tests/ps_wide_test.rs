@@ -9,7 +9,7 @@
 //! | EC-1 | `clr ps --wide` shows all 11 columns including Mode, Command, Binary | Behavioral |
 //! | EC-2 | `clr ps -w` short form shows Mode, Command, Binary                | Behavioral    |
 //! | EC-3 | `clr ps --wide --columns pid,task` → `--columns` wins             | Precedence    |
-//! | EC-4 | `clr ps` without `--wide` hides Mode, Command, Binary             | Default       |
+//! | EC-4 | `clr ps` without `--wide` hides Command, Binary (Mode is default) | Default       |
 //! | EC-5 | `clr ps --help` output contains `--wide` and `-w`                 | Documentation |
 
 mod cli_binary_test_helpers;
@@ -73,7 +73,8 @@ fn ec2_short_form_w_shows_wide_columns()
   let _ = bg.wait();
 
   let stdout = stdout_str( &out );
-  assert!( out.status.success(), "EC-2: exit 0 expected, got {:?}", out.status.code() );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!( out.status.success(), "EC-2: exit 0 expected, got {:?}\nstderr:\n{stderr}", out.status.code() );
   assert!( stdout.contains( "Mode" ),    "EC-2: Mode must appear with -w. Got:\n{stdout}" );
   assert!( stdout.contains( "Command" ), "EC-2: Command must appear with -w. Got:\n{stdout}" );
   assert!( stdout.contains( "Binary" ),  "EC-2: Binary must appear with -w. Got:\n{stdout}" );
@@ -110,7 +111,7 @@ fn ec3_columns_overrides_wide()
 
 // ── EC-4: Default hides optional columns ────────────────────────────────────
 
-/// EC-4: `clr ps` without `--wide` does not show Mode, Command, Binary.
+/// EC-4: `clr ps` without `--wide` shows Mode (default column) but hides Command, Binary.
 #[ cfg( unix ) ]
 #[ test ]
 fn ec4_default_hides_wide_columns()
@@ -131,7 +132,8 @@ fn ec4_default_hides_wide_columns()
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "EC-4: exit 0 expected, got {:?}", out.status.code() );
-  assert!( !stdout.contains( "Mode" ),    "EC-4: Mode must NOT appear without --wide. Got:\n{stdout}" );
+  // Mode is a default column (added in TSK-224) — must appear even without --wide.
+  assert!( stdout.contains( "Mode" ),     "EC-4: Mode must appear in default view. Got:\n{stdout}" );
   assert!( !stdout.contains( "Command" ), "EC-4: Command must NOT appear without --wide. Got:\n{stdout}" );
   assert!( !stdout.contains( "Binary" ),  "EC-4: Binary must NOT appear without --wide. Got:\n{stdout}" );
 }

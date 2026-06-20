@@ -10,6 +10,10 @@ Mode
 
 Switches Claude Code into plan mode where it can only read and analyze code but cannot make modifications. Used for architecture planning and code review before making changes.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

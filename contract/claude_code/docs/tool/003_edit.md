@@ -10,6 +10,10 @@ File Operations
 
 Performs exact string replacements in files. Requires the file to have been read first. The `old_string` must be unique in the file (or `replace_all` must be set). Preserves exact indentation. Preferred over Write for modifying existing files as it sends only the diff.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

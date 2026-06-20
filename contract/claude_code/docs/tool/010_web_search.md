@@ -10,6 +10,10 @@ Web
 
 Performs a web search query and returns relevant results. Returns titles, URLs, and snippets.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: NEG-ONLY | **Evidence**: E10, E21
+**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: NEG-ONLY | **Since**: pre-v1.0 | **Evidence**: E10, E21
 
 `CLAUDE_CODE_AUTO_CONTINUE` environment variable enables automated continuation mode in the `claude` binary.
 

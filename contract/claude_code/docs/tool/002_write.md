@@ -10,6 +10,10 @@ File Operations
 
 Creates a new file or overwrites an existing file at the specified path. Requires that existing files be read first via the Read tool before overwriting. Accepts absolute paths only.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

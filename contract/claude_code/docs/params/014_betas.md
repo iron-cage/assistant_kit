@@ -18,6 +18,10 @@ string[] (space-separated beta header names)
 
 —
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Sends additional beta feature headers with API requests. Only effective when using API key authentication (not browser OAuth). Beta headers opt into experimental Anthropic API features before they are generally available. The accepted values depend on current Anthropic beta offerings. Use only when specifically required by a beta feature's documentation.

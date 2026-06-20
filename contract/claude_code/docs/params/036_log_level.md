@@ -18,6 +18,10 @@ enum — `Error` `Warn` `Info` `Debug` `Trace`
 
 `Info`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Controls the minimum severity level of log messages emitted by Claude Code's internal logger. `Error` shows only errors; `Trace` shows everything including fine-grained internal events. `Info` is the standard operational level. Increase to `Debug` or `Trace` when diagnosing unexpected behaviour without full `--debug` mode overhead.

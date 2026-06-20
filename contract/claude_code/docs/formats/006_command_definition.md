@@ -42,6 +42,10 @@ A command defined at `~/.claude/commands/commit.md` is invoked in a Claude Code 
 
 **Examples**: `commit.md`, `refactor_extracting.md`, `test_clean.md`, `pr_review.md`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

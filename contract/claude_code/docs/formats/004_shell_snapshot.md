@@ -53,6 +53,10 @@ shopt -u histappend
 
 Old snapshots can be deleted safely — only affects ability to restore shell environment for old sessions. Current session's snapshot is needed for active session restoration only.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

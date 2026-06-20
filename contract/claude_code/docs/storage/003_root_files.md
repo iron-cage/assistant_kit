@@ -77,6 +77,10 @@ See [`../settings/001_global_settings.md`](../settings/001_global_settings.md) f
 
 **Maintenance**: Never delete `.credentials.json` or `settings.json` during normal operation. `history.jsonl` can be truncated safely.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

@@ -18,6 +18,10 @@ string? (optional category filter)
 
 `off`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Enables debug mode. With no argument, all debug categories are emitted. With an optional category filter string (e.g. `"api,hooks"` or `"!1p,!file"`), only matching categories are shown — prefix with `!` to exclude a category. Debug output goes to stderr. Supersedes the deprecated `--mcp-debug` flag for MCP-related debugging.

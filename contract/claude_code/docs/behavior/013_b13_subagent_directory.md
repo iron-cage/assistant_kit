@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: VALIDATED | **Evidence**: E23, E27
+**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: VALIDATED | **Since**: pre-v1.0 | **Evidence**: E23, E27
 
 New-format agent sessions are stored in a subdirectory tree rooted at the parent session UUID:
 

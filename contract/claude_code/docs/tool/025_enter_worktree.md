@@ -10,6 +10,10 @@ Mode
 
 Creates a temporary git worktree giving the agent an isolated copy of the repository. Changes made in the worktree do not affect the main working directory. The worktree is automatically cleaned up if no changes are made.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

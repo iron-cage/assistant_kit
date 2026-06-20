@@ -6,7 +6,7 @@
 |------|---------|-------------|----------:|
 | `api/` | Index of API doc instances covering COMMANDS_YAML, VerbosityLevel, and register_commands contracts | [api/readme.md](api/readme.md) | 1 |
 | `cli/` | Index of CLI reference instances covering commands, params, types, groups, dictionary, user stories, env params | [cli/readme.md](cli/readme.md) | 5 |
-| `cli/param/` | Index of individual parameter reference instances (63 parameters) | [cli/param/readme.md](cli/param/readme.md) | 63 |
+| `cli/param/` | Index of individual parameter reference instances (65 parameters) | [cli/param/readme.md](cli/param/readme.md) | 65 |
 | `cli/user_story/` | Index of user goal and usage pattern instances (27 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 27 |
 | `feature/` | Index of feature doc instances covering the clr binary tool design | [feature/readme.md](feature/readme.md) | 1 |
 | `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, trace universality, isolated/refresh subprocess defaults, and exit code contract | [invariant/readme.md](invariant/readme.md) | 6 |
@@ -84,6 +84,8 @@
 | cli/param | 065 | --max-budget-usd | [cli/param/065_max_budget_usd.md](cli/param/065_max_budget_usd.md) |
 | cli/param | 066 | --add-dir | [cli/param/066_add_dir.md](cli/param/066_add_dir.md) |
 | cli/param | 067 | --fallback-model | [cli/param/067_fallback_model.md](cli/param/067_fallback_model.md) |
+| cli/param | 068 | --pid | [cli/param/068_pid.md](cli/param/068_pid.md) |
+| cli/param | 069 | --inspect | [cli/param/069_inspect.md](cli/param/069_inspect.md) |
 | cli/user_story | 001 | Interactive REPL | [cli/user_story/001_interactive_repl.md](cli/user_story/001_interactive_repl.md) |
 | cli/user_story | 002 | Print Mode Capture | [cli/user_story/002_print_mode_capture.md](cli/user_story/002_print_mode_capture.md) |
 | cli/user_story | 003 | Interactive With Message | [cli/user_story/003_interactive_with_message.md](cli/user_story/003_interactive_with_message.md) |

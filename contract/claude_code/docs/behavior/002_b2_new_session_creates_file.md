@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: VALIDATED | **Evidence**: E1, E12, E47
+**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: VALIDATED | **Since**: pre-v1.0 | **Evidence**: E1, E12, E47
 
 Each `claude` invocation without `--continue` creates a separate new `.jsonl` session file; sessions are never appended to existing files unless explicitly continued.
 

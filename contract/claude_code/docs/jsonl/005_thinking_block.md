@@ -33,6 +33,10 @@
 
 **Ordering**: Typically appears first in the content array: `[thinking, text, ...]` or `[thinking, tool_use, ...]`.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

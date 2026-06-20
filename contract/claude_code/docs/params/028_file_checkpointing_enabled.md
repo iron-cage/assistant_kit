@@ -16,6 +16,10 @@ providing a recovery path if an edit produces an undesired result.
 { "fileCheckpointingEnabled": true }
 ```
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

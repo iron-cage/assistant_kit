@@ -18,6 +18,10 @@ object
 
 `{}`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Embeds MCP server definitions directly in `settings.json` as an alternative to the `--mcp-config` CLI flag (which points to a separate JSON file). The object keys are server names; each value is an MCP server config object with `command`, `args`, and optional `env` fields. Servers defined here are loaded on every session without needing a `--mcp-config` flag. Typically placed in a project-level `.claude/settings.json` to scope servers to the project, but valid in the global `~/.claude/settings.json` as well.

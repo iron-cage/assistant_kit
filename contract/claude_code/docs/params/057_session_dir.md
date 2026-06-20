@@ -18,6 +18,10 @@ path
 
 `auto` (`~/.claude/projects/{encoded-path}/`)
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Overrides the directory where session `.jsonl` files are stored for the current invocation. When set, Claude reads and writes session files from this path instead of the default project-encoded directory under `~/.claude/projects/`. Useful for redirecting session storage to a custom location in CI or multi-user environments.

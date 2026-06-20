@@ -18,6 +18,10 @@ string
 
 `"dark"`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Sets the UI color theme for Claude Code's terminal interface. The value is a theme name string. The binary ships with at least `"dark"` and `"light"` built-in themes. This setting is read once at startup from the settings file; it cannot be overridden per-invocation via CLI or env var. Modify via `cm .settings.set key::theme value::light` or by editing `~/.claude/settings.json` directly.

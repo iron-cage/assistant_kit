@@ -7,17 +7,17 @@
 - **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (-> param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (65 total)
+### All Env Parameters (68 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
 | Input (CLR_*) — `run` subcommand | 58 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 3 | Caller env fallbacks for credential operation parameters |
-| Input (CLR_*) — `ps` subcommand | 2 | Caller env fallbacks for session listing display parameters |
+| Input (CLR_*) — `ps` subcommand | 5 | Caller env fallbacks for session listing display and flag thresholds |
 | Runtime config (CLR_*) | 1 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 65 environment variables
+**Total:** 68 environment variables
 
 ---
 
@@ -153,7 +153,7 @@ subcommand. It is a cross-command env var that applies to all three executing co
 
 ### Env Param 3: CLR_* Input Parameters — `ps` Subcommand
 
-Environment variable fallbacks for the 2 `ps` session listing display parameters.
+Environment variable fallbacks for the 5 `ps` session listing display and flag-threshold parameters.
 `dispatch_ps()` in `src/cli/ps.rs` reads these before table rendering.
 Each variable is applied **only when the corresponding CLI flag is absent** — the
 CLI flag always wins when both are present.
@@ -162,16 +162,23 @@ CLI flag always wins when both are present.
 |---|----------|---------------|------|-------|
 | 1 | `CLR_PS_MODE` | [`--mode`](param/058_mode.md) | string | Parsed as enum (`all`/`interactive`/`print`); invalid values → exit 1 |
 | 2 | `CLR_PS_COLUMNS` | [`--columns`](param/059_columns.md) | string | Comma-separated column keys; applied when `--columns` absent |
+| 3 | `CLR_PS_PID` | [`--pid`](param/068_pid.md) | string | Comma-separated numeric PIDs; non-numeric entries silently ignored; applied when `--pid` absent |
+| 4 | `CLR_PS_ANCIENT_SECS` | _(no CLI flag)_ | u64 | Elapsed-seconds threshold above which the 🕰 (Ancient) flag is shown; default `28800` (8 h); invalid values silently ignored |
+| 5 | `CLR_PS_HIGH_RAM_MB` | _(no CLI flag)_ | u64 | RSS megabyte threshold above which the 🐘 (High RAM) flag is shown; default `400`; invalid values silently ignored |
 
 **Precedence:**
 
 1. CLI flag (wins unconditionally when provided)
 2. `CLR_PS_*` env var (applied when CLI field absent)
-3. Built-in default (`all` for mode, 8 default columns for columns)
+3. Built-in default (`all` for mode, 9 default columns for columns, no PID filter, 28800 for ancient threshold, 400 for high-RAM threshold)
 
 **Note:** `--wide` has no env var equivalent — it is a convenience shorthand only.
 When both `CLR_PS_COLUMNS` and `--wide` are active, `CLR_PS_COLUMNS` wins (explicit
 column selection overrides the convenience flag).
+
+**Note (`CLR_PS_ANCIENT_SECS` / `CLR_PS_HIGH_RAM_MB`):** These variables have no corresponding
+CLI flags. They are the only mechanism to override the flag thresholds. Invalid values (non-numeric,
+overflow) are silently ignored — the built-in defaults are used instead.
 
 ---
 

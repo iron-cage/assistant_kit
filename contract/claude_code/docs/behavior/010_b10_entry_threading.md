@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: VALIDATED | **Evidence**: E9, E20
+**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: VALIDATED | **Since**: pre-v1.0 | **Evidence**: E9, E20
 
 Each JSONL entry contains a `parentUuid` field that links it to the previous entry in the conversation. The first entry has `"parentUuid": null`. This forms a singly-linked chain that can be walked to reconstruct conversation order:
 

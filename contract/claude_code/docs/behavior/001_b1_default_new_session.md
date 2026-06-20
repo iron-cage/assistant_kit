@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: ✅ Confirmed | **Certainty**: 90% | **Tier**: VALIDATED | **Evidence**: E1, E2, E11, E47
+**Status**: ✅ Confirmed | **Certainty**: 90% | **Tier**: VALIDATED | **Since**: pre-v1.0 | **Evidence**: E1, E2, E11, E47
 
 The `claude` binary defaults to a NEW session on every invocation. Continuation requires an explicit `-c` / `--continue` flag:
 

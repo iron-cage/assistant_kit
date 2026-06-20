@@ -55,6 +55,10 @@ HTTP 200 (personal Max account, alice@example.com, example response):
 | 401 | Token invalid or expired |
 | 403 | Token lacks required scope |
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

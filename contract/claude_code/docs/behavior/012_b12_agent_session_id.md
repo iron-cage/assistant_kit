@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: VALIDATED | **Evidence**: E22, E26
+**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: VALIDATED | **Since**: pre-v1.0 | **Evidence**: E22, E26
 
 In agent JSONL entries, the `sessionId` field does **not** refer to the agent's own session. Instead it contains the UUID of the parent (root) session. This is the primary programmatic link between a sub-agent and the conversation that spawned it.
 

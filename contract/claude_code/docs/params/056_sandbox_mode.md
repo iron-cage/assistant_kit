@@ -18,6 +18,10 @@ bool
 
 `true`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Enables sandbox mode, which restricts certain system-level operations Claude Code can perform. When true (the default), the process runs with additional isolation constraints. Set to `false` in environments that require unrestricted system access. The `claude_runner_core` builder also defaults this to `true` — no difference between builder and binary default for this parameter.

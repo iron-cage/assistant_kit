@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Document `clr ps` as a session inspection tool that lists all running Claude Code processes and queued `clr` waiters with per-session metadata in two plain-style tables.
-- **Responsibility**: Define acceptance criteria for the session listing command: plain-style table output, elapsed column, queued-sessions table, empty-session state, column presence, help discoverability, typo guard, self-exclusion, mode filtering, column selection, and wide output.
-- **In Scope**: `clr ps` plain-style table output, default 8 columns (`#`/`PID`/`Elapsed`/`CPU%`/`RAM`/`State`/`Absolute Path`/`Task`), optional 3 columns (`Mode`/`Command`/`Binary`), queued CLR processes table (`#`/`PID`/`CWD`/`Waiting`/`Attempt` columns), no-sessions message, `clr --help` listing, typo-guard for `clr p` / `clr pss`, self-PID exclusion, `$PRO` path shortening, gate state files, `CLR_GATE_DIR` override, `--mode` filtering, `--columns` selection, `--wide` expansion, `CLR_PS_MODE` / `CLR_PS_COLUMNS` env var fallbacks.
+- **Responsibility**: Define acceptance criteria for the session listing command: plain-style table output, elapsed column, queued-sessions table, empty-session state, column presence, help discoverability, typo guard, self-exclusion, mode filtering, column selection, wide output, session flags, and flag legend.
+- **In Scope**: `clr ps` plain-style table output, 9 default columns (`#`/`PID`/`Elapsed`/`CPU%`/`RAM`/`State`/`Mode`/`Absolute Path`/`Task`), optional 2 columns (`Command`/`Binary`), conditional `Flags` column (shown only when ≥1 flag applies to any row), flag legend below active table (shown only when ≥1 flag present), 7 session flags (👈 this-session, 🖨 print-mode, ⚡ running, 🕰 ancient, 🐘 high-RAM, ⚠ dead-metrics, 🐳 container), `CLR_PS_ANCIENT_SECS` and `CLR_PS_HIGH_RAM_MB` threshold env vars, queued CLR processes table (`#`/`PID`/`CWD`/`Waiting`/`Attempt` columns), no-sessions message, `clr --help` listing, typo-guard for `clr p` / `clr pss`, self-PID exclusion, `$PRO` path shortening, gate state files, `CLR_GATE_DIR` override, `--mode` filtering, `--columns` selection, `--wide` expansion, `CLR_PS_MODE` / `CLR_PS_COLUMNS` env var fallbacks.
 - **Out of Scope**: Watch/auto-refresh mode, non-Linux platforms. (Session termination implemented as `clr kill` in US-027 / TSK-201.)
 
 ### Persona
@@ -44,6 +44,16 @@ enabling them to identify stale, stuck, or piled-up sessions.
 - AC-018: When both `--columns` and `--wide` are specified, `--columns` wins (explicit selection overrides the convenience flag)
 - AC-019: `CLR_PS_MODE=print clr ps` filters to print-mode sessions (env var fallback); `clr ps --mode interactive` with `CLR_PS_MODE=print` shows interactive sessions only (CLI wins)
 - AC-020: `CLR_PS_COLUMNS=pid,elapsed clr ps` shows only PID and Elapsed columns (env var fallback); `clr ps --columns pid,path` with `CLR_PS_COLUMNS=pid,elapsed` shows PID and Path (CLI wins)
+- AC-021: When no active session has any flag, the `Flags` column is absent from the active sessions table output
+- AC-022: When ≥1 active session has at least one flag, the `Flags` column appears in the active sessions table between `State` and `Mode`; the column header is `Flags`
+- AC-023: 🐳 (Container) flag appears for sessions whose working directory does not start with `$HOME`; sessions within `$HOME` do not show the flag
+- AC-024: 🕰 (Ancient) flag appears for sessions whose elapsed time exceeds `CLR_PS_ANCIENT_SECS` seconds (default: 28800 = 8 h); `CLR_PS_ANCIENT_SECS` env var overrides the threshold
+- AC-025: 🐘 (High RAM) flag appears for sessions whose RSS memory exceeds `CLR_PS_HIGH_RAM_MB` MB (default: 400 MB); `CLR_PS_HIGH_RAM_MB` env var overrides the threshold
+- AC-026: ⚠ (Dead metrics) flag appears for sessions where `/proc` metrics could not be read (started_at is None — all metric fields display as `-`)
+- AC-027: ⚡ (Running) flag appears for sessions in kernel state `R` (currently scheduled on CPU at the moment of the `clr ps` scan)
+- AC-028: 🖨 (Print mode) flag appears for sessions classified as print mode (cmdline contains `--print` or `-p`)
+- AC-029: 👈 (This session) flag appears when `clr ps` is invoked as a direct subprocess of a `claude` process (i.e., `getppid()` resolves to a PID whose cmdline basename is `claude`)
+- AC-030: When ≥1 flag is present in any row, a legend is printed below the active sessions table listing only the flag symbols and their names that appear in the current output; the legend is omitted when no flags are present
 
 ### Referenced Commands
 
@@ -55,7 +65,7 @@ enabling them to identify stale, stuck, or piled-up sessions.
 
 | # | Group | Params |
 |---|-------|--------|
-| 5 | [Session Listing](../param_group/05_session_listing.md) | `--mode`, `--columns`, `--wide` |
+| 5 | [Session Listing](../param_group/05_session_listing.md) | `--mode`, `--columns`, `--wide`, `--pid`, `--inspect` |
 
 ### Referenced Parameters
 
@@ -64,6 +74,10 @@ enabling them to identify stale, stuck, or piled-up sessions.
 | 58 | [`--mode`](../param/058_mode.md) | AC-013, AC-014, AC-019 |
 | 59 | [`--columns`](../param/059_columns.md) | AC-015, AC-016, AC-018, AC-020 |
 | 60 | [`--wide`](../param/060_wide.md) | AC-017, AC-018 |
+| 68 | [`--pid`](../param/068_pid.md) | — |
+| 69 | [`--inspect`](../param/069_inspect.md) | — |
+| — | `CLR_PS_ANCIENT_SECS` | AC-024 |
+| — | `CLR_PS_HIGH_RAM_MB` | AC-025 |
 
 ### Related User Stories
 

@@ -46,6 +46,10 @@ HTTP 403 with standard Max OAuth token:
 {"error": "OAuth token does not meet scope requirement org:create_api_key"}
 ```
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 80% | **Tier**: FLAG-VFY | **Evidence**: E37, E38
+**Status**: 🎯 Observed | **Certainty**: 80% | **Tier**: FLAG-VFY | **Since**: pre-v1.0 | **Evidence**: E37, E38
 
 By default Claude Code generates a random UUIDv4 for each new session. `--session-id <uuid>` overrides this to a caller-supplied UUID. Useful for reproducible automation where session identity must be deterministic (e.g., linking Claude invocations to external tracking systems).
 

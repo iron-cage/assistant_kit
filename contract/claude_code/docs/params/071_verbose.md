@@ -18,6 +18,10 @@ bool
 
 `off`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Enables verbose output mode, overriding whatever the config file specifies. When on, Claude emits additional internal reasoning steps and tool call details to stderr. Useful for debugging sessions or understanding what Claude is doing. The flag takes no value — its presence enables verbose mode.

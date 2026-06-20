@@ -18,6 +18,10 @@ bool
 
 `off`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 When set, ignores all MCP server configurations from settings files, project config, and other sources — only the servers defined via `--mcp-config` are available. Useful for hermetic automation where the MCP environment must be fully controlled and predictable, with no ambient MCP servers leaking in from user settings.

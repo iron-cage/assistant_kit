@@ -2,6 +2,8 @@
 //! plain-style tables.
 
 use claude_core::process::{ find_claude_processes, ProcessInfo };
+#[ cfg( target_os = "linux" ) ]
+use claude_core::process::ProcessMetrics;
 use data_fmt::{ RowBuilder, TableFormatter, TableConfig, TableCaption, Format };
 
 // Runtime configuration for `clr ps`, assembled from env-var defaults (applied
@@ -9,11 +11,19 @@ use data_fmt::{ RowBuilder, TableFormatter, TableConfig, TableCaption, Format };
 struct PsConfig
 {
   /// Mode filter: `None` or `"all"` = no filter; `"print"` / `"interactive"` = filter rows.
-  mode    : Option< String >,
+  mode         : Option< String >,
   /// Comma-separated column keys from `--columns`; overrides `--wide` when present.
-  columns : Option< String >,
+  columns      : Option< String >,
   /// When `true` and `columns` is `None`: show all 11 columns.
-  wide    : bool,
+  wide         : bool,
+  /// PID filter from `--pid`; empty = show all sessions.
+  pids         : Vec< u32 >,
+  /// When `true`: emit key:value inspect blocks instead of tables.
+  inspect      : bool,
+  /// Elapsed-seconds threshold above which the 🕰 (Ancient) flag fires. Default: 28800 (8h).
+  ancient_secs : u64,
+  /// RAM megabytes threshold above which the 🐘 (High RAM) flag fires. Default: 400 MB.
+  high_ram_mb  : u64,
 }
 
 // Classify a process's execution mode from its cmdline args.
@@ -38,14 +48,25 @@ fn classify_mode( args : &[ String ] ) -> &str
 /// Dispatch `clr ps`: list active Claude Code sessions and queued `clr` waiters
 /// in two plain-style tables.
 ///
-/// Accepts `--mode`, `--columns`, `--wide` (and their short forms).
-/// Exits 0 with the tables (or empty-state messages); exits 1 on unknown or
-/// invalid arguments.
+/// Accepts `--mode`, `--columns`, `--wide`, `--pid`, `--inspect` (and their short forms).
+/// Exits 0 with the tables (or inspect blocks, or empty-state message);
+/// exits 1 on unknown or invalid arguments.
+#[ allow( clippy::too_many_lines ) ]
 pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
 {
   // Env-var defaults applied first; CLI tokens overwrite (CLI-wins).
-  let ( env_mode, env_columns ) = super::env::apply_ps_env_vars();
-  let mut config = PsConfig { mode : env_mode, columns : env_columns, wide : false };
+  let ( env_mode, env_columns, env_pids, env_ancient_secs, env_high_ram_mb )
+    = super::env::apply_ps_env_vars();
+  let mut config = PsConfig
+  {
+    mode         : env_mode,
+    columns      : env_columns,
+    wide         : false,
+    pids         : env_pids,
+    inspect      : false,
+    ancient_secs : env_ancient_secs,
+    high_ram_mb  : env_high_ram_mb,
+  };
 
   let mut i = 1_usize; // tokens[0] is "ps"
   while i < tokens.len()
@@ -80,6 +101,35 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
       {
         config.wide = true;
       }
+      "--pid" =>
+      {
+        i += 1;
+        if i >= tokens.len()
+        {
+          eprintln!( "clr ps: `--pid` requires a value (comma-separated PIDs)" );
+          std::process::exit( 1 );
+        }
+        let csv = tokens[ i ].clone();
+        let mut parsed_pids = Vec::new();
+        for part in csv.split( ',' )
+        {
+          let trimmed = part.trim();
+          if let Ok( pid ) = trimmed.parse::< u32 >()
+          {
+            parsed_pids.push( pid );
+          }
+          else
+          {
+            eprintln!( "clr ps: `--pid` value `{trimmed}` is not a valid PID; must be a positive integer" );
+            std::process::exit( 1 );
+          }
+        }
+        config.pids = parsed_pids;
+      }
+      "--inspect" | "-i" =>
+      {
+        config.inspect = true;
+      }
       arg =>
       {
         eprintln!( "clr ps: unexpected argument `{arg}`\nRun 'clr ps --help' for usage." );
@@ -112,19 +162,57 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
     }
   }
 
-  let procs        = find_claude_processes();
-  let active_table = build_active_table( &procs, &config );
-  let queued_table = build_queued_table();
+  let procs = find_claude_processes();
 
-  match ( active_table, queued_table )
+  // Inspect mode: emit key:value blocks instead of tables; suppress queued output.
+  if config.inspect
+  {
+    let mode_str = config.mode.as_deref().unwrap_or( "all" );
+    let mode_ok : Vec< &ProcessInfo > = if mode_str == "all"
+    {
+      procs.iter().collect()
+    }
+    else
+    {
+      procs.iter().filter( | p | classify_mode( &p.args ) == mode_str ).collect()
+    };
+    let filtered : Vec< &ProcessInfo > = if config.pids.is_empty()
+    {
+      mode_ok
+    }
+    else
+    {
+      mode_ok.into_iter().filter( | p | config.pids.contains( &p.pid ) ).collect()
+    };
+    let output = build_inspect_output( &filtered );
+    if output.is_empty()
+    {
+      println!( "No active Claude Code sessions." );
+    }
+    else
+    {
+      println!( "{output}" );
+    }
+    std::process::exit( 0 );
+  }
+
+  let active_result = build_active_table( &procs, &config );
+  let queued_table  = build_queued_table();
+
+  match ( active_result, queued_table )
   {
     ( None, None ) =>
     {
       println!( "No active Claude Code sessions." );
     }
-    ( Some( at ), None ) =>
+    ( Some( ( at, legend ) ), None ) =>
     {
       println!( "{at}" );
+      if let Some( leg ) = legend
+      {
+        println!();
+        println!( "{leg}" );
+      }
     }
     ( None, Some( qt ) ) =>
     {
@@ -135,9 +223,14 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
       println!();
       println!( "{qt}" );
     }
-    ( Some( at ), Some( qt ) ) =>
+    ( Some( ( at, legend ) ), Some( qt ) ) =>
     {
       println!( "{at}" );
+      if let Some( leg ) = legend
+      {
+        println!();
+        println!( "{leg}" );
+      }
       println!();
       println!( "{qt}" );
     }
@@ -191,9 +284,10 @@ const COLUMN_KEYS : &[ ( &str, &str ) ] = &[
   ( "binary",  "Binary" ),
 ];
 
-// Default column set (8 columns) shown when neither `--wide` nor `--columns` is given.
+// Default column set (9 columns) shown when neither `--wide` nor `--columns` is given.
+// `mode` is inserted after `state` so session type is visible in the default view.
 const DEFAULT_COLUMNS : &[ &str ] = &[
-  "idx", "pid", "elapsed", "cpu", "ram", "state", "path", "task",
+  "idx", "pid", "elapsed", "cpu", "ram", "state", "mode", "path", "task",
 ];
 
 // Resolve the ordered list of column keys from PsConfig.
@@ -254,18 +348,203 @@ fn validate_columns( csv : &str ) -> Result< Vec< &'static str >, String >
   Ok( out )
 }
 
+// Emit a key:value inspect record for each matching process.
+//
+// Each block starts with a PID rule line, followed by 12 attribute lines
+// (pid, mode, elapsed, cpu, ram, state, path, task, binary, cmd, cmdline, started).
+// Blocks are joined by blank lines.  Returns an empty string when `procs` is empty
+// so the caller can emit the no-sessions message.
+fn build_inspect_output( procs : &[ &ProcessInfo ] ) -> String
+{
+  use core::fmt::Write as _;
+  let mut out = String::new();
+  for ( idx, proc ) in procs.iter().enumerate()
+  {
+    if idx > 0 { out.push( '\n' ); }
+
+    let pid     = proc.pid;
+    let mode    = classify_mode( &proc.args ).to_string();
+    let path    = shorten_path( &proc.cwd.display().to_string() );
+    let task    = resolve_task( proc );
+    let binary  = proc.args.first().cloned().unwrap_or_default();
+    let cmd     = proc.args.get( 1.. ).unwrap_or( &[] ).join( " " );
+    let cmdline = proc.args.join( " " );
+
+    #[ cfg( target_os = "linux" ) ]
+    let ( elapsed, cpu, ram, state, started ) =
+    {
+      use claude_core::process::read_process_metrics;
+      match read_process_metrics( pid )
+      {
+        Some( m ) => (
+          elapsed_label( m.started_at ),
+          format!( "{:.1}%", m.cpu_pct ),
+          ram_label( m.ram_kb ),
+          m.state.to_string(),
+          m.started_at.to_string(),
+        ),
+        None => (
+          "-".to_string(), "-".to_string(), "-".to_string(),
+          "-".to_string(), "-".to_string(),
+        ),
+      }
+    };
+
+    #[ cfg( not( target_os = "linux" ) ) ]
+    let ( elapsed, cpu, ram, state, started ) = (
+      "-".to_string(), "-".to_string(), "-".to_string(),
+      "-".to_string(), "-".to_string(),
+    );
+
+    let rule = format!( "──── PID {pid} {}", "─".repeat( 50 ) );
+    let _ = writeln!( out, "{rule}" );
+    let _ = writeln!( out, "{:<10}{pid}",     "pid:" );
+    let _ = writeln!( out, "{:<10}{mode}",    "mode:" );
+    let _ = writeln!( out, "{:<10}{elapsed}", "elapsed:" );
+    let _ = writeln!( out, "{:<10}{cpu}",     "cpu:" );
+    let _ = writeln!( out, "{:<10}{ram}",     "ram:" );
+    let _ = writeln!( out, "{:<10}{state}",   "state:" );
+    let _ = writeln!( out, "{:<10}{path}",    "path:" );
+    let _ = writeln!( out, "{:<10}{task}",    "task:" );
+    let _ = writeln!( out, "{:<10}{binary}",  "binary:" );
+    let _ = writeln!( out, "{:<10}{cmd}",     "cmd:" );
+    let _ = writeln!( out, "{:<10}{cmdline}", "cmdline:" );
+    let _ = writeln!( out, "{:<10}{started}", "started:" );
+  }
+  out.trim_end_matches( '\n' ).to_string()
+}
+
+// Per-flag metadata in canonical display order (👈🖨⚡🕰🐘⚠🐳).
+// Only used on Linux because compute_flags is Linux-only.
+#[ cfg( target_os = "linux" ) ]
+const FLAG_LEGEND : &[ ( &str, &str ) ] = &[
+  ( "👈", "This session" ),
+  ( "🖨",  "Print mode"   ),
+  ( "⚡", "Running"      ),
+  ( "🕰",  "Ancient"      ),
+  ( "🐘", "High RAM"     ),
+  ( "⚠",  "Dead metrics" ),
+  ( "🐳", "Container"    ),
+];
+
+// Compute session-flag emoji string for a single process row.
+//
+// Flags in canonical order 👈🖨⚡🕰🐘⚠🐳 (only symbols that fire are included).
+// Pure computation — no filesystem I/O beyond what the caller already has in `metrics`.
+// The `/proc/{my_ppid}/cmdline` read for 👈 is inexpensive and done once per `clr ps` run.
+#[ cfg( target_os = "linux" ) ]
+fn compute_flags(
+  proc         : &ProcessInfo,
+  metrics      : Option< &ProcessMetrics >,
+  home         : &str,
+  ancient_secs : u64,
+  high_ram_mb  : u64,
+  my_ppid      : u32,
+) -> String
+{
+  let mut flags = String::new();
+
+  // 👈 This session: clr ps is a direct child of this claude process.
+  if proc.pid == my_ppid
+  {
+    // Verify the parent's cmdline arg[0] basename == "claude".
+    let is_claude = std::fs::read( format!( "/proc/{my_ppid}/cmdline" ) )
+      .ok()
+      .and_then( | b |
+      {
+        let arg0 : Vec< u8 > = b.split( | &c | c == b'\0' )
+          .next()
+          .unwrap_or( &[] )
+          .to_vec();
+        String::from_utf8( arg0 ).ok()
+      } )
+      .is_some_and( | s |
+      {
+        std::path::Path::new( &s )
+          .file_name()
+          .and_then( | n | n.to_str() )
+          == Some( "claude" )
+      } );
+    if is_claude { flags.push( '👈' ); }
+  }
+
+  // 🖨 Print mode: cmdline contains --print or -p.
+  if classify_mode( &proc.args ) == "print" { flags.push( '🖨' ); }
+
+  if let Some( m ) = metrics
+  {
+    // ⚡ Running: kernel state is R.
+    if m.state == 'R' { flags.push( '⚡' ); }
+
+    // 🕰 Ancient: elapsed seconds exceed the configured threshold.
+    let elapsed = super::gate::unix_now().saturating_sub( m.started_at );
+    if elapsed > ancient_secs { flags.push( '🕰' ); }
+
+    // 🐘 High RAM: RSS exceeds threshold. Comparison in KB to avoid integer-division
+    //   truncation (e.g. 512 KB / 1024 = 0 MB, which would never exceed a 0 MB threshold).
+    if m.ram_kb > high_ram_mb.saturating_mul( 1_024 ) { flags.push( '🐘' ); }
+  }
+  else
+  {
+    // ⚠ Dead metrics: read_process_metrics returned None (TOCTOU race or zombie).
+    flags.push( '⚠' );
+  }
+
+  // 🐳 Container: working directory is outside $HOME.
+  let cwd_str = proc.cwd.to_str().unwrap_or( "" );
+  if !home.is_empty() && !cwd_str.starts_with( home )
+  {
+    flags.push( '🐳' );
+  }
+
+  flags
+}
+
+// Build the legend line from the collected per-row flag strings.
+//
+// Only symbols that appeared in at least one row are included, in canonical order.
+// Returns an empty string when `flags_per_row` contains no non-empty entries
+// (caller should check `any_flags` before calling to avoid the empty-string case).
+#[ cfg( target_os = "linux" ) ]
+fn build_legend( flags_per_row : &[ String ] ) -> String
+{
+  let all_flags : String = flags_per_row.concat();
+  FLAG_LEGEND.iter()
+    .filter( | ( emoji, _ ) | all_flags.contains( *emoji ) )
+    .map( | ( emoji, name ) | format!( "{emoji} {name}" ) )
+    .collect::< Vec< _ > >()
+    .join( "  " )
+}
+
 // Build the active sessions table, returning None when no sessions match.
-fn build_active_table( procs : &[ ProcessInfo ], config : &PsConfig ) -> Option< String >
+//
+// Returns `Some((table_string, legend))` where `legend` is `Some(line)` when ≥1 flag
+// fired across all displayed rows, or `None` when all rows are flag-free.
+// The caller must print the legend after the active table (separated by a blank line).
+fn build_active_table(
+  procs  : &[ ProcessInfo ],
+  config : &PsConfig,
+) -> Option< ( String, Option< String > ) >
 {
   // Apply mode filter before checking emptiness.
   let mode = config.mode.as_deref().unwrap_or( "all" );
-  let filtered : Vec< &ProcessInfo > = if mode == "all"
+  let mode_filtered : Vec< &ProcessInfo > = if mode == "all"
   {
     procs.iter().collect()
   }
   else
   {
     procs.iter().filter( | p | classify_mode( &p.args ) == mode ).collect()
+  };
+
+  // Apply PID filter after mode filter (AND semantics).
+  let filtered : Vec< &ProcessInfo > = if config.pids.is_empty()
+  {
+    mode_filtered
+  }
+  else
+  {
+    mode_filtered.into_iter().filter( | p | config.pids.contains( &p.pid ) ).collect()
   };
 
   if filtered.is_empty() { return None; }
@@ -282,24 +561,64 @@ fn build_active_table( procs : &[ ProcessInfo ], config : &PsConfig ) -> Option<
   #[ cfg( not( target_os = "linux" ) ) ]
   let sorted : Vec< &ProcessInfo > = filtered;
 
-  let cols    = resolve_columns( config );
-  let headers : Vec< String > = cols.iter().map( |k|
+  // Pass 1: compute flags per row (Linux only; always empty on other platforms).
+  #[ cfg( target_os = "linux" ) ]
+  let flags_per_row : Vec< String > = {
+    use claude_core::process::read_process_metrics;
+    let home    = std::env::var( "HOME" ).unwrap_or_default();
+    let my_ppid : u32 = std::os::unix::process::parent_id();
+    sorted.iter().map( | proc |
+    {
+      let m = read_process_metrics( proc.pid );
+      compute_flags( proc, m.as_ref(), &home, config.ancient_secs, config.high_ram_mb, my_ppid )
+    } ).collect()
+  };
+  #[ cfg( not( target_os = "linux" ) ) ]
+  let flags_per_row : Vec< String > = sorted.iter().map( |_| String::new() ).collect();
+
+  let any_flags = flags_per_row.iter().any( | f | !f.is_empty() );
+
+  let cols = resolve_columns( config );
+
+  // Find insertion position for the Flags column — immediately after "state".
+  let flags_insert_pos : Option< usize > = if any_flags
+  {
+    cols.iter().position( | &k | k == "state" ).map( | p | p + 1 )
+  }
+  else
+  {
+    None
+  };
+
+  // Build headers, inserting "Flags" after "State" when any flag fired.
+  let mut headers : Vec< String > = cols.iter().map( |k|
   {
     COLUMN_KEYS.iter()
       .find( | ( ck, _ ) | ck == k )
       .map_or_else( || ( *k ).to_string(), | ( _, h ) | ( *h ).to_string() )
   } ).collect();
+  if let Some( p ) = flags_insert_pos { headers.insert( p, "Flags".to_string() ); }
 
+  // Pass 2: build rows, injecting flags value at insertion position.
   let mut builder = RowBuilder::new( headers );
-  for ( idx, proc ) in sorted.iter().enumerate()
+  for ( ( idx, proc ), flags_str ) in sorted.iter().enumerate().zip( flags_per_row.iter() )
   {
-    let row = build_row( idx + 1, proc, &cols );
+    let mut row = build_row( idx + 1, proc, &cols );
+    if let Some( p ) = flags_insert_pos { row.insert( p, flags_str.clone() ); }
     builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
   }
 
   let caption = TableCaption::new( "Active Sessions" )
     .field( format!( "{} running", sorted.len() ) );
-  Some( render_plain_table( builder, caption ) )
+  let table_str = render_plain_table( builder, caption );
+
+  // Build legend from flags present across all rows (Linux only).
+  #[ cfg( target_os = "linux" ) ]
+  let legend = if any_flags { Some( build_legend( &flags_per_row ) ) } else { None };
+  #[ cfg( not( target_os = "linux" ) ) ]
+  let legend : Option< String > = None;
+
+  Some( ( table_str, legend ) )
 }
 
 // Build one table row for the given process, emitting only the requested columns.

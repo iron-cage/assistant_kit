@@ -1,9 +1,9 @@
 # Env Param :: CLR_* Input Variables
 
-Edge cases for the 56 `CLR_*` input environment variable fallbacks (51 for `run` + 3 for `isolated`/`refresh` + 2 for `ps`).
+Edge cases for the `CLR_*` input environment variable fallbacks (58 for `run`, 3 for `isolated`/`refresh`, 5 for `ps`; see `env_param.md` §1–§3 for full list).
 Source: [`env_param.md`](../../../../docs/cli/env_param.md)
 Implementation: `apply_env_vars()` in `src/cli/env.rs`; `apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/cli/cred_parse.rs`
-Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E18–E57)
+Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E18–E40), `tests/ps_flags_test.rs` (E41–E42)
 
 ## Test Case Index
 
@@ -49,19 +49,22 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 | E38 | `CLR_RETRY_ON_SERVICE=N` sets Service class retry count | `CLR_RETRY_ON_SERVICE` | dry-run exits 0; CLI flag wins; invalid value silently ignored |
 | E39 | `CLR_SERVICE_DELAY=N` sets Service class retry delay (secs) | `CLR_SERVICE_DELAY` | dry-run exits 0; CLI flag wins; invalid value silently ignored |
 | E40 | `CLR_RETRY_ON_UNKNOWN=N` sets Unknown class retry count | `CLR_RETRY_ON_UNKNOWN` | dry-run exits 0; CLI flag wins; invalid value silently ignored |
+| E41 | `CLR_PS_ANCIENT_SECS=0` triggers 🕰 flag for any running session | `CLR_PS_ANCIENT_SECS` | `clr ps` output contains 🕰; invalid value silently ignored (default 28800 used) |
+| E42 | `CLR_PS_HIGH_RAM_MB=0` triggers 🐘 flag for any running session | `CLR_PS_HIGH_RAM_MB` | `clr ps` output contains 🐘; invalid value silently ignored (default 400 used) |
 
 ## Test Coverage Summary
 
 - Bool vars (truthy only): E02, E04, E05, E06, E07, E11, E13, E14, E18, E19, E28 (11 tests)
 - String vars: E01, E03, E08, E10, E15, E16, E21, E22, E23, E29, E31, E32, E33 (13 tests)
-- Parsed vars (with silent-ignore): E09, E12, E17, E30, E35, E36, E37, E38, E39, E40 (10 tests)
+- Parsed vars (with silent-ignore): E09, E12, E17, E30, E35, E36, E37, E38, E39, E40, E41, E42 (12 tests)
 - Parsed vars (with hard-rejection): E34 (1 test)
 - Negation suppression (suppress default injection): E05, E06, E07, E18, E19 (5 tests)
 - CLI-wins verification: E01, E03, E29, E30, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40 (14 tests)
 - Isolated subcommand: E23, E24 (2 tests)
 - Credential ops (cross-command): E28 (1 test)
+- `ps` flag threshold vars (no CLI equivalent): E41, E42 (2 tests)
 
-**Total:** 40 edge cases (E01–E40)
+**Total:** 42 edge cases (E01–E42)
 
 ## Test Cases
 
@@ -489,3 +492,27 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **CLI-wins:** `clr --retry-on-unknown 2 --dry-run task` with `CLR_RETRY_ON_UNKNOWN=1` → CLI value 2 used; env var 1 ignored
 - **Invalid-ignored:** `CLR_RETRY_ON_UNKNOWN=bad` → parse failure silently ignored; effective default (auto → fallback 2) used; dry-run exits 0 normally
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E41: CLR_PS_ANCIENT_SECS sets ancient-session flag threshold
+
+- **Given:** Fake `claude` ELF running; `CLR_PS_ANCIENT_SECS=0` (zero threshold — any non-zero elapsed triggers 🕰)
+- **When:** `clr ps` with `CLR_PS_ANCIENT_SECS=0` in env
+- **Then:** exit 0; stdout contains `🕰` (Ancient flag); legend lists `🕰`
+- **Exit:** 0
+- **Invalid-ignored:** `CLR_PS_ANCIENT_SECS=notanumber` → parse failure silently ignored; default 28800 used; no 🕰 flag for typical running session
+- **Note:** No CLI flag equivalent — env var is the only override mechanism
+- **Source:** [env_param.md §3](../../../../docs/cli/env_param.md)
+
+---
+
+### E42: CLR_PS_HIGH_RAM_MB sets high-RAM flag threshold
+
+- **Given:** Fake `claude` ELF running; `CLR_PS_HIGH_RAM_MB=0` (zero threshold — any non-zero RSS triggers 🐘)
+- **When:** `clr ps` with `CLR_PS_HIGH_RAM_MB=0` in env
+- **Then:** exit 0; stdout contains `🐘` (High RAM flag); legend lists `🐘`
+- **Exit:** 0
+- **Invalid-ignored:** `CLR_PS_HIGH_RAM_MB=notanumber` → parse failure silently ignored; default 400 used; typical test process RAM would not trigger the flag
+- **Note:** No CLI flag equivalent — env var is the only override mechanism
+- **Source:** [env_param.md §3](../../../../docs/cli/env_param.md)

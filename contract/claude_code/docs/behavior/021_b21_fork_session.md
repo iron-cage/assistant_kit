@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 80% | **Tier**: FLAG-VFY | **Evidence**: E39, E40
+**Status**: 🎯 Observed | **Certainty**: 80% | **Tier**: FLAG-VFY | **Since**: pre-v1.0 | **Evidence**: E39, E40
 
 When resuming a session (`--resume` or `--continue`), `--fork-session` creates a new session UUID rather than appending to the original file. The resumed history is copied into the new `.jsonl`, leaving the source session untouched.
 

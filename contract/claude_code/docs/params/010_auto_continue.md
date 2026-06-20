@@ -18,6 +18,10 @@ bool
 
 `false`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 When true, Claude automatically continues long responses that would otherwise be truncated, without requiring a user prompt to proceed. Enables fully unattended automation in `--print` mode. Without this, a truncated response in `--print` mode may hang waiting for input. The `claude_runner_core` builder defaults this to `true` for automation; the binary default is `false`.

@@ -12,7 +12,7 @@
 //! | EC-4 | CLI `--columns pid,path` wins over `CLR_PS_COLUMNS=pid,elapsed`               | CLI-wins      |
 //! | EC-5 | `--columns pid,task` with `--wide` → `--columns` wins                        | Precedence    |
 //! | EC-6 | `--columns idx,pid,mode,cmd,binary` shows optional columns                    | Behavioral    |
-//! | EC-7 | Default (no `--columns`) shows the 8 default columns                         | Default       |
+//! | EC-7 | Default (no `--columns`) shows the 9 default columns (including Mode)         | Default       |
 //! | EC-8  | `clr ps --help` output contains `--columns`                                   | Documentation |
 //! | EC-9  | `idx` counter is 1-based after `--mode` filtering                             | Interaction   |
 //! | EC-10 | `clr ps --help` lists `idx`/`cmd`, not `num`/`command` (BUG-303 regression)   | Documentation |
@@ -197,7 +197,7 @@ fn ec6_optional_columns_displayed()
 
 // ── EC-7: Default columns shown without `--columns` ──────────────────────────
 
-/// EC-7: Default `clr ps` shows 8 default columns; hides Mode, Command, Binary.
+/// EC-7: Default `clr ps` shows 9 default columns (including Mode); hides Command, Binary.
 #[ cfg( unix ) ]
 #[ test ]
 fn ec7_default_columns_shown()
@@ -223,9 +223,9 @@ fn ec7_default_columns_shown()
   assert!( stdout.contains( "CPU%" ),          "EC-7: CPU% must appear. Got:\n{stdout}" );
   assert!( stdout.contains( "RAM" ),           "EC-7: RAM must appear. Got:\n{stdout}" );
   assert!( stdout.contains( "State" ),         "EC-7: State must appear. Got:\n{stdout}" );
+  assert!( stdout.contains( "Mode" ),          "EC-7: Mode must appear in default (9th default col). Got:\n{stdout}" );
   assert!( stdout.contains( "Absolute Path" ), "EC-7: Absolute Path must appear. Got:\n{stdout}" );
   assert!( stdout.contains( "Task" ),          "EC-7: Task must appear. Got:\n{stdout}" );
-  assert!( !stdout.contains( "Mode" ),    "EC-7: Mode must NOT appear in default. Got:\n{stdout}" );
   assert!( !stdout.contains( "Command" ), "EC-7: Command must NOT appear in default. Got:\n{stdout}" );
   assert!( !stdout.contains( "Binary" ),  "EC-7: Binary must NOT appear in default. Got:\n{stdout}" );
 }

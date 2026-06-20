@@ -62,6 +62,10 @@
 
 The `permissions` object in `.claude/settings.local.json` is auto-managed by Claude Code during sessions. When the user grants or denies a tool permission interactively, Claude Code writes the rule to this file. The `allow`, `deny`, and `ask` arrays contain tool pattern strings.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

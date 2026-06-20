@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 75% | **Tier**: FLAG-VFY | **Evidence**: E45, E46
+**Status**: 🎯 Observed | **Certainty**: 75% | **Tier**: FLAG-VFY | **Since**: pre-v1.0 | **Evidence**: E45, E46
 
 `--from-pr` without a value opens an interactive picker listing sessions previously associated with GitHub pull requests. `--from-pr <PR-number-or-URL>` resumes the session linked to that PR directly.
 

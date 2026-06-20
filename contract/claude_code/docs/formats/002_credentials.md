@@ -35,6 +35,10 @@ The `claudeAiOauth` object contains the OAuth authentication payload. The exact 
 
 Written by `.account.switch` when switching active accounts. Also written by the OAuth refresh cycle. Written atomically (read-modify-write with file replacement).
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

@@ -10,6 +10,10 @@ Extensibility
 
 Executes user-defined skills (slash commands) that extend Claude Code's capabilities. Skills are defined as markdown files in the user's commands directory. Only available for skills listed in the user-invocable skills section.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

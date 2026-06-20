@@ -18,6 +18,10 @@ bool
 
 `false`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 When `true`, suppresses the interactive "Are you sure?" confirmation dialog shown when `--dangerously-skip-permissions` is active. Useful in CI/CD environments and automated pipelines where no TTY is available to answer the prompt. Setting this in `~/.claude/settings.json` makes dangerous mode fully non-interactive across all sessions. Has no effect unless dangerous mode is active.

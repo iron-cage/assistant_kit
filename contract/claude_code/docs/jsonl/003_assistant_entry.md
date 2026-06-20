@@ -57,6 +57,10 @@
 
 **`message.content` is an array**: Contrast with user entries where `message.content` is a string. May contain multiple blocks in one response (thinking + text + tool_use is common).
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

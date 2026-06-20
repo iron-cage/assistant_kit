@@ -18,6 +18,10 @@ bool
 
 `off`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Emits partial response chunks as they arrive rather than waiting for the complete response. Requires `--output-format=stream-json` and print mode. Enables real-time streaming to downstream consumers. Without this flag, stream-json still streams but only emits complete message objects.

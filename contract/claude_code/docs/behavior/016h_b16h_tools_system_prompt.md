@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: ❓ Uncertain | **Certainty**: 60% | **Tier**: MEASURE | **Evidence**: E32
+**Status**: ❓ Uncertain | **Certainty**: 60% | **Tier**: MEASURE | **Since**: pre-v1.0 | **Evidence**: E32
 
 Tool *definitions* (~12k tokens) remain in the assembled system prompt even when `--tools ""` is given — invocation is blocked but the token cost is unchanged.
 

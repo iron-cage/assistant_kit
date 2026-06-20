@@ -27,6 +27,10 @@
 
 The text block is the most common content block type. It contains the primary prose response. A single assistant message may contain multiple text blocks interspersed with tool use blocks.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

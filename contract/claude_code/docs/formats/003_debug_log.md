@@ -44,6 +44,10 @@
 
 Safe to delete entirely — no impact on conversations, settings, or credentials. Can be deleted to reclaim disk space at any time. Claude Code recreates new log files on next run.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

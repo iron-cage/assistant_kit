@@ -18,6 +18,10 @@ string (comma-separated) — valid values: `user` `project` `local` (any combina
 
 all
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Filters which setting source layers are loaded at startup. `user` = `~/.claude/settings.json`. `project` = `.claude/settings.json` in the project root. `local` = `.claude/settings.local.json`. Specify a comma-separated subset to load only those layers, ignoring others. Useful for isolating config layers during debugging or in environments where some layers are absent.

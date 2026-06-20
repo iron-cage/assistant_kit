@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: FLAG-VFY | **Evidence**: E2, E14
+**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: FLAG-VFY | **Since**: pre-v1.0 | **Evidence**: E2, E14
 
 `-c` / `--continue` is the explicit opt-in for resuming the most recently modified session. At the binary level, continuation is NOT the default — it must be requested with `-c`. The `clr` wrapper inverts this by passing `-c` by default (see B1).
 

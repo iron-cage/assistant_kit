@@ -51,6 +51,10 @@ projects/{project-id}/
 
 Known `agentType` values: `Explore` (~63%), `general-purpose` (~36%), `Plan` (<1%).
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

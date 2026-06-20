@@ -4,7 +4,7 @@ Select which columns to display in the `clr ps` active sessions table. Accepts a
 comma-separated list of column keys. Columns are rendered in the order specified.
 
 - **Type:** comma-separated string
-- **Default:** `idx,pid,elapsed,cpu,ram,state,path,task`
+- **Default:** `idx,pid,elapsed,cpu,ram,state,mode,path,task`
 - **Command:** [`ps`](../command/06_ps.md)
 
 ```sh
@@ -25,7 +25,7 @@ CLR_PS_COLUMNS=pid,path,task clr ps   # env-var equivalent
 | `state` | State | `/proc/{pid}/stat` field 3 | yes |
 | `path` | Path | `/proc/{pid}/cwd` ($PRO shortened) | yes |
 | `task` | Task | Session JSONL last user message | yes |
-| `mode` | Mode | cmdline: `--print`/`-p` present → `print`, else `interactive` | no |
+| `mode` | Mode | cmdline: `--print`/`-p` present → `print`, else `interactive` | yes |
 | `cmd` | Command | cmdline args[1..] joined | no |
 | `binary` | Binary | cmdline args[0] (executable path) | no |
 
@@ -48,7 +48,7 @@ listing valid keys to stderr.
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 6 | [`ps`](../command/06_ps.md) | 8 default columns | Controls active sessions table columns; queued table columns are fixed |
+| 6 | [`ps`](../command/06_ps.md) | 9 default columns | Controls active sessions table columns; queued table columns are fixed |
 
 ### Referenced User Stories
 

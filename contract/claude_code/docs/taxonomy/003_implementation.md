@@ -45,6 +45,10 @@ When chains are detected:
 
 Session UUIDs appear only at higher verbosity levels (`verbosity::2+`) for debugging or direct access purposes. At default verbosity, `.projects` shows Conversations. This is intentional — UUIDs are not human-meaningful (`8d795a1c-c81d-4010-8d29-b4e678272419`).
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

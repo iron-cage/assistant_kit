@@ -42,6 +42,10 @@
 
 Can be truncated to reclaim space — loses project history used for session picker but does not affect conversation data in `projects/`. File is safe to delete entirely (Claude Code recreates it); only loses the project history index.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

@@ -18,6 +18,10 @@ string
 
 —
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 The Anthropic API key used to authenticate requests. Must be set in the environment; the `--api-key` CLI flag was removed from the binary. Without a valid key, Claude Code falls back to browser-based OAuth authentication. For automation and CI, always set this env var explicitly rather than relying on interactive login.

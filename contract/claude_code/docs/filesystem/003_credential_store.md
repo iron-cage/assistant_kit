@@ -41,6 +41,10 @@ Implemented in `PersistPaths::credential_store()`. The directory is created on f
 - **delete** (`.account.delete`): removes the file
 - **list** (`.account.list`): reads filenames to enumerate saved accounts
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

@@ -18,6 +18,10 @@ integer
 
 — (model default when unset)
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Top-k sampling cutoff. Limits token sampling to the k highest-probability tokens at each step. When unset, the model's default top-k is used. Lower values make output more predictable; higher values allow more diversity. Generally not tuned independently — prefer `temperature` or `top_p` for most use cases.

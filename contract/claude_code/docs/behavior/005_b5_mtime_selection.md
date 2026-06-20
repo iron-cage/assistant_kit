@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 60% | **Tier**: VALIDATED† | **Evidence**: E4, E15
+**Status**: 🎯 Observed | **Certainty**: 60% | **Tier**: VALIDATED† | **Since**: pre-v1.0 | **Evidence**: E4, E15
 
 The "current" session resumed by `--continue` is the most recently modified `.jsonl` file (mtime).
 

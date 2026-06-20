@@ -18,6 +18,10 @@ bool
 
 `false`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 When `true`, activates voice input (microphone) and audio output (text-to-speech) features. Requires platform audio support. Persists across sessions via `~/.claude/settings.json`. Has no effect in non-interactive or `--print` mode.

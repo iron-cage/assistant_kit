@@ -80,6 +80,10 @@ Keys valid only in `~/.claude/settings.json` (not in project settings):
 | `fileCheckpointingEnabled` | bool | `false` | Save checkpoint copy of each file before editing |
 | `remoteControlAtStartup` | bool | `false` | Open remote-control channel on startup |
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

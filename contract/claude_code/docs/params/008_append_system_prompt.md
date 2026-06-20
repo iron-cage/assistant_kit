@@ -18,6 +18,10 @@ string
 
 —
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Appends the supplied text to the end of the default system prompt. The default prompt remains intact; the appended text is added after it. Useful for injecting per-invocation context (e.g. project conventions, user identity) without discarding the baseline instructions. Cannot be combined with `--system-prompt`.

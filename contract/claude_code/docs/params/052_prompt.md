@@ -18,6 +18,10 @@ string
 
 — (required when not in interactive mode)
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 The text message sent to Claude as the initial user prompt. Provided as a bare positional argument — no flag name precedes it. When omitted, Claude enters interactive REPL mode. Mutually exclusive with interactive REPL; supplying a message implies print mode by default.

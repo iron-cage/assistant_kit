@@ -10,6 +10,10 @@ Shell
 
 Executes bash commands and returns stdout/stderr output. Working directory persists between calls but shell state does not. Default timeout is 120000ms (2 minutes), configurable up to 600000ms (10 minutes). Supports background execution via `run_in_background` parameter. Shell environment is initialized from the user's profile.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

@@ -11,16 +11,16 @@
 | `settings` | Settings file structure and protocols: global, project, version lock | [settings/readme.md](settings/readme.md) | 3 |
 | `formats` | Data formats: file formats, output schemas — history, credentials, debug, shell-snapshots, todos, commands, JSON response | [formats/readme.md](formats/readme.md) | 7 |
 | `taxonomy` | Four-level concept hierarchy: Project, Conversation, Session, Entry | [taxonomy/readme.md](taxonomy/readme.md) | 3 |
-| `params` | CLI parameter specifications for the `claude` binary | [params/readme.md](params/readme.md) | 76 |
+| `params` | CLI parameter specifications for the `claude` binary | [params/readme.md](params/readme.md) | 79 |
 | `tool` | Built-in tools available in Claude Code sessions | [tool/readme.md](tool/readme.md) | 26 |
 | `endpoint` | Wire contracts for Anthropic HTTP endpoints consumed by workspace crates | [endpoint/readme.md](endpoint/readme.md) | 10 |
 | `fault` | Aggregated index of all fault conditions: terminal errors (E1–E6), silent failures (F1–F4), and quirks (Q1–Q5) with detection signals and `classify_error()` priority order | [fault/readme.md](fault/readme.md) | 0 |
 
-**Total doc instances**: 169 (27 + 3 + 4 + 10 + 3 + 7 + 3 + 76 + 10 + 26)
+**Total doc instances**: 172 (27 + 3 + 4 + 10 + 3 + 7 + 3 + 79 + 10 + 26)
 
 ## Master Doc Instances Table
 
-### behavior/ (25 instances)
+### behavior/ (27 instances)
 
 | ID | Name | File |
 |----|------|------|
@@ -127,6 +127,6 @@
 | 009 | CLI Feedback | [endpoint/009_cli_feedback.md](endpoint/009_cli_feedback.md) |
 | 010 | Web Domain Info | [endpoint/010_web_domain_info.md](endpoint/010_web_domain_info.md) |
 
-> `params` instances (76 files) use numbered naming and are enumerated in their master file: [params/readme.md](params/readme.md).
+> `params` instances (79 files) use numbered naming and are enumerated in their master file: [params/readme.md](params/readme.md).
 >
 > `tool` instances (26 files) use numbered naming and are enumerated in their master file: [tool/readme.md](tool/readme.md).

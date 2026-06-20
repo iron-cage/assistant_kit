@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: FLAG-VFY | **Evidence**: E3, E13
+**Status**: ✅ Confirmed | **Certainty**: 95% | **Tier**: FLAG-VFY | **Since**: pre-v1.0 | **Evidence**: E3, E13
 
 `-p` / `--print` switches output capture mode to non-interactive. It does not interact with `--continue` or session creation. A `-p` invocation starts a new session (binary default, B1) unless `-c` / `--continue` is also passed.
 

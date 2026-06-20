@@ -43,6 +43,10 @@ HTTP 400 with standard Max OAuth token:
 {"error": "Access Forbidden"}
 ```
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

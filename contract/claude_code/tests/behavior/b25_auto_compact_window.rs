@@ -11,6 +11,8 @@
 //! Invalidation: binary exits non-zero with the env var set, OR prints a rejection
 //! referencing `CLAUDE_CODE_AUTO_COMPACT_WINDOW` on stderr.
 
+use crate::skip_if_version_before;
+
 /// B25: binary exits successfully and does not reject `CLAUDE_CODE_AUTO_COMPACT_WINDOW`.
 ///
 /// Two assertions provide invalidation power:
@@ -23,6 +25,9 @@
 #[ test ]
 fn b25_auto_compact_window_env_var_recognized()
 {
+  // B25 requires claude >= v2.1.75; skip gracefully on older binaries.
+  skip_if_version_before!( "2.1.75" );
+
   let Some( claude ) = super::find_claude_binary() else
   {
     eprintln!( "skip: `claude` binary not found on PATH" );

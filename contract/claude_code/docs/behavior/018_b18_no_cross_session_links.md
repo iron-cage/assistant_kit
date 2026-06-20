@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 80% | **Tier**: VALIDATED | **Evidence**: E34
+**Status**: 🎯 Observed | **Certainty**: 80% | **Tier**: VALIDATED | **Since**: pre-v1.0 | **Evidence**: E34
 
 When Claude Code starts a new session in a project that already has sessions (whether via a fresh invocation without `--continue`, or via `--new-session` in the `clr` wrapper), the first entry of the new session has `parentUuid: null`. No field in the new session's entries references the prior session's UUID or last entry UUID.
 

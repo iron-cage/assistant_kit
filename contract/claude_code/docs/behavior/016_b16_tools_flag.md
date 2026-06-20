@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: ✅ Confirmed | **Certainty**: 90% | **Tier**: FLAG-VFY | **Evidence**: E30, E31
+**Status**: ✅ Confirmed | **Certainty**: 90% | **Tier**: FLAG-VFY | **Since**: pre-v1.0 | **Evidence**: E30, E31
 
 `--tools ""` disables all tool invocation; `--tools "default"` restores all tools; both values are accepted at CLI parse time without parse error.
 

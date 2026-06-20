@@ -10,6 +10,10 @@ Background Tasks
 
 Terminates a running background task by its ID. The task is stopped and its status is updated to reflect cancellation.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

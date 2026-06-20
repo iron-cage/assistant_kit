@@ -18,6 +18,10 @@ string[] (space or comma separated)
 
 none denied
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Blocks specific tools from being available for the session. Accepts the same tool name format as `--allowed-tools`. The listed tools are removed from the available set; all others remain. Useful for targeted disabling without enumerating all permitted tools. When both `--allowed-tools` and `--disallowed-tools` are present, the disallowed list is subtracted from the allowed set.

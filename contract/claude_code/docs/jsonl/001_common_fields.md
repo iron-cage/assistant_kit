@@ -34,6 +34,10 @@
 
 **`agentId` and `slug`**: Optional fields present only in agent session entries (where `isSidechain: true`). `slug` is shared across all sibling agents of one parent.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

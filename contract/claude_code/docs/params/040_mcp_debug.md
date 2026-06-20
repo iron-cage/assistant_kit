@@ -20,6 +20,10 @@ bool
 
 `off`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Enables MCP (Model Context Protocol) debug mode, showing errors and diagnostic output from MCP servers. This flag is deprecated; use `--debug` with an appropriate category filter to capture MCP-related output. Maintained for backwards compatibility but may be removed in a future release.

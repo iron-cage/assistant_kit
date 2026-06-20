@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: Observed | **Certainty**: 85% | **Tier**: NEG-ONLY | **Evidence**: E48, E49
+**Status**: Observed | **Certainty**: 85% | **Tier**: NEG-ONLY | **Since**: v2.1.75 | **Evidence**: E48, E49
 
 `CLAUDE_CODE_AUTO_COMPACT_WINDOW` environment variable sets the effective context window in tokens for auto-compaction threshold calculations. When the active conversation approaches this token count (as a percentage governed by `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`), Claude Code automatically compacts the context.
 

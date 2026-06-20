@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: Observed | **Certainty**: 80% | **Tier**: NEG-ONLY | **Evidence**: E50, E51
+**Status**: Observed | **Certainty**: 80% | **Tier**: NEG-ONLY | **Since**: v2.1.75 | **Evidence**: E50, E51
 
 `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` environment variable overrides the auto-compaction percentage: compaction fires when `used_tokens / window >= pct / 100`. The percentage is applied to the effective window set by `CLAUDE_CODE_AUTO_COMPACT_WINDOW`.
 

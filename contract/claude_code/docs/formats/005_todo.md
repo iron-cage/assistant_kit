@@ -48,6 +48,10 @@
 
 One file per session UUID. Updated on every task status change (full array overwrite). File is created when the first todo is written for a session; absent if no todos were created.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

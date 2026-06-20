@@ -99,6 +99,10 @@ HTTP 200 on success. Body is a JSON object.
 | 403 | Token lacks required scope | Re-authenticate |
 | 429 | Rate limited | Back off; conditionally refresh if local token is expired |
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: UNVERIFIED | **Evidence**: E7, E18
+**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: UNVERIFIED | **Since**: pre-v1.0 | **Evidence**: E7, E18
 
 Claude Code creates an empty `.jsonl` file as a session placeholder at startup. If the process crashes or exits before writing any entries, the file remains at 0 bytes.
 

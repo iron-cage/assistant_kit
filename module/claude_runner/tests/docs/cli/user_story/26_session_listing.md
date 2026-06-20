@@ -23,6 +23,15 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 | US-15 | `--columns` overrides `--wide` | AC-018 | ✅ |
 | US-16 | `CLR_PS_MODE` env var filters sessions | AC-019 | ✅ |
 | US-17 | `CLR_PS_COLUMNS` env var selects columns | AC-020 | ✅ |
+| US-18 | `Flags` column absent when no flags apply to any session | AC-021 | ✅ |
+| US-19 | 🐳 Container flag appears for session cwd outside `$HOME` | AC-023 | ✅ |
+| US-20 | 🕰 Ancient flag with `CLR_PS_ANCIENT_SECS=0` threshold | AC-024 | ✅ |
+| US-21 | 🐘 High-RAM flag with `CLR_PS_HIGH_RAM_MB=0` threshold | AC-025 | ✅ |
+| US-22 | ⚠ Dead-metrics flag for session with unreadable proc stats | AC-026 | ✅ |
+| US-23 | ⚡ Running flag for session in kernel state R | AC-027 | ✅ |
+| US-24 | 🖨 Print-mode flag for print-mode session | AC-028 | ✅ |
+| US-25 | Legend appears below active table when flags present | AC-030 | ✅ |
+| US-26 | Legend absent when no flags present | AC-030 | ✅ |
 
 ---
 
@@ -161,7 +170,7 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 
 - **Given:** ≥1 fake `claude` process running
 - **When:** `clr ps --wide`
-- **Then:** Exit 0; stdout contains `Mode`, `Command`, `Binary` (plus 8 defaults)
+- **Then:** Exit 0; stdout contains `Mode`, `Command`, `Binary` (plus 9 defaults including Mode)
 - **Exit:** 0
 - **Verifies:** AC-017
 
@@ -194,3 +203,94 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 - **Then:** Exit 0; stdout contains `PID`, `Elapsed`; does NOT contain `CPU%`, `RAM`, `Task`
 - **Exit:** 0
 - **Verifies:** AC-020
+
+---
+
+### US-18: Flags column absent when no flags apply
+
+- **Given:** Fake `claude` ELF running in a subdirectory of `$HOME`; `CLR_PS_ANCIENT_SECS=999999`; `CLR_PS_HIGH_RAM_MB=999999`; interactive mode
+- **When:** `clr ps`
+- **Then:** Exit 0; stdout does NOT contain `Flags` header; no flag emoji in output
+- **Exit:** 0
+- **Verifies:** AC-021
+
+---
+
+### US-19: 🐳 Container flag for session cwd outside `$HOME`
+
+- **Given:** Fake `claude` ELF spawned with cwd `/tmp/workspace` (outside temp HOME); `HOME=<temp_home>`
+- **When:** `clr ps`
+- **Then:** Exit 0; stdout contains `Flags` column header; the session row contains `🐳`; legend below active table lists `🐳  Container`
+- **Exit:** 0
+- **Verifies:** AC-023
+
+---
+
+### US-20: 🕰 Ancient flag with `CLR_PS_ANCIENT_SECS=0`
+
+- **Given:** Fake `claude` ELF running; `CLR_PS_ANCIENT_SECS=0` (threshold = 0 → any elapsed time triggers flag)
+- **When:** `clr ps` with `CLR_PS_ANCIENT_SECS=0` in env
+- **Then:** Exit 0; stdout contains `🕰`; legend lists `🕰  Ancient`
+- **Exit:** 0
+- **Verifies:** AC-024
+
+---
+
+### US-21: 🐘 High-RAM flag with `CLR_PS_HIGH_RAM_MB=0`
+
+- **Given:** Fake `claude` ELF running; `CLR_PS_HIGH_RAM_MB=0` (threshold = 0 → any non-zero RSS triggers flag)
+- **When:** `clr ps` with `CLR_PS_HIGH_RAM_MB=0` in env
+- **Then:** Exit 0; stdout contains `🐘`; legend lists `🐘  High RAM`
+- **Exit:** 0
+- **Verifies:** AC-025
+
+---
+
+### US-22: ⚠ Dead-metrics flag for session with unreadable proc stats
+
+- **Given:** Fake `claude` cmdline entry visible in proc scan but `/proc/{pid}/stat` absent (TOCTOU-dead session)
+- **When:** `clr ps`
+- **Then:** Exit 0; stdout contains `⚠`; legend lists `⚠  Dead metrics`
+- **Exit:** 0
+- **Verifies:** AC-026
+
+---
+
+### US-23: ⚡ Running flag for session in kernel state R
+
+- **Given:** Fake `claude` process whose `/proc/{pid}/stat` state field is `R`
+- **When:** `clr ps`
+- **Then:** Exit 0; stdout contains `⚡`; legend lists `⚡  Running`
+- **Exit:** 0
+- **Verifies:** AC-027
+- **Note:** Kernel state `R` may occur naturally for CPU-intensive processes or be synthesised via a fake proc dir
+
+---
+
+### US-24: 🖨 Print-mode flag for print-mode session
+
+- **Given:** Fake `claude` ELF spawned with `--print` arg; cwd inside `$HOME`; `CLR_PS_ANCIENT_SECS=999999`; `CLR_PS_HIGH_RAM_MB=999999`
+- **When:** `clr ps`
+- **Then:** Exit 0; stdout contains `🖨`; legend lists `🖨  Print mode`
+- **Exit:** 0
+- **Verifies:** AC-028
+
+---
+
+### US-25: Legend appears when flags present
+
+- **Given:** Fake `claude` ELF running with 🐳 flag (cwd outside `$HOME`)
+- **When:** `clr ps`
+- **Then:** Exit 0; stdout contains a single legend line after the active sessions table; legend line contains `🐳` and `Container`
+- **Exit:** 0
+- **Verifies:** AC-030
+
+---
+
+### US-26: Legend absent when no flags present
+
+- **Given:** Fake `claude` ELF running inside `$HOME`; `CLR_PS_ANCIENT_SECS=999999`; `CLR_PS_HIGH_RAM_MB=999999`; interactive mode
+- **When:** `clr ps`
+- **Then:** Exit 0; stdout does NOT contain any flag emoji (`👈`, `🖨`, `⚡`, `🕰`, `🐘`, `⚠`, `🐳`)
+- **Exit:** 0
+- **Verifies:** AC-030

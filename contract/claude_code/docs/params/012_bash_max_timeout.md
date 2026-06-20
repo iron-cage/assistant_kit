@@ -18,6 +18,10 @@ integer (milliseconds)
 
 `600 000` (10 minutes)
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 The maximum timeout that any individual bash command is permitted to use, regardless of what Claude requests. Acts as a ceiling on `CLAUDE_CODE_BASH_TIMEOUT`. No single bash command can run longer than this value. For long-running operations (full test suites, large builds), increase both this and `CLAUDE_CODE_BASH_TIMEOUT`.

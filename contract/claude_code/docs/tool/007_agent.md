@@ -10,6 +10,10 @@ Agents
 
 Launches autonomous subagents to handle complex, multi-step tasks. Available agent types include general-purpose, Explore (codebase search), Plan (architecture), and custom types. Agents run in their own context and return results. Supports background execution, worktree isolation, and model override. Multiple agents can run in parallel.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

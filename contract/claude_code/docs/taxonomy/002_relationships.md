@@ -71,6 +71,10 @@ When `--continue` / `-c` is passed, `claude` appends to the **same** JSONL file 
             └── ...
 ```
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

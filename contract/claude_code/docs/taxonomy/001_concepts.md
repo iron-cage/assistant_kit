@@ -38,6 +38,10 @@
 
 Sessions with zero entries can exist as startup placeholders (B8 — Claude Code creates an empty file before writing the first entry; the file remains at 0 bytes if the process exits without writing).
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

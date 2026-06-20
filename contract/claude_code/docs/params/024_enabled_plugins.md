@@ -18,6 +18,10 @@ object
 
 `{}`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 The active plugin registry stored in settings. Keys are plugin identifiers; values are plugin configuration objects. Claude Code reads this at startup to determine which plugins to initialise. For session-scoped plugin loading without persisting to settings, use `--plugin-dir` instead. Managed by Claude Code's plugin system; not intended for direct manual editing.

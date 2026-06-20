@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: VALIDATED | **Evidence**: E33
+**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: VALIDATED | **Since**: pre-v1.0 | **Evidence**: E33
 
 Within one `.jsonl` session file, the `parentUuid` threading is closed for the vast majority of entries — no entry references a UUID that lives in a different file.
 

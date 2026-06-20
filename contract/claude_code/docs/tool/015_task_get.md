@@ -10,6 +10,10 @@ Background Tasks
 
 Retrieves the current status and metadata of a background task by its ID.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

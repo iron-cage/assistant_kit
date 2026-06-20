@@ -17,6 +17,10 @@ to the running instance.
 { "remoteControlAtStartup": true }
 ```
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

@@ -18,6 +18,10 @@ json string
 
 —
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Supplies a JSON Schema that Claude's response must conform to. Claude attempts to produce output matching the schema structure. Useful for structured data extraction pipelines where the response must be machine-parseable JSON. Best combined with `--output-format=json`. Example: `{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}`.

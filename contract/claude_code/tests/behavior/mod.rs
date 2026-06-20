@@ -213,6 +213,85 @@ pub fn find_subagent_dirs( project : &std::path::Path ) -> Vec< ( String, std::p
     .collect()
 }
 
+/// Parse `claude --version` stdout to extract the version string (e.g. `"2.1.75"`).
+///
+/// Returns `None` if the binary is not found or the output contains no token that
+/// looks like a dotted numeric version.
+#[ must_use ]
+#[ inline ]
+pub fn claude_version() -> Option< String >
+{
+  let claude = find_claude_binary()?;
+  let out = std::process::Command::new( claude )
+    .arg( "--version" )
+    .output()
+    .ok()?;
+  let text = stdout( &out );
+  // matches "2.1.75" in "claude 2.1.75 (Claude Code)" or "Claude Code 2.1.75"
+  text.split_whitespace()
+    .find( | t |
+      t.contains( '.' )
+        && t.chars().next().is_some_and( | c | c.is_ascii_digit() )
+    )
+    .map( | s | s.to_owned() )
+}
+
+/// Returns `true` when `installed` semver is >= `min` semver.
+///
+/// Compares each dot-separated part as an integer so `"2.1.9" < "2.1.75"` (not
+/// lexicographic order, which would give the wrong result).  Missing parts default
+/// to `0`.
+#[ must_use ]
+#[ inline ]
+pub fn version_gte( installed : &str, min : &str ) -> bool
+{
+  let parse = | s : &str | -> Vec< u64 >
+  {
+    s.split( '.' ).map( | p | p.parse::< u64 >().unwrap_or( 0 ) ).collect()
+  };
+  let a = parse( installed );
+  let b = parse( min );
+  let len = a.len().max( b.len() );
+  for i in 0..len
+  {
+    let ai = a.get( i ).copied().unwrap_or( 0 );
+    let bi = b.get( i ).copied().unwrap_or( 0 );
+    if ai != bi { return ai > bi; }
+  }
+  true // equal
+}
+
+/// Skip the current test if the installed `claude` binary predates `$min_version`.
+///
+/// Usage inside a `#[test]` function:
+/// ```ignore
+/// skip_if_version_before!( "2.1.75" );
+/// ```
+///
+/// Prints a `skip:` line to stderr (visible with `cargo test -- --nocapture`) and
+/// returns early — not a failure.
+#[ macro_export ]
+macro_rules! skip_if_version_before
+{
+  ( $min:expr ) =>
+  {
+    match super::claude_version()
+    {
+      None =>
+      {
+        eprintln!( "skip: claude binary not found" );
+        return;
+      }
+      Some( ref v ) if !super::version_gte( v, $min ) =>
+      {
+        eprintln!( "skip: requires claude >= {}; found {}", $min, v );
+        return;
+      }
+      _ => {}
+    }
+  };
+}
+
 /// List `.meta.json` files in a subagents directory.
 #[ must_use ]
 #[ inline ]

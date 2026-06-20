@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: VALIDATED | **Evidence**: E25, E29
+**Status**: 🎯 Observed | **Certainty**: 85% | **Tier**: VALIDATED | **Since**: pre-v1.0 | **Evidence**: E25, E29
 
 Agent entries carry a `slug` field — a human-readable conversation label like `"jaunty-painting-hinton"`. All agents spawned from the same parent share an identical slug.
 

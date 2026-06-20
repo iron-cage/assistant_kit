@@ -18,6 +18,10 @@ enum — `Ask` `Auto` `Plan`
 
 `Ask`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Controls the default action mode for tool execution. `Ask` (default) prompts the user before each tool call. `Auto` executes tools without prompting. `Plan` puts Claude in read-only planning mode where it describes what it would do without executing. Can be overridden per-session by `--permission-mode`.

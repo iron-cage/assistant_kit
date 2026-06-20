@@ -18,6 +18,10 @@ bool
 
 `false`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 When true, all tool invocations are automatically approved without user confirmation prompts. Equivalent in effect to `--dangerously-skip-permissions` but applied via env var. Intended for fully automated pipelines in sandboxed environments. Setting this in an interactive or network-connected context removes a key safety layer.

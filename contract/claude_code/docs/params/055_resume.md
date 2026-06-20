@@ -18,6 +18,10 @@ string? (optional session ID)
 
 —
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Resumes a previous conversation. With no argument, opens an interactive picker listing recent sessions. With a session ID argument, resumes that specific session directly. The session ID is the UUID from the `.jsonl` filename in `~/.claude/projects/`. See also `--fork-session` to resume without overwriting the original.

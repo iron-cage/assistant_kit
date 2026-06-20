@@ -72,6 +72,10 @@ HTTP 200:
 
 HTTP 429 is the only status code that maps to a distinct `AuthError` variant. All other non-200 status codes produce `HttpTransport`.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

@@ -35,6 +35,10 @@
 
 **`content` type**: A plain string. May contain multi-line output (newline-delimited), JSON, or error messages.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

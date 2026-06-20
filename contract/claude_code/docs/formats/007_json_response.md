@@ -146,6 +146,10 @@ The `content` array contains heterogeneous blocks distinguished by `type`.
 
 Transient — not stored on disk. Each invocation produces one JSON object on stdout. Size scales with response length and number of tool use rounds (multi-block responses can reach 500KB+).
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

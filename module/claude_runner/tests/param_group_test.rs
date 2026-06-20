@@ -675,3 +675,88 @@ fn g5cc5_env_vars_respected()
   assert!( stdout.contains( "Elapsed" ), "G5CC5: Elapsed column must appear. Got:\n{stdout}" );
   assert!( !stdout.contains( "CPU%" ),   "G5CC5: CPU% must NOT appear. Got:\n{stdout}" );
 }
+
+/// G5CC6: `CLR_PS_PID=<PID-A>` env var restricts active table to session A only.
+///
+/// With two fake sessions (A and B), only A's PID appears in the table.
+///
+/// Spec: `05_session_listing.md` G5-CC6
+#[ cfg( unix ) ]
+#[ test ]
+fn g5cc6_clr_ps_pid_env_var_filters_active_table()
+{
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg_a = spawn_fake_claude( &path_val );
+  let pid_a    = bg_a.id();
+  let mut bg_b = spawn_fake_claude( &path_val );
+  let pid_b    = bg_b.id();
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .arg( "ps" )
+    .env( "PATH", &path_val )
+    .env( "CLR_PS_PID", pid_a.to_string() )
+    .output()
+    .expect( "run clr ps with CLR_PS_PID=A" );
+
+  let _ = bg_a.kill(); let _ = bg_a.wait();
+  let _ = bg_b.kill(); let _ = bg_b.wait();
+
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( out.status.success(), "G5CC6: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( &pid_a.to_string() ),
+    "G5CC6: PID A {pid_a} must appear. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( &pid_b.to_string() ),
+    "G5CC6: PID B {pid_b} must NOT appear. Got:\n{stdout}"
+  );
+}
+
+/// G5CC7: `--inspect` switches to key:value format; `--columns` and `--wide` are ignored.
+///
+/// With `--inspect --columns pid --wide`, all 12 attribute keys must appear in the output
+/// and no table header row should be present.
+///
+/// Spec: `05_session_listing.md` G5-CC7
+#[ cfg( unix ) ]
+#[ test ]
+fn g5cc7_inspect_switches_format_ignores_columns_wide()
+{
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = spawn_fake_claude( &path_val );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--inspect", "--columns", "pid", "--wide" ] )
+    .env( "PATH", &path_val )
+    .output()
+    .expect( "run clr ps --inspect --columns pid --wide" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( out.status.success(), "G5CC7: exit 0 expected, got {:?}", out.status.code() );
+
+  // All 12 inspect attribute keys must appear despite --columns pid being present.
+  for key in &[ "pid:", "mode:", "elapsed:", "cpu:", "ram:", "state:",
+                "path:", "task:", "binary:", "cmd:", "cmdline:", "started:" ]
+  {
+    assert!(
+      stdout.contains( key ),
+      "G5CC7: inspect attribute '{key}' must appear (--columns/--wide ignored). Got:\n{stdout}"
+    );
+  }
+
+  // No table header row.
+  assert!(
+    !stdout.contains( "Active Sessions" ),
+    "G5CC7: table header 'Active Sessions' must NOT appear in inspect mode. Got:\n{stdout}"
+  );
+}

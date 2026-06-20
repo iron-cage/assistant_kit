@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`clr ps --pid` PID filter and `--inspect` key:value output** (TSK-224)
+  - `--pid <PIDs>`: restricts the active sessions table to the specified comma-separated process IDs;
+    non-numeric entries exit 1; combined with `--mode` as an AND filter; `CLR_PS_PID` env var fallback
+  - `-i`/`--inspect`: emits 12-attribute key:value record blocks per session instead of the table;
+    ignores `--columns`/`--wide`; suppresses the Queued CLR Processes table; filters via `--pid`/`--mode`
+  - `mode` promoted to `DEFAULT_COLUMNS` — visible in `clr ps` output without any flags
+  - Parameters: [`--pid`](docs/cli/param/068_pid.md) (param 068), [`--inspect`](docs/cli/param/069_inspect.md) (param 069)
+  - Tests: `ps_pid_test.rs` (EC-1–EC-8), `ps_inspect_test.rs` (EC-1–EC-9)
+
 ### Fixed
 
 - **`clr ps --help`/`-h`/`help` now exits 0 and prints help** (BUG-294, TSK-206)

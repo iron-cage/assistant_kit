@@ -18,6 +18,10 @@ string
 
 `"default"`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Configures the visual output style used when Claude renders responses in the terminal. Distinct from `--output-format` (which controls the data serialisation format: `text`/`json`/`stream-json`); `outputStyle` is a UI-layer preference affecting visual presentation.

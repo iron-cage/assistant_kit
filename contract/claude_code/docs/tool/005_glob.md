@@ -10,6 +10,10 @@ Search
 
 Fast file pattern matching that works with any codebase size. Supports glob patterns like `**/*.js` or `src/**/*.ts`. Returns matching file paths sorted by modification time. Preferred over `find` command in Bash.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

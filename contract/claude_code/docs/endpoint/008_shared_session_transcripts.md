@@ -38,6 +38,10 @@ HTTP 403 "Access Forbidden" for standard Max OAuth tokens. The `user:sessions:cl
 | 405 | Method Not Allowed — only POST is accepted |
 | 401 | Token invalid or expired |
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

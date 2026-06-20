@@ -18,6 +18,10 @@ enum — `text` `stream-json`
 
 `text`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Specifies the encoding of input read from stdin (print mode only). `text` reads the prompt as plain text. `stream-json` accepts a stream of newline-delimited JSON message objects, enabling multi-turn structured input. Use with `--replay-user-messages` for full bidirectional JSON streaming. Has no effect outside print mode.

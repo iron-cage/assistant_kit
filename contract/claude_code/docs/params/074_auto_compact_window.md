@@ -18,6 +18,10 @@ integer (tokens)
 
 Model's context window: `200 000` (standard) or `1 000 000` (extended context)
 
+### Since
+
+`v2.1.75` (2026-03-13)
+
 ### Description
 
 Sets the effective context window size in tokens for auto-compaction threshold calculations. When the active conversation approaches this token count (as a percentage governed by `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`), Claude Code automatically compacts the conversation context.

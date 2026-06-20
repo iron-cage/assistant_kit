@@ -18,6 +18,10 @@ string (file path or JSON string)
 
 —
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Loads additional settings from a JSON file path or an inline JSON string, supplementing the default settings loaded from `~/.claude/settings.json`. Settings from this source are merged with (not replacing) the default config. Useful for per-invocation or per-project settings overrides without modifying the global config file.

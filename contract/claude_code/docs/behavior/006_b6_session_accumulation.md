@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: ✅ Confirmed | **Certainty**: 90% | **Tier**: VALIDATED | **Evidence**: E5, E16
+**Status**: ✅ Confirmed | **Certainty**: 90% | **Tier**: VALIDATED | **Since**: pre-v1.0 | **Evidence**: E5, E16
 
 Each project directory accumulates one `.jsonl` file per independent session invocation (each call without `--continue`). Session files are never compacted or rotated — they persist indefinitely.
 

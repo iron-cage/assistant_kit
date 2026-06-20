@@ -18,6 +18,10 @@ bool
 
 `off`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Re-emits user messages received on stdin back on stdout for acknowledgment. Requires both `--input-format=stream-json` and `--output-format=stream-json`. Useful for bidirectional streaming pipelines where the consumer needs to verify that Claude received each user message before processing the response.

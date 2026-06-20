@@ -10,6 +10,10 @@ Background Tasks
 
 Updates the status or metadata of a background task. Used to mark tasks as in_progress, completed, or to add notes.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

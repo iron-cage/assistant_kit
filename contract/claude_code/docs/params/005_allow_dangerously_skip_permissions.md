@@ -18,6 +18,10 @@ bool
 
 `off`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Makes skip-permissions available as an option during the session without enabling it by default. Differs from `--dangerously-skip-permissions` in that permission bypass is not automatic — Claude may still prompt in some cases. Recommended for sandboxes where the operator wants to allow unattended operation but not force it unconditionally.

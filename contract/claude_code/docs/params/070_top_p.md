@@ -18,6 +18,10 @@ float — valid range: 0.0–1.0
 
 — (model default when unset)
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Nucleus sampling threshold. At each token, only the top-probability tokens whose cumulative probability reaches `top_p` are considered. Lower values restrict sampling to a smaller, higher-confidence token set. When unset, the model's default top-p is used. Generally, tune either temperature or top_p but not both simultaneously.

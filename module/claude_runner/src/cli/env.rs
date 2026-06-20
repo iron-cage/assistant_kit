@@ -268,12 +268,32 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
   Ok( () )
 }
 
-/// Read `CLR_PS_MODE` and `CLR_PS_COLUMNS` env-var defaults for `clr ps`.
+/// Read `CLR_PS_MODE`, `CLR_PS_COLUMNS`, `CLR_PS_PID`, `CLR_PS_ANCIENT_SECS`, and
+/// `CLR_PS_HIGH_RAM_MB` env-var defaults for `clr ps`.
 ///
-/// Returns `(mode, columns)` — each `None` when the var is absent or empty.
+/// Returns `(mode, columns, pids, ancient_secs, high_ram_mb)` — `mode` and `columns` are
+/// `None` when absent or empty; `pids` is an empty `Vec` when `CLR_PS_PID` is absent or
+/// contains no parseable PIDs. Non-numeric entries in `CLR_PS_PID` are silently ignored.
+/// `ancient_secs` defaults to 28800 (8 h); `high_ram_mb` defaults to 400. Invalid values
+/// for either threshold are silently ignored and the default is used instead.
 /// The caller applies these as defaults before parsing CLI tokens; CLI values
 /// always overwrite env-var values (CLI-wins).
-pub( super ) fn apply_ps_env_vars() -> ( Option< String >, Option< String > )
+pub( super ) fn apply_ps_env_vars()
+  -> ( Option< String >, Option< String >, Vec< u32 >, u64, u64 )
 {
-  ( env_str( "CLR_PS_MODE" ), env_str( "CLR_PS_COLUMNS" ) )
+  let pids = env_str( "CLR_PS_PID" )
+    .map( | csv |
+    {
+      csv.split( ',' )
+        .filter_map( | s | s.trim().parse::< u32 >().ok() )
+        .collect()
+    } )
+    .unwrap_or_default();
+  let ancient_secs = env_str( "CLR_PS_ANCIENT_SECS" )
+    .and_then( | v | v.parse::< u64 >().ok() )
+    .unwrap_or( 28_800 );
+  let high_ram_mb = env_str( "CLR_PS_HIGH_RAM_MB" )
+    .and_then( | v | v.parse::< u64 >().ok() )
+    .unwrap_or( 400 );
+  ( env_str( "CLR_PS_MODE" ), env_str( "CLR_PS_COLUMNS" ), pids, ancient_secs, high_ram_mb )
 }

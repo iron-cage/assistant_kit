@@ -27,5 +27,5 @@ slow-timeout = { period = "30s", terminate-after = 1 }
 ps-serial = { max-threads = 1 }
 
 [[profile.default.overrides]]
-filter = "binary(user_story_ps_test) | binary(ps_command_test) | binary(kill_command_test) | binary(user_story_kill_test)"
+filter = "binary(user_story_ps_test) | binary(ps_command_test) | binary(kill_command_test) | binary(user_story_kill_test) | binary(ps_mode_test) | binary(ps_columns_test) | binary(ps_wide_test) | binary(ps_pid_test) | binary(ps_inspect_test) | binary(ps_flags_test) | binary(param_group_test)"
 test-group = "ps-serial"

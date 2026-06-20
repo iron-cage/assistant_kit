@@ -18,6 +18,10 @@ string[] (space or comma separated)
 
 all tools enabled
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Restricts available tools to an explicit allowlist. Tool names follow the format `ToolName` or `ToolName(pattern:*)` for pattern-restricted variants (e.g. `Bash(git:*)` allows only git-prefixed bash commands). Tools not listed are unavailable for the session. Takes precedence over `--tools` when both are provided.

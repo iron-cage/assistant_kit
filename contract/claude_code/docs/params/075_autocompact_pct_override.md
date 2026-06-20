@@ -18,6 +18,10 @@ integer (percentage, 1–100)
 
 Binary default (auto — not publicly documented)
 
+### Since
+
+`v2.1.75` (2026-03-13)
+
 ### Description
 
 Overrides the auto-compaction threshold as a percentage of the effective context window configured by `CLAUDE_CODE_AUTO_COMPACT_WINDOW`. When `used_tokens / window >= pct / 100`, Claude Code compacts the conversation context.

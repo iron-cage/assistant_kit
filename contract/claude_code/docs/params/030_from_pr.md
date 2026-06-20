@@ -18,6 +18,10 @@ string? (optional PR number or URL)
 
 —
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Resumes a session that was previously linked to a GitHub pull request. With no argument, opens an interactive picker. With a PR number or URL, resumes the session associated with that PR directly. Requires the session to have been originally started with PR context. Useful for continuing code review or PR-related work across multiple sessions.

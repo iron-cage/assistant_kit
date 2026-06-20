@@ -18,6 +18,10 @@ path[] (space or comma separated)
 
 —
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Grants tool access to additional directories beyond the current working directory. Claude's file-reading and editing tools are normally scoped to the project directory; `--add-dir` expands that scope to the listed paths. Can be specified multiple times or as a space-separated list. Does not restrict the base project directory.

@@ -29,7 +29,7 @@
 | 3 | `refresh` | Refresh OAuth credentials without running a task | 3 | `clr refresh --creds creds.json` |
 | 4 | `help` | Print usage information and exit | 0 | `clr help` |
 | 5 | `ask` | Semantic alias for run (identical defaults) | 58 | `clr ask "What does X do?"` |
-| 6 | `ps` | List running Claude Code sessions | 3 | `clr ps` |
+| 6 | `ps` | List running Claude Code sessions | 5 | `clr ps` |
 | 7 | `kill` | Terminate a running Claude Code session by PID | 0 | `clr kill 12345` |
 | 8 | `tools` | List Claude Code tools with version info | 0 | `clr tools` |
 

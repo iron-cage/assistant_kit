@@ -33,6 +33,10 @@
 
 All sub-paths are derived from this base. The `ClaudePaths` struct in `claude_profile/src/paths.rs` is the authoritative path source — all commands that access `~/.claude/` paths must go through it.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

@@ -67,6 +67,10 @@ A root session and its agents form a **Session Family**.
 
 **Maintenance**: Cannot be safely deleted without losing conversation history. Old agent sessions (`agent-*.jsonl`, `*/subagents/`) can be deleted if their parent conversations are no longer needed.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

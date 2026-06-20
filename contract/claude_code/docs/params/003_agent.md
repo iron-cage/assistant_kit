@@ -18,6 +18,10 @@ string (agent name)
 
 —
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Overrides the agent configuration for the current session. Accepts a named agent defined in `--agents` or in the agents settings. Different agents have different system prompts, tool sets, and capabilities. When unset, the default agent (general-purpose) is used. Enables switching between specialised agents (e.g. a code reviewer vs a planner) per invocation.

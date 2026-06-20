@@ -179,6 +179,10 @@ HTTP 200 (personal Max account). `settings` and `organization.settings` are larg
 | 401 | Token invalid or expired |
 | 403 | Token lacks required scope, or endpoint requires web-session auth |
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

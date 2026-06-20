@@ -10,6 +10,10 @@ File Operations
 
 Edits cells in Jupyter notebooks (.ipynb files). Supports adding, removing, and modifying cells with their content and cell type.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

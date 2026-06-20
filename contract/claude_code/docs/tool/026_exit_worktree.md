@@ -10,6 +10,10 @@ Mode
 
 Returns from the git worktree back to the main working directory. If changes were made in the worktree, the worktree path and branch are preserved for the user to review.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

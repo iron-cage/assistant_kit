@@ -18,6 +18,10 @@ bool
 
 `off`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Enables the `SendUserMessage` tool, which allows sub-agents to communicate directly with the user during agentic workflows. Normally sub-agents cannot send messages to the user — only the top-level session can. With `--brief`, agents can surface questions or status updates without the top-level orchestrator acting as intermediary.

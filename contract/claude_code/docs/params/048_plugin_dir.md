@@ -18,6 +18,10 @@ path[] (space-separated)
 
 —
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Loads Claude Code plugins from the specified directories for this session only. Plugins extend Claude's capabilities with additional tools or behaviours. The directories are scanned for plugin manifests at startup. This is a session-scoped override; for persistent plugin registration use the `enabledPlugins` settings config key instead.

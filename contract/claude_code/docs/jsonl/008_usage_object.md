@@ -43,6 +43,10 @@
 
 **`cache_creation` vs `cache_creation_input_tokens`**: Both fields track the same tokens. `cache_creation_input_tokens` is the top-level summary; `cache_creation` breaks it down by cache tier duration.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

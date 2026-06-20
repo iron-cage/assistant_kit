@@ -10,6 +10,10 @@ Scheduling
 
 Creates a scheduled task that runs at specified intervals. The task executes automatically according to its schedule within the session.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

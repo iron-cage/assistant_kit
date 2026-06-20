@@ -92,6 +92,10 @@ Network failures (`ureq::Error::Transport`) propagate as `QuotaError::HttpTransp
 | 429 | Yes | Request rate limited |
 | 5xx | Yes | Server error |
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

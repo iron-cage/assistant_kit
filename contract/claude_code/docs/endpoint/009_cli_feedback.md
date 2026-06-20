@@ -32,6 +32,10 @@ HTTP 403 "Access Forbidden" for standard Max OAuth tokens. Feedback submission l
 | 403 | `"Access Forbidden"` — standard OAuth tokens insufficient |
 | 401 | Token invalid or expired |
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

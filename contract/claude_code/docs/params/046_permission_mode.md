@@ -18,6 +18,10 @@ enum — `default` `acceptEdits` `bypassPermissions` `dontAsk` `plan` `auto`
 
 `default`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Sets fine-grained permission behaviour for the session. `default` prompts for each tool use. `acceptEdits` auto-accepts file edits but prompts for bash. `bypassPermissions` skips all checks (equivalent to `--dangerously-skip-permissions`). `dontAsk` suppresses permission prompts. `plan` enters read-only planning mode. `auto` lets Claude decide autonomously.

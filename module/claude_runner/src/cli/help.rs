@@ -158,6 +158,8 @@ pub( crate ) fn print_ps_help() -> !
   println!( "  -m, --mode <MODE>                   Filter rows: all (default), print, interactive" );
   println!( "      --columns <COLS>                Comma-separated column keys (overrides --wide)" );
   println!( "  -w, --wide                          Show all 11 columns" );
+  println!( "      --pid <PIDs>                    Comma-separated PIDs; restrict active table to matching sessions" );
+  println!( "  -i, --inspect                       Show all 12 attributes per session in key:value format" );
   println!( "  -h, --help                          Show this help and exit" );
   println!();
   // Fix(BUG-303): key names must match COLUMN_KEYS constant (idx, cmd — not num, command).
@@ -178,7 +180,7 @@ pub( crate ) fn print_ps_help() -> !
   println!( "  cmd        Command        Arguments passed after the binary (flags and values)" );
   println!( "  binary     Binary         Full executable path of the claude binary" );
   println!();
-  println!( "DEFAULT COLUMNS: idx, pid, elapsed, cpu, ram, state, path, task" );
+  println!( "DEFAULT COLUMNS: idx, pid, elapsed, cpu, ram, state, mode, path, task" );
   println!();
   println!( "QUEUED CLR PROCESSES TABLE (shown when gate files exist in CLR_GATE_DIR):" );
   println!( "  #                                  Row index" );
@@ -187,13 +189,25 @@ pub( crate ) fn print_ps_help() -> !
   println!( "  Waiting                            Time spent waiting for a session slot" );
   println!( "  Attempt                            Number of polling attempts so far" );
   println!();
+  println!( "SESSION FLAGS (auto-inserted Flags column when ≥1 flag fires):" );
+  println!( "  👈  This session    Parent of clr ps is a claude process" );
+  println!( "  🖨   Print mode      Session cmdline contains --print or -p" );
+  println!( "  ⚡  Running         Kernel process state == R" );
+  println!( "  🕰   Ancient         elapsed_secs > CLR_PS_ANCIENT_SECS (default: 28800 = 8 h)" );
+  println!( "  🐘  High RAM        RAM > CLR_PS_HIGH_RAM_MB (default: 400 MB)" );
+  println!( "  ⚠   Dead metrics    /proc stat unreadable (all metric fields show -)" );
+  println!( "  🐳  Container       Session cwd does not start with \\$HOME" );
+  println!();
   println!( "EXIT CODES:" );
-  println!( "  0    Success (table printed or empty-state message shown)" );
-  println!( "  1    Error (unexpected argument, invalid --mode value, or unknown column key)" );
+  println!( "  0    Success (table printed, inspect blocks printed, or empty-state message shown)" );
+  println!( "  1    Error (unexpected argument, invalid --mode value, unknown column key, or non-numeric --pid value)" );
   println!();
   println!( "ENVIRONMENT:" );
   println!( "  CLR_PS_MODE                        Default value for --mode" );
   println!( "  CLR_PS_COLUMNS                     Default value for --columns" );
+  println!( "  CLR_PS_PID                         Default value for --pid (comma-separated PIDs)" );
+  println!( "  CLR_PS_ANCIENT_SECS                Seconds threshold for 🕰 Ancient flag (default: 28800)" );
+  println!( "  CLR_PS_HIGH_RAM_MB                 RAM-MB threshold for 🐘 High RAM flag (default: 400)" );
   println!( "  CLR_GATE_DIR                       Directory for CLR gate state files (default: /tmp/clr-gate)" );
   std::process::exit( 0 );
 }

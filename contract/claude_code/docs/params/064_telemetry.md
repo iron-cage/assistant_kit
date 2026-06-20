@@ -18,6 +18,10 @@ bool
 
 `true`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Controls whether Claude Code sends anonymous usage telemetry to Anthropic. Telemetry data is non-identifying usage statistics — it does not include prompt content or file data. The binary default is `true` (opt-out model). Set to `false` to disable. The `claude_runner_core` builder defaults to `false` to respect privacy in automation contexts.

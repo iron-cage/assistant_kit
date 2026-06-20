@@ -18,6 +18,10 @@ integer (positive)
 
 — (unlimited; Claude Code runs until task completion or budget exhaustion)
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Caps the number of agentic turns Claude Code may execute in a single session. Each tool call + response constitutes one turn. When the limit is reached, Claude Code stops and returns whatever progress was made. Useful for bounding cost and preventing runaway sessions.

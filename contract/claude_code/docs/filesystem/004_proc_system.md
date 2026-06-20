@@ -34,6 +34,10 @@ The `.processes` and `.processes.kill` commands scan `/proc/` to detect running 
 
 This is Linux-specific functionality. The `/proc/` filesystem is read-only from userspace (no writes).
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

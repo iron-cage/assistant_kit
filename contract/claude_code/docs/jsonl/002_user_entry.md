@@ -55,6 +55,10 @@
 
 **`thinkingMetadata`**: Optional; present when the user has configured extended thinking (e.g., by typing "ultrathink"). The `triggers` array identifies which words in the message enabled thinking.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

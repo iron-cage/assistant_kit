@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: 🎯 Observed | **Certainty**: 80% | **Tier**: NEG-ONLY | **Evidence**: E43, E44
+**Status**: 🎯 Observed | **Certainty**: 80% | **Tier**: NEG-ONLY | **Since**: pre-v1.0 | **Evidence**: E43, E44
 
 When set, session `.jsonl` files are read from and written to the specified path instead of the default `~/.claude/projects/{encoded-path}/`. Useful for:
 - CI pipelines where sessions must be stored in a known, writable location

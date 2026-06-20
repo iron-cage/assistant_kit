@@ -58,7 +58,13 @@
 | User stories (US19–US25) | `user_story_output_test.rs` | End-to-end user story workflows: MCP config, output file, concurrency stories |
 | User stories (US26) | `user_story_ps_test.rs` | End-to-end user story workflows: session listing via `clr ps` |
 | User stories (US27) | `user_story_kill_test.rs` | End-to-end user story workflows: session termination via `clr kill` |
-| `clr ps` subcommand (IT-1–IT-20) | `ps_command_test.rs` | `clr ps` table output, no-sessions message, help listing, typo guard, self-exclusion, path shortening, orphan filtering, sort order (BUG-293/294/295/296/297/301) |
+| `clr ps` subcommand (IT-1–IT-29) | `ps_command_test.rs` | `clr ps` table output, no-sessions message, help listing, typo guard, self-exclusion, path shortening, orphan filtering, sort order, mode/columns/wide filter and env vars (BUG-293/294/295/296/297/301) |
+| `clr ps --mode` param (EC-1–EC-8) | `ps_mode_test.rs` | `--mode` filter (interactive/print/all), env var `CLR_PS_MODE`, AND semantics with `--columns`, help |
+| `clr ps --columns` param (EC-1–EC-10) | `ps_columns_test.rs` | `--columns` custom subset, unknown key exit 1, env var `CLR_PS_COLUMNS`, CLI-wins, `--wide` override, optional cols, defaults, help, BUG-303 regression |
+| `clr ps --wide` param (EC-1–EC-5) | `ps_wide_test.rs` | `--wide` extra columns (Mode/Command/Binary), `-w` short form, CLI `--columns` wins, default hides optional cols, help |
+| `clr ps --pid` param (EC-1–EC-8) | `ps_pid_test.rs` | `--pid` single/multi filter, non-existent PID empty state, non-numeric exit 1, AND semantics with `--mode`/`--inspect`, help, env var `CLR_PS_PID` |
+| `clr ps --inspect` flag (EC-1–EC-9) | `ps_inspect_test.rs` | `--inspect` key:value blocks, all 12 attrs, PID filter, mode filter, ignores `--columns`/`--wide`, suppresses queued table, empty state, help |
+| `clr ps` session flags (IT-30–IT-38, US-18–US-26, E41–E42) | `ps_flags_test.rs` | Two-pass Flags column (👈🖨⚡🕰🐘⚠🐳), legend line, `CLR_PS_ANCIENT_SECS`, `CLR_PS_HIGH_RAM_MB` env vars, TOCTOU-dead-metrics via fake proc |
 | `clr kill` subcommand (IT-1–IT-9) | `kill_command_test.rs` | `clr kill` PID validation, SIGTERM delivery, error handling, help text, typo guard |
 | `clr tools` subcommand (IT-1–IT-7) | `tools_command_test.rs` | `clr tools` exit 0, tool names, categories, caption, help, scheduling/mode tools, main help mention |
 | Output format param (EC-1–EC-14) | `output_format_test.rs` | `--output-format` forwarding, missing-value, text/json/stream-json variants, summary→json intercept, env var (EC-8/EC-12), summary YAML header rendering (EC-10), text body extraction (EC-11), multi-block topology (EC-13), non-zero exit passthrough (EC-14) |
@@ -122,7 +128,8 @@
 | `user_story_output_test.rs` | User story end-to-end workflows: US19–US25 (MCP config, output file, concurrency gate). |
 | `user_story_ps_test.rs` | User story end-to-end workflows: US26 (session listing via `clr ps`). |
 | `user_story_kill_test.rs` | User story end-to-end workflows: US27 (session termination via `clr kill`). |
-| `ps_command_test.rs` | `clr ps` subcommand integration tests: table output, no-sessions, help, typo guard, self-exclusion, path shortening, orphan filtering, sort order (IT-1–IT-20). |
+| `ps_command_test.rs` | `clr ps` subcommand integration tests: table output, no-sessions, help, typo guard, self-exclusion, path shortening, orphan filtering, sort order, mode/columns/wide filter and env vars (IT-1–IT-29). |
+| `ps_flags_test.rs` | `clr ps` session flags integration tests: Flags column two-pass rendering, legend, 7 flag conditions, threshold env vars (IT-30–IT-38, US-18–US-26, E41–E42). |
 | `kill_command_test.rs` | `clr kill` subcommand integration tests: PID validation, SIGTERM delivery, error handling, help text, typo guard (IT-1–IT-9). |
 | `tools_command_test.rs` | `clr tools` subcommand integration tests: exit 0, tool names, categories, caption count, help text, scheduling/mode tools, main help mention (IT-1–IT-7). |
 | `output_format_test.rs` | `--output-format` integration: forwarding, missing-value, text/json/stream-json variants, summary→json intercept, env var (EC-1–EC-14). |

@@ -53,6 +53,10 @@ The blocklist is maintained server-side and is not configurable per-user. Anthro
 | 401 | Token invalid or expired |
 | 400 | Malformed or missing `domain` parameter |
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

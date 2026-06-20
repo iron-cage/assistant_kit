@@ -18,6 +18,10 @@ bool
 
 `off`
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Description
 
 Disables writing the session to disk. No `.jsonl` file is created and the session cannot be resumed later. Useful for ephemeral invocations where session history is unwanted (e.g. one-shot CI queries, privacy-sensitive contexts). Only works with `--print` mode.

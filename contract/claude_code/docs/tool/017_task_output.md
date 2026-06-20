@@ -10,6 +10,10 @@ Background Tasks
 
 Reads the output produced by a background task. Can optionally block until the task completes. Session-scoped in-memory registry is cleared on context compaction.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

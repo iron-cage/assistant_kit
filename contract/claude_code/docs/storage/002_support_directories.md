@@ -67,6 +67,10 @@ See [`../formats/004_shell_snapshot.md`](../formats/004_shell_snapshot.md) for f
 
 See [`../formats/006_command_definition.md`](../formats/006_command_definition.md) for format spec.
 
+### Since
+
+pre-v1.0 (unverified)
+
 ### Cross-References
 
 | Type | File | Responsibility |

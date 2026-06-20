@@ -24,35 +24,35 @@ Adapted from hypothesis table format. Status reflects certainty of the observati
 - `MEASURE` — live API measurement; no pass/fail; runs by default in container where `~/.claude` is mounted (`lim_it_` prefix)
 - `VALIDATED†` — test proves feasibility of mechanism but not that the binary uses it
 
-| ID | Behavior | Category | Status | Certainty | Tier | Evidence |
-|----|----------|----------|--------|-----------|------|----------|
-| [B1](001_b1_default_new_session.md) | `claude` binary defaults to NEW session; resuming requires explicit `--continue`/`-c`. `clr` wrapper inverts this default | Continuation | ✅ | 90% | VALIDATED | E1, E2, E11, E47 |
-| [B2](002_b2_new_session_creates_file.md) | Each invocation without `--continue` creates a new `.jsonl`; `--new-session` is a `clr` wrapper flag | Storage | ✅ | 95% | VALIDATED | E1, E12, E47 |
-| [B3](003_b3_print_orthogonal.md) | `-p`/`--print` controls output mode only; does not affect session selection | Flags | ✅ | 95% | FLAG-VFY | E3, E13 |
-| [B4](004_b4_continue_flag.md) | `-c`/`--continue` is explicit opt-in for resuming most recently modified session | Flags | 🎯 | 85% | FLAG-VFY | E2, E14 |
-| [B5](005_b5_mtime_selection.md) | "Current" session resumed by `--continue` is the most recently modified `.jsonl` (mtime) | Selection | 🎯 | 60% | VALIDATED† | E4, E15 |
-| [B6](006_b6_session_accumulation.md) | Sessions accumulate one file per independent invocation; never compacted or rotated | Storage | ✅ | 90% | VALIDATED | E5, E16 |
-| [B7](007_b7_agent_sessions_sibling.md) | Agent sessions are `agent-*.jsonl` siblings with `isSidechain: true` (flat layout) | Storage | ✅ | 95% | VALIDATED | E6, E17 |
-| [B8](008_b8_zero_byte_placeholder.md) | Claude Code creates zero-byte `.jsonl` placeholders on startup; remain if process crashes | Storage | 🎯 | 85% | UNVERIFIED | E7, E18 |
-| [B9](009_b9_storage_path_encoding.md) | Project sessions stored at `~/.claude/projects/{path-encoded}/`; `/` → `-` | Storage | ✅ | 95% | VALIDATED | E8, E19 |
-| [B10](010_b10_entry_threading.md) | Entries linked by `parentUuid`; root entry has `parentUuid: null` | Entries | ✅ | 95% | VALIDATED | E9, E20 |
-| [B11](011_b11_auto_continue_env.md) | `CLAUDE_CODE_AUTO_CONTINUE` env var enables automated continuation mode | Flags | 🎯 | 85% | NEG-ONLY | E10, E21 |
-| [B12](012_b12_agent_session_id.md) | Agent JSONL entries carry `sessionId` equal to the parent session UUID | Families | ✅ | 95% | VALIDATED | E22, E26 |
-| [B13](013_b13_subagent_directory.md) | New-format agents stored at `{parent-uuid}/subagents/agent-{agentId}.jsonl` | Families | ✅ | 95% | VALIDATED | E23, E27 |
-| [B14](014_b14_agent_meta_json.md) | Agent `.meta.json` sidecars contain `agentType` and optional `description` | Families | ✅ | 90% | VALIDATED | E24, E28 |
-| [B15](015_b15_agent_slug.md) | Agent entries carry a `slug` field shared by all agents of one parent | Families | 🎯 | 85% | VALIDATED | E25, E29 |
-| [B16](016_b16_tools_flag.md) | `--tools ""` disables all tool invocation; `--tools "default"` restores all tools | Flags | ✅ | 90% | FLAG-VFY | E30, E31 |
-| [B16h](016h_b16h_tools_system_prompt.md) | Tool definitions (~12k tokens) remain in assembled system prompt even with `--tools ""` | Flags | ❓ | 60% | MEASURE | E32 |
-| [B17](017_b17_parentuuid_self_contained.md) | `parentUuid` chain is self-contained within one session file (< 0.2% compaction exceptions) | Entries | 🎯 | 85% | VALIDATED | E33 |
-| [B18](018_b18_no_cross_session_links.md) | No cross-session continuation metadata; first entry of new session has `parentUuid: null` | Continuation | 🎯 | 80% | VALIDATED | E34 |
-| [B19](019_b19_resume_flag.md) | `--resume`/`-r` resumes a specific prior session by UUID | Continuation | 🎯 | 85% | FLAG-VFY | E35, E36 |
-| [B20](020_b20_session_id_flag.md) | `--session-id <uuid>` assigns a deterministic UUID to the current session | Session | 🎯 | 80% | FLAG-VFY | E37, E38 |
-| [B21](021_b21_fork_session.md) | `--fork-session` creates a new session UUID when resuming; original unchanged | Continuation | 🎯 | 80% | FLAG-VFY | E39, E40 |
-| [B22](022_b22_no_session_persistence.md) | `--no-session-persistence` disables session disk writes; only works with `--print` mode | Storage | 🎯 | 85% | FLAG-VFY | E41, E42 |
-| [B23](023_b23_session_dir_override.md) | `CLAUDE_CODE_SESSION_DIR` env var overrides session storage directory | Storage | 🎯 | 80% | NEG-ONLY | E43, E44 |
-| [B24](024_b24_from_pr.md) | `--from-pr [value]` resumes a session previously linked to a GitHub pull request | Continuation | 🎯 | 75% | FLAG-VFY | E45, E46 |
-| [B25](025_b25_auto_compact_window.md) | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` env var sets the effective token window for auto-compaction calculations | Flags | 🎯 | 85% | NEG-ONLY | E48, E49 |
-| [B26](026_b26_autocompact_pct_override.md) | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` env var overrides the compaction trigger as a percentage of the window | Flags | 🎯 | 80% | NEG-ONLY | E50, E51 |
+| ID | Behavior | Category | Status | Certainty | Tier | Since | Evidence |
+|----|----------|----------|--------|-----------|------|-------|----------|
+| [B1](001_b1_default_new_session.md) | `claude` binary defaults to NEW session; resuming requires explicit `--continue`/`-c`. `clr` wrapper inverts this default | Continuation | ✅ | 90% | VALIDATED | pre-v1.0 | E1, E2, E11, E47 |
+| [B2](002_b2_new_session_creates_file.md) | Each invocation without `--continue` creates a new `.jsonl`; `--new-session` is a `clr` wrapper flag | Storage | ✅ | 95% | VALIDATED | pre-v1.0 | E1, E12, E47 |
+| [B3](003_b3_print_orthogonal.md) | `-p`/`--print` controls output mode only; does not affect session selection | Flags | ✅ | 95% | FLAG-VFY | pre-v1.0 | E3, E13 |
+| [B4](004_b4_continue_flag.md) | `-c`/`--continue` is explicit opt-in for resuming most recently modified session | Flags | 🎯 | 85% | FLAG-VFY | pre-v1.0 | E2, E14 |
+| [B5](005_b5_mtime_selection.md) | "Current" session resumed by `--continue` is the most recently modified `.jsonl` (mtime) | Selection | 🎯 | 60% | VALIDATED† | pre-v1.0 | E4, E15 |
+| [B6](006_b6_session_accumulation.md) | Sessions accumulate one file per independent invocation; never compacted or rotated | Storage | ✅ | 90% | VALIDATED | pre-v1.0 | E5, E16 |
+| [B7](007_b7_agent_sessions_sibling.md) | Agent sessions are `agent-*.jsonl` siblings with `isSidechain: true` (flat layout) | Storage | ✅ | 95% | VALIDATED | pre-v1.0 | E6, E17 |
+| [B8](008_b8_zero_byte_placeholder.md) | Claude Code creates zero-byte `.jsonl` placeholders on startup; remain if process crashes | Storage | 🎯 | 85% | UNVERIFIED | pre-v1.0 | E7, E18 |
+| [B9](009_b9_storage_path_encoding.md) | Project sessions stored at `~/.claude/projects/{path-encoded}/`; `/` → `-` | Storage | ✅ | 95% | VALIDATED | pre-v1.0 | E8, E19 |
+| [B10](010_b10_entry_threading.md) | Entries linked by `parentUuid`; root entry has `parentUuid: null` | Entries | ✅ | 95% | VALIDATED | pre-v1.0 | E9, E20 |
+| [B11](011_b11_auto_continue_env.md) | `CLAUDE_CODE_AUTO_CONTINUE` env var enables automated continuation mode | Flags | 🎯 | 85% | NEG-ONLY | pre-v1.0 | E10, E21 |
+| [B12](012_b12_agent_session_id.md) | Agent JSONL entries carry `sessionId` equal to the parent session UUID | Families | ✅ | 95% | VALIDATED | pre-v1.0 | E22, E26 |
+| [B13](013_b13_subagent_directory.md) | New-format agents stored at `{parent-uuid}/subagents/agent-{agentId}.jsonl` | Families | ✅ | 95% | VALIDATED | pre-v1.0 | E23, E27 |
+| [B14](014_b14_agent_meta_json.md) | Agent `.meta.json` sidecars contain `agentType` and optional `description` | Families | ✅ | 90% | VALIDATED | pre-v1.0 | E24, E28 |
+| [B15](015_b15_agent_slug.md) | Agent entries carry a `slug` field shared by all agents of one parent | Families | 🎯 | 85% | VALIDATED | pre-v1.0 | E25, E29 |
+| [B16](016_b16_tools_flag.md) | `--tools ""` disables all tool invocation; `--tools "default"` restores all tools | Flags | ✅ | 90% | FLAG-VFY | pre-v1.0 | E30, E31 |
+| [B16h](016h_b16h_tools_system_prompt.md) | Tool definitions (~12k tokens) remain in assembled system prompt even with `--tools ""` | Flags | ❓ | 60% | MEASURE | pre-v1.0 | E32 |
+| [B17](017_b17_parentuuid_self_contained.md) | `parentUuid` chain is self-contained within one session file (< 0.2% compaction exceptions) | Entries | 🎯 | 85% | VALIDATED | pre-v1.0 | E33 |
+| [B18](018_b18_no_cross_session_links.md) | No cross-session continuation metadata; first entry of new session has `parentUuid: null` | Continuation | 🎯 | 80% | VALIDATED | pre-v1.0 | E34 |
+| [B19](019_b19_resume_flag.md) | `--resume`/`-r` resumes a specific prior session by UUID | Continuation | 🎯 | 85% | FLAG-VFY | pre-v1.0 | E35, E36 |
+| [B20](020_b20_session_id_flag.md) | `--session-id <uuid>` assigns a deterministic UUID to the current session | Session | 🎯 | 80% | FLAG-VFY | pre-v1.0 | E37, E38 |
+| [B21](021_b21_fork_session.md) | `--fork-session` creates a new session UUID when resuming; original unchanged | Continuation | 🎯 | 80% | FLAG-VFY | pre-v1.0 | E39, E40 |
+| [B22](022_b22_no_session_persistence.md) | `--no-session-persistence` disables session disk writes; only works with `--print` mode | Storage | 🎯 | 85% | FLAG-VFY | pre-v1.0 | E41, E42 |
+| [B23](023_b23_session_dir_override.md) | `CLAUDE_CODE_SESSION_DIR` env var overrides session storage directory | Storage | 🎯 | 80% | NEG-ONLY | pre-v1.0 | E43, E44 |
+| [B24](024_b24_from_pr.md) | `--from-pr [value]` resumes a session previously linked to a GitHub pull request | Continuation | 🎯 | 75% | FLAG-VFY | pre-v1.0 | E45, E46 |
+| [B25](025_b25_auto_compact_window.md) | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` env var sets the effective token window for auto-compaction calculations | Flags | 🎯 | 85% | NEG-ONLY | v2.1.75 | E48, E49 |
+| [B26](026_b26_autocompact_pct_override.md) | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` env var overrides the compaction trigger as a percentage of the window | Flags | 🎯 | 80% | NEG-ONLY | v2.1.75 | E50, E51 |
 
 ---
 
