@@ -44,7 +44,7 @@ clp .accounts format::table
 | `touch::` | `bool` | **`0`** | Activate idle 5h session windows via subprocess (default `0`; differs from `.usage` default of `1`) |
 | `imodel::` | `enum` | `auto` | Subprocess model: `auto`, `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Subprocess effort: `auto`, `low`, `normal`, `high`, `max` |
-| `sort::` | `enum` | **`name`** | Row ordering and `→` recommendation: `name` (default for `.accounts`), `renew`, `renews` |
+| `sort::` | `enum` | **`name`** | Row ordering and footer recommendation: `name` (default for `.accounts`), `renew`, `renews` |
 | `desc::` | `bool` | `0` | Sort direction: 0 = ascending, 1 = descending |
 | `prefer::` | `enum` | `any` | Weekly quota column for sort heuristics: `any`, `opus`, `sonnet` |
 | `count::` | `u64` | `0` | Max rows to display (0 = all) |

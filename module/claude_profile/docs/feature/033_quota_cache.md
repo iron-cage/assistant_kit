@@ -33,7 +33,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 **Algorithm:**
 
 1. **On successful fetch**: After `fetch_oauth_usage` returns `Ok(usage_data)`, serialize the quota fields into the `"cache"` object and write to `{name}.json` via read-merge-write. The `fetched_at` timestamp is set to `now()` UTC ISO-8601. The `status` field is set to `"ok"`.
-2. **On fetch error**: Read `{name}.json`, extract the `"cache"` object if present. If `cache.fetched_at` exists, compute `age_minutes = now - fetched_at`. Use cached quota values for display. Mark the row with a staleness indicator.
+2. **On fetch error (transient errors only — 429, timeout, network)**: Read `{name}.json`, extract the `"cache"` object if present. If `cache.fetched_at` exists, compute `age_minutes = now - fetched_at`. Use cached quota values for display. Mark the row with a staleness indicator. **Auth errors (HTTP 401, HTTP 403) bypass cache fallback entirely** — they pass through as `Err` so `should_refresh()` can trigger a token refresh. Only transient errors fall back to cache; auth errors must remain `Err` so the refresh pipeline sees them. Fix for BUG-296.
 3. **On model override**: After `apply_model_override` determines the target model, write `cache.model_override` to `{name}.json`.
 4. **On touch completion**: After a successful touch subprocess, write `cache.last_touch_at` and `cache.touch_idle = false` to `{name}.json`.
 5. **On successful retry after token refresh**: After `apply_refresh()` performs a token refresh and the quota retry returns `Ok(retried)`, set `aq.cached = false` and `aq.cache_age_secs = None` on the in-memory `AccountQuota`, then call `write_quota_cache()` with the fresh data. This clears the `~` staleness indicators and updates the on-disk cache so the next run starts from fresh data.
@@ -56,7 +56,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 ### Acceptance Criteria
 
 - **AC-01**: On successful `fetch_oauth_usage`, the `"cache"` key in `{name}.json` is written with `fetched_at`, `status`, and all quota fields.
-- **AC-02**: On fetch error (429, timeout, network), if `{name}.json` contains a valid `"cache"` object, quota columns display cached values with `~` prefix.
+- **AC-02**: On transient fetch error (429, timeout, network), if `{name}.json` contains a valid `"cache"` object, quota columns display cached values with `~` prefix. HTTP 401 and HTTP 403 errors are excluded from cache fallback.
 - **AC-03**: When cached data is displayed, an age indicator (`(Nm ago)` or `(Nh ago)`) appears in the error reason position.
 - **AC-04**: When no cache exists (fresh account, never fetched), display remains `—` (no regression from current behavior).
 - **AC-05**: The `model_override` field is written to cache after `apply_model_override` executes.
@@ -66,6 +66,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 - **AC-09**: `format::json` output includes a `"cached": true` flag and `"cache_age_secs": N` field when displaying cached data.
 - **AC-10**: When cache fallback converts a fetch error to `Ok(cached_data)` (AC-02 path), accounts whose local token is expired (`expires_at_ms / 1000 <= now_secs`) are still flagged for token refresh by `should_refresh()` via the `cached + expired` guard — the `Ok` result does not suppress refresh when `cached = true` and the token is locally expired.
 - **AC-11**: After `apply_refresh()` executes a successful token refresh and quota retry (`retry OK`), `aq.cached` is reset to `false` and `aq.cache_age_secs` is cleared to `None` on the in-memory `AccountQuota`, and the fresh data is written to `{name}.json` via `write_quota_cache()`. The row no longer shows `~` prefix or `(Xh ago)` label, and the next run reads fresh cache data.
+- **AC-12**: HTTP 401 and HTTP 403 auth errors from `fetch_oauth_usage` bypass cache fallback — `fetch_all_quota` returns `Err` (not `Ok(cached_data)`) for these error types. The `Err` propagates to `should_refresh()`, which triggers a token refresh attempt. Auth errors must not be masked by cache. Fix for BUG-296.
 
 ### Bugs
 
@@ -74,6 +75,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 | [BUG-255 🟢 Fixed](../../../../../task/claude_profile/bug/255_cache_fallback_defeats_should_refresh.md) | Cache fallback Err→Ok conversion defeats `should_refresh()` — fixed via `cached + expired` guard in `should_refresh()` |
 | [BUG-256 🟢 Fixed](../../../../../task/claude_profile/bug/256_retry_ok_does_not_clear_cached_metadata.md) | `retry OK` does not clear `cached` metadata — `~` and `(Xh ago)` persist after successful refresh; fix = AC-11 |
 | [BUG-288 🟢 Fixed (Fix A)](../../../../../task/claude_profile/bug/288_account_use_touch_not_confirmed_usage_double_subprocess.md) | Fix A complete: `apply_post_switch_touch` now calls `write_quota_cache` with post-subprocess quota data; subsequent `apply_touch` reads updated quota (`resets_at = Some`) and skips the redundant subprocess. Fix B (`touch_idle` read site in `apply_touch` as defense-in-depth for server-side propagation lag) deferred; `touch_idle=false` write (AC-06) remains dead code pending follow-on task. |
+| [BUG-296 🟢 Fixed (TSK-306)](../../../../../task/claude_profile/bug/296_cached_non_expired_401_no_refresh.md) | Auth-error guard added: `fetch.rs:235` changes fallback arm to `Err( ref e ) if !e.contains("401") && !e.contains("403")` — auth errors propagate as `Err`; transient errors still fall back to cache; fix = AC-12 |
 
 ### Features
 

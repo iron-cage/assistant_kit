@@ -6,7 +6,7 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 
 | FT | Criterion | AC |
 |----|-----------|-----|
-| FT-01 | `rotate::1` switches to `→` winner and outputs "switched to '{name}'" | AC-01 |
+| FT-01 | `rotate::1` switches to footer-recommended account and outputs "switched to '{name}'" | AC-01 |
 | FT-02 | `rotate::1 dry::1` previews target without switching | AC-02 |
 | FT-03 | No eligible candidate → exit 1, table still rendered | AC-03 |
 | FT-04 | `rotate::1 live::1` → exit 1 before fetch | AC-04 |
@@ -21,7 +21,7 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 
 | ID | Test Name | AC | Category |
 |----|-----------|-----|----------|
-| FT-01 | `rotate::1` switches to → winner, output contains "switched to" | AC-01 | Core Switch |
+| FT-01 | `rotate::1` switches to footer-recommended account, output contains "switched to" | AC-01 | Core Switch |
 | FT-02 | `rotate::1 dry::1` previews, credentials unchanged | AC-02 | Dry Run |
 | FT-03 | No eligible account → exit 1, table rendered | AC-03 | No Candidate |
 | FT-04 | `rotate::1 live::1` exits 1 immediately | AC-04 | Mutual Exclusion |
@@ -36,11 +36,11 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 
 ---
 
-### FT-01: `rotate::1` switches to → winner, output contains "switched to"
+### FT-01: `rotate::1` switches to footer-recommended account, output contains "switched to"
 
 - **Given:** Two owned accounts: `alpha@test.com` (h5_util=20.0, 80% left) and `beta@test.com` (h5_util=70.0, 30% left). Neither is current. `sort::renew` (default). `alpha` has soonest 7d renewal.
 - **When:** `clp .usage rotate::1`
-- **Then:** Exit 0. Credentials updated to `alpha@test.com` (renew winner). Output contains `switched to 'alpha@test.com'`. `→` on alpha in table.
+- **Then:** Exit 0. Credentials updated to `alpha@test.com` (renew winner). Output contains `switched to 'alpha@test.com'`. Footer `Next:` line shows `alpha@test.com`.
 - **Exit:** 0
 - **Source:** [038_usage_strategy_rotate.md AC-01](../../../docs/feature/038_usage_strategy_rotate.md)
 
@@ -80,7 +80,7 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 
 - **Given:** Two accounts: `foreign@test.com` (is_owned=false, best renew) and `mine@test.com` (is_owned=true, second renew). Neither current. `force::0` (default).
 - **When:** `clp .usage rotate::1`
-- **Then:** Exit 0. Switches to `mine@test.com` (foreign skipped by G5). `→` on `mine@test.com` in table (non-owned account excluded from → too).
+- **Then:** Exit 0. Switches to `mine@test.com` (foreign skipped by G5). Footer `Next:` line shows `mine@test.com` (non-owned account excluded from footer recommendation too).
 - **Exit:** 0
 - **Source:** [038_usage_strategy_rotate.md AC-05](../../../docs/feature/038_usage_strategy_rotate.md)
 
@@ -90,7 +90,7 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 
 - **Given:** Same two accounts as FT-05: `foreign@test.com` (is_owned=false, best renew) and `mine@test.com` (is_owned=true). Neither current.
 - **When:** `clp .usage rotate::1 force::1`
-- **Then:** Exit 0. Switches to `foreign@test.com` (G5 bypassed). `→` on `foreign@test.com` in table.
+- **Then:** Exit 0. Switches to `foreign@test.com` (G5 bypassed). Footer `Next:` line shows `foreign@test.com`.
 - **Exit:** 0
 - **Source:** [038_usage_strategy_rotate.md AC-06](../../../docs/feature/038_usage_strategy_rotate.md)
 
@@ -100,7 +100,7 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 
 - **Given:** Two owned accounts with different billing renewal dates. Neither current.
 - **When:** `clp .usage rotate::1 sort::renews`
-- **Then:** Exit 0. Switches to the account with the soonest billing renewal. `→` on that account. Output: `switched to '{name}'`.
+- **Then:** Exit 0. Switches to the account with the soonest billing renewal. Footer `Next:` line shows that account. Output: `switched to '{name}'`.
 - **Exit:** 0
 - **Source:** [038_usage_strategy_rotate.md AC-07](../../../docs/feature/038_usage_strategy_rotate.md)
 

@@ -36,8 +36,7 @@ These diverge when an external actor (`claude auth login`, a direct credential w
 - Flag column semantics (single character, priority order):
   1. `✓` — `is_current = true` (this account is currently in use by Claude)
   2. `*` — `is_active = true` AND `is_current = false` (saved-active but not the live account)
-  3. `→` — recommendation marker (unchanged)
-  4. ` ` — none of the above
+  3. ` ` — none of the above
 - When current = active (normal case): only `✓` appears; no `*` on any row.
 - When current ≠ active: `✓` on current row, `*` on active row; divergence is immediately visible.
 - When credentials file unreadable: no `✓` on any row; `*` still appears for the active account.

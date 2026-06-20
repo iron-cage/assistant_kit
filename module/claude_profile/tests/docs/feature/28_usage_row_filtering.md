@@ -9,14 +9,14 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 | FT-01 | `count::3` shows at most 3 rows | AC-01 | Integration |
 | FT-02 | `offset::2 count::3` skips first 2 rows then shows at most 3 | AC-02 | Integration |
 | FT-03 | `only_active::1` shows exactly the active account row | AC-03 | Integration |
-| FT-04 | `only_next::1` shows exactly the → row | AC-04 | Integration |
+| FT-04 | `only_next::1` shows exactly the recommended account row | AC-04 | Integration |
 | FT-05 | `min_5h::50` hides rows below 50% threshold (inclusive boundary) | AC-05 | Integration |
 | FT-06 | `min_7d::20` hides rows below 20% threshold (inclusive boundary) | AC-06 | Integration |
 | FT-07 | `only_valid::1` hides 🔴 rows | AC-07 | Integration |
 | FT-08 | `exclude_exhausted::1` hides 🟡 and 🔴 rows | AC-08 | Integration |
 | FT-09 | Multiple filters combine with AND logic | AC-09 | Integration |
 | FT-10 | `get::7d_left` extracts bare 7d Left value | AC-10 | Integration |
-| FT-11 | `only_next::1 get::7d_left` extracts value for → account | AC-11 | Integration |
+| FT-11 | `only_next::1 get::7d_left` extracts value for recommended account | AC-11 | Integration |
 | FT-12 | `get::status` extracts status emoji | AC-12 | Integration |
 | FT-13 | `format::tsv` produces tab-separated output with text status labels | AC-13 | Integration |
 | FT-14 | `no_color::1` produces emoji-free output | AC-14 | Integration |
@@ -31,7 +31,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 | FT-01 | count::3 truncates to 3 rows | AC-01 | Row Limit |
 | FT-02 | offset::2 count::3 windows result set | AC-02 | Pagination |
 | FT-03 | only_active::1 shows active account | AC-03 | Row Filter |
-| FT-04 | only_next::1 shows → account | AC-04 | Row Filter |
+| FT-04 | only_next::1 shows recommended account | AC-04 | Row Filter |
 | FT-05 | min_5h::50 inclusive threshold filter | AC-05 | Threshold Filter |
 | FT-06 | min_7d::20 inclusive threshold filter | AC-06 | Threshold Filter |
 | FT-07 | only_valid::1 hides 🔴 | AC-07 | Status Filter |
@@ -86,11 +86,11 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 
 ---
 
-### FT-04: `only_next::1` shows exactly the → account
+### FT-04: `only_next::1` shows exactly the recommended account
 
-- **Given:** Three accounts with valid quota; one receives → from the active sort strategy.
+- **Given:** Three accounts with valid quota; one is the footer recommendation from the active sort strategy.
 - **When:** `clp .usage only_next::1`
-- **Then:** Exits 0. Exactly one data row shown — the → account. All other rows absent.
+- **Then:** Exits 0. Exactly one data row shown — the footer-recommended account. All other rows absent.
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it206_lim_it_ft028_04_only_next_1_shows_arrow` (in `tests/cli/usage_test.rs`)
@@ -170,9 +170,9 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 
 ### FT-11: `only_next::1 get::7d_left` targeted extraction
 
-- **Given:** Two accounts with valid quota; one receives →.
+- **Given:** Two accounts with valid quota; one is the footer recommendation.
 - **When:** `clp .usage only_next::1 get::7d_left`
-- **Then:** Exits 0. Stdout is the 7d Left value for the → account as a bare string.
+- **Then:** Exits 0. Stdout is the 7d Left value for the footer-recommended account as a bare string.
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it215_lim_it_ft028_11_only_next_get_7d_left` (in `tests/cli/usage_test.rs`)

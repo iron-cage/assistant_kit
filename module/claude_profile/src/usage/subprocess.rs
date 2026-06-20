@@ -14,10 +14,13 @@ use super::types::{ AccountQuota, SubprocessModel, SubprocessEffort };
 ///
 /// AC-01: `auto` selects Haiku for general keep-alive pings — Haiku conserves Sonnet
 ///        and Opus quota.
-///        `son_idle` gate (Fix BUG-289, BUG-290, TSK-292): Whenever `son_idle=true`
-///        (`seven_day_sonnet` present AND `resets_at=None`), `auto` selects Sonnet
-///        regardless of 5h or 7d timer state — a single Sonnet touch opens all idle
-///        dimensions simultaneously.
+///        Utilization-aware Sonnet gate (Fix BUG-289, BUG-290, TSK-292; extended Fix BUG-301, TSK-311):
+///        Selects `claude-sonnet-4-6` when `seven_day_sonnet` present AND either:
+///          • `son_idle=true` (`resets_at=None`) — Haiku cannot start the Sonnet window; a single
+///            Sonnet touch opens all idle dimensions simultaneously (5h, 7d, Son); OR
+///          • `son_available=true` (`(100 - utilization) > 20%`) — remaining Sonnet quota should
+///            not expire unused while Haiku pings keep sessions alive.
+///        Falls through to Haiku when Sonnet tier absent or utilization ≥ 80% (≤ 20% remaining).
 /// AC-02: `sonnet` always maps to `claude-sonnet-4-6`.
 /// AC-03: `opus` always maps to `claude-opus-4-6`.
 /// AC-04: `keep` passes `IsolatedModel::KeepCurrent` — no `--model` flag injected.
@@ -35,13 +38,18 @@ pub( crate ) fn resolve_model( aq : &AccountQuota, imodel : SubprocessModel ) ->
     SubprocessModel::Auto   =>
     {
       // Fix(BUG-289, BUG-290, TSK-292): son_idle gate — Haiku cannot activate the 7d-Sonnet window.
-      // When son_idle=true, Sonnet opens all idle dimensions simultaneously (5h, 7d, Son).
+      // Fix(BUG-301, TSK-311): son_available gate — remaining Sonnet quota must not expire unused.
+      // Sonnet selected when: son_idle (resets_at=None) OR son_available (>20% remaining).
       if let Ok( ref data ) = aq.result
       {
-        let son_idle = data.seven_day_sonnet.as_ref().is_some_and( |p| p.resets_at.is_none() );
-        if son_idle
+        if let Some( ref son ) = data.seven_day_sonnet
         {
-          return IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
+          let son_idle      = son.resets_at.is_none();
+          let son_available = 100.0 - son.utilization > 20.0;
+          if son_idle || son_available
+          {
+            return IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
+          }
         }
       }
       // AC-01: Haiku for general keep-alive pings — conserves Sonnet and Opus quota.
@@ -218,30 +226,32 @@ mod tests
     );
   }
 
-  /// EC-9b: `imodel::auto` selects Haiku when Sonnet window already running (`son_idle=false`).
+  /// EC-9b: `imodel::auto` selects Haiku when Sonnet window running AND exhausted (≤ 20% remaining).
   ///
-  /// The `son_idle` gate does NOT fire when `seven_day_sonnet.resets_at=Some(...)` (Sonnet window
-  /// active, `son_idle=false`). `auto` returns Haiku — conserves quota. No infinite loop because
-  /// the 7d-Sonnet window is already open.
+  /// `seven_day_sonnet.resets_at=Some(...)` → `son_idle=false`.
+  /// `seven_day_sonnet.utilization=90.0` → `son_available=(100-90>20)=false`.
+  /// Both gate conditions false → Haiku selected. Conserves the last 10% of Sonnet quota.
+  /// Fix(BUG-301, TSK-311): Haiku now requires BOTH gates to fail, not just `son_idle=false`.
   ///
-  /// Test Matrix row 2: `five_h=running, d7=running, son=running` → Haiku.
+  /// Test Matrix row 2: `five_h=running, d7=running, son=exhausted (90%)` → Haiku.
   #[ test ]
   fn it_imodel_auto_selects_haiku_when_son_running()
   {
-    // Start from son_idle base; override son to running (resets_at=Some → son_idle=false).
+    // Start from son_idle base; override son to running and exhausted (90% used, 10% remaining < 20%).
     let mut aq = mk_aq_with_son_idle();
     if let Ok( ref mut data ) = aq.result
     {
       if let Some( ref mut son ) = data.seven_day_sonnet
       {
-        son.resets_at = Some( "2026-06-14T10:00:00Z".to_string() );
+        son.resets_at   = Some( "2026-06-14T10:00:00Z".to_string() );
+        son.utilization = 90.0;   // Fix(BUG-301): exhausted → Haiku; available (e.g. 60%) → Sonnet
       }
     }
     let model    = resolve_model( &aq, SubprocessModel::Auto );
     let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
     assert_eq!(
       model_id, "claude-haiku-4-5-20251001",
-      "imodel::auto must select haiku when son_idle=false (Sonnet window running); gate requires son_idle=true",
+      "imodel::auto must select haiku when son_idle=false AND son_available=false (90% used, 10% < 20% threshold)",
     );
   }
 
@@ -385,32 +395,35 @@ mod tests
     );
   }
 
-  /// FT-27: `imodel::auto` selects Haiku when Sonnet running (`son_idle=false`).
+  /// FT-27: `imodel::auto` selects Haiku when Sonnet running AND exhausted, regardless of 7d state.
   ///
-  /// `seven_day_sonnet.resets_at=Some(...)` → `son_idle=false`. Gate does NOT fire → Haiku.
-  /// `d7_running` state is irrelevant to new gate. Exercises `son=running` with 7d-idle.
+  /// `seven_day_sonnet.resets_at=Some(...)` → `son_idle=false`.
+  /// `seven_day_sonnet.utilization=90.0` → `son_available=(100-90>20)=false`.
+  /// Both gate conditions false → Haiku selected. `d7_running` state is irrelevant.
+  /// Exercises `son=exhausted` with 7d-idle. Fix(BUG-301, TSK-311).
   ///
-  /// Test Matrix extra row: `five_h=running, d7=Some(idle), son=running` → Haiku.
+  /// Test Matrix extra row: `five_h=running, d7=Some(idle), son=exhausted (90%)` → Haiku.
   ///
   /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-27]
   #[ test ]
   fn it_imodel_auto_selects_haiku_when_d7_idle_and_son_running()
   {
-    // Start from son_idle base; set d7=Some(idle) and son=running.
+    // Start from son_idle base; set d7=Some(idle) and son=exhausted (90% used, 10% remaining < 20%).
     let mut aq = mk_aq_with_son_idle();
     if let Ok( ref mut data ) = aq.result
     {
       data.seven_day = Some( claude_quota::PeriodUsage { utilization: 50.0, resets_at: None } );
       if let Some( ref mut son ) = data.seven_day_sonnet
       {
-        son.resets_at = Some( "2026-06-14T10:00:00Z".to_string() );
+        son.resets_at   = Some( "2026-06-14T10:00:00Z".to_string() );
+        son.utilization = 90.0;   // Fix(BUG-301): exhausted → Haiku regardless of 7d state
       }
     }
     let model    = resolve_model( &aq, SubprocessModel::Auto );
     let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
     assert_eq!(
       model_id, "claude-haiku-4-5-20251001",
-      "imodel::auto must select haiku when son_idle=false (Sonnet running); d7_running irrelevant to new gate",
+      "imodel::auto must select haiku when son_idle=false AND son_available=false (90% used); d7 state irrelevant",
     );
   }
 
@@ -475,22 +488,55 @@ mod tests
     );
   }
 
-  /// FT-30: `imodel::auto` selects Haiku when 7d running via Some + Sonnet running.
+  /// MRE — BUG-301: `imodel::auto` selects Haiku when Sonnet window active with 40% remaining.
+  ///
+  /// Root cause: `subprocess.rs:41` binary `son_idle` gate checked only `resets_at.is_none()`.
+  /// When Sonnet window is running (`resets_at=Some`) but 40% quota remains, `son_idle=false` and
+  /// the old gate returned Haiku — wasting the remaining quota as the window timer expires.
+  /// Fix: extended gate checks `son_available = (100.0 - utilization) > 20.0` alongside `son_idle`.
+  ///
+  /// Fix(BUG-301, TSK-311).
+  ///
+  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-31]
+  #[ test ]
+  fn mre_bug301_son_active_with_remaining_quota_selects_sonnet()
+  {
+    // Sonnet window active (resets_at=Some) with 60% utilization (40% remaining > 20% threshold).
+    let mut aq = mk_aq_with_son_idle();
+    if let Ok( ref mut data ) = aq.result
+    {
+      if let Some( ref mut son ) = data.seven_day_sonnet
+      {
+        son.resets_at   = Some( "2026-06-20T10:00:00Z".to_string() );
+        son.utilization = 60.0;
+      }
+    }
+    let model    = resolve_model( &aq, SubprocessModel::Auto );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-sonnet-4-6",
+      "imodel::auto must select sonnet when son_idle=false but son_available=true (40% remaining); Fix(BUG-301)",
+    );
+  }
+
+  /// FT-30: `imodel::auto` selects Haiku when 7d running via Some + Sonnet exhausted.
   ///
   /// `seven_day=Some({resets_at:Some(...)})` → `d7_running=true` via `map_or` Some-branch.
-  /// `seven_day_sonnet.resets_at=Some(...)` → `son_idle = is_some_and(|p| p.resets_at.is_none()) = false`.
-  /// Gate requires `son_idle=true`; running Sonnet window blocks it. Haiku selected.
+  /// `seven_day_sonnet.resets_at=Some(...)` → `son_idle=false`.
+  /// `seven_day_sonnet.utilization=90.0` → `son_available=(100-90>20)=false`.
+  /// Both gate conditions false; Haiku selected (Sonnet exhausted, conserve last 10%).
   ///
   /// Completes the `d7=Some(running)` Some-branch column alongside FT-25 (Sonnet, son=idle)
   /// and FT-29 (Haiku, son=absent): all three `son` states under `d7=Z + five_h=running` now covered.
   ///
-  /// Test Matrix row 27: `five_h=running, d7=Some(running via Some), son=running` → Haiku.
+  /// Test Matrix row 27: `five_h=running, d7=Some(running via Some), son=exhausted` → Haiku.
   ///
   /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-30]
   #[ test ]
   fn it_imodel_auto_selects_haiku_when_d7_some_running_and_son_running()
   {
-    // Start from son_idle base; override d7 to Some(running) and set son to running.
+    // Start from son_idle base; override d7 to Some(running) and set son to exhausted (90% used).
+    // son_idle=false (resets_at=Some) AND son_available=(100-90>20)=false → both gates fail → Haiku.
     let mut aq = mk_aq_with_son_idle();
     if let Ok( ref mut data ) = aq.result
     {
@@ -501,14 +547,15 @@ mod tests
       } );
       if let Some( ref mut son ) = data.seven_day_sonnet
       {
-        son.resets_at = Some( "2026-06-14T10:00:00Z".to_string() );
+        son.resets_at   = Some( "2026-06-14T10:00:00Z".to_string() );
+        son.utilization = 90.0;   // Fix(BUG-301): test Haiku via exhaustion, not binary gate
       }
     }
     let model    = resolve_model( &aq, SubprocessModel::Auto );
     let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
     assert_eq!(
       model_id, "claude-haiku-4-5-20251001",
-      "imodel::auto must select haiku when d7_running=true (Some-branch) but son_idle=false (son running); son blocks gate",
+      "imodel::auto must select haiku when son_idle=false and son_available=false (90% used, 10% remaining < 20%)",
     );
   }
 

@@ -704,7 +704,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     use std::time::{ SystemTime, UNIX_EPOCH };
     let now_secs = SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().as_secs();
 
-    // only_next: retain only the account that received the → marker.
+    // only_next: retain only the recommended next account.
     if params.only_next
     {
       let best_opt = find_next_for_strategy( &accounts, params.sort, params.prefer, now_secs, params.rotate && !params.force );
@@ -758,13 +758,25 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     return Ok( OutputData::new( content, "text" ) );
   }
 
+  // Read session state once for the footer; both render_text and render_plain consume it.
+  // Reads settings.json once; extracts "model" and "effortLevel" (effort is never changed by
+  // account rotation — it reflects the user's persistent Claude Code preference).
+  let settings_content = crate::ClaudePaths::new()
+    .and_then( |p| std::fs::read_to_string( p.settings_file() ).ok() );
+  let session_model_str  = settings_content.as_deref()
+    .and_then( |s| crate::account::parse_string_field( s, "model" ) );
+  let session_effort_str = settings_content.as_deref()
+    .and_then( |s| crate::account::parse_string_field( s, "effortLevel" ) );
+  let session_model  = session_model_str.as_deref();
+  let session_effort = session_effort_str.as_deref();
+
   let content = match params.format
   {
     UsageOutputFormat::Json  => render_json( &accounts ),
     UsageOutputFormat::Tsv   => render_tsv( &accounts, params.sort, params.desc, params.prefer, &params.cols ),
-    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, &params.cols, params.rotate, params.force ),
+    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort ),
     UsageOutputFormat::Value => String::new(),
-    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, params.rotate, params.force ),
+    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort ),
   };
 
   let content = if params.no_color && params.format != UsageOutputFormat::Tsv

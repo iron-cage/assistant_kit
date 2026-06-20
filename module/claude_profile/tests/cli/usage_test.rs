@@ -2857,15 +2857,15 @@ fn it101_usage_help_shows_touch_param()
   );
 }
 
-/// it102 `lim_it` (IT-51 / FT-03 of feature/020): `sort::renew` (default) places `→` on exactly one account.
+/// it102 `lim_it` (IT-51 / FT-03 of feature/020): `sort::renew` (default) shows recommendation in footer.
 ///
 /// With ≥2 accounts sharing a live token, the renew strategy selects one winner.
-/// Exactly one table row gets `→` in the flag column.
+/// The footer must show a `Next (renew):` recommendation line.
 ///
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-51]
 ///       [`tests/docs/feature/020_usage_sort_strategies.md` AC-09]
 #[ test ]
-fn it102_lim_it_sort_renew_places_arrow_on_winner()
+fn it102_lim_it_sort_renew_shows_recommendation()
 {
   let Some( token ) = live_active_token() else
   {
@@ -2882,22 +2882,21 @@ fn it102_lim_it_sort_renew_places_arrow_on_winner()
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
-  let arrow_count = text.lines().filter( |l| l.contains( "→" ) ).count();
-  assert_eq!(
-    arrow_count, 1,
-    "sort::renew must place exactly one → in table rows (IT-51/020), got:\n{text}",
+  assert!(
+    text.contains( "Next (renew):" ),
+    "sort::renew must show 'Next (renew):' recommendation in footer (IT-51/020), got:\n{text}",
   );
 }
 
-/// it103 `lim_it` (IT-52 / feature/020): `sort::renews` places `→` on exactly one account.
+/// it103 `lim_it` (IT-52 / feature/020): `sort::renews` shows recommendation in footer.
 ///
 /// With ≥2 accounts sharing a live token, the renews strategy selects the account with
-/// the soonest billing renewal. Exactly one `→` appears in the table rows.
+/// the soonest billing renewal. The footer must show a `Next (renews):` recommendation line.
 ///
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-52]
 ///       [`tests/docs/feature/020_usage_sort_strategies.md` AC-09]
 #[ test ]
-fn it103_lim_it_sort_renews_places_arrow_on_winner()
+fn it103_lim_it_sort_renews_shows_recommendation()
 {
   let Some( token ) = live_active_token() else
   {
@@ -2914,10 +2913,9 @@ fn it103_lim_it_sort_renews_places_arrow_on_winner()
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
-  let arrow_count = text.lines().filter( |l| l.contains( "→" ) ).count();
-  assert_eq!(
-    arrow_count, 1,
-    "sort::renews must place exactly one → in table rows (IT-52/020), got:\n{text}",
+  assert!(
+    text.contains( "Next (renews):" ),
+    "sort::renews must show 'Next (renews):' recommendation in footer (IT-52/020), got:\n{text}",
   );
 }
 
@@ -5799,16 +5797,16 @@ fn it221_ft029_09_usage_no_profile_shows_empty_host()
   );
 }
 
-// ── it206: lim_it only_next::1 shows exactly the → account (028 FT-04) ───────
+// ── it206: lim_it only_next::1 shows exactly the recommended account (028 FT-04) ───
 
-/// it206 `lim_it` (028 FT-04): `only_next::1` shows exactly one row — the → account.
+/// it206 `lim_it` (028 FT-04): `only_next::1` shows exactly one row — the recommended account.
 ///
-/// With two live accounts, the active `next::` strategy selects one → winner.
+/// With two live accounts, the active sort strategy selects one winner.
 /// `only_next::1` must show only that row; all others are hidden.
 ///
 /// Spec: [`tests/docs/feature/028_usage_row_filtering.md` FT-04]
 #[ test ]
-fn it206_lim_it_ft028_04_only_next_1_shows_arrow()
+fn it206_lim_it_ft028_04_only_next_1_shows_recommended()
 {
   let Some( token ) = live_active_token() else
   {
@@ -5831,15 +5829,7 @@ fn it206_lim_it_ft028_04_only_next_1_shows_arrow()
     .count();
   assert_eq!(
     data_rows, 1,
-    "only_next::1 must show exactly 1 row (the → account), got:\n{text}",
-  );
-  // The one shown row must contain the → marker.
-  let arrow_rows = text.lines()
-    .filter( | l | l.contains( "→" ) && l.contains( "@test.com" ) )
-    .count();
-  assert_eq!(
-    arrow_rows, 1,
-    "only_next::1 must show the → account row, got:\n{text}",
+    "only_next::1 must show exactly 1 row (the recommended account), got:\n{text}",
   );
 }
 
@@ -6698,14 +6688,14 @@ fn it235_lim_it_no_color_0_output_includes_emoji()
   );
 }
 
-/// it236 `lim_it` (047 EC-5): `no_color::1` footer uses ASCII `->` not `→`.
+/// it236 `lim_it` (047 EC-5): `no_color::1` replaces `✓` with `*` in flag column.
 ///
-/// With two live accounts (valid quota), `no_color::1` must replace the unicode
-/// `→` arrow with ASCII `->` in footer strategy lines.
+/// With a live active account, `no_color::1` must replace the unicode `✓` check mark
+/// with ASCII `*` in the flag column, and must not contain the unicode character.
 ///
 /// Spec: [`tests/docs/cli/param/047_no_color.md` EC-5]
 #[ test ]
-fn it236_lim_it_no_color_1_footer_uses_ascii_arrow()
+fn it236_lim_it_no_color_1_check_mark_replaced_by_star()
 {
   let Some( token ) = live_active_token() else
   {
@@ -6722,12 +6712,12 @@ fn it236_lim_it_no_color_1_footer_uses_ascii_arrow()
   let text = stdout( &out );
 
   assert!(
-    text.contains( "->" ),
-    "no_color::1 footer must use ASCII '->' (047 EC-5), got:\n{text}",
+    !text.contains( '\u{2713}' ),
+    "no_color::1 must replace unicode '✓' with '*' (047 EC-5), got:\n{text}",
   );
   assert!(
-    !text.contains( "\u{2192}" ),
-    "no_color::1 must replace unicode '→' with '->' (047 EC-5), got:\n{text}",
+    text.contains( '*' ),
+    "no_color::1 must contain '*' (replaced from '✓') (047 EC-5), got:\n{text}",
   );
 }
 

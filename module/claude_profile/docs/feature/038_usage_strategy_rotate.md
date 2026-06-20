@@ -4,16 +4,16 @@
 
 - **Purpose**: Enable strategy-driven account rotation directly from `.usage` — the quota table and the switch action are a single command.
 - **Responsibility**: Documents the `rotate::1` parameter on `.usage`: eligibility filtering, ownership gate, strategy selection via the active `sort::` algorithm, dry-run preview, and touch reuse from the already-fetched `AccountQuota`.
-- **In Scope**: `rotate::` boolean param, G5 ownership gate on rotate path, strategy selection via `find_next_for_strategy()` (same `sort::` that drives `→`), post-switch touch from pre-fetched quota, `dry::1` preview, `force::1` bypass, mutual exclusion with `live::1`, no-eligible-account error.
-- **Out of Scope**: The recommendation display (→ marker, footer) and sort order — that is Feature 020. The deprecated `auto_rotate()` API and `.account.rotate` command — see [008_auto_rotate.md](008_auto_rotate.md) (deprecated).
+- **In Scope**: `rotate::` boolean param, G5 ownership gate on rotate path, strategy selection via `find_next_for_strategy()` (same `sort::` that drives the footer recommendation), post-switch touch from pre-fetched quota, `dry::1` preview, `force::1` bypass, mutual exclusion with `live::1`, no-eligible-account error.
+- **Out of Scope**: The recommendation display (footer) and sort order — that is Feature 020. The deprecated `auto_rotate()` API and `.account.rotate` command — see [008_auto_rotate.md](008_auto_rotate.md) (deprecated).
 
 ### Design
 
-Adding `rotate::1` to `.usage` merges account rotation into the quota-fetch pipeline. The `.usage` command already fetches `AccountQuota` for every account and runs `find_next_for_strategy()` to identify the `→` winner. With `rotate::1`, that winner is immediately activated after the table is rendered.
+Adding `rotate::1` to `.usage` merges account rotation into the quota-fetch pipeline. The `.usage` command already fetches `AccountQuota` for every account and runs `find_next_for_strategy()` to identify the recommended account. With `rotate::1`, that account is immediately activated after the table is rendered.
 
 **Selection algorithm:**
 
-`rotate::1` reuses `find_next_for_strategy(accounts, next_strategy, prefer, now_secs)` — the same function that places `→` in the table body. The `→` account and the switched-to account are always the same account.
+`rotate::1` reuses `find_next_for_strategy(accounts, next_strategy, prefer, now_secs)` — the same function that selects the footer recommendation. The recommended account and the switched-to account are always the same account.
 
 When `rotate::1` is active, `find_first_eligible` applies an additional ownership filter: only owned accounts (`aq.is_owned == true`) are eligible. This mirrors the G5 gate on `.account.use`. `force::1` bypasses this gate, allowing rotation to non-owned accounts.
 
@@ -42,11 +42,11 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 
 ### Acceptance Criteria
 
-- **AC-01**: `rotate::1` switches to the account selected by the active `sort::` strategy (the `→` winner). The table shows `→` on that account; the output ends with `switched to '{name}'`.
+- **AC-01**: `rotate::1` switches to the account selected by the active `sort::` strategy (the recommended account). The footer shows the recommended account; the output ends with `switched to '{name}'`.
 - **AC-02**: `rotate::1 dry::1` previews the target account with `[dry-run] would switch to '{name}'`; no credentials are written; exit 0.
 - **AC-03**: When no eligible candidate exists for the active `sort::` strategy (all accounts are current, active, occupied, h-exhausted, or non-owned when `force::0`), `rotate::1` exits 1 with `"no eligible account to rotate to"`. The table is still rendered.
 - **AC-04**: `rotate::1 live::1` exits 1 before any fetch with `"rotate::1 and live::1 are mutually exclusive"`.
-- **AC-05**: `rotate::1` applies the G5 ownership gate to `find_first_eligible`: non-owned accounts (`aq.is_owned == false`) are skipped. A non-owned account receives no `→` marker and is never switched to.
+- **AC-05**: `rotate::1` applies the G5 ownership gate to `find_first_eligible`: non-owned accounts (`aq.is_owned == false`) are skipped. A non-owned account is excluded from the recommendation and is never switched to.
 - **AC-06**: `rotate::1 force::1` bypasses the G5 ownership gate: non-owned accounts are eligible for rotation (same bypass semantics as `.account.use force::1`).
 - **AC-07**: `rotate::1 sort::renews` switches to the account with soonest billing renewal.
 - **AC-08**: `rotate::1 format::json` still executes the switch; JSON output is unchanged (no `"switched_to"` field added to JSON).
@@ -81,7 +81,7 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 
 | File | Relationship |
 |------|--------------|
-| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies and `→` recommendation — `find_next_for_strategy` reused for rotation target |
+| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies and footer recommendation — `find_next_for_strategy` reused for rotation target |
 | [004_account_use.md](004_account_use.md) | `switch_account()` primitive called after strategy selection |
 | [024_session_touch.md](024_session_touch.md) | Post-switch touch applied from in-memory `AccountQuota` |
 | [036_account_ownership.md](036_account_ownership.md) | G5 ownership gate enforced on rotation eligibility |

@@ -32,10 +32,11 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 | FT-24 | `imodel::auto` selects sonnet when 7d timer idle and `son_idle=true` | AC-01 | Unit |
 | FT-25 | `imodel::auto` selects sonnet when 7d running via explicit Some path and `son_idle=true` | AC-01 | Unit |
 | FT-26 | `imodel::auto` selects sonnet when 5h absent + 7d running and `son_idle=true` | AC-01 | Unit |
-| FT-27 | `imodel::auto` selects haiku when 7d idle + Sonnet running (two gate failures) | AC-01 | Unit |
+| FT-27 | `imodel::auto` selects haiku when 7d idle + Sonnet exhausted (both gates fail) | AC-01 | Unit |
 | FT-28 | `imodel::auto` selects haiku when 7d idle + Sonnet tier absent | AC-01 | Unit |
 | FT-29 | `imodel::auto` selects haiku when 7d running via Some + Sonnet tier absent | AC-01 | Unit |
-| FT-30 | `imodel::auto` selects haiku when 7d running via Some + Sonnet running | AC-01 | Unit |
+| FT-30 | `imodel::auto` selects haiku when 7d running via Some + Sonnet exhausted | AC-01 | Unit |
+| FT-31 | `imodel::auto` selects sonnet when Sonnet window active with 40% remaining (MRE BUG-301) | AC-01 | Unit |
 
 ### Test Case Index
 
@@ -67,12 +68,13 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 | FT-24 | imodel::auto selects sonnet when d7 idle son_idle | AC-01 | Model Auto |
 | FT-25 | imodel::auto selects sonnet when d7 running via Some son_idle | AC-01 | Model Auto |
 | FT-26 | imodel::auto selects sonnet 5h absent d7 Some running son_idle | AC-01 | Model Auto |
-| FT-27 | imodel::auto selects haiku d7 idle son running | AC-01 | Model Auto |
+| FT-27 | imodel::auto selects haiku d7 idle son exhausted | AC-01 | Model Auto |
 | FT-28 | imodel::auto selects haiku d7 idle son absent | AC-01 | Model Auto |
 | FT-29 | imodel::auto selects haiku d7 Some running son absent | AC-01 | Model Auto |
-| FT-30 | imodel::auto selects haiku d7 Some running son running | AC-01 | Model Auto |
+| FT-30 | imodel::auto selects haiku d7 Some running son exhausted | AC-01 | Model Auto |
+| FT-31 | imodel::auto selects sonnet son active 40% remaining MRE BUG-301 | AC-01 | Model Auto |
 
-**Total:** 30 FT cases
+**Total:** 31 FT cases
 
 ---
 
@@ -363,11 +365,11 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ---
 
-### FT-27: `imodel::auto` selects haiku when Sonnet running (`son_idle=false`)
+### FT-27: `imodel::auto` selects haiku when Sonnet exhausted (7d idle, both gates fail)
 
-- **Given:** Account where `seven_day=Some({resets_at:None})` (7d idle) and `seven_day_sonnet=Some({resets_at:Some(...)})` (Sonnet running → `son_idle=false`). `five_hour=running` (`five_h_running=true`).
+- **Given:** Account where `seven_day=Some({resets_at:None})` (7d idle) and `seven_day_sonnet=Some({resets_at:Some(...), utilization:90.0})` (Sonnet running, 10% remaining → `son_idle=false`, `son_available=(100-90>20)=false`). `five_hour=running`.
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
-- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. `son_idle = is_some_and(|p| p.resets_at.is_none()) = false` (Sonnet active → resets_at is Some → is_none()=false). Gate does NOT fire; `d7_running` state is irrelevant. Haiku selected. Exercises `son=running` with 7d-idle — distinct from EC-9b (`d7=None`).
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Both gate conditions fail: `son_idle=false` (resets_at is Some) AND `son_available=false` (only 10% remaining < 20% threshold). Haiku selected; `d7_running` state irrelevant. Exercises `son=exhausted` with 7d-idle. Fix(BUG-301, TSK-311).
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_selects_haiku_when_d7_idle_and_son_running` (in `src/usage/subprocess.rs #[cfg(test)]`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
@@ -396,11 +398,22 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ---
 
-### FT-30: `imodel::auto` selects haiku when 7d running via Some + Sonnet running
+### FT-30: `imodel::auto` selects haiku when 7d running via Some + Sonnet exhausted
 
-- **Given:** Account where `seven_day=Some({resets_at:Some(...)})` (7d active → `d7_running=true` via Some-branch) and `seven_day_sonnet=Some({resets_at:Some(...)})` (Sonnet window running → `son_idle=false`). `five_hour=running` (`five_h_running=true`).
+- **Given:** Account where `seven_day=Some({resets_at:Some(...)})` (7d active → `d7_running=true` via Some-branch) and `seven_day_sonnet=Some({resets_at:Some(...), utilization:90.0})` (Sonnet running, 10% remaining → `son_idle=false`, `son_available=false`). `five_hour=running`.
 - **When:** `resolve_model(&aq, SubprocessModel::Auto)`
-- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. `d7_running=true` via closure; `son_idle = is_some_and(|p| p.resets_at.is_none())=false` (Sonnet active). Gate blocked by `son_idle=false`. Haiku selected. Closes the `d7=Some(running) + son=running` cell; together with FT-25 (son=idle → Sonnet) and FT-29 (son=absent → Haiku), all three `son` states under `d7=Z + five_h=running` are now covered.
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Both gate conditions fail: `son_idle=false` (resets_at is Some) AND `son_available=(100-90>20)=false` (10% remaining < 20% threshold). Haiku selected. Closes the `d7=Some(running) + son=exhausted` cell; together with FT-25 (son=idle → Sonnet), FT-29 (son=absent → Haiku), and FT-31 (son=active+available → Sonnet), all key `son` states are covered. Fix(BUG-301, TSK-311).
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_selects_haiku_when_d7_some_running_and_son_running` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### FT-31: `imodel::auto` selects sonnet when Sonnet window active with 40% remaining (MRE BUG-301)
+
+- **Given:** Account where `seven_day_sonnet=Some({resets_at:Some("2026-06-20T..."), utilization:60.0})` (Sonnet window active, 40% remaining → `son_idle=false`, `son_available=(100-60>20)=true`). Helper: `mk_aq_with_son_idle()` with son mutated to `resets_at=Some` and `utilization=60.0`.
+- **When:** `resolve_model(&aq, SubprocessModel::Auto)`
+- **Then:** Returns `IsolatedModel::Specific("claude-sonnet-4-6")`. `son_available=true` → gate fires; remaining Sonnet quota (40%) is used before the window expires. Before BUG-301 fix: `son_idle=false` caused Haiku — wasting 40% quota. Fix(BUG-301, TSK-311).
+- **Exit:** n/a (unit test)
+- **Source fn:** `mre_bug301_son_active_with_remaining_quota_selects_sonnet` (in `src/usage/subprocess.rs #[cfg(test)]`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)

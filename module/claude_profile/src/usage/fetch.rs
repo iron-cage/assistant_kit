@@ -226,7 +226,13 @@ pub( crate ) fn fetch_quota_for_list(
         claude_profile_core::account::write_quota_cache( credential_store, &acct.name, h5, d7, sn );
         ( result, false, None )
       }
-      Err( ref _e ) =>
+      // Fix(BUG-296): auth errors (401, 403) must not fall back to cache — they indicate
+      //   credential rejection and must remain Err so should_refresh() can trigger refresh.
+      // Root cause: Err(ref _e) matched all errors; cache masking converted 401 Err to
+      //   Ok(cached_data), bypassing the 401/403 guard in refresh_predicate.rs:34.
+      // Pitfall: only transient errors (5xx, network, timeout) are legitimate cache-fallback
+      //   candidates; auth errors are definitive rejections that need credential action.
+      Err( ref e ) if !e.contains( "401" ) && !e.contains( "403" ) =>
       {
         if let Some( entry ) = claude_profile_core::account::read_quota_cache( credential_store, &acct.name )
         {
@@ -244,6 +250,7 @@ pub( crate ) fn fetch_quota_for_list(
           ( result, false, None )
         }
       }
+      Err( _ ) => ( result, false, None ),
     };
     results.push( AccountQuota
     {
@@ -721,6 +728,61 @@ mod tests
       results.len(), 1,
       "BUG-218: quota table must have exactly 1 row for 1 stored account; len={}",
       results.len(),
+    );
+  }
+
+  // ── BUG-296: auth errors must bypass cache fallback ──────────────────────────
+
+  /// MRE for BUG-296: HTTP 401/403 auth errors must bypass the cache fallback arm.
+  ///
+  /// # Root Cause
+  /// `Err( ref _e ) =>` in `fetch_quota_for_list` matched ALL error variants, including
+  /// HTTP 401 and 403 authentication failures. A 401 from the server would be silently
+  /// converted to `Ok(cached_data)` when a warm cache existed, causing:
+  ///   - `should_refresh()` auth-error guard at `refresh_predicate.rs:34` bypassed
+  ///   - No token refresh attempted (trace shows: `should_retry=false  reason: ok`)
+  ///   - Watchdog receiving 🟢 status from stale cache indefinitely (confirmed: 7+ cycles)
+  ///
+  /// # Why Not Caught
+  /// The cache fallback was designed for transient errors (429, network, timeout); no test
+  /// verified that auth errors (401, 403) bypass the cache arm. The distinction between
+  /// "transient failure" and "credential rejection" was absent from both code and tests.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-296): match guard `Err( ref e ) if !e.contains("401") && !e.contains("403")`.
+  /// Auth errors fall through to `Err( _ ) => ( result, false, None )` — `cached=false`,
+  /// `aq.result` remains `Err`, enabling `should_refresh()` to trigger credential refresh.
+  ///
+  /// # Prevention
+  /// Structural assertion: the guard pattern must appear in source before `read_quota_cache`.
+  /// Any future modification to the cache fallback match must preserve this ordering.
+  ///
+  /// # Pitfall
+  /// HTTP 401/403 are DEFINITIVE rejections, not transient errors. Using cached data hides
+  /// a credential failure and prevents automated recovery via the refresh pipeline.
+  #[ doc = "bug_reproducer(BUG-296)" ]
+  #[ test ]
+  fn mre_bug296_cached_non_expired_401_no_refresh()
+  {
+    // Structural assertion: auth-error guard must appear, and read_quota_cache must appear
+    // AFTER it (not before) — there is another read_quota_cache call earlier in the file
+    // (non-owned path), so we search within src[guard_pos..] to find the one in the error arm.
+    let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/fetch.rs" ) );
+    let guard_pos = src.find( r#"!e.contains( "401" ) && !e.contains( "403" )"# )
+      .expect(
+        "BUG-296: auth-error guard not found in fetch.rs — \
+         401/403 errors must bypass cache fallback via match guard",
+      );
+    assert!(
+      src[ guard_pos.. ].contains( "read_quota_cache( credential_store" ),
+      "BUG-296: read_quota_cache call not found after auth-error guard in fetch.rs — \
+       guard must precede read_quota_cache in the cache fallback arm",
+    );
+    // Confirm catch-all arm propagates auth errors without cache substitution.
+    assert!(
+      src.contains( "Err( _ ) => ( result, false, None )" ),
+      "BUG-296: catch-all Err arm missing in cache fallback match — \
+       auth errors must propagate as Err with cached=false",
     );
   }
 

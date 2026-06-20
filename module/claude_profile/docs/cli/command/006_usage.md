@@ -47,7 +47,7 @@ clp .usage rotate::1 force::1
 | `interval::` | `u64` | `30` | Seconds between refresh cycles (≥ 30; only validated when `live::1`) |
 | `jitter::` | `u64` | `0` | Max random seconds added to each cycle delay (≤ interval; only validated when `live::1`) |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
-| `sort::` | `enum` | `renew` | Row ordering strategy AND `→` recommendation: `name` (alphabetical), `renew` (soonest quota refill), `renews` (soonest billing renewal). Top eligible account receives `→` marker |
+| `sort::` | `enum` | `renew` | Row ordering strategy AND footer recommendation: `name` (alphabetical), `renew` (soonest quota refill), `renews` (soonest billing renewal). Recommended account shown in footer `Next (strategy):` line |
 | `desc::` | `bool` | context-sensitive | Sort direction; default depends on `sort::` strategy (`name`/`renew`/`renews`→`0`) |
 | `prefer::` | `enum` | `any` | Weekly quota column for sort heuristics: `any` = `min(7d Left, 7d(Son))`, `opus` = `7d Left`, `sonnet` = `7d(Son)` |
 | `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to default set |
@@ -57,7 +57,7 @@ clp .usage rotate::1 force::1
 | `count::` | `u64` | `0` | Maximum rows to display (0 = all rows) |
 | `offset::` | `u64` | `0` | Skip first N rows from display |
 | `only_active::` | `bool` | `0` | Show only the active (current/starred) account row |
-| `only_next::` | `bool` | `0` | Show only the recommended next account (`→` row) |
+| `only_next::` | `bool` | `0` | Show only the recommended next account row |
 | `min_5h::` | `f64` | `0` | Hide accounts with `5h Left` below this percentage (0–100) |
 | `min_7d::` | `f64` | `0` | Hide accounts with `7d Left` below this percentage (0–100) |
 | `only_valid::` | `bool` | `0` | Hide accounts with invalid/missing tokens (status ≠ 🔴) |
@@ -72,7 +72,7 @@ clp .usage rotate::1 force::1
 | `assign::` | `bool` | `0` | Write per-machine active marker for the target account on this machine (or the machine named by `for::`) |
 | `force::` | `bool` | `0` | Bypass G8 ownership gate for `unclaim::1` when the account is owned by a different machine |
 | `for::` | `string` | *(omit)* | Target `USER@MACHINE` identity for `assign::1`; defaults to current user@hostname when absent |
-| `rotate::` | `bool` | `0` | After quota fetch and table render, switch to the `→` recommended account (active `sort::` strategy winner); G5 ownership gate (non-owned accounts skipped; `force::1` bypasses); mutually exclusive with `live::1`; `dry::1` previews without switching |
+| `rotate::` | `bool` | `0` | After quota fetch and table render, switch to the recommended account (active `sort::` strategy winner); G5 ownership gate (non-owned accounts skipped; `force::1` bypasses); mutually exclusive with `live::1`; `dry::1` previews without switching |
 
 **Algorithm (11 steps):**
 1. Enumerate `{credential_store}/*.credentials.json` alphabetically; build account list
@@ -83,7 +83,7 @@ clp .usage rotate::1 force::1
 6. `(when touch::1)` `apply_touch()`: for each account with any quota timer absent, spawn isolated subprocess to activate idle window; re-fetch quota (runs after refresh so refreshed accounts are touched)
 7. Session-model override: `(when set_model:: provided)` write requested model via `set_session_model()`; `(otherwise, when current account has valid quota)` write resolved model via `apply_model_override()`
 8. Post-filter: apply `only_next::`, `only_valid::`, `exclude_exhausted::`, `min_5h::`, `min_7d::`, `count::`, `offset::` predicates
-9. Compute derived fields: status emoji, `→ Next` column, `~Renews`, flag column priority (`✓`/`*`/`@`/`→`)
+9. Compute derived fields: status emoji, `→ Next` column, `~Renews`, flag column priority (`✓`/`*`/`@`)
 10. Four-group status partition (`🟢`→`🟡 h-exhausted`→`🟡 weekly-exhausted`→`🔴`); apply `sort::` strategy + `desc::` direction within each group
 11. `(when format::text)` Render table + footer; `(when get:: provided)` extract single field from first match; `(when live::1)` loop with `interval::` + `jitter::` delay
 12. `(when rotate::1)` Rotation dispatch: call `find_next_for_strategy()` winner; if no winner → exit 1 (`"no eligible account to rotate to"`); if `dry::1` → append `"[dry-run] would switch to '{name}'"` and exit 0; apply G5 ownership gate (non-owned accounts exit 1 unless `force::1`); call `switch_account(winner)`; apply post-switch touch from in-memory `AccountQuota` (no re-fetch); append `"switched to '{name}'"` to output
@@ -98,10 +98,11 @@ clp .usage
 #   🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%   28%      in 6d 14h  in 5h 02m   ~in 30d      in 6d 14h +7d
 # ✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%   35%      in 4d 23h  in 7h 24m   ~in 6d       in 4d 23h +7d
 # @ 🟢 carol@example.com    🟢 91%     in 4h 12m  🟢 73%   41%      in 5d 8h   in 2h 30m   ~in 14d      in 5d 8h +7d
-# → 🟡 frank@example.com    🟡 3%      in 0h 23m  🟢 52%   12%      in 2d 11h  in 1h 12m   ~in 8d       in 2d 11h +7d
+#   🟡 frank@example.com    🟡 3%      in 0h 23m  🟢 52%   12%      in 2d 11h  in 1h 12m   ~in 8d       in 2d 11h +7d
 #   🔴 dave@example.com     —          —           —        —        —          EXPIRED      ?            —
 #
-# Valid: 4 / 5   ->  Next (renew): frank@example.com  in 2d 11h +7d  model: opus
+# Valid: 4 / 5   session: claude-sonnet-4-6  effort: low
+# Next (renew): frank@example.com  in 2d 11h +7d  model: opus
 
 clp .usage live::1 interval::60 jitter::10
 # Quota
@@ -113,14 +114,14 @@ clp .usage live::1 interval::60 jitter::10
 
 **Notes:**
 - Accounts are enumerated from `{credential_store}/*.credentials.json` in alphabetical order.
-- Flag column priority: `✓` = current account, `*` = active-but-not-current (divergence), `@` = occupied on another machine (another machine's `_active_*` marker names this account), `→` = recommended next account. Priority: `✓` > `*` > `@` > `→` > blank. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md) and [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md).
+- Flag column priority: `✓` = current account, `*` = active-but-not-current (divergence), `@` = occupied on another machine (another machine's `_active_*` marker names this account). Priority: `✓` > `*` > `@` > blank. The recommended next account appears in the footer's `Next (strategy):` line, not in the flag column. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md) and [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md).
 - Status emoji column (`●`): composite of 5h and 7d status — `🟢` = both available (`5h Left > 15%` and `7d Left > 5%`); `🟡` = h-exhausted (`5h Left ≤ 15%`, 7d available) or weekly-exhausted (`7d Left ≤ 5%`, 5h available); `🔴` = both exhausted or error. Per-column emoji also embedded in `5h Left` (🟢/🟡 at ≤15% threshold) and `7d Left` (🟢/🟡 at ≤5% threshold). No JSON equivalent.
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails.
 - `Sub` is sourced from `GET /api/oauth/account` (parallel fetch); shows `?` when that fetch fails.
 - `~Renews` shows an exact duration (`in Xh Ym`, no `~`) when `_renewal_at` is set in `{name}.json` (via `.account.renewal`); shows an estimated `~in Xd` from `org_created_at` day-of-month when not set; shows `?` when neither source is available.
 - `→ Next` shows the soonest upcoming strategic event among 7d quota reset (`+7d`) and billing renewal (`$ren`). Token expiry (`!tok`) and 5h session resets are not candidates — already shown in `Expires` and `5h Reset`. Shows `—` when all candidates are absent or in the past.
 - Accounts with failed quota fetch (expired/missing `accessToken`, 429 rate-limit, or other API error) show `—` for all quota columns (`5h Left` through `7d Reset`) with a shortened error reason replacing the **last visible quota column**. `Expires`, `Sub`, and `~Renews` are sourced independently and retain their values regardless of quota fetch failure.
-- Footer: shows one recommendation line for the active `sort::` strategy when ≥2 accounts have valid quota data. The top eligible account in the sort order receives `→` in the table body.
+- Footer: shows one recommendation line for the active `sort::` strategy when ≥2 accounts have valid quota data. The flag column shows `✓`, `*`, `@`, or blank — recommended account shown in footer `Next (strategy):` line.
 - Empty credential store exits 0 with `(no accounts configured)`.
 - `refresh::1` triggers at most one retry per account per cycle. See [feature/017_token_refresh.md](../../feature/017_token_refresh.md).
 - `live::1 format::json` exits 1 before any fetch. See [feature/018_live_monitor.md](../../feature/018_live_monitor.md).
@@ -128,8 +129,8 @@ clp .usage live::1 interval::60 jitter::10
 - `Sub` column hidden by default; show via `cols::+sub`. `7d Son Reset` column also hidden by default; show via `cols::+7d_son_reset`.
 - Duration format (`format_duration_secs`) capped to 2 significant units (e.g., `1d 2h` not `1d 2h 45m`).
 - See [feature/009_token_usage.md](../../feature/009_token_usage.md) for the baseline algorithm and AC criteria.
-- See [feature/020_usage_sort_strategies.md](../../feature/020_usage_sort_strategies.md) for sort strategies and `→` recommendation.
-- `rotate::1` executes account switch to the `→` winner after rendering; mutually exclusive with `live::1` (exits 1 before fetch). G5 ownership gate applies — non-owned accounts are ineligible unless `force::1`. Post-switch touch reuses already-fetched `AccountQuota` (no extra API call). See [feature/038_usage_strategy_rotate.md](../../feature/038_usage_strategy_rotate.md).
+- See [feature/020_usage_sort_strategies.md](../../feature/020_usage_sort_strategies.md) for sort strategies and footer recommendation.
+- `rotate::1` executes account switch to the footer-recommended account after rendering; mutually exclusive with `live::1` (exits 1 before fetch). G5 ownership gate applies — non-owned accounts are ineligible unless `force::1`. Post-switch touch reuses already-fetched `AccountQuota` (no extra API call). See [feature/038_usage_strategy_rotate.md](../../feature/038_usage_strategy_rotate.md).
 - `touch::` (default `1`) activates accounts with any quota timer absent (no active 5h, 7d, or 7d-Sonnet window) by sending a minimal prompt; pass `touch::0` to suppress. Runs after `refresh::` when both active. See [feature/024_session_touch.md](../../feature/024_session_touch.md) for full trigger conditions including skip guards (h-exhausted, 7d-exhausted).
 - `imodel::` controls the Claude model injected into `touch::` and `refresh::` subprocesses. `auto` (default) selects Haiku by default; Sonnet when `son_idle=true` (7d-Sonnet window present but not yet started — activates idle window). See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).
 - `effort::` controls the effort level (`--effort` flag) for those subprocesses. `auto` (default) uses `low` for any model; no flag for `imodel::haiku` or `imodel::keep`. Low effort prevents extended thinking in keep-alive subprocesses, avoiding timeouts. See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).
@@ -142,14 +143,13 @@ clp .usage live::1 interval::60 jitter::10
 | 2 | [Current Account Awareness](../../feature/016_current_account_awareness.md) | Flag column (`✓`/`*`) and active account detection |
 | 3 | [Token Refresh](../../feature/017_token_refresh.md) | Auth error recovery on 401/403/429 |
 | 4 | [Live Monitor](../../feature/018_live_monitor.md) | Continuous refresh loop behavior (`live::1`) |
-| 5 | [Sort Strategies](../../feature/020_usage_sort_strategies.md) | Row ordering strategies (`sort::`, `desc::`, `prefer::`) |
-| 6 | [Sort Strategies](../../feature/020_usage_sort_strategies.md) | `→` recommendation marker and footer (driven by `sort::`) |
-| 7 | [Session Touch](../../feature/024_session_touch.md) | Idle account activation trigger conditions |
-| 8 | [Per-Machine Active Marker](../../feature/025_per_machine_active_marker.md) | Machine-local active marker (`@` flag column) |
-| 9 | [Subprocess Model/Effort](../../feature/026_subprocess_model_effort.md) | Model and effort selection for subprocesses |
-| 10 | [Row Filtering](../../feature/028_usage_row_filtering.md) | Filter predicates (`only_active::`, `min_5h::`, etc.) |
-| 11 | [Account Renewal Override](../../feature/030_account_renewal_override.md) | `~Renews` exact duration when `_renewal_at` is set |
-| 12 | [Usage Strategy Rotate](../../feature/038_usage_strategy_rotate.md) | `rotate::1` — strategy-driven account rotation via `.usage` |
+| 5 | [Sort Strategies](../../feature/020_usage_sort_strategies.md) | Row ordering strategies and footer recommendation (`sort::`, `desc::`, `prefer::`) |
+| 6 | [Session Touch](../../feature/024_session_touch.md) | Idle account activation trigger conditions |
+| 7 | [Per-Machine Active Marker](../../feature/025_per_machine_active_marker.md) | Machine-local active marker (`@` flag column) |
+| 8 | [Subprocess Model/Effort](../../feature/026_subprocess_model_effort.md) | Model and effort selection for subprocesses |
+| 9 | [Row Filtering](../../feature/028_usage_row_filtering.md) | Filter predicates (`only_active::`, `min_5h::`, etc.) |
+| 10 | [Account Renewal Override](../../feature/030_account_renewal_override.md) | `~Renews` exact duration when `_renewal_at` is set |
+| 11 | [Usage Strategy Rotate](../../feature/038_usage_strategy_rotate.md) | `rotate::1` — strategy-driven account rotation via `.usage` |
 
 ### Referenced User Stories
 

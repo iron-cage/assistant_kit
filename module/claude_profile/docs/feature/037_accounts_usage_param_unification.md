@@ -71,8 +71,7 @@ The identity set (`.accounts` default) includes: Account, Owner, Active, Current
 | [032_account_assign.md](032_account_assign.md) | `.account.assign` behavior absorbed as `assign::` + `for::` params |
 | [036_account_ownership.md](036_account_ownership.md) | `.account.unclaim` behavior absorbed as `unclaim::` param; G8 gate preserved |
 | [028_usage_row_filtering.md](028_usage_row_filtering.md) | Row filtering params (`count::`, `offset::`, `only_active::`, etc.) added to `.accounts` |
-| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies (`sort::`, `desc::`, `prefer::`) added to `.accounts` |
-| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies and `→` recommendation added to `.accounts` |
+| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies (`sort::`, `desc::`, `prefer::`) and footer recommendation added to `.accounts` |
 | [024_session_touch.md](024_session_touch.md) | Touch (`touch::`) available on `.accounts` with default `0` |
 | [017_token_refresh.md](017_token_refresh.md) | Refresh (`refresh::`) available on `.accounts` with default `0` |
 | [029_account_host_metadata.md](029_account_host_metadata.md) | `cols::` syntax shared between `.accounts` and `.usage` |

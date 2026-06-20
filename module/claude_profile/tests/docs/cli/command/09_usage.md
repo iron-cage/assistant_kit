@@ -16,7 +16,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-8 | Multiple accounts displayed in alphabetical order | Ordering |
 | IT-9 | Account with missing token file shows `—` with error reason | Error Inline |
 | IT-10 | Account with expired token shows `EXPIRED` in Expires column | Expires Column |
-| IT-11 | Best non-current account is marked with `→` in flag column | Recommendation |
+| IT-11 | Recommended account appears in footer `Next:` line; no `→` in table rows | Recommendation |
 | IT-12 | Footer line shows valid count and recommended next account | Footer |
 | IT-13 | `*` marks active account when it differs from the current account | Active Divergence |
 | IT-14 | When credentials file unreadable: no `✓`; `*` still marks active account | Active Divergence |
@@ -226,11 +226,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-11: Best non-current account is marked with `→` in flag column
+### IT-11: Recommended account appears in footer `Next:` line; no `→` in table rows
 
 - **Given:** Two accounts — one active with quota data, one non-active with valid token and quota data showing lower session usage than the active account.
 - **When:** `clp .usage`
-- **Then:** A line in stdout contains both `→` and the non-active account name. No line contains both `→` and the active account name. Exit 0.
+- **Then:** Stdout contains a footer line matching `Next` and the non-active account name. No table data row contains a bare `→` marker in the flag column. Exit 0.
 - **Exit:** 0
 - **Live:** yes (requires real tokens for both accounts to return quota data)
 - **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
@@ -651,7 +651,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ### IT-51: ~~`next::drain` default~~ → REMOVED
 
-> `next::` parameter removed entirely. `sort::` now drives the `→` recommendation.
+> `next::` parameter removed entirely. `sort::` now drives the footer recommendation.
 > Replaced by single-strategy footer tests. See `it253_next_param_removed_exit_1`.
 
 ---
@@ -897,9 +897,9 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ### IT-77: `rotate::1 dry::1` previews target; no switch executed; exit 0
 
-- **Given:** Two accounts: `primary@acme.com` (current, active) and `secondary@acme.com` (owned, non-current, non-active, not h-exhausted, not expired, has quota). `sort::renew` (default) selects `secondary@acme.com` as `→` winner.
+- **Given:** Two accounts: `primary@acme.com` (current, active) and `secondary@acme.com` (owned, non-current, non-active, not h-exhausted, not expired, has quota). `sort::renew` (default) selects `secondary@acme.com` as the footer recommendation.
 - **When:** `clp .usage rotate::1 dry::1`
-- **Then:** Exits 0. Table is rendered; `→` appears on `secondary@acme.com`. Output ends with `[dry-run] would switch to 'secondary@acme.com'`. Credential store is NOT modified (credentials file unchanged).
+- **Then:** Exits 0. Table is rendered; footer `Next:` line shows `secondary@acme.com`. Output ends with `[dry-run] would switch to 'secondary@acme.com'`. Credential store is NOT modified (credentials file unchanged).
 - **Exit:** 0
 - **Source fn:** `it251_rotate_dry_preview_no_switch` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-02](../../../../docs/feature/038_usage_strategy_rotate.md)
@@ -910,7 +910,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 - **Given:** Two accounts: `primary@acme.com` (current, active) and `secondary@acme.com` (owned, non-current, non-active, has quota). Live test environment.
 - **When:** `clp .usage rotate::1`
-- **Then:** Exits 0. Table is rendered with `→` on `secondary@acme.com`. Output ends with `switched to 'secondary@acme.com'`. The active marker in the credential store now points to `secondary@acme.com`.
+- **Then:** Exits 0. Table is rendered; footer `Next:` line shows `secondary@acme.com`. Output ends with `switched to 'secondary@acme.com'`. The active marker in the credential store now points to `secondary@acme.com`.
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it252_lim_it_rotate_core_switch_switches_account` (in `tests/cli/usage_test.rs`)
