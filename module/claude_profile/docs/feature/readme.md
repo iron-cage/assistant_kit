@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the functional capabilities of `claude_profile` — account credential management and the `clp` CLI.
 - **Responsibility**: Documents all functional requirements with their design, acceptance criteria, and test references.
-- **In Scope**: feature/001 through feature/038 — full functional capability set for claude_profile and the clp CLI.
+- **In Scope**: feature/001 through feature/039 — full functional capability set for claude_profile and the clp CLI.
 - **Out of Scope**: Quality constraints (→ invariant/), CLI design (→ cli/).
 
 ### Overview Table
@@ -36,7 +36,7 @@
 | 023 | [Next Account Recommendation Strategies](023_next_account_strategies.md) | **DEPRECATED** — absorbed into feature 020; `next::` removed, `→` driven by `sort::` | ⛔ |
 | 024 | [Session Touch via Isolated Subprocess](024_session_touch.md) | Activate idle accounts' 5h session windows by sending minimal prompt via isolated subprocess; `touch::` parameter | ✅ |
 | 025 | [Per-Machine Active Marker](025_per_machine_active_marker.md) | Machine-specific `_active_{hostname}_{user}` marker; exact local-part prefix resolution | ✅ |
-| 026 | [Subprocess Model and Effort Control](026_subprocess_model_effort.md) | `imodel::` and `effort::` parameters; per-account auto model selection (20% threshold); effort resolution | ✅ |
+| 026 | [Subprocess Model and Effort Control](026_subprocess_model_effort.md) | `imodel::` and `effort::` parameters; auto model selection (haiku default; sonnet when `son_idle=true`); effort resolution | ✅ |
 | 027 | [`.account.use` Post-Switch Touch](027_account_use_post_switch_touch.md) | Activate idle 5h window after account switch; `touch::`, `imodel::`, `effort::` on `.account.use` | ✅ |
 | 028 | [Usage Row Filtering and Extraction](028_usage_row_filtering.md) | Row-level filters, count/offset pagination, and `get::` single-value extraction for `.usage` output | ✅ |
 | 029 | [Account Host and Role Metadata](029_account_host_metadata.md) | Capture host/role labels at `.account.save` time; display via `cols::+host` and `cols::+role` | ✅ |
@@ -49,3 +49,4 @@
 | 036 | [Account Ownership](036_account_ownership.md) | `owner` field in `{name}.json`; ownership-neutral `.account.save` (`account_save_routine()` passes `owner: None`); `.accounts unclaim::1` clears ownership via `write_owner()`; `.account.assign` is marker-only; eight enforcement gates (G1–G8) preventing non-owner credential operations; cache-as-primary for non-owned fetch | ✅ |
 | 037 | [Accounts/Usage Param Unification](037_accounts_usage_param_unification.md) | Unify `.accounts` and `.usage` to 32 shared params with different defaults; absorb `.account.unclaim` as `unclaim::` and `.account.assign` as `assign::`/`for::` params; replace 15 field toggles with `cols::`; reduce commands 18→16 | ✅ |
 | 038 | [Usage Strategy Rotate](038_usage_strategy_rotate.md) | `rotate::1` on `.usage`: switch to `→` winner after quota table render; G5 ownership gate; dry-run preview; touch reuse from in-memory quota; deprecates `.account.rotate` | ✅ |
+| 039 | [Decision Algorithm Reference](039_decision_algorithms.md) | Unified reference for 5 core decision algorithms: touch model, session model override, quota status groups, eligibility gates, next-account positive selection | ✅ |

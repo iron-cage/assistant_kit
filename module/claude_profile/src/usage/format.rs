@@ -323,24 +323,56 @@ pub( crate ) fn seven_day_left( aq : &AccountQuota ) -> f64
   100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization )
 }
 
+/// Return `(five_hour_left, relevant_7d_left)` for a given `prefer` strategy.
+///
+/// `five_hour_left` = `100.0 - five_hour.utilization` for `Ok` accounts; `-1.0` for `Err`.
+///
+/// `relevant_7d_left` is model-aware:
+/// - `Opus`   → raw `seven_day_left` (Sonnet cap irrelevant for Opus intent).
+/// - `Sonnet` → `100.0 - sonnet.utilization` when `Some`; **`0.0`** when `None` (absent = unknown).
+/// - `Any`    → `min(seven_day_left, 100.0 - sonnet.utilization)` when `Some`; else `seven_day_left`.
+/// - `Err(_)` result → `(-1.0, 0.0)`.
+///
+/// Fix(BUG Phase-2): old `prefer_weekly` used `map_or(0.0, ...)` for Sonnet utilization —
+///   when `seven_day_sonnet = None`, `100.0 - 0.0 = 100.0`, silently inflating the quota
+///   and making accounts with absent Sonnet tiers appear fully eligible under `prefer::son`.
+/// Root cause: `map_or(0.0, ...)` is correct for DISPLAY (absent = show nothing / 0% label)
+///   but wrong for eligibility gates — absent ≠ exhausted ≠ available.
+/// Pitfall: always use `if let Some(ref son)` for quota-gate logic. `map_or` folds None into
+///   a numeric sentinel that is indistinguishable from an actual measured value.
+pub( super ) fn relevant_quotas( aq : &AccountQuota, prefer : PreferStrategy ) -> ( f64, f64 )
+{
+  let Ok( data ) = &aq.result else { return ( -1.0, 0.0 ); };
+  let five_h_left = 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
+  let left_7d     = 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization );
+  let relevant_7d = match prefer
+  {
+    PreferStrategy::Opus   => left_7d,
+    PreferStrategy::Sonnet =>
+    {
+      if let Some( ref son ) = data.seven_day_sonnet { 100.0 - son.utilization }
+      else { 0.0 }
+    }
+    PreferStrategy::Any =>
+    {
+      if let Some( ref son ) = data.seven_day_sonnet { left_7d.min( 100.0 - son.utilization ) }
+      else { left_7d }
+    }
+  };
+  ( five_h_left, relevant_7d )
+}
+
 /// Return the weekly quota left (%) for a given `prefer` strategy.
 ///
 /// - `Opus`   → `7d Left` only.
-/// - `Sonnet` → `7d(Son)` only.
-/// - `Any`    → `min(7d Left, 7d(Son))` — conservative: whichever cap is more constrained.
+/// - `Sonnet` → `7d(Son)` only; **`0.0`** when `seven_day_sonnet` is absent (unknown ≠ 100%).
+/// - `Any`    → `min(7d Left, 7d(Son))` when Sonnet present; `7d Left` when absent.
 ///
 /// Absent period data is treated as `0.0` left. `Err` accounts return `0.0`.
+/// Delegates to `relevant_quotas()` for the model-aware computation.
 pub( crate ) fn prefer_weekly( aq : &AccountQuota, prefer : PreferStrategy ) -> f64
 {
-  let Ok( data ) = &aq.result else { return 0.0; };
-  let left_7d  = 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization );
-  let left_son = 100.0 - data.seven_day_sonnet.as_ref().map_or( 0.0, |p| p.utilization );
-  match prefer
-  {
-    PreferStrategy::Opus   => left_7d,
-    PreferStrategy::Sonnet => left_son,
-    PreferStrategy::Any    => left_7d.min( left_son ),
-  }
+  relevant_quotas( aq, prefer ).1
 }
 
 // ── Cell renderers ────────────────────────────────────────────────────────────

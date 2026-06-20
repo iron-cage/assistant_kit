@@ -535,7 +535,7 @@ mod tests
   use crate::usage::test_support::
   {
     FAR_FUTURE_MS,
-    mk_aq_ok, mk_aq_err, mk_aq_sort,
+    mk_aq_ok, mk_aq_err, mk_aq_sort, mk_aq_sort_weekly,
     mk_named_aq, mk_named_aq_err,
   };
 
@@ -917,6 +917,56 @@ mod tests
     assert!(
       !output.contains( "→ Next (" ),
       "footer must omit recommendation line when no eligible candidate (FT-08/020), got:\n{output}",
+    );
+  }
+
+  // ── Footer: model label ───────────────────────────────────────────────────
+
+  /// FT-28 of feature/009 — footer shows session model (sonnet/opus) for the
+  /// recommended account, based on `seven_day_sonnet` utilization threshold.
+  ///
+  /// Session model mirrors `apply_model_override()` in `api.rs`:
+  ///   `sonnet_left` = 100.0 - utilization; if `sonnet_left` < 15.0 → opus, else → sonnet.
+  ///
+  /// Spec: [`tests/docs/feature/09_token_usage.md` FT-28]
+  ///       [`docs/feature/009_token_usage.md` AC-10]
+  #[ test ]
+  fn test_ft28_009_footer_model_label()
+  {
+    // Scenario 1: recommended account has seven_day_sonnet.utilization = 50.0
+    //             → sonnet_left = 50.0 ≥ 15.0 → session model = sonnet
+    let mut current_1 = mk_aq_sort_weekly( "a@x.com", 10.0, 10.0, 50.0 );
+    current_1.is_current = true;
+    let sonnet_ok = mk_aq_sort_weekly( "b@x.com", 10.0, 10.0, 50.0 );
+    // Default utilization from helper is 50.0 → sonnet_left = 50.0 ≥ 15.0
+    let output = render_text(
+      &[ current_1, sonnet_ok ], SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), false, false,
+    );
+    assert!(
+      output.contains( "model: sonnet" ),
+      "FT-28 scenario 1: footer must show 'model: sonnet' when sonnet_left=50% ≥ 15%; got:\n{output}",
+    );
+
+    // Scenario 2: recommended account has seven_day_sonnet.utilization = 90.0
+    //             → sonnet_left = 10.0 < 15.0 → session model = opus (override fires)
+    let mut current_2 = mk_aq_sort_weekly( "a@x.com", 10.0, 10.0, 50.0 );
+    current_2.is_current = true;
+    let mut opus_override = mk_aq_sort_weekly( "c@x.com", 10.0, 10.0, 50.0 );
+    if let Ok( ref mut data ) = opus_override.result
+    {
+      if let Some( ref mut son ) = data.seven_day_sonnet
+      {
+        son.utilization = 90.0; // 10% left < 15% threshold → opus
+      }
+    }
+    let output = render_text(
+      &[ current_2, opus_override ], SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), false, false,
+    );
+    assert!(
+      output.contains( "model: opus" ),
+      "FT-28 scenario 2: footer must show 'model: opus' when sonnet_left=10% < 15%; got:\n{output}",
     );
   }
 }

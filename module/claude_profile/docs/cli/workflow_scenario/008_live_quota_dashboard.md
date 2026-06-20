@@ -12,7 +12,7 @@ clp .usage live::1
 # ✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%   35%      in 4d 23h  in 7h 24m   ~in 6d       in 4d 23h +7d
 #   🔴 dave@example.com     —          —           —        —        —          EXPIRED      ?            —
 #
-# Valid: 2 / 3   ->  Next (renew): bob@example.com   in 4h 58m +7d
+# Valid: 2 / 3   ->  Next (renew): bob@example.com  in 6d 14h +7d  model: sonnet
 #
 #   Next update in 0:29 (at 14:32:07 UTC)  [Ctrl-C to exit]
 

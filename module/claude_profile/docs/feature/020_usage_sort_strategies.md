@@ -61,7 +61,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 **Eligibility:** non-current, non-active, non-occupied, not h-exhausted (`5h Left > 15%`), not weekly-exhausted (`prefer_weekly > 5.0`), valid quota data, `expires_in_secs > 0`. When no eligible account exists, no `→` is placed.
 
-**Footer:** The footer shows one recommendation line for the active `sort::` strategy (omitted when 0 or 1 valid accounts). Format: strategy name, account name, key metric. The renew footer line shows the renewal countdowns: `7d resets in {d7}, renews in {sub}` (exact subscription date), `7d resets in {d7}, ~renews in {sub}` (estimated subscription date), or `7d resets in {d7}` when no subscription data is available.
+**Footer:** The footer shows one recommendation line for the active `sort::` strategy (omitted when 0 or 1 valid accounts). Format: strategy name, account name, `→ Next` value (soonest strategic event), session model label. The renew footer uses the same `→ Next` format as the table column — `in {duration} +7d` (7d reset is soonest) or `in {duration} $ren` / `~in {duration} $ren` (renewal is soonest). The model label shows the session model after switching: `opus` when the account's `seven_day_sonnet` exists and `sonnet_left < 15%` (override fires); `sonnet` otherwise. See [009_token_usage.md AC-10](009_token_usage.md).
 
 **`→` table marker:** The account selected by the active `sort::` strategy receives the `→` flag in the table body (flag column priority: `✓` > `*` > `@` > `→` > blank). When no eligible candidate exists, no `→` is placed on any row.
 
@@ -71,7 +71,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 - **AC-02**: `sort::renews` sorts by subscription renewal timer ascending; accounts without subscription data are placed last; tiebreak is alphabetical name.
 - **AC-03**: `desc::1` reverses the sort direction within each status group; `desc::0` uses the strategy's natural direction. The four-group status partition (🟢 → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴) is never reversed by `desc::`.
 - **AC-04**: Each strategy has a context-sensitive `desc::` default: `name`→`0`, `renew`→`0`, `renews`→`0`.
-- **AC-05**: `prefer::any` (default) uses `min(7d Left, 7d(Son))` as weekly quota; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
+- **AC-05**: `prefer::any` (default) uses `min(7d Left, 7d(Son))` when Sonnet tier present, else raw `7d Left`; `prefer::opus` uses raw `7d Left`; `prefer::sonnet` uses `7d(Son)` when present, else `0.0` (absent Sonnet tier = ineligible for recommendation).
 - **AC-06**: `prefer::` affects `sort::renew` (secondary tiebreak key).
 - **AC-07**: Invalid `sort::` value exits 1 with an error naming the valid values (`name`, `renew`, `renews`).
 - **AC-08**: Invalid `prefer::` value exits 1 with an error naming the valid values.

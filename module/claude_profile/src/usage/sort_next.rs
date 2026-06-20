@@ -6,7 +6,7 @@
 use crate::output::format_duration_secs;
 use super::sort::sort_indices;
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy };
-use super::format::{ prefer_weekly, renewal_secs };
+use super::format::{ prefer_weekly, renewal_secs, next_event_raw };
 
 // ── Next-account recommendation ───────────────────────────────────────────────
 
@@ -98,23 +98,27 @@ pub( crate ) fn strategy_metric(
     SortStrategy::Renew =>
     {
       let Ok( data ) = &aq.result else { return String::new(); };
-      // Fix(BUG-229): show min(7d_reset, sub_renewal) — the two legs of the renew criterion.
-      // Root cause: previous format showed 5h and 7d timers; 5h is not a renewal event.
-      // Pitfall: subscription renewal may be absent (no OauthAccountData); show only 7d in that case.
-      let d7_str = data.seven_day.as_ref()
+      // Use → Next format: min(7d_reset, sub_renewal) shown as `in {dur} {event}`.
+      // Matches the → Next table column so the footer metric is immediately comparable.
+      let d7_secs = data.seven_day.as_ref()
         .and_then( |p| p.resets_at.as_deref() )
         .and_then( claude_quota::iso_to_unix_secs )
-        .map_or_else( || "\u{2014}".to_string(), |t| format_duration_secs( t.saturating_sub( now_secs ) ) );
+        .map( |t| t.saturating_sub( now_secs ) );
       let sub_pair = renewal_secs(
         aq.renewal_at.as_deref(),
         aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
         now_secs,
       );
-      match sub_pair
+      let ( sub_s, sub_est ) = match sub_pair
       {
-        Some( ( s, false ) ) => format!( "7d resets in {d7_str}, renews in {}", format_duration_secs( s ) ),
-        Some( ( s, true  ) ) => format!( "7d resets in {d7_str}, ~renews in {}", format_duration_secs( s ) ),
-        None                 => format!( "7d resets in {d7_str}" ),
+        Some( ( s, est ) ) => ( Some( s ), est ),
+        None               => ( None, false ),
+      };
+      match next_event_raw( d7_secs, sub_s, sub_est )
+      {
+        None                             => "\u{2014}".to_string(),
+        Some( ( secs, prefix, true  ) ) => format!( "~in {} {prefix}", format_duration_secs( secs ) ),
+        Some( ( secs, prefix, false ) ) => format!( "in {} {prefix}",  format_duration_secs( secs ) ),
       }
     }
     SortStrategy::Renews =>

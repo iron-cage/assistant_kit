@@ -30,9 +30,10 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | — |
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | — |
 | FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | — |
-| FT-25 | `.usage` applies model override for current account when `7d(Son) < 20%` | AC-32 | — |
+| FT-25 | `.usage` applies model override for current account when `7d(Son) < 15%` | AC-32 | — |
 | FT-26 | `format::json` output includes `"is_owned"` bool per account object | AC-05 | — |
 | FT-27 | `.usage` model override skips when `seven_day_sonnet` is absent (`None`) — absent tier is unknown, not exhausted | AC-32 | — |
+| FT-28 | Footer shows session model and `→ Next` metric for recommended account | AC-10 | — |
 | — | Table output rendered by `data_fmt` crate (`use data_fmt::…` in `render.rs`) | AC-04 | Structural (code review — all render paths use `data_fmt`) |
 | — | `Expires` column: `"in Xh Ym"` / `"EXPIRED"` from `compute_expires_cell()` | AC-07 | IT-003, IT-010 (command-level coverage) |
 | — | `5h Left`, `7d Left`, `7d(Son)`, `5h Reset`, `7d Reset` from `OauthUsageData` | AC-08 | Indirect — FT-07/FT-08/FT-11/FT-14/FT-15/FT-16 all depend on these columns |
@@ -73,11 +74,12 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | Subscription State |
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | Subscription State |
 | FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | Trace Ordering |
-| FT-25 | `.usage` applies model override for current account when `7d(Son) < 20%` | AC-32 | Model Override |
+| FT-25 | `.usage` applies model override for current account when `7d(Son) < 15%` | AC-32 | Model Override |
 | FT-26 | `format::json` includes `"is_owned": bool` per account object | AC-05 | JSON Fields |
 | FT-27 | `.usage` model override skips when `seven_day_sonnet = None` (BUG-300 MRE) | AC-32 | Model Override |
+| FT-28 | Footer shows session model and `→ Next` metric for recommended account | AC-10 | Footer |
 
-**Total:** 27 FT cases
+**Total:** 28 FT cases
 
 ---
 
@@ -400,10 +402,10 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ---
 
-### FT-25: `.usage` applies model override for current account when `7d(Son) < 20%`
+### FT-25: `.usage` applies model override for current account when `7d(Son) < 15%`
 
 - **Given (unit test):** One `AccountQuota` for the current account (`is_current = true`):
-  - `result = Ok(OauthUsageData)` with `seven_day_sonnet = Some(PeriodUsage { utilization: 90.0, resets_at: Some("...") })` — 10% left (< 20% threshold)
+  - `result = Ok(OauthUsageData)` with `seven_day_sonnet = Some(PeriodUsage { utilization: 90.0, resets_at: Some("...") })` — 10% left (< 15% threshold)
   - `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"`
   - `ClaudePaths` pointing to a temp directory
 - **When:** `apply_model_override(&data, &paths, false, "usage", "test@example.com")` is called with the current account's quota data.
@@ -431,6 +433,19 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Note:** Fix(BUG-300): `map_or(0.0, ...)` treated `None` as 0% remaining (fully exhausted), causing unconditional Opus override for accounts without a Sonnet tier. `None` must be treated as absent/unknown — not as exhaustion. Guard changed to `if let Some(ref sonnet) = quota.seven_day_sonnet { ... }`.
 - **Source fn:** `mre_bug300_model_override_absent_sonnet_no_override` (in `src/usage/api_tests.rs`)
 - **Source:** [009_token_usage.md AC-32](../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-28: Footer shows session model and `→ Next` metric for recommended account
+
+- **Given (unit test):** Two scenarios, each with two `AccountQuota` entries rendered via `render_text()`:
+  - **Scenario 1 (sonnet — no override):** `a@x.com` (`is_current=true`), `b@x.com` with `seven_day_sonnet.utilization = 50.0` (50% left, ≥ 15% threshold — no session model override).
+  - **Scenario 2 (opus — override fires):** `a@x.com` (`is_current=true`), `c@x.com` with `seven_day_sonnet.utilization = 90.0` (10% left, < 15% threshold — session model override to Opus).
+- **When:** `render_text(&[current, candidate], SortStrategy::Name, ...)` is called.
+- **Then:** Scenario 1 footer contains `model: sonnet` (sonnet_left=50% ≥ 15% — default working model). Scenario 2 footer contains `model: opus` (sonnet_left=10% < 15% — model override fires). Both scenarios show the `→ Next` format for the footer metric (not individual `7d resets` / `renews` components).
+- **Exit:** n/a (unit test)
+- **Source fn:** `test_ft28_009_footer_model_label` (in `src/usage/mod.rs`)
+- **Source:** [009_token_usage.md AC-10](../../../docs/feature/009_token_usage.md)
 
 ---
 

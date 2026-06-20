@@ -202,6 +202,143 @@
     }
   }
 
+  /// Corner case: `is_active = true` — account active on this machine (not current session) is skipped.
+  ///
+  /// Gate 1 of `find_first_eligible`: `if aq.is_current || aq.is_active { continue; }`.
+  /// Existing tests only exercise `is_current = true`; this covers the `is_active = true` branch
+  /// independently (a logged-in account on this machine that is not the current active session).
+  #[ test ]
+  fn test_cc_is_active_skips_account()
+  {
+    let now = 0u64;
+    // A: active on this machine (not the current session) → gate 1 fires via is_active branch
+    let mut a = mk_aq_sort( "active@test.com", 50.0, FAR_FUTURE_MS );
+    a.is_active = true;
+    // B: free, eligible
+    let b = mk_aq_sort( "free@test.com", 50.0, FAR_FUTURE_MS );
+
+    let accounts = vec![ a, b ];
+    for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+      assert_eq!(
+        result, Some( 1 ),
+        "{strategy:?}: is_active=true must be skipped; free@test.com (index 1) must be selected",
+      );
+    }
+
+    // All active — no eligible candidate remains
+    let mut a2 = mk_aq_sort( "active@test.com", 50.0, FAR_FUTURE_MS );
+    a2.is_active = true;
+    let all_active = vec![ a2 ];
+    for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
+    {
+      let result = find_next_for_strategy( &all_active, strategy, PreferStrategy::Any, now, false );
+      assert!( result.is_none(), "{strategy:?}: all-active must return None" );
+    }
+  }
+
+  /// Corner case: expired token gate — `Ok(data)` account with past `expires_at_ms` is skipped.
+  ///
+  /// Gate 5 of `find_first_eligible`:
+  ///   `if ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) == 0 { continue; }`.
+  /// Fires when `expires_at_ms / 1000 ≤ now_secs`. Distinct from gate 3 (`result.is_err()`):
+  /// account has valid quota data but a stale credential token.
+  ///
+  /// Boundary: `expires_at_ms / 1000 == now_secs` → 0 secs remaining → expired.
+  /// One-past: `expires_at_ms / 1000 == now_secs + 1` → 1 sec remaining → eligible.
+  #[ test ]
+  fn test_cc_expired_ok_account_skipped()
+  {
+    let now_secs : u64 = 2_000;
+    // A: Ok data, token expired (1000 ms → 1 sec ≤ now=2000) → gate 5 skips it
+    let a = mk_aq_sort( "expired@test.com", 50.0, 1_000 );
+    // B: valid token → eligible
+    let b = mk_aq_sort( "valid@test.com", 50.0, FAR_FUTURE_MS );
+
+    let accounts = vec![ a, b ];
+    for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now_secs, false );
+      assert_eq!(
+        result, Some( 1 ),
+        "{strategy:?}: expired Ok account must be skipped; valid@test.com (index 1) must win",
+      );
+    }
+
+    // Boundary: expires_at_ms / 1000 == now_secs → saturating_sub == 0 → still expired
+    let at_boundary = mk_aq_sort( "boundary@test.com", 50.0, now_secs * 1000 );
+    let accounts_boundary = vec![ at_boundary ];
+    for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
+    {
+      let result = find_next_for_strategy( &accounts_boundary, strategy, PreferStrategy::Any, now_secs, false );
+      assert!(
+        result.is_none(),
+        "{strategy:?}: boundary-expired account (0 secs remaining) must be skipped",
+      );
+    }
+
+    // One-past boundary: expires_secs == now_secs + 1 → 1 sec remaining → eligible
+    let one_sec_left = mk_aq_sort( "one_sec@test.com", 50.0, ( now_secs + 1 ) * 1000 );
+    let accounts_valid = vec![ one_sec_left ];
+    for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
+    {
+      let result = find_next_for_strategy( &accounts_valid, strategy, PreferStrategy::Any, now_secs, false );
+      assert_eq!(
+        result, Some( 0 ),
+        "{strategy:?}: account with 1 second remaining must be eligible",
+      );
+    }
+  }
+
+  /// Corner case: `gate_ownership = true` — non-owned accounts are skipped.
+  ///
+  /// `extra` predicate: `prefer_weekly(aq, prefer) > 5.0 && ( !gate_ownership || aq.is_owned )`.
+  /// When `gate_ownership = true`, the `aq.is_owned` check must pass. All existing tests pass
+  /// `gate_ownership = false` (bypassing this check). This test exercises the ownership-gate path.
+  #[ test ]
+  fn test_cc_gate_ownership_rejects_non_owned()
+  {
+    let now = 0u64;
+    // A: not owned, alphabetically first — must be tried first and skipped under gate_ownership=true
+    // (using "aaa_" prefix to guarantee it sorts before "zzz_" regardless of strategy tiebreaker)
+    let mut a = mk_aq_sort( "aaa_unowned@test.com", 50.0, FAR_FUTURE_MS );
+    a.is_owned = false;
+    // B: owned, alphabetically second — selected only when unowned is properly rejected
+    let b = mk_aq_sort( "zzz_owned@test.com", 50.0, FAR_FUTURE_MS );
+
+    let accounts = vec![ a, b ];
+    for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
+    {
+      // gate_ownership=true: aaa_unowned is tried first (alphabetically), rejected by is_owned gate
+      let with_gate = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, true );
+      assert_eq!(
+        with_gate, Some( 1 ),
+        "{strategy:?} gate_ownership=true: aaa_unowned (is_owned=false) must be skipped; zzz_owned (index 1) must win",
+      );
+
+      // gate_ownership=false: aaa_unowned is eligible when ownership gate is off
+      let no_gate = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+      assert!(
+        no_gate.is_some(),
+        "{strategy:?} gate_ownership=false: non-owned must be eligible when ownership gate is off",
+      );
+    }
+
+    // Only non-owned with gate_ownership=true — no eligible candidate
+    let mut a2 = mk_aq_sort( "aaa_unowned@test.com", 50.0, FAR_FUTURE_MS );
+    a2.is_owned = false;
+    let all_unowned = vec![ a2 ];
+    for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
+    {
+      let result = find_next_for_strategy( &all_unowned, strategy, PreferStrategy::Any, now, true );
+      assert!(
+        result.is_none(),
+        "{strategy:?}: all-non-owned with gate_ownership=true must return None",
+      );
+    }
+  }
+
   // ── strategy_metric ───────────────────────────────────────────────────────
 
   /// `sort::renew` uses alphabetical name as tiebreaker on equal renewal time (BUG-260/BUG-291).
@@ -350,8 +487,8 @@
       "BUG-229: winner name must be b@test.com" );
   }
 
-  /// BUG-229 MRE: `strategy_metric(Renew)` must show `"7d resets in X, renews in Y"`
-  /// when subscription data is present (exact), and `"7d resets in X"` only when absent.
+  /// BUG-229 MRE: `strategy_metric(Renew)` must show `→ Next` format: the soonest of
+  /// `min(7d_reset, sub_renewal)` as `"in {dur} {event}"` or `"~in {dur} {event}"` (estimated).
   ///
   /// # Root Cause
   /// Previous format was `"{pct}% session, 5h resets in {h5} / 7d resets in {d7}"` — the
@@ -361,8 +498,9 @@
   /// No test asserted the renew metric format before this fix.
   ///
   /// # Fix Applied
-  /// Renew arm now computes `d7_str` and `sub_pair` from `renewal_secs`, producing
-  /// `"7d resets in {d7}, renews in {sub}"` or `"7d resets in {d7}"` when no sub data.
+  /// Renew arm now calls `next_event_raw(d7_secs, sub_s, sub_est)` and formats as
+  /// `"in {dur} {prefix}"` or `"~in {dur} {prefix}"`, matching the `→ Next` column.
+  /// Event labels: `+7d` for 7d weekly reset, `$ren` for subscription renewal.
   ///
   /// # Prevention
   /// Test all three branches: exact sub, estimated sub (via `org_created_at`), no sub.
@@ -405,17 +543,18 @@
 
     let metric = strategy_metric( &aq, SortStrategy::Renew, PreferStrategy::Any, now);
 
+    // Sub (1h) < 7d reset (24h) → `next_event_raw` picks sub → "in 1h $ren" (exact, no ~).
     assert!(
-      metric.contains( "7d resets in" ),
-      "BUG-229: renew metric with sub must show '7d resets in': {metric}",
+      metric.contains( "$ren" ),
+      "BUG-229: renew metric with exact sub must show '$ren' event: {metric}",
     );
     assert!(
-      metric.contains( "renews in" ),
-      "BUG-229: renew metric with exact sub must show 'renews in': {metric}",
+      !metric.contains( "~in" ),
+      "BUG-229: exact sub renewal must not have '~in' estimation prefix: {metric}",
     );
     assert!(
-      !metric.contains( "~renews" ),
-      "BUG-229: exact sub renewal must not have '~' prefix: {metric}",
+      !metric.contains( "7d resets in" ),
+      "BUG-229: renew metric must not show old '7d resets in' format: {metric}",
     );
     assert!(
       !metric.contains( "session" ),
@@ -462,13 +601,18 @@
 
     let metric = strategy_metric( &aq, SortStrategy::Renew, PreferStrategy::Any, now);
 
+    // No sub, 7d reset in 1h → `next_event_raw` picks 7d reset → "in 1h +7d" (exact, no ~).
     assert!(
-      metric.contains( "7d resets in" ),
-      "BUG-229: renew metric without sub must still show '7d resets in': {metric}",
+      metric.contains( "+7d" ),
+      "BUG-229: renew metric without sub must show '+7d' event: {metric}",
     );
     assert!(
       !metric.contains( "renews" ),
       "BUG-229: renew metric without sub must not show 'renews': {metric}",
+    );
+    assert!(
+      !metric.contains( "7d resets in" ),
+      "BUG-229: renew metric must not show old '7d resets in' format: {metric}",
     );
     assert!(
       !metric.contains( "session" ),
