@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clr parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 56 clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout` (isolated/refresh), `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--subdir`, `--output-file`, `--expect`, `--expect-strategy`, `--max-sessions`, `--retry-on-transient`, `--transient-delay`, `--timeout` (run/ask), `--retry-on-account`, `--account-delay`, `--retry-on-auth`, `--auth-delay`, `--retry-on-service`, `--service-delay`, `--retry-on-process`, `--process-delay`, `--retry-on-validation`, `--validation-delay`, `--retry-on-runner`, `--runner-delay`, `--retry-on-unknown`, `--unknown-delay`, `--retry-override`, `--retry-override-delay`, `--retry-default`, `--retry-default-delay`, `--mode`, `--columns`, `--wide`.
+- **In Scope**: All 63 clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout` (isolated/refresh), `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--subdir`, `--output-file`, `--expect`, `--expect-strategy`, `--max-sessions`, `--retry-on-transient`, `--transient-delay`, `--timeout` (run/ask), `--retry-on-account`, `--account-delay`, `--retry-on-auth`, `--auth-delay`, `--retry-on-service`, `--service-delay`, `--retry-on-process`, `--process-delay`, `--retry-on-validation`, `--validation-delay`, `--retry-on-runner`, `--runner-delay`, `--retry-on-unknown`, `--unknown-delay`, `--retry-override`, `--retry-override-delay`, `--retry-default`, `--retry-default-delay`, `--mode`, `--columns`, `--wide`, `--output-format`, `--max-turns`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--add-dir`, `--fallback-model`.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
@@ -69,3 +69,10 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `058_mode.md` | Edge cases for `--mode` parameter (ps filter) | ✅ |
 | `059_columns.md` | Edge cases for `--columns` parameter (ps column selector) | ✅ |
 | `060_wide.md` | Edge cases for `--wide` flag (ps wide output) | ✅ |
+| `061_output_format.md` | Edge cases for `--output-format` parameter | ✅ |
+| `062_max_turns.md` | Edge cases for `--max-turns` parameter | ✅ |
+| `063_allowed_tools.md` | Edge cases for `--allowed-tools` parameter | ✅ |
+| `064_disallowed_tools.md` | Edge cases for `--disallowed-tools` parameter | ✅ |
+| `065_max_budget_usd.md` | Edge cases for `--max-budget-usd` parameter | ✅ |
+| `066_add_dir.md` | Edge cases for `--add-dir` parameter | ✅ |
+| `067_fallback_model.md` | Edge cases for `--fallback-model` parameter | ✅ |

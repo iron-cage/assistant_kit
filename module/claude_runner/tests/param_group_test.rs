@@ -3,7 +3,7 @@
 //! Covers CC-N interaction cases for all five parameter groups.
 //! Source: `tests/docs/cli/param_group/`
 //!
-//! - Group 1 (Claude-Native Flags): G1CC1–G1CC5 (`01_claude_native_flags.md`)
+//! - Group 1 (Claude-Native Flags): G1CC1–G1CC6 (`01_claude_native_flags.md`)
 //! - Group 2 (Runner Control):      G2CC1–G2CC6 (`02_runner_control.md`)
 //! - Group 3 (System Prompt):       G3CC1–G3CC4 (`03_system_prompt.md`)
 //! - Group 4 (Credential Ops):      G4CC6       (`04_credential_operations.md`; CC-1–CC-5 are `lim_it`)
@@ -126,6 +126,43 @@ fn g1cc5_new_claude_native_flags_forwarded_together()
     stdout.contains( "/tmp/servers.json" ),
     "output must contain mcp-config path: {stdout}",
   );
+}
+
+/// G1CC6: All 7 new passthrough params forwarded together without conflict.
+///
+/// `--output-format json`, `--max-turns 5`, `--allowed-tools Read,Edit`,
+/// `--disallowed-tools Bash`, `--max-budget-usd 5.00`, `--add-dir /tmp`,
+/// and `--fallback-model sonnet` all appear in the assembled command; exit 0.
+///
+/// Spec: `01_claude_native_flags.md` CC-6
+#[ test ]
+fn g1cc6_all_new_passthrough_params_forwarded_together()
+{
+  let out = run_cli( &[
+    "--dry-run",
+    "--output-format", "json",
+    "--max-turns", "5",
+    "--allowed-tools", "Read,Edit",
+    "--disallowed-tools", "Bash",
+    "--max-budget-usd", "5.00",
+    "--add-dir", "/tmp",
+    "--fallback-model", "sonnet",
+    "Fix bug",
+  ] );
+  assert!( out.status.success(), "exit must be 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( stdout.contains( "--output-format" ),    "must contain --output-format: {stdout}" );
+  assert!( stdout.contains( "json" ),              "must contain json: {stdout}" );
+  assert!( stdout.contains( "--max-turns" ),       "must contain --max-turns: {stdout}" );
+  assert!( stdout.contains( "--allowed-tools" ),   "must contain --allowed-tools: {stdout}" );
+  assert!( stdout.contains( "Read,Edit" ),         "must contain Read,Edit: {stdout}" );
+  assert!( stdout.contains( "--disallowed-tools" ), "must contain --disallowed-tools: {stdout}" );
+  assert!( stdout.contains( "Bash" ),              "must contain Bash: {stdout}" );
+  assert!( stdout.contains( "--max-budget-usd" ),  "must contain --max-budget-usd: {stdout}" );
+  assert!( stdout.contains( "5.00" ),              "must contain 5.00: {stdout}" );
+  assert!( stdout.contains( "--add-dir" ),         "must contain --add-dir: {stdout}" );
+  assert!( stdout.contains( "--fallback-model" ),  "must contain --fallback-model: {stdout}" );
+  assert!( stdout.contains( "sonnet" ),            "must contain sonnet: {stdout}" );
 }
 
 // ─── Group 2: Runner Control ───────────────────────────────────────────────────

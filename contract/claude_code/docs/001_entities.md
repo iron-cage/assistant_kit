@@ -9,13 +9,14 @@
 | `filesystem` | Runtime filesystem paths accessed by claude_version | [filesystem/readme.md](filesystem/readme.md) | 4 |
 | `jsonl` | Session JSONL entry format: common fields, entry types, content blocks, usage, threading, sidechain | [jsonl/readme.md](jsonl/readme.md) | 10 |
 | `settings` | Settings file structure and protocols: global, project, version lock | [settings/readme.md](settings/readme.md) | 3 |
-| `formats` | Ancillary file formats: history, credentials, debug, shell-snapshots, todos, commands | [formats/readme.md](formats/readme.md) | 6 |
+| `formats` | Data formats: file formats, output schemas — history, credentials, debug, shell-snapshots, todos, commands, JSON response | [formats/readme.md](formats/readme.md) | 7 |
 | `taxonomy` | Four-level concept hierarchy: Project, Conversation, Session, Entry | [taxonomy/readme.md](taxonomy/readme.md) | 3 |
-| `params` | CLI parameter specifications for the `claude` binary | [params/readme.md](params/readme.md) | 75 |
+| `params` | CLI parameter specifications for the `claude` binary | [params/readme.md](params/readme.md) | 76 |
+| `tool` | Built-in tools available in Claude Code sessions | [tool/readme.md](tool/readme.md) | 26 |
 | `endpoint` | Wire contracts for Anthropic HTTP endpoints consumed by workspace crates | [endpoint/readme.md](endpoint/readme.md) | 10 |
 | `fault` | Aggregated index of all fault conditions: terminal errors (E1–E6), silent failures (F1–F4), and quirks (Q1–Q5) with detection signals and `classify_error()` priority order | [fault/readme.md](fault/readme.md) | 0 |
 
-**Total doc instances**: 141 (27 + 3 + 4 + 10 + 3 + 6 + 3 + 75 + 10)
+**Total doc instances**: 169 (27 + 3 + 4 + 10 + 3 + 7 + 3 + 76 + 10 + 26)
 
 ## Master Doc Instances Table
 
@@ -91,7 +92,7 @@
 | 002 | Project Settings | [settings/002_project_settings.md](settings/002_project_settings.md) |
 | 003 | Version Lock | [settings/003_version_lock.md](settings/003_version_lock.md) |
 
-### formats/ (6 instances)
+### formats/ (7 instances)
 
 | ID | Name | File |
 |----|------|------|
@@ -101,6 +102,7 @@
 | 004 | Shell Snapshot | [formats/004_shell_snapshot.md](formats/004_shell_snapshot.md) |
 | 005 | Todo | [formats/005_todo.md](formats/005_todo.md) |
 | 006 | Command Definition | [formats/006_command_definition.md](formats/006_command_definition.md) |
+| 007 | JSON Response | [formats/007_json_response.md](formats/007_json_response.md) |
 
 ### taxonomy/ (3 instances)
 
@@ -125,4 +127,6 @@
 | 009 | CLI Feedback | [endpoint/009_cli_feedback.md](endpoint/009_cli_feedback.md) |
 | 010 | Web Domain Info | [endpoint/010_web_domain_info.md](endpoint/010_web_domain_info.md) |
 
-> `params` instances (75 files) use numbered naming and are enumerated in their master file: [params/readme.md](params/readme.md).
+> `params` instances (76 files) use numbered naming and are enumerated in their master file: [params/readme.md](params/readme.md).
+>
+> `tool` instances (26 files) use numbered naming and are enumerated in their master file: [tool/readme.md](tool/readme.md).

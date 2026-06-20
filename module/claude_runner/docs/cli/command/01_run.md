@@ -67,6 +67,13 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--retry-override-delay`](../param/055_retry_override_delay.md) | u32 | auto | Tier 1: forces delay for all error classes |
 | [`--retry-default`](../param/056_retry_default.md) | u8 | `2` | Tier 3: fallback retry count for all unset classes |
 | [`--retry-default-delay`](../param/057_retry_default_delay.md) | u32 | `30` | Tier 3: fallback delay for all unset classes |
+| [`--output-format`](../param/061_output_format.md) | enum | — | Output format (`text`/`json`/`stream-json`) |
+| [`--max-turns`](../param/062_max_turns.md) | u32 | — | Max agentic turns before stopping; unset = unlimited |
+| [`--allowed-tools`](../param/063_allowed_tools.md) | string | — | Restrict Claude to specified tools only |
+| [`--disallowed-tools`](../param/064_disallowed_tools.md) | string | — | Prevent Claude from using specified tools |
+| [`--max-budget-usd`](../param/065_max_budget_usd.md) | f64 | — | Max dollar budget for session |
+| [`--add-dir`](../param/066_add_dir.md) | path | — | Additional directory for Claude Code to access |
+| [`--fallback-model`](../param/067_fallback_model.md) | string | — | Fallback model when primary unavailable |
 
 **Execution Modes:**
 

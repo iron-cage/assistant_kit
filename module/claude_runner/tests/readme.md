@@ -60,6 +60,14 @@
 | User stories (US27) | `user_story_kill_test.rs` | End-to-end user story workflows: session termination via `clr kill` |
 | `clr ps` subcommand (IT-1–IT-20) | `ps_command_test.rs` | `clr ps` table output, no-sessions message, help listing, typo guard, self-exclusion, path shortening, orphan filtering, sort order (BUG-293/294/295/296/297/301) |
 | `clr kill` subcommand (IT-1–IT-9) | `kill_command_test.rs` | `clr kill` PID validation, SIGTERM delivery, error handling, help text, typo guard |
+| `clr tools` subcommand (IT-1–IT-7) | `tools_command_test.rs` | `clr tools` exit 0, tool names, categories, caption, help, scheduling/mode tools, main help mention |
+| Output format param (EC-1–EC-14) | `output_format_test.rs` | `--output-format` forwarding, missing-value, text/json/stream-json variants, summary→json intercept, env var (EC-8/EC-12), summary YAML header rendering (EC-10), text body extraction (EC-11), multi-block topology (EC-13), non-zero exit passthrough (EC-14) |
+| Max turns param (EC-1–EC-7) | `max_turns_test.rs` | `--max-turns` forwarding, missing-value, boundary, any-numeric, help, absent-by-default, env var |
+| Allowed tools param (EC-1–EC-7) | `allowed_tools_test.rs` | `--allowed-tools` forwarding (comma-preserved, hyphen-form), missing-value, any-string, help, env var |
+| Disallowed tools param (EC-1–EC-7) | `disallowed_tools_test.rs` | `--disallowed-tools` forwarding, missing-value, any-string, help, env var |
+| Max budget USD param (EC-1–EC-7) | `max_budget_usd_test.rs` | `--max-budget-usd` forwarding (decimal-preserved), missing-value, any-numeric, help, env var |
+| Add dir param (EC-1–EC-7) | `add_dir_test.rs` | `--add-dir` forwarding, missing-value, non-existent path accepted, help, env var |
+| Fallback model param (EC-1–EC-7) | `fallback_model_test.rs` | `--fallback-model` forwarding, missing-value, any-string, help, env var |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
 ### Responsibility Table
@@ -116,6 +124,14 @@
 | `user_story_kill_test.rs` | User story end-to-end workflows: US27 (session termination via `clr kill`). |
 | `ps_command_test.rs` | `clr ps` subcommand integration tests: table output, no-sessions, help, typo guard, self-exclusion, path shortening, orphan filtering, sort order (IT-1–IT-20). |
 | `kill_command_test.rs` | `clr kill` subcommand integration tests: PID validation, SIGTERM delivery, error handling, help text, typo guard (IT-1–IT-9). |
+| `tools_command_test.rs` | `clr tools` subcommand integration tests: exit 0, tool names, categories, caption count, help text, scheduling/mode tools, main help mention (IT-1–IT-7). |
+| `output_format_test.rs` | `--output-format` integration: forwarding, missing-value, text/json/stream-json variants, summary→json intercept, env var (EC-1–EC-14). |
+| `max_turns_test.rs` | `--max-turns` integration: forwarding, missing-value, boundary, any-numeric, help, absent-by-default, env var (EC-1–EC-7). |
+| `allowed_tools_test.rs` | `--allowed-tools` integration: forwarding (comma-preserved, hyphen-form), missing-value, any-string, help, absent-by-default, env var (EC-1–EC-7). |
+| `disallowed_tools_test.rs` | `--disallowed-tools` integration: forwarding, missing-value, any-string, help, absent-by-default, env var (EC-1–EC-7). |
+| `max_budget_usd_test.rs` | `--max-budget-usd` integration: forwarding (decimal-preserved), missing-value, any-numeric, help, absent-by-default, env var (EC-1–EC-7). |
+| `add_dir_test.rs` | `--add-dir` integration: forwarding, missing-value, non-existent path accepted, help, absent-by-default, env var (EC-1–EC-7). |
+| `fallback_model_test.rs` | `--fallback-model` integration: forwarding, missing-value, any-string, help, absent-by-default, env var (EC-1–EC-7). |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |

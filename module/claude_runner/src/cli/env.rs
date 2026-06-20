@@ -18,7 +18,7 @@ pub( super ) fn env_str( var : &str ) -> Option< String >
   std::env::var( var ).ok().filter( | v | !v.is_empty() )
 }
 
-/// Apply `CLR_*` environment variable fallbacks for the 51 run parameters.
+/// Apply `CLR_*` environment variable fallbacks for the 58 run parameters.
 ///
 /// Each field is updated only when it is still at its zero/default value — the CLI
 /// flag always wins when both are present (CLI-wins field-default check).
@@ -258,6 +258,13 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
       parsed.retry_default_delay = v.parse::< u32 >().ok();
     }
   }
+  if parsed.output_format.is_none()    { parsed.output_format    = env_str( "CLR_OUTPUT_FORMAT" ); }
+  if parsed.max_turns.is_none()        { parsed.max_turns        = env_str( "CLR_MAX_TURNS" ); }
+  if parsed.allowed_tools.is_none()    { parsed.allowed_tools    = env_str( "CLR_ALLOWED_TOOLS" ); }
+  if parsed.disallowed_tools.is_none() { parsed.disallowed_tools = env_str( "CLR_DISALLOWED_TOOLS" ); }
+  if parsed.max_budget_usd.is_none()   { parsed.max_budget_usd   = env_str( "CLR_MAX_BUDGET_USD" ); }
+  if parsed.add_dir.is_none()          { parsed.add_dir          = env_str( "CLR_ADD_DIR" ); }
+  if parsed.fallback_model.is_none()   { parsed.fallback_model   = env_str( "CLR_FALLBACK_MODEL" ); }
   Ok( () )
 }
 

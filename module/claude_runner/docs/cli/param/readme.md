@@ -60,8 +60,15 @@
 | 058_mode.md | `--mode` parameter spec (ps session filter) |
 | 059_columns.md | `--columns` parameter spec (ps column selector) |
 | 060_wide.md | `--wide` flag spec (ps wide output) |
+| 061_output_format.md | `--output-format` parameter spec |
+| 062_max_turns.md | `--max-turns` parameter spec |
+| 063_allowed_tools.md | `--allowed-tools` parameter spec |
+| 064_disallowed_tools.md | `--disallowed-tools` parameter spec |
+| 065_max_budget_usd.md | `--max-budget-usd` parameter spec |
+| 066_add_dir.md | `--add-dir` parameter spec |
+| 067_fallback_model.md | `--fallback-model` parameter spec |
 
-### All Parameters (56 total)
+### All Parameters (63 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -121,10 +128,17 @@
 | 58 | `--mode` | enum | `all` | `all`/`interactive`/`print` | Filter `clr ps` by session execution mode | 1 cmd |
 | 59 | `--columns` | string | 8 default cols | Comma-separated column keys | Select which columns to display in `clr ps` | 1 cmd |
 | 60 | `--wide` | bool | false | present/absent | Show all 11 columns in `clr ps` | 1 cmd |
+| 61 | `--output-format` | enum | — | `text`/`json`/`stream-json` | Output format for Claude Code response | 2 cmds |
+| 62 | `--max-turns` | u32 | — | 0 to 4294967295 | Max agentic turns before stopping; unset = unlimited | 2 cmds |
+| 63 | `--allowed-tools` | string | — | Tool name list | Restrict Claude to specified tools only | 2 cmds |
+| 64 | `--disallowed-tools` | string | — | Tool name list | Prevent Claude from using specified tools | 2 cmds |
+| 65 | `--max-budget-usd` | f64 | — | Positive float | Max dollar budget for session | 2 cmds |
+| 66 | `--add-dir` | path | — | Any path | Additional directory for Claude Code to access | 2 cmds |
+| 67 | `--fallback-model` | string | — | Any model name | Fallback model when primary unavailable | 2 cmds |
 
-**Total:** 56 parameters
+**Total:** 63 parameters
 
-**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25–36, 40–57 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60 form [Session Listing](../param_group/05_session_listing.md).
+**Groups:** Parameters 2–4, 17, 23, 24, and 61–67 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25–36, 40–57 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60 form [Session Listing](../param_group/05_session_listing.md).
 
 ### Navigation
 
@@ -184,6 +198,13 @@
 - [`--mode`](058_mode.md)
 - [`--columns`](059_columns.md)
 - [`--wide`](060_wide.md)
+- [`--output-format`](061_output_format.md)
+- [`--max-turns`](062_max_turns.md)
+- [`--allowed-tools`](063_allowed_tools.md)
+- [`--disallowed-tools`](064_disallowed_tools.md)
+- [`--max-budget-usd`](065_max_budget_usd.md)
+- [`--add-dir`](066_add_dir.md)
+- [`--fallback-model`](067_fallback_model.md)
 
 ### Quick Reference
 
@@ -191,4 +212,4 @@
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 51 parameters, `ps` = 3 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.
+**Commands by parameter count:** `run` = 58 parameters, `ps` = 3 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.
