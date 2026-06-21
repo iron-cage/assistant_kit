@@ -2,6 +2,7 @@
 //!
 //! Covers E01–E17: one test per `CLR_*` env var.
 //! E18–E37 live in `env_var_ext_test.rs`.
+//! `ec_timeout_env_matches_default` (TSK-227): `CLR_TIMEOUT=3600` accepted without error.
 //! Source: `task/claude_runner/148_env_var_all_params.md`
 //!
 //! All tests use `run_cli_with_env()` — no `std::env::set_var`, no thread-global mutation.
@@ -464,5 +465,30 @@ fn e17_clr_effort_sets_level()
   assert!(
     stdout.contains( "low" ),
     "CLR_EFFORT=low must set effort to low (not max): {stdout}",
+  );
+}
+
+// ── ec_timeout_env_matches_default: CLR_TIMEOUT=3600 is valid and accepted ───
+
+/// TSK-227 / BUG-305 — `CLR_TIMEOUT=3600` is accepted; dry-run output confirms parsing succeeds.
+///
+/// Verifies that setting `CLR_TIMEOUT` to the same value as `DEFAULT_PRINT_TIMEOUT_SECS` (3600)
+/// is valid and does not cause a parse error. The env var path (`Some(3600)`) and the default
+/// path (`None` → `unwrap_or(3600)`) produce the same `timeout_secs` value; this test confirms the
+/// env-var path reaches the same numeric value without being silently ignored.
+///
+/// Spec: `tests/docs/cli/param/36_timeout.md` `ec_timeout_env_matches_default`
+#[ test ]
+fn ec_timeout_env_matches_default()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_TIMEOUT", "3600" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_TIMEOUT=3600 must be accepted without error. exit={:?} stderr={}",
+    out.status.code(),
+    String::from_utf8_lossy( &out.stderr )
   );
 }

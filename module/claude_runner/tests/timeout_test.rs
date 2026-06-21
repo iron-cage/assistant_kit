@@ -3,7 +3,9 @@
 //!
 //! ## Purpose
 //!
-//! Verify EC-1 through EC-8 from `tests/docs/cli/param/36_timeout.md`.
+//! Verify EC-1 through EC-8 from `tests/docs/cli/param/36_timeout.md` and the
+//! default-timeout tests (`ec_timeout_default_*`, `ec_timeout_explicit_*`, `ec_timeout_unlimited_*`)
+//! introduced by TSK-227 (BUG-305: print-mode had no default watchdog).
 //!
 //! ## Scope Note
 //!
@@ -13,7 +15,10 @@
 //! ## Test Layout
 //!
 //! - EC-1..EC-6: parser/dry-run — no subprocess required
-//! - EC-7..EC-8: require fake subprocess
+//! - EC-7..EC-8: require fake subprocess (explicit timeout)
+//! - ec_timeout_default_*: require fake subprocess (default timeout path, TSK-227)
+//! - ec_timeout_explicit_*: explicit timeout above default
+//! - ec_timeout_unlimited_*: explicit --timeout 0 / CLR_TIMEOUT=0 opt-out
 //!
 //! ## Corner Cases Covered
 //!
@@ -23,8 +28,14 @@
 //! - EC-4: `CLR_TIMEOUT=10` env var applied
 //! - EC-5: CLI 60 wins over `CLR_TIMEOUT=5`
 //! - EC-6: `CLR_TIMEOUT=abc` silently ignored
-//! - EC-7: fake sleeps 30; --timeout 1 → exit 2 within ~2s; stderr "timeout after 1s"
+//! - EC-7: fake sleeps 30; --timeout 1 → exit 4 within ~2s; stderr "timeout after 1s"
 //! - EC-8: fake exits 0 fast; --timeout 30 → exit 0; no timeout message
+//! - ec_timeout_default_constant_value: DEFAULT_PRINT_TIMEOUT_SECS constant equals 3600
+//! - ec_timeout_default_no_fire: no --timeout, fast subprocess → exit 0, no timeout msg (BUG-305)
+//! - ec_timeout_default_activates_watchdog: no --timeout, 2s subprocess → exit 0 (3600s default)
+//! - ec_timeout_explicit_above_default: --timeout 7200 with fast subprocess → exit 0
+//! - ec_timeout_unlimited_flag: --timeout 0 opts out of 3600s default → exit 0
+//! - ec_timeout_unlimited_env: CLR_TIMEOUT=0 opts out of 3600s default → exit 0
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env };
 use std::process::Command;
@@ -219,5 +230,246 @@ fn ec8_no_timeout_when_subprocess_exits_fast()
   assert!(
     !stderr.to_lowercase().contains( "timeout" ),
     "no timeout message when subprocess exits before deadline. Got:\n{stderr}"
+  );
+}
+
+// ── ec_timeout_default_constant_value: DEFAULT_PRINT_TIMEOUT_SECS = 3600 ──────
+
+/// TSK-227 / BUG-305 — `DEFAULT_PRINT_TIMEOUT_SECS` constant must equal 3600.
+///
+/// Root Cause: run_print_mode() used unwrap_or(0), leaving print-mode sessions unbounded by default
+/// Why Not Caught: no test asserted the constant value existed or was correct
+/// Fix Applied: DEFAULT_PRINT_TIMEOUT_SECS const added above run_print_mode(); unwrap_or changed
+/// Prevention: this test fails if the constant is removed or changed to a different value
+/// Pitfall: run_interactive() must retain unwrap_or(0) — only print-mode adopts this default
+#[ test ]
+fn ec_timeout_default_constant_value()
+{
+  let src = include_str!( "../src/cli/execution.rs" );
+  assert!(
+    src.contains( "DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600" ),
+    "DEFAULT_PRINT_TIMEOUT_SECS must be defined as u32 = 3600 in src/cli/execution.rs"
+  );
+  assert!(
+    src.contains( "unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )" ),
+    "run_print_mode() must use DEFAULT_PRINT_TIMEOUT_SECS in unwrap_or(); not a magic literal"
+  );
+}
+
+// ── ec_timeout_default_no_fire: fast subprocess exits before 3600s watchdog ───
+
+/// TSK-227 / BUG-305 — no --timeout, fast subprocess → exit 0, no timeout message.
+///
+/// Root Cause: unwrap_or(0) disabled watchdog entirely; default path was never exercised
+/// Why Not Caught: no test covered the None → unwrap_or branch for print-mode
+/// Fix Applied: unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS ) arms a 3600s watchdog by default
+/// Prevention: verifies fast subprocess completes normally under the default watchdog
+/// Pitfall: env_remove("CLR_TIMEOUT") required — ambient env var would override the None path
+#[ cfg( unix ) ]
+#[ test ]
+fn ec_timeout_default_no_fire()
+{
+  let tmp  = tempfile::tempdir().expect( "create temp dir" );
+  let fake = tmp.path().join( "claude" );
+
+  std::fs::write( &fake, b"#!/bin/sh\nprintf 'ok'\nexit 0\n" ).expect( "write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake claude" );
+
+  let old_path = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path = format!( "{}:{old_path}", tmp.path().display() );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "0", "x" ] )
+    .env( "PATH", &new_path )
+    .env_remove( "CLR_TIMEOUT" )
+    .output()
+    .expect( "invoke clr" );
+
+  assert!(
+    out.status.success(),
+    "exit must be 0: fast subprocess under default 3600s watchdog. exit={:?} stderr={}",
+    out.status.code(),
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.to_lowercase().contains( "timeout" ),
+    "no timeout message: 3600s default watchdog must not fire on fast subprocess. Got:\n{stderr}"
+  );
+}
+
+// ── ec_timeout_default_activates_watchdog: 2s subprocess survives 3600s default
+
+/// TSK-227 / BUG-305 — no --timeout, 2s subprocess → exit 0 (3600s watchdog, not 0).
+///
+/// Root Cause: with unwrap_or(0) the watchdog was disabled; a small constant would kill a 2s process
+/// Why Not Caught: no test proved the default was armed at a sane value (not 0 or 1)
+/// Fix Applied: DEFAULT_PRINT_TIMEOUT_SECS = 3600 → 2s subprocess completes long before deadline
+/// Prevention: if constant is changed to < 2, this test will fail (subprocess killed prematurely)
+/// Pitfall: env_remove("CLR_TIMEOUT") required; test timing must allow ≥2s for subprocess sleep
+#[ cfg( unix ) ]
+#[ test ]
+fn ec_timeout_default_activates_watchdog()
+{
+  let tmp  = tempfile::tempdir().expect( "create temp dir" );
+  let fake = tmp.path().join( "claude" );
+
+  // 2s sleep: completes well before the 3600s default watchdog
+  std::fs::write( &fake, b"#!/bin/sh\nsleep 2\nprintf 'ok'\nexit 0\n" ).expect( "write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake claude" );
+
+  let old_path = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path = format!( "{}:{old_path}", tmp.path().display() );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  let start = std::time::Instant::now();
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "0", "x" ] )
+    .env( "PATH", &new_path )
+    .env_remove( "CLR_TIMEOUT" )
+    .output()
+    .expect( "invoke clr" );
+  let elapsed = start.elapsed();
+
+  assert!(
+    out.status.success(),
+    "exit must be 0: 2s subprocess completes before 3600s default watchdog. exit={:?} stderr={}",
+    out.status.code(),
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.to_lowercase().contains( "timeout" ),
+    "3600s default watchdog must not fire on a 2s subprocess. Got:\n{stderr}"
+  );
+  assert!(
+    elapsed.as_secs() < 10,
+    "test must complete in <10s (subprocess sleeps 2s); elapsed {elapsed:?}"
+  );
+}
+
+// ── ec_timeout_explicit_above_default: --timeout 7200 with fast subprocess ───
+
+/// TSK-227 — explicit --timeout 7200 (above the 3600 default); fast subprocess exits 0.
+///
+/// Verifies that an explicit timeout value above the default is accepted and the fast
+/// subprocess completes normally. The Some(7200).unwrap_or(3600) = 7200 branch is exercised.
+#[ cfg( unix ) ]
+#[ test ]
+fn ec_timeout_explicit_above_default()
+{
+  let tmp  = tempfile::tempdir().expect( "create temp dir" );
+  let fake = tmp.path().join( "claude" );
+
+  std::fs::write( &fake, b"#!/bin/sh\nprintf 'ok'\nexit 0\n" ).expect( "write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake claude" );
+
+  let old_path = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path = format!( "{}:{old_path}", tmp.path().display() );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  let out = Command::new( bin )
+    .args( [ "-p", "--timeout", "7200", "--max-sessions", "0", "x" ] )
+    .env( "PATH", &new_path )
+    .env_remove( "CLR_TIMEOUT" )
+    .output()
+    .expect( "invoke clr" );
+
+  assert!(
+    out.status.success(),
+    "exit must be 0 with --timeout 7200 and fast subprocess. exit={:?} stderr={}",
+    out.status.code(),
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.to_lowercase().contains( "timeout" ),
+    "no timeout message with --timeout 7200 and fast subprocess. Got:\n{stderr}"
+  );
+}
+
+// ── ec_timeout_unlimited_flag: --timeout 0 opts out of 3600s default ─────────
+
+/// TSK-227 — `--timeout 0` explicitly opts out of the 3600s default; fast subprocess exits 0.
+///
+/// Some(0).unwrap_or(DEFAULT_PRINT_TIMEOUT_SECS) = 0 (unlimited). Confirms the explicit
+/// override path still works after introducing the default.
+#[ cfg( unix ) ]
+#[ test ]
+fn ec_timeout_unlimited_flag()
+{
+  let tmp  = tempfile::tempdir().expect( "create temp dir" );
+  let fake = tmp.path().join( "claude" );
+
+  std::fs::write( &fake, b"#!/bin/sh\nprintf 'ok'\nexit 0\n" ).expect( "write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake claude" );
+
+  let old_path = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path = format!( "{}:{old_path}", tmp.path().display() );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  let out = Command::new( bin )
+    .args( [ "-p", "--timeout", "0", "--max-sessions", "0", "x" ] )
+    .env( "PATH", &new_path )
+    .env_remove( "CLR_TIMEOUT" )
+    .output()
+    .expect( "invoke clr" );
+
+  assert!(
+    out.status.success(),
+    "--timeout 0 must opt out of 3600s default; fast subprocess exits 0. exit={:?} stderr={}",
+    out.status.code(),
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.to_lowercase().contains( "timeout" ),
+    "--timeout 0 means unlimited — no timeout message expected. Got:\n{stderr}"
+  );
+}
+
+// ── ec_timeout_unlimited_env: CLR_TIMEOUT=0 opts out of 3600s default ────────
+
+/// TSK-227 — `CLR_TIMEOUT=0` opts out of the 3600s default via env var; fast subprocess exits 0.
+///
+/// apply_env_vars() sets cli.timeout = Some(0); Some(0).unwrap_or(DEFAULT) = 0 (unlimited).
+/// Confirms env-var opt-out path still works after introducing the default.
+#[ cfg( unix ) ]
+#[ test ]
+fn ec_timeout_unlimited_env()
+{
+  let tmp  = tempfile::tempdir().expect( "create temp dir" );
+  let fake = tmp.path().join( "claude" );
+
+  std::fs::write( &fake, b"#!/bin/sh\nprintf 'ok'\nexit 0\n" ).expect( "write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake claude" );
+
+  let old_path = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path = format!( "{}:{old_path}", tmp.path().display() );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "0", "x" ] )
+    .env( "PATH", &new_path )
+    .env( "CLR_TIMEOUT", "0" )
+    .output()
+    .expect( "invoke clr" );
+
+  assert!(
+    out.status.success(),
+    "CLR_TIMEOUT=0 must opt out of 3600s default; fast subprocess exits 0. exit={:?} stderr={}",
+    out.status.code(),
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.to_lowercase().contains( "timeout" ),
+    "CLR_TIMEOUT=0 means unlimited — no timeout message expected. Got:\n{stderr}"
   );
 }

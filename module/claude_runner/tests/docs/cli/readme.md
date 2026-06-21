@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 7 clr commands, all 65 parameters, all 14 types, all 5 parameter groups, 2 env parameter specs, 27 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 8 clr commands, all 65 parameters, all 14 types, all 5 parameter groups, 2 env parameter specs, 27 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -25,7 +25,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
-| Commands | 7 | ≥8 IT each |
+| Commands | 8 | ≥8 IT each |
 | Parameters | 65 | ≥6 EC each |
 | Parameter groups | 5 | ≥4 CC each |
 | Types | 14 | ≥4 TC each |
@@ -43,6 +43,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`ask`](command/05_ask.md)
 - [`ps`](command/06_ps.md)
 - [`kill`](command/07_kill.md)
+- [`tools`](command/08_tools.md)
 
 #### Parameters
 - [`[MESSAGE]`](param/01_message.md)

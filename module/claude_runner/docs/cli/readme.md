@@ -19,7 +19,7 @@ clr [OPTIONS] [MESSAGE]
 
 | File | Responsibility |
 |------|----------------|
-| `command/` | Command reference: run, ask, isolated, refresh, help, ps, kill (7 commands) |
+| `command/` | Command reference: run, ask, isolated, refresh, help, ps, kill, tools (8 commands) |
 | `dictionary.md` | Domain vocabulary for clr CLI concepts |
 | `command_defaults.md` | Cross-command parameter default matrix and isolated/refresh design targets |
 | `env_param.md` | CLR_* env var fallbacks, CLR_GATE_DIR runtime config, and CLAUDE_CODE_* subprocess vars (68 vars) |
@@ -33,7 +33,7 @@ clr [OPTIONS] [MESSAGE]
 | Entity | L1 | L2 | L3 | L4 | L5 | Status |
 |--------|----|----|----|----|----|----|
 | readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
-| command/ (7 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| command/ (8 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param/ (65 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | type/ (14 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
@@ -43,7 +43,7 @@ clr [OPTIONS] [MESSAGE]
 | config_param.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — no config file mechanism |
 | format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — no named output formats |
 | tests/docs/cli/readme.md | ➖ | ➖ | ➖ | ✅ | ➖ | Complete |
-| tests/docs/cli/command/ (7 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/command/ (8 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param/ (65 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param_group/ (5 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/type/ (14 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
@@ -56,7 +56,7 @@ clr [OPTIONS] [MESSAGE]
 
 ### Navigation
 
-- [Commands](command/readme.md) — command reference (7 commands)
+- [Commands](command/readme.md) — command reference (8 commands)
 - [Parameters](param/readme.md) — flag and argument reference (65 parameters)
 - [Types](type/readme.md) — semantic type definitions (14 types)
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (5 groups)

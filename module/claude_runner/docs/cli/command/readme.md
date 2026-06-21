@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Document the seven clr subcommands and their parameters, modes, and usage examples.
+- **Purpose**: Document the eight clr subcommands and their parameters, modes, and usage examples.
 - **Responsibility**: Specify each command's behavior, accepted parameters, and usage.
-- **In Scope**: run, ask, isolated, refresh, help, ps, kill commands and their invocation modes.
+- **In Scope**: run, ask, isolated, refresh, help, ps, kill, tools commands and their invocation modes.
 - **Out of Scope**: Parameter definitions (-> `../param/`), type definitions (-> `../type/`), user stories (-> `../user_story/`).
 
 ### Responsibility Table
