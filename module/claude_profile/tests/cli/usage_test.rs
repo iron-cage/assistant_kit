@@ -218,6 +218,21 @@
 //! | it245 | `it245_min_7d_get_account_err_passes_returns_name`  | `min_7d::1 get::account` on Err account — returns name (absent passes) | P | no |
 //! | it246 | `it246_min_7d_only_valid_removes_err_account`       | `min_7d::1 only_valid::1` — Err passes `min_7d` but `only_valid` removes it | P | no |
 //! | it248 | `it248_owner_column_visible_by_default`             | Owner column visible by default; `cols::-owner` hides it (037 IT-74/AC-19) | P | no |
+//! | it256 | `it256_who_true_rejected_kind_integer`              | `who::true` exits 1 — `who::` is Kind::Integer (062 EC-6) | N | no |
+//! | it257 | `it257_solo_default_off_exits_0`                   | `solo::0` explicit — two owned accounts; exits 0 (061 EC-1) | P | no |
+//! | it258 | `it258_solo_current_live_noncurrent_approx`        | `solo::1` current+owned live; non-current has solo-skip trace (061 EC-2) | P | no |
+//! | it259 | `it259_solo_current_not_owned_no_http`             | `solo::1` current NOT owned — G1 fires, no HTTP for that account (061 EC-3) | P | no |
+//! | it260 | `it260_solo_no_active_marker_all_approx`           | `solo::1` no active marker — all approximated; trace shows solo-skip (061 EC-4) | P | no |
+//! | it261 | `it261_solo_rotate_mutual_exclusion_exit_1`        | `solo::1 rotate::1` — mutual exclusion, exits 1 (061 EC-5) | N | no |
+//! | it262 | `it262_solo_live_composition_allowed`              | `solo::1 live::1` — allowed; SIGINT → exit 0 + "Monitor stopped." (061 EC-6) | P | no |
+//! | it263 | `it263_solo_refresh_composition_allowed`           | `solo::1 refresh::1` — allowed; exits 0 (061 EC-7) | P | no |
+//! | it264 | `it264_solo_touch_composition_allowed`             | `solo::1 touch::1` — allowed; exits 0 (061 EC-8) | P | no |
+//! | it265 | `it265_solo_only_active_composition_allowed`       | `solo::1 only_active::1` — orthogonal; exits 0 (061 EC-9) | P | no |
+//! | it266 | `it266_solo_trace_shows_solo_skip`                 | `solo::1 trace::1` — stderr has `solo-skip: approximated` for non-current (061 EC-10) | P | no |
+//! | it267 | `it267_solo_true_rejected_type_error`              | `solo::true` exits 1 — Kind::Integer rejects string (061 EC-11) | N | no |
+//! | it268 | `it268_solo_2_rejected_out_of_range`               | `solo::2` exits 1 — integer outside {0, 1} (061 EC-12) | N | no |
+//! | it269 | `it269_solo_json_format_with_approximated_accounts` | `solo::1 format::json` — JSON valid with approximated data (CC) | P | no |
+//! | it270 | `it270_solo_single_current_account_no_skip`        | `solo::1` single current account — no solo-skip (CC) | P | no |
 
 use crate::cli_runner::{
   BIN,
@@ -7214,4 +7229,481 @@ fn it248_owner_column_visible_by_default()
       "IT-74B: Owner column header must be hidden with cols::-owner; got:\n{text}",
     );
   }
+}
+
+// ── it257-it268: solo:: parameter EC tests (061) ─────────────────────────────
+
+/// it257 (061 EC-1): `solo::0` (default off) — two owned accounts; command exits 0.
+///
+/// `solo::0` is equivalent to omitting the param. Both accounts have no `owner`
+/// field set (empty owner → `is_owned=true`). Without a live access token the
+/// accounts return error results but the command still exits 0.
+///
+/// Spec: [`tests/docs/cli/param/61_solo.md` EC-1]
+#[ test ]
+fn it257_solo_default_off_exits_0()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@work.pro", "max", "tier4", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "bob@home.pro",   "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "solo::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // solo::0 (default off) must show all accounts — neither is hidden.
+  assert!( text.contains( "alice@work.pro" ), "EC-1: alice must appear with solo::0; got:\n{text}" );
+  assert!( text.contains( "bob@home.pro" ),   "EC-1: bob must appear with solo::0; got:\n{text}" );
+}
+
+/// it258 (061 EC-2): `solo::1` — both accounts appear in the output table;
+/// non-current account uses approximated data; exits 0.
+///
+/// Account A (alice) has its stored token matching the live session credentials →
+/// `is_current=true`. Account B (bob) has no access token → `is_current=false`.
+/// With `solo::1`, Bob's fetch is intercepted by the solo gate and
+/// `approximate_quota()` is called. Both rows appear in stdout because `solo::1`
+/// controls token consumption only, not display visibility.
+///
+/// Spec: [`tests/docs/cli/param/61_solo.md` EC-2]
+#[ test ]
+fn it258_solo_current_live_noncurrent_approx()
+{
+  const FAKE_TOK : &str = "solo-ec2-fake-token";
+  let dir              = TempDir::new().unwrap();
+  let home             = dir.path().to_str().unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  // Alice: has an accessToken that matches live creds → is_current=true.
+  write_account_with_token( dir.path(), "alice@work.pro", FAKE_TOK, false );
+  write_live_credentials_with_token( dir.path(), FAKE_TOK );
+
+  // Bob: no accessToken → is_current=false; quota cache for approximate_quota().
+  write_account( dir.path(), "bob@home.pro", "max", "tier4", FAR_FUTURE_MS, false );
+  let bob_cache = serde_json::json!({ "cache": { "fetched_at": "2026-01-01T10:00:00Z", "five_hour": { "left_pct": 55.0 } } });
+  std::fs::write(
+    credential_store.join( "bob@home.pro.json" ),
+    serde_json::to_string_pretty( &bob_cache ).unwrap() + "\n",
+  ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "solo::1", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let err  = stderr( &out );
+  // Both rows appear — solo::1 controls token consumption, not display.
+  assert!(
+    text.contains( "alice@work.pro" ),
+    "EC-2: alice (current+owned) must appear in output; got:\n{text}",
+  );
+  assert!(
+    text.contains( "bob@home.pro" ),
+    "EC-2: bob (solo-skipped) must still appear in table (solo controls fetch, not display); got:\n{text}",
+  );
+  // Alice is current+owned → solo gate must NOT fire for her.
+  assert!(
+    !err.contains( "alice@work.pro  solo-skip" ),
+    "EC-2: alice (is_current=true) must not be solo-skipped; got stderr:\n{err}",
+  );
+  // Bob is non-current → solo gate fires.
+  assert!(
+    err.contains( "solo-skip" ),
+    "EC-2: bob (is_current=false) must be solo-skipped; got stderr:\n{err}",
+  );
+}
+
+/// it259 (061 EC-3): `solo::1` — current account is NOT owned; G1 fires for it;
+/// no account passes both `is_current && is_owned`; all non-live.
+///
+/// Alice is "current" (stored token matches live session) but her `owner` field
+/// is set to `"other@remote"` — G1 fires and Alice takes the non-owned cache
+/// path (trace: "skipped (reason: not owned)"). Bob is owned but not current
+/// — solo gate fires (trace: "solo-skip: approximated"). Neither makes an HTTP call.
+///
+/// Spec: [`tests/docs/cli/param/61_solo.md` EC-3]
+#[ test ]
+fn it259_solo_current_not_owned_no_http()
+{
+  const FAKE_TOK : &str = "solo-ec3-fake-token";
+  let dir              = TempDir::new().unwrap();
+  let home             = dir.path().to_str().unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  // Alice: current (token match) but NOT owned (foreign owner).
+  write_account_with_token( dir.path(), "alice@work.pro", FAKE_TOK, false );
+  write_live_credentials_with_token( dir.path(), FAKE_TOK );
+  write_account_owner( dir.path(), "alice@work.pro", "other@remote" );
+
+  // Bob: owned (no owner field) but not current (no token); quota cache for approximate_quota.
+  write_account( dir.path(), "bob@home.pro", "max", "tier4", FAR_FUTURE_MS, false );
+  let bob_cache = serde_json::json!({ "cache": { "fetched_at": "2026-01-01T10:00:00Z", "five_hour": { "left_pct": 30.0 } } });
+  std::fs::write(
+    credential_store.join( "bob@home.pro.json" ),
+    serde_json::to_string_pretty( &bob_cache ).unwrap() + "\n",
+  ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "solo::1", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  // Alice: G1 non-owned trace; Bob: solo-skip trace — both prove no HTTP for either.
+  assert!(
+    err.contains( "not owned" ),
+    "EC-3: G1 trace must show 'not owned' for alice (current but foreign owner); got:\n{err}",
+  );
+  assert!(
+    err.contains( "solo-skip" ),
+    "EC-3: solo trace must show 'solo-skip' for bob (owned but not current); got:\n{err}",
+  );
+}
+
+/// it260 (061 EC-4): `solo::1` — no active marker; no live credentials;
+/// `is_current=false` for all accounts → all take solo-skip path.
+///
+/// Without `_active_*` marker or `~/.claude/.credentials.json`, `live_token`
+/// is `None` and `is_current=false` for every account. With `solo::1` all
+/// owned accounts are intercepted by the solo gate.
+///
+/// Spec: [`tests/docs/cli/param/61_solo.md` EC-4]
+#[ test ]
+fn it260_solo_no_active_marker_all_approx()
+{
+  let dir              = TempDir::new().unwrap();
+  let home             = dir.path().to_str().unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  // Two owned accounts — no active marker, no live credentials.
+  write_account( dir.path(), "alice@work.pro", "max", "tier4", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "bob@home.pro",   "max", "tier4", FAR_FUTURE_MS, false );
+
+  // Write quota cache so approximate_quota returns data.
+  for name in &[ "alice@work.pro", "bob@home.pro" ]
+  {
+    let cache = serde_json::json!({ "cache": { "fetched_at": "2026-01-01T10:00:00Z", "five_hour": { "left_pct": 40.0 } } });
+    std::fs::write(
+      credential_store.join( format!( "{name}.json" ) ),
+      serde_json::to_string_pretty( &cache ).unwrap() + "\n",
+    ).unwrap();
+  }
+
+  let out = run_cs_with_env( &[ ".usage", "solo::1", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "solo-skip: approximated" ),
+    "EC-4: both accounts must show solo-skip when no active marker; got:\n{err}",
+  );
+}
+
+/// it261 (061 EC-5): `solo::1 rotate::1` — mutual exclusion; exits 1 before any fetch.
+///
+/// Both params conflict: `rotate::1` requires live data from all candidate accounts
+/// to pick the next one, while `solo::1` restricts HTTP to the current account only.
+/// The conflict is detected at parse time; no fetch or rotate occurs.
+///
+/// Spec: [`tests/docs/cli/param/61_solo.md` EC-5]
+#[ test ]
+fn it261_solo_rotate_mutual_exclusion_exit_1()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "solo::1", "rotate::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "solo" ) && err.contains( "rotate" ),
+    "EC-5: error must reference both `solo` and `rotate`; got:\n{err}",
+  );
+}
+
+/// it262 (061 EC-6): `solo::1 live::1` — allowed; loop starts; SIGINT → exit 0.
+///
+/// `solo::1` and `live::1` are not mutually exclusive. The live-monitor loop runs
+/// normally; each cycle only the current+owned account is live-fetched. SIGINT
+/// causes a clean exit 0 with "Monitor stopped." in stdout.
+///
+/// Spec: [`tests/docs/cli/param/61_solo.md` EC-6]
+#[ cfg( unix ) ]
+#[ test ]
+fn it262_solo_live_composition_allowed()
+{
+  use std::process::Stdio;
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Single account, no token → instant fail, render error row, countdown starts.
+  write_account( dir.path(), "alice@work.pro", "max", "tier4", FAR_FUTURE_MS, true );
+
+  let child = std::process::Command::new( BIN )
+    .args( [ ".usage", "solo::1", "live::1", "interval::30", "jitter::0" ] )
+    .env( "HOME", home )
+    .env_remove( "PRO" )
+    .stdout( Stdio::piped() )
+    .stderr( Stdio::piped() )
+    .spawn()
+    .expect( "failed to spawn clp binary" );
+
+  std::thread::sleep( core::time::Duration::from_secs( 3 ) );
+
+  let _ = std::process::Command::new( "kill" )
+    .args( [ "-INT", &child.id().to_string() ] )
+    .status();
+
+  let out  = child.wait_with_output().expect( "failed to wait on clp binary" );
+  let text = String::from_utf8_lossy( &out.stdout );
+  assert_eq!(
+    out.status.code(),
+    Some( 0 ),
+    "EC-6: SIGINT on solo+live must exit 0; got: {:?}\nstdout: {text}\nstderr: {}",
+    out.status,
+    String::from_utf8_lossy( &out.stderr ),
+  );
+  assert!(
+    text.contains( "Monitor stopped." ),
+    "EC-6: clean SIGINT exit must print 'Monitor stopped.'; got:\n{text}",
+  );
+}
+
+/// it263 (061 EC-7): `solo::1 refresh::1` — allowed; exits 0.
+///
+/// `refresh::1` is allowed with `solo::1`. Refresh subprocesses only fire for
+/// the current+owned account (if it has an auth error). With no real token the
+/// accounts show error results; command still exits 0.
+///
+/// Spec: [`tests/docs/cli/param/61_solo.md` EC-7]
+#[ test ]
+fn it263_solo_refresh_composition_allowed()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@work.pro", "max", "tier4", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "bob@home.pro",   "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "solo::1", "refresh::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+/// it264 (061 EC-8): `solo::1 touch::1` — allowed; exits 0.
+///
+/// `touch::1` is allowed with `solo::1`. Touch subprocesses only fire for the
+/// current+owned account (if it has an idle 5h window). Command exits 0.
+///
+/// Spec: [`tests/docs/cli/param/61_solo.md` EC-8]
+#[ test ]
+fn it264_solo_touch_composition_allowed()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@work.pro", "max", "tier4", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "bob@home.pro",   "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "solo::1", "touch::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+/// it265 (061 EC-9): `solo::1 only_active::1` — orthogonal composition; exits 0.
+///
+/// `solo::1` controls which accounts are HTTP-fetched; `only_active::1` controls
+/// which accounts appear in the display table. They are independent. Alice has an
+/// active marker → shown by `only_active::1`; Bob is not active → hidden.
+/// Command exits 0 regardless of fetch results.
+///
+/// Spec: [`tests/docs/cli/param/61_solo.md` EC-9]
+#[ test ]
+fn it265_solo_only_active_composition_allowed()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Alice: active marker set (is_active=true).
+  write_account( dir.path(), "alice@work.pro", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "bob@home.pro",   "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "solo::1", "only_active::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // only_active::1 filters by active marker; solo::1 controls fetch strategy — orthogonal.
+  assert!( text.contains( "alice@work.pro" ), "EC-9: alice (is_active=true) must appear with only_active::1; got:\n{text}" );
+  assert!( !text.contains( "bob@home.pro" ),  "EC-9: bob (is_active=false) must be hidden by only_active::1; got:\n{text}" );
+}
+
+/// it266 (061 EC-10): `solo::1 trace::1` — stderr contains `solo-skip: approximated`
+/// for the non-current owned account.
+///
+/// With two owned accounts, Alice is current (live token match) and Bob is not.
+/// `solo::1` intercepts Bob's fetch; `trace::1` causes the trace line
+/// `[trace] fetch  bob@home.pro  solo-skip: approximated (age: Ns)` on stderr.
+///
+/// Spec: [`tests/docs/cli/param/61_solo.md` EC-10]
+#[ test ]
+fn it266_solo_trace_shows_solo_skip()
+{
+  const FAKE_TOK : &str = "solo-ec10-fake-token";
+  let dir              = TempDir::new().unwrap();
+  let home             = dir.path().to_str().unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account_with_token( dir.path(), "alice@work.pro", FAKE_TOK, false );
+  write_live_credentials_with_token( dir.path(), FAKE_TOK );
+
+  write_account( dir.path(), "bob@home.pro", "max", "tier4", FAR_FUTURE_MS, false );
+  let bob_cache = serde_json::json!({ "cache": { "fetched_at": "2026-01-01T10:00:00Z", "five_hour": { "left_pct": 42.0 } } });
+  std::fs::write(
+    credential_store.join( "bob@home.pro.json" ),
+    serde_json::to_string_pretty( &bob_cache ).unwrap() + "\n",
+  ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "solo::1", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "solo-skip: approximated" ),
+    "EC-10: stderr must contain `solo-skip: approximated`; got:\n{err}",
+  );
+  assert!(
+    err.contains( "bob@home.pro" ),
+    "EC-10: trace line must name the skipped account `bob@home.pro`; got:\n{err}",
+  );
+}
+
+/// it267 (061 EC-11): `solo::true` exits 1 — `solo::` is `Kind::Integer`;
+/// "true" fails integer parse at the framework level.
+///
+/// Same mechanism as `who::true` (it256): the unilang routing layer calls
+/// `"true".parse::<i64>()` for `Kind::Integer` params, which fails before
+/// `parse_usage_params` is reached.
+///
+/// Spec: [`tests/docs/cli/param/61_solo.md` EC-11]
+#[ test ]
+fn it267_solo_true_rejected_type_error()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "solo::true" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+/// it268 (061 EC-12): `solo::2` exits 1 — integer outside the valid set {0, 1}.
+///
+/// `parse_int_flag` for `solo::` accepts only 0 and 1. Any other integer
+/// value is rejected with exit 1.
+///
+/// Spec: [`tests/docs/cli/param/61_solo.md` EC-12]
+#[ test ]
+fn it268_solo_2_rejected_out_of_range()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "solo::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  // parse_int_flag produces "solo:: must be 0, 1, false, or true" for integer outside {0, 1}.
+  assert!(
+    err.contains( "solo" ),
+    "EC-12: error message must reference `solo`; got stderr:\n{err}",
+  );
+}
+
+// ── Cross-feature corner cases ────────────────────────────────────────────────
+
+/// it269 (CC): `solo::1 format::json` — JSON output works with solo-approximated data.
+///
+/// Solo gate uses `approximate_quota()` for non-current accounts, which produces
+/// `AccountQuota` with `cached=true` and `is_owned=true`. JSON renderer must handle
+/// these approximated rows identically to live-fetched rows (no panic, no missing fields).
+#[ test ]
+fn it269_solo_json_format_with_approximated_accounts()
+{
+  let dir              = TempDir::new().unwrap();
+  let home             = dir.path().to_str().unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  // Two owned accounts — no active marker, no live credentials.
+  write_account( dir.path(), "alice@work.pro", "max", "tier4", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "bob@home.pro",   "max", "tier4", FAR_FUTURE_MS, false );
+
+  // Quota cache so approximate_quota returns data.
+  for name in &[ "alice@work.pro", "bob@home.pro" ]
+  {
+    let cache = serde_json::json!({ "cache": { "fetched_at": "2026-01-01T10:00:00Z", "five_hour": { "left_pct": 40.0 } } });
+    std::fs::write(
+      credential_store.join( format!( "{name}.json" ) ),
+      serde_json::to_string_pretty( &cache ).unwrap() + "\n",
+    ).unwrap();
+  }
+
+  let out = run_cs_with_env( &[ ".usage", "solo::1", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let json_str = stdout( &out );
+  // Must be valid JSON array.
+  let parsed : serde_json::Value = serde_json::from_str( &json_str )
+    .unwrap_or_else( |e| panic!( "CC: solo+json must produce valid JSON; err={e}; raw:\n{json_str}" ) );
+  assert!(
+    parsed.is_array(),
+    "CC: solo+json output must be a JSON array; got:\n{json_str}",
+  );
+}
+
+/// it270 (CC): `solo::1` with a single account that IS current — solo has no effect.
+///
+/// When only one account exists and it is the current one, the solo gate lets it
+/// through for live fetch (not approximation). The output must show the account
+/// without any "solo-skip" trace in the fetch phase.
+///
+/// `is_current` requires both: (1) `write_account_with_token` stores the token in
+/// the credential store, (2) `write_live_credentials_with_token` writes the same
+/// token to `~/.claude/.credentials.json` so the live-token comparison succeeds.
+#[ test ]
+fn it270_solo_single_current_account_no_skip()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  // Single owned account with matching live credentials → is_current=true.
+  write_account_with_token( dir.path(), "only@work.pro", "tok-only", true );
+  write_live_credentials_with_token( dir.path(), "tok-only" );
+
+  // Quota cache (used as fallback; but the fetch gate should let it through).
+  let cache = serde_json::json!({ "cache": { "fetched_at": "2026-01-01T10:00:00Z", "five_hour": { "left_pct": 50.0 } } });
+  std::fs::write(
+    store.join( "only@work.pro.json" ),
+    serde_json::to_string_pretty( &cache ).unwrap() + "\n",
+  ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "solo::1", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  // No trace line for this account should contain "solo-skip" in the fetch phase.
+  let fetch_solo_skip = err.lines().any( |l| l.contains( "fetch" ) && l.contains( "solo-skip" ) );
+  assert!(
+    !fetch_solo_skip,
+    "CC: fetch phase must not solo-skip the current account; got stderr:\n{err}",
+  );
+}
+
+/// it256 (062 EC-6): `who::true` exits 1 — `who::` is `Kind::Integer`; "true" fails integer parse at framework level.
+///
+/// The unilang routing layer calls `"true".parse::<i64>()` for `Kind::Integer` params, which
+/// fails before `parse_usage_params` is reached. This is distinct from `Kind::String` params
+/// (e.g. `only_next::`) where "true" passes through as `Value::String` and `parse_int_flag`
+/// maps it to `Ok(1)`.
+///
+/// Spec: [`tests/docs/cli/param/62_who.md` EC-6]
+#[ test ]
+fn it256_who_true_rejected_kind_integer()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "who::true" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
 }

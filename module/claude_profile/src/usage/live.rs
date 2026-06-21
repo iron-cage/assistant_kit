@@ -90,9 +90,10 @@ pub( crate ) fn execute_live_mode(
     let _ = std::io::stdout().flush();
 
     // Fetch with per-account stagger delays (thunder-herd mitigation).
-    let accounts = fetch_all_quota( credential_store, live_creds_file, true, params.trace )?;
+    let accounts = fetch_all_quota( credential_store, live_creds_file, true, params.trace, params.solo )?;
 
-    let text = render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, None, None );
+    // live mode: no session context for footer; no credential_store path for sessions table.
+    let text = render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, None, None, None, None );
     print!( "{text}" );
 
     // Compute next-refresh wall-clock time.

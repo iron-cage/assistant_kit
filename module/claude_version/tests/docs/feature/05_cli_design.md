@@ -99,10 +99,10 @@ Both are valid invocations; output length differs.
 | `ft005_3_last_param_wins` | `integration/feature_surface_test.rs` |
 | `tc093_empty_args_exits_0` | `integration/framework_test.rs` |
 | `tc04_help_anywhere_wins` | `integration/read_commands_test.rs` |
-| `dd01_001_bool_true_rejected` | `integration/collection_surface_test.rs` |
-| `dd02_001_last_v_wins` | `integration/collection_surface_test.rs` |
-| `dd03_001_cmd_not_implemented_exit2` | `integration/collection_surface_test.rs` |
-| `dd04_001_per_cmd_validation` | `integration/collection_surface_test.rs` |
+| `dd01_001_bool_true_rejected` | `integration/catalog_surface_test.rs` |
+| `dd02_001_last_v_wins` | `integration/catalog_surface_test.rs` |
+| `dd03_001_cmd_not_implemented_exit2` | `integration/catalog_surface_test.rs` |
+| `dd04_001_per_cmd_validation` | `integration/catalog_surface_test.rs` |
 
 ---
 

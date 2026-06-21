@@ -4,7 +4,7 @@
 
 - **Purpose**: Surface live quota utilization for all saved accounts and the currently live session via `GET /api/oauth/usage`, showing 5h, 7d, and Sonnet-specific weekly quota remaining.
 - **Responsibility**: Documents the `usage` module and `.usage` CLI command.
-- **In Scope**: Per-account quota fetch via `claude_quota::fetch_oauth_usage()` calling `GET /api/oauth/usage`, `OauthUsageData` parsing with `five_hour`/`seven_day`/`seven_day_sonnet` fields, parallel fetch of account billing state via `claude_quota::fetch_oauth_account()` → `OauthAccountData` (`billing_type`, `has_max`, `org_created_at`), token expiry from credential files (`expires_at_ms`), live account detection by matching `accessToken` in `~/.claude/.credentials.json` against saved account tokens, active account divergence marker (`*` in flag column for active-marker-but-not-current accounts), `@` occupied-elsewhere flag (accounts named by any `_active_*` marker in the credential store other than the current machine's own marker receive `@` in the flag column when no higher-priority flag applies; `other_machines_active()` reads all non-own `_active_*` files and returns the set of account names), synthetic `(current session)` row when live credentials are unsaved, `Sub` column (subscription label: `max`/`pro`/`—`/`?`, hidden by default — `cols::+sub` to show), `~Renews` column (duration countdown to billing renewal: exact when `_renewal_at` ISO-8601 UTC override present in `{name}.json`, estimated with `~` prefix when derived from `org_created_at` day-of-month), `→ Next` column (soonest upcoming strategic event among `+7d` 7d quota reset and `$ren` billing renewal — token expiry (`!tok`) and 5h resets (`+5h`) are excluded; token expiry already surfaced in `Expires` column, 5h resets already surfaced in `5h Reset` column), `_renewal_at` optional ISO-8601 UTC field in `{name}.json` (written by `.account.renewal`, preserved by `save()` read-merge), table output using `data_fmt`, graceful handling of expired/missing tokens, composite `●` status emoji (AND of 5h and 7d), per-column emoji in `5h Left` and `7d Left` values, four-group status partition (🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Red), `cols::` column visibility modifiers, `sort::`-driven 2-line footer (session state line + recommended account line), `7d Son Reset` column (hidden by default), duration format capped to 2 significant units, `format::json` output.
+- **In Scope**: Per-account quota fetch via `claude_quota::fetch_oauth_usage()` calling `GET /api/oauth/usage`, `OauthUsageData` parsing with `five_hour`/`seven_day`/`seven_day_sonnet` fields, parallel fetch of account billing state via `claude_quota::fetch_oauth_account()` → `OauthAccountData` (`billing_type`, `has_max`, `org_created_at`), token expiry from credential files (`expires_at_ms`), live account detection by matching `accessToken` in `~/.claude/.credentials.json` against saved account tokens, active account divergence marker (`*` in flag column for active-marker-but-not-current accounts), `@` occupied-elsewhere flag (accounts named by any `_active_*` marker in the credential store other than the current machine's own marker receive `@` in the flag column when no higher-priority flag applies; `other_machines_active()` reads all non-own `_active_*` files and returns the set of account names), synthetic `(current session)` row when live credentials are unsaved, `Sub` column (subscription label: `max`/`pro`/`—`/`?`, hidden by default — `cols::+sub` to show), `~Renews` column (duration countdown to billing renewal: exact when `_renewal_at` ISO-8601 UTC override present in `{name}.json`, estimated with `~` prefix when derived from `org_created_at` day-of-month), `→ Next` column (soonest upcoming strategic event among `+7d` 7d quota reset and `$ren` billing renewal — token expiry (`!tok`) and 5h resets (`+5h`) are excluded; token expiry already surfaced in `Expires` column, 5h resets already surfaced in `5h Reset` column), `_renewal_at` optional ISO-8601 UTC field in `{name}.json` (written by `.account.renewal`, preserved by `save()` read-merge), table output using `data_fmt`, graceful handling of expired/missing tokens, composite `●` status emoji (AND of 5h and 7d), per-column emoji in `5h Left` and `7d Left` values, four-group status partition (🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Red), `cols::` column visibility modifiers, `sort::`-driven 2-line footer (`Current` line identifying the `✓` account + `Next` recommendation line, both using `·` delimiter and aligned columns), sessions table showing all `_active_*` markers as `{user}@{host}` → account (controlled by `who::` parameter, default shown when >1 marker exists), `7d Son Reset` column (hidden by default), duration format capped to 2 significant units, `format::json` output.
 - **Out of Scope**: Historical token counts from stats-cache.json (replaced by live API data); verbosity levels (single fixed output level per command design); relying on per-machine active marker for `✓` determination (live credential matching via `accessToken` comparison determines `✓`; active marker determines `*` only).
 
 ### Design
@@ -63,7 +63,8 @@
    - `→ Next` selects the minimum-timestamp event among `+7d` and `$ren`; events are excluded when the corresponding timestamp is absent or in the past
    - **Four-group status partition:** Before applying the sort strategy, accounts are partitioned into four status groups (see [dictionary](../cli/002_dictionary.md#status-groups)): 🟢 Green (both available) → 🟡 h-exhausted (5h exhausted, 7d available) → 🟡 weekly-exhausted (5h available, 7d exhausted) → 🔴 Red (both exhausted or error). Group order is fixed — sort strategy applies within each group only. `desc::1` reverses within groups but never changes group order.
    - **Duration format:** `format_duration_secs` output is capped to 2 significant units (e.g., `1d 2h` not `1d 2h 45m`, `3h 19m` not `3h 19m 5s`).
-7. Append footer when ≥2 accounts with valid quota data exist. Footer shows the current session state (`session: <model>  effort: <level>` when set in `~/.claude/settings.json`) on the first line, and the recommendation for the active `sort::` strategy on the second line — account name, strategy-specific metric, and `model: <label>` showing what the session model will be after switching. Omit footer when 0 or 1 valid account.
+7. Append footer when ≥2 accounts with valid quota data exist. Footer has two `·`-delimited, column-aligned lines: (1) `Current · <name> · <model>/<effort> · N/N` identifying the `✓` account, its session model and effort from `~/.claude/settings.json`, and the valid/total count; (2) `Next (<strategy>) · <name> · <model> · <metric>` showing the recommendation for the active `sort::` strategy. When no `✓` account is detected (credentials unreadable), fall back to `Valid: N / M   session: <model>  effort: <level>` on line 1. Omit footer when 0 or 1 valid account.
+7a. Append sessions table after footer when >1 `_active_*` marker file exists in the credential store. The table shows all markers (including the current machine's own) with columns `Session` (`{user}@{host}`, derived from the `_active_{host}_{user}` filename) and `Account` (file content). The current machine's own session receives `✓` in the Account column. Rendered via `data_fmt`. The `who::0` parameter suppresses the sessions table. When only 1 marker exists, the sessions table is omitted by default (no new information).
 8. For `format::json`: output a JSON array with one object per account (synthetic first if present, then alphabetical saved), always including `expires_in_secs`.
 
 **Output format (text) — saved account is live, `sort::renew` (default):**
@@ -78,11 +79,11 @@ Quota
   🔴 dave@example.com     —          —           —          —        —          EXPIRED      ?              —
   🔴 eve@example.com      —          —           —          —        —          EXPIRED      ?              —
 
-Valid: 3 / 5   session: claude-sonnet-4-6  effort: low
-Next (renew): carol@example.com  in 2d 11h +7d  model: opus
+Current      · alice@example.com · sonnet/low · 3/5
+Next (renew) · carol@example.com · opus       · in 2d 11h +7d
 ```
 
-(Sub column hidden by default; show with `cols::+sub`. Four-group status partition: 🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Red. Footer first line shows current `~/.claude/settings.json` session state; second line shows the recommended account with metric from `→ Next` column and `model: opus` because carol's 7d(Son)=12% < 15% — session model override to Opus would fire on switch.)
+(Sub column hidden by default; show with `cols::+sub`. Four-group status partition: 🟢 Green → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Red. Footer `Current` line identifies the `✓` account with session model/effort from `settings.json` and valid/total count. `Next` line shows the recommended account with metric from `→ Next` column and `opus` because carol's 7d(Son)=12% < 15% — session model override to Opus would fire on switch. Both lines use `·` delimiter with column-aligned padding.)
 
 **Output format (text) — divergence, `sort::renew` (default):**
 
@@ -94,11 +95,11 @@ Quota
 * 🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   ~in 6d         in 6d 14h +7d
   🟢 carol@example.com    🟢 95%     in 3h 44m  🟢 72%     54%      in 5d 01h  in 6h 11m   ~in 11d        in 5d 1h +7d
 
-Valid: 3 / 3   session: claude-sonnet-4-6  effort: low
-Next (renew): carol@example.com  in 5d 1h +7d  model: sonnet
+Current      · alice@example.com · sonnet/low · 3/3
+Next (renew) · carol@example.com · sonnet     · in 5d 1h +7d
 ```
 
-(`*` = active marker points here, but live credentials belong to `alice@example.com`. carol is the only eligible account. `model: sonnet` because carol's 7d(Son)=54% ≥ 15% — no override.)
+(`*` = active marker points here, but live credentials belong to `alice@example.com`. carol is the only eligible account. `sonnet` because carol's 7d(Son)=54% ≥ 15% — no override.)
 
 **Output format (text) — occupied elsewhere:**
 
@@ -110,8 +111,8 @@ Quota
 @ 🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   ~in 6d         in 6d 14h +7d
   🟢 carol@example.com    🟢 95%     in 3h 44m  🟢 72%     54%      in 5d 01h  in 6h 11m   ~in 11d        in 5d 1h +7d
 
-Valid: 3 / 3   session: claude-sonnet-4-6  effort: low
-Next (renew): carol@example.com  in 5d 1h +7d  model: sonnet
+Current      · alice@example.com · sonnet/low · 3/3
+Next (renew) · carol@example.com · sonnet     · in 5d 1h +7d
 ```
 
 (`@` = bob is the active account on another machine: some other machine's `_active_*` marker in the credential store names bob, while this machine's own marker names alice, and alice is also the live session. `is_occupied_elsewhere = true` for bob; `is_active = false` and `is_current = false` for bob on this machine. No higher-priority flag applies, so bob receives `@`.)
@@ -126,8 +127,8 @@ Quota
   🟢 alice@example.com    🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   in 3h 47m      in 3h 47m $ren
   🔴 bob@example.com      —          —           —          —        —          EXPIRED      ?              —
 
-Valid: 2 / 3   session: claude-sonnet-4-6  effort: low
-Next (renew): alice@example.com  in 3h 47m $ren  model: sonnet
+Current          · (current session)   · sonnet/low · 2/3
+Next (renew)     · alice@example.com   · sonnet     · in 3h 47m $ren
 ```
 
 **Output format (JSON):**
@@ -164,7 +165,7 @@ Next (renew): alice@example.com  in 3h 47m $ren  model: sonnet
 - **AC-08**: `5h Left` and `7d Left` show remaining quota percentage (100 − consumed); `7d(Son)` shows remaining Sonnet-only weekly quota (100 − consumed) or `—` when absent; `5h Reset` and `7d Reset` show independent reset countdowns as separate columns; all quota data sourced from `claude_quota::fetch_oauth_usage()` → `OauthUsageData`.
 - **AC-17**: `7d(Son)` column is populated when `OauthUsageData.seven_day_sonnet` is `Some`; shows `—` when `None`. JSON field `weekly_7d_sonnet_left_pct` is an integer when present and `null` when absent.
 - **AC-09**: The recommended next account is determined by the `sort::` parameter (see [020_usage_sort_strategies.md](020_usage_sort_strategies.md)). The top eligible account in the active sort order is shown in the footer's `Next (strategy):` line. Default is `sort::renew`.
-- **AC-10**: A footer is appended when ≥2 accounts have valid quota data; the footer is absent when 0 or 1 valid account. The footer has two lines: (1) current session state from `~/.claude/settings.json` — `Valid: N / M   session: <model>  effort: <level>` (omitting `session:` / `effort:` parts when the corresponding field is absent); (2) recommendation — `Next (strategy): <name>  <metric>  model: <label>` where the metric uses `→ Next` format (the soonest strategic event, matching the `→ Next` table column) and `model: opus` fires when `seven_day_sonnet` exists and `sonnet_left < 15%`; `model: sonnet` otherwise.
+- **AC-10**: A footer is appended when ≥2 accounts have valid quota data; the footer is absent when 0 or 1 valid account. The footer has two `·`-delimited, column-aligned lines: (1) `Current · <name> · <model>/<effort> · N/N` — identifies the `✓` account by name; `<model>` is the session model from `~/.claude/settings.json` (`model` field, shortened to `sonnet`/`opus`/`haiku`); `<effort>` is the effort level from `settings.json` (`effortLevel` field); when effort is absent, shows `<model>` only (no slash); `N/N` = valid count / total count. (2) `Next (<strategy>) · <name> · <model> · <metric>` — `<model>` is `opus` when `seven_day_sonnet` exists and `sonnet_left < 15%`, `sonnet` otherwise; `<metric>` uses `→ Next` format (soonest strategic event). When no `✓` account is detected (credentials file unreadable), line 1 falls back to `Valid: N / M   session: <model>  effort: <level>` (legacy format). Column padding aligns the `·` delimiters vertically across both lines.
 - **AC-11**: When the live `~/.claude/.credentials.json` token does not match any saved account's token, a synthetic row is prepended at the top of the table with `✓`, quota fetched via the live token, and the name set to the email from `~/.claude.json` (or `(current session)` when that file is unavailable or the field is empty).
 - **AC-12**: When `~/.claude/.credentials.json` is unreadable, no `✓` is emitted on any row; all saved accounts are still shown.
 - **AC-13**: `*` in the flag column marks the account with the per-machine active marker when it differs from the current (live) account; no `*` appears when active and current are the same account.
@@ -194,6 +195,9 @@ Next (renew): alice@example.com  in 3h 47m $ren  model: sonnet
 - **AC-30**: Accounts with `is_occupied_elsewhere = true` — their name appears in any `_active_*` marker file in the credential store other than the current machine's own marker (as returned by `other_machines_active(store)`) — receive `@` in the flag column when `is_active = false` AND `is_current = false`. Flag priority chain: `✓` > `*` > `@` > blank; an account receives at most one flag character per row. `format::json` output includes `is_occupied_elsewhere` (bool) per object. `format::json` never emits `@` — the field is a bool, not the single-character flag.
 
 - **AC-32**: After the touch loop, `.usage` applies `apply_model_override()` for the **current** account (`is_current == true`): when the current account has valid quota data (`result` is `Ok`) and `seven_day_sonnet` remaining is below 15%, and the session model in `~/.claude/settings.json` is `"claude-sonnet-4-6"` (or empty), overwrites the session model with `"claude-opus-4-6"`. This ensures the interactive session switches to Opus when Sonnet quota is nearly exhausted, even without an `.account.use` switch event. When `trace::1`, emits `[trace] usage  {name}  model override: sonnet→opus (7d(Son) left={N}%)` to stderr when the override fires. No-op when the current account has no quota data, when `seven_day_sonnet` is absent (`None`) — absent tier is treated as unknown, not exhausted (Fix BUG-300) — when `7d(Son) ≥ 15%`, or when the session model is already Opus. (Fix for BUG-244.)
+
+- **AC-33**: A sessions table is appended after the footer when >1 `_active_*` marker file exists in the credential store. The table has two columns: `Session` (`{user}@{host}`, derived by stripping the `_active_` prefix from the marker filename and splitting at the boundary between host and user) and `Account` (file content, trimmed). The current machine's own session receives `✓` appended to the Account value. Rendered via `data_fmt`. When only 1 marker exists, the sessions table is omitted by default.
+- **AC-34**: `who::0` suppresses the sessions table unconditionally (even when >1 marker exists). `who::1` forces the sessions table on (even when ≤1 marker). Default behavior (omit parameter) is auto: shown when >1 marker, hidden when ≤1.
 
 - **AC-31**: When `OauthAccountData.billing_type == "none"` (confirmed cancelled subscription via a successful account fetch), the account's per-fetch result is overridden to `Err("no subscription")` — the `GET /api/oauth/usage` HTTP response is discarded regardless of its status code. This makes the result semantically correct at the data layer and removes the need for context-aware display logic in `render.rs`. `~Renews` shows `"—"` for these accounts (AC-27). When `billing_type` is unknown (`OauthAccountData` fetch failed), the raw usage fetch result and standard error mapping apply. Trace behavior: when `trace::1`, `[trace] result:` is emitted AFTER the Class A override, so the trace correctly reflects the final stored result (not the raw API response). (**BUG-233 ✅ Fixed** 2026-06-03; **BUG-234 ✅ Fixed** 2026-06-03 — trace ordering)
 

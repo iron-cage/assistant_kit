@@ -33,8 +33,11 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-25 | `.usage` applies model override for current account when `7d(Son) < 15%` | AC-32 | — |
 | FT-26 | `format::json` output includes `"is_owned"` bool per account object | AC-05 | — |
 | FT-27 | `.usage` model override skips when `seven_day_sonnet` is absent (`None`) — absent tier is unknown, not exhausted | AC-32 | — |
-| FT-28 | Footer shows session model and `→ Next` metric for recommended account | AC-10 | — |
-| FT-29 | Footer first line shows `session:` and `effort:` when settings provide them; omits them when absent | AC-10 | — |
+| FT-28 | Footer `Current` line identifies `✓` account with model and valid count; `Next` line shows recommendation with model and metric; both use `·` delimiter and aligned columns | AC-10 | — |
+| FT-29 | Footer `Current` line shows `model/effort` combined when effort present; `model` only when effort absent | AC-10 | — |
+| FT-30 | Sessions table shown after footer when >1 `_active_*` marker exists; each marker rendered as `{user}@{host}` + account; own session has `✓` | AC-33 | — |
+| FT-31 | Sessions table hidden when ≤1 `_active_*` marker (single-session default) | AC-33 | — |
+| FT-32 | `who::0` suppresses sessions table; `who::1` forces it on | AC-34 | — |
 | — | Table output rendered by `data_fmt` crate (`use data_fmt::…` in `render.rs`) | AC-04 | Structural (code review — all render paths use `data_fmt`) |
 | — | `Expires` column: `"in Xh Ym"` / `"EXPIRED"` from `compute_expires_cell()` | AC-07 | IT-003, IT-010 (command-level coverage) |
 | — | `5h Left`, `7d Left`, `7d(Son)`, `5h Reset`, `7d Reset` from `OauthUsageData` | AC-08 | Indirect — FT-07/FT-08/FT-11/FT-14/FT-15/FT-16 all depend on these columns |
@@ -78,10 +81,13 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-25 | `.usage` applies model override for current account when `7d(Son) < 15%` | AC-32 | Model Override |
 | FT-26 | `format::json` includes `"is_owned": bool` per account object | AC-05 | JSON Fields |
 | FT-27 | `.usage` model override skips when `seven_day_sonnet = None` (BUG-300 MRE) | AC-32 | Model Override |
-| FT-28 | Footer shows session model and `→ Next` metric for recommended account | AC-10 | Footer |
-| FT-29 | Footer first line shows `session:` and `effort:` when set; omits each part when absent | AC-10 | Footer Session/Effort |
+| FT-28 | Footer `Current` + `Next` lines with `·` delimiter and column alignment | AC-10 | Footer |
+| FT-29 | Footer `Current` line: `model/effort` when effort present; `model` only when absent | AC-10 | Footer Session/Effort |
+| FT-30 | Sessions table shown when >1 marker; own session has `✓` | AC-33 | Sessions Table |
+| FT-31 | Sessions table hidden when ≤1 marker | AC-33 | Sessions Table |
+| FT-32 | `who::0` suppresses sessions table; `who::1` forces it on | AC-34 | Sessions Table |
 
-**Total:** 29 FT cases
+**Total:** 32 FT cases
 
 ---
 
@@ -438,13 +444,11 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ---
 
-### FT-28: Footer shows session model and `→ Next` metric for recommended account
+### FT-28: Footer `Current` + `Next` lines with `·` delimiter and column alignment
 
-- **Given (unit test):** Two scenarios, each with two `AccountQuota` entries rendered via `render_text()`:
-  - **Scenario 1 (sonnet — no override):** `a@x.com` (`is_current=true`), `b@x.com` with `seven_day_sonnet.utilization = 50.0` (50% left, ≥ 15% threshold — no session model override).
-  - **Scenario 2 (opus — override fires):** `a@x.com` (`is_current=true`), `c@x.com` with `seven_day_sonnet.utilization = 90.0` (10% left, < 15% threshold — session model override to Opus).
-- **When:** `render_text(&[current, candidate], SortStrategy::Name, ...)` is called.
-- **Then:** Scenario 1 footer contains `model: sonnet` (sonnet_left=50% ≥ 15% — default working model). Scenario 2 footer contains `model: opus` (sonnet_left=10% < 15% — model override fires). Both scenarios show the `→ Next` format for the footer metric (not individual `7d resets` / `renews` components).
+- **Given (unit test):** Two `AccountQuota` entries rendered via `render_text()`: `a@x.com` (`is_current=true`, valid quota), `b@x.com` (valid quota, `seven_day_sonnet.utilization = 50.0`). `session_model = Some("sonnet")`, `session_effort = Some("low")`.
+- **When:** `render_text(&accounts, SortStrategy::Renew, ...)` is called.
+- **Then:** Footer contains two lines: (1) a line containing `Current` and `·` and `a@x.com` and `sonnet/low`; (2) a line containing `Next (renew)` and `·` and `b@x.com` and `sonnet`. The `·` delimiters in both lines are vertically aligned (same column positions).
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_ft28_009_footer_model_label` (in `src/usage/mod.rs`)
 - **Source:** [009_token_usage.md AC-10](../../../docs/feature/009_token_usage.md)
@@ -469,18 +473,48 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ---
 
-### FT-29: Footer first line shows `session:` and `effort:` when set; omits each part when absent
+### FT-29: Footer `Current` line shows `model/effort` when effort present; `model` only when absent
 
-- **Given (unit test):** Three scenarios, each with two valid `AccountQuota` entries rendered via `render_text()`:
-  - **Scenario 1 (both present):** `session_model = Some("claude-sonnet-4-6")`, `session_effort = Some("low")`.
-  - **Scenario 2 (model only):** `session_model = Some("claude-sonnet-4-6")`, `session_effort = None`.
-  - **Scenario 3 (neither):** `session_model = None`, `session_effort = None`.
-- **When:** `render_text(&accounts, SortStrategy::Renew, None, PreferStrategy::Any, &ColsVisibility::default_set(), session_model, session_effort)` is called for each scenario.
+- **Given (unit test):** Two scenarios, each with two valid `AccountQuota` entries rendered via `render_text()`:
+  - **Scenario 1 (effort present):** `session_model = Some("sonnet")`, `session_effort = Some("low")`.
+  - **Scenario 2 (effort absent):** `session_model = Some("sonnet")`, `session_effort = None`.
+- **When:** `render_text(...)` is called for each scenario.
 - **Then:**
-  - Scenario 1: footer first line contains `session: claude-sonnet-4-6  effort: low`; the `Valid: N / M` prefix is present on the same line.
-  - Scenario 2: footer first line contains `session: claude-sonnet-4-6`; does NOT contain `effort:`.
-  - Scenario 3: footer first line contains `Valid: N / M`; does NOT contain `session:` or `effort:`.
-  - In all scenarios, footer second line (`Next (renew): ...`) is present and unaffected by session/effort values.
+  - Scenario 1: footer `Current` line contains `sonnet/low` (model + slash + effort combined).
+  - Scenario 2: footer `Current` line contains `sonnet` but NOT `sonnet/` (no trailing slash when effort absent).
+  - In both scenarios, footer `Next` line is present and unaffected.
 - **Exit:** n/a (unit test — string content assertions)
 - **Source fn:** `test_ft29_009_footer_session_effort_display` (in `src/usage/render_tests.rs`)
 - **Source:** [009_token_usage.md AC-10](../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-30: Sessions table shown when >1 `_active_*` marker exists; own session has `✓`
+
+- **Given:** Credential store contains 2 `_active_*` files: `_active_laptop_user1` → `alice@x.com` (current machine's own marker), `_active_desktop_user1` → `bob@x.com` (another machine). Two saved accounts with valid quota.
+- **When:** `clp .usage` is run.
+- **Then:** Output after the footer contains a `Sessions` table with two rows: `user1@laptop` → `alice@x.com ✓` and `user1@desktop` → `bob@x.com`. The `✓` marks the current machine's own session.
+- **Exit:** 0
+- **Source:** [009_token_usage.md AC-33](../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-31: Sessions table hidden when ≤1 `_active_*` marker (single-session default)
+
+- **Given:** Credential store contains only the current machine's own `_active_*` marker. Two saved accounts with valid quota.
+- **When:** `clp .usage` is run (no `who::` parameter).
+- **Then:** Output does NOT contain a `Sessions` heading or table. Footer is present but no sessions section follows it.
+- **Exit:** 0
+- **Source:** [009_token_usage.md AC-33](../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-32: `who::0` suppresses sessions table; `who::1` forces it on
+
+- **Given:** Credential store contains 2 `_active_*` marker files (>1 session). Two saved accounts with valid quota.
+- **When (suppress):** `clp .usage who::0`
+- **Then:** Output does NOT contain a `Sessions` table despite >1 marker.
+- **When (force):** Credential store contains only 1 `_active_*` marker. `clp .usage who::1`
+- **Then:** Output contains a `Sessions` table with 1 row (the current machine's own session with `✓`), despite ≤1 marker.
+- **Exit:** 0
+- **Source:** [009_token_usage.md AC-34](../../../docs/feature/009_token_usage.md)

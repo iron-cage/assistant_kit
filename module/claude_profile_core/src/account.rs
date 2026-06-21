@@ -1318,12 +1318,15 @@ pub fn write_quota_cache(
       {
         co.insert( "seven_day_sonnet".into(), period_json( u, r ) );
       }
-      // Preserve model_override and touch state from prior cache.
+      // Preserve model_override, touch state, and measurement history from prior cache.
+      // Feature 040: "history" must survive write_quota_cache or every successful fetch
+      //   would clobber the stored ring buffer (verification finding F4-3).
       if let Some( prev ) = obj.get( "cache" ).and_then( |c| c.as_object() )
       {
         if let Some( v ) = prev.get( "model_override" ) { co.insert( "model_override".into(), v.clone() ); }
         if let Some( v ) = prev.get( "last_touch_at" )  { co.insert( "last_touch_at".into(), v.clone() ); }
         if let Some( v ) = prev.get( "touch_idle" )     { co.insert( "touch_idle".into(), v.clone() ); }
+        if let Some( v ) = prev.get( "history" )        { co.insert( "history".into(), v.clone() ); }
       }
     }
     obj.insert( "cache".to_string(), cache );
@@ -1483,6 +1486,141 @@ pub fn parse_iso_utc_secs( s : &str ) -> Option< u64 >
   #[ allow( clippy::cast_sign_loss ) ]
   let days = ( era * 146_097 + doe - 719_468 ) as u64;
   Some( days * 86400 + hh * 3600 + mm * 60 + ss )
+}
+
+// ── Measurement history ───────────────────────────────────────────────────────
+
+/// Timestamped quota measurement stored in `cache.history[]`.
+///
+/// Each successful fetch appends one entry; the array is capped at 10 entries (FIFO).
+/// Used by the approximation module to fit a polynomial when the API is unavailable
+/// (Feature 040).
+#[ derive( Debug ) ]
+pub struct HistoryEntry
+{
+  /// Unix timestamp (seconds) when the measurement was taken.
+  pub t  : u64,
+  /// 5h period: `(utilization 0–100, resets_at ISO string)`; `None` when absent.
+  pub h5 : Option< ( f64, String ) >,
+  /// 7d period: `(utilization 0–100, resets_at ISO string)`; `None` when absent.
+  pub d7 : Option< ( f64, String ) >,
+  /// 7d-sonnet period: `(utilization 0–100, resets_at ISO string)`; `None` when absent.
+  pub sn : Option< ( f64, String ) >,
+}
+
+/// Parse a `[f64, string]` JSON array into a period tuple.
+fn parse_history_period( val : &serde_json::Value ) -> Option< ( f64, String ) >
+{
+  let arr = val.as_array()?;
+  if arr.len() != 2 { return None; }
+  let u = arr[ 0 ].as_f64()?;
+  let r = arr[ 1 ].as_str()?.to_string();
+  Some( ( u, r ) )
+}
+
+/// Read measurement history from `cache.history[]` in `{name}.json` (Feature 040 AC-11).
+///
+/// Returns an empty `Vec` when the file is absent, unparseable, or has no `"history"` key —
+/// backward compatible with old cache format from Feature 033.
+#[ must_use ]
+#[ inline ]
+pub fn read_history(
+  credential_store : &std::path::Path,
+  name             : &str,
+) -> Vec< HistoryEntry >
+{
+  let meta_path = credential_store.join( format!( "{name}.json" ) );
+  let Ok( text ) = std::fs::read_to_string( &meta_path ) else { return vec![] };
+  let val : serde_json::Value = match serde_json::from_str( &text ) { Ok( v ) => v, Err( _ ) => return vec![] };
+  let Some( arr ) = val.get( "cache" ).and_then( |c| c.get( "history" ) ).and_then( |h| h.as_array() ) else { return vec![] };
+  arr.iter().filter_map( |entry|
+  {
+    let t = entry.get( "t" )?.as_u64()?;
+    Some( HistoryEntry
+    {
+      t,
+      h5 : entry.get( "h5" ).and_then( parse_history_period ),
+      d7 : entry.get( "d7" ).and_then( parse_history_period ),
+      sn : entry.get( "sn" ).and_then( parse_history_period ),
+    } )
+  } ).collect()
+}
+
+/// Serialize an optional period to a JSON array `[utilization, resets_at]` or `null`.
+fn history_period_json( period : Option< ( f64, &str ) > ) -> serde_json::Value
+{
+  match period
+  {
+    Some( ( u, r ) ) => serde_json::json!( [ u, r ] ),
+    None             => serde_json::Value::Null,
+  }
+}
+
+/// Append a quota measurement to `cache.history[]` in `{name}.json` (Feature 040 AC-01, AC-02, AC-13).
+///
+/// - Enforces a 10-entry FIFO ring buffer: oldest entry evicted when buffer is full (AC-02).
+/// - Overwrites the last entry when `t` matches its timestamp to prevent fast-cycle fill (AC-13).
+/// - Creates `cache.history` when absent (first measurement for this account).
+/// - Write failures are silently ignored — quota display is non-critical (matches Feature 033 pattern).
+#[ inline ]
+pub fn write_history_entry(
+  credential_store : &std::path::Path,
+  name             : &str,
+  t                : u64,
+  h5               : Option< ( f64, &str ) >,
+  d7               : Option< ( f64, &str ) >,
+  sn               : Option< ( f64, &str ) >,
+)
+{
+  let meta_path = credential_store.join( format!( "{name}.json" ) );
+  let mut snapshot = std::fs::read_to_string( &meta_path )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .unwrap_or_else( || serde_json::json!( {} ) );
+  if let Some( obj ) = snapshot.as_object_mut()
+  {
+    let cache = obj.entry( "cache" ).or_insert_with( || serde_json::json!( {} ) );
+    if let Some( co ) = cache.as_object_mut()
+    {
+      let history = co.entry( "history" ).or_insert_with( || serde_json::json!( [] ) );
+      if let Some( arr ) = history.as_array_mut()
+      {
+        let entry = serde_json::json!(
+        {
+          "t"  : t,
+          "h5" : history_period_json( h5 ),
+          "d7" : history_period_json( d7 ),
+          "sn" : history_period_json( sn ),
+        } );
+        // AC-13: duplicate-timestamp dedup — overwrite last entry when same Unix second.
+        if let Some( last ) = arr.last()
+        {
+          if last.get( "t" ).and_then( serde_json::Value::as_u64 ) == Some( t )
+          {
+            let len = arr.len();
+            arr[ len - 1 ] = entry;
+          }
+          else
+          {
+            arr.push( entry );
+          }
+        }
+        else
+        {
+          arr.push( entry );
+        }
+        // AC-02: ring buffer FIFO cap — evict oldest (index 0) when over 10 entries.
+        while arr.len() > 10
+        {
+          arr.remove( 0 );
+        }
+      }
+    }
+  }
+  let _ = std::fs::write(
+    &meta_path,
+    serde_json::to_string_pretty( &snapshot ).map( |s| s + "\n" ).unwrap_or_default(),
+  );
 }
 
 #[ cfg( test ) ]

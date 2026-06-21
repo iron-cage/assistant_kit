@@ -40,6 +40,7 @@ pub( crate ) fn apply_refresh(
   trace            : bool,
   imodel           : SubprocessModel,
   effort           : SubprocessEffort,
+  solo             : bool,
 )
 {
   let now_secs = std::time::SystemTime::now()
@@ -49,14 +50,37 @@ pub( crate ) fn apply_refresh(
 
   for aq in accounts
   {
+    // Solo gate: non-current accounts are never refreshed when solo::1.
+    // Fires before should_refresh — avoids evaluating the predicate for solo-skipped accounts.
+    if solo && !aq.is_current
+    {
+      if trace { eprintln!( "[trace] refresh  {}  solo-skip", aq.name ); }
+      continue;
+    }
+
     let should_retry = should_refresh( aq, now_secs );
     // Fix(BUG-295): reason derived from aq.result.err() silently fell through to "ok"
     //   for non-owned accounts (G1 sets result=Ok(cached_data) for them).
     //   Root cause: ownership gate fires before result is ever an error for non-owned accts.
     //   Pitfall: check !aq.is_owned BEFORE consulting aq.result.err() at trace sites.
+    // Fix(BUG-298): owned+cached accounts also have result=Ok (fetch.rs:229-240 cache fallback
+    //   converts Err→Ok and sets aq.cached=true); .err() on Ok returns None → constant "ok".
+    //   Real trigger: BUG-255 guard (cached && expired). Check aq.cached before aq.result.err().
+    //   Pitfall: any trigger path that converts Err→Ok must add its own reason branch here.
     if trace
     {
-      let reason = if aq.is_owned { aq.result.as_ref().err().map_or( "ok", String::as_str ) } else { "not owned" };
+      let reason = if !aq.is_owned
+      {
+        "not owned"
+      }
+      else if aq.cached
+      {
+        "cached-expired"
+      }
+      else
+      {
+        aq.result.as_ref().err().map_or( "ok", String::as_str )
+      };
       eprintln!( "[trace] refresh  {}  should_retry={} (reason: {})", aq.name, should_retry, reason );
     }
     if !should_retry { continue; }

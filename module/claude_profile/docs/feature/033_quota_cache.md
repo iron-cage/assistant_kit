@@ -86,6 +86,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | Model override — cache persists override decision |
 | [029_account_host_metadata.md](029_account_host_metadata.md) | `{name}.json` structure — cache extends the same file |
 | [036_account_ownership.md](036_account_ownership.md) | G1: non-owned accounts use cache as primary source; same display path as cache-fallback |
+| [040_quota_measurement_history.md](040_quota_measurement_history.md) | Extends single-point cache with 10-entry measurement history ring buffer and polynomial approximation |
 
 ### Sources
 

@@ -2,7 +2,7 @@
 
 Formal specification of co-dependencies, mutual exclusions, and cascading effects between clp parameters.
 
-### All Interactions (11 total)
+### All Interactions (12 total)
 
 | # | Interaction | Parameters | Effect |
 |---|-------------|------------|--------|
@@ -17,6 +17,7 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 | 9 | `sort::` recommendation does not affect `format::json` output | `sort::`, `format::` | JSON array order is always alphabetical; footer recommendation is omitted regardless of `sort::` value |
 | 10 | `imodel::` and `effort::` do not affect `format::json` output | `imodel::`, `effort::`, `format::` | Subprocess model and effort control only subprocess invocations; JSON output structure is unchanged |
 | 11 | `imodel::keep` + `effort::auto` injects no `--effort` flag | `imodel::`, `effort::` | When `imodel::keep`, no model is known at dispatch time; `effort::auto` resolves to no `--effort` flag to avoid incompatible model/effort combinations |
+| 12 | `solo::1` is incompatible with `rotate::1` | `solo::`, `rotate::` | Exits 1 before any fetch — rotation requires live data from candidates but solo prevents live-fetching them |
 
 ---
 
@@ -289,4 +290,32 @@ clp .usage imodel::keep effort::auto
 # imodel::keep + effort::high: --effort high is injected (explicit, model-independent)
 clp .usage imodel::keep effort::high
 # subprocess runs: claude --effort high --print .
+```
+
+---
+
+### Interaction :: 12. `solo::1` is incompatible with `rotate::1`
+
+**Parameters:** [`solo::`](param/060_solo.md), [`rotate::`](param/059_rotate.md)
+
+**Effect:** When both `solo::1` and `rotate::1` are specified on `.usage`, the command exits 1 before any fetch with an error message referencing both `"solo"` and `"rotate"`. No table rendered.
+
+**Rationale:** `rotate::1` needs live quota data from all candidate accounts to select the best switch target. `solo::1` prevents live-fetching any account except the current+owned one — candidates would have approximated data only, making rotation decisions unreliable. The two intents conflict: solo conserves tokens by avoiding API calls, while rotation requires API calls to make an informed decision.
+
+**Commands affected:** [`.usage`](command/006_usage.md#command--9-usage)
+
+**Examples:**
+
+```bash
+# Rejected before any fetch — exits 1
+clp .usage solo::1 rotate::1
+# error: solo::1 is incompatible with rotate::1
+
+# Valid: solo without rotation
+clp .usage solo::1
+# ...table with live data for current+owned, approximated for others...
+
+# Valid: rotation without solo
+clp .usage rotate::1
+# ...table + switch to recommended account...
 ```

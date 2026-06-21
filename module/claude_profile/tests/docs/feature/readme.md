@@ -13,7 +13,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | File | Responsibility |
 |------|----------------|
-| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 39 feature docs |
+| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 40 feature docs |
 | 01_account_store_init.md | FT cases for Feature 001 — Account Store Initialization |
 | 02_account_save.md | FT cases for Feature 002 — Save Account |
 | 03_account_list.md | FT cases for Feature 003 — Accounts |
@@ -53,6 +53,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 37_accounts_usage_param_unification.md | FT cases for Feature 037 — Accounts/Usage Parameter Set Unification |
 | 38_usage_strategy_rotate.md | FT cases for Feature 038 — Usage Strategy Rotate |
 | 39_decision_algorithms.md | FT cases for Feature 039 — Decision Algorithm Reference |
+| 40_quota_measurement_history.md | FT cases for Feature 040 — Quota Measurement History and Polynomial Approximation |
 
 ### Coverage Summary
 
@@ -67,7 +68,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 006_token_status | [006_token_status.md](06_token_status.md) | FT-01 … FT-04 | ✅ |
 | 007_file_topology | [007_file_topology.md](07_file_topology.md) | FT-01 … FT-06 | ✅ |
 | 008_auto_rotate | [008_auto_rotate.md](08_auto_rotate.md) | FT-01 … FT-04 | ✅ |
-| 009_token_usage | [009_token_usage.md](09_token_usage.md) | FT-01 … FT-28 | ✅ |
+| 009_token_usage | [009_token_usage.md](09_token_usage.md) | FT-01 … FT-32 | ✅ |
 | 010_persistent_storage | [010_persistent_storage.md](10_persistent_storage.md) | FT-01 … FT-07 | ✅ |
 | 011_account_status_by_name | [011_account_status_by_name.md](11_account_status_by_name.md) | FT-01 … FT-05 | ✅ |
 | 012_live_credentials_status | [012_live_credentials_status.md](12_live_credentials_status.md) | FT-01 … FT-07 | ✅ |
@@ -75,17 +76,17 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 014_rich_account_metadata | [014_rich_account_metadata.md](14_rich_account_metadata.md) | FT-01 … FT-12 | ✅ |
 | 015_name_shortcut_syntax | [015_name_shortcut_syntax.md](15_name_shortcut_syntax.md) | FT-01 … FT-14 | ✅ |
 | 016_current_account_awareness | [016_current_account_awareness.md](16_current_account_awareness.md) | FT-01 … FT-11 | ✅ |
-| 017_token_refresh | [017_token_refresh.md](17_token_refresh.md) | FT-01 … FT-18 | ✅ |
+| 017_token_refresh | [017_token_refresh.md](17_token_refresh.md) | FT-01 … FT-21 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](18_live_monitor.md) | FT-01 … FT-09 | ✅ |
 | 019_account_relogin | [019_account_relogin.md](19_account_relogin.md) | FT-01 … FT-11 | ✅ |
-| 020_usage_sort_strategies | [020_usage_sort_strategies.md](20_usage_sort_strategies.md) | FT-01 … FT-12 | ✅ |
+| 020_usage_sort_strategies | [020_usage_sort_strategies.md](20_usage_sort_strategies.md) | FT-01 … FT-13 | ✅ |
 | 021_extended_snapshot_fields | [021_extended_snapshot_fields.md](21_extended_snapshot_fields.md) | FT-01 … FT-09 | ✅ |
 | 022_org_identity_snapshot | [022_org_identity_snapshot.md](22_org_identity_snapshot.md) | FT-01 … FT-11 | ✅ |
 | ~~023_next_account_strategies~~ | ~~[023_next_account_strategies.md](23_next_account_strategies.md)~~ | ~~FT-01 … FT-19~~ | ⛔ DEPRECATED |
-| 024_session_touch | [024_session_touch.md](24_session_touch.md) | FT-01 … FT-21 | ✅ |
-| 025_per_machine_active_marker | [025_per_machine_active_marker.md](25_per_machine_active_marker.md) | FT-01 … FT-12 | ✅ |
-| 026_subprocess_model_effort | [026_subprocess_model_effort.md](26_subprocess_model_effort.md) | FT-01 … FT-30 | ✅ |
-| 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](27_account_use_post_switch_touch.md) | FT-01 … FT-21 | ✅ |
+| 024_session_touch | [024_session_touch.md](24_session_touch.md) | FT-01 … FT-22 | ✅ |
+| 025_per_machine_active_marker | [025_per_machine_active_marker.md](25_per_machine_active_marker.md) | FT-01 … FT-13 | ✅ |
+| 026_subprocess_model_effort | [026_subprocess_model_effort.md](26_subprocess_model_effort.md) | FT-01 … FT-31 | ✅ |
+| 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](27_account_use_post_switch_touch.md) | FT-01 … FT-22 | ✅ |
 | 028_usage_row_filtering | [028_usage_row_filtering.md](28_usage_row_filtering.md) | FT-01 … FT-17 | ✅ |
 | 029_account_host_metadata | [029_account_host_metadata.md](29_account_host_metadata.md) | FT-01 … FT-10 | ✅ |
 | 030_account_renewal_override | [030_account_renewal_override.md](30_account_renewal_override.md) | FT-01 … FT-15 | ✅ |
@@ -97,9 +98,10 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-21 | ✅ |
 | 037_accounts_usage_param_unification | [037_accounts_usage_param_unification.md](37_accounts_usage_param_unification.md) | FT-01 … FT-21 | ✅ |
 | 038_usage_strategy_rotate | [038_usage_strategy_rotate.md](38_usage_strategy_rotate.md) | FT-01 … FT-10 | ✅ |
-| 039_decision_algorithms | [039_decision_algorithms.md](39_decision_algorithms.md) | FT-01 … FT-08 | ✅ |
+| 039_decision_algorithms | [039_decision_algorithms.md](39_decision_algorithms.md) | FT-01 … FT-12 | ✅ |
+| 040_quota_measurement_history | [040_quota_measurement_history.md](40_quota_measurement_history.md) | FT-01 … FT-13 | ✅ |
 
-**Total:** 40 specs — 39 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+**Total:** 41 specs — 40 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 
 ### Cross-Reference Depth
 

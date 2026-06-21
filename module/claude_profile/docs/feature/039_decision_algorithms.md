@@ -1,7 +1,7 @@
 # Feature 039 — Decision Algorithm Reference
 
-- **Purpose**: Unified reference for the five core decision algorithms that govern model selection, quota classification, and next-account recommendation.
-- **Cross-references**: [020](020_usage_sort_strategies.md) (sort strategies, status groups), [026](026_subprocess_model_effort.md) (touch model), [027](027_account_use_post_switch_touch.md) (session model override), [036](036_account_ownership.md) (ownership gates), [038](038_usage_strategy_rotate.md) (auto-switch)
+- **Purpose**: Unified reference for the six core decision algorithms that govern model selection, quota classification, next-account recommendation, and quota approximation.
+- **Cross-references**: [020](020_usage_sort_strategies.md) (sort strategies, status groups), [026](026_subprocess_model_effort.md) (touch model), [027](027_account_use_post_switch_touch.md) (session model override), [036](036_account_ownership.md) (ownership gates), [038](038_usage_strategy_rotate.md) (auto-switch), [040](040_quota_measurement_history.md) (measurement history and approximation)
 
 ---
 
@@ -9,17 +9,16 @@
 
 How `resolve_model()` selects the model for keep-alive touch pings.
 
-Entry point: `subprocess.rs:35-49` (`resolve_model`).
+Entry point: `subprocess.rs:29-59` (`resolve_model`).
 
-| `seven_day_sonnet` | `resets_at` | Touch Model | Rationale |
-|---|---|---|---|
-| `None` | — | Haiku | No Sonnet tier — conserve quota |
-| `Some` | `None` | **Sonnet** | `son_idle=true` — activate idle Sonnet window |
-| `Some` | `Some(...)` | Haiku | `son_idle=false` — Sonnet window active **(BUG-301: ignores utilization)** |
+| `seven_day_sonnet` | `resets_at` | `utilization` | Touch Model | Rationale |
+|---|---|---|---|---|
+| `None` | — | — | Haiku | No Sonnet tier — conserve quota |
+| `Some` | `None` | any | **Sonnet** | `son_idle=true` — activate idle Sonnet window (Haiku cannot open it) |
+| `Some` | `Some(...)` | < 80% | **Sonnet** | `son_available=true` — window active, > 20% remaining; use quota before window expires |
+| `Some` | `Some(...)` | ≥ 80% | Haiku | `son_available=false` — Sonnet near-exhausted (≤ 20% remaining); conserve last reserves |
 
-`son_idle` gate at `subprocess.rs:41`: `data.seven_day_sonnet.as_ref().is_some_and(|p| p.resets_at.is_none())` — binary check; `p.utilization` is never read.
-
-**Known bug (BUG-301):** When Sonnet window is active with substantial remaining quota (e.g., 40%), Haiku is still selected. The gate never reads utilization.
+Utilization-aware gate at `subprocess.rs:29-59` (Fix BUG-301, TSK-311): `son_idle = son.resets_at.is_none()`, `son_available = 100.0 - son.utilization > 20.0`; selects Sonnet when `son_idle || son_available`. Falls through to Haiku when Sonnet tier absent or ≤ 20% remaining.
 
 ---
 
@@ -125,12 +124,37 @@ Lower weekly capacity = benefits most from the upcoming renewal event. An accoun
 
 ---
 
+## Table 6 — Quota Approximation
+
+How `approximate_utilization()` estimates quota levels when the server is unavailable (rate-limited, timeout, network error).
+
+Entry point: `approx.rs` (`approximate_utilization`).
+
+| Measurements (post-filter) | Degree | Method | Fallback |
+|---|---|---|---|
+| 0 | — | `None` | No data |
+| 1 | 0 | Constant (last value) | — |
+| 2 | 1 | Linear extrapolation | — |
+| 3–10 | 2 | Quadratic LS (Cramer 3x3) | linear if singular |
+
+Pre-fit: discard measurements before `window_start` (`resets_at - window_duration`: 18000s for 5h, 604800s for 7d). If `now > resets_at` → return 0.0 (window expired).
+
+Post-fit: clamp to [0.0, 100.0]. If extrapolation > 2x measurement span → tangent-line continuation (evaluate derivative at t_max, extend linearly).
+
+Time normalization: subtract `t_values[0]` before computing power sums to avoid f64 precision loss on large Unix timestamps.
+
+---
+
 ## Source Reference
 
 | Algorithm | Primary source | Related features |
 |---|---|---|
-| Touch model selection | `src/usage/subprocess.rs:35-49` | 024, 026 |
+| Touch model selection | `src/usage/subprocess.rs:29-59` | 024, 026 |
 | Session model override | `src/usage/api.rs:259-290` | 027, 034 |
 | Quota status groups | `src/usage/sort.rs:22-48` | 020 |
 | Eligibility gates | `src/usage/sort_next.rs:16-36, 46-83` | 020, 036, 038 |
 | Positive selection | `src/usage/sort.rs:62-173`, `sort_next.rs:46-83` | 020, 038 |
+| Quota approximation | `src/usage/approx.rs` | 033, 040 |
+| Solo gate (fetch) | `src/usage/fetch.rs` (after G1) | 036, 060 |
+| Solo gate (refresh) | `src/usage/refresh.rs` (after G2) | 036, 060 |
+| Solo gate (touch) | `src/usage/touch.rs` (after G4b) | 036, 060 |

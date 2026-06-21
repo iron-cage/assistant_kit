@@ -8,12 +8,16 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 |----|-----------|-------|-------|
 | FT-01 | Touch model: idle Sonnet window → Sonnet | Table 1 | Unit test |
 | FT-02 | Touch model: absent Sonnet tier → Haiku | Table 1 | Unit test |
+| FT-09 | Touch model: active Sonnet window, 40% remaining → Sonnet | Table 1 | Unit test — Fix BUG-301 |
 | FT-03 | Session model override: exactly 15% Sonnet left → no override | Table 2 | Boundary — Phase 1 fix |
 | FT-04 | Session model override: below 15% Sonnet left → Opus | Table 2 | Boundary — Phase 1 fix |
 | FT-05 | Status groups: four-group partition order | Table 3 | Unit test |
 | FT-06 | Eligibility gate G7: `prefer_weekly ≤ 5.0` → account skipped | Table 4 | Phase 2 |
 | FT-07 | Eligibility gate G7: `prefer_weekly > 5.0` → account eligible | Table 4 | Phase 2 |
 | FT-08 | Positive selection: first eligible Green account wins | Table 5 | Unit test |
+| FT-10 | Quadratic extrapolation from 3+ measurements | Table 6 | Cross-ref F040 FT-04 |
+| FT-11 | Expired window returns 0.0 | Table 6 | Cross-ref F040 FT-07 |
+| FT-12 | Singular matrix falls back to constant | Table 6 | Cross-ref F040 FT-10 |
 
 ### Test Case Index
 
@@ -21,22 +25,26 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 |----|-----------|-------|----------|
 | FT-01 | Touch model idle Sonnet → Sonnet | Table 1 | Touch Model |
 | FT-02 | Touch model absent Sonnet → Haiku | Table 1 | Touch Model |
+| FT-09 | Touch model active Sonnet, 40% remaining → Sonnet | Table 1 | Touch Model |
 | FT-03 | Session override at 15% boundary → no-op | Table 2 | Session Override |
 | FT-04 | Session override below 15% → Opus | Table 2 | Session Override |
 | FT-05 | Status group four-partition order | Table 3 | Status Groups |
 | FT-06 | Gate 7 prefer_weekly ≤ 5.0 skips account | Table 4 | Eligibility |
 | FT-07 | Gate 7 prefer_weekly > 5.0 passes account | Table 4 | Eligibility |
 | FT-08 | Positive selection first eligible wins | Table 5 | Selection |
+| FT-10 | Quadratic extrapolation from 3+ measurements | Table 6 | Approximation |
+| FT-11 | Expired window returns 0.0 | Table 6 | Approximation |
+| FT-12 | Singular matrix falls back to constant | Table 6 | Approximation |
 
-**Total:** 8 FT cases
+**Total:** 12 FT cases
 
 ---
 
 ### FT-01: Touch model — idle Sonnet window selects Sonnet
 
 - **Given:** An `AccountQuota` with `seven_day_sonnet = Some(PeriodUsage { resets_at: None, utilization: 40.0 })` — Sonnet tier present, `resets_at = None` (no active window → `son_idle = true`).
-- **When:** `resolve_model(aq)` is called (entry point: `subprocess.rs:35-49`).
-- **Then:** Returns `Sonnet`. The `son_idle` gate fires: `is_some_and(|p| p.resets_at.is_none()) = true`. Sonnet is selected to activate the idle window.
+- **When:** `resolve_model(aq)` is called (entry point: `subprocess.rs:29-59`).
+- **Then:** Returns `Sonnet`. `son_idle = son.resets_at.is_none() = true` (no active window). Gate `son_idle || son_available`: `son_idle=true` → Sonnet selected to activate the idle window.
 - **Note:** Table 1 row 2. This is the warm-up case: no active Sonnet session → using Sonnet keeps it warm.
 - **Source fn:** `it_imodel_auto_selects_sonnet_when_son_idle` (in `src/usage/subprocess.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 1](../../../docs/feature/039_decision_algorithms.md)
@@ -47,9 +55,20 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 
 - **Given:** An `AccountQuota` with `seven_day_sonnet = None` — no Sonnet tier on this account.
 - **When:** `resolve_model(aq)` is called.
-- **Then:** Returns `Haiku`. The outer `is_some_and` check fails immediately. No Sonnet tier → conserve quota.
+- **Then:** Returns `Haiku`. `if let Some(ref son) = data.seven_day_sonnet` does not match (tier absent). Falls through to Haiku. No Sonnet tier → conserve quota.
 - **Note:** Table 1 row 1.
 - **Source fn:** `it_imodel_auto_selects_haiku_when_son_tier_absent` (in `src/usage/subprocess.rs`)
+- **Source:** [feature/039_decision_algorithms.md Table 1](../../../docs/feature/039_decision_algorithms.md)
+
+---
+
+### FT-09: Touch model — active Sonnet window with remaining quota selects Sonnet
+
+- **Given:** An `AccountQuota` with `seven_day_sonnet = Some(PeriodUsage { resets_at: Some("2026-06-20T..."), utilization: 60.0 })` — Sonnet window active (`resets_at=Some`), 40% quota remaining (`100.0 - 60.0 = 40.0 > 20.0` → `son_available=true`).
+- **When:** `resolve_model(aq)` is called (entry point: `subprocess.rs:29-59`).
+- **Then:** Returns `Sonnet`. `son_idle=false` (window running), but `son_available=true` (40% > 20% threshold). Gate `son_idle || son_available = true`. Remaining Sonnet quota must not expire unused.
+- **Note:** Table 1 row 3. Fix BUG-301 (TSK-311): old binary `son_idle` gate returned Haiku in this case; extended gate adds `son_available` check so quota is consumed before window expires.
+- **Source fn:** `mre_bug301_son_active_with_remaining_quota_selects_sonnet` (in `src/usage/subprocess.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 1](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -122,12 +141,46 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 
 ---
 
+### FT-10: Quadratic extrapolation from 3+ measurements
+
+- **Given:** A history of 3 non-collinear measurements with accelerating utilization: `[(t0, 20.0), (t0+100, 50.0), (t0+200, 90.0)]`. Window active (`resets_at > now`). `now = t0 + 300`.
+- **When:** `approximate_utilization()` is called with the 3 measurements, `resets_at`, window duration, and `now`.
+- **Then:** Returns `Some(value)` where `value > 90.0` (extrapolated beyond last measurement due to accelerating quadratic fit). Value is clamped to [0.0, 100.0].
+- **Note:** Table 6 row "3–10 measurements → degree 2 quadratic LS (Cramer 3x3)". Detailed algorithm testing in F040 FT-04.
+- **Source fn:** `approx_quadratic_three_points_extrapolates` (in `src/usage/approx.rs`)
+- **Source:** [feature/039_decision_algorithms.md Table 6](../../../docs/feature/039_decision_algorithms.md)
+
+---
+
+### FT-11: Expired window returns 0.0
+
+- **Given:** Measurements exist in history, but the window has expired: `now > resets_at`.
+- **When:** `approximate_utilization()` is called with `resets_at_secs = Some(r)` where `now > r`.
+- **Then:** Returns `Some(0.0)`. Window expired → new window starts at 0% utilization regardless of historical measurements.
+- **Note:** Table 6 pre-fit: "If `now > resets_at` → return 0.0 (window expired)". Detailed testing in F040 FT-07.
+- **Source fn:** `approx_expired_window_returns_zero` (in `src/usage/approx.rs`)
+- **Source:** [feature/039_decision_algorithms.md Table 6](../../../docs/feature/039_decision_algorithms.md)
+
+---
+
+### FT-12: Singular matrix falls back to constant
+
+- **Given:** 3+ measurements that are perfectly collinear or have identical timestamps, producing a singular normal-equations matrix (`|det| < 1e-12`).
+- **When:** `approximate_utilization()` attempts quadratic LS fit.
+- **Then:** Falls back to linear; if linear also singular, returns last measurement value (constant). Result is clamped to [0.0, 100.0].
+- **Note:** Table 6 fallback column: "linear if singular". Detailed testing in F040 FT-10.
+- **Source fn:** `approx_singular_matrix_falls_back_to_constant` (in `src/usage/approx.rs`)
+- **Source:** [feature/039_decision_algorithms.md Table 6](../../../docs/feature/039_decision_algorithms.md)
+
+---
+
 ## Source Reference
 
 | Algorithm | Unit Tests | Implementation |
 |-----------|-----------|----------------|
-| Touch model selection (Table 1) | `src/usage/subprocess.rs` (touch model tests) | `subprocess.rs:35-49` |
+| Touch model selection (Table 1) | `it_imodel_auto_selects_sonnet_when_son_idle`, `it_imodel_auto_selects_haiku_when_son_tier_absent`, `mre_bug301_son_active_with_remaining_quota_selects_sonnet` in `src/usage/subprocess.rs` | `subprocess.rs:29-59` |
 | Session model override (Table 2) | `t07_model_override_skips_at_and_above_15pct_boundary` in `src/usage/api_tests.rs`; `test_render_footer_model_label_at_15pct_no_override`, `test_render_footer_model_label_below_15pct_opus` in `src/usage/render_tests.rs` | `api.rs:259-290`, `render.rs:258` |
 | Quota status groups (Table 3) | `test_three_tier_grouping_*` in `src/usage/mod.rs` | `sort.rs:31-48` |
 | Eligibility gates (Table 4) | `test_relevant_quotas_*` in `src/usage/format_tests.rs` | `sort_next.rs:24-35, 59` |
 | Positive selection (Table 5) | `test_sort_name_alphabetical` in `src/usage/sort.rs` | `sort_next.rs:46-83` |
+| Quota approximation (Table 6) | `approx_quadratic_three_points_extrapolates`, `approx_expired_window_returns_zero`, `approx_singular_matrix_falls_back_to_constant` in `src/usage/approx.rs` | `approx.rs` |

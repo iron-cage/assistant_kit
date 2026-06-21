@@ -10,7 +10,7 @@
 | File | Responsibility |
 |------|----------------|
 | cli/ | CLI design documentation (commands, params, types) |
-| feature/ | Functional requirement doc instances (feature/001 through feature/037) |
+| feature/ | Functional requirement doc instances (feature/001 through feature/040) |
 | invariant/ | Non-functional constraint doc instances (invariant/001 through invariant/007) |
 | entity/ | Master index of all doc entities and instances |
 | doc_graph.yml | Cross-reference graph for feature/ and invariant/ doc instances |
