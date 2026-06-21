@@ -1128,3 +1128,135 @@
        and who=Some(true); got:\n{output}",
     );
   }
+
+  // ── Corner-case tests ───────────────────────────────────────────────────────
+
+  /// CC-06: Single valid account → footer is NOT emitted.
+  ///
+  /// Root Cause: `valid_count < 2` guard at render.rs:226 early-returns without footer.
+  /// Verifies the `< 2` threshold — a single valid account must not show
+  /// "Current" / "Next" / "Valid:" lines.
+  #[ test ]
+  fn cc_single_valid_account_no_footer()
+  {
+    use crate::usage::test_support::mk_aq_ok;
+    let mut aq = mk_aq_ok( 20.0 );
+    aq.is_current = true;
+    let accounts = vec![ aq ];
+    let output = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), None, None, None, None,
+    );
+    // "Current ·" is the footer format; bare "Current" could appear elsewhere.
+    assert!(
+      !output.contains( "Current \u{00b7}" ),
+      "CC-06: single valid account must not show 'Current ·' footer; got:\n{output}",
+    );
+    // "Next (" is the footer format `Next (name)` / `Next (renew)`.
+    assert!(
+      !output.contains( "Next (" ),
+      "CC-06: single valid account must not show 'Next (...)' footer; got:\n{output}",
+    );
+    assert!(
+      !output.contains( "Valid:" ),
+      "CC-06: single valid account must not show 'Valid:' footer; got:\n{output}",
+    );
+  }
+
+  /// CC-07: No `is_current` account among ≥2 valid → legacy "Valid: N / M" footer.
+  ///
+  /// Root Cause: the `if let Some( cur ) = accounts.iter().find(|aq| aq.is_current)`
+  /// guard at render.rs:260 falls to the `else` branch producing "Valid: N / M".
+  /// Verifies the fallback format when credentials are unreadable.
+  #[ test ]
+  fn cc_no_current_account_uses_legacy_footer()
+  {
+    // Two valid accounts, neither is_current → legacy footer.
+    let mk = | name : &str |
+    {
+      AccountQuota
+      {
+        name                  : name.to_string(),
+        is_current            : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
+        expires_at_ms         : FAR_FUTURE_MS,
+        result                : Ok( claude_quota::OauthUsageData
+        {
+          five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+          seven_day        : None,
+          seven_day_sonnet : None,
+        } ),
+        account               : None,
+        host                  : String::new(),
+        role                  : String::new(),
+        renewal_at            : None,
+        cached                : false,
+        cache_age_secs        : None,
+        is_owned              : true,
+        owner                 : String::new(),
+      }
+    };
+    let accounts = vec![ mk( "a@x.com" ), mk( "b@x.com" ) ];
+    let output = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), None, None, None, None,
+    );
+    assert!(
+      output.contains( "Valid:" ),
+      "CC-07: no is_current among ≥2 valid must use legacy 'Valid:' footer; got:\n{output}",
+    );
+    assert!(
+      !output.contains( "Current" ),
+      "CC-07: legacy footer must not contain 'Current' line; got:\n{output}",
+    );
+  }
+
+  /// CC-08: Effort-only session (no model) → footer col3 shows just the effort level.
+  ///
+  /// Root Cause: the `(None, Some(se)) => se.to_string()` branch at render.rs:266.
+  /// Verifies that effort alone is rendered without a leading "/" or "session:" label.
+  #[ test ]
+  fn cc_effort_only_footer_shows_effort_without_model()
+  {
+    // 3 accounts: cur + 2 non-current → 2-line footer.
+    let mk = | name : &str, cur : bool |
+    {
+      AccountQuota
+      {
+        name                  : name.to_string(),
+        is_current            : cur,
+        is_active             : false,
+        is_occupied_elsewhere : false,
+        expires_at_ms         : FAR_FUTURE_MS,
+        result                : Ok( claude_quota::OauthUsageData
+        {
+          five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+          seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+          seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 50.0, resets_at : None } ),
+        } ),
+        account               : None,
+        host                  : String::new(),
+        role                  : String::new(),
+        renewal_at            : None,
+        cached                : false,
+        cache_age_secs        : None,
+        is_owned              : true,
+        owner                 : String::new(),
+      }
+    };
+    let accounts = vec![ mk( "cur@x.com", true ), mk( "a@x.com", false ), mk( "b@x.com", false ) ];
+    let output = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), None, Some( "high" ), None, None,
+    );
+    // Footer line 1 col3 must contain "high" (effort only, no model prefix).
+    assert!(
+      output.contains( "high" ),
+      "CC-08: effort-only footer must contain effort level 'high'; got:\n{output}",
+    );
+    assert!(
+      !output.contains( "/high" ),
+      "CC-08: effort-only footer must not have model prefix '/high'; got:\n{output}",
+    );
+  }

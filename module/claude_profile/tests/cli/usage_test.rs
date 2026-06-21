@@ -231,6 +231,8 @@
 //! | it266 | `it266_solo_trace_shows_solo_skip`                 | `solo::1 trace::1` — stderr has `solo-skip: approximated` for non-current (061 EC-10) | P | no |
 //! | it267 | `it267_solo_true_rejected_type_error`              | `solo::true` exits 1 — Kind::Integer rejects string (061 EC-11) | N | no |
 //! | it268 | `it268_solo_2_rejected_out_of_range`               | `solo::2` exits 1 — integer outside {0, 1} (061 EC-12) | N | no |
+//! | it269 | `it269_solo_json_format_with_approximated_accounts` | `solo::1 format::json` — JSON valid with approximated data (CC) | P | no |
+//! | it270 | `it270_solo_single_current_account_no_skip`        | `solo::1` single current account — no solo-skip (CC) | P | no |
 
 use crate::cli_runner::{
   BIN,
@@ -7605,6 +7607,84 @@ fn it268_solo_2_rejected_out_of_range()
   assert!(
     err.contains( "solo" ),
     "EC-12: error message must reference `solo`; got stderr:\n{err}",
+  );
+}
+
+// ── Cross-feature corner cases ────────────────────────────────────────────────
+
+/// it269 (CC): `solo::1 format::json` — JSON output works with solo-approximated data.
+///
+/// Solo gate uses `approximate_quota()` for non-current accounts, which produces
+/// `AccountQuota` with `cached=true` and `is_owned=true`. JSON renderer must handle
+/// these approximated rows identically to live-fetched rows (no panic, no missing fields).
+#[ test ]
+fn it269_solo_json_format_with_approximated_accounts()
+{
+  let dir              = TempDir::new().unwrap();
+  let home             = dir.path().to_str().unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  // Two owned accounts — no active marker, no live credentials.
+  write_account( dir.path(), "alice@work.pro", "max", "tier4", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "bob@home.pro",   "max", "tier4", FAR_FUTURE_MS, false );
+
+  // Quota cache so approximate_quota returns data.
+  for name in &[ "alice@work.pro", "bob@home.pro" ]
+  {
+    let cache = serde_json::json!({ "cache": { "fetched_at": "2026-01-01T10:00:00Z", "five_hour": { "left_pct": 40.0 } } });
+    std::fs::write(
+      credential_store.join( format!( "{name}.json" ) ),
+      serde_json::to_string_pretty( &cache ).unwrap() + "\n",
+    ).unwrap();
+  }
+
+  let out = run_cs_with_env( &[ ".usage", "solo::1", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let json_str = stdout( &out );
+  // Must be valid JSON array.
+  let parsed : serde_json::Value = serde_json::from_str( &json_str )
+    .unwrap_or_else( |e| panic!( "CC: solo+json must produce valid JSON; err={e}; raw:\n{json_str}" ) );
+  assert!(
+    parsed.is_array(),
+    "CC: solo+json output must be a JSON array; got:\n{json_str}",
+  );
+}
+
+/// it270 (CC): `solo::1` with a single account that IS current — solo has no effect.
+///
+/// When only one account exists and it is the current one, the solo gate lets it
+/// through for live fetch (not approximation). The output must show the account
+/// without any "solo-skip" trace in the fetch phase.
+///
+/// `is_current` requires both: (1) `write_account_with_token` stores the token in
+/// the credential store, (2) `write_live_credentials_with_token` writes the same
+/// token to `~/.claude/.credentials.json` so the live-token comparison succeeds.
+#[ test ]
+fn it270_solo_single_current_account_no_skip()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  // Single owned account with matching live credentials → is_current=true.
+  write_account_with_token( dir.path(), "only@work.pro", "tok-only", true );
+  write_live_credentials_with_token( dir.path(), "tok-only" );
+
+  // Quota cache (used as fallback; but the fetch gate should let it through).
+  let cache = serde_json::json!({ "cache": { "fetched_at": "2026-01-01T10:00:00Z", "five_hour": { "left_pct": 50.0 } } });
+  std::fs::write(
+    store.join( "only@work.pro.json" ),
+    serde_json::to_string_pretty( &cache ).unwrap() + "\n",
+  ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "solo::1", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  // No trace line for this account should contain "solo-skip" in the fetch phase.
+  let fetch_solo_skip = err.lines().any( |l| l.contains( "fetch" ) && l.contains( "solo-skip" ) );
+  assert!(
+    !fetch_solo_skip,
+    "CC: fetch phase must not solo-skip the current account; got stderr:\n{err}",
   );
 }
 
