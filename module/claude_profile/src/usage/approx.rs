@@ -350,4 +350,89 @@ mod tests
       "FT-10: singular matrix must fall back to last measurement 52.0; got {v}",
     );
   }
+
+  // ── Corner-case tests ───────────────────────────────────────────────────────
+
+  /// CC-01: Empty measurements → None.
+  ///
+  /// Root Cause: if the ring buffer has never been written, `measurements` is `&[]`.
+  /// Verifies the `0 => None` arm at line 59.
+  #[ test ]
+  fn cc_empty_input_returns_none()
+  {
+    let pts : &[ ( u64, f64 ) ] = &[];
+    assert_eq!(
+      approximate_utilization( pts, None, 18000, 1000 ),
+      None,
+      "CC-01: empty measurements must return None",
+    );
+  }
+
+  /// CC-02: Single measurement → degree-0 constant (clamped).
+  ///
+  /// Root Cause: ring buffer with only one entry uses constant extrapolation.
+  /// Verifies `1 => Some( pts[0].1.clamp(...) )` at line 60.
+  #[ test ]
+  fn cc_single_measurement_returns_constant()
+  {
+    let pts : &[ ( u64, f64 ) ] = &[ ( 500, 42.0 ) ];
+    let result = approximate_utilization( pts, None, 18000, 9999 );
+    assert_eq!(
+      result,
+      Some( 42.0 ),
+      "CC-02: single measurement must return its value regardless of now_secs",
+    );
+  }
+
+  /// CC-03: `now_secs == resets_at_secs` → NOT expired (strict `>` comparison).
+  ///
+  /// Root Cause: boundary condition — `now_secs > r` (strict), so equality means
+  /// the window is still active. An off-by-one here would incorrectly return 0.0.
+  #[ test ]
+  fn cc_now_equals_resets_at_is_not_expired()
+  {
+    let pts : &[ ( u64, f64 ) ] = &[ ( 1000, 50.0 ), ( 2000, 60.0 ), ( 3000, 70.0 ) ];
+    let resets_at : u64 = 3000;
+    let result = approximate_utilization( pts, Some( resets_at ), 18000, resets_at );
+    // Must NOT be Some(0.0) — the strict `>` guard should not fire at equality.
+    assert_ne!(
+      result,
+      Some( 0.0 ),
+      "CC-03: now_secs == resets_at must NOT trigger expiry; got Some(0.0)",
+    );
+    assert!( result.is_some(), "CC-03: must return Some (points exist)" );
+  }
+
+  /// CC-04: Linear extrapolation with negative slope → clamps to 0.0.
+  ///
+  /// Root Cause: when utilization decreases over time, the polynomial can
+  /// extrapolate below zero. The `clamp(0.0, 100.0)` at line 80 must catch this.
+  #[ test ]
+  fn cc_negative_slope_clamps_to_zero()
+  {
+    // Slope = (10 - 90) / (1000 - 0) = -0.08/s.  At t=2000: y = 90 + (-0.08)*2000 = -70.
+    let pts : &[ ( u64, f64 ) ] = &[ ( 0, 90.0 ), ( 1000, 10.0 ) ];
+    let result = approximate_utilization( pts, None, 18000, 2000 );
+    assert_eq!(
+      result,
+      Some( 0.0 ),
+      "CC-04: negative extrapolation must clamp to 0.0",
+    );
+  }
+
+  /// CC-05: Two identical timestamps (degenerate linear) → returns last value.
+  ///
+  /// Root Cause: `linear_extrapolate` has `dt.abs() < 1e-12` guard returning `last.1`.
+  /// Verifies the degenerate arm doesn't panic or produce NaN.
+  #[ test ]
+  fn cc_degenerate_linear_identical_timestamps()
+  {
+    let pts : &[ ( u64, f64 ) ] = &[ ( 500, 30.0 ), ( 500, 45.0 ) ];
+    let result = approximate_utilization( pts, None, 18000, 600 );
+    let v = result.expect( "CC-05: must return Some for 2-point degenerate" );
+    assert!(
+      ( v - 45.0 ).abs() < 1e-9,
+      "CC-05: degenerate linear must return last value 45.0; got {v}",
+    );
+  }
 }
