@@ -48,7 +48,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--max-sessions`](../param/033_max_sessions.md) | u32 | `30` | Max concurrent claude sessions before blocking (0 = unlimited) |
 | [`--retry-on-transient`](../param/034_retry_on_transient.md) | u8 | auto | Transient class retry count (Tier 2; effective default = 2 via fallback) |
 | [`--transient-delay`](../param/035_transient_delay.md) | u32 | auto | Transient class delay (Tier 2; effective default = 30 via fallback) |
-| [`--timeout`](../param/036_timeout.md) | u32 | `0` | Seconds before watchdog kills subprocess (0 = unlimited) |
+| [`--timeout`](../param/036_timeout.md) | u32 | `3600` (print-mode) / `0` (interactive) | Seconds before watchdog kills subprocess (absent → `DEFAULT_PRINT_TIMEOUT_SECS` for print-mode; 0 = unlimited) |
 | [`--retry-on-account`](../param/040_retry_on_account.md) | u8 | 0 | Account class retry count (class default = 0; opt-in only) |
 | [`--account-delay`](../param/041_account_delay.md) | u32 | auto | Account class delay (Tier 2) |
 | [`--retry-on-auth`](../param/042_retry_on_auth.md) | u8 | auto | Auth class retry count (Tier 2) |

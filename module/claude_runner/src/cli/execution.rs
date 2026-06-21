@@ -388,6 +388,10 @@ pub( super ) fn apply_runner_retry( cli : &CliArgs, err : &std::io::Error, attem
   std::process::exit( 1 );
 }
 
+/// Default watchdog for print-mode when `--timeout` is absent and `CLR_TIMEOUT` is unset.
+/// Interactive mode retains `unwrap_or( 0 )` (unlimited) — `run_interactive()` must NOT adopt this constant.
+const DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600;
+
 /// Execute in non-interactive print mode (captures output).
 ///
 /// Both `--print` (passed to claude) and output capture are required:
@@ -398,12 +402,25 @@ pub( super ) fn apply_runner_retry( cli : &CliArgs, err : &std::io::Error, attem
 /// Uses a 4-tier retry hierarchy: override → class-specific → class-default → fallback.
 /// Every error class is retried when its effective count > 0.
 /// Console output uses `[Class] <message>` format on stderr.
-/// Supports subprocess timeout via `--timeout` (0 = unlimited).
+/// Supports subprocess timeout via `--timeout` (0 = unlimited; absent = `DEFAULT_PRINT_TIMEOUT_SECS`).
 #[ allow( clippy::too_many_lines ) ]
 pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
 {
   let verbosity    = cli.verbosity.unwrap_or_default();
-  let timeout_secs = cli.timeout.unwrap_or( 0 );
+  // Fix(BUG-305): print-mode sessions had no default watchdog, leaving unattended sessions unbounded.
+  // Root cause: unwrap_or( 0 ) treated absent --timeout as unlimited; print-mode should default to 1h.
+  // Pitfall: DEFAULT_PRINT_TIMEOUT_SECS applies ONLY here in run_print_mode(); run_interactive() must retain unwrap_or( 0 ) — it is user-attended.
+  let timeout_secs = cli.timeout.unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS );
+  // Validate stdin file before the retry loop — a missing file is a user error,
+  // not a transient spawn failure; it must not trigger runner retry.
+  if let Some( ref file_path ) = cli.file
+  {
+    if let Err( e ) = std::fs::File::open( file_path )
+    {
+      eprintln!( "Error: cannot open stdin file '{file_path}': {e}" );
+      std::process::exit( 1 );
+    }
+  }
   // Per-class attempt counters: [Transient, Account, Auth, Service, Process, Unknown]
   let mut attempts = [ 0usize; 6 ];
   // Fix(BUG-299): Runner retry counter — tracks spawn failure attempts separately from class retries.

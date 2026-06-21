@@ -13,10 +13,10 @@ Every `clr` command must be a bare word (no `-` or `--` prefix). Only parameters
 
 | Token Type | Prefix | Position | Examples |
 |------------|--------|----------|----------|
-| command | none (bare word) | first positional token | `run`, `ask`, `isolated`, `refresh`, `help`, `ps`, `kill` |
+| command | none (bare word) | first positional token | `run`, `ask`, `isolated`, `refresh`, `help`, `ps`, `kill`, `tools` |
 | parameter | `--` or `-` | anywhere after command | `--model`, `--creds`, `-p`, `--trace` |
 
-**All commands (7):**
+**All commands (8):**
 
 | Command | Dispatch | Notes |
 |---------|----------|-------|
@@ -27,6 +27,7 @@ Every `clr` command must be a bare word (no `-` or `--` prefix). Only parameters
 | `help` | explicit first token | `clr help` |
 | `ps` | explicit first token | `clr ps` — list running Claude Code sessions (Linux only) |
 | `kill` | explicit first token | `clr kill <pid>` — terminate a Claude Code session by PID |
+| `tools` | explicit first token | `clr tools` — list Claude Code built-in tools with version info |
 
 **Convenience aliases:** `--help` and `-h` are parameter-form aliases for the `help` command. They trigger identical behavior (`print_help()` + exit 0). The canonical invocation is `clr help`; the flag aliases exist for POSIX convention compliance.
 
@@ -36,11 +37,11 @@ Command dispatch in `run_cli()` uses exact string matching on the first non-flag
 
 1. If first token is `"run"` → strip it (tokens become remainder); both `clr run …` and `clr run help` go through this step first.
 2. If first token is `"help"` → call `print_help()` and return. Covers `clr help` and (post-strip) `clr run help`.
-3. `match` on first token: `"ask"` → `dispatch_ask()`, `"isolated"` → `dispatch_isolated()`, `"refresh"` → `dispatch_refresh()`, `"ps"` → `dispatch_ps()`, `"kill"` → `dispatch_kill()`.
+3. `match` on first token: `"ask"` → `dispatch_ask()`, `"isolated"` → `dispatch_isolated()`, `"refresh"` → `dispatch_refresh()`, `"ps"` → `dispatch_ps()`, `"kill"` → `dispatch_kill()`, `"tools"` → `dispatch_tools()`.
 4. `guard_unknown_subcommand()` — rejects token that resembles a known subcommand; exits 1 with "Did you mean" suggestion. Guard fires when: (a) `first.len() >= 4` and `sub.starts_with(first)` (prefix truncation), or (b) `is_close_typo(first, sub)` (1-char insertion/deletion/substitution). Minimum length of 4 prevents false positives from common short words (e.g. "is" sharing a prefix with "isolated").
 5. `dispatch_run()` — implicit `run` (no explicit subcommand token).
 
-The `KNOWN_SUBCOMMANDS` guard checks for typos/truncations of all registered subcommands (`run`, `ask`, `isolated`, `refresh`, `help`, `ps`, `kill`) before `parse_args()` is reached.
+The `KNOWN_SUBCOMMANDS` guard checks for typos/truncations of all registered subcommands (`run`, `ask`, `isolated`, `refresh`, `help`, `ps`, `kill`, `tools`) before `parse_args()` is reached.
 
 `--help`/`-h` flag aliases are handled inside `parse_args()` as a pre-scan fast-path (before any flag parsing) for backward compatibility.
 
