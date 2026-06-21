@@ -21,11 +21,6 @@ ELF process named `claude`.
 | IT-7 | `clr --help` lists `kill` subcommand | Help listing |
 | IT-8 | `clr kil` (typo) → exit 1, "Did you mean 'kill'?" | Typo guard |
 | IT-9 | `clr kill 1234 extra` → exit 1, unexpected argument | Extra argument |
-| IT-10 | `clr kill --stale` with no stale sessions → exit 0, "No stale" message | Stale: empty |
-| IT-11 | `clr kill --stale` with one stale print-mode session → exit 0, killed | Stale: kill |
-| IT-12 | `clr kill --stale` skips interactive sessions regardless of age | Stale: mode filter |
-| IT-13 | `clr kill --stale 1234` → exit 1, mutually exclusive | Stale: conflict |
-| IT-14 | `clr kill --help` lists `--stale` | Stale: help |
 
 ## Test Coverage Summary
 
@@ -37,9 +32,8 @@ ELF process named `claude`.
 - Help listing: 1 test (IT-7)
 - Typo guard: 1 test (IT-8)
 - Extra argument: 1 test (IT-9)
-- Stale: 5 tests (IT-10, IT-11, IT-12, IT-13, IT-14)
 
-**Total:** 14 tests
+**Total:** 9 tests
 
 ---
 
@@ -122,54 +116,4 @@ ELF process named `claude`.
 - **Command:** `clr kill 1234 extra`
 - **Expected behavior:** stderr contains `"unexpected argument"`; exit 1
 - **Exit:** 1
-- **Source:** [command/07_kill.md](../../../../docs/cli/command/07_kill.md)
-
----
-
-### IT-10: `--stale` with no stale sessions
-
-- **Setup:** no running claude processes (or all are recent / interactive)
-- **Command:** `clr kill --stale`
-- **Expected behavior:** exit 0; stdout contains `"No stale print-mode sessions found"`
-- **Exit:** 0
-- **Source:** [command/07_kill.md](../../../../docs/cli/command/07_kill.md)
-
----
-
-### IT-11: `--stale` kills stale print-mode session
-
-- **Setup:** fake `claude` process spawned with print-mode args (`--print`); process age simulated > 3600s via `_CLR_STALE_THRESHOLD=1` test override (kills sessions older than 1s); short sleep to ensure age > 1s
-- **Command:** `clr kill --stale` with `_CLR_STALE_THRESHOLD=1`
-- **Expected behavior:** exit 0; stdout contains `"Killed PID"` with the fake claude PID; fake process is dead after command completes
-- **Exit:** 0
-- **Source:** [command/07_kill.md](../../../../docs/cli/command/07_kill.md)
-- **Platform:** Linux/Unix only (`#[cfg(unix)]`)
-
----
-
-### IT-12: `--stale` skips interactive sessions
-
-- **Setup:** fake `claude` process spawned WITHOUT `--print` (interactive mode); process age > threshold
-- **Command:** `clr kill --stale` with `_CLR_STALE_THRESHOLD=1`
-- **Expected behavior:** exit 0; stdout contains `"No stale print-mode sessions found"`; fake interactive claude process is still alive
-- **Exit:** 0
-- **Source:** [command/07_kill.md](../../../../docs/cli/command/07_kill.md)
-- **Platform:** Linux/Unix only (`#[cfg(unix)]`)
-
----
-
-### IT-13: `--stale` with PID is mutually exclusive
-
-- **Command:** `clr kill --stale 1234`
-- **Expected behavior:** exit 1; stderr indicates `--stale` and `<PID>` are mutually exclusive
-- **Exit:** 1
-- **Source:** [command/07_kill.md](../../../../docs/cli/command/07_kill.md)
-
----
-
-### IT-14: `--help` lists `--stale`
-
-- **Command:** `clr kill --help`
-- **Expected behavior:** exit 0; stdout contains `"--stale"`
-- **Exit:** 0
 - **Source:** [command/07_kill.md](../../../../docs/cli/command/07_kill.md)
