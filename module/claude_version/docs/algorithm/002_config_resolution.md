@@ -64,7 +64,9 @@ Look up K in the known settings catalog:
 
 ### Catalog
 
-The known settings catalog is implemented in `claude_version_core::config_catalog`. Each entry defines:
+The known settings catalog is implemented in `claude_version_core::config_catalog`. Each entry defines a settings.json key with its optional env var mapping and catalog default. The catalog is the source of truth for which keys appear in `.config show-all` even when absent from all config files.
+
+**Current catalog (7 entries — partial, expansion planned in Task 001):**
 
 | Key | Type | Env var | Default | Notes |
 |-----|------|---------|---------|-------|
@@ -75,6 +77,28 @@ The known settings catalog is implemented in `claude_version_core::config_catalo
 | `theme` | String | — | `system` | UI theme: system/light/dark |
 | `hasCompletedOnboarding` | Bool | — | `false` | First-run onboarding flag |
 | `env.DISABLE_AUTOUPDATER` | String | — | — (absent) | Disable autoupdate via settings env block |
+
+**Known gap:** The catalog covers 7 of ~21 settings.json config keys. The following keys are MISSING from the catalog and therefore absent from `.config show-all` unless a user has written them to a config file:
+
+| Missing key | Type | Default | CLI flag override |
+|-------------|------|---------|------------------|
+| `effortLevel` | enum | `medium` | `--effort` |
+| `permissionMode` | enum | `default` | `--permission-mode` |
+| `allowedTools` | string[] | all | `--allowed-tools` |
+| `disallowedTools` | string[] | none | `--disallowed-tools` |
+| `env` | object | `{}` | — |
+| `enabledPlugins` | object | `{}` | — |
+| `hooks` | object | `{}` | — |
+| `mcpServers` | object | `{}` | — |
+| `skipDangerousModePermissionPrompt` | bool | `false` | — |
+| `voiceEnabled` | bool | `false` | — |
+| `permissions` | object | `{}` | — (project only) |
+| `outputStyle` | string | `default` | — |
+| `fileCheckpointingEnabled` | bool | `false` | — |
+| `remoteControlAtStartup` | bool | `false` | — |
+| `disableBundledSkills` | bool | `false` | — (also `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS`) |
+
+Catalog expansion to all ~21 config keys is tracked in Task 001 (catalog expansion). After expansion, `.config show-all` will display all of these even when absent from config files.
 
 Non-catalog keys are accepted by `.config` with no env mapping and no default.
 

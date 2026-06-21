@@ -42,6 +42,7 @@ enabled = [
   "dep:claude_core",
   "claude_core/enabled",
   "dep:claude_version_core",
+  "dep:cli_fmt",
   "dep:unilang",
   "unilang/enabled",
   "dep:error_tools",
@@ -52,6 +53,7 @@ enabled = [
 claude_runner_core  = { workspace = true, optional = true }
 claude_core       = { workspace = true, optional = true }
 claude_version_core = { workspace = true, optional = true }
+cli_fmt             = { workspace = true, optional = true }
 unilang             = { workspace = true, optional = true }
 error_tools         = { workspace = true, optional = true }
 

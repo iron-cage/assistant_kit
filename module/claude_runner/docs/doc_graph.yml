@@ -1,10 +1,10 @@
 meta:
   description: Cross-reference graph for design doc instances in claude_runner (feature, invariant, api entities). CLI reference docs (cli/) are out of scope.
-  node_count: 6
-  edge_count: 12
+  node_count: 9
+  edge_count: 18
   component_count: 1
   generated: 2026-05-16
-  last_reviewed: 2026-06-06
+  last_reviewed: 2026-06-21
 
 nodes:
   - id: feature/001
@@ -30,6 +30,21 @@ nodes:
   - id: invariant/004
     file: invariant/004_trace_universality.md
     label: Trace Universality
+    entity: invariant
+
+  - id: invariant/005
+    file: invariant/005_isolated_subprocess_defaults.md
+    label: Isolated Subprocess Defaults
+    entity: invariant
+
+  - id: invariant/006
+    file: invariant/006_exit_codes.md
+    label: Exit Code Contract
+    entity: invariant
+
+  - id: invariant/007
+    file: invariant/007_print_mode_timeout.md
+    label: Print-Mode Timeout Default
     entity: invariant
 
   - id: api/001
@@ -86,10 +101,34 @@ edges:
     to: feature/001
     via: features
 
+  - from: feature/001
+    to: invariant/005
+    via: invariants
+
+  - from: invariant/005
+    to: feature/001
+    via: features
+
+  - from: feature/001
+    to: invariant/006
+    via: invariants
+
+  - from: invariant/006
+    to: feature/001
+    via: features
+
+  - from: feature/001
+    to: invariant/007
+    via: invariants
+
+  - from: invariant/007
+    to: feature/001
+    via: features
+
 components:
   - id: 1
     label: Main corpus
-    size: 6
+    size: 9
     isolated: false
     nodes:
       - feature/001
@@ -97,6 +136,9 @@ components:
       - invariant/002
       - invariant/003
       - invariant/004
+      - invariant/005
+      - invariant/006
+      - invariant/007
       - api/001
 
 dangling_refs: []

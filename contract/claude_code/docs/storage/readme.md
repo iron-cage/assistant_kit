@@ -40,8 +40,8 @@ Storage Root  (~/.claude/)
 | ID | Name | Responsibility |
 |----|------|----------------|
 | [001](001_projects_directory.md) | Projects Directory | `projects/` — conversation storage; UUID and path projects; flat and hierarchical agent layouts |
-| [002](002_support_directories.md) | Support Directories | `debug/`, `todos/`, `shell-snapshots/`, `session-env/`, `commands/` — operational support storage |
-| [003](003_root_files.md) | Root Files | `history.jsonl`, `.credentials.json`, `settings.json` — global files at `~/.claude/` root |
+| [002](002_support_directories.md) | Support Directories | `debug/`, `todos/`, `shell-snapshots/`, `session-env/`, `commands/`, `sessions/`, `agents/`, `skills/`, `hooks/` — operational support storage |
+| [003](003_root_files.md) | Root Files | `history.jsonl`, `.credentials.json`, `settings.json`, `cld-timeout-config.json`, `stats-cache.json` — global files at `~/.claude/` root |
 
 ### Directory Structure
 
@@ -63,9 +63,15 @@ Storage Root  (~/.claude/)
 ├── shell-snapshots/              # Shell environment captures
 ├── session-env/                  # Session metadata
 ├── commands/                     # Command definitions
+├── sessions/                     # Session tracking metadata
+├── agents/                       # Agent configuration and state
+├── skills/                       # User-defined skill definitions
+├── hooks/                        # Hook script storage
 ├── history.jsonl                 # Global project index
 ├── .credentials.json             # API credentials
-└── settings.json                 # User settings
+├── settings.json                 # User settings
+├── cld-timeout-config.json       # Bash tool timeout configuration
+└── stats-cache.json              # Usage statistics cache
 ```
 
 ### Type-Specific Requirements

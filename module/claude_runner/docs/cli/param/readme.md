@@ -108,8 +108,8 @@
 | 33 | `--max-sessions` | u32 | 30 | 0 to 4294967295 | Max concurrent Claude Code sessions before blocking; 0 = unlimited | 2 cmds |
 | 34 | `--retry-on-transient` | u8 | auto | 0–255 | Transient class retry count (Tier 2) | 2 cmds |
 | 35 | `--transient-delay` | u32 | auto | 0 to 4294967295 | Transient class delay (Tier 2) | 2 cmds |
-| 36 | `--timeout` | u32 | `0` | 0 to 4294967295 | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only; contrast with param 20) | 2 cmds |
-| 40 | `--retry-on-account` | u8 | 0 | 0–255 | Account class retry count (class default = 0; opt-in only) | 2 cmds |
+| 36 | `--timeout` | u32 | `3600` (print) / `0` (interactive) | 0 to 4294967295 | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only; contrast with param 20) | 2 cmds |
+| 40 | `--retry-on-account` | u8 | auto | 0–255 | Account class retry count (Tier 2) | 2 cmds |
 | 41 | `--account-delay` | u32 | auto | 0 to 4294967295 | Account class delay (Tier 2) | 2 cmds |
 | 42 | `--retry-on-auth` | u8 | auto | 0–255 | Auth class retry count (Tier 2) | 2 cmds |
 | 43 | `--auth-delay` | u32 | auto | 0 to 4294967295 | Auth class delay (Tier 2) | 2 cmds |
@@ -218,4 +218,4 @@
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 58 parameters, `ps` = 5 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.
+**Commands by parameter count:** `run` = 58, `ask` = 58, `ps` = 5, `isolated` = 4, `refresh` = 3, `kill` = 0, `tools` = 0, `help` = 0.

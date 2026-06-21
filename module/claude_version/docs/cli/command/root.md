@@ -28,8 +28,8 @@ clv.status .help  # .help anywhere in argv triggers help (FR-02)
 
 **Algorithm (3 steps):**
 1. Scan argv for `.help` anywhere, or detect empty argv or bare `.` as the sole token.
-2. If any trigger is present, bypass normal command dispatch entirely.
-3. Render full command listing with all parameters and usage examples to stdout and exit 0.
+2. If any trigger is present, bypass the unilang pipeline entirely (intercept before parsing).
+3. Render grouped command listing (4 categories: version management, settings & config, process lifecycle, status), shared parameters, and usage examples via `cli_fmt::CliHelpTemplate` to stdout and exit 0.
 
 ### Related Commands
 

@@ -26,7 +26,7 @@
 
 - **Given:** No prior configuration
 - **When:** `clr --new-session --dry-run "test"`
-- **Then:** `-c` absent; `--dangerously-skip-permissions`, `--chrome`, `--effort max` still present; ultrathink suffix still appended
+- **Then:** `-c` absent; `--dangerously-skip-permissions`, `--effort max` still present; ultrathink suffix still appended; `--chrome` absent (print mode — BUG-304 mitigation)
 - **Exit:** 0
 
 ### US-3: fresh session in print mode

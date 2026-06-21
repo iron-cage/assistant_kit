@@ -420,7 +420,7 @@ fn build_inspect_output( procs : &[ &ProcessInfo ] ) -> String
 const FLAG_LEGEND : &[ ( &str, &str ) ] = &[
   ( "👈", "This session" ),
   ( "🖨",  "Print mode"   ),
-  ( "⚡", "Running"      ),
+  ( "⚡", "On CPU"       ),
   ( "🕰",  "Ancient"      ),
   ( "🐘", "High RAM"     ),
   ( "⚠",  "Dead metrics" ),
@@ -433,6 +433,12 @@ const FLAG_LEGEND : &[ ( &str, &str ) ] = &[
 // Pure computation — no filesystem I/O beyond what the caller already has in `metrics`.
 // The `/proc/{my_ppid}/cmdline` read for 👈 is inexpensive and done once per `clr ps` run.
 #[ cfg( target_os = "linux" ) ]
+fn push_flag( flags : &mut String, c : char )
+{
+  if !flags.is_empty() { flags.push( ' ' ); }
+  flags.push( c );
+}
+
 fn compute_flags(
   proc         : &ProcessInfo,
   metrics      : Option< &ProcessMetrics >,
@@ -465,36 +471,36 @@ fn compute_flags(
           .and_then( | n | n.to_str() )
           == Some( "claude" )
       } );
-    if is_claude { flags.push( '👈' ); }
+    if is_claude { push_flag( &mut flags, '👈' ); }
   }
 
   // 🖨 Print mode: cmdline contains --print or -p.
-  if classify_mode( &proc.args ) == "print" { flags.push( '🖨' ); }
+  if classify_mode( &proc.args ) == "print" { push_flag( &mut flags, '🖨' ); }
 
   if let Some( m ) = metrics
   {
-    // ⚡ Running: kernel state is R.
-    if m.state == 'R' { flags.push( '⚡' ); }
+    // ⚡ On CPU: kernel scheduler state is R (executing on a core at sample instant).
+    if m.state == 'R' { push_flag( &mut flags, '⚡' ); }
 
     // 🕰 Ancient: elapsed seconds exceed the configured threshold.
     let elapsed = super::gate::unix_now().saturating_sub( m.started_at );
-    if elapsed > ancient_secs { flags.push( '🕰' ); }
+    if elapsed > ancient_secs { push_flag( &mut flags, '🕰' ); }
 
     // 🐘 High RAM: RSS exceeds threshold. Comparison in KB to avoid integer-division
     //   truncation (e.g. 512 KB / 1024 = 0 MB, which would never exceed a 0 MB threshold).
-    if m.ram_kb > high_ram_mb.saturating_mul( 1_024 ) { flags.push( '🐘' ); }
+    if m.ram_kb > high_ram_mb.saturating_mul( 1_024 ) { push_flag( &mut flags, '🐘' ); }
   }
   else
   {
     // ⚠ Dead metrics: read_process_metrics returned None (TOCTOU race or zombie).
-    flags.push( '⚠' );
+    push_flag( &mut flags, '⚠' );
   }
 
   // 🐳 Container: working directory is outside $HOME.
   let cwd_str = proc.cwd.to_str().unwrap_or( "" );
   if !home.is_empty() && !cwd_str.starts_with( home )
   {
-    flags.push( '🐳' );
+    push_flag( &mut flags, '🐳' );
   }
 
   flags

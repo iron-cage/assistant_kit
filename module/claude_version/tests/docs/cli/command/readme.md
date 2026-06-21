@@ -24,4 +24,5 @@
 | 11_settings_set.md | Integration tests for `.settings.set` command | ✅ |
 | 12_version_history.md | Integration tests for `.version.history` command | ✅ |
 | 13_config.md | Integration tests for `.config` command (show-all/get/set/unset modes) | ✅ |
+| 14_params.md | Integration tests for `.params` command (show-all/single/kind-filter modes) | ⏳ |
 | procedure.md | Workflow for creating and updating command test specs | ✅ |

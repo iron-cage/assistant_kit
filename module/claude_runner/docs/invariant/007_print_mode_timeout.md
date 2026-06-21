@@ -29,9 +29,19 @@ In `run_print_mode()` (`src/cli/execution.rs`), the timeout is resolved as:
 ```rust
 const DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600;
 
+fn default_print_timeout() -> u32
+{
+  std::env::var( "_CLR_DEFAULT_TIMEOUT" )
+    .ok()
+    .and_then( | s | s.parse().ok() )
+    .unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )
+}
+
 // … inside run_print_mode():
-let timeout_secs = cli.timeout.unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS );
+let timeout_secs = cli.timeout.unwrap_or( default_print_timeout() );
 ```
+
+The `_CLR_DEFAULT_TIMEOUT` internal env var exists solely for test injection — it allows integration tests to verify the default-path kill mechanism without waiting 3600 seconds. The underscore prefix signals internal/test-only use; it is not documented in user-facing param docs and must not appear in `clr --help`.
 
 In `run_interactive()` (same file), the timeout must remain:
 

@@ -11,7 +11,8 @@ combinations.
 
 ```sh
 clr --dry-run "test" --model sonnet --max-tokens 50000
-# Output includes: claude --dangerously-skip-permissions --chrome -c --print --model sonnet "test\n\nultrathink"
+# Output includes: claude --dangerously-skip-permissions -c --print --model sonnet "test\n\nultrathink"
+# Note: --chrome absent in print mode (BUG-304 suppression); present only in interactive mode
 ```
 
 ### Referenced Type

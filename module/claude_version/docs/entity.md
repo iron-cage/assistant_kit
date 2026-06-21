@@ -59,6 +59,7 @@ docs/
 | feature | 004 | Dry Run | ✅ | [feature/004_dry_run.md](feature/004_dry_run.md) |
 | feature | 005 | CLI Design | ✅ | [feature/005_cli_design.md](feature/005_cli_design.md) |
 | feature | 006 | Config Command | ✅ | [feature/006_config_command.md](feature/006_config_command.md) |
+| feature | 007 | Params Command | ⏳ | [feature/007_params_command.md](feature/007_params_command.md) |
 | format | 01 | Text | ✅ | [cli/format/01_text.md](cli/format/01_text.md) |
 | format | 02 | JSON | ✅ | [cli/format/02_json.md](cli/format/02_json.md) |
 | pattern | 001 | Version Lock | ✅ | [pattern/001_version_lock.md](pattern/001_version_lock.md) |
@@ -70,3 +71,4 @@ docs/
 | user_story | 004 | Settings Management | ✅ | [cli/user_story/004_settings_management.md](cli/user_story/004_settings_management.md) |
 | user_story | 005 | Version Pinning | ✅ | [cli/user_story/005_version_pinning.md](cli/user_story/005_version_pinning.md) |
 | user_story | 006 | Config Management | ✅ | [cli/user_story/006_config_management.md](cli/user_story/006_config_management.md) |
+| user_story | 007 | Params Inspection | ⏳ | [cli/user_story/007_params_inspection.md](cli/user_story/007_params_inspection.md) |

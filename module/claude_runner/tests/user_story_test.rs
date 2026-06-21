@@ -239,8 +239,8 @@ fn us04_1_dry_run_prints_command()
     "dry-run must show --dangerously-skip-permissions. Got:\n{output}"
   );
   assert!(
-    output.contains( "--chrome" ),
-    "dry-run must show --chrome. Got:\n{output}"
+    !output.contains( "--chrome" ),
+    "print-mode dry-run must NOT show --chrome (BUG-304 mitigation). Got:\n{output}"
   );
   assert!(
     output.contains( "--effort max" ),
@@ -260,7 +260,7 @@ fn us04_2_all_defaults_visible()
     output.contains( "--dangerously-skip-permissions" ),
     "must have --dangerously-skip-permissions. Got:\n{output}"
   );
-  assert!( output.contains( "--chrome" ), "must have --chrome. Got:\n{output}" );
+  assert!( !output.contains( "--chrome" ), "print-mode must NOT have --chrome (BUG-304). Got:\n{output}" );
   assert!( output.contains( "--effort max" ), "must have --effort max. Got:\n{output}" );
   assert!(
     output.contains( "ultrathink" ),
@@ -437,7 +437,7 @@ fn us07_2_other_defaults_preserved()
     output.contains( "--dangerously-skip-permissions" ),
     "skip-permissions must remain. Got:\n{output}"
   );
-  assert!( output.contains( "--chrome" ), "--chrome must remain. Got:\n{output}" );
+  assert!( !output.contains( "--chrome" ), "print-mode must NOT have --chrome (BUG-304). Got:\n{output}" );
   assert!( output.contains( "--effort max" ), "--effort max must remain. Got:\n{output}" );
   assert!(
     output.contains( "ultrathink" ),

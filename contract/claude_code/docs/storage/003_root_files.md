@@ -4,16 +4,18 @@
 
 - **Purpose**: Document the global files at the `~/.claude/` root that are not inside any subdirectory.
 - **Responsibility**: Authoritative instance for root-level files — `history.jsonl`, `.credentials.json`, and `settings.json` — purpose, format, access patterns, and security considerations.
-- **In Scope**: `history.jsonl` (global project index), `.credentials.json` (API tokens), `settings.json` (user settings).
+- **In Scope**: `history.jsonl` (global project index), `.credentials.json` (API tokens), `settings.json` (user settings), `cld-timeout-config.json` (timeout config), `stats-cache.json` (usage stats cache).
 - **Out of Scope**: `projects/` directory (→ [001_projects_directory.md](001_projects_directory.md)); support directories (→ [002_support_directories.md](002_support_directories.md)); settings file format internals (→ [`../settings/`](../settings/readme.md)); credentials file format (→ [`../formats/002_credentials.md`](../formats/002_credentials.md)).
 
 ### Structure
 
 ```
 ~/.claude/
-├── history.jsonl         # 1.1MB - Global project access index
-├── .credentials.json     # ~1KB  - Active API authentication tokens
-└── settings.json         # ~5KB  - User settings and configuration
+├── history.jsonl              # 1.1MB - Global project access index
+├── .credentials.json          # ~1KB  - Active API authentication tokens
+├── settings.json              # ~5KB  - User settings and configuration
+├── cld-timeout-config.json    # <1KB  - Bash tool timeout configuration
+└── stats-cache.json           # <1KB  - Usage statistics cache
 ```
 
 ### Contents
@@ -66,6 +68,20 @@ Key groups:
 - **Features**: `voiceEnabled`, `fileCheckpointingEnabled`, `remoteControlAtStartup`
 
 See [`../settings/001_global_settings.md`](../settings/001_global_settings.md) for full key table and write protocol.
+
+#### cld-timeout-config.json — Bash Tool Timeout Configuration (<1KB)
+
+**Purpose**: Stores user-specific overrides for bash tool timeout behavior.
+**Format**: JSON object with timeout-related keys.
+**Access frequency**: Low — read on session startup.
+**Maintenance**: Safe to delete; reverts to default timeout behavior.
+
+#### stats-cache.json — Usage Statistics Cache (<1KB)
+
+**Purpose**: Caches usage statistics and token counts for display in the status bar.
+**Format**: JSON object with aggregated usage metrics.
+**Access frequency**: Medium — updated during sessions.
+**Maintenance**: Safe to delete; will be regenerated from session data.
 
 ### Security Summary
 

@@ -36,7 +36,7 @@
 | 1 | Usage error | Unknown param, bad value, missing required |
 | 2 | Runtime error | `ErrorCode::InternalError` or `CommandNotImplemented` |
 
-**Help listing:** `.help` displays all commands, all parameters, and a usage line. Empty argv also displays help and exits 0. `.help` anywhere in argv triggers help output.
+**Help listing:** `.help` displays commands grouped by functional category (version management, settings & config, process lifecycle, status), all shared parameters, and usage examples. Empty argv also displays help and exits 0. `.help` anywhere in argv triggers help output. Rendered via `cli_fmt::CliHelpTemplate` — intercepted before the unilang pipeline.
 
 **Binary names:** `claude_version` (primary binary) and `clv` (alias binary). Both delegate to `run_cli()`.
 

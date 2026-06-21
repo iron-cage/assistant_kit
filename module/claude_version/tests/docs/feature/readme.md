@@ -17,4 +17,5 @@
 | 04_dry_run.md | FT- test cases for dry::1 preview mode across mutation commands | ✅ |
 | 05_cli_design.md | FT- test cases for 5-phase unilang pipeline and exit codes | ✅ |
 | 06_config_command.md | FT- test cases for `.config` command: show-all/get/set/unset/resolution/catalog | ✅ |
+| 07_params_command.md | FT- test cases for `.params` command: show-all/single/kind-filter/format/errors | ⏳ |
 | procedure.md | Workflow for creating and updating feature test specs | ✅ |

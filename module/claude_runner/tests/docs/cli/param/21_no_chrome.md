@@ -7,7 +7,8 @@ Edge case coverage for the `--no-chrome` parameter. See [021_no_chrome.md](../..
 | ID | Test Name | Category |
 |----|-----------|----------|
 | EC-1 | `--no-chrome` → no `--chrome` flag in assembled command | Behavioral Divergence |
-| EC-2 | Default (no `--no-chrome`) → `--chrome` present in assembled command | Behavioral Divergence |
+| EC-2 | Default (no `--no-chrome`) → `--chrome` present in interactive mode | Behavioral Divergence |
+| EC-2b | Print mode → `--chrome` suppressed automatically (BUG-304 mitigation) | Behavioral Divergence |
 | EC-3 | `--no-chrome` without message → accepted, no error | Edge Case |
 | EC-4 | `--help` output contains `--no-chrome` | Documentation |
 | EC-5 | `--no-chrome` + `--no-skip-permissions` → both accepted, no conflict | Interaction |
@@ -15,12 +16,12 @@ Edge case coverage for the `--no-chrome` parameter. See [021_no_chrome.md](../..
 
 ## Test Coverage Summary
 
-- Behavioral Divergence: 2 tests (EC-1, EC-2)
+- Behavioral Divergence: 3 tests (EC-1, EC-2, EC-2b)
 - Edge Case: 1 test
 - Interaction: 2 tests
 - Documentation: 1 test
 
-**Total:** 6 edge cases
+**Total:** 7 edge cases
 
 ---
 
@@ -35,13 +36,24 @@ Edge case coverage for the `--no-chrome` parameter. See [021_no_chrome.md](../..
 
 ---
 
-### EC-2: Default → `--chrome` injected
+### EC-2: Default → `--chrome` injected in interactive mode
 
 - **Given:** clean environment
-- **When:** `clr --dry-run "Fix the bug"`
-- **Then:** Assembled command contains `--chrome`
+- **When:** `clr --dry-run` (no message — interactive mode)
+- **Then:** Assembled command contains `--chrome`; default for interactive sessions
 - **Exit:** 0
 - **Source:** [invariant/001_default_flags.md](../../../../docs/invariant/001_default_flags.md)
+- **Commands:** run, ask
+
+---
+
+### EC-2b: Print mode → `--chrome` suppressed automatically
+
+- **Given:** clean environment
+- **When:** `clr --dry-run "Fix the bug"` (message present → print mode)
+- **Then:** Assembled command does NOT contain `--chrome`; suppressed to prevent BUG-304 hang
+- **Exit:** 0
+- **Source:** `src/cli/builder.rs` Fix(BUG-304)
 - **Commands:** run, ask
 
 ---

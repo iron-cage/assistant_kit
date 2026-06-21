@@ -8,7 +8,7 @@ parameter in this directory.
 
 - **Purpose**: Authoritative flat reference for every parameter the `claude` binary accepts at runtime.
 - **Responsibility**: Master table and per-parameter detail files for CLI flags, env vars, and settings config keys.
-- **In Scope**: All 79 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys.
+- **In Scope**: All 95 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `MCP_*` env vars, `API_*` env vars, `CLAUDE_CLIENT_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys.
 - **Out of Scope**: Builder-API defaults and Rust `with_*()` methods (→ `module/claude_runner_core/docs/claude_params/`); Claude API protocol (→ Anthropic docs).
 
 ### Responsibility Table
@@ -95,6 +95,22 @@ parameter in this directory.
 | 077_safe_mode.md | `--safe-mode` / `CLAUDE_CODE_SAFE_MODE` — disable bundled skills and experimental features |
 | 078_disable_bundled_skills.md | `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` / `disableBundledSkills` — disable bundled slash command skills |
 | 079_subagent_model.md | `CLAUDE_CODE_SUBAGENT_MODEL` — model override for subagent sessions |
+| 080_experimental_agent_teams.md | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` — experimental multi-agent teams |
+| 081_enable_auto_mode.md | `CLAUDE_CODE_ENABLE_AUTO_MODE` — enable auto-mode permission classifier |
+| 082_tmpdir.md | `CLAUDE_CODE_TMPDIR` — custom temporary directory |
+| 083_stop_hook_block_cap.md | `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` — max consecutive hook blocks |
+| 084_ps_execution_policy.md | `CLAUDE_CODE_POWERSHELL_RESPECT_EXECUTION_POLICY` — PowerShell execution policy |
+| 085_default_sonnet_model.md | `ANTHROPIC_DEFAULT_SONNET_MODEL` — override sonnet alias target |
+| 086_client_presence_file.md | `CLAUDE_CLIENT_PRESENCE_FILE` — IDE client presence file path |
+| 087_workspace_id.md | `ANTHROPIC_WORKSPACE_ID` — Anthropic workspace ID |
+| 088_plugin_prefer_https.md | `CLAUDE_CODE_PLUGIN_PREFER_HTTPS` — prefer HTTPS plugin transport |
+| 089_mcp_tool_timeout.md | `MCP_TOOL_TIMEOUT` — MCP tool invocation timeout |
+| 090_api_force_idle_timeout.md | `API_FORCE_IDLE_TIMEOUT` — force API connection idle timeout |
+| 091_language.md | `language` config key — UI language |
+| 092_worktree_bg_isolation.md | `worktree.bgIsolation` config key — worktree background isolation |
+| 093_sandbox_allow_apple_events.md | `sandbox.allowAppleEvents` config key — allow Apple Events in sandbox |
+| 094_thinking_disabled_display.md | `thinking.disabled.display` config key — thinking indicator when disabled |
+| 095_wheel_scroll_accel.md | `wheelScrollAccelerationEnabled` config key — mouse wheel scroll acceleration |
 
 ### Parameter Table
 
@@ -182,6 +198,22 @@ Precedence: CLI arg > env var > settings config.
 | 77 | [safe_mode](077_safe_mode.md) | `--safe-mode` | `CLAUDE_CODE_SAFE_MODE` | — | bool | off | v2.1.169 | Disable bundled skills and experimental features |
 | 78 | [disable_bundled_skills](078_disable_bundled_skills.md) | — | `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` | `disableBundledSkills` | bool | false | v2.1.169 | Disable all built-in slash command skills |
 | 79 | [subagent_model](079_subagent_model.md) | — | `CLAUDE_CODE_SUBAGENT_MODEL` | — | string | — | v2.1.153 | Model override for Agent-tool subagent sessions |
+| 80 | [experimental_agent_teams](080_experimental_agent_teams.md) | — | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | — | bool | false | v2.1.178 | Enable experimental multi-agent team coordination |
+| 81 | [enable_auto_mode](081_enable_auto_mode.md) | — | `CLAUDE_CODE_ENABLE_AUTO_MODE` | — | bool | false | v2.1.158 | Enable auto-mode permission classifier |
+| 82 | [tmpdir](082_tmpdir.md) | — | `CLAUDE_CODE_TMPDIR` | — | path | system temp | v2.1.161 | Override temporary directory |
+| 83 | [stop_hook_block_cap](083_stop_hook_block_cap.md) | — | `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` | — | integer | — | v2.1.147 | Max consecutive hook blocks before bypass |
+| 84 | [ps_execution_policy](084_ps_execution_policy.md) | — | `CLAUDE_CODE_POWERSHELL_RESPECT_EXECUTION_POLICY` | — | bool | false | v2.1.143 | Respect PowerShell execution policy (Windows) |
+| 85 | [default_sonnet_model](085_default_sonnet_model.md) | — | `ANTHROPIC_DEFAULT_SONNET_MODEL` | — | string | latest Sonnet | v2.1.174 | Override sonnet alias model target |
+| 86 | [client_presence_file](086_client_presence_file.md) | — | `CLAUDE_CLIENT_PRESENCE_FILE` | — | path | — | v2.1.181 | IDE client presence detection file path |
+| 87 | [workspace_id](087_workspace_id.md) | — | `ANTHROPIC_WORKSPACE_ID` | — | string | — | v2.1.141 | Anthropic workspace ID for API routing |
+| 88 | [plugin_prefer_https](088_plugin_prefer_https.md) | — | `CLAUDE_CODE_PLUGIN_PREFER_HTTPS` | — | bool | false | v2.1.141 | Prefer HTTPS transport for plugins |
+| 89 | [mcp_tool_timeout](089_mcp_tool_timeout.md) | — | `MCP_TOOL_TIMEOUT` | — | integer ms | — | v2.1.142 | MCP tool invocation timeout |
+| 90 | [api_force_idle_timeout](090_api_force_idle_timeout.md) | — | `API_FORCE_IDLE_TIMEOUT` | — | integer ms | — | v2.1.169 | Force API connection idle timeout |
+| 91 | [language](091_language.md) | — | — | `language` | string | system locale | v2.1.176 | UI language |
+| 92 | [worktree_bg_isolation](092_worktree_bg_isolation.md) | — | — | `worktree.bgIsolation` | bool | false | v2.1.143 | Worktree background isolation |
+| 93 | [sandbox_allow_apple_events](093_sandbox_allow_apple_events.md) | — | — | `sandbox.allowAppleEvents` | bool | false | v2.1.181 | Allow Apple Events in sandbox (macOS) |
+| 94 | [thinking_disabled_display](094_thinking_disabled_display.md) | — | — | `thinking.disabled.display` | string | — | v2.1.181 | Thinking indicator display when disabled |
+| 95 | [wheel_scroll_accel](095_wheel_scroll_accel.md) | — | — | `wheelScrollAccelerationEnabled` | bool | false | v2.1.174 | Mouse wheel scroll acceleration |
 
 ### Cross-References
 
