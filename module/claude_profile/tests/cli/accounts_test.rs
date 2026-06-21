@@ -86,6 +86,8 @@
 //! | ft19 | `ft19_owner_column_default_visible` | Owner: line visible by default in text output | P |
 //! | ft20 | `ft20_accounts_unclaim_force_bypasses_g8` | `unclaim::1 force::1` → clears owner regardless of owner identity | P |
 //! | ft21 | `ft21_force_no_effect_without_unclaim` | `force::1` alone (no unclaim) → accepted, no mutation | P |
+//! | it_batch_unclaim_force | `it_batch_unclaim_force_clears_non_owned` | `unclaim::1 force::1` no name → clears ALL accounts with non-empty owner, including non-owned | P |
+//! | it_batch_unclaim_force_dry | `it_batch_unclaim_force_dry_previews_all` | `unclaim::1 force::1 dry::1` no name → [dry-run] for all non-empty-owner accounts, no writes | P |
 
 use crate::cli_runner::{
   run_cs, run_cs_with_env,
@@ -1920,4 +1922,124 @@ fn ft21_force_no_effect_without_unclaim()
       .expect( "FT-21B: marker must be written with force::1 + assign::1" );
     assert_eq!( marker.trim(), "alice@acme.com", "FT-21B: marker must contain alice@acme.com" );
   }
+}
+
+#[ test ]
+/// IT: `unclaim::1 force::1` batch (no `name::`) clears ALL accounts with a non-empty owner,
+/// including those owned by a different identity.
+///
+/// `force::1` bypasses the G8 per-account skip logic in the batch loop:
+/// ```
+/// if !force && !is_owned(&owner) { skip; continue; }
+/// ```
+/// With `force::1` the condition short-circuits — non-owned accounts are NOT skipped.
+///
+/// Setup: alice (owned by current = `testuser@testmachine`), bob (owned by `other@remote`),
+/// carol (unowned, empty owner — skipped because `owner.is_empty()`).
+///
+/// Expected: alice + bob both unclaimed (`owner: ""`); carol unchanged; exit 0.
+fn it_batch_unclaim_force_clears_non_owned()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "testuser@testmachine" );
+
+  write_account( dir.path(), "bob@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "bob@acme.com", "other@remote" );
+
+  write_account( dir.path(), "carol@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  // carol: no owner written → empty owner → not touched by unclaim
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "unclaim::1", "force::1" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  assert!(
+    text.contains( "unclaimed alice@acme.com" ),
+    "it_batch_unclaim_force: alice (self-owned) must be unclaimed; got:\n{text}",
+  );
+  assert!(
+    text.contains( "unclaimed bob@acme.com" ),
+    "it_batch_unclaim_force: bob (other-owned) must be unclaimed when force::1; got:\n{text}",
+  );
+  assert!(
+    !text.contains( "carol" ),
+    "it_batch_unclaim_force: carol (unowned) must not appear in output; got:\n{text}",
+  );
+
+  let store    = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let alice_meta = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let alice_val : serde_json::Value = serde_json::from_str( &alice_meta ).unwrap();
+  assert_eq!(
+    alice_val[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "",
+    "it_batch_unclaim_force: alice.json owner must be cleared",
+  );
+
+  let bob_meta = std::fs::read_to_string( store.join( "bob@acme.com.json" ) ).unwrap();
+  let bob_val : serde_json::Value = serde_json::from_str( &bob_meta ).unwrap();
+  assert_eq!(
+    bob_val[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "",
+    "it_batch_unclaim_force: bob.json owner must be cleared (force bypasses G8)",
+  );
+}
+
+#[ test ]
+/// IT: `unclaim::1 force::1 dry::1` batch (no `name::`) previews without writing.
+///
+/// Same 3-account setup as `it_batch_unclaim_force_clears_non_owned`.
+/// With `dry::1`, the unclaim loop prints `[dry-run] would unclaim <name>` for each
+/// non-empty-owner account (alice + bob) and exits 0 — no writes occur.
+fn it_batch_unclaim_force_dry_previews_all()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "testuser@testmachine" );
+
+  write_account( dir.path(), "bob@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "bob@acme.com", "other@remote" );
+
+  write_account( dir.path(), "carol@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "unclaim::1", "force::1", "dry::1" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  assert!(
+    text.contains( "[dry-run]" ) && text.contains( "alice@acme.com" ),
+    "it_batch_unclaim_force_dry: alice must appear in dry-run output; got:\n{text}",
+  );
+  assert!(
+    text.contains( "[dry-run]" ) && text.contains( "bob@acme.com" ),
+    "it_batch_unclaim_force_dry: bob must appear in dry-run output (force bypasses G8); got:\n{text}",
+  );
+
+  // Verify no writes occurred — both owners must be unchanged.
+  let store    = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let alice_meta = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let alice_val : serde_json::Value = serde_json::from_str( &alice_meta ).unwrap();
+  assert_eq!(
+    alice_val[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "testuser@testmachine",
+    "it_batch_unclaim_force_dry: alice.json owner must NOT be cleared in dry mode",
+  );
+
+  let bob_meta = std::fs::read_to_string( store.join( "bob@acme.com.json" ) ).unwrap();
+  let bob_val : serde_json::Value = serde_json::from_str( &bob_meta ).unwrap();
+  assert_eq!(
+    bob_val[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "other@remote",
+    "it_batch_unclaim_force_dry: bob.json owner must NOT be cleared in dry mode",
+  );
 }
