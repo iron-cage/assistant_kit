@@ -18,6 +18,7 @@
 | processes.md | Process-namespace commands: `.processes`, `.processes.kill` |
 | settings.md | Settings-namespace commands: `.settings.*` (deprecated) |
 | config.md | Config command: `.config` (unified settings inspection and modification) |
+| params.md | Params command: `.params` (read-only param catalog inspection) |
 
 ### All Commands
 
@@ -36,6 +37,7 @@
 | 11 | `.settings.set` | settings | [settings.md](settings.md) *(deprecated)* |
 | 12 | `.version.history` | version | [version.md](version.md) |
 | 13 | `.config` | config | [config.md](config.md) |
+| 14 | `.params` | params | [params.md](params.md) |
 
 ### Navigation
 
@@ -44,6 +46,7 @@
 - [Process Commands](processes.md) — `.processes`, `.processes.kill`
 - [Settings Commands](settings.md) — `.settings.show`, `.settings.get`, `.settings.set` *(deprecated)*
 - [Config Command](config.md) — `.config`
+- [Params Command](params.md) — `.params`
 
 ### See Also
 

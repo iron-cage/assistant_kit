@@ -17,6 +17,7 @@
 | 04_settings_management.md | US- acceptance tests for settings read/write workflow | ✅ |
 | 05_version_pinning.md | US- acceptance tests for team-wide version pinning | ✅ |
 | 06_config_management.md | AT- acceptance tests for config inspection/modification via `.config` | ✅ |
+| 07_params_inspection.md | AT- acceptance tests for param inspection via `.params` | ⏳ |
 | procedure.md | Workflow for creating and updating user story test specs | ✅ |
 
 ### Navigation

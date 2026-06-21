@@ -36,7 +36,7 @@
 | 1 | Usage error | Unknown param, bad value, missing required |
 | 2 | Runtime error | `ErrorCode::InternalError` or `CommandNotImplemented` |
 
-**Help listing:** `.help` displays all commands, all parameters, and a usage line. Empty argv also displays help and exits 0. `.help` anywhere in argv triggers help output.
+**Help listing:** `.help` displays commands grouped by functional category (version management, settings & config, process lifecycle, status), all shared parameters, and usage examples. Empty argv also displays help and exits 0. `.help` anywhere in argv triggers help output. Rendered via `cli_fmt::CliHelpTemplate` — intercepted before the unilang pipeline.
 
 **Binary names:** `claude_version` (primary binary) and `clv` (alias binary). Both delegate to `run_cli()`.
 
@@ -51,11 +51,26 @@
 | [feature/003_settings_management.md](003_settings_management.md) | Settings commands handled by this pipeline |
 | [feature/006_config_command.md](006_config_command.md) | Unified .config command handled by this pipeline |
 
-### Catalogs
+### Design Decisions
 
-| File | Relationship |
-|------|-------------|
-| [catalog/001_design_decisions.md](../catalog/001_design_decisions.md) | Design decisions this pipeline implements |
+| ID | Decision | Category |
+|----|----------|----------|
+| D1 | Unilang `.command param::value` syntax | Syntax |
+| D2 | Two-level subcommands | Syntax |
+| D3 | Boolean parameters use `0`/`1` values | Parameter Conventions |
+| D4 | Unilang exit code semantics via `ErrorData` | Pipeline |
+| D5 | Unilang 5-phase pipeline with custom adapter layer | Pipeline |
+| D6 | docs/cli/ with three-layer structure | Documentation |
+| D7 | Unilang re-adopted for per-command validation | Pipeline |
+| D8 | Last occurrence wins for repeated parameters | Parameter Conventions |
+
+Decisions by concern area: **Syntax**: D1, D2 | **Pipeline**: D4, D5, D7 | **Parameter Conventions**: D3, D8 | **Documentation**: D6
+
+**D2 — Two-level subcommands:** Commands use at most two dot-separated segments (`.version.show`, `.settings.get`). Single-segment commands (`.status`, `.processes`, `.help`) are also supported.
+
+**D6 — docs/cli/ with three-layer structure:** A proper three-layer reference (`command/`, `param/`, `type/`) with parameter groups, dictionary, and workflows — all in unilang syntax.
+
+**D7 — Unilang re-adopted for per-command validation:** `unilang` was added back to Cargo.toml after the hand-rolled parser proved inadequate for per-command parameter scoping. The unilang SemanticAnalyzer rejects unknown parameters per command (not globally), which prevents silent acceptance of params on wrong commands (e.g., `format::` on `.version.guard`). Consistent error message formatting across all 12 commands is a further benefit. The custom `adapter.rs` layer retains full control over `claude_version`-specific normalisation without forking unilang.
 
 ### Sources
 

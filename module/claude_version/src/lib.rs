@@ -102,6 +102,85 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".config",          "Show, get, set, or unset settings with 4-layer resolution",  vec![ key(), val(), scp(), uns(), dry(), v(), fmt() ], Box::new( config_routine ) );
 }
 
+/// Render grouped help output via `cli_fmt::CliHelpTemplate`.
+///
+/// Displays 4 command groups (Version Management, Settings & Config,
+/// Process Lifecycle, Status), shared parameters, and usage examples.
+#[ cfg( feature = "enabled" ) ]
+fn print_usage( binary : &str )
+{
+  use cli_fmt::help::*;
+
+  let data = CliHelpData
+  {
+    binary  : binary.to_string(),
+    tagline : "Claude Code version manager: install, upgrade, and session lifecycle.".to_string(),
+    groups  : vec!
+    [
+      CommandGroup
+      {
+        name    : "Version Management".to_string(),
+        entries : vec!
+        [
+          CommandEntry { name : ".version.show".to_string(),    desc : "Print the currently installed Claude Code version".to_string() },
+          CommandEntry { name : ".version.install".to_string(), desc : "Download and install a Claude Code version via installer".to_string() },
+          CommandEntry { name : ".version.guard".to_string(),   desc : "Check for version drift and restore preferred version".to_string() },
+          CommandEntry { name : ".version.list".to_string(),    desc : "List all named version aliases".to_string() },
+          CommandEntry { name : ".version.history".to_string(), desc : "Show release history with changelogs from GitHub".to_string() },
+        ],
+      },
+      CommandGroup
+      {
+        name    : "Settings & Config".to_string(),
+        entries : vec!
+        [
+          CommandEntry { name : ".settings.show".to_string(), desc : "Print all settings from ~/.claude/settings.json".to_string() },
+          CommandEntry { name : ".settings.get".to_string(),  desc : "Read a single setting by key".to_string() },
+          CommandEntry { name : ".settings.set".to_string(),  desc : "Write a single setting atomically".to_string() },
+          CommandEntry { name : ".config".to_string(),        desc : "Show, get, set, or unset settings with 4-layer resolution".to_string() },
+        ],
+      },
+      CommandGroup
+      {
+        name    : "Process Lifecycle".to_string(),
+        entries : vec!
+        [
+          CommandEntry { name : ".processes".to_string(),      desc : "List all running Claude Code processes".to_string() },
+          CommandEntry { name : ".processes.kill".to_string(), desc : "Terminate all Claude Code processes".to_string() },
+        ],
+      },
+      CommandGroup
+      {
+        name    : "Status".to_string(),
+        entries : vec!
+        [
+          CommandEntry { name : ".status".to_string(), desc : "Show installation state, process count, and active account".to_string() },
+        ],
+      },
+    ],
+    options : vec!
+    [
+      OptionEntry { name : "v::0|1|2".to_string(),        desc : "Verbosity level (default: 1)".to_string() },
+      OptionEntry { name : "format::text|json".to_string(), desc : "Output format (default: text)".to_string() },
+      OptionEntry { name : "dry::bool".to_string(),       desc : "Dry-run preview (no changes)".to_string() },
+      OptionEntry { name : "force::bool".to_string(),     desc : "Force operation (skip confirmations)".to_string() },
+      OptionEntry { name : "key::KEY".to_string(),        desc : "Setting key".to_string() },
+      OptionEntry { name : "value::VALUE".to_string(),    desc : "Setting value".to_string() },
+      OptionEntry { name : "interval::N".to_string(),     desc : "Polling interval in seconds".to_string() },
+      OptionEntry { name : "count::N".to_string(),        desc : "Maximum entries to show".to_string() },
+    ],
+    examples : vec!
+    [
+      ExampleEntry { invocation : format!( "{binary} .status" ),                    desc : None },
+      ExampleEntry { invocation : format!( "{binary} .version.install" ),            desc : None },
+      ExampleEntry { invocation : format!( "{binary} .settings.get key::model" ),    desc : None },
+      ExampleEntry { invocation : format!( "{binary} .processes" ),                  desc : None },
+      ExampleEntry { invocation : format!( "{binary} .config key::model" ),          desc : None },
+    ],
+  };
+  print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
+}
+
 /// Run the `claude_version` CLI — 5-phase unilang pipeline.
 ///
 /// Entry point shared by both the `claude_version` and `clv` binaries so
@@ -142,9 +221,17 @@ pub fn run_cli()
     }
   }
 
+  let binary = std::env::args()
+  .next()
+  .as_deref()
+  .and_then( | p | std::path::Path::new( p ).file_name() )
+  .and_then( | n | n.to_str() )
+  .unwrap_or( "clv" )
+  .to_owned();
+
   let argv : Vec< String > = std::env::args().skip( 1 ).collect();
 
-  let ( tokens, _needs_help ) = match argv_to_unilang_tokens( &argv )
+  let ( tokens, needs_help ) = match argv_to_unilang_tokens( &argv )
   {
     Ok( r )  => r,
     Err( e ) =>
@@ -153,6 +240,12 @@ pub fn run_cli()
       std::process::exit( 1 );
     }
   };
+
+  if needs_help
+  {
+    print_usage( &binary );
+    std::process::exit( 0 );
+  }
 
   let mut registry = CommandRegistry::new();
   register_commands( &mut registry );

@@ -99,3 +99,52 @@ Both are valid invocations; output length differs.
 | `ft005_3_last_param_wins` | `integration/feature_surface_test.rs` |
 | `tc093_empty_args_exits_0` | `integration/framework_test.rs` |
 | `tc04_help_anywhere_wins` | `integration/read_commands_test.rs` |
+| `dd01_001_bool_true_rejected` | `integration/collection_surface_test.rs` |
+| `dd02_001_last_v_wins` | `integration/collection_surface_test.rs` |
+| `dd03_001_cmd_not_implemented_exit2` | `integration/collection_surface_test.rs` |
+| `dd04_001_per_cmd_validation` | `integration/collection_surface_test.rs` |
+
+---
+
+## Design Decision Tests
+
+Verify that testable design decisions (D3, D4, D7, D8) are enforced. Non-testable decisions (D1, D2, D5, D6) are structural and have no directly observable test surface.
+
+| DD | Scenario | Decision |
+|----|----------|----------|
+| DD-1 | `dry::1` accepted; `dry::true` rejected with exit 1 | D3 |
+| DD-2 | Repeated `v::` parameter: last occurrence wins | D8 |
+| DD-3 | `CommandNotImplemented` produces exit 2 | D4 |
+| DD-4 | `format::` on `.settings.set` rejected with exit 1 | D7 |
+
+---
+
+### DD-1: boolean parameters use 0/1 values only (D3)
+
+- **Given:** the `.version.install` command with `dry` parameter
+- **When:** `clv .version.install dry::true`
+- **Then:** exit 1; stderr contains error indicating invalid boolean value
+
+---
+
+### DD-2: last `v::` occurrence wins (D8)
+
+- **Given:** `v::` supplied twice with different values
+- **When:** `clv .status v::0 v::2`
+- **Then:** output matches v::2 verbosity (detailed); last value wins; exit 0
+
+---
+
+### DD-3: internal error produces exit 2 (D4)
+
+- **Given:** a command invocation that triggers an internal unrecoverable error path
+- **When:** `CommandNotImplemented` error is returned by the command routine
+- **Then:** exit 2 (not exit 1); distinguishes internal failure from user input error
+
+---
+
+### DD-4: per-command parameter validation rejects unknown params (D7)
+
+- **Given:** `format::` is not accepted by `.settings.set`
+- **When:** `clv .settings.set format::json key::k value::v`
+- **Then:** exit 1; stderr contains error indicating `format` is not valid for this command

@@ -21,6 +21,7 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 | IT-6 | Help output contains all visible command names | Content |
 | IT-7 | `.help` does not appear in its own command listing | Visibility |
 | IT-8 | Help output is stable across repeated invocations | Stability |
+| IT-9 | Help output contains grouped section headers | Structure |
 
 ## Test Coverage Summary
 
@@ -32,8 +33,9 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 - Content: 1 test
 - Visibility: 1 test
 - Stability: 1 test
+- Structure: 1 test
 
-**Total:** 8 tests
+**Total:** 9 tests
 
 ---
 
@@ -114,6 +116,16 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 - **Then:** all 3 stdout captures are byte-identical
 - **Exit:** 0
 - **Source:** [command/readme.md — .help](../../../../docs/cli/command/readme.md#command--1-help)
+
+---
+
+### IT-9: Help output contains grouped section headers
+
+- **Given:** clean environment
+- **When:** `clv .help`
+- **Then:** stdout contains all 4 section header strings: "Version Management", "Settings & Config", "Process Lifecycle", "Status"
+- **Exit:** 0
+- **Source:** [command/root.md — .help](../../../../docs/cli/command/root.md#command--1-help), [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
 
 ---
 

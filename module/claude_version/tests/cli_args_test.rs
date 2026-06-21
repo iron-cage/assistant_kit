@@ -125,7 +125,7 @@ fn tc001_empty_argv_shows_help()
 {
   let out = run( &[] );
   assert_eq!( code( &out ), 0, "empty argv must exit 0" );
-  assert!( out_stdout( &out ).contains( "Available commands:" ), "must show help" );
+  assert!( out_stdout( &out ).contains( "Version Management" ), "must show help" );
 }
 
 // TC-002: .help → help, exit 0
@@ -134,7 +134,7 @@ fn tc002_dot_help()
 {
   let out = run( &[ ".help" ] );
   assert_eq!( code( &out ), 0 );
-  assert!( out_stdout( &out ).contains( "Available commands:" ), "must show help" );
+  assert!( out_stdout( &out ).contains( "Version Management" ), "must show help" );
 }
 
 // TC-004: unknown bogus::1 param → exit 1
@@ -299,7 +299,7 @@ fn tc026_help_subcommand_explicitly()
 {
   let out = run( &[ ".help" ] );
   assert_eq!( code( &out ), 0 );
-  assert!( out_stdout( &out ).contains( "Available commands:" ), "must show help" );
+  assert!( out_stdout( &out ).contains( "Version Management" ), "must show help" );
 }
 
 // TC-027: -- double-dash token → rejected as non-param::value
@@ -461,7 +461,7 @@ fn tc038_help_in_second_position()
   let out = run( &[ ".status", ".help" ] );
   assert_eq!( code( &out ), 0, "`.status .help` must exit 0" );
   let stdout = out_stdout( &out );
-  assert!( stdout.contains( "Available commands:" ), "must show help listing: {stdout}" );
+  assert!( stdout.contains( "Version Management" ), "must show help listing: {stdout}" );
 }
 
 // TC-039: .help after multi-part command → exit 0, help output
@@ -471,7 +471,7 @@ fn tc039_help_after_multi_part_command()
   let out = run( &[ ".version.install", ".help" ] );
   assert_eq!( code( &out ), 0, "`.version.install .help` must exit 0" );
   let stdout = out_stdout( &out );
-  assert!( stdout.contains( "Available commands:" ), "must show help listing: {stdout}" );
+  assert!( stdout.contains( "Version Management" ), "must show help listing: {stdout}" );
 }
 
 // TC-040: .help after params → exit 0, help output
@@ -481,7 +481,7 @@ fn tc040_help_after_params()
   let out = run( &[ ".version.guard", "dry::1", ".help" ] );
   assert_eq!( code( &out ), 0, "`.version.guard dry::1 .help` must exit 0" );
   let stdout = out_stdout( &out );
-  assert!( stdout.contains( "Available commands:" ), "must show help listing: {stdout}" );
+  assert!( stdout.contains( "Version Management" ), "must show help listing: {stdout}" );
 }
 
 // TC-484: verbosity::3 (canonical key) rejected like v::3
@@ -669,7 +669,7 @@ fn tc489_bare_help_after_command_routes_to_help()
   let out = run( &[ ".version.show", "help" ] );
   assert_eq!( code( &out ), 0, "`.version.show help` must exit 0" );
   let stdout = out_stdout( &out );
-  assert!( stdout.contains( "Available commands:" ), "must show help listing: {stdout}" );
+  assert!( stdout.contains( "Version Management" ), "must show help listing: {stdout}" );
 }
 
 // TC-490: bare `help` after params → routes to `.help`, exit 0
@@ -679,7 +679,7 @@ fn tc490_bare_help_after_params_routes_to_help()
   let out = run( &[ ".version.history", "count::3", "help" ] );
   assert_eq!( code( &out ), 0, "`.version.history count::3 help` must exit 0" );
   let stdout = out_stdout( &out );
-  assert!( stdout.contains( "Available commands:" ), "must show help listing: {stdout}" );
+  assert!( stdout.contains( "Version Management" ), "must show help listing: {stdout}" );
 }
 
 // TC-491: interval::u64max (exceeds i64::MAX) → clear error, exit 1
@@ -1053,7 +1053,7 @@ fn ec3_help_mutation_no_side_effects()
     .expect( "failed to run" );
   assert_eq!( code( &out ), 0, ".help must exit 0 even with mutation command: {}", out_stderr( &out ) );
   let stdout = out_stdout( &out );
-  assert!( stdout.contains( "Available commands:" ), "must show help: {stdout}" );
+  assert!( stdout.contains( "Version Management" ), "must show help: {stdout}" );
   // settings.json must NOT be created — mutation suppressed by .help
   assert!(
     !dir.path().join( ".claude/settings.json" ).exists(),
@@ -1068,7 +1068,7 @@ fn ec4_help_position_first_arg()
   let out = run( &[ ".help", ".version.list" ] );
   assert_eq!( code( &out ), 0, "`.help .version.list` must exit 0" );
   let stdout = out_stdout( &out );
-  assert!( stdout.contains( "Available commands:" ), "must show help: {stdout}" );
+  assert!( stdout.contains( "Version Management" ), "must show help: {stdout}" );
 }
 
 // EC-5: absent `.help` → command executes normally, NOT help output
@@ -1081,7 +1081,7 @@ fn ec5_absent_help_not_triggered()
   assert!( stdout.contains( "stable" ), ".version.list must show aliases not help: {stdout}" );
   // help text must NOT appear (that would mean .help was incorrectly triggered)
   assert!(
-    !stdout.contains( "Available commands:" ),
+    !stdout.contains( "Version Management" ),
     "help must NOT appear when .help is absent: {stdout}"
   );
 }
@@ -1114,7 +1114,7 @@ fn ec7_help_accepted_by_all_commands()
     assert_eq!( code( &out ), 0, ".help must exit 0 for {args:?}" );
     let stdout = out_stdout( &out );
     assert!(
-      stdout.contains( "Available commands:" ),
+      stdout.contains( "Version Management" ),
       ".help must show help for {args:?}: {stdout}"
     );
   }
@@ -1132,7 +1132,7 @@ fn ec8_help_wins_over_params()
     !stdout.trim_start().starts_with( '[' ),
     "output must not be a JSON array when .help is present: {stdout}"
   );
-  assert!( stdout.contains( "Available commands:" ), "must show help: {stdout}" );
+  assert!( stdout.contains( "Version Management" ), "must show help: {stdout}" );
 }
 
 // ─── 02_dry.md EC-6, EC-7, EC-9 ────────────────────────────────────────────

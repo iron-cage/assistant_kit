@@ -34,7 +34,7 @@ Unit and integration tests for `claude_version`.
 | `integration/user_story_test.rs` | Acceptance tests for all user story specifications |
 | `integration/format_surface_test.rs` | FM- format surface tests from tests/docs/cli/format/ specs |
 | `integration/pitfall_surface_test.rs` | PF- pitfall surface tests from tests/docs/pitfall/ specs |
-| `integration/catalog_surface_test.rs` | DD- catalog surface tests from tests/docs/catalog/ specs |
+| `integration/catalog_surface_test.rs` | DD- design decision tests from tests/docs/feature/05_cli_design.md |
 | `integration/version_param_test.rs` | EC- edge case tests for the `version::` parameter |
 | `integration/dry_param_test.rs` | EC- edge case tests for the `dry::` parameter |
 | `integration/force_param_test.rs` | EC- edge case tests for the `force::` parameter |

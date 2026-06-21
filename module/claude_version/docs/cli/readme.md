@@ -5,7 +5,7 @@
 - **Purpose**: Document the clv command-line interface for Claude Code version and settings management.
 - **Responsibility**: Reference documentation for commands, parameters, types, output formats, and user stories.
 - **In Scope**: commands, params, types, parameter groups, dictionary, user stories, output formats, environment parameters, config parameters, parameter interactions.
-- **Out of Scope**: Implementation design and behavioral contracts — validation rules, exit code semantics, pipeline architecture (→ `feature/`), design rationale (→ `catalog/001_design_decisions.md`), test planning (→ `tests/docs/cli/`).
+- **Out of Scope**: Implementation design and behavioral contracts — validation rules, exit code semantics, pipeline architecture (→ `feature/`), design rationale (→ `feature/005_cli_design.md`), test planning (→ `tests/docs/cli/`).
 
 Manage Claude Code installation: versions, processes, and settings.
 
@@ -69,7 +69,7 @@ clv <.command> [param::value ...]
 ### See Also
 
 - [feature/001_version_management.md](../feature/001_version_management.md) — version management, architecture, constraints
-- [catalog/001_design_decisions.md](../catalog/001_design_decisions.md) — CLI redesign rationale
+- [feature/005_cli_design.md](../feature/005_cli_design.md) — CLI pipeline design and design decisions
 - [tests/docs/cli/](../../tests/docs/cli/readme.md) — test case planning (commands, params, groups)
 
 ### Exception Records

@@ -19,6 +19,7 @@
 | 004_settings_management.md | Read and write settings via deprecated commands |
 | 005_version_pinning.md | Pin team-wide Claude Code version |
 | 006_config_management.md | Inspect and modify config via `.config` |
+| 007_params_inspection.md | Discover Claude Code params and inspect current observable values |
 
 ### Overview Table
 
@@ -30,3 +31,4 @@
 | [004_settings_management.md](004_settings_management.md) | 004 | Settings Management | developer | `.settings.show`, `.settings.get`, `.settings.set` |
 | [005_version_pinning.md](005_version_pinning.md) | 005 | Version Pinning | team lead | `.version.list`, `.version.install`, `.version.show`, `.version.guard` |
 | [006_config_management.md](006_config_management.md) | 006 | Config Management | developer | `.config` |
+| [007_params_inspection.md](007_params_inspection.md) | 007 | Params Inspection | developer | `.params` |

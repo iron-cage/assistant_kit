@@ -17,3 +17,4 @@
 | 004 | [Dry Run](004_dry_run.md) | Mutation preview via dry::1 across all mutation commands | ✅ |
 | 005 | [CLI Design](005_cli_design.md) | Command routing, parameter parsing, exit codes, help listing | ✅ |
 | 006 | [Config Command](006_config_command.md) | Unified `.config` command with 4-layer resolution and catalog | ✅ |
+| 007 | [Params Command](007_params_command.md) | `.params` command — full param catalog inspection with observable values | ⏳ |

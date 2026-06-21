@@ -93,9 +93,9 @@ nodes:
   file: ../contract/claude_code/docs/taxonomy/readme.md
   label: Concept Taxonomy
   entity: claude_code
-- id: claude_code/entities
-  file: ../contract/claude_code/docs/001_entities.md
-  label: Doc Entities Index
+- id: claude_code/entity
+  file: ../contract/claude_code/docs/001_entity.md
+  label: Doc Entity Index
   entity: claude_code
 edges:
 - from: feature/001
@@ -245,28 +245,28 @@ edges:
 - from: claude_code/006
   to: claude_code/002
   via: cross_references
-- from: claude_code/entities
+- from: claude_code/entity
   to: claude_code/001
   via: indexes
-- from: claude_code/entities
+- from: claude_code/entity
   to: claude_code/002
   via: indexes
-- from: claude_code/entities
+- from: claude_code/entity
   to: claude_code/003
   via: indexes
-- from: claude_code/entities
+- from: claude_code/entity
   to: claude_code/004
   via: indexes
-- from: claude_code/entities
+- from: claude_code/entity
   to: claude_code/005
   via: indexes
-- from: claude_code/entities
+- from: claude_code/entity
   to: claude_code/006
   via: indexes
-- from: claude_code/entities
+- from: claude_code/entity
   to: claude_code/007
   via: indexes
-- from: claude_code/entities
+- from: claude_code/entity
   to: claude_code/params
   via: indexes
 components:
@@ -307,5 +307,5 @@ components:
   - claude_code/006
   - claude_code/params
   - claude_code/007
-  - claude_code/entities
+  - claude_code/entity
 dangling_refs: []

@@ -13,5 +13,5 @@
 | `taxonomy/` | Four-level concept hierarchy (Project/Conversation/Session/Entry) — 3 instances |
 | `endpoint/` | Anthropic HTTP endpoint wire contracts (URL, auth, schema, errors) |
 | `params/` | CLI parameter specifications — one file per runtime parameter (73 instances) |
-| `001_entities.md` | Cross-entity index: all collection types with instance counts |
+| `001_entity.md` | Cross-entity index: all collection types with instance counts |
 | `fault/` | Fault collection — all known error, silent failure, and quirk conditions of the `claude` binary |
