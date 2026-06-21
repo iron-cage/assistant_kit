@@ -3,7 +3,7 @@
 //!
 //! ## Purpose
 //!
-//! Verify EC-1 through EC-8 from `tests/docs/cli/param/056_retry_default.md` and
+//! Verify EC-1 through EC-9 from `tests/docs/cli/param/056_retry_default.md` and
 //! EC-1 through EC-6 from `tests/docs/cli/param/057_retry_default_delay.md`.
 //!
 //! Both parameter specs share this test file because `--retry-default-delay` is
@@ -12,7 +12,7 @@
 //! ## Test Layout
 //!
 //! - EC-1..EC-6 (param 56), EC-1..EC-6 (param 57): parser/dry-run — no subprocess
-//! - EC-7..EC-8 (param 56): require fake subprocess; test 3-tier priority
+//! - EC-7..EC-9 (param 56): require fake subprocess; test 3-tier priority
 //!
 //! ## Corner Cases Covered
 //!
@@ -25,6 +25,7 @@
 //! - EC-6: invalid env var silently ignored
 //! - EC-7: class-specific=1 beats fallback=5; fake always exits 2 → exhausted after 2 calls
 //! - EC-8: no class-specific, no override → fallback=3 fires; fake exits 2 once then 0 → exit 0
+//! - EC-9: fallback fires for Account class (Account not special-cased)
 //!
 //! ### --retry-default-delay (param 57)
 //! - EC-1 (delay): help lists flag
@@ -264,6 +265,60 @@ fn ec8_retry_default_fires_when_no_class_or_override()
   assert!(
     stderr.contains( "[Transient]" ) && stderr.to_lowercase().contains( "retry" ),
     "stderr must contain [Transient] retry message (fallback used). Got:\n{stderr}"
+  );
+}
+
+// ── EC-9: Fallback fires for Account class (Account not special-cased) ────────
+
+/// EC-9 (param 56): no `--retry-on-account`, no `--retry-override`; Tier 3 fallback
+/// fires for Account class. Fake emits `"You've hit your limit"` + exits 2 once,
+/// then exits 0 → exit 0; `[Account]` retry message in stderr; two invocations.
+///
+/// Confirms Account uses the same 3-tier resolution as all other error classes —
+/// no class_default_count() override blocks fallback.
+#[ cfg( unix ) ]
+#[ test ]
+fn ec9_retry_default_fires_for_account_class()
+{
+  let tmp   = tempfile::tempdir().expect( "create temp dir" );
+  let fake  = tmp.path().join( "claude" );
+  let count = tmp.path().join( "count" );
+
+  let count_path = count.to_str().expect( "counter path utf-8" );
+  let script = format!(
+    "#!/bin/sh\nif [ -f \"{count_path}\" ]; then exit 0; fi\ntouch \"{count_path}\"\n\
+     printf \"You've hit your limit\\n\"\nexit 2\n"
+  );
+  std::fs::write( &fake, script.as_bytes() ).expect( "write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake claude" );
+
+  let old_path = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path = format!( "{}:{old_path}", tmp.path().display() );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  let out = Command::new( bin )
+    .args( [
+      "-p", "--retry-default-delay", "0",
+      "--max-sessions", "0", "x"
+    ] )
+    .env( "PATH", &new_path )
+    .env_remove( "CLR_RETRY_ON_ACCOUNT" )
+    .env_remove( "CLR_RETRY_OVERRIDE" )
+    .env_remove( "CLR_RETRY_DEFAULT" )
+    .output()
+    .expect( "invoke clr" );
+
+  assert!(
+    out.status.success(),
+    "exit must be 0 (fallback fires for Account; retry succeeds). exit={:?} stderr={}",
+    out.status.code(),
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "[Account]" ) && stderr.to_lowercase().contains( "retry" ),
+    "stderr must contain [Account] retry message (fallback used). Got:\n{stderr}"
   );
 }
 

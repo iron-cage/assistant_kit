@@ -70,16 +70,33 @@ fn s34_no_chrome_suppresses_chrome_flag()
   );
 }
 
-// S35: default (no `--no-chrome`) → `--chrome` present in assembled command (`21_no_chrome.md` EC-2)
+// S35: default (no `--no-chrome`) → `--chrome` present in interactive mode (`21_no_chrome.md` EC-2)
+// Fix(BUG-304): chrome is suppressed automatically in print mode; only injected for interactive.
 #[ test ]
-fn s35_default_chrome_injected()
+fn s35_default_chrome_injected_interactive()
 {
-  let out = run_cli( &[ "--dry-run", "Fix bug" ] );
+  // No message → interactive mode; --chrome must appear by default.
+  let out = run_cli( &[ "--dry-run" ] );
   assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "--chrome" ),
-    "default assembled command must contain --chrome. Got:\n{stdout}"
+    "default interactive command must contain --chrome. Got:\n{stdout}"
+  );
+}
+
+// S35b: print mode (message given, no explicit --no-chrome) → `--chrome` absent (`21_no_chrome.md` EC-2b)
+// Fix(BUG-304): chrome is automatically suppressed in print mode to prevent session hang.
+#[ test ]
+fn s35b_print_mode_suppresses_chrome()
+{
+  // Message present → print mode auto-detected; --chrome must be suppressed.
+  let out = run_cli( &[ "--dry-run", "Fix bug" ] );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( "--chrome" ),
+    "print-mode command must NOT contain --chrome (BUG-304 mitigation). Got:\n{stdout}"
   );
 }
 

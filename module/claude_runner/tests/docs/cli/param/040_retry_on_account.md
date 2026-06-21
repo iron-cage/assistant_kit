@@ -15,7 +15,7 @@ See [040_retry_on_account.md](../../../../docs/cli/param/040_retry_on_account.md
 | EC-6 | `CLR_RETRY_ON_ACCOUNT=notanumber --dry-run` → silently ignored | Validation |
 | EC-7 | Fake emits quota pattern + exits 2 once then 0; retries=1, delay=0 → exit 0; `[Account]` in stderr | Integration |
 | EC-8 | Fake always emits quota pattern + exits 2; retries=2 → exit 2; `[Account]` exhaustion in stderr | Integration |
-| EC-9 | Fake emits quota pattern + exits 2; no retry flags → exit 2; no retry lines; Account default=0 | Default |
+| EC-9 | Fake emits quota + exits 2 once then 0; no retry flags → exit 0; retries via Tier 3 fallback (default=2) | Default |
 
 ## Test Coverage Summary
 
@@ -25,7 +25,7 @@ See [040_retry_on_account.md](../../../../docs/cli/param/040_retry_on_account.md
 - CLI-wins: 1 test (EC-5)
 - Validation: 1 test (EC-6)
 - Integration: 2 tests (EC-7, EC-8)
-- Default: 1 test (EC-9)
+- Default (Fallback): 1 test (EC-9)
 
 **Total:** 9 edge cases
 
@@ -47,7 +47,7 @@ RateLimit fallback. `--account-delay 0` is required in integration tests to prev
 | EC-6 | `ec6_clr_retry_on_account_invalid_ignored` | `retry_account_test.rs` |
 | EC-7 | `ec7_account_retry_succeeds_after_one_quota_exhausted` | `retry_account_test.rs` |
 | EC-8 | `ec8_account_retry_exhausted` | `retry_account_test.rs` |
-| EC-9 | `ec9_account_default_zero_no_retry` | `retry_account_test.rs` |
+| EC-9 | `ec9_account_retries_via_tier3_fallback` | `retry_account_test.rs` |
 
 ---
 
@@ -139,12 +139,12 @@ RateLimit fallback. `--account-delay 0` is required in integration tests to prev
 
 ---
 
-### EC-9: Account default=0 — no retry without explicit opt-in
+### EC-9: Account retries via Tier 3 fallback (default=2) when no class-specific flag set
 
-- **Given:** fake emits `"You've hit your limit"` + exits 2; NO `--retry-on-account` flag; `--retry-override 0 --max-sessions 0 -p "x"`
-- **When:** `clr --retry-override 0 --max-sessions 0 -p "x"` using fake (Account class_default=0 takes effect)
-- **Then:** Exit 2; stderr contains `[Account]`; stderr does NOT contain `retrying`; exactly 1 invocation (no retry)
-- **Exit:** 2
+- **Given:** fake emits `"You've hit your limit"` + exits 2 on first call; exits 0 on second; NO `--retry-on-account` flag; `--retry-default-delay 0 --max-sessions 0 -p "x"`
+- **When:** `clr --retry-default-delay 0 --max-sessions 0 -p "x"` using fake
+- **Then:** Exit 0; stderr contains `[Account]` retry progress line; two invocations (1 retry from Tier 3 fallback default=2)
+- **Exit:** 0
 - **Source:** [040_retry_on_account.md](../../../../docs/cli/param/040_retry_on_account.md)
 - **Commands:** run, ask
-- **Note:** `--retry-override 0` is set to prevent Tier 3 fallback from masking the class default; the test validates that Account-class-specific default of 0 means no retry fires. **Divergence from EC-7:** EC-7 uses explicit `--retry-on-account 1` (opt-in); EC-9 uses no class-specific flag (default 0).
+- **Note:** No class-specific or override flags set — Account class falls through to Tier 3 `--retry-default` (built-in 2). **Divergence from EC-7:** EC-7 uses explicit `--retry-on-account 1` (Tier 2); EC-9 relies on Tier 3 fallback.

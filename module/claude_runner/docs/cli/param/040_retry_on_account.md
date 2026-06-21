@@ -8,30 +8,24 @@ subprocess, decrementing the retry counter. On exhaustion, `clr` emits an
 exhaustion message to stderr and propagates the subprocess exit code.
 
 - **Type:** u8 (0–255)
-- **Default:** `0` (no retry; opt-in only — quota resets are hours-long, making short-delay retry counterproductive)
+- **Default:** `auto` (inherits from `--retry-default`, Tier 3 fallback; effective default = 2)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 
 ```sh
-clr -p "task" --retry-on-account 3                 # opt-in: retry up to 3 times on quota exhaustion
-clr -p "task" --retry-on-account 0                 # explicit zero (same as default)
+clr -p "task" --retry-on-account 3                 # retry up to 3 times on quota exhaustion
+clr -p "task" --retry-on-account 0                 # explicit zero: disable Account retry
 CLR_RETRY_ON_ACCOUNT=2 clr -p "task"               # env-var equivalent
 ```
 
-**Note:** Default is `0` — Account class does not retry unless explicitly opted in.
-Quota resets are measured in hours; a 30-second retry delay wastes wall-clock time
-without meaningful chance of success. Use `--retry-on-account N` with a long
-`--account-delay` only when the task duration may span a billing-period boundary.
-`--retry-override` (Tier 1) beats this value when set.
+**Note:** `--retry-override` (Tier 1) beats this value when set.
 
 **Note:** `QuotaExhausted` is checked first in `classify_error()` priority order.
 A response that matches both `"You've hit your limit"` and `"API Error: "` is
 always classified as Account, never Service.
 
-**Note:** Retrying a quota-exhausted error is only useful for very long-running
-batch workflows where the billing period may reset between retry attempts (set
-a high `--account-delay` in this case). For immediate account switching, see
-the deferred `--on-quota-exhausted` parameter in `type/14_error_class.md`.
+**Note:** For immediate account switching instead of retrying, see the deferred
+`--on-quota-exhausted` parameter in `type/14_error_class.md`.
 
 **Note:** The value is the number of *re-invocations*, not total attempts.
 
@@ -46,7 +40,7 @@ CLI flag wins when both are present.
 ### 3-Tier Resolution
 
 ```
-effective = --retry-override ?? --retry-on-account ?? class_default(Account=0) ?? --retry-default (2)
+effective = --retry-override ?? --retry-on-account ?? --retry-default (2)
 ```
 
 ### Referenced Parameter Groups
@@ -59,8 +53,8 @@ effective = --retry-override ?? --retry-on-account ?? class_default(Account=0) ?
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`run`](../command/01_run.md) | 0 | class default = 0; 4-tier resolution in `run_print_mode()` |
-| 5 | [`ask`](../command/05_ask.md) | 0 | Same behavior; pure alias for run |
+| 1 | [`run`](../command/01_run.md) | auto | 3-tier resolution in `run_print_mode()` |
+| 5 | [`ask`](../command/05_ask.md) | auto | Same behavior; pure alias for run |
 
 ### See Also
 

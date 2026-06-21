@@ -69,7 +69,7 @@ clr --trace "Fix bug" --dir /project
 | [`--retry-on-transient`](../param/034_retry_on_transient.md) | u8 | auto | Retry (Tier 2) | Transient class retry count; effective default = 2 via fallback |
 | [`--transient-delay`](../param/035_transient_delay.md) | u32 | auto | Retry delay (Tier 2) | Transient class delay; effective default = 30 via fallback |
 | [`--timeout`](../param/036_timeout.md) | u32 | `0` | Execution watchdog | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only) |
-| [`--retry-on-account`](../param/040_retry_on_account.md) | u8 | 0 | Retry (Tier 2) | Account class retry count (opt-in only) |
+| [`--retry-on-account`](../param/040_retry_on_account.md) | u8 | auto | Retry (Tier 2) | Account class retry count |
 | [`--account-delay`](../param/041_account_delay.md) | u32 | auto | Retry delay (Tier 2) | Account class delay |
 | [`--retry-on-auth`](../param/042_retry_on_auth.md) | u8 | auto | Retry (Tier 2) | Auth class retry count |
 | [`--auth-delay`](../param/043_auth_delay.md) | u32 | auto | Retry delay (Tier 2) | Auth class delay |
