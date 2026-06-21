@@ -51,6 +51,7 @@ pub( crate ) fn print_help()
   println!( "  --no-persist                       Disable session persistence (--no-session-persistence)" );
   println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
   println!( "  --mcp-config <PATH>                MCP server config file (repeatable)" );
+  println!( "  --output-style <MODE>              Rendering mode: summary (ANSI box, default) or raw (passthrough) [env: CLR_OUTPUT_STYLE]" );
   println!( "  --output-format <FMT>              Output format: text, json, stream-json, summary" );
   println!( "  --max-turns <N>                    Max agentic turns (0 = unlimited)" );
   println!( "  --allowed-tools <TOOLS>            Comma-separated tool whitelist (e.g. \"Read,Edit\")" );
@@ -192,7 +193,7 @@ pub( crate ) fn print_ps_help() -> !
   println!( "SESSION FLAGS (auto-inserted Flags column when ≥1 flag fires):" );
   println!( "  👈  This session    Parent of clr ps is a claude process" );
   println!( "  🖨   Print mode      Session cmdline contains --print or -p" );
-  println!( "  ⚡  On CPU          Kernel process state == R (executing at sample instant)" );
+  println!( "  ⚡  Active          CPU delta >= 3 ticks in 1-second sample window" );
   println!( "  🕰   Ancient         elapsed_secs > CLR_PS_ANCIENT_SECS (default: 28800 = 8 h)" );
   println!( "  🐘  High RAM        RAM > CLR_PS_HIGH_RAM_MB (default: 400 MB)" );
   println!( "  ⚠   Dead metrics    /proc stat unreadable (all metric fields show -)" );

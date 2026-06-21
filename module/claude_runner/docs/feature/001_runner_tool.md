@@ -35,6 +35,8 @@ and prints. Write errors (permission denied, directory absent) cause `clr` to ex
 error on stderr. In dry-run mode the file is not created. `--output-file` is orthogonal to
 `--file` — `--file` feeds input to the subprocess; `--output-file` captures subprocess output.
 
+**Print-mode output rendering:** `run_print_mode()` renders output through `summary.rs` by default — `--output-style summary` is the default; `--output-style raw` bypasses `render_summary()` and returns raw claude output unchanged. When `--output-style summary` is active and `--output-format` is absent, `clr` automatically injects `--output-format json` into the subprocess command so `render_summary()` receives parseable input. If rendering fails (e.g. when `--output-format text` was explicitly set), `render_summary()` returns `None` and `clr` falls back to raw output unchanged. `CLR_OUTPUT_STYLE` env var accepted; CLI flag wins. Invalid values (`--output-style invalid` or `CLR_OUTPUT_STYLE=bogus`) exit 1 immediately.
+
 **Enum output validation:** `--expect "val1|val2|..."` validates captured stdout against a
 pipe-separated list of expected values (case-insensitive, whitespace-trimmed). The
 `--expect-strategy` parameter controls mismatch handling: `fail` (exit 3, default), `retry`
@@ -59,7 +61,7 @@ rows by execution mode (interactive/print). `--columns` selects a custom column 
 `--pid <PIDs>` restricts the active table to comma-separated PIDs (AND with `--mode`).
 `-i`/`--inspect` switches to 12-attribute key:value record blocks per session (suppresses
 queued table, ignores `--columns`/`--wide`). Each row can display emoji session flags:
-🐳 (container), 🕰 (ancient), 🐘 (high RAM), ⚠ (high CPU), ⚡ (low CPU), 🖨 (print mode),
+🐳 (container), 🕰 (ancient), 🐘 (high RAM), ⚠ (dead metrics), ⚡ (active), 🖨 (print mode),
 👈 (this session); thresholds configurable via `CLR_PS_ANCIENT_SECS` (default 28800) and
 `CLR_PS_HIGH_RAM_MB` (default 400). Env vars: `CLR_PS_MODE`, `CLR_PS_COLUMNS`, `CLR_PS_PID`,
 `CLR_PS_ANCIENT_SECS`, `CLR_PS_HIGH_RAM_MB`. Data sources: `/proc/{pid}/stat` (state, CPU
@@ -120,7 +122,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../src/cli/cred_parse.rs` | `IsolatedArgs`, `RefreshArgs`, their parsers and env-var fallbacks |
 | `../../src/cli/fence.rs` | `strip_fences` utility — outermost code-fence stripping for `--strip-fences` |
 | `../../src/cli/tools.rs` | `clr tools` — list Claude Code built-in tools in a plain-style table |
-| `../../src/cli/summary.rs` | `--output-format summary` rendering — JSON→YAML metadata header + text body |
+| `../../src/cli/summary.rs` | `render_summary()` — JSON→ANSI box; called in `run_print_mode()` when `--output-style summary` (default); falls back to raw on non-JSON input |
 
 ### Tests
 
@@ -152,9 +154,10 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/kill_command_test.rs` | IT-01–IT-09 clr kill SIGTERM delivery and guards |
 | `../../tests/isolated_defaults_test.rs` | ISD-01–ISD-13 isolated subprocess model, effort, flags |
 | `../../tests/isolated_correctness_test.rs` | CT-1–CT-6 isolated correctness invariants |
-| `../../tests/timeout_test.rs` | Default timeout constant, watchdog activation, unlimited flag/env |
+| `../../tests/timeout_test.rs` | Default timeout constant, watchdog activation, unlimited flag/env, default-path kill via `_CLR_DEFAULT_TIMEOUT` (TSK-228) |
 | `../../tests/tools_command_test.rs` | IT-01–IT-09 clr tools table output, help, unknown args |
 | `../../tests/output_format_test.rs` | --output-format summary rendering and fallback |
+| `../../tests/output_style_test.rs` | EC-01–EC-13 --output-style summary/raw rendering, CLR_OUTPUT_STYLE env var, legacy alias, graceful fallback |
 | `../../tests/ask_command_test.rs` | clr ask dispatch, help intercept, BUG-249/250 |
 | `../../tests/env_var_test.rs` | E01–E17 CLR_* env-variable fallback for run params |
 | `../../tests/env_var_ext_test.rs` | E18–E34 extended env-variable fallback (output-file, expect, retry) |
@@ -191,7 +194,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/ps_mode_test.rs` | EC-1–EC-8 --mode filter for clr ps |
 | `../../tests/ps_columns_test.rs` | EC-1–EC-10 --columns custom column selection, BUG-303 |
 | `../../tests/ps_wide_test.rs` | EC-1–EC-5 --wide optional column display |
-| `../../tests/ps_flags_test.rs` | IT-30–IT-38, US-18–US-26 session flag emoji computation |
+| `../../tests/ps_flags_test.rs` | IT-30–IT-40, US-18–US-26, E41–E42 session flag emoji computation |
 
 ### Provenance
 

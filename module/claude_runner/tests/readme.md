@@ -52,7 +52,7 @@
 | Retry on Unknown (EC-1–EC-10) | `retry_unknown_test.rs` | `--retry-on-unknown` parse, env var, retry, exhaustion, old-flag rejected |
 | Retry Override (EC-1–EC-10, EC-1–EC-6) | `retry_override_test.rs` | `--retry-override` and `--retry-override-delay` parse, env var, 3-tier priority (Tier 1) |
 | Retry Default (EC-1–EC-8, EC-1–EC-6) | `retry_default_test.rs` | `--retry-default` and `--retry-default-delay` parse, env var, 3-tier fallback (Tier 3) |
-| Timeout run/ask (EC-1–EC-8) | `timeout_test.rs` | `--timeout` parse, env var, watchdog kill, fast-exit no-fire |
+| Timeout run/ask (EC-1–EC-8, +7 default-path) | `timeout_test.rs` | `--timeout` parse, env var, watchdog kill (explicit + default), fast-exit no-fire, default watchdog constant + `_CLR_DEFAULT_TIMEOUT` kill path (TSK-227/228) |
 | User stories (US01–US09) | `user_story_test.rs` | End-to-end user story workflows: core run/ask/model/verbose stories |
 | User stories (US10–US18) | `user_story_creds_isolated_test.rs` | End-to-end user story workflows: credential, isolated, and refresh stories |
 | User stories (US19–US25) | `user_story_output_test.rs` | End-to-end user story workflows: MCP config, output file, concurrency stories |
@@ -64,9 +64,10 @@
 | `clr ps --wide` param (EC-1–EC-5) | `ps_wide_test.rs` | `--wide` extra columns (Mode/Command/Binary), `-w` short form, CLI `--columns` wins, default hides optional cols, help |
 | `clr ps --pid` param (EC-1–EC-8) | `ps_pid_test.rs` | `--pid` single/multi filter, non-existent PID empty state, non-numeric exit 1, AND semantics with `--mode`/`--inspect`, help, env var `CLR_PS_PID` |
 | `clr ps --inspect` flag (EC-1–EC-9) | `ps_inspect_test.rs` | `--inspect` key:value blocks, all 12 attrs, PID filter, mode filter, ignores `--columns`/`--wide`, suppresses queued table, empty state, help |
-| `clr ps` session flags (IT-30–IT-38, US-18–US-26, E41–E42) | `ps_flags_test.rs` | Two-pass Flags column (👈🖨⚡🕰🐘⚠🐳), legend line, `CLR_PS_ANCIENT_SECS`, `CLR_PS_HIGH_RAM_MB` env vars, TOCTOU-dead-metrics via fake proc |
+| `clr ps` session flags (IT-30–IT-40, US-18–US-26, E41–E42) | `ps_flags_test.rs` | Two-pass Flags column (👈🖨⚡🕰🐘⚠🐳), legend line, `CLR_PS_ANCIENT_SECS`, `CLR_PS_HIGH_RAM_MB` env vars, TOCTOU-dead-metrics via fake proc, CPU delta active flag (IT-39/IT-40) |
 | `clr kill` subcommand (IT-1–IT-9) | `kill_command_test.rs` | `clr kill` PID validation, SIGTERM delivery, error handling, help text, typo guard |
-| `clr tools` subcommand (IT-1–IT-7) | `tools_command_test.rs` | `clr tools` exit 0, tool names, categories, caption, help, scheduling/mode tools, main help mention |
+| `clr tools` subcommand (IT-1–IT-9) | `tools_command_test.rs` | `clr tools` exit 0, tool names, categories, caption, help, scheduling/mode tools, main help mention, unknown-arg exit 1 |
+| Output style param (EC-01–EC-13) | `output_style_test.rs` | `--output-style` summary/raw rendering, CLR_OUTPUT_STYLE env var, auto-inject `--output-format json`, graceful fallback, legacy alias, CLI-wins, dry-run trace, validation (EC-01–EC-13) |
 | Output format param (EC-1–EC-14) | `output_format_test.rs` | `--output-format` forwarding, missing-value, text/json/stream-json variants, summary→json intercept, env var (EC-8/EC-12), summary YAML header rendering (EC-10), text body extraction (EC-11), multi-block topology (EC-13), non-zero exit passthrough (EC-14) |
 | Max turns param (EC-1–EC-7) | `max_turns_test.rs` | `--max-turns` forwarding, missing-value, boundary, any-numeric, help, absent-by-default, env var |
 | Allowed tools param (EC-1–EC-7) | `allowed_tools_test.rs` | `--allowed-tools` forwarding (comma-preserved, hyphen-form), missing-value, any-string, help, env var |
@@ -120,7 +121,7 @@
 | `retry_unknown_test.rs` | `--retry-on-unknown` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion, old-flag rejected (EC-1–EC-10 param 52, EC-1–EC-7 param 53). |
 | `retry_override_test.rs` | `--retry-override` and `--retry-override-delay` integration: parse, env var, CLI-wins, Tier 1 disables/overrides class-specific, cross-class application (EC-1–EC-10 param 54, EC-1–EC-6 param 55). |
 | `retry_default_test.rs` | `--retry-default` and `--retry-default-delay` integration: parse, env var, CLI-wins, Tier 3 fallback fires when no override/class-specific (EC-1–EC-8 param 56, EC-1–EC-6 param 57). |
-| `timeout_test.rs` | `--timeout` (run/ask) integration: parse, env var, CLI-wins, fake-subprocess watchdog kill and fast-exit no-fire (EC-1–EC-8). |
+| `timeout_test.rs` | `--timeout` (run/ask) integration: parse, env var, CLI-wins, fake-subprocess watchdog kill and fast-exit no-fire (EC-1–EC-8); default watchdog path: constant value, no-fire, 2s survivor, explicit-above-default, unlimited flag/env, `_CLR_DEFAULT_TIMEOUT=2` kill (TSK-227/228). |
 | `env_var_test.rs` | CLR_* env var fallback: E01–E17, one per CLR_* variable, CLI-wins verification. |
 | `env_var_ext_test.rs` | CLR_* env var fallback extended: E18–E57, BUG-233 subdir slash validation. |
 | `user_story_test.rs` | User story end-to-end workflows: US01–US09 (core run/ask/model/verbose stories). |
@@ -129,9 +130,9 @@
 | `user_story_ps_test.rs` | User story end-to-end workflows: US26 (session listing via `clr ps`). |
 | `user_story_kill_test.rs` | User story end-to-end workflows: US27 (session termination via `clr kill`). |
 | `ps_command_test.rs` | `clr ps` subcommand integration tests: table output, no-sessions, help, typo guard, self-exclusion, path shortening, orphan filtering, sort order, mode/columns/wide filter and env vars (IT-1–IT-29). |
-| `ps_flags_test.rs` | `clr ps` session flags integration tests: Flags column two-pass rendering, legend, 7 flag conditions, threshold env vars (IT-30–IT-38, US-18–US-26, E41–E42). |
+| `ps_flags_test.rs` | `clr ps` session flags integration tests: Flags column two-pass rendering, legend, 7 flag conditions, threshold env vars, CPU delta active detection (IT-30–IT-40, US-18–US-26, E41–E42). |
 | `kill_command_test.rs` | `clr kill` subcommand integration tests: PID validation, SIGTERM delivery, error handling, help text, typo guard (IT-1–IT-9). |
-| `tools_command_test.rs` | `clr tools` subcommand integration tests: exit 0, tool names, categories, caption count, help text, scheduling/mode tools, main help mention (IT-1–IT-7). |
+| `tools_command_test.rs` | `clr tools` subcommand integration tests: exit 0, tool names, categories, caption count, help text, scheduling/mode tools, main help mention, unknown-arg exit 1 (IT-1–IT-9). |
 | `output_format_test.rs` | `--output-format` integration: forwarding, missing-value, text/json/stream-json variants, summary→json intercept, env var (EC-1–EC-14). |
 | `max_turns_test.rs` | `--max-turns` integration: forwarding, missing-value, boundary, any-numeric, help, absent-by-default, env var (EC-1–EC-7). |
 | `allowed_tools_test.rs` | `--allowed-tools` integration: forwarding (comma-preserved, hyphen-form), missing-value, any-string, help, absent-by-default, env var (EC-1–EC-7). |
@@ -139,6 +140,7 @@
 | `max_budget_usd_test.rs` | `--max-budget-usd` integration: forwarding (decimal-preserved), missing-value, any-numeric, help, absent-by-default, env var (EC-1–EC-7). |
 | `add_dir_test.rs` | `--add-dir` integration: forwarding, missing-value, non-existent path accepted, help, absent-by-default, env var (EC-1–EC-7). |
 | `fallback_model_test.rs` | `--fallback-model` integration: forwarding, missing-value, any-string, help, absent-by-default, env var (EC-1–EC-7). |
+| `output_style_test.rs` | `--output-style` integration: summary/raw rendering, CLR_OUTPUT_STYLE env var, auto-inject `--output-format json`, graceful fallback, legacy alias, CLI-wins, dry-run trace, validation (EC-01–EC-13). |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |

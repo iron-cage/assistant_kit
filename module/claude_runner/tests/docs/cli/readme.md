@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 8 clr commands, all 65 parameters, all 14 types, all 5 parameter groups, 2 env parameter specs, 27 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 8 clr commands, all 66 parameters, all 14 types, all 5 parameter groups, 2 env parameter specs, 27 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -26,7 +26,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
 | Commands | 8 | ≥8 IT each |
-| Parameters | 65 | ≥6 EC each |
+| Parameters | 66 | ≥6 EC each |
 | Parameter groups | 5 | ≥4 CC each |
 | Types | 14 | ≥4 TC each |
 | Env params | 2 | ≥6 EC each |
@@ -111,6 +111,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`--max-budget-usd`](param/065_max_budget_usd.md)
 - [`--add-dir`](param/066_add_dir.md)
 - [`--fallback-model`](param/067_fallback_model.md)
+- [`--output-style`](param/070_output_style.md)
 
 #### Parameter Groups
 - [Claude-Native Flags](param_group/01_claude_native_flags.md)
@@ -166,4 +167,4 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 
 #### Env Params
 - [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)
-- [`CLR_* (66 vars)`](env_param/02_clr_input_vars.md)
+- [`CLR_* (67 vars)`](env_param/02_clr_input_vars.md)

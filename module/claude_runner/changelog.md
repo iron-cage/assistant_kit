@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`--output-style <MODE>` — runner-level print-mode rendering control** (TSK-231)
+  - Two values: `summary` (default) routes stdout through `render_summary()` in `summary.rs` producing an ANSI box; `raw` bypasses rendering and passes stdout unchanged
+  - **Default changed:** `clr run -m "..."` (no flags) now renders the summary ANSI box by default; previous behavior was raw text
+  - When `--output-style summary` and `--output-format` is absent, `clr` auto-injects `--output-format json` into the subprocess command; graceful fallback to raw when non-JSON output is received (e.g. `--output-format text` explicitly set)
+  - `CLR_OUTPUT_STYLE` env var: accepts `summary` or `raw`; invalid values exit 1 (not silently ignored); CLI flag wins when both set
+  - **Separation of concerns:** `--output-style` is runner-level rendering; `--output-format` is a claude passthrough; the two are orthogonal
+  - **Legacy alias preserved:** `--output-format summary` remains supported for backward compatibility
+  - Sources: `src/cli/parse.rs` (field + dispatch + validation), `src/cli/env.rs` (CLR_OUTPUT_STYLE), `src/cli/builder.rs` (injection branch), `src/cli/execution.rs` (predicate replacement), `src/cli/help.rs` (OPTIONS entry)
+  - Tests: `tests/output_style_test.rs` (EC-01–EC-13); spec: `tests/docs/cli/param/070_output_style.md`
+
+- **Default timeout kill test: `ec_timeout_default_kills` + `default_print_timeout()` helper** (TSK-228)
+  - `default_print_timeout() -> u32` helper in `src/cli/execution.rs`: reads `_CLR_DEFAULT_TIMEOUT` env var (test-only override), falls back to `DEFAULT_PRINT_TIMEOUT_SECS` (3600); call site in `run_print_mode()` changed from `unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )` to `unwrap_or( default_print_timeout() )`
+  - `ec_timeout_default_kills` integration test in `tests/timeout_test.rs`: sets `_CLR_DEFAULT_TIMEOUT=2`, fake claude sleeps 30s, asserts exit 4 within ~5s and stderr contains "timeout" — proves the `None → default` path fires `poll_timeout()` and kills the subprocess (gap not covered by EC-7 which tests `Some(1)` explicit path only)
+  - `ec_timeout_default_constant_value` assertion updated: third assert added for `unwrap_or( default_print_timeout() )` at call site
+  - `clr kill --stale` proposal cancelled (TSK-229, MAAV 0/4 FAIL, YAGNI): `--stale` syntax and IT-10..IT-14 reverted from kill docs
+
 - **`clr ps --pid` PID filter and `--inspect` key:value output** (TSK-224)
   - `--pid <PIDs>`: restricts the active sessions table to the specified comma-separated process IDs;
     non-numeric entries exit 1; combined with `--mode` as an AND filter; `CLR_PS_PID` env var fallback
@@ -20,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`clr ps` session flags** (TSK-225)
   - Each active session row can display emoji flags: 🐳 (container), 🕰 (ancient), 🐘 (high RAM),
-    ⚠ (high CPU), ⚡ (low CPU), 🖨 (print mode), 👈 (this session)
+    ⚠ (dead metrics), ⚡ (active), 🖨 (print mode), 👈 (this session)
   - `compute_flags()` + `FLAG_LEGEND` + `build_legend()` in `ps.rs`; legend appended below the table
   - Configurable thresholds: `CLR_PS_ANCIENT_SECS` (default 28800), `CLR_PS_HIGH_RAM_MB` (default 400);
     setting either to `0` triggers the flag on every process
@@ -123,6 +139,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tests: EC-7 (retry fires on absent binary), EC-8 (retry disabled with `--retry-on-runner 0`)
 
 ### Changed
+
+- **⚡ flag trigger redesigned from kernel state R to two-sample CPU delta** (TSK-230)
+  - Previous trigger: `/proc/{pid}/stat` field 3 == `R` (kernel scheduler state at sample instant);
+    detected only 1–2 of 20 active sessions — effectively useless for monitoring
+  - New trigger: read `/proc/{pid}/stat` fields 14+15 (utime+stime) twice with 1 s sleep; fire ⚡
+    when delta >= 3 ticks (30 ms CPU in 1 s window); detected 16/20 active sessions in validation
+  - Threshold of 3 ticks separates active work (6–100 ticks/s) from BUG-304 timer noise (1–2 ticks)
+  - Flag renamed "On CPU" → "Active" in legend and help text
+  - No-process optimization: pre-pass sleep skipped when `procs.is_empty()`
+  - Tests: IT-39 (sleeping → no ⚡), IT-40 (busy-loop → ⚡), US-23 updated
 
 - **Account error class retry default changed from 0 to auto** (BUG-307, BUG-308)
   - `class_default_count()` removed; `resolve_count()` simplified from 4-tier to 3-tier resolution

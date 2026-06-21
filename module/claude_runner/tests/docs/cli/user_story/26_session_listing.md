@@ -28,7 +28,7 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 | US-20 | 🕰 Ancient flag with `CLR_PS_ANCIENT_SECS=0` threshold | AC-024 | ✅ |
 | US-21 | 🐘 High-RAM flag with `CLR_PS_HIGH_RAM_MB=0` threshold | AC-025 | ✅ |
 | US-22 | ⚠ Dead-metrics flag for session with unreadable proc stats | AC-026 | ✅ |
-| US-23 | ⚡ Running flag for session in kernel state R | AC-027 | ✅ |
+| US-23 | ⚡ Active flag for session with CPU delta ≥ 3 ticks | AC-027 | ✅ |
 | US-24 | 🖨 Print-mode flag for print-mode session | AC-028 | ✅ |
 | US-25 | Legend appears below active table when flags present | AC-030 | ✅ |
 | US-26 | Legend absent when no flags present | AC-030 | ✅ |
@@ -256,14 +256,14 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 
 ---
 
-### US-23: ⚡ Running flag for session in kernel state R
+### US-23: ⚡ Active flag for session with CPU delta ≥ 3 ticks
 
-- **Given:** Fake `claude` process whose `/proc/{pid}/stat` state field is `R`
+- **Given:** Fake `claude` process consuming significant CPU (e.g. busy-loop) so that two-sample `/proc/{pid}/stat` delta ≥ 3 ticks in 1 s window
 - **When:** `clr ps`
-- **Then:** Exit 0; stdout contains `⚡`; legend lists `⚡  Running`
+- **Then:** Exit 0; stdout contains `⚡`; legend lists `⚡  Active`
 - **Exit:** 0
 - **Verifies:** AC-027
-- **Note:** Kernel state `R` may occur naturally for CPU-intensive processes or be synthesised via a fake proc dir
+- **Note:** A busy-loop process consumes 100% CPU → delta ≈ 100 ticks/s, well above the threshold of 3
 
 ---
 

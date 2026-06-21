@@ -196,7 +196,32 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
     std::process::exit( 0 );
   }
 
-  let active_result = build_active_table( &procs, &config );
+  // Two-sample CPU delta pre-pass (1 s window).  Skip the 1 s sleep when no
+  // processes are found — the table builder returns None immediately anyway.
+  #[ cfg( target_os = "linux" ) ]
+  let deltas : std::collections::HashMap< u32, u64 > = if procs.is_empty()
+  {
+    std::collections::HashMap::new()
+  }
+  else
+  {
+    let first : std::collections::HashMap< u32, u64 > = procs.iter()
+      .filter_map( |p| read_cpu_ticks( p.pid ).map( |t| ( p.pid, t ) ) )
+      .collect();
+    std::thread::sleep( core::time::Duration::from_secs( 1 ) );
+    procs.iter()
+      .filter_map( |p|
+      {
+        let t1 = first.get( &p.pid )?;
+        let t2 = read_cpu_ticks( p.pid )?;
+        Some( ( p.pid, t2.saturating_sub( *t1 ) ) )
+      } )
+      .collect()
+  };
+  #[ cfg( not( target_os = "linux" ) ) ]
+  let deltas : std::collections::HashMap< u32, u64 > = std::collections::HashMap::new();
+
+  let active_result = build_active_table( &procs, &config, &deltas );
   let queued_table  = build_queued_table();
 
   match ( active_result, queued_table )
@@ -420,17 +445,40 @@ fn build_inspect_output( procs : &[ &ProcessInfo ] ) -> String
 const FLAG_LEGEND : &[ ( &str, &str ) ] = &[
   ( "👈", "This session" ),
   ( "🖨",  "Print mode"   ),
-  ( "⚡", "On CPU"       ),
+  ( "⚡", "Active"       ),
   ( "🕰",  "Ancient"      ),
   ( "🐘", "High RAM"     ),
   ( "⚠",  "Dead metrics" ),
   ( "🐳", "Container"    ),
 ];
 
+// Read cumulative CPU ticks (utime + stime) from `/proc/{pid}/stat`.
+// Returns `None` if the process exited or fields are unreadable.
+//
+// WHY two-sample delta instead of kernel state R (field 3):
+// State R is a microsecond snapshot — it detected only 1-2 of 20 active sessions
+// in live testing.  Cumulative ticks delta over 1 s reliably identifies sustained
+// CPU use; a threshold of 3 ticks (≈ 30 ms) separates real work from BUG-304
+// timer noise (1-2 ticks) with no observed false positives or false negatives.
+#[ cfg( target_os = "linux" ) ]
+fn read_cpu_ticks( pid : u32 ) -> Option< u64 >
+{
+  let data = std::fs::read_to_string( format!( "/proc/{pid}/stat" ) ).ok()?;
+  // Field 1 is (comm) which may contain spaces — find closing ')' first.
+  let close_paren = data.find( ')' )?;
+  let after_comm = &data[ close_paren + 2.. ]; // skip ") "
+  let rest : Vec< &str > = after_comm.split_whitespace().collect();
+  // rest[0] = state (field 3), rest[11] = utime (field 14), rest[12] = stime (field 15).
+  let utime : u64 = rest.get( 11 )?.parse().ok()?;
+  let stime : u64 = rest.get( 12 )?.parse().ok()?;
+  Some( utime + stime )
+}
+
 // Compute session-flag emoji string for a single process row.
 //
 // Flags in canonical order 👈🖨⚡🕰🐘⚠🐳 (only symbols that fire are included).
-// Pure computation — no filesystem I/O beyond what the caller already has in `metrics`.
+// Pure computation — no filesystem I/O beyond what the caller already has in `metrics` and
+// `cpu_delta_ticks` (both pre-computed by the caller in `dispatch_ps()`).
 // The `/proc/{my_ppid}/cmdline` read for 👈 is inexpensive and done once per `clr ps` run.
 #[ cfg( target_os = "linux" ) ]
 fn push_flag( flags : &mut String, c : char )
@@ -440,12 +488,13 @@ fn push_flag( flags : &mut String, c : char )
 }
 
 fn compute_flags(
-  proc         : &ProcessInfo,
-  metrics      : Option< &ProcessMetrics >,
-  home         : &str,
-  ancient_secs : u64,
-  high_ram_mb  : u64,
-  my_ppid      : u32,
+  proc            : &ProcessInfo,
+  metrics         : Option< &ProcessMetrics >,
+  home            : &str,
+  ancient_secs    : u64,
+  high_ram_mb     : u64,
+  my_ppid         : u32,
+  cpu_delta_ticks : u64,
 ) -> String
 {
   let mut flags = String::new();
@@ -477,11 +526,12 @@ fn compute_flags(
   // 🖨 Print mode: cmdline contains --print or -p.
   if classify_mode( &proc.args ) == "print" { push_flag( &mut flags, '🖨' ); }
 
+  // ⚡ Active: CPU delta >= 3 ticks in 1-second sample window.
+  // Threshold separates active sessions (6-100 ticks) from BUG-304 timer noise (1-2 ticks).
+  if cpu_delta_ticks >= 3 { push_flag( &mut flags, '⚡' ); }
+
   if let Some( m ) = metrics
   {
-    // ⚡ On CPU: kernel scheduler state is R (executing on a core at sample instant).
-    if m.state == 'R' { push_flag( &mut flags, '⚡' ); }
-
     // 🕰 Ancient: elapsed seconds exceed the configured threshold.
     let elapsed = super::gate::unix_now().saturating_sub( m.started_at );
     if elapsed > ancient_secs { push_flag( &mut flags, '🕰' ); }
@@ -530,6 +580,7 @@ fn build_legend( flags_per_row : &[ String ] ) -> String
 fn build_active_table(
   procs  : &[ ProcessInfo ],
   config : &PsConfig,
+  deltas : &std::collections::HashMap< u32, u64 >,
 ) -> Option< ( String, Option< String > ) >
 {
   // Apply mode filter before checking emptiness.
@@ -576,7 +627,8 @@ fn build_active_table(
     sorted.iter().map( | proc |
     {
       let m = read_process_metrics( proc.pid );
-      compute_flags( proc, m.as_ref(), &home, config.ancient_secs, config.high_ram_mb, my_ppid )
+      let cpu_delta = deltas.get( &proc.pid ).copied().unwrap_or( 0 );
+      compute_flags( proc, m.as_ref(), &home, config.ancient_secs, config.high_ram_mb, my_ppid, cpu_delta )
     } ).collect()
   };
   #[ cfg( not( target_os = "linux" ) ) ]

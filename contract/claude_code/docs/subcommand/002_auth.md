@@ -26,6 +26,22 @@ The `login` sub-subcommand opens a browser-based OAuth flow. The `status`
 sub-subcommand shows the current authentication state including account
 identity and token validity.
 
+### Sub-subcommand Options
+
+#### `claude auth login`
+
+| Option | Description |
+|--------|-------------|
+| `--email <email>` | Pre-populate email address on the login page |
+| `--sso` | Force SSO login flow |
+
+#### `claude auth status`
+
+| Option | Description |
+|--------|-------------|
+| `--json` | Output as JSON (default) |
+| `--text` | Output as human-readable text |
+
 ### Since
 
 pre-v1.0 (unverified)

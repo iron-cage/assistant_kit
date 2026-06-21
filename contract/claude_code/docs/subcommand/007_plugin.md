@@ -33,6 +33,59 @@ correctness.
 
 Alias: `claude plugins` works identically to `claude plugin`.
 
+### Sub-subcommand Options
+
+#### `claude plugin install`
+
+| Option | Description |
+|--------|-------------|
+| `-s`, `--scope <scope>` | Installation scope: `user`, `project`, or `local` (default: user) |
+
+#### `claude plugin uninstall`
+
+| Option | Description |
+|--------|-------------|
+| `-s`, `--scope <scope>` | Uninstall from scope: `user`, `project`, or `local` (default: user) |
+
+#### `claude plugin list`
+
+| Option | Description |
+|--------|-------------|
+| `--json` | Output as JSON |
+| `--available` | Include available plugins from marketplaces (requires `--json`) |
+
+#### `claude plugin enable`
+
+| Option | Description |
+|--------|-------------|
+| `-s`, `--scope <scope>` | Installation scope: `user`, `project`, `local` (default: auto-detect) |
+
+#### `claude plugin disable`
+
+| Option | Description |
+|--------|-------------|
+| `-a`, `--all` | Disable all enabled plugins |
+| `-s`, `--scope <scope>` | Installation scope: `user`, `project`, `local` (default: auto-detect) |
+
+#### `claude plugin update`
+
+| Option | Description |
+|--------|-------------|
+| `-s`, `--scope <scope>` | Installation scope: `user`, `project`, `local`, `managed` (default: user) |
+
+#### `claude plugin marketplace add`
+
+| Option | Description |
+|--------|-------------|
+| `--scope <scope>` | Config scope: `user`, `project`, or `local` |
+| `--sparse <paths...>` | Git sparse-checkout paths (for monorepos) |
+
+#### `claude plugin marketplace list`
+
+| Option | Description |
+|--------|-------------|
+| `--json` | Output as JSON |
+
 ### Since
 
 v2.0.12 (2025-10-09)

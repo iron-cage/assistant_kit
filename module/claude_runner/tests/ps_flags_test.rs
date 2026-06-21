@@ -1,6 +1,6 @@
 //! Session-flags tests for `clr ps`.
 //!
-//! Test spec: [`tests/docs/cli/command/06_ps.md`](docs/cli/command/06_ps.md) IT-30–IT-38
+//! Test spec: [`tests/docs/cli/command/06_ps.md`](docs/cli/command/06_ps.md) IT-30–IT-40
 //! and [`tests/docs/cli/user_story/26_session_listing.md`](docs/cli/user_story/26_session_listing.md)
 //! US-18–US-26, plus E41–E42 env var tests.
 //!
@@ -22,7 +22,9 @@
 //! | US-20  | 🕰 Ancient flag with `CLR_PS_ANCIENT_SECS=0` threshold              | User Story   |
 //! | US-21  | 🐘 High-RAM flag with `CLR_PS_HIGH_RAM_MB=0` threshold              | User Story   |
 //! | US-22  | ⚠ Dead-metrics flag for session with unreadable proc stats          | User Story   |
-//! | US-23  | ⚡ On CPU flag for session in kernel state R                         | User Story   |
+//! | IT-39  | Sleeping process → no ⚡ flag (CPU delta = 0)                       | Behavioral   |
+//! | IT-40  | Busy-loop process → ⚡ flag present (CPU delta ≫ 3)                 | Behavioral   |
+//! | US-23  | ⚡ Active flag for session with CPU delta >= 3 ticks                | User Story   |
 //! | US-24  | 🖨 Print-mode flag for print-mode session                            | User Story   |
 //! | US-25  | Legend appears below active table when flags present                | User Story   |
 //! | US-26  | Legend absent when no flags present                                 | User Story   |
@@ -677,16 +679,16 @@ fn us22_dead_metrics_flag_for_missing_stat()
   );
 }
 
-// ── US-23: ⚡ On CPU flag for session in kernel state R ─────────────────────
+// ── US-23: ⚡ Active flag for session with CPU delta >= 3 ticks ─────────────
 
-/// US-23: Developer running `clr ps` sees ⚡ On CPU for a CPU-intensive session
-/// whose `/proc/{pid}/stat` state field is `R`.
+/// US-23: Developer running `clr ps` sees ⚡ Active for a CPU-intensive session
+/// whose CPU delta >= 3 ticks in the 1-second sample window.
 ///
 /// Spawns a tight shell busy-loop via `/bin/sh --arg0 claude -c 'while :; do :; done'`.
-/// The loop has no blocking syscalls so the kernel state is `R` essentially all the time.
+/// The loop consumes ~100 ticks/s — well above the threshold of 3.
 #[ cfg( target_os = "linux" ) ]
 #[ test ]
-fn us23_running_flag_for_cpu_intensive_session()
+fn us23_active_flag_for_cpu_intensive_session()
 {
   use std::os::unix::process::CommandExt as _;
   use cli_binary_test_helpers::fake_claude_binary_dir;
@@ -722,11 +724,11 @@ fn us23_running_flag_for_cpu_intensive_session()
   assert!( out.status.success(), "US-23: exit 0 expected, got {:?}", out.status.code() );
   assert!(
     stdout.contains( "⚡" ),
-    "US-23: ⚡ flag must appear for session in kernel state R. Got:\n{stdout}"
+    "US-23: ⚡ flag must appear for busy-loop session (CPU delta >> 3). Got:\n{stdout}"
   );
   assert!(
-    stdout.contains( "On CPU" ),
-    "US-23: legend must contain 'On CPU'. Got:\n{stdout}"
+    stdout.contains( "Active" ),
+    "US-23: legend must contain 'Active'. Got:\n{stdout}"
   );
 }
 
@@ -1034,5 +1036,107 @@ fn e42_high_ram_mb_env_var()
   assert!(
     !stdout_invalid.contains( "🐘" ),
     "E42b: 🐘 must NOT fire when CLR_PS_HIGH_RAM_MB is invalid (default 400 used). Got:\n{stdout_invalid}"
+  );
+}
+
+// ── IT-39: Sleeping process → no ⚡ flag (CPU delta = 0) ────────────────────
+
+/// IT-39: A sleeping `claude` process accumulates 0 CPU ticks in the 1-second
+/// sample window, so the ⚡ flag must NOT fire.
+///
+/// Validates the negative path: delta = 0 < 3 → no ⚡.
+///
+/// # Host caveat
+///
+/// On the host with any CPU-active live sessions, those sessions appear in `clr ps`
+/// output with ⚡, making `!stdout.contains("⚡")` fail falsely even though the
+/// sleeping process is correctly unflagged. Reliable only in container (0 live sessions).
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it39_sleeping_process_no_active_flag()
+{
+  use std::os::unix::process::CommandExt as _;
+  use cli_binary_test_helpers::fake_claude_binary_dir;
+
+  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+
+  // Sleeping process: argv = ["claude", "-c", "sleep 300"]
+  let mut bg = std::process::Command::new( "/bin/sh" )
+    .arg0( "claude" )
+    .arg( "-c" )
+    .arg( "sleep 300" )
+    .env( "PATH", &path_val )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn sleeping claude" );
+  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps" ] )
+    .env( "PATH", &path_val )
+    .env( "CLR_PS_ANCIENT_SECS", "999999" )
+    .env( "CLR_PS_HIGH_RAM_MB", "999999" )
+    .output()
+    .expect( "run clr ps" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-39: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    !stdout.contains( "⚡" ),
+    "IT-39: ⚡ must NOT appear for sleeping process (CPU delta = 0). Got:\n{stdout}"
+  );
+}
+
+// ── IT-40: Busy-loop process → ⚡ flag present (CPU delta ≫ 3) ──────────────
+
+/// IT-40: A busy-loop `claude` process consumes ~100 ticks/s, so the ⚡ flag
+/// must fire (delta ≈ 100 >> 3). Also validates the legend reads "Active".
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it40_busy_loop_process_active_flag()
+{
+  use std::os::unix::process::CommandExt as _;
+  use cli_binary_test_helpers::fake_claude_binary_dir;
+
+  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+
+  // Busy-loop process: argv = ["claude", "-c", "while :; do :; done"]
+  let mut bg = std::process::Command::new( "/bin/sh" )
+    .arg0( "claude" )
+    .arg( "-c" )
+    .arg( "while :; do :; done" )
+    .env( "PATH", &path_val )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn busy-loop claude" );
+  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps" ] )
+    .env( "PATH", &path_val )
+    .env( "CLR_PS_ANCIENT_SECS", "999999" )
+    .env( "CLR_PS_HIGH_RAM_MB", "999999" )
+    .output()
+    .expect( "run clr ps" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-40: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( "⚡" ),
+    "IT-40: ⚡ must appear for busy-loop process (CPU delta >> 3). Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( "Active" ),
+    "IT-40: legend must contain 'Active'. Got:\n{stdout}"
   );
 }

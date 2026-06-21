@@ -101,6 +101,7 @@ pub( crate ) struct CliArgs
   pub( crate ) max_budget_usd          : Option< String >,
   pub( crate ) add_dir                 : Option< String >,
   pub( crate ) fallback_model          : Option< String >,
+  pub( crate ) output_style            : Option< String >,
 }
 
 /// Consume the next argv element as a flag's value.
@@ -441,6 +442,17 @@ fn parse_runner_value_flag(
         parse_u32_flag( next_value( tokens, next, "--retry-default-delay" )?, "--retry-default-delay", " (seconds)" )?
       );
     }
+    "--output-style" =>
+    {
+      let v = next_value( tokens, next, "--output-style" )?;
+      if !matches!( v, "summary" | "raw" )
+      {
+        return Err( Error::msg( format!(
+          "invalid output-style '{v}' — expected: summary, raw"
+        ) ) );
+      }
+      parsed.output_style = Some( v.to_string() );
+    }
     _ => return Ok( false ),
   }
   Ok( true )
@@ -526,6 +538,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       max_budget_usd          : None,
       add_dir                 : None,
       fallback_model          : None,
+      output_style            : None,
     } );
   }
 

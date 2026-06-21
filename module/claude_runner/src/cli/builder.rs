@@ -185,9 +185,19 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
   }
   if let Some( ref fmt ) = cli.output_format
   {
-    // "summary" is intercepted by the runner; forward "json" to claude so it returns parseable output.
+    // Path A (legacy alias): "summary" is intercepted by the runner; forward "json" to claude.
     let forwarded = if fmt == "summary" { "json" } else { fmt.as_str() };
     builder = builder.with_arg( "--output-format" ).with_arg( forwarded );
+  }
+  else if use_print
+  {
+    // Path B (auto-inject): when rendering summary and no --output-format is set, inject
+    // --output-format json so claude returns parseable JSON for render_summary().
+    let effective_style = cli.output_style.as_deref().unwrap_or( "summary" );
+    if effective_style == "summary"
+    {
+      builder = builder.with_arg( "--output-format" ).with_arg( "json" );
+    }
   }
   if let Some( ref turns ) = cli.max_turns
   {

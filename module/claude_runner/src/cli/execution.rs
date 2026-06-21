@@ -376,6 +376,20 @@ pub( super ) fn apply_runner_retry( cli : &CliArgs, err : &std::io::Error, attem
 /// Interactive mode retains `unwrap_or( 0 )` (unlimited) — `run_interactive()` must NOT adopt this constant.
 const DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600;
 
+/// Resolve the default print-mode timeout.
+///
+/// In production: always returns `DEFAULT_PRINT_TIMEOUT_SECS` (3600).
+/// In tests: `_CLR_DEFAULT_TIMEOUT` env var overrides the constant so integration
+///   tests can verify the kill path without waiting 3600 seconds.
+/// The `_` prefix signals internal/test-only use — not exposed in `--help`.
+fn default_print_timeout() -> u32
+{
+  std::env::var( "_CLR_DEFAULT_TIMEOUT" )
+    .ok()
+    .and_then( | s | s.parse().ok() )
+    .unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )
+}
+
 /// Execute in non-interactive print mode (captures output).
 ///
 /// Both `--print` (passed to claude) and output capture are required:
@@ -394,7 +408,7 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
   // Fix(BUG-305): print-mode sessions had no default watchdog, leaving unattended sessions unbounded.
   // Root cause: unwrap_or( 0 ) treated absent --timeout as unlimited; print-mode should default to 1h.
   // Pitfall: DEFAULT_PRINT_TIMEOUT_SECS applies ONLY here in run_print_mode(); run_interactive() must retain unwrap_or( 0 ) — it is user-attended.
-  let timeout_secs = cli.timeout.unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS );
+  let timeout_secs = cli.timeout.unwrap_or( default_print_timeout() );
   // Validate stdin file before the retry loop — a missing file is a user error,
   // not a transient spawn failure; it must not trigger runner retry.
   if let Some( ref file_path ) = cli.file
@@ -484,7 +498,7 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
     let out = if cli.strip_fences { strip_fences( &output.stdout ) } else { output.stdout };
     // summary format: intercept JSON output, render YAML header + text body.
     // Falls back to raw output when JSON cannot be parsed.
-    let out = if cli.output_format.as_deref() == Some( "summary" )
+    let out = if cli.output_style.as_deref().unwrap_or( "summary" ) == "summary"
     {
       super::summary::render_summary( &out ).unwrap_or( out )
     }

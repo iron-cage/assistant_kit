@@ -252,7 +252,11 @@ fn ec_timeout_default_constant_value()
   );
   assert!(
     src.contains( "unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )" ),
-    "run_print_mode() must use DEFAULT_PRINT_TIMEOUT_SECS in unwrap_or(); not a magic literal"
+    "DEFAULT_PRINT_TIMEOUT_SECS must appear in unwrap_or() (inside default_print_timeout() helper)"
+  );
+  assert!(
+    src.contains( "unwrap_or( default_print_timeout() )" ),
+    "run_print_mode() call site must use default_print_timeout(), not the constant directly"
   );
 }
 
@@ -471,5 +475,64 @@ fn ec_timeout_unlimited_env()
   assert!(
     !stderr.to_lowercase().contains( "timeout" ),
     "CLR_TIMEOUT=0 means unlimited — no timeout message expected. Got:\n{stderr}"
+  );
+}
+
+// ── ec_timeout_default_kills: default watchdog fires and kills hanging subprocess ────────
+
+/// TSK-228 / BUG-305 — no --timeout, _CLR_DEFAULT_TIMEOUT=2, hanging subprocess → exit 4.
+///
+/// Root Cause: None → unwrap_or(DEFAULT_PRINT_TIMEOUT_SECS) path had no kill test;
+///   EC-7 tests Some(1) (explicit --timeout 1); the None (no flag) path was never exercised
+///   with a kill — the gap that TSK-228 closes
+/// Why Not Caught: TSK-227 added the constant and default path but no integration test proved
+///   the watchdog fires on the None branch; ec_timeout_default_constant_value verifies source
+///   text only, not runtime kill behaviour
+/// Fix Applied: default_print_timeout() reads _CLR_DEFAULT_TIMEOUT env var (test-only override),
+///   falls back to DEFAULT_PRINT_TIMEOUT_SECS; run_print_mode() calls unwrap_or(default_print_timeout())
+/// Prevention: _CLR_DEFAULT_TIMEOUT=2 shortens the default to 2s so a 30s subprocess is killed,
+///   proving the None→default path fires poll_timeout() and exits 4
+/// Pitfall: must set --retry-override 0 — default retry=2 × delay=30s = 60s hang without it
+#[ cfg( unix ) ]
+#[ test ]
+fn ec_timeout_default_kills()
+{
+  let tmp  = tempfile::tempdir().expect( "create temp dir" );
+  let fake = tmp.path().join( "claude" );
+
+  // Fake claude sleeps 30 seconds — will be killed by the 2s default watchdog
+  std::fs::write( &fake, b"#!/bin/sh\nsleep 30\n" ).expect( "write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake claude" );
+
+  let old_path = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path = format!( "{}:{old_path}", tmp.path().display() );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  let start = std::time::Instant::now();
+  let out = Command::new( bin )
+    // No --timeout flag: exercises None → unwrap_or( default_print_timeout() ) path
+    .args( [ "-p", "--max-sessions", "0", "--retry-override", "0", "x" ] )
+    .env( "PATH", &new_path )
+    .env( "_CLR_DEFAULT_TIMEOUT", "2" )
+    .env_remove( "CLR_TIMEOUT" )
+    .output()
+    .expect( "invoke clr" );
+  let elapsed = start.elapsed();
+
+  assert_eq!(
+    out.status.code(),
+    Some( 4 ),
+    "exit must be 4: default watchdog fired via _CLR_DEFAULT_TIMEOUT=2. Got: {:?}",
+    out.status.code()
+  );
+  assert!(
+    elapsed.as_secs() < 10,
+    "default watchdog (2s) must fire within ~5s; elapsed {elapsed:?} — kill path broken"
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.to_lowercase().contains( "timeout" ),
+    "stderr must contain 'timeout' when default watchdog fires. Got:\n{stderr}"
   );
 }

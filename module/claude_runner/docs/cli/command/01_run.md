@@ -67,6 +67,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--retry-override-delay`](../param/055_retry_override_delay.md) | u32 | auto | Tier 1: forces delay for all error classes |
 | [`--retry-default`](../param/056_retry_default.md) | u8 | `2` | Tier 3: fallback retry count for all unset classes |
 | [`--retry-default-delay`](../param/057_retry_default_delay.md) | u32 | `30` | Tier 3: fallback delay for all unset classes |
+| [`--output-style`](../param/070_output_style.md) | enum | `summary` | Output rendering style: `summary` (ANSI box via `render_summary()`) or `raw` (bypass rendering) |
 | [`--output-format`](../param/061_output_format.md) | enum | — | Output format (`text`/`json`/`stream-json`) |
 | [`--max-turns`](../param/062_max_turns.md) | u32 | — | Max agentic turns before stopping; unset = unlimited |
 | [`--allowed-tools`](../param/063_allowed_tools.md) | string | — | Restrict Claude to specified tools only |

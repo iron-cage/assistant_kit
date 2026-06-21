@@ -52,7 +52,7 @@ IT-2 and IT-3 use a fake `claude` subprocess to avoid live API calls. IT-3 uses 
 
 - **Given:** source file `src/cli/execution.rs`
 - **When:** static source inspection at test run time
-- **Then:** File contains `DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600` and `unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )` — named constant used, not inlined literal
+- **Then:** File contains (1) `DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600` — constant exists with correct value; (2) `unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )` — constant used inside `default_print_timeout()` helper (not inlined at call site); (3) `unwrap_or( default_print_timeout() )` — `run_print_mode()` call site delegates to helper, not the constant directly (TSK-228)
 - **Exit:** 0
 - **Source:** [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md) Enforcement Mechanism
 

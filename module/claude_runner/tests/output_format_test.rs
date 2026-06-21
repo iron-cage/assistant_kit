@@ -105,18 +105,25 @@ fn ec6_output_format_help_listed()
   );
 }
 
-// ── EC-7: Without --output-format → flag absent ───────────────────────────────
+// ── EC-7: Without --output-format → runner auto-injects json for summary mode ─
 
-/// EC-7: Without `--output-format`, the assembled command does NOT contain `--output-format`.
+/// EC-7: Without `--output-format`, print-mode dry-run shows `--output-format json`
+/// because the runner auto-injects it via Path B for default summary rendering.
 #[ test ]
-fn ec7_output_format_absent_by_default()
+fn ec7_output_format_absent_auto_injected_in_summary_mode()
 {
   let out = run_cli( &[ "--dry-run", "Fix bug" ] );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
+  // Path B in builder.rs auto-injects --output-format json when output_style is summary
+  // (the default) and no explicit --output-format flag is present.
   assert!(
-    !stdout.contains( "--output-format" ),
-    "assembled command must NOT contain --output-format without explicit flag. Got:\n{stdout}"
+    stdout.contains( "--output-format" ),
+    "assembled command must contain auto-injected --output-format. Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( "json" ),
+    "assembled command must contain auto-injected json value. Got:\n{stdout}"
   );
 }
 

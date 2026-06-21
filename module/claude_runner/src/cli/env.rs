@@ -18,7 +18,7 @@ pub( super ) fn env_str( var : &str ) -> Option< String >
   std::env::var( var ).ok().filter( | v | !v.is_empty() )
 }
 
-/// Apply `CLR_*` environment variable fallbacks for the 58 run parameters.
+/// Apply `CLR_*` environment variable fallbacks for the 59 run parameters.
 ///
 /// Each field is updated only when it is still at its zero/default value — the CLI
 /// flag always wins when both are present (CLI-wins field-default check).
@@ -265,6 +265,19 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
   if parsed.max_budget_usd.is_none()   { parsed.max_budget_usd   = env_str( "CLR_MAX_BUDGET_USD" ); }
   if parsed.add_dir.is_none()          { parsed.add_dir          = env_str( "CLR_ADD_DIR" ); }
   if parsed.fallback_model.is_none()   { parsed.fallback_model   = env_str( "CLR_FALLBACK_MODEL" ); }
+  if parsed.output_style.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_OUTPUT_STYLE" )
+    {
+      if !matches!( v.as_str(), "summary" | "raw" )
+      {
+        return Err( Error::msg( format!(
+          "CLR_OUTPUT_STYLE: invalid value '{v}' — expected: summary, raw"
+        ) ) );
+      }
+      parsed.output_style = Some( v );
+    }
+  }
   Ok( () )
 }
 

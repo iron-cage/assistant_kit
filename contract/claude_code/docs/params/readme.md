@@ -8,7 +8,7 @@ parameter in this directory.
 
 - **Purpose**: Authoritative flat reference for every parameter the `claude` binary accepts at runtime.
 - **Responsibility**: Master table and per-parameter detail files for CLI flags, env vars, and settings config keys.
-- **In Scope**: All 95 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `MCP_*` env vars, `API_*` env vars, `CLAUDE_CLIENT_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys.
+- **In Scope**: All 120 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `MCP_*` env vars, `API_*` env vars, `CLAUDE_CLIENT_*` env vars, `BASH_*` env vars, `DISABLE_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys.
 - **Out of Scope**: Builder-API defaults and Rust `with_*()` methods (→ `module/claude_runner_core/docs/claude_params/`); Claude API protocol (→ Anthropic docs).
 
 ### Responsibility Table
@@ -111,6 +111,31 @@ parameter in this directory.
 | 093_sandbox_allow_apple_events.md | `sandbox.allowAppleEvents` config key — allow Apple Events in sandbox |
 | 094_thinking_disabled_display.md | `thinking.disabled.display` config key — thinking indicator when disabled |
 | 095_wheel_scroll_accel.md | `wheelScrollAccelerationEnabled` config key — mouse wheel scroll acceleration |
+| 096_bash_default_timeout_ms.md | `BASH_DEFAULT_TIMEOUT_MS` — default Bash tool timeout |
+| 097_bash_max_output_length.md | `BASH_MAX_OUTPUT_LENGTH` — max chars before file save |
+| 098_bash_max_timeout_ms.md | `BASH_MAX_TIMEOUT_MS` — max model-requested timeout |
+| 099_disable_autoupdater.md | `DISABLE_AUTOUPDATER` — disable background auto-updates |
+| 100_disable_auto_compact.md | `DISABLE_AUTO_COMPACT` — disable auto-compaction |
+| 101_disable_compact.md | `DISABLE_COMPACT` — disable all compaction |
+| 102_disable_cost_warnings.md | `DISABLE_COST_WARNINGS` — disable cost warnings |
+| 103_disable_doctor_command.md | `DISABLE_DOCTOR_COMMAND` — hide /doctor command |
+| 104_disable_error_reporting.md | `DISABLE_ERROR_REPORTING` — opt out of Sentry |
+| 105_disable_extra_usage_command.md | `DISABLE_EXTRA_USAGE_COMMAND` — hide /usage-credits |
+| 106_disable_feedback_command.md | `DISABLE_FEEDBACK_COMMAND` — disable /feedback |
+| 107_disable_growthbook.md | `DISABLE_GROWTHBOOK` — disable feature flags |
+| 108_disable_installation_checks.md | `DISABLE_INSTALLATION_CHECKS` — disable install warnings |
+| 109_disable_install_github_app_command.md | `DISABLE_INSTALL_GITHUB_APP_COMMAND` — hide /install-github-app |
+| 110_disable_interleaved_thinking.md | `DISABLE_INTERLEAVED_THINKING` — disable interleaved thinking |
+| 111_disable_login_command.md | `DISABLE_LOGIN_COMMAND` — hide /login |
+| 112_disable_logout_command.md | `DISABLE_LOGOUT_COMMAND` — hide /logout |
+| 113_disable_prompt_caching.md | `DISABLE_PROMPT_CACHING` — disable all prompt caching |
+| 114_disable_prompt_caching_fable.md | `DISABLE_PROMPT_CACHING_FABLE` — disable Fable caching |
+| 115_disable_prompt_caching_haiku.md | `DISABLE_PROMPT_CACHING_HAIKU` — disable Haiku caching |
+| 116_disable_prompt_caching_opus.md | `DISABLE_PROMPT_CACHING_OPUS` — disable Opus caching |
+| 117_disable_prompt_caching_sonnet.md | `DISABLE_PROMPT_CACHING_SONNET` — disable Sonnet caching |
+| 118_disable_telemetry.md | `DISABLE_TELEMETRY` — opt out of telemetry |
+| 119_disable_updates.md | `DISABLE_UPDATES` — block all updates |
+| 120_disable_upgrade_command.md | `DISABLE_UPGRADE_COMMAND` — hide /upgrade |
 
 ### Parameter Table
 
@@ -214,6 +239,31 @@ Precedence: CLI arg > env var > settings config.
 | 93 | [sandbox_allow_apple_events](093_sandbox_allow_apple_events.md) | — | — | `sandbox.allowAppleEvents` | bool | false | v2.1.181 | Allow Apple Events in sandbox (macOS) |
 | 94 | [thinking_disabled_display](094_thinking_disabled_display.md) | — | — | `thinking.disabled.display` | string | — | v2.1.181 | Thinking indicator display when disabled |
 | 95 | [wheel_scroll_accel](095_wheel_scroll_accel.md) | — | — | `wheelScrollAccelerationEnabled` | bool | false | v2.1.174 | Mouse wheel scroll acceleration |
+| 96 | [bash_default_timeout_ms](096_bash_default_timeout_ms.md) | — | `BASH_DEFAULT_TIMEOUT_MS` | — | integer ms | `120000` | pre-v1.0 | Default Bash tool timeout (2 min) |
+| 97 | [bash_max_output_length](097_bash_max_output_length.md) | — | `BASH_MAX_OUTPUT_LENGTH` | — | integer | — | pre-v1.0 | Max chars in Bash output before file save |
+| 98 | [bash_max_timeout_ms](098_bash_max_timeout_ms.md) | — | `BASH_MAX_TIMEOUT_MS` | — | integer ms | `600000` | v0.2.108 | Max model-requested Bash timeout (10 min) |
+| 99 | [disable_autoupdater](099_disable_autoupdater.md) | — | `DISABLE_AUTOUPDATER` | — | bool | off | pre-v1.0 | Disable background auto-updates |
+| 100 | [disable_auto_compact](100_disable_auto_compact.md) | — | `DISABLE_AUTO_COMPACT` | — | bool | off | pre-v1.0 | Disable auto-compaction only |
+| 101 | [disable_compact](101_disable_compact.md) | — | `DISABLE_COMPACT` | — | bool | off | pre-v1.0 | Disable all compaction (auto + manual) |
+| 102 | [disable_cost_warnings](102_disable_cost_warnings.md) | — | `DISABLE_COST_WARNINGS` | — | bool | off | pre-v1.0 | Disable cost warning messages |
+| 103 | [disable_doctor_command](103_disable_doctor_command.md) | — | `DISABLE_DOCTOR_COMMAND` | — | bool | off | pre-v1.0 | Hide /doctor slash command |
+| 104 | [disable_error_reporting](104_disable_error_reporting.md) | — | `DISABLE_ERROR_REPORTING` | — | bool | off | pre-v1.0 | Opt out of Sentry error reporting |
+| 105 | [disable_extra_usage_command](105_disable_extra_usage_command.md) | — | `DISABLE_EXTRA_USAGE_COMMAND` | — | bool | off | pre-v1.0 | Hide /usage-credits slash command |
+| 106 | [disable_feedback_command](106_disable_feedback_command.md) | — | `DISABLE_FEEDBACK_COMMAND` | — | bool | off | pre-v1.0 | Disable /feedback slash command |
+| 107 | [disable_growthbook](107_disable_growthbook.md) | — | `DISABLE_GROWTHBOOK` | — | bool | off | pre-v1.0 | Disable GrowthBook feature flags |
+| 108 | [disable_installation_checks](108_disable_installation_checks.md) | — | `DISABLE_INSTALLATION_CHECKS` | — | bool | off | pre-v1.0 | Disable installation warnings |
+| 109 | [disable_install_github_app_command](109_disable_install_github_app_command.md) | — | `DISABLE_INSTALL_GITHUB_APP_COMMAND` | — | bool | off | pre-v1.0 | Hide /install-github-app command |
+| 110 | [disable_interleaved_thinking](110_disable_interleaved_thinking.md) | — | `DISABLE_INTERLEAVED_THINKING` | — | bool | off | v1.0.1 | Disable interleaved thinking beta |
+| 111 | [disable_login_command](111_disable_login_command.md) | — | `DISABLE_LOGIN_COMMAND` | — | bool | off | pre-v1.0 | Hide /login slash command |
+| 112 | [disable_logout_command](112_disable_logout_command.md) | — | `DISABLE_LOGOUT_COMMAND` | — | bool | off | pre-v1.0 | Hide /logout slash command |
+| 113 | [disable_prompt_caching](113_disable_prompt_caching.md) | — | `DISABLE_PROMPT_CACHING` | — | bool | off | pre-v1.0 | Disable prompt caching for all models |
+| 114 | [disable_prompt_caching_fable](114_disable_prompt_caching_fable.md) | — | `DISABLE_PROMPT_CACHING_FABLE` | — | bool | off | v2.1.170+ | Disable prompt caching for Fable |
+| 115 | [disable_prompt_caching_haiku](115_disable_prompt_caching_haiku.md) | — | `DISABLE_PROMPT_CACHING_HAIKU` | — | bool | off | pre-v1.0 | Disable prompt caching for Haiku |
+| 116 | [disable_prompt_caching_opus](116_disable_prompt_caching_opus.md) | — | `DISABLE_PROMPT_CACHING_OPUS` | — | bool | off | pre-v1.0 | Disable prompt caching for Opus |
+| 117 | [disable_prompt_caching_sonnet](117_disable_prompt_caching_sonnet.md) | — | `DISABLE_PROMPT_CACHING_SONNET` | — | bool | off | pre-v1.0 | Disable prompt caching for Sonnet |
+| 118 | [disable_telemetry](118_disable_telemetry.md) | — | `DISABLE_TELEMETRY` | — | bool | off | pre-v1.0 | Opt out of telemetry |
+| 119 | [disable_updates](119_disable_updates.md) | — | `DISABLE_UPDATES` | — | bool | off | pre-v1.0 | Block all updates (auto + manual) |
+| 120 | [disable_upgrade_command](120_disable_upgrade_command.md) | — | `DISABLE_UPGRADE_COMMAND` | — | bool | off | pre-v1.0 | Hide /upgrade slash command |
 
 ### Cross-References
 

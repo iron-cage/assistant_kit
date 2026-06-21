@@ -169,7 +169,7 @@ semantics: unlimited (no watchdog). Tests in this file cover `run`/`ask` only;
 
 - **Given:** source file `src/cli/execution.rs` at build time
 - **When:** `include_str!("../src/cli/execution.rs")` — static assertion at test compile/run time
-- **Then:** File contains `DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600` and `unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )`
+- **Then:** File contains (1) `DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600`; (2) `unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )` inside the `default_print_timeout()` helper; (3) `unwrap_or( default_print_timeout() )` at the `run_print_mode()` call site (TSK-228 — not the constant directly)
 - **Exit:** 0
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md), [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md)
 - **Commands:** run, ask
