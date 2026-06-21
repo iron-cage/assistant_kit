@@ -90,22 +90,22 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 
 ---
 
-### EC-7: `solo::1 refresh::1` — refresh fires only for current+owned
+### EC-7: `solo::1 refresh::1` — refresh solo gate fires for non-current
 
-- **Given:** Two owned accounts both with auth errors (401). Account A is current+owned. Account B is owned but not current.
-- **When:** `clp .usage solo::1 refresh::1`
-- **Then:** Refresh subprocess fires only for Account A. Account B retains its error state (no refresh attempted). Account B's error data is from `approximate_quota()`.
+- **Given:** Alice is current+owned (live token match). Bob is not current. `solo::1 refresh::1 trace::1`.
+- **When:** `clp .usage solo::1 refresh::1 trace::1`
+- **Then:** Exits 0. Refresh solo gate fires for Bob — stderr contains `"solo-skip"` in a refresh trace line. Alice passes the solo gate; no subprocess fires (no 401 error from HTTP fetch).
 - **Exit:** 0
 - **Source fn:** `it263_solo_refresh_composition_allowed` (in `tests/cli/usage_test.rs`); `ec7_solo_gate_skips_non_current_with_trace` (in `src/usage/refresh_tests.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---
 
-### EC-8: `solo::1 touch::1` — touch fires only for current+owned
+### EC-8: `solo::1 touch::1` — touch solo gate fires for non-current
 
-- **Given:** Two owned accounts both with idle 5h windows. Account A is current+owned. Account B is owned but not current.
-- **When:** `clp .usage solo::1 touch::1`
-- **Then:** Touch subprocess fires only for Account A. Account B remains idle (no subprocess spawned).
+- **Given:** Alice is current+owned (live token match). Bob is not current. `solo::1 touch::1 trace::1`.
+- **When:** `clp .usage solo::1 touch::1 trace::1`
+- **Then:** Exits 0. Touch solo gate fires for Bob — stderr contains `"solo-skip"` in a touch trace line. Alice passes the solo gate; no subprocess fires (no active idle window without real quota data).
 - **Exit:** 0
 - **Source fn:** `it264_solo_touch_composition_allowed` (in `tests/cli/usage_test.rs`); `ec8_solo_gate_skips_non_current_with_trace` (in `src/usage/touch_tests.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
@@ -123,11 +123,11 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 
 ---
 
-### EC-10: `solo::1 trace::1` — trace lines show `solo-skip: approximated`
+### EC-10: `solo::1 refresh::1 touch::1 trace::1` — all three solo gate sites emit trace
 
-- **Given:** Two owned accounts. Account A is current+owned. Account B is not current.
-- **When:** `clp .usage solo::1 trace::1`
-- **Then:** Stderr contains `solo-skip: approximated` for Account B's fetch trace. Account A's trace shows `live (current+owned)` or similar. Refresh and touch traces for Account B show `solo-skip`.
+- **Given:** Alice is current+owned (live token match). Bob is not current. `solo::1 refresh::1 touch::1 trace::1`.
+- **When:** `clp .usage solo::1 refresh::1 touch::1 trace::1`
+- **Then:** Stderr contains `solo-skip: approximated` in Bob's fetch trace; `solo-skip` in Bob's refresh trace; `solo-skip` in Bob's touch trace. Alice's trace shows no `solo-skip` (she passes the gate at all three sites).
 - **Exit:** 0
 - **Source fn:** `it266_solo_trace_shows_solo_skip` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)

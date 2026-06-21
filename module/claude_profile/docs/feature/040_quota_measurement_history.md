@@ -101,7 +101,7 @@ This prevents quadratic divergence (a2 > 0 shooting to infinity).
 - **AC-01**: On successful `fetch_oauth_usage`, the measurement is appended to `cache.history[]` in `{name}.json` with `t` (current Unix seconds), `h5`, `d7`, `sn` fields matching the fetched quota data.
 - **AC-02**: `cache.history[]` contains at most 10 entries; when the 11th is appended, the oldest (index 0) is evicted (FIFO).
 - **AC-03**: Only real server-returned values are stored in `cache.history[]` — approximated values, cached fallback values, and error results are never appended.
-- **AC-04**: When the server is unavailable (transient error) and `cache.history[]` has 3+ measurements in the current window, quota columns display quadratic-LS-approximated values with `~` prefix.
+- **AC-04**: When the server is unavailable (transient error) OR when `is_owned = false` (Feature 036 G1 gate — server not consulted) — and `cache.history[]` has 2+ measurements in the current window — quota columns display polynomial-approximated values with `~` prefix. For 3+ measurements, quadratic LS fit is used; for exactly 2, linear extrapolation. Both display paths call the centralized `read_cached_quota()` function.
 - **AC-05**: Each period (5h, 7d, 7d-sonnet) is approximated independently — absence of one period does not affect the others.
 - **AC-06**: Measurements from a previous window (before `window_start = latest_resets_at - window_duration`) are excluded from the polynomial fit.
 - **AC-07**: If `resets_at` has elapsed (`now_secs > resets_at_secs`), approximated utilization is `0.0` (window reset).
@@ -120,6 +120,14 @@ This prevents quadratic divergence (a2 > 0 shooting to infinity).
 | [009_token_usage.md](009_token_usage.md) | Approximated values displayed in `.usage` table |
 | [036_account_ownership.md](036_account_ownership.md) | Non-owned accounts skip history append (G1 gate) |
 | [039_decision_algorithms.md](039_decision_algorithms.md) | Approximation algorithm documented as Table 6 |
+| [061_solo_token_conservation.md](061_solo_token_conservation.md) | `approximate_quota()` in Feature 061 calls this feature's polynomial approximation for solo-skipped accounts |
+
+### Bugs
+
+| File | Relationship |
+|------|-------------|
+| [BUG-304 🟢 Fixed (TSK-316)](../../../../../task/claude_profile/bug/304_cache_read_bypasses_approximation.md) | G1 (non-owned) cache read bypassed approximation; HTTP-error fallback and `approximate_quota()` duplicated the approximation block inline. Fixed: centralized `read_cached_quota()` function; all three utilization cache-read paths now call it |
+| [BUG-307 🟢 Fixed](../../../../../task/claude_profile/bug/307_quadratic_fit_det0_cramer_cofactor_error.md) | `det0` Cramer cofactor in `quadratic_fit()` used `s1*r2` instead of `s2*r1` — wrong column-3 minor. Produced incorrect constant term `a0`; AC-08 clamping masked it for upward-trending data. Fixed: `s2*r1`; broad FT-04/06–10 ranges were insufficient to catch it; FT-17 tight assertion exposed the bug |
 
 ### Sources
 

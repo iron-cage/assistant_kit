@@ -13,7 +13,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | File | Responsibility |
 |------|----------------|
-| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 40 feature docs |
+| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 42 feature docs |
 | 01_account_store_init.md | FT cases for Feature 001 — Account Store Initialization |
 | 02_account_save.md | FT cases for Feature 002 — Save Account |
 | 03_account_list.md | FT cases for Feature 003 — Accounts |
@@ -54,6 +54,8 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 38_usage_strategy_rotate.md | FT cases for Feature 038 — Usage Strategy Rotate |
 | 39_decision_algorithms.md | FT cases for Feature 039 — Decision Algorithm Reference |
 | 40_quota_measurement_history.md | FT cases for Feature 040 — Quota Measurement History and Polynomial Approximation |
+| 61_solo_token_conservation.md | FT cases for Feature 061 — Solo Token Conservation Mode |
+| 62_unified_session_config.md | FT cases for Feature 062 — Unified Session Config Recommendation |
 
 ### Coverage Summary
 
@@ -95,13 +97,15 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 033_quota_cache | [033_quota_cache.md](33_quota_cache.md) | FT-01 … FT-11 | ✅ |
 | 034_explicit_session_model_override | [034_explicit_session_model_override.md](34_explicit_session_model_override.md) | FT-01 … FT-11 | ✅ |
 | 035_model_command | [035_model_command.md](35_model_command.md) | FT-01 … FT-12 | ✅ |
-| 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-21 | ✅ |
+| 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-25 | ✅ |
 | 037_accounts_usage_param_unification | [037_accounts_usage_param_unification.md](37_accounts_usage_param_unification.md) | FT-01 … FT-21 | ✅ |
 | 038_usage_strategy_rotate | [038_usage_strategy_rotate.md](38_usage_strategy_rotate.md) | FT-01 … FT-10 | ✅ |
 | 039_decision_algorithms | [039_decision_algorithms.md](39_decision_algorithms.md) | FT-01 … FT-12 | ✅ |
-| 040_quota_measurement_history | [040_quota_measurement_history.md](40_quota_measurement_history.md) | FT-01 … FT-13 | ✅ |
+| 040_quota_measurement_history | [040_quota_measurement_history.md](40_quota_measurement_history.md) | FT-01 … FT-18 | ✅ |
+| 061_solo_token_conservation | [061_solo_token_conservation.md](61_solo_token_conservation.md) | FT-01 … FT-12 | ✅ |
+| 062_unified_session_config | [062_unified_session_config.md](62_unified_session_config.md) | FT-01 … FT-13, EC-01 | ✅ |
 
-**Total:** 41 specs — 40 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+**Total:** 43 specs — 42 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 
 ### Cross-Reference Depth
 

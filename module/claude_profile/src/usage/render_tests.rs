@@ -4,7 +4,7 @@
 
   use super::{ render_text, render_tsv, render_json };
   use crate::usage::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility };
-  use crate::usage::test_support::FAR_FUTURE_MS;
+  use crate::usage::test_support::{ FAR_FUTURE_MS, mk_aq_sort, mk_aq_sort_weekly };
 
   /// FT-20/009 — `~Renews` must retain billing date (not error reason) for 429-errored accounts.
   ///
@@ -1045,7 +1045,37 @@
   /// `_active_{host}_{user}` filename, Account column from file content,
   /// and `✓` on the own session row.
   ///
+  /// # Root Cause (BUG-308)
+  /// Previous version hardcoded `_active_w003_user1` and `_active_w004_user2` as
+  /// "other machine" marker filenames. On the test machine (hostname=w003, user=user1),
+  /// `active_marker_filename()` returns `_active_w003_user1` — the same name as the
+  /// hardcoded "other" marker. The second `fs::write` overwrote the own marker content
+  /// (`"own@test.com"` → `"alice@test.com"`), so `build_sessions_table` showed
+  /// `alice@test.com ✓` instead of `own@test.com ✓`.
+  ///
+  /// # Why Not Caught
+  /// Test was written and validated on a machine where `active_marker_filename()` did not
+  /// collide with `_active_w003_user1`. The fragility is machine-specific and silent —
+  /// the test panics with a misleading message rather than a setup-collision error.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-308): replaced hardcoded `_active_w003_user1` / `_active_w004_user2` with
+  /// clearly synthetic names `_active_testhost1_tst1` / `_active_testhost2_tst2`. Added
+  /// `assert_ne!` guards to fail loudly on any machine where a collision still occurs.
+  /// Own marker is written LAST to ensure it is never overwritten.
+  ///
+  /// # Prevention
+  /// Any test writing `_active_*` marker files for "other machines" must use names that
+  /// cannot collide with `active_marker_filename()` on the real machine. Use synthetic
+  /// host/user identifiers and add `assert_ne!` guards as a safety net.
+  ///
+  /// # Pitfall
+  /// `active_marker_filename()` depends on the actual hostname and `$USER` env var —
+  /// both vary across machines. Never hardcode expected identities like `user1@w003`
+  /// directly; use synthetic names or derive them from `active_marker_filename()`.
+  ///
   /// Spec: [`tests/docs/feature/25_per_machine_active_marker.md` FT-13]
+  #[ doc = "bug_reproducer(BUG-308)" ]
   #[ test ]
   fn ft13_025_sessions_table_parses_marker_identity_from_filename()
   {
@@ -1056,11 +1086,25 @@
 
     // Own marker: exact filename from `active_marker_filename()`.
     let own_fname = claude_profile_core::account::active_marker_filename();
+
+    // "Other machine" markers use synthetic hostnames/users that no real machine is expected
+    // to have. Fix(BUG-308): previous hardcoded `_active_w003_user1` overwrote the own marker
+    // on machines where hostname=w003, user=user1 (same name as `active_marker_filename()`).
+    let other1_fname = "_active_testhost1_tst1";
+    let other2_fname = "_active_testhost2_tst2";
+    assert_ne!(
+      own_fname.as_str(), other1_fname,
+      "BUG-308 guard: own marker '{own_fname}' must not equal other1 '{other1_fname}' — pick different synthetic names",
+    );
+    assert_ne!(
+      own_fname.as_str(), other2_fname,
+      "BUG-308 guard: own marker '{own_fname}' must not equal other2 '{other2_fname}' — pick different synthetic names",
+    );
+
+    // Write "other" markers first, own marker LAST — ensures own is never overwritten.
+    std::fs::write( spath.join( other1_fname ), "alice@test.com" ).unwrap();
+    std::fs::write( spath.join( other2_fname ), "bob@test.com" ).unwrap();
     std::fs::write( spath.join( &own_fname ), "own@test.com" ).unwrap();
-    // `_active_w003_user1`: host=w003, user=user1 → identity = "user1@w003"
-    std::fs::write( spath.join( "_active_w003_user1" ), "alice@test.com" ).unwrap();
-    // `_active_w004_user2`: host=w004, user=user2 → identity = "user2@w004"
-    std::fs::write( spath.join( "_active_w004_user2" ), "bob@test.com" ).unwrap();
 
     let accounts = vec![ mk_aq_ok( 10.0 ) ];
     let cols     = ColsVisibility::default_set();
@@ -1075,14 +1119,15 @@
       output.contains( "Sessions" ),
       "FT-13: sessions table must appear with 3 markers; got:\n{output}",
     );
-    // Session column: identity parsed from filename.
+    // Session column: identity parsed as {user}@{host} from _active_{host}_{user} filename.
+    // `_active_testhost1_tst1` → rsplit_once('_') → host="testhost1", user="tst1" → "tst1@testhost1"
     assert!(
-      output.contains( "user1@w003" ),
-      "FT-13: `_active_w003_user1` must render session 'user1@w003'; got:\n{output}",
+      output.contains( "tst1@testhost1" ),
+      "FT-13: `_active_testhost1_tst1` must render session 'tst1@testhost1'; got:\n{output}",
     );
     assert!(
-      output.contains( "user2@w004" ),
-      "FT-13: `_active_w004_user2` must render session 'user2@w004'; got:\n{output}",
+      output.contains( "tst2@testhost2" ),
+      "FT-13: `_active_testhost2_tst2` must render session 'tst2@testhost2'; got:\n{output}",
     );
     // Account column: file content (account names).
     assert!(
@@ -1250,13 +1295,124 @@
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
       &ColsVisibility::default_set(), None, Some( "high" ), None, None,
     );
-    // Footer line 1 col3 must contain "high" (effort only, no model prefix).
+    // Footer Current line col3 must contain "high" (effort only, no model prefix).
+    // The Next line legitimately shows "sonnet/high" (Feature 062, AC-03) — scope
+    // the no-slash check to the Current line only, not the full output.
+    let current_line = output.lines().find( |l| l.trim_start().starts_with( "Current" ) )
+      .unwrap_or( "" );
     assert!(
-      output.contains( "high" ),
-      "CC-08: effort-only footer must contain effort level 'high'; got:\n{output}",
+      current_line.contains( "high" ),
+      "CC-08: effort-only footer Current line must contain effort level 'high'; got:\n{output}",
     );
     assert!(
-      !output.contains( "/high" ),
-      "CC-08: effort-only footer must not have model prefix '/high'; got:\n{output}",
+      !current_line.contains( "/high" ),
+      "CC-08: effort-only footer Current line must not have model prefix '/high'; got:\n{output}",
+    );
+  }
+
+  // ── Footer Next effort display: FT-05..FT-08 (Feature 062) ──────────────────
+
+  /// FT-05 — Footer Next line shows `sonnet/high` when effort present and Sonnet available.
+  ///
+  /// Spec: [`tests/docs/feature/62_unified_session_config.md` FT-05]
+  #[ test ]
+  fn ft05_footer_next_shows_model_and_effort_when_set()
+  {
+    let mut cur = mk_aq_sort( "cur@x.com", 50.0, FAR_FUTURE_MS );
+    cur.is_current = true;
+    let rec = mk_aq_sort_weekly( "aaa@x.com", 50.0, 50.0, 80.0 );  // 20% Sonnet left → sonnet
+    let accounts = vec![ cur, rec ];
+    let output = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), None, Some( "high" ), None, None,
+    );
+    assert!(
+      output.contains( "sonnet/high" ),
+      "FT-05: footer Next must contain 'sonnet/high' when session_effort=Some(\"high\") and Sonnet available; got:\n{output}",
+    );
+  }
+
+  /// FT-06 — Footer Next line shows only model (no slash) when effort absent.
+  ///
+  /// Spec: [`tests/docs/feature/62_unified_session_config.md` FT-06]
+  #[ test ]
+  fn ft06_footer_next_shows_only_model_when_effort_absent()
+  {
+    let mut cur = mk_aq_sort( "cur@x.com", 50.0, FAR_FUTURE_MS );
+    cur.is_current = true;
+    let rec = mk_aq_sort_weekly( "aaa@x.com", 50.0, 50.0, 80.0 );  // 20% Sonnet left → sonnet
+    let accounts = vec![ cur, rec ];
+    let output = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), None, None, None, None,
+    );
+    assert!(
+      output.contains( "sonnet" ) && !output.contains( "sonnet/" ),
+      "FT-06: footer Next must contain 'sonnet' with no slash when session_effort=None; got:\n{output}",
+    );
+  }
+
+  /// FT-07 — Footer Next line shows `opus/max` when Sonnet exhausted and effort present.
+  ///
+  /// Spec: [`tests/docs/feature/62_unified_session_config.md` FT-07]
+  #[ test ]
+  fn ft07_footer_next_shows_opus_and_effort_when_sonnet_exhausted()
+  {
+    let mut cur = mk_aq_sort( "cur@x.com", 50.0, FAR_FUTURE_MS );
+    cur.is_current = true;
+    let rec = mk_aq_sort_weekly( "aaa@x.com", 50.0, 50.0, 90.0 );  // 10% Sonnet left → opus
+    let accounts = vec![ cur, rec ];
+    let output = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), None, Some( "max" ), None, None,
+    );
+    assert!(
+      output.contains( "opus/max" ),
+      "FT-07: footer Next must contain 'opus/max' when Sonnet exhausted and session_effort=Some(\"max\"); got:\n{output}",
+    );
+  }
+
+  /// FT-08 — Column alignment: third `·` at same char position in Current and Next lines.
+  ///
+  /// `model_effort` = "s" (1 char); `rec_display` = "sonnet" (6 chars when Sonnet available + no effort).
+  /// `col3_w` = max(1, 6) = 6 → Current col3 padded to 6; Next col3 is 6 — third `·` aligns.
+  ///
+  /// Spec: [`tests/docs/feature/62_unified_session_config.md` FT-08]
+  #[ test ]
+  fn ft08_footer_column_alignment_third_dot()
+  {
+    let mut cur = mk_aq_sort( "cur@x.com", 50.0, FAR_FUTURE_MS );
+    cur.is_current = true;
+    // rec has Sonnet available (20% left) → rec_display = "sonnet" (6 chars).
+    // session_model = "s" (1 char) → model_effort = "s"; col3_w = max(1, 6) = 6.
+    let rec = mk_aq_sort_weekly( "aaa@x.com", 50.0, 50.0, 80.0 );
+    let accounts = vec![ cur, rec ];
+    let output = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), Some( "s" ), None, None, None,
+    );
+    let footer_lines : Vec< &str > = output.lines()
+      .filter( |l| l.contains( '·' ) )
+      .collect();
+    assert!(
+      footer_lines.len() >= 2,
+      "FT-08: must have ≥2 footer lines with ·; got:\n{output}",
+    );
+    let cur_line  = footer_lines[ footer_lines.len() - 2 ];
+    let next_line = footer_lines[ footer_lines.len() - 1 ];
+    let third_dot_char_pos = |line : &str| -> Option< usize >
+    {
+      let mut count = 0usize;
+      for ( i, ch ) in line.chars().enumerate()
+      {
+        if ch == '·' { count += 1; if count == 3 { return Some( i ); } }
+      }
+      None
+    };
+    let cur_pos  = third_dot_char_pos( cur_line );
+    let next_pos = third_dot_char_pos( next_line );
+    assert_eq!(
+      cur_pos, next_pos,
+      "FT-08: third · must be at same char position in Current and Next lines;\n  cur:  '{cur_line}'\n  next: '{next_line}'",
     );
   }

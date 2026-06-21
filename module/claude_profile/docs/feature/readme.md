@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the functional capabilities of `claude_profile` — account credential management and the `clp` CLI.
 - **Responsibility**: Documents all functional requirements with their design, acceptance criteria, and test references.
-- **In Scope**: feature/001 through feature/040 — full functional capability set for claude_profile and the clp CLI.
+- **In Scope**: feature/001 through feature/040, feature/061, and feature/062 — full functional capability set for claude_profile and the clp CLI.
 - **Out of Scope**: Quality constraints (→ invariant/), CLI design (→ cli/).
 
 ### Overview Table
@@ -51,3 +51,5 @@
 | 038 | [Usage Strategy Rotate](038_usage_strategy_rotate.md) | `rotate::1` on `.usage`: switch to footer-recommended account after quota table render; G5 ownership gate; dry-run preview; touch reuse from in-memory quota; deprecates `.account.rotate` | ✅ |
 | 039 | [Decision Algorithm Reference](039_decision_algorithms.md) | Unified reference for 6 core decision algorithms: touch model, session model override, quota status groups, eligibility gates, next-account positive selection, quota approximation | ✅ |
 | 040 | [Quota Measurement History](040_quota_measurement_history.md) | Store up to 10 real server measurements; quadratic LS approximation when API unavailable | ✅ |
+| 061 | [Solo Token Conservation](061_solo_token_conservation.md) | Restrict live operations to current+owned account; others use `approximate_quota()` | ✅ |
+| 062 | [Unified Session Config Recommendation](062_unified_session_config.md) | `recommended_model()` canonical function; footer Next line shows effort; rotation writes model+effort for winner | ✅ |

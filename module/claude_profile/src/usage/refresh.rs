@@ -10,6 +10,35 @@ use super::types::{ AccountQuota, SubprocessModel, SubprocessEffort };
 use super::subprocess::{ resolve_model, effort_pre_args };
 use super::fetch::{ read_token, parse_u64_from_str };
 
+// ── reason_label ─────────────────────────────────────────────────────────────
+
+// Fix(BUG-306): inline reason block had no is_occupied_elsewhere branch —
+//   owned+non-cached+occupied-elsewhere accounts fell through to "ok".
+//   Root cause: three-branch inline block (not-owned / cached / else) predates
+//   the occupancy predicate gate (BUG-303); no branch was added when the gate
+//   was introduced.
+//   Pitfall: every new predicate gate in should_refresh must have a corresponding
+//   branch in reason_label — the predicate–reason 1:1 contract.
+pub( crate ) fn reason_label( aq : &AccountQuota ) -> &str
+{
+  if !aq.is_owned
+  {
+    "not owned"
+  }
+  else if aq.cached
+  {
+    "cached-expired"
+  }
+  else if aq.is_occupied_elsewhere
+  {
+    "occupied elsewhere"
+  }
+  else
+  {
+    aq.result.as_ref().err().map_or( "ok", String::as_str )
+  }
+}
+
 // ── Refresh loop ──────────────────────────────────────────────────────────────
 
 /// Retry quota fetch for accounts that need token refresh (401/403 auth errors,
@@ -69,19 +98,7 @@ pub( crate ) fn apply_refresh(
     //   Pitfall: any trigger path that converts Err→Ok must add its own reason branch here.
     if trace
     {
-      let reason = if !aq.is_owned
-      {
-        "not owned"
-      }
-      else if aq.cached
-      {
-        "cached-expired"
-      }
-      else
-      {
-        aq.result.as_ref().err().map_or( "ok", String::as_str )
-      };
-      eprintln!( "[trace] refresh  {}  should_retry={} (reason: {})", aq.name, should_retry, reason );
+      eprintln!( "[trace] refresh  {}  should_retry={} (reason: {})", aq.name, should_retry, reason_label( aq ) );
     }
     if !should_retry { continue; }
 

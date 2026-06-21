@@ -21,6 +21,16 @@
 //!
 //! Time normalization: subtract `t_values[0]` before computing power sums to
 //! avoid f64 precision loss on large Unix timestamps (~1.75 × 10⁹, AC).
+//!
+//! # Known Pitfalls
+//!
+//! **Cramer cofactor index confusion (BUG-307):** Each of `det2`/`det1`/`det0` replaces a
+//! DIFFERENT column of the normal matrix with the RHS vector `[r2, r1, r0]^T`. Cofactor
+//! terms for `det0` (col-3 replaced) involve `r1` from the RHS — never `r2` (the power-sum
+//! variable). Copying cofactor terms across `det2`/`det1`/`det0` without re-deriving silently
+//! produces wrong coefficients. AC-08 clamping can further mask the error for upward-trending
+//! data by returning 100.0 (clamped from an overshot wrong estimate). Always re-derive each
+//! minor independently from the correct column-replaced matrix.
 
 /// Approximate current utilization from historical measurements.
 ///
@@ -137,9 +147,12 @@ fn quadratic_fit( pts : &[ ( u64, f64 ) ], now_secs : u64 ) -> f64
   else
   {
     // Cramer's rule: det_a2, det_a1, det_a0.
+    // Fix(BUG-307): det0 cofactor used s1*r2 instead of s2*r1 — wrong column-3 Cramer minor.
+    // Root cause: cofactor(1,2) of det0 replaces col-3 with RHS; minor is s3*r0-s2*r1, not s3*r0-s1*r2 (s1 is col-2; s2 is col-1 in the replaced-column row).
+    // Pitfall: Cramer minors for det2/det1/det0 each replace a DIFFERENT column — never copy cofactor terms across them; re-derive each minor independently.
     let det2 = r2 * ( s2 * n - s1 * s1 ) - s3 * ( r1 * n - s1 * r0 ) + s2 * ( r1 * s1 - s2 * r0 );
     let det1 = s4 * ( r1 * n - s1 * r0 ) - r2 * ( s3 * n - s1 * s2 ) + s2 * ( s3 * r0 - s2 * r1 );
-    let det0 = s4 * ( s2 * r0 - s1 * r1 ) - s3 * ( s3 * r0 - s1 * r2 ) + r2 * ( s3 * s1 - s2 * s2 );
+    let det0 = s4 * ( s2 * r0 - s1 * r1 ) - s3 * ( s3 * r0 - s2 * r1 ) + r2 * ( s3 * s1 - s2 * s2 );
     ( det2 / det, det1 / det, det0 / det )
   };
 
@@ -433,6 +446,33 @@ mod tests
     assert!(
       ( v - 45.0 ).abs() < 1e-9,
       "CC-05: degenerate linear must return last value 45.0; got {v}",
+    );
+  }
+
+  /// CC-06: All measurements outside the current window → `None`.
+  ///
+  /// Root Cause: when `resets_at` is set and all recorded measurements have
+  /// `t < window_start` (= `resets_at - window_duration`), the window filter
+  /// excludes every point. `pts.len() == 0` → `match` arm `0 => None`.
+  ///
+  /// This matters at the call site (`read_cached_quota`): when `approximate_utilization`
+  /// returns `None`, the raw cache value is preserved unchanged. If the filter were
+  /// accidentally inverted or the boundary condition wrong, a stale point from a prior
+  /// window could pollute the current approximation.
+  #[ test ]
+  fn cc_all_measurements_outside_window_returns_none()
+  {
+    // Window: resets_at = 118_000, window_duration = 18_000 → window_start = 100_000.
+    // All measurements at t=1_000, 2_000, 3_000 — well before window_start=100_000.
+    // now_secs=110_000 is within the window (not expired).
+    let pts : &[ ( u64, f64 ) ] = &[ ( 1_000, 60.0 ), ( 2_000, 70.0 ), ( 3_000, 80.0 ) ];
+    let resets_at : u64 = 118_000;
+    let now_secs  : u64 = 110_000;
+    let result = approximate_utilization( pts, Some( resets_at ), 18_000, now_secs );
+    assert_eq!(
+      result,
+      None,
+      "CC-06: all measurements outside window must return None (zero in-window pts); got {result:?}",
     );
   }
 }

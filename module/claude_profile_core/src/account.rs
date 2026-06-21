@@ -553,12 +553,34 @@ pub fn get_session_model( paths : &ClaudePaths ) -> Option< String >
   parse_string_field( &content, "model" )
 }
 
+/// Write the session effort level to `~/.claude/settings.json`.
+///
+/// Performs a read-modify-write preserving all existing JSON keys (same pattern as
+/// `set_session_model()`). Creates `~/.claude/` if the directory is absent.
+/// Any I/O failure is silently ignored (best-effort policy).
+///
+/// Called by the `.usage rotate::1` dispatcher (Feature 062, AC-06) to carry forward
+/// the effort level after an account switch.
+#[ inline ]
+pub fn set_session_effort( paths : &ClaudePaths, effort_id : &str )
+{
+  let path = paths.settings_file();
+  if let Some( parent ) = path.parent() { let _ = std::fs::create_dir_all( parent ); }
+  let mut live = std::fs::read_to_string( &path )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .unwrap_or_else( || serde_json::json!( {} ) );
+  let Some( obj ) = live.as_object_mut() else { return; };
+  obj.insert( "effortLevel".to_string(), serde_json::Value::String( effort_id.to_string() ) );
+  let _ = std::fs::write( path, serde_json::to_string_pretty( &live ).map( |s| s + "\n" ).unwrap_or_default() );
+}
+
 /// Read the current effort level from `~/.claude/settings.json`.
 ///
 /// Returns `Some(effort)` when `settings.json` exists and contains an `"effortLevel"` key;
 /// `None` when the file is absent, unparseable, or the `"effortLevel"` key is missing.
-/// Note: `effortLevel` is never written by `claude_profile` account rotation — it reflects the
-/// user's persistent Claude Code preference and is unchanged by `.usage rotate::1`.
+/// `effortLevel` may be updated by `.usage rotate::1` (Feature 062, AC-06) to carry forward
+/// the effort level after an account switch.
 #[ must_use ]
 #[ inline ]
 pub fn get_session_effort( paths : &ClaudePaths ) -> Option< String >

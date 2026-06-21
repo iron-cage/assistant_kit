@@ -17,7 +17,7 @@ use super::refresh::apply_refresh;
 use super::touch::apply_touch;
 use super::params::parse_usage_params;
 use super::sort::find_next_for_strategy;
-use super::format::{ five_hour_left, seven_day_left, status_emoji };
+use super::format::{ five_hour_left, seven_day_left, status_emoji, OPUS_OVERRIDE_THRESHOLD };
 
 // ── no_color post-processor ────────────────────────────────────────────────────
 
@@ -271,7 +271,7 @@ pub( crate ) fn apply_model_override(
   if let Some( ref sonnet ) = quota.seven_day_sonnet
   {
     let sonnet_left = 100.0 - sonnet.utilization;
-    if sonnet_left < 15.0
+    if sonnet_left < OPUS_OVERRIDE_THRESHOLD
     {
       let overrode = crate::account::override_session_model_to_opus( paths );
       if overrode
@@ -759,8 +759,8 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   }
 
   // Read session state once for the footer; both render_text and render_plain consume it.
-  // Reads settings.json once; extracts "model" and "effortLevel" (effort is never changed by
-  // account rotation — it reflects the user's persistent Claude Code preference).
+  // Reads settings.json once; extracts "model" and "effortLevel".
+  // effortLevel is carried forward after rotation when present (Feature 062, AC-06).
   let settings_content = crate::ClaudePaths::new()
     .and_then( |p| std::fs::read_to_string( p.settings_file() ).ok() );
   let session_model_str  = settings_content.as_deref()
@@ -823,6 +823,17 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
     crate::account::switch_account( &winner_name, &credential_store, &claude_paths )
       .map_err( |e| io_err_to_error_data( &e, "usage rotate" ) )?;
+
+    // AC-05: model override for winner (Feature 062)
+    if let Ok( ref winner_data ) = accounts[ winner_idx ].result
+    {
+      apply_model_override( winner_data, &claude_paths, params.trace, "usage rotate", &winner_name );
+    }
+    // AC-06/AC-07: carry-forward effort when present; no default injected when absent
+    if let Some( se ) = session_effort
+    {
+      claude_profile_core::account::set_session_effort( &claude_paths, se );
+    }
 
     apply_touch( &mut accounts[ winner_idx ], &credential_store, Some( &claude_paths ), params.trace, params.imodel, params.effort, params.solo );
 

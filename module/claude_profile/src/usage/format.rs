@@ -375,6 +375,36 @@ pub( crate ) fn prefer_weekly( aq : &AccountQuota, prefer : PreferStrategy ) -> 
   relevant_quotas( aq, prefer ).1
 }
 
+// ── Model recommendation ──────────────────────────────────────────────────────
+
+/// Sonnet utilization threshold above which Opus is recommended.
+///
+/// Accounts where `100.0 - seven_day_sonnet.utilization < OPUS_OVERRIDE_THRESHOLD`
+/// are recommended `"opus"` by `recommended_model()` and overridden by `apply_model_override()`.
+/// The literal `15.0` must not be duplicated — always reference this constant.
+pub( super ) const OPUS_OVERRIDE_THRESHOLD : f64 = 15.0;
+
+/// Return the recommended session model for the next rotation candidate.
+///
+/// - `Ok(data)` with `seven_day_sonnet` present and `< OPUS_OVERRIDE_THRESHOLD` left → `"opus"`.
+/// - `Ok(data)` with `seven_day_sonnet` absent (tier unknown) → `"sonnet"` (conservative).
+/// - `Err(_)` → `"sonnet"` (quota unknown → conservative).
+///
+/// Mirrors the guard in `apply_model_override()`. Both reference `OPUS_OVERRIDE_THRESHOLD`
+/// — the literal must not be duplicated.
+pub( crate ) fn recommended_model( aq : &AccountQuota ) -> &'static str
+{
+  match &aq.result
+  {
+    Ok( data ) => match &data.seven_day_sonnet
+    {
+      Some( s ) if 100.0 - s.utilization < OPUS_OVERRIDE_THRESHOLD => "opus",
+      _ => "sonnet",
+    },
+    Err( _ ) => "sonnet",
+  }
+}
+
 // ── Cell renderers ────────────────────────────────────────────────────────────
 
 /// Compute the 5 quota display cells for a successful OAuth usage fetch.

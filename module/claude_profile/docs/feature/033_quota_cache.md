@@ -76,6 +76,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 | [BUG-256 🟢 Fixed](../../../../../task/claude_profile/bug/256_retry_ok_does_not_clear_cached_metadata.md) | `retry OK` does not clear `cached` metadata — `~` and `(Xh ago)` persist after successful refresh; fix = AC-11 |
 | [BUG-288 🟢 Fixed (Fix A)](../../../../../task/claude_profile/bug/288_account_use_touch_not_confirmed_usage_double_subprocess.md) | Fix A complete: `apply_post_switch_touch` now calls `write_quota_cache` with post-subprocess quota data; subsequent `apply_touch` reads updated quota (`resets_at = Some`) and skips the redundant subprocess. Fix B (`touch_idle` read site in `apply_touch` as defense-in-depth for server-side propagation lag) deferred; `touch_idle=false` write (AC-06) remains dead code pending follow-on task. |
 | [BUG-296 🟢 Fixed (TSK-306)](../../../../../task/claude_profile/bug/296_cached_non_expired_401_no_refresh.md) | Auth-error guard added: `fetch.rs:235` changes fallback arm to `Err( ref e ) if !e.contains("401") && !e.contains("403")` — auth errors propagate as `Err`; transient errors still fall back to cache; fix = AC-12 |
+| [BUG-304 🟢 Fixed (TSK-316)](../../../../../task/claude_profile/bug/304_cache_read_bypasses_approximation.md) | Three independent cache-read paths reconstructed `OauthUsageData` for utilization; G1 (non-owned) applied no approximation, HTTP-error fallback and `approximate_quota()` each inlined 40–55 lines of duplicated approximation. Fixed: centralized `read_cached_quota()` function |
 
 ### Features
 
@@ -87,6 +88,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 | [029_account_host_metadata.md](029_account_host_metadata.md) | `{name}.json` structure — cache extends the same file |
 | [036_account_ownership.md](036_account_ownership.md) | G1: non-owned accounts use cache as primary source; same display path as cache-fallback |
 | [040_quota_measurement_history.md](040_quota_measurement_history.md) | Extends single-point cache with 10-entry measurement history ring buffer and polynomial approximation |
+| [061_solo_token_conservation.md](061_solo_token_conservation.md) | `approximate_quota()` reads the single-point cache as fallback when history is absent |
 
 ### Sources
 

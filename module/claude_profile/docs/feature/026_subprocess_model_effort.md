@@ -147,6 +147,7 @@ if let Some(effort) = effort_opt {
 | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | `.account.use` post-switch subprocess — also uses `resolve_model()` and `resolve_effort()` |
 | [033_quota_cache.md](033_quota_cache.md) | Quota cache — cache persists model override decision |
 | [034_explicit_session_model_override.md](034_explicit_session_model_override.md) | `set_model::` for session model — orthogonal to `imodel::` subprocess model |
+| [062_unified_session_config.md](062_unified_session_config.md) | Session effort (`effortLevel` in settings.json) — distinct from subprocess `effort::` param; managed via `set_session_effort()` |
 
 ### Parameters
 

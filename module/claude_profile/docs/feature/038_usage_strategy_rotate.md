@@ -28,6 +28,8 @@ When `rotate::1` is active, `find_first_eligible` applies an additional ownershi
    b. If dry::1     → append "[dry-run] would switch to '{name}'" → exit 0
    c. Ownership gate (G5): if !winner.is_owned && !force → exit 1
    d. switch_account(winner_name, credential_store, paths)
+   d'. apply_model_override(winner.result.ok(), paths) — sets model="opus" when winner Sonnet left < 15%
+   d''. if session_effort.is_some() → set_session_effort(paths, session_effort) — carry-forward effort
    e. apply_post_switch_touch using AccountQuota already in memory (no re-fetch)
    f. append "switched to '{name}'\n" to output
 ```
@@ -86,6 +88,8 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 | [024_session_touch.md](024_session_touch.md) | Post-switch touch applied from in-memory `AccountQuota` |
 | [036_account_ownership.md](036_account_ownership.md) | G5 ownership gate enforced on rotation eligibility |
 | [008_auto_rotate.md](008_auto_rotate.md) | **DEPRECATED** predecessor; this feature replaces it |
+| [061_solo_token_conservation.md](061_solo_token_conservation.md) | `rotate::1` is mutually exclusive with `solo::1` — both present exits 1 before fetch |
+| [062_unified_session_config.md](062_unified_session_config.md) | Rotation dispatcher updated: calls `apply_model_override()` and `set_session_effort()` for the winner after switch |
 
 ### Sources
 

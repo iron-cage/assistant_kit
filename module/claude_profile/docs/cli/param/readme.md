@@ -132,6 +132,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 58 | `force::` | `bool` | `0` | `0`, `1`, `false`, `true` | Bypass G5–G8 ownership enforcement on mutation commands | `.account.use`, `.account.delete`, `.account.relogin`, `.accounts`, `.usage` |
 | 59 | `rotate::` | `bool` | `0` | `0`, `1` | After quota table render, switch to footer-recommended account; mutually exclusive with `live::1`; G5 ownership gate | `.usage` |
 | 60 | `solo::` | `bool` | `0` | `0`, `1` | Token conservation: restrict all credential-consuming operations to current+owned account; others use `approximate_quota()` | `.usage` |
+| 61 | `who::` | `i64` | `-1` | `-1` (auto), `0` (hide), `1` (show) | Sessions table visibility in `.usage` output | `.usage` |
 
 *Param 1 = cross-command account selector (no formal group); params 48, 52 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = ungrouped (`.model`-specific); param 56 = REMOVED; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54, 60 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file)*
 
