@@ -46,13 +46,14 @@ Test case planning for [invariant/001_default_flags.md](../../../../docs/invaria
 
 ---
 
-### IN-3: `--chrome` present by default
+### IN-3: `--chrome` present by default in interactive mode
 
 - **Given:** clean environment
-- **When:** `clr --dry-run "Fix bug"`
-- **Then:** Assembled command contains `--chrome`; injected by default
+- **When:** `clr --dry-run` (no message — interactive mode)
+- **Then:** Assembled command contains `--chrome`; injected by default in interactive mode
 - **Exit:** 0
 - **Source:** [invariant/001_default_flags.md](../../../../docs/invariant/001_default_flags.md)
+- **Note:** `--chrome` is automatically suppressed in print mode (message given) to prevent BUG-304 permanent hang; test `s35b_print_mode_suppresses_chrome` covers the suppression invariant
 
 ---
 

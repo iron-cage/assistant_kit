@@ -15,7 +15,7 @@
 |------|---------|----------|-----------|
 | `-c` (continue conversation) | ON (when session exists) | `--new-session` | Automation expects session continuity by default; injected only when session storage is non-empty (`session_exists()` guard) |
 | `--dangerously-skip-permissions` | ON | `--no-skip-permissions` | Automation pipelines must not stall on permission prompts |
-| `--chrome` | ON | `--no-chrome` | Browser context is essential for web-aware automation |
+| `--chrome` | ON (interactive only; suppressed in print mode — BUG-304) | `--no-chrome` | Browser context for web-aware automation; suppressed in print mode to prevent permanent session hang |
 | `"\n\nultrathink"` message suffix | ON | `--no-ultrathink` | Extended thinking mode should be the automation default |
 | `--effort max` | ON | `--effort <level>` or `--no-effort-max` | Agentic automation requires maximum reasoning; claude binary default (`medium`) undershoots |
 | `CLAUDECODE` removal | ON | `--keep-claudecode` | Subprocess must behave as standalone; inheriting `CLAUDECODE=1` triggers nested-agent mode which alters permissions, output format, and tool availability |
@@ -26,7 +26,7 @@ These defaults are intentional and must not be removed without explicit design d
 
 The flag injection is implemented at three layers:
 - `-c`: injected by `build_claude_command()` via `session_exists()` guard — only when `!cli.new_session` AND the configured session directory (or `$HOME/.claude/projects/{encoded(effective_dir)}/` default, checked via `check_continuation()`) contains conversation files. `--dangerously-skip-permissions`: injected unconditionally unless `--no-skip-permissions` is set.
-- `--chrome`: injected via `ClaudeCommand::new()` builder default (`chrome: Some(true)`). CLI opt-out: `--no-chrome`. Rust API callers can also override with `with_chrome(None)` or `with_chrome(Some(false))`.
+- `--chrome`: injected via `ClaudeCommand::new()` builder default (`chrome: Some(true)`). CLI opt-out: `--no-chrome`. Rust API callers can also override with `with_chrome(None)` or `with_chrome(Some(false))`. Print-mode suppression (Fix(BUG-304)): `builder.rs` computes `use_print` early and applies `if cli.no_chrome || use_print { chrome = None }` — prevents `--chrome` emission for all print-mode invocations without requiring `--no-chrome`.
 - `"\n\nultrathink"` message suffix: appended to the message string inside `build_claude_command()` before `builder.with_message()` is called. Skipped when `cli.no_ultrathink` is set or the message already ends with `"ultrathink"` (idempotent guard — `msg.trim_end().ends_with("ultrathink")`).
 - `--effort max`: injected by `build_claude_command()` via `builder.with_effort(cli.effort.unwrap_or(EffortLevel::Max))`. Skipped entirely when `cli.no_effort_max` is set. Overridden to a different level when `cli.effort` is `Some(level)`.
 - `CLAUDECODE` removal: `std::env::remove_var("CLAUDECODE")` called on the subprocess environment before spawn. Skipped when `cli.keep_claudecode` is set.
@@ -52,6 +52,12 @@ If any default injection is removed:
 
 - **Root cause:** `src/cli/builder.rs` — `session_exists()` + `check_continuation()`, `Fix(BUG-214-reopen)` comment; original `cli/mod.rs` path is now `builder.rs` after refactor
 - **Bug report:** `claude_tools/task/claude_runner/bug/214_bare_clr_exits_no_session.md` (external to crate)
+
+**BUG-304 (INT mitigation 2026-06-21) — `claude --print --chrome` sessions never exit:**
+`build_claude_command()` now computes `use_print` before the `--no-chrome` guard and applies `if cli.no_chrome || use_print` to suppress `--chrome` in all print-mode invocations. Root cause (EXT): Node.js/libuv registers a ref-counted 1-second timerfd (Chrome CDP reconnect) that is never `unref()`'d after `--print` response flush; event loop cannot drain; `clr`'s `cmd.output()` deadlocks. `--chrome` remains active in interactive mode.
+
+- **Root cause (INT):** `src/cli/builder.rs` — `use_print` computed early; `if cli.no_chrome || use_print` guard; `Fix(BUG-304)` comment
+- **Bug report:** `task/claude_runner/bug/304_print_chrome_session_permanent_hang.md`
 
 ### Features
 

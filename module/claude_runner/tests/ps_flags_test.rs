@@ -22,7 +22,7 @@
 //! | US-20  | 🕰 Ancient flag with `CLR_PS_ANCIENT_SECS=0` threshold              | User Story   |
 //! | US-21  | 🐘 High-RAM flag with `CLR_PS_HIGH_RAM_MB=0` threshold              | User Story   |
 //! | US-22  | ⚠ Dead-metrics flag for session with unreadable proc stats          | User Story   |
-//! | US-23  | ⚡ Running flag for session in kernel state R                        | User Story   |
+//! | US-23  | ⚡ On CPU flag for session in kernel state R                         | User Story   |
 //! | US-24  | 🖨 Print-mode flag for print-mode session                            | User Story   |
 //! | US-25  | Legend appears below active table when flags present                | User Story   |
 //! | US-26  | Legend absent when no flags present                                 | User Story   |
@@ -677,9 +677,9 @@ fn us22_dead_metrics_flag_for_missing_stat()
   );
 }
 
-// ── US-23: ⚡ Running flag for session in kernel state R ───────────────────
+// ── US-23: ⚡ On CPU flag for session in kernel state R ─────────────────────
 
-/// US-23: Developer running `clr ps` sees ⚡ Running for a CPU-intensive session
+/// US-23: Developer running `clr ps` sees ⚡ On CPU for a CPU-intensive session
 /// whose `/proc/{pid}/stat` state field is `R`.
 ///
 /// Spawns a tight shell busy-loop via `/bin/sh --arg0 claude -c 'while :; do :; done'`.
@@ -725,8 +725,8 @@ fn us23_running_flag_for_cpu_intensive_session()
     "US-23: ⚡ flag must appear for session in kernel state R. Got:\n{stdout}"
   );
   assert!(
-    stdout.contains( "Running" ),
-    "US-23: legend must contain 'Running'. Got:\n{stdout}"
+    stdout.contains( "On CPU" ),
+    "US-23: legend must contain 'On CPU'. Got:\n{stdout}"
   );
 }
 

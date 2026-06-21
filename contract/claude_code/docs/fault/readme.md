@@ -81,5 +81,5 @@ When `claude` exits non-zero, detection MUST follow this priority order (higher 
 |------|------|----------------|
 | collection | [`../../../../docs/error/readme.md`](../../../../docs/error/readme.md) | Error collection — 6 terminal error instances |
 | collection | [`../../../../module/claude_runner_core/docs/failure_mode/readme.md`](../../../../module/claude_runner_core/docs/failure_mode/readme.md) | Failure mode collection — 4 silent failure instances |
-| collection | [`../behavior/readme.md`](../behavior/readme.md) | Behavior collection — 25 observed behaviors (B1-B24 + B16h) |
+| collection | [`../behavior/readme.md`](../behavior/readme.md) | Behavior collection — 27 observed behaviors (B1-B26 + B16h) |
 | source | `../../../../module/claude_runner_core/src/types.rs` | `ErrorKind` enum, `classify_error()` implementation |

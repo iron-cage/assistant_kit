@@ -1,16 +1,16 @@
-//! Catalog surface tests (DD- prefix) for `claude_version`.
+//! Design decision tests (DD- prefix) for `claude_version`.
 //!
-//! Implements test cases from `tests/docs/catalog/` spec files.
+//! Implements test cases from `tests/docs/feature/05_cli_design.md` Design Decision Tests section.
 //! Each function maps to one DD- case verifying a design decision is implemented.
 //!
 //! # Coverage Map
 //!
 //! | DD-spec | ID | Decision | Function |
 //! |---------|----|----------|----------|
-//! | collection/001_design_decisions.md | DD-1 | D3 | `dd01_001_bool_true_rejected` |
-//! | collection/001_design_decisions.md | DD-2 | D8 | `dd02_001_last_v_wins` |
-//! | collection/001_design_decisions.md | DD-3 | D4 | `dd03_001_cmd_not_implemented_exit2` |
-//! | collection/001_design_decisions.md | DD-4 | D7 | `dd04_001_per_cmd_validation` |
+//! | feature/05_cli_design.md | DD-1 | D3 | `dd01_001_bool_true_rejected` |
+//! | feature/05_cli_design.md | DD-2 | D8 | `dd02_001_last_v_wins` |
+//! | feature/05_cli_design.md | DD-3 | D4 | `dd03_001_cmd_not_implemented_exit2` |
+//! | feature/05_cli_design.md | DD-4 | D7 | `dd04_001_per_cmd_validation` |
 
 use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr, stdout };
 

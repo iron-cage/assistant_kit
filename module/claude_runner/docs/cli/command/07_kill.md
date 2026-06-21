@@ -6,13 +6,15 @@ Terminate a running Claude Code session by sending SIGTERM to the target process
 
 ```sh
 clr kill <PID>
+clr kill --stale
 ```
 
 **Parameters:**
 
 | # | Name | Required | Description |
 |---|------|----------|-------------|
-| 1 | `<PID>` | Yes | Process ID of the Claude Code session to terminate |
+| 1 | `<PID>` | Yes (unless `--stale`) | Process ID of the Claude Code session to terminate |
+| - | `--stale` | No | Kill all print-mode sessions older than `DEFAULT_PRINT_TIMEOUT_SECS` (3600 s) |
 
 **Validation:**
 
@@ -35,6 +37,16 @@ immediate unconditional termination, use `kill -KILL <PID>` directly.
 | 0 | SIGTERM delivered successfully |
 | 1 | Error: missing PID, invalid PID format, PID is not a running Claude session, or signal delivery failed |
 
+**Batch Mode — `--stale`:**
+
+`clr kill --stale` identifies all print-mode Claude Code sessions whose elapsed time exceeds `DEFAULT_PRINT_TIMEOUT_SECS` (3600 seconds = 1 hour) and sends SIGTERM to each. Interactive sessions are never targeted — they are user-attended and deliberately have no default timeout.
+
+This provides an external enforcement mechanism for sessions started before the TSK-227 watchdog was deployed, or for sessions whose internal watchdog failed. The threshold is not configurable; it matches `DEFAULT_PRINT_TIMEOUT_SECS` from `src/cli/execution.rs`.
+
+Output: one `"Killed PID <N>"` line per terminated session, followed by a summary count. If no stale sessions are found: `"No stale print-mode sessions found."`.
+
+`--stale` is mutually exclusive with `<PID>`. Passing both exits 1.
+
 **Examples:**
 
 ```sh
@@ -43,6 +55,9 @@ clr ps
 
 # Terminate session with PID 12345
 clr kill 12345
+
+# Kill all stale print-mode sessions (> 1 hour)
+clr kill --stale
 
 # Show kill-specific help
 clr kill --help

@@ -104,7 +104,19 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
       cli.effort.unwrap_or( EffortLevel::Max )
     );
   }
-  if cli.no_chrome
+  // Determine print mode early — used for both chrome suppression and --print injection.
+  // Fix(BUG-227): message without -p was silently using TTY passthrough,
+  //   producing raw TUI escape codes instead of clean text output in scripted contexts.
+  // Root cause: print mode was only enabled by explicit -p/--print; no auto-detection.
+  // Pitfall: `--interactive` must suppress this to allow prompted REPL sessions.
+  let use_print = cli.print_mode || ( cli.message.is_some() && !cli.interactive );
+  // Fix(BUG-304): suppress --chrome whenever print mode is active.
+  //   Root cause: Node.js/libuv registers a ref-counted 1-second timerfd (Chrome CDP
+  //   reconnect) that is never unref()'d after --print response flush; event loop cannot
+  //   drain; clr's cmd.output() holds pipe read-ends open — both sides deadlocked.
+  // Pitfall: cli.no_chrome is the explicit user opt-out; use_print is the automatic
+  //   suppression that prevents the hang without requiring --no-chrome.
+  if cli.no_chrome || use_print
   {
     builder = builder.with_chrome( None );
   }
@@ -148,12 +160,6 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
   {
     builder = builder.with_append_system_prompt( asp.clone() );
   }
-  // Auto-add --print when a message is given and interactive mode is not explicitly requested.
-  // Fix(BUG-227): message without -p was silently using TTY passthrough,
-  // producing raw TUI escape codes instead of clean text output in scripted contexts.
-  // Root cause: print mode was only enabled by explicit -p/--print; no auto-detection.
-  // Pitfall: `--interactive` must suppress this auto-addition to allow prompted REPL sessions.
-  let use_print = cli.print_mode || ( cli.message.is_some() && !cli.interactive );
   if use_print
   {
     builder = builder.with_arg( "--print" );

@@ -42,7 +42,7 @@
 use std::process::Command;
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, run_with_path };
+use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_session_dir, run_with_path };
 
 // E01: Interactive mode: binary not found exits 1 with error on stderr.
 #[ test ]
@@ -204,17 +204,20 @@ fn e09_verbosity_four_stderr_preview()
 // `clr "hello world"` routes to print mode (execute() + --print), but this test only asserts
 // that the message and -c are present — not that --print is absent — so it covers both paths.
 // Uses a fake binary that echoes its arguments to a file, then verifies.
+// Uses --session-dir pointing to a non-empty dir to guarantee -c injection regardless of host
+// session state (fixes fragile environment dependency — session_exists() requires a prior session).
 #[ test ]
 fn e10_interactive_message_forwarded()
 {
-  let args_file      = tempfile::NamedTempFile::new().expect( "create args file" );
-  let args_path      = args_file.path().display().to_string();
-  let script         = format!( "echo \"$@\" > \"{args_path}\"\n" );
-  let ( _tmp, path ) = fake_claude_dir( &script );
+  let args_file                  = tempfile::NamedTempFile::new().expect( "create args file" );
+  let args_path                  = args_file.path().display().to_string();
+  let script                     = format!( "echo \"$@\" > \"{args_path}\"\n" );
+  let ( _tmp, path )             = fake_claude_dir( &script );
+  let ( _session, session_path ) = make_session_dir();
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( [ "hello world" ] )
+    .args( [ "--session-dir", &session_path, "hello world" ] )
     .env( "PATH", &path )
     .output()
     .expect( "invoke" );

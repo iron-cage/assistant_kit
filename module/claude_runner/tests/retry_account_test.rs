@@ -3,7 +3,7 @@
 //!
 //! ## Purpose
 //!
-//! Verify EC-1 through EC-8 from `tests/docs/cli/param/040_retry_on_account.md` and
+//! Verify EC-1 through EC-9 from `tests/docs/cli/param/040_retry_on_account.md` and
 //! EC-1 through EC-6 from `tests/docs/cli/param/041_account_delay.md`.
 //!
 //! Both parameter specs share this test file because `--account-delay` only fires
@@ -12,7 +12,7 @@
 //! ## Test Layout
 //!
 //! - EC-1..EC-6 (param 40), EC-1..EC-6 (param 41): parser/dry-run — no subprocess
-//! - EC-7..EC-8 (param 40): require fake subprocess
+//! - EC-7..EC-9 (param 40): require fake subprocess
 //!
 //! ## Corner Cases Covered
 //!
@@ -25,6 +25,7 @@
 //! - EC-6: invalid env var silently ignored
 //! - EC-7: fake emits `"You've hit your limit"` once then 0; retries=1, delay=0 → exit 0; `[Account]` in stderr
 //! - EC-8: fake always emits quota pattern; retries=2, delay=0 → exit 2; `[Account]` exhaustion in stderr
+//! - EC-9: no retry flags → Tier 3 fallback fires; fake exits 2 once then 0 → exit 0; `[Account]` in stderr
 //!
 //! ### --account-delay (param 41)
 //! - EC-1 (delay): help lists flag
@@ -253,33 +254,38 @@ fn ec8_account_retry_exhausted()
   );
 }
 
-// ── EC-9: Account class default = 0 → no retry without explicit opt-in ────────
+// ── EC-9: Account retries via Tier 3 fallback (no class-specific flag) ─────────
 
-/// EC-9 (param 40): fake emits `"You've hit your limit"` + exits 2; NO `--retry-on-account`
-/// flag set; class_default_count(Account) = Some(0) takes effect → no retry; exit 2.
+/// EC-9 (param 40): fake emits `"You've hit your limit"` + exits 2 on first call,
+/// then exits 0 on second. NO `--retry-on-account` flag set; Tier 3 fallback (default 2)
+/// fires → retry succeeds; exit 0; `[Account]` in stderr; two invocations.
 ///
-/// Root Cause: Account class default was `auto` (falling through to Tier 3 fallback = 2),
-///   causing a 60-second stall (2 × 30s) on every quota exhaustion with no user benefit,
-///   since quota resets take hours not seconds.
-/// Why Not Caught: EC-7 and EC-8 both test explicit `--retry-on-account N` (opt-in); neither
-///   tested the unset/default behaviour.
-/// Fix Applied: class_default_count(ErrorClass::Account) = Some(0) inserted between class_cli
-///   and fallback in resolve_count() 4-tier resolution.
-/// Prevention: this test asserts absence of "retrying" in stderr when no retry flags are set.
-/// Pitfall: DO NOT use `--retry-override 0` here — that tests Tier 1 override, not the class
-///   default; the old 3-tier code would also return 0 with override 0, masking regressions.
-///   env_remove CLR_RETRY_DEFAULT/CLR_RETRY_OVERRIDE/CLR_RETRY_ON_ACCOUNT for determinism.
+/// Root Cause: class_default_count(Account) = Some(0) blocked Tier 3 fallback, causing
+///   Account errors to never retry unless explicitly opted-in with --retry-on-account.
+/// Why Not Caught: EC-7 and EC-8 both test explicit --retry-on-account N (opt-in); neither
+///   tested the unset/default behaviour where fallback should fire.
+/// Fix Applied: class_default_count() removed; resolve_count() simplified to 3-tier
+///   (override ?? class-specific ?? fallback). All classes now use uniform resolution.
+/// Prevention: this test asserts retry fires via Tier 3 fallback when no class-specific flag set.
+/// Pitfall: DO NOT set --retry-on-account here — that tests Tier 2, not Tier 3 fallback.
+///   env_remove CLR_RETRY_ON_ACCOUNT/CLR_RETRY_DEFAULT/CLR_RETRY_OVERRIDE for determinism.
 #[ cfg( unix ) ]
 #[ test ]
-fn ec9_account_default_zero_no_retry()
+fn ec9_account_retries_via_tier3_fallback()
 {
-  let tmp  = tempfile::tempdir().expect( "create temp dir" );
-  let fake = tmp.path().join( "claude" );
+  let tmp   = tempfile::tempdir().expect( "create temp dir" );
+  let fake  = tmp.path().join( "claude" );
+  let count = tmp.path().join( "count" );
 
-  std::fs::write(
-    &fake,
-    b"#!/bin/sh\nprintf \"You've hit your limit\\n\"\nexit 2\n",
-  ).expect( "write fake claude" );
+  let count_path = count.to_str().expect( "counter path utf-8" );
+  let script = format!(
+    "#!/bin/sh\n\
+     if [ -f \"{count_path}\" ]; then exit 0; fi\n\
+     touch \"{count_path}\"\n\
+     printf \"You've hit your limit\\n\"\n\
+     exit 2\n"
+  );
+  std::fs::write( &fake, script.as_bytes() ).expect( "write fake claude" );
   std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
     .expect( "chmod fake claude" );
 
@@ -288,7 +294,7 @@ fn ec9_account_default_zero_no_retry()
   let bin      = env!( "CARGO_BIN_EXE_clr" );
 
   let out = Command::new( bin )
-    .args( [ "-p", "--max-sessions", "0", "x" ] )
+    .args( [ "-p", "--retry-default-delay", "0", "--max-sessions", "0", "x" ] )
     .env( "PATH", &new_path )
     .env_remove( "CLR_RETRY_ON_ACCOUNT" )
     .env_remove( "CLR_RETRY_DEFAULT" )
@@ -296,10 +302,9 @@ fn ec9_account_default_zero_no_retry()
     .output()
     .expect( "invoke clr" );
 
-  assert_eq!(
-    out.status.code(),
-    Some( 2 ),
-    "Account class_default=0: exit must be 2 with no retry flags. exit={:?} stderr={}",
+  assert!(
+    out.status.success(),
+    "Tier 3 fallback must fire for Account: exit must be 0. exit={:?} stderr={}",
     out.status.code(),
     String::from_utf8_lossy( &out.stderr )
   );
@@ -309,8 +314,8 @@ fn ec9_account_default_zero_no_retry()
     "stderr must contain [Account] class label. Got:\n{stderr}"
   );
   assert!(
-    !stderr.contains( "retrying" ),
-    "Account class_default=0: no retry progress line must appear in stderr. Got:\n{stderr}"
+    stderr.to_lowercase().contains( "retry" ),
+    "stderr must contain retry message (Tier 3 fallback fired). Got:\n{stderr}"
   );
 }
 

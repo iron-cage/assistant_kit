@@ -15,6 +15,7 @@ See [056_retry_default.md](../../../../docs/cli/param/056_retry_default.md) for 
 | EC-6 | `CLR_RETRY_DEFAULT=notanumber --dry-run` → silently ignored | Validation |
 | EC-7 | Class-specific set → class-specific wins over fallback (Transient=1 beats fallback=5) | Integration |
 | EC-8 | No class-specific and no override → fallback fires for Transient class | Integration |
+| EC-9 | No class-specific and no override → fallback fires for Account class (Account not special) | Integration |
 
 ## Test Coverage Summary
 
@@ -23,9 +24,9 @@ See [056_retry_default.md](../../../../docs/cli/param/056_retry_default.md) for 
 - Env Var: 1 test (EC-4)
 - CLI-wins: 1 test (EC-5)
 - Validation: 1 test (EC-6)
-- Integration: 2 tests (EC-7, EC-8)
+- Integration: 3 tests (EC-7, EC-8, EC-9)
 
-**Total:** 8 edge cases
+**Total:** 9 edge cases
 
 ## Architectural Constraint
 
@@ -46,6 +47,7 @@ Tier 2 beats Tier 3. EC-8 demonstrates Tier 3 fires when both Tier 1 and Tier 2 
 | EC-6 | `ec6_clr_retry_default_invalid_ignored` | `retry_default_test.rs` |
 | EC-7 | `ec7_class_specific_beats_retry_default` | `retry_default_test.rs` |
 | EC-8 | `ec8_retry_default_fires_when_no_class_or_override` | `retry_default_test.rs` |
+| EC-9 | `ec9_retry_default_fires_for_account_class` | `retry_default_test.rs` |
 
 ---
 
@@ -134,3 +136,15 @@ Tier 2 beats Tier 3. EC-8 demonstrates Tier 3 fires when both Tier 1 and Tier 2 
 - **Exit:** 0
 - **Source:** [056_retry_default.md](../../../../docs/cli/param/056_retry_default.md)
 - **Commands:** run, ask
+
+---
+
+### EC-9: --retry-default fires for Account class (Account not special)
+
+- **Given:** fake emits `"You've hit your limit"` + exits 2 once then 0; `--retry-default-delay 0 -p "x"` (no `--retry-on-account`, no `--retry-override`)
+- **When:** `clr --retry-default-delay 0 --max-sessions 0 -p "x"` using fake
+- **Then:** Exit 0; stderr contains `[Account]` retry message; two invocations (fallback default=2 fires for Account class)
+- **Exit:** 0
+- **Source:** [056_retry_default.md](../../../../docs/cli/param/056_retry_default.md)
+- **Commands:** run, ask
+- **Note:** Validates that Account class has no special class-level default — it uses the same Tier 3 fallback as all other classes. **Divergence from EC-8:** EC-8 uses Transient class; EC-9 uses Account class (formerly special-cased to 0).

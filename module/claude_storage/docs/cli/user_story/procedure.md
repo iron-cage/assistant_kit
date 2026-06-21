@@ -13,7 +13,7 @@
 6. For each group in `### Referenced Parameter Groups`: add a back-reference row to that group's `### Referenced User Stories` in `param_group/NN_name.md`
 7. For each format in `### Referenced Formats`: add a back-reference row to that format's `### Referenced User Stories` in `format/NN_*.md`
 8. For each story in `### Related User Stories`: add a reciprocal row to that story's `### Related User Stories`
-9. Update `docs/entities.md` — increment `cli/user_story/` Instances column
+9. Update `docs/entity.md` — increment `cli/user_story/` Instances column
 10. Run bidirectional integrity check: every forward reference must have a back-reference
 
 ## Remove User Story
@@ -24,4 +24,4 @@
 4. Remove its back-reference row from every group's `### Referenced User Stories`; same minimum-1 check
 5. Remove its back-reference row from every format's `### Referenced User Stories`; verify each format retains ≥1 row
 6. Remove its row from every related story's `### Related User Stories`
-7. Update `docs/entities.md` — decrement `cli/user_story/` Instances column
+7. Update `docs/entity.md` — decrement `cli/user_story/` Instances column

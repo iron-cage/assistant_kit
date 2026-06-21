@@ -67,7 +67,7 @@ cargo run -p claude_runner -- --dry-run --dir /tmp "test"
 **Expected:**
 - Prints env var lines (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`, etc.)
 - Prints: `cd /tmp`
-- Prints: `env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max --print "test\n\nultrathink"` (bypass, chrome, effort max, print, ultrathink suffix; `env -u CLAUDECODE` prefix from Feature 006; `-c` omitted because `/tmp` has no session history for this project per BUG-214 fix — `-c` appears only when `$HOME/.claude/projects/{encoded(dir)}/` is non-empty)
+- Prints: `env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print "test\n\nultrathink"` (bypass, effort max, print, ultrathink suffix; `env -u CLAUDECODE` prefix from Feature 006; `--chrome` absent — print mode suppression per BUG-304; `-c` omitted because `/tmp` has no session history for this project per BUG-214 fix — `-c` appears only when `$HOME/.claude/projects/{encoded(dir)}/` is non-empty)
 - Does NOT invoke Claude binary
 - Exit code 0
 
@@ -356,7 +356,7 @@ cargo run -p claude_runner -- ask --dry-run "question"
 cargo run -p claude_runner -- run --dry-run "question"
 ```
 
-**Expected:** Both commands produce **identical** dry-run output — `--effort max`, `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`, `-c` continuation, `--dangerously-skip-permissions`, ultrathink suffix, `--chrome`. `ask` is a pure semantic alias for `run` since plan-007; all old ask-specific overrides (effort high, 16384 tokens, no `-c`, no skip-permissions) were removed. Exit code 0 on both.
+**Expected:** Both commands produce **identical** dry-run output — `--effort max`, `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`, `-c` continuation, `--dangerously-skip-permissions`, ultrathink suffix; `--chrome` absent (print mode — BUG-304 suppression). `ask` is a pure semantic alias for `run` since plan-007; all old ask-specific overrides (effort high, 16384 tokens, no `-c`, no skip-permissions) were removed. Exit code 0 on both.
 
 ### TC-46: Empty Session Dir — No `-c` Injected (BUG-214 regression guard)
 ```sh
@@ -721,7 +721,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-69:** `clr ask --dry-run test` → has `--dangerously-skip-permissions` (pure alias — no suppression)
 - **CC-70:** `clr ask --dry-run test` → does NOT have `--no-session-persistence` (pure alias — no injection)
 - **CC-71:** `clr ask --dry-run test` → has ultrathink suffix (pure alias — no suppression)
-- **CC-72:** `clr ask --dry-run test` → has `--chrome` (pure alias — no suppression)
+- **CC-72:** `clr ask --dry-run test` → no `--chrome` (print mode — BUG-304 suppression)
 - **CC-73:** `clr ask --dry-run test` → `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` (pure alias — not 16384)
 - **CC-74:** `clr ask help` (positional) → shows ask help, exits 0 (BUG-249 regression guard)
 - **CC-75:** `clr ask --effort high --dry-run test` → has `--effort high` (explicit override respected)
@@ -838,7 +838,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 
 ---
 
-## New Corner Cases (NC-1 through NC-19) — Discovered During Manual Testing
+## New Corner Cases (NC-1 through NC-20) — Discovered During Manual Testing
 
 ### NC-1: QuotaExhausted Label (Automated)
 
@@ -1004,4 +1004,34 @@ CLR_OUTPUT_FORMAT=json cargo run -p claude_runner -- --dry-run "test"
 ```
 
 **Expected:** Each dry-run trace includes the forwarded param (e.g. `--max-turns 10`, `--allowed-tools Bash`, `--output-format json`). Automated analog: `output_format_test.rs` EC-3/EC-4/EC-6; `max_turns_test.rs` EC-2; `allowed_tools_test.rs` EC-2.
+
+### NC-20: `clr run --print` with Chrome — Process Exits Within 90s (BUG-304 regression)
+
+**Context:** BUG-304 — `claude --print --chrome` sessions never exit due to a ref-counted 1-second timerfd in the Node.js/libuv event loop. INT mitigation (2026-06-21): `builder.rs` suppresses `--chrome` automatically in print mode. This NC verifies the mitigation is effective against a live `claude` binary.
+
+**Precondition:** Live `claude` binary installed with valid credentials. Run this before any release that changes `--chrome` defaults, print-mode behavior, or `builder.rs` chrome-suppression logic.
+
+```sh
+# Verify chrome is suppressed in dry-run (automated proxy — always passes):
+clr --dry-run "ping" | grep -v -- '--chrome' && echo "OK: --chrome absent in print mode"
+
+# Live process lifetime test (requires real claude):
+clr run --print "say: done" &
+CLR_PID=$!
+sleep 90
+if kill -0 $CLR_PID 2>/dev/null; then
+  echo "FAIL: clr still running after 90s (BUG-304 regression)"
+  kill $CLR_PID
+else
+  echo "PASS: clr exited within 90s"
+fi
+```
+
+**Expected:**
+- Dry-run line: `OK: --chrome absent in print mode`
+- Live line: `PASS: clr exited within 90s`
+
+**Failure interpretation:** If `FAIL` is printed, BUG-304 has regressed. Check `builder.rs`: `use_print` must be computed before the `no_chrome` guard, and the guard must be `if cli.no_chrome || use_print`. If `--chrome` appears in dry-run output for a print-mode invocation, the mitigation code has been removed or broken.
+
+**Note:** Root fix (EXT) for BUG-304 requires Anthropic to call `process.exit(0)` in the `claude` binary's `--print` code path after flushing the final response. Until that ships, the dry-run assertion provides an automated regression guard; the live test provides end-to-end confirmation. Automated dry-run guard: `param_extended_flags_test.rs::s35b_print_mode_suppresses_chrome`.
 

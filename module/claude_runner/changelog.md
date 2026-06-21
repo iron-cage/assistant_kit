@@ -18,7 +18,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Parameters: [`--pid`](docs/cli/param/068_pid.md) (param 068), [`--inspect`](docs/cli/param/069_inspect.md) (param 069)
   - Tests: `ps_pid_test.rs` (EC-1–EC-8), `ps_inspect_test.rs` (EC-1–EC-9)
 
+- **`clr ps` session flags** (TSK-225)
+  - Each active session row can display emoji flags: 🐳 (container), 🕰 (ancient), 🐘 (high RAM),
+    ⚠ (high CPU), ⚡ (low CPU), 🖨 (print mode), 👈 (this session)
+  - `compute_flags()` + `FLAG_LEGEND` + `build_legend()` in `ps.rs`; legend appended below the table
+  - Configurable thresholds: `CLR_PS_ANCIENT_SECS` (default 28800), `CLR_PS_HIGH_RAM_MB` (default 400);
+    setting either to `0` triggers the flag on every process
+  - Tests: `ps_flags_test.rs` (IT-30–IT-38, US-18–US-26, E41–E42)
+
+- **`clr ps --mode`/`--columns`/`--wide` session listing params** (TSK-214)
+  - `--mode <MODE>`: filter active sessions by mode (`print`/`interactive`/`all`); `CLR_PS_MODE` env var
+  - `--columns <KEYS>`: select and reorder columns by comma-separated key names; `CLR_PS_COLUMNS` env var
+  - `--wide`: shorthand for all columns; overrides `--columns`
+  - Implementation: `PsConfig` + `classify_mode()` + `resolve_columns()` + `validate_columns()` +
+    `COLUMN_KEYS`/`DEFAULT_COLUMNS` constants in `ps.rs`; `apply_ps_env_vars()` in `env.rs`
+  - Parameters: [`--mode`](docs/cli/param/058_mode.md) (058), [`--columns`](docs/cli/param/059_columns.md) (059),
+    [`--wide`](docs/cli/param/060_wide.md) (060)
+  - Tests: `ps_mode_test.rs` (EC-1–EC-8), `ps_columns_test.rs` (EC-1–EC-10), `ps_wide_test.rs` (EC-1–EC-5)
+
+- **7 Claude-native passthrough params** (Plan 021, TSK-215–221)
+  - `--output-format` (061), `--max-turns` (062), `--allowed-tools` (063), `--disallowed-tools` (064),
+    `--max-budget-usd` (065), `--add-dir` (066), `--fallback-model` (067)
+  - Forwarded directly to the `claude` subprocess; `CLR_*` env var fallbacks for each
+  - `--output-format summary` rendering: `render_summary_output()` in `execution.rs` emits
+    cost/duration/turns extracted from the JSON summary blob
+
+- **`clr tools` subcommand** (Plan 021, TSK-222)
+  - Lists all 26 Claude Code built-in tools in a plain-style table with Name, Category, Description columns
+  - Source: `src/cli/tools.rs`; static `TOOLS` array sourced from `contract/claude_code/docs/tool/readme.md`
+  - Unknown arguments exit 1 (e.g. `clr tools --bogus`)
+  - Tests: `tools_command_test.rs` (IT-1–IT-9)
+
 ### Fixed
+
+- **`clr ps` active sessions sorted oldest-first** (BUG-301, TSK-210)
+  - `build_active_table()` was emitting rows in arbitrary filesystem order from `/proc`
+  - Fix: sort by `read_process_metrics().started_at` ascending; `#[cfg(target_os = "linux")]` guard
+  - Tests: IT-20, US-09
+
+- **`clr ps` table width no longer overflows terminal** (BUG-300, TSK-211)
+  - Single-pass render used terminal width for both caption and body, causing misaligned wrapping
+  - Fix: two-pass render — first probe measures `body_width`, second pass uses `terminal_width(Some(body_width))`
+    via `data_fmt 0.4` `build_view()` + `Format::format(&view)`
+  - Tests: verified via existing ps_command_test suite
+
+- **`guard_unknown_subcommand()` no longer false-matches short prefixes** (BUG-302, TSK-212)
+  - 2–3 character inputs like `"is"` matched `"isolated"` via `sub.starts_with(first)`; the reverse
+    branch `first.starts_with(sub)` matched morphological extensions like `"asking"` → `"ask"`
+  - Fix: `first.len() >= 4` guard added to prefix branch; reverse extension branch removed entirely
+  - Tests: `bug_reproducer_302_*` + 3 regression tests in `cli_args_ext_test.rs`; IN-7/IN-8
+
+- **`print_ps_help()` key names aligned with `COLUMN_KEYS`** (BUG-303)
+  - Help text used `num`/`command` but `COLUMN_KEYS` defined `idx`/`cmd`; users following help
+    text got "unknown column" errors
+  - Fix: 3 lines in `help.rs` corrected to `idx`/`cmd`
+  - Tests: EC-10 regression in `ps_columns_test.rs`
+
+- **`dispatch_tools()` now rejects unknown arguments** (Plan 021 post-verification)
+  - `clr tools --bogus` silently exited 0; should exit 1 with error
+  - Fix: unknown-arg guard in `src/cli/tools.rs` (lines 53–62)
+  - Tests: IT-9 in `tools_command_test.rs`
+
+- **`--chrome` suppressed in print mode to prevent permanent session hang** (BUG-304, INT mitigation)
+  - `claude --print --chrome` sessions never exit: Node.js/libuv registers a ref-counted 1-second
+    timerfd (Chrome CDP reconnect) that is never `unref()`'d after `--print` response flush; event
+    loop cannot drain; `clr`'s `cmd.output()` deadlocks waiting for subprocess EOF
+  - Fix: `builder.rs` computes `use_print` before the `no_chrome` guard; `if cli.no_chrome || use_print`
+    suppresses `--chrome` in all print-mode invocations automatically
+  - `--chrome` still injected in interactive mode (no message); `--no-chrome` remains the explicit opt-out
+  - Root fix (EXT) required in upstream `claude` binary (`process.exit(0)` after flush)
+  - Tests: `s35_default_chrome_injected_interactive`, `s35b_print_mode_suppresses_chrome`
 
 - **`clr ps --help`/`-h`/`help` now exits 0 and prints help** (BUG-294, TSK-206)
   - `dispatch_ps()` lacked the `--help`/`-h`/`help` intercept present in all peer dispatch
@@ -54,6 +123,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tests: EC-7 (retry fires on absent binary), EC-8 (retry disabled with `--retry-on-runner 0`)
 
 ### Changed
+
+- **Account error class retry default changed from 0 to auto** (BUG-307, BUG-308)
+  - `class_default_count()` removed; `resolve_count()` simplified from 4-tier to 3-tier resolution
+    (`--retry-override` ?? `--retry-on-<class>` ?? `--retry-default`); Account now inherits Tier 3
+    fallback (effective default = 2) like all other error classes
+
+- **Print-mode sessions now have a 1-hour default timeout watchdog** (BUG-305, TSK-227)
+  - `run_print_mode()` used `cli.timeout.unwrap_or( 0 )`, leaving unattended sessions unbounded;
+    four `clr run --print --chrome` sessions were found alive after 76–79 hours
+  - Fix: `DEFAULT_PRINT_TIMEOUT_SECS: u32 = 3600` constant; `unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )`
+    in `run_print_mode()` only; `run_interactive()` retains `unwrap_or( 0 )` (user-attended)
+  - `--timeout 0` or `CLR_TIMEOUT=0` explicitly restores unlimited behavior
+  - Stdin-file pre-check added before the retry loop — missing `--file` path now fast-fails with
+    `"Error: cannot open stdin file '<path>': ..."` instead of entering runner retry
+  - Tests: 7 new in `timeout_test.rs` + 1 in `env_var_test.rs`; invariant 007 created
 
 - **Account class (`--retry-on-account`) default retry count changed from `auto` (effective 2) to `0`** (TSK-213)
   - Quota resets are measured in hours; 30-second retry delays are counterproductive for

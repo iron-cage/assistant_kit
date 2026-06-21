@@ -53,20 +53,34 @@ environments with parallel `clr` invocations hitting API rate limits. The gate u
 
 **Session listing (`clr ps`):** Prints two plain-style tables: active Claude Code sessions
 and queued `clr` waiters (processes blocked at the concurrency gate). Default active table
-columns: `#`, `PID`, `Elapsed`, `CPU%`, `RAM`, `State`, `Absolute Path`, `Task`; optional
-columns: `Mode`, `Command`, `Binary` (shown via `--wide` or `--columns`). `--mode` filters
+columns: `#`, `PID`, `Elapsed`, `CPU%`, `RAM`, `State`, `Mode`, `Absolute Path`, `Task`;
+optional columns: `Command`, `Binary` (shown via `--wide` or `--columns`). `--mode` filters
 rows by execution mode (interactive/print). `--columns` selects a custom column subset.
-Env vars: `CLR_PS_MODE`, `CLR_PS_COLUMNS`. Data sources:
-`/proc/{pid}/stat` (state, CPU jiffies, start time), `/proc/{pid}/status` (VmRSS in MB),
-`~/.claude/projects/` JSONL files (Task column — last user message, truncated to 35 chars);
-falls back to `"interactive"` when no JSONL found. Active session rows are ordered
-by start time (oldest first). Queued table reads gate state files from
-`$CLR_GATE_DIR` — columns: `#`, `PID`, `CWD`, `Waiting`, `Attempt`; gate files whose PID
-no longer exists are filtered out and self-heal-deleted (BUG-293). The current `clr ps`
-process is never listed. When no sessions are found: prints `No active Claude Code sessions.`
-and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
+`--pid <PIDs>` restricts the active table to comma-separated PIDs (AND with `--mode`).
+`-i`/`--inspect` switches to 12-attribute key:value record blocks per session (suppresses
+queued table, ignores `--columns`/`--wide`). Each row can display emoji session flags:
+🐳 (container), 🕰 (ancient), 🐘 (high RAM), ⚠ (high CPU), ⚡ (low CPU), 🖨 (print mode),
+👈 (this session); thresholds configurable via `CLR_PS_ANCIENT_SECS` (default 28800) and
+`CLR_PS_HIGH_RAM_MB` (default 400). Env vars: `CLR_PS_MODE`, `CLR_PS_COLUMNS`, `CLR_PS_PID`,
+`CLR_PS_ANCIENT_SECS`, `CLR_PS_HIGH_RAM_MB`. Data sources: `/proc/{pid}/stat` (state, CPU
+jiffies, start time), `/proc/{pid}/status` (VmRSS in MB), `~/.claude/projects/` JSONL files
+(Task column — last user message, truncated to 35 chars); falls back to `"interactive"` when
+no JSONL found. Active session rows are ordered by start time (oldest first). Queued table
+reads gate state files from `$CLR_GATE_DIR` — columns: `#`, `PID`, `CWD`, `Waiting`,
+`Attempt`; gate files whose PID no longer exists are filtered out and self-heal-deleted
+(BUG-293). The current `clr ps` process is never listed. When no sessions are found: prints
+`No active Claude Code sessions.` and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
 
-**3-tier retry hierarchy:** When a subprocess exits with a classifiable error, the runner retries according to a 3-tier resolution: Tier 1 (`--retry-override`) forces count/delay for all classes; Tier 2 (`--retry-on-<class>`/`--<class>-delay`) overrides per error class; Tier 3 (`--retry-default`/`--retry-default-delay`) provides fallback defaults (count=2, delay=30s). Between Tier 2 and Tier 3, a class-level default may apply: Account defaults to 0 retries (quota resets are hours-long; opt-in only via `--retry-on-account N`). The 8 error classes are Transient, Account, Auth, Service, Process, Validation, Runner, and Unknown. Each class maps from `ErrorKind` via `classify_to_class()` in `execution.rs`. Stderr error labels use `[Class]` prefix for traceability (e.g., `"Error: [Transient] rate limit (exit 2)"`). Validation class retries are only active when `--expect-strategy retry` is set. Parameters 040–057 cover all 20 retry flags; each has a `CLR_*` env var fallback.
+**Session termination (`clr kill <pid>`):** Sends SIGTERM to a running Claude Code session
+identified by PID. Validates the PID belongs to a running `claude` process via
+`find_claude_processes()`. Exits 0 on success, 1 if PID not found or not a `claude` process.
+Typo guard: `clr kil` and `clr killl` trigger "Did you mean 'kill'?" and exit 1.
+
+**Tool listing (`clr tools`):** Lists all 26 Claude Code built-in tools in a plain-style
+table with Name, Category, and Description columns. Static data sourced from
+`contract/claude_code/docs/tool/readme.md`. Unknown arguments exit 1.
+
+**3-tier retry hierarchy:** When a subprocess exits with a classifiable error, the runner retries according to a 3-tier resolution: Tier 1 (`--retry-override`) forces count/delay for all classes; Tier 2 (`--retry-on-<class>`/`--<class>-delay`) overrides per error class; Tier 3 (`--retry-default`/`--retry-default-delay`) provides fallback defaults (count=2, delay=30s). All 8 error classes use the same 3-tier resolution with no class-level default overrides. The 8 error classes are Transient, Account, Auth, Service, Process, Validation, Runner, and Unknown. Each class maps from `ErrorKind` via `classify_to_class()` in `execution.rs`. Stderr error labels use `[Class]` prefix for traceability (e.g., `"Error: [Transient] rate limit (exit 2)"`). Validation class retries are only active when `--expect-strategy retry` is set. Parameters 040–057 cover all 20 retry flags; each has a `CLR_*` env var fallback.
 
 **Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile` (via `--session-dir` flag passthrough or resolved externally).
 
@@ -84,6 +98,9 @@ and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
 | [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero consumer workspace deps, binary deps gated by enabled |
 | [invariant/003_command_naming.md](../invariant/003_command_naming.md) | Command naming convention (clr / clr run / clr ask) |
 | [invariant/004_trace_universality.md](../invariant/004_trace_universality.md) | --trace applies to all executing subcommands |
+| [invariant/005_isolated_subprocess_defaults.md](../invariant/005_isolated_subprocess_defaults.md) | Isolated subprocess model, effort, and flag defaults |
+| [invariant/006_exit_codes.md](../invariant/006_exit_codes.md) | Exit code semantics (0-4, 128+signal) |
+| [invariant/007_print_mode_timeout.md](../invariant/007_print_mode_timeout.md) | Print-mode default timeout (3600s) vs interactive (unlimited) |
 
 ### Sources
 
@@ -102,6 +119,8 @@ and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
 | `../../src/cli/credential.rs` | Credential-isolated execution (`run_isolated_command`, `run_refresh_command`), trace emission for isolated/refresh |
 | `../../src/cli/cred_parse.rs` | `IsolatedArgs`, `RefreshArgs`, their parsers and env-var fallbacks |
 | `../../src/cli/fence.rs` | `strip_fences` utility — outermost code-fence stripping for `--strip-fences` |
+| `../../src/cli/tools.rs` | `clr tools` — list Claude Code built-in tools in a plain-style table |
+| `../../src/cli/summary.rs` | `--output-format summary` rendering — JSON→YAML metadata header + text body |
 
 ### Tests
 
@@ -133,6 +152,46 @@ and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
 | `../../tests/kill_command_test.rs` | IT-01–IT-09 clr kill SIGTERM delivery and guards |
 | `../../tests/isolated_defaults_test.rs` | ISD-01–ISD-13 isolated subprocess model, effort, flags |
 | `../../tests/isolated_correctness_test.rs` | CT-1–CT-6 isolated correctness invariants |
+| `../../tests/timeout_test.rs` | Default timeout constant, watchdog activation, unlimited flag/env |
+| `../../tests/tools_command_test.rs` | IT-01–IT-09 clr tools table output, help, unknown args |
+| `../../tests/output_format_test.rs` | --output-format summary rendering and fallback |
+| `../../tests/ask_command_test.rs` | clr ask dispatch, help intercept, BUG-249/250 |
+| `../../tests/env_var_test.rs` | E01–E17 CLR_* env-variable fallback for run params |
+| `../../tests/env_var_ext_test.rs` | E18–E34 extended env-variable fallback (output-file, expect, retry) |
+| `../../tests/verbosity_test.rs` | Verbosity gate levels 0–5, fatal error passthrough |
+| `../../tests/param_group_test.rs` | G1–G5 param group composition and count contracts |
+| `../../tests/param_edge_cases_test.rs` | Edge cases for flag parsing (empty values, duplicates, ordering) |
+| `../../tests/param_extended_flags_test.rs` | Extended flag parsing for retry, gate, output params |
+| `../../tests/param_trace_edge_cases_test.rs` | --trace edge cases (combined with other flags) |
+| `../../tests/ultrathink_args_test.rs` | --ultrathink / --no-ultrathink suffix injection |
+| `../../tests/effort_args_test.rs` | --effort level flag parsing and forwarding |
+| `../../tests/fence_test.rs` | strip_fences utility — fence pair detection and stripping |
+| `../../tests/add_dir_test.rs` | --add-dir flag parsing and forwarding |
+| `../../tests/allowed_tools_test.rs` | --allowed-tools flag parsing and forwarding |
+| `../../tests/disallowed_tools_test.rs` | --disallowed-tools flag parsing and forwarding |
+| `../../tests/max_turns_test.rs` | --max-turns flag parsing and forwarding |
+| `../../tests/max_budget_usd_test.rs` | --max-budget-usd flag parsing and forwarding |
+| `../../tests/fallback_model_test.rs` | --fallback-model flag parsing and forwarding |
+| `../../tests/scope_param_test.rs` | --scope flag parsing and forwarding |
+| `../../tests/unset_param_test.rs` | --unset flag parsing and forwarding |
+| `../../tests/stale_ref_guard_test.rs` | Guard against stale cross-module references |
+| `../../tests/refresh_test.rs` | clr refresh command execution and trace output |
+| `../../tests/creds_default_test.rs` | Credential command default model/effort values |
+| `../../tests/invariant_trace_universality_test.rs` | IT-01–IT-02 --trace universality across all subcommands |
+| `../../tests/commands_yaml_test.rs` | COMMANDS_YAML path validity and content checks |
+| `../../tests/lib_test.rs` | Library surface smoke tests |
+| `../../tests/user_story_test.rs` | US-01–US-09 core user stories (run, ask, flags) |
+| `../../tests/user_story_creds_isolated_test.rs` | US-10–US-18 credential-isolated user stories |
+| `../../tests/user_story_output_test.rs` | US-19–US-25 output capture and validation user stories |
+| `../../tests/user_story_kill_test.rs` | US-01–US-06 clr kill acceptance criteria |
+| `../../tests/bug_reproducers_239_244_test.rs` | BUG-239–BUG-244 signal handling and spawn failure reproducers |
+| `../../tests/bug_reproducers_246_test.rs` | BUG-246 reproducer |
+| `../../tests/ps_pid_test.rs` | EC-1–EC-8 --pid filter for clr ps |
+| `../../tests/ps_inspect_test.rs` | EC-1–EC-9 --inspect key:value block output |
+| `../../tests/ps_mode_test.rs` | EC-1–EC-8 --mode filter for clr ps |
+| `../../tests/ps_columns_test.rs` | EC-1–EC-10 --columns custom column selection, BUG-303 |
+| `../../tests/ps_wide_test.rs` | EC-1–EC-5 --wide optional column display |
+| `../../tests/ps_flags_test.rs` | IT-30–IT-38, US-18–US-26 session flag emoji computation |
 
 ### Provenance
 

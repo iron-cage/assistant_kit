@@ -75,7 +75,7 @@ pub( crate ) fn print_help()
   println!( "  --retry-default-delay <SECS>       Fallback delay for unset classes (default: 30; 0 = immediate)" );
   println!( "  --retry-on-transient <N>           Transient (rate limit) retry count (default: auto → fallback)" );
   println!( "  --transient-delay <SECS>           Transient class delay (default: auto → fallback)" );
-  println!( "  --retry-on-account <N>             Account (quota exhausted) retry count (default: 0; opt-in only)" );
+  println!( "  --retry-on-account <N>             Account (quota exhausted) retry count (default: auto → fallback)" );
   println!( "  --account-delay <SECS>             Account class delay (default: auto → fallback)" );
   println!( "  --retry-on-auth <N>                Auth (credential) retry count (default: auto → fallback)" );
   println!( "  --auth-delay <SECS>                Auth class delay (default: auto → fallback)" );
@@ -192,7 +192,7 @@ pub( crate ) fn print_ps_help() -> !
   println!( "SESSION FLAGS (auto-inserted Flags column when ≥1 flag fires):" );
   println!( "  👈  This session    Parent of clr ps is a claude process" );
   println!( "  🖨   Print mode      Session cmdline contains --print or -p" );
-  println!( "  ⚡  Running         Kernel process state == R" );
+  println!( "  ⚡  On CPU          Kernel process state == R (executing at sample instant)" );
   println!( "  🕰   Ancient         elapsed_secs > CLR_PS_ANCIENT_SECS (default: 28800 = 8 h)" );
   println!( "  🐘  High RAM        RAM > CLR_PS_HIGH_RAM_MB (default: 400 MB)" );
   println!( "  ⚠   Dead metrics    /proc stat unreadable (all metric fields show -)" );
