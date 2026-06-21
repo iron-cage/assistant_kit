@@ -1,7 +1,7 @@
 # Feature 039 — Decision Algorithm Reference
 
 - **Purpose**: Unified reference for the six core decision algorithms that govern model selection, quota classification, next-account recommendation, and quota approximation.
-- **Cross-references**: [020](020_usage_sort_strategies.md) (sort strategies, status groups), [026](026_subprocess_model_effort.md) (touch model), [027](027_account_use_post_switch_touch.md) (session model override), [036](036_account_ownership.md) (ownership gates), [038](038_usage_strategy_rotate.md) (auto-switch), [040](040_quota_measurement_history.md) (measurement history and approximation)
+- **Cross-references**: [020](020_usage_sort_strategies.md) (sort strategies, status groups), [026](026_subprocess_model_effort.md) (touch model), [027](027_account_use_post_switch_touch.md) (session model override), [036](036_account_ownership.md) (ownership gates), [038](038_usage_strategy_rotate.md) (auto-switch), [040](040_quota_measurement_history.md) (measurement history and approximation), [061](061_solo_token_conservation.md) (solo gate predicate), [062](062_unified_session_config.md) (`recommended_model()` canonical entry point for Table 2)
 
 ---
 
@@ -24,9 +24,9 @@ Utilization-aware gate at `subprocess.rs:29-59` (Fix BUG-301, TSK-311): `son_idl
 
 ## Table 2 — Session Model Override
 
-How `apply_model_override()` upgrades the interactive session model from Sonnet to Opus.
+How `apply_model_override()` upgrades the interactive session model from Sonnet to Opus. The threshold logic is canonicalized in `recommended_model(aq)` (`format.rs`) — see [Feature 062](062_unified_session_config.md).
 
-Entry point: `api.rs:259-290` (`apply_model_override`).
+Entry point: `format.rs` (`recommended_model`), called by `api.rs:259-290` (`apply_model_override`) and `render.rs` footer generation.
 
 | `seven_day_sonnet` | Sonnet left (`100 - utilization`) | Override | Rationale |
 |---|---|---|---|
@@ -145,16 +145,17 @@ Time normalization: subtract `t_values[0]` before computing power sums to avoid 
 
 ---
 
-## Source Reference
+### Sources
 
 | Algorithm | Primary source | Related features |
 |---|---|---|
 | Touch model selection | `src/usage/subprocess.rs:29-59` | 024, 026 |
-| Session model override | `src/usage/api.rs:259-290` | 027, 034 |
+| Session model override | `src/usage/format.rs` (`recommended_model`), `src/usage/api.rs:259-290` (`apply_model_override`) | 027, 034, 062 |
 | Quota status groups | `src/usage/sort.rs:22-48` | 020 |
 | Eligibility gates | `src/usage/sort_next.rs:16-36, 46-83` | 020, 036, 038 |
 | Positive selection | `src/usage/sort.rs:62-173`, `sort_next.rs:46-83` | 020, 038 |
 | Quota approximation | `src/usage/approx.rs` | 033, 040 |
-| Solo gate (fetch) | `src/usage/fetch.rs` (after G1) | 036, 060 |
-| Solo gate (refresh) | `src/usage/refresh.rs` (after G2) | 036, 060 |
-| Solo gate (touch) | `src/usage/touch.rs` (after G4b) | 036, 060 |
+| Solo gate (fetch) | `src/usage/fetch.rs` (after G1) | 036, 061 |
+| Occupied-elsewhere gate G1b (fetch) | `src/usage/fetch.rs` (after solo gate) | 036 |
+| Solo gate (refresh) | `src/usage/refresh.rs` (after G2) | 036, 061 |
+| Solo gate (touch) | `src/usage/touch.rs` (after G4b) | 036, 061 |

@@ -96,6 +96,7 @@
 //! | it082 | `it082_cols_unknown_id_exit_1`                      | `cols::+bogus_col` → exit 1, stderr names valid IDs        | N | no |
 //! | it083 | `it083_usage_help_shows_next_cols_params`           | `.usage.help` lists `next` and `cols` params               | P | no |
 //! | mre171 | `mre_bug_171_account_populated_after_refresh`      | BUG-171: `Fix(BUG-171)` present → `aq.account` populated  | P | no |
+//! | mre307 | `mre_bug307_approx_det0_quadratic_fit_correct`     | BUG-307: `Fix(BUG-307)` present → correct det0 Cramer cofactor in `approx.rs` | P | no |
 //! | it092 | `it092_next_all_rejected_exit_1`                    | `next::all` rejected → exit 1, stderr redirects to sort::  | N | no |
 //! | it093 | `it093_footer_not_gated_on_next_all_structural`     | `Responsibility(TSK-184-footer)` present; old All-gate absent (TSK-184) | P | no |
 //! | it094 | `it094_next_session_rejected_exit_1`                | `next::session` rejected → exit 1, stderr redirects to sort:: | N | no |
@@ -233,6 +234,7 @@
 //! | it268 | `it268_solo_2_rejected_out_of_range`               | `solo::2` exits 1 — integer outside {0, 1} (061 EC-12) | N | no |
 //! | it269 | `it269_solo_json_format_with_approximated_accounts` | `solo::1 format::json` — JSON valid with approximated data (CC) | P | no |
 //! | it270 | `it270_solo_single_current_account_no_skip`        | `solo::1` single current account — no solo-skip (CC) | P | no |
+//! | it271 | `mre_bug305_fetch_skips_occupied_elsewhere_with_trace` | G1b gate — owned+occupied-elsewhere skipped with trace (036 FT-24) | P | no |
 
 use crate::cli_runner::{
   BIN,
@@ -7465,41 +7467,71 @@ fn it262_solo_live_composition_allowed()
   );
 }
 
-/// it263 (061 EC-7): `solo::1 refresh::1` — allowed; exits 0.
+/// it263 (061 EC-7): `solo::1 refresh::1` — allowed; exits 0; refresh solo gate
+/// fires for non-current accounts.
 ///
-/// `refresh::1` is allowed with `solo::1`. Refresh subprocesses only fire for
-/// the current+owned account (if it has an auth error). With no real token the
-/// accounts show error results; command still exits 0.
+/// Alice is current+owned (token match). Bob is not current. With `solo::1
+/// refresh::1 trace::1` the refresh solo gate emits `solo-skip` for Bob —
+/// proving the gate fires before any refresh subprocess decision for Bob.
+/// Alice passes the solo gate; no subprocess fires (no 401 from HTTP).
 ///
 /// Spec: [`tests/docs/cli/param/61_solo.md` EC-7]
 #[ test ]
 fn it263_solo_refresh_composition_allowed()
 {
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "alice@work.pro", "max", "tier4", FAR_FUTURE_MS, false );
-  write_account( dir.path(), "bob@home.pro",   "max", "tier4", FAR_FUTURE_MS, false );
+  const FAKE_TOK : &str = "solo-ec7-fake-token";
+  let dir              = TempDir::new().unwrap();
+  let home             = dir.path().to_str().unwrap();
 
-  let out = run_cs_with_env( &[ ".usage", "solo::1", "refresh::1" ], &[ ( "HOME", home ) ] );
+  write_account_with_token( dir.path(), "alice@work.pro", FAKE_TOK, false );
+  write_live_credentials_with_token( dir.path(), FAKE_TOK );
+  write_account( dir.path(), "bob@home.pro", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "solo::1", "refresh::1", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
   assert_exit( &out, 0 );
+  let err = stderr( &out );
+  // Refresh solo gate must fire for Bob (not current) — emits `solo-skip` in refresh trace.
+  assert!(
+    err.lines().any( |l| l.contains( "refresh" ) && l.contains( "solo-skip" ) ),
+    "EC-7: refresh solo gate must emit 'solo-skip' for non-current account; got stderr:\n{err}",
+  );
 }
 
-/// it264 (061 EC-8): `solo::1 touch::1` — allowed; exits 0.
+/// it264 (061 EC-8): `solo::1 touch::1` — allowed; exits 0; touch solo gate
+/// fires for non-current accounts.
 ///
-/// `touch::1` is allowed with `solo::1`. Touch subprocesses only fire for the
-/// current+owned account (if it has an idle 5h window). Command exits 0.
+/// Alice is current+owned (token match). Bob is not current. With `solo::1
+/// touch::1 trace::1` the touch solo gate emits `solo-skip` for Bob —
+/// proving the gate fires before any touch subprocess decision for Bob.
+/// Alice passes the solo gate; no subprocess fires (no active idle window
+/// without real quota data from a failed HTTP fetch).
 ///
 /// Spec: [`tests/docs/cli/param/61_solo.md` EC-8]
 #[ test ]
 fn it264_solo_touch_composition_allowed()
 {
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "alice@work.pro", "max", "tier4", FAR_FUTURE_MS, false );
-  write_account( dir.path(), "bob@home.pro",   "max", "tier4", FAR_FUTURE_MS, false );
+  const FAKE_TOK : &str = "solo-ec8-fake-token";
+  let dir              = TempDir::new().unwrap();
+  let home             = dir.path().to_str().unwrap();
 
-  let out = run_cs_with_env( &[ ".usage", "solo::1", "touch::1" ], &[ ( "HOME", home ) ] );
+  write_account_with_token( dir.path(), "alice@work.pro", FAKE_TOK, false );
+  write_live_credentials_with_token( dir.path(), FAKE_TOK );
+  write_account( dir.path(), "bob@home.pro", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "solo::1", "touch::1", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
   assert_exit( &out, 0 );
+  let err = stderr( &out );
+  // Touch solo gate must fire for Bob (not current) — emits `solo-skip` in touch trace.
+  assert!(
+    err.lines().any( |l| l.contains( "touch" ) && l.contains( "solo-skip" ) ),
+    "EC-8: touch solo gate must emit 'solo-skip' for non-current account; got stderr:\n{err}",
+  );
 }
 
 /// it265 (061 EC-9): `solo::1 only_active::1` — orthogonal composition; exits 0.
@@ -7527,12 +7559,14 @@ fn it265_solo_only_active_composition_allowed()
   assert!( !text.contains( "bob@home.pro" ),  "EC-9: bob (is_active=false) must be hidden by only_active::1; got:\n{text}" );
 }
 
-/// it266 (061 EC-10): `solo::1 trace::1` — stderr contains `solo-skip: approximated`
-/// for the non-current owned account.
+/// it266 (061 EC-10): `solo::1 refresh::1 touch::1 trace::1` — stderr contains
+/// `solo-skip` at all three gate sites (fetch, refresh, touch) for the non-current
+/// account.
 ///
 /// With two owned accounts, Alice is current (live token match) and Bob is not.
-/// `solo::1` intercepts Bob's fetch; `trace::1` causes the trace line
-/// `[trace] fetch  bob@home.pro  solo-skip: approximated (age: Ns)` on stderr.
+/// The solo gate fires at three sites for Bob: fetch (emits `solo-skip: approximated`),
+/// refresh (emits `solo-skip`), and touch (emits `solo-skip`). Alice is not
+/// solo-skipped at any site.
 ///
 /// Spec: [`tests/docs/cli/param/61_solo.md` EC-10]
 #[ test ]
@@ -7553,16 +7587,30 @@ fn it266_solo_trace_shows_solo_skip()
     serde_json::to_string_pretty( &bob_cache ).unwrap() + "\n",
   ).unwrap();
 
-  let out = run_cs_with_env( &[ ".usage", "solo::1", "trace::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env(
+    &[ ".usage", "solo::1", "refresh::1", "touch::1", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
   assert_exit( &out, 0 );
   let err = stderr( &out );
+  // Fetch solo gate fires for Bob — emits `solo-skip: approximated` with account name.
   assert!(
     err.contains( "solo-skip: approximated" ),
-    "EC-10: stderr must contain `solo-skip: approximated`; got:\n{err}",
+    "EC-10: stderr must contain `solo-skip: approximated` (fetch trace); got:\n{err}",
   );
   assert!(
     err.contains( "bob@home.pro" ),
-    "EC-10: trace line must name the skipped account `bob@home.pro`; got:\n{err}",
+    "EC-10: fetch trace line must name the skipped account `bob@home.pro`; got:\n{err}",
+  );
+  // Refresh solo gate also fires for Bob — emits `solo-skip` in refresh trace line.
+  assert!(
+    err.lines().any( |l| l.contains( "refresh" ) && l.contains( "solo-skip" ) ),
+    "EC-10: solo gate must emit 'solo-skip' in refresh trace for non-current account; got:\n{err}",
+  );
+  // Touch solo gate also fires for Bob — emits `solo-skip` in touch trace line.
+  assert!(
+    err.lines().any( |l| l.contains( "touch" ) && l.contains( "solo-skip" ) ),
+    "EC-10: solo gate must emit 'solo-skip' in touch trace for non-current account; got:\n{err}",
   );
 }
 
@@ -7706,4 +7754,118 @@ fn it256_who_true_rejected_kind_integer()
 
   let out = run_cs_with_env( &[ ".usage", "who::true" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
+}
+
+/// it271 (036 FT-24): G1b gate — owned account occupied on another machine is
+/// skipped with `[trace] fetch  <name>  skipped (reason: occupied elsewhere)`.
+///
+/// # Root Cause
+/// `fetch_quota_for_list()` computed `occupied_elsewhere` at line 74 but used it
+/// only to stamp `is_occupied_elsewhere` on the pushed `AccountQuota`. No gate
+/// existed between the solo gate (`continue;` at line 148) and the expiry
+/// pre-flight check (line 154), causing unnecessary HTTP round-trips for every
+/// owned account active on another machine.
+///
+/// # Why Not Caught
+/// No integration test exercised a multi-machine setup with an owned account
+/// active elsewhere; the field was stamped but never gated.
+///
+/// # Fix Applied
+/// G1b gate inserted after the solo gate: `if !is_current && occupied_elsewhere.contains(&acct.name)`
+/// → calls `approximate_quota()` (cache+polynomial approximation) and continues.
+///
+/// # Prevention
+/// This test creates an `_active_remotebox_remoteuser` marker containing the
+/// account name, then asserts the skip-trace line is present and no credential-
+/// read trace appears for the skipped account.
+///
+/// # Pitfall
+/// `other_machines_active()` reads the FILE CONTENT (not filename) as the account
+/// name; the marker file must contain exactly the account name to trigger the gate.
+#[ doc = "bug_reproducer(BUG-305)" ]
+#[ test ]
+fn mre_bug305_fetch_skips_occupied_elsewhere_with_trace()
+{
+  let dir              = TempDir::new().unwrap();
+  let home             = dir.path().to_str().unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  // Owned account with quota cache + token (so it would normally attempt HTTP).
+  let acct_name = "occ@work.pro";
+  write_account( dir.path(), acct_name, "max", "tier4", FAR_FUTURE_MS, false );
+  let cache = serde_json::json!({ "cache": { "fetched_at": "2026-01-01T10:00:00Z", "five_hour": { "left_pct": 30.0 } } });
+  std::fs::write(
+    credential_store.join( format!( "{acct_name}.json" ) ),
+    serde_json::to_string_pretty( &cache ).unwrap() + "\n",
+  ).unwrap();
+
+  // Remote-machine active marker — content is the account name.
+  std::fs::write(
+    credential_store.join( "_active_remotebox_remoteuser" ),
+    acct_name,
+  ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+
+  // G1b skip trace must be present.
+  assert!(
+    err.contains( "occupied elsewhere" ) && err.contains( "[trace] fetch" ),
+    "FT-24: G1b skip trace must contain 'occupied elsewhere' in a fetch trace line; got:\n{err}",
+  );
+
+  // No credential-read trace for the occupied account — proves HTTP was skipped.
+  let cred_read = err.lines().any( |l| l.contains( acct_name ) && l.contains( "reading" ) );
+  assert!(
+    !cred_read,
+    "FT-24: no credential-read trace must appear for occupied-elsewhere account; got:\n{err}",
+  );
+}
+
+// ── BUG-307 — det0 Cramer cofactor error in quadratic_fit ─────────────────────
+
+/// `mre_bug307` (BUG-307): `quadratic_fit` in `approx.rs` must use `s2 * r1` (not `s1 * r2`)
+/// for the `det0` Cramer cofactor that computes the constant term `a0` of the quadratic fit.
+///
+/// # Root Cause
+/// Least-squares quadratic fit uses a 3×3 normal equation solved by Cramer's rule.
+/// For `a0`, column 3 is replaced by the RHS `[r2, r1, r0]^T`. Cofactor(1,2) of that matrix
+/// is `-(s3·r0 - s2·r1)`. The bug used `s1·r2` — mixing power-sum index `s1` with RHS index
+/// `r2` — producing wrong `a0` for collinear data with large normalized timestamps.
+///
+/// # Why Not Caught
+/// Feature 040 math tests (FT-04/FT-06–FT-10) accepted any `v > 35.0 && v <= 100.0`. For
+/// 3 linear points (10 → 25 → 40, slope = 15/3600 per second), the wrong formula produced
+/// `a0 ≈ 77.5` → `y(t_now) ≈ 122.5` → clamped to 100.0. Since 100.0 ∈ (35, 100], the broad
+/// range test passed. The bug only surfaced when FT-17 tightened the range to `abs(v - 55.0) < 5.0`.
+///
+/// # Fix Applied
+/// Changed `s1 * r2` → `s2 * r1` in the `det0` line at `approx.rs:142`. The replaced-column
+/// minor for det0 uses element `r1` from the RHS column (row 2), not the power-sum variable `r2`.
+///
+/// # Prevention
+/// This test asserts `Fix(BUG-307)` is present in `approx.rs`. Any future edit that reverts the
+/// comment causes this test to fail before the clamped-100.0 path can be reached in production.
+/// FT-17 (`test_read_cached_quota_applies_approximation`) is the end-to-end regression.
+///
+/// # Pitfall
+/// When deriving 3×3 Cramer minors for `det0`, cofactor terms involve the REPLACED column
+/// (RHS `[r2, r1, r0]`), not the original power-sum column. Each of `det2`/`det1`/`det0`
+/// replaces a different column — never copy cofactor terms across them without re-deriving.
+#[ doc = "bug_reproducer(BUG-307)" ]
+#[ test ]
+fn mre_bug307_approx_det0_quadratic_fit_correct()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/approx.rs" ) );
+
+  // Before fix: `Fix(BUG-307)` absent → det0 uses wrong cofactor (s1*r2) → a0≈77.5 →
+  //             y(t_now)≈122.5 → clamped 100.0 for linear data with large timestamps.
+  // After fix:  `Fix(BUG-307)` present → correct cofactor s2*r1 → a0≈10.0 → extrapolation ~55.0.
+  assert!(
+    src.contains( "Fix(BUG-307)" ),
+    "BUG-307: approx.rs must contain Fix(BUG-307) — wrong det0 Cramer cofactor (s1*r2 → s2*r1) \
+     caused quadratic fit to clamp to 100.0 for linear data with large normalized timestamps; \
+     fix: use s2*r1 in the det0 minor (col-3 is replaced by RHS, so the minor uses r1 not r2).",
+  );
 }

@@ -461,6 +461,38 @@ mod tests
     assert_eq!( accounts[ idx[ 1 ] ].name, "red-account" );
   }
 
+  // ── status_group_of boundary: GAP-7 ─────────────────────────────────────────
+
+  /// GAP-7a — `status_group_of` assigns `HExhausted` when `five_hour.utilization = 85.0` exactly.
+  ///
+  /// `five_hour_left = 100.0 - 85.0 = 15.0`; guard is `> 15.0` (strict) → `h5_ok = false`.
+  /// `seven_day = None` → `seven_day_left = 100.0 > 5.0` → `d7_ok = true`.
+  /// Result: `(false, true)` → `HExhausted`.
+  #[ test ]
+  fn mre_bug_gap7_status_group_of_h_exhausted_at_exactly_15_pct_left()
+  {
+    let aq = mk_aq_sort( "test@x.com", 85.0, FAR_FUTURE_MS );  // 15% left exactly
+    assert!(
+      matches!( status_group_of( &aq ), StatusGroup::HExhausted ),
+      "utilization=85.0 (15% left) must be HExhausted (strict > 15.0 guard; boundary is NOT green)",
+    );
+  }
+
+  /// GAP-7b — `status_group_of` assigns `WeeklyExhausted` when `seven_day_left = 5.0` exactly.
+  ///
+  /// `seven_day.utilization = 95.0` → `seven_day_left = 5.0`; guard is `> 5.0` (strict) → `d7_ok = false`.
+  /// `five_hour.utilization = 0.0` → `five_hour_left = 100.0 > 15.0` → `h5_ok = true`.
+  /// Result: `(true, false)` → `WeeklyExhausted`.
+  #[ test ]
+  fn mre_bug_gap7_status_group_of_weekly_exhausted_at_exactly_5_pct_left()
+  {
+    let aq = mk_aq_sort_weekly( "test@x.com", 0.0, 95.0, 0.0 );  // seven_day_left = 5% exactly
+    assert!(
+      matches!( status_group_of( &aq ), StatusGroup::WeeklyExhausted ),
+      "seven_day.util=95.0 (5% left) must be WeeklyExhausted (strict > 5.0 guard; boundary is NOT green)",
+    );
+  }
+
   /// CC-059/CC-060 — `prefer_weekly` with absent period data treats account as fully available.
   ///
   /// Both accounts are in the same group (green: h5 > 15%, weekly > 5%). Within the group,

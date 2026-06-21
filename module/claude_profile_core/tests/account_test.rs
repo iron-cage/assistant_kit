@@ -1847,3 +1847,68 @@ fn history_duplicate_timestamp_overwrites()
     "FT-13: last entry updated to new value (99.0), not 30.0; got {}", h5.0,
   );
 }
+
+// ── set_session_effort (Feature 062) ──────────────────────────────────────────
+
+/// FT-09 (062): `set_session_effort()` writes `effortLevel` and preserves existing keys.
+///
+/// Spec: [`tests/docs/feature/62_unified_session_config.md` FT-09]
+#[ test ]
+fn ft09_set_session_effort_writes_effort_level()
+{
+  let tmp = TempDir::new().unwrap();
+  let dot = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot ).unwrap();
+  std::fs::write(
+    dot.join( "settings.json" ),
+    r#"{"theme":"dark","model":"sonnet"}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  claude_profile_core::account::set_session_effort( &paths, "max" );
+
+  let content = std::fs::read_to_string( dot.join( "settings.json" ) )
+    .expect( "settings.json must exist after set_session_effort" );
+  assert!(
+    content.contains( "\"effortLevel\"" ) && content.contains( "\"max\"" ),
+    "FT-09: settings.json must contain effortLevel=max; got: {content}",
+  );
+  assert!(
+    content.contains( "\"theme\"" ) && content.contains( "dark" ),
+    "FT-09: set_session_effort must preserve existing 'theme' key; got: {content}",
+  );
+  assert!(
+    content.contains( "\"model\"" ) && content.contains( "sonnet" ),
+    "FT-09: set_session_effort must preserve existing 'model' key; got: {content}",
+  );
+}
+
+/// FT-10 (062): `set_session_effort()` creates `~/.claude/` directory when absent.
+///
+/// Spec: [`tests/docs/feature/62_unified_session_config.md` FT-10]
+#[ test ]
+fn ft10_set_session_effort_creates_parent_dir_when_absent()
+{
+  let tmp = TempDir::new().unwrap();
+  let dot = tmp.path().join( ".claude" );
+  // Precondition: ~/.claude/ must NOT exist.
+  assert!(
+    !dot.exists(),
+    "test precondition: ~/.claude/ must not exist before calling set_session_effort",
+  );
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  claude_profile_core::account::set_session_effort( &paths, "high" );
+
+  let settings = dot.join( "settings.json" );
+  assert!(
+    settings.exists(),
+    "FT-10: set_session_effort must create ~/.claude/ dir and settings.json when parent dir absent",
+  );
+  let content = std::fs::read_to_string( &settings )
+    .expect( "settings.json must be readable" );
+  assert!(
+    content.contains( "\"effortLevel\"" ) && content.contains( "\"high\"" ),
+    "FT-10: created settings.json must contain effortLevel=high; got: {content}",
+  );
+}

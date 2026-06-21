@@ -302,9 +302,12 @@ fn t05_apply_model_override_absent_from_usage_routine_before_fix()
   };
   let body       = &src[ fn_start..body_end ];
   let call_count = body.matches( "apply_model_override(" ).count();
+  // BUG-244 fix: one call for the current-account usage path (guarded by is_current).
+  // Feature 062 (AC-05): one call for the rotation-winner path (after switch_account).
   assert_eq!(
-    call_count, 1,
-    "apply_model_override must be called exactly once in usage_routine body",
+    call_count, 2,
+    "apply_model_override must be called exactly twice in usage_routine body: \
+    once for current-account (BUG-244) and once for rotation-winner (Feature 062 AC-05)",
   );
 }
 
@@ -692,5 +695,125 @@ fn it_apply_post_switch_touch_cred_file_absent_skips_refetch()
   assert!(
     !cache.contains( "resets_at" ),
     "resets_at must not appear when credential file is absent (outer guard bypassed); got: {cache}",
+  );
+}
+
+/// `ft11` — Rotation dispatcher calls `apply_model_override` for the winner (AC-05, Feature 062).
+///
+/// # Root Cause
+/// Before Feature 062, the rotation dispatch block in `usage_routine` called `switch_account` and
+/// `apply_touch` but never `apply_model_override` for the winner — the winner's session model
+/// remained at whatever was set by the previous current account.
+///
+/// # Why Not Caught
+/// No structural test asserted the call site exists inside the rotation block.
+///
+/// # Fix Applied
+/// Added `apply_model_override( winner_data, &claude_paths, ... )` inside the rotation dispatch
+/// block, guarded by `if let Ok( ref winner_data ) = accounts[ winner_idx ].result`.
+///
+/// # Prevention
+/// Structural grep: rotation dispatch block must contain `apply_model_override(`.
+///
+/// # Pitfall
+/// Must insert AFTER `switch_account` succeeds — before that point, `claude_paths` is
+/// conditionally set and `winner_idx` may not be resolved.
+#[ test ]
+fn ft11_rotation_dispatcher_calls_apply_model_override_for_winner()
+{
+  let src      = include_str!( "api.rs" );
+  // Locate rotation dispatch block: starts at "Rotation dispatch" comment.
+  let block_start = src
+    .find( "Rotation dispatch (Feature 038" )
+    .expect( "rotation dispatch block not found in api.rs" );
+  // Ends at the closing `}` of `if params.rotate { ... }` — after the final `return Ok`.
+  let block_end   = src[ block_start.. ]
+    .find( "\n  Ok( OutputData::new( content" )
+    .map_or( src.len(), |rel| block_start + rel );
+  let block = &src[ block_start..block_end ];
+
+  assert!(
+    block.contains( "apply_model_override(" ),
+    "AC-05: apply_model_override must be called in the rotation dispatch block (Feature 062)\n\
+    block:\n{block}",
+  );
+}
+
+/// `ft12` — Rotation dispatcher calls `set_session_effort` to carry forward effort (AC-06).
+///
+/// # Root Cause
+/// Before Feature 062, `effortLevel` was never written during rotation — the user's effort
+/// preference would vanish from settings.json after switching accounts.
+///
+/// # Why Not Caught
+/// No structural test asserted the call site exists inside the rotation block.
+///
+/// # Fix Applied
+/// Added `set_session_effort( &claude_paths, se )` inside the rotation dispatch block,
+/// guarded by `if let Some( se ) = session_effort`.
+///
+/// # Prevention
+/// Structural grep: rotation dispatch block must contain `set_session_effort(`.
+///
+/// # Pitfall
+/// `session_effort` is read from the PRE-rotation settings.json and carried forward — it
+/// represents the user's persistent effort preference, not the winner account's data.
+#[ test ]
+fn ft12_rotation_dispatcher_calls_set_session_effort_for_carry_forward()
+{
+  let src         = include_str!( "api.rs" );
+  let block_start = src
+    .find( "Rotation dispatch (Feature 038" )
+    .expect( "rotation dispatch block not found in api.rs" );
+  let block_end   = src[ block_start.. ]
+    .find( "\n  Ok( OutputData::new( content" )
+    .map_or( src.len(), |rel| block_start + rel );
+  let block = &src[ block_start..block_end ];
+
+  assert!(
+    block.contains( "set_session_effort(" ),
+    "AC-06: set_session_effort must be called in the rotation dispatch block (Feature 062)\n\
+    block:\n{block}",
+  );
+}
+
+/// `ft13` — `set_session_effort` is only called when `session_effort` is `Some` (AC-07).
+///
+/// # Root Cause
+/// AC-07 forbids injecting a default effort when none is configured. If `set_session_effort`
+/// were called unconditionally (or with a hardcoded default), users without an effort preference
+/// would have one silently injected after rotation.
+///
+/// # Why Not Caught
+/// No structural test asserted the `Some(se)` guard wraps the call.
+///
+/// # Fix Applied
+/// `set_session_effort` is called inside `if let Some( se ) = session_effort { ... }` — only
+/// fires when the pre-rotation settings.json contained an `effortLevel` value.
+///
+/// # Prevention
+/// Structural grep: `set_session_effort` call must be preceded by `if let Some( se ) = session_effort`.
+///
+/// # Pitfall
+/// The guard checks `session_effort` (the `Option<&str>` extracted from settings.json before
+/// render), not `params.effort` (the CLI param). These are distinct: params.effort governs
+/// the subprocess model; `session_effort` governs the settings.json effortLevel field.
+#[ test ]
+fn ft13_rotation_set_session_effort_guarded_by_some_not_injected()
+{
+  let src         = include_str!( "api.rs" );
+  let block_start = src
+    .find( "Rotation dispatch (Feature 038" )
+    .expect( "rotation dispatch block not found in api.rs" );
+  let block_end   = src[ block_start.. ]
+    .find( "\n  Ok( OutputData::new( content" )
+    .map_or( src.len(), |rel| block_start + rel );
+  let block = &src[ block_start..block_end ];
+
+  assert!(
+    block.contains( "if let Some( se ) = session_effort" ),
+    "AC-07: set_session_effort must be guarded by `if let Some( se ) = session_effort` \
+    to prevent effort injection when none is configured (Feature 062)\n\
+    block:\n{block}",
   );
 }

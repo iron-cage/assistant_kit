@@ -9,6 +9,7 @@ use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Format };
 use crate::output::{ format_duration_secs, json_escape };
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, ColsVisibility, GetField };
 use super::format::{
+  recommended_model,
   compute_expires_cell, sub_label, shorten_error,
   quota_text_cells, status_emoji, renews_label, next_event_label, next_event_raw, renewal_secs,
 };
@@ -244,16 +245,11 @@ pub( crate ) fn render_text(
 
   let rec    = &accounts[ idx ];
   let metric = strategy_metric( rec, sort, prefer, now_secs );
-  // Recommendation model: mirrors apply_model_override() threshold.
-  // seven_day_sonnet = None (absent tier) → treat as unknown, not exhausted → sonnet.
-  let rec_model = match &rec.result
+  let rec_model   = recommended_model( rec );
+  let rec_display = match session_effort
   {
-    Ok( data ) => match &data.seven_day_sonnet
-    {
-      Some( sonnet ) if 100.0 - sonnet.utilization < 15.0 => "opus",
-      _ => "sonnet",
-    },
-    Err( _ ) => "sonnet",
+    Some( se ) => rec_model.to_string() + "/" + se,
+    None       => rec_model.to_string(),
   };
 
   // Build footer lines: find current (✓) account or fall back to legacy format.
@@ -270,12 +266,12 @@ pub( crate ) fn render_text(
     let next_label   = format!( "Next ({strategy_name})" );
     let col1_w = next_label.len().max( "Current".len() );
     let col2_w = cur.name.len().max( rec.name.len() );
-    let col3_w = model_effort.len().max( rec_model.len() );
+    let col3_w = model_effort.len().max( rec_display.len() );
     format!(
       "{:<col1_w$} · {:<col2_w$} · {:<col3_w$} · {valid_count}/{total}\n\
        {:<col1_w$} · {:<col2_w$} · {:<col3_w$} · {metric}\n",
       "Current", cur.name, model_effort,
-      next_label, rec.name, rec_model,
+      next_label, rec.name, rec_display,
     )
   }
   else

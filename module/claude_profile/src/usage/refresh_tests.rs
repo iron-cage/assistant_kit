@@ -1480,3 +1480,172 @@
     );
   }
 
+  // ── GAP-20: trace reason "ok" for owned+non-cached+Ok ────────────────────────
+
+  /// GAP-20 — `apply_refresh` trace reason is `"ok"` for owned, non-cached, `Ok` account.
+  ///
+  /// Path: `!is_owned` = false → `cached` = false → `result.err()` = None → `map_or("ok", …)` = `"ok"`.
+  /// `should_refresh` returns `false` for this account (no auth error, not cached-expired),
+  /// so the trace line `should_retry=false (reason: ok)` is emitted and the account is skipped.
+  ///
+  /// This test documents the CORRECT and EXPECTED behaviour, distinguishing the healthy
+  /// non-retry path from the misleading-label bugs fixed in BUG-295 (non-owned) and
+  /// BUG-298 (owned+cached).
+  #[ test ]
+  fn mre_bug_gap20_refresh_trace_reason_ok_owned_non_cached_ok()
+  {
+    use std::io::Read;
+
+    let store    = TempDir::new().unwrap();
+    let ok_quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+    let mut accounts = vec![ AccountQuota
+    {
+      name                  : "healthy@example.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,  // valid token → no expiry trigger
+      result                : Ok( ok_quota ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,  // non-cached → BUG-255 guard does not fire
+      cache_age_secs        : None,
+      is_owned              : true,   // owned → not "not owned"
+      owner                 : String::new(),
+    } ];
+
+    let _lock = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let mut buf = gag::BufferRedirect::stderr().unwrap();
+    apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
+    let mut output = String::new();
+    buf.read_to_string( &mut output ).unwrap();
+
+    assert!(
+      output.contains( "reason: ok" ),
+      "GAP-20: owned+non-cached+Ok account must emit 'reason: ok' trace; got: {output}",
+    );
+    assert!(
+      !output.contains( "reason: not owned" ) && !output.contains( "reason: cached-expired" ),
+      "GAP-20: must not emit non-owned or cached-expired reason for this path; got: {output}",
+    );
+  }
+
+  // ── BUG-306 reproducer ──────────────────────────────────────────────────
+
+  /// MRE — `reason_label` returns `"occupied elsewhere"` for owned, non-cached,
+  /// occupied-elsewhere account with Ok result.
+  ///
+  /// # Root Cause
+  /// The inline trace reason block at `refresh.rs:72-83` had three branches:
+  /// `!is_owned` → `"not owned"`, `aq.cached` → `"cached-expired"`, else →
+  /// `aq.result.err().map_or("ok", ...)`. An owned, non-cached, occupied-elsewhere
+  /// account fell through to the else arm and showed `reason: ok` — actively
+  /// misleading because the account was skipped by the G2 predicate gate.
+  ///
+  /// # Why Not Caught
+  /// No test exercised the trace-reason path for the occupied-elsewhere predicate;
+  /// all existing tests covered not-owned, cached-expired, and genuine-ok branches.
+  ///
+  /// # Fix Applied
+  /// Extracted the inline block into `fn reason_label(aq: &AccountQuota) -> &'static str`
+  /// with a new `else if aq.is_occupied_elsewhere { "occupied elsewhere" }` branch
+  /// after `aq.cached`. Enforces predicate–reason 1:1 contract.
+  ///
+  /// # Prevention
+  /// `reason_label` is a named function directly testable by unit test; future
+  /// predicate additions must add a corresponding branch or this test class will
+  /// expose the gap.
+  ///
+  /// # Pitfall
+  /// Branch order matters: `is_occupied_elsewhere` must come after `cached` because
+  /// cached accounts have their own trace reason regardless of occupancy status.
+  #[ doc = "bug_reproducer(BUG-306)" ]
+  #[ test ]
+  fn mre_bug306_refresh_trace_reason_occupied_elsewhere()
+  {
+    let aq = AccountQuota
+    {
+      name                  : "occ@example.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : true,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : true,
+      owner                 : String::new(),
+    };
+    assert_eq!( super::reason_label( &aq ), "occupied elsewhere" );
+  }
+
+  /// Regression — `reason_label` returns `"not owned"` for non-owned account.
+  #[ test ]
+  fn reason_label_not_owned()
+  {
+    let aq = AccountQuota
+    {
+      name : "x".into(), is_current : false, is_active : false,
+      is_occupied_elsewhere : false, expires_at_ms : 0,
+      result : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
+      account : None, host : String::new(), role : String::new(),
+      renewal_at : None, cached : false, cache_age_secs : None,
+      is_owned : false, owner : String::new(),
+    };
+    assert_eq!( super::reason_label( &aq ), "not owned" );
+  }
+
+  /// Regression — `reason_label` returns `"cached-expired"` for owned+cached account.
+  #[ test ]
+  fn reason_label_cached_expired()
+  {
+    let aq = AccountQuota
+    {
+      name : "x".into(), is_current : false, is_active : false,
+      is_occupied_elsewhere : false, expires_at_ms : 0,
+      result : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
+      account : None, host : String::new(), role : String::new(),
+      renewal_at : None, cached : true, cache_age_secs : Some( 999 ),
+      is_owned : true, owner : String::new(),
+    };
+    assert_eq!( super::reason_label( &aq ), "cached-expired" );
+  }
+
+  /// Regression — `reason_label` returns `"ok"` for owned+non-cached+Ok account.
+  #[ test ]
+  fn reason_label_ok()
+  {
+    let aq = AccountQuota
+    {
+      name : "x".into(), is_current : false, is_active : false,
+      is_occupied_elsewhere : false, expires_at_ms : 0,
+      result : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
+      account : None, host : String::new(), role : String::new(),
+      renewal_at : None, cached : false, cache_age_secs : None,
+      is_owned : true, owner : String::new(),
+    };
+    assert_eq!( super::reason_label( &aq ), "ok" );
+  }
+
+  /// Regression — `reason_label` returns error string for owned+non-cached+Err account.
+  #[ test ]
+  fn reason_label_err()
+  {
+    let aq = AccountQuota
+    {
+      name : "x".into(), is_current : false, is_active : false,
+      is_occupied_elsewhere : false, expires_at_ms : 0,
+      result : Err( "HTTP 401 Unauthorized".to_string() ),
+      account : None, host : String::new(), role : String::new(),
+      renewal_at : None, cached : false, cache_age_secs : None,
+      is_owned : true, owner : String::new(),
+    };
+    assert_eq!( super::reason_label( &aq ), "HTTP 401 Unauthorized" );
+  }
+

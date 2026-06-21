@@ -196,9 +196,24 @@ nodes:
     label: Decision Algorithm Reference
     entity: feature
 
+  - id: feature/038
+    file: feature/038_usage_strategy_rotate.md
+    label: Usage Strategy Rotate
+    entity: feature
+
   - id: feature/040
     file: feature/040_quota_measurement_history.md
     label: Quota Measurement History and Polynomial Approximation
+    entity: feature
+
+  - id: feature/061
+    file: feature/061_solo_token_conservation.md
+    label: Solo Token Conservation Mode
+    entity: feature
+
+  - id: feature/062
+    file: feature/062_unified_session_config.md
+    label: Unified Session Config Recommendation
     entity: feature
 
   - id: invariant/001
@@ -431,9 +446,54 @@ edges:
   - {from: feature/040, to: feature/036, label: "non-owned accounts skip history append (G1 gate)"}
   - {from: feature/040, to: feature/039, label: "approximation algorithm documented as Table 6"}
 
+  # ── feature/038: Usage Strategy Rotate ─────────────────────────────────────
+
+  - {from: feature/038, to: feature/020, label: "find_next_for_strategy() reused for rotation target selection"}
+  - {from: feature/038, to: feature/004, label: "switch_account() called after strategy winner selected"}
+  - {from: feature/038, to: feature/024, label: "post-switch touch applied from in-memory AccountQuota"}
+  - {from: feature/038, to: feature/036, label: "G5 ownership gate on rotation eligibility"}
+  - {from: feature/038, to: feature/008, label: "deprecated predecessor — .account.rotate replaced by rotate::1"}
+
+  # 038 inbound: back-references from affected features
+  - {from: feature/020, to: feature/038, label: "footer recommendation used as rotation target; sort strategies shared"}
+  - {from: feature/004, to: feature/038, label: "switch_account() primitive reused by rotate::1"}
+  - {from: feature/024, to: feature/038, label: "touch applied post-rotate from in-memory quota"}
+  - {from: feature/036, to: feature/038, label: "G5 ownership gate enforced on rotate::1"}
+  - {from: feature/008, to: feature/038, label: "superseded by rotate::1 on .usage"}
+
+  # ── feature/061: Solo Token Conservation ────────────────────────────────────
+
+  - {from: feature/061, to: feature/036, label: "solo gate predicate is_current && is_owned extends ownership checks"}
+  - {from: feature/061, to: feature/040, label: "approximate_quota() uses Feature 040 polynomial approximation for non-current accounts"}
+  - {from: feature/061, to: feature/033, label: "approximate_quota() reads quota cache as fallback when history absent"}
+  - {from: feature/061, to: feature/038, label: "mutually exclusive with rotate::1 — both present exits 1 before fetch"}
+
+  # 061 inbound: back-references from affected features
+  - {from: feature/036, to: feature/061, label: "is_current && is_owned used as solo gate predicate"}
+  - {from: feature/040, to: feature/061, label: "polynomial approximation called by approximate_quota() in solo skip path"}
+  - {from: feature/033, to: feature/061, label: "quota cache read by approximate_quota() as single-point fallback"}
+  - {from: feature/038, to: feature/061, label: "rotate::1 and solo::1 are mutually exclusive"}
+
+  # ── feature/062: Unified Session Config Recommendation ─────────────────────
+
+  - {from: feature/062, to: feature/020, label: "adds /{session_effort} suffix to footer Next line recommendation display"}
+  - {from: feature/062, to: feature/034, label: "set_session_effort() is counterpart to set_session_model() — same read-modify-write pattern"}
+  - {from: feature/062, to: feature/035, label: "set_session_effort() added as counterpart for effort persistence"}
+  - {from: feature/062, to: feature/038, label: "rotation dispatcher updated: apply_model_override() + set_session_effort() for winner"}
+  - {from: feature/062, to: feature/039, label: "recommended_model() is canonical entry point for Table 2 session model override"}
+  - {from: feature/062, to: feature/026, label: "session effortLevel distinct from subprocess effort:: param; managed via set_session_effort()"}
+
+  # 062 inbound: back-references from affected features
+  - {from: feature/020, to: feature/062, label: "footer Next line now shows /{effort} suffix"}
+  - {from: feature/034, to: feature/062, label: "set_session_effort() counterpart relationship"}
+  - {from: feature/035, to: feature/062, label: "set_session_effort() added as counterpart for effort persistence"}
+  - {from: feature/038, to: feature/062, label: "rotation dispatcher updated with model override and effort write for winner"}
+  - {from: feature/026, to: feature/062, label: "session effortLevel distinct from subprocess effort:: param"}
+  - {from: feature/039, to: feature/062, label: "recommended_model() documented as canonical entry point in Table 2"}
+
 components:
   - id: 1
-    size: 36
+    size: 39
     isolated: false
     nodes:
       - feature/001
@@ -469,8 +529,11 @@ components:
       - feature/034
       - feature/035
       - feature/036
+      - feature/038
       - feature/039
       - feature/040
+      - feature/061
+      - feature/062
       - invariant/005
 
   - id: 2

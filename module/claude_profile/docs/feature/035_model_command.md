@@ -83,6 +83,7 @@ Similarly, `get_session_model()` MUST be introduced in `claude_profile_core/src/
 | File | Relationship |
 |------|--------------|
 | [034_explicit_session_model_override.md](034_explicit_session_model_override.md) | `set_model::` side-parameter — shares `set_session_model()` and `map_model_shorthand()` with this feature |
+| [062_unified_session_config.md](062_unified_session_config.md) | `set_session_effort()` added as counterpart to `set_session_model()` for effort persistence |
 
 ### Parameters
 

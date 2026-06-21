@@ -913,3 +913,26 @@
       "BUG-291: sort::renew tiebreaker must match sort_indices(Renew) — bob (prefer_weekly=40) must win, not alice; got {idx:?}",
     );
   }
+
+  // ── GAP-8: find_first_eligible gate 4 at exactly 85% utilization ─────────────
+
+  /// GAP-8 — `find_first_eligible` gate 4 fires at exactly `five_hour.utilization = 85.0`.
+  ///
+  /// Gate 4: `data.five_hour.as_ref().is_some_and(|p| p.utilization >= 85.0)` → skip.
+  /// At exactly 85.0, the condition `>= 85.0` is satisfied → account is excluded.
+  /// All three strategies must skip this account → `find_next_for_strategy` returns `None`.
+  #[ test ]
+  fn mre_bug_gap8_find_first_eligible_at_exactly_85_utilization()
+  {
+    let now  = 0u64;
+    let acct = mk_aq_sort( "aaa@test.com", 85.0, FAR_FUTURE_MS );  // exactly 85% → gate 4 fires
+    let accounts = vec![ acct ];
+    for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+      assert!(
+        result.is_none(),
+        "{strategy:?}: account with five_hour.utilization=85.0 must be skipped by gate 4 (>= 85.0); got: {result:?}",
+      );
+    }
+  }

@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for measurement history ring buffer storage and polynomial approximation behavior.
 - **Source**: `docs/feature/040_quota_measurement_history.md`
-- **Covers**: AC-01 through AC-13
+- **Covers**: AC-01 through AC-13 (FT-14..FT-18 cover read_cached_quota() pipeline — BUG-304 fix)
 
 ### Test Cases
 
@@ -23,11 +23,17 @@
 | FT-11 | AC-11 | Backward compatibility — no history key = 0 measurements | ✅ `history_read_absent_key_returns_empty` |
 | FT-12 | AC-12 | Non-owned accounts skip history append | ✅ `ft12_history_non_owned_skips_append` |
 | FT-13 | AC-13 | Duplicate timestamp overwrites instead of append | ✅ `history_duplicate_timestamp_overwrites` |
+| FT-14 | AC-04 | `read_cached_quota` — absent cache returns `None` | ✅ `test_read_cached_quota_absent_returns_none` |
+| FT-15 | AC-11 | `read_cached_quota` — cache present, no history → raw values (backward compat) | ✅ `test_read_cached_quota_no_history_returns_raw` |
+| FT-16 | AC-04 | `read_cached_quota` — 1 history entry → raw values (< 2 skips approximation) | ✅ `test_read_cached_quota_one_history_returns_raw` |
+| FT-17 | AC-04 | `read_cached_quota` — 3+ history entries → approximated values (polynomial applied) | ✅ `test_read_cached_quota_applies_approximation` |
+| FT-18 | AC-07 | `read_cached_quota` — resets_at elapsed → utilization 0.0 | ✅ `test_read_cached_quota_expired_window_returns_zero` |
 
 ### Notes
 
 - FT-01, FT-02, FT-11, FT-13 are storage-layer unit tests in `claude_profile_core/tests/account_test.rs`.
 - FT-04, FT-06, FT-07, FT-08, FT-09, FT-10 are pure-math unit tests in `src/usage/approx.rs` `#[cfg(test)]` module.
+- FT-14..FT-18 are unit tests for `read_cached_quota()` in `src/usage/fetch.rs` — verify the centralized cache-read + approximation pipeline (BUG-304 fix, TSK-316).
 - FT-03, FT-05, FT-12 are integration tests verifying the fetch pipeline behavior in `src/usage/fetch.rs` test module.
 - FT-04 render integration (display with `~` prefix) may be covered by existing FT-03/033 render tests — the display path is shared.
 
@@ -173,3 +179,62 @@
 - **Exit:** history length unchanged; last entry updated
 - **Source fn:** `history_duplicate_timestamp_overwrites`
 - **Source:** [040_quota_measurement_history.md AC-13](../../../docs/feature/040_quota_measurement_history.md)
+
+---
+
+### FT-14: `read_cached_quota` — absent cache returns `None`
+
+- **Given:** Account `alice` has no `alice.json` file in the credential store (or `alice.json` exists but has no `"cache"` key).
+- **When:** `read_cached_quota(credential_store, "alice", now_secs)` is called.
+- **Then:** Returns `None`. No panic, no error propagated.
+- **Exit:** None
+- **Source fn:** `test_read_cached_quota_absent_returns_none`
+- **Note:** `read_cached_quota()` is the centralized cache-read + approximation function (BUG-304 fix). Absent cache → `None` mirrors the graceful-degradation behavior of raw `read_quota_cache()` for this case.
+- **Source:** [040_quota_measurement_history.md AC-04](../../../docs/feature/040_quota_measurement_history.md)
+
+---
+
+### FT-15: `read_cached_quota` — no history → raw cached values returned
+
+- **Given:** Account `alice` has `alice.json` with a valid `"cache"` object (known `five_hour.utilization = 55.0`) but no `"history"` key.
+- **When:** `read_cached_quota(credential_store, "alice", now_secs)` is called.
+- **Then:** Returns `Some((data, age_secs))` where `data.five_hour.utilization == 55.0` (raw cached value — no approximation applied). `age_secs` equals `now_secs - fetched_at_secs`.
+- **Exit:** Some((raw_data, age))
+- **Note:** Backward-compatible path (AC-11). When `history.len() < 2`, `read_cached_quota` skips approximation and returns the raw single-point cache value.
+- **Source fn:** `test_read_cached_quota_no_history_returns_raw`
+- **Source:** [040_quota_measurement_history.md AC-11](../../../docs/feature/040_quota_measurement_history.md)
+
+---
+
+### FT-16: `read_cached_quota` — 1 history entry → raw values (threshold not met)
+
+- **Given:** Account `alice` has `alice.json` with `"cache"` (known `five_hour.utilization = 55.0`) and `"history": [{ one entry }]`.
+- **When:** `read_cached_quota(credential_store, "alice", now_secs)` is called.
+- **Then:** Returns `Some((data, age_secs))` where `data.five_hour.utilization == 55.0` (raw — `len() == 1 < 2` threshold).
+- **Exit:** Some((raw_data, age))
+- **Note:** The `>= 2` threshold for approximation is the boundary; exactly 1 entry is explicitly below it.
+- **Source fn:** `test_read_cached_quota_one_history_returns_raw`
+- **Source:** [040_quota_measurement_history.md AC-04](../../../docs/feature/040_quota_measurement_history.md)
+
+---
+
+### FT-17: `read_cached_quota` — 3+ history entries → polynomial-approximated values
+
+- **Given:** Account `alice` has `alice.json` with `"cache"` (`five_hour.utilization = 40.0`, `resets_at` set 4h in the future). `"history"` contains 3 entries in the current 5h window with `h5` utilization values `10.0`, `25.0`, `40.0` at timestamps `t0 < t1 < t2 < now_secs` (monotonically increasing trend).
+- **When:** `read_cached_quota(credential_store, "alice", now_secs)` is called.
+- **Then:** Returns `Some((data, age_secs))` where `data.five_hour.utilization ≠ 40.0` (quadratic LS polynomial applied — result > 40.0 due to increasing trend). `age_secs` computed from `fetched_at`. `d7` and `sn` unaffected (independent periods, 5h window only has data here).
+- **Exit:** Some((approximated_data, age)) where five_hour.utilization > 40.0
+- **Note:** This is the core BUG-304 fix verification at the function-unit level. FT-04 tests `approximate_utilization()` in isolation; this test verifies the pipeline: `read_cached_quota()` reads cache + history and applies the algorithm. Complements Feature 036 FT-23 which tests the G1 integration path end-to-end.
+- **Source fn:** `test_read_cached_quota_applies_approximation`
+- **Source:** [040_quota_measurement_history.md AC-04](../../../docs/feature/040_quota_measurement_history.md)
+
+---
+
+### FT-18: `read_cached_quota` — elapsed `resets_at` → utilization 0.0
+
+- **Given:** Account `alice` has `alice.json` with `"cache"` (`five_hour.utilization = 70.0`, `resets_at` set 2 hours in the PAST). `"history"` contains 3 entries in the now-elapsed window.
+- **When:** `read_cached_quota(credential_store, "alice", now_secs)` is called with `now_secs > resets_at_secs`.
+- **Then:** Returns `Some((data, age_secs))` where `data.five_hour.utilization == 0.0` — the window has reset; `approximate_utilization()` returns `0.0` when `now_secs > resets_at_secs` (AC-07). The stale raw value of `70.0` is NOT returned.
+- **Exit:** Some((data, age)) where five_hour.utilization == 0.0
+- **Source fn:** `test_read_cached_quota_expired_window_returns_zero`
+- **Source:** [040_quota_measurement_history.md AC-07](../../../docs/feature/040_quota_measurement_history.md)

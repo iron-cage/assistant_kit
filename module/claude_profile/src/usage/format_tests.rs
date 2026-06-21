@@ -4,7 +4,7 @@
 // without widening their visibility. See src/usage/readme.md § Inline Test Exception.
 
 use super::*;
-use crate::usage::test_support::{ mk_aq_ok_both, mk_aq_sort_weekly, mk_aq_err };
+use crate::usage::test_support::{ FAR_FUTURE_MS, mk_aq_ok_both, mk_aq_sort, mk_aq_sort_weekly, mk_aq_err };
 use crate::usage::types::PreferStrategy;
 
 // ── shorten_error ──────────────────────────────────────────────────────────
@@ -618,5 +618,82 @@ fn test_relevant_quotas_err()
   assert!(
     ( quotas.0 - ( -1.0 ) ).abs() < 1e-9 && quotas.1.abs() < 1e-9,
     "Err result → relevant_quotas must return (-1.0, 0.0); got: {quotas:?}",
+  );
+}
+
+// ── recommended_model: FT-01..FT-04, EC-01 ────────────────────────────────────
+
+/// FT-01 — `recommended_model()` returns `"sonnet"` when `seven_day_sonnet` tier is absent.
+///
+/// Absent Sonnet tier → unknown capacity → conservative recommendation is Sonnet.
+///
+/// Spec: [`tests/docs/feature/62_unified_session_config.md` FT-01]
+#[ test ]
+fn ft01_recommended_model_sonnet_when_tier_absent()
+{
+  let aq = mk_aq_sort( "a@test.com", 0.0, FAR_FUTURE_MS );  // seven_day_sonnet = None
+  assert_eq!(
+    recommended_model( &aq ), "sonnet",
+    "absent Sonnet tier must return sonnet; got: {:?}", recommended_model( &aq ),
+  );
+}
+
+/// FT-02 — `recommended_model()` returns `"sonnet"` when Sonnet left is exactly 15%.
+///
+/// Guard is strict `< OPUS_OVERRIDE_THRESHOLD`; utilization = 85.0 → 15.0% left → NOT opus.
+///
+/// Spec: [`tests/docs/feature/62_unified_session_config.md` FT-02]
+#[ test ]
+fn ft02_recommended_model_sonnet_at_exactly_15_pct_left()
+{
+  let aq = mk_aq_sort_weekly( "a@test.com", 0.0, 0.0, 85.0 );  // 15% left exactly
+  assert_eq!(
+    recommended_model( &aq ), "sonnet",
+    "utilization=85.0 (15% left) must return sonnet (strict < boundary); got: {:?}", recommended_model( &aq ),
+  );
+}
+
+/// FT-03 — `recommended_model()` returns `"opus"` when Sonnet left is < 15%.
+///
+/// utilization = 86.0 → 14.0% left → opus override fires.
+///
+/// Spec: [`tests/docs/feature/62_unified_session_config.md` FT-03]
+#[ test ]
+fn ft03_recommended_model_opus_when_sonnet_below_threshold()
+{
+  let aq = mk_aq_sort_weekly( "a@test.com", 0.0, 0.0, 86.0 );  // 14% left
+  assert_eq!(
+    recommended_model( &aq ), "opus",
+    "utilization=86.0 (14% left) must return opus; got: {:?}", recommended_model( &aq ),
+  );
+}
+
+/// FT-04 — `recommended_model()` returns `"sonnet"` on Err result.
+///
+/// Quota fetch failed → cannot determine Sonnet capacity → conservative: sonnet.
+///
+/// Spec: [`tests/docs/feature/62_unified_session_config.md` FT-04]
+#[ test ]
+fn ft04_recommended_model_sonnet_on_err()
+{
+  let aq = mk_aq_err();
+  assert_eq!(
+    recommended_model( &aq ), "sonnet",
+    "Err result must return sonnet; got: {:?}", recommended_model( &aq ),
+  );
+}
+
+/// EC-01 — `recommended_model()` boundary: utilization = 84.999 returns `"sonnet"`.
+///
+/// 100.0 - 84.999 = 15.001% left → strictly above threshold → sonnet (not opus).
+///
+/// Spec: [`tests/docs/feature/62_unified_session_config.md` EC-01]
+#[ test ]
+fn ec01_recommended_model_sonnet_at_15_001_pct_left()
+{
+  let aq = mk_aq_sort_weekly( "a@test.com", 0.0, 0.0, 84.999 );
+  assert_eq!(
+    recommended_model( &aq ), "sonnet",
+    "utilization=84.999 (15.001% left) must return sonnet; got: {:?}", recommended_model( &aq ),
   );
 }

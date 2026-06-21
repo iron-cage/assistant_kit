@@ -67,6 +67,7 @@ if let Some( ref sm ) = set_model_str
 | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | `imodel::` for subprocess model — orthogonal to `set_model::` |
 | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch touch execution — `apply_model_override()` skipped when `set_model::` present |
 | [035_model_command.md](035_model_command.md) | Standalone `.model` get/set command — shares `set_session_model()` and the `map_model_shorthand()` inner function extracted from `validate_set_model()` |
+| [062_unified_session_config.md](062_unified_session_config.md) | `set_session_effort()` is the counterpart to `set_session_model()` — same read-modify-write pattern |
 
 ### Parameters
 

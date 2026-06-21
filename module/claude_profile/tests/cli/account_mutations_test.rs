@@ -161,6 +161,10 @@
 //! | ao06 | `ft01_save_does_not_stamp_owner` | `.account.save` does NOT modify `owner` — passes `owner: None`; existing value preserved | P |
 //! | ao07 | `ft12_save_does_not_stamp_owner` | `.account.save` does NOT modify `owner`; existing value preserved via read-merge | P |
 //! | ec3  | `as_save_does_not_modify_owner` | `.account.save` preserves existing `owner` field unchanged (IT-20) | P |
+//! | ao08 | `ft18_use_force_bypasses_g5` | `.account.use force::1` with non-owned → G5 bypassed, exits 0 | P |
+//! | ao09 | `ft19_delete_force_bypasses_g6` | `.account.delete force::1` with non-owned → G6 bypassed, exits 0, file deleted | P |
+//! | ao10 | `ft20_relogin_force_bypasses_g7` | `.account.relogin force::1 dry::1` with non-owned → G7 bypassed, [dry-run], exits 0 | P |
+//! | ao11 | `ft21_force_dry_bypasses_gate_previews` | G5/G6/G7/G8 all with `force::1 dry::1` → gate bypassed, [dry-run], exits 0 | P |
 //!
 //! ### AU — Account Unclaim (Feature 036 + 037; via `.accounts unclaim::1`)
 //!
@@ -4373,6 +4377,182 @@ fn ft17_unclaim_dry_run()
     content_before, content_after,
     "FT-17: dry::1 must not write; file content must be unchanged",
   );
+}
+
+/// FT-18 (AC-18, Feat 036): `.account.use name::X force::1` bypasses G5 ownership gate.
+///
+/// Account owned by `"other@remote"`; current identity = `"testuser@testmachine"`.
+/// Without `force::1` → exit 1 (ownership violation). With `force::1` → gate
+/// bypassed, `switch_account()` executes, exits 0.
+///
+/// Spec: [`tests/docs/feature/36_account_ownership.md` FT-18]
+#[ test ]
+fn ft18_use_force_bypasses_g5()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  // `.account.use` copies credentials to `~/.claude/.credentials.json` — directory must exist.
+  let dot_claude = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::alice@acme.com", "force::1" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "ownership violation" ),
+    "FT-18: force::1 must bypass G5 — no ownership violation message; got:\n{err}",
+  );
+}
+
+/// FT-19 (AC-19, Feat 036): `.account.delete name::X force::1` bypasses G6 ownership gate.
+///
+/// Account owned by `"other@remote"`; current identity = `"testuser@testmachine"`.
+/// Without `force::1` → exit 1 and file kept. With `force::1` → gate bypassed,
+/// deletion proceeds, exits 0, credential file removed.
+///
+/// Spec: [`tests/docs/feature/36_account_ownership.md` FT-19]
+#[ test ]
+fn ft19_delete_force_bypasses_g6()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  let out = run_cs_with_env(
+    &[ ".account.delete", "name::alice@acme.com", "force::1" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+  assert!(
+    !account_exists( dir.path(), "alice@acme.com" ),
+    "FT-19: force::1 must bypass G6 — credential file must be deleted",
+  );
+}
+
+/// FT-20 (AC-20, Feat 036): `.account.relogin name::X force::1` bypasses G7 ownership gate.
+///
+/// Account owned by `"other@remote"`; current identity = `"testuser@testmachine"`.
+/// Without `force::1` → exit 1 (ownership violation). With `force::1 dry::1` →
+/// G7 bypassed, dry-run preview printed, exits 0.
+///
+/// `dry::1` is used here to prevent spawning the browser-login subprocess in CI.
+/// The key assertion is that G7 does not fire (no ownership violation message).
+///
+/// Spec: [`tests/docs/feature/36_account_ownership.md` FT-20]
+#[ test ]
+fn ft20_relogin_force_bypasses_g7()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  let out = run_cs_with_env(
+    &[ ".account.relogin", "name::alice@acme.com", "force::1", "dry::1" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "ownership violation" ),
+    "FT-20: force::1 must bypass G7 — no ownership violation message; got:\n{err}",
+  );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "[dry-run]" ),
+    "FT-20: dry::1 must produce dry-run preview after gate bypass; got:\n{text}",
+  );
+}
+
+/// FT-21 (AC-21, Feat 036): `force::1 dry::1` on G5–G8 commands bypasses gate and previews.
+///
+/// For each of the four commands (G5: `.account.use`, G6: `.account.delete`,
+/// G7: `.account.relogin`, G8: `.accounts unclaim::1`): account owned by
+/// `"other@remote"`, current identity `"local@local"`. `force::1 dry::1` →
+/// ownership gate bypassed (no exit 1), `[dry-run]` message printed, exits 0.
+/// File writes are suppressed by `dry::1`.
+///
+/// Spec: [`tests/docs/feature/36_account_ownership.md` FT-21]
+#[ test ]
+fn ft21_force_dry_bypasses_gate_previews()
+{
+  // G5: .account.use force::1 dry::1
+  {
+    let dir  = TempDir::new().unwrap();
+    let home = dir.path().to_str().unwrap();
+    write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+    write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+    let o = run_cs_with_env(
+      &[ ".account.use", "name::alice@acme.com", "force::1", "dry::1" ],
+      &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
+    );
+    assert_exit( &o, 0 );
+    assert!( !stderr( &o ).contains( "ownership violation" ), "FT-21 G5: must not exit with ownership violation" );
+    assert!( stdout( &o ).contains( "[dry-run]" ), "FT-21 G5: [dry-run] message required in stdout" );
+  }
+
+  // G6: .account.delete force::1 dry::1
+  {
+    let dir  = TempDir::new().unwrap();
+    let home = dir.path().to_str().unwrap();
+    write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+    write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+    let o = run_cs_with_env(
+      &[ ".account.delete", "name::alice@acme.com", "force::1", "dry::1" ],
+      &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
+    );
+    assert_exit( &o, 0 );
+    assert!( !stderr( &o ).contains( "ownership violation" ), "FT-21 G6: must not exit with ownership violation" );
+    assert!( stdout( &o ).contains( "[dry-run]" ), "FT-21 G6: [dry-run] message required in stdout" );
+    assert!( account_exists( dir.path(), "alice@acme.com" ), "FT-21 G6: dry::1 must not delete credential file" );
+  }
+
+  // G7: .account.relogin force::1 dry::1
+  {
+    let dir  = TempDir::new().unwrap();
+    let home = dir.path().to_str().unwrap();
+    write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+    write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+    let o = run_cs_with_env(
+      &[ ".account.relogin", "name::alice@acme.com", "force::1", "dry::1" ],
+      &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
+    );
+    assert_exit( &o, 0 );
+    assert!( !stderr( &o ).contains( "ownership violation" ), "FT-21 G7: must not exit with ownership violation" );
+    assert!( stdout( &o ).contains( "[dry-run]" ), "FT-21 G7: [dry-run] message required in stdout" );
+  }
+
+  // G8: .accounts unclaim::1 force::1 dry::1
+  {
+    let dir  = TempDir::new().unwrap();
+    let home = dir.path().to_str().unwrap();
+    write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+    write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+    let store        = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+    let meta_path    = store.join( "alice@acme.com.json" );
+    let meta_before  = std::fs::read_to_string( &meta_path ).unwrap();
+
+    let o = run_cs_with_env(
+      &[ ".accounts", "unclaim::1", "name::alice@acme.com", "force::1", "dry::1" ],
+      &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
+    );
+    assert_exit( &o, 0 );
+    assert!( !stderr( &o ).contains( "ownership violation" ), "FT-21 G8: must not exit with ownership violation" );
+    assert!( stdout( &o ).contains( "[dry-run]" ), "FT-21 G8: [dry-run] message required in stdout" );
+    let meta_after = std::fs::read_to_string( &meta_path ).unwrap();
+    assert_eq!( meta_before, meta_after, "FT-21 G8: dry::1 must not write owner field" );
+  }
 }
 
 /// IT-1: core unclaim — owner match clears owner to `""`.
