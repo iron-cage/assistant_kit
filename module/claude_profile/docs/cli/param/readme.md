@@ -63,8 +63,10 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [057_assign.md](057_assign.md) | `assign::` — write per-machine active-account marker (mutation param on `.accounts`/`.usage`, Feature 037) |
 | [058_force.md](058_force.md) | `force::` — bypass G5–G8 ownership enforcement on mutation commands |
 | [059_rotate.md](059_rotate.md) | `rotate::` — after quota table render, switch to the footer-recommended account; mutually exclusive with `live::1`; G5 ownership gate; `dry::1` previews |
+| [060_solo.md](060_solo.md) | `solo::` — token conservation mode restricting all credential-consuming operations to the current+owned account; others use `approximate_quota()` |
+| [061_who.md](061_who.md) | `who::` — sessions table visibility in `.usage` (auto: shown when >1 active marker) |
 
-**Total:** 58 active parameters (param 056 re-activated in Feature 037; 057–058 new; 059 new in Feature 038)
+**Total:** 60 active parameters (param 056 re-activated in Feature 037; 057–058 new; 059 new in Feature 038; 060 new; 061 new — sessions table)
 
 ### Overview Table
 
@@ -129,8 +131,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 57 | `assign::` | `bool` | `0` | `0`, `1` | Write per-machine active-account marker (mutation param on `.accounts`/`.usage`; Feature 037) | `.accounts`, `.usage` |
 | 58 | `force::` | `bool` | `0` | `0`, `1`, `false`, `true` | Bypass G5–G8 ownership enforcement on mutation commands | `.account.use`, `.account.delete`, `.account.relogin`, `.accounts`, `.usage` |
 | 59 | `rotate::` | `bool` | `0` | `0`, `1` | After quota table render, switch to footer-recommended account; mutually exclusive with `live::1`; G5 ownership gate | `.usage` |
+| 60 | `solo::` | `bool` | `0` | `0`, `1` | Token conservation: restrict all credential-consuming operations to current+owned account; others use `approximate_quota()` | `.usage` |
 
-*Param 1 = cross-command account selector (no formal group); params 48, 52 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = ungrouped (`.model`-specific); param 56 = REMOVED; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file)*
+*Param 1 = cross-command account selector (no formal group); params 48, 52 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = ungrouped (`.model`-specific); param 56 = REMOVED; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54, 60 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file)*
 
 ### See Also
 

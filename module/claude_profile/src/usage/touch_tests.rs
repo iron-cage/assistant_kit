@@ -61,7 +61,7 @@ fn test_apply_touch_mre_bug208_restore_trace_emitted()
   let mut aq = mk_aq_with_resets_at( None );
 
   // trace=true: Fix(BUG-211) — no restore; no [trace] restore switch_account line emitted.
-  apply_touch( &mut aq, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto );
+  apply_touch( &mut aq, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
   // Fix(BUG-211): no switch_account → live credentials file must NOT exist.
   assert!(
@@ -144,6 +144,7 @@ fn test_mre_bug214_apply_touch_skips_7d_exhausted_account()
     true,
     SubprocessModel::Auto,
     SubprocessEffort::Auto,
+    false,
   );
 
   let mut captured = String::new();
@@ -224,6 +225,7 @@ fn test_mre_bug215_apply_touch_fires_when_7d_timer_absent()
     true,
     SubprocessModel::Auto,
     SubprocessEffort::Auto,
+    false,
   );
 
   let mut captured = String::new();
@@ -321,6 +323,7 @@ fn test_mre_bug288_apply_touch_skips_touch_idle_false()
     true,
     SubprocessModel::Auto,
     SubprocessEffort::Auto,
+    false,
   );
 
   let mut captured = String::new();
@@ -366,7 +369,7 @@ fn test_apply_touch_touch_idle_true_not_skipped_by_guard()
     let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
-      &mut aq, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto,
+      &mut aq, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false
     );
     let mut captured = String::new();
     stderr_buf.read_to_string( &mut captured ).unwrap();
@@ -390,7 +393,7 @@ fn test_apply_touch_touch_idle_true_not_skipped_by_guard()
     let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
-      &mut aq, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto,
+      &mut aq, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false
     );
     let mut captured = String::new();
     stderr_buf.read_to_string( &mut captured ).unwrap();
@@ -434,7 +437,7 @@ fn test_apply_touch_touch_idle_none_in_cache_not_skipped()
     let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
-      &mut aq, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto,
+      &mut aq, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false
     );
     let mut captured = String::new();
     stderr_buf.read_to_string( &mut captured ).unwrap();
@@ -463,7 +466,7 @@ fn test_apply_touch_touch_idle_none_in_cache_not_skipped()
     let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
-      &mut aq, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto,
+      &mut aq, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false
     );
     let mut captured = String::new();
     stderr_buf.read_to_string( &mut captured ).unwrap();
@@ -512,7 +515,7 @@ fn test_apply_touch_touch_idle_false_fetched_at_absent_guard_bypassed()
     let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
-      &mut aq, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto,
+      &mut aq, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false
     );
     let mut captured = String::new();
     stderr_buf.read_to_string( &mut captured ).unwrap();
@@ -539,7 +542,7 @@ fn test_apply_touch_touch_idle_false_fetched_at_absent_guard_bypassed()
     let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
-      &mut aq, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto,
+      &mut aq, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false
     );
     let mut captured = String::new();
     stderr_buf.read_to_string( &mut captured ).unwrap();
@@ -596,7 +599,7 @@ fn test_apply_touch_touch_idle_false_silent_when_trace_disabled()
       None,
       true,
       SubprocessModel::Auto,
-      SubprocessEffort::Auto,
+      SubprocessEffort::Auto, false
     );
     let mut captured = String::new();
     stderr_buf.read_to_string( &mut captured ).unwrap();
@@ -616,7 +619,7 @@ fn test_apply_touch_touch_idle_false_silent_when_trace_disabled()
       None,
       false,
       SubprocessModel::Auto,
-      SubprocessEffort::Auto,
+      SubprocessEffort::Auto, false
     );
     let mut captured = String::new();
     stderr_buf.read_to_string( &mut captured ).unwrap();
@@ -666,6 +669,7 @@ fn test_apply_touch_error_account_skips_before_touch_idle_guard()
     true,
     SubprocessModel::Auto,
     SubprocessEffort::Auto,
+    false,
   );
 
   let mut captured = String::new();
@@ -749,7 +753,7 @@ fn it_apply_touch_trigger_fires_resets_at_none()
   ).unwrap();
   let mut aq = mk_aq_with_resets_at( None );
   let paths  = crate::ClaudePaths::with_home( &fake_home );
-  apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+  apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
   // Fix(BUG-211): no switch_account in apply_touch restore → live credentials file must NOT exist.
   assert!(
     !paths.credentials_file().exists(),
@@ -781,7 +785,7 @@ fn it_apply_touch_trigger_skips_resets_at_some()
   ).unwrap();
   let mut aq = mk_aq_with_resets_at( Some( "2099-01-01T00:00:00Z" ) );
   let paths  = crate::ClaudePaths::with_home( &fake_home );
-  apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+  apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
   // Trigger skipped → early return → live credentials file NOT written.
   assert!(
     !fake_home.join( ".claude" ).join( ".credentials.json" ).exists(),
@@ -863,7 +867,7 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
 
     let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
-    apply_touch( &mut aq_a, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_touch( &mut aq_a, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     let mut captured_a = String::new();
     stderr_buf.read_to_string( &mut captured_a ).unwrap();
 
@@ -896,7 +900,7 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
 
     let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
-    apply_touch( &mut aq_b, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_touch( &mut aq_b, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     let mut captured_b = String::new();
     stderr_buf.read_to_string( &mut captured_b ).unwrap();
 
@@ -934,7 +938,7 @@ fn ft07_touch_skips_non_owned_with_trace()
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // trace=true; claude_paths=None so subprocess cannot fire even if G4 is bypassed.
-  apply_touch( &mut aq, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
+  apply_touch( &mut aq, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
   let mut captured = String::new();
   stderr_buf.read_to_string( &mut captured ).unwrap();
@@ -951,6 +955,52 @@ fn ft07_touch_skips_non_owned_with_trace()
 }
 
 // ── BUG-302 MRE: occupied-elsewhere accounts skipped by apply_touch ────────────
+
+/// EC-8 (061): `apply_touch` solo gate — non-current owned account is skipped with
+/// `[trace] touch  {name}  solo-skip` when `solo=true`.
+///
+/// With `solo=true`, the solo gate fires before G4 (non-owned check) for any account
+/// where `aq.is_current=false`. The account here is `is_owned=true` — without the solo
+/// gate it would proceed to the `all_running` check. With `solo=true` it is skipped
+/// immediately and the trace confirms the reason.
+///
+/// Non-vacuity anchor: `solo=false` (in all other touch tests) reaches the timer check
+/// and emits `read credentials:` or a timer trace — proving the solo gate does not fire
+/// for `solo=false`.
+///
+/// Spec: [`tests/docs/cli/param/61_solo.md` EC-8]
+#[ test ]
+fn ec8_solo_gate_skips_non_current_with_trace()
+{
+  use std::io::Read;
+
+  let store = tempfile::TempDir::new().unwrap();
+  // mk_aq_with_resets_at defaults: is_current=false, is_owned=true — exact preconditions.
+  let mut aq = mk_aq_with_resets_at( None );
+
+  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+  let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+
+  // trace=true, solo=true: solo gate fires, emits skip trace, returns before timer check.
+  apply_touch( &mut aq, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, true );
+
+  let mut captured = String::new();
+  stderr_buf.read_to_string( &mut captured ).unwrap();
+
+  assert!(
+    captured.contains( "solo-skip" ),
+    "EC-8: solo gate must emit 'solo-skip' trace for non-current account; got:\n{captured}",
+  );
+  assert!(
+    captured.contains( "test@example.com" ),
+    "EC-8: trace must name the skipped account; got:\n{captured}",
+  );
+  // Solo gate fires before timer/credentials check — no subprocess path reached.
+  assert!(
+    !captured.contains( "read credentials:" ),
+    "EC-8: solo gate must fire BEFORE credential read; got:\n{captured}",
+  );
+}
 
 /// FT-22 (AC-17): `apply_touch()` skips owned accounts with `is_occupied_elsewhere=true`;
 /// emits `[trace] ... occupied elsewhere`.
@@ -998,7 +1048,7 @@ fn ft_touch_skips_occupied_elsewhere_with_trace()
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // trace=true; claude_paths=None so subprocess cannot fire even if guard is bypassed.
-  apply_touch( &mut aq, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
+  apply_touch( &mut aq, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
   let mut captured = String::new();
   stderr_buf.read_to_string( &mut captured ).unwrap();

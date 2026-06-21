@@ -98,7 +98,7 @@
 
     // Text renderer: the error reason must appear somewhere in output (in a quota column).
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None,
     );
     assert!(
       text.contains( "(rate limited (429))" ),
@@ -153,7 +153,7 @@
 
     // --- text renderer ---
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None,
     );
     let alice_text = text.lines().find( | l | l.contains( "alice@test.com" ) )
       .expect( "FT-21: alice line missing from render_text" );
@@ -238,7 +238,7 @@
     let accounts = vec![ aq ];
     let cols     = ColsVisibility::default_set();
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None,
     );
     assert!(
       text.contains( '~' ),
@@ -343,7 +343,7 @@
     let mut cols = ColsVisibility::default_set();
     cols.d7_son_reset = true;
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None,
     );
     assert!(
       text.contains( "~in " ),
@@ -416,7 +416,7 @@
 
     // text renderer: ~Renews must be "—", NOT "~in Nd"
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None,
     );
     assert!(
       text.contains( "\u{2014}" ),
@@ -482,7 +482,7 @@
     let text_a = render_text(
       &[ aq_cached ],
       SortStrategy::Name, None, PreferStrategy::Any,
-      &cols, None, None,
+      &cols, None, None, None, None,
     );
     assert!(
       text_a.contains( '~' ),
@@ -510,7 +510,7 @@
     let text_b = render_text(
       &[ aq_no_cache ],
       SortStrategy::Name, None, PreferStrategy::Any,
-      &cols, None, None,
+      &cols, None, None, None, None,
     );
     // No tilde prefix when no cache data.
     assert!(
@@ -639,13 +639,37 @@
       is_owned              : true,
       owner                 : String::new(),
     };
+    // cur@x.com: is_current=true — triggers 2-line `·`-delimited footer so the model label appears.
+    let aq_cur = AccountQuota
+    {
+      name                  : "cur@x.com".to_string(),
+      is_current            : true,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+        seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+        seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 50.0, resets_at : None } ),
+      } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : true,
+      owner                 : String::new(),
+    };
     let output = render_text(
-      &[ aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
+    // Footer line 2: `Next (name) · a@x.com · sonnet · {metric}` — 15.0% left is NOT < 15%.
     assert!(
-      output.contains( "model: sonnet" ),
-      "FT-28 boundary: footer must show 'model: sonnet' when sonnet_left = 15.0% (not < 15%); got:\n{output}",
+      output.contains( "· sonnet" ),
+      "FT-28 boundary: footer line 2 must show '· sonnet' when sonnet_left = 15.0% (not < 15%); got:\n{output}",
     );
   }
 
@@ -706,13 +730,37 @@
       is_owned              : true,
       owner                 : String::new(),
     };
+    // cur@x.com: is_current=true — triggers 2-line `·`-delimited footer so the model label appears.
+    let aq_cur = AccountQuota
+    {
+      name                  : "cur@x.com".to_string(),
+      is_current            : true,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+        seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+        seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 50.0, resets_at : None } ),
+      } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : true,
+      owner                 : String::new(),
+    };
     let output = render_text(
-      &[ aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
+    // Footer line 2: `Next (name) · a@x.com · opus · {metric}` — 14.9% left IS < 15%.
     assert!(
-      output.contains( "model: opus" ),
-      "FT-28 boundary: footer must show 'model: opus' when sonnet_left ≈ 14.9% (< 15%); got:\n{output}",
+      output.contains( "· opus" ),
+      "FT-28 boundary: footer line 2 must show '· opus' when sonnet_left ≈ 14.9% (< 15%); got:\n{output}",
     );
   }
 
@@ -723,12 +771,36 @@
   ///
   /// Spec: [`tests/docs/feature/09_token_usage.md` FT-29]
   #[ test ]
+  #[ allow( clippy::too_many_lines ) ]
   fn test_ft29_009_footer_session_effort_display()
   {
-    // Inner helper — builds two valid accounts needed for footer display (≥ 2 valid).
+    // Inner helper — builds three valid accounts; cur@x.com is `is_current=true` so the
+    // 2-line `·`-delimited footer is used and session model/effort appear in col 3 of line 1.
     fn make_accounts() -> Vec< AccountQuota >
     {
       vec![
+        AccountQuota
+        {
+          name                  : "cur@x.com".to_string(),
+          is_current            : true,
+          is_active             : false,
+          is_occupied_elsewhere : false,
+          expires_at_ms         : FAR_FUTURE_MS,
+          result                : Ok( claude_quota::OauthUsageData
+          {
+            five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+            seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
+            seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 50.0, resets_at : None } ),
+          } ),
+          account               : None,
+          host                  : String::new(),
+          role                  : String::new(),
+          renewal_at            : None,
+          cached                : false,
+          cache_age_secs        : None,
+          is_owned              : true,
+          owner                 : String::new(),
+        },
         AccountQuota
         {
           name                  : "a@x.com".to_string(),
@@ -777,57 +849,282 @@
     }
 
     // Scenario 1 — both session_model and session_effort supplied.
+    // Footer line 1: `Current · cur@x.com · claude-sonnet-4-6/low · N/M`
     {
       let accounts = make_accounts();
       let output = render_text(
         &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
-        &ColsVisibility::default_set(), Some( "claude-sonnet-4-6" ), Some( "low" ),
+        &ColsVisibility::default_set(), Some( "claude-sonnet-4-6" ), Some( "low" ), None, None,
       );
       assert!(
-        output.contains( "session: claude-sonnet-4-6  effort: low" ),
-        "FT-29 s1: footer line 1 must contain 'session: claude-sonnet-4-6  effort: low'; got:\n{output}",
+        output.contains( "claude-sonnet-4-6/low" ),
+        "FT-29 s1: footer Current line col3 must be 'claude-sonnet-4-6/low'; got:\n{output}",
       );
       assert!(
-        output.contains( "Valid:" ),
-        "FT-29 s1: footer line 1 must contain 'Valid:'; got:\n{output}",
+        output.contains( "Current" ),
+        "FT-29 s1: footer must have Current line; got:\n{output}",
       );
     }
 
     // Scenario 2 — session_model only; effort must be absent.
+    // Footer line 1: `Current · cur@x.com · claude-sonnet-4-6 · N/M` (no slash)
     {
       let accounts = make_accounts();
       let output = render_text(
         &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
-        &ColsVisibility::default_set(), Some( "claude-sonnet-4-6" ), None,
+        &ColsVisibility::default_set(), Some( "claude-sonnet-4-6" ), None, None, None,
       );
       assert!(
-        output.contains( "session: claude-sonnet-4-6" ),
-        "FT-29 s2: footer line 1 must contain 'session: claude-sonnet-4-6'; got:\n{output}",
+        output.contains( "claude-sonnet-4-6" ),
+        "FT-29 s2: footer Current line must contain model name; got:\n{output}",
       );
       assert!(
         !output.contains( "effort:" ),
-        "FT-29 s2: footer line 1 must not contain 'effort:' when effort is None; got:\n{output}",
+        "FT-29 s2: footer must not contain 'effort:' label when effort is None; got:\n{output}",
+      );
+      assert!(
+        !output.contains( "/low" ),
+        "FT-29 s2: footer must not contain '/low' when effort is None; got:\n{output}",
       );
     }
 
-    // Scenario 3 — neither model nor effort; only Valid: count shown.
+    // Scenario 3 — neither model nor effort; col3 of Current line is empty.
     {
       let accounts = make_accounts();
       let output = render_text(
         &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
-        &ColsVisibility::default_set(), None, None,
+        &ColsVisibility::default_set(), None, None, None, None,
       );
       assert!(
-        output.contains( "Valid:" ),
-        "FT-29 s3: footer line 1 must contain 'Valid:'; got:\n{output}",
+        output.contains( "Current" ),
+        "FT-29 s3: footer must have Current line even with no model/effort; got:\n{output}",
       );
       assert!(
         !output.contains( "session:" ),
-        "FT-29 s3: footer line 1 must not contain 'session:' when model is None; got:\n{output}",
+        "FT-29 s3: footer must not contain 'session:' label when model is None; got:\n{output}",
       );
       assert!(
         !output.contains( "effort:" ),
-        "FT-29 s3: footer line 1 must not contain 'effort:' when effort is None; got:\n{output}",
+        "FT-29 s3: footer must not contain 'effort:' label when effort is None; got:\n{output}",
       );
     }
+  }
+
+  // ── Sessions table ─────────────────────────────────────────────────────────
+
+  /// FT-30/009 — sessions table shown automatically when >1 `_active_*` marker exists.
+  ///
+  /// 3 marker files in `TempDir`; own session identified by `active_marker_filename()`.
+  /// `who=None` (auto) → `marker_count` > 1 → table shown with `✓` on own row.
+  ///
+  /// Spec: [`tests/docs/feature/09_token_usage.md` FT-30]
+  #[ test ]
+  fn ft30_009_sessions_table_shown_auto_multiple_markers()
+  {
+    use tempfile::TempDir;
+    use crate::usage::test_support::mk_aq_ok;
+    let store = TempDir::new().unwrap();
+    let spath = store.path();
+
+    // Own marker: exact filename from active_marker_filename().
+    let own_fname = claude_profile_core::account::active_marker_filename();
+    std::fs::write( spath.join( &own_fname ), "own@example.com" ).unwrap();
+    // Other sessions on other machines.
+    std::fs::write( spath.join( "_active_serverA_bob" ),   "bob@example.com" ).unwrap();
+    std::fs::write( spath.join( "_active_serverB_carol" ), "carol@example.com" ).unwrap();
+
+    let accounts = vec![ mk_aq_ok( 10.0 ) ];
+    let cols     = ColsVisibility::default_set();
+    let output   = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      &cols, None, None, Some( spath ), None,
+    );
+
+    assert!(
+      output.contains( "Sessions" ),
+      "FT-30: sessions table header must appear with 3 markers (who=None); got:\n{output}",
+    );
+    // Own session: account cell = "{account} ✓"
+    assert!(
+      output.contains( "own@example.com \u{2713}" ),
+      "FT-30: own session must show '\u{2713}' on account cell; got:\n{output}",
+    );
+    assert!(
+      output.contains( "bob@example.com" ),
+      "FT-30: bob row must appear in sessions table; got:\n{output}",
+    );
+    assert!(
+      output.contains( "carol@example.com" ),
+      "FT-30: carol row must appear in sessions table; got:\n{output}",
+    );
+  }
+
+  /// FT-31/009 — sessions table hidden automatically when ≤1 `_active_*` marker exists.
+  ///
+  /// Only own marker present; `who=None` → `marker_count` = 1, `1 > 1 = false` → table not shown.
+  ///
+  /// Spec: [`tests/docs/feature/09_token_usage.md` FT-31]
+  #[ test ]
+  fn ft31_009_sessions_table_hidden_auto_single_marker()
+  {
+    use tempfile::TempDir;
+    use crate::usage::test_support::mk_aq_ok;
+    let store = TempDir::new().unwrap();
+    let spath = store.path();
+
+    let own_fname = claude_profile_core::account::active_marker_filename();
+    std::fs::write( spath.join( &own_fname ), "own@example.com" ).unwrap();
+
+    let accounts = vec![ mk_aq_ok( 10.0 ) ];
+    let cols     = ColsVisibility::default_set();
+    let output   = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      &cols, None, None, Some( spath ), None,
+    );
+
+    assert!(
+      !output.contains( "Sessions" ),
+      "FT-31: sessions table must be hidden with only 1 marker (who=None); got:\n{output}",
+    );
+  }
+
+  /// FT-32/009 — `who::` overrides automatic sessions table visibility.
+  ///
+  /// `who=Some(true)` forces on with 1 marker; `who=Some(false)` suppresses with 3 markers.
+  ///
+  /// Spec: [`tests/docs/feature/09_token_usage.md` FT-32]
+  #[ test ]
+  fn ft32_009_sessions_table_who_override()
+  {
+    use tempfile::TempDir;
+    use crate::usage::test_support::mk_aq_ok;
+
+    // who=Some(true) with 1 marker: force-on shows the table.
+    {
+      let store = TempDir::new().unwrap();
+      let spath = store.path();
+      let own_fname = claude_profile_core::account::active_marker_filename();
+      std::fs::write( spath.join( &own_fname ), "own@example.com" ).unwrap();
+
+      let accounts = vec![ mk_aq_ok( 10.0 ) ];
+      let output = render_text(
+        &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+        &ColsVisibility::default_set(), None, None, Some( spath ), Some( true ),
+      );
+      assert!(
+        output.contains( "Sessions" ),
+        "FT-32 who=1: sessions table must appear with who=Some(true) even with 1 marker; got:\n{output}",
+      );
+    }
+
+    // who=Some(false) with 3 markers: force-off suppresses the table.
+    {
+      let store = TempDir::new().unwrap();
+      let spath = store.path();
+      let own_fname = claude_profile_core::account::active_marker_filename();
+      std::fs::write( spath.join( &own_fname ), "own@example.com" ).unwrap();
+      std::fs::write( spath.join( "_active_serverA_bob" ),   "bob@example.com" ).unwrap();
+      std::fs::write( spath.join( "_active_serverB_carol" ), "carol@example.com" ).unwrap();
+
+      let accounts = vec![ mk_aq_ok( 10.0 ) ];
+      let output = render_text(
+        &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+        &ColsVisibility::default_set(), None, None, Some( spath ), Some( false ),
+      );
+      assert!(
+        !output.contains( "Sessions" ),
+        "FT-32 who=0: sessions table must be suppressed with who=Some(false) even with 3 markers; got:\n{output}",
+      );
+    }
+  }
+
+  /// FT-13/025 — cross-feature: sessions table renders `_active_*` markers as
+  /// `{user}@{host}` session identity → account rows.
+  ///
+  /// Three markers: own + 2 others. Verifies Session column parsing from
+  /// `_active_{host}_{user}` filename, Account column from file content,
+  /// and `✓` on the own session row.
+  ///
+  /// Spec: [`tests/docs/feature/25_per_machine_active_marker.md` FT-13]
+  #[ test ]
+  fn ft13_025_sessions_table_parses_marker_identity_from_filename()
+  {
+    use tempfile::TempDir;
+    use crate::usage::test_support::mk_aq_ok;
+    let store = TempDir::new().unwrap();
+    let spath = store.path();
+
+    // Own marker: exact filename from `active_marker_filename()`.
+    let own_fname = claude_profile_core::account::active_marker_filename();
+    std::fs::write( spath.join( &own_fname ), "own@test.com" ).unwrap();
+    // `_active_w003_user1`: host=w003, user=user1 → identity = "user1@w003"
+    std::fs::write( spath.join( "_active_w003_user1" ), "alice@test.com" ).unwrap();
+    // `_active_w004_user2`: host=w004, user=user2 → identity = "user2@w004"
+    std::fs::write( spath.join( "_active_w004_user2" ), "bob@test.com" ).unwrap();
+
+    let accounts = vec![ mk_aq_ok( 10.0 ) ];
+    let cols     = ColsVisibility::default_set();
+    // who=None: auto-shows because marker_count=3 > 1.
+    let output = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      &cols, None, None, Some( spath ), None,
+    );
+
+    // Sessions table header must appear (3 markers, who=None → auto-show).
+    assert!(
+      output.contains( "Sessions" ),
+      "FT-13: sessions table must appear with 3 markers; got:\n{output}",
+    );
+    // Session column: identity parsed from filename.
+    assert!(
+      output.contains( "user1@w003" ),
+      "FT-13: `_active_w003_user1` must render session 'user1@w003'; got:\n{output}",
+    );
+    assert!(
+      output.contains( "user2@w004" ),
+      "FT-13: `_active_w004_user2` must render session 'user2@w004'; got:\n{output}",
+    );
+    // Account column: file content (account names).
+    assert!(
+      output.contains( "alice@test.com" ),
+      "FT-13: alice account from file content must appear; got:\n{output}",
+    );
+    assert!(
+      output.contains( "bob@test.com" ),
+      "FT-13: bob account from file content must appear; got:\n{output}",
+    );
+    // Own session: account cell = "{account} ✓".
+    assert!(
+      output.contains( "own@test.com \u{2713}" ),
+      "FT-13: own session row must show '\u{2713}' on account cell; got:\n{output}",
+    );
+  }
+
+  /// EC-5/062 — `who::1` with 0 `_active_*` markers → sessions table omitted gracefully.
+  ///
+  /// `build_sessions_table` returns an empty string when no markers exist.
+  /// The `if show && !sessions_text.is_empty()` guard suppresses the append even when
+  /// `who = Some(true)`, so the output contains no `Sessions` section.
+  ///
+  /// Spec: [`tests/docs/cli/param/62_who.md` EC-5]
+  #[ test ]
+  fn ec5_062_who_force_on_zero_markers_omits_gracefully()
+  {
+    use tempfile::TempDir;
+    use crate::usage::test_support::mk_aq_ok;
+    let store = TempDir::new().unwrap();
+    // Deliberately empty — no `_active_*` files written.
+    let spath = store.path();
+
+    let accounts = vec![ mk_aq_ok( 10.0 ) ];
+    let output   = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), None, None, Some( spath ), Some( true ),
+    );
+
+    assert!(
+      !output.contains( "Sessions" ),
+      "EC-5: sessions table must be gracefully omitted when store has 0 markers \
+       and who=Some(true); got:\n{output}",
+    );
   }

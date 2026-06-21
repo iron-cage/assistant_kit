@@ -17,6 +17,7 @@ mod refresh_predicate;
 mod touch;
 mod params;
 mod api;
+pub( crate ) mod approx;
 
 pub( crate ) use api::{
   validate_imodel_str, validate_effort_str, pre_switch_touch_ctx, apply_post_switch_touch,
@@ -548,7 +549,7 @@ mod tests
     let aq = mk_aq_err();
     let output = render_text(
       &[ aq ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
     assert!( output.contains( "🔴" ), "Err account must show 🔴. Got:\n{output}" );
   }
@@ -560,7 +561,7 @@ mod tests
     let aq = mk_aq_ok( 10.0 );
     let output = render_text(
       &[ aq ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
     assert!( output.contains( "🟢" ), "90% left must show 🟢. Got:\n{output}" );
   }
@@ -572,7 +573,7 @@ mod tests
     let aq = mk_aq_ok( 97.0 );
     let output = render_text(
       &[ aq ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
     assert!( output.contains( "🟡" ), "3% left must show 🟡. Got:\n{output}" );
   }
@@ -586,11 +587,11 @@ mod tests
     let aq_15_1pct = mk_aq_ok( 84.9 );
     let out_15   = render_text(
       &[ aq_15pct ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
     let out_15_1 = render_text(
       &[ aq_15_1pct ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
     assert!( out_15.contains( "🟡" ),   "exactly 15% left must show 🟡. Got:\n{out_15}" );
     assert!( out_15_1.contains( "🟢" ), "15.1% left must show 🟢. Got:\n{out_15_1}" );
@@ -605,7 +606,7 @@ mod tests
     aq.name = "(current session)".to_string();
     let output = render_text(
       &[ aq ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
     assert!( output.contains( "🟢" ), "80% left synthetic row must show 🟢. Got:\n{output}" );
   }
@@ -630,7 +631,7 @@ mod tests
   {
     let result = render_text(
       &[], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
     assert!( result.contains( "no accounts configured" ), "empty must say no accounts, got: {result}" );
   }
@@ -731,7 +732,7 @@ mod tests
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
     let json = render_json( &accounts );
 
@@ -792,24 +793,26 @@ mod tests
   #[ test ]
   fn test_sort_recommendation_unaffected_by_sort_strategy()
   {
-    let accounts = vec![
-      mk_aq_sort( "a@x.com", 20.0, FAR_FUTURE_MS ),  // 80% 5h_left — alphabetically first
-      mk_aq_sort( "b@x.com", 75.0, FAR_FUTURE_MS ),  // 25% 5h_left
-    ];
+    let a = mk_aq_sort( "a@x.com", 20.0, FAR_FUTURE_MS );  // 80% 5h_left — alphabetically first
+    let b = mk_aq_sort( "b@x.com", 75.0, FAR_FUTURE_MS );  // 25% 5h_left
+    // cur@x.com: is_current=true — triggers 2-line `·`-delimited footer where line 2 names the recommendation.
+    let mut cur = mk_aq_sort( "cur@x.com", 10.0, FAR_FUTURE_MS );
+    cur.is_current = true;
+    let accounts = vec![ a, b, cur ];
 
-    // sort::name: a@x.com first alphabetically → recommended in footer.
+    // sort::name: a@x.com first alphabetically among non-current → recommended in footer line 2.
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
 
     assert!( output.contains( "a@x.com" ), "output must contain a@x.com; got:\n{output}" );
     assert!(
-      output.contains( "Next (name):" ),
-      "footer must show 'Next (name):'; got:\n{output}",
+      output.contains( "Next (name) ·" ),
+      "footer must show 'Next (name) ·'; got:\n{output}",
     );
     assert!(
-      output.contains( "Next (name): a@x.com" ),
+      output.contains( "Next (name) · a@x.com" ),
       "footer must recommend a@x.com (first alphabetically under sort::name); got:\n{output}",
     );
   }
@@ -826,7 +829,7 @@ mod tests
     let accounts = vec![ a, b, c ];
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
     let pos_a = output.find( "a@x.com" ).expect( "a@x.com must appear in output" );
     let pos_b = output.find( "b@x.com" ).expect( "b@x.com must appear in output" );
@@ -850,7 +853,7 @@ mod tests
 
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
 
     let pos_d = output.find( "d@x.com" ).expect( "d@x.com must appear" );
@@ -880,7 +883,7 @@ mod tests
 
     let output = render_text(
       &accounts, SortStrategy::Name, Some( true ), PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
 
     let pos_c = output.find( "c@x.com" ).expect( "c@x.com must appear" );
@@ -911,7 +914,7 @@ mod tests
 
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
 
     assert!(
@@ -939,13 +942,14 @@ mod tests
     current_1.is_current = true;
     let sonnet_ok = mk_aq_sort_weekly( "b@x.com", 10.0, 10.0, 50.0 );
     // Default utilization from helper is 50.0 → sonnet_left = 50.0 ≥ 15.0
+    // Footer line 2: `Next (name) · b@x.com · sonnet · {metric}`
     let output = render_text(
       &[ current_1, sonnet_ok ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
     assert!(
-      output.contains( "model: sonnet" ),
-      "FT-28 scenario 1: footer must show 'model: sonnet' when sonnet_left=50% ≥ 15%; got:\n{output}",
+      output.contains( "· sonnet" ),
+      "FT-28 scenario 1: footer line 2 must show '· sonnet' when sonnet_left=50% ≥ 15%; got:\n{output}",
     );
 
     // Scenario 2: recommended account has seven_day_sonnet.utilization = 90.0
@@ -960,13 +964,14 @@ mod tests
         son.utilization = 90.0; // 10% left < 15% threshold → opus
       }
     }
+    // Footer line 2: `Next (name) · c@x.com · opus · {metric}`
     let output = render_text(
       &[ current_2, opus_override ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None,
+      &ColsVisibility::default_set(), None, None, None, None,
     );
     assert!(
-      output.contains( "model: opus" ),
-      "FT-28 scenario 2: footer must show 'model: opus' when sonnet_left=10% < 15%; got:\n{output}",
+      output.contains( "· opus" ),
+      "FT-28 scenario 2: footer line 2 must show '· opus' when sonnet_left=10% < 15%; got:\n{output}",
     );
   }
 }

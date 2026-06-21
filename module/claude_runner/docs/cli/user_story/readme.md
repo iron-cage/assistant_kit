@@ -81,7 +81,7 @@ When adding new user stories, update these files in order:
 4. `docs/cli/user_story/readme.md` — Responsibility Table row + Index row *(this file)*
 5. `tests/docs/cli/user_story/readme.md` — Responsibility Table row + In Scope count
 6. `docs/cli/param/NNN_*.md` — Referenced User Stories for each param involved
-7. `docs/002_entities.md` — count in header row + new instance row
+7. `docs/002_entity.md` — count in header row + new instance row
 8. `docs/cli/readme.md` — count in 4 places (Responsibility Table, Completion Matrix ×2, Navigation)
 9. `tests/readme.md` — count in 2 places (Domain Map, Responsibility Table)
 10. `tests/docs/cli/readme.md` — count in Scope, Coverage Summary, nav links

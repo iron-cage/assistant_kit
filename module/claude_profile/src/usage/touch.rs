@@ -40,8 +40,17 @@ pub( crate ) fn apply_touch(
   trace            : bool,
   imodel           : SubprocessModel,
   effort           : SubprocessEffort,
+  solo             : bool,
 )
 {
+  // Solo gate: non-current accounts are never touched when solo::1.
+  // Fires before G4 — avoids credential reads for solo-skipped accounts.
+  if solo && !aq.is_current
+  {
+    if trace { let _ = writeln!( std::io::stderr(), "[trace] touch  {}  solo-skip", aq.name ); }
+    return;
+  }
+
   // G4: Non-owned accounts are never touched — subprocess spawning on foreign credentials forbidden.
   if !aq.is_owned
   {

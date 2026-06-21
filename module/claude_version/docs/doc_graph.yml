@@ -1,7 +1,7 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_version
-  node_count: 28
-  edge_count: 61
+  node_count: 27
+  edge_count: 60
   component_count: 3
   generated: 2026-06-16
 
@@ -70,11 +70,6 @@ nodes:
     file: cli/format/02_json.md
     label: JSON Format
     entity: format
-
-  - id: catalog/001
-    file: catalog/001_design_decisions.md
-    label: Design Decisions
-    entity: catalog
 
   - id: feature/001
     file: feature/001_version_management.md
@@ -268,11 +263,6 @@ edges:
     to: pitfall/002
     via: pitfalls
 
-  # catalog/001 Design Decisions
-  - from: catalog/001
-    to: feature/005
-    via: features
-
   # pitfall/001 Version Lock chmod Side Effects
   - from: pitfall/001
     to: pattern/001
@@ -415,7 +405,7 @@ edges:
 components:
   - id: 1
     label: Main corpus
-    size: 26
+    size: 25
     isolated: false
     nodes:
       - algorithm/001
@@ -426,7 +416,6 @@ components:
       - cli/004
       - cli/005
       - cli/006
-      - catalog/001
       - feature/001
       - feature/002
       - feature/003

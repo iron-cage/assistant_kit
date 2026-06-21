@@ -27,6 +27,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-13+ | `apply_refresh` does not write `~/.claude/.credentials.json`; file unchanged after cycle | AC-29 | (structural — FT-06/AC-20 mechanism + FT-13/FT-17 verification) |
 | FT-19 | `refresh_account_token` returns `None` (RT expired) → `aq.result = Err("refresh token expired")` before `continue;` | AC-30 | — |
 | FT-20 | `should_refresh()` returns `false` for owned account with `is_occupied_elsewhere == true` | AC-31 | — |
+| FT-21 | `apply_refresh` trace emits `reason: cached-expired` (not `reason: ok`) for owned+cached+expired account | Algorithm | — |
 
 ### Test Case Index
 
@@ -52,9 +53,9 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-18 | After refresh, `aq.account` re-populated via `fetch_oauth_account(new_token)` | AC-27 | BUG-171 MRE |
 | FT-19 | `refresh_account_token` returns `None` → `aq.result = Err("refresh token expired")` (BUG-297 MRE) | AC-30 | BUG-297 MRE |
 | FT-20 | `should_refresh()` returns `false` for owned account with `is_occupied_elsewhere == true` (BUG-303 MRE) | AC-31 | G2 Occupancy Guard |
-| FT-20 | `should_refresh()` returns `false` for owned account with `is_occupied_elsewhere == true` (BUG-303 MRE) | AC-31 | G2 Occupancy Guard |
+| FT-21 | `apply_refresh` trace emits `reason: cached-expired` (not `reason: ok`) for owned+cached+expired account (BUG-298 MRE) | Algorithm | BUG-298 MRE |
 
-**Total:** 20 FT cases
+**Total:** 21 FT cases
 
 ---
 
@@ -280,3 +281,14 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Source fn:** `mre_bug303_should_refresh_false_for_occupied_elsewhere` (in `src/usage/refresh_predicate.rs` `#[cfg(test)]` module)
 - **Note:** BUG-303 MRE (Critical). Before the fix, G2 at `refresh_predicate.rs:32` only checked `!aq.is_owned`, allowing `should_refresh` to return `true` for owned+occupied accounts. Refreshing an occupied account writes new `accessToken`/`refreshToken` to disk while the other machine is actively using those credentials, invalidating its live session. Fix: `if !aq.is_owned || aq.is_occupied_elsewhere { return false; }`. Mirrors `ft06_should_refresh_false_when_not_owned` — same file, same `#[cfg(test)]` block, occupancy variant. This tests the predicate gate; `apply_refresh` never reaches the refresh body when `should_refresh` returns `false`.
 - **Source:** [017_token_refresh.md AC-31](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-21: `apply_refresh` trace emits `reason: cached-expired` (not `reason: ok`) for owned+cached+expired account (BUG-298 MRE)
+
+- **Given:** One `AccountQuota` with `is_owned = true`, `cached = true`, `result = Ok(cached_data)` (cache fallback converted Err→Ok), and `expires_at_ms = 0` (expired — BUG-255 guard fires). `apply_refresh` is called with `trace = true`.
+- **When:** The trace reason expression in `refresh.rs` evaluates for this account. The BUG-255 guard (`aq.cached && expired`) causes `should_retry = true`.
+- **Then:** Stderr contains `reason: cached-expired`. Stderr does NOT contain `reason: ok`. The `else if aq.cached { "cached-expired" }` branch fires before `aq.result.as_ref().err()` — which would return `None` for `Ok(cached_data)` and produce the misleading constant `"ok"`.
+- **Source fn:** `mre_bug298_apply_refresh_trace_reason_cached_expired` (in `src/usage/refresh_tests.rs`)
+- **Note:** Fix for BUG-298. Root cause: `fetch.rs:229-240` cache fallback converts Err→Ok and sets `aq.cached=true`, making `aq.result.err()` always `None`. The original reason expression `map_or("ok", ...)` on that `None` produced the constant `"ok"` for all cached+owned accounts regardless of triggering cause. The fix adds an explicit branch ordered before the `err()`-based path: not-owned → `"not owned"`, owned+cached → `"cached-expired"`, owned+live → error string or `"ok"`.
+- **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)

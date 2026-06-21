@@ -1,8 +1,8 @@
 # Group :: 3. Fetch Behavior
 
-**Parameters:** `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::`
+**Parameters:** `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::`, `solo::`
 **Pattern:** Per-invocation fetch control
-**Purpose:** Controls fetch behavior across quota, inspection, and switch commands — token refresh on auth error or locally-expired credentials, continuous monitor loop configuration, and isolated subprocess setup.
+**Purpose:** Controls fetch behavior across quota, inspection, and switch commands — token refresh on auth error or locally-expired credentials, continuous monitor loop configuration, isolated subprocess setup, and token conservation mode.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -14,12 +14,13 @@
 | [`touch::`](../param/034_touch.md) | `bool` | `1` | Activate idle 5h windows via isolated subprocess |
 | [`imodel::`](../param/035_imodel.md) | `enum` | `auto` | Model for isolated subprocesses: `auto` (haiku by default; sonnet when `son_idle=true`), `sonnet`, `opus`, `haiku`, `keep` |
 | [`effort::`](../param/036_effort.md) | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (`low` for any model; no flag for haiku/keep), `low`, `normal`, `high`, `max` |
+| [`solo::`](../param/060_solo.md) | `bool` | `0` | Token conservation: restrict all credential-consuming operations to the current+owned account; others use `approximate_quota()` |
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | All 8 params |
+| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | All 9 params |
 | 2 | [`.account.use`](../command/001_account.md#command--5-accountuse) | `trace::`, `touch::`, `imodel::`, `effort::` |
 | 3 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | `refresh::`, `trace::` |
 
@@ -43,7 +44,7 @@ clp .usage
 
 > "Does parameter X control **how commands fetch remote data** (retry strategy, iteration mode, or isolated subprocess configuration)?"
 
-All 8 members pass: `refresh::` (retry strategy on auth error or locally-expired token), `live::` (iteration mode), `interval::` (loop cycle duration), `jitter::` (loop timing variance), `trace::` (diagnostic output during fetch operations), `touch::` (active-window extension strategy), `imodel::` (subprocess model configuration), `effort::` (subprocess effort configuration). `format::` fails (output serialisation, not fetch strategy) and is correctly excluded.
+All 9 members pass: `refresh::` (retry strategy on auth error or locally-expired token), `live::` (iteration mode), `interval::` (loop cycle duration), `jitter::` (loop timing variance), `trace::` (diagnostic output during fetch operations), `touch::` (active-window extension strategy), `imodel::` (subprocess model configuration), `effort::` (subprocess effort configuration), `solo::` (token conservation — restricts which accounts receive live fetch). `format::` fails (output serialisation, not fetch strategy) and is correctly excluded.
 
 **Invariants**
 

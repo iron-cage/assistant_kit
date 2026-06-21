@@ -18,6 +18,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 | FT-10 | `.account.save` (no `name::`) — `oauthAccount.emailAddress` present, overrides stale `_active` marker (BUG-212) | AC-08 (002) | Integration (BUG-212) |
 | FT-11 | `other_machines_active()` returns other machines' account names, excludes own marker | AC-05 | Unit |
 | FT-12 | `other_machines_active()` returns empty HashSet when only own marker or empty store | AC-05 | Unit |
+| FT-13 | `.usage` sessions table renders `_active_*` markers as `{user}@{host}` → account rows | AC-33 (009) | Integration (→ 009) |
 
 ### Test Case Index
 
@@ -35,8 +36,9 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 | FT-10 | .account.save uses `oauthAccount.emailAddress` when present, ignores stale `_active` marker | AC-08 (002) | Name Resolution |
 | FT-11 | other_machines_active returns other machines' names, excludes own marker | AC-05 | Unit |
 | FT-12 | other_machines_active returns empty HashSet when only own marker or empty store | AC-05 | Unit |
+| FT-13 | `.usage` sessions table renders `_active_*` markers as session identity → account rows | AC-33 (009) | Integration (→ 009) |
 
-**Total:** 12 FT cases
+**Total:** 13 FT cases
 
 ---
 
@@ -172,3 +174,15 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Note:** Case A verifies the own-marker exclusion filter. Case B verifies graceful empty-directory handling. Both are covered in the same test function.
 - **Source fn:** `test_ft12_025_other_machines_active_empty_when_only_own` (in `claude_profile_core/tests/account_test.rs`)
 - **Source:** [feature/025_per_machine_active_marker.md AC-05](../../../docs/feature/025_per_machine_active_marker.md)
+
+---
+
+### FT-13: `.usage` sessions table renders `_active_*` markers as session identity → account rows
+
+- **Given:** A credential store with 3 `_active_*` marker files: `_active_w003_user1` containing `"alice@test.com"`, `_active_w004_user2` containing `"bob@test.com"`, and the current machine's own marker (as returned by `active_marker_filename()`) containing `"own@test.com"`. All three accounts exist in the credential store with valid quota data.
+- **When:** `clp .usage` (default — `who::` auto behavior triggers because >1 marker exists)
+- **Then:** Exits 0. Output includes a sessions table after the footer. The table has columns `Session` and `Account`. Each `_active_*` marker is rendered as a row: `Session` = `{user}@{host}` (parsed from filename `_active_{host}_{user}`), `Account` = file content (the account name). The current machine's own row is marked with `✓`. All three rows appear.
+- **Exit:** 0
+- **Note:** Cross-feature integration: this test validates Feature 025's `_active_*` marker data as consumed by Feature 009's sessions table (AC-33). The data source (`other_machines_active()` + own marker) is Feature 025's responsibility; the rendering is Feature 009's.
+- **Source fn:** `ft13_025_sessions_table_parses_marker_identity_from_filename` (in `src/usage/render_tests.rs`)
+- **Source:** [feature/009_token_usage.md AC-33](../../../docs/feature/009_token_usage.md), [feature/025_per_machine_active_marker.md AC-05](../../../docs/feature/025_per_machine_active_marker.md)

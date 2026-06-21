@@ -248,6 +248,10 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "for", Kind::String ).with_description( "Target identity as USER@MACHINE for assign::1 (default: current $USER@hostname)" ),
       // Rotation param (Feature 038)
       reg_arg_opt( "rotate", Kind::Integer ).with_description( "Switch to the → winner after rendering the quota table (0 = off, default; 1 = on); mutually exclusive with live::1" ),
+      // Sessions table visibility (Plan 022)
+      reg_arg_opt( "who",  Kind::Integer ).with_description( "Sessions table: auto (default — shown when >1 active marker), 0 = suppress, 1 = force on" ),
+      // Token conservation (TSK-314)
+      reg_arg_opt( "solo", Kind::Integer ).with_description( "token conservation: restrict fetch to current+owned account only (0 = off, default; 1 = on)" ),
     ],
     Box::new( usage_routine          ) );
 }

@@ -262,6 +262,14 @@ pub( crate ) struct UsageParams
   pub( crate ) rotate    : bool,
   /// When true, bypass the G5 ownership gate on the rotate path (and G8 on unclaim).
   pub( crate ) force     : bool,
+  // ── Sessions table (Plan 022) ──────────────────────────────────────────────
+  /// Controls sessions table visibility: `None` = auto (shown when >1 `_active_*` marker),
+  /// `Some(true)` = force on, `Some(false)` = suppress.
+  pub( crate ) who       : Option< bool >,
+  // ── Token conservation (TSK-314) ──────────────────────────────────────────
+  /// When true, restrict all fetch/refresh/touch operations to the current+owned account.
+  /// All other accounts use approximated historical data from the quota cache.
+  pub( crate ) solo      : bool,
 }
 
 // ── Output format ─────────────────────────────────────────────────────────────

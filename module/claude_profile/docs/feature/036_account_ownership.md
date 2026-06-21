@@ -98,12 +98,14 @@ An account is "owned by this machine" when: (a) owner is empty or absent (no enf
 | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | `resolve_hostname()` — shared fallback chain for `current_identity()` |
 | [029_account_host_metadata.md](029_account_host_metadata.md) | `{name}.json` structure — `owner` field extends the same file; `host::` is display label, not ownership |
 | [033_quota_cache.md](033_quota_cache.md) | G1 non-owned path uses quota cache as primary source; same display as cache-fallback |
+| [040_quota_measurement_history.md](040_quota_measurement_history.md) | Non-owned accounts skip history append (G1 gate) |
 
 ### Parameters
 
 | File | Relationship |
 |------|--------------|
 | [cli/param/058_force.md](../cli/param/058_force.md) | `force::` — bypass G5–G8 ownership enforcement on mutation commands |
+| [cli/param/060_solo.md](../cli/param/060_solo.md) | `solo::` — extends G1/G2/G4 with `is_current` check; non-current+owned accounts use `approximate_quota()` instead of live fetch |
 
 ### Commands
 
