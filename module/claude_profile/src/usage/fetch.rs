@@ -62,6 +62,7 @@ pub( crate ) fn fetch_quota_for_list(
   live_creds_file  : &std::path::Path,
   stagger          : bool,
   trace            : bool,
+  solo             : bool,
 ) -> Vec< AccountQuota >
 {
   // Read the live session token once (graceful degradation on any error).
@@ -140,6 +141,24 @@ pub( crate ) fn fetch_quota_for_list(
       read_token( credential_store, &acct.name )
         .is_ok_and( |stored| stored == *live )
     } );
+
+    // Solo gate: skip HTTP for non-current accounts when solo::1 — use cached/approximated data.
+    // Fires after G1 (non-owned already handled above) and after is_current is resolved.
+    // Pitfall: is_current requires a token read, but no HTTP is attempted; the read here is
+    //   token-comparison only, not credential-consuming in the network sense.
+    if solo && !is_current
+    {
+      let age_hint = claude_profile_core::account::read_quota_cache( credential_store, &acct.name )
+        .map_or( 0, |e| cache_age_from_fetched_at( &e.fetched_at ) );
+      if trace
+      {
+        eprintln!( "[trace] fetch  {}  solo-skip: approximated (age: {}s)", acct.name, age_hint );
+      }
+      let aq = approximate_quota( acct, credential_store, is_current, occupied_elsewhere.contains( &acct.name ), now_secs );
+      results.push( aq );
+      continue;
+    }
+
     // Fix(BUG-233): skip both API calls for locally-expired tokens — guaranteed 401 otherwise.
     // Root cause: no pre-flight expiry check; both thread spawn + main-thread HTTP always fired.
     // Pitfall: expires_at_ms is in milliseconds; now_secs is in seconds — divide before comparing.
@@ -224,6 +243,16 @@ pub( crate ) fn fetch_quota_for_list(
         let d7 = data.seven_day.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
         let sn = data.seven_day_sonnet.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
         claude_profile_core::account::write_quota_cache( credential_store, &acct.name, h5, d7, sn );
+        // Feature 040: append measurement to history ring buffer (AC-01).
+        {
+          let now_secs = std::time::SystemTime::now()
+            .duration_since( std::time::UNIX_EPOCH )
+            .map_or( 0, |d| d.as_secs() );
+          let hh5 = data.five_hour.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref().unwrap_or( "" ) ) );
+          let hd7 = data.seven_day.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref().unwrap_or( "" ) ) );
+          let hsn = data.seven_day_sonnet.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref().unwrap_or( "" ) ) );
+          claude_profile_core::account::write_history_entry( credential_store, &acct.name, now_secs, hh5, hd7, hsn );
+        }
         ( result, false, None )
       }
       // Fix(BUG-296): auth errors (401, 403) must not fall back to cache — they indicate
@@ -237,12 +266,60 @@ pub( crate ) fn fetch_quota_for_list(
         if let Some( entry ) = claude_profile_core::account::read_quota_cache( credential_store, &acct.name )
         {
           let age = cache_age_from_fetched_at( &entry.fetched_at );
-          let data = claude_quota::OauthUsageData
+          let mut data = claude_quota::OauthUsageData
           {
             five_hour        : entry.five_hour.map( |( u, r )| claude_quota::PeriodUsage { utilization : u, resets_at : r } ),
             seven_day        : entry.seven_day.map( |( u, r )| claude_quota::PeriodUsage { utilization : u, resets_at : r } ),
             seven_day_sonnet : entry.seven_day_sonnet.map( |( u, r )| claude_quota::PeriodUsage { utilization : u, resets_at : r } ),
           };
+          // Feature 040: approximate utilization from history when cache fallback is used (AC-04, AC-05).
+          let history = claude_profile_core::account::read_history( credential_store, &acct.name );
+          if history.len() >= 2
+          {
+            let now_secs = std::time::SystemTime::now()
+              .duration_since( std::time::UNIX_EPOCH )
+              .map_or( 0, |d| d.as_secs() );
+            // Approximate each period independently (AC-05).
+            if let Some( ref mut fh ) = data.five_hour
+            {
+              let pts : Vec< ( u64, f64 ) > = history.iter()
+                .filter_map( |m| m.h5.as_ref().map( |( u, _ )| ( m.t, *u ) ) )
+                .collect();
+              let resets = history.iter().rev()
+                .find_map( |m| m.h5.as_ref().map( |( _, r )| r.as_str() ) )
+                .and_then( claude_quota::iso_to_unix_secs );
+              if let Some( v ) = super::approx::approximate_utilization( &pts, resets, 18000, now_secs )
+              {
+                fh.utilization = v;
+              }
+            }
+            if let Some( ref mut d7 ) = data.seven_day
+            {
+              let pts : Vec< ( u64, f64 ) > = history.iter()
+                .filter_map( |m| m.d7.as_ref().map( |( u, _ )| ( m.t, *u ) ) )
+                .collect();
+              let resets = history.iter().rev()
+                .find_map( |m| m.d7.as_ref().map( |( _, r )| r.as_str() ) )
+                .and_then( claude_quota::iso_to_unix_secs );
+              if let Some( v ) = super::approx::approximate_utilization( &pts, resets, 604_800, now_secs )
+              {
+                d7.utilization = v;
+              }
+            }
+            if let Some( ref mut sn ) = data.seven_day_sonnet
+            {
+              let pts : Vec< ( u64, f64 ) > = history.iter()
+                .filter_map( |m| m.sn.as_ref().map( |( u, _ )| ( m.t, *u ) ) )
+                .collect();
+              let resets = history.iter().rev()
+                .find_map( |m| m.sn.as_ref().map( |( _, r )| r.as_str() ) )
+                .and_then( claude_quota::iso_to_unix_secs );
+              if let Some( v ) = super::approx::approximate_utilization( &pts, resets, 604_800, now_secs )
+              {
+                sn.utilization = v;
+              }
+            }
+          }
           ( Ok( data ), true, Some( age ) )
         }
         else
@@ -286,6 +363,7 @@ pub( crate ) fn fetch_all_quota(
   live_creds_file  : &std::path::Path,
   stagger          : bool,
   trace            : bool,
+  solo             : bool,
 ) -> Result< Vec< AccountQuota >, ErrorData >
 {
   let accounts = crate::account::list( credential_store )
@@ -293,7 +371,7 @@ pub( crate ) fn fetch_all_quota(
       ErrorCode::InternalError,
       format!( "cannot read credential store: {e}" ),
     ) )?;
-  Ok( fetch_quota_for_list( &accounts, credential_store, live_creds_file, stagger, trace ) )
+  Ok( fetch_quota_for_list( &accounts, credential_store, live_creds_file, stagger, trace, solo ) )
 }
 
 /// Prepend a synthetic current-session row when no stored account matches the live token.
@@ -346,6 +424,107 @@ fn cache_age_from_fetched_at( fetched_at : &str ) -> u64
   let now = std::time::SystemTime::now().duration_since( std::time::UNIX_EPOCH ).unwrap_or_default().as_secs();
   let then = claude_profile_core::account::parse_iso_utc_secs( fetched_at ).unwrap_or( now );
   now.saturating_sub( then )
+}
+
+// ── Solo-gate approximation helper ───────────────────────────────────────────
+
+/// Return cache-backed `AccountQuota` for an account bypassed by the solo gate.
+///
+/// Reads quota cache and history from the credential store, runs polynomial
+/// approximation (Feature 040) for each period independently when ≥2 history
+/// entries exist, and returns `AccountQuota` with `cached=true`.
+/// When no cache entry exists the result field is `Err("no cache")`.
+///
+/// This is the sole permitted source of non-live data when `solo::1` is active —
+/// no caller may read cache files directly for solo-skipped accounts.
+fn approximate_quota(
+  acct                  : &crate::account::Account,
+  credential_store      : &std::path::Path,
+  is_current            : bool,
+  is_occupied_elsewhere : bool,
+  now_secs              : u64,
+) -> AccountQuota
+{
+  let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
+  let renewal_at     = read_renewal_at( credential_store, &acct.name );
+  let cache          = claude_profile_core::account::read_quota_cache( credential_store, &acct.name );
+  let owner          = claude_profile_core::account::read_owner( credential_store, &acct.name );
+  let ( result, cached, cache_age_secs ) = match cache
+  {
+    Some( entry ) =>
+    {
+      let age  = cache_age_from_fetched_at( &entry.fetched_at );
+      let mut data = claude_quota::OauthUsageData
+      {
+        five_hour        : entry.five_hour.map( |( u, r )| claude_quota::PeriodUsage { utilization : u, resets_at : r } ),
+        seven_day        : entry.seven_day.map( |( u, r )| claude_quota::PeriodUsage { utilization : u, resets_at : r } ),
+        seven_day_sonnet : entry.seven_day_sonnet.map( |( u, r )| claude_quota::PeriodUsage { utilization : u, resets_at : r } ),
+      };
+      // Feature 040: apply history polynomial approximation (same as cache-fallback path).
+      let history = claude_profile_core::account::read_history( credential_store, &acct.name );
+      if history.len() >= 2
+      {
+        if let Some( ref mut fh ) = data.five_hour
+        {
+          let pts : Vec< ( u64, f64 ) > = history.iter()
+            .filter_map( |m| m.h5.as_ref().map( |( u, _ )| ( m.t, *u ) ) )
+            .collect();
+          let resets = history.iter().rev()
+            .find_map( |m| m.h5.as_ref().map( |( _, r )| r.as_str() ) )
+            .and_then( claude_quota::iso_to_unix_secs );
+          if let Some( v ) = super::approx::approximate_utilization( &pts, resets, 18000, now_secs )
+          {
+            fh.utilization = v;
+          }
+        }
+        if let Some( ref mut d7 ) = data.seven_day
+        {
+          let pts : Vec< ( u64, f64 ) > = history.iter()
+            .filter_map( |m| m.d7.as_ref().map( |( u, _ )| ( m.t, *u ) ) )
+            .collect();
+          let resets = history.iter().rev()
+            .find_map( |m| m.d7.as_ref().map( |( _, r )| r.as_str() ) )
+            .and_then( claude_quota::iso_to_unix_secs );
+          if let Some( v ) = super::approx::approximate_utilization( &pts, resets, 604_800, now_secs )
+          {
+            d7.utilization = v;
+          }
+        }
+        if let Some( ref mut sn ) = data.seven_day_sonnet
+        {
+          let pts : Vec< ( u64, f64 ) > = history.iter()
+            .filter_map( |m| m.sn.as_ref().map( |( u, _ )| ( m.t, *u ) ) )
+            .collect();
+          let resets = history.iter().rev()
+            .find_map( |m| m.sn.as_ref().map( |( _, r )| r.as_str() ) )
+            .and_then( claude_quota::iso_to_unix_secs );
+          if let Some( v ) = super::approx::approximate_utilization( &pts, resets, 604_800, now_secs )
+          {
+            sn.utilization = v;
+          }
+        }
+      }
+      ( Ok( data ), true, Some( age ) )
+    }
+    None => ( Err( "no cache".to_string() ), false, None ),
+  };
+  AccountQuota
+  {
+    name                  : acct.name.clone(),
+    is_current,
+    is_active             : acct.is_active,
+    is_occupied_elsewhere,
+    expires_at_ms         : acct.expires_at_ms,
+    result,
+    account               : None,
+    host,
+    role,
+    renewal_at,
+    cached,
+    cache_age_secs,
+    is_owned              : true,
+    owner,
+  }
 }
 
 // ── Profile metadata reader ───────────────────────────────────────────────────
@@ -950,7 +1129,7 @@ mod tests
     // live_creds_file absent → graceful degradation; is_current=false for all accounts.
     let absent_live = store.path().join( ".absent_credentials.json" );
 
-    let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false );
+    let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
 
     assert_eq!( results.len(), 1, "FT-04: must return exactly 1 AccountQuota for 1 account" );
     let aq = &results[ 0 ];
@@ -1016,7 +1195,7 @@ mod tests
     } ];
 
     let absent_live = store.path().join( ".absent_credentials.json" );
-    let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false );
+    let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
 
     assert_eq!( results.len(), 1, "CC-7: must return exactly 1 AccountQuota" );
     let aq = &results[ 0 ];
@@ -1030,6 +1209,242 @@ mod tests
     assert!(
       err.contains( "not owned" ),
       "CC-7: error message must contain 'not owned'; got: {err}",
+    );
+  }
+
+  // ── Feature 040: history pipeline tests ────────────────────────────────────
+
+  /// FT-03 — Cache-fallback path does NOT write a new history entry.
+  ///
+  /// A transient expired-token error triggers cache-fallback (not 401/403).
+  /// History is only appended on the success arm — the fallback arm must leave
+  /// the ring buffer unchanged.
+  #[ test ]
+  fn ft03_history_skips_cached_fallback()
+  {
+    let store = tempfile::TempDir::new().unwrap();
+
+    // Pre-write cache with one existing history entry (object-per-entry format).
+    let meta = serde_json::json!(
+    {
+      "cache" :
+      {
+        "fetched_at" : "2026-06-01T10:00:00Z",
+        "status"     : "ok",
+        "five_hour"  : { "left_pct" : 60.0 },
+        "history"    :
+        [
+          { "t" : 1_748_000_000_u64, "h5" : [ 60.0, "" ], "d7" : null, "sn" : null }
+        ]
+      }
+    } );
+    std::fs::write(
+      store.path().join( "alice@test.com.json" ),
+      serde_json::to_string_pretty( &meta ).unwrap() + "\n",
+    ).unwrap();
+
+    // Expired token (expiresAt=1ms) — triggers "token expired (local)" error,
+    // which is not 401/403 and goes to the cache-fallback arm.
+    std::fs::write(
+      store.path().join( "alice@test.com.credentials.json" ),
+      r#"{"accessToken":"tok","expiresAt":1}"#,
+    ).unwrap();
+
+    let accounts = vec![ crate::account::Account
+    {
+      name              : "alice@test.com".to_string(),
+      subscription_type : "pro".to_string(),
+      rate_limit_tier   : String::new(),
+      expires_at_ms     : 1,
+      is_active         : false,
+      email             : String::new(),
+      display_name      : String::new(),
+      role              : String::new(),
+      billing           : String::new(),
+      model             : String::new(),
+      tagged_id         : String::new(),
+      uuid              : String::new(),
+      capabilities      : Vec::new(),
+      organization_uuid : String::new(),
+      organization_name : String::new(),
+      organization_role : String::new(),
+      workspace_uuid    : String::new(),
+      workspace_name    : String::new(),
+      profile_host      : String::new(),
+      profile_role      : String::new(),
+    } ];
+
+    let absent_live = store.path().join( ".absent_credentials.json" );
+    let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+
+    // Pipeline must have used cache-fallback.
+    assert_eq!( results.len(), 1 );
+    assert!( results[ 0 ].cached, "FT-03: result must be cached" );
+
+    // History must still have exactly 1 entry — fallback arm must not append.
+    let text = std::fs::read_to_string( store.path().join( "alice@test.com.json" ) ).unwrap();
+    let json : serde_json::Value = serde_json::from_str( &text ).unwrap();
+    let history_len = json[ "cache" ][ "history" ].as_array().map_or( 0, Vec::len );
+    assert_eq!(
+      history_len, 1,
+      "FT-03: cache-fallback must not append new history entry; got {history_len} entries",
+    );
+  }
+
+  /// FT-05 — Approximation is independent per period: absent `sn` history entries leave sn unaffected.
+  ///
+  /// History has 2 h5 entries (both utilization=70.0, slope=0 → extrapolation=70.0).
+  /// No sn entries. Cache h5=50.0, sn=50.0.
+  /// After cache-fallback + approximation: h5 becomes 70.0, sn stays 50.0.
+  #[ test ]
+  fn ft05_approx_independent_periods_absent_sn_unaffected()
+  {
+    let store = tempfile::TempDir::new().unwrap();
+
+    // History: 2 h5 entries at 70.0, no sn entries.
+    // Both h5 at 70.0 → linear slope=0 → extrapolation=70.0 regardless of now_secs.
+    // Cache: five_hour=50.0, seven_day_sonnet=50.0.
+    let meta = serde_json::json!(
+    {
+      "cache" :
+      {
+        "fetched_at"       : "2026-06-01T10:00:00Z",
+        "status"           : "ok",
+        "five_hour"        : { "left_pct" : 50.0 },
+        "seven_day_sonnet" : { "left_pct" : 50.0 },
+        "history" :
+        [
+          { "t" : 1_748_000_000_u64, "h5" : [ 70.0, "" ], "d7" : null, "sn" : null },
+          { "t" : 1_748_003_600_u64, "h5" : [ 70.0, "" ], "d7" : null, "sn" : null }
+        ]
+      }
+    } );
+    std::fs::write(
+      store.path().join( "alice@test.com.json" ),
+      serde_json::to_string_pretty( &meta ).unwrap() + "\n",
+    ).unwrap();
+
+    std::fs::write(
+      store.path().join( "alice@test.com.credentials.json" ),
+      r#"{"accessToken":"tok","expiresAt":1}"#,
+    ).unwrap();
+
+    let accounts = vec![ crate::account::Account
+    {
+      name              : "alice@test.com".to_string(),
+      subscription_type : "pro".to_string(),
+      rate_limit_tier   : String::new(),
+      expires_at_ms     : 1,
+      is_active         : false,
+      email             : String::new(),
+      display_name      : String::new(),
+      role              : String::new(),
+      billing           : String::new(),
+      model             : String::new(),
+      tagged_id         : String::new(),
+      uuid              : String::new(),
+      capabilities      : Vec::new(),
+      organization_uuid : String::new(),
+      organization_name : String::new(),
+      organization_role : String::new(),
+      workspace_uuid    : String::new(),
+      workspace_name    : String::new(),
+      profile_host      : String::new(),
+      profile_role      : String::new(),
+    } ];
+
+    let absent_live = store.path().join( ".absent_credentials.json" );
+    let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+
+    assert_eq!( results.len(), 1 );
+    let aq = &results[ 0 ];
+    assert!( aq.cached, "FT-05: must be cached result" );
+
+    let data = aq.result.as_ref().expect( "FT-05: result must be Ok(cached)" );
+    let h5 = data.five_hour.as_ref().expect( "FT-05: five_hour must be Some" );
+    let sn = data.seven_day_sonnet.as_ref().expect( "FT-05: seven_day_sonnet must be Some" );
+
+    // h5: 2 history points both at 70.0 → slope=0 → approx=70.0 (changed from 50.0 cache value).
+    assert!(
+      ( h5.utilization - 70.0 ).abs() < 1e-6,
+      "FT-05: h5.utilization must be 70.0 (approximated from 2 identical history points); got: {}", h5.utilization,
+    );
+    // sn: no history entries → approx returns None → sn.utilization unchanged at 50.0 (cache).
+    assert!(
+      ( sn.utilization - 50.0 ).abs() < 1e-6,
+      "FT-05: sn.utilization must remain 50.0 (no sn history; absent period unaffected); got: {}", sn.utilization,
+    );
+  }
+
+  /// FT-12 — Non-owned accounts do not append to history (AC-12).
+  ///
+  /// G1 gate intercepts non-owned accounts before the success arm, so
+  /// `write_history_entry` is never called for them.
+  #[ test ]
+  fn ft12_history_non_owned_skips_append()
+  {
+    let store = tempfile::TempDir::new().unwrap();
+
+    // Foreign-owned account with a quota cache but no history.
+    let meta = serde_json::json!(
+    {
+      "owner" : "other@remote",
+      "cache" :
+      {
+        "fetched_at" : "2026-06-01T10:00:00Z",
+        "status"     : "ok",
+        "five_hour"  : { "left_pct" : 60.0 }
+      }
+    } );
+    std::fs::write(
+      store.path().join( "alice@test.com.json" ),
+      serde_json::to_string_pretty( &meta ).unwrap() + "\n",
+    ).unwrap();
+
+    std::fs::write(
+      store.path().join( "alice@test.com.credentials.json" ),
+      r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
+    ).unwrap();
+
+    let accounts = vec![ crate::account::Account
+    {
+      name              : "alice@test.com".to_string(),
+      subscription_type : "pro".to_string(),
+      rate_limit_tier   : String::new(),
+      expires_at_ms     : u64::MAX / 2,
+      is_active         : false,
+      email             : String::new(),
+      display_name      : String::new(),
+      role              : String::new(),
+      billing           : String::new(),
+      model             : String::new(),
+      tagged_id         : String::new(),
+      uuid              : String::new(),
+      capabilities      : Vec::new(),
+      organization_uuid : String::new(),
+      organization_name : String::new(),
+      organization_role : String::new(),
+      workspace_uuid    : String::new(),
+      workspace_name    : String::new(),
+      profile_host      : String::new(),
+      profile_role      : String::new(),
+    } ];
+
+    let absent_live = store.path().join( ".absent_credentials.json" );
+    let results = fetch_quota_for_list( &accounts, store.path(), &absent_live, false, false, false );
+
+    // G1 gate must have fired.
+    assert_eq!( results.len(), 1 );
+    assert!( !results[ 0 ].is_owned, "FT-12: G1 gate must set is_owned=false" );
+
+    // No history key must have been written to {name}.json.
+    let text = std::fs::read_to_string( store.path().join( "alice@test.com.json" ) ).unwrap();
+    let json : serde_json::Value = serde_json::from_str( &text ).unwrap();
+    let has_history = json[ "cache" ].as_object()
+      .is_some_and( |c| c.contains_key( "history" ) );
+    assert!(
+      !has_history,
+      "FT-12: G1-gated non-owned account must not have 'history' written to account json",
     );
   }
 }

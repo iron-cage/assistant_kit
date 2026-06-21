@@ -57,11 +57,11 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 ### Recommendation
 
-`sort::` drives the footer recommendation — the top eligible account in the sort order is shown in the footer's `Next (strategy):` line. No separate `next::` parameter exists. The flag column shows `✓`, `*`, `@`, or blank.
+`sort::` drives the footer recommendation — the top eligible account in the sort order is shown in the footer's `Next (<strategy>)` line. No separate `next::` parameter exists. The flag column shows `✓`, `*`, `@`, or blank.
 
 **Eligibility:** non-current, non-active, non-occupied, not h-exhausted (`5h Left > 15%`), not weekly-exhausted (`prefer_weekly > 5.0`), valid quota data, `expires_in_secs > 0`. When no eligible account exists, the footer recommendation line is omitted.
 
-**Footer:** The footer shows one recommendation line for the active `sort::` strategy (omitted when 0 or 1 valid accounts). Format: strategy name, account name, `→ Next` value (soonest strategic event), session model label. The renew footer uses the same `→ Next` format as the table column — `in {duration} +7d` (7d reset is soonest) or `in {duration} $ren` / `~in {duration} $ren` (renewal is soonest). The model label shows the session model after switching: `opus` when the account's `seven_day_sonnet` exists and `sonnet_left < 15%` (override fires); `sonnet` otherwise. See [009_token_usage.md AC-10](009_token_usage.md).
+**Footer:** The footer has two `·`-delimited, column-aligned lines (omitted when 0 or 1 valid accounts): (1) `Current · <name> · <model>/<effort> · N/N` — the `✓` account, session model/effort from `settings.json`, valid/total count; (2) `Next (<strategy>) · <name> · <model> · <metric>` — the recommendation for the active strategy. The metric uses the same `→ Next` format as the table column — `in {duration} +7d` (7d reset is soonest) or `in {duration} $ren` / `~in {duration} $ren` (renewal is soonest). The model label shows the session model after switching: `opus` when the account's `seven_day_sonnet` exists and `sonnet_left < 15%` (override fires); `sonnet` otherwise. Column padding aligns `·` delimiters vertically across both lines. See [009_token_usage.md AC-10](009_token_usage.md).
 
 ### Acceptance Criteria
 
@@ -73,7 +73,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 - **AC-06**: `prefer::` affects `sort::renew` (secondary tiebreak key).
 - **AC-07**: Invalid `sort::` value exits 1 with an error naming the valid values (`name`, `renew`, `renews`).
 - **AC-08**: Invalid `prefer::` value exits 1 with an error naming the valid values.
-- **AC-09**: `sort::` drives both row ordering and the footer recommendation. The top eligible account in the active sort order is shown in the footer's `Next (strategy):` line. The flag column shows `✓`, `*`, `@`, or blank — no `→` marker. The footer shows one recommendation line for the active strategy. No separate `next::` parameter exists.
+- **AC-09**: `sort::` drives both row ordering and the footer recommendation. The top eligible account in the active sort order is shown in the footer's `Next (<strategy>)` line. The flag column shows `✓`, `*`, `@`, or blank — no `→` marker. The footer has two `·`-delimited lines: `Current` (identifying the `✓` account) and `Next (<strategy>)` (recommendation). No separate `next::` parameter exists.
 - **AC-10**: `sort::` and `desc::` work correctly with `live::1` — sort order is stable within each refresh cycle. Status group order is fixed across cycles.
 - **AC-11**: `format::json` output is NOT affected by `sort::` or `desc::` — `render_json` preserves the input slice order without re-sorting (alphabetical in practice; stable schema for pipeline consumers).
 - **AC-12**: Four-group status partition is applied universally before any sort strategy. Accounts are partitioned into: 🟢 Green (`5h Left > 15%` and `7d Left > 5%`), 🟡 h-exhausted (`5h Left ≤ 15%` and `7d Left > 5%`), 🟡 weekly-exhausted (`5h Left > 15%` and `7d Left ≤ 5%`), 🔴 Red (both exhausted or error). Sort strategy applies within each status group. See [dictionary](../cli/002_dictionary.md#status-groups).

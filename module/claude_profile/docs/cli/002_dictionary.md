@@ -43,6 +43,10 @@
 
 Group 2 ranks above group 3 because 5h exhaustion recovers in hours; 7d exhaustion takes days. See [sort::](param/025_sort.md).
 
+### Operational Modes
+
+**solo mode** — Token conservation mode activated by `solo::1` on `.usage`. Restricts all credential-consuming operations (HTTP quota fetch, account metadata fetch, refresh subprocess, touch subprocess) to the account that is both current AND owned. All other accounts display approximated historical data via the dedicated `approximate_quota()` function — no direct cache file reads permitted. Controls token consumption only; display filters (`only_active::`, `count::`, `offset::`, etc.) remain fully independent. Mutually exclusive with `rotate::1`. See [param/060_solo.md](param/060_solo.md).
+
 ### Technical Terms
 
 **Atomic Switch** — Write-then-rename pattern used during account switching. Credentials are written to a `.json.tmp` file adjacent to the target, then renamed into place, ensuring the credential file is never partially written.

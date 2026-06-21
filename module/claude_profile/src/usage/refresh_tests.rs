@@ -60,7 +60,7 @@
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
     // Fix(BUG-297): 429+expired fires should_refresh → refresh_account_token returns None
     //   (no cred file) → result is now Err("refresh token expired"), not the original 429 error.
@@ -99,7 +99,7 @@
         owner                : String::new(),
       },
     ];
-    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     assert!( accounts[ 0 ].result.is_ok(), "Ok result must not be changed by apply_refresh" );
   }
 
@@ -131,7 +131,7 @@
         owner                : String::new(),
       },
     ];
-    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e == &err_msg ),
       "generic error must be unchanged; result: {:?}", accounts[ 0 ].result,
@@ -146,7 +146,7 @@
   {
     let store = TempDir::new().unwrap();
     let mut accounts : Vec< AccountQuota > = vec![];
-    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     assert!( accounts.is_empty(), "empty slice must remain empty" );
   }
 
@@ -179,7 +179,7 @@
         owner                : String::new(),
       },
     ];
-    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     // Fix(BUG-297): 401 fires should_refresh → refresh_account_token returns None
     //   (no cred file) → result is now Err("refresh token expired"), not the original 401 error.
     assert!(
@@ -216,7 +216,7 @@
         owner                : String::new(),
       },
     ];
-    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     // Fix(BUG-297): 403 fires should_refresh → refresh_account_token returns None
     //   (no cred file) → result is now Err("refresh token expired"), not the original 403 error.
     assert!(
@@ -310,7 +310,7 @@
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
     assert!( accounts[ 0 ].result.is_ok(), "Ok account must remain Ok" );
     // Fix(BUG-297): 429+expired and 401 both fire should_refresh → refresh_account_token
@@ -358,7 +358,7 @@
         owner                : String::new(),
       },
     ];
-    apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
   }
 
   // ── apply_refresh: lifecycle (Some(paths)) ──────────────────────────────────
@@ -416,7 +416,7 @@
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
     // Fix(BUG-297): switch_account fails (no cred file) → refresh_account_token returns None
     //   → result is now Err("refresh token expired"), not the original 401 error.
@@ -500,7 +500,7 @@
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
     // Fix(BUG-211): no switch_account in apply_refresh → live credentials file must NOT exist.
     assert!(
@@ -546,7 +546,7 @@
         owner                : String::new(),
       },
     ];
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     // Fix(BUG-297): switch_account fails (no cred file) → refresh_account_token returns None
     //   → result is now Err("refresh token expired"), not the original 429 error.
     assert!(
@@ -591,7 +591,7 @@
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
     // Fix(BUG-297): switch_account fails (no cred file) → refresh_account_token returns None
     //   → result is now Err("refresh token expired"), not the original 403 error.
@@ -640,7 +640,7 @@
         owner                : String::new(),
       },
     ];
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     // Fix(BUG-297): fs::copy fails (no .claude/ dir) → switch_account returns Err
     //   → refresh_account_token returns None → result is now Err("refresh token expired").
     assert!(
@@ -662,7 +662,7 @@
     let fake_home = TempDir::new().unwrap();
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
     let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → no loop body
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     assert!(
       !store.path().join( crate::account::active_marker_filename() ).exists(),
       "per-machine active marker must not be created when it was absent before apply_refresh",
@@ -701,7 +701,7 @@
       },
     ];
     // Must not panic — switch_account fails (no cred file), trace logs to stderr.
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
   }
 
   /// L7 — active marker with trailing newline is unchanged after `apply_refresh` (no restore).
@@ -717,7 +717,7 @@
     std::fs::write( store.path().join( crate::account::active_marker_filename() ), "alice@example.com\n" ).unwrap();
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
     let mut accounts : Vec< AccountQuota > = vec![];
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com\n",
@@ -738,7 +738,7 @@
     std::fs::write( store.path().join( crate::account::active_marker_filename() ), ws ).unwrap();
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
     let mut accounts : Vec< AccountQuota > = vec![];
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, ws,
@@ -756,7 +756,7 @@
     let store = TempDir::new().unwrap();
     std::fs::write( store.path().join( crate::account::active_marker_filename() ), "alice@example.com" ).unwrap();
     let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → no loop body
-    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com",
@@ -828,7 +828,7 @@
       },
     ];
     // Must not panic — switch_account succeeds; run_isolated invoked; fails fast (fake creds).
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
   }
 
   /// FT-04 — `apply_refresh`: 429 + non-expired local token → NOT retried, result unchanged.
@@ -861,7 +861,7 @@
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
@@ -903,7 +903,7 @@
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
     // Fix(BUG-297): no cred file → refresh_account_token returns None → result is now
     //   Err("refresh token expired"), not the original 429 error.
@@ -1029,7 +1029,7 @@
     ];
 
     // trace=true: Fix(BUG-211) — no restore switch_account; no [trace] restore line emitted.
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
     // Fix(BUG-211): no switch_account → live credentials file must NOT exist.
     assert!(
@@ -1182,7 +1182,7 @@
     use std::io::Read;
     let _lock = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut buf = gag::BufferRedirect::stderr().unwrap();
-    apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     let mut output = String::new();
     buf.read_to_string( &mut output ).unwrap();
 
@@ -1255,7 +1255,7 @@
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "refresh token expired" ) ),
@@ -1324,7 +1324,7 @@
     ];
 
     // Phase 1: apply_refresh → sets aq.result = Err("refresh token expired").
-    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
     assert!(
       accounts[ 0 ].result.is_err(),
@@ -1343,6 +1343,7 @@
       true,
       SubprocessModel::Auto,
       SubprocessEffort::Auto,
+      false,
     );
 
     let mut captured = String::new();
@@ -1355,6 +1356,127 @@
     assert!(
       !captured.contains( "run_isolated: invoking" ),
       "BUG-297 pipeline: apply_touch must NOT spawn subprocess after refresh None; got:\n{captured}",
+    );
+  }
+
+  // ── BUG-298 MRE: owned+cached trace reason must be "cached-expired", not "ok" ──
+
+  /// MRE for BUG-298: `apply_refresh` emits `reason: cached-expired` (not `reason: ok`) when
+  /// `aq.is_owned == true`, `aq.cached == true`, and `aq.result` is `Ok(cached_data)`.
+  ///
+  /// # Root Cause
+  /// `fetch.rs:229-240` cache fallback converts `Err→Ok` and sets `aq.cached = true`. The
+  /// original trace reason expression `aq.result.as_ref().err().map_or("ok", …)` calls `.err()`
+  /// on the now-`Ok` result — returning `None` — and produces the constant label `"ok"`. This is
+  /// misleading: the actual trigger is the BUG-255 guard (`aq.cached && expired`), not a healthy
+  /// fetch. A developer reading `reason: ok` cannot determine why refresh was attempted.
+  ///
+  /// # Why Not Caught
+  /// BUG-295 fixed the `!aq.is_owned` branch of the same expression but reviewed it in isolation.
+  /// The `aq.is_owned && aq.cached` case was not in scope for that fix and had no covering test.
+  /// BUG-255 added the cached+expired predicate without auditing downstream trace labels.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-298): `else if aq.cached { "cached-expired" }` branch added before the
+  /// `aq.result.err()` expression in the trace reason computation at `refresh.rs`.
+  ///
+  /// # Prevention
+  /// This test captures stderr from `apply_refresh(trace=true)` for an owned+cached+expired
+  /// account. Asserts `reason: cached-expired` present; `reason: ok` absent.
+  ///
+  /// # Pitfall
+  /// Hold `STDERR_LOCK` before `gag::BufferRedirect::stderr()` — concurrent gag captures corrupt
+  /// each other via the shared fd 2. Any trigger path that converts Err→Ok (cache, synthetic
+  /// data injection) must add its own reason branch before `aq.result.err()` at the trace site.
+  #[ doc = "bug_reproducer(BUG-298)" ]
+  #[ test ]
+  fn mre_bug298_apply_refresh_trace_reason_cached_expired()
+  {
+    let store       = TempDir::new().unwrap();
+    let stale_quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name                  : "cached-owned@box.pro".to_string(),
+        is_current            : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
+        expires_at_ms         : 0, // expired → BUG-255 guard fires → should_refresh=true
+        result                : Ok( stale_quota ), // cache fallback converted Err→Ok
+        account               : None,
+        host                  : String::new(),
+        role                  : String::new(),
+        renewal_at            : None,
+        cached                : true,  // cache masking active
+        cache_age_secs        : Some( 7200 ),
+        is_owned              : true,  // required: non-owned skips with "not owned"
+        owner                 : String::new(),
+      },
+    ];
+
+    use std::io::Read;
+    let _lock = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let mut buf = gag::BufferRedirect::stderr().unwrap();
+    apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
+    let mut output = String::new();
+    buf.read_to_string( &mut output ).unwrap();
+
+    assert!(
+      output.contains( "reason: cached-expired" ),
+      "BUG-298: trace must emit 'reason: cached-expired' for owned+cached+expired account; got: {output}",
+    );
+    assert!(
+      !output.contains( "reason: ok" ),
+      "BUG-298: trace must NOT emit 'reason: ok' for owned+cached account (misleading); got: {output}",
+    );
+  }
+
+  /// EC-7 (061): `apply_refresh` solo gate — non-current owned account is skipped with
+  /// `[trace] refresh  {name}  solo-skip` when `solo=true`.
+  ///
+  /// With `solo=true`, the solo gate fires before G2 (non-owned check) for any account
+  /// where `aq.is_current=false`. The account here is `is_owned=true` — without the solo
+  /// gate it would proceed to the `should_refresh` check. With `solo=true` it is skipped
+  /// immediately and the trace confirms the reason.
+  ///
+  /// Spec: [`tests/docs/cli/param/61_solo.md` EC-7]
+  #[ test ]
+  fn ec7_solo_gate_skips_non_current_with_trace()
+  {
+    use std::io::Read;
+
+    let store = TempDir::new().unwrap();
+    let mut accounts = vec![ AccountQuota
+    {
+      name                  : "noncurrent@example.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : true,
+      owner                 : String::new(),
+    } ];
+
+    let _lock = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let mut buf = gag::BufferRedirect::stderr().unwrap();
+    apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, true );
+    let mut output = String::new();
+    buf.read_to_string( &mut output ).unwrap();
+
+    assert!(
+      output.contains( "solo-skip" ),
+      "EC-7: solo gate must emit 'solo-skip' trace for non-current account; got: {output}",
+    );
+    assert!(
+      output.contains( "noncurrent@example.com" ),
+      "EC-7: trace must name the skipped account; got: {output}",
     );
   }
 

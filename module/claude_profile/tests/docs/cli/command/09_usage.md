@@ -16,8 +16,8 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-8 | Multiple accounts displayed in alphabetical order | Ordering |
 | IT-9 | Account with missing token file shows `—` with error reason | Error Inline |
 | IT-10 | Account with expired token shows `EXPIRED` in Expires column | Expires Column |
-| IT-11 | Recommended account appears in footer `Next:` line; no `→` in table rows | Recommendation |
-| IT-12 | Footer line shows valid count and recommended next account | Footer |
+| IT-11 | Recommended account appears in footer `Next (<strategy>)` line with `·` delimiter; no `→` in table rows | Recommendation |
+| IT-12 | Footer `Current` line shows `✓` account with `·`-delimited model and valid count | Footer |
 | IT-13 | `*` marks active account when it differs from the current account | Active Divergence |
 | IT-14 | When credentials file unreadable: no `✓`; `*` still marks active account | Active Divergence |
 | IT-15 | When current = active, only `✓` appears; no `*` on any row | Active Divergence |
@@ -42,7 +42,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-34 | `.usage.help` refresh description includes "401/403" but NOT "401/403/429" | Help Output |
 | IT-35 | `trace::1` with no-token account → stderr contains `[trace]` lines | Trace |
 | IT-36 | Empty store + `format::json` → output is `[]` | Output Format |
-| IT-37 | Single failed account → no "Valid:" footer line emitted | Footer |
+| IT-37 | Single failed account → no `Current` footer line emitted | Footer |
 | IT-38 | `.usage.help` shows `refresh::` default as `1` (enabled) | Help Output |
 | IT-39 | `.usage.help` refresh description mentions `429` and locally-expired case | Help Output |
 | IT-40 | Table header row contains `●` column label | Status Emoji |
@@ -82,6 +82,9 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-78 | `rotate::1` executes switch; output ends with `switched to '{name}'` | Rotate Param |
 | IT-79 | `rotate::1 sort::renews` uses the renews-strategy winner | Rotate Param |
 | IT-80 | `rotate::1 force::1` bypasses G5 gate; non-owned account eligible | Rotate Param |
+| IT-81 | `who::0` accepted; empty store exits 0 | Who Param |
+| IT-82 | `who::2` rejected; exit 1; error mentions valid values `0` and `1` | Who Param |
+| IT-83 | `.usage.help` lists `who` param with sessions table description | Help Output |
 
 ### Test Coverage Summary
 
@@ -104,7 +107,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Live Monitor: 2 tests (IT-22, IT-31)
 - Live Guards: 6 tests (IT-23, IT-24, IT-25, IT-27, IT-29, IT-30)
 - JSON Output: 1 test (IT-28)
-- Help Output: 8 tests (IT-32, IT-34, IT-38, IT-39, IT-50, IT-61, IT-64, IT-70)
+- Help Output: 9 tests (IT-32, IT-34, IT-38, IT-39, IT-50, IT-61, IT-64, IT-70, IT-83)
 - Trace: 1 test (IT-35)
 - Status Emoji: 3 tests (IT-40, IT-41, IT-42)
 - Sort Acceptance: 5 tests (IT-44, IT-45, IT-46, IT-47, IT-65)
@@ -121,8 +124,9 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Next Event Column: 1 test (IT-71)
 - Owner Column: 1 test (IT-74)
 - Rotate Param: 6 tests (IT-75, IT-76, IT-77, IT-78, IT-79, IT-80)
+- Who Param: 2 tests (IT-81, IT-82)
 
-**Total:** 87 spec entries (IT-43, IT-57, IT-59, IT-60, IT-73 removed — unit tests not observable via clp output); IT-65 added for `sort::next`; IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); IT-71–IT-72 added by Plan 012 (`→ Next` column and JSON new fields); IT-74 added by Feature 037 (Owner column default-visible in `.usage`); IT-75–IT-80 added by Feature 038 (`rotate::` parameter group); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/19_refresh.md`–`23_trace.md` (param EC edge cases, not command spec)
+**Total:** 90 spec entries (IT-43, IT-57, IT-59, IT-60, IT-73 removed — unit tests not observable via clp output); IT-65 added for `sort::next`; IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); IT-71–IT-72 added by Plan 012 (`→ Next` column and JSON new fields); IT-74 added by Feature 037 (Owner column default-visible in `.usage`); IT-75–IT-80 added by Feature 038 (`rotate::` parameter group); IT-81–IT-83 added by Plan 022 (`who::` parameter and sessions table); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/19_refresh.md`–`23_trace.md` (param EC edge cases, not command spec)
 
 ---
 
@@ -226,22 +230,22 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-11: Recommended account appears in footer `Next:` line; no `→` in table rows
+### IT-11: Recommended account appears in footer `Next (<strategy>)` line with `·` delimiter; no `→` in table rows
 
 - **Given:** Two accounts — one active with quota data, one non-active with valid token and quota data showing lower session usage than the active account.
 - **When:** `clp .usage`
-- **Then:** Stdout contains a footer line matching `Next` and the non-active account name. No table data row contains a bare `→` marker in the flag column. Exit 0.
+- **Then:** Stdout contains a `·`-delimited footer line matching `Next (renew) ·` and the non-active account name. No table data row contains a bare `→` marker in the flag column. Exit 0.
 - **Exit:** 0
 - **Live:** yes (requires real tokens for both accounts to return quota data)
 - **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
 
 ---
 
-### IT-12: Footer line shows valid count and recommended next account
+### IT-12: Footer `Current` line shows `✓` account with `·`-delimited model and valid count
 
 - **Given:** At least two accounts with valid tokens that return quota data.
 - **When:** `clp .usage`
-- **Then:** Stdout contains a footer line matching "Valid: N / M" and "Next:" with the recommended account name. Exit 0.
+- **Then:** Stdout contains a `·`-delimited footer line matching `Current · <name> · <model> · N/N` identifying the `✓` account, followed by a `Next (renew) ·` line with the recommended account. Exit 0.
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota headers)
 - **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
@@ -510,11 +514,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-37: Single failed account → no "Valid:" footer line emitted
+### IT-37: Single failed account → no `Current` footer line emitted
 
 - **Given:** One saved account whose credential file has no `accessToken` (quota fetch fails; `valid_count = 0`).
 - **When:** `clp .usage`
-- **Then:** Exits 0; stdout does NOT contain "Valid:" (footer is suppressed when `valid_count < 2`).
+- **Then:** Exits 0; stdout does NOT contain `Current ·` (footer is suppressed when `valid_count < 2`).
 - **Exit:** 0
 - **Source fn:** `it036_no_footer_when_no_valid_accounts`
 - **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
@@ -939,3 +943,33 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Live:** yes
 - **Source fn:** `it254_lim_it_rotate_force_bypasses_g5` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/038_usage_strategy_rotate.md AC-06](../../../../docs/feature/038_usage_strategy_rotate.md)
+
+---
+
+### IT-81: `who::0` accepted; empty store exits 0
+
+- **Given:** Empty credential store (no accounts, no `_active_*` markers).
+- **When:** `clp .usage who::0`
+- **Then:** Exits 0 with `(no accounts configured)`. The `who::0` parameter is accepted without error.
+- **Exit:** 0
+- **Source:** [cli/param/061_who.md](../../../../docs/cli/param/061_who.md)
+
+---
+
+### IT-82: `who::2` rejected; exit 1; error mentions valid values
+
+- **Given:** Any environment (empty credential store is sufficient).
+- **When:** `clp .usage who::2`
+- **Then:** Exits 1. Stderr contains error indicating `who::` must be `0` or `1`.
+- **Exit:** 1
+- **Source:** [cli/param/061_who.md](../../../../docs/cli/param/061_who.md)
+
+---
+
+### IT-83: `.usage.help` lists `who` param with sessions table description
+
+- **Given:** Any environment.
+- **When:** `clp .usage.help`
+- **Then:** Exits 0. Stdout contains `who` in the parameter listing. Description mentions sessions table visibility.
+- **Exit:** 0
+- **Source:** [cli/param/061_who.md](../../../../docs/cli/param/061_who.md)

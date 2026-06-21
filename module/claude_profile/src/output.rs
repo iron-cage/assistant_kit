@@ -115,8 +115,13 @@ pub fn format_duration_secs( secs : u64 ) -> String
 /// Returns `default` when absent; rejects non-`Value::Integer` values or integers outside
 /// `{0, 1}` with `ArgumentTypeMismatch`.
 ///
-/// Pitfall: params registered as `Kind::String` (e.g. `touch::`) deliver all values
-/// including `"0"` and `"1"` as `Value::String` — the integer arms handle `Kind::Integer` params.
+/// Pitfall: params registered as `Kind::String` (e.g. `touch::`, `only_next::`) deliver
+/// all values — including `"0"`, `"1"`, `"true"`, and `"false"` — as `Value::String`, so
+/// the `"true"`/`"false"` alias arms (lines 130-131) are only reachable for `Kind::String`
+/// params. For `Kind::Integer` params (e.g. `who::`, `rotate::`) the unilang routing layer
+/// calls `"true".parse::<i64>()` at framework level, which fails before this function is
+/// invoked — `"true"` is rejected with exit 1. Use `Kind::String` if you want "true"/"false"
+/// as accepted aliases; use `Kind::Integer` if you want hard integer-only enforcement.
 #[ inline ]
 pub(crate) fn parse_int_flag( cmd : &VerifiedCommand, name : &str, default : i64 ) -> Result< i64, ErrorData >
 {

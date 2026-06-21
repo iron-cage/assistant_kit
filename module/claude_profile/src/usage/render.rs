@@ -32,6 +32,8 @@ pub( crate ) fn render_text(
   cols           : &ColsVisibility,
   session_model  : Option< &str >,
   session_effort : Option< &str >,
+  store_path     : Option< &std::path::Path >,
+  who            : Option< bool >,
 ) -> String
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
@@ -219,11 +221,14 @@ pub( crate ) fn render_text(
   let table = Format::format( &TableFormatter::with_config( TableConfig::default().auto_wrap( false ) ), &view ).unwrap_or_default();
   let body  = format!( "Quota\n\n{table}\n" );
 
-  // Footer: shown only when ≥2 valid accounts (AC-09 from 020_usage_sort_strategies.md).
+  // Footer: shown only when ≥2 valid accounts (AC-10).
   let valid_count = accounts.iter().filter( |aq| aq.result.is_ok() ).count();
-  if valid_count < 2 { return body; }
+  if valid_count < 2
+  {
+    return append_sessions_table( body, store_path, who );
+  }
 
-  // Footer: single-strategy recommendation line for the active sort:: strategy.
+  // Footer: 2-line `·`-delimited column-aligned format (AC-10).
   let strategy_name = match sort
   {
     SortStrategy::Name   => "name",
@@ -231,28 +236,51 @@ pub( crate ) fn render_text(
     SortStrategy::Renews => "renews",
   };
   let total = accounts.len();
-  if let Some( idx ) = find_next_for_strategy( accounts, sort, prefer, now_secs, false )
+
+  let Some( idx ) = find_next_for_strategy( accounts, sort, prefer, now_secs, false ) else
   {
-    let rec         = &accounts[ idx ];
-    let metric      = strategy_metric( rec, sort, prefer, now_secs );
-    let rec_name    = &rec.name;
-    let metric_part = if metric.is_empty() { String::new() } else { format!( "   {metric}" ) };
-    // Session model: the model the user will work with after switching.
-    // Mirrors apply_model_override() threshold: sonnet_left < 15% → opus, else sonnet.
-    // seven_day_sonnet = None (absent tier) → treat as unknown, not exhausted → sonnet.
-    let model_label = match &rec.result
+    return append_sessions_table( body, store_path, who );
+  };
+
+  let rec    = &accounts[ idx ];
+  let metric = strategy_metric( rec, sort, prefer, now_secs );
+  // Recommendation model: mirrors apply_model_override() threshold.
+  // seven_day_sonnet = None (absent tier) → treat as unknown, not exhausted → sonnet.
+  let rec_model = match &rec.result
+  {
+    Ok( data ) => match &data.seven_day_sonnet
     {
-      Ok( data ) => match &data.seven_day_sonnet
-      {
-        Some( sonnet ) =>
-        {
-          let sonnet_left = 100.0 - sonnet.utilization;
-          if sonnet_left < 15.0 { "opus" } else { "sonnet" }
-        }
-        None => "sonnet",
-      },
-      Err( _ ) => "sonnet",
+      Some( sonnet ) if 100.0 - sonnet.utilization < 15.0 => "opus",
+      _ => "sonnet",
+    },
+    Err( _ ) => "sonnet",
+  };
+
+  // Build footer lines: find current (✓) account or fall back to legacy format.
+  let footer = if let Some( cur ) = accounts.iter().find( |aq| aq.is_current )
+  {
+    let model_effort = match ( session_model, session_effort )
+    {
+      ( Some( sm ), Some( se ) ) => [ sm, se ].join( "/" ),
+      ( Some( sm ), None       ) => sm.to_string(),
+      ( None,       Some( se ) ) => se.to_string(),
+      ( None,       None       ) => String::new(),
     };
+    // Column widths for `·` alignment.
+    let next_label   = format!( "Next ({strategy_name})" );
+    let col1_w = next_label.len().max( "Current".len() );
+    let col2_w = cur.name.len().max( rec.name.len() );
+    let col3_w = model_effort.len().max( rec_model.len() );
+    format!(
+      "{:<col1_w$} · {:<col2_w$} · {:<col3_w$} · {valid_count}/{total}\n\
+       {:<col1_w$} · {:<col2_w$} · {:<col3_w$} · {metric}\n",
+      "Current", cur.name, model_effort,
+      next_label, rec.name, rec_model,
+    )
+  }
+  else
+  {
+    // Fallback: credentials unreadable — legacy format (AC-10).
     let session_part = match ( session_model, session_effort )
     {
       ( Some( sm ), Some( se ) ) => format!( "   session: {sm}  effort: {se}" ),
@@ -260,12 +288,99 @@ pub( crate ) fn render_text(
       ( None,       Some( se ) ) => format!( "   effort: {se}" ),
       ( None,       None       ) => String::new(),
     };
-    format!( "{body}Valid: {valid_count} / {total}{session_part}\nNext ({strategy_name}): {rec_name}{metric_part}  model: {model_label}\n" )
+    format!( "Valid: {valid_count} / {total}{session_part}\n" )
+  };
+
+  append_sessions_table( format!( "{body}{footer}" ), store_path, who )
+}
+
+// ── Sessions table ─────────────────────────────────────────────────────────────
+
+/// Append sessions table to `body` when `store_path` is provided and visibility allows.
+///
+/// `who = None` → auto (show when >1 `_active_*` marker); `Some(true)` → force on;
+/// `Some(false)` → suppress.
+fn append_sessions_table(
+  body       : String,
+  store_path : Option< &std::path::Path >,
+  who        : Option< bool >,
+) -> String
+{
+  let Some( store ) = store_path else { return body; };
+  let ( marker_count, sessions_text ) = build_sessions_table( store );
+  let show = match who
+  {
+    Some( true  ) => true,
+    Some( false ) => false,
+    None          => marker_count > 1,
+  };
+  if show && !sessions_text.is_empty()
+  {
+    format!( "{body}\n{sessions_text}" )
   }
   else
   {
     body
   }
+}
+
+/// Read all `_active_*` markers from `store_path`, render as `{user}@{host} → account` table.
+///
+/// Returns `(marker_count, table_string)`. `marker_count` includes the own marker.
+/// Own session receives `✓` appended to the Account column.
+fn build_sessions_table( store_path : &std::path::Path ) -> ( usize, String )
+{
+  use claude_profile_core::account::active_marker_filename;
+
+  let own_marker = active_marker_filename();
+
+  // Collect all `_active_*` entries from the credential store.
+  let entries : Vec< ( String, String, bool ) > =
+    std::fs::read_dir( store_path )
+      .ok()
+      .into_iter()
+      .flatten()
+      .filter_map( Result::ok )
+      .filter_map( | entry |
+      {
+        let fname = entry.file_name().to_string_lossy().into_owned();
+        if !fname.starts_with( "_active_" ) { return None; }
+        // Parse `{user}@{host}` from `_active_{host}_{user}`: strip prefix, split on last `_`.
+        let rest = fname.strip_prefix( "_active_" )?;
+        let ( host, user ) = rest.rsplit_once( '_' )?;
+        let identity    = format!( "{user}@{host}" );
+        let account_raw = std::fs::read_to_string( entry.path() ).unwrap_or_default();
+        let account     = account_raw.trim().to_string();
+        let is_own      = fname == own_marker;
+        Some( ( identity, account, is_own ) )
+      } )
+      .collect();
+
+  let marker_count = entries.len();
+  if marker_count == 0 { return ( 0, String::new() ); }
+
+  // Build table with `data_fmt`.
+  let headers = vec![ "Session".to_string(), "Account".to_string() ];
+  let mut builder = RowBuilder::new( headers );
+  for ( identity, account, is_own ) in &entries
+  {
+    let account_cell = if *is_own
+    {
+      format!( "{account} ✓" )
+    }
+    else
+    {
+      account.clone()
+    };
+    builder = builder.add_row( vec![ identity.clone().into(), account_cell.into() ] );
+  }
+  let view  = builder.build_view();
+  let table = Format::format(
+    &TableFormatter::with_config( TableConfig::default().auto_wrap( false ) ),
+    &view,
+  ).unwrap_or_default();
+
+  ( marker_count, format!( "Sessions\n\n{table}\n" ) )
 }
 
 // ── JSON renderer ─────────────────────────────────────────────────────────────
@@ -581,6 +696,7 @@ pub( crate ) fn render_tsv(
 /// Render quota results as plain text (same as `render_text` with emoji replaced).
 ///
 /// `🟢`→`ok`, `🟡`→`warn`, `🔴`→`err`, `→`→`->`, `✓`→`*`.
+#[ allow( clippy::too_many_arguments ) ]
 pub( crate ) fn render_plain(
   accounts       : &[ AccountQuota ],
   sort           : SortStrategy,
@@ -589,9 +705,11 @@ pub( crate ) fn render_plain(
   cols           : &ColsVisibility,
   session_model  : Option< &str >,
   session_effort : Option< &str >,
+  store_path     : Option< &std::path::Path >,
+  who            : Option< bool >,
 ) -> String
 {
-  let raw = render_text( accounts, sort, desc, prefer, cols, session_model, session_effort );
+  let raw = render_text( accounts, sort, desc, prefer, cols, session_model, session_effort, store_path, who );
   raw
     .replace( "🟢", "ok" )
     .replace( "🟡", "warn" )

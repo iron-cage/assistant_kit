@@ -69,6 +69,10 @@
 //! | `cc4_read_owner_null_value` | read_owner with "owner": null → "" |
 //! | `cc5_read_owner_numeric_value` | read_owner with "owner": 42 → "" |
 //! | `cc6_background_save_new_account_no_owner` | background save on new account (owner:None) → no owner field |
+//! | `history_append_stores_correct_fields` | FT-01: write_history_entry stores t/h5/d7/sn in cache.history[0] |
+//! | `history_ring_buffer_evicts_oldest` | FT-02: 11th append evicts entry 0; length stays 10 |
+//! | `history_read_absent_key_returns_empty` | FT-11: absent history key → empty vec (AC-11 backward compat) |
+//! | `history_duplicate_timestamp_overwrites` | FT-13: same-second append overwrites last entry, not appends |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -1689,4 +1693,157 @@ fn cc6_background_save_new_account_no_owner()
     "CC-6: background save on new account must not create owner field; got: {owner:?}",
   );
   assert!( account::is_owned( &owner ), "CC-6: absent owner must pass is_owned() gate" );
+}
+
+// ── Feature 040: Measurement history storage ──────────────────────────────────
+
+/// FT-01 (AC-01): `write_history_entry()` stores correct `t`, `h5`, `d7`, `sn` fields.
+///
+/// # Given
+/// Account `alice` has `alice.json` with an empty `cache.history[]` array.
+/// A successful quota fetch returned utilization values for all three periods.
+/// # When
+/// `write_history_entry()` is called with the current timestamp and period data.
+/// # Then
+/// `cache.history[0]` contains `t` (Unix seconds), `h5: [42.0, "..."]`, `d7: [35.0, "..."]`, `sn: [20.0, "..."]`.
+#[ test ]
+fn history_append_stores_correct_fields()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+
+  // Write alice.json with empty cache.history[].
+  std::fs::write(
+    store.join( "alice.json" ),
+    r#"{"cache":{"fetched_at":"2026-06-21T12:00:00Z","status":"ok","history":[]}}"#,
+  ).unwrap();
+
+  let t = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH )
+    .map_or( 0, |d| d.as_secs() );
+
+  account::write_history_entry(
+    store,
+    "alice",
+    t,
+    Some( ( 42.0, "2026-06-21T14:00:00+00:00" ) ),
+    Some( ( 35.0, "2026-06-25T00:00:00+00:00" ) ),
+    Some( ( 20.0, "2026-06-25T00:00:00+00:00" ) ),
+  );
+
+  let entries = account::read_history( store, "alice" );
+  assert_eq!( entries.len(), 1, "FT-01: exactly 1 history entry after first append" );
+  let e = &entries[ 0 ];
+  assert!(
+    t.abs_diff( e.t ) <= 2,
+    "FT-01: stored t={} must be within 2s of now t={}", e.t, t,
+  );
+  let h5 = e.h5.as_ref().expect( "FT-01: h5 must be Some" );
+  assert!( ( h5.0 - 42.0 ).abs() < 1e-9, "FT-01: h5 utilization got {}", h5.0 );
+  assert_eq!( h5.1, "2026-06-21T14:00:00+00:00", "FT-01: h5 resets_at" );
+  let d7 = e.d7.as_ref().expect( "FT-01: d7 must be Some" );
+  assert!( ( d7.0 - 35.0 ).abs() < 1e-9, "FT-01: d7 utilization got {}", d7.0 );
+  let sn = e.sn.as_ref().expect( "FT-01: sn must be Some" );
+  assert!( ( sn.0 - 20.0 ).abs() < 1e-9, "FT-01: sn utilization got {}", sn.0 );
+}
+
+/// FT-02 (AC-02): Ring buffer evicts oldest entry when 11th measurement appended.
+///
+/// # Given
+/// `alice.json` `cache.history[]` already has 10 entries with `t` values 1000..1009.
+/// # When
+/// An 11th measurement is appended with `t = 1010`.
+/// # Then
+/// `cache.history[]` has exactly 10 entries; `history[0].t == 1001` (oldest evicted);
+/// `history[9].t == 1010` (newest appended).
+#[ test ]
+fn history_ring_buffer_evicts_oldest()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+
+  // Append 10 entries with t = 1000..1009.
+  for i in 0_u64..10
+  {
+    account::write_history_entry( store, "alice", 1000 + i, None, None, None );
+  }
+
+  let entries = account::read_history( store, "alice" );
+  assert_eq!( entries.len(), 10, "FT-02: exactly 10 entries after 10 appends" );
+
+  // Append 11th entry.
+  account::write_history_entry( store, "alice", 1010, None, None, None );
+
+  let entries = account::read_history( store, "alice" );
+  assert_eq!( entries.len(), 10, "FT-02: still 10 entries after 11th append (ring buffer cap)" );
+  assert_eq!(
+    entries[ 0 ].t, 1001,
+    "FT-02: oldest entry (t=1000) evicted; t=1001 is now first",
+  );
+  assert_eq!(
+    entries[ 9 ].t, 1010,
+    "FT-02: newest entry (t=1010) is last",
+  );
+}
+
+/// FT-11 (AC-11): Backward compatibility — absent `"history"` key returns empty vec.
+///
+/// # Given
+/// `alice.json` has a `cache` object with quota fields but no `"history"` key (old format).
+/// # When
+/// `read_history()` is called for `alice`.
+/// # Then
+/// Returns empty `Vec` — existing single-point fallback behavior preserved.
+#[ test ]
+fn history_read_absent_key_returns_empty()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+
+  // Old cache format without "history" key.
+  std::fs::write(
+    store.join( "alice.json" ),
+    r#"{"cache":{"fetched_at":"2026-06-21T12:00:00Z","status":"ok","five_hour":{"left_pct":42.0}}}"#,
+  ).unwrap();
+
+  let entries = account::read_history( store, "alice" );
+  assert!(
+    entries.is_empty(),
+    "FT-11: absent history key must return empty vec (AC-11 backward compat); got: {}", entries.len(),
+  );
+}
+
+/// FT-13 (AC-13): Duplicate timestamp overwrites last entry instead of appending.
+///
+/// # Given
+/// `alice.json` `cache.history[]` has 3 entries. The last entry has `t = 1002`.
+/// # When
+/// A new measurement is appended with `t = 1002` (same Unix second, updated values).
+/// # Then
+/// `cache.history[]` still has 3 entries (not 4). The last entry's `h5` is updated.
+#[ test ]
+fn history_duplicate_timestamp_overwrites()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+
+  // Append 3 entries.
+  account::write_history_entry( store, "alice", 1000, Some( ( 10.0, "2026-06-21T14:00:00+00:00" ) ), None, None );
+  account::write_history_entry( store, "alice", 1001, Some( ( 20.0, "2026-06-21T14:00:00+00:00" ) ), None, None );
+  account::write_history_entry( store, "alice", 1002, Some( ( 30.0, "2026-06-21T14:00:00+00:00" ) ), None, None );
+
+  let entries = account::read_history( store, "alice" );
+  assert_eq!( entries.len(), 3, "FT-13: 3 entries before duplicate-timestamp test" );
+
+  // Append with same t as last entry (duplicate timestamp).
+  account::write_history_entry( store, "alice", 1002, Some( ( 99.0, "2026-06-21T14:00:00+00:00" ) ), None, None );
+
+  let entries = account::read_history( store, "alice" );
+  assert_eq!( entries.len(), 3, "FT-13: still 3 entries after duplicate-timestamp append" );
+  let last = &entries[ 2 ];
+  let h5   = last.h5.as_ref().expect( "FT-13: last entry h5 must be Some" );
+  assert!(
+    ( h5.0 - 99.0 ).abs() < 1e-9,
+    "FT-13: last entry updated to new value (99.0), not 30.0; got {}", h5.0,
+  );
 }

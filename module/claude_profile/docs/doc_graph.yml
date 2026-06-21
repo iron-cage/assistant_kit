@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for feature/ and invariant/ doc instances in claude_profile
-  node_count: 42
-  edge_count: 89
+  node_count: 44
+  edge_count: 96
   component_count: 8
-  generated: 2026-06-09
+  generated: 2026-06-21
   scope_note: >
     Covers feature/ and invariant/ cross-references only. CLI entities
     (command, param, param_group, type, format, workflow_scenario) and
@@ -189,6 +189,16 @@ nodes:
   - id: feature/036
     file: feature/036_account_ownership.md
     label: Account Ownership
+    entity: feature
+
+  - id: feature/039
+    file: feature/039_decision_algorithms.md
+    label: Decision Algorithm Reference
+    entity: feature
+
+  - id: feature/040
+    file: feature/040_quota_measurement_history.md
+    label: Quota Measurement History and Polynomial Approximation
     entity: feature
 
   - id: invariant/001
@@ -396,6 +406,7 @@ edges:
   - {from: feature/036, to: feature/025, label: "current_identity() reuses resolve_hostname() fallback chain from active marker"}
   - {from: feature/036, to: feature/029, label: "owner field extends same {name}.json as host metadata"}
   - {from: feature/036, to: feature/033, label: "G1 non-owned path uses quota cache as primary; same display as cache-fallback"}
+  - {from: feature/036, to: feature/040, label: "G1 non-owned accounts skip history append"}
 
   # 036 inbound: back-references from affected features
   - {from: feature/002, to: feature/036, label: "save is ownership-neutral — account_save_routine() passes owner: None to save(); .accounts unclaim::1 clears ownership via write_owner(); .account.assign is marker-only — does NOT call write_owner()"}
@@ -408,9 +419,21 @@ edges:
   - {from: feature/029, to: feature/036, label: "host:: is display label; owner governs enforcement — distinct fields in {name}.json"}
   - {from: feature/033, to: feature/036, label: "cache-as-primary interaction for non-owned accounts"}
 
+  # ── feature/039: Decision Algorithm Reference ──────────────────────────────
+
+  - {from: feature/039, to: feature/020, label: "documents sort strategy algorithms"}
+  - {from: feature/039, to: feature/040, label: "Table 6 documents quota approximation algorithm"}
+
+  # ── feature/040: Quota Measurement History ─────────────────────────────────
+
+  - {from: feature/040, to: feature/033, label: "extends quota cache with measurement history ring buffer"}
+  - {from: feature/040, to: feature/009, label: "approximated values displayed in usage output"}
+  - {from: feature/040, to: feature/036, label: "non-owned accounts skip history append (G1 gate)"}
+  - {from: feature/040, to: feature/039, label: "approximation algorithm documented as Table 6"}
+
 components:
   - id: 1
-    size: 34
+    size: 36
     isolated: false
     nodes:
       - feature/001
@@ -446,6 +469,8 @@ components:
       - feature/034
       - feature/035
       - feature/036
+      - feature/039
+      - feature/040
       - invariant/005
 
   - id: 2

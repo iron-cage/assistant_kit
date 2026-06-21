@@ -650,7 +650,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
       format!( "cannot read credential store: {e}" ),
     ) )?;
   if params.only_active { acct_list.retain( |aq| aq.is_active ); }
-  let mut accounts = fetch_quota_for_list( &acct_list, &credential_store, &live_creds_file, false, params.trace );
+  let mut accounts = fetch_quota_for_list( &acct_list, &credential_store, &live_creds_file, false, params.trace, params.solo );
 
   // Retry-once per account on 401/403 auth errors or 429+locally-expired: if
   // refresh::1 and any account's quota fetch failed with an auth error OR a
@@ -660,7 +660,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   if params.refresh == 1
   {
     let claude_paths = crate::ClaudePaths::new();
-    apply_refresh( &mut accounts, &credential_store, claude_paths.as_ref(), params.trace, params.imodel, params.effort );
+    apply_refresh( &mut accounts, &credential_store, claude_paths.as_ref(), params.trace, params.imodel, params.effort, params.solo );
   }
 
   // touch::1: activate idle 5h windows — runs after refresh so post-refresh results
@@ -671,7 +671,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     let claude_paths = crate::ClaudePaths::new();
     for aq in &mut accounts
     {
-      apply_touch( aq, &credential_store, claude_paths.as_ref(), params.trace, params.imodel, params.effort );
+      apply_touch( aq, &credential_store, claude_paths.as_ref(), params.trace, params.imodel, params.effort, params.solo );
     }
   }
 
@@ -774,9 +774,9 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   {
     UsageOutputFormat::Json  => render_json( &accounts ),
     UsageOutputFormat::Tsv   => render_tsv( &accounts, params.sort, params.desc, params.prefer, &params.cols ),
-    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort ),
+    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who ),
     UsageOutputFormat::Value => String::new(),
-    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort ),
+    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who ),
   };
 
   let content = if params.no_color && params.format != UsageOutputFormat::Tsv
@@ -824,7 +824,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     crate::account::switch_account( &winner_name, &credential_store, &claude_paths )
       .map_err( |e| io_err_to_error_data( &e, "usage rotate" ) )?;
 
-    apply_touch( &mut accounts[ winner_idx ], &credential_store, Some( &claude_paths ), params.trace, params.imodel, params.effort );
+    apply_touch( &mut accounts[ winner_idx ], &credential_store, Some( &claude_paths ), params.trace, params.imodel, params.effort, params.solo );
 
     let msg = format!( "{content}\nswitched to '{winner_name}'\n" );
     return Ok( OutputData::new( msg, "text" ) );
