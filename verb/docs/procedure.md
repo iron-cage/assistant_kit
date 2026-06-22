@@ -40,6 +40,23 @@ For non-Rust standalone projects (Python, Node.js, etc.) the `verb/` scripts cal
 10. Set executable bit: `chmod +x verb/*` (dispatchers + plain scripts) and `chmod +x verb/*.d/*` (layer files).
 11. Add `| \`verb/\` | Shell scripts for each \`do\` protocol verb. |` row to project `readme.md`.
 
+## Add Workspace-Level Verbs
+
+Workspace-level verbs operate on all crates simultaneously. They live in the workspace root `verb/` directory alongside the existing `test` dispatcher.
+
+1. Create `verb/build`: `cargo build --workspace` (universal).
+2. `verb/test` already exists — dispatches to `runbox/runbox .test` (container, `--workspace` scope via `runbox.yml cmd_scope`).
+3. Create `verb/clean`: `cargo clean` (workspace-wide, no `-p` scoping needed).
+4. Create `verb/run`: `echo "error: run is unavailable at workspace scope" >&2; exit 3` — workspace has multiple binaries; use `module/*/verb/run` instead.
+5. Create `verb/lint`: `cargo clippy --workspace --all-targets --all-features -- -D warnings`.
+6. Create `verb/verify`: chains `./verb/test` (container) + `cargo +nightly udeps --workspace --all-targets --all-features` + `cargo +nightly audit` (host). Not a single `exec` — multi-step.
+7. Create `verb/verbs`: `printf` table showing all 8 workspace verbs with `run` as `unavailable`.
+8. Create `verb/package_info`: Python3 script reading workspace `Cargo.toml` — emits JSON with `scope: "workspace"`, member count, crate name list, workspace version/edition.
+9. Set executable bit: `chmod +x verb/{build,clean,lint,run,verify,verbs,package_info}`.
+10. Update `verb/readme.md` Responsibility Table with rows for all new verbs.
+
+All workspace verbs follow the same `--dry-run` contract as module verbs: print the command, exit 0.
+
 ## Update a Verb Command
 
 1. Identify the module and verb to change (e.g., `claude_profile/verb/build`).

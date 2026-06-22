@@ -1,6 +1,6 @@
 [package]
 name = "claude_version_core"
-version.workspace = true
+version = "1.4.1"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -27,3 +27,6 @@ claude_core = { workspace = true }
 [dev-dependencies]
 test_tools = { workspace = true, features = [ "full" ] }
 tempfile   = { workspace = true }
+
+[package.metadata.cargo-udeps.ignore]
+development = [ "test_tools" ]

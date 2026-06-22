@@ -349,6 +349,47 @@ pub fn write_account_renewal_json( home : &std::path::Path, name : &str, renewal
   merge_account_meta( home, name, serde_json::json!({ "_renewal_at": renewal_at_iso }) );
 }
 
+/// Write a quota cache entry into `{credential_store}/{name}.json`.
+///
+/// Simulates a prior successful API fetch so the cache-fallback path in `fetch.rs`
+/// returns `Ok(data)` without a network call. Used in offline rotation tests where
+/// accounts have no `accessToken` — `read_token()` returns `Err("missing")` (not 401/403),
+/// triggering cache fallback.
+///
+/// - `h5_util` : consumed 5h quota percent (0–100). Gate 4 rejects `>= 85.0`.
+/// - `d7_util` : consumed 7d quota percent (0–100). Gate 6 requires `100 - d7_util > 5.0`.
+/// - `d7_resets_at` : optional ISO-8601 reset timestamp for the 7d period.
+///
+/// The cache uses the `left_pct` field (actual stored name per `account.rs:period_json`)
+/// which stores the consumed utilization percentage despite the name suggesting "left".
+///
+/// # Panics
+///
+/// Panics if the directory or file cannot be created.
+#[ inline ]
+pub fn write_account_quota_cache(
+  home         : &std::path::Path,
+  name         : &str,
+  h5_util      : f64,
+  d7_util      : f64,
+  d7_resets_at : Option< &str >,
+)
+{
+  let d7_resets : serde_json::Value = match d7_resets_at
+  {
+    Some( s ) => serde_json::Value::String( s.to_string() ),
+    None      => serde_json::Value::Null,
+  };
+  merge_account_meta( home, name, serde_json::json!({
+    "cache": {
+      "fetched_at": "2026-01-01T00:00:00Z",
+      "status": "ok",
+      "five_hour": { "left_pct": h5_util },
+      "seven_day": { "left_pct": d7_util, "resets_at": d7_resets }
+    }
+  }) );
+}
+
 /// Write `owner` field into `{credential_store}/{name}.json`.
 ///
 /// Used to pre-populate ownership metadata for G5/G6/G7 gate tests.

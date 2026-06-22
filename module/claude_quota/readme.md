@@ -66,4 +66,3 @@ pub fn fetch_claude_cli_roles(token: &str) -> Result<ClaudeCliRolesData, QuotaEr
 | `tests/bug172_guard_test.rs` | Static-analysis guard: no bare ureq calls without timeout configuration |
 | `docs/` | Endpoint reference and API documentation. |
 | `verb/` | Shell scripts for each `do` protocol verb. |
-| `runbox/` | Shell scripts for container-orchestrated operations. |

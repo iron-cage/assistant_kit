@@ -8,4 +8,3 @@
 | `docs/` | Behavioral requirements: feature and invariant doc instances |
 | `tests/` | Integration test suite |
 | `verb/` | Shell scripts for each `do` protocol verb. |
-| `runbox/` | Shell scripts for container-orchestrated operations. |

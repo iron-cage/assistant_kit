@@ -4,19 +4,19 @@
 
 - **Purpose**: Document the four-layer crate dependency hierarchy governing the assistant workspace.
 - **Responsibility**: Describe the layer definitions, Layer Invariant, permitted dep directions, and crate-to-layer assignments.
-- **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps), dependency table, Layer * position (claude_storage_core, claude_auth, claude_quota — outside hierarchy).
+- **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps), dependency table, Layer * position (claude_storage_core, claude_auth, claude_quota, runbox — outside hierarchy).
 - **Out of Scope**: Cross-workspace integration (→ `integration/001_consumer_integration.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`).
 
 ### Problem
 
-A workspace with 15 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
+A workspace with 17 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
 
 ### Solution
 
 Strict four-layer hierarchy with one rule: **dependencies flow downward only**. No Layer N crate may depend on another Layer N crate.
 
 ```
-Layer 3: assistant                                                   (cli — not claude_-prefixed by design)
+Layer 3: assistant · assistant_kit                                   (cli + lib — not claude_-prefixed by design)
              ↓
 Layer 2: dream                                                      (lib — not claude_-prefixed by design)
          claude_assets · claude_version · claude_runner · claude_profile · claude_storage  (cli)
@@ -27,6 +27,7 @@ Layer 0: claude_core                                                  (zero work
 *        claude_storage_core                                            (zero-dep JSONL parser — no claude_core dep)
 *        claude_auth                                                    (zero workspace deps — OAuth token refresh transport)
 *        claude_quota                                                   (zero workspace deps — API rate-limit HTTP transport)
+*        runbox                                                         (zero workspace deps — container runner scaffold CLI)
 ```
 
 **Dependencies per crate:**
@@ -37,6 +38,7 @@ Layer 0: claude_core                                                  (zero work
 | * | `claude_storage_core` | lib | — |
 | * | `claude_auth` | lib | — |
 | * | `claude_quota` | lib | — |
+| * | `runbox` | cli | `runbox`, `crb` |
 | 1 | `claude_assets_core` | lib | — |
 | 1 | `claude_profile_core` | lib | — |
 | 1 | `claude_version_core` | lib | — |
@@ -48,13 +50,15 @@ Layer 0: claude_core                                                  (zero work
 | 2 | `claude_runner` | cli | `clr`, `claude_runner` |
 | 2 | `claude_version` | cli | `clv`, `claude_version` |
 | 3 | `assistant` | cli | `ast`, `assistant` |
+| 3 | `assistant_kit` | lib | — |
 
 `*` = outside layer hierarchy.
 
-**Layer `*` position:** Three crates sit outside the numbered layer hierarchy. They have no workspace dependencies (only an optional `ureq` or no external dep):
+**Layer `*` position:** Four crates sit outside the numbered layer hierarchy. They have no workspace dependencies (only an optional `ureq` or no external dep):
 - `claude_storage_core` — zero-dep JSONL parsing primitive; uses env-var paths, not `ClaudePaths`; wrapped by Layer 2's `claude_storage`
 - `claude_auth` — OAuth token refresh transport; standalone primitive usable without any workspace dep
 - `claude_quota` — API rate-limit HTTP transport; standalone primitive usable without any workspace dep
+- `runbox` — container runner scaffold CLI; zero workspace deps; generates `runbox/runbox`, `runbox/runbox.yml`, `runbox/runbox.dockerfile` in a target project
 
 ### Applicability
 

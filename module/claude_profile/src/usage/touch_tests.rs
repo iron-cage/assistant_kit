@@ -1068,3 +1068,129 @@ fn ft_touch_skips_occupied_elsewhere_with_trace()
     "FT-22: no subprocess must be spawned for occupied-elsewhere account; got:\n{captured}",
   );
 }
+
+// ── BUG-309 MRE: re-fetch block must clear cached metadata and write cache file ─
+
+/// MRE for BUG-309: `apply_touch` re-fetch block clears `cached` flag, `cache_age_secs`,
+/// and writes fresh quota data to `{name}.json` via `write_quota_cache()`.
+///
+/// # Root Cause
+///
+/// The re-fetch block in `apply_touch` only set `aq.result = Ok(new_data)` — it did not
+/// clear `aq.cached` or `aq.cache_age_secs`, so `render.rs` kept the `~` prefix on every
+/// quota cell and the `(Xh ago)` age label for cache-fallback accounts. `write_quota_cache`
+/// was also absent, so `{name}.json` retained stale pre-touch quota (with `resets_at=null`)
+/// across restarts. Same class of omission as BUG-256 (refresh.rs retry-OK arm) and
+/// BUG-288 (`apply_post_switch_touch` re-fetch block), but in `apply_touch`.
+///
+/// # Why Not Caught
+///
+/// No test guarded the content of the `apply_touch` re-fetch block. `apply_touch` was
+/// implemented after Fix(BUG-256) corrected `apply_refresh`, but the three mutations were
+/// never propagated. Fix(BUG-288) addressed `apply_post_switch_touch` in `api.rs` but did
+/// not audit `apply_touch` in `touch.rs` for the same missing mutations.
+///
+/// # Fix Applied
+///
+/// Fix(BUG-309): in the re-fetch block of `apply_touch`, extract h5/d7/sn references
+/// BEFORE moving `new_data` into `aq.result`, then call `write_quota_cache`, and set
+/// `aq.cached = false` and `aq.cache_age_secs = None`.
+///
+/// # Prevention
+///
+/// This test greps the source of the re-fetch block for the three AC-18 mutations.
+/// Any merge conflict or refactor that drops them will cause this test to fail.
+///
+/// # Pitfall
+///
+/// The `write_quota_cache` call must appear BEFORE `aq.result = Ok( new_data )` —
+/// h5/d7/sn borrow from `new_data`; moving it first would be use-after-move.
+/// The order check below enforces this structural constraint statically.
+///
+/// Spec: [`tests/docs/feature/24_session_touch.md` FT-23]
+#[ doc = "bug_reproducer(BUG-309)" ]
+#[ test ]
+fn mre_bug309_apply_touch_refetch_writes_cache_and_clears_cached_flag()
+{
+  let src      = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs" ) );
+  let fn_start = src.find( "pub( crate ) fn apply_touch(" ).expect( "apply_touch not found" );
+
+  // Locate the re-fetch block within the function body.
+  let refetch_rel = src[ fn_start.. ]
+    .find( "if let Ok( new_data ) = claude_quota::fetch_oauth_usage(" )
+    .expect( "BUG-309: re-fetch block `if let Ok( new_data ) = claude_quota::fetch_oauth_usage(` not found in apply_touch" );
+  let refetch_start = fn_start + refetch_rel;
+
+  // The re-fetch block is the last statement in apply_touch — slice from here to end.
+  let refetch_block = &src[ refetch_start.. ];
+
+  // AC-18 check 1: aq.cached must be cleared to false.
+  assert!(
+    refetch_block.contains( "aq.cached         = false" ),
+    "BUG-309: apply_touch re-fetch block must set `aq.cached = false` to clear ~ prefix from render",
+  );
+
+  // AC-18 check 2: aq.cache_age_secs must be cleared to None.
+  assert!(
+    refetch_block.contains( "aq.cache_age_secs = None" ),
+    "BUG-309: apply_touch re-fetch block must set `aq.cache_age_secs = None` to remove (Xh ago) label",
+  );
+
+  // AC-18 check 3: write_quota_cache must be called with fresh data.
+  assert!(
+    refetch_block.contains( "write_quota_cache(" ),
+    "BUG-309: apply_touch re-fetch block must call write_quota_cache to persist fresh data to {{name}}.json",
+  );
+
+  // Order check: write_quota_cache must appear before the move of new_data into aq.result.
+  let cache_write_pos = refetch_block.find( "write_quota_cache(" ).unwrap();
+  let result_move_pos = refetch_block
+    .find( "aq.result         = Ok( new_data )" )
+    .expect( "BUG-309: `aq.result = Ok( new_data )` not found in apply_touch re-fetch block" );
+  assert!(
+    cache_write_pos < result_move_pos,
+    "BUG-309: write_quota_cache must appear before `aq.result = Ok( new_data )` — \
+     h5/d7/sn borrow from new_data and would be use-after-move otherwise",
+  );
+}
+
+// ── D3: Bulk touch does NOT write live credentials ────────────────────────
+
+/// Reach test: the bulk touch loop in `api.rs` (lines 669-676) iterates `apply_touch`
+/// over all accounts but does NOT perform any `switch_account` or live-credential copy.
+/// Live credentials are ONLY written in the rotation dispatch block (step 4d/4e').
+///
+/// The bulk loop has no `switch_account` preceding it — each `apply_touch` writes to
+/// STORE only via `refresh_account_token → save(update_marker=false)`. If `fs::copy` or
+/// `switch_account` were added inside the bulk loop, the live session would silently
+/// change during a non-rotation `.usage` call — that's a regression.
+///
+/// Spec: [`tests/docs/feature/38_usage_strategy_rotate.md` FT-11 (reach D3)]
+#[ test ]
+fn reach_bulk_touch_does_not_write_live_credentials()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/api.rs" ) );
+
+  // Locate the bulk touch loop: `if params.touch == 1`
+  let touch_block_start = src
+    .find( "if params.touch == 1" )
+    .expect( "bulk touch block not found in api.rs" );
+
+  // The block ends at the next top-level comment block (Session-model override).
+  let touch_block_end = src[ touch_block_start.. ]
+    .find( "// ── Session-model override" )
+    .map_or( src.len(), |rel| touch_block_start + rel );
+  let bulk_block = &src[ touch_block_start..touch_block_end ];
+
+  // The bulk loop must NOT contain switch_account or fs::copy — those belong only in rotation.
+  assert!(
+    !bulk_block.contains( "switch_account(" ),
+    "D3: bulk touch loop must NOT call switch_account — live credentials must not change \
+    during a non-rotation .usage call.\nbulk block:\n{bulk_block}",
+  );
+  assert!(
+    !bulk_block.contains( "fs::copy" ),
+    "D3: bulk touch loop must NOT call fs::copy — live credentials must not change \
+    during a non-rotation .usage call.\nbulk block:\n{bulk_block}",
+  );
+}

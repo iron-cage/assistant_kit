@@ -75,6 +75,49 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".kinds",     "Show all supported artifact kinds with source and target path mappings",       vec![],                            Box::new( kinds_routine     ) );
 }
 
+/// Render grouped help output via `cli_fmt::CliHelpTemplate`.
+///
+/// Displays 1 command group (Asset Management), shared parameters,
+/// and usage examples.
+#[ cfg( feature = "enabled" ) ]
+fn print_usage( binary : &str )
+{
+  use cli_fmt::help::*;
+
+  let data = CliHelpData
+  {
+    binary  : binary.to_string(),
+    tagline : "Claude Code artifact installer: manage rules, skills, commands, and hooks via symlinks.".to_string(),
+    groups  : vec!
+    [
+      CommandGroup
+      {
+        name    : "Asset Management".to_string(),
+        entries : vec!
+        [
+          CommandEntry { name : ".list".to_string(),      desc : "List available and installed Claude Code artifacts".to_string() },
+          CommandEntry { name : ".install".to_string(),   desc : "Install a named artifact via symlink into .claude/<kind>/".to_string() },
+          CommandEntry { name : ".uninstall".to_string(), desc : "Remove an installed artifact symlink from .claude/<kind>/".to_string() },
+          CommandEntry { name : ".kinds".to_string(),     desc : "Show all artifact kinds with source and target path mappings".to_string() },
+        ],
+      },
+    ],
+    options : vec!
+    [
+      OptionEntry { name : "kind::KIND".to_string(),     desc : "Filter by artifact kind (e.g. rule, skill, command)".to_string() },
+      OptionEntry { name : "name::NAME".to_string(),     desc : "Artifact name to install or uninstall".to_string() },
+      OptionEntry { name : "installed::0|1".to_string(), desc : "Show only installed (1) or uninstalled (0)".to_string() },
+    ],
+    examples : vec!
+    [
+      ExampleEntry { invocation : format!( "{binary} .list" ),                             desc : None },
+      ExampleEntry { invocation : format!( "{binary} .install kind::rule name::my_rule" ), desc : None },
+      ExampleEntry { invocation : format!( "{binary} .kinds" ),                            desc : None },
+    ],
+  };
+  print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
+}
+
 #[ cfg( feature = "enabled" ) ]
 /// Run the `claude_assets` CLI — 5-phase unilang pipeline.
 ///
@@ -114,9 +157,17 @@ pub fn run_cli()
     }
   }
 
+  let binary = std::env::args()
+  .next()
+  .as_deref()
+  .and_then( | p | std::path::Path::new( p ).file_name() )
+  .and_then( | n | n.to_str() )
+  .unwrap_or( "cla" )
+  .to_owned();
+
   let argv : Vec< String > = std::env::args().skip( 1 ).collect();
 
-  let ( tokens, _needs_help ) = match argv_to_unilang_tokens( &argv )
+  let ( tokens, needs_help ) = match argv_to_unilang_tokens( &argv )
   {
     Ok( r )  => r,
     Err( e ) =>
@@ -125,6 +176,12 @@ pub fn run_cli()
       std::process::exit( 1 );
     }
   };
+
+  if needs_help
+  {
+    print_usage( &binary );
+    std::process::exit( 0 );
+  }
 
   let mut registry = CommandRegistry::new();
   register_commands( &mut registry );

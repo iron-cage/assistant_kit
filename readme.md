@@ -28,7 +28,6 @@ ast .help                    # all ~40 commands in one place
 | `contract/` | Behavioral contract test suites for external dependencies |
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, error |
 | `../task/workspace/` | Workspace task registry — External Layout (see `../task/`) |
-| `runbox/` | Container runner: scripts, Dockerfile, config, variability analysis docs, and ecosystem examples. |
 | `verb/` | Universal Action Protocol: per-verb reference docs for all 7 `do` protocol verbs. |
 | `vision.md` | Project vision, design rationale, and open problems |
 | `../locales.md` | Locale and internationalisation notes |
@@ -83,20 +82,20 @@ Layer 3: assistant       (ast)    (super-app — all Layer 2 CLIs)
 
 **Container (all tests — real ~/.claude/ required):**
 ```bash
-./runbox/runbox .test
+./verb/test
 ```
 
 **Container (offline — no ~/.claude/ needed):**
 ```bash
-./runbox/runbox .test.offline
+./verb/test offline
 ```
 
 **Container (interactive shell):**
 ```bash
-./runbox/runbox .shell
+./verb/shell
 ```
 
 **Local (w3 required):**
 ```bash
-./runbox/test
+./verb/test
 ```

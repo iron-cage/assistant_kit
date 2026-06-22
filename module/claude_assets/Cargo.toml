@@ -1,6 +1,6 @@
 [package]
 name         = "claude_assets"
-version.workspace = true
+version = "1.4.1"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -40,12 +40,14 @@ enabled = [
   "dep:error_tools",
   "error_tools/enabled",
   "error_tools/error_untyped",
+  "dep:cli_fmt",
 ]
 
 [dependencies]
 claude_assets_core = { workspace = true, optional = true }
 unilang            = { workspace = true, optional = true }
 error_tools        = { workspace = true, optional = true }
+cli_fmt            = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile   = { workspace = true }

@@ -16,6 +16,7 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 | FT-08 | `rotate::1 format::json` executes switch; JSON unchanged | AC-08 |
 | FT-09 | Post-switch touch uses in-memory quota (no extra API call) | AC-09 |
 | FT-10 | Exit code 1 on ownership violation without force | AC-10 |
+| FT-11 | Rotation touch re-syncs live credentials from store after `apply_touch` | AC-11 |
 
 ### Test Case Index
 
@@ -31,8 +32,16 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 | FT-08 | `rotate::1 format::json` — switch happens, JSON body unchanged | AC-08 | Format Interaction |
 | FT-09 | Post-switch touch fires without extra quota API call | AC-09 | Touch Reuse |
 | FT-10 | Non-owned target without force → exit 1 ownership violation | AC-10 | Ownership Gate |
+| FT-11 | Rotation touch re-syncs live credentials after apply_touch | AC-11 | BUG-310 MRE |
+| CC-01 | `rotate::1` offline (cache-eligible winner) — live creds replaced by winner | AC-01 | Offline / BUG-310 |
+| CC-02 | `rotate::1 touch::1` offline — fs::copy re-sync fires, live creds still replaced | AC-11 | Offline / BUG-310 |
+| CC-03 | `rotate::0` explicit — exit 0, no switch, credentials unchanged | AC-01 | Explicit Disable |
+| CC-04 | `rotate::0` — usage table still rendered (no suppression) | AC-03 | Explicit Disable |
+| CC-05 | `rotate::1 sort::name` — alphabetically-first eligible account wins | AC-07 | Strategy Selection |
+| CC-06 | `rotate::1 format::tsv` offline — switch executes, format flag not rejected | AC-08 | Format Interaction |
+| CC-07 | `rotate::1 dry::1` offline — `[dry-run]` output, credentials unchanged | AC-02 | Dry Run |
 
-**Total:** 10 FT cases
+**Total:** 18 test cases (11 FT + 7 CC)
 
 ---
 
@@ -136,3 +145,15 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 - **Then:** Exit 1. Error message contains `"ownership violation"` or `"no eligible account"`. Credentials unchanged.
 - **Exit:** 1
 - **Source:** [038_usage_strategy_rotate.md AC-10](../../../docs/feature/038_usage_strategy_rotate.md)
+
+---
+
+### FT-11: Rotation touch re-syncs live credentials from store after `apply_touch` (BUG-310 MRE)
+
+- **Given:** Two accounts in a `TempDir` credential store: `current@test.com` (current, h-exhausted — triggers rotation) and `winner@test.com` (idle — `resets_at=None`, valid quota, owned). A `ClaudePaths` with a writable `~/.claude/.credentials.json`. The winner's store credentials contain `accessToken = "token_A"`. `rotate::1 touch::1`.
+- **When:** The rotation dispatch executes: (1) `switch_account(winner)` copies `token_A` from store to live. (2) `apply_touch(winner)` spawns a subprocess that refreshes the token — `refresh_account_token` writes `token_B` to the STORE file `{name}.credentials.json` via `save(update_marker=false)`. (3) The re-sync step copies the updated store credentials to live.
+- **Then:** The live session file (`~/.claude/.credentials.json`) contains `token_B` (post-touch refreshed token), NOT `token_A` (pre-touch stale token). Reading the live file and the store file yields the same `accessToken` value.
+- **Exit:** N/A (unit test — no exit code; tests the `api.rs` rotation dispatch block)
+- **Source fn:** `mre_bug310_rotation_touch_resyncs_live_credentials` (in `src/usage/api_tests.rs`)
+- **Note:** BUG-310 MRE. Before fix, `apply_touch` writes refreshed credentials to STORE only (via `refresh_account_token → save(update_marker=false)`); the live session retains pre-refresh `token_A`. If the OAuth server invalidates `token_A` during refresh, the live session dies. Fix: re-sync store → live after `apply_touch` at `api.rs:838`.
+- **Source:** [038_usage_strategy_rotate.md AC-11](../../../docs/feature/038_usage_strategy_rotate.md)

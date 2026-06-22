@@ -17,7 +17,7 @@ All crates share a single version declared in `[workspace.package]` unless expli
 version = "1.0.0"
 ```
 
-Most crates inherit this version via `version.workspace = true` in their `Cargo.toml`. The workspace currently has 15 publishable crates; 11 follow the shared version and 4 use explicit overrides (see table below).
+Most crates inherit this version via `version.workspace = true` in their `Cargo.toml`. The workspace currently has 16 publishable crates; 11 follow the shared version and 5 use explicit overrides (see table below).
 
 **Override (exception):** If a crate needs to diverge (e.g., a major API break to only one crate, or a standalone primitive with its own release cadence), override with an explicit `version = "x.y.z"` in that crate's `Cargo.toml`. The reason for the divergence must be documented.
 
@@ -29,6 +29,7 @@ Most crates inherit this version via `version.workspace = true` in their `Cargo.
 | `claude_quota` | `0.1.0` | Standalone Layer * primitive; early-stage release; own cadence |
 | `dream` | `1.2.0` | Library facade; explicitly versioned to track its own API additions independently of workspace cadence |
 | `assistant` | `1.2.0` | Super-app binary; version tracks `dream` |
+| `assistant_kit` | `0.1.0` | Layer 3 library facade; early-stage release; own cadence |
 
 ### Enforcement Mechanism
 

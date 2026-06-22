@@ -1,18 +1,18 @@
 # verb/
 
-Shell scripts implementing the `do` protocol verbs for `rust_example` (runbox/container ecosystem).
+Shell scripts implementing the `do` protocol verbs for `rust_example` (container ecosystem).
 
 | File | Responsibility |
 |------|----------------|
-| `build` | Build the container image via `./runbox/runbox .build`. |
+| `build` | Build the container image via `./verb/.build`. |
 | `test` | Dispatcher: run full test suite; delegates to `test.d/` layer by `VERB_LAYER`. |
-| `test.d/` | Layer directory: `l1` (container), `l2` (runbox orchestration). |
+| `test.d/` | Layer directory: `l1` (container), `l2` (container orchestration). |
 | `clean` | Remove container image and named `target` volume. |
 | `run` | Dispatcher: execute entry point; delegates to `run.d/` layer by `VERB_LAYER`. |
-| `run.d/` | Layer directory: `l1` (container), `l2` (runbox orchestration). |
+| `run.d/` | Layer directory: `l1` (container), `l2` (container orchestration). |
 | `lint` | Dispatcher: run linter; delegates to `lint.d/` layer by `VERB_LAYER`. |
-| `lint.d/` | Layer directory: `l1` (container), `l2` (runbox orchestration). |
-| `verify` | Run offline tests via `./runbox/runbox .test.offline`. |
+| `lint.d/` | Layer directory: `l1` (container), `l2` (container orchestration). |
+| `verify` | Run offline tests via `./verb/.test.offline`. |
 | `verbs` | List all available verbs and their availability (meta). |
 | `package_info` | Report deterministic package metadata as JSON (meta). |
 

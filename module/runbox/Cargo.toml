@@ -1,0 +1,52 @@
+[package]
+name         = "runbox"
+version = "1.4.1"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme       = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/runbox"
+description  = "CLI for scaffolding container runner integration files"
+keywords     = [ "cli", "container", "scaffold", "docker" ]
+categories   = [ "development-tools", "command-line-utilities" ]
+
+[lints]
+workspace = true
+
+[lib]
+name = "runbox"
+path = "src/lib.rs"
+
+[[bin]]
+name = "runbox"
+path = "src/main.rs"
+required-features = [ "enabled" ]
+
+[[bin]]
+name = "crb"
+path = "src/bin/crb.rs"
+required-features = [ "enabled" ]
+
+[features]
+default = []
+full    = [ "enabled" ]
+enabled = [
+  "dep:unilang",
+  "unilang/enabled",
+  "dep:error_tools",
+  "error_tools/enabled",
+  "error_tools/error_untyped",
+  "dep:cli_fmt",
+]
+
+[dependencies]
+unilang     = { workspace = true, optional = true }
+error_tools = { workspace = true, optional = true }
+cli_fmt     = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile   = { workspace = true }
+assert_cmd = { workspace = true }

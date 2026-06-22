@@ -1,0 +1,16 @@
+# All simple cargo modules share the workspace image.
+image: workspace_test
+
+# workspace scope — simple modules share the workspace image; no per-module build
+cmd_scope: --workspace
+
+# script invoked by `.test` inside the container (path relative to /workspace)
+test_script: module/runbox/verb/test.d/l1
+
+# script invoked by `.build` inside the container (path relative to /workspace)
+run_script: module/runbox/verb/build
+
+# optional binary plugin: name:container_path (binary found via 'which name' on host)
+bin_plugin: w3:/usr/local/bin/w3
+# container mount point for bin_plugin working volume (persists compilation artifacts)
+bin_plugin_volume: /tmp/will_test_targets

@@ -817,3 +817,185 @@ fn ft13_rotation_set_session_effort_guarded_by_some_not_injected()
     block:\n{block}",
   );
 }
+
+// ── BUG-310 MRE: rotation dispatch must re-sync live credentials after apply_touch ─
+
+/// MRE for BUG-310: after `apply_touch` in the rotation dispatch block, the winner's
+/// store credentials must be copied back to the live session file.
+///
+/// # Root Cause
+///
+/// `switch_account(winner)` at step 4d copies store→live BEFORE `apply_touch` at step 4e.
+/// The touch subprocess may refresh the OAuth token, writing `token_B` to the STORE file
+/// via `refresh_account_token → save(update_marker=false)`. The live session retains stale
+/// `token_A` — if the server invalidated `token_A` during refresh, the live session dies.
+///
+/// # Why Not Caught
+///
+/// No test asserted that the rotation block re-syncs live credentials after the touch step.
+/// `apply_touch` intentionally writes to STORE only (BUG-211 fix) — the live re-sync is
+/// the caller's responsibility, and the rotation dispatcher was the only caller that needed it.
+///
+/// # Fix Applied
+///
+/// `std::fs::copy( store/{name}.credentials.json, claude_paths.credentials_file() )` added
+/// immediately after `apply_touch` in the rotation dispatch block (step 4e').
+///
+/// # Prevention
+///
+/// Structural grep: rotation dispatch block must contain `fs::copy` (or `std::fs::copy`)
+/// after `apply_touch`. This test enforces that.
+///
+/// # Pitfall
+///
+/// Do NOT call `switch_account` again — it re-writes the `_active` marker and patches
+/// `.claude.json` redundantly. A targeted credential file copy suffices.
+///
+/// `let _ = std::fs::copy(...)` silently discards I/O errors. If the filesystem write
+/// fails (permissions, disk full), rotation still reports success but live credentials
+/// may remain stale. A future improvement would emit a trace warning on copy failure.
+///
+/// Spec: [`tests/docs/feature/38_usage_strategy_rotate.md` FT-11]
+#[ doc = "bug_reproducer(BUG-310)" ]
+#[ test ]
+fn mre_bug310_rotation_touch_resyncs_live_credentials()
+{
+  let src         = include_str!( "api.rs" );
+  let block_start = src
+    .find( "Rotation dispatch (Feature 038" )
+    .expect( "rotation dispatch block not found in api.rs" );
+  let block_end   = src[ block_start.. ]
+    .find( "\n  Ok( OutputData::new( content" )
+    .map_or( src.len(), |rel| block_start + rel );
+  let block = &src[ block_start..block_end ];
+
+  // Locate apply_touch call within the rotation block.
+  let touch_pos = block
+    .find( "apply_touch(" )
+    .expect( "BUG-310: apply_touch call not found in rotation dispatch block" );
+
+  // After apply_touch, there must be a store→live credential re-sync via fs::copy.
+  let after_touch = &block[ touch_pos.. ];
+  assert!(
+    after_touch.contains( "fs::copy" ),
+    "BUG-310 AC-11: rotation dispatch block must re-sync live credentials from store \
+    after apply_touch via fs::copy. Without this, live retains stale pre-refresh token.\n\
+    block after apply_touch:\n{after_touch}",
+  );
+}
+
+/// Control for BUG-310: when `touch::0` is used (no `apply_touch` call in rotation),
+/// `switch_account` alone suffices — store and live are already consistent.
+///
+/// This test verifies that `switch_account` IS called in the rotation block, ensuring
+/// the store→live copy happens at step 4d. The divergence from D1 only arises when
+/// `apply_touch` refreshes the token AFTER `switch_account` already copied.
+///
+/// Spec: [`tests/docs/feature/38_usage_strategy_rotate.md` FT-11 (control)]
+#[ test ]
+fn mre_bug310_rotation_no_refresh_no_divergence()
+{
+  let src         = include_str!( "api.rs" );
+  let block_start = src
+    .find( "Rotation dispatch (Feature 038" )
+    .expect( "rotation dispatch block not found in api.rs" );
+  let block_end   = src[ block_start.. ]
+    .find( "\n  Ok( OutputData::new( content" )
+    .map_or( src.len(), |rel| block_start + rel );
+  let block = &src[ block_start..block_end ];
+
+  // switch_account must exist in the rotation block — this is the store→live copy at step 4d.
+  assert!(
+    block.contains( "switch_account(" ),
+    "BUG-310 control: switch_account must be called in the rotation dispatch block \
+    to copy store credentials to live at step 4d.\n\
+    block:\n{block}",
+  );
+
+  // apply_touch must also exist — without it, there's no token refresh divergence.
+  assert!(
+    block.contains( "apply_touch(" ),
+    "BUG-310 control: apply_touch must be called in the rotation dispatch block \
+    at step 4e. Without it, no token refresh can create store/live divergence.\n\
+    block:\n{block}",
+  );
+}
+
+// ── D4: Rotation without touch — switch_account alone is consistent ───────
+
+/// Reach test: `switch_account` precedes `apply_touch` in the rotation dispatch block.
+/// This ordering means that when `touch::0` is used (`apply_touch` is skipped), the live
+/// file already matches the store — no re-sync needed.
+///
+/// The test verifies that `switch_account` appears BEFORE `apply_touch` in the block,
+/// ensuring step 4d (store→live copy) always happens before step 4e (touch may diverge).
+///
+/// Spec: [`tests/docs/feature/38_usage_strategy_rotate.md` FT-11 (reach D4)]
+#[ test ]
+fn reach_rotation_switch_account_precedes_apply_touch()
+{
+  let src         = include_str!( "api.rs" );
+  let block_start = src
+    .find( "Rotation dispatch (Feature 038" )
+    .expect( "rotation dispatch block not found in api.rs" );
+  let block_end   = src[ block_start.. ]
+    .find( "\n  Ok( OutputData::new( content" )
+    .map_or( src.len(), |rel| block_start + rel );
+  let block = &src[ block_start..block_end ];
+
+  let switch_pos = block.find( "switch_account(" )
+    .expect( "D4: switch_account not found in rotation block" );
+  let touch_pos  = block.find( "apply_touch(" )
+    .expect( "D4: apply_touch not found in rotation block" );
+  assert!(
+    switch_pos < touch_pos,
+    "D4: switch_account (step 4d) must precede apply_touch (step 4e) in rotation block. \
+    When touch::0 skips apply_touch, the store→live copy from switch_account is already consistent.",
+  );
+}
+
+// ── D5: Structural guard — fs::copy after apply_touch in rotation block ───
+
+/// Structural proximity guard: `fs::copy` must appear after `apply_touch` in the
+/// rotation dispatch block, within a few lines. This prevents regression by ensuring
+/// the re-sync step is never accidentally removed by refactoring.
+///
+/// Before fix: FAILS (no `fs::copy` exists). After fix: PASSES.
+///
+/// **Known gap:** verifies `fs::copy` and `credentials_file()` appear after `apply_touch`,
+/// but does NOT verify the SOURCE argument is `credential_store.join(...)`. A refactor
+/// that accidentally swaps src/dst would still pass. Copy-direction correctness is
+/// enforced by code review and the `Fix(BUG-310)` comment in `api.rs`.
+///
+/// Spec: [`tests/docs/feature/38_usage_strategy_rotate.md` FT-11 (reach D5)]
+#[ test ]
+fn reach_structural_guard_fs_copy_follows_apply_touch_in_rotation()
+{
+  let src         = include_str!( "api.rs" );
+  let block_start = src
+    .find( "Rotation dispatch (Feature 038" )
+    .expect( "rotation dispatch block not found in api.rs" );
+  let block_end   = src[ block_start.. ]
+    .find( "\n  Ok( OutputData::new( content" )
+    .map_or( src.len(), |rel| block_start + rel );
+  let block = &src[ block_start..block_end ];
+
+  let touch_pos = block.find( "apply_touch(" )
+    .expect( "D5: apply_touch not found in rotation block" );
+  let after_touch = &block[ touch_pos.. ];
+
+  // fs::copy must appear after apply_touch — this is the re-sync step (4e').
+  assert!(
+    after_touch.contains( "fs::copy" ),
+    "D5 AC-11: fs::copy must follow apply_touch in rotation block to re-sync \
+    live credentials after potential token refresh.\n\
+    block after apply_touch:\n{after_touch}",
+  );
+
+  // The fs::copy must reference credentials_file() — not some other path.
+  assert!(
+    after_touch.contains( "credentials_file()" ),
+    "D5 AC-11: fs::copy target must be credentials_file() (the live session file).\n\
+    block after apply_touch:\n{after_touch}",
+  );
+}
