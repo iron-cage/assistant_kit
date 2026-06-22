@@ -102,6 +102,7 @@ pub( crate ) struct CliArgs
   pub( crate ) add_dir                 : Option< String >,
   pub( crate ) fallback_model          : Option< String >,
   pub( crate ) output_style            : Option< String >,
+  pub( crate ) summary_fields         : Option< String >,
 }
 
 /// Consume the next argv element as a flag's value.
@@ -453,6 +454,23 @@ fn parse_runner_value_flag(
       }
       parsed.output_style = Some( v.to_string() );
     }
+    "--summary-fields" =>
+    {
+      let v = next_value( tokens, next, "--summary-fields" )?;
+      if let Err( bad ) = super::summary::resolve_fields( v )
+      {
+        if v.contains( ',' )
+        {
+          return Err( Error::msg( format!(
+            "invalid summary-fields: unknown field '{bad}'"
+          ) ) );
+        }
+        return Err( Error::msg( format!(
+          "invalid summary-fields '{v}'"
+        ) ) );
+      }
+      parsed.summary_fields = Some( v.to_string() );
+    }
     _ => return Ok( false ),
   }
   Ok( true )
@@ -539,6 +557,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       add_dir                 : None,
       fallback_model          : None,
       output_style            : None,
+      summary_fields          : None,
     } );
   }
 

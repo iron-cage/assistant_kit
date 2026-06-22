@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- feat: add `--summary-fields` parameter for summary output field selection (TSK-234)
+  - Presets: `full` (default, 32 fields), `standard` (14 fields), `minimal` (7 fields)
+  - Custom comma-separated field whitelists with validation
+  - `CLR_SUMMARY_FIELDS` env var; CLI flag wins when both set
+  - Tests: `tests/summary_fields_test.rs` (EC-01–EC-12)
+
 - **`--output-style <MODE>` — runner-level print-mode rendering control** (TSK-231)
   - Two values: `summary` (default) routes stdout through `render_summary()` in `summary.rs` producing a key:val header; `raw` bypasses rendering and passes stdout unchanged
   - **Default changed:** `clr run -m "..."` (no flags) now renders the summary key:val header by default; previous behavior was raw text

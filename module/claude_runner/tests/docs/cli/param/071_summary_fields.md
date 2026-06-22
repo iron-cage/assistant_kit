@@ -8,9 +8,9 @@ Edge case coverage for the `--summary-fields` parameter on the `run`/`ask` dispa
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-01 | Default (`full`) — stdout contains all 32 header fields | Default |
+| EC-01 | Default (`full`) — stdout contains all 32 header fields | Behavioral Divergence |
 | EC-02 | `--summary-fields full` explicit — same as default | Explicit |
-| EC-03 | `--summary-fields minimal` — stdout contains 7 fields only | Profile |
+| EC-03 | `--summary-fields minimal` — stdout contains 7 fields only | Behavioral Divergence |
 | EC-04 | `--summary-fields standard` — stdout contains 14 fields | Profile |
 | EC-05 | Custom whitelist `type,session_id,total_cost_usd` — only 3 fields | Custom |
 | EC-06 | `--output-style raw` ignores `--summary-fields` — no header | Interaction |
@@ -23,9 +23,9 @@ Edge case coverage for the `--summary-fields` parameter on the `run`/`ask` dispa
 
 ## Test Coverage Summary
 
-- Default: 1 test (EC-01)
+- Behavioral Divergence: 2 tests (EC-01, EC-03)
 - Explicit: 1 test (EC-02)
-- Profile: 2 tests (EC-03, EC-04)
+- Profile: 1 test (EC-04)
 - Custom: 1 test (EC-05)
 - Interaction: 1 test (EC-06)
 - Validation: 2 tests (EC-07, EC-08)

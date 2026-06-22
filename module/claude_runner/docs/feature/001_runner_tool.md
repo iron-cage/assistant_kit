@@ -158,6 +158,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/tools_command_test.rs` | IT-01–IT-09 clr tools table output, help, unknown args |
 | `../../tests/output_format_test.rs` | --output-format summary rendering and fallback |
 | `../../tests/output_style_test.rs` | EC-01–EC-13 --output-style summary/raw rendering, CLR_OUTPUT_STYLE env var, legacy alias, graceful fallback |
+| `../../tests/summary_fields_test.rs` | EC-01–EC-12 --summary-fields profile/custom/env field selection |
 | `../../tests/ask_command_test.rs` | clr ask dispatch, help intercept, BUG-249/250 |
 | `../../tests/env_var_test.rs` | E01–E17 CLR_* env-variable fallback for run params |
 | `../../tests/env_var_ext_test.rs` | E18–E34 extended env-variable fallback (output-file, expect, retry) |

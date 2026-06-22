@@ -18,7 +18,7 @@ pub( super ) fn env_str( var : &str ) -> Option< String >
   std::env::var( var ).ok().filter( | v | !v.is_empty() )
 }
 
-/// Apply `CLR_*` environment variable fallbacks for the 59 run parameters.
+/// Apply `CLR_*` environment variable fallbacks for the 60 run parameters.
 ///
 /// Each field is updated only when it is still at its zero/default value — the CLI
 /// flag always wins when both are present (CLI-wins field-default check).
@@ -276,6 +276,19 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
         ) ) );
       }
       parsed.output_style = Some( v );
+    }
+  }
+  if parsed.summary_fields.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_SUMMARY_FIELDS" )
+    {
+      if super::summary::resolve_fields( &v ).is_err()
+      {
+        return Err( Error::msg( format!(
+          "CLR_SUMMARY_FIELDS: invalid value '{v}'"
+        ) ) );
+      }
+      parsed.summary_fields = Some( v );
     }
   }
   Ok( () )

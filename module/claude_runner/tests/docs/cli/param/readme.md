@@ -79,4 +79,4 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `066_add_dir.md` | Edge cases for `--add-dir` parameter | ✅ |
 | `067_fallback_model.md` | Edge cases for `--fallback-model` parameter | ✅ |
 | `070_output_style.md` | Edge cases for `--output-style` parameter (EC-01–EC-13) | ✅ |
-| `071_summary_fields.md` | Edge cases for `--summary-fields` parameter (EC-01–EC-12) | ⏳ |
+| `071_summary_fields.md` | Edge cases for `--summary-fields` parameter (EC-01–EC-12) | ✅ |

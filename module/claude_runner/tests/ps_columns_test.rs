@@ -49,10 +49,16 @@ fn ec1_custom_columns_correct_headers()
   assert!( stdout.contains( "PID" ),           "EC-1: PID header must appear. Got:\n{stdout}" );
   assert!( stdout.contains( "Absolute Path" ), "EC-1: Absolute Path header must appear. Got:\n{stdout}" );
   assert!( stdout.contains( "Task" ),          "EC-1: Task header must appear. Got:\n{stdout}" );
-  assert!( !stdout.contains( "CPU%" ),     "EC-1: CPU% must NOT appear. Got:\n{stdout}" );
-  assert!( !stdout.contains( "RAM" ),      "EC-1: RAM must NOT appear. Got:\n{stdout}" );
-  assert!( !stdout.contains( "State" ),    "EC-1: State must NOT appear. Got:\n{stdout}" );
-  assert!( !stdout.contains( "Elapsed" ),  "EC-1: Elapsed must NOT appear. Got:\n{stdout}" );
+  // Check absent columns on the header line only — the flag legend may contain substrings
+  // like "High RAM" that would false-positive a whole-stdout search.
+  // Fix(BUG-310)
+  // Root cause: whole-stdout contains("RAM") matches legend "🐘 High RAM", not column header.
+  // Pitfall: any negative column assertion against full stdout is fragile when flags fire.
+  let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
+  assert!( !header.contains( "CPU%" ),    "EC-1: CPU% must NOT appear in headers. Got:\n{stdout}" );
+  assert!( !header.contains( "RAM" ),     "EC-1: RAM must NOT appear in headers. Got:\n{stdout}" );
+  assert!( !header.contains( "State" ),   "EC-1: State must NOT appear in headers. Got:\n{stdout}" );
+  assert!( !header.contains( "Elapsed" ), "EC-1: Elapsed must NOT appear in headers. Got:\n{stdout}" );
 }
 
 // ── EC-2: Unknown column key → exit 1 ────────────────────────────────────────
@@ -99,9 +105,11 @@ fn ec3_env_var_columns_fallback()
   assert!( out.status.success(), "EC-3: exit 0 expected, got {:?}", out.status.code() );
   assert!( stdout.contains( "PID" ),     "EC-3: PID must appear. Got:\n{stdout}" );
   assert!( stdout.contains( "Elapsed" ), "EC-3: Elapsed must appear. Got:\n{stdout}" );
-  assert!( !stdout.contains( "CPU%" ),   "EC-3: CPU% must NOT appear. Got:\n{stdout}" );
-  assert!( !stdout.contains( "RAM" ),    "EC-3: RAM must NOT appear. Got:\n{stdout}" );
-  assert!( !stdout.contains( "Task" ),   "EC-3: Task must NOT appear. Got:\n{stdout}" );
+  // Header-only check — legend "🐘 High RAM" would false-positive whole-stdout search.
+  let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
+  assert!( !header.contains( "CPU%" ),   "EC-3: CPU% must NOT appear in headers. Got:\n{stdout}" );
+  assert!( !header.contains( "RAM" ),    "EC-3: RAM must NOT appear in headers. Got:\n{stdout}" );
+  assert!( !header.contains( "Task" ),   "EC-3: Task must NOT appear in headers. Got:\n{stdout}" );
 }
 
 // ── EC-4: CLI `--columns` wins over `CLR_PS_COLUMNS` ────────────────────────

@@ -7,7 +7,7 @@
 - **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (-> param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (69 total)
+### All Env Parameters (70 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
