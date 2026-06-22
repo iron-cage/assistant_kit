@@ -85,7 +85,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 021_extended_snapshot_fields | [021_extended_snapshot_fields.md](21_extended_snapshot_fields.md) | FT-01 … FT-09 | ✅ |
 | 022_org_identity_snapshot | [022_org_identity_snapshot.md](22_org_identity_snapshot.md) | FT-01 … FT-11 | ✅ |
 | ~~023_next_account_strategies~~ | ~~[023_next_account_strategies.md](23_next_account_strategies.md)~~ | ~~FT-01 … FT-19~~ | ⛔ DEPRECATED |
-| 024_session_touch | [024_session_touch.md](24_session_touch.md) | FT-01 … FT-22 | ✅ |
+| 024_session_touch | [024_session_touch.md](24_session_touch.md) | FT-01 … FT-23 | ✅ |
 | 025_per_machine_active_marker | [025_per_machine_active_marker.md](25_per_machine_active_marker.md) | FT-01 … FT-13 | ✅ |
 | 026_subprocess_model_effort | [026_subprocess_model_effort.md](26_subprocess_model_effort.md) | FT-01 … FT-31 | ✅ |
 | 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](27_account_use_post_switch_touch.md) | FT-01 … FT-22 | ✅ |
@@ -99,7 +99,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 035_model_command | [035_model_command.md](35_model_command.md) | FT-01 … FT-12 | ✅ |
 | 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-25 | ✅ |
 | 037_accounts_usage_param_unification | [037_accounts_usage_param_unification.md](37_accounts_usage_param_unification.md) | FT-01 … FT-21 | ✅ |
-| 038_usage_strategy_rotate | [038_usage_strategy_rotate.md](38_usage_strategy_rotate.md) | FT-01 … FT-10 | ✅ |
+| 038_usage_strategy_rotate | [038_usage_strategy_rotate.md](38_usage_strategy_rotate.md) | FT-01 … FT-11, CC-01 … CC-05 | ✅ |
 | 039_decision_algorithms | [039_decision_algorithms.md](39_decision_algorithms.md) | FT-01 … FT-12 | ✅ |
 | 040_quota_measurement_history | [040_quota_measurement_history.md](40_quota_measurement_history.md) | FT-01 … FT-18 | ✅ |
 | 061_solo_token_conservation | [061_solo_token_conservation.md](61_solo_token_conservation.md) | FT-01 … FT-12 | ✅ |

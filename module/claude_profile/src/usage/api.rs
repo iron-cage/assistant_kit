@@ -837,6 +837,15 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
     apply_touch( &mut accounts[ winner_idx ], &credential_store, Some( &claude_paths ), params.trace, params.imodel, params.effort, params.solo );
 
+    // Fix(BUG-310): re-sync live credentials after post-rotation touch.
+    // Root cause: switch_account copies store→live BEFORE apply_touch; the touch subprocess
+    //   may refresh the token, writing to STORE only via save(update_marker=false); live retains
+    //   stale pre-refresh credentials that may be server-invalidated.
+    // Pitfall: do NOT call switch_account again — it re-writes _active marker and patches
+    //   .claude.json redundantly; a targeted credential file copy suffices.
+    let src_cred = credential_store.join( format!( "{winner_name}.credentials.json" ) );
+    let _ = std::fs::copy( &src_cred, claude_paths.credentials_file() );
+
     let msg = format!( "{content}\nswitched to '{winner_name}'\n" );
     return Ok( OutputData::new( msg, "text" ) );
   }

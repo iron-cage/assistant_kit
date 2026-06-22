@@ -7,26 +7,32 @@
 //!
 //! ## Test Matrix
 //!
-//! | ID     | Test Function                                  | AC    | Live? |
-//! |--------|------------------------------------------------|-------|-------|
-//! | FT-04  | `ft04_rotate_live_mutual_exclusion`            | AC-04 | no    |
-//! | FT-03  | `ft03_no_eligible_account_exits_1`             | AC-03 | no    |
-//! | FT-01  | `ft01_lim_it_rotates_to_next_winner`           | AC-01 | yes   |
-//! | FT-02  | `ft02_lim_it_dry_run_no_switch`                | AC-02 | yes   |
-//! | FT-05  | `ft05_lim_it_g5_gate_skips_non_owned`          | AC-05 | yes   |
-//! | FT-06  | `ft06_lim_it_force_bypasses_g5`                | AC-06 | yes   |
-//! | FT-07  | `ft07_lim_it_sort_renews`                      | AC-07 | yes   |
-//! | FT-08  | `ft08_lim_it_format_json_switch_executes`      | AC-08 | yes   |
-//! | FT-09  | `ft09_lim_it_touch_reuse_no_extra_api_call`    | AC-09 | yes   |
-//! | FT-10  | `ft10_non_owned_no_force_exits_1`              | AC-10 | no    |
-//! | EC-05  | `ec05_rotate_true_rejected_not_integer`         | EC-5  | no    |
-//! | EC-06  | `ec06_rotate_false_rejected_not_integer`        | EC-6  | no    |
-//! | EC-07  | `ec07_rotate_2_rejected_out_of_range`           | EC-7  | no    |
+//! | ID     | Test Function                                          | AC    | Live? |
+//! |--------|--------------------------------------------------------|-------|-------|
+//! | FT-04  | `ft04_rotate_live_mutual_exclusion`                    | AC-04 | no    |
+//! | FT-03  | `ft03_no_eligible_account_exits_1`                     | AC-03 | no    |
+//! | FT-01  | `ft01_lim_it_rotates_to_next_winner`                   | AC-01 | yes   |
+//! | FT-02  | `ft02_lim_it_dry_run_no_switch`                        | AC-02 | yes   |
+//! | FT-05  | `ft05_lim_it_g5_gate_skips_non_owned`                  | AC-05 | yes   |
+//! | FT-06  | `ft06_lim_it_force_bypasses_g5`                        | AC-06 | yes   |
+//! | FT-07  | `ft07_lim_it_sort_renews`                              | AC-07 | yes   |
+//! | FT-08  | `ft08_lim_it_format_json_switch_executes`              | AC-08 | yes   |
+//! | FT-09  | `ft09_lim_it_touch_reuse_no_extra_api_call`            | AC-09 | yes   |
+//! | FT-10  | `ft10_non_owned_no_force_exits_1`                      | AC-10 | no    |
+//! | EC-05  | `ec05_rotate_true_rejected_not_integer`                | EC-5  | no    |
+//! | EC-06  | `ec06_rotate_false_rejected_not_integer`               | EC-6  | no    |
+//! | EC-07  | `ec07_rotate_2_rejected_out_of_range`                  | EC-7  | no    |
+//! | CC-01  | `cc01_rotate_offline_live_creds_replaced_by_winner`    | —     | no    |
+//! | CC-02  | `cc02_rotate_touch_offline_live_creds_still_replaced`  | —     | no    |
+//! | CC-03  | `cc03_rotate_zero_no_switch`                           | —     | no    |
+//! | CC-04  | `cc04_rotate_zero_table_rendered`                      | —     | no    |
+//! | CC-05  | `cc05_rotate_sort_name_selects_alphabetical_winner`    | AC-07 | no    |
 
 use crate::cli_runner::{
   run_cs_with_env,
   stdout, stderr, assert_exit,
   write_credentials, write_account, write_account_owner,
+  write_account_quota_cache,
   require_live_api, write_account_with_token, live_active_token,
   FAR_FUTURE_MS,
 };
@@ -456,5 +462,187 @@ fn ec07_rotate_2_rejected_out_of_range()
   assert!(
     combined.contains( "must be" ) || combined.contains( '0' ),
     "rotate::2 error must indicate valid range, got:\n{combined}",
+  );
+}
+
+// ── CC-01: offline rotation — live creds replaced by winner (BUG-310 regression) ──
+
+/// CC-01: `rotate::1` offline with a quota-cached winner.
+///
+/// When an account has no `accessToken`, `read_token()` returns
+/// `Err("missing accessToken")` (not a 401/403), triggering the cache-fallback
+/// path in `fetch.rs`. With a valid cache entry the account becomes eligible.
+/// After rotation, `switch_account` copies winner's store creds to live, then
+/// the BUG-310 fix's `fs::copy` re-syncs after `apply_touch`.
+///
+/// Unique credential tiers ("tier-current" vs "tier-winner") let us verify
+/// which file's content ended up in the live session file without needing tokens.
+#[ test ]
+fn cc01_rotate_offline_live_creds_replaced_by_winner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Active account — no accessToken; is_current via active marker.
+  write_credentials( dir.path(), "max", "tier-current", FAR_FUTURE_MS );
+  write_account( dir.path(), "current@test.com", "max", "tier-current", FAR_FUTURE_MS, true  );
+  // Winner — no accessToken; has quota cache so cache-fallback yields Ok(data).
+  // h5_util=20.0 < 85.0 (passes Gate 4); d7 left = 70.0 > 5.0 (passes Gate 6).
+  write_account( dir.path(), "winner@test.com",  "max", "tier-winner",  FAR_FUTURE_MS, false );
+  write_account_quota_cache( dir.path(), "winner@test.com", 20.0, 30.0, None );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  assert!(
+    text.contains( "switched to 'winner@test.com'" ),
+    "rotate::1 offline must output \"switched to 'winner@test.com'\", got:\n{text}",
+  );
+  // Live credentials must be replaced by winner's store content (BUG-310 regression).
+  let live = std::fs::read_to_string(
+    dir.path().join( ".claude" ).join( ".credentials.json" ),
+  ).expect( "live credentials file must exist after rotation" );
+  assert!(
+    live.contains( "tier-winner" ),
+    "live credentials must contain winner's tier 'tier-winner', got:\n{live}",
+  );
+  assert!(
+    !live.contains( "tier-current" ),
+    "live credentials must NOT still contain pre-rotation 'tier-current', got:\n{live}",
+  );
+}
+
+// ── CC-02: rotate::1 touch::1 offline — live creds still replaced ─────────────
+
+/// CC-02: `rotate::1 touch::1` offline.
+///
+/// `apply_touch` runs after switch; with no live token the touch subprocess
+/// cannot refresh (no-op). The BUG-310 fix's `fs::copy` at `api.rs:847` runs
+/// regardless, re-syncing store → live. Live credentials must still be the
+/// winner's store content after the command exits.
+#[ test ]
+fn cc02_rotate_touch_offline_live_creds_still_replaced()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier-current", FAR_FUTURE_MS );
+  write_account( dir.path(), "current@test.com", "max", "tier-current", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "winner@test.com",  "max", "tier-winner",  FAR_FUTURE_MS, false );
+  write_account_quota_cache( dir.path(), "winner@test.com", 20.0, 30.0, None );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1", "touch::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let live = std::fs::read_to_string(
+    dir.path().join( ".claude" ).join( ".credentials.json" ),
+  ).expect( "live credentials must exist after rotate+touch" );
+  assert!(
+    live.contains( "tier-winner" ),
+    "rotate+touch offline: live creds must be winner's store content, got:\n{live}",
+  );
+}
+
+// ── CC-03: rotate::0 — explicit disable, no switch ────────────────────────────
+
+/// CC-03: `rotate::0` explicitly disables rotation; the command renders the
+/// usage table and exits 0 without switching credentials.
+///
+/// `rotate::0` is equivalent to omitting `rotate::`. The rotation block in
+/// `api.rs` is conditional on `params.rotate == true`.
+#[ test ]
+fn cc03_rotate_zero_no_switch()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier-current", FAR_FUTURE_MS );
+  write_account( dir.path(), "current@test.com", "max", "tier-current", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "winner@test.com",  "max", "tier-winner",  FAR_FUTURE_MS, false );
+  write_account_quota_cache( dir.path(), "winner@test.com", 20.0, 30.0, None );
+
+  let live_before = std::fs::read_to_string(
+    dir.path().join( ".claude" ).join( ".credentials.json" ),
+  ).expect( "live credentials must exist before command" );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::0" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let combined = format!( "{}{}", stdout( &out ), stderr( &out ) );
+  assert!(
+    !combined.contains( "switched to" ),
+    "rotate::0 must NOT output 'switched to'; got:\n{combined}",
+  );
+  let live_after = std::fs::read_to_string(
+    dir.path().join( ".claude" ).join( ".credentials.json" ),
+  ).expect( "live credentials must still exist" );
+  assert_eq!( live_before, live_after, "rotate::0 must not modify live credentials" );
+}
+
+// ── CC-04: rotate::0 — usage table still rendered ─────────────────────────────
+
+/// CC-04: `rotate::0` (no rotation) still renders the usage table.
+///
+/// The table is produced before the rotation block; `rotate::0` must not
+/// suppress it. Account names must appear in the output.
+#[ test ]
+fn cc04_rotate_zero_table_rendered()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
+  write_account( dir.path(), "current@test.com", "max", "default", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "other@test.com",   "max", "default", FAR_FUTURE_MS, false );
+  write_account_quota_cache( dir.path(), "other@test.com", 20.0, 30.0, None );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::0" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  assert!(
+    text.contains( "current@test.com" ) || text.contains( "other@test.com" ),
+    "rotate::0 must render usage table containing account names, got:\n{text}",
+  );
+}
+
+// ── CC-05: rotate::1 sort::name — alphabetical winner selected ────────────────
+
+/// CC-05: `rotate::1 sort::name` selects the alphabetically-first eligible
+/// non-current account.
+///
+/// With two cached accounts `alpha@test.com` and `beta@test.com`, `sort::name`
+/// sorts ascending by name → `alpha` tried first → eligible → wins.
+#[ test ]
+fn cc05_rotate_sort_name_selects_alphabetical_winner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier-current", FAR_FUTURE_MS );
+  write_account( dir.path(), "current@test.com", "max", "tier-current", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "alpha@test.com",   "max", "tier-alpha",   FAR_FUTURE_MS, false );
+  write_account( dir.path(), "beta@test.com",    "max", "tier-beta",    FAR_FUTURE_MS, false );
+  write_account_quota_cache( dir.path(), "alpha@test.com", 20.0, 30.0, None );
+  write_account_quota_cache( dir.path(), "beta@test.com",  20.0, 30.0, None );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1", "sort::name" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  assert!(
+    text.contains( "switched to 'alpha@test.com'" ),
+    "sort::name must select alphabetically-first eligible account 'alpha@test.com', got:\n{text}",
   );
 }

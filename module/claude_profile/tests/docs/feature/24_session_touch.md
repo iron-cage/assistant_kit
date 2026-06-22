@@ -28,6 +28,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-20 | `son_running=false` (5h+7d running, Sonnet 7d absent) + `imodel::auto` (Haiku) → touch fires both calls; Sonnet window unchanged; touch re-fires on second call (BUG-289 infinite loop MRE) | AC-02, AC-15 | BUG-289 MRE |
 | FT-21 | Non-owned account (`aq.is_owned == false`) skipped by `apply_touch`; trace line emitted when `trace::1` | AC-17 | G4 Ownership Gate |
 | FT-22 | Owned account with `is_occupied_elsewhere == true` skipped by `apply_touch`; trace line emitted when `trace::1` | AC-17 | G4 Occupancy Guard |
+| FT-23 | `apply_touch` re-fetch block writes cache and clears cached metadata (BUG-309 MRE) | AC-18 | BUG-309 MRE |
 
 ### Test Case Index
 
@@ -55,8 +56,9 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-20 | son_running=false + imodel::auto (Haiku) fires touch both calls; Sonnet window unchanged; re-fires on second call (BUG-289 MRE) | AC-02, AC-15 | BUG-289 MRE |
 | FT-21 | Non-owned account skipped by apply_touch; trace line emitted (G4 ownership gate) | AC-17 | G4 Ownership Gate |
 | FT-22 | Owned account occupied elsewhere skipped by apply_touch; trace line emitted (G4 occupancy guard) | AC-17 | G4 Occupancy Guard |
+| FT-23 | apply_touch re-fetch writes cache + clears cached flag (BUG-309 structural) | AC-18 | BUG-309 MRE |
 
-**Total:** 22 FT cases
+**Total:** 23 FT cases
 
 ---
 
@@ -316,3 +318,15 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Source fn:** `ft_touch_skips_occupied_elsewhere_with_trace` (in `src/usage/touch.rs` `#[cfg(test)]` module)
 - **Note:** BUG-302 MRE. Complements FT-21 (non-owned account skip); this tests the occupancy case where ownership is confirmed but concurrent use by another machine prevents the touch subprocess. The two guards are independent: G4 (`!is_owned` → skip) and occupancy guard (`is_occupied_elsewhere` → skip). Trace reason string `"occupied elsewhere"` distinguishes this from the `"not owned"` reason of FT-21.
 - **Source:** [feature/024_session_touch.md AC-17](../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-23: `apply_touch` re-fetch block writes cache and clears cached metadata (BUG-309 MRE)
+
+- **Given:** `apply_touch` source code at `src/usage/touch.rs`.
+- **When:** The `if let Ok( new_data ) = claude_quota::fetch_oauth_usage(...)` re-fetch block is inspected.
+- **Then:** The block contains all three required mutations: (1) `write_quota_cache(...)` is called, (2) `aq.cached = false` is set, (3) `aq.cache_age_secs = None` is set. Additionally, `write_quota_cache` appears BEFORE `aq.result = Ok( new_data )` — enforcing the borrow-before-move ordering constraint.
+- **Exit:** N/A (structural source-inspection test — no exit code)
+- **Source fn:** `mre_bug309_apply_touch_refetch_writes_cache_and_clears_cached_flag` (in `src/usage/touch_tests.rs`)
+- **Note:** BUG-309 MRE. Structural guard ensuring the three post-fetch mutations are never accidentally dropped by a refactor or merge conflict. Mirrors `mre_bug256_retry_ok_stale_cached_metadata` in `refresh_tests.rs` for the `apply_touch` code path.
+- **Source:** [feature/024_session_touch.md AC-18](../../../docs/feature/024_session_touch.md)

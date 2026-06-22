@@ -147,7 +147,20 @@ pub( crate ) fn apply_touch(
   let Ok( token ) = read_token( credential_store, &aq.name ) else { return; };
   if let Ok( new_data ) = claude_quota::fetch_oauth_usage( &token )
   {
-    aq.result = Ok( new_data );
+    // Fix(BUG-309): re-fetch block cleared only aq.result — cached flag, cache_age_secs,
+    //   and write_quota_cache were all absent, mirroring the BUG-256 omission in refresh.rs.
+    //   {name}.json retained pre-touch quota (resets_at=null); cache-fallback accounts kept
+    //   ~ markers and (Xh ago) label even after a successful live re-fetch.
+    // Root cause: apply_touch was implemented after Fix(BUG-256) corrected apply_refresh,
+    //   but the three post-fetch mutations were never propagated to this re-fetch block.
+    // Pitfall: extract h5/d7/sn BEFORE moving new_data into aq.result — use-after-move otherwise.
+    let h5 = new_data.five_hour.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
+    let d7 = new_data.seven_day.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
+    let sn = new_data.seven_day_sonnet.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
+    claude_profile_core::account::write_quota_cache( credential_store, &aq.name, h5, d7, sn );
+    aq.result         = Ok( new_data );
+    aq.cached         = false;
+    aq.cache_age_secs = None;
     if let Ok( acct ) = claude_quota::fetch_oauth_account( &token )
     {
       aq.account = Some( acct );

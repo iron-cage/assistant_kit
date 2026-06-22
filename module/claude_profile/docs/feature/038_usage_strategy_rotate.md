@@ -30,7 +30,8 @@ When `rotate::1` is active, `find_first_eligible` applies an additional ownershi
    d. switch_account(winner_name, credential_store, paths)
    d'. apply_model_override(winner.result.ok(), paths) — sets model="opus" when winner Sonnet left < 15%
    d''. if session_effort.is_some() → set_session_effort(paths, session_effort) — carry-forward effort
-   e. apply_post_switch_touch using AccountQuota already in memory (no re-fetch)
+   e. apply_touch(winner) — touch subprocess may refresh token (writes to STORE only)
+   e'. Re-sync: copy winner's store credentials to live session (BUG-310 fix — AC-11)
    f. append "switched to '{name}'\n" to output
 ```
 
@@ -54,6 +55,7 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 - **AC-08**: `rotate::1 format::json` still executes the switch; JSON output is unchanged (no `"switched_to"` field added to JSON).
 - **AC-09**: Post-switch touch is applied using the winner's `AccountQuota` already in memory from the main fetch — no additional `GET /api/oauth/usage` call for the winner account.
 - **AC-10**: Exit codes: 0 = switch succeeded (or dry-run); 1 = usage error (no eligible account, mutual exclusion, ownership violation); 2 = runtime error (credential store unreadable, switch I/O failure).
+- **AC-11**: After `apply_touch(winner)` completes in the rotation dispatch (step 4e), the winner's credentials are re-synced from the persistent store to the live session file (`~/.claude/.credentials.json`). This ensures any token refresh performed by the touch subprocess (writes to STORE only via `refresh_account_token → save(update_marker=false)`) is reflected in the live session. Without re-sync, the live session retains pre-refresh credentials that may be server-invalidated. Fix(BUG-310).
 
 ### Migration from `.account.rotate`
 
@@ -63,6 +65,12 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 | `clp .account.rotate dry::1` | `clp .usage rotate::1 dry::1` | Same semantics. |
 | `clp .account.rotate trace::1` | `clp .usage rotate::1 trace::1` | Same semantics. |
 | *(no equivalent)* | `clp .usage rotate::1 sort::renews` | New: rotate to account with soonest billing renewal. |
+
+### Bugs
+
+| File | Relationship |
+|------|--------------|
+| [BUG-310 🟢 Fixed](../../../../../task/claude_profile/bug/310_rotation_touch_stale_live_credentials.md) | `api.rs:824` copies pre-touch store credentials to live via `switch_account(winner)`; `api.rs:838` `apply_touch(winner)` may refresh token writing to STORE only; live session retains stale pre-refresh credentials; fix = AC-11 — `fs::copy` at `api.rs:847` re-syncs store→live after `apply_touch` (TSK-318) |
 
 ### Commands
 
