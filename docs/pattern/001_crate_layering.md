@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the four-layer crate dependency hierarchy governing the assistant workspace.
 - **Responsibility**: Describe the layer definitions, Layer Invariant, permitted dep directions, and crate-to-layer assignments.
-- **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps), dependency table, Layer * position (claude_storage_core, claude_auth, claude_quota — outside hierarchy).
+- **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps), dependency table, Layer * position (claude_storage_core, claude_auth, claude_quota, runbox — outside hierarchy).
 - **Out of Scope**: Cross-workspace integration (→ `integration/001_consumer_integration.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`).
 
 ### Problem
@@ -54,7 +54,7 @@ Layer 0: claude_core                                                  (zero work
 
 `*` = outside layer hierarchy.
 
-**Layer `*` position:** Three crates sit outside the numbered layer hierarchy. They have no workspace dependencies (only an optional `ureq` or no external dep):
+**Layer `*` position:** Four crates sit outside the numbered layer hierarchy. They have no workspace dependencies (only an optional `ureq` or no external dep):
 - `claude_storage_core` — zero-dep JSONL parsing primitive; uses env-var paths, not `ClaudePaths`; wrapped by Layer 2's `claude_storage`
 - `claude_auth` — OAuth token refresh transport; standalone primitive usable without any workspace dep
 - `claude_quota` — API rate-limit HTTP transport; standalone primitive usable without any workspace dep
