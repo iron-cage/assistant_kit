@@ -111,7 +111,7 @@ default-features = false
 
 [workspace.dependencies.claude_assets]
 path = "module/claude_assets"
-version = "=1.3.1"
+version = "=1.4.1"
 default-features = false
 
 [workspace.dependencies.claude_core]
