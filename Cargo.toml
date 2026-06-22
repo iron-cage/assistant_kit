@@ -101,7 +101,7 @@ default-features = false
 
 [workspace.dependencies.claude_auth]
 path = "module/claude_auth"
-version = "=0.1.0"
+version = "=0.2.1"
 default-features = false
 
 [workspace.dependencies.claude_assets_core]
