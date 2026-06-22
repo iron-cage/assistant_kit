@@ -63,6 +63,7 @@
 | 068_pid.md | `--pid` parameter spec (ps PID filter) |
 | 069_inspect.md | `--inspect` flag spec (ps key:value output) |
 | 070_output_style.md | `--output-style` parameter spec (runner-level rendering control) |
+| 071_summary_fields.md | `--summary-fields` parameter spec (summary field selection) |
 | 061_output_format.md | `--output-format` parameter spec |
 | 062_max_turns.md | `--max-turns` parameter spec |
 | 063_allowed_tools.md | `--allowed-tools` parameter spec |
@@ -71,7 +72,7 @@
 | 066_add_dir.md | `--add-dir` parameter spec |
 | 067_fallback_model.md | `--fallback-model` parameter spec |
 
-### All Parameters (66 total)
+### All Parameters (67 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -141,10 +142,11 @@
 | 68 | `--pid` | string | — | Comma-separated numeric PIDs | Filter `clr ps` active table to specified process IDs only | 1 cmd |
 | 69 | `--inspect` | bool | false | present/absent | Switch `clr ps` to key:value record output showing all 12 session attributes | 1 cmd |
 | 70 | `--output-style` | enum | `summary` | `summary`/`raw` | Runner-level rendering control: `summary` routes stdout through `render_summary()`; `raw` passes through unchanged | 2 cmds |
+| 71 | `--summary-fields` | string | `full` | `minimal`/`standard`/`full`/custom | Select which CLR envelope fields appear in summary header; custom = comma-separated field names | 2 cmds |
 
-**Total:** 66 parameters
+**Total:** 67 parameters
 
-**Groups:** Parameters 2–4, 17, 23, 24, and 61–67 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25–36, 40–57, 70 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md).
+**Groups:** Parameters 2–4, 17, 23, 24, and 61–67 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25–36, 40–57, 70–71 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md).
 
 ### Navigation
 
@@ -207,6 +209,7 @@
 - [`--pid`](068_pid.md)
 - [`--inspect`](069_inspect.md)
 - [`--output-style`](070_output_style.md)
+- [`--summary-fields`](071_summary_fields.md)
 - [`--output-format`](061_output_format.md)
 - [`--max-turns`](062_max_turns.md)
 - [`--allowed-tools`](063_allowed_tools.md)
@@ -221,4 +224,4 @@
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 59, `ask` = 59, `ps` = 5, `isolated` = 4, `refresh` = 3, `kill` = 0, `tools` = 0, `help` = 0.
+**Commands by parameter count:** `run` = 60, `ask` = 60, `ps` = 5, `isolated` = 4, `refresh` = 3, `kill` = 0, `tools` = 0, `help` = 0.
