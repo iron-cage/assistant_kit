@@ -12,4 +12,3 @@
 | `tests/` | Integration test suite directory |
 | tests/install.rs | Real-fs integration tests via tempfile |
 | `verb/` | Shell scripts for each `do` protocol verb. |
-| `runbox/` | Shell scripts for container-orchestrated operations. |

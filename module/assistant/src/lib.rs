@@ -111,9 +111,149 @@ mod cli
     registry
   }
 
+  // 41 commands across 8 groups — data construction cannot be split further.
+  #[ allow( clippy::too_many_lines ) ]
+  fn print_usage( binary : &str )
+  {
+    use cli_fmt::help::*;
+
+    let data = CliHelpData
+    {
+      binary  : binary.to_string(),
+      tagline : "Claude Code super-app: manage versions, accounts, assets, storage, and processes.".to_string(),
+      groups  : vec!
+      [
+        CommandGroup
+        {
+          name    : "Asset Management".to_string(),
+          entries : vec!
+          [
+            CommandEntry { name : ".list".to_string(),      desc : "List available and installed Claude Code artifacts".to_string() },
+            CommandEntry { name : ".install".to_string(),   desc : "Install a named artifact via symlink into .claude/<kind>/".to_string() },
+            CommandEntry { name : ".uninstall".to_string(), desc : "Remove an installed artifact symlink from .claude/<kind>/".to_string() },
+            CommandEntry { name : ".kinds".to_string(),     desc : "Show all artifact kinds with source and target path mappings".to_string() },
+          ],
+        },
+        CommandGroup
+        {
+          name    : "Version Management".to_string(),
+          entries : vec!
+          [
+            CommandEntry { name : ".version.show".to_string(),    desc : "Show current Claude Code version".to_string() },
+            CommandEntry { name : ".version.install".to_string(), desc : "Install a specific Claude Code version".to_string() },
+            CommandEntry { name : ".version.guard".to_string(),   desc : "Guard minimum version requirement".to_string() },
+            CommandEntry { name : ".version.list".to_string(),    desc : "List available Claude Code versions".to_string() },
+            CommandEntry { name : ".version.history".to_string(), desc : "Show version installation history".to_string() },
+          ],
+        },
+        CommandGroup
+        {
+          name    : "Settings & Config".to_string(),
+          entries : vec!
+          [
+            CommandEntry { name : ".settings.show".to_string(), desc : "Display current settings".to_string() },
+            CommandEntry { name : ".settings.get".to_string(),  desc : "Get a specific setting value".to_string() },
+            CommandEntry { name : ".settings.set".to_string(),  desc : "Set a specific setting value".to_string() },
+            CommandEntry { name : ".config".to_string(),        desc : "Show configuration paths and state".to_string() },
+          ],
+        },
+        CommandGroup
+        {
+          name    : "Process Lifecycle".to_string(),
+          entries : vec!
+          [
+            CommandEntry { name : ".status".to_string(),         desc : "Show overall system status".to_string() },
+            CommandEntry { name : ".processes".to_string(),      desc : "List running Claude processes".to_string() },
+            CommandEntry { name : ".processes.kill".to_string(), desc : "Kill running Claude processes".to_string() },
+          ],
+        },
+        CommandGroup
+        {
+          name    : "Account Management".to_string(),
+          entries : vec!
+          [
+            CommandEntry { name : ".credentials.status".to_string(), desc : "Show credential status".to_string() },
+            CommandEntry { name : ".accounts".to_string(),           desc : "List all configured accounts".to_string() },
+            CommandEntry { name : ".account.limits".to_string(),     desc : "Show account rate limits".to_string() },
+            CommandEntry { name : ".account.save".to_string(),       desc : "Save account credentials".to_string() },
+            CommandEntry { name : ".account.use".to_string(),        desc : "Switch active account".to_string() },
+            CommandEntry { name : ".account.delete".to_string(),     desc : "Remove an account".to_string() },
+            CommandEntry { name : ".account.relogin".to_string(),    desc : "Re-authenticate an account".to_string() },
+            CommandEntry { name : ".account.renewal".to_string(),    desc : "Show account renewal info".to_string() },
+            CommandEntry { name : ".account.rotate".to_string(),     desc : "Rotate credentials (DEPRECATED)".to_string() },
+            CommandEntry { name : ".account.inspect".to_string(),    desc : "Inspect account details".to_string() },
+          ],
+        },
+        CommandGroup
+        {
+          name    : "Token & Model".to_string(),
+          entries : vec!
+          [
+            CommandEntry { name : ".model".to_string(),        desc : "Show or set active model".to_string() },
+            CommandEntry { name : ".token.status".to_string(), desc : "Show token/usage status".to_string() },
+            CommandEntry { name : ".paths".to_string(),        desc : "Show profile filesystem paths".to_string() },
+            CommandEntry { name : ".usage".to_string(),        desc : "Show usage statistics".to_string() },
+          ],
+        },
+        CommandGroup
+        {
+          name    : "Storage Query".to_string(),
+          entries : vec!
+          [
+            CommandEntry { name : ".show".to_string(),           desc : "Display entries from a specific session".to_string() },
+            CommandEntry { name : ".count".to_string(),          desc : "Count sessions or entries matching criteria".to_string() },
+            CommandEntry { name : ".search".to_string(),         desc : "Search conversation content across sessions".to_string() },
+            CommandEntry { name : ".export".to_string(),         desc : "Export session data in various formats".to_string() },
+            CommandEntry { name : ".projects".to_string(),       desc : "List all known projects with session counts".to_string() },
+            CommandEntry { name : ".path".to_string(),           desc : "Print filesystem path of a project directory".to_string() },
+            CommandEntry { name : ".exists".to_string(),         desc : "Check whether a project has any sessions".to_string() },
+            CommandEntry { name : ".session.dir".to_string(),    desc : "Print the filesystem path of a session directory".to_string() },
+            CommandEntry { name : ".session.ensure".to_string(), desc : "Ensure a session directory exists (create if missing)".to_string() },
+          ],
+        },
+        CommandGroup
+        {
+          name    : "System".to_string(),
+          entries : vec!
+          [
+            CommandEntry { name : ".claude".to_string(),      desc : "Show Claude Code runtime info".to_string() },
+            CommandEntry { name : ".claude.help".to_string(), desc : "Show Claude Code built-in help".to_string() },
+          ],
+        },
+      ],
+      options : vec!
+      [
+        OptionEntry { name : "kind::KIND".to_string(),   desc : "Artifact kind filter".to_string() },
+        OptionEntry { name : "name::NAME".to_string(),   desc : "Artifact or account name".to_string() },
+        OptionEntry { name : "format::FMT".to_string(),  desc : "Output format (text, json)".to_string() },
+        OptionEntry { name : "session::ID".to_string(),  desc : "Target session identifier".to_string() },
+        OptionEntry { name : "project::ID".to_string(),  desc : "Target project identifier".to_string() },
+        OptionEntry { name : "limit::N".to_string(),     desc : "Maximum entries to return".to_string() },
+        OptionEntry { name : "query::TEXT".to_string(),  desc : "Search query string".to_string() },
+      ],
+      examples : vec!
+      [
+        ExampleEntry { invocation : format!( "{binary} .status" ),                            desc : None },
+        ExampleEntry { invocation : format!( "{binary} .version.show" ),                      desc : None },
+        ExampleEntry { invocation : format!( "{binary} .accounts" ),                          desc : None },
+        ExampleEntry { invocation : format!( "{binary} .list kind::rule" ),                   desc : None },
+        ExampleEntry { invocation : format!( "{binary} .search query::\"error handling\"" ),  desc : None },
+      ],
+    };
+    print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
+  }
+
   pub( super ) fn run( argv : &[ String ] )
   {
-    let ( tokens, _needs_help ) = match argv_to_unilang_tokens( argv )
+    let binary = std::env::args()
+    .next()
+    .as_deref()
+    .and_then( | p | std::path::Path::new( p ).file_name() )
+    .and_then( | n | n.to_str() )
+    .unwrap_or( "ast" )
+    .to_owned();
+
+    let ( tokens, needs_help ) = match argv_to_unilang_tokens( argv )
     {
       Ok( r )  => r,
       Err( e ) =>
@@ -122,6 +262,12 @@ mod cli
         std::process::exit( 1 );
       }
     };
+
+    if needs_help
+    {
+      print_usage( &binary );
+      std::process::exit( 0 );
+    }
 
     let registry = build_registry();
 

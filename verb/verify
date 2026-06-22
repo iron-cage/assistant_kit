@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# do verify — full checks: container test suite, dependency analysis, audit
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/.."
+if [[ "${1:-}" == "--dry-run" ]]; then
+  echo "./verb/test && cargo +nightly udeps --workspace --all-targets --all-features && cargo +nightly audit"
+  exit 0
+fi
+"$SCRIPT_DIR/test"
+cargo +nightly udeps --workspace --all-targets --all-features
+if [ -f Cargo.lock ]; then
+  exec cargo +nightly audit
+else
+  echo "ℹ No Cargo.lock — skipping audit"
+fi

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# do verbs — list available workspace-level verbs (protocol meta-verb)
+set -euo pipefail
+printf '%-13s %-11s %s\n' build       available   "cargo build --workspace"
+printf '%-13s %-11s %s\n' test        available   "./runbox/runbox .test (container)"
+printf '%-13s %-11s %s\n' clean       available   "cargo clean"
+printf '%-13s %-11s %s\n' run         unavailable "(multiple binaries — use module/*/verb/run)"
+printf '%-13s %-11s %s\n' lint        available   "cargo clippy --workspace --all-features -- -D warnings"
+printf '%-13s %-11s %s\n' verify      available   "./verb/test + udeps + audit"
+printf '%-13s %-11s %s\n' verbs       built-in    "-"
+printf '%-13s %-11s %s\n' package_info built-in   "-"
