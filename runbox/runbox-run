@@ -337,6 +337,14 @@ cmd_test()
       fi
     fi
   done
+  # Fix(BUG-003): Pre-generate Cargo.lock on host so :ro workspace mount does not block
+  # cargo metadata inside the container.
+  # Root cause: cargo always writes Cargo.lock to workspace root; :ro mount (line 352)
+  # blocks that write with EROFS (os error 30).
+  # Pitfall: CARGO_TARGET_DIR only redirects target/; Cargo.lock location is not configurable.
+  # Pitfall: --no-deps suppresses full dep resolution and does NOT write Cargo.lock — omit it.
+  cargo metadata --manifest-path "$WORKSPACE_ROOT/Cargo.toml" \
+    --format-version 1 > /dev/null
   "$CONTAINER_CMD" run --rm \
     "${userns_arg[@]}" \
     --user "$(id -u):$(id -g)" \

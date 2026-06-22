@@ -483,6 +483,42 @@ EOF
   rm -rf "$tmp"
 }
 
+test_t7_cargo_lock_pregenerated_when_absent()
+{
+  # BUG-003 regression: cargo metadata must succeed (create Cargo.lock) when
+  # invoked on a workspace with no pre-existing Cargo.lock — which is exactly
+  # what cmd_test() now does on the host before mounting :ro.
+  local t7_workspace
+  t7_workspace="$( mktemp -d )"
+  mkdir -p "$t7_workspace/demo/src"
+  cat > "$t7_workspace/Cargo.toml" <<'TOML'
+[workspace]
+members = ["demo"]
+TOML
+  cat > "$t7_workspace/demo/Cargo.toml" <<'TOML'
+[package]
+name = "demo"
+version = "0.1.0"
+edition = "2021"
+TOML
+  echo 'fn main(){}' > "$t7_workspace/demo/src/main.rs"
+  rm -f "$t7_workspace/Cargo.lock"
+
+  cargo metadata --manifest-path "$t7_workspace/Cargo.toml" \
+    --format-version 1 > /dev/null 2>&1
+  local cargo_exit=$?
+
+  if [[ $cargo_exit -eq 0 && -f "$t7_workspace/Cargo.lock" ]]; then
+    _pass "T7: cargo metadata pre-generation creates Cargo.lock when absent [BUG-003 regression]"
+  else
+    local lock_status="no"
+    [[ -f "$t7_workspace/Cargo.lock" ]] && lock_status="yes"
+    _fail "T7: cargo metadata pre-generation failed (cargo_exit=$cargo_exit lock_exists=$lock_status)"
+  fi
+
+  rm -rf "$t7_workspace"
+}
+
 # ── Runner ────────────────────────────────────────────────────────────────────
 
 echo ""
@@ -493,6 +529,7 @@ test_t3_stale_hash_triggers_rebuild
 test_t4_matching_hash_skips_rebuild
 test_t5_dockerfile_creates_claude_dir
 test_t6_hash_changes_when_runbox_run_changes
+test_t7_cargo_lock_pregenerated_when_absent
 echo ""
 echo "  Results: ${PASS_COUNT} passed, ${FAIL_COUNT} failed"
 echo "──────────────────────────────────────────────────────────────────────"
