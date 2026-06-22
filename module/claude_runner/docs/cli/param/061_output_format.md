@@ -22,26 +22,30 @@ clr --output-format summary "Explain factorial"
 | `text` | Claude-Native | `--output-format text` | Plain text output (default) |
 | `json` | Claude-Native | `--output-format json` | Single JSON object on completion |
 | `stream-json` | Claude-Native | `--output-format stream-json` | Newline-delimited JSON chunks |
-| `summary` | Runner-synthetic | `--output-format json` | YAML metadata header + text body (see below) |
+| `summary` | Runner-synthetic | `--output-format json` | Key:val header + text body (see below) |
 
 ### `summary` Variant
 
-Runner-level transformation. `clr` sends `--output-format json` to claude, parses the JSON response per [`007_json_response.md`](../../../../contract/claude_code/docs/formats/007_json_response.md), and renders:
+Runner-level transformation. `clr` sends `--output-format json` to claude, parses the CLR result envelope response emitted by `claude --output-format json`, and renders:
 
-1. **YAML header** (boxed, ANSI-colored) — all top-level attributes in YAML format; `content` array replaced with topology pseudo-attribute showing block count, per-block type, and field keys
+1. **Key:val header** (ANSI-colored) — CLR result envelope fields as `key: value` lines
 2. **Separator** (`---`)
-3. **Text body** — extracted text block content, rendered uncolored as in `text` mode
+3. **Text body** — the `result` field value rendered uncolored
 
-Color scheme: keys cyan, string values green, numeric values yellow, null dim, block types magenta, block indices bright-black, tool names bold-green, separator dim.
+Color scheme: keys cyan, string values green, numeric values yellow, boolean values yellow, separator dim.
 
-Content topology pseudo-attributes:
+CLR result envelope fields rendered in header:
 
-| Block Type | Rendering | Shown |
-|------------|-----------|-------|
-| `text` | `text  N chars` | Character count; content in body |
-| `thinking` | `thinking  {thinking, signature}` | Field keys only |
-| `tool_use` | `tool_use  "Name" {field_keys}` | Tool name + input keys |
-| `tool_result` | `tool_result  ok` or `ERROR` | Success/failure indicator |
+| Field | Type | Header Line |
+|-------|------|-------------|
+| `type` | string | `type: result` |
+| `subtype` | string | `subtype: success` |
+| `session_id` | string | `session_id: …` |
+| `is_error` | bool | `is_error: false` |
+| `usage.input_tokens` | u64 | `input_tokens: N` |
+| `usage.output_tokens` | u64 | `output_tokens: N` |
+| `total_cost_usd` | float | `total_cost_usd: X.XXXX` |
+| `result` | string | text body after `---` separator |
 
 ### Referenced Parameter Groups
 

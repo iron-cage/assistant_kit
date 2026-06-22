@@ -14,13 +14,13 @@ Edge case tests for the output format parameter. Tests validate value forwarding
 | EC-4 | `--output-format text` → forwarded | Behavioral Divergence |
 | EC-5 | `--output-format stream-json` → forwarded | Behavioral Divergence |
 | EC-6 | `--help` lists `--output-format` | Documentation |
-| EC-7 | Without `--output-format` → no `--output-format` flag in assembled command | Behavioral Divergence |
+| EC-7 | Without `--output-format` → runner auto-injects `--output-format json` in summary mode | Behavioral Divergence |
 | EC-8 | `CLR_OUTPUT_FORMAT=json` env var → forwarded | Env Var |
 | EC-9 | `--output-format summary` dry-run → `--output-format json` in assembled command | Summary Variant |
-| EC-10 | `--output-format summary` with fake claude JSON → stdout contains YAML header box | Summary Variant |
-| EC-11 | `--output-format summary` with fake claude JSON → stdout contains text body after separator | Summary Variant |
+| EC-10 | `--output-format summary` with fake claude CLR envelope → stdout contains summary header | Summary Variant |
+| EC-11 | `--output-format summary` with fake claude CLR envelope → `result` value after `---` separator | Summary Variant |
 | EC-12 | `CLR_OUTPUT_FORMAT=summary` env var → `--output-format json` in assembled command | Summary Variant |
-| EC-13 | Multi-block JSON (thinking+tool_use+text) → topology shows all block types | Summary Variant |
+| EC-13 | CLR envelope with `is_error: true` → error status visible in summary header | Summary Variant |
 | EC-14 | Claude exits non-zero with `summary` → raw output preserved, no JSON parse | Summary Variant |
 
 ## Test Coverage Summary
@@ -97,11 +97,11 @@ Edge case tests for the output format parameter. Tests validate value forwarding
 - **Commands:** run, ask
 ---
 
-### EC-7: Without `--output-format` → no `--output-format` flag in assembled command
+### EC-7: Without `--output-format` → runner auto-injects `--output-format json` in summary mode
 
-- **Given:** clean environment
+- **Given:** clean environment; no `--output-format` flag; no `CLR_OUTPUT_FORMAT` env var; default `--output-style summary`
 - **When:** `clr --dry-run "Fix bug"`
-- **Then:** Assembled command does NOT contain `--output-format`
+- **Then:** Assembled command DOES contain `--output-format json` (auto-injected by Path B in `builder.rs` when `use_print && effective_style == "summary" && output_format.is_none()`)
 - **Exit:** 0
 - **Source:** [061_output_format.md](../../../../docs/cli/param/061_output_format.md)
 - **Commands:** run, ask
@@ -127,21 +127,21 @@ Edge case tests for the output format parameter. Tests validate value forwarding
 - **Commands:** run, ask
 ---
 
-### EC-10: `--output-format summary` with fake claude JSON → YAML header box in stdout
+### EC-10: `--output-format summary` with fake claude CLR envelope → summary header in stdout
 
-- **Given:** Fake claude binary that outputs `{"id":"msg_01","type":"message","role":"assistant","content":[{"type":"text","text":"hello"}],"model":"test","stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":1,"output_tokens":1}}`
+- **Given:** Fake claude binary that outputs `{"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"result":"hello","usage":{"input_tokens":1,"output_tokens":1},"total_cost_usd":0.0}`
 - **When:** `clr --output-format summary "msg"`
-- **Then:** Stdout contains `model:` and `usage:` and `content:` (YAML header); stdout contains box-drawing characters
+- **Then:** Stdout contains `session_id:` and `input_tokens:` and `is_error:` (summary header); stdout contains `---` separator
 - **Exit:** 0
 - **Source:** [061_output_format.md](../../../../docs/cli/param/061_output_format.md)
 - **Commands:** run, ask
 ---
 
-### EC-11: `--output-format summary` with fake claude JSON → text body after separator
+### EC-11: `--output-format summary` with fake claude CLR envelope → `result` value after separator
 
 - **Given:** Same fake claude binary as EC-10
 - **When:** `clr --output-format summary "msg"`
-- **Then:** Stdout contains `hello` (extracted text block content) after the YAML header section
+- **Then:** Stdout contains `hello` (the `result` field value) after the `---` separator
 - **Exit:** 0
 - **Source:** [061_output_format.md](../../../../docs/cli/param/061_output_format.md)
 - **Commands:** run, ask
@@ -157,11 +157,11 @@ Edge case tests for the output format parameter. Tests validate value forwarding
 - **Commands:** run, ask
 ---
 
-### EC-13: Multi-block JSON → topology shows all block types in header
+### EC-13: CLR envelope with `is_error: true` → error status visible in summary header
 
-- **Given:** Fake claude binary that outputs a 3-block JSON response: `{"id":"msg_01","type":"message","role":"assistant","content":[{"type":"thinking","thinking":"...","signature":"sig"},{"type":"tool_use","id":"toolu_01","name":"Read","input":{"file_path":"/tmp/f"}},{"type":"text","text":"The result"}],"model":"test","stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":5,"output_tokens":10}}`
+- **Given:** Fake claude binary that outputs `{"type":"result","subtype":"error","session_id":"00000000-0000-0000-0000-000000000002","is_error":true,"result":"Something went wrong","usage":{"input_tokens":2,"output_tokens":0},"total_cost_usd":0.0}`
 - **When:** `clr --output-format summary "msg"`
-- **Then:** stdout YAML header contains `thinking`, `tool_use`, and `text` block entries with field topology; `"Read"` tool name appears; `{file_path}` input keys appear; `The result` appears in text body
+- **Then:** Summary header contains `is_error:` and `subtype:`; `Something went wrong` appears after the `---` separator
 - **Exit:** 0
 - **Source:** [061_output_format.md](../../../../docs/cli/param/061_output_format.md)
 - **Commands:** run, ask
@@ -171,7 +171,7 @@ Edge case tests for the output format parameter. Tests validate value forwarding
 
 - **Given:** Fake claude binary that exits with code 2 and writes `Error: rate limit` to stderr
 - **When:** `clr --output-format summary "msg"`
-- **Then:** `Error: rate limit` appears in stderr; no YAML header in stdout; no JSON parse error in output
+- **Then:** `Error: rate limit` appears in stderr; no summary header in stdout; no JSON parse error in output
 - **Exit:** 2
 - **Source:** [061_output_format.md](../../../../docs/cli/param/061_output_format.md)
 - **Commands:** run, ask

@@ -8,19 +8,19 @@ Edge case coverage for the `--output-style` parameter on the `run`/`ask` dispatc
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-01 | `clr run -m "x"` (no flags) → stdout contains `╭`; exit 0 | Default |
-| EC-02 | `--output-style summary -m "x"` → stdout contains `╭`; exit 0 | Explicit |
-| EC-03 | `--output-style raw -m "x"` → stdout does NOT contain `╭`; exit 0 | Behavioral Divergence |
-| EC-04 | `CLR_OUTPUT_STYLE=raw` (no flag) → stdout does NOT contain `╭`; exit 0 | Env Var |
-| EC-05 | `--output-format text --output-style summary -m "x"` → stdout does NOT contain `╭`; exit 0 | Behavioral Divergence |
-| EC-06 | `--output-format json --output-style raw -m "x"` → stdout does NOT contain `╭`; exit 0 | Behavioral Divergence |
+| EC-01 | `clr run -m "x"` (no flags) → stdout contains `---`; exit 0 | Default |
+| EC-02 | `--output-style summary -m "x"` → stdout contains `---`; exit 0 | Explicit |
+| EC-03 | `--output-style raw -m "x"` → stdout does NOT contain `---`; exit 0 | Behavioral Divergence |
+| EC-04 | `CLR_OUTPUT_STYLE=raw` (no flag) → stdout does NOT contain `---`; exit 0 | Env Var |
+| EC-05 | `--output-format text --output-style summary -m "x"` → stdout does NOT contain `---`; exit 0 | Behavioral Divergence |
+| EC-06 | `--output-format json --output-style raw -m "x"` → stdout does NOT contain `---`; exit 0 | Behavioral Divergence |
 | EC-07 | `--output-style invalid` → exit 1; stderr contains `"invalid output-style 'invalid'"` | Validation |
-| EC-08 | `--output-format summary -m "x"` (legacy, no `--output-style`) → stdout contains `╭`; exit 0 | Legacy Alias |
-| EC-09 | `clr ask -m "x"` (no flags) → stdout contains `╭`; exit 0 | Default |
+| EC-08 | `--output-format summary -m "x"` (legacy, no `--output-style`) → stdout contains `---`; exit 0 | Legacy Alias |
+| EC-09 | `clr ask -m "x"` (no flags) → stdout contains `---`; exit 0 | Default |
 | EC-10 | `--dry-run --output-style summary -m "x"` → stderr trace contains `"--output-format json"` | Dry-Run |
-| EC-11 | `CLR_OUTPUT_STYLE=raw` + `--output-style summary` flag → stdout contains `╭`; flag wins | CLI-wins |
+| EC-11 | `CLR_OUTPUT_STYLE=raw` + `--output-style summary` flag → stdout contains `---`; flag wins | CLI-wins |
 | EC-12 | `CLR_OUTPUT_STYLE=bogus clr run -m "x"` → exit 1; stderr contains `"CLR_OUTPUT_STYLE: invalid value 'bogus'"` | Env Var Validation |
-| EC-13 | `--output-format stream-json --output-style summary -m "x"` → stdout does NOT contain `╭`; exit 0 | Behavioral Divergence |
+| EC-13 | `--output-format stream-json --output-style summary -m "x"` → stdout does NOT contain `---`; exit 0 | Behavioral Divergence |
 
 ## Test Coverage Summary
 
@@ -38,13 +38,15 @@ Edge case coverage for the `--output-style` parameter on the `run`/`ask` dispatc
 
 ## Architectural Constraint
 
-All 13 tests use a fake `claude` subprocess to avoid live API calls. The fake claude script emits the JSON object:
-```json
-{"type":"message","content":[{"type":"text","text":"hello"}],"id":"x","role":"assistant","model":"claude-sonnet-4-6","stop_reason":"end_turn","usage":{"input_tokens":1,"output_tokens":1}}
-```
-Tests assert `╭` presence (stdout.contains("╭")) or absence (!stdout.contains("╭")) to detect whether `render_summary()` fired.
+All 13 tests use a fake `claude` subprocess to avoid live API calls. The standard fake claude fixture emits the CLR result envelope produced by `claude --output-format json` in production:
 
-EC-05 and EC-13 verify the graceful fallback path: `--output-format text`/`stream-json` forwarded to claude causes `render_summary()` to receive non-JSON input, return `None`, and fall through to the raw output via `unwrap_or(out)` in `execution.rs`.
+```json
+{"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"result":"hello","usage":{"input_tokens":1,"output_tokens":1},"total_cost_usd":0.0}
+```
+
+Tests assert `---` presence (`stdout.contains("---")`) or absence (`!stdout.contains("---")`) to detect whether `render_summary()` fired and successfully parsed the response.
+
+**EC-05 and EC-13** require a format-aware fake claude script: when invoked with `--output-format text`, the script emits plain text (not JSON); when invoked with `--output-format stream-json`, it emits a non-JSON stream. This drives `render_summary()` to receive unparseable input, return `None`, and fall through to raw output via `unwrap_or(out)` in `execution.rs`.
 
 EC-08 verifies two independent code paths both fire for `--output-format summary` legacy alias: (1) `builder.rs` translates `"summary"` → `"json"` for the subprocess via the `if let Some(ref fmt)` block; (2) `execution.rs` predicate `output_style.unwrap_or("summary") == "summary"` fires because `output_style` is `None` — triggering `render_summary()`. Both paths are required for the legacy alias to work.
 
@@ -52,61 +54,61 @@ EC-10 dry-run verifies that when `--output-style summary` is set and `--output-f
 
 ---
 
-### EC-01: Default output-style is `summary` — stdout contains `╭`
+### EC-01: Default output-style is `summary` — stdout contains `---`
 
 - **Given:** no `--output-style` flag; no `CLR_OUTPUT_STYLE`; fake claude fixture; `-p --max-sessions 0`
 - **When:** `clr -p --max-sessions 0 "x"` with fake claude emitting JSON
-- **Then:** Exit 0; stdout contains `╭`; `render_summary()` fired because `output_style.unwrap_or("summary") == "summary"` with auto-injected `--output-format json`
+- **Then:** Exit 0; stdout contains `---`; `render_summary()` fired because `output_style.unwrap_or("summary") == "summary"` with auto-injected `--output-format json`
 - **Exit:** 0
 - **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Default-summary behavior
 
 ---
 
-### EC-02: Explicit `--output-style summary` → stdout contains `╭`
+### EC-02: Explicit `--output-style summary` → stdout contains `---`
 
 - **Given:** `--output-style summary`; fake claude fixture; `-p --max-sessions 0`
 - **When:** `clr -p --max-sessions 0 --output-style summary "x"` with fake claude
-- **Then:** Exit 0; stdout contains `╭`; explicit `summary` identical to default path
+- **Then:** Exit 0; stdout contains `---`; explicit `summary` identical to default path
 - **Exit:** 0
 - **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Default (`summary`)
 
 ---
 
-### EC-03: `--output-style raw` → stdout does NOT contain `╭`
+### EC-03: `--output-style raw` → stdout does NOT contain `---`
 
 - **Given:** `--output-style raw`; fake claude fixture; `-p --max-sessions 0`
 - **When:** `clr -p --max-sessions 0 --output-style raw "x"` with fake claude
-- **Then:** Exit 0; stdout does NOT contain `╭`; `render_summary()` not called; raw claude output
+- **Then:** Exit 0; stdout does NOT contain `---`; `render_summary()` not called; raw claude output
 - **Exit:** 0
 - **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Values (`raw`)
 
 ---
 
-### EC-04: `CLR_OUTPUT_STYLE=raw` → stdout does NOT contain `╭`
+### EC-04: `CLR_OUTPUT_STYLE=raw` → stdout does NOT contain `---`
 
 - **Given:** `CLR_OUTPUT_STYLE=raw`; no `--output-style` flag; fake claude fixture; `-p --max-sessions 0`
 - **When:** `CLR_OUTPUT_STYLE=raw clr -p --max-sessions 0 "x"` with fake claude
-- **Then:** Exit 0; stdout does NOT contain `╭`; env var applied when flag absent
+- **Then:** Exit 0; stdout does NOT contain `---`; env var applied when flag absent
 - **Exit:** 0
 - **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Env var (`CLR_OUTPUT_STYLE`)
 
 ---
 
-### EC-05: `--output-format text --output-style summary` → stdout does NOT contain `╭`; exit 0
+### EC-05: `--output-format text --output-style summary` → stdout does NOT contain `---`; exit 0
 
 - **Given:** `--output-format text`; `--output-style summary`; fake claude fixture; `-p --max-sessions 0`
 - **When:** `clr -p --max-sessions 0 --output-format text --output-style summary "x"` with fake claude
-- **Then:** Exit 0; stdout does NOT contain `╭`; `render_summary()` called but receives plain text; returns `None`; raw text passed through via `unwrap_or(out)` at `execution.rs` call site
+- **Then:** Exit 0; stdout does NOT contain `---`; `render_summary()` called but receives plain text; returns `None`; raw text passed through via `unwrap_or(out)` at `execution.rs` call site
 - **Exit:** 0
 - **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Combinations table (`text` / `summary` row)
 
 ---
 
-### EC-06: `--output-format json --output-style raw` → stdout does NOT contain `╭`
+### EC-06: `--output-format json --output-style raw` → stdout does NOT contain `---`
 
 - **Given:** `--output-format json`; `--output-style raw`; fake claude fixture; `-p --max-sessions 0`
 - **When:** `clr -p --max-sessions 0 --output-format json --output-style raw "x"` with fake claude
-- **Then:** Exit 0; stdout does NOT contain `╭`; `render_summary()` not called despite JSON output; raw JSON from fake claude
+- **Then:** Exit 0; stdout does NOT contain `---`; `render_summary()` not called despite JSON output; raw JSON from fake claude
 - **Exit:** 0
 - **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Combinations table (`any` / `raw` row)
 
@@ -122,21 +124,21 @@ EC-10 dry-run verifies that when `--output-style summary` is set and `--output-f
 
 ---
 
-### EC-08: `--output-format summary` legacy alias → stdout contains `╭`
+### EC-08: `--output-format summary` legacy alias → stdout contains `---`
 
 - **Given:** `--output-format summary`; no `--output-style` flag; fake claude fixture; `-p --max-sessions 0`
 - **When:** `clr -p --max-sessions 0 --output-format summary "x"` with fake claude
-- **Then:** Exit 0; stdout contains `╭`; two independent code paths both fire: (1) `builder.rs` `if let Some(ref fmt)` block translates `"summary"` → `"json"` and forwards `--output-format json` to claude subprocess; (2) `execution.rs` predicate `output_style.unwrap_or("summary") == "summary"` fires because `output_style` is `None` — triggering `render_summary()` post-processing
+- **Then:** Exit 0; stdout contains `---`; two independent code paths both fire: (1) `builder.rs` `if let Some(ref fmt)` block translates `"summary"` → `"json"` and forwards `--output-format json` to claude subprocess; (2) `execution.rs` predicate `output_style.unwrap_or("summary") == "summary"` fires because `output_style` is `None` — triggering `render_summary()` post-processing
 - **Exit:** 0
 - **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Legacy alias
 
 ---
 
-### EC-09: `clr ask` default → stdout contains `╭`
+### EC-09: `clr ask` default → stdout contains `---`
 
 - **Given:** no `--output-style` flag; no `CLR_OUTPUT_STYLE`; fake claude fixture; `--max-sessions 0`
 - **When:** `clr ask --max-sessions 0 -m "x"` with fake claude
-- **Then:** Exit 0; stdout contains `╭`; `ask` uses same `build_claude_command()` path as `run`; `effective_style` defaults to `"summary"`
+- **Then:** Exit 0; stdout contains `---`; `ask` uses same `build_claude_command()` path as `run`; `effective_style` defaults to `"summary"`
 - **Exit:** 0
 - **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Referenced Commands (`ask` row)
 
@@ -152,11 +154,11 @@ EC-10 dry-run verifies that when `--output-style summary` is set and `--output-f
 
 ---
 
-### EC-11: `CLR_OUTPUT_STYLE=raw` + `--output-style summary` flag → flag wins; stdout contains `╭`
+### EC-11: `CLR_OUTPUT_STYLE=raw` + `--output-style summary` flag → flag wins; stdout contains `---`
 
 - **Given:** `CLR_OUTPUT_STYLE=raw`; `--output-style summary` flag; fake claude fixture; `-p --max-sessions 0`
 - **When:** `CLR_OUTPUT_STYLE=raw clr -p --max-sessions 0 --output-style summary "x"` with fake claude
-- **Then:** Exit 0; stdout contains `╭`; CLI flag wins over env var (standard precedence)
+- **Then:** Exit 0; stdout contains `---`; CLI flag wins over env var (standard precedence)
 - **Exit:** 0
 - **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Env var (CLI flag wins when both set)
 
@@ -172,10 +174,10 @@ EC-10 dry-run verifies that when `--output-style summary` is set and `--output-f
 
 ---
 
-### EC-13: `--output-format stream-json --output-style summary` → stdout does NOT contain `╭`; exit 0
+### EC-13: `--output-format stream-json --output-style summary` → stdout does NOT contain `---`; exit 0
 
 - **Given:** `--output-format stream-json`; `--output-style summary`; fake claude fixture; `-p --max-sessions 0`
 - **When:** `clr -p --max-sessions 0 --output-format stream-json --output-style summary "x"` with fake claude
-- **Then:** Exit 0; stdout does NOT contain `╭`; `stream-json` forwarded verbatim; `render_summary()` receives non-JSON stream; returns `None`; raw stream passed through via `unwrap_or(out)` — same fallback as EC-05
+- **Then:** Exit 0; stdout does NOT contain `---`; `stream-json` forwarded verbatim; `render_summary()` receives non-JSON stream; returns `None`; raw stream passed through via `unwrap_or(out)` — same fallback as EC-05
 - **Exit:** 0
 - **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Combinations table (`stream-json` / `summary` row)

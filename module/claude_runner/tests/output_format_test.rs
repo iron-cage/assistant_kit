@@ -202,15 +202,15 @@ fn ec12_output_format_summary_env_var_forwarded_as_json()
   );
 }
 
-// ── EC-10: summary mode → YAML header box in stdout ──────────────────────────
+// ── EC-10: summary mode → CLR envelope header in stdout ──────────────────────
 
-/// EC-10: `--output-format summary` with fake claude JSON → stdout contains YAML
-/// header with box-drawing characters and `model:`, `usage:`, `content:` keys.
+/// EC-10: `--output-format summary` with fake claude CLR envelope → stdout contains
+/// summary header with `session_id:`, `input_tokens:`, `is_error:` and `---` separator.
 #[ cfg( unix ) ]
 #[ test ]
 fn ec10_output_format_summary_yaml_header()
 {
-  let json = r#"{"id":"msg_01","type":"message","role":"assistant","content":[{"type":"text","text":"hello"}],"model":"test","stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":1,"output_tokens":1}}"#;
+  let json = r#"{"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"result":"hello","usage":{"input_tokens":1,"output_tokens":1},"total_cost_usd":0.0}"#;
   let ( _dir, path ) = fake_claude_dir( &format!( "echo '{json}'" ) );
   let out = run_with_path(
     &[ "--output-format", "summary", "--max-sessions", "0", "msg" ],
@@ -218,24 +218,24 @@ fn ec10_output_format_summary_yaml_header()
   );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = stdout_str( &out );
-  assert!( stdout.contains( "model:" ), "stdout must contain 'model:'. Got:\n{stdout}" );
-  assert!( stdout.contains( "usage:" ), "stdout must contain 'usage:'. Got:\n{stdout}" );
-  assert!( stdout.contains( "content:" ), "stdout must contain 'content:'. Got:\n{stdout}" );
+  assert!( stdout.contains( "session_id" ),    "stdout must contain 'session_id:'. Got:\n{stdout}" );
+  assert!( stdout.contains( "input_tokens" ),  "stdout must contain 'input_tokens:'. Got:\n{stdout}" );
+  assert!( stdout.contains( "is_error" ),      "stdout must contain 'is_error:'. Got:\n{stdout}" );
   assert!(
-    stdout.contains( '╭' ) || stdout.contains( '│' ) || stdout.contains( '╰' ),
-    "stdout must contain box-drawing characters. Got:\n{stdout}"
+    stdout.contains( "---" ),
+    "stdout must contain '---' separator. Got:\n{stdout}"
   );
 }
 
 // ── EC-11: summary mode → text body after separator ──────────────────────────
 
-/// EC-11: `--output-format summary` with fake claude JSON → stdout contains the
-/// extracted text block content (`hello`) after the YAML header section.
+/// EC-11: `--output-format summary` with fake claude CLR envelope → stdout contains
+/// the `result` field value (`hello`) after the `---` separator.
 #[ cfg( unix ) ]
 #[ test ]
 fn ec11_output_format_summary_text_body()
 {
-  let json = r#"{"id":"msg_01","type":"message","role":"assistant","content":[{"type":"text","text":"hello"}],"model":"test","stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":1,"output_tokens":1}}"#;
+  let json = r#"{"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"result":"hello","usage":{"input_tokens":1,"output_tokens":1},"total_cost_usd":0.0}"#;
   let ( _dir, path ) = fake_claude_dir( &format!( "echo '{json}'" ) );
   let out = run_with_path(
     &[ "--output-format", "summary", "--max-sessions", "0", "msg" ],
@@ -256,15 +256,15 @@ fn ec11_output_format_summary_text_body()
   }
 }
 
-// ── EC-13: summary mode → multi-block topology ────────────────────────────────
+// ── EC-13: summary mode → error envelope ─────────────────────────────────────
 
-/// EC-13: Multi-block JSON (`thinking+tool_use+text`) → topology shows all block
-/// types, tool name, input keys, and extracted text.
+/// EC-13: CLR envelope with `is_error: true` → summary header shows `is_error:` and
+/// `subtype:`; error message appears in text body after `---`.
 #[ cfg( unix ) ]
 #[ test ]
-fn ec13_output_format_summary_multi_block_topology()
+fn ec13_output_format_summary_error_envelope()
 {
-  let json = r#"{"id":"msg_01","type":"message","role":"assistant","content":[{"type":"thinking","thinking":"...","signature":"sig"},{"type":"tool_use","id":"toolu_01","name":"Read","input":{"file_path":"/tmp/f"}},{"type":"text","text":"The result"}],"model":"test","stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":5,"output_tokens":10}}"#;
+  let json = r#"{"type":"result","subtype":"error","session_id":"00000000-0000-0000-0000-000000000002","is_error":true,"result":"Something went wrong","usage":{"input_tokens":2,"output_tokens":0},"total_cost_usd":0.0}"#;
   let ( _dir, path ) = fake_claude_dir( &format!( "echo '{json}'" ) );
   let out = run_with_path(
     &[ "--output-format", "summary", "--max-sessions", "0", "msg" ],
@@ -272,27 +272,18 @@ fn ec13_output_format_summary_multi_block_topology()
   );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = stdout_str( &out );
-  assert!( stdout.contains( "thinking" ), "stdout must contain 'thinking'. Got:\n{stdout}" );
-  assert!( stdout.contains( "tool_use" ), "stdout must contain 'tool_use'. Got:\n{stdout}" );
-  assert!( stdout.contains( "text" ),     "stdout must contain 'text'. Got:\n{stdout}" );
+  assert!( stdout.contains( "is_error" ), "stdout must contain 'is_error'. Got:\n{stdout}" );
+  assert!( stdout.contains( "subtype" ),  "stdout must contain 'subtype'. Got:\n{stdout}" );
   assert!(
-    stdout.contains( "\"Read\"" ),
-    "stdout must contain tool name '\"Read\"'. Got:\n{stdout}"
-  );
-  assert!(
-    stdout.contains( "file_path" ),
-    "stdout must contain input key 'file_path'. Got:\n{stdout}"
-  );
-  assert!(
-    stdout.contains( "The result" ),
-    "stdout must contain extracted text 'The result'. Got:\n{stdout}"
+    stdout.contains( "Something went wrong" ),
+    "stdout must contain error message in text body. Got:\n{stdout}"
   );
 }
 
-// ── EC-14: claude non-zero exit with summary → raw stderr, no YAML ───────────
+// ── EC-14: claude non-zero exit with summary → raw stderr, no header ─────────
 
 /// EC-14: When claude exits non-zero with `summary` mode, stderr is preserved,
-/// no YAML header appears in stdout, and the exit code propagates.
+/// no summary header appears in stdout, and the exit code propagates.
 #[ cfg( unix ) ]
 #[ test ]
 fn ec14_output_format_summary_nonzero_exit_passthrough()
@@ -315,7 +306,7 @@ fn ec14_output_format_summary_nonzero_exit_passthrough()
   );
   let stdout = stdout_str( &out );
   assert!(
-    !stdout.contains( "model:" ) && !stdout.contains( "╭" ),
-    "stdout must NOT contain YAML header on non-zero exit. Got:\n{stdout}"
+    !stdout.contains( "session_id" ) && !stdout.contains( "---" ),
+    "stdout must NOT contain summary header on non-zero exit. Got:\n{stdout}"
   );
 }
