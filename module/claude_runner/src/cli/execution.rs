@@ -496,7 +496,7 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
 
     // Success path — expect validation, file write, stdout.
     let out = if cli.strip_fences { strip_fences( &output.stdout ) } else { output.stdout };
-    // summary format: intercept JSON output, render YAML header + text body.
+    // summary format: intercept JSON output, render key:val header + text body.
     // Falls back to raw output when JSON cannot be parsed.
     let out = if cli.output_style.as_deref().unwrap_or( "summary" ) == "summary"
     {

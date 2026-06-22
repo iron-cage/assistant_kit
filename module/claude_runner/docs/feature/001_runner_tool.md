@@ -122,7 +122,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../src/cli/cred_parse.rs` | `IsolatedArgs`, `RefreshArgs`, their parsers and env-var fallbacks |
 | `../../src/cli/fence.rs` | `strip_fences` utility — outermost code-fence stripping for `--strip-fences` |
 | `../../src/cli/tools.rs` | `clr tools` — list Claude Code built-in tools in a plain-style table |
-| `../../src/cli/summary.rs` | `render_summary()` — JSON→ANSI box; called in `run_print_mode()` when `--output-style summary` (default); falls back to raw on non-JSON input |
+| `../../src/cli/summary.rs` | `render_summary()` — JSON→key:val summary; called in `run_print_mode()` when `--output-style summary` (default); falls back to raw on non-JSON input |
 
 ### Tests
 

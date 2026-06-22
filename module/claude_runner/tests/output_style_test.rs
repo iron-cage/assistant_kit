@@ -6,7 +6,7 @@
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ fake_claude_dir, run_cli, run_cli_with_env };
 
-const JSON_FIXTURE : &str = r#"{"type":"message","content":[{"type":"text","text":"hello"}],"id":"x","role":"assistant","model":"claude-sonnet-4-6","stop_reason":"end_turn","usage":{"input_tokens":1,"output_tokens":1}}"#;
+const JSON_FIXTURE : &str = r#"{"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"result":"hello","usage":{"input_tokens":1,"output_tokens":1},"total_cost_usd":0.0}"#;
 
 /// Run `clr` with a fake claude that emits the JSON fixture.
 ///
@@ -43,10 +43,10 @@ fn run_text_claude( args : &[ &str ] ) -> std::process::Output
     .expect( "Failed to invoke clr binary" )
 }
 
-// ── EC-01: Default output-style is summary — stdout contains ╭ ───────────────
+// ── EC-01: Default output-style is summary — stdout contains --- ─────────────
 
 /// EC-01: Without any `--output-style` flag or `CLR_OUTPUT_STYLE`, print mode invokes
-/// `render_summary()` and stdout contains box-drawing character `╭`.
+/// `render_summary()` and stdout contains the `---` separator.
 #[ test ]
 fn ec01_default_output_style_is_summary()
 {
@@ -54,12 +54,12 @@ fn ec01_default_output_style_is_summary()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( '╭' ),
-    "stdout must contain '╭' (render_summary fired by default). Got:\n{stdout}"
+    stdout.contains( "---" ),
+    "stdout must contain '---' (render_summary fired by default). Got:\n{stdout}"
   );
 }
 
-// ── EC-02: Explicit --output-style summary → stdout contains ╭ ───────────────
+// ── EC-02: Explicit --output-style summary → stdout contains --- ─────────────
 
 /// EC-02: Explicit `--output-style summary` behaves identically to the default path.
 #[ test ]
@@ -72,12 +72,12 @@ fn ec02_explicit_summary_renders()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( '╭' ),
-    "stdout must contain '╭' with explicit --output-style summary. Got:\n{stdout}"
+    stdout.contains( "---" ),
+    "stdout must contain '---' with explicit --output-style summary. Got:\n{stdout}"
   );
 }
 
-// ── EC-03: --output-style raw → stdout does NOT contain ╭ ────────────────────
+// ── EC-03: --output-style raw → stdout does NOT contain --- ──────────────────
 
 /// EC-03: `--output-style raw` bypasses `render_summary()`; raw claude output reaches stdout.
 #[ test ]
@@ -90,14 +90,14 @@ fn ec03_raw_style_bypasses_render()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    !stdout.contains( '╭' ),
-    "stdout must NOT contain '╭' with --output-style raw. Got:\n{stdout}"
+    !stdout.contains( "---" ),
+    "stdout must NOT contain '---' with --output-style raw. Got:\n{stdout}"
   );
 }
 
-// ── EC-04: CLR_OUTPUT_STYLE=raw env var → stdout does NOT contain ╭ ──────────
+// ── EC-04: CLR_OUTPUT_STYLE=raw env var → stdout does NOT contain --- ────────
 
-/// EC-04: `CLR_OUTPUT_STYLE=raw` applies when no CLI flag is present; no box rendered.
+/// EC-04: `CLR_OUTPUT_STYLE=raw` applies when no CLI flag is present; no summary rendered.
 #[ test ]
 fn ec04_env_raw_bypasses_render()
 {
@@ -108,18 +108,18 @@ fn ec04_env_raw_bypasses_render()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    !stdout.contains( '╭' ),
-    "stdout must NOT contain '╭' with CLR_OUTPUT_STYLE=raw. Got:\n{stdout}"
+    !stdout.contains( "---" ),
+    "stdout must NOT contain '---' with CLR_OUTPUT_STYLE=raw. Got:\n{stdout}"
   );
 }
 
-// ── EC-05: --output-format text --output-style summary → no ╭ ────────────────
+// ── EC-05: --output-format text --output-style summary → no --- ──────────────
 
 /// EC-05: `--output-format text` goes through Path A in builder.rs (forwarded verbatim).
 /// `render_summary()` IS called (style defaults to summary) but receives plain text
 /// from the fake claude, returns `None`, and `unwrap_or(out)` passes the raw text through.
 #[ test ]
-fn ec05_text_format_with_summary_style_no_box()
+fn ec05_text_format_with_summary_style_no_summary()
 {
   let out = run_text_claude(
     &[ "-p", "--max-sessions", "0", "--output-format", "text", "--output-style", "summary", "x" ],
@@ -127,17 +127,17 @@ fn ec05_text_format_with_summary_style_no_box()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    !stdout.contains( '╭' ),
-    "stdout must NOT contain '╭' when render_summary receives non-JSON text. Got:\n{stdout}"
+    !stdout.contains( "---" ),
+    "stdout must NOT contain '---' when render_summary receives non-JSON text. Got:\n{stdout}"
   );
 }
 
-// ── EC-06: --output-format json --output-style raw → no ╭ ────────────────────
+// ── EC-06: --output-format json --output-style raw → no --- ──────────────────
 
 /// EC-06: `--output-style raw` suppresses `render_summary()` even when the subprocess
 /// emits valid JSON via `--output-format json`.
 #[ test ]
-fn ec06_json_format_raw_style_no_box()
+fn ec06_json_format_raw_style_no_summary()
 {
   let out = run_json_claude(
     &[ "-p", "--max-sessions", "0", "--output-format", "json", "--output-style", "raw", "x" ],
@@ -146,8 +146,8 @@ fn ec06_json_format_raw_style_no_box()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    !stdout.contains( '╭' ),
-    "stdout must NOT contain '╭' with --output-style raw even when JSON available. Got:\n{stdout}"
+    !stdout.contains( "---" ),
+    "stdout must NOT contain '---' with --output-style raw even when JSON available. Got:\n{stdout}"
   );
 }
 
@@ -174,7 +174,7 @@ fn ec07_invalid_style_value_rejected()
   );
 }
 
-// ── EC-08: --output-format summary legacy alias → stdout contains ╭ ──────────
+// ── EC-08: --output-format summary legacy alias → stdout contains --- ────────
 
 /// EC-08: `--output-format summary` (legacy alias) fires both Path A (translates to
 /// `--output-format json` in the subprocess command) and the `render_summary()` predicate
@@ -189,15 +189,15 @@ fn ec08_output_format_summary_legacy_alias()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( '╭' ),
-    "stdout must contain '╭' via --output-format summary legacy alias. Got:\n{stdout}"
+    stdout.contains( "---" ),
+    "stdout must contain '---' via --output-format summary legacy alias. Got:\n{stdout}"
   );
 }
 
-// ── EC-09: clr ask default → stdout contains ╭ ───────────────────────────────
+// ── EC-09: clr ask default → stdout contains --- ─────────────────────────────
 
 /// EC-09: `clr ask` with a message uses the same print-mode path as `clr run -p`; default
-/// output-style is `summary`, so `render_summary()` fires and stdout contains `╭`.
+/// output-style is `summary`, so `render_summary()` fires and stdout contains `---`.
 #[ test ]
 fn ec09_ask_default_style_is_summary()
 {
@@ -205,8 +205,8 @@ fn ec09_ask_default_style_is_summary()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( '╭' ),
-    "stdout must contain '╭' with clr ask (default summary). Got:\n{stdout}"
+    stdout.contains( "---" ),
+    "stdout must contain '---' with clr ask (default summary). Got:\n{stdout}"
   );
 }
 
@@ -245,8 +245,8 @@ fn ec11_cli_flag_wins_over_env_var()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( '╭' ),
-    "stdout must contain '╭' — CLI flag wins over CLR_OUTPUT_STYLE=raw. Got:\n{stdout}"
+    stdout.contains( "---" ),
+    "stdout must contain '---' — CLI flag wins over CLR_OUTPUT_STYLE=raw. Got:\n{stdout}"
   );
 }
 
@@ -276,13 +276,13 @@ fn ec12_env_bogus_value_rejected()
   );
 }
 
-// ── EC-13: --output-format stream-json --output-style summary → no ╭ ──────────
+// ── EC-13: --output-format stream-json --output-style summary → no --- ────────
 
 /// EC-13: Same fallback as EC-05 — `--output-format stream-json` forwarded via Path A;
 /// `render_summary()` called but receives non-JSON stream from fake claude; returns `None`;
-/// raw output passed through without box.
+/// raw output passed through without summary header.
 #[ test ]
-fn ec13_stream_json_format_with_summary_style_no_box()
+fn ec13_stream_json_format_with_summary_style_no_summary()
 {
   let out = run_text_claude(
     &[
@@ -295,7 +295,7 @@ fn ec13_stream_json_format_with_summary_style_no_box()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    !stdout.contains( '╭' ),
-    "stdout must NOT contain '╭' when render_summary receives non-JSON stream. Got:\n{stdout}"
+    !stdout.contains( "---" ),
+    "stdout must NOT contain '---' when render_summary receives non-JSON stream. Got:\n{stdout}"
   );
 }
