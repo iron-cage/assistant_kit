@@ -166,7 +166,7 @@ default-features = false
 
 [workspace.dependencies.claude_quota]
 path = "module/claude_quota"
-version = "=0.1.0"
+version = "=0.2.1"
 default-features = false
 
 [workspace.dependencies.runbox]
