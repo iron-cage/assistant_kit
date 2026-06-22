@@ -99,7 +99,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 035_model_command | [035_model_command.md](35_model_command.md) | FT-01 … FT-12 | ✅ |
 | 036_account_ownership | [036_account_ownership.md](36_account_ownership.md) | FT-01 … FT-25 | ✅ |
 | 037_accounts_usage_param_unification | [037_accounts_usage_param_unification.md](37_accounts_usage_param_unification.md) | FT-01 … FT-21 | ✅ |
-| 038_usage_strategy_rotate | [038_usage_strategy_rotate.md](38_usage_strategy_rotate.md) | FT-01 … FT-11, CC-01 … CC-05 | ✅ |
+| 038_usage_strategy_rotate | [038_usage_strategy_rotate.md](38_usage_strategy_rotate.md) | FT-01 … FT-11, CC-01 … CC-07 | ✅ |
 | 039_decision_algorithms | [039_decision_algorithms.md](39_decision_algorithms.md) | FT-01 … FT-12 | ✅ |
 | 040_quota_measurement_history | [040_quota_measurement_history.md](40_quota_measurement_history.md) | FT-01 … FT-18 | ✅ |
 | 061_solo_token_conservation | [061_solo_token_conservation.md](61_solo_token_conservation.md) | FT-01 … FT-12 | ✅ |

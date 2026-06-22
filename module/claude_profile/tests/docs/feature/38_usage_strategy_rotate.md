@@ -38,8 +38,10 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 | CC-03 | `rotate::0` explicit — exit 0, no switch, credentials unchanged | AC-01 | Explicit Disable |
 | CC-04 | `rotate::0` — usage table still rendered (no suppression) | AC-03 | Explicit Disable |
 | CC-05 | `rotate::1 sort::name` — alphabetically-first eligible account wins | AC-07 | Strategy Selection |
+| CC-06 | `rotate::1 format::tsv` offline — switch executes, format flag not rejected | AC-08 | Format Interaction |
+| CC-07 | `rotate::1 dry::1` offline — `[dry-run]` output, credentials unchanged | AC-02 | Dry Run |
 
-**Total:** 16 test cases (11 FT + 5 CC)
+**Total:** 18 test cases (11 FT + 7 CC)
 
 ---
 

@@ -27,6 +27,8 @@
 //! | CC-03  | `cc03_rotate_zero_no_switch`                           | —     | no    |
 //! | CC-04  | `cc04_rotate_zero_table_rendered`                      | —     | no    |
 //! | CC-05  | `cc05_rotate_sort_name_selects_alphabetical_winner`    | AC-07 | no    |
+//! | CC-06  | `cc06_rotate_format_tsv_executes_switch`               | AC-08 | no    |
+//! | CC-07  | `cc07_rotate_dry_offline_no_credential_change`         | AC-02 | no    |
 
 use crate::cli_runner::{
   run_cs_with_env,
@@ -644,5 +646,81 @@ fn cc05_rotate_sort_name_selects_alphabetical_winner()
   assert!(
     text.contains( "switched to 'alpha@test.com'" ),
     "sort::name must select alphabetically-first eligible account 'alpha@test.com', got:\n{text}",
+  );
+}
+
+// ── CC-06: rotate::1 format::tsv — TSV format does not block rotation ─────────
+
+/// CC-06: `rotate::1 format::tsv` offline.
+///
+/// `format::tsv` is a valid output style (`params.rs` error message lists "tsv" as
+/// accepted). Rotation must execute and switch credentials; the output may be TSV
+/// or text depending on how the rotation line is appended, but the command must
+/// not exit 1 due to the format flag.
+#[ test ]
+fn cc06_rotate_format_tsv_executes_switch()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier-current", FAR_FUTURE_MS );
+  write_account( dir.path(), "current@test.com", "max", "tier-current", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "winner@test.com",  "max", "tier-winner",  FAR_FUTURE_MS, false );
+  write_account_quota_cache( dir.path(), "winner@test.com", 20.0, 30.0, None );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1", "format::tsv" ],
+    &[ ( "HOME", home ) ],
+  );
+  // format::tsv must not cause rejection; rotation must succeed.
+  assert_exit( &out, 0 );
+
+  // Live credentials must be replaced (switch executed).
+  let live = std::fs::read_to_string(
+    dir.path().join( ".claude" ).join( ".credentials.json" ),
+  ).expect( "live credentials must exist after rotation" );
+  assert!(
+    live.contains( "tier-winner" ),
+    "format::tsv rotate must still switch live creds to winner, got:\n{live}",
+  );
+}
+
+// ── CC-07: rotate::1 dry::1 offline — no credential change ────────────────────
+
+/// CC-07: `rotate::1 dry::1` offline with a quota-cached winner.
+///
+/// FT-02 covers the live-API dry-run path. This test covers the offline path:
+/// the cache-eligible winner is found, `[dry-run] would switch to` is emitted,
+/// but credentials must remain unchanged.
+#[ test ]
+fn cc07_rotate_dry_offline_no_credential_change()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier-current", FAR_FUTURE_MS );
+  write_account( dir.path(), "current@test.com", "max", "tier-current", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "winner@test.com",  "max", "tier-winner",  FAR_FUTURE_MS, false );
+  write_account_quota_cache( dir.path(), "winner@test.com", 20.0, 30.0, None );
+
+  let live_before = std::fs::read_to_string(
+    dir.path().join( ".claude" ).join( ".credentials.json" ),
+  ).expect( "live credentials must exist before dry-run" );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "rotate::1", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let combined = format!( "{}{}", stdout( &out ), stderr( &out ) );
+  assert!(
+    combined.contains( "[dry-run]" ) && combined.contains( "would switch to" ),
+    "dry-run offline must output '[dry-run] would switch to', got:\n{combined}",
+  );
+  let live_after = std::fs::read_to_string(
+    dir.path().join( ".claude" ).join( ".credentials.json" ),
+  ).expect( "live credentials must still exist after dry-run" );
+  assert_eq!(
+    live_before, live_after,
+    "rotate::1 dry::1 must not modify live credentials",
   );
 }
