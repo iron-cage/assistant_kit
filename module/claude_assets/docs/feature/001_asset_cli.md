@@ -26,8 +26,10 @@
 
 **`.kinds` behavior:** Iterates all six `ArtifactKind` variants and prints one line per kind showing the source path (`$PRO_CLAUDE/<subdir>/`) and target path (`.claude/<subdir>/`). Degrades gracefully when `$PRO_CLAUDE` is unset — prints the literal string `$PRO_CLAUDE` as the source root.
 
+**Help rendering:** When `needs_help` is true (empty argv, `.help`, `--help`, `-h`), `print_usage()` renders grouped command output via `cli_fmt::CliHelpTemplate` to stdout and exits 0. Help is intercepted before the unilang pipeline. The output contains one command group ("Asset Management") with all 4 commands, a shared parameters section, and usage examples.
+
 **Adapter preprocessing:** `argv_to_unilang_tokens()` in `src/adapter.rs` transforms raw argv into unilang token strings before the parser runs:
-- Empty argv → `.help` (shows usage)
+- Empty argv or `.help`/`--help`/`-h` → `needs_help = true`
 - First arg not starting with `.` → error (commands must start with dot)
 - `installed::` values other than `0` or `1` → error (bool normalisation)
 - Args missing `::` separator → error

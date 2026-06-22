@@ -975,7 +975,7 @@ cargo run -p claude_runner -- tools some-arg
 
 ### NC-17: `--output-format summary` Intercept — Builder Substitutes `json`
 
-**Context:** The `summary` value is not a native Claude CLI format — `clr` intercepts it and forwards `--output-format json` to claude, then renders the JSON response as a summary box. In dry-run mode, the substitution is visible in the trace output.
+**Context:** The `summary` value is not a native Claude CLI format — `clr` intercepts it and forwards `--output-format json` to claude, then renders the JSON response as a key:val summary header. In dry-run mode, the substitution is visible in the trace output.
 
 ```sh
 cargo run -p claude_runner -- --dry-run --output-format summary "test"

@@ -1,10 +1,10 @@
 # run/
 
-Runbox integration for `nodejs` example.
+Container integration for `nodejs` example.
 
 | File | Responsibility |
 |------|----------------|
-| `runbox` | Universal wrapper: auto-discovers runbox-run via walk-up (copy verbatim). |
+| `runbox` | Universal wrapper: auto-discovers container runner via walk-up (copy verbatim). |
 | `runbox.yml` | Project config: image, cache_dir, dockerfile, test/lint/run scripts. |
 | `runbox.dockerfile` | Node.js container image: npm install + seed mount point. |
 | `plugins.sh` | Test lister: node --test --test-reporter=spec instead of default nextest list. |

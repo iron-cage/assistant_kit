@@ -10,8 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **`--output-style <MODE>` — runner-level print-mode rendering control** (TSK-231)
-  - Two values: `summary` (default) routes stdout through `render_summary()` in `summary.rs` producing an ANSI box; `raw` bypasses rendering and passes stdout unchanged
-  - **Default changed:** `clr run -m "..."` (no flags) now renders the summary ANSI box by default; previous behavior was raw text
+  - Two values: `summary` (default) routes stdout through `render_summary()` in `summary.rs` producing a key:val header; `raw` bypasses rendering and passes stdout unchanged
+  - **Default changed:** `clr run -m "..."` (no flags) now renders the summary key:val header by default; previous behavior was raw text
   - When `--output-style summary` and `--output-format` is absent, `clr` auto-injects `--output-format json` into the subprocess command; graceful fallback to raw when non-JSON output is received (e.g. `--output-format text` explicitly set)
   - `CLR_OUTPUT_STYLE` env var: accepts `summary` or `raw`; invalid values exit 1 (not silently ignored); CLI flag wins when both set
   - **Separation of concerns:** `--output-style` is runner-level rendering; `--output-format` is a claude passthrough; the two are orthogonal
@@ -56,8 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--output-format` (061), `--max-turns` (062), `--allowed-tools` (063), `--disallowed-tools` (064),
     `--max-budget-usd` (065), `--add-dir` (066), `--fallback-model` (067)
   - Forwarded directly to the `claude` subprocess; `CLR_*` env var fallbacks for each
-  - `--output-format summary` rendering: `render_summary_output()` in `execution.rs` emits
-    cost/duration/turns extracted from the JSON summary blob
+  - `--output-format summary` legacy alias routes through `render_summary()` in `summary.rs`
+    (renders CLR result envelope as key:val header + text body)
 
 - **`clr tools` subcommand** (Plan 021, TSK-222)
   - Lists all 26 Claude Code built-in tools in a plain-style table with Name, Category, Description columns
@@ -66,6 +66,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tests: `tools_command_test.rs` (IT-1–IT-9)
 
 ### Fixed
+
+- **`render_summary()` rewritten for CLR result envelope schema** (BUG-309, TSK-233)
+  - `render_summary()` hard-gated on `"id"` field (Messages API schema) which is absent from the
+    CLR result envelope emitted by `claude --output-format json`; `extract_str(json,"id")?` returned
+    `None` on every live invocation; caller's `.unwrap_or(out)` silently printed raw JSON
+  - Fix: gate changed to `extract_str(json,"session_id")?`; header now renders CLR envelope fields
+    (`type`, `subtype`, `session_id`, `is_error`, `usage`, `total_cost_usd`); `result` field
+    appears as text body after `---` separator
+  - Removed: `ContentBlock` struct, `parse_content_blocks()`, `parse_input_keys()`, `find_close()`,
+    3 unused color constants (`MAGENTA`, `BRIGHT_BLACK`, `BOLD_GREEN`)
+  - Added: `extract_f64()` helper for `total_cost_usd` parsing
+  - Both test fixtures (`output_style_test.rs`, `output_format_test.rs`) updated from Messages API
+    to CLR result envelope; contract test `ec14_render_summary_clr_envelope_accepted` added
+  - Tests: all 13 `output_style_test` EC pass, all 14 `output_format_test` EC pass, g2cc4 pass
 
 - **`clr ps` active sessions sorted oldest-first** (BUG-301, TSK-210)
   - `build_active_table()` was emitting rows in arbitrary filesystem order from `/proc`

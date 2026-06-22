@@ -1,13 +1,13 @@
-# runbox
+# container runner
 
-Variability analysis of the runbox test container infrastructure.
+Variability analysis of the container test infrastructure.
 
 ### Scope
 
-- **Purpose:** Map the variability dimensions of the runbox Docker test infrastructure.
+- **Purpose:** Map the variability dimensions of the container test infrastructure.
 - **Responsibility:** Per-instance reference collections for every configurable parameter slot and swappable plugin slot.
 - **In Scope:** Scalar parameters (`runbox.yml` keys, required or optional-with-default); plugin slots (hook-based ✅ and param-based 🔧).
-- **Out of Scope:** Runbox implementation code (→ `runbox/`); Docker build stages (→ `runbox/runbox.dockerfile`); test results.
+- **Out of Scope:** Container runner implementation code (→ `runbox/`); Docker build stages (→ `runbox/runbox.dockerfile`); test results.
 
 ### Responsibility Table
 

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# do package_info — report workspace metadata as JSON (deterministic)
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/.."
+python3 - <<'PYEOF'
+import json, re, os
+
+with open("Cargo.toml") as f:
+  toml = f.read()
+
+def extract(key, src):
+  m = re.search(rf'^{key}\s*=\s*"([^"]+)"', src, re.MULTILINE)
+  return m.group(1) if m else None
+
+members = []
+m = re.search(r'members\s*=\s*\[(.*?)\]', toml, re.DOTALL)
+if m:
+  members = re.findall(r'"([^"]+)"', m.group(1))
+
+ws_section = re.search(r'\[workspace\.package\](.*?)(?=\n\[|\Z)', toml, re.DOTALL)
+ws_edition = extract("edition", ws_section.group(1)) if ws_section else "unknown"
+ws_version = extract("version", ws_section.group(1)) if ws_section else "unknown"
+
+crates = []
+for member in members:
+  cargo = os.path.join(member, "Cargo.toml")
+  if os.path.isfile(cargo):
+    with open(cargo) as f:
+      crate_toml = f.read()
+    name = extract("name", crate_toml) or os.path.basename(member)
+    crates.append(name)
+
+print("\n" + json.dumps({
+  "scope": "workspace",
+  "members": len(crates),
+  "crates": crates,
+  "version": ws_version,
+  "edition": ws_edition,
+  "language": "rust",
+  "package_manager": "cargo",
+  "signal": "Cargo.toml [workspace]",
+  "confidence": "inferred",
+}, indent=2) + "\n")
+PYEOF

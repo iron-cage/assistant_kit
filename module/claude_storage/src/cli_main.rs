@@ -54,6 +54,80 @@ fn build_command_registry() -> CommandRegistry
   registry
 }
 
+/// Render grouped help output via `cli_fmt::CliHelpTemplate`.
+///
+/// Displays 4 command groups (Status, Session, Project, Query),
+/// shared parameters, and usage examples.
+fn print_usage( binary : &str )
+{
+  use cli_fmt::help::*;
+
+  let data = CliHelpData
+  {
+    binary  : binary.to_string(),
+    tagline : "Claude Code storage explorer: query conversations, sessions, and projects.".to_string(),
+    groups  : vec!
+    [
+      CommandGroup
+      {
+        name    : "Status".to_string(),
+        entries : vec!
+        [
+          CommandEntry { name : ".status".to_string(), desc : "Show storage summary (projects, sessions, entries)".to_string() },
+        ],
+      },
+      CommandGroup
+      {
+        name    : "Session".to_string(),
+        entries : vec!
+        [
+          CommandEntry { name : ".session.dir".to_string(),    desc : "Print the filesystem path of a session directory".to_string() },
+          CommandEntry { name : ".session.ensure".to_string(), desc : "Ensure a session directory exists (create if missing)".to_string() },
+        ],
+      },
+      CommandGroup
+      {
+        name    : "Project".to_string(),
+        entries : vec!
+        [
+          CommandEntry { name : ".projects".to_string(),       desc : "List all known projects with session counts".to_string() },
+          CommandEntry { name : ".project.path".to_string(),   desc : "Print the filesystem path of a project directory".to_string() },
+          CommandEntry { name : ".project.exists".to_string(), desc : "Check whether a project has any sessions".to_string() },
+        ],
+      },
+      CommandGroup
+      {
+        name    : "Query".to_string(),
+        entries : vec!
+        [
+          CommandEntry { name : ".list".to_string(),   desc : "List sessions with filtering and sorting".to_string() },
+          CommandEntry { name : ".show".to_string(),   desc : "Display entries from a specific session".to_string() },
+          CommandEntry { name : ".count".to_string(),  desc : "Count sessions or entries matching criteria".to_string() },
+          CommandEntry { name : ".search".to_string(), desc : "Search conversation content across sessions".to_string() },
+          CommandEntry { name : ".export".to_string(), desc : "Export session data in various formats".to_string() },
+        ],
+      },
+    ],
+    options : vec!
+    [
+      OptionEntry { name : "project::ID".to_string(),     desc : "Filter by project identifier".to_string() },
+      OptionEntry { name : "session::ID".to_string(),     desc : "Target a specific session".to_string() },
+      OptionEntry { name : "scope::VALUE".to_string(),    desc : "Scope filter (all, cli, web, ide)".to_string() },
+      OptionEntry { name : "format::FMT".to_string(),     desc : "Output format (text, json, markdown)".to_string() },
+      OptionEntry { name : "limit::N".to_string(),        desc : "Maximum entries to return".to_string() },
+      OptionEntry { name : "query::TEXT".to_string(),     desc : "Search query string".to_string() },
+    ],
+    examples : vec!
+    [
+      ExampleEntry { invocation : format!( "{binary} .status" ),                          desc : None },
+      ExampleEntry { invocation : format!( "{binary} .list scope::cli limit::10" ),       desc : None },
+      ExampleEntry { invocation : format!( "{binary} .search query::\"error handling\"" ), desc : None },
+      ExampleEntry { invocation : format!( "{binary} --repl" ),                           desc : Some( "Enter interactive REPL mode".to_string() ) },
+    ],
+  };
+  print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
+}
+
 /// Run REPL (Read-Eval-Print Loop) mode.
 fn run_repl( registry : CommandRegistry )
 {
@@ -202,20 +276,44 @@ fn execute_oneshot( registry : CommandRegistry, args : Vec< String > ) -> !
 
 /// Run the `claude_storage` CLI.
 ///
-/// Dispatches to REPL mode (no args) or one-shot mode (args provided).
+/// Three invocation modes:
+/// - Help: empty argv, `.help`, `--help`, `-h` → grouped help via `cli_fmt`
+/// - REPL: `--repl` → interactive read-eval-print loop
+/// - One-shot: any other args → execute command and exit
+///
 /// Entry point shared by the `claude_storage` and `clg` binary targets.
 #[ inline ]
 pub fn run()
 {
-  let registry = build_command_registry();
   let args : Vec< String > = env::args().collect();
+
+  let binary = args.first()
+  .and_then( | p | std::path::Path::new( p ).file_name() )
+  .and_then( | n | n.to_str() )
+  .unwrap_or( "clg" )
+  .to_owned();
 
   if args.len() == 1
   {
-    run_repl( registry );
+    print_usage( &binary );
+    process::exit( 0 );
   }
-  else
+
+  let first = &args[ 1 ];
+
+  if first == ".help" || first == "--help" || first == "-h" || first == "help"
   {
-    execute_oneshot( registry, args );
+    print_usage( &binary );
+    process::exit( 0 );
   }
+
+  if first == "--repl"
+  {
+    let registry = build_command_registry();
+    run_repl( registry );
+    return;
+  }
+
+  let registry = build_command_registry();
+  execute_oneshot( registry, args );
 }

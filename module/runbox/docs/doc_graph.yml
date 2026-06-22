@@ -1,0 +1,22 @@
+meta:
+  description: Cross-reference graph for all doc instances in runbox
+  node_count: 1
+  edge_count: 0
+  component_count: 1
+  generated: 2026-06-22
+
+nodes:
+  - id: feature/001
+    file: feature/001_scaffold_command.md
+    label: Scaffold Command
+    entity: feature
+
+edges: []
+
+components:
+  - id: 1
+    size: 1
+    isolated: true
+    nodes: [feature/001]
+
+dangling_refs: []

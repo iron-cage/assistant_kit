@@ -18,3 +18,4 @@
 | dream | Layer 2 library facade re-exporting all core crates (Layer 0, *, 1) |
 | assistant_kit | Layer 3 library facade re-exporting all Layer 2 full-featured crates |
 | assistant | Layer 3 super-app aggregating all Layer 2 CLI tools into ast |
+| runbox | Layer * standalone CLI for scaffolding container runner integration files |

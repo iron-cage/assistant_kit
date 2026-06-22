@@ -6,14 +6,14 @@ Per-verb reference for the `do` Universal Action Protocol.
 
 - **Purpose:** Document every verb in the `do` protocol implemented across workspace modules.
 - **Responsibility:** Per-instance reference covering kind, availability, `--dry-run` contract, command, and notes.
-- **In Scope:** All 8 protocol verbs (6 canonical + 2 meta); their contracts and module-level variation.
-- **Out of Scope:** Verb script implementation (→ `module/*/verb/`); runbox integration (→ `runbox/docs/`).
+- **In Scope:** All 8 protocol verbs (6 canonical + 2 meta); their contracts, module-level variation, and workspace-level behavior.
+- **Out of Scope:** Verb script implementation (→ `module/*/verb/` for modules, `verb/` for workspace).
 
 ### Responsibility Table
 
 | File | Responsibility |
 |------|----------------|
-| `procedure.md` | Add a verb/ dir to a module; update a verb command |
+| `procedure.md` | Add a verb/ dir to a module or workspace; update a verb command |
 | `001_build.md` | `build` verb: compile project artifacts |
 | `002_test.md` | `test` verb: run the full test suite |
 | `003_clean.md` | `clean` verb: remove generated artifacts |
@@ -38,4 +38,4 @@ Canonical verbs implement project actions. Meta verbs implement protocol introsp
 | [006](006_verbs.md) | `verbs` | meta | universal | — | List all verbs with status |
 | [007](007_package_info.md) | `package_info` | meta | universal | — | Deterministic flat JSON: name, version, edition, ecosystem |
 
-**Availability:** `universal` = present and functional in all modules; `binary-only` = functional only in modules with a binary entry point; library modules exit 3 (unavailable).
+**Availability:** `universal` = present and functional in all modules and at workspace scope; `binary-only` = functional only in modules with a binary entry point; library modules and workspace scope exit 3 (unavailable) for `run`.

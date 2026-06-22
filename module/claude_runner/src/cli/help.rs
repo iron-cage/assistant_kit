@@ -51,7 +51,7 @@ pub( crate ) fn print_help()
   println!( "  --no-persist                       Disable session persistence (--no-session-persistence)" );
   println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
   println!( "  --mcp-config <PATH>                MCP server config file (repeatable)" );
-  println!( "  --output-style <MODE>              Rendering mode: summary (ANSI box, default) or raw (passthrough) [env: CLR_OUTPUT_STYLE]" );
+  println!( "  --output-style <MODE>              Rendering mode: summary (key:val header, default) or raw (passthrough) [env: CLR_OUTPUT_STYLE]" );
   println!( "  --output-format <FMT>              Output format: text, json, stream-json, summary" );
   println!( "  --max-turns <N>                    Max agentic turns (0 = unlimited)" );
   println!( "  --allowed-tools <TOOLS>            Comma-separated tool whitelist (e.g. \"Read,Edit\")" );

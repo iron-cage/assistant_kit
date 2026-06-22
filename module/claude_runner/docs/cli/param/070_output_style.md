@@ -10,7 +10,7 @@ returns the raw claude output without post-processing (`raw`).
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 
 ```sh
-clr -p "summarise logs"                          # default: summary box rendered
+clr -p "summarise logs"                          # default: summary header rendered
 clr -p "summarise logs" --output-style summary   # explicit: same as default
 clr -p "summarise logs" --output-style raw       # bypass render_summary(); raw claude output
 CLR_OUTPUT_STYLE=raw clr -p "task"              # env-var equivalent of --output-style raw
@@ -51,11 +51,11 @@ CLI flag wins when both are set (standard precedence).
 
 | `--output-format` | `--output-style` | Behavior |
 |-------------------|------------------|----------|
-| absent | `summary` (default) | `clr` injects `--output-format json`; `render_summary()` renders ANSI box |
+| absent | `summary` (default) | `clr` injects `--output-format json`; `render_summary()` renders key:val header |
 | `text` | `summary` | `--output-format text` forwarded; `render_summary()` receives plain text; returns `None`; raw text passed through |
-| `json` | `summary` | `--output-format json` forwarded; `render_summary()` renders box |
+| `json` | `summary` | `--output-format json` forwarded; `render_summary()` renders key:val header |
 | `stream-json` | `summary` | `--output-format stream-json` forwarded; `render_summary()` receives non-JSON stream; returns `None`; raw stream passed through |
-| `summary` (legacy) | absent | builder alias translates to `json`; execution predicate fires via `output_style.unwrap_or("summary")`; box rendered |
+| `summary` (legacy) | absent | builder alias translates to `json`; execution predicate fires via `output_style.unwrap_or("summary")`; key:val header rendered |
 | any | `raw` | no `--output-format json` injection; `render_summary()` not called; raw claude output |
 
 ### Referenced Parameter Groups

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# do run — unavailable at workspace scope (multiple binaries)
+echo "error: run is unavailable at workspace scope (use module/*/verb/run)" >&2
+exit 3

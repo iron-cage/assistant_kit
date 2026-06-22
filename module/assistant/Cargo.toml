@@ -48,6 +48,7 @@ enabled = [
   "unilang/enabled",
   "dep:error_tools",
   "error_tools/enabled",
+  "dep:cli_fmt",
 ]
 
 [dependencies]
@@ -58,6 +59,7 @@ claude_runner  = { workspace = true, optional = true }
 claude_storage = { workspace = true, optional = true }
 unilang        = { workspace = true, optional = true }
 error_tools    = { workspace = true, optional = true }
+cli_fmt        = { workspace = true, optional = true }
 
 [build-dependencies]
 unilang    = { workspace = true }

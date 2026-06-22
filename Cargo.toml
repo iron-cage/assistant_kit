@@ -24,6 +24,7 @@ members = [
   "module/claude_quota",
   "module/dream",
   "module/assistant",
+  "module/runbox",
 ]
 exclude = [ "-*", "contract/claude_code" ]
 
@@ -100,22 +101,22 @@ default-features = false
 
 [workspace.dependencies.claude_auth]
 path = "module/claude_auth"
-version = "=0.1.0"
+version = "=0.3.1"
 default-features = false
 
 [workspace.dependencies.claude_assets_core]
 path = "module/claude_assets_core"
-version = "=1.2.0"
+version = "=1.4.1"
 default-features = false
 
 [workspace.dependencies.claude_assets]
 path = "module/claude_assets"
-version = "=1.2.0"
+version = "=1.4.1"
 default-features = false
 
 [workspace.dependencies.claude_core]
 path = "module/claude_core"
-version = "=1.2.0"
+version = "=1.4.1"
 default-features = false
 
 [workspace.dependencies.claude_profile_core]
@@ -125,12 +126,12 @@ default-features = false
 
 [workspace.dependencies.claude_version_core]
 path = "module/claude_version_core"
-version = "=1.2.0"
+version = "=1.4.1"
 default-features = false
 
 [workspace.dependencies.claude_storage_core]
 path = "module/claude_storage_core"
-version = "=1.2.0"
+version = "=1.4.1"
 default-features = false
 
 [workspace.dependencies.claude_profile]
@@ -140,22 +141,22 @@ default-features = false
 
 [workspace.dependencies.claude_runner_core]
 path = "module/claude_runner_core"
-version = "=1.2.0"
+version = "=1.4.1"
 default-features = false
 
 [workspace.dependencies.claude_runner]
 path = "module/claude_runner"
-version = "=1.2.0"
+version = "=1.4.1"
 default-features = false
 
 [workspace.dependencies.claude_version]
 path = "module/claude_version"
-version = "=1.2.0"
+version = "=1.4.1"
 default-features = false
 
 [workspace.dependencies.claude_storage]
 path = "module/claude_storage"
-version = "=1.2.0"
+version = "=1.4.1"
 default-features = false
 
 [workspace.dependencies.dream]
@@ -165,7 +166,12 @@ default-features = false
 
 [workspace.dependencies.claude_quota]
 path = "module/claude_quota"
-version = "=0.1.0"
+version = "=0.2.1"
+default-features = false
+
+[workspace.dependencies.runbox]
+path = "module/runbox"
+version = "=1.4.1"
 default-features = false
 
 ## External — published companion crates

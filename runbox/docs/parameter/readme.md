@@ -1,13 +1,13 @@
 # Runbox Parameters
 
-One file per scalar configuration slot in the runbox infrastructure.
+One file per scalar configuration slot in the container test infrastructure.
 Parameters have fixed presence — they always exist; only their value changes.
 
 ### Scope
 
-- **Purpose:** Document every scalar configuration slot in the runbox infrastructure.
+- **Purpose:** Document every scalar configuration slot in the container test infrastructure.
 - **Responsibility:** Per-parameter reference covering status, current state, data flow, and notes.
-- **In Scope:** All `runbox.yml` keys (required and optional-with-default) in the runbox infrastructure.
+- **In Scope:** All `runbox.yml` keys (required and optional-with-default) in the container test infrastructure.
 - **Out of Scope:** Plugin slots (→ `plugin/`); test results; implementation code.
 
 ### Overview Table

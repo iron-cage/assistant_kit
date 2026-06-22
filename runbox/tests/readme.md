@@ -1,6 +1,6 @@
 # run/tests
 
-Regression tests for the runbox shell script infrastructure.
+Regression tests for the container runner shell script infrastructure.
 
 | File | Responsibility |
 |------|----------------|

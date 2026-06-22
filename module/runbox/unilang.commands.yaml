@@ -1,0 +1,53 @@
+# Runbox CLI Commands
+# Following unilang v0.35+ schema
+# Metadata-only export — programmatic registration via register_commands()
+
+- name: ".init"
+  namespace: ""
+  description: "Scaffold container runner integration files in the current directory"
+  hint: "Initialize runbox"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["runbox", "scaffold", "init"]
+  permissions: []
+  idempotent: false
+  deprecation_message: ""
+  http_method_hint: "POST"
+
+  arguments:
+    - name: "image"
+      kind: "String"
+      description: "Docker image tag for this project"
+      hint: "Image tag"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "ecosystem"
+      kind: "String"
+      description: "Project ecosystem: rust, nodejs, python, none (default: none)"
+      hint: "Ecosystem"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "test_script"
+      kind: "String"
+      description: "Test script path inside container (default: verb/test.d/l1)"
+      hint: "Test script path"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".init image::my_project"
+    - ".init image::my_project ecosystem::rust"
+    - ".init image::my_project ecosystem::python test_script::verb/test"
+  auto_help_enabled: true

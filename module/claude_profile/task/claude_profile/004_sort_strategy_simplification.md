@@ -164,7 +164,7 @@
 - `docs/feature/037_accounts_usage_param_unification.md` — `next::` removed from param table
 - `docs/feature/008_auto_rotate.md` — deprecation note updated
 - `docs/feature/readme.md` — feature 020/023 listings
-- `docs/entities/readme.md` — feature 023 and param 032 marked deprecated/removed
+- `docs/entity/readme.md` — feature 023 and param 032 marked deprecated/removed
 - `docs/doc_graph.yml` — feature 023 edges removed
 
 **Test specs (need update in implementation):**

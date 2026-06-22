@@ -26,6 +26,8 @@ Duplicate registrations via `command_add_runtime` are silently skipped — the f
 
 **Static YAML aggregation:** `build.rs` concatenates the `unilang.commands.yaml` files from `claude_runner` and `claude_storage` into a compile-time-generated `static_commands.rs` (written to `OUT_DIR`). `register_static_commands()` maps each YAML-declared command name to a concrete routine function using a `phf::phf_map!` lookup table.
 
+**Help rendering:** When `needs_help` is true (empty argv, `.help`, `--help`, `-h`), `print_usage()` renders grouped command output via `cli_fmt::CliHelpTemplate` to stdout and exits 0. Help is intercepted before the unilang pipeline. Commands are displayed in 8 groups: "Asset Management" (from cla), "Version Management" / "Settings & Config" / "Process Lifecycle" (from clv), "Account Management" / "Token & Model" (from clp), "Storage Query" / "System" (from YAML-backed static commands). Binary name is extracted via `std::env::args().next()`, not from `argv`, because `run_cli()` already applies `skip(1)` before passing `argv` to `cli::run()`.
+
 **Adapter reuse:** `src/main.rs` calls `claude_version::adapter::argv_to_unilang_tokens()` for argv preprocessing. assistant does not implement its own adapter — it delegates to the manager's adapter, which covers all commands in the registry.
 
 **`.claude` stub:** In standalone `clr` context, `.claude` routes to Claude Code execution. In `ast` context, `.claude` and `.claude.help` route to `claude_stub_routine`, which prints a message directing the user to `clr`. This prevents `ast` from competing with `clr` as the execution entry point.

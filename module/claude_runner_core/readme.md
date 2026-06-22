@@ -14,7 +14,6 @@ Claude Code process execution with builder pattern and single execution point.
 | `docs/` | Behavioral requirements: features, invariants, parameter reference |
 | `../../../task/claude_runner_core/` | Crate task registry — External Layout (see `claude_tools/task/`) |
 | `verb/` | Shell scripts for each `do` protocol verb. |
-| `runbox/` | Shell scripts for container-orchestrated operations. |
 
 ### Responsibility Table
 

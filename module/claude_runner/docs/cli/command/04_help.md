@@ -19,6 +19,8 @@ clr --help
 |------|---------|
 | 0 | Always |
 
+**Rendering:** Help output is rendered via `cli_fmt::CliHelpTemplate` using `usage_lines` (multiple USAGE forms), `option_groups` (COMMANDS, OPTIONS, RETRY OPTIONS, CREDENTIAL OPTIONS sections), and `examples`. Per-subcommand help (`clr ps --help`, `clr isolated --help`, `clr ask --help`, `clr refresh --help`) is each rendered as a separate `CliHelpTemplate` call with subcommand-specific data.
+
 **Notes:** `clr help` is the canonical word-subcommand form. `--help` / `-h`
 anywhere in argv are parameter aliases that trigger identical behavior. All
 three forms override any other flags. Empty argv (no arguments) enters

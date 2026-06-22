@@ -1,11 +1,11 @@
 # Runbox Plugins
 
-One file per swappable behavioral slot in the runbox infrastructure.
+One file per swappable behavioral slot in the container test infrastructure.
 Plugins have lifecycle management — their absence changes the execution shape, not just a value.
 
 ### Scope
 
-- **Purpose:** Document every swappable behavioral slot in the runbox infrastructure.
+- **Purpose:** Document every swappable behavioral slot in the container test infrastructure.
 - **Responsibility:** Per-plugin reference covering status, what it controls, mechanism, and notes.
 - **In Scope:** All swappable behavioral slots — hook-based (✅ `plugins.sh`) and param-based (🔧 `runbox.yml`).
 - **Out of Scope:** Scalar parameters (→ `parameter/`); plugin configuration values.
@@ -13,7 +13,7 @@ Plugins have lifecycle management — their absence changes the execution shape,
 ### Status Legend
 
 ✅ = logic lives in `runbox/plugins.sh`; swap by overriding the hook; `plugins.sh` absent = slot inactive
-🔧 = param read by `runbox-run` core via `cfg_or`; swap by setting `runbox.yml` key; always has a default
+🔧 = param read by `container runner` core via `cfg_or`; swap by setting `runbox.yml` key; always has a default
 🔒 = requires code changes to swap (reserved for future hardcoded slots)
 
 ### Overview Table

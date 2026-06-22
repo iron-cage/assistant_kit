@@ -11,7 +11,6 @@ Zero own logic — every public item originates from a Layer 2 crate.
 | `src/` | Feature-gated `pub mod` re-export modules for all five domains |
 | `tests/` | Integration smoke tests verifying re-export paths per feature |
 | `verb/` | Shell scripts for each `do` protocol verb. |
-| `runbox/` | Shell scripts for container-orchestrated operations. |
 
 ## Feature Flags
 
