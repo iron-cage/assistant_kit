@@ -62,9 +62,9 @@ fn ft1_all_five_l2_crates_contribute_commands()
   }
 }
 
-/// FT-2: `.status` resolves to claude_version's implementation (first-wins)
-/// because claude_version::register_commands() runs before
-/// register_static_commands() which maps `.status` to storage's routine.
+/// FT-2: `.status` resolves to `claude_version`'s implementation (first-wins)
+/// because `claude_version::register_commands()` runs before
+/// `register_static_commands()` which maps `.status` to storage's routine.
 #[test]
 fn ft2_first_wins_precedence_status()
 {
@@ -145,7 +145,7 @@ fn ic1_register_commands_contract()
 }
 
 /// IC-2: Every command in the `register_static_commands()` PHF map is
-/// registered in the CommandRegistry. None produce exit 1 (unknown command).
+/// registered in the `CommandRegistry`. None produce exit 1 (unknown command).
 /// Commands shadowed by first-wins (`.status`, `.list`) still resolve —
 /// they dispatch the first-registered implementation, not the YAML-backed one.
 #[test]

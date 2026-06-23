@@ -67,7 +67,7 @@ cargo run -p claude_runner -- --dry-run --dir /tmp "test"
 **Expected:**
 - Prints env var lines (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`, etc.)
 - Prints: `cd /tmp`
-- Prints: `env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print "test\n\nultrathink"` (bypass, effort max, print, ultrathink suffix; `env -u CLAUDECODE` prefix from Feature 006; `--chrome` absent — print mode suppression per BUG-304; `-c` omitted because `/tmp` has no session history for this project per BUG-214 fix — `-c` appears only when `$HOME/.claude/projects/{encoded(dir)}/` is non-empty)
+- Prints: `env -u CLAUDECODE claude --dangerously-skip-permissions --effort max --print --output-format json "test\n\nultrathink"` (bypass, effort max, print, `--output-format json` auto-injected in summary mode per TSK-231; `env -u CLAUDECODE` prefix from Feature 006; `--chrome` absent — print mode suppression per BUG-304; `-c` omitted because `/tmp` has no session history for this project per BUG-214 fix — `-c` appears only when `$HOME/.claude/projects/{encoded(dir)}/` is non-empty)
 - Does NOT invoke Claude binary
 - Exit code 0
 
@@ -76,7 +76,7 @@ cargo run -p claude_runner -- --dry-run --dir /tmp "test"
 cargo run -p claude_runner -- --help
 ```
 
-**Expected:** Prints USAGE, ARGUMENTS, OPTIONS sections. Exit code 0.
+**Expected:** Prints USAGE and ARGUMENTS sections, then two named option groups: "RUNNER OPTIONS:" (~45 entries including `--output-style`, `--summary-fields`, all retry params, `--timeout`) and "CLAUDE CODE OPTIONS (forwarded):" (14 entries including `--model`, `--output-format`, `--max-turns`, `--max-budget-usd`). The old single "OPTIONS:" heading is no longer emitted (TSK-232 help split). Exit code 0.
 
 ### TC-9: Error on Unknown Flag
 ```sh
@@ -865,9 +865,23 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-181:** Non-zero claude exit + `--summary-fields minimal` → render_summary skipped; raw error output shown
 - Automated in: `summary_fields_test.rs` (EC-01–EC-12), `summary.rs` unit tests (9 tests)
 
+### Output style: --output-style param (TSK-231)
+
+- **CC-182:** `--output-style summary --dry-run "test"` → exit 0; dry-run trace contains `--output-format json` (auto-injected)
+- **CC-183:** `--output-style raw --dry-run "test"` → exit 0; dry-run trace does NOT contain `--output-format json`
+- **CC-184:** `--output-style bogus --dry-run "test"` → exit 1; error "invalid --output-style value"
+- **CC-185:** `--output-style` (missing value) → exit 1; error "requires a value"
+- **CC-186:** `CLR_OUTPUT_STYLE=raw --dry-run "test"` → exit 0; no `--output-format json` in trace
+- **CC-187:** `CLR_OUTPUT_STYLE=bogus --dry-run "test"` → exit 1; error "CLR_OUTPUT_STYLE: invalid" (hard-reject, unlike soft-ignore for other env vars)
+- **CC-188:** `CLR_OUTPUT_STYLE=raw --output-style summary --dry-run "test"` → exit 0; CLI wins, `--output-format json` injected
+- **CC-189:** `--output-style summary --output-format text --dry-run "test"` → exit 0; explicit `--output-format text` wins over auto-injection (explicit beats auto)
+- **CC-190:** `--output-style raw --output-format json --dry-run "test"` → exit 0; `--output-format json` forwarded verbatim (explicit CLI arg, not auto-injected)
+- **CC-191:** `--output-style summary` with `CLR_OUTPUT_FORMAT=text` set → exit 0; auto-injection skipped (output_format already set); `--output-format text` forwarded
+- Automated in: `output_style_test.rs` EC-01–EC-13
+
 ---
 
-## New Corner Cases (NC-1 through NC-20) — Discovered During Manual Testing
+## New Corner Cases (NC-1 through NC-26) — Discovered During Manual Testing
 
 ### NC-1: QuotaExhausted Label (Automated)
 
@@ -974,12 +988,14 @@ Then exits with code 1. The old limit of 50 attempts is **not** used.
 ```sh
 mkdir -p /tmp/test-gate
 printf '{"cwd":"/tmp/myproject","since":1720000000,"attempt":3,"message":"waiting for session slot"}' \
-  > /tmp/test-gate/99999.json
+  > /tmp/test-gate/$$.json
 CLR_GATE_DIR=/tmp/test-gate cargo run -p claude_runner -- ps
 rm -rf /tmp/test-gate
 ```
 
-**Expected:** "No active Claude Code sessions." message appears first, then a blank line, then the queued table. The queued table begins with a titled caption rule line (e.g., `─── Queued · 1 waiting ──────────────`), followed by column headers `PID`, `CWD`, `Waiting`, `Attempt`. PID column shows `99999`. `Waiting` shows a large elapsed value (epoch 1720000000 is in 2024, so format is `Xh Ym`). Exit code 0. No live `claude` sessions required — works in container.
+**Expected:** "No active Claude Code sessions." message appears first, then a blank line, then the queued table. The queued table begins with a titled caption rule line (e.g., `─── Queued · 1 waiting ──────────────`), followed by column headers `PID`, `CWD`, `Waiting`, `Attempt`. PID column shows the shell's own PID (value of `$$`). `Waiting` shows a large elapsed value (epoch 1720000000 is in 2024, so format is `Xh Ym`). Exit code 0. No live `claude` sessions required — works in container.
+
+**Note:** The gate file must be named with a real PID (`$$.json` — the current shell's PID). A fake PID such as `99999` is filtered out: `build_queued_table()` checks `/proc/{pid}` existence (BUG-293 liveness fix) and self-heals by deleting the file if the PID is dead — so the queued table never appears when the PID doesn't exist in `/proc/`. Using `$$` guarantees a live PID that passes the liveness check.
 
 ### NC-15: `clr kill` — Live Claude Session Termination
 
@@ -1063,4 +1079,52 @@ fi
 **Failure interpretation:** If `FAIL` is printed, BUG-304 has regressed. Check `builder.rs`: `use_print` must be computed before the `no_chrome` guard, and the guard must be `if cli.no_chrome || use_print`. If `--chrome` appears in dry-run output for a print-mode invocation, the mitigation code has been removed or broken.
 
 **Note:** Root fix (EXT) for BUG-304 requires Anthropic to call `process.exit(0)` in the `claude` binary's `--print` code path after flushing the final response. Until that ships, the dry-run assertion provides an automated regression guard; the live test provides end-to-end confirmation. Automated dry-run guard: `param_extended_flags_test.rs::s35b_print_mode_suppresses_chrome`.
+
+### NC-21: `--output-style` Default Is `summary` — Auto-Injects `--output-format json`
+
+```sh
+cargo run -p claude_runner -- --dry-run "test"
+```
+
+**Expected:** Dry-run trace includes `--output-format json` (auto-injected by `builder.rs` when `output_style == "summary"` and no `--output-format` specified, per TSK-231). Neither `--output-style` nor `--output-format summary` appears in the forwarded claude command line — these are runner-level and consumed before forwarding. Automated in: `output_style_test.rs` EC-01/EC-10.
+
+### NC-22: `--output-style raw` — No `--output-format json` Injection
+
+```sh
+cargo run -p claude_runner -- --dry-run --output-style raw "test"
+```
+
+**Expected:** Dry-run trace does NOT include `--output-format json`. The `--output-style raw` bypasses the auto-injection gate in `builder.rs`. No `--output-style` flag appears in the forwarded command (runner-level). Automated in: `output_style_test.rs` EC-03.
+
+### NC-23: `--output-style bogus` — Hard Error Exit 1
+
+```sh
+cargo run -p claude_runner -- --output-style bogus "test"
+```
+
+**Expected:** Exit 1. Stderr contains `"invalid output-style"` (clap validation). Does not invoke Claude. Automated in: `output_style_test.rs` EC-07.
+
+### NC-24: `CLR_OUTPUT_STYLE=raw` Env Var Works
+
+```sh
+CLR_OUTPUT_STYLE=raw cargo run -p claude_runner -- --dry-run "test"
+```
+
+**Expected:** Exit 0. Dry-run trace does NOT contain `--output-format json` — env var raw mode bypasses auto-injection. Automated in: `output_style_test.rs` EC-04.
+
+### NC-25: `CLR_OUTPUT_STYLE=bogus` Env Var — Hard Error Exit 1
+
+```sh
+CLR_OUTPUT_STYLE=bogus cargo run -p claude_runner -- --dry-run "test"
+```
+
+**Expected:** Exit 1. Stderr contains `"CLR_OUTPUT_STYLE: invalid"` (hard-reject, unlike soft-ignore for other invalid env vars like `CLR_EFFORT=invalid`). Automated in: `output_style_test.rs` EC-12.
+
+### NC-26: CLI `--output-style` Wins Over `CLR_OUTPUT_STYLE`
+
+```sh
+CLR_OUTPUT_STYLE=raw cargo run -p claude_runner -- --dry-run --output-style summary "test"
+```
+
+**Expected:** Exit 0. CLI wins: `output_style == "summary"` → `--output-format json` IS injected, despite env var being `raw`. Confirms CLI-over-env precedence rule. Automated in: `output_style_test.rs` EC-09.
 
