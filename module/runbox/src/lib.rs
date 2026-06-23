@@ -86,50 +86,48 @@ fn print_usage( binary : &str )
 {
   use cli_fmt::help::*;
 
-  let data = CliHelpData
-  {
-    binary  : binary.to_string(),
-    tagline : "Container runner scaffold: generate integration files for a project.".to_string(),
-    groups  : vec!
-    [
-      CommandGroup
-      {
-        name    : "Scaffold".to_string(),
-        entries : vec!
-        [
-          CommandEntry
-          {
-            name : ".init".to_string(),
-            desc : "Scaffold container runner integration files in the current directory".to_string(),
-          },
-        ],
-      },
-    ],
-    options : vec!
-    [
-      OptionEntry
-      {
-        name : "image::IMAGE".to_string(),
-        desc : "Docker image tag for this project (required)".to_string(),
-      },
-      OptionEntry
-      {
-        name : "ecosystem::ECOSYSTEM".to_string(),
-        desc : "Project ecosystem: rust, nodejs, python, none (default: none)".to_string(),
-      },
-      OptionEntry
-      {
-        name : "test_script::PATH".to_string(),
-        desc : "Test script path inside container (default: verb/test.d/l1)".to_string(),
-      },
-    ],
-    examples : vec!
-    [
-      ExampleEntry { invocation : format!( "{binary} .init image::my_project" ),                                         desc : None },
-      ExampleEntry { invocation : format!( "{binary} .init image::my_project ecosystem::rust" ),                         desc : None },
-      ExampleEntry { invocation : format!( "{binary} .init image::my_project ecosystem::python test_script::verb/test" ), desc : None },
-    ],
-  };
+  let mut data    = CliHelpData::default();
+  data.binary     = binary.to_string();
+  data.tagline    = "Container runner scaffold: generate integration files for a project.".to_string();
+  data.groups     = vec!
+  [
+    CommandGroup
+    {
+      name    : "Scaffold".to_string(),
+      entries : vec!
+      [
+        CommandEntry
+        {
+          name : ".init".to_string(),
+          desc : "Scaffold container runner integration files in the current directory".to_string(),
+        },
+      ],
+    },
+  ];
+  data.options    = vec!
+  [
+    OptionEntry
+    {
+      name : "image::IMAGE".to_string(),
+      desc : "Docker image tag for this project (required)".to_string(),
+    },
+    OptionEntry
+    {
+      name : "ecosystem::ECOSYSTEM".to_string(),
+      desc : "Project ecosystem: rust, nodejs, python, none (default: none)".to_string(),
+    },
+    OptionEntry
+    {
+      name : "test_script::PATH".to_string(),
+      desc : "Test script path inside container (default: verb/test.d/l1)".to_string(),
+    },
+  ];
+  data.examples   = vec!
+  [
+    ExampleEntry { invocation : format!( "{binary} .init image::my_project" ),                                         desc : None },
+    ExampleEntry { invocation : format!( "{binary} .init image::my_project ecosystem::rust" ),                         desc : None },
+    ExampleEntry { invocation : format!( "{binary} .init image::my_project ecosystem::python test_script::verb/test" ), desc : None },
+  ];
   print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
 }
 

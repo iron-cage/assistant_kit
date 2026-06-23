@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Help split: `RUNNER OPTIONS` / `CLAUDE CODE OPTIONS (forwarded)` sections** (TSK-232)
+  - `clr --help` now uses `CliHelpTemplate` from `cli_fmt ^0.9` instead of 262-line hand-rolled `print!` calls
+  - Two option groups: `RUNNER OPTIONS` (47 entries — flags consumed by the runner) and `CLAUDE CODE OPTIONS (forwarded)` (14 entries — flags passed to claude verbatim)
+  - Users can now distinguish which flags `clr` processes vs. which pass through to claude
+  - `print_help()` refactored into `runner_option_group()` + `claude_code_option_group()` helpers (under Clippy 100-line limit)
+  - `cli_fmt` workspace dep upgraded `^0.8` → `^0.9`; all 7 workspace crates using `CliHelpData` migrated from struct literals to `CliHelpData::default()` + field assignment (E0639: struct is `#[non_exhaustive]` in 0.9)
+  - Tests: EC-01–EC-06 in `tests/cli_args_ext_test.rs`; spec updated: `tests/docs/cli/command/02_help.md`
+
 - feat: add `--summary-fields` parameter for summary output field selection (TSK-234)
   - Presets: `full` (default, 32 fields), `standard` (14 fields), `minimal` (7 fields)
   - Custom comma-separated field whitelists with validation
@@ -86,6 +94,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Both test fixtures (`output_style_test.rs`, `output_format_test.rs`) updated from Messages API
     to CLR result envelope; contract test `ec14_render_summary_clr_envelope_accepted` added
   - Tests: all 13 `output_style_test` EC pass, all 14 `output_format_test` EC pass, g2cc4 pass
+
+- **Retry diagnostic message shows human text, not raw JSON blob** (TSK-235)
+  - In summary mode, `first_message()` returned the raw CLR JSON envelope when the subprocess
+    exited with a retriable error — users saw `[Account] {"type":"result","session_id":...}` instead
+    of the human-readable result text
+  - Fix: `first_message()` gains a `use_summary: bool` parameter; when `use_summary` and stdout
+    starts with `{`, it calls `super::summary::extract_result_text()` to extract the `"result"` field
+    before falling back to line-scan; `use_summary` binding in `run_print_mode()` set from
+    `cli.output_style.as_deref().unwrap_or("summary") == "summary"`
+  - On error exhaustion, the raw `eprint!("{}", output.stdout)` is replaced with a `render_summary()`
+    gate — produces the same key:val `---` header as the success path in summary mode
+  - `pub(super) fn extract_result_text(json: &str) -> Option<String>` added to `summary.rs`
+    as a thin wrapper over `extract_str(json, "result")`; raw mode (`--output-style raw`) is
+    unaffected on both paths
+  - Tests: EC-10 (`ec10_retry_message_shows_result_not_json_blob`),
+    EC-11 (`ec11_exhaustion_output_rendered_not_raw_json`) in `retry_account_test.rs`
 
 - **`clr ps` active sessions sorted oldest-first** (BUG-301, TSK-210)
   - `build_active_table()` was emitting rows in arbitrary filesystem order from `/proc`

@@ -48,6 +48,7 @@ enabled = [
   "dep:unilang",
   "unilang/enabled",
   "dep:data_fmt",
+  "dep:cli_fmt",
 ]
 
 [dependencies]
@@ -57,6 +58,7 @@ claude_storage_core = { workspace = true, optional = true }
 error_tools         = { workspace = true, optional = true }
 unilang             = { workspace = true, optional = true }
 data_fmt            = { workspace = true, optional = true }
+cli_fmt             = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

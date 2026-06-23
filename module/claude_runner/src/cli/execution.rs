@@ -144,8 +144,23 @@ fn class_fields( cli : &CliArgs, class : ErrorClass ) -> ( Option< u8 >, Option<
 
 /// Extract the first non-empty line from stdout or stderr as the original message.
 /// Falls back to the class-specific default when both are empty.
-fn first_message( output : &ExecutionOutput, class : ErrorClass ) -> String
+///
+/// When `use_summary` is true and stdout looks like a JSON envelope, extracts the
+/// `"result"` field first so retry diagnostics show human-readable text rather than
+/// the raw JSON blob.
+fn first_message( output : &ExecutionOutput, class : ErrorClass, use_summary : bool ) -> String
 {
+  if use_summary && output.stdout.trim_start().starts_with( '{' )
+  {
+    if let Some( text ) = super::summary::extract_result_text( &output.stdout )
+    {
+      for line in text.lines()
+      {
+        let t = line.trim();
+        if !t.is_empty() { return t.to_string(); }
+      }
+    }
+  }
   for s in [ &output.stdout, &output.stderr ]
   {
     for line in s.lines()
@@ -450,7 +465,8 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
       let ( count_field, delay_field ) = class_fields( cli, class );
       let limit = resolve_count( cli.retry_override, count_field, cli.retry_default ) as usize;
       let delay = resolve_delay( cli.retry_override_delay, delay_field, cli.retry_default_delay );
-      let msg = first_message( &output, class );
+      let use_summary = cli.output_style.as_deref().unwrap_or( "summary" ) == "summary";
+      let msg = first_message( &output, class, use_summary );
 
       if attempts[ class_idx ] < limit
       {
@@ -490,7 +506,19 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
       // Fix(BUG-247): forward captured stdout to stderr on failure before exiting.
       // Root cause: on non-zero exit, captured stdout was never forwarded; diagnostic output was lost.
       // Pitfall: in print mode stdout is captured — on failure it must be re-emitted to stderr.
-      if !output.stdout.is_empty() { eprint!( "{}", output.stdout ); }
+      if !output.stdout.is_empty()
+      {
+        let rendered = if use_summary
+        {
+          super::summary::render_summary( &output.stdout, cli.summary_fields.as_deref() )
+            .unwrap_or_else( || output.stdout.clone() )
+        }
+        else
+        {
+          output.stdout.clone()
+        };
+        if !rendered.is_empty() { eprint!( "{rendered}" ); }
+      }
       std::process::exit( output.exit_code );
     }
 

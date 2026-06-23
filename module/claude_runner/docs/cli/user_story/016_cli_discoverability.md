@@ -19,7 +19,7 @@ View a complete usage summary — commands, flags, and invocation syntax — wit
 
 - `clr help` prints usage information and exits with code 0
 - `clr -h` and `clr --help` produce identical output to `clr help`
-- Help output lists all available subcommands (run, isolated, refresh, ask, help)
+- Help output lists all 8 available subcommands (run, ask, isolated, refresh, ps, kill, tools, help) in two structured sections: RUNNER OPTIONS and CLAUDE CODE OPTIONS (forwarded)
 - Help output lists available flags with short descriptions
 - No Claude subprocess is launched; no credentials are required
 - No session state is read or written

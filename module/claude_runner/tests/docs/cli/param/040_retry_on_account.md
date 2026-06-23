@@ -51,8 +51,8 @@ RateLimit fallback. `--account-delay 0` is required in integration tests to prev
 | EC-7 | `ec7_account_retry_succeeds_after_one_quota_exhausted` | `retry_account_test.rs` |
 | EC-8 | `ec8_account_retry_exhausted` | `retry_account_test.rs` |
 | EC-9 | `ec9_account_retries_via_tier3_fallback` | `retry_account_test.rs` |
-| EC-10 | ⏳ `ec10_retry_message_shows_result_not_json_blob` | `retry_account_test.rs` |
-| EC-11 | ⏳ `ec11_exhaustion_output_rendered_not_raw_json` | `retry_account_test.rs` |
+| EC-10 | ✅ `ec10_retry_message_shows_result_not_json_blob` | `retry_account_test.rs` |
+| EC-11 | ✅ `ec11_exhaustion_output_rendered_not_raw_json` | `retry_account_test.rs` |
 
 ---
 
@@ -153,3 +153,25 @@ RateLimit fallback. `--account-delay 0` is required in integration tests to prev
 - **Source:** [040_retry_on_account.md](../../../../docs/cli/param/040_retry_on_account.md)
 - **Commands:** run, ask
 - **Note:** No class-specific or override flags set — Account class falls through to Tier 3 `--retry-default` (built-in 2). **Divergence from EC-7:** EC-7 uses explicit `--retry-on-account 1` (Tier 2); EC-9 relies on Tier 3 fallback.
+
+---
+
+### EC-10: Retry stderr line shows result text, not raw JSON blob (summary mode)
+
+- **Given:** fake claude first call: outputs CLR JSON envelope `{"type":"result","session_id":"s","result":"hello",...}` on stdout + `"You've hit your limit"` on stderr + exits 2; second call: exits 0; `--retry-on-account 1 --account-delay 0 --max-sessions 0 -p "x"` in summary mode (default)
+- **When:** retry diagnostic line emitted to stderr after first failure
+- **Then:** Stderr contains `[Account] hello`; stderr does NOT contain `[Account] {` (raw JSON blob absent)
+- **Exit:** 0
+- **Source:** `src/cli/execution.rs` `first_message()`, `src/cli/summary.rs` `extract_result_text()`
+- **Commands:** run, ask
+
+---
+
+### EC-11: Exhaustion stderr renders key:val output, not raw JSON dump (summary mode)
+
+- **Given:** fake claude always outputs CLR JSON envelope + `"You've hit your limit"` + exits 2; `--retry-on-account 0 --max-sessions 0 -p "x"` (non-retriable path) in summary mode (default)
+- **When:** stdout forwarded to stderr on non-retriable error exit
+- **Then:** Stderr contains `---` (render_summary separator); stderr does NOT contain `{"type"` (raw JSON blob absent)
+- **Exit:** 2
+- **Source:** `src/cli/execution.rs` exhaustion path, `src/cli/summary.rs` `render_summary()`
+- **Commands:** run, ask

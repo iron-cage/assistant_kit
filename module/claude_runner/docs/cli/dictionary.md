@@ -19,6 +19,9 @@ Domain vocabulary for the `clr` CLI. Terms are organized by category below.
 | ask | Semantic alias for `run` with identical parameters and defaults; no behavioral differences |
 | isolated | Subcommand that runs `claude` in a credential-isolated temporary HOME; requires `--creds` |
 | refresh | Subcommand that refreshes OAuth credentials via `run_isolated()` with `["--print", "."]`; requires `--creds`; no task executed |
+| ps | List running Claude Code sessions with process metrics; supports `--mode`, `--columns`, `--wide`, `--pid`, `--inspect` |
+| kill | Terminate a running Claude Code session by PID via SIGTERM; canonical form `clr kill <PID>` |
+| tools | List all Claude Code built-in tools available to the subprocess; canonical form `clr tools` |
 | help | Display usage information and exit; canonical form `clr help`; `--help`/`-h` are parameter aliases |
 
 ### Modes

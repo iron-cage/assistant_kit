@@ -455,7 +455,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Exit:** 0
 - **CLI-wins:** `clr --timeout 60 --dry-run task` with `CLR_TIMEOUT=30` → CLI value 60 used; env var 30 ignored
 - **Zero:** `CLR_TIMEOUT=0` → unlimited (no watchdog); dry-run exits 0 normally
-- **Invalid-ignored:** `CLR_TIMEOUT=notanumber` → parse failure silently ignored; default 0 (unlimited) used; dry-run exits 0 normally
+- **Invalid-ignored:** `CLR_TIMEOUT=notanumber` → parse failure silently ignored; default 3600s watchdog applied for run/ask print-mode (unlimited for isolated/refresh); dry-run exits 0 before timeout fires
 - **Cross-command:** `CLR_TIMEOUT` also applies to `isolated`/`refresh` (same semantics: 0 = unlimited); tested separately in E24
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
 
