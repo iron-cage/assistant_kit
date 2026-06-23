@@ -1,9 +1,9 @@
 # Env Param :: CLR_* Input Variables
 
-Edge cases for the `CLR_*` input environment variable fallbacks (59 for `run`, 3 for `isolated`/`refresh`, 5 for `ps`; see `env_param.md` §1–§3 for full list).
+Edge cases for the `CLR_*` input environment variable fallbacks (60 for `run`, 3 for `isolated`/`refresh`, 5 for `ps`; see `env_param.md` §1–§3 for full list).
 Source: [`env_param.md`](../../../../docs/cli/env_param.md)
 Implementation: `apply_env_vars()` in `src/cli/env.rs`; `apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/cli/cred_parse.rs`
-Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E18–E40), `tests/ps_flags_test.rs` (E41–E42)
+Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E18–E40), `tests/ps_flags_test.rs` (E41–E42), `tests/output_style_test.rs` (E43), `tests/summary_fields_test.rs` (E44)
 
 ## Test Case Index
 
@@ -51,20 +51,22 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 | E40 | `CLR_RETRY_ON_UNKNOWN=N` sets Unknown class retry count | `CLR_RETRY_ON_UNKNOWN` | dry-run exits 0; CLI flag wins; invalid value silently ignored |
 | E41 | `CLR_PS_ANCIENT_SECS=0` triggers 🕰 flag for any running session | `CLR_PS_ANCIENT_SECS` | `clr ps` output contains 🕰; invalid value silently ignored (default 28800 used) |
 | E42 | `CLR_PS_HIGH_RAM_MB=0` triggers 🐘 flag for any running session | `CLR_PS_HIGH_RAM_MB` | `clr ps` output contains 🐘; invalid value silently ignored (default 400 used) |
+| E43 | `CLR_OUTPUT_STYLE=raw` sets rendering mode; invalid value hard-rejected | `CLR_OUTPUT_STYLE` | exit 0 with env applied; CLI flag wins; exit 1 on bogus value |
+| E44 | `CLR_SUMMARY_FIELDS=minimal` sets summary field profile; invalid value hard-rejected | `CLR_SUMMARY_FIELDS` | exit 0 with env applied; CLI flag wins; exit 1 on bogus value |
 
 ## Test Coverage Summary
 
 - Bool vars (truthy only): E02, E04, E05, E06, E07, E11, E13, E14, E18, E19, E28 (11 tests)
-- String vars: E01, E03, E08, E10, E15, E16, E21, E22, E23, E29, E31, E32, E33 (13 tests)
+- String vars: E01, E03, E08, E10, E15, E16, E21, E22, E23, E29, E31, E32, E33, E43, E44 (15 tests)
 - Parsed vars (with silent-ignore): E09, E12, E17, E30, E35, E36, E37, E38, E39, E40, E41, E42 (12 tests)
 - Parsed vars (with hard-rejection): E34 (1 test)
 - Negation suppression (suppress default injection): E05, E06, E07, E18, E19 (5 tests)
-- CLI-wins verification: E01, E03, E29, E30, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40 (14 tests)
+- CLI-wins verification: E01, E03, E29, E30, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40, E43, E44 (16 tests)
 - Isolated subcommand: E23, E24 (2 tests)
 - Credential ops (cross-command): E28 (1 test)
 - `ps` flag threshold vars (no CLI equivalent): E41, E42 (2 tests)
 
-**Total:** 42 edge cases (E01–E42)
+**Total:** 44 edge cases (E01–E44)
 
 ## Test Cases
 
@@ -516,3 +518,29 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Invalid-ignored:** `CLR_PS_HIGH_RAM_MB=notanumber` → parse failure silently ignored; default 400 used; typical test process RAM would not trigger the flag
 - **Note:** No CLI flag equivalent — env var is the only override mechanism
 - **Source:** [env_param.md §3](../../../../docs/cli/env_param.md)
+
+---
+
+### E43: CLR_OUTPUT_STYLE sets output rendering mode; invalid value hard-rejected
+
+- **Given:** `CLR_OUTPUT_STYLE=raw`; no `--output-style` on CLI; fake claude fixture; `-p --max-sessions 0`
+- **When:** `CLR_OUTPUT_STYLE=raw clr -p --max-sessions 0 "x"` with fake claude
+- **Then:** exit 0; stdout does NOT contain `---`; env var applied; raw output path taken (same as `--output-style raw`)
+- **Exit:** 0
+- **CLI-wins:** `CLR_OUTPUT_STYLE=raw clr -p --max-sessions 0 --output-style summary "x"` → stdout contains `---`; CLI flag `summary` wins over env var `raw`
+- **Invalid:** `CLR_OUTPUT_STYLE=bogus clr run -m "x"` → exit 1; stderr contains `"CLR_OUTPUT_STYLE: invalid value 'bogus'"` (hard-rejected, not silently ignored)
+- **Note:** Covered by `output_style_test.rs` EC-04 (env var applied), EC-11 (CLI-wins), EC-12 (env var validation)
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E44: CLR_SUMMARY_FIELDS sets summary field profile; invalid value hard-rejected
+
+- **Given:** `CLR_SUMMARY_FIELDS=minimal`; no `--summary-fields` on CLI; fake claude fixture; `-p --max-sessions 0`
+- **When:** `CLR_SUMMARY_FIELDS=minimal clr -p --max-sessions 0 "x"` with fake claude
+- **Then:** exit 0; stdout contains `type:` and `total_cost_usd:` but NOT `duration_ms:` or `model:`; env var applied; 7-field minimal profile active
+- **Exit:** 0
+- **CLI-wins:** `CLR_SUMMARY_FIELDS=minimal clr -p --max-sessions 0 --summary-fields full "x"` → stdout contains `duration_ms:` and `model:`; CLI flag `full` wins over env var `minimal`
+- **Invalid:** `CLR_SUMMARY_FIELDS=bogus clr run -m "x"` → exit 1; stderr contains `"CLR_SUMMARY_FIELDS: invalid value 'bogus'"` (hard-rejected, not silently ignored)
+- **Note:** Covered by `summary_fields_test.rs` EC-09 (env var applied), EC-10 (CLI-wins), EC-11 (env var validation)
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)

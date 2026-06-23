@@ -102,11 +102,12 @@ fn ec3_columns_overrides_wide()
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "EC-3: exit 0 expected, got {:?}", out.status.code() );
-  assert!( stdout.contains( "PID" ),  "EC-3: PID must appear. Got:\n{stdout}" );
-  assert!( stdout.contains( "Task" ), "EC-3: Task must appear. Got:\n{stdout}" );
-  assert!( !stdout.contains( "Mode" ),    "EC-3: Mode must NOT appear (--columns wins). Got:\n{stdout}" );
-  assert!( !stdout.contains( "Command" ), "EC-3: Command must NOT appear. Got:\n{stdout}" );
-  assert!( !stdout.contains( "Binary" ),  "EC-3: Binary must NOT appear. Got:\n{stdout}" );
+  let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
+  assert!( header.contains( "PID" ),  "EC-3: PID must appear in header. Got:\n{stdout}" );
+  assert!( header.contains( "Task" ), "EC-3: Task must appear in header. Got:\n{stdout}" );
+  assert!( !header.contains( "Mode" ),    "EC-3: Mode must NOT appear in header (--columns wins). Got:\n{stdout}" );
+  assert!( !header.contains( "Command" ), "EC-3: Command must NOT appear in header. Got:\n{stdout}" );
+  assert!( !header.contains( "Binary" ),  "EC-3: Binary must NOT appear in header. Got:\n{stdout}" );
 }
 
 // ── EC-4: Default hides optional columns ────────────────────────────────────
@@ -132,10 +133,11 @@ fn ec4_default_hides_wide_columns()
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "EC-4: exit 0 expected, got {:?}", out.status.code() );
+  let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
   // Mode is a default column (added in TSK-224) — must appear even without --wide.
-  assert!( stdout.contains( "Mode" ),     "EC-4: Mode must appear in default view. Got:\n{stdout}" );
-  assert!( !stdout.contains( "Command" ), "EC-4: Command must NOT appear without --wide. Got:\n{stdout}" );
-  assert!( !stdout.contains( "Binary" ),  "EC-4: Binary must NOT appear without --wide. Got:\n{stdout}" );
+  assert!( header.contains( "Mode" ),     "EC-4: Mode must appear in default header. Got:\n{stdout}" );
+  assert!( !header.contains( "Command" ), "EC-4: Command must NOT appear in header without --wide. Got:\n{stdout}" );
+  assert!( !header.contains( "Binary" ),  "EC-4: Binary must NOT appear in header without --wide. Got:\n{stdout}" );
 }
 
 // ── EC-5: Help output contains `--wide` and `-w` ─────────────────────────────

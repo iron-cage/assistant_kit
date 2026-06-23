@@ -230,7 +230,7 @@ fn g2cc3_no_skip_permissions_and_no_effort_max_both_suppressed()
   );
 }
 
-/// G2CC4: All 43 runner control flags together → exit 0; no unknown-flag error.
+/// G2CC4: All 44 runner control flags together → exit 0; no unknown-flag error.
 ///
 /// Every runner control flag accepted without conflict. `--dry-run` wins over `--trace`,
 /// so stderr is empty. `--no-chrome` suppresses the default `--chrome` injection.

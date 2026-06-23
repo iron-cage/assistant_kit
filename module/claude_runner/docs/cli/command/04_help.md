@@ -19,7 +19,7 @@ clr --help
 |------|---------|
 | 0 | Always |
 
-**Rendering:** Help output is rendered via `cli_fmt::CliHelpTemplate` using `usage_lines` (multiple USAGE forms), `option_groups` (COMMANDS, OPTIONS, RETRY OPTIONS, CREDENTIAL OPTIONS sections), and `examples`. Per-subcommand help (`clr ps --help`, `clr isolated --help`, `clr ask --help`, `clr refresh --help`) is each rendered as a separate `CliHelpTemplate` call with subcommand-specific data.
+**Rendering:** Main help (`clr --help`, `clr -h`, `clr help`) is rendered via `cli_fmt::CliHelpTemplate` using `usage_lines` (8 USAGE forms), `arguments` (one `<COMMAND>` entry), and two `option_groups`: RUNNER OPTIONS (runner-consumed params) and CLAUDE CODE OPTIONS (forwarded) (params passed through to claude). Per-subcommand help (`clr ps --help`, `clr isolated --help`, `clr ask --help`, `clr refresh --help`) uses hand-rolled `println!` output.
 
 **Notes:** `clr help` is the canonical word-subcommand form. `--help` / `-h`
 anywhere in argv are parameter aliases that trigger identical behavior. All

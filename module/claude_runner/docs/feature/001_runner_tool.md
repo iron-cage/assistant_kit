@@ -82,7 +82,9 @@ Typo guard: `clr kil` and `clr killl` trigger "Did you mean 'kill'?" and exit 1.
 table with Name, Category, and Description columns. Static data sourced from
 `contract/claude_code/docs/tool/readme.md`. Unknown arguments exit 1.
 
-**3-tier retry hierarchy:** When a subprocess exits with a classifiable error, the runner retries according to a 3-tier resolution: Tier 1 (`--retry-override`) forces count/delay for all classes; Tier 2 (`--retry-on-<class>`/`--<class>-delay`) overrides per error class; Tier 3 (`--retry-default`/`--retry-default-delay`) provides fallback defaults (count=2, delay=30s). All 8 error classes use the same 3-tier resolution with no class-level default overrides. The 8 error classes are Transient, Account, Auth, Service, Process, Validation, Runner, and Unknown. Each class maps from `ErrorKind` via `classify_to_class()` in `execution.rs`. Stderr error labels use `[Class]` prefix for traceability (e.g., `"Error: [Transient] rate limit (exit 2)"`). Validation class retries are only active when `--expect-strategy retry` is set. Parameters 040–057 cover all 20 retry flags; each has a `CLR_*` env var fallback.
+**3-tier retry hierarchy:** When a subprocess exits with a classifiable error, the runner retries according to a 3-tier resolution: Tier 1 (`--retry-override`) forces count/delay for all classes; Tier 2 (`--retry-on-<class>`/`--<class>-delay`) overrides per error class; Tier 3 (`--retry-default`/`--retry-default-delay`) provides fallback defaults (count=2, delay=30s). All 8 error classes use the same 3-tier resolution with no class-level default overrides. The 8 error classes are Transient, Account, Auth, Service, Process, Validation, Runner, and Unknown. Each class maps from `ErrorKind` via `classify_to_class()` in `execution.rs`. Stderr error labels use `[Class]` prefix for traceability (e.g., `"[Account] You've hit your limit · resets 2:40pm — retrying in 30s (attempt 1/3)…"`). Validation class retries are only active when `--expect-strategy retry` is set. Parameters 040–057 cover all 20 retry flags; each has a `CLR_*` env var fallback.
+
+**Error output in summary mode:** In summary mode (default), `first_message()` in `execution.rs` extracts the `"result"` field from the JSON envelope when stdout is JSON — yielding a human-readable single line (e.g., `"You've hit your limit · resets 2:40pm"`) rather than the full raw JSON blob. On error exhaustion, captured stdout is rendered through `render_summary()` before emit to stderr — the same formatted key:val output produced on the success path. In raw mode (`--output-style raw`), both paths emit stdout unmodified.
 
 **Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile` (via `--session-dir` flag passthrough or resolved externally).
 
@@ -110,7 +112,7 @@ table with Name, Category, and Description columns. Static data sourced from
 |------|--------------|
 | `../../src/lib.rs` | `run_cli()` entry point |
 | `../../src/cli/mod.rs` | Subcommand dispatch, dry-run, guard |
-| `../../src/cli/execution.rs` | `run_print_mode`, `run_interactive`, timeout watchdog, expect validation |
+| `../../src/cli/execution.rs` | `run_print_mode`, `run_interactive`, `first_message` (JSON result extraction), timeout watchdog, expect validation |
 | `../../src/cli/parse.rs` | CLI argument parsing (`parse_args`, `CliArgs`, `ExpectStrategy`) |
 | `../../src/cli/env.rs` | `apply_env_vars` — CLR_* env-variable fallbacks for all run params |
 | `../../src/cli/help.rs` | Help text printing for all subcommands (`clr`, `ask`, `isolated`, `refresh`) |

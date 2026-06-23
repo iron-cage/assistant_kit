@@ -370,8 +370,10 @@ fn us_12_columns_custom_subset()
   assert!( stdout.contains( "PID" ),           "US-12: PID must be present: {stdout}" );
   assert!( stdout.contains( "Absolute Path" ), "US-12: Absolute Path must be present: {stdout}" );
   assert!( stdout.contains( "Task" ),          "US-12: Task must be present: {stdout}" );
-  assert!( !stdout.contains( "CPU%" ), "US-12: CPU% must be absent: {stdout}" );
-  assert!( !stdout.contains( "RAM" ),  "US-12: RAM must be absent: {stdout}" );
+  // Header-only check — legend "🐘 High RAM" would false-positive whole-stdout search.
+  let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
+  assert!( !header.contains( "CPU%" ), "US-12: CPU% must be absent from headers: {stdout}" );
+  assert!( !header.contains( "RAM" ),  "US-12: RAM must be absent from headers: {stdout}" );
 }
 
 // ── US-13: `--columns bogus` exits 1 ─────────────────────────────────────────
@@ -438,11 +440,12 @@ fn us_15_columns_overrides_wide()
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "US-15 (AC-018): exit 0 expected, got {:?}", out.status.code() );
-  assert!( stdout.contains( "PID" ),  "US-15: PID must be present: {stdout}" );
-  assert!( stdout.contains( "Task" ), "US-15: Task must be present: {stdout}" );
-  assert!( !stdout.contains( "Mode" ),    "US-15: Mode must be absent: {stdout}" );
-  assert!( !stdout.contains( "Command" ), "US-15: Command must be absent: {stdout}" );
-  assert!( !stdout.contains( "Binary" ),  "US-15: Binary must be absent: {stdout}" );
+  let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
+  assert!( header.contains( "PID" ),  "US-15: PID must be present in header: {stdout}" );
+  assert!( header.contains( "Task" ), "US-15: Task must be present in header: {stdout}" );
+  assert!( !header.contains( "Mode" ),    "US-15: Mode must be absent from header: {stdout}" );
+  assert!( !header.contains( "Command" ), "US-15: Command must be absent from header: {stdout}" );
+  assert!( !header.contains( "Binary" ),  "US-15: Binary must be absent from header: {stdout}" );
 }
 
 // ── US-16: `CLR_PS_MODE` env var filters sessions ────────────────────────────
@@ -510,8 +513,10 @@ fn us_17_clr_ps_columns_env_var()
   assert!( out.status.success(), "US-17 (AC-020): exit 0 expected, got {:?}", out.status.code() );
   assert!( stdout.contains( "PID" ),     "US-17: PID must be present: {stdout}" );
   assert!( stdout.contains( "Elapsed" ), "US-17: Elapsed must be present: {stdout}" );
-  assert!( !stdout.contains( "CPU%" ),          "US-17: CPU% must be absent: {stdout}" );
-  assert!( !stdout.contains( "RAM" ),           "US-17: RAM must be absent: {stdout}" );
-  assert!( !stdout.contains( "Task" ),          "US-17: Task must be absent: {stdout}" );
-  assert!( !stdout.contains( "Absolute Path" ), "US-17: Absolute Path must be absent: {stdout}" );
+  // Header-only check — legend "🐘 High RAM" would false-positive whole-stdout search.
+  let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
+  assert!( !header.contains( "CPU%" ),          "US-17: CPU% must be absent from headers: {stdout}" );
+  assert!( !header.contains( "RAM" ),           "US-17: RAM must be absent from headers: {stdout}" );
+  assert!( !header.contains( "Task" ),          "US-17: Task must be absent from headers: {stdout}" );
+  assert!( !header.contains( "Absolute Path" ), "US-17: Absolute Path must be absent from headers: {stdout}" );
 }

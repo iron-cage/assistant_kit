@@ -60,11 +60,14 @@ fn it30_flags_column_absent_when_no_flags()
     .stderr( std::process::Stdio::null() )
     .spawn()
     .expect( "spawn fake claude" );
+  let pid = bg.id().to_string();
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  // Use --pid to isolate the fake process — other host sessions with flags would
+  // make the Flags column appear, false-failing the absence assertion.
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
-    .args( [ "ps" ] )
+    .args( [ "ps", "--pid", &pid ] )
     .env( "PATH", &path_val )
     .env( "HOME", temp_home.path() )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
@@ -386,11 +389,13 @@ fn it37_legend_absent_when_no_flags()
     .stderr( std::process::Stdio::null() )
     .spawn()
     .expect( "spawn fake claude" );
+  let pid = bg.id().to_string();
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  // Use --pid to isolate the fake process — live sessions with flags would pollute stdout.
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
-    .args( [ "ps" ] )
+    .args( [ "ps", "--pid", &pid ] )
     .env( "PATH", &path_val )
     .env( "HOME", temp_home.path() )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
@@ -480,11 +485,13 @@ fn us18_flags_column_absent_when_no_flags_apply()
     .stderr( std::process::Stdio::null() )
     .spawn()
     .expect( "spawn fake claude" );
+  let pid = bg.id().to_string();
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  // Use --pid to isolate the fake process — live sessions with flags would pollute stdout.
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
-    .args( [ "ps" ] )
+    .args( [ "ps", "--pid", &pid ] )
     .env( "PATH", &path_val )
     .env( "HOME", temp_home.path() )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
@@ -856,11 +863,13 @@ fn us26_legend_absent_when_no_flags_present()
     .stderr( std::process::Stdio::null() )
     .spawn()
     .expect( "spawn fake claude" );
+  let pid = bg.id().to_string();
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  // Use --pid to isolate the fake process — live sessions with flags would pollute stdout.
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
-    .args( [ "ps" ] )
+    .args( [ "ps", "--pid", &pid ] )
     .env( "PATH", &path_val )
     .env( "HOME", temp_home.path() )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
@@ -926,7 +935,9 @@ fn e41_ancient_secs_env_var()
     "E41a: 🕰 must fire with CLR_PS_ANCIENT_SECS=0. Got:\n{stdout_valid}"
   );
 
-  // Sub-case (b): invalid value → silently ignored; default 28800 used → 🕰 absent.
+  // Sub-case (b): invalid value → silently ignored; default 28800 used → 🕰 absent
+  // for our freshly-spawned process.  Check only the fake PID's row — host sessions
+  // running >8 h will have 🕰 in their rows, which would false-positive whole-stdout search.
   let ( _bin_dir2, path_val2 ) = fake_claude_binary_dir();
   let mut bg2 = std::process::Command::new( "claude" )
     .env( "PATH", &path_val2 )
@@ -935,6 +946,7 @@ fn e41_ancient_secs_env_var()
     .stderr( std::process::Stdio::null() )
     .spawn()
     .expect( "spawn fake claude 2" );
+  let pid2 = bg2.id().to_string();
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
   let out_invalid = std::process::Command::new( bin )
@@ -954,9 +966,12 @@ fn e41_ancient_secs_env_var()
     "E41b: exit 0 expected with invalid CLR_PS_ANCIENT_SECS, got {:?}",
     out_invalid.status.code()
   );
+  let pid_row = stdout_invalid.lines()
+    .find( | l | l.contains( &pid2 ) )
+    .unwrap_or( "" );
   assert!(
-    !stdout_invalid.contains( "🕰" ),
-    "E41b: 🕰 must NOT fire when CLR_PS_ANCIENT_SECS is invalid (default 28800 used). Got:\n{stdout_invalid}"
+    !pid_row.contains( "🕰" ),
+    "E41b: 🕰 must NOT fire for PID {pid2} when CLR_PS_ANCIENT_SECS is invalid (default 28800). Got:\n{stdout_invalid}"
   );
 }
 
@@ -1005,6 +1020,8 @@ fn e42_high_ram_mb_env_var()
   );
 
   // Sub-case (b): invalid value → silently ignored; default 400 MB used → 🐘 absent for sleep.
+  // Check only the fake PID's row — host sessions using >400 MB will have 🐘, false-positiving
+  // a whole-stdout search.
   let ( _bin_dir2, path_val2 ) = fake_claude_binary_dir();
   let mut bg2 = std::process::Command::new( "claude" )
     .env( "PATH", &path_val2 )
@@ -1013,6 +1030,7 @@ fn e42_high_ram_mb_env_var()
     .stderr( std::process::Stdio::null() )
     .spawn()
     .expect( "spawn fake claude 2" );
+  let pid2 = bg2.id().to_string();
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
   let out_invalid = std::process::Command::new( bin )
@@ -1032,10 +1050,12 @@ fn e42_high_ram_mb_env_var()
     "E42b: exit 0 expected with invalid CLR_PS_HIGH_RAM_MB, got {:?}",
     out_invalid.status.code()
   );
-  // sleep uses far less than 400 MB RSS.
+  let pid_row = stdout_invalid.lines()
+    .find( | l | l.contains( &pid2 ) )
+    .unwrap_or( "" );
   assert!(
-    !stdout_invalid.contains( "🐘" ),
-    "E42b: 🐘 must NOT fire when CLR_PS_HIGH_RAM_MB is invalid (default 400 used). Got:\n{stdout_invalid}"
+    !pid_row.contains( "🐘" ),
+    "E42b: 🐘 must NOT fire for PID {pid2} when CLR_PS_HIGH_RAM_MB is invalid (default 400). Got:\n{stdout_invalid}"
   );
 }
 
@@ -1070,11 +1090,12 @@ fn it39_sleeping_process_no_active_flag()
     .stderr( std::process::Stdio::null() )
     .spawn()
     .expect( "spawn sleeping claude" );
+  let pid = bg.id().to_string();
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
-    .args( [ "ps" ] )
+    .args( [ "ps", "--pid", &pid ] )
     .env( "PATH", &path_val )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
     .env( "CLR_PS_HIGH_RAM_MB", "999999" )

@@ -1,3 +1,4 @@
+#![ cfg( unix ) ]
 #![ allow( clippy::doc_markdown ) ] // test doc comments use code identifiers in prose
 //! `--timeout` (run/ask) Integration Tests
 //!

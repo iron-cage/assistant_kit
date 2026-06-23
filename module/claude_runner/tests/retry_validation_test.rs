@@ -1,3 +1,4 @@
+#![ cfg( unix ) ]
 #![ allow( clippy::doc_markdown ) ] // test doc comments use code identifiers in prose
 //! `--retry-on-validation` / `--validation-delay` Integration Tests
 //!
