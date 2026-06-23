@@ -446,6 +446,31 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     let assign_flag  = crate::output::parse_int_flag( &cmd, "assign",  0 )? != 0;
     let unclaim_flag = crate::output::parse_int_flag( &cmd, "unclaim", 0 )? != 0;
 
+    // owner:: param — explicit ownership assignment (Feature 063).
+    let owner_value = match cmd.arguments.get( "owner" )
+    {
+      Some( Value::String( s ) ) if !s.is_empty() => Some( s.clone() ),
+      Some( Value::String( _ ) ) =>
+        return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch,
+          "owner:: value must be non-empty — use unclaim::1 to clear ownership".into() ) ),
+      _ => None,
+    };
+    if owner_value.is_some() && unclaim_flag
+    {
+      return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch,
+        "owner:: and unclaim::1 are mutually exclusive — set or clear, not both".into() ) );
+    }
+    let raw_name_for_owner = match cmd.arguments.get( "name" )
+    {
+      Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
+      _ => String::new(),
+    };
+    if owner_value.is_some() && raw_name_for_owner.is_empty()
+    {
+      return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch,
+        "owner:: requires name:: — batch ownership assignment is not supported".into() ) );
+    }
+
     if assign_flag
     {
       let san = | s : &str | -> String
@@ -630,6 +655,39 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
       if params.trace { eprintln!( "[trace] usage unclaim  write_owner: OK  name={name_arg}" ) }
 
       return Ok( OutputData::new( format!( "unclaimed {name_arg}\n" ), "text" ) );
+    }
+
+    // ── owner:: explicit ownership assignment (Feature 063) ───────────────────
+    if let Some( ref ov ) = owner_value
+    {
+      let name_arg = resolve_account_name( &raw_name_for_owner, &credential_store )?;
+      let json_path = credential_store.join( format!( "{name_arg}.json" ) );
+      if !json_path.exists()
+      {
+        return Err( ErrorData::new(
+          ErrorCode::InternalError,
+          format!( "account not found: {name_arg}" ),
+        ) );
+      }
+      // G8 ownership gate.
+      let owner = crate::account::read_owner( &credential_store, &name_arg );
+      if !params.force && !crate::account::is_owned( &owner )
+      {
+        return Err( ErrorData::new(
+          ErrorCode::ArgumentTypeMismatch,
+          format!( "ownership violation: this account is owned by {owner}" ),
+        ) );
+      }
+      if is_dry( &cmd )
+      {
+        return Ok( OutputData::new(
+          format!( "[dry-run] would set owner of {name_arg} to {ov}\n" ), "text",
+        ) );
+      }
+      crate::account::write_owner( &name_arg, &credential_store, ov )
+        .map_err( |e| io_err_to_error_data( &e, "usage owner" ) )?;
+      if params.trace { eprintln!( "[trace] usage owner  write_owner: OK  name={name_arg} identity={ov}" ) }
+      return Ok( OutputData::new( format!( "owned {name_arg} by {ov}\n" ), "text" ) );
     }
   }
 

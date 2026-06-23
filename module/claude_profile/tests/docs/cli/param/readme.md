@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clp parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: 60 active clp parameter edge case files (params 1–61 with gaps); `current::` (docs param 18) has no dedicated EC file — covered by `command/003_accounts.md` IT tests. Production param 56 (`unclaim::`) was previously REMOVED — file `57_unclaim.md` is retained as a tombstone for the old `.account.save unclaim::` removal; param 56 (`unclaim::`) has been re-activated on `.accounts`/`.usage` in Feature 037. Test files `58_assign.md` and `59_force.md` cover params 057 (`assign::`) and 058 (`force::`) introduced in Feature 037. Test file `60_rotate.md` covers param 059 (`rotate::`) introduced in Feature 038. Test files `61_solo.md` and `62_who.md` cover params 060 (`solo::`) and 061 (`who::`) introduced in Feature 061 / Plan 022.
+- **In Scope**: 61 active clp parameter edge case files (params 1–62 with gaps); `current::` (docs param 18) has no dedicated EC file — covered by `command/003_accounts.md` IT tests. Production param 56 (`unclaim::`) was previously REMOVED — file `57_unclaim.md` is retained as a tombstone for the old `.account.save unclaim::` removal; param 56 (`unclaim::`) has been re-activated on `.accounts`/`.usage` in Feature 037. Test files `58_assign.md` and `59_force.md` cover params 057 (`assign::`) and 058 (`force::`) introduced in Feature 037. Test file `60_rotate.md` covers param 059 (`rotate::`) introduced in Feature 038. Test files `61_solo.md` and `62_who.md` cover params 060 (`solo::`) and 061 (`who::`) introduced in Feature 061 / Plan 022. Test file `63_owner.md` covers param 062 (`owner::`) introduced in Feature 063.
 - **Numbering note**: Test doc numbering is offset +1 from `docs/cli/param/` starting at position 2 (test `003_format.md` ↔ production `002_format.md`). Test file `002_` does not exist; this is intentional — the offset arose when `current::` was excluded from EC coverage, shifting subsequent test IDs by one.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
@@ -72,3 +72,4 @@
 | 60_rotate.md | Edge cases for `rotate::` parameter (strategy-driven rotation on `.usage` — Feature 038) |
 | 61_solo.md | Edge cases for `solo::` parameter (token conservation mode — current+owned only) |
 | 62_who.md | Edge cases for `who::` parameter (sessions table visibility in `.usage`) |
+| 63_owner.md | Edge cases for `owner::` parameter (explicit ownership assignment — Feature 063) |

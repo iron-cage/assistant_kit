@@ -65,8 +65,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [059_rotate.md](059_rotate.md) | `rotate::` — after quota table render, switch to the footer-recommended account; mutually exclusive with `live::1`; G5 ownership gate; `dry::1` previews |
 | [060_solo.md](060_solo.md) | `solo::` — token conservation mode restricting all credential-consuming operations to the current+owned account; others use `approximate_quota()` |
 | [061_who.md](061_who.md) | `who::` — sessions table visibility in `.usage` (auto: shown when >1 active marker) |
+| [062_owner.md](062_owner.md) | `owner::` — explicit ownership assignment to named identity (`USER@MACHINE`) |
 
-**Total:** 60 active parameters (param 056 re-activated in Feature 037; 057–058 new; 059 new in Feature 038; 060 new; 061 new — sessions table)
+**Total:** 61 active parameters (param 062 new in Feature 063) (param 056 re-activated in Feature 037; 057–058 new; 059 new in Feature 038; 060 new; 061 new — sessions table)
 
 ### Overview Table
 
@@ -133,6 +134,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 59 | `rotate::` | `bool` | `0` | `0`, `1` | After quota table render, switch to footer-recommended account; mutually exclusive with `live::1`; G5 ownership gate | `.usage` |
 | 60 | `solo::` | `bool` | `0` | `0`, `1` | Token conservation: restrict all credential-consuming operations to current+owned account; others use `approximate_quota()` | `.usage` |
 | 61 | `who::` | `i64` | `-1` | `-1` (auto), `0` (hide), `1` (show) | Sessions table visibility in `.usage` output | `.usage` |
+| 62 | `owner::` | `string` | *(omit)* | `USER@MACHINE` | Explicit ownership assignment for named account | `.accounts`, `.usage` |
 
 *Param 1 = cross-command account selector (no formal group); params 48, 52 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = ungrouped (`.model`-specific); param 56 = REMOVED; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54, 60 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file)*
 

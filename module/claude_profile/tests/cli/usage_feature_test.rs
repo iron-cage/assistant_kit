@@ -509,3 +509,31 @@ fn f37_ft17_usage_assign_mirrors_accounts()
     "f37-FT-17: marker must contain alice@acme.com",
   );
 }
+
+// ── Feature 063: owner:: on .usage ──────────────────────────────────────────
+
+/// FT-12 (AC-12, Feat 063): `.usage owner::` same behavior as `.accounts owner::`.
+///
+/// Spec: [`tests/docs/feature/63_explicit_ownership_claim.md` FT-12]
+#[ test ]
+fn f63_ft12_usage_owner_mirrors_accounts()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "" );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "owner::user1@w003", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  assert_eq!(
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "user1@w003",
+    "FT-12: .usage owner:: must write owner field",
+  );
+}

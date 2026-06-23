@@ -19,7 +19,7 @@ use super::fetch::{ read_token, parse_u64_from_str };
 //   was introduced.
 //   Pitfall: every new predicate gate in should_refresh must have a corresponding
 //   branch in reason_label — the predicate–reason 1:1 contract.
-pub( crate ) fn reason_label( aq : &AccountQuota ) -> &str
+pub( crate ) fn reason_label( aq : &AccountQuota, now_secs : u64 ) -> &str
 {
   if !aq.is_owned
   {
@@ -27,7 +27,8 @@ pub( crate ) fn reason_label( aq : &AccountQuota ) -> &str
   }
   else if aq.cached
   {
-    "cached-expired"
+    if ( aq.expires_at_ms / 1000 ) <= now_secs { "cached-expired" }
+    else { "cached" }
   }
   else if aq.is_occupied_elsewhere
   {
@@ -98,7 +99,7 @@ pub( crate ) fn apply_refresh(
     //   Pitfall: any trigger path that converts Err→Ok must add its own reason branch here.
     if trace
     {
-      eprintln!( "[trace] refresh  {}  should_retry={} (reason: {})", aq.name, should_retry, reason_label( aq ) );
+      eprintln!( "[trace] refresh  {}  should_retry={} (reason: {})", aq.name, should_retry, reason_label( aq, now_secs ) );
     }
     if !should_retry { continue; }
 

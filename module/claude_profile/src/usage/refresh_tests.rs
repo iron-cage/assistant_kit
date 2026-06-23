@@ -1582,7 +1582,7 @@
       is_owned              : true,
       owner                 : String::new(),
     };
-    assert_eq!( super::reason_label( &aq ), "occupied elsewhere" );
+    assert_eq!( super::reason_label( &aq, 0 ), "occupied elsewhere" );
   }
 
   /// Regression — `reason_label` returns `"not owned"` for non-owned account.
@@ -1598,10 +1598,10 @@
       renewal_at : None, cached : false, cache_age_secs : None,
       is_owned : false, owner : String::new(),
     };
-    assert_eq!( super::reason_label( &aq ), "not owned" );
+    assert_eq!( super::reason_label( &aq, 0 ), "not owned" );
   }
 
-  /// Regression — `reason_label` returns `"cached-expired"` for owned+cached account.
+  /// Regression — `reason_label` returns `"cached-expired"` for owned+cached account with expired token.
   #[ test ]
   fn reason_label_cached_expired()
   {
@@ -1614,7 +1614,26 @@
       renewal_at : None, cached : true, cache_age_secs : Some( 999 ),
       is_owned : true, owner : String::new(),
     };
-    assert_eq!( super::reason_label( &aq ), "cached-expired" );
+    assert_eq!( super::reason_label( &aq, 1 ), "cached-expired" );
+  }
+
+  /// Regression — `reason_label` returns `"cached"` for owned+cached account with valid token.
+  ///
+  /// Distinguishes rate-limited cache fallback (token still valid, no refresh needed)
+  /// from token-expired cache fallback (token expired, refresh attempted).
+  #[ test ]
+  fn reason_label_cached_valid()
+  {
+    let aq = AccountQuota
+    {
+      name : "x".into(), is_current : false, is_active : false,
+      is_occupied_elsewhere : false, expires_at_ms : FAR_FUTURE_MS,
+      result : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
+      account : None, host : String::new(), role : String::new(),
+      renewal_at : None, cached : true, cache_age_secs : Some( 60 ),
+      is_owned : true, owner : String::new(),
+    };
+    assert_eq!( super::reason_label( &aq, 9_999 ), "cached" );
   }
 
   /// Regression — `reason_label` returns `"ok"` for owned+non-cached+Ok account.
@@ -1630,7 +1649,7 @@
       renewal_at : None, cached : false, cache_age_secs : None,
       is_owned : true, owner : String::new(),
     };
-    assert_eq!( super::reason_label( &aq ), "ok" );
+    assert_eq!( super::reason_label( &aq, 0 ), "ok" );
   }
 
   /// Regression — `reason_label` returns error string for owned+non-cached+Err account.
@@ -1646,6 +1665,6 @@
       renewal_at : None, cached : false, cache_age_secs : None,
       is_owned : true, owner : String::new(),
     };
-    assert_eq!( super::reason_label( &aq ), "HTTP 401 Unauthorized" );
+    assert_eq!( super::reason_label( &aq, 0 ), "HTTP 401 Unauthorized" );
   }
 
