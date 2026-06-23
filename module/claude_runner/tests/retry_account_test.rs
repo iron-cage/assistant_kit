@@ -4,7 +4,7 @@
 //!
 //! ## Purpose
 //!
-//! Verify EC-1 through EC-9 from `tests/docs/cli/param/040_retry_on_account.md` and
+//! Verify EC-1 through EC-11 from `tests/docs/cli/param/040_retry_on_account.md` and
 //! EC-1 through EC-6 from `tests/docs/cli/param/041_account_delay.md`.
 //!
 //! Both parameter specs share this test file because `--account-delay` only fires
@@ -13,7 +13,7 @@
 //! ## Test Layout
 //!
 //! - EC-1..EC-6 (param 40), EC-1..EC-6 (param 41): parser/dry-run — no subprocess
-//! - EC-7..EC-9 (param 40): require fake subprocess
+//! - EC-7..EC-11 (param 40): require fake subprocess
 //!
 //! ## Corner Cases Covered
 //!
@@ -27,6 +27,8 @@
 //! - EC-7: fake emits `"You've hit your limit"` once then 0; retries=1, delay=0 → exit 0; `[Account]` in stderr
 //! - EC-8: fake always emits quota pattern; retries=2, delay=0 → exit 2; `[Account]` exhaustion in stderr
 //! - EC-9: no retry flags → Tier 3 fallback fires; fake exits 2 once then 0 → exit 0; `[Account]` in stderr
+//! - EC-10: fake emits CLR JSON envelope + quota pattern; retries=1, delay=0 → exit 0; retry line shows `hello` not JSON blob
+//! - EC-11: fake always emits JSON envelope + quota pattern; retries=0 → exit 2; exhaustion output shows `---` separator (summary rendered)
 //!
 //! ### --account-delay (param 41)
 //! - EC-1 (delay): help lists flag
@@ -317,6 +319,118 @@ fn ec9_account_retries_via_tier3_fallback()
   assert!(
     stderr.to_lowercase().contains( "retry" ),
     "stderr must contain retry message (Tier 3 fallback fired). Got:\n{stderr}"
+  );
+}
+
+// ── EC-10: Retry message shows extracted result text, NOT raw JSON blob ────────
+
+/// EC-10 (param 40): in summary mode (default), retry diagnostic line shows extracted
+/// `"result"` text from CLR JSON envelope instead of the raw JSON blob.
+///
+/// Fake claude: first call exits 2 with JSON envelope on stdout (`"result":"hello"`)
+/// and quota pattern on stderr; second call exits 0.
+/// Assert: stderr retry line contains `hello` (extracted), not `{` (raw JSON).
+#[ cfg( unix ) ]
+#[ test ]
+fn ec10_retry_message_shows_result_not_json_blob()
+{
+  let tmp   = tempfile::tempdir().expect( "create temp dir" );
+  let fake  = tmp.path().join( "claude" );
+  let count = tmp.path().join( "count" );
+
+  let count_path = count.to_str().expect( "counter path utf-8" );
+  let script = format!(
+    "#!/bin/sh\n\
+     if [ -f \"{count_path}\" ]; then exit 0; fi\n\
+     touch \"{count_path}\"\n\
+     printf '%s' '{{\"type\":\"result\",\"session_id\":\"s\",\"is_error\":true,\"result\":\"hello\",\"usage\":{{\"input_tokens\":0,\"output_tokens\":0}},\"total_cost_usd\":0.0}}'\n\
+     echo \"You've hit your limit\" >&2\n\
+     exit 2\n"
+  );
+  std::fs::write( &fake, script.as_bytes() ).expect( "write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake claude" );
+
+  let old_path = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path = format!( "{}:{old_path}", tmp.path().display() );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  let out = Command::new( bin )
+    .args( [
+      "-p", "--retry-on-account", "1", "--account-delay", "0",
+      "--max-sessions", "0", "x"
+    ] )
+    .env( "PATH", &new_path )
+    .output()
+    .expect( "invoke clr" );
+
+  assert!(
+    out.status.success(),
+    "exit must be 0 after Account retry succeeds. exit={:?} stderr={}",
+    out.status.code(),
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "[Account] hello" ),
+    "stderr retry line must contain extracted result text 'hello', not raw JSON. Got:\n{stderr}"
+  );
+  assert!(
+    !stderr.contains( "[Account] {" ),
+    "stderr retry line must NOT contain raw JSON blob. Got:\n{stderr}"
+  );
+}
+
+// ── EC-11: Exhaustion output rendered as summary, NOT raw JSON dump ───────────
+
+/// EC-11 (param 40): in summary mode (default), exhaustion-path stdout is rendered
+/// through `render_summary()` instead of being dumped as raw JSON.
+///
+/// Fake claude: always exits 2 with JSON envelope on stdout and quota pattern on stderr.
+/// retries=0 (explicit disable) → immediate non-retriable error path.
+/// Assert: stderr contains `---` (summary separator from render_summary), NOT raw JSON.
+#[ cfg( unix ) ]
+#[ test ]
+fn ec11_exhaustion_output_rendered_not_raw_json()
+{
+  let tmp  = tempfile::tempdir().expect( "create temp dir" );
+  let fake = tmp.path().join( "claude" );
+
+  let script =
+    "#!/bin/sh\n\
+     printf '%s' '{\"type\":\"result\",\"session_id\":\"s\",\"is_error\":true,\"result\":\"hello\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0},\"total_cost_usd\":0.0}'\n\
+     echo \"You've hit your limit\" >&2\n\
+     exit 2\n";
+  std::fs::write( &fake, script.as_bytes() ).expect( "write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake claude" );
+
+  let old_path = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path = format!( "{}:{old_path}", tmp.path().display() );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  let out = Command::new( bin )
+    .args( [
+      "-p", "--retry-on-account", "0", "--account-delay", "0",
+      "--max-sessions", "0", "x"
+    ] )
+    .env( "PATH", &new_path )
+    .output()
+    .expect( "invoke clr" );
+
+  assert_eq!(
+    out.status.code(),
+    Some( 2 ),
+    "exit must be 2 (non-retriable). Got: {:?}", out.status.code()
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "---" ),
+    "stderr must contain '---' separator from render_summary(). Got:\n{stderr}"
+  );
+  assert!(
+    !stderr.contains( "{\"type\"" ),
+    "stderr must NOT contain raw JSON blob. Got:\n{stderr}"
   );
 }
 

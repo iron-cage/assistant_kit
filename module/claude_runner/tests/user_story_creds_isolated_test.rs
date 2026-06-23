@@ -450,12 +450,12 @@ fn us16_1_help_prints_usage()
   assert!( out.status.success(), "clr help must exit 0. Got: {:?}", out.status.code() );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "USAGE:" ),
-    "`clr help` must print USAGE section. Got:\n{stdout}"
+    stdout.contains( "RUNNER OPTIONS:" ),
+    "`clr help` must print RUNNER OPTIONS section. Got:\n{stdout}"
   );
   assert!(
-    stdout.contains( "COMMANDS:" ),
-    "`clr help` must print COMMANDS section. Got:\n{stdout}"
+    stdout.contains( "Commands:" ),
+    "`clr help` must print Commands section. Got:\n{stdout}"
   );
 }
 
@@ -479,11 +479,9 @@ fn us16_2_flag_aliases_identical()
   );
 }
 
-/// US-3: help output lists all 5 subcommands and available flags.
+/// US-3: help output lists all 8 subcommands and available flags.
 ///
-/// All 5 named subcommands — run, ask, isolated, refresh, help — appear in COMMANDS.
-/// `run` is both the default invocation form (shown in USAGE as `clr [OPTIONS] [MESSAGE]`)
-/// and an explicit subcommand (`clr run [OPTIONS] [MESSAGE]`).
+/// All 8 named subcommands — run, ask, isolated, refresh, ps, kill, tools, help — appear in COMMANDS.
 #[ test ]
 fn us16_3_all_subcommands_listed()
 {
@@ -491,19 +489,19 @@ fn us16_3_all_subcommands_listed()
   assert!( out.status.success(), "clr help must exit 0" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "COMMANDS:" ),
-    "clr help must print COMMANDS section. Got:\n{stdout}"
+    stdout.contains( "Commands:" ),
+    "clr help must print Commands section. Got:\n{stdout}"
   );
   // Extract COMMANDS block to assert each subcommand appears there (not just anywhere in output).
   let after_cmds = stdout
-    .split_once( "COMMANDS:\n" )
+    .split_once( "Commands:\n" )
     .map_or( "", | ( _, rest ) | rest );
   let cmds_block = after_cmds
-    .split_once( "\nARGUMENTS:" )
+    .split_once( "\nRUNNER OPTIONS:" )
     .map_or( after_cmds, | ( block, _ ) | block );
   assert!(
     cmds_block.lines().any( | l | l.trim_start().starts_with( "run" ) ),
-    "COMMANDS section must list 'run' subcommand. Got COMMANDS block:\n{cmds_block}"
+    "Commands section must list 'run' subcommand. Got Commands block:\n{cmds_block}"
   );
   assert!(
     stdout.contains( "ask" ),
@@ -520,6 +518,18 @@ fn us16_3_all_subcommands_listed()
   assert!(
     stdout.contains( "help" ),
     "clr help must list 'help' subcommand. Got:\n{stdout}"
+  );
+  assert!(
+    cmds_block.lines().any( | l | l.trim_start().starts_with( "ps" ) ),
+    "Commands section must list 'ps' subcommand. Got Commands block:\n{cmds_block}"
+  );
+  assert!(
+    cmds_block.lines().any( | l | l.trim_start().starts_with( "kill" ) ),
+    "Commands section must list 'kill' subcommand. Got Commands block:\n{cmds_block}"
+  );
+  assert!(
+    cmds_block.lines().any( | l | l.trim_start().starts_with( "tools" ) ),
+    "Commands section must list 'tools' subcommand. Got Commands block:\n{cmds_block}"
   );
   assert!(
     stdout.contains( "[OPTIONS]" ),
@@ -551,7 +561,7 @@ fn us16_4_no_side_effects()
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "USAGE:" ),
+    stdout.contains( "RUNNER OPTIONS:" ),
     "clr help output must be complete even without claude in PATH. Got:\n{stdout}"
   );
 }
@@ -593,16 +603,16 @@ fn bug_mre_212_run_subcommand_not_in_help_commands()
   let stdout = String::from_utf8_lossy( &out.stdout );
   // Extract only the COMMANDS block (after "COMMANDS:\n", before "\nARGUMENTS:").
   let after_cmds = stdout
-    .split_once( "COMMANDS:\n" )
+    .split_once( "Commands:\n" )
     .map_or( "", | ( _, rest ) | rest );
   let cmds_block = after_cmds
-    .split_once( "\nARGUMENTS:" )
+    .split_once( "\nRUNNER OPTIONS:" )
     .map_or( after_cmds, | ( block, _ ) | block );
   assert!(
     cmds_block.lines().any( | l | l.trim_start().starts_with( "run" ) ),
-    "COMMANDS section must list 'run' as a named subcommand.\n\
-     Fix(BUG-212): add 'run' to print_help() COMMANDS section.\n\
-     Got COMMANDS block:\n{cmds_block}"
+    "Commands section must list 'run' as a named subcommand.\n\
+     Fix(BUG-212): add 'run' to print_help() Commands section.\n\
+     Got Commands block:\n{cmds_block}"
   );
 }
 

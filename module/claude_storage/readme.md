@@ -12,8 +12,6 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 | `src/` | CLI pipeline, command routines, binary entry points |
 | `tests/` | Integration and parameter validation tests |
 | `docs/` | Behavioral requirements: features, CLI reference, operation docs |
-| `task/` | Crate-scoped task tracking (in-repo) |
-| `../../../../claude_tools/task/claude_storage/` | Canonical task registry (external, see `claude_tools/task/`) |
 | `examples/` | Usage examples for storage API |
 | `changelog.md` | Notable changes by version |
 | `verb/` | Shell scripts for each `do` protocol verb. |

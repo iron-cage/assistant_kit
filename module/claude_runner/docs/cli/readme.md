@@ -12,7 +12,7 @@ Execute Claude Code with configurable `--flag value` parameters.
 ### Usage
 
 ```sh
-clr [OPTIONS] [MESSAGE]
+clr <command> [OPTIONS] [MESSAGE]
 ```
 
 ### Responsibility Table

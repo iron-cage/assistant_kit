@@ -209,8 +209,8 @@ fn t55_help_wins_over_subsequent_unknown_flag()
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "USAGE:" ),
-    "--help before unknown flag must show USAGE. Got:\n{stdout}"
+    stdout.contains( "RUNNER OPTIONS:" ),
+    "--help before unknown flag must show RUNNER OPTIONS. Got:\n{stdout}"
   );
 }
 
@@ -231,8 +231,8 @@ fn t56_help_wins_over_preceding_unknown_flag()
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "USAGE:" ),
-    "--help after unknown flag must show USAGE. Got:\n{stdout}"
+    stdout.contains( "RUNNER OPTIONS:" ),
+    "--help after unknown flag must show RUNNER OPTIONS. Got:\n{stdout}"
   );
 }
 

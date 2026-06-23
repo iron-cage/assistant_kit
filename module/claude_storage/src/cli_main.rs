@@ -62,69 +62,67 @@ fn print_usage( binary : &str )
 {
   use cli_fmt::help::*;
 
-  let data = CliHelpData
-  {
-    binary  : binary.to_string(),
-    tagline : "Claude Code storage explorer: query conversations, sessions, and projects.".to_string(),
-    groups  : vec!
-    [
-      CommandGroup
-      {
-        name    : "Status".to_string(),
-        entries : vec!
-        [
-          CommandEntry { name : ".status".to_string(), desc : "Show storage summary (projects, sessions, entries)".to_string() },
-        ],
-      },
-      CommandGroup
-      {
-        name    : "Session".to_string(),
-        entries : vec!
-        [
-          CommandEntry { name : ".session.dir".to_string(),    desc : "Print the filesystem path of a session directory".to_string() },
-          CommandEntry { name : ".session.ensure".to_string(), desc : "Ensure a session directory exists (create if missing)".to_string() },
-        ],
-      },
-      CommandGroup
-      {
-        name    : "Project".to_string(),
-        entries : vec!
-        [
-          CommandEntry { name : ".projects".to_string(),       desc : "List all known projects with session counts".to_string() },
-          CommandEntry { name : ".project.path".to_string(),   desc : "Print the filesystem path of a project directory".to_string() },
-          CommandEntry { name : ".project.exists".to_string(), desc : "Check whether a project has any sessions".to_string() },
-        ],
-      },
-      CommandGroup
-      {
-        name    : "Query".to_string(),
-        entries : vec!
-        [
-          CommandEntry { name : ".list".to_string(),   desc : "List sessions with filtering and sorting".to_string() },
-          CommandEntry { name : ".show".to_string(),   desc : "Display entries from a specific session".to_string() },
-          CommandEntry { name : ".count".to_string(),  desc : "Count sessions or entries matching criteria".to_string() },
-          CommandEntry { name : ".search".to_string(), desc : "Search conversation content across sessions".to_string() },
-          CommandEntry { name : ".export".to_string(), desc : "Export session data in various formats".to_string() },
-        ],
-      },
-    ],
-    options : vec!
-    [
-      OptionEntry { name : "project::ID".to_string(),     desc : "Filter by project identifier".to_string() },
-      OptionEntry { name : "session::ID".to_string(),     desc : "Target a specific session".to_string() },
-      OptionEntry { name : "scope::VALUE".to_string(),    desc : "Scope filter (all, cli, web, ide)".to_string() },
-      OptionEntry { name : "format::FMT".to_string(),     desc : "Output format (text, json, markdown)".to_string() },
-      OptionEntry { name : "limit::N".to_string(),        desc : "Maximum entries to return".to_string() },
-      OptionEntry { name : "query::TEXT".to_string(),     desc : "Search query string".to_string() },
-    ],
-    examples : vec!
-    [
-      ExampleEntry { invocation : format!( "{binary} .status" ),                          desc : None },
-      ExampleEntry { invocation : format!( "{binary} .list scope::cli limit::10" ),       desc : None },
-      ExampleEntry { invocation : format!( "{binary} .search query::\"error handling\"" ), desc : None },
-      ExampleEntry { invocation : format!( "{binary} --repl" ),                           desc : Some( "Enter interactive REPL mode".to_string() ) },
-    ],
-  };
+  let mut data    = CliHelpData::default();
+  data.binary     = binary.to_string();
+  data.tagline    = "Claude Code storage explorer: query conversations, sessions, and projects.".to_string();
+  data.groups     = vec!
+  [
+    CommandGroup
+    {
+      name    : "Status".to_string(),
+      entries : vec!
+      [
+        CommandEntry { name : ".status".to_string(), desc : "Show storage summary (projects, sessions, entries)".to_string() },
+      ],
+    },
+    CommandGroup
+    {
+      name    : "Session".to_string(),
+      entries : vec!
+      [
+        CommandEntry { name : ".session.dir".to_string(),    desc : "Print the filesystem path of a session directory".to_string() },
+        CommandEntry { name : ".session.ensure".to_string(), desc : "Ensure a session directory exists (create if missing)".to_string() },
+      ],
+    },
+    CommandGroup
+    {
+      name    : "Project".to_string(),
+      entries : vec!
+      [
+        CommandEntry { name : ".projects".to_string(),       desc : "List all known projects with session counts".to_string() },
+        CommandEntry { name : ".project.path".to_string(),   desc : "Print the filesystem path of a project directory".to_string() },
+        CommandEntry { name : ".project.exists".to_string(), desc : "Check whether a project has any sessions".to_string() },
+      ],
+    },
+    CommandGroup
+    {
+      name    : "Query".to_string(),
+      entries : vec!
+      [
+        CommandEntry { name : ".list".to_string(),   desc : "List sessions with filtering and sorting".to_string() },
+        CommandEntry { name : ".show".to_string(),   desc : "Display entries from a specific session".to_string() },
+        CommandEntry { name : ".count".to_string(),  desc : "Count sessions or entries matching criteria".to_string() },
+        CommandEntry { name : ".search".to_string(), desc : "Search conversation content across sessions".to_string() },
+        CommandEntry { name : ".export".to_string(), desc : "Export session data in various formats".to_string() },
+      ],
+    },
+  ];
+  data.options    = vec!
+  [
+    OptionEntry { name : "project::ID".to_string(),     desc : "Filter by project identifier".to_string() },
+    OptionEntry { name : "session::ID".to_string(),     desc : "Target a specific session".to_string() },
+    OptionEntry { name : "scope::VALUE".to_string(),    desc : "Scope filter (all, cli, web, ide)".to_string() },
+    OptionEntry { name : "format::FMT".to_string(),     desc : "Output format (text, json, markdown)".to_string() },
+    OptionEntry { name : "limit::N".to_string(),        desc : "Maximum entries to return".to_string() },
+    OptionEntry { name : "query::TEXT".to_string(),     desc : "Search query string".to_string() },
+  ];
+  data.examples   = vec!
+  [
+    ExampleEntry { invocation : format!( "{binary} .status" ),                          desc : None },
+    ExampleEntry { invocation : format!( "{binary} .list scope::cli limit::10" ),       desc : None },
+    ExampleEntry { invocation : format!( "{binary} .search query::\"error handling\"" ), desc : None },
+    ExampleEntry { invocation : format!( "{binary} --repl" ),                           desc : Some( "Enter interactive REPL mode".to_string() ) },
+  ];
   print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
 }
 
