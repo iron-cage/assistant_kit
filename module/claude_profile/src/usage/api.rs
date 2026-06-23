@@ -268,6 +268,10 @@ pub( crate ) fn apply_model_override(
   //   unconditionally for any account without a Sonnet tier.
   // Root cause: None means "tier absent/unknown", not "fully exhausted"; 0.0 < 20.0 always fires.
   // Pitfall: guard override on Some(ref sonnet) — absent tier must never trigger quota-exhaustion logic.
+  // Fix(BUG-311): was one-way (sonnet→opus only); settings.json retained stale "opus" after switching
+  //   to an account with sufficient Sonnet quota — no code wrote "sonnet" back.
+  // Root cause: the else-branch was absent; model state was never reset when quota recovered.
+  // Pitfall: use override_session_model_to_sonnet() to avoid redundant writes when already "sonnet".
   if let Some( ref sonnet ) = quota.seven_day_sonnet
   {
     let sonnet_left = 100.0 - sonnet.utilization;
@@ -286,6 +290,28 @@ pub( crate ) fn apply_model_override(
         }
       }
     }
+    else
+    {
+      let overrode = crate::account::override_session_model_to_sonnet( paths );
+      if overrode && trace
+      {
+        use std::io::Write as _;
+        let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  model override: opus→sonnet (7d(Son) left={sonnet_left:.0}%)" );
+      }
+    }
+  }
+  else
+  {
+    // Sonnet tier absent — write "sonnet" conservatively (absent tier ≠ exhausted).
+    let _ = crate::account::override_session_model_to_sonnet( paths );
+  }
+  // Fix(BUG-312): effortLevel never initialized; footer always omitted effort.
+  // Root cause: set_session_effort() only called in .usage rotate::1 (carry-forward);
+  //   neither .account.use nor plain .usage ever initialized effortLevel in settings.json.
+  // Pitfall: only initialize — never overwrite user-configured effort.
+  if claude_profile_core::account::get_session_effort( paths ).is_none()
+  {
+    claude_profile_core::account::set_session_effort( paths, "low" );
   }
 }
 

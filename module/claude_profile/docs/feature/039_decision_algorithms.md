@@ -24,15 +24,15 @@ Utilization-aware gate at `subprocess.rs:29-59` (Fix BUG-301, TSK-311): `son_idl
 
 ## Table 2 — Session Model Override
 
-How `apply_model_override()` upgrades the interactive session model from Sonnet to Opus. The threshold logic is canonicalized in `recommended_model(aq)` (`format.rs`) — see [Feature 062](062_unified_session_config.md).
+How `apply_model_override()` manages the interactive session model bidirectionally. The threshold logic for the Sonnet-exhaustion direction is canonicalized in `recommended_model(aq)` (`format.rs`) — see [Feature 062](062_unified_session_config.md).
 
-Entry point: `format.rs` (`recommended_model`), called by `api.rs:259-290` (`apply_model_override`) and `render.rs` footer generation.
+Entry point: `api.rs` (`apply_model_override`); footer recommendation uses `format.rs` (`recommended_model`) called by `render.rs`.
 
 | `seven_day_sonnet` | Sonnet left (`100 - utilization`) | Override | Rationale |
 |---|---|---|---|
-| `None` | — | no-op | No Sonnet tier — nothing to evaluate |
-| `Some` | >= 15% | no-op | Sufficient Sonnet capacity |
-| `Some` | < 15% | **Sonnet -> Opus** | Sonnet near-exhausted — preserve remaining tokens |
+| `None` | — | **→ Sonnet** (if model was Opus form) | Absent tier ≠ exhausted — restore Sonnet conservatively (Fix BUG-311). No trace emitted. |
+| `Some` | >= 15% | **→ Sonnet** (if model was Opus form) | Sufficient capacity — restore if degraded to Opus (Fix BUG-311). |
+| `Some` | < 15% | **→ Opus** (if model was Sonnet form) | Sonnet near-exhausted — preserve remaining tokens. |
 
 ---
 

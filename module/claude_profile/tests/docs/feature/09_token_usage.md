@@ -32,7 +32,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | — |
 | FT-25 | `.usage` applies model override for current account when `7d(Son) < 15%` | AC-32 | — |
 | FT-26 | `format::json` output includes `"is_owned"` bool per account object | AC-05 | — |
-| FT-27 | `.usage` model override skips when `seven_day_sonnet` is absent (`None`) — absent tier is unknown, not exhausted | AC-32 | — |
+| FT-27 | `.usage` model override writes `"sonnet"` conservatively when `seven_day_sonnet` is absent (`None`) — absent tier is unknown, not exhausted (BUG-300 + BUG-311) | AC-32 | — |
 | FT-28 | Footer `Current` line identifies `✓` account with model and valid count; `Next` line shows recommendation with model and metric; both use `·` delimiter and aligned columns | AC-10 | — |
 | FT-29 | Footer `Current` line shows `model/effort` combined when effort present; `model` only when effort absent | AC-10 | — |
 | FT-30 | Sessions table shown after footer when >1 `_active_*` marker exists; each marker rendered as `{user}@{host}` + account; own session has `✓` | AC-33 | — |
@@ -80,7 +80,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | Trace Ordering |
 | FT-25 | `.usage` applies model override for current account when `7d(Son) < 15%` | AC-32 | Model Override |
 | FT-26 | `format::json` includes `"is_owned": bool` per account object | AC-05 | JSON Fields |
-| FT-27 | `.usage` model override skips when `seven_day_sonnet = None` (BUG-300 MRE) | AC-32 | Model Override |
+| FT-27 | `.usage` model override writes `"sonnet"` conservatively when `seven_day_sonnet = None` (BUG-300 + BUG-311) | AC-32 | Model Override |
 | FT-28 | Footer `Current` + `Next` lines with `·` delimiter and column alignment | AC-10 | Footer |
 | FT-29 | Footer `Current` line: `model/effort` when effort present; `model` only when absent | AC-10 | Footer Session/Effort |
 | FT-30 | Sessions table shown when >1 marker; own session has `✓` | AC-33 | Sessions Table |
@@ -427,18 +427,17 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ---
 
-### FT-27: `.usage` model override skips when `seven_day_sonnet = None` (BUG-300 MRE)
+### FT-27: `.usage` model override writes `"sonnet"` conservatively when `seven_day_sonnet = None` (BUG-300 + BUG-311)
 
 - **Given (unit test):** One `AccountQuota` for the current account (`is_current = true`):
   - `result = Ok(OauthUsageData)` with `seven_day_sonnet = None` (absent tier — account has no Sonnet weekly quota)
-  - `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"` (or empty)
+  - `~/.claude/settings.json` not present (or empty)
   - `ClaudePaths` pointing to a temp directory
 - **When:** `apply_model_override(&data, &paths, false, "usage", "test@example.com")` is called.
 - **Then:**
-  - `~/.claude/settings.json` is NOT modified — still contains `"claude-sonnet-4-6"`. Override did not fire.
-  - A second scenario (regression guard): same setup with `seven_day_sonnet = Some(PeriodUsage { utilization: 90.0, ... })` (10% left) — override DOES fire and `~/.claude/settings.json` is updated to `"claude-opus-4-6"`. Confirms `Some` path still fires correctly.
+  - `~/.claude/settings.json` contains `"model": "sonnet"` — `override_session_model_to_sonnet()` fires conservatively (Fix BUG-311). `"opus"` does NOT appear. Absent tier is treated as unknown, not exhausted.
 - **Exit:** n/a (unit test)
-- **Note:** Fix(BUG-300): `map_or(0.0, ...)` treated `None` as 0% remaining (fully exhausted), causing unconditional Opus override for accounts without a Sonnet tier. `None` must be treated as absent/unknown — not as exhaustion. Guard changed to `if let Some(ref sonnet) = quota.seven_day_sonnet { ... }`.
+- **Note:** Fix(BUG-300): `map_or(0.0, ...)` treated `None` as 0% remaining (fully exhausted), causing unconditional Opus override for accounts without a Sonnet tier. `None` must be treated as absent/unknown — not as exhaustion. Guard changed to `if let Some(ref sonnet) = quota.seven_day_sonnet { ... }`. Fix(BUG-311): the else-branch (tier absent) now conservatively calls `override_session_model_to_sonnet()` — absent tier ≠ exhausted, so Sonnet is the safe default.
 - **Source fn:** `mre_bug300_model_override_absent_sonnet_no_override` (in `src/usage/api_tests.rs`)
 - **Source:** [009_token_usage.md AC-32](../../../docs/feature/009_token_usage.md)
 

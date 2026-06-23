@@ -175,13 +175,18 @@ fn mre_bug286_full_opus_id_normalized_to_shorthand()
 ///
 /// # Prevention
 /// This test catches any regression to `map_or(0.0, ...)` or other "treat None as 0%"
-/// patterns. Observable contract: `settings.json` must NOT be created when `seven_day_sonnet`
-/// is absent, regardless of any threshold comparison.
+/// patterns. Observable contract: when `seven_day_sonnet` is absent, `"opus"` must NOT be
+/// written — absent tier is unknown quota, not exhaustion.
 ///
 /// # Pitfall
 /// `map_or(0.0, ...)` is correct for display (show 0% when tier absent) but WRONG for
 /// conditional gates. `None` = "tier absent/unknown". Always use `if let Some(...)` for
 /// quota-exhaustion logic — never treat absence as exhaustion.
+///
+/// # Fix(BUG-311) behaviour change
+/// BUG-311 added the else-branch: when tier is absent, `"sonnet"` is now written
+/// conservatively. The BUG-300 invariant still holds — `"opus"` is never written for
+/// absent tier. The new invariant: absent tier → model = `"sonnet"` (safe default).
 #[ doc = "bug_reproducer(BUG-300)" ]
 #[ test ]
 fn mre_bug300_model_override_absent_sonnet_no_override()
@@ -190,13 +195,17 @@ fn mre_bug300_model_override_absent_sonnet_no_override()
   let dir   = TempDir::new().unwrap();
   let paths = crate::ClaudePaths::with_home( dir.path() );
   std::fs::create_dir_all( paths.base() ).unwrap();
-  // seven_day_sonnet = None: Sonnet tier absent — override must NOT fire.
+  // seven_day_sonnet = None: Sonnet tier absent — opus must NOT fire; sonnet written conservatively.
   let quota = OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
   apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
-    !paths.settings_file().exists(),
-    "BUG-300: settings.json must NOT be written when seven_day_sonnet is None \
-     (absent tier is unknown, not exhausted)",
+    content.contains( "\"sonnet\"" ),
+    "BUG-300/BUG-311: absent Sonnet tier must write sonnet (conservative default), got: {content}",
+  );
+  assert!(
+    !content.contains( "\"opus\"" ),
+    "BUG-300: absent Sonnet tier must NOT write opus (absent tier ≠ exhausted), got: {content}",
   );
 }
 
@@ -223,8 +232,10 @@ fn t01_model_override_fires_when_sonnet_below_threshold()
   );
 }
 
+/// Fix(BUG-311): when Sonnet quota is sufficient, opus override skips and sonnet is
+/// written as the recommended session model.
 #[ test ]
-fn t02_model_override_skips_when_sonnet_above_threshold()
+fn t02_model_override_writes_sonnet_when_quota_sufficient()
 {
   use claude_quota::{ OauthUsageData, PeriodUsage };
   let dir   = TempDir::new().unwrap();
@@ -237,9 +248,14 @@ fn t02_model_override_skips_when_sonnet_above_threshold()
     seven_day_sonnet : Some( PeriodUsage { utilization : 70.0, resets_at : None } ),
   };
   apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
-    !paths.settings_file().exists(),
-    "must NOT write settings.json when 7d(Son) utilization=70% (30% left)",
+    content.contains( "\"sonnet\"" ),
+    "Fix(BUG-311): 7d(Son) utilization=70% (30% left) must write sonnet as recommended model, got: {content}",
+  );
+  assert!(
+    !content.contains( "\"opus\"" ),
+    "7d(Son) 30% left: opus override must NOT fire, got: {content}",
   );
 }
 
@@ -328,14 +344,16 @@ fn t06_model_override_skips_for_non_current_account()
   );
 }
 
+/// Fix(BUG-311): at the exact 15% boundary (left == 15%, not < 15%), opus override skips
+/// and sonnet is written as recommended model.
 #[ test ]
-fn t07_model_override_skips_at_and_above_15pct_boundary()
+fn t07_model_override_writes_sonnet_at_15pct_boundary()
 {
   use claude_quota::{ OauthUsageData, PeriodUsage };
   let dir   = TempDir::new().unwrap();
   let paths = crate::ClaudePaths::with_home( dir.path() );
   std::fs::create_dir_all( paths.base() ).unwrap();
-  // utilization=85.0 → sonnet_left = 100.0 - 85.0 = 15.0; 15.0 < 15.0 == false.
+  // utilization=85.0 → sonnet_left = 100.0 - 85.0 = 15.0; 15.0 < 15.0 == false → sonnet wins.
   let quota = OauthUsageData
   {
     five_hour        : None,
@@ -343,9 +361,14 @@ fn t07_model_override_skips_at_and_above_15pct_boundary()
     seven_day_sonnet : Some( PeriodUsage { utilization : 85.0, resets_at : None } ),
   };
   apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
-    !paths.settings_file().exists(),
-    "must NOT write at exact 15% boundary (utilization=85.0)",
+    content.contains( "\"sonnet\"" ),
+    "Fix(BUG-311): exact 15% boundary (utilization=85.0) must write sonnet, got: {content}",
+  );
+  assert!(
+    !content.contains( "\"opus\"" ),
+    "exact 15% boundary: opus override must NOT fire (strict <), got: {content}",
   );
 }
 
@@ -375,6 +398,161 @@ fn t08_model_override_trace_label_is_usage()
   assert!(
     !output.contains( "[trace] account.use" ),
     "trace output must NOT contain '[trace] account.use' when label='usage', got: {output}",
+  );
+}
+
+// ── BUG-311 tests: bidirectional model override ────────────────────────────
+
+/// `mre_bug311` — `apply_model_override()` never restores `"sonnet"` when Sonnet quota recovers.
+///
+/// # Root Cause
+/// `apply_model_override()` was one-way: it only wrote `"opus"` when Sonnet was below
+/// 15% threshold. The else-branch was absent — when Sonnet was sufficient, no write
+/// occurred and `settings.json` retained whatever model was set before the switch
+/// (commonly `"opus"` from a prior exhaustion cycle).
+///
+/// # Why Not Caught
+/// All pre-existing tests only checked the opus-write path. No test pre-wrote `"opus"`
+/// to `settings.json` then called `apply_model_override()` with sufficient Sonnet quota.
+///
+/// # Fix Applied
+/// Added else-branch in `apply_model_override()`: when `sonnet_left >= threshold`, call
+/// `override_session_model_to_sonnet()`. Added `override_session_model_to_sonnet()` in
+/// `claude_profile_core::account` mirroring `override_session_model_to_opus()`.
+///
+/// # Prevention
+/// This test pre-writes `"opus"` and asserts restoration to `"sonnet"` when quota allows.
+///
+/// # Pitfall
+/// Model state after `.account.use` must always reflect the current quota — not whatever
+/// the previous session had. Unidirectional overrides silently preserve stale state.
+#[ doc = "bug_reproducer(BUG-311)" ]
+#[ test ]
+fn mre_bug311_model_restored_to_sonnet_when_opus_and_quota_sufficient()
+{
+  use claude_quota::{ OauthUsageData, PeriodUsage };
+  let dir   = TempDir::new().unwrap();
+  let paths = crate::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  // Pre-write "opus" — simulates state left from a prior quota-exhaustion cycle.
+  std::fs::write( paths.settings_file(), r#"{"model":"opus"}"# ).unwrap();
+  // Sonnet quota is fine: 4% utilization → 96% left > 15% threshold.
+  let quota = OauthUsageData
+  {
+    five_hour        : None,
+    seven_day        : None,
+    seven_day_sonnet : Some( PeriodUsage { utilization : 4.0, resets_at : None } ),
+  };
+  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
+  assert!(
+    content.contains( "\"sonnet\"" ) && !content.contains( "\"opus\"" ),
+    "BUG-311: must restore sonnet when prior model=opus and 7d(Son) 96% left, got: {content}",
+  );
+}
+
+/// BUG-311 trace: `apply_model_override()` emits `opus→sonnet` trace when restoring model.
+#[ test ]
+fn t09_model_override_trace_opus_to_sonnet()
+{
+  use claude_quota::{ OauthUsageData, PeriodUsage };
+  use std::io::Read;
+  let dir   = TempDir::new().unwrap();
+  let paths = crate::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  // Pre-write "opus" so the gate in override_session_model_to_sonnet fires.
+  std::fs::write( paths.settings_file(), r#"{"model":"opus"}"# ).unwrap();
+  let quota = OauthUsageData
+  {
+    five_hour        : None,
+    seven_day        : None,
+    seven_day_sonnet : Some( PeriodUsage { utilization : 4.0, resets_at : None } ),
+  };
+  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+  let mut buf = gag::BufferRedirect::stderr().unwrap();
+  apply_model_override( &quota, &paths, true, "account.use", "test-account" );
+  let mut output = String::new();
+  buf.read_to_string( &mut output ).unwrap();
+  assert!(
+    output.contains( "model override: opus→sonnet" ),
+    "BUG-311: trace must contain 'opus→sonnet' when restoring from stale opus, got: {output}",
+  );
+}
+
+// ── BUG-312 tests: effort initialization ──────────────────────────────────
+
+/// `mre_bug312` — `apply_model_override()` never initializes `effortLevel`; footer omits effort.
+///
+/// # Root Cause
+/// `set_session_effort()` was only called from `.usage rotate::1` (carry-forward path).
+/// Neither `.account.use` nor plain `.usage` initialized `effortLevel` in `settings.json`.
+/// The footer reads `effortLevel` from `settings.json`; when absent, it renders as
+/// `model` without `/effort` — effort was invisible regardless of usage pattern.
+///
+/// # Why Not Caught
+/// All prior effort tests exercised the carry-forward path (`rotate::1`). No test called
+/// `apply_model_override()` and then checked for `effortLevel` in `settings.json`.
+///
+/// # Fix Applied
+/// Added `get_session_effort` guard in `apply_model_override()`:
+/// when `effortLevel` is absent, write `"low"` (matching `resolve_effort(Auto)` default).
+/// Preserves user-configured effort — only writes on first initialization.
+///
+/// # Prevention
+/// This test asserts that `effortLevel` is written with value `"low"` after calling
+/// `apply_model_override()` when `settings.json` has no `effortLevel` key.
+///
+/// # Pitfall
+/// The effort init guard (`get_session_effort().is_none()`) reads `settings.json` AFTER
+/// the model write — must always be the last operation so it sees the updated file.
+#[ doc = "bug_reproducer(BUG-312)" ]
+#[ test ]
+fn mre_bug312_effort_initialized_to_low_when_absent()
+{
+  use claude_quota::{ OauthUsageData, PeriodUsage };
+  let dir   = TempDir::new().unwrap();
+  let paths = crate::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  // No settings.json initially — simulates fresh install or first .account.use.
+  let quota = OauthUsageData
+  {
+    five_hour        : None,
+    seven_day        : None,
+    seven_day_sonnet : Some( PeriodUsage { utilization : 4.0, resets_at : None } ),
+  };
+  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
+  assert!(
+    content.contains( "\"effortLevel\"" ) && content.contains( "\"low\"" ),
+    "BUG-312: effortLevel must be initialized to 'low' when absent, got: {content}",
+  );
+}
+
+/// BUG-312 guard: user-configured effort must not be overwritten.
+#[ test ]
+fn t10_effort_preserved_when_already_configured()
+{
+  use claude_quota::{ OauthUsageData, PeriodUsage };
+  let dir   = TempDir::new().unwrap();
+  let paths = crate::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  // Pre-write user-configured effort "high" — must survive apply_model_override.
+  std::fs::write( paths.settings_file(), r#"{"model":"sonnet","effortLevel":"high"}"# ).unwrap();
+  let quota = OauthUsageData
+  {
+    five_hour        : None,
+    seven_day        : None,
+    seven_day_sonnet : Some( PeriodUsage { utilization : 4.0, resets_at : None } ),
+  };
+  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
+  assert!(
+    content.contains( "\"high\"" ),
+    "BUG-312 guard: user-set effortLevel='high' must not be overwritten, got: {content}",
+  );
+  assert!(
+    !content.contains( "\"low\"" ),
+    "BUG-312 guard: 'low' must not replace user-set 'high', got: {content}",
   );
 }
 
@@ -777,22 +955,25 @@ fn ft12_rotation_dispatcher_calls_set_session_effort_for_carry_forward()
   );
 }
 
-/// `ft13` — `set_session_effort` is only called when `session_effort` is `Some` (AC-07).
+/// `ft13` — carry-forward `set_session_effort` is guarded by `if let Some( se ) = session_effort` (AC-07).
 ///
 /// # Root Cause
-/// AC-07 forbids injecting a default effort when none is configured. If `set_session_effort`
-/// were called unconditionally (or with a hardcoded default), users without an effort preference
-/// would have one silently injected after rotation.
+/// AC-07 (pre-BUG-312): `set_session_effort` must only carry forward the pre-rotation effort value
+/// when one was already configured — not inject a default. After Fix(BUG-312),
+/// `apply_model_override()` now initializes `effortLevel: "low"` when absent; the carry-forward
+/// guard here prevents `set_session_effort` from overwriting that init with `None` (no-op).
 ///
 /// # Why Not Caught
-/// No structural test asserted the `Some(se)` guard wraps the call.
+/// No structural test asserted the `Some(se)` guard wraps the carry-forward call.
 ///
 /// # Fix Applied
 /// `set_session_effort` is called inside `if let Some( se ) = session_effort { ... }` — only
 /// fires when the pre-rotation settings.json contained an `effortLevel` value.
+/// The init path (for absent effortLevel) is handled by `apply_model_override()` (Fix BUG-312).
 ///
 /// # Prevention
-/// Structural grep: `set_session_effort` call must be preceded by `if let Some( se ) = session_effort`.
+/// Structural grep: carry-forward `set_session_effort` call must be inside
+/// `if let Some( se ) = session_effort { ... }`.
 ///
 /// # Pitfall
 /// The guard checks `session_effort` (the `Option<&str>` extracted from settings.json before
@@ -812,9 +993,9 @@ fn ft13_rotation_set_session_effort_guarded_by_some_not_injected()
 
   assert!(
     block.contains( "if let Some( se ) = session_effort" ),
-    "AC-07: set_session_effort must be guarded by `if let Some( se ) = session_effort` \
-    to prevent effort injection when none is configured (Feature 062)\n\
-    block:\n{block}",
+    "AC-07: carry-forward set_session_effort must be guarded by \
+`if let Some( se ) = session_effort` (Feature 062; init path handled by apply_model_override BUG-312)\n\
+block:\n{block}",
   );
 }
 

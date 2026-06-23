@@ -506,6 +506,44 @@ pub fn override_session_model_to_opus( paths : &ClaudePaths ) -> bool
   }
 }
 
+/// Override the session model to `"sonnet"` in `~/.claude/settings.json`.
+///
+/// Called by `apply_model_override()` when Sonnet 7d utilization is at or above the exhaustion
+/// threshold — restores the session model to Sonnet when quota allows.
+///
+/// Gate: only writes when the current model contains `"opus"`, equals the full-ID form
+/// `"claude-sonnet-4-6"` (shorthand normalization), or is empty.
+/// Returns `true` when the file was updated, `false` when the model was already `"sonnet"`.
+///
+/// Mirrors `override_session_model_to_opus()` in the reverse direction.
+///
+/// # Fix(BUG-311)
+/// Root cause: `apply_model_override()` had no sonnet-restoration path; `settings.json`
+///   retained `"opus"` after switching to an account with sufficient Sonnet quota.
+/// Pitfall: write `"sonnet"` shorthand (not `"claude-sonnet-4-6"`) — Claude Code stores shorthand.
+#[ must_use ]
+#[ inline ]
+pub fn override_session_model_to_sonnet( paths : &ClaudePaths ) -> bool
+{
+  let path = paths.settings_file();
+  let mut live = std::fs::read_to_string( &path )
+    .ok()
+    .and_then( | s | serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .unwrap_or_else( || serde_json::json!( {} ) );
+  let Some( obj ) = live.as_object_mut() else { return false; };
+  let current = obj.get( "model" ).and_then( | v | v.as_str() ).unwrap_or( "" );
+  if current.contains( "opus" ) || current == "claude-sonnet-4-6" || current.is_empty()
+  {
+    obj.insert( "model".to_string(), serde_json::Value::String( "sonnet".to_string() ) );
+    let _ = std::fs::write( path, serde_json::to_string_pretty( &live ).map( | s | s + "\n" ).unwrap_or_default() );
+    true
+  }
+  else
+  {
+    false
+  }
+}
+
 /// Write an explicit session model to `~/.claude/settings.json`.
 ///
 /// `model_id` is the full model string (e.g., `"claude-opus-4-6"`).

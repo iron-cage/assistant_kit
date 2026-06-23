@@ -124,15 +124,35 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 | Expected | After switch, `settings.json` `effortLevel` = `"high"` |
 | Status | ✅ |
 
-## FT-13 — Rotation does not inject effort when none set
+## FT-13 — Rotation initializes effort to "low" when none set (Fix BUG-312)
 
-**AC-07** | **Source**: `api.rs` rotation dispatcher
+**AC-07** | **Source**: `api.rs` rotation dispatcher + `apply_model_override`
 
 | Field | Value |
 |-------|-------|
 | Input | `.usage rotate::1`; settings.json has no `effortLevel` key before rotation |
-| Expected | After switch, `settings.json` still has no `effortLevel` key |
-| Status | ✅ |
+| Expected | After switch, `settings.json` contains `"effortLevel": "low"` — initialized by `apply_model_override()` BUG-312 guard before carry-forward runs |
+| Status | ✅ (updated post-BUG-312; was: "no effortLevel key written") |
+
+## FT-14 — `apply_model_override()` initializes `effortLevel: "low"` when absent (BUG-312 MRE)
+
+**Fix BUG-312** | **Source**: `src/usage/api.rs` (`apply_model_override`)
+
+| Field | Value |
+|-------|-------|
+| Input | Temp dir as `~/.claude/`; no `settings.json` present; `apply_model_override` called with any quota data |
+| Expected | `settings.json` created; contains `"effortLevel": "low"`. The init guard (`get_session_effort().is_none()` → `set_session_effort(paths, "low")`) fires. |
+| Status | ✅ `mre_bug312_effort_initialized_to_low_when_absent` in `src/usage/api_tests.rs` |
+
+## FT-15 — Pre-configured `effortLevel` is not overwritten by `apply_model_override()` (BUG-312 preservation guard)
+
+**Fix BUG-312** | **Source**: `src/usage/api.rs` (`apply_model_override`)
+
+| Field | Value |
+|-------|-------|
+| Input | `settings.json` pre-seeded with `"effortLevel": "high"`; `apply_model_override` called |
+| Expected | `settings.json` still contains `"effortLevel": "high"` — `is_none()` guard is false; init does not overwrite user-configured effort |
+| Status | ✅ `t10_effort_preserved_when_already_configured` in `src/usage/api_tests.rs` |
 
 ## EC-01 — `recommended_model()` boundary: utilization = 84.999 returns sonnet (above threshold)
 
