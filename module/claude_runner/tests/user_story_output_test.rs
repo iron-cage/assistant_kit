@@ -1,3 +1,4 @@
+#![ cfg( unix ) ]
 //! User Story Integration Tests — Output, Effort, Context, Subdir, Concurrency (US19–US25)
 //!
 //! ## Purpose

@@ -31,7 +31,10 @@ always classified as Account, never Service.
 
 **Note:** When a retry fires, `clr` emits to stderr:
 `"[Account] <message> — retrying in Xs (attempt M/N)…"`.
-On exhaustion: `"Error: [Account] <message> — retries exhausted (exit N)"`.
+On exhaustion: `"Error: [Account] <message> — retries exhausted (exit N)"`, followed by
+the captured stdout rendered through `render_summary()` (summary mode) or raw (raw mode).
+In summary mode, `<message>` is the `"result"` field extracted from the JSON envelope
+(e.g., `"You've hit your limit · resets 2:40pm (Europe/Kiev)"`), not the full JSON blob.
 
 **Env var:** `CLR_RETRY_ON_ACCOUNT` — accepts a decimal integer string (0–255);
 invalid values are silently ignored (parse failure → field stays at auto/unset);

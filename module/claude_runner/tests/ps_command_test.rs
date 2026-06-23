@@ -900,10 +900,12 @@ fn it_24_columns_custom_subset()
   assert!( stdout.contains( "PID" ),           "IT-24: PID must be present: {stdout}" );
   assert!( stdout.contains( "Absolute Path" ), "IT-24: Absolute Path must be present: {stdout}" );
   assert!( stdout.contains( "Task" ),          "IT-24: Task must be present: {stdout}" );
-  assert!( !stdout.contains( "CPU%" ),    "IT-24: CPU% must be absent: {stdout}" );
-  assert!( !stdout.contains( "RAM" ),     "IT-24: RAM must be absent: {stdout}" );
-  assert!( !stdout.contains( "Elapsed" ), "IT-24: Elapsed must be absent: {stdout}" );
-  assert!( !stdout.contains( "State" ),   "IT-24: State must be absent: {stdout}" );
+  // Header-only check — legend "🐘 High RAM" would false-positive whole-stdout search.
+  let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
+  assert!( !header.contains( "CPU%" ),    "IT-24: CPU% must be absent from headers: {stdout}" );
+  assert!( !header.contains( "RAM" ),     "IT-24: RAM must be absent from headers: {stdout}" );
+  assert!( !header.contains( "Elapsed" ), "IT-24: Elapsed must be absent from headers: {stdout}" );
+  assert!( !header.contains( "State" ),   "IT-24: State must be absent from headers: {stdout}" );
 }
 
 // ── IT-25: `--columns bogus` → exit 1 ────────────────────────────────────────
@@ -970,11 +972,12 @@ fn it_27_columns_wins_over_wide()
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "IT-27: exit 0 expected, got {:?}", out.status.code() );
-  assert!( stdout.contains( "PID" ),  "IT-27: PID must be present: {stdout}" );
-  assert!( stdout.contains( "Task" ), "IT-27: Task must be present: {stdout}" );
-  assert!( !stdout.contains( "Mode" ),    "IT-27: Mode must be absent when --columns wins: {stdout}" );
-  assert!( !stdout.contains( "Command" ), "IT-27: Command must be absent when --columns wins: {stdout}" );
-  assert!( !stdout.contains( "Binary" ),  "IT-27: Binary must be absent when --columns wins: {stdout}" );
+  let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
+  assert!( header.contains( "PID" ),  "IT-27: PID must be present in header: {stdout}" );
+  assert!( header.contains( "Task" ), "IT-27: Task must be present in header: {stdout}" );
+  assert!( !header.contains( "Mode" ),    "IT-27: Mode must be absent from header when --columns wins: {stdout}" );
+  assert!( !header.contains( "Command" ), "IT-27: Command must be absent from header when --columns wins: {stdout}" );
+  assert!( !header.contains( "Binary" ),  "IT-27: Binary must be absent from header when --columns wins: {stdout}" );
 }
 
 // ── IT-28: `CLR_PS_MODE=print` env var fallback ──────────────────────────────
@@ -1042,8 +1045,10 @@ fn it_29_clr_ps_columns_env_var()
   assert!( out.status.success(), "IT-29: exit 0 expected, got {:?}", out.status.code() );
   assert!( stdout.contains( "PID" ),     "IT-29: PID must be present: {stdout}" );
   assert!( stdout.contains( "Elapsed" ), "IT-29: Elapsed must be present: {stdout}" );
-  assert!( !stdout.contains( "CPU%" ),          "IT-29: CPU% must be absent: {stdout}" );
-  assert!( !stdout.contains( "RAM" ),           "IT-29: RAM must be absent: {stdout}" );
-  assert!( !stdout.contains( "Task" ),          "IT-29: Task must be absent: {stdout}" );
-  assert!( !stdout.contains( "Absolute Path" ), "IT-29: Absolute Path must be absent: {stdout}" );
+  // Header-only check — legend "🐘 High RAM" would false-positive whole-stdout search.
+  let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
+  assert!( !header.contains( "CPU%" ),          "IT-29: CPU% must be absent from headers: {stdout}" );
+  assert!( !header.contains( "RAM" ),           "IT-29: RAM must be absent from headers: {stdout}" );
+  assert!( !header.contains( "Task" ),          "IT-29: Task must be absent from headers: {stdout}" );
+  assert!( !header.contains( "Absolute Path" ), "IT-29: Absolute Path must be absent from headers: {stdout}" );
 }

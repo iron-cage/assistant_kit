@@ -135,13 +135,14 @@ fn ec4_cli_columns_wins_over_env_var()
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "EC-4: exit 0 expected, got {:?}", out.status.code() );
+  let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
   assert!(
-    stdout.contains( "Absolute Path" ),
-    "EC-4: Absolute Path must appear (CLI --columns wins). Got:\n{stdout}"
+    header.contains( "Absolute Path" ),
+    "EC-4: Absolute Path must appear in header (CLI --columns wins). Got:\n{stdout}"
   );
   assert!(
-    !stdout.contains( "Elapsed" ),
-    "EC-4: Elapsed must NOT appear (CLI wins over env var). Got:\n{stdout}"
+    !header.contains( "Elapsed" ),
+    "EC-4: Elapsed must NOT appear in header (CLI wins over env var). Got:\n{stdout}"
   );
 }
 
@@ -167,11 +168,12 @@ fn ec5_columns_wins_over_wide()
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "EC-5: exit 0 expected, got {:?}", out.status.code() );
-  assert!( stdout.contains( "PID" ),  "EC-5: PID must appear. Got:\n{stdout}" );
-  assert!( stdout.contains( "Task" ), "EC-5: Task must appear. Got:\n{stdout}" );
-  assert!( !stdout.contains( "Mode" ),    "EC-5: Mode must NOT appear (--columns wins). Got:\n{stdout}" );
-  assert!( !stdout.contains( "Command" ), "EC-5: Command must NOT appear. Got:\n{stdout}" );
-  assert!( !stdout.contains( "Binary" ),  "EC-5: Binary must NOT appear. Got:\n{stdout}" );
+  let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
+  assert!( header.contains( "PID" ),  "EC-5: PID must appear in header. Got:\n{stdout}" );
+  assert!( header.contains( "Task" ), "EC-5: Task must appear in header. Got:\n{stdout}" );
+  assert!( !header.contains( "Mode" ),    "EC-5: Mode must NOT appear in header (--columns wins). Got:\n{stdout}" );
+  assert!( !header.contains( "Command" ), "EC-5: Command must NOT appear in header. Got:\n{stdout}" );
+  assert!( !header.contains( "Binary" ),  "EC-5: Binary must NOT appear in header. Got:\n{stdout}" );
 }
 
 // ── EC-6: Optional columns displayed when requested ──────────────────────────
@@ -226,16 +228,17 @@ fn ec7_default_columns_shown()
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "EC-7: exit 0 expected, got {:?}", out.status.code() );
-  assert!( stdout.contains( "PID" ),           "EC-7: PID must appear. Got:\n{stdout}" );
-  assert!( stdout.contains( "Elapsed" ),       "EC-7: Elapsed must appear. Got:\n{stdout}" );
-  assert!( stdout.contains( "CPU%" ),          "EC-7: CPU% must appear. Got:\n{stdout}" );
-  assert!( stdout.contains( "RAM" ),           "EC-7: RAM must appear. Got:\n{stdout}" );
-  assert!( stdout.contains( "State" ),         "EC-7: State must appear. Got:\n{stdout}" );
-  assert!( stdout.contains( "Mode" ),          "EC-7: Mode must appear in default (9th default col). Got:\n{stdout}" );
-  assert!( stdout.contains( "Absolute Path" ), "EC-7: Absolute Path must appear. Got:\n{stdout}" );
-  assert!( stdout.contains( "Task" ),          "EC-7: Task must appear. Got:\n{stdout}" );
-  assert!( !stdout.contains( "Command" ), "EC-7: Command must NOT appear in default. Got:\n{stdout}" );
-  assert!( !stdout.contains( "Binary" ),  "EC-7: Binary must NOT appear in default. Got:\n{stdout}" );
+  let header = stdout.lines().find( | l | l.contains( "PID" ) ).unwrap_or( "" );
+  assert!( header.contains( "PID" ),           "EC-7: PID must appear in header. Got:\n{stdout}" );
+  assert!( header.contains( "Elapsed" ),       "EC-7: Elapsed must appear in header. Got:\n{stdout}" );
+  assert!( header.contains( "CPU%" ),          "EC-7: CPU% must appear in header. Got:\n{stdout}" );
+  assert!( header.contains( "RAM" ),           "EC-7: RAM must appear in header. Got:\n{stdout}" );
+  assert!( header.contains( "State" ),         "EC-7: State must appear in header. Got:\n{stdout}" );
+  assert!( header.contains( "Mode" ),          "EC-7: Mode must appear in default header. Got:\n{stdout}" );
+  assert!( header.contains( "Absolute Path" ), "EC-7: Absolute Path must appear in header. Got:\n{stdout}" );
+  assert!( header.contains( "Task" ),          "EC-7: Task must appear in header. Got:\n{stdout}" );
+  assert!( !header.contains( "Command" ), "EC-7: Command must NOT appear in default header. Got:\n{stdout}" );
+  assert!( !header.contains( "Binary" ),  "EC-7: Binary must NOT appear in default header. Got:\n{stdout}" );
 }
 
 // ── EC-8: Help output contains `--columns` ───────────────────────────────────

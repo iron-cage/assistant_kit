@@ -168,6 +168,7 @@ fn quota_exhausted_pattern_emits_labeled_message()
 /// TC-12 needs `chmod 000` to trigger EACCES. Copy the binary, then call
 /// `fs::set_permissions()` to deny execution.
 // test_kind: bug_reproducer(BUG-298)
+#[ cfg( unix ) ]
 #[ test ]
 fn tc_12_runner_spawn_failed_prefix()
 {

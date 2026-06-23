@@ -1,3 +1,4 @@
+#![ cfg( unix ) ]
 //! Isolated/Refresh Subprocess Correctness Tests
 //!
 //! ## Purpose
