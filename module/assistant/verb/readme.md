@@ -11,7 +11,7 @@
 | File | Responsibility |
 |------|---------------|
 | `build` | Compile project artifacts via `cargo build`. |
-| `test` | Dispatcher: run full test suite; delegates to `test.d/` layer by `VERB_LAYER`. |
+| `test` | Dispatcher: run full test suite; default dispatches to `runbox/runbox .test`; delegates to `test.d/` layer when `VERB_LAYER` is set. |
 | `test.d/` | Layer directory: `l0` (host-native), `l1` (container-internal). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `run` | Dispatcher: execute entry point; delegates to `run.d/` layer by `VERB_LAYER`. |

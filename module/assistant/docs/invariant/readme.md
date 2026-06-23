@@ -1,4 +1,4 @@
-# Invariant Collection
+# Invariant Doc Entity
 
 ### Scope
 
@@ -11,5 +11,4 @@
 
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
-| 001 | [Aggregation Completeness](001_aggregation_completeness.md) | Every Layer 2 crate registered in ast must expose register_commands() | ✅ |
-| — | [procedure.md](procedure.md) | Workflow for creating and updating invariant doc instances | ✅ |
+| 001 | [Aggregation Completeness](001_aggregation_completeness.md) | Layer 2 register_commands() and COMMANDS_YAML contract enforcement | ✅ |

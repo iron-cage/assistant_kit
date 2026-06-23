@@ -31,15 +31,20 @@ All tests live in each crate's `tests/` directory. Manual tests live in `tests/m
 - A skip count increase signals a test was silently disabled to make the suite pass — this masks real capability loss
 - Tests outside `tests/` are invisible to the standard test commands and will not be discovered
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| feature | [feature/001_workspace_design.md](../feature/001_workspace_design.md) | Workspace that these tests cover |
-| source | `../../Cargo.toml` | workspace lint configuration (missing_inline_in_public_items) |
+| File | Relationship |
+|------|--------------|
+| [feature/001_workspace_design.md](../feature/001_workspace_design.md) | Workspace that these tests cover |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
+| File | Relationship |
+|------|--------------|
+| `../../Cargo.toml` | Workspace lint configuration (missing_inline_in_public_items) |
+
+### Provenance
+
+| File | Relationship |
+|------|--------------|
 | `spec.md` (deleted — migrated here) | Testing Strategy section |

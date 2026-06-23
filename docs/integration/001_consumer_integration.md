@@ -68,16 +68,26 @@ The path dep is a development convenience. Publishing assistant crates to crates
 
 **Version constraint:** Use `^1.0` (caret, minor-level flexibility — the workspace standard per `crate_distribution.rulebook.md § Cargo Organization : External Dependency Version Format`). Minor updates to dream crates are consumed automatically; major bumps require coordination.
 
-### Cross-References
+### Invariants
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| invariant | [invariant/001_privacy_invariant.md](../invariant/001_privacy_invariant.md) | One-way dependency rule (dream ← consumer, never reversed) |
-| pattern | [pattern/001_crate_layering.md](../pattern/001_crate_layering.md) | Layer 1 and Layer 2 crates that consumers may depend on |
-| source | `../../Cargo.toml` | Workspace manifest |
+| File | Relationship |
+|------|--------------|
+| [invariant/001_privacy_invariant.md](../invariant/001_privacy_invariant.md) | One-way dependency rule (dream ← consumer, never reversed) |
+
+### Patterns
+
+| File | Relationship |
+|------|--------------|
+| [pattern/001_crate_layering.md](../pattern/001_crate_layering.md) | Layer 1 and Layer 2 crates that consumers may depend on |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
+| File | Relationship |
+|------|--------------|
+| `../../Cargo.toml` | Workspace manifest |
+
+### Provenance
+
+| File | Relationship |
+|------|--------------|
 | `spec.md` (deleted — migrated here) | Dependency Flow, Workspace Structure, Cross-Workspace Protocol sections |

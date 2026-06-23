@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in the assistant workspace
-  node_count: 23
-  edge_count: 57
-  component_count: 3
-  generated: '2026-04-22'
+  node_count: 14
+  edge_count: 32
+  component_count: 2
+  last_updated: '2026-06-23'
 nodes:
 - id: feature/001
   file: feature/001_workspace_design.md
@@ -61,214 +61,103 @@ nodes:
   file: error/006_quota_exhausted.md
   label: Quota Exhausted
   entity: error
-- id: claude_code/001
-  file: ../contract/claude_code/docs/behavior/readme.md
-  label: Behavior Hypotheses
-  entity: claude_code
-- id: claude_code/002
-  file: ../contract/claude_code/docs/storage/readme.md
-  label: Storage Organization
-  entity: claude_code
-- id: claude_code/003
-  file: ../contract/claude_code/docs/filesystem/readme.md
-  label: Filesystem Layout
-  entity: claude_code
-- id: claude_code/004
-  file: ../contract/claude_code/docs/jsonl/readme.md
-  label: JSONL Format
-  entity: claude_code
-- id: claude_code/005
-  file: ../contract/claude_code/docs/settings/readme.md
-  label: Settings Format
-  entity: claude_code
-- id: claude_code/006
-  file: ../contract/claude_code/docs/formats/readme.md
-  label: Ancillary Formats
-  entity: claude_code
-- id: claude_code/params
-  file: ../contract/claude_code/docs/params/readme.md
-  label: Parameters
-  entity: claude_code
-- id: claude_code/007
-  file: ../contract/claude_code/docs/taxonomy/readme.md
-  label: Concept Taxonomy
-  entity: claude_code
-- id: claude_code/entity
-  file: ../contract/claude_code/docs/001_entity.md
-  label: Doc Entity Index
-  entity: claude_code
 edges:
-- from: feature/001
-  to: pattern/001
-  via: cross_references
-- from: feature/001
-  to: invariant/001
-  via: cross_references
-- from: feature/001
-  to: invariant/004
-  via: cross_references
-- from: feature/001
-  to: integration/001
-  via: cross_references
-- from: invariant/001
-  to: feature/001
-  via: cross_references
-- from: invariant/001
-  to: integration/001
-  via: cross_references
-- from: invariant/002
-  to: feature/001
-  via: cross_references
-- from: invariant/003
-  to: feature/001
-  via: cross_references
-- from: invariant/004
-  to: feature/001
-  via: cross_references
-- from: invariant/005
-  to: invariant/001
-  via: cross_references
-- from: invariant/005
-  to: invariant/002
-  via: cross_references
-- from: invariant/001
-  to: invariant/005
-  via: cross_references
-- from: invariant/002
-  to: invariant/005
-  via: cross_references
-- from: pattern/001
-  to: feature/001
-  via: cross_references
-- from: pattern/001
-  to: invariant/001
-  via: cross_references
-- from: integration/001
-  to: invariant/001
-  via: cross_references
-- from: integration/001
-  to: pattern/001
-  via: cross_references
-- from: feature/001
-  to: invariant/003
-  via: cross_references
-- from: error/002
-  to: error/001
-  via: cross_references
-- from: error/003
-  to: error/001
-  via: cross_references
-- from: error/003
-  to: error/004
-  via: cross_references
-- from: error/004
+- from: error/001
+  to: error/002
+  via: typed_reference
+- from: error/001
   to: error/003
-  via: cross_references
-- from: error/004
+  via: typed_reference
+- from: error/001
   to: error/005
-  via: cross_references
-- from: error/005
-  to: error/001
-  via: cross_references
-- from: error/005
-  to: error/004
-  via: cross_references
-- from: error/006
-  to: error/001
-  via: cross_references
+  via: typed_reference
 - from: error/001
   to: error/006
-  via: cross_references
-- from: claude_code/001
-  to: claude_code/002
-  via: cross_references
-- from: claude_code/001
-  to: claude_code/004
-  via: cross_references
-- from: claude_code/002
-  to: claude_code/001
-  via: cross_references
-- from: claude_code/002
-  to: claude_code/004
-  via: cross_references
-- from: claude_code/002
-  to: claude_code/005
-  via: cross_references
-- from: claude_code/003
-  to: claude_code/005
-  via: cross_references
-- from: claude_code/004
-  to: claude_code/001
-  via: cross_references
-- from: claude_code/006
-  to: claude_code/004
-  via: cross_references
-- from: claude_code/params
-  to: claude_code/001
-  via: cross_references
-- from: claude_code/params
-  to: claude_code/005
-  via: cross_references
-- from: claude_code/001
-  to: claude_code/params
-  via: cross_references
-- from: claude_code/005
-  to: claude_code/params
-  via: cross_references
-- from: claude_code/007
-  to: claude_code/001
-  via: cross_references
-- from: claude_code/007
-  to: claude_code/002
-  via: cross_references
-- from: claude_code/007
-  to: claude_code/004
-  via: cross_references
-- from: claude_code/001
-  to: claude_code/007
-  via: cross_references
-- from: claude_code/004
-  to: claude_code/007
-  via: cross_references
-- from: claude_code/002
-  to: claude_code/006
-  via: cross_references
-- from: claude_code/003
-  to: claude_code/002
-  via: cross_references
-- from: claude_code/004
-  to: claude_code/002
-  via: cross_references
-- from: claude_code/005
-  to: claude_code/003
-  via: cross_references
-- from: claude_code/006
-  to: claude_code/002
-  via: cross_references
-- from: claude_code/entity
-  to: claude_code/001
-  via: indexes
-- from: claude_code/entity
-  to: claude_code/002
-  via: indexes
-- from: claude_code/entity
-  to: claude_code/003
-  via: indexes
-- from: claude_code/entity
-  to: claude_code/004
-  via: indexes
-- from: claude_code/entity
-  to: claude_code/005
-  via: indexes
-- from: claude_code/entity
-  to: claude_code/006
-  via: indexes
-- from: claude_code/entity
-  to: claude_code/007
-  via: indexes
-- from: claude_code/entity
-  to: claude_code/params
-  via: indexes
+  via: typed_reference
+- from: error/002
+  to: error/001
+  via: typed_reference
+- from: error/003
+  to: error/001
+  via: typed_reference
+- from: error/003
+  to: error/004
+  via: typed_reference
+- from: error/004
+  to: error/003
+  via: typed_reference
+- from: error/004
+  to: error/005
+  via: typed_reference
+- from: error/005
+  to: error/001
+  via: typed_reference
+- from: error/005
+  to: error/004
+  via: typed_reference
+- from: error/006
+  to: error/001
+  via: typed_reference
+- from: feature/001
+  to: integration/001
+  via: typed_reference
+- from: feature/001
+  to: invariant/001
+  via: typed_reference
+- from: feature/001
+  to: invariant/002
+  via: typed_reference
+- from: feature/001
+  to: invariant/003
+  via: typed_reference
+- from: feature/001
+  to: invariant/004
+  via: typed_reference
+- from: feature/001
+  to: invariant/005
+  via: typed_reference
+- from: feature/001
+  to: pattern/001
+  via: typed_reference
+- from: integration/001
+  to: invariant/001
+  via: typed_reference
+- from: integration/001
+  to: pattern/001
+  via: typed_reference
+- from: invariant/001
+  to: feature/001
+  via: typed_reference
+- from: invariant/001
+  to: integration/001
+  via: typed_reference
+- from: invariant/001
+  to: invariant/005
+  via: typed_reference
+- from: invariant/002
+  to: feature/001
+  via: typed_reference
+- from: invariant/002
+  to: invariant/005
+  via: typed_reference
+- from: invariant/003
+  to: feature/001
+  via: typed_reference
+- from: invariant/004
+  to: feature/001
+  via: typed_reference
+- from: invariant/005
+  to: invariant/001
+  via: typed_reference
+- from: invariant/005
+  to: invariant/002
+  via: typed_reference
+- from: pattern/001
+  to: feature/001
+  via: typed_reference
+- from: pattern/001
+  to: invariant/001
+  via: typed_reference
 components:
 - id: 1
   label: Main corpus
@@ -276,17 +165,18 @@ components:
   isolated: false
   nodes:
   - feature/001
+  - integration/001
   - invariant/001
   - invariant/002
   - invariant/003
   - invariant/004
   - invariant/005
   - pattern/001
-  - integration/001
 - id: 2
   label: Error catalog
   size: 6
   isolated: true
+  gap: No error instance cross-references any non-error doc instance; the error catalog is structurally disconnected from the main corpus
   nodes:
   - error/001
   - error/002
@@ -294,18 +184,4 @@ components:
   - error/004
   - error/005
   - error/006
-- id: 3
-  label: Claude Code knowledge
-  size: 9
-  isolated: true
-  nodes:
-  - claude_code/001
-  - claude_code/002
-  - claude_code/003
-  - claude_code/004
-  - claude_code/005
-  - claude_code/006
-  - claude_code/params
-  - claude_code/007
-  - claude_code/entity
 dangling_refs: []
