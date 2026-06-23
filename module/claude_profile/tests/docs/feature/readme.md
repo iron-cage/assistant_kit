@@ -56,6 +56,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 40_quota_measurement_history.md | FT cases for Feature 040 — Quota Measurement History and Polynomial Approximation |
 | 61_solo_token_conservation.md | FT cases for Feature 061 — Solo Token Conservation Mode |
 | 62_unified_session_config.md | FT cases for Feature 062 — Unified Session Config Recommendation |
+| 63_explicit_ownership_claim.md | FT cases for Feature 063 — Explicit Ownership Claim |
 
 ### Coverage Summary
 
@@ -104,8 +105,9 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 040_quota_measurement_history | [040_quota_measurement_history.md](40_quota_measurement_history.md) | FT-01 … FT-18 | ✅ |
 | 061_solo_token_conservation | [061_solo_token_conservation.md](61_solo_token_conservation.md) | FT-01 … FT-12 | ✅ |
 | 062_unified_session_config | [062_unified_session_config.md](62_unified_session_config.md) | FT-01 … FT-13, EC-01 | ✅ |
+| 063_explicit_ownership_claim | [063_explicit_ownership_claim.md](63_explicit_ownership_claim.md) | FT-01 … FT-12 | ✅ |
 
-**Total:** 43 specs — 42 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+**Total:** 44 specs — 43 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 
 ### Cross-Reference Depth
 

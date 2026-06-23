@@ -34,7 +34,7 @@
 | FT-22 | AC-22 | `apply_refresh()` emits `[trace] refresh  <name>  should_retry=false (reason: not owned)` when `trace::1` and `aq.is_owned == false` — reason is `"not owned"`, not `"ok"` (BUG-295) | ✅ `mre_bug295_apply_refresh_trace_reason_not_owned` |
 | FT-23 | AC-04 | G1 non-owned path applies polynomial approximation when history available (BUG-304) | ✅ `ft23_g1_non_owned_applies_approximation` |
 | FT-24 | AC-23 | Owned + occupied-elsewhere + non-current account: `fetch_quota_for_list` skips token read + HTTP; calls `approximate_quota()`; emits `[trace] fetch  <name>  skipped (reason: occupied elsewhere)` when `trace::1` — Fix(BUG-305) | ✅ `mre_bug305_fetch_skips_occupied_elsewhere_with_trace` |
-| FT-25 | AC-24 | `reason_label(aq)` returns `"occupied elsewhere"` for owned + non-cached + occupied-elsewhere + Ok-result account — Fix(BUG-306); `apply_refresh()` trace emits correct reason | ✅ `mre_bug306_refresh_trace_reason_occupied_elsewhere` |
+| FT-25 | AC-24 | `reason_label(aq, now_secs)` returns `"occupied elsewhere"` for owned + non-cached + occupied-elsewhere + Ok-result account — Fix(BUG-306); `apply_refresh()` trace emits correct reason | ✅ `mre_bug306_refresh_trace_reason_occupied_elsewhere` |
 
 ### Notes
 
@@ -55,7 +55,7 @@
 - FT-18–21 require `force::` (`058`) to be registered on `.account.use`, `.account.delete`, `.account.relogin` — Task 002 prerequisite.
 - FT-22 is a unit test in `src/usage/refresh_tests.rs` — uses `gag::BufferRedirect::stderr()` for trace capture. Reproduces BUG-295: verifies `apply_refresh()` emits `reason: not owned` (not `reason: ok`) when `aq.is_owned == false`.
 - FT-24 is a unit test in `src/usage/fetch.rs` or `tests/cli/usage_test.rs` — creates a temp credential store with an `alice.json` owned by current identity and a `_active_{remote_host}_{remote_user}` marker file naming `alice`. Verifies no HTTP call fires and trace line emitted. Reproduces BUG-305.
-- FT-25 is a unit test in `src/usage/refresh_tests.rs` — directly calls `reason_label(&aq)` with `is_owned=true, cached=false, is_occupied_elsewhere=true, result=Ok(...)`. Verifies return value is `"occupied elsewhere"`. No `apply_refresh()` call needed — the extracted function is directly testable. Reproduces BUG-306.
+- FT-25 is a unit test in `src/usage/refresh_tests.rs` — directly calls `reason_label(&aq, 0)` with `is_owned=true, cached=false, is_occupied_elsewhere=true, result=Ok(...)`. Verifies return value is `"occupied elsewhere"`. No `apply_refresh()` call needed — the extracted function is directly testable. Reproduces BUG-306.
 
 ---
 
@@ -345,12 +345,12 @@
 
 ---
 
-### FT-25: `reason_label(aq)` returns `"occupied elsewhere"` for owned + non-cached + occupied-elsewhere account (BUG-306)
+### FT-25: `reason_label(aq, now_secs)` returns `"occupied elsewhere"` for owned + non-cached + occupied-elsewhere account (BUG-306)
 
 - **Given:** `AccountQuota { is_owned: true, cached: false, is_occupied_elsewhere: true, result: Ok(Default::default()) }` — owned account, no cache hit, active on another machine, fetch succeeded.
-- **When:** `reason_label(&aq)` is called (extracted function in `refresh.rs`).
-- **Then:** Returns `"occupied elsewhere"`. The function branches: `!is_owned` → false; `cached` → false; `is_occupied_elsewhere` → true → `"occupied elsewhere"`. The `else` branch (`aq.result.err().map_or("ok", ...)`) is NOT reached.
+- **When:** `reason_label(&aq, 0)` is called (extracted function in `refresh.rs`).
+- **Then:** Returns `"occupied elsewhere"`. The function branches: `!is_owned` → false; `cached` → false; `is_occupied_elsewhere` → true → `"occupied elsewhere"`. The cached sub-branch (expired vs valid) and the `else` branch (`aq.result.err().map_or("ok", ...)`) are NOT reached.
 - **Exit:** `"occupied elsewhere"` (not `"ok"`)
 - **Source fn:** `mre_bug306_refresh_trace_reason_occupied_elsewhere`
-- **Note:** Reproduces BUG-306. Before fix: no `is_occupied_elsewhere` branch in the inline reason block — else fires → `"ok"`. After fix: `reason_label(aq)` is a dedicated function with the `is_occupied_elsewhere` branch inserted after `cached`. The function is directly testable without running the full `apply_refresh()` pipeline. Third instance of predicate-gate vs reason-branch omission (after BUG-295, BUG-298). The extracted function enforces the predicate–reason 1:1 contract: each branch in `reason_label()` must mirror a gate in `should_refresh()`.
+- **Note:** Reproduces BUG-306. Before fix: no `is_occupied_elsewhere` branch in the inline reason block — else fires → `"ok"`. After fix: `reason_label(aq, now_secs)` is a dedicated function with the `is_occupied_elsewhere` branch inserted after `cached`. The function is directly testable without running the full `apply_refresh()` pipeline. Third instance of predicate-gate vs reason-branch omission (after BUG-295, BUG-298). The extracted function enforces the predicate–reason 1:1 contract: each branch in `reason_label()` must mirror a gate in `should_refresh()`.
 - **Source:** [036_account_ownership.md AC-24](../../../docs/feature/036_account_ownership.md)

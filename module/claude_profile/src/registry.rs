@@ -94,7 +94,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       // Mutation params
       bfs( "assign",  "Write per-machine active marker (1 = write; 0 = off, default); when name:: absent, emits usage block" ),
       bfs( "unclaim", "Release ownership of named account (1 = unclaim; 0 = off, default); when name:: absent, batch-unclaims filtered set" ),
-      bfs( "force",   "Bypass G8 ownership gate on unclaim::1 (default 0)" ),
+      reg_arg_opt( "owner", Kind::String ).with_description( "Set account ownership to USER@MACHINE identity; requires name::; mutually exclusive with unclaim::1" ),
+      bfs( "force",   "Bypass G8 ownership gate on unclaim::1 or owner:: (default 0)" ),
       reg_arg_opt( "cols", Kind::String ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default set: account, owner, active, current, sub, tier, expires, email" ),
       reg_arg_opt( "for",  Kind::String ).with_description( "Target identity as USER@MACHINE for assign::1 (default: current $USER@hostname)" ),
       // Unified display/query params (same set as .usage; defaults differ)
@@ -244,7 +245,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       dry(),
       bfs( "assign",  "Write per-machine active marker (1 = write; 0 = off, default); when name:: absent, emits usage block" ),
       bfs( "unclaim", "Release ownership of named account (1 = unclaim; 0 = off, default); when name:: absent, batch-unclaims filtered set" ),
-      bfs( "force",   "Bypass ownership gate: G5 on rotate::1, G8 on unclaim::1 (default 0)" ),
+      reg_arg_opt( "owner", Kind::String ).with_description( "Set account ownership to USER@MACHINE identity; requires name::; mutually exclusive with unclaim::1" ),
+      bfs( "force",   "Bypass ownership gate: G5 on rotate::1, G8 on unclaim::1 or owner:: (default 0)" ),
       reg_arg_opt( "for", Kind::String ).with_description( "Target identity as USER@MACHINE for assign::1 (default: current $USER@hostname)" ),
       // Rotation param (Feature 038)
       reg_arg_opt( "rotate", Kind::Integer ).with_description( "Switch to the → winner after rendering the quota table (0 = off, default; 1 = on); mutually exclusive with live::1" ),

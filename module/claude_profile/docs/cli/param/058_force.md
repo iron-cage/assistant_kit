@@ -4,7 +4,7 @@ Bypasses ownership enforcement gates on mutation commands. When `force::1`, the 
 
 - **Default:** `0` (enforce ownership gates normally)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`
-- **Purpose:** Allows any machine/user identity to execute account mutations (use, delete, relogin, unclaim) on accounts owned by a different identity. Intended for administrative recovery and cross-machine management scenarios.
+- **Purpose:** Allows any machine/user identity to execute account mutations (use, delete, relogin, unclaim, owner set) on accounts owned by a different identity. Intended for administrative recovery and cross-machine management scenarios.
 
 **Bypass scope:**
 
@@ -14,6 +14,7 @@ Bypasses ownership enforcement gates on mutation commands. When `force::1`, the 
 | G6 | `.account.delete` | Ownership check skipped; proceeds to deletion |
 | G7 | `.account.relogin` | Ownership check skipped; proceeds to 6-step relogin |
 | G8 | `.accounts unclaim::1` | Ownership check skipped; clears owner field |
+| G8 | `.accounts owner::VALUE` | Ownership check skipped; sets owner to VALUE (Feature 063) |
 
 **No bypass for read-side gates:** `force::1` does not affect G1–G4 (fetch, refresh, touch suppression). Non-owned accounts continue to use cache-as-primary for quota reads regardless of `force::`.
 

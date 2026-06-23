@@ -185,6 +185,31 @@
 //! | it09 | `it09_unclaim_missing_name` | `.accounts unclaim::1` (no name) → batch empty store → exit 0 | P |
 //! | it10 | `it10_unclaim_unknown_param` | unknown parameter → exit 1 | N |
 //! | it11 | `it11_unclaim_preserves_renewal_at` | `_renewal_at` preserved via read-merge | P |
+//!
+//! ### AP — Account Owner Param (Feature 063; via `.accounts owner::`)
+//!
+//! | ID | Test Function | Condition | P/N |
+//! |----|---------------|-----------|-----|
+//! | ft01 | `ft_owner_sets_owner_field` | `owner::user1@w003 name::X` writes owner field | P |
+//! | ft02 | `ft_owner_requires_name` | `owner::X` without `name::` → exit 1 | N |
+//! | ft03 | `ft_owner_g8_blocks_non_owner` | G8: owned by another → exit 1 | N |
+//! | ft04 | `ft_owner_unowned_passes_g8` | unowned → write succeeds | P |
+//! | ft05 | `ft_owner_mutual_exclusion_unclaim` | `owner:: + unclaim::1` → exit 1 | N |
+//! | ft06 | `ft_owner_dry_run_preview` | `dry::1` → preview, no file writes | P |
+//! | ft07 | `ft_owner_force_bypasses_g8` | `force::1` bypasses G8 | P |
+//! | ft08 | `ft_owner_trace_emits_diagnostic` | `trace::1` → stderr diagnostic | P |
+//! | ft09 | `ft_owner_prefix_resolution` | short name resolves to full email | P |
+//! | ft10 | `ft_owner_empty_value_rejected` | empty `owner::` → exit 1 | N |
+//! | ft11 | `ft_owner_gates_respect_new_value` | subsequent ops respect new owner | P |
+//! | ec01 | `ec1_owner_sets_custom_identity` | `owner::alice@laptop` writes custom identity | P |
+//! | ec02 | `ec2_owner_empty_rejected` | empty value → exit 1 with `unclaim::1` hint | N |
+//! | ec03 | `ec3_owner_and_unclaim_mutual_exclusion` | `owner:: + unclaim::1` → exit 1 | N |
+//! | ec04 | `ec4_owner_missing_name_exits_1` | no `name::` → exit 1 | N |
+//! | ec05 | `ec5_owner_g8_foreign_owner_blocked` | foreign owner → exit 1 | N |
+//! | ec06 | `ec6_owner_force_bypasses_g8` | `force::1` bypasses G8 | P |
+//! | ec07 | `ec7_owner_dry_no_file_writes` | `dry::1` no file writes | P |
+//! | ec08 | `ec8_owner_overwrite_existing` | owned by caller → overwrites to new identity | P |
+//! | ec09 | `ec9_owner_idempotent_same_value` | same value → idempotent exit 0 | P |
 
 use crate::cli_runner::{
   run_cs, run_cs_with_env,
@@ -4797,5 +4822,492 @@ fn it11_unclaim_preserves_renewal_at()
   assert_eq!(
     val[ "_renewal_at" ].as_str().unwrap_or( "MISSING" ), "2026-06-29T21:00:00Z",
     "IT-11: _renewal_at must be preserved via read-merge in write_owner()",
+  );
+}
+
+// ── AP: Account Owner Param (Feature 063) ─────────────────────────────────────
+
+/// FT-01 (AC-01, Feat 063): `.accounts owner::user1@w003 name::X` writes owner field.
+///
+/// Spec: [`tests/docs/feature/63_explicit_ownership_claim.md` FT-01]
+#[ test ]
+fn ft_owner_sets_owner_field()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::user1@w003", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  assert_eq!(
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "user1@w003",
+    "FT-01: owner must be 'user1@w003'",
+  );
+  assert!(
+    stdout( &out ).contains( "owned alice@acme.com by user1@w003" ),
+    "FT-01: stdout must confirm ownership; got:\n{}", stdout( &out ),
+  );
+}
+
+/// FT-02 (AC-02, Feat 063): `.accounts owner::X` without `name::` → exit 1.
+///
+/// Spec: [`tests/docs/feature/63_explicit_ownership_claim.md` FT-02]
+#[ test ]
+fn ft_owner_requires_name()
+{
+  let out = run_cs( &[ ".accounts", "owner::user1@w003" ] );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "requires name" ),
+    "FT-02: stderr must mention 'requires name'; got:\n{}", stderr( &out ),
+  );
+}
+
+/// FT-03 (AC-03, Feat 063): G8 gate — owned by another → exit 1.
+///
+/// Spec: [`tests/docs/feature/63_explicit_ownership_claim.md` FT-03]
+#[ test ]
+fn ft_owner_g8_blocks_non_owner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::me@here", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "me" ), ( "HOSTNAME", "here" ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "ownership violation" ),
+    "FT-03: stderr must contain 'ownership violation'; got:\n{}", stderr( &out ),
+  );
+}
+
+/// FT-04 (AC-04, Feat 063): unowned account → write succeeds.
+///
+/// Spec: [`tests/docs/feature/63_explicit_ownership_claim.md` FT-04]
+#[ test ]
+fn ft_owner_unowned_passes_g8()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::user1@w003", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  assert_eq!(
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "user1@w003",
+    "FT-04: unowned account must accept owner write",
+  );
+}
+
+/// FT-05 (AC-05, Feat 063): `owner:: + unclaim::1` → exit 1 (mutual exclusion).
+///
+/// Spec: [`tests/docs/feature/63_explicit_ownership_claim.md` FT-05]
+#[ test ]
+fn ft_owner_mutual_exclusion_unclaim()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "test@acme.com", "" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::user1@w003", "unclaim::1", "name::test@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "mutually exclusive" ),
+    "FT-05: stderr must mention 'mutually exclusive'; got:\n{}", stderr( &out ),
+  );
+}
+
+/// FT-06 (AC-06, Feat 063): `dry::1` → preview, no file writes.
+///
+/// Spec: [`tests/docs/feature/63_explicit_ownership_claim.md` FT-06]
+#[ test ]
+fn ft_owner_dry_run_preview()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "" );
+
+  let store     = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta_path = store.join( "alice@acme.com.json" );
+  let before    = std::fs::read_to_string( &meta_path ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::user1@w003", "name::alice@acme.com", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "[dry-run]" ),
+    "FT-06: stdout must contain '[dry-run]'; got:\n{text}",
+  );
+
+  let after = std::fs::read_to_string( &meta_path ).unwrap();
+  assert_eq!( before, after, "FT-06: dry-run must not modify files" );
+}
+
+/// FT-07 (AC-07, Feat 063): `force::1` bypasses G8 for other-owned account.
+///
+/// Spec: [`tests/docs/feature/63_explicit_ownership_claim.md` FT-07]
+#[ test ]
+fn ft_owner_force_bypasses_g8()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::me@here", "name::alice@acme.com", "force::1" ],
+    &[ ( "HOME", home ), ( "USER", "me" ), ( "HOSTNAME", "here" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  assert_eq!(
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "me@here",
+    "FT-07: force::1 must bypass G8 and write owner",
+  );
+}
+
+/// FT-08 (AC-08, Feat 063): `trace::1` → stderr diagnostic.
+///
+/// Spec: [`tests/docs/feature/63_explicit_ownership_claim.md` FT-08]
+#[ test ]
+fn ft_owner_trace_emits_diagnostic()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::user1@w003", "name::alice@acme.com", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "[trace]" ) && err.contains( "write_owner" ),
+    "FT-08: stderr must contain trace diagnostic; got:\n{err}",
+  );
+}
+
+/// FT-09 (AC-09, Feat 063): short name resolves to full email.
+///
+/// Spec: [`tests/docs/feature/63_explicit_ownership_claim.md` FT-09]
+#[ test ]
+fn ft_owner_prefix_resolution()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::user1@w003", "name::alice" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  assert_eq!(
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "user1@w003",
+    "FT-09: prefix 'alice' must resolve to 'alice@acme.com'",
+  );
+}
+
+/// FT-10 (AC-10, Feat 063): empty `owner::` → exit 1.
+///
+/// Spec: [`tests/docs/feature/63_explicit_ownership_claim.md` FT-10]
+#[ test ]
+fn ft_owner_empty_value_rejected()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "test@acme.com", "" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::", "name::test@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "non-empty" ) || stderr( &out ).contains( "unclaim" ),
+    "FT-10: stderr must reject empty owner; got:\n{}", stderr( &out ),
+  );
+}
+
+/// FT-11 (AC-11, Feat 063): subsequent ops respect new owner.
+///
+/// After setting owner, a subsequent unclaim by a different identity is blocked by G8.
+///
+/// Spec: [`tests/docs/feature/63_explicit_ownership_claim.md` FT-11]
+#[ test ]
+fn ft_owner_gates_respect_new_value()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "" );
+
+  // Step 1: claim ownership.
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::alice@laptop", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  // Step 2: unclaim by different identity → G8 must block.
+  let out2 = run_cs_with_env(
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "bob" ), ( "HOSTNAME", "desktop" ) ],
+  );
+  assert_exit( &out2, 1 );
+  assert!(
+    stderr( &out2 ).contains( "ownership violation" ),
+    "FT-11: subsequent unclaim by different identity must be blocked; got:\n{}", stderr( &out2 ),
+  );
+}
+
+// ── EC: owner:: edge cases (Param 062) ────────────────────────────────────────
+
+/// EC-01 (Param 062): `owner::alice@laptop name::X` writes `"owner": "alice@laptop"`.
+///
+/// Spec: [`tests/docs/cli/param/63_owner.md` EC-01]
+#[ test ]
+fn ec1_owner_sets_custom_identity()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::alice@laptop", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  assert_eq!(
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "alice@laptop",
+    "EC-01: owner must be 'alice@laptop'",
+  );
+}
+
+/// EC-02 (Param 062): empty `owner::` → exit 1 with `unclaim::1` hint.
+///
+/// Spec: [`tests/docs/cli/param/63_owner.md` EC-02]
+#[ test ]
+fn ec2_owner_empty_rejected()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "test@acme.com", "" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::", "name::test@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "unclaim::1" ),
+    "EC-02: stderr must mention 'unclaim::1'; got:\n{}", stderr( &out ),
+  );
+}
+
+/// EC-03 (Param 062): `owner::user1@w003 unclaim::1 name::X` → exit 1 mutual exclusion.
+///
+/// Spec: [`tests/docs/cli/param/63_owner.md` EC-03]
+#[ test ]
+fn ec3_owner_and_unclaim_mutual_exclusion()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "test@acme.com", "" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::user1@w003", "unclaim::1", "name::test@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "mutually exclusive" ),
+    "EC-03: stderr must mention 'mutually exclusive'; got:\n{}", stderr( &out ),
+  );
+}
+
+/// EC-04 (Param 062): `owner::user1@w003` (no `name::`) → exit 1.
+///
+/// Spec: [`tests/docs/cli/param/63_owner.md` EC-04]
+#[ test ]
+fn ec4_owner_missing_name_exits_1()
+{
+  let out = run_cs( &[ ".accounts", "owner::user1@w003" ] );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "requires name" ),
+    "EC-04: stderr must mention 'requires name'; got:\n{}", stderr( &out ),
+  );
+}
+
+/// EC-05 (Param 062): G8 — account owned by another → exit 1 ownership violation.
+///
+/// Spec: [`tests/docs/cli/param/63_owner.md` EC-05]
+#[ test ]
+fn ec5_owner_g8_foreign_owner_blocked()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "other@host" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::me@local", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "me" ), ( "HOSTNAME", "local" ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "ownership violation" ),
+    "EC-05: stderr must contain 'ownership violation'; got:\n{}", stderr( &out ),
+  );
+}
+
+/// EC-06 (Param 062): same as EC-05 + `force::1` → write succeeds, exit 0.
+///
+/// Spec: [`tests/docs/cli/param/63_owner.md` EC-06]
+#[ test ]
+fn ec6_owner_force_bypasses_g8()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "other@host" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::me@local", "name::alice@acme.com", "force::1" ],
+    &[ ( "HOME", home ), ( "USER", "me" ), ( "HOSTNAME", "local" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  assert_eq!(
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "me@local",
+    "EC-06: force::1 must bypass G8",
+  );
+}
+
+/// EC-07 (Param 062): `owner::user1@w003 name::X dry::1` → `[dry-run]`, no file writes.
+///
+/// Spec: [`tests/docs/cli/param/63_owner.md` EC-07]
+#[ test ]
+fn ec7_owner_dry_no_file_writes()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "" );
+
+  let store     = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta_path = store.join( "alice@acme.com.json" );
+  let before    = std::fs::read_to_string( &meta_path ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::user1@w003", "name::alice@acme.com", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  assert!( stdout( &out ).contains( "[dry-run]" ), "EC-07: stdout must contain [dry-run]" );
+
+  let after = std::fs::read_to_string( &meta_path ).unwrap();
+  assert_eq!( before, after, "EC-07: dry-run must not modify files" );
+}
+
+/// EC-08 (Param 062): account owned by caller → `owner::new@identity` → overwrites.
+///
+/// Spec: [`tests/docs/cli/param/63_owner.md` EC-08]
+#[ test ]
+fn ec8_owner_overwrite_existing()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "user1@w003" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::new@identity", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  assert_eq!(
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "new@identity",
+    "EC-08: owner must be overwritten to 'new@identity'",
+  );
+}
+
+/// EC-09 (Param 062): idempotent — same `owner::user1@w003` when already owned by same → exit 0.
+///
+/// Spec: [`tests/docs/cli/param/63_owner.md` EC-09]
+#[ test ]
+fn ec9_owner_idempotent_same_value()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "user1@w003" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "owner::user1@w003", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "user1" ), ( "HOSTNAME", "w003" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let meta  = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let val : serde_json::Value = serde_json::from_str( &meta ).unwrap();
+  assert_eq!(
+    val[ "owner" ].as_str().unwrap_or( "MISSING" ), "user1@w003",
+    "EC-09: idempotent write must preserve owner",
   );
 }
