@@ -75,41 +75,248 @@ fn extract_f64( s : &str, key : &str ) -> Option< f64 >
   rest[ ..end ].parse().ok()
 }
 
+/// Extract a JSON boolean value for `key`.
+fn extract_bool( s : &str, key : &str ) -> Option< bool >
+{
+  let needle = format!( "\"{key}\":" );
+  let pos    = s.find( &needle )?;
+  let rest   = s[ pos + needle.len() .. ].trim_start_matches( ' ' );
+  if rest.starts_with( "true" )  { return Some( true ); }
+  if rest.starts_with( "false" ) { return Some( false ); }
+  None
+}
+
+/// Count elements in the `permission_denials` JSON array.
+fn count_permission_denials( json : &str ) -> u64
+{
+  let needle = "\"permission_denials\":[";
+  let Some( pos ) = json.find( needle ) else { return 0 };
+  let rest  = &json[ pos + needle.len() .. ];
+  let Some( end ) = rest.find( ']' ) else { return 0 };
+  let inner = rest[ ..end ].trim();
+  if inner.is_empty() { return 0; }
+  ( inner.matches( "},{" ).count() + 1 ) as u64
+}
+
+// ── Field constants ──────────────────────────────────────────────────────────────
+
+/// All 32 renderable CLR envelope fields in canonical order.
+const FIELD_ORDER : &[ &str ] = &[
+  "type", "subtype", "session_id", "uuid", "is_error", "stop_reason",
+  "num_turns", "fast_mode_state", "duration_ms", "duration_api_ms",
+  "input_tokens", "output_tokens", "cache_creation_input_tokens",
+  "cache_read_input_tokens", "total_cost_usd", "service_tier", "speed",
+  "inference_geo", "web_search_requests", "web_fetch_requests",
+  "cache_ephemeral_1h_input_tokens", "cache_ephemeral_5m_input_tokens",
+  "model", "model_input_tokens", "model_output_tokens",
+  "model_cache_read_input_tokens", "model_cache_creation_input_tokens",
+  "model_web_search_requests", "model_cost_usd", "model_context_window",
+  "model_max_output_tokens", "permission_denials",
+];
+
+/// `minimal` profile: 7 fields (v1.2.0 backward-compatible rendering).
+const PROFILE_MINIMAL : &[ &str ] = &[
+  "type", "subtype", "session_id", "is_error",
+  "input_tokens", "output_tokens", "total_cost_usd",
+];
+
+/// `standard` profile: 14 key operational fields.
+const PROFILE_STANDARD : &[ &str ] = &[
+  "type", "subtype", "session_id", "is_error", "stop_reason", "num_turns",
+  "duration_ms", "input_tokens", "output_tokens",
+  "cache_creation_input_tokens", "cache_read_input_tokens",
+  "total_cost_usd", "service_tier", "model",
+];
+
+/// Resolve a `--summary-fields` value to a validated field list.
+///
+/// Returns `Ok(fields)` for valid profiles (`full`, `standard`, `minimal`) or
+/// valid comma-separated custom whitelists.  Returns `Err(bad_token)` on invalid input.
+pub( super ) fn resolve_fields( value : &str ) -> Result< Vec< &'static str >, String >
+{
+  match value
+  {
+    "full"     => return Ok( FIELD_ORDER.to_vec() ),
+    "minimal"  => return Ok( PROFILE_MINIMAL.to_vec() ),
+    "standard" => return Ok( PROFILE_STANDARD.to_vec() ),
+    _          => {}
+  }
+  let mut fields = Vec::new();
+  for token in value.split( ',' )
+  {
+    let token = token.trim();
+    if let Some( &field ) = FIELD_ORDER.iter().find( |&&f| f == token )
+    {
+      if !fields.contains( &field ) { fields.push( field ); }
+    }
+    else
+    {
+      return Err( token.to_string() );
+    }
+  }
+  if fields.is_empty()
+  {
+    return Err( value.to_string() );
+  }
+  Ok( fields )
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 /// Render `summary` format output from a successful `--output-format json` CLR response.
 ///
 /// Returns `Some(rendered)` on success, `None` when the JSON cannot be parsed as a
 /// CLR result envelope (caller should fall back to printing raw `json`).
-pub( super ) fn render_summary( json : &str ) -> Option< String >
+///
+/// `fields` is the raw `--summary-fields` value (`None` defaults to `"full"`).
+#[ allow( clippy::too_many_lines, clippy::similar_names ) ]
+pub( super ) fn render_summary( json : &str, fields : Option< &str > ) -> Option< String >
 {
-  // Fix(BUG-309): gate on "session_id" — CLR result envelope field; old code gated on "id" (Messages API)
-  // Root cause: claude --output-format json emits CLR result envelope (session_id), not Messages API (id)
-  // Pitfall: wrong-schema test fixtures masked 100% production failure; all 13 EC tests passed on bad fixtures
-  let session_id    = extract_str( json, "session_id" )?;
-  let msg_type      = extract_str( json, "type" ).unwrap_or_default();
-  let subtype       = extract_str( json, "subtype" ).unwrap_or_default();
-  let is_error      = json.contains( "\"is_error\":true" );
-  let result        = extract_str( json, "result" ).unwrap_or_default();
+  // Fix(BUG-309): gate on "session_id" — CLR result envelope field
+  let selected = resolve_fields( fields.unwrap_or( "full" ) ).ok()?;
+  let has      = |f : &str| selected.contains( &f );
 
-  let usage_marker  = "\"usage\":{";
-  let usage_str     = json.find( usage_marker ).map( |p| &json[ p + usage_marker.len() .. ] );
-  let input_tokens  = usage_str.and_then( |s| extract_u64( s, "input_tokens" ) ).unwrap_or( 0 );
-  let output_tokens = usage_str.and_then( |s| extract_u64( s, "output_tokens" ) ).unwrap_or( 0 );
-  let cost          = extract_f64( json, "total_cost_usd" ).unwrap_or( 0.0 );
+  let session_id   = extract_str( json, "session_id" )?;
+  let msg_type     = extract_str( json, "type" ).unwrap_or_default();
+  let subtype      = extract_str( json, "subtype" ).unwrap_or_default();
+  let is_error     = extract_bool( json, "is_error" ).unwrap_or( false );
+  let result       = extract_str( json, "result" ).unwrap_or_default();
 
+  // Top-level scalars
+  let uuid         = extract_str( json, "uuid" ).unwrap_or_default();
+  let stop_reason  = extract_str( json, "stop_reason" ).unwrap_or_default();
+  let num_turns    = extract_u64( json, "num_turns" ).unwrap_or( 0 );
+  let fast_mode    = extract_str( json, "fast_mode_state" ).unwrap_or_default();
+  let duration_ms  = extract_u64( json, "duration_ms" ).unwrap_or( 0 );
+  let duration_api = extract_u64( json, "duration_api_ms" ).unwrap_or( 0 );
+  let cost         = extract_f64( json, "total_cost_usd" ).unwrap_or( 0.0 );
+
+  // usage nested object
+  let usage_marker = "\"usage\":{";
+  let usage_str    = json.find( usage_marker ).map( |p| &json[ p + usage_marker.len() .. ] );
+  let in_tok       = usage_str.and_then( |s| extract_u64( s, "input_tokens" ) ).unwrap_or( 0 );
+  let out_tok      = usage_str.and_then( |s| extract_u64( s, "output_tokens" ) ).unwrap_or( 0 );
+  let cache_create = usage_str.and_then( |s| extract_u64( s, "cache_creation_input_tokens" ) ).unwrap_or( 0 );
+  let cache_read   = usage_str.and_then( |s| extract_u64( s, "cache_read_input_tokens" ) ).unwrap_or( 0 );
+  let svc_tier     = usage_str.and_then( |s| extract_str( s, "service_tier" ) ).unwrap_or_default();
+  let spd          = usage_str.and_then( |s| extract_str( s, "speed" ) ).unwrap_or_default();
+  let inf_geo      = usage_str.and_then( |s| extract_str( s, "inference_geo" ) ).unwrap_or_default();
+
+  // usage.server_tool_use
+  let stu_marker = "\"server_tool_use\":{";
+  let stu_str    = usage_str.and_then( |s| s.find( stu_marker ).map( |p| &s[ p + stu_marker.len() .. ] ) );
+  let web_search = stu_str.and_then( |s| extract_u64( s, "web_search_requests" ) ).unwrap_or( 0 );
+  let web_fetch  = stu_str.and_then( |s| extract_u64( s, "web_fetch_requests" ) ).unwrap_or( 0 );
+
+  // usage.cache_creation
+  let cc_marker = "\"cache_creation\":{";
+  let cc_str    = usage_str.and_then( |s| s.find( cc_marker ).map( |p| &s[ p + cc_marker.len() .. ] ) );
+  let eph_1h    = cc_str.and_then( |s| extract_u64( s, "ephemeral_1h_input_tokens" ) ).unwrap_or( 0 );
+  let eph_5m    = cc_str.and_then( |s| extract_u64( s, "ephemeral_5m_input_tokens" ) ).unwrap_or( 0 );
+
+  // modelUsage — first model's stats
+  let mu_marker  = "\"modelUsage\":{";
+  let mu_str     = json.find( mu_marker ).map( |p| &json[ p + mu_marker.len() .. ] );
+  let model_name = mu_str.and_then( |s| {
+    let q1    = s.find( '"' )?;
+    let inner = &s[ q1 + 1 .. ];
+    let q2    = inner.find( '"' )?;
+    Some( inner[ ..q2 ].to_string() )
+  } ).unwrap_or_default();
+  let mu_inner   = mu_str.and_then( |s| s.find( '{' ).map( |p| &s[ p + 1 .. ] ) );
+  let m_in_tok   = mu_inner.and_then( |s| extract_u64( s, "inputTokens" ) ).unwrap_or( 0 );
+  let m_out_tok  = mu_inner.and_then( |s| extract_u64( s, "outputTokens" ) ).unwrap_or( 0 );
+  let m_cr_tok   = mu_inner.and_then( |s| extract_u64( s, "cacheReadInputTokens" ) ).unwrap_or( 0 );
+  let m_cc_tok   = mu_inner.and_then( |s| extract_u64( s, "cacheCreationInputTokens" ) ).unwrap_or( 0 );
+  let m_ws       = mu_inner.and_then( |s| extract_u64( s, "webSearchRequests" ) ).unwrap_or( 0 );
+  let m_cost     = mu_inner.and_then( |s| extract_f64( s, "costUSD" ) ).unwrap_or( 0.0 );
+  let m_ctx      = mu_inner.and_then( |s| extract_u64( s, "contextWindow" ) ).unwrap_or( 0 );
+  let m_max_out  = mu_inner.and_then( |s| extract_u64( s, "maxOutputTokens" ) ).unwrap_or( 0 );
+
+  let denials  = count_permission_denials( json );
   let is_err_s = if is_error { "true" } else { "false" };
 
   let mut out = String::new();
-  let _ = writeln!( out, "{CYAN}type:{RESET} {GREEN}{msg_type}{RESET}" );
-  let _ = writeln!( out, "{CYAN}subtype:{RESET} {GREEN}{subtype}{RESET}" );
-  let _ = writeln!( out, "{CYAN}session_id:{RESET} {GREEN}{session_id}{RESET}" );
-  let _ = writeln!( out, "{CYAN}is_error:{RESET} {YELLOW}{is_err_s}{RESET}" );
-  let _ = writeln!( out, "{CYAN}input_tokens:{RESET} {YELLOW}{input_tokens}{RESET}" );
-  let _ = writeln!( out, "{CYAN}output_tokens:{RESET} {YELLOW}{output_tokens}{RESET}" );
-  let _ = writeln!( out, "{CYAN}total_cost_usd:{RESET} {YELLOW}{cost:.4}{RESET}" );
-  let _ = writeln!( out, "{DIM}---{RESET}" );
+  if has( "type" )            { let _ = writeln!( out, "{CYAN}type:{RESET} {GREEN}{msg_type}{RESET}" ); }
+  if has( "subtype" )         { let _ = writeln!( out, "{CYAN}subtype:{RESET} {GREEN}{subtype}{RESET}" ); }
+  if has( "session_id" )      { let _ = writeln!( out, "{CYAN}session_id:{RESET} {GREEN}{session_id}{RESET}" ); }
+  if has( "uuid" )            { let _ = writeln!( out, "{CYAN}uuid:{RESET} {GREEN}{uuid}{RESET}" ); }
+  if has( "is_error" )        { let _ = writeln!( out, "{CYAN}is_error:{RESET} {YELLOW}{is_err_s}{RESET}" ); }
+  if has( "stop_reason" )     { let _ = writeln!( out, "{CYAN}stop_reason:{RESET} {GREEN}{stop_reason}{RESET}" ); }
+  if has( "num_turns" )       { let _ = writeln!( out, "{CYAN}num_turns:{RESET} {YELLOW}{num_turns}{RESET}" ); }
+  if has( "fast_mode_state" ) { let _ = writeln!( out, "{CYAN}fast_mode_state:{RESET} {GREEN}{fast_mode}{RESET}" ); }
+  if has( "duration_ms" )     { let _ = writeln!( out, "{CYAN}duration_ms:{RESET} {YELLOW}{duration_ms}{RESET}" ); }
+  if has( "duration_api_ms" ) { let _ = writeln!( out, "{CYAN}duration_api_ms:{RESET} {YELLOW}{duration_api}{RESET}" ); }
+  if has( "input_tokens" )    { let _ = writeln!( out, "{CYAN}input_tokens:{RESET} {YELLOW}{in_tok}{RESET}" ); }
+  if has( "output_tokens" )   { let _ = writeln!( out, "{CYAN}output_tokens:{RESET} {YELLOW}{out_tok}{RESET}" ); }
+  if has( "cache_creation_input_tokens" )
+  {
+    let _ = writeln!( out, "{CYAN}cache_creation_input_tokens:{RESET} {YELLOW}{cache_create}{RESET}" );
+  }
+  if has( "cache_read_input_tokens" )
+  {
+    let _ = writeln!( out, "{CYAN}cache_read_input_tokens:{RESET} {YELLOW}{cache_read}{RESET}" );
+  }
+  if has( "total_cost_usd" )  { let _ = writeln!( out, "{CYAN}total_cost_usd:{RESET} {YELLOW}{cost:.4}{RESET}" ); }
+  if has( "service_tier" )    { let _ = writeln!( out, "{CYAN}service_tier:{RESET} {GREEN}{svc_tier}{RESET}" ); }
+  if has( "speed" )           { let _ = writeln!( out, "{CYAN}speed:{RESET} {GREEN}{spd}{RESET}" ); }
+  if has( "inference_geo" )
+  {
+    let color = if inf_geo.is_empty() { DIM } else { GREEN };
+    let _ = writeln!( out, "{CYAN}inference_geo:{RESET} {color}{inf_geo}{RESET}" );
+  }
+  if has( "web_search_requests" )
+  {
+    let _ = writeln!( out, "{CYAN}web_search_requests:{RESET} {YELLOW}{web_search}{RESET}" );
+  }
+  if has( "web_fetch_requests" )
+  {
+    let _ = writeln!( out, "{CYAN}web_fetch_requests:{RESET} {YELLOW}{web_fetch}{RESET}" );
+  }
+  if has( "cache_ephemeral_1h_input_tokens" )
+  {
+    let _ = writeln!( out, "{CYAN}cache_ephemeral_1h_input_tokens:{RESET} {YELLOW}{eph_1h}{RESET}" );
+  }
+  if has( "cache_ephemeral_5m_input_tokens" )
+  {
+    let _ = writeln!( out, "{CYAN}cache_ephemeral_5m_input_tokens:{RESET} {YELLOW}{eph_5m}{RESET}" );
+  }
+  if has( "model" )           { let _ = writeln!( out, "{CYAN}model:{RESET} {GREEN}{model_name}{RESET}" ); }
+  if has( "model_input_tokens" )
+  {
+    let _ = writeln!( out, "{CYAN}model_input_tokens:{RESET} {YELLOW}{m_in_tok}{RESET}" );
+  }
+  if has( "model_output_tokens" )
+  {
+    let _ = writeln!( out, "{CYAN}model_output_tokens:{RESET} {YELLOW}{m_out_tok}{RESET}" );
+  }
+  if has( "model_cache_read_input_tokens" )
+  {
+    let _ = writeln!( out, "{CYAN}model_cache_read_input_tokens:{RESET} {YELLOW}{m_cr_tok}{RESET}" );
+  }
+  if has( "model_cache_creation_input_tokens" )
+  {
+    let _ = writeln!( out, "{CYAN}model_cache_creation_input_tokens:{RESET} {YELLOW}{m_cc_tok}{RESET}" );
+  }
+  if has( "model_web_search_requests" )
+  {
+    let _ = writeln!( out, "{CYAN}model_web_search_requests:{RESET} {YELLOW}{m_ws}{RESET}" );
+  }
+  if has( "model_cost_usd" )  { let _ = writeln!( out, "{CYAN}model_cost_usd:{RESET} {YELLOW}{m_cost:.4}{RESET}" ); }
+  if has( "model_context_window" )
+  {
+    let _ = writeln!( out, "{CYAN}model_context_window:{RESET} {YELLOW}{m_ctx}{RESET}" );
+  }
+  if has( "model_max_output_tokens" )
+  {
+    let _ = writeln!( out, "{CYAN}model_max_output_tokens:{RESET} {YELLOW}{m_max_out}{RESET}" );
+  }
+  if has( "permission_denials" )
+  {
+    let _ = writeln!( out, "{CYAN}permission_denials:{RESET} {YELLOW}{denials}{RESET}" );
+  }
 
+  let _ = writeln!( out, "{DIM}---{RESET}" );
   out.push_str( &result );
   if !result.is_empty() && !result.ends_with( '\n' ) { out.push( '\n' ); }
 
@@ -119,7 +326,9 @@ pub( super ) fn render_summary( json : &str ) -> Option< String >
 #[ cfg( test ) ]
 mod tests
 {
-  use super::render_summary;
+  use super::{ render_summary, resolve_fields };
+
+  const FULL_ENVELOPE : &str = r#"{"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"duration_ms":100,"duration_api_ms":90,"num_turns":1,"result":"hello","stop_reason":"end_turn","total_cost_usd":0.001,"uuid":"00000000-0000-0000-0000-000000000002","fast_mode_state":"off","usage":{"input_tokens":3,"output_tokens":4,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"service_tier":"standard","speed":"standard","inference_geo":"","server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"cache_creation":{"ephemeral_1h_input_tokens":0,"ephemeral_5m_input_tokens":0},"iterations":[]},"modelUsage":{"claude-opus-4-6":{"inputTokens":3,"outputTokens":4,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":0.001,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[]}"#;
 
   /// EC-14: `render_summary()` returns `Some` for a valid CLR result envelope.
   ///
@@ -128,13 +337,15 @@ mod tests
   #[ test ]
   fn ec14_render_summary_clr_envelope_accepted()
   {
-    let json     = r#"{"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"result":"hello world","usage":{"input_tokens":3,"output_tokens":4},"total_cost_usd":0.001}"#;
-    let rendered = render_summary( json );
+    let rendered = render_summary( FULL_ENVELOPE, None );
     assert!( rendered.is_some(), "render_summary must return Some for valid CLR envelope; got None" );
     let s = rendered.unwrap();
-    assert!( s.contains( "---" ),          "rendered output must contain separator '---'. Got:\n{s}" );
-    assert!( s.contains( "hello world" ),  "rendered output must contain the result text. Got:\n{s}" );
-    assert!( s.contains( "session_id:" ),  "output must contain 'session_id:'. Got:\n{s}" );
+    assert!( s.contains( "---" ),                "rendered output must contain separator '---'. Got:\n{s}" );
+    assert!( s.contains( "hello" ),              "rendered output must contain the result text. Got:\n{s}" );
+    assert!( s.contains( "session_id:" ),        "output must contain 'session_id:'. Got:\n{s}" );
+    assert!( s.contains( "model:" ),             "output must contain 'model:'. Got:\n{s}" );
+    assert!( s.contains( "permission_denials:" ), "output must contain 'permission_denials:'. Got:\n{s}" );
+    assert!( s.contains( "duration_ms:" ),       "output must contain 'duration_ms:'. Got:\n{s}" );
   }
 
   /// Unescape test: JSON `\n` in `result` field becomes actual newline in output.
@@ -142,7 +353,69 @@ mod tests
   fn extract_str_unescapes_json_newlines()
   {
     let json = r#"{"type":"result","subtype":"success","session_id":"x","is_error":false,"result":"line1\nline2","usage":{"input_tokens":0,"output_tokens":0},"total_cost_usd":0.0}"#;
-    let rendered = render_summary( json ).expect( "must parse" );
+    let rendered = render_summary( json, None ).expect( "must parse" );
     assert!( rendered.contains( "line1\nline2" ), "\\n must be unescaped to actual newline. Got:\n{rendered}" );
+  }
+
+  #[ test ]
+  fn resolve_fields_full_returns_32()
+  {
+    let fields = resolve_fields( "full" ).unwrap();
+    assert_eq!( fields.len(), 32, "full profile must have 32 fields" );
+  }
+
+  #[ test ]
+  fn resolve_fields_minimal_returns_7()
+  {
+    let fields = resolve_fields( "minimal" ).unwrap();
+    assert_eq!( fields.len(), 7, "minimal profile must have 7 fields" );
+    assert!( fields.contains( &"type" ) );
+    assert!( fields.contains( &"total_cost_usd" ) );
+  }
+
+  #[ test ]
+  fn resolve_fields_standard_returns_14()
+  {
+    let fields = resolve_fields( "standard" ).unwrap();
+    assert_eq!( fields.len(), 14, "standard profile must have 14 fields" );
+    assert!( fields.contains( &"model" ) );
+    assert!( fields.contains( &"duration_ms" ) );
+  }
+
+  #[ test ]
+  fn resolve_fields_custom_whitelist()
+  {
+    let fields = resolve_fields( "type,session_id,total_cost_usd" ).unwrap();
+    assert_eq!( fields.len(), 3 );
+    assert!( fields.contains( &"type" ) );
+    assert!( fields.contains( &"session_id" ) );
+    assert!( fields.contains( &"total_cost_usd" ) );
+  }
+
+  #[ test ]
+  fn resolve_fields_invalid_single_token()
+  {
+    let err = resolve_fields( "bogus" ).unwrap_err();
+    assert_eq!( err, "bogus" );
+  }
+
+  #[ test ]
+  fn resolve_fields_invalid_in_custom_list()
+  {
+    let err = resolve_fields( "type,nonexistent_field" ).unwrap_err();
+    assert_eq!( err, "nonexistent_field" );
+  }
+
+  /// `render_summary` with `minimal` profile renders only 7 header fields.
+  #[ test ]
+  fn render_summary_minimal_filters_fields()
+  {
+    let rendered = render_summary( FULL_ENVELOPE, Some( "minimal" ) ).unwrap();
+    assert!( rendered.contains( "type:" ),           "minimal must include type:" );
+    assert!( rendered.contains( "total_cost_usd:" ), "minimal must include total_cost_usd:" );
+    assert!( !rendered.contains( "duration_ms:" ),   "minimal must NOT include duration_ms:" );
+    assert!( !rendered.contains( "model:" ),         "minimal must NOT include model:" );
+    assert!( rendered.contains( "---" ),             "separator must always appear" );
+    assert!( rendered.contains( "hello" ),           "result body must always appear" );
   }
 }

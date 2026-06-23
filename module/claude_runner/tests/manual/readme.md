@@ -644,7 +644,7 @@ cargo run -p claude_runner -- tools some-arg
 All TC-1 through TC-82 must pass without unexpected errors or panics.
 TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-82 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
-CC-1 through CC-156 are automated — listed for traceability only.
+CC-1 through CC-181 are automated — listed for traceability only.
 
 ---
 
@@ -835,6 +835,35 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-155:** `[Service]` prefix in error output on API error
 - **CC-156:** `[Process]` prefix in error output on exit 4
 - Automated in: `retry_account_test.rs`, `retry_auth_test.rs`, `retry_process_test.rs`, `retry_runner_test.rs`, `retry_override_test.rs`, `retry_default_test.rs`, `retry_validation_test.rs`, `retry_transient_test.rs`, `error_classification_test.rs`, `env_var_ext_test.rs`
+
+### Summary fields: --summary-fields param (TSK-234)
+
+- **CC-157:** `--summary-fields ""` → exit 1; error `"invalid summary-fields ''"`
+- **CC-158:** `--summary-fields "type,"` (trailing comma) → exit 1; error `"unknown field ''"`
+- **CC-159:** `--summary-fields ",type"` (leading comma) → exit 1; error `"unknown field ''"`
+- **CC-160:** `--summary-fields "type,,session_id"` (double comma) → exit 1; error `"unknown field ''"`
+- **CC-161:** `--summary-fields "Full"` (case-sensitive) → exit 1; error `"invalid summary-fields 'Full'"`
+- **CC-162:** `--summary-fields "full,type"` (profile name in custom list) → exit 1; error `"unknown field 'full'"`
+- **CC-163:** `--summary-fields` (missing value) → exit 1; error `"requires a value"`
+- **CC-164:** `--summary-fields " "` (whitespace-only) → exit 1; error `"invalid summary-fields ' '"`
+- **CC-165:** `--summary-fields minimal --summary-fields full` (double flag) → last wins; renders 32 fields
+- **CC-166:** `--summary-fields "type, session_id"` (spaces around commas) → exit 0; trimmed and accepted
+- **CC-167:** `--summary-fields "type,type,type"` (duplicates) → exit 0; deduped to 1 field
+- **CC-168:** `--summary-fields "total_cost_usd"` (single custom field) → exit 0; renders 1 header line + separator + body
+- **CC-169:** `--summary-fields minimal` with `clr ask` → exit 0; renders 7 fields (same as `clr run -p`)
+- **CC-170:** `--summary-fields "total_cost_usd,type"` (reverse order) → renders `type:` before `total_cost_usd:` (canonical FIELD_ORDER)
+- **CC-171:** `--summary-fields "model"` with JSON missing `modelUsage` → exit 0; `model:` renders empty
+- **CC-172:** `--summary-fields "is_error"` with `is_error:true` envelope → exit 0; renders `is_error: true`
+- **CC-173:** `--summary-fields "permission_denials"` with 2 denials → renders `permission_denials: 2`
+- **CC-174:** `--output-style raw --summary-fields "type"` → raw JSON output; `--summary-fields` silently ignored
+- **CC-175:** `CLR_SUMMARY_FIELDS=""` (empty env var) → treated as unset (env_str filters empty); defaults to full
+- **CC-176:** `CLR_SUMMARY_FIELDS="type,"` (trailing comma env) → exit 1; error `"CLR_SUMMARY_FIELDS: invalid value 'type,'"`
+- **CC-177:** `CLR_SUMMARY_FIELDS=minimal` + `--summary-fields "type,total_cost_usd"` → CLI wins; 2 fields rendered
+- **CC-178:** `--summary-fields "full,standard"` (two profile names) → exit 1; error `"unknown field 'full'"`
+- **CC-179:** `--summary-fields " , , "` (whitespace-only tokens) → exit 1; error `"unknown field ''"`
+- **CC-180:** `--summary-fields "type,BOGUS,session_id"` (mixed valid/invalid) → exit 1; error `"unknown field 'BOGUS'"`
+- **CC-181:** Non-zero claude exit + `--summary-fields minimal` → render_summary skipped; raw error output shown
+- Automated in: `summary_fields_test.rs` (EC-01–EC-12), `summary.rs` unit tests (9 tests)
 
 ---
 

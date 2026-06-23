@@ -500,7 +500,7 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
     // Falls back to raw output when JSON cannot be parsed.
     let out = if cli.output_style.as_deref().unwrap_or( "summary" ) == "summary"
     {
-      super::summary::render_summary( &out ).unwrap_or( out )
+      super::summary::render_summary( &out, cli.summary_fields.as_deref() ).unwrap_or( out )
     }
     else
     {

@@ -7,23 +7,23 @@
 - **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (-> param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (68 total)
+### All Env Parameters (70 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
-| Input (CLR_*) — `run` subcommand | 59 | Caller env fallbacks for `run` parameters |
+| Input (CLR_*) — `run` subcommand | 60 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 3 | Caller env fallbacks for credential operation parameters |
 | Input (CLR_*) — `ps` subcommand | 5 | Caller env fallbacks for session listing display and flag thresholds |
 | Runtime config (CLR_*) | 1 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 69 environment variables
+**Total:** 70 environment variables
 
 ---
 
 ### Env Param 1: CLR_* Input Parameters — `run` Subcommand
 
-Environment variable fallbacks for all 59 `run` subcommand parameters.
+Environment variable fallbacks for all 60 `run` subcommand parameters.
 `apply_env_vars()` in `src/cli/env.rs` reads these immediately after CLI parsing, before command
 dispatch. Each variable is applied **only when the corresponding CLI field is still at its
 zero/absent value** — the CLI flag always wins when both are present.
@@ -95,6 +95,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 57 | `CLR_ADD_DIR` | [`--add-dir`](param/066_add_dir.md) | string | Forwarded as-is to claude |
 | 58 | `CLR_FALLBACK_MODEL` | [`--fallback-model`](param/067_fallback_model.md) | string | Forwarded as-is to claude |
 | 59 | `CLR_OUTPUT_STYLE` | [`--output-style`](param/070_output_style.md) | string | Parsed as enum (`summary`/`raw`); invalid values exit 1 (not silently ignored) |
+| 60 | `CLR_SUMMARY_FIELDS` | [`--summary-fields`](param/071_summary_fields.md) | string | Preset name (`minimal`/`standard`/`full`) or comma-separated field whitelist; invalid values exit 1 |
 
 **Precedence (current — 3 tiers):**
 

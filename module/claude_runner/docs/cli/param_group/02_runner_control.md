@@ -6,7 +6,7 @@
 
 ### Semantic Coherence Test
 
-"Is this flag consumed by the runner, not Claude?" — YES for all 43.
+"Is this flag consumed by the runner, not Claude?" — YES for all 44.
 
 ### Why NOT X
 
@@ -38,8 +38,8 @@ clr --trace "Fix bug" --dir /project
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 1 | [`run`](../command/01_run.md) | Full | — | All 43 params apply; default command |
-| 5 | [`ask`](../command/05_ask.md) | Full | — | All 43 params apply; identical behavior — pure alias for run |
+| 1 | [`run`](../command/01_run.md) | Full | — | All 44 params apply; default command |
+| 5 | [`ask`](../command/05_ask.md) | Full | — | All 44 params apply; identical behavior — pure alias for run |
 
 ### Referenced Parameters
 
@@ -88,6 +88,7 @@ clr --trace "Fix bug" --dir /project
 | [`--retry-default`](../param/056_retry_default.md) | u8 | `2` | Retry (Tier 3) | Fallback retry count for all unset classes |
 | [`--retry-default-delay`](../param/057_retry_default_delay.md) | u32 | `30` | Retry delay (Tier 3) | Fallback delay for all unset classes |
 | [`--output-style`](../param/070_output_style.md) | enum | `summary` | Output renderer | Runner-level rendering: `summary` routes stdout through `render_summary()`; `raw` passthrough |
+| [`--summary-fields`](../param/071_summary_fields.md) | string | `full` | Field selector | Select which CLR envelope fields render in summary header; presets: `minimal`/`standard`/`full`; or custom whitelist |
 
 ### Referenced Tests
 

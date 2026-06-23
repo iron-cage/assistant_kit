@@ -487,6 +487,7 @@ fn push_flag( flags : &mut String, c : char )
   flags.push( c );
 }
 
+#[ cfg( target_os = "linux" ) ]
 fn compute_flags(
   proc            : &ProcessInfo,
   metrics         : Option< &ProcessMetrics >,
@@ -605,6 +606,10 @@ fn build_active_table(
   };
 
   if filtered.is_empty() { return None; }
+
+  // `deltas` is only consumed inside `#[cfg(target_os = "linux")]` below.
+  #[ cfg( not( target_os = "linux" ) ) ]
+  let _ = &deltas;
 
   // Sort oldest-first (AC-012): smallest started_at = longest running = row #1.
   #[ cfg( target_os = "linux" ) ]

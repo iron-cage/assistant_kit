@@ -73,6 +73,7 @@ CLI flag wins when both are set (standard precedence).
 
 ### See Also
 
+- [`071_summary_fields.md`](071_summary_fields.md) — `--summary-fields` controls which fields appear in summary header (only effective when `--output-style summary`)
 - [`061_output_format.md`](061_output_format.md) — `--output-format` passthrough (what claude emits; distinct from rendering)
 - [`execution.rs`](../../../../src/cli/execution.rs) — `render_summary()` call site (predicate at ~line 501)
 - [`builder.rs`](../../../../src/cli/builder.rs) — `effective_style` injection branch (~line 186)

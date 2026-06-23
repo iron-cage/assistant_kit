@@ -298,6 +298,7 @@ fn g2cc4_all_runner_control_flags_no_conflict()
       "--retry-default", "2",
       "--retry-default-delay", "30",
       "--output-style", "summary",
+      "--summary-fields", "standard",
       "Fix bug",
     ] )
     // Spec CC-4 requires "clean environment" — unset CLAUDECODE so the BUG-248 warning
@@ -309,7 +310,7 @@ fn g2cc4_all_runner_control_flags_no_conflict()
     .expect( "failed to invoke clr binary" );
   assert!(
     out.status.success(),
-    "all 43 runner control flags must be accepted without conflict: {out:?}",
+    "all 44 runner control flags must be accepted without conflict: {out:?}",
   );
   assert!(
     out.stderr.is_empty(),
