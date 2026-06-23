@@ -67,3 +67,15 @@ Counterpart to `set_session_model()` with identical read-modify-write pattern: r
 | File | Relationship |
 |------|--------------|
 | `tests/docs/feature/62_unified_session_config.md` | FT-01..FT-15, EC-01 — FT-01..FT-13 implemented (TSK-315); FT-14..FT-15 added for BUG-312 MRE tests |
+
+### Algorithm Docs
+
+| File | Relationship |
+|------|-------------|
+| [algorithm/002_session_model_override.md](../algorithm/002_session_model_override.md) | `apply_model_override()` and `recommended_model()` — canonical entry point extracted by this feature |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [schema/006_settings_json.md](../schema/006_settings_json.md) | `model` and `effortLevel` fields written by `set_session_model()` / `set_session_effort()` |

@@ -263,3 +263,12 @@ Next (renew)     · alice@example.com   · sonnet     · in 3h 47m $ren
 | File | Relationship |
 |------|--------------|
 | `tests/cli/usage_test.rs` | All-accounts quota table and JSON output tests |
+
+### Algorithm Docs
+
+| File | Relationship |
+|------|-------------|
+| [algorithm/003_quota_status_groups.md](../algorithm/003_quota_status_groups.md) | 4-group status partition — `status_group_of()` drives row ordering and composite `●` emoji |
+| [algorithm/004_eligibility_gates.md](../algorithm/004_eligibility_gates.md) | 8 eligibility gates — filter candidates for footer recommendation and auto-switch |
+| [algorithm/005_next_account_selection.md](../algorithm/005_next_account_selection.md) | Positive selection — 3-step algorithm producing the `Next` footer recommendation |
+| [algorithm/007_sort_strategies.md](../algorithm/007_sort_strategies.md) | `sort::` strategies and `prefer_weekly` computation |

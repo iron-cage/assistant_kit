@@ -174,6 +174,15 @@ impl core::error::Error for RunnerError {}
 /// - `RunnerError::Io` if writing credentials or cleanup fails critically.
 /// - `RunnerError::ClaudeNotFound` if the `claude` binary is absent from `PATH`.
 /// - `RunnerError::Timeout { secs }` if the subprocess exceeds `timeout_secs`.
+///
+/// # Warning
+///
+/// Do NOT call `run_isolated()` directly for credential refresh.
+/// Use `claude_profile_core::account::refresh_account_token()` instead — it wraps
+/// `run_isolated` with RT rotation (`expiresAt=1` manipulation) and current-account
+/// live credential sync. Direct callers bypass both behaviors, causing silent RT decay
+/// and credential divergence. See invariant 008:
+/// `claude_profile/docs/invariant/008_single_token_refresh_entry.md`.
 #[ cfg( feature = "enabled" ) ]
 #[ inline ]
 #[ allow( clippy::too_many_lines ) ]

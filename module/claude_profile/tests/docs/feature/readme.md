@@ -79,7 +79,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 014_rich_account_metadata | [014_rich_account_metadata.md](14_rich_account_metadata.md) | FT-01 … FT-12 | ✅ |
 | 015_name_shortcut_syntax | [015_name_shortcut_syntax.md](15_name_shortcut_syntax.md) | FT-01 … FT-14 | ✅ |
 | 016_current_account_awareness | [016_current_account_awareness.md](16_current_account_awareness.md) | FT-01 … FT-11 | ✅ |
-| 017_token_refresh | [017_token_refresh.md](17_token_refresh.md) | FT-01 … FT-21 | ✅ |
+| 017_token_refresh | [017_token_refresh.md](17_token_refresh.md) | FT-01 … FT-25 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](18_live_monitor.md) | FT-01 … FT-09 | ✅ |
 | 019_account_relogin | [019_account_relogin.md](19_account_relogin.md) | FT-01 … FT-11 | ✅ |
 | 020_usage_sort_strategies | [020_usage_sort_strategies.md](20_usage_sort_strategies.md) | FT-01 … FT-13 | ✅ |
@@ -89,7 +89,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 024_session_touch | [024_session_touch.md](24_session_touch.md) | FT-01 … FT-23 | ✅ |
 | 025_per_machine_active_marker | [025_per_machine_active_marker.md](25_per_machine_active_marker.md) | FT-01 … FT-13 | ✅ |
 | 026_subprocess_model_effort | [026_subprocess_model_effort.md](26_subprocess_model_effort.md) | FT-01 … FT-31 | ✅ |
-| 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](27_account_use_post_switch_touch.md) | FT-01 … FT-22 | ✅ |
+| 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](27_account_use_post_switch_touch.md) | FT-01 … FT-24 | ✅ |
 | 028_usage_row_filtering | [028_usage_row_filtering.md](28_usage_row_filtering.md) | FT-01 … FT-17 | ✅ |
 | 029_account_host_metadata | [029_account_host_metadata.md](29_account_host_metadata.md) | FT-01 … FT-10 | ✅ |
 | 030_account_renewal_override | [030_account_renewal_override.md](30_account_renewal_override.md) | FT-01 … FT-15 | ✅ |

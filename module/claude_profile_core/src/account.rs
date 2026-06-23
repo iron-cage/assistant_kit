@@ -744,61 +744,7 @@ pub fn refresh_account_token(
 
   if let Some( p ) = paths
   {
-    // Fix(BUG-175): removed switch_account call — credentials read directly from credential store
-    // Root cause: Some(paths) branch read via p.credentials_file() forcing switch_account to populate it;
-    //   run_isolated creates its own temp HOME and never reads ~/.claude/, so the write was redundant
-    // Pitfall: switch_account before a read looks like defensive initialization;
-    //   the unnecessary global write is only visible in concurrent multi-account batch scenarios
-    let creds_json = match std::fs::read_to_string( credential_store.join( format!( "{name}.credentials.json" ) ) )
-    {
-      Ok( s )  => { if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  read credentials: OK" ); } s }
-      Err( e ) =>
-      {
-        if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  read credentials: Err({e})" ); }
-        return None;
-      }
-    };
-    let t_run = std::time::Instant::now();
-    if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
-    let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, model )
-    {
-      Ok( r )  => r,
-      Err( e ) =>
-      {
-        if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
-        return None;
-      }
-    };
-    if trace
-    {
-      let creds_status = if isolated.credentials.is_some() { "Some" } else { "None" };
-      let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
-    }
-    let new_creds = isolated.credentials?;
-    // Fix(BUG-221): write refreshed credentials directly to the credential store, not to
-    //   p.credentials_file() (the live session file ~/.claude/.credentials.json).
-    // Root cause: BUG-175's fix (TSK-208) removed switch_account() but left the write to the
-    //   live file intact; every batch refresh call clobbered the active session credentials.
-    // Pitfall: save() is called with Some(&new_creds) so it writes from bytes directly,
-    //   bypassing the copy-from-live-file path that would copy now-stale credentials.
-    let store_cred_path = credential_store.join( format!( "{name}.credentials.json" ) );
-    if let Err( e ) = std::fs::write( &store_cred_path, &new_creds )
-    {
-      if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write credentials: Err({e})" ); }
-      return None;
-    }
-    if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write credentials: OK" ); }
-    // Pass owner: None — background refresh must not mutate the owner field.
-    match save( name, credential_store, p, false, Some( new_creds.as_bytes() ), None, None, None )
-    {
-      Ok( () ) => { if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  save: OK" ); } }
-      Err( e ) =>
-      {
-        if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  save: Err({e})" ); }
-        return None;
-      }
-    }
-    Some( new_creds )
+    refresh_token_with_live_path( name, credential_store, p, trace, label, model, args )
   }
   else
   {
@@ -812,6 +758,9 @@ pub fn refresh_account_token(
         return None;
       }
     };
+    // AC-32 (Change A): set expiresAt=1 in the in-memory copy to force RT rotation.
+    // The stored credential file is NOT modified — only the transient copy passed to run_isolated.
+    let creds_json = manipulate_expires_at( &creds_json );
     let t_run = std::time::Instant::now();
     if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
     let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, model )
@@ -837,6 +786,193 @@ pub fn refresh_account_token(
     if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write credentials: OK" ); }
     Some( new_creds )
   }
+}
+
+// Inner implementation for the `Some(paths)` branch of `refresh_account_token`.
+// Handles live-credential pre-sync (Change B / AC-33) and delegates to run_isolated.
+// Kept separate to stay within the line-count limit for the public function.
+#[ cfg( feature = "enabled" ) ]
+fn refresh_token_with_live_path(
+  name             : &str,
+  credential_store : &Path,
+  p                : &ClaudePaths,
+  trace            : bool,
+  label            : &str,
+  model            : claude_runner_core::IsolatedModel,
+  args             : Vec< String >,
+) -> Option< String >
+{
+  // Fix(BUG-175): removed switch_account call — credentials read directly from credential store
+  // Root cause: Some(paths) branch read via p.credentials_file() forcing switch_account to populate it;
+  //   run_isolated creates its own temp HOME and never reads ~/.claude/, so the write was redundant
+  // Pitfall: switch_account before a read looks like defensive initialization;
+  //   the unnecessary global write is only visible in concurrent multi-account batch scenarios
+  let creds_json = match std::fs::read_to_string( credential_store.join( format!( "{name}.credentials.json" ) ) )
+  {
+    Ok( s )  => { if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  read credentials: OK" ); } s }
+    Err( e ) =>
+    {
+      if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  read credentials: Err({e})" ); }
+      return None;
+    }
+  };
+  // AC-33 (Change B) pre-sync: if the live session already refreshed, sync without subprocess.
+  // Avoids a redundant run_isolated call when ~/.claude/.credentials.json has a fresher RT pair.
+  // Guard: only valid when name IS the currently active account. For non-current accounts the
+  // live file holds a different account's credentials — comparing against name's store would
+  // falsely treat the current session's creds as a "fresh" RT pair for name and corrupt the
+  // store by overwriting name's credentials with the current session's credentials.
+  // Pitfall: apply_touch calls refresh_account_token for ALL accounts (including non-current)
+  // during the pre-rotation touch loop; attempt_expired_token_refresh calls it for the TARGET
+  // account before switch_account — in both cases name is NOT yet the active account.
+  let is_active = {
+    let marker = credential_store.join( active_marker_filename() );
+    std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )
+  };
+  if is_active
+  {
+    if let Ok( live_json ) = std::fs::read_to_string( p.credentials_file() )
+    {
+      if live_json.trim() != creds_json.trim()
+      {
+        let store_path = credential_store.join( format!( "{name}.credentials.json" ) );
+        if std::fs::write( &store_path, &live_json ).is_ok()
+        {
+          let _ = save( name, credential_store, p, false, Some( live_json.as_bytes() ), None, None, None );
+          return Some( live_json );
+        }
+      }
+    }
+  }
+  // AC-32 (Change A): set expiresAt=1 in the in-memory copy to force RT rotation.
+  // The stored credential file is NOT modified — only the transient copy passed to run_isolated.
+  let creds_json = manipulate_expires_at( &creds_json );
+  let t_run = std::time::Instant::now();
+  if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
+  let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, model )
+  {
+    Ok( r )  => r,
+    Err( e ) =>
+    {
+      if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
+      return None;
+    }
+  };
+  if trace
+  {
+    let creds_status = if isolated.credentials.is_some() { "Some" } else { "None" };
+    let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
+  }
+  // Fix(BUG-221): write refreshed credentials directly to the credential store, not to
+  //   p.credentials_file() (the live session file ~/.claude/.credentials.json).
+  // Root cause: BUG-175's fix (TSK-208) removed switch_account() but left the write to the
+  //   live file intact; every batch refresh call clobbered the active session credentials.
+  // Pitfall: save() is called with Some(&new_creds) so it writes from bytes directly,
+  //   bypassing the copy-from-live-file path that would copy now-stale credentials.
+  let Some( new_creds ) = isolated.credentials else
+  {
+    // AC-33 (Change B) race recovery: run_isolated returned credentials=None.
+    // A concurrent live session may have refreshed during the subprocess call.
+    // Same is_active guard as pre-sync: only valid for the currently active account.
+    if is_active
+    {
+      let orig_stored = std::fs::read_to_string(
+        credential_store.join( format!( "{name}.credentials.json" ) ),
+      ).unwrap_or_default();
+      if let Ok( live_json ) = std::fs::read_to_string( p.credentials_file() )
+      {
+        if live_json.trim() != orig_stored.trim()
+        {
+          let store_path = credential_store.join( format!( "{name}.credentials.json" ) );
+          if std::fs::write( &store_path, &live_json ).is_ok()
+          {
+            let _ = save( name, credential_store, p, false, Some( live_json.as_bytes() ), None, None, None );
+            return Some( live_json );
+          }
+        }
+      }
+    }
+    return None;
+  };
+  let store_cred_path = credential_store.join( format!( "{name}.credentials.json" ) );
+  if let Err( e ) = std::fs::write( &store_cred_path, &new_creds )
+  {
+    if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write credentials: Err({e})" ); }
+    return None;
+  }
+  if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write credentials: OK" ); }
+  // Pass owner: None — background refresh must not mutate the owner field.
+  match save( name, credential_store, p, false, Some( new_creds.as_bytes() ), None, None, None )
+  {
+    Ok( () ) => { if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  save: OK" ); } }
+    Err( e ) =>
+    {
+      if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  save: Err({e})" ); }
+      return None;
+    }
+  }
+  Some( new_creds )
+}
+
+/// Replace the `expiresAt` value in a credentials JSON string with `1`.
+///
+/// # Purpose (AC-32 / Change A)
+///
+/// Forces the Claude CLI subprocess (`run_isolated`) to treat the access token as
+/// expired on every call, so it uses the stored refresh token to obtain a fresh
+/// AT+RT pair. This rotates the refresh token on every invocation, preventing the
+/// silent RT decay that rendered account i5 irrecoverable.
+///
+/// # Contract
+///
+/// - Input is a raw JSON string from a credentials file.
+/// - If `"expiresAt":DIGITS` (bare numeric) is found, it is replaced with `"expiresAt":1`.
+/// - If `"expiresAt":"DIGITS"` (quoted string) is found, it is replaced with `"expiresAt":"1"`.
+/// - If neither pattern is present, the string is returned unchanged.
+/// - Negative values (e.g. `"expiresAt":-1`) are not matched — treated as absent.
+/// - Only the in-memory copy is modified; the on-disk credential file is NEVER touched.
+///
+/// # Pitfall
+///
+/// Do NOT pass the return value to `std::fs::write` — that would corrupt the stored
+/// credentials. Only pass it to `run_isolated` as the transient in-process credential JSON.
+#[ must_use ]
+#[ inline ]
+pub fn manipulate_expires_at( creds_json : &str ) -> String
+{
+  // Try bare numeric first (most common format): "expiresAt":DIGITS
+  if let Some( start ) = creds_json.find( "\"expiresAt\":" )
+  {
+    let after_key = &creds_json[ start + "\"expiresAt\":".len().. ];
+    // Quoted value: "expiresAt":"DIGITS"
+    if let Some( inner ) = after_key.strip_prefix( '"' )
+    {
+      if let Some( end ) = inner.find( '"' )
+      {
+        let old_val = &after_key[ ..end + 2 ]; // includes surrounding quotes
+        return creds_json.replacen(
+          &format!( "\"expiresAt\":{old_val}" ),
+          "\"expiresAt\":\"1\"",
+          1,
+        );
+      }
+    }
+    else
+    {
+      // Bare numeric value: ends at first non-digit character
+      let end = after_key.find( | c : char | !c.is_ascii_digit() ).unwrap_or( after_key.len() );
+      let old_val = &after_key[ ..end ];
+      if !old_val.is_empty()
+      {
+        return creds_json.replacen(
+          &format!( "\"expiresAt\":{old_val}" ),
+          "\"expiresAt\":1",
+          1,
+        );
+      }
+    }
+  }
+  creds_json.to_string()
 }
 
 /// Return the filename for the per-machine active-account marker.

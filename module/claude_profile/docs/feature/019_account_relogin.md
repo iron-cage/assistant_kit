@@ -83,3 +83,10 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 | File | Relationship |
 |------|--------------|
 | [tests/docs/cli/command/012_account_relogin.md](../../tests/docs/cli/command/012_account_relogin.md) | Integration test plan |
+
+### Subprocess Docs
+
+| File | Relationship |
+|------|-------------|
+| [subprocess/005_relogin_invocation.md](../subprocess/005_relogin_invocation.md) | Relogin vs. `run_isolated()` comparison; TTY inheritance; active account restore |
+| [state_machine/002_oauth_token_lifecycle.md](../state_machine/002_oauth_token_lifecycle.md) | RT-expired state and relogin as recovery transition |

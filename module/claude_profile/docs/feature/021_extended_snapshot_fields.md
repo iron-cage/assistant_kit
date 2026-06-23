@@ -9,13 +9,7 @@
 
 ### Design
 
-The `{name}.json` snapshot (a copy of `~/.claude.json` taken at `save()` time) contains the full `oauthAccount` object written by Claude Code. The current `Account` struct reads four fields from it: `emailAddress`, `displayName`, `organizationRole`, `billingType`. Three additional fields are present in the same object and require no new API calls:
-
-| JSON key | Field type | `Account` field | Semantics |
-|----------|-----------|----------------|-----------|
-| `taggedId` | string | `tagged_id: String` | Stable user ID with type prefix (e.g. `"user_01..."`) |
-| `uuid` | string | `uuid: String` | UUID form of user ID |
-| `capabilities` | string[] | `capabilities: Vec<String>` | Enabled product features (e.g. `["claude_max","chat"]`) |
+The `{name}.json` snapshot (a copy of `~/.claude.json` taken at `save()` time) contains the full `oauthAccount` object written by Claude Code. The current `Account` struct reads four fields from it: `emailAddress`, `displayName`, `organizationRole`, `billingType`. Three additional fields are present in the same object and require no new API calls — see [schema/002_account_json.md](../schema/002_account_json.md) for the complete field table (`tagged_id`, `uuid`, `capabilities` rows).
 
 **Extraction:** `tagged_id` and `uuid` use the existing `parse_string_field()` helper. `capabilities` is a JSON array — a new `parse_string_array_field(json, key) -> Vec<String>` helper is required. This helper scans for `"key":[` and parses quoted strings until `]`.
 
@@ -75,3 +69,10 @@ The `{name}.json` snapshot (a copy of `~/.claude.json` taken at `save()` time) c
 |------|--------------|
 | `tests/cli/credentials_test.rs` | Test cases for `uuid::` and `capabilities::` on `.credentials.status` |
 | `tests/cli/accounts_test.rs` | Test cases for `uuid::` and `capabilities::` on `.accounts` |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [schema/002_account_json.md](../schema/002_account_json.md) | Unified `{name}.json` field table — `tagged_id`, `uuid`, `capabilities` rows owned by this feature |
+| [schema/007_claude_json.md](../schema/007_claude_json.md) | `~/.claude.json` fields read (`oauthAccount.id`, `primaryEmailAddress`, `capabilities`) |

@@ -71,3 +71,9 @@ This file is created or overwritten on every `save()` invocation (same idempoten
 | `src/account.rs` | `save()` — `{name}.json` host/role write; host/role capture |
 | `src/commands/account_ops.rs` | `account_save_routine()` — host/role param extraction |
 | `src/usage/render.rs` | host/role column rendering in quota table |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [schema/002_account_json.md](../schema/002_account_json.md) | Unified `{name}.json` field table — `host`, `role` rows owned by this feature |

@@ -99,3 +99,9 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 | `src/usage/render.rs` | Staleness display — `~` prefix via `prefix_tilde()`, `(Nm ago)` age label, `(stale)` markers, `cache_json_fields()` |
 | `src/usage/api.rs` | Side-effect cache — `write_cache_string()` (model_override, AC-05) and `write_cache_bool()` (touch_idle, AC-06) |
 | `claude_profile_core/src/account.rs` | Storage layer — `QuotaCacheEntry`, `read_quota_cache()`, `write_quota_cache()`, `write_cache_field()` |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [schema/002_account_json.md](../schema/002_account_json.md) | Unified `{name}.json` field table — `_quota_cache` subtree owned by this feature |

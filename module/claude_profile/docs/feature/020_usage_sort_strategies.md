@@ -107,3 +107,13 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 | File | Relationship |
 |------|--------------|
 | `src/usage/sort.rs`, `src/usage/sort_next.rs`, `src/usage/params.rs` | Sort implementation; recommendation selection; strategy parsing |
+
+### Algorithm Docs
+
+| File | Relationship |
+|------|-------------|
+| [algorithm/003_quota_status_groups.md](../algorithm/003_quota_status_groups.md) | 4-group status partition — fixed display order |
+| [algorithm/004_eligibility_gates.md](../algorithm/004_eligibility_gates.md) | 8 eligibility gates — next-account filtering |
+| [algorithm/005_next_account_selection.md](../algorithm/005_next_account_selection.md) | 3-step positive selection — winner determination |
+| [algorithm/007_sort_strategies.md](../algorithm/007_sort_strategies.md) | Sort strategy keys and `prefer_weekly` computation |
+| [pitfall/001_quota_gate_pitfalls.md](../pitfall/001_quota_gate_pitfalls.md) | BUG-299 (`prefer_weekly` vs raw threshold pitfall) |

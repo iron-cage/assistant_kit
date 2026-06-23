@@ -46,6 +46,15 @@
 //! |----|---------------|-----------|-----|
 //! | IN-1 | `param_defaults_in1_active_account_used_without_name_arg` | `.token.status` without `name::` succeeds when active account set | P |
 //! | IN-2 | `param_defaults_in2_require_nonempty_string_arg_only_in_use_delete` | `require_nonempty_string_arg` only in `.account.use` and `.account.delete` handlers | P |
+//!
+//! ### Invariant 008 — Single Token Refresh Entry Point (IN-1..IN-4)
+//!
+//! | ID | Test Function | Condition | P/N |
+//! |----|---------------|-----------|-----|
+//! | FT-25/IN-1 | `single_token_refresh_entry_in1_src_contains_zero_run_isolated_calls` | grep finds no code-level `run_isolated(` in src/ | P |
+//! | IN-2 | `single_token_refresh_entry_in2_run_isolated_doc_has_warning` | `# Warning` present in `run_isolated()` doc in `isolated.rs` | P |
+//! | IN-3 | `single_token_refresh_entry_in3_expires_manipulation_before_run_isolated` | `manipulate_expires_at(` appears before `run_isolated(` in `account.rs` | P |
+//! | IN-4 | `single_token_refresh_entry_in4_live_sync_in_refresh_token_with_live_path` | `credentials_file()` appears in `refresh_token_with_live_path` in `account.rs` | P |
 
 use std::path::Path;
 use std::process::Command;
@@ -372,4 +381,156 @@ fn param_defaults_in2_require_nonempty_string_arg_only_in_use_delete()
       "require_nonempty_string_arg called outside expected handlers — violates param-defaults invariant:\n{line}",
     );
   }
+}
+
+// ── Invariant 008: Single Token Refresh Entry Point ──────────────────────────
+
+// FT-25 / IN-1: src/ contains zero code-level run_isolated( calls
+//
+// All token refresh operations must go through `refresh_account_token()` in
+// `claude_profile_core`. Direct `run_isolated(` calls in `claude_profile/src/`
+// bypass expiresAt=1 manipulation (Feature 017 AC-32) and live credential sync
+// (Feature 017 AC-33), causing silent RT decay that can render accounts irrecoverable.
+//
+// The grep may return doc-comment mentions of run_isolated( (e.g. lines starting
+// with `///`). These are filtered by checking for "//" in the output line — they
+// are not code-level calls and do not violate the invariant.
+#[ test ]
+fn single_token_refresh_entry_in1_src_contains_zero_run_isolated_calls()
+{
+  let src_dir = Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src" );
+  let output = Command::new( "/usr/bin/grep" )
+    .args( [ "-rn", "run_isolated(", src_dir.to_str().unwrap() ] )
+    .output()
+    .expect( "grep failed" );
+
+  let matches = String::from_utf8_lossy( &output.stdout );
+  let violations : Vec< &str > = matches.lines()
+    // Filter out comment-only lines from the grep output (format: "path:linenum:content").
+    // Doc comments (///) and line comments (//) that ARE the code content are not direct
+    // invocations. We extract the content part (after the second ':') and check if it
+    // trims to a comment — this correctly keeps real violations that happen to have a
+    // trailing `//` comment on the same line, while still suppressing pure comment lines.
+    .filter( | line |
+    {
+      // Split "path:linenum:content" — file paths on Linux contain no ':'.
+      let mut parts = line.splitn( 3, ':' );
+      let _ = parts.next(); // path
+      let _ = parts.next(); // linenum
+      let code = parts.next().unwrap_or( "" );
+      !code.trim_start().starts_with( "//" )
+    } )
+    .collect();
+
+  assert!(
+    violations.is_empty(),
+    "invariant 008 violation: direct run_isolated( call found in claude_profile/src/ — \
+     all token refresh must go through claude_profile_core::account::refresh_account_token():\n{}",
+    violations.join( "\n" ),
+  );
+}
+
+// IN-2: `run_isolated` doc comment in `claude_runner_core/src/isolated.rs` has a `# Warning` section
+//
+// The invariant enforcement mechanism includes both an automated grep test (IN-1) and a
+// `# Warning` doc comment at the `run_isolated()` definition and re-export. The doc warning
+// is the first line of defence: developers reading `isolated.rs` see it before writing any call.
+// This test verifies the warning is present and not accidentally removed.
+#[ test ]
+fn single_token_refresh_entry_in2_run_isolated_doc_has_warning()
+{
+  // Navigate from claude_profile/ → module/ → claude_runner_core/src/isolated.rs
+  let crate_dir   = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
+  let isolated_rs = crate_dir
+    .parent()
+    .expect( "parent of crate dir (module/) must exist" )
+    .join( "claude_runner_core" )
+    .join( "src" )
+    .join( "isolated.rs" );
+
+  let content = std::fs::read_to_string( &isolated_rs )
+    .unwrap_or_else( |e| panic!( "cannot read {}: {e}", isolated_rs.display() ) );
+
+  // Find the run_isolated doc block and verify it contains "# Warning"
+  let fn_pos = content.find( "pub fn run_isolated" )
+    .expect( "run_isolated function must exist in isolated.rs" );
+  // The doc comment precedes the function — search the region before the function decl
+  let doc_region = &content[ ..fn_pos ];
+  assert!(
+    doc_region.contains( "# Warning" ),
+    "invariant 008 enforcement gap: run_isolated() doc in isolated.rs is missing '# Warning' section \
+     directing callers to use refresh_account_token() — this is the first-line defence against \
+     future invariant violations"
+  );
+}
+
+// IN-3: `manipulate_expires_at(` appears before `run_isolated(` in `claude_profile_core/src/account.rs`
+//
+// AC-32 (Change A) requires `expiresAt=1` manipulation to be applied before every `run_isolated`
+// call. This structural test verifies the ordering is maintained in `account.rs`.
+#[ test ]
+fn single_token_refresh_entry_in3_expires_manipulation_before_run_isolated()
+{
+  let crate_dir  = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
+  let core_src   = crate_dir
+    .parent()
+    .expect( "parent of crate dir must exist" )
+    .join( "claude_profile_core" )
+    .join( "src" )
+    .join( "account.rs" );
+
+  let content = std::fs::read_to_string( &core_src )
+    .unwrap_or_else( |e| panic!( "cannot read {}: {e}", core_src.display() ) );
+
+  let manip_pos = content.find( "manipulate_expires_at(" )
+    .expect( "manipulate_expires_at( must appear in account.rs (AC-32 / Change A)" );
+  let run_pos = content.find( "run_isolated(" )
+    .expect( "run_isolated( must appear in account.rs (it is the sole authorized caller)" );
+
+  assert!(
+    manip_pos < run_pos,
+    "invariant 008 AC-32 violation: manipulate_expires_at( must appear before run_isolated( \
+     in account.rs to ensure expiresAt=1 manipulation always precedes subprocess spawn \
+     (manip_pos={manip_pos}, run_pos={run_pos})",
+  );
+}
+
+// IN-4: `credentials_file()` appears inside `refresh_token_with_live_path` in `account.rs`
+//
+// AC-33 (Change B) requires current-account live credential sync inside the `Some(paths)` branch.
+// After the extraction refactor, this logic lives in `refresh_token_with_live_path`. This structural
+// test verifies the live-sync reads (`credentials_file()`) are present in the helper body.
+#[ test ]
+fn single_token_refresh_entry_in4_live_sync_in_refresh_token_with_live_path()
+{
+  let crate_dir  = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
+  let core_src   = crate_dir
+    .parent()
+    .expect( "parent of crate dir must exist" )
+    .join( "claude_profile_core" )
+    .join( "src" )
+    .join( "account.rs" );
+
+  let content = std::fs::read_to_string( &core_src )
+    .unwrap_or_else( |e| panic!( "cannot read {}: {e}", core_src.display() ) );
+
+  // Locate the refresh_token_with_live_path helper body
+  let helper_start = content.find( "fn refresh_token_with_live_path(" )
+    .expect( "refresh_token_with_live_path must exist in account.rs (private helper for AC-33)" );
+  let helper_body_start = content[ helper_start.. ].find( '{' )
+    .expect( "helper body opening brace must exist" );
+  let helper_region = &content[ helper_start + helper_body_start.. ];
+
+  // Count code-level calls only (exclude comment lines)
+  let count = helper_region.lines()
+    .filter( | line | !line.trim_start().starts_with( "//" ) )
+    .filter( | line | line.contains( "credentials_file()" ) )
+    .count();
+
+  assert!(
+    count >= 2,
+    "invariant 008 AC-33 violation: expected ≥2 code-level credentials_file() calls in \
+     refresh_token_with_live_path (pre-sync read + race-recovery read), found {count} — \
+     live credential sync (Change B) may be missing or incomplete",
+  );
 }
