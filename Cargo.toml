@@ -146,7 +146,7 @@ default-features = false
 
 [workspace.dependencies.claude_runner]
 path = "module/claude_runner"
-version = "=1.4.1"
+version = "=1.5.1"
 default-features = false
 
 [workspace.dependencies.claude_version]
