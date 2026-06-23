@@ -157,3 +157,14 @@ render results as table
 | `src/usage/touch.rs`, `src/usage/params.rs` | `touch::` param read; idle-account detection (`resets_at` absent); subprocess call; re-fetch |
 | `src/lib.rs` | `touch::` parameter registration via `register_commands()` |
 | `claude_profile_core/src/account.rs` | `refresh_account_token()` — reused for touch |
+
+### Subprocess Docs
+
+| File | Relationship |
+|------|-------------|
+| [subprocess/001_run_isolated_contract.md](../subprocess/001_run_isolated_contract.md) | `run_isolated()` API contract |
+| [subprocess/002_credential_writeback.md](../subprocess/002_credential_writeback.md) | Credential write-back protocol |
+| [subprocess/004_session_touch_invocation.md](../subprocess/004_session_touch_invocation.md) | Full trigger predicate table and skip-reason trace codes |
+| [algorithm/001_touch_model_selection.md](../algorithm/001_touch_model_selection.md) | `resolve_model()` — Sonnet selection for `son_idle` accounts |
+| [state_machine/003_session_window_lifecycle.md](../state_machine/003_session_window_lifecycle.md) | Session window idle/active/exhausted lifecycle |
+| [pitfall/002_subprocess_integration_pitfalls.md](../pitfall/002_subprocess_integration_pitfalls.md) | BUG-289/290 (Haiku cannot open 7d-Sonnet window) |

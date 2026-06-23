@@ -118,3 +118,9 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 |------|--------------|
 | [tests/docs/feature/38_usage_strategy_rotate.md](../../tests/docs/feature/38_usage_strategy_rotate.md) | Feature behavioral requirement test surface |
 | [tests/docs/cli/command/09_usage.md](../../tests/docs/cli/command/09_usage.md) | Integration test cases for `rotate::` parameter group |
+
+### Subprocess Docs
+
+| File | Relationship |
+|------|-------------|
+| [subprocess/004_session_touch_invocation.md](../subprocess/004_session_touch_invocation.md) | `apply_touch()` trigger conditions — post-rotation touch from in-memory `AccountQuota` |

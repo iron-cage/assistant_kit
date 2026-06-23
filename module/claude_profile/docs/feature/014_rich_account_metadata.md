@@ -26,21 +26,7 @@
 
 **`format::json`:** All new fields are included in JSON output regardless of field-presence params, extending the existing JSON shape with `"display_name"`, `"role"`, `"billing"`, `"model"` keys.
 
-**`~/.claude.json` layout (relevant fields):**
-```json
-{
-  "oauthAccount": {
-    "displayName": "alice",
-    "organizationRole": "admin",
-    "billingType": "stripe_subscription"
-  }
-}
-```
-
-**`~/.claude/settings.json` layout (relevant field):**
-```json
-{ "model": "sonnet" }
-```
+**Field schemas:** See [schema/007_claude_json.md](../schema/007_claude_json.md) for `~/.claude.json` fields and [schema/006_settings_json.md](../schema/006_settings_json.md) for `settings.json` fields.
 
 **Missing or empty fields:** All new fields show `N/A` when the source file is absent or the field is missing/empty. Never error on absent metadata — `.credentials.status` is a graceful read command.
 
@@ -117,3 +103,11 @@ This label is NOT a separate field param — it is the formatted output of the e
 |------|--------------|
 | `tests/cli/credentials_test.rs` | Test cases for each opt-in field on `.credentials.status` |
 | `tests/cli/accounts_test.rs` | Test cases for rich metadata fields on `.accounts` |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [schema/002_account_json.md](../schema/002_account_json.md) | Unified `{name}.json` field table — `oauthAccount`, `model` rows owned by this feature |
+| [schema/007_claude_json.md](../schema/007_claude_json.md) | `~/.claude.json` fields read by this feature (`oauthAccount.displayName`, `organizationRole`, `billingType`) |
+| [schema/006_settings_json.md](../schema/006_settings_json.md) | `model` field in `~/.claude/settings.json` captured at save time |

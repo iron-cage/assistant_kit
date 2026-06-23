@@ -145,3 +145,22 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 | `src/lib.rs` | `touch::`, `imodel::`, `effort::`, `trace::` parameter registration on `.account.use` |
 | `src/usage/subprocess.rs`, `src/usage/api.rs` | `resolve_model()`, `resolve_effort()` reused from Feature 026; new: `TouchCtx`, `validate_imodel_str()`, `validate_effort_str()`, `pre_switch_touch_ctx()`, `apply_post_switch_touch()`, `apply_model_override()` |
 | `claude_profile_core/src/account.rs` | `refresh_account_token()` — invoked by `apply_post_switch_touch()` per Feature 017 AC-34 / invariant 008 |
+
+### Algorithm Docs
+
+| File | Relationship |
+|------|-------------|
+| [algorithm/001_touch_model_selection.md](../algorithm/001_touch_model_selection.md) | `resolve_model()` decision table — selects Sonnet or Haiku for post-switch subprocess |
+| [algorithm/002_session_model_override.md](../algorithm/002_session_model_override.md) | `apply_model_override()` bidirectional logic — Sonnet/Opus written to `settings.json` based on quota |
+
+### Subprocess Docs
+
+| File | Relationship |
+|------|-------------|
+| [subprocess/004_session_touch_invocation.md](../subprocess/004_session_touch_invocation.md) | `apply_touch()` trigger conditions and skip-reason trace codes — invoked via `refresh_account_token()` in step 5 |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [schema/006_settings_json.md](../schema/006_settings_json.md) | `model` and `effortLevel` fields written by `apply_model_override()` in step 4b |

@@ -162,3 +162,11 @@ if let Some(effort) = effort_opt {
 |------|--------------|
 | `src/usage/subprocess.rs` | `resolve_model()`, `resolve_effort()`, subprocess arg construction |
 | `src/lib.rs` | `imodel::` and `effort::` parameter registration via `register_commands()` |
+
+### Algorithm Docs
+
+| File | Relationship |
+|------|-------------|
+| [algorithm/001_touch_model_selection.md](../algorithm/001_touch_model_selection.md) | `resolve_model()` decision table with pseudocode |
+| [algorithm/008_subprocess_effort_resolution.md](../algorithm/008_subprocess_effort_resolution.md) | `resolve_effort()` decision table |
+| [pitfall/002_subprocess_integration_pitfalls.md](../pitfall/002_subprocess_integration_pitfalls.md) | BUG-289/290/301 (model gate pitfalls), BUG-243 (timeout output loss) |
