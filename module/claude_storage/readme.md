@@ -12,7 +12,6 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 | `src/` | CLI pipeline, command routines, binary entry points |
 | `tests/` | Integration and parameter validation tests |
 | `docs/` | Behavioral requirements: features, CLI reference, operation docs |
-
 | `examples/` | Usage examples for storage API |
 | `changelog.md` | Notable changes by version |
 | `verb/` | Shell scripts for each `do` protocol verb. |

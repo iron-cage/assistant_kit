@@ -240,7 +240,7 @@ fn t14_help_flag_exits_zero_with_usage()
   let out = run_cli( &[ "--help" ] );
   assert!( out.status.success(), "--help must exit 0" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  assert!( stdout.contains( "USAGE:" ), "--help must print USAGE" );
+  assert!( stdout.contains( "RUNNER OPTIONS:" ), "--help must print RUNNER OPTIONS" );
 }
 
 // T15: -h works as short help
@@ -250,7 +250,7 @@ fn t15_short_help_flag_works()
   let out = run_cli( &[ "-h" ] );
   assert!( out.status.success(), "-h must exit 0" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  assert!( stdout.contains( "USAGE:" ), "help output must contain USAGE:. Got:\n{stdout}" );
+  assert!( stdout.contains( "RUNNER OPTIONS:" ), "help output must contain RUNNER OPTIONS:. Got:\n{stdout}" );
 }
 
 // T16: help lists all documented options (--new-session present, --continue absent)
@@ -263,9 +263,9 @@ fn t16_help_lists_all_options()
   for opt in &[
     "--print", "--new-session", "--model", "--verbose",
     "--no-skip-permissions", "--max-tokens", "--session-dir",
-    "--dir", "--dry-run", "--verbosity", "--help", "[MESSAGE]",
+    "--dir", "--dry-run", "--verbosity", "--help",
     "--system-prompt", "--append-system-prompt", "--no-ultrathink",
-    "--effort", "--no-effort-max",
+    "--effort", "--no-effort-max", "[<MSG>]",
   ] {
     assert!( stdout.contains( opt ), "--help missing option {opt}. Got:\n{stdout}" );
   }
@@ -380,8 +380,8 @@ fn t26_help_after_flags_shows_help()
   assert!( out.status.success(), "--help must exit 0 even after valid flags" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "USAGE:" ),
-    "--help must print USAGE even after valid flags. Got:\n{stdout}"
+    stdout.contains( "RUNNER OPTIONS:" ),
+    "--help must print RUNNER OPTIONS even after valid flags. Got:\n{stdout}"
   );
 }
 

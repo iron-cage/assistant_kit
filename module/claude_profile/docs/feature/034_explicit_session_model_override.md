@@ -84,3 +84,9 @@ if let Some( ref sm ) = set_model_str
 | `src/usage/types.rs` | `validate_set_model()` — calls `map_model_shorthand()` inner function and formats error with `set_model::` prefix; four-value mapping |
 | `claude_profile_core/src/account.rs` | `set_session_model()` — read-merge-write on `~/.claude/settings.json` |
 | `src/lib.rs` | `set_model::` parameter registration on `.account.use` and `.usage` |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [schema/006_settings_json.md](../schema/006_settings_json.md) | `model` field in `~/.claude/settings.json` read and written by `set_session_model()` |

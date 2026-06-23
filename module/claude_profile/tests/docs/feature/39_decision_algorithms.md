@@ -9,7 +9,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 | FT-01 | Touch model: idle Sonnet window → Sonnet | Table 1 | Unit test |
 | FT-02 | Touch model: absent Sonnet tier → Haiku | Table 1 | Unit test |
 | FT-09 | Touch model: active Sonnet window, 40% remaining → Sonnet | Table 1 | Unit test — Fix BUG-301 |
-| FT-03 | Session model override: exactly 15% Sonnet left → no override | Table 2 | Boundary — Phase 1 fix |
+| FT-03 | Session model override: exactly 15% Sonnet left → writes Sonnet (Fix BUG-311) | Table 2 | Boundary — Phase 1 fix |
 | FT-04 | Session model override: below 15% Sonnet left → Opus | Table 2 | Boundary — Phase 1 fix |
 | FT-05 | Status groups: four-group partition order | Table 3 | Unit test |
 | FT-06 | Eligibility gate G7: `prefer_weekly ≤ 5.0` → account skipped | Table 4 | Phase 2 |
@@ -73,13 +73,13 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 
 ---
 
-### FT-03: Session model override — exactly 15% Sonnet left → no override
+### FT-03: Session model override — exactly 15% Sonnet left → writes Sonnet (Fix BUG-311)
 
-- **Given:** An `AccountQuota` with `seven_day_sonnet = Some(PeriodUsage { utilization: 85.0, .. })` → `sonnet_left = 100.0 - 85.0 = 15.0%`. Current model is Sonnet.
-- **When:** `recommended_model(aq)` is called (canonical entry point: `format.rs`; called by `apply_model_override` at `api.rs:259-290` — Feature 062).
-- **Then:** Returns `"sonnet"`. Override does NOT fire. The gate `sonnet_left < OPUS_OVERRIDE_THRESHOLD (15.0)` evaluates to `15.0 < 15.0 = false`.
+- **Given:** An `AccountQuota` with `seven_day_sonnet = Some(PeriodUsage { utilization: 85.0, .. })` → `sonnet_left = 100.0 - 85.0 = 15.0%`.
+- **When:** `apply_model_override(&quota, &paths, false, "usage", "test-account")` is called (canonical path: `api.rs:259-290`; uses `recommended_model(aq)` from `format.rs` — Feature 062).
+- **Then:** Writes `"sonnet"` to `settings.json`. Opus override does NOT fire (`sonnet_left < OPUS_OVERRIDE_THRESHOLD (15.0)` evaluates to `15.0 < 15.0 = false`). Sonnet-restore path fires via `override_session_model_to_sonnet()` (Fix BUG-311).
 - **Note:** Table 2 boundary. Exactly at threshold = sufficient capacity. Threshold canonicalized as `OPUS_OVERRIDE_THRESHOLD` in `format.rs` (Feature 062).
-- **Source fn:** `t07_model_override_skips_at_and_above_15pct_boundary` (in `src/usage/api_tests.rs`); `test_render_footer_model_label_at_15pct_no_override` (in `src/usage/render_tests.rs`)
+- **Source fn:** `t07_model_override_writes_sonnet_at_15pct_boundary` (in `src/usage/api_tests.rs`); `test_render_footer_model_label_at_15pct_no_override` (in `src/usage/render_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 2](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -179,7 +179,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 | Algorithm | Unit Tests | Implementation |
 |-----------|-----------|----------------|
 | Touch model selection (Table 1) | `it_imodel_auto_selects_sonnet_when_son_idle`, `it_imodel_auto_selects_haiku_when_son_tier_absent`, `mre_bug301_son_active_with_remaining_quota_selects_sonnet` in `src/usage/subprocess.rs` | `subprocess.rs:29-59` |
-| Session model override (Table 2) | `ft01..ft04_recommended_model_*` in `src/usage/format_tests.rs` (Feature 062); `t07_model_override_skips_at_and_above_15pct_boundary` in `src/usage/api_tests.rs`; `test_render_footer_model_label_at_15pct_no_override`, `test_render_footer_model_label_below_15pct_opus` in `src/usage/render_tests.rs` | `format.rs` (`recommended_model`, `OPUS_OVERRIDE_THRESHOLD`), `api.rs:259-290` (`apply_model_override`), `render.rs` (footer) |
+| Session model override (Table 2) | `ft01..ft04_recommended_model_*` in `src/usage/format_tests.rs` (Feature 062); `t07_model_override_writes_sonnet_at_15pct_boundary` in `src/usage/api_tests.rs`; `test_render_footer_model_label_at_15pct_no_override`, `test_render_footer_model_label_below_15pct_opus` in `src/usage/render_tests.rs` | `format.rs` (`recommended_model`, `OPUS_OVERRIDE_THRESHOLD`), `api.rs:259-290` (`apply_model_override`), `render.rs` (footer) |
 | Quota status groups (Table 3) | `test_three_tier_grouping_*` in `src/usage/mod.rs` | `sort.rs:31-48` |
 | Eligibility gates (Table 4) | `test_relevant_quotas_*` in `src/usage/format_tests.rs` | `sort_next.rs:24-35, 59` |
 | Positive selection (Table 5) | `test_sort_name_alphabetical` in `src/usage/sort.rs` | `sort_next.rs:46-83` |

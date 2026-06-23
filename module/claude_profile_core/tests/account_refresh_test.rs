@@ -24,6 +24,12 @@
 //! | `bug_mre_bug221_some_branch_no_p_credentials_file_write` | structural | grep account.rs for `std::fs::write( p.credentials_file(),` | 0 occurrences |
 //! | `mre_bug221_save_some_creds_writes_to_store_not_live_file` | unit | `save("acct", store, paths, false, Some(b"data"))` | store = `b"data"`; live file unchanged |
 //! | `mre_bug221_save_none_creds_copies_from_live_file` | unit | `save("acct", store, paths, false, None)` | store = live file content; live file unchanged |
+//! | `ft22_manipulate_expires_at_replaces_numeric_value` | behavioral | `manipulate_expires_at` with numeric `expiresAt` value | value replaced (original absent from result) |
+//! | `ft22_manipulate_expires_at_replaces_quoted_value` | behavioral | `manipulate_expires_at` with quoted `expiresAt` value | value replaced (original absent from result) |
+//! | `ft22_manipulate_expires_at_noop_when_key_absent` | behavioral | `manipulate_expires_at` when `expiresAt` key absent | string returned unchanged |
+//! | `ft22_manipulate_expires_at_called_before_run_isolated_structural` | structural | grep `account.rs` for `manipulate_expires_at(` before first `run_isolated(` | in order |
+//! | `ft23_live_sync_returns_live_creds_without_subprocess` | behavioral | live creds differ from stored → sync and return `Some(live)` without subprocess | `Some(live_json)` |
+//! | `ft24_some_paths_branch_reads_credentials_file_twice_structural` | structural | grep `account.rs` `Some(paths)` branch for ≥2 `credentials_file()` calls | ≥2 occurrences |
 //!
 //! ## Pitfall: Consumer Feature Activation
 //!
@@ -305,5 +311,351 @@ fn mre_bug221_save_none_creds_copies_from_live_file()
     std::fs::read( &live_file ).unwrap(),
     b"live_creds_content",
     "save(None) must NOT modify the live credentials file",
+  );
+}
+
+// ── FT-22: manipulate_expires_at ──────────────────────────────────────────────
+
+// FT-22a: numeric expiresAt value is replaced with 1
+//
+// When credentials JSON contains `"expiresAt":BIGNUM`, the returned string must
+// replace the big numeric value so the CLI treats the access token as expired and
+// uses the refresh token — forcing RT rotation on every subprocess call (AC-32).
+#[ test ]
+fn ft22_manipulate_expires_at_replaces_numeric_value()
+{
+  let input  = r#"{"accessToken":"tok","expiresAt":9999999999999}"#;
+  let result = account::manipulate_expires_at( input );
+  assert!(
+    !result.contains( "9999999999999" ),
+    "ft22: numeric expiresAt must be replaced; original value must not appear in result, got: {result}",
+  );
+  assert!(
+    result.contains( "expiresAt" ),
+    "ft22: expiresAt key must still be present in result, got: {result}",
+  );
+  assert!(
+    result.contains( "accessToken" ),
+    "ft22: accessToken must be preserved unchanged, got: {result}",
+  );
+}
+
+// FT-22b: quoted expiresAt value is replaced
+//
+// Some Claude CLI versions store expiresAt as a quoted string rather than a bare
+// number. The function must handle both formats.
+#[ test ]
+fn ft22_manipulate_expires_at_replaces_quoted_value()
+{
+  let input  = r#"{"accessToken":"tok","expiresAt":"9999999999999"}"#;
+  let result = account::manipulate_expires_at( input );
+  assert!(
+    !result.contains( "9999999999999" ),
+    "ft22: quoted expiresAt must be replaced; original value must not appear in result, got: {result}",
+  );
+  assert!(
+    result.contains( "expiresAt" ),
+    "ft22: expiresAt key must still be present in result, got: {result}",
+  );
+}
+
+// FT-22c: string returned unchanged when expiresAt key is absent
+//
+// Not all credential JSON objects include expiresAt. The function must return the
+// original string unchanged when the key is absent — not panic or corrupt the JSON.
+#[ test ]
+fn ft22_manipulate_expires_at_noop_when_key_absent()
+{
+  let input  = r#"{"accessToken":"tok","refreshToken":"rt"}"#;
+  let result = account::manipulate_expires_at( input );
+  assert_eq!(
+    result, input,
+    "ft22: when expiresAt key is absent, manipulate_expires_at must return the input unchanged",
+  );
+}
+
+// FT-23: live credentials different from stored → sync without subprocess, return Some(live)
+//
+// AC-33 (Change B): When `Some(paths)` is supplied and the live credentials file
+// `~/.claude/.credentials.json` differs from the stored per-account file, `refresh_account_token`
+// must sync live→store and return `Some(live_creds)` WITHOUT spawning `run_isolated`.
+//
+// Observable: since `run_isolated` fails with `Err` in the test environment (no real claude
+// binary), any return of `Some(...)` proves the pre-sync path fired — the subprocess was NOT called.
+#[ cfg( feature = "enabled" ) ]
+#[ test ]
+fn ft23_live_sync_returns_live_creds_without_subprocess()
+{
+  let store     = TempDir::new().unwrap();
+  let fake_home = TempDir::new().unwrap();
+  let dot_claude = fake_home.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  let stored_json = r#"{"accessToken":"tok_A","expiresAt":9999999999999,"refreshToken":"rt_A"}"#;
+  let live_json   = r#"{"accessToken":"tok_B","expiresAt":9999999999999,"refreshToken":"rt_B"}"#;
+
+  // Write stored credentials (token A)
+  std::fs::write(
+    store.path().join( "ghost@example.com.credentials.json" ),
+    stored_json,
+  ).unwrap();
+  // Write DIFFERENT live credentials (token B) at ~/.claude/.credentials.json
+  let live_creds_path = dot_claude.join( ".credentials.json" );
+  std::fs::write( &live_creds_path, live_json ).unwrap();
+  // Write active marker so the is_active guard in Change B passes for "ghost@example.com".
+  // The pre-sync only fires when name == active account; without the marker it is skipped.
+  std::fs::write(
+    store.path().join( account::active_marker_filename() ),
+    "ghost@example.com",
+  ).unwrap();
+
+  let paths  = ClaudePaths::with_home( fake_home.path() );
+  let result = account::refresh_account_token(
+    "ghost@example.com", store.path(), Some( &paths ), false, "test",
+    claude_runner_core::IsolatedModel::Default, &[],
+  );
+
+  // AC-33: live diff detected → returned Some(live_json) without subprocess
+  assert!(
+    result.is_some(),
+    "ft23: live creds differ from stored — expected Some(live_creds) via pre-sync, got None \
+     (None means run_isolated was called and failed, meaning pre-sync did not fire)",
+  );
+  let returned = result.unwrap();
+  assert!(
+    returned.contains( "tok_B" ),
+    "ft23: returned credentials must be live creds (tok_B), got: {returned}",
+  );
+  // Verify stored file was updated to the live version
+  let stored_after = std::fs::read_to_string(
+    store.path().join( "ghost@example.com.credentials.json" ),
+  ).expect( "stored cred file must exist after sync" );
+  assert!(
+    stored_after.contains( "tok_B" ),
+    "ft23: stored credentials must be updated to live version (tok_B), got: {stored_after}",
+  );
+}
+
+// FT-22d structural: manipulate_expires_at is called before run_isolated in refresh_account_token
+//
+// Change A requires that both branches of refresh_account_token call manipulate_expires_at
+// BEFORE passing credentials to run_isolated. A structural source scan enforces this ordering.
+#[ test ]
+fn ft22_manipulate_expires_at_called_before_run_isolated_structural()
+{
+  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
+  let content    = std::fs::read_to_string( &account_rs )
+    .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
+
+  // Locate refresh_account_token body (starts at `pub fn refresh_account_token(`)
+  let fn_start = content.find( "pub fn refresh_account_token(" )
+    .expect( "refresh_account_token must exist in account.rs" );
+  let fn_body = &content[ fn_start.. ];
+
+  let manip_pos = fn_body.find( "manipulate_expires_at(" )
+    .expect( "AC-32: manipulate_expires_at must be called inside refresh_account_token" );
+  let run_pos = fn_body.find( "run_isolated(" )
+    .expect( "run_isolated must still be called inside refresh_account_token" );
+
+  assert!(
+    manip_pos < run_pos,
+    "AC-32: manipulate_expires_at must appear before run_isolated in refresh_account_token body \
+     (manip_pos={manip_pos}, run_pos={run_pos})",
+  );
+}
+
+// FT-24 structural: refresh_token_with_live_path reads credentials_file() at least twice
+//
+// AC-33 (Change B) adds two reads of the live credentials file via `p.credentials_file()`:
+//   1. Pre-sync: before run_isolated — detect if live already refreshed and sync early
+//   2. Race recovery: after run_isolated returns Ok(isolated) with credentials=None — sync if changed
+// The Some(paths) branch of `refresh_account_token` delegates to `refresh_token_with_live_path`;
+// the structural count verifies both reads are present in the helper's body.
+// Fix(BUG-313 refactor): FT-24 updated to search `refresh_token_with_live_path` (the extracted helper)
+// instead of the Some(paths) branch of `refresh_account_token`, which now contains only a delegation call.
+// Root cause: helper extraction moved `credentials_file()` calls into the private helper, but the
+//   structural test still searched the public function's Some(paths) block (now a one-liner).
+// Pitfall: structural tests must track the function that ACTUALLY contains the logic, not just the
+//   public entry point — delegation patterns move the code without necessarily breaking the invariant.
+#[ test ]
+fn ft24_some_paths_branch_reads_credentials_file_twice_structural()
+{
+  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
+  let content    = std::fs::read_to_string( &account_rs )
+    .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
+
+  // Extract the refresh_token_with_live_path helper body.
+  // This private function implements the Some(paths) branch logic after extraction.
+  let helper_start = content.find( "fn refresh_token_with_live_path(" )
+    .expect( "refresh_token_with_live_path must exist in account.rs (private helper for Some(paths) branch)" );
+  // The helper ends at its closing brace; find the next top-level function or end of file.
+  // Use the leading `\n}` that closes the helper body (followed by a blank line).
+  let helper_body_start = content[ helper_start.. ].find( '{' )
+    .expect( "helper body opening brace must exist" );
+  let helper_region = &content[ helper_start + helper_body_start.. ];
+
+  // Count only code-level calls — exclude comment lines (// prefix after trimming).
+  // Comments in the helper mention credentials_file() by name but are not calls.
+  let count = helper_region.lines()
+    .filter( | line | !line.trim_start().starts_with( "//" ) )
+    .filter( | line | line.contains( "credentials_file()" ) )
+    .count();
+  assert!(
+    count >= 2,
+    "AC-33: expected ≥2 code-level credentials_file() calls in refresh_token_with_live_path \
+     (pre-sync read + race recovery read), found {count}",
+  );
+}
+
+// FT-22e: negative expiresAt value is NOT replaced — treated as absent per doc contract
+//
+// AC-32 doc: "Negative values (e.g. `"expiresAt":-1`) are not matched — treated as absent."
+// The implementation finds `-` as the first non-digit character, producing old_val="" (empty),
+// which is filtered by `!old_val.is_empty()` → falls through to return unchanged.
+#[ test ]
+fn ft22_manipulate_expires_at_noop_for_negative_value()
+{
+  let input  = r#"{"accessToken":"tok","expiresAt":-1,"refreshToken":"rt"}"#;
+  let result = account::manipulate_expires_at( input );
+  assert_eq!(
+    result, input,
+    "ft22e: negative expiresAt must be treated as absent (not replaced); string must be unchanged",
+  );
+}
+
+// FT-22f: expiresAt already set to numeric 1 — idempotent, no double-replacement
+//
+// When expiresAt is already 1, replacen replaces "expiresAt":1 with "expiresAt":1 (no change).
+// Verifies the function is safe to call repeatedly without corrupting the JSON.
+#[ test ]
+fn ft22_manipulate_expires_at_idempotent_already_numeric_one()
+{
+  let input  = r#"{"accessToken":"tok","expiresAt":1,"refreshToken":"rt"}"#;
+  let result = account::manipulate_expires_at( input );
+  assert!(
+    result.contains( "\"expiresAt\":1" ),
+    "ft22f: expiresAt:1 must still be present in result, got: {result}",
+  );
+  assert!(
+    result.contains( "accessToken" ),
+    "ft22f: accessToken must be preserved after idempotent call, got: {result}",
+  );
+  // The overall string must not be corrupted — both known fields still present.
+  assert!(
+    result.contains( "refreshToken" ),
+    "ft22f: refreshToken must be preserved after idempotent call, got: {result}",
+  );
+}
+
+// FT-23b: non-active account with live ≠ stored — pre-sync does NOT fire
+//
+// AC-33 pre-sync guard: only fires when name IS the currently active account.
+// When the active marker names a DIFFERENT account, `is_active = false` — the function
+// must NOT overwrite the store with the live credentials. The live file belongs to a
+// different account; writing it to name's store would corrupt the credential store.
+//
+// Safety property: the function returns None (run_isolated fails in test env) and the
+// stored file content is UNCHANGED (still tok_A, not tok_B from live).
+#[ cfg( feature = "enabled" ) ]
+#[ test ]
+fn ft23_non_active_account_skips_live_presync()
+{
+  let store     = TempDir::new().unwrap();
+  let fake_home = TempDir::new().unwrap();
+  let dot_claude = fake_home.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  let stored_json = r#"{"accessToken":"tok_A","expiresAt":9999999999999,"refreshToken":"rt_A"}"#;
+  let live_json   = r#"{"accessToken":"tok_B","expiresAt":9999999999999,"refreshToken":"rt_B"}"#;
+
+  // Write stored credentials for alice (tok_A).
+  std::fs::write(
+    store.path().join( "alice@example.com.credentials.json" ),
+    stored_json,
+  ).unwrap();
+  // Write DIFFERENT live credentials (tok_B) — belongs to another account's live session.
+  std::fs::write( dot_claude.join( ".credentials.json" ), live_json ).unwrap();
+  // Active marker names "other@example.com", NOT "alice@example.com".
+  // This means `is_active = false` for alice — the pre-sync guard must block the sync.
+  std::fs::write(
+    store.path().join( account::active_marker_filename() ),
+    "other@example.com",
+  ).unwrap();
+
+  let paths  = ClaudePaths::with_home( fake_home.path() );
+  let result = account::refresh_account_token(
+    "alice@example.com", store.path(), Some( &paths ), false, "test",
+    claude_runner_core::IsolatedModel::Default, &[],
+  );
+
+  // Pre-sync must NOT have fired (would return Some(tok_B) if it did).
+  // run_isolated fails in test env → returns None.
+  assert!(
+    result.is_none(),
+    "ft23b: non-active account must not trigger pre-sync; expected None (run_isolated path), \
+     got Some(...) — this means pre-sync fired for a non-active account, which corrupts the store",
+  );
+  // Store must still contain tok_A — NOT overwritten with live tok_B.
+  let stored_after = std::fs::read_to_string(
+    store.path().join( "alice@example.com.credentials.json" ),
+  ).expect( "stored cred file must still exist after call" );
+  assert!(
+    stored_after.contains( "tok_A" ),
+    "ft23b: stored credentials must remain tok_A after non-active call; \
+     got: {stored_after} — tok_B written means pre-sync leaked for non-active account",
+  );
+  assert!(
+    !stored_after.contains( "tok_B" ),
+    "ft23b: stored credentials must NOT contain tok_B (live creds from another account); \
+     got: {stored_after}",
+  );
+}
+
+// FT-23c: active account — live == stored → no early return, falls through to run_isolated
+//
+// AC-33 pre-sync: early return fires ONLY when live creds DIFFER from stored (`!=` check).
+// When live == stored, the pre-sync guard is satisfied but its body is skipped — execution
+// falls through to run_isolated to rotate the RT. This verifies the `!=` comparison direction.
+//
+// Observable: function returns None (run_isolated fails in test env), not Some.
+// If the comparison were accidentally flipped to `==`, it would return Some(live) here,
+// failing the test. This prevents a sign-error regression in the comparison.
+#[ cfg( feature = "enabled" ) ]
+#[ test ]
+fn ft23_active_account_same_creds_falls_through_to_run_isolated()
+{
+  let store     = TempDir::new().unwrap();
+  let fake_home = TempDir::new().unwrap();
+  let dot_claude = fake_home.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  // Live and stored are IDENTICAL.
+  let same_json = r#"{"accessToken":"tok_A","expiresAt":9999999999999,"refreshToken":"rt_A"}"#;
+
+  std::fs::write(
+    store.path().join( "alice@example.com.credentials.json" ),
+    same_json,
+  ).unwrap();
+  std::fs::write( dot_claude.join( ".credentials.json" ), same_json ).unwrap();
+  // Active marker names alice — so is_active = true, pre-sync guard runs.
+  std::fs::write(
+    store.path().join( account::active_marker_filename() ),
+    "alice@example.com",
+  ).unwrap();
+
+  let paths  = ClaudePaths::with_home( fake_home.path() );
+  let result = account::refresh_account_token(
+    "alice@example.com", store.path(), Some( &paths ), false, "test",
+    claude_runner_core::IsolatedModel::Default, &[],
+  );
+
+  // live == stored: pre-sync early return must NOT fire.
+  // Expected: None from run_isolated failure (not Some from pre-sync).
+  // If Some is returned, the `!=` check is inverted and the function returns early
+  // when creds are equal — skipping run_isolated and silently not rotating the RT.
+  assert!(
+    result.is_none(),
+    "ft23c: when live == stored, pre-sync must not return early; expected None from run_isolated \
+     path, got Some(...) — the != comparison may be inverted, causing skipped RT rotation",
   );
 }

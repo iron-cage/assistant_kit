@@ -265,6 +265,86 @@ fn t49_help_options_column_aligned()
   }
 }
 
+// ── EC-01–EC-06: Help section split (TSK-232 / Plan 030) ──────────────────────
+
+// EC-01: help contains RUNNER OPTIONS section header
+#[ test ]
+fn ec01_help_contains_runner_options_section()
+{
+  let out = run_cli( &[ "--help" ] );
+  assert!( out.status.success() );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "RUNNER OPTIONS:" ),
+    "help must contain RUNNER OPTIONS section. Got:\n{stdout}"
+  );
+}
+
+// EC-02: help contains CLAUDE CODE OPTIONS (forwarded) section header
+#[ test ]
+fn ec02_help_contains_claude_code_options_section()
+{
+  let out = run_cli( &[ "--help" ] );
+  assert!( out.status.success() );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "CLAUDE CODE OPTIONS (forwarded):" ),
+    "help must contain CLAUDE CODE OPTIONS (forwarded) section. Got:\n{stdout}"
+  );
+}
+
+// EC-03: help has eight usage forms (one per command)
+#[ test ]
+fn ec03_help_has_eight_usage_forms()
+{
+  let out = run_cli( &[ "--help" ] );
+  assert!( out.status.success() );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  let count = stdout.lines().filter( | l | l.starts_with( "  clr " ) ).count();
+  assert_eq!(
+    count, 8,
+    "help must have 8 usage lines starting with '  clr '. Got {count}:\n{stdout}"
+  );
+}
+
+// EC-04: help contains Commands section
+#[ test ]
+fn ec04_help_contains_commands_section()
+{
+  let out = run_cli( &[ "--help" ] );
+  assert!( out.status.success() );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "Commands:" ),
+    "help must contain Commands section. Got:\n{stdout}"
+  );
+}
+
+// EC-05: help contains key flags across both option groups
+#[ test ]
+fn ec05_help_contains_key_flags_across_groups()
+{
+  let out = run_cli( &[ "--help" ] );
+  assert!( out.status.success() );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( stdout.contains( "--model" ), "missing --model. Got:\n{stdout}" );
+  assert!( stdout.contains( "--timeout" ), "missing --timeout. Got:\n{stdout}" );
+  assert!( stdout.contains( "--max-sessions" ), "missing --max-sessions. Got:\n{stdout}" );
+}
+
+// EC-06: help does not contain standalone OPTIONS header (replaced by split groups)
+#[ test ]
+fn ec06_help_no_standalone_options_header()
+{
+  let out = run_cli( &[ "--help" ] );
+  assert!( out.status.success() );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( "\nOPTIONS:\n" ),
+    "help must NOT contain standalone OPTIONS header. Got:\n{stdout}"
+  );
+}
+
 // ── S58–S69, S79: New flag parsing tests ────────────────────────────────────────
 
 // S58: --strip-fences accepted in dry-run
@@ -592,8 +672,8 @@ fn bug_reproducer_215_run_help_dispatches_help()
 
   let out_run  = String::from_utf8_lossy( &with_run.stdout );
   assert!(
-    out_run.contains( "USAGE" ),
-    "`clr run help` must print USAGE. Got:\n{out_run}"
+    out_run.contains( "RUNNER OPTIONS:" ),
+    "`clr run help` must print RUNNER OPTIONS. Got:\n{out_run}"
   );
 
   // Output must be identical to bare `clr help`.

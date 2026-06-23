@@ -1,102 +1,129 @@
 /// Print help for the main `clr` command to stdout.
 pub( crate ) fn print_help()
 {
-  println!( "clr — Execute Claude Code with configurable parameters" );
-  println!();
-  println!( "USAGE:" );
-  println!( "  clr [OPTIONS] [MESSAGE]" );
-  println!( "  clr run      [OPTIONS] [MESSAGE]" );
-  println!( "  clr ask      [OPTIONS] [QUESTION]" );
-  println!( "  clr isolated --creds <FILE> [--timeout <SECS>] [--trace] [MESSAGE]" );
-  println!( "  clr refresh  --creds <FILE> [--timeout <SECS>] [--trace]" );
-  println!( "  clr kill     <PID>" );
-  println!( "  clr tools" );
-  println!( "  clr help" );
-  println!();
-  println!( "COMMANDS:" );
-  // Fix(BUG-212): `run` was absent from COMMANDS despite being a valid explicit subcommand.
-  // Root cause: print_help() only listed ask/isolated/refresh/help; discoverability AC violated.
-  // Pitfall: `clr run` must strip the leading token before reaching the parser — see lib.rs.
-  println!( "  run                                Execute Claude Code with configurable parameters (default mode)" );
-  println!( "  ask                                Semantic alias for `run` (identical behavior)" );
-  println!( "  isolated                           Run Claude with credential-isolated temp HOME" );
-  println!( "  refresh                            Refresh OAuth credentials without running a task" );
-  println!( "  ps                                 List running Claude Code sessions" );
-  println!( "  kill                               Terminate a running Claude Code session by PID" );
-  println!( "  tools                              List all Claude Code built-in tools" );
-  println!( "  help                               Print usage information and exit" );
-  println!();
-  println!( "ARGUMENTS:" );
-  println!( "  [MESSAGE]                          Prompt message for Claude" );
-  println!();
-  println!( "OPTIONS:" );
-  println!( "  -p, --print                        Non-interactive mode (capture and print output)" );
-  println!( "  --interactive                      Force interactive mode even when a message is given" );
-  println!( "  --new-session                      Start a new session (default: continues previous)" );
-  println!( "  --model <MODEL>                    Model to use" );
-  println!( "  --verbose                          Enable verbose output" );
-  println!( "  --no-skip-permissions              Disable automatic permission bypass (on by default)" );
-  println!( "  --max-tokens <N>                   Max output tokens (default: 200000)" );
-  println!( "  --session-dir <PATH>               Session storage directory" );
-  println!( "  --dir <PATH>                       Working directory" );
-  println!( "  --subdir <NAME>                    Named subdirectory appended to --dir as /-NAME; . = identity" );
-  println!( "  --dry-run                          Print command without executing" );
-  println!( "  --trace                            Print command to stderr then execute (like set -x)" );
-  println!( "  --system-prompt <TEXT>             Set system prompt (replaces the default)" );
-  println!( "  --append-system-prompt <TEXT>      Append text to the default system prompt" );
-  println!( "  --no-ultrathink                    Disable automatic \"\\n\\nultrathink\" message suffix" );
-  println!( "  --effort <LEVEL>                   Reasoning effort: low, medium, high, max (default: max)" );
-  println!( "  --no-effort-max                    Suppress default --effort max injection" );
-  println!( "  --no-chrome                        Suppress default --chrome injection" );
-  println!( "  --no-persist                       Disable session persistence (--no-session-persistence)" );
-  println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
-  println!( "  --mcp-config <PATH>                MCP server config file (repeatable)" );
-  println!( "  --output-style <MODE>              Rendering mode: summary (key:val header, default) or raw (passthrough) [env: CLR_OUTPUT_STYLE]" );
-  println!( "  --summary-fields <FIELDS>          Summary field selection: minimal, standard, full (default), or comma-separated field names [env: CLR_SUMMARY_FIELDS]" );
-  println!( "  --output-format <FMT>              Output format: text, json, stream-json, summary" );
-  println!( "  --max-turns <N>                    Max agentic turns (0 = unlimited)" );
-  println!( "  --allowed-tools <TOOLS>            Comma-separated tool whitelist (e.g. \"Read,Edit\")" );
-  println!( "  --disallowed-tools <TOOLS>         Comma-separated tool blacklist" );
-  println!( "  --max-budget-usd <AMOUNT>          Max API spend in USD for this session" );
-  println!( "  --add-dir <PATH>                   Additional directory Claude may access" );
-  println!( "  --fallback-model <MODEL>           Fallback model when primary is unavailable" );
-  println!( "  --file <PATH>                      Pipe file content to subprocess stdin" );
-  println!( "  --strip-fences                     Strip outermost markdown code fences from stdout" );
-  println!( "  --keep-claudecode                  Preserve CLAUDECODE env var in subprocess (default: removed)" );
-  println!( "  --verbosity <0-5>                  Runner output verbosity level (default: 3)" );
-  println!( "  --output-file <PATH>               Write captured output to file (tee: stdout + file)" );
-  println!( "  --expect <VALS>                    Pipe-separated expected values; mismatch → exit 3 (case-insensitive, trimmed)" );
-  println!( "  --expect-strategy <STRAT>          Mismatch handling: fail (default), retry, default:<VAL>" );
-  println!( "  --max-sessions <N>                 Max concurrent claude sessions before blocking (0=unlimited, default: 30)" );
-  println!( "  --timeout <SECS>                   Kill subprocess after N seconds (0 = unlimited, default: 0)" );
-  println!();
-  println!( "RETRY OPTIONS (3-tier: override > class-specific > fallback):" );
-  println!( "  --retry-override <N>               Force retry count for all error classes (0–255; unset = use per-class)" );
-  println!( "  --retry-override-delay <SECS>      Force delay for all error classes (unset = use per-class)" );
-  println!( "  --retry-default <N>                Fallback retry count for unset classes (0–255, default: 2)" );
-  println!( "  --retry-default-delay <SECS>       Fallback delay for unset classes (default: 30; 0 = immediate)" );
-  println!( "  --retry-on-transient <N>           Transient (rate limit) retry count (default: auto → fallback)" );
-  println!( "  --transient-delay <SECS>           Transient class delay (default: auto → fallback)" );
-  println!( "  --retry-on-account <N>             Account (quota exhausted) retry count (default: auto → fallback)" );
-  println!( "  --account-delay <SECS>             Account class delay (default: auto → fallback)" );
-  println!( "  --retry-on-auth <N>                Auth (credential) retry count (default: auto → fallback)" );
-  println!( "  --auth-delay <SECS>                Auth class delay (default: auto → fallback)" );
-  println!( "  --retry-on-service <N>             Service (API error) retry count (default: auto → fallback)" );
-  println!( "  --service-delay <SECS>             Service class delay (default: auto → fallback)" );
-  println!( "  --retry-on-process <N>             Process (signal/timeout) retry count (default: auto → fallback)" );
-  println!( "  --process-delay <SECS>             Process class delay (default: auto → fallback)" );
-  println!( "  --retry-on-validation <N>          Validation (--expect mismatch) retry count (default: auto → fallback)" );
-  println!( "  --validation-delay <SECS>          Validation class delay (default: auto → fallback)" );
-  println!( "  --retry-on-runner <N>              Runner (infrastructure) retry count (default: auto → fallback)" );
-  println!( "  --runner-delay <SECS>              Runner class delay (default: auto → fallback)" );
-  println!( "  --retry-on-unknown <N>             Unknown error retry count (default: auto → fallback)" );
-  println!( "  --unknown-delay <SECS>             Unknown class delay (default: auto → fallback)" );
-  println!( "  -h, --help                         Show this help" );
-  println!();
-  println!( "CREDENTIAL OPTIONS (isolated, refresh):" );
-  println!( "  --creds <FILE>                     Credentials JSON file (required)" );
-  println!( "  --timeout <SECS>                   Max seconds to wait (default: 30 isolated, 45 refresh)" );
-  println!( "  --trace                            Print creds path, timeout, and claude invocation to stderr" );
+  use cli_fmt::help::*;
+
+  let mut data         = CliHelpData::default();
+  data.binary          = "clr".to_string();
+  data.tagline         = "Execute Claude Code with configurable parameters".to_string();
+  data.usage_lines     = vec!
+  [
+    "clr <command>".to_string(),
+    "clr run [OPTIONS] [<MSG>]".to_string(),
+    "clr ask [OPTIONS] [<MSG>]".to_string(),
+    "clr ps [OPTIONS]".to_string(),
+    "clr kill <PID>".to_string(),
+    "clr tools".to_string(),
+    "clr isolated [OPTIONS]".to_string(),
+    "clr refresh [OPTIONS]".to_string(),
+  ];
+  data.groups          = vec!
+  [
+    CommandGroup
+    {
+      name    : String::new(),
+      entries : vec!
+      [
+        CommandEntry { name : "run".to_string(),      desc : "Execute Claude Code (default mode)".to_string() },
+        CommandEntry { name : "ask".to_string(),      desc : "Semantic alias for run (identical behavior)".to_string() },
+        CommandEntry { name : "isolated".to_string(), desc : "Run with credential-isolated temp HOME".to_string() },
+        CommandEntry { name : "refresh".to_string(),  desc : "Refresh OAuth credentials without a task".to_string() },
+        CommandEntry { name : "ps".to_string(),       desc : "List running Claude Code sessions".to_string() },
+        CommandEntry { name : "kill".to_string(),     desc : "Terminate a Claude Code session by PID".to_string() },
+        CommandEntry { name : "tools".to_string(),    desc : "List all Claude Code built-in tools".to_string() },
+        CommandEntry { name : "help".to_string(),     desc : "Print this help and exit".to_string() },
+      ],
+    },
+  ];
+  data.option_groups   = vec![ runner_option_group(), claude_code_option_group() ];
+  print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
+}
+
+fn runner_option_group() -> cli_fmt::help::OptionGroup
+{
+  use cli_fmt::help::{ OptionEntry, OptionGroup };
+  OptionGroup
+  {
+    name    : "RUNNER OPTIONS".to_string(),
+    entries : vec!
+    [
+      OptionEntry { name : "-p, --print".into(),                    desc : "Non-interactive mode (capture and print output)".into() },
+      OptionEntry { name : "--interactive".into(),                   desc : "Force interactive mode even when a message is given".into() },
+      OptionEntry { name : "--new-session".into(),                   desc : "Start a new session (default: continues previous)".into() },
+      OptionEntry { name : "--no-skip-permissions".into(),           desc : "Disable automatic permission bypass (on by default)".into() },
+      OptionEntry { name : "--no-ultrathink".into(),                 desc : "Disable automatic \"\\n\\nultrathink\" message suffix".into() },
+      OptionEntry { name : "--no-effort-max".into(),                 desc : "Suppress default --effort max injection".into() },
+      OptionEntry { name : "--no-chrome".into(),                     desc : "Suppress default --chrome injection".into() },
+      OptionEntry { name : "--no-persist".into(),                    desc : "Disable session persistence (--no-session-persistence)".into() },
+      OptionEntry { name : "--keep-claudecode".into(),               desc : "Preserve CLAUDECODE env var in subprocess (default: removed)".into() },
+      OptionEntry { name : "--verbose".into(),                       desc : "Enable verbose output".into() },
+      OptionEntry { name : "--verbosity <0-5>".into(),               desc : "Runner output verbosity level (default: 3)".into() },
+      OptionEntry { name : "--dir <PATH>".into(),                    desc : "Working directory".into() },
+      OptionEntry { name : "--subdir <NAME>".into(),                 desc : "Named subdirectory appended to --dir as /-NAME; . = identity".into() },
+      OptionEntry { name : "--session-dir <PATH>".into(),            desc : "Session storage directory".into() },
+      OptionEntry { name : "--dry-run".into(),                       desc : "Print command without executing".into() },
+      OptionEntry { name : "--trace".into(),                         desc : "Print command to stderr then execute (like set -x)".into() },
+      OptionEntry { name : "--file <PATH>".into(),                   desc : "Pipe file content to subprocess stdin".into() },
+      OptionEntry { name : "--strip-fences".into(),                  desc : "Strip outermost markdown code fences from stdout".into() },
+      OptionEntry { name : "--output-file <PATH>".into(),            desc : "Write captured output to file (tee: stdout + file)".into() },
+      OptionEntry { name : "--output-style <MODE>".into(),           desc : "Rendering mode: summary (default) or raw [env: CLR_OUTPUT_STYLE]".into() },
+      OptionEntry { name : "--summary-fields <FIELDS>".into(),       desc : "Summary field selection: minimal, standard, full (default), or comma-separated [env: CLR_SUMMARY_FIELDS]".into() },
+      OptionEntry { name : "--expect <VALS>".into(),                 desc : "Pipe-separated expected values; mismatch → exit 3".into() },
+      OptionEntry { name : "--expect-strategy <STRAT>".into(),       desc : "Mismatch handling: fail (default), retry, default:<VAL>".into() },
+      OptionEntry { name : "--max-sessions <N>".into(),              desc : "Max concurrent sessions before blocking (0=unlimited, default: 30)".into() },
+      OptionEntry { name : "--timeout <SECS>".into(),                desc : "Kill subprocess after N seconds (0 = unlimited, default: 3600)".into() },
+      // Retry tier 1: override
+      OptionEntry { name : "--retry-override <N>".into(),            desc : "Force retry count for all error classes (unset = per-class)".into() },
+      OptionEntry { name : "--retry-override-delay <SECS>".into(),   desc : "Force delay for all error classes (unset = per-class)".into() },
+      // Retry tier 2: class-specific
+      OptionEntry { name : "--retry-on-transient <N>".into(),        desc : "Transient (rate limit) retry count (default: auto → fallback)".into() },
+      OptionEntry { name : "--transient-delay <SECS>".into(),        desc : "Transient class delay (default: auto → fallback)".into() },
+      OptionEntry { name : "--retry-on-account <N>".into(),          desc : "Account (quota exhausted) retry count (default: auto → fallback)".into() },
+      OptionEntry { name : "--account-delay <SECS>".into(),          desc : "Account class delay (default: auto → fallback)".into() },
+      OptionEntry { name : "--retry-on-auth <N>".into(),             desc : "Auth (credential) retry count (default: auto → fallback)".into() },
+      OptionEntry { name : "--auth-delay <SECS>".into(),             desc : "Auth class delay (default: auto → fallback)".into() },
+      OptionEntry { name : "--retry-on-service <N>".into(),          desc : "Service (API error) retry count (default: auto → fallback)".into() },
+      OptionEntry { name : "--service-delay <SECS>".into(),          desc : "Service class delay (default: auto → fallback)".into() },
+      OptionEntry { name : "--retry-on-process <N>".into(),          desc : "Process (signal/timeout) retry count (default: auto → fallback)".into() },
+      OptionEntry { name : "--process-delay <SECS>".into(),          desc : "Process class delay (default: auto → fallback)".into() },
+      OptionEntry { name : "--retry-on-validation <N>".into(),       desc : "Validation (--expect mismatch) retry count (default: auto → fallback)".into() },
+      OptionEntry { name : "--validation-delay <SECS>".into(),       desc : "Validation class delay (default: auto → fallback)".into() },
+      OptionEntry { name : "--retry-on-runner <N>".into(),           desc : "Runner (infrastructure) retry count (default: auto → fallback)".into() },
+      OptionEntry { name : "--runner-delay <SECS>".into(),           desc : "Runner class delay (default: auto → fallback)".into() },
+      OptionEntry { name : "--retry-on-unknown <N>".into(),          desc : "Unknown error retry count (default: auto → fallback)".into() },
+      OptionEntry { name : "--unknown-delay <SECS>".into(),          desc : "Unknown class delay (default: auto → fallback)".into() },
+      // Retry tier 3: fallback
+      OptionEntry { name : "--retry-default <N>".into(),             desc : "Fallback retry count for unset classes (default: 2)".into() },
+      OptionEntry { name : "--retry-default-delay <SECS>".into(),    desc : "Fallback delay for unset classes (default: 30; 0 = immediate)".into() },
+      OptionEntry { name : "-h, --help".into(),                      desc : "Show this help".into() },
+    ],
+  }
+}
+
+fn claude_code_option_group() -> cli_fmt::help::OptionGroup
+{
+  use cli_fmt::help::{ OptionEntry, OptionGroup };
+  OptionGroup
+  {
+    name    : "CLAUDE CODE OPTIONS (forwarded)".to_string(),
+    entries : vec!
+    [
+      OptionEntry { name : "--model <MODEL>".into(),                 desc : "Model to use".into() },
+      OptionEntry { name : "--max-tokens <N>".into(),                desc : "Max output tokens (default: 200000)".into() },
+      OptionEntry { name : "--effort <LEVEL>".into(),                desc : "Reasoning effort: low, medium, high, max (default: max)".into() },
+      OptionEntry { name : "--output-format <FMT>".into(),           desc : "Output format: text, json, stream-json".into() },
+      OptionEntry { name : "--max-turns <N>".into(),                 desc : "Max agentic turns (0 = unlimited)".into() },
+      OptionEntry { name : "--allowed-tools <TOOLS>".into(),         desc : "Comma-separated tool whitelist (e.g. \"Read,Edit\")".into() },
+      OptionEntry { name : "--disallowed-tools <TOOLS>".into(),      desc : "Comma-separated tool blacklist".into() },
+      OptionEntry { name : "--max-budget-usd <AMOUNT>".into(),       desc : "Max API spend in USD for this session".into() },
+      OptionEntry { name : "--add-dir <PATH>".into(),                desc : "Additional directory Claude may access".into() },
+      OptionEntry { name : "--fallback-model <MODEL>".into(),        desc : "Fallback model when primary is unavailable".into() },
+      OptionEntry { name : "--json-schema <SCHEMA>".into(),          desc : "JSON schema for structured output".into() },
+      OptionEntry { name : "--mcp-config <PATH>".into(),             desc : "MCP server config file (repeatable)".into() },
+      OptionEntry { name : "--system-prompt <TEXT>".into(),          desc : "Set system prompt (replaces the default)".into() },
+      OptionEntry { name : "--append-system-prompt <TEXT>".into(),   desc : "Append text to the default system prompt".into() },
+    ],
+  }
 }
 
 /// Print help for the `isolated` subcommand and exit 0.
@@ -250,7 +277,7 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --output-file <PATH>               Write captured output to file (tee: stdout + file)" );
   println!( "  --expect <VALS>                    Pipe-separated expected values; mismatch → exit 3 (case-insensitive, trimmed)" );
   println!( "  --expect-strategy <STRAT>          Mismatch handling: fail (default), retry, default:<VAL>" );
-  println!( "  --timeout <SECS>                   Kill subprocess after N seconds (0 = unlimited, default: 0)" );
+  println!( "  --timeout <SECS>                   Kill subprocess after N seconds (0 = unlimited, default: 3600)" );
   println!( "  --retry-override <N>               Force retry count for all error classes" );
   println!( "  --retry-default <N>                Fallback retry count (default: 2)" );
   println!( "  --retry-on-transient <N>           Transient class retry count (default: auto → fallback)" );

@@ -45,7 +45,7 @@
 | CLR-layer exit codes (EC-1–EC-3) | `exit_code_contract_test.rs` | timeout→exit 4, expect mismatch→exit 3, gate bypass→exit 0 |
 | Retry on Service (EC-1–EC-10, EC-1–EC-7) | `retry_service_test.rs` | `--retry-on-service` and `--service-delay` parse, env var, retry, exhaustion, quota exclusion |
 | Retry on Validation (EC-1–EC-10, EC-1–EC-6) | `retry_validation_test.rs` | `--retry-on-validation` and `--validation-delay` parse, env var, retry, exhaustion, old-flag rejected |
-| Retry on Account (EC-1–EC-8, EC-1–EC-6) | `retry_account_test.rs` | `--retry-on-account` and `--account-delay` parse, env var, retry, exhaustion |
+| Retry on Account (EC-1–EC-11, EC-1–EC-6) | `retry_account_test.rs` | `--retry-on-account` and `--account-delay` parse, env var, retry, exhaustion; EC-10/EC-11 summary-mode diagnostic quality (TSK-235) |
 | Retry on Auth (EC-1–EC-8, EC-1–EC-6) | `retry_auth_test.rs` | `--retry-on-auth` and `--auth-delay` parse, env var, retry, exhaustion |
 | Retry on Process (EC-1–EC-8, EC-1–EC-6) | `retry_process_test.rs` | `--retry-on-process` and `--process-delay` parse, env var, retry, exhaustion |
 | Retry on Runner (EC-1–EC-6, EC-1–EC-6) | `retry_runner_test.rs` | `--retry-on-runner` and `--runner-delay` parse-only (Runner exits before retry loop) |
@@ -115,7 +115,7 @@
 | `retry_transient_test.rs` | `--retry-on-transient` and `--transient-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion/quota-excluded, old-flag rejected (EC-1–EC-10 param 34, EC-1–EC-7 param 35). |
 | `retry_service_test.rs` | `--retry-on-service` and `--service-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion/quota-excluded, old-flag rejected (EC-1–EC-10 param 44, EC-1–EC-7 param 45). |
 | `retry_validation_test.rs` | `--retry-on-validation` and `--validation-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion, old-flag rejected (EC-1–EC-10 param 48, EC-1–EC-6 param 49). |
-| `retry_account_test.rs` | `--retry-on-account` and `--account-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion (EC-1–EC-8 param 40, EC-1–EC-6 param 41). |
+| `retry_account_test.rs` | `--retry-on-account` and `--account-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion, summary-mode diagnostic quality (EC-1–EC-11 param 40, EC-1–EC-6 param 41). |
 | `retry_auth_test.rs` | `--retry-on-auth` and `--auth-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion (EC-1–EC-8 param 42, EC-1–EC-6 param 43). |
 | `retry_process_test.rs` | `--retry-on-process` and `--process-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion (EC-1–EC-8 param 46, EC-1–EC-6 param 47). |
 | `retry_runner_test.rs` | `--retry-on-runner` and `--runner-delay` parse-only: parse, env var, CLI-wins (EC-1–EC-6 param 50, EC-1–EC-6 param 51). Runner exits before retry loop — no integration tests. |

@@ -93,6 +93,9 @@ Two other arg combinations are broken and must not be used:
 - **AC-29**: After `apply_refresh()` completes (regardless of how many accounts were refreshed), `~/.claude/.credentials.json` is byte-identical to its state at `apply_refresh()` entry. Batch refresh must not disrupt the user's live Claude session. Fix for [BUG-221](../../../../../task/claude_profile/bug/221_refresh_account_token_some_branch_clobbers_live_credentials.md).
 - **AC-30**: When `refresh_account_token` returns `None` (OAuth refresh token expired — `run_isolated` exits without writing credentials), `apply_refresh` sets `aq.result = Err("refresh token expired")` before continuing to the next account. This ensures downstream phases (`apply_touch`) see `Err` and skip the account. Setting `Err` is required regardless of the pre-refresh result value — when cache masking produced `Ok(cached_data)`, leaving `aq.result` as `Ok` would allow `apply_touch` to fire a redundant subprocess. Fix for BUG-297.
 - **AC-31**: `should_refresh()` returns `false` for accounts where `aq.is_occupied_elsewhere == true` — another machine is actively using this account (its name appears in that machine's `_active_*` marker file). This guard prevents calling `refresh_account_token()` on an occupied account: a successful refresh writes new `accessToken`/`refreshToken` to disk, immediately invalidating the live session on the other machine. The occupancy guard is checked alongside the ownership guard (`!aq.is_owned`) at the G2 gate in `refresh_predicate.rs`. Fix for BUG-303.
+- **AC-32**: `refresh_account_token()` sets `expiresAt` to `"1"` in the credential JSON passed to `run_isolated`, forcing Claude CLI to treat the access token as expired. The CLI uses the refresh token to obtain a fresh AT+RT pair, rotating the RT on every call. The original stored credential file is NOT modified — only the in-memory copy passed to the subprocess is manipulated. This prevents RT decay: without forced expiry, `run_isolated` with a valid AT returns `credentials=None` (CLI uses AT as-is), and the RT ages silently until it expires server-side.
+- **AC-33**: When `paths` is `Some` and the account being refreshed is the current account, `refresh_account_token()` checks live credentials (`~/.claude/.credentials.json`) against stored credentials before spawning a subprocess. If different (the live Claude Code session already refreshed and rotated the RT), syncs live->store and returns `Some(live_creds)` without spawning `run_isolated`. After `run_isolated` returns `credentials=None`, re-checks live credentials as race recovery — if the live session refreshed between the initial check and the subprocess, uses the live credentials.
+- **AC-34**: All token refresh operations across `claude_profile` MUST go through `refresh_account_token()`. Direct `run_isolated()` calls for credential refresh are forbidden. `apply_post_switch_touch` (previously a direct `run_isolated` call — fire-and-forget, no credential write-back) is routed through `refresh_account_token()`. See [invariant 008](../invariant/008_single_token_refresh_entry.md).
 
 ### Bugs
 
@@ -167,4 +170,22 @@ Two other arg combinations are broken and must not be used:
 |------|--------------|
 | `src/usage/refresh.rs` | `refresh::` param read; retry trigger; calls `account::refresh_account_token()`; expiry derivation; retry fetch |
 | `src/lib.rs` | `refresh::` parameter registration via `register_commands()` |
-| `claude_profile_core/src/account.rs` | `refresh_account_token()` — `read credentials → run_isolated → write credentials → save` lifecycle |
+| `src/usage/api.rs` | `apply_post_switch_touch()` — calls `refresh_account_token()` per AC-34 / invariant 008 |
+| `claude_profile_core/src/account.rs` | `refresh_account_token()` — `read credentials → run_isolated → write credentials → save` lifecycle; sole authorized caller of `run_isolated()` (invariant 008) |
+
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [invariant/008_single_token_refresh_entry.md](../invariant/008_single_token_refresh_entry.md) | Invariant 008: all token refresh through `refresh_account_token()`; AC-32/AC-33/AC-34 implement this invariant |
+
+### Subprocess Docs
+
+| File | Relationship |
+|------|-------------|
+| [subprocess/001_run_isolated_contract.md](../subprocess/001_run_isolated_contract.md) | `run_isolated()` API — signature, isolation mechanism, `IsolatedRunResult`, `RunnerError` |
+| [subprocess/002_credential_writeback.md](../subprocess/002_credential_writeback.md) | Credential write-back protocol — RT rotation, live-file safety, expiry derivation |
+| [subprocess/003_token_refresh_invocation.md](../subprocess/003_token_refresh_invocation.md) | `should_refresh()` predicate and post-refresh actions |
+| [state_machine/002_oauth_token_lifecycle.md](../state_machine/002_oauth_token_lifecycle.md) | Token validity states and transitions |
+| [pitfall/003_credential_sync_pitfalls.md](../pitfall/003_credential_sync_pitfalls.md) | BUG-162/170/208/211/221/310 (credential sync pitfalls) |
+| [pitfall/002_subprocess_integration_pitfalls.md](../pitfall/002_subprocess_integration_pitfalls.md) | BUG-169 (`[]` args broken), BUG-243 (timeout output discard) |

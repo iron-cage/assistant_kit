@@ -5,6 +5,11 @@
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
 | `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 43 |
+| `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 7 |
+| `algorithm/` | Decision algorithm references (model selection, quota classification, sort, approximation) | [algorithm/readme.md](../algorithm/readme.md) | 8 |
+| `subprocess/` | Isolated subprocess contract, credential write-back protocol, and invocation sites | [subprocess/readme.md](../subprocess/readme.md) | 5 |
+| `state_machine/` | Domain lifecycle state machines (account, token, session window, ownership, quota measurement) | [state_machine/readme.md](../state_machine/readme.md) | 5 |
+| `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 6 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](../cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 7 |
 | `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 62 |
@@ -14,7 +19,7 @@
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
 | `cli/command_noun/` | Domain noun documentation (account, token, credentials) | [cli/command_noun/readme.md](../cli/command_noun/readme.md) | 3 |
 | `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, assign, status, unclaim) | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 11 |
-| `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 7 |
+| `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 8 |
 | `research_interactive/` | Investigation findings on Claude binary behavior | [research_interactive/readme.md](../research_interactive/readme.md) | 1 |
 | `tests/docs/cli/command/` | Per-command integration test case documentation | [tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 19 |
 | `tests/docs/cli/command_noun/` | Per-noun test case documentation | [tests/docs/cli/command_noun/readme.md](../../tests/docs/cli/command_noun/readme.md) | 3 |
@@ -24,7 +29,7 @@
 | `tests/docs/cli/type/` | Per-type test case documentation | [tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) | 4 |
 | `tests/docs/cli/user_story/` | Per-story acceptance test documentation | [tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) | 5 |
 | `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 44 |
-| `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 7 |
+| `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 8 |
 
 ## Master Doc Instances Table
 
@@ -185,4 +190,36 @@
 | invariant | 005 | Atomic Account Switching | [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) |
 | invariant | 006 | Parameters Default to Active Context | [invariant/006_param_defaults.md](../invariant/006_param_defaults.md) |
 | invariant | 007 | JSON Storage Format | [invariant/007_json_storage_format.md](../invariant/007_json_storage_format.md) |
+| invariant | 008 | Single Token Refresh Entry Point | [invariant/008_single_token_refresh_entry.md](../invariant/008_single_token_refresh_entry.md) |
 | research_interactive | 001 | Claude Interactive Session Control | [research_interactive/001_claude_interactive_session_control.md](../research_interactive/001_claude_interactive_session_control.md) |
+| schema | 001 | Credential Snapshot (`{name}.credentials.json`) | [schema/001_credentials_json.md](../schema/001_credentials_json.md) |
+| schema | 002 | Account Metadata (`{name}.json`) — unified field table | [schema/002_account_json.md](../schema/002_account_json.md) |
+| schema | 003 | File Topology (`ClaudePaths`) | [schema/003_file_topology.md](../schema/003_file_topology.md) |
+| schema | 004 | Storage Root (`PersistPaths`) | [schema/004_storage_root.md](../schema/004_storage_root.md) |
+| schema | 005 | Active Marker (`_active_{host}_{user}`) | [schema/005_active_marker.md](../schema/005_active_marker.md) |
+| schema | 006 | Session Settings (`~/.claude/settings.json`) | [schema/006_settings_json.md](../schema/006_settings_json.md) |
+| schema | 007 | Claude State (`~/.claude.json`) | [schema/007_claude_json.md](../schema/007_claude_json.md) |
+| algorithm | 001 | Touch Model Selection | [algorithm/001_touch_model_selection.md](../algorithm/001_touch_model_selection.md) |
+| algorithm | 002 | Session Model Override | [algorithm/002_session_model_override.md](../algorithm/002_session_model_override.md) |
+| algorithm | 003 | Quota Status Groups | [algorithm/003_quota_status_groups.md](../algorithm/003_quota_status_groups.md) |
+| algorithm | 004 | Next-Account Eligibility Gates | [algorithm/004_eligibility_gates.md](../algorithm/004_eligibility_gates.md) |
+| algorithm | 005 | Next-Account Positive Selection | [algorithm/005_next_account_selection.md](../algorithm/005_next_account_selection.md) |
+| algorithm | 006 | Quota Polynomial Approximation | [algorithm/006_quota_approximation.md](../algorithm/006_quota_approximation.md) |
+| algorithm | 007 | Sort Strategies | [algorithm/007_sort_strategies.md](../algorithm/007_sort_strategies.md) |
+| algorithm | 008 | Subprocess Effort Resolution | [algorithm/008_subprocess_effort_resolution.md](../algorithm/008_subprocess_effort_resolution.md) |
+| subprocess | 001 | `run_isolated()` Contract | [subprocess/001_run_isolated_contract.md](../subprocess/001_run_isolated_contract.md) |
+| subprocess | 002 | Credential Write-Back Protocol | [subprocess/002_credential_writeback.md](../subprocess/002_credential_writeback.md) |
+| subprocess | 003 | Token Refresh Invocation | [subprocess/003_token_refresh_invocation.md](../subprocess/003_token_refresh_invocation.md) |
+| subprocess | 004 | Session Touch Invocation | [subprocess/004_session_touch_invocation.md](../subprocess/004_session_touch_invocation.md) |
+| subprocess | 005 | Browser Relogin Invocation | [subprocess/005_relogin_invocation.md](../subprocess/005_relogin_invocation.md) |
+| state_machine | 001 | Account Lifecycle | [state_machine/001_account_lifecycle.md](../state_machine/001_account_lifecycle.md) |
+| state_machine | 002 | OAuth Token Lifecycle | [state_machine/002_oauth_token_lifecycle.md](../state_machine/002_oauth_token_lifecycle.md) |
+| state_machine | 003 | Session Window Lifecycle | [state_machine/003_session_window_lifecycle.md](../state_machine/003_session_window_lifecycle.md) |
+| state_machine | 004 | Ownership Lifecycle | [state_machine/004_ownership_lifecycle.md](../state_machine/004_ownership_lifecycle.md) |
+| state_machine | 005 | Quota Measurement Lifecycle | [state_machine/005_quota_measurement_lifecycle.md](../state_machine/005_quota_measurement_lifecycle.md) |
+| pitfall | 001 | Quota Gate Pitfalls | [pitfall/001_quota_gate_pitfalls.md](../pitfall/001_quota_gate_pitfalls.md) |
+| pitfall | 002 | Subprocess Integration Pitfalls | [pitfall/002_subprocess_integration_pitfalls.md](../pitfall/002_subprocess_integration_pitfalls.md) |
+| pitfall | 003 | Credential Sync Pitfalls | [pitfall/003_credential_sync_pitfalls.md](../pitfall/003_credential_sync_pitfalls.md) |
+| pitfall | 004 | Account Identity Pitfalls | [pitfall/004_account_identity_pitfalls.md](../pitfall/004_account_identity_pitfalls.md) |
+| pitfall | 005 | Ownership Gate Pitfalls | [pitfall/005_ownership_gate_pitfalls.md](../pitfall/005_ownership_gate_pitfalls.md) |
+| pitfall | 006 | Model Override Pitfalls | [pitfall/006_model_override_pitfalls.md](../pitfall/006_model_override_pitfalls.md) |

@@ -106,3 +106,9 @@ Similarly, `get_session_model()` MUST be introduced in `claude_profile_core/src/
 |------|--------------|
 | `tests/docs/feature/35_model_command.md` | Feature test spec (FT-01 through FT-12) |
 | `tests/docs/cli/command/17_model.md` | Command-level integration test spec (IT-01 through IT-13) |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [schema/006_settings_json.md](../schema/006_settings_json.md) | `model` field in `~/.claude/settings.json` read by `get_session_model()` and written by `set_session_model()` |

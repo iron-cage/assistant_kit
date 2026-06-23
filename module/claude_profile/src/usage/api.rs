@@ -44,18 +44,16 @@ fn apply_no_color( s : String ) -> String
 #[ derive( Debug ) ]
 pub( crate ) struct TouchCtx
 {
-  /// Raw credentials JSON read from the account credential file before the switch.
-  credentials_json : String,
   /// Pre-fetched quota data used to resolve the subprocess model.
-  quota            : OauthUsageData,
+  quota : OauthUsageData,
 }
 
 #[ cfg( test ) ]
 impl TouchCtx
 {
-  fn for_test( credentials_json : String, quota : claude_quota::OauthUsageData ) -> Self
+  fn for_test( quota : claude_quota::OauthUsageData ) -> Self
   {
-    Self { credentials_json, quota }
+    Self { quota }
   }
 }
 
@@ -226,7 +224,7 @@ pub( crate ) fn pre_switch_touch_ctx(
   //   on any machine; using it as a local subprocess identity oracle is a category error.
   //   Always return NeedTouch; the subprocess (claude --print .) is idempotent.
   if trace { eprintln!( "[trace] account.use  {name}  subprocess: scheduled (idle check removed)" ) }
-  PreSwitchOutcome::NeedTouch( TouchCtx { credentials_json, quota } )
+  PreSwitchOutcome::NeedTouch( TouchCtx { quota } )
 }
 
 /// Spawn an isolated subprocess to activate the idle 5h session window for `name`.
@@ -268,6 +266,10 @@ pub( crate ) fn apply_model_override(
   //   unconditionally for any account without a Sonnet tier.
   // Root cause: None means "tier absent/unknown", not "fully exhausted"; 0.0 < 20.0 always fires.
   // Pitfall: guard override on Some(ref sonnet) — absent tier must never trigger quota-exhaustion logic.
+  // Fix(BUG-311): was one-way (sonnet→opus only); settings.json retained stale "opus" after switching
+  //   to an account with sufficient Sonnet quota — no code wrote "sonnet" back.
+  // Root cause: the else-branch was absent; model state was never reset when quota recovered.
+  // Pitfall: use override_session_model_to_sonnet() to avoid redundant writes when already "sonnet".
   if let Some( ref sonnet ) = quota.seven_day_sonnet
   {
     let sonnet_left = 100.0 - sonnet.utilization;
@@ -286,6 +288,28 @@ pub( crate ) fn apply_model_override(
         }
       }
     }
+    else
+    {
+      let overrode = crate::account::override_session_model_to_sonnet( paths );
+      if overrode && trace
+      {
+        use std::io::Write as _;
+        let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  model override: opus→sonnet (7d(Son) left={sonnet_left:.0}%)" );
+      }
+    }
+  }
+  else
+  {
+    // Sonnet tier absent — write "sonnet" conservatively (absent tier ≠ exhausted).
+    let _ = crate::account::override_session_model_to_sonnet( paths );
+  }
+  // Fix(BUG-312): effortLevel never initialized; footer always omitted effort.
+  // Root cause: set_session_effort() only called in .usage rotate::1 (carry-forward);
+  //   neither .account.use nor plain .usage ever initialized effortLevel in settings.json.
+  // Pitfall: only initialize — never overwrite user-configured effort.
+  if claude_profile_core::account::get_session_effort( paths ).is_none()
+  {
+    claude_profile_core::account::set_session_effort( paths, "low" );
   }
 }
 
@@ -296,13 +320,19 @@ pub( crate ) fn apply_model_override(
 // Root cause: Same as `pre_switch_touch_ctx` — Feature 027 "Out of Scope" deferral.
 // Pitfall: When a function is split across pre/post phases, both halves need the same diagnostic
 //   param — adding trace:: to one without the other leaves half the operation blind.
+// Pitfall: `credential_store` must be `PersistPaths::credential_store()` — NOT `paths.base()`.
+//   `paths.base()` is `~/.claude/` (Claude config dir); the credential store is
+//   `~/.persistent/claude/credential/`. Passing `paths.base()` causes `refresh_account_token`
+//   to silently fail — `{name}.credentials.json` doesn't exist in `~/.claude/`, so
+//   `refresh_token_with_live_path` returns `None` immediately without rotating the RT.
 pub( crate ) fn apply_post_switch_touch(
-  name       : &str,
-  ctx        : TouchCtx,
-  imodel_str : &str,
-  effort_str : &str,
-  trace      : bool,
-  paths      : &crate::ClaudePaths,
+  name             : &str,
+  ctx              : TouchCtx,
+  imodel_str       : &str,
+  effort_str       : &str,
+  trace            : bool,
+  paths            : &crate::ClaudePaths,
+  credential_store : &std::path::Path,
 )
 {
   let imodel = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
@@ -336,14 +366,18 @@ pub( crate ) fn apply_post_switch_touch(
   };
   let effort_label = effort_val.unwrap_or( "(none)" );
   if trace { eprintln!( "[trace] account.use  {name}  model: {model_str}  effort: {effort_label}" ) }
-  let mut args = match effort_val
+  let extra_pre_args = match effort_val
   {
     Some( e ) => vec![ "--effort".to_string(), e.to_string() ],
     None      => vec![],
   };
-  args.push( "--print".to_string() );
-  args.push( ".".to_string() );
-  let _ = claude_runner_core::run_isolated( &ctx.credentials_json, args, 120, model );
+  // AC-34 / Invariant 008: route through refresh_account_token instead of direct run_isolated.
+  // refresh_account_token internally appends ["--print", "."] and applies:
+  //   - expiresAt=1 manipulation (Feature 017 AC-32): forces RT rotation on every call
+  //   - live credential sync for current account (Feature 017 AC-33): avoids redundant subprocess
+  let _ = crate::account::refresh_account_token(
+    name, credential_store, Some( paths ), trace, "account.use", model, &extra_pre_args,
+  );
   // Persist touch timestamp to cache (Feature 033 AC-06).
   claude_profile_core::account::write_cache_string(
     paths.base(), name, "last_touch_at", &claude_profile_core::account::chrono_now_utc(),

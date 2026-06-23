@@ -17,8 +17,8 @@ After `switch_account()` succeeds, `.account.use` fetches quota data for the tar
 2. Fetch quota for the target account from `{credential_store}/{name}.credentials.json` — one HTTP call to `/api/oauth/usage`. If fetch fails (network error, expired token), record failure and continue to step 3.
 3. If `dry::1`: print `[dry-run] would switch to '{name}'` (no files changed, no subprocess).
 4. `switch_account(name)` — atomic credential rotation (credentials, active marker, best-effort `oauthAccount` patch); model snapshot restore from `{name}.json` into `~/.claude/settings.json`.
-4b. If quota fetch succeeded (step 2): check `seven_day_sonnet` utilization; if `seven_day_sonnet` is absent (`None`) this step is a no-op — absent tier is treated as unknown, not exhausted (Fix BUG-300). If present and remaining < 15% and restored model is Sonnet (any form: `"sonnet"`, `"claude-sonnet-4-6"`, or absent) **or** is full-ID Opus (`"claude-opus-4-6"` — normalized to `"opus"` shorthand per BUG-286 fix), overwrite `~/.claude/settings.json` model with `"opus"` (BUG-225 fix; BUG-257 alias fix; BUG-286 normalization fix). When `touch_ctx` is absent (fetch failed — see BUG-226 limitation), this step is skipped and the snapshot model is installed as-is.
-5. If quota fetch succeeded (step 2): call `resolve_model(quota, imodel_param)` → `IsolatedModel`; call `resolve_effort(&model, effort_param)` → `Option<&str>`; spawn `run_isolated()` with `["--print", "."]` plus optional `--model` and `--effort` flags. Subprocess is idempotent — exits immediately if account is already active. After subprocess completes: re-fetch quota via `fetch_oauth_usage` unconditionally using the saved OAuth token (best-effort; failure does not abort the switch). The re-fetch ensures the account's session state is visible to any subsequent command (e.g., `.usage`) that also evaluates quota timers. (Fix(BUG-285): idle check removed; `AlreadyActive` variant removed from `PreSwitchOutcome`. Fix(BUG-288): post-subprocess re-fetch added.)
+4b. If quota fetch succeeded (step 2): call `apply_model_override()` which is now bidirectional (Fix BUG-311). When `seven_day_sonnet` is `Some` and remaining < 15%: overwrite `~/.claude/settings.json` model with `"opus"` (Fix BUG-225; alias fix BUG-257; normalization fix BUG-286). When `seven_day_sonnet` is `Some` and remaining >= 15%: overwrite model with `"sonnet"` if currently in any `"opus"` form (Fix BUG-311). When `seven_day_sonnet` is absent (`None`): overwrite model with `"sonnet"` conservatively — absent tier is treated as unknown, not exhausted (Fix BUG-300; conservative sonnet restore extended by Fix BUG-311). When `touch_ctx` is absent (fetch failed — see BUG-226 limitation), this step is skipped and the snapshot model is installed as-is.
+5. If quota fetch succeeded (step 2): call `resolve_model(quota, imodel_param)` → `IsolatedModel`; call `resolve_effort(&model, effort_param)` → `Option<&str>`; call `claude_profile_core::account::refresh_account_token()` with the resolved model and effort args (Feature 017 AC-34 / invariant 008) — which internally applies `expiresAt=1` manipulation (Feature 017 AC-32, RT rotation) and live credential sync for the current account (Feature 017 AC-33, race safety), then invokes `run_isolated` with `["--print", "."]`. The subprocess is idempotent — exits immediately if account is already active. After subprocess completes: re-fetch quota via `fetch_oauth_usage` unconditionally using the saved OAuth token (best-effort; failure does not abort the switch). The re-fetch ensures the account's session state is visible to any subsequent command (e.g., `.usage`) that also evaluates quota timers. (Fix(BUG-285): idle check removed; `AlreadyActive` variant removed from `PreSwitchOutcome`. Fix(BUG-288): post-subprocess re-fetch added.)
 
 **When `touch::0`:** Steps 1, 4, 5 only. No quota fetch, no subprocess. Pure credential rotation (pre-Feature-027 behavior).
 
@@ -75,8 +75,8 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 - **AC-15**: When `trace::1` and `touch::0`: no `[trace] account.use` lines emitted — no quota fetch operations are performed on the `touch::0` path.
 - **AC-16**: `trace::` (Kind::String, default `0`) is registered on `.account.use`; `trace::bad` exits 1 with stderr naming `0`, `1`, `false`, `true`.
 - **AC-17**: When `touch::1` (default) and the quota fetch fails (returns Err) AND the target account's token is locally expired (current time > `expiresAt` from `{credential_store}/{name}.credentials.json`) AND `refresh::1` (default): first calls `attempt_expired_token_refresh()`. If refresh succeeds: re-probes touch context with fresh token; continues with the switch (exits 0 on success). If refresh fails: exits 3 with `account credentials expired and refresh failed: {name} (expired {N}h {M}m ago)` on stderr; `switch_account()` is NOT called. When `trace::1`: emits `expired({N}h {M}m ago) → attempting refresh` → then `refresh OK — re-probing touch context` or `refresh failed → refused`. (Fix for BUG-213; extended by BUG-230.)
-- **AC-18**: When quota fetch succeeded (step 2) and `seven_day_sonnet` is `Some` and its remaining quota < 15% and the just-restored session model contains `"sonnet"` (matches both shorthand `"sonnet"` and full ID `"claude-sonnet-4-6"`) or is absent or equals `"claude-opus-4-6"` (full-ID opus normalized to `"opus"` shorthand): overwrites `~/.claude/settings.json` model with `"opus"` before the subprocess step. When `seven_day_sonnet` is absent (`None`), this criterion does not fire — absent tier is treated as unknown, not exhausted (Fix BUG-300). (Fix for BUG-225; alias fix for BUG-257; full-ID normalization fix for BUG-286.)
-- **AC-19**: When `trace::1` and the model override fires (AC-18): emits `[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={N}%)` before the `model:` line. Omitted when override does not fire (model was already `"opus"` shorthand, threshold not met, or quota fetch failed).
+- **AC-18**: When quota fetch succeeded (step 2), `apply_model_override()` runs bidirectionally before the subprocess step (Fix BUG-311). (a) When `seven_day_sonnet` is `Some` and remaining < 15%: if session model contains `"sonnet"` (both shorthand and full-ID `"claude-sonnet-4-6"`) or is absent or equals full-ID `"claude-opus-4-6"`, overwrites model with `"opus"` shorthand. (Fix BUG-225; alias fix BUG-257; normalization fix BUG-286.) (b) When `seven_day_sonnet` is `Some` and remaining >= 15%: if session model is any `"opus"` form (shorthand, full-ID, or empty), overwrites model with `"sonnet"` — restores Sonnet when quota has recovered (Fix BUG-311). (c) When `seven_day_sonnet` is absent (`None`): writes `"sonnet"` conservatively if model is any `"opus"` form — absent tier is not exhausted (Fix BUG-300; conservative restore extended by Fix BUG-311). `override_session_model_to_sonnet()` is a no-op when model is already `"sonnet"` shorthand.
+- **AC-19**: When `trace::1` and the model override fires (AC-18): emits `[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={N}%)` before the `model:` line when upgrading to Opus. Emits `[trace] account.use  {name}  model override: opus→sonnet (7d(Son) left={N}%)` when restoring to Sonnet (Sonnet tier present and left >= 15%, Fix BUG-311). Omitted when no model change occurs (model already correct, tier absent, or quota fetch failed).
 - **AC-20**: When `touch::1` (default) and the quota fetch fails AND the target token is locally expired AND `refresh::0`: exits 3 immediately with `account credentials expired: {name} (expired {N}h {M}m ago)` on stderr; no refresh attempt is made. When `trace::1`: emits `expired({N}h {M}m ago) → refused (refresh::0)`. (Fix for BUG-230.)
 - **AC-21**: After the `run_isolated` subprocess completes, `apply_post_switch_touch` re-fetches quota for the switched-to account using its saved OAuth token (`fetch_oauth_usage`). The re-fetch is best-effort (non-aborting) — it fires regardless of whether the subprocess returned new credentials, and silently skips on any failure (unreadable credential file, missing `accessToken`, or HTTP error). On success, the in-memory quota result reflects the post-subprocess state, so any subsequent `.usage touch` call will see the active `resets_at` values and skip redundant subprocess spawning. On failure, the pre-subprocess quota data remains; the switch and subprocess are not rolled back. This mirrors `apply_touch` AC-03 in Feature 024. Fix(BUG-288): absence of this re-fetch caused `.usage touch` to see stale pre-subprocess quota (`resets_at = None`) and spawn a redundant second subprocess for the just-switched account.
 - **Limitation (BUG-226)**: When the quota fetch returns 429 (rate-limited) or any other error, quota data is unavailable and the quota-aware model upgrade (AC-18) cannot fire. The snapshot model restored by `switch_account()` is installed as-is — potentially leaving the session on Sonnet even when Sonnet quota is exhausted. No workaround exists at the `.account.use` layer; the user must manually override via `imodel::opus`.
@@ -92,6 +92,7 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 | `task/claude_profile/bug/286_switch_account_model_id_not_normalized_to_shorthand.md` | BUG-286 🟢 Fixed (TSK-261): `override_session_model_to_opus` gate extended to match `"claude-opus-4-6"` (full-ID opus) in addition to Sonnet forms; normalized to `"opus"` shorthand when 7d(Son) < 15% — see AC-18 |
 | `task/claude_profile/bug/288_account_use_touch_not_confirmed_usage_double_subprocess.md` | BUG-288 🟢 Fixed (Fix A): `apply_post_switch_touch` now re-fetches quota post-subprocess via `fetch_oauth_usage` and persists via `write_quota_cache(paths.base(), name, h5, d7, sn)` — AC-21 satisfied; subsequent `.usage touch` sees updated `resets_at` and skips the redundant subprocess. Fix B (`touch_idle` read site in `apply_touch`) deferred to follow-on task. |
 | `task/claude_profile/bug/300_model_override_none_sonnet_triggers_opus.md` | BUG-300 ✅ Fixed (TSK-302): `apply_model_override()` used `map_or(0.0, ...)` on `quota.seven_day_sonnet`; when `None`, returned 0.0 < 20.0 → Opus override fired unconditionally for accounts without a Sonnet tier. Fix: `if let Some(ref sonnet) = quota.seven_day_sonnet` guard at `api.rs:267`; `mre_bug300_model_override_absent_sonnet_no_override` added to `api_tests.rs` |
+| `task/claude_profile/bug/311_model_override_one_way_ratchet.md` | BUG-311 ✅ Fixed (2026-06-23): `apply_model_override()` was one-way — only wrote `"opus"` when exhausted; no code wrote `"sonnet"` back when quota recovered. Settings.json retained stale `"opus"` after switching to an account with sufficient Sonnet quota. Fix: added `override_session_model_to_sonnet()` in `claude_profile_core`; added else-branch (sonnet-sufficient) + tier-absent else to `apply_model_override()` (AC-18, AC-19). |
 
 ### Commands
 
@@ -103,7 +104,14 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 
 | File | Relationship |
 |------|--------------|
-| `claude_runner_core` | `run_isolated()`, `IsolatedModel` — subprocess execution |
+| `claude_runner_core` | `run_isolated()`, `IsolatedModel` — subprocess execution (invoked internally by `refresh_account_token`) |
+| `claude_profile_core` | `refresh_account_token()` — single token refresh entry point (invariant 008) |
+
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [invariant/008_single_token_refresh_entry.md](../invariant/008_single_token_refresh_entry.md) | Invariant 008: all token refresh through `refresh_account_token()` — AC-34 routes `apply_post_switch_touch` through this entry point (TSK-320) |
 
 ### Features
 
@@ -136,3 +144,23 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 | `src/commands/account_ops.rs` | `account_use_routine()` — adds quota fetch + subprocess call after credential rotation |
 | `src/lib.rs` | `touch::`, `imodel::`, `effort::`, `trace::` parameter registration on `.account.use` |
 | `src/usage/subprocess.rs`, `src/usage/api.rs` | `resolve_model()`, `resolve_effort()` reused from Feature 026; new: `TouchCtx`, `validate_imodel_str()`, `validate_effort_str()`, `pre_switch_touch_ctx()`, `apply_post_switch_touch()`, `apply_model_override()` |
+| `claude_profile_core/src/account.rs` | `refresh_account_token()` — invoked by `apply_post_switch_touch()` per Feature 017 AC-34 / invariant 008 |
+
+### Algorithm Docs
+
+| File | Relationship |
+|------|-------------|
+| [algorithm/001_touch_model_selection.md](../algorithm/001_touch_model_selection.md) | `resolve_model()` decision table — selects Sonnet or Haiku for post-switch subprocess |
+| [algorithm/002_session_model_override.md](../algorithm/002_session_model_override.md) | `apply_model_override()` bidirectional logic — Sonnet/Opus written to `settings.json` based on quota |
+
+### Subprocess Docs
+
+| File | Relationship |
+|------|-------------|
+| [subprocess/004_session_touch_invocation.md](../subprocess/004_session_touch_invocation.md) | `apply_touch()` trigger conditions and skip-reason trace codes — invoked via `refresh_account_token()` in step 5 |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [schema/006_settings_json.md](../schema/006_settings_json.md) | `model` and `effortLevel` fields written by `apply_model_override()` in step 4b |

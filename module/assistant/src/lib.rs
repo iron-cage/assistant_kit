@@ -119,11 +119,10 @@ mod cli
   {
     use cli_fmt::help::*;
 
-    let data = CliHelpData
-    {
-      binary  : binary.to_string(),
-      tagline : "Claude Code super-app: manage versions, accounts, assets, storage, and processes.".to_string(),
-      groups  : vec!
+    let mut data    = CliHelpData::default();
+    data.binary     = binary.to_string();
+    data.tagline    = "Claude Code super-app: manage versions, accounts, assets, storage, and processes.".to_string();
+    data.groups     = vec!
       [
         CommandGroup
         {
@@ -222,8 +221,8 @@ mod cli
             CommandEntry { name : ".claude.help".to_string(), desc : "Show Claude Code built-in help".to_string() },
           ],
         },
-      ],
-      options : vec!
+      ];
+    data.options = vec!
       [
         OptionEntry { name : "kind::KIND".to_string(),   desc : "Artifact kind filter".to_string() },
         OptionEntry { name : "name::NAME".to_string(),   desc : "Artifact or account name".to_string() },
@@ -232,16 +231,15 @@ mod cli
         OptionEntry { name : "project::ID".to_string(),  desc : "Target project identifier".to_string() },
         OptionEntry { name : "limit::N".to_string(),     desc : "Maximum entries to return".to_string() },
         OptionEntry { name : "query::TEXT".to_string(),  desc : "Search query string".to_string() },
-      ],
-      examples : vec!
+      ];
+    data.examples = vec!
       [
         ExampleEntry { invocation : format!( "{binary} .status" ),                            desc : None },
         ExampleEntry { invocation : format!( "{binary} .version.show" ),                      desc : None },
         ExampleEntry { invocation : format!( "{binary} .accounts" ),                          desc : None },
         ExampleEntry { invocation : format!( "{binary} .list kind::rule" ),                   desc : None },
         ExampleEntry { invocation : format!( "{binary} .search query::\"error handling\"" ),  desc : None },
-      ],
-    };
+      ];
     print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
   }
 

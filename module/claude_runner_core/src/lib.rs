@@ -84,5 +84,12 @@ pub use crate::isolated::{ IsolatedModel, IsolatedRunResult, RunnerError, ISOLAT
 pub use crate::types::{ ActionMode, EffortLevel, ErrorKind, ExecutionOutput, InputFormat, LogLevel, OutputFormat, PermissionMode };
 pub use crate::session_dir::{ SessionManager, Strategy };
 
+/// Re-export of [`crate::isolated::run_isolated`].
+///
+/// # Warning
+///
+/// Do NOT call `run_isolated()` directly for credential refresh.
+/// Use `claude_profile_core::account::refresh_account_token()` instead.
+/// See invariant 008: `claude_profile/docs/invariant/008_single_token_refresh_entry.md`.
 #[ cfg( feature = "enabled" ) ]
 pub use crate::isolated::run_isolated;

@@ -98,6 +98,16 @@ fn count_permission_denials( json : &str ) -> u64
   ( inner.matches( "},{" ).count() + 1 ) as u64
 }
 
+/// Extract the `"result"` field from a CLR JSON envelope.
+///
+/// Returns `Some(text)` when the envelope contains a non-null `"result"` string,
+/// `None` otherwise.  Used by `first_message()` to avoid showing raw JSON blobs
+/// in retry diagnostic messages.
+pub( super ) fn extract_result_text( json : &str ) -> Option< String >
+{
+  extract_str( json, "result" )
+}
+
 // ── Field constants ──────────────────────────────────────────────────────────────
 
 /// All 32 renderable CLR envelope fields in canonical order.

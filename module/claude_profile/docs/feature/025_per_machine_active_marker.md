@@ -13,15 +13,7 @@
 
 Previously `switch_account()` and `save()` wrote a single shared `_active` file to the credential store. In a multi-machine setup where the credential store is version-controlled, every account switch on any machine produced a git modification — causing noise and implicit conflicts.
 
-The new design writes `_active_{hostname}_{user}` instead:
-
-- `hostname`: `$HOSTNAME` env var; falls back to `/etc/hostname`; falls back to `"local"`.
-- `user`: `$USER` env var; falls back to `$USERNAME`; falls back to `"user"`.
-- Both components are sanitized: only alphanumeric, `-`, and `.` are kept; all other characters become `_`.
-
-Example: machine `w003` logged in as `user1` → marker file is `_active_w003_user1`.
-
-The `.gitignore` pattern `_active_*` excludes all per-machine marker files from version control. Each machine is independent — switching on `w003` never affects `w004`.
+The new design writes `_active_{hostname}_{user}` instead. Filename derivation, sanitization rules, and `.gitignore` convention are documented in [schema/005_active_marker.md](../schema/005_active_marker.md).
 
 `active_marker_filename()` is the single source of truth for the marker filename. All reads and writes go through this function; no caller hard-codes `"_active"`.
 
@@ -69,3 +61,10 @@ The `.gitignore` pattern `_active_*` excludes all per-machine marker files from 
 |------|--------------|
 | `tests/cli/account_mutations_test.rs` (aw16, aw17) | aw16: exact-local-part wins over prefix; aw17: no exact match falls through to ambiguous |
 | `module/claude_profile_core/tests/account_test.rs` | FT-11: other_machines_active returns others' names; FT-12: returns empty HashSet when only own marker or empty store |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [schema/005_active_marker.md](../schema/005_active_marker.md) | Marker filename derivation, content format, and `.gitignore` convention — extracted from this feature |
+| [pitfall/004_account_identity_pitfalls.md](../pitfall/004_account_identity_pitfalls.md) | BUG-308 (test fixture collision), BUG-212 (stale marker as name source) |

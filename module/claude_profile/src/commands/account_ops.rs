@@ -118,7 +118,7 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   {
     crate::usage::PreSwitchOutcome::NeedTouch( ctx ) =>
     {
-      crate::usage::apply_post_switch_touch( &name, ctx, &imodel_str, &effort_str, trace, &paths );
+      crate::usage::apply_post_switch_touch( &name, ctx, &imodel_str, &effort_str, trace, &paths, &credential_store );
     }
     crate::usage::PreSwitchOutcome::Unavailable => {}
   }

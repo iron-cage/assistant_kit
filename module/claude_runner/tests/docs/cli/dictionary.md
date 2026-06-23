@@ -9,7 +9,7 @@ Term accuracy and completeness checks for the CLI dictionary at
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| DT-1 | Commands section lists all 5 subcommands | Completeness |
+| DT-1 | Commands section lists all 8 subcommands | Completeness |
 | DT-2 | Modes section lists all 10 behavioral modes | Completeness |
 | DT-3 | `help` canonical form → `clr help` exits 0 with usage | Accuracy |
 | DT-4 | `dry-run` mode definition → no subprocess spawned | Accuracy |
@@ -27,11 +27,11 @@ Term accuracy and completeness checks for the CLI dictionary at
 
 ---
 
-### DT-1: Commands section lists all 5 subcommands
+### DT-1: Commands section lists all 8 subcommands
 
 - **Given:** `docs/cli/dictionary.md` Commands section
 - **When:** inspect entries in the Commands table
-- **Then:** exactly 5 entries present: `run`, `isolated`, `refresh`, `ask`, `help`; no entry missing; no extra entries; each name matches the corresponding file under `docs/cli/command/`
+- **Then:** exactly 8 entries present: `run`, `ask`, `isolated`, `refresh`, `ps`, `kill`, `tools`, `help`; no entry missing; no extra entries; each name matches the corresponding file under `docs/cli/command/`
 - **Exit:** n/a (static doc check)
 - **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [command/](../../../docs/cli/command/readme.md)
 

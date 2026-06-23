@@ -1,3 +1,4 @@
+#![ cfg( unix ) ]
 #![ allow( clippy::doc_markdown ) ] // test doc comments use code identifiers in prose
 //! `--timeout` (run/ask) Integration Tests
 //!
@@ -127,7 +128,7 @@ fn ec5_timeout_cli_wins_over_env()
 
 // ── EC-6: CLR_TIMEOUT=invalid → silently ignored ─────────────────────────────
 
-/// EC-6: invalid `CLR_TIMEOUT` silently ignored; default 0 (unlimited) used.
+/// EC-6: invalid `CLR_TIMEOUT` silently ignored; default 3600s watchdog applied for run/ask print-mode; dry-run exits before timeout fires.
 #[ test ]
 fn ec6_clr_timeout_invalid_ignored()
 {

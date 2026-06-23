@@ -118,29 +118,27 @@ pub( super ) fn print_usage( binary : &str )
   acct_entries.append( &mut acct_extra );
   info_entries.append( &mut info_extra );
 
-  let data = CliHelpData
-  {
-    binary  : binary.to_string(),
-    tagline : "Manage Claude Code account credentials and token state.".to_string(),
-    groups  : vec!
-    [
-      CommandGroup { name : "Account management".to_string(), entries : acct_entries },
-      CommandGroup { name : "Status & info".to_string(),      entries : info_entries },
-    ],
-    options  : vec!
-    [
-      OptionEntry { name : "format::text|json".to_string(), desc : "Output format (default: text)".to_string() },
-      OptionEntry { name : "dry::bool".to_string(),         desc : "Dry-run preview (no changes)".to_string()  },
-      OptionEntry { name : "name::EMAIL".to_string(),       desc : "Account name".to_string()                  },
-    ],
-    examples : vec!
-    [
-      ExampleEntry { invocation : format!( "{binary} .accounts" ),                   desc : None },
-      ExampleEntry { invocation : format!( "{binary} .account.use alice@acme.com" ), desc : None },
-      ExampleEntry { invocation : format!( "{binary} .usage" ),                      desc : None },
-      ExampleEntry { invocation : format!( "{binary} .credentials.status" ),         desc : None },
-    ],
-  };
+  let mut data    = CliHelpData::default();
+  data.binary     = binary.to_string();
+  data.tagline    = "Manage Claude Code account credentials and token state.".to_string();
+  data.groups     = vec!
+  [
+    CommandGroup { name : "Account management".to_string(), entries : acct_entries },
+    CommandGroup { name : "Status & info".to_string(),      entries : info_entries },
+  ];
+  data.options    = vec!
+  [
+    OptionEntry { name : "format::text|json".to_string(), desc : "Output format (default: text)".to_string() },
+    OptionEntry { name : "dry::bool".to_string(),         desc : "Dry-run preview (no changes)".to_string()  },
+    OptionEntry { name : "name::EMAIL".to_string(),       desc : "Account name".to_string()                  },
+  ];
+  data.examples   = vec!
+  [
+    ExampleEntry { invocation : format!( "{binary} .accounts" ),                   desc : None },
+    ExampleEntry { invocation : format!( "{binary} .account.use alice@acme.com" ), desc : None },
+    ExampleEntry { invocation : format!( "{binary} .usage" ),                      desc : None },
+    ExampleEntry { invocation : format!( "{binary} .credentials.status" ),         desc : None },
+  ];
   print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
 }
 

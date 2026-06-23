@@ -187,7 +187,7 @@ default-features = false
 
 [workspace.dependencies.cli_fmt]
 # Published companion crate (crates.io: cli_fmt ^0.8). Path removed — use registry version.
-version = "^0.8"
+version = "^0.9"
 default-features = false
 features = [ "cli_help_template" ]
 

@@ -136,3 +136,11 @@ This prevents quadratic divergence (a2 > 0 shooting to infinity).
 | `src/usage/approx.rs` | Approximation algorithm — polynomial fit, reset filtering, clamping, tangent-line continuation |
 | `src/usage/fetch.rs` | History append on success; approximation call on cache-fallback path |
 | `claude_profile_core/src/account.rs` | Storage layer — `write_history_entry()`, `read_history()`, ring buffer management |
+
+### Algorithm / State Machine Docs
+
+| File | Relationship |
+|------|-------------|
+| [algorithm/006_quota_approximation.md](../algorithm/006_quota_approximation.md) | Polynomial approximation — degree selection, Cramer 3×3, reset filter, clamping, tangent continuation |
+| [state_machine/005_quota_measurement_lifecycle.md](../state_machine/005_quota_measurement_lifecycle.md) | Ring buffer fill states and approximation readiness progression |
+| [schema/002_account_json.md](../schema/002_account_json.md) | `history` array schema in `{name}.json` |

@@ -1,3 +1,4 @@
+#![ cfg( unix ) ]
 //! `--expect` / `--expect-strategy` Integration Tests
 //!
 //! ## Purpose

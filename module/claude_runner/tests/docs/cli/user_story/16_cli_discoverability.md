@@ -33,7 +33,7 @@
 
 - **Given:** No prior configuration
 - **When:** `clr help`
-- **Then:** Output lists all 5 subcommands: run, isolated, refresh, ask, help; available flags shown with short descriptions
+- **Then:** Output lists all 8 subcommands: run, ask, isolated, refresh, ps, kill, tools, help; available flags shown with short descriptions in RUNNER OPTIONS and CLAUDE CODE OPTIONS (forwarded) sections
 - **Exit:** 0
 
 ### US-4: no side effects

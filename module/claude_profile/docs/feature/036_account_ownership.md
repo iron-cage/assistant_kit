@@ -143,3 +143,11 @@ An account is "owned by this machine" when: (a) owner is empty or absent (no enf
 | `claude_profile_core/src/account.rs` | `save()` with `owner: Option<&str>` — writes when `Some`, preserves when `None`; `current_identity()`; `read_owner()`; `is_owned()`; `write_owner()` — used by `account_unclaim_routine()` for direct owner writes |
 | `src/commands/account_relogin.rs` | G7: `account_relogin_routine()` — ownership guard before 6-step procedure |
 | `src/usage/types.rs` | `AccountQuota.is_owned: bool` field |
+
+### Schema / State Machine / Pitfall Docs
+
+| File | Relationship |
+|------|-------------|
+| [schema/002_account_json.md](../schema/002_account_json.md) | `owner` field in `{name}.json` |
+| [state_machine/004_ownership_lifecycle.md](../state_machine/004_ownership_lifecycle.md) | Ownership states: unclaimed → owned_here → owned_elsewhere |
+| [pitfall/005_ownership_gate_pitfalls.md](../pitfall/005_ownership_gate_pitfalls.md) | BUG-302/303/305/306 — missing `is_occupied_elsewhere` guards |

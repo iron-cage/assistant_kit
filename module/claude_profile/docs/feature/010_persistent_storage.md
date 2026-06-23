@@ -9,25 +9,7 @@
 
 ### Design
 
-`claude_profile` must expose a `PersistPaths` type that resolves a user-controlled persistent storage root from environment variables using stdlib only (no third-party crates).
-
-**Resolution chain:**
-
-1. Try `$PRO` — accepted only if set **and** points to an existing directory on disk.
-   - If `$PRO` is set but points to a file or non-existent path → silently skip, continue to step 2.
-2. Fall back to `$HOME` (Linux/macOS) or `$USERPROFILE` (Windows).
-3. Compute paths under `.persistent/`:
-   - Base path: `{root}/.persistent/claude_profile/`
-   - Credential store: `{root}/.persistent/claude/credential/`
-4. Create directories on first use via `create_dir_all` (idempotent).
-
-**Error condition:** If both `$PRO`/`$HOME`/`$USERPROFILE` are unset → return error.
-
-**`PersistPaths::base()`** returns the resolved `PathBuf` to `{root}/.persistent/claude_profile/`.
-
-**`PersistPaths::credential_store()`** returns the resolved `PathBuf` to `{root}/.persistent/claude/credential/`.
-
-**`ensure_exists()`** creates the base directory (idempotent — no error if already present).
+`claude_profile` must expose a `PersistPaths` type that resolves a user-controlled persistent storage root from environment variables using stdlib only (no third-party crates). The resolution chain, path methods, and error conditions are documented in [schema/004_storage_root.md](../schema/004_storage_root.md).
 
 ### Acceptance Criteria
 
@@ -65,3 +47,9 @@
 | `tests/cli/persist_test.rs::p16` | `credential_store()` under `$PRO` — path starts with `$PRO` (AC-06) |
 | `tests/cli/persist_test.rs::p17` | `credential_store()` path ends with `.persistent/claude/credential` under `$PRO` (AC-06) |
 | `tests/cli/persist_test.rs::p18` | `credential_store()` path ends with `.persistent/claude/credential` under `$HOME` (AC-07) |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [schema/004_storage_root.md](../schema/004_storage_root.md) | Resolution chain and `PersistPaths` API reference — extracted from this feature |

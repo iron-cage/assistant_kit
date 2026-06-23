@@ -14,6 +14,12 @@ Integration test planning for help output. See [command/04_help.md](../../../../
 | IT-6 | `--help` output goes to stdout; stderr is empty | Output Stream |
 | IT-7 | `-h` output is byte-identical to `--help` output | Alias |
 | IT-8 | Help output is stable across repeated invocations | Stability |
+| EC-01 | stdout contains `"RUNNER OPTIONS:"` section header | Section Split |
+| EC-02 | stdout contains `"CLAUDE CODE OPTIONS (forwarded):"` section header | Section Split |
+| EC-03 | exactly 8 lines start with `"  clr "` (usage forms) | Section Split |
+| EC-04 | stdout contains `"Commands:"` section | Section Split |
+| EC-05 | stdout contains `--model`, `--timeout`, `--max-sessions` | Section Split |
+| EC-06 | stdout does NOT contain `"\nOPTIONS:\n"` as standalone section header | Section Split |
 
 ## Test Coverage Summary
 
@@ -23,15 +29,16 @@ Integration test planning for help output. See [command/04_help.md](../../../../
 - Override: 2 tests
 - Output Stream: 1 test
 - Stability: 1 test
+- Section Split: 6 tests (EC-01–EC-06, `cli_args_ext_test.rs`)
 
-**Total:** 8 tests
+**Total:** 14 tests
 
 ---
 
 ### IT-1: `clr --help` → help output, exit 0
 
 - **Command:** `clr --help`
-- **Expected behavior:** Contains "USAGE:", "OPTIONS:", known flags
+- **Expected behavior:** Contains "Commands:", "RUNNER OPTIONS:", "CLAUDE CODE OPTIONS (forwarded):", known flags
 - **Exit:** 0
 - **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
 
@@ -97,3 +104,57 @@ Integration test planning for help output. See [command/04_help.md](../../../../
 - **Expected behavior:** all 3 stdout captures are byte-identical
 - **Exit:** 0
 - **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+
+---
+
+### EC-01: stdout contains `"RUNNER OPTIONS:"` section header
+
+- **Command:** `clr --help`
+- **Expected behavior:** stdout contains the string `"RUNNER OPTIONS:"`
+- **Exit:** 0
+- **Source:** `tests/cli_args_ext_test.rs::ec01_help_contains_runner_options_section`
+
+---
+
+### EC-02: stdout contains `"CLAUDE CODE OPTIONS (forwarded):"` section header
+
+- **Command:** `clr --help`
+- **Expected behavior:** stdout contains the string `"CLAUDE CODE OPTIONS (forwarded):"`
+- **Exit:** 0
+- **Source:** `tests/cli_args_ext_test.rs::ec02_help_contains_claude_code_options_section`
+
+---
+
+### EC-03: exactly 8 lines start with `"  clr "` (usage forms)
+
+- **Command:** `clr --help`
+- **Expected behavior:** splitting stdout by newline and counting lines that start with `"  clr "` (two-space indent) yields exactly 8
+- **Exit:** 0
+- **Source:** `tests/cli_args_ext_test.rs::ec03_help_has_eight_usage_forms`
+
+---
+
+### EC-04: stdout contains `"Commands:"` section
+
+- **Command:** `clr --help`
+- **Expected behavior:** stdout contains the string `"Commands:"`
+- **Exit:** 0
+- **Source:** `tests/cli_args_ext_test.rs::ec04_help_contains_commands_section`
+
+---
+
+### EC-05: stdout contains `--model`, `--timeout`, `--max-sessions`
+
+- **Command:** `clr --help`
+- **Expected behavior:** stdout contains `"--model"`, `"--timeout"`, and `"--max-sessions"` (regression: rewrite preserves all option names across both groups)
+- **Exit:** 0
+- **Source:** `tests/cli_args_ext_test.rs::ec05_help_contains_key_flags_across_groups`
+
+---
+
+### EC-06: stdout does NOT contain `"\nOPTIONS:\n"` as standalone section header
+
+- **Command:** `clr --help`
+- **Expected behavior:** the old flat `OPTIONS:` section header is absent; it has been replaced by the named option groups `RUNNER OPTIONS:` and `CLAUDE CODE OPTIONS (forwarded):`
+- **Exit:** 0
+- **Source:** `tests/cli_args_ext_test.rs::ec06_help_no_standalone_options_header`
