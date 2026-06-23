@@ -141,6 +141,7 @@ render results as table
 | File | Relationship |
 |------|--------------|
 | [invariant/004_no_process_execution.md](../invariant/004_no_process_execution.md) | `claude_profile` delegates all process execution to `claude_runner_core` |
+| [invariant/008_single_token_refresh_entry.md](../invariant/008_single_token_refresh_entry.md) | Invariant 008: all token refresh through `refresh_account_token()` — touch reuses this entry point |
 
 ### Parameters
 

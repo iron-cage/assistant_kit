@@ -44,18 +44,16 @@ fn apply_no_color( s : String ) -> String
 #[ derive( Debug ) ]
 pub( crate ) struct TouchCtx
 {
-  /// Raw credentials JSON read from the account credential file before the switch.
-  credentials_json : String,
   /// Pre-fetched quota data used to resolve the subprocess model.
-  quota            : OauthUsageData,
+  quota : OauthUsageData,
 }
 
 #[ cfg( test ) ]
 impl TouchCtx
 {
-  fn for_test( credentials_json : String, quota : claude_quota::OauthUsageData ) -> Self
+  fn for_test( quota : claude_quota::OauthUsageData ) -> Self
   {
-    Self { credentials_json, quota }
+    Self { quota }
   }
 }
 
@@ -226,7 +224,7 @@ pub( crate ) fn pre_switch_touch_ctx(
   //   on any machine; using it as a local subprocess identity oracle is a category error.
   //   Always return NeedTouch; the subprocess (claude --print .) is idempotent.
   if trace { eprintln!( "[trace] account.use  {name}  subprocess: scheduled (idle check removed)" ) }
-  PreSwitchOutcome::NeedTouch( TouchCtx { credentials_json, quota } )
+  PreSwitchOutcome::NeedTouch( TouchCtx { quota } )
 }
 
 /// Spawn an isolated subprocess to activate the idle 5h session window for `name`.
@@ -322,13 +320,19 @@ pub( crate ) fn apply_model_override(
 // Root cause: Same as `pre_switch_touch_ctx` — Feature 027 "Out of Scope" deferral.
 // Pitfall: When a function is split across pre/post phases, both halves need the same diagnostic
 //   param — adding trace:: to one without the other leaves half the operation blind.
+// Pitfall: `credential_store` must be `PersistPaths::credential_store()` — NOT `paths.base()`.
+//   `paths.base()` is `~/.claude/` (Claude config dir); the credential store is
+//   `~/.persistent/claude/credential/`. Passing `paths.base()` causes `refresh_account_token`
+//   to silently fail — `{name}.credentials.json` doesn't exist in `~/.claude/`, so
+//   `refresh_token_with_live_path` returns `None` immediately without rotating the RT.
 pub( crate ) fn apply_post_switch_touch(
-  name       : &str,
-  ctx        : TouchCtx,
-  imodel_str : &str,
-  effort_str : &str,
-  trace      : bool,
-  paths      : &crate::ClaudePaths,
+  name             : &str,
+  ctx              : TouchCtx,
+  imodel_str       : &str,
+  effort_str       : &str,
+  trace            : bool,
+  paths            : &crate::ClaudePaths,
+  credential_store : &std::path::Path,
 )
 {
   let imodel = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
@@ -362,14 +366,18 @@ pub( crate ) fn apply_post_switch_touch(
   };
   let effort_label = effort_val.unwrap_or( "(none)" );
   if trace { eprintln!( "[trace] account.use  {name}  model: {model_str}  effort: {effort_label}" ) }
-  let mut args = match effort_val
+  let extra_pre_args = match effort_val
   {
     Some( e ) => vec![ "--effort".to_string(), e.to_string() ],
     None      => vec![],
   };
-  args.push( "--print".to_string() );
-  args.push( ".".to_string() );
-  let _ = claude_runner_core::run_isolated( &ctx.credentials_json, args, 120, model );
+  // AC-34 / Invariant 008: route through refresh_account_token instead of direct run_isolated.
+  // refresh_account_token internally appends ["--print", "."] and applies:
+  //   - expiresAt=1 manipulation (Feature 017 AC-32): forces RT rotation on every call
+  //   - live credential sync for current account (Feature 017 AC-33): avoids redundant subprocess
+  let _ = crate::account::refresh_account_token(
+    name, credential_store, Some( paths ), trace, "account.use", model, &extra_pre_args,
+  );
   // Persist touch timestamp to cache (Feature 033 AC-06).
   claude_profile_core::account::write_cache_string(
     paths.base(), name, "last_touch_at", &claude_profile_core::account::chrono_now_utc(),

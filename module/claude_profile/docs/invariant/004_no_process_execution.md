@@ -39,3 +39,4 @@
 | source | `src/` | Entire source tree — must have zero `std::process` occurrences |
 | test | `tests/responsibility_no_process_execution_test.rs` | Grep audit that fails CI if `std::process` appears in src/ |
 | doc | [001_zero_third_party_deps.md](001_zero_third_party_deps.md) | Related boundary: zero crates.io deps in library path |
+| invariant | [008_single_token_refresh_entry.md](008_single_token_refresh_entry.md) | Related boundary: single entry point for token refresh — `refresh_account_token()` delegates to `run_isolated()` in `claude_runner_core` |

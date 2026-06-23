@@ -14,7 +14,7 @@
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
 | `cli/command_noun/` | Domain noun documentation (account, token, credentials) | [cli/command_noun/readme.md](../cli/command_noun/readme.md) | 3 |
 | `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, assign, status, unclaim) | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 11 |
-| `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 7 |
+| `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 8 |
 | `research_interactive/` | Investigation findings on Claude binary behavior | [research_interactive/readme.md](../research_interactive/readme.md) | 1 |
 | `tests/docs/cli/command/` | Per-command integration test case documentation | [tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 19 |
 | `tests/docs/cli/command_noun/` | Per-noun test case documentation | [tests/docs/cli/command_noun/readme.md](../../tests/docs/cli/command_noun/readme.md) | 3 |
@@ -24,7 +24,7 @@
 | `tests/docs/cli/type/` | Per-type test case documentation | [tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) | 4 |
 | `tests/docs/cli/user_story/` | Per-story acceptance test documentation | [tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) | 5 |
 | `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 44 |
-| `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 7 |
+| `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 8 |
 
 ## Master Doc Instances Table
 
@@ -185,4 +185,5 @@
 | invariant | 005 | Atomic Account Switching | [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) |
 | invariant | 006 | Parameters Default to Active Context | [invariant/006_param_defaults.md](../invariant/006_param_defaults.md) |
 | invariant | 007 | JSON Storage Format | [invariant/007_json_storage_format.md](../invariant/007_json_storage_format.md) |
+| invariant | 008 | Single Token Refresh Entry Point | [invariant/008_single_token_refresh_entry.md](../invariant/008_single_token_refresh_entry.md) |
 | research_interactive | 001 | Claude Interactive Session Control | [research_interactive/001_claude_interactive_session_control.md](../research_interactive/001_claude_interactive_session_control.md) |

@@ -28,6 +28,10 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-19 | `refresh_account_token` returns `None` (RT expired) → `aq.result = Err("refresh token expired")` before `continue;` | AC-30 | — |
 | FT-20 | `should_refresh()` returns `false` for owned account with `is_occupied_elsewhere == true` | AC-31 | — |
 | FT-21 | `apply_refresh` trace emits `reason: cached-expired` (not `reason: ok`) for owned+cached+expired account | Algorithm | — |
+| FT-22 | `refresh_account_token` sets `expiresAt=1` before `run_isolated` — RT rotates on every call | AC-32 | — |
+| FT-23 | Current account: live creds differ from stored -> sync live->store, no subprocess spawned | AC-33 | — |
+| FT-24 | Current account: `run_isolated` returns `None` -> race recovery re-reads live creds | AC-33 | — |
+| FT-25 | `claude_profile/src/` contains zero direct `run_isolated` calls (invariant 008 grep test) | AC-34 | — |
 
 ### Test Case Index
 
@@ -54,8 +58,12 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-19 | `refresh_account_token` returns `None` → `aq.result = Err("refresh token expired")` (BUG-297 MRE) | AC-30 | BUG-297 MRE |
 | FT-20 | `should_refresh()` returns `false` for owned account with `is_occupied_elsewhere == true` (BUG-303 MRE) | AC-31 | G2 Occupancy Guard |
 | FT-21 | `apply_refresh` trace emits `reason: cached-expired` (not `reason: ok`) for owned+cached+expired account (BUG-298 MRE) | Algorithm | BUG-298 MRE |
+| FT-22 | `refresh_account_token` sets `expiresAt=1` before `run_isolated` — RT rotates | AC-32 | RT Rotation |
+| FT-23 | Current account: live creds differ from stored -> sync live->store, no subprocess | AC-33 | Live Sync |
+| FT-24 | Current account: `run_isolated` returns `None` -> race recovery reads live creds | AC-33 | Race Recovery |
+| FT-25 | `claude_profile/src/` contains zero direct `run_isolated` calls (invariant 008) | AC-34 | Grep Invariant |
 
-**Total:** 21 FT cases
+**Total:** 25 FT cases
 
 ---
 
@@ -292,3 +300,43 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Source fn:** `mre_bug298_apply_refresh_trace_reason_cached_expired` (in `src/usage/refresh_tests.rs`)
 - **Note:** Fix for BUG-298. Root cause: `fetch.rs:229-240` cache fallback converts Err→Ok and sets `aq.cached=true`, making `aq.result.err()` always `None`. The original reason expression `map_or("ok", ...)` on that `None` produced the constant `"ok"` for all cached+owned accounts regardless of triggering cause. The fix adds an explicit branch ordered before the `err()`-based path: not-owned → `"not owned"`, owned+cached+expired → `"cached-expired"`, owned+cached+valid → `"cached"`, owned+live → error string or `"ok"`.
 - **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-22: `refresh_account_token` sets `expiresAt=1` before `run_isolated` — RT rotates on every call
+
+- **Given:** `refresh_account_token` is called with stored credentials containing a valid (far-future) `expiresAt` value. The access token is not expired.
+- **When:** The function prepares credentials for `run_isolated`.
+- **Then:** The credential JSON passed to `run_isolated` has `expiresAt` set to `"1"` (past timestamp), forcing Claude CLI to treat AT as expired and use RT to obtain a fresh AT+RT pair. The original stored credential file is NOT modified. `run_isolated` returns `credentials=Some(new_creds)` with a rotated RT.
+- **Source fn:** `ft22_manipulate_expires_at_replaces_numeric_value`, `ft22_manipulate_expires_at_replaces_quoted_value`, `ft22_manipulate_expires_at_noop_when_key_absent`, `ft22_manipulate_expires_at_called_before_run_isolated_structural` (in `claude_profile_core/tests/account_refresh_test.rs`)
+- **Source:** [017_token_refresh.md AC-32](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-23: Current account — live creds differ from stored -> sync live->store, no subprocess spawned
+
+- **Given:** `refresh_account_token` is called for the current account with `paths = Some(...)`. Live credentials at `~/.claude/.credentials.json` differ from stored credentials at `{store}/{name}.credentials.json` (the live Claude Code session already refreshed and rotated the RT).
+- **When:** The function compares live credentials with stored credentials.
+- **Then:** Live credentials are written to the store via `std::fs::write` + `save()`; `Some(live_creds)` is returned; no `run_isolated` subprocess is spawned. The live session's fresh RT is preserved in the store.
+- **Source fn:** `ft23_live_sync_returns_live_creds_without_subprocess` (in `claude_profile_core/tests/account_refresh_test.rs`)
+- **Source:** [017_token_refresh.md AC-33](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-24: Current account — `run_isolated` returns `None` -> race recovery reads live creds
+
+- **Given:** `refresh_account_token` is called for the current account with `paths = Some(...)`. Live credentials initially match stored credentials. After `run_isolated` is invoked, the live Claude Code session refreshes concurrently — live credentials now differ from stored.
+- **When:** `run_isolated` returns `credentials=None` (the RT passed to the subprocess was already consumed by the live session's concurrent refresh).
+- **Then:** The function re-reads live credentials. They differ from stored (race detected). Live credentials are written to the store; `Some(live_creds)` is returned. The function does NOT return `None`.
+- **Source fn:** `ft24_some_paths_branch_reads_credentials_file_twice_structural` (structural — verifies race-recovery code path exists via `credentials_file()` call count in `refresh_token_with_live_path`; behavioral test not feasible without mocking `run_isolated`, which is prohibited by testing principles)
+- **Source:** [017_token_refresh.md AC-33](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-25: `claude_profile/src/` contains zero direct `run_isolated` calls (invariant 008)
+
+- **Given:** The `src/` directory of `claude_profile` crate at the current HEAD.
+- **When:** `grep -rn "run_isolated(" src/` is run from `module/claude_profile/`.
+- **Then:** Zero matches. All token refresh operations go through `refresh_account_token()` in `claude_profile_core/src/account.rs`. The grep-based invariant test in `tests/` enforces this at CI.
+- **Source fn:** `single_token_refresh_entry_in1_src_contains_zero_run_isolated_calls` (in `module/claude_profile/tests/cli/invariant_test.rs`)
+- **Source:** [017_token_refresh.md AC-34](../../../docs/feature/017_token_refresh.md), [invariant/008_single_token_refresh_entry.md](../../../docs/invariant/008_single_token_refresh_entry.md)

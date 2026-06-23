@@ -170,4 +170,11 @@ Two other arg combinations are broken and must not be used:
 |------|--------------|
 | `src/usage/refresh.rs` | `refresh::` param read; retry trigger; calls `account::refresh_account_token()`; expiry derivation; retry fetch |
 | `src/lib.rs` | `refresh::` parameter registration via `register_commands()` |
-| `claude_profile_core/src/account.rs` | `refresh_account_token()` — `read credentials → run_isolated → write credentials → save` lifecycle |
+| `src/usage/api.rs` | `apply_post_switch_touch()` — calls `refresh_account_token()` per AC-34 / invariant 008 |
+| `claude_profile_core/src/account.rs` | `refresh_account_token()` — `read credentials → run_isolated → write credentials → save` lifecycle; sole authorized caller of `run_isolated()` (invariant 008) |
+
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [invariant/008_single_token_refresh_entry.md](../invariant/008_single_token_refresh_entry.md) | Invariant 008: all token refresh through `refresh_account_token()`; AC-32/AC-33/AC-34 implement this invariant |

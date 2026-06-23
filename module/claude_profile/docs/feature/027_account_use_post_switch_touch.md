@@ -18,7 +18,7 @@ After `switch_account()` succeeds, `.account.use` fetches quota data for the tar
 3. If `dry::1`: print `[dry-run] would switch to '{name}'` (no files changed, no subprocess).
 4. `switch_account(name)` — atomic credential rotation (credentials, active marker, best-effort `oauthAccount` patch); model snapshot restore from `{name}.json` into `~/.claude/settings.json`.
 4b. If quota fetch succeeded (step 2): call `apply_model_override()` which is now bidirectional (Fix BUG-311). When `seven_day_sonnet` is `Some` and remaining < 15%: overwrite `~/.claude/settings.json` model with `"opus"` (Fix BUG-225; alias fix BUG-257; normalization fix BUG-286). When `seven_day_sonnet` is `Some` and remaining >= 15%: overwrite model with `"sonnet"` if currently in any `"opus"` form (Fix BUG-311). When `seven_day_sonnet` is absent (`None`): overwrite model with `"sonnet"` conservatively — absent tier is treated as unknown, not exhausted (Fix BUG-300; conservative sonnet restore extended by Fix BUG-311). When `touch_ctx` is absent (fetch failed — see BUG-226 limitation), this step is skipped and the snapshot model is installed as-is.
-5. If quota fetch succeeded (step 2): call `resolve_model(quota, imodel_param)` → `IsolatedModel`; call `resolve_effort(&model, effort_param)` → `Option<&str>`; spawn `run_isolated()` with `["--print", "."]` plus optional `--model` and `--effort` flags. Subprocess is idempotent — exits immediately if account is already active. After subprocess completes: re-fetch quota via `fetch_oauth_usage` unconditionally using the saved OAuth token (best-effort; failure does not abort the switch). The re-fetch ensures the account's session state is visible to any subsequent command (e.g., `.usage`) that also evaluates quota timers. (Fix(BUG-285): idle check removed; `AlreadyActive` variant removed from `PreSwitchOutcome`. Fix(BUG-288): post-subprocess re-fetch added.)
+5. If quota fetch succeeded (step 2): call `resolve_model(quota, imodel_param)` → `IsolatedModel`; call `resolve_effort(&model, effort_param)` → `Option<&str>`; call `claude_profile_core::account::refresh_account_token()` with the resolved model and effort args (Feature 017 AC-34 / invariant 008) — which internally applies `expiresAt=1` manipulation (Feature 017 AC-32, RT rotation) and live credential sync for the current account (Feature 017 AC-33, race safety), then invokes `run_isolated` with `["--print", "."]`. The subprocess is idempotent — exits immediately if account is already active. After subprocess completes: re-fetch quota via `fetch_oauth_usage` unconditionally using the saved OAuth token (best-effort; failure does not abort the switch). The re-fetch ensures the account's session state is visible to any subsequent command (e.g., `.usage`) that also evaluates quota timers. (Fix(BUG-285): idle check removed; `AlreadyActive` variant removed from `PreSwitchOutcome`. Fix(BUG-288): post-subprocess re-fetch added.)
 
 **When `touch::0`:** Steps 1, 4, 5 only. No quota fetch, no subprocess. Pure credential rotation (pre-Feature-027 behavior).
 
@@ -104,7 +104,14 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 
 | File | Relationship |
 |------|--------------|
-| `claude_runner_core` | `run_isolated()`, `IsolatedModel` — subprocess execution |
+| `claude_runner_core` | `run_isolated()`, `IsolatedModel` — subprocess execution (invoked internally by `refresh_account_token`) |
+| `claude_profile_core` | `refresh_account_token()` — single token refresh entry point (invariant 008) |
+
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [invariant/008_single_token_refresh_entry.md](../invariant/008_single_token_refresh_entry.md) | Invariant 008: all token refresh through `refresh_account_token()` — AC-34 routes `apply_post_switch_touch` through this entry point (TSK-320) |
 
 ### Features
 
@@ -137,3 +144,4 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 | `src/commands/account_ops.rs` | `account_use_routine()` — adds quota fetch + subprocess call after credential rotation |
 | `src/lib.rs` | `touch::`, `imodel::`, `effort::`, `trace::` parameter registration on `.account.use` |
 | `src/usage/subprocess.rs`, `src/usage/api.rs` | `resolve_model()`, `resolve_effort()` reused from Feature 026; new: `TouchCtx`, `validate_imodel_str()`, `validate_effort_str()`, `pre_switch_touch_ctx()`, `apply_post_switch_touch()`, `apply_model_override()` |
+| `claude_profile_core/src/account.rs` | `refresh_account_token()` — invoked by `apply_post_switch_touch()` per Feature 017 AC-34 / invariant 008 |

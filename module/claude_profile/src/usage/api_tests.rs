@@ -775,12 +775,11 @@ fn mre_bug288_post_switch_touch_refetch_updates_quota()
   ).unwrap();
 
   let ctx = TouchCtx::for_test(
-    r#"{"subscriptionType":"pro"}"#.to_string(),
     OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None },
   );
 
   // Must not panic: run_isolated fails silently (let _ = ...); re-fetch skipped.
-  apply_post_switch_touch( name, ctx, "auto", "auto", false, &paths );
+  apply_post_switch_touch( name, ctx, "auto", "auto", false, &paths, paths.base() );
 
   // Observable 1: pre-re-fetch cache writes (last_touch_at, touch_idle) must succeed
   // even when the re-fetch block is skipped — they are written unconditionally before it.
@@ -849,12 +848,11 @@ fn it_apply_post_switch_touch_cred_file_absent_skips_refetch()
   // Outer `if let Ok` guard fires → entire re-fetch block bypassed.
 
   let ctx = TouchCtx::for_test(
-    r#"{"subscriptionType":"pro"}"#.to_string(),
     OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None },
   );
 
   // Must not panic: run_isolated discards result; outer re-fetch guard skips silently.
-  apply_post_switch_touch( name, ctx, "auto", "auto", false, &paths );
+  apply_post_switch_touch( name, ctx, "auto", "auto", false, &paths, paths.base() );
 
   // Observable 1: last_touch_at and touch_idle written unconditionally (before re-fetch block).
   let cache_path = paths.base().join( format!( "{name}.json" ) );
@@ -1178,5 +1176,68 @@ fn reach_structural_guard_fs_copy_follows_apply_touch_in_rotation()
     after_touch.contains( "credentials_file()" ),
     "D5 AC-11: fs::copy target must be credentials_file() (the live session file).\n\
     block after apply_touch:\n{after_touch}",
+  );
+}
+
+/// AC-34 routing structural: `apply_post_switch_touch` calls `refresh_account_token`, not `run_isolated`
+///
+/// # Root Cause
+/// Before AC-34 / Invariant 008, `apply_post_switch_touch` called `run_isolated` directly —
+/// a fire-and-forget pattern that bypassed:
+///   - expiresAt=1 manipulation (AC-32): no RT rotation
+///   - live credential sync (AC-33): no pre-sync or race recovery
+///   - credential write-back: rotated credentials silently discarded
+///
+/// # Why Not Caught
+/// No structural test asserted the routing destination. The IN-1 invariant test (grep-based)
+/// verifies ABSENCE of direct `run_isolated` calls; this test verifies PRESENCE of the
+/// `refresh_account_token` call — the positive routing complement to IN-1's negative guard.
+///
+/// # Fix Applied
+/// AC-34: `apply_post_switch_touch` now calls `crate::account::refresh_account_token(...)`.
+/// The `credential_store` parameter was added as the 7th param to carry the correct
+/// `~/.persistent/claude/credential/` path (NOT `paths.base()` = `~/.claude/`).
+///
+/// # Prevention
+/// Both the negative invariant (IN-1: zero `run_isolated` calls) and this positive
+/// routing test must pass for AC-34 to be fully enforced.
+///
+/// # Pitfall
+/// `apply_post_switch_touch` body region ends just before the `// ── Main routine` anchor.
+/// If that anchor is renamed, the structural search must be updated.
+#[ test ]
+fn ft_apply_post_switch_touch_routes_through_refresh_account_token()
+{
+  let src      = include_str!( "api.rs" );
+  let fn_start = src
+    .find( "pub( crate ) fn apply_post_switch_touch(" )
+    .expect( "apply_post_switch_touch must exist in api.rs (AC-34 routing entry point)" );
+  let fn_end = src[ fn_start.. ]
+    .find( "\n// ── Main routine" )
+    .map( |rel| fn_start + rel )
+    .expect( "'// ── Main routine' anchor must follow apply_post_switch_touch in api.rs" );
+  let fn_body = &src[ fn_start..fn_end ];
+
+  // Positive routing assertion: must delegate to refresh_account_token (AC-34).
+  assert!(
+    fn_body.contains( "refresh_account_token(" ),
+    "AC-34: apply_post_switch_touch must call refresh_account_token() for token refresh \
+    (not run_isolated directly) — see invariant 008 and Feature 017 AC-34\n\
+    function body:\n{fn_body}",
+  );
+
+  // Negative routing assertion: must NOT call run_isolated directly (complements IN-1 grep).
+  // Pattern built at runtime — avoids embedding "run_isolated(" as literal bytes in this file,
+  // which would itself be a violation of the IN-1 invariant this test enforces.
+  let direct_call_pattern = format!( "{}(", "run_isolated" );
+  let violations : Vec< &str > = fn_body.lines()
+    .filter( | line | !line.trim_start().starts_with( "//" ) )
+    .filter( | line | line.contains( &direct_call_pattern ) )
+    .collect();
+  assert!(
+    violations.is_empty(),
+    "AC-34: apply_post_switch_touch must not invoke run_isolated directly; \
+    all token refresh must route through refresh_account_token:\n{}",
+    violations.join( "\n" ),
   );
 }
