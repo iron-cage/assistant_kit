@@ -156,7 +156,7 @@ default-features = false
 
 [workspace.dependencies.claude_storage]
 path = "module/claude_storage"
-version = "=1.6.1"
+version = "=1.7.1"
 default-features = false
 
 [workspace.dependencies.dream]
