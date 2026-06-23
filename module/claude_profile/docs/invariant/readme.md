@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the non-functional constraints that `claude_profile` must maintain at all times.
 - **Responsibility**: Documents all quality invariants with their statements, enforcement mechanisms, and violation consequences.
-- **In Scope**: invariant/001 through invariant/007 — all non-functional constraints and architectural guarantees for claude_profile.
+- **In Scope**: invariant/001 through invariant/008 — all non-functional constraints and architectural guarantees for claude_profile.
 - **Out of Scope**: Functional requirements (→ feature/), CLI design constraints (→ cli/).
 
 ### Overview Table
@@ -18,3 +18,4 @@
 | 005 | [Atomic Account Switching](005_atomic_switching.md) | Account switching uses write-then-rename to prevent credential corruption | ✅ |
 | 006 | [Parameters Default to Active Context](006_param_defaults.md) | Every parameter must have a default unless requiring an explicit value is absolutely necessary | ✅ |
 | 007 | [JSON Storage Format](007_json_storage_format.md) | All `.json` files written to disk use `serde_json::to_string_pretty` + trailing `\n` | ✅ |
+| 008 | [Single Token Refresh Entry Point](008_single_token_refresh_entry.md) | All token refresh goes through `refresh_account_token()`; no direct `run_isolated()` calls | ✅ |

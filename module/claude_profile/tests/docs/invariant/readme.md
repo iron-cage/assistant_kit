@@ -7,7 +7,7 @@ one invariant doc instance and asserts the invariant holds at normal and boundar
 
 - **Purpose**: Verify that each architectural invariant is detectable and enforceable via tooling or test.
 - **Responsibility**: Index of per-invariant property assertion files (IN-N entries).
-- **In Scope**: All 7 invariants from `docs/invariant/`.
+- **In Scope**: All 8 invariants from `docs/invariant/`.
 - **Out of Scope**: Feature behavior tests (→ `../feature/`), CLI edge cases (→ `../cli/`).
 
 ### Responsibility Table
@@ -21,6 +21,7 @@ one invariant doc instance and asserts the invariant holds at normal and boundar
 | `05_atomic_switching.md` | IN- spec for atomic account switching invariant |
 | `06_param_defaults.md` | IN- spec for parameter default context invariant |
 | `07_json_storage_format.md` | IN- spec for JSON pretty-print + trailing newline invariant |
+| `08_single_token_refresh_entry.md` | IN- spec for single `refresh_account_token()` entry point invariant |
 
 ### Coverage Summary
 
@@ -33,5 +34,6 @@ one invariant doc instance and asserts the invariant holds at normal and boundar
 | 05_atomic_switching | [docs/invariant/005_atomic_switching.md](../../../docs/invariant/005_atomic_switching.md) | IN-1 … IN-2 | ✅ |
 | 06_param_defaults | [docs/invariant/006_param_defaults.md](../../../docs/invariant/006_param_defaults.md) | IN-1 … IN-2 | ✅ |
 | 07_json_storage_format | [docs/invariant/007_json_storage_format.md](../../../docs/invariant/007_json_storage_format.md) | IN-1 … IN-2 | ✅ |
+| 08_single_token_refresh_entry | [docs/invariant/008_single_token_refresh_entry.md](../../../docs/invariant/008_single_token_refresh_entry.md) | IN-1 … IN-4 | ✅ |
 
-**Total:** 7 specs, 14 IN cases minimum.
+**Total:** 8 specs, 18 IN cases minimum.
