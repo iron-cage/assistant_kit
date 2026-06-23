@@ -1,7 +1,9 @@
 //! `assistant` — agent-agnostic super-app aggregating all coding agent CLI tools.
 //!
 //! Aggregates commands from all Layer 2 crates:
-//! - [`claude_version`]: version management, settings, session, account commands
+//! - [`claude_assets`]: asset management (list, install, uninstall, kinds)
+//! - [`claude_version`]: version management, settings, processes, status
+//! - [`claude_profile`]: account management, credentials, token, usage, paths
 //! - [`claude_runner`]: `.claude` AI-assistance command (YAML-based)
 //! - [`claude_storage`]: storage exploration commands (YAML-based)
 //!

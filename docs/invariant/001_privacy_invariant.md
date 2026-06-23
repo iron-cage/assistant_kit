@@ -44,16 +44,26 @@ The consumer workspace depends on assistant; assistant does not depend on the co
 - Adding consumer workspace types leaks internal orchestration concepts into the published interface
 - Any crate depending on a private workspace becomes unpublishable to crates.io
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| feature | [feature/001_workspace_design.md](../feature/001_workspace_design.md) | Workspace that this invariant protects |
-| integration | [integration/001_consumer_integration.md](../integration/001_consumer_integration.md) | Cross-workspace dep protocol that flows in the permitted direction |
-| source | `../../Cargo.toml` | Workspace dependency declarations |
+| File | Relationship |
+|------|--------------|
+| [feature/001_workspace_design.md](../feature/001_workspace_design.md) | Workspace that this invariant protects |
+
+### Integrations
+
+| File | Relationship |
+|------|--------------|
+| [integration/001_consumer_integration.md](../integration/001_consumer_integration.md) | Cross-workspace dep protocol that flows in the permitted direction |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
+| File | Relationship |
+|------|--------------|
+| `../../Cargo.toml` | Workspace dependency declarations |
+
+### Provenance
+
+| File | Relationship |
+|------|--------------|
 | `spec.md` (deleted — migrated here) | Privacy Invariant, Dependency Flow sections |

@@ -1,4 +1,4 @@
-# Error Collection
+# Error Doc Entity
 
 ### Scope
 
@@ -6,6 +6,7 @@
 - **Responsibility**: Document each error's trigger conditions, plain-language meaning, and recovery steps.
 - **In Scope**: Terminal error messages emitted by the `claude` binary; API, network, and authentication failures.
 - **Out of Scope**: Session behaviors (→ `contract/claude_code/docs/behavior/readme.md`); internal Rust crate error types (→ source `src/`).
+- **Extension Type**: `error/` is a workspace-specific doc entity extension (not one of the 13 standard types in `doc_des.rulebook.md`). It follows the standard doc entity protocol (master file, NNN-named instances, typed reference sections) with the type-specific sections below.
 - **Type-Specific Sections**: Each doc instance MUST include, in addition to Common Doc Instance Requirements: Abstract (H3), Trigger Conditions (H3), Recovery (H3).
 
 ### Overview Table

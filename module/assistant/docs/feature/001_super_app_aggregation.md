@@ -15,11 +15,11 @@
 
 ```
 claude_assets::register_commands(&mut registry)    // .list, .install, .uninstall, .kinds
-claude_version::register_commands(&mut registry)   // .status, .version.*, .processes.*, .settings.*
-claude_profile::register_commands(&mut registry)   // .account.*, .token.status, .paths, .usage
-claude_runner::register_commands(&mut registry)    // .claude, .claude.help (stub in ast context)
-claude_storage::register_commands(&mut registry)   // .status (skipped — already registered by manager)
-register_static_commands(&mut registry)            // YAML-backed runner + storage commands
+claude_version::register_commands(&mut registry)   // .status, .version.*, .processes.*, .settings.*, .config
+claude_profile::register_commands(&mut registry)   // .accounts, .account.*, .credentials.status, .model, .token.status, .paths, .usage
+claude_runner::register_commands(&mut registry)    // runner programmatic commands
+claude_storage::register_commands(&mut registry)   // .status (skipped — already registered by version)
+register_static_commands(&mut registry)            // YAML-backed: .claude/.claude.help (stub), 11 storage commands
 ```
 
 Duplicate registrations via `command_add_runtime` are silently skipped — the first registration wins. This means `claude_version`'s `.status` takes precedence over `claude_storage`'s `.status`.
@@ -28,19 +28,36 @@ Duplicate registrations via `command_add_runtime` are silently skipped — the f
 
 **Help rendering:** When `needs_help` is true (empty argv, `.help`, `--help`, `-h`), `print_usage()` renders grouped command output via `cli_fmt::CliHelpTemplate` to stdout and exits 0. Help is intercepted before the unilang pipeline. Commands are displayed in 8 groups: "Asset Management" (from cla), "Version Management" / "Settings & Config" / "Process Lifecycle" (from clv), "Account Management" / "Token & Model" (from clp), "Storage Query" / "System" (from YAML-backed static commands). Binary name is extracted via `std::env::args().next()`, not from `argv`, because `run_cli()` already applies `skip(1)` before passing `argv` to `cli::run()`.
 
-**Adapter reuse:** `src/main.rs` calls `claude_version::adapter::argv_to_unilang_tokens()` for argv preprocessing. assistant does not implement its own adapter — it delegates to the manager's adapter, which covers all commands in the registry.
+**Adapter reuse:** `src/lib.rs` calls `claude_version::adapter::argv_to_unilang_tokens()` for argv preprocessing. assistant does not implement its own adapter — it delegates to the manager's adapter, which covers all commands in the registry.
 
 **`.claude` stub:** In standalone `clr` context, `.claude` routes to Claude Code execution. In `ast` context, `.claude` and `.claude.help` route to `claude_stub_routine`, which prints a message directing the user to `clr`. This prevents `ast` from competing with `clr` as the execution entry point.
 
 **Feature gate:** All Layer 2 dependencies are behind the `enabled` feature. Building without `--features enabled` produces an empty library shell — the intended behavior for library crates in this workspace. The `ast` binary target requires `enabled` via `required-features`.
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/main.rs` | build_registry(), register_static_commands(), main() |
-| source | `src/lib.rs` | Feature gate and crate-level doc comment |
-| source | `build.rs` | YAML aggregation that generates static_commands.rs |
-| source | `Cargo.toml` | Layer 2 dependency declarations with feature gating |
-| doc | [invariant/001_aggregation_completeness.md](../invariant/001_aggregation_completeness.md) | Rule: every Layer 2 crate must expose register_commands() |
-| doc | [claude_assets/docs/feature/001_asset_cli.md](../../claude_assets/docs/feature/001_asset_cli.md) | register_commands() contract for claude_assets |
+| File | Relationship |
+|------|--------------|
+| [../../../claude_assets/docs/feature/001_asset_cli.md](../../../claude_assets/docs/feature/001_asset_cli.md) | register_commands() contract for claude_assets |
+
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [../invariant/001_aggregation_completeness.md](../invariant/001_aggregation_completeness.md) | Every Layer 2 crate must expose register_commands() |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| [../../src/lib.rs](../../src/lib.rs) | build_registry(), register_static_commands(), run(), feature gate |
+| [../../src/main.rs](../../src/main.rs) | main() entry point — delegates to run_cli() |
+| [../../build.rs](../../build.rs) | YAML aggregation that generates static_commands.rs |
+| [../../Cargo.toml](../../Cargo.toml) | Layer 2 dependency declarations with feature gating |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| [../../tests/cli_sanity.rs](../../tests/cli_sanity.rs) | Compile and link sanity checks for ast binary against all Layer 2 crates |
+| [../../tests/aggregation.rs](../../tests/aggregation.rs) | Super-app aggregation feature tests (FT-1..4) |

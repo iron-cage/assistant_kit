@@ -39,9 +39,17 @@ fi
 
 `ExecutionOutput::classify_error()` returns `Some(ErrorKind::RateLimit)` for exit code 2, enabling programmatic branching without string-parsing CLR output.
 
-### Cross-References
+### Errors
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| related | [006_quota_exhausted.md](006_quota_exhausted.md) | Period quota exhaustion — distinct from transient rate limit |
-| source | `../../module/claude_runner_core/src/types.rs` | `ErrorKind::RateLimit` variant and `classify_error()` on `ExecutionOutput` |
+| File | Relationship |
+|------|--------------|
+| [002_authentication_failed.md](002_authentication_failed.md) | Auth error — distinct failure mode from rate limit |
+| [003_context_limit_reached.md](003_context_limit_reached.md) | Context overflow — distinct from API rate limit |
+| [005_api_overloaded.md](005_api_overloaded.md) | Server capacity overload — distinct from per-key rate limit |
+| [006_quota_exhausted.md](006_quota_exhausted.md) | Period quota exhaustion — distinct from transient rate limit |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `../../module/claude_runner_core/src/types.rs` | `ErrorKind::RateLimit` variant and `classify_error()` on `ExecutionOutput` |

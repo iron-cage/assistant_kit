@@ -57,11 +57,16 @@ When `clr` invokes `claude --print` and authentication fails, the subprocess exi
 
 Unlike rate-limit errors, auth errors require a corrective action (re-authentication or key rotation) — not a simple wait-and-retry. Callers that receive `ErrorKind::AuthError` from `ExecutionOutput::classify_error()` should stop retrying and escalate.
 
-### Cross-References
+### Errors
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| error | [error/001_rate_limit_reached.md](001_rate_limit_reached.md) | Rate-limit error — different HTTP status (429) and recovery path |
-| source | `../../module/claude_profile/src/commands.rs` | `account auto-rotate` and credential status commands |
-| source | `../../module/claude_profile/src/token.rs` | Credential file parsing and expiry detection |
-| source | `../../module/claude_runner_core/src/types.rs` | `ErrorKind::AuthError` variant and `classify_error()` on `ExecutionOutput` |
+| File | Relationship |
+|------|--------------|
+| [001_rate_limit_reached.md](001_rate_limit_reached.md) | Rate-limit error — different HTTP status (429) and recovery path |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `../../module/claude_profile/src/commands.rs` | `account auto-rotate` and credential status commands |
+| `../../module/claude_profile/src/token.rs` | Credential file parsing and expiry detection |
+| `../../module/claude_runner_core/src/types.rs` | `ErrorKind::AuthError` variant and `classify_error()` on `ExecutionOutput` |

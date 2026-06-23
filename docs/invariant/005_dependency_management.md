@@ -63,10 +63,15 @@ grep -A3 'path = "\.\.' Cargo.toml | grep -v 'version'
 - Missing publish metadata causes crates.io to reject the publish with "field … is required"
 - Stale dep versions expose the workspace to resolved security vulnerabilities and miss upstream bug fixes
 
-### Cross-References
+### Invariants
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| invariant | [invariant/001_privacy_invariant.md](001_privacy_invariant.md) | Forbidden dep types (private workspace path deps) |
-| invariant | [invariant/002_versioning_strategy.md](002_versioning_strategy.md) | Shared version policy for workspace members |
-| source | `../../Cargo.toml` | Workspace dependency declarations |
+| File | Relationship |
+|------|--------------|
+| [invariant/001_privacy_invariant.md](001_privacy_invariant.md) | Forbidden dep types (private workspace path deps) |
+| [invariant/002_versioning_strategy.md](002_versioning_strategy.md) | Shared version policy for workspace members |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `../../Cargo.toml` | Workspace dependency declarations |

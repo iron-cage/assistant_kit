@@ -44,11 +44,16 @@ fi
 
 `ExecutionOutput::classify_error()` returns `Some(ErrorKind::QuotaExhausted)` for this case, enabling programmatic branching. The variant is distinct from `ErrorKind::RateLimit` (transient 429).
 
-### Cross-References
+### Errors
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| related | [001_rate_limit_reached.md](001_rate_limit_reached.md) | Transient HTTP 429 rate limit — distinct from period quota exhaustion |
-| source | `../../module/claude_runner_core/src/types.rs` | `ErrorKind::QuotaExhausted` variant and `classify_error()` on `ExecutionOutput` |
-| source | `../../module/claude_profile/src/usage/api.rs` | `.usage` command showing per-account quota status and reset times |
-| source | `../../module/claude_profile/src/commands/account_ops.rs` | `.account.assign` command for automatic account rotation on quota exhaustion |
+| File | Relationship |
+|------|--------------|
+| [001_rate_limit_reached.md](001_rate_limit_reached.md) | Transient HTTP 429 rate limit — distinct from period quota exhaustion |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `../../module/claude_runner_core/src/types.rs` | `ErrorKind::QuotaExhausted` variant and `classify_error()` on `ExecutionOutput` |
+| `../../module/claude_profile/src/usage/api.rs` | `.usage` command showing per-account quota status and reset times |
+| `../../module/claude_profile/src/commands/account_ops.rs` | `.account.assign` command for automatic account rotation on quota exhaustion |

@@ -60,32 +60,38 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 
 **Out of scope:** Job queue management, AI orchestration, orchestration daemon integration, and any consumer-workspace-specific types (WorkDir, TopicName, JobId). If a feature requires knowing about queues, topics, or jobs, it does not belong here.
 
-**Performance characteristics:**
+**Performance characteristics:** See [invariant/004_performance.md](../invariant/004_performance.md) for the fast-path vs full-parse cost model, concrete measurements, and avoidance rules.
 
-`.status` command verbosity modes:
+### Integrations
 
-| Verbosity | Mode | Cost | Includes |
-|-----------|------|------|----------|
-| 0 | Fast (filesystem only) | O(P+S): ~50ms | Project count only |
-| 1 | Fast (filesystem only) | O(P+S): ~50ms | Projects + session counts by type |
-| 2–5 | Full (JSONL parsing) | O(total JSONL bytes): ~minutes | All above + entry counts + token usage |
+| File | Relationship |
+|------|--------------|
+| [integration/001_consumer_integration.md](../integration/001_consumer_integration.md) | How consumer workspaces consume assistant crates |
 
-`.list min_entries::N` reads every session file (O(total JSONL bytes)). With 1903 projects/2429 sessions/~7 GB of JSONL: cold cache ~12 minutes, warm cache ~25 seconds. Use `.count` instead for fast project/session counts.
+### Invariants
 
-`Session::count_entries()` uses byte-level string search (not full JSON parsing) on `"type":"user"` and `"type":"assistant"` patterns. Fast per-file, but O(total_JSONL_bytes) aggregate — avoid calling in loops over thousands of sessions without awareness of cost.
+| File | Relationship |
+|------|--------------|
+| [invariant/001_privacy_invariant.md](../invariant/001_privacy_invariant.md) | Zero consumer workspace dependency rule |
+| [invariant/002_versioning_strategy.md](../invariant/002_versioning_strategy.md) | Shared workspace version policy |
+| [invariant/003_testing_strategy.md](../invariant/003_testing_strategy.md) | TDD baseline and Level 3 enforcement |
+| [invariant/004_performance.md](../invariant/004_performance.md) | Performance constraints for storage operations |
+| [invariant/005_dependency_management.md](../invariant/005_dependency_management.md) | Workspace dep centralization policy |
 
-### Cross-References
+### Patterns
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| pattern | [pattern/001_crate_layering.md](../pattern/001_crate_layering.md) | Four-layer dependency hierarchy between these crates |
-| invariant | [invariant/001_privacy_invariant.md](../invariant/001_privacy_invariant.md) | Zero consumer workspace dependency rule |
-| invariant | [invariant/004_performance.md](../invariant/004_performance.md) | Performance constraints for storage operations |
-| integration | [integration/001_consumer_integration.md](../integration/001_consumer_integration.md) | How consumer workspaces consume assistant crates |
-| source | `../../Cargo.toml` | Workspace manifest and member declarations |
+| File | Relationship |
+|------|--------------|
+| [pattern/001_crate_layering.md](../pattern/001_crate_layering.md) | Four-layer dependency hierarchy between these crates |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
+| File | Relationship |
+|------|--------------|
+| `../../Cargo.toml` | Workspace manifest and member declarations |
+
+### Provenance
+
+| File | Relationship |
+|------|--------------|
 | `spec.md` (deleted — migrated here) | Purpose, Problem Statement, Workspace Structure, Crate Inventory, In Scope, Out of Scope, Performance Characteristics |

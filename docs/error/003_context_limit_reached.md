@@ -61,10 +61,15 @@ Auto-compaction succeeded but a tool output or included file immediately refille
 1. Avoid reading very large files through Claude's tool use in the same session where the context is nearly full.
 2. Use `/clear` and restart with a fresh session dedicated to the large-file operation.
 
-### Cross-References
+### Errors
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| error | [error/001_rate_limit_reached.md](001_rate_limit_reached.md) | Rate-limit error — distinct cause (quota, not token size) |
-| error | [error/004_request_timed_out.md](004_request_timed_out.md) | Timeout error — occurs when context is large but not over limit |
-| source | `../../module/claude_runner/src/main.rs` | `--max-tokens` flag that affects the input+max_tokens sum |
+| File | Relationship |
+|------|--------------|
+| [001_rate_limit_reached.md](001_rate_limit_reached.md) | Rate-limit error — distinct cause (quota, not token size) |
+| [004_request_timed_out.md](004_request_timed_out.md) | Timeout error — occurs when context is large but not over limit |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `../../module/claude_runner/src/main.rs` | `--max-tokens` flag that affects the input+max_tokens sum |

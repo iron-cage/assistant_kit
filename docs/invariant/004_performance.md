@@ -40,15 +40,20 @@ There is no session entry count index. `min_entries::N` filtering and entry coun
 - Using `min_entries::N` in a frequent script causes multi-minute runtimes
 - Confusing fast-path and full-path operation costs leads to unexpectedly slow pipelines
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| feature | [feature/001_workspace_design.md](../feature/001_workspace_design.md) | Workspace design that includes these storage operations |
-| source | `../../module/claude_storage_core/src/` | count_entries() and storage parsing implementation |
+| File | Relationship |
+|------|--------------|
+| [feature/001_workspace_design.md](../feature/001_workspace_design.md) | Workspace design that includes these storage operations |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
-| `spec.md` (deleted — migrated here) | Performance Characteristics section (.status verbosity, min_entries, count_entries) |
+| File | Relationship |
+|------|--------------|
+| `../../module/claude_storage_core/src/` | count_entries() and storage parsing implementation |
+
+### Provenance
+
+| File | Relationship |
+|------|--------------|
+| `spec.md` (deleted — migrated here) | Performance Characteristics section |

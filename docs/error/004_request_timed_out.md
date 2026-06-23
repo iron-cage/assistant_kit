@@ -47,10 +47,15 @@ Where `X` follows the backoff schedule and `Y` increments from 1 to 10. After at
 - Avoid peak hours if timeouts correlate with time of day.
 - Consider setting `ANTHROPIC_BASE_URL` to an alternate regional endpoint if available.
 
-### Cross-References
+### Errors
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| error | [error/005_api_overloaded.md](005_api_overloaded.md) | Overloaded error (HTTP 529) — server busy, distinct from timeout |
-| error | [error/003_context_limit_reached.md](003_context_limit_reached.md) | Context-limit error — large context increases timeout risk |
-| source | `../../module/claude_runner/src/main.rs` | `--max-tokens` flag and print-mode execution that captures exit code |
+| File | Relationship |
+|------|--------------|
+| [003_context_limit_reached.md](003_context_limit_reached.md) | Context-limit error — large context increases timeout risk |
+| [005_api_overloaded.md](005_api_overloaded.md) | Overloaded error (HTTP 529) — server busy, distinct from timeout |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `../../module/claude_runner/src/main.rs` | `--max-tokens` flag and print-mode execution that captures exit code |

@@ -23,7 +23,7 @@
 //! | `ast_projects_accepts_scope_param` | storage `.projects` accepts `scope::` (manager collision gone) |
 //! | `ast_usage_command_accepted` | `.usage` routed via profile programmatic registration |
 //! | `ast_paths_command_accepted` | `.paths` routed via profile programmatic registration |
-//! | `ast_account_list_command_accepted` | `.account.list` routed via manager (first-wins) |
+//! | `ast_account_list_command_accepted` | `.accounts` routed via profile programmatic registration |
 
 #[test]
 fn ast_package_name_is_assistant()
@@ -98,9 +98,9 @@ fn ast_usage_command_accepted()
     .output()
     .unwrap();
   let code = out.status.code().unwrap_or( -1 );
-  assert_ne!(
-    code, 1,
-    "ast.usage must not exit 1 (unknown command); stderr: {}",
+  assert!(
+    code == 0 || code == 2,
+    "ast.usage must exit 0 or 2 (not {code}); stderr: {}",
     String::from_utf8_lossy( &out.stderr ),
   );
 }

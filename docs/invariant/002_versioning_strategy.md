@@ -42,15 +42,20 @@ The workspace `Cargo.toml` declares the shared version. Crates that need to dive
 - Silently diverging versions cause consumer confusion about which combination of crate versions is compatible
 - Unintentional version overrides can create publishing inconsistencies
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| feature | [feature/001_workspace_design.md](../feature/001_workspace_design.md) | Crate inventory that shares this version |
-| source | `../../Cargo.toml` | workspace.package.version declaration |
+| File | Relationship |
+|------|--------------|
+| [feature/001_workspace_design.md](../feature/001_workspace_design.md) | Crate inventory that shares this version |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
+| File | Relationship |
+|------|--------------|
+| `../../Cargo.toml` | workspace.package.version declaration |
+
+### Provenance
+
+| File | Relationship |
+|------|--------------|
 | `spec.md` (deleted — migrated here) | Versioning Strategy section |

@@ -78,16 +78,26 @@ This pattern applies when:
 - Breaking Layer Invariant requires refactoring to introduce a new layer or extract shared code
 - Same-layer crates that need to share logic must move shared code down a layer
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| feature | [feature/001_workspace_design.md](../feature/001_workspace_design.md) | Crate inventory that follows this pattern |
-| invariant | [invariant/001_privacy_invariant.md](../invariant/001_privacy_invariant.md) | Privacy constraint: no private consumer workspace deps |
-| source | `../../Cargo.toml` | Workspace manifest enforcing member deps |
+| File | Relationship |
+|------|--------------|
+| [feature/001_workspace_design.md](../feature/001_workspace_design.md) | Crate inventory that follows this pattern |
+
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [invariant/001_privacy_invariant.md](../invariant/001_privacy_invariant.md) | Privacy constraint: no private consumer workspace deps |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
+| File | Relationship |
+|------|--------------|
+| `../../Cargo.toml` | Workspace manifest enforcing member deps |
+
+### Provenance
+
+| File | Relationship |
+|------|--------------|
 | `spec.md` (deleted — migrated here) | Four-Layer Crate Architecture section |

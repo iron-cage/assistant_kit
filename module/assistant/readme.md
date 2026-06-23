@@ -6,10 +6,11 @@ Layer 3 super-app aggregating all Layer 2 CLI tools into a single `ast` binary.
 
 ```
 ast (Layer 3)
-  ├── claude_version (Layer 2) — 14 commands: .status, .version.*, .processes.*, .settings.*, .account.*
-  ├── claude_profile (Layer 2) — 8 commands:  .account.*, .token.status, .paths, .usage
-  ├── claude_runner  (Layer 2) — 2 commands:  .claude, .claude.help
-  └── claude_storage (Layer 2) — 9 commands:  .status, .list, .show, .count, .search, .export, .session, .sessions
+  ├── claude_assets   (Layer 2) — 4 commands:  .list, .install, .uninstall, .kinds
+  ├── claude_version  (Layer 2) — 12 commands: .status, .version.*, .processes.*, .settings.*, .config
+  ├── claude_profile  (Layer 2) — 14 commands: .accounts, .account.*, .credentials.status, .model, .token.status, .paths, .usage
+  ├── claude_runner   (Layer 2) — 2 commands:  .claude, .claude.help
+  └── claude_storage  (Layer 2) — 9 commands:  .show, .count, .search, .export, .projects, .path, .exists, .session.*
 ```
 
 ## Usage
@@ -30,3 +31,4 @@ ast .version.install          # install/update claude
 | `docs/` | Behavioral requirements: feature and invariant doc instances |
 | `tests/` | Compile and link sanity checks for the `ast` binary |
 | `verb/` | Shell scripts for each `do` protocol verb. |
+| `runbox/` | Container test configuration and runbox entry script |

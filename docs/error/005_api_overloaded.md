@@ -45,11 +45,16 @@ When `clr` invokes `claude --print` and the API is overloaded, Claude emits an `
 
 `ExecutionOutput::classify_error()` returns `Some(ErrorKind::ApiError)` when the `"API Error: "` pattern matches and no higher-priority pattern fires first.
 
-### Cross-References
+### Errors
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| error | [error/001_rate_limit_reached.md](001_rate_limit_reached.md) | Rate-limit error (429) — per-key quota, distinct from capacity overload |
-| error | [error/004_request_timed_out.md](004_request_timed_out.md) | Timeout error — connection-level failure vs server-side capacity rejection |
-| source | `../../module/claude_profile/src/commands.rs` | `account auto-rotate` command for switching accounts under error conditions |
-| source | `../../module/claude_runner_core/src/types.rs` | `ErrorKind::ApiError` variant and `classify_error()` on `ExecutionOutput` |
+| File | Relationship |
+|------|--------------|
+| [001_rate_limit_reached.md](001_rate_limit_reached.md) | Rate-limit error (429) — per-key quota, distinct from capacity overload |
+| [004_request_timed_out.md](004_request_timed_out.md) | Timeout error — connection-level failure vs server-side capacity rejection |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `../../module/claude_profile/src/commands.rs` | `account auto-rotate` command for switching accounts under error conditions |
+| `../../module/claude_runner_core/src/types.rs` | `ErrorKind::ApiError` variant and `classify_error()` on `ExecutionOutput` |
