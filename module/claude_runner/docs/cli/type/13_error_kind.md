@@ -16,7 +16,7 @@ Callers use this to decide whether to retry, switch credentials, abort, or surfa
 |---------|-------------|------------------|-----------------|
 | `RateLimit` | exit 2 (no text match) | exit code fallback after pattern scan | retry with backoff |
 | `QuotaExhausted` | exit 2 + text match | `"You've hit your limit"` in stdout/stderr | wait for period reset or switch account |
-| `AuthError` | any nonzero + text match | `"Your organization does not have access to Claude"` in stdout/stderr | fix credentials |
+| `AuthError` | any nonzero + text match | `"authentication_error"` or `"Your organization does not have access to Claude"` in stdout/stderr | fix credentials |
 | `ApiError` | any nonzero + text match | `"API Error: "` in stdout/stderr | surface to user; may be transient |
 | `Signal` | exit code > 128 | exit code > 128 (POSIX 128+N convention) | report signal number; check for external killer |
 | `Unknown` | other nonzero | no pattern match, exit ≤ 128, exit ≠ 2 | surface raw output to user |
@@ -27,14 +27,16 @@ Callers use this to decide whether to retry, switch credentials, abort, or surfa
 
 1. Scan stdout + stderr for `"You've hit your limit"` → `QuotaExhausted`
 2. Scan stdout + stderr for `"Your organization does not have access to Claude"` → `AuthError`
-3. Scan stdout + stderr for `"API Error: "` → `ApiError`
-4. Exit code == 2 → `RateLimit`
-5. Exit code > 128 → `Signal`
-6. Default → `Unknown`
+3. Scan stdout + stderr for `"authentication_error"` → `AuthError`
+4. Scan stdout + stderr for `"API Error: "` → `ApiError`
+5. Exit code == 2 → `RateLimit`
+6. Exit code > 128 → `Signal`
+7. Default → `Unknown`
 
 `QuotaExhausted` is checked before `AuthError` and before the exit-2 sentinel so period-exhaustion messages
 (which also produce exit 2) are classified as `QuotaExhausted`, not `RateLimit`.
-`AuthError` is checked before `ApiError` because a 401 response may contain both `"Your organization..."` and `"API Error: "`.
+`AuthError` is checked before `ApiError` because a 401 response may contain both `"authentication_error"` and `"API Error: "`.
+The `"authentication_error"` pattern (step 3) catches the Claude CLI 401 form: `"Failed to authenticate. API Error: 401 {\"type\":\"authentication_error\",...}"` — it must appear before the `"API Error: "` catch-all at step 4.
 
 ### CLR-Layer Ad-Hoc Error Codes
 

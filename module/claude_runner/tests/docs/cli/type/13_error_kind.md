@@ -21,6 +21,7 @@ Validation tests for the `ErrorKind` classification type. Tests validate subproc
 | TC-10 | CLR timeout → exit 4, stderr `"Error: timeout after {N}s"` | CLR-Layer |
 | TC-11 | `--expect` mismatch → exit 3 | CLR-Layer |
 | TC-12 | `--max-sessions 0`, no gate → still exits 0 on success | CLR-Layer |
+| TC-13 | `authentication_error` 401 string → `AuthError`, not `ApiError` | Auth / Priority Order |
 
 ## Test Coverage Summary
 
@@ -33,8 +34,9 @@ Validation tests for the `ErrorKind` classification type. Tests validate subproc
 - Unknown: 1 test (TC-7)
 - Priority Order: 2 tests (TC-8, TC-9)
 - CLR-Layer: 3 tests (TC-10, TC-11, TC-12)
+- Auth / Priority Order: 1 test (TC-13)
 
-**Total:** 12 test cases
+**Total:** 13 test cases
 
 ## Test Cases
 
@@ -157,4 +159,15 @@ Validation tests for the `ErrorKind` classification type. Tests validate subproc
 - **When:** invoked
 - **Then:** exits 0 (gate is disabled; no exit 1 from gate timeout)
 - **Exit:** 0
+- **Source:** [type/13_error_kind.md](../../../../docs/cli/type/13_error_kind.md)
+
+---
+
+### TC-13: `authentication_error` 401 string → `AuthError`, not `ApiError`
+
+- **Given:** `ExecutionOutput` with `exit_code = 1`, stderr contains `"Failed to authenticate. API Error: 401 {\"type\":\"authentication_error\",\"message\":\"Invalid authentication credentials\"}"`
+- **When:** `classify_error()` called
+- **Then:** Returns `Some(ErrorKind::AuthError)`, not `Some(ErrorKind::ApiError)` — the `"authentication_error"` pattern fires before the `"API Error: "` catch-all
+- **Exit:** N/A (unit test)
+- **Note:** test_kind: bug_reproducer(BUG-314). Without the fix the string would be misclassified as `ApiError` because `"API Error: "` appears in the same message.
 - **Source:** [type/13_error_kind.md](../../../../docs/cli/type/13_error_kind.md)

@@ -460,6 +460,14 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
       // Pitfall: classify_error() scans stdout AND stderr — rate-limit reason may be in stdout.
       let kind = output.classify_error();
       let class = classify_to_class( kind.as_ref(), output.exit_code );
+      // Fix(BUG-315): auth errors exit immediately without sleeping (fail-fast).
+      // Root cause: retry loop had no is_auth_error guard; auth failures burned retry
+      //   budget sleeping between guaranteed re-failures — same stale credential, same
+      //   401 outcome. Auth failures cannot be recovered without credential injection.
+      // Pitfall: never use `break` inside this retry block — break exits the loop and
+      //   falls through to the function's implicit return (), bypassing the
+      //   process::exit(exit_code) call below. Guard the block ENTRY instead.
+      let is_auth_error = matches!( class, ErrorClass::Auth );
       let class_idx = class as usize;
       let label = class.label();
       let ( count_field, delay_field ) = class_fields( cli, class );
@@ -468,7 +476,7 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
       let use_summary = cli.output_style.as_deref().unwrap_or( "summary" ) == "summary";
       let msg = first_message( &output, class, use_summary );
 
-      if attempts[ class_idx ] < limit
+      if !is_auth_error && attempts[ class_idx ] < limit
       {
         attempts[ class_idx ] += 1;
         if verbosity.shows_warnings()

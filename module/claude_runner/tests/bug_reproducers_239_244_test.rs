@@ -223,16 +223,26 @@ fn spawn_error_visible_at_verbosity_0()
 
 // ── BUG-241 ──────────────────────────────────────────────────────────────────
 
-/// BUG-241 reproducer T4: PATH=/tmp → stderr must contain "not found" AND "install".
+/// BUG-241 reproducer T4: no `claude` binary in PATH → stderr must contain "not found" AND "install".
 ///
 /// Before fix: `execute()` emitted `"Failed to execute Claude Code: {raw_os_error}"` —
 /// the OS error string on Linux is "No such file or directory (os error 2)" with no
 /// install guidance.
+///
+/// Uses an empty temp dir as PATH to guarantee ENOENT regardless of `/tmp` contents.
+/// `PATH=/tmp` was fragile: if `/tmp/claude/` exists (e.g. from a prior Claude Code session),
+/// Linux returns EACCES (os error 13) instead of ENOENT (os error 2), which bypasses the
+/// install-hint branch and emits the raw OS error instead.
 #[ test ]
 #[ doc = "bug_reproducer(BUG-241)" ]
 fn binary_not_found_shows_install_hint()
 {
-  let out = run_cli_with_env( &[ "--print", "--retry-override", "0", "test" ], &[ ( "PATH", "/tmp" ) ] );
+  let empty_dir = tempfile::TempDir::new().expect( "empty PATH dir" );
+  let path_val  = empty_dir.path().to_str().expect( "path UTF-8" );
+  let out = run_cli_with_env(
+    &[ "--print", "--retry-override", "0", "test" ],
+    &[ ( "PATH", path_val ) ],
+  );
   assert_ne!( exit_code( &out ), 0, "BUG-241: must exit non-zero when binary absent" );
   let err = stderr_str( &out );
   assert!(

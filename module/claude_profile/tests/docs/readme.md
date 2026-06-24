@@ -10,6 +10,7 @@ Test-lens documentation for `claude_profile`. Each surface subdirectory contains
 | feature/ | Feature behavioral requirement test cases (FT-N entries) |
 | invariant/ | Invariant property assertion specs (IN-N entries) |
 | cli/type/ | CLI type acceptance and boundary spec (TC-N entries) |
+| pitfall/ | Pitfall guard verification specs (PP-N entries) |
 
 ### Surface Index
 
@@ -21,3 +22,4 @@ Test-lens documentation for `claude_profile`. Each surface subdirectory contains
 | Feature docs | `docs/feature/` | `FT-` | 4 each | [feature/](feature/readme.md) |
 | Invariant docs | `docs/invariant/` | `IN-` | 2 each | [invariant/](invariant/readme.md) |
 | CLI types | `docs/cli/type/` | `TC-` | 4 each | [cli/type/](cli/type/readme.md) |
+| Pitfall docs | `docs/pitfall/` | `PP-` | 2 each | [pitfall/](pitfall/readme.md) |

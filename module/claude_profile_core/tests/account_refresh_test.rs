@@ -659,3 +659,59 @@ fn ft23_active_account_same_creds_falls_through_to_run_isolated()
      path, got Some(...) — the != comparison may be inverted, causing skipped RT rotation",
   );
 }
+
+// ── MRE BUG-316 ───────────────────────────────────────────────────────────────
+
+/// MRE BUG-316: `refresh_token_with_live_path` re-reads the active marker at each use site.
+///
+/// # Root Cause
+///
+/// `is_active` was computed ONCE before `run_isolated` and reused 35 seconds later in the
+/// race-recovery block. A concurrent `switch_account("B")` during the subprocess window
+/// changed the marker to "B". The stale cached `is_active=true` caused B's live credentials
+/// (now in `~/.claude/.credentials.json`) to be written into A's credential store slot —
+/// silently corrupting the credential of the account that was active at function entry.
+///
+/// # Why Not Caught
+///
+/// No test existed for the TOCTOU scenario (filesystem boolean cached across a blocking
+/// subprocess call). The design assumption (upstream ensures valid AT) was never tested.
+///
+/// # Fix Applied
+///
+/// Replaced the single cached `let is_active = {...}` with two independent inline re-reads:
+/// one at the pre-sync site (anonymous `if { ... }` block) and one at the race-recovery
+/// site (`is_active_now`), both in `refresh_token_with_live_path`.
+///
+/// # Prevention
+///
+/// This structural test verifies that `is_active_now` exists (the named re-read at the
+/// race-recovery site) and that `Fix(BUG-316)` is annotated at both re-read sites.
+///
+/// # Pitfall
+///
+/// Never cache a filesystem-derived boolean across a blocking call (subprocess, network I/O)
+/// in a multi-process environment — re-read at each use site instead.
+#[ cfg( feature = "enabled" ) ]
+#[ test ]
+fn mre_bug316_stale_is_active_race_recovery_copies_wrong_account_creds()
+{
+  // test_kind: bug_reproducer(BUG-316)
+  let src = std::fs::read_to_string(
+    concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/account.rs" )
+  ).expect( "read account.rs" );
+
+  // Fix: race-recovery site must use a fresh re-read variable, not a cached bool.
+  assert!(
+    src.contains( "is_active_now" ),
+    "BUG-316 fix: `is_active_now` must exist — fresh re-read at race-recovery block"
+  );
+
+  // Fix: both re-read sites must carry the Fix(BUG-316) annotation.
+  let fix_count = src.matches( "Fix(BUG-316)" ).count();
+  assert!(
+    fix_count >= 2,
+    "BUG-316 fix: `Fix(BUG-316)` must appear at ≥2 sites (pre-sync + race-recovery). \
+     Found: {fix_count}"
+  );
+}

@@ -21,6 +21,7 @@ Validation tests for the `ErrorClass` taxonomy. `ErrorClass` is a documentation-
 | TC-10 | Timeout uses exit 4, not exit 2 | Disambiguation |
 | TC-11 | Exit-2 disambiguation: QuotaExhausted vs RateLimit | Disambiguation |
 | TC-12 | Runner — spawn failed → stderr contains `[Runner]` prefix | Runner (BUG-298) |
+| TC-13 | Auth 401 `authentication_error` → `[Auth]` class label in output | Auth (BUG-314) |
 
 ## Test Coverage Summary
 
@@ -31,8 +32,9 @@ Validation tests for the `ErrorClass` taxonomy. `ErrorClass` is a documentation-
 - Process: 2 tests (TC-7, TC-9)
 - Validation: 1 test (TC-8)
 - Disambiguation: 2 tests (TC-10, TC-11)
+- Auth: 1 test (TC-13)
 
-**Total:** 12 test cases
+**Total:** 13 test cases
 
 ## Test Cases
 
@@ -158,4 +160,15 @@ Validation tests for the `ErrorClass` taxonomy. `ErrorClass` is a documentation-
 - **Then:** exit 1; stderr contains `"[Runner]"` prefix before the error message (e.g. `Error: [Runner] failed to execute Claude Code: permission denied (os error 13) (exit 1)`)
 - **Exit:** 1
 - **Note:** test_kind: bug_reproducer(BUG-298). Validates that `spawn_error_msg()` and all spawn-error call sites prepend `[Runner]` as specified in § Console Output Format. Currently failing — fix tracked in BUG-298.
+- **Source:** [type/14_error_class.md](../../../../docs/cli/type/14_error_class.md)
+
+---
+
+### TC-13: Auth 401 `authentication_error` → `[Auth]` class label in output
+
+- **Given:** fake `claude` that exits 1 and prints to stderr: `"Failed to authenticate. API Error: 401 {\"type\":\"authentication_error\",\"message\":\"Invalid authentication credentials\"}"`
+- **When:** `clr --print --max-sessions 0 "msg"` (no `--on-auth-error switch` configured)
+- **Then:** exit 1; stderr contains `"[Auth]"` class label (not `"[Service]"`); process exits immediately without retrying (fail-fast, no sleep)
+- **Exit:** 1
+- **Note:** test_kind: bug_reproducer(BUG-314, BUG-315). BUG-314: `"authentication_error"` pattern must fire before the `"API Error: "` catch-all to produce `[Auth]` not `[Service]`. BUG-315: no retry sleep occurs when no credential recovery hook is configured.
 - **Source:** [type/14_error_class.md](../../../../docs/cli/type/14_error_class.md)
