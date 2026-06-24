@@ -21,6 +21,11 @@
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env };
+// Fix(BUG-316): Root cause: Command imported without cfg gate but used only in
+// #[cfg(unix)] test fns (ec1/ec3/ec4); on Windows those tests are absent so the
+// import is unused → -W unused-imports warning.  Pitfall: gate the import with
+// the same cfg that gates all its usage sites.
+#[ cfg( unix ) ]
 use std::process::Command;
 
 // ── EC-2: Default — no file artifact ────────────────────────────────────────

@@ -1,5 +1,10 @@
+#![ allow( missing_docs ) ]
 #![ cfg( unix ) ]
-#![ cfg_attr( not( unix ), allow( missing_docs ) ) ]
+// Fix(BUG-316): Root cause: Feature-064 pull added cfg_attr(not(unix), allow(missing_docs))
+// AFTER cfg(unix) — on Windows cfg(unix)=false gates the whole file before cfg_attr is reached,
+// so the lint suppression never fires; missing_docs lint sees an empty undocumented crate.
+// Pitfall: lint-suppression inner attributes targeting Windows must appear BEFORE #![cfg(unix)];
+// anything appearing after the gate is unreachable when the gate evaluates to false.
 #![ allow( clippy::doc_markdown ) ] // test doc comments use code identifiers in prose
 //! `--retry-on-service` and `--service-delay` Integration Tests
 //!

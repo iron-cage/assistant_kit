@@ -1,5 +1,5 @@
+#![ allow( missing_docs ) ]
 #![ cfg( unix ) ]
-#![ cfg_attr( not( unix ), allow( missing_docs ) ) ]
 //! Credential default fallback tests.
 //!
 //! Verifies the 3-tier `--creds` resolution for `isolated` and `refresh`:

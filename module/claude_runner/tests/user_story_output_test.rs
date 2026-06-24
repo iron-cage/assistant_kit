@@ -1,5 +1,5 @@
+#![ allow( missing_docs ) ]
 #![ cfg( unix ) ]
-#![ cfg_attr( not( unix ), allow( missing_docs ) ) ]
 //! User Story Integration Tests — Output, Effort, Context, Subdir, Concurrency (US19–US25)
 //!
 //! ## Purpose

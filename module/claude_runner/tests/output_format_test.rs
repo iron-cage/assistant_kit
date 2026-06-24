@@ -1,5 +1,5 @@
+#![ allow( missing_docs ) ]
 #![ cfg( unix ) ]
-#![ cfg_attr( not( unix ), allow( missing_docs ) ) ]
 //! `--output-format` Integration Tests
 //!
 //! Covers EC-1 through EC-14 from `tests/docs/cli/param/061_output_format.md`.
