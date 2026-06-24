@@ -9,7 +9,6 @@ use error_tools::{ Error, Result };
 /// Param names that only accept boolean values (true/false/1/0).
 const BOOL_PARAMS : &[ &str ] = &[
   "dry",
-  "active",
   "account", "sub", "tier", "token", "expires", "email", "file", "saved",
 ];
 

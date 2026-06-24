@@ -6,21 +6,22 @@ Edge case tests for the repurposed `active::` parameter (Feature 064). Previousl
 
 ## Test Case Index
 
-| ID | Test Name | Category |
-|----|-----------|----------|
-| EC-1 | `active::user@host name::X` writes `_active_host_user = X` | Behavioral |
-| EC-2 | `active::user@host` (no `name::`) clears `_active_host_user` | Behavioral |
-| EC-3 | `active::badvalue` (no `@`) exits 1 | Validation |
-| EC-4 | `active::@host` (empty user component) exits 1 | Validation |
-| EC-5 | `active::user@` (empty machine component) exits 1 | Validation |
-| EC-6 | Space in machine component sanitized to `_` | Sanitization |
-| EC-7 | Dot and hyphen in machine component preserved | Sanitization |
-| EC-8 | `active::user@host name::X dry::1` previews without writing | Dry-run |
-| EC-9 | `active::user@host name::unknown` exits 1 (account not in store) | Validation |
-| EC-10 | `active::` absent — no marker write (default omit) | Default |
-| EC-11 | `active::user@host` does NOT modify `owner` field | Isolation |
-| EC-12 | `active::0 name::X` exits 1 — `"0"` is not a valid `USER@MACHINE` | Validation |
-| EC-13 | `force::1 active::user@host name::X` — `force::1` silently ignored; marker written | No-op |
+| ID | Test Name | Category | Status |
+|----|-----------|----------|--------|
+| EC-1 | `active::user@host name::X` writes `_active_host_user = X` | Behavioral | ✅ |
+| EC-2 | `active::user@host` (no `name::`) clears `_active_host_user` | Behavioral | ✅ |
+| EC-3 | `active::badvalue` (no `@`) exits 1 | Validation | ✅ |
+| EC-4 | `active::@host` (empty user component) exits 1 | Validation | ✅ |
+| EC-5 | `active::user@` (empty machine component) exits 1 | Validation | ✅ |
+| EC-6 | Space in machine component sanitized to `_` | Sanitization | ✅ |
+| EC-7 | Dot and hyphen in machine component preserved | Sanitization | ✅ |
+| EC-8 | `active::user@host name::X dry::1` previews without writing | Dry-run | ✅ |
+| EC-9 | `active::user@host name::unknown` exits 1 (account not in store) | Validation | ✅ |
+| EC-10 | `active::` absent — no marker write (default omit) | Default | ✅ |
+| EC-11 | `active::user@host` does NOT modify `owner` field | Isolation | ✅ |
+| EC-12 | `active::0 name::X` exits 1 — `"0"` is not a valid `USER@MACHINE` | Validation | ✅ |
+| EC-13 | `force::1 active::user@host name::X` — `force::1` silently ignored; marker written | No-op | ✅ |
+| EC-14 | `active::user@host` (no `name::`) when marker absent — no-op exit 0, stdout `unassigned` | Behavioral | ✅ |
 
 ## Test Coverage Summary
 
@@ -30,9 +31,9 @@ Edge case tests for the repurposed `active::` parameter (Feature 064). Previousl
 - Dry-run: 1 test (EC-8)
 - Default: 1 test (EC-10)
 - Isolation: 1 test (EC-11)
-- No-op: 1 test (EC-13)
+- No-op: 2 tests (EC-13, EC-14)
 
-**Total:** 13 edge cases
+**Total:** 14 edge cases
 
 ## Test Cases
 
@@ -164,5 +165,15 @@ Edge case tests for the repurposed `active::` parameter (Feature 064). Previousl
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
 - **When:** `clp .accounts active::user1@w003 name::alice@corp.com force::1`
 - **Then:** Exits 0. `{credential_store}/_active_w003_user1` written with `alice@corp.com`. `force::1` is silently ignored — `active::` has no ownership gate, so `force::` has no effect. Output identical to the same command without `force::1`.
+- **Exit:** 0
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
+
+---
+
+### EC-14: `active::user@host` (no `name::`) when marker absent — no-op exit 0
+
+- **Given:** Credential store exists but contains no `_active_testmachine_testuser` marker file.
+- **When:** `clp .accounts active::testuser@testmachine` (no `name::`)
+- **Then:** Exits 0. stdout contains `unassigned`. No new `_active_*` file is created — the absent marker stays absent.
 - **Exit:** 0
 - **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)

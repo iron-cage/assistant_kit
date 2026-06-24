@@ -734,9 +734,9 @@ fn assign_bv1_reassigning_same_account_idempotent()
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
   write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, true );
 
-  // First assign (marker already set)
+  // First assign (marker already set by write_account(make_active=true) under real env).
   let out1 = run_cs_with_env(
-    &[ ".accounts", "assign::1", "name::alice@acme.com" ],
+    &[ ".accounts", "active::testuser@testmachine", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out1, 0 );
@@ -746,9 +746,9 @@ fn assign_bv1_reassigning_same_account_idempotent()
     .join( "_active_testmachine_testuser" );
   let marker_content = std::fs::read_to_string( &marker_path ).unwrap();
 
-  // Second assign with same account
+  // Second assign with same account — idempotent.
   let out2 = run_cs_with_env(
-    &[ ".accounts", "assign::1", "name::alice@acme.com" ],
+    &[ ".accounts", "active::testuser@testmachine", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out2, 0 );
@@ -777,7 +777,7 @@ fn assign_bv2_writes_marker_without_touching_credential_files()
   let mtime_live_before = mtime_ms( &live_creds );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "assign::1", "name::alice@acme.com" ],
+    &[ ".accounts", "active::testuser@testmachine", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 0 );
@@ -795,11 +795,11 @@ fn assign_bv2_writes_marker_without_touching_credential_files()
   // Credential files must remain unmodified
   assert_eq!(
     mtime_cred_before, mtime_ms( &cred_file ),
-    "alice@acme.com.credentials.json must not be modified by assign",
+    "alice@acme.com.credentials.json must not be modified by active::",
   );
   assert_eq!(
     mtime_live_before, mtime_ms( &live_creds ),
-    "~/.claude/.credentials.json must not be modified by assign",
+    "~/.claude/.credentials.json must not be modified by active::",
   );
 }
 
@@ -811,11 +811,12 @@ fn assign_bv3_nonexistent_account_exits_2()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
 
+  // active:: validates account existence with exit 1 (ArgumentTypeMismatch, not InternalError).
   let out = run_cs_with_env(
-    &[ ".accounts", "assign::1", "name::nobody@acme.com" ],
+    &[ ".accounts", "active::testuser@testmachine", "name::nobody@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
-  assert_exit( &out, 2 );
+  assert_exit( &out, 1 );
 }
 
 // ── verb::status ──────────────────────────────────────────────────────────────
