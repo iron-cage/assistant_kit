@@ -55,7 +55,7 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 ### Navigation
 
 - [Commands](command/readme.md) — 18 commands (17 visible + 1 hidden) across 6 namespaces
-- [Parameters](param/readme.md) — 61 individual parameter specifications
+- [Parameters](param/readme.md) — 58 active parameter specifications (62 files; 3 REMOVED via Feature 064)
 - [Types](type/readme.md) — 4 CLI types (AccountName, OutputFormat, WarningThreshold, AccountSelector)
 - [Parameter Groups](param_group/readme.md) — 6 groups (Output Control, Field Presence, Fetch Behavior, Sort Control, Display Control, Account Targeting)
 - [User Stories](user_story/readme.md) — 5 user stories (Account Rotation, Onboarding, Quota Monitoring, Scripted Automation, Credential Diagnostics)

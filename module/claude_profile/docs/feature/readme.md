@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the functional capabilities of `claude_profile` — account credential management and the `clp` CLI.
 - **Responsibility**: Documents all functional requirements with their design, acceptance criteria, and test references.
-- **In Scope**: feature/001 through feature/040, feature/061 through feature/063 — full functional capability set for claude_profile and the clp CLI.
+- **In Scope**: feature/001 through feature/040, feature/061 through feature/064 — full functional capability set for claude_profile and the clp CLI.
 - **Out of Scope**: Quality constraints (→ invariant/), CLI design (→ cli/).
 
 ### Overview Table
@@ -53,4 +53,5 @@
 | 040 | [Quota Measurement History](040_quota_measurement_history.md) | Store up to 10 real server measurements; quadratic LS approximation when API unavailable | ✅ |
 | 061 | [Solo Token Conservation](061_solo_token_conservation.md) | Restrict live operations to current+owned account; others use `approximate_quota()` | ✅ |
 | 062 | [Unified Session Config Recommendation](062_unified_session_config.md) | `recommended_model()` canonical function; footer Next line shows effort; rotation writes model+effort for winner | ✅ |
-| 063 | [Explicit Ownership Claim](063_explicit_ownership_claim.md) | `owner::` parameter — CLI-exposed write path for account ownership; G8 gate; `force::` bypass; mutual exclusion with `unclaim::1` | ✅ |
+| 063 | [Explicit Ownership Claim](063_explicit_ownership_claim.md) | `owner::` parameter — CLI-exposed write path for account ownership; G8 gate; `force::` bypass | ✅ |
+| 064 | [Active Marker and Owner Param Redesign](064_active_marker_and_owner_redesign.md) | Repurpose `active::` as `Kind::String` assign/unassign param; `owner::0` sentinel for ownership release; batch `name::X,Y,Z`; remove `assign::1`, `for::`, `unclaim::1` | ✅ |

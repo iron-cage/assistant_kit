@@ -73,6 +73,10 @@
 //! | `mre_324_a` | `mre_324_role_toggle_shows_user_label` | `cols::+role` → user-defined label from `{name}.json`, not org role | P |
 //! | `mre_324_b` | `mre_324_host_role_na_when_metadata_absent` | `cols::+host,+role`, no snapshot → Host/Role both N/A | P |
 //! | `mre_324_c` | `mre_324_json_output_keys` | `format::json` → canonical AC-12 keys; no `profile_host`/`profile_role` | P |
+//! | `mre_324_d` | `mre_324_json_owner_is_owned_values` | `format::json` → correct `owner`/`is_owned` values (AC-20) | P |
+//! | `mre_324_e` | `mre_324_json_renewal_at_values` | `format::json` → correct `renewal_at` value and null (AC-21) | P |
+//! | `mre_324_f` | `mre_324_json_is_owned_false_for_foreign_owner` | `format::json` → `is_owned: false` when owner is a foreign identity | P |
+//! | `mre_324_g` | `mre_324_json_host_role_org_role_values` | `format::json` → correct `host`, `role`, `organization_role` VALUES | P |
 //!
 //! ### FT — Feature 037 Param Unification Tests
 //!
@@ -2140,4 +2144,213 @@ fn mre_324_json_output_keys()
   assert!( text.contains( "\"renewal_at\""        ), "JSON must include renewal_at key, got:\n{text}"        );
   assert!( !text.contains( "\"profile_host\""     ), "JSON must NOT include profile_host key, got:\n{text}"  );
   assert!( !text.contains( "\"profile_role\""     ), "JSON must NOT include profile_role key, got:\n{text}"  );
+}
+
+// ── mre_324_d ─────────────────────────────────────────────────────────────────
+
+/// `mre_324_d` — `format::json` emits correct `owner` and `is_owned` VALUES per account.
+///
+/// AC-20: Account A with `owner` matching current identity → `is_owned: true`;
+/// Account B with no owner field → `owner: ""` and `is_owned: true` (unowned = all-owned).
+///
+/// Spec: [`tests/docs/feature/03_account_list.md` FT-20]
+#[ test ]
+fn mre_324_json_owner_is_owned_values()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Account A: owned by testuser@testmachine (matches identity set via env vars below)
+  write_account( dir.path(), "alice@acme.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "testuser@testmachine" );
+
+  // Account B: no owner field → unowned = owned by all
+  write_account( dir.path(), "bob@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "format::json" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  let arr : serde_json::Value = serde_json::from_str( &text )
+    .expect( "format::json must produce valid JSON" );
+  let arr = arr.as_array().expect( "JSON root must be an array" );
+
+  let alice = arr.iter()
+    .find( |v| v[ "name" ].as_str() == Some( "alice@acme.com" ) )
+    .expect( "alice@acme.com must appear in JSON output" );
+  assert_eq!(
+    alice[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "testuser@testmachine",
+    "FT-20: alice owner value must be 'testuser@testmachine'; got:\n{text}",
+  );
+  assert!(
+    alice[ "is_owned" ].as_bool().unwrap_or( false ),
+    "FT-20: alice is_owned must be true (owner matches identity); got:\n{text}",
+  );
+
+  let bob = arr.iter()
+    .find( |v| v[ "name" ].as_str() == Some( "bob@acme.com" ) )
+    .expect( "bob@acme.com must appear in JSON output" );
+  assert_eq!(
+    bob[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "",
+    "FT-20: bob owner must be empty string (no owner field); got:\n{text}",
+  );
+  assert!(
+    bob[ "is_owned" ].as_bool().unwrap_or( false ),
+    "FT-20: bob is_owned must be true (unowned = owned by all); got:\n{text}",
+  );
+}
+
+// ── mre_324_e ─────────────────────────────────────────────────────────────────
+
+/// `mre_324_e` — `format::json` emits correct `renewal_at` VALUE; `null` when absent.
+///
+/// AC-21: Account A with `_renewal_at` set → `renewal_at: "<iso>"`;
+/// Account B with no `_renewal_at` → `renewal_at: null`.
+///
+/// Spec: [`tests/docs/feature/03_account_list.md` FT-21]
+#[ test ]
+fn mre_324_json_renewal_at_values()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Account A: has a renewal override date
+  write_account( dir.path(), "alice@acme.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account_renewal_json( dir.path(), "alice@acme.com", "2025-08-01T00:00:00Z" );
+
+  // Account B: no _renewal_at field → renewal_at must be null in JSON output
+  write_account( dir.path(), "bob@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  let arr : serde_json::Value = serde_json::from_str( &text )
+    .expect( "format::json must produce valid JSON" );
+  let arr = arr.as_array().expect( "JSON root must be an array" );
+
+  let alice = arr.iter()
+    .find( |v| v[ "name" ].as_str() == Some( "alice@acme.com" ) )
+    .expect( "alice@acme.com must appear in JSON output" );
+  assert_eq!(
+    alice[ "renewal_at" ].as_str().unwrap_or( "MISSING" ),
+    "2025-08-01T00:00:00Z",
+    "FT-21: alice renewal_at must be '2025-08-01T00:00:00Z'; got:\n{text}",
+  );
+
+  let bob = arr.iter()
+    .find( |v| v[ "name" ].as_str() == Some( "bob@acme.com" ) )
+    .expect( "bob@acme.com must appear in JSON output" );
+  assert!(
+    bob[ "renewal_at" ].is_null(),
+    "FT-21: bob renewal_at must be null when _renewal_at absent; got:\n{text}",
+  );
+}
+
+// ── mre_324_f ─────────────────────────────────────────────────────────────────
+
+/// `mre_324_f` — `format::json` emits `is_owned: false` when owner is a foreign identity.
+///
+/// AC-20 covers three states: empty owner (all-owned), matching owner (this machine owns),
+/// and foreign owner (different machine owns). Only the third yields `is_owned: false`.
+/// This test exercises that branch by writing owner "other@remote" and running as a
+/// different identity "local@localmachine".
+///
+/// Spec: [`docs/feature/003_account_list.md` AC-20]
+#[ test ]
+fn mre_324_json_is_owned_false_for_foreign_owner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Account owned by "other@remote"; we run as USER=local, HOSTNAME=localmachine → mismatch.
+  write_account( dir.path(), "alice@acme.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "format::json" ],
+    &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "localmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  let arr : serde_json::Value = serde_json::from_str( &text )
+    .expect( "format::json must produce valid JSON" );
+  let arr = arr.as_array().expect( "JSON root must be an array" );
+
+  let alice = arr.iter()
+    .find( |v| v[ "name" ].as_str() == Some( "alice@acme.com" ) )
+    .expect( "alice@acme.com must appear in JSON output" );
+  assert_eq!(
+    alice[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "other@remote",
+    "mre_324_f: owner field must be 'other@remote'; got:\n{text}",
+  );
+  assert!(
+    !alice[ "is_owned" ].as_bool().unwrap_or( true ),
+    "mre_324_f: is_owned must be false when owner is a foreign identity; got:\n{text}",
+  );
+}
+
+// ── mre_324_g ─────────────────────────────────────────────────────────────────
+
+/// `mre_324_g` — `format::json` emits correct VALUES for `host`, `role`, `organization_role`.
+///
+/// `mre_324_c` verified key presence; this test verifies that each field carries
+/// the correct value from its data source:
+/// - `"role"` → user-defined label from `{name}.json` `"role"` key (via `write_account_profile_json`)
+/// - `"host"` → host label from `{name}.json` `"host"` key (via `write_account_profile_json`)
+/// - `"organization_role"` → org role from `{name}.json` `"organization_role"` key (via `write_account_roles_json`)
+///
+/// Spec: [`docs/feature/003_account_list.md` AC-12]
+#[ test ]
+fn mre_324_json_host_role_org_role_values()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  // User-defined role label and host from profile fields:
+  write_account_profile_json( dir.path(), "test@example.com", Some( "work-laptop" ), Some( "developer" ) );
+  // Org role from roles.json (organization_role key, distinct from the user role label):
+  write_account_roles_json( dir.path(), "test@example.com", "uuid-123", "Acme Corp", "admin" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  let arr : serde_json::Value = serde_json::from_str( &text )
+    .expect( "format::json must produce valid JSON" );
+  let arr = arr.as_array().expect( "JSON root must be an array" );
+
+  let acct = arr.iter()
+    .find( |v| v[ "name" ].as_str() == Some( "test@example.com" ) )
+    .expect( "test@example.com must appear in JSON output" );
+
+  assert_eq!(
+    acct[ "host" ].as_str().unwrap_or( "MISSING" ),
+    "work-laptop",
+    "mre_324_g: host must be 'work-laptop' from profile host field; got:\n{text}",
+  );
+  assert_eq!(
+    acct[ "role" ].as_str().unwrap_or( "MISSING" ),
+    "developer",
+    "mre_324_g: role must be 'developer' (user-defined label from role field); got:\n{text}",
+  );
+  assert_eq!(
+    acct[ "organization_role" ].as_str().unwrap_or( "MISSING" ),
+    "admin",
+    "mre_324_g: organization_role must be 'admin' from organization_role field; got:\n{text}",
+  );
 }

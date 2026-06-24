@@ -52,6 +52,9 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 | IT-44 | `unclaim::1 name::X` clears owner field when G8 passes | Feature 037 — unclaim mutation |
 | IT-45 | `unclaim::1 name::X` exits 1 with ownership violation when G8 fails | Feature 037 — unclaim mutation |
 | IT-46 | `force::1 unclaim::1 name::X` bypasses G8 and clears owner | Feature 037 — force bypass |
+| IT-47 | `format::json` emits correct `owner`, `is_owned`, `renewal_at` values | TSK-324 — JSON value correctness |
+| IT-48 | `format::json` emits `is_owned: false` when owner is a foreign identity | TSK-324 — JSON value correctness |
+| IT-49 | `format::json` emits correct `host`, `role`, `organization_role` values | TSK-324 — JSON value correctness |
 
 ### Test Coverage Summary
 
@@ -80,8 +83,9 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - Feature 037 — assign mutation: 1 test (IT-43)
 - Feature 037 — unclaim mutation: 2 tests (IT-44, IT-45)
 - Feature 037 — force bypass: 1 test (IT-46)
+- TSK-324 — JSON value correctness: 3 tests (IT-47, IT-48, IT-49)
 
-**Total:** 46 integration tests
+**Total:** 49 integration tests
 
 ---
 
@@ -542,3 +546,33 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **Then:** Exit 0. G8 gate bypassed. `alice.json` contains `"owner": ""`. stdout contains `unclaimed alice@acme.com`.
 - **Exit:** 0
 - **Source:** [feature/037_accounts_usage_param_unification.md AC-20](../../../../docs/feature/037_accounts_usage_param_unification.md)
+
+---
+
+### IT-47: `format::json` emits correct `owner`, `is_owned`, `renewal_at` values
+
+- **Given:** `alice@acme.com` with `alice.json` containing `"owner": "testuser@testmachine"` and `"_renewal_at": "2025-08-01T00:00:00Z"`. `bob@acme.com` with no owner or renewal fields.
+- **When:** `clp .accounts format::json` with current identity = `testuser@testmachine`.
+- **Then:** alice JSON object has `owner: "testuser@testmachine"`, `is_owned: true`, `renewal_at: "2025-08-01T00:00:00Z"`. bob JSON object has `owner: ""`, `is_owned: true` (unowned = all-owned), `renewal_at: null`.
+- **Exit:** 0
+- **Source:** [feature/003_account_list.md AC-20, AC-21](../../../../docs/feature/003_account_list.md)
+
+---
+
+### IT-48: `format::json` emits `is_owned: false` when owner is a foreign identity
+
+- **Given:** `alice@acme.com` with `alice.json` containing `"owner": "other@remote"`. Current identity is `local@localmachine` (USER=local, HOSTNAME=localmachine).
+- **When:** `clp .accounts format::json`
+- **Then:** alice JSON object has `owner: "other@remote"` and `is_owned: false` (foreign owner).
+- **Exit:** 0
+- **Source:** [feature/003_account_list.md AC-20](../../../../docs/feature/003_account_list.md)
+
+---
+
+### IT-49: `format::json` emits correct `host`, `role`, `organization_role` values
+
+- **Given:** `test@example.com` with `{name}.json` containing `host = "work-laptop"`, `role = "developer"`, `organization_role = "admin"`.
+- **When:** `clp .accounts format::json`
+- **Then:** JSON object has `host: "work-laptop"`, `role: "developer"`, `organization_role: "admin"`.
+- **Exit:** 0
+- **Source:** [feature/003_account_list.md AC-12](../../../../docs/feature/003_account_list.md)

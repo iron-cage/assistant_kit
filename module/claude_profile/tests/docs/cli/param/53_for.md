@@ -1,27 +1,34 @@
-# Test: `for::` Parameter (Account Assign Target Identity)
+# Test: `for::` Parameter — REMOVED (Feature 064)
 
-Edge case coverage for the `for::` `USER@MACHINE` composite target identity parameter on
-`.accounts assign::1`. See [param/053_for.md](../../../../docs/cli/param/053_for.md) for specification.
+> **REMOVED (Feature 064)**: The `for::` parameter on `.accounts assign::1` has been removed.
+> Its functionality is absorbed into the `active::` param value: `active::USER@MACHINE name::X`.
+>
+> Any invocation of `for::` now exits 1 with the migration message:
+> "REMOVED — functionality absorbed into `active::` value: `active::USER@MACHINE name::X`"
+>
+> See [param/053_for.md](../../../../docs/cli/param/053_for.md) for the removal notice.
+> See [feature/064_active_marker_and_owner_redesign.md](../../../../docs/feature/064_active_marker_and_owner_redesign.md) for the redesign.
 
-The parameter splits on the **first** `@`: left → user component, right → machine component.
-Each component is sanitized independently (alphanumeric, `-`, `.` kept; else `_`).
+All EC test cases in this file (EC-1 through EC-8) are **superseded** — `for::` no longer exists as an active
+parameter. The split/sanitize semantics are now exercised by `14_active.md` EC-3 through EC-7 (the
+`active::USER@MACHINE` value uses the same split-on-first-`@` and sanitize rules as the former `for::` value).
 
-### Test Case Index
+### Superseded Test Case Index (DO NOT IMPLEMENT)
 
-| ID | Test Name | Category |
-|----|-----------|----------|
-| EC-1 | `for::bob@laptop` writes `_active_laptop_bob` | Behavioral Divergence |
-| EC-2 | `for::` omitted — current machine default used | Behavioral Divergence |
-| EC-3 | `for::badvalue` (no `@`) exits 1 | Validation |
-| EC-4 | `for::@laptop` (empty user component) exits 1 | Validation |
-| EC-5 | `for::bob@` (empty machine component) exits 1 | Validation |
-| EC-6 | Space in machine component sanitized to `_` | Sanitization |
-| EC-7 | Dot and hyphen in machine component preserved | Sanitization |
-| EC-8 | Multiple `@` in value — split on first only | Split Semantics |
+| ID | Test Name | Category | Status |
+|----|-----------|----------|--------|
+| EC-1 | `for::bob@laptop` writes `_active_laptop_bob` | Behavioral | **REMOVED** |
+| EC-2 | `for::` omitted — current machine default used | Behavioral | **REMOVED** |
+| EC-3 | `for::badvalue` (no `@`) exits 1 | Validation | **REMOVED** |
+| EC-4 | `for::@laptop` (empty user component) exits 1 | Validation | **REMOVED** |
+| EC-5 | `for::bob@` (empty machine component) exits 1 | Validation | **REMOVED** |
+| EC-6 | Space in machine component sanitized to `_` | Sanitization | **REMOVED** |
+| EC-7 | Dot and hyphen in machine component preserved | Sanitization | **REMOVED** |
+| EC-8 | Multiple `@` in value — split on first only | Split Semantics | **REMOVED** |
 
 ---
 
-### EC-1: `for::bob@laptop` writes `_active_laptop_bob`
+### EC-1: `for::bob@laptop` writes `_active_laptop_bob` *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
 - **When:** `clp .accounts assign::1 name::alice@corp.com for::bob@laptop`
@@ -32,7 +39,7 @@ Each component is sanitized independently (alphanumeric, `-`, `.` kept; else `_`
 
 ---
 
-### EC-2: `for::` omitted — current machine default used
+### EC-2: `for::` omitted — current machine default used *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
 - **When:** `clp .accounts assign::1 name::alice@corp.com` (no `for::`)
@@ -43,7 +50,7 @@ Each component is sanitized independently (alphanumeric, `-`, `.` kept; else `_`
 
 ---
 
-### EC-3: `for::badvalue` (no `@`) exits 1
+### EC-3: `for::badvalue` (no `@`) exits 1 *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
 - **When:** `clp .accounts assign::1 name::alice@corp.com for::badvalue`
@@ -54,7 +61,7 @@ Each component is sanitized independently (alphanumeric, `-`, `.` kept; else `_`
 
 ---
 
-### EC-4: `for::@laptop` (empty user component) exits 1
+### EC-4: `for::@laptop` (empty user component) exits 1 *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
 - **When:** `clp .accounts assign::1 name::alice@corp.com for::@laptop`
@@ -65,7 +72,7 @@ Each component is sanitized independently (alphanumeric, `-`, `.` kept; else `_`
 
 ---
 
-### EC-5: `for::bob@` (empty machine component) exits 1
+### EC-5: `for::bob@` (empty machine component) exits 1 *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
 - **When:** `clp .accounts assign::1 name::alice@corp.com for::bob@`
@@ -76,7 +83,7 @@ Each component is sanitized independently (alphanumeric, `-`, `.` kept; else `_`
 
 ---
 
-### EC-6: Space in machine component sanitized to `_`
+### EC-6: Space in machine component sanitized to `_` *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
 - **When:** `clp .accounts assign::1 name::alice@corp.com for::alice@my laptop`
@@ -87,7 +94,7 @@ Each component is sanitized independently (alphanumeric, `-`, `.` kept; else `_`
 
 ---
 
-### EC-7: Dot and hyphen in machine component preserved
+### EC-7: Dot and hyphen in machine component preserved *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
 - **When:** `clp .accounts assign::1 name::alice@corp.com for::user1@w003.local`
@@ -98,7 +105,7 @@ Each component is sanitized independently (alphanumeric, `-`, `.` kept; else `_`
 
 ---
 
-### EC-8: Multiple `@` in value — split on first only
+### EC-8: Multiple `@` in value — split on first only *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
 - **When:** `clp .accounts assign::1 name::alice@corp.com for::alice@corp.com@laptop`

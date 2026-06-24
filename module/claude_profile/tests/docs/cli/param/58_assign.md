@@ -1,28 +1,34 @@
-# Test: `assign::` Parameter (Marker Write Mutation)
+# Test: `assign::` Parameter — REMOVED (Feature 064)
 
-Edge case coverage for the `assign::` bool mutation param on `.accounts` and `.usage`.
-See [param/057_assign.md](../../../../docs/cli/param/057_assign.md) for specification.
+> **REMOVED (Feature 064)**: The `assign::` parameter on `.accounts` and `.usage` has been removed.
+> The marker write operation is now `active::USER@MACHINE name::X`.
+>
+> Any invocation of `assign::` exits 1 with the migration message:
+> "REMOVED — use `active::USER@MACHINE name::X` instead"
+>
+> See [param/057_assign.md](../../../../docs/cli/param/057_assign.md) for the removal notice.
+> See [feature/064_active_marker_and_owner_redesign.md](../../../../docs/feature/064_active_marker_and_owner_redesign.md) for the redesign.
 
-When `assign::1 name::X`, writes `{credential_store}/_active_{machine}_{user}` = X without credential rotation.
-When `assign::1` (no `name::`), emits a live usage block instead of writing.
-`dry::1` previews without writing. `force::1` has no effect (no ownership gate on assign).
+All EC test cases in this file (EC-1 through EC-8) are **superseded** — `assign::` no longer exists as an active
+parameter. The equivalent behaviors are now covered by `14_active.md` EC-1 through EC-11 (the `active::USER@MACHINE`
+param handles assign, unassign, dry-run, validation, sanitization, and isolation).
 
-### Test Case Index
+### Superseded Test Case Index (DO NOT IMPLEMENT)
 
-| ID | Test Name | Category |
-|----|-----------|----------|
-| EC-1 | `assign::1 name::X` writes marker for current machine | Behavioral |
-| EC-2 | `assign::1 name::X for::U@M` writes marker for specified machine | Behavioral |
-| EC-3 | `assign::1` (no `name::`) emits live usage block; no marker written | Behavioral Divergence |
-| EC-4 | `assign::0` (default) — no marker write | Default |
-| EC-5 | `assign::1 name::unknown` exits 1 — account not in credential store | Validation |
-| EC-6 | `assign::1 dry::1 name::X` previews without writing | Dry-run |
-| EC-7 | `force::1 assign::1 name::X` writes normally; `force::` silently ignored | Interaction |
-| EC-8 | `assign::1 name::` (empty string name) exits 1 | Validation |
+| ID | Test Name | Category | Status |
+|----|-----------|----------|--------|
+| EC-1 | `assign::1 name::X` writes marker for current machine | Behavioral | **REMOVED** |
+| EC-2 | `assign::1 name::X for::U@M` writes marker for specified machine | Behavioral | **REMOVED** |
+| EC-3 | `assign::1` (no `name::`) emits live usage block; no marker written | Behavioral Divergence | **REMOVED** |
+| EC-4 | `assign::0` (default) — no marker written | Default | **REMOVED** |
+| EC-5 | `assign::1 name::unknown` exits 1 — account not in credential store | Validation | **REMOVED** |
+| EC-6 | `assign::1 dry::1 name::X` previews without writing | Dry-run | **REMOVED** |
+| EC-7 | `force::1 assign::1 name::X` writes normally; `force::` silently ignored | Interaction | **REMOVED** |
+| EC-8 | `assign::1 name::` (empty string name) exits 1 | Validation | **REMOVED** |
 
 ---
 
-### EC-1: `assign::1 name::X` writes marker for current machine
+### EC-1: `assign::1 name::X` writes marker for current machine *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store. No existing marker for current machine.
 - **When:** `clp .accounts assign::1 name::alice@corp.com`
@@ -33,7 +39,7 @@ When `assign::1` (no `name::`), emits a live usage block instead of writing.
 
 ---
 
-### EC-2: `assign::1 name::X for::U@M` writes marker for specified machine
+### EC-2: `assign::1 name::X for::U@M` writes marker for specified machine *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
 - **When:** `clp .accounts assign::1 name::alice@corp.com for::bob@laptop`
@@ -44,7 +50,7 @@ When `assign::1` (no `name::`), emits a live usage block instead of writing.
 
 ---
 
-### EC-3: `assign::1` (no `name::`) emits live usage block; no marker written
+### EC-3: `assign::1` (no `name::`) emits live usage block; no marker written *(SUPERSEDED)*
 
 - **Given:** Current machine identity resolves to `testuser@testmachine`. Active account is `alice@corp.com`.
 - **When:** `clp .accounts assign::1` (no `name::`)
@@ -55,7 +61,7 @@ When `assign::1` (no `name::`), emits a live usage block instead of writing.
 
 ---
 
-### EC-4: `assign::0` (default) — no marker written
+### EC-4: `assign::0` (default) — no marker written *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
 - **When:** `clp .accounts assign::0 name::alice@corp.com` (or `.accounts name::alice@corp.com` with no `assign::`)
@@ -66,7 +72,7 @@ When `assign::1` (no `name::`), emits a live usage block instead of writing.
 
 ---
 
-### EC-5: `assign::1 name::unknown` exits 1 — account not in credential store
+### EC-5: `assign::1 name::unknown` exits 1 — account not in credential store *(SUPERSEDED)*
 
 - **Given:** Credential store does NOT contain `missing@corp.com`.
 - **When:** `clp .accounts assign::1 name::missing@corp.com`
@@ -77,7 +83,7 @@ When `assign::1` (no `name::`), emits a live usage block instead of writing.
 
 ---
 
-### EC-6: `assign::1 dry::1 name::X` previews without writing
+### EC-6: `assign::1 dry::1 name::X` previews without writing *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store. Note any existing marker mtime.
 - **When:** `clp .accounts assign::1 dry::1 name::alice@corp.com`
@@ -88,7 +94,7 @@ When `assign::1` (no `name::`), emits a live usage block instead of writing.
 
 ---
 
-### EC-7: `force::1 assign::1 name::X` writes normally; `force::` silently ignored
+### EC-7: `force::1 assign::1 name::X` writes normally; `force::` silently ignored *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store. `alice@corp.com.json` has `"owner": "other@remote"` (owned by different identity).
 - **When:** `clp .accounts force::1 assign::1 name::alice@corp.com`
@@ -100,7 +106,7 @@ When `assign::1` (no `name::`), emits a live usage block instead of writing.
 
 ---
 
-### EC-8: `assign::1 name::` (empty string) exits 1
+### EC-8: `assign::1 name::` (empty string) exits 1 *(SUPERSEDED)*
 
 - **Given:** `alice@corp.com.credentials.json` exists in credential store.
 - **When:** `clp .accounts assign::1 name::`  (empty name value, distinct from absent `name::`)

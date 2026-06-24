@@ -27,6 +27,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 | FT-19 | `cols::+org_name` shows `Org:` from `{name}.json`; `N/A` when absent | AC-19 |
 | FT-20 | `format::json` includes `owner` and `is_owned` fields per account | AC-20 |
 | FT-21 | `format::json` includes `renewal_at` field; absent when not set | AC-21 |
+| FT-22 | `format::json` emits correct `host`, `role`, `organization_role` values | AC-12 |
 
 ### Test Case Index
 
@@ -53,8 +54,9 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 | FT-19 | `cols::+org_name` shows `Org:` from `{name}.json`; `N/A` if absent | AC-19 | Opt-In Fields |
 | FT-20 | `format::json` includes `owner` (string) and `is_owned` (bool) per account | AC-20 | JSON Fields |
 | FT-21 | `format::json` includes `renewal_at`; absent/null when not set | AC-21 | JSON Fields |
+| FT-22 | `format::json` emits correct `host`, `role`, `organization_role` field values | AC-12 | JSON Fields |
 
-**Total:** 21 FT cases
+**Total:** 22 FT cases
 
 ---
 
@@ -299,7 +301,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **When:** `clp .accounts format::json`
 - **Then:** Account A JSON object contains `owner: "w003_user1"` and `is_owned: true`. Account B JSON object contains `owner: ""` and `is_owned: true` (unowned = owned by all).
 - **Exit:** 0
-- **Source fn:** `mre_324_json_output_keys` (key presence; value-level coverage pending — dedicated test not yet written)
+- **Source fn:** `mre_324_json_output_keys` (key presence), `mre_324_json_owner_is_owned_values` (matching owner → true, unowned → true), `mre_324_json_is_owned_false_for_foreign_owner` (foreign owner → false)
 - **Source:** [003_account_list.md AC-20](../../../docs/feature/003_account_list.md)
 
 ---
@@ -310,5 +312,16 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **When:** `clp .accounts format::json`
 - **Then:** Account A JSON object contains `renewal_at: "2025-08-01T00:00:00Z"`. Account B JSON object has `renewal_at` absent or `null`.
 - **Exit:** 0
-- **Source fn:** `mre_324_json_output_keys` (key presence; value-level coverage pending — dedicated test not yet written)
+- **Source fn:** `mre_324_json_output_keys` (key presence), `mre_324_json_renewal_at_values` (value-level)
 - **Source:** [003_account_list.md AC-21](../../../docs/feature/003_account_list.md)
+
+---
+
+### FT-22: `format::json` emits correct `host`, `role`, `organization_role` field values
+
+- **Given:** `test@example.com` with `{name}.json` containing `host = "work-laptop"` (user-defined host label), `role = "developer"` (user-defined role label), `organization_role = "admin"` (org role from Roles API). These three fields come from distinct JSON keys.
+- **When:** `clp .accounts format::json`
+- **Then:** JSON object has `host: "work-laptop"`, `role: "developer"`, `organization_role: "admin"`. No cross-contamination between user role label and org role.
+- **Exit:** 0
+- **Source fn:** `mre_324_json_host_role_org_role_values`
+- **Source:** [003_account_list.md AC-12](../../../docs/feature/003_account_list.md)
