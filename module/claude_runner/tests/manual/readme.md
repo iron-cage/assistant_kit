@@ -877,7 +877,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-189:** `--output-style summary --output-format text --dry-run "test"` → exit 0; explicit `--output-format text` wins over auto-injection (explicit beats auto)
 - **CC-190:** `--output-style raw --output-format json --dry-run "test"` → exit 0; `--output-format json` forwarded verbatim (explicit CLI arg, not auto-injected)
 - **CC-191:** `--output-style summary` with `CLR_OUTPUT_FORMAT=text` set → exit 0; auto-injection skipped (output_format already set); `--output-format text` forwarded
-- Automated in: `output_style_test.rs` EC-01–EC-13
+- Automated in: `output_style_test.rs` EC-01–EC-14, IT-7
 
 ---
 

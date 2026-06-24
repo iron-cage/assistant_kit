@@ -9,7 +9,7 @@
 | `cli/param/` | Index of individual parameter reference instances (67 parameters) | [cli/param/readme.md](cli/param/readme.md) | 67 |
 | `cli/user_story/` | Index of user goal and usage pattern instances (27 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 27 |
 | `feature/` | Index of feature doc instances covering the clr binary tool design | [feature/readme.md](feature/readme.md) | 1 |
-| `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, trace universality, isolated/refresh subprocess defaults, exit code contract, and print-mode timeout default | [invariant/readme.md](invariant/readme.md) | 7 |
+| `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, trace universality, isolated/refresh subprocess defaults, exit code contract, print-mode timeout default, and render_summary gate field | [invariant/readme.md](invariant/readme.md) | 8 |
 
 ### Master Doc Instances Table
 
@@ -123,3 +123,4 @@
 | invariant | 005 | Isolated Subprocess Defaults | [invariant/005_isolated_subprocess_defaults.md](invariant/005_isolated_subprocess_defaults.md) |
 | invariant | 006 | Exit Code Contract | [invariant/006_exit_codes.md](invariant/006_exit_codes.md) |
 | invariant | 007 | Print-Mode Timeout Default | [invariant/007_print_mode_timeout.md](invariant/007_print_mode_timeout.md) |
+| invariant | 008 | render_summary() Gate Field | [invariant/008_render_summary_gate.md](invariant/008_render_summary_gate.md) |

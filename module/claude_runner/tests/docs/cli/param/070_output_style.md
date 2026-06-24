@@ -21,6 +21,7 @@ Edge case coverage for the `--output-style` parameter on the `run`/`ask` dispatc
 | EC-11 | `CLR_OUTPUT_STYLE=raw` + `--output-style summary` flag → stdout contains `---`; flag wins | CLI-wins |
 | EC-12 | `CLR_OUTPUT_STYLE=bogus clr run -m "x"` → exit 1; stderr contains `"CLR_OUTPUT_STYLE: invalid value 'bogus'"` | Env Var Validation |
 | EC-13 | `--output-format stream-json --output-style summary -m "x"` → stdout does NOT contain `---`; exit 0 | Behavioral Divergence |
+| EC-14 | Minimal CLR envelope (no `session_id`) → stdout contains `---`; exit 0 | Minimal Envelope |
 
 ## Test Coverage Summary
 
@@ -33,15 +34,22 @@ Edge case coverage for the `--output-style` parameter on the `run`/`ask` dispatc
 - Dry-Run: 1 test (EC-10)
 - CLI-wins: 1 test (EC-11)
 - Env Var Validation: 1 test (EC-12)
+- Minimal Envelope: 1 test (EC-14)
 
-**Total:** 13 test cases
+**Total:** 14 test cases
 
 ## Architectural Constraint
 
-All 13 tests use a fake `claude` subprocess to avoid live API calls. The standard fake claude fixture emits the CLR result envelope produced by `claude --output-format json` in production:
+All 14 tests use a fake `claude` subprocess to avoid live API calls. The standard fake claude fixture emits the CLR result envelope produced by `claude --output-format json` in production:
 
 ```json
 {"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"result":"hello","usage":{"input_tokens":1,"output_tokens":1},"total_cost_usd":0.0}
+```
+
+EC-14 uses a **minimal CLR envelope** — a 7-field variant observed in some claude binary versions that omits `session_id` (and `usage`, `total_cost_usd`):
+
+```json
+{"type":"result","subtype":"success","is_error":false,"duration_ms":1000,"duration_api_ms":900,"num_turns":1,"result":"hello"}
 ```
 
 Tests assert `---` presence (`stdout.contains("---")`) or absence (`!stdout.contains("---")`) to detect whether `render_summary()` fired and successfully parsed the response.
@@ -181,3 +189,13 @@ EC-10 dry-run verifies that when `--output-style summary` is set and `--output-f
 - **Then:** Exit 0; stdout does NOT contain `---`; `stream-json` forwarded verbatim; `render_summary()` receives non-JSON stream; returns `None`; raw stream passed through via `unwrap_or(out)` — same fallback as EC-05
 - **Exit:** 0
 - **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Combinations table (`stream-json` / `summary` row)
+
+---
+
+### EC-14: Minimal CLR envelope (no `session_id`) → stdout contains `---`; exit 0
+
+- **Given:** fake claude emitting a 7-field minimal CLR envelope without `session_id`; `-p --max-sessions 0`; no `--output-format` flag (auto-inject fires); no `--output-style` flag (default `summary`)
+- **When:** `clr -p --max-sessions 0 "x"` with fake claude emitting `{"type":"result","subtype":"success","is_error":false,"duration_ms":1000,"duration_api_ms":900,"num_turns":1,"result":"hello"}`
+- **Then:** Exit 0; stdout contains `---`; `render_summary()` returns `Some(_)` because gate is on `type=="result"` (invariant field); `session_id` absence does NOT cause `None` return; renders available fields
+- **Exit:** 0
+- **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Default-summary behavior; BUG-310 regression coverage

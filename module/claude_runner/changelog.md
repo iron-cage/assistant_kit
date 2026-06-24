@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Separation of concerns:** `--output-style` is runner-level rendering; `--output-format` is a claude passthrough; the two are orthogonal
   - **Legacy alias preserved:** `--output-format summary` remains supported for backward compatibility
   - Sources: `src/cli/parse.rs` (field + dispatch + validation), `src/cli/env.rs` (CLR_OUTPUT_STYLE), `src/cli/builder.rs` (injection branch), `src/cli/execution.rs` (predicate replacement), `src/cli/help.rs` (OPTIONS entry)
-  - Tests: `tests/output_style_test.rs` (EC-01–EC-13); spec: `tests/docs/cli/param/070_output_style.md`
+  - Tests: `tests/output_style_test.rs` (EC-01–EC-13; EC-14 added by TSK-236); spec: `tests/docs/cli/param/070_output_style.md`
 
 - **Default timeout kill test: `ec_timeout_default_kills` + `default_print_timeout()` helper** (TSK-228)
   - `default_print_timeout() -> u32` helper in `src/cli/execution.rs`: reads `_CLR_DEFAULT_TIMEOUT` env var (test-only override), falls back to `DEFAULT_PRINT_TIMEOUT_SECS` (3600); call site in `run_print_mode()` changed from `unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )` to `unwrap_or( default_print_timeout() )`
@@ -94,6 +94,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Both test fixtures (`output_style_test.rs`, `output_format_test.rs`) updated from Messages API
     to CLR result envelope; contract test `ec14_render_summary_clr_envelope_accepted` added
   - Tests: all 13 `output_style_test` EC pass, all 14 `output_format_test` EC pass, g2cc4 pass
+
+- **`render_summary()` gate changed from optional `session_id` to invariant `type` field** (BUG-310, TSK-236)
+  - `render_summary()` gated on `extract_str(json,"session_id")?` (the BUG-309 fix) which returned
+    `None` for any CLR envelope missing `session_id`; at least one observed claude binary version
+    emits a minimal 7-field envelope without `session_id`, restoring the BUG-309 raw-JSON symptom
+  - Fix: gate replaced with `extract_str(json,"type")?` + `if msg_type != "result" { return None; }`;
+    `session_id` now extracted with `.unwrap_or_default()` — absent = empty string, not `None`
+  - **Structural anti-pattern documented (D15):** gating `render_summary()` on any optional CLR field
+    with `?` is forbidden; only `"type":"result"` (invariant field) is a safe gate; see `docs/001_design_decisions.md`
+  - Added: invariant doc `docs/invariant/008_render_summary_gate.md`; IT-7 structural guard in
+    `tests/output_style_test.rs` asserts the anti-pattern substring is absent from source
+  - Unit tests added to `src/cli/summary.rs`: IT-1 (minimal envelope → `Some`), IT-4 (type≠result → `None`),
+    IT-5 (no type field → `None`), IT-6 (non-JSON → `None`)
+  - Tests: EC-14 (`ec14_render_summary_minimal_envelope_no_session_id`) in `tests/output_style_test.rs`;
+    IT-7 (`render_summary_gate_uses_type_not_session_id`) structural guard in same file
 
 - **Retry diagnostic message shows human text, not raw JSON blob** (TSK-235)
   - In summary mode, `first_message()` returned the raw CLR JSON envelope when the subprocess

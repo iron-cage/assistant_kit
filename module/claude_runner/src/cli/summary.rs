@@ -182,12 +182,16 @@ pub( super ) fn resolve_fields( value : &str ) -> Result< Vec< &'static str >, S
 #[ allow( clippy::too_many_lines, clippy::similar_names ) ]
 pub( super ) fn render_summary( json : &str, fields : Option< &str > ) -> Option< String >
 {
-  // Fix(BUG-309): gate on "session_id" — CLR result envelope field
   let selected = resolve_fields( fields.unwrap_or( "full" ) ).ok()?;
   let has      = |f : &str| selected.contains( &f );
 
-  let session_id   = extract_str( json, "session_id" )?;
-  let msg_type     = extract_str( json, "type" ).unwrap_or_default();
+  // Fix(BUG-310): gate on invariant field, not optional session_id.
+  // Root cause: extract_str(json,"session_id")? returned None for 7-field envelopes
+  //   where session_id is absent — restoring BUG-309 raw-JSON symptom for those versions.
+  // Pitfall: any ? on an optional CLR field silently breaks all envelopes missing that field.
+  let msg_type     = extract_str( json, "type" )?;
+  if msg_type != "result" { return None; }
+  let session_id   = extract_str( json, "session_id" ).unwrap_or_default();
   let subtype      = extract_str( json, "subtype" ).unwrap_or_default();
   let is_error     = extract_bool( json, "is_error" ).unwrap_or( false );
   let result       = extract_str( json, "result" ).unwrap_or_default();
@@ -427,5 +431,48 @@ mod tests
     assert!( !rendered.contains( "model:" ),         "minimal must NOT include model:" );
     assert!( rendered.contains( "---" ),             "separator must always appear" );
     assert!( rendered.contains( "hello" ),           "result body must always appear" );
+  }
+
+  // ── BUG-310 gate invariant tests ──────────────────────────────────────────────
+
+  const MINIMAL_ENVELOPE : &str =
+    r#"{"type":"result","subtype":"success","is_error":false,"duration_ms":1000,"duration_api_ms":900,"num_turns":1,"result":"hello"}"#;
+
+  /// IT-1 (BUG-310 regression): minimal 7-field CLR envelope without `session_id` must
+  /// return `Some` — gate is on `type=="result"`, not the optional `session_id` field.
+  #[ test ]
+  fn render_summary_accepts_envelope_without_session_id()
+  {
+    let result = render_summary( MINIMAL_ENVELOPE, None );
+    assert!( result.is_some(), "render_summary must return Some for 7-field envelope lacking session_id; got None" );
+    let s = result.unwrap();
+    assert!( s.contains( "---" ),   "separator must appear. Got:\n{s}" );
+    assert!( s.contains( "hello" ), "result text must appear. Got:\n{s}" );
+  }
+
+  /// IT-4: JSON with `"type":"message"` must be rejected (not a CLR result envelope).
+  #[ test ]
+  fn render_summary_rejects_non_result_type()
+  {
+    let json   = r#"{"type":"message","content":"some stream output"}"#;
+    let result = render_summary( json, None );
+    assert!( result.is_none(), "must return None for type!=result; got Some" );
+  }
+
+  /// IT-5: JSON without a `type` field at all must be rejected.
+  #[ test ]
+  fn render_summary_rejects_json_without_type()
+  {
+    let json   = r#"{"session_id":"abc","result":"hello","is_error":false}"#;
+    let result = render_summary( json, None );
+    assert!( result.is_none(), "must return None for JSON lacking type field; got Some" );
+  }
+
+  /// IT-6: Non-JSON input must be rejected.
+  #[ test ]
+  fn render_summary_rejects_non_json()
+  {
+    let result = render_summary( "this is not json at all", None );
+    assert!( result.is_none(), "must return None for non-JSON input; got Some" );
   }
 }
