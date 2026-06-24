@@ -1,4 +1,5 @@
 #![ cfg( unix ) ]
+#![ cfg_attr( not( unix ), allow( missing_docs ) ) ]
 //! Isolated/Refresh Subprocess Correctness Tests
 //!
 //! ## Purpose

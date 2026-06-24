@@ -1,4 +1,5 @@
 #![ cfg( unix ) ]
+#![ cfg_attr( not( unix ), allow( missing_docs ) ) ]
 //! `--summary-fields` Integration Tests (EC-01–EC-12)
 //!
 //! Covers EC-01 through EC-12 from `tests/docs/cli/param/071_summary_fields.md`.

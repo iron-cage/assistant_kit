@@ -1,4 +1,5 @@
 #![ cfg( unix ) ]
+#![ cfg_attr( not( unix ), allow( missing_docs ) ) ]
 //! `--output-style` Integration Tests (EC-01–EC-14, IT-7)
 //!
 //! Covers EC-01 through EC-14 from `tests/docs/cli/param/070_output_style.md`;
