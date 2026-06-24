@@ -19,17 +19,20 @@ Edge case tests for the repurposed `active::` parameter (Feature 064). Previousl
 | EC-9 | `active::user@host name::unknown` exits 1 (account not in store) | Validation |
 | EC-10 | `active::` absent — no marker write (default omit) | Default |
 | EC-11 | `active::user@host` does NOT modify `owner` field | Isolation |
+| EC-12 | `active::0 name::X` exits 1 — `"0"` is not a valid `USER@MACHINE` | Validation |
+| EC-13 | `force::1 active::user@host name::X` — `force::1` silently ignored; marker written | No-op |
 
 ## Test Coverage Summary
 
 - Behavioral: 2 tests (EC-1, EC-2)
-- Validation: 4 tests (EC-3, EC-4, EC-5, EC-9)
+- Validation: 5 tests (EC-3, EC-4, EC-5, EC-9, EC-12)
 - Sanitization: 2 tests (EC-6, EC-7)
 - Dry-run: 1 test (EC-8)
 - Default: 1 test (EC-10)
 - Isolation: 1 test (EC-11)
+- No-op: 1 test (EC-13)
 
-**Total:** 11 edge cases
+**Total:** 13 edge cases
 
 ## Test Cases
 
@@ -140,5 +143,26 @@ Edge case tests for the repurposed `active::` parameter (Feature 064). Previousl
 - **Given:** `alice@corp.com.json` exists with `"owner": "other@machine"`.
 - **When:** `clp .accounts active::user1@w003 name::alice@corp.com`
 - **Then:** Exits 0. `{credential_store}/_active_w003_user1` written. `alice@corp.com.json` still contains `"owner": "other@machine"` — unchanged. `active::` is marker-only.
+- **Exit:** 0
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
+
+---
+
+### EC-12: `active::0 name::X` exits 1 — `"0"` rejected
+
+- **Given:** `alice@corp.com.credentials.json` exists in credential store.
+- **When:** `clp .accounts active::0 name::alice@corp.com`
+- **Then:** Exits 1. `"0"` contains no `@` — rejected by `USER@MACHINE` format validation. Error message indicates invalid `active::` format. No `_active_*` file written.
+- **Exit:** 1
+- **Note:** `"0"` is a sentinel for `owner::0` (ownership release), NOT for `active::`. The error should direct the user to `owner::0` or `active::USER@MACHINE` (without `name::`) for unassign.
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
+
+---
+
+### EC-13: `force::1 active::user@host name::X` — `force::1` silently ignored
+
+- **Given:** `alice@corp.com.credentials.json` exists in credential store.
+- **When:** `clp .accounts active::user1@w003 name::alice@corp.com force::1`
+- **Then:** Exits 0. `{credential_store}/_active_w003_user1` written with `alice@corp.com`. `force::1` is silently ignored — `active::` has no ownership gate, so `force::` has no effect. Output identical to the same command without `force::1`.
 - **Exit:** 0
 - **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)

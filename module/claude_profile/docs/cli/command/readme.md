@@ -38,7 +38,7 @@
 ### Quick Reference
 
 **Required Parameters:**
-- `name::` — required on `.account.use`, `.account.delete`, `.account.relogin`, `.account.renewal`; optional on `.account.save` (inferred), `.accounts`, `.account.limits`, `.account.inspect` (defaults to active account). For unclaim, use `.accounts unclaim::1 name::X`.
+- `name::` — required on `.account.use`, `.account.delete`, `.account.relogin`, `.account.renewal`; optional on `.account.save` (inferred), `.accounts`, `.account.limits`, `.account.inspect` (defaults to active account). For ownership release, use `.accounts owner::0 name::X` (Feature 064).
 
 **Most-Used Parameters:**
 - `format::` — 7 commands (`.accounts`, `.token.status`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`, `.account.inspect`)

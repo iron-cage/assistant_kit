@@ -15,8 +15,8 @@ A saved credential profile stored in the per-machine account store (`{credential
 | 7 | `.account.rotate` | rotate | **DEPRECATED** — hidden redirector; exits 1 with notice to use `.usage rotate::1` | No | No |
 | 8 | `.account.renewal` | renewal | Set or clear billing renewal timestamp override | Yes | No |
 | 9 | `.account.inspect` | inspect | Live multi-endpoint identity and subscription diagnostic | Yes | No |
-| 10 | `.account.assign` | assign | Write per-machine active marker without credential rotation | Yes | No |
-| 11 | `.account.unclaim` | unclaim | Release account ownership by clearing the `owner` field | Yes | No |
+| 10 | `.account.assign` *(removed — Feature 037)* | — | **Removed.** Use `.accounts active::USER@MACHINE name::X` (Feature 064) | — | — |
+| 11 | `.account.unclaim` *(removed — Feature 037; `unclaim::1` also REMOVED — Feature 064)* | — | **Removed.** Use `.accounts owner::0 name::X` (Feature 064) | — | — |
 
 ### Parameter Matrix
 
@@ -36,10 +36,10 @@ A saved credential profile stored in the per-machine account store (`{credential
 | `at::` | — | — | — | — | — | — | — | optional | — | — | — |
 | `from_now::` | — | — | — | — | — | — | — | optional | — | — | — |
 | `clear::` | — | — | — | — | — | — | — | optional | — | — | — |
-| `for::` | — | — | — | — | — | — | — | — | — | optional | — |
+| ~~`for::`~~ | — | — | — | — | — | — | — | — | — | *(REMOVED — Feature 064)* | — |
 | Field display params (×13) | optional | — | — | — | — | — | — | — | — | — | — |
 
-Field display params on `.accounts`: `active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`.
+Legacy field-toggle params on `.accounts` (×12, all exit 1 with `cols::` migration hint — Feature 037): `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`. Note: `active::` was repurposed as a `Kind::String` mutation param in Feature 064 — it is no longer a field toggle.
 
 ### Lifecycle
 
@@ -53,11 +53,11 @@ Field display params on `.accounts`: `active::`, `current::`, `sub::`, `tier::`,
 [active] --account.relogin--> [active]
 [saved]  --account.renewal--> [saved]
 [active] --account.renewal--> [active]
-[absent/saved/active] --account.assign--> [same state]
-[saved/active]       --account.unclaim--> [same state, owner: ""]
+[absent/saved/active] --accounts active::USER@MACHINE name::X--> [same state, marker written]
+[saved/active]       --accounts owner::0 name::X--> [same state, owner: ""]
 ```
 
-An account is created by `save`, activated by `use`, and removed by `delete`. The `active` state is machine-scoped: one account is active per `{hostname}_{user}` pair at any time. `relogin` refreshes credentials in-place without changing lifecycle state. `renewal`, `inspect`, `limits`, and `assign` are non-lifecycle operations (metadata update, read, and marker write). `.account.unclaim` releases ownership without changing lifecycle state.
+An account is created by `save`, activated by `use`, and removed by `delete`. The `active` state is machine-scoped: one account is active per `{hostname}_{user}` pair at any time. `relogin` refreshes credentials in-place without changing lifecycle state. `renewal`, `inspect`, and `limits` are non-lifecycle operations (metadata update and read). `.accounts active::USER@MACHINE name::X` writes the per-machine marker without changing lifecycle state (ownership-neutral). `.accounts owner::0 name::X` releases ownership without changing lifecycle state.
 
 ### Provider Contract
 
@@ -72,8 +72,8 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | `.account.rotate` | **DEPRECATED** — redirector prints deprecation notice, exits 1; rotation moved to `.usage rotate::1` |
 | `.account.renewal` | `account::set_renewal_at()` — read-merge write to `{name}.json` `_renewal_at` key |
 | `.account.inspect` | Endpoints 002/005/001 — `fetch_oauth_account()`, `fetch_claude_cli_roles()`, `fetch_oauth_usage()` |
-| `.account.assign` | `account::write_active_marker()` — writes `_active_{machine}_{user}` file only |
-| `.account.unclaim` | `account::write_owner()` — writes `owner: ""` to `{name}.json` only |
+| `.account.assign` *(removed Feature 037)* | Use `.accounts active::USER@MACHINE name::X` (Feature 064) → `account::write_active_marker()` |
+| `.account.unclaim` *(removed Feature 037; `unclaim::1` REMOVED Feature 064)* | Use `.accounts owner::0 name::X` (Feature 064) → `account::write_owner()` |
 
 ### Output Schema
 
@@ -135,7 +135,7 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | exit 1 | Invalid `name::` characters (`/`, `\`, `*`) or missing `@` in email | Use a valid email address |
 | exit 1 | `name::` prefix matches multiple accounts (ambiguous) | Use full email address |
 | exit 1 | `.account.renewal` called without `at::`, `from_now::`, or `clear::` | Provide one operation parameter |
-| exit 1 | Ownership violation on `.account.use`, `.account.delete`, `.account.relogin`, or `.account.unclaim` | Run from the owning machine; or `.account.unclaim` from the owner first |
+| exit 1 | Ownership violation on `.account.use`, `.account.delete`, `.account.relogin`, `.accounts owner::0`, or `.accounts owner::USER@MACHINE` | Run from the owning machine; or `.accounts owner::0 name::X` from the owner first; `force::1` bypasses G8 |
 | exit 2 | Account not found in credential store | Run `.account.save` to create; check `name::` spelling |
 | exit 2 | Credential store unreadable or `$HOME` unset | Check `$HOME` env and file permissions |
 | exit 2 | No active account for commands that default to active | Run `.account.use name::EMAIL` first |
@@ -176,5 +176,5 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | 7 | [`.account.rotate`](../command/001_account.md#command--13-accountrotate) | **DEPRECATED** — redirector; use `.usage rotate::1` |
 | 8 | [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) | Set or clear billing renewal override |
 | 9 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | Live identity and subscription diagnostic |
-| 10 | [`.account.assign`](../command/001_account.md#command--16-accountassign) | Write per-machine active marker |
-| 11 | [`.account.unclaim`](../command/001_account.md#command--17-accountunclaim) | Release account ownership |
+| 10 | [`.account.assign`](../command/001_account.md#command--16-accountassign) *(removed Feature 037)* | Use `.accounts active::USER@MACHINE name::X` (Feature 064) |
+| 11 | [`.account.unclaim`](../command/001_account.md#command--17-accountunclaim) *(removed Feature 037; `unclaim::1` REMOVED Feature 064)* | Use `.accounts owner::0 name::X` (Feature 064) |

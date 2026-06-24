@@ -23,8 +23,10 @@
 | FT-15 | `owner::` with empty value exits 1 (empty ≠ sentinel "0") | AC-15 | Validation |
 | FT-16 | `owner::0 name::X dry::1` prints `[dry-run]`; no file written | AC-16 | Dry-run |
 | FT-17 | `owner::0 name::X force::1 dry::1` bypasses G8 + dry-run | AC-17 | Dry-run + Gate |
+| FT-18 | `active::0 name::X` exits 1 — value `"0"` rejected (no `@`) | AC-18 | Validation |
+| FT-19 | `active::USER@MACHINE dry::1` (no `name::`) unassign dry-run preview | AC-19 | Dry-run |
 
-**Total:** 17 test cases
+**Total:** 19 test cases
 
 ## Test Cases
 
@@ -215,4 +217,26 @@
 - **Then:** Exits 0. stdout contains `[dry-run] would clear owner of alice@corp.com`. G8 bypassed by `force::1`. No files written — dry-run suppresses actual write.
 - **Exit:** 0
 - **Maps to:** AC-17
+- **Source:** [feature/064_active_marker_and_owner_redesign.md](../../../docs/feature/064_active_marker_and_owner_redesign.md)
+
+---
+
+### FT-18: `active::0 name::X` exits 1 — value `"0"` rejected
+
+- **Given:** `alice@corp.com.credentials.json` exists in credential store.
+- **When:** `clp .accounts active::0 name::alice@corp.com`
+- **Then:** Exits 1. `"0"` contains no `@` and is rejected by `USER@MACHINE` format validation. Error message indicates invalid format. No `_active_*` file written.
+- **Exit:** 1
+- **Maps to:** AC-18
+- **Source:** [feature/064_active_marker_and_owner_redesign.md](../../../docs/feature/064_active_marker_and_owner_redesign.md)
+
+---
+
+### FT-19: `active::USER@MACHINE dry::1` (no `name::`) unassign dry-run preview
+
+- **Given:** `{credential_store}/_active_w003_user1` exists containing `alice@corp.com`.
+- **When:** `clp .accounts active::user1@w003 dry::1` (no `name::`)
+- **Then:** Exits 0. stdout contains `[dry-run] would unassign user1@w003  →  _active_w003_user1 cleared`. `_active_w003_user1` is NOT modified or deleted.
+- **Exit:** 0
+- **Maps to:** AC-19
 - **Source:** [feature/064_active_marker_and_owner_redesign.md](../../../docs/feature/064_active_marker_and_owner_redesign.md)

@@ -59,7 +59,6 @@ Commands:
     .account.rotate       Auto-rotate to the best inactive account
     .account.renewal      Set or clear billing renewal timestamp override
     .account.inspect      Show identity, subscription, and org fields
-    .account.assign       Write per-machine active-account marker
 
   Status & info
     .credentials.status   Show live credential metadata

@@ -1,7 +1,7 @@
 # Test: `force::` Parameter (Ownership Gate Bypass)
 
 Edge case coverage for the `force::` bool bypass param on `.account.use`, `.account.delete`,
-`.account.relogin`, and `.accounts` (with `unclaim::1`).
+`.account.relogin`, and `.accounts` (with `owner::0` / `owner::USER@MACHINE` — Feature 064).
 See [param/058_force.md](../../../../docs/cli/param/058_force.md) for specification.
 
 `force::1` bypasses G5–G8 ownership enforcement gates. Does NOT bypass G1–G4 (read-side gates).
@@ -15,7 +15,7 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 | EC-1 | `force::1` on `.account.use` bypasses G5; exits 0 | G5 Bypass |
 | EC-2 | `force::1` on `.account.delete` bypasses G6; exits 0 | G6 Bypass |
 | EC-3 | `force::1` on `.account.relogin` bypasses G7; exits 0 | G7 Bypass |
-| EC-4 | `force::1 unclaim::1` on `.accounts` bypasses G8; exits 0 | G8 Bypass |
+| EC-4 | `force::1 owner::0 name::X` on `.accounts` bypasses G8; exits 0 (Feature 064) | G8 Bypass |
 | EC-5 | `force::0` (default) — ownership gates enforced normally | Default |
 | EC-6 | `force::1 dry::1` — gate bypassed, mutation previewed without writing | Dry-run Interaction |
 | EC-7 | `force::1` without mutation param — silently ignored; no error | No-op |
@@ -56,10 +56,10 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 
 ---
 
-### EC-4: `force::1 unclaim::1` on `.accounts` bypasses G8; exits 0
+### EC-4: `force::1 owner::0 name::X` on `.accounts` bypasses G8; exits 0 (Feature 064)
 
 - **Given:** Account `alice@corp.com` has `alice@corp.com.json` with `"owner": "other@remote"`. Current identity ≠ `"other@remote"`.
-- **When:** `clp .accounts unclaim::1 name::alice@corp.com force::1`
+- **When:** `clp .accounts owner::0 name::alice@corp.com force::1` (formerly `unclaim::1 name::X force::1` — Feature 064)
 - **Then:** Exits 0. G8 ownership gate bypassed. `alice@corp.com.json` updated with `"owner": ""`. stdout contains `unclaimed alice@corp.com`.
 - **Exit:** 0
 - **Source fn:** `fc04_accounts_unclaim_force_bypasses_g8`
@@ -84,7 +84,7 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 - **When:** `clp .account.use name::alice@corp.com force::1 dry::1`
 - **Then:** Exits 0. No ownership violation (G5 bypassed). stdout contains `[dry-run]` preview message. `~/.claude/.credentials.json` mtime unchanged — no credential swap performed.
 - **Exit:** 0
-- **Note:** force runs BEFORE dry: gate is bypassed first, then dry-run prevents the actual write. Same behavior applies to delete, relogin, and accounts unclaim::1.
+- **Note:** force runs BEFORE dry: gate is bypassed first, then dry-run prevents the actual write. Same behavior applies to delete, relogin, and `.accounts owner::0 name::X` (Feature 064).
 - **Source fn:** `fc06_force_dry_gate_bypassed_write_suppressed`
 - **Source:** [param/058_force.md](../../../../docs/cli/param/058_force.md)
 
@@ -92,11 +92,11 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 
 ### EC-7: `force::1` without mutation param — silently ignored; no error
 
-- **Given:** Credential store with accounts. No `unclaim::`, `assign::`, or explicit switch in progress.
+- **Given:** Credential store with accounts. No `owner::`, `active::`, or explicit switch in progress.
 - **When (case A):** `clp .accounts force::1` (list accounts, no mutation)
 - **Then (case A):** Exits 0. Normal `.accounts` listing output. No error about `force::1`. `force::` is silently ignored.
-- **When (case B):** `clp .accounts force::1 assign::1 name::alice@corp.com`
-- **Then (case B):** Exits 0. Marker file written normally. `force::1` has no gate to bypass on assign path — silently ignored.
+- **When (case B):** `clp .accounts force::1 active::testuser@testmachine name::alice@corp.com` (formerly `assign::1 name::X` — Feature 064)
+- **Then (case B):** Exits 0. Marker file written normally. `force::1` has no gate to bypass on `active::` path — silently ignored.
 - **Exit:** 0 (both cases)
 - **Source fn:** `fc07_force_ignored_without_mutation`
 - **Source:** [param/058_force.md](../../../../docs/cli/param/058_force.md)

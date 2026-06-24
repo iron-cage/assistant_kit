@@ -61,10 +61,10 @@ Writes the per-machine active marker (`_active_{machine}_{user}`) for a named ac
 | [feature/032_account_assign.md](../../feature/032_account_assign.md) | Marker write, `for::` resolution, sanitization rules |
 | [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md) | `_active_{machine}_{user}` marker semantics |
 | [feature/036_account_ownership.md](../../feature/036_account_ownership.md) | Ownership model; enforcement gates G1–G8; ownership is stamped by `.account.save`, not `.account.assign` |
-| [feature/037_accounts_usage_param_unification.md](../../feature/037_accounts_usage_param_unification.md) | `assign::` absorbed as mutation param; `.account.assign` standalone removed; `for::` retained |
+| [feature/037_accounts_usage_param_unification.md](../../feature/037_accounts_usage_param_unification.md) | `assign::` absorbed as mutation param; `.account.assign` standalone removed; `for::` and `assign::` further REMOVED in Feature 064 — use `active::USER@MACHINE` |
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.assign`](../command/001_account.md#command--16-accountassign) | Write per-machine active marker without credential rotation (removed in Feature 037 — use `.accounts assign::1`) |
+| 1 | [`.account.assign`](../command/001_account.md#command--16-accountassign) | Write per-machine active marker without credential rotation (removed in Feature 037; `assign::1` further REMOVED in Feature 064 — use `.accounts active::USER@MACHINE name::X`) |

@@ -122,13 +122,13 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 |------|--------------|
 | [cli/param/001_name.md](../cli/param/001_name.md) | `name::` — account identifier with prefix resolution |
 | [cli/param/004_dry.md](../cli/param/004_dry.md) | `dry::` — dry-run flag |
-| [cli/param/053_for.md](../cli/param/053_for.md) | `for::` — `USER@MACHINE` target identity |
+| [cli/param/053_for.md](../cli/param/053_for.md) | `for::` — `USER@MACHINE` target identity (REMOVED_TOGGLE in Feature 064 — use `active::USER@MACHINE`) |
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | `.accounts assign::1` | CLI surface for this feature (`.account.assign` removed — see Feature 037) |
+| 1 | `.accounts active::USER@MACHINE name::X` | CLI surface for this feature (`.account.assign` removed Feature 037; `assign::1` further REMOVED Feature 064) |
 
 ### Sources
 

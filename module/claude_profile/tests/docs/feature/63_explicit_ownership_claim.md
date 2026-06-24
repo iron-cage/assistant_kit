@@ -8,7 +8,7 @@
 | FT-02 | `ft_owner_requires_name` | AC-02: exits 1 when `name::` absent | ✅ |
 | FT-03 | `ft_owner_g8_blocks_non_owner` | AC-03: G8 gate — owned by another → exit 1 | ✅ |
 | FT-04 | `ft_owner_unowned_passes_g8` | AC-04: unowned account → write succeeds | ✅ |
-| FT-05 | `ft_owner_mutual_exclusion_unclaim` | AC-05: `owner:: + unclaim::1` → exit 1 | ✅ |
+| FT-05 | `ft_owner_mutual_exclusion_unclaim` | AC-05: `owner:: + unclaim::1` → exit 1 (now via REMOVED_TOGGLE on `unclaim::1`, Feature 064) | ✅ |
 | FT-06 | `ft_owner_dry_run_preview` | AC-06: dry::1 → preview, no file writes | ✅ |
 | FT-07 | `ft_owner_force_bypasses_g8` | AC-07: force::1 bypasses G8 for other-owned account | ✅ |
 | FT-08 | `ft_owner_trace_emits_diagnostic` | AC-08: trace::1 → stderr diagnostic | ✅ |

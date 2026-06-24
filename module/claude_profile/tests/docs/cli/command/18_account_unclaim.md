@@ -2,7 +2,7 @@
 
 `.account.unclaim` has been **fully deregistered** from the command registry by Feature 037 (shipped).
 It produces a generic "unknown command" error — the same error as any unregistered command.
-All ownership-release behavior is in `.accounts unclaim::1` — see `03_accounts.md` IT-44 through IT-45.
+All ownership-release behavior is now in `.accounts owner::0 name::X` (Feature 064 — `unclaim::1` is REMOVED) — see `03_accounts.md` IT-44 through IT-45.
 
 | # | Test | Conditions | Exit |
 |---|------|-----------|------|

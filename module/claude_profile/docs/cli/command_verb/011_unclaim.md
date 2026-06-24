@@ -71,11 +71,11 @@ This matches the pattern of G5/G6/G7 — gate evaluates before any mutation.
 | File | Relationship |
 |------|-------------|
 | [feature/036_account_ownership.md](../../feature/036_account_ownership.md) | Ownership model, G8 gate, `write_owner()` implementation, AC-02/AC-16–AC-21 (including `force::` bypass) |
-| [feature/002_account_save.md](../../feature/002_account_save.md) | `.account.save` always stamps `current_identity()` — use `.accounts unclaim::1` to clear (post-Feature 037) |
+| [feature/002_account_save.md](../../feature/002_account_save.md) | `.account.save` always stamps `current_identity()` — use `.accounts owner::0 name::X` to clear (Feature 064) |
 | [feature/037_accounts_usage_param_unification.md](../../feature/037_accounts_usage_param_unification.md) | `unclaim::` absorbed as mutation param; `.account.unclaim` standalone removed; batch unclaim added |
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.unclaim`](../command/001_account.md#command--17-accountunclaim) | Release ownership of saved account profile (removed in Feature 037 — use `.accounts unclaim::1`) |
+| 1 | [`.account.unclaim`](../command/001_account.md#command--17-accountunclaim) | Release ownership of saved account profile (removed in Feature 037; `unclaim::1` further REMOVED in Feature 064 — use `.accounts owner::0 name::X`) |

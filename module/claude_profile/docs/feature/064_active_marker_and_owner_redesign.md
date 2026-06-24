@@ -56,10 +56,10 @@ owner::user1@w003 name::X,Y,Z      → set ownership for X, Y, and Z
 - **AC-04**: `clp .accounts active::user1@w003 name::ghost@example.com` when account not in credential store exits 1 with account-not-found error; no marker file written.
 - **AC-05**: `clp .accounts assign::1 name::X` exits 1 with migration message: "REMOVED — use `active::USER@MACHINE name::X` instead". No files modified.
 - **AC-06**: `clp .accounts assign::1 name::X for::bob@laptop` exits 1 (both `assign::1` and `for::` trigger REMOVED_TOGGLE messages). No files modified.
-- **AC-07**: `clp .accounts unclaim::1 name::X` exits 1 with migration message: "REMOVED — use `owner::0 name::X` instead". No files modified.
+- **AC-07**: `clp .accounts unclaim::1 name::X` exits 1 with migration message: "REMOVED — use `owner::0 name::X` instead (or `owner::0` alone to batch-clear)". No files modified.
 - **AC-08**: `clp .accounts owner::0 name::alice@corp.com` writes `owner: ""` to `{name}.json` via `write_owner()`; exits 0; stdout contains `unclaimed alice@corp.com`; G8 gate evaluated before write; credentials NOT touched.
-- **AC-09**: `clp .accounts owner::0` (no `name::`) clears ownership for all owned accounts matching current filter; per-account G8 check; non-owned accounts skipped with `"skip"` message; exits 0.
-- **AC-10**: `clp .accounts owner::0 name::X,Y,Z` clears ownership for X, Y, and Z; each evaluated against G8 independently; exits 0.
+- **AC-09**: `clp .accounts owner::0` (no `name::`) clears ownership for all owned accounts in the credential store (pre-filter — display-filter params such as `only_valid::`, `exclude_exhausted::`, and `min_5h::` do NOT scope the batch-clear); per-account G8 check; non-owned accounts (unowned or owned by another identity) are skipped with a `"skip"` message rather than exiting 1; exits 0.
+- **AC-10**: `clp .accounts owner::0 name::X,Y,Z` clears ownership for X, Y, and Z; each evaluated against G8 independently; when an account is owned by another identity and `force::1` is absent, that account exits 1 per-account (unlike the no-`name::` batch-clear which skips non-owned accounts); exits 0 when all succeed.
 - **AC-11**: `clp .accounts owner::user1@w003 name::X,Y,Z` sets ownership for X, Y, and Z; each evaluated against G8 independently; exits 0.
 - **AC-12**: `clp .accounts owner::0 name::X force::1` bypasses G8 for X even when owned by a different identity; exits 0.
 - **AC-13**: `active::user1@w003` sanitizes value correctly — e.g., `active::alice@my laptop` writes `_active_my_laptop_alice` (space → `_`). Dot and hyphen in machine component preserved verbatim.
@@ -67,6 +67,8 @@ owner::user1@w003 name::X,Y,Z      → set ownership for X, Y, and Z
 - **AC-15**: `owner::` with empty string value (`owner::`) still exits 1 with message directing user to `owner::0` for ownership release (empty string ≠ sentinel `"0"`).
 - **AC-16**: `clp .accounts owner::0 name::X dry::1` prints `[dry-run] would clear owner of X`; exits 0; no files written. G8 gate still runs before dry-run check.
 - **AC-17**: `clp .accounts owner::0 name::X force::1 dry::1` bypasses G8 AND respects dry-run — prints `[dry-run] would clear owner of X`; no files written.
+- **AC-18**: `clp .accounts active::0 name::alice@corp.com` exits 1; value `"0"` contains no `@` and is therefore rejected by the `USER@MACHINE` format validation (same path as AC error cases); error message indicates invalid format and directs user to `owner::0` for ownership release or `active::USER@MACHINE` without `name::` for marker unassign. No files modified.
+- **AC-19**: `clp .accounts active::user1@w003 dry::1` (no `name::`) exits 0; stdout contains `[dry-run] would unassign user1@w003  →  _active_w003_user1 cleared`; no `_active_*` file modified or deleted.
 
 ### Features
 

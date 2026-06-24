@@ -92,12 +92,13 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       trc(),
       fmt(),
       // Mutation params
-      bfs( "assign",  "Write per-machine active marker (1 = write; 0 = off, default); when name:: absent, emits usage block" ),
-      bfs( "unclaim", "Release ownership of named account (1 = unclaim; 0 = off, default); when name:: absent, batch-unclaims filtered set" ),
-      reg_arg_opt( "owner", Kind::String ).with_description( "Set account ownership to USER@MACHINE identity; requires name::; mutually exclusive with unclaim::1" ),
-      bfs( "force",   "Bypass G8 ownership gate on unclaim::1 or owner:: (default 0)" ),
+      bfd( "assign",  "REMOVED — use active::USER@MACHINE name::X instead" ),
+      bfd( "unclaim", "REMOVED — use owner::0 name::X instead (or owner::0 alone to batch-clear)" ),
+      reg_arg_opt( "owner", Kind::String ).with_description( "Set or clear account ownership: USER@MACHINE identity to set; sentinel value \"0\" clears ownership (owner::0)" ),
+      bfs( "force",   "Bypass G8 ownership gate on owner:: (default 0)" ),
       reg_arg_opt( "cols", Kind::String ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default set: account, owner, active, current, sub, tier, expires, email" ),
-      reg_arg_opt( "for",  Kind::String ).with_description( "Target identity as USER@MACHINE for assign::1 (default: current $USER@hostname)" ),
+      bfd( "for",     "REMOVED — functionality absorbed into active:: value: active::USER@MACHINE name::X" ),
+      reg_arg_opt( "active", Kind::String ).with_description( "USER@MACHINE target: assign marker when name:: present, unassign when absent (Feature 064)" ),
       // Unified display/query params (same set as .usage; defaults differ)
       reg_arg_opt( "refresh",           Kind::Integer ).with_description( "Attempt OAuth token refresh for expired credentials via subprocess (0 = off, default; 1 = enabled)" ),
       reg_arg_opt( "touch",             Kind::String  ).with_description( "Extend active 5h session windows via subprocess (0/false = off, default; 1/true = on)" ),
@@ -124,7 +125,6 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "jitter",            Kind::Integer ).with_description( "Max random seconds added to interval (0 = none, default)" ),
       // Legacy field-toggle params (removed by Feature 037; kept registered so the routine
       // can emit a helpful cols:: migration message instead of a generic framework error).
-      bfd( "active",       "REMOVED — use cols::-active instead"       ),
       bfd( "current",      "REMOVED — use cols::-current instead"      ),
       bfd( "sub",          "REMOVED — use cols::-sub instead"          ),
       bfd( "tier",         "REMOVED — use cols::-tier instead"         ),
@@ -243,11 +243,12 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       // Mutation params (Feature 037 — unified with .accounts)
       nam(),
       dry(),
-      bfs( "assign",  "Write per-machine active marker (1 = write; 0 = off, default); when name:: absent, emits usage block" ),
-      bfs( "unclaim", "Release ownership of named account (1 = unclaim; 0 = off, default); when name:: absent, batch-unclaims filtered set" ),
-      reg_arg_opt( "owner", Kind::String ).with_description( "Set account ownership to USER@MACHINE identity; requires name::; mutually exclusive with unclaim::1" ),
-      bfs( "force",   "Bypass ownership gate: G5 on rotate::1, G8 on unclaim::1 or owner:: (default 0)" ),
-      reg_arg_opt( "for", Kind::String ).with_description( "Target identity as USER@MACHINE for assign::1 (default: current $USER@hostname)" ),
+      bfd( "assign",  "REMOVED — use active::USER@MACHINE name::X instead" ),
+      bfd( "unclaim", "REMOVED — use owner::0 name::X instead (or owner::0 alone to batch-clear)" ),
+      reg_arg_opt( "owner", Kind::String ).with_description( "Set or clear account ownership: USER@MACHINE identity to set; sentinel value \"0\" clears ownership (owner::0)" ),
+      bfs( "force",   "Bypass G8 ownership gate on owner:: (default 0)" ),
+      bfd( "for",     "REMOVED — functionality absorbed into active:: value: active::USER@MACHINE name::X" ),
+      reg_arg_opt( "active", Kind::String ).with_description( "USER@MACHINE target: assign marker when name:: present, unassign when absent (Feature 064)" ),
       // Rotation param (Feature 038)
       reg_arg_opt( "rotate", Kind::Integer ).with_description( "Switch to the → winner after rendering the quota table (0 = off, default; 1 = on); mutually exclusive with live::1" ),
       // Sessions table visibility (Plan 022)

@@ -2,7 +2,7 @@
 
 `.account.assign` has been **fully deregistered** from the command registry by Feature 037 (shipped).
 It produces a generic "unknown command" error — the same error as any unregistered command.
-All marker-write behavior is in `.accounts assign::1` — see `03_accounts.md` IT-43 through IT-46.
+All marker-write behavior is now in `.accounts active::USER@MACHINE name::X` (Feature 064 — `assign::1` is REMOVED) — see `03_accounts.md` IT-43 through IT-46.
 
 | # | Test | Conditions | Exit |
 |---|------|-----------|------|
