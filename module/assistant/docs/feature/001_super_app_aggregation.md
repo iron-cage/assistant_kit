@@ -45,6 +45,7 @@ Duplicate registrations via `command_add_runtime` are silently skipped — the f
 | File | Relationship |
 |------|--------------|
 | [../invariant/001_aggregation_completeness.md](../invariant/001_aggregation_completeness.md) | Every Layer 2 crate must expose register_commands() |
+| [../invariant/002_publish_sandbox_safety.md](../invariant/002_publish_sandbox_safety.md) | build.rs must not panic in the cargo publish sandbox |
 
 ### Sources
 
