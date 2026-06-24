@@ -76,6 +76,7 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 
 | File | Relationship |
 |------|--------------|
+| [003_account_list.md](003_account_list.md) | `.accounts` — `renewal_at` field in design table and `format::json`; AC-21 |
 | [002_account_save.md](002_account_save.md) | `save()` read-merge preserving `_renewal_at` (AC-17 there) |
 | [009_token_usage.md](009_token_usage.md) | `.usage` rendering; `~Renews` and `→ Next` columns; AC-27/AC-28/AC-29 |
 | [015_name_shortcut_syntax.md](015_name_shortcut_syntax.md) | Prefix resolution for `name::` — AC-12/AC-13 cover single and comma-list prefix resolution on `.account.renewal` |

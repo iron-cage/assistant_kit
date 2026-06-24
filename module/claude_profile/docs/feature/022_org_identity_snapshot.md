@@ -42,7 +42,7 @@ Personal accounts have `null` workspace fields. Enterprise accounts have non-nul
 |-------|--------|----------------|-----------|
 | `organization_uuid` | `{name}.json` | `organization_uuid: String` | Org UUID |
 | `organization_name` | `{name}.json` | `organization_name: String` | Org display name |
-| `organization_role` | `{name}.json` | `organization_role: String` | User's role in org |
+| `organization_role` | `{name}.json` | `org_role: String` | User's role in org (struct field renamed by TSK-324; JSON key `"organization_role"` retained) |
 | `workspace_uuid` | `{name}.json` | `workspace_uuid: String` | Workspace UUID (empty for personal) |
 | `workspace_name` | `{name}.json` | `workspace_name: String` | Workspace name (empty for personal) |
 
@@ -77,8 +77,8 @@ Applied to `.credentials.status` (reads from live `~/.claude.json` — org field
 - **AC-02**: If endpoint 005 call fails during `save()`, org identity metadata is not written to `{name}.json`; `save()` still exits 0.
 - **AC-03**: Re-running `clp .account.save` (same name) overwrites org identity fields in `{name}.json` with fresh data — this is the metadata refresh mechanism.
 - **AC-04**: `clp .account.delete name::alice@acme.com` removes `{credential_store}/alice@acme.com.json` if it exists; absent file causes no error.
-- **AC-05**: `clp .accounts org_uuid::1` shows `Org ID:` line per account from saved `{name}.json`; `N/A` when absent.
-- **AC-06**: `clp .accounts org_name::1` shows `Org:` line per account from saved `{name}.json`; `N/A` when absent.
+- **AC-05**: `clp .accounts cols::+org_uuid` shows `Org ID:` line per account from saved `{name}.json`; `N/A` when absent.
+- **AC-06**: `clp .accounts cols::+org_name` shows `Org:` line per account from saved `{name}.json`; `N/A` when absent.
 - **AC-07**: `clp .credentials.status org_uuid::1` shows `Org ID:` from the active account's `{name}.json`; `N/A` when absent.
 - **AC-08**: `clp .credentials.status org_name::1` shows `Org:` from the active account's `{name}.json`; `N/A` when absent.
 - **AC-09**: `format::json` always includes `organization_uuid`, `organization_name`, `organization_role`, `workspace_uuid`, `workspace_name` on both commands.
@@ -95,6 +95,7 @@ Applied to `.credentials.status` (reads from live `~/.claude.json` — org field
 
 | File | Relationship |
 |------|--------------|
+| [003_account_list.md](003_account_list.md) | `.accounts` — `cols::+org_uuid`/`cols::+org_name` opt-in columns and org fields in `format::json` |
 | [002_account_save.md](002_account_save.md) | `.account.save` — org identity written to `{name}.json` and idempotency |
 | [005_account_delete.md](005_account_delete.md) | `.account.delete` — `{name}.json` removed best-effort |
 | [014_rich_account_metadata.md](014_rich_account_metadata.md) | Base rich metadata feature (FR-20); this feature extends it |

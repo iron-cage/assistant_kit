@@ -70,6 +70,9 @@
 //! | acc48 | `acc48_org_name_missing_roles_json_na` | `cols::+org_name`, no roles.json → Org: N/A | P |
 //! | acc49 | `acc49_accounts_host_role_shows_profile_metadata` | `cols::+host,+role` → Host/Role from profile.json | P |
 //! | acc50 | `acc50_accounts_host_no_profile_json_exits_0` | absent profile.json → no non-zero exit, Host: N/A | P |
+//! | `mre_324_a` | `mre_324_role_toggle_shows_user_label` | `cols::+role` → user-defined label from `{name}.json`, not org role | P |
+//! | `mre_324_b` | `mre_324_host_role_na_when_metadata_absent` | `cols::+host,+role`, no snapshot → Host/Role both N/A | P |
+//! | `mre_324_c` | `mre_324_json_output_keys` | `format::json` → canonical AC-12 keys; no `profile_host`/`profile_role` | P |
 //!
 //! ### FT — Feature 037 Param Unification Tests
 //!
@@ -95,7 +98,7 @@ use crate::cli_runner::{
   write_account, write_account_with_token, write_credentials, write_claude_json_full, write_settings_json,
   write_account_claude_json, write_account_settings_json, write_live_credentials_with_token,
   write_account_claude_json_extended, write_account_roles_json, write_account_profile_json,
-  write_account_owner, live_active_token, require_live_api,
+  write_account_owner, write_account_renewal_json, live_active_token, require_live_api,
   FAR_FUTURE_MS, PAST_MS,
 };
 use tempfile::TempDir;
@@ -2042,4 +2045,99 @@ fn it_batch_unclaim_force_dry_previews_all()
     "other@remote",
     "it_batch_unclaim_force_dry: bob.json owner must NOT be cleared in dry mode",
   );
+}
+
+// ── mre_324: Account struct field alignment (TSK-324) ────────────────────────
+
+/// `mre_324_a` — `cols::+role` shows user-defined label from `{name}.json` `role` field.
+///
+/// After TSK-324, `Account.role` holds the user-defined label from `{name}.json`
+/// top-level `"role"` key (previously `profile_role`). `Account.org_role` holds
+/// the Roles API value. `cols::+role` must show the user label, not the org role.
+///
+/// Spec: [`docs/feature/003_account_list.md` AC-10]
+#[ test ]
+fn mre_324_role_toggle_shows_user_label()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account_profile_json( dir.path(), "test@example.com", None, Some( "work" ) );
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "cols::+role" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Role:    work" ),
+    "cols::+role must show user-defined label from {{name}}.json role field, got:\n{text}",
+  );
+}
+
+// ── mre_324_b ─────────────────────────────────────────────────────────────────
+
+/// `mre_324_b` — `cols::+host,+role` both show `N/A` when no `{name}.json` exists.
+///
+/// When no metadata snapshot is present, `Account.host` and `Account.role` are
+/// both empty strings; the text renderer falls back to `N/A` for each.
+///
+/// Spec: [`docs/feature/003_account_list.md` AC-11]
+#[ test ]
+fn mre_324_host_role_na_when_metadata_absent()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  // No {name}.json written — host and role must degrade gracefully.
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "cols::+host,+role" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Host:    N/A" ),
+    "absent profile.json must show Host: N/A, got:\n{text}",
+  );
+  assert!(
+    text.contains( "Role:    N/A" ),
+    "absent profile.json must show Role: N/A, got:\n{text}",
+  );
+}
+
+// ── mre_324_c ─────────────────────────────────────────────────────────────────
+
+/// `mre_324_c` — `format::json` emits AC-12 canonical key set; no legacy keys.
+///
+/// After TSK-324, JSON output must include `"organization_role"`, `"host"`,
+/// `"owner"`, `"is_owned"`, `"renewal_at"` and must NOT include the removed
+/// `"profile_host"` or `"profile_role"` keys.
+///
+/// Spec: [`docs/feature/003_account_list.md` AC-12]
+#[ test ]
+fn mre_324_json_output_keys()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account_profile_json( dir.path(), "test@example.com", Some( "mybox" ), Some( "work" ) );
+  write_account_owner( dir.path(), "test@example.com", "testuser@testmachine" );
+  write_account_renewal_json( dir.path(), "test@example.com", "2026-08-01T00:00:00Z" );
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"organization_role\"" ), "JSON must include organization_role key, got:\n{text}" );
+  assert!( text.contains( "\"host\""              ), "JSON must include host key, got:\n{text}"              );
+  assert!( text.contains( "\"owner\""             ), "JSON must include owner key, got:\n{text}"             );
+  assert!( text.contains( "\"is_owned\""          ), "JSON must include is_owned key, got:\n{text}"          );
+  assert!( text.contains( "\"renewal_at\""        ), "JSON must include renewal_at key, got:\n{text}"        );
+  assert!( !text.contains( "\"profile_host\""     ), "JSON must NOT include profile_host key, got:\n{text}"  );
+  assert!( !text.contains( "\"profile_role\""     ), "JSON must NOT include profile_role key, got:\n{text}"  );
 }
