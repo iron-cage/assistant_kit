@@ -1,4 +1,5 @@
 #![ cfg( unix ) ]
+#![ cfg_attr( not( unix ), allow( missing_docs ) ) ]
 #![ allow( clippy::doc_markdown ) ] // test doc comments use code identifiers in prose
 //! `--retry-default` and `--retry-default-delay` Integration Tests
 //!

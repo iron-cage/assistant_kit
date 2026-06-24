@@ -23,6 +23,7 @@ use cli_binary_test_helpers::{ run_cli, stdout_str };
 use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
 
 // The 12 expected attribute key prefixes present in every inspect block.
+#[ cfg( unix ) ]
 const INSPECT_KEYS : &[ &str ] = &[
   "pid:", "mode:", "elapsed:", "cpu:", "ram:", "state:",
   "path:", "task:", "binary:", "cmd:", "cmdline:", "started:",
