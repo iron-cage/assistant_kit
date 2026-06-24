@@ -16,7 +16,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [010_email.md](010_email.md) | `email::` — email address field toggle |
 | [011_file.md](011_file.md) | `file::` — credentials file path field toggle |
 | [012_saved.md](012_saved.md) | `saved::` — saved account count field toggle |
-| [013_active.md](013_active.md) | `active::` — active/inactive status field toggle |
+| [013_active.md](013_active.md) | `active::` — `USER@MACHINE` mutation param: assign/unassign active-account marker (Feature 064) |
 | [014_display_name.md](014_display_name.md) | `display_name::` — display name field toggle |
 | [015_role.md](015_role.md) | `role::` — organisation role field toggle |
 | [016_billing.md](016_billing.md) | `billing::` — billing type field toggle |
@@ -56,18 +56,18 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [050_from_now.md](050_from_now.md) | `from_now::` — signed duration delta from now for `.account.renewal` |
 | [051_clear.md](051_clear.md) | `clear::` — remove billing renewal override from `{name}.json` |
 | [052_role.md](052_role.md) | `role::` (metadata label) — free-text role label written to `{name}.json` at account save |
-| [053_for.md](053_for.md) | `for::` — `USER@MACHINE` target identity for `.account.assign` |
+| [053_for.md](053_for.md) | `for::` — **REMOVED** (Feature 064); absorbed into `active::` value |
 | [054_set_model.md](054_set_model.md) | `set_model::` — explicit Claude Code session model write to `settings.json` |
 | [055_set.md](055_set.md) | `set::` — model shorthand to write on `.model`; absent = get mode |
-| [056_unclaim.md](056_unclaim.md) | `unclaim::` — **REMOVED** — superseded by `.account.unclaim` command (re-activated as mutation param on `.accounts`/`.usage` in Feature 037) |
-| [057_assign.md](057_assign.md) | `assign::` — write per-machine active-account marker (mutation param on `.accounts`/`.usage`, Feature 037) |
+| [056_unclaim.md](056_unclaim.md) | `unclaim::` — **REMOVED** (Feature 064); replaced by `owner::0` sentinel |
+| [057_assign.md](057_assign.md) | `assign::` — **REMOVED** (Feature 064); replaced by `active::USER@MACHINE name::X` |
 | [058_force.md](058_force.md) | `force::` — bypass G5–G8 ownership enforcement on mutation commands |
 | [059_rotate.md](059_rotate.md) | `rotate::` — after quota table render, switch to the footer-recommended account; mutually exclusive with `live::1`; G5 ownership gate; `dry::1` previews |
 | [060_solo.md](060_solo.md) | `solo::` — token conservation mode restricting all credential-consuming operations to the current+owned account; others use `approximate_quota()` |
 | [061_who.md](061_who.md) | `who::` — sessions table visibility in `.usage` (auto: shown when >1 active marker) |
-| [062_owner.md](062_owner.md) | `owner::` — explicit ownership assignment to named identity (`USER@MACHINE`) |
+| [062_owner.md](062_owner.md) | `owner::` — ownership set (`USER@MACHINE`) or release (`owner::0`); batch via comma-list `name::` |
 
-**Total:** 61 active parameters (param 062 new in Feature 063) (param 056 re-activated in Feature 037; 057–058 new; 059 new in Feature 038; 060 new; 061 new — sessions table)
+**Total:** 58 active parameters (Feature 064: params 053 `for::`, 056 `unclaim::`, 057 `assign::` REMOVED; param 013 `active::` repurposed as `Kind::String`; param 062 `owner::` extended with `owner::0` sentinel + batch)
 
 ### Overview Table
 
@@ -85,7 +85,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 10 | `email::` | `bool` | `1` | `0`, `1` | Email address line toggle | 2 cmds |
 | 11 | `file::` | `bool` | `0` | `0`, `1` | Credentials file path toggle (opt-in) | 1 cmd |
 | 12 | `saved::` | `bool` | `0` | `0`, `1` | Saved account count toggle (opt-in) | 1 cmd |
-| 13 | `active::` | `bool` | `1` | `0`, `1` | Active/inactive status toggle | 1 cmd |
+| 13 | `active::` | `string` | *(omit)* | `USER@MACHINE` | Assign/unassign active-account marker for target identity (Feature 064) | `.accounts`, `.usage` |
 | 14 | `display_name::` | `bool` | `0` | `0`, `1` | Display name toggle (opt-in) | 2 cmds |
 | 15 | `role::` | `bool` | `0` | `0`, `1` | Organisation role toggle (opt-in) | 2 cmds |
 | 16 | `billing::` | `bool` | `0` | `0`, `1` | Billing type toggle (opt-in) | 2 cmds |
@@ -125,16 +125,16 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 50 | `from_now::` | `string` | *(omit)* | `+`/`-` duration (e.g., `+3h30m`) | Signed delta from now for `.account.renewal` | 1 cmd |
 | 51 | `clear::` | `bool` | `0` | `0`, `1` | Remove billing renewal override | 1 cmd |
 | 52 | `role::` (metadata label) | `string` | `""` | Any string | User-defined role label at account save | 1 cmd |
-| 53 | `for::` | `string` | `$USER@resolve_hostname()` | `USER@MACHINE` | Target host+user identity for `.account.assign` | 1 cmd |
+| 53 | `for::` | — | — | — | REMOVED (Feature 064) — absorbed into `active::` value | — |
 | 54 | `set_model::` | `enum` | *(omit)* | `opus`, `sonnet`, `haiku`, `default` | Explicit session model write to `settings.json` | 2 cmds |
 | 55 | `set::` | `enum` | *(omit)* | `opus`, `sonnet`, `haiku`, `default` | Mode selector on `.model`: absent = get, present = set | 1 cmd |
-| 56 | `unclaim::` | `bool` | `0` | `0`, `1` | Release ownership of named account (mutation param on `.accounts`/`.usage`; Feature 037) | `.accounts`, `.usage` |
-| 57 | `assign::` | `bool` | `0` | `0`, `1` | Write per-machine active-account marker (mutation param on `.accounts`/`.usage`; Feature 037) | `.accounts`, `.usage` |
+| 56 | `unclaim::` | — | — | — | REMOVED (Feature 064) — use `owner::0` | — |
+| 57 | `assign::` | — | — | — | REMOVED (Feature 064) — use `active::USER@MACHINE name::X` | — |
 | 58 | `force::` | `bool` | `0` | `0`, `1`, `false`, `true` | Bypass G5–G8 ownership enforcement on mutation commands | `.account.use`, `.account.delete`, `.account.relogin`, `.accounts`, `.usage` |
 | 59 | `rotate::` | `bool` | `0` | `0`, `1` | After quota table render, switch to footer-recommended account; mutually exclusive with `live::1`; G5 ownership gate | `.usage` |
 | 60 | `solo::` | `bool` | `0` | `0`, `1` | Token conservation: restrict all credential-consuming operations to current+owned account; others use `approximate_quota()` | `.usage` |
 | 61 | `who::` | `i64` | `-1` | `-1` (auto), `0` (hide), `1` (show) | Sessions table visibility in `.usage` output | `.usage` |
-| 62 | `owner::` | `string` | *(omit)* | `USER@MACHINE` | Explicit ownership assignment for named account | `.accounts`, `.usage` |
+| 62 | `owner::` | `string` | *(omit)* | `USER@MACHINE`, `0` (release) | Set ownership (`USER@MACHINE`) or release (`0`); batch via comma-list `name::` | `.accounts`, `.usage` |
 
 *Param 1 = cross-command account selector (no formal group); params 48, 52 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = ungrouped (`.model`-specific); param 56 = REMOVED; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54, 60 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file)*
 

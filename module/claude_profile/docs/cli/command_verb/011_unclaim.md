@@ -55,15 +55,16 @@ This matches the pattern of G5/G6/G7 — gate evaluates before any mutation.
 [saved/active, unowned] --account.unclaim--> [same state, owner: ""]  (idempotent)
 ```
 
-### Migration (Feature 037)
+### Migration (Feature 037 + Feature 064)
 
-> `.account.unclaim` has been removed as a standalone working command (Feature 037). Its behavior is absorbed into `.accounts` and `.usage` as the `unclaim::1` mutation param.
+> `.account.unclaim` has been removed as a standalone working command (Feature 037). Its behavior was absorbed as `unclaim::1`. Feature 064 removed `unclaim::1` and replaced it with `owner::0`.
 > - `clp .account.unclaim name::X` → exits 1 with generic "unknown command" error (fully deregistered)
-> - `clp .accounts unclaim::1 name::X` → clears owner field (same behavior)
-> - `clp .accounts unclaim::1 name::X force::1` → bypasses G8; clears owner regardless of caller identity
-> - Batch unclaim: `clp .accounts unclaim::1` (no `name::`) → applies to all filtered accounts
+> - `clp .accounts unclaim::1 name::X` → exits 1 with REMOVED_TOGGLE migration message (Feature 064)
+> - `clp .accounts owner::0 name::X` → clears owner field (current behavior)
+> - `clp .accounts owner::0 name::X force::1` → bypasses G8; clears owner regardless of caller identity
+> - Batch release: `clp .accounts owner::0` (no `name::`) → applies to all filtered owned accounts
 >
-> See [feature/037_accounts_usage_param_unification.md](../../feature/037_accounts_usage_param_unification.md) AC-05 through AC-11.
+> See [feature/064_active_marker_and_owner_redesign.md](../../feature/064_active_marker_and_owner_redesign.md) AC-08 through AC-12.
 
 ### Cross-References
 

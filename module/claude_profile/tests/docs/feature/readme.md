@@ -57,6 +57,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 61_solo_token_conservation.md | FT cases for Feature 061 — Solo Token Conservation Mode |
 | 62_unified_session_config.md | FT cases for Feature 062 — Unified Session Config Recommendation |
 | 63_explicit_ownership_claim.md | FT cases for Feature 063 — Explicit Ownership Claim |
+| 64_active_marker_and_owner_redesign.md | FT cases for Feature 064 — Active Marker and Owner Param Redesign |
 
 ### Coverage Summary
 
@@ -65,7 +66,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | doc_structure (collection) | [00_doc_structure.md](00_doc_structure.md) | DT-01 … DT-07 | ✅ |
 | 001_account_store_init | [001_account_store_init.md](01_account_store_init.md) | FT-01 … FT-04 | ✅ |
 | 002_account_save | [002_account_save.md](02_account_save.md) | FT-01 … FT-16 | ✅ |
-| 003_account_list | [003_account_list.md](03_account_list.md) | FT-01 … FT-21 | ✅ |
+| 003_account_list | [003_account_list.md](03_account_list.md) | FT-01 … FT-22 | ✅ |
 | 004_account_use | [004_account_use.md](04_account_use.md) | FT-01 … FT-11 | ✅ |
 | 005_account_delete | [005_account_delete.md](05_account_delete.md) | FT-01 … FT-07 | ✅ |
 | 006_token_status | [006_token_status.md](06_token_status.md) | FT-01 … FT-04 | ✅ |
@@ -106,8 +107,9 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 061_solo_token_conservation | [061_solo_token_conservation.md](61_solo_token_conservation.md) | FT-01 … FT-12 | ✅ |
 | 062_unified_session_config | [062_unified_session_config.md](62_unified_session_config.md) | FT-01 … FT-13, EC-01 | ✅ |
 | 063_explicit_ownership_claim | [063_explicit_ownership_claim.md](63_explicit_ownership_claim.md) | FT-01 … FT-12 | ✅ |
+| 064_active_marker_and_owner_redesign | [064_active_marker_and_owner_redesign.md](64_active_marker_and_owner_redesign.md) | FT-01 … FT-17 | ⏳ |
 
-**Total:** 44 specs — 43 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+**Total:** 45 specs — 44 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 
 ### Cross-Reference Depth
 

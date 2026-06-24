@@ -43,14 +43,16 @@ Writes the per-machine active marker (`_active_{machine}_{user}`) for a named ac
 [absent/saved/active] --account.assign--> [same state]  (marker written; {name}.json unchanged; credentials unchanged)
 ```
 
-### Migration (Feature 037)
+### Migration (Feature 037 + Feature 064)
 
-> `.account.assign` has been removed as a standalone working command (Feature 037). Its behavior is absorbed into `.accounts` and `.usage` as the `assign::1` mutation param.
+> `.account.assign` has been removed as a standalone working command (Feature 037). Its behavior was absorbed into `.accounts`/`.usage` as `assign::1` + `for::`. Feature 064 replaced both with `active::USER@MACHINE name::X`.
 > - `clp .account.assign name::X` → exits 1 with generic "unknown command" error (fully deregistered)
-> - `clp .accounts assign::1 name::X` → writes marker (same behavior)
-> - `clp .accounts assign::1 name::X for::U@M` → targeted machine marker (same behavior)
+> - `clp .accounts assign::1 name::X` → exits 1 with REMOVED_TOGGLE migration message (Feature 064)
+> - `clp .accounts active::$USER@$HOSTNAME name::X` → writes marker for current machine (current behavior)
+> - `clp .accounts active::bob@laptop name::X` → writes marker for specific machine (current behavior)
+> - `clp .accounts active::user1@w003` (no `name::`) → clears/unassigns the marker (Feature 064)
 >
-> See [feature/037_accounts_usage_param_unification.md](../../feature/037_accounts_usage_param_unification.md) AC-08 through AC-12.
+> See [feature/064_active_marker_and_owner_redesign.md](../../feature/064_active_marker_and_owner_redesign.md) AC-01 through AC-07.
 
 ### Cross-References
 

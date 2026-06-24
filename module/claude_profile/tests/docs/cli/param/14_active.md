@@ -1,84 +1,144 @@
 # Parameter :: `active::`
 
-Edge case tests for the `active::` parameter. Tests validate boolean enforcement, default behavior, and Active/inactive status display control.
+Edge case tests for the repurposed `active::` parameter (Feature 064). Previously a `bool` field-presence toggle; now a `Kind::String` mutation param where the value is a `USER@MACHINE` target identity for active-account marker assign/unassign operations.
 
-**Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
+**Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
 
 ## Test Case Index
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | `active:::0` suppressed from output | Field Control |
-| EC-2 | `active::::2` rejected (out of range) | Boundary Values |
-| EC-3 | `active::::yes` rejected (type validation) | Type Validation |
-| EC-4 | Default value is `1` (present by default) | Default |
-| EC-5 | `active::::1` explicit enable accepted | Field Control |
-| EC-6 | `format::json` output unaffected by `active::::0` | Interaction |
+| EC-1 | `active::user@host name::X` writes `_active_host_user = X` | Behavioral |
+| EC-2 | `active::user@host` (no `name::`) clears `_active_host_user` | Behavioral |
+| EC-3 | `active::badvalue` (no `@`) exits 1 | Validation |
+| EC-4 | `active::@host` (empty user component) exits 1 | Validation |
+| EC-5 | `active::user@` (empty machine component) exits 1 | Validation |
+| EC-6 | Space in machine component sanitized to `_` | Sanitization |
+| EC-7 | Dot and hyphen in machine component preserved | Sanitization |
+| EC-8 | `active::user@host name::X dry::1` previews without writing | Dry-run |
+| EC-9 | `active::user@host name::unknown` exits 1 (account not in store) | Validation |
+| EC-10 | `active::` absent — no marker write (default omit) | Default |
+| EC-11 | `active::user@host` does NOT modify `owner` field | Isolation |
 
 ## Test Coverage Summary
 
-- Field Control: 2 tests (EC-1, EC-5)
-- Boundary Values: 1 test (EC-2)
-- Type Validation: 1 test (EC-3)
-- Default: 1 test (EC-4)
-- Interaction: 1 test (EC-6)
+- Behavioral: 2 tests (EC-1, EC-2)
+- Validation: 4 tests (EC-3, EC-4, EC-5, EC-9)
+- Sanitization: 2 tests (EC-6, EC-7)
+- Dry-run: 1 test (EC-8)
+- Default: 1 test (EC-10)
+- Isolation: 1 test (EC-11)
 
-**Total:** 6 edge cases
-
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Total:** 11 edge cases
 
 ## Test Cases
+
 ---
 
-### EC-1: `active:::0` — field suppressed from output:
+### EC-1: `active::user1@w003 name::X` writes `_active_w003_user1 = X`
 
-- **Given:** fixture with at least one account in credential store
-- **When:** `clp .accounts active:::0`
-- **Then:** `Active/inactive status` line absent from output
+- **Given:** `alice@corp.com.credentials.json` exists in credential store. No existing `_active_w003_user1` marker.
+- **When:** `clp .accounts active::user1@w003 name::alice@corp.com`
+- **Then:** Exits 0. `{credential_store}/_active_w003_user1` contains `alice@corp.com`. No other files modified (credentials, `{name}.json`, `~/.claude.json` all unchanged).
 - **Exit:** 0
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
+
 ---
 
-### EC-2: `active::::2` rejected:
+### EC-2: `active::user1@w003` (no `name::`) clears `_active_w003_user1`
 
-- **Given:** clean environment
-- **When:** `clp .accounts active::::2`
-- **Then:** `active:: must be 0 or 1`; exit 1
+- **Given:** `{credential_store}/_active_w003_user1` exists containing `alice@corp.com`.
+- **When:** `clp .accounts active::user1@w003` (no `name::`)
+- **Then:** Exits 0. `_active_w003_user1` is cleared or deleted. No credential files modified.
+- **Exit:** 0
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
+
+---
+
+### EC-3: `active::badvalue` (no `@`) exits 1
+
+- **Given:** Clean environment.
+- **When:** `clp .accounts active::badvalue name::alice@corp.com`
+- **Then:** Exits 1. Error message explains `USER@MACHINE` format (must include `@`). No `_active_*` file written.
 - **Exit:** 1
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
+
 ---
 
-### EC-3: `active::::yes` rejected:
+### EC-4: `active::@w003` (empty user component) exits 1
 
-- **Given:** clean environment
-- **When:** `clp .accounts active::::yes`
-- **Then:** `active:: must be 0 or 1`; exit 1
+- **Given:** Clean environment.
+- **When:** `clp .accounts active::@w003 name::alice@corp.com`
+- **Then:** Exits 1. Error about empty user component. No `_active_*` file written.
 - **Exit:** 1
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
+
 ---
 
-### EC-4: Default value (present by default):
+### EC-5: `active::user1@` (empty machine component) exits 1
 
-- **Given:** fixture with at least one account in credential store
-- **When:** `clp .accounts`
-- **Then:** `Active/inactive status` line present in default output
-- **Exit:** 0
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
+- **Given:** Clean environment.
+- **When:** `clp .accounts active::user1@ name::alice@corp.com`
+- **Then:** Exits 1. Error about empty machine component. No `_active_*` file written.
+- **Exit:** 1
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
+
 ---
 
-### EC-5: `active::::1` explicit enable accepted:
+### EC-6: Space in machine component sanitized to `_`
 
-- **Given:** fixture with at least one account in credential store
-- **When:** `clp .accounts active::::1`
-- **Then:** `Active/inactive status` line present in output
+- **Given:** `alice@corp.com.credentials.json` exists in credential store.
+- **When:** `clp .accounts active::"alice@my laptop" name::alice@corp.com`
+- **Then:** Exits 0. `{credential_store}/_active_my_laptop_alice` contains `alice@corp.com`. Space in `my laptop` replaced with `_`.
 - **Exit:** 0
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
+
 ---
 
-### EC-6: `format::json` unaffected by `active::::0`:
+### EC-7: Dot and hyphen in machine component preserved
 
-- **Given:** fixture with at least one account in credential store
-- **When:** `clp .accounts format::json active::::0`
-- **Then:** JSON output contains all fields regardless of `active::` value
+- **Given:** `alice@corp.com.credentials.json` exists in credential store.
+- **When:** `clp .accounts active::user1@w003.local name::alice@corp.com`
+- **Then:** Exits 0. `{credential_store}/_active_w003.local_user1` contains `alice@corp.com`. Dot is kept verbatim.
 - **Exit:** 0
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
+
+---
+
+### EC-8: `active::user1@w003 name::X dry::1` previews without writing
+
+- **Given:** `alice@corp.com.credentials.json` exists. No existing `_active_w003_user1`.
+- **When:** `clp .accounts active::user1@w003 name::alice@corp.com dry::1`
+- **Then:** Exits 0. stdout contains `[dry-run]` preview message. No `_active_*` file created or modified.
+- **Exit:** 0
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
+
+---
+
+### EC-9: `active::user1@w003 name::unknown` exits 1 — account not found
+
+- **Given:** Credential store does NOT contain `ghost@example.com`.
+- **When:** `clp .accounts active::user1@w003 name::ghost@example.com`
+- **Then:** Exits 1. Error indicates account not found. No `_active_*` file created.
+- **Exit:** 1
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
+
+---
+
+### EC-10: `active::` absent — no marker write
+
+- **Given:** `alice@corp.com.credentials.json` exists.
+- **When:** `clp .accounts name::alice@corp.com` (no `active::`)
+- **Then:** Exits 0. No `_active_*` marker file written. Normal `.accounts` listing output.
+- **Exit:** 0
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
+
+---
+
+### EC-11: `active::user@host name::X` does NOT modify `owner` field
+
+- **Given:** `alice@corp.com.json` exists with `"owner": "other@machine"`.
+- **When:** `clp .accounts active::user1@w003 name::alice@corp.com`
+- **Then:** Exits 0. `{credential_store}/_active_w003_user1` written. `alice@corp.com.json` still contains `"owner": "other@machine"` — unchanged. `active::` is marker-only.
+- **Exit:** 0
+- **Source:** [params.md#parameter--13-active](../../../../docs/cli/param/013_active.md)
