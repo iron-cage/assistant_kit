@@ -514,6 +514,60 @@ pub( crate ) mod test_support
     }
   }
 
+  /// Build an `AccountQuota` with a cancelled subscription (`billing_type = "none"`).
+  ///
+  /// Simulates a dead account: subscription cancelled, no renewal path. The name
+  /// and quota utilizations are configurable — a cancelled account may still have
+  /// good quota right before the JWT expires, which is the BUG-317 scenario
+  /// (`billing_type = "none"` was ignored by `status_group_of()`).
+  ///
+  /// Pitfall: `account = None` is ambiguous (API fetch failed, not confirmed cancelled).
+  /// This helper always sets `account = Some({billing_type: "none"})` — the definitive
+  /// cancelled signal.
+  pub( crate ) fn mk_aq_cancelled(
+    name    : &str,
+    h5_util : f64,
+    d7_util : f64,
+  ) -> AccountQuota
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : h5_util, resets_at : None } ),
+      seven_day        : Some( claude_quota::PeriodUsage { utilization : d7_util, resets_at : None } ),
+      seven_day_sonnet : None,
+    };
+    AccountQuota
+    {
+      name          : name.to_string(),
+      is_current    : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms : FAR_FUTURE_MS,
+      result        : Ok( data ),
+      account       : Some( claude_quota::OauthAccountData
+      {
+        tagged_id       : String::new(),
+        uuid            : String::new(),
+        email_address   : String::new(),
+        full_name       : String::new(),
+        display_name    : String::new(),
+        billing_type    : "none".to_string(),
+        has_max         : false,
+        capabilities    : vec![],
+        rate_limit_tier : String::new(),
+        org_created_at  : String::new(),
+        memberships     : vec![],
+      } ),
+      host          : String::new(),
+      role          : String::new(),
+      renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
+      is_owned      : true,
+      owner                : String::new(),
+    }
+  }
+
   /// Mutex serializing tests that redirect the process-global stderr fd via `gag`.
   ///
   /// `gag::BufferRedirect::stderr()` redirects fd 2 via `dup2`; concurrent captures from

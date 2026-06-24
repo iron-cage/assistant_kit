@@ -12,6 +12,7 @@ Edge case coverage for the `only_valid::` parameter on `.usage`. See [param/043_
 | EC-4 | `only_valid::1` with all 🔴 accounts shows 0 rows | Empty Result |
 | EC-5 | `only_valid::true` accepted (alias for 1) | Alias Acceptance |
 | EC-6 | `only_valid::false` accepted (alias for 0) | Alias Acceptance |
+| EC-7 | Cancelled account (`billing_type="none"`, `result=Ok`) excluded by `only_valid::1` | Cancelled Subscription |
 
 ---
 
@@ -77,4 +78,16 @@ Edge case coverage for the `only_valid::` parameter on `.usage`. See [param/043_
 - **Then:** Exits 0. All rows shown — same result as `only_valid::0`.
 - **Exit:** 0
 - **Source fn:** `it173_only_valid_false_shows_all_rows` (in `tests/cli/usage_test.rs`)
+- **Source:** [param/043_only_valid.md](../../../../docs/cli/param/043_only_valid.md)
+
+---
+
+### EC-7: Cancelled account (`billing_type="none"`, `result=Ok`) excluded by `only_valid::1`
+
+- **Given (unit test):** One `AccountQuota` with `result = Ok(OauthUsageData)` (quota fetch succeeded) and `account = Some(OauthAccountData { billing_type: "none", ... })` — subscription cancelled. This is the critical case: `result.is_ok()` is `true`, so the first predicate passes, but `billing_type="none"` triggers the second predicate.
+- **When:** `only_valid::1` filter applied (via `accounts.retain(...)` in `api.rs`).
+- **Then:** The account is excluded from the result set. Without Fix(BUG-317), this account would pass `only_valid::1` because only `result.is_ok()` was checked.
+- **Exit:** n/a (unit test — retain predicate)
+- **Source fn:** `mre_bug317_cancelled_excluded_by_only_valid` (in `src/usage/api_tests.rs`)
+- **Note:** Fix(BUG-317): predicate is now `result.is_ok() && !account.as_ref().is_some_and(|a| a.billing_type == "none")`. Both conditions must pass independently.
 - **Source:** [param/043_only_valid.md](../../../../docs/cli/param/043_only_valid.md)

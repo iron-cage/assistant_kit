@@ -164,7 +164,7 @@ pub( crate ) fn render_text(
           aq.name.clone()
         };
         let mut row : Vec< String > = vec![ flag_cell ];
-        if cols.status       { row.push( status_emoji( &aq.result ).to_string() ); }
+        if cols.status       { row.push( status_emoji( aq ).to_string() ); }
         row.push( name_display );
         if cols.h5_left      { row.push( cells[ 0 ].clone() ); }
         if cols.h5_reset     { row.push( cells[ 1 ].clone() ); }
@@ -187,7 +187,7 @@ pub( crate ) fn render_text(
         let error_str = format!( "({})", shorten_error( reason ) );
 
         let mut row : Vec< String > = vec![ flag_cell ];
-        if cols.status       { row.push( status_emoji( &aq.result ).to_string() ); }
+        if cols.status       { row.push( status_emoji( aq ).to_string() ); }
         row.push( aq.name.clone() );
         let structural_len = row.len();
         if cols.h5_left      { row.push( dash.clone() ); }
@@ -584,7 +584,7 @@ pub( crate ) fn render_tsv(
   {
     let aq         = &accounts[ idx ];
     let flag_cell  = if aq.is_current { "\u{2713}" } else if aq.is_active { "*" } else if aq.is_occupied_elsewhere { "@" } else { "" };
-    let status_str = match status_emoji( &aq.result )
+    let status_str = match status_emoji( aq )
     {
       "🟢" => "ok",
       "🟡" => "warn",
@@ -726,7 +726,7 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
   let dash = "\u{2014}".to_string();
   match field
   {
-    GetField::Status  => status_emoji( &aq.result ).to_string(),
+    GetField::Status  => status_emoji( aq ).to_string(),
     GetField::Account => aq.name.clone(),
     GetField::Expires => compute_expires_cell( aq.expires_at_ms, now_secs ),
     GetField::Sub    => sub_label( aq.account.as_ref() ).to_string(),

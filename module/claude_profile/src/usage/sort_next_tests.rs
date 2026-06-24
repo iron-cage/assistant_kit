@@ -9,6 +9,7 @@
   {
     FAR_FUTURE_MS,
     mk_aq_sort, mk_aq_with_7d_reset, mk_aq_with_7d_reset_util,
+    mk_aq_cancelled,
     reset_iso_at,
   };
 
@@ -915,6 +916,51 @@
   }
 
   // ── GAP-8: find_first_eligible gate 4 at exactly 85% utilization ─────────────
+
+  // ── BUG-317 MRE: cancelled subscription eligibility gate ─────────────────
+
+  /// BUG-317 MRE — `find_first_eligible` must skip cancelled accounts (`billing_type="none"`).
+  ///
+  /// # Root Cause
+  /// `find_first_eligible()` checked `is_current`, `is_occupied_elsewhere`, `result.is_err()`,
+  /// `five_hour.utilization >= 85.0`, `expires_at_ms`, and the `extra` predicate — but never
+  /// `billing_type`. A cancelled account with good quota passed all these gates and was
+  /// recommended as the next rotation target despite being permanently unusable after JWT expiry.
+  ///
+  /// # Why Not Caught
+  /// Existing `find_first_eligible` tests never set `account = Some({billing_type: "none"})`.
+  /// Tests with `account = None` do not trigger the gate (ambiguous — API fetch failure).
+  ///
+  /// # Fix Applied
+  /// Added `billing_type="none"` gate to `find_first_eligible()` (`sort_next.rs`), immediately
+  /// after `is_occupied_elsewhere` check: `if aq.account.as_ref().is_some_and(|a| a.billing_type == "none") { continue; }`
+  ///
+  /// # Prevention
+  /// Test uses `mk_aq_cancelled` which always sets confirmed-cancelled `account` data.
+  /// Any test adding a rotation-candidate gate must add the analogous cancelled-account case.
+  ///
+  /// # Pitfall
+  /// `account = None` is NOT gated — account-API fetch failure is ambiguous and does not
+  /// confirm cancellation. Only `billing_type = "none"` with `account = Some` is definitive.
+  #[ doc = "bug_reproducer(BUG-317)" ]
+  #[ test ]
+  fn mre_bug317_cancelled_not_recommended_by_find_next()
+  {
+    let now = 0u64;
+    // Single account: cancelled subscription, good quota (would pass extra predicate before fix).
+    // Before fix: recommended by all strategies (quota passes, not expired, owned).
+    // After fix: gated by billing_type="none" → all strategies return None.
+    let cancelled = mk_aq_cancelled( "cancelled@test.com", 20.0, 20.0 );
+    let accounts  = vec![ cancelled ];
+    for strategy in [ SortStrategy::Renew, SortStrategy::Name, SortStrategy::Renews ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+      assert!(
+        result.is_none(),
+        "BUG-317: {strategy:?} must not recommend cancelled account (billing_type='none'); got idx {result:?}",
+      );
+    }
+  }
 
   /// GAP-8 — `find_first_eligible` gate 4 fires at exactly `five_hour.utilization = 85.0`.
   ///

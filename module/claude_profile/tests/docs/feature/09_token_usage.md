@@ -38,6 +38,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-30 | Sessions table shown after footer when >1 `_active_*` marker exists; each marker rendered as `{user}@{host}` + account; own session has `✓` | AC-33 | — |
 | FT-31 | Sessions table hidden when ≤1 `_active_*` marker (single-session default) | AC-33 | — |
 | FT-32 | `who::0` suppresses sessions table; `who::1` forces it on | AC-34 | — |
+| FT-33 | Cancelled account (`billing_type="none"`) gets `🔴` in `●` column | AC-18 | — |
 | — | Table output rendered by `data_fmt` crate (`use data_fmt::…` in `render.rs`) | AC-04 | Structural (code review — all render paths use `data_fmt`) |
 | — | `Expires` column: `"in Xh Ym"` / `"EXPIRED"` from `compute_expires_cell()` | AC-07 | IT-003, IT-010 (command-level coverage) |
 | — | `5h Left`, `7d Left`, `7d(Son)`, `5h Reset`, `7d Reset` from `OauthUsageData` | AC-08 | Indirect — FT-07/FT-08/FT-11/FT-14/FT-15/FT-16 all depend on these columns |
@@ -86,8 +87,9 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-30 | Sessions table shown when >1 marker; own session has `✓` | AC-33 | Sessions Table |
 | FT-31 | Sessions table hidden when ≤1 marker | AC-33 | Sessions Table |
 | FT-32 | `who::0` suppresses sessions table; `who::1` forces it on | AC-34 | Sessions Table |
+| FT-33 | Cancelled account (`billing_type="none"`) gets `🔴` in `●` column regardless of quota values | AC-18 | Status Emoji |
 
-**Total:** 32 FT cases
+**Total:** 33 FT cases
 
 ---
 
@@ -160,7 +162,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - Variant A: `result = Err("missing accessToken".to_string())` → expected `🔴`
   - Variant B: `result = Ok(data)` where `five_hour.utilization = 10.0` (90% left) → expected `🟢`
   - Variant C: `result = Ok(data)` where `five_hour.utilization = 97.0` (3% left) → expected `🟡`
-- **When:** `status_emoji(&aq.result)` called for each variant.
+- **When:** `status_emoji(&aq)` called for each variant.
 - **Then:** Returns `"🔴"` for A, `"🟢"` for B, `"🟡"` for C.
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_status_emoji_red`, `test_status_emoji_green`, `test_status_emoji_yellow`
@@ -174,7 +176,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - Variant A: `five_hour.utilization = 85.0` (15.0% left), `seven_day.utilization = 50.0` (50% left) → expected `🟡` (5h at boundary)
   - Variant B: `five_hour.utilization = 84.9` (15.1% left), `seven_day.utilization = 50.0` (50% left) → expected `🟢` (both above threshold)
   - Variant C: `five_hour.utilization = 50.0` (50% left), `seven_day.utilization = 95.0` (5.0% left) → expected `🟡` (7d at boundary)
-- **When:** `status_emoji(&aq.result)` for each.
+- **When:** `status_emoji(&aq)` for each.
 - **Then:** A returns `"🟡"`; B returns `"🟢"`; C returns `"🟡"`. The 5h boundary is `left > 15.0`; the 7d boundary is `left > 5.0` (both strict greater-than).
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_status_emoji_boundary`
@@ -517,3 +519,16 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Output contains a `Sessions` table with 1 row (the current machine's own session with `✓`), despite ≤1 marker.
 - **Exit:** 0
 - **Source:** [009_token_usage.md AC-34](../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-33: Cancelled account (`billing_type="none"`) gets `🔴` in `●` column regardless of quota values
+
+- **Given (unit test):** One `AccountQuota` created via `mk_aq_cancelled("dead@test.com", 20.0, 20.0)`:
+  - `result = Ok(OauthUsageData)` with `five_hour.utilization = 20.0` (80% left) and `seven_day.utilization = 20.0` (80% left) — both well above thresholds
+  - `account = Some(OauthAccountData { billing_type: "none", ... })` — confirmed cancelled subscription
+- **When:** `status_emoji(&aq)` is called.
+- **Then:** Returns `"🔴"` — the `billing_type = "none"` gate fires before quota thresholds. Without Fix(BUG-317), this would return `"🟢"` (both quotas healthy, `result = Ok`).
+- **Exit:** n/a (unit test)
+- **Source fn:** `mre_bug317_cancelled_status_emoji_is_red` (in `src/usage/format_tests.rs`)
+- **Source:** [009_token_usage.md AC-18](../../../docs/feature/009_token_usage.md)

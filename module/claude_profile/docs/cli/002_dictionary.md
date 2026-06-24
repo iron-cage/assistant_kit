@@ -39,7 +39,7 @@
 | 1 | 🟢 | Green | available | available | — |
 | 2 | 🟡 | h-exhausted | exhausted | available | Short-cycle (5h reset) |
 | 3 | 🟡 | weekly-exhausted | available | exhausted | Long-cycle (7d reset) |
-| 4 | 🔴 | Red | — | — | Fully exhausted or error |
+| 4 | 🔴 | Red | — | — | Fully exhausted, error, or cancelled (`billing_type="none"`) |
 
 Group 2 ranks above group 3 because 5h exhaustion recovers in hours; 7d exhaustion takes days. See [sort::](param/025_sort.md).
 

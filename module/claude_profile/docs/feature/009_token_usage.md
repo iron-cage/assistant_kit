@@ -45,9 +45,9 @@
    - **Hidden-by-default columns:** Sub, 7d Son Reset — available via `cols::+sub`, `cols::+7d_son_reset`
    - **Column visibility:** The `cols::` parameter accepts comma-separated `+col_id` / `-col_id` modifiers relative to the default column set. The `flag` and `account` columns are structural and always visible. See [param/033_cols.md](../cli/param/033_cols.md).
    - **Composite status emoji column (`●`):** placed between the flag and Account columns; populated on every row; uses AND logic of 5h and 7d:
-     - `🔴` — token read failed or API returned an error (no valid quota data; `result` is `Err`)
-     - `🟡` — valid token, either `5h Left ≤ 15.0%` or `7d Left ≤ 5.0%` (at least one quota exhausted; `result` is `Ok`)
-     - `🟢` — valid token, both `5h Left > 15.0%` and `7d Left > 5.0%` (both quotas healthy; `result` is `Ok`)
+     - `🔴` — token read failed or API returned an error (`result` is `Err`), OR subscription cancelled (`billing_type = "none"` confirmed via `OauthAccountData`)
+     - `🟡` — valid token, active subscription, either `5h Left ≤ 15.0%` or `7d Left ≤ 5.0%` (at least one quota exhausted; `result` is `Ok`)
+     - `🟢` — valid token, active subscription, both `5h Left > 15.0%` and `7d Left > 5.0%` (both quotas healthy; `result` is `Ok`)
      - No JSON equivalent — the status is a display-only column derived from existing fields
    - **Per-column emoji:** `5h Left` and `7d Left` column values embed an individual 🟢/🟡 emoji based on their own threshold: `5h Left` uses ≤15% (`🟢 86%` when > 15%, `🟡 12%` when ≤ 15%); `7d Left` uses ≤5% (`🟢 65%` when > 5%, `🟡 3%` when ≤ 5%). This provides drill-down visibility beyond the composite `●`.
    - `Expires`: "in Xh Ym" when `expires_in_secs > 0`; "EXPIRED" when `expires_in_secs == 0`
@@ -172,7 +172,7 @@ Next (renew)     · alice@example.com   · sonnet     · in 3h 47m $ren
 - **AC-14**: When current = active (normal case), only `✓` appears on the current row; no `*` is emitted on any row.
 - **AC-15**: When `~/.claude/.credentials.json` is unreadable, no `✓` is emitted; `*` is still emitted for the active account. See [016_current_account_awareness.md](016_current_account_awareness.md).
 - **AC-16**: `format::json` output uses `is_current` (replacing the former `active` field) and includes a new `is_active` boolean field per object.
-- **AC-18**: Every table row has a composite status emoji in the `●` column (second column, after flag) using AND logic: `🟢` when `result` is `Ok` and `5h Left > 15%` and `7d Left > 5%`, `🟡` when `result` is `Ok` and either `5h Left ≤ 15%` or `7d Left ≤ 5%`, `🔴` when `result` is `Err`. The emoji appears on every row including the synthetic current-session row.
+- **AC-18**: Every table row has a composite status emoji in the `●` column (second column, after flag) using AND logic: `🟢` when `result` is `Ok` and subscription active and `5h Left > 15%` and `7d Left > 5%`, `🟡` when `result` is `Ok` and subscription active and either `5h Left ≤ 15%` or `7d Left ≤ 5%`, `🔴` when `result` is `Err` OR when `billing_type = "none"` (cancelled subscription — permanently unusable regardless of quota values; Fix BUG-317). `account = None` (API fetch failed) is NOT classified as cancelled — absent data is ambiguous. The emoji appears on every row including the synthetic current-session row.
 - **AC-19**: The exhaustion boundary for composite `●` is exclusive for `🟢` and inclusive for `🟡`: 5h dimension uses 15% (`5h Left = 15%` → `🟡`; `> 15%` needed for `🟢`), 7d dimension uses 5% (`7d Left = 5%` → `🟡`; `> 5%` needed for `🟢`).
 - **AC-20**: The `●` status emoji column has no JSON equivalent — `format::json` output is unchanged; pipeline consumers derive status from `session_5h_left_pct`, `weekly_7d_left_pct`, and the `error` field.
 - **AC-21**: `5h Left` and `7d Left` column values each embed a per-column emoji prefix using their respective thresholds: `5h Left` shows `🟢` when `> 15%`, `🟡` when `≤ 15%`; `7d Left` shows `🟢` when `> 5%`, `🟡` when `≤ 5%`. This provides individual-dimension visibility beyond the composite `●`.
@@ -207,6 +207,7 @@ Next (renew)     · alice@example.com   · sonnet     · in 3h 47m $ren
 |------|--------------|
 | `task/claude_profile/bug/244_usage_command_never_applies_model_override.md` | BUG-244 ✅ Fixed: `apply_model_override()` call added to `usage_routine()` before row-filter pipeline; `label: &str` param added to distinguish `.usage` from `.account.use` trace prefix (TSK-249) |
 | `task/claude_profile/bug/300_model_override_none_sonnet_triggers_opus.md` | BUG-300 ✅ Fixed (TSK-302): `apply_model_override()` used `map_or(0.0, ...)` on `quota.seven_day_sonnet`; when `None`, returned 0.0 < 20.0 → Opus override fired unconditionally for accounts without a Sonnet tier. Fix: `if let Some(ref sonnet) = quota.seven_day_sonnet` guard at `api.rs:267`; `mre_bug300_model_override_absent_sonnet_no_override` added to `api_tests.rs` |
+| `task/claude_profile/bug/317_cancelled_subscription_misclassified_weekly_exhausted.md` | BUG-317 ✅ Fixed: Cancelled accounts (`billing_type="none"`) misclassified as 🟡/🟢. Fix A: `status_group_of()` gates on `billing_type` before quota thresholds (`sort.rs`). Fix B: `find_first_eligible()` skips cancelled accounts (`sort_next.rs`). Fix C: `status_emoji()` signature changed to `&AccountQuota`; gates on `billing_type` before quota thresholds (`format.rs`). Fix D: `only_valid` filter excludes cancelled; `exclude_exhausted` auto-fixed via Fix C (`api.rs`). MREs: `mre_bug317_cancelled_status_emoji_is_red`, `mre_bug317_cancelled_not_recommended_by_find_next`, `mre_bug317_cancelled_account_status_group_is_red`, `mre_bug317_cancelled_excluded_by_only_valid` |
 
 ### Commands
 

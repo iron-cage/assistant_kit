@@ -6,7 +6,7 @@ Filters the `.usage` table to hide accounts in status groups 2–4 (🟡 h-exhau
 - **Constraints:** `0`, `1`, `false`, `true`
 - **Purpose:** Show only fully healthy accounts (status = 🟢).
 
-**Behavior:** When `exclude_exhausted::1`, only 🟢 rows (valid token, `5h Left > 15%`, `7d Left > 5%`) are displayed. Both 🟡 (exhausted — hourly or weekly) and 🔴 (invalid token) rows are hidden. Strictly more aggressive than `only_valid::1`, which keeps 🟡 rows.
+**Behavior:** When `exclude_exhausted::1`, only 🟢 rows (valid token, active subscription, `5h Left > 15%`, `7d Left > 5%`) are displayed. Both 🟡 (exhausted — hourly or weekly) and 🔴 (invalid token, network error, or cancelled subscription with `billing_type="none"`) rows are hidden. Strictly more aggressive than `only_valid::1`, which keeps 🟡 rows. The cancelled-subscription path is handled transitively: `exclude_exhausted` delegates to `status_emoji(&aq)` which returns `🔴` for cancelled accounts (Fix BUG-317).
 
 **Examples:**
 
