@@ -31,6 +31,16 @@ enum StatusGroup
 fn status_group_of( aq : &AccountQuota ) -> StatusGroup
 {
   if aq.result.is_err() { return StatusGroup::Red; }
+  // Fix(BUG-317): cancelled subscription is permanently unusable → Red regardless of quota.
+  // Root cause: billing_type was not checked; accounts with billing_type="none" appeared 🟡
+  //   or 🟢 based solely on quota, hiding permanently dead status from the user.
+  // Pitfall: account may be None (account-API fetch failed) — only classify Red when
+  //   account data is present and billing_type is definitively "none". Absent data is
+  //   ambiguous; do not penalize it.
+  if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" )
+  {
+    return StatusGroup::Red;
+  }
   let h5_ok = five_hour_left( aq ) > 15.0;
   // Fix(BUG-299): use raw seven_day_left for d7_ok — group boundaries are model-agnostic per AC-12.
   // Root cause: prefer_weekly(any) = min(7d, 7d_son) can be ≤ 5.0 when 7d_son ≤ 5% even if
@@ -182,6 +192,7 @@ mod tests
   {
     FAR_FUTURE_MS,
     mk_aq_sort, mk_aq_sort_weekly, mk_aq_with_reset, mk_aq_with_7d_reset,
+    mk_aq_cancelled,
   };
 
   // ── sort_indices: name strategy ──────────────────────────────────────────
@@ -491,6 +502,68 @@ mod tests
       matches!( status_group_of( &aq ), StatusGroup::WeeklyExhausted ),
       "seven_day.util=95.0 (5% left) must be WeeklyExhausted (strict > 5.0 guard; boundary is NOT green)",
     );
+  }
+
+  // ── BUG-317 MRE: cancelled subscription ─────────────────────────────────
+
+  /// BUG-317 MRE — cancelled subscription (`billing_type="none"`) must be classified Red
+  /// even when quota looks healthy.
+  ///
+  /// # Root Cause
+  /// `status_group_of()` checked only `result.is_err()` and quota thresholds. It never
+  /// inspected `billing_type`. An account with `billing_type="none"` and 50% 5h / 80% 7d
+  /// (both thresholds pass) was classified Green — appearing as 🟢 despite being permanently
+  /// dead (no new JWT after subscription expiry).
+  ///
+  /// # Why Not Caught
+  /// All existing `status_group_of` tests used `account = None` (no subscription data).
+  /// The `billing_type` field was never present in any sort-related test fixture.
+  ///
+  /// # Fix Applied
+  /// Added cancelled-subscription gate to `status_group_of()` (sort.rs): checks
+  /// `aq.account.as_ref().is_some_and(|a| a.billing_type == "none")` → returns Red,
+  /// before quota threshold evaluation.
+  ///
+  /// # Prevention
+  /// New helper `mk_aq_cancelled` always sets `billing_type="none"` with account data
+  /// present. Tests that need "good quota but dead account" must use it exclusively.
+  ///
+  /// # Pitfall
+  /// `account = None` (account-API fetch failed) is ambiguous — do NOT classify as Red.
+  /// Only `account = Some({billing_type: "none"})` is the definitive cancelled signal.
+  #[ doc = "bug_reproducer(BUG-317)" ]
+  #[ test ]
+  fn mre_bug317_cancelled_subscription_classified_red()
+  {
+    // cancelled: billing_type="none", 5h=50% (good), 7d=20% (good) — would be Green if not for billing_type.
+    // Before fix: Green; after fix: Red.
+    let cancelled = mk_aq_cancelled( "cancelled@test.com", 50.0, 20.0 );
+    assert!(
+      matches!( status_group_of( &cancelled ), StatusGroup::Red ),
+      "BUG-317: billing_type='none' must be Red regardless of quota; got non-Red",
+    );
+  }
+
+  /// BUG-317 regression — cancelled account sorts after weekly-exhausted in `sort::renew`.
+  ///
+  /// Verifies that `status_group_of` returning Red for cancelled accounts propagates
+  /// correctly into sort order: weekly-exhausted (G3) must rank before cancelled/Red (G4),
+  /// even when the cancelled account has better quota.
+  #[ test ]
+  fn mre_bug317_cancelled_ranks_after_weekly_exhausted()
+  {
+    // weekly: active subscription, 5h=100% left (util=0.0), 7d=4% left (util=96.0) → WeeklyExhausted (G3)
+    let weekly    = mk_aq_sort_weekly( "weekly@test.com", 0.0, 96.0, 0.0 );
+    // cancelled: billing_type="none", 50% 5h / 80% 7d — both good; before fix G1 (Green); after fix G4 (Red)
+    let cancelled = mk_aq_cancelled( "cancelled@test.com", 50.0, 20.0 );
+    let accounts  = vec![ cancelled, weekly ];
+    let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0 );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "weekly@test.com",
+      "BUG-317: weekly-exhausted (G3) must rank before cancelled/Red (G4); got: {:?}",
+      idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
+    );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "cancelled@test.com" );
   }
 
   /// CC-059/CC-060 — `prefer_weekly` with absent period data treats account as fully available.

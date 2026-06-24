@@ -24,14 +24,17 @@
 |-------|------|--------|-----------|---------|---------|
 | `oauthAccount` | object | `~/.claude.json` → `oauthAccount` subtree | `save()` at save time | `list()` for `.accounts`/`.usage` display | [014](../feature/014_rich_account_metadata.md) |
 | `oauthAccount.displayName` | string | `~/.claude.json` | `save()` | `list()` → `display_name` field | [014](../feature/014_rich_account_metadata.md) |
-| `oauthAccount.organizationRole` | string | `~/.claude.json` | `save()` | `list()` → `role` field (read-only display) | [014](../feature/014_rich_account_metadata.md) |
+| `oauthAccount.organizationRole` | string | `~/.claude.json` | `save()` | (not read by `list()` — `Account.role` reading `organizationRole` dropped by TSK-324; blob preserved in `{name}.json` via `oauthAccount` subtree) | [014](../feature/014_rich_account_metadata.md) |
 | `oauthAccount.billingType` | string | `~/.claude.json` | `save()` | `list()` → `billing` field | [014](../feature/014_rich_account_metadata.md) |
 | `model` | string | `~/.claude/settings.json` → `model` | `save()` at save time; `switch_account()` restores on switch | `list()` → `model` field; `switch_account()` restores model to settings.json | [014](../feature/014_rich_account_metadata.md) |
 | `tagged_id` | string | `~/.claude.json` → `oauthAccount.primaryEmailAddress` or email | `save()` | `list()` → `tagged_id` field | [021](../feature/021_extended_snapshot_fields.md) |
 | `uuid` | string | `~/.claude.json` → `oauthAccount.id` | `save()` | `list()` → `uuid` field (opt-in `uuid::1`) | [021](../feature/021_extended_snapshot_fields.md) |
 | `capabilities` | array of strings | `~/.claude.json` → `oauthAccount.capabilities` | `save()` | `list()` → `capabilities` field (opt-in `capabilities::1`) | [021](../feature/021_extended_snapshot_fields.md) |
-| `org_uuid` | string | Endpoint 005 at save time | `save()` | `list()` → `org_uuid` field (opt-in `org_uuid::1`) | [022](../feature/022_org_identity_snapshot.md) |
-| `org_name` | string | Endpoint 005 at save time | `save()` | `list()` → `org_name` field (opt-in `org_name::1`) | [022](../feature/022_org_identity_snapshot.md) |
+| `organization_uuid` | string | Endpoint 005 at save time | `save()` | `list()` → `organization_uuid` field (opt-in `org_uuid::1`) | [022](../feature/022_org_identity_snapshot.md) |
+| `organization_name` | string | Endpoint 005 at save time | `save()` | `list()` → `organization_name` field (opt-in `org_name::1`) | [022](../feature/022_org_identity_snapshot.md) |
+| `organization_role` | string | Endpoint 005 at save time | `save()` | `list()` → `Account.org_role` field; `format::json` as `"organization_role"` key | [022](../feature/022_org_identity_snapshot.md), [003](../feature/003_account_list.md) |
+| `workspace_uuid` | string | Endpoint 005 at save time | `save()` | `list()` → `Account.workspace_uuid`; `format::json` as `"workspace_uuid"` key; empty for personal accounts | [022](../feature/022_org_identity_snapshot.md) |
+| `workspace_name` | string | Endpoint 005 at save time | `save()` | `list()` → `Account.workspace_name`; `format::json` as `"workspace_name"` key; empty for personal accounts | [022](../feature/022_org_identity_snapshot.md) |
 | `host` | string | `$HOSTNAME`/`/etc/hostname`/`"local"` | `save()` when `host::` param given or auto-captured | `list()` → `host` field (opt-in `cols::+host`) | [029](../feature/029_account_host_metadata.md) |
 | `role` | string | `role::` CLI param at save time | `save()` when `role::` param given | `list()` → `role` metadata label (opt-in `cols::+role`) | [029](../feature/029_account_host_metadata.md) |
 | `_renewal_at` | string (ISO 8601) | `at::` or `from_now::` CLI param | `.account.renewal` command | `list()` → `~Renews` / `→ Next` columns | [030](../feature/030_account_renewal_override.md) |
@@ -70,8 +73,11 @@ These fields are written by one caller and never touched by others (preserved vi
   "tagged_id": "alice@example.com",
   "uuid": "01234567-...",
   "capabilities": ["claude_max"],
-  "org_uuid": "org-abc123",
-  "org_name": "Example Corp",
+  "organization_uuid": "org-abc123",
+  "organization_name": "Example Corp",
+  "organization_role": "admin",
+  "workspace_uuid": null,
+  "workspace_name": null,
   "host": "w003",
   "role": "work",
   "_renewal_at": "2026-07-01T00:00:00Z",

@@ -257,9 +257,9 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-18: `cols::+role,+billing,+model` shows corresponding lines
 
-- **Given:** `work@acme.com` with saved `{name}.json` containing `{"oauthAccount":{"organizationRole":"admin","billingType":"stripe_subscription"}, "model":"sonnet"}`.
+- **Given:** `work@acme.com` with saved `{name}.json` containing `{"role":"dev","oauthAccount":{"billingType":"stripe_subscription"},"model":"sonnet"}`.
 - **When:** `clp .accounts cols::+role,+billing,+model`
-- **Then:** Stdout contains `Role:    admin`, `Billing: stripe_subscription`, `Model:   sonnet`.; all 3 metadata fields rendered via cols:: addition
+- **Then:** Stdout contains `Role:    dev`, `Billing: stripe_subscription`, `Model:   sonnet`. `role` value comes from the top-level `"role"` field — not from `oauthAccount.organizationRole`.; all 3 metadata fields rendered via cols:: addition
 - **Exit:** 0
 - **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 

@@ -114,6 +114,18 @@ fn generate_static_commands()
 {
   let out_dir = env::var( "OUT_DIR" ).expect( "OUT_DIR not set" );
 
+  // Fix(BUG-003): sibling YAML files are absent in the cargo publish sandbox —
+  // Cargo extracts only the assistant package to a temp dir, so the
+  // concat!(env!("CARGO_MANIFEST_DIR"), "/../<sibling>/...") paths do not exist.
+  // Generate an empty registry that compiles cleanly; normal workspace builds
+  // always have the files present and generate the full registry.
+  // See: task/assistant/bug/003_build_rs_sibling_path_publish_panic.md
+  if !std::path::Path::new( RUNNER_YAML ).exists() || !std::path::Path::new( STORAGE_YAML ).exists()
+  {
+    generate_empty_static_commands( &out_dir );
+    return;
+  }
+
   // Transform YAML from Layer 2 YAML-based crates.
   // claude_version uses programmatic registration (no YAML file).
   let runner_yaml  = transform_yaml( RUNNER_YAML,  "claude_runner.yaml",  &out_dir );
@@ -182,4 +194,38 @@ fn generate_static_commands()
     }
     Err( e ) => panic!( "Failed to aggregate commands: {e}" ),
   }
+}
+
+/// Generate an empty static command registry for the cargo publish sandbox.
+///
+/// During `cargo publish`, only the assistant package is present in the sandbox —
+/// sibling crate YAML files are absent. Aggregating zero modules produces a valid
+/// but empty `AGGREGATED_COMMANDS` map of the correct type; the package compiles
+/// cleanly. Normal workspace builds never reach this path (YAML files present).
+fn generate_empty_static_commands( out_dir : &str )
+{
+  let config = unilang::multi_yaml::AggregationConfig
+  {
+    base_dir            : PathBuf::from( out_dir ),
+    modules             : vec![],
+    global_prefix       : None,
+    detect_conflicts    : false,
+    env_overrides       : HashMap::new(),
+    conflict_resolution : unilang::multi_yaml::ConflictResolutionStrategy::Fail,
+    auto_discovery      : false,
+    discovery_patterns  : vec![],
+    namespace_isolation : unilang::multi_yaml::NamespaceIsolation
+    {
+      enabled     : false,
+      separator   : ".".to_string(),
+      strict_mode : false,
+    },
+  };
+
+  let mut aggregator = unilang::multi_yaml::MultiYamlAggregator::new( config );
+  aggregator.aggregate().expect( "Failed to create empty command aggregation" );
+  let source = aggregator.generate_static_registry_source();
+  let output_path = PathBuf::from( out_dir ).join( "static_commands.rs" );
+  std::fs::write( &output_path, &source )
+    .expect( "Failed to write empty static_commands.rs" );
 }

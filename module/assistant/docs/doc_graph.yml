@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all NNN-identified doc instances in assistant
-  node_count: 2
-  edge_count: 2
+  node_count: 3
+  edge_count: 4
   component_count: 1
-  last_updated: '2026-06-23'
+  last_updated: '2026-06-24'
 
 nodes:
   - id: feature/001
@@ -14,6 +14,10 @@ nodes:
     file: invariant/001_aggregation_completeness.md
     label: Aggregation Completeness
     entity: invariant
+  - id: invariant/002
+    file: invariant/002_publish_sandbox_safety.md
+    label: Publish Sandbox Safety
+    entity: invariant
 
 edges:
   - from: feature/001
@@ -22,14 +26,21 @@ edges:
   - from: invariant/001
     to: feature/001
     via: typed_reference
+  - from: feature/001
+    to: invariant/002
+    via: typed_reference
+  - from: invariant/002
+    to: feature/001
+    via: typed_reference
 
 components:
   - id: 1
-    label: Super App Aggregation + Aggregation Completeness
-    size: 2
+    label: Super App Aggregation + Aggregation Completeness + Publish Sandbox Safety
+    size: 3
     isolated: false
     nodes:
       - feature/001
       - invariant/001
+      - invariant/002
 
 dangling_refs: []

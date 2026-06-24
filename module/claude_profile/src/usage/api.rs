@@ -395,7 +395,11 @@ pub( crate ) fn apply_post_switch_touch(
   //   was present in apply_touch (Feature 024 AC-03) but not mirrored here.
   // Pitfall: any post-switch touch function must re-fetch quota after subprocess to keep
   //   the cache consistent with the newly-activated session window.
-  let cred_path = paths.base().join( format!( "{name}.credentials.json" ) );
+  // Fix(BUG-318): use credential_store (not paths.base()) for the AC-21 re-fetch credential read.
+  //   paths.base() = ~/.claude/ (Claude config dir); the credential file lives in credential_store.
+  //   Reading paths.base()/{name}.credentials.json silently returns Err (file absent) — quota cache
+  //   was never updated after touch. Same fix applied to write_quota_cache call below.
+  let cred_path = credential_store.join( format!( "{name}.credentials.json" ) );
   if let Ok( fresh_json ) = std::fs::read_to_string( &cred_path )
   {
     if let Some( token ) = crate::account::parse_string_field( &fresh_json, "accessToken" )
@@ -405,7 +409,7 @@ pub( crate ) fn apply_post_switch_touch(
         let h5 = new_data.five_hour.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
         let d7 = new_data.seven_day.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
         let sn = new_data.seven_day_sonnet.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
-        claude_profile_core::account::write_quota_cache( paths.base(), name, h5, d7, sn );
+        claude_profile_core::account::write_quota_cache( credential_store, name, h5, d7, sn );
       }
     }
   }
@@ -809,8 +813,17 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
     // Boolean row filters.
     // only_active: pre-filtered before HTTP in fetch_quota_for_list (BUG-245/246 fix).
-    if params.only_valid        { accounts.retain( |aq| aq.result.is_ok() ); }
-    if params.exclude_exhausted { accounts.retain( |aq| status_emoji( &aq.result ) == "🟢" ); }
+    // Fix(BUG-317): cancelled accounts (billing_type="none") have result=Ok but are permanently
+    //   unusable — exclude them from only_valid and exclude_exhausted results.
+    // Root cause: only_valid checked result.is_ok() without inspecting billing_type; cancelled
+    //   accounts passed through and appeared as valid. exclude_exhausted delegated to
+    //   status_emoji which was also unaware of billing_type.
+    // Pitfall: account=None is ambiguous (API fetch failed); is_some_and guards correctly.
+    if params.only_valid
+    {
+      accounts.retain( |aq| aq.result.is_ok() && !aq.account.as_ref().is_some_and( |a| a.billing_type == "none" ) );
+    }
+    if params.exclude_exhausted { accounts.retain( |aq| status_emoji( aq ) == "🟢" ); }
 
     // Threshold filters: only applied to accounts with valid quota data.
     // Accounts with no valid quota (Err) pass through — absent data ≠ exhausted.

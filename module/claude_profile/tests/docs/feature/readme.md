@@ -65,13 +65,13 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | doc_structure (collection) | [00_doc_structure.md](00_doc_structure.md) | DT-01 … DT-07 | ✅ |
 | 001_account_store_init | [001_account_store_init.md](01_account_store_init.md) | FT-01 … FT-04 | ✅ |
 | 002_account_save | [002_account_save.md](02_account_save.md) | FT-01 … FT-16 | ✅ |
-| 003_account_list | [003_account_list.md](03_account_list.md) | FT-01 … FT-19 | ✅ |
+| 003_account_list | [003_account_list.md](03_account_list.md) | FT-01 … FT-21 | ✅ |
 | 004_account_use | [004_account_use.md](04_account_use.md) | FT-01 … FT-11 | ✅ |
 | 005_account_delete | [005_account_delete.md](05_account_delete.md) | FT-01 … FT-07 | ✅ |
 | 006_token_status | [006_token_status.md](06_token_status.md) | FT-01 … FT-04 | ✅ |
 | 007_file_topology | [007_file_topology.md](07_file_topology.md) | FT-01 … FT-06 | ✅ |
 | 008_auto_rotate | [008_auto_rotate.md](08_auto_rotate.md) | FT-01 … FT-04 | ✅ |
-| 009_token_usage | [009_token_usage.md](09_token_usage.md) | FT-01 … FT-32 | ✅ |
+| 009_token_usage | [009_token_usage.md](09_token_usage.md) | FT-01 … FT-33 | ✅ |
 | 010_persistent_storage | [010_persistent_storage.md](10_persistent_storage.md) | FT-01 … FT-07 | ✅ |
 | 011_account_status_by_name | [011_account_status_by_name.md](11_account_status_by_name.md) | FT-01 … FT-05 | ✅ |
 | 012_live_credentials_status | [012_live_credentials_status.md](12_live_credentials_status.md) | FT-01 … FT-07 | ✅ |

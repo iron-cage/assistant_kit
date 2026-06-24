@@ -237,12 +237,12 @@ fn render_accounts_text(
       }
       if cols.host
       {
-        let host = if a.profile_host.is_empty() { "N/A" } else { &a.profile_host };
+        let host = if a.host.is_empty() { "N/A" } else { &a.host };
         let _ = writeln!( out, "  Host:    {host}" );
       }
       if cols.role
       {
-        let role = if a.profile_role.is_empty() { "N/A" } else { &a.profile_role };
+        let role = if a.role.is_empty() { "N/A" } else { &a.role };
         let _ = writeln!( out, "  Role:    {role}" );
       }
       if cols.billing
@@ -288,6 +288,16 @@ fn render_accounts_text(
   out
 }
 
+/// Serialise an optional renewal timestamp as a JSON value (`null` or a quoted string).
+fn renewal_at_json( v : Option< &str > ) -> String
+{
+  match v
+  {
+    None    => "null".to_string(),
+    Some(s) => format!( "\"{}\"", json_escape( s ) ),
+  }
+}
+
 /// Render a slice of accounts as a JSON array string.
 fn render_accounts_json( accounts : &[ &crate::account::Account ], current_name : Option< &str > ) -> String
 {
@@ -302,7 +312,7 @@ fn render_accounts_json( accounts : &[ &crate::account::Account ], current_name 
        \"tagged_id\":\"{}\",\"capabilities\":{},\
        \"organization_uuid\":\"{}\",\"organization_name\":\"{}\",\
        \"organization_role\":\"{}\",\"workspace_uuid\":\"{}\",\"workspace_name\":\"{}\",\
-       \"profile_host\":\"{}\",\"profile_role\":\"{}\"}}",
+       \"host\":\"{}\",\"owner\":\"{}\",\"is_owned\":{},\"renewal_at\":{}}}",
       json_escape( &a.name ),
       a.is_active,
       is_current,
@@ -318,11 +328,13 @@ fn render_accounts_json( accounts : &[ &crate::account::Account ], current_name 
       caps_to_json( &a.capabilities ),
       json_escape( &a.organization_uuid ),
       json_escape( &a.organization_name ),
-      json_escape( &a.organization_role ),
+      json_escape( &a.org_role ),
       json_escape( &a.workspace_uuid ),
       json_escape( &a.workspace_name ),
-      json_escape( &a.profile_host ),
-      json_escape( &a.profile_role ),
+      json_escape( &a.host ),
+      json_escape( &a.owner ),
+      a.is_owned,
+      renewal_at_json( a.renewal_at.as_deref() ),
     )
   } ).collect();
   format!( "[{}]\n", entries.join( "," ) )

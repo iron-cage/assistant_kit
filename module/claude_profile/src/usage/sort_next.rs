@@ -26,6 +26,12 @@ where F : Fn( &AccountQuota ) -> bool
     let aq = &accounts[ idx ];
     if aq.is_current || aq.is_active { continue; }
     if aq.is_occupied_elsewhere { continue; }
+    // Fix(BUG-317): cancelled subscription — never eligible for rotation.
+    // Root cause: billing_type="none" accounts passed all existing gates (quota, expiry,
+    //   ownership) and could be recommended as next despite being permanently unusable.
+    // Pitfall: account=None is ambiguous (API fetch failed); only gate when billing_type
+    //   is definitively "none" with account data present.
+    if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" ) { continue; }
     let Ok( data ) = &aq.result else { continue; };
     if data.five_hour.as_ref().is_some_and( |p| p.utilization >= 85.0 ) { continue; }
     if ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) == 0 { continue; }

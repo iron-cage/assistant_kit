@@ -102,6 +102,7 @@ An account is "owned by this machine" when: (a) owner is empty or absent (no enf
 
 | File | Relationship |
 |------|--------------|
+| [003_account_list.md](003_account_list.md) | `.accounts` — `owner` and `is_owned` fields in design table and `format::json`; AC-20 |
 | [002_account_save.md](002_account_save.md) | `.account.save` — ownership-neutral; `account_save_routine()` passes `owner: None`; does NOT modify `owner` field |
 | [032_account_assign.md](032_account_assign.md) | `.accounts assign::1` — marker-only write; does NOT call `write_owner()`; does NOT accept `unclaim::` |
 | [004_account_use.md](004_account_use.md) | G5: `.account.use` ownership guard |

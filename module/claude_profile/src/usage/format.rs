@@ -446,23 +446,28 @@ pub( crate ) fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs
 
 /// Return the single-glyph quota status emoji for an account row.
 ///
-/// - `"🔴"` — token is invalid or missing (`result` is `Err`).
-/// - `"🟡"` — token valid, but `5h Left ≤ 15%` or `7d Left ≤ 5%`.
-/// - `"🟢"` — token valid, `5h Left > 15%` AND `7d Left > 5%`.
+/// - `"🔴"` — token is invalid or missing (`result` is `Err`), OR subscription is
+///   cancelled (`billing_type="none"`).
+/// - `"🟡"` — token valid, subscription active, but `5h Left ≤ 15%` or `7d Left ≤ 5%`.
+/// - `"🟢"` — token valid, subscription active, `5h Left > 15%` AND `7d Left > 5%`.
 ///
 /// Absent period data is treated as fully available (conservative, 0% utilised).
-pub( crate ) fn status_emoji( result : &Result< claude_quota::OauthUsageData, String > ) -> &'static str
+/// `account=None` (API fetch failed) is NOT classified 🔴 — absent data is ambiguous.
+// Fix(BUG-317): billing_type="none" was not checked — cancelled accounts with good quota
+//   appeared 🟢/🟡, misleading the user into thinking the account was temporarily exhausted
+//   rather than permanently dead.
+// Root cause: function only inspected result; billing_type lives in account which was ignored.
+// Pitfall: account=None is ambiguous (API fetch failed, not confirmed cancelled) —
+//   only fire the cancelled gate when account=Some(billing_type="none") is definitively present.
+pub( crate ) fn status_emoji( aq : &AccountQuota ) -> &'static str
 {
-  match result
-  {
-    Err( _ ) => "🔴",
-    Ok( data ) =>
-    {
-      let h5_left = 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
-      let d7_left = 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization );
-      if h5_left > 15.0 && d7_left > 5.0 { "🟢" } else { "🟡" }
-    }
-  }
+  if aq.result.is_err() { return "🔴"; }
+  // Fix(BUG-317): cancelled subscription → permanently unusable → 🔴 regardless of quota.
+  if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" ) { return "🔴"; }
+  let Ok( data ) = &aq.result else { unreachable!() };
+  let h5_left = 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
+  let d7_left = 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization );
+  if h5_left > 15.0 && d7_left > 5.0 { "🟢" } else { "🟡" }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

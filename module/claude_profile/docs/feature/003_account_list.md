@@ -21,7 +21,7 @@
 | `expiresAt` | Credential file `expiresAt` field | Unix epoch milliseconds |
 | `email` | Saved `{name}.json` → `emailAddress` | Empty or absent → shown as `N/A` |
 | `display_name` | Saved `{name}.json` → `oauthAccount.displayName` | Empty or absent → shown as `N/A` |
-| `role` | Saved `{name}.json` → `oauthAccount.organizationRole` | Empty or absent → shown as `N/A` |
+| `org_role` | Saved `{name}.json` → `organization_role` | Org admin/member role (e.g. `"admin"`, `"member"`); empty or absent → `N/A` |
 | `billing` | Saved `{name}.json` → `oauthAccount.billingType` | Empty or absent → shown as `N/A` |
 | `model` | Saved `{name}.json` → `model` field (BUG-222 fix: captured by `save()`) | Empty or absent → shown as `N/A` |
 | `tagged_id` | Saved `{name}.json` → `oauthAccount.taggedId` | Empty or absent → shown as `N/A` |
@@ -29,6 +29,13 @@
 | `capabilities` | Saved `{name}.json` → `oauthAccount.capabilities[]` | Empty array or absent → shown as `N/A` |
 | `organization_uuid` | Saved `{name}.json` → `organization_uuid` | Empty or absent → shown as `N/A` |
 | `organization_name` | Saved `{name}.json` → `organization_name` | Empty or absent → shown as `N/A` |
+| `workspace_uuid` | Saved `{name}.json` → `workspace_uuid` | Enterprise accounts only; empty string for personal accounts; JSON output only — no text display line; see [022_org_identity_snapshot.md](022_org_identity_snapshot.md) |
+| `workspace_name` | Saved `{name}.json` → `workspace_name` | Enterprise accounts only; empty string for personal accounts; JSON output only — no text display line; see [022_org_identity_snapshot.md](022_org_identity_snapshot.md) |
+| `role` | Saved `{name}.json` → `role` | User-defined label (e.g. `"work"`, `"dev"`); see [029_account_host_metadata.md](029_account_host_metadata.md); empty or absent → `N/A` |
+| `host` | Saved `{name}.json` → `host` | Machine host label; see [029_account_host_metadata.md](029_account_host_metadata.md); empty or absent → `N/A` |
+| `owner` | Saved `{name}.json` → `owner` | Ownership identity string; empty = unowned (no enforcement); see [036_account_ownership.md](036_account_ownership.md) |
+| `is_owned` | Derived: `owner.is_empty() \|\| owner == current_identity()` | `true` when unowned or owned by this machine; see [036_account_ownership.md](036_account_ownership.md) |
+| `renewal_at` | Saved `{name}.json` → `_renewal_at` | Billing renewal timestamp override; absent when not set; see [030_account_renewal_override.md](030_account_renewal_override.md) |
 
 **Without `name::`:** Lists all accounts as indented key-val blocks, sorted alphabetically. Each block is a header line (email) followed by indented `Key:  value` lines. A blank line separates consecutive blocks.
 
@@ -36,27 +43,29 @@
 
 **Empty account store:** Prints `(no accounts configured)` and exits 0.
 
-**Field-presence toggles (default-on):**
-- `active::0` — suppress the `Active:` line
-- `current::0` — suppress the `Current:` line (live credential match; see [016_current_account_awareness.md](016_current_account_awareness.md))
-- `sub::0` — suppress the `Sub:` line
-- `tier::0` — suppress the `Tier:` line
-- `expires::0` — suppress the `Expires:` line
-- `email::0` — suppress the `Email:` line
+**Column suppression via `cols::` (default-on columns, remove with `cols::-<col>`):**
+- `cols::-active` — suppress the `Active:` line
+- `cols::-current` — suppress the `Current:` line (live credential match; see [016_current_account_awareness.md](016_current_account_awareness.md))
+- `cols::-sub` — suppress the `Sub:` line
+- `cols::-tier` — suppress the `Tier:` line
+- `cols::-expires` — suppress the `Expires:` line
+- `cols::-email` — suppress the `Email:` line
+- `cols::-owner` — suppress the `Owner:` line
 
-**Field-presence toggles (opt-in, default off):**
-- `display_name::1` — show the `Display:` line
-- `role::1` — show the `Role:` line
-- `billing::1` — show the `Billing:` line
-- `model::1` — show the `Model:` line
-- `uuid::1` — show the `ID:` line (tagged user ID)
-- `capabilities::1` — show the `Capabilities:` line
-- `org_uuid::1` — show the `Org ID:` line
-- `org_name::1` — show the `Org:` line
+**Column addition via `cols::` (opt-in columns, add with `cols::+<col>`):**
+- `cols::+display_name` — show the `Display:` line
+- `cols::+host` — show the `Host:` line
+- `cols::+role` — show the `Role:` line
+- `cols::+billing` — show the `Billing:` line
+- `cols::+model` — show the `Model:` line
+- `cols::+uuid` — show the `ID:` line (tagged user ID)
+- `cols::+capabilities` — show the `Capabilities:` line
+- `cols::+org_uuid` — show the `Org ID:` line
+- `cols::+org_name` — show the `Org:` line
 
-When all field toggles are disabled, only bare account name lines are printed (no indentation, no blank-line separators).
+When all default-on columns are removed via `cols::`, only bare account name lines are printed (no indentation, no blank-line separators).
 
-**`format::json`:** Returns a JSON array with all fields regardless of field-presence toggle values. Each object contains `name`, `is_active`, `is_current`, `subscription_type`, `rate_limit_tier`, `expires_at_ms`, `email`, `display_name`, `role`, `billing`, `model`, `tagged_id`, `capabilities`, `organization_uuid`, `organization_name`.
+**`format::json`:** Returns a JSON array with all fields regardless of `cols::` column settings. Each object contains `name`, `is_active`, `is_current`, `subscription_type`, `rate_limit_tier`, `expires_at_ms`, `email`, `display_name`, `role`, `billing`, `model`, `tagged_id`, `capabilities`, `organization_uuid`, `organization_name`, `organization_role`, `workspace_uuid`, `workspace_name`, `host`, `owner`, `is_owned`, `renewal_at`.
 
 ### Acceptance Criteria
 
@@ -65,20 +74,22 @@ When all field toggles are disabled, only bare account name lines are printed (n
 - **AC-03**: The account matching the per-machine active marker has `is_active: true`; all others `false`.
 - **AC-04**: `format::json` output is a valid JSON array.
 - **AC-05**: `name::EMAIL` scopes to single account; exit 2 if not found; exit 1 if invalid format.
-- **AC-06**: Field-presence toggles suppress individual lines from text output only.
-- **AC-07**: All fields disabled → bare name lines only; no blank-line separators.
+- **AC-06**: `cols::-<col>` removes individual lines from text output; `cols::+<col>` adds opt-in lines. `format::json` always includes all fields regardless of `cols::` settings.
+- **AC-07**: All default-on columns removed via `cols::` → bare name lines only; no blank-line separators.
 - **AC-08**: Accounts listed alphabetically by name.
-- **AC-09**: `display_name::1` shows `Display:` line per account from saved `{name}.json`.
-- **AC-10**: `role::1`, `billing::1`, `model::1` show corresponding lines per account from saved snapshots.
-- **AC-11**: Accounts without saved metadata files show `N/A` for `email`, `display_name`, `role`, `billing`, `model`.
-- **AC-12**: `format::json` includes `email`, `display_name`, `role`, `billing`, `model`, `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` keys per account object.
+- **AC-09**: `cols::+display_name` shows `Display:` line per account from saved `{name}.json`.
+- **AC-10**: `cols::+role` shows `Role:` line with the user-defined label from `{name}.json` `role` field; `cols::+billing`, `cols::+model` show corresponding lines per account from saved snapshots.
+- **AC-11**: Accounts without saved metadata files show `N/A` for `email`, `display_name`, `host`, `role`, `billing`, `model`.
+- **AC-12**: `format::json` includes `email`, `display_name`, `role`, `billing`, `model`, `tagged_id`, `capabilities`, `organization_uuid`, `organization_name`, `organization_role`, `workspace_uuid`, `workspace_name`, `host`, `owner`, `is_owned`, `renewal_at` keys per account object.
 - **AC-13**: `Current:  yes` is shown for the account whose `accessToken` matches `~/.claude/.credentials.json`; `Current:  no` for all others. See [016_current_account_awareness.md](016_current_account_awareness.md).
-- **AC-14**: `current::0` suppresses the `Current:` line; the line is also suppressed when `~/.claude/.credentials.json` is unreadable.
+- **AC-14**: `cols::-current` suppresses the `Current:` line; the line is also suppressed when `~/.claude/.credentials.json` is unreadable.
 - **AC-15**: `format::json` includes `is_current` boolean field per account object.
-- **AC-16**: `uuid::1` shows `ID:` line from `tagged_id` field; `N/A` when absent from snapshot.
-- **AC-17**: `capabilities::1` shows `Capabilities:` line as comma-separated list; `N/A` when absent or empty.
-- **AC-18**: `org_uuid::1` shows `Org ID:` line from `{name}.json`; `N/A` when absent.
-- **AC-19**: `org_name::1` shows `Org:` line from `{name}.json`; `N/A` when absent.
+- **AC-16**: `cols::+uuid` shows `ID:` line from `tagged_id` field; `N/A` when absent from snapshot.
+- **AC-17**: `cols::+capabilities` shows `Capabilities:` line as comma-separated list; `N/A` when absent or empty.
+- **AC-18**: `cols::+org_uuid` shows `Org ID:` line from `{name}.json`; `N/A` when absent.
+- **AC-19**: `cols::+org_name` shows `Org:` line from `{name}.json`; `N/A` when absent.
+- **AC-20**: `format::json` includes `owner` (string) and `is_owned` (boolean) fields per account object; `owner` is empty string when unowned; `is_owned` is `true` when owner is empty or matches current machine identity.
+- **AC-21**: `format::json` includes `renewal_at` field per account object; absent (omitted or `null`) when `_renewal_at` is not set in `{name}.json`.
 
 ### Commands
 
@@ -93,6 +104,9 @@ When all field toggles are disabled, only bare account name lines are printed (n
 | [016_current_account_awareness.md](016_current_account_awareness.md) | Current-account detection algorithm and `Current:` field additions |
 | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | `tagged_id`, `uuid`, `capabilities` fields and `uuid::`, `capabilities::` params |
 | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Org identity fields and `org_uuid::`, `org_name::` params |
+| [029_account_host_metadata.md](029_account_host_metadata.md) | `host` and `role` user-defined label fields; `cols::+host`/`cols::+role` opt-in columns |
+| [036_account_ownership.md](036_account_ownership.md) | `owner` and `is_owned` fields; ownership gate logic |
+| [030_account_renewal_override.md](030_account_renewal_override.md) | `renewal_at` field and `_renewal_at` JSON key in `{name}.json` |
 
 ### Referenced Commands
 
@@ -111,4 +125,4 @@ When all field toggles are disabled, only bare account name lines are printed (n
 
 | File | Relationship |
 |------|--------------|
-| [tests/docs/cli/command/003_accounts.md](../../tests/docs/cli/command/003_accounts.md) | Integration test plan |
+| [tests/docs/cli/command/03_accounts.md](../../tests/docs/cli/command/03_accounts.md) | Integration test plan |

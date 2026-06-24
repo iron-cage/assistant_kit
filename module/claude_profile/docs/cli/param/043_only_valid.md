@@ -1,17 +1,17 @@
 # Parameter :: 43. `only_valid::`
 
-Filters the `.usage` table to hide accounts with invalid or missing tokens (🔴 rows).
+Filters the `.usage` table to hide accounts with invalid or missing tokens, or cancelled subscriptions (🔴 rows).
 
 - **Default:** `0`
 - **Constraints:** `0`, `1`, `false`, `true`
-- **Purpose:** Show only accounts with valid tokens (status ≠ 🔴).
+- **Purpose:** Show only accounts with valid, active subscriptions (status ≠ 🔴).
 
-**Behavior:** When `only_valid::1`, rows where the account has an invalid or missing `accessToken` (🔴 composite status) are hidden. 🟢 and 🟡 rows remain visible. The footer recommendation is unaffected by this filter (computed on the full set before filtering).
+**Behavior:** When `only_valid::1`, rows where the account has an invalid or missing `accessToken` OR a cancelled subscription (`billing_type = "none"`) are hidden. Both conditions produce 🔴 composite status. 🟢 and 🟡 rows remain visible. The footer recommendation is unaffected by this filter (computed on the full set before filtering). Fix(BUG-317): cancelled accounts with `result = Ok(...)` were previously not excluded — the filter only checked `result.is_ok()` without inspecting `billing_type`.
 
 **Examples:**
 
 ```text
-only_valid::1            -> hide expired/missing token accounts
+only_valid::1            -> hide expired/missing token accounts and cancelled subscriptions
 only_valid::1 count::5   -> first 5 valid accounts
 ```
 

@@ -12,6 +12,7 @@ Edge case coverage for the `exclude_exhausted::` parameter on `.usage`. See [par
 | EC-4 | `exclude_exhausted::bad` exits 1 naming valid values | Invalid Value |
 | EC-5 | `exclude_exhausted::1` with all 🔴 accounts shows 0 rows | Empty Result |
 | EC-6 | `exclude_exhausted::true` accepted (alias for 1) | Alias Acceptance |
+| EC-7 | Cancelled account (`billing_type="none"`) hidden by `exclude_exhausted::1` | Cancelled Subscription |
 
 ---
 
@@ -79,4 +80,16 @@ Edge case coverage for the `exclude_exhausted::` parameter on `.usage`. See [par
 - **Then:** Exits 0. Only 🟢 row shown — same result as `exclude_exhausted::1`.
 - **Exit:** 0
 - **Source fn:** `it177_exclude_exhausted_true_accepted` (in `tests/cli/usage_test.rs`)
+- **Source:** [param/044_exclude_exhausted.md](../../../../docs/cli/param/044_exclude_exhausted.md)
+
+---
+
+### EC-7: Cancelled account (`billing_type="none"`) hidden by `exclude_exhausted::1`
+
+- **Given (unit test):** One `AccountQuota` with `result = Ok(OauthUsageData)` and healthy quota (`5h Left = 80%`, `7d Left = 80%`) but `account = Some(OauthAccountData { billing_type: "none", ... })` — subscription cancelled.
+- **When:** `exclude_exhausted::1` filter applied (retains only accounts where `status_emoji(&aq) == "🟢"`).
+- **Then:** The account is excluded — `status_emoji(&aq)` returns `"🔴"` due to the `billing_type="none"` gate (Fix BUG-317 in `format.rs`), so it fails the `== "🟢"` predicate. Without Fix(BUG-317), `status_emoji` would return `"🟢"` and the cancelled account would pass.
+- **Exit:** n/a (unit test — retain predicate via status_emoji)
+- **Note:** This path is transitive: `exclude_exhausted` calls `status_emoji(&aq)` which now returns 🔴 for cancelled accounts. The fix is in `format.rs`, not in the filter predicate itself.
+- **Source fn:** covers via `mre_bug317_cancelled_status_emoji_is_red` (in `src/usage/format_tests.rs`) — confirms 🔴 output; filter behavior follows from that.
 - **Source:** [param/044_exclude_exhausted.md](../../../../docs/cli/param/044_exclude_exhausted.md)

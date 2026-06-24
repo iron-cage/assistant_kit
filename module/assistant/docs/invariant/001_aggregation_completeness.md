@@ -15,7 +15,7 @@ Every Layer 2 crate that exposes CLI commands MUST satisfy both conditions when 
 
 2. **`COMMANDS_YAML: &str` constant must exist** — the constant must resolve to the absolute path of the crate's `unilang.commands.yaml` file. `build.rs` uses it for `rerun-if-changed` dependency tracking, ensuring the `ast` binary is rebuilt whenever any Layer 2 command definition changes.
 
-**Current Layer 2 crates (as of TSK-089):**
+**Current Layer 2 crates:**
 
 | Crate | register_commands | COMMANDS_YAML | Registered in ast |
 |-------|------------------|---------------|-------------------|
