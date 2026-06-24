@@ -28,10 +28,19 @@ Logic that gates on quota values has multiple non-obvious invariants: the correc
 
 **Rule:** Session window presence (`resets_at = Some`) and session window capacity (`utilization`) are independent dimensions. Check both.
 
+### Pitfall 4 — Cancelled subscription (`billing_type="none"`) is NOT a quota state
+
+**Root cause (BUG-317):** `status_emoji()` and row filter functions (`only_valid`, `exclude_exhausted`) only inspected `result` (`Ok`/`Err`) to classify accounts. A cancelled account with `billing_type="none"` could still have `result = Ok(...)` (the API may return quota data for recently cancelled accounts), causing it to appear as 🟢/🟡 — misleading the user into thinking the account was temporarily exhausted rather than permanently dead.
+
+**Fix:** Four sites patched: (A) `status_group_of()` in `sort.rs` gates on `billing_type` before quota thresholds → Red. (B) `find_first_eligible()` in `sort_next.rs` skips cancelled accounts (Gate 3b). (C) `status_emoji()` in `format.rs` changed from `&Result<OauthUsageData, String>` to `&AccountQuota`; `billing_type="none"` → 🔴. (D) `only_valid` filter in `api.rs` explicitly excludes `billing_type="none"`.
+
+**Rule:** `billing_type` is a subscription-level signal independent of quota values. Check it before any quota threshold. `account = None` (API fetch failed) is NOT the same as `billing_type = "none"` (confirmed cancelled) — absent data is ambiguous and must not trigger the cancelled path.
+
 ### Cross-References
 
 | File | Relationship |
 |------|-------------|
 | [algorithm/001](../algorithm/001_touch_model_selection.md) | Touch model selection (Pitfall 3) |
 | [algorithm/002](../algorithm/002_session_model_override.md) | Session model override (Pitfall 2) |
-| [algorithm/003](../algorithm/003_quota_status_groups.md) | Status groups (Pitfall 1) |
+| [algorithm/003](../algorithm/003_quota_status_groups.md) | Status groups (Pitfall 1, Pitfall 4) |
+| [algorithm/004](../algorithm/004_eligibility_gates.md) | Eligibility gates — Gate 3b (Pitfall 4) |

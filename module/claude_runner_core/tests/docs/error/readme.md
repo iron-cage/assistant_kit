@@ -17,4 +17,4 @@
 
 | Error Doc | File | Tests | Status |
 |-----------|------|-------|--------|
-| [Rate Limit](../../../../docs/error/001_rate_limit_reached.md) + [Quota Exhausted](../../../../docs/error/006_quota_exhausted.md) | [001_classify_error.md](001_classify_error.md) | 18 FT | ✅ |
+| [Rate Limit](../../../../docs/error/001_rate_limit_reached.md) + [Quota Exhausted](../../../../docs/error/006_quota_exhausted.md) | [001_classify_error.md](001_classify_error.md) | 19 FT | ✅ |

@@ -19,7 +19,7 @@ All classes default to **retry = 2**, **delay = 30s** (Validation delay = 0s —
 |-------------|-----------|-------------|-------------|---------------|---------------|---------------|
 | **Transient** | exit 2, no quota text | `--retry-on-transient` | `--transient-delay` | 2 | 30s | Retry with backoff |
 | **Account** | `"You've hit your limit"` in output | `--retry-on-account` | `--account-delay` | 2 | 30s | Retry with backoff; or switch credentials |
-| **Auth** | `"Your organization does not have access to Claude"` | `--retry-on-auth` | `--auth-delay` | 2 | 30s | Retry with backoff; or fix credentials |
+| **Auth** | `"authentication_error"` or `"Your organization does not have access to Claude"` in output | `--retry-on-auth` | `--auth-delay` | 2 | 30s | Retry with backoff; or fix credentials |
 | **Service** | `"API Error: "` in output | `--retry-on-service` | `--service-delay` | 2 | 30s | Retry with backoff |
 | **Process** | exit > 128 (signal) or exit 4 (timeout) | `--retry-on-process` | `--process-delay` | 2 | 30s | Retry with backoff; investigate persistent failures |
 | **Validation** | exit 3 (`--expect` mismatch) | `--retry-on-validation` | `--validation-delay` | 2 | 0s | Re-prompt immediately; adjust `--expect` on persistent mismatch |
@@ -34,7 +34,7 @@ All classes default to **retry = 2**, **delay = 30s** (Validation delay = 0s —
 
 **Service** — API-layer error from the Anthropic backend (HTTP 4xx/5xx). The `"API Error: "` prefix (colon-space, not parenthesis) identifies these. May be transient infrastructure issues. Automatic retry via `--retry-on-service N` with `--service-delay SECS` cooldown.
 
-**Auth** — Credential or authorization failure. The subprocess rejects the current credentials. Rotating or re-issuing credentials is required.
+**Auth** — Credential or authorization failure. The subprocess rejects the current credentials. Detected by `"authentication_error"` in output (Fix BUG-314: this pattern fires before the `"API Error: "` catch-all, covering the Claude CLI 401 form) or by `"Your organization does not have access to Claude"`. Rotating or re-issuing credentials is required. When auth error is detected and no credential recovery hook (`--on-auth-error switch`) is configured, the retry loop exits immediately (fail-fast) without sleeping or consuming retry slots (Fix BUG-315).
 
 **Process** — Subprocess died from an OS signal or was killed by the CLR timeout watchdog. `Signal` variants have exit code > 128; `Timeout` variants have exit 4 with the `"Error: timeout after {N}s"` stderr line. Increasing `--timeout` or investigating external process killers is the response.
 

@@ -31,7 +31,7 @@
 | `only_next::` | `bool` | `0` | Show only the row selected as the recommended next account by the active `sort::` strategy |
 | `min_5h::` | `f64` | `0` | Hide rows where `5h Left` is below this percentage (0–100); rows with `—` (no valid quota) are also hidden |
 | `min_7d::` | `f64` | `0` | Hide rows where `7d Left` is below this percentage (0–100); rows with `—` are also hidden |
-| `only_valid::` | `bool` | `0` | Hide rows where status is 🔴 (invalid or missing token) |
+| `only_valid::` | `bool` | `0` | Hide rows where status is 🔴 (invalid or missing token, or cancelled subscription with `billing_type="none"`) |
 | `exclude_exhausted::` | `bool` | `0` | Hide rows where status is 🟡 (weekly or hourly exhausted) or 🔴 (invalid token) |
 
 **`get::` single-value extraction:**
@@ -78,7 +78,7 @@
 - **AC-04**: `clp .usage only_next::1` displays exactly one row — the account selected as recommended by the active `sort::` strategy; exits 0 with 0 rows when no eligible candidate exists.
 - **AC-05**: `clp .usage min_5h::50` hides all rows where `5h Left < 50%` or where `5h Left` is `—`. Rows with `5h Left = 50%` are shown (inclusive boundary).
 - **AC-06**: `clp .usage min_7d::20` hides all rows where `7d Left < 20%` or where `7d Left` is `—`. Rows with `7d Left = 20%` are shown (inclusive boundary).
-- **AC-07**: `clp .usage only_valid::1` hides all 🔴 rows; shows 🟢 and 🟡 rows.
+- **AC-07**: `clp .usage only_valid::1` hides all 🔴 rows (invalid/missing tokens AND cancelled subscriptions with `billing_type="none"`); shows 🟢 and 🟡 rows.
 - **AC-08**: `clp .usage exclude_exhausted::1` hides all 🟡 and 🔴 rows; shows only 🟢 rows.
 - **AC-09**: Multiple row filters combine with AND: `clp .usage only_valid::1 min_7d::30` shows only 🟢/🟡 rows where `7d Left ≥ 30%`.
 - **AC-10**: `clp .usage get::7d_left` outputs the `7d Left` value of the first row (top of sorted, filtered result) as a bare string with no headers, separators, or footer. Exit 0. Implies `format::value`.

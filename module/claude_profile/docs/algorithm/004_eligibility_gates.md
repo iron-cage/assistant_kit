@@ -16,7 +16,8 @@ Filter candidates for next-account recommendation and auto-switch. An account is
 | 1 | Current | `is_current = true` | `sort_next.rs:27` |
 | 2 | Active | `is_active = true` | `sort_next.rs:27` |
 | 3 | Occupied | `is_occupied_elsewhere = true` | `sort_next.rs:28` |
-| 4 | Error | `result = Err(...)` | `sort_next.rs:29` |
+| 3b | Cancelled | `billing_type = "none"` | `sort_next.rs:29` |
+| 4 | Error | `result = Err(...)` | `sort_next.rs:30` |
 | 5 | h-exhausted | `five_hour.utilization >= 85.0` (≤ 15% left) | `sort_next.rs:30` |
 | 6 | Expired | `expires_at_ms / 1000 ≤ now_secs` | `sort_next.rs:31` |
 | 7 | Weekly-exhausted | `prefer_weekly(aq, prefer) ≤ 5.0` | `sort_next.rs:59` (extra) |
@@ -39,7 +40,7 @@ Filter candidates for next-account recommendation and auto-switch. An account is
 | File | Relationship |
 |------|-------------|
 | [feature/039_decision_algorithms.md](../feature/039_decision_algorithms.md) | Table 4 (legacy reference) |
-| [algorithm/003](003_quota_status_groups.md) | Status groups — same 5h/7d thresholds |
+| [algorithm/003](003_quota_status_groups.md) | Status groups — same 5h/7d thresholds; cancelled gate parallel |
 | [algorithm/005](005_next_account_selection.md) | Positive selection uses these gates |
 | [feature/036_account_ownership.md](../feature/036_account_ownership.md) | `is_owned` field semantics |
 | [feature/061_solo_token_conservation.md](../feature/061_solo_token_conservation.md) | Solo gate (before G1 in fetch/refresh/touch) |

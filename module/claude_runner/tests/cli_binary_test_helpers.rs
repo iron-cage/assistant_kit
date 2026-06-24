@@ -233,22 +233,40 @@ pub fn fake_claude_binary_dir() -> ( tempfile::TempDir, String )
 ///
 /// # Panics
 ///
-/// Panics if the subprocess cannot be spawned.
+/// Panics if the subprocess cannot be spawned after retries.
 #[cfg(unix)]
 #[inline]
 #[must_use]
 #[allow(dead_code)]
 pub fn spawn_fake_claude( path_val : &str ) -> std::process::Child
 {
-  let child = std::process::Command::new( "claude" )
-    .env( "PATH", path_val )
-    .arg( "30" )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::null() )
-    .spawn()
-    .expect( "spawn fake claude" );
-  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
-  child
+  // Retry up to 3 times on ETXTBSY (os error 26 — ExecutableFileBusy).
+  // Under high parallel-test load, Linux rejects execve() when the target
+  // binary is transiently open-for-write by a concurrent fs::copy in another
+  // test process.  The error resolves as soon as the write fd closes.
+  let mut attempt = 0u32;
+  loop
+  {
+    match std::process::Command::new( "claude" )
+      .env( "PATH", path_val )
+      .arg( "30" )
+      .stdout( std::process::Stdio::null() )
+      .stderr( std::process::Stdio::null() )
+      .spawn()
+    {
+      Ok( child ) =>
+      {
+        std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+        return child;
+      }
+      Err( ref e ) if e.raw_os_error() == Some( 26 ) && attempt < 3 =>
+      {
+        attempt += 1;
+        std::thread::sleep( core::time::Duration::from_millis( 20 * u64::from( attempt ) ) );
+      }
+      Err( e ) => panic!( "spawn fake claude: {e}" ),
+    }
+  }
 }
 
 /// Spawn a print-mode fake `claude` process (argv contains `--print`).

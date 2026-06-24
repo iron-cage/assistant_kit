@@ -71,7 +71,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 006_token_status | [006_token_status.md](06_token_status.md) | FT-01 … FT-04 | ✅ |
 | 007_file_topology | [007_file_topology.md](07_file_topology.md) | FT-01 … FT-06 | ✅ |
 | 008_auto_rotate | [008_auto_rotate.md](08_auto_rotate.md) | FT-01 … FT-04 | ✅ |
-| 009_token_usage | [009_token_usage.md](09_token_usage.md) | FT-01 … FT-32 | ✅ |
+| 009_token_usage | [009_token_usage.md](09_token_usage.md) | FT-01 … FT-33 | ✅ |
 | 010_persistent_storage | [010_persistent_storage.md](10_persistent_storage.md) | FT-01 … FT-07 | ✅ |
 | 011_account_status_by_name | [011_account_status_by_name.md](11_account_status_by_name.md) | FT-01 … FT-05 | ✅ |
 | 012_live_credentials_status | [012_live_credentials_status.md](12_live_credentials_status.md) | FT-01 … FT-07 | ✅ |

@@ -117,6 +117,12 @@
 - **When**: `classify_error()` is called
 - **Then**: Returns `Some(ErrorKind::Unknown)` — `str::contains` is case-sensitive; uppercase variant does not match `"You've hit your limit"`
 
+#### FT-19: `authentication_error` 401 → AuthError (not ApiError)
+
+- **Given**: `ExecutionOutput { exit_code: 1, stdout: "", stderr: "Failed to authenticate. API Error: 401 {\"type\":\"authentication_error\",\"message\":\"Invalid authentication credentials\"}" }`
+- **When**: `classify_error()` is called
+- **Then**: Returns `Some(ErrorKind::AuthError)` — the `"authentication_error"` pattern fires before the `"API Error: "` catch-all; without this fix the same string would be misclassified as `ApiError`
+
 ### Non-Coverage Notes
 
 The following scenarios are intentionally not tested because they are not observable through `classify_error()` in print mode:

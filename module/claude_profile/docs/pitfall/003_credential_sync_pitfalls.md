@@ -36,6 +36,14 @@ Earlier `apply_refresh`/`apply_touch` loops snapshotted the current `_active` ma
 
 **Rule:** After any touch/refresh operation on the account that's being rotated to, re-sync the live credential file from the store.
 
+### Pitfall 5 — Stale `is_active` guard in race-recovery corrupts credential store slot (BUG-316)
+
+`refresh_token_with_live_path` computes `is_active` once by reading `_active_{host}_{user}` at function entry, then reuses that boolean in the race-recovery block ~35 seconds later (after `run_isolated` completes). If a concurrent `switch_account("B")` runs during the subprocess window, the active marker changes to "B" — but `is_active` still holds `true`. Race recovery then reads the live file (now containing B's credentials) and writes B's credentials into A's credential store slot.
+
+**Fix (BUG-316):** Re-read the active marker independently inside the `credentials=None` branch, immediately before the race-recovery guard. Only proceed with race recovery if the freshly-read marker still points to `name`.
+
+**Rule:** Never cache a filesystem-derived boolean across a blocking call (subprocess, network I/O) in a multi-process environment. Re-read the active marker at each use site in `refresh_token_with_live_path` — independently before the pre-sync block and independently before the race-recovery block.
+
 ### Cross-References
 
 | File | Relationship |

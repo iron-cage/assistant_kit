@@ -744,7 +744,7 @@ pub fn refresh_account_token(
 
   if let Some( p ) = paths
   {
-    refresh_token_with_live_path( name, credential_store, p, trace, label, model, args )
+    refresh_token_with_live_path( name, credential_store, p, trace, label, model, args, claude_runner_core::run_isolated )
   }
   else
   {
@@ -792,6 +792,7 @@ pub fn refresh_account_token(
 // Handles live-credential pre-sync (Change B / AC-33) and delegates to run_isolated.
 // Kept separate to stay within the line-count limit for the public function.
 #[ cfg( feature = "enabled" ) ]
+#[ allow( clippy::too_many_arguments ) ] // 8th param `run_isolated_fn` added by BUG-316 — test seam; all args are independent concerns.
 fn refresh_token_with_live_path(
   name             : &str,
   credential_store : &Path,
@@ -800,6 +801,7 @@ fn refresh_token_with_live_path(
   label            : &str,
   model            : claude_runner_core::IsolatedModel,
   args             : Vec< String >,
+  run_isolated_fn  : impl Fn( &str, Vec< String >, u64, claude_runner_core::IsolatedModel ) -> Result< claude_runner_core::IsolatedRunResult, claude_runner_core::RunnerError >,
 ) -> Option< String >
 {
   // Fix(BUG-175): removed switch_account call — credentials read directly from credential store
@@ -825,11 +827,18 @@ fn refresh_token_with_live_path(
   // Pitfall: apply_touch calls refresh_account_token for ALL accounts (including non-current)
   // during the pre-rotation touch loop; attempt_expired_token_refresh calls it for the TARGET
   // account before switch_account — in both cases name is NOT yet the active account.
-  let is_active = {
+  // Fix(BUG-316): re-read the active marker independently at each use site.
+  // Root cause: is_active was computed once before run_isolated and reused 35s later in
+  //   the race-recovery block; a concurrent switch_account("B") during the subprocess
+  //   window changed the marker to "B", but the stale cached bool caused live credentials
+  //   (now holding B's creds post-switch) to be written into A's credential store slot.
+  // Pitfall: never cache a filesystem-derived boolean across a blocking call (subprocess,
+  //   network I/O) in a multi-process environment — re-read at each use site instead.
+  let is_active_pre_sync = {
     let marker = credential_store.join( active_marker_filename() );
     std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )
   };
-  if is_active
+  if is_active_pre_sync
   {
     if let Ok( live_json ) = std::fs::read_to_string( p.credentials_file() )
     {
@@ -849,7 +858,7 @@ fn refresh_token_with_live_path(
   let creds_json = manipulate_expires_at( &creds_json );
   let t_run = std::time::Instant::now();
   if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
-  let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, model )
+  let isolated = match run_isolated_fn( &creds_json, args, 35, model )
   {
     Ok( r )  => r,
     Err( e ) =>
@@ -873,8 +882,14 @@ fn refresh_token_with_live_path(
   {
     // AC-33 (Change B) race recovery: run_isolated returned credentials=None.
     // A concurrent live session may have refreshed during the subprocess call.
-    // Same is_active guard as pre-sync: only valid for the currently active account.
-    if is_active
+    // Fix(BUG-316): re-read the active marker here — not the cached value from function
+    //   entry. The 35-second run_isolated window allows switch_account("B") to change the
+    //   marker; the stale cached bool would write B's live credentials into A's store slot.
+    let is_active_now = {
+      let marker = credential_store.join( active_marker_filename() );
+      std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )
+    };
+    if is_active_now
     {
       let orig_stored = std::fs::read_to_string(
         credential_store.join( format!( "{name}.credentials.json" ) ),

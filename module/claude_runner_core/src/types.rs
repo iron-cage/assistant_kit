@@ -465,8 +465,11 @@ pub enum ErrorKind
 }
 
 // Priority-ordered stderr/stdout patterns → ErrorKind.
-// AuthError appears before ApiError so 401 responses
-// ("Your organization..." + "API Error:") hit AuthError, not ApiError.
+// Both AuthError patterns appear before ApiError so all 401 responses hit AuthError:
+//   "Your organization..." — org-level access denial
+//   "authentication_error" — Claude CLI 401 form (Fix BUG-314: contains "API Error: "
+//     as a substring; without this pattern the catch-all fired first → misclassified
+//     as ApiError → ErrorClass::Service instead of ErrorClass::Auth)
 //
 // NOTE: E4 (Request Timed Out) retry progress uses "API Error (Request timed out.)"
 // which does NOT match "API Error: " (parenthesis, not colon-space). However, E4 hangs
@@ -480,6 +483,13 @@ const ERROR_PATTERNS : &[ ( &str, ErrorKind ) ] =
 &[
   ( "You've hit your limit",                            ErrorKind::QuotaExhausted ),
   ( "Your organization does not have access to Claude", ErrorKind::AuthError ),
+  // Fix(BUG-314): "authentication_error" precedes the "API Error: " catch-all.
+  // Root cause: the Claude CLI 401 form "Failed to authenticate. API Error: 401
+  //   {\"type\":\"authentication_error\",...}" contains "API Error: " as a substring;
+  //   without this entry the catch-all fired first → ApiError → ErrorClass::Service.
+  // Pitfall: priority-ordered pattern lists silently misclassify errors that also contain
+  //   a catch-all substring — every non-catch-all class needs a pattern placed before it.
+  ( "authentication_error",                             ErrorKind::AuthError ),
   ( "API Error: ",                                      ErrorKind::ApiError ),
 ];
 

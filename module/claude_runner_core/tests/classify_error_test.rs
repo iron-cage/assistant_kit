@@ -20,6 +20,9 @@
 //! | T16 | exit=128, empty (boundary: NOT > 128) | `Some(Unknown)` — 128 is not a signal |
 //! | T17 | exit=129, empty (128+1 = SIGHUP) | `Some(Signal)` — first code satisfying > 128 |
 //! | T18 | exit=1, stderr="YOU'VE HIT YOUR LIMIT" (uppercase) | `Some(Unknown)` — case-sensitive |
+//! | A2  | exit=1, stdout=`"...authentication_error..."` | `Some(AuthError)` — stdout scan path |
+//! | A3  | exit=1, stderr=`"AUTHENTICATION_ERROR..."` (uppercase) | `Some(Unknown)` — case-sensitive |
+//! | A4  | exit=1, stderr contains both quota pattern and `"authentication_error"` | `Some(QuotaExhausted)` — quota wins |
 //!
 //! # Root Cause (BUG-037)
 //!
@@ -349,5 +352,123 @@ fn classify_error_quota_pattern_case_sensitive()
     out.classify_error(),
     Some( ErrorKind::Unknown ),
     "T18: uppercase quota pattern must NOT match; pattern matching is case-sensitive"
+  );
+}
+
+// ── FT-19 (MRE BUG-314) ──────────────────────────────────────────────────────
+
+/// FT-19 / MRE BUG-314: `"authentication_error"` 401 string → `AuthError`, not `ApiError`.
+///
+/// # Root Cause
+///
+/// `ERROR_PATTERNS` had exactly one `AuthError` pattern: `"Your organization does not have
+/// access to Claude"`. The 401 `authentication_error` response also contains `"API Error: "` —
+/// the catch-all — so it matched `ApiError` first (priority-ordered scan stops at first hit).
+///
+/// # Why Not Caught
+///
+/// All prior `AuthError` tests used the org-access-denial string only. No test covered the
+/// `authentication_error` 401 format. Silent misclassification: `ApiError` is a valid
+/// non-panicking result, so no existing test failure surfaced.
+///
+/// # Fix Applied
+///
+/// Added `"authentication_error"` as a second `AuthError` pattern BEFORE `"API Error: "`
+/// in `ERROR_PATTERNS` (`types.rs:479-484`).
+///
+/// # Prevention
+///
+/// This test fails whenever the `"authentication_error"` pattern is removed or reordered
+/// after the `"API Error: "` catch-all entry.
+///
+/// # Pitfall
+///
+/// Priority-ordered pattern lists silently misclassify any error whose string also contains
+/// a catch-all substring — every non-catch-all class needs a pattern placed before the
+/// catch-all entry.
+#[ test ]
+fn mre_bug314_authentication_error_classifies_as_auth_error()
+{
+  // test_kind: bug_reproducer(BUG-314)
+  //
+  // The Claude CLI 401 form contains "API Error: " as a substring.
+  // Without the "authentication_error" pattern the catch-all fires first → ApiError → Service.
+  let out = make_output(
+    "",
+    "Failed to authenticate. API Error: 401 \
+     {\"type\":\"authentication_error\",\
+     \"message\":\"Invalid authentication credentials\"}",
+    1,
+  );
+  assert_eq!(
+    out.classify_error(),
+    Some( ErrorKind::AuthError ),
+    "FT-19: authentication_error 401 must yield AuthError, not ApiError — \
+     pattern must precede the \"API Error: \" catch-all in ERROR_PATTERNS"
+  );
+}
+
+// ── A2: authentication_error pattern in stdout ────────────────────────────────
+
+/// A2: `"authentication_error"` in stdout → `AuthError` (stdout scan path for BUG-314 pattern).
+///
+/// `classify_error()` scans both: `stderr.contains(pattern) || stdout.contains(pattern)`.
+/// FT-19 covers the stderr path. This covers the stdout path — parallel to T04 (org-access
+/// in stdout) and T13 (quota in stdout). Guards that the stdout branch is not accidentally
+/// omitted for the `"authentication_error"` pattern added by BUG-314.
+#[ test ]
+fn classify_error_authentication_error_in_stdout()
+{
+  let out = make_output(
+    "{\"type\":\"authentication_error\",\"message\":\"Invalid credentials\"}",
+    "",
+    1,
+  );
+  assert_eq!(
+    out.classify_error(),
+    Some( ErrorKind::AuthError ),
+    "A2: authentication_error in stdout must yield AuthError (stdout scan path must work)"
+  );
+}
+
+// ── A3: authentication_error pattern is case-sensitive ────────────────────────
+
+/// A3: `"AUTHENTICATION_ERROR"` (uppercase) with exit code 1 → `Unknown`.
+///
+/// Pattern matching is case-sensitive (`str::contains`). An uppercased variant does not
+/// match the `"authentication_error"` entry, so exit-code fallbacks apply: exit=1 → `Unknown`.
+/// Mirrors T18 which guards the same property for the quota pattern.
+#[ test ]
+fn classify_error_authentication_error_case_sensitive()
+{
+  let out = make_output( "", "AUTHENTICATION_ERROR: invalid credentials", 1 );
+  assert_eq!(
+    out.classify_error(),
+    Some( ErrorKind::Unknown ),
+    "A3: uppercase AUTHENTICATION_ERROR must NOT match; pattern matching is case-sensitive"
+  );
+}
+
+// ── A4: quota pattern wins over authentication_error ─────────────────────────
+
+/// A4: Both `"You've hit your limit"` and `"authentication_error"` in stderr → `QuotaExhausted`.
+///
+/// `ERROR_PATTERNS` is priority-ordered: quota (index 0) precedes auth patterns (indices 1–2).
+/// When both substrings appear, the quota pattern matches first — `QuotaExhausted` is returned,
+/// not `AuthError`. Guards the insertion ordering: `"authentication_error"` was added at index 2,
+/// after quota at index 0.
+#[ test ]
+fn classify_error_quota_wins_over_authentication_error()
+{
+  let out = make_output(
+    "",
+    "You've hit your limit — authentication_error: quota reached",
+    1,
+  );
+  assert_eq!(
+    out.classify_error(),
+    Some( ErrorKind::QuotaExhausted ),
+    "A4: QuotaExhausted must win over authentication_error when both patterns present \
+     (quota is index 0 in ERROR_PATTERNS; authentication_error is index 2)"
   );
 }

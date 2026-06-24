@@ -1241,3 +1241,77 @@ fn ft_apply_post_switch_touch_routes_through_refresh_account_token()
     violations.join( "\n" ),
   );
 }
+
+/// BUG-317 MRE — `only_valid::1` must exclude cancelled accounts (`billing_type="none"`).
+///
+/// # Root Cause
+/// The `only_valid` retain predicate in `api.rs` only checked `result.is_ok()`. A cancelled
+/// account with a successful API response (`result = Ok(...)`) and `billing_type = "none"`
+/// passed `only_valid::1` as if it were a valid account — potentially surfacing in the
+/// valid-account list and rotation recommendations.
+///
+/// # Why Not Caught
+/// All existing `only_valid` tests used accounts with `account = None` (no subscription data)
+/// or `result = Err(...)`. The case of `result = Ok` + `billing_type = "none"` was untested:
+/// good quota data returned by the API, but subscription permanently cancelled.
+///
+/// # Fix Applied
+/// Fix D (BUG-317): the retain predicate is now:
+/// `aq.result.is_ok() && !aq.account.as_ref().is_some_and(|a| a.billing_type == "none")`
+/// Both conditions must pass. A cancelled account satisfies `result.is_ok()` but fails the
+/// second condition — correctly excluded.
+///
+/// # Prevention
+/// Structural inspection of `api.rs` via `include_str!` ensures the `billing_type` guard
+/// cannot be silently removed. If Fix D is reverted, the structural assertion fails immediately.
+///
+/// # Pitfall
+/// `account = None` is NOT equivalent to `billing_type = "none"`. `account = None` means the
+/// account-API call failed (ambiguous). Only `account = Some({billing_type: "none"})` is the
+/// definitive cancellation signal. `mk_aq_cancelled` always sets `account = Some(...)` with
+/// `billing_type = "none"` — use it for cancelled-account tests.
+#[ doc = "bug_reproducer(BUG-317)" ]
+#[ test ]
+fn mre_bug317_cancelled_excluded_by_only_valid()
+{
+  use crate::usage::test_support::mk_aq_cancelled;
+
+  // ── Structural: verify Fix D predicate is present in api.rs ─────────────────────────────
+  // include_str! is compile-time — the assertion fails at build if Fix D is reverted.
+  let src = include_str!( "api.rs" );
+  let only_valid_pos = src
+    .find( "if params.only_valid" )
+    .expect( "BUG-317 Fix D: 'if params.only_valid' block must exist in api.rs" );
+  // Scan the retain expression (next 300 bytes) for the billing_type guard.
+  let block = &src[ only_valid_pos .. ( only_valid_pos + 300 ).min( src.len() ) ];
+  assert!(
+    block.contains( "billing_type" ),
+    "BUG-317 Fix D: only_valid retain predicate must check billing_type=\"none\" to exclude \
+    cancelled accounts — revert of Fix D detected in api.rs\nblock:\n{block}",
+  );
+
+  // ── Preconditions: mk_aq_cancelled produces the critical BUG-317 scenario ────────────────
+  // result = Ok  →  old predicate (result.is_ok() only) would pass this account through.
+  // billing_type = "none"  →  Fix D second predicate correctly blocks it.
+  let cancelled = mk_aq_cancelled( "dead@test.com", 20.0, 20.0 );
+  assert!(
+    cancelled.result.is_ok(),
+    "BUG-317 precondition: mk_aq_cancelled must produce result=Ok — \
+    cancelled account has valid quota data (the exact bug scenario: would have slipped through)",
+  );
+  assert!(
+    cancelled.account.as_ref().is_some_and( |a| a.billing_type == "none" ),
+    "BUG-317 precondition: mk_aq_cancelled must set billing_type=\"none\" (definitive cancel signal)",
+  );
+
+  // ── Predicate: Fix D correctly excludes the cancelled account ────────────────────────────
+  // Replicate the Fix D retain predicate. The retain keeps accounts where this is true;
+  // the cancelled account must evaluate to false (excluded).
+  let passes_only_valid = cancelled.result.is_ok()
+    && !cancelled.account.as_ref().is_some_and( |a| a.billing_type == "none" );
+  assert!(
+    !passes_only_valid,
+    "BUG-317 Fix D: cancelled account (result=Ok, billing_type=\"none\") must be excluded \
+    by only_valid::1 — the billing_type guard must negate the result.is_ok() pass",
+  );
+}

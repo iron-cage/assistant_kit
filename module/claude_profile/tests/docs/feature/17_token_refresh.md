@@ -32,6 +32,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-23 | Current account: live creds differ from stored -> sync live->store, no subprocess spawned | AC-33 | — |
 | FT-24 | Current account: `run_isolated` returns `None` -> race recovery re-reads live creds | AC-33 | — |
 | FT-25 | `claude_profile/src/` contains zero direct `run_isolated` calls (invariant 008 grep test) | AC-34 | — |
+| FT-26 | Current account becomes non-current during `run_isolated` window — re-read of active marker prevents stale `is_active` from writing wrong-account credentials to store (BUG-316 MRE) | AC-33 | — |
 
 ### Test Case Index
 
@@ -62,8 +63,9 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-23 | Current account: live creds differ from stored -> sync live->store, no subprocess | AC-33 | Live Sync |
 | FT-24 | Current account: `run_isolated` returns `None` -> race recovery reads live creds | AC-33 | Race Recovery |
 | FT-25 | `claude_profile/src/` contains zero direct `run_isolated` calls (invariant 008) | AC-34 | Grep Invariant |
+| FT-26 | Current account becomes non-current during `run_isolated` window — stale `is_active` guard MUST NOT write wrong-account credentials to A's store slot (BUG-316 MRE) | AC-33 | TOCTOU Race Guard |
 
-**Total:** 25 FT cases
+**Total:** 26 FT cases
 
 ---
 
@@ -340,3 +342,16 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Then:** Zero matches. All token refresh operations go through `refresh_account_token()` in `claude_profile_core/src/account.rs`. The grep-based invariant test in `tests/` enforces this at CI.
 - **Source fn:** `single_token_refresh_entry_in1_src_contains_zero_run_isolated_calls` (in `module/claude_profile/tests/cli/invariant_test.rs`)
 - **Source:** [017_token_refresh.md AC-34](../../../docs/feature/017_token_refresh.md), [invariant/008_single_token_refresh_entry.md](../../../docs/invariant/008_single_token_refresh_entry.md)
+
+---
+
+### FT-26: Current account becomes non-current during `run_isolated` window — stale `is_active` must not write wrong-account credentials (BUG-316 MRE)
+
+- **Given:** `refresh_token_with_live_path("A", paths, ...)` is entered. The active marker `_active_{host}_{user}` initially contains `"A"` — `is_active` would be `true` if computed here. A per-account credential file `A.credentials.json` exists in the store. Between the initial active-marker read and the race-recovery block (simulating 35 seconds of `run_isolated` blocking), the active marker is overwritten with `"B"` and the live credentials file is overwritten with B's JSON. `run_isolated` returns `credentials=None`.
+- **When:** `refresh_token_with_live_path` executes the race-recovery block (the `credentials=None` arm after `run_isolated` returns). The fix re-reads the active marker before the guard.
+- **Then:** The fresh re-read finds the marker contains `"B"`, not `"A"` — `is_active_now == false`. Race recovery does NOT fire. The function returns `None`. `A.credentials.json` in the store is NOT overwritten with B's credentials. A's credential store slot is unchanged.
+- **Failure case (without fix):** The stale `is_active=true` (computed before `run_isolated`) causes race recovery to read the live file (containing B's credentials) and write them into `A.credentials.json` — credential cross-contamination with no error surfaced.
+- **Exit:** N/A (unit test — verifies that `A.credentials.json` is unchanged after `refresh_token_with_live_path` returns `None` when active marker changes mid-function)
+- **Source fn:** `mre_bug316_stale_is_active_race_recovery_copies_wrong_account_creds` (in `claude_profile_core/tests/account_refresh_test.rs`)
+- **Note:** Fix for BUG-316. The race requires two OS processes (watchdog running `refresh::1` + user running `rotate::1`). The ~35-second `run_isolated` window makes this a practically exploitable race. Fix: re-read `_active_{host}_{user}` marker immediately before race-recovery guard at `account.rs:877`.
+- **Source:** [017_token_refresh.md AC-33](../../../docs/feature/017_token_refresh.md)

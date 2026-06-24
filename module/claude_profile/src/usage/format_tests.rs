@@ -4,8 +4,8 @@
 // without widening their visibility. See src/usage/readme.md § Inline Test Exception.
 
 use super::*;
-use crate::usage::test_support::{ FAR_FUTURE_MS, mk_aq_ok_both, mk_aq_sort, mk_aq_sort_weekly, mk_aq_err };
-use crate::usage::types::PreferStrategy;
+use crate::usage::test_support::{ FAR_FUTURE_MS, mk_aq_ok_both, mk_aq_sort, mk_aq_sort_weekly, mk_aq_err, mk_aq_cancelled };
+use crate::usage::types::{ AccountQuota, PreferStrategy };
 
 // ── shorten_error ──────────────────────────────────────────────────────────
 
@@ -238,7 +238,7 @@ fn tel_far_future_is_valid()
 fn test_status_emoji_and_both_ample_green()
 {
   let aq = mk_aq_ok_both( 50.0, 50.0 );
-  assert_eq!( status_emoji( &aq.result ), "🟢", "5h > 15% and 7d > 5% → 🟢" );
+  assert_eq!( status_emoji( &aq ), "🟢", "5h > 15% and 7d > 5% → 🟢" );
 }
 
 /// SE-AND-T02: `5h_left`=50%, `7d_left`=3% (`d7_util`=97) → 🟡 (7d ≤ 5%).
@@ -246,7 +246,7 @@ fn test_status_emoji_and_both_ample_green()
 fn test_status_emoji_and_7d_low_yellow()
 {
   let aq = mk_aq_ok_both( 50.0, 97.0 );
-  assert_eq!( status_emoji( &aq.result ), "🟡", "7d ≤ 5% despite 5h ample → 🟡" );
+  assert_eq!( status_emoji( &aq ), "🟡", "7d ≤ 5% despite 5h ample → 🟡" );
 }
 
 /// SE-AND-T03: `5h_left`=3% (`h5_util`=97), `7d_left`=50% → 🟡 (5h ≤ 15%).
@@ -254,7 +254,7 @@ fn test_status_emoji_and_7d_low_yellow()
 fn test_status_emoji_and_5h_low_yellow()
 {
   let aq = mk_aq_ok_both( 97.0, 50.0 );
-  assert_eq!( status_emoji( &aq.result ), "🟡", "5h ≤ 15% despite 7d ample → 🟡" );
+  assert_eq!( status_emoji( &aq ), "🟡", "5h ≤ 15% despite 7d ample → 🟡" );
 }
 
 /// SE-AND-T04: `5h_left`=15%, `7d_left`=5% → 🟡 (5h at boundary, 7d at boundary).
@@ -262,7 +262,7 @@ fn test_status_emoji_and_5h_low_yellow()
 fn test_status_emoji_and_both_at_threshold_yellow()
 {
   let aq = mk_aq_ok_both( 85.0, 95.0 );
-  assert_eq!( status_emoji( &aq.result ), "🟡", "5h=15% and 7d=5% → 🟡 (neither > threshold)" );
+  assert_eq!( status_emoji( &aq ), "🟡", "5h=15% and 7d=5% → 🟡 (neither > threshold)" );
 }
 
 /// IT-43 — Exact boundary precision: each threshold tested independently.
@@ -280,9 +280,9 @@ fn it151_status_emoji_boundary_precision()
   let aq_a = mk_aq_ok_both( 85.0, 50.0 );
   let aq_b = mk_aq_ok_both( 84.9, 50.0 );
   let aq_c = mk_aq_ok_both( 50.0, 95.0 );
-  assert_eq!( status_emoji( &aq_a.result ), "🟡", "A: 5h=15.0% (at threshold) → 🟡" );
-  assert_eq!( status_emoji( &aq_b.result ), "🟢", "B: 5h=15.1% (just above) → 🟢" );
-  assert_eq!( status_emoji( &aq_c.result ), "🟡", "C: 7d=5.0% (at threshold) → 🟡" );
+  assert_eq!( status_emoji( &aq_a ), "🟡", "A: 5h=15.0% (at threshold) → 🟡" );
+  assert_eq!( status_emoji( &aq_b ), "🟢", "B: 5h=15.1% (just above) → 🟢" );
+  assert_eq!( status_emoji( &aq_c ), "🟡", "C: 7d=5.0% (at threshold) → 🟡" );
 }
 
 // ── status_emoji with absent period data ──────────────────────────────────
@@ -291,6 +291,7 @@ fn it151_status_emoji_boundary_precision()
 ///
 /// Doc comment: "Absent period data is treated as fully available (conservative, 0% utilised)."
 /// `five_hour`=None → `map_or`(0.0) → `h5_left`=100% > 15% → 🟢 (given `seven_day` also absent → 100%).
+/// `account=None` — API fetch failed, not a confirmed cancelled account.
 #[ test ]
 fn test_status_emoji_five_hour_none_is_green()
 {
@@ -298,10 +299,60 @@ fn test_status_emoji_five_hour_none_is_green()
   {
     five_hour : None, seven_day : None, seven_day_sonnet : None,
   };
-  let result : Result< claude_quota::OauthUsageData, String > = Ok( data );
+  let aq = AccountQuota
+  {
+    name                  : String::new(),
+    is_current            : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms         : FAR_FUTURE_MS,
+    result                : Ok( data ),
+    account               : None,
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
+    cached                : false,
+    cache_age_secs        : None,
+    is_owned              : true,
+    owner                 : String::new(),
+  };
   assert_eq!(
-    status_emoji( &result ), "🟢",
+    status_emoji( &aq ), "🟢",
     "five_hour=None must yield 🟢 (conservative 100% left)",
+  );
+}
+
+/// MRE(BUG-317): cancelled account (`billing_type="none"`) must show 🔴 in the `●` column.
+///
+/// # Root Cause
+/// `status_emoji` only checked `result.is_err()` and quota thresholds; it never inspected
+/// `billing_type`. A cancelled account with good quota (e.g., 80% 5h, 80% 7d) returned 🟢,
+/// contradicting the 🔴 classification in `status_group_of()` and misleading the user into
+/// thinking the account was temporarily exhausted rather than permanently unusable.
+///
+/// # Why Not Caught
+/// All existing `status_emoji` tests used `account=None` (no subscription data). The
+/// `billing_type` field was never present in any format.rs test fixture.
+///
+/// # Fix Applied
+/// `status_emoji` now accepts `&AccountQuota` and checks `billing_type="none"` → 🔴 after
+/// the `result.is_err()` check, before quota threshold evaluation.
+///
+/// # Prevention
+/// This test uses `mk_aq_cancelled` which sets `account=Some({billing_type: "none"})` so
+/// the gate fires. All future `status_emoji` tests should use full `&AccountQuota`.
+///
+/// # Pitfall
+/// `account=None` (API fetch failed) is ambiguous — do NOT penalize it. Only fire when
+/// `account=Some(billing_type="none")` is definitively present.
+#[ doc = "bug_reproducer(BUG-317)" ]
+#[ test ]
+fn mre_bug317_cancelled_status_emoji_is_red()
+{
+  let aq = mk_aq_cancelled( "dead@test.com", 20.0, 20.0 );
+  assert_eq!(
+    status_emoji( &aq ), "🔴",
+    "BUG-317: cancelled account (billing_type='none') must show 🔴 in the ● column",
   );
 }
 
