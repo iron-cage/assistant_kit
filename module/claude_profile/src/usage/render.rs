@@ -35,6 +35,7 @@ pub( crate ) fn render_text(
   session_effort : Option< &str >,
   store_path     : Option< &std::path::Path >,
   who            : Option< bool >,
+  gate_ownership : bool,
 ) -> String
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
@@ -238,7 +239,11 @@ pub( crate ) fn render_text(
   };
   let total = accounts.len();
 
-  let Some( idx ) = find_next_for_strategy( accounts, sort, prefer, now_secs, false ) else
+  // Fix(BUG-320): gate_ownership was hardcoded false — footer could recommend a non-owned
+  //   account while auto-switch (gate_ownership=true) would skip it. Root cause: render_text
+  //   had no gate_ownership param; false was hardcoded at the call site.
+  // Pitfall: api.rs must pass params.rotate && !params.force; live.rs and mod.rs pass false.
+  let Some( idx ) = find_next_for_strategy( accounts, sort, prefer, now_secs, gate_ownership ) else
   {
     return append_sessions_table( body, store_path, who );
   };
@@ -703,9 +708,10 @@ pub( crate ) fn render_plain(
   session_effort : Option< &str >,
   store_path     : Option< &std::path::Path >,
   who            : Option< bool >,
+  gate_ownership : bool,
 ) -> String
 {
-  let raw = render_text( accounts, sort, desc, prefer, cols, session_model, session_effort, store_path, who );
+  let raw = render_text( accounts, sort, desc, prefer, cols, session_model, session_effort, store_path, who, gate_ownership );
   raw
     .replace( "🟢", "ok" )
     .replace( "🟡", "warn" )

@@ -19,8 +19,8 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-11 | `trace::1 touch::1` idle account — all 6 trace lines emitted in order | AC-10, AC-11, AC-12, AC-13, AC-14 | Integration |
 | FT-12 | `trace::1 touch::1` active account — read+fetch+scheduled+model+spawned lines (no idle-check, BUG-285) | AC-10, AC-11, AC-12, AC-13, AC-14 | Integration |
 | FT-13 | `trace::1 touch::1` fetch failure + `expiresAt` future — fetch-err + expiry-valid emitted; idle/model omitted | AC-10, AC-11, AC-14 | Integration |
-| FT-14 | `trace::1 touch::0` — no `[trace] account.use` lines emitted | AC-15 | Integration |
-| FT-15 | `trace::0` (default) — no `[trace] account.use` lines emitted | AC-15 | Integration |
+| FT-14 | `trace::1 touch::0` — no timestamped `account.use` diagnostic lines emitted | AC-15 | Integration |
+| FT-15 | `trace::0` (default) — no timestamped `account.use` diagnostic lines emitted | AC-15 | Integration |
 | FT-16 | `trace::` with bad value exits 1 | AC-16 | Integration |
 | FT-17 | `touch::1` + fetch Err + expired `expiresAt` + `refresh::1` → refresh fails → exits 3; switch NOT executed | AC-17 | Integration (BUG-213 + BUG-230 MRE) |
 | FT-18 | `touch::1` + fetch Err + expired `expiresAt` + `refresh::0` → exits 3 immediately; no refresh attempt | AC-20 | Integration (BUG-230) |
@@ -184,7 +184,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 - **Given:** Account `alice@home.com` saved with valid OAuth token. Credential store has a valid `alice@home.com.credentials.json`.
 - **When:** `clp .account.use name::alice@home.com trace::1`
-- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr (in order): `[trace] account.use  alice@home.com  reading {path}`, `reading: OK`, `quota fetch: OK`, `subprocess: scheduled (idle check removed)`, `model: {model}  effort: {effort}`, `subprocess: spawned`. Fix(BUG-285): `idle check:` trace line removed; subprocess always fires when fetch succeeds.
+- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr (in order): `... · account.use  alice@home.com  reading {path}`, `reading: OK`, `quota fetch: OK`, `subprocess: scheduled (idle check removed)`, `model: {model}  effort: {effort}`, `subprocess: spawned`. Fix(BUG-285): `idle check:` trace line removed; subprocess always fires when fetch succeeds.
 - **Exit:** 0
 - **Live:** yes (requires valid OAuth token)
 - **Source fn:** `aw28_lim_it_trace_idle_account_all_lines` (in `tests/cli/account_mutations_test.rs`)
@@ -215,22 +215,22 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 ---
 
-### FT-14: `trace::1 touch::0` — no `[trace] account.use` lines emitted
+### FT-14: `trace::1 touch::0` — no timestamped `account.use` diagnostic lines emitted
 
 - **Given:** Any account store state.
 - **When:** `clp .account.use name::alice@home.com touch::0 trace::1`
-- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr: no `[trace] account.use` lines (no quota fetch operations performed).
+- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr: no timestamped `account.use` diagnostic lines (no quota fetch operations performed).
 - **Exit:** 0
 - **Source fn:** `aw31_trace_touch_disabled_no_trace_lines` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-15](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
 
-### FT-15: `trace::0` (default) — no `[trace] account.use` lines emitted
+### FT-15: `trace::0` (default) — no timestamped `account.use` diagnostic lines emitted
 
 - **Given:** Account `alice@home.com` saved with valid credentials and idle 5h window.
 - **When:** `clp .account.use name::alice@home.com` (default `trace::0`, default `touch::1`)
-- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr: no `[trace] account.use` lines. This is the standard non-diagnostic output path.
+- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr: no timestamped `account.use` diagnostic lines. This is the standard non-diagnostic output path.
 - **Exit:** 0
 - **Source fn:** `aw22_touch_disabled_switch_succeeds` — already covers absence of trace output for non-trace invocations
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-15](../../../docs/feature/027_account_use_post_switch_touch.md)
@@ -338,7 +338,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 - **Given (unit test):** `apply_model_override` called with `trace=true`, `seven_day_sonnet = Some(PeriodUsage { utilization: 4.0 })` (96% left). `~/.claude/settings.json` pre-seeded with `"model": "opus"`.
 - **When:** `apply_model_override(&data, &paths, true, "account.use", "alice@home.com")`.
-- **Then:** Stderr contains `[trace] account.use  alice@home.com  model override: opus→sonnet (7d(Son) left=96%)`. Settings.json updated to `"sonnet"`.
+- **Then:** Stderr contains `... · account.use  alice@home.com  model override: opus→sonnet (7d(Son) left=96%)`. Settings.json updated to `"sonnet"`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `t09_model_override_trace_opus_to_sonnet` (in `src/usage/api_tests.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-19](../../../docs/feature/027_account_use_post_switch_touch.md)

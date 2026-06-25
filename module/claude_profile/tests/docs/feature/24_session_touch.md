@@ -14,7 +14,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-06 | apply_touch does not call switch_account; `_active` marker unchanged throughout cycle | AC-06 | BUG-211 MRE |
 | FT-07 | Touch failure is non-aborting; row shows original data | AC-07 | Integration |
 | FT-08 | `touch::` does not affect `format::json` output structure | AC-08 | Integration |
-| FT-09 | `trace=true` emits `[trace]` lines for touch subprocess lifecycle | AC-09 | Integration (lim_it) |
+| FT-09 | `trace=true` emits timestamped diagnostic lines for touch subprocess lifecycle | AC-09 | Integration (lim_it) |
 | FT-10 | `touch::` appears in `.usage.help` with default `1` | AC-10 | Integration |
 | FT-11 | Account with any timer absent IS touched (positive trigger) | AC-02 | Trigger |
 | FT-12 | In `live::1` mode, touch fires each cycle when any timer absent | AC-11 | Live Mode |
@@ -112,7 +112,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 - **Given:** One account with expired token (quota fetch would fail with 401).
 - **When:** `clp .usage refresh::1 touch::1 trace::1`
-- **Then:** Stderr `[trace]` lines show refresh lifecycle before any touch lifecycle. Touch runs on post-refresh results — if refresh started a session (making `resets_at` present), that account is skipped by touch (already activated by refresh). If the post-refresh result still has `resets_at` absent, touch fires.
+- **Then:** Stderr timestamped diagnostic lines show refresh lifecycle before any touch lifecycle. Touch runs on post-refresh results — if refresh started a session (making `resets_at` present), that account is skipped by touch (already activated by refresh). If the post-refresh result still has `resets_at` absent, touch fires.
 - **Exit:** 0
 - **Live:** yes (lim_it — requires expired token + active 5h window)
 - **Source fn:** `it112_structural_refresh_before_touch_ordering_in_source` (in `tests/cli/usage_test.rs`)
@@ -155,11 +155,11 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 ---
 
-### FT-09: `trace=true` emits `[trace]` lines for touch subprocess lifecycle
+### FT-09: `trace=true` emits timestamped diagnostic lines for touch subprocess lifecycle
 
 - **Given:** One account with valid quota data and `resets_at` absent (idle — qualifies for touch); `touch::1 trace::1`.
 - **When:** `clp .usage touch::1 trace::1`
-- **Then:** Stderr contains `[trace]` lines showing the touch subprocess lifecycle steps (`read credentials`, `run_isolated` with elapsed time, `write credentials`, `save`). Lines include account name and subprocess status.
+- **Then:** Stderr contains timestamped diagnostic lines showing the touch subprocess lifecycle steps (`read credentials`, `run_isolated` with elapsed time, `write credentials`, `save`). Lines include account name and subprocess status.
 - **Exit:** 0
 - **Live:** yes (lim_it — requires idle account for subprocess to be triggered)
 - **Source fn:** `it115_lim_it_trace_1_shows_touch_lifecycle` (in `tests/cli/usage_test.rs`)
@@ -217,7 +217,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 - **Given:** Two accounts: one with `resets_at` present (already active — skip reason: "already active 5h window"); one with errored quota (no valid data — skip reason: Err). `touch::1 trace::1`.
 - **When:** `clp .usage touch::1 trace::1`
-- **Then:** Stderr contains `[trace] touch  <name>  skipped (reason: ...)` lines for each non-qualifying account. The `resets_at` present case and the errored case each produce a diagnostically distinct skip-reason line. No subprocess spawned for either account.
+- **Then:** Stderr contains timestamped `... · touch  <name>  skipped (reason: ...)` lines for each non-qualifying account. The `resets_at` present case and the errored case each produce a diagnostically distinct skip-reason line. No subprocess spawned for either account.
 - **Exit:** 0
 - **Source fn:** `it141_trace_skip_lines_emitted_for_non_qualifying_accounts` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-09, AC-12](../../../docs/feature/024_session_touch.md)
@@ -239,7 +239,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 - **Given:** `apply_touch` is called with one account whose `AccountQuota` has: `result = Ok(data)` with `seven_day_left = 0.0` (weekly quota fully exhausted), `five_hour_left = 100.0` (5h budget non-zero), and `five_hour.resets_at = None` (idle — no active 5h session). The 7d guard is present in `apply_touch`.
 - **When:** `apply_touch` processes this account.
-- **Then:** No subprocess is spawned (`refresh_account_token` is NOT called). The account is skipped with a trace line `[trace] touch  <name>  skipped (reason: 7d-exhausted)` (or equivalent). `apply_touch` returns after the skip without calling `run_isolated`.
+- **Then:** No subprocess is spawned (`refresh_account_token` is NOT called). The account is skipped with a timestamped trace line `... · touch  <name>  skipped (reason: 7d-exhausted)` (or equivalent). `apply_touch` returns after the skip without calling `run_isolated`.
 - **Exit:** N/A (unit test — no exit code)
 - **Source fn:** `test_mre_bug214_apply_touch_skips_7d_exhausted_account` (in `src/usage/touch_tests.rs`)
 - **Note:** BUG-214 MRE. Mirrors FT-13 (which tests the all-timers-running guard) and the h-exhausted guard test (BUG-178). The account passes the error guard and the 5h-idle guard but must be caught by the new 7d guard.
@@ -251,7 +251,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 - **Given:** `apply_touch` is called with one account whose `AccountQuota` has: `result = Ok(data)` with `five_hour.resets_at = Some(...)` (5h session active), `five_hour_left > 15.0` (not h-exhausted), `seven_day_left > 0.0` (not 7d-exhausted), and `seven_day.resets_at = None` (7d window timer absent — period exists but no active countdown). The 3-timer trigger is implemented.
 - **When:** `apply_touch` processes this account.
-- **Then:** The trigger fires — `refresh_account_token` IS called. The account is NOT skipped as "already active" because not all three timers are running. No `[trace] touch  <name>  skipped` line emitted.
+- **Then:** The trigger fires — `refresh_account_token` IS called. The account is NOT skipped as "already active" because not all three timers are running. No timestamped `... · touch  <name>  skipped` line emitted.
 - **Exit:** N/A (unit test — no exit code)
 - **Source fn:** `test_mre_bug215_apply_touch_fires_when_7d_timer_absent` (in `src/usage/touch_tests.rs`)
 - **Note:** BUG-215 MRE. The scenario where the 5h session is active but the 7d window was just reset (no `resets_at`) was incorrectly skipped as "already active" before the 3-timer fix. This test verifies the fix: touch fires whenever any timer is absent, not only when the 5h timer is absent.
@@ -275,9 +275,9 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 - **Given:** `apply_touch` is called with one account whose quota cache entry has `touch_idle = Some(false)` — written by `apply_post_switch_touch` at `api.rs:330-332` after its subprocess activated the account. The account's quota data shows `five_hour.resets_at = None` (would qualify for touch by timer state alone — the API has not yet propagated the new session's `resets_at` to the quota endpoint).
 - **When:** `apply_touch` evaluates skip conditions for that account (with `trace=true`).
-- **Then:** `apply_touch` reads `touch_idle = Some(false)` from the quota cache; skips the account before the `all_running` check without spawning a subprocess; emits `[trace] touch  <name>  skipped (reason: touch_idle=false)`.
+- **Then:** `apply_touch` reads `touch_idle = Some(false)` from the quota cache; skips the account before the `all_running` check without spawning a subprocess; emits a timestamped line `... · touch  <name>  skipped (reason: touch_idle=false)`.
 - **Exit:** N/A (unit test — no exit code)
-- **Source fn:** `test_mre_bug288_apply_touch_skips_touch_idle_false` (in `src/usage/touch_tests.rs`) — behavioral: writes `touch_idle=Some(false)` to quota cache for an idle account (`resets_at=None`), calls `apply_touch` with `trace=true`, asserts `[trace] touch  <name>  skipped (reason: touch_idle=false)` emitted (guard fires before `all_running` check; no subprocess spawned because `claude_paths=None`).
+- **Source fn:** `test_mre_bug288_apply_touch_skips_touch_idle_false` (in `src/usage/touch_tests.rs`) — behavioral: writes `touch_idle=Some(false)` to quota cache for an idle account (`resets_at=None`), calls `apply_touch` with `trace=true`, asserts a timestamped `... · touch  <name>  skipped (reason: touch_idle=false)` line emitted (guard fires before `all_running` check; no subprocess spawned because `claude_paths=None`).
 - **Note:** BUG-288 Fix B MRE (TSK-291). Before Fix B, `api.rs:330-332` wrote `touch_idle=false` with zero read sites — dead write. Fix B adds the read site at `touch.rs:59-66`. Defense-in-depth for API propagation lag: when the Anthropic API hasn't reflected the new session's `resets_at` at the quota endpoint by the time `.usage` runs (even after Fix A's re-fetch), the local `touch_idle=false` flag prevents a redundant subprocess.
 - **Source:** [feature/024_session_touch.md AC-16](../../../docs/feature/024_session_touch.md)
 
@@ -301,7 +301,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 - **Given:** `apply_touch` is called with one account (`alice`) whose `AccountQuota` has `is_owned = false` (set by G1 during fetch — `alice.json` contains `"owner": "other@remote"`). `trace::1` is enabled.
 - **When:** `apply_touch` processes the account list containing `alice`.
-- **Then:** No subprocess is spawned for `alice` (`refresh_account_token` is NOT called). Stderr contains `[trace] touch  alice  skipped (reason: not owned)`. The skip fires before any timer checks — `is_owned` is evaluated as the first guard after the error-account check.
+- **Then:** No subprocess is spawned for `alice` (`refresh_account_token` is NOT called). Stderr contains a timestamped line `... · touch  alice  skipped (reason: not owned)`. The skip fires before any timer checks — `is_owned` is evaluated as the first guard after the error-account check.
 - **Exit:** N/A (unit test — no exit code)
 - **Source fn:** `ft07_touch_skips_non_owned_with_trace` (in `src/usage/touch.rs` `#[cfg(test)]` module)
 - **Note:** G4 ownership gate from Feature 036 AC-07 / Feature 024 AC-17. Shared with Feature 036 FT-07 — same test function, both specs reference it. Trace format matches other touch skip traces (`skipped (reason: not owned)` — see AC-12 for full list of skip reasons).
@@ -313,7 +313,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 - **Given:** `apply_touch` is called with one account (`bob`) whose `AccountQuota` has `is_owned = true` (this machine is the credential owner) AND `is_occupied_elsewhere = true` (another machine's `_active_*` marker file names this account). `trace::1` is enabled.
 - **When:** `apply_touch` processes the account list containing `bob`.
-- **Then:** No subprocess is spawned for `bob` (`refresh_account_token` is NOT called). Stderr contains `[trace] touch  bob  skipped (reason: occupied elsewhere)`. The skip fires immediately after the `is_owned` check — `is_occupied_elsewhere` is evaluated as a second gate before any timer checks.
+- **Then:** No subprocess is spawned for `bob` (`refresh_account_token` is NOT called). Stderr contains a timestamped line `... · touch  bob  skipped (reason: occupied elsewhere)`. The skip fires immediately after the `is_owned` check — `is_occupied_elsewhere` is evaluated as a second gate before any timer checks.
 - **Exit:** N/A (unit test — no exit code)
 - **Source fn:** `ft_touch_skips_occupied_elsewhere_with_trace` (in `src/usage/touch.rs` `#[cfg(test)]` module)
 - **Note:** BUG-302 MRE. Complements FT-21 (non-owned account skip); this tests the occupancy case where ownership is confirmed but concurrent use by another machine prevents the touch subprocess. The two guards are independent: G4 (`!is_owned` → skip) and occupancy guard (`is_occupied_elsewhere` → skip). Trace reason string `"occupied elsewhere"` distinguishes this from the `"not owned"` reason of FT-21.

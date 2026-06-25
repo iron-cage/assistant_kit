@@ -10,6 +10,7 @@ use super::types::{ AccountQuota, SubprocessModel, SubprocessEffort };
 use super::subprocess::{ resolve_model, effort_pre_args };
 use super::fetch::{ read_token, parse_u64_from_str };
 use super::format::{ five_hour_left, seven_day_left };
+use claude_profile_core::account::trace_ts;
 
 // ── Touch ─────────────────────────────────────────────────────────────────────
 
@@ -47,14 +48,14 @@ pub( crate ) fn apply_touch(
   // Fires before G4 — avoids credential reads for solo-skipped accounts.
   if solo && !aq.is_current
   {
-    if trace { let _ = writeln!( std::io::stderr(), "[trace] touch  {}  solo-skip", aq.name ); }
+    if trace { let _ = writeln!( std::io::stderr(), "{}touch  {}  solo-skip", trace_ts(), aq.name ); }
     return;
   }
 
   // G4: Non-owned accounts are never touched — subprocess spawning on foreign credentials forbidden.
   if !aq.is_owned
   {
-    if trace { let _ = writeln!( std::io::stderr(), "[trace] touch  {}  skipped (reason: not owned)", aq.name ); }
+    if trace { let _ = writeln!( std::io::stderr(), "{}touch  {}  skipped (reason: not owned)", trace_ts(), aq.name ); }
     return;
   }
 
@@ -64,7 +65,7 @@ pub( crate ) fn apply_touch(
   //   occupied; both guards must fire independently, not as a combined condition.
   if aq.is_occupied_elsewhere
   {
-    if trace { let _ = writeln!( std::io::stderr(), "[trace] touch  {}  skipped (reason: occupied elsewhere)", aq.name ); }
+    if trace { let _ = writeln!( std::io::stderr(), "{}touch  {}  skipped (reason: occupied elsewhere)", trace_ts(), aq.name ); }
     return;
   }
 
@@ -74,7 +75,7 @@ pub( crate ) fn apply_touch(
   // Pitfall: multiple early-return guards each need their own trace emission.
   let Ok( ref data ) = aq.result else
   {
-    if trace { let _ = writeln!( std::io::stderr(), "[trace] touch  {}  skipped (reason: error account)", aq.name ); }
+    if trace { let _ = writeln!( std::io::stderr(), "{}touch  {}  skipped (reason: error account)", trace_ts(), aq.name ); }
     return;
   };
 
@@ -89,7 +90,7 @@ pub( crate ) fn apply_touch(
   {
     if cache.touch_idle == Some( false )
     {
-      if trace { let _ = writeln!( std::io::stderr(), "[trace] touch  {}  skipped (reason: touch_idle=false)", aq.name ); }
+      if trace { let _ = writeln!( std::io::stderr(), "{}touch  {}  skipped (reason: touch_idle=false)", trace_ts(), aq.name ); }
       return;
     }
   }
@@ -118,7 +119,7 @@ pub( crate ) fn apply_touch(
       let reason = if all_running    { "already active" }
         else if h_left  <= 15.0     { "h-exhausted"    }
         else                         { "7d-exhausted"   };
-      let _ = writeln!( std::io::stderr(), "[trace] touch  {}  skipped (reason: {})", aq.name, reason );
+      let _ = writeln!( std::io::stderr(), "{}touch  {}  skipped (reason: {})", trace_ts(), aq.name, reason );
     }
     return;
   }

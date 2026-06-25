@@ -40,7 +40,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-32 | `.usage.help` lists `live`, `interval`, `jitter` params | Help Output |
 | IT-33 | `refresh::1` per-account refresh loop — no panic, exit 0 (lim_it) | Token Refresh |
 | IT-34 | `.usage.help` refresh description includes "401/403" but NOT "401/403/429" | Help Output |
-| IT-35 | `trace::1` with no-token account → stderr contains `[trace]` lines | Trace |
+| IT-35 | `trace::1` with no-token account → stderr contains timestamped diagnostic lines | Trace |
 | IT-36 | Empty store + `format::json` → output is `[]` | Output Format |
 | IT-37 | Single failed account → no `Current` footer line emitted | Footer |
 | IT-38 | `.usage.help` shows `refresh::` default as `1` (enabled) | Help Output |
@@ -499,11 +499,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-35: `trace::1` with no-token account → stderr contains `[trace]` lines
+### IT-35: `trace::1` with no-token account → stderr contains timestamped diagnostic lines
 
 - **Given:** One saved account whose credential file has no `accessToken` field.
 - **When:** `clp .usage trace::1`
-- **Then:** Exits 0; stderr contains `[trace]` lines including the account name; stdout still shows the account row.
+- **Then:** Exits 0; stderr contains timestamped diagnostic lines including the account name; stdout still shows the account row.
 - **Exit:** 0
 - **Source fn:** `it034_trace_param_writes_to_stderr`
 - **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)

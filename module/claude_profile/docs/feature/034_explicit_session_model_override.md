@@ -4,7 +4,7 @@
 
 - **Purpose**: Allow users to set the `~/.claude/settings.json` model key explicitly from `.account.use` and `.usage`, bypassing the automatic `apply_model_override()` Sonnet→Opus threshold logic.
 - **Responsibility**: Documents the `set_model::` parameter, `validate_set_model()` value mapping, `set_session_model()` write path, override precedence over auto-override, and `default` removal behavior.
-- **In Scope**: `set_model::` parameter on `.account.use` and `.usage`; `validate_set_model()` validation function; `set_session_model()` write-to-settings implementation in `claude_profile_core`; precedence ordering ensuring explicit value wins over `apply_model_override()`; `default` value removes the `model` key; `[trace] account.use … set_model:` trace line on `.account.use` when `trace::1`.
+- **In Scope**: `set_model::` parameter on `.account.use` and `.usage`; `validate_set_model()` validation function; `set_session_model()` write-to-settings implementation in `claude_profile_core`; precedence ordering ensuring explicit value wins over `apply_model_override()`; `default` value removes the `model` key; timestamped `account.use  …  set_model:` diagnostic line on `.account.use` when `trace::1`.
 - **Out of Scope**: Subprocess model selection (→ 026_subprocess_model_effort.md `imodel::` parameter); interactive model picker in Claude Code UI; `apply_model_override()` Sonnet→Opus threshold logic when `set_model::` is absent (→ 027_account_use_post_switch_touch.md).
 
 ### Design
@@ -33,7 +33,7 @@ if let Some( ref sm ) = set_model_str
 {
   let model_id = validate_set_model( sm ).ok().flatten();
   set_session_model( &paths, model_id );
-  if trace { eprintln!( "[trace] account.use  {name}  set_model: {sm}" ) }
+  if trace { eprintln!( "{}account.use  {name}  set_model: {sm}", trace_ts() ) }
 }
 ```
 
@@ -52,7 +52,7 @@ if let Some( ref sm ) = set_model_str
 - **AC-03**: `set_model::haiku` writes `"model": "claude-haiku-4-5-20251001"` to `~/.claude/settings.json` on both commands.
 - **AC-04**: `set_model::default` removes the `"model"` key from `~/.claude/settings.json` on both commands; existing keys are unaffected.
 - **AC-05**: When `set_model::` is provided, `apply_model_override()` is NOT called — the explicit value is the final write to `settings.json`.
-- **AC-06**: On `.account.use` with `trace::1` and `set_model::X`: emits `[trace] account.use  {name}  set_model: X` to stderr after the credential rotation.
+- **AC-06**: On `.account.use` with `trace::1` and `set_model::X`: emits a timestamped diagnostic line: `... · account.use  {name}  set_model: X` to stderr after the credential rotation.
 - **AC-07**: `set_model::bad` exits 1 with stderr containing all four valid values: `opus`, `sonnet`, `haiku`, `default`.
 - **AC-08**: `set_model::` appears in `.account.use --help` and `.usage --help` output.
 - **AC-09**: `set_model::` does not affect `format::json` output structure or subprocess model selection (`imodel::` governs that).
@@ -79,7 +79,7 @@ if let Some( ref sm ) = set_model_str
 
 | File | Relationship |
 |------|--------------|
-| `src/commands/account_ops.rs` | `set_model_str` parsing, post-match `set_session_model()` call, `[trace]` emission |
+| `src/commands/account_ops.rs` | `set_model_str` parsing, post-match `set_session_model()` call, timestamped diagnostic line emission |
 | `src/usage/api.rs` | `.usage` session-model override block — `set_model` branch vs `apply_model_override` branch |
 | `src/usage/types.rs` | `validate_set_model()` — calls `map_model_shorthand()` inner function and formats error with `set_model::` prefix; four-value mapping |
 | `claude_profile_core/src/account.rs` | `set_session_model()` — read-merge-write on `~/.claude/settings.json` |

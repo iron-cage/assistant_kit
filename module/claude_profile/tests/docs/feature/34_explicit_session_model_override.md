@@ -15,7 +15,7 @@
 | FT-03 | AC-03 | `set_model::haiku` writes `claude-haiku-4-5-20251001` to `settings.json` | ✅ `ft03_set_model_haiku_writes_full_id` |
 | FT-04 | AC-04 | `set_model::default` removes `model` key; other keys preserved | ✅ `ft04_set_model_default_removes_key_preserves_others` |
 | FT-05 | AC-05 | Explicit `set_model::` wins over `switch_account` per-account model restore (`.account.use` path) | ✅ `ft05_explicit_set_model_wins_over_switch_restore` |
-| FT-06 | AC-06 | `trace::1` + `set_model::X` emits `[trace] account.use  {name}  set_model: X` | ✅ `ft06_trace_line_emitted_with_set_model` |
+| FT-06 | AC-06 | `trace::1` + `set_model::X` emits timestamped `... · account.use  {name}  set_model: X` | ✅ `ft06_trace_line_emitted_with_set_model` |
 | FT-07 | AC-07 | `set_model::bad` exits 1 with all four valid values in stderr | ✅ `ft07_set_model_bad_value_exits_1` |
 | FT-08 | AC-08 | `set_model::` appears in `--help` on `.account.use` and `.usage` | ✅ `ft08_set_model_appears_in_help_output` |
 | FT-09 | AC-09 | `set_model::` has no effect on `format::json` output or subprocess args | ✅ `ft09_set_model_no_set_model_key_in_json` |
@@ -91,7 +91,7 @@
 
 - **Given:** An account `alice` in the credential store.
 - **When:** `clp .account.use name::alice set_model::opus trace::1`
-- **Then:** Stderr contains `[trace] account.use  alice  set_model: opus`. Exits 0.
+- **Then:** Stderr contains a timestamped diagnostic line `... · account.use  alice  set_model: opus`. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft06_trace_line_emitted_with_set_model`
 - **Source:** [034_explicit_session_model_override.md AC-06](../../../docs/feature/034_explicit_session_model_override.md)

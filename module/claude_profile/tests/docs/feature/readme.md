@@ -13,7 +13,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | File | Responsibility |
 |------|----------------|
-| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 46 feature docs |
+| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 47 feature docs |
 | 01_account_store_init.md | FT cases for Feature 001 — Account Store Initialization |
 | 02_account_save.md | FT cases for Feature 002 — Save Account |
 | 03_account_list.md | FT cases for Feature 003 — Accounts |
@@ -60,6 +60,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 64_active_marker_and_owner_redesign.md | FT cases for Feature 064 — Active Marker and Owner Param Redesign |
 | 65_assignee_param_redesign.md | FT cases for Feature 065 — Assignee Param Redesign |
 | 66_dual_source_quota_parsing.md | FT cases for Feature 066 — Dual-Source OAuth Quota Parsing |
+| 67_trace_timestamps.md | FT cases for Feature 067 — Trace Timestamp Prefix |
 
 ### Coverage Summary
 
@@ -112,8 +113,9 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 064_active_marker_and_owner_redesign | [064_active_marker_and_owner_redesign.md](64_active_marker_and_owner_redesign.md) | FT-01 … FT-19 | ✅ |
 | 065_assignee_param_redesign | [065_assignee_param_redesign.md](65_assignee_param_redesign.md) | FT-01 … FT-13 | ✅ |
 | 066_dual_source_quota_parsing | [066_dual_source_quota_parsing.md](66_dual_source_quota_parsing.md) | FT-01 … FT-12 | ✅ |
+| 067_trace_timestamps | [067_trace_timestamps.md](67_trace_timestamps.md) | FT-01 … FT-07 | ✅ |
 
-**Total:** 47 specs — 46 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+**Total:** 48 specs — 47 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 
 ### Cross-Reference Depth
 

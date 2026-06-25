@@ -6,7 +6,7 @@ Test spec for `docs/feature/001_workspace_design.md`.
 
 | Case ID | Category | Status |
 |---------|----------|--------|
-| WD-1 | Workspace member completeness | ⏳ |
+| WD-1 | Workspace member completeness | ✅ |
 
 ## Cases
 

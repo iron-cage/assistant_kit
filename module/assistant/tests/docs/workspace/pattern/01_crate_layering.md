@@ -6,8 +6,8 @@ Test spec for `docs/pattern/001_crate_layering.md`.
 
 | Case ID | Category | Status |
 |---------|----------|--------|
-| CL-1 | No same-layer dependencies | ⏳ |
-| CL-2 | Downward-only dependency flow | ⏳ |
+| CL-1 | No same-layer dependencies | ✅ |
+| CL-2 | Downward-only dependency flow | ✅ |
 
 ## Cases
 

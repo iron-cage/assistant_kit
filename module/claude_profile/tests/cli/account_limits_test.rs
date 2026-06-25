@@ -408,8 +408,8 @@ fn it_trace_account_limits_accepted()
     "trace::1 must be accepted by .account.limits, got stderr:\n{err}",
   );
   assert!(
-    err.contains( "[trace]" ),
-    "trace::1 must emit [trace] lines to stderr for .account.limits, got:\n{err}",
+    err.contains( " · " ),
+    "trace::1 must emit trace lines to stderr for .account.limits, got:\n{err}",
   );
 }
 

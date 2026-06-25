@@ -10,7 +10,7 @@ use tempfile::TempDir;
 /// FT-15 / BUG-211 MRE — `apply_touch` does NOT write live credentials file (no `switch_account`).
 ///
 /// Fix(BUG-211): the snapshot+restore pattern was removed from `apply_touch`. With
-/// `trace=true`, no `[trace] touch  {name}  restore switch_account: OK/Err` line is
+/// `trace=true`, no restore `switch_account` trace line is
 /// emitted — the restore step no longer exists.
 ///
 /// # Root Cause
@@ -60,7 +60,7 @@ fn test_apply_touch_mre_bug208_restore_trace_emitted()
   // No credential file for test@example.com — refresh_account_token returns None.
   let mut aq = mk_aq_with_resets_at( None );
 
-  // trace=true: Fix(BUG-211) — no restore; no [trace] restore switch_account line emitted.
+  // trace=true: Fix(BUG-211) — no restore; no restore switch_account trace line emitted.
   apply_touch( &mut aq, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
   // Fix(BUG-211): no switch_account → live credentials file must NOT exist.
@@ -131,12 +131,12 @@ fn test_mre_bug214_apply_touch_skips_7d_exhausted_account()
     } );
   }
 
-  // Capture stderr — [trace] skip lines go to stderr via eprintln!.
+  // Capture stderr — timestamped skip lines go to stderr via eprintln!.
   let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // claude_paths=None: subprocess never spawns (no binary path) even if guard misses.
-  // trace=true: [trace] skip line emitted only when guard fires.
+  // trace=true: skip line emitted only when guard fires.
   apply_touch(
     &mut aq,
     store.path(),
@@ -150,7 +150,7 @@ fn test_mre_bug214_apply_touch_skips_7d_exhausted_account()
   let mut captured = String::new();
   stderr_buf.read_to_string( &mut captured ).unwrap();
 
-  // Fix: guard fires → "[trace] touch  test@example.com  skipped (reason: 7d-exhausted)".
+  // Fix: guard fires → "YYYY-MM-DD · HH:MM:SS · touch  test@example.com  skipped (reason: 7d-exhausted)".
   assert!(
     captured.contains( "7d-exhausted" ),
     "apply_touch must emit '7d-exhausted' trace for idle 7d-exhausted account; got:\n{captured}",
@@ -212,7 +212,7 @@ fn test_mre_bug215_apply_touch_fires_when_7d_timer_absent()
     } );
   }
 
-  // Capture stderr — [trace] skip lines go to stderr via eprintln!.
+  // Capture stderr — timestamped skip lines go to stderr via eprintln!.
   let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
@@ -310,12 +310,12 @@ fn test_mre_bug288_apply_touch_skips_touch_idle_false()
   // The touch_idle=false guard must intercept BEFORE the all_running check.
   let mut aq = mk_aq_with_resets_at( None );
 
-  // Capture stderr — [trace] skip line goes to stderr via eprintln!.
+  // Capture stderr — timestamped skip line goes to stderr via eprintln!.
   let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // claude_paths=None: subprocess never spawns regardless of guard outcome.
-  // trace=true: "[trace] touch  <name>  skipped (reason: touch_idle=false)" emitted by guard.
+  // trace=true: "YYYY-MM-DD · HH:MM:SS · touch  <name>  skipped (reason: touch_idle=false)" emitted by guard.
   apply_touch(
     &mut aq,
     store.path(),
@@ -913,11 +913,11 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
 
 // ── G4: non-owned accounts skipped by apply_touch ─────────────────────────
 
-/// FT-07 (AC-07): `apply_touch()` skips non-owned accounts; emits `[trace] ... not owned`.
+/// FT-07 (AC-07): `apply_touch()` skips non-owned accounts; emits timestamped trace with `not owned`.
 ///
 /// G4 gate fires when `aq.is_owned == false`:
 /// - No subprocess is spawned.
-/// - With `trace=true`: stderr contains `"[trace] touch  {name}  skipped (reason: not owned)"`.
+/// - With `trace=true`: stderr contains `" · touch  {name}  skipped (reason: not owned)"`.
 ///
 /// Pitfall: `mk_aq_with_resets_at` sets `is_owned=true`; must be overridden to `false`.
 ///
@@ -949,15 +949,15 @@ fn ft07_touch_skips_non_owned_with_trace()
     "FT-07: G4 gate must emit 'not owned' trace line; got:\n{captured}",
   );
   assert!(
-    captured.contains( "[trace] touch" ),
-    "FT-07: trace line must start with '[trace] touch'; got:\n{captured}",
+    captured.contains( " · touch  " ),
+    "FT-07: trace line must contain ' · touch  '; got:\n{captured}",
   );
 }
 
 // ── BUG-302 MRE: occupied-elsewhere accounts skipped by apply_touch ────────────
 
 /// EC-8 (061): `apply_touch` solo gate — non-current owned account is skipped with
-/// `[trace] touch  {name}  solo-skip` when `solo=true`.
+/// timestamped `touch  {name}  solo-skip` line when `solo=true`.
 ///
 /// With `solo=true`, the solo gate fires before G4 (non-owned check) for any account
 /// where `aq.is_current=false`. The account here is `is_owned=true` — without the solo
@@ -1003,7 +1003,7 @@ fn ec8_solo_gate_skips_non_current_with_trace()
 }
 
 /// FT-22 (AC-17): `apply_touch()` skips owned accounts with `is_occupied_elsewhere=true`;
-/// emits `[trace] ... occupied elsewhere`.
+/// emits timestamped trace with `occupied elsewhere`.
 ///
 /// # Root Cause
 /// G4 at `touch.rs:46` checked `!aq.is_owned` only. When `is_owned=true` and
@@ -1059,8 +1059,8 @@ fn ft_touch_skips_occupied_elsewhere_with_trace()
     "FT-22: occupancy guard must emit 'occupied elsewhere' trace line; got:\n{captured}",
   );
   assert!(
-    captured.contains( "[trace] touch" ),
-    "FT-22: trace line must start with '[trace] touch'; got:\n{captured}",
+    captured.contains( " · touch  " ),
+    "FT-22: trace line must contain ' · touch  '; got:\n{captured}",
   );
   // No subprocess must fire.
   assert!(

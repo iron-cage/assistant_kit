@@ -8,6 +8,7 @@ use super::shared::{
   require_nonempty_string_arg, is_dry, require_claude_paths, require_credential_store,
   io_err_to_error_data, resolve_account_name,
 };
+use claude_profile_core::account::trace_ts;
 
 /// `.account.use` — atomic credential rotation by name.
 ///
@@ -129,7 +130,7 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   {
     let model_id = crate::usage::validate_set_model( sm ).ok().flatten();
     claude_profile_core::account::set_session_model( &paths, model_id );
-    if trace { eprintln!( "[trace] account.use  {name}  set_model: {sm}" ) }
+    if trace { eprintln!( "{}account.use  {name}  set_model: {sm}", trace_ts() ) }
   }
 
   Ok( OutputData::new( format!( "switched to '{name}'\n" ), "text" ) )
@@ -184,7 +185,7 @@ fn check_expiry_and_refresh(
     if trace
     {
       let rem_s = ( exp_ms - now_ms ) / 1000;
-      eprintln!( "[trace] account.use  {name}  expiry check: valid (expires in {}h {}m)", rem_s / 3600, ( rem_s % 3600 ) / 60 );
+      eprintln!( "{}account.use  {name}  expiry check: valid (expires in {}h {}m)", trace_ts(), rem_s / 3600, ( rem_s % 3600 ) / 60 );
     }
     return crate::usage::PreSwitchOutcome::Unavailable;
   }
@@ -193,19 +194,19 @@ fn check_expiry_and_refresh(
   let m         = ( elapsed_s % 3600 ) / 60;
   if refresh != 0
   {
-    if trace { eprintln!( "[trace] account.use  {name}  expiry check: expired({h}h {m}m ago) → attempting refresh" ) }
+    if trace { eprintln!( "{}account.use  {name}  expiry check: expired({h}h {m}m ago) → attempting refresh", trace_ts() ) }
     let refreshed = crate::usage::attempt_expired_token_refresh( name, credential_store, paths, trace, imodel_str, effort_str );
     if refreshed
     {
-      if trace { eprintln!( "[trace] account.use  {name}  expiry check: refresh OK — re-probing touch context" ) }
+      if trace { eprintln!( "{}account.use  {name}  expiry check: refresh OK — re-probing touch context", trace_ts() ) }
       return crate::usage::pre_switch_touch_ctx( name, credential_store, trace, imodel_str, effort_str );
     }
-    if trace { eprintln!( "[trace] account.use  {name}  expiry check: refresh failed → refused" ) }
+    if trace { eprintln!( "{}account.use  {name}  expiry check: refresh failed → refused", trace_ts() ) }
     eprintln!( "account credentials expired and refresh failed: {name} (expired {h}h {m}m ago)" );
   }
   else
   {
-    if trace { eprintln!( "[trace] account.use  {name}  expiry check: expired({h}h {m}m ago) → refused (refresh::0)" ) }
+    if trace { eprintln!( "{}account.use  {name}  expiry check: expired({h}h {m}m ago) → refused (refresh::0)", trace_ts() ) }
     eprintln!( "account credentials expired: {name} (expired {h}h {m}m ago)" );
   }
   std::process::exit( 3 );
@@ -265,7 +266,7 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     }
   };
   let credential_store = require_credential_store()?;
-  if trace { eprintln!( "[trace] account.save  reading {}", paths.credentials_file().display() ) }
+  if trace { eprintln!( "{}account.save  reading {}", trace_ts(), paths.credentials_file().display() ) }
 
   // Validate name before dry-run check so dry-run rejects invalid names
   // instead of reporting "[dry-run] would save" for names that would fail.
@@ -298,7 +299,7 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   // Owner can only be set by write_owner() — no CLI-exposed set path.
   crate::account::save( &name, &credential_store, &paths, true, None, Some( &host_val ), Some( &role_val ), None )
     .map_err( |e| io_err_to_error_data( &e, "account save" ) )?;
-  if trace { eprintln!( "[trace] account.save  write: OK  host={host_val}  role={role_val}" ) }
+  if trace { eprintln!( "{}account.save  write: OK  host={host_val}  role={role_val}", trace_ts() ) }
 
   Ok( OutputData::new( format!( "saved current credentials as '{name}'\n" ), "text" ) )
 }
@@ -319,7 +320,7 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let raw_name         = require_nonempty_string_arg( &cmd, "name" )?;
   let credential_store = require_credential_store()?;
-  if trace { eprintln!( "[trace] account.delete  store: {}", credential_store.display() ) }
+  if trace { eprintln!( "{}account.delete  store: {}", trace_ts(), credential_store.display() ) }
   let name             = resolve_account_name( &raw_name, &credential_store )?;
   crate::account::check_delete_preconditions( &name, &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account delete" ) )?;

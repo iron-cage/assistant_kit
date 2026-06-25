@@ -39,14 +39,14 @@ if touch_param == 1:
         if account_quota.result is Err:
             // Skip: no valid quota
             if trace:
-                emit "[trace] touch  <name>  skipped (reason: Err)"
+                emit "... · touch  <name>  skipped (reason: Err)"
             continue
 
         // Fix(BUG-288-FixB): defense-in-depth — read local touch_idle cache flag before timer checks
         if read_quota_cache(credential_store, name) is Some(cache) AND cache.touch_idle == Some(false):
             // Skip: subprocess already activated this account; local flag not subject to API lag
             if trace:
-                emit "[trace] touch  <name>  skipped (reason: touch_idle=false)"
+                emit "... · touch  <name>  skipped (reason: touch_idle=false)"
             continue
 
         if all_running
@@ -54,7 +54,7 @@ if touch_param == 1:
            OR seven_day_left(account_quota) <= 0.0%:
             // Skip: all timers running; h-exhausted; or 7d-exhausted
             if trace:
-                emit "[trace] touch  <name>  skipped (reason: ...)"
+                emit "... · touch  <name>  skipped (reason: ...)"
             continue
         // Account qualifies: valid quota, at least one quota timer absent (not fully active)
         // refresh_account_token internally calls save(update_marker=false) — _active marker never written
@@ -75,7 +75,7 @@ render results as table
 
 **Interaction with `live::`:** In `live::1` mode, `touch::1` applies on every cycle. If any quota timer lapses between cycles (its `resets_at` becomes absent), touch will re-activate it on the next cycle. Accounts where all three timers remain active are not touched again — only accounts with at least one newly-absent timer are re-activated.
 
-**Ownership gate (G4):** When account ownership is enabled (Feature 036), `apply_touch()` skips accounts where `aq.is_owned == false` (owned by a different machine) OR `aq.is_occupied_elsewhere == true` (owned by this machine but another machine is actively using this account — BUG-302 fix). When `trace::1`, emits `[trace] touch  <name>  skipped (reason: not owned)` or `[trace] touch  <name>  skipped (reason: occupied elsewhere)` respectively. Spawning a touch subprocess on an account actively used by another machine creates a competing subprocess that contends with the remote session.
+**Ownership gate (G4):** When account ownership is enabled (Feature 036), `apply_touch()` skips accounts where `aq.is_owned == false` (owned by a different machine) OR `aq.is_occupied_elsewhere == true` (owned by this machine but another machine is actively using this account — BUG-302 fix). When `trace::1`, emits `... · touch  <name>  skipped (reason: not owned)` or `... · touch  <name>  skipped (reason: occupied elsewhere)` respectively. Spawning a touch subprocess on an account actively used by another machine creates a competing subprocess that contends with the remote session.
 
 **Subprocess cost:** Each touch spawns an isolated Claude Code subprocess (~35s timeout). With N idle accounts, this adds up to N * 35s. This is acceptable for the common case (a few idle accounts) but can be slow when many accounts are idle simultaneously. The parameter is on by default (`touch::1`); pass `touch::0` to suppress subprocess spawning when explicit control is needed.
 
@@ -91,15 +91,15 @@ render results as table
 - **AC-06**: After all touch operations complete, `apply_touch` does NOT call `switch_account`. The `_active` marker is not written during touch cycling (via `update_marker=false` in `save()` inside `refresh_account_token`), so no restore is needed. Fix for BUG-211.
 - **AC-07**: If the touch subprocess fails, the account's row shows its original quota data unchanged (touch failure is non-aborting).
 - **AC-08**: `touch::` does not affect `format::json` output structure — touched accounts appear as normal data objects with their re-fetched quota.
-- **AC-09**: When `trace=true`, every account processed by `apply_touch` emits a `[trace] touch` line: touched accounts show subprocess lifecycle steps (`read credentials`, `run_isolated` with elapsed time, `write credentials`, `save`); accounts skipped because they do not qualify (already active, or errored) emit a `[trace] touch  <name>  skipped (reason: ...)` line.
-- **AC-12**: When `trace=true`, accounts skipped by the touch trigger emit a skip-reason trace line covering all skip cases: all three timers running (already active — skip), h-exhausted (skip), 7d-exhausted (skip), `touch_idle=false` (subprocess already activated — Fix B, BUG-288, see AC-16), Err result (no valid quota), `not owned` (G4 ownership gate — Feature 036), and `occupied elsewhere` (G4 occupancy guard — BUG-302 fix). All skip cases are diagnostically distinct and produce a trace line.
-- **AC-17**: `apply_touch()` skips accounts where `aq.is_owned == false` (G4 ownership gate, Feature 036 AC-07) OR `aq.is_occupied_elsewhere == true` (G4 occupancy guard — BUG-302 fix). When `trace::1`, emits `[trace] touch  <name>  skipped (reason: not owned)` or `[trace] touch  <name>  skipped (reason: occupied elsewhere)` respectively. No subprocess is spawned for non-owned or currently-occupied accounts.
+- **AC-09**: When `trace=true`, every account processed by `apply_touch` emits a timestamped `touch` diagnostic line: touched accounts show subprocess lifecycle steps (`read credentials`, `run_isolated` with elapsed time, `write credentials`, `save`); accounts skipped because they do not qualify (already active, or errored) emit a `... · touch  <name>  skipped (reason: ...)` line.
+- **AC-12**: When `trace=true`, accounts skipped by the touch trigger emit a timestamped skip-reason diagnostic line covering all skip cases: all three timers running (already active — skip), h-exhausted (skip), 7d-exhausted (skip), `touch_idle=false` (subprocess already activated — Fix B, BUG-288, see AC-16), Err result (no valid quota), `not owned` (G4 ownership gate — Feature 036), and `occupied elsewhere` (G4 occupancy guard — BUG-302 fix). All skip cases are diagnostically distinct and produce a trace line.
+- **AC-17**: `apply_touch()` skips accounts where `aq.is_owned == false` (G4 ownership gate, Feature 036 AC-07) OR `aq.is_occupied_elsewhere == true` (G4 occupancy guard — BUG-302 fix). When `trace::1`, emits `... · touch  <name>  skipped (reason: not owned)` or `... · touch  <name>  skipped (reason: occupied elsewhere)` respectively. No subprocess is spawned for non-owned or currently-occupied accounts.
 - **AC-10**: `touch::` parameter appears in `.usage --help` output with its default value (`1`).
 - **AC-11**: In `live::1` mode with `touch::1` active, touch runs on every cycle. For each cycle where any quota timer is absent (any session window lapsed since last cycle), the touch trigger fires and a new session is started. The trigger does not fire for accounts where all three timers are present (all windows still active).
 - **AC-15**: Touch trigger checks all three quota window timers — `five_hour.resets_at`, `seven_day.resets_at`, and `seven_day_sonnet.resets_at`. An account qualifies for touch if any of these is absent (None), subject to the h-exhausted and 7d-exhausted skip guards. When the `seven_day` or `seven_day_sonnet` field itself is absent (account plan has no weekly-quota tracking), that dimension is treated as "running" and does not trigger touch — only a field-present timer with `resets_at = None` triggers.
 - **AC-13**: No `switch_account` call occurs in `apply_touch`. The previous AC-13 restore trace is superseded — trace output for touch lifecycle steps remains unchanged (per AC-09), but no `restore switch_account` line is emitted. Fix for BUG-211.
 - **AC-14**: Accounts with 7d weekly quota fully exhausted (`seven_day_left <= 0%`) are skipped by `apply_touch` even when idle (`five_hour.resets_at` absent) and 5h budget is non-zero. The Anthropic API does not open a new 5h session when the 7d budget is exhausted — spawning a subprocess for such accounts wastes wall time (~2.3s per account for a 429 rejection) and produces misleading `run_isolated: OK credentials=None` trace without establishing a session. Fixed in TSK-217 (Docker L3 ✅).
-- **AC-16**: `apply_touch` reads the quota cache (via `read_quota_cache`) after the error-account skip guard and before the `all_running` timer check. If the cache entry has `touch_idle = Some(false)` — the flag written by `apply_post_switch_touch` at `api.rs:330-332` after its subprocess activated the account — `apply_touch` skips that account without spawning a subprocess and emits `[trace] touch  <name>  skipped (reason: touch_idle=false)` when trace is enabled. Defense-in-depth for server-side quota propagation lag: even when Fix A's post-subprocess re-fetch returns `resets_at = None` (API hasn't propagated the new session yet), the local `touch_idle=false` flag prevents a redundant subprocess spawn. The `api.rs:330-332` write is no longer a dead write (zero read sites). Fix(BUG-288-FixB), TSK-291.
+- **AC-16**: `apply_touch` reads the quota cache (via `read_quota_cache`) after the error-account skip guard and before the `all_running` timer check. If the cache entry has `touch_idle = Some(false)` — the flag written by `apply_post_switch_touch` at `api.rs:330-332` after its subprocess activated the account — `apply_touch` skips that account without spawning a subprocess and emits `... · touch  <name>  skipped (reason: touch_idle=false)` when trace is enabled. Defense-in-depth for server-side quota propagation lag: even when Fix A's post-subprocess re-fetch returns `resets_at = None` (API hasn't propagated the new session yet), the local `touch_idle=false` flag prevents a redundant subprocess spawn. The `api.rs:330-332` write is no longer a dead write (zero read sites). Fix(BUG-288-FixB), TSK-291.
 - **AC-18**: After `fetch_oauth_usage` succeeds in the `apply_touch` re-fetch block, `write_quota_cache()` is called to persist fresh quota data to `{name}.json`, `aq.cached` is set to `false`, and `aq.cache_age_secs` is set to `None`. These three mutations must appear before `aq.result = Ok(new_data)` — h5/d7/sn are extracted from `new_data` by reference before it is moved. Fix(BUG-309). Mirrors AC-03 of Feature 033 and the equivalent Fix(BUG-256) in `apply_refresh`.
 
 ### Bugs

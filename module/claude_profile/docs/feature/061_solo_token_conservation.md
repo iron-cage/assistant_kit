@@ -35,9 +35,9 @@ No caller may read cache files directly when serving solo-skipped accounts. All 
 
 | Gate | Source file | Position | Skip condition | Trace emission |
 |------|-------------|----------|----------------|----------------|
-| Fetch | `src/usage/fetch.rs` | After `is_current` computed, before HTTP request | `solo && !(is_current && is_owned)` | `[trace] fetch {name} solo-skip: approximated (age: Ns)` |
-| Refresh | `src/usage/refresh.rs` | First gate in per-account loop | `solo && !aq.is_current` | `[trace] refresh {name} solo-skip` |
-| Touch | `src/usage/touch.rs` | First gate in per-account loop | `solo && !aq.is_current` | `[trace] touch {name} solo-skip` |
+| Fetch | `src/usage/fetch.rs` | After `is_current` computed, before HTTP request | `solo && !(is_current && is_owned)` | `... · fetch {name} solo-skip: approximated (age: Ns)` |
+| Refresh | `src/usage/refresh.rs` | First gate in per-account loop | `solo && !aq.is_current` | `... · refresh {name} solo-skip` |
+| Touch | `src/usage/touch.rs` | First gate in per-account loop | `solo && !aq.is_current` | `... · touch {name} solo-skip` |
 
 When the fetch gate fires, `approximate_quota()` is called and its result replaces the live fetch. When the refresh or touch gates fire, the account is skipped entirely — no subprocess is spawned.
 

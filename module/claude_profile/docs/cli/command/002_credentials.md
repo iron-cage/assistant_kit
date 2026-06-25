@@ -40,7 +40,7 @@ clp .credentials.status format::json
 | `capabilities::` | `bool` | `0` | Show product capabilities list from `~/.claude.json` (opt-in) |
 | `org_uuid::` | `bool` | `0` | Show organisation UUID from active account's `{name}.json` snapshot (opt-in) |
 | `org_name::` | `bool` | `0` | Show organisation display name from active account's `{name}.json` snapshot (opt-in) |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for the credential file read and each supplementary snapshot read |
+| `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for the credential file read and each supplementary snapshot read |
 
 **Algorithm (3 steps):**
 1. Read `~/.claude/.credentials.json`; read `_active_{hostname}_{user}` marker (best-effort)

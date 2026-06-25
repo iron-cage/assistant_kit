@@ -1429,8 +1429,8 @@ fn it_trace_accounts_accepted()
   );
   assert_exit( &out, 0 );
   assert!(
-    err.contains( "[trace]" ),
-    "trace::1 must emit [trace] lines to stderr for .accounts, got:\n{err}",
+    err.contains( " · " ),
+    "trace::1 must emit trace lines to stderr for .accounts, got:\n{err}",
   );
 }
 
@@ -1579,7 +1579,7 @@ fn ft01_accounts_accepts_32_params()
 #[ test ]
 /// FT-03 (AC-03): `.accounts` default — no HTTP fetch, no subprocess, identity column set.
 ///
-/// With `trace::1`, no `[trace] fetch` or `[trace] touch` lines should appear.
+/// With `trace::1`, no ` · fetch` or ` · touch` timestamp lines should appear.
 /// Owner column (default-on) must be present in output.
 ///
 /// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-03]
@@ -1598,12 +1598,12 @@ fn ft03_accounts_default_profile()
 
   let err = stderr( &out );
   assert!(
-    !err.contains( "[trace] fetch" ),
-    "FT-03: default .accounts must NOT produce [trace] fetch lines (no network call); got stderr:\n{err}",
+    !err.contains( " · fetch  " ),
+    "FT-03: default .accounts must NOT produce fetch trace lines (no network call); got stderr:\n{err}",
   );
   assert!(
-    !err.contains( "[trace] touch" ),
-    "FT-03: default .accounts must NOT produce [trace] touch lines; got stderr:\n{err}",
+    !err.contains( " · touch  " ),
+    "FT-03: default .accounts must NOT produce touch trace lines; got stderr:\n{err}",
   );
 
   let text = stdout( &out );
@@ -1811,7 +1811,7 @@ fn ft14_accounts_cols_modifier()
 #[ test ]
 /// FT-15 (AC-15, `lim_it`): `.accounts refresh::1` uses same fetch algorithm as `.usage`.
 ///
-/// Requires live API access. With a valid token, `[trace] fetch` lines appear in stderr.
+/// Requires live API access. With a valid token, timestamped ` · fetch` lines appear in stderr.
 ///
 /// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-15]
 fn lim_it_ft15_accounts_refresh_live()

@@ -229,7 +229,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 - **Given:** `refresh_account_token` is called via `apply_refresh` with `trace=true`; the credential file exists in the persistent store (so `read credentials` succeeds) AND `{fake_home}/.claude/` directory exists (so the write-credentials path has a valid parent if reached); `run_isolated` fails fast (no valid claude binary or fake token).
 - **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), true)` is called (unit test; equivalent to `clp .usage refresh::1 trace::1`)
-- **Then:** `[trace] refresh {name}  read credentials: OK` and `[trace] refresh {name}  run_isolated: invoking claude  args=["--print", "."]  timeout=35s` are emitted to stderr (in that order); `[trace] refresh {name}  run_isolated: Err(…)` or `OK credentials=None` follows; no panic; account result unchanged.
+- **Then:** A timestamped line `... · refresh {name}  read credentials: OK` and `... · refresh {name}  run_isolated: invoking claude  args=["--print", "."]  timeout=35s` are emitted to stderr (in that order); `... · refresh {name}  run_isolated: Err(…)` or `OK credentials=None` follows; no panic; account result unchanged.
 - **Source fn:** `test_apply_refresh_lifecycle_l010_trace_run_isolated_invoked_no_panic` (L10 in `usage.rs`), `art_some_paths_run_isolated_invoked_trace_no_panic` (in `account_refresh_test.rs`)
 - **Note:** Fix for BUG-166 — `refresh_account_token` previously had no `trace` parameter; all failure paths returned `None` silently without any diagnostic output. Testing uses "does not panic" pattern because nextest does not support reliable stderr assertion for `eprintln!` in unit tests.
 - **Source:** [017_token_refresh.md AC-26](../../../docs/feature/017_token_refresh.md)
@@ -252,7 +252,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 - **Given:** Active marker contains `"alice@example.com"`; `alice@example.com.credentials.json` exists in the persistent store; `{fake_home}/.claude/` directory exists; one account `"bob@example.com"` has a 401 error but no credential file in the persistent store.
 - **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), true)` is called with `trace=true` (unit test context; equivalent to `clp .usage refresh::1 trace::1`)
-- **Then:** `apply_refresh` returns without calling `switch_account`; `{fake_home}/.claude/.credentials.json` does NOT exist (no restore occurred); `{store}/_active_{hostname}_{user}` is unchanged (`"alice@example.com"`); no `[trace] refresh  {name}  restore switch_account:` line is emitted (restore step no longer exists).
+- **Then:** `apply_refresh` returns without calling `switch_account`; `{fake_home}/.claude/.credentials.json` does NOT exist (no restore occurred); `{store}/_active_{hostname}_{user}` is unchanged (`"alice@example.com"`); no timestamped `... · refresh  {name}  restore switch_account:` line is emitted (restore step no longer exists).
 - **Source fn:** `test_apply_refresh_mre_bug208_restore_trace_emitted` (in `src/usage/refresh_tests.rs`)
 - **Note:** Fix for BUG-211 — snapshot+restore removed from `apply_refresh`. Previous BUG-208 fix (restore trace instrumentation) is superseded: the entire restore block is gone, so there is no restore line to emit.
 - **Source:** [017_token_refresh.md AC-28](../../../docs/feature/017_token_refresh.md)

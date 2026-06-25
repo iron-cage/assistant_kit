@@ -44,7 +44,7 @@ This matches the pattern of G5/G6/G7 — gate evaluates before any mutation.
 | `name::` | Account name (full email address); no name inference | Yes |
 | `dry::` | Validate and print intent without writing | No |
 | `force::` | Bypass G8 ownership gate; allow any identity to unclaim | No |
-| `trace::` | Emit `[trace]` diagnostic lines to stderr | No |
+| `trace::` | Emit timestamped diagnostic lines to stderr | No |
 
 ### State Transition Pattern
 

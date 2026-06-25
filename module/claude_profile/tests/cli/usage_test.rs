@@ -47,7 +47,7 @@
 //! | it031 | `it031_usage_help_shows_live_params`             | `.usage.help` → exit 0, stdout contains `live`, `interval`, `jitter`     | P | no |
 //! | it032 | `it032_lim_it_refresh_per_account`               | real token + `refresh::1` → exit 0, account name visible (AC-19)         | P | yes |
 //! | it033 | `it033_mre_refresh_help_excludes_429`            | `.usage.help` refresh says 401/403 not 401/403/429 (BUG-279) | P | no |
-//! | it034 | `it034_trace_param_writes_to_stderr`             | `trace::1` with no-token account → stderr contains `[trace]` lines         | P | no |
+//! | it034 | `it034_trace_param_writes_to_stderr`             | `trace::1` with no-token account → stderr contains ` · ` timestamp lines   | P | no |
 //! | it035 | `it035_empty_store_json_format`                  | empty store + `format::json` → output is `[]`                              | P | no |
 //! | it036 | `it036_no_footer_when_no_valid_accounts`         | single failed account → no "Valid:" footer line                            | P | no |
 //! | it037 | `it037_mre_bug155_refresh_defaults_to_1`         | `.usage.help` shows "1 = enabled, default" for refresh (BUG-155)           | P | no |
@@ -62,10 +62,10 @@
 //! | it046 | `it046_jitter_0_explicit_live_accepted`              | `live::1 jitter::0` explicit zero guard passes (EC-1)     | P | no |
 //! | it047 | `it047_jitter_10_live_accepted`                      | `live::1 interval::30 jitter::10` guard passes (EC-2)     | P | no |
 //! | it048 | `it048_jitter_abc_rejected`                          | `jitter::abc` type error → exit 1 (EC-7)                  | N | no |
-//! | it049 | `it049_trace_0_no_trace_on_stderr`                   | `trace::0` explicit → no [trace] on stderr (EC-2)          | P | no |
+//! | it049 | `it049_trace_0_no_trace_on_stderr`                   | `trace::0` explicit → no ` · ` lines on stderr (EC-2)      | P | no |
 //! | it050 | `it050_trace_2_rejected`                             | `trace::2` out of range → exit 1 (EC-3)                    | N | no |
 //! | it051 | `it051_trace_yes_rejected`                           | `trace::yes` type error → exit 1 (EC-4)                    | N | no |
-//! | it052 | `it052_trace_default_off`                            | no `trace::` → no [trace] lines on stderr (EC-5)           | P | no |
+//! | it052 | `it052_trace_default_off`                            | no `trace::` → no ` · ` lines on stderr (EC-5)             | P | no |
 //! | it053 | `it053_sort_name_accepted`                         | `sort::name` + empty store → exit 0 (IT-44/AC-01)          | P | no |
 //! | it054 | ~~`it054_sort_endurance_accepted`~~                 | REMOVED — `sort::endurance` now rejected (see it249)       | - | no |
 //! | it055 | ~~`it055_sort_drain_accepted`~~                     | REMOVED — `sort::drain` now rejected (see it250)           | - | no |
@@ -129,7 +129,7 @@
 //! | it137 | `it137_sort_default_is_renew_structural`             | sort default is `SortStrategy::Renew` when no `sort::` arg given (TSK-193/TSK-220 AC-01 structural) | P | no |
 //! | it138 | ~~`it138_sort_next_resolves_to_drain_structural`~~   | REMOVED — `sort::next` and `NextStrategy` removed          | - | no |
 //! | it139 | ~~`it139_sort_next_resolves_to_endurance_structural`~~ | REMOVED — `sort::next` and `NextStrategy` removed        | - | no |
-//! | it141 | `it141_trace_skip_lines_emitted_for_non_qualifying_accounts` | `touch::1 trace::1` errored account → `[trace] touch <name> skipped (reason: error account)` (BUG-202 / 024 FT-14) | P | no |
+//! | it141 | `it141_trace_skip_lines_emitted_for_non_qualifying_accounts` | `touch::1 trace::1` errored account → ` · touch <name> skipped (reason: error account)` (BUG-202 / 024 FT-14) | P | no |
 //! | it142 | `it142_imodel_haiku_accepted_empty_store_exits_0`   | `imodel::haiku` accepted; empty store exits 0 (EC-11 / 035) | P | no |
 //! | it143 | `it143_effort_low_accepted_empty_store_exits_0`     | `effort::low` accepted; empty store exits 0 (EC-10 / 036) | P | no |
 //! | it144 | `it144_effort_normal_accepted_empty_store_exits_0`  | `effort::normal` accepted; empty store exits 0 (EC-11 / 036) | P | no |
@@ -1273,9 +1273,9 @@ fn it032_lim_it_refresh_per_account()
 
 // ── it034 ──────────────────────────────────────────────────────────────────────
 
-/// it034: `trace::1` with a no-token account → stderr contains `[trace]` lines.
+/// it034: `trace::1` with a no-token account → stderr contains timestamped diagnostic lines.
 ///
-/// `trace::1` causes `fetch_all_quota` to emit `[trace]` lines per account to
+/// `trace::1` causes `fetch_all_quota` to emit timestamped diagnostic lines per account to
 /// stderr — one before reading credentials and one after. With a credential file
 /// that has no `accessToken`, `read_token()` returns Err → trace emits
 /// "cannot read token: missing accessToken". This test confirms the `trace`
@@ -1292,8 +1292,8 @@ fn it034_trace_param_writes_to_stderr()
   assert_exit( &out, 0 );
   let err = stderr( &out );
   assert!(
-    err.contains( "[trace]" ),
-    "trace::1 must write [trace] lines to stderr, got:\n{err}",
+    err.contains( " · " ),
+    "trace::1 must write trace lines to stderr, got:\n{err}",
   );
   assert!(
     err.contains( "trace-acct" ),
@@ -1711,7 +1711,7 @@ fn it048_jitter_abc_rejected()
 
 // ── it049 ──────────────────────────────────────────────────────────────────────
 
-/// it049 (EC-2): `trace::0` explicit disable — no `[trace]` lines
+/// it049 (EC-2): `trace::0` explicit disable — no timestamped trace lines
 /// appear on stderr; exit 0.
 ///
 /// Uses a no-token account so the fetch path is exercised (increasing the chance
@@ -1728,8 +1728,8 @@ fn it049_trace_0_no_trace_on_stderr()
   assert_exit( &out, 0 );
   let err = stderr( &out );
   assert!(
-    !err.contains( "[trace]" ),
-    "trace::0 must not emit [trace] lines on stderr, got:\n{err}",
+    !err.contains( " · " ),
+    "trace::0 must not emit trace lines on stderr, got:\n{err}",
   );
 }
 
@@ -1776,10 +1776,10 @@ fn it051_trace_yes_rejected()
 
 // ── it052 ──────────────────────────────────────────────────────────────────────
 
-/// it052 (EC-5): default behavior (no `trace::` param) — no `[trace]`
-/// lines appear on stderr; trace is off by default (default = 0).
+/// it052 (EC-5): default behavior (no `trace::` param) — no timestamped
+/// trace lines appear on stderr; trace is off by default (default = 0).
 ///
-/// Uses a no-token account to exercise the fetch path; absence of `[trace]` lines
+/// Uses a no-token account to exercise the fetch path; absence of timestamped trace lines
 /// confirms the default is correctly set to disabled.
 /// Source: `tests/docs/cli/param/23_trace.md § EC-5`.
 #[ test ]
@@ -1793,8 +1793,8 @@ fn it052_trace_default_off()
   assert_exit( &out, 0 );
   let err = stderr( &out );
   assert!(
-    !err.contains( "[trace]" ),
-    "default (no trace:: param) must not emit [trace] lines on stderr, got:\n{err}",
+    !err.contains( " · " ),
+    "default (no trace:: param) must not emit trace lines on stderr, got:\n{err}",
   );
 }
 
@@ -3101,7 +3101,7 @@ fn it109_lim_it_touch_0_no_subprocess_idle_account_unchanged()
 /// it110 `lim_it` (FT-02 of feature/024 / EC-8): `touch::1` — subprocess observed via trace for idle account.
 ///
 /// When `touch::1` and the account has `five_hour.resets_at` absent (idle), a subprocess
-/// is invoked to activate the 5h session. With `trace::1`, stderr shows `[trace]` lines
+/// is invoked to activate the 5h session. With `trace::1`, stderr shows timestamped diagnostic lines
 /// for the subprocess lifecycle. Skips when the live account is in active state (`resets_at` present).
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-02]
@@ -3261,10 +3261,10 @@ fn it114_structural_touch_failure_non_aborting_guard_exists()
   );
 }
 
-/// it115 `lim_it` (FT-09 of feature/024): `trace::1` emits `[trace]` lines for touch subprocess lifecycle.
+/// it115 `lim_it` (FT-09 of feature/024): `trace::1` emits timestamped lines for touch subprocess lifecycle.
 ///
 /// With `touch::1 trace::1` and an account with `resets_at` absent (idle), stderr shows
-/// `[trace]` lines showing the subprocess lifecycle (`switch_account`, `run_isolated`). Skips when active.
+/// timestamped lines showing the subprocess lifecycle (`switch_account`, `run_isolated`). Skips when active.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
 #[ test ]
@@ -3292,8 +3292,8 @@ fn it115_lim_it_trace_1_shows_touch_lifecycle()
   assert_exit( &out, 0 );
   let err = stderr( &out );
   assert!(
-    err.contains( "[trace]" ),
-    "trace::1 must emit [trace] lines for touch subprocess lifecycle (FT-09), got stderr:\n{err}",
+    err.contains( " · " ),
+    "trace::1 must emit trace lines for touch subprocess lifecycle (FT-09), got stderr:\n{err}",
   );
 }
 
@@ -3782,8 +3782,8 @@ fn it132_apply_touch_trigger_is_is_none_structural()
 /// parameter so callers can inject `"touch"` or `"refresh"` to distinguish subprocess types
 /// in trace output. Currently all calls hardcode `"refresh"` making touch trace indistinguishable.
 ///
-/// RED:   `account.rs` contains `"[trace] refresh  {name}  switch_account: OK"` (hardcoded).
-/// GREEN: all calls use `{label}` variable; that literal string is absent.
+/// RED:   `account.rs` contained `"[trace] refresh  {name}  switch_account: OK"` (hardcoded label).
+/// GREEN: all calls use `{label}` variable; both that literal and all `[trace] ` literals are absent (Feature 067).
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
 ///       [`docs/feature/024_session_touch.md` AC-09]
@@ -3797,16 +3797,15 @@ fn it133_refresh_account_token_has_label_param_structural()
   assert!(
     !src.contains( "[trace] refresh  {name}  switch_account: OK" ),
     "TSK-192: `refresh_account_token()` must accept `label: &str` and use `{{label}}` in all\n\
-     trace `eprintln!` calls instead of the hardcoded string `\"refresh\"`.\n\
-     Add `label: &str` after `trace: bool` in the signature and replace all\n\
-     `\"[trace] refresh  {{name}}  ...\"` patterns with `\"[trace] {{label}}  {{name}}  ...\"`.",
+     trace calls instead of the hardcoded string `\"refresh\"`.\n\
+     Note: Feature 067 replaced all `[trace] ` literals with `trace_ts()` calls.",
   );
 }
 
 /// it134 (TSK-192 AC-09 structural): `apply_touch` call site passes `"touch"` label.
 ///
 /// The `refresh_account_token()` call in `apply_touch()` must pass the literal `"touch"`
-/// as the `label` argument so trace output reads `[trace] touch ...` (not `[trace] refresh ...`).
+/// as the `label` argument so trace output reads `YYYY-MM-DD · HH:MM:SS · touch ...` (not `… refresh …`).
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
 ///       [`docs/feature/024_session_touch.md` AC-09]
@@ -3823,7 +3822,7 @@ fn it134_apply_touch_passes_touch_label_structural()
 /// it135 (TSK-192 AC-09 structural): `apply_refresh` call site passes `"refresh"` label.
 ///
 /// The `refresh_account_token()` call in `apply_refresh()` must pass the literal `"refresh"`
-/// as the `label` argument so trace output reads `[trace] refresh ...`.
+/// as the `label` argument so trace output reads `YYYY-MM-DD · HH:MM:SS · refresh ...`.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
 ///       [`docs/feature/024_session_touch.md` AC-09]
@@ -3901,8 +3900,8 @@ fn it137_sort_default_is_renew_structural()
 ///
 /// ## Fix Applied
 ///
-/// Added `if trace { eprintln!("[trace] touch  {}  skipped (reason: error account)",
-/// aq.name); }` before the `return` in the `else` branch at line 1497.
+/// Added `if trace { eprintln!("{}touch  {}  skipped (reason: error account)", trace_ts(), aq.name); }`
+/// before the `return` in the `else` branch (now uses `trace_ts()` per Feature 067).
 ///
 /// ## Prevention
 ///
@@ -3915,7 +3914,7 @@ fn it137_sort_default_is_renew_structural()
 /// diagnostic contract requires visibility into all skip decisions.
 ///
 /// RED:   errored account has no touch trace line → assert fails.
-/// GREEN: error guard emits `[trace] touch  <name>  skipped (reason: error account)`.
+/// GREEN: error guard emits `YYYY-MM-DD · HH:MM:SS · touch  <name>  skipped (reason: error account)`.
 #[ test ]
 fn it141_trace_skip_lines_emitted_for_non_qualifying_accounts()
 {
@@ -3931,8 +3930,8 @@ fn it141_trace_skip_lines_emitted_for_non_qualifying_accounts()
   assert_exit( &out, 0 );
   let err = stderr( &out );
   assert!(
-    err.contains( "[trace] touch  err@x.com  skipped (reason: error account)" ),
-    "BUG-202: errored account must emit `[trace] touch  <name>  skipped (reason: error account)` \
+    err.contains( " · touch  err@x.com  skipped (reason: error account)" ),
+    "BUG-202: errored account must emit touch trace skipped (reason: error account) \
      when trace=true (AC-09/AC-12 of Feature 024). Got stderr:\n{err}",
   );
 }
@@ -6957,7 +6956,7 @@ fn it247_synthetic_row_suppressed_name_collision()
 ///
 /// With `only_active::1`, the pipeline must fetch quota data only for the account that has the
 /// active marker. Non-active accounts must be skipped (no HTTP fetch). `trace::1` makes each
-/// quota fetch observable: every actual HTTP call produces a `[trace] ... result:` line on
+/// quota fetch observable: every actual HTTP call produces a timestamped ` · ... result:` line on
 /// stderr. Exactly 1 such line must appear; N lines would indicate the pipeline violation
 /// tracked in BUG-245/BUG-246.
 ///
@@ -6988,11 +6987,11 @@ fn it_ft028_17_only_active_single_http_fetch()
   assert_exit( &out, 0 );
   let err = stderr( &out );
 
-  // Count lines that are both [trace] lines and contain "result:" — each corresponds to
+  // Count lines that are both timestamp-prefixed and contain "result:" — each corresponds to
   // one HTTP fetch attempt.
   let result_lines : Vec< &str > = err
     .lines()
-    .filter( |l| l.contains( "[trace]" ) && l.contains( "result:" ) )
+    .filter( |l| l.contains( " · " ) && l.contains( "result:" ) )
     .collect();
 
   assert_eq!(
@@ -7757,7 +7756,7 @@ fn it256_who_true_rejected_kind_integer()
 }
 
 /// it271 (036 FT-24): G1b gate — owned account occupied on another machine is
-/// skipped with `[trace] fetch  <name>  skipped (reason: occupied elsewhere)`.
+/// skipped with `YYYY-MM-DD · HH:MM:SS · fetch  <name>  skipped (reason: occupied elsewhere)`.
 ///
 /// # Root Cause
 /// `fetch_quota_for_list()` computed `occupied_elsewhere` at line 74 but used it
@@ -7811,7 +7810,7 @@ fn mre_bug305_fetch_skips_occupied_elsewhere_with_trace()
 
   // G1b skip trace must be present.
   assert!(
-    err.contains( "occupied elsewhere" ) && err.contains( "[trace] fetch" ),
+    err.contains( "occupied elsewhere" ) && err.contains( " · fetch  " ),
     "FT-24: G1b skip trace must contain 'occupied elsewhere' in a fetch trace line; got:\n{err}",
   );
 

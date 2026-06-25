@@ -6,8 +6,8 @@ Test spec for `docs/invariant/002_versioning_strategy.md`.
 
 | Case ID | Category | Status |
 |---------|----------|--------|
-| VS-1 | Shared version declared | ⏳ |
-| VS-2 | Non-override crates inherit workspace version | ⏳ |
+| VS-1 | Shared version declared | ✅ |
+| VS-2 | Non-override crates inherit workspace version | ✅ |
 
 ## Cases
 

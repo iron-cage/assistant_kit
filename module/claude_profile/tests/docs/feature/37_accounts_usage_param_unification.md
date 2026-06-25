@@ -38,7 +38,7 @@
 ### Notes
 
 - FT-01 and FT-02 are structural registration tests: run `.accounts` and `.usage` with each of the 32 params set to a valid value and verify exit 0; then try an unknown param and verify exit 1 with error message.
-- FT-03 verifies `.accounts` default behavior without `refresh::1` or `touch::1`: no network calls, no subprocesses. Use `trace::1` to assert no `[trace] fetch` or `[trace] touch` lines appear.
+- FT-03 verifies `.accounts` default behavior without `refresh::1` or `touch::1`: no network calls, no subprocesses. Use `trace::1` to assert no timestamped `fetch` or `touch` diagnostic lines appear.
 - FT-04 verifies `.usage` default behavior includes Owner column in output and that `sort::renew` ordering is applied without explicit `sort::` param.
 - FT-05 is an integration test via `./verb/test` — identical to the former FT-02 in `36_account_ownership.md` but via `accounts owner::0 name::alice` (Feature 064; formerly `unclaim::1`).
 - FT-06 verifies G8 gate: non-owner caller on `.accounts owner::0 name::X` exits 1 before `dry::1` is checked (Feature 064).
@@ -89,7 +89,7 @@
 
 - **Given:** Credential store with accounts including at least one non-expired account. No explicit `refresh::` or `touch::` param.
 - **When:** `clp .accounts trace::1` is executed.
-- **Then:** Exits 0. No `[trace] fetch` or `[trace] touch` lines in output. Output columns include Account, Owner, Active, Current, Sub, Tier, Expires, Email (identity set). Rows sorted alphabetically by account name. No HTTP call performed.
+- **Then:** Exits 0. No timestamped `fetch` or `touch` diagnostic lines in output. Output columns include Account, Owner, Active, Current, Sub, Tier, Expires, Email (identity set). Rows sorted alphabetically by account name. No HTTP call performed.
 - **Exit:** 0
 - **Source fn:** `ft03_accounts_default_profile`
 - **Source:** [037_accounts_usage_param_unification.md AC-03](../../../docs/feature/037_accounts_usage_param_unification.md)
@@ -100,7 +100,7 @@
 
 - **Given:** Credential store with at least one owned account with known quota data.
 - **When:** `clp .usage trace::1` is executed.
-- **Then:** Exits 0. `[trace] fetch` lines appear (live fetch active). Output columns include Status, Account, Owner, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, ~Renews, → Next (quota set). Owner column shows owner identity. Rows sorted by `~Renews` (soonest first).
+- **Then:** Exits 0. timestamped `fetch` diagnostic lines appear (live fetch active). Output columns include Status, Account, Owner, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, ~Renews, → Next (quota set). Owner column shows owner identity. Rows sorted by `~Renews` (soonest first).
 - **Exit:** 0
 - **Source fn:** `f37_ft04_usage_default_profile` (`usage_feature_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-04](../../../docs/feature/037_accounts_usage_param_unification.md)
@@ -224,9 +224,9 @@
 
 - **Given:** Credential store with at least one owned account. Network accessible.
 - **When (case A):** `clp .accounts refresh::1 trace::1` is executed; separately, `clp .usage trace::1` is executed.
-- **Then (case A):** Both produce `[trace] fetch` lines; quota columns in `.accounts refresh::1` output match values in `.usage` output for same accounts.
+- **Then (case A):** Both produce timestamped `fetch` diagnostic lines; quota columns in `.accounts refresh::1` output match values in `.usage` output for same accounts.
 - **When (case B):** `clp .accounts touch::1 trace::1` is executed.
-- **Then (case B):** `[trace] touch` lines appear; same accounts touched as `.usage touch::1` would touch.
+- **Then (case B):** timestamped `touch` diagnostic lines appear; same accounts touched as `.usage touch::1` would touch.
 - **Exit:** 0
 - **Source fn:** `lim_it_ft15_accounts_refresh_live (accounts_test.rs)`
 - **Source:** [037_accounts_usage_param_unification.md AC-15](../../../docs/feature/037_accounts_usage_param_unification.md)

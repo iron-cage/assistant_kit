@@ -371,8 +371,8 @@ fn it_trace_token_status_accepted()
   );
   assert_exit( &out, 0 );
   assert!(
-    err.contains( "[trace]" ),
-    "trace::1 must emit [trace] lines to stderr for .token.status, got:\n{err}",
+    err.contains( " · " ),
+    "trace::1 must emit trace lines to stderr for .token.status, got:\n{err}",
   );
 }
 
@@ -394,7 +394,7 @@ fn it_trace_paths_accepted()
   );
   assert_exit( &out, 0 );
   assert!(
-    err.contains( "[trace]" ),
-    "trace::1 must emit [trace] lines to stderr for .paths, got:\n{err}",
+    err.contains( " · " ),
+    "trace::1 must emit trace lines to stderr for .paths, got:\n{err}",
   );
 }

@@ -6,6 +6,7 @@
 use unilang::data::{ ErrorCode, ErrorData };
 use super::types::AccountQuota;
 use super::format::token_exp_label;
+use claude_profile_core::account::trace_ts;
 
 // ── Token reader ──────────────────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ fn inject_synthetic_if_new( results : &mut Vec< AccountQuota >, row : AccountQuo
 /// When `stagger` is `true`, each account fetch is preceded by a pseudo-random sleep
 /// of 200–1500 ms (thunder-herd mitigation for live monitor mode).
 ///
-/// When `trace` is `true`, one `[trace]` line is written to stderr before reading
+/// When `trace` is `true`, one timestamped diagnostic line is written to stderr before reading
 /// each account's credentials and one after the final result is determined (including
 /// any `billing_type` override — see AC-31).
 #[ allow( clippy::too_many_lines ) ]
@@ -97,7 +98,7 @@ pub( crate ) fn fetch_quota_for_list(
     let owner = claude_profile_core::account::read_owner( credential_store, &acct.name );
     if !claude_profile_core::account::is_owned( &owner )
     {
-      if trace { eprintln!( "[trace] fetch  {}  skipped (reason: not owned)", acct.name ); }
+      if trace { eprintln!( "{}fetch  {}  skipped (reason: not owned)", trace_ts(), acct.name ); }
       let ( host, role )                        = read_profile_metadata( credential_store, &acct.name );
       let renewal_at                            = read_renewal_at( credential_store, &acct.name );
       let ( result, cached, cache_age_secs ) = match read_cached_quota( credential_store, &acct.name, now_secs )
@@ -142,7 +143,7 @@ pub( crate ) fn fetch_quota_for_list(
       let age_hint = aq.cache_age_secs.unwrap_or( 0 );
       if trace
       {
-        eprintln!( "[trace] fetch  {}  solo-skip: approximated (age: {}s)", acct.name, age_hint );
+        eprintln!( "{}fetch  {}  solo-skip: approximated (age: {}s)", trace_ts(), acct.name, age_hint );
       }
       results.push( aq );
       continue;
@@ -156,7 +157,7 @@ pub( crate ) fn fetch_quota_for_list(
     //   and AFTER the solo gate (solo preempts G1b when both conditions overlap).
     if !is_current && occupied_elsewhere.contains( &acct.name )
     {
-      if trace { eprintln!( "[trace] fetch  {}  skipped (reason: occupied elsewhere)", acct.name ); }
+      if trace { eprintln!( "{}fetch  {}  skipped (reason: occupied elsewhere)", trace_ts(), acct.name ); }
       let aq = approximate_quota( acct, credential_store, is_current, true, now_secs );
       results.push( aq );
       continue;
@@ -167,7 +168,7 @@ pub( crate ) fn fetch_quota_for_list(
     // Pitfall: expires_at_ms is in milliseconds; now_secs is in seconds — divide before comparing.
     let ( result, account ) = if acct.expires_at_ms / 1000 <= now_secs
     {
-      if trace { eprintln!( "[trace] {}  token expired (local) — skipping API calls", acct.name ); }
+      if trace { eprintln!( "{}{}  token expired (local) — skipping API calls", trace_ts(), acct.name ); }
       ( Err( "token expired (local)".to_string() ), None )
     }
     else
@@ -175,7 +176,7 @@ pub( crate ) fn fetch_quota_for_list(
       if trace
       {
         let creds_path = credential_store.join( format!( "{}.credentials.json", acct.name ) );
-        eprintln!( "[trace] {}  reading {}", acct.name, creds_path.display() );
+        eprintln!( "{}{}  reading {}", trace_ts(), acct.name, creds_path.display() );
       }
       match read_token( credential_store, &acct.name )
       {
@@ -192,7 +193,8 @@ pub( crate ) fn fetch_quota_for_list(
           {
             let prefix = if token.len() >= 20 { &token[ ..20 ] } else { &token };
             eprintln!(
-              "[trace] {}  GET {}  token={}...  exp={}",
+              "{}{}  GET {}  token={}...  exp={}",
+              trace_ts(),
               acct.name,
               claude_quota::OAUTH_USAGE_URL,
               prefix,
@@ -221,15 +223,15 @@ pub( crate ) fn fetch_quota_for_list(
           {
             match &r
             {
-              Ok( _ )  => eprintln!( "[trace] {}  result: OK", acct.name ),
-              Err( e ) => eprintln!( "[trace] {}  result: Err({})", acct.name, e ),
+              Ok( _ )  => eprintln!( "{}{}  result: OK", trace_ts(), acct.name ),
+              Err( e ) => eprintln!( "{}{}  result: Err({})", trace_ts(), acct.name, e ),
             }
           }
           ( r, account_data )
         }
         Err( e ) =>
         {
-          if trace { eprintln!( "[trace] {}  cannot read token: {}", acct.name, e ); }
+          if trace { eprintln!( "{}{}  cannot read token: {}", trace_ts(), acct.name, e ); }
           ( Err( e ), None )
         }
       }
@@ -685,7 +687,7 @@ mod tests
   /// Result trace must be emitted AFTER the Class A `billing_type` override.
   ///
   /// # Root Cause
-  /// The `[trace] result:` block preceded `account_handle.join()` and the Class A override
+  /// The result trace block preceded `account_handle.join()` and the Class A override
   /// (BUG-233 fix). For `billing_type="none"` accounts the raw API result (Ok or 429) can
   /// differ from the stored result (`Err("no subscription")`), making the trace misleading.
   ///
@@ -714,7 +716,7 @@ mod tests
     let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/fetch.rs" ) );
     let override_pos = src.find( r#"a.billing_type == "none" ) && r.is_err() { Err( "no subscription""# )
       .expect( "BUG-234: Class A billing_type override not found in fetch.rs" );
-    let trace_pos = src.find( r#"eprintln!( "[trace] {}  result: OK""# )
+    let trace_pos = src.find( r#"eprintln!( "{}{}  result: OK""# )
       .expect( "BUG-234: result: OK trace line not found in fetch.rs" );
     assert!(
       override_pos < trace_pos,

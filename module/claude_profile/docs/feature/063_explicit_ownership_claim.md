@@ -18,7 +18,7 @@
 3. If `dry::1`: print `[dry-run] would set owner of {name} to {value}` → exit 0; no file writes
 4. Call `write_owner(name, credential_store, value)` — writes `"owner": "{value}"` to `{name}.json`
 5. Print: `owned {name} by {value}`
-6. If `trace::1`: emit `[trace] accounts owner  write_owner: OK  name={name} identity={value}`
+6. If `trace::1`: emit `... · accounts owner  write_owner: OK  name={name} identity={value}`
 
 **Value format:** The `owner::` value is an opaque string written as-is to the `owner` field. The conventional format is `USER@HOSTNAME` (matching `current_identity()` output), but the field accepts any non-empty string. An empty `owner::` value is rejected (use `owner::0` to clear — Feature 064).
 
@@ -45,7 +45,7 @@ This matches the G8 pattern used by `owner::0` (Feature 064).
 - **AC-05**: `clp .accounts owner::` (empty value) exits 1 with error directing user to `owner::0` for ownership release. (Former `unclaim::1` mutual exclusion no longer applies — `unclaim::` is now REMOVED; `owner::0` is the release sentinel.)
 - **AC-06**: `clp .accounts owner::user1@w003 name::X dry::1` prints `[dry-run] would set owner of {name} to user1@w003`; exits 0; no files written.
 - **AC-07**: `clp .accounts owner::user1@w003 name::X force::1` when account is owned by a different identity → G8 bypassed → `write_owner()` succeeds; exits 0.
-- **AC-08**: `clp .accounts owner::user1@w003 name::X trace::1` emits `[trace] accounts owner  write_owner: OK  name={name} identity=user1@w003` to stderr.
+- **AC-08**: `clp .accounts owner::user1@w003 name::X trace::1` emits `... · accounts owner  write_owner: OK  name={name} identity=user1@w003` to stderr.
 - **AC-09**: Prefix resolution: `owner::user1@w003 name::ill` resolves `ill` to the full account email if unambiguous.
 - **AC-10**: `owner::` with empty value exits 1 with error directing user to use `owner::0` to clear ownership.
 - **AC-11**: After setting owner, all G1–G8 gates respect the new owner on subsequent operations from any identity.

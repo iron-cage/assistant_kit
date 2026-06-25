@@ -1,6 +1,6 @@
 # Parameter :: 23. `trace::`
 
-When enabled, writes `[trace]` diagnostic lines to stderr for internal operations performed by any `clp` command: file reads, API calls, subprocess lifecycle steps, and multi-step operation outcomes.
+When enabled, writes timestamped diagnostic lines to stderr (prefix format: `YYYY-MM-DD · HH:MM:SS · `, UTC) for internal operations performed by any `clp` command: file reads, API calls, subprocess lifecycle steps, and multi-step operation outcomes.
 
 - **Default:** `0` (off — no diagnostic output)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`; ignored in live monitor mode (`live::1`)
@@ -10,43 +10,44 @@ When enabled, writes `[trace]` diagnostic lines to stderr for internal operation
 
 ```text
 trace::0   → no diagnostic output (default)
-trace::1   → print [trace] lines to stderr; stdout output unchanged
+trace::1   → print timestamped diagnostic lines to stderr; stdout output unchanged
 ```
 
 **Notes:**
 - Output goes to stderr so it does not interfere with `format::json` parsing on stdout.
+- Each diagnostic line is prefixed with a UTC timestamp in `YYYY-MM-DD · HH:MM:SS · ` format, enabling correlation with watchdog and other time-stamped output.
 - Token values in GET lines are truncated to the first 20 characters followed by `...` (`sk-ant-oA3Txy6P1wRmV2...`).
 - The fetch phase emits one `reading` line, one `GET` line (with token prefix and expiry status), and one `result` line per account. The refresh phase emits one `should_retry` line per account, then detailed lifecycle step lines from `refresh_account_token` for accounts where a refresh is attempted.
 - Full trace output for an expired account whose OAuth refresh succeeds:
   ```
-  [trace] alice@example.com  reading /home/user/.pro/.../alice@example.com.credentials.json
-  [trace] alice@example.com  GET https://api.anthropic.com/api/oauth/usage  token=sk-ant-oA3Txy6P1w...  exp=expired(2d 3h ago)
-  [trace] alice@example.com  result: Err(HTTP transport error: HTTP 401)
-  [trace] refresh  alice@example.com  should_retry=true (reason: HTTP transport error: HTTP 401)
-  [trace] refresh  alice@example.com  attempting token refresh
-  [trace] refresh  alice@example.com  read credentials: OK
-  [trace] refresh  alice@example.com  run_isolated: invoking claude  args=["--print", "."]  timeout=35s
-  [trace] refresh  alice@example.com  run_isolated: OK credentials=Some
-  [trace] refresh  alice@example.com  write credentials: OK
-  [trace] refresh  alice@example.com  save: OK
-  [trace] refresh  alice@example.com  token refreshed, retrying quota fetch
-  [trace] refresh  alice@example.com  retry OK
-  [trace] refresh  alice@example.com  restore switch_account: OK
+  2026-06-25 · 16:40:04 · alice@example.com  reading /home/user/.pro/.../alice@example.com.credentials.json
+  2026-06-25 · 16:40:04 · alice@example.com  GET https://api.anthropic.com/api/oauth/usage  token=sk-ant-oA3Txy6P1w...  exp=expired(2d 3h ago)
+  2026-06-25 · 16:40:04 · alice@example.com  result: Err(HTTP transport error: HTTP 401)
+  2026-06-25 · 16:40:04 · refresh  alice@example.com  should_retry=true (reason: HTTP transport error: HTTP 401)
+  2026-06-25 · 16:40:04 · refresh  alice@example.com  attempting token refresh
+  2026-06-25 · 16:40:04 · refresh  alice@example.com  read credentials: OK
+  2026-06-25 · 16:40:04 · refresh  alice@example.com  run_isolated: invoking claude  args=["--print", "."]  timeout=35s
+  2026-06-25 · 16:40:04 · refresh  alice@example.com  run_isolated: OK credentials=Some
+  2026-06-25 · 16:40:04 · refresh  alice@example.com  write credentials: OK
+  2026-06-25 · 16:40:04 · refresh  alice@example.com  save: OK
+  2026-06-25 · 16:40:04 · refresh  alice@example.com  token refreshed, retrying quota fetch
+  2026-06-25 · 16:40:04 · refresh  alice@example.com  retry OK
+  2026-06-25 · 16:40:04 · refresh  alice@example.com  restore switch_account: OK
   ```
 - For a rate-limited account with a non-expired token (refresh not triggered):
   ```
-  [trace] alice@example.com  GET https://api.anthropic.com/api/oauth/usage  token=sk-ant-oA3Txy6P1w...  exp=valid(1h 22m left)
-  [trace] alice@example.com  result: Err(HTTP transport error: HTTP 429)
-  [trace] refresh  alice@example.com  should_retry=false (reason: HTTP transport error: HTTP 429)
+  2026-06-25 · 16:40:04 · alice@example.com  GET https://api.anthropic.com/api/oauth/usage  token=sk-ant-oA3Txy6P1w...  exp=valid(1h 22m left)
+  2026-06-25 · 16:40:04 · alice@example.com  result: Err(HTTP transport error: HTTP 429)
+  2026-06-25 · 16:40:04 · refresh  alice@example.com  should_retry=false (reason: HTTP transport error: HTTP 429)
   ```
 - Full `.account.use` trace when quota fetch succeeds (subprocess always dispatched; Fix(BUG-285)):
   ```
-  [trace] account.use  alice@home.com  reading /home/user/.pro/.../alice@home.com.credentials.json
-  [trace] account.use  alice@home.com  reading: OK
-  [trace] account.use  alice@home.com  quota fetch: OK
-  [trace] account.use  alice@home.com  subprocess: scheduled (idle check removed)
-  [trace] account.use  alice@home.com  model: claude-opus-4-6  effort: low
-  [trace] account.use  alice@home.com  subprocess: spawned
+  2026-06-25 · 16:40:04 · account.use  alice@home.com  reading /home/user/.pro/.../alice@home.com.credentials.json
+  2026-06-25 · 16:40:04 · account.use  alice@home.com  reading: OK
+  2026-06-25 · 16:40:04 · account.use  alice@home.com  quota fetch: OK
+  2026-06-25 · 16:40:04 · account.use  alice@home.com  subprocess: scheduled (idle check removed)
+  2026-06-25 · 16:40:04 · account.use  alice@home.com  model: claude-opus-4-6  effort: low
+  2026-06-25 · 16:40:04 · account.use  alice@home.com  subprocess: spawned
   ```
 
 ### Referenced Type

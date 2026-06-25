@@ -5,6 +5,7 @@ use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use super::shared::{ is_dry, require_claude_paths, require_credential_store, io_err_to_error_data, resolve_account_name };
+use claude_profile_core::account::trace_ts;
 
 /// `.account.relogin` — force browser re-authentication for a named account with dead refreshToken.
 ///
@@ -25,7 +26,7 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
-  if trace { eprintln!( "[trace] account.relogin  store: {}", credential_store.display() ) }
+  if trace { eprintln!( "{}account.relogin  store: {}", trace_ts(), credential_store.display() ) }
   let raw_name         = match cmd.arguments.get( "name" )
   {
     Some( Value::String( s ) ) if !s.is_empty() => s.clone(),

@@ -46,7 +46,7 @@ fn secs_to_hms_utc( unix_secs : u64 ) -> String
 ///
 /// Timing is governed by `params.interval` (minimum seconds between cycles, ≥ 30)
 /// and `params.jitter` (maximum random seconds added per cycle, 0 = none).
-/// When `params.trace` is `true`, per-account `[trace]` lines are emitted to stderr.
+/// When `params.trace` is `true`, per-account timestamped diagnostic lines are emitted to stderr.
 // Fix(BUG-317): Root cause: execute_live_mode called sigemptyset/sigaddset/sigprocmask
 // unconditionally — POSIX symbols absent on Windows → LNK2019 at link time.
 // Pitfall: `extern "C"` declarations for POSIX signal functions compile on all
@@ -103,7 +103,7 @@ pub( crate ) fn execute_live_mode(
     let accounts = fetch_all_quota( credential_store, live_creds_file, true, params.trace, params.solo )?;
 
     // live mode: no session context for footer; no credential_store path for sessions table.
-    let text = render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, None, None, None, None );
+    let text = render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, None, None, None, None, false );
     print!( "{text}" );
 
     // Compute next-refresh wall-clock time.
