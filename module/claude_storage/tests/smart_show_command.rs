@@ -46,6 +46,7 @@
 //! non-deterministic failures under nextest's thread pool when multiple tests ran concurrently.
 //! Pitfall: manual `fs::remove_*` cleanup runs after binary exit but is not guaranteed to
 //! complete before the next parallel test starts — `TempDir` drop is the only safe cleanup.
+#![ cfg( unix ) ]
 
 mod common;
 

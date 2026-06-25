@@ -69,6 +69,7 @@
 //!
 //! **Lesson**: Validate ALL parameter values explicitly. Fail fast with clear error
 //! messages. Don't silently accept or clamp invalid values without documentation.
+#![ cfg( unix ) ]
 
 mod common;
 

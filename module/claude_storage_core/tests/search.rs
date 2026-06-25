@@ -1,6 +1,7 @@
 //! Search functionality tests
 //!
 //! Tests for content search across sessions.
+#![ cfg( unix ) ]
 
 use claude_storage_core::{ Storage, SearchFilter, EntryType };
 

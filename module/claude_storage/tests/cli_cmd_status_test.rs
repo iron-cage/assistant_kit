@@ -13,6 +13,7 @@
 //! - INT-6: Exit code 0 on success
 //! - INT-7: Exit code 2 on unreadable storage path
 //! - INT-8: Output contains project count and session count
+#![ cfg( unix ) ]
 
 mod common;
 
