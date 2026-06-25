@@ -260,6 +260,10 @@ fn it_09_pro_prefix_shortened_in_path_column()
 ///
 /// Uses the test process's own PID so the `/proc/{pid}` liveness filter
 /// passes — gate files with dead PIDs are filtered out (BUG-293).
+///
+/// Linux-only: the liveness filter probes `/proc/{pid}` which does not exist
+/// on Windows or macOS.
+#[ cfg( target_os = "linux" ) ]
 #[ test ]
 fn it_10_gate_file_present_shows_queued_table()
 {

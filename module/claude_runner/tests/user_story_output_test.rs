@@ -1,4 +1,4 @@
-#![ allow( missing_docs ) ]
+//! Unix-only integration tests.
 #![ cfg( unix ) ]
 //! User Story Integration Tests — Output, Effort, Context, Subdir, Concurrency (US19–US25)
 //!
