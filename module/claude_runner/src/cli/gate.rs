@@ -2,16 +2,16 @@ use crate::VerbosityLevel;
 use claude_core::process::find_claude_processes;
 use std::path::PathBuf;
 
-// Return the gate state directory — $CLR_GATE_DIR or /tmp/clr-gate.
+// Return the gate state directory — $CLR_GATE_DIR or <sys-temp>/clr-gate.
 //
 // $CLR_GATE_DIR is the single test-injection point; tests override it to a temp
-// dir so IT-10/IT-11 never touch the real /tmp/clr-gate on the host.
+// dir so IT-10/IT-11 never touch the real default path on the host.
 pub( super ) fn gate_dir() -> PathBuf
 {
   std::env::var( "CLR_GATE_DIR" )
     .ok()
     .filter( |s| !s.is_empty() )
-    .map_or_else( || PathBuf::from( "/tmp/clr-gate" ), PathBuf::from )
+    .map_or_else( || std::env::temp_dir().join( "clr-gate" ), PathBuf::from )
 }
 
 // Return current Unix timestamp in seconds.

@@ -587,7 +587,7 @@ mod tests
   fn test_project_new()
   {
     let id = ProjectId::path( "/home/user/project" );
-    let project = Project::new( id, PathBuf::from( "/tmp/storage" ) );
+    let project = Project::new( id, PathBuf::from( "storage" ) );
 
     assert!( project.id().as_path().is_some() );
   }

@@ -6,8 +6,8 @@ Test spec for `docs/invariant/005_dependency_management.md`.
 
 | Case ID | Category | Status |
 |---------|----------|--------|
-| DM-1 | Dependency centralization | ⏳ |
-| DM-2 | Workspace reference usage | ⏳ |
+| DM-1 | Dependency centralization | ✅ |
+| DM-2 | Workspace reference usage | ✅ |
 
 ## Cases
 

@@ -46,6 +46,9 @@
 // `get_installed_version()` falls back to running `claude --version` via PATH,
 // which finds the sleep dummy and either hangs or returns garbage — causing
 // the guard to call `perform_install` and trigger a network request.
+// Unix-only: uses std::os::unix::fs::symlink, /usr/bin/sleep, kill -0, and
+// find_claude_processes() which reads /proc — none of which exist on Windows.
+#[ cfg( unix ) ]
 #[ test ]
 fn version_guard_does_not_kill()
 {
