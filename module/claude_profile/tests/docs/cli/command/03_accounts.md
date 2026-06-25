@@ -48,7 +48,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 | IT-40 | Owner column present by default; `—` when unowned | Feature 037 — Owner Column |
 | IT-41 | `cols::-owner` hides Owner column | Feature 037 — Owner Column |
 | IT-42 | Unknown parameter exits 1 | Feature 037 — Param Validation |
-| IT-43 | `active::USER@MACHINE name::X` writes active marker; no other files changed (Feature 064) | Feature 064 — active mutation |
+| IT-43 | `assignee::USER@MACHINE name::X` writes active marker; no other files changed (Feature 065) | Feature 065 — assignee mutation |
 | IT-44 | `owner::0 name::X` clears owner field when G8 passes (Feature 064) | Feature 064 — owner mutation |
 | IT-45 | `owner::0 name::X` exits 1 with ownership violation when G8 fails (Feature 064) | Feature 064 — owner mutation |
 | IT-46 | `force::1 owner::0 name::X` bypasses G8 and clears owner (Feature 064) | Feature 064 — force bypass |
@@ -163,7 +163,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 - **Given:** Two accounts exist: `work@acme.com` (active) and `personal@home.com`.
 - **When:** `clp .accounts active::0`
-- **Then:** Exit 1. Error message references `cols::` syntax.; individual field toggle params removed in Feature 037 — `active::`, `sub::`, `tier::`, `expires::`, `email::`, etc. all rejected
+- **Then:** Exit 1. `active::` exits 1 with REMOVED_TOGGLE migration message pointing to `assignee::` (Feature 065); other legacy field toggles (`sub::`, `tier::`, `expires::`, `email::`, etc.) exit 1 with `cols::` migration hint (Feature 037).
 - **Exit:** 1
 - **Source:** [feature/037_accounts_usage_param_unification.md AC-13](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
@@ -509,10 +509,10 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-43: `active::USER@MACHINE name::X` writes active marker; no other files changed (Feature 064)
+### IT-43: `assignee::USER@MACHINE name::X` writes active marker; no other files changed (Feature 065)
 
 - **Given:** `alice@acme.com` exists. Record mtime of `alice.json`, `alice.credentials.json`, `~/.claude.json`.
-- **When:** `clp .accounts active::testuser@testmachine name::alice@acme.com` (formerly `assign::1 name::X` — Feature 064)
+- **When:** `clp .accounts assignee::testuser@testmachine name::alice@acme.com` (formerly `assign::1 name::X` — Feature 037; then `active::` — Feature 064; renamed `assignee::` — Feature 065)
 - **Then:** Exit 0. `_active_testmachine_testuser` in credential store contains `alice@acme.com`. mtime of `alice.json`, `alice.credentials.json`, and `~/.claude.json` unchanged.
 - **Exit:** 0
 - **Source:** [feature/037_accounts_usage_param_unification.md AC-08](../../../../docs/feature/037_accounts_usage_param_unification.md)

@@ -43,16 +43,17 @@ Writes the per-machine active marker (`_active_{machine}_{user}`) for a named ac
 [absent/saved/active] --account.assign--> [same state]  (marker written; {name}.json unchanged; credentials unchanged)
 ```
 
-### Migration (Feature 037 + Feature 064)
+### Migration (Feature 037 + Feature 064 + Feature 065)
 
-> `.account.assign` has been removed as a standalone working command (Feature 037). Its behavior was absorbed into `.accounts`/`.usage` as `assign::1` + `for::`. Feature 064 replaced both with `active::USER@MACHINE name::X`.
+> `.account.assign` has been removed as a standalone working command (Feature 037). Its behavior was absorbed into `.accounts`/`.usage` as `assign::1` + `for::`. Feature 064 replaced both with `active::USER@MACHINE name::X`. Feature 065 renamed `active::` → `assignee::` and added `assignee::0` as the current-machine sentinel.
 > - `clp .account.assign name::X` → exits 1 with generic "unknown command" error (fully deregistered)
 > - `clp .accounts assign::1 name::X` → exits 1 with REMOVED_TOGGLE migration message (Feature 064)
-> - `clp .accounts active::$USER@$HOSTNAME name::X` → writes marker for current machine (current behavior)
-> - `clp .accounts active::bob@laptop name::X` → writes marker for specific machine (current behavior)
-> - `clp .accounts active::user1@w003` (no `name::`) → clears/unassigns the marker (Feature 064)
+> - `clp .accounts active::user1@w003 name::X` → exits 1 with REMOVED_TOGGLE migration message (Feature 065)
+> - `clp .accounts assignee::0 name::X` → writes marker for current machine (current behavior — `0` = `$USER@$HOSTNAME`)
+> - `clp .accounts assignee::bob@laptop name::X` → writes marker for specific machine (current behavior)
+> - `clp .accounts assignee::user1@w003` (no `name::`) → clears/unassigns the marker (Feature 065)
 >
-> See [feature/064_active_marker_and_owner_redesign.md](../../feature/064_active_marker_and_owner_redesign.md) AC-01 through AC-07.
+> See [feature/065_assignee_param_redesign.md](../../feature/065_assignee_param_redesign.md) AC-01 through AC-10.
 
 ### Cross-References
 
@@ -61,10 +62,11 @@ Writes the per-machine active marker (`_active_{machine}_{user}`) for a named ac
 | [feature/032_account_assign.md](../../feature/032_account_assign.md) | Marker write, `for::` resolution, sanitization rules |
 | [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md) | `_active_{machine}_{user}` marker semantics |
 | [feature/036_account_ownership.md](../../feature/036_account_ownership.md) | Ownership model; enforcement gates G1–G8; ownership is stamped by `.account.save`, not `.account.assign` |
-| [feature/037_accounts_usage_param_unification.md](../../feature/037_accounts_usage_param_unification.md) | `assign::` absorbed as mutation param; `.account.assign` standalone removed; `for::` and `assign::` further REMOVED in Feature 064 — use `active::USER@MACHINE` |
+| [feature/037_accounts_usage_param_unification.md](../../feature/037_accounts_usage_param_unification.md) | `assign::` absorbed as mutation param; `.account.assign` standalone removed; `for::` and `assign::` further REMOVED in Feature 064 |
+| [feature/065_assignee_param_redesign.md](../../feature/065_assignee_param_redesign.md) | `assignee::` rename from `active::`; `assignee::0` current-machine sentinel; `active::` REMOVED_TOGGLE |
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.assign`](../command/001_account.md#command--16-accountassign) | Write per-machine active marker without credential rotation (removed in Feature 037; `assign::1` further REMOVED in Feature 064 — use `.accounts active::USER@MACHINE name::X`) |
+| 1 | [`.account.assign`](../command/001_account.md#command--16-accountassign) | Write per-machine active marker without credential rotation (removed in Feature 037; `assign::1` further REMOVED in Feature 064; `active::` further REMOVED in Feature 065 — use `.accounts assignee::USER@MACHINE name::X`) |

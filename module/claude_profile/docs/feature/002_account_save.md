@@ -84,7 +84,7 @@
 | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Org identity metadata lifecycle and org fields in `{name}.json` |
 | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Per-machine marker naming convention used in step 8 |
 | [030_account_renewal_override.md](030_account_renewal_override.md) | `_renewal_at` field written by `.account.renewal`; preserved by `save()` read-merge (AC-17) |
-| [036_account_ownership.md](036_account_ownership.md) | Ownership model — `.account.save` is ownership-neutral (owner: None); `owner::0` clears ownership (Feature 064; formerly `.account.unclaim`); `active::USER@MACHINE` is marker-only (Feature 064; formerly `.account.assign`) |
+| [036_account_ownership.md](036_account_ownership.md) | Ownership model — `.account.save` is ownership-neutral (owner: None); `owner::0` clears ownership (Feature 064; formerly `.account.unclaim`); `assignee::USER@MACHINE` is marker-only (Feature 065; formerly `.account.assign`) |
 | [032_account_assign.md](032_account_assign.md) | `.account.assign` — marker-only write; does NOT call `write_owner()`; does NOT modify `owner` field in `{name}.json` |
 
 ### Referenced Commands

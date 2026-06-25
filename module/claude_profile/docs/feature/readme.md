@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the functional capabilities of `claude_profile` — account credential management and the `clp` CLI.
 - **Responsibility**: Documents all functional requirements with their design, acceptance criteria, and test references.
-- **In Scope**: feature/001 through feature/040, feature/061 through feature/064 — full functional capability set for claude_profile and the clp CLI.
+- **In Scope**: feature/001 through feature/040, feature/061 through feature/065 — full functional capability set for claude_profile and the clp CLI.
 - **Out of Scope**: Quality constraints (→ invariant/), CLI design (→ cli/).
 
 ### Overview Table
@@ -46,7 +46,7 @@
 | 033 | [Quota Cache Fallback](033_quota_cache.md) | Persist last-known quota in `{name}.json`; display cached values with staleness indicator when API unavailable | ✅ |
 | 034 | [Explicit Session Model Override](034_explicit_session_model_override.md) | `set_model::` parameter on `.account.use` and `.usage`; writes explicit model ID to `~/.claude/settings.json` via `set_session_model()`, bypassing auto-override | ✅ |
 | 035 | [Dedicated Model Get/Set Command](035_model_command.md) | `.model` command for standalone get/set of session model in `settings.json`; `set::` parameter; `get_session_model()` helper; no-duplication via shared `map_model_shorthand()` | ✅ |
-| 036 | [Account Ownership](036_account_ownership.md) | `owner` field in `{name}.json`; ownership-neutral `.account.save` (`account_save_routine()` passes `owner: None`); `.accounts owner::0 name::X` releases ownership via `write_owner()` (Feature 064); `.accounts active::USER@MACHINE` is marker-only (Feature 064); nine enforcement gates (G1, G1b, G2–G8) preventing non-owner credential operations; cache-as-primary for non-owned fetch | ✅ |
+| 036 | [Account Ownership](036_account_ownership.md) | `owner` field in `{name}.json`; ownership-neutral `.account.save` (`account_save_routine()` passes `owner: None`); `.accounts owner::0 name::X` releases ownership via `write_owner()` (Feature 064); `.accounts assignee::USER@MACHINE` is marker-only (Feature 065); nine enforcement gates (G1, G1b, G2–G8) preventing non-owner credential operations; cache-as-primary for non-owned fetch | ✅ |
 | 037 | [Accounts/Usage Param Unification](037_accounts_usage_param_unification.md) | Unify `.accounts` and `.usage` to 32 shared params with different defaults; absorb `.account.unclaim` as `unclaim::` and `.account.assign` as `assign::`/`for::` params; replace 15 field toggles with `cols::`; reduce commands 18→16 | ✅ |
 | 038 | [Usage Strategy Rotate](038_usage_strategy_rotate.md) | `rotate::1` on `.usage`: switch to footer-recommended account after quota table render; G5 ownership gate; dry-run preview; touch reuse from in-memory quota; deprecates `.account.rotate` | ✅ |
 | 039 | [Decision Algorithm Reference](039_decision_algorithms.md) | Unified reference for 6 core decision algorithms: touch model, session model override, quota status groups, eligibility gates, next-account positive selection, quota approximation | ✅ |
@@ -55,3 +55,4 @@
 | 062 | [Unified Session Config Recommendation](062_unified_session_config.md) | `recommended_model()` canonical function; footer Next line shows effort; rotation writes model+effort for winner | ✅ |
 | 063 | [Explicit Ownership Claim](063_explicit_ownership_claim.md) | `owner::` parameter — CLI-exposed write path for account ownership; G8 gate; `force::` bypass | ✅ |
 | 064 | [Active Marker and Owner Param Redesign](064_active_marker_and_owner_redesign.md) | Repurpose `active::` as `Kind::String` assign/unassign param; `owner::0` sentinel for ownership release; batch `name::X,Y,Z`; remove `assign::1`, `for::`, `unclaim::1` | ✅ |
+| 065 | [Assignee Param Redesign](065_assignee_param_redesign.md) | Rename `active::` → `assignee::`; `assignee::0` sentinel = current machine (`$USER@$HOSTNAME`); `active::` REMOVED_TOGGLE | ✅ |

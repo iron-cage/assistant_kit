@@ -736,7 +736,7 @@ fn assign_bv1_reassigning_same_account_idempotent()
 
   // First assign (marker already set by write_account(make_active=true) under real env).
   let out1 = run_cs_with_env(
-    &[ ".accounts", "active::testuser@testmachine", "name::alice@acme.com" ],
+    &[ ".accounts", "assignee::testuser@testmachine", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out1, 0 );
@@ -748,7 +748,7 @@ fn assign_bv1_reassigning_same_account_idempotent()
 
   // Second assign with same account — idempotent.
   let out2 = run_cs_with_env(
-    &[ ".accounts", "active::testuser@testmachine", "name::alice@acme.com" ],
+    &[ ".accounts", "assignee::testuser@testmachine", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out2, 0 );
@@ -777,7 +777,7 @@ fn assign_bv2_writes_marker_without_touching_credential_files()
   let mtime_live_before = mtime_ms( &live_creds );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "active::testuser@testmachine", "name::alice@acme.com" ],
+    &[ ".accounts", "assignee::testuser@testmachine", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 0 );
@@ -795,11 +795,11 @@ fn assign_bv2_writes_marker_without_touching_credential_files()
   // Credential files must remain unmodified
   assert_eq!(
     mtime_cred_before, mtime_ms( &cred_file ),
-    "alice@acme.com.credentials.json must not be modified by active::",
+    "alice@acme.com.credentials.json must not be modified by assignee::",
   );
   assert_eq!(
     mtime_live_before, mtime_ms( &live_creds ),
-    "~/.claude/.credentials.json must not be modified by active::",
+    "~/.claude/.credentials.json must not be modified by assignee::",
   );
 }
 
@@ -811,9 +811,9 @@ fn assign_bv3_nonexistent_account_exits_2()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
 
-  // active:: validates account existence with exit 1 (ArgumentTypeMismatch, not InternalError).
+  // assignee:: validates account existence with exit 1 (ArgumentTypeMismatch, not InternalError).
   let out = run_cs_with_env(
-    &[ ".accounts", "active::testuser@testmachine", "name::nobody@acme.com" ],
+    &[ ".accounts", "assignee::testuser@testmachine", "name::nobody@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 1 );

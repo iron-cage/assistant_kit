@@ -43,6 +43,12 @@
 
 Group 2 ranks above group 3 because 5h exhaustion recovers in hours; 7d exhaustion takes days. See [sort::](param/025_sort.md).
 
+### Ownership and Assignment
+
+**Owner** — The `USER@MACHINE` identity that holds persistent ownership of an account, stored in the `owner` field of `{name}.json`. Ownership is managed via `owner::USER@MACHINE` (set) and `owner::0` (release). The ownership gate (G8) blocks credential operations by non-owners. See [feature/036_account_ownership.md](../feature/036_account_ownership.md).
+
+**Assignee** — The `USER@MACHINE` identity that holds a specific account as currently active on its machine, recorded in the `_active_{machine}_{user}` marker file. Assignment is managed via `assignee::USER@MACHINE name::X` (set), `assignee::0 name::X` (set for current machine), and `assignee::USER@MACHINE` / `assignee::0` without `name::` (clear). Assignment is marker-only and does not affect the `owner` field. See [feature/065_assignee_param_redesign.md](../feature/065_assignee_param_redesign.md).
+
 ### Operational Modes
 
 **solo mode** — Token conservation mode activated by `solo::1` on `.usage`. Restricts all credential-consuming operations (HTTP quota fetch, account metadata fetch, refresh subprocess, touch subprocess) to the account that is both current AND owned. All other accounts display approximated historical data via the dedicated `approximate_quota()` function — no direct cache file reads permitted. Controls token consumption only; display filters (`only_active::`, `count::`, `offset::`, etc.) remain fully independent. Mutually exclusive with `rotate::1`. See [param/060_solo.md](param/060_solo.md).

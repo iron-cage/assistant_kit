@@ -4,7 +4,7 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 44 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 45 |
 | `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 7 |
 | `algorithm/` | Decision algorithm references (model selection, quota classification, sort, approximation) | [algorithm/readme.md](../algorithm/readme.md) | 8 |
 | `subprocess/` | Isolated subprocess contract, credential write-back protocol, and invocation sites | [subprocess/readme.md](../subprocess/readme.md) | 5 |
@@ -12,7 +12,7 @@
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 6 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](../cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 7 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 62 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 63 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](../cli/param_group/readme.md) | 6 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 4 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](../cli/format/readme.md) | 3 |
@@ -24,11 +24,11 @@
 | `tests/docs/cli/command/` | Per-command integration test case documentation | [tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 19 |
 | `tests/docs/cli/command_noun/` | Per-noun test case documentation | [tests/docs/cli/command_noun/readme.md](../../tests/docs/cli/command_noun/readme.md) | 3 |
 | `tests/docs/cli/command_verb/` | Per-verb test case documentation | [tests/docs/cli/command_verb/readme.md](../../tests/docs/cli/command_verb/readme.md) | 11 |
-| `tests/docs/cli/param/` | Per-parameter edge case test documentation | [tests/docs/cli/param/readme.md](../../tests/docs/cli/param/readme.md) | 61 |
+| `tests/docs/cli/param/` | Per-parameter edge case test documentation | [tests/docs/cli/param/readme.md](../../tests/docs/cli/param/readme.md) | 63 |
 | `tests/docs/cli/param_group/` | Per-group interaction test documentation | [tests/docs/cli/param_group/readme.md](../../tests/docs/cli/param_group/readme.md) | 6 |
 | `tests/docs/cli/type/` | Per-type test case documentation | [tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) | 4 |
 | `tests/docs/cli/user_story/` | Per-story acceptance test documentation | [tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) | 5 |
-| `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 45 |
+| `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 46 |
 | `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 8 |
 | `tests/docs/pitfall/` | Per-pitfall guard verification test documentation | [tests/docs/pitfall/readme.md](../../tests/docs/pitfall/readme.md) | 1 |
 
@@ -80,6 +80,7 @@
 | feature | 062 | Unified Session Config Recommendation | [feature/062_unified_session_config.md](../feature/062_unified_session_config.md) |
 | feature | 063 | Explicit Ownership Claim | [feature/063_explicit_ownership_claim.md](../feature/063_explicit_ownership_claim.md) |
 | feature | 064 | Active Marker and Owner Param Redesign | [feature/064_active_marker_and_owner_redesign.md](../feature/064_active_marker_and_owner_redesign.md) |
+| feature | 065 | Assignee Param Redesign | [feature/065_assignee_param_redesign.md](../feature/065_assignee_param_redesign.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](../cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](../cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](../cli/003_env_param.md) |
@@ -103,7 +104,7 @@
 | param | 010 | `email::` | [cli/param/010_email.md](../cli/param/010_email.md) |
 | param | 011 | `file::` | [cli/param/011_file.md](../cli/param/011_file.md) |
 | param | 012 | `saved::` | [cli/param/012_saved.md](../cli/param/012_saved.md) |
-| param | 013 | `active::` | [cli/param/013_active.md](../cli/param/013_active.md) |
+| param | 013 | `active::` — **REMOVED** (Feature 065); use `assignee::` | [cli/param/013_active.md](../cli/param/013_active.md) |
 | param | 014 | `display_name::` | [cli/param/014_display_name.md](../cli/param/014_display_name.md) |
 | param | 015 | `role::` | [cli/param/015_role.md](../cli/param/015_role.md) |
 | param | 016 | `billing::` | [cli/param/016_billing.md](../cli/param/016_billing.md) |
@@ -153,6 +154,7 @@
 | param | 060 | `solo::` (token conservation — current+owned only) | [cli/param/060_solo.md](../cli/param/060_solo.md) |
 | param | 061 | `who::` (sessions table visibility) | [cli/param/061_who.md](../cli/param/061_who.md) |
 | param | 062 | `owner::` (explicit ownership assignment) | [cli/param/062_owner.md](../cli/param/062_owner.md) |
+| param | 063 | `assignee::` (marker assignment/unassign; `assignee::0` = current machine) | [cli/param/063_assignee.md](../cli/param/063_assignee.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](../cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](../cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](../cli/param_group/003_fetch_behavior.md) |

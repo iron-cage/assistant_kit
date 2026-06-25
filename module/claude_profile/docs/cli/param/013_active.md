@@ -1,12 +1,21 @@
 # Parameter :: 13. `active::`
 
-> **Repurposed (Feature 064):** `active::` was formerly a `bool` field-presence toggle for `.credentials.status` (already removed from `.accounts` in Feature 037 AC-13). It is now a `Kind::String` mutation param — the value is the target `USER@MACHINE` identity for an active-account marker write or clear.
+> **REMOVED (Feature 065):** The `active::` parameter has been removed from the unified parameter set on `.accounts` and `.usage`. Marker assignment is now performed via `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine).
 >
-> **Migration from `assign::1` + `for::` (Feature 064):**
-> - `assign::1 name::X` → `active::$USER@$HOSTNAME name::X` (current machine)
-> - `assign::1 name::X for::bob@laptop` → `active::bob@laptop name::X`
+> **Migration:**
+> - `active::user1@w003 name::X` → `assignee::user1@w003 name::X`
+> - `active::user1@w003` (unassign) → `assignee::user1@w003`
+> - `active::$USER@$HOSTNAME name::X` → `assignee::0 name::X` (current machine via sentinel)
+>
+> Using `active::` now exits 1 with a migration message.
+>
+> See [feature/065_assignee_param_redesign.md](../../feature/065_assignee_param_redesign.md) for full context.
 
-Mutation param on `.accounts` and `.usage` that writes or clears the per-machine active-account marker (`_active_{machine}_{user}`) for any host+user pair. When `name::X` is provided, assigns X as the active account for the target identity. When `name::` is absent, clears (unassigns) the marker for the target identity.
+[Historical specification retained below for reference.]
+
+---
+
+~~Mutation param on `.accounts` and `.usage` that writes or clears the per-machine active-account marker (`_active_{machine}_{user}`) for any host+user pair. When `name::X` is provided, assigns X as the active account for the target identity. When `name::` is absent, clears (unassigns) the marker for the target identity.~~
 
 - **Default:** *(omit)* — no marker write when absent
 - **Constraints:** `Kind::String`; value format `USER@MACHINE` — split on first `@`; both parts required; each component sanitized per `active_marker_filename()` char-filter (alphanumeric, `-`, `.` kept; all others become `_`). The value `"0"` is NOT accepted (to clear ownership, use `owner::0`; to clear a marker, use `active::USER@MACHINE` without `name::`).
@@ -59,10 +68,7 @@ Sanitization: alphanumeric, `-`, `.` kept; all other characters become `_`. Iden
 
 ### See Also
 
-- [cli/param/001_name.md](001_name.md) — `name::` — account identifier (required for assign; absent = unassign)
-- [cli/param/004_dry.md](004_dry.md) — `dry::` — dry-run preview
-- [cli/param/057_assign.md](057_assign.md) — `assign::` — REMOVED; replaced by this param
-- [cli/param/053_for.md](053_for.md) — `for::` — REMOVED; functionality absorbed into `active::` value
-- [feature/064_active_marker_and_owner_redesign.md](../../feature/064_active_marker_and_owner_redesign.md) — full redesign scope
+- [cli/param/063_assignee.md](063_assignee.md) — `assignee::` — replacement param (Feature 065)
+- [feature/065_assignee_param_redesign.md](../../feature/065_assignee_param_redesign.md) — removal context
+- [feature/064_active_marker_and_owner_redesign.md](../../feature/064_active_marker_and_owner_redesign.md) — Feature 064 where `active::` was introduced as `Kind::String`
 - [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md) — marker filename derivation and sanitization rules
-- [feature/032_account_assign.md](../../feature/032_account_assign.md) — original assign behavior now implemented here

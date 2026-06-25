@@ -1,5 +1,7 @@
 # Feature: Active Marker and Owner Param Redesign
 
+> **Partially superseded (Feature 065):** The `active::` param introduced in this feature has been renamed to `assignee::` in Feature 065. `active::` is now a REMOVED_TOGGLE. See [065_assignee_param_redesign.md](065_assignee_param_redesign.md).
+
 ### Scope
 
 - **Purpose**: Replace the two-param `assign::1` + `for::` combination with a single `active::USER@MACHINE` param; add `owner::0` sentinel to `owner::` for ownership release; support batch comma-list in `name::` for `owner::` operations; remove `unclaim::1` as an active param (REMOVED_TOGGLE → `owner::0`).
@@ -38,10 +40,10 @@ owner::user1@w003 name::X,Y,Z      → set ownership for X, Y, and Z
 
 **REMOVED_TOGGLE stubs:** `assign`, `for`, and `unclaim` are registered as `bfd()` (REMOVED_TOGGLE / dead-flag) entries in `registry.rs`. Any invocation emits a migration message and exits 1.
 
-| Removed param | Migration message |
+| Removed param | Migration message (Feature 065 update) |
 |---------------|-------------------|
-| `assign::` | "REMOVED — use `active::USER@MACHINE name::X` instead" |
-| `for::` | "REMOVED — functionality absorbed into `active::` value: `active::USER@MACHINE name::X`" |
+| `assign::` | "REMOVED — use `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine)" |
+| `for::` | "REMOVED — use `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine)" |
 | `unclaim::` | "REMOVED — use `owner::0 name::X` instead (or `owner::0` alone to batch-clear)" |
 
 **`force::` bypass:** The `force::1` bypass for G8 applies to both `owner::0` and `owner::USER@MACHINE` paths (same as it applied to `unclaim::1` and `owner::USER@MACHINE` in prior design). The `active::` param has no ownership gate — `force::1` has no effect on `active::`.
@@ -54,8 +56,8 @@ owner::user1@w003 name::X,Y,Z      → set ownership for X, Y, and Z
 - **AC-02**: `clp .accounts active::user1@w003` (no `name::`) clears (empties or deletes) `{credential_store}/_active_w003_user1`; exits 0; stdout contains `unassigned user1@w003  →  _active_w003_user1 cleared`. No credential files modified.
 - **AC-03**: `clp .accounts active::user1@w003 name::alice@corp.com dry::1` exits 0; stdout contains `[dry-run] would assign alice@corp.com for user1@w003  →  _active_w003_user1`; no files written.
 - **AC-04**: `clp .accounts active::user1@w003 name::ghost@example.com` when account not in credential store exits 1 with account-not-found error; no marker file written.
-- **AC-05**: `clp .accounts assign::1 name::X` exits 1 with migration message: "REMOVED — use `active::USER@MACHINE name::X` instead". No files modified.
-- **AC-06**: `clp .accounts assign::1 name::X for::bob@laptop` exits 1 (both `assign::1` and `for::` trigger REMOVED_TOGGLE messages). No files modified.
+- **AC-05**: `clp .accounts assign::1 name::X` exits 1 with migration message: "REMOVED — use `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine)". No files modified. *(Message updated by Feature 065.)*
+- **AC-06**: `clp .accounts assign::1 name::X for::bob@laptop` exits 1 (both `assign::1` and `for::` trigger REMOVED_TOGGLE messages referencing `assignee::`). No files modified. *(Messages updated by Feature 065.)*
 - **AC-07**: `clp .accounts unclaim::1 name::X` exits 1 with migration message: "REMOVED — use `owner::0 name::X` instead (or `owner::0` alone to batch-clear)". No files modified.
 - **AC-08**: `clp .accounts owner::0 name::alice@corp.com` writes `owner: ""` to `{name}.json` via `write_owner()`; exits 0; stdout contains `unclaimed alice@corp.com`; G8 gate evaluated before write; credentials NOT touched.
 - **AC-09**: `clp .accounts owner::0` (no `name::`) clears ownership for all owned accounts in the credential store (pre-filter — display-filter params such as `only_valid::`, `exclude_exhausted::`, and `min_5h::` do NOT scope the batch-clear); per-account G8 check; non-owned accounts (unowned or owned by another identity) are skipped with a `"skip"` message rather than exiting 1; exits 0.
@@ -79,12 +81,14 @@ owner::user1@w003 name::X,Y,Z      → set ownership for X, Y, and Z
 | [036_account_ownership.md](036_account_ownership.md) | `owner` field, G8 gate, `write_owner()` — `owner::0` sentinel triggers `write_owner(name, store, "")` |
 | [037_accounts_usage_param_unification.md](037_accounts_usage_param_unification.md) | Param set context — `assign::1`/`for::` removed; `unclaim::1` removed; `active::` added to mutation set |
 | [063_explicit_ownership_claim.md](063_explicit_ownership_claim.md) | `owner::USER@MACHINE` set path; `owner::` param; G8 gate shared with `owner::0` |
+| [065_assignee_param_redesign.md](065_assignee_param_redesign.md) | Feature 065 — renames `active::` → `assignee::`; adds `assignee::0` current-machine sentinel; `active::` becomes REMOVED_TOGGLE |
 
 ### Parameters
 
 | File | Relationship |
 |------|--------------|
-| [cli/param/013_active.md](../cli/param/013_active.md) | `active::` — repurposed mutation param (String); assign/unassign marker |
+| [cli/param/013_active.md](../cli/param/013_active.md) | `active::` — repurposed mutation param (String); assign/unassign marker (REMOVED in Feature 065 → `assignee::`) |
+| [cli/param/063_assignee.md](../cli/param/063_assignee.md) | `assignee::` — renamed replacement for `active::` (Feature 065) |
 | [cli/param/053_for.md](../cli/param/053_for.md) | `for::` — REMOVED; functionality absorbed into `active::` value |
 | [cli/param/056_unclaim.md](../cli/param/056_unclaim.md) | `unclaim::` — REMOVED; replaced by `owner::0` |
 | [cli/param/057_assign.md](../cli/param/057_assign.md) | `assign::` — REMOVED; replaced by `active::USER@MACHINE name::X` |
@@ -114,5 +118,7 @@ owner::user1@w003 name::X,Y,Z      → set ownership for X, Y, and Z
 | File | Relationship |
 |------|--------------|
 | [tests/docs/feature/64_active_marker_and_owner_redesign.md](../../tests/docs/feature/64_active_marker_and_owner_redesign.md) | FT spec mapping ACs to test cases |
-| [tests/docs/cli/param/14_active.md](../../tests/docs/cli/param/14_active.md) | EC edge cases for repurposed `active::` param |
+| [tests/docs/cli/param/14_active.md](../../tests/docs/cli/param/14_active.md) | EC edge cases for repurposed `active::` param (REMOVED — superseded by `64_assignee.md`) |
 | [tests/docs/cli/param/63_owner.md](../../tests/docs/cli/param/63_owner.md) | EC edge cases for `owner::0` sentinel + batch |
+| [tests/docs/cli/param/64_assignee.md](../../tests/docs/cli/param/64_assignee.md) | EC edge cases for `assignee::` param (Feature 065 replacement) |
+| [tests/docs/feature/65_assignee_param_redesign.md](../../tests/docs/feature/65_assignee_param_redesign.md) | FT spec for Feature 065 — `assignee::` rename + `assignee::0` sentinel |

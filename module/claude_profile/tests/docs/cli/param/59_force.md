@@ -92,11 +92,11 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 
 ### EC-7: `force::1` without mutation param — silently ignored; no error
 
-- **Given:** Credential store with accounts. No `owner::`, `active::`, or explicit switch in progress.
+- **Given:** Credential store with accounts. No `owner::`, `assignee::`, or explicit switch in progress.
 - **When (case A):** `clp .accounts force::1` (list accounts, no mutation)
 - **Then (case A):** Exits 0. Normal `.accounts` listing output. No error about `force::1`. `force::` is silently ignored.
-- **When (case B):** `clp .accounts force::1 active::testuser@testmachine name::alice@corp.com` (formerly `assign::1 name::X` — Feature 064)
-- **Then (case B):** Exits 0. Marker file written normally. `force::1` has no gate to bypass on `active::` path — silently ignored.
+- **When (case B):** `clp .accounts force::1 assignee::testuser@testmachine name::alice@corp.com` (Feature 065; formerly `active::` — Feature 064)
+- **Then (case B):** Exits 0. Marker file written normally. `force::1` has no gate to bypass on `assignee::` path — silently ignored.
 - **Exit:** 0 (both cases)
 - **Source fn:** `fc07_force_ignored_without_mutation`
 - **Source:** [param/058_force.md](../../../../docs/cli/param/058_force.md)

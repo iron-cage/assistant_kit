@@ -16,7 +16,7 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 | Entry | Responsibility |
 |-------|----------------|
 | [command/](command/readme.md) | Per-namespace command specifications (account, token, credentials, usage, paths, meta) |
-| [param/](param/readme.md) | Individual parameter specifications (62 params, one file each) |
+| [param/](param/readme.md) | Individual parameter specifications (63 params, one file each) |
 | [type/](type/readme.md) | CLI type definitions (AccountName, OutputFormat, WarningThreshold, AccountSelector) |
 | [param_group/](param_group/readme.md) | Parameter group semantics (Output Control, Field Presence, Fetch Behavior, Sort Control, Display Control, Account Targeting) |
 | [user_story/](user_story/readme.md) | Five canonical user stories mapping personas and goals to commands |
@@ -55,7 +55,7 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 ### Navigation
 
 - [Commands](command/readme.md) — 18 commands (17 visible + 1 hidden) across 6 namespaces
-- [Parameters](param/readme.md) — 58 active parameter specifications (62 files; 3 REMOVED via Feature 064)
+- [Parameters](param/readme.md) — 58 active parameter specifications (63 files; 5 REMOVED: 013, 032, 053, 056, 057)
 - [Types](type/readme.md) — 4 CLI types (AccountName, OutputFormat, WarningThreshold, AccountSelector)
 - [Parameter Groups](param_group/readme.md) — 6 groups (Output Control, Field Presence, Fetch Behavior, Sort Control, Display Control, Account Targeting)
 - [User Stories](user_story/readme.md) — 5 user stories (Account Rotation, Onboarding, Quota Monitoring, Scripted Automation, Credential Diagnostics)

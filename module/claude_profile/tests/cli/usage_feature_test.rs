@@ -34,7 +34,7 @@
 //! | f37ft02 | `f37_ft02_usage_accepts_32_params`    | AC-02 | no    |
 //! | f37ft04 | `f37_ft04_usage_default_profile`      | AC-04 | no    |
 //! | f37ft16 | `f37_ft16_usage_unclaim_mirrors_accounts` | AC-16 | no | <!-- tests owner::0 (Feature 064 successor) -->
-//! | f37ft17 | `f37_ft17_usage_assign_mirrors_accounts`  | AC-17 | no | <!-- tests active:: (Feature 064 successor) -->
+//! | f37ft17 | `f37_ft17_usage_assign_mirrors_accounts`  | AC-17 | no | <!-- tests assignee:: (Feature 065 successor) -->
 //!
 //! ### Feature 063 — Explicit Ownership Claim on `.usage`
 //!
@@ -49,6 +49,12 @@
 //! | f64ft05 | `f64_ft05_usage_assign_removed_toggle`    | AC-05 | no    |
 //! | f64ft07 | `f64_ft07_usage_unclaim_removed_toggle`   | AC-07 | no    |
 //! | f64ft06b| `f64_ft06b_usage_for_removed_toggle`      | AC-06 | no    |
+//!
+//! ### Feature 065 — Assignee Param Redesign (`.usage` sentinel parity)
+//!
+//! | ID      | Test Function                             | AC    | Live? |
+//! |---------|-------------------------------------------|-------|-------|
+//! | f65ft02 | `f65_ft02_usage_assignee_zero_sentinel_assign` | AC-02 | no |
 
 use crate::cli_runner::{
   BIN,
@@ -417,9 +423,9 @@ fn f37_ft02_usage_accepts_32_params()
   );
   assert_exit( &out, 0 );
 
-  // Mutation params accepted when dry::1 suppresses writes (Feature 064: active:: replaces assign::1).
+  // Mutation params accepted when dry::1 suppresses writes (Feature 065: assignee:: replaces active::/assign::1).
   let out = run_cs_with_env(
-    &[ ".usage", "active::testuser@testmachine", "name::alice@acme.com", "dry::1" ],
+    &[ ".usage", "assignee::testuser@testmachine", "name::alice@acme.com", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -496,10 +502,10 @@ fn f37_ft16_usage_unclaim_mirrors_accounts()
 }
 
 #[ test ]
-/// f37-FT-17 (AC-17): `.usage active::USER@MACHINE name::X` writes marker — identical to `.accounts active::`.
+/// f37-FT-17 (AC-17): `.usage assignee::USER@MACHINE name::X` writes marker — identical to `.accounts assignee::`.
 ///
-/// After `.usage active::testuser@testmachine name::alice`, the per-machine marker file exists
-/// and contains the account name. (`assign::1` was REMOVED in Feature 064; `active::` is the successor.)
+/// After `.usage assignee::testuser@testmachine name::alice`, the per-machine marker file exists
+/// and contains the account name. (`assign::1` was REMOVED in Feature 064; `assignee::` is the successor.)
 ///
 /// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-17]
 fn f37_ft17_usage_assign_mirrors_accounts()
@@ -509,18 +515,48 @@ fn f37_ft17_usage_assign_mirrors_accounts()
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
 
   let out = run_cs_with_env(
-    &[ ".usage", "active::testuser@testmachine", "name::alice@acme.com" ],
+    &[ ".usage", "assignee::testuser@testmachine", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 0 );
 
   let store   = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   let content = std::fs::read_to_string( store.join( "_active_testmachine_testuser" ) )
-    .expect( "f37-FT-17: .usage active::testuser@testmachine must write per-machine marker" );
+    .expect( "f37-FT-17: .usage assignee::testuser@testmachine must write per-machine marker" );
   assert_eq!(
     content.trim(),
     "alice@acme.com",
     "f37-FT-17: marker must contain alice@acme.com",
+  );
+}
+
+// ── Feature 065: assignee::0 sentinel on .usage ─────────────────────────────
+
+#[ test ]
+/// f65-FT-02 parity on `.usage` (AC-02 — `.usage` side): `.usage assignee::0 name::X` expands
+/// sentinel to current identity and writes per-machine marker.
+///
+/// Mirrors `ec2_assignee_zero_sentinel_assign` in `account_assign_test.rs` but targets `.usage`.
+/// Ensures Feature 037 parity: `.accounts assignee::0` and `.usage assignee::0` behave identically.
+fn f65_ft02_usage_assignee_zero_sentinel_assign()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "assignee::0", "name::alice@acme.com" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store   = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let content = std::fs::read_to_string( store.join( "_active_testmachine_testuser" ) )
+    .expect( "f65-FT-02: .usage assignee::0 must expand to testuser@testmachine and write marker" );
+  assert_eq!(
+    content.trim(),
+    "alice@acme.com",
+    "f65-FT-02: marker must contain alice@acme.com",
   );
 }
 
@@ -555,7 +591,7 @@ fn f63_ft12_usage_owner_mirrors_accounts()
 // ── Feature 064: REMOVED_TOGGLE parity on .usage ────────────────────────────
 
 /// FT-05 parity on `.usage` (AC-05 — `.usage` side): `assign::1` exits 1 with
-/// REMOVED migration message pointing to `active::`.
+/// REMOVED migration message pointing to `assignee::`.
 ///
 /// Spec: [`tests/docs/feature/64_active_marker_and_owner_redesign.md` FT-05]
 #[ test ]
@@ -573,8 +609,8 @@ fn f64_ft05_usage_assign_removed_toggle()
 
   let err = stderr( &out );
   assert!(
-    err.contains( "REMOVED" ) && err.contains( "active::" ),
-    "f64-FT-05: `.usage assign::1` must exit 1 with REMOVED migration pointing to active::; got:\n{err}",
+    err.contains( "REMOVED" ) && err.contains( "assignee::" ),
+    "f64-FT-05: `.usage assign::1` must exit 1 with REMOVED migration pointing to assignee::; got:\n{err}",
   );
 }
 

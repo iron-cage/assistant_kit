@@ -49,14 +49,14 @@ This matches the G8 pattern used by `owner::0` (Feature 064).
 - **AC-09**: Prefix resolution: `owner::user1@w003 name::ill` resolves `ill` to the full account email if unambiguous.
 - **AC-10**: `owner::` with empty value exits 1 with error directing user to use `owner::0` to clear ownership.
 - **AC-11**: After setting owner, all G1–G8 gates respect the new owner on subsequent operations from any identity.
-- **AC-12**: `.usage owner::user1@w003 name::X` works identically to `.accounts owner::user1@w003 name::X` — same write path, same gates, same output (mutation executes before table render, same as `active::USER@MACHINE` and `owner::0`).
+- **AC-12**: `.usage owner::user1@w003 name::X` works identically to `.accounts owner::user1@w003 name::X` — same write path, same gates, same output (mutation executes before table render, same as `assignee::USER@MACHINE` and `owner::0`).
 
 ### Features
 
 | File | Relationship |
 |------|--------------|
 | [036_account_ownership.md](036_account_ownership.md) | Core ownership model — `owner` field, `write_owner()`, G1–G8 gates, `is_owned()` predicate |
-| [032_account_assign.md](032_account_assign.md) | `.accounts active::USER@MACHINE` is marker-only — does NOT set owner (contrast point; `assign::1` REMOVED — Feature 064) |
+| [032_account_assign.md](032_account_assign.md) | `.accounts assignee::USER@MACHINE` is marker-only — does NOT set owner (contrast point; `active::` REMOVED — Feature 065) |
 | [037_accounts_usage_param_unification.md](037_accounts_usage_param_unification.md) | Unified param set — `owner::` registered on both `.accounts` and `.usage` |
 
 ### Parameters

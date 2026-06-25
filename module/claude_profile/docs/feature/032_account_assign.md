@@ -7,7 +7,7 @@
 - **In Scope**: `.account.assign` command; `for::USER@MACHINE` parameter; sanitization rules for marker filename; dry-run; live usage block output when `name::` absent; marker write only (no credential copy, no `~/.claude.*` side effects, no `owner` field changes).
 - **Out of Scope**: Full credential rotation (→ 004_account_use.md); per-machine marker filename derivation (→ 025_per_machine_active_marker.md); account-save host display label (→ 029_account_host_metadata.md); credential file access control (enforcement is logical, not filesystem-level); ownership stamp (→ 036_account_ownership.md, managed by `.account.save`).
 
-> **CLI surface migration (Feature 037 — shipped, then Feature 064 — shipped):** This feature's behavior was absorbed into `.accounts` as `assign::1` + `for::` parameters in Feature 037. Those params were replaced by `active::USER@MACHINE` in Feature 064. The standalone `.account.assign` command **has been removed** (deregistered from the command registry — produces generic 'unknown command' error). All acceptance criteria below apply via `clp .accounts active::USER@MACHINE name::X`. See [037_accounts_usage_param_unification.md](037_accounts_usage_param_unification.md) and [064_active_marker_and_owner_redesign.md](064_active_marker_and_owner_redesign.md).
+> **CLI surface migration (Feature 037 — shipped, then Feature 064 — shipped, then Feature 065 — shipped):** This feature's behavior was absorbed into `.accounts` as `assign::1` + `for::` parameters in Feature 037. Those params were replaced by `active::USER@MACHINE` in Feature 064. Feature 065 renamed `active::` → `assignee::` and added `assignee::0` as the current-machine sentinel; `active::` is now a REMOVED_TOGGLE. The standalone `.account.assign` command **has been removed** (deregistered from the command registry — produces generic 'unknown command' error). All acceptance criteria below apply via `clp .accounts assignee::USER@MACHINE name::X`. See [037_accounts_usage_param_unification.md](037_accounts_usage_param_unification.md), [064_active_marker_and_owner_redesign.md](064_active_marker_and_owner_redesign.md), and [065_assignee_param_redesign.md](065_assignee_param_redesign.md).
 
 ### Design
 
@@ -99,7 +99,7 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 - **AC-10**: Overwriting an existing marker: if `_active_laptop_bob` already contains `old@corp.com`, `.account.assign name::new@corp.com for::bob@laptop` overwrites it; exits 0; file now contains `new@corp.com`.
 - **AC-11**: The command does not invoke `switch_account()` — `~/.claude/.credentials.json` and `~/.claude.json` are left unchanged by a successful assign.
 - **AC-12**: `clp .account.assign name::alice@corp.com for::bob@laptop dry::1` includes `_active_laptop_bob` in the dry-run stdout.
-- **AC-13**: `.accounts active::USER@MACHINE` does NOT modify the `owner` field in `{name}.json` — marker-only write. The `active::` path in `accounts_routine()` does not call `write_owner()`. Ownership is released via `.accounts owner::0` and set via `.accounts owner::USER@MACHINE` (see [036_account_ownership.md](036_account_ownership.md)).
+- **AC-13**: `.accounts assignee::USER@MACHINE` does NOT modify the `owner` field in `{name}.json` — marker-only write. The `assignee::` path in `accounts_routine()` does not call `write_owner()`. Ownership is released via `.accounts owner::0` and set via `.accounts owner::USER@MACHINE` (see [036_account_ownership.md](036_account_ownership.md)).
 
 ### Commands
 
@@ -122,13 +122,13 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 |------|--------------|
 | [cli/param/001_name.md](../cli/param/001_name.md) | `name::` — account identifier with prefix resolution |
 | [cli/param/004_dry.md](../cli/param/004_dry.md) | `dry::` — dry-run flag |
-| [cli/param/053_for.md](../cli/param/053_for.md) | `for::` — `USER@MACHINE` target identity (REMOVED_TOGGLE in Feature 064 — use `active::USER@MACHINE`) |
+| [cli/param/053_for.md](../cli/param/053_for.md) | `for::` — `USER@MACHINE` target identity (REMOVED_TOGGLE in Feature 064 — now use `assignee::USER@MACHINE`) |
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | `.accounts active::USER@MACHINE name::X` | CLI surface for this feature (`.account.assign` removed Feature 037; `assign::1` further REMOVED Feature 064) |
+| 1 | `.accounts assignee::USER@MACHINE name::X` | CLI surface for this feature (`.account.assign` removed Feature 037; `assign::1` REMOVED Feature 064; `active::` REMOVED Feature 065) |
 
 ### Sources
 

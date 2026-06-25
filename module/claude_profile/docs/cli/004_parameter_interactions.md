@@ -7,8 +7,8 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 | # | Interaction | Parameters | Effect |
 |---|-------------|------------|--------|
 | 1 | `dry::` is orthogonal to output control | `dry::`, `format::` | Dry-run mode applies to mutation; does not affect output formatting |
-| 2 | `format::json` overrides field-presence params | `format::`, `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::` | JSON output includes all fields regardless of field-presence param values |
-| 3 | `format::table` ignores field-presence params | `format::`, `active::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `role::`, `billing::`, `model::` | Table output uses fixed columns regardless of field-presence param values |
+| 2 | `format::json` overrides field-presence params | `format::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::` | JSON output includes all fields regardless of field-presence param values |
+| 3 | `format::table` ignores field-presence params | `format::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `role::`, `billing::`, `model::` | Table output uses fixed columns regardless of field-presence param values |
 | 4 | `live::1` is incompatible with `format::json` | `live::`, `format::` | Exits 1 before any fetch with `"live monitor mode is incompatible with format::json"` |
 | 5 | `desc::` default is determined by `sort::` | `sort::`, `desc::` | Each sort strategy has a context-sensitive `desc::` default; explicit `desc::` overrides it |
 | 6 | `prefer::` selects the weekly column used by sort heuristics | `sort::`, `prefer::` | `prefer::any/opus/sonnet` controls which weekly quota column `renew` strategy reads |
@@ -35,9 +35,9 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 
 ### Interaction :: 2. `format::json` overrides field-presence params
 
-**Parameters:** [`format::`](params.md#parameter--2-format), [`active::`](params.md#parameter--13-active), [`account::`](params.md#parameter--5-account), [`sub::`](params.md#parameter--6-sub), [`tier::`](params.md#parameter--7-tier), [`token::`](params.md#parameter--8-token), [`expires::`](params.md#parameter--9-expires), [`email::`](params.md#parameter--10-email), [`file::`](params.md#parameter--11-file), [`saved::`](params.md#parameter--12-saved), [`display_name::`](params.md#parameter--14-display_name), [`role::`](params.md#parameter--15-role), [`billing::`](params.md#parameter--16-billing), [`model::`](params.md#parameter--17-model)
+**Parameters:** [`format::`](params.md#parameter--2-format), [`account::`](params.md#parameter--5-account), [`sub::`](params.md#parameter--6-sub), [`tier::`](params.md#parameter--7-tier), [`token::`](params.md#parameter--8-token), [`expires::`](params.md#parameter--9-expires), [`email::`](params.md#parameter--10-email), [`file::`](params.md#parameter--11-file), [`saved::`](params.md#parameter--12-saved), [`display_name::`](params.md#parameter--14-display_name), [`role::`](params.md#parameter--15-role), [`billing::`](params.md#parameter--16-billing), [`model::`](params.md#parameter--17-model)
 
-**Effect:** When `format::json` is specified on `.accounts` or `.credentials.status`, the JSON output always includes all fields regardless of field-presence param values. Setting `sub::0` or `active::0` only suppresses those fields in text output, not in JSON.
+**Effect:** When `format::json` is specified on `.accounts` or `.credentials.status`, the JSON output always includes all fields regardless of field-presence param values. Setting `sub::0` only suppresses that field in text output, not in JSON.
 
 **Rationale:** JSON consumers rely on stable schemas; selectively omitting fields based on presence params would break pipeline consumers that expect consistent structure. The field-presence params are a text-output formatting concern, not a data-selection concern.
 
@@ -50,10 +50,6 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 clp .accounts sub::0 format::json
 # [{"name":"alice@acme.com","is_active":true,"subscription_type":"max",...}]  ← subscription_type still present
 
-# active::0 suppresses Active: in text, but JSON still has "is_active"
-clp .accounts active::0 format::json
-# [{"name":"alice@acme.com","is_active":true,...}]  ← is_active still present
-
 # file::0 (default) suppresses File: in text, but JSON always includes "file"
 clp .credentials.status format::json
 # {"subscription":"max",...,"file":"/home/user/.claude/.credentials.json","saved":2}
@@ -63,7 +59,7 @@ clp .credentials.status format::json
 
 ### Interaction :: 3. `format::table` ignores field-presence params
 
-**Parameters:** [`format::`](params.md#parameter--2-format), [`active::`](params.md#parameter--13-active), [`sub::`](params.md#parameter--6-sub), [`tier::`](params.md#parameter--7-tier), [`expires::`](params.md#parameter--9-expires), [`email::`](params.md#parameter--10-email), [`display_name::`](params.md#parameter--14-display_name), [`role::`](params.md#parameter--15-role), [`billing::`](params.md#parameter--16-billing), [`model::`](params.md#parameter--17-model)
+**Parameters:** [`format::`](params.md#parameter--2-format), [`sub::`](params.md#parameter--6-sub), [`tier::`](params.md#parameter--7-tier), [`expires::`](params.md#parameter--9-expires), [`email::`](params.md#parameter--10-email), [`display_name::`](params.md#parameter--14-display_name), [`role::`](params.md#parameter--15-role), [`billing::`](params.md#parameter--16-billing), [`model::`](params.md#parameter--17-model)
 
 **Effect:** When `format::table` is specified on `.accounts`, the table always uses a fixed column set (flag, Account, Sub, Tier, Expires, Email) regardless of field-presence param values. Passing `sub::0` or `tier::0` alongside `format::table` has no effect on table columns.
 
@@ -78,7 +74,7 @@ clp .credentials.status format::json
 clp .accounts sub::0 format::table
 
 # All field-presence params ignored in table mode
-clp .accounts active::0 sub::0 tier::0 format::table
+clp .accounts sub::0 tier::0 format::table
 ```
 
 ---
