@@ -1,4 +1,4 @@
-#![ allow( missing_docs ) ]
+//! Unix-only integration tests.
 #![ cfg( unix ) ]
 //! Isolated/Refresh Subprocess Correctness Tests
 //!

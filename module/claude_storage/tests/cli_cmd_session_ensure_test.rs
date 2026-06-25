@@ -27,6 +27,7 @@
 //! The spec says `path::` is required (exit 1 when absent). Issue-037 changed
 //! the implementation to default to cwd. INT-1 documents the spec requirement;
 //! a divergence is expected and intentional.
+#![ cfg( unix ) ]
 
 mod common;
 

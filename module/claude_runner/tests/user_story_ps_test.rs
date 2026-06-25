@@ -155,6 +155,9 @@ fn us_05_pro_prefix_shortened_in_path()
 ///
 /// Uses the test process's own PID so the `/proc/{pid}` liveness filter
 /// passes — gate files with dead PIDs are filtered out (BUG-293).
+///
+/// Linux-only: the liveness filter probes `/proc/{pid}`.
+#[ cfg( target_os = "linux" ) ]
 #[ test ]
 fn us_06_queued_clr_shows_queued_headers()
 {

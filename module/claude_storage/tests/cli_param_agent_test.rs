@@ -13,6 +13,7 @@
 //! - EC-5: Unset returns all session types
 //! - EC-6: `agent::1` auto-enables sessions display in .list
 //! - EC-7: `agent::0` auto-enables sessions display in .list
+#![ cfg( unix ) ]
 
 mod common;
 

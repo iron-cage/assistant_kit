@@ -1,4 +1,4 @@
-#![ allow( missing_docs ) ]
+//! Unix-only integration tests.
 #![ cfg( unix ) ]
 //! `--output-style` Integration Tests (EC-01–EC-14, IT-7)
 //!

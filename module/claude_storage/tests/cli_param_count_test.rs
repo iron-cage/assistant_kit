@@ -12,6 +12,7 @@
 //! - EC-4: `count::yes` → rejected (type validation)
 //! - EC-5: `count::1` with empty storage → outputs 0
 //! - EC-6: `count::1` exits 0 even with no results
+#![ cfg( unix ) ]
 
 mod common;
 

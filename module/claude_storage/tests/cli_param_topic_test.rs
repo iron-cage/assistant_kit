@@ -16,6 +16,7 @@
 //! - EC-8: Absent in .project.exists checks base path storage
 //! - EC-9: Value with hyphen accepted
 //! - EC-10: Value with underscore accepted
+#![ cfg( unix ) ]
 
 mod common;
 

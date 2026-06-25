@@ -1,4 +1,4 @@
-#![ allow( missing_docs ) ]
+//! Unix-only integration tests.
 #![ cfg( unix ) ]
 #![ allow( clippy::doc_markdown ) ] // test doc comments use code identifiers in prose
 //! `--retry-on-process` and `--process-delay` Integration Tests

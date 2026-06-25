@@ -1,4 +1,4 @@
-#![ allow( missing_docs ) ]
+//! Unix-only integration tests.
 #![ cfg( unix ) ]
 //! `--expect` / `--expect-strategy` Integration Tests
 //!

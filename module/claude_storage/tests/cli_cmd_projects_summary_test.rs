@@ -36,6 +36,7 @@
 //! - INT-50: Double-topic key shows both topic components unconditionally
 //!
 //! Tests INT-1..INT-25: → `cli_cmd_projects_test.rs`
+#![ cfg( unix ) ]
 
 mod common;
 

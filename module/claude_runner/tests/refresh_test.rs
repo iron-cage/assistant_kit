@@ -35,7 +35,10 @@ fn run_refresh( args : &[ &str ] ) -> std::process::Output
 
 /// IT-2: creds file that does not exist → exit 1 with file-not-found message.
 ///
+/// Unix-only: uses `/tmp/` path and checks unix-style error messages.
+///
 /// Source: tests/docs/cli/command/04_refresh.md#it-2
+#[ cfg( unix ) ]
 #[ test ]
 fn test_it2_creds_file_not_found()
 {
