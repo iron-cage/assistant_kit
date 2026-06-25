@@ -1,5 +1,5 @@
+#![ allow( missing_docs ) ]
 #![ cfg( unix ) ]
-#![ cfg_attr( not( unix ), allow( missing_docs ) ) ]
 //! `--expect` / `--expect-strategy` Integration Tests
 //!
 //! ## Purpose

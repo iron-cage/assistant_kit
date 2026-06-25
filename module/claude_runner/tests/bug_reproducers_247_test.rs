@@ -39,6 +39,12 @@
 //! | `t04_stdout_on_success_path_goes_to_clr_stdout` | exits 0 with stdout content | content in clr stdout |
 //! | `t05_stdout_forwarded_on_exit_2_rate_limit` | exits 2 with stdout content | content in clr stderr; clr exits 2 |
 
+#![ cfg( unix ) ]
+// Fix(BUG-316): Root cause: Feature-064 pull did not gate this file; fake_claude_dir is
+// #[cfg(unix)]-only so its unconditional import fails on Windows (E0432 "configured out").
+// Pitfall: when a test file imports ANY unix-only helper, the whole file needs #![cfg(unix)];
+// unresolved imports are crate-level errors, not item-level — #[cfg(unix)] on test fns alone
+// does not prevent the import from being resolved.
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ fake_claude_dir, run_cli_with_env };
 
