@@ -97,7 +97,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "owner", Kind::String ).with_description( "Set or clear account ownership: USER@MACHINE identity to set; sentinel value \"0\" clears ownership (owner::0)" ),
       bfs( "force",   "Bypass G8 ownership gate on owner:: (default 0)" ),
       reg_arg_opt( "cols", Kind::String ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default set: account, owner, active, current, sub, tier, expires, email" ),
-      reg_arg_opt( "for",     Kind::String  ).with_description( "USER@MACHINE identity for marker assignment; default is current machine (use with assign::1 name::X)" ),
+      reg_arg_opt( "for", Kind::String ).with_description( "REMOVED — functionality absorbed into active:: value: active::USER@MACHINE name::X" ),
       reg_arg_opt( "active", Kind::String ).with_description( "USER@MACHINE target: assign marker when name:: present, unassign when absent (Feature 064)" ),
       // Unified display/query params (same set as .usage; defaults differ)
       reg_arg_opt( "refresh",           Kind::Integer ).with_description( "Attempt OAuth token refresh for expired credentials via subprocess (0 = off, default; 1 = enabled)" ),
@@ -247,7 +247,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "unclaim", Kind::Integer ).with_description( "Clear account ownership: unclaim::1 name::ACCOUNT; without name:: batch-clears all owned accounts" ),
       reg_arg_opt( "owner", Kind::String ).with_description( "Set or clear account ownership: USER@MACHINE identity to set; sentinel value \"0\" clears ownership (owner::0)" ),
       bfs( "force",   "Bypass G8 ownership gate on owner:: (default 0)" ),
-      reg_arg_opt( "for",     Kind::String  ).with_description( "USER@MACHINE identity for marker assignment; default is current machine (use with assign::1 name::X)" ),
+      reg_arg_opt( "for", Kind::String ).with_description( "REMOVED — functionality absorbed into active:: value: active::USER@MACHINE name::X" ),
       reg_arg_opt( "active", Kind::String ).with_description( "USER@MACHINE target: assign marker when name:: present, unassign when absent (Feature 064)" ),
       // Rotation param (Feature 038)
       reg_arg_opt( "rotate", Kind::Integer ).with_description( "Switch to the → winner after rendering the quota table (0 = off, default; 1 = on); mutually exclusive with live::1" ),

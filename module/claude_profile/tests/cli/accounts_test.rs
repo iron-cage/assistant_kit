@@ -1559,9 +1559,9 @@ fn ft01_accounts_accepts_32_params()
   );
   assert_exit( &out, 0 );
 
-  // assign/unclaim/force/for accepted; dry::1 suppresses writes.
+  // active:: + name:: + dry::1 accepted (Feature 064 ownership mutation).
   let out = run_cs_with_env(
-    &[ ".accounts", "assign::1", "name::alice@acme.com", "dry::1" ],
+    &[ ".accounts", "active::testuser@testmachine", "name::alice@acme.com", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -1635,7 +1635,7 @@ fn ft07_accounts_unclaim_batch()
   write_account_owner( dir.path(), "bob@acme.com", "other@remote" );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "unclaim::1" ],
+    &[ ".accounts", "owner::0" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 0 );
@@ -1727,8 +1727,9 @@ fn ft13_accounts_legacy_toggles_rejected()
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
 
+  // "active" removed from this list — Feature 064 repurposed it as Kind::String (active::USER@MACHINE).
   let toggles = [
-    "active", "current", "sub", "tier", "expires", "email",
+    "current", "sub", "tier", "expires", "email",
     "display_name", "host", "role", "billing", "model",
     "uuid", "capabilities", "org_uuid", "org_name",
   ];
@@ -1867,14 +1868,14 @@ fn ft20_accounts_unclaim_force_bypasses_g8()
 
   // Without force: G8 blocks.
   let out_blocked = run_cs_with_env(
-    &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
+    &[ ".accounts", "owner::0", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
   );
   assert_exit( &out_blocked, 1 );
 
   // With force::1: G8 bypassed.
   let out = run_cs_with_env(
-    &[ ".accounts", "unclaim::1", "name::alice@acme.com", "force::1" ],
+    &[ ".accounts", "owner::0", "name::alice@acme.com", "force::1" ],
     &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
   );
   assert_exit( &out, 0 );
@@ -1916,17 +1917,17 @@ fn ft21_force_no_effect_without_unclaim()
     );
   }
 
-  // Case B: force + assign → marker written, no error.
+  // Case B: force + active:: → marker written, no error (force is silently ignored on active::).
   {
     let out = run_cs_with_env(
-      &[ ".accounts", "force::1", "assign::1", "name::alice@acme.com" ],
+      &[ ".accounts", "force::1", "active::testuser@testmachine", "name::alice@acme.com" ],
       &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
     );
     assert_exit( &out, 0 );
 
     let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
     let marker = std::fs::read_to_string( store.join( "_active_testmachine_testuser" ) )
-      .expect( "FT-21B: marker must be written with force::1 + assign::1" );
+      .expect( "FT-21B: marker must be written with force::1 + active::testuser@testmachine" );
     assert_eq!( marker.trim(), "alice@acme.com", "FT-21B: marker must contain alice@acme.com" );
   }
 }
@@ -1960,7 +1961,7 @@ fn it_batch_unclaim_force_clears_non_owned()
   // carol: no owner written → empty owner → not touched by unclaim
 
   let out = run_cs_with_env(
-    &[ ".accounts", "unclaim::1", "force::1" ],
+    &[ ".accounts", "owner::0", "force::1" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 0 );
@@ -1976,7 +1977,7 @@ fn it_batch_unclaim_force_clears_non_owned()
   );
   assert!(
     !text.contains( "carol" ),
-    "it_batch_unclaim_force: carol (unowned) must not appear in output; got:\n{text}",
+    "it_batch_unclaim_force: carol (no .json) must not appear in output; got:\n{text}",
   );
 
   let store    = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
@@ -2017,7 +2018,7 @@ fn it_batch_unclaim_force_dry_previews_all()
   write_account( dir.path(), "carol@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "unclaim::1", "force::1", "dry::1" ],
+    &[ ".accounts", "owner::0", "force::1", "dry::1" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 0 );

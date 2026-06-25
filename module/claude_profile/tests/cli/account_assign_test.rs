@@ -1,75 +1,85 @@
-//! Integration tests: AA (Account Assign) — `.accounts assign::1` mutation param.
+//! Integration tests: `active::` marker assign/unassign — Feature 064.
 //!
 //! Tests invoke the compiled `clp` binary as a subprocess via `CARGO_BIN_EXE_clp`.
 //!
 //! ## Scope
 //!
-//! All tests (aa01–aa18, ec7–ec8, ft13–ft15) are fixture-based and run entirely offline.
-//! No network access required. HOME isolation via `TempDir` + `USER=testuser`
-//! + `HOSTNAME=testmachine` ensures deterministic marker filenames.
+//! All tests are fixture-based and run entirely offline. No network access required.
+//! HOME isolation via `TempDir` + `USER=testuser` + `HOSTNAME=testmachine` ensures
+//! deterministic marker filenames.
 //!
-//! Feature 037 absorbed `.account.assign` into `.accounts assign::1`. All tests use
-//! `.accounts assign::1 name::X`. The `.account.assign` command is fully removed.
+//! Feature 064 replaced `.accounts assign::1` + `for::` (Feature 032/037) with a single
+//! `active::USER@MACHINE` param. `unclaim::1` replaced by `owner::0`. This file tests:
+//!
+//! - `active::USER@MACHINE name::X` — assign (write marker)
+//! - `active::USER@MACHINE` (no name) — unassign (clear marker)
+//! - `REMOVED_TOGGLE`: `assign::1`, `for::`, `unclaim::1` exit 1 with migration messages
+//! - `active::` validation: USER@MACHINE format, empty components, sanitization
+//! - `active::` isolation: does NOT modify `owner` field
 //!
 //! ## Test Matrix
 //!
-//! | ID | Test Function | FT | Condition | P/N |
-//! |----|---------------|----|-----------|-----|
-//! | aa01 | `aa01_current_machine_marker_written` | FT-08 | No `for::` → `_active_testmachine_testuser` created = account name | P |
-//! | aa02 | `aa02_remote_machine_marker_written` | FT-09 | `for::bob@laptop` → `_active_laptop_bob` created = account name | P |
-//! | aa03 | `aa03_dry_run_no_write` | FT-08 | `dry::1` → no `_active_*` file; stdout contains `[dry-run] would assign` | P |
-//! | aa04 | `aa04_no_name_emits_usage_block` | FT-10 | No `name::` (active account set) → preamble + machine + active account name + `Ready to copy:` | P |
-//! | aa05 | `aa05_unknown_account_exits_2` | FT-08 | Unknown account name (`@`-form) → exit 2 | N |
-//! | aa06 | `aa06_for_without_at_exits_1` | FT-09 | `for::badvalue` (no `@`) → exit 1 | N |
-//! | aa07 | `aa07_empty_for_component_exits_1` | FT-09 | `for::@laptop` or `for::bob@` → exit 1 | N |
-//! | aa08 | `aa08_special_chars_sanitized` | FT-09 | `for::alice@my laptop` → `_active_my_laptop_alice` (space → `_`) | P |
-//! | aa09 | `aa09_prefix_resolution` | FT-08 | `name::alice` prefix resolves to `alice@corp.com` | P |
-//! | aa10 | `aa10_overwrite_existing_marker` | FT-08 | Overwrites existing `_active_laptop_bob` with new account name | P |
-//! | aa11 | `aa11_no_credentials_json_side_effect` | FT-08 | `~/.claude/.credentials.json` content unchanged after assign | P |
-//! | aa12 | `aa12_dry_run_shows_marker_filename` | FT-08 | `dry::1` + `for::bob@laptop` → stdout contains `_active_laptop_bob` | P |
-//! | aa13 | `aa13_dry_run_unknown_account_exits_2` | FT-08 | `dry::1` + unknown account → exit 2 (existence validated before dry-run) | N |
-//! | aa14 | `aa14_usage_block_no_active_marker_shows_none` | FT-10 | No `name::`, no marker file → `Active account: (none)`, no `Ready to copy:` | P |
-//! | aa15 | `aa15_ambiguous_prefix_exits_1` | FT-08 | `name::alice` matches two accounts → exit 1 (ambiguous, not exit 2) | N |
-//! | aa16 | `aa16_exact_local_part_beats_prefix_ambiguity` | FT-08 | `name::i1` when `i1@host` + `i11@host` exist → resolves to `i1@host` (exact wins) | P |
-//! | aa17 | `aa17_for_only_at_both_empty_exits_1` | FT-09 | `for::@` (only `@`, both components empty) → exit 1 | N |
-//! | ec7  | `ec7_dot_hyphen_in_machine_preserved` | FT-09 | `for::user1@w003.local` → `_active_w003.local_user1` (dot + hyphen kept) | P |
-//! | ec8  | `ec8_multiple_at_splits_on_first` | FT-09 | `for::alice@corp.com@laptop` → split on first `@` → `_active_corp.com_laptop_alice` | P |
-//! | aa18 | `aa18_empty_name_exits_1` | FT-08 | `name::` (empty) → exit 1 "`name::` value cannot be empty" | N |
-//!
-//! ### AO — Account Assign Ownership (Feature 036 / 037)
-//!
-//! | ID | Test Function | FT | Condition | P/N |
-//! |----|---------------|----|-----------|-----|
-//! | ft13 | `ft13_assign_does_not_modify_owner` | FT-08 | `.accounts assign::1` does NOT touch owner (marker-only) | P |
-//! | ft14 | `ft14_assign_for_does_not_modify_owner` | FT-09 | `.accounts assign::1 for::bob@laptop` does NOT touch owner | P |
+//! | ID | Test Function | FT/EC | Condition | P/N |
+//! |----|---------------|-------|-----------|-----|
+//! | FT-01 | `ft01_active_assign_writes_current_machine_marker` | FT-01 | `active::testuser@testmachine name::X` writes `DEFAULT_MARKER` | P |
+//! | FT-01b | `ft01b_active_assign_writes_remote_marker` | FT-01 | `active::bob@laptop name::X` writes `_active_laptop_bob` | P |
+//! | FT-02 | `ft02_active_unassign_clears_marker` | FT-02 | `active::testuser@testmachine` (no name) clears marker | P |
+//! | FT-03 | `ft03_active_assign_dry_run` | FT-03 | `active::testuser@testmachine name::X dry::1` → no write | P |
+//! | FT-04 | `ft04_active_unknown_account_exits_1` | FT-04 | `active::testuser@testmachine name::ghost` → exit 1 | N |
+//! | FT-05 | `ft05_assign_removed_toggle` | FT-05 | `assign::1 name::X` → exit 1 REMOVED_TOGGLE | N |
+//! | FT-06 | `ft06_assign_and_for_removed_toggles` | FT-06 | `assign::1 for::bob@laptop name::X` → exit 1 | N |
+//! | FT-07 | `ft07_unclaim_removed_toggle` | FT-07 | `unclaim::1 name::X` → exit 1 REMOVED_TOGGLE | N |
+//! | FT-13a | `ft13a_space_in_active_value_sanitized` | FT-13 | `active::"alice@my laptop" name::X` → `_active_my_laptop_alice` | P |
+//! | FT-13b | `ft13b_dot_hyphen_in_active_value_preserved` | FT-13 | `active::user1@w003.local name::X` → `_active_w003.local_user1` | P |
+//! | FT-14 | `ft14_active_does_not_modify_owner` | FT-14 | `active::...` does NOT touch `owner` field | P |
+//! | FT-18 | `ft18_active_zero_rejected` | FT-18 | `active::0 name::X` exits 1 (no `@`) | N |
+//! | FT-19 | `ft19_active_unassign_dry_run` | FT-19 | `active::user1@w003 dry::1` (no name) → `[dry-run]` preview | P |
+//! | EC-3 | `ec3_active_no_at_exits_1` | EC-3 | `active::badvalue name::X` exits 1 | N |
+//! | EC-4 | `ec4_active_empty_user_exits_1` | EC-4 | `active::@testmachine name::X` exits 1 | N |
+//! | EC-5 | `ec5_active_empty_machine_exits_1` | EC-5 | `active::testuser@ name::X` exits 1 | N |
+//! | EC-8 | `ec8_multiple_at_splits_on_first` | EC-8/FT-13 | `active::alice@corp.com@laptop` splits on first `@` | P |
+//! | EC-10 | `ec10_active_absent_no_marker_write` | EC-10 | no `active::` param → no marker file written | P |
+//! | EC-13 | `ec13_force_ignored_for_active` | EC-13 | `force::1 active::...` — force silently ignored; marker written | P |
+//! | aa09 | `aa09_prefix_resolution` | — | `name::alice` prefix resolves to `alice@corp.com` | P |
+//! | aa10 | `aa10_overwrite_existing_marker` | — | Second assign overwrites the marker | P |
+//! | aa11 | `aa11_no_credentials_json_side_effect` | — | `active::` does NOT modify `~/.claude/.credentials.json` | P |
+//! | aa12 | `aa12_dry_run_shows_marker_filename` | — | `dry::1` stdout names the target marker file | P |
+//! | aa13 | `aa13_dry_run_unknown_account_exits_1` | — | `dry::1` + unknown account → exit 1 (existence check before dry-run) | N |
+//! | aa15 | `aa15_ambiguous_prefix_exits_1` | — | `name::alice` when two alice-accounts → exit 1 ambiguous | N |
+//! | aa16 | `aa16_exact_local_part_beats_prefix_ambiguity` | — | `name::i1` when `i1@host` + `i11@host` → resolves to `i1@host` | P |
+//! | ft14b | `ft14b_active_for_does_not_modify_owner` | FT-14 | `active::bob@laptop name::X` does NOT touch `owner` field | P |
+//! | aa14 | `aa14_unassign_absent_marker_is_noop` | — | unassign when marker absent → exit 0, stdout `unassigned` | P |
 
 use crate::cli_runner::{ run_cs_with_env, stdout, stderr, assert_exit, write_account, write_account_owner };
 use tempfile::TempDir;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-/// Fixed USER value used throughout these tests for deterministic marker filenames.
+/// Fixed USER value for deterministic marker filenames.
 const TEST_USER : &str = "testuser";
 
-/// Fixed HOSTNAME value used throughout these tests for deterministic marker filenames.
+/// Fixed HOSTNAME value for deterministic marker filenames.
 const TEST_HOST : &str = "testmachine";
 
-/// Expected default marker when no `for::` is provided (matches `_active_testmachine_testuser`).
+/// Expected default marker when `active::testuser@testmachine` is used.
 const DEFAULT_MARKER : &str = "_active_testmachine_testuser";
 
-/// Standard env block that sets HOME, USER, and HOSTNAME for deterministic behavior.
+/// `active::` value targeting the test machine/user.
+const ACTIVE_CURRENT : &str = "testuser@testmachine";
+
+/// Standard env block: HOME, USER, HOSTNAME for deterministic behavior.
 fn test_env( home : &str ) -> Vec< ( &str, &str ) >
 {
   vec![ ( "HOME", home ), ( "USER", TEST_USER ), ( "HOSTNAME", TEST_HOST ) ]
 }
 
-/// Resolve the credential store path for a given home directory.
+/// Credential store path for a given home directory.
 fn credential_store( home : &std::path::Path ) -> std::path::PathBuf
 {
   home.join( ".persistent" ).join( "claude" ).join( "credential" )
 }
 
-/// Count files in the credential store whose names start with `_active`.
+/// Count `_active*` files in the credential store.
 fn active_marker_count( store : &std::path::Path ) -> usize
 {
   std::fs::read_dir( store )
@@ -80,11 +90,21 @@ fn active_marker_count( store : &std::path::Path ) -> usize
     )
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+/// Read `owner` field from `{name}.json` in the credential store.
+fn read_owner( home : &std::path::Path, name : &str ) -> Option< String >
+{
+  let meta = credential_store( home ).join( format!( "{name}.json" ) );
+  std::fs::read_to_string( &meta )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .and_then( |v| v[ "owner" ].as_str().map( str::to_string ) )
+}
+
+// ── FT-01: assign writes marker ───────────────────────────────────────────────
 
 #[ test ]
-/// AC-01: default (no `for::`) writes `_active_{machine}_{user}` for current machine.
-fn aa01_current_machine_marker_written()
+/// FT-01 (AC-01): `active::testuser@testmachine name::alice@corp.com` writes `DEFAULT_MARKER`.
+fn ft01_active_assign_writes_current_machine_marker()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -93,22 +113,25 @@ fn aa01_current_machine_marker_written()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com" ], &refs );
+  let out = run_cs_with_env(
+    &[ ".accounts", &format!( "active::{ACTIVE_CURRENT}" ), "name::alice@corp.com" ],
+    &refs,
+  );
   assert_exit( &out, 0 );
 
-  let store    = credential_store( dir.path() );
-  let content  = std::fs::read_to_string( store.join( DEFAULT_MARKER ) )
-    .expect( "default marker must exist after assign" );
+  let store   = credential_store( dir.path() );
+  let content = std::fs::read_to_string( store.join( DEFAULT_MARKER ) )
+    .expect( "DEFAULT_MARKER must exist after active:: assign" );
   assert_eq!( content.trim(), "alice@corp.com", "marker must contain the assigned account name" );
 
   let out_text = stdout( &out );
-  assert!( out_text.contains( "Assigned" ), "stdout must confirm assignment: {out_text}" );
+  assert!( out_text.contains( "assigned" ), "stdout must confirm assignment: {out_text}" );
   assert!( out_text.contains( DEFAULT_MARKER ), "stdout must name the marker file: {out_text}" );
 }
 
 #[ test ]
-/// AC-02: `for::bob@laptop` writes `_active_laptop_bob` (machine first, then user).
-fn aa02_remote_machine_marker_written()
+/// FT-01 (remote machine): `active::bob@laptop name::alice@corp.com` writes `_active_laptop_bob`.
+fn ft01b_active_assign_writes_remote_marker()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -117,18 +140,54 @@ fn aa02_remote_machine_marker_written()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::bob@laptop" ], &refs );
+  let out = run_cs_with_env(
+    &[ ".accounts", "active::bob@laptop", "name::alice@corp.com" ],
+    &refs,
+  );
   assert_exit( &out, 0 );
 
   let store   = credential_store( dir.path() );
   let content = std::fs::read_to_string( store.join( "_active_laptop_bob" ) )
-    .expect( "_active_laptop_bob must exist after assign with for::bob@laptop" );
-  assert_eq!( content.trim(), "alice@corp.com", "marker must contain the assigned account name" );
+    .expect( "_active_laptop_bob must exist after active::bob@laptop assign" );
+  assert_eq!( content.trim(), "alice@corp.com" );
 }
 
+// ── FT-02: unassign clears marker ─────────────────────────────────────────────
+
 #[ test ]
-/// AC-03: `dry::1` prints `[dry-run] would assign` and writes no marker file.
-fn aa03_dry_run_no_write()
+/// FT-02 (AC-02): `active::user1@w003` (no `name::`) clears `_active_w003_user1`.
+fn ft02_active_unassign_clears_marker()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  let store  = credential_store( dir.path() );
+  let marker = "_active_w003_user1";
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::write( store.join( marker ), "alice@corp.com" ).unwrap();
+
+  let out = run_cs_with_env( &[ ".accounts", "active::user1@w003" ], &refs );
+  assert_exit( &out, 0 );
+
+  let out_text = stdout( &out );
+  assert!(
+    out_text.contains( "unassigned" ) && out_text.contains( marker ),
+    "stdout must confirm unassign with marker name: {out_text}",
+  );
+
+  let marker_path = store.join( marker );
+  let still_has_content = std::fs::read_to_string( &marker_path )
+    .is_ok_and( |s| !s.trim().is_empty() );
+  assert!( !still_has_content, "marker must be cleared or deleted after unassign" );
+}
+
+// ── FT-03: assign dry-run ─────────────────────────────────────────────────────
+
+#[ test ]
+/// FT-03 (AC-03): `dry::1` prints `[dry-run] would assign`; no marker written.
+fn ft03_active_assign_dry_run()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -137,7 +196,10 @@ fn aa03_dry_run_no_write()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "dry::1" ], &refs );
+  let out = run_cs_with_env(
+    &[ ".accounts", &format!( "active::{ACTIVE_CURRENT}" ), "name::alice@corp.com", "dry::1" ],
+    &refs,
+  );
   assert_exit( &out, 0 );
 
   let out_text = stdout( &out );
@@ -147,42 +209,11 @@ fn aa03_dry_run_no_write()
   assert_eq!( active_marker_count( &store ), 0, "dry-run must write no marker files" );
 }
 
-#[ test ]
-/// AC-04: no `name::` with active account set → emits preamble + live usage block with machine identity,
-/// active account name, and copy-paste ready examples containing that name.
-///
-/// ## Why pre-seeding the active marker is required
-///
-/// The usage block conditionally shows a `Ready to copy:` section only when `active != "(none)"`.
-/// Without pre-seeding `DEFAULT_MARKER`, the command reads no marker file and shows `(none)`,
-/// which omits `Ready to copy:` entirely — the primary AC-04 success path (copy-paste examples
-/// with the real account name substituted) would never be exercised. Pre-seeding ensures the
-/// block shows the actual account name and the `Ready to copy:` section is present.
-fn aa04_no_name_emits_usage_block()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let env  = test_env( home );
-  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
-
-  // Write account and pre-seed the active marker so the usage block shows the real account name.
-  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
-  let store = credential_store( dir.path() );
-  std::fs::write( store.join( DEFAULT_MARKER ), "alice@corp.com" ).unwrap();
-
-  let out = run_cs_with_env( &[ ".accounts", "assign::1" ], &refs );
-  assert_exit( &out, 0 );
-
-  let out_text = stdout( &out );
-  assert!( out_text.contains( "Current machine:" ), "stdout must show current machine: {out_text}" );
-  assert!( out_text.contains( "Active account:" ), "stdout must show active account: {out_text}" );
-  assert!( out_text.contains( "alice@corp.com" ), "stdout must show active account name in examples: {out_text}" );
-  assert!( out_text.contains( "Ready to copy:" ), "stdout must show ready-to-copy block: {out_text}" );
-}
+// ── FT-04: unknown account exits 1 ───────────────────────────────────────────
 
 #[ test ]
-/// AC-05: unknown account name → exit 2 (not found).
-fn aa05_unknown_account_exits_2()
+/// FT-04 (AC-04): unknown account → exit 1; no marker written.
+fn ft04_active_unknown_account_exits_1()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -191,32 +222,84 @@ fn aa05_unknown_account_exits_2()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::nobody@example.com" ], &refs );
-  assert_exit( &out, 2 );
-}
-
-#[ test ]
-/// AC-06: `for::` without `@` → exit 1 with error about USER@MACHINE format.
-fn aa06_for_without_at_exits_1()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let env  = test_env( home );
-  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
-
-  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
-
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::badvalue" ], &refs );
+  let out = run_cs_with_env(
+    &[ ".accounts", &format!( "active::{ACTIVE_CURRENT}" ), "name::ghost@example.com" ],
+    &refs,
+  );
   assert_exit( &out, 1 );
 
-  let err_text = stderr( &out );
-  assert!( err_text.contains( "USER@MACHINE" ) || err_text.contains( '@' ),
-    "stderr must explain the required format: {err_text}" );
+  let store = credential_store( dir.path() );
+  assert_eq!( active_marker_count( &store ), 0, "no marker file must be written for unknown account" );
+}
+
+// ── FT-05..FT-07: REMOVED_TOGGLE migration messages ─────────────────────────
+
+#[ test ]
+/// FT-05 (AC-05): `assign::1 name::X` exits 1 with REMOVED migration message.
+fn ft05_assign_removed_toggle()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "assign::1", "name::alice@corp.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "REMOVED" ) && err.contains( "active::" ),
+    "FT-05: stderr must contain REMOVED migration message pointing to active::; got:\n{err}",
+  );
+
+  let store = credential_store( dir.path() );
+  assert_eq!( active_marker_count( &store ), 0, "REMOVED_TOGGLE must write no marker files" );
 }
 
 #[ test ]
-/// AC-07: empty user or machine component in `for::` → exit 1.
-fn aa07_empty_for_component_exits_1()
+/// FT-06 (AC-06): `assign::1 for::bob@laptop name::X` — both REMOVED; exits 1.
+fn ft06_assign_and_for_removed_toggles()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "assign::1", "name::alice@corp.com", "for::bob@laptop" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!( stderr( &out ).contains( "REMOVED" ), "FT-06: must emit REMOVED migration; got:\n{}", stderr( &out ) );
+}
+
+#[ test ]
+/// FT-07 (AC-07): `unclaim::1 name::X` exits 1 with REMOVED migration message.
+fn ft07_unclaim_removed_toggle()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "unclaim::1", "name::alice@corp.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "REMOVED" ) && err.contains( "owner::0" ),
+    "FT-07: stderr must contain REMOVED migration pointing to owner::0; got:\n{err}",
+  );
+}
+
+// ── FT-13: sanitization ────────────────────────────────────────────────────────
+
+#[ test ]
+/// FT-13a (AC-13): space in machine component → sanitized to `_`.
+fn ft13a_space_in_active_value_sanitized()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -225,39 +308,21 @@ fn aa07_empty_for_component_exits_1()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  // Empty user component (left of @).
-  let out_a = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::@laptop" ], &refs );
-  assert_exit( &out_a, 1 );
-
-  // Empty machine component (right of @).
-  let out_b = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::bob@" ], &refs );
-  assert_exit( &out_b, 1 );
-}
-
-#[ test ]
-/// AC-08: space in machine component is sanitized to `_`; marker filename uses sanitized form.
-fn aa08_special_chars_sanitized()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let env  = test_env( home );
-  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
-
-  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
-
-  // "alice@my laptop" — space in machine component must sanitize to `_`.
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::alice@my laptop" ], &refs );
+  let out = run_cs_with_env(
+    &[ ".accounts", "active::alice@my laptop", "name::alice@corp.com" ],
+    &refs,
+  );
   assert_exit( &out, 0 );
 
   let store   = credential_store( dir.path() );
   let content = std::fs::read_to_string( store.join( "_active_my_laptop_alice" ) )
-    .expect( "_active_my_laptop_alice must exist after assign with space in machine component" );
+    .expect( "_active_my_laptop_alice must exist — space in machine → '_'" );
   assert_eq!( content.trim(), "alice@corp.com" );
 }
 
 #[ test ]
-/// AC-09: bare prefix `alice` resolves to `alice@corp.com` when that is the only match.
-fn aa09_prefix_resolution()
+/// FT-13b (AC-13): dot and hyphen in machine component preserved verbatim.
+fn ft13b_dot_hyphen_in_active_value_preserved()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -266,256 +331,188 @@ fn aa09_prefix_resolution()
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice" ], &refs );
-  assert_exit( &out, 0 );
-
-  let store   = credential_store( dir.path() );
-  let content = std::fs::read_to_string( store.join( DEFAULT_MARKER ) )
-    .expect( "default marker must exist after assign with prefix name" );
-  assert_eq!( content.trim(), "alice@corp.com", "resolved name must be written to marker" );
-}
-
-#[ test ]
-/// AC-10: second assign to the same marker path overwrites the previous account name.
-fn aa10_overwrite_existing_marker()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let env  = test_env( home );
-  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
-
-  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
-  write_account( dir.path(), "bob@corp.com", "max", "tier4", 9_999_999_999_999, false );
-
-  // Write initial marker.
-  let store = credential_store( dir.path() );
-  std::fs::write( store.join( "_active_laptop_bob" ), "old@account.com" ).unwrap();
-
-  // Overwrite with alice@corp.com.
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::bob@laptop" ], &refs );
-  assert_exit( &out, 0 );
-
-  let content = std::fs::read_to_string( store.join( "_active_laptop_bob" ) ).unwrap();
-  assert_eq!( content.trim(), "alice@corp.com", "marker must be overwritten with new account" );
-}
-
-#[ test ]
-/// AC-11: `.accounts assign::1` must not modify `~/.claude/.credentials.json`.
-fn aa11_no_credentials_json_side_effect()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let env  = test_env( home );
-  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
-
-  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
-
-  // Write a sentinel .credentials.json and capture its content.
-  let claude_dir  = dir.path().join( ".claude" );
-  std::fs::create_dir_all( &claude_dir ).unwrap();
-  let creds_path  = claude_dir.join( ".credentials.json" );
-  let before      = r#"{"sentinel":"must-not-change"}"#;
-  std::fs::write( &creds_path, before ).unwrap();
-
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com" ], &refs );
-  assert_exit( &out, 0 );
-
-  let after = std::fs::read_to_string( &creds_path ).unwrap();
-  assert_eq!( after, before, "~/.claude/.credentials.json must be unchanged after .accounts assign::1" );
-}
-
-// ── AA13 — Dry-run with unknown @-account exits 2 ─────────────────────────────
-
-#[ test ]
-/// AC-05 / BUG-247: `dry::1` with an unknown @-containing account name must still exit 2.
-///
-/// ## Root Cause (BUG-247)
-///
-/// `resolve_account_name` short-circuits on `@` and returns the raw name without
-/// validating it against the credential store. The existence check was not performed
-/// before the dry-run branch, so `dry::1` silently succeeded (exit 0) even when the
-/// named account did not exist — contradicting the spec execution order (validate
-/// existence → then check dry-run flag).
-///
-/// ## Why Not Caught
-///
-/// `aa05` tests the non-dry case; no prior test exercised the `dry::1` path with an
-/// @-containing name that is absent from the credential store.
-///
-/// ## Fix Applied
-///
-/// Added existence guard before the dry-run branch in `accounts_routine()` assign path:
-/// existence check now runs unconditionally — the dry-run flag only suppresses
-/// the write step, never the precondition checks.
-///
-/// ## Prevention
-///
-/// For every command that accepts a `dry::` flag, pair a dry-unknown-account test with
-/// the normal-path test. Validate-then-dry is the canonical order for all mutation commands.
-///
-/// ## Pitfall
-///
-/// `resolve_account_name` `@`-fast-path bypasses store validation intentionally (full email
-/// → no prefix expansion needed), but callers must still check existence after
-/// resolution. Never assume a resolved name is a valid stored account.
-fn aa13_dry_run_unknown_account_exits_2()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let env  = test_env( home );
-  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
-
-  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
-
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::ghost@example.com", "dry::1" ], &refs );
-  assert_exit( &out, 2 );
-  let out_text = stdout( &out );
-  assert!(
-    !out_text.contains( "[dry-run] would assign" ),
-    "dry-run output must not be emitted for a non-existent account: {out_text}",
+  let out = run_cs_with_env(
+    &[ ".accounts", "active::user1@w003.local", "name::alice@corp.com" ],
+    &refs,
   );
-}
-
-// ── AA14 — Usage block shows (none) when no active marker ─────────────────────
-
-#[ test ]
-/// AC-04 (none-branch): when `name::` is absent AND no `_active_{machine}_{user}` file
-/// exists, the usage block shows `Active account: (none)` and omits `Ready to copy:`.
-fn aa14_usage_block_no_active_marker_shows_none()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let env  = test_env( home );
-  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
-
-  // No account written; no _active_* marker file created.
-  // Create the credential store directory so the command doesn't fail on store setup.
-  let store = credential_store( dir.path() );
-  std::fs::create_dir_all( &store ).unwrap();
-
-  let out = run_cs_with_env( &[ ".accounts", "assign::1" ], &refs );
-  assert_exit( &out, 0 );
-
-  let out_text = stdout( &out );
-  assert!(
-    out_text.contains( "Active account:   (none)" ) || out_text.contains( "Active account: (none)" ),
-    "usage block must show (none) when no marker file exists: {out_text}",
-  );
-  assert!(
-    !out_text.contains( "Ready to copy:" ),
-    "Ready to copy: section must be absent when active account is (none): {out_text}",
-  );
-}
-
-// ── AA15 — Ambiguous prefix exits 1 ───────────────────────────────────────────
-
-#[ test ]
-/// Ambiguous bare prefix: `name::alice` when both `alice@corp.com` and `alice@other.com`
-/// exist exits 1 (not exit 2), because the input is syntactically valid but the
-/// resolution is ambiguous — a user error, not a "not found".
-fn aa15_ambiguous_prefix_exits_1()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let env  = test_env( home );
-  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
-
-  write_account( dir.path(), "alice@corp.com",  "max", "tier4", 9_999_999_999_999, false );
-  write_account( dir.path(), "alice@other.com", "max", "tier4", 9_999_999_999_999, false );
-
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice" ], &refs );
-  assert_exit( &out, 1 );
-
-  let err_text = stderr( &out );
-  assert!(
-    err_text.contains( "ambiguous" ),
-    "stderr must explain the ambiguity: {err_text}",
-  );
-}
-
-// ── AA16 — Exact local-part beats prefix ambiguity ────────────────────────────
-
-#[ test ]
-/// Exact local-part match: when `i1@host` and `i11@host` both exist, `name::i1`
-/// resolves to `i1@host` (exact local-part match wins over prefix scan).
-///
-/// Without this rule, `i1` would be ambiguous (it is a prefix of both `i1@host`
-/// and `i11@host`). The exact-match shortcut ensures `i1` unambiguously selects `i1@host`.
-fn aa16_exact_local_part_beats_prefix_ambiguity()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let env  = test_env( home );
-  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
-
-  write_account( dir.path(), "i1@host",  "max", "tier4", 9_999_999_999_999, false );
-  write_account( dir.path(), "i11@host", "max", "tier4", 9_999_999_999_999, false );
-
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::i1" ], &refs );
-  assert_exit( &out, 0 );
-
-  let store   = credential_store( dir.path() );
-  let content = std::fs::read_to_string( store.join( DEFAULT_MARKER ) )
-    .expect( "marker must exist after exact-local-part resolution" );
-  assert_eq!( content.trim(), "i1@host", "exact local-part match must resolve to i1@host, not i11@host" );
-}
-
-// ── AA17 — for::@ (only @, both components empty) exits 1 ─────────────────────
-
-#[ test ]
-/// `for::@` — when the `for::` value is exactly `@`, both split components are empty.
-/// The empty-user check fires first → exit 1.
-fn aa17_for_only_at_both_empty_exits_1()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let env  = test_env( home );
-  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
-
-  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
-
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::@" ], &refs );
-  assert_exit( &out, 1 );
-
-  let store = credential_store( dir.path() );
-  assert_eq!( active_marker_count( &store ), 0, "no marker file must be written when for:: is invalid: for::@" );
-}
-
-// ── EC-7 ──────────────────────────────────────────────────────────────────────
-
-#[ test ]
-/// EC-7: dot and hyphen in machine component are preserved verbatim (kept in sanitization).
-///
-/// `for::user1@w003.local` — both `.` and `-` are in the allowed charset (alphanumeric, `-`, `.`).
-/// The marker filename must be `_active_w003.local_user1`, not `_active_w003_local_user1`.
-fn ec7_dot_hyphen_in_machine_preserved()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let env  = test_env( home );
-  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
-
-  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
-
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com", "for::user1@w003.local" ], &refs );
   assert_exit( &out, 0 );
 
   let store   = credential_store( dir.path() );
   let content = std::fs::read_to_string( store.join( "_active_w003.local_user1" ) )
-    .expect( "_active_w003.local_user1 must exist — dot and hyphen must be preserved in sanitization" );
+    .expect( "_active_w003.local_user1 must exist — dot/hyphen preserved in sanitization" );
   assert_eq!( content.trim(), "alice@corp.com" );
 }
 
-// ── EC-8 ──────────────────────────────────────────────────────────────────────
+// ── FT-14: active:: does NOT modify owner ────────────────────────────────────
 
 #[ test ]
-/// EC-8: multiple `@` in `for::` value — split on the **first** `@` only.
-///
-/// `for::alice@corp.com@laptop` splits into:
-/// - user component: `alice`
-/// - machine component: `corp.com@laptop` (sanitized: `@` → `_` → `corp.com_laptop`)
-///
-/// Written filename: `_active_corp.com_laptop_alice`.
+/// FT-14 (AC-14): `active::testuser@testmachine name::X` does NOT modify `owner` field.
+fn ft14_active_does_not_modify_owner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+  write_account_owner( dir.path(), "alice@corp.com", "other@machine" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", &format!( "active::{ACTIVE_CURRENT}" ), "name::alice@corp.com" ],
+    &refs,
+  );
+  assert_exit( &out, 0 );
+
+  let owner = read_owner( dir.path(), "alice@corp.com" );
+  assert_eq!(
+    owner.as_deref(), Some( "other@machine" ),
+    "FT-14: active:: must NOT modify owner; got: {owner:?}",
+  );
+}
+
+#[ test ]
+/// FT-14 (remote variant): `active::bob@laptop name::X` does NOT modify `owner` field.
+fn ft14b_active_for_does_not_modify_owner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+  write_account_owner( dir.path(), "alice@corp.com", "other@machine" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "active::bob@laptop", "name::alice@corp.com" ],
+    &refs,
+  );
+  assert_exit( &out, 0 );
+
+  let owner = read_owner( dir.path(), "alice@corp.com" );
+  assert_eq!(
+    owner.as_deref(), Some( "other@machine" ),
+    "FT-14b: active::bob@laptop must NOT modify owner; got: {owner:?}",
+  );
+}
+
+// ── FT-18: active::0 rejected ─────────────────────────────────────────────────
+
+#[ test ]
+/// FT-18 (AC-18): `active::0 name::X` exits 1 — value `"0"` contains no `@`.
+fn ft18_active_zero_rejected()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "active::0", "name::alice@corp.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "USER@MACHINE" ) || err.contains( "'@'" ),
+    "FT-18: stderr must explain USER@MACHINE format requirement; got:\n{err}",
+  );
+
+  let store = credential_store( dir.path() );
+  assert_eq!( active_marker_count( &store ), 0, "active::0 must write no marker file" );
+}
+
+// ── FT-19: unassign dry-run ───────────────────────────────────────────────────
+
+#[ test ]
+/// FT-19 (AC-19): `active::user1@w003 dry::1` (no `name::`) prints `[dry-run]`; no file deleted.
+fn ft19_active_unassign_dry_run()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  let store  = credential_store( dir.path() );
+  let marker = "_active_w003_user1";
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::write( store.join( marker ), "alice@corp.com" ).unwrap();
+
+  let out = run_cs_with_env( &[ ".accounts", "active::user1@w003", "dry::1" ], &refs );
+  assert_exit( &out, 0 );
+
+  let out_text = stdout( &out );
+  assert!(
+    out_text.contains( "[dry-run]" ) && out_text.contains( "unassign" ),
+    "FT-19: stdout must contain [dry-run] unassign preview: {out_text}",
+  );
+
+  let content = std::fs::read_to_string( store.join( marker ) ).unwrap();
+  assert_eq!( content.trim(), "alice@corp.com", "FT-19: dry-run must NOT delete or clear the marker" );
+}
+
+// ── EC-3..EC-5: active:: format validation ────────────────────────────────────
+
+#[ test ]
+/// EC-3: `active::badvalue` (no `@`) exits 1 with USER@MACHINE format error.
+fn ec3_active_no_at_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "active::badvalue", "name::alice@corp.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "USER@MACHINE" ) || stderr( &out ).contains( "'@'" ),
+    "EC-3: stderr must explain USER@MACHINE format; got:\n{}", stderr( &out ),
+  );
+}
+
+#[ test ]
+/// EC-4: `active::@testmachine` (empty user component) exits 1.
+fn ec4_active_empty_user_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "active::@testmachine", "name::alice@corp.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "user" ) || stderr( &out ).contains( "empty" ),
+    "EC-4: stderr must mention empty user component; got:\n{}", stderr( &out ),
+  );
+}
+
+#[ test ]
+/// EC-5: `active::testuser@` (empty machine component) exits 1.
+fn ec5_active_empty_machine_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "active::testuser@", "name::alice@corp.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "machine" ) || stderr( &out ).contains( "empty" ),
+    "EC-5: stderr must mention empty machine component; got:\n{}", stderr( &out ),
+  );
+}
+
+// ── EC-8: multiple @ splits on first ─────────────────────────────────────────
+
+#[ test ]
+/// EC-8: `active::alice@corp.com@laptop` — split on first `@` → marker `_active_corp.com_laptop_alice`.
 fn ec8_multiple_at_splits_on_first()
 {
   let dir  = TempDir::new().unwrap();
@@ -526,19 +523,141 @@ fn ec8_multiple_at_splits_on_first()
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "assign::1", "name::alice@corp.com", "for::alice@corp.com@laptop" ],
+    &[ ".accounts", "active::alice@corp.com@laptop", "name::alice@corp.com" ],
     &refs,
   );
   assert_exit( &out, 0 );
 
   let store   = credential_store( dir.path() );
   let content = std::fs::read_to_string( store.join( "_active_corp.com_laptop_alice" ) )
-    .expect( "_active_corp.com_laptop_alice must exist — split on first @ only, rest becomes machine" );
+    .expect( "_active_corp.com_laptop_alice must exist — split on first @ only" );
+  assert_eq!( content.trim(), "alice@corp.com" );
+}
+
+// ── EC-10: active:: absent → no marker ────────────────────────────────────────
+
+#[ test ]
+/// EC-10: no `active::` param → `.accounts` runs normally; no `_active_*` file written.
+fn ec10_active_absent_no_marker_write()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "name::alice@corp.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store = credential_store( dir.path() );
+  assert_eq!( active_marker_count( &store ), 0, "EC-10: no active:: → no marker file must be written" );
+}
+
+// ── EC-13: force::1 silently ignored for active:: ────────────────────────────
+
+#[ test ]
+/// EC-13: `force::1 active::testuser@testmachine name::X` — `force::1` silently ignored;
+/// marker is written normally (`active::` has no ownership gate).
+fn ec13_force_ignored_for_active()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", &format!( "active::{ACTIVE_CURRENT}" ), "name::alice@corp.com", "force::1" ],
+    &refs,
+  );
+  assert_exit( &out, 0 );
+
+  let store   = credential_store( dir.path() );
+  let content = std::fs::read_to_string( store.join( DEFAULT_MARKER ) )
+    .expect( "DEFAULT_MARKER must exist — force::1 is silently ignored for active::" );
+  assert_eq!( content.trim(), "alice@corp.com" );
+}
+
+// ── Regression / preserved tests ─────────────────────────────────────────────
+
+#[ test ]
+/// Prefix `alice` resolves to `alice@corp.com` (one unambiguous match).
+fn aa09_prefix_resolution()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", &format!( "active::{ACTIVE_CURRENT}" ), "name::alice" ],
+    &refs,
+  );
+  assert_exit( &out, 0 );
+
+  let store   = credential_store( dir.path() );
+  let content = std::fs::read_to_string( store.join( DEFAULT_MARKER ) ).unwrap();
   assert_eq!( content.trim(), "alice@corp.com" );
 }
 
 #[ test ]
-/// AC-12: `dry::1` with `for::bob@laptop` → stdout contains the target marker filename.
+/// Second `active::bob@laptop` assign overwrites the existing `_active_laptop_bob` marker.
+fn aa10_overwrite_existing_marker()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+  write_account( dir.path(), "bob@corp.com",   "max", "tier4", 9_999_999_999_999, false );
+
+  let store = credential_store( dir.path() );
+  std::fs::write( store.join( "_active_laptop_bob" ), "old@account.com" ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "active::bob@laptop", "name::alice@corp.com" ],
+    &refs,
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "_active_laptop_bob" ) ).unwrap();
+  assert_eq!( content.trim(), "alice@corp.com" );
+}
+
+#[ test ]
+/// `active::` must not modify `~/.claude/.credentials.json`.
+fn aa11_no_credentials_json_side_effect()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  let creds_path = claude_dir.join( ".credentials.json" );
+  let before     = r#"{"sentinel":"must-not-change"}"#;
+  std::fs::write( &creds_path, before ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".accounts", &format!( "active::{ACTIVE_CURRENT}" ), "name::alice@corp.com" ],
+    &refs,
+  );
+  assert_exit( &out, 0 );
+
+  let after = std::fs::read_to_string( &creds_path ).unwrap();
+  assert_eq!( after, before, "~/.claude/.credentials.json must be unchanged after active:: assign" );
+}
+
+#[ test ]
+/// `dry::1` stdout names the target marker file (`_active_laptop_bob`).
 fn aa12_dry_run_shows_marker_filename()
 {
   let dir  = TempDir::new().unwrap();
@@ -549,63 +668,35 @@ fn aa12_dry_run_shows_marker_filename()
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "assign::1", "name::alice@corp.com", "for::bob@laptop", "dry::1" ],
+    &[ ".accounts", "active::bob@laptop", "name::alice@corp.com", "dry::1" ],
     &refs,
   );
   assert_exit( &out, 0 );
 
   let out_text = stdout( &out );
-  assert!( out_text.contains( "_active_laptop_bob" ),
-    "dry-run stdout must name the target marker file: {out_text}" );
-}
-
-// ── AO: Account Assign Ownership (Feature 036 / 037) ──────────────────────────
-
-/// Read the `owner` field from `{name}.json` in the test credential store.
-fn read_owner( home : &std::path::Path, name : &str ) -> Option< String >
-{
-  let meta = credential_store( home ).join( format!( "{name}.json" ) );
-  std::fs::read_to_string( &meta )
-    .ok()
-    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
-    .and_then( |v| v[ "owner" ].as_str().map( str::to_string ) )
-}
-
-/// FT-08 (AC-08): `.accounts assign::1` does NOT modify `owner` — marker-only.
-///
-/// Pre-seed `{name}.json` with `"owner": "alice@host1"`. After `.accounts assign::1`,
-/// `owner` must remain `"alice@host1"` — assign is marker-only (ownership stamp on save only).
-///
-/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-08]
-#[ test ]
-fn ft13_assign_does_not_modify_owner()
-{
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let env  = test_env( home );
-  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
-
-  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
-  write_account_owner( dir.path(), "alice@corp.com", "alice@host1" );
-
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::alice@corp.com" ], &refs );
-  assert_exit( &out, 0 );
-
-  let owner = read_owner( dir.path(), "alice@corp.com" );
-  assert_eq!(
-    owner.as_deref(), Some( "alice@host1" ),
-    "FT-08: .accounts assign::1 must NOT modify owner (marker-only); got: {owner:?}",
+  assert!(
+    out_text.contains( "_active_laptop_bob" ),
+    "dry-run stdout must name the target marker file: {out_text}",
   );
 }
 
-/// FT-09 (AC-09): `.accounts assign::1 for::bob@laptop` does NOT modify `owner` — marker-only.
-///
-/// Pre-seed `{name}.json` with `"owner": "alice@host1"`. After `.accounts assign::1 for::bob@laptop`,
-/// `owner` must remain `"alice@host1"`. Marker written to `_active_laptop_bob`.
-///
-/// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-09]
 #[ test ]
-fn ft14_assign_for_does_not_modify_owner()
+/// `dry::1` + unknown account → exit 1 (existence validated before dry-run).
+///
+/// ## Root Cause (BUG-247)
+///
+/// `resolve_account_name` short-circuits on `@`; the cred-file existence check
+/// must run before the dry-run branch — not after.
+///
+/// ## Fix Applied
+///
+/// Existence guard placed unconditionally before dry-run check in the `active::` dispatch.
+///
+/// ## Pitfall
+///
+/// `@`-form names bypass prefix resolution but NOT existence validation; callers
+/// must check existence after resolution.
+fn aa13_dry_run_unknown_account_exits_1()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -613,41 +704,89 @@ fn ft14_assign_for_does_not_modify_owner()
   let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
 
   write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
-  write_account_owner( dir.path(), "alice@corp.com", "alice@host1" );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "assign::1", "name::alice@corp.com", "for::bob@laptop" ],
+    &[ ".accounts", &format!( "active::{ACTIVE_CURRENT}" ), "name::ghost@example.com", "dry::1" ],
+    &refs,
+  );
+  assert_exit( &out, 1 );
+  let out_text = stdout( &out );
+  assert!(
+    !out_text.contains( "[dry-run] would assign" ),
+    "dry-run output must not be emitted for a non-existent account: {out_text}",
+  );
+}
+
+#[ test ]
+/// Ambiguous prefix `alice` (two alice-accounts) → exit 1 (not 2 — argument error, not missing).
+fn aa15_ambiguous_prefix_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  write_account( dir.path(), "alice@corp.com",  "max", "tier4", 9_999_999_999_999, false );
+  write_account( dir.path(), "alice@other.com", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", &format!( "active::{ACTIVE_CURRENT}" ), "name::alice" ],
+    &refs,
+  );
+  assert_exit( &out, 1 );
+  assert!( stderr( &out ).contains( "ambiguous" ), "stderr must explain ambiguity: {}", stderr( &out ) );
+}
+
+#[ test ]
+/// `name::i1` when both `i1@host` and `i11@host` exist → exact local-part match wins → `i1@host`.
+fn aa16_exact_local_part_beats_prefix_ambiguity()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let env  = test_env( home );
+  let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
+
+  write_account( dir.path(), "i1@host",  "max", "tier4", 9_999_999_999_999, false );
+  write_account( dir.path(), "i11@host", "max", "tier4", 9_999_999_999_999, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", &format!( "active::{ACTIVE_CURRENT}" ), "name::i1" ],
     &refs,
   );
   assert_exit( &out, 0 );
 
-  let owner = read_owner( dir.path(), "alice@corp.com" );
-  assert_eq!(
-    owner.as_deref(), Some( "alice@host1" ),
-    "FT-09: .accounts assign::1 for:: must NOT modify owner (marker-only); got: {owner:?}",
-  );
+  let store   = credential_store( dir.path() );
+  let content = std::fs::read_to_string( store.join( DEFAULT_MARKER ) ).unwrap();
+  assert_eq!( content.trim(), "i1@host", "exact local-part must resolve to i1@host, not i11@host" );
 }
 
-
-/// `name::` (empty value) exits 1 — not treated as absent.
-///
-/// Previously, `.account.assign name::` fell through to the usage block (exit 0),
-/// treating empty the same as absent. All other commands exit 1 on empty `name::`.
 #[ test ]
-fn aa18_empty_name_exits_1()
+/// aa14: `active::USER@MACHINE` (no `name::`) when the marker file does not
+/// exist — treated as a no-op; exits 0; stdout confirms `unassigned`.
+///
+/// The unassign path skips `remove_file` when the marker is absent and still
+/// emits the standard confirmation message.
+fn aa14_unassign_absent_marker_is_noop()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   let env  = test_env( home );
   let refs : Vec< ( &str, &str ) > = env.iter().map( | ( k, v ) | ( *k, *v ) ).collect();
 
-  write_account( dir.path(), "alice@corp.com", "max", "tier4", 9_999_999_999_999, false );
+  // Credential store exists but contains NO marker files.
+  std::fs::create_dir_all( credential_store( dir.path() ) ).unwrap();
 
-  let out = run_cs_with_env( &[ ".accounts", "assign::1", "name::" ], &refs );
-  assert_exit( &out, 1 );
-  let err = stderr( &out );
+  let out = run_cs_with_env( &[ ".accounts", &format!( "active::{ACTIVE_CURRENT}" ) ], &refs );
+  assert_exit( &out, 0 );
+
+  let out_text = stdout( &out );
   assert!(
-    err.contains( "name:: value cannot be empty" ),
-    "aa18: empty name:: must produce 'name:: value cannot be empty'; got stderr: {err}",
+    out_text.contains( "unassigned" ),
+    "aa14: stdout must contain 'unassigned' even when marker was absent; got:\n{out_text}",
+  );
+  // Marker must still be absent (not created).
+  assert!(
+    !credential_store( dir.path() ).join( DEFAULT_MARKER ).exists(),
+    "aa14: unassign of absent marker must not create the marker file",
   );
 }

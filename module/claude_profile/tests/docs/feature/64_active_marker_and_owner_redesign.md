@@ -4,27 +4,27 @@
 
 ## Test Case Index
 
-| ID | Test Name | AC | Category |
-|----|-----------|----|----------|
-| FT-01 | `active::USER@MACHINE name::X` writes marker | AC-01 | Behavioral |
-| FT-02 | `active::USER@MACHINE` (no `name::`) unassigns marker | AC-02 | Behavioral |
-| FT-03 | `active::USER@MACHINE name::X dry::1` previews without writing | AC-03 | Dry-run |
-| FT-04 | `active::USER@MACHINE name::ghost` — unknown account exits 1 | AC-04 | Validation |
-| FT-05 | `assign::1 name::X` exits 1 with REMOVED_TOGGLE migration message | AC-05 | Migration |
-| FT-06 | `assign::1 name::X for::bob@laptop` exits 1 (both REMOVED) | AC-06 | Migration |
-| FT-07 | `unclaim::1 name::X` exits 1 with REMOVED_TOGGLE migration message | AC-07 | Migration |
-| FT-08 | `owner::0 name::X` clears ownership via `write_owner(name, store, "")` | AC-08 | Behavioral |
-| FT-09 | `owner::0` alone — batch-clears all owned accounts in filter | AC-09 | Batch |
-| FT-10 | `owner::0 name::X,Y,Z` — batch-clear comma-list | AC-10 | Batch |
-| FT-11 | `owner::USER@MACHINE name::X,Y,Z` — batch-set comma-list | AC-11 | Batch |
-| FT-12 | `owner::0 name::X force::1` bypasses G8 | AC-12 | Gate Bypass |
-| FT-13 | `active::` value sanitization — space→`_`; dot/hyphen preserved | AC-13 | Sanitization |
-| FT-14 | `active::USER@MACHINE name::X` does NOT modify `owner` field | AC-14 | Isolation |
-| FT-15 | `owner::` with empty value exits 1 (empty ≠ sentinel "0") | AC-15 | Validation |
-| FT-16 | `owner::0 name::X dry::1` prints `[dry-run]`; no file written | AC-16 | Dry-run |
-| FT-17 | `owner::0 name::X force::1 dry::1` bypasses G8 + dry-run | AC-17 | Dry-run + Gate |
-| FT-18 | `active::0 name::X` exits 1 — value `"0"` rejected (no `@`) | AC-18 | Validation |
-| FT-19 | `active::USER@MACHINE dry::1` (no `name::`) unassign dry-run preview | AC-19 | Dry-run |
+| ID | Test Name | AC | Category | Status |
+|----|-----------|----|-----------|----|
+| FT-01 | `active::USER@MACHINE name::X` writes marker | AC-01 | Behavioral | ✅ |
+| FT-02 | `active::USER@MACHINE` (no `name::`) unassigns marker | AC-02 | Behavioral | ✅ |
+| FT-03 | `active::USER@MACHINE name::X dry::1` previews without writing | AC-03 | Dry-run | ✅ |
+| FT-04 | `active::USER@MACHINE name::ghost` — unknown account exits 1 | AC-04 | Validation | ✅ |
+| FT-05 | `assign::1 name::X` exits 1 with REMOVED_TOGGLE migration message | AC-05 | Migration | ✅ |
+| FT-06 | `assign::1 name::X for::bob@laptop` exits 1 (both REMOVED) | AC-06 | Migration | ✅ |
+| FT-07 | `unclaim::1 name::X` exits 1 with REMOVED_TOGGLE migration message | AC-07 | Migration | ✅ |
+| FT-08 | `owner::0 name::X` clears ownership via `write_owner(name, store, "")` | AC-08 | Behavioral | ✅ |
+| FT-09 | `owner::0` alone — batch-clears all owned accounts in filter | AC-09 | Batch | ✅ |
+| FT-10 | `owner::0 name::X,Y,Z` — batch-clear comma-list | AC-10 | Batch | ✅ |
+| FT-11 | `owner::USER@MACHINE name::X,Y,Z` — batch-set comma-list | AC-11 | Batch | ✅ |
+| FT-12 | `owner::0 name::X force::1` bypasses G8 | AC-12 | Gate Bypass | ✅ |
+| FT-13 | `active::` value sanitization — space→`_`; dot/hyphen preserved | AC-13 | Sanitization | ✅ |
+| FT-14 | `active::USER@MACHINE name::X` does NOT modify `owner` field | AC-14 | Isolation | ✅ |
+| FT-15 | `owner::` with empty value exits 1 (empty ≠ sentinel "0") | AC-15 | Validation | ✅ |
+| FT-16 | `owner::0 name::X dry::1` prints `[dry-run]`; no file written | AC-16 | Dry-run | ✅ |
+| FT-17 | `owner::0 name::X force::1 dry::1` bypasses G8 + dry-run | AC-17 | Dry-run + Gate | ✅ |
+| FT-18 | `active::0 name::X` exits 1 — value `"0"` rejected (no `@`) | AC-18 | Validation | ✅ |
+| FT-19 | `active::USER@MACHINE dry::1` (no `name::`) unassign dry-run preview | AC-19 | Dry-run | ✅ |
 
 **Total:** 19 test cases
 

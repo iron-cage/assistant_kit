@@ -33,8 +33,22 @@
 //! |---------|---------------------------------------|-------|-------|
 //! | f37ft02 | `f37_ft02_usage_accepts_32_params`    | AC-02 | no    |
 //! | f37ft04 | `f37_ft04_usage_default_profile`      | AC-04 | no    |
-//! | f37ft16 | `f37_ft16_usage_unclaim_mirrors_accounts` | AC-16 | no |
-//! | f37ft17 | `f37_ft17_usage_assign_mirrors_accounts`  | AC-17 | no |
+//! | f37ft16 | `f37_ft16_usage_unclaim_mirrors_accounts` | AC-16 | no | <!-- tests owner::0 (Feature 064 successor) -->
+//! | f37ft17 | `f37_ft17_usage_assign_mirrors_accounts`  | AC-17 | no | <!-- tests active:: (Feature 064 successor) -->
+//!
+//! ### Feature 063 — Explicit Ownership Claim on `.usage`
+//!
+//! | ID      | Test Function                             | AC    | Live? |
+//! |---------|-------------------------------------------|-------|-------|
+//! | f63ft12 | `f63_ft12_usage_owner_mirrors_accounts`   | AC-12 | no    |
+//!
+//! ### Feature 064 — Active Marker and Owner Param Redesign (`.usage` `REMOVED_TOGGLE` parity)
+//!
+//! | ID      | Test Function                             | AC    | Live? |
+//! |---------|-------------------------------------------|-------|-------|
+//! | f64ft05 | `f64_ft05_usage_assign_removed_toggle`    | AC-05 | no    |
+//! | f64ft07 | `f64_ft07_usage_unclaim_removed_toggle`   | AC-07 | no    |
+//! | f64ft06b| `f64_ft06b_usage_for_removed_toggle`      | AC-06 | no    |
 
 use crate::cli_runner::{
   BIN,
@@ -403,9 +417,9 @@ fn f37_ft02_usage_accepts_32_params()
   );
   assert_exit( &out, 0 );
 
-  // Mutation params accepted when dry::1 suppresses writes.
+  // Mutation params accepted when dry::1 suppresses writes (Feature 064: active:: replaces assign::1).
   let out = run_cs_with_env(
-    &[ ".usage", "assign::1", "name::alice@acme.com", "dry::1" ],
+    &[ ".usage", "active::testuser@testmachine", "name::alice@acme.com", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -452,10 +466,10 @@ fn f37_ft04_usage_default_profile()
 }
 
 #[ test ]
-/// f37-FT-16 (AC-16): `.usage unclaim::1 name::X` clears owner — identical to `.accounts unclaim::1 name::X`.
+/// f37-FT-16 (AC-16): `.usage owner::0 name::X` clears owner — identical to `.accounts owner::0 name::X`.
 ///
-/// alice is owned by testuser@testmachine (G8 passes). After `.usage unclaim::1`,
-/// `alice.json` has `"owner": ""`.
+/// alice is owned by testuser@testmachine (G8 passes). After `.usage owner::0 name::alice`,
+/// `alice.json` has `"owner": ""`. (`unclaim::1` was REMOVED in Feature 064; `owner::0` is the successor.)
 ///
 /// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-16]
 fn f37_ft16_usage_unclaim_mirrors_accounts()
@@ -466,7 +480,7 @@ fn f37_ft16_usage_unclaim_mirrors_accounts()
   write_account_owner( dir.path(), "alice@acme.com", "testuser@testmachine" );
 
   let out = run_cs_with_env(
-    &[ ".usage", "unclaim::1", "name::alice@acme.com" ],
+    &[ ".usage", "owner::0", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 0 );
@@ -477,15 +491,15 @@ fn f37_ft16_usage_unclaim_mirrors_accounts()
   assert_eq!(
     val[ "owner" ].as_str().unwrap_or( "MISSING" ),
     "",
-    "f37-FT-16: .usage unclaim::1 must clear owner to \"\"",
+    "f37-FT-16: .usage owner::0 must clear owner to \"\"",
   );
 }
 
 #[ test ]
-/// f37-FT-17 (AC-17): `.usage assign::1 name::X` writes marker — identical to `.accounts assign::1 name::X`.
+/// f37-FT-17 (AC-17): `.usage active::USER@MACHINE name::X` writes marker — identical to `.accounts active::`.
 ///
-/// After `.usage assign::1 name::alice`, the per-machine marker file exists and
-/// contains the account name.
+/// After `.usage active::testuser@testmachine name::alice`, the per-machine marker file exists
+/// and contains the account name. (`assign::1` was REMOVED in Feature 064; `active::` is the successor.)
 ///
 /// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-17]
 fn f37_ft17_usage_assign_mirrors_accounts()
@@ -495,14 +509,14 @@ fn f37_ft17_usage_assign_mirrors_accounts()
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
 
   let out = run_cs_with_env(
-    &[ ".usage", "assign::1", "name::alice@acme.com" ],
+    &[ ".usage", "active::testuser@testmachine", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 0 );
 
   let store   = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   let content = std::fs::read_to_string( store.join( "_active_testmachine_testuser" ) )
-    .expect( "f37-FT-17: .usage assign::1 must write per-machine marker" );
+    .expect( "f37-FT-17: .usage active::testuser@testmachine must write per-machine marker" );
   assert_eq!(
     content.trim(),
     "alice@acme.com",
@@ -510,7 +524,7 @@ fn f37_ft17_usage_assign_mirrors_accounts()
   );
 }
 
-// ── Feature 063: owner:: on .usage ──────────────────────────────────────────
+// ── Feature 063: owner:: on .usage ─────────────────────────────────────────
 
 /// FT-12 (AC-12, Feat 063): `.usage owner::` same behavior as `.accounts owner::`.
 ///
@@ -535,5 +549,80 @@ fn f63_ft12_usage_owner_mirrors_accounts()
   assert_eq!(
     val[ "owner" ].as_str().unwrap_or( "MISSING" ), "user1@w003",
     "FT-12: .usage owner:: must write owner field",
+  );
+}
+
+// ── Feature 064: REMOVED_TOGGLE parity on .usage ────────────────────────────
+
+/// FT-05 parity on `.usage` (AC-05 — `.usage` side): `assign::1` exits 1 with
+/// REMOVED migration message pointing to `active::`.
+///
+/// Spec: [`tests/docs/feature/64_active_marker_and_owner_redesign.md` FT-05]
+#[ test ]
+fn f64_ft05_usage_assign_removed_toggle()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "assign::1", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "REMOVED" ) && err.contains( "active::" ),
+    "f64-FT-05: `.usage assign::1` must exit 1 with REMOVED migration pointing to active::; got:\n{err}",
+  );
+}
+
+/// FT-07 parity on `.usage` (AC-07 — `.usage` side): `unclaim::1` exits 1 with
+/// REMOVED migration message pointing to `owner::0`.
+///
+/// Spec: [`tests/docs/feature/64_active_marker_and_owner_redesign.md` FT-07]
+#[ test ]
+fn f64_ft07_usage_unclaim_removed_toggle()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "" );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "unclaim::1", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "REMOVED" ) && err.contains( "owner::0" ),
+    "f64-FT-07: `.usage unclaim::1` must exit 1 with REMOVED migration pointing to owner::0; got:\n{err}",
+  );
+}
+
+/// FT-06b parity on `.usage` (AC-06 — `.usage` side): `for::user@host` exits 1
+/// with REMOVED migration message.
+///
+/// Spec: [`tests/docs/feature/64_active_marker_and_owner_redesign.md` FT-06]
+#[ test ]
+fn f64_ft06b_usage_for_removed_toggle()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "for::bob@laptop", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "REMOVED" ),
+    "f64-FT-06b: `.usage for::user@host` must exit 1 with REMOVED migration; got:\n{err}",
   );
 }
