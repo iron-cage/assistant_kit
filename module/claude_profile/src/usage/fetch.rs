@@ -303,6 +303,7 @@ pub( crate ) fn fetch_quota_for_list(
 /// to `fetch_quota_for_list()` for the HTTP fetch loop.
 /// Signature kept stable — callers that need a pre-filtered account list should
 /// call `fetch_quota_for_list()` directly.
+#[ cfg_attr( not( unix ), allow( dead_code ) ) ]
 pub( crate ) fn fetch_all_quota(
   credential_store : &std::path::Path,
   live_creds_file  : &std::path::Path,
