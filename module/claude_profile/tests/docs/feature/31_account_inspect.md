@@ -19,7 +19,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 | FT-11 | refresh::0: locally-expired token NOT refreshed; all endpoints get stale token | AC-11 |
 | FT-12 | name:: resolved by AccountSelector; invalid name exits 2 | AC-12 |
 | FT-13 | format::json includes all required fields | AC-13 |
-| FT-14 | trace::1 emits [trace] lines per endpoint | AC-14 |
+| FT-14 | trace::1 emits timestamped diagnostic lines per endpoint | AC-14 |
 | FT-15 | No credential store exits 2 | AC-15 |
 | FT-16 | Priority 2 selection: stripe_subscription (no claude_max) preferred over none | AC-03, AC-06 |
 | FT-17 | Priority 3 fallback: all none memberships → memberships[0] selected | AC-03, AC-06 |
@@ -55,7 +55,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 | FT-11 | Locally-expired token with refresh::0: all endpoints fail; full snapshot fallback | AC-11 | Token Refresh |
 | FT-12 | name::prefix resolves to account; unknown name exits 2 | AC-12 | Name Resolution |
 | FT-13 | format::json includes memberships array with selected field | AC-13 | JSON Format |
-| FT-14 | trace::1 emits [trace] endpoint lines to stderr | AC-14 | Trace |
+| FT-14 | trace::1 emits timestamped diagnostic endpoint lines to stderr | AC-14 | Trace |
 | FT-15 | No credential store exits 2 | AC-15 | Error Handling |
 | FT-16 | Priority 2 selection: stripe_subscription without claude_max preferred over none | AC-03, AC-06 | Selection Priority |
 | FT-17 | Priority 3 fallback: all none memberships selects memberships[0] | AC-03, AC-06 | Selection Priority |
@@ -223,11 +223,11 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 
 ---
 
-### FT-14: trace::1 emits [trace] endpoint lines to stderr
+### FT-14: trace::1 emits timestamped diagnostic endpoint lines to stderr
 
 - **Given:** An account with a valid token.
 - **When:** `clp .account.inspect trace::1` (stderr captured)
-- **Then:** Stderr contains at least three `[trace]` lines, one per endpoint (001, 002, 005), each showing the URL and HTTP status.
+- **Then:** Stderr contains at least three timestamped diagnostic lines, one per endpoint (001, 002, 005), each showing the URL and HTTP status.
 - **Exit:** 0
 - **Source fn:** `ai13_trace_emits_lines_to_stderr`, `lim_it_ai21_trace_endpoint_lines_on_live_account`
 - **Source:** [031_account_inspect.md AC-14](../../../docs/feature/031_account_inspect.md)

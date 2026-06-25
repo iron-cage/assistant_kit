@@ -243,7 +243,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 
 - **Given:** Credential store with N ≥ 3 accounts; one account has the `_active_{hostname}_{user}` filesystem marker.
 - **When:** `clp .usage only_active::1 get::status trace::1`
-- **Then:** Exits 0. Trace output contains exactly 1 `[trace] ... result:` line (one HTTP fetch). Non-active accounts produce no trace result lines. The single result line corresponds to the active account.
+- **Then:** Exits 0. Trace output contains exactly 1 timestamped `... result:` line (one HTTP fetch). Non-active accounts produce no trace result lines. The single result line corresponds to the active account.
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it_ft028_17_only_active_single_http_fetch` (in `tests/cli/usage_test.rs`)

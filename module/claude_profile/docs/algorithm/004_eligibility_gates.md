@@ -27,9 +27,11 @@ Filter candidates for next-account recommendation and auto-switch. An account is
 
 | Call site | `gate_ownership` | Effect |
 |---|---|---|
-| Auto-switch execution (`api.rs:789`) | `!params.force` | Ownership required unless `force::1` |
-| Table marker render (`render.rs:53`) | `rotate && !force` | Only when rotate active and not forced |
-| Footer recommendation (`render.rs:242`) | `false` (hardcoded) | Ownership never checked for footer |
+| Footer + display recommendation (`render.rs:241`) | `false` (hardcoded) | Ownership never checked — non-owned accounts can appear as "Next" recommendation |
+| `only_next::1` row filter (`api.rs:835`) | `rotate && !force` | Non-owned excluded when auto-switch is active and not forced |
+| Auto-switch execution (`api.rs:935`) | `!params.force` | Ownership required unless `force::1` |
+
+Note: the `→ Next` column in the table is a **data column** showing the next renewal/reset event time — it is not a per-row recommendation marker. The footer "Next (strategy):" line is the only recommendation output and uses `gate_ownership=false`. This means the footer can recommend a non-owned account that auto-switch (`rotate::1`) would reject — BUG-320 🟢 Verified.
 
 ### Gate 3 vs Gate 8 — `force::1` scope
 

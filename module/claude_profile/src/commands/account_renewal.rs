@@ -5,6 +5,7 @@ use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use super::shared::{ require_nonempty_string_arg, is_dry, require_credential_store, io_err_to_error_data, resolve_account_name };
+use claude_profile_core::account::trace_ts;
 
 /// `.account.renewal` — set or clear a billing renewal timestamp override for one or more accounts.
 ///
@@ -95,7 +96,7 @@ pub fn account_renewal_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   };
 
   let credential_store = require_credential_store()?;
-  if trace { eprintln!( "[trace] account.renewal  store: {}", credential_store.display() ) }
+  if trace { eprintln!( "{}account.renewal  store: {}", trace_ts(), credential_store.display() ) }
 
   // Resolve target account name(s).
   let names : Vec< String > = if raw_name == "all"
@@ -118,7 +119,7 @@ pub fn account_renewal_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     vec![ resolve_account_name( &raw_name, &credential_store )? ]
   };
 
-  if trace { eprintln!( "[trace] account.renewal  targets: {names:?}" ) }
+  if trace { eprintln!( "{}account.renewal  targets: {names:?}", trace_ts() ) }
 
   let mut output     = String::new();
   let mut had_error  = false;

@@ -72,11 +72,11 @@ Every other account: **zero HTTP calls, zero subprocesses**. Cached/historical d
 When `trace::1`:
 
 ```
-[trace] fetch    alice@work.pro   live (current+owned)
-[trace] fetch    bob@home.pro     solo-skip: approximated (age: 1800s)
-[trace] fetch    carol@other.pro  solo-skip: approximated (age: 7200s)
-[trace] refresh  bob@home.pro     solo-skip
-[trace] touch    bob@home.pro     solo-skip
+2026-06-25 · 16:40:04 · fetch    alice@work.pro   live (current+owned)
+2026-06-25 · 16:40:05 · fetch    bob@home.pro     solo-skip: approximated (age: 1800s)
+2026-06-25 · 16:40:06 · fetch    carol@other.pro  solo-skip: approximated (age: 7200s)
+2026-06-25 · 16:40:07 · refresh  bob@home.pro     solo-skip
+2026-06-25 · 16:40:08 · touch    bob@home.pro     solo-skip
 ```
 
 ### Examples

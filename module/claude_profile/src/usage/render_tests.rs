@@ -98,7 +98,7 @@
 
     // Text renderer: the error reason must appear somewhere in output (in a quota column).
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
     );
     assert!(
       text.contains( "(rate limited (429))" ),
@@ -153,7 +153,7 @@
 
     // --- text renderer ---
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
     );
     let alice_text = text.lines().find( | l | l.contains( "alice@test.com" ) )
       .expect( "FT-21: alice line missing from render_text" );
@@ -238,7 +238,7 @@
     let accounts = vec![ aq ];
     let cols     = ColsVisibility::default_set();
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
     );
     assert!(
       text.contains( '~' ),
@@ -343,7 +343,7 @@
     let mut cols = ColsVisibility::default_set();
     cols.d7_son_reset = true;
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
     );
     assert!(
       text.contains( "~in " ),
@@ -416,7 +416,7 @@
 
     // text renderer: ~Renews must be "—", NOT "~in Nd"
     let text = render_text(
-      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None,
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
     );
     assert!(
       text.contains( "\u{2014}" ),
@@ -482,7 +482,7 @@
     let text_a = render_text(
       &[ aq_cached ],
       SortStrategy::Name, None, PreferStrategy::Any,
-      &cols, None, None, None, None,
+      &cols, None, None, None, None, false,
     );
     assert!(
       text_a.contains( '~' ),
@@ -510,7 +510,7 @@
     let text_b = render_text(
       &[ aq_no_cache ],
       SortStrategy::Name, None, PreferStrategy::Any,
-      &cols, None, None, None, None,
+      &cols, None, None, None, None, false,
     );
     // No tilde prefix when no cache data.
     assert!(
@@ -664,7 +664,7 @@
     };
     let output = render_text(
       &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None, None, None,
+      &ColsVisibility::default_set(), None, None, None, None, false,
     );
     // Footer line 2: `Next (name) · a@x.com · sonnet · {metric}` — 15.0% left is NOT < 15%.
     assert!(
@@ -755,7 +755,7 @@
     };
     let output = render_text(
       &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None, None, None,
+      &ColsVisibility::default_set(), None, None, None, None, false,
     );
     // Footer line 2: `Next (name) · a@x.com · opus · {metric}` — 14.9% left IS < 15%.
     assert!(
@@ -854,7 +854,7 @@
       let accounts = make_accounts();
       let output = render_text(
         &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
-        &ColsVisibility::default_set(), Some( "claude-sonnet-4-6" ), Some( "low" ), None, None,
+        &ColsVisibility::default_set(), Some( "claude-sonnet-4-6" ), Some( "low" ), None, None, false,
       );
       assert!(
         output.contains( "claude-sonnet-4-6/low" ),
@@ -872,7 +872,7 @@
       let accounts = make_accounts();
       let output = render_text(
         &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
-        &ColsVisibility::default_set(), Some( "claude-sonnet-4-6" ), None, None, None,
+        &ColsVisibility::default_set(), Some( "claude-sonnet-4-6" ), None, None, None, false,
       );
       assert!(
         output.contains( "claude-sonnet-4-6" ),
@@ -893,7 +893,7 @@
       let accounts = make_accounts();
       let output = render_text(
         &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
-        &ColsVisibility::default_set(), None, None, None, None,
+        &ColsVisibility::default_set(), None, None, None, None, false,
       );
       assert!(
         output.contains( "Current" ),
@@ -937,7 +937,7 @@
     let cols     = ColsVisibility::default_set();
     let output   = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &cols, None, None, Some( spath ), None,
+      &cols, None, None, Some( spath ), None, false,
     );
 
     assert!(
@@ -979,7 +979,7 @@
     let cols     = ColsVisibility::default_set();
     let output   = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &cols, None, None, Some( spath ), None,
+      &cols, None, None, Some( spath ), None, false,
     );
 
     assert!(
@@ -1009,7 +1009,7 @@
       let accounts = vec![ mk_aq_ok( 10.0 ) ];
       let output = render_text(
         &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-        &ColsVisibility::default_set(), None, None, Some( spath ), Some( true ),
+        &ColsVisibility::default_set(), None, None, Some( spath ), Some( true ), false,
       );
       assert!(
         output.contains( "Sessions" ),
@@ -1029,7 +1029,7 @@
       let accounts = vec![ mk_aq_ok( 10.0 ) ];
       let output = render_text(
         &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-        &ColsVisibility::default_set(), None, None, Some( spath ), Some( false ),
+        &ColsVisibility::default_set(), None, None, Some( spath ), Some( false ), false,
       );
       assert!(
         !output.contains( "Sessions" ),
@@ -1111,7 +1111,7 @@
     // who=None: auto-shows because marker_count=3 > 1.
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &cols, None, None, Some( spath ), None,
+      &cols, None, None, Some( spath ), None, false,
     );
 
     // Sessions table header must appear (3 markers, who=None → auto-show).
@@ -1164,7 +1164,7 @@
     let accounts = vec![ mk_aq_ok( 10.0 ) ];
     let output   = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None, Some( spath ), Some( true ),
+      &ColsVisibility::default_set(), None, None, Some( spath ), Some( true ), false,
     );
 
     assert!(
@@ -1190,7 +1190,7 @@
     let accounts = vec![ aq ];
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None, None, None,
+      &ColsVisibility::default_set(), None, None, None, None, false,
     );
     // "Current ·" is the footer format; bare "Current" could appear elsewhere.
     assert!(
@@ -1245,7 +1245,7 @@
     let accounts = vec![ mk( "a@x.com" ), mk( "b@x.com" ) ];
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None, None, None,
+      &ColsVisibility::default_set(), None, None, None, None, false,
     );
     assert!(
       output.contains( "Valid:" ),
@@ -1293,7 +1293,7 @@
     let accounts = vec![ mk( "cur@x.com", true ), mk( "a@x.com", false ), mk( "b@x.com", false ) ];
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, Some( "high" ), None, None,
+      &ColsVisibility::default_set(), None, Some( "high" ), None, None, false,
     );
     // Footer Current line col3 must contain "high" (effort only, no model prefix).
     // The Next line legitimately shows "sonnet/high" (Feature 062, AC-03) — scope
@@ -1324,7 +1324,7 @@
     let accounts = vec![ cur, rec ];
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, Some( "high" ), None, None,
+      &ColsVisibility::default_set(), None, Some( "high" ), None, None, false,
     );
     assert!(
       output.contains( "sonnet/high" ),
@@ -1344,7 +1344,7 @@
     let accounts = vec![ cur, rec ];
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, None, None, None,
+      &ColsVisibility::default_set(), None, None, None, None, false,
     );
     assert!(
       output.contains( "sonnet" ) && !output.contains( "sonnet/" ),
@@ -1364,7 +1364,7 @@
     let accounts = vec![ cur, rec ];
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), None, Some( "max" ), None, None,
+      &ColsVisibility::default_set(), None, Some( "max" ), None, None, false,
     );
     assert!(
       output.contains( "opus/max" ),
@@ -1389,7 +1389,7 @@
     let accounts = vec![ cur, rec ];
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), Some( "s" ), None, None, None,
+      &ColsVisibility::default_set(), Some( "s" ), None, None, None, false,
     );
     let footer_lines : Vec< &str > = output.lines()
       .filter( |l| l.contains( '·' ) )
@@ -1414,5 +1414,75 @@
     assert_eq!(
       cur_pos, next_pos,
       "FT-08: third · must be at same char position in Current and Next lines;\n  cur:  '{cur_line}'\n  next: '{next_line}'",
+    );
+  }
+
+  // ── BUG-320 reproducer ────────────────────────────────────────────────────
+
+  /// BUG-320 reproducer — `render_text(gate_ownership=true)` skips non-owned accounts
+  /// in the footer Next recommendation.
+  ///
+  /// # Root Cause
+  /// `render.rs` hardcoded `gate_ownership=false` when calling `find_next_for_strategy`.
+  /// Auto-switch used `gate_ownership = params.rotate && !params.force`, so the footer
+  /// could recommend a non-owned account that auto-switch would reject, violating
+  /// Feature 038 AC-10 ("recommended == switched-to").
+  ///
+  /// # Why Not Caught
+  /// `render_text` had no `gate_ownership` param; all callers implicitly passed `false`.
+  /// No test exercised the ownership-gated recommendation path.
+  ///
+  /// # Fix Applied
+  /// Added `gate_ownership: bool` as the 10th param to `render_text` and `render_plain`.
+  /// `api.rs` passes `params.rotate && !params.force`; display-only callers pass `false`.
+  ///
+  /// # Prevention
+  /// Footer Next tests that involve rotate mode must cover both
+  /// `gate_ownership=false` (non-owned eligible) and `gate_ownership=true` (non-owned skipped).
+  ///
+  /// # Pitfall
+  /// `mk_aq_sort()` defaults to `is_owned=true`; set `is_owned=false` explicitly to create
+  /// a non-owned account. Also: non-owned accounts still appear in table rows — only the
+  /// footer Next line is affected by the gate.
+  #[ doc = "bug_reproducer(BUG-320)" ]
+  #[ test ]
+  fn mre_bug320_footer_excludes_non_owned_when_rotate_force_0()
+  {
+    // "aaa" prefix → sorts first under SortStrategy::Name; lower utilisation → eligible.
+    let mut non_owned = mk_aq_sort( "aaa_nonowned@x.com", 10.0, FAR_FUTURE_MS );
+    non_owned.is_owned = false;
+    let owned = mk_aq_sort( "bbb_owned@x.com", 20.0, FAR_FUTURE_MS );
+    let mut cur = mk_aq_sort( "cur@x.com", 50.0, FAR_FUTURE_MS );
+    cur.is_current = true;
+    let accounts = vec![ cur, non_owned, owned ];
+
+    // Without gate: non-owned "aaa" wins (sorts first by name, fully eligible).
+    let without_gate = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), None, None, None, None, false,
+    );
+    let next_without = without_gate.lines()
+      .find( |l| l.trim_start().starts_with( "Next" ) )
+      .unwrap_or( "" );
+    assert!(
+      next_without.contains( "aaa_nonowned" ),
+      "BUG-320 (control): gate_ownership=false must recommend the non-owned account that sorts first;\n  next: {next_without:?}",
+    );
+
+    // With gate (fix): non-owned "aaa" skipped → owned "bbb" recommended.
+    let with_gate = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      &ColsVisibility::default_set(), None, None, None, None, true,
+    );
+    let next_with = with_gate.lines()
+      .find( |l| l.trim_start().starts_with( "Next" ) )
+      .unwrap_or( "" );
+    assert!(
+      next_with.contains( "bbb_owned" ),
+      "BUG-320: gate_ownership=true must recommend the owned account in footer Next;\n  next: {next_with:?}",
+    );
+    assert!(
+      !next_with.contains( "aaa_nonowned" ),
+      "BUG-320: gate_ownership=true must not show non-owned account in footer Next;\n  next: {next_with:?}",
     );
   }

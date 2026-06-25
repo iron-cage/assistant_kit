@@ -768,7 +768,7 @@
   ///
   /// `switch_account` succeeds (cred file in store, `.claude/` dir in `fake_home`).
   /// `run_isolated` is invoked but fails fast (no valid claude binary or fake token) →
-  /// trace emits `[trace] … run_isolated: Err(…)` or `OK credentials=None` →
+  /// trace emits `YYYY-MM-DD · HH:MM:SS · … run_isolated: Err(…)` or `OK credentials=None` →
   /// `refresh_account_token` returns `None` → account skipped → no panic.
   ///
   /// # Root Cause
@@ -960,7 +960,7 @@
   /// FT-17 / BUG-211 MRE — `apply_refresh` does NOT write live credentials file (no `switch_account`).
   ///
   /// Fix(BUG-211): the snapshot+restore pattern was removed from `apply_refresh`. With
-  /// `trace=true`, no `[trace] refresh  {name}  restore switch_account: OK/Err` line is
+  /// `trace=true`, no restore `switch_account` trace line is
   /// emitted — the restore step no longer exists.
   ///
   /// # Root Cause
@@ -971,7 +971,7 @@
   /// # Why Not Caught
   /// BUG-208 tests verified that the restore EXECUTED (live creds written). No test verified
   /// that the live creds file is NOT written when the restore is absent — the previous
-  /// `[trace]` guard was observing eprintln output which is not assertable in nextest.
+  /// trace guard was observing eprintln output which is not assertable in nextest.
   ///
   /// # Fix Applied
   /// BUG-211: removed snapshot+restore from `apply_refresh`; `refresh_account_token` passes
@@ -1028,7 +1028,7 @@
       },
     ];
 
-    // trace=true: Fix(BUG-211) — no restore switch_account; no [trace] restore line emitted.
+    // trace=true: Fix(BUG-211) — no restore switch_account; no restore trace line emitted.
     apply_refresh( &mut accounts, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
 
     // Fix(BUG-211): no switch_account → live credentials file must NOT exist.
@@ -1432,7 +1432,7 @@
   }
 
   /// EC-7 (061): `apply_refresh` solo gate — non-current owned account is skipped with
-  /// `[trace] refresh  {name}  solo-skip` when `solo=true`.
+  /// timestamped `refresh  {name}  solo-skip` line when `solo=true`.
   ///
   /// With `solo=true`, the solo gate fires before G2 (non-owned check) for any account
   /// where `aq.is_current=false`. The account here is `is_owned=true` — without the solo

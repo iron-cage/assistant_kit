@@ -345,7 +345,7 @@ fn ai12_json_data_source_snapshot_when_all_fail()
 }
 
 #[ test ]
-/// AC-14: `trace::1` emits `[trace]` lines to stderr (verified on the status trace line).
+/// AC-14: `trace::1` emits timestamped diagnostic lines to stderr (verified on the status trace line).
 ///
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-14`
 fn ai13_trace_emits_lines_to_stderr()
@@ -356,7 +356,7 @@ fn ai13_trace_emits_lines_to_stderr()
   let out   = run_inspect( home, &[ "name::alice@acme.com", "refresh::0", "trace::1" ] );
   assert_exit( &out, 0 );
   let err   = stderr( &out );
-  assert!( err.contains( "[trace]" ), "trace::1 must emit [trace] lines to stderr, got:\n{err}" );
+  assert!( err.contains( " · " ), "trace::1 must emit trace lines to stderr, got:\n{err}" );
   assert!( err.contains( "status" ), "trace must include status line, got:\n{err}" );
 }
 
@@ -968,7 +968,7 @@ fn lim_it_ai20_refresh_attempted_on_expired_token()
 }
 
 #[ test ]
-/// AC-14: `trace::1` emits endpoint-level `[trace]` lines to stderr for a live account.
+/// AC-14: `trace::1` emits endpoint-level timestamped diagnostic lines to stderr for a live account.
 ///
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-14`
 fn lim_it_ai21_trace_endpoint_lines_on_live_account()
@@ -981,11 +981,11 @@ fn lim_it_ai21_trace_endpoint_lines_on_live_account()
   let out  = run_inspect( home, &[ "trace::1" ] );
   assert_exit( &out, 0 );
   let err  = stderr( &out );
-  // Expect one [trace] line per endpoint (account, roles, usage).
-  let trace_count = err.lines().filter( | l | l.contains( "[trace]" ) ).count();
+  // Expect one timestamped diagnostic line per endpoint (account, roles, usage).
+  let trace_count = err.lines().filter( | l | l.contains( " · " ) ).count();
   assert!(
     trace_count >= 3,
-    "trace::1 must emit at least 3 [trace] lines (one per endpoint), got {trace_count}:\n{err}",
+    "trace::1 must emit at least 3 trace lines (one per endpoint), got {trace_count}:\n{err}",
   );
 }
 

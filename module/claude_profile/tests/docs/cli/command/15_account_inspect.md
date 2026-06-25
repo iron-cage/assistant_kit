@@ -7,7 +7,7 @@ Unified live account diagnostic — identity, subscription, org, and quota utili
 | IT-1 | Default (active account) produces expected output fields | Active account set; `clp .account.inspect`; output contains `Account:`, `Status:`, `Tagged ID:`, `Memberships:`, `Billing:` | 0 |
 | IT-2 | `name::alice` inspects named account | Account `alice@acme.com` exists in credential store; `name::alice`; output shows `Account: alice@acme.com` | 0 |
 | IT-3 | `format::json` outputs valid JSON with required keys | Account exists; `format::json`; output is valid JSON containing `account`, `status`, `memberships` fields | 0 |
-| IT-4 | `trace::1` emits `[trace]` lines to stderr | Account exists; `trace::1`; stderr contains `[trace]` endpoint call lines; stdout contains normal output | 0 |
+| IT-4 | `trace::1` emits timestamped diagnostic lines to stderr | Account exists; `trace::1`; stderr contains timestamped diagnostic endpoint call lines; stdout contains normal output | 0 |
 | IT-5 | `refresh::0` skips token refresh on expired credentials | Account with expired `expiresAt`; `refresh::0`; no subprocess spawned; command proceeds with local credentials | 0 |
 | IT-6 | Unknown account name exits 2 | `name::nobody@example.com` not in credential store | 2 |
 | IT-7 | Unknown parameter rejected → exit 1 | `clp .account.inspect unknown::x` | 1 |

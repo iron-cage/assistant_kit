@@ -24,7 +24,7 @@ clp .paths field::credentials
 |-----------|------|---------|---------|
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format |
 | `field::` | `String` | `""` (show all) | Output a single named path value; valid: `base`, `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env`, `sessions` |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for home resolution source and each resolved path |
+| `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for home resolution source and each resolved path |
 
 **Algorithm (3 steps):**
 1. Resolve `HOME`; derive all canonical `~/.claude/` paths via `ClaudePaths`

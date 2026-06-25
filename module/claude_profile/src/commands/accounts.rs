@@ -8,6 +8,7 @@ use unilang::types::Value;
 use data_fmt::{ RowBuilder, TableFormatter, Format };
 use crate::output::{ OutputFormat, OutputOptions, json_escape, format_duration_secs };
 use super::shared::{ require_credential_store, io_err_to_error_data, resolve_account_name, caps_to_json };
+use claude_profile_core::account::trace_ts;
 
 // ── Column visibility ─────────────────────────────────────────────────────────
 
@@ -438,7 +439,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
   let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let Ok( credential_store ) = require_credential_store() else
   {
-    if trace { eprintln!( "[trace] accounts  credential store: not found" ) }
+    if trace { eprintln!( "{}accounts  credential store: not found", trace_ts() ) }
     let content = match opts.format
     {
       OutputFormat::Json  => "[]\n".to_string(),
@@ -447,7 +448,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
     };
     return Ok( OutputData::new( content, "text" ) );
   };
-  if trace { eprintln!( "[trace] accounts  reading store: {}", credential_store.display() ) }
+  if trace { eprintln!( "{}accounts  reading store: {}", trace_ts(), credential_store.display() ) }
 
   let raw_name = match cmd.arguments.get( "name" )
   {
@@ -580,7 +581,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
       }
       std::fs::write( credential_store.join( &marker ), name_arg.as_bytes() )
         .map_err( | e | io_err_to_error_data( &e, "accounts assignee" ) )?;
-      if trace { eprintln!( "[trace] accounts assignee  write marker: {marker}  →  {name_arg}" ) }
+      if trace { eprintln!( "{}accounts assignee  write marker: {marker}  →  {name_arg}", trace_ts() ) }
       return Ok( OutputData::new(
         format!( "assigned {name_arg} for {display}  \u{2192}  {marker}\n" ),
         "text",
@@ -600,7 +601,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
       std::fs::remove_file( &marker_path )
         .map_err( | e | io_err_to_error_data( &e, "accounts assignee unassign" ) )?;
     }
-    if trace { eprintln!( "[trace] accounts assignee  cleared marker: {marker}" ) }
+    if trace { eprintln!( "{}accounts assignee  cleared marker: {marker}", trace_ts() ) }
     return Ok( OutputData::new(
       format!( "unassigned {display}  \u{2192}  {marker} cleared\n" ),
       "text",
@@ -652,7 +653,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
         if !force && !crate::account::is_owned( &acct_owner )
         {
           // Owned by another identity — skip with message (AC-09).
-          if trace { eprintln!( "[trace] accounts owner  batch-skip (foreign owner): {}  owner={acct_owner}", acct.name ) }
+          if trace { eprintln!( "{}accounts owner  batch-skip (foreign owner): {}  owner={acct_owner}", trace_ts(), acct.name ) }
           writeln!( out, "skip {}", acct.name ).unwrap();
           continue;
         }
@@ -663,7 +664,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
         }
         crate::account::write_owner( &acct.name, &credential_store, "" )
           .map_err( |e| io_err_to_error_data( &e, "accounts owner batch-clear" ) )?;
-        if trace { eprintln!( "[trace] accounts owner  cleared: {}  was={acct_owner}", acct.name ) }
+        if trace { eprintln!( "{}accounts owner  cleared: {}  was={acct_owner}", trace_ts(), acct.name ) }
         writeln!( out, "unclaimed {}", acct.name ).unwrap();
       }
       return Ok( OutputData::new( out, "text" ) );
@@ -718,7 +719,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
         .map_err( |e| io_err_to_error_data( &e, "accounts owner" ) )?;
       if trace
       {
-        eprintln!( "[trace] accounts owner  write_owner: OK  name={name} identity={}", if is_sentinel { "(cleared)" } else { ov } );
+        eprintln!( "{}accounts owner  write_owner: OK  name={name} identity={}", trace_ts(), if is_sentinel { "(cleared)" } else { ov } );
       }
       if is_sentinel
       {

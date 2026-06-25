@@ -314,7 +314,7 @@ fn f18_ft01_live_0_single_fetch()
 
 /// f18-FT-06 (AC-29): `live::1 trace::1` with 2 no-token accounts — per-account
 /// stagger delay of 200–1500 ms fires before each credential read, confirmed by
-/// ≥ 2 `[trace] … reading` lines on stderr after a SIGINT-terminated run.
+/// ≥ 2 timestamped ` · … reading` lines on stderr after a SIGINT-terminated run.
 ///
 /// Stagger fires before `read_token()` in `fetch_all_quota` (`stagger=true` only
 /// in live mode). No live token required — the credential JSON files have no
@@ -362,11 +362,11 @@ fn f18_ft06_live_stagger_per_account_trace()
 
   let trace_reading_count = err
     .lines()
-    .filter( |l| l.contains( "[trace]" ) && l.contains( "reading" ) )
+    .filter( |l| l.contains( " · " ) && l.contains( "reading" ) )
     .count();
   assert!(
     trace_reading_count >= 2,
-    "stagger must fire before each account fetch — expected ≥ 2 '[trace] … reading' lines on stderr, \
+    "stagger must fire before each account fetch — expected ≥ 2 timestamp ' · … reading' lines on stderr, \
      got {trace_reading_count}:\n{err}",
   );
   // Both accounts must appear individually in trace output — catches regressions

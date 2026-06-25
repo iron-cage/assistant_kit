@@ -6,6 +6,7 @@ use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use super::shared::{ require_claude_paths, require_credential_store, io_err_to_error_data, resolve_account_name, caps_to_json };
 use crate::output::json_escape;
+use claude_profile_core::account::trace_ts;
 
 /// Snapshot data read from `{name}.json` for per-endpoint fallback.
 struct InspectSnapshot
@@ -105,14 +106,14 @@ fn inspect_call_account(
   {
     return Err( claude_quota::QuotaError::HttpTransport( "no token".to_string() ) );
   }
-  if trace { eprintln!( "[trace] account.inspect  {name}  GET /api/oauth/account" ) }
+  if trace { eprintln!( "{}account.inspect  {name}  GET /api/oauth/account", trace_ts() ) }
   let r = claude_quota::fetch_oauth_account( tok );
   if trace
   {
     match &r
     {
-      Ok( a )  => eprintln!( "[trace] account.inspect  {name}  account OK  tagged_id={}", a.tagged_id ),
-      Err( e ) => eprintln!( "[trace] account.inspect  {name}  account ERR  {e}" ),
+      Ok( a )  => eprintln!( "{}account.inspect  {name}  account OK  tagged_id={}", trace_ts(), a.tagged_id ),
+      Err( e ) => eprintln!( "{}account.inspect  {name}  account ERR  {e}", trace_ts() ),
     }
   }
   r
@@ -129,14 +130,14 @@ fn inspect_call_usage(
   {
     return Err( claude_quota::QuotaError::HttpTransport( "no token".to_string() ) );
   }
-  if trace { eprintln!( "[trace] account.inspect  {name}  GET /api/oauth/usage" ) }
+  if trace { eprintln!( "{}account.inspect  {name}  GET /api/oauth/usage", trace_ts() ) }
   let r = claude_quota::fetch_oauth_usage( tok );
   if trace
   {
     match &r
     {
-      Ok( _ )  => eprintln!( "[trace] account.inspect  {name}  usage OK" ),
-      Err( e ) => eprintln!( "[trace] account.inspect  {name}  usage ERR  {e}" ),
+      Ok( _ )  => eprintln!( "{}account.inspect  {name}  usage OK", trace_ts() ),
+      Err( e ) => eprintln!( "{}account.inspect  {name}  usage ERR  {e}", trace_ts() ),
     }
   }
   r
@@ -153,14 +154,14 @@ fn inspect_call_roles(
   {
     return Err( claude_quota::QuotaError::HttpTransport( "no token".to_string() ) );
   }
-  if trace { eprintln!( "[trace] account.inspect  {name}  GET roles" ) }
+  if trace { eprintln!( "{}account.inspect  {name}  GET roles", trace_ts() ) }
   let r = claude_quota::fetch_claude_cli_roles( tok );
   if trace
   {
     match &r
     {
-      Ok( rd ) => eprintln!( "[trace] account.inspect  {name}  roles OK  org={}", rd.organization_name ),
-      Err( e ) => eprintln!( "[trace] account.inspect  {name}  roles ERR  {e}" ),
+      Ok( rd ) => eprintln!( "{}account.inspect  {name}  roles OK  org={}", trace_ts(), rd.organization_name ),
+      Err( e ) => eprintln!( "{}account.inspect  {name}  roles ERR  {e}", trace_ts() ),
     }
   }
   r
@@ -554,26 +555,26 @@ pub fn account_inspect_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let cred_str = std::fs::read_to_string( &cred_path )
     .map_err( |e| io_err_to_error_data( &e, "account inspect" ) )?;
   let ( tok_label, status_bare, expires_in_secs, is_expired ) = inspect_derive_status( &cred_str );
-  if trace { eprintln!( "[trace] account.inspect  {name}  status: {tok_label}" ) }
+  if trace { eprintln!( "{}account.inspect  {name}  status: {tok_label}", trace_ts() ) }
 
   let mut live_token = extract_access_token( &cred_str );
 
   if is_expired && refresh != 0
   {
-    if trace { eprintln!( "[trace] account.inspect  {name}  token expired → attempting refresh" ) }
+    if trace { eprintln!( "{}account.inspect  {name}  token expired → attempting refresh", trace_ts() ) }
     let paths     = require_claude_paths()?;
     let refreshed = crate::usage::attempt_expired_token_refresh(
       &name, &credential_store, &paths, trace, "auto", "auto",
     );
     if refreshed
     {
-      if trace { eprintln!( "[trace] account.inspect  {name}  refresh OK — re-reading token" ) }
+      if trace { eprintln!( "{}account.inspect  {name}  refresh OK — re-reading token", trace_ts() ) }
       live_token = std::fs::read_to_string( &cred_path ).ok()
         .and_then( | s | extract_access_token( &s ) );
     }
     else if trace
     {
-      eprintln!( "[trace] account.inspect  {name}  refresh failed — proceeding with stale token" );
+      eprintln!( "{}account.inspect  {name}  refresh failed — proceeding with stale token", trace_ts() );
     }
   }
 

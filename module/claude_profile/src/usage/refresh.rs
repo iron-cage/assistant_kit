@@ -9,6 +9,7 @@ use super::refresh_predicate::should_refresh;
 use super::types::{ AccountQuota, SubprocessModel, SubprocessEffort };
 use super::subprocess::{ resolve_model, effort_pre_args };
 use super::fetch::{ read_token, parse_u64_from_str };
+use claude_profile_core::account::trace_ts;
 
 // ── reason_label ─────────────────────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ pub( crate ) fn apply_refresh(
     // Fires before should_refresh — avoids evaluating the predicate for solo-skipped accounts.
     if solo && !aq.is_current
     {
-      if trace { eprintln!( "[trace] refresh  {}  solo-skip", aq.name ); }
+      if trace { eprintln!( "{}refresh  {}  solo-skip", trace_ts(), aq.name ); }
       continue;
     }
 
@@ -99,11 +100,11 @@ pub( crate ) fn apply_refresh(
     //   Pitfall: any trigger path that converts Err→Ok must add its own reason branch here.
     if trace
     {
-      eprintln!( "[trace] refresh  {}  should_retry={} (reason: {})", aq.name, should_retry, reason_label( aq, now_secs ) );
+      eprintln!( "{}refresh  {}  should_retry={} (reason: {})", trace_ts(), aq.name, should_retry, reason_label( aq, now_secs ) );
     }
     if !should_retry { continue; }
 
-    if trace { eprintln!( "[trace] refresh  {}  attempting token refresh", aq.name ); }
+    if trace { eprintln!( "{}refresh  {}  attempting token refresh", trace_ts(), aq.name ); }
     let model      = resolve_model( aq, imodel );
     let pre_args   = effort_pre_args( &model, effort );
     let Some( new_creds ) = crate::account::refresh_account_token(
@@ -113,7 +114,7 @@ pub( crate ) fn apply_refresh(
     {
       if trace
       {
-        eprintln!( "[trace] refresh  {}  refresh returned None — skipping retry", aq.name );
+        eprintln!( "{}refresh  {}  refresh returned None — skipping retry", trace_ts(), aq.name );
       }
       // Fix(BUG-297): set aq.result to Err so apply_touch skips this account.
       // Root cause: else-continue left aq.result=Ok(cached_data) when cache masking was active;
@@ -145,13 +146,13 @@ pub( crate ) fn apply_refresh(
     }
 
     // Re-read the refreshed token and retry only this account's quota.
-    if trace { eprintln!( "[trace] refresh  {}  token refreshed, retrying quota fetch", aq.name ); }
+    if trace { eprintln!( "{}refresh  {}  token refreshed, retrying quota fetch", trace_ts(), aq.name ); }
     let Ok( token ) = read_token( credential_store, &aq.name ) else { continue; };
     match claude_quota::fetch_oauth_usage( &token )
     {
       Ok( retried ) =>
       {
-        if trace { eprintln!( "[trace] refresh  {}  retry OK", aq.name ); }
+        if trace { eprintln!( "{}refresh  {}  retry OK", trace_ts(), aq.name ); }
         // Fix(BUG-256): retry OK arm cleared only aq.result — cached flag and cache_age_secs
         //   not cleared, causing render.rs to keep ~ prefix and (Xh ago) on every quota cell.
         //   write_quota_cache also absent, so {name}.json still held the stale cached quota.
@@ -178,7 +179,7 @@ pub( crate ) fn apply_refresh(
       }
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] refresh  {}  retry Err({})", aq.name, e ); }
+        if trace { eprintln!( "{}refresh  {}  retry Err({})", trace_ts(), aq.name, e ); }
         // Fix(BUG-156): propagate the retry error to show the current post-refresh status.
         // Root cause: on retry failure the original error (e.g. "401 expired") was kept,
         //   hiding the actual post-refresh state (e.g. "429 rate-limited after refresh").

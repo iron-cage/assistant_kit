@@ -15,7 +15,7 @@
 //! | FT-03 | `ft03_set_model_haiku_writes_full_id`                 | `.account.use set_model::haiku` → `claude-haiku-4-5-20251001`    | P   |
 //! | FT-04 | `ft04_set_model_default_removes_key_preserves_others` | `default` removes `model`; unrelated keys preserved              | P   |
 //! | FT-05 | `ft05_explicit_set_model_wins_over_switch_restore`    | `set_model::sonnet` wins over `switch_account` model restore     | P   |
-//! | FT-06 | `ft06_trace_line_emitted_with_set_model`              | `trace::1 set_model::opus` → `[trace]...set_model: opus`         | P   |
+//! | FT-06 | `ft06_trace_line_emitted_with_set_model`              | `trace::1 set_model::opus` → timestamp line with `set_model: opus` | P |
 //! | FT-07 | `ft07_set_model_bad_value_exits_1`                    | `set_model::bad` → exit 1, stderr names all 4 valid values       | N   |
 //! | FT-08 | `ft08_set_model_appears_in_help_output`               | `.account.use.help` and `.usage.help` both show `set_model`      | P   |
 //! | FT-09 | `ft09_set_model_no_set_model_key_in_json`             | `format::json` output has no `set_model` key                     | P   |
@@ -195,7 +195,7 @@ fn ft05_explicit_set_model_wins_over_switch_restore()
 }
 
 /// FT-06 (AC-06): `trace::1` + `set_model::opus` emits
-/// `[trace] account.use … set_model: opus` to stderr. Exit 0.
+/// `YYYY-MM-DD · HH:MM:SS · account.use … set_model: opus` to stderr. Exit 0.
 ///
 /// The trace emission is in the post-match block and fires regardless of `touch::`.
 #[ test ]
@@ -213,8 +213,8 @@ fn ft06_trace_line_emitted_with_set_model()
   assert_exit( &out, 0 );
   let err = stderr( &out );
   assert!(
-    err.contains( "[trace] account.use" ),
-    "trace::1 + set_model::opus must emit `[trace] account.use` line to stderr, got:\n{err}",
+    err.contains( " · account.use  " ),
+    "trace::1 + set_model::opus must emit account.use trace line to stderr, got:\n{err}",
   );
   assert!(
     err.contains( "set_model: opus" ),
@@ -714,7 +714,7 @@ fn cc9_set_model_recovers_from_malformed_settings_json()
 
 /// CC-13: `.usage set_model::opus trace::1` does NOT emit a `set_model:` trace line.
 ///
-/// The `[trace] account.use  {name}  set_model: X` line is only emitted on
+/// The `YYYY-MM-DD · HH:MM:SS · account.use  {name}  set_model: X` line is only emitted on
 /// `.account.use` (AC-06). The `.usage` code path has no corresponding trace emission.
 #[ test ]
 fn cc13_usage_set_model_no_trace_line_emitted()

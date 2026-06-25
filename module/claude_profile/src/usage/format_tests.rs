@@ -181,7 +181,7 @@ fn test_compute_expires_cell_now_exceeds_expires()
 /// EC-1 — epoch timestamp (ms=0) is always in the past → `expired(... ago)`.
 ///
 /// # Root Cause
-/// `token_exp_label` is a private helper used in the `[trace]` GET line.
+/// `token_exp_label` is a private helper used in the timestamped GET diagnostic line.
 /// It branches on `now_ms >= expires_at_ms`. Epoch zero is always ≤ now,
 /// so the expired branch must fire for any realistic system clock.
 ///

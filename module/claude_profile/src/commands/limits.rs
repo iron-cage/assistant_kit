@@ -7,6 +7,7 @@ use unilang::types::Value;
 use claude_quota::RateLimitData;
 use crate::output::{ OutputFormat, OutputOptions, json_escape, format_duration_secs };
 use super::shared::{ require_claude_paths, require_credential_store, io_err_to_error_data, resolve_account_name };
+use claude_profile_core::account::trace_ts;
 
 // ── Single-consumer helpers ───────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
-  if trace { eprintln!( "[trace] account.limits  store: {}", credential_store.display() ) }
+  if trace { eprintln!( "{}account.limits  store: {}", trace_ts(), credential_store.display() ) }
 
   let raw_name = match cmd.arguments.get( "name" )
   {

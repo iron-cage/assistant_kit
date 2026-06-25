@@ -31,9 +31,9 @@
 | FT-19 | AC-19 | `.account.delete name::X force::1` when X owned by different identity bypasses G6; exits 0; files deleted | ✅ `ft19_delete_force_bypasses_g6` |
 | FT-20 | AC-20 | `.account.relogin name::X force::1` when X owned by different identity bypasses G7; exits 0; 6-step relogin proceeds | ✅ `ft20_relogin_force_bypasses_g7` |
 | FT-21 | AC-21 | `force::1 dry::1` on G5/G6/G7 commands bypasses ownership gate but previews without writing; exits 0; `[dry-run]` printed | ✅ `ft21_force_dry_bypasses_gate_previews` |
-| FT-22 | AC-22 | `apply_refresh()` emits `[trace] refresh  <name>  should_retry=false (reason: not owned)` when `trace::1` and `aq.is_owned == false` — reason is `"not owned"`, not `"ok"` (BUG-295) | ✅ `mre_bug295_apply_refresh_trace_reason_not_owned` |
+| FT-22 | AC-22 | `apply_refresh()` emits `... · refresh  <name>  should_retry=false (reason: not owned)` when `trace::1` and `aq.is_owned == false` — reason is `"not owned"`, not `"ok"` (BUG-295) | ✅ `mre_bug295_apply_refresh_trace_reason_not_owned` |
 | FT-23 | AC-04 | G1 non-owned path applies polynomial approximation when history available (BUG-304) | ✅ `ft23_g1_non_owned_applies_approximation` |
-| FT-24 | AC-23 | Owned + occupied-elsewhere + non-current account: `fetch_quota_for_list` skips token read + HTTP; calls `approximate_quota()`; emits `[trace] fetch  <name>  skipped (reason: occupied elsewhere)` when `trace::1` — Fix(BUG-305) | ✅ `mre_bug305_fetch_skips_occupied_elsewhere_with_trace` |
+| FT-24 | AC-23 | Owned + occupied-elsewhere + non-current account: `fetch_quota_for_list` skips token read + HTTP; calls `approximate_quota()`; emits `... · fetch  <name>  skipped (reason: occupied elsewhere)` when `trace::1` — Fix(BUG-305) | ✅ `mre_bug305_fetch_skips_occupied_elsewhere_with_trace` |
 | FT-25 | AC-24 | `reason_label(aq, now_secs)` returns `"occupied elsewhere"` for owned + non-cached + occupied-elsewhere + Ok-result account — Fix(BUG-306); `apply_refresh()` trace emits correct reason | ✅ `mre_bug306_refresh_trace_reason_occupied_elsewhere` |
 
 ### Notes
@@ -137,10 +137,10 @@
 
 - **Given (case A):** Account `alice` with `aq.is_owned = false, aq.is_occupied_elsewhere = false`. `trace::1` enabled.
 - **When (case A):** `apply_touch()` processes the account list containing `alice`.
-- **Then (case A):** No subprocess spawned. Stderr contains `[trace] touch  alice  skipped (reason: not owned)`.
+- **Then (case A):** No subprocess spawned. Stderr contains a timestamped diagnostic line `... · touch  alice  skipped (reason: not owned)`.
 - **Given (case B):** Account `alice` with `aq.is_owned = true, aq.is_occupied_elsewhere = true`. `trace::1` enabled.
 - **When (case B):** `apply_touch()` processes `alice`.
-- **Then (case B):** No subprocess spawned. Stderr contains `[trace] touch  alice  skipped (reason: occupied elsewhere)`.
+- **Then (case B):** No subprocess spawned. Stderr contains a timestamped diagnostic line `... · touch  alice  skipped (reason: occupied elsewhere)`.
 - **Exit:** Ok(()) with no subprocess; matching trace line emitted per case
 - **Source fn:** `ft07_touch_skips_non_owned_with_trace`
 - **Note:** Gate condition: `!aq.is_owned || aq.is_occupied_elsewhere`. The trace reason mirrors the specific gate that fired.
@@ -319,7 +319,7 @@
 
 - **Given:** `AccountQuota` with `is_owned: false` and `result: Ok(cached_data)` (non-owned cache path, as set by G1 in `fetch.rs`). Env var `TRACE=1` (or `trace::1`) active.
 - **When:** `apply_refresh()` is called with this `aq`.
-- **Then:** stderr contains `[trace] refresh  <name>  should_retry=false (reason: not owned)`. The reason string is `"not owned"` — derived from the ownership gate check (`!aq.is_owned`), NOT from `aq.result.err()`.
+- **Then:** stderr contains `... · refresh  <name>  should_retry=false (reason: not owned)`. The reason string is `"not owned"` — derived from the ownership gate check (`!aq.is_owned`), NOT from `aq.result.err()`.
 - **Exit:** reason = `"not owned"` (not `"ok"`)
 - **Source fn:** `mre_bug295_apply_refresh_trace_reason_not_owned`
 - **Note:** Reproduces BUG-295. Before fix: `aq.result = Ok(cached_data)` for non-owned accounts causes `.err()` to return `None`, yielding `reason: ok`. After fix: ownership gate checked first; emits `"not owned"` before consulting `aq.result`. Consistent with AC-07 / FT-07 (`apply_touch` trace pattern).
@@ -343,7 +343,7 @@
 
 - **Given:** Account `alice` has `alice.json` with `"owner": "testuser@testmachine"` (current identity = `"testuser@testmachine"`, so `is_owned = true`). A `_active_{remote_host}_{remote_user}` marker file exists naming `alice` (so `is_occupied_elsewhere = true`). `alice` is NOT the live session on this machine (`is_current = false`). Quota cache present with valid data. `trace::1` enabled.
 - **When:** `fetch_quota_for_list()` processes `alice` (G1 passes — owned; G1b fires — occupied elsewhere and not current).
-- **Then:** No `read_token()` call for credential reading; no HTTP GET to `fetch_oauth_usage`. `approximate_quota()` is called and returns `AccountQuota` with `cached: true` and quota values from cache/approximation. Stderr contains `[trace] fetch  alice  skipped (reason: occupied elsewhere)`. `is_owned: true`, `is_occupied_elsewhere: true`.
+- **Then:** No `read_token()` call for credential reading; no HTTP GET to `fetch_oauth_usage`. `approximate_quota()` is called and returns `AccountQuota` with `cached: true` and quota values from cache/approximation. Stderr contains a timestamped diagnostic line `... · fetch  alice  skipped (reason: occupied elsewhere)`. `is_owned: true`, `is_occupied_elsewhere: true`.
 - **Exit:** Ok(cached/approximated data); trace line emitted; no HTTP call
 - **Source fn:** `mre_bug305_fetch_skips_occupied_elsewhere_with_trace`
 - **Note:** Reproduces BUG-305. Before fix: `occupied_elsewhere` computed at line 74 but only stamped on result at line 337 — no gate fires; full HTTP pipeline executes. After fix: G1b gate fires for `is_owned && is_occupied_elsewhere && !is_current`; `approximate_quota()` returns cached/approximated data without HTTP. Sister test to BUG-302 (touch) and BUG-303 (refresh) MRE tests.

@@ -64,7 +64,7 @@ clp .accounts format::table
 | `interval::` | `u64` | `30` | Seconds between live refresh cycles (≥ 30) |
 | `jitter::` | `u64` | `0` | Max random seconds added to interval |
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format: `text`, `json`, `table` |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr |
+| `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr |
 
 **Algorithm (5 steps):**
 1. Resolve credential store; graceful degradation on unavailability (returns `(no accounts configured)` with exit 0)
@@ -159,7 +159,7 @@ clp .account.save host::workstation role::personal    # both metadata fields
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `host::` | `string` | `""` (auto-detected hostname) | Machine/host label stored in `{name}.json` (see [feature/029](../../feature/029_account_host_metadata.md)) |
 | `role::` | `string` | `""` | User-defined role label stored in `{name}.json` (see [param 052](../param/052_role.md)) |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for credential read and file write steps |
+| `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for credential read and file write steps |
 
 **Algorithm (5 steps):**
 1. Resolve `name::`: read `oauthAccount.emailAddress` from `~/.claude.json`; fall back to `_active_{hostname}_{user}` marker; exit 1 if neither present
@@ -237,7 +237,7 @@ clp .account.use name::alice@home.com set_model::default
 | `refresh::` | `bool` | `1` | Attempt OAuth token refresh when locally expired before refusing with exit 3 |
 | `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (haiku — sufficient for keep-alive), `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (`low` for any model; no flag for haiku/keep), `low`, `normal`, `high`, `max` |
-| `trace::` | `bool` | `0` | Print `[trace] account.use` lines to stderr: credential read, quota fetch, idle check, model resolution, subprocess dispatch |
+| `trace::` | `bool` | `0` | Print timestamped `account.use` diagnostic lines to stderr: credential read, quota fetch, model resolution, subprocess dispatch |
 | `set_model::` | `enum` | *(omit)* | Explicitly write session model to `settings.json`: `opus` (`claude-opus-4-6`), `sonnet` (`claude-sonnet-4-6`), `haiku` (`claude-haiku-4-5-20251001`), `default` (removes override); takes precedence over automatic `apply_model_override()` |
 
 **Algorithm (7 steps):**
@@ -262,12 +262,12 @@ clp .account.use name::alice@home.com dry::1
 # [dry-run] would switch to 'alice@home.com'
 
 clp .account.use name::alice@home.com trace::1
-# [trace] account.use  alice@home.com  reading /...alice@home.com.credentials.json
-# [trace] account.use  alice@home.com  reading: OK
-# [trace] account.use  alice@home.com  quota fetch: OK
-# [trace] account.use  alice@home.com  subprocess: scheduled (idle check removed)
-# [trace] account.use  alice@home.com  model: claude-opus-4-6  effort: low
-# [trace] account.use  alice@home.com  subprocess: spawned
+# 2026-06-25 · 16:40:04 · account.use  alice@home.com  reading /...alice@home.com.credentials.json
+# 2026-06-25 · 16:40:04 · account.use  alice@home.com  reading: OK
+# 2026-06-25 · 16:40:04 · account.use  alice@home.com  quota fetch: OK
+# 2026-06-25 · 16:40:04 · account.use  alice@home.com  subprocess: scheduled (idle check removed)
+# 2026-06-25 · 16:40:04 · account.use  alice@home.com  model: claude-opus-4-6  effort: low
+# 2026-06-25 · 16:40:04 · account.use  alice@home.com  subprocess: spawned
 # switched to 'alice@home.com'
 ```
 
@@ -318,7 +318,7 @@ clp .account.delete name::alice@oldco.com dry::1
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | **(required)** | Account email to delete |
 | `dry::` | `bool` | `0` | Preview action without executing |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each file removal step |
+| `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for each file removal step |
 
 **Algorithm (4 steps):**
 1. Resolve `name::` via `AccountSelector`; validate account exists in credential store
@@ -376,7 +376,7 @@ clp .account.limits format::json
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | *(omit for active)* | Query a named account instead of the active account |
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for credential store read and API call |
+| `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for credential store read and API call |
 
 **Algorithm (3 steps):**
 1. Resolve `name::` (omit → active account from `_active_{hostname}_{user}` marker); load credentials
@@ -435,7 +435,7 @@ clp .account.relogin dry::1            # dry-run for active account
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | *(active account)* | Account to re-authenticate; omit to use the currently active account |
 | `dry::` | `bool` | `0` | Preview the steps without executing |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each step: store read, switch, spawn, credential change, save, restore |
+| `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for each step: store read, switch, spawn, credential change, save, restore |
 
 **Algorithm (6 steps):**
 1. Resolve `name::` via [`AccountSelector`](../type/004_account_selector.md) → validate account exists in credential store
@@ -518,7 +518,7 @@ clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
 | `from_now::` | `string` | *(omit)* | Signed duration delta from now (e.g., `+3h30m`, `-30m`, `+0m`); mutually exclusive with `at::` and `clear::` |
 | `clear::` | `bool` | `0` | Remove `_renewal_at` from `{name}.json`; mutually exclusive with `at::` and `from_now::` |
 | `dry::` | `bool` | `0` | Preview operation without writing files |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each file read and write step |
+| `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for each file read and write step |
 
 **Algorithm (4 steps):**
 1. Resolve target account list from `name::`: single email/prefix, comma-separated list, or `all` (every saved account)
@@ -580,14 +580,14 @@ clp .account.inspect name::alice@acme.com
 clp .account.inspect alice             # prefix
 clp .account.inspect refresh::0        # skip token refresh on expired credentials
 clp .account.inspect format::json
-clp .account.inspect trace::1          # show [trace] endpoint calls to stderr
+clp .account.inspect trace::1          # show timestamped diagnostic endpoint calls to stderr
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | *(active account)* | Account to inspect; omit to use the currently active account |
 | `refresh::` | `bool` | `1` | Attempt OAuth token refresh via isolated subprocess when `expiresAt` is locally expired, before endpoint calls |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each endpoint call: URL, HTTP status, field extraction summary |
+| `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for each endpoint call: URL, HTTP status, field extraction summary |
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format: `text` (default) or `json` |
 
 **Algorithm (5 steps):**

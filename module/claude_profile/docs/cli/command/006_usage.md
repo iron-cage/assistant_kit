@@ -49,7 +49,7 @@ clp .usage solo::1 live::1 interval::60
 | `live::` | `bool` | `0` | Enable continuous refresh loop (Ctrl-C to exit) |
 | `interval::` | `u64` | `30` | Seconds between refresh cycles (≥ 30; only validated when `live::1`) |
 | `jitter::` | `u64` | `0` | Max random seconds added to each cycle delay (≤ interval; only validated when `live::1`) |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
+| `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr: credential reads, API calls, and refresh steps |
 | `sort::` | `enum` | `renew` | Row ordering strategy AND footer recommendation: `name` (alphabetical), `renew` (soonest quota refill), `renews` (soonest billing renewal). Recommended account shown in footer `Next (strategy):` line |
 | `desc::` | `bool` | context-sensitive | Sort direction; default depends on `sort::` strategy (`name`/`renew`/`renews`→`0`) |
 | `prefer::` | `enum` | `any` | Weekly quota column for sort heuristics: `any` = `min(7d Left, 7d(Son))`, `opus` = `7d Left`, `sonnet` = `7d(Son)` |

@@ -760,10 +760,10 @@ pub fn refresh_account_token(
     let path = credential_store.join( format!( "{name}.credentials.json" ) );
     let creds_json = match std::fs::read_to_string( &path )
     {
-      Ok( s )  => { if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  read credentials: OK" ); } s }
+      Ok( s )  => { if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  read credentials: OK", trace_ts() ); } s }
       Err( e ) =>
       {
-        if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  read credentials: Err({e})" ); }
+        if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  read credentials: Err({e})", trace_ts() ); }
         return None;
       }
     };
@@ -771,28 +771,28 @@ pub fn refresh_account_token(
     // The stored credential file is NOT modified — only the transient copy passed to run_isolated.
     let creds_json = manipulate_expires_at( &creds_json );
     let t_run = std::time::Instant::now();
-    if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
+    if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s", trace_ts() ); }
     let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, model )
     {
       Ok( r )  => r,
       Err( e ) =>
       {
-        if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
+        if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  run_isolated: Err({e})  ({:.1}s)", trace_ts(), t_run.elapsed().as_secs_f64() ); }
         return None;
       }
     };
     if trace
     {
       let creds_status = if isolated.credentials.is_some() { "Some" } else { "None" };
-      let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
+      let _ = writeln!( std::io::stderr(), "{}{label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", trace_ts(), t_run.elapsed().as_secs_f64() );
     }
     let new_creds = isolated.credentials?;
     if let Err( e ) = std::fs::write( &path, &new_creds )
     {
-      if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write credentials: Err({e})" ); }
+      if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write credentials: Err({e})", trace_ts() ); }
       return None;
     }
-    if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write credentials: OK" ); }
+    if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write credentials: OK", trace_ts() ); }
     Some( new_creds )
   }
 }
@@ -820,10 +820,10 @@ fn refresh_token_with_live_path(
   //   the unnecessary global write is only visible in concurrent multi-account batch scenarios
   let creds_json = match std::fs::read_to_string( credential_store.join( format!( "{name}.credentials.json" ) ) )
   {
-    Ok( s )  => { if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  read credentials: OK" ); } s }
+    Ok( s )  => { if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  read credentials: OK", trace_ts() ); } s }
     Err( e ) =>
     {
-      if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  read credentials: Err({e})" ); }
+      if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  read credentials: Err({e})", trace_ts() ); }
       return None;
     }
   };
@@ -866,20 +866,20 @@ fn refresh_token_with_live_path(
   // The stored credential file is NOT modified — only the transient copy passed to run_isolated.
   let creds_json = manipulate_expires_at( &creds_json );
   let t_run = std::time::Instant::now();
-  if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
+  if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s", trace_ts() ); }
   let isolated = match run_isolated_fn( &creds_json, args, 35, model )
   {
     Ok( r )  => r,
     Err( e ) =>
     {
-      if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
+      if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  run_isolated: Err({e})  ({:.1}s)", trace_ts(), t_run.elapsed().as_secs_f64() ); }
       return None;
     }
   };
   if trace
   {
     let creds_status = if isolated.credentials.is_some() { "Some" } else { "None" };
-    let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
+    let _ = writeln!( std::io::stderr(), "{}{label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", trace_ts(), t_run.elapsed().as_secs_f64() );
   }
   // Fix(BUG-221): write refreshed credentials directly to the credential store, not to
   //   p.credentials_file() (the live session file ~/.claude/.credentials.json).
@@ -921,17 +921,17 @@ fn refresh_token_with_live_path(
   let store_cred_path = credential_store.join( format!( "{name}.credentials.json" ) );
   if let Err( e ) = std::fs::write( &store_cred_path, &new_creds )
   {
-    if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write credentials: Err({e})" ); }
+    if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write credentials: Err({e})", trace_ts() ); }
     return None;
   }
-  if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write credentials: OK" ); }
+  if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write credentials: OK", trace_ts() ); }
   // Pass owner: None — background refresh must not mutate the owner field.
   match save( name, credential_store, p, false, Some( new_creds.as_bytes() ), None, None, None )
   {
-    Ok( () ) => { if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  save: OK" ); } }
+    Ok( () ) => { if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  save: OK", trace_ts() ); } }
     Err( e ) =>
     {
-      if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  save: Err({e})" ); }
+      if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  save: Err({e})", trace_ts() ); }
       return None;
     }
   }
@@ -952,7 +952,7 @@ fn refresh_token_with_live_path(
   if is_still_active
   {
     let _ = std::fs::write( p.credentials_file(), &new_creds );
-    if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write live: OK" ); }
+    if trace { let _ = writeln!( std::io::stderr(), "{}{label}  {name}  write live: OK", trace_ts() ); }
   }
   Some( new_creds )
 }
@@ -1698,6 +1698,20 @@ pub fn chrono_now_utc() -> String
   let m   = if mp < 10 { mp + 3 } else { mp - 9 };
   let y   = if m <= 2 { y + 1 } else { y };
   format!( "{y:04}-{m:02}-{d:02}T{hh:02}:{mm:02}:{ss:02}Z" )
+}
+
+/// Return a UTC timestamp prefix string for diagnostic trace lines.
+///
+/// Format: `"YYYY-MM-DD · HH:MM:SS · "` — two middle dots separate date, time, and body.
+/// Use as first argument in `eprintln!( "{}label  name  ...", trace_ts() )` so the caller
+/// label and account name follow immediately after the space.
+#[ inline ]
+#[ must_use ]
+pub fn trace_ts() -> String
+{
+  let utc = chrono_now_utc();
+  // chrono_now_utc produces "YYYY-MM-DDTHH:MM:SSZ"; slice date and time parts.
+  format!( "{} · {} · ", &utc[ ..10 ], &utc[ 11..19 ] )
 }
 
 /// Parse an ISO-8601 UTC timestamp to seconds since epoch.

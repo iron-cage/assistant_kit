@@ -60,7 +60,7 @@
 //! | aw28 | `aw28_lim_it_trace_idle_account_all_lines` | `trace::1` + live idle token → all 6 trace lines on stderr (`lim_it`) | P |
 //! | aw29 | `aw29_lim_it_trace_active_account_subprocess_skipped` | `trace::1` + live active token → read+fetch+idle-check+model+subprocess-skipped lines (`lim_it`) | P |
 //! | aw30 | `aw30_trace_fetch_failure_skips_idle_model_lines` | `trace::1` + invalid token → fetch-err + subprocess-skipped only | N |
-//! | aw31 | `aw31_trace_touch_disabled_no_trace_lines` | `touch::0 trace::1` → no `[trace] account.use` lines | P |
+//! | aw31 | `aw31_trace_touch_disabled_no_trace_lines` | `touch::0 trace::1` → no ` · account.use` timestamp lines | P |
 //! | aw32 | `aw32_trace_bad_value_exits_1` | `trace::bad` → exit 1, stderr lists valid values | N |
 //! | aw35 | `aw35_help_shows_positional_example` | `.account.use.help` examples contain positional form (no `name::`) (015 FT-10/AC-10) | P |
 //!
@@ -1702,8 +1702,8 @@ fn aw28_lim_it_trace_idle_account_all_lines()
   );
   let err = stderr( &out );
   assert!(
-    err.contains( "[trace] account.use" ),
-    "aw28: stderr must contain [trace] account.use prefix, got:\n{err}",
+    err.contains( " · account.use  " ),
+    "aw28: stderr must contain account.use trace prefix, got:\n{err}",
   );
   assert!(
     err.contains( "reading" ) && err.contains( "reading: OK" ),
@@ -1763,8 +1763,8 @@ fn aw29_lim_it_trace_active_account_subprocess_skipped()
   assert_exit( &out, 0 );
   let err = stderr( &out );
   assert!(
-    err.contains( "[trace] account.use" ),
-    "aw29: stderr must contain [trace] account.use prefix, got:\n{err}",
+    err.contains( " · account.use  " ),
+    "aw29: stderr must contain account.use trace prefix, got:\n{err}",
   );
   // Fix(BUG-285): no idle check — subprocess always fires when fetch OK.
   // Old trace `idle check: resets_at=present → already active` no longer exists.
@@ -1828,8 +1828,8 @@ fn aw30_trace_fetch_failure_skips_idle_model_lines()
   );
   let err = stderr( &out );
   assert!(
-    err.contains( "[trace] account.use" ),
-    "aw30: stderr must contain [trace] account.use prefix, got:\n{err}",
+    err.contains( " · account.use  " ),
+    "aw30: stderr must contain account.use trace prefix, got:\n{err}",
   );
   assert!(
     err.contains( "reading: OK" ),
@@ -1857,10 +1857,10 @@ fn aw30_trace_fetch_failure_skips_idle_model_lines()
   );
 }
 
-/// aw31: `trace::1 touch::0` → no `[trace] account.use` lines emitted (FT-14, EC-7).
+/// aw31: `trace::1 touch::0` → no ` · account.use` timestamp lines emitted (FT-14, EC-7).
 ///
 /// When `touch::0` is set, `pre_switch_touch_ctx` is never called — no quota fetch
-/// operations occur, so no `[trace] account.use` lines should appear on stderr.
+/// operations occur, so no ` · account.use` timestamp lines should appear on stderr.
 /// The `trace::1` parameter is accepted (exit 0) but has no effect without touch operations.
 #[ test ]
 fn aw31_trace_touch_disabled_no_trace_lines()
@@ -1881,8 +1881,8 @@ fn aw31_trace_touch_disabled_no_trace_lines()
   );
   let err = stderr( &out );
   assert!(
-    !err.contains( "[trace] account.use" ),
-    "aw31: touch::0 must produce no [trace] account.use lines, got stderr:\n{err}",
+    !err.contains( " · account.use  " ),
+    "aw31: touch::0 must produce no account.use trace lines, got stderr:\n{err}",
   );
 }
 
@@ -1935,8 +1935,8 @@ fn it_trace_account_save_accepted()
     "trace::1 must be accepted by .account.save, got stderr:\n{err}",
   );
   assert!(
-    err.contains( "[trace]" ),
-    "trace::1 must emit [trace] lines to stderr for .account.save, got:\n{err}",
+    err.contains( " · " ),
+    "trace::1 must emit trace lines to stderr for .account.save, got:\n{err}",
   );
 }
 
@@ -1984,8 +1984,8 @@ fn it_trace_account_delete_accepted()
     "trace::1 must be accepted by .account.delete, got stderr:\n{err}",
   );
   assert!(
-    err.contains( "[trace]" ),
-    "trace::1 must emit [trace] lines to stderr for .account.delete, got:\n{err}",
+    err.contains( " · " ),
+    "trace::1 must emit trace lines to stderr for .account.delete, got:\n{err}",
   );
 }
 
@@ -2010,8 +2010,8 @@ fn it_trace_account_relogin_accepted()
     "trace::1 must be accepted by .account.relogin, got stderr:\n{err}",
   );
   assert!(
-    err.contains( "[trace]" ),
-    "trace::1 must emit [trace] lines to stderr for .account.relogin, got:\n{err}",
+    err.contains( " · " ),
+    "trace::1 must emit trace lines to stderr for .account.relogin, got:\n{err}",
   );
 }
 
@@ -5032,7 +5032,7 @@ fn ft_owner_trace_emits_diagnostic()
   assert_exit( &out, 0 );
   let err = stderr( &out );
   assert!(
-    err.contains( "[trace]" ) && err.contains( "write_owner" ),
+    err.contains( " · " ) && err.contains( "write_owner" ),
     "FT-08: stderr must contain trace diagnostic; got:\n{err}",
   );
 }

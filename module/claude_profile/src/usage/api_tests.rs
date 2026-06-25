@@ -392,12 +392,12 @@ fn t08_model_override_trace_label_is_usage()
   let mut output = String::new();
   buf.read_to_string( &mut output ).unwrap();
   assert!(
-    output.contains( "[trace] usage" ),
-    "trace output must contain '[trace] usage' when label='usage', got: {output}",
+    output.contains( " · usage" ),
+    "trace output must contain ' · usage' when label='usage', got: {output}",
   );
   assert!(
-    !output.contains( "[trace] account.use" ),
-    "trace output must NOT contain '[trace] account.use' when label='usage', got: {output}",
+    !output.contains( " · account.use  " ),
+    "trace output must NOT contain ' · account.use' when label='usage', got: {output}",
   );
 }
 

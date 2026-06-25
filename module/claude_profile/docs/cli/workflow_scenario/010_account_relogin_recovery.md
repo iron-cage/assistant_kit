@@ -13,9 +13,9 @@
 ```bash
 # Run usage with trace to identify accounts where silent refresh fails
 clp .usage refresh::1 trace::1
-# [trace] refresh carol@example.com  read credentials: OK
-# [trace] refresh carol@example.com  run_isolated: invoking claude  args=["--print", "."]  timeout=35s
-# [trace] refresh carol@example.com  run_isolated: OK credentials=None   <- dead refreshToken
+# 2026-06-25 · 16:40:04 · refresh carol@example.com  read credentials: OK
+# 2026-06-25 · 16:40:04 · refresh carol@example.com  run_isolated: invoking claude  args=["--print", "."]  timeout=35s
+# 2026-06-25 · 16:40:38 · refresh carol@example.com  run_isolated: OK credentials=None   <- dead refreshToken
 #
 #   Account          5h Left  ...  Expires   Sub  ~Renews
 # ✓ alice@example.com    86%      in 7h

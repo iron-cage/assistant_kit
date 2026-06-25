@@ -7,6 +7,7 @@ use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use crate::output::{ OutputFormat, OutputOptions, json_escape };
 use super::shared::{ require_claude_paths, require_credential_store, derive_token_state, caps_to_json };
+use claude_profile_core::account::trace_ts;
 
 // ── Single-consumer helpers ───────────────────────────────────────────────────
 
@@ -88,12 +89,12 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
   }
   let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let paths            = require_claude_paths()?;
-  if trace { eprintln!( "[trace] credentials.status  reading {}", paths.credentials_file().display() ) }
+  if trace { eprintln!( "{}credentials.status  reading {}", trace_ts(), paths.credentials_file().display() ) }
   let credential_store = require_credential_store()?;
 
   if !paths.credentials_file().exists()
   {
-    if trace { eprintln!( "[trace] credentials.status  reading: Err(not found)" ) }
+    if trace { eprintln!( "{}credentials.status  reading: Err(not found)", trace_ts() ) }
     return Err( ErrorData::new(
       ErrorCode::InternalError,
       format!(
@@ -102,7 +103,7 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
       ),
     ) );
   }
-  if trace { eprintln!( "[trace] credentials.status  reading: OK" ) }
+  if trace { eprintln!( "{}credentials.status  reading: OK", trace_ts() ) }
 
   // Per-field presence flags; None (absent param) = use default.
   // Default-on: account, sub, tier, token, expires, email.

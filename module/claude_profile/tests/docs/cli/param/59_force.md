@@ -107,7 +107,7 @@ When combined with `dry::1`: gate is bypassed but mutation is still previewed wi
 
 - **Given:** Account `alice@corp.com` with `"owner": "other@remote"`. Cache contains valid quota. Current identity ≠ `"other@remote"`.
 - **When:** `clp .usage name::alice@corp.com force::1 trace::1`
-- **Then:** Exits 0. `[trace] fetch  alice@corp.com  skipped (reason: not owned)` appears in output (G1 gate active — cache-as-primary). HTTP fetch NOT performed. Quota columns show cached values with `~` prefix. `force::1` does NOT trigger live fetch for non-owned accounts.
+- **Then:** Exits 0. `... · fetch  alice@corp.com  skipped (reason: not owned)` appears in output (G1 gate active — cache-as-primary). HTTP fetch NOT performed. Quota columns show cached values with `~` prefix. `force::1` does NOT trigger live fetch for non-owned accounts.
 - **Exit:** 0 with cache-sourced data
 - **Note:** G1–G4 are read-side gates that intentionally suppress load on non-owned accounts. `force::` is scoped to write mutations only — G5–G8.
 - **Source fn:** `fc08_force_does_not_bypass_read_gates`

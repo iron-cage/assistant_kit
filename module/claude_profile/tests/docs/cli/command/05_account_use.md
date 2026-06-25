@@ -31,7 +31,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 | IT-23 | `touch::`, `refresh::`, `imodel::`, `effort::`, `trace::` appear in `.account.use --help` | Help Output |
 | IT-28 | `refresh::bad` exits 1 naming valid values `0`, `1`, `false`, `true` | Validation |
 | IT-24 | `trace::1 touch::1` idle account — 6 trace lines emitted to stderr in order | Trace Output |
-| IT-25 | `trace::1 touch::0` — no `[trace] account.use` lines emitted | Trace Suppression |
+| IT-25 | `trace::1 touch::0` — no timestamped `account.use` diagnostic lines emitted | Trace Suppression |
 | IT-26 | `trace::bad` exits 1 naming valid values `0`, `1`, `false`, `true` | Validation |
 | IT-27 | `oauthAccount.organizationName` in `~/.claude.json` reflects switched-to account (BUG-219 guard) | Org Identity |
 | IT-29 | `oauthAccount.emailAddress` in `~/.claude.json` patched unconditionally even when `{name}.json` absent (BUG-254 guard) | oauthAccount Email |
@@ -308,7 +308,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 - **Given:** Account `alice@home.com` saved with valid token.
 - **When:** `clp .account.use name::alice@home.com trace::1`
-- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout. Stderr (in order) contains: `reading {path}`, `reading: OK`, `quota fetch: OK`, `subprocess: scheduled (idle check removed)`, `model: {model}  effort: {effort}`, `subprocess: spawned`. Fix(BUG-285): `idle check:` trace line removed; subprocess always fires when fetch succeeds. Prefix of every trace line is `[trace] account.use  alice@home.com`.
+- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout. Stderr (in order) contains: `reading {path}`, `reading: OK`, `quota fetch: OK`, `subprocess: scheduled (idle check removed)`, `model: {model}  effort: {effort}`, `subprocess: spawned`. Fix(BUG-285): `idle check:` trace line removed; subprocess always fires when fetch succeeds. Prefix of every trace line is `... · account.use  alice@home.com`.
 - **Exit:** 0
 - **Live:** yes (requires valid token)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-10–AC-14](../../../../docs/feature/027_account_use_post_switch_touch.md)
@@ -316,11 +316,11 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ---
 
-### IT-25: `trace::1 touch::0` — no `[trace] account.use` lines emitted
+### IT-25: `trace::1 touch::0` — no timestamped `account.use` diagnostic lines emitted
 
 - **Given:** Account `alice@home.com` saved.
 - **When:** `clp .account.use name::alice@home.com touch::0 trace::1`
-- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout. Stderr contains no `[trace] account.use` lines.
+- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout. Stderr contains no timestamped `account.use` diagnostic lines.
 - **Exit:** 0
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-15](../../../../docs/feature/027_account_use_post_switch_touch.md)
 - **Source fn:** `aw31_trace_touch_disabled_no_trace_lines`

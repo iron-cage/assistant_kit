@@ -15,11 +15,11 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 | FB-7 | `live::1 interval::29` exits 1 (interval too low) | interval validation |
 | FB-8 | `live::1 jitter::` exceeding `interval::` exits 1 | jitter validation |
 | FB-9 | `live::1` and `refresh::1` composable — refresh runs every cycle | composability |
-| FB-10 | `trace::1` writes `[trace]` lines to stderr; stdout unchanged | trace output |
+| FB-10 | `trace::1` writes timestamped diagnostic lines to stderr; stdout unchanged | trace output |
 | FB-11 | `trace::0` (default) produces no stderr diagnostic output | trace default |
 | FB-12 | `trace::1 refresh::1` shows per-account refresh path steps | trace + refresh |
 | FB-13 | `touch::1` runs after `refresh::1` when both active | touch ordering |
-| FB-14 | `touch::1 trace::1` shows `[trace]` lines for touch subprocess | touch + trace |
+| FB-14 | `touch::1 trace::1` shows timestamped diagnostic lines for touch subprocess | touch + trace |
 
 ### Test Coverage Summary
 
@@ -116,7 +116,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 
 - **Given:** One saved account with valid quota data.
 - **When:** `clp .usage trace::1`
-- **Then:** stderr contains `[trace]` prefixed lines for credential read, API call, and result. stdout contains the normal quota table unchanged.
+- **Then:** stderr contains timestamped diagnostic lines for credential read, API call, and result. stdout contains the normal quota table unchanged.
 
 ---
 
@@ -132,7 +132,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 
 - **Given:** One saved account returning a 401 error.
 - **When:** `clp .usage refresh::1 trace::1`
-- **Then:** stderr contains `[trace]` lines showing: credential read, API call attempt, 401 result, subprocess launch, credential re-read, retry API call, retry result. All steps visible per account.
+- **Then:** stderr contains timestamped diagnostic lines showing: credential read, API call attempt, 401 result, subprocess launch, credential re-read, retry API call, retry result. All steps visible per account.
 
 ---
 
@@ -140,14 +140,14 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 
 - **Given:** One account with expired token (quota would fail with 401); after token refresh, `five_hour.resets_at` is present (session activated by refresh). `refresh::1 touch::1 trace::1`.
 - **When:** `clp .usage refresh::1 touch::1 trace::1`
-- **Then:** stderr `[trace]` lines show refresh lifecycle completing first. Touch then evaluates post-refresh quota: since `resets_at` is now present (session started by refresh), touch correctly SKIPS the account (already active). No redundant double-subprocess. Trace shows `skipped (reason: already active)`.
+- **Then:** stderr timestamped diagnostic lines show refresh lifecycle completing first. Touch then evaluates post-refresh quota: since `resets_at` is now present (session started by refresh), touch correctly SKIPS the account (already active). No redundant double-subprocess. Trace shows `skipped (reason: already active)`.
 - **Source:** [feature/024_session_touch.md AC-05](../../../../docs/feature/024_session_touch.md)
 
 ---
 
-### FB-14: `touch::1 trace::1` shows `[trace]` lines for touch subprocess lifecycle
+### FB-14: `touch::1 trace::1` shows timestamped diagnostic lines for touch subprocess lifecycle
 
 - **Given:** One account with valid quota data and `five_hour.resets_at` absent (idle — no active 5h window). `touch::1 trace::1`.
 - **When:** `clp .usage touch::1 trace::1`
-- **Then:** stderr contains `[trace]` lines for the touch subprocess lifecycle (same `[trace]` prefix format as refresh) with per-step elapsed time. Lines include account name and subprocess status. stdout contains the normal quota table unchanged.
+- **Then:** stderr contains timestamped diagnostic lines for the touch subprocess lifecycle (same format as refresh) with per-step elapsed time. Lines include account name and subprocess status. stdout contains the normal quota table unchanged.
 - **Source:** [feature/024_session_touch.md AC-09](../../../../docs/feature/024_session_touch.md)

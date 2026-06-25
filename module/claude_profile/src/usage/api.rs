@@ -18,6 +18,7 @@ use super::touch::apply_touch;
 use super::params::parse_usage_params;
 use super::sort::find_next_for_strategy;
 use super::format::{ five_hour_left, seven_day_left, status_emoji, OPUS_OVERRIDE_THRESHOLD };
+use claude_profile_core::account::trace_ts;
 
 // ── no_color post-processor ────────────────────────────────────────────────────
 
@@ -163,7 +164,7 @@ pub( crate ) fn attempt_expired_token_refresh(
 /// Returns [`PreSwitchOutcome::NeedTouch`] when quota is successfully fetched.
 /// The subprocess is always dispatched; it exits immediately when the account is already active.
 ///
-/// When `trace` is true, emits `[trace] account.use  {name}  {step}` lines to stderr
+/// When `trace` is true, emits `YYYY-MM-DD · HH:MM:SS · account.use  {name}  {step}` lines to stderr
 /// for each internal operation, including the reason when `Unavailable` is returned.
 ///
 /// Called BEFORE the switch so the target account's credential file still holds the
@@ -174,7 +175,7 @@ pub( crate ) fn attempt_expired_token_refresh(
 // Root cause: Feature 027 scope explicitly deferred trace:: as "Out of Scope"; no rule required
 //   trace:: on commands performing fetch operations.
 // Pitfall: Any command extended to perform HTTP/file/subprocess operations must add trace:: in
-//   the same pass — grep [trace] emission sites in source and verify each emitting command registers trace::.
+//   the same pass — grep trace_ts() call sites in source and verify each emitting command registers trace::.
 pub( crate ) fn pre_switch_touch_ctx(
   name       : &str,
   store_path : &std::path::Path,
@@ -184,16 +185,16 @@ pub( crate ) fn pre_switch_touch_ctx(
 ) -> PreSwitchOutcome
 {
   let path = store_path.join( format!( "{name}.credentials.json" ) );
-  if trace { eprintln!( "[trace] account.use  {name}  reading {}", path.display() ) }
+  if trace { eprintln!( "{}account.use  {name}  reading {}", trace_ts(), path.display() ) }
   let credentials_json = match std::fs::read_to_string( &path )
   {
-    Ok( s )  => { if trace { eprintln!( "[trace] account.use  {name}  reading: OK" ) } s }
+    Ok( s )  => { if trace { eprintln!( "{}account.use  {name}  reading: OK", trace_ts() ) } s }
     Err( e ) =>
     {
       if trace
       {
-        eprintln!( "[trace] account.use  {name}  reading: Err({e})" );
-        eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: fetch failed)" );
+        eprintln!( "{}account.use  {name}  reading: Err({e})", trace_ts() );
+        eprintln!( "{}account.use  {name}  subprocess: skipped (reason: fetch failed)", trace_ts() );
       }
       return PreSwitchOutcome::Unavailable;
     }
@@ -202,20 +203,20 @@ pub( crate ) fn pre_switch_touch_ctx(
   {
     if trace
     {
-      eprintln!( "[trace] account.use  {name}  quota fetch: Err(no accessToken in credentials)" );
-      eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: fetch failed)" );
+      eprintln!( "{}account.use  {name}  quota fetch: Err(no accessToken in credentials)", trace_ts() );
+      eprintln!( "{}account.use  {name}  subprocess: skipped (reason: fetch failed)", trace_ts() );
     }
     return PreSwitchOutcome::Unavailable;
   };
   let quota = match claude_quota::fetch_oauth_usage( &token )
   {
-    Ok( q )  => { if trace { eprintln!( "[trace] account.use  {name}  quota fetch: OK" ) } q }
+    Ok( q )  => { if trace { eprintln!( "{}account.use  {name}  quota fetch: OK", trace_ts() ) } q }
     Err( e ) =>
     {
       if trace
       {
-        eprintln!( "[trace] account.use  {name}  quota fetch: Err({e})" );
-        eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: fetch failed)" );
+        eprintln!( "{}account.use  {name}  quota fetch: Err({e})", trace_ts() );
+        eprintln!( "{}account.use  {name}  subprocess: skipped (reason: fetch failed)", trace_ts() );
       }
       return PreSwitchOutcome::Unavailable;
     }
@@ -223,7 +224,7 @@ pub( crate ) fn pre_switch_touch_ctx(
   // Fix(BUG-285): removed is_idle check — resets_at is server-side state set by any session
   //   on any machine; using it as a local subprocess identity oracle is a category error.
   //   Always return NeedTouch; the subprocess (claude --print .) is idempotent.
-  if trace { eprintln!( "[trace] account.use  {name}  subprocess: scheduled (idle check removed)" ) }
+  if trace { eprintln!( "{}account.use  {name}  subprocess: scheduled (idle check removed)", trace_ts() ) }
   PreSwitchOutcome::NeedTouch( TouchCtx { quota } )
 }
 
@@ -233,10 +234,10 @@ pub( crate ) fn pre_switch_touch_ctx(
 /// (held in `ctx`) for model resolution. The subprocess is fire-and-forget; any
 /// failure is silently ignored — the switch has already succeeded.
 ///
-/// When `trace` is true, emits `[trace] account.use  {name}  model: ...  effort: ...` and
-/// `[trace] account.use  {name}  subprocess: spawned` to stderr after dispatching.
+/// When `trace` is true, emits `YYYY-MM-DD · HH:MM:SS · account.use  {name}  model: ...  effort: ...` and
+/// `YYYY-MM-DD · HH:MM:SS · account.use  {name}  subprocess: spawned` to stderr after dispatching.
 /// When the Sonnet→Opus override fires (BUG-225), also emits
-/// `[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={N}%)`.
+/// `YYYY-MM-DD · HH:MM:SS · account.use  {name}  model override: sonnet→opus (7d(Son) left={N}%)`.
 ///
 /// `imodel_str` and `effort_str` must have been pre-validated by [`validate_imodel_str`]
 /// / [`validate_effort_str`]; the `parse()` calls below are infallible on validated input.
@@ -284,7 +285,7 @@ pub( crate ) fn apply_model_override(
         if trace
         {
           use std::io::Write as _;
-          let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)" );
+          let _ = writeln!( std::io::stderr(), "{}{label}  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)", trace_ts() );
         }
       }
     }
@@ -294,7 +295,7 @@ pub( crate ) fn apply_model_override(
       if overrode && trace
       {
         use std::io::Write as _;
-        let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  model override: opus→sonnet (7d(Son) left={sonnet_left:.0}%)" );
+        let _ = writeln!( std::io::stderr(), "{}{label}  {name}  model override: opus→sonnet (7d(Son) left={sonnet_left:.0}%)", trace_ts() );
       }
     }
   }
@@ -315,7 +316,7 @@ pub( crate ) fn apply_model_override(
 
 
 // Fix(BUG-207): `apply_post_switch_touch` had no `trace` param — model/effort resolution
-//   and subprocess spawn were invisible; only the missing [trace] lines in `pre_switch_touch_ctx`
+//   and subprocess spawn were invisible; only the missing trace lines in `pre_switch_touch_ctx`
 //   were apparent; both functions required the same fix.
 // Root cause: Same as `pre_switch_touch_ctx` — Feature 027 "Out of Scope" deferral.
 // Pitfall: When a function is split across pre/post phases, both halves need the same diagnostic
@@ -365,7 +366,7 @@ pub( crate ) fn apply_post_switch_touch(
     _                                                => "keep-current",
   };
   let effort_label = effort_val.unwrap_or( "(none)" );
-  if trace { eprintln!( "[trace] account.use  {name}  model: {model_str}  effort: {effort_label}" ) }
+  if trace { eprintln!( "{}account.use  {name}  model: {model_str}  effort: {effort_label}", trace_ts() ) }
   let extra_pre_args = match effort_val
   {
     Some( e ) => vec![ "--effort".to_string(), e.to_string() ],
@@ -385,7 +386,7 @@ pub( crate ) fn apply_post_switch_touch(
   claude_profile_core::account::write_cache_bool(
     paths.base(), name, "touch_idle", false,
   );
-  if trace { eprintln!( "[trace] account.use  {name}  subprocess: spawned" ) }
+  if trace { eprintln!( "{}account.use  {name}  subprocess: spawned", trace_ts() ) }
   // AC-21: post-subprocess quota re-fetch (best-effort, non-aborting on failure).
   // Persists updated resets_at to cache so subsequent .usage sees the newly-activated
   // session window, preventing the double-subprocess race (BUG-288).
@@ -585,7 +586,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
         }
         std::fs::write( credential_store.join( &marker ), name_arg.as_bytes() )
           .map_err( | e | io_err_to_error_data( &e, "usage assignee" ) )?;
-        if params.trace { eprintln!( "[trace] usage assignee  write marker: {marker}  →  {name_arg}" ) }
+        if params.trace { eprintln!( "{}usage assignee  write marker: {marker}  →  {name_arg}", trace_ts() ) }
         return Ok( OutputData::new(
           format!( "assigned {name_arg} for {display}  \u{2192}  {marker}\n" ),
           "text",
@@ -605,7 +606,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
         std::fs::remove_file( &marker_path )
           .map_err( | e | io_err_to_error_data( &e, "usage assignee unassign" ) )?;
       }
-      if params.trace { eprintln!( "[trace] usage assignee  cleared marker: {marker}" ) }
+      if params.trace { eprintln!( "{}usage assignee  cleared marker: {marker}", trace_ts() ) }
       return Ok( OutputData::new(
         format!( "unassigned {display}  \u{2192}  {marker} cleared\n" ),
         "text",
@@ -677,7 +678,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
           if !force && !crate::account::is_owned( &acct_owner )
           {
             // Owned by another identity — skip with message (AC-09).
-            if params.trace { eprintln!( "[trace] usage owner  batch-skip (foreign owner): {}  owner={acct_owner}", acct.name ) }
+            if params.trace { eprintln!( "{}usage owner  batch-skip (foreign owner): {}  owner={acct_owner}", trace_ts(), acct.name ) }
             writeln!( out, "skip {}", acct.name ).unwrap();
             continue;
           }
@@ -688,7 +689,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
           }
           crate::account::write_owner( &acct.name, &credential_store, "" )
             .map_err( |e| io_err_to_error_data( &e, "usage owner batch-clear" ) )?;
-          if params.trace { eprintln!( "[trace] usage owner  cleared: {}  was={acct_owner}", acct.name ) }
+          if params.trace { eprintln!( "{}usage owner  cleared: {}  was={acct_owner}", trace_ts(), acct.name ) }
           writeln!( out, "unclaimed {}", acct.name ).unwrap();
         }
         return Ok( OutputData::new( out, "text" ) );
@@ -743,7 +744,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
           .map_err( |e| io_err_to_error_data( &e, "usage owner" ) )?;
         if params.trace
         {
-          eprintln!( "[trace] usage owner  write_owner: OK  name={name} identity={}", if is_sentinel { "(cleared)" } else { ov } );
+          eprintln!( "{}usage owner  write_owner: OK  name={name} identity={}", trace_ts(), if is_sentinel { "(cleared)" } else { ov } );
         }
         if is_sentinel
         {
@@ -908,9 +909,9 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   {
     UsageOutputFormat::Json  => render_json( &accounts ),
     UsageOutputFormat::Tsv   => render_tsv( &accounts, params.sort, params.desc, params.prefer, &params.cols ),
-    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who ),
+    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who, params.rotate && !params.force ),
     UsageOutputFormat::Value => String::new(),
-    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who ),
+    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, &params.cols, session_model, session_effort, Some( &credential_store ), params.who, params.rotate && !params.force ),
   };
 
   let content = if params.no_color && params.format != UsageOutputFormat::Tsv

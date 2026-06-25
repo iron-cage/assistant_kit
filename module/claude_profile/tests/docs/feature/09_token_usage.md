@@ -29,7 +29,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-21 | `@` in flag column for accounts active on another machine's `_active_*` marker | AC-30 | — |
 | FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | — |
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | — |
-| FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | — |
+| FT-24 | Trace result line emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | — |
 | FT-25 | `.usage` applies model override for current account when `7d(Son) < 15%` | AC-32 | — |
 | FT-26 | `format::json` output includes `"is_owned"` bool per account object | AC-05 | — |
 | FT-27 | `.usage` model override writes `"sonnet"` conservatively when `seven_day_sonnet` is absent (`None`) — absent tier is unknown, not exhausted (BUG-300 + BUG-311) | AC-32 | — |
@@ -79,7 +79,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-21 | `@` in flag column when account is active on another machine's `_active_*` marker | AC-30 | Occupied Elsewhere |
 | FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | Subscription State |
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | Subscription State |
-| FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | Trace Ordering |
+| FT-24 | Trace result line emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | Trace Ordering |
 | FT-25 | `.usage` applies model override for current account when `7d(Son) < 15%` | AC-32 | Model Override |
 | FT-26 | `format::json` includes `"is_owned": bool` per account object | AC-05 | JSON Fields |
 | FT-27 | `.usage` model override writes `"sonnet"` conservatively when `seven_day_sonnet = None` (BUG-300 + BUG-311) | AC-32 | Model Override |
@@ -399,15 +399,15 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ---
 
-### FT-24: `[trace] result:` emitted AFTER Class A billing_type override
+### FT-24: Trace result line emitted AFTER Class A billing_type override
 
 - **Given (structural test):** Source file `src/usage/fetch.rs` as a string (via `include_str!`).
-- **When:** Position of the Class A override pattern (`a.billing_type == "none" ) { Err( "no subscription"`) and position of the trace emission pattern (`eprintln!( "[trace] {}  result: OK"`) are extracted from the source string.
+- **When:** Position of the Class A override pattern (`a.billing_type == "none" ) { Err( "no subscription"`) and position of the trace emission pattern (`eprintln!( "{}{}  result: OK"`) are extracted from the source string.
 - **Then:**
   - The Class A override pattern is found (non-None) — the override is present.
   - The trace emission pattern is found (non-None) — the trace line is present.
   - `override_pos < trace_pos` — the override precedes the trace emission in source order.
-  - Observable consequence: for `billing_type="none"` accounts, `[trace] result:` emits `Err(no subscription)`, matching the table — no `result: OK` / `(no subscription)` contradiction.
+  - Observable consequence: for `billing_type="none"` accounts, the trace result line emits `Err(no subscription)`, matching the table — no `result: OK` / `(no subscription)` contradiction.
 - **Exit:** n/a (structural unit test — assertion failure if positions violate ordering)
 - **Note:** BUG-234 fix. The bug was introduced when the BUG-233 Class A override was added after the trace block rather than before it. Structural test prevents regression without requiring live API calls. Source ordering is the correctness invariant — at runtime, any `billing_type="none"` override applied before the trace emission guarantees trace-result consistency.
 - **Source fn:** `mre_bug234_result_trace_after_billing_type_override` (in `src/usage/fetch.rs`)

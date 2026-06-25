@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the functional capabilities of `claude_profile` — account credential management and the `clp` CLI.
 - **Responsibility**: Documents all functional requirements with their design, acceptance criteria, and test references.
-- **In Scope**: feature/001 through feature/040, feature/061 through feature/065 — full functional capability set for claude_profile and the clp CLI.
+- **In Scope**: feature/001 through feature/040, feature/061 through feature/067 — full functional capability set for claude_profile and the clp CLI.
 - **Out of Scope**: Quality constraints (→ invariant/), CLI design (→ cli/).
 
 ### Overview Table
@@ -56,3 +56,5 @@
 | 063 | [Explicit Ownership Claim](063_explicit_ownership_claim.md) | `owner::` parameter — CLI-exposed write path for account ownership; G8 gate; `force::` bypass | ✅ |
 | 064 | [Active Marker and Owner Param Redesign](064_active_marker_and_owner_redesign.md) | Repurpose `active::` as `Kind::String` assign/unassign param; `owner::0` sentinel for ownership release; batch `name::X,Y,Z`; remove `assign::1`, `for::`, `unclaim::1` | ✅ |
 | 065 | [Assignee Param Redesign](065_assignee_param_redesign.md) | Rename `active::` → `assignee::`; `assignee::0` sentinel = current machine (`$USER@$HOSTNAME`); `active::` REMOVED_TOGGLE | ✅ |
+| 066 | [Dual-Source OAuth Quota Parsing](066_dual_source_quota_parsing.md) | Maintain correct per-model quota data when Anthropic API format changes by parsing both named-field and `limits`-array formats | ✅ |
+| 067 | [Trace Timestamp Prefix](067_trace_timestamps.md) | Replace `[trace]` prefix with UTC timestamp on all diagnostic trace output; enables watchdog log correlation | ✅ |

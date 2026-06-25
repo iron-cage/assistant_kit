@@ -27,7 +27,7 @@
 active::user1@w003 name::X          → write _active_w003_user1 = X (assign)
 active::user1@w003                   → clear _active_w003_user1    (unassign)
 active::user1@w003 name::X dry::1   → preview without writing
-active::user1@w003 name::X trace::1 → emit [trace] accounts active  assign: OK
+active::user1@w003 name::X trace::1 → emit ... · accounts active  assign: OK
 ```
 
 **Value format and sanitization:**

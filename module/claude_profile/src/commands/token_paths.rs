@@ -6,6 +6,7 @@ use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use crate::output::{ OutputFormat, OutputOptions, json_escape };
 use super::shared::{ require_claude_paths, require_credential_store, io_err_to_error_data };
+use claude_profile_core::account::trace_ts;
 
 /// `.token.status` — show active OAuth token expiry classification.
 ///
@@ -29,7 +30,7 @@ pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   }
   let trace = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let paths = require_claude_paths()?;
-  if trace { eprintln!( "[trace] token.status  reading {}", paths.credentials_file().display() ) }
+  if trace { eprintln!( "{}token.status  reading {}", trace_ts(), paths.credentials_file().display() ) }
 
   let threshold_secs = match cmd.arguments.get( "threshold" )
   {
@@ -118,7 +119,7 @@ pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     ) );
   }
   let paths            = require_claude_paths()?;
-  if trace { eprintln!( "[trace] paths  base: {}", paths.base().display() ) }
+  if trace { eprintln!( "{}paths  base: {}", trace_ts(), paths.base().display() ) }
   let credential_store = require_credential_store()?;
 
   let content = match opts.format

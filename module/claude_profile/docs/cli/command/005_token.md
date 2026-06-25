@@ -23,7 +23,7 @@ clp .token.status format::json
 |-----------|------|---------|---------|
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format |
 | `threshold::` | [`WarningThreshold`](../type/003_warning_threshold.md) | `3600` | ExpiringSoon threshold in seconds |
-| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for the credential file read |
+| `trace::` | `bool` | `0` | Print timestamped diagnostic lines to stderr for the credential file read |
 
 **Algorithm (3 steps):**
 1. Read `expiresAt` from `~/.claude/.credentials.json`

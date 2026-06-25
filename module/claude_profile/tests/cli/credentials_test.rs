@@ -1075,7 +1075,7 @@ fn it_trace_credentials_status_accepted()
   );
   assert_exit( &out, 0 );
   assert!(
-    err.contains( "[trace]" ),
-    "trace::1 must emit [trace] lines to stderr for .credentials.status, got:\n{err}",
+    err.contains( " · " ),
+    "trace::1 must emit trace lines to stderr for .credentials.status, got:\n{err}",
   );
 }

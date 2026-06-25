@@ -83,7 +83,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   // Strict opt-in flags: only "0" or "1" accepted (not "yes"/"no"/"true").
   let bfs = | nm : &'static str, desc : &'static str |
     reg_arg_opt( nm, Kind::String ).with_description( desc );
-  let trc = || reg_arg_opt( "trace", Kind::Integer ).with_description( "Print [trace] lines to stderr for each file read and write step (0 = off, default; 1 = on)" );
+  let trc = || reg_arg_opt( "trace", Kind::Integer ).with_description( "Print timestamped diagnostic lines to stderr for each file read and write step (0 = off, default; 1 = on)" );
 
   reg_cmd( registry, ".credentials.status", "Show live credential metadata without account store dependency",
     vec![
@@ -190,7 +190,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "imodel",    Kind::String ).with_description( "Subprocess model: `auto` (default, haiku — sufficient for keep-alive), `sonnet`, `opus`, `haiku` (claude-haiku-4-5-20251001), `keep`" ),
       reg_arg_opt( "effort",    Kind::String ).with_description( "Subprocess effort level: `auto` (default, low for any model), `low`, `normal`, `high`, `max`" ),
       reg_arg_opt( "set_model", Kind::String ).with_description( "Set Claude Code session model: `opus` (claude-opus-4-6), `sonnet` (claude-sonnet-4-6), `haiku` (claude-haiku-4-5-20251001), `default` (removes override)" ),
-      reg_arg_opt( "trace",     Kind::String ).with_description( "Print [trace] lines to stderr for each internal operation (0 = off, default; 1 = on)" ),
+      reg_arg_opt( "trace",     Kind::String ).with_description( "Print timestamped diagnostic lines to stderr for each internal operation (0 = off, default; 1 = on)" ),
       bfs( "force", "Bypass G5 ownership gate; allow switching to a non-owned account" ),
     ] )
     .examples( vec![ "clp .account.use alice@acme.com".to_string() ] )
@@ -243,7 +243,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "live",      Kind::Integer ).with_description( "Continuous monitor mode (0 = off, default; 1 = on)" ),
       reg_arg_opt( "interval",  Kind::Integer ).with_description( "Seconds between refreshes (minimum 30, default 30)" ),
       reg_arg_opt( "jitter",    Kind::Integer ).with_description( "Max random seconds added to interval (0 = none, default)" ),
-      reg_arg_opt( "trace",     Kind::Integer ).with_description( "Print [trace] lines to stderr showing each credential read, API call, and refresh step (0 = off; 1 = on)" ),
+      reg_arg_opt( "trace",     Kind::Integer ).with_description( "Print timestamped diagnostic lines to stderr showing each credential read, API call, and refresh step (0 = off; 1 = on)" ),
       reg_arg_opt( "sort",      Kind::String  ).with_description( "Row ordering strategy: `renew` (default), `name`, `renews`" ),
       reg_arg_opt( "desc",      Kind::Integer ).with_description( "Sort direction: 0 = ascending (default for name/renew/renews), 1 = descending" ),
       reg_arg_opt( "prefer",    Kind::String  ).with_description( "Weekly quota column for strategies: `any` (default, min of both), `opus` (7d Left), `sonnet` (7d(Son))" ),

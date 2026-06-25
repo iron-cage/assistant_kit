@@ -212,7 +212,7 @@ pub( crate ) struct UsageParams
   pub( crate ) interval          : u64,
   /// Max random seconds added to each cycle (default 0; only validated when live=1).
   pub( crate ) jitter            : u64,
-  /// true = emit `[trace]` diagnostic lines to stderr.
+  /// true = emit timestamped diagnostic lines to stderr (`YYYY-MM-DD · HH:MM:SS · …`).
   pub( crate ) trace             : bool,
   /// Row ordering strategy for the text table.
   pub( crate ) sort              : SortStrategy,
