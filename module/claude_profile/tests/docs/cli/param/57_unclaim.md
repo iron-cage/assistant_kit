@@ -1,13 +1,20 @@
-# Test: `unclaim::` Parameter — REMOVED
+# Test: `unclaim::` Parameter — REMOVED (twice)
 
-> **REMOVED**: The `unclaim::` parameter on `.account.save` has been removed (production param 056).
-> The ownership clear operation is now `.accounts unclaim::1 name::EMAIL` (Feature 037 absorbed `.account.unclaim` into `.accounts`; `.account.unclaim` is fully deregistered).
-> See [command/18_account_unclaim.md](../command/18_account_unclaim.md) for current deregistration test coverage.
+> **REMOVED (Feature 036)**: The `unclaim::` parameter on `.account.save` was removed in Feature 036 (production param 056).
+>
+> **RE-ACTIVATED (Feature 037)**: Feature 037 absorbed it into `.accounts`/`.usage` as `unclaim::1`; `.account.unclaim` was converted to a redirect stub that exits 1 with a targeted `owner::0` migration hint.
+>
+> **REMOVED AGAIN (Feature 064)**: `unclaim::1` on `.accounts`/`.usage` has been removed in Feature 064.
+> The ownership clear operation is now `owner::0 name::EMAIL` (or `owner::0` alone for batch-clear).
+> Any invocation of `unclaim::1` exits 1 with the migration message:
+> "REMOVED — use `owner::0 name::X` instead (or `owner::0` alone to batch-clear)"
+>
 > See [param/056_unclaim.md](../../../../docs/cli/param/056_unclaim.md) for the removal notice.
+> See [feature/064_active_marker_and_owner_redesign.md](../../../../docs/feature/064_active_marker_and_owner_redesign.md) for the redesign.
 
 All EC test cases in this file (EC-1 through EC-5) are **invalid** — the `unclaim::` parameter
-no longer exists on `.account.save`. The test functions (`ec1_*` through `ec5_*`) are superseded
-by tests in `account_mutations_test.rs` covering `.accounts unclaim::1`.
+no longer exists on `.account.save` or on `.accounts`/`.usage`. The `owner::0` replacement path
+is covered by `63_owner.md` EC-10 through EC-16.
 
 ### Superseded Test Case Index (DO NOT IMPLEMENT)
 

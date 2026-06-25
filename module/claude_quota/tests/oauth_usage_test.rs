@@ -17,8 +17,20 @@
 //! | T24 | `resets_at: null` (explicit null; utilization present) | `PeriodUsage { resets_at: None }`   | ✅     |
 //! | T25 | Realistic body: `seven_day.utilization = 46.0`        | `seven_day.utilization == 46.0`      | ✅     |
 //! | T26 | `iso_to_unix_secs("2026-05-15T12:20:00.499185+00:00")` | `Some(1778847600)`                  | ✅     |
-//! | T27 | `iso_to_unix_secs("not-a-date")`                      | `None`                               | ✅     |
-//! | T28 | `PeriodUsage` and `OauthUsageData` field accessibility | all `pub` fields readable            | ✅     |
+//! | T27   | `iso_to_unix_secs("not-a-date")`                        | `None`                                  | ✅   |
+//! | T28   | `PeriodUsage` and `OauthUsageData` field accessibility  | all `pub` fields readable               | ✅   |
+//! | FT-01 | Named field `Some` → Phase 2 not invoked                | `seven_day_sonnet.utilization = 45.0`   | ✅   |
+//! | FT-02 | Named `null` + `limits` kind match                      | `seven_day_sonnet = Some(45.0)`         | ✅   |
+//! | FT-03 | `percent` maps directly to `utilization`                 | `seven_day_sonnet.utilization = 73.0`   | ✅   |
+//! | FT-04 | Named `null` + no limits match                          | `seven_day_sonnet = None`, no error     | ✅   |
+//! | FT-05 | `resets_at` carried from limits entry                   | `PeriodUsage.resets_at = Some(string)`  | ✅   |
+//! | FT-06 | `resets_at: null` in limits entry                       | `PeriodUsage.resets_at = None`          | ✅   |
+//! | FT-07 | Match via `kind` needle (`"weekly_sonnet"`)              | `seven_day_sonnet = Some(33.0)`         | ✅   |
+//! | FT-08 | Match via `scope` needle (`scope="sonnet"`)              | `seven_day_sonnet = Some(45.0)`         | ✅   |
+//! | FT-09 | Validity guard passes for null value on present key      | `parse_oauth_usage` returns `Ok`        | ✅   |
+//! | FT-10 | `OauthUsageData` struct fields unchanged                 | all 3 fields accessible                 | ✅   |
+//! | FT-11 | Old format (no `limits` key) parses via Phase 1          | `seven_day_sonnet = Some(30.0)`         | ✅   |
+//! | FT-12 | Named field `Some` wins over matching limits entry       | `seven_day_sonnet.utilization = 30.0`   | ✅   |
 //!
 //! ## Corner Cases Covered
 //!
@@ -32,6 +44,14 @@
 //! - ✅ Known-date `iso_to_unix_secs` validation (T26)
 //! - ✅ Invalid string returns `None` from `iso_to_unix_secs` (T27)
 //! - ✅ Field accessibility on both public structs (T28)
+//! - ✅ Phase 1 named field takes priority over `limits` array (FT-01, FT-12)
+//! - ✅ Phase 2 fallback: `limits` kind needle match (FT-02, FT-03, FT-07)
+//! - ✅ Phase 2 fallback: `limits` scope needle match (FT-08)
+//! - ✅ Phase 2 fallback: `resets_at` carry-through from limits entry (FT-05, FT-06)
+//! - ✅ Phase 2 no-match returns `None`, no error (FT-04)
+//! - ✅ Validity guard passes for null value on present key (FT-09)
+//! - ✅ Struct field list unchanged after dual-source parsing (FT-10)
+//! - ✅ Old format (no `limits` key) still parses via Phase 1 (FT-11)
 
 use claude_quota::{ parse_oauth_usage, iso_to_unix_secs, OauthUsageData, PeriodUsage, QuotaError };
 
@@ -216,4 +236,145 @@ fn t28_field_accessibility()
   assert!( data.five_hour.is_some(),        "T28: OauthUsageData.five_hour" );
   assert!( data.seven_day.is_none(),        "T28: OauthUsageData.seven_day" );
   assert!( data.seven_day_sonnet.is_none(), "T28: OauthUsageData.seven_day_sonnet" );
+}
+
+// ── FT-01 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+/// Named field `Some` → Phase 2 not invoked; Phase 1 result returned unchanged.
+fn ft_01_named_field_some_phase2_not_invoked()
+{
+  let body = r#"{"five_hour":{"utilization":5.0,"resets_at":"2026-06-25T12:00:00+00:00"},"seven_day":{"utilization":18.0,"resets_at":"2026-06-30T04:00:00+00:00"},"seven_day_sonnet":{"utilization":45.0,"resets_at":"2026-06-28T04:00:00+00:00"},"limits":[]}"#;
+  let data = parse_oauth_usage( body ).unwrap();
+  let son  = data.seven_day_sonnet.expect( "FT-01: named field Some must be returned" );
+  assert!( ( son.utilization - 45.0 ).abs() < 0.001, "FT-01: utilization must be 45.0" );
+}
+
+// ── FT-02 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+/// Named field `null` + `limits` entry with `kind = "weekly_sonnet"` → `seven_day_sonnet` populated.
+fn ft_02_named_null_limits_kind_match_populates_sonnet()
+{
+  let body = r#"{"five_hour":{"utilization":5.0,"resets_at":null},"seven_day":{"utilization":18.0,"resets_at":"2026-06-30T04:00:00+00:00"},"seven_day_sonnet":null,"limits":[{"kind":"session","group":"session","percent":5,"severity":"normal","resets_at":null,"scope":null,"is_active":false},{"kind":"weekly_sonnet","group":"weekly","percent":45,"severity":"normal","resets_at":"2026-06-28T04:00:00+00:00","scope":null,"is_active":true}]}"#;
+  let data = parse_oauth_usage( body ).unwrap();
+  let son  = data.seven_day_sonnet.expect( "FT-02: limits match must populate seven_day_sonnet" );
+  assert!( ( son.utilization - 45.0 ).abs() < 0.001, "FT-02: utilization must be 45.0" );
+}
+
+// ── FT-03 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+/// `percent` field in limits entry maps directly to `utilization` (no scale conversion).
+fn ft_03_percent_maps_directly_to_utilization()
+{
+  let body = r#"{"five_hour":{"utilization":5.0,"resets_at":null},"seven_day":{"utilization":18.0,"resets_at":null},"seven_day_sonnet":null,"limits":[{"kind":"weekly_sonnet","group":"weekly","percent":73,"severity":"normal","resets_at":null,"scope":null,"is_active":true}]}"#;
+  let data = parse_oauth_usage( body ).unwrap();
+  let son  = data.seven_day_sonnet.expect( "FT-03: must populate from limits" );
+  assert!( ( son.utilization - 73.0 ).abs() < 0.001, "FT-03: percent 73 must map to utilization 73.0" );
+}
+
+// ── FT-04 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+/// Named field `null` + no matching limits entry → `seven_day_sonnet = None`, no error.
+fn ft_04_named_null_no_limits_match_returns_none_no_error()
+{
+  let body = r#"{"five_hour":{"utilization":2.0,"resets_at":"2026-06-25T11:59:59"},"seven_day":{"utilization":18.0,"resets_at":"2026-06-30T04:00:00+00:00"},"seven_day_sonnet":null,"limits":[{"kind":"session","group":"session","percent":2,"severity":"normal","resets_at":"2026-06-25T11:59:59","scope":null,"is_active":false},{"kind":"weekly_all","group":"weekly","percent":18,"severity":"normal","resets_at":"2026-06-30T04:00:00+00:00","scope":null,"is_active":true}]}"#;
+  let data = parse_oauth_usage( body ).unwrap();
+  assert!( data.seven_day_sonnet.is_none(), "FT-04: no matching limits entry must leave seven_day_sonnet = None" );
+}
+
+// ── FT-05 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+/// `resets_at` string from a matching limits entry is carried into `PeriodUsage.resets_at`.
+fn ft_05_resets_at_from_limits_carried_into_period_usage()
+{
+  let body = r#"{"five_hour":{"utilization":5.0,"resets_at":null},"seven_day":{"utilization":18.0,"resets_at":null},"seven_day_sonnet":null,"limits":[{"kind":"weekly_sonnet","group":"weekly","percent":45,"severity":"normal","resets_at":"2026-06-30T04:00:00+00:00","scope":null,"is_active":true}]}"#;
+  let data = parse_oauth_usage( body ).unwrap();
+  let son  = data.seven_day_sonnet.expect( "FT-05: must populate from limits" );
+  assert_eq!( son.resets_at, Some( "2026-06-30T04:00:00+00:00".to_string() ) );
+}
+
+// ── FT-06 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+/// `resets_at: null` in a matching limits entry → `PeriodUsage.resets_at = None`.
+fn ft_06_resets_at_null_in_limits_entry_gives_none()
+{
+  let body = r#"{"five_hour":{"utilization":5.0,"resets_at":null},"seven_day":{"utilization":18.0,"resets_at":null},"seven_day_sonnet":null,"limits":[{"kind":"weekly_sonnet","group":"weekly","percent":45,"severity":"normal","resets_at":null,"scope":null,"is_active":true}]}"#;
+  let data = parse_oauth_usage( body ).unwrap();
+  let son  = data.seven_day_sonnet.expect( "FT-06: must populate from limits" );
+  assert!( son.resets_at.is_none(), "FT-06: null resets_at must give None" );
+}
+
+// ── FT-07 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+/// `kind = "weekly_sonnet"` matches the `"sonnet"` needle → limits entry selected.
+fn ft_07_match_via_kind_needle()
+{
+  let body = r#"{"five_hour":{"utilization":5.0,"resets_at":null},"seven_day":{"utilization":18.0,"resets_at":null},"seven_day_sonnet":null,"limits":[{"kind":"weekly_sonnet","group":"weekly","percent":33,"severity":"normal","resets_at":null,"scope":null,"is_active":true}]}"#;
+  let data = parse_oauth_usage( body ).unwrap();
+  assert!( data.seven_day_sonnet.is_some(), "FT-07: kind='weekly_sonnet' must match needle 'sonnet'" );
+}
+
+// ── FT-08 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+/// `scope = "sonnet"` with a generic `kind` value → limits entry selected via scope needle.
+fn ft_08_match_via_scope_needle()
+{
+  let body = r#"{"five_hour":{"utilization":5.0,"resets_at":null},"seven_day":{"utilization":18.0,"resets_at":null},"seven_day_sonnet":null,"limits":[{"kind":"weekly_all","group":"weekly","percent":45,"severity":"normal","resets_at":null,"scope":"sonnet","is_active":true}]}"#;
+  let data = parse_oauth_usage( body ).unwrap();
+  assert!( data.seven_day_sonnet.is_some(), "FT-08: scope='sonnet' must match needle" );
+}
+
+// ── FT-09 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+/// Post-2026-06-25 format: `seven_day_sonnet` key present but value `null` → validity guard passes.
+fn ft_09_validity_guard_passes_for_null_seven_day_sonnet_key()
+{
+  // Key is present (guard checks key presence, not value type).
+  let body = r#"{"five_hour":{"utilization":2.0,"resets_at":"2026-06-25T11:59:59"},"seven_day":{"utilization":18.0,"resets_at":"2026-06-30T04:00:00+00:00"},"seven_day_sonnet":null,"limits":[]}"#;
+  assert!( parse_oauth_usage( body ).is_ok(), "FT-09: null value on present key must not fail validity guard" );
+}
+
+// ── FT-10 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+/// `OauthUsageData` struct still exposes exactly the same 3 fields after dual-source parsing.
+fn ft_10_oauth_usage_data_struct_fields_unchanged()
+{
+  let body = r#"{"five_hour":{"utilization":5.0,"resets_at":null},"seven_day":{"utilization":18.0,"resets_at":null},"seven_day_sonnet":null,"limits":[]}"#;
+  let data = parse_oauth_usage( body ).unwrap();
+  // Accessing all 3 fields compiles — proves no new/removed fields
+  let _ = ( &data.five_hour, &data.seven_day, &data.seven_day_sonnet );
+}
+
+// ── FT-11 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+/// Pre-2026-06-25 format (no `limits` key): named field still parsed via Phase 1.
+fn ft_11_old_format_no_limits_parses_via_phase1()
+{
+  let body = r#"{"five_hour":{"utilization":5.0,"resets_at":"2026-06-25T12:00:00+00:00"},"seven_day":{"utilization":18.0,"resets_at":"2026-06-30T04:00:00+00:00"},"seven_day_sonnet":{"utilization":30.0,"resets_at":"2026-06-28T00:00:00+00:00"}}"#;
+  let data = parse_oauth_usage( body ).unwrap();
+  let son  = data.seven_day_sonnet.expect( "FT-11: old format must populate via Phase 1" );
+  assert!( ( son.utilization - 30.0 ).abs() < 0.001, "FT-11: old format utilization" );
+}
+
+// ── FT-12 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+/// Named field `Some` (30.0) wins over a matching limits entry (70.0): Phase 1 takes priority.
+fn ft_12_named_field_wins_over_limits_when_both_present()
+{
+  // Named field: utilization=30; limits entry: percent=70 — Phase 1 result must win.
+  let body = r#"{"five_hour":{"utilization":5.0,"resets_at":null},"seven_day":{"utilization":18.0,"resets_at":null},"seven_day_sonnet":{"utilization":30.0,"resets_at":null},"limits":[{"kind":"weekly_sonnet","group":"weekly","percent":70,"severity":"normal","resets_at":null,"scope":null,"is_active":true}]}"#;
+  let data = parse_oauth_usage( body ).unwrap();
+  let son  = data.seven_day_sonnet.expect( "FT-12: must be Some" );
+  assert!( ( son.utilization - 30.0 ).abs() < 0.001, "FT-12: named field (30.0) must win over limits entry (70.0)" );
 }

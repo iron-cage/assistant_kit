@@ -1,12 +1,19 @@
+//! Unix-only integration tests.
 #![ cfg( unix ) ]
-//! `--output-style` Integration Tests (EC-01–EC-13)
+//! `--output-style` Integration Tests (EC-01–EC-14, IT-7)
 //!
-//! Covers EC-01 through EC-13 from `tests/docs/cli/param/070_output_style.md`.
+//! Covers EC-01 through EC-14 from `tests/docs/cli/param/070_output_style.md`;
+//! IT-7 (structural anti-pattern guard) from `tests/docs/invariant/08_render_summary_gate.md`.
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ fake_claude_dir, run_cli, run_cli_with_env };
 
 const JSON_FIXTURE : &str = r#"{"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"result":"hello","usage":{"input_tokens":1,"output_tokens":1},"total_cost_usd":0.0}"#;
+
+/// Minimal 7-field CLR envelope — no `session_id`, no `usage`, no `total_cost_usd`.
+/// Used by EC-14 to verify BUG-310 fix: `render_summary()` must gate on `type=="result"`,
+/// not on the optional `session_id` field.
+const MINIMAL_ENVELOPE : &str = r#"{"type":"result","subtype":"success","is_error":false,"duration_ms":1000,"duration_api_ms":900,"num_turns":1,"result":"hello"}"#;
 
 /// Run `clr` with a fake claude that emits the JSON fixture.
 ///
@@ -23,6 +30,23 @@ fn run_json_claude( args : &[ &str ], extra_envs : &[ ( &str, &str ) ] ) -> std:
     .env( "PATH", &path )
     .env_remove( "CLR_OUTPUT_STYLE" )
     .envs( extra_envs.iter().copied() )
+    .output()
+    .expect( "Failed to invoke clr binary" )
+}
+
+/// Run `clr` with a fake claude that emits the minimal 7-field CLR envelope (no `session_id`).
+///
+/// Used for EC-14 to verify BUG-310 fix: `render_summary()` gate on `type=="result"` handles
+/// absent `session_id` via `.unwrap_or_default()` instead of propagating `None`.
+fn run_minimal_claude( args : &[ &str ] ) -> std::process::Output
+{
+  let body = format!( "echo '{MINIMAL_ENVELOPE}'" );
+  let ( _dir, path ) = fake_claude_dir( &body );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  std::process::Command::new( bin )
+    .args( args )
+    .env( "PATH", &path )
+    .env_remove( "CLR_OUTPUT_STYLE" )
     .output()
     .expect( "Failed to invoke clr binary" )
 }
@@ -297,5 +321,50 @@ fn ec13_stream_json_format_with_summary_style_no_summary()
   assert!(
     !stdout.contains( "---" ),
     "stdout must NOT contain '---' when render_summary receives non-JSON stream. Got:\n{stdout}"
+  );
+}
+
+// ── EC-14: Minimal 7-field CLR envelope (no session_id) → stdout contains --- ─
+
+/// EC-14 / IT-2 (BUG-310 regression): `clr -p` with a fake claude emitting a minimal
+/// 7-field CLR envelope (no `session_id`, no `usage`, no `total_cost_usd`) must produce
+/// a rendered summary containing `---`.
+///
+/// Verifies the full `clr` execution path end-to-end: Path B auto-injects
+/// `--output-format json`, `render_summary()` gates on `"type":"result"` (invariant field),
+/// and handles absent `session_id` via `.unwrap_or_default()` instead of propagating `None`
+/// (which was the BUG-310 failure mode: `None` → `unwrap_or(out)` → raw JSON on stdout).
+#[ test ]
+fn ec14_render_summary_minimal_envelope_no_session_id()
+{
+  let out = run_minimal_claude( &[ "-p", "--max-sessions", "0", "x" ] );
+  assert!( out.status.success(), "exit must be 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "---" ),
+    "stdout must contain '---' for minimal CLR envelope without session_id (BUG-310 regression). Got:\n{stdout}"
+  );
+}
+
+// ── IT-7: Source does NOT contain extract_str( json, "session_id" )? ──────────
+
+/// IT-7: Structural regression guard — verifies that `src/cli/summary.rs` does NOT contain
+/// the BUG-310 anti-pattern `extract_str( json, "session_id" )?`.
+///
+/// This prevents the `?`-on-optional-field gate from being silently re-introduced in future
+/// refactors: any such `?` on an optional CLR field returns `None` for any envelope missing
+/// that field, restoring the raw-JSON fallback symptom. The only permitted gate is on the
+/// invariant `"type"` field.
+#[ test ]
+fn render_summary_gate_uses_type_not_session_id()
+{
+  let manifest_dir = env!( "CARGO_MANIFEST_DIR" );
+  let src_path = std::path::Path::new( manifest_dir ).join( "src/cli/summary.rs" );
+  let source = std::fs::read_to_string( &src_path )
+    .expect( "failed to read src/cli/summary.rs" );
+  assert!(
+    !source.contains( r#"extract_str( json, "session_id" )?"# ),
+    "BUG-310 anti-pattern detected: extract_str( json, \"session_id\" )? must not appear in \
+    src/cli/summary.rs — gate must use the invariant 'type' field, not the optional 'session_id'"
   );
 }

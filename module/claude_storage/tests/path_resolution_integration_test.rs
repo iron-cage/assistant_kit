@@ -2,6 +2,7 @@
 //!
 //! Verifies that `claude_storage .list ``path::``.` correctly finds projects
 //! in the current working directory using the smart path resolution.
+#![ cfg( unix ) ]
 
 mod common;
 

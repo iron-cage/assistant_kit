@@ -26,7 +26,7 @@ This file is created or overwritten on every `save()` invocation (same idempoten
 
 **`host::` vs `owner`:** The `host::` value is a user-customizable display label that can be any string (e.g., `"workstation"`, `"laptop"`). The `owner` field (Feature 036) is set explicitly via `write_owner()` — `.account.save` is ownership-neutral and never writes to the `owner` field; it is never user-specified via CLI parameter. These are separate fields with different semantics: `host::` is for display/identification; `owner` is for access enforcement.
 
-**`.accounts` display:** Host and role fields are also surfaced in `.accounts` output when `host::1` or `role::1` field toggles are active (separate opt-in toggle params, analogous to `uuid::`, `display_name::`, etc.).
+**`.accounts` display:** Host and role fields are also surfaced in `.accounts` output when added via `cols::+host` or `cols::+role` (opt-in columns, analogous to `cols::+uuid`, `cols::+display_name`, etc.).
 
 ### Acceptance Criteria
 
@@ -37,7 +37,7 @@ This file is created or overwritten on every `save()` invocation (same idempoten
 - **AC-05**: `clp .usage cols::+host` shows the `Host` column populated from `{name}.json`; accounts with no profile file show an empty cell.
 - **AC-06**: `clp .usage cols::+role` shows the `Role` column populated from `{name}.json`; accounts with no profile file show an empty cell.
 - **AC-07**: `clp .usage cols::+host,+role get::host` outputs the host label for the first row as a bare string (format::value).
-- **AC-08**: `clp .accounts host::1 role::1` shows `Host:` and `Role:` fields in each account's output block.
+- **AC-08**: `clp .accounts cols::+host,+role` shows `Host:` and `Role:` fields in each account's output block.
 - **AC-09**: `{name}.json` absence does not cause any command to exit non-zero — the file is treated as optional metadata.
 - **AC-10**: Re-running `clp .account.save` with `host::newbox` updates the host label in `{name}.json` without affecting credential files.
 
@@ -45,12 +45,13 @@ This file is created or overwritten on every `save()` invocation (same idempoten
 
 | File | Relationship |
 |------|--------------|
-| `task/claude_profile/bug/239_account_save_hostname_empty_env_var.md` | BUG-239 ✅ Fixed: `resolve_hostname()` fallback chain (`$HOSTNAME` → `/etc/hostname` → `"local"`) extracted and shared with `active_marker_filename()` |
+| BUG-239 | BUG-239 ✅ Fixed: `resolve_hostname()` fallback chain (`$HOSTNAME` → `/etc/hostname` → `"local"`) extracted and shared with `active_marker_filename()` |
 
 ### Features
 
 | File | Relationship |
 |------|--------------|
+| [003_account_list.md](003_account_list.md) | `.accounts` — `cols::+host`/`cols::+role` opt-in columns and `host`/`role` in `format::json` |
 | [002_account_save.md](002_account_save.md) | Account save operation this feature extends |
 | [009_token_usage.md](009_token_usage.md) | Base `.usage` rendering that gains `host`/`role` columns |
 | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | `resolve_hostname()` fallback chain shared with `active_marker_filename()` |

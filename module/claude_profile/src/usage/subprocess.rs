@@ -597,6 +597,147 @@ mod tests
     );
   }
 
+  // ── Algorithm 001 AC cases ────────────────────────────────────────────────
+
+  /// AC-1 (algorithm/001): `SubprocessModel::Haiku` selects Haiku regardless of quota.
+  ///
+  /// Even when Sonnet is fully available (`utilization=0.0`, `son_idle=true`),
+  /// an explicit `Haiku` param bypasses all quota logic. The explicit-model branch
+  /// returns before the Auto quota inspection code runs.
+  ///
+  /// Spec: [`tests/docs/algorithm/001_touch_model_selection.md` AC-1]
+  #[ test ]
+  fn ac1_haiku_explicit_selects_haiku_regardless_of_quota()
+  {
+    // Sonnet fully available and idle — should make no difference for explicit Haiku.
+    let aq       = mk_aq_with_sonnet_util( 0.0 );
+    let model    = resolve_model( &aq, SubprocessModel::Haiku );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-haiku-4-5-20251001",
+      "AC-1: SubprocessModel::Haiku must return claude-haiku-4-5-20251001 regardless of quota; \
+       Sonnet availability is irrelevant for explicit imodel",
+    );
+  }
+
+  /// AC-2 (algorithm/001): `SubprocessModel::Sonnet` selects Sonnet regardless of quota.
+  ///
+  /// Even when `seven_day_sonnet=None` (no Sonnet tier), an explicit `Sonnet` param
+  /// bypasses quota logic. The result is `Specific("claude-sonnet-4-6")` unconditionally.
+  ///
+  /// Spec: [`tests/docs/algorithm/001_touch_model_selection.md` AC-2]
+  #[ test ]
+  fn ac2_sonnet_explicit_selects_sonnet_regardless_of_quota()
+  {
+    // No Sonnet tier — should make no difference for explicit Sonnet.
+    let aq       = mk_aq_no_sonnet_data();
+    let model    = resolve_model( &aq, SubprocessModel::Sonnet );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-sonnet-4-6",
+      "AC-2: SubprocessModel::Sonnet must return claude-sonnet-4-6 regardless of quota; \
+       tier absence is irrelevant for explicit imodel",
+    );
+  }
+
+  /// AC-3 (algorithm/001): `SubprocessModel::Auto` with no Sonnet tier selects Haiku.
+  ///
+  /// `seven_day_sonnet=None` → `son_idle` and `son_available` gates both unevaluated;
+  /// the `if let Some(ref son)` arm does not fire → falls through to Haiku default.
+  ///
+  /// Spec: [`tests/docs/algorithm/001_touch_model_selection.md` AC-3]
+  #[ test ]
+  fn ac3_auto_no_sonnet_tier_selects_haiku()
+  {
+    let aq       = mk_aq_no_sonnet_data();   // seven_day_sonnet = None
+    let model    = resolve_model( &aq, SubprocessModel::Auto );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-haiku-4-5-20251001",
+      "AC-3: Auto with seven_day_sonnet=None must select Haiku; \
+       Sonnet tier absent means neither son_idle nor son_available can fire",
+    );
+  }
+
+  /// AC-4 (algorithm/001): `SubprocessModel::Auto` with idle Sonnet window selects Sonnet.
+  ///
+  /// `seven_day_sonnet.resets_at=None` → `son_idle=true`; the idle-window gate fires,
+  /// returning Sonnet. Haiku cannot open the idle Sonnet session window; a single
+  /// Sonnet touch opens all idle dimensions simultaneously.
+  ///
+  /// Spec: [`tests/docs/algorithm/001_touch_model_selection.md` AC-4]
+  #[ test ]
+  fn ac4_auto_idle_sonnet_window_selects_sonnet()
+  {
+    // utilization=30.0 (70% remaining), resets_at=None → son_idle=true.
+    let aq       = mk_aq_with_sonnet_util( 30.0 );
+    let model    = resolve_model( &aq, SubprocessModel::Auto );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-sonnet-4-6",
+      "AC-4: Auto with son_idle=true (resets_at=None) must select Sonnet; \
+       Haiku cannot open an idle Sonnet window",
+    );
+  }
+
+  /// AC-5 (algorithm/001): `SubprocessModel::Auto` with active window and 25% remaining selects Sonnet.
+  ///
+  /// `resets_at=Some(...)` → `son_idle=false`; `utilization=75.0` → `son_available=(100-75)>20=true`.
+  /// `son_available` gate fires → Sonnet selected to avoid wasting the expiring window.
+  /// Regression: Fix BUG-301 (pre-fix, binary `son_idle` gate ignored utilization).
+  ///
+  /// Spec: [`tests/docs/algorithm/001_touch_model_selection.md` AC-5]
+  #[ test ]
+  fn ac5_auto_active_sonnet_with_capacity_selects_sonnet()
+  {
+    // Start from son_idle base; override to active window (resets_at=Some) with 25% remaining.
+    let mut aq = mk_aq_with_son_idle();
+    if let Ok( ref mut data ) = aq.result
+    {
+      if let Some( ref mut son ) = data.seven_day_sonnet
+      {
+        son.resets_at   = Some( "2026-06-28T04:00:00+00:00".to_string() );
+        son.utilization = 75.0;   // 25% remaining > 20% threshold → son_available=true
+      }
+    }
+    let model    = resolve_model( &aq, SubprocessModel::Auto );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-sonnet-4-6",
+      "AC-5: Auto with active Sonnet window and 25% remaining must select Sonnet; \
+       son_available=(100-75)>20=true; Fix(BUG-301)",
+    );
+  }
+
+  /// AC-6 (algorithm/001): `SubprocessModel::Auto` with active window and 15% remaining selects Haiku.
+  ///
+  /// `resets_at=Some(...)` → `son_idle=false`; `utilization=85.0` → `son_available=(100-85)>20=false`.
+  /// Both gates fail → Haiku selected to conserve the last 15% Sonnet reserve for direct sessions.
+  /// This is the boundary case: exactly at 15% remaining (the ≤20% threshold).
+  ///
+  /// Spec: [`tests/docs/algorithm/001_touch_model_selection.md` AC-6]
+  #[ test ]
+  fn ac6_auto_active_sonnet_nearly_exhausted_selects_haiku()
+  {
+    // Start from son_idle base; override to active window (resets_at=Some) with 15% remaining.
+    let mut aq = mk_aq_with_son_idle();
+    if let Ok( ref mut data ) = aq.result
+    {
+      if let Some( ref mut son ) = data.seven_day_sonnet
+      {
+        son.resets_at   = Some( "2026-06-28T04:00:00+00:00".to_string() );
+        son.utilization = 85.0;   // 15% remaining — NOT > 20% threshold → son_available=false
+      }
+    }
+    let model    = resolve_model( &aq, SubprocessModel::Auto );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-haiku-4-5-20251001",
+      "AC-6: Auto with active Sonnet window and 15% remaining must select Haiku; \
+       son_available=(100-85)>20=false; conserve reserves for direct sessions",
+    );
+  }
+
   // ── resolve_effort ────────────────────────────────────────────────────────
 
   /// `effort::high` always returns `Some("high")` regardless of model.

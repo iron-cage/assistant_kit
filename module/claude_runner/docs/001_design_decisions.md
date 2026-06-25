@@ -125,6 +125,30 @@ and confuses shell completers, subcommand typo detection, and user mental models
 and `-h` remain as parameter aliases for POSIX compliance. `KNOWN_SUBCOMMANDS` includes
 `"help"` alongside `"isolated"` and `"refresh"`.
 
+### D15 — `render_summary()` gates on invariant field `type=="result"`, not optional fields
+
+`render_summary()` uses `"type":"result"` as its primary gate condition. Optional fields
+such as `session_id` are extracted with `.unwrap_or_default()` when absent.
+
+**Rationale:** The `claude --output-format json` envelope schema varies by binary version.
+At least one observed version emits a minimal 7-field envelope without `session_id`:
+`{"type":"result","subtype":"success","is_error":false,"duration_ms":N,"duration_api_ms":N,"num_turns":N,"result":"..."}`.
+Gating on any optional field causes `render_summary()` to return `None` for that variant,
+silently restoring the raw-JSON fallback symptom that summary rendering was intended to fix
+(BUG-310; structural recurrence of BUG-309 which gated on `"id"`).
+
+**Pitfall:** BUG-309's fix replaced the `"id"` gate with `"session_id"` — same `?`-gate
+mechanism, different optional field. This inherited the same structural fragility. Any
+future change to the gate field must use a field guaranteed present in ALL CLR result
+envelopes across all claude binary versions.
+
+**Invariant field:** `"type":"result"` is present in every CLR result envelope observed
+across all tested claude binary versions. It is the only reliable gate.
+
+**Consequence:** `render_summary()` returns `None` only for non-CLR-result JSON
+(envelope lacks `"type":"result"`) or non-JSON input — not for CLR envelopes that
+omit optional fields like `session_id`, `usage`, or `total_cost_usd`.
+
 ### D14 — Dedicated `refresh` command vs reusing `isolated`
 
 **Rationale:** `clr isolated` is designed for running real tasks in credential isolation.

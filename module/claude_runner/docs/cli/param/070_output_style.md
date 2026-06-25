@@ -25,10 +25,14 @@ subprocess. `--output-style` controls what `clr` does with that output. When
 `--output-format json` automatically so that `render_summary()` receives parseable input.
 
 **Default-summary behavior:** `clr run -m "..."` (no flags) uses `--output-style summary`
-by default, which routes stdout through `render_summary()`. If rendering fails (non-JSON
-input, e.g. when `--output-format text` is explicitly set), `render_summary()` returns
-`None` and `clr` falls back to the raw output unchanged (`unwrap_or(out)` in
-`execution.rs`). The default therefore degrades gracefully.
+by default, which routes stdout through `render_summary()`. The render gate is
+`"type":"result"` (present in all CLR result envelopes). Optional fields such as
+`session_id` being absent do NOT cause rendering failure — they are handled with
+`.unwrap_or_default()`. If rendering fails (non-CLR-result JSON, non-JSON input, e.g.
+when `--output-format text` is explicitly set), `render_summary()` returns `None` and
+`clr` falls back to the raw output unchanged (`unwrap_or(out)` in `execution.rs`). The
+default therefore degrades gracefully for non-CLR input while rendering all CLR envelopes
+regardless of optional field presence. See D15 in `docs/001_design_decisions.md`.
 
 **Validation:** Invalid values exit 1 immediately with:
 `invalid output-style '{v}' — expected: summary, raw`

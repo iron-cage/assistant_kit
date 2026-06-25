@@ -55,8 +55,6 @@ fn require_str( cmd : &VerifiedCommand, name : &str ) -> Result< String, ErrorDa
 #[ inline ]
 pub fn init_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  use std::os::unix::fs::PermissionsExt as _;
-
   let image = require_str( &cmd, "image" )?;
 
   let eco_raw = opt_str( &cmd, "ecosystem" ).unwrap_or_default();
@@ -103,15 +101,20 @@ pub fn init_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result<
     format!( "failed to write runbox/runbox: {e}" ),
   ) )?;
 
-  let mut perms = fs::metadata( &wrapper_path ).map_err( |e| ErrorData::new(
-    ErrorCode::InternalError,
-    format!( "failed to read runbox/runbox metadata: {e}" ),
-  ) )?.permissions();
-  perms.set_mode( 0o755 );
-  fs::set_permissions( &wrapper_path, perms ).map_err( |e| ErrorData::new(
-    ErrorCode::InternalError,
-    format!( "failed to set permissions on runbox/runbox: {e}" ),
-  ) )?;
+  // Fix: set executable bit on Unix; on Windows shell scripts don't use Unix permissions.
+  #[ cfg( unix ) ]
+  {
+    use std::os::unix::fs::PermissionsExt as _;
+    let mut perms = fs::metadata( &wrapper_path ).map_err( |e| ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "failed to read runbox/runbox metadata: {e}" ),
+    ) )?.permissions();
+    perms.set_mode( 0o755 );
+    fs::set_permissions( &wrapper_path, perms ).map_err( |e| ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "failed to set permissions on runbox/runbox: {e}" ),
+    ) )?;
+  }
 
   // Write runbox/runbox.yml
   fs::write( runbox_dir.join( "runbox.yml" ), runbox_yml( &image, &eco, &test_script ) )

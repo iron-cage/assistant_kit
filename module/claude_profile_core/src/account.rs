@@ -65,9 +65,6 @@ pub struct Account
   /// Display name from saved `{name}.json` `oauthAccount.displayName`.
   /// Empty string when snapshot absent or field missing.
   pub display_name : String,
-  /// Organisation role from saved `{name}.json` `oauthAccount.organizationRole`.
-  /// Empty string when snapshot absent or field missing.
-  pub role : String,
   /// Billing type from saved `{name}.json` `oauthAccount.billingType`.
   /// Empty string when snapshot absent or field missing.
   pub billing : String,
@@ -89,9 +86,9 @@ pub struct Account
   /// Organisation display name from saved `{name}.json` `organization_name`.
   /// Empty string when snapshot absent or field missing.
   pub organization_name : String,
-  /// User's role in the organisation from saved `{name}.json` `organization_role`.
+  /// User's role in the organisation from saved `{name}.json` `organization_role` (Roles API path).
   /// Empty string when snapshot absent or field missing.
-  pub organization_role : String,
+  pub org_role : String,
   /// Workspace UUID from saved `{name}.json` `workspace_uuid`.
   /// Empty string when snapshot absent or field missing (personal accounts have `null`).
   pub workspace_uuid : String,
@@ -100,10 +97,16 @@ pub struct Account
   pub workspace_name : String,
   /// Machine host label from saved `{name}.json` `host`.
   /// Empty string when file absent or field missing.
-  pub profile_host : String,
+  pub host : String,
   /// User-defined role label from saved `{name}.json` `role`.
   /// Empty string when file absent or field missing.
-  pub profile_role : String,
+  pub role : String,
+  /// Account owner from saved `{name}.json` `owner`; empty when unset — see Feature 036.
+  pub owner : String,
+  /// `true` when `owner` is empty (unowned) or matches `current_identity()` (owned by this machine).
+  pub is_owned : bool,
+  /// Renewal override from saved `{name}.json` `_renewal_at`; `None` when unset — see Feature 030.
+  pub renewal_at : Option< String >,
 }
 
 /// List all accounts in `credential_store`.
@@ -119,7 +122,9 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
 {
   if !credential_store.exists() { return Ok( Vec::new() ); }
 
-  let active = read_active_marker( credential_store );
+  let active   = read_active_marker( credential_store );
+  // Pre-compute once — current_identity() reads env vars + resolves hostname.
+  let identity = current_identity();
   let mut accounts = Vec::new();
 
   for entry in std::fs::read_dir( credential_store )?.flatten()
@@ -141,7 +146,6 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
     ).unwrap_or_default();
     let email        = parse_string_field( &meta_json, "emailAddress"      ).unwrap_or_default();
     let display_name = parse_string_field( &meta_json, "displayName"      ).unwrap_or_default();
-    let role         = parse_string_field( &meta_json, "organizationRole" ).unwrap_or_default();
     let billing      = parse_string_field( &meta_json, "billingType"      ).unwrap_or_default();
     let model        = parse_string_field( &meta_json, "model"            ).unwrap_or_default();
     let tagged_id    = parse_string_field( &meta_json, "taggedId"         ).unwrap_or_default();
@@ -149,11 +153,14 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
     let capabilities = parse_string_array_field( &meta_json, "capabilities" );
     let organization_uuid = parse_string_field( &meta_json, "organization_uuid" ).unwrap_or_default();
     let organization_name = parse_string_field( &meta_json, "organization_name" ).unwrap_or_default();
-    let organization_role = parse_string_field( &meta_json, "organization_role" ).unwrap_or_default();
+    let org_role          = parse_string_field( &meta_json, "organization_role" ).unwrap_or_default();
     let workspace_uuid    = parse_string_field( &meta_json, "workspace_uuid"    ).unwrap_or_default();
     let workspace_name    = parse_string_field( &meta_json, "workspace_name"    ).unwrap_or_default();
-    let profile_host = parse_string_field( &meta_json, "host" ).unwrap_or_default();
-    let profile_role = parse_string_field( &meta_json, "role" ).unwrap_or_default();
+    let host         = parse_string_field( &meta_json, "host"       ).unwrap_or_default();
+    let role         = parse_string_field( &meta_json, "role"       ).unwrap_or_default();
+    let owner        = parse_string_field( &meta_json, "owner"      ).unwrap_or_default();
+    let is_owned     = owner.is_empty() || owner == identity;
+    let renewal_at   = parse_string_field( &meta_json, "_renewal_at" );
 
     accounts.push( Account
     {
@@ -164,7 +171,6 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
       is_active,
       email,
       display_name,
-      role,
       billing,
       model,
       tagged_id,
@@ -172,11 +178,14 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
       capabilities,
       organization_uuid,
       organization_name,
-      organization_role,
+      org_role,
       workspace_uuid,
       workspace_name,
-      profile_host,
-      profile_role,
+      host,
+      role,
+      owner,
+      is_owned,
+      renewal_at,
     } );
   }
 
@@ -925,6 +934,25 @@ fn refresh_token_with_live_path(
       if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  save: Err({e})" ); }
       return None;
     }
+  }
+  // Fix(BUG-318): post-rotation live sync for the currently active account.
+  // Root cause: run_isolated rotates credentials, writing AT_new+RT_new to STORE only;
+  //   LIVE (~/.claude/.credentials.json) retains AT_old (now revoked by Anthropic). A
+  //   subsequent .account.save reads LIVE and copies it to STORE, overwriting the freshly-
+  //   rotated credentials with the revoked ones. The account is then permanently broken —
+  //   the revoked RT cannot be used to recover via token refresh.
+  // Pitfall: re-read the active marker here — same rationale as is_active_now in the
+  //   credentials=None recovery branch (Fix(BUG-316)). The 35s subprocess window allows a
+  //   concurrent switch_account call to change the active account; a stale bool would write
+  //   the wrong credentials to LIVE.
+  let is_still_active = {
+    let marker = credential_store.join( active_marker_filename() );
+    std::fs::read_to_string( &marker ).ok().is_some_and( |s| s.trim() == name )
+  };
+  if is_still_active
+  {
+    let _ = std::fs::write( p.credentials_file(), &new_creds );
+    if trace { let _ = writeln!( std::io::stderr(), "[trace] {label}  {name}  write live: OK" ); }
   }
   Some( new_creds )
 }

@@ -222,9 +222,10 @@ fn t11_ask_positional_help_shows_help()
 fn t10_ask_subdir_effective_dir()
 {
   let output = run_ask_dry( &[ "--subdir", "feature", "What is X?" ] );
+  let sep = std::path::MAIN_SEPARATOR;
   assert!(
-    output.contains( "/-feature" ),
-    "ask --subdir feature must produce path ending in /-feature. Got:\n{output}"
+    output.contains( &format!( "{sep}-feature" ) ),
+    "ask --subdir feature must produce path ending in {sep}-feature. Got:\n{output}"
   );
 }
 

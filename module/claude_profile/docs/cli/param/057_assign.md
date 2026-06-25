@@ -1,6 +1,20 @@
 # Parameter :: 57. `assign::`
 
-Mutation param on `.accounts` and `.usage` that writes the per-machine active-account marker for any host+user pair. When `assign::1 name::X`, writes `{credential_store}/_active_{machine}_{user}` = X. Introduced in Feature 037 absorbing the former standalone `.account.assign` command.
+> **REMOVED (Feature 064):** The `assign::` parameter has been removed from the unified parameter set on `.accounts` and `.usage`. Marker assignment was moved to `active::USER@MACHINE name::X` (Feature 064), then `active::` was renamed to `assignee::` (Feature 065). Current CLI surface uses `assignee::`.
+>
+> **Migration:**
+> - `assign::1 name::X` → `assignee::0 name::X` (current machine via `assignee::0` sentinel)
+> - `assign::1 name::X for::bob@laptop` → `assignee::bob@laptop name::X`
+>
+> Using `assign::1` now exits 1 with a migration message.
+>
+> See [feature/065_assignee_param_redesign.md](../../feature/065_assignee_param_redesign.md) for full context.
+
+[Historical specification retained below for reference.]
+
+---
+
+~~Mutation param on `.accounts` and `.usage` that writes the per-machine active-account marker for any host+user pair.~~ When `assign::1 name::X`, writes `{credential_store}/_active_{machine}_{user}` = X. Introduced in Feature 037 absorbing the former standalone `.account.assign` command.
 
 - **Default:** `0` (no marker write)
 - **Constraints:** Accepted values: `0`, `1`

@@ -123,12 +123,6 @@ In live mode, `format::json` is rejected before the first fetch (see Validation)
 |------|--------------|
 | [cli/param/020_live.md](../cli/param/020_live.md) | `live::`, `interval::`, `jitter::` parameter specifications |
 
-### Tasks
-
-| File | Relationship |
-|------|--------------|
-| `task/claude_profile/138_usage_live_monitor.md` | Implementation task for this feature |
-
 ### Referenced Commands
 
 | # | Command | Role |

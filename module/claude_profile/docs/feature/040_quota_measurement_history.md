@@ -126,8 +126,8 @@ This prevents quadratic divergence (a2 > 0 shooting to infinity).
 
 | File | Relationship |
 |------|-------------|
-| [BUG-304 🟢 Fixed (TSK-316)](../../../../../task/claude_profile/bug/304_cache_read_bypasses_approximation.md) | G1 (non-owned) cache read bypassed approximation; HTTP-error fallback and `approximate_quota()` duplicated the approximation block inline. Fixed: centralized `read_cached_quota()` function; all three utilization cache-read paths now call it |
-| [BUG-307 🟢 Fixed](../../../../../task/claude_profile/bug/307_quadratic_fit_det0_cramer_cofactor_error.md) | `det0` Cramer cofactor in `quadratic_fit()` used `s1*r2` instead of `s2*r1` — wrong column-3 minor. Produced incorrect constant term `a0`; AC-08 clamping masked it for upward-trending data. Fixed: `s2*r1`; broad FT-04/06–10 ranges were insufficient to catch it; FT-17 tight assertion exposed the bug |
+| BUG-304 🟢 Fixed (TSK-316) | G1 (non-owned) cache read bypassed approximation; HTTP-error fallback and `approximate_quota()` duplicated the approximation block inline. Fixed: centralized `read_cached_quota()` function; all three utilization cache-read paths now call it |
+| BUG-307 🟢 Fixed | `det0` Cramer cofactor in `quadratic_fit()` used `s1*r2` instead of `s2*r1` — wrong column-3 minor. Produced incorrect constant term `a0`; AC-08 clamping masked it for upward-trending data. Fixed: `s2*r1`; broad FT-04/06–10 ranges were insufficient to catch it; FT-17 tight assertion exposed the bug |
 
 ### Sources
 

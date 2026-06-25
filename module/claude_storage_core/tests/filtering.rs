@@ -21,6 +21,7 @@
 //! `default_filter_matches_all` fails while passing in isolation, run with
 //! `cargo nextest run -p claude_storage_core --no-fail-fast` to confirm the
 //! failure is contention-related rather than a logic regression.
+#![ cfg( unix ) ]
 
 use claude_storage_core::{ Storage, SessionFilter, ProjectFilter, StringMatcher };
 

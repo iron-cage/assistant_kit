@@ -21,7 +21,8 @@
 //! | `art_some_paths_run_isolated_invoked_trace_no_panic`    | `Some(paths)` | `trace=true`; cred in store; `.claude/` exists    | no panic, `None`   |
 //! | `bug_mre_bug205_refresh_token_read_write_ok_trace_structural` | structural | grep account.rs for `"read credentials: OK"` and `"write credentials: OK"` | ≥2 each |
 //! | `bug_mre_bug175_no_switch_account_in_some_branch` | structural | grep account.rs for `"switch_account( name, credential_store, p )"` | 0 occurrences |
-//! | `bug_mre_bug221_some_branch_no_p_credentials_file_write` | structural | grep account.rs for `std::fs::write( p.credentials_file(),` | 0 occurrences |
+//! | `bug_mre_bug221_some_branch_no_p_credentials_file_write` | structural | grep account.rs for `std::fs::write( p.credentials_file(),` | exactly 1 occurrence (BUG-318 active-account live sync) |
+//! | `mre_bug318_rotation_live_sync_structural` | structural | grep account.rs for `is_still_active` and `Fix(BUG-318)` | present |
 //! | `mre_bug221_save_some_creds_writes_to_store_not_live_file` | unit | `save("acct", store, paths, false, Some(b"data"))` | store = `b"data"`; live file unchanged |
 //! | `mre_bug221_save_none_creds_copies_from_live_file` | unit | `save("acct", store, paths, false, None)` | store = live file content; live file unchanged |
 //! | `ft22_manipulate_expires_at_replaces_numeric_value` | behavioral | `manipulate_expires_at` with numeric `expiresAt` value | value replaced (original absent from result) |
@@ -227,10 +228,14 @@ fn bug_mre_bug205_refresh_token_read_write_ok_trace_structural()
 //   no test verified the live file was untouched after a successful refresh cycle in the Some branch.
 // Fix Applied: changed write target from p.credentials_file() to credential_store path; added
 //   creds: Option<&[u8]> to save() so save(Some(&new_creds)) writes from bytes without reading live file.
-// Prevention: structural test asserts 0 occurrences of the old write-to-live-file pattern; any regression
-//   reintroducing the write to p.credentials_file() in the Some(paths) branch fails immediately.
+// Prevention: structural test asserts exactly 1 occurrence of the pattern — the BUG-318 conditional live sync
+//   (write to p.credentials_file() only when is_still_active, after rotation). 0 occurrences means the live
+//   sync was removed; >1 means an unconditional clobber was reintroduced. Both are regressions.
 // Pitfall: grep for the full function-call pattern to avoid matching doc comments or other write() calls
 //   that are not the live-file clobber.
+// Update(BUG-318): changed assertion from count==0 to count==1 — Fix(BUG-318) adds one conditional
+//   write to p.credentials_file() in the success path (post-rotation live sync for active account).
+//   The old invariant (0 occurrences) was correct for batch refresh but prevented the needed live sync.
 fn bug_mre_bug221_some_branch_no_p_credentials_file_write()
 {
   let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
@@ -238,8 +243,10 @@ fn bug_mre_bug221_some_branch_no_p_credentials_file_write()
     .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
   let count = content.matches( "std::fs::write( p.credentials_file()," ).count();
   assert!(
-    count == 0,
-    "BUG-221: expected 0 occurrences of 'std::fs::write( p.credentials_file(),' in account.rs, found {count}"
+    count == 1,
+    "BUG-221/BUG-318: expected exactly 1 occurrence of 'std::fs::write( p.credentials_file(),' \
+     in account.rs (the BUG-318 is_still_active live sync); 0 = live sync removed, >1 = unconditional \
+     clobber reintroduced. Found {count}"
   );
 }
 
@@ -713,5 +720,66 @@ fn mre_bug316_stale_is_active_race_recovery_copies_wrong_account_creds()
     fix_count >= 2,
     "BUG-316 fix: `Fix(BUG-316)` must appear at ≥2 sites (pre-sync + race-recovery). \
      Found: {fix_count}"
+  );
+}
+
+// ── structural (BUG-318) ──────────────────────────────────────────────────────
+
+/// # Root Cause
+///
+/// `refresh_token_with_live_path` (called from `apply_post_switch_touch` during `.account.use`)
+/// runs `run_isolated` with `expiresAt=1` (AC-32), causing Claude to perform OAuth token
+/// rotation. Claude writes `AT_new + RT_new` to LIVE (`~/.claude/.credentials.json`). The
+/// function then writes `new_creds` to STORE and calls `save()` — but never updates LIVE.
+/// LIVE retains `AT_old` (now revoked by Anthropic). A subsequent `.account.save` reads LIVE
+/// (`AT_old`, revoked) and copies it to STORE, overwriting `AT_new` with the revoked token.
+/// All future API calls with `AT_old` return 401; the revoked RT cannot recover the account.
+///
+/// # Why Not Caught
+///
+/// No test verified that LIVE is updated after a successful rotation in `refresh_token_with_live_path`.
+/// BUG-221's structural test asserted `count == 0` for `std::fs::write( p.credentials_file(),` —
+/// which inadvertently prevented the needed conditional live sync from being added.
+///
+/// # Fix Applied
+///
+/// Added `is_still_active` re-read after `save()` in the success path of
+/// `refresh_token_with_live_path`. When the account is still the active session (marker
+/// re-read, same pattern as `is_active_now` in Fix(BUG-316)), writes `new_creds` to
+/// `p.credentials_file()` (LIVE), keeping LIVE consistent with STORE after rotation.
+///
+/// # Prevention
+///
+/// This structural test verifies that `is_still_active` (the post-rotation live-sync variable)
+/// and `Fix(BUG-318)` annotation exist in `account.rs`. The BUG-221 structural test was
+/// updated from `count == 0` to `count == 1` — one conditional live sync is correct; zero
+/// means the sync was removed; more than one means an unconditional clobber was reintroduced.
+///
+/// # Pitfall
+///
+/// After any `run_isolated` call that rotates credentials, LIVE must be kept in sync with
+/// STORE for the currently active account. Removing all writes to `p.credentials_file()`
+/// (as BUG-221 did for the batch-refresh case) must be paired with a conditional write for
+/// the active-account single-switch case. The invariant: after rotation, LIVE == STORE for
+/// the active account.
+#[ cfg( feature = "enabled" ) ]
+#[ test ]
+fn mre_bug318_rotation_live_sync_structural()
+{
+  // test_kind: bug_reproducer(BUG-318)
+  let src = std::fs::read_to_string(
+    concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/account.rs" )
+  ).expect( "read account.rs" );
+
+  // Fix: post-rotation live sync variable must exist in the success path.
+  assert!(
+    src.contains( "is_still_active" ),
+    "BUG-318 fix: `is_still_active` must exist — post-rotation live sync variable in success path"
+  );
+
+  // Fix: the live sync site must carry the Fix(BUG-318) annotation.
+  assert!(
+    src.contains( "Fix(BUG-318)" ),
+    "BUG-318 fix: `Fix(BUG-318)` annotation must appear at the live-sync write site in account.rs"
   );
 }

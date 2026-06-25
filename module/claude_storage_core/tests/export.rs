@@ -1,6 +1,7 @@
 //! Export functionality integration tests
 //!
 //! Tests for exporting sessions to markdown, JSON, and text formats.
+#![ cfg( unix ) ]
 
 use claude_storage_core::{ Storage, ExportFormat, export_session };
 use std::io::Cursor;

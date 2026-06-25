@@ -1,4 +1,9 @@
+//! Unix-only integration tests.
 #![ cfg( unix ) ]
+// Fix(BUG-316): Root cause: Feature-064 pull added cfg_attr(not(unix), allow(missing_docs))
+// AFTER cfg(unix) — on Windows cfg(unix)=false gates the whole crate before cfg_attr fires.
+// Pitfall: `//!` doc comment must precede `#![cfg(unix)]` to satisfy `missing_docs` on Windows;
+// `#![allow(missing_docs)]` is forbidden at crate level.
 #![ allow( clippy::doc_markdown ) ] // test doc comments use code identifiers in prose
 //! `--retry-on-service` and `--service-delay` Integration Tests
 //!

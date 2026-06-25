@@ -1,3 +1,4 @@
+//! Unix-only integration tests.
 #![ cfg( unix ) ]
 //! `--summary-fields` Integration Tests (EC-01–EC-12)
 //!

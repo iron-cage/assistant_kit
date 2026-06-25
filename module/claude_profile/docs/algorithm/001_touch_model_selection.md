@@ -39,6 +39,12 @@ fn resolve_model(aq, imodel_param):
       Specific("claude-haiku-4-5-20251001")
 ```
 
+### API Change Impact (2026-06-25)
+
+The Anthropic API restructured `GET /api/oauth/usage` between 2026-06-24T22:06Z and 2026-06-25T01:24Z. The `seven_day_sonnet` field is now always `null`. As a result, the `"auto"` branch always takes the `None` path (row 5 in the table above), returning Haiku unconditionally — even for accounts whose Sonnet quota is active and available.
+
+This is a **temporary blind spot** until Feature 066 (dual-source parsing) populates `seven_day_sonnet` from the new `limits` array when Anthropic re-enables per-model entries. See [algorithm/009](009_oauth_usage_response_migration.md).
+
 ### Bug History
 
 - **BUG-289 / BUG-290:** over-constrained gate (`five_h_running AND d7_running AND son_idle`) caused two-touch warm-up; simplified to `son_idle` alone.
@@ -50,5 +56,6 @@ fn resolve_model(aq, imodel_param):
 |------|-------------|
 | [feature/026_subprocess_model_effort.md](../feature/026_subprocess_model_effort.md) | Full feature spec, `imodel::` parameter values, AC |
 | [algorithm/008](008_subprocess_effort_resolution.md) | Companion effort resolution algorithm |
+| [algorithm/009](009_oauth_usage_response_migration.md) | API response format change — why `seven_day_sonnet` is currently always `None`; dual-source parsing recovery path |
 | [feature/024_session_touch.md](../feature/024_session_touch.md) | Touch subprocess trigger conditions |
 | [feature/017_token_refresh.md](../feature/017_token_refresh.md) | Refresh subprocess also uses `resolve_model()` |

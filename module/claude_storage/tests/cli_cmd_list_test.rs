@@ -18,6 +18,7 @@
 //! - INT-10: `show_sessions::0` suppresses display even with `session::`
 //! - INT-11: Combined `path::` `session::` filter
 //! - INT-12: Exit code 0 on empty storage
+#![ cfg( unix ) ]
 
 mod common;
 

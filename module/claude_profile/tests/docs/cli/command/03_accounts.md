@@ -48,10 +48,13 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 | IT-40 | Owner column present by default; `—` when unowned | Feature 037 — Owner Column |
 | IT-41 | `cols::-owner` hides Owner column | Feature 037 — Owner Column |
 | IT-42 | Unknown parameter exits 1 | Feature 037 — Param Validation |
-| IT-43 | `assign::1 name::X` writes active marker; no other files changed | Feature 037 — assign mutation |
-| IT-44 | `unclaim::1 name::X` clears owner field when G8 passes | Feature 037 — unclaim mutation |
-| IT-45 | `unclaim::1 name::X` exits 1 with ownership violation when G8 fails | Feature 037 — unclaim mutation |
-| IT-46 | `force::1 unclaim::1 name::X` bypasses G8 and clears owner | Feature 037 — force bypass |
+| IT-43 | `assignee::USER@MACHINE name::X` writes active marker; no other files changed (Feature 065) | Feature 065 — assignee mutation |
+| IT-44 | `owner::0 name::X` clears owner field when G8 passes (Feature 064) | Feature 064 — owner mutation |
+| IT-45 | `owner::0 name::X` exits 1 with ownership violation when G8 fails (Feature 064) | Feature 064 — owner mutation |
+| IT-46 | `force::1 owner::0 name::X` bypasses G8 and clears owner (Feature 064) | Feature 064 — force bypass |
+| IT-47 | `format::json` emits correct `owner`, `is_owned`, `renewal_at` values | TSK-324 — JSON value correctness |
+| IT-48 | `format::json` emits `is_owned: false` when owner is a foreign identity | TSK-324 — JSON value correctness |
+| IT-49 | `format::json` emits correct `host`, `role`, `organization_role` values | TSK-324 — JSON value correctness |
 
 ### Test Coverage Summary
 
@@ -80,8 +83,9 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - Feature 037 — assign mutation: 1 test (IT-43)
 - Feature 037 — unclaim mutation: 2 tests (IT-44, IT-45)
 - Feature 037 — force bypass: 1 test (IT-46)
+- TSK-324 — JSON value correctness: 3 tests (IT-47, IT-48, IT-49)
 
-**Total:** 46 integration tests
+**Total:** 49 integration tests
 
 ---
 
@@ -159,7 +163,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 - **Given:** Two accounts exist: `work@acme.com` (active) and `personal@home.com`.
 - **When:** `clp .accounts active::0`
-- **Then:** Exit 1. Error message references `cols::` syntax.; individual field toggle params removed in Feature 037 — `active::`, `sub::`, `tier::`, `expires::`, `email::`, etc. all rejected
+- **Then:** Exit 1. `active::` exits 1 with REMOVED_TOGGLE migration message pointing to `assignee::` (Feature 065); other legacy field toggles (`sub::`, `tier::`, `expires::`, `email::`, etc.) exit 1 with `cols::` migration hint (Feature 037).
 - **Exit:** 1
 - **Source:** [feature/037_accounts_usage_param_unification.md AC-13](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
@@ -257,9 +261,9 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-18: `cols::+role,+billing,+model` shows corresponding lines
 
-- **Given:** `work@acme.com` with saved `{name}.json` containing `{"oauthAccount":{"organizationRole":"admin","billingType":"stripe_subscription"}, "model":"sonnet"}`.
+- **Given:** `work@acme.com` with saved `{name}.json` containing `{"role":"dev","oauthAccount":{"billingType":"stripe_subscription"},"model":"sonnet"}`.
 - **When:** `clp .accounts cols::+role,+billing,+model`
-- **Then:** Stdout contains `Role:    admin`, `Billing: stripe_subscription`, `Model:   sonnet`.; all 3 metadata fields rendered via cols:: addition
+- **Then:** Stdout contains `Role:    dev`, `Billing: stripe_subscription`, `Model:   sonnet`. `role` value comes from the top-level `"role"` field — not from `oauthAccount.organizationRole`.; all 3 metadata fields rendered via cols:: addition
 - **Exit:** 0
 - **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
@@ -505,40 +509,70 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-43: `assign::1 name::X` writes active marker; no other files changed
+### IT-43: `assignee::USER@MACHINE name::X` writes active marker; no other files changed (Feature 065)
 
 - **Given:** `alice@acme.com` exists. Record mtime of `alice.json`, `alice.credentials.json`, `~/.claude.json`.
-- **When:** `clp .accounts assign::1 name::alice@acme.com`
-- **Then:** Exit 0. `_active_{machine}_{user}` in credential store contains `alice@acme.com`. mtime of `alice.json`, `alice.credentials.json`, and `~/.claude.json` unchanged.
+- **When:** `clp .accounts assignee::testuser@testmachine name::alice@acme.com` (formerly `assign::1 name::X` — Feature 037; then `active::` — Feature 064; renamed `assignee::` — Feature 065)
+- **Then:** Exit 0. `_active_testmachine_testuser` in credential store contains `alice@acme.com`. mtime of `alice.json`, `alice.credentials.json`, and `~/.claude.json` unchanged.
 - **Exit:** 0
 - **Source:** [feature/037_accounts_usage_param_unification.md AC-08](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
-### IT-44: `unclaim::1 name::X` clears owner field when G8 passes
+### IT-44: `owner::0 name::X` clears owner field when G8 passes (Feature 064)
 
 - **Given:** `alice@acme.com` with `alice.json` containing `"owner": "testuser@testmachine"`. Current identity = `testuser@testmachine`.
-- **When:** `clp .accounts unclaim::1 name::alice@acme.com`
+- **When:** `clp .accounts owner::0 name::alice@acme.com` (formerly `unclaim::1 name::X` — Feature 064)
 - **Then:** Exit 0. `alice.json` contains `"owner": ""`. `alice.credentials.json` mtime unchanged. Active marker unchanged.
 - **Exit:** 0
 - **Source:** [feature/037_accounts_usage_param_unification.md AC-05](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
-### IT-45: `unclaim::1 name::X` exits 1 with ownership violation when G8 fails
+### IT-45: `owner::0 name::X` exits 1 with ownership violation when G8 fails (Feature 064)
 
 - **Given:** `alice@acme.com` with `alice.json` containing `"owner": "other@remote"`. Current identity ≠ `other@remote`.
-- **When:** `clp .accounts unclaim::1 name::alice@acme.com`
+- **When:** `clp .accounts owner::0 name::alice@acme.com` (formerly `unclaim::1 name::X` — Feature 064)
 - **Then:** Exit 1. stdout contains `ownership violation: this account is owned by other@remote`. `alice.json` unchanged.
 - **Exit:** 1
 - **Source:** [feature/037_accounts_usage_param_unification.md AC-06](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
-### IT-46: `force::1 unclaim::1 name::X` bypasses G8 and clears owner
+### IT-46: `force::1 owner::0 name::X` bypasses G8 and clears owner (Feature 064)
 
 - **Given:** `alice@acme.com` with `alice.json` containing `"owner": "other@remote"`. Current identity ≠ `other@remote`.
-- **When:** `clp .accounts unclaim::1 name::alice@acme.com force::1`
+- **When:** `clp .accounts owner::0 name::alice@acme.com force::1` (formerly `unclaim::1 name::X force::1` — Feature 064)
 - **Then:** Exit 0. G8 gate bypassed. `alice.json` contains `"owner": ""`. stdout contains `unclaimed alice@acme.com`.
 - **Exit:** 0
 - **Source:** [feature/037_accounts_usage_param_unification.md AC-20](../../../../docs/feature/037_accounts_usage_param_unification.md)
+
+---
+
+### IT-47: `format::json` emits correct `owner`, `is_owned`, `renewal_at` values
+
+- **Given:** `alice@acme.com` with `alice.json` containing `"owner": "testuser@testmachine"` and `"_renewal_at": "2025-08-01T00:00:00Z"`. `bob@acme.com` with no owner or renewal fields.
+- **When:** `clp .accounts format::json` with current identity = `testuser@testmachine`.
+- **Then:** alice JSON object has `owner: "testuser@testmachine"`, `is_owned: true`, `renewal_at: "2025-08-01T00:00:00Z"`. bob JSON object has `owner: ""`, `is_owned: true` (unowned = all-owned), `renewal_at: null`.
+- **Exit:** 0
+- **Source:** [feature/003_account_list.md AC-20, AC-21](../../../../docs/feature/003_account_list.md)
+
+---
+
+### IT-48: `format::json` emits `is_owned: false` when owner is a foreign identity
+
+- **Given:** `alice@acme.com` with `alice.json` containing `"owner": "other@remote"`. Current identity is `local@localmachine` (USER=local, HOSTNAME=localmachine).
+- **When:** `clp .accounts format::json`
+- **Then:** alice JSON object has `owner: "other@remote"` and `is_owned: false` (foreign owner).
+- **Exit:** 0
+- **Source:** [feature/003_account_list.md AC-20](../../../../docs/feature/003_account_list.md)
+
+---
+
+### IT-49: `format::json` emits correct `host`, `role`, `organization_role` values
+
+- **Given:** `test@example.com` with `{name}.json` containing `host = "work-laptop"`, `role = "developer"`, `organization_role = "admin"`.
+- **When:** `clp .accounts format::json`
+- **Then:** JSON object has `host: "work-laptop"`, `role: "developer"`, `organization_role: "admin"`.
+- **Exit:** 0
+- **Source:** [feature/003_account_list.md AC-12](../../../../docs/feature/003_account_list.md)

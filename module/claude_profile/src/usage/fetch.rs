@@ -303,6 +303,7 @@ pub( crate ) fn fetch_quota_for_list(
 /// to `fetch_quota_for_list()` for the HTTP fetch loop.
 /// Signature kept stable — callers that need a pre-filtered account list should
 /// call `fetch_quota_for_list()` directly.
+#[ cfg_attr( not( unix ), allow( dead_code ) ) ]
 pub( crate ) fn fetch_all_quota(
   credential_store : &std::path::Path,
   live_creds_file  : &std::path::Path,
@@ -1080,7 +1081,6 @@ mod tests
       is_active         : false,
       email             : String::new(),
       display_name      : String::new(),
-      role              : String::new(),
       billing           : String::new(),
       model             : String::new(),
       tagged_id         : String::new(),
@@ -1088,11 +1088,14 @@ mod tests
       capabilities      : Vec::new(),
       organization_uuid : String::new(),
       organization_name : String::new(),
-      organization_role : String::new(),
+      org_role          : String::new(),
       workspace_uuid    : String::new(),
       workspace_name    : String::new(),
-      profile_host      : String::new(),
-      profile_role      : String::new(),
+      host              : String::new(),
+      role              : String::new(),
+      owner             : String::new(),
+      is_owned          : true,
+      renewal_at        : None,
     } ];
 
     // live_creds_file absent → graceful degradation; is_current=false for all accounts.
@@ -1148,7 +1151,6 @@ mod tests
       is_active         : false,
       email             : String::new(),
       display_name      : String::new(),
-      role              : String::new(),
       billing           : String::new(),
       model             : String::new(),
       tagged_id         : String::new(),
@@ -1156,11 +1158,14 @@ mod tests
       capabilities      : Vec::new(),
       organization_uuid : String::new(),
       organization_name : String::new(),
-      organization_role : String::new(),
+      org_role          : String::new(),
       workspace_uuid    : String::new(),
       workspace_name    : String::new(),
-      profile_host      : String::new(),
-      profile_role      : String::new(),
+      host              : String::new(),
+      role              : String::new(),
+      owner             : String::new(),
+      is_owned          : true,
+      renewal_at        : None,
     } ];
 
     let absent_live = store.path().join( ".absent_credentials.json" );
@@ -1228,7 +1233,6 @@ mod tests
       is_active         : false,
       email             : String::new(),
       display_name      : String::new(),
-      role              : String::new(),
       billing           : String::new(),
       model             : String::new(),
       tagged_id         : String::new(),
@@ -1236,11 +1240,14 @@ mod tests
       capabilities      : Vec::new(),
       organization_uuid : String::new(),
       organization_name : String::new(),
-      organization_role : String::new(),
+      org_role          : String::new(),
       workspace_uuid    : String::new(),
       workspace_name    : String::new(),
-      profile_host      : String::new(),
-      profile_role      : String::new(),
+      host              : String::new(),
+      role              : String::new(),
+      owner             : String::new(),
+      is_owned          : true,
+      renewal_at        : None,
     } ];
 
     let absent_live = store.path().join( ".absent_credentials.json" );
@@ -1307,7 +1314,6 @@ mod tests
       is_active         : false,
       email             : String::new(),
       display_name      : String::new(),
-      role              : String::new(),
       billing           : String::new(),
       model             : String::new(),
       tagged_id         : String::new(),
@@ -1315,11 +1321,14 @@ mod tests
       capabilities      : Vec::new(),
       organization_uuid : String::new(),
       organization_name : String::new(),
-      organization_role : String::new(),
+      org_role          : String::new(),
       workspace_uuid    : String::new(),
       workspace_name    : String::new(),
-      profile_host      : String::new(),
-      profile_role      : String::new(),
+      host              : String::new(),
+      role              : String::new(),
+      owner             : String::new(),
+      is_owned          : true,
+      renewal_at        : None,
     } ];
 
     let absent_live = store.path().join( ".absent_credentials.json" );
@@ -1631,7 +1640,6 @@ mod tests
       is_active         : false,
       email             : String::new(),
       display_name      : String::new(),
-      role              : String::new(),
       billing           : String::new(),
       model             : String::new(),
       tagged_id         : String::new(),
@@ -1639,11 +1647,14 @@ mod tests
       capabilities      : Vec::new(),
       organization_uuid : String::new(),
       organization_name : String::new(),
-      organization_role : String::new(),
+      org_role          : String::new(),
       workspace_uuid    : String::new(),
       workspace_name    : String::new(),
-      profile_host      : String::new(),
-      profile_role      : String::new(),
+      host              : String::new(),
+      role              : String::new(),
+      owner             : String::new(),
+      is_owned          : true,
+      renewal_at        : None,
     } ];
 
     let absent_live = store.path().join( ".absent_credentials.json" );
@@ -1706,7 +1717,6 @@ mod tests
       is_active         : false,
       email             : String::new(),
       display_name      : String::new(),
-      role              : String::new(),
       billing           : String::new(),
       model             : String::new(),
       tagged_id         : String::new(),
@@ -1714,11 +1724,14 @@ mod tests
       capabilities      : Vec::new(),
       organization_uuid : String::new(),
       organization_name : String::new(),
-      organization_role : String::new(),
+      org_role          : String::new(),
       workspace_uuid    : String::new(),
       workspace_name    : String::new(),
-      profile_host      : String::new(),
-      profile_role      : String::new(),
+      host              : String::new(),
+      role              : String::new(),
+      owner             : String::new(),
+      is_owned          : true,
+      renewal_at        : None,
     } ];
 
     let absent_live = store.path().join( ".absent_credentials.json" );

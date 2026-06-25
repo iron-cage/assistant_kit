@@ -16,15 +16,15 @@
 [unclaimed]      --.account.save (auto)--> [unclaimed]     (save is ownership-neutral: owner=None)
 [unclaimed]      --.accounts owner::X --> [owned_here]     (X = current_identity())
 [unclaimed]      --.accounts owner::X --> [owned_elsewhere] (X = different machine)
-[owned_here]     --.accounts unclaim::1--> [unclaimed]
-[owned_elsewhere]--.accounts unclaim::1--> [unclaimed]     (force::1 required if not the owner)
+[owned_here]     --.accounts owner::0 name::X--> [unclaimed]
+[owned_elsewhere]--.accounts owner::0 name::X--> [unclaimed]   (force::1 required if not the owner)
 [owned_here]     --.accounts owner::Y --> [owned_elsewhere] (force::1 required)
 [owned_elsewhere]--.accounts owner::X --> [owned_here]     (X = current_identity(); force::1 required)
 ```
 
 ### Ownership Gates (G1–G8)
 
-Eight enforcement gates prevent non-owner credential operations. Key gates:
+Nine enforcement gates (G1, G1b, G2–G8) prevent non-owner credential operations. Key gates:
 
 | Gate | Location | Effect |
 |------|----------|--------|

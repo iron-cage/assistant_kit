@@ -8,6 +8,8 @@ use data_fmt::{ RowBuilder, TableFormatter, TableConfig, TableCaption, Format };
 
 // Runtime configuration for `clr ps`, assembled from env-var defaults (applied
 // first) then CLI tokens (which overwrite env values — CLI-wins).
+// ancient_secs and high_ram_mb are only read inside #[cfg(target_os = "linux")] blocks.
+#[ cfg_attr( not( target_os = "linux" ), allow( dead_code ) ) ]
 struct PsConfig
 {
   /// Mode filter: `None` or `"all"` = no filter; `"print"` / `"interactive"` = filter rows.
@@ -772,6 +774,7 @@ fn elapsed_label( started_at : u64 ) -> String
 }
 
 // Format RAM in kilobytes as a human-readable label (K or M suffix).
+#[ cfg( target_os = "linux" ) ]
 fn ram_label( kb : u64 ) -> String
 {
   if kb >= 1_024 { format!( "{}M", kb / 1_024 ) }

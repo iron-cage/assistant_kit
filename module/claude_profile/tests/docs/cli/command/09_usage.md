@@ -85,6 +85,10 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-81 | `who::0` accepted; empty store exits 0 | Who Param |
 | IT-82 | `who::2` rejected; exit 1; error mentions valid values `0` and `1` | Who Param |
 | IT-83 | `.usage.help` lists `who` param with sessions table description | Help Output |
+| IT-84 | `assignee::USER@MACHINE name::X` writes active marker on `.usage` (Feature 065) | Feature 065 — assignee mutation |
+| IT-85 | `owner::0 name::X` clears owner field when G8 passes on `.usage` (Feature 064) | Feature 064 — owner mutation |
+| IT-86 | `assign::1` REMOVED_TOGGLE exits 1 on `.usage` (Feature 064) | Feature 064 — REMOVED_TOGGLE |
+| IT-87 | `unclaim::1` REMOVED_TOGGLE exits 1 on `.usage` (Feature 064) | Feature 064 — REMOVED_TOGGLE |
 
 ### Test Coverage Summary
 
@@ -125,8 +129,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Owner Column: 1 test (IT-74)
 - Rotate Param: 6 tests (IT-75, IT-76, IT-77, IT-78, IT-79, IT-80)
 - Who Param: 2 tests (IT-81, IT-82)
+- Feature 064 — active mutation: 1 test (IT-84)
+- Feature 064 — owner mutation: 1 test (IT-85)
+- Feature 064 — REMOVED_TOGGLE: 2 tests (IT-86, IT-87)
 
-**Total:** 90 spec entries (IT-43, IT-57, IT-59, IT-60, IT-73 removed — unit tests not observable via clp output); IT-65 added for `sort::next`; IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); IT-71–IT-72 added by Plan 012 (`→ Next` column and JSON new fields); IT-74 added by Feature 037 (Owner column default-visible in `.usage`); IT-75–IT-80 added by Feature 038 (`rotate::` parameter group); IT-81–IT-83 added by Plan 022 (`who::` parameter and sessions table); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/19_refresh.md`–`23_trace.md` (param EC edge cases, not command spec)
+**Total:** 94 spec entries (IT-43, IT-57, IT-59, IT-60, IT-73 removed — unit tests not observable via clp output); IT-65 added for `sort::next`; IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); IT-71–IT-72 added by Plan 012 (`→ Next` column and JSON new fields); IT-74 added by Feature 037 (Owner column default-visible in `.usage`); IT-75–IT-80 added by Feature 038 (`rotate::` parameter group); IT-81–IT-83 added by Plan 022 (`who::` parameter and sessions table); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/19_refresh.md`–`23_trace.md` (param EC edge cases, not command spec)
 
 ---
 
@@ -298,7 +305,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage`
 - **Then:** That account's row shows `EXPIRED` in Expires and `—` for all quota columns (5h Left, 5h Reset, 7d Left, 7d(Son)); the 7d Reset column shows `(auth expired (401))` — NOT `(HTTP transport error: HTTP 401)`. Exit 0.
 - **Exit:** 0
-- **Fix:** BUG-152 (`task/claude_profile/bug/152_shorten_error_omits_401.md`)
+- **Fix:** BUG-152
 - **Source fn:** `ft002_lim_it_http_401_shortens_to_auth_expired` (in `usage_feature_test.rs`)
 - **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)
 
@@ -531,7 +538,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage.help`
 - **Then:** Exits 0; stdout contains `"1 = enabled, default"` (indicating `refresh::1` is the default); stdout does NOT contain `"0 = disabled, default"`.
 - **Exit:** 0
-- **Fix:** BUG-155 (`task/claude_profile/bug/155_refresh_wrong_default.md`)
+- **Fix:** BUG-155
 - **Source fn:** `it037_mre_bug155_refresh_defaults_to_1`
 - **Source:** [017_token_refresh.md AC-23](../../../../docs/feature/017_token_refresh.md)
 
@@ -543,7 +550,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage.help`
 - **Then:** Exits 0; stdout contains `"429"` (the conditional 429+locally-expired refresh case is documented in the parameter description); stdout does NOT contain the old combined string `"401/403/429"`.
 - **Exit:** 0
-- **Fix:** BUG-156 (`task/claude_profile/bug/156_refresh_429_expired_not_refreshed.md`)
+- **Fix:** BUG-156
 - **Source fn:** `it038_mre_bug156_refresh_help_mentions_429_expired`
 - **Source:** [017_token_refresh.md AC-24](../../../../docs/feature/017_token_refresh.md)
 
@@ -973,3 +980,43 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0. Stdout contains `who` in the parameter listing. Description mentions sessions table visibility.
 - **Exit:** 0
 - **Source:** [cli/param/061_who.md](../../../../docs/cli/param/061_who.md)
+
+---
+
+### IT-84: `assignee::USER@MACHINE name::X` writes active marker on `.usage` (Feature 065)
+
+- **Given:** `alice@acme.com` exists in credential store. Record mtime of `alice.json`, `alice.credentials.json`.
+- **When:** `clp .usage assignee::testuser@testmachine name::alice@acme.com`
+- **Then:** Exit 0. `_active_testmachine_testuser` in credential store contains `alice@acme.com`. mtime of `alice.json` and `alice.credentials.json` unchanged. Same behavior as `.accounts` IT-43.
+- **Exit:** 0
+- **Source:** [feature/065_assignee_param_redesign.md AC-01](../../../../docs/feature/065_assignee_param_redesign.md)
+
+---
+
+### IT-85: `owner::0 name::X` clears owner field when G8 passes on `.usage` (Feature 064)
+
+- **Given:** `alice@acme.com` with `alice.json` containing `"owner": "testuser@testmachine"`. Current identity = `testuser@testmachine`.
+- **When:** `clp .usage owner::0 name::alice@acme.com`
+- **Then:** Exit 0. `alice.json` contains `"owner": ""`. `alice.credentials.json` mtime unchanged. Same behavior as `.accounts` IT-44.
+- **Exit:** 0
+- **Source:** [feature/064_active_marker_and_owner_redesign.md AC-08](../../../../docs/feature/064_active_marker_and_owner_redesign.md)
+
+---
+
+### IT-86: `assign::1` REMOVED_TOGGLE exits 1 on `.usage` (Feature 064)
+
+- **Given:** Any environment.
+- **When:** `clp .usage assign::1 name::alice@acme.com`
+- **Then:** Exit 1. Migration message: "REMOVED — use `assignee::USER@MACHINE name::X` instead". No files modified.
+- **Exit:** 1
+- **Source:** [feature/064_active_marker_and_owner_redesign.md AC-05](../../../../docs/feature/064_active_marker_and_owner_redesign.md)
+
+---
+
+### IT-87: `unclaim::1` REMOVED_TOGGLE exits 1 on `.usage` (Feature 064)
+
+- **Given:** Any environment.
+- **When:** `clp .usage unclaim::1 name::alice@acme.com`
+- **Then:** Exit 1. Migration message: "REMOVED — use `owner::0 name::X` instead (or `owner::0` alone to batch-clear)". No files modified.
+- **Exit:** 1
+- **Source:** [feature/064_active_marker_and_owner_redesign.md AC-07](../../../../docs/feature/064_active_marker_and_owner_redesign.md)

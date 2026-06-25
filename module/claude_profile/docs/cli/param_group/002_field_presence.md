@@ -1,12 +1,11 @@
 # Group :: 2. Field Presence
 
-**Parameters:** `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`
+**Parameters:** `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`
 **Pattern:** Per-field boolean presence control
 **Purpose:** Each param independently controls whether one output line appears in text output. Shared params (`sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`) work identically across both commands.
 
 | Parameter | Type | Default | Commands | Controls |
 |-----------|------|---------|----------|----------|
-| [`active::`](../param/013_active.md) | `bool` | `1` | `.accounts` only | Active/inactive status line |
 | [`account::`](../param/005_account.md) | `bool` | `1` | `.credentials.status` only | Active account name line |
 | [`sub::`](../param/006_sub.md) | `bool` | `1` | Both | Subscription type line |
 | [`tier::`](../param/007_tier.md) | `bool` | `1` | Both | Rate-limit tier line |
@@ -28,7 +27,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | 13 field-presence params |
+| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | 12 field-presence params |
 | 2 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | 16 field-presence params |
 
 **Typical Patterns:**
@@ -46,7 +45,7 @@ clp .credentials.status email::0
 clp .credentials.status file::1 saved::1
 
 # Bare names only (.accounts)
-clp .accounts active::0 sub::0 tier::0 expires::0 email::0
+clp .accounts sub::0 tier::0 expires::0 email::0
 
 # Token-only (.credentials.status)
 clp .credentials.status account::0 sub::0 tier::0 expires::0 email::0
@@ -56,7 +55,7 @@ clp .credentials.status account::0 sub::0 tier::0 expires::0 email::0
 
 > "Does parameter X independently control ONE output field?"
 
-All 17 members pass — each controls exactly one output line. `format::` fails (controls serialisation format, not field selection) and is correctly excluded.
+All 16 members pass — each controls exactly one output line. `format::` fails (controls serialisation format, not field selection) and is correctly excluded.
 
 **Why NOT `format::`**
 

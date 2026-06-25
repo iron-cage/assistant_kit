@@ -85,8 +85,8 @@ work@acme.com
 
 | File | Relationship |
 |------|--------------|
-| `task/claude_profile/bug/217_switch_account_corrupts_claude_json_with_stale_snapshot_emailaddress.md` | BUG-217 🟢 Fixed: stale `emailAddress` precondition eliminated; `switch_account()` now enforces `emailAddress == name` before insert |
-| `task/claude_profile/bug/218_fetch_all_quota_synthetic_row_collides_with_existing_account.md` | BUG-218 🟢 Fixed: `fetch_all_quota()` now guards synthetic-row insertion via `inject_synthetic_if_new()` — suppresses insert when `synthetic_name` already appears in stored-account list |
+| BUG-217 | BUG-217 🟢 Fixed: stale `emailAddress` precondition eliminated; `switch_account()` now enforces `emailAddress == name` before insert |
+| BUG-218 | BUG-218 🟢 Fixed: `fetch_all_quota()` now guards synthetic-row insertion via `inject_synthetic_if_new()` — suppresses insert when `synthetic_name` already appears in stored-account list |
 
 ### Commands
 

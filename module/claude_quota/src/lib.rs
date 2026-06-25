@@ -334,6 +334,12 @@ pub fn parse_oauth_usage( body : &str ) -> Result< OauthUsageData, QuotaError >
   let seven_day        = parse_period( body, "seven_day" )?;
   let seven_day_sonnet = parse_period( body, "seven_day_sonnet" )?;
 
+  // Phase 2: limits-array fallback — runs only when Phase 1 returned None.
+  // Handles post-2026-06-25 API format where `seven_day_sonnet` is permanently null.
+  // When Anthropic re-enables per-model `limits` entries, this auto-populates the field.
+  let seven_day_sonnet = seven_day_sonnet
+    .or_else( || scan_limits_for_kind( body, &[ "weekly_sonnet", "sonnet" ] ) );
+
   Ok( OauthUsageData { five_hour, seven_day, seven_day_sonnet } )
 }
 
@@ -442,6 +448,49 @@ fn parse_optional_string_in_block( block : &str, key : &str ) -> Option< String 
     return Some( inner[ ..end ].to_string() );
   }
 
+  None
+}
+
+/// Scan the `"limits":[...]` array for a quota boundary whose `"kind"` or `"scope"` field
+/// value contains any of the given needles.
+///
+/// Returns the first match as a [`PeriodUsage`]:
+/// - `utilization` = `"percent"` value cast to `f64` (both fields measure consumed %, 0–100)
+/// - `resets_at`   = `"resets_at"` string value (`None` when absent or `null`)
+///
+/// Returns `None` when the `limits` key is absent, the array is empty, or no entry matches.
+fn scan_limits_for_kind( body : &str, kind_needles : &[ &str ] ) -> Option< PeriodUsage >
+{
+  // Find "limits":[ in body
+  let needle = "\"limits\":";
+  let pos    = body.find( needle )?;
+  let after  = body[ pos + needle.len() .. ].trim_start();
+  if !after.starts_with( '[' ) { return None; }
+
+  // Walk the array: extract each {...} object block
+  let mut rest = after[ 1.. ].trim_start(); // skip '['
+  loop
+  {
+    rest = rest.trim_start();
+    if rest.starts_with( ']' ) || rest.is_empty() { break; }
+    if rest.starts_with( ',' ) { rest = &rest[ 1.. ]; continue; }
+
+    let block = extract_object_block( rest )?;
+    rest      = &rest[ block.len().. ];
+
+    // Check if "kind" or "scope" value contains any needle
+    let kind_val  = parse_optional_string_in_block( block, "kind"  ).unwrap_or_default();
+    let scope_val = parse_optional_string_in_block( block, "scope" ).unwrap_or_default();
+    let matched   = kind_needles
+      .iter()
+      .any( |n| kind_val.contains( *n ) || scope_val.contains( *n ) );
+    if !matched { continue; }
+
+    // Extract percent as utilization (cast — same scale: 0–100 consumed %)
+    let utilization = parse_f64_in_block( block, "percent" )?;
+    let resets_at   = parse_optional_string_in_block( block, "resets_at" );
+    return Some( PeriodUsage { utilization, resets_at } );
+  }
   None
 }
 

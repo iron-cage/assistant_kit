@@ -97,6 +97,7 @@
 //! - **Pitfall**: When parsing Claude Code storage format, ALWAYS check the top-level `"type"` field
 //!   ("user" or "assistant"), not `"role"`. The `role` field exists but is nested inside `message`.
 //!   If you see entry counts of 0 when you expect data, check field name mismatches first.
+#![ cfg( unix ) ]
 
 use tempfile::TempDir;
 use std::path::Path;

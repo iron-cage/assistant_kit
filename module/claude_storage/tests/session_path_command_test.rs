@@ -50,6 +50,7 @@
 //! - Missing `path::` defaults to cwd (issue-037)
 //! - Invalid strategy rejected
 //! - Empty topic rejected
+#![ cfg( unix ) ]
 
 mod common;
 

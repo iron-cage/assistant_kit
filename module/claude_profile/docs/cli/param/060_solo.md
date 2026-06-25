@@ -63,8 +63,8 @@ Every other account: **zero HTTP calls, zero subprocesses**. Cached/historical d
 | `solo::1 refresh::1` | Allowed. Refresh subprocess fires only for current+owned account (if error predicate matches). |
 | `solo::1 touch::1` | Allowed. Touch subprocess fires only for current+owned account (if idle). |
 | `solo::1 only_active::1` | Allowed. Orthogonal: fetch current+owned live, display only active row. |
-| `solo::1 assign::1` | Allowed. `assign::` writes local JSON — no API call. |
-| `solo::1 unclaim::1` | Allowed. `unclaim::` writes local JSON — no API call. |
+| `solo::1 assignee::USER@MACHINE` | Allowed. `assignee::` writes local marker file — no API call. (Feature 065: `active::` is REMOVED.) |
+| `solo::1 owner::0` | Allowed. `owner::0` writes local JSON — no API call. (Feature 064: `unclaim::1` is REMOVED.) |
 | `solo::1 force::1` | Allowed. `force::` bypasses G5-G8 (write-side). Solo is read-side token conservation. Independent domains. |
 
 ### Trace Output

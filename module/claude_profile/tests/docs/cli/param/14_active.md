@@ -1,84 +1,35 @@
-# Parameter :: `active::`
+# Test: `active::` Parameter — REMOVED (Feature 065)
 
-Edge case tests for the `active::` parameter. Tests validate boolean enforcement, default behavior, and Active/inactive status display control.
+> **REMOVED (Feature 065)**: The `active::` parameter on `.accounts` and `.usage` has been removed.
+> Its functionality is replaced by the `assignee::` param: `assignee::USER@MACHINE name::X`.
+> The `assignee::0` sentinel provides a shorthand for the current machine (`$USER@$HOSTNAME`).
+>
+> Any invocation of `active::` now exits 1 with the migration message:
+> "REMOVED — use `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine)"
+>
+> See [param/013_active.md](../../../../docs/cli/param/013_active.md) for the removal notice.
+> See [feature/065_assignee_param_redesign.md](../../../../docs/feature/065_assignee_param_redesign.md) for the redesign.
 
-**Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
+All EC test cases in this file (EC-1 through EC-14) are **superseded** — `active::` no longer exists as an
+active parameter. The behavioral semantics are now exercised by `64_assignee.md` EC-1 through EC-18 (which
+cover `assignee::USER@MACHINE`, `assignee::0` sentinel, sanitization, dry-run, and the `active::`
+REMOVED_TOGGLE migration path).
 
-## Test Case Index
+### Superseded Test Case Index (DO NOT IMPLEMENT)
 
-| ID | Test Name | Category |
-|----|-----------|----------|
-| EC-1 | `active:::0` suppressed from output | Field Control |
-| EC-2 | `active::::2` rejected (out of range) | Boundary Values |
-| EC-3 | `active::::yes` rejected (type validation) | Type Validation |
-| EC-4 | Default value is `1` (present by default) | Default |
-| EC-5 | `active::::1` explicit enable accepted | Field Control |
-| EC-6 | `format::json` output unaffected by `active::::0` | Interaction |
-
-## Test Coverage Summary
-
-- Field Control: 2 tests (EC-1, EC-5)
-- Boundary Values: 1 test (EC-2)
-- Type Validation: 1 test (EC-3)
-- Default: 1 test (EC-4)
-- Interaction: 1 test (EC-6)
-
-**Total:** 6 edge cases
-
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
-
-## Test Cases
----
-
-### EC-1: `active:::0` — field suppressed from output:
-
-- **Given:** fixture with at least one account in credential store
-- **When:** `clp .accounts active:::0`
-- **Then:** `Active/inactive status` line absent from output
-- **Exit:** 0
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
----
-
-### EC-2: `active::::2` rejected:
-
-- **Given:** clean environment
-- **When:** `clp .accounts active::::2`
-- **Then:** `active:: must be 0 or 1`; exit 1
-- **Exit:** 1
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
----
-
-### EC-3: `active::::yes` rejected:
-
-- **Given:** clean environment
-- **When:** `clp .accounts active::::yes`
-- **Then:** `active:: must be 0 or 1`; exit 1
-- **Exit:** 1
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
----
-
-### EC-4: Default value (present by default):
-
-- **Given:** fixture with at least one account in credential store
-- **When:** `clp .accounts`
-- **Then:** `Active/inactive status` line present in default output
-- **Exit:** 0
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
----
-
-### EC-5: `active::::1` explicit enable accepted:
-
-- **Given:** fixture with at least one account in credential store
-- **When:** `clp .accounts active::::1`
-- **Then:** `Active/inactive status` line present in output
-- **Exit:** 0
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
----
-
-### EC-6: `format::json` unaffected by `active::::0`:
-
-- **Given:** fixture with at least one account in credential store
-- **When:** `clp .accounts format::json active::::0`
-- **Then:** JSON output contains all fields regardless of `active::` value
-- **Exit:** 0
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/013_active.md)
+| ID | Test Name | Category | Status |
+|----|-----------|----------|--------|
+| EC-1 | `active::user@host name::X` writes `_active_host_user = X` | Behavioral | **REMOVED** |
+| EC-2 | `active::user@host` (no `name::`) clears `_active_host_user` | Behavioral | **REMOVED** |
+| EC-3 | `active::badvalue` (no `@`) exits 1 | Validation | **REMOVED** |
+| EC-4 | `active::@host` (empty user component) exits 1 | Validation | **REMOVED** |
+| EC-5 | `active::user@` (empty machine component) exits 1 | Validation | **REMOVED** |
+| EC-6 | Space in machine component sanitized to `_` | Sanitization | **REMOVED** |
+| EC-7 | Dot and hyphen in machine component preserved | Sanitization | **REMOVED** |
+| EC-8 | `active::user@host name::X dry::1` previews without writing | Dry-run | **REMOVED** |
+| EC-9 | `active::user@host name::unknown` exits 1 (account not in store) | Validation | **REMOVED** |
+| EC-10 | `active::` absent — no marker write (default omit) | Default | **REMOVED** |
+| EC-11 | `active::user@host` does NOT modify `owner` field | Isolation | **REMOVED** |
+| EC-12 | `active::0 name::X` exits 1 — `"0"` is not a valid `USER@MACHINE` | Validation | **REMOVED** |
+| EC-13 | `force::1 active::user@host name::X` — `force::1` silently ignored; marker written | No-op | **REMOVED** |
+| EC-14 | `active::user@host` (no `name::`) when marker absent — no-op exit 0 | Behavioral | **REMOVED** |

@@ -19,3 +19,4 @@
 | 006 | [Quota Polynomial Approximation](006_quota_approximation.md) | `approx.rs` `approximate_utilization()` | 033, 040, 061 |
 | 007 | [Sort Strategies](007_sort_strategies.md) | `sort.rs` `sort_indices()` | 020 |
 | 008 | [Subprocess Effort Resolution](008_subprocess_effort_resolution.md) | `subprocess.rs` `resolve_effort()` | 026 |
+| 009 | [OAuth Usage Response Dual-Source Parsing](009_oauth_usage_response_migration.md) | `claude_quota/src/lib.rs` `parse_oauth_usage()` | 009, 066 |

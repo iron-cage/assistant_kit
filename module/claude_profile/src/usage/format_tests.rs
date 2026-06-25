@@ -257,12 +257,12 @@ fn test_status_emoji_and_5h_low_yellow()
   assert_eq!( status_emoji( &aq ), "🟡", "5h ≤ 15% despite 7d ample → 🟡" );
 }
 
-/// SE-AND-T04: `5h_left`=15%, `7d_left`=5% → 🟡 (5h at boundary, 7d at boundary).
+/// SE-AND-T04: `5h_left`=15%, `7d_left`=5% → 🔴 (both-exhausted → Red; neither threshold passes).
 #[ test ]
-fn test_status_emoji_and_both_at_threshold_yellow()
+fn test_status_emoji_and_both_at_threshold_red()
 {
   let aq = mk_aq_ok_both( 85.0, 95.0 );
-  assert_eq!( status_emoji( &aq ), "🟡", "5h=15% and 7d=5% → 🟡 (neither > threshold)" );
+  assert_eq!( status_emoji( &aq ), "🔴", "5h=15% and 7d=5% → 🔴 (both-exhausted → Red; neither > threshold)" );
 }
 
 /// IT-43 — Exact boundary precision: each threshold tested independently.
@@ -353,6 +353,41 @@ fn mre_bug317_cancelled_status_emoji_is_red()
   assert_eq!(
     status_emoji( &aq ), "🔴",
     "BUG-317: cancelled account (billing_type='none') must show 🔴 in the ● column",
+  );
+}
+
+/// BUG-319 MRE — both-exhausted (5h ≤ 15% AND 7d ≤ 5%) must show 🔴, not 🟡.
+///
+/// # Root Cause
+/// `status_emoji()` used `if h5_left > 15.0 && d7_left > 5.0 { "🟢" } else { "🟡" }`.
+/// The `else` branch captured all non-green states: h-exhausted (G2), weekly-exhausted (G3),
+/// and both-exhausted (G4). G4 must be 🔴 — `status_group_of()` already returned Red for it
+/// (sort order was correct), but the displayed emoji was wrong.
+///
+/// # Why Not Caught
+/// SE-AND-T04 tested both-at-threshold and asserted 🟡 — it codified the bug as expected
+/// behavior. No test covered both-deeply-exhausted with a distinct expected value.
+///
+/// # Fix Applied
+/// Changed `status_emoji()` to a 3-arm match: `(true,true)→🟢`, `(false,false)→🔴`, `_→🟡`.
+///
+/// # Prevention
+/// MRE values (5h=6%, 7d=4%) match the live i14@wbox.pro observation that triggered discovery.
+/// Keep both thresholds well inside their exhaustion zones to clearly exercise the Red arm.
+///
+/// # Pitfall
+/// `status_emoji()` and `status_group_of()` must agree: both-exhausted = Red/🔴. Any change
+/// to group boundary thresholds must update both functions in lockstep.
+#[ doc = "bug_reproducer(BUG-319)" ]
+#[ test ]
+fn mre_bug319_both_exhausted_status_emoji_is_red()
+{
+  // 5h_util=94% → 5h_left=6% (h-exhausted: ≤ 15%); 7d_util=96% → 7d_left=4% (weekly-exhausted: ≤ 5%).
+  // Both below thresholds → both-exhausted → Group 4 (Red) → must be 🔴.
+  let aq = mk_aq_ok_both( 94.0, 96.0 );
+  assert_eq!(
+    status_emoji( &aq ), "🔴",
+    "BUG-319: both-exhausted (5h=6%, 7d=4%) must be 🔴 (Red/G4), not 🟡",
   );
 }
 
@@ -746,5 +781,41 @@ fn ec01_recommended_model_sonnet_at_15_001_pct_left()
   assert_eq!(
     recommended_model( &aq ), "sonnet",
     "utilization=84.999 (15.001% left) must return sonnet; got: {:?}", recommended_model( &aq ),
+  );
+}
+
+// ── Algorithm 002 AC cases ────────────────────────────────────────────────
+
+/// AC-6 (algorithm/002): `recommended_model()` divergence — sufficient vs near-exhausted.
+///
+/// Two quota states produce divergent outputs, proving the function is non-constant:
+///   State A: `utilization=80.0` (20% left, above threshold) → `"sonnet"`
+///   State B: `utilization=86.0` (14% left, below threshold) → `"opus"`
+///
+/// The divergence is necessary because `recommended_model()` is the footer's model
+/// recommendation signal — a constant return value would mean the threshold has no effect.
+///
+/// Spec: [`tests/docs/algorithm/002_session_model_override.md` AC-6]
+#[ test ]
+fn ac6_recommended_model_divergence_sufficient_vs_near_exhausted()
+{
+  // State A: 20% remaining — above OPUS_OVERRIDE_THRESHOLD (15.0) → sonnet
+  let aq_a = mk_aq_sort_weekly( "test", 0.0, 0.0, 80.0 );
+  // State B: 14% remaining — below OPUS_OVERRIDE_THRESHOLD (15.0) → opus
+  let aq_b = mk_aq_sort_weekly( "test", 0.0, 0.0, 86.0 );
+  let model_a = recommended_model( &aq_a );
+  let model_b = recommended_model( &aq_b );
+  assert_eq!(
+    model_a, "sonnet",
+    "AC-6 state A: utilization=80.0 (20% left) must return sonnet; got: {model_a}",
+  );
+  assert_eq!(
+    model_b, "opus",
+    "AC-6 state B: utilization=86.0 (14% left) must return opus; got: {model_b}",
+  );
+  assert_ne!(
+    model_a, model_b,
+    "AC-6: recommended_model must return divergent results for sufficient vs near-exhausted quota; \
+     both states returning the same value means the threshold has no effect",
   );
 }

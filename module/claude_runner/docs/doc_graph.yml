@@ -1,10 +1,10 @@
 meta:
   description: Cross-reference graph for design doc instances in claude_runner (feature, invariant, api entities). CLI reference docs (cli/) are out of scope.
-  node_count: 9
-  edge_count: 18
+  node_count: 10
+  edge_count: 20
   component_count: 1
   generated: 2026-05-16
-  last_reviewed: 2026-06-21
+  last_reviewed: 2026-06-24
 
 nodes:
   - id: feature/001
@@ -45,6 +45,11 @@ nodes:
   - id: invariant/007
     file: invariant/007_print_mode_timeout.md
     label: Print-Mode Timeout Default
+    entity: invariant
+
+  - id: invariant/008
+    file: invariant/008_render_summary_gate.md
+    label: render_summary Gate Field
     entity: invariant
 
   - id: api/001
@@ -125,6 +130,14 @@ edges:
     to: feature/001
     via: features
 
+  - from: feature/001
+    to: invariant/008
+    via: invariants
+
+  - from: invariant/008
+    to: feature/001
+    via: features
+
 components:
   - id: 1
     label: Main corpus
@@ -139,6 +152,7 @@ components:
       - invariant/005
       - invariant/006
       - invariant/007
+      - invariant/008
       - api/001
 
 dangling_refs: []

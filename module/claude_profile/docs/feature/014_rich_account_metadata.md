@@ -18,7 +18,7 @@
 | Param | Default | Source | Output Line |
 |-------|---------|--------|-------------|
 | `display_name::` | `0` | `~/.claude.json → oauthAccount.displayName` | `Display: {displayName_or_N/A}` |
-| `role::` | `0` | `~/.claude.json → oauthAccount.organizationRole` | `Role:    {organizationRole_or_N/A}` |
+| `role::` | `0` | `.credentials.status`: `~/.claude.json → oauthAccount.organizationRole`; `.accounts`: `{name}.json → role` (user-defined label — see [029_account_host_metadata.md](029_account_host_metadata.md)) | `Role:    {value_or_N/A}` |
 | `billing::` | `0` | `~/.claude.json → oauthAccount.billingType` | `Billing: {billingType_or_N/A}` |
 | `model::` | `0` | `~/.claude/settings.json → model` | `Model:   {model_or_N/A}` |
 
@@ -50,8 +50,8 @@ This label is NOT a separate field param — it is the formatted output of the e
 - **AC-06**: `format::json` includes `display_name`, `role`, `billing`, `model` keys regardless of field-presence params.
 - **AC-07**: Absent `~/.claude.json` → all three oauthAccount fields show `N/A` without error.
 - **AC-08**: Absent `~/.claude/settings.json` → `model` shows `N/A` without error.
-- **AC-09**: `clp .accounts display_name::1` shows `Display:` line per account from saved `{name}.json` snapshot.
-- **AC-10**: `clp .accounts role::1 billing::1` shows corresponding lines per account; `model::1` shows the value from `{name}.json` if present, or `N/A` if that file is absent or lacks a `model` field. `save()` writes the current model preference to `{name}.json` (BUG-222 fix); `switch_account()` restores it on account switch.
+- **AC-09**: `clp .accounts cols::+display_name` shows `Display:` line per account from saved `{name}.json` snapshot.
+- **AC-10**: `clp .accounts cols::+role` shows `Role:` line with the **user-defined label** from saved `{name}.json` `role` field (Feature 029) — not `oauthAccount.organizationRole`; `cols::+billing` shows `Billing:` line from `oauthAccount.billingType`; `cols::+model` shows the value from `{name}.json` if present, or `N/A` if that file is absent or lacks a `model` field. `save()` writes the current model preference to `{name}.json` (BUG-222 fix); `switch_account()` restores it on account switch.
 - **AC-11**: Accounts with no `{name}.json` snapshot on disk show `N/A` for `display_name`, `role`, `billing`, `model`.
 - **AC-12**: `clp .accounts format::json` includes `display_name`, `role`, `billing`, `model` keys per account object.
 
@@ -59,7 +59,7 @@ This label is NOT a separate field param — it is the formatted output of the e
 
 | File | Relationship |
 |------|--------------|
-| `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json`; `switch_account()` restores/clears `model` in `~/.claude/settings.json` on each switch |
+| BUG-222 | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json`; `switch_account()` restores/clears `model` in `~/.claude/settings.json` on each switch |
 
 ### Commands
 

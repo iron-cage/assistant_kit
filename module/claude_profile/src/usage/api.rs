@@ -395,7 +395,11 @@ pub( crate ) fn apply_post_switch_touch(
   //   was present in apply_touch (Feature 024 AC-03) but not mirrored here.
   // Pitfall: any post-switch touch function must re-fetch quota after subprocess to keep
   //   the cache consistent with the newly-activated session window.
-  let cred_path = paths.base().join( format!( "{name}.credentials.json" ) );
+  // Fix(BUG-318): use credential_store (not paths.base()) for the AC-21 re-fetch credential read.
+  //   paths.base() = ~/.claude/ (Claude config dir); the credential file lives in credential_store.
+  //   Reading paths.base()/{name}.credentials.json silently returns Err (file absent) — quota cache
+  //   was never updated after touch. Same fix applied to write_quota_cache call below.
+  let cred_path = credential_store.join( format!( "{name}.credentials.json" ) );
   if let Ok( fresh_json ) = std::fs::read_to_string( &cred_path )
   {
     if let Some( token ) = crate::account::parse_string_field( &fresh_json, "accessToken" )
@@ -405,7 +409,7 @@ pub( crate ) fn apply_post_switch_touch(
         let h5 = new_data.five_hour.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
         let d7 = new_data.seven_day.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
         let sn = new_data.seven_day_sonnet.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
-        claude_profile_core::account::write_quota_cache( paths.base(), name, h5, d7, sn );
+        claude_profile_core::account::write_quota_cache( credential_store, name, h5, d7, sn );
       }
     }
   }
@@ -472,256 +476,285 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   let live_creds_file  = crate::ClaudePaths::new()
     .map_or_else( || std::path::PathBuf::from( "/dev/null" ), |p| p.credentials_file() );
 
-  // ── Mutation dispatch (Feature 037 — unified with .accounts) ──────────────
+  // ── Mutation dispatch (Feature 037 + 064 — unified with .accounts) ─────────
   {
     use unilang::types::Value;
+    use core::fmt::Write as _;
     use crate::commands::shared::{ is_dry, resolve_account_name, io_err_to_error_data };
 
-    let assign_flag  = crate::output::parse_int_flag( &cmd, "assign",  0 )? != 0;
-    let unclaim_flag = crate::output::parse_int_flag( &cmd, "unclaim", 0 )? != 0;
+    // REMOVED_TOGGLE checks: assign, unclaim, for, active → migration messages (Feature 064/065).
+    if cmd.arguments.contains_key( "assign" )
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        "assign:: REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)".to_string(),
+      ) );
+    }
+    if cmd.arguments.contains_key( "unclaim" )
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        "unclaim:: REMOVED — use owner::0 name::X instead (or owner::0 alone to batch-clear)".to_string(),
+      ) );
+    }
+    if cmd.arguments.contains_key( "for" )
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        "for:: REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)".to_string(),
+      ) );
+    }
+    if cmd.arguments.contains_key( "active" )
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        "active:: REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)".to_string(),
+      ) );
+    }
 
-    // owner:: param — explicit ownership assignment (Feature 063).
+    // ── assignee:: dispatch (Feature 065) ────────────────────────────────────
+    if let Some( Value::String( av ) ) = cmd.arguments.get( "assignee" )
+    {
+      let av = if av == "0"
+      {
+        // Sentinel "0" expands to current machine identity ($USER@$HOSTNAME).
+        claude_profile_core::account::current_identity()
+      }
+      else
+      {
+        av.clone()
+      };
+      let san = | s : &str | -> String
+      {
+        s.chars().map( | c | if c.is_alphanumeric() || c == '-' || c == '.' { c } else { '_' } ).collect()
+      };
+      let ( usr_raw, mch_raw ) = av.split_once( '@' ).ok_or_else( || ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        "assignee:: must be USER@MACHINE format (no '@' found) — or use assignee::0 for current machine".to_string(),
+      ) )?;
+      if usr_raw.is_empty()
+      {
+        return Err( ErrorData::new(
+          ErrorCode::ArgumentTypeMismatch,
+          "assignee:: user component (left of '@') must not be empty".to_string(),
+        ) );
+      }
+      if mch_raw.is_empty()
+      {
+        return Err( ErrorData::new(
+          ErrorCode::ArgumentTypeMismatch,
+          "assignee:: machine component (right of '@') must not be empty".to_string(),
+        ) );
+      }
+      let su      = san( usr_raw );
+      let sm      = san( mch_raw );
+      let marker  = format!( "_active_{sm}_{su}" );
+      let display = format!( "{su}@{sm}" );
+
+      let raw_name = match cmd.arguments.get( "name" )
+      {
+        Some( Value::String( s ) ) => s.clone(),
+        _ => String::new(),
+      };
+      let name_arg = if raw_name.is_empty()
+      {
+        raw_name.clone()
+      }
+      else
+      {
+        resolve_account_name( &raw_name, &credential_store )?
+      };
+
+      if !name_arg.is_empty()
+      {
+        // Assign: write marker pointing to name_arg.
+        let cred_path = credential_store.join( format!( "{name_arg}.credentials.json" ) );
+        if !cred_path.exists()
+        {
+          return Err( ErrorData::new(
+            ErrorCode::ArgumentTypeMismatch,
+            format!( "account '{name_arg}' not found in credential store" ),
+          ) );
+        }
+        if is_dry( &cmd )
+        {
+          return Ok( OutputData::new(
+            format!( "[dry-run] would assign {name_arg} for {display}  \u{2192}  {marker}\n" ),
+            "text",
+          ) );
+        }
+        std::fs::write( credential_store.join( &marker ), name_arg.as_bytes() )
+          .map_err( | e | io_err_to_error_data( &e, "usage assignee" ) )?;
+        if params.trace { eprintln!( "[trace] usage assignee  write marker: {marker}  →  {name_arg}" ) }
+        return Ok( OutputData::new(
+          format!( "assigned {name_arg} for {display}  \u{2192}  {marker}\n" ),
+          "text",
+        ) );
+      }
+      // Unassign: clear the marker file.
+      if is_dry( &cmd )
+      {
+        return Ok( OutputData::new(
+          format!( "[dry-run] would unassign {display}  \u{2192}  {marker} cleared\n" ),
+          "text",
+        ) );
+      }
+      let marker_path = credential_store.join( &marker );
+      if marker_path.exists()
+      {
+        std::fs::remove_file( &marker_path )
+          .map_err( | e | io_err_to_error_data( &e, "usage assignee unassign" ) )?;
+      }
+      if params.trace { eprintln!( "[trace] usage assignee  cleared marker: {marker}" ) }
+      return Ok( OutputData::new(
+        format!( "unassigned {display}  \u{2192}  {marker} cleared\n" ),
+        "text",
+      ) );
+    }
+
+    // owner:: param — explicit ownership assignment/release (Feature 063 + 064).
     let owner_value = match cmd.arguments.get( "owner" )
     {
       Some( Value::String( s ) ) if !s.is_empty() => Some( s.clone() ),
       Some( Value::String( _ ) ) =>
         return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch,
-          "owner:: value must be non-empty — use unclaim::1 to clear ownership".into() ) ),
+          "owner:: value must be non-empty — use owner::0 to clear ownership".into() ) ),
       _ => None,
     };
-    if owner_value.is_some() && unclaim_flag
-    {
-      return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch,
-        "owner:: and unclaim::1 are mutually exclusive — set or clear, not both".into() ) );
-    }
-    let raw_name_for_owner = match cmd.arguments.get( "name" )
-    {
-      Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
-      _ => String::new(),
-    };
-    if owner_value.is_some() && raw_name_for_owner.is_empty()
-    {
-      return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch,
-        "owner:: requires name:: — batch ownership assignment is not supported".into() ) );
-    }
 
-    if assign_flag
+    // ── owner:: explicit ownership assignment/release (Feature 063 + 064) ──────
+    if let Some( ref ov ) = owner_value
     {
-      let san = | s : &str | -> String
-      {
-        s.chars().map( | c | if c.is_alphanumeric() || c == '-' || c == '.' { c } else { '_' } ).collect()
-      };
+      let is_sentinel = ov.as_str() == "0";
+      let force       = params.force;
+      let is_dry_run  = is_dry( &cmd );
 
       let raw_name = match cmd.arguments.get( "name" )
       {
-        Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
+        Some( Value::String( s ) ) => s.clone(),
         _ => String::new(),
+      };
+      let name_arg = if raw_name.is_empty() || raw_name.contains( ',' )
+      {
+        // Comma-list — defer per-component resolution to dispatch below.
+        raw_name.clone()
+      }
+      else
+      {
+        resolve_account_name( &raw_name, &credential_store )?
       };
 
       if raw_name.is_empty()
       {
-        let user    = std::env::var( "USER" )
-          .or_else( |_| std::env::var( "USERNAME" ) )
-          .unwrap_or_else( |_| "user".to_string() );
-        let machine = crate::account::resolve_hostname();
-        let marker  = format!( "_active_{}_{}", san( &machine ), san( &user ) );
-        let active  = std::fs::read_to_string( credential_store.join( &marker ) )
-          .ok()
-          .map( | s | s.trim().to_string() )
-          .filter( | s | !s.is_empty() )
-          .unwrap_or_else( || "(none)".to_string() );
-        let ready = if active == "(none)"
+        // No name:: → batch-clear (owner::0 only; owner::VALUE requires name::).
+        if !is_sentinel
         {
-          String::new()
-        }
-        else
-        {
-          format!(
-            "\nReady to copy:\n  clp .usage assign::1 name::{active}\n  clp .usage assign::1 name::{active} for::{user}@{machine}\n"
-          )
-        };
-        let block = format!(
-          ".usage assign::1 \u{2014} write the active-account marker for any machine.\n\n\
-           \x20 name::   account to assign (required)\n\
-           \x20 for::    USER@MACHINE to target  (default: current machine)\n\
-           \x20 dry::1   preview without writing\n\n\
-           Current machine:  {user}@{machine}  (\u{2192} {marker})\n\
-           Active account:   {active}\n{ready}"
-        );
-        return Ok( OutputData::new( block, "text" ) );
-      }
-
-      let name_arg = resolve_account_name( &raw_name, &credential_store )?;
-      let cred_path = credential_store.join( format!( "{name_arg}.credentials.json" ) );
-      if !cred_path.exists()
-      {
-        return Err( ErrorData::new(
-          ErrorCode::InternalError,
-          format!( "account '{name_arg}' not found in credential store" ),
-        ) );
-      }
-
-      let ( marker, for_display ) = match cmd.arguments.get( "for" )
-      {
-        Some( Value::String( s ) ) if !s.is_empty() =>
-        {
-          let ( usr, mch ) = s.split_once( '@' ).ok_or_else( || ErrorData::new(
+          return Err( ErrorData::new(
             ErrorCode::ArgumentTypeMismatch,
-            "for:: must be USER@MACHINE format (no '@' found)".to_string(),
-          ) )?;
-          if usr.is_empty()
-          {
-            return Err( ErrorData::new(
-              ErrorCode::ArgumentTypeMismatch,
-              "for:: user component (left of '@') must not be empty".to_string(),
-            ) );
-          }
-          if mch.is_empty()
-          {
-            return Err( ErrorData::new(
-              ErrorCode::ArgumentTypeMismatch,
-              "for:: machine component (right of '@') must not be empty".to_string(),
-            ) );
-          }
-          let su = san( usr );
-          let sm = san( mch );
-          ( format!( "_active_{sm}_{su}" ), format!( "{su}@{sm}" ) )
+            "owner::USER@MACHINE requires name:: to specify the target account".to_string(),
+          ) );
         }
-        _ =>
-        {
-          let user    = std::env::var( "USER" )
-            .or_else( |_| std::env::var( "USERNAME" ) )
-            .unwrap_or_else( |_| "user".to_string() );
-          let machine = crate::account::resolve_hostname();
-          let su = san( &user );
-          let sm = san( &machine );
-          ( format!( "_active_{sm}_{su}" ), format!( "{su}@{sm}" ) )
-        }
-      };
-      if params.trace { eprintln!( "[trace] usage assign  marker: {marker}" ) }
-
-      if is_dry( &cmd )
-      {
-        return Ok( OutputData::new(
-          format!( "[dry-run] would assign {name_arg} for {for_display}  \u{2192}  {marker}\n" ),
-          "text",
-        ) );
-      }
-
-      std::fs::write( credential_store.join( &marker ), name_arg.as_bytes() )
-        .map_err( | e | io_err_to_error_data( &e, "usage assign" ) )?;
-
-      return Ok( OutputData::new(
-        format!( "Assigned {name_arg} for {for_display}  \u{2192}  {marker}\n" ),
-        "text",
-      ) );
-    }
-
-    if unclaim_flag
-    {
-      let force = params.force;
-
-      let raw_name = match cmd.arguments.get( "name" )
-      {
-        Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
-        _ => String::new(),
-      };
-
-      if raw_name.is_empty()
-      {
+        // Batch-clear all accounts currently owned by this identity.
+        // Unowned and foreign-owned accounts are skipped with a "skip" message (AC-09).
         let all_accounts = crate::account::list( &credential_store )
           .map_err( |e| ErrorData::new(
             ErrorCode::InternalError,
             format!( "cannot read credential store: {e}" ),
           ) )?;
         let mut out = String::new();
-        for a in &all_accounts
+        for acct in &all_accounts
         {
-          let owner = crate::account::read_owner( &credential_store, &a.name );
-          if owner.is_empty() { continue; }
-          if !force && !crate::account::is_owned( &owner )
+          let json_path = credential_store.join( format!( "{}.json", acct.name ) );
+          // No metadata file → silently skip (no ownership info to act on).
+          if !json_path.exists() { continue; }
+          let acct_owner = crate::account::read_owner( &credential_store, &acct.name );
+          if acct_owner.is_empty()
           {
-            use core::fmt::Write as _;
-            let _ = writeln!( out, "skip {}: owned by {owner}", a.name );
+            // Unowned — nothing to clear; skip with message (AC-09).
+            writeln!( out, "skip {}", acct.name ).unwrap();
             continue;
           }
-          if is_dry( &cmd )
+          if !force && !crate::account::is_owned( &acct_owner )
           {
-            use core::fmt::Write as _;
-            let _ = writeln!( out, "[dry-run] would unclaim {}", a.name );
+            // Owned by another identity — skip with message (AC-09).
+            if params.trace { eprintln!( "[trace] usage owner  batch-skip (foreign owner): {}  owner={acct_owner}", acct.name ) }
+            writeln!( out, "skip {}", acct.name ).unwrap();
             continue;
           }
-          crate::account::write_owner( &a.name, &credential_store, "" )
-            .map_err( |e| io_err_to_error_data( &e, "usage unclaim" ) )?;
-          use core::fmt::Write as _;
-          let _ = writeln!( out, "unclaimed {}", a.name );
+          if is_dry_run
+          {
+            writeln!( out, "[dry-run] would clear owner of {}", acct.name ).unwrap();
+            continue;
+          }
+          crate::account::write_owner( &acct.name, &credential_store, "" )
+            .map_err( |e| io_err_to_error_data( &e, "usage owner batch-clear" ) )?;
+          if params.trace { eprintln!( "[trace] usage owner  cleared: {}  was={acct_owner}", acct.name ) }
+          writeln!( out, "unclaimed {}", acct.name ).unwrap();
         }
-        if out.is_empty() { out.push_str( "no owned accounts to unclaim\n" ); }
         return Ok( OutputData::new( out, "text" ) );
       }
 
-      let name_arg = resolve_account_name( &raw_name, &credential_store )?;
-      let json_path = credential_store.join( format!( "{name_arg}.json" ) );
-      if !json_path.exists()
+      // name:: present — resolve each component (comma-list supported for owner:: ops).
+      let target_names : Vec< String > = if raw_name.contains( ',' )
       {
-        return Err( ErrorData::new(
-          ErrorCode::InternalError,
-          format!( "account not found: {name_arg}" ),
-        ) );
+        raw_name.split( ',' )
+          .map( | part | resolve_account_name( part.trim(), &credential_store ) )
+          .collect::< Result< Vec< _ >, _ > >()?
       }
+      else
+      {
+        vec![ name_arg ]
+      };
 
-      let owner = crate::account::read_owner( &credential_store, &name_arg );
-      if !force && !crate::account::is_owned( &owner )
+      let mut out = String::new();
+      for name in &target_names
       {
-        return Err( ErrorData::new(
-          ErrorCode::ArgumentTypeMismatch,
-          format!( "ownership violation: this account is owned by {owner}" ),
-        ) );
+        let json_path = credential_store.join( format!( "{name}.json" ) );
+        if !json_path.exists()
+        {
+          return Err( ErrorData::new(
+            ErrorCode::InternalError,
+            format!( "account not found: {name}" ),
+          ) );
+        }
+        // G8 ownership gate — evaluated per account, even in dry-run (AC-16/AC-17).
+        let acct_owner = crate::account::read_owner( &credential_store, name );
+        if !force && !crate::account::is_owned( &acct_owner )
+        {
+          return Err( ErrorData::new(
+            ErrorCode::ArgumentTypeMismatch,
+            format!( "ownership violation: {name} is owned by {acct_owner}" ),
+          ) );
+        }
+        if is_dry_run
+        {
+          if is_sentinel
+          {
+            writeln!( out, "[dry-run] would clear owner of {name}" ).unwrap();
+          }
+          else
+          {
+            writeln!( out, "[dry-run] would set owner of {name} to {ov}" ).unwrap();
+          }
+          continue;
+        }
+        let new_owner = if is_sentinel { "" } else { ov.as_str() };
+        crate::account::write_owner( name, &credential_store, new_owner )
+          .map_err( |e| io_err_to_error_data( &e, "usage owner" ) )?;
+        if params.trace
+        {
+          eprintln!( "[trace] usage owner  write_owner: OK  name={name} identity={}", if is_sentinel { "(cleared)" } else { ov } );
+        }
+        if is_sentinel
+        {
+          writeln!( out, "unclaimed {name}" ).unwrap();
+        }
+        else
+        {
+          writeln!( out, "owned {name} by {ov}" ).unwrap();
+        }
       }
-
-      if is_dry( &cmd )
-      {
-        return Ok( OutputData::new( format!( "[dry-run] would unclaim {name_arg}\n" ), "text" ) );
-      }
-
-      crate::account::write_owner( &name_arg, &credential_store, "" )
-        .map_err( |e| io_err_to_error_data( &e, "usage unclaim" ) )?;
-      if params.trace { eprintln!( "[trace] usage unclaim  write_owner: OK  name={name_arg}" ) }
-
-      return Ok( OutputData::new( format!( "unclaimed {name_arg}\n" ), "text" ) );
-    }
-
-    // ── owner:: explicit ownership assignment (Feature 063) ───────────────────
-    if let Some( ref ov ) = owner_value
-    {
-      let name_arg = resolve_account_name( &raw_name_for_owner, &credential_store )?;
-      let json_path = credential_store.join( format!( "{name_arg}.json" ) );
-      if !json_path.exists()
-      {
-        return Err( ErrorData::new(
-          ErrorCode::InternalError,
-          format!( "account not found: {name_arg}" ),
-        ) );
-      }
-      // G8 ownership gate.
-      let owner = crate::account::read_owner( &credential_store, &name_arg );
-      if !params.force && !crate::account::is_owned( &owner )
-      {
-        return Err( ErrorData::new(
-          ErrorCode::ArgumentTypeMismatch,
-          format!( "ownership violation: this account is owned by {owner}" ),
-        ) );
-      }
-      if is_dry( &cmd )
-      {
-        return Ok( OutputData::new(
-          format!( "[dry-run] would set owner of {name_arg} to {ov}\n" ), "text",
-        ) );
-      }
-      crate::account::write_owner( &name_arg, &credential_store, ov )
-        .map_err( |e| io_err_to_error_data( &e, "usage owner" ) )?;
-      if params.trace { eprintln!( "[trace] usage owner  write_owner: OK  name={name_arg} identity={ov}" ) }
-      return Ok( OutputData::new( format!( "owned {name_arg} by {ov}\n" ), "text" ) );
+      return Ok( OutputData::new( out, "text" ) );
     }
   }
 

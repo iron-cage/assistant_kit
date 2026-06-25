@@ -322,9 +322,10 @@ fn e29_clr_subdir_sets_effective_dir()
   );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
+  let sep = std::path::MAIN_SEPARATOR;
   assert!(
-    stdout.contains( "/-feature" ),
-    "CLR_SUBDIR=feature must produce path ending in /-feature: {stdout}",
+    stdout.contains( &format!( "{sep}-feature" ) ),
+    "CLR_SUBDIR=feature must produce path ending in {sep}-feature: {stdout}",
   );
   // CLI-wins: --subdir build must take precedence over CLR_SUBDIR=debug
   let out2 = run_cli_with_env(
@@ -334,11 +335,11 @@ fn e29_clr_subdir_sets_effective_dir()
   assert!( out2.status.success(), "CLI --subdir with CLR_SUBDIR must exit 0: {out2:?}" );
   let stdout2 = String::from_utf8_lossy( &out2.stdout );
   assert!(
-    stdout2.contains( "/-build" ),
+    stdout2.contains( &format!( "{sep}-build" ) ),
     "CLI --subdir build must win over CLR_SUBDIR=debug: {stdout2}",
   );
   assert!(
-    !stdout2.contains( "/-debug" ),
+    !stdout2.contains( &format!( "{sep}-debug" ) ),
     "CLR_SUBDIR=debug must be suppressed by CLI --subdir: {stdout2}",
   );
 }
@@ -420,13 +421,10 @@ fn bug233_clr_subdir_slash_silently_ignored()
   );
   assert!( out.status.success(), "must exit 0 even with invalid CLR_SUBDIR: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
+  let sep = std::path::MAIN_SEPARATOR;
   assert!(
-    !stdout.contains( "/-a/b" ),
-    "CLR_SUBDIR=a/b must be silently ignored — no /-a/b in output: {stdout}",
-  );
-  assert!(
-    !stdout.contains( "/-a" ),
-    "CLR_SUBDIR=a/b must not be partially applied: {stdout}",
+    !stdout.contains( &format!( "{sep}-a" ) ),
+    "CLR_SUBDIR=a/b must be silently ignored — no {sep}-a in output: {stdout}",
   );
 }
 

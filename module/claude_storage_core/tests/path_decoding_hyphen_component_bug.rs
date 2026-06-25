@@ -40,6 +40,7 @@
 //!
 //! The fix requires look-ahead logic to determine if a hyphen is a component separator
 //! or part of the component name.
+#![ cfg( unix ) ]
 
 use claude_storage_core::decode_path;
 

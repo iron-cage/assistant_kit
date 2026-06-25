@@ -456,9 +456,10 @@ fn s81_default_no_subdir_no_hyphen_prefix()
   let out = run_cli( &[ "--dry-run", "task" ] );
   assert!( out.status.success(), "must exit 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
+  let sep = std::path::MAIN_SEPARATOR;
   assert!(
-    !stdout.contains( "/-" ),
-    "without --subdir, no /- path component must appear. Got:\n{stdout}"
+    !stdout.contains( &format!( "{sep}-" ) ),
+    "without --subdir, no {sep}- path component must appear. Got:\n{stdout}"
   );
 }
 
@@ -469,9 +470,10 @@ fn s82_subdir_name_appends_hyphen_prefix()
   let out = run_cli( &[ "--dry-run", "--subdir", "build", "task" ] );
   assert!( out.status.success(), "must exit 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
+  let sep = std::path::MAIN_SEPARATOR;
   assert!(
-    stdout.contains( "/-build" ),
-    "--subdir build must produce path ending in /-build. Got:\n{stdout}"
+    stdout.contains( &format!( "{sep}-build" ) ),
+    "--subdir build must produce path ending in {sep}-build. Got:\n{stdout}"
   );
 }
 
@@ -482,9 +484,10 @@ fn s83_subdir_dot_identity_no_suffix()
   let out = run_cli( &[ "--dry-run", "--subdir", ".", "task" ] );
   assert!( out.status.success(), "must exit 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
+  let sep = std::path::MAIN_SEPARATOR;
   assert!(
-    !stdout.contains( "/-" ),
-    "--subdir . must not append any /- suffix. Got:\n{stdout}"
+    !stdout.contains( &format!( "{sep}-" ) ),
+    "--subdir . must not append any {sep}- suffix. Got:\n{stdout}"
   );
 }
 
@@ -502,6 +505,7 @@ fn s84_help_lists_subdir()
 }
 
 // S85: `--subdir NAME` + `--dir PATH` → effective dir is `PATH/-NAME` (`28_subdir.md` EC-5)
+#[ cfg( unix ) ]
 #[ test ]
 fn s85_subdir_with_dir_combined()
 {
@@ -539,9 +543,10 @@ fn s86_subdir_empty_string_is_identity()
   let out = run_cli( &[ "--dry-run", "--subdir", "", "task" ] );
   assert!( out.status.success(), "must exit 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
+  let sep = std::path::MAIN_SEPARATOR;
   assert!(
-    !stdout.contains( "/-" ),
-    "--subdir '' (empty) must be identity — no /- suffix. Got:\n{stdout}"
+    !stdout.contains( &format!( "{sep}-" ) ),
+    "--subdir '' (empty) must be identity — no {sep}- suffix. Got:\n{stdout}"
   );
 }
 

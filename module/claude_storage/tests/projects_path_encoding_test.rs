@@ -20,6 +20,7 @@
 //! Note: IT-60..IT-64 follow IT-59 (`scope::around` tests in `projects_scope_around_test.rs`).
 //! IT-27..IT-30 were already allocated in `tests/docs/cli/command/007_projects.md`
 //! for unrelated tests, so the next available block was used here.
+#![ cfg( unix ) ]
 
 mod common;
 

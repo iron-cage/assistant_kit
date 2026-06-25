@@ -33,10 +33,33 @@ fn account_rotate_redirector( _cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   ) )
 }
 
+/// REMOVED redirector: `.account.assign` exits 1 with migration notice.
+///
+/// Assignment moved to `assignee::USER@MACHINE name::X` on `.accounts`/`.usage` (Feature 065).
+fn account_assign_redirector( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  Err( ErrorData::new(
+    ErrorCode::ArgumentTypeMismatch,
+    "'.account.assign' is removed — use 'assignee::USER@MACHINE name::X' (or 'assignee::0 name::X' for current machine) on '.accounts' or '.usage' instead".to_string(),
+  ) )
+}
+
+/// REMOVED redirector: `.account.unclaim` exits 1 with migration notice.
+///
+/// Unclaim moved to `owner::0 name::X` on `.accounts`/`.usage` (Feature 063/037).
+fn account_unclaim_redirector( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  Err( ErrorData::new(
+    ErrorCode::ArgumentTypeMismatch,
+    "'.account.unclaim' is removed — use 'owner::0 name::X' (or 'owner::0' alone to batch-clear) on '.accounts' or '.usage' instead".to_string(),
+  ) )
+}
+
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 14 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set, token status, paths, usage).
+/// Registers 16 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set, token status, paths, usage).
 /// `.account.rotate` is registered as a deprecated redirector (always exits 1 with migration notice).
+/// `.account.assign` and `.account.unclaim` are registered as removed redirectors (always exits 1 with migration notice pointing to Feature 065/037 replacements).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -92,12 +115,14 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       trc(),
       fmt(),
       // Mutation params
-      bfs( "assign",  "Write per-machine active marker (1 = write; 0 = off, default); when name:: absent, emits usage block" ),
-      bfs( "unclaim", "Release ownership of named account (1 = unclaim; 0 = off, default); when name:: absent, batch-unclaims filtered set" ),
-      reg_arg_opt( "owner", Kind::String ).with_description( "Set account ownership to USER@MACHINE identity; requires name::; mutually exclusive with unclaim::1" ),
-      bfs( "force",   "Bypass G8 ownership gate on unclaim::1 or owner:: (default 0)" ),
+      bfd( "assign",  "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
+      bfd( "unclaim", "REMOVED — use owner::0 name::X instead (or owner::0 alone to batch-clear)" ),
+      reg_arg_opt( "owner", Kind::String ).with_description( "Set or clear account ownership: USER@MACHINE identity to set; sentinel value \"0\" clears ownership (owner::0)" ),
+      bfs( "force",   "Bypass G8 ownership gate on owner:: (default 0)" ),
       reg_arg_opt( "cols", Kind::String ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default set: account, owner, active, current, sub, tier, expires, email" ),
-      reg_arg_opt( "for",  Kind::String ).with_description( "Target identity as USER@MACHINE for assign::1 (default: current $USER@hostname)" ),
+      bfs( "for",     "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
+      bfs( "active",  "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
+      reg_arg_opt( "assignee", Kind::String ).with_description( "USER@MACHINE (or sentinel \"0\" = $USER@$HOSTNAME) assign/unassign active-account marker; Feature 065" ),
       // Unified display/query params (same set as .usage; defaults differ)
       reg_arg_opt( "refresh",           Kind::Integer ).with_description( "Attempt OAuth token refresh for expired credentials via subprocess (0 = off, default; 1 = enabled)" ),
       reg_arg_opt( "touch",             Kind::String  ).with_description( "Extend active 5h session windows via subprocess (0/false = off, default; 1/true = on)" ),
@@ -124,7 +149,6 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "jitter",            Kind::Integer ).with_description( "Max random seconds added to interval (0 = none, default)" ),
       // Legacy field-toggle params (removed by Feature 037; kept registered so the routine
       // can emit a helpful cols:: migration message instead of a generic framework error).
-      bfd( "active",       "REMOVED — use cols::-active instead"       ),
       bfd( "current",      "REMOVED — use cols::-current instead"      ),
       bfd( "sub",          "REMOVED — use cols::-sub instead"          ),
       bfd( "tier",         "REMOVED — use cols::-tier instead"         ),
@@ -187,7 +211,9 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       trc(),
     ],
     Box::new( account_renewal_routine ) );
-  reg_cmd( registry, ".account.rotate", "DEPRECATED — use '.usage rotate::1' for strategy-driven account rotation",        vec![],               Box::new( account_rotate_redirector ) );
+  reg_cmd( registry, ".account.rotate",  "DEPRECATED — use '.usage rotate::1' for strategy-driven account rotation",                                          vec![], Box::new( account_rotate_redirector  ) );
+  reg_cmd( registry, ".account.assign",  "REMOVED — use 'assignee::USER@MACHINE name::X' on '.accounts' or '.usage' instead (Feature 065)",                 vec![ nam(), dry(), trc() ], Box::new( account_assign_redirector  ) );
+  reg_cmd( registry, ".account.unclaim", "REMOVED — use 'owner::0 name::X' (or 'owner::0' alone to batch-clear) on '.accounts' or '.usage' instead",        vec![ nam(), dry(), trc() ], Box::new( account_unclaim_redirector ) );
   reg_cmd( registry, ".account.inspect", "Show identity, subscription, and org fields for one account via live endpoints",
     vec![
       nam(),
@@ -243,11 +269,13 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       // Mutation params (Feature 037 — unified with .accounts)
       nam(),
       dry(),
-      bfs( "assign",  "Write per-machine active marker (1 = write; 0 = off, default); when name:: absent, emits usage block" ),
-      bfs( "unclaim", "Release ownership of named account (1 = unclaim; 0 = off, default); when name:: absent, batch-unclaims filtered set" ),
-      reg_arg_opt( "owner", Kind::String ).with_description( "Set account ownership to USER@MACHINE identity; requires name::; mutually exclusive with unclaim::1" ),
-      bfs( "force",   "Bypass ownership gate: G5 on rotate::1, G8 on unclaim::1 or owner:: (default 0)" ),
-      reg_arg_opt( "for", Kind::String ).with_description( "Target identity as USER@MACHINE for assign::1 (default: current $USER@hostname)" ),
+      bfd( "assign",  "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
+      bfd( "unclaim", "REMOVED — use owner::0 name::X instead (or owner::0 alone to batch-clear)" ),
+      reg_arg_opt( "owner", Kind::String ).with_description( "Set or clear account ownership: USER@MACHINE identity to set; sentinel value \"0\" clears ownership (owner::0)" ),
+      bfs( "force",   "Bypass G8 ownership gate on owner:: (default 0)" ),
+      bfs( "for",     "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
+      bfs( "active",  "REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)" ),
+      reg_arg_opt( "assignee", Kind::String ).with_description( "USER@MACHINE (or sentinel \"0\" = $USER@$HOSTNAME) assign/unassign active-account marker; Feature 065" ),
       // Rotation param (Feature 038)
       reg_arg_opt( "rotate", Kind::Integer ).with_description( "Switch to the → winner after rendering the quota table (0 = off, default; 1 = on); mutually exclusive with live::1" ),
       // Sessions table visibility (Plan 022)

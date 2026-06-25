@@ -8,13 +8,16 @@ Identifies the target account. Accepted as an explicit `name::EMAIL` pair, as a 
 - **Prefix resolution:** When the supplied value contains no `@`, it is matched as a prefix against saved account names. The first alphabetically sorted match is used. If zero or multiple accounts match, the command exits 1 with a disambiguation error.
 - **Purpose:** Selects the target credential file at `{credential_store}/{email}.credentials.json`. Name validation matches the library's `account::validate_name()` rules. An invalid name exits 1; a valid but unknown name exits 2.
 
+**Comma-list for batch `owner::` operations (Feature 064):** When used with `owner::USER@MACHINE` or `owner::0`, `name::` accepts a comma-separated list to operate on multiple accounts in one invocation: `name::X,Y,Z`. Each account is resolved independently using the same rules (explicit email, prefix, or bare `@`-containing value). Comma-list is NOT supported for other params — `assignee::` explicitly has no batch mode.
+
 **Examples:**
 
 ```text
-name::alice@acme.com   → explicit form → {credential_store}/alice@acme.com.credentials.json
-alice@acme.com         → positional form (bare arg after command) → same as above
-alice                  → prefix form → resolves to first saved account starting with "alice"
-car                    → prefix form → resolves to e.g. carol@example.com
+name::alice@acme.com             → explicit form → {credential_store}/alice@acme.com.credentials.json
+alice@acme.com                   → positional form (bare arg after command) → same as above
+alice                            → prefix form → resolves to first saved account starting with "alice"
+car                              → prefix form → resolves to e.g. carol@example.com
+name::alice@a.com,bob@b.com,car  → comma-list form (batch owner:: only) → resolves 3 accounts
 ```
 
 ### Referenced Type

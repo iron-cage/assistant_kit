@@ -70,6 +70,13 @@
 //! | acc48 | `acc48_org_name_missing_roles_json_na` | `cols::+org_name`, no roles.json → Org: N/A | P |
 //! | acc49 | `acc49_accounts_host_role_shows_profile_metadata` | `cols::+host,+role` → Host/Role from profile.json | P |
 //! | acc50 | `acc50_accounts_host_no_profile_json_exits_0` | absent profile.json → no non-zero exit, Host: N/A | P |
+//! | `mre_324_a` | `mre_324_role_toggle_shows_user_label` | `cols::+role` → user-defined label from `{name}.json`, not org role | P |
+//! | `mre_324_b` | `mre_324_host_role_na_when_metadata_absent` | `cols::+host,+role`, no snapshot → Host/Role both N/A | P |
+//! | `mre_324_c` | `mre_324_json_output_keys` | `format::json` → canonical AC-12 keys; no `profile_host`/`profile_role` | P |
+//! | `mre_324_d` | `mre_324_json_owner_is_owned_values` | `format::json` → correct `owner`/`is_owned` values (AC-20) | P |
+//! | `mre_324_e` | `mre_324_json_renewal_at_values` | `format::json` → correct `renewal_at` value and null (AC-21) | P |
+//! | `mre_324_f` | `mre_324_json_is_owned_false_for_foreign_owner` | `format::json` → `is_owned: false` when owner is a foreign identity | P |
+//! | `mre_324_g` | `mre_324_json_host_role_org_role_values` | `format::json` → correct `host`, `role`, `organization_role` VALUES | P |
 //!
 //! ### FT — Feature 037 Param Unification Tests
 //!
@@ -78,8 +85,10 @@
 //! | ft01 | `ft01_accounts_accepts_32_params` | `.accounts` accepts all 32 registered params without error | P |
 //! | ft03 | `ft03_accounts_default_profile` | `.accounts` default output includes Owner column | P |
 //! | ft07 | `ft07_accounts_unclaim_batch` | `unclaim::1` no name → clears all owned accounts, exits 0 | P |
-//! | ft11 | `ft11_account_unclaim_fully_deregistered` | `.account.unclaim` → exit 1 + generic error, no migration hint | N |
-//! | ft12 | `ft12_account_assign_fully_deregistered` | `.account.assign` → exit 1 + generic error, no migration hint | N |
+//! | ft11 | `ft11_account_unclaim_fully_deregistered` | `.account.unclaim name::X` → exit 1 + targeted `owner::0` migration hint | N |
+//! | ft11b | `ft11b_account_unclaim_no_args` | `.account.unclaim` (no args) → exit 1 + `owner::0` migration hint | N |
+//! | ft12 | `ft12_account_assign_fully_deregistered` | `.account.assign name::X` → exit 1 + targeted `assignee::` migration hint | N |
+//! | ft12b | `ft12b_account_assign_no_args` | `.account.assign` (no args) → exit 1 + `assignee::` migration hint | N |
 //! | ft13 | `ft13_accounts_legacy_toggles_rejected` | removed toggle param → exit 1 + migration message | N |
 //! | ft14 | `ft14_accounts_cols_modifier` | `cols::+display_name` → Display: line present | P |
 //! | ft15 | `lim_it_ft15_accounts_refresh_live` | `refresh::1` with live token → account appears in output | P |
@@ -95,7 +104,7 @@ use crate::cli_runner::{
   write_account, write_account_with_token, write_credentials, write_claude_json_full, write_settings_json,
   write_account_claude_json, write_account_settings_json, write_live_credentials_with_token,
   write_account_claude_json_extended, write_account_roles_json, write_account_profile_json,
-  write_account_owner, live_active_token, require_live_api,
+  write_account_owner, write_account_renewal_json, live_active_token, require_live_api,
   FAR_FUTURE_MS, PAST_MS,
 };
 use tempfile::TempDir;
@@ -1552,9 +1561,9 @@ fn ft01_accounts_accepts_32_params()
   );
   assert_exit( &out, 0 );
 
-  // assign/unclaim/force/for accepted; dry::1 suppresses writes.
+  // assignee:: + name:: + dry::1 accepted (Feature 065 ownership mutation).
   let out = run_cs_with_env(
-    &[ ".accounts", "assign::1", "name::alice@acme.com", "dry::1" ],
+    &[ ".accounts", "assignee::testuser@testmachine", "name::alice@acme.com", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -1628,7 +1637,7 @@ fn ft07_accounts_unclaim_batch()
   write_account_owner( dir.path(), "bob@acme.com", "other@remote" );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "unclaim::1" ],
+    &[ ".accounts", "owner::0" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 0 );
@@ -1662,11 +1671,11 @@ fn ft07_accounts_unclaim_batch()
 }
 
 #[ test ]
-/// FT-11 (AC-11): `.account.unclaim` is fully deregistered — generic "unknown command" error, no migration hint.
+/// FT-11 (AC-11): `.account.unclaim` is a removed redirector — exits 1 with targeted `owner::0` migration hint.
 ///
-/// `.account.unclaim` was removed in Feature 037 with no redirect stub.
-/// Calling it is indistinguishable from calling any other unregistered command:
-/// exits 1 with a generic error; stderr must NOT contain `"unclaim::1"` or `"moved to"`.
+/// `.account.unclaim` was removed in Feature 037. A redirect stub registered in Feature 037
+/// ensures the error message points users to `owner::0 name::X` rather than a generic
+/// "unknown command" message.
 ///
 /// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-11]
 fn ft11_account_unclaim_fully_deregistered()
@@ -1679,17 +1688,17 @@ fn ft11_account_unclaim_fully_deregistered()
     "FT-11: .account.unclaim must produce a non-empty error on stderr",
   );
   assert!(
-    !err.contains( "unclaim::1" ) && !err.contains( "moved to" ),
-    "FT-11: error must be generic (no migration hint to .accounts unclaim::1); got:\n{err}",
+    err.contains( "owner::0" ),
+    "FT-11: error must contain 'owner::0' migration hint; got:\n{err}",
   );
 }
 
 #[ test ]
-/// FT-12 (AC-12): `.account.assign` is fully deregistered — generic "unknown command" error, no migration hint.
+/// FT-12 (AC-12): `.account.assign` is a removed redirector — exits 1 with targeted `assignee::` migration hint.
 ///
-/// `.account.assign` was removed in Feature 037 with no redirect stub.
-/// Calling it is indistinguishable from calling any other unregistered command:
-/// exits 1 with a generic error; stderr must NOT contain `"assign::1"` or `"moved to"`.
+/// `.account.assign` was removed in Feature 037. A redirect stub registered in Feature 037
+/// ensures the error message points users to `assignee::USER@MACHINE name::X` (Feature 065)
+/// rather than a generic "unknown command" message.
 ///
 /// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-12]
 fn ft12_account_assign_fully_deregistered()
@@ -1702,8 +1711,40 @@ fn ft12_account_assign_fully_deregistered()
     "FT-12: .account.assign must produce a non-empty error on stderr",
   );
   assert!(
-    !err.contains( "assign::1" ) && !err.contains( "moved to" ),
-    "FT-12: error must be generic (no migration hint to .accounts assign::1); got:\n{err}",
+    err.contains( "assignee::" ),
+    "FT-12: error must contain 'assignee::' migration hint; got:\n{err}",
+  );
+}
+
+#[ test ]
+/// FT-11b: `.account.unclaim` with no arguments still exits 1 with `owner::0` migration hint.
+///
+/// The redirect stub ignores all arguments and always returns the migration error — this
+/// verifies the zero-arg case is also covered.
+fn ft11b_account_unclaim_no_args()
+{
+  let out = run_cs( &[ ".account.unclaim" ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "owner::0" ),
+    "FT-11b: .account.unclaim (no args) must reference 'owner::0' migration hint; got:\n{err}",
+  );
+}
+
+#[ test ]
+/// FT-12b: `.account.assign` with no arguments still exits 1 with `assignee::` migration hint.
+///
+/// The redirect stub ignores all arguments and always returns the migration error — this
+/// verifies the zero-arg case is also covered.
+fn ft12b_account_assign_no_args()
+{
+  let out = run_cs( &[ ".account.assign" ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "assignee::" ),
+    "FT-12b: .account.assign (no args) must reference 'assignee::' migration hint; got:\n{err}",
   );
 }
 
@@ -1720,8 +1761,9 @@ fn ft13_accounts_legacy_toggles_rejected()
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
 
+  // "active" removed from this list — Feature 065 renamed it to assignee:: (REMOVED_TOGGLE; bfs Kind::String).
   let toggles = [
-    "active", "current", "sub", "tier", "expires", "email",
+    "current", "sub", "tier", "expires", "email",
     "display_name", "host", "role", "billing", "model",
     "uuid", "capabilities", "org_uuid", "org_name",
   ];
@@ -1860,14 +1902,14 @@ fn ft20_accounts_unclaim_force_bypasses_g8()
 
   // Without force: G8 blocks.
   let out_blocked = run_cs_with_env(
-    &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
+    &[ ".accounts", "owner::0", "name::alice@acme.com" ],
     &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
   );
   assert_exit( &out_blocked, 1 );
 
   // With force::1: G8 bypassed.
   let out = run_cs_with_env(
-    &[ ".accounts", "unclaim::1", "name::alice@acme.com", "force::1" ],
+    &[ ".accounts", "owner::0", "name::alice@acme.com", "force::1" ],
     &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "local" ) ],
   );
   assert_exit( &out, 0 );
@@ -1909,17 +1951,17 @@ fn ft21_force_no_effect_without_unclaim()
     );
   }
 
-  // Case B: force + assign → marker written, no error.
+  // Case B: force + assignee:: → marker written, no error (force is silently ignored on assignee::).
   {
     let out = run_cs_with_env(
-      &[ ".accounts", "force::1", "assign::1", "name::alice@acme.com" ],
+      &[ ".accounts", "force::1", "assignee::testuser@testmachine", "name::alice@acme.com" ],
       &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
     );
     assert_exit( &out, 0 );
 
     let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
     let marker = std::fs::read_to_string( store.join( "_active_testmachine_testuser" ) )
-      .expect( "FT-21B: marker must be written with force::1 + assign::1" );
+      .expect( "FT-21B: marker must be written with force::1 + assignee::testuser@testmachine" );
     assert_eq!( marker.trim(), "alice@acme.com", "FT-21B: marker must contain alice@acme.com" );
   }
 }
@@ -1953,7 +1995,7 @@ fn it_batch_unclaim_force_clears_non_owned()
   // carol: no owner written → empty owner → not touched by unclaim
 
   let out = run_cs_with_env(
-    &[ ".accounts", "unclaim::1", "force::1" ],
+    &[ ".accounts", "owner::0", "force::1" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 0 );
@@ -1969,7 +2011,7 @@ fn it_batch_unclaim_force_clears_non_owned()
   );
   assert!(
     !text.contains( "carol" ),
-    "it_batch_unclaim_force: carol (unowned) must not appear in output; got:\n{text}",
+    "it_batch_unclaim_force: carol (no .json) must not appear in output; got:\n{text}",
   );
 
   let store    = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
@@ -2010,7 +2052,7 @@ fn it_batch_unclaim_force_dry_previews_all()
   write_account( dir.path(), "carol@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
 
   let out = run_cs_with_env(
-    &[ ".accounts", "unclaim::1", "force::1", "dry::1" ],
+    &[ ".accounts", "owner::0", "force::1", "dry::1" ],
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 0 );
@@ -2041,5 +2083,309 @@ fn it_batch_unclaim_force_dry_previews_all()
     bob_val[ "owner" ].as_str().unwrap_or( "MISSING" ),
     "other@remote",
     "it_batch_unclaim_force_dry: bob.json owner must NOT be cleared in dry mode",
+  );
+}
+
+// ── mre_324: Account struct field alignment (TSK-324) ────────────────────────
+
+/// `mre_324_a` — `cols::+role` shows user-defined label from `{name}.json` `role` field.
+///
+/// After TSK-324, `Account.role` holds the user-defined label from `{name}.json`
+/// top-level `"role"` key (previously `profile_role`). `Account.org_role` holds
+/// the Roles API value. `cols::+role` must show the user label, not the org role.
+///
+/// Spec: [`docs/feature/003_account_list.md` AC-10]
+#[ test ]
+fn mre_324_role_toggle_shows_user_label()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account_profile_json( dir.path(), "test@example.com", None, Some( "work" ) );
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "cols::+role" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Role:    work" ),
+    "cols::+role must show user-defined label from {{name}}.json role field, got:\n{text}",
+  );
+}
+
+// ── mre_324_b ─────────────────────────────────────────────────────────────────
+
+/// `mre_324_b` — `cols::+host,+role` both show `N/A` when no `{name}.json` exists.
+///
+/// When no metadata snapshot is present, `Account.host` and `Account.role` are
+/// both empty strings; the text renderer falls back to `N/A` for each.
+///
+/// Spec: [`docs/feature/003_account_list.md` AC-11]
+#[ test ]
+fn mre_324_host_role_na_when_metadata_absent()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  // No {name}.json written — host and role must degrade gracefully.
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "cols::+host,+role" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Host:    N/A" ),
+    "absent profile.json must show Host: N/A, got:\n{text}",
+  );
+  assert!(
+    text.contains( "Role:    N/A" ),
+    "absent profile.json must show Role: N/A, got:\n{text}",
+  );
+}
+
+// ── mre_324_c ─────────────────────────────────────────────────────────────────
+
+/// `mre_324_c` — `format::json` emits AC-12 canonical key set; no legacy keys.
+///
+/// After TSK-324, JSON output must include `"organization_role"`, `"host"`,
+/// `"owner"`, `"is_owned"`, `"renewal_at"` and must NOT include the removed
+/// `"profile_host"` or `"profile_role"` keys.
+///
+/// Spec: [`docs/feature/003_account_list.md` AC-12]
+#[ test ]
+fn mre_324_json_output_keys()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account_profile_json( dir.path(), "test@example.com", Some( "mybox" ), Some( "work" ) );
+  write_account_owner( dir.path(), "test@example.com", "testuser@testmachine" );
+  write_account_renewal_json( dir.path(), "test@example.com", "2026-08-01T00:00:00Z" );
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"organization_role\"" ), "JSON must include organization_role key, got:\n{text}" );
+  assert!( text.contains( "\"host\""              ), "JSON must include host key, got:\n{text}"              );
+  assert!( text.contains( "\"owner\""             ), "JSON must include owner key, got:\n{text}"             );
+  assert!( text.contains( "\"is_owned\""          ), "JSON must include is_owned key, got:\n{text}"          );
+  assert!( text.contains( "\"renewal_at\""        ), "JSON must include renewal_at key, got:\n{text}"        );
+  assert!( !text.contains( "\"profile_host\""     ), "JSON must NOT include profile_host key, got:\n{text}"  );
+  assert!( !text.contains( "\"profile_role\""     ), "JSON must NOT include profile_role key, got:\n{text}"  );
+}
+
+// ── mre_324_d ─────────────────────────────────────────────────────────────────
+
+/// `mre_324_d` — `format::json` emits correct `owner` and `is_owned` VALUES per account.
+///
+/// AC-20: Account A with `owner` matching current identity → `is_owned: true`;
+/// Account B with no owner field → `owner: ""` and `is_owned: true` (unowned = all-owned).
+///
+/// Spec: [`tests/docs/feature/03_account_list.md` FT-20]
+#[ test ]
+fn mre_324_json_owner_is_owned_values()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Account A: owned by testuser@testmachine (matches identity set via env vars below)
+  write_account( dir.path(), "alice@acme.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "testuser@testmachine" );
+
+  // Account B: no owner field → unowned = owned by all
+  write_account( dir.path(), "bob@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "format::json" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  let arr : serde_json::Value = serde_json::from_str( &text )
+    .expect( "format::json must produce valid JSON" );
+  let arr = arr.as_array().expect( "JSON root must be an array" );
+
+  let alice = arr.iter()
+    .find( |v| v[ "name" ].as_str() == Some( "alice@acme.com" ) )
+    .expect( "alice@acme.com must appear in JSON output" );
+  assert_eq!(
+    alice[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "testuser@testmachine",
+    "FT-20: alice owner value must be 'testuser@testmachine'; got:\n{text}",
+  );
+  assert!(
+    alice[ "is_owned" ].as_bool().unwrap_or( false ),
+    "FT-20: alice is_owned must be true (owner matches identity); got:\n{text}",
+  );
+
+  let bob = arr.iter()
+    .find( |v| v[ "name" ].as_str() == Some( "bob@acme.com" ) )
+    .expect( "bob@acme.com must appear in JSON output" );
+  assert_eq!(
+    bob[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "",
+    "FT-20: bob owner must be empty string (no owner field); got:\n{text}",
+  );
+  assert!(
+    bob[ "is_owned" ].as_bool().unwrap_or( false ),
+    "FT-20: bob is_owned must be true (unowned = owned by all); got:\n{text}",
+  );
+}
+
+// ── mre_324_e ─────────────────────────────────────────────────────────────────
+
+/// `mre_324_e` — `format::json` emits correct `renewal_at` VALUE; `null` when absent.
+///
+/// AC-21: Account A with `_renewal_at` set → `renewal_at: "<iso>"`;
+/// Account B with no `_renewal_at` → `renewal_at: null`.
+///
+/// Spec: [`tests/docs/feature/03_account_list.md` FT-21]
+#[ test ]
+fn mre_324_json_renewal_at_values()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Account A: has a renewal override date
+  write_account( dir.path(), "alice@acme.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account_renewal_json( dir.path(), "alice@acme.com", "2025-08-01T00:00:00Z" );
+
+  // Account B: no _renewal_at field → renewal_at must be null in JSON output
+  write_account( dir.path(), "bob@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  let arr : serde_json::Value = serde_json::from_str( &text )
+    .expect( "format::json must produce valid JSON" );
+  let arr = arr.as_array().expect( "JSON root must be an array" );
+
+  let alice = arr.iter()
+    .find( |v| v[ "name" ].as_str() == Some( "alice@acme.com" ) )
+    .expect( "alice@acme.com must appear in JSON output" );
+  assert_eq!(
+    alice[ "renewal_at" ].as_str().unwrap_or( "MISSING" ),
+    "2025-08-01T00:00:00Z",
+    "FT-21: alice renewal_at must be '2025-08-01T00:00:00Z'; got:\n{text}",
+  );
+
+  let bob = arr.iter()
+    .find( |v| v[ "name" ].as_str() == Some( "bob@acme.com" ) )
+    .expect( "bob@acme.com must appear in JSON output" );
+  assert!(
+    bob[ "renewal_at" ].is_null(),
+    "FT-21: bob renewal_at must be null when _renewal_at absent; got:\n{text}",
+  );
+}
+
+// ── mre_324_f ─────────────────────────────────────────────────────────────────
+
+/// `mre_324_f` — `format::json` emits `is_owned: false` when owner is a foreign identity.
+///
+/// AC-20 covers three states: empty owner (all-owned), matching owner (this machine owns),
+/// and foreign owner (different machine owns). Only the third yields `is_owned: false`.
+/// This test exercises that branch by writing owner "other@remote" and running as a
+/// different identity "local@localmachine".
+///
+/// Spec: [`docs/feature/003_account_list.md` AC-20]
+#[ test ]
+fn mre_324_json_is_owned_false_for_foreign_owner()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Account owned by "other@remote"; we run as USER=local, HOSTNAME=localmachine → mismatch.
+  write_account( dir.path(), "alice@acme.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "other@remote" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "format::json" ],
+    &[ ( "HOME", home ), ( "USER", "local" ), ( "HOSTNAME", "localmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  let arr : serde_json::Value = serde_json::from_str( &text )
+    .expect( "format::json must produce valid JSON" );
+  let arr = arr.as_array().expect( "JSON root must be an array" );
+
+  let alice = arr.iter()
+    .find( |v| v[ "name" ].as_str() == Some( "alice@acme.com" ) )
+    .expect( "alice@acme.com must appear in JSON output" );
+  assert_eq!(
+    alice[ "owner" ].as_str().unwrap_or( "MISSING" ),
+    "other@remote",
+    "mre_324_f: owner field must be 'other@remote'; got:\n{text}",
+  );
+  assert!(
+    !alice[ "is_owned" ].as_bool().unwrap_or( true ),
+    "mre_324_f: is_owned must be false when owner is a foreign identity; got:\n{text}",
+  );
+}
+
+// ── mre_324_g ─────────────────────────────────────────────────────────────────
+
+/// `mre_324_g` — `format::json` emits correct VALUES for `host`, `role`, `organization_role`.
+///
+/// `mre_324_c` verified key presence; this test verifies that each field carries
+/// the correct value from its data source:
+/// - `"role"` → user-defined label from `{name}.json` `"role"` key (via `write_account_profile_json`)
+/// - `"host"` → host label from `{name}.json` `"host"` key (via `write_account_profile_json`)
+/// - `"organization_role"` → org role from `{name}.json` `"organization_role"` key (via `write_account_roles_json`)
+///
+/// Spec: [`docs/feature/003_account_list.md` AC-12]
+#[ test ]
+fn mre_324_json_host_role_org_role_values()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  // User-defined role label and host from profile fields:
+  write_account_profile_json( dir.path(), "test@example.com", Some( "work-laptop" ), Some( "developer" ) );
+  // Org role from roles.json (organization_role key, distinct from the user role label):
+  write_account_roles_json( dir.path(), "test@example.com", "uuid-123", "Acme Corp", "admin" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  let arr : serde_json::Value = serde_json::from_str( &text )
+    .expect( "format::json must produce valid JSON" );
+  let arr = arr.as_array().expect( "JSON root must be an array" );
+
+  let acct = arr.iter()
+    .find( |v| v[ "name" ].as_str() == Some( "test@example.com" ) )
+    .expect( "test@example.com must appear in JSON output" );
+
+  assert_eq!(
+    acct[ "host" ].as_str().unwrap_or( "MISSING" ),
+    "work-laptop",
+    "mre_324_g: host must be 'work-laptop' from profile host field; got:\n{text}",
+  );
+  assert_eq!(
+    acct[ "role" ].as_str().unwrap_or( "MISSING" ),
+    "developer",
+    "mre_324_g: role must be 'developer' (user-defined label from role field); got:\n{text}",
+  );
+  assert_eq!(
+    acct[ "organization_role" ].as_str().unwrap_or( "MISSING" ),
+    "admin",
+    "mre_324_g: organization_role must be 'admin' from organization_role field; got:\n{text}",
   );
 }

@@ -13,7 +13,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | File | Responsibility |
 |------|----------------|
-| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 42 feature docs |
+| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 46 feature docs |
 | 01_account_store_init.md | FT cases for Feature 001 — Account Store Initialization |
 | 02_account_save.md | FT cases for Feature 002 — Save Account |
 | 03_account_list.md | FT cases for Feature 003 — Accounts |
@@ -57,6 +57,9 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 61_solo_token_conservation.md | FT cases for Feature 061 — Solo Token Conservation Mode |
 | 62_unified_session_config.md | FT cases for Feature 062 — Unified Session Config Recommendation |
 | 63_explicit_ownership_claim.md | FT cases for Feature 063 — Explicit Ownership Claim |
+| 64_active_marker_and_owner_redesign.md | FT cases for Feature 064 — Active Marker and Owner Param Redesign |
+| 65_assignee_param_redesign.md | FT cases for Feature 065 — Assignee Param Redesign |
+| 66_dual_source_quota_parsing.md | FT cases for Feature 066 — Dual-Source OAuth Quota Parsing |
 
 ### Coverage Summary
 
@@ -65,13 +68,13 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | doc_structure (collection) | [00_doc_structure.md](00_doc_structure.md) | DT-01 … DT-07 | ✅ |
 | 001_account_store_init | [001_account_store_init.md](01_account_store_init.md) | FT-01 … FT-04 | ✅ |
 | 002_account_save | [002_account_save.md](02_account_save.md) | FT-01 … FT-16 | ✅ |
-| 003_account_list | [003_account_list.md](03_account_list.md) | FT-01 … FT-19 | ✅ |
+| 003_account_list | [003_account_list.md](03_account_list.md) | FT-01 … FT-22 | ✅ |
 | 004_account_use | [004_account_use.md](04_account_use.md) | FT-01 … FT-11 | ✅ |
 | 005_account_delete | [005_account_delete.md](05_account_delete.md) | FT-01 … FT-07 | ✅ |
 | 006_token_status | [006_token_status.md](06_token_status.md) | FT-01 … FT-04 | ✅ |
 | 007_file_topology | [007_file_topology.md](07_file_topology.md) | FT-01 … FT-06 | ✅ |
 | 008_auto_rotate | [008_auto_rotate.md](08_auto_rotate.md) | FT-01 … FT-04 | ✅ |
-| 009_token_usage | [009_token_usage.md](09_token_usage.md) | FT-01 … FT-33 | ✅ |
+| 009_token_usage | [009_token_usage.md](09_token_usage.md) | FT-01 … FT-34 | ✅ |
 | 010_persistent_storage | [010_persistent_storage.md](10_persistent_storage.md) | FT-01 … FT-07 | ✅ |
 | 011_account_status_by_name | [011_account_status_by_name.md](11_account_status_by_name.md) | FT-01 … FT-05 | ✅ |
 | 012_live_credentials_status | [012_live_credentials_status.md](12_live_credentials_status.md) | FT-01 … FT-07 | ✅ |
@@ -106,8 +109,11 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 061_solo_token_conservation | [061_solo_token_conservation.md](61_solo_token_conservation.md) | FT-01 … FT-12 | ✅ |
 | 062_unified_session_config | [062_unified_session_config.md](62_unified_session_config.md) | FT-01 … FT-13, EC-01 | ✅ |
 | 063_explicit_ownership_claim | [063_explicit_ownership_claim.md](63_explicit_ownership_claim.md) | FT-01 … FT-12 | ✅ |
+| 064_active_marker_and_owner_redesign | [064_active_marker_and_owner_redesign.md](64_active_marker_and_owner_redesign.md) | FT-01 … FT-19 | ✅ |
+| 065_assignee_param_redesign | [065_assignee_param_redesign.md](65_assignee_param_redesign.md) | FT-01 … FT-13 | ✅ |
+| 066_dual_source_quota_parsing | [066_dual_source_quota_parsing.md](66_dual_source_quota_parsing.md) | FT-01 … FT-12 | ✅ |
 
-**Total:** 44 specs — 43 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+**Total:** 47 specs — 46 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 
 ### Cross-Reference Depth
 

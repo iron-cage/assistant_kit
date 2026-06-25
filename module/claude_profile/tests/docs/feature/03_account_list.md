@@ -11,20 +11,23 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 | FT-03 | Active account marked `Active: yes`; all others `Active: no` | AC-03 |
 | FT-04 | `format::json` returns a valid JSON array | AC-04 |
 | FT-05 | `name::` scopes to one account; exit 2 not found; exit 1 invalid | AC-05 |
-| FT-06 | Field-presence toggles suppress individual lines from text output | AC-06 |
-| FT-07 | All fields disabled → bare name lines, no blank-line separators | AC-07 |
+| FT-06 | `cols::` column suppression removes lines; JSON ignores `cols::` settings | AC-06 |
+| FT-07 | All default-on columns removed via `cols::` → bare name lines, no blank separators | AC-07 |
 | FT-08 | Accounts listed alphabetically by name | AC-08 |
-| FT-09 | `display_name::1` shows `Display:` line from snapshot | AC-09 |
-| FT-10 | `role::1`, `billing::1`, `model::1` show lines from snapshots | AC-10 |
+| FT-09 | `cols::+display_name` shows `Display:` line from snapshot | AC-09 |
+| FT-10 | `cols::+host,+role,+billing,+model` show lines from snapshots | AC-10 |
 | FT-11 | Absent metadata files → `N/A` for affected fields | AC-11 |
 | FT-12 | `format::json` includes extended fields for every account object | AC-12 |
 | FT-13 | `Current: yes` for token-matched account; `Current: no` for others | AC-13 |
-| FT-14 | `current::0` suppresses `Current:` line; absent creds also suppresses | AC-14 |
+| FT-14 | `cols::-current` suppresses `Current:` line; absent creds also suppresses | AC-14 |
 | FT-15 | `format::json` includes `is_current` boolean per account | AC-15 |
-| FT-16 | `uuid::1` shows `ID:` line from snapshot; `N/A` when absent | AC-16 |
-| FT-17 | `capabilities::1` shows `Capabilities:` line; `N/A` when absent | AC-17 |
-| FT-18 | `org_uuid::1` shows `Org ID:` from `{name}.json`; `N/A` when absent | AC-18 |
-| FT-19 | `org_name::1` shows `Org:` from `{name}.json`; `N/A` when absent | AC-19 |
+| FT-16 | `cols::+uuid` shows `ID:` line from snapshot; `N/A` when absent | AC-16 |
+| FT-17 | `cols::+capabilities` shows `Capabilities:` line; `N/A` when absent | AC-17 |
+| FT-18 | `cols::+org_uuid` shows `Org ID:` from `{name}.json`; `N/A` when absent | AC-18 |
+| FT-19 | `cols::+org_name` shows `Org:` from `{name}.json`; `N/A` when absent | AC-19 |
+| FT-20 | `format::json` includes `owner` and `is_owned` fields per account | AC-20 |
+| FT-21 | `format::json` includes `renewal_at` field; absent when not set | AC-21 |
+| FT-22 | `format::json` emits correct `host`, `role`, `organization_role` values | AC-12 |
 
 ### Test Case Index
 
@@ -35,22 +38,25 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 | FT-03 | Active account shows `Active: yes`; inactive shows `Active: no` | AC-03 | Active Marker |
 | FT-04 | `format::json` produces valid JSON array; empty store → `[]` | AC-04 | JSON Format |
 | FT-05 | `name::` scopes output; exit 2 unknown; exit 1 invalid characters | AC-05 | Name Scoping |
-| FT-06 | Field-presence toggles suppress lines; JSON ignores them | AC-06 | Field Toggles |
-| FT-07 | All field toggles off → bare name lines, no blank separators | AC-07 | Field Toggles |
+| FT-06 | `cols::` column suppression removes lines; JSON ignores `cols::` settings | AC-06 | Column Control |
+| FT-07 | All default-on columns removed via `cols::` → bare name lines, no blank separators | AC-07 | Column Control |
 | FT-08 | Accounts listed alphabetically | AC-08 | Ordering |
-| FT-09 | `display_name::1` shows `Display:` line; absent by default | AC-09 | Opt-In Fields |
-| FT-10 | `role::1 billing::1 model::1` show lines; absent by default | AC-10 | Opt-In Fields |
+| FT-09 | `cols::+display_name` shows `Display:` line; absent by default | AC-09 | Opt-In Fields |
+| FT-10 | `cols::+host,+role,+billing,+model` show lines; absent by default | AC-10 | Opt-In Fields |
 | FT-11 | Missing credential/snapshot data shows `N/A` for absent fields | AC-11 | N/A Handling |
 | FT-12 | `format::json` includes extended fields on every object | AC-12 | JSON Fields |
 | FT-13 | Live credential match → `Current: yes` on matched; `no` on others | AC-13 | Current Account |
-| FT-14 | `current::0` suppresses `Current:` line; unreadable creds also suppresses | AC-14 | Current Account |
+| FT-14 | `cols::-current` suppresses `Current:` line; unreadable creds also suppresses | AC-14 | Current Account |
 | FT-15 | `format::json` includes `is_current` boolean per account | AC-15 | JSON Fields |
-| FT-16 | `uuid::1` shows `ID:` from snapshot; absent by default; `N/A` if no snapshot | AC-16 | Opt-In Fields |
-| FT-17 | `capabilities::1` shows `Capabilities:` list; absent by default; `N/A` if absent | AC-17 | Opt-In Fields |
-| FT-18 | `org_uuid::1` shows `Org ID:` from `{name}.json`; `N/A` if absent | AC-18 | Opt-In Fields |
-| FT-19 | `org_name::1` shows `Org:` from `{name}.json`; `N/A` if absent | AC-19 | Opt-In Fields |
+| FT-16 | `cols::+uuid` shows `ID:` from snapshot; absent by default; `N/A` if no snapshot | AC-16 | Opt-In Fields |
+| FT-17 | `cols::+capabilities` shows `Capabilities:` list; absent by default; `N/A` if absent | AC-17 | Opt-In Fields |
+| FT-18 | `cols::+org_uuid` shows `Org ID:` from `{name}.json`; `N/A` if absent | AC-18 | Opt-In Fields |
+| FT-19 | `cols::+org_name` shows `Org:` from `{name}.json`; `N/A` if absent | AC-19 | Opt-In Fields |
+| FT-20 | `format::json` includes `owner` (string) and `is_owned` (bool) per account | AC-20 | JSON Fields |
+| FT-21 | `format::json` includes `renewal_at`; absent/null when not set | AC-21 | JSON Fields |
+| FT-22 | `format::json` emits correct `host`, `role`, `organization_role` field values | AC-12 | JSON Fields |
 
-**Total:** 19 FT cases
+**Total:** 22 FT cases
 
 ---
 
@@ -119,23 +125,23 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ---
 
-### FT-06: Field-presence toggles suppress lines; JSON ignores them
+### FT-06: `cols::` column suppression removes lines; JSON ignores `cols::` settings
 
 - **Given:** An account with all standard fields populated.
-- **When (text):** `clp .accounts sub::0 tier::0`
+- **When (text):** `clp .accounts cols::-sub,-tier`
 - **Then:** `Sub:` and `Tier:` lines are absent from the block; other standard fields remain present.
-- **When (json):** `clp .accounts sub::0 tier::0 format::json`
-- **Then:** JSON output still includes all fields; field-presence toggles apply to text output only.
+- **When (json):** `clp .accounts cols::-sub,-tier format::json`
+- **Then:** JSON output still includes all fields; `cols::` exclusions apply to text output only.
 - **Exit:** 0
 - **Source fn:** `acc07_field_presence_suppresses_lines`, `acc10_json_ignores_field_presence`
 - **Source:** [003_account_list.md AC-06](../../../docs/feature/003_account_list.md)
 
 ---
 
-### FT-07: All field toggles off → bare name lines, no blank separators
+### FT-07: All default-on columns removed via `cols::` → bare name lines, no blank separators
 
 - **Given:** Two accounts in the store.
-- **When:** `clp .accounts active::0 current::0 sub::0 tier::0 expires::0 email::0`
+- **When:** `clp .accounts cols::-active,-owner,-current,-sub,-tier,-expires,-email`
 - **Then:** Output contains only bare account name lines (no indentation, no `Key: value` pairs). No blank-line separators between accounts.
 - **Exit:** 0
 - **Source fn:** `acc08_all_fields_off_bare_names`
@@ -154,10 +160,10 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ---
 
-### FT-09: `display_name::1` shows `Display:` line; absent by default
+### FT-09: `cols::+display_name` shows `Display:` line; absent by default
 
 - **Given:** An account with a saved `{name}.json` snapshot containing `oauthAccount.displayName = "Alice"`.
-- **When (opt-in):** `clp .accounts display_name::1`
+- **When (opt-in):** `clp .accounts cols::+display_name`
 - **Then:** Block includes `Display:  Alice`.
 - **When (default):** `clp .accounts` (no opt-in)
 - **Then:** Block does NOT contain a `Display:` line.
@@ -167,15 +173,15 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ---
 
-### FT-10: `role::1 billing::1 model::1` show lines; absent by default
+### FT-10: `cols::+host,+role,+billing,+model` show lines; absent by default
 
-- **Given:** An account with `{name}.json` containing `organizationRole = "admin"`, `billingType = "stripe_subscription"`, and `model = "claude-opus-4-6"`.
-- **When (opt-in):** `clp .accounts role::1 billing::1 model::1`
-- **Then:** Block includes `Role:  admin`, `Billing:  stripe_subscription`, `Model:  claude-opus-4-6`.
+- **Given:** An account with `{name}.json` containing `host = "alice@workstation"`, `role = "work"` (user-defined label), `billingType = "stripe_subscription"`, and `model = "claude-opus-4-6"`.
+- **When (opt-in):** `clp .accounts cols::+host,+role,+billing,+model`
+- **Then:** Block includes `Host:  alice@workstation`, `Role:  work`, `Billing:  stripe_subscription`, `Model:  claude-opus-4-6`.
 - **When (default):** `clp .accounts`
-- **Then:** None of those three lines appear in the block.
+- **Then:** None of those four lines appear in the block.
 - **Exit:** 0
-- **Source fn:** `acc21_role_billing_model_from_snapshots`, `acc24_new_fields_absent_by_default`
+- **Source fn:** `acc21_role_billing_model_from_snapshots`, `acc24_new_fields_absent_by_default`, `mre_324_role_toggle_shows_user_label`
 - **Source:** [003_account_list.md AC-10](../../../docs/feature/003_account_list.md)
 
 ---
@@ -183,21 +189,21 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 ### FT-11: Missing credential/snapshot data shows `N/A` for absent fields
 
 - **Given:** An account with a valid `{name}.credentials.json` but no `subscriptionType` or `rateLimitTier` fields; no `{name}.json` snapshot at all.
-- **When:** `clp .accounts display_name::1 role::1 billing::1 model::1 uuid::1 capabilities::1`
-- **Then:** `Sub:  N/A`, `Tier:  N/A`, `Email:  N/A`, `Display:  N/A`, `Role:  N/A`, `Billing:  N/A`, `Model:  N/A`, `ID:  N/A`, `Capabilities:  N/A`.
+- **When:** `clp .accounts cols::+display_name,+host,+role,+billing,+model,+uuid,+capabilities`
+- **Then:** `Sub:  N/A`, `Tier:  N/A`, `Email:  N/A`, `Display:  N/A`, `Host:  N/A`, `Role:  N/A`, `Billing:  N/A`, `Model:  N/A`, `ID:  N/A`, `Capabilities:  N/A`.
 - **Exit:** 0
-- **Source fn:** `acc15_missing_sub_field_shows_na`, `acc16_missing_tier_field_shows_na`, `acc22_no_snapshot_shows_na_for_new_fields`, `acc41_no_snapshot_uuid_capabilities_na`
+- **Source fn:** `acc15_missing_sub_field_shows_na`, `acc16_missing_tier_field_shows_na`, `acc22_no_snapshot_shows_na_for_new_fields`, `acc41_no_snapshot_uuid_capabilities_na`, `mre_324_host_role_na_when_metadata_absent`
 - **Source:** [003_account_list.md AC-11](../../../docs/feature/003_account_list.md)
 
 ---
 
 ### FT-12: `format::json` includes extended fields on every account object
 
-- **Given:** An account with snapshots for email, display_name, role, billing, model, tagged_id, capabilities, org_uuid, org_name.
+- **Given:** An account with snapshots for email, display_name, organization_role, workspace_uuid, workspace_name, role, host, billing, model, tagged_id, capabilities, organization_uuid, organization_name, owner, renewal_at.
 - **When:** `clp .accounts format::json`
-- **Then:** Each JSON object contains keys `email`, `display_name`, `role`, `billing`, `model`, `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` — regardless of whether field-presence toggles are set.
+- **Then:** Each JSON object contains keys `email`, `display_name`, `role`, `billing`, `model`, `tagged_id`, `capabilities`, `organization_uuid`, `organization_name`, `organization_role`, `workspace_uuid`, `workspace_name`, `host`, `owner`, `is_owned`, `renewal_at` — regardless of `cols::` column settings.
 - **Exit:** 0
-- **Source fn:** `acc23_json_includes_new_fields`, `acc37_json_includes_tagged_id`, `acc40_json_includes_capabilities`, `acc45_json_includes_org_uuid`
+- **Source fn:** `acc23_json_includes_new_fields`, `acc37_json_includes_tagged_id`, `acc40_json_includes_capabilities`, `acc45_json_includes_org_uuid`, `mre_324_json_output_keys`
 - **Source:** [003_account_list.md AC-12](../../../docs/feature/003_account_list.md)
 
 ---
@@ -213,12 +219,12 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ---
 
-### FT-14: `current::0` suppresses `Current:` line; unreadable creds also suppresses
+### FT-14: `cols::-current` suppresses `Current:` line; unreadable creds also suppresses
 
 - **Given:** `~/.claude/.credentials.json` is absent (or the live credentials are unreadable).
 - **When (unreadable):** `clp .accounts`
 - **Then:** `Current:` line is absent from all blocks (no live credential file → cannot compare).
-- **When (explicit toggle):** `clp .accounts current::0` with a live credentials file present
+- **When (explicit toggle):** `clp .accounts cols::-current` with a live credentials file present
 - **Then:** `Current:` line is absent from all blocks.
 - **Exit:** 0
 - **Source fn:** `acc32_accounts_suppresses_current_when_creds_absent`, `acc33_accounts_current_param_and_json`
@@ -237,10 +243,10 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ---
 
-### FT-16: `uuid::1` shows `ID:` from snapshot; absent by default; `N/A` if no snapshot
+### FT-16: `cols::+uuid` shows `ID:` from snapshot; absent by default; `N/A` if no snapshot
 
 - **Given:** One account with `{name}.json` containing `oauthAccount.taggedId = "user_01abc"`. One account with no snapshot.
-- **When (opt-in):** `clp .accounts uuid::1`
+- **When (opt-in):** `clp .accounts cols::+uuid`
 - **Then:** Account with snapshot shows `ID:  user_01abc`; account without snapshot shows `ID:  N/A`.
 - **When (default):** `clp .accounts`
 - **Then:** No `ID:` line in any block.
@@ -250,10 +256,10 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ---
 
-### FT-17: `capabilities::1` shows `Capabilities:` list; absent by default; `N/A` if absent
+### FT-17: `cols::+capabilities` shows `Capabilities:` list; absent by default; `N/A` if absent
 
 - **Given:** One account with `{name}.json` containing `capabilities = ["claude_max", "chat"]`. One account with no snapshot.
-- **When (opt-in):** `clp .accounts capabilities::1`
+- **When (opt-in):** `clp .accounts cols::+capabilities`
 - **Then:** Account with snapshot shows `Capabilities:  claude_max, chat`; account without snapshot shows `Capabilities:  N/A`.
 - **When (default):** `clp .accounts`
 - **Then:** No `Capabilities:` line in any block.
@@ -263,10 +269,10 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ---
 
-### FT-18: `org_uuid::1` shows `Org ID:` from `{name}.json`; `N/A` if absent
+### FT-18: `cols::+org_uuid` shows `Org ID:` from `{name}.json`; `N/A` if absent
 
 - **Given:** One account with `{name}.json` containing `organization_uuid = "aaaa-bbbb"`. One account with no org identity fields.
-- **When (opt-in):** `clp .accounts org_uuid::1`
+- **When (opt-in):** `clp .accounts cols::+org_uuid`
 - **Then:** Account with `{name}.json` shows `Org ID:  aaaa-bbbb`; account without shows `Org ID:  N/A`.
 - **When (default):** `clp .accounts`
 - **Then:** No `Org ID:` line in any block.
@@ -276,13 +282,46 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ---
 
-### FT-19: `org_name::1` shows `Org:` from `{name}.json`; `N/A` if absent
+### FT-19: `cols::+org_name` shows `Org:` from `{name}.json`; `N/A` if absent
 
 - **Given:** One account with `{name}.json` containing `organization_name = "Acme Corp"`. One account with no org identity fields.
-- **When (opt-in):** `clp .accounts org_name::1`
+- **When (opt-in):** `clp .accounts cols::+org_name`
 - **Then:** Account with `{name}.json` shows `Org:  Acme Corp`; account without shows `Org:  N/A`.
 - **When (default):** `clp .accounts`
 - **Then:** No `Org:` line in any block.
 - **Exit:** 0
 - **Source fn:** `acc46_org_name_shows_from_roles_json`, `acc47_org_name_absent_by_default`, `acc48_org_name_missing_roles_json_na`
 - **Source:** [003_account_list.md AC-19](../../../docs/feature/003_account_list.md)
+
+---
+
+### FT-20: `format::json` includes `owner` and `is_owned` fields per account
+
+- **Given:** Account A has `{name}.json` with `owner = "w003_user1"` (matches current machine identity). Account B has no `owner` field.
+- **When:** `clp .accounts format::json`
+- **Then:** Account A JSON object contains `owner: "w003_user1"` and `is_owned: true`. Account B JSON object contains `owner: ""` and `is_owned: true` (unowned = owned by all).
+- **Exit:** 0
+- **Source fn:** `mre_324_json_output_keys` (key presence), `mre_324_json_owner_is_owned_values` (matching owner → true, unowned → true), `mre_324_json_is_owned_false_for_foreign_owner` (foreign owner → false)
+- **Source:** [003_account_list.md AC-20](../../../docs/feature/003_account_list.md)
+
+---
+
+### FT-21: `format::json` includes `renewal_at`; absent/null when not set
+
+- **Given:** Account A has `{name}.json` with `_renewal_at = "2025-08-01T00:00:00Z"`. Account B has no `_renewal_at` field.
+- **When:** `clp .accounts format::json`
+- **Then:** Account A JSON object contains `renewal_at: "2025-08-01T00:00:00Z"`. Account B JSON object has `renewal_at` absent or `null`.
+- **Exit:** 0
+- **Source fn:** `mre_324_json_output_keys` (key presence), `mre_324_json_renewal_at_values` (value-level)
+- **Source:** [003_account_list.md AC-21](../../../docs/feature/003_account_list.md)
+
+---
+
+### FT-22: `format::json` emits correct `host`, `role`, `organization_role` field values
+
+- **Given:** `test@example.com` with `{name}.json` containing `host = "work-laptop"` (user-defined host label), `role = "developer"` (user-defined role label), `organization_role = "admin"` (org role from Roles API). These three fields come from distinct JSON keys.
+- **When:** `clp .accounts format::json`
+- **Then:** JSON object has `host: "work-laptop"`, `role: "developer"`, `organization_role: "admin"`. No cross-contamination between user role label and org role.
+- **Exit:** 0
+- **Source fn:** `mre_324_json_host_role_org_role_values`
+- **Source:** [003_account_list.md AC-12](../../../docs/feature/003_account_list.md)

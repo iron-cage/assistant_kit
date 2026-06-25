@@ -48,7 +48,7 @@ clp .usage
 | `name::` | No | Identifies a target entity, not presentation |
 | `threshold::` | No | Controls classification boundary, not presentation |
 | `dry::` | No | Controls execution mode, not presentation |
-| `active::` | No | Controls field inclusion, not presentation format (Field Presence) |
+| `assignee::` | No | Mutation param for marker assign/unassign; not a presentation parameter (`active::` REMOVED — Feature 065) |
 | `no_color::` | No | Controls symbol rendering, not serialization format (Display Control) |
 
 All members pass. No false inclusions.

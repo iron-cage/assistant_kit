@@ -1,3 +1,4 @@
+//! Unix-only integration tests.
 #![ cfg( unix ) ]
 //! `--expect` / `--expect-strategy` Integration Tests
 //!

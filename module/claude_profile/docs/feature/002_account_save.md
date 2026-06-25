@@ -61,13 +61,13 @@
 
 | File | Relationship |
 |------|--------------|
-| `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json` (step 7); `switch_account()` restores model on switch |
+| BUG-222 | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json` (step 7); `switch_account()` restores model on switch |
 
 ### Related Commands
 
 | File | Relationship |
 |------|--------------|
-| [036_account_ownership.md](036_account_ownership.md) | ownership model — `.account.unclaim` clears ownership; G1–G8 enforcement gates |
+| [036_account_ownership.md](036_account_ownership.md) | ownership model — `owner::0` clears ownership (Feature 064; formerly `.account.unclaim`); G1–G8 enforcement gates |
 
 ### Commands
 
@@ -84,7 +84,7 @@
 | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Org identity metadata lifecycle and org fields in `{name}.json` |
 | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Per-machine marker naming convention used in step 8 |
 | [030_account_renewal_override.md](030_account_renewal_override.md) | `_renewal_at` field written by `.account.renewal`; preserved by `save()` read-merge (AC-17) |
-| [036_account_ownership.md](036_account_ownership.md) | Ownership model — `.account.save` is ownership-neutral (owner: None); `.account.unclaim` clears ownership; `.account.assign` is marker-only |
+| [036_account_ownership.md](036_account_ownership.md) | Ownership model — `.account.save` is ownership-neutral (owner: None); `owner::0` clears ownership (Feature 064; formerly `.account.unclaim`); `assignee::USER@MACHINE` is marker-only (Feature 065; formerly `.account.assign`) |
 | [032_account_assign.md](032_account_assign.md) | `.account.assign` — marker-only write; does NOT call `write_owner()`; does NOT modify `owner` field in `{name}.json` |
 
 ### Referenced Commands

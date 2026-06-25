@@ -53,7 +53,7 @@ Captures the current active session credentials as a named account profile in th
 |------|-------------|
 | [feature/001_account_store_init.md](../../feature/001_account_store_init.md) | Credential store initialization before first save |
 | [feature/002_account_save.md](../../feature/002_account_save.md) | Save algorithm and `{name}.json` read-merge semantics |
-| [feature/036_account_ownership.md](../../feature/036_account_ownership.md) | Ownership model — `.account.save` is ownership-neutral (passes `owner: None`); `.accounts unclaim::1` clears ownership; `.account.assign` is marker-only |
+| [feature/036_account_ownership.md](../../feature/036_account_ownership.md) | Ownership model — `.account.save` is ownership-neutral (passes `owner: None`); `.accounts owner::0 name::X` clears ownership (Feature 064); `.accounts assignee::USER@MACHINE name::X` is marker-only (Feature 065) |
 
 ### Referenced Commands
 

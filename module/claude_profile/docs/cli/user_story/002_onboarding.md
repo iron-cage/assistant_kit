@@ -23,7 +23,7 @@
 | 3 | [`.account.delete`](../command/001_account.md#command--6-accountdelete) | Cleanup: remove stale or incorrect profiles |
 | 4 | [`.account.relogin`](../command/001_account.md#command--12-accountrelogin) | Recovery: browser re-auth when refresh token is dead |
 | 5 | [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) | Management: set billing renewal timestamp override |
-| 6 | [`.account.assign`](../command/001_account.md#command--16-accountassign) | Cross-machine: write active-account marker for another host |
+| 6 | [`.accounts`](../command/001_account.md#command--3-accounts) | Cross-machine: write active-account marker for another host via `assignee::USER@MACHINE name::X` (Feature 065; formerly `.account.assign`) |
 
 ### Referenced Parameters
 
@@ -36,7 +36,7 @@
 | 5 | [`at::`](../param/049_at.md) | Absolute renewal timestamp for `.account.renewal` |
 | 6 | [`from_now::`](../param/050_from_now.md) | Delta-from-now renewal timestamp |
 | 7 | [`clear::`](../param/051_clear.md) | Remove `_renewal_at` override from `{name}.json` |
-| 8 | [`for::`](../param/053_for.md) | Target `USER@MACHINE` for `.account.assign` |
+| 8 | [`assignee::`](../param/063_assignee.md) | Target `USER@MACHINE` (or `"0"` for current machine) for per-machine marker write (Feature 065; formerly `active::` / `for::`) |
 
 ### Referenced Parameter Groups
 

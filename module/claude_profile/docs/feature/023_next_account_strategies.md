@@ -12,8 +12,8 @@
 
 | File | Relationship |
 |------|--------------|
-| `task/claude_profile/bug/243_renew_strategy_missing_5h_tiebreaker.md` | BUG-243 ✅ Fixed: superseded by BUG-291 |
-| `task/claude_profile/bug/260_renew_next_selection_nondeterministic_when_fully_tied.md` | BUG-260 ✅ Fixed: name tiebreaker added |
-| `task/claude_profile/bug/287_endurance_missing_weekly_floor_gate.md` | BUG-287 ✅ Fixed: endurance weekly-floor gate (strategy now removed) |
-| `task/claude_profile/bug/291_renew_next_uses_parallel_sort_instead_of_sort_indices.md` | BUG-291 ✅ Fixed: unified sort/recommendation algorithm |
-| `task/claude_profile/bug/292_renew_next_recommends_weekly_exhausted_account.md` | BUG-292 ✅ Fixed: weekly-floor gate on renew |
+| BUG-243 | BUG-243 ✅ Fixed: superseded by BUG-291 |
+| BUG-260 | BUG-260 ✅ Fixed: name tiebreaker added |
+| BUG-287 | BUG-287 ✅ Fixed: endurance weekly-floor gate (strategy now removed) |
+| BUG-291 | BUG-291 ✅ Fixed: unified sort/recommendation algorithm |
+| BUG-292 | BUG-292 ✅ Fixed: weekly-floor gate on renew |

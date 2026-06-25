@@ -105,6 +105,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | [invariant/005_isolated_subprocess_defaults.md](../invariant/005_isolated_subprocess_defaults.md) | Isolated subprocess model, effort, and flag defaults |
 | [invariant/006_exit_codes.md](../invariant/006_exit_codes.md) | Exit code semantics (0-4, 128+signal) |
 | [invariant/007_print_mode_timeout.md](../invariant/007_print_mode_timeout.md) | Print-mode default timeout (3600s) vs interactive (unlimited) |
+| [invariant/008_render_summary_gate.md](../invariant/008_render_summary_gate.md) | `render_summary()` must gate on `"type":"result"`; optional fields use `.unwrap_or_default()` |
 
 ### Sources
 
@@ -159,7 +160,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/timeout_test.rs` | Default timeout constant, watchdog activation, unlimited flag/env, default-path kill via `_CLR_DEFAULT_TIMEOUT` (TSK-228) |
 | `../../tests/tools_command_test.rs` | IT-01–IT-09 clr tools table output, help, unknown args |
 | `../../tests/output_format_test.rs` | --output-format summary rendering and fallback |
-| `../../tests/output_style_test.rs` | EC-01–EC-13 --output-style summary/raw rendering, CLR_OUTPUT_STYLE env var, legacy alias, graceful fallback |
+| `../../tests/output_style_test.rs` | EC-01–EC-14 --output-style summary/raw rendering, CLR_OUTPUT_STYLE env var, legacy alias, graceful fallback, minimal CLR envelope (BUG-310 regression) |
 | `../../tests/summary_fields_test.rs` | EC-01–EC-12 --summary-fields profile/custom/env field selection |
 | `../../tests/ask_command_test.rs` | clr ask dispatch, help intercept, BUG-249/250 |
 | `../../tests/env_var_test.rs` | E01–E17 CLR_* env-variable fallback for run params |
