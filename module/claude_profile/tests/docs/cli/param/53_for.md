@@ -1,17 +1,17 @@
 # Test: `for::` Parameter — REMOVED (Feature 064)
 
 > **REMOVED (Feature 064)**: The `for::` parameter on `.accounts assign::1` has been removed.
-> Its functionality is absorbed into the `active::` param value: `active::USER@MACHINE name::X`.
+> Its functionality was absorbed into the `active::` param value (Feature 064), which was then renamed to `assignee::` (Feature 065). Current CLI: `assignee::USER@MACHINE name::X`.
 >
 > Any invocation of `for::` now exits 1 with the migration message:
-> "REMOVED — functionality absorbed into `active::` value: `active::USER@MACHINE name::X`"
+> "REMOVED — functionality absorbed into `assignee::` value: `assignee::USER@MACHINE name::X`"
 >
 > See [param/053_for.md](../../../../docs/cli/param/053_for.md) for the removal notice.
-> See [feature/064_active_marker_and_owner_redesign.md](../../../../docs/feature/064_active_marker_and_owner_redesign.md) for the redesign.
+> See [feature/065_assignee_param_redesign.md](../../../../docs/feature/065_assignee_param_redesign.md) for the current interface.
 
 All EC test cases in this file (EC-1 through EC-8) are **superseded** — `for::` no longer exists as an active
-parameter. The split/sanitize semantics are now exercised by `14_active.md` EC-3 through EC-7 (the
-`active::USER@MACHINE` value uses the same split-on-first-`@` and sanitize rules as the former `for::` value).
+parameter. The split/sanitize semantics are now exercised by `64_assignee.md` EC-3 through EC-7 (the
+`assignee::USER@MACHINE` value uses the same split-on-first-`@` and sanitize rules as the former `for::` value).
 
 ### Superseded Test Case Index (DO NOT IMPLEMENT)
 

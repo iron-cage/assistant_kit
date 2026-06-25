@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clp parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: 59 active clp parameter edge case files (params 1–62 with gaps); `current::` (docs param 18) has no dedicated EC file — covered by `command/003_accounts.md` IT tests. Production param 56 (`unclaim::`) was previously REMOVED (Feature 036), re-activated on `.accounts`/`.usage` in Feature 037, and REMOVED AGAIN in Feature 064 (use `owner::0`) — file `57_unclaim.md` is a dual tombstone. File `53_for.md` is a TOMBSTONE — `for::` REMOVED (Feature 064; absorbed into `active::` value). File `58_assign.md` is a TOMBSTONE — `assign::` REMOVED (Feature 064; use `active::USER@MACHINE name::X`). File `14_active.md` covers the repurposed `active::` param (`Kind::String` mutation — Feature 064). Test file `59_force.md` covers param 058 (`force::`) introduced in Feature 036/037. Test file `60_rotate.md` covers param 059 (`rotate::`) introduced in Feature 038. Test files `61_solo.md` and `62_who.md` cover params 060 (`solo::`) and 061 (`who::`) introduced in Feature 061 / Plan 022. Test file `63_owner.md` covers param 062 (`owner::`) introduced in Feature 063, extended with `owner::0` sentinel and batch comma-list in Feature 064.
+- **In Scope**: 59 active clp parameter edge case files (params 1–63 with gaps); `current::` (docs param 18) has no dedicated EC file — covered by `command/003_accounts.md` IT tests. Production param 56 (`unclaim::`) was previously REMOVED (Feature 036), re-activated on `.accounts`/`.usage` in Feature 037, and REMOVED AGAIN in Feature 064 (use `owner::0`) — file `57_unclaim.md` is a dual tombstone. File `53_for.md` is a TOMBSTONE — `for::` REMOVED (Feature 064; absorbed into `active::` value, which was then renamed to `assignee::` in Feature 065). File `58_assign.md` is a TOMBSTONE — `assign::` REMOVED (Feature 064; use `assignee::USER@MACHINE name::X`). File `14_active.md` is a TOMBSTONE — `active::` REMOVED (Feature 065; use `assignee::USER@MACHINE name::X`). Test file `64_assignee.md` covers param 063 (`assignee::`) introduced in Feature 065 with `assignee::0` sentinel. Test file `59_force.md` covers param 058 (`force::`) introduced in Feature 036/037. Test file `60_rotate.md` covers param 059 (`rotate::`) introduced in Feature 038. Test files `61_solo.md` and `62_who.md` cover params 060 (`solo::`) and 061 (`who::`) introduced in Feature 061 / Plan 022. Test file `63_owner.md` covers param 062 (`owner::`) introduced in Feature 063, extended with `owner::0` sentinel and batch comma-list in Feature 064.
 - **Numbering note**: Test doc numbering is offset +1 from `docs/cli/param/` starting at position 2 (test `003_format.md` ↔ production `002_format.md`). Test file `002_` does not exist; this is intentional — the offset arose when `current::` was excluded from EC coverage, shifting subsequent test IDs by one.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
@@ -24,7 +24,7 @@
 | 11_email.md | Edge cases for `email::` parameter (`.credentials.status` and `.accounts`) |
 | 12_file.md | Edge cases for `file::` parameter |
 | 13_saved.md | Edge cases for `saved::` parameter |
-| 14_active.md | Edge cases for `active::` parameter (repurposed `Kind::String` mutation — Feature 064; assign/unassign marker) |
+| 14_active.md | **TOMBSTONE** — `active::` REMOVED (Feature 065); replaced by `assignee::USER@MACHINE name::X`; see [feature/065_assignee_param_redesign.md](../../../../docs/feature/065_assignee_param_redesign.md) |
 | 15_display_name.md | Edge cases for `display_name::` parameter |
 | 16_role.md | Edge cases for `role::` parameter |
 | 17_billing.md | Edge cases for `billing::` parameter |
@@ -63,13 +63,14 @@
 | 50_from_now.md | Edge cases for `from_now::` parameter (`.account.renewal` relative delta) |
 | 51_clear.md | Edge cases for `clear::` parameter (`.account.renewal` renewal removal) |
 | 52_role.md | Edge cases for `role::` parameter (`.account.save` free-text metadata label) |
-| 53_for.md | **TOMBSTONE** — `for::` REMOVED (Feature 064); functionality absorbed into `active::` value; see [feature/064_active_marker_and_owner_redesign.md](../../../../docs/feature/064_active_marker_and_owner_redesign.md) |
+| 53_for.md | **TOMBSTONE** — `for::` REMOVED (Feature 064); functionality absorbed into `assignee::` value (via `active::` Feature 064, renamed Feature 065); see [feature/065_assignee_param_redesign.md](../../../../docs/feature/065_assignee_param_redesign.md) |
 | 54_set_model.md | Edge cases for `set_model::` parameter (explicit session model override) |
 | 55_set.md | Edge cases for `set::` parameter (`.model` mode selector: absent = get, present = set) |
 | 57_unclaim.md | **TOMBSTONE** — `unclaim::` removed from `.account.save` (Feature 036); re-activated on `.accounts`/`.usage` in Feature 037; REMOVED AGAIN (Feature 064) — use `owner::0`; see [param/056_unclaim.md](../../../../docs/cli/param/056_unclaim.md) |
-| 58_assign.md | **TOMBSTONE** — `assign::` REMOVED (Feature 064); use `active::USER@MACHINE name::X`; see [feature/064_active_marker_and_owner_redesign.md](../../../../docs/feature/064_active_marker_and_owner_redesign.md) |
+| 58_assign.md | **TOMBSTONE** — `assign::` REMOVED (Feature 064); use `assignee::USER@MACHINE name::X` (Feature 065); see [feature/065_assignee_param_redesign.md](../../../../docs/feature/065_assignee_param_redesign.md) |
 | 59_force.md | Edge cases for `force::` parameter (G5–G8 ownership gate bypass — Feature 036/037) |
 | 60_rotate.md | Edge cases for `rotate::` parameter (strategy-driven rotation on `.usage` — Feature 038) |
 | 61_solo.md | Edge cases for `solo::` parameter (token conservation mode — current+owned only) |
 | 62_who.md | Edge cases for `who::` parameter (sessions table visibility in `.usage`) |
 | 63_owner.md | Edge cases for `owner::` parameter (Feature 063: explicit ownership set; Feature 064: `owner::0` sentinel + batch comma-list) |
+| 64_assignee.md | Edge cases for `assignee::` parameter (Feature 065: renamed from `active::`; `assignee::0` sentinel = current machine) |

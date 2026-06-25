@@ -1559,9 +1559,9 @@ fn ft01_accounts_accepts_32_params()
   );
   assert_exit( &out, 0 );
 
-  // active:: + name:: + dry::1 accepted (Feature 064 ownership mutation).
+  // assignee:: + name:: + dry::1 accepted (Feature 065 ownership mutation).
   let out = run_cs_with_env(
-    &[ ".accounts", "active::testuser@testmachine", "name::alice@acme.com", "dry::1" ],
+    &[ ".accounts", "assignee::testuser@testmachine", "name::alice@acme.com", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -1727,7 +1727,7 @@ fn ft13_accounts_legacy_toggles_rejected()
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
 
-  // "active" removed from this list — Feature 064 repurposed it as Kind::String (active::USER@MACHINE).
+  // "active" removed from this list — Feature 065 renamed it to assignee:: (REMOVED_TOGGLE; bfs Kind::String).
   let toggles = [
     "current", "sub", "tier", "expires", "email",
     "display_name", "host", "role", "billing", "model",
@@ -1917,17 +1917,17 @@ fn ft21_force_no_effect_without_unclaim()
     );
   }
 
-  // Case B: force + active:: → marker written, no error (force is silently ignored on active::).
+  // Case B: force + assignee:: → marker written, no error (force is silently ignored on assignee::).
   {
     let out = run_cs_with_env(
-      &[ ".accounts", "force::1", "active::testuser@testmachine", "name::alice@acme.com" ],
+      &[ ".accounts", "force::1", "assignee::testuser@testmachine", "name::alice@acme.com" ],
       &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
     );
     assert_exit( &out, 0 );
 
     let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
     let marker = std::fs::read_to_string( store.join( "_active_testmachine_testuser" ) )
-      .expect( "FT-21B: marker must be written with force::1 + active::testuser@testmachine" );
+      .expect( "FT-21B: marker must be written with force::1 + assignee::testuser@testmachine" );
     assert_eq!( marker.trim(), "alice@acme.com", "FT-21B: marker must contain alice@acme.com" );
   }
 }

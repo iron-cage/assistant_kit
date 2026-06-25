@@ -1,16 +1,16 @@
 # Test: `assign::` Parameter — REMOVED (Feature 064)
 
 > **REMOVED (Feature 064)**: The `assign::` parameter on `.accounts` and `.usage` has been removed.
-> The marker write operation is now `active::USER@MACHINE name::X`.
+> Marker assignment was moved to `active::USER@MACHINE name::X` (Feature 064), which was then renamed to `assignee::USER@MACHINE name::X` (Feature 065).
 >
 > Any invocation of `assign::` exits 1 with the migration message:
-> "REMOVED — use `active::USER@MACHINE name::X` instead"
+> "REMOVED — use `assignee::USER@MACHINE name::X` instead"
 >
 > See [param/057_assign.md](../../../../docs/cli/param/057_assign.md) for the removal notice.
-> See [feature/064_active_marker_and_owner_redesign.md](../../../../docs/feature/064_active_marker_and_owner_redesign.md) for the redesign.
+> See [feature/065_assignee_param_redesign.md](../../../../docs/feature/065_assignee_param_redesign.md) for the current interface.
 
 All EC test cases in this file (EC-1 through EC-8) are **superseded** — `assign::` no longer exists as an active
-parameter. The equivalent behaviors are now covered by `14_active.md` EC-1 through EC-11 (the `active::USER@MACHINE`
+parameter. The equivalent behaviors are now covered by `64_assignee.md` EC-1 through EC-11 (the `assignee::USER@MACHINE`
 param handles assign, unassign, dry-run, validation, sanitization, and isolation).
 
 ### Superseded Test Case Index (DO NOT IMPLEMENT)

@@ -2,6 +2,8 @@
 
 Integration and edge case coverage for the Field Presence parameter group. See [parameter_groups.md](../../../../docs/cli/param_group/readme.md#group--2-field-presence) for specification.
 
+> **Feature 037/065 note:** `.accounts` field-presence toggles (`active::`, `sub::`, `tier::`, `expires::`, `email::`, etc.) were removed in Feature 037 and replaced by `cols::`. CCs that invoke these on `.accounts` (CC-4, CC-8, CC-11) describe pre-Feature-037 behavior — the tests now exit 1 instead of 0. Additionally, `active::` was further repurposed (Feature 064) and then REMOVED_TOGGLE'd (Feature 065); on `.accounts` it now exits 1 with a migration message pointing to `assignee::`. CC-8 has been updated to reflect this.
+
 Both `.accounts` and `.credentials.status` are Full Implementors for their own field sets. Eight parameters are shared between both commands: four default-on (`sub::`, `tier::`, `expires::`, `email::`) and four opt-in (`display_name::`, `role::`, `billing::`, `model::`).
 
 ### Test Case Index
@@ -115,12 +117,14 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 
 ### CC-8: `active::` is `.accounts`-specific — no effect on `.credentials.status`
 
+> **Feature 065 note:** `active::` is now a REMOVED_TOGGLE on `.accounts` (Feature 065). `clp .accounts active::0` exits 1 with a migration message pointing to `assignee::` — it no longer suppresses the Active field. The command-specificity principle (that `.credentials.status` rejects `.accounts`-only params) still holds, but `active::` exits 1 on both commands for different reasons.
+
 - **Given:** Active account and credentials exist.
 - **When:**
-  1. `clp .accounts active::0` — should suppress `Active:` line
-  2. `clp .credentials.status active::0` — should fail (unknown param) or be ignored
-- **Then:** `active::` applies to `.accounts` only; `.credentials.status` rejects it
-- **Exit:** 0
+  1. `clp .accounts active::0` — exits 1 (REMOVED_TOGGLE, Feature 065; formerly suppressed `Active:` line)
+  2. `clp .credentials.status active::0` — exits 1 (unknown param)
+- **Then:** Both exit 1. `active::` is a REMOVED_TOGGLE on `.accounts`; `.credentials.status` rejects it as unknown.
+- **Exit:** 1 (both cases)
 - **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
 
 ---

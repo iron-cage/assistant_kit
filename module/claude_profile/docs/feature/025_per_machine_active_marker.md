@@ -35,7 +35,7 @@ The new design writes `_active_{hostname}_{user}` instead. Filename derivation, 
 | [004_account_use.md](004_account_use.md) | Base switch behavior; design step 4 updated |
 | [015_name_shortcut_syntax.md](015_name_shortcut_syntax.md) | Prefix resolution; AC-11 added for exact-local-part match |
 | [029_account_host_metadata.md](029_account_host_metadata.md) | `resolve_hostname()` fallback chain shared with host auto-capture |
-| [032_account_assign.md](032_account_assign.md) | Marker-only write for any `USER@MACHINE` pair via `active::USER@MACHINE name::X` (Feature 064); contrast point for `.account.use` full credential rotation |
+| [065_assignee_param_redesign.md](065_assignee_param_redesign.md) | Marker-only write for any `USER@MACHINE` pair via `assignee::USER@MACHINE name::X` (Feature 065); contrast point for `.account.use` full credential rotation |
 | [036_account_ownership.md](036_account_ownership.md) | `current_identity()` uses the same `resolve_hostname()` fallback chain to form `$USER@<hostname>` |
 | [009_token_usage.md](009_token_usage.md) | Sessions table (AC-33, AC-34): `.usage` renders all `_active_*` markers as `{user}@{host} → account` table after the footer; controlled by `who::` parameter |
 
@@ -51,7 +51,7 @@ The new design writes `_active_{hostname}_{user}` instead. Filename derivation, 
 |------|--------------|
 | `module/claude_profile_core/src/account.rs` | `active_marker_filename()` — derives per-machine marker name; `read_active_marker()`, `switch_account()`, `save()`, `delete()` — use it; `other_machines_active(store)` — reads all `_active_*` except own marker, returns `HashSet<String>` of account names |
 | `src/commands/shared.rs`, `src/commands/account_ops.rs` | `resolve_account_name()` — exact-local-part match priority (defined in `shared.rs`); `account_save_routine()` — reads `oauthAccount.emailAddress` from `~/.claude.json` as primary name inference source when `name::` is omitted; falls back to `_active_{hostname}_{user}` marker (BUG-212 fix, TSK-215) |
-| `src/commands/accounts.rs` | `accounts_routine()` `active::` path — writes or clears `_active_{machine}_{user}` for any `USER@MACHINE` pair without credential rotation (Feature 064: replaced former `assign::1` + `for::` params) |
+| `src/commands/accounts.rs` | `accounts_routine()` `assignee::` path — writes or clears `_active_{machine}_{user}` for any `USER@MACHINE` pair without credential rotation (Feature 065: renamed from `active::` which replaced former `assign::1` + `for::` params) |
 | `src/usage/refresh.rs`, `src/usage/touch.rs` | `apply_refresh` and `apply_touch` snapshot/restore the `_active` marker around per-account processing; snapshot+restore removed by BUG-211 fix (`save()` now writes conditionally via `update_marker=false` — see AC-15 in [002_account_save.md](002_account_save.md)); reads removed in Phases 3/4 of TSK-214 |
 | `.gitignore` | `_active_*` pattern excludes per-machine markers from version control |
 

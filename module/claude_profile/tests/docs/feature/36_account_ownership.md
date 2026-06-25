@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Test cases for account ownership enforcement — ownership-neutral `.account.save` and `.accounts active::USER@MACHINE name::X`, `.accounts owner::0 name::X` with G8 gate (Feature 064; formerly `assign::1`/`unclaim::1`), nine enforcement gates (G1, G1b, G2–G8), backward compatibility, and `is_owned` JSON field.
+- **Purpose**: Test cases for account ownership enforcement — ownership-neutral `.account.save` and `.accounts assignee::USER@MACHINE name::X`, `.accounts owner::0 name::X` with G8 gate (Feature 064/065; formerly `assign::1`/`unclaim::1`), nine enforcement gates (G1, G1b, G2–G8), backward compatibility, and `is_owned` JSON field.
 - **Source**: `docs/feature/036_account_ownership.md`
 - **Covers**: AC-01 through AC-24
 
@@ -89,7 +89,7 @@
 - **When (case B):** `clp .account.unclaim name::alice` is executed; separately `clp .account.assign name::alice` is executed.
 - **Then (case B):** Both exit 1 with generic "unknown command" error — fully deregistered (not redirect stubs; same error as any unrecognized command).
 - **When (case C):** `clp .accounts unclaim::1 name::alice` is executed; separately `clp .accounts assign::1 name::alice` is executed.
-- **Then (case C):** Both exit 1 with REMOVED_TOGGLE migration messages: `unclaim::1` → "REMOVED — use `owner::0 name::X`"; `assign::1` → "REMOVED — use `active::USER@MACHINE name::X`". (Feature 064.)
+- **Then (case C):** Both exit 1 with REMOVED_TOGGLE migration messages: `unclaim::1` → "REMOVED — use `owner::0 name::X`"; `assign::1` → "REMOVED — use `assignee::USER@MACHINE name::X`". (Feature 064.)
 - **Exit:** 1 (all cases)
 - **Source fn:** `ft03_unclaim_param_placement`
 - **Source:** [036_account_ownership.md AC-03](../../../docs/feature/036_account_ownership.md)
@@ -234,7 +234,7 @@
 - **When (case B):** `clp .accounts unclaim::1 name::alice` is executed.
 - **Then (case B):** Exits 1 — REMOVED_TOGGLE migration message: "REMOVED — use `owner::0 name::X`". No file written. (Feature 064.)
 - **When (case C):** `clp .accounts assign::1 name::alice` is executed.
-- **Then (case C):** Exits 1 — REMOVED_TOGGLE migration message: "REMOVED — use `active::USER@MACHINE name::X`". No file written. (Feature 064.)
+- **Then (case C):** Exits 1 — REMOVED_TOGGLE migration message: "REMOVED — use `assignee::USER@MACHINE name::X`". No file written. (Feature 065: `active::` itself is now also REMOVED_TOGGLE; use `assignee::`.)
 - **Exit:** 1 (all cases)
 - **Source fn:** `ft15_unclaim_not_on_save_or_assign` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [036_account_ownership.md AC-15](../../../docs/feature/036_account_ownership.md)

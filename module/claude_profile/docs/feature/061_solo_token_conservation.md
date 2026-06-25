@@ -66,7 +66,7 @@ When the fetch gate fires, `approximate_quota()` is called and its result replac
 | `solo::1 refresh::1` | Allowed. Refresh subprocess fires only for current+owned account (if auth error). |
 | `solo::1 touch::1` | Allowed. Touch subprocess fires only for current+owned account (if idle). |
 | `solo::1 only_active::1` | Allowed. Orthogonal — solo controls fetch, `only_active::` controls display. |
-| `solo::1 active::USER@MACHINE` | Allowed. `active::` writes local marker file — no API call. (Feature 064: `assign::1` is REMOVED; use `active::USER@MACHINE` instead.) |
+| `solo::1 assignee::USER@MACHINE` | Allowed. `assignee::` writes local marker file — no API call. (Feature 065: `active::` is REMOVED; use `assignee::USER@MACHINE` instead.) |
 | `solo::1 owner::0` | Allowed. `owner::0` writes local JSON — no API call. (Feature 064: `unclaim::1` is REMOVED; use `owner::0` instead.) |
 | `solo::1 force::1` | Allowed. `force::` bypasses G5–G8 (write-side). Solo is read-side token conservation. Independent domains. |
 

@@ -1,14 +1,14 @@
 # Parameter :: 57. `assign::`
 
-> **REMOVED (Feature 064):** The `assign::` parameter has been removed from the unified parameter set on `.accounts` and `.usage`. Marker assignment is now performed via `active::USER@MACHINE name::X`.
+> **REMOVED (Feature 064):** The `assign::` parameter has been removed from the unified parameter set on `.accounts` and `.usage`. Marker assignment was moved to `active::USER@MACHINE name::X` (Feature 064), then `active::` was renamed to `assignee::` (Feature 065). Current CLI surface uses `assignee::`.
 >
 > **Migration:**
-> - `assign::1 name::X` → `active::$USER@$HOSTNAME name::X` (current machine)
-> - `assign::1 name::X for::bob@laptop` → `active::bob@laptop name::X`
+> - `assign::1 name::X` → `assignee::0 name::X` (current machine via `assignee::0` sentinel)
+> - `assign::1 name::X for::bob@laptop` → `assignee::bob@laptop name::X`
 >
 > Using `assign::1` now exits 1 with a migration message.
 >
-> See [feature/064_active_marker_and_owner_redesign.md](../../feature/064_active_marker_and_owner_redesign.md) for full context.
+> See [feature/065_assignee_param_redesign.md](../../feature/065_assignee_param_redesign.md) for full context.
 
 [Historical specification retained below for reference.]
 

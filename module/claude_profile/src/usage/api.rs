@@ -482,12 +482,12 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     use core::fmt::Write as _;
     use crate::commands::shared::{ is_dry, resolve_account_name, io_err_to_error_data };
 
-    // REMOVED_TOGGLE checks: assign, unclaim, for → migration messages (Feature 064).
+    // REMOVED_TOGGLE checks: assign, unclaim, for, active → migration messages (Feature 064/065).
     if cmd.arguments.contains_key( "assign" )
     {
       return Err( ErrorData::new(
         ErrorCode::ArgumentTypeMismatch,
-        "assign:: REMOVED — use active::USER@MACHINE name::X instead".to_string(),
+        "assign:: REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)".to_string(),
       ) );
     }
     if cmd.arguments.contains_key( "unclaim" )
@@ -501,34 +501,49 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     {
       return Err( ErrorData::new(
         ErrorCode::ArgumentTypeMismatch,
-        "for:: REMOVED — functionality absorbed into active:: value: active::USER@MACHINE name::X".to_string(),
+        "for:: REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)".to_string(),
+      ) );
+    }
+    if cmd.arguments.contains_key( "active" )
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        "active:: REMOVED — use assignee::USER@MACHINE name::X (or assignee::0 name::X for current machine)".to_string(),
       ) );
     }
 
-    // ── active:: dispatch (Feature 064) ──────────────────────────────────────
-    if let Some( Value::String( av ) ) = cmd.arguments.get( "active" )
+    // ── assignee:: dispatch (Feature 065) ────────────────────────────────────
+    if let Some( Value::String( av ) ) = cmd.arguments.get( "assignee" )
     {
-      let av  = av.clone();
+      let av = if av == "0"
+      {
+        // Sentinel "0" expands to current machine identity ($USER@$HOSTNAME).
+        claude_profile_core::account::current_identity()
+      }
+      else
+      {
+        av.clone()
+      };
       let san = | s : &str | -> String
       {
         s.chars().map( | c | if c.is_alphanumeric() || c == '-' || c == '.' { c } else { '_' } ).collect()
       };
       let ( usr_raw, mch_raw ) = av.split_once( '@' ).ok_or_else( || ErrorData::new(
         ErrorCode::ArgumentTypeMismatch,
-        "active:: must be USER@MACHINE format (no '@' found)".to_string(),
+        "assignee:: must be USER@MACHINE format (no '@' found) — or use assignee::0 for current machine".to_string(),
       ) )?;
       if usr_raw.is_empty()
       {
         return Err( ErrorData::new(
           ErrorCode::ArgumentTypeMismatch,
-          "active:: user component (left of '@') must not be empty".to_string(),
+          "assignee:: user component (left of '@') must not be empty".to_string(),
         ) );
       }
       if mch_raw.is_empty()
       {
         return Err( ErrorData::new(
           ErrorCode::ArgumentTypeMismatch,
-          "active:: machine component (right of '@') must not be empty".to_string(),
+          "assignee:: machine component (right of '@') must not be empty".to_string(),
         ) );
       }
       let su      = san( usr_raw );
@@ -569,8 +584,8 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
           ) );
         }
         std::fs::write( credential_store.join( &marker ), name_arg.as_bytes() )
-          .map_err( | e | io_err_to_error_data( &e, "usage active" ) )?;
-        if params.trace { eprintln!( "[trace] usage active  write marker: {marker}  →  {name_arg}" ) }
+          .map_err( | e | io_err_to_error_data( &e, "usage assignee" ) )?;
+        if params.trace { eprintln!( "[trace] usage assignee  write marker: {marker}  →  {name_arg}" ) }
         return Ok( OutputData::new(
           format!( "assigned {name_arg} for {display}  \u{2192}  {marker}\n" ),
           "text",
@@ -588,9 +603,9 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
       if marker_path.exists()
       {
         std::fs::remove_file( &marker_path )
-          .map_err( | e | io_err_to_error_data( &e, "usage active unassign" ) )?;
+          .map_err( | e | io_err_to_error_data( &e, "usage assignee unassign" ) )?;
       }
-      if params.trace { eprintln!( "[trace] usage active  cleared marker: {marker}" ) }
+      if params.trace { eprintln!( "[trace] usage assignee  cleared marker: {marker}" ) }
       return Ok( OutputData::new(
         format!( "unassigned {display}  \u{2192}  {marker} cleared\n" ),
         "text",

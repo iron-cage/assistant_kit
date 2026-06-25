@@ -6,10 +6,10 @@ Account management commands: list, save, use, delete, limits, and relogin.
 
 ### Command :: 3. `.accounts`
 
-List all saved accounts (identity view) or run per-account mutations (`active::USER@MACHINE`, `owner::0`, `owner::USER@MACHINE`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email). When data-source params are active (`refresh::1`, `touch::1`), fetches live quota using the same pipeline as `.usage` — defaults to local-only read with no HTTP fetch.
+List all saved accounts (identity view) or run per-account mutations (`assignee::USER@MACHINE`, `owner::0`, `owner::USER@MACHINE`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email). When data-source params are active (`refresh::1`, `touch::1`), fetches live quota using the same pipeline as `.usage` — defaults to local-only read with no HTTP fetch.
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`cols::`](../param/033_cols.md), [`active::`](../param/013_active.md), [`owner::`](../param/062_owner.md), [`force::`](../param/058_force.md), [`dry::`](../param/004_dry.md), [`set_model::`](../param/054_set_model.md), [`refresh::`](../param/019_refresh.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`abs::`](../param/046_abs.md), [`no_color::`](../param/047_no_color.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars, legacy field-toggle param used, unknown `cols::` id, REMOVED_TOGGLE param used (`assign::`, `for::`, `unclaim::`) — exits 1 with migration message, G8 ownership violation on `owner::0` or `owner::USER@MACHINE`) | 2 (runtime: account not found or credential store unreadable)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`cols::`](../param/033_cols.md), [`assignee::`](../param/063_assignee.md), [`owner::`](../param/062_owner.md), [`force::`](../param/058_force.md), [`dry::`](../param/004_dry.md), [`set_model::`](../param/054_set_model.md), [`refresh::`](../param/019_refresh.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`abs::`](../param/046_abs.md), [`no_color::`](../param/047_no_color.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars, legacy field-toggle param used, unknown `cols::` id, REMOVED_TOGGLE param used (`assign::`, `for::`, `unclaim::`, `active::`) — exits 1 with migration message, G8 ownership violation on `owner::0` or `owner::USER@MACHINE`) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
 
@@ -20,8 +20,10 @@ clp .accounts alice@acme.com                         # positional: bare name at 
 clp .accounts car                                     # prefix: first saved account starting with "car"
 clp .accounts cols::+host,-tier                      # add host column, remove tier column
 clp .accounts cols::-owner                            # hide owner column
-clp .accounts active::user1@w003 name::alice@acme.com  # write per-machine marker for alice
-clp .accounts active::user1@w003                       # unassign (clear) marker for user1@w003
+clp .accounts assignee::user1@w003 name::alice@acme.com  # write per-machine marker for alice
+clp .accounts assignee::0 name::alice@acme.com           # write marker for current machine
+clp .accounts assignee::user1@w003                       # unassign (clear) marker for user1@w003
+clp .accounts assignee::0                                # unassign current machine's marker
 clp .accounts owner::0 name::alice@acme.com            # clear ownership (G8 gate)
 clp .accounts owner::0 name::alice@acme.com force::1   # bypass G8
 clp .accounts owner::user1@w003 name::alice@acme.com   # set ownership
@@ -35,7 +37,7 @@ clp .accounts format::table
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | *(omit to list all)* | Show or operate on a single named account; prefix resolution supported |
 | `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to identity default set (`account`, `owner`, `active`, `current`, `sub`, `tier`, `expires`, `email`); opt-in: `display_name`, `host`, `role`, `billing`, `model`, `uuid`, `capabilities`, `org_uuid`, `org_name` |
-| `active::` | `string` (`USER@MACHINE`) | *(omit)* | When `name::` present: write per-machine marker `_active_{machine}_{user}` = `{name}`. When `name::` absent: clear marker for the given identity. Value sanitized per `active_marker_filename()` rules (Feature 064; replaces former `assign::1` + `for::`) |
+| `assignee::` | `string` (`USER@MACHINE` or `0`) | *(omit)* | When `name::` present: write per-machine marker `_active_{machine}_{user}` = `{name}`. When `name::` absent: clear marker for the given identity. Value `"0"` expands to `$USER@$HOSTNAME` (current machine). Value sanitized per `active_marker_filename()` rules (Feature 065; renamed from `active::`) |
 | `owner::` | `string` | *(omit)* | `owner::0`: clear ownership via `write_owner(name, store, "")`; G8 gate runs before write even when `dry::1`; when `name::` absent, batch-clears all owned accounts in filtered set. `owner::USER@MACHINE`: set owner; G8 gate; `name::` required (comma-list `X,Y,Z` supported). Feature 063/064. |
 | `force::` | `bool` | `0` | Bypass G8 ownership gate on `owner::0` and `owner::USER@MACHINE`; allows any identity to modify ownership; ignored without `owner::` |
 | `dry::` | `bool` | `0` | Preview mutations without writing; G8 gate still runs on `owner::0 name::X dry::1` (Feature 064) |
@@ -67,7 +69,7 @@ clp .accounts format::table
 **Algorithm (5 steps):**
 1. Resolve credential store; graceful degradation on unavailability (returns `(no accounts configured)` with exit 0)
 2. List all accounts; resolve and filter by `name::` when provided
-3. **Mutation dispatch:** `active::USER@MACHINE name::X` → write per-machine marker; `active::USER@MACHINE` (no `name::`) → clear per-machine marker; `owner::0` → G8 gate then write `owner: ""` (or batch-clear all owned when `name::` absent); `owner::USER@MACHINE` → G8 gate then write owner identity (comma-list `name::` supported); REMOVED_TOGGLE param present (`assign::`, `for::`, `unclaim::`) → exit 1 with migration message; legacy field-toggle param present → exit 1 with `cols::` migration hint
+3. **Mutation dispatch:** `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine) → write per-machine marker; `assignee::` (no `name::`) → clear per-machine marker; `owner::0` → G8 gate then write `owner: ""` (or batch-clear all owned when `name::` absent); `owner::USER@MACHINE` → G8 gate then write owner identity (comma-list `name::` supported); REMOVED_TOGGLE param present (`assign::`, `for::`, `unclaim::`, `active::`) → exit 1 with migration message; legacy field-toggle param present → exit 1 with `cols::` migration hint
 4. Parse `cols::` modifiers; read `owner` from `{name}.json` per account (when `cols.owner`); detect current account via token comparison (when `cols.current`)
 5. Apply sort/filter; render in `format::`
 
@@ -94,7 +96,7 @@ clp .accounts format::table
 clp .accounts owner::0 name::alice@acme.com
 # unclaimed alice@acme.com
 
-clp .accounts active::bob@laptop name::alice@acme.com
+clp .accounts assignee::bob@laptop name::alice@acme.com
 # assigned alice@acme.com for bob@laptop  →  _active_laptop_bob
 ```
 
@@ -104,7 +106,7 @@ clp .accounts active::bob@laptop name::alice@acme.com
 - `format::json` always includes all fields regardless of `cols::`.
 - `format::table` columns: flag, Account, Owner (when enabled), Active, Sub, Tier, Expires.
 - Data-source params (`refresh::`, `touch::`) default to `0` — `.accounts` is local-only by default; set to `1` to activate the same live pipeline as `.usage`.
-- `active::` and `owner::` are also available on `.usage` (same behavior, unified param set). `assign::`, `unclaim::`, and `for::` are REMOVED_TOGGLE params — any invocation exits 1 with a migration message. See [Feature 064](../../feature/064_active_marker_and_owner_redesign.md).
+- `assignee::` and `owner::` are also available on `.usage` (same behavior, unified param set). `assign::`, `unclaim::`, `for::`, and `active::` are REMOVED_TOGGLE params — any invocation exits 1 with a migration message. See [Feature 065](../../feature/065_assignee_param_redesign.md) and [Feature 064](../../feature/064_active_marker_and_owner_redesign.md).
 - G8 ownership gate evaluates BEFORE `dry::1` on `owner::0 name::X` (Feature 064) — a non-owner gets exit 1 even in dry-run mode.
 - `current::` field (in text mode) shows `Current: yes` for the account whose `accessToken` matches `~/.claude/.credentials.json`. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
 
@@ -121,7 +123,8 @@ clp .accounts active::bob@laptop name::alice@acme.com
 | 7 | [Host Metadata](../../feature/029_account_host_metadata.md) | `cols::+host` / `+role` from saved snapshot |
 | 8 | [Account Ownership](../../feature/036_account_ownership.md) | G8 gate for `owner::0` and `owner::USER@MACHINE`; `force::` bypass |
 | 9 | [Accounts/Usage Param Unification](../../feature/037_accounts_usage_param_unification.md) | 32-param unified interface; `cols::` replacing field toggles; mutation params |
-| 10 | [Active Marker and Owner Param Redesign](../../feature/064_active_marker_and_owner_redesign.md) | `active::` repurposed as mutation param; `owner::0` sentinel; REMOVED_TOGGLE stubs |
+| 10 | [Active Marker and Owner Param Redesign](../../feature/064_active_marker_and_owner_redesign.md) | `active::` introduced as `Kind::String` mutation param (superseded by Feature 065); `owner::0` sentinel; REMOVED_TOGGLE stubs |
+| 11 | [Assignee Param Redesign](../../feature/065_assignee_param_redesign.md) | `assignee::` rename from `active::`; `assignee::0` current-machine sentinel; `active::` REMOVED_TOGGLE |
 
 ### Referenced User Stories
 
@@ -193,7 +196,7 @@ clp .account.save host::workstation role::work
 | 3 | [Persistent Storage](../../feature/010_persistent_storage.md) | Unified `{name}.json` merge semantics |
 | 4 | [Per-Machine Active Marker](../../feature/025_per_machine_active_marker.md) | `_active_{hostname}_{user}` marker written on save |
 | 5 | [Host Metadata](../../feature/029_account_host_metadata.md) | `host::` and `role::` metadata stored in `{name}.json` |
-| 6 | [Account Ownership](../../feature/036_account_ownership.md) | Ownership model — `.account.save` is ownership-neutral (passes `owner: None`); `.accounts owner::0 name::X` releases ownership (Feature 064); `.accounts active::USER@MACHINE` is marker-only (Feature 064) |
+| 6 | [Account Ownership](../../feature/036_account_ownership.md) | Ownership model — `.account.save` is ownership-neutral (passes `owner: None`); `.accounts owner::0 name::X` releases ownership (Feature 064); `.accounts assignee::USER@MACHINE` is marker-only (Feature 065) |
 
 ### Referenced User Stories
 
@@ -672,14 +675,16 @@ clp .account.inspect format::json | jq '.memberships | length'
 
 ---
 
-### Command :: 16. `.account.assign` *(removed — Feature 037; migration path superseded — Feature 064)*
+### Command :: 16. `.account.assign` *(removed — Feature 037; migration path superseded — Feature 064/065)*
 
-**Fully removed (Feature 037).** The interim `.accounts assign::1 name::X` migration path is also removed (Feature 064 — `assign::` is now a REMOVED_TOGGLE). Use `.accounts active::USER@MACHINE name::X` instead.
+**Fully removed (Feature 037).** The interim `.accounts assign::1 name::X` migration path is also removed (Feature 064 — `assign::` is now a REMOVED_TOGGLE). The `active::` migration path introduced in Feature 064 is itself now a REMOVED_TOGGLE (Feature 065). Use `.accounts assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine) instead.
 
 ```bash
-clp .accounts active::user1@w003 name::alice@corp.com
-clp .accounts active::bob@laptop name::alice@corp.com
-clp .accounts active::user1@w003         # unassign marker (no name::)
+clp .accounts assignee::user1@w003 name::alice@corp.com
+clp .accounts assignee::0 name::alice@corp.com          # current machine
+clp .accounts assignee::bob@laptop name::alice@corp.com
+clp .accounts assignee::user1@w003                      # unassign marker (no name::)
+clp .accounts assignee::0                               # unassign current machine's marker
 ```
 
 ---

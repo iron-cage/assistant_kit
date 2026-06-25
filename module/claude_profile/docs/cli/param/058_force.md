@@ -18,7 +18,7 @@ Bypasses ownership enforcement gates on mutation commands. When `force::1`, the 
 
 **No bypass for read-side gates:** `force::1` does not affect G1–G4 (fetch, refresh, touch suppression). Non-owned accounts continue to use cache-as-primary for quota reads regardless of `force::`.
 
-**No effect on `active::` marker writes:** `force::1` is silently ignored when used with `active::USER@MACHINE` — marker writes have no ownership gate (Feature 064). `force::` applies only to the ownership gates G5–G8 listed above.
+**No effect on `assignee::` marker writes:** `force::1` is silently ignored when used with `assignee::USER@MACHINE` — marker writes have no ownership gate (Feature 065). `force::` applies only to the ownership gates G5–G8 listed above.
 
 **Examples:**
 

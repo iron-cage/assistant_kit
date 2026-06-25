@@ -85,7 +85,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-81 | `who::0` accepted; empty store exits 0 | Who Param |
 | IT-82 | `who::2` rejected; exit 1; error mentions valid values `0` and `1` | Who Param |
 | IT-83 | `.usage.help` lists `who` param with sessions table description | Help Output |
-| IT-84 | `active::USER@MACHINE name::X` writes active marker on `.usage` (Feature 064) | Feature 064 — active mutation |
+| IT-84 | `assignee::USER@MACHINE name::X` writes active marker on `.usage` (Feature 065) | Feature 065 — assignee mutation |
 | IT-85 | `owner::0 name::X` clears owner field when G8 passes on `.usage` (Feature 064) | Feature 064 — owner mutation |
 | IT-86 | `assign::1` REMOVED_TOGGLE exits 1 on `.usage` (Feature 064) | Feature 064 — REMOVED_TOGGLE |
 | IT-87 | `unclaim::1` REMOVED_TOGGLE exits 1 on `.usage` (Feature 064) | Feature 064 — REMOVED_TOGGLE |
@@ -983,13 +983,13 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-84: `active::USER@MACHINE name::X` writes active marker on `.usage` (Feature 064)
+### IT-84: `assignee::USER@MACHINE name::X` writes active marker on `.usage` (Feature 065)
 
 - **Given:** `alice@acme.com` exists in credential store. Record mtime of `alice.json`, `alice.credentials.json`.
-- **When:** `clp .usage active::testuser@testmachine name::alice@acme.com`
+- **When:** `clp .usage assignee::testuser@testmachine name::alice@acme.com`
 - **Then:** Exit 0. `_active_testmachine_testuser` in credential store contains `alice@acme.com`. mtime of `alice.json` and `alice.credentials.json` unchanged. Same behavior as `.accounts` IT-43.
 - **Exit:** 0
-- **Source:** [feature/064_active_marker_and_owner_redesign.md AC-01](../../../../docs/feature/064_active_marker_and_owner_redesign.md)
+- **Source:** [feature/065_assignee_param_redesign.md AC-01](../../../../docs/feature/065_assignee_param_redesign.md)
 
 ---
 
@@ -1007,7 +1007,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 - **Given:** Any environment.
 - **When:** `clp .usage assign::1 name::alice@acme.com`
-- **Then:** Exit 1. Migration message: "REMOVED — use `active::USER@MACHINE name::X` instead". No files modified.
+- **Then:** Exit 1. Migration message: "REMOVED — use `assignee::USER@MACHINE name::X` instead". No files modified.
 - **Exit:** 1
 - **Source:** [feature/064_active_marker_and_owner_redesign.md AC-05](../../../../docs/feature/064_active_marker_and_owner_redesign.md)
 
