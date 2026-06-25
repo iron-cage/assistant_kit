@@ -322,6 +322,7 @@ fn g2cc4_all_runner_control_flags_no_conflict()
     !stdout.contains( "--chrome" ),
     "--no-chrome must suppress --chrome injection: {stdout}",
   );
+  #[ cfg( unix ) ]
   assert!(
     stdout.contains( "/tmp/test/-work" ),
     "effective dir must contain /tmp/test/-work: {stdout}",
@@ -355,6 +356,7 @@ fn g2cc5_file_strip_fences_keep_claudecode_accepted()
 /// G2CC6: `--dir PATH` + `--subdir NAME` → effective dir is `PATH/-NAME`.
 ///
 /// Spec: `02_runner_control.md` CC-6
+#[ cfg( unix ) ]
 #[ test ]
 fn g2cc6_dir_plus_subdir_effective_dir()
 {

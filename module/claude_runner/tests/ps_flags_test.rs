@@ -31,6 +31,9 @@
 //! | E41    | `CLR_PS_ANCIENT_SECS` env var: valid triggers 🕰; invalid silently ignored | Env Var |
 //! | E42    | `CLR_PS_HIGH_RAM_MB` env var: valid triggers 🐘; invalid silently ignored  | Env Var |
 
+#![ allow( missing_docs ) ]
+#![ cfg( unix ) ]
+
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::stdout_str;
 
