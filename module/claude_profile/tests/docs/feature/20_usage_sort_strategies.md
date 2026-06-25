@@ -167,7 +167,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then:** `account-a` appears before `weekly-exh`. `account-a` is in HExhausted (group 2); `weekly-exh` is in WeeklyExhausted (group 3). Under `prefer::any`, `prefer_weekly(account-a) = min(32%, 5%) = 5.0` — the bug used this value and placed `account-a` in Red; the fix uses `seven_day_left = 32% > 5.0%` → HExhausted.
 - **Exit:** n/a (unit test — position assertion)
 - **Source fn:** `mre_bug299_h_exhausted_misclassified_as_red_prefer_any` (in `src/usage/sort.rs`)
-- **Source:** [feature/020_usage_sort_strategies.md AC-12](../../../docs/feature/020_usage_sort_strategies.md); [bug/299](../../../../task/claude_profile/bug/299_status_group_of_prefer_weekly_boundary.md)
+- **Source:** [feature/020_usage_sort_strategies.md AC-12](../../../docs/feature/020_usage_sort_strategies.md); BUG-299
 
 ---
 

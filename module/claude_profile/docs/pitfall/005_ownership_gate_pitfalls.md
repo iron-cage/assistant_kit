@@ -28,6 +28,16 @@ Same pattern as BUG-303 in `apply_touch()`. The G4 gate only checked `!aq.is_own
 
 **Fix:** Extract `reason_label()` function with explicit `is_occupied_elsewhere` branch before the fallback.
 
+### Pitfall 5 — Occupied-elsewhere accounts bypass explicit command gates
+
+G5 (`.account.use`), G6 (`.account.delete`), and G7 (`.account.relogin`) check `!is_owned` only. An occupied-elsewhere account has `is_owned=true` and therefore passes all three gates without restriction.
+
+This is intentional by design: occupied-elsewhere accounts are owned by this machine, so explicit manipulation is permitted. Protection for occupied-elsewhere accounts exists only in the automatic pipeline (G1b blocks HTTP fetch; G2 blocks refresh; G4 blocks touch) and in `find_first_eligible` Gate 3 (blocks auto-switch selection). Explicit command gates do not participate.
+
+**Contrast:** a non-owned account (`is_owned=false`) is blocked by G5/G6/G7/G8 for all mutation commands. An occupied-elsewhere account (`is_owned=true`, `is_occupied_elsewhere=true`) is blocked only by the automatic pipeline and Gate 3 — never by the explicit command gates.
+
+**Pitfall for system extension:** when adding a new mutation command, do not assume the existing ownership gate pattern (`!is_owned`) is sufficient to protect occupied-elsewhere accounts. If the new command must not disturb a remote session, add an explicit `is_occupied_elsewhere` check independently.
+
 ### General Rule
 
 Every gate that protects against cross-machine interference MUST check BOTH:

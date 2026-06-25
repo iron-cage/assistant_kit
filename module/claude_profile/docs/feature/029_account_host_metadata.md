@@ -45,7 +45,7 @@ This file is created or overwritten on every `save()` invocation (same idempoten
 
 | File | Relationship |
 |------|--------------|
-| `task/claude_profile/bug/239_account_save_hostname_empty_env_var.md` | BUG-239 ✅ Fixed: `resolve_hostname()` fallback chain (`$HOSTNAME` → `/etc/hostname` → `"local"`) extracted and shared with `active_marker_filename()` |
+| BUG-239 | BUG-239 ✅ Fixed: `resolve_hostname()` fallback chain (`$HOSTNAME` → `/etc/hostname` → `"local"`) extracted and shared with `active_marker_filename()` |
 
 ### Features
 

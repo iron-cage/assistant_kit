@@ -31,6 +31,12 @@ Filter candidates for next-account recommendation and auto-switch. An account is
 | Table marker render (`render.rs:53`) | `rotate && !force` | Only when rotate active and not forced |
 | Footer recommendation (`render.rs:242`) | `false` (hardcoded) | Ownership never checked for footer |
 
+### Gate 3 vs Gate 8 — `force::1` scope
+
+Gate 3 (`is_occupied_elsewhere → continue`) fires unconditionally inside `find_first_eligible()` — it is not part of the `extra` predicate controlled by `gate_ownership`. Gate 8 (Foreign-owned) is inside the `extra` predicate and is bypassed when `gate_ownership=false` or when `force::1` sets it to `false`.
+
+An occupied-elsewhere account cannot be selected by `find_next_for_strategy()` under any `force::1` or `gate_ownership` combination. A non-owned account can be selected when `gate_ownership=false` (footer recommendation at `render.rs:241`).
+
 ### `is_owned` Semantics
 
 `is_owned = true` when `owner` field is empty OR matches `current_identity()` (`{user}@{hostname}`). `is_owned = false` when a different machine owns the account. Source: `types.rs:193-195`.

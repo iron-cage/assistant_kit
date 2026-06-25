@@ -11,6 +11,7 @@ Test-lens documentation for `claude_profile`. Each surface subdirectory contains
 | invariant/ | Invariant property assertion specs (IN-N entries) |
 | cli/type/ | CLI type acceptance and boundary spec (TC-N entries) |
 | pitfall/ | Pitfall guard verification specs (PP-N entries) |
+| algorithm/ | Algorithm correctness specs (AC-N entries) |
 
 ### Surface Index
 
@@ -23,3 +24,4 @@ Test-lens documentation for `claude_profile`. Each surface subdirectory contains
 | Invariant docs | `docs/invariant/` | `IN-` | 2 each | [invariant/](invariant/readme.md) |
 | CLI types | `docs/cli/type/` | `TC-` | 4 each | [cli/type/](cli/type/readme.md) |
 | Pitfall docs | `docs/pitfall/` | `PP-` | 2 each | [pitfall/](pitfall/readme.md) |
+| Algorithm docs | `docs/algorithm/` | `AC-` | 4 each | [algorithm/](algorithm/readme.md) |

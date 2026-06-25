@@ -70,9 +70,9 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 
 | File | Relationship |
 |------|--------------|
-| [BUG-310 🟢 Fixed](../../../../../task/claude_profile/bug/310_rotation_touch_stale_live_credentials.md) | `api.rs:824` copies pre-touch store credentials to live via `switch_account(winner)`; `api.rs:838` `apply_touch(winner)` may refresh token writing to STORE only; live session retains stale pre-refresh credentials; fix = AC-11 — `fs::copy` at `api.rs:847` re-syncs store→live after `apply_touch` (TSK-318) |
-| [BUG-311 🟢 Fixed](../../../../../task/claude_profile/bug/311_model_override_one_way_ratchet.md) | `apply_model_override()` only wrote `"opus"`; no else-branch restored `"sonnet"` when winner had sufficient Sonnet quota. Rotation step d' retained stale `"opus"` after switching to a Sonnet-available account. Fix: bidirectional override (else-branch + tier-absent case) in `api.rs`. |
-| [BUG-312 🟢 Fixed](../../../../../task/claude_profile/bug/312_effort_never_initialized.md) | `effortLevel` was never written on fresh install or after `.account.use` — only `rotate::1` carry-forward wrote it. Footer omitted effort for all non-carry-forward paths. Fix: `apply_model_override()` (called in step d') now initializes `effortLevel: "low"` when key is absent. |
+| BUG-310 🟢 Fixed | `api.rs:824` copies pre-touch store credentials to live via `switch_account(winner)`; `api.rs:838` `apply_touch(winner)` may refresh token writing to STORE only; live session retains stale pre-refresh credentials; fix = AC-11 — `fs::copy` at `api.rs:847` re-syncs store→live after `apply_touch` (TSK-318) |
+| BUG-311 🟢 Fixed | `apply_model_override()` only wrote `"opus"`; no else-branch restored `"sonnet"` when winner had sufficient Sonnet quota. Rotation step d' retained stale `"opus"` after switching to a Sonnet-available account. Fix: bidirectional override (else-branch + tier-absent case) in `api.rs`. |
+| BUG-312 🟢 Fixed | `effortLevel` was never written on fresh install or after `.account.use` — only `rotate::1` carry-forward wrote it. Footer omitted effort for all non-carry-forward paths. Fix: `apply_model_override()` (called in step d') now initializes `effortLevel: "low"` when key is absent. |
 
 ### Commands
 

@@ -783,3 +783,39 @@ fn ec01_recommended_model_sonnet_at_15_001_pct_left()
     "utilization=84.999 (15.001% left) must return sonnet; got: {:?}", recommended_model( &aq ),
   );
 }
+
+// ── Algorithm 002 AC cases ────────────────────────────────────────────────
+
+/// AC-6 (algorithm/002): `recommended_model()` divergence — sufficient vs near-exhausted.
+///
+/// Two quota states produce divergent outputs, proving the function is non-constant:
+///   State A: `utilization=80.0` (20% left, above threshold) → `"sonnet"`
+///   State B: `utilization=86.0` (14% left, below threshold) → `"opus"`
+///
+/// The divergence is necessary because `recommended_model()` is the footer's model
+/// recommendation signal — a constant return value would mean the threshold has no effect.
+///
+/// Spec: [`tests/docs/algorithm/002_session_model_override.md` AC-6]
+#[ test ]
+fn ac6_recommended_model_divergence_sufficient_vs_near_exhausted()
+{
+  // State A: 20% remaining — above OPUS_OVERRIDE_THRESHOLD (15.0) → sonnet
+  let aq_a = mk_aq_sort_weekly( "test", 0.0, 0.0, 80.0 );
+  // State B: 14% remaining — below OPUS_OVERRIDE_THRESHOLD (15.0) → opus
+  let aq_b = mk_aq_sort_weekly( "test", 0.0, 0.0, 86.0 );
+  let model_a = recommended_model( &aq_a );
+  let model_b = recommended_model( &aq_b );
+  assert_eq!(
+    model_a, "sonnet",
+    "AC-6 state A: utilization=80.0 (20% left) must return sonnet; got: {model_a}",
+  );
+  assert_eq!(
+    model_b, "opus",
+    "AC-6 state B: utilization=86.0 (14% left) must return opus; got: {model_b}",
+  );
+  assert_ne!(
+    model_a, model_b,
+    "AC-6: recommended_model must return divergent results for sufficient vs near-exhausted quota; \
+     both states returning the same value means the threshold has no effect",
+  );
+}

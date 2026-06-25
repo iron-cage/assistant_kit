@@ -201,5 +201,5 @@ All `behavior` doc instances must include:
 
 **This entity consumed by**:
 - `../../tests/behavior/` — invalidation test suite (one file per behavior)
-- `../../-plan/001_behavior_validation_upgrade.plan.md` — validation upgrade roadmap
+
 - `../../../module/claude_runner_core/docs/claude_params/` — flag behavior cross-references

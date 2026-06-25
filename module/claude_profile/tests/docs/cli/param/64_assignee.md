@@ -26,20 +26,22 @@ Edge case tests for the `assignee::` parameter (Feature 065). Renamed from `acti
 | EC-16 | `force::1 assignee::user@host name::X` — `force::1` silently ignored | No-op | ✅ |
 | EC-17 | `active::user@host name::X` exits 1 — REMOVED_TOGGLE migration message | Migration | ✅ |
 | EC-18 | `assignee::user@host` (no `name::`) when marker absent — no-op exit 0 | Behavioral | ✅ |
+| EC-19 | Multiple `@` in value — `assignee::alice@corp.com@laptop` splits on first `@` | Sanitization | ✅ |
 
 ## Test Coverage Summary
 
 - Behavioral: 3 tests (EC-1, EC-3, EC-18)
 - Sentinel: 2 tests (EC-2, EC-4)
 - Validation: 4 tests (EC-5, EC-6, EC-7, EC-11)
-- Sanitization: 2 tests (EC-12, EC-13)
+- Sanitization: 3 tests (EC-12, EC-13, EC-19)
 - Dry-run: 3 tests (EC-8, EC-9, EC-10)
 - Default: 1 test (EC-14)
 - Isolation: 1 test (EC-15)
 - No-op: 1 test (EC-16)
 - Migration: 1 test (EC-17)
+- Multiple-at: 1 test (EC-19)
 
-**Total:** 18 edge cases
+**Total:** 19 edge cases
 
 ## Test Cases
 
@@ -222,4 +224,15 @@ Edge case tests for the `assignee::` parameter (Feature 065). Renamed from `acti
 - **When:** `clp .accounts assignee::testuser@testmachine` (no `name::`)
 - **Then:** Exits 0. stdout contains `unassigned`. No new `_active_*` file is created — the absent marker stays absent.
 - **Exit:** 0
+- **Source:** [params.md#parameter--63-assignee](../../../../docs/cli/param/063_assignee.md)
+
+---
+
+### EC-19: Multiple `@` in value — splits on first `@`
+
+- **Given:** `alice@corp.com.credentials.json` exists in credential store.
+- **When:** `clp .accounts assignee::alice@corp.com@laptop name::alice@corp.com`
+- **Then:** Exits 0. `split_once('@')` splits on the FIRST `@`; user = `"alice"`, machine = `"corp.com@laptop"`. After sanitization (`@` → `_`): marker = `_active_corp.com_laptop_alice`. `{credential_store}/_active_corp.com_laptop_alice` contains `alice@corp.com`.
+- **Exit:** 0
+- **Note:** Implemented as `ec8_multiple_at_splits_on_first` (historically numbered before this spec was aligned).
 - **Source:** [params.md#parameter--63-assignee](../../../../docs/cli/param/063_assignee.md)

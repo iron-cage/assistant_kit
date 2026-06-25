@@ -305,7 +305,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage`
 - **Then:** That account's row shows `EXPIRED` in Expires and `—` for all quota columns (5h Left, 5h Reset, 7d Left, 7d(Son)); the 7d Reset column shows `(auth expired (401))` — NOT `(HTTP transport error: HTTP 401)`. Exit 0.
 - **Exit:** 0
-- **Fix:** BUG-152 (`task/claude_profile/bug/152_shorten_error_omits_401.md`)
+- **Fix:** BUG-152
 - **Source fn:** `ft002_lim_it_http_401_shortens_to_auth_expired` (in `usage_feature_test.rs`)
 - **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)
 
@@ -538,7 +538,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage.help`
 - **Then:** Exits 0; stdout contains `"1 = enabled, default"` (indicating `refresh::1` is the default); stdout does NOT contain `"0 = disabled, default"`.
 - **Exit:** 0
-- **Fix:** BUG-155 (`task/claude_profile/bug/155_refresh_wrong_default.md`)
+- **Fix:** BUG-155
 - **Source fn:** `it037_mre_bug155_refresh_defaults_to_1`
 - **Source:** [017_token_refresh.md AC-23](../../../../docs/feature/017_token_refresh.md)
 
@@ -550,7 +550,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage.help`
 - **Then:** Exits 0; stdout contains `"429"` (the conditional 429+locally-expired refresh case is documented in the parameter description); stdout does NOT contain the old combined string `"401/403/429"`.
 - **Exit:** 0
-- **Fix:** BUG-156 (`task/claude_profile/bug/156_refresh_429_expired_not_refreshed.md`)
+- **Fix:** BUG-156
 - **Source fn:** `it038_mre_bug156_refresh_help_mentions_429_expired`
 - **Source:** [017_token_refresh.md AC-24](../../../../docs/feature/017_token_refresh.md)
 

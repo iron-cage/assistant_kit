@@ -1315,3 +1315,167 @@ fn mre_bug317_cancelled_excluded_by_only_valid()
     by only_valid::1 — the billing_type guard must negate the result.is_ok() pass",
   );
 }
+
+// ── Algorithm 002 AC cases ────────────────────────────────────────────────
+
+/// AC-1 (algorithm/002): Absent Sonnet tier with Opus session writes "sonnet" conservatively.
+///
+/// `seven_day_sonnet=None` → `else` branch of `apply_model_override` →
+/// `override_session_model_to_sonnet()`. Current model `"opus"` satisfies gate
+/// (`contains("opus")=true`) → writes `"sonnet"`. Absent tier ≠ exhausted.
+///
+/// Spec: [`tests/docs/algorithm/002_session_model_override.md` AC-1]
+#[ test ]
+fn ac1_absent_tier_with_opus_session_restores_sonnet()
+{
+  use claude_quota::OauthUsageData;
+  let dir   = TempDir::new().unwrap();
+  let paths = crate::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  std::fs::write( paths.settings_file(), r#"{"model":"opus"}"# ).unwrap();
+  let quota = OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+  apply_model_override( &quota, &paths, false, "test", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
+  assert!(
+    content.contains( "\"sonnet\"" ),
+    "AC-1: absent Sonnet tier + Opus session must write sonnet (Fix BUG-311); got: {content}",
+  );
+  assert!(
+    !content.contains( "\"opus\"" ),
+    "AC-1: absent tier must not leave opus in settings.json; got: {content}",
+  );
+}
+
+/// AC-2 (algorithm/002): Absent Sonnet tier with Sonnet session — model field unchanged.
+///
+/// `seven_day_sonnet=None` → calls `override_session_model_to_sonnet()`.
+/// Current model `"sonnet"` shorthand does NOT satisfy the gate
+/// (`contains("opus")=false`, `=="claude-sonnet-4-6"=false`, `is_empty()=false`) →
+/// returns `false` — model field unchanged; session already in Sonnet form.
+///
+/// Spec: [`tests/docs/algorithm/002_session_model_override.md` AC-2]
+#[ test ]
+fn ac2_absent_tier_with_sonnet_session_model_field_unchanged()
+{
+  use claude_quota::OauthUsageData;
+  let dir   = TempDir::new().unwrap();
+  let paths = crate::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  // Pre-write settings.json with sonnet shorthand (production form).
+  std::fs::write( paths.settings_file(), r#"{"model":"sonnet"}"# ).unwrap();
+  let quota = OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+  apply_model_override( &quota, &paths, false, "test", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
+  assert!(
+    content.contains( "\"sonnet\"" ),
+    "AC-2: absent tier + Sonnet session must leave model = sonnet; got: {content}",
+  );
+  assert!(
+    !content.contains( "\"opus\"" ),
+    "AC-2: absent tier + Sonnet session must not write opus; got: {content}",
+  );
+}
+
+/// AC-3 (algorithm/002): Sufficient Sonnet quota with Opus session restores Sonnet.
+///
+/// `utilization=80.0` → `sonnet_left=20.0 ≥ 15.0` → `else` branch →
+/// `override_session_model_to_sonnet()`. Current model `"opus"` satisfies gate → writes `"sonnet"`.
+/// Recovery path added by Fix BUG-311.
+///
+/// Spec: [`tests/docs/algorithm/002_session_model_override.md` AC-3]
+#[ test ]
+fn ac3_sufficient_quota_with_opus_session_restores_sonnet()
+{
+  use claude_quota::{ OauthUsageData, PeriodUsage };
+  let dir   = TempDir::new().unwrap();
+  let paths = crate::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  std::fs::write( paths.settings_file(), r#"{"model":"opus"}"# ).unwrap();
+  let quota = OauthUsageData
+  {
+    five_hour        : None,
+    seven_day        : None,
+    seven_day_sonnet : Some( PeriodUsage { utilization : 80.0, resets_at : None } ),
+  };
+  apply_model_override( &quota, &paths, false, "test", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
+  assert!(
+    content.contains( "\"sonnet\"" ),
+    "AC-3: 20% Sonnet remaining + Opus session must write sonnet (Fix BUG-311 recovery path); got: {content}",
+  );
+  assert!(
+    !content.contains( "\"opus\"" ),
+    "AC-3: sufficient quota must not leave opus; got: {content}",
+  );
+}
+
+/// AC-4 (algorithm/002): Near-exhausted Sonnet quota with Sonnet session switches to Opus.
+///
+/// `utilization=86.0` → `sonnet_left=14.0 < 15.0` → Opus override fires →
+/// `override_session_model_to_opus()`. Current model `"sonnet"` satisfies gate
+/// (`contains("sonnet")=true`) → writes `"opus"`.
+///
+/// Spec: [`tests/docs/algorithm/002_session_model_override.md` AC-4]
+#[ test ]
+fn ac4_near_exhausted_quota_with_sonnet_session_switches_to_opus()
+{
+  use claude_quota::{ OauthUsageData, PeriodUsage };
+  let dir   = TempDir::new().unwrap();
+  let paths = crate::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  std::fs::write( paths.settings_file(), r#"{"model":"sonnet"}"# ).unwrap();
+  let quota = OauthUsageData
+  {
+    five_hour        : None,
+    seven_day        : None,
+    seven_day_sonnet : Some( PeriodUsage
+    {
+      utilization : 86.0,
+      resets_at   : Some( "2026-06-28T04:00:00+00:00".to_string() ),
+    } ),
+  };
+  apply_model_override( &quota, &paths, false, "test", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
+  assert!(
+    content.contains( "\"opus\"" ),
+    "AC-4: 14% Sonnet remaining + Sonnet session must write opus (near-exhausted); got: {content}",
+  );
+}
+
+/// AC-5 (algorithm/002): Near-exhausted Sonnet quota with Opus session — model field unchanged.
+///
+/// `utilization=86.0` → Opus override path → `override_session_model_to_opus()`.
+/// Current model `"opus"` does NOT satisfy gate
+/// (`contains("sonnet")=false`, `=="claude-opus-4-6"=false`, `is_empty()=false`) →
+/// returns `false` — model field unchanged; session already in Opus form.
+///
+/// Spec: [`tests/docs/algorithm/002_session_model_override.md` AC-5]
+#[ test ]
+fn ac5_near_exhausted_quota_with_opus_session_model_field_unchanged()
+{
+  use claude_quota::{ OauthUsageData, PeriodUsage };
+  let dir   = TempDir::new().unwrap();
+  let paths = crate::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  std::fs::write( paths.settings_file(), r#"{"model":"opus"}"# ).unwrap();
+  let quota = OauthUsageData
+  {
+    five_hour        : None,
+    seven_day        : None,
+    seven_day_sonnet : Some( PeriodUsage
+    {
+      utilization : 86.0,
+      resets_at   : Some( "2026-06-28T04:00:00+00:00".to_string() ),
+    } ),
+  };
+  apply_model_override( &quota, &paths, false, "test", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
+  assert!(
+    content.contains( "\"opus\"" ),
+    "AC-5: 14% Sonnet remaining + Opus session must leave model = opus (no-op); got: {content}",
+  );
+  assert!(
+    !content.contains( "\"sonnet\"" ),
+    "AC-5: already-Opus session must not write sonnet; got: {content}",
+  );
+}

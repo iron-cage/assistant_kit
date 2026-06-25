@@ -99,8 +99,8 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 | File | Relationship |
 |------|--------------|
-| `task/claude_profile/bug/259_sort_non_deterministic_when_all_keys_tied.md` | BUG-259 ✅ Fixed: `sort_indices` all `sort_by` closures missing final name tiebreaker — non-deterministic row order when all numeric keys tie |
-| `task/claude_profile/bug/299_status_group_of_prefer_weekly_boundary.md` | BUG-299 ✅ Fixed: `status_group_of()` used `prefer_weekly` for group boundary — fix: `sort.rs:35` changed to `seven_day_left( aq ) > 5.0`; `prefer` param removed from signature (TSK-301) |
+| BUG-259 | BUG-259 ✅ Fixed: `sort_indices` all `sort_by` closures missing final name tiebreaker — non-deterministic row order when all numeric keys tie |
+| BUG-299 | BUG-299 ✅ Fixed: `status_group_of()` used `prefer_weekly` for group boundary — fix: `sort.rs:35` changed to `seven_day_left( aq ) > 5.0`; `prefer` param removed from signature (TSK-301) |
 
 ### Sources
 

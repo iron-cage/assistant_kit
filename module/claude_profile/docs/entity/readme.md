@@ -4,9 +4,9 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 45 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 46 |
 | `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 7 |
-| `algorithm/` | Decision algorithm references (model selection, quota classification, sort, approximation) | [algorithm/readme.md](../algorithm/readme.md) | 8 |
+| `algorithm/` | Decision algorithm references (model selection, quota classification, sort, approximation) | [algorithm/readme.md](../algorithm/readme.md) | 9 |
 | `subprocess/` | Isolated subprocess contract, credential write-back protocol, and invocation sites | [subprocess/readme.md](../subprocess/readme.md) | 5 |
 | `state_machine/` | Domain lifecycle state machines (account, token, session window, ownership, quota measurement) | [state_machine/readme.md](../state_machine/readme.md) | 5 |
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 6 |
@@ -28,9 +28,10 @@
 | `tests/docs/cli/param_group/` | Per-group interaction test documentation | [tests/docs/cli/param_group/readme.md](../../tests/docs/cli/param_group/readme.md) | 6 |
 | `tests/docs/cli/type/` | Per-type test case documentation | [tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) | 4 |
 | `tests/docs/cli/user_story/` | Per-story acceptance test documentation | [tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) | 5 |
-| `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 46 |
+| `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 47 |
 | `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 8 |
 | `tests/docs/pitfall/` | Per-pitfall guard verification test documentation | [tests/docs/pitfall/readme.md](../../tests/docs/pitfall/readme.md) | 1 |
+| `tests/docs/algorithm/` | Per-algorithm AC-N correctness test documentation | [tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) | 3 |
 
 ## Master Doc Instances Table
 
@@ -81,6 +82,7 @@
 | feature | 063 | Explicit Ownership Claim | [feature/063_explicit_ownership_claim.md](../feature/063_explicit_ownership_claim.md) |
 | feature | 064 | Active Marker and Owner Param Redesign | [feature/064_active_marker_and_owner_redesign.md](../feature/064_active_marker_and_owner_redesign.md) |
 | feature | 065 | Assignee Param Redesign | [feature/065_assignee_param_redesign.md](../feature/065_assignee_param_redesign.md) |
+| feature | 066 | Dual-Source OAuth Quota Parsing | [feature/066_dual_source_quota_parsing.md](../feature/066_dual_source_quota_parsing.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](../cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](../cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](../cli/003_env_param.md) |
@@ -211,6 +213,7 @@
 | algorithm | 006 | Quota Polynomial Approximation | [algorithm/006_quota_approximation.md](../algorithm/006_quota_approximation.md) |
 | algorithm | 007 | Sort Strategies | [algorithm/007_sort_strategies.md](../algorithm/007_sort_strategies.md) |
 | algorithm | 008 | Subprocess Effort Resolution | [algorithm/008_subprocess_effort_resolution.md](../algorithm/008_subprocess_effort_resolution.md) |
+| algorithm | 009 | OAuth Usage Response Dual-Source Parsing | [algorithm/009_oauth_usage_response_migration.md](../algorithm/009_oauth_usage_response_migration.md) |
 | subprocess | 001 | `run_isolated()` Contract | [subprocess/001_run_isolated_contract.md](../subprocess/001_run_isolated_contract.md) |
 | subprocess | 002 | Credential Write-Back Protocol | [subprocess/002_credential_writeback.md](../subprocess/002_credential_writeback.md) |
 | subprocess | 003 | Token Refresh Invocation | [subprocess/003_token_refresh_invocation.md](../subprocess/003_token_refresh_invocation.md) |

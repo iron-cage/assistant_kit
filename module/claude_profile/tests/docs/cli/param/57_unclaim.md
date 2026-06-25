@@ -2,7 +2,7 @@
 
 > **REMOVED (Feature 036)**: The `unclaim::` parameter on `.account.save` was removed in Feature 036 (production param 056).
 >
-> **RE-ACTIVATED (Feature 037)**: Feature 037 absorbed it into `.accounts`/`.usage` as `unclaim::1`; `.account.unclaim` was fully deregistered.
+> **RE-ACTIVATED (Feature 037)**: Feature 037 absorbed it into `.accounts`/`.usage` as `unclaim::1`; `.account.unclaim` was converted to a redirect stub that exits 1 with a targeted `owner::0` migration hint.
 >
 > **REMOVED AGAIN (Feature 064)**: `unclaim::1` on `.accounts`/`.usage` has been removed in Feature 064.
 > The ownership clear operation is now `owner::0 name::EMAIL` (or `owner::0` alone for batch-clear).

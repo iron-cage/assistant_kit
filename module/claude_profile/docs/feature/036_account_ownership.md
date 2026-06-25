@@ -62,6 +62,78 @@ An account is "owned by this machine" when: (a) owner is empty or absent (no enf
 
 **Predicate–reason contract:** Every early-return gate in `should_refresh()` (`refresh_predicate.rs`) must have a corresponding branch in `reason_label(aq, now_secs)` (`refresh.rs`). The function is extracted specifically to enforce this contract and make the 1:1 mapping testable directly. When a new predicate gate is added, the matching reason branch is a mandatory co-change.
 
+### Token Operation Matrix
+
+The tables below show which token operations fire per account state across all CLI contexts. The two foreign-account states are mutually exclusive in the automatic pipeline: G1 fires before G1b, so G1b applies only to `is_owned=true` accounts.
+
+**Token operation legend:**
+- **Token read** — reads `accessToken` from `{name}.credentials.json`
+- **Quota API** — HTTP GET to `/api/oauth/usage`
+- **Account API** — HTTP GET to `/api/oauth/account` (billing/subscription info)
+- **Refresh sub** — OAuth token refresh subprocess; no Claude API quota consumed
+- **Touch sub** — Claude API request subprocess; opens 5h window; **consumes Claude API quota**
+- **Cred copy** — copies `{name}.credentials.json` to `~/.claude/.credentials.json`
+
+#### Automatic pipeline (`.usage`, `.accounts`, `live::1`)
+
+| Token operation | Location | Normal (`is_owned=true`) | Non-owned (`is_owned=false`) | Occupied-elsewhere (`is_owned=true`, `is_occ=true`) |
+|---|---|---|---|---|
+| Token read for `is_current` comparison | `fetch.rs:131` | ✅ | ❌ G1 fires first | ✅ comparison only — no network use ¹ |
+| Quota API | `fetch_oauth_usage()` | ✅ | ❌ G1 | ❌ G1b |
+| Account API | `fetch_oauth_account()` | ✅ | ❌ G1 | ❌ G1b |
+| Cache read (`{name}.json`) | G1/G1b fallback | conditional | ✅ always — `read_cached_quota()` | ✅ always — `approximate_quota()` |
+| Refresh sub | `apply_refresh()` via G2 | conditional | ❌ G2: `!is_owned` | ❌ G2: `is_occupied_elsewhere` |
+| Touch sub (Claude API quota) | `apply_touch()` via G4 | conditional | ❌ G4: `!is_owned` | ❌ G4: `is_occupied_elsewhere` |
+| Token read inside touch | `touch.rs:147` | conditional | ❌ G4 | ❌ G4 |
+| Quota API re-fetch after touch | `touch.rs:148` | conditional | ❌ G4 | ❌ G4 |
+| Account API re-fetch after touch | `touch.rs:164` | conditional | ❌ G4 | ❌ G4 |
+
+¹ Code comment at `fetch.rs:136`: *"the read here is token-comparison only, not credential-consuming in the network sense."*
+
+#### Display and recommendation
+
+| Operation | Context | Normal | Non-owned | Occupied-elsewhere |
+|---|---|---|---|---|
+| Shown in display output | render | ✅ live data | ✅ cached (`~` prefix) or `—` | ✅ approximated |
+| Appears as footer "Next" | `render.rs:241` `gate_ownership=false` | N/A | ✅ ownership not checked | ❌ Gate 3 unconditional |
+
+#### Auto-switch (`.usage rotate::1`)
+
+| Token operation | Gate | Normal | Non-owned | Occupied-elsewhere |
+|---|---|---|---|---|
+| Selected as winner | Gate 8 (`gate_ownership=true`) | ✅ | ❌ Gate 8 rejects | ❌ Gate 3 always — unconditional |
+| Selected as winner with `force::1` | Gate 8 bypassed | ✅ | ✅ | ❌ Gate 3 still fires — `force::1` does not bypass Gate 3 |
+| Cred copy on winner | `switch_account()` | ✅ | ❌ never winner | ❌ never winner |
+| Touch sub on winner | `apply_touch()` on winner | conditional | ❌ | ❌ |
+| Post-switch cred re-sync | `std::fs::copy` store→live | ✅ | ❌ | ❌ |
+
+#### Explicit account commands
+
+| Token operation | Gate | Normal | Non-owned | Occupied-elsewhere |
+|---|---|---|---|---|
+| `.account.use` — cred copy | G5: `!is_owned` | ✅ | ❌ exit 1 | ✅ G5 passes (`is_owned=true`) |
+| `.account.use force::1` | G5 bypassed | ✅ | ✅ | ✅ |
+| `.account.delete` — cred deletion | G6: `!is_owned` | ✅ | ❌ exit 1 | ✅ G6 passes |
+| `.account.delete force::1` | G6 bypassed | ✅ | ✅ | ✅ |
+| `.account.relogin` — re-auth | G7: `!is_owned` | ✅ | ❌ exit 1 | ✅ G7 passes |
+| `.account.relogin force::1` | G7 bypassed | ✅ | ✅ | ✅ |
+
+#### Metadata writes
+
+| Token operation | Gate | Normal | Non-owned | Occupied-elsewhere |
+|---|---|---|---|---|
+| `.accounts assignee::` — marker write | none | ✅ | ✅ | ✅ |
+| `.accounts owner::0` / `owner::USER@MACHINE` | G8: `!is_owned` | ✅ | ❌ exit 1 | ✅ G8 passes |
+| `.accounts owner::* force::1` | G8 bypassed | ✅ | ✅ | ✅ |
+
+#### Key asymmetries
+
+**Non-owned accounts in footer vs auto-switch:** `render.rs:241` calls `find_next_for_strategy` with `gate_ownership=false` — a non-owned account can appear as the footer "Next" recommendation even though auto-switch would reject it (`gate_ownership=true`). The display recommends something that auto-switch cannot execute without `force::1`.
+
+**`force::1` does not unblock occupied-elsewhere for auto-switch:** Gate 3 (`is_occupied_elsewhere → continue`) in `find_first_eligible` is unconditional — not part of the `extra` predicate controlled by `gate_ownership`. `force::1` bypasses Gate 8 only. An occupied-elsewhere account cannot be auto-switched to under any parameter combination.
+
+**Occupied-elsewhere accounts are fully mutable via explicit commands:** G5/G6/G7/G8 check only `!is_owned`. Since occupied-elsewhere accounts have `is_owned=true`, all explicit commands (`.account.use`, `.account.delete`, `.account.relogin`, owner writes) proceed without restriction — only the automatic pipeline and `find_first_eligible` Gate 3 protect them.
+
 ### Acceptance Criteria
 
 - **AC-01**: `clp .account.save name::X` does NOT modify the `owner` field in `{name}.json` — `account_save_routine()` passes `owner: None` to `save()`, preserving any existing value via read-merge. `clp .accounts assignee::user@host name::X` also does NOT modify `owner` (marker-only — no `write_owner()` call). Both paths are ownership-neutral.
@@ -93,10 +165,10 @@ An account is "owned by this machine" when: (a) owner is empty or absent (no enf
 
 | File | Relationship |
 |------|--------------|
-| [BUG-295 🟢 Fixed](../../../../task/claude_profile/bug/295_refresh_trace_misleads_reason_ok_for_not_owned.md) | `apply_refresh` emitted `reason: ok` instead of `reason: not owned` for non-owned accounts. Fixed: `!aq.is_owned` guard added to reason derivation at `refresh.rs` |
-| [BUG-304 🟢 Fixed (TSK-316)](../../../../../task/claude_profile/bug/304_cache_read_bypasses_approximation.md) | G1 non-owned cache read path bypassed Feature 040 polynomial approximation — stale data in multi-machine setups. Fixed: centralized `read_cached_quota()` function replaces all 3 inline cache-read paths |
-| [BUG-305 🟢 Fixed (TSK-317)](../../../../../task/claude_profile/bug/305_fetch_fires_for_occupied_elsewhere_accounts.md) | `fetch_quota_for_list` performed full HTTP fetch for owned+occupied-elsewhere accounts. Fixed: G1b gate added after solo gate — `!is_current && occupied_elsewhere.contains(&acct.name)` → `approximate_quota()` |
-| [BUG-306 🟢 Fixed (TSK-317)](../../../../../task/claude_profile/bug/306_refresh_trace_reason_ok_for_occupied_elsewhere.md) | `apply_refresh` trace emitted `reason: ok` for owned+non-cached+occupied-elsewhere accounts. Fixed: `reason_label()` extracted with `is_occupied_elsewhere` branch |
+| BUG-295 🟢 Fixed | `apply_refresh` emitted `reason: ok` instead of `reason: not owned` for non-owned accounts. Fixed: `!aq.is_owned` guard added to reason derivation at `refresh.rs` |
+| BUG-304 🟢 Fixed (TSK-316) | G1 non-owned cache read path bypassed Feature 040 polynomial approximation — stale data in multi-machine setups. Fixed: centralized `read_cached_quota()` function replaces all 3 inline cache-read paths |
+| BUG-305 🟢 Fixed (TSK-317) | `fetch_quota_for_list` performed full HTTP fetch for owned+occupied-elsewhere accounts. Fixed: G1b gate added after solo gate — `!is_current && occupied_elsewhere.contains(&acct.name)` → `approximate_quota()` |
+| BUG-306 🟢 Fixed (TSK-317) | `apply_refresh` trace emitted `reason: ok` for owned+non-cached+occupied-elsewhere accounts. Fixed: `reason_label()` extracted with `is_occupied_elsewhere` branch |
 
 ### Features
 

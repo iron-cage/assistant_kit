@@ -50,11 +50,16 @@
 //! | f64ft07 | `f64_ft07_usage_unclaim_removed_toggle`   | AC-07 | no    |
 //! | f64ft06b| `f64_ft06b_usage_for_removed_toggle`      | AC-06 | no    |
 //!
-//! ### Feature 065 — Assignee Param Redesign (`.usage` sentinel parity)
+//! ### Feature 065 — Assignee Param Redesign (`.usage` parity)
 //!
-//! | ID      | Test Function                             | AC    | Live? |
-//! |---------|-------------------------------------------|-------|-------|
-//! | f65ft02 | `f65_ft02_usage_assignee_zero_sentinel_assign` | AC-02 | no |
+//! | ID       | Test Function                                    | AC    | Live? |
+//! |----------|--------------------------------------------------|-------|-------|
+//! | f65ft02  | `f65_ft02_usage_assignee_zero_sentinel_assign`   | AC-02 | no    |
+//! | f65ft03  | `f65_ft03_usage_assignee_unassign`               | AC-03 | no    |
+//! | f65ft04  | `f65_ft04_usage_assignee_zero_sentinel_unassign` | AC-04 | no    |
+//! | f65ft05  | `f65_ft05_usage_assignee_dry_run_assign`         | AC-05 | no    |
+//! | f65ft10  | `f65_ft10_usage_active_removed_toggle`           | AC-10 | no    |
+//! | f65ec5   | `f65_ec5_usage_assignee_badvalue`                | EC-09 | no    |
 
 use crate::cli_runner::{
   BIN,
@@ -661,4 +666,149 @@ fn f64_ft06b_usage_for_removed_toggle()
     err.contains( "REMOVED" ),
     "f64-FT-06b: `.usage for::user@host` must exit 1 with REMOVED migration; got:\n{err}",
   );
+}
+
+// ── Feature 065: assignee:: corner cases on .usage ───────────────────────────
+
+#[ test ]
+/// FT-10 parity on `.usage` (AC-10): `active::user@machine name::X` exits 1 with `REMOVED_TOGGLE`
+/// migration message pointing to `assignee::`.
+///
+/// Mirrors `ft10_active_removed_toggle_migration_message` in `account_assign_test.rs` but
+/// targets `.usage`. The `REMOVED_TOGGLE` check for `active::` is in `usage/api.rs`.
+fn f65_ft10_usage_active_removed_toggle()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "active::user1@w003", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "REMOVED" ) && err.contains( "assignee::" ),
+    "f65-FT-10: `.usage active::` must exit 1 with REMOVED migration pointing to assignee::; got:\n{err}",
+  );
+}
+
+#[ test ]
+/// FT-03 parity on `.usage` (AC-03): `.usage assignee::user1@w003` (no `name::`) clears the
+/// per-machine marker file.
+///
+/// Mirrors `ft02_assignee_unassign_clears_marker` in `account_assign_test.rs` but targets `.usage`.
+fn f65_ft03_usage_assignee_unassign()
+{
+  let dir    = TempDir::new().unwrap();
+  let home   = dir.path().to_str().unwrap();
+  let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let marker = "_active_w003_user1";
+
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::write( store.join( marker ), "alice@acme.com" ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".usage", "assignee::user1@w003" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let out_text = stdout( &out );
+  assert!(
+    out_text.contains( "unassigned" ) && out_text.contains( marker ),
+    "f65-FT-03: .usage assignee:: unassign must confirm via stdout; got:\n{out_text}",
+  );
+
+  let still_has_content = std::fs::read_to_string( store.join( marker ) )
+    .is_ok_and( |s| !s.trim().is_empty() );
+  assert!( !still_has_content, "f65-FT-03: marker must be cleared or deleted after .usage unassign" );
+}
+
+#[ test ]
+/// EC-5 parity on `.usage`: `assignee::badvalue` (no `@`, not `"0"`) exits 1 with format error.
+///
+/// Format validation runs inside the `assignee::` dispatch in `usage/api.rs` — same as accounts.rs.
+fn f65_ec5_usage_assignee_badvalue()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "assignee::badvalue", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "USER@MACHINE" ) || err.contains( "'@'" ),
+    "f65-EC-5: `.usage assignee::badvalue` must explain USER@MACHINE format; got:\n{err}",
+  );
+}
+
+#[ test ]
+/// FT-05 parity on `.usage` (AC-05): `assignee::user@host name::X dry::1` prints `[dry-run]`
+/// preview and writes no marker file.
+///
+/// Mirrors `ft03_assignee_assign_dry_run` in `account_assign_test.rs` but targets `.usage`.
+fn f65_ft05_usage_assignee_dry_run_assign()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "assignee::testuser@testmachine", "name::alice@acme.com", "dry::1" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let out_text = stdout( &out );
+  assert!(
+    out_text.contains( "[dry-run] would assign" ),
+    "f65-FT-05: .usage assignee:: dry-run must print '[dry-run] would assign'; got:\n{out_text}",
+  );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let marker_count = std::fs::read_dir( &store )
+    .map_or( 0, |d| d.filter_map( core::result::Result::ok )
+      .filter( |e| e.file_name().to_string_lossy().starts_with( "_active" ) )
+      .count() );
+  assert_eq!( marker_count, 0, "f65-FT-05: dry-run must write no marker files on .usage" );
+}
+
+#[ test ]
+/// FT-04 parity on `.usage` (AC-04): `assignee::0` (no `name::`) expands sentinel to current
+/// machine identity and clears the per-machine marker.
+///
+/// Mirrors `ec4_assignee_zero_sentinel_unassign` in `account_assign_test.rs` but targets `.usage`.
+fn f65_ft04_usage_assignee_zero_sentinel_unassign()
+{
+  let dir    = TempDir::new().unwrap();
+  let home   = dir.path().to_str().unwrap();
+  let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let marker = "_active_testmachine_testuser";
+
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::write( store.join( marker ), "alice@acme.com" ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".usage", "assignee::0" ],
+    &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let out_text = stdout( &out );
+  assert!(
+    out_text.contains( "unassigned" ),
+    "f65-FT-04: .usage assignee::0 must confirm unassign via stdout; got:\n{out_text}",
+  );
+
+  let still_has_content = std::fs::read_to_string( store.join( marker ) )
+    .is_ok_and( |s| !s.trim().is_empty() );
+  assert!( !still_has_content, "f65-FT-04: sentinel unassign must clear the marker on .usage" );
 }

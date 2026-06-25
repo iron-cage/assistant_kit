@@ -85,8 +85,10 @@
 //! | ft01 | `ft01_accounts_accepts_32_params` | `.accounts` accepts all 32 registered params without error | P |
 //! | ft03 | `ft03_accounts_default_profile` | `.accounts` default output includes Owner column | P |
 //! | ft07 | `ft07_accounts_unclaim_batch` | `unclaim::1` no name → clears all owned accounts, exits 0 | P |
-//! | ft11 | `ft11_account_unclaim_fully_deregistered` | `.account.unclaim` → exit 1 + generic error, no migration hint | N |
-//! | ft12 | `ft12_account_assign_fully_deregistered` | `.account.assign` → exit 1 + generic error, no migration hint | N |
+//! | ft11 | `ft11_account_unclaim_fully_deregistered` | `.account.unclaim name::X` → exit 1 + targeted `owner::0` migration hint | N |
+//! | ft11b | `ft11b_account_unclaim_no_args` | `.account.unclaim` (no args) → exit 1 + `owner::0` migration hint | N |
+//! | ft12 | `ft12_account_assign_fully_deregistered` | `.account.assign name::X` → exit 1 + targeted `assignee::` migration hint | N |
+//! | ft12b | `ft12b_account_assign_no_args` | `.account.assign` (no args) → exit 1 + `assignee::` migration hint | N |
 //! | ft13 | `ft13_accounts_legacy_toggles_rejected` | removed toggle param → exit 1 + migration message | N |
 //! | ft14 | `ft14_accounts_cols_modifier` | `cols::+display_name` → Display: line present | P |
 //! | ft15 | `lim_it_ft15_accounts_refresh_live` | `refresh::1` with live token → account appears in output | P |
@@ -1669,11 +1671,11 @@ fn ft07_accounts_unclaim_batch()
 }
 
 #[ test ]
-/// FT-11 (AC-11): `.account.unclaim` is fully deregistered — generic "unknown command" error, no migration hint.
+/// FT-11 (AC-11): `.account.unclaim` is a removed redirector — exits 1 with targeted `owner::0` migration hint.
 ///
-/// `.account.unclaim` was removed in Feature 037 with no redirect stub.
-/// Calling it is indistinguishable from calling any other unregistered command:
-/// exits 1 with a generic error; stderr must NOT contain `"unclaim::1"` or `"moved to"`.
+/// `.account.unclaim` was removed in Feature 037. A redirect stub registered in Feature 037
+/// ensures the error message points users to `owner::0 name::X` rather than a generic
+/// "unknown command" message.
 ///
 /// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-11]
 fn ft11_account_unclaim_fully_deregistered()
@@ -1686,17 +1688,17 @@ fn ft11_account_unclaim_fully_deregistered()
     "FT-11: .account.unclaim must produce a non-empty error on stderr",
   );
   assert!(
-    !err.contains( "unclaim::1" ) && !err.contains( "moved to" ),
-    "FT-11: error must be generic (no migration hint to .accounts unclaim::1); got:\n{err}",
+    err.contains( "owner::0" ),
+    "FT-11: error must contain 'owner::0' migration hint; got:\n{err}",
   );
 }
 
 #[ test ]
-/// FT-12 (AC-12): `.account.assign` is fully deregistered — generic "unknown command" error, no migration hint.
+/// FT-12 (AC-12): `.account.assign` is a removed redirector — exits 1 with targeted `assignee::` migration hint.
 ///
-/// `.account.assign` was removed in Feature 037 with no redirect stub.
-/// Calling it is indistinguishable from calling any other unregistered command:
-/// exits 1 with a generic error; stderr must NOT contain `"assign::1"` or `"moved to"`.
+/// `.account.assign` was removed in Feature 037. A redirect stub registered in Feature 037
+/// ensures the error message points users to `assignee::USER@MACHINE name::X` (Feature 065)
+/// rather than a generic "unknown command" message.
 ///
 /// Spec: [`tests/docs/feature/37_accounts_usage_param_unification.md` FT-12]
 fn ft12_account_assign_fully_deregistered()
@@ -1709,8 +1711,40 @@ fn ft12_account_assign_fully_deregistered()
     "FT-12: .account.assign must produce a non-empty error on stderr",
   );
   assert!(
-    !err.contains( "assign::1" ) && !err.contains( "moved to" ),
-    "FT-12: error must be generic (no migration hint to .accounts assign::1); got:\n{err}",
+    err.contains( "assignee::" ),
+    "FT-12: error must contain 'assignee::' migration hint; got:\n{err}",
+  );
+}
+
+#[ test ]
+/// FT-11b: `.account.unclaim` with no arguments still exits 1 with `owner::0` migration hint.
+///
+/// The redirect stub ignores all arguments and always returns the migration error — this
+/// verifies the zero-arg case is also covered.
+fn ft11b_account_unclaim_no_args()
+{
+  let out = run_cs( &[ ".account.unclaim" ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "owner::0" ),
+    "FT-11b: .account.unclaim (no args) must reference 'owner::0' migration hint; got:\n{err}",
+  );
+}
+
+#[ test ]
+/// FT-12b: `.account.assign` with no arguments still exits 1 with `assignee::` migration hint.
+///
+/// The redirect stub ignores all arguments and always returns the migration error — this
+/// verifies the zero-arg case is also covered.
+fn ft12b_account_assign_no_args()
+{
+  let out = run_cs( &[ ".account.assign" ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "assignee::" ),
+    "FT-12b: .account.assign (no args) must reference 'assignee::' migration hint; got:\n{err}",
   );
 }
 

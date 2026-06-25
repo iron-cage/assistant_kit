@@ -59,7 +59,7 @@ This label is NOT a separate field param — it is the formatted output of the e
 
 | File | Relationship |
 |------|--------------|
-| `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json`; `switch_account()` restores/clears `model` in `~/.claude/settings.json` on each switch |
+| BUG-222 | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json`; `switch_account()` restores/clears `model` in `~/.claude/settings.json` on each switch |
 
 ### Commands
 

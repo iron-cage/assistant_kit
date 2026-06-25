@@ -33,10 +33,33 @@ fn account_rotate_redirector( _cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   ) )
 }
 
+/// REMOVED redirector: `.account.assign` exits 1 with migration notice.
+///
+/// Assignment moved to `assignee::USER@MACHINE name::X` on `.accounts`/`.usage` (Feature 065).
+fn account_assign_redirector( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  Err( ErrorData::new(
+    ErrorCode::ArgumentTypeMismatch,
+    "'.account.assign' is removed — use 'assignee::USER@MACHINE name::X' (or 'assignee::0 name::X' for current machine) on '.accounts' or '.usage' instead".to_string(),
+  ) )
+}
+
+/// REMOVED redirector: `.account.unclaim` exits 1 with migration notice.
+///
+/// Unclaim moved to `owner::0 name::X` on `.accounts`/`.usage` (Feature 063/037).
+fn account_unclaim_redirector( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  Err( ErrorData::new(
+    ErrorCode::ArgumentTypeMismatch,
+    "'.account.unclaim' is removed — use 'owner::0 name::X' (or 'owner::0' alone to batch-clear) on '.accounts' or '.usage' instead".to_string(),
+  ) )
+}
+
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 14 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set, token status, paths, usage).
+/// Registers 16 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set, token status, paths, usage).
 /// `.account.rotate` is registered as a deprecated redirector (always exits 1 with migration notice).
+/// `.account.assign` and `.account.unclaim` are registered as removed redirectors (always exits 1 with migration notice pointing to Feature 065/037 replacements).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -188,7 +211,9 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       trc(),
     ],
     Box::new( account_renewal_routine ) );
-  reg_cmd( registry, ".account.rotate", "DEPRECATED — use '.usage rotate::1' for strategy-driven account rotation",        vec![],               Box::new( account_rotate_redirector ) );
+  reg_cmd( registry, ".account.rotate",  "DEPRECATED — use '.usage rotate::1' for strategy-driven account rotation",                                          vec![], Box::new( account_rotate_redirector  ) );
+  reg_cmd( registry, ".account.assign",  "REMOVED — use 'assignee::USER@MACHINE name::X' on '.accounts' or '.usage' instead (Feature 065)",                 vec![ nam(), dry(), trc() ], Box::new( account_assign_redirector  ) );
+  reg_cmd( registry, ".account.unclaim", "REMOVED — use 'owner::0 name::X' (or 'owner::0' alone to batch-clear) on '.accounts' or '.usage' instead",        vec![ nam(), dry(), trc() ], Box::new( account_unclaim_redirector ) );
   reg_cmd( registry, ".account.inspect", "Show identity, subscription, and org fields for one account via live endpoints",
     vec![
       nam(),

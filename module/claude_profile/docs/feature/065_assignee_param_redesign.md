@@ -27,7 +27,7 @@ assignee::0            → expand to assignee::$USER@$HOSTNAME          (unassig
 
 The `"0"` sentinel in `assignee::` is a **"current machine" shortcut** — it does NOT mean "clear" (contrast: in `owner::`, `"0"` = release ownership). Both `assignee::0` and `assignee::USER@MACHINE` follow the same code path after expansion.
 
-**REMOVED_TOGGLE for `active::`:** `active::` is registered as a `bfd()` (REMOVED_TOGGLE / dead-flag) entry in `registry.rs`. Any invocation emits a migration message and exits 1.
+**REMOVED_TOGGLE for `active::`:** `active::` is registered as a `bfs()` (REMOVED_TOGGLE / dead-flag, `Kind::String` — `bfs` is required so the framework accepts `USER@MACHINE`-format values at the parser level and routes to the routine, which then emits the migration message) entry in `registry.rs`. Any invocation emits a migration message and exits 1.
 
 | Removed param | Migration message |
 |---------------|-------------------|
@@ -111,7 +111,7 @@ assignee::0                               # clear current machine's marker
 
 | File | Relationship |
 |------|--------------|
-| `src/registry.rs` | `bfd("active", ...)` → REMOVED_TOGGLE; `reg_arg_opt("assignee", Kind::String)` added to both `.accounts` and `.usage` |
+| `src/registry.rs` | `bfs("active", ...)` → REMOVED_TOGGLE (Kind::String — accepts USER@MACHINE values at parser level so routine can show migration message); `bfs("for", ...)` updated to point to `assignee::`; `reg_arg_opt("assignee", Kind::String)` added to both `.accounts` and `.usage` |
 | `src/commands/accounts.rs` | `assignee::` dispatch (assign/unassign); `assignee::0` sentinel expansion before processing |
 | `src/usage/api.rs` | Same `assignee::` dispatch and `assignee::0` expansion for `.usage` side |
 | `claude_profile_core/src/account.rs` | `active_marker_filename()` sanitization re-used by `assignee::` value parser; `current_identity()` used for `assignee::0` expansion |

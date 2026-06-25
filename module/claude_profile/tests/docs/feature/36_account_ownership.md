@@ -12,7 +12,7 @@
 |----|----|----------|-----------|
 | FT-01 | AC-01 | `.account.save` does NOT modify `owner` — `account_save_routine()` passes `owner: None`; existing value preserved | ✅ `ft01_save_does_not_stamp_owner` |
 | FT-02 | AC-02 | `.accounts owner::0 name::alice` exits 0; writes `owner: ""`; `write_owner()` called directly — no credential re-save (Feature 064; formerly `unclaim::1`) | ✅ `ft02_unclaim_clears_owner` |
-| FT-03 | AC-03 | `owner::` NOT on `.account.save` (exits 1); `.account.unclaim` and `.account.assign` fully deregistered (generic "unknown command"); `.accounts unclaim::1` and `.accounts assign::1` exit 1 with REMOVED_TOGGLE migration message (Feature 064) | ✅ `ft03_unclaim_param_placement` |
+| FT-03 | AC-03 | `owner::` NOT on `.account.save` (exits 1); `.account.unclaim` and `.account.assign` registered as redirect stubs — exit 1 with targeted migration hints (Feature 037); `.accounts unclaim::1` and `.accounts assign::1` exit 1 with REMOVED_TOGGLE migration message (Feature 064) | ✅ `ft03_unclaim_param_placement` |
 | FT-04 | AC-04 | Non-owned account: `fetch_quota_for_list` skips token read + HTTP; reads cache; `aq.is_owned = false` | ✅ `ft04_non_owned_uses_cache_not_http` |
 | FT-05 | AC-05 | Non-owned account with cache: usage row renders with `~` prefix and age indicator; without cache: dashes | ✅ `ft05_non_owned_display_tilde_or_dashes` |
 | FT-06 | AC-06 | `should_refresh()` returns `false` when `aq.is_owned == false` OR `aq.is_occupied_elsewhere == true`; gate condition: `!is_owned \|\| is_occupied_elsewhere` | ✅ `ft06_should_refresh_false_when_not_owned` |
@@ -40,7 +40,7 @@
 
 - FT-01 is an integration test — calls `clp .account.save name::alice` and asserts existing `owner` field is UNCHANGED (`account_save_routine()` passes `owner: None`; ownership-neutral).
 - FT-02 is an integration test — calls `clp .accounts owner::0 name::alice` and asserts exit 0, `owner: ""` written, and credential file NOT re-saved (`alice.credentials.json` mtime unchanged). The `accounts_routine()` owner::0 path calls `write_owner()` directly. (Feature 064; formerly `unclaim::1`.)
-- FT-03 is structural with three cases: (a) `.account.save` rejects `owner::0` (exits 1 — not registered); (b) `.account.unclaim` and `.account.assign` produce generic "unknown command" error (fully deregistered); (c) `.accounts unclaim::1` and `.accounts assign::1` exit 1 with REMOVED_TOGGLE migration messages (Feature 064).
+- FT-03 is structural with three cases: (a) `.account.save` rejects `owner::0` (exits 1 — not registered); (b) `.account.unclaim` and `.account.assign` are registered as redirect stubs (Feature 037) — both exit 1 with targeted migration hints; (c) `.accounts unclaim::1` and `.accounts assign::1` exit 1 with REMOVED_TOGGLE migration messages (Feature 064).
 - FT-04 is a unit test in `src/usage/fetch.rs` — mock-free: verify no `read_token()` call path was exercised and cache JSON is the returned value.
 - FT-05 is a render test in `src/usage/render_tests.rs` — uses `AccountQuota { is_owned: false, cached: true, ... }` and asserts `~` prefix; also tests `cached: false, is_owned: false` giving dashes.
 - FT-06 is a unit test in `src/usage/refresh_predicate.rs` `#[cfg(test)]` module.
@@ -87,7 +87,7 @@
 - **When (case A):** `clp .account.save name::alice owner::0` is executed.
 - **Then (case A):** Exits 1 — `owner::` not registered on `.account.save`. `alice.json` unchanged.
 - **When (case B):** `clp .account.unclaim name::alice` is executed; separately `clp .account.assign name::alice` is executed.
-- **Then (case B):** Both exit 1 with generic "unknown command" error — fully deregistered (not redirect stubs; same error as any unrecognized command).
+- **Then (case B):** Both exit 1 with targeted migration hints (registered as redirect stubs, Feature 037): `.account.unclaim` stderr contains `"owner::0"` hint; `.account.assign` stderr contains `"assignee::"` hint.
 - **When (case C):** `clp .accounts unclaim::1 name::alice` is executed; separately `clp .accounts assign::1 name::alice` is executed.
 - **Then (case C):** Both exit 1 with REMOVED_TOGGLE migration messages: `unclaim::1` → "REMOVED — use `owner::0 name::X`"; `assign::1` → "REMOVED — use `assignee::USER@MACHINE name::X`". (Feature 064.)
 - **Exit:** 1 (all cases)

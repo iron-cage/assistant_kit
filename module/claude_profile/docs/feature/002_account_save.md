@@ -61,7 +61,7 @@
 
 | File | Relationship |
 |------|--------------|
-| `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json` (step 7); `switch_account()` restores model on switch |
+| BUG-222 | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json` (step 7); `switch_account()` restores model on switch |
 
 ### Related Commands
 

@@ -127,9 +127,9 @@ if let Some(effort) = effort_opt {
 
 | File | Relationship |
 |------|--------------|
-| `task/claude_profile/bug/289_son_running_false_haiku_touch_infinite_loop.md` | BUG-289 🟢 Fixed (TSK-292): `resolve_model(Auto)` reads `aq.result` and returns Sonnet when `son_idle=true`; Haiku is the default for all other `auto` cases. |
-| `task/claude_profile/bug/290_resolve_model_auto_two_touch_cold_account.md` | BUG-290 🟢 Fixed: over-constrained BUG-289 gate (`five_h_running AND d7_running AND son_idle`) forced two-touch warm-up for cold accounts. Gate simplified to `son_idle` alone — `five_h_running` and `d7_running` conditions removed. |
-| `task/claude_profile/bug/301_resolve_model_auto_ignores_sonnet_utilization.md` | BUG-301 🟢 Fixed (TSK-311): binary `son_idle` gate selected Haiku when Sonnet window active (`resets_at=Some`) with remaining quota (e.g., 40%); added `son_available=(100-utilization>20%)` gate so remaining Sonnet quota is used before window expires. |
+| BUG-289 | BUG-289 🟢 Fixed (TSK-292): `resolve_model(Auto)` reads `aq.result` and returns Sonnet when `son_idle=true`; Haiku is the default for all other `auto` cases. |
+| BUG-290 | BUG-290 🟢 Fixed: over-constrained BUG-289 gate (`five_h_running AND d7_running AND son_idle`) forced two-touch warm-up for cold accounts. Gate simplified to `son_idle` alone — `five_h_running` and `d7_running` conditions removed. |
+| BUG-301 | BUG-301 🟢 Fixed (TSK-311): binary `son_idle` gate selected Haiku when Sonnet window active (`resets_at=Some`) with remaining quota (e.g., 40%); added `son_available=(100-utilization>20%)` gate so remaining Sonnet quota is used before window expires. |
 
 ### Dependencies
 

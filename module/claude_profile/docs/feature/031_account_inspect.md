@@ -205,7 +205,7 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 
 | File | Relationship |
 |------|--------------|
-| `task/claude_profile/bug/237_parse_oauth_account_multi_membership_reads_first_only.md` | BUG-237 — motivation for multi-membership display |
+| BUG-237 | BUG-237 — motivation for multi-membership display |
 
 ### Features
 

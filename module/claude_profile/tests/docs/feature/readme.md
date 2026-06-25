@@ -13,7 +13,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | File | Responsibility |
 |------|----------------|
-| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 45 feature docs |
+| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 46 feature docs |
 | 01_account_store_init.md | FT cases for Feature 001 — Account Store Initialization |
 | 02_account_save.md | FT cases for Feature 002 — Save Account |
 | 03_account_list.md | FT cases for Feature 003 — Accounts |
@@ -59,6 +59,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 63_explicit_ownership_claim.md | FT cases for Feature 063 — Explicit Ownership Claim |
 | 64_active_marker_and_owner_redesign.md | FT cases for Feature 064 — Active Marker and Owner Param Redesign |
 | 65_assignee_param_redesign.md | FT cases for Feature 065 — Assignee Param Redesign |
+| 66_dual_source_quota_parsing.md | FT cases for Feature 066 — Dual-Source OAuth Quota Parsing |
 
 ### Coverage Summary
 
@@ -109,9 +110,10 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 062_unified_session_config | [062_unified_session_config.md](62_unified_session_config.md) | FT-01 … FT-13, EC-01 | ✅ |
 | 063_explicit_ownership_claim | [063_explicit_ownership_claim.md](63_explicit_ownership_claim.md) | FT-01 … FT-12 | ✅ |
 | 064_active_marker_and_owner_redesign | [064_active_marker_and_owner_redesign.md](64_active_marker_and_owner_redesign.md) | FT-01 … FT-19 | ✅ |
-| 065_assignee_param_redesign | [065_assignee_param_redesign.md](65_assignee_param_redesign.md) | FT-01 … FT-13 | ⏳ |
+| 065_assignee_param_redesign | [065_assignee_param_redesign.md](65_assignee_param_redesign.md) | FT-01 … FT-13 | ✅ |
+| 066_dual_source_quota_parsing | [066_dual_source_quota_parsing.md](66_dual_source_quota_parsing.md) | FT-01 … FT-12 | ✅ |
 
-**Total:** 46 specs — 45 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+**Total:** 47 specs — 46 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 
 ### Cross-Reference Depth
 

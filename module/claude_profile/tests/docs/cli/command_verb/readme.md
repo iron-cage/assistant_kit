@@ -5,8 +5,7 @@ state transition, and pre-condition enforcement properties defined in `docs/cli/
 
 **BV- extension note:** BV- is a project-local element type extension not registered in
 `test_surface.rulebook.md` (that file is outside the `module/claude_profile/` package scope).
-Task `task/claude_profile/completed/286_command_verb_contract_test_specs.md` is the authorizing source
-for the BV- prefix until a separate rulebook-update task is filed.
+TSK-286 is the authorizing source for the BV- prefix until a separate rulebook-update task is filed.
 
 ### Responsibility Table
 

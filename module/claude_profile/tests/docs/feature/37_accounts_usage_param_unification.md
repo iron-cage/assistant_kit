@@ -20,8 +20,8 @@
 | FT-08 | AC-08 | `.accounts assignee::user1@w003 name::X` writes marker file; `{name}.json`, credentials, `~/.claude.json` unchanged (Feature 065; formerly `assign::1 name::X`) | `ft01_assignee_assign_writes_current_machine_marker (account_assign_test.rs)` |
 | FT-09 | AC-09 | `.accounts assignee::bob@laptop name::X` writes `_active_laptop_bob`; sanitization identical to former `.account.assign` (Feature 065; formerly `assign::1 name::X for::bob@laptop`) | `ft01b_assignee_assign_writes_remote_marker (account_assign_test.rs)` |
 | FT-10 | AC-10 | `.accounts assignee::user1@w003` (no `name::`) clears `_active_w003_user1`; exits 0; no credentials or `{name}.json` touched (Feature 065; replaces former `assign::1` no-name usage block) | `ft02_assignee_unassign_clears_marker (account_assign_test.rs)` |
-| FT-11 | AC-11 | `.account.unclaim name::alice` exits 1 with generic "unknown command" error — command fully deregistered, not a redirect stub | `ft11_account_unclaim_fully_deregistered` (`accounts_test.rs`) |
-| FT-12 | AC-12 | `.account.assign name::alice` exits 1 with generic "unknown command" error — command fully deregistered, not a redirect stub | `ft12_account_assign_fully_deregistered` (`accounts_test.rs`) |
+| FT-11 | AC-11 | `.account.unclaim name::alice` exits 1 with targeted `owner::0` migration hint — registered as redirect stub (Feature 037) | `ft11_account_unclaim_fully_deregistered` (`accounts_test.rs`) |
+| FT-12 | AC-12 | `.account.assign name::alice` exits 1 with targeted `assignee::` migration hint — registered as redirect stub (Feature 037) | `ft12_account_assign_fully_deregistered` (`accounts_test.rs`) |
 | FT-13 | AC-13 | `.accounts` rejects all 15 legacy field toggles (`active::`, `current::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `host::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`); each exits 1 directing to `cols::` | `ft13_accounts_legacy_toggles_rejected` |
 | FT-14 | AC-14 | `.accounts cols::+host,-tier` adds host column and removes tier from identity default set | `ft14_accounts_cols_modifier` |
 | FT-15 | AC-15 | `.accounts refresh::1` fetches live quota; `.accounts touch::1` activates idle sessions — same algorithm as `.usage` | `lim_it_ft15_accounts_refresh_live (accounts_test.rs)` |
@@ -45,7 +45,7 @@
 - FT-07 is an integration test: set up two accounts (alice owned by current, bob owned by other). `.accounts owner::0` with no `name::` applies ownership release to alice (G8 passes, owner cleared); emits `"skip bob: owned by other@remote"` for bob and continues. Exit 0 always (best-effort batch — per-account G8 violations produce skip messages, not failures). (Feature 064; formerly `unclaim::1` batch.)
 - FT-08 verifies that only the marker file is written — mtime of `{name}.credentials.json`, `{name}.json`, and `~/.claude.json` are all unchanged after `.accounts assignee::user1@w003 name::X` (Feature 065; formerly `active::user1@w003 name::X` — Feature 064; formerly `assign::1 name::X`).
 - FT-09 verifies `assignee::` sanitization: `assignee::bob@my-laptop` → marker `_active_my-laptop_bob` (dashes and dots preserved, other specials → `_`). (Feature 065; formerly `active::bob@my-laptop` — Feature 064; formerly `assign::1 name::X for::bob@my-laptop`.)
-- FT-11 and FT-12 are integration tests via `./verb/test` — verify exit 1 and that the error message is a generic "unknown command" error (NOT a migration message). These commands are fully deregistered: calling them is indistinguishable from calling any other unrecognized command.
+- FT-11 and FT-12 are integration tests via `./verb/test` — verify exit 1 and that stderr contains the targeted migration hint. These commands are registered as redirect stubs (Feature 037): `.account.unclaim` exits 1 with `"owner::0"` hint; `.account.assign` exits 1 with `"assignee::"` hint. NOT generic "unknown command" errors.
 - FT-13 uses one sub-case per legacy toggle — 15 invocations; each exits 1 with a message mentioning `cols::`.
 - FT-14 is a render test verifying column set modification: identity default is Account, Owner, Active, Current, Sub, Tier, Expires, Email. After `cols::+host,-tier`: Tier removed, Host added.
 - FT-15 is an integration test: `.accounts refresh::1` must produce live quota output matching what `.usage` produces for the same accounts.
@@ -176,22 +176,22 @@
 
 ---
 
-### FT-11: `.account.unclaim` produces generic "unknown command" error — fully deregistered
+### FT-11: `.account.unclaim` exits 1 with targeted migration hint to `owner::0`
 
 - **Given:** Any environment.
 - **When:** `clp .account.unclaim name::alice` is executed.
-- **Then:** Exits 1. Error output contains a generic "unknown command" error — identical to calling any unregistered command (e.g., `.account.nonexistent`). Does NOT contain the former redirect-stub migration message. No `alice.json` modification.
+- **Then:** Exits 1. Error output contains `"owner::0"` migration hint (added by redirect stub, Feature 037). No `alice.json` modification.
 - **Exit:** 1
 - **Source fn:** `ft11_account_unclaim_fully_deregistered` (`accounts_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-11](../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
-### FT-12: `.account.assign` produces generic "unknown command" error — fully deregistered
+### FT-12: `.account.assign` exits 1 with targeted migration hint to `assignee::`
 
 - **Given:** Any environment.
 - **When:** `clp .account.assign name::alice` is executed.
-- **Then:** Exits 1. Error output contains a generic "unknown command" error — identical to calling any unregistered command. Does NOT contain the former redirect-stub migration message. No marker file written.
+- **Then:** Exits 1. Error output contains `"assignee::"` migration hint (added by redirect stub, Feature 065). No marker file written.
 - **Exit:** 1
 - **Source fn:** `ft12_account_assign_fully_deregistered` (`accounts_test.rs`)
 - **Source:** [037_accounts_usage_param_unification.md AC-12](../../../docs/feature/037_accounts_usage_param_unification.md)
