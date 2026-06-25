@@ -467,7 +467,18 @@ pub( crate ) fn status_emoji( aq : &AccountQuota ) -> &'static str
   let Ok( data ) = &aq.result else { unreachable!() };
   let h5_left = 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
   let d7_left = 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization );
-  if h5_left > 15.0 && d7_left > 5.0 { "🟢" } else { "🟡" }
+  // Fix(BUG-319): both-exhausted (h5 ≤ 15% AND d7 ≤ 5%) must be 🔴 (group 4 / Red), not 🟡.
+  // Root cause: `else { "🟡" }` collapsed h-exhausted (G2), weekly-exhausted (G3), and
+  //   both-exhausted (G4) into one branch. `status_group_of()` correctly returned Red for G4
+  //   so sort order was right, but the displayed emoji was wrong.
+  // Pitfall: `status_emoji()` and `status_group_of()` must agree on Red: both-exhausted = 🔴.
+  //   Keep both in sync when changing group boundary thresholds.
+  match ( h5_left > 15.0, d7_left > 5.0 )
+  {
+    ( true,  true  ) => "🟢",
+    ( false, false ) => "🔴",
+    _                => "🟡",
+  }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
