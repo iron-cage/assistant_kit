@@ -3,7 +3,7 @@
 //! `execute_live_mode` loops indefinitely until SIGINT (Ctrl-C), fetching
 //! quota data and rendering a countdown footer between cycles.
 
-use unilang::data::{ ErrorCode, ErrorData, OutputData };
+use unilang::data::{ ErrorData, OutputData };
 use super::types::UsageParams;
 #[ cfg( unix ) ]
 use super::fetch::fetch_all_quota;
@@ -153,10 +153,8 @@ pub( crate ) fn execute_live_mode(
   _params           : &UsageParams,
 ) -> Result< OutputData, ErrorData >
 {
-  Err( ErrorData::new(
-    ErrorCode::InternalError,
-    "Live mode requires POSIX signals and is not supported on this platform".to_string(),
-  ) )
+  eprintln!( "Error: live mode requires POSIX signal support and is not available on this platform" );
+  std::process::exit( 1 )
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
