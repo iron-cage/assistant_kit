@@ -499,15 +499,15 @@ mod tests
   #[test]
   fn test_storage_with_root()
   {
-    let storage = Storage::with_root( "/tmp/claude-test" );
-    assert_eq!( storage.root(), Path::new( "/tmp/claude-test" ) );
-    assert_eq!( storage.projects_dir(), PathBuf::from( "/tmp/claude-test/projects" ) );
+    let storage = Storage::with_root( "claude-test" );
+    assert_eq!( storage.root(), Path::new( "claude-test" ) );
+    assert_eq!( storage.projects_dir(), PathBuf::from( "claude-test" ).join( "projects" ) );
   }
 
   #[test]
   fn test_projects_dir()
   {
-    let storage = Storage::with_root( "/tmp/test" );
-    assert_eq!( storage.projects_dir(), PathBuf::from( "/tmp/test/projects" ) );
+    let storage = Storage::with_root( "test-storage" );
+    assert_eq!( storage.projects_dir(), PathBuf::from( "test-storage" ).join( "projects" ) );
   }
 }

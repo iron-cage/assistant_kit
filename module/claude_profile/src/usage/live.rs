@@ -3,17 +3,21 @@
 //! `execute_live_mode` loops indefinitely until SIGINT (Ctrl-C), fetching
 //! quota data and rendering a countdown footer between cycles.
 
-use unilang::data::{ ErrorData, OutputData };
+use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use super::types::UsageParams;
+#[ cfg( unix ) ]
 use super::fetch::fetch_all_quota;
+#[ cfg( unix ) ]
 use super::render::render_text;
 
 // ── SIGINT plumbing ───────────────────────────────────────────────────────────
 
 /// Shared quit flag — set to `true` by `on_sigint` on SIGINT; polled each second.
+#[ cfg( unix ) ]
 static STOP_FLAG : core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new( false );
 
 /// SIGINT handler: sets `STOP_FLAG` so the countdown loop exits cleanly.
+#[ cfg( unix ) ]
 extern "C" fn on_sigint( _ : std::os::raw::c_int )
 {
   STOP_FLAG.store( true, core::sync::atomic::Ordering::Relaxed );
@@ -22,6 +26,7 @@ extern "C" fn on_sigint( _ : std::os::raw::c_int )
 // ── UTC clock helper ──────────────────────────────────────────────────────────
 
 /// Format a Unix timestamp as `HH:MM:SS` in UTC (no external dep).
+#[ cfg_attr( not( unix ), allow( dead_code ) ) ]
 fn secs_to_hms_utc( unix_secs : u64 ) -> String
 {
   let sod = unix_secs % 86400;
@@ -42,6 +47,11 @@ fn secs_to_hms_utc( unix_secs : u64 ) -> String
 /// Timing is governed by `params.interval` (minimum seconds between cycles, ≥ 30)
 /// and `params.jitter` (maximum random seconds added per cycle, 0 = none).
 /// When `params.trace` is `true`, per-account `[trace]` lines are emitted to stderr.
+// Fix(BUG-317): Root cause: execute_live_mode called sigemptyset/sigaddset/sigprocmask
+// unconditionally — POSIX symbols absent on Windows → LNK2019 at link time.
+// Pitfall: `extern "C"` declarations for POSIX signal functions compile on all
+// platforms but fail to link on Windows; the entire function must be #[cfg(unix)].
+#[ cfg( unix ) ]
 #[ allow( unsafe_code ) ]
 pub( crate ) fn execute_live_mode(
   credential_store : &std::path::Path,
@@ -133,6 +143,20 @@ pub( crate ) fn execute_live_mode(
 
   println!( "\nMonitor stopped." );
   Ok( OutputData::new( String::new(), "text" ) )
+}
+
+/// Live mode is not available on non-Unix platforms (requires POSIX signal handling).
+#[ cfg( not( unix ) ) ]
+pub( crate ) fn execute_live_mode(
+  _credential_store : &std::path::Path,
+  _live_creds_file  : &std::path::Path,
+  _params           : &UsageParams,
+) -> Result< OutputData, ErrorData >
+{
+  Err( ErrorData::new(
+    ErrorCode::InternalError,
+    "Live mode requires POSIX signals and is not supported on this platform".to_string(),
+  ) )
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

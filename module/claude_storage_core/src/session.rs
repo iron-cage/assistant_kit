@@ -633,7 +633,7 @@ mod tests
     let session = Session::new
     (
       "test-uuid".to_string(),
-      PathBuf::from( "/tmp/test.jsonl" )
+      PathBuf::from( "test.jsonl" )
     );
 
     assert_eq!( session.id(), "test-uuid" );
