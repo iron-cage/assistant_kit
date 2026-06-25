@@ -6,8 +6,8 @@ Test spec for `docs/invariant/001_privacy_invariant.md`.
 
 | Case ID | Category | Status |
 |---------|----------|--------|
-| PI-1 | No private workspace path deps | ⏳ |
-| PI-2 | Out-of-workspace path deps carry version | ⏳ |
+| PI-1 | No private workspace path deps | ✅ |
+| PI-2 | Out-of-workspace path deps carry version | ✅ |
 
 ## Cases
 
