@@ -3,7 +3,7 @@
 //! `execute_live_mode` loops indefinitely until SIGINT (Ctrl-C), fetching
 //! quota data and rendering a countdown footer between cycles.
 
-use unilang::data::{ ErrorCode, ErrorData, OutputData };
+use unilang::data::{ ErrorData, OutputData };
 use super::types::UsageParams;
 #[ cfg( unix ) ]
 use super::fetch::fetch_all_quota;
