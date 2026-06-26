@@ -131,7 +131,7 @@ default-features = false
 
 [workspace.dependencies.claude_storage_core]
 path = "module/claude_storage_core"
-version = "=1.4.1"
+version = "=1.5.1"
 default-features = false
 
 [workspace.dependencies.claude_profile]
