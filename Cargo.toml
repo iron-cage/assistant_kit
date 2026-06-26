@@ -151,7 +151,7 @@ default-features = false
 
 [workspace.dependencies.claude_version]
 path = "module/claude_version"
-version = "=1.5.1"
+version = "=1.6.1"
 default-features = false
 
 [workspace.dependencies.claude_storage]
