@@ -96,7 +96,7 @@ incremental = false
 
 [workspace.dependencies.assistant_kit]
 path = "module/assistant_kit"
-version = "=0.1.0"
+version = "=0.2.1"
 default-features = false
 
 [workspace.dependencies.claude_auth]
