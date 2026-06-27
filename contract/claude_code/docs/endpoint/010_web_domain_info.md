@@ -62,3 +62,5 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [004_oauth_token.md](004_oauth_token.md) | Token refresh |
+| doc | [../tool/009_web_fetch.md](../tool/009_web_fetch.md) | WebFetch tool — governed by this endpoint |
+| doc | [../tool/010_web_search.md](../tool/010_web_search.md) | WebSearch tool — governed by this endpoint |

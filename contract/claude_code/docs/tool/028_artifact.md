@@ -36,4 +36,3 @@ v2.0+ (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
-| doc | [../params/readme.md](../params/readme.md) | `CLAUDE_CODE_DISABLE_ARTIFACT` env var |

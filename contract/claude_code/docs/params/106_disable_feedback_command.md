@@ -27,3 +27,4 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [../endpoint/009_cli_feedback.md](../endpoint/009_cli_feedback.md) | Feedback submission endpoint |

@@ -31,3 +31,6 @@ Sets the default timeout for each bash command Claude executes. If a bash comman
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [012_bash_max_timeout.md](012_bash_max_timeout.md) | `CLAUDE_CODE_BASH_MAX_TIMEOUT` — ceiling that caps this value |
+| doc | [096_bash_default_timeout_ms.md](096_bash_default_timeout_ms.md) | `BASH_DEFAULT_TIMEOUT_MS` — binary-level default timeout equivalent |
+| doc | [../tool/004_bash.md](../tool/004_bash.md) | Bash tool this configures |

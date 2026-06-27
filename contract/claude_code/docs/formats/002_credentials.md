@@ -47,3 +47,5 @@ pre-v1.0 (unverified)
 | filesystem | [`../filesystem/001_claude_home.md`](../filesystem/001_claude_home.md) | Path location and access pattern |
 | filesystem | [`../filesystem/003_credential_store.md`](../filesystem/003_credential_store.md) | Per-account credential snapshots (different from this active token) |
 | endpoint | `../endpoint/004_oauth_token.md` | OAuth token refresh endpoint |
+| subcommand | [`../subcommand/002_auth.md`](../subcommand/002_auth.md) | Auth subcommand that manages this file |
+| subcommand | [`../subcommand/008_setup_token.md`](../subcommand/008_setup_token.md) | Setup-token subcommand that writes this file |

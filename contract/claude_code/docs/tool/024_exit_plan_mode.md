@@ -19,3 +19,4 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
+| doc | [023_enter_plan_mode.md](023_enter_plan_mode.md) | Enter plan mode |

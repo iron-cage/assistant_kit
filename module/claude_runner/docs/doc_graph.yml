@@ -141,7 +141,7 @@ edges:
 components:
   - id: 1
     label: Main corpus
-    size: 9
+    size: 10
     isolated: false
     nodes:
       - feature/001

@@ -31,3 +31,4 @@ Disables all slash command skills for the session. Slash commands (e.g. `/commit
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [../tool/013_skill.md](../tool/013_skill.md) | Skill tool this disables |

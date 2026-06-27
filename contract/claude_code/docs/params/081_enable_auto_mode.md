@@ -38,3 +38,4 @@ configuration.
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [046_permission_mode.md](046_permission_mode.md) | Permission mode selection including `auto` |
+| doc | [../subcommand/003_auto_mode.md](../subcommand/003_auto_mode.md) | Inspect auto-mode classifier config |

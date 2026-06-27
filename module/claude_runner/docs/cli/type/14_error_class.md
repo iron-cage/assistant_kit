@@ -143,12 +143,12 @@ Current system uses 3 tiers. Target is 4 tiers with a config file layer.
 
 | Priority | Tier | Source | Status |
 |----------|------|--------|--------|
-| 1 (highest) | CLI parameter | `--flag value` on command line | Exists (53 params) |
-| 2 | Environment variable | `CLR_*` env vars | Exists (56 vars) |
+| 1 (highest) | CLI parameter | `--flag value` on command line | Exists (67 params) |
+| 2 | Environment variable | `CLR_*` env vars | Exists (70 vars) |
 | 3 | Config file | TBD — `~/.config/clr/config.toml` or `$CLR_CONFIG` | Gap |
 | 4 (lowest) | Hardcoded default | Built into source code | Exists |
 
-**Config file gap:** No config file mechanism exists. Config keys would use `snake_case` matching CLI `--kebab-case` names (e.g., `retry_on_transient = 1`). All 53 parameters should be configurable at the config file tier.
+**Config file gap:** No config file mechanism exists. Config keys would use `snake_case` matching CLI `--kebab-case` names (e.g., `retry_on_transient = 1`). All 67 parameters should be configurable at the config file tier.
 
 ### Console Output Format
 
@@ -227,7 +227,6 @@ Error: [Runner] claude binary not found in PATH — install with: npm i -g @anth
 ```
 
 **Runner / SpawnFailed** (exit 1 — OS spawn error, no subprocess):
-<!-- BUG-298: actual output missing [Runner] prefix — spawn_error_msg() emits bare "Failed to execute Claude Code: {e}" -->
 ```
 Error: [Runner] failed to execute Claude Code: permission denied (os error 13) (exit 1)
 ```

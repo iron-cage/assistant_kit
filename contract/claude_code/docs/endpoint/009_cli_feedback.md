@@ -41,3 +41,4 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [004_oauth_token.md](004_oauth_token.md) | Token refresh |
+| doc | [../params/106_disable_feedback_command.md](../params/106_disable_feedback_command.md) | Env var to hide `/feedback` command |

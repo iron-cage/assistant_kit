@@ -31,3 +31,5 @@ Creates a new git worktree for the session. With no name argument, an auto-gener
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [../tool/025_enter_worktree.md](../tool/025_enter_worktree.md) | EnterWorktree tool |
+| doc | [../tool/026_exit_worktree.md](../tool/026_exit_worktree.md) | ExitWorktree tool |

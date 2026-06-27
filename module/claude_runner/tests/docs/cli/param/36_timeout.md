@@ -27,6 +27,7 @@ must not be confused with those in `20_timeout.md`.
 | ec_timeout_unlimited_env | `CLR_TIMEOUT=0` opts out of 3600s default; fast subprocess → exit 0 | Env Var |
 | ec_timeout_env_matches_default | `CLR_TIMEOUT=3600` accepted without error; dry-run exits 0 | Env Var |
 | ec_timeout_default_kills | No `--timeout`, `_CLR_DEFAULT_TIMEOUT=2`; hanging subprocess → exit 4, killed by default watchdog | Integration (TSK-227) |
+| ec_timeout_retry_no_double_emission | `_CLR_DEFAULT_TIMEOUT=2`, `--retry-on-process 1`, `--process-delay 0`; hanging subprocess → no stderr line starts with `"timeout after"` | Bug Reproducer (BUG-317) |
 
 ## Test Coverage Summary
 
@@ -38,8 +39,9 @@ must not be confused with those in `20_timeout.md`.
 - Integration: 2 tests (EC-7, EC-8)
 - Structural: 1 test (ec_timeout_default_constant_value)
 - Integration (TSK-227): 5 tests (ec_timeout_default_no_fire, ec_timeout_default_activates_watchdog, ec_timeout_explicit_above_default, ec_timeout_unlimited_flag, ec_timeout_default_kills)
+- Bug Reproducer (BUG-317): 1 test (ec_timeout_retry_no_double_emission)
 
-**Total:** 16 edge cases
+**Total:** 17 edge cases
 
 ## Architectural Constraint
 
@@ -74,6 +76,7 @@ semantics: unlimited (no watchdog). Tests in this file cover `run`/`ask` only;
 | ec_timeout_unlimited_env | `ec_timeout_unlimited_env` | `timeout_test.rs` |
 | ec_timeout_env_matches_default | `ec_timeout_env_matches_default` | `env_var_test.rs` |
 | ec_timeout_default_kills | `ec_timeout_default_kills` | `timeout_test.rs` |
+| ec_timeout_retry_no_double_emission | `ec_timeout_retry_no_double_emission` | `timeout_test.rs` |
 
 ---
 
@@ -249,4 +252,15 @@ semantics: unlimited (no watchdog). Tests in this file cover `run`/`ask` only;
 - **Then:** Exit 4 within ~5s; stderr contains "timeout"; subprocess killed by default watchdog. Proves the `None → unwrap_or(default_print_timeout())` path fires `poll_timeout()`. EC-7 tests `Some(1)` (explicit `--timeout`); this test covers the `None` (no flag) path.
 - **Exit:** 4
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md), [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md)
+- **Commands:** run, ask
+
+---
+
+### ec_timeout_retry_no_double_emission: BUG-317 — [Process] retry line starts at column 0
+
+- **Given:** `_CLR_DEFAULT_TIMEOUT=2`; `CLR_TIMEOUT` removed; `--retry-on-process 1 --process-delay 0 --max-sessions 0 -p "x"`; fake claude sleeps 300s
+- **When:** `_CLR_DEFAULT_TIMEOUT=2 clr -p --retry-on-process 1 --process-delay 0 --max-sessions 0 "x"` with indefinitely-sleeping fake; `CLR_TIMEOUT` unset
+- **Then:** No stderr line begins with `"timeout after"`; at least one `[Process]` line is present in stderr. Pre-fix: `"timeout after 2s[Process] timeout after 2s — retrying…"` on one line. Post-fix: `"[Process] timeout after 2s — retrying…"` cleanly at column 0.
+- **Exit:** 4 (timeout exhausted after two attempts: 1 retry = 2 total; both timeout)
+- **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md)
 - **Commands:** run, ask

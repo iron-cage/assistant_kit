@@ -20,3 +20,4 @@ pre-v1.0 (unverified)
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
 | doc | [../params/073_worktree.md](../params/073_worktree.md) | Worktree session parameter |
+| doc | [026_exit_worktree.md](026_exit_worktree.md) | Exit worktree isolation |

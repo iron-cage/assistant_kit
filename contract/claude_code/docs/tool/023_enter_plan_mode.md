@@ -19,3 +19,4 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
+| doc | [024_exit_plan_mode.md](024_exit_plan_mode.md) | Exit plan mode |

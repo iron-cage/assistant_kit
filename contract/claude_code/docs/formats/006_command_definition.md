@@ -52,3 +52,4 @@ pre-v1.0 (unverified)
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Formats master index |
 | storage | [`../storage/002_support_directories.md`](../storage/002_support_directories.md) | `commands/` directory: size, growth |
+| tool | [`../tool/013_skill.md`](../tool/013_skill.md) | Skill tool that invokes these command definitions |

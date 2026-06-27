@@ -19,3 +19,5 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
+| doc | [009_web_fetch.md](009_web_fetch.md) | Web fetch alternative |
+| doc | [../endpoint/010_web_domain_info.md](../endpoint/010_web_domain_info.md) | Domain allowlist endpoint |

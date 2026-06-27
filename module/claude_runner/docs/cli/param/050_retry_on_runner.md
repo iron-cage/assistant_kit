@@ -1,5 +1,4 @@
 # CLI Parameter: --retry-on-runner
-<!-- BUG-299: retry behavior described below is not yet implemented — retry_on_runner has no runtime effect in current implementation -->
 
 Maximum number of automatic retries when a Runner error class condition occurs
 (CLR-layer failures: binary not found, spawn failed, gate timeout, output file

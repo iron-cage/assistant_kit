@@ -19,3 +19,5 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
+| doc | [014_task_create.md](014_task_create.md) | Create tasks |
+| doc | [027_todo_write.md](027_todo_write.md) | TodoWrite — predecessor for tracking (disabled by default since v2.1.142) |

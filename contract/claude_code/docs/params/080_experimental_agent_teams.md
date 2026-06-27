@@ -34,3 +34,4 @@ or changed in future versions.
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [079_subagent_model.md](079_subagent_model.md) | Subagent model override |
+| doc | [../tool/036_send_message.md](../tool/036_send_message.md) | SendMessage tool (requires this flag) |

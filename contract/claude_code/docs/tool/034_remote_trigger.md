@@ -36,5 +36,7 @@ v2.0+ (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
-| doc | [020_cron_create.md](020_cron_create.md) | Local scheduled tasks |
+| doc | [020_cron_create.md](020_cron_create.md) | Local scheduled tasks (create) |
+| doc | [021_cron_delete.md](021_cron_delete.md) | Local scheduled tasks (delete) |
+| doc | [022_cron_list.md](022_cron_list.md) | Local scheduled tasks (list) |
 | doc | [035_schedule_wakeup.md](035_schedule_wakeup.md) | Loop iteration scheduling |

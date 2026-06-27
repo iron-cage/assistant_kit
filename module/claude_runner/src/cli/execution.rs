@@ -451,7 +451,17 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
       Err( e ) => { apply_runner_retry( cli, &e, &mut runner_attempt ); continue; }
     };
 
-    if !output.stderr.is_empty() { eprint!( "{}", output.stderr ); }
+    // Fix(BUG-317): suppress double-emission of CLR-synthesized timeout label.
+    // Root cause: execute_print_attempt() stores the timeout label in output.stderr (exit 4);
+    //   unconditional forward fires before the retry formatter, which also surfaces the same
+    //   string via first_message(), concatenating bare "timeout after Ns" before "[Process]"
+    //   with no newline separator — garbling every retry and exhaustion line on timeout.
+    // Pitfall: storing CLR-synthesized strings in output.stderr violates the field's implicit
+    //   contract (subprocess-originated only); gate on exit_code != 4 distinguishes them.
+    if !output.stderr.is_empty() && output.exit_code != 4
+    {
+      eprint!( "{}", output.stderr );
+    }
 
     if output.exit_code != 0
     {

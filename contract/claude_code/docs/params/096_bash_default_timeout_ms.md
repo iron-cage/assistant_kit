@@ -29,5 +29,6 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
-| doc | [098_bash_max_timeout_ms.md](098_bash_max_timeout_ms.md) | Maximum timeout cap |
+| doc | [098_bash_max_timeout_ms.md](098_bash_max_timeout_ms.md) | `BASH_MAX_TIMEOUT_MS` — maximum timeout cap |
+| doc | [013_bash_timeout.md](013_bash_timeout.md) | `CLAUDE_CODE_BASH_TIMEOUT` — runner-level equivalent |
 | doc | [../tool/004_bash.md](../tool/004_bash.md) | Bash tool |

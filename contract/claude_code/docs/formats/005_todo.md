@@ -58,3 +58,4 @@ pre-v1.0 (unverified)
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Formats master index |
 | storage | [`../storage/002_support_directories.md`](../storage/002_support_directories.md) | `todos/` directory: size, organization |
+| tool | [`../tool/027_todo_write.md`](../tool/027_todo_write.md) | TodoWrite tool that produces this format |

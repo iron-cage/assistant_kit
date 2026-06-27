@@ -38,3 +38,4 @@ safety-related toggles.
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [077_safe_mode.md](077_safe_mode.md) | Safe mode (enables this setting implicitly) |
+| doc | [../tool/013_skill.md](../tool/013_skill.md) | Skill tool this disables |

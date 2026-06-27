@@ -48,11 +48,11 @@
 | Retry on Account (EC-1–EC-11, EC-1–EC-6) | `retry_account_test.rs` | `--retry-on-account` and `--account-delay` parse, env var, retry, exhaustion; EC-10/EC-11 summary-mode diagnostic quality (TSK-235) |
 | Retry on Auth (EC-1–EC-8, EC-1–EC-6) | `retry_auth_test.rs` | `--retry-on-auth` and `--auth-delay` parse, env var, retry, exhaustion |
 | Retry on Process (EC-1–EC-8, EC-1–EC-6) | `retry_process_test.rs` | `--retry-on-process` and `--process-delay` parse, env var, retry, exhaustion |
-| Retry on Runner (EC-1–EC-6, EC-1–EC-6) | `retry_runner_test.rs` | `--retry-on-runner` and `--runner-delay` parse-only (Runner exits before retry loop) |
+| Retry on Runner (EC-1–EC-8, EC-1–EC-6) | `retry_runner_test.rs` | `--retry-on-runner` parse, env var, runtime retry on absent binary (EC-7/EC-8, BUG-299); `--runner-delay` parse |
 | Retry on Unknown (EC-1–EC-10) | `retry_unknown_test.rs` | `--retry-on-unknown` parse, env var, retry, exhaustion, old-flag rejected |
 | Retry Override (EC-1–EC-10, EC-1–EC-6) | `retry_override_test.rs` | `--retry-override` and `--retry-override-delay` parse, env var, 3-tier priority (Tier 1) |
 | Retry Default (EC-1–EC-8, EC-1–EC-6) | `retry_default_test.rs` | `--retry-default` and `--retry-default-delay` parse, env var, 3-tier fallback (Tier 3) |
-| Timeout run/ask (EC-1–EC-8, +7 default-path) | `timeout_test.rs` | `--timeout` parse, env var, watchdog kill (explicit + default), fast-exit no-fire, default watchdog constant + `_CLR_DEFAULT_TIMEOUT` kill path (TSK-227/228) |
+| Timeout run/ask (EC-1–EC-8, +7 default-path, +1 BUG-317) | `timeout_test.rs` | `--timeout` parse, env var, watchdog kill (explicit + default), fast-exit no-fire, default watchdog constant + `_CLR_DEFAULT_TIMEOUT` kill path (TSK-227/228); BUG-317: no double-emission of bare timeout label on retry lines |
 | User stories (US01–US09) | `user_story_test.rs` | End-to-end user story workflows: core run/ask/model/verbose stories |
 | User stories (US10–US18) | `user_story_creds_isolated_test.rs` | End-to-end user story workflows: credential, isolated, and refresh stories |
 | User stories (US19–US25) | `user_story_output_test.rs` | End-to-end user story workflows: MCP config, output file, concurrency stories |
@@ -118,11 +118,11 @@
 | `retry_account_test.rs` | `--retry-on-account` and `--account-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion, summary-mode diagnostic quality (EC-1–EC-11 param 40, EC-1–EC-6 param 41). |
 | `retry_auth_test.rs` | `--retry-on-auth` and `--auth-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion (EC-1–EC-8 param 42, EC-1–EC-6 param 43). |
 | `retry_process_test.rs` | `--retry-on-process` and `--process-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion (EC-1–EC-8 param 46, EC-1–EC-6 param 47). |
-| `retry_runner_test.rs` | `--retry-on-runner` and `--runner-delay` parse-only: parse, env var, CLI-wins (EC-1–EC-6 param 50, EC-1–EC-6 param 51). Runner exits before retry loop — no integration tests. |
+| `retry_runner_test.rs` | `--retry-on-runner` parse, env var, CLI-wins (EC-1–EC-6 param 50) + runtime retry on absent binary (EC-7/EC-8, BUG-299); `--runner-delay` parse, env var, CLI-wins (EC-1–EC-6 param 51). |
 | `retry_unknown_test.rs` | `--retry-on-unknown` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion, old-flag rejected (EC-1–EC-10 param 52, EC-1–EC-7 param 53). |
 | `retry_override_test.rs` | `--retry-override` and `--retry-override-delay` integration: parse, env var, CLI-wins, Tier 1 disables/overrides class-specific, cross-class application (EC-1–EC-10 param 54, EC-1–EC-6 param 55). |
 | `retry_default_test.rs` | `--retry-default` and `--retry-default-delay` integration: parse, env var, CLI-wins, Tier 3 fallback fires when no override/class-specific (EC-1–EC-8 param 56, EC-1–EC-6 param 57). |
-| `timeout_test.rs` | `--timeout` (run/ask) integration: parse, env var, CLI-wins, fake-subprocess watchdog kill and fast-exit no-fire (EC-1–EC-8); default watchdog path: constant value, no-fire, 2s survivor, explicit-above-default, unlimited flag/env, `_CLR_DEFAULT_TIMEOUT=2` kill (TSK-227/228). |
+| `timeout_test.rs` | `--timeout` (run/ask) integration: parse, env var, CLI-wins, fake-subprocess watchdog kill and fast-exit no-fire (EC-1–EC-8); default watchdog path: constant value, no-fire, 2s survivor, explicit-above-default, unlimited flag/env, `_CLR_DEFAULT_TIMEOUT=2` kill (TSK-227/228); BUG-317 retry double-emission guard (`ec_timeout_retry_no_double_emission`). |
 | `env_var_test.rs` | CLR_* env var fallback: E01–E17, one per CLR_* variable, CLI-wins verification. |
 | `env_var_ext_test.rs` | CLR_* env var fallback extended: E18–E57, BUG-233 subdir slash validation. |
 | `user_story_test.rs` | User story end-to-end workflows: US01–US09 (core run/ask/model/verbose stories). |

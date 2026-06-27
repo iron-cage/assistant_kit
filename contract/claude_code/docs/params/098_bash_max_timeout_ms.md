@@ -29,5 +29,6 @@ v0.2.108 (2025-05-13)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
-| doc | [096_bash_default_timeout_ms.md](096_bash_default_timeout_ms.md) | Default timeout |
+| doc | [096_bash_default_timeout_ms.md](096_bash_default_timeout_ms.md) | `BASH_DEFAULT_TIMEOUT_MS` — default timeout |
+| doc | [012_bash_max_timeout.md](012_bash_max_timeout.md) | `CLAUDE_CODE_BASH_MAX_TIMEOUT` — runner-level equivalent |
 | doc | [../tool/004_bash.md](../tool/004_bash.md) | Bash tool |

@@ -25,3 +25,5 @@ pre-v1.0 (unverified); deprecated v2.1.81 (2026-03-20)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
+| doc | [001_read.md](001_read.md) | Read — replacement: use on task output file path |
+| doc | [015_task_get.md](015_task_get.md) | TaskGet — use to get task status instead |

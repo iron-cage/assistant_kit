@@ -81,6 +81,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Timeout stderr double-emission on retry lines eliminated** (BUG-317)
+  - `run_print_mode()` unconditionally forwarded `output.stderr` via `eprint!("{}", output.stderr)` at
+    `execution.rs:454` with no trailing newline; `execute_print_attempt()` stores the CLR-synthesized
+    timeout label `"timeout after Ns"` in the `stderr` field (exit code 4); the retry formatter then
+    extracted the same string via `first_message()` and emitted `[Process] timeout after Ns — retrying…`;
+    the two emissions concatenated without a separator → `"timeout after Ns[Process] timeout after Ns —
+    retrying…"` on a single terminal line for every retry + exhaustion event
+  - Fix: `eprint!` at line 454 gated on `output.exit_code != 4`; exit 4 is the exclusive CLR-internal
+    timeout sentinel — no subprocess can produce it in CLR's taxonomy; the retry formatter already surfaces
+    the full `[Process]` structured message, so suppressing the bare forward eliminates the double-emission
+  - **Pitfall:** storing CLR-synthesized strings in `ExecutionOutput.stderr` violates the field's implicit
+    contract (subprocess-originated only); any unconditional `eprint!` of `output.stderr` will double-emit
+    when the retry formatter also surfaces the same string via `first_message()`
+  - Tests: `ec_timeout_retry_no_double_emission` in `tests/timeout_test.rs` — asserts no stderr line
+    starts with `"timeout after"` when timeout fires during a Process-class retry loop; spec: `36_timeout.md`
+
+- **Windows compilation regressions in `claude_runner/tests/` fixed** (BUG-316)
+  - Feature 064 pull introduced 3 failures on Windows: (F1) `bug_reproducers_247_test.rs` missing
+    `#![cfg(unix)]` → E0432 on `use std::os::unix::process::ExitStatusExt`; (F2) 17 test files had
+    `#![allow(missing_docs)]` after `#![cfg(unix)]` — inner attrs must precede cfg gates; (F3)
+    `ps_flags_test.rs` ungated `stdout_str` import → E0432 on non-Linux
+  - Fix: `#![allow(missing_docs)]` moved before `#![cfg(unix)]` across affected files; `ps_flags_test.rs`
+    given crate-level `#![allow(missing_docs)]` + `#![cfg(unix)]` gate; ungated `Command` import
+    removed from `output_file_test.rs`; `bug_reproducers_247_test.rs` given `#![cfg(unix)]` gate
+  - Cross-platform path separator sweep across 4 test files (`ask_command_test.rs` t10,
+    `env_var_ext_test.rs` e29/bug233, `param_extended_flags_test.rs` s81–s86, `param_group_test.rs`
+    G2CC4/G2CC6) — `/-NAME` subdir assertions replaced with `std::path::MAIN_SEPARATOR` for both
+    positive and negative assertions; tests with hardcoded `/tmp/` paths gated `#[cfg(unix)]`
+  - Rule: (1) lint-suppression inner attrs must precede `#![cfg(unix)]`; (2) `/-NAME` assertions
+    must use `MAIN_SEPARATOR`; (3) negative `!contains("/-")` assertions are equally broken on
+    Windows — `\-` goes undetected; fix both directions when adding cross-platform guards
+
+- **`run_print_mode` retry loop now fails fast on auth errors** (BUG-315, TSK-323)
+  - Auth errors (`ErrorKind::AuthError`) are persistent — the auth token is invalid and requires
+    explicit credential recovery; the retry loop had no recovery mechanism, so each `sleep + continue`
+    iteration reproduced the same 401 failure and exhausted N×delay seconds without useful output
+  - Fix: guard the retry-block entry with `!is_auth_error &&` condition; when `kind` is
+    `ErrorKind::AuthError`, the sleep+retry block is skipped and execution falls through to the
+    non-retriable exit path, which prints `[Auth] …` and calls `process::exit(output.exit_code)`
+  - `// Fix(BUG-315)` comment at guard: Root cause: auth errors are persistent without credential
+    recovery; retrying consumes budget without recovery path; Pitfall: a retry loop operating on
+    auth-class errors without a credential recovery hook deterministically exhausts its budget
+  - Tests: `mre_bug315_auth_error_exits_retry_loop_immediately` in `tests/retry_auth_test.rs`
+
+- **`authentication_error` 401 now correctly classified as `[Auth]`** (BUG-314, TSK-322)
+  - `ERROR_PATTERNS` had no entry for `"authentication_error"`; the `"API Error: "` catch-all
+    matched first → `ApiError` → `ErrorClass::Service`; auth-specific retry logic (`--retry-on-auth`,
+    BUG-315 fail-fast guard) never fired on actual 401 credential failures
+  - Fix: inserted `("authentication_error", ErrorKind::AuthError)` before `"API Error: "` in
+    `claude_runner_core/src/types.rs` `ERROR_PATTERNS`; the Claude CLI 401 output string
+    `"Failed to authenticate. API Error: 401 {\"type\":\"authentication_error\",...}"` now classifies
+    as `Some(ErrorKind::AuthError)`, not `Some(ErrorKind::ApiError)`
+  - `// Fix(BUG-314)` comment at insertion: this pattern must precede the `"API Error: "` catch-all;
+    swapping their positions is a silent regression that re-classifies 401 as Service
+  - Tests: `mre_bug314_authentication_error_classifies_as_auth_error` in `error_classification_test.rs`
+
 - **`render_summary()` rewritten for CLR result envelope schema** (BUG-309, TSK-233)
   - `render_summary()` hard-gated on `"id"` field (Messages API schema) which is absent from the
     CLR result envelope emitted by `claude --output-format json`; `extract_str(json,"id")?` returned

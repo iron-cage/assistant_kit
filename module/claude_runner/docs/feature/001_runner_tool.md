@@ -157,7 +157,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/kill_command_test.rs` | IT-01–IT-09 clr kill SIGTERM delivery and guards |
 | `../../tests/isolated_defaults_test.rs` | ISD-01–ISD-13 isolated subprocess model, effort, flags |
 | `../../tests/isolated_correctness_test.rs` | CT-1–CT-6 isolated correctness invariants |
-| `../../tests/timeout_test.rs` | Default timeout constant, watchdog activation, unlimited flag/env, default-path kill via `_CLR_DEFAULT_TIMEOUT` (TSK-228) |
+| `../../tests/timeout_test.rs` | Default timeout constant, watchdog activation, unlimited flag/env, default-path kill via `_CLR_DEFAULT_TIMEOUT` (TSK-228); BUG-317 double-emission guard (`ec_timeout_retry_no_double_emission`) |
 | `../../tests/tools_command_test.rs` | IT-01–IT-09 clr tools table output, help, unknown args |
 | `../../tests/output_format_test.rs` | --output-format summary rendering and fallback |
 | `../../tests/output_style_test.rs` | EC-01–EC-14 --output-style summary/raw rendering, CLR_OUTPUT_STYLE env var, legacy alias, graceful fallback, minimal CLR envelope (BUG-310 regression) |
@@ -179,8 +179,6 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/max_turns_test.rs` | --max-turns flag parsing and forwarding |
 | `../../tests/max_budget_usd_test.rs` | --max-budget-usd flag parsing and forwarding |
 | `../../tests/fallback_model_test.rs` | --fallback-model flag parsing and forwarding |
-| `../../tests/scope_param_test.rs` | --scope flag parsing and forwarding |
-| `../../tests/unset_param_test.rs` | --unset flag parsing and forwarding |
 | `../../tests/stale_ref_guard_test.rs` | Guard against stale cross-module references |
 | `../../tests/refresh_test.rs` | clr refresh command execution and trace output |
 | `../../tests/creds_default_test.rs` | Credential command default model/effort values |

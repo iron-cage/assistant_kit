@@ -21,3 +21,5 @@ pre-v1.0 (unverified)
 | doc | [readme.md](readme.md) | Master tool table |
 | doc | [../params/003_agent.md](../params/003_agent.md) | Agent override parameter |
 | doc | [../params/004_agents.md](../params/004_agents.md) | Custom agent definitions |
+| doc | [036_send_message.md](036_send_message.md) | Send message to agent teammate |
+| doc | [040_workflow.md](040_workflow.md) | Multi-subagent workflow orchestration |

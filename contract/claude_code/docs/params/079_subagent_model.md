@@ -37,3 +37,4 @@ Accepts the same model alias or full model ID format as `--model`.
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [042_model.md](042_model.md) | Model selection for primary session |
+| doc | [../tool/007_agent.md](../tool/007_agent.md) | Agent tool that spawns subagents |

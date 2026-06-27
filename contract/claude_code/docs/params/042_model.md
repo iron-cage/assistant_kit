@@ -31,3 +31,4 @@ Specifies the model to use for this session. Accepts short aliases (`sonnet`, `o
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [079_subagent_model.md](079_subagent_model.md) | Subagent model override |

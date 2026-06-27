@@ -31,3 +31,6 @@ The maximum timeout that any individual bash command is permitted to use, regard
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [013_bash_timeout.md](013_bash_timeout.md) | `CLAUDE_CODE_BASH_TIMEOUT` — default timeout (this is its ceiling) |
+| doc | [098_bash_max_timeout_ms.md](098_bash_max_timeout_ms.md) | `BASH_MAX_TIMEOUT_MS` — binary-level max timeout equivalent |
+| doc | [../tool/004_bash.md](../tool/004_bash.md) | Bash tool this constrains |

@@ -19,3 +19,5 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
+| doc | [017_task_output.md](017_task_output.md) | TaskOutput — deprecated; Read is the replacement |
+| doc | [011_notebook_edit.md](011_notebook_edit.md) | Edit Jupyter notebooks (write-side companion) |

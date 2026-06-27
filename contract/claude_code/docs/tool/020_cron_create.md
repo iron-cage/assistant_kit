@@ -19,3 +19,6 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
+| doc | [021_cron_delete.md](021_cron_delete.md) | Delete scheduled tasks |
+| doc | [022_cron_list.md](022_cron_list.md) | List scheduled tasks |
+| doc | [034_remote_trigger.md](034_remote_trigger.md) | Cloud-hosted routine scheduling |

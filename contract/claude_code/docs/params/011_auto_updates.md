@@ -31,3 +31,6 @@ Controls whether Claude Code automatically updates its binary on startup. When t
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [099_disable_autoupdater.md](099_disable_autoupdater.md) | Env var to disable background auto-updates |
+| doc | [../subcommand/004_doctor.md](../subcommand/004_doctor.md) | Auto-updater health check |
+| doc | [../subcommand/009_update.md](../subcommand/009_update.md) | Manual update subcommand |

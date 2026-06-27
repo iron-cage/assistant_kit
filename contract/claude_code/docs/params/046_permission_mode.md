@@ -31,3 +31,5 @@ Sets fine-grained permission behaviour for the session. `default` prompts for ea
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [081_enable_auto_mode.md](081_enable_auto_mode.md) | `CLAUDE_CODE_ENABLE_AUTO_MODE` — enables `auto` mode |
+| doc | [../subcommand/003_auto_mode.md](../subcommand/003_auto_mode.md) | Inspect auto-mode classifier config |

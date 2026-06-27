@@ -37,3 +37,4 @@ v2.1.153 (2026-05-28)
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
 | doc | [007_agent.md](007_agent.md) | Individual subagent launch |
+| doc | [036_send_message.md](036_send_message.md) | Message passing between agents |

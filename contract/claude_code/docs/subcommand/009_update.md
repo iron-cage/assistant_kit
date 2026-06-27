@@ -38,3 +38,5 @@ pre-v1.0 (unverified)
 | doc | [005_install.md](005_install.md) | Specific version installation |
 | doc | [../params/011_auto_updates.md](../params/011_auto_updates.md) | `autoUpdates` config key |
 | doc | [../params/050_preferred_version_spec.md](../params/050_preferred_version_spec.md) | Preferred version spec |
+| doc | [../params/119_disable_updates.md](../params/119_disable_updates.md) | Env var to block all updates |
+| doc | [../params/120_disable_upgrade_command.md](../params/120_disable_upgrade_command.md) | Env var to hide `/upgrade` command |

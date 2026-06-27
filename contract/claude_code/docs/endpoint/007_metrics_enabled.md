@@ -52,3 +52,4 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [005_claude_cli_roles.md](005_claude_cli_roles.md) | Org/workspace role lookup |
+| doc | [../params/118_disable_telemetry.md](../params/118_disable_telemetry.md) | Disable telemetry (related feature) |

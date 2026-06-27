@@ -5,9 +5,10 @@
 //!
 //! ## Purpose
 //!
-//! Verify EC-1 through EC-8 from `tests/docs/cli/param/36_timeout.md` and the
+//! Verify EC-1 through EC-8 from `tests/docs/cli/param/36_timeout.md`, the
 //! default-timeout tests (`ec_timeout_default_*`, `ec_timeout_explicit_*`, `ec_timeout_unlimited_*`)
-//! introduced by TSK-227 (BUG-305: print-mode had no default watchdog).
+//! introduced by TSK-227/228 (BUG-305: print-mode had no default watchdog), and the
+//! BUG-317 double-emission guard (`ec_timeout_retry_no_double_emission`).
 //!
 //! ## Scope Note
 //!
@@ -38,6 +39,8 @@
 //! - ec_timeout_explicit_above_default: --timeout 7200 with fast subprocess → exit 0
 //! - ec_timeout_unlimited_flag: --timeout 0 opts out of 3600s default → exit 0
 //! - ec_timeout_unlimited_env: CLR_TIMEOUT=0 opts out of 3600s default → exit 0
+//! - ec_timeout_default_kills: `_CLR_DEFAULT_TIMEOUT=2`, hanging subprocess → exit 4 (TSK-228)
+//! - ec_timeout_retry_no_double_emission: no stderr line starts with bare label on retry (BUG-317)
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env };
 use std::process::Command;
@@ -477,6 +480,74 @@ fn ec_timeout_unlimited_env()
   assert!(
     !stderr.to_lowercase().contains( "timeout" ),
     "CLR_TIMEOUT=0 means unlimited — no timeout message expected. Got:\n{stderr}"
+  );
+}
+
+// ── ec_timeout_retry_no_double_emission: BUG-317 — [Process] retry line starts at column 0 ─────
+
+/// BUG-317 — timeout stderr retry line must start with `[Process]`, not with the bare label.
+///
+/// Root Cause: `eprint!("{}", output.stderr)` at execution.rs:454 fired unconditionally before
+///   the retry formatter; execute_print_attempt() stores the timeout label in output.stderr (exit 4);
+///   both the unconditional forward AND the retry formatter surface the same string, concatenating
+///   `"timeout after Ns[Process] timeout after Ns — retrying…"` with no newline separator.
+/// Why Not Caught: EC-7 and ec_timeout_default_kills check only that stderr contains("timeout");
+///   no test asserted that each [Process] line starts at position 0, not mid-line.
+/// Fix Applied: execution.rs gate changed to `!output.stderr.is_empty() && output.exit_code != 4`;
+///   CLR-synthesized timeout label suppressed from unconditional forward; retry formatter
+///   surfaces it cleanly via first_message() with the [Process] prefix intact at column 0.
+/// Prevention: assert no stderr line begins with "timeout after"; [Process] line must exist.
+/// Pitfall: --retry-override 0 disables all retries → no [Process] line emitted at all;
+///   must use --retry-on-process 1 to exercise the retry path (the primary BUG-317 site).
+#[ cfg( unix ) ]
+#[ test ]
+fn ec_timeout_retry_no_double_emission()
+{
+  let tmp  = tempfile::tempdir().expect( "create temp dir" );
+  let fake = tmp.path().join( "claude" );
+
+  // Fake claude sleeps indefinitely — killed by timeout watchdog on each attempt
+  std::fs::write( &fake, b"#!/bin/sh\nsleep 300\n" ).expect( "write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake claude" );
+
+  let old_path = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path = format!( "{}:{old_path}", tmp.path().display() );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  // _CLR_DEFAULT_TIMEOUT=2: each attempt times out after 2s.
+  // --retry-on-process 1: one retry (two total attempts) → exercises the retry branch.
+  // --process-delay 0: no inter-retry sleep → test completes in ~4s.
+  let out = Command::new( bin )
+    .args( [
+      "-p",
+      "--retry-on-process", "1",
+      "--process-delay",    "0",
+      "--max-sessions",     "0",
+      "x",
+    ] )
+    .env( "PATH", &new_path )
+    .env( "_CLR_DEFAULT_TIMEOUT", "2" )
+    .env_remove( "CLR_TIMEOUT" )
+    .output()
+    .expect( "invoke clr" );
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+
+  // BUG-317 detection invariant: no stderr line may begin with "timeout after".
+  // Pre-fix, each [Process] line was preceded by the bare label with no newline:
+  //   "timeout after 2s[Process] timeout after 2s — retrying…"
+  for line in stderr.lines()
+  {
+    assert!(
+      !line.starts_with( "timeout after" ),
+      "BUG-317 double-emission: stderr line starts with bare timeout label. Line: {line:?}\nFull stderr:\n{stderr}"
+    );
+  }
+  // At least one [Process] line must appear (proves the retry path was exercised).
+  assert!(
+    stderr.contains( "[Process]" ),
+    "stderr must contain a [Process] retry line (proves retry path exercised). Got:\n{stderr}"
   );
 }
 

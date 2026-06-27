@@ -19,3 +19,5 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
+| doc | [014_task_create.md](014_task_create.md) | Create tasks |
+| doc | [016_task_list.md](016_task_list.md) | List all tasks |

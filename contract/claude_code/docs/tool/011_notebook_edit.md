@@ -19,3 +19,4 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
+| doc | [001_read.md](001_read.md) | Read notebooks (read-side companion) |

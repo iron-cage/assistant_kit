@@ -36,4 +36,4 @@ Windows-only; no effect on Linux or macOS.
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
-| doc | [013_bash_timeout.md](013_bash_timeout.md) | Bash tool timeout |
+| doc | [../tool/030_powershell.md](../tool/030_powershell.md) | PowerShell tool this governs |

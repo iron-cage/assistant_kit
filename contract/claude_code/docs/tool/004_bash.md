@@ -19,5 +19,10 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
-| doc | [../params/013_bash_timeout.md](../params/013_bash_timeout.md) | Default bash timeout |
-| doc | [../params/012_bash_max_timeout.md](../params/012_bash_max_timeout.md) | Max bash timeout |
+| doc | [../params/013_bash_timeout.md](../params/013_bash_timeout.md) | `CLAUDE_CODE_BASH_TIMEOUT` — runner-level default timeout |
+| doc | [../params/012_bash_max_timeout.md](../params/012_bash_max_timeout.md) | `CLAUDE_CODE_BASH_MAX_TIMEOUT` — runner-level max timeout |
+| doc | [../params/096_bash_default_timeout_ms.md](../params/096_bash_default_timeout_ms.md) | `BASH_DEFAULT_TIMEOUT_MS` — binary-level default timeout |
+| doc | [../params/097_bash_max_output_length.md](../params/097_bash_max_output_length.md) | `BASH_MAX_OUTPUT_LENGTH` — output cap before file save |
+| doc | [../params/098_bash_max_timeout_ms.md](../params/098_bash_max_timeout_ms.md) | `BASH_MAX_TIMEOUT_MS` — binary-level max timeout cap |
+| doc | [029_monitor.md](029_monitor.md) | Background shell execution variant |
+| doc | [030_powershell.md](030_powershell.md) | PowerShell alternative on Windows |
