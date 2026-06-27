@@ -197,6 +197,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/ps_columns_test.rs` | EC-1–EC-10 --columns custom column selection, BUG-303 |
 | `../../tests/ps_wide_test.rs` | EC-1–EC-5 --wide optional column display |
 | `../../tests/ps_flags_test.rs` | IT-30–IT-40, US-18–US-26, E41–E42 session flag emoji computation |
+| `../../tests/journal_integration_test.rs` | EC-1–EC-10 --journal/--journal-dir event emission, level filtering, retry/timeout events |
 
 ### Provenance
 

@@ -275,7 +275,6 @@ fn render_plain_table( builder : RowBuilder, heading : Heading ) -> String
   Format::format(
     &TableFormatter::with_config(
       TableConfig::plain()
-        .auto_wrap( false )
         .with_heading( heading ),
     ),
     &builder.build_view(),

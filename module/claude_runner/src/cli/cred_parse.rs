@@ -25,6 +25,8 @@ pub( super ) struct IsolatedArgs
   pub( super ) trace            : bool,
   pub( super ) message          : Option< String >,
   pub( super ) passthrough_args : Vec< String >,
+  pub( super ) journal          : Option< String >,
+  pub( super ) journal_dir      : Option< String >,
 }
 
 /// Parsed arguments for the `refresh` subcommand.
@@ -33,6 +35,8 @@ pub( super ) struct RefreshArgs
   pub( super ) creds_path   : String,
   pub( super ) timeout_secs : u64,
   pub( super ) trace        : bool,
+  pub( super ) journal      : Option< String >,
+  pub( super ) journal_dir  : Option< String >,
 }
 
 /// Parse a raw string as a `u64` timeout in seconds.
@@ -94,6 +98,8 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
   let mut trace            : bool             = false;
   let mut message_parts    : Vec< String >    = Vec::new();
   let mut passthrough_args : Vec< String >    = Vec::new();
+  let mut journal          : Option< String > = None;
+  let mut journal_dir      : Option< String > = None;
   let mut i = 0;
   while i < tokens.len()
   {
@@ -126,6 +132,23 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
       // one but parse_isolated_args was written without it.
       // Pitfall: any catch-all for unknown flags silently swallows --help and -h;
       // always add an explicit --help arm before the catch-all in every subcommand parser.
+      "--journal" =>
+      {
+        let v = next_value( tokens, i + 1, "--journal" )?;
+        if !matches!( v, "full" | "meta" | "off" )
+        {
+          return Err( Error::msg( format!(
+            "invalid --journal value '{v}' — expected: full, meta, off"
+          ) ) );
+        }
+        journal = Some( v.to_string() );
+        i += 1;
+      }
+      "--journal-dir" =>
+      {
+        journal_dir = Some( next_value( tokens, i + 1, "--journal-dir" )?.to_string() );
+        i += 1;
+      }
       "-h" | "--help" => { super::help::print_isolated_help(); }
       s if s.starts_with( '-' ) =>
       {
@@ -144,15 +167,18 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
   // in run_cli() so that CLR_CREDS env var can supply the value before the check.
   let creds_path = creds_path.unwrap_or_default();
   let message    = if message_parts.is_empty() { None } else { Some( message_parts.join( " " ) ) };
-  Ok( IsolatedArgs { creds_path, timeout_secs, trace, message, passthrough_args } )
+  Ok( IsolatedArgs { creds_path, timeout_secs, trace, message, passthrough_args, journal, journal_dir } )
 }
 
-/// Apply `CLR_CREDS`, `CLR_TIMEOUT`, and `CLR_TRACE` env var fallbacks for `isolated`.
+/// Apply `CLR_CREDS`, `CLR_TIMEOUT`, `CLR_TRACE`, `CLR_JOURNAL`, and `CLR_JOURNAL_DIR`
+/// env var fallbacks for `isolated`.
 ///
 /// Delegates to [`apply_cred_env_vars`] with isolated's timeout sentinel (30).
 pub( super ) fn apply_isolated_env_vars( parsed : &mut IsolatedArgs )
 {
   apply_cred_env_vars( &mut parsed.creds_path, &mut parsed.timeout_secs, 30, &mut parsed.trace );
+  if parsed.journal.is_none()     { parsed.journal     = env_str( "CLR_JOURNAL" ); }
+  if parsed.journal_dir.is_none() { parsed.journal_dir = env_str( "CLR_JOURNAL_DIR" ); }
 }
 
 /// Parse `tokens` as arguments to the `refresh` subcommand.
@@ -164,6 +190,8 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
   let mut creds_path   : Option< String > = None;
   let mut timeout_secs : u64              = 45;
   let mut trace        : bool             = false;
+  let mut journal      : Option< String > = None;
+  let mut journal_dir  : Option< String > = None;
   let mut i = 0;
   while i < tokens.len()
   {
@@ -185,6 +213,23 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
       {
         trace = true;
       }
+      "--journal" =>
+      {
+        let v = next_value( tokens, i + 1, "--journal" )?;
+        if !matches!( v, "full" | "meta" | "off" )
+        {
+          return Err( Error::msg( format!(
+            "invalid --journal value '{v}' — expected: full, meta, off"
+          ) ) );
+        }
+        journal = Some( v.to_string() );
+        i += 1;
+      }
+      "--journal-dir" =>
+      {
+        journal_dir = Some( next_value( tokens, i + 1, "--journal-dir" )?.to_string() );
+        i += 1;
+      }
       "-h" | "--help" => { super::help::print_refresh_help(); }
       s if s.starts_with( '-' ) =>
       {
@@ -197,13 +242,16 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
     i += 1;
   }
   let creds_path = creds_path.unwrap_or_default();
-  Ok( RefreshArgs { creds_path, timeout_secs, trace } )
+  Ok( RefreshArgs { creds_path, timeout_secs, trace, journal, journal_dir } )
 }
 
-/// Apply `CLR_CREDS`, `CLR_TIMEOUT`, and `CLR_TRACE` env var fallbacks for `refresh`.
+/// Apply `CLR_CREDS`, `CLR_TIMEOUT`, `CLR_TRACE`, `CLR_JOURNAL`, and `CLR_JOURNAL_DIR`
+/// env var fallbacks for `refresh`.
 ///
 /// Delegates to [`apply_cred_env_vars`] with refresh's timeout sentinel (45).
 pub( super ) fn apply_refresh_env_vars( parsed : &mut RefreshArgs )
 {
   apply_cred_env_vars( &mut parsed.creds_path, &mut parsed.timeout_secs, 45, &mut parsed.trace );
+  if parsed.journal.is_none()     { parsed.journal     = env_str( "CLR_JOURNAL" ); }
+  if parsed.journal_dir.is_none() { parsed.journal_dir = env_str( "CLR_JOURNAL_DIR" ); }
 }

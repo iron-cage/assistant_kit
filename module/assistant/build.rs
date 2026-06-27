@@ -22,6 +22,7 @@ use std::{ collections::HashMap, env, path::PathBuf };
 const ASSETS_YAML  : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/../claude_assets/unilang.commands.yaml" );
 const RUNNER_YAML  : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/../claude_runner/claude.commands.yaml" );
 const STORAGE_YAML : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/../claude_storage/unilang.commands.yaml" );
+const JOURNAL_YAML : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/../claude_journal_viewer/claude_journal.commands.yaml" );
 
 fn main()
 {
@@ -29,6 +30,7 @@ fn main()
   println!( "cargo:rerun-if-changed={ASSETS_YAML}" );
   println!( "cargo:rerun-if-changed={RUNNER_YAML}" );
   println!( "cargo:rerun-if-changed={STORAGE_YAML}" );
+  println!( "cargo:rerun-if-changed={JOURNAL_YAML}" );
 
   if env::var( "CARGO_FEATURE_ENABLED" ).is_ok()
   {
@@ -131,26 +133,49 @@ fn generate_static_commands()
   let runner_yaml  = transform_yaml( RUNNER_YAML,  "claude_runner.yaml",  &out_dir );
   let storage_yaml = transform_yaml( STORAGE_YAML, "claude_storage.yaml", &out_dir );
 
+  // Journal viewer YAML is optional — absent when claude_journal_viewer not present.
+  let journal_yaml_enabled = std::path::Path::new( JOURNAL_YAML ).exists();
+  let journal_yaml = if journal_yaml_enabled
+  {
+    transform_yaml( JOURNAL_YAML, "claude_journal.yaml", &out_dir )
+  }
+  else
+  {
+    String::new()
+  };
+
+  let mut modules = vec!
+  [
+    unilang::multi_yaml::ModuleConfig
+    {
+      name      : "claude_runner".to_string(),
+      yaml_path : runner_yaml,
+      prefix    : None,
+      enabled   : true,
+    },
+    unilang::multi_yaml::ModuleConfig
+    {
+      name      : "claude_storage".to_string(),
+      yaml_path : storage_yaml,
+      prefix    : None,
+      enabled   : true,
+    },
+  ];
+  if journal_yaml_enabled
+  {
+    modules.push( unilang::multi_yaml::ModuleConfig
+    {
+      name      : "claude_journal_viewer".to_string(),
+      yaml_path : journal_yaml,
+      prefix    : None,
+      enabled   : true,
+    } );
+  }
+
   let config = unilang::multi_yaml::AggregationConfig
   {
     base_dir            : PathBuf::from( &out_dir ),
-    modules             : vec!
-    [
-      unilang::multi_yaml::ModuleConfig
-      {
-        name      : "claude_runner".to_string(),
-        yaml_path : runner_yaml,
-        prefix    : None,
-        enabled   : true,
-      },
-      unilang::multi_yaml::ModuleConfig
-      {
-        name      : "claude_storage".to_string(),
-        yaml_path : storage_yaml,
-        prefix    : None,
-        enabled   : true,
-      },
-    ],
+    modules,
     global_prefix       : None,
     detect_conflicts    : true,
     env_overrides       : HashMap::new(),

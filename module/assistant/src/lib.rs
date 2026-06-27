@@ -73,19 +73,27 @@ mod cli
 
     let routines : phf::Map< &'static str, RoutineFn > = phf::phf_map!
     {
-      ".claude"          => claude_stub_routine,
-      ".claude.help"     => claude_stub_routine,
-      ".status"          => claude_storage::cli::status_routine,
-      ".list"            => claude_storage::cli::list_routine,
-      ".show"            => claude_storage::cli::show_routine,
-      ".projects"        => claude_storage::cli::projects_routine,
-      ".count"           => claude_storage::cli::count_routine,
-      ".search"          => claude_storage::cli::search_routine,
-      ".export"          => claude_storage::cli::export_routine,
-      ".path"            => claude_storage::cli::project_path_routine,
-      ".exists"          => claude_storage::cli::project_exists_routine,
-      ".session.dir"     => claude_storage::cli::session_dir_routine,
-      ".session.ensure"  => claude_storage::cli::session_ensure_routine,
+      ".claude"              => claude_stub_routine,
+      ".claude.help"         => claude_stub_routine,
+      ".status"              => claude_storage::cli::status_routine,
+      ".list"                => claude_storage::cli::list_routine,
+      ".show"                => claude_storage::cli::show_routine,
+      ".projects"            => claude_storage::cli::projects_routine,
+      ".count"               => claude_storage::cli::count_routine,
+      ".search"              => claude_storage::cli::search_routine,
+      ".export"              => claude_storage::cli::export_routine,
+      ".path"                => claude_storage::cli::project_path_routine,
+      ".exists"              => claude_storage::cli::project_exists_routine,
+      ".session.dir"         => claude_storage::cli::session_dir_routine,
+      ".session.ensure"      => claude_storage::cli::session_ensure_routine,
+      ".journal.list"        => claude_journal_viewer::routines::list_routine,
+      ".journal.tail"        => claude_journal_viewer::routines::tail_routine,
+      ".journal.stats"       => claude_journal_viewer::routines::stats_routine,
+      ".journal.search"      => claude_journal_viewer::routines::search_routine,
+      ".journal.serve"       => claude_journal_viewer::routines::serve_routine,
+      ".journal.prune"       => claude_journal_viewer::routines::prune_routine,
+      ".journal.status"      => claude_journal_viewer::routines::status_routine,
+      ".journal.export"      => claude_journal_viewer::routines::export_routine,
     };
 
     for ( name, static_cmd ) in AGGREGATED_COMMANDS.entries()
@@ -113,7 +121,7 @@ mod cli
     registry
   }
 
-  // 41 commands across 8 groups — data construction cannot be split further.
+  // 49 commands across 9 groups — data construction cannot be split further.
   #[ allow( clippy::too_many_lines ) ]
   fn print_usage( binary : &str )
   {
@@ -210,6 +218,21 @@ mod cli
             CommandEntry { name : ".exists".to_string(),         desc : "Check whether a project has any sessions".to_string() },
             CommandEntry { name : ".session.dir".to_string(),    desc : "Print the filesystem path of a session directory".to_string() },
             CommandEntry { name : ".session.ensure".to_string(), desc : "Ensure a session directory exists (create if missing)".to_string() },
+          ],
+        },
+        CommandGroup
+        {
+          name    : "Journal Viewing".to_string(),
+          entries : vec!
+          [
+            CommandEntry { name : ".journal.list".to_string(),   desc : "List CLR journal events (table or JSON)".to_string() },
+            CommandEntry { name : ".journal.tail".to_string(),   desc : "Follow CLR journal events in real-time (use clj .tail)".to_string() },
+            CommandEntry { name : ".journal.stats".to_string(),  desc : "Show CLR journal aggregate statistics".to_string() },
+            CommandEntry { name : ".journal.search".to_string(), desc : "Search CLR journal events by pattern".to_string() },
+            CommandEntry { name : ".journal.serve".to_string(),  desc : "Start web viewer for CLR journal (use clj .serve)".to_string() },
+            CommandEntry { name : ".journal.prune".to_string(),  desc : "Delete old CLR journal files".to_string() },
+            CommandEntry { name : ".journal.status".to_string(), desc : "Show CLR journal health: file count, size, dates".to_string() },
+            CommandEntry { name : ".journal.export".to_string(), desc : "Export CLR journal events to a file".to_string() },
           ],
         },
         CommandGroup

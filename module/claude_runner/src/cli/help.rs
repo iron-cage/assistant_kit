@@ -68,6 +68,8 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--output-file <PATH>".into(),            desc : "Write captured output to file (tee: stdout + file)".into() },
       OptionEntry { name : "--output-style <MODE>".into(),           desc : "Rendering mode: summary (default) or raw [env: CLR_OUTPUT_STYLE]".into() },
       OptionEntry { name : "--summary-fields <FIELDS>".into(),       desc : "Summary field selection: minimal, standard, full (default), or comma-separated [env: CLR_SUMMARY_FIELDS]".into() },
+      OptionEntry { name : "--journal <LEVEL>".into(),               desc : "Journal level: full (default), meta (no output), or off [env: CLR_JOURNAL]".into() },
+      OptionEntry { name : "--journal-dir <PATH>".into(),            desc : "Journal directory (default: ~/.clr/journal/) [env: CLR_JOURNAL_DIR]".into() },
       OptionEntry { name : "--expect <VALS>".into(),                 desc : "Pipe-separated expected values; mismatch → exit 3".into() },
       OptionEntry { name : "--expect-strategy <STRAT>".into(),       desc : "Mismatch handling: fail (default), retry, default:<VAL>".into() },
       OptionEntry { name : "--max-sessions <N>".into(),              desc : "Max concurrent sessions before blocking (0=unlimited, default: 30)".into() },
@@ -145,6 +147,8 @@ pub( crate ) fn print_isolated_help() -> !
   println!( "  --creds <FILE>                     Credentials JSON file (required)" );
   println!( "  --timeout <SECS>                   Max seconds to wait for subprocess (default: 30)" );
   println!( "  --trace                            Print underlying call details to stderr" );
+  println!( "  --journal <LEVEL>                  Journal level: full (default), meta, or off [env: CLR_JOURNAL]" );
+  println!( "  --journal-dir <PATH>               Journal directory (default: ~/.clr/journal/) [env: CLR_JOURNAL_DIR]" );
   println!( "  -h, --help                         Show this help" );
   println!();
   println!( "EXIT CODES:" );
@@ -166,6 +170,8 @@ pub( crate ) fn print_refresh_help() -> !
   println!( "  --creds <FILE>                     Credentials JSON file (required)" );
   println!( "  --timeout <SECS>                   Max seconds to wait for refresh (default: 45)" );
   println!( "  --trace                            Print underlying call details to stderr" );
+  println!( "  --journal <LEVEL>                  Journal level: full (default), meta, or off [env: CLR_JOURNAL]" );
+  println!( "  --journal-dir <PATH>               Journal directory (default: ~/.clr/journal/) [env: CLR_JOURNAL_DIR]" );
   println!( "  -h, --help                         Show this help" );
   println!();
   println!( "EXIT CODES:" );

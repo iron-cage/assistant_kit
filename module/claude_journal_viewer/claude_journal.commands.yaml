@@ -1,0 +1,395 @@
+- name: ".journal.list"
+  namespace: ""
+  category: "journal"
+  description: "Display a filtered event table from the CLR journal (default: last 50 events)"
+  hint: "List journal events"
+  version: "0.1.0"
+  status: "stable"
+  aliases: []
+  tags: ["journal", "list"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+  arguments:
+    - name: "since"
+      kind: "String"
+      description: "Show events newer than this duration (e.g. 1h, 7d, 2w)"
+      hint: "Time window start"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "until"
+      kind: "String"
+      description: "Show events older than this duration"
+      hint: "Time window end"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "type"
+      kind: "String"
+      description: "Filter by event type (execution, credential, gate_wait, retry, timeout, runner_retry, validation_retry, interactive)"
+      hint: "Event type filter"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "command"
+      kind: "String"
+      description: "Filter by command name (run, ask, isolated, refresh)"
+      hint: "Command filter"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "exit_code"
+      kind: "Integer"
+      description: "Filter by exit code"
+      hint: "Exit code filter"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "model"
+      kind: "String"
+      description: "Filter by model name substring"
+      hint: "Model filter"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "limit"
+      kind: "Integer"
+      description: "Maximum number of events to return (default: 50)"
+      hint: "Result limit"
+      optional: true
+      default: 50
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "format"
+      kind: "String"
+      description: "Output format: table (default) or json"
+      hint: "Output format"
+      optional: true
+      default: "table"
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "dir"
+      kind: "String"
+      description: "Journal directory override (default: ~/.clr/journal/)"
+      hint: "Journal dir"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+  examples:
+  - .journal.list
+  - .journal.list since::1d
+  - .journal.list since::1h format::json
+  - .journal.list type::execution exit_code::0
+  auto_help_enabled: true
+
+- name: ".journal.stats"
+  namespace: ""
+  category: "journal"
+  description: "Show aggregate statistics (default: last 7 days, grouped by day)"
+  hint: "Journal statistics"
+  version: "0.1.0"
+  status: "stable"
+  aliases: []
+  tags: ["journal", "stats"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+  arguments:
+    - name: "by"
+      kind: "String"
+      description: "Group results by: day (default) or model"
+      hint: "Group by"
+      optional: true
+      default: "day"
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "since"
+      kind: "String"
+      description: "Time window start (default: 7d)"
+      hint: "Time window start"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "dir"
+      kind: "String"
+      description: "Journal directory override"
+      hint: "Journal dir"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+  examples:
+  - .journal.stats
+  - .journal.stats by::model since::30d
+  auto_help_enabled: true
+
+- name: ".journal.search"
+  namespace: ""
+  category: "journal"
+  description: "Search journal events by substring pattern"
+  hint: "Search journal"
+  version: "0.1.0"
+  status: "stable"
+  aliases: []
+  tags: ["journal", "search"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+  arguments:
+    - name: "pattern"
+      kind: "String"
+      description: "Substring to search for (required)"
+      hint: "Search pattern"
+      optional: false
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "since"
+      kind: "String"
+      description: "Limit search to events newer than this duration"
+      hint: "Time window start"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "dir"
+      kind: "String"
+      description: "Journal directory override"
+      hint: "Journal dir"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+  examples:
+  - .journal.search pattern::error
+  - .journal.search pattern::timeout since::7d
+  auto_help_enabled: true
+
+- name: ".journal.status"
+  namespace: ""
+  category: "journal"
+  description: "Show journal health: file count, total size, date range"
+  hint: "Journal status"
+  version: "0.1.0"
+  status: "stable"
+  aliases: []
+  tags: ["journal", "status"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+  arguments:
+    - name: "dir"
+      kind: "String"
+      description: "Journal directory override"
+      hint: "Journal dir"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+  examples:
+  - .journal.status
+  auto_help_enabled: true
+
+- name: ".journal.prune"
+  namespace: ""
+  category: "journal"
+  description: "Delete journal files older than the keep window (default: 30d)"
+  hint: "Prune old journal files"
+  version: "0.1.0"
+  status: "stable"
+  aliases: []
+  tags: ["journal", "prune"]
+  permissions: []
+  idempotent: false
+  deprecation_message: ""
+  http_method_hint: "DELETE"
+  arguments:
+    - name: "keep"
+      kind: "String"
+      description: "Retention window — files older than this are deleted (default: 30d)"
+      hint: "Retention period"
+      optional: true
+      default: "30d"
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "dry_run"
+      kind: "Boolean"
+      description: "List files that would be deleted without removing them"
+      hint: "Dry run"
+      optional: true
+      default: false
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "dir"
+      kind: "String"
+      description: "Journal directory override"
+      hint: "Journal dir"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+  examples:
+  - .journal.prune keep::30d dry_run::1
+  - .journal.prune keep::7d
+  auto_help_enabled: true
+
+- name: ".journal.export"
+  namespace: ""
+  category: "journal"
+  description: "Export filtered journal events to a file"
+  hint: "Export journal events"
+  version: "0.1.0"
+  status: "stable"
+  aliases: []
+  tags: ["journal", "export"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+  arguments:
+    - name: "output"
+      kind: "String"
+      description: "Output file path (required)"
+      hint: "Output path"
+      optional: false
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "format"
+      kind: "String"
+      description: "Export format: json (default), jsonl, csv, table"
+      hint: "Export format"
+      optional: true
+      default: "json"
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "since"
+      kind: "String"
+      description: "Time window start"
+      hint: "Time window start"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "dir"
+      kind: "String"
+      description: "Journal directory override"
+      hint: "Journal dir"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+  examples:
+  - .journal.export output::/tmp/events.json
+  - .journal.export output::/tmp/e.csv format::csv since::7d
+  auto_help_enabled: true
+
+- name: ".journal.tail"
+  namespace: ""
+  category: "journal"
+  description: "Follow journal events in real-time (use clj .tail for interactive use)"
+  hint: "Follow journal events"
+  version: "0.1.0"
+  status: "stable"
+  aliases: []
+  tags: ["journal", "tail"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+  arguments:
+    - name: "type"
+      kind: "String"
+      description: "Filter by event type"
+      hint: "Event type filter"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "dir"
+      kind: "String"
+      description: "Journal directory override"
+      hint: "Journal dir"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+  examples:
+  - .journal.tail
+  - .journal.tail type::execution
+  auto_help_enabled: true
+
+- name: ".journal.serve"
+  namespace: ""
+  category: "journal"
+  description: "Start embedded web dashboard for journal viewing (use clj .serve for interactive use)"
+  hint: "Start web journal viewer"
+  version: "0.1.0"
+  status: "stable"
+  aliases: []
+  tags: ["journal", "serve"]
+  permissions: []
+  idempotent: false
+  deprecation_message: ""
+  http_method_hint: "GET"
+  arguments:
+    - name: "port"
+      kind: "Integer"
+      description: "HTTP port (default: random)"
+      hint: "HTTP port"
+      optional: true
+      default: 0
+      validation_rules: []
+      aliases: []
+      tags: []
+    - name: "dir"
+      kind: "String"
+      description: "Journal directory override"
+      hint: "Journal dir"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+  examples:
+  - .journal.serve
+  - .journal.serve port::9090
+  auto_help_enabled: true

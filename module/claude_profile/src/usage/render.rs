@@ -220,7 +220,7 @@ pub( crate ) fn render_text(
   }
 
   let view  = builder.build_view();
-  let table = Format::format( &TableFormatter::with_config( TableConfig::default().auto_wrap( false ) ), &view ).unwrap_or_default();
+  let table = Format::format( &TableFormatter::with_config( TableConfig::default().with_auto_wrap( false ) ), &view ).unwrap_or_default();
   let body  = format!( "Quota\n\n{table}\n" );
 
   // Footer: shown only when ≥2 valid accounts (AC-10).
@@ -377,7 +377,7 @@ fn build_sessions_table( store_path : &std::path::Path ) -> ( usize, String )
   }
   let view  = builder.build_view();
   let table = Format::format(
-    &TableFormatter::with_config( TableConfig::default().auto_wrap( false ) ),
+    &TableFormatter::with_config( TableConfig::default().with_auto_wrap( false ) ),
     &view,
   ).unwrap_or_default();
 

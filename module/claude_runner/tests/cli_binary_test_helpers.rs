@@ -11,7 +11,7 @@
 //! | `stderr_str` | `refresh_test`, `bug_reproducers_239_244_test`, `invariant_trace_universality_test`, `error_classification_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `output_format_test` |
 //! | `stdout_str` | `refresh_test`, `isolated_correctness_test`, `isolated_test`, `dry_run_test`, `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `output_format_test` |
 //! | `make_creds_file` | `refresh_test`, `param_trace_edge_cases_test`, `invariant_trace_universality_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test` |
-//! | `fake_claude_dir` (unix) | `bug_reproducers_239_244_test`, `error_classification_test`, `execution_mode_test`, `bug_reproducers_247_test`, `exit_code_contract_test`, `output_format_test`, `output_style_test`, `summary_fields_test` |
+//! | `fake_claude_dir` (unix) | `bug_reproducers_239_244_test`, `error_classification_test`, `execution_mode_test`, `bug_reproducers_247_test`, `exit_code_contract_test`, `output_format_test`, `output_style_test`, `summary_fields_test`, `journal_integration_test` |
 //! | `fake_claude_binary_dir` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_flags_test` |
 //! | `fake_claude` (unix) | `execution_mode_test`, `expect_validation_test` |
 //! | `run_with_path` | `execution_mode_test`, `expect_validation_test`, `exit_code_contract_test`, `output_format_test` |

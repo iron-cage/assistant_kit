@@ -1,4 +1,5 @@
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel, REFRESH_DEFAULT_MODEL, RunnerError, run_isolated };
+use claude_journal::{ EventRecord, EventType, JournalWriter };
 
 /// Emit trace diagnostics for a credential-operation command (`isolated` or `refresh`).
 ///
@@ -73,6 +74,7 @@ pub( super ) fn run_isolated_command
   passthrough_args : &[ String ],
   skip_perms       : bool,
   no_chrome        : bool,
+  journal          : Option< JournalWriter >,
 ) -> !
 {
   // Build the full arg list with all injected defaults prepended before --print.
@@ -120,6 +122,15 @@ pub( super ) fn run_isolated_command
       if !result.stdout.is_empty() { print!( "{}", result.stdout ); }
       // exit_code == -1: killed by timeout but creds already refreshed — exit 0.
       let exit_code = if result.exit_code == -1 { 0 } else { result.exit_code };
+      if let Some( ref w ) = journal
+      {
+        let mut ev             = EventRecord::new( EventType::Credential );
+        ev.fields.command      = Some( label.to_string() );
+        ev.fields.exit_code    = Some( exit_code );
+        ev.fields.creds        = Some( creds_path.to_string() );
+        ev.fields.timeout_secs = Some( u32::try_from( timeout_secs ).unwrap_or( u32::MAX ) );
+        let _ = w.append( &ev );
+      }
       std::process::exit( exit_code );
     }
     Err( RunnerError::Timeout { secs } | RunnerError::TimeoutWithOutput { secs, .. } ) =>
@@ -130,6 +141,15 @@ pub( super ) fn run_isolated_command
       // isolated/refresh use RunnerError::Timeout from claude_runner_core::isolated — exit 2
       // signals "no credentials refreshed, no subprocess output" (see 001_design_decisions.md
       // line 138).  Do NOT change to exit 4; that would break the isolated/refresh contract.
+      if let Some( ref w ) = journal
+      {
+        let mut ev             = EventRecord::new( EventType::Credential );
+        ev.fields.command      = Some( label.to_string() );
+        ev.fields.exit_code    = Some( 2 );
+        ev.fields.creds        = Some( creds_path.to_string() );
+        ev.fields.timeout_secs = Some( u32::try_from( secs ).unwrap_or( u32::MAX ) );
+        let _ = w.append( &ev );
+      }
       std::process::exit( 2 );
     }
     Err( e ) =>
@@ -156,6 +176,7 @@ pub( super ) fn run_refresh_command
   creds_path   : &str,
   timeout_secs : u64,
   trace        : bool,
+  journal      : Option< JournalWriter >,
 ) -> !
 {
   run_isolated_command(
@@ -169,5 +190,6 @@ pub( super ) fn run_refresh_command
     &[],
     false, // no skip-perms: refresh is HTTP-only, invokes no tools
     true,  // no-chrome: OAuth token exchange is pure HTTP; suppress browser context
+    journal,
   );
 }

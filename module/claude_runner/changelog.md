@@ -18,6 +18,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Event journaling integration** (Plan 033, TSK-326)
+  - `--journal <full|meta|off>` controls event emission level; `full` (default) captures stdout/stderr (≤1MB each), `meta` records metadata only, `off` disables journaling
+  - `--journal-dir <PATH>` overrides journal directory; 3-tier resolution: CLI flag > `CLR_JOURNAL_DIR` env var > `~/.clr/journal/`
+  - 8 emission points: Execution (success/error), Credential (isolated/refresh), GateWait (session slot acquired), Retry (per-class), Timeout (watchdog), RunnerRetry (spawn failure), Interactive (session start/end)
+  - Best-effort: journal write failures never change the runner exit code
+  - Parameters: [`--journal`](docs/cli/param/072_journal.md) (072), [`--journal-dir`](docs/cli/param/073_journal_dir.md) (073)
+  - Env vars: `CLR_JOURNAL`, `CLR_JOURNAL_DIR`; invalid `CLR_JOURNAL` exits 1
+  - New dependency: `claude_journal` (workspace)
+  - Tests: `journal_integration_test.rs` (EC-1–EC-10)
+
 - **Help split: `RUNNER OPTIONS` / `CLAUDE CODE OPTIONS (forwarded)` sections** (TSK-232)
   - `clr --help` now uses `CliHelpTemplate` from `cli_fmt ^0.9` instead of 262-line hand-rolled `print!` calls
   - Two option groups: `RUNNER OPTIONS` (47 entries — flags consumed by the runner) and `CLAUDE CODE OPTIONS (forwarded)` (14 entries — flags passed to claude verbatim)

@@ -19,6 +19,8 @@ clr refresh [--creds <FILE>] [--timeout <SECS>] [--trace]
 | [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | `~/.claude/.credentials.json` | Credentials JSON file path (optional; defaults to current account credentials) |
 | [`--timeout`](../param/020_timeout.md) | [`TimeoutSecs`](../type/09_timeout_secs.md) | 45 | Max seconds to wait for refresh |
 | [`--trace`](../param/013_trace.md) | bool | false | Print underlying call details to stderr then execute |
+| [`--journal`](../param/072_journal.md) | enum | `full` | Journal level: `full` (stdout+stderr ≤1MB), `meta` (metadata only), `off` (disabled) |
+| [`--journal-dir`](../param/073_journal_dir.md) | path | `~/.clr/journal/` | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` |
 | `-h`/`--help` | — | — | Print refresh subcommand help and exit 0 |
 
 **Exit Codes:**

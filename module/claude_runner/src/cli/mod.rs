@@ -139,14 +139,50 @@ fn is_close_typo( first : &str, sub : &str ) -> bool
   true
 }
 
-pub( super ) fn run_built_command( builder : &ClaudeCommand, cli : &CliArgs )
+/// Resolve the journal directory from CLI args, env var, or home-based default.
+fn resolve_journal_dir( journal_dir : Option< &str > ) -> std::path::PathBuf
+{
+  if let Some( d ) = journal_dir
+  {
+    return std::path::PathBuf::from( d );
+  }
+  if let Ok( v ) = std::env::var( "CLR_JOURNAL_DIR" )
+  {
+    if !v.is_empty() { return std::path::PathBuf::from( v ); }
+  }
+  std::env::var( "HOME" )
+    .map_or_else( | _ | std::path::PathBuf::from( ".clr/journal" ), | h | std::path::PathBuf::from( h ).join( ".clr" ).join( "journal" ) )
+}
+
+/// Create a `JournalWriter` from CLI args unless journaling is disabled (`--journal off`).
+///
+/// Resolution order for the directory: `--journal-dir` > `CLR_JOURNAL_DIR` > `~/.clr/journal/`.
+/// The directory is created if it does not exist. I/O errors during directory creation are
+/// silently ignored — journaling is best-effort and must not abort the runner.
+pub( super ) fn resolve_journal_writer(
+  journal     : Option< &str >,
+  journal_dir : Option< &str >,
+) -> Option< claude_journal::JournalWriter >
+{
+  let level = journal.unwrap_or( "full" );
+  if level == "off" { return None; }
+  let dir = resolve_journal_dir( journal_dir );
+  let _ = std::fs::create_dir_all( &dir );
+  Some( claude_journal::JournalWriter::new( dir ) )
+}
+
+pub( super ) fn run_built_command(
+  builder : &ClaudeCommand,
+  cli     : &CliArgs,
+  journal : Option< &claude_journal::JournalWriter >,
+)
 {
   let verbosity = cli.verbosity.unwrap_or_default();
 
   // Concurrency gate: block before subprocess launch when max active claude sessions is reached.
   // Default limit is 30; 0 = unlimited.  dry-run is bypassed by caller (never reaches here).
   let max_sessions = cli.max_sessions.unwrap_or( 30 );
-  wait_for_session_slot( max_sessions, verbosity, cli );
+  wait_for_session_slot( max_sessions, verbosity, cli, journal );
 
   if cli.trace || verbosity.shows_verbose_detail()
   {
@@ -160,11 +196,11 @@ pub( super ) fn run_built_command( builder : &ClaudeCommand, cli : &CliArgs )
 
   if cli.print_mode || ( cli.message.is_some() && !cli.interactive )
   {
-    execution::run_print_mode( builder, cli );
+    execution::run_print_mode( builder, cli, journal );
   }
   else
   {
-    execution::run_interactive( builder, cli );
+    execution::run_interactive( builder, cli, journal );
   }
 }
 
@@ -198,6 +234,7 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     std::process::exit( 1 );
   }
 
+  let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
   let builder = build_claude_command( &cli );
 
   // Fix(BUG-248): warn when --keep-claudecode is set while CLAUDECODE is present in
@@ -226,7 +263,7 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     std::process::exit( 0 );
   }
 
-  run_built_command( &builder, &cli );
+  run_built_command( &builder, &cli, journal.as_ref() );
   std::process::exit( 0 );
 }
 
@@ -268,6 +305,7 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     eprintln!( "{CREDS_PATH_ERROR}" );
     std::process::exit( 1 );
   }
+  let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
   run_isolated_command(
     "isolated",
     &cli.creds_path,
@@ -279,6 +317,7 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     &cli.passthrough_args,
     cli.message.is_some(), // skip-perms when a real task message is present
     false,                 // chrome stays on for isolated tasks (may use browser tools)
+    journal,
   )
 }
 
@@ -296,5 +335,6 @@ pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
     eprintln!( "{CREDS_PATH_ERROR}" );
     std::process::exit( 1 );
   }
-  run_refresh_command( &cli.creds_path, cli.timeout_secs, cli.trace )
+  let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
+  run_refresh_command( &cli.creds_path, cli.timeout_secs, cli.trace, journal )
 }

@@ -20,6 +20,8 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [MESSAGE]
 | [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | `~/.claude/.credentials.json` | Credentials JSON file path (optional; defaults to current account credentials) |
 | [`--timeout`](../param/020_timeout.md) | [`TimeoutSecs`](../type/09_timeout_secs.md) | 30 | Max seconds to wait for subprocess |
 | [`--trace`](../param/013_trace.md) | bool | false | Print underlying call details to stderr then execute |
+| [`--journal`](../param/072_journal.md) | enum | `full` | Journal level: `full` (stdout+stderr ≤1MB), `meta` (metadata only), `off` (disabled) |
+| [`--journal-dir`](../param/073_journal_dir.md) | path | `~/.clr/journal/` | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` |
 | `-h`/`--help` | — | — | Print isolated subcommand help and exit 0 |
 
 **Exit Codes:**
@@ -30,6 +32,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [MESSAGE]
 | 1 | Error (creds file not found, claude not in PATH, I/O failure) |
 | 2 | Timeout — subprocess did not finish within `--timeout` seconds; any partial stdout accumulated before the timeout is preserved in the error output |
 | N | Passthrough from claude subprocess (non-zero) |
+| 128+signal | POSIX signal termination — subprocess killed by signal (e.g., 130 = SIGINT, 143 = SIGTERM); passes through from subprocess identically to any other non-zero `N` |
 
 **Examples:**
 

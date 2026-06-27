@@ -38,7 +38,7 @@ use std::{
 
 const MANIFEST_DIR : &str = env!( "CARGO_MANIFEST_DIR" );
 
-/// All 17 workspace member crate names.
+/// All 19 workspace member crate names.
 const WORKSPACE_MEMBERS : &[ &str ] = &[
   "claude_storage_core",
   "claude_auth",
@@ -57,6 +57,8 @@ const WORKSPACE_MEMBERS : &[ &str ] = &[
   "assistant",
   "assistant_kit",
   "runbox",
+  "claude_journal",
+  "claude_journal_viewer",
 ];
 
 // ──────────────────────────────── helpers ─────────────────────────────────
@@ -150,13 +152,15 @@ fn layer_of( name : &str ) -> Option< u8 >
     "claude_assets_core"
     | "claude_profile_core"
     | "claude_version_core"
-    | "claude_runner_core" => Some( 1 ),
+    | "claude_runner_core"
+    | "claude_journal" => Some( 1 ),
     "dream"
     | "claude_assets"
     | "claude_version"
     | "claude_runner"
     | "claude_profile"
-    | "claude_storage" => Some( 2 ),
+    | "claude_storage"
+    | "claude_journal_viewer" => Some( 2 ),
     "assistant" | "assistant_kit" => Some( 3 ),
     // Layer * — no numeric layer; exempt from CL checks
     _ => None,

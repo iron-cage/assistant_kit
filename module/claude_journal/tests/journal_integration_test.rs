@@ -39,7 +39,7 @@ fn it1_writer_creates_file_on_first_append()
   assert!( dir.exists(), "journal dir must be created on first append" );
   let jsonl_files : Vec< _ > = std::fs::read_dir( &dir )
     .expect( "read_dir" )
-    .filter_map( | e | e.ok() )
+    .filter_map( core::result::Result::ok )
     .filter( | e | e.path().extension().and_then( | x | x.to_str() ) == Some( "jsonl" ) )
     .collect();
   assert!( !jsonl_files.is_empty(), "at least one .jsonl file must exist after first append" );
@@ -139,7 +139,10 @@ fn it4_rotation_date_filename_format()
     today.len() == "2026-06-27.jsonl".len(),
     "today_filename must have the correct length"
   );
-  assert!( today.ends_with( ".jsonl" ), "today_filename must end with .jsonl" );
+  assert!(
+    std::path::Path::new( &today ).extension().is_some_and( | ext | ext.eq_ignore_ascii_case( "jsonl" ) ),
+    "today_filename must end with .jsonl"
+  );
   // Verify date part has the right shape: digits and dashes at positions 0-9.
   let date_part = &today[ ..10 ];
   let parts : Vec< &str > = date_part.split( '-' ).collect();
