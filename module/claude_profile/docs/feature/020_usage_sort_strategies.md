@@ -100,7 +100,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 | File | Relationship |
 |------|--------------|
 | BUG-259 | BUG-259 ✅ Fixed: `sort_indices` all `sort_by` closures missing final name tiebreaker — non-deterministic row order when all numeric keys tie |
-| BUG-321 | BUG-321 🔴 Unverified: Both-exhausted accounts show 🔴 and sort with dead accounts. Fix: `(false,false)→WeeklyExhausted` in `status_group_of()` + `(false,false)→"🟡"` in `status_emoji()`. No new variant needed — both-exhausted merges into G3 (7d is binding). |
+| BUG-321 | BUG-321 ✅ Fixed (TSK-331): Both-exhausted accounts were showing 🔴 and sorting with dead accounts. Fix: `( _, false ) => StatusGroup::WeeklyExhausted` in `status_group_of()` (merges `(true,false)` and `(false,false)`); `_ => "🟡"` catch-all in `status_emoji()`. No new variant. MREs: `mre_bug321_both_exhausted_sorts_in_weekly_group`, `mre_bug321_four_group_partition_order`. |
 | BUG-299 | BUG-299 ✅ Fixed: `status_group_of()` used `prefer_weekly` for group boundary — fix: `sort.rs:35` changed to `seven_day_left( aq ) > 5.0`; `prefer` param removed from signature (TSK-301) |
 
 ### Sources
