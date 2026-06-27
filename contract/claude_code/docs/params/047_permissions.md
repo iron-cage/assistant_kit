@@ -62,5 +62,6 @@ Example:
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
-| doc | [permission_mode.md](permission_mode.md) | Session-level permission mode |
-| doc | [allowed_tools.md](allowed_tools.md) | CLI-level tool allowlist |
+| doc | [046_permission_mode.md](046_permission_mode.md) | Session-level permission mode |
+| doc | [006_allowed_tools.md](006_allowed_tools.md) | CLI-level tool allowlist |
+| doc | [022_disallowed_tools.md](022_disallowed_tools.md) | CLI-level tool denylist |

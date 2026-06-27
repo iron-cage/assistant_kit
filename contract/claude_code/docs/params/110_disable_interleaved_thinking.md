@@ -29,3 +29,6 @@ v1.0.1 (2025-05-22)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [094_thinking_disabled_display.md](094_thinking_disabled_display.md) | Display behavior when thinking is disabled |
+| doc | [023_effort.md](023_effort.md) | Effort level (governs thinking depth) |
+| doc | [014_betas.md](014_betas.md) | Beta headers (thinking uses interleaved-thinking header) |

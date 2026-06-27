@@ -37,3 +37,5 @@ Introduced in Claude Code v2.1.75 (2026-03-13), alongside 1M context window supp
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [075_autocompact_pct_override.md](075_autocompact_pct_override.md) | Percentage applied to this window value |
 | behavior | [../behavior/025_b25_auto_compact_window.md](../behavior/025_b25_auto_compact_window.md) | Behavioral contract: env var acceptance |
+| doc | [100_disable_auto_compact.md](100_disable_auto_compact.md) | Disable auto-compaction entirely |
+| doc | [101_disable_compact.md](101_disable_compact.md) | Disable all compaction |

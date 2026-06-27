@@ -31,3 +31,4 @@ Controls whether Claude Code sends anonymous usage telemetry to Anthropic. Telem
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [118_disable_telemetry.md](118_disable_telemetry.md) | Flag-based telemetry disable |

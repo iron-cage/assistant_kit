@@ -31,3 +31,5 @@ Top-k sampling cutoff. Limits token sampling to the k highest-probability tokens
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [065_temperature.md](065_temperature.md) | Sampling temperature (sibling sampling parameter) |
+| doc | [070_top_p.md](070_top_p.md) | Nucleus sampling (sibling sampling parameter) |

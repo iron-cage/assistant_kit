@@ -35,3 +35,4 @@ Useful for controlling latency when MCP servers are slow or unresponsive.
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [039_mcp_config.md](039_mcp_config.md) | MCP server configuration |
 | doc | [041_mcp_servers.md](041_mcp_servers.md) | Inline MCP server definitions |
+| doc | [../subcommand/006_mcp.md](../subcommand/006_mcp.md) | MCP server management subcommand |

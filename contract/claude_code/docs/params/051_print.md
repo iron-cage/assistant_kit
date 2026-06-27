@@ -31,3 +31,6 @@ Run Claude in non-interactive print mode: send the prompt, receive the response 
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [044_output_format.md](044_output_format.md) | Response encoding (text/json/stream-json) |
+| doc | [043_no_session_persistence.md](043_no_session_persistence.md) | Ephemeral sessions (requires print mode) |
+| doc | [026_fallback_model.md](026_fallback_model.md) | Fallback model (only active in print mode) |

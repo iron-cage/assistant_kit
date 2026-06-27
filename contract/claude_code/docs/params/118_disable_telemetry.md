@@ -29,5 +29,6 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [064_telemetry.md](064_telemetry.md) | Env-var telemetry control |
 | doc | [104_disable_error_reporting.md](104_disable_error_reporting.md) | Disable error reporting |
 | doc | [../endpoint/007_metrics_enabled.md](../endpoint/007_metrics_enabled.md) | Metrics-enabled endpoint (org-level feature) |

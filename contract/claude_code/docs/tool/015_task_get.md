@@ -22,3 +22,4 @@ pre-v1.0 (unverified)
 | doc | [014_task_create.md](014_task_create.md) | Create tasks |
 | doc | [016_task_list.md](016_task_list.md) | List all tasks |
 | doc | [017_task_output.md](017_task_output.md) | TaskOutput — deprecated alternative for reading output |
+| doc | [027_todo_write.md](027_todo_write.md) | TodoWrite — predecessor tool (disabled by default since v2.1.142) |

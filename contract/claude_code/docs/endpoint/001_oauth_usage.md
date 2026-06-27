@@ -112,3 +112,4 @@ pre-v1.0 (unverified)
 | doc | `../../../../module/claude_profile/docs/feature/017_token_refresh.md` | Auth-error retry and refresh trigger |
 | doc | [002_oauth_account.md](002_oauth_account.md) | Account identity and billing type endpoint |
 | doc | [003_v1_messages.md](003_v1_messages.md) | Alternative quota source via POST response headers |
+| doc | [004_oauth_token.md](004_oauth_token.md) | Token refresh endpoint — produces the access token consumed by this endpoint |

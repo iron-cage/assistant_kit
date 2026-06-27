@@ -31,5 +31,5 @@ When `true`, suppresses the interactive "Are you sure?" confirmation dialog show
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
-| doc | [dangerously_skip_permissions.md](dangerously_skip_permissions.md) | `--dangerously-skip-permissions` flag |
-| doc | [allow_dangerously_skip_permissions.md](allow_dangerously_skip_permissions.md) | `--allow-dangerously-skip-permissions` flag |
+| doc | [018_dangerously_skip_permissions.md](018_dangerously_skip_permissions.md) | `--dangerously-skip-permissions` flag |
+| doc | [005_allow_dangerously_skip_permissions.md](005_allow_dangerously_skip_permissions.md) | `--allow-dangerously-skip-permissions` flag |

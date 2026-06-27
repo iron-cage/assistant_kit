@@ -31,3 +31,5 @@ Controls the reasoning effort and compute budget for the session. `low` is fast 
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [042_model.md](042_model.md) | Model selection (effort applies to selected model) |
+| doc | [038_max_output_tokens.md](038_max_output_tokens.md) | Output token limit (related compute budget) |

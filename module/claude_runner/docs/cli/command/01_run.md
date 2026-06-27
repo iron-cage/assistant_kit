@@ -69,6 +69,8 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--retry-default-delay`](../param/057_retry_default_delay.md) | u32 | `30` | Tier 3: fallback delay for all unset classes |
 | [`--output-style`](../param/070_output_style.md) | enum | `summary` | Output rendering style: `summary` (key:val header via `render_summary()`) or `raw` (bypass rendering) |
 | [`--summary-fields`](../param/071_summary_fields.md) | string | `full` | Summary field selection: `minimal`/`standard`/`full`/custom whitelist |
+| [`--journal`](../param/072_journal.md) | enum | `full` | Journal level: `full` (stdout+stderr ≤1MB each), `meta` (metadata only), `off` (disabled) |
+| [`--journal-dir`](../param/073_journal_dir.md) | path | `~/.clr/journal/` | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` |
 | [`--output-format`](../param/061_output_format.md) | enum | — | Output format (`text`/`json`/`stream-json`) |
 | [`--max-turns`](../param/062_max_turns.md) | u32 | — | Max agentic turns before stopping; unset = unlimited |
 | [`--allowed-tools`](../param/063_allowed_tools.md) | string | — | Restrict Claude to specified tools only |

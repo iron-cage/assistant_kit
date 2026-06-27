@@ -31,3 +31,6 @@ Assigns a specific UUID to the current session instead of generating one automat
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [055_resume.md](055_resume.md) | Resume by session ID |
+| doc | [029_fork_session.md](029_fork_session.md) | Fork from a session ID |
+| doc | [057_session_dir.md](057_session_dir.md) | Directory where session files are stored |

@@ -34,3 +34,4 @@ thinking blocks.
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [023_effort.md](023_effort.md) | Effort level (controls thinking depth) |
+| doc | [110_disable_interleaved_thinking.md](110_disable_interleaved_thinking.md) | Disable interleaved thinking mode |

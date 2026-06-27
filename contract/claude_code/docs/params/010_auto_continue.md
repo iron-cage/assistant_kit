@@ -31,3 +31,5 @@ When true, Claude automatically continues long responses that would otherwise be
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [051_print.md](051_print.md) | Print mode (enables unattended automation) |
+| doc | [076_max_turns.md](076_max_turns.md) | Maximum continuation turns |

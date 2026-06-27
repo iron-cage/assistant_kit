@@ -23,3 +23,4 @@ pre-v1.0 (unverified)
 | doc | [../params/004_agents.md](../params/004_agents.md) | Custom agent definitions |
 | doc | [036_send_message.md](036_send_message.md) | Send message to agent teammate |
 | doc | [040_workflow.md](040_workflow.md) | Multi-subagent workflow orchestration |
+| doc | [../subcommand/001_agents.md](../subcommand/001_agents.md) | Agents subcommand — lists configured agents |

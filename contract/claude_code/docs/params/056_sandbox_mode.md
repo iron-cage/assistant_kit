@@ -31,3 +31,5 @@ Enables sandbox mode, which restricts certain system-level operations Claude Cod
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [093_sandbox_allow_apple_events.md](093_sandbox_allow_apple_events.md) | Apple Events exception in sandbox (macOS) |
+| doc | [018_dangerously_skip_permissions.md](018_dangerously_skip_permissions.md) | Bypass permissions (used alongside sandbox) |

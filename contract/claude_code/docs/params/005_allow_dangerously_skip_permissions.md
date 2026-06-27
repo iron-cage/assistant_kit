@@ -31,3 +31,5 @@ Makes skip-permissions available as an option during the session without enablin
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [018_dangerously_skip_permissions.md](018_dangerously_skip_permissions.md) | Unconditional bypass (stronger form) |
+| doc | [061_skip_dangerous_mode_permission_prompt.md](061_skip_dangerous_mode_permission_prompt.md) | Suppress dangerous-mode confirmation prompt |

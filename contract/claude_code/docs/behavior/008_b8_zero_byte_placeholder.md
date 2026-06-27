@@ -30,4 +30,5 @@ The UNVERIFIED tier means the test logs this observation but makes no hard asser
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
 | behavior | [002_b2_new_session_creates_file.md](002_b2_new_session_creates_file.md) | Normal file creation per invocation |
+| taxonomy | [`../taxonomy/001_concepts.md`](../taxonomy/001_concepts.md) | Zero-entry Sessions concept definition |
 | test | `../../tests/behavior/b08_zero_byte_init.rs` | Observation test (UNVERIFIED — no hard assertion) |

@@ -31,3 +31,5 @@ The text message sent to Claude as the initial user prompt. Provided as a bare p
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [051_print.md](051_print.md) | Print mode (implied by supplying a message) |
+| doc | [027_file.md](027_file.md) | File-based input alternative |

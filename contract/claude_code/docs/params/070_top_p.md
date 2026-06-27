@@ -31,3 +31,5 @@ Nucleus sampling threshold. At each token, only the top-probability tokens whose
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [065_temperature.md](065_temperature.md) | Sampling temperature (sibling sampling parameter) |
+| doc | [069_top_k.md](069_top_k.md) | Top-k sampling (sibling sampling parameter) |

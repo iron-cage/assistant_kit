@@ -30,4 +30,5 @@ The flag also accepts specific tool names: `--tools "Bash,Edit,Read"` enables on
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
 | behavior | [016h_b16h_tools_system_prompt.md](016h_b16h_tools_system_prompt.md) | Tool definitions remain in system prompt even when `--tools ""` is used |
+| jsonl | [`../jsonl/006_tool_use_block.md`](../jsonl/006_tool_use_block.md) | Tool use content blocks (invocation records controlled by this flag) |
 | test | `../../tests/behavior/b16_tools_disable.rs` | Invalidation test (FLAG-VFY) |

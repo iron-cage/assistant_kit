@@ -31,3 +31,5 @@ Bypasses all permission checks for every tool invocation — file writes, bash c
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [005_allow_dangerously_skip_permissions.md](005_allow_dangerously_skip_permissions.md) | Softer form (makes bypass available, not forced) |
+| doc | [061_skip_dangerous_mode_permission_prompt.md](061_skip_dangerous_mode_permission_prompt.md) | Suppress confirmation prompt for this flag |

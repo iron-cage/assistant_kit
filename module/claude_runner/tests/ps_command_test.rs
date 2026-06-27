@@ -326,8 +326,8 @@ fn it_11_no_gate_files_no_queued_table()
 /// contains the titled caption rule line ("Active Sessions · N running") above
 /// the column headers.
 ///
-/// The caption is rendered by `TableCaption::new("Active Sessions").field(format!("{} running", n))`
-/// via `data_fmt`; this test confirms end-to-end that the caption text appears in
+/// The heading is rendered by `Heading::new("Active Sessions").with_field(format!("{} running", n))`
+/// via `data_fmt`; this test confirms end-to-end that the heading text appears in
 /// the output and is not accidentally dropped by the formatter.
 #[ cfg( unix ) ]
 #[ test ]

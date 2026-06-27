@@ -1,0 +1,26 @@
+[package]
+name = "claude_journal_viewer"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+description = "CLI and web viewer for CLR journal events"
+keywords = [ "journal", "viewer", "cli", "claude", "runner" ]
+categories = [ "command-line-utilities" ]
+
+[lints]
+workspace = true
+
+[lib]
+name = "claude_journal_viewer"
+path = "src/lib.rs"
+
+[[bin]]
+name = "clj"
+path = "src/cli_main.rs"
+
+[dependencies]

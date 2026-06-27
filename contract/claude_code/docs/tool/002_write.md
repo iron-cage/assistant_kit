@@ -19,3 +19,5 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
+| doc | [001_read.md](001_read.md) | Read — required before overwriting existing files |
+| doc | [003_edit.md](003_edit.md) | Edit — preferred for modifying existing files (sends only the diff) |

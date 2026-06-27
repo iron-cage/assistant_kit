@@ -36,3 +36,4 @@ pre-v1.0 (unverified)
 | doc | [readme.md](readme.md) | Master subcommand table |
 | doc | [002_auth.md](002_auth.md) | Authentication management |
 | doc | [../storage/003_root_files.md](../storage/003_root_files.md) | `.credentials.json` storage |
+| doc | [../formats/002_credentials.md](../formats/002_credentials.md) | Credentials file format this subcommand writes |

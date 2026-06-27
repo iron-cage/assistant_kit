@@ -31,3 +31,5 @@ When true, all tool invocations are automatically approved without user confirma
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [018_dangerously_skip_permissions.md](018_dangerously_skip_permissions.md) | Equivalent effect via CLI flag |
+| doc | [046_permission_mode.md](046_permission_mode.md) | Session-level permission mode |

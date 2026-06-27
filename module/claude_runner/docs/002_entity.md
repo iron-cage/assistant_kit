@@ -6,9 +6,9 @@
 |------|---------|-------------|----------:|
 | `api/` | Index of API doc instances covering COMMANDS_YAML, VerbosityLevel, and register_commands contracts | [api/readme.md](api/readme.md) | 1 |
 | `cli/` | Index of CLI reference instances covering commands, params, types, groups, dictionary, user stories, env params | [cli/readme.md](cli/readme.md) | 5 |
-| `cli/param/` | Index of individual parameter reference instances (67 parameters) | [cli/param/readme.md](cli/param/readme.md) | 67 |
+| `cli/param/` | Index of individual parameter reference instances (69 parameters) | [cli/param/readme.md](cli/param/readme.md) | 69 |
 | `cli/user_story/` | Index of user goal and usage pattern instances (27 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 27 |
-| `feature/` | Index of feature doc instances covering the clr binary tool design | [feature/readme.md](feature/readme.md) | 1 |
+| `feature/` | Index of feature doc instances covering the clr binary tool design and journaling integration | [feature/readme.md](feature/readme.md) | 2 |
 | `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, trace universality, isolated/refresh subprocess defaults, exit code contract, print-mode timeout default, and render_summary gate field | [invariant/readme.md](invariant/readme.md) | 8 |
 
 ### Master Doc Instances Table
@@ -88,6 +88,8 @@
 | cli/param | 069 | --inspect | [cli/param/069_inspect.md](cli/param/069_inspect.md) |
 | cli/param | 070 | --output-style | [cli/param/070_output_style.md](cli/param/070_output_style.md) |
 | cli/param | 071 | --summary-fields | [cli/param/071_summary_fields.md](cli/param/071_summary_fields.md) |
+| cli/param | 072 | --journal | [cli/param/072_journal.md](cli/param/072_journal.md) |
+| cli/param | 073 | --journal-dir | [cli/param/073_journal_dir.md](cli/param/073_journal_dir.md) |
 | cli/user_story | 001 | Interactive REPL | [cli/user_story/001_interactive_repl.md](cli/user_story/001_interactive_repl.md) |
 | cli/user_story | 002 | Print Mode Capture | [cli/user_story/002_print_mode_capture.md](cli/user_story/002_print_mode_capture.md) |
 | cli/user_story | 003 | Interactive With Message | [cli/user_story/003_interactive_with_message.md](cli/user_story/003_interactive_with_message.md) |
@@ -116,6 +118,7 @@
 | cli/user_story | 026 | Session Listing | [cli/user_story/026_session_listing.md](cli/user_story/026_session_listing.md) |
 | cli/user_story | 027 | Session Termination | [cli/user_story/027_session_termination.md](cli/user_story/027_session_termination.md) |
 | feature | 001 | Runner Tool | [feature/001_runner_tool.md](feature/001_runner_tool.md) |
+| feature | 002 | Journaling Integration | [feature/002_journaling_integration.md](feature/002_journaling_integration.md) |
 | invariant | 001 | Default Flags | [invariant/001_default_flags.md](invariant/001_default_flags.md) |
 | invariant | 002 | Dependency Constraints | [invariant/002_dep_constraints.md](invariant/002_dep_constraints.md) |
 | invariant | 003 | Command Naming | [invariant/003_command_naming.md](invariant/003_command_naming.md) |

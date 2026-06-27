@@ -31,3 +31,5 @@ Sets the UI color theme for Claude Code's terminal interface. The value is a the
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [091_language.md](091_language.md) | UI language setting |
+| doc | [095_wheel_scroll_accel.md](095_wheel_scroll_accel.md) | UI scroll acceleration |

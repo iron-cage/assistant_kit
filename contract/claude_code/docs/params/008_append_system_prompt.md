@@ -31,3 +31,4 @@ Appends the supplied text to the end of the default system prompt. The default p
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [063_system_prompt.md](063_system_prompt.md) | Full system prompt replacement (mutually exclusive) |

@@ -37,4 +37,6 @@ From the user's perspective agent sessions are invisible — `--continue` skips 
 | behavior | [012_b12_agent_session_id.md](012_b12_agent_session_id.md) | Agent `sessionId` equals parent session UUID |
 | behavior | [013_b13_subagent_directory.md](013_b13_subagent_directory.md) | Hierarchical agent layout (newer format) |
 | behavior | [014_b14_agent_meta_json.md](014_b14_agent_meta_json.md) | Agent `.meta.json` sidecars |
+| jsonl | [`../jsonl/010_sidechain_sessions.md`](../jsonl/010_sidechain_sessions.md) | Sidechain JSONL entry format and both storage layouts |
+| storage | [`../storage/001_projects_directory.md`](../storage/001_projects_directory.md) | Projects directory: agent file locations |
 | test | `../../tests/behavior/b07_agent_sessions.rs` | Invalidation test |

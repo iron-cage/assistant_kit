@@ -80,4 +80,5 @@ pre-v1.0 (unverified)
 | behavior | [`../behavior/006_b6_session_accumulation.md`](../behavior/006_b6_session_accumulation.md) | Session accumulation without rotation |
 | behavior | [`../behavior/007_b7_agent_sessions_sibling.md`](../behavior/007_b7_agent_sessions_sibling.md) | Flat agent layout |
 | behavior | [`../behavior/013_b13_subagent_directory.md`](../behavior/013_b13_subagent_directory.md) | Hierarchical agent layout |
+| jsonl | [`../jsonl/010_sidechain_sessions.md`](../jsonl/010_sidechain_sessions.md) | Sidechain JSONL entry format and storage layout diagrams |
 | source | `../../../../module/claude_storage/src/` | Storage implementation |

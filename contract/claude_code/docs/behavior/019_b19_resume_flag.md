@@ -27,6 +27,9 @@ The session UUID must match the filename of an existing `.jsonl` in the project'
 | Type | File | Responsibility |
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
+| behavior | [004_b4_continue_flag.md](004_b4_continue_flag.md) | `--continue` flag (mtime-based counterpart to UUID-based `--resume`) |
 | behavior | [005_b5_mtime_selection.md](005_b5_mtime_selection.md) | Mtime-based selection that `--resume` overrides |
+| behavior | [020_b20_session_id_flag.md](020_b20_session_id_flag.md) | `--session-id` for deterministic UUID assignment when resuming |
 | behavior | [021_b21_fork_session.md](021_b21_fork_session.md) | `--fork-session` that branches from a resumed session |
+| behavior | [024_b24_from_pr.md](024_b24_from_pr.md) | `--from-pr` for PR-linked session resume (alternative resume mode) |
 | test | `../../tests/behavior/b19_resume_flag.rs` | Invalidation test |

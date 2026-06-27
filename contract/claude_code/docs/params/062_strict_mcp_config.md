@@ -31,3 +31,6 @@ When set, ignores all MCP server configurations from settings files, project con
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [039_mcp_config.md](039_mcp_config.md) | MCP config file (used with this flag) |
+| doc | [041_mcp_servers.md](041_mcp_servers.md) | Inline MCP servers (also excluded by this flag) |
+| doc | [../subcommand/006_mcp.md](../subcommand/006_mcp.md) | MCP server management subcommand |

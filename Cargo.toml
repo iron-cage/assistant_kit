@@ -8,6 +8,8 @@
 [workspace]
 resolver = "2"
 members = [
+  "module/claude_journal",
+  "module/claude_journal_viewer",
   "module/assistant_kit",
   "module/claude_auth",
   "module/claude_assets_core",
@@ -93,6 +95,16 @@ missing_docs_in_private_items = "allow"
 incremental = false
 
 ## Internal workspace dependencies
+
+[workspace.dependencies.claude_journal]
+path = "module/claude_journal"
+version = "=0.1.0"
+default-features = false
+
+[workspace.dependencies.claude_journal_viewer]
+path = "module/claude_journal_viewer"
+version = "=0.1.0"
+default-features = false
 
 [workspace.dependencies.assistant_kit]
 path = "module/assistant_kit"
@@ -186,18 +198,30 @@ features = [ "enabled", "approach_yaml_multi_build" ]
 default-features = false
 
 [workspace.dependencies.cli_fmt]
-# Published companion crate (crates.io: cli_fmt ^0.8). Path removed — use registry version.
-version = "^0.9"
+# Published companion crate (crates.io: cli_fmt ^0.10). Path removed — use registry version.
+version = "^0.10"
 default-features = false
 features = [ "cli_help_template" ]
 
 [workspace.dependencies.data_fmt]
-version = "^0.4"
+version = "^0.6"
 default-features = false
 features = [ "enabled" ]
 
 [workspace.dependencies.ureq]
 version = "^3"
+
+## Serialization
+
+[workspace.dependencies.serde]
+version = "^1.0"
+features = [ "derive" ]
+default-features = false
+
+[workspace.dependencies.chrono]
+version = "^0.4"
+features = [ "clock", "std" ]
+default-features = false
 
 ## Dev dependencies
 
@@ -205,7 +229,7 @@ version = "^3"
 version = "^3"
 
 [workspace.dependencies.test_tools]
-version = "^0.17"
+version = "^0.18"
 default-features = false
 
 [workspace.dependencies.assert_cmd]

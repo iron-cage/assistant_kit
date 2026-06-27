@@ -31,3 +31,5 @@ Writes debug log output to the specified file path in addition to (or instead of
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [019_debug.md](019_debug.md) | Debug mode (implicitly enabled by this flag) |
+| doc | [036_log_level.md](036_log_level.md) | Internal logger severity level |

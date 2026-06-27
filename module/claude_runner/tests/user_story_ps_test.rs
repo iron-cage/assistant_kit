@@ -184,7 +184,7 @@ fn us_06_queued_clr_shows_queued_headers()
 /// a titled caption rule containing "Active Sessions · N running" above the
 /// column headers.
 ///
-/// The caption is emitted by `TableCaption::new("Active Sessions").field(format!("{} running", n))`.
+/// The heading is emitted by `Heading::new("Active Sessions").with_field(format!("{} running", n))`.
 /// This test confirms the caption text is present in the rendered output so that
 /// AC-010 is machine-verifiable.
 #[ cfg( unix ) ]

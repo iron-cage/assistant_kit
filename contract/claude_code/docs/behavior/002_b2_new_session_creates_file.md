@@ -30,4 +30,5 @@ Each `claude` invocation without `--continue` creates a separate new `.jsonl` se
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
 | behavior | [001_b1_default_new_session.md](001_b1_default_new_session.md) | Binary default is new session |
 | behavior | [006_b6_session_accumulation.md](006_b6_session_accumulation.md) | Long-term accumulation pattern |
+| behavior | [008_b8_zero_byte_placeholder.md](008_b8_zero_byte_placeholder.md) | Zero-byte placeholder file created at session start |
 | test | `../../tests/behavior/b02_new_session.rs` | Invalidation test |

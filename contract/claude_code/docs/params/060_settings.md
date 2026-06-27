@@ -31,3 +31,5 @@ Loads additional settings from a JSON file path or an inline JSON string, supple
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [059_setting_sources.md](059_setting_sources.md) | Filter which setting layers are loaded |
+| doc | [025_env_overrides.md](025_env_overrides.md) | Per-session env overrides in settings |

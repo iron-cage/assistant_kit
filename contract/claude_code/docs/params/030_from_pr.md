@@ -31,3 +31,4 @@ Resumes a session that was previously linked to a GitHub pull request. With no a
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [055_resume.md](055_resume.md) | General session resumption |

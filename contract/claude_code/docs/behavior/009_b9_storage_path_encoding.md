@@ -37,4 +37,5 @@ This encoding is deterministic and reversible. The leading `-` distinguishes CLI
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
 | storage | [`../storage/001_projects_directory.md`](../storage/001_projects_directory.md) | Projects directory path encoding detail and UUID vs path project types |
+| behavior | [023_b23_session_dir_override.md](023_b23_session_dir_override.md) | `CLAUDE_CODE_SESSION_DIR` env var that overrides this default path |
 | test | `../../tests/behavior/b09_storage_path.rs` | Invalidation test |

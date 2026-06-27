@@ -32,5 +32,7 @@ See [`../taxonomy/003_implementation.md`](../taxonomy/003_implementation.md) for
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
 | behavior | [017_b17_parentuuid_self_contained.md](017_b17_parentuuid_self_contained.md) | `parentUuid` self-containment within session file |
+| taxonomy | [`../taxonomy/002_relationships.md`](../taxonomy/002_relationships.md) | Pairwise cardinalities — cross-session boundary basis |
 | taxonomy | [`../taxonomy/003_implementation.md`](../taxonomy/003_implementation.md) | Conversation Chain detection algorithm (task 021) |
+| jsonl | [`../jsonl/009_threading_model.md`](../jsonl/009_threading_model.md) | Threading model spec: cross-session boundary |
 | test | `../../tests/behavior/b18_no_cross_session_links.rs` | Invalidation test |

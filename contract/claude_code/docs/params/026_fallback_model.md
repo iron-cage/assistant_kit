@@ -31,3 +31,5 @@ Specifies an alternative model to use automatically when the primary model (`--m
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [042_model.md](042_model.md) | Primary model selection |
+| doc | [051_print.md](051_print.md) | Print mode (required for fallback to apply) |

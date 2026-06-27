@@ -30,4 +30,5 @@ This is why cross-session conversation chains must be inferred: for B17-conformi
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
 | behavior | [010_b10_entry_threading.md](010_b10_entry_threading.md) | Entry threading model via `parentUuid` |
 | behavior | [018_b18_no_cross_session_links.md](018_b18_no_cross_session_links.md) | No cross-session continuation metadata (new session starts with `parentUuid: null`) |
+| jsonl | [`../jsonl/009_threading_model.md`](../jsonl/009_threading_model.md) | Threading model spec: compaction exception detail |
 | test | `../../tests/behavior/b17_parentuuid_self_contained.rs` | Invalidation test |

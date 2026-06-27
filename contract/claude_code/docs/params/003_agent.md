@@ -33,3 +33,4 @@ Overrides the agent configuration for the current session. Accepts a named agent
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [004_agents.md](004_agents.md) | Custom agent definitions |
 | doc | [../tool/007_agent.md](../tool/007_agent.md) | Agent tool this configures |
+| doc | [../subcommand/001_agents.md](../subcommand/001_agents.md) | Agents subcommand — lists configured agents |

@@ -31,3 +31,5 @@ When resuming a session (via `--resume` or `--continue`), creates a new session 
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [055_resume.md](055_resume.md) | Resume by ID (used with this flag) |
+| doc | [017_continue.md](017_continue.md) | Continue most recent (used with this flag) |
