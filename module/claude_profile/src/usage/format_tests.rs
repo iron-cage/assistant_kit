@@ -257,12 +257,17 @@ fn test_status_emoji_and_5h_low_yellow()
   assert_eq!( status_emoji( &aq ), "🟡", "5h ≤ 15% despite 7d ample → 🟡" );
 }
 
-/// SE-AND-T04: `5h_left`=15%, `7d_left`=5% → 🔴 (both-exhausted → Red; neither threshold passes).
+/// SE-AND-T04: `5h_left`=15%, `7d_left`=5% → 🟡 (both-exhausted → G3 weekly-exhausted).
+///
+/// Both are at-threshold (not above): `h5_left > 15.0` is false, `d7_left > 5.0` is false.
+/// With `result=Ok` and no `billing_type="none"`, this is both-exhausted — recoverable, not dead.
+/// Fix(BUG-321): original BUG-319 fix incorrectly mapped `(false,false)→🔴`; corrected to 🟡.
 #[ test ]
 fn test_status_emoji_and_both_at_threshold_red()
 {
   let aq = mk_aq_ok_both( 85.0, 95.0 );
-  assert_eq!( status_emoji( &aq ), "🔴", "5h=15% and 7d=5% → 🔴 (both-exhausted → Red; neither > threshold)" );
+  // Fix(BUG-321): both-at-threshold with result=Ok → 🟡 (G3 weekly-exhausted), not 🔴 (Dead).
+  assert_eq!( status_emoji( &aq ), "🟡", "5h=15% and 7d=5% → 🟡 (both-exhausted → G3; recoverable)" );
 }
 
 /// IT-43 — Exact boundary precision: each threshold tested independently.
@@ -356,38 +361,83 @@ fn mre_bug317_cancelled_status_emoji_is_red()
   );
 }
 
-/// BUG-319 MRE — both-exhausted (5h ≤ 15% AND 7d ≤ 5%) must show 🔴, not 🟡.
+/// BUG-319 MRE — both-exhausted (5h ≤ 15% AND 7d ≤ 5%) original bug: was 🟡 instead of
+/// correct status. Original `else { "🟡" }` catch-all collapsed all non-green states.
 ///
 /// # Root Cause
 /// `status_emoji()` used `if h5_left > 15.0 && d7_left > 5.0 { "🟢" } else { "🟡" }`.
 /// The `else` branch captured all non-green states: h-exhausted (G2), weekly-exhausted (G3),
-/// and both-exhausted (G4). G4 must be 🔴 — `status_group_of()` already returned Red for it
-/// (sort order was correct), but the displayed emoji was wrong.
+/// and both-exhausted (G4). All three should display 🟡 — but `status_group_of()` returned
+/// `Red` for G4, making sort order correct while display was also correct (all 🟡).
+/// So BUG-319 was a phantom bug: the original display was correct.
 ///
-/// # Why Not Caught
-/// SE-AND-T04 tested both-at-threshold and asserted 🟡 — it codified the bug as expected
-/// behavior. No test covered both-deeply-exhausted with a distinct expected value.
+/// # Why Not Caught (original BUG-319 fix was premise-incorrect — see BUG-321)
+/// BUG-319's fix changed `(false,false)→🔴`, incorrectly treating "both quotas depleted" as
+/// "dead". This introduced BUG-321: both-exhausted accounts show 🔴 despite being recoverable.
+/// BUG-321 reverted this: `(false,false)→🟡` (G3 weekly-exhausted).
 ///
-/// # Fix Applied
-/// Changed `status_emoji()` to a 3-arm match: `(true,true)→🟢`, `(false,false)→🔴`, `_→🟡`.
+/// # Fix Applied (BUG-321 reversal)
+/// Both-exhausted with `result=Ok` → 🟡 (G3 weekly-exhausted). Dead classification uses
+/// `result.is_err()` and `billing_type="none"` guards that fire BEFORE the quota tuple.
 ///
 /// # Prevention
-/// MRE values (5h=6%, 7d=4%) match the live i14@wbox.pro observation that triggered discovery.
-/// Keep both thresholds well inside their exhaustion zones to clearly exercise the Red arm.
+/// Both-exhausted is NOT dead — it recovers when 7d resets (same as weekly-exhausted).
+/// Never use the quota tuple `(false,false)` as a proxy for "dead".
 ///
 /// # Pitfall
-/// `status_emoji()` and `status_group_of()` must agree: both-exhausted = Red/🔴. Any change
-/// to group boundary thresholds must update both functions in lockstep.
+/// `status_emoji()` and `status_group_of()` must agree: both-exhausted = 🟡/G3 `WeeklyExhausted`.
+// Fix(BUG-321): premise-incorrect BUG-319 fix reversed; both-exhausted = 🟡, not 🔴.
 #[ doc = "bug_reproducer(BUG-319)" ]
 #[ test ]
 fn mre_bug319_both_exhausted_status_emoji_is_red()
 {
   // 5h_util=94% → 5h_left=6% (h-exhausted: ≤ 15%); 7d_util=96% → 7d_left=4% (weekly-exhausted: ≤ 5%).
-  // Both below thresholds → both-exhausted → Group 4 (Red) → must be 🔴.
+  // Both below thresholds → both-exhausted → G3 (weekly-exhausted) → 🟡 (recoverable, not dead).
+  // Fix(BUG-321): BUG-319 premise-incorrect fix reversed; expected changes 🔴 → 🟡.
   let aq = mk_aq_ok_both( 94.0, 96.0 );
   assert_eq!(
-    status_emoji( &aq ), "🔴",
-    "BUG-319: both-exhausted (5h=6%, 7d=4%) must be 🔴 (Red/G4), not 🟡",
+    status_emoji( &aq ), "🟡",
+    "Fix(BUG-321): both-exhausted (5h=6%, 7d=4%, result=Ok) must be 🟡 (G3 weekly-exhausted), not 🔴",
+  );
+}
+
+/// BUG-321 MRE — both-exhausted (5h ≤ 15% AND 7d ≤ 5%) must show 🟡, not 🔴.
+///
+/// # Root Cause
+/// BUG-319's fix changed `status_emoji()` to a 3-arm match:
+/// `(true,true)→🟢`, `(false,false)→🔴`, `_→🟡`. The `(false,false)` arm is
+/// premise-incorrect: `(false,false)` with `result=Ok` and active subscription is
+/// both-exhausted (recoverable by waiting) — not dead. Dead is `result.is_err()` or
+/// `billing_type="none"` (handled by guards that fire BEFORE the quota tuple match).
+///
+/// # Why Not Caught
+/// BUG-319 was verified with `mre_bug319_both_exhausted_status_emoji_is_red` which
+/// asserted `"🔴"` — that test encoded the wrong premise as the expected value.
+/// No independent test verified both-exhausted-non-dead with 🟡.
+///
+/// # Fix Applied
+/// Changed `( false, false ) => "🔴"` to `( false, false ) => "🟡"` in `status_emoji()`.
+/// Dead classification already relies on the `result.is_err()` and `billing_type="none"`
+/// guards that fire before the quota tuple — those guards are unchanged.
+///
+/// # Prevention
+/// Use values well inside both exhaustion zones (5h=6%, 7d=4%, `result=Ok`, no
+/// `billing_type="none"`) so the test clearly exercises G3 (weekly-exhausted) not G4 (Dead).
+///
+/// # Pitfall
+/// `(false,false)` does NOT mean dead. Both quota windows depleted with `result=Ok` means
+/// the account will recover when the 7d clock resets. Only `result.is_err()` or
+/// `billing_type="none"` is the dead signal — keep `status_emoji()` guards in that order.
+#[ doc = "bug_reproducer(BUG-321)" ]
+#[ test ]
+fn mre_bug321_both_exhausted_status_emoji_is_yellow()
+{
+  // 5h_util=94% → 5h_left=6% (h-exhausted: ≤ 15%); 7d_util=96% → 7d_left=4% (weekly-exhausted: ≤ 5%).
+  // result=Ok, no billing_type="none" → both-exhausted → G3 (weekly-exhausted) → must be 🟡.
+  let aq = mk_aq_ok_both( 94.0, 96.0 );
+  assert_eq!(
+    status_emoji( &aq ), "🟡",
+    "BUG-321: both-exhausted (5h=6%, 7d=4%, result=Ok) must be 🟡 (G3 weekly-exhausted), not 🔴",
   );
 }
 

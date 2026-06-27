@@ -42,7 +42,7 @@ Source locations: `sort.rs:113-116` (`7d_reset_secs`), `sort.rs:117-121` (`sub_r
 
 ### Group Invariant
 
-Sorting is always applied within status groups — the 4-group partition (Green → h-exhausted → weekly-exhausted → Red) is never reordered by any strategy. `desc::` reverses row order within each group only.
+Sorting is always applied within status groups — the 4-group partition (Green → h-exhausted → weekly-exhausted → Dead) is never reordered by any strategy. Both-exhausted accounts (5h ≤ 15% AND 7d ≤ 5%) merge into G3 weekly-exhausted — the 7d constraint is binding in both cases. `desc::` reverses row order within each group only.
 
 ### Cross-References
 

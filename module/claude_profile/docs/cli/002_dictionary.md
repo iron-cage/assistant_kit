@@ -26,9 +26,9 @@
 
 **exhausted** — A quota dimension at or below its exhaustion threshold (unusable until reset).
 
-**h-exhausted** — Account with `5h Left ≤ 15%`; the 5h session window is at or below threshold. Status group 2 when 7d is still available; status group 4 when both dimensions are exhausted.
+**h-exhausted** — Account with `5h Left ≤ 15%` and `7d Left > 5%`; the 5h session window is at or below threshold but the weekly quota is still available. Status group 2.
 
-**weekly-exhausted** — Account with `7d Left ≤ 5%`; the 7d weekly quota is at or below threshold. Status group 3 when 5h is still available; status group 4 when both dimensions are exhausted.
+**weekly-exhausted** — Account with `7d Left ≤ 5%`; the 7d weekly quota is at or below threshold. Status group 3. Covers any `7d Left ≤ 5%` account, including accounts where both quotas are exhausted — the 7d constraint is binding in both cases. Fix(BUG-321): the former code classified the both-exhausted case (`5h ≤ 15%` AND `7d ≤ 5%`) as Dead (🔴); the correct classification is weekly-exhausted (🟡) since both-exhausted accounts recover without external action.
 
 ### Status Groups
 
@@ -38,10 +38,10 @@
 |-------|-------|------|----|----|----------|
 | 1 | 🟢 | Green | available | available | — |
 | 2 | 🟡 | h-exhausted | exhausted | available | Short-cycle (5h reset) |
-| 3 | 🟡 | weekly-exhausted | available | exhausted | Long-cycle (7d reset) |
-| 4 | 🔴 | Red | — | — | Fully exhausted, error, or cancelled (`billing_type="none"`) |
+| 3 | 🟡 | weekly-exhausted | any | exhausted | Long-cycle (7d reset) — includes both-exhausted |
+| 4 | 🔴 | Dead | — | — | Error or cancelled (`billing_type="none"`) — not recoverable without external action |
 
-Group 2 ranks above group 3 because 5h exhaustion recovers in hours; 7d exhaustion takes days. See [sort::](param/025_sort.md).
+Group 2 ranks above group 3 because 5h exhaustion recovers in hours; 7d exhaustion takes days. Group 3 (weekly-exhausted) ranks above group 4 (Dead) because it WILL recover — no external action needed. See [sort::](param/025_sort.md).
 
 ### Ownership and Assignment
 

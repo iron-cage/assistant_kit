@@ -10,12 +10,12 @@ Partition accounts into 4 fixed display groups for `.usage` output ordering and 
 
 ### Group Table
 
-| 5h Left | 7d Left | Group | Emoji | Display position |
-|---|---|---|---|---|
-| > 15% | > 5% | Green | 🟢 | top |
-| ≤ 15% | > 5% | h-exhausted | 🟡 | 2nd |
-| > 15% | ≤ 5% | weekly-exhausted | 🟡 | 3rd |
-| ≤ 15% | ≤ 5% OR `result=Err` OR `billing_type="none"` | Red | 🔴 | bottom |
+| 5h Left | 7d Left | Condition | Group | Emoji | Display position |
+|---|---|---|---|---|---|
+| > 15% | > 5% | both available | Green | 🟢 | top |
+| ≤ 15% | > 5% | 5h gone, 7d ok | h-exhausted | 🟡 | 2nd |
+| — | ≤ 5% | 7d gone (any 5h) | weekly-exhausted | 🟡 | 3rd |
+| — | — | `result=Err` OR `billing_type="none"` | Dead | 🔴 | bottom |
 
 ### Thresholds
 
@@ -29,15 +29,19 @@ Partition accounts into 4 fixed display groups for `.usage` output ordering and 
 
 ### Group Order is Fixed
 
-`desc::` only reverses row order *within* each group, never between groups. The Green→h-exhausted→weekly-exhausted→Red order is invariant.
+`desc::` only reverses row order *within* each group, never between groups. The Green→h-exhausted→weekly-exhausted→Dead order is invariant.
 
-### Error Accounts
+### Weekly-Exhausted Group (G3)
 
-Accounts with `result = Err(...)` are classified as Red regardless of quota percentages.
+Any account with `7d Left ≤ 5%` is G3 (weekly-exhausted 🟡), **regardless of 5h Left**. This includes accounts where both quotas are exhausted (`5h Left ≤ 15%` AND `7d Left ≤ 5%`): the 7d constraint is the binding factor. When the 7d resets, the 5h window will have already reset many times over (5h << 7 days), so both-exhausted accounts have identical recovery behavior to weekly-exhausted accounts. Fix(BUG-321): the former code mapped `( false, false )` to `StatusGroup::Red`, incorrectly classifying these recoverable accounts as dead.
 
-### Cancelled Accounts
+### Dead Accounts (G4)
 
-Accounts with `billing_type = "none"` (confirmed cancelled subscription) are classified as Red regardless of quota percentages. The `billing_type` gate fires before quota thresholds — even if the API returns healthy quota values for a cancelled account, the account is permanently unusable and must appear in the Red group. Fix(BUG-317): `status_group_of()` checks `billing_type == "none"` via `account.as_ref().is_some_and()` before evaluating 5h/7d thresholds. `account = None` (API fetch failed) is NOT treated as cancelled — absent data is ambiguous.
+Accounts with `result = Err(...)` OR `billing_type = "none"` (confirmed cancelled subscription) are classified as Dead (G4, 🔴). These are unrecoverable without external action:
+- `result = Err` — token missing, expired, auth error, or fetch failed
+- `billing_type = "none"` — subscription permanently cancelled; quota can never reset
+
+The `billing_type` gate fires before quota thresholds. Fix(BUG-317): `status_group_of()` checks `billing_type == "none"` via `account.as_ref().is_some_and()` before evaluating 5h/7d thresholds. `account = None` (API fetch failed) is NOT treated as cancelled — absent data is ambiguous.
 
 ### Cross-References
 
