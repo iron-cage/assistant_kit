@@ -23,8 +23,8 @@ enum StatusGroup
 {
   Green,           // both available: 5h > 15%, 7d Left > 5%
   HExhausted,      // 5h ≤ 15%, 7d > 5%
-  WeeklyExhausted, // 5h > 15%, 7d ≤ 5%
-  Red,             // both exhausted or error
+  WeeklyExhausted, // 7d ≤ 5% (any 5h state) — includes both-exhausted (Fix BUG-321)
+  Red,             // error or cancelled (billing_type="none") — requires external action
 }
 
 /// Assign an account to its status group.
@@ -474,15 +474,15 @@ mod tests
     // account-a: 5h_util=100% (5h Left=0%, h-exhausted), 7d_util=68% (7d Left=32%, NOT weekly-exhausted),
     //            7d_son_util=95% (7d(Son)=5% left). prefer_weekly(any) = min(32%, 5%) = 5.0 — fails > 5.0.
     // Bug: status_group_of classified this as Red; fix: seven_day_left=32% > 5.0 → HExhausted.
-    // red-account: both quotas exhausted — always Red.
+    // red-account: both quotas exhausted — G3 WeeklyExhausted (Fix BUG-321: 7d is binding).
     let accounts = vec![
-      mk_aq_sort_weekly( "account-a",   100.0, 68.0, 95.0 ), // must be Group 2 (HExhausted)
-      mk_aq_sort_weekly( "red-account", 100.0, 96.0, 96.0 ), // Group 4 (Red)
+      mk_aq_sort_weekly( "account-a",   100.0, 68.0, 95.0 ), // G2 HExhausted: 5h=0% ≤ 15%, 7d=32% > 5%
+      mk_aq_sort_weekly( "red-account", 100.0, 96.0, 96.0 ), // G3 WeeklyExhausted: both exhausted (Fix BUG-321)
     ];
     let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0 );
     assert_eq!(
       accounts[ idx[ 0 ] ].name, "account-a",
-      "BUG-299: account with 7d Left=32% must be HExhausted (G2), ranking before Red (G4); got: {:?}",
+      "BUG-299: account with 7d Left=32% must be HExhausted (G2), ranking before WeeklyExhausted (G3); got: {:?}",
       idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
     );
     assert_eq!( accounts[ idx[ 1 ] ].name, "red-account" );
@@ -620,6 +620,50 @@ mod tests
       idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
     );
     assert_eq!( accounts[ idx[ 1 ] ].name, "aaa@test.com" );
+  }
+
+  /// BUG-321 MRE — full 4-group partition: Green → h-exhausted → weekly-exhausted (incl. both-exhausted) → Dead.
+  ///
+  /// Five accounts chosen so that `sort::name` alphabetical order (`both_exh`, `dead`, `green`, `h_exh`,
+  /// `weekly_exh`) is completely inverted by 4-group partitioning. Both-exhausted (`result=Ok`,
+  /// `5h=6%`, `7d=4%`) must sort WITH `weekly_exh` (G3) rather than WITH `dead` (G4).
+  ///
+  /// # Root Cause
+  /// `( false, false ) => StatusGroup::Red` placed both-exhausted in G4 alongside
+  /// cancelled/error accounts. G4 means permanently dead — requires external action to recover.
+  /// Both-exhausted is recoverable (7d reset restores both windows) and belongs in G3.
+  ///
+  /// # Fix Applied
+  /// `( _, false ) => StatusGroup::WeeklyExhausted` — both `(true, false)` and `(false, false)`
+  /// merge into G3. Dead classification fires before this match via `result.is_err()` and
+  /// `billing_type="none"` guards — both-exhausted-with-Ok-result is never dead.
+  ///
+  /// # Prevention
+  /// Alpha sort (without groups) interleaves all five accounts across groups — any partition
+  /// regression is immediately visible as incorrect relative ordering.
+  ///
+  /// # Pitfall
+  /// `(false, false)` with `result=Ok` is G3 (recoverable), NOT G4 (dead). Dead requires an
+  /// explicit `result=Err` or `billing_type="none"` — the quota tuple alone is not sufficient.
+  #[ doc = "bug_reproducer(BUG-321)" ]
+  #[ test ]
+  fn mre_bug321_four_group_partition_order()
+  {
+    // Alpha order without groups: both_exh < dead < green < h_exh < weekly_exh
+    // Expected with 4-group partition: green (G1) → h_exh (G2) → both_exh,weekly_exh (G3, alpha) → dead (G4)
+    let green      = mk_aq_sort_weekly( "green@test.com",      10.0, 10.0, 0.0 ); // G1: 5h=90%,7d=90%
+    let h_exh      = mk_aq_sort_weekly( "h_exh@test.com",      90.0, 10.0, 0.0 ); // G2: 5h=10%≤15%,7d=90%
+    let weekly_exh = mk_aq_sort_weekly( "weekly_exh@test.com", 10.0, 98.0, 0.0 ); // G3: 5h=90%,7d=2%≤5%
+    let both_exh   = mk_aq_sort_weekly( "both_exh@test.com",   94.0, 96.0, 0.0 ); // G3: Fix(BUG-321) — 5h=6%≤15%,7d=4%≤5%
+    let dead       = mk_aq_cancelled(   "dead@test.com",        50.0, 20.0      ); // G4: billing_type="none"
+    let accounts   = vec![ green, h_exh, weekly_exh, both_exh, dead ];
+    let idx        = sort_indices( &accounts, SortStrategy::Name, None, PreferStrategy::Any, 0 );
+    let name_order : Vec< &str > = idx.iter().map( |&i| accounts[ i ].name.as_str() ).collect();
+    assert_eq!(
+      name_order,
+      vec![ "green@test.com", "h_exh@test.com", "both_exh@test.com", "weekly_exh@test.com", "dead@test.com" ],
+      "BUG-321: 4-group partition must produce G1→G2→G3(both+weekly alpha)→G4; got: {name_order:?}",
+    );
   }
 
   /// CC-059/CC-060 — `prefer_weekly` with absent period data treats account as fully available.

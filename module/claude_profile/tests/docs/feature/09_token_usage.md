@@ -549,7 +549,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `status_emoji(&aq)` is called.
 - **Then:** Returns `"🟡"` — both-exhausted (G3 weekly-exhausted) is recoverable by waiting; it is NOT dead. `"🔴"` (Dead) is reserved for `result = Err` or `billing_type="none"` only.
 - **Exit:** n/a (unit test)
-- **Note:** Fix(BUG-321): `(false,false)` arm in `status_emoji()` changes from `"🔴"` to `"🟡"`. Fix(BUG-321) in `status_group_of()`: `(false,false)` arm changes from `StatusGroup::Red` to `StatusGroup::WeeklyExhausted` — no new enum variant, no array resize. The BUG-319 fix (`(false,false)→🔴`) was premise-incorrect — both-exhausted and weekly-exhausted have identical recovery behavior (7d is the binding constraint). `mre_bug319_both_exhausted_status_emoji_is_red` assertion flips from 🔴 → 🟡.
+- **Note:** Fix(BUG-321): `( _, false ) => StatusGroup::WeeklyExhausted` in `status_group_of()` (merged `(true,false)` and `(false,false)` arms; no new variant); `_ => "🟡"` catch-all in `status_emoji()` (dead gate via `billing_type` early return fires before the match). The BUG-319 fix (`(false,false)→🔴`) was premise-incorrect — both-exhausted and weekly-exhausted have identical recovery behavior (7d is the binding constraint). `mre_bug319_both_exhausted_status_emoji_is_red` assertion flipped 🔴→🟡 by this fix.
 - **Source fn:** `mre_bug321_both_exhausted_status_emoji_is_yellow` (in `src/usage/format_tests.rs`)
 - **Source:** [009_token_usage.md AC-18, AC-26](../../../docs/feature/009_token_usage.md)
 
