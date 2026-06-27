@@ -31,3 +31,5 @@ The concrete semver string resolved at the time of the last `cm .version.install
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [050_preferred_version_spec.md](050_preferred_version_spec.md) | Version alias spec (companion) |
+| doc | [../subcommand/005_install.md](../subcommand/005_install.md) | Install subcommand (writes this) |

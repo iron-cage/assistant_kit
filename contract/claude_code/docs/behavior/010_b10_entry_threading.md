@@ -37,5 +37,6 @@ Entry 4 (Assistant): uuid=D, parentUuid=C
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
 | behavior | [017_b17_parentuuid_self_contained.md](017_b17_parentuuid_self_contained.md) | `parentUuid` chain stays within one session file |
 | behavior | [018_b18_no_cross_session_links.md](018_b18_no_cross_session_links.md) | No cross-session continuation pointers |
+| jsonl | [`../jsonl/001_common_fields.md`](../jsonl/001_common_fields.md) | Common fields: `parentUuid` field definition |
 | jsonl | [`../jsonl/009_threading_model.md`](../jsonl/009_threading_model.md) | Full threading model schema |
 | test | `../../tests/behavior/b10_entry_threading.rs` | Invalidation test |

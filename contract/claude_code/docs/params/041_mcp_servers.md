@@ -44,4 +44,7 @@ Example:
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
-| doc | [mcp_config.md](mcp_config.md) | `--mcp-config` CLI flag (external JSON file form) |
+| doc | [039_mcp_config.md](039_mcp_config.md) | `--mcp-config` CLI flag (external JSON file form) |
+| doc | [062_strict_mcp_config.md](062_strict_mcp_config.md) | Restrict to only these servers |
+| doc | [089_mcp_tool_timeout.md](089_mcp_tool_timeout.md) | MCP tool call timeout |
+| doc | [../subcommand/006_mcp.md](../subcommand/006_mcp.md) | MCP server management subcommand |

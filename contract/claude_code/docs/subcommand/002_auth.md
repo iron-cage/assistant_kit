@@ -56,3 +56,4 @@ pre-v1.0 (unverified)
 | doc | [../endpoint/004_oauth_token.md](../endpoint/004_oauth_token.md) | OAuth token refresh endpoint |
 | doc | [../params/111_disable_login_command.md](../params/111_disable_login_command.md) | Env var to hide `/login` slash command |
 | doc | [../params/112_disable_logout_command.md](../params/112_disable_logout_command.md) | Env var to hide `/logout` slash command |
+| doc | [008_setup_token.md](008_setup_token.md) | Setup-token subcommand — alternative long-lived token setup |

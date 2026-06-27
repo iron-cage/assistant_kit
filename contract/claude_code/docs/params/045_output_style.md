@@ -33,11 +33,11 @@ Known value: `"default"`. Other values are not confirmed from observed usage.
 - Config-key only; no CLI flag or env var form
 - Found in project-level `.claude/settings.local.json` in practice
 - Not managed by `claude_version`; written directly by Claude Code's settings UI
-- Distinct from `--output-format` (`output_format.md`): that controls serialisation, this controls presentation
+- Distinct from `--output-format` (`044_output_format.md`): that controls serialisation, this controls presentation
 
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
-| doc | [output_format.md](output_format.md) | Data serialisation format (text/json/stream-json) |
+| doc | [044_output_format.md](044_output_format.md) | Data serialisation format (text/json/stream-json) |

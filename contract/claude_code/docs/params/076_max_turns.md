@@ -31,3 +31,4 @@ Caps the number of agentic turns Claude Code may execute in a single session. Ea
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [010_auto_continue.md](010_auto_continue.md) | Auto-continue after turn limit |

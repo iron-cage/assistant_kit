@@ -31,3 +31,6 @@ The active plugin registry stored in settings. Keys are plugin identifiers; valu
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [048_plugin_dir.md](048_plugin_dir.md) | Session plugin directory (alternative) |
+| doc | [088_plugin_prefer_https.md](088_plugin_prefer_https.md) | Plugin HTTPS preference |
+| doc | [../subcommand/007_plugin.md](../subcommand/007_plugin.md) | Plugin management subcommand |

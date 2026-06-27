@@ -46,3 +46,4 @@ pre-v1.0 (unverified)
 | entity | [readme.md](readme.md) | JSONL master index |
 | jsonl | [002_user_entry.md](002_user_entry.md) | User entry: `message.content` field that can contain this block |
 | jsonl | [006_tool_use_block.md](006_tool_use_block.md) | Tool use block whose `id` is referenced by `tool_use_id` |
+| format | [`../formats/007_json_response.md`](../formats/007_json_response.md) | JSON response format that uses this block in its `content` array |

@@ -31,3 +31,7 @@ Enables debug mode. With no argument, all debug categories are emitted. With an 
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [020_debug_file.md](020_debug_file.md) | Write debug output to file |
+| doc | [036_log_level.md](036_log_level.md) | Internal logger severity level |
+| doc | [040_mcp_debug.md](040_mcp_debug.md) | Deprecated MCP debug flag (superseded by this) |
+| doc | [071_verbose.md](071_verbose.md) | Verbose output mode |

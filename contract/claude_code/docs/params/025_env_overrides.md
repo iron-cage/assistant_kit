@@ -31,3 +31,5 @@ A JSON object of environment variables injected into the Claude Code process at 
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [060_settings.md](060_settings.md) | Settings file (contains this object) |
+| doc | [059_setting_sources.md](059_setting_sources.md) | Which settings layers are loaded |

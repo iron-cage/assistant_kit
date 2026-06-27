@@ -33,3 +33,4 @@ Defines custom agents as an inline JSON object for the session. Each key is an a
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [003_agent.md](003_agent.md) | Single agent override parameter |
 | doc | [../tool/007_agent.md](../tool/007_agent.md) | Agent tool this defines agents for |
+| doc | [../subcommand/001_agents.md](../subcommand/001_agents.md) | Agents subcommand — lists configured agents |

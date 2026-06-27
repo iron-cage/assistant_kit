@@ -29,3 +29,5 @@ pre-v1.0 (unverified)
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [100_disable_auto_compact.md](100_disable_auto_compact.md) | Disable auto-compaction only |
+| doc | [074_auto_compact_window.md](074_auto_compact_window.md) | Auto-compact token window |
+| doc | [075_autocompact_pct_override.md](075_autocompact_pct_override.md) | Auto-compact trigger percentage |

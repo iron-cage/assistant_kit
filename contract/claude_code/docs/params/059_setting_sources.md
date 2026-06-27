@@ -31,3 +31,5 @@ Filters which setting source layers are loaded at startup. `user` = `~/.claude/s
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [060_settings.md](060_settings.md) | Supplementary settings file (also a source) |
+| doc | [025_env_overrides.md](025_env_overrides.md) | Per-session env overrides in settings |

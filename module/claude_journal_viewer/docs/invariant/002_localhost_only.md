@@ -14,4 +14,4 @@ The `.serve` web server binds to `127.0.0.1` by default. Journal data may contai
 ## Sources
 
 - `src/cli/serve.rs` — default bind address constant
-- `docs/cli/param/16_bind.md` — parameter documentation
+- `docs/cli/param/16_bind.md` — parameter documentation (Phase 2 deliverable; created alongside `src/cli/serve.rs`)

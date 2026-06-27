@@ -65,3 +65,4 @@ pre-v1.0 (unverified)
 |------|------|----------------|
 | doc | [006_create_api_key.md](006_create_api_key.md) | API key creation — uses `org:create_api_key` scope |
 | doc | [002_oauth_account.md](002_oauth_account.md) | Full account identity and org membership |
+| doc | [007_metrics_enabled.md](007_metrics_enabled.md) | Metrics-enabled endpoint (references this for org role context) |

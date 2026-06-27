@@ -31,3 +31,5 @@ Re-emits user messages received on stdin back on stdout for acknowledgment. Requ
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [034_input_format.md](034_input_format.md) | Input format (stream-json required) |
+| doc | [044_output_format.md](044_output_format.md) | Output format (stream-json required) |

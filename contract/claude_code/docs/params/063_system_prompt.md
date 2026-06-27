@@ -31,3 +31,4 @@ Replaces the entire default system prompt with the supplied text. The default sy
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [008_append_system_prompt.md](008_append_system_prompt.md) | Append-only alternative (mutually exclusive) |

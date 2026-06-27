@@ -21,3 +21,4 @@ pre-v1.0 (unverified)
 | doc | [readme.md](readme.md) | Master tool table |
 | doc | [../params/021_disable_slash_commands.md](../params/021_disable_slash_commands.md) | Disable slash commands parameter |
 | doc | [../params/078_disable_bundled_skills.md](../params/078_disable_bundled_skills.md) | Disable bundled skills only |
+| doc | [../formats/006_command_definition.md](../formats/006_command_definition.md) | Command definition format for skill files |

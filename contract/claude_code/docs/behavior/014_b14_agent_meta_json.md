@@ -41,6 +41,7 @@ The `description` field is optional and present only on some `Explore` agents. O
 | Type | File | Responsibility |
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
+| behavior | [007_b7_agent_sessions_sibling.md](007_b7_agent_sessions_sibling.md) | Flat agent layout (no `.meta.json` sidecars in flat format) |
 | behavior | [013_b13_subagent_directory.md](013_b13_subagent_directory.md) | Hierarchical agent layout (directory containing the sidecar) |
 | jsonl | [`../jsonl/010_sidechain_sessions.md`](../jsonl/010_sidechain_sessions.md) | Agent JSONL entry format |
 | test | `../../tests/behavior/b14_agent_meta_json.rs` | Invalidation test |

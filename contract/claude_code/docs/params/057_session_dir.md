@@ -31,3 +31,7 @@ Overrides the directory where session `.jsonl` files are stored for the current 
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [055_resume.md](055_resume.md) | Resume sessions (reads from this dir) |
+| doc | [058_session_id.md](058_session_id.md) | Session ID stored in this dir |
+| doc | [../storage/001_projects.md](../storage/001_projects.md) | Project session storage layout |
+| behavior | [../behavior/023_b23_session_dir_override.md](../behavior/023_b23_session_dir_override.md) | Behavioral contract: `CLAUDE_CODE_SESSION_DIR` override |

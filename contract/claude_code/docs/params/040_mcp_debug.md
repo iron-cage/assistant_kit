@@ -33,3 +33,5 @@ Enables MCP (Model Context Protocol) debug mode, showing errors and diagnostic o
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [019_debug.md](019_debug.md) | `--debug` supersedes this flag |
+| doc | [039_mcp_config.md](039_mcp_config.md) | MCP server configuration |

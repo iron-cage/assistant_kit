@@ -57,4 +57,5 @@ pre-v1.0 (unverified)
 | taxonomy | [001_concepts.md](001_concepts.md) | Concept definitions: Project, Conversation, Session, Entry |
 | taxonomy | [002_relationships.md](002_relationships.md) | Pairwise cardinalities |
 | behavior | [`../behavior/018_b18_no_cross_session_links.md`](../behavior/018_b18_no_cross_session_links.md) | B18: no cross-session metadata — reason chain inference is needed |
+| jsonl | [`../jsonl/009_threading_model.md`](../jsonl/009_threading_model.md) | Threading model spec: `parentUuid` chain structure |
 | source | `../../../../module/claude_storage_core/docs/data_structure/001_storage_hierarchy.md` | Session Family data structure |

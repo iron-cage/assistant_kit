@@ -28,5 +28,6 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [099_disable_autoupdater.md](099_disable_autoupdater.md) | Disable background auto-updates only |
 | doc | [119_disable_updates.md](119_disable_updates.md) | Block all updates |
 | doc | [../subcommand/009_update.md](../subcommand/009_update.md) | Update subcommand |

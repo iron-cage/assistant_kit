@@ -1,6 +1,6 @@
 //! `clr tools` — list all Claude Code built-in tools in a plain-style table.
 
-use data_fmt::{ RowBuilder, TableFormatter, TableConfig, TableCaption, Format };
+use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Heading, Format };
 
 /// Static list of 26 Claude Code built-in tools: (name, category, description).
 ///
@@ -79,26 +79,18 @@ pub( crate ) fn dispatch_tools( tokens : &[ String ] ) -> !
     builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
   }
 
-  let caption = TableCaption::new( "Claude Code Tools" )
-    .field( format!( "{} built-in", TOOLS.len() ) );
+  let heading = Heading::new( "Claude Code Tools" )
+    .with_field( format!( "{} built-in", TOOLS.len() ) );
 
-  let view = builder.build_view();
-  let probe = Format::format(
-    &TableFormatter::with_config( TableConfig::plain().auto_wrap( false ) ),
-    &view,
-  ).unwrap_or_default();
-  let body_width = probe
-    .lines()
-    .find( | l | !l.trim().is_empty() )
-    .map_or( 120, | l | l.chars().count() );
+  // data_fmt ≥0.5.1 fills the heading rule to the rendered table body width
+  // automatically, so no two-pass probe is required.
   let table = Format::format(
     &TableFormatter::with_config(
       TableConfig::plain()
         .auto_wrap( false )
-        .terminal_width( Some( body_width ) )
-        .caption( caption ),
+        .with_heading( heading ),
     ),
-    &view,
+    &builder.build_view(),
   ).unwrap_or_default();
 
   println!( "{table}" );

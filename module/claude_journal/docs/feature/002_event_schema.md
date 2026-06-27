@@ -4,7 +4,7 @@
 
 ## Description
 
-Type-discriminated, version-tagged event schema for the journal system. Every event record contains a `v` field (schema version, currently `1`) and a `type` field (event type discriminator). The schema uses a flat field bag where each event type populates a relevant subset of fields and leaves the rest as `null`.
+Type-discriminated, version-tagged event schema for the journal system. Every event record contains a `v` field (schema version, currently `1`) and a `type` field (event type discriminator). The schema uses a flat field bag where each event type populates a relevant subset of fields and leaves the rest omitted.
 
 Eight event types are defined in schema v1:
 
@@ -29,7 +29,7 @@ The `v` field enables forward-compatible parsing: readers skip unknown fields; s
 - AC-002: The `v` field is `1` for all events emitted by this version
 - AC-003: The `type` field matches one of the 8 defined EventType variants exactly
 - AC-004: The `ts` field is ISO 8601 with millisecond precision in UTC
-- AC-005: Fields not relevant to an event type are serialized as JSON `null` (not omitted)
+- AC-005: Fields not relevant to an event type are **omitted** from JSON serialization (not serialized as null)
 - AC-006: Unknown fields in a JSON line are silently ignored on deserialization (forward compat)
 - AC-007: The `retry_class_counts` field is a 6-element array `[Transient, Account, Auth, Service, Process, Unknown]`
 - AC-008: Numeric fields (`cost_usd`, `duration_ms`, `input_tokens`, `output_tokens`) use their native JSON types (number), not strings

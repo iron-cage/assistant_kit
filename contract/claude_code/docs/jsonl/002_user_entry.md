@@ -66,3 +66,5 @@ pre-v1.0 (unverified)
 | entity | [readme.md](readme.md) | JSONL master index |
 | jsonl | [001_common_fields.md](001_common_fields.md) | Common fields: uuid, parentUuid, timestamp, type, cwd, sessionId, etc. |
 | jsonl | [003_assistant_entry.md](003_assistant_entry.md) | Assistant entry format (message.content is array) |
+| jsonl | [005_thinking_block.md](005_thinking_block.md) | Thinking blocks triggered by `thinkingMetadata` in this entry |
+| jsonl | [007_tool_result_block.md](007_tool_result_block.md) | Tool result blocks that appear in user entries |

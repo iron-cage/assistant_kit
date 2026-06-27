@@ -36,3 +36,4 @@ v2.0+ (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
+| doc | [037_share_onboarding_guide.md](037_share_onboarding_guide.md) | ShareOnboardingGuide — share guide files externally (related publishing tool) |

@@ -21,3 +21,5 @@ pre-v1.0 (unverified)
 | doc | [readme.md](readme.md) | Master tool table |
 | doc | [017_task_output.md](017_task_output.md) | TaskOutput — deprecated; Read is the replacement |
 | doc | [011_notebook_edit.md](011_notebook_edit.md) | Edit Jupyter notebooks (write-side companion) |
+| doc | [002_write.md](002_write.md) | Write — create or overwrite files (requires Read first) |
+| doc | [003_edit.md](003_edit.md) | Edit — patch existing files (requires Read first) |

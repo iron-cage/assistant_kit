@@ -31,3 +31,4 @@ Controls the default action mode for tool execution. `Ask` (default) prompts the
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [046_permission_mode.md](046_permission_mode.md) | Per-session override of this setting |

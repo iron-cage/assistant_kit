@@ -31,3 +31,5 @@ Blocks specific tools from being available for the session. Accepts the same too
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [006_allowed_tools.md](006_allowed_tools.md) | Tool allowlist (complement) |
+| doc | [068_tools.md](068_tools.md) | Full tool override (coarser control) |

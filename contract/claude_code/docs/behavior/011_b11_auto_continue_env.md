@@ -30,4 +30,6 @@ This env var is set by the `clr` runner before spawning `claude` (via `cmd.env("
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
 | behavior | [023_b23_session_dir_override.md](023_b23_session_dir_override.md) | `CLAUDE_CODE_SESSION_DIR` env var (different env var) |
+| behavior | [025_b25_auto_compact_window.md](025_b25_auto_compact_window.md) | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` env var (same NEG-ONLY pattern) |
+| behavior | [026_b26_autocompact_pct_override.md](026_b26_autocompact_pct_override.md) | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` env var (same NEG-ONLY pattern) |
 | test | `../../tests/behavior/b11_auto_continue.rs` | Invalidation test (NEG-ONLY) |

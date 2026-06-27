@@ -45,6 +45,8 @@ pre-v1.0 (unverified)
 | entity | [readme.md](readme.md) | JSONL master index |
 | jsonl | [002_user_entry.md](002_user_entry.md) | User-specific fields: `message.role`, `message.content` (string), `thinkingMetadata` |
 | jsonl | [003_assistant_entry.md](003_assistant_entry.md) | Assistant-specific fields: `message.model`, `message.content` (array), `requestId` |
+| jsonl | [009_threading_model.md](009_threading_model.md) | Threading model: `parentUuid` chain structure and self-containment |
 | behavior | [`../behavior/010_b10_entry_threading.md`](../behavior/010_b10_entry_threading.md) | `parentUuid` threading model |
 | behavior | [`../behavior/012_b12_agent_session_id.md`](../behavior/012_b12_agent_session_id.md) | Agent `sessionId` equals parent UUID |
 | behavior | [`../behavior/015_b15_agent_slug.md`](../behavior/015_b15_agent_slug.md) | Agent `slug` field semantics |
+| jsonl | [010_sidechain_sessions.md](010_sidechain_sessions.md) | Sidechain entry format: `isSidechain`, `agentId`, `slug` in agent entries |

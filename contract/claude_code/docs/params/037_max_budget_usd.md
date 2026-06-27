@@ -31,3 +31,5 @@ Sets a hard cap on API spend for this invocation. Claude stops making API calls 
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [102_disable_cost_warnings.md](102_disable_cost_warnings.md) | Disable cost warning messages |
+| doc | [051_print.md](051_print.md) | Print mode (required for budget to apply) |

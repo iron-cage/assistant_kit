@@ -31,4 +31,5 @@ The slug serves as a human-friendly family identifier that could be displayed in
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
 | behavior | [012_b12_agent_session_id.md](012_b12_agent_session_id.md) | Agent `sessionId` as programmatic parent link |
 | jsonl | [`../jsonl/001_common_fields.md`](../jsonl/001_common_fields.md) | `agentId` and `slug` as optional common fields |
+| jsonl | [`../jsonl/010_sidechain_sessions.md`](../jsonl/010_sidechain_sessions.md) | Sidechain JSONL entry format (`slug` field in agent entries) |
 | test | `../../tests/behavior/b15_agent_slug_field.rs` | Invalidation test |

@@ -31,3 +31,5 @@ Emits partial response chunks as they arrive rather than waiting for the complet
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [044_output_format.md](044_output_format.md) | Output format (stream-json required for this flag) |
+| doc | [051_print.md](051_print.md) | Print mode (required for this flag) |

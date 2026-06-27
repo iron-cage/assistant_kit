@@ -42,4 +42,6 @@ Both formats may coexist in real storage — older projects use flat, newer use 
 | behavior | [007_b7_agent_sessions_sibling.md](007_b7_agent_sessions_sibling.md) | Flat agent layout (older format) |
 | behavior | [012_b12_agent_session_id.md](012_b12_agent_session_id.md) | Agent `sessionId` equals parent directory UUID |
 | behavior | [014_b14_agent_meta_json.md](014_b14_agent_meta_json.md) | Agent `.meta.json` sidecars |
+| jsonl | [`../jsonl/010_sidechain_sessions.md`](../jsonl/010_sidechain_sessions.md) | Sidechain JSONL entry format and storage layouts |
+| storage | [`../storage/001_projects_directory.md`](../storage/001_projects_directory.md) | Projects directory: hierarchical agent file locations |
 | test | `../../tests/behavior/b13_subagent_directory_structure.rs` | Invalidation test |

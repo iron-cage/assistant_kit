@@ -46,3 +46,4 @@ Example:
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [083_stop_hook_block_cap.md](083_stop_hook_block_cap.md) | Cap on consecutive hook blocks |

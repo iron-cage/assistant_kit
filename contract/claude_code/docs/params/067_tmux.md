@@ -31,3 +31,4 @@ Creates a tmux session for the worktree when used with `--worktree`. In iTerm2, 
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [073_worktree.md](073_worktree.md) | Worktree flag (required for --tmux) |

@@ -31,3 +31,6 @@ Disables writing the session to disk. No `.jsonl` file is created and the sessio
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [055_resume.md](055_resume.md) | Resume sessions (disabled by this flag) |
+| doc | [017_continue.md](017_continue.md) | Continue sessions (disabled by this flag) |
+| doc | [051_print.md](051_print.md) | Print mode (required for this flag to apply) |

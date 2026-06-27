@@ -35,3 +35,4 @@ where plugins run as remote services.
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [048_plugin_dir.md](048_plugin_dir.md) | Plugin directory configuration |
 | doc | [024_enabled_plugins.md](024_enabled_plugins.md) | Active plugin registry |
+| doc | [../subcommand/007_plugin.md](../subcommand/007_plugin.md) | Plugin management subcommand |

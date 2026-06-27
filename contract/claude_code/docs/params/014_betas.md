@@ -31,3 +31,4 @@ Sends additional beta feature headers with API requests. Only effective when usi
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [110_disable_interleaved_thinking.md](110_disable_interleaved_thinking.md) | Disable interleaved thinking (beta-related) |

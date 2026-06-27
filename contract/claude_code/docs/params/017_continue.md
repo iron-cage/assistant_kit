@@ -31,3 +31,6 @@ Explicitly continue the most recent conversation in the current directory. This 
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [055_resume.md](055_resume.md) | Resume by session ID (more specific alternative) |
+| doc | [029_fork_session.md](029_fork_session.md) | Fork without modifying original |
+| doc | [043_no_session_persistence.md](043_no_session_persistence.md) | Disable session storage entirely |

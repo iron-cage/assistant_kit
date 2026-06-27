@@ -31,3 +31,4 @@ The Anthropic API key used to authenticate requests. Must be set in the environm
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [087_workspace_id.md](087_workspace_id.md) | Workspace ID for API routing |

@@ -22,3 +22,4 @@ pre-v1.0 (unverified)
 | doc | [014_task_create.md](014_task_create.md) | Create tasks |
 | doc | [015_task_get.md](015_task_get.md) | Get task status |
 | doc | [016_task_list.md](016_task_list.md) | List all tasks |
+| doc | [027_todo_write.md](027_todo_write.md) | TodoWrite — predecessor tool (status updates replaced by this tool) |

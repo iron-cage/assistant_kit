@@ -192,3 +192,4 @@ pre-v1.0 (unverified)
 | doc | `../../../../module/claude_profile/docs/feature/014_rich_account_metadata.md` | Rich metadata fields (reads local snapshot, not this API) |
 | doc | [001_oauth_usage.md](001_oauth_usage.md) | Quota utilization endpoint |
 | doc | [003_v1_messages.md](003_v1_messages.md) | Rate-limit header endpoint |
+| doc | [004_oauth_token.md](004_oauth_token.md) | Token refresh endpoint — produces the access token consumed by this endpoint |

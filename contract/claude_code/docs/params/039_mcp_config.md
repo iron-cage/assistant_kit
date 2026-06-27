@@ -31,3 +31,7 @@ Loads MCP (Model Context Protocol) server definitions from JSON files or inline 
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [041_mcp_servers.md](041_mcp_servers.md) | Inline MCP servers (settings alternative) |
+| doc | [062_strict_mcp_config.md](062_strict_mcp_config.md) | Use only this config (strict mode) |
+| doc | [089_mcp_tool_timeout.md](089_mcp_tool_timeout.md) | MCP tool call timeout |
+| doc | [../subcommand/006_mcp.md](../subcommand/006_mcp.md) | MCP server management subcommand |

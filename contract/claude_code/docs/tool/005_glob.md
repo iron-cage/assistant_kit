@@ -19,3 +19,4 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
+| doc | [006_grep.md](006_grep.md) | Grep — search file contents (complements pattern-based file finding) |

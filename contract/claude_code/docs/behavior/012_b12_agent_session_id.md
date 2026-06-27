@@ -32,4 +32,6 @@ This `sessionId` field is what enables the `claude_storage` library to group age
 | behavior | [007_b7_agent_sessions_sibling.md](007_b7_agent_sessions_sibling.md) | Flat agent layout (sibling files) |
 | behavior | [013_b13_subagent_directory.md](013_b13_subagent_directory.md) | Hierarchical agent layout (directory structure) |
 | behavior | [015_b15_agent_slug.md](015_b15_agent_slug.md) | Agent `slug` field (human-readable family ID) |
+| jsonl | [`../jsonl/001_common_fields.md`](../jsonl/001_common_fields.md) | Common fields: `sessionId` field definition |
+| jsonl | [`../jsonl/010_sidechain_sessions.md`](../jsonl/010_sidechain_sessions.md) | Sidechain JSONL entry format |
 | test | `../../tests/behavior/b12_agent_session_id_is_parent.rs` | Invalidation test |

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Dependency upgrade: `data_fmt ^0.4 → ^0.6`** (TSK-327)
+  - Migrated `clr ps` and `clr tools` from `TableCaption`/`.field()`/`.caption()` to `Heading`/`.with_field()`/`.with_heading()` (renamed in data_fmt TSK-009)
+  - Removed two-pass probe workaround in `ps.rs::render_plain_table()` and inline in `tools.rs::dispatch_tools()` — data_fmt ≥0.5.1 fills heading rule to rendered table body width automatically (data_fmt TSK-008)
+  - No behavioral change to `clr ps` / `clr tools` output content
+- **Dependency upgrade: `cli_fmt ^0.9 → ^0.10`** — API-compatible; no code changes required
+- **Dependency upgrade: `test_tools ^0.17 → ^0.18`** — API-compatible; no code changes required
+
 ### Added
 
 - **Help split: `RUNNER OPTIONS` / `CLAUDE CODE OPTIONS (forwarded)` sections** (TSK-232)

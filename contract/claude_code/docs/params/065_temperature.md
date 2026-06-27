@@ -31,3 +31,5 @@ Controls the randomness of Claude's responses. Lower values (toward 0.0) make re
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [069_top_k.md](069_top_k.md) | Top-k sampling (sibling sampling parameter) |
+| doc | [070_top_p.md](070_top_p.md) | Nucleus sampling (sibling sampling parameter) |

@@ -31,3 +31,5 @@ Overrides the full set of available tools. `default` (the default value) enables
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [006_allowed_tools.md](006_allowed_tools.md) | Tool allowlist (finer control) |
+| doc | [022_disallowed_tools.md](022_disallowed_tools.md) | Tool denylist (finer control) |

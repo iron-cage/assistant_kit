@@ -4,7 +4,7 @@
 use claude_core::process::{ find_claude_processes, ProcessInfo };
 #[ cfg( target_os = "linux" ) ]
 use claude_core::process::ProcessMetrics;
-use data_fmt::{ RowBuilder, TableFormatter, TableConfig, TableCaption, Format };
+use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Heading, Format };
 
 // Runtime configuration for `clr ps`, assembled from env-var defaults (applied
 // first) then CLI tokens (which overwrite env values — CLI-wins).
@@ -265,34 +265,20 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
   std::process::exit( 0 );
 }
 
-// Render a completed RowBuilder as a captioned plain-style table string.
+// Render a completed RowBuilder as a headed plain-style table string.
 //
-// Two-pass render: first probe measures the actual body width so the caption
-// rule line spans the full table rather than the terminal fallback (120 cols).
+// data_fmt ≥0.5.1 fills the heading rule to the rendered table body width
+// automatically (TSK-008), so no two-pass probe is required.
 // auto_wrap: false — prevents word-wrapping long paths across continuation rows.
-fn render_plain_table( builder : RowBuilder, caption : TableCaption ) -> String
+fn render_plain_table( builder : RowBuilder, heading : Heading ) -> String
 {
-  let view = builder.build_view();
-
-  // Probe render (no caption) to measure actual table body width.
-  let probe = Format::format(
-    &TableFormatter::with_config( TableConfig::plain().auto_wrap( false ) ),
-    &view,
-  ).unwrap_or_default();
-  let body_width = probe
-    .lines()
-    .find( |l| !l.trim().is_empty() )
-    .map_or( 120, |l| l.chars().count() );
-
-  // Final render with caption anchored to measured body width.
   Format::format(
     &TableFormatter::with_config(
       TableConfig::plain()
         .auto_wrap( false )
-        .terminal_width( Some( body_width ) )
-        .caption( caption ),
+        .with_heading( heading ),
     ),
-    &view,
+    &builder.build_view(),
   ).unwrap_or_default()
 }
 
@@ -673,9 +659,9 @@ fn build_active_table(
     builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
   }
 
-  let caption = TableCaption::new( "Active Sessions" )
-    .field( format!( "{} running", sorted.len() ) );
-  let table_str = render_plain_table( builder, caption );
+  let heading = Heading::new( "Active Sessions" )
+    .with_field( format!( "{} running", sorted.len() ) );
+  let table_str = render_plain_table( builder, heading );
 
   // Build legend from flags present across all rows (Linux only).
   #[ cfg( target_os = "linux" ) ]
@@ -955,7 +941,7 @@ fn build_queued_table() -> Option< String >
     builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
   }
 
-  let caption = TableCaption::new( "Queued" )
-    .field( format!( "{count} waiting" ) );
-  Some( render_plain_table( builder, caption ) )
+  let heading = Heading::new( "Queued" )
+    .with_field( format!( "{count} waiting" ) );
+  Some( render_plain_table( builder, heading ) )
 }

@@ -43,7 +43,7 @@ pub struct EventRecord
 }
 
 /// Flat field bag — each event type populates a relevant subset.
-/// All fields are `Option` — serialize as JSON `null` when absent.
+/// All fields are `Option` — absent fields are omitted from JSON output (not serialized as null).
 #[derive( Debug, Clone, Default )]
 pub struct EventFields
 {

@@ -19,3 +19,4 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
+| doc | [005_glob.md](005_glob.md) | Glob — find files by pattern (complements content searching) |

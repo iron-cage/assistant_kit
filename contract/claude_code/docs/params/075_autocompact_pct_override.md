@@ -39,3 +39,5 @@ Introduced alongside `CLAUDE_CODE_AUTO_COMPACT_WINDOW` in Claude Code v2.1.75 (2
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [074_auto_compact_window.md](074_auto_compact_window.md) | Token window this percentage is applied to |
 | behavior | [../behavior/026_b26_autocompact_pct_override.md](../behavior/026_b26_autocompact_pct_override.md) | Behavioral contract: env var acceptance |
+| doc | [100_disable_auto_compact.md](100_disable_auto_compact.md) | Disable auto-compaction entirely |
+| doc | [101_disable_compact.md](101_disable_compact.md) | Disable all compaction |

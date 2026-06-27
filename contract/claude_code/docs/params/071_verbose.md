@@ -31,3 +31,5 @@ Enables verbose output mode, overriding whatever the config file specifies. When
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [019_debug.md](019_debug.md) | Debug mode with category filtering |
+| doc | [036_log_level.md](036_log_level.md) | Internal logger severity level |

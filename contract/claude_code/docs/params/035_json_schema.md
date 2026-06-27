@@ -31,3 +31,4 @@ Supplies a JSON Schema that Claude's response must conform to. Claude attempts t
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [044_output_format.md](044_output_format.md) | Output format (json mode recommended with schema) |

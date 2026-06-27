@@ -31,3 +31,5 @@ Restricts available tools to an explicit allowlist. Tool names follow the format
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [022_disallowed_tools.md](022_disallowed_tools.md) | Tool denylist (complement) |
+| doc | [068_tools.md](068_tools.md) | Full tool override (coarser control) |

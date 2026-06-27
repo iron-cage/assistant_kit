@@ -31,3 +31,6 @@ Loads Claude Code plugins from the specified directories for this session only. 
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
+| doc | [024_enabled_plugins.md](024_enabled_plugins.md) | Persistent plugin registry (alternative) |
+| doc | [088_plugin_prefer_https.md](088_plugin_prefer_https.md) | Plugin HTTPS preference |
+| doc | [../subcommand/007_plugin.md](../subcommand/007_plugin.md) | Plugin management subcommand |
