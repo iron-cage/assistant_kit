@@ -1,0 +1,38 @@
+nodes:
+  - id: feature_001
+    path: feature/001_cli_viewing.md
+    type: feature
+  - id: feature_002
+    path: feature/002_web_viewing.md
+    type: feature
+  - id: feature_003
+    path: feature/003_filtering.md
+    type: feature
+  - id: invariant_001
+    path: invariant/001_read_only.md
+    type: invariant
+  - id: invariant_002
+    path: invariant/002_localhost_only.md
+    type: invariant
+
+edges:
+  - from: feature_001
+    to: feature_003
+    relation: uses
+    note: CLI commands use shared filtering
+  - from: feature_002
+    to: feature_003
+    relation: uses
+    note: Web viewer uses same filtering logic
+  - from: feature_002
+    to: invariant_002
+    relation: constrained_by
+    note: Web server defaults to localhost binding
+  - from: feature_001
+    to: invariant_001
+    relation: constrained_by
+    note: CLI viewer never modifies journal files
+  - from: feature_002
+    to: invariant_001
+    relation: constrained_by
+    note: Web viewer never modifies journal files

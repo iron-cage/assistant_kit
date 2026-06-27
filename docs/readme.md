@@ -30,6 +30,12 @@ All doc entities across the workspace, including per-crate documentation scopes.
 | workspace (`docs/`) | `error/` | extension | 6 |
 | `module/assistant/` | `feature/` | standard | 1 |
 | `module/assistant/` | `invariant/` | standard | 1 |
+| `module/claude_journal/` | `feature/` | standard | 3 |
+| `module/claude_journal/` | `invariant/` | standard | 3 |
+| `module/claude_journal/` | `api/` | standard | 3 |
+| `module/claude_journal_viewer/` | `feature/` | standard | 3 |
+| `module/claude_journal_viewer/` | `invariant/` | standard | 2 |
+| `module/claude_journal_viewer/` | `cli/` | cli | 62 |
 
 ### Instance Naming
 

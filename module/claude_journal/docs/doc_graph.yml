@@ -1,0 +1,57 @@
+nodes:
+  - id: feature_001
+    path: feature/001_event_journaling.md
+    type: feature
+  - id: feature_002
+    path: feature/002_event_schema.md
+    type: feature
+  - id: feature_003
+    path: feature/003_rotation.md
+    type: feature
+  - id: invariant_001
+    path: invariant/001_append_only.md
+    type: invariant
+  - id: invariant_002
+    path: invariant/002_crash_safety.md
+    type: invariant
+  - id: invariant_003
+    path: invariant/003_schema_version.md
+    type: invariant
+  - id: api_001
+    path: api/001_journal_writer.md
+    type: api
+  - id: api_002
+    path: api/002_journal_reader.md
+    type: api
+  - id: api_003
+    path: api/003_event_type.md
+    type: api
+
+edges:
+  - from: feature_001
+    to: invariant_001
+    relation: constrained_by
+  - from: feature_001
+    to: invariant_002
+    relation: constrained_by
+  - from: feature_001
+    to: api_001
+    relation: implemented_by
+  - from: feature_002
+    to: invariant_003
+    relation: constrained_by
+  - from: feature_002
+    to: api_003
+    relation: implemented_by
+  - from: feature_003
+    to: api_002
+    relation: uses
+  - from: api_001
+    to: api_003
+    relation: depends_on
+  - from: api_002
+    to: api_003
+    relation: depends_on
+  - from: api_002
+    to: invariant_002
+    relation: constrained_by
