@@ -23,8 +23,14 @@ pub( super ) struct IsolatedArgs
   pub( super ) creds_path       : String,
   pub( super ) timeout_secs     : u64,
   pub( super ) trace            : bool,
+  pub( super ) dry_run          : bool,
   pub( super ) message          : Option< String >,
   pub( super ) passthrough_args : Vec< String >,
+  pub( super ) dir              : Option< String >,
+  pub( super ) add_dirs         : Vec< String >,
+  pub( super ) file             : Option< String >,
+  pub( super ) expect           : Option< String >,
+  pub( super ) expect_strategy  : Option< String >,
   pub( super ) journal          : Option< String >,
   pub( super ) journal_dir      : Option< String >,
 }
@@ -51,6 +57,21 @@ fn parse_timeout_secs( raw : &str ) -> Result< u64 >
        Expected non-negative integer"
     ) )
   )
+}
+
+/// Validate and return a journal level string (`full`, `meta`, or `off`).
+fn validate_journal_level( v : &str ) -> Result< String >
+{
+  if matches!( v, "full" | "meta" | "off" )
+  {
+    Ok( v.to_string() )
+  }
+  else
+  {
+    Err( Error::msg( format!(
+      "invalid --journal value '{v}' — expected: full, meta, off"
+    ) ) )
+  }
 }
 
 /// Apply `CLR_CREDS`, `CLR_TIMEOUT`, and `CLR_TRACE` env var fallbacks for credential subcommands.
@@ -96,8 +117,14 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
   let mut creds_path       : Option< String > = None;
   let mut timeout_secs     : u64              = 30;
   let mut trace            : bool             = false;
+  let mut dry_run          : bool             = false;
   let mut message_parts    : Vec< String >    = Vec::new();
   let mut passthrough_args : Vec< String >    = Vec::new();
+  let mut dir              : Option< String > = None;
+  let mut add_dirs         : Vec< String >    = Vec::new();
+  let mut file             : Option< String > = None;
+  let mut expect           : Option< String > = None;
+  let mut expect_strategy  : Option< String > = None;
   let mut journal          : Option< String > = None;
   let mut journal_dir      : Option< String > = None;
   let mut i = 0;
@@ -126,6 +153,35 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
       {
         trace = true;
       }
+      "--dry-run" =>
+      {
+        dry_run = true;
+      }
+      "--dir" =>
+      {
+        dir = Some( next_value( tokens, i + 1, "--dir" )?.to_string() );
+        i += 1;
+      }
+      "--add-dir" =>
+      {
+        add_dirs.push( next_value( tokens, i + 1, "--add-dir" )?.to_string() );
+        i += 1;
+      }
+      "--file" =>
+      {
+        file = Some( next_value( tokens, i + 1, "--file" )?.to_string() );
+        i += 1;
+      }
+      "--expect" =>
+      {
+        expect = Some( next_value( tokens, i + 1, "--expect" )?.to_string() );
+        i += 1;
+      }
+      "--expect-strategy" =>
+      {
+        expect_strategy = Some( next_value( tokens, i + 1, "--expect-strategy" )?.to_string() );
+        i += 1;
+      }
       // Fix(BUG-222): parse_isolated_args fell through --help to the
       // starts_with('-') catch-all, returning Err("unknown option: --help") → exit 1.
       // Root cause: no explicit --help arm in parse_isolated_args; global parse_args has
@@ -134,14 +190,7 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
       // always add an explicit --help arm before the catch-all in every subcommand parser.
       "--journal" =>
       {
-        let v = next_value( tokens, i + 1, "--journal" )?;
-        if !matches!( v, "full" | "meta" | "off" )
-        {
-          return Err( Error::msg( format!(
-            "invalid --journal value '{v}' — expected: full, meta, off"
-          ) ) );
-        }
-        journal = Some( v.to_string() );
+        journal = Some( validate_journal_level( next_value( tokens, i + 1, "--journal" )? )? );
         i += 1;
       }
       "--journal-dir" =>
@@ -167,16 +216,26 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
   // in run_cli() so that CLR_CREDS env var can supply the value before the check.
   let creds_path = creds_path.unwrap_or_default();
   let message    = if message_parts.is_empty() { None } else { Some( message_parts.join( " " ) ) };
-  Ok( IsolatedArgs { creds_path, timeout_secs, trace, message, passthrough_args, journal, journal_dir } )
+  Ok( IsolatedArgs
+  {
+    creds_path, timeout_secs, trace, dry_run, message, passthrough_args,
+    dir, add_dirs, file, expect, expect_strategy,
+    journal, journal_dir,
+  } )
 }
 
-/// Apply `CLR_CREDS`, `CLR_TIMEOUT`, `CLR_TRACE`, `CLR_JOURNAL`, and `CLR_JOURNAL_DIR`
-/// env var fallbacks for `isolated`.
+/// Apply `CLR_CREDS`, `CLR_TIMEOUT`, `CLR_TRACE`, `CLR_DIR`, `CLR_ADD_DIR`,
+/// `CLR_JOURNAL`, and `CLR_JOURNAL_DIR` env var fallbacks for `isolated`.
 ///
 /// Delegates to [`apply_cred_env_vars`] with isolated's timeout sentinel (30).
 pub( super ) fn apply_isolated_env_vars( parsed : &mut IsolatedArgs )
 {
   apply_cred_env_vars( &mut parsed.creds_path, &mut parsed.timeout_secs, 30, &mut parsed.trace );
+  if parsed.dir.is_none()       { parsed.dir     = env_str( "CLR_DIR" ); }
+  if parsed.add_dirs.is_empty()
+  {
+    if let Some( v ) = env_str( "CLR_ADD_DIR" ) { parsed.add_dirs.push( v ); }
+  }
   if parsed.journal.is_none()     { parsed.journal     = env_str( "CLR_JOURNAL" ); }
   if parsed.journal_dir.is_none() { parsed.journal_dir = env_str( "CLR_JOURNAL_DIR" ); }
 }
@@ -215,14 +274,7 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
       }
       "--journal" =>
       {
-        let v = next_value( tokens, i + 1, "--journal" )?;
-        if !matches!( v, "full" | "meta" | "off" )
-        {
-          return Err( Error::msg( format!(
-            "invalid --journal value '{v}' — expected: full, meta, off"
-          ) ) );
-        }
-        journal = Some( v.to_string() );
+        journal = Some( validate_journal_level( next_value( tokens, i + 1, "--journal" )? )? );
         i += 1;
       }
       "--journal-dir" =>

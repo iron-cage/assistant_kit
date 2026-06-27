@@ -11,6 +11,11 @@ mod ps;
 mod kill;
 mod tools;
 mod summary;
+// summary_unit_test.rs (external test) imports render_summary/resolve_fields via the public API.
+// The unused_imports lint fires for pub use in private modules when no code in the lib crate itself
+// references the re-exported path — but the test file consumer is invisible at lib-compile time.
+#[ allow( unused_imports ) ]
+pub use summary::{ render_summary, resolve_fields };
 
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
 use parse::CliArgs;
@@ -305,6 +310,80 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     eprintln!( "{CREDS_PATH_ERROR}" );
     std::process::exit( 1 );
   }
+
+  // Phase 1: --dry-run — build preview command and print to stdout without spawning.
+  if cli.dry_run
+  {
+    let mut args : Vec< String > = Vec::new();
+    args.push( "--effort".to_string() );
+    args.push( "max".to_string() );
+    args.push( "--no-session-persistence".to_string() );
+    if cli.message.is_some() { args.push( "--dangerously-skip-permissions".to_string() ); }
+    // Phase 2: --dir and --add-dir show in preview
+    if let Some( ref d ) = cli.dir
+    {
+      args.push( "--dir".to_string() );
+      args.push( d.clone() );
+    }
+    for ad in &cli.add_dirs
+    {
+      args.push( "--add-dir".to_string() );
+      args.push( ad.clone() );
+    }
+    if let Some( ref m ) = cli.message
+    {
+      args.push( "--print".to_string() );
+      args.push( m.clone() );
+    }
+    args.extend_from_slice( &cli.passthrough_args );
+    let temp_dir = std::env::temp_dir().join( format!( "claude_isolated_{}", std::process::id() ) );
+    let mut full_args = Vec::with_capacity( args.len() + 2 );
+    if let Some( id ) = IsolatedModel::Default.model_id()
+    {
+      full_args.push( "--model".to_string() );
+      full_args.push( id.to_string() );
+    }
+    full_args.extend( args );
+    let preview = ClaudeCommand::new().with_home( &temp_dir ).with_args( full_args );
+    handle_dry_run( &preview );
+    std::process::exit( 0 );
+  }
+
+  // Phase 2: validate --dir path exists before spawning subprocess.
+  if let Some( ref d ) = cli.dir
+  {
+    if !std::path::Path::new( d ).exists()
+    {
+      eprintln!( "Error: --dir path does not exist: {d}" );
+      std::process::exit( 1 );
+    }
+  }
+
+  // Phase 3: validate --file path exists before spawning subprocess.
+  if let Some( ref f ) = cli.file
+  {
+    if !std::path::Path::new( f ).exists()
+    {
+      eprintln!( "Error: --file path does not exist: {f}" );
+      std::process::exit( 1 );
+    }
+  }
+
+  // Phase 2: inject --dir/--add-dir into the front of passthrough_args so they
+  // appear in the subprocess command before any user-supplied passthrough flags.
+  let mut passthrough : Vec< String > = Vec::new();
+  if let Some( ref d ) = cli.dir
+  {
+    passthrough.push( "--dir".to_string() );
+    passthrough.push( d.clone() );
+  }
+  for ad in &cli.add_dirs
+  {
+    passthrough.push( "--add-dir".to_string() );
+    passthrough.push( ad.clone() );
+  }
+  passthrough.extend_from_slice( &cli.passthrough_args );
+
   let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
   run_isolated_command(
     "isolated",
@@ -314,9 +393,12 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     IsolatedModel::Default,
     EffortLevel::Max,
     cli.message.as_deref(),
-    &cli.passthrough_args,
+    &passthrough,
     cli.message.is_some(), // skip-perms when a real task message is present
     false,                 // chrome stays on for isolated tasks (may use browser tools)
+    cli.file.as_deref(),
+    cli.expect.as_deref(),
+    cli.expect_strategy.as_deref(),
     journal,
   )
 }

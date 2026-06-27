@@ -49,7 +49,7 @@
       aliases: []
       tags: []
     - name: "exit_code"
-      kind: "Integer"
+      kind: "String"
       description: "Filter by exit code"
       hint: "Exit code filter"
       optional: true

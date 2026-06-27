@@ -41,13 +41,18 @@ fn emit_execution(
   if is_full_level( cli )
   {
     const TRUNCATE : usize = 1_048_576;
+    const MARKER   : &str  = "\n[truncated at 1MB]";
     if !stdout.is_empty()
     {
-      ev.fields.stdout = Some( stdout.chars().take( TRUNCATE ).collect() );
+      let mut s : String = stdout.chars().take( TRUNCATE ).collect();
+      if stdout.chars().count() > TRUNCATE { s.push_str( MARKER ); }
+      ev.fields.stdout = Some( s );
     }
     if !stderr.is_empty()
     {
-      ev.fields.stderr = Some( stderr.chars().take( TRUNCATE ).collect() );
+      let mut s : String = stderr.chars().take( TRUNCATE ).collect();
+      if stderr.chars().count() > TRUNCATE { s.push_str( MARKER ); }
+      ev.fields.stderr = Some( s );
     }
   }
   emit( writer, &ev );
@@ -124,7 +129,12 @@ fn emit_interactive(
 //
 // Distinguishes the common "not found" case (claude not installed) from other OS errors
 // so callers can surface an actionable install hint without duplicating the check.
-// Fix(BUG-298): [Runner] prefix missing from all branches — see task/claude_runner/bug/298_spawn_error_missing_runner_class_prefix.md
+// Fix(BUG-298): prepend `[Runner]` to both branches of `spawn_error_msg`.
+// Root cause: both branches returned bare strings without the class prefix, so the error
+//   classification display showed no class label — the `[Runner]` marker was present in
+//   `classify_error()` logic but never inserted into the human-facing message.
+// Pitfall: spawn errors bypass the normal `ExecutionOutput`-based classification path;
+//   the `[Runner]` label must be injected here, at message construction time.
 fn spawn_error_msg( e : &std::io::Error ) -> String
 {
   if e.kind() == std::io::ErrorKind::NotFound
@@ -403,8 +413,9 @@ fn apply_expect_validation(
 /// Runner-class retry logic via `apply_runner_retry()`.
 ///
 /// When `timeout_secs == 0`, `builder.execute()` is used (blocking, no polling overhead).
-/// When `timeout_secs > 0`, `spawn_piped()` + `try_wait()` polling is used, mirroring the
-/// established pattern in `claude_runner_core::isolated`.
+/// When `timeout_secs > 0`, `spawn_piped()` + `try_wait()` polling is used with background
+/// reader threads draining stdout/stderr to prevent pipe-buffer deadlock when the subprocess
+/// produces more than the kernel pipe buffer (64 KiB on Linux).
 fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
   -> Result< ExecutionOutput, std::io::Error >
 {
@@ -421,9 +432,13 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
     };
   }
 
-  // Timeout path: spawn and poll with try_wait(), mirroring isolated.rs BUG-243 fix.
-  // Pitfall: keep the Child in scope so child.kill() + child.wait() can recover output
-  //   and prevent the subprocess from becoming an orphan.
+  // Timeout path: spawn with piped I/O, drain pipes in background threads, and poll
+  // for exit with try_wait().
+  //
+  // Pitfall (pipe deadlock): without background draining, a subprocess that writes more
+  //   than the kernel pipe buffer (64 KiB) blocks on write.  try_wait() then never
+  //   returns Some(_), and the test hangs until timeout fires.  Background threads prevent
+  //   this by continuously consuming the pipe, allowing the subprocess to run to completion.
   // Fix(BUG-299): return Err with descriptive message so run_print_mode() can apply runner retry.
   let mut child = match builder.spawn_piped()
   {
@@ -442,6 +457,25 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
     }
   };
 
+  // Take pipe handles before entering the poll loop so background threads own them.
+  let stdout_pipe = child.stdout.take().expect( "stdout piped by spawn_piped" );
+  let stderr_pipe = child.stderr.take().expect( "stderr piped by spawn_piped" );
+
+  let stdout_t = std::thread::spawn( move || -> Vec< u8 >
+  {
+    use std::io::Read as _;
+    let mut buf = Vec::new();
+    let _ = { let mut r = stdout_pipe; r.read_to_end( &mut buf ) };
+    buf
+  } );
+  let stderr_t = std::thread::spawn( move || -> Vec< u8 >
+  {
+    use std::io::Read as _;
+    let mut buf = Vec::new();
+    let _ = { let mut r = stderr_pipe; r.read_to_end( &mut buf ) };
+    buf
+  } );
+
   let deadline = std::time::Instant::now()
     + core::time::Duration::from_secs( u64::from( timeout_secs ) );
 
@@ -449,22 +483,25 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
   {
     match child.try_wait()
     {
-      Ok( Some( _ ) ) =>
+      Ok( Some( status ) ) =>
       {
-        let raw = match child.wait_with_output()
-        {
-          Ok( o )  => o,
-          Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
-        };
-        let exit_code = signal_exit_code( &raw.status );
-        let stdout = String::from_utf8_lossy( &raw.stdout ).to_string();
-        let stderr = String::from_utf8_lossy( &raw.stderr ).to_string();
+        // Subprocess exited: join reader threads to collect remaining buffered data.
+        let stdout_bytes = stdout_t.join().unwrap_or_default();
+        let stderr_bytes = stderr_t.join().unwrap_or_default();
+        let exit_code = signal_exit_code( &status );
+        let stdout = String::from_utf8_lossy( &stdout_bytes ).to_string();
+        let stderr = String::from_utf8_lossy( &stderr_bytes ).to_string();
         return Ok( ExecutionOutput { stdout, stderr, exit_code } );
       }
       Ok( None ) =>
       {
         if check_timeout( &mut child, deadline )
         {
+          // Drop reader threads — do NOT join.  Shell child processes (e.g. `sleep`)
+          // inherit the pipe write end; joining would block until they exit too.
+          // Dropped JoinHandles are detached; threads complete when the pipe closes.
+          drop( stdout_t );
+          drop( stderr_t );
           return Ok( ExecutionOutput
           {
             stdout   : String::new(),

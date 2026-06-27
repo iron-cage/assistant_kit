@@ -23,7 +23,7 @@ claude_runner serves two distinct consumers from one crate:
 
 **Trace mode:** `--trace` prints environment variables and the full command to stderr (like `set -x`), then executes normally. This is independent of verbosity level.
 
-**Stdin file piping:** `--file <PATH>` opens the given file and pipes its content as standard input to the `claude` subprocess. Equivalent to `cat file | clr -p "..."` but without a shell pipeline. The file is opened at spawn time; a non-readable path causes `clr` to exit with an error.
+**Stdin file piping:** `--file <PATH>` opens the given file and pipes its content as standard input to the `claude` subprocess. Equivalent to `cat file | clr -p "..."` but without a shell pipeline. The file is opened at spawn time; a non-readable path causes `clr` to exit with an error. Applies to `run`, `ask`, and `isolated` subcommands (isolated uses a separate `run_isolated_with_stdin_file()` code path in `credential.rs`).
 
 **Output fence stripping:** `--strip-fences` post-processes captured stdout after the subprocess exits: the first and last markdown code fence lines (`` ``` `` with optional language tag) are removed and the content between them is emitted unchanged. If no fence pair is found, stdout passes through unmodified.
 
@@ -42,7 +42,9 @@ pipe-separated list of expected values (case-insensitive, whitespace-trimmed). T
 `--expect-strategy` parameter controls mismatch handling: `fail` (exit 3, default), `retry`
 (re-invoke up to `--retry-on-validation` times then exit 3), or `default:<VALUE>` (output fallback
 and exit 0). Exit code 3 is exclusive to `--expect` mismatch; it does not overlap with
-subprocess exit codes. Both parameters are silently ignored in interactive mode.
+subprocess exit codes. Both parameters are silently ignored in interactive mode. Also supported by
+`isolated` — with the restriction that `retry` strategy is unsupported (exits 1 with error:
+one-shot semantics have no retry loop); `fail` and `default:<VALUE>` work identically.
 
 **Session concurrency gate:** `--max-sessions <N>` (default 30, 0 = unlimited) counts active
 `claude` processes via `/proc` scan before spawning a subprocess. When the live count is at or
@@ -85,6 +87,10 @@ table with Name, Category, and Description columns. Static data sourced from
 **3-tier retry hierarchy:** When a subprocess exits with a classifiable error, the runner retries according to a 3-tier resolution: Tier 1 (`--retry-override`) forces count/delay for all classes; Tier 2 (`--retry-on-<class>`/`--<class>-delay`) overrides per error class; Tier 3 (`--retry-default`/`--retry-default-delay`) provides fallback defaults (count=2, delay=30s). All 8 error classes use the same 3-tier resolution with no class-level default overrides. The 8 error classes are Transient, Account, Auth, Service, Process, Validation, Runner, and Unknown. Each class maps from `ErrorKind` via `classify_to_class()` in `execution.rs`. Stderr error labels use `[Class]` prefix for traceability (e.g., `"[Account] You've hit your limit · resets 2:40pm — retrying in 30s (attempt 1/3)…"`). Validation class retries are only active when `--expect-strategy retry` is set. Parameters 040–057 cover all 20 retry flags; each has a `CLR_*` env var fallback.
 
 **Error output in summary mode:** In summary mode (default), `first_message()` in `execution.rs` extracts the `"result"` field from the JSON envelope when stdout is JSON — yielding a human-readable single line (e.g., `"You've hit your limit · resets 2:40pm"`) rather than the full raw JSON blob. On error exhaustion, captured stdout is rendered through `render_summary()` before emit to stderr — the same formatted key:val output produced on the success path. In raw mode (`--output-style raw`), both paths emit stdout unmodified.
+
+**Journaling:** `--journal <level>` (default: `full`) enables automatic event recording via `claude_journal::JournalWriter`. At `full` level all event fields are recorded including complete stdout and stderr (each truncated at 1 MB); at `meta` only metadata (timestamp, command, exit code, duration, cost, model) is recorded; at `off` journaling is disabled. `--journal-dir <path>` overrides the default `~/.clr/journal/` directory. Events are emitted at eight execution boundaries: subprocess exit (`execution`), credential ops completion (`credential`), concurrency gate block (`gate_wait`), rate-limit retry (`retry`), watchdog timeout (`timeout`), runner retry (`runner_retry`), expect-validation retry (`validation_retry`), and interactive session start/end (`interactive`). Journal write failures are logged to stderr at verbosity >= 3 but never alter `clr`'s exit code — journaling is best-effort. Applies to all four executing subcommands: `run`, `ask`, `isolated`, `refresh`. See [feature/002_journaling_integration.md](002_journaling_integration.md).
+
+**Isolated subcommand extended params (Plan 034):** `clr isolated` gained six params that mirror existing `run`/`ask` capabilities: `--dry-run` (print injected temp-HOME command without creating a directory or spawning; exit 0), `--dir <PATH>` (working directory injected into subprocess; validated before spawn; `CLR_DIR` env fallback), `--add-dir <PATH>` (repeatable; additional read paths; `CLR_ADD_DIR` env fallback), `--file <PATH>` (pipe file content as stdin; pre-spawn existence check; exit 1 if missing), `--expect <VALS>` (pipe-separated match patterns; case-insensitive trimmed), `--expect-strategy <STRAT>` (`fail`→exit 3, `default:<V>`→exit 0; `retry` unsupported → exit 1). `isolated` param count went from 6 to 12; it now shares 9 params with `run`/`ask` (was 3). Exit code 3 applies to `isolated` on `--expect` mismatch with `fail` strategy.
 
 **Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile` (via `--session-dir` flag passthrough or resolved externally).
 
@@ -135,7 +141,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/cli_args_ext_test.rs` | T36–T49, S58–S79 extended flags; BUG-212, BUG-215 reproducers |
 | `../../tests/dry_run_test.rs` | Validates dry-run preview output including all injected flags |
 | `../../tests/execution_mode_test.rs` | E01–E13 live mode dispatch via fake claude binary |
-| `../../tests/isolated_test.rs` | Credential-isolated and refresh command execution; trace output for isolated/refresh |
+| `../../tests/isolated_test.rs` | `clr isolated` parsing, error cases, lim_it live runs, unknown-subcommand detection; Plan 034: `--dry-run` (IT-12–15), `--dir`/`--add-dir` (IT-16–20), `--file` (IT-21–23), `--expect`/`--expect-strategy` (IT-24–27) |
 | `../../tests/output_file_test.rs` | T01–T06 --output-file tee behavior, write errors, dry-run skip |
 | `../../tests/expect_validation_test.rs` | T01–T17 --expect / --expect-strategy / --retry-on-validation validation loop |
 | `../../tests/bug_reproducers_247_test.rs` | BUG-247 stdout-to-stderr forwarding on subprocess failure |
@@ -197,7 +203,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/ps_columns_test.rs` | EC-1–EC-10 --columns custom column selection, BUG-303 |
 | `../../tests/ps_wide_test.rs` | EC-1–EC-5 --wide optional column display |
 | `../../tests/ps_flags_test.rs` | IT-30–IT-40, US-18–US-26, E41–E42 session flag emoji computation |
-| `../../tests/journal_integration_test.rs` | EC-1–EC-10 --journal/--journal-dir event emission, level filtering, retry/timeout events |
+| `../../tests/journal_integration_test.rs` | EC-1–EC-15 --journal/--journal-dir event emission, level filtering, retry/timeout/gate_wait/validation_retry events, truncation, CLI-wins precedence |
 
 ### Provenance
 

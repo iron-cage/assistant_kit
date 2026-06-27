@@ -14,7 +14,8 @@ use std::{ collections::HashMap, path::PathBuf, time::SystemTime };
 /// Resolve the journal directory from `dir::` param, `CLR_JOURNAL_DIR` env,
 /// or the default `~/.clr/journal/`.
 #[ must_use ]
-pub fn resolve_journal_dir( params : &HashMap< String, String > ) -> PathBuf
+#[ inline ]
+pub fn resolve_journal_dir< S : ::std::hash::BuildHasher >( params : &HashMap< String, String, S > ) -> PathBuf
 {
   if let Some( d ) = params.get( "dir" )
   {
@@ -38,6 +39,7 @@ pub fn resolve_journal_dir( params : &HashMap< String, String > ) -> PathBuf
 /// # Errors
 ///
 /// Returns an error when the input is not a valid `<number><unit>` pair.
+#[ inline ]
 pub fn parse_duration( s : &str ) -> Result< Duration, String >
 {
   let err = || format!( "invalid duration '{s}' (expected e.g. 30s, 5m, 1h, 7d, 2w)" );
@@ -61,6 +63,7 @@ pub fn parse_duration( s : &str ) -> Result< Duration, String >
 /// # Errors
 ///
 /// Returns an error listing all valid type names when the input is not recognised.
+#[ inline ]
 pub fn parse_event_type( s : &str ) -> Result< EventType, String >
 {
   EventType::parse( s ).ok_or_else( || format!(
@@ -75,7 +78,8 @@ pub fn parse_event_type( s : &str ) -> Result< EventType, String >
 ///
 /// Returns a descriptive error string when any typed param (`since`, `until`,
 /// `type`, `exit_code`, `limit`) fails to parse.
-pub fn build_filter( params : &HashMap< String, String > ) -> Result< JournalFilter, String >
+#[ inline ]
+pub fn build_filter< S : ::std::hash::BuildHasher >( params : &HashMap< String, String, S > ) -> Result< JournalFilter, String >
 {
   let mut f = JournalFilter::default();
   if let Some( s ) = params.get( "since" )
@@ -111,6 +115,7 @@ pub fn build_filter( params : &HashMap< String, String > ) -> Result< JournalFil
 
 /// Returns `true` when `NO_COLOR` is set in the environment.
 #[ must_use ]
+#[ inline ]
 pub fn no_color() -> bool
 {
   std::env::var_os( "NO_COLOR" ).is_some()
@@ -118,6 +123,7 @@ pub fn no_color() -> bool
 
 /// Wrap `s` in ANSI bold codes unless `NO_COLOR` is set.
 #[ must_use ]
+#[ inline ]
 pub fn bold( s : &str ) -> String
 {
   if no_color() { s.to_owned() }
@@ -126,6 +132,7 @@ pub fn bold( s : &str ) -> String
 
 /// Format a millisecond duration as a human-readable string.
 #[ must_use ]
+#[ inline ]
 pub fn format_ms( ms : u64 ) -> String
 {
   if ms < 1_000 { format!( "{ms}ms" ) }
@@ -135,6 +142,7 @@ pub fn format_ms( ms : u64 ) -> String
 
 /// Return the event table header line.
 #[ must_use ]
+#[ inline ]
 pub fn event_header() -> String
 {
   format!(
@@ -145,6 +153,7 @@ pub fn event_header() -> String
 
 /// Format one event record as a compact table row string.
 #[ must_use ]
+#[ inline ]
 pub fn format_event_row( ev : &EventRecord ) -> String
 {
   let ts     = ev.ts.get( ..16 ).unwrap_or( &ev.ts );
@@ -167,7 +176,8 @@ pub fn format_event_row( ev : &EventRecord ) -> String
 ///
 /// Returns `Err` when any filter param is invalid or when the format is not
 /// `"table"` or `"json"`.
-pub fn list_output( params : &HashMap< String, String >, dir : PathBuf ) -> Result< String, String >
+#[ inline ]
+pub fn list_output< S : ::std::hash::BuildHasher >( params : &HashMap< String, String, S >, dir : PathBuf ) -> Result< String, String >
 {
   let mut filter = build_filter( params )?;
   if filter.limit.is_none() { filter.limit = Some( 50 ); }
@@ -205,7 +215,8 @@ pub fn list_output( params : &HashMap< String, String >, dir : PathBuf ) -> Resu
 ///
 /// Returns `Err` when any filter param is invalid or `by` is not `"day"` or
 /// `"model"`.
-pub fn stats_output( params : &HashMap< String, String >, dir : PathBuf ) -> Result< String, String >
+#[ inline ]
+pub fn stats_output< S : ::std::hash::BuildHasher >( params : &HashMap< String, String, S >, dir : PathBuf ) -> Result< String, String >
 {
   let mut filter = build_filter( params )?;
   if filter.since.is_none() { filter.since = Some( Duration::from_secs( 7 * 86_400 ) ); }
@@ -264,7 +275,8 @@ where
 ///
 /// Returns `Err` when any filter param is invalid or the required `pattern::`
 /// param is absent.
-pub fn search_output( params : &HashMap< String, String >, dir : PathBuf ) -> Result< String, String >
+#[ inline ]
+pub fn search_output< S : ::std::hash::BuildHasher >( params : &HashMap< String, String, S >, dir : PathBuf ) -> Result< String, String >
 {
   let pattern = params.get( "pattern" )
     .cloned()
@@ -302,6 +314,7 @@ pub fn search_output( params : &HashMap< String, String >, dir : PathBuf ) -> Re
 
 /// `.status` — return a journal health string.
 #[ must_use ]
+#[ inline ]
 pub fn status_output( dir : PathBuf ) -> String
 {
   let reader = JournalReader::open( dir.clone() );
@@ -323,7 +336,8 @@ pub fn status_output( dir : PathBuf ) -> String
 /// # Errors
 ///
 /// Returns `Err` when `keep::` or `dry_run::` params are invalid.
-pub fn prune_output( params : &HashMap< String, String >, dir : PathBuf ) -> Result< String, String >
+#[ inline ]
+pub fn prune_output< S : ::std::hash::BuildHasher >( params : &HashMap< String, String, S >, dir : PathBuf ) -> Result< String, String >
 {
   let keep_str = params.get( "keep" ).map_or( "30d", String::as_str );
   let keep_dur = parse_duration( keep_str )?;
@@ -364,14 +378,15 @@ pub fn prune_output( params : &HashMap< String, String >, dir : PathBuf ) -> Res
   let mut out = lines.join( "\n" );
   out.push( '\n' );
   out.push( '\n' );
-  out.push_str( if dry_run
+  let msg = if dry_run
   {
-    &format!( "{count} file(s) would be pruned." )
+    format!( "{count} file(s) would be pruned." )
   }
   else
   {
-    &format!( "{count} file(s) pruned." )
-  } );
+    format!( "{count} file(s) pruned." )
+  };
+  out.push_str( &msg );
   Ok( out )
 }
 
@@ -380,6 +395,7 @@ pub fn prune_output( params : &HashMap< String, String >, dir : PathBuf ) -> Res
 /// # Errors
 ///
 /// Returns `Err` for unknown format names.
+#[ inline ]
 pub fn build_export_content( events : &[ EventRecord ], format : &str ) -> Result< String, String >
 {
   match format
@@ -441,7 +457,8 @@ pub fn build_export_content( events : &[ EventRecord ], format : &str ) -> Resul
 ///
 /// Returns `Err` when `output::` is missing, any filter param is invalid,
 /// the format is unknown, or the file cannot be written.
-pub fn export_output( params : &HashMap< String, String >, dir : PathBuf ) -> Result< String, String >
+#[ inline ]
+pub fn export_output< S : ::std::hash::BuildHasher >( params : &HashMap< String, String, S >, dir : PathBuf ) -> Result< String, String >
 {
   let output  = params.get( "output" )
     .cloned()

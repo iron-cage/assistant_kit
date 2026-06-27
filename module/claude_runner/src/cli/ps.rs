@@ -807,11 +807,12 @@ fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
 
   // Scan for the last Form A user line (string `"content"`, not array).
   //
-  // Fix(BUG-297): the old predicate `.find(| l | l.contains(r#""type":"user""#))`
-  //   returned the last `"type":"user"` line, which in any active session is a
-  //   Form B tool_result entry with `"content":[...]` — not the human's question.
-  // Fix: additionally require `"content":"` (string value) and exclude `"content":[`
-  //   (array value). Form B always serialises the outer content as a JSON array.
+  // Fix(BUG-297): require `"content":"` (string) and exclude `"content":[` (array).
+  // Root cause: `.find(|l| l.contains("\"type\":\"user\""))` returned the last user line,
+  //   which in any active session is a Form B tool_result with `"content":[...]`, not the
+  //   human's question — the old predicate did not distinguish Form A from Form B.
+  // Pitfall: tool_result messages have `"type":"user"` but array content; must exclude
+  //   `"content":[` to distinguish Form A (human question) from Form B (tool result).
   let content   = std::fs::read_to_string( jsonl_path ).ok()?;
   let last_user = content.lines().rev()
     .find( | l |
@@ -820,8 +821,11 @@ fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
         && !l.contains( r#""content":["# )
     )?;
 
-  // Fix(BUG-296): Claude's Form A stores the human message in `"content":"..."`, not
-  //   `"text":"..."`. The old marker matched nothing, silently returning `None`.
+  // Fix(BUG-296): Claude Form A stores human text in `"content":"..."`, not `"text":"..."`.
+  // Root cause: old marker used `"text":"..."` (Messages API array-element key), but Form A
+  //   serialises the entire human turn as `"content":"<text>"` at the message level.
+  // Pitfall: Messages API uses `"text"` inside content arrays; Form A uses `"content"` directly
+  //   as a string value — searching for `"text":"..."` always returns None for Form A lines.
   let marker     = r#""content":""#;
   let text_start = last_user.find( marker ).map( | i | i + marker.len() )?;
   let rest       = &last_user[ text_start .. ];

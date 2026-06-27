@@ -56,6 +56,14 @@ mod cli;
 #[ doc( hidden ) ]
 pub use cli::strip_fences;
 
+// render_summary and resolve_fields are used by tests/summary_unit_test.rs.
+// The allow(unused_imports) suppresses the false-positive lint that fires because
+// the lib-crate compiler cannot see external test consumers at library compile time.
+#[ cfg( feature = "enabled" ) ]
+#[ doc( hidden ) ]
+#[ allow( unused_imports ) ]
+pub use cli::{ render_summary, resolve_fields };
+
 #[ cfg( feature = "enabled" ) ]
 /// Run the `clr`/`claude_runner` CLI.
 ///

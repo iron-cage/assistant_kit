@@ -58,9 +58,11 @@ interfere with the primary execution path.
 | AC-010 | Retry events include error_class, attempt number, and delay |
 | AC-011 | Timeout events include timeout_secs and partial_stdout |
 | AC-012 | Interactive session events include session_duration |
+| AC-013 | Validation-retry events are emitted when `--expect-strategy retry` fires a retry |
 
 ### Cross-References
 
+- Parent feature: [feature/001_runner_tool.md](001_runner_tool.md) — runner tool design (journaling section)
 - Library API: [claude_journal/docs/api/001_journal_writer.md](../../claude_journal/docs/api/001_journal_writer.md)
 - Event schema: [claude_journal/docs/feature/002_event_schema.md](../../claude_journal/docs/feature/002_event_schema.md)
 - Viewer: [claude_journal_viewer/docs/feature/001_cli_viewing.md](../../claude_journal_viewer/docs/feature/001_cli_viewing.md)
@@ -68,4 +70,4 @@ interfere with the primary execution path.
 
 ### Since
 
-Planned (unreleased)
+1.2.0

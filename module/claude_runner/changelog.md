@@ -18,6 +18,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`clr isolated` param gap closure** (Plan 034, TSK-328–331)
+  - `--dry-run` (TSK-328): print injected command without creating temp HOME or spawning; exit 0; consistent with `run`/`ask`
+  - `--dir <PATH>` / `--add-dir <PATH>` (TSK-329): set working directory and grant additional read paths; validated before spawn; env fallbacks `CLR_DIR` / `CLR_ADD_DIR`
+  - `--file <PATH>` (TSK-330): pipe file content as stdin to the isolated subprocess; pre-spawn existence check (exit 1 if missing)
+  - `--expect <VALS>` / `--expect-strategy <STRAT>` (TSK-331): assert output matches pipe-separated patterns (case-insensitive, trimmed); `fail` → exit 3; `default:<V>` → print V, exit 0; `retry` unsupported (one-shot semantics) → exit 1
+  - `isolated` param count: 6 → 12; shared params with `run`/`ask` now 9 (was 3)
+  - Exit code 3 now applies to `isolated` (`--expect` mismatch with `fail` strategy)
+  - Tests: IT-12–IT-27 in `tests/isolated_test.rs` (16 new cases); spec: `tests/docs/cli/command/03_isolated.md`
+  - Docs: `docs/cli/command/02_isolated.md`, `docs/cli/parity/001_run_ask_isolated.md`
+
 - **Event journaling integration** (Plan 033, TSK-326)
   - `--journal <full|meta|off>` controls event emission level; `full` (default) captures stdout/stderr (≤1MB each), `meta` records metadata only, `off` disables journaling
   - `--journal-dir <PATH>` overrides journal directory; 3-tier resolution: CLI flag > `CLR_JOURNAL_DIR` env var > `~/.clr/journal/`
@@ -26,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Parameters: [`--journal`](docs/cli/param/072_journal.md) (072), [`--journal-dir`](docs/cli/param/073_journal_dir.md) (073)
   - Env vars: `CLR_JOURNAL`, `CLR_JOURNAL_DIR`; invalid `CLR_JOURNAL` exits 1
   - New dependency: `claude_journal` (workspace)
-  - Tests: `journal_integration_test.rs` (EC-1–EC-10)
+  - Tests: `journal_integration_test.rs` (EC-1–EC-15); EC-11..EC-13: gate_wait, validation_retry, read-only isolation; EC-14: CLI-wins-over-env precedence; EC-15: 1MB truncation marker
 
 - **Help split: `RUNNER OPTIONS` / `CLAUDE CODE OPTIONS (forwarded)` sections** (TSK-232)
   - `clr --help` now uses `CliHelpTemplate` from `cli_fmt ^0.9` instead of 262-line hand-rolled `print!` calls

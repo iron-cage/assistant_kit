@@ -18,7 +18,7 @@
 //!
 //! | Test | Spec | Scenario |
 //! |------|------|----------|
-//! | `wd1_workspace_members_completeness` | WD-1 | All 17 documented crates in members list |
+//! | `wd1_workspace_members_completeness` | WD-1 | All 19 documented crates in members list |
 //! | `pi1_no_private_path_deps` | PI-1 | No workspace path dep points outside the workspace |
 //! | `pi2_out_of_workspace_path_deps_have_version` | PI-2 | Out-of-workspace path deps carry version field |
 //! | `vs1_workspace_package_version_declared` | VS-1 | `[workspace.package]` declares a version |
@@ -169,7 +169,7 @@ fn layer_of( name : &str ) -> Option< u8 >
 
 // ──────────────────────── feature: workspace design ───────────────────────
 
-/// WD-1: All 17 documented workspace members are present in `[workspace.members]`.
+/// WD-1: All 19 documented workspace members are present in `[workspace.members]`.
 ///
 /// ## Root Cause (why this test exists)
 /// Workspace membership controls which crates are built and tested in CI.
