@@ -14,7 +14,7 @@ Interaction tests for Group 4 (Sort Control: `sort::`, `desc::`, `prefer::`). Se
 
 ### CC-1: `sort::` and `desc::` have no effect on `format::json` output
 
-- **Behavioral Divergence:** `sort::renew format::json` vs `sort::name format::json` -- JSON array order is alphabetical in both cases, while text output would differ.
+- **Behavioral Divergence:** `sort::renew format::json` vs `sort::name format::json` — JSON array order is alphabetical in both cases, while text output would differ.
 - **Given:** Two saved accounts: `b@x.com` and `a@x.com`; both with credential files missing accessToken (will appear with error in JSON but in same order as text accounts).
 - **When-A:** `clp .usage sort::name format::json`
 - **When-B:** `clp .usage sort::renew format::json`

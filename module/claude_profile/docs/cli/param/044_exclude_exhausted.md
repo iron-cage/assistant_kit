@@ -1,6 +1,6 @@
 # Parameter :: 44. `exclude_exhausted::`
 
-Filters the `.usage` table to hide accounts in status groups 2–4 (🟡 h-exhausted, 🟡 weekly-exhausted, 🔴 Red), showing only 🟢 Green accounts.
+Filters the `.usage` table to hide accounts in status groups 2–4 (🟡 h-exhausted, 🟡 weekly-exhausted, 🔴 Dead), showing only 🟢 Green accounts.
 
 - **Default:** `0`
 - **Constraints:** `0`, `1`, `false`, `true`

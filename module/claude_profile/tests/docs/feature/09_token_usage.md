@@ -12,14 +12,14 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-04 | Live token match governs `✓`, not `_active` marker | AC-02 | IT-2, IT-13 |
 | FT-05 | Missing credential store → exit 2 | AC-06 | IT-6, IT-7 |
 | ~~FT-06~~ | ~~Endurance strategy tiebreaker: expiry breaks 5h Left tie~~ (REMOVED — endurance strategy deleted) | ~~AC-09~~ | ~~IT-11~~ |
-| FT-07 | Status emoji `🟢`/`🟡`/`🔴` correct per account state (4 variants incl. both-exhausted) | AC-18 | IT-40, IT-41 |
+| FT-07 | Status emoji `🟢`/`🟡`/`🔴` correct per account state (4 variants incl. both-exhausted → 🟡) | AC-18 | IT-40, IT-41 |
 | FT-08 | Strict boundary: 5h at 15%, 7d at 5% — at boundary → `🟡`; above → `🟢` | AC-19 | — |
 | FT-09 | `format::json` output contains no status emoji | AC-20 | IT-42 |
 | FT-10 | After token refresh, `~Renews` shows actual date (not `?`) | BUG-171 | — |
 | FT-11 | `5h Left` / `7d Left` values embed per-column emoji prefix | AC-21 | — |
 | FT-12 | `Sub` / `7d Son Reset` hidden by default; `cols::+` reveals them | AC-22 | — |
 | FT-13 | Invalid `cols::` column ID exits 1 with error | AC-23 | — |
-| FT-14 | Four-group outer ordering: 🟢 before 🟡 before 🔴 independent of sort | AC-24 | — |
+| FT-14 | Four-group outer ordering: 🟢 before 🟡 (G2+G3) before 🔴 independent of sort | AC-24 | — |
 | FT-15 | `format_duration_secs` capped to 2 significant time units | AC-25 | — |
 | FT-16 | Within 🟡 group: h-exhausted (`5h Left ≤ 15%`) before weekly-exhausted | AC-26 | — |
 | FT-17 | `~Renews` shows exact `in Xh Ym` (no `~`) when `_renewal_at` set | AC-27 | — |
@@ -39,7 +39,8 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-31 | Sessions table hidden when ≤1 `_active_*` marker (single-session default) | AC-33 | — |
 | FT-32 | `who::0` suppresses sessions table; `who::1` forces it on | AC-34 | — |
 | FT-33 | Cancelled account (`billing_type="none"`) gets `🔴` in `●` column | AC-18 | — |
-| FT-34 | Both-exhausted account (5h ≤ 15% AND 7d ≤ 5%) gets `🔴`, not `🟡` (BUG-319) | AC-18, AC-26 | — |
+| FT-34 | Both-exhausted account (5h ≤ 15% AND 7d ≤ 5%) gets `🟡`, not `🔴` (BUG-321) | AC-18, AC-26 | — |
+| FT-35 | Both-exhausted (🟡) sorts in G3 weekly-exhausted group, before G4 Dead (🔴) | AC-24, AC-26 | — |
 | — | Table output rendered by `data_fmt` crate (`use data_fmt::…` in `render.rs`) | AC-04 | Structural (code review — all render paths use `data_fmt`) |
 | — | `Expires` column: `"in Xh Ym"` / `"EXPIRED"` from `compute_expires_cell()` | AC-07 | IT-003, IT-010 (command-level coverage) |
 | — | `5h Left`, `7d Left`, `7d(Son)`, `5h Reset`, `7d Reset` from `OauthUsageData` | AC-08 | Indirect — FT-07/FT-08/FT-11/FT-14/FT-15/FT-16 all depend on these columns |
@@ -89,9 +90,10 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-31 | Sessions table hidden when ≤1 marker | AC-33 | Sessions Table |
 | FT-32 | `who::0` suppresses sessions table; `who::1` forces it on | AC-34 | Sessions Table |
 | FT-33 | Cancelled account (`billing_type="none"`) gets `🔴` in `●` column regardless of quota values | AC-18 | Status Emoji |
-| FT-34 | Both-exhausted account (5h ≤ 15% AND 7d ≤ 5%) gets `🔴` in `●` column, not `🟡` (BUG-319) | AC-18, AC-26 | Status Emoji |
+| FT-34 | Both-exhausted account (5h ≤ 15% AND 7d ≤ 5%) gets `🟡` in `●` column, not `🔴` (BUG-321) | AC-18, AC-26 | Status Emoji |
+| FT-35 | Both-exhausted (🟡) sorts in G3 weekly-exhausted group, before G4 Dead (🔴) | AC-24, AC-26 | Sort Order |
 
-**Total:** 34 FT cases
+**Total:** 35 FT cases
 
 ---
 
@@ -161,14 +163,15 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 ### FT-07: Status emoji correct for each of four account states
 
 - **Given:** Unit test. Four `AccountQuota` variants:
-  - Variant A: `result = Err("missing accessToken".to_string())` → expected `🔴`
+  - Variant A: `result = Err("missing accessToken".to_string())` → expected `🔴` (dead: error)
   - Variant B: `result = Ok(data)` where `five_hour.utilization = 10.0` (90% left), `seven_day.utilization = 10.0` (90% left) → expected `🟢`
   - Variant C: `result = Ok(data)` where `five_hour.utilization = 97.0` (3% left), `seven_day.utilization = 10.0` (90% left) → expected `🟡` (h-exhausted only)
-  - Variant D: `result = Ok(data)` where `five_hour.utilization = 97.0` (3% left), `seven_day.utilization = 97.0` (3% left) → expected `🔴` (both-exhausted; Fix BUG-319)
+  - Variant D: `result = Ok(data)` where `five_hour.utilization = 97.0` (3% left), `seven_day.utilization = 97.0` (3% left) → expected `🟡` (both-exhausted → G3 weekly-exhausted; recoverable; Fix BUG-321)
 - **When:** `status_emoji(&aq)` called for each variant.
-- **Then:** Returns `"🔴"` for A, `"🟢"` for B, `"🟡"` for C, `"🔴"` for D.
+- **Then:** Returns `"🔴"` for A, `"🟢"` for B, `"🟡"` for C, `"🟡"` for D.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_status_emoji_red`, `test_status_emoji_green`, `test_status_emoji_yellow`, `mre_bug319_both_exhausted_status_emoji_is_red`
+- **Note:** Variant D was previously `"🔴"` (BUG-319 fix). BUG-321 reverses this — both-exhausted is recoverable and must show 🟡, not 🔴. Dead (🔴) is only for error or cancelled.
+- **Source fn:** `test_status_emoji_red`, `test_status_emoji_green`, `test_status_emoji_yellow`, `mre_bug321_both_exhausted_status_emoji_is_yellow`
 - **Source:** [009_token_usage.md AC-18](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -249,14 +252,14 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ---
 
-### FT-14: Four-group outer ordering: `🟢` before `🟡` before `🔴` regardless of sort strategy
+### FT-14: Four-group outer ordering: `🟢` before `🟡` (G2+G3) before `🔴` regardless of sort strategy
 
 - **Given:** Unit test. Three `AccountQuota` entries (alphabetical order: alice → bob → carol):
-  - `alice@x.com`: `result = Err(...)` → 🔴 group
-  - `bob@x.com`: `result = Ok(data)` where `five_hour.utilization = 97.0` (3% left) → 🟡 group
-  - `carol@x.com`: `result = Ok(data)` where `five_hour.utilization = 10.0` (90% left) → 🟢 group
+  - `alice@x.com`: `result = Err(...)` → 🔴 Dead group (G4)
+  - `bob@x.com`: `result = Ok(data)` where `five_hour.utilization = 97.0` (3% left) → 🟡 group (G2 h-exhausted)
+  - `carol@x.com`: `result = Ok(data)` where `five_hour.utilization = 10.0` (90% left) → 🟢 group (G1)
 - **When:** Four-group status partition applied; alphabetical sort within each group.
-- **Then:** Output order is `carol@x.com` (🟢) → `bob@x.com` (🟡) → `alice@x.com` (🔴). Outer group ordering 🟢 → 🟡 → 🔴 is preserved regardless of alphabetical order. (Within-🟡 sub-grouping — h-exhausted before weekly-exhausted — is tested by FT-16.)
+- **Then:** Output order is `carol@x.com` (🟢) → `bob@x.com` (🟡) → `alice@x.com` (🔴). Outer group ordering 🟢 → 🟡 → 🔴 is preserved regardless of alphabetical order. (Within-🟡 sub-grouping — h-exhausted (G2) before weekly-exhausted (G3, including both-exhausted) — is tested by FT-16.)
 - **Exit:** n/a (unit test — order assertion on sorted list)
 - **Source fn:** `test_three_tier_grouping_green_before_yellow_before_red` (in `src/usage/mod.rs`)
 - **Source:** [009_token_usage.md AC-24](../../../docs/feature/009_token_usage.md)
@@ -284,10 +287,10 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - `b@x.com`: `five_hour.utilization=99.0` (1% left), `seven_day.utilization=30.0` (70% left) → 🟡 group, **h-exhausted** sub-group
   - `c@x.com`: `five_hour.utilization=97.0` (3% left), `seven_day.utilization=50.0` (50% left) → 🟡 group, **h-exhausted** sub-group (5h ≤ 15%)
   - `d@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=10.0` (90% left) → 🟢 group
-  - Alpha sort would produce: a → b → c → d. Four-group partition would place d (🟢) first, then a, b, c (all 🟡), then any 🔴.
+  - Alpha sort would produce: a → b → c → d. Four-group partition would place d (🟢) first, then a, b, c (all 🟡), then any 🔴 Dead.
 - **When:** `render_text(&accounts, SortStrategy::Name, None, PreferStrategy::Any, &ColsVisibility::default_set(), None, None)`
 - **Then:** Output row order is: `d@x.com` (🟢), then among 🟡 — `b@x.com` and `c@x.com` (h-exhausted, in alpha order), then `a@x.com` (weekly-exhausted). `a@x.com` must appear AFTER both `b@x.com` and `c@x.com` despite being alpha-first.
-- **Edge case:** An account with both `5h Left ≤ 15%` AND `7d Left ≤ 5%` falls in the **🔴 Red group** (G4), NOT the 🟡 h-exhausted group (Fix BUG-319). Such accounts are sorted after all 🟡 rows, not within them.
+- **Edge case:** An account with both `5h Left ≤ 15%` AND `7d Left ≤ 5%` falls in **G3 weekly-exhausted** (🟡), NOT G4 Dead (🔴) (Fix BUG-321). The 7d constraint is binding — when 7d resets, 5h will have long since reset too. Both-exhausted and weekly-exhausted have identical recovery behavior. FT-35 tests this boundary.
 - **Exit:** n/a (unit test — position assertion via `output.find()`)
 - **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (in `src/usage/mod.rs`)
 - **Source:** [009_token_usage.md AC-26](../../../docs/feature/009_token_usage.md)
@@ -538,14 +541,29 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ---
 
-### FT-34: Both-exhausted account (5h ≤ 15% AND 7d ≤ 5%) gets `🔴`, not `🟡` (BUG-319)
+### FT-34: Both-exhausted account (5h ≤ 15% AND 7d ≤ 5%) gets `🟡`, not `🔴` (BUG-321)
 
 - **Given (unit test):** One `AccountQuota`:
   - `result = Ok(OauthUsageData)` with `five_hour.utilization = 94.0` (6% left) and `seven_day.utilization = 96.0` (4% left) — both dimensions below their exhaustion thresholds
   - Active subscription (`billing_type` not `"none"`)
 - **When:** `status_emoji(&aq)` is called.
-- **Then:** Returns `"🔴"` — both-exhausted (G4) maps to Red. Before Fix(BUG-319), the 2-branch conditional `else { "🟡" }` returned `"🟡"` for this case, collapsing G2 (h-exhausted), G3 (weekly-exhausted), and G4 (both-exhausted) into a single branch.
+- **Then:** Returns `"🟡"` — both-exhausted (G3 weekly-exhausted) is recoverable by waiting; it is NOT dead. `"🔴"` (Dead) is reserved for `result = Err` or `billing_type="none"` only.
 - **Exit:** n/a (unit test)
-- **Note:** Fix(BUG-319): changed to 3-arm match in `format.rs`: `(true,true)→🟢`, `(false,false)→🔴`, `_→🟡`. `status_group_of()` in `sort.rs` already classified both-exhausted as G4 (Red) — sort order was correct; only the displayed emoji was wrong.
-- **Source fn:** `mre_bug319_both_exhausted_status_emoji_is_red` (in `src/usage/format_tests.rs`)
+- **Note:** Fix(BUG-321): `(false,false)` arm in `status_emoji()` changes from `"🔴"` to `"🟡"`. Fix(BUG-321) in `status_group_of()`: `(false,false)` arm changes from `StatusGroup::Red` to `StatusGroup::WeeklyExhausted` — no new enum variant, no array resize. The BUG-319 fix (`(false,false)→🔴`) was premise-incorrect — both-exhausted and weekly-exhausted have identical recovery behavior (7d is the binding constraint). `mre_bug319_both_exhausted_status_emoji_is_red` assertion flips from 🔴 → 🟡.
+- **Source fn:** `mre_bug321_both_exhausted_status_emoji_is_yellow` (in `src/usage/format_tests.rs`)
 - **Source:** [009_token_usage.md AC-18, AC-26](../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-35: Both-exhausted (🟡) sorts in G3 weekly-exhausted group, before G4 Dead (🔴)
+
+- **Given (unit test):** Two `AccountQuota` entries:
+  - `both@x.com`: `result = Ok(data)` with `five_hour.utilization = 94.0` (6% left) and `seven_day.utilization = 96.0` (4% left) — both-exhausted → G3 weekly-exhausted (🟡)
+  - `dead@x.com`: `result = Err("missing accessToken")` — G4 Dead (🔴)
+  - Input order: dead first (alpha order `both` > `dead` reversed for test clarity)
+- **When:** Four-group status partition applied; `sort::name` applied.
+- **Then:** `both@x.com` (G3 🟡) appears before `dead@x.com` (G4 🔴) in output. G3 < G4 partition index enforces this regardless of alphabetical order. Fix(BUG-321): `(false,false)` maps to `StatusGroup::WeeklyExhausted` (G3), not `StatusGroup::Red` (G4).
+- **Exit:** n/a (unit test — order assertion)
+- **Note:** Both-exhausted accounts WILL recover when quota resets (7d resets, 5h will also have reset); dead accounts require external action. The 7d constraint is binding for both both-exhausted and weekly-exhausted — identical recovery behavior.
+- **Source fn:** `mre_bug321_both_exhausted_sorts_in_weekly_group` (in `src/usage/sort.rs` or `src/usage/mod.rs`)
+- **Source:** [009_token_usage.md AC-24, AC-26](../../../docs/feature/009_token_usage.md)

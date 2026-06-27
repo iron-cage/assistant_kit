@@ -52,8 +52,11 @@ fn status_group_of( aq : &AccountQuota ) -> StatusGroup
   {
     ( true,  true  ) => StatusGroup::Green,
     ( false, true  ) => StatusGroup::HExhausted,
-    ( true,  false ) => StatusGroup::WeeklyExhausted,
-    ( false, false ) => StatusGroup::Red,
+    // Fix(BUG-321): both-exhausted (5h ≤ 15% AND 7d ≤ 5%) → G3 WeeklyExhausted, not G4 Red.
+    // 7d is the binding constraint: when 7d resets, 5h will have long since reset.
+    // Recovery is identical to single-weekly-exhausted — no separate group needed.
+    // Dead classification (result=Err / billing_type="none") fires BEFORE this match.
+    ( _, false ) => StatusGroup::WeeklyExhausted,
   }
 }
 
@@ -382,24 +385,37 @@ mod tests
     );
   }
 
-  /// AC-12 — 4-group partition: weekly-exhausted (Group 3) ranks above red (Group 4).
+  /// AC-12 — 4-group partition: weekly-exhausted (Group 3) ranks above dead/red (Group 4).
   ///
-  /// Red account has both quotas exhausted.
+  /// Dead account: `billing_type="none"` (cancelled subscription) → G4 Red.
+  /// Both-exhausted with `result=Ok` → G3 `WeeklyExhausted` (same group as weekly-only).
+  /// Fix(BUG-321): original test used a both-exhausted account as G4 — premise-incorrect.
+  ///   Both-exhausted is G3 (recoverable), not G4 (dead). Using `mk_aq_cancelled` (G4) instead.
   #[ test ]
   fn test_4group_weekly_exhausted_ranks_before_red()
   {
-    // red: both five_hour_left ≤ 15% AND seven_day_left ≤ 5%
-    let accounts = vec![
-      mk_aq_sort_weekly( "red@test.com",              90.0, 96.0, 96.0 ), // Group 4: both exhausted
-      mk_aq_sort_weekly( "weekly_exhausted@test.com", 50.0, 96.0, 96.0 ), // Group 3: only weekly
-    ];
-    let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0 );
-    assert_eq!(
-      accounts[ idx[ 0 ] ].name, "weekly_exhausted@test.com",
-      "4-group: weekly-exhausted (G3) must rank before red (G4); got: {:?}",
+    // G4 Dead: billing_type="none" (cancelled) — zzz@ sorts last alphabetically within G4
+    let dead    = mk_aq_cancelled(   "zzz@test.com",             50.0, 20.0 );
+    // G3 WeeklyExhausted: 5h=50% (ok), 7d=4% left (≤ 5%) — only weekly-exhausted
+    let weekly  = mk_aq_sort_weekly( "weekly_only@test.com",     50.0, 96.0, 96.0 );
+    // G3 WeeklyExhausted: 5h=10% left (≤ 15%), 7d=4% left (≤ 5%) — both-exhausted, Fix(BUG-321)
+    let both_ex = mk_aq_sort_weekly( "weekly_both@test.com",     90.0, 96.0, 96.0 );
+    let accounts = vec![ dead, weekly, both_ex ];
+    let idx = sort_indices( &accounts, SortStrategy::Name, None, PreferStrategy::Any, 0 );
+    // Both G3 accounts must rank before G4 Dead regardless of alphabetical order
+    let pos_weekly  = idx.iter().position( |&i| accounts[ i ].name == "weekly_only@test.com" ).unwrap();
+    let pos_both_ex = idx.iter().position( |&i| accounts[ i ].name == "weekly_both@test.com" ).unwrap();
+    let pos_dead    = idx.iter().position( |&i| accounts[ i ].name == "zzz@test.com" ).unwrap();
+    assert!(
+      pos_weekly < pos_dead,
+      "4-group: weekly-only (G3) must rank before dead (G4); order: {:?}",
       idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
     );
-    assert_eq!( accounts[ idx[ 1 ] ].name, "red@test.com" );
+    assert!(
+      pos_both_ex < pos_dead,
+      "Fix(BUG-321): both-exhausted (G3) must rank before dead (G4); order: {:?}",
+      idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
+    );
   }
 
   /// AC-03 / AC-12 — 4-group partition: `desc::1` preserves group order (groups are never reversed).
@@ -564,6 +580,46 @@ mod tests
       idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
     );
     assert_eq!( accounts[ idx[ 1 ] ].name, "cancelled@test.com" );
+  }
+
+  /// BUG-321 MRE — both-exhausted account sorts in G3 (weekly-exhausted), before G4 Dead.
+  ///
+  /// Verifies that `status_group_of()` maps `(false,false)` (5h ≤ 15% AND 7d ≤ 5%, `result=Ok`)
+  /// to `StatusGroup::WeeklyExhausted` (G3), not `StatusGroup::Red` (G4). Sort order confirms
+  /// the group mapping: both-exhausted must rank before the dead/cancelled account.
+  ///
+  /// # Root Cause
+  /// `status_group_of()` used `( false, false ) => StatusGroup::Red`. Both quota dimensions
+  /// below threshold with `result=Ok` is recoverable (7d reset restores both windows) — it
+  /// belongs in G3 alongside single-weekly-exhausted accounts, not G4 Dead.
+  ///
+  /// # Fix Applied
+  /// Changed `( false, false ) => StatusGroup::Red` to
+  /// `( false, false ) => StatusGroup::WeeklyExhausted` in `status_group_of()`. No new enum
+  /// variant; no `sort_indices()` array resize (4-slot partition unchanged).
+  ///
+  /// # Pitfall
+  /// The Dead gate (`billing_type="none"` + `result.is_err()`) fires BEFORE the quota tuple
+  /// match — both-exhausted only reaches the tuple when those guards are clear.
+  #[ doc = "bug_reproducer(BUG-321)" ]
+  #[ test ]
+  fn mre_bug321_both_exhausted_sorts_in_weekly_group()
+  {
+    // Names chosen so "aaa" < "zzz" alphabetically: before fix both are Red (G4) → "aaa"
+    // sorts first → assertion fails. After fix both-exhausted moves to G3 → "zzz" (G3)
+    // ranks before "aaa" (G4 Dead) regardless of alphabetical order.
+    // both-exhausted: result=Ok, 5h_util=94% (6% left ≤ 15%), 7d_util=96% (4% left ≤ 5%)
+    let both_exh = mk_aq_sort_weekly( "zzz@test.com", 94.0, 96.0, 0.0 );
+    // dead (G4): billing_type="none" — both cancelled and result=Err classify as Dead
+    let dead     = mk_aq_cancelled(   "aaa@test.com", 50.0, 20.0 );
+    let accounts = vec![ dead, both_exh ];
+    let idx = sort_indices( &accounts, SortStrategy::Name, None, PreferStrategy::Any, 0 );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "zzz@test.com",
+      "BUG-321: both-exhausted (G3) must sort before dead/cancelled (G4); order: {:?}",
+      idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
+    );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "aaa@test.com" );
   }
 
   /// CC-059/CC-060 — `prefer_weekly` with absent period data treats account as fully available.

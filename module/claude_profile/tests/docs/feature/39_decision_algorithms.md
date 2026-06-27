@@ -11,7 +11,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 | FT-09 | Touch model: active Sonnet window, 40% remaining → Sonnet | Table 1 | Unit test — Fix BUG-301 |
 | FT-03 | Session model override: exactly 15% Sonnet left → writes Sonnet (Fix BUG-311) | Table 2 | Boundary — Phase 1 fix |
 | FT-04 | Session model override: below 15% Sonnet left → Opus | Table 2 | Boundary — Phase 1 fix |
-| FT-05 | Status groups: four-group partition order | Table 3 | Unit test |
+| FT-05 | Status groups: four-group partition order (both-exhausted in G3) | Table 3 | Unit test |
 | FT-06 | Eligibility gate G7: `prefer_weekly ≤ 5.0` → account skipped | Table 4 | Phase 2 |
 | FT-07 | Eligibility gate G7: `prefer_weekly > 5.0` → account eligible | Table 4 | Phase 2 |
 | FT-08 | Positive selection: first eligible Green account wins | Table 5 | Unit test |
@@ -28,7 +28,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 | FT-09 | Touch model active Sonnet, 40% remaining → Sonnet | Table 1 | Touch Model |
 | FT-03 | Session override at 15% boundary → no-op | Table 2 | Session Override |
 | FT-04 | Session override below 15% → Opus | Table 2 | Session Override |
-| FT-05 | Status group four-partition order | Table 3 | Status Groups |
+| FT-05 | Status group four-partition order (both-exhausted in G3) | Table 3 | Status Groups |
 | FT-06 | Gate 7 prefer_weekly ≤ 5.0 skips account | Table 4 | Eligibility |
 | FT-07 | Gate 7 prefer_weekly > 5.0 passes account | Table 4 | Eligibility |
 | FT-08 | Positive selection first eligible wins | Table 5 | Selection |
@@ -95,16 +95,17 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 
 ---
 
-### FT-05: Status groups — four-group partition: Green → h-exhausted → weekly-exhausted → Red
+### FT-05: Status groups — four-group partition: Green → h-exhausted → weekly-exhausted → Dead
 
-- **Given:** Four `AccountQuota` structs fed to `sort_indices` under `sort::name` (which would interleave alphabetically without group partitioning):
-  - `green@x.com`: `five_hour_util=10%` (5h_left=90%), `seven_day_util=10%` (7d_left=90%) — both thresholds above → 🟢 Green.
-  - `h_exh@x.com`: `five_hour_util=90%` (5h_left=10% ≤ 15%), `seven_day_util=10%` (7d_left=90%) — 5h exhausted → 🟡 h-exhausted.
-  - `weekly@x.com`: `five_hour_util=10%` (5h_left=90%), `seven_day_util=98%` (7d_left=2% ≤ 5%) — 7d exhausted → 🟡 weekly-exhausted.
-  - `red@x.com`: `result = Err(...)` → 🔴 Red.
+- **Given:** Five `AccountQuota` structs fed to `sort_indices` under `sort::name` (which would interleave alphabetically without group partitioning):
+  - `green@x.com`: `five_hour_util=10%` (5h_left=90%), `seven_day_util=10%` (7d_left=90%) — both thresholds above → 🟢 G1 Green.
+  - `h_exh@x.com`: `five_hour_util=90%` (5h_left=10% ≤ 15%), `seven_day_util=10%` (7d_left=90%) — 5h exhausted → 🟡 G2 h-exhausted.
+  - `weekly@x.com`: `five_hour_util=10%` (5h_left=90%), `seven_day_util=98%` (7d_left=2% ≤ 5%) — 7d exhausted → 🟡 G3 weekly-exhausted.
+  - `both@x.com`: `five_hour_util=94%` (5h_left=6% ≤ 15%), `seven_day_util=96%` (7d_left=4% ≤ 5%) — both exhausted → 🟡 G3 weekly-exhausted (7d is binding; Fix BUG-321).
+  - `dead@x.com`: `result = Err(...)` → 🔴 G4 Dead.
 - **When:** `status_group_of(aq)` is evaluated per account via `sort_indices` (entry point: `sort.rs:31-48`).
-- **Then:** Group assignment: `green@x.com` → Green; `h_exh@x.com` → HExhausted; `weekly@x.com` → WeeklyExhausted; `red@x.com` → Red. Output row order: Green → h-exhausted → weekly-exhausted → Red. `sort::name` alpha order is overridden by group partition.
-- **Source fn:** `test_three_tier_grouping_green_before_yellow_before_red` (in `src/usage/mod.rs`)
+- **Then:** Group assignment: `green@x.com` → Green; `h_exh@x.com` → HExhausted; `weekly@x.com` → WeeklyExhausted; `both@x.com` → WeeklyExhausted (same G3 — `(false,false)` maps to `StatusGroup::WeeklyExhausted`); `dead@x.com` → Dead. Output row order: Green (G1) → h-exhausted (G2) → weekly-exhausted (G3, including `both@x.com`) → Dead (G4 🔴). `sort::name` alpha order is overridden by group partition.
+- **Source fn:** `mre_bug321_four_group_partition_order` (in `src/usage/sort.rs` or `src/usage/mod.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 3](../../../docs/feature/039_decision_algorithms.md)
 
 ---

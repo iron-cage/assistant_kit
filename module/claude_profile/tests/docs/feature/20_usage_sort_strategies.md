@@ -11,7 +11,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-03 | `format::json` order unaffected by `sort::` | AC-11 | Integration |
 | FT-04 | Invalid `sort::` value exits 1 naming valid values | AC-07 | Integration |
 | FT-05 | Invalid `prefer::` value exits 1 naming valid values | AC-08 | Integration |
-| FT-06 | Four-group status partition: 🟢 above 🟡h above 🟡w above 🔴 | AC-12 | Unit test |
+| FT-06 | Four-group status partition: 🟢 above 🟡h above 🟡w (incl. both-exhausted) above 🔴 Dead | AC-12 | Unit test |
 | FT-07 | `sort::renew` is default when `sort::` omitted | AC-01 | Unit test |
 | FT-08 | Within 🟡: h-exhausted before weekly-exhausted; `desc::` doesn't swap sub-groups | AC-12 | Unit test |
 | FT-09 | `sort::renew` alphabetical when all numeric sort keys tied (BUG-259) | AC-01 | Tiebreaker |
@@ -30,7 +30,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-03 | JSON output alphabetical regardless of sort | AC-11 | JSON No-op |
 | FT-04 | Invalid sort value rejected | AC-07 | Validation |
 | FT-05 | Invalid prefer value rejected | AC-08 | Validation |
-| FT-06 | Four-group partition: 🟢 above 🟡h above 🟡w above 🔴 | AC-12 | Tier Grouping |
+| FT-06 | Four-group partition: 🟢 above 🟡h above 🟡w (incl. both-exhausted) above 🔴 Dead | AC-12 | Tier Grouping |
 | FT-07 | `sort::renew` is default when `sort::` omitted | AC-01 | Default |
 | FT-08 | Within 🟡: h-exhausted before weekly-exhausted; sub-grouping not reversed by `desc::` | AC-12 | Yellow Sub-Grouping |
 | FT-09 | sort::renew alphabetical tiebreaker when all numeric keys tied | AC-01 | Tiebreaker |
@@ -98,13 +98,13 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 ---
 
-### FT-06: Four-group status partition: 🟢 above 🟡 h-exhausted above 🟡 weekly-exhausted above 🔴
+### FT-06: Four-group status partition: 🟢 above 🟡 h-exhausted above 🟡 weekly-exhausted (incl. both-exhausted) above 🔴 Dead
 
-- **Given:** Four `AccountQuota` structs: `green@test.com` (5h_left=80%, 7d_left=60% — both available, 🟢), `h_exh@test.com` (5h_left=3%, 7d_left=50% — 5h exhausted, 7d available, 🟡h), `weekly_exh@test.com` (5h_left=80%, 7d_left=2% — 5h available, 7d exhausted, 🟡w), `red@test.com` (result=Err — 🔴). Any sort strategy.
+- **Given:** Five `AccountQuota` structs: `green@test.com` (5h_left=80%, 7d_left=60% — both available, 🟢 G1), `h_exh@test.com` (5h_left=3%, 7d_left=50% — 5h exhausted, 🟡 G2), `weekly_exh@test.com` (5h_left=80%, 7d_left=2% — 7d exhausted, 🟡 G3), `both_exh@test.com` (5h_left=6%, 7d_left=4% — both exhausted, 🟡 G3 weekly-exhausted — 7d is binding), `dead@test.com` (result=Err — 🔴 G4). Any sort strategy.
 - **When:** `sort_indices(&accounts, SortStrategy::Name, None, PreferStrategy::Any, 0)` — name sort would interleave groups alphabetically.
-- **Then:** Output order: `green@test.com` (🟢), then 🟡h before 🟡w, then `red@test.com` (🔴). Four-group partition overrides alphabetical sort.
+- **Then:** Output order: `green@test.com` (🟢 G1), then G2 h-exhausted before G3 weekly-exhausted (both `weekly_exh` and `both_exh` — alphabetical within G3), then `dead@test.com` (🔴 G4). Four-group partition overrides alphabetical sort. Fix(BUG-321): `both_exh@test.com` sorts to G3 weekly-exhausted (🟡), not G4 Dead (🔴).
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_three_tier_grouping_green_before_yellow_before_red` (in `src/usage/mod.rs`)
+- **Source fn:** `mre_bug321_four_group_partition_order` (in `src/usage/sort.rs` or `src/usage/mod.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-12](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---

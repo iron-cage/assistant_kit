@@ -142,7 +142,7 @@ clp .usage sort::renew desc::1
 
 **Effect:** `prefer::` determines which weekly quota column is used by the `sort::renew` within-group tiebreak and the footer recommendation eligibility gate. `prefer::any` (default) uses `min(7d Left, 7d(Son))`; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
 
-**`prefer::` does NOT affect group membership.** The four-group status partition always uses raw `7d Left` for the weekly boundary (`7d Left > 5%` for Green/h-exhausted vs weekly-exhausted/Red). An account's status group is determined by `5h Left` and `7d Left` columns only — not by `prefer_weekly`. See [AC-12](../../feature/020_usage_sort_strategies.md#acceptance-criteria).
+**`prefer::` does NOT affect group membership.** The four-group status partition always uses raw `7d Left` for the weekly boundary (`7d Left > 5%` for Green/h-exhausted vs weekly-exhausted/Dead). An account's status group is determined by `5h Left` and `7d Left` columns only — not by `prefer_weekly`. See [AC-12](../../feature/020_usage_sort_strategies.md#acceptance-criteria).
 
 **Affected heuristics:**
 - `sort::renew` tiebreak: lowest `weekly(prefer)` ascending — within a group, among accounts with the same renewal event time, the account with the lower prefer-selected weekly quota ranks first
