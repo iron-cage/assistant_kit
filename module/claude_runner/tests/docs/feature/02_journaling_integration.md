@@ -14,6 +14,16 @@ Test case planning for [feature/002_journaling_integration.md](../../../../docs/
 | FT-6 | `CLR_JOURNAL_DIR=/tmp/j` env var — same directory effect as CLI flag | Env Var |
 | FT-7 | Journal write failure (read-only path) — `clr` exit code unchanged | Error Isolation |
 | FT-8 | Stdout exceeding 1 MB → field truncated with `[truncated at 1MB]` marker | Truncation |
+| FT-9 | `--journal-dir <cli>` + `CLR_JOURNAL_DIR=<env>` → file in CLI dir (CLI wins) | Precedence |
+| FT-10 | Gate wait event emitted when `wait_for_session_slot()` blocks | Gate Emission |
+| FT-11 | Validation retry event emitted on expect-strategy retry | Validation Emission |
+| FT-12 | `--dry-run` does NOT create journal directory (BUG-319) | Side Effect Isolation |
+| FT-13 | `--journal bogus` CLI flag → exit 1 with error | Validation |
+| FT-14 | `--journal Full` (wrong case) → exit 1 | Validation |
+| FT-15 | `--journal` missing value → exit 1 | Validation |
+| FT-16 | `--journal full --journal meta` (last wins) → meta-level | Duplicate Handling |
+| FT-17 | `--journal off --journal-dir <dir>` → no JSONL | Off Precedence |
+| FT-18 | `CLR_JOURNAL=off` + `CLR_JOURNAL_DIR=<dir>` → no JSONL | Off Precedence |
 
 ## Test Coverage Summary
 
@@ -24,8 +34,22 @@ Test case planning for [feature/002_journaling_integration.md](../../../../docs/
 - Env Var: 1 test (FT-6)
 - Error Isolation: 1 test (FT-7)
 - Truncation: 1 test (FT-8)
+- Precedence: 1 test (FT-9)
+- Gate Emission: 1 test (FT-10)
+- Validation Emission: 1 test (FT-11)
+- Side Effect Isolation: 1 test (FT-12)
+- Validation: 3 tests (FT-13, FT-14, FT-15)
+- Duplicate Handling: 1 test (FT-16)
+- Off Precedence: 2 tests (FT-17, FT-18)
 
-**Total:** 8 tests
+**Total:** 18 tests
+
+> **Implementation note:** The actual test file uses EC-N identifiers (EC-1..EC-22)
+> mapped to integration test scenarios. FT-N here is the spec-level identifier.
+> CLI-wins-over-env is implemented as `ec14_journal_dir_cli_wins_over_env`;
+> truncation marker as `ec15_stdout_over_1mb_has_truncation_marker`;
+> gate_wait emission as `ec11_gate_wait_event_emitted_when_gate_blocks`;
+> validation_retry emission as `ec12_validation_retry_event_emitted_on_expect_mismatch`.
 
 ## Architectural Constraint
 
@@ -114,3 +138,103 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **Then:** journal event `fields.stdout` is `Some(s)` where `s.ends_with("\n[truncated at 1MB]")` and `s.len() <= 1_100_000` (truncated to 1 MB + suffix)
 - **Exit:** 0
 - **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) AC-007
+
+---
+
+### FT-9: `--journal-dir` CLI flag wins over `CLR_JOURNAL_DIR` env var
+
+- **Given:** two temporary directories (`cli_dir`, `env_dir`); fake claude exits 0; `CLR_JOURNAL_DIR=<env_dir>` set
+- **When:** `clr -p --max-sessions 0 --journal-dir <cli_dir> "task"` with `CLR_JOURNAL_DIR=<env_dir>`
+- **Then:** JSONL file appears in `<cli_dir>`; `<env_dir>` contains no `.jsonl` files (CLI flag takes precedence)
+- **Exit:** 0
+- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) design — "Resolution: CLI > env > default"
+
+---
+
+### FT-10: Gate wait event emitted when `wait_for_session_slot()` blocks
+
+- **Given:** ELF fake `claude` binary holding 1 gate slot for ~3 s; separate script fake for the actual subprocess; temporary journal dir
+- **When:** `clr -p --max-sessions 1 --journal full --journal-dir <tmpdir> "x"` with `_CLR_GATE_POLL_SECS=1`
+- **Then:** JSONL contains a line with `"type":"gate_wait"` and `"gate_outcome":"acquired"`; `clr` exits 0 once gate releases
+- **Exit:** 0
+- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) AC-009
+
+---
+
+### FT-11: Validation retry event emitted on expect-strategy retry
+
+- **Given:** counter-script fake `claude` (first call prints `WRONG`, second prints `RIGHT`); temporary journal dir
+- **When:** `clr -p --max-sessions 0 --expect right --expect-strategy retry --retry-on-validation 1 --validation-delay 0 --journal full --journal-dir <tmpdir> "x"`
+- **Then:** JSONL contains a line with `"type":"validation_retry"` (emitted before the re-attempt); second attempt matches `"right"`; `clr` exits 0
+- **Exit:** 0
+- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) AC-013
+
+---
+
+### FT-12: `--dry-run` does NOT create journal directory (BUG-319)
+
+- **Given:** parent temp dir with a non-existent subdirectory `must_not_exist`
+- **When:** `clr --dry-run --journal-dir <parent>/must_not_exist "test"`
+- **Then:** `<parent>/must_not_exist` does NOT exist on disk; dry-run output shown on stdout
+- **Exit:** 0
+- **Source:** BUG-319 regression guard
+
+---
+
+### FT-13: `--journal bogus` CLI flag exits 1
+
+- **Given:** no special setup
+- **When:** `clr --dry-run --journal bogus "test"`
+- **Then:** exit 1; stderr contains `--journal` and `bogus`
+- **Exit:** 1
+- **Source:** [param/072_journal.md](../../../../docs/cli/param/072_journal.md) — valid values: full, meta, off
+
+---
+
+### FT-14: `--journal Full` (case-sensitive) exits 1
+
+- **Given:** no special setup
+- **When:** `clr --dry-run --journal Full "test"` (also: FULL, Meta, META, Off, OFF)
+- **Then:** exit 1 for each case variant; only lowercase accepted
+- **Exit:** 1
+- **Source:** [param/072_journal.md](../../../../docs/cli/param/072_journal.md) — enum values are lowercase only
+
+---
+
+### FT-15: `--journal` missing value exits 1
+
+- **Given:** no special setup
+- **When:** `clr --dry-run --journal` (no following value)
+- **Then:** exit 1; stderr mentions `--journal` or `requires a value`
+- **Exit:** 1
+- **Source:** parse.rs `next_value()` guard
+
+---
+
+### FT-16: `--journal full --journal meta` (last wins) → meta-level
+
+- **Given:** temp journal dir; fake claude exits 0 with output
+- **When:** `clr -p --max-sessions 0 --journal full --journal meta --journal-dir <tmpdir> "x"`
+- **Then:** JSONL contains execution event; `stdout` field absent (meta-level wins)
+- **Exit:** 0
+- **Source:** Standard last-wins flag semantics
+
+---
+
+### FT-17: `--journal off --journal-dir <dir>` → no JSONL
+
+- **Given:** parent temp dir with non-existent subdirectory; fake claude exits 0
+- **When:** `clr -p --max-sessions 0 --journal off --journal-dir <parent>/should_not_appear "x"`
+- **Then:** `<parent>/should_not_appear` does NOT exist (off short-circuits before dir creation)
+- **Exit:** 0
+- **Source:** resolve_journal_writer() early return on "off"
+
+---
+
+### FT-18: `CLR_JOURNAL=off` + `CLR_JOURNAL_DIR=<dir>` → no JSONL
+
+- **Given:** parent temp dir with non-existent subdirectory; fake claude exits 0; `CLR_JOURNAL=off` + `CLR_JOURNAL_DIR=<parent>/env_off_should_not_appear`
+- **When:** `clr -p --max-sessions 0 "x"` with env vars set
+- **Then:** `<parent>/env_off_should_not_appear` does NOT exist
+- **Exit:** 0
+- **Source:** env var precedence + resolve_journal_writer() early return on "off"

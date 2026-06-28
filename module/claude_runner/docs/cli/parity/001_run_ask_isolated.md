@@ -21,7 +21,7 @@
 | Behavioral difference from `run` | — | None | Significant (see below) |
 | **--- Param Surface ---** | | | |
 | Full param set (67+ params) | Yes | Yes (identical) | No — minimal set only |
-| Param count | All 67+ | All 67+ | 6: `MESSAGE`, `--creds`, `--timeout`, `--trace`, `--journal`, `--journal-dir` |
+| Param count | All 67+ | All 67+ | 12: `MESSAGE`, `--creds`, `--timeout`, `--trace`, `--dry-run`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir` |
 | Passthrough override (`-- <args>`) | No | No | Yes (e.g., `-- --effort medium`) |
 | **--- Session ---** | | | |
 | Session continuation (`-c`) | Yes — auto (last session in dir) | Yes — auto | No (temp HOME has no history) |
@@ -45,7 +45,7 @@
 | No-message -> REPL | Yes — interactive | Yes — interactive | Yes — interactive (no `--dangerously-skip-permissions`) |
 | With-message -> print (auto) | Yes | Yes | Yes (+ `--dangerously-skip-permissions`) |
 | `--interactive` with message opt-in | Yes | Yes | No (flag not available) |
-| `--dry-run` preview | Yes | Yes | No |
+| `--dry-run` preview | Yes | Yes | Yes |
 | `--trace` | Yes | Yes | Yes |
 | **--- Timeout ---** | | | |
 | Default timeout (print mode) | `3600 s` (`DEFAULT_PRINT_TIMEOUT_SECS`) | `3600 s` | `30 s` |
@@ -75,22 +75,22 @@
 | Default effort | `max` (injected) | `max` (injected) | `max` (always injected) |
 | `--no-effort-max` suppress | Yes | Yes | No |
 | **--- Output ---** | | | |
-| `--output-style` (summary/raw) | Yes | Yes | No |
-| `--summary-fields` | Yes | Yes | No |
-| `--output-file` (tee to file) | Yes | Yes | No |
-| `--output-format` (text/json/stream-json) | Yes | Yes | No |
-| `--strip-fences` | Yes | Yes | No |
+| `--output-style` (summary/raw) | Yes | Yes | Yes (default: `raw`, not `summary`) |
+| `--summary-fields` | Yes | Yes | Yes |
+| `--output-file` (tee to file) | Yes | Yes | Yes |
+| `--output-format` (text/json/stream-json) | Yes | Yes | No (passthrough) |
+| `--strip-fences` | Yes | Yes | Yes |
 | **--- Validation ---** | | | |
-| `--expect` / `--expect-strategy` | Yes | Yes | No |
+| `--expect` / `--expect-strategy` | Yes | Yes | Yes (`fail` + `default:<V>` only; `retry` not supported → exit 1) |
 | **--- Input ---** | | | |
 | `MESSAGE` positional | Yes | Yes | Yes (optional) |
-| `--file` (pipe file as stdin) | Yes | Yes | No |
+| `--file` (pipe file as stdin) | Yes | Yes | Yes |
 | `--json-schema` | Yes | Yes | No (override via passthrough) |
 | `--mcp-config` | Yes | Yes | No (override via passthrough) |
 | **--- Directory ---** | | | |
-| `--dir` (working directory) | Yes (default: cwd) | Yes | No |
+| `--dir` (working directory) | Yes (default: cwd) | Yes | Yes (validated before spawn; `CLR_DIR` env fallback) |
 | `--subdir` | Yes | Yes | No |
-| `--add-dir` | Yes | Yes | No |
+| `--add-dir` | Yes | Yes | Yes (repeatable; `CLR_ADD_DIR` env fallback) |
 | `--session-dir` | Yes | Yes | No |
 | **--- System Prompt ---** | | | |
 | `--system-prompt` | Yes | Yes | No (override via passthrough) |
@@ -108,7 +108,7 @@
 | `0` success | Yes | Yes | Yes |
 | `1` error (parse/spawn/I/O) | Yes | Yes | Yes |
 | `2` rate-limit or transient retries exhausted | Yes | Yes | Yes — means **timeout** here (not rate-limit) |
-| `3` expect mismatch | Yes | Yes | No |
+| `3` expect mismatch | Yes | Yes | Yes (`--expect` mismatch with `fail` strategy) |
 | `4` CLR watchdog timeout | Yes | Yes | No (isolated timeout -> exit `2`) |
 | `N` subprocess passthrough | Yes | Yes | Yes |
 | `128+signal` (POSIX) | Yes | Yes | Yes (POSIX passthrough — same semantics as `N`) |
@@ -123,10 +123,24 @@
 ### Key Takeaways
 
 - `run` vs `ask` — zero behavioral difference; `ask` is a pure documentation signal for "this is a question".
-- `isolated` shares only 3 meaningful params with `run`/`ask` (`MESSAGE`, `--trace`, `--journal*`); everything else is stripped down or hardcoded.
+- `isolated` shares 9 params with `run`/`ask` (`MESSAGE`, `--trace`, `--dry-run`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal*`); everything else is stripped down or hardcoded.
 - The defining `isolated`-specific behaviors: temp HOME lifecycle, credential writeback, timeout exits as `2` (not `4`), and `--dangerously-skip-permissions` conditional on MESSAGE presence.
 - `isolated` parameter overrides are only possible via `-- <passthrough-args>` syntax; no native flags for model/effort/tools.
 - Both `run` and `ask` suppress `--chrome` automatically in print mode (BUG-304 fix); `isolated` never suppresses it.
+- `--output-format` is not a gap — it is passthrough-covered (`-- --output-format json`). If TSK-332 adds `--output-style`, the Path B auto-inject supplies `--output-format json` automatically.
+
+---
+
+### Exclusion Rationale
+
+Params not in the gap closure table are excluded by design. Four categories:
+
+| Category | Params | Reason |
+|----------|--------|--------|
+| **Temp HOME = meaningless** | `--subdir`, `--session-dir`, `--new-session`, `--no-persist`, `-c` | Temp HOME has no session history; these params control session state that does not exist |
+| **One-shot = no retry** | 20 retry params, `--expect-retries`, `--max-sessions`, `--fallback-model` | No retry loop in `run_isolated_command()`; retrying bad credentials is pointless; concurrency gate conflicts with urgent credential ops |
+| **Passthrough covers it** | `--model`, `--effort`, `--no-effort-max`, `--output-format`, `--system-prompt`, `--append-system-prompt`, `--json-schema`, `--mcp-config`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--max-turns`, `--chrome`/`--no-chrome` | Claude-native flags with no CLR-level validation or transformation; override via `-- <flag>` |
+| **Architecture mismatch** | `--interactive`, `--verbose`, Ultrathink suffix | `--interactive` conflicts with message-present contract; `--verbose` subsumed by `--verbosity` (TSK-333); ultrathink conflicts with "execute immediately" CLAUDE.md directive |
 
 ---
 
@@ -136,12 +150,12 @@ The following gaps between `isolated` and `run`/`ask` are tracked as implementat
 
 | Task | Gap | Dimension | `isolated` After Closure |
 |------|-----|-----------|--------------------------|
-| TSK-328 | `--dry-run` not available | Execution Modes | Preview injected command without spawning subprocess |
-| TSK-329 | `--dir` / `--add-dir` not available | Directory | Set working directory and grant read access to additional paths |
-| TSK-330 | `--file` not available | Input | Pipe a file as stdin to the isolated subprocess |
-| TSK-331 | `--expect` / `--expect-strategy` (fail + default) not available | Validation | Assert output matches expected pattern; exit 3 on mismatch |
-| TSK-332 | `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields` not available | Output | Tee output to file, strip code fences, render summary, select fields |
-| TSK-333 | `--verbosity`, `--keep-claudecode` not available | Runner Control | Gate CLR verbose logging; suppress env -u CLAUDECODE injection |
+| TSK-328 ✅ | `--dry-run` not available | Execution Modes | Preview injected command without spawning subprocess |
+| TSK-329 ✅ | `--dir` / `--add-dir` not available | Directory | Set working directory and grant read access to additional paths |
+| TSK-330 ✅ | `--file` not available | Input | Pipe a file as stdin to the isolated subprocess |
+| TSK-331 ✅ | `--expect` / `--expect-strategy` (fail + default) not available | Validation | Assert output matches expected pattern; exit 3 on mismatch |
+| TSK-332 ✅ | `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields` not available | Output | Tee output to file, strip code fences, render summary, select fields |
+| TSK-333 | `--verbosity` not available | Runner Control | Gate CLR verbose logging level (1-5) |
 
 ---
 
