@@ -7,7 +7,7 @@ All subcommands exposed by the `claude` binary beyond the default interactive/pr
 - **Purpose**: Authoritative reference for every subcommand the `claude` binary provides.
 - **Responsibility**: Master table and per-subcommand detail files.
 - **In Scope**: All 9 subcommands — agents, auth, auto-mode, doctor, install, mcp, plugin, setup-token, update.
-- **Out of Scope**: The default session mode (→ `../params/`); builder-API (→ `module/claude_runner_core/`).
+- **Out of Scope**: The default session mode (→ `../param/`); builder-API (→ `module/claude_runner_core/`).
 
 ### Responsibility Table
 
@@ -42,5 +42,5 @@ All subcommands exposed by the `claude` binary beyond the default interactive/pr
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| doc | [`../params/readme.md`](../params/readme.md) | CLI parameter specifications |
+| doc | [`../param/readme.md`](../param/readme.md) | CLI parameter specifications |
 | doc | [`../tool/readme.md`](../tool/readme.md) | Built-in tools available in sessions |

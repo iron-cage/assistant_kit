@@ -15,4 +15,5 @@
 | `algorithm/` | Computational procedures and their design rationale |
 | `invariant/` | Non-functional constraints with measurable thresholds |
 | `api/` | Public library interface and stability guarantees |
+| `entity.md` | Doc Entity index for this crate's documentation scope |
 | `doc_graph.yml` | Cross-reference graph for navigability analysis |

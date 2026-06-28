@@ -9,4 +9,4 @@
 
 | # | Name | Purpose | Status |
 |---|------|---------|--------|
-| 01 | [01_super_app_aggregation.md](01_super_app_aggregation.md) | Feature spec for Super-App Aggregation | ✅ |
+| 01 | [001_super_app_aggregation.md](001_super_app_aggregation.md) | Feature spec for Super-App Aggregation | ✅ |

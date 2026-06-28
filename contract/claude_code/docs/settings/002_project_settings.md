@@ -72,4 +72,4 @@ pre-v1.0 (unverified)
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Settings master index: full parameter table |
 | settings | [001_global_settings.md](001_global_settings.md) | Global settings (G+P keys also appear here) |
-| params | `../params/readme.md` | Full parameter table with CLI flags and env vars |
+| params | `../param/readme.md` | Full parameter table with CLI flags and env vars |

@@ -13,6 +13,6 @@ Per-feature-doc test case indices for `claude_journal_viewer`. See [feature/read
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `01_cli_viewing.md` | Test cases for the CLI viewing feature doc instance | ⏳ |
-| `02_web_viewing.md` | Test cases for the web viewing feature doc instance | ⏳ |
-| `03_filtering.md` | Test cases for the filtering feature doc instance | ⏳ |
+| `001_cli_viewing.md` | Test cases for the CLI viewing feature doc instance | ⏳ |
+| `002_web_viewing.md` | Test cases for the web viewing feature doc instance | ⏳ |
+| `003_filtering.md` | Test cases for the filtering feature doc instance | ⏳ |

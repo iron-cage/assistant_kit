@@ -27,8 +27,8 @@
 |--------|----|------|------|
 | feature | 001 | CLI Tool | [feature/001_cli_tool.md](feature/001_cli_tool.md) |
 | operation | 001 | Migration Guide | [operation/001_migration_guide.md](operation/001_migration_guide.md) |
-| user_story | 001 | Audit Session History | [cli/user_story/001_audit_session_history.md](cli/user_story/001_audit_session_history.md) |
-| user_story | 002 | Find Past Conversation | [cli/user_story/002_find_past_conversation.md](cli/user_story/002_find_past_conversation.md) |
-| user_story | 003 | Export Session for Review | [cli/user_story/003_export_session_for_review.md](cli/user_story/003_export_session_for_review.md) |
-| user_story | 004 | Query Storage Programmatically | [cli/user_story/004_query_storage_programmatically.md](cli/user_story/004_query_storage_programmatically.md) |
-| user_story | 005 | Resume Claude Session | [cli/user_story/005_resume_claude_session.md](cli/user_story/005_resume_claude_session.md) |
+| cli/user_story | 001 | Audit Session History | [cli/user_story/001_audit_session_history.md](cli/user_story/001_audit_session_history.md) |
+| cli/user_story | 002 | Find Past Conversation | [cli/user_story/002_find_past_conversation.md](cli/user_story/002_find_past_conversation.md) |
+| cli/user_story | 003 | Export Session for Review | [cli/user_story/003_export_session_for_review.md](cli/user_story/003_export_session_for_review.md) |
+| cli/user_story | 004 | Query Storage Programmatically | [cli/user_story/004_query_storage_programmatically.md](cli/user_story/004_query_storage_programmatically.md) |
+| cli/user_story | 005 | Resume Claude Session | [cli/user_story/005_resume_claude_session.md](cli/user_story/005_resume_claude_session.md) |

@@ -154,7 +154,7 @@ pre-v1.0 (unverified)
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| param | [../params/044_output_format.md](../params/044_output_format.md) | `--output-format` parameter specification |
+| param | [../param/044_output_format.md](../param/044_output_format.md) | `--output-format` parameter specification |
 | jsonl | [../jsonl/004_text_block.md](../jsonl/004_text_block.md) | Shared text block structure |
 | jsonl | [../jsonl/005_thinking_block.md](../jsonl/005_thinking_block.md) | Shared thinking block structure |
 | jsonl | [../jsonl/006_tool_use_block.md](../jsonl/006_tool_use_block.md) | Shared tool_use block structure |

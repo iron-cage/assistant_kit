@@ -31,5 +31,5 @@ Note the naming asymmetry: this variable uses a `CLAUDE_` prefix without `_CODE_
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
 | behavior | [025_b25_auto_compact_window.md](025_b25_auto_compact_window.md) | Companion env var: token window this percentage applies to |
 | behavior | [011_b11_auto_continue_env.md](011_b11_auto_continue_env.md) | `CLAUDE_CODE_AUTO_CONTINUE` env var (same NEG-ONLY pattern) |
-| param | [../params/075_autocompact_pct_override.md](../params/075_autocompact_pct_override.md) | Parameter detail: type, default, description |
+| param | [../param/075_autocompact_pct_override.md](../param/075_autocompact_pct_override.md) | Parameter detail: type, default, description |
 | test | `../../tests/behavior/b26_autocompact_pct_override.rs` | Invalidation test (NEG-ONLY) |

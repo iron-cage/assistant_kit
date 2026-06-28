@@ -5,7 +5,7 @@
 - **Purpose**: Catalog observed and confirmed external behaviors of the `claude` binary relevant to session lifecycle and storage.
 - **Responsibility**: Master file for the `behavior` collection — lists all 27 behavior instances (B1–B26 + B16h), provides the shared evidence table (E1–E51), and links to invalidation test files.
 - **In Scope**: Session continuation, flag semantics, agent layouts, entry threading, storage path encoding, cross-session relationship absence (conversation chain foundations).
-- **Out of Scope**: Entry-level JSONL schema (→ [`../jsonl/`](../jsonl/readme.md)); storage directory architecture (→ [`../storage/`](../storage/readme.md)); filesystem paths (→ [`../filesystem/`](../filesystem/readme.md)); settings format (→ [`../settings/`](../settings/readme.md)); ancillary file formats (→ [`../formats/`](../formats/readme.md)); concept taxonomy (→ [`../taxonomy/`](../taxonomy/readme.md)).
+- **Out of Scope**: Entry-level JSONL schema (→ [`../jsonl/`](../jsonl/readme.md)); storage directory architecture (→ [`../storage/`](../storage/readme.md)); filesystem paths (→ [`../filesystem/`](../filesystem/readme.md)); settings format (→ [`../settings/`](../settings/readme.md)); ancillary file formats (→ [`../format/`](../format/readme.md)); concept taxonomy (→ [`../taxonomy/`](../taxonomy/readme.md)).
 
 ### Overview Table
 
@@ -104,7 +104,7 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | E40 | B21 | Test | `../../tests/behavior/b21_fork_session_flag.rs` | `b21_fork_session_flag_documented_in_help` | `claude --help` output contains `--fork-session` flag |
 | E41 | B22 | Observation | `claude --help` live output | `--no-session-persistence` flag entry | Help text documents `--no-session-persistence` flag; notes it disables `.jsonl` creation and works only with `--print` mode |
 | E42 | B22 | Test | `../../tests/behavior/b22_no_session_persistence_flag.rs` | `b22_no_session_persistence_flag_documented_in_help` | `claude --help` output contains `--no-session-persistence` flag |
-| E43 | B23 | Doc | `../params/057_session_dir.md` | Description | Documents `CLAUDE_CODE_SESSION_DIR` env var that overrides session storage directory |
+| E43 | B23 | Doc | `../param/057_session_dir.md` | Description | Documents `CLAUDE_CODE_SESSION_DIR` env var that overrides session storage directory |
 | E44 | B23 | Test | `../../tests/behavior/b23_session_dir_override.rs` | `b23_session_dir_env_var_not_rejected` | Binary does not explicitly reject `CLAUDE_CODE_SESSION_DIR` env var at startup |
 | E45 | B24 | Observation | `claude --help` live output | `--from-pr` flag entry | Help text documents `--from-pr [value]` flag for resuming sessions linked to GitHub pull requests |
 | E46 | B24 | Test | `../../tests/behavior/b24_from_pr_flag.rs` | `b24_from_pr_flag_documented_in_help` | `claude --help` output contains `--from-pr` flag |
@@ -202,4 +202,4 @@ All `behavior` doc instances must include:
 **This entity consumed by**:
 - `../../tests/behavior/` — invalidation test suite (one file per behavior)
 
-- `../../../module/claude_runner_core/docs/claude_params/` — flag behavior cross-references
+- `../../../module/claude_runner_core/docs/claude_param/` — flag behavior cross-references

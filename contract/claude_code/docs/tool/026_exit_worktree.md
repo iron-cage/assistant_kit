@@ -19,5 +19,5 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
-| doc | [../params/073_worktree.md](../params/073_worktree.md) | Worktree session parameter |
+| doc | [../param/073_worktree.md](../param/073_worktree.md) | Worktree session parameter |
 | doc | [025_enter_worktree.md](025_enter_worktree.md) | Enter worktree isolation |
