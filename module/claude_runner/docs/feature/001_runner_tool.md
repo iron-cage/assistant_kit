@@ -141,7 +141,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/cli_args_ext_test.rs` | T36–T49, S58–S79 extended flags; BUG-212, BUG-215 reproducers |
 | `../../tests/dry_run_test.rs` | Validates dry-run preview output including all injected flags |
 | `../../tests/execution_mode_test.rs` | E01–E13 live mode dispatch via fake claude binary |
-| `../../tests/isolated_test.rs` | `clr isolated` parsing, error cases, lim_it live runs, unknown-subcommand detection; Plan 034: `--dry-run` (IT-12–15), `--dir`/`--add-dir` (IT-16–20), `--file` (IT-21–23), `--expect`/`--expect-strategy` (IT-24–27) |
+| `../../tests/isolated_test.rs` | `clr isolated` parsing, error cases, lim_it live runs, unknown-subcommand detection; Plan 034: `--dry-run` (IT-12–15), `--dir`/`--add-dir` (IT-16–20), `--file` (IT-21–23), `--expect`/`--expect-strategy` (IT-24–27), pipe buffering (IT-28); Plan 035: `--output-file` (IT-29), `--strip-fences` (IT-30), `--output-style` (IT-31), `--summary-fields` (IT-32), env fallbacks (IT-33–36) |
 | `../../tests/output_file_test.rs` | T01–T06 --output-file tee behavior, write errors, dry-run skip |
 | `../../tests/expect_validation_test.rs` | T01–T17 --expect / --expect-strategy / --retry-on-validation validation loop |
 | `../../tests/bug_reproducers_247_test.rs` | BUG-247 stdout-to-stderr forwarding on subprocess failure |

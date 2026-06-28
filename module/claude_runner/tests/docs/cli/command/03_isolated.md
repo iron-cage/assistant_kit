@@ -33,6 +33,16 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 | IT-25 | `--expect "hello" --expect-strategy fail` mismatch → exit 3 | Expect Fail |
 | IT-26 | `--expect "hello" --expect-strategy default:no` mismatch → exit 0, stdout "no" | Expect Default |
 | IT-27 | `--expect-strategy retry` → exit 1 (unsupported for isolated) | Expect Retry |
+| IT-28 | `--file` with >64 KiB stdout → no pipe deadlock | Pipe Buffering |
+| IT-29 | `--output-file` tees output to disk | Output File |
+| IT-30 | `--strip-fences` removes outer fences | Strip Fences |
+| IT-31 | `--output-style summary` renders CLR envelope | Output Style |
+| IT-32 | `--summary-fields minimal` limits rendered fields | Summary Fields |
+| IT-33 | `CLR_OUTPUT_FILE` env var fallback | Output Env |
+| IT-34 | `CLR_STRIP_FENCES=1` env var fallback | Output Env |
+| IT-35 | `CLR_OUTPUT_STYLE=summary` env var fallback | Output Env |
+| IT-36 | `CLR_SUMMARY_FIELDS=minimal` env var fallback | Output Env |
+| IT-37 | `CLR_JOURNAL=bogus` env var → exit 1, error names env var | Error: Invalid Env |
 
 ## Test Coverage Summary
 
@@ -49,8 +59,14 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - File Input: 2 tests (IT-21, IT-23)
 - File Error: 1 test (IT-22)
 - Expect Validation: 4 tests (IT-24 through IT-27)
+- Pipe Buffering: 1 test (IT-28)
+- Output File: 1 test (IT-29)
+- Strip Fences: 1 test (IT-30)
+- Output Style: 1 test (IT-31)
+- Summary Fields: 1 test (IT-32)
+- Output Env: 4 tests (IT-33 through IT-36)
 
-**Total:** 27 test cases
+**Total:** 36 test cases
 
 ---
 
@@ -321,3 +337,104 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Expected behavior:** exit 1; stderr contains "retry" indicating unsupported strategy
 - **Exit:** 1
 - **Source:** [--expect-strategy](../../../../docs/cli/param/031_expect_strategy.md)
+
+---
+
+### IT-28: `--file` with >64 KiB stdout → no pipe deadlock
+
+- **Setup:** credentials JSON at temp file; fake claude echoes >64 KiB of output; `--file` used to pipe stdin
+- **Command:** `clr isolated --creds <f> --file <input> "msg"` (PATH set to fake claude dir)
+- **Expected behavior:** exit 0; all output captured without deadlock; background reader threads drain stdout/stderr concurrently
+- **Exit:** 0
+- **Source:** [--file](../../../../docs/cli/param/025_file.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+
+---
+
+### IT-29: `--output-file` tees output to disk
+
+- **Setup:** credentials JSON at temp file; fake claude echoes known text; output file path in temp dir
+- **Command:** `clr isolated --creds <f> --output-file <path> "msg"` (PATH set to fake claude dir)
+- **Expected behavior:** exit 0; stdout contains known text; output file at `<path>` contains same text
+- **Exit:** 0
+- **Source:** [--output-file](../../../../docs/cli/param/029_output_file.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+
+---
+
+### IT-30: `--strip-fences` removes outer fences
+
+- **Setup:** credentials JSON at temp file; fake claude emits fenced python code (` ```python\nprint("hi")\n``` `)
+- **Command:** `clr isolated --creds <f> --strip-fences "msg"` (PATH set to fake claude dir)
+- **Expected behavior:** exit 0; stdout contains `print("hi")` without fence lines
+- **Exit:** 0
+- **Source:** [--strip-fences](../../../../docs/cli/param/026_strip_fences.md)
+
+---
+
+### IT-31: `--output-style summary` renders CLR envelope
+
+- **Setup:** credentials JSON at temp file; fake claude emits JSON with `"type":"result"` and `"result":"hello"`
+- **Command:** `clr isolated --creds <f> --output-style summary "msg"` (PATH set to fake claude dir)
+- **Expected behavior:** exit 0; stdout contains rendered summary (key:val format with `---` separator); raw JSON not in stdout
+- **Exit:** 0
+- **Source:** [--output-style](../../../../docs/cli/param/070_output_style.md)
+
+---
+
+### IT-32: `--summary-fields minimal` limits rendered fields
+
+- **Setup:** credentials JSON at temp file; fake claude emits CLR envelope JSON with `"type":"result"`, `"result":"hello"`, `"num_turns":5`
+- **Command:** `clr isolated --creds <f> --output-style summary --summary-fields minimal "msg"` (PATH set to fake claude dir)
+- **Expected behavior:** exit 0; stdout contains `result` field; stdout does NOT contain `num_turns` (excluded by minimal profile)
+- **Exit:** 0
+- **Source:** [--summary-fields](../../../../docs/cli/param/071_summary_fields.md)
+
+---
+
+### IT-33: `CLR_OUTPUT_FILE` env var fallback
+
+- **Setup:** credentials JSON at temp file; fake claude echoes known text; `CLR_OUTPUT_FILE=<path>` in env; no `--output-file` flag
+- **Command:** `clr isolated --creds <f> "msg"` (with `CLR_OUTPUT_FILE` set)
+- **Expected behavior:** exit 0; output file at `<path>` contains known text
+- **Exit:** 0
+- **Source:** [--output-file](../../../../docs/cli/param/029_output_file.md)
+
+---
+
+### IT-34: `CLR_STRIP_FENCES=1` env var fallback
+
+- **Setup:** credentials JSON at temp file; fake claude emits fenced code; `CLR_STRIP_FENCES=1` in env; no `--strip-fences` flag
+- **Command:** `clr isolated --creds <f> "msg"` (with `CLR_STRIP_FENCES=1` set)
+- **Expected behavior:** exit 0; stdout contains code without fence lines
+- **Exit:** 0
+- **Source:** [--strip-fences](../../../../docs/cli/param/026_strip_fences.md)
+
+---
+
+### IT-35: `CLR_OUTPUT_STYLE=summary` env var fallback
+
+- **Setup:** credentials JSON at temp file; fake claude emits CLR JSON envelope; `CLR_OUTPUT_STYLE=summary` in env; no `--output-style` flag
+- **Command:** `clr isolated --creds <f> "msg"` (with `CLR_OUTPUT_STYLE=summary` set)
+- **Expected behavior:** exit 0; stdout contains rendered summary format (not raw JSON)
+- **Exit:** 0
+- **Source:** [--output-style](../../../../docs/cli/param/070_output_style.md)
+
+---
+
+### IT-36: `CLR_SUMMARY_FIELDS=minimal` env var fallback
+
+- **Setup:** credentials JSON at temp file; fake claude emits CLR JSON envelope; `CLR_OUTPUT_STYLE=summary` + `CLR_SUMMARY_FIELDS=minimal` in env
+- **Command:** `clr isolated --creds <f> "msg"` (with both env vars set)
+- **Expected behavior:** exit 0; stdout contains `result` field; stdout does NOT contain `num_turns`
+- **Exit:** 0
+- **Source:** [--summary-fields](../../../../docs/cli/param/071_summary_fields.md)
+
+
+---
+
+### IT-37: `CLR_JOURNAL=bogus` env var → exit 1 with error naming the env var
+
+- **Setup:** credentials JSON at temp file; `CLR_JOURNAL=bogus` in env; `--dry-run` flag prevents subprocess spawn
+- **Command:** `clr isolated --creds <f> --dry-run "x"` (with `CLR_JOURNAL=bogus` set)
+- **Expected behavior:** exit 1; stderr contains `"CLR_JOURNAL"` and `"invalid"`
+- **Exit:** 1
+- **Source:** Fix — `apply_isolated_env_vars()` validates `CLR_JOURNAL` consistently with `apply_env_vars()` in `env.rs`

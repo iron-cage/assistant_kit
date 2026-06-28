@@ -64,7 +64,7 @@ fn emit_credential_trace
 /// - **Other errors:** exits 1 with an error message.
 ///
 /// This function never returns; it always calls `std::process::exit`.
-#[ allow( clippy::too_many_arguments ) ]
+#[ allow( clippy::too_many_arguments, clippy::fn_params_excessive_bools ) ]
 pub( super ) fn run_isolated_command
 (
   label            : &str,
@@ -81,6 +81,10 @@ pub( super ) fn run_isolated_command
   expect           : Option< &str >,
   expect_strategy  : Option< &str >,
   journal          : Option< JournalWriter >,
+  output_file      : Option< &str >,
+  do_strip_fences  : bool,
+  output_style     : Option< &str >,
+  summary_fields   : Option< &str >,
 ) -> !
 {
   // Build the full arg list with all injected defaults prepended before --print.
@@ -144,7 +148,25 @@ pub( super ) fn run_isolated_command
       {
         result.stdout
       };
-      if !stdout.is_empty() { print!( "{}", stdout ); }
+      // Output processing chain: strip fences → render summary → print → write file.
+      let stdout = if do_strip_fences
+      {
+        super::fence::strip_fences( &stdout )
+      }
+      else { stdout };
+      let stdout = if output_style == Some( "summary" )
+      {
+        super::summary::render_summary( &stdout, summary_fields ).unwrap_or( stdout )
+      }
+      else { stdout };
+      if !stdout.is_empty() { print!( "{stdout}" ); }
+      if let Some( path ) = output_file
+      {
+        if let Err( e ) = std::fs::write( path, &stdout )
+        {
+          eprintln!( "Warning: could not write output file '{path}': {e}" );
+        }
+      }
       if let Some( ref w ) = journal
       {
         let mut ev             = EventRecord::new( EventType::Credential );
@@ -231,6 +253,7 @@ fn apply_isolated_expect( stdout : &str, expect : Option< &str >, strategy : Opt
 /// Pitfall: this function duplicates the temp-HOME lifecycle from `run_isolated()` in
 /// `claude_runner_core` to avoid modifying out-of-scope code. If `run_isolated()` gains
 /// new setup steps, update both together.
+#[ allow( clippy::too_many_lines ) ]
 fn run_isolated_with_stdin_file
 (
   credentials_json : &str,
@@ -279,6 +302,27 @@ fn run_isolated_with_stdin_file
     }
   } )?;
 
+  // Take pipe handles before the poll loop so background reader threads own them.
+  // Without draining, a subprocess writing >64 KiB blocks on pipe write,
+  // try_wait() never returns Some(_), and the operation hangs until timeout.
+  let stdout_pipe = child.stdout.take().expect( "stdout piped by spawn_piped" );
+  let stderr_pipe = child.stderr.take().expect( "stderr piped by spawn_piped" );
+
+  let stdout_t = std::thread::spawn( move || -> Vec< u8 >
+  {
+    use std::io::Read as _;
+    let mut buf = Vec::new();
+    let _ = { let mut r = stdout_pipe; r.read_to_end( &mut buf ) };
+    buf
+  } );
+  let stderr_t = std::thread::spawn( move || -> Vec< u8 >
+  {
+    use std::io::Read as _;
+    let mut buf = Vec::new();
+    let _ = { let mut r = stderr_pipe; r.read_to_end( &mut buf ) };
+    buf
+  } );
+
   let deadline : Option< std::time::Instant > = if timeout_secs > 0
   {
     Some( std::time::Instant::now() + Duration::from_secs( timeout_secs ) )
@@ -288,29 +332,31 @@ fn run_isolated_with_stdin_file
     None
   };
   let mut timed_out = false;
-  let subprocess_output : Result< std::process::Output, RunnerError > = loop
+  loop
   {
     match child.try_wait()
     {
-      Ok( Some( _ ) ) =>
-      {
-        break child.wait_with_output()
-          .map_err( | e | RunnerError::Io( e.to_string() ) );
-      }
+      Ok( Some( _ ) ) => { break; }
       Ok( None ) =>
       {
         if deadline.is_some_and( | d | std::time::Instant::now() >= d )
         {
           timed_out = true;
           let _ = child.kill();
-          break child.wait_with_output()
-            .map_err( | e | RunnerError::Io( e.to_string() ) );
+          break;
         }
         std::thread::sleep( Duration::from_millis( 50 ) );
       }
-      Err( e ) => break Err( RunnerError::Io( e.to_string() ) ),
+      Err( e ) =>
+      {
+        // Drop reader threads before returning — do NOT join (shell children may hold pipes).
+        drop( stdout_t );
+        drop( stderr_t );
+        let _ = std::fs::remove_dir_all( &temp_dir );
+        return Err( RunnerError::Io( e.to_string() ) );
+      }
     }
-  };
+  }
 
   let credentials = std::fs::read_to_string( &creds_path )
     .ok()
@@ -321,12 +367,12 @@ fn run_isolated_with_stdin_file
 
   let _ = std::fs::remove_dir_all( &temp_dir );
 
-  let output = subprocess_output?;
-  let stdout = String::from_utf8_lossy( &output.stdout ).to_string();
-  let stderr = String::from_utf8_lossy( &output.stderr ).to_string();
-
   if timed_out
   {
+    // Drop reader threads — do NOT join.  Shell child processes may inherit the pipe
+    // write end; joining would block until they exit too (same as execute_print_attempt fix).
+    drop( stdout_t );
+    drop( stderr_t );
     if credentials.is_some()
     {
       return Ok( IsolatedRunResult
@@ -340,11 +386,17 @@ fn run_isolated_with_stdin_file
     return Err( RunnerError::TimeoutWithOutput
     {
       secs           : timeout_secs,
-      partial_stdout : stdout,
+      partial_stdout : String::new(),
     } );
   }
 
-  let exit_code = signal_exit_code( &output.status );
+  // Normal exit: join reader threads to collect all buffered data.
+  let stdout_bytes = stdout_t.join().unwrap_or_default();
+  let stderr_bytes = stderr_t.join().unwrap_or_default();
+  let stdout = String::from_utf8_lossy( &stdout_bytes ).to_string();
+  let stderr = String::from_utf8_lossy( &stderr_bytes ).to_string();
+  let exit_code = signal_exit_code( &child.wait()
+    .map_err( | e | RunnerError::Io( e.to_string() ) )? );
   Ok( IsolatedRunResult { exit_code, stdout, stderr, credentials } )
 }
 
@@ -382,5 +434,9 @@ pub( super ) fn run_refresh_command
     None,   // no expect pattern for refresh
     None,   // no expect strategy for refresh
     journal,
+    None,   // no output file for refresh
+    false,  // no fence stripping for refresh
+    None,   // no output style for refresh
+    None,   // no summary fields for refresh
   );
 }

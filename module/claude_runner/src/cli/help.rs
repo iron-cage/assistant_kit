@@ -159,6 +159,10 @@ pub( crate ) fn print_isolated_help() -> !
   println!( "  --expect <VALS>                    Pipe-separated expected values; mismatch triggers strategy (case-insensitive, trimmed)" );
   println!( "  --expect-strategy <STRAT>          Mismatch handling: fail (default) → exit 3; default:<VAL> → print VAL, exit 0" );
   println!( "                                     Note: retry is NOT supported for isolated (one-shot semantics)" );
+  println!( "  --output-file <PATH>               Write output to file (also prints to stdout) [env: CLR_OUTPUT_FILE]" );
+  println!( "  --strip-fences                     Strip outermost markdown code fences from output [env: CLR_STRIP_FENCES]" );
+  println!( "  --output-style <MODE>              Output rendering: raw (default), summary [env: CLR_OUTPUT_STYLE]" );
+  println!( "  --summary-fields <PROFILE>         Summary field selection: full, standard, minimal, or comma-separated [env: CLR_SUMMARY_FIELDS]" );
   println!();
   println!( "EXIT CODES:" );
   println!( "  0    Success" );

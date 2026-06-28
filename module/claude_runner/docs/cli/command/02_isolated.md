@@ -28,6 +28,10 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 | [`--expect-strategy`](../param/031_expect_strategy.md) | enum | `fail` | Mismatch strategy: `fail` → exit 3; `default:<V>` → print `<V>`, exit 0; `retry` → exit 1 (unsupported for isolated) |
 | [`--journal`](../param/072_journal.md) | enum | `full` | Journal level: `full` (stdout+stderr ≤1MB), `meta` (metadata only), `off` (disabled) |
 | [`--journal-dir`](../param/073_journal_dir.md) | path | `~/.clr/journal/` | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` |
+| [`--output-file`](../param/029_output_file.md) | path | — | Write output to file (also prints to stdout); env: `CLR_OUTPUT_FILE` |
+| [`--strip-fences`](../param/026_strip_fences.md) | bool | false | Strip outermost markdown code fences from output; env: `CLR_STRIP_FENCES` |
+| [`--output-style`](../param/070_output_style.md) | enum | `raw` | Output rendering: `raw` (default), `summary`; env: `CLR_OUTPUT_STYLE` |
+| [`--summary-fields`](../param/071_summary_fields.md) | string | — | Summary field selection: `full`, `standard`, `minimal`, or comma-separated; env: `CLR_SUMMARY_FIELDS` |
 | `-h`/`--help` | — | — | Print isolated subcommand help and exit 0 |
 
 **Exit Codes:**

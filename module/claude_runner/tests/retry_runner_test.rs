@@ -240,9 +240,19 @@ fn ec6_clr_runner_delay_invalid_ignored()
 /// `--retry-on-runner`/`--runner-delay` were parsed but had no runtime effect;
 /// all spawn-error arms called `exit(1)` directly, bypassing the retry system.
 ///
+/// ## Why Not Caught
+/// All prior tests used a live or fake `claude` binary — spawn always succeeded.
+/// No test combined a missing binary with a non-zero `--retry-on-runner` count,
+/// so the dead retry path in `apply_runner_retry()` was never reached.
+///
 /// ## Fix Applied
 /// `execute_print_attempt()` now returns `Result<ExecutionOutput, io::Error>` on
 /// spawn failure; `run_print_mode()` calls `apply_runner_retry()` on `Err`.
+///
+/// ## Prevention
+/// Every retry class must have one "retry fires" test (positive path, EC-7) and
+/// one "retry disabled" test (negative path, EC-8) using an unconditional failure
+/// mode. For the Runner class, an empty PATH provides a reproducible failure.
 ///
 /// ## Pitfall
 /// Do NOT include `--retry-override` in EC-7 — it short-circuits to its value
@@ -274,10 +284,28 @@ fn ec7_runner_retry_fires_on_absent_binary()
 // ── EC-8: retry disabled explicitly — no retry fires ─────────────────────────
 
 /// EC-8 (BUG-299): when `claude` is absent and `--retry-on-runner 0 --retry-override 0`
-/// is set, no retry fires — stderr does NOT contain `"retrying"`; exit 1 immediately.
+/// is set, no retry fires — stderr does NOT contain `"retrying"`; exit immediately.
 ///
-/// `--retry-override 0` suppresses the default fallback (2 retries), ensuring the
-/// zero class-specific count is not overridden by the default.
+/// ## Root Cause (BUG-299)
+/// `--retry-on-runner`/`--runner-delay` were parsed but had no runtime effect;
+/// all spawn-error arms called `exit(1)` directly, bypassing the retry system.
+///
+/// ## Why Not Caught
+/// All prior tests used a live or fake `claude` binary — spawn always succeeded.
+/// No test combined a missing binary with an explicit zero retry count to confirm
+/// that the "disabled" semantic was correctly enforced.
+///
+/// ## Fix Applied
+/// `execute_print_attempt()` returns `Err` on spawn failure; `apply_runner_retry()`
+/// checks the configured count and exits on exhaustion without sleeping when count is 0.
+///
+/// ## Prevention
+/// Pair every retry "fires" test (EC-7) with a "disabled" test (EC-8) so both
+/// the active and inactive code paths are covered for each retry class.
+///
+/// ## Pitfall
+/// `--retry-override 0` is required alongside `--retry-on-runner 0` — without it,
+/// the 3-tier fallback supplies the default count (2), causing unexpected retries.
 // test_kind: bug_reproducer(BUG-299)
 #[ test ]
 fn ec8_runner_retry_disabled_no_retry()

@@ -304,7 +304,11 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     Ok( c )  => c,
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
   };
-  apply_isolated_env_vars( &mut cli );
+  if let Err( e ) = apply_isolated_env_vars( &mut cli )
+  {
+    eprintln!( "Error: {e}" );
+    std::process::exit( 1 );
+  }
   if cli.creds_path.is_empty()
   {
     eprintln!( "{CREDS_PATH_ERROR}" );
@@ -400,6 +404,10 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     cli.expect.as_deref(),
     cli.expect_strategy.as_deref(),
     journal,
+    cli.output_file.as_deref(),
+    cli.strip_fences,
+    cli.output_style.as_deref(),
+    cli.summary_fields.as_deref(),
   )
 }
 
@@ -411,7 +419,11 @@ pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
     Ok( c )  => c,
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
   };
-  apply_refresh_env_vars( &mut cli );
+  if let Err( e ) = apply_refresh_env_vars( &mut cli )
+  {
+    eprintln!( "Error: {e}" );
+    std::process::exit( 1 );
+  }
   if cli.creds_path.is_empty()
   {
     eprintln!( "{CREDS_PATH_ERROR}" );

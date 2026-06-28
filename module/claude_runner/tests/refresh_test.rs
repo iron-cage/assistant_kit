@@ -9,6 +9,7 @@
 //! | IT-4 | `--timeout 0` → unlimited (no watchdog), exit 0 | No (Unix) |
 //! | IT-6 | `--creds <f> --timeout abc` → exit 1, invalid timeout | No |
 //! | IT-8 | `clr refresh --help` → exit 0, help text shown | No |
+//! | IT-9 | `CLR_JOURNAL=bogus` → exit 1 with error message | No |
 //!
 //! Tests containing `lim_it` (not present in this file) would require a live
 //! OAuth-capable `claude` binary.  All tests here run without live credentials.
@@ -144,5 +145,64 @@ fn test_it8_help_exits_zero()
   assert!(
     stdout.contains( "--help" ),
     "help text must mention --help; got:\n{stdout}",
+  );
+}
+
+// ── IT-9: CLR_JOURNAL=invalid → exit 1 ───────────────────────────────────────
+
+/// IT-9: `CLR_JOURNAL=bogus` env var with `clr refresh` exits 1 and names the
+/// invalid value in the error message.
+///
+/// ## Root Cause
+///
+/// `apply_refresh_env_vars()` applied `CLR_JOURNAL` directly via `env_str()` without
+/// validation — an invalid value was silently accepted, unlike the `run`/`ask` path.
+///
+/// ## Why Not Caught
+///
+/// No test asserted that `CLR_JOURNAL=bogus` would be rejected by the refresh path.
+///
+/// ## Fix Applied
+///
+/// `apply_refresh_env_vars()` now validates `CLR_JOURNAL` against `"full" | "meta" | "off"`
+/// and returns `Err` with message `"CLR_JOURNAL: invalid value '…'"`.
+///
+/// ## Prevention
+///
+/// Assert `CLR_JOURNAL=bogus clr refresh …` exits 1 and names the env var in stderr.
+///
+/// ## Pitfall
+///
+/// The `--creds` flag must point to a readable file so the env var error is the first
+/// exit point (fired before the creds-path empty-string check).
+///
+/// Source: tests/docs/cli/command/04_refresh.md#it-9
+#[ test ]
+fn test_it9_clr_journal_invalid_value_exits_1()
+{
+  let creds   = make_creds_file( "{}" );
+  let creds_s = creds.path().to_str().expect( "utf-8" );
+  let bin     = env!( "CARGO_BIN_EXE_clr" );
+  let out     = std::process::Command::new( bin )
+    .args( [ "refresh", "--creds", creds_s ] )
+    .env( "CLR_JOURNAL", "bogus" )
+    .env_remove( "CLR_JOURNAL_DIR" )
+    .output()
+    .expect( "failed to invoke clr refresh" );
+  assert_eq!(
+    exit_code( &out ),
+    1,
+    "CLR_JOURNAL=bogus must cause refresh to exit 1. Got: {:?}\nstderr: {}",
+    out.status.code(),
+    stderr_str( &out ),
+  );
+  let stderr = stderr_str( &out );
+  assert!(
+    stderr.contains( "CLR_JOURNAL" ),
+    "error must mention CLR_JOURNAL. Got:\n{stderr}"
+  );
+  assert!(
+    stderr.to_lowercase().contains( "invalid" ),
+    "error must describe the value as invalid. Got:\n{stderr}"
   );
 }

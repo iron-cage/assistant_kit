@@ -142,6 +142,12 @@ const PROFILE_STANDARD : &[ &str ] = &[
 ///
 /// Returns `Ok(fields)` for valid profiles (`full`, `standard`, `minimal`) or
 /// valid comma-separated custom whitelists.  Returns `Err(bad_token)` on invalid input.
+///
+/// # Errors
+///
+/// Returns `Err(token)` when `value` is not a recognized profile name and
+/// contains at least one field name absent from `FIELD_ORDER`.
+#[ inline ]
 pub fn resolve_fields( value : &str ) -> Result< Vec< &'static str >, String >
 {
   match value
@@ -179,6 +185,8 @@ pub fn resolve_fields( value : &str ) -> Result< Vec< &'static str >, String >
 /// CLR result envelope (caller should fall back to printing raw `json`).
 ///
 /// `fields` is the raw `--summary-fields` value (`None` defaults to `"full"`).
+#[ inline ]
+#[ must_use ]
 #[ allow( clippy::too_many_lines, clippy::similar_names ) ]
 pub fn render_summary( json : &str, fields : Option< &str > ) -> Option< String >
 {

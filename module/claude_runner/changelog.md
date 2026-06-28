@@ -23,9 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--dir <PATH>` / `--add-dir <PATH>` (TSK-329): set working directory and grant additional read paths; validated before spawn; env fallbacks `CLR_DIR` / `CLR_ADD_DIR`
   - `--file <PATH>` (TSK-330): pipe file content as stdin to the isolated subprocess; pre-spawn existence check (exit 1 if missing)
   - `--expect <VALS>` / `--expect-strategy <STRAT>` (TSK-331): assert output matches pipe-separated patterns (case-insensitive, trimmed); `fail` → exit 3; `default:<V>` → print V, exit 0; `retry` unsupported (one-shot semantics) → exit 1
-  - `isolated` param count: 6 → 12; shared params with `run`/`ask` now 9 (was 3)
+  - `--output-file <PATH>` (TSK-332): tee subprocess output to disk; env fallback `CLR_OUTPUT_FILE`
+  - `--strip-fences` (TSK-332): strip outermost markdown code fences from output; env fallback `CLR_STRIP_FENCES`
+  - `--output-style <MODE>` (TSK-332): output rendering control (`raw` default, `summary`); env fallback `CLR_OUTPUT_STYLE`; default is `raw` (not `summary` like `run`/`ask`); no auto-inject of `--output-format json` — use passthrough if needed
+  - `--summary-fields <PROFILE>` (TSK-332): summary field selection (`full`/`standard`/`minimal`/custom); env fallback `CLR_SUMMARY_FIELDS`
+  - `isolated` param count: 6 → 16; shared params with `run`/`ask` now 13 (was 3)
   - Exit code 3 now applies to `isolated` (`--expect` mismatch with `fail` strategy)
-  - Tests: IT-12–IT-27 in `tests/isolated_test.rs` (16 new cases); spec: `tests/docs/cli/command/03_isolated.md`
+  - Tests: IT-12–IT-36 in `tests/isolated_test.rs` (25 new cases); spec: `tests/docs/cli/command/03_isolated.md`
   - Docs: `docs/cli/command/02_isolated.md`, `docs/cli/parity/001_run_ask_isolated.md`
 
 - **Event journaling integration** (Plan 033, TSK-326)
