@@ -92,6 +92,8 @@ table with Name, Category, and Description columns. Static data sourced from
 
 **Isolated subcommand extended params (Plan 034):** `clr isolated` gained six params that mirror existing `run`/`ask` capabilities: `--dry-run` (print injected temp-HOME command without creating a directory or spawning; exit 0), `--dir <PATH>` (working directory injected into subprocess; validated before spawn; `CLR_DIR` env fallback), `--add-dir <PATH>` (repeatable; additional read paths; `CLR_ADD_DIR` env fallback), `--file <PATH>` (pipe file content as stdin; pre-spawn existence check; exit 1 if missing), `--expect <VALS>` (pipe-separated match patterns; case-insensitive trimmed), `--expect-strategy <STRAT>` (`fail`→exit 3, `default:<V>`→exit 0; `retry` unsupported → exit 1). `isolated` param count went from 6 to 12; it now shares 9 params with `run`/`ask` (was 3). Exit code 3 applies to `isolated` on `--expect` mismatch with `fail` strategy.
 
+**Session mismatch detection (BUG-320 hardening):** When `-c` is injected, `session_exists()` captures the UUID of the most-recently-modified `.jsonl` file in the session storage directory as `expected_session_id: Option<SessionId>`. On the success path in `run_print_mode()`, `extract_session_id()` in `summary.rs` parses the `session_id` field from claude's JSON result envelope. If `expected_session_id` is `Some` and the actual UUID differs, a `[Runner] warning: session mismatch` line is emitted to stderr. The run is not failed — the warning is diagnostic only. See [invariant/009_session_mismatch_detection.md](../invariant/009_session_mismatch_detection.md).
+
 **Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile` (via `--session-dir` flag passthrough or resolved externally).
 
 ### APIs
@@ -112,6 +114,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | [invariant/006_exit_codes.md](../invariant/006_exit_codes.md) | Exit code semantics (0-4, 128+signal) |
 | [invariant/007_print_mode_timeout.md](../invariant/007_print_mode_timeout.md) | Print-mode default timeout (3600s) vs interactive (unlimited) |
 | [invariant/008_render_summary_gate.md](../invariant/008_render_summary_gate.md) | `render_summary()` must gate on `"type":"result"`; optional fields use `.unwrap_or_default()` |
+| [invariant/009_session_mismatch_detection.md](../invariant/009_session_mismatch_detection.md) | Diagnostic warning when `-c` resumes a different session than expected |
 
 ### Sources
 
