@@ -1,5 +1,12 @@
 # Parameter Group :: 2. Project Scope
 
+### Scope
+
+- **Purpose**: Specify the Project Scope parameter group.
+- **Responsibility**: Member parameters, coherence semantics, and command usage for Project Scope.
+- **In Scope**: Group membership, shared behavior, command interactions.
+- **Out of Scope**: Individual parameter specs (→ `param/`), type constraints (→ `type/`).
+
 **Parameters:** `project::`
 
 **Pattern:** Project-level scope restriction

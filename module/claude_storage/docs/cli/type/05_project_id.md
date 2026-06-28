@@ -1,5 +1,12 @@
 # Type :: 5. `ProjectId`
 
+### Scope
+
+- **Purpose**: Specify the `ProjectId` semantic type.
+- **Responsibility**: Validation rules, fundamental type, and parameter mapping for `ProjectId`.
+- **In Scope**: Parsing rules, valid/invalid values, error messages.
+- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
+
 **Purpose:** Multi-format project identifier. Claude Code uses different naming schemes for projects; this type accepts all of them and resolves to the internal path-encoded key.
 
 **Fundamental Type:** Wrapper around string (multi-format)

@@ -1,5 +1,12 @@
 # Type System
 
+### Scope
+
+- **Purpose**: Document semantic newtypes constraining CLI parameter values.
+- **Responsibility**: Per-type constraint and parsing reference for all CLI types.
+- **In Scope**: All 13 semantic types with validation rules, fundamental types, and parameter mappings.
+- **Out of Scope**: Parameter specifications (→ `param/`), command behavior (→ `command/`).
+
 Semantic newtypes for `claude_storage` CLI parameters. Every parameter uses a named type with validation constraints — never bare primitives.
 
 See [param/readme.md](../param/readme.md) for which parameters use each type.
@@ -19,8 +26,8 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 | `09_session_id.md` | SessionId — exact session identifier |
 | `10_storage_path.md` | StoragePath — filesystem path (absolute or ~-prefixed) |
 | `11_target_type.md` | TargetType — count target enum (projects/sessions/entries) |
-| `13_topic_name.md` | TopicName — session topic identifier string |
-| `14_strategy_type.md` | StrategyType — resume strategy enum (resume/fresh) |
+| `12_topic_name.md` | TopicName — session topic identifier string |
+| `13_strategy_type.md` | StrategyType — resume strategy enum (resume/fresh) |
 
 ### Type Index
 
@@ -37,9 +44,8 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 | 9 | [`SessionId`](09_session_id.md) | String | `session_id::`, `session::` |
 | 10 | [`StoragePath`](10_storage_path.md) | String (filesystem) | `path::` (most), `output::` |
 | 11 | [`TargetType`](11_target_type.md) | String enum | `target::` |
-| 12 | [`TopicName`](13_topic_name.md) | String (identifier) | `topic::` |
-| 13 | [`StrategyType`](14_strategy_type.md) | String enum | `strategy::` |
-| 14 | [`StrategyType`](14_strategy_type.md) | String enum | `strategy::` |
+| 12 | [`TopicName`](12_topic_name.md) | String (identifier) | `topic::` |
+| 13 | [`StrategyType`](13_strategy_type.md) | String enum | `strategy::` |
 
 ### Navigation
 
@@ -54,5 +60,5 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 - [SessionId](09_session_id.md)
 - [StoragePath](10_storage_path.md)
 - [TargetType](11_target_type.md)
-- [TopicName](13_topic_name.md)
-- [StrategyType](14_strategy_type.md)
+- [TopicName](12_topic_name.md)
+- [StrategyType](13_strategy_type.md)

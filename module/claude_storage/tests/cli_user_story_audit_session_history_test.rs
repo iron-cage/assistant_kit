@@ -7,8 +7,8 @@
 //! ## Coverage
 //!
 //! - RWS-1: Basic status shows project and session totals
-//! - RWS-2: Verbosity 2 shows per-project breakdown
-//! - RWS-3: Verbosity 0 outputs machine-readable format
+//! - RWS-2: `show_tokens` reveals token consumption
+//! - RWS-3: Status outputs machine-readable format
 //! - RWS-4: Count `target::sessions` returns bare integer
 //! - RWS-5: Path override inspects alternate storage root
 
@@ -76,19 +76,19 @@ fn rws_1_basic_status_shows_project_and_session_totals()
   );
 }
 
-/// RWS-2: Verbosity 2 shows per-project breakdown.
+/// RWS-2: `show_tokens` reveals token consumption.
 ///
 /// ## Purpose
-/// End-to-end acceptance test: developer drills into per-project session counts
-/// using `verbosity::2`, getting more detail than the default summary.
+/// End-to-end acceptance test: developer audits token usage by running
+/// `.status show_tokens::1`, getting token counts in addition to the default summary.
 ///
 /// ## Coverage
-/// Per-project detail rows; entry breakdown visible; more detail than `verbosity::1`; exit 0.
+/// Token section present with `show_tokens::1`; more detail than default; exit 0.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/user_story/01_audit_session_history.md` — RWS-2
 #[ test ]
-fn rws_2_verbosity_2_shows_per_project_breakdown()
+fn rws_2_show_tokens_reveals_token_consumption()
 {
   let root = TempDir::new().unwrap();
   let p1 = root.path().join( "audit2-proj-a" );
@@ -96,38 +96,37 @@ fn rws_2_verbosity_2_shows_per_project_breakdown()
   common::write_path_project_session( root.path(), &p1, "s001", 4 );
   common::write_path_project_session( root.path(), &p2, "s002", 4 );
 
-  let v1_out = common::clg_cmd()
+  let default_out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".status" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
-  let v2_out = common::clg_cmd()
+  let tokens_out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".status" )
-    .arg( "verbosity::2" )
+    .arg( "show_tokens::1" )
     .output()
     .unwrap();
 
-  assert_exit( &v1_out, 0 );
-  assert_exit( &v2_out, 0 );
+  assert_exit( &default_out, 0 );
+  assert_exit( &tokens_out, 0 );
 
-  let v2 = stdout( &v2_out );
-  let v1 = stdout( &v1_out );
+  let s_tokens = stdout( &tokens_out );
+  let s_default = stdout( &default_out );
 
   assert!(
-    v2.len() > v1.len(),
-    "RWS-2: verbosity::2 must produce more detail than verbosity::1;\n  v1 ({} bytes):\n{v1}\n  v2 ({} bytes):\n{v2}",
-    v1.len(),
-    v2.len()
+    s_tokens.len() > s_default.len(),
+    "RWS-2: show_tokens::1 must produce more detail than default;\n  default ({} bytes):\n{s_default}\n  tokens ({} bytes):\n{s_tokens}",
+    s_default.len(),
+    s_tokens.len()
   );
 }
 
-/// RWS-3: Verbosity 0 outputs machine-readable format.
+/// RWS-3: Status outputs machine-readable format.
 ///
 /// ## Purpose
-/// End-to-end acceptance test: developer pipes `.status ```verbosity::```0` to a
+/// End-to-end acceptance test: developer pipes `.status` to a
 /// script and gets `Projects: N` parseable output.
 ///
 /// ## Coverage
@@ -136,7 +135,7 @@ fn rws_2_verbosity_2_shows_per_project_breakdown()
 /// ## Related Requirements
 /// `tests/docs/cli/user_story/01_audit_session_history.md` — RWS-3
 #[ test ]
-fn rws_3_verbosity_0_outputs_machine_readable_format()
+fn rws_3_status_outputs_machine_readable_format()
 {
   let root = TempDir::new().unwrap();
   let p1 = root.path().join( "audit3proj" );
@@ -145,7 +144,6 @@ fn rws_3_verbosity_0_outputs_machine_readable_format()
   let out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".status" )
-    .arg( "verbosity::0" )
     .output()
     .unwrap();
 
@@ -155,16 +153,16 @@ fn rws_3_verbosity_0_outputs_machine_readable_format()
   let s_lower = s.to_lowercase();
   assert!(
     s_lower.contains( "projects:" ),
-    "RWS-3: verbosity::0 must output 'projects:' key (case-insensitive); got:\n{s}"
+    "RWS-3: .status must output 'projects:' key (case-insensitive); got:\n{s}"
   );
   assert!(
     s_lower.contains( "sessions:" ),
-    "RWS-3: verbosity::0 must output 'sessions:' key (case-insensitive); got:\n{s}"
+    "RWS-3: .status must output 'sessions:' key (case-insensitive); got:\n{s}"
   );
   // Must not contain decorative elements
   assert!(
     !s.contains( "===" ) && !s.contains( "│" ) && !s.contains( "┌" ),
-    "RWS-3: verbosity::0 must not contain table borders or decorations; got:\n{s}"
+    "RWS-3: .status must not contain table borders or decorations; got:\n{s}"
   );
 }
 

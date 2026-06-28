@@ -4,7 +4,7 @@
 //! They are called by `render.rs`, `sort.rs`, `touch.rs`, and `fetch.rs`.
 
 use crate::output::format_duration_secs;
-use super::types::{ AccountQuota, PreferStrategy };
+use super::types::{ AccountQuota, PreferStrategy, OPUS_OVERRIDE_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD };
 
 // ── Token expiry label ────────────────────────────────────────────────────────
 
@@ -377,12 +377,6 @@ pub( crate ) fn prefer_weekly( aq : &AccountQuota, prefer : PreferStrategy ) -> 
 
 // ── Model recommendation ──────────────────────────────────────────────────────
 
-/// Sonnet utilization threshold above which Opus is recommended.
-///
-/// Accounts where `100.0 - seven_day_sonnet.utilization < OPUS_OVERRIDE_THRESHOLD`
-/// are recommended `"opus"` by `recommended_model()` and overridden by `apply_model_override()`.
-/// The literal `15.0` must not be duplicated — always reference this constant.
-pub( super ) const OPUS_OVERRIDE_THRESHOLD : f64 = 15.0;
 
 /// Return the recommended session model for the next rotation candidate.
 ///
@@ -436,9 +430,9 @@ pub( crate ) fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs
       )
   };
   [
-    pct_emoji( data.five_hour.as_ref().map( |p| p.utilization ), 15.0 ),
+    pct_emoji( data.five_hour.as_ref().map( |p| p.utilization ), OPUS_OVERRIDE_THRESHOLD ),
     reset_cell( data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ) ),
-    pct_emoji( data.seven_day.as_ref().map( |p| p.utilization ), 5.0 ),
+    pct_emoji( data.seven_day.as_ref().map( |p| p.utilization ), WEEKLY_EXHAUSTION_THRESHOLD ),
     pct_cell(  data.seven_day_sonnet.as_ref().map( |p| p.utilization ) ),
     reset_cell( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) ),
   ]
@@ -463,6 +457,10 @@ pub( crate ) fn status_emoji( aq : &AccountQuota ) -> &'static str
 {
   if aq.result.is_err() { return "🔴"; }
   // Fix(BUG-317): cancelled subscription → permanently unusable → 🔴 regardless of quota.
+  // Root cause: status_emoji() only checked quota thresholds — billing_type="none" accounts
+  //   with remaining quota appeared 🟢/🟡 even though they can never be used.
+  // Pitfall: billing_type gate must fire BEFORE quota threshold checks in all classification
+  //   functions; cancelled accounts are dead regardless of their quota readings.
   if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" ) { return "🔴"; }
   let Ok( data ) = &aq.result else { unreachable!() };
   let h5_left = 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
@@ -470,9 +468,14 @@ pub( crate ) fn status_emoji( aq : &AccountQuota ) -> &'static str
   // Fix(BUG-321): both-exhausted (h5 ≤ 15% AND d7 ≤ 5%) → 🟡 (G3 weekly-exhausted), not 🔴.
   // BUG-319's fix used `(false,false)→🔴` as a proxy for "dead" — premise-incorrect.
   // Both quota dimensions depleted with result=Ok is recoverable (7d reset restores both).
-  // Dead classification uses result.is_err() and billing_type="none" guards (above) — unchanged.
+  // Root cause: BUG-319 fix assumed the (false,false) arm mapped to "dead" — it does not;
+  //   dead is gated exclusively by result.is_err() and billing_type="none".
+  // Pitfall: 🔴 must only follow result.is_err() or billing_type="none" guards, never quota thresholds.
   // Fix(BUG-321): `status_emoji()` and `status_group_of()` now agree: both-exhausted = 🟡/G3.
-  match ( h5_left > 15.0, d7_left > 5.0 )
+  // Root cause: same as line 470 — BUG-319 fix premise was incorrect.
+  // Pitfall: emoji and group classification must be kept in sync; divergence produces
+  //   inconsistent table rows where 🔴 emoji appears in a 🟡 sort group.
+  match ( h5_left > OPUS_OVERRIDE_THRESHOLD, d7_left > WEEKLY_EXHAUSTION_THRESHOLD )
   {
     ( true, true ) => "🟢",
     _              => "🟡",

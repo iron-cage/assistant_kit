@@ -10,7 +10,7 @@
 
 pub( crate ) use super::sort_next::{ find_next_for_strategy, strategy_metric };
 
-use super::types::{ AccountQuota, SortStrategy, PreferStrategy };
+use super::types::{ AccountQuota, SortStrategy, PreferStrategy, OPUS_OVERRIDE_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD };
 use super::format::{ five_hour_left, prefer_weekly, seven_day_left, renewal_secs };
 
 // ── Status group ──────────────────────────────────────────────────────────────
@@ -41,13 +41,13 @@ fn status_group_of( aq : &AccountQuota ) -> StatusGroup
   {
     return StatusGroup::Red;
   }
-  let h5_ok = five_hour_left( aq ) > 15.0;
+  let h5_ok = five_hour_left( aq ) > OPUS_OVERRIDE_THRESHOLD;
   // Fix(BUG-299): use raw seven_day_left for d7_ok — group boundaries are model-agnostic per AC-12.
   // Root cause: prefer_weekly(any) = min(7d, 7d_son) can be ≤ 5.0 when 7d_son ≤ 5% even if
   //   seven_day_left > 5%, misclassifying h-exhausted accounts as Red instead of HExhausted.
   // Pitfall: prefer_weekly is correct for sort::renew tiebreak and → eligibility (model-aware);
   //   wrong for group boundary predicates — always use raw single-metric functions here.
-  let d7_ok = seven_day_left( aq ) > 5.0;
+  let d7_ok = seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD;
   match ( h5_ok, d7_ok )
   {
     ( true,  true  ) => StatusGroup::Green,
@@ -56,6 +56,10 @@ fn status_group_of( aq : &AccountQuota ) -> StatusGroup
     // 7d is the binding constraint: when 7d resets, 5h will have long since reset.
     // Recovery is identical to single-weekly-exhausted — no separate group needed.
     // Dead classification (result=Err / billing_type="none") fires BEFORE this match.
+    // Root cause: BUG-319 fix added `(false,false)→Red` with incorrect premise that
+    //   both-exhausted = dead; `result=Ok` with depleted quota is recoverable, not dead.
+    // Pitfall: Dead (G4) is exclusively for unrecoverable states — never use quota
+    //   threshold patterns to classify accounts as Red.
     ( _, false ) => StatusGroup::WeeklyExhausted,
   }
 }

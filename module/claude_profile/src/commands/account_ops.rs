@@ -100,6 +100,9 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
 
   // Fix(BUG-213): when touch is enabled and the quota fetch failed (Unavailable),
   //   check expiresAt and attempt refresh (BUG-230) before calling switch_account().
+  // Root cause: quota fetch failure returned PreSwitchOutcome::Unavailable immediately,
+  //   bypassing the expiry check — expired-token accounts were switched without refresh.
+  // Pitfall: quota fetch failure ≠ token validity unknown; always check expiresAt independently.
   if touch != 0 && matches!( outcome, crate::usage::PreSwitchOutcome::Unavailable )
   {
     outcome = check_expiry_and_refresh(
@@ -112,9 +115,15 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
 
   // Post-switch: spawn subprocess touch for all fetch-succeeded cases.
   // Fix(BUG-225): Sonnet→Opus session model override when 7d(Son) < 20%.
+  // Root cause: switch_account() restored the snapshot model blindly — quota state not consulted.
+  // Pitfall: model restoration from snapshot must be followed by quota-aware override; the
+  //   snapshot reflects the model at save time, not current quota utilization.
   // Fix(BUG-285): AlreadyActive path removed — the is_idle check used server-side
   //   resets_at as proxy for local subprocess identity (category error). Always spawn;
   //   the subprocess is idempotent and exits immediately when already active.
+  // Root cause: resets_at is written by any Claude session on any machine; it cannot
+  //   identify the local subprocess.
+  // Pitfall: server-side session state is not a substitute for local subprocess identity.
   match outcome
   {
     crate::usage::PreSwitchOutcome::NeedTouch( ctx ) =>

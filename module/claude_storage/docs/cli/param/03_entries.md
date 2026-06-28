@@ -1,5 +1,12 @@
 # Parameter :: 3. `show_entries::`
 
+### Scope
+
+- **Purpose**: Specify the `show_entries::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `show_entries::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Show all individual entries in a session display.
 
 **Type:** Boolean
@@ -32,6 +39,10 @@ show_entries::1    # Full entry listing
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 3 | [`.show`](../command/03_show.md) | `0` | Lists all entry records when enabled |
+
+### Referenced Parameter Groups
+
+None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

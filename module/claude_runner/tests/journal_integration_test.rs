@@ -1,7 +1,7 @@
 //! Unix-only integration tests.
 #![ cfg( unix ) ]
 #![ allow( clippy::doc_markdown ) ] // test doc comments use code identifiers in prose
-//! Journal Integration Tests (EC-1..EC-15)
+//! Journal Integration Tests (EC-1..EC-22)
 //!
 //! ## Purpose
 //!
@@ -25,6 +25,13 @@
 //! - EC-13: Read-only journal dir → subprocess exit preserved; journal errors ignored
 //! - EC-14: `--journal-dir <cli>` + `CLR_JOURNAL_DIR=<env>` → file in CLI dir (CLI wins)
 //! - EC-15: Stdout > 1 MB at `full` level → field contains `"[truncated at 1MB]"` marker
+//! - EC-16: `--dry-run` does NOT create journal directory (BUG-319 regression)
+//! - EC-17: `--journal bogus` CLI flag → exit 1 with error message
+//! - EC-18: `--journal Full` (wrong case) → exit 1 (case-sensitive)
+//! - EC-19: `--journal` as last token (missing value) → exit 1
+//! - EC-20: `--journal full --journal meta` (duplicate) → second wins; meta-level JSONL
+//! - EC-21: `--journal off --journal-dir <dir>` → no JSONL (off takes precedence)
+//! - EC-22: `CLR_JOURNAL=off` + `CLR_JOURNAL_DIR=<dir>` → no JSONL (off via env)
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ fake_claude_dir, fake_claude_binary_dir };
@@ -799,5 +806,242 @@ fn ec15_stdout_over_1mb_has_truncation_marker()
     "stdout exceeding 1 MB must end with '[truncated at 1MB]' marker. \
      Content snippet:\n{}",
     &content[ ..content.len().min( 300 ) ],
+  );
+}
+
+// ── EC-16: --dry-run does NOT create journal directory (BUG-319) ──────────────
+
+/// EC-16: `--dry-run` must not create the journal directory as a side effect.
+/// Before BUG-319 fix, `resolve_journal_writer()` was called before the dry-run
+/// check, creating `~/.clr/journal/` (or `--journal-dir`) even though no events
+/// are emitted.
+///
+/// ## Root Cause
+/// `resolve_journal_writer()` calls `create_dir_all()` unconditionally; it was
+/// placed before the dry-run exit in `dispatch_run()`.
+/// ## Why Not Caught
+/// No test verified that dry-run avoids filesystem side effects for journaling.
+/// ## Fix Applied
+/// Moved `resolve_journal_writer()` after the `if cli.dry_run { exit(0) }` block.
+/// ## Prevention
+/// This test asserts the custom `--journal-dir` path does NOT exist after dry-run.
+/// ## Pitfall
+/// Uses a unique subdirectory that does not exist before the test; existence check
+/// after dry-run detects the side effect.
+#[ test ]
+fn ec16_dry_run_does_not_create_journal_directory()
+{
+  let parent = tempfile::TempDir::new().expect( "parent tmpdir" );
+  let jdir   = parent.path().join( "must_not_exist" );
+  let jdir_s = jdir.to_str().expect( "utf-8" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "--dry-run", "--journal-dir", jdir_s, "test" ] )
+    .env_remove( "CLR_JOURNAL" )
+    .env_remove( "CLR_JOURNAL_DIR" )
+    .output()
+    .expect( "invoke clr dry-run" );
+
+  assert!(
+    out.status.success(),
+    "dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  assert!(
+    !jdir.exists(),
+    "BUG-319 regression: --dry-run must NOT create journal directory. Found: {jdir_s}"
+  );
+}
+
+// ── EC-17: --journal bogus CLI flag → exit 1 ─────────────────────────────────
+
+/// EC-17: `--journal bogus` (invalid value via CLI flag) exits 1 with an error
+/// message identifying the flag and the bad value.
+#[ test ]
+fn ec17_journal_bogus_cli_flag_exits_1()
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "--dry-run", "--journal", "bogus", "test" ] )
+    .env_remove( "CLR_JOURNAL" )
+    .env_remove( "CLR_JOURNAL_DIR" )
+    .output()
+    .expect( "invoke clr" );
+
+  assert_eq!(
+    out.status.code(), Some( 1 ),
+    "invalid --journal value must exit 1. Got: {:?}",
+    out.status.code()
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "--journal" ),
+    "error must mention --journal flag. Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "bogus" ),
+    "error must include the bad value 'bogus'. Got:\n{stderr}"
+  );
+}
+
+// ── EC-18: --journal Full (case-sensitive) → exit 1 ──────────────────────────
+
+/// EC-18: `--journal Full` exits 1 because valid values are lowercase only
+/// (`full`, `meta`, `off`).  Case sensitivity prevents silent misclassification.
+#[ test ]
+fn ec18_journal_case_sensitive_exits_1()
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  for bad in [ "Full", "FULL", "Meta", "META", "Off", "OFF" ]
+  {
+    let out = std::process::Command::new( bin )
+      .args( [ "--dry-run", "--journal", bad, "test" ] )
+      .env_remove( "CLR_JOURNAL" )
+      .env_remove( "CLR_JOURNAL_DIR" )
+      .output()
+      .expect( "invoke clr" );
+
+    assert_eq!(
+      out.status.code(), Some( 1 ),
+      "--journal {bad} must exit 1 (case-sensitive). Got: {:?}",
+      out.status.code()
+    );
+  }
+}
+
+// ── EC-19: --journal as last token (missing value) → exit 1 ──────────────────
+
+/// EC-19: `--journal` as the final argument with no following value exits 1
+/// with a "requires a value" error.
+#[ test ]
+fn ec19_journal_missing_value_exits_1()
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "--dry-run", "--journal" ] )
+    .env_remove( "CLR_JOURNAL" )
+    .env_remove( "CLR_JOURNAL_DIR" )
+    .output()
+    .expect( "invoke clr" );
+
+  assert_eq!(
+    out.status.code(), Some( 1 ),
+    "--journal without value must exit 1. Got: {:?}",
+    out.status.code()
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "requires a value" ) || stderr.contains( "--journal" ),
+    "error must mention --journal or 'requires a value'. Got:\n{stderr}"
+  );
+}
+
+// ── EC-20: --journal full --journal meta (last wins) → meta-level JSONL ──────
+
+/// EC-20: When `--journal` is specified twice, the last value wins.  Specifying
+/// `--journal full --journal meta` results in meta-level journaling (no stdout
+/// field in the JSONL event).
+#[ cfg( unix ) ]
+#[ test ]
+fn ec20_journal_duplicate_last_wins()
+{
+  let jdir   = tempfile::TempDir::new().expect( "jdir" );
+  let jdir_s = jdir.path().to_str().expect( "utf-8" ).to_owned();
+
+  let ( out, _fake ) = run_with_journal(
+    &[ "--journal", "full", "--journal", "meta", "--journal-dir", &jdir_s ],
+    &[],
+    "printf duplicate_test",
+  );
+
+  assert!(
+    out.status.success(),
+    "exit must be 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+
+  let content = read_journal_content( jdir.path() );
+  assert!(
+    content.contains( r#""type":"execution""# ),
+    "JSONL must contain execution event. Got:\n{content}"
+  );
+  assert!(
+    !content.contains( r#""stdout""# ),
+    "last --journal meta must win; stdout absent in meta mode. Got:\n{content}"
+  );
+}
+
+// ── EC-21: --journal off --journal-dir <dir> → no JSONL ──────────────────────
+
+/// EC-21: `--journal off` with `--journal-dir <dir>` creates no JSONL file.
+/// The `off` level short-circuits `resolve_journal_writer()` before the directory
+/// is even created.
+#[ test ]
+fn ec21_journal_off_with_journal_dir_no_file()
+{
+  let parent = tempfile::TempDir::new().expect( "parent" );
+  let jdir   = parent.path().join( "should_not_appear" );
+  let jdir_s = jdir.to_str().expect( "utf-8" );
+
+  let ( dir, path ) = fake_claude_dir( "exit 0" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "0", "--journal", "off", "--journal-dir", jdir_s, "x" ] )
+    .env( "PATH", &path )
+    .env_remove( "CLR_JOURNAL" )
+    .env_remove( "CLR_JOURNAL_DIR" )
+    .env_remove( "CLR_TIMEOUT" )
+    .env_remove( "_CLR_DEFAULT_TIMEOUT" )
+    .output()
+    .expect( "invoke clr" );
+
+  drop( dir );
+
+  assert!(
+    out.status.success(),
+    "exit must be 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  // --journal off should never create the directory at all
+  assert!(
+    !jdir.exists(),
+    "--journal off must not create journal dir. Found: {jdir_s}"
+  );
+}
+
+// ── EC-22: CLR_JOURNAL=off + CLR_JOURNAL_DIR → no JSONL ─────────────────────
+
+/// EC-22: `CLR_JOURNAL=off` via env var with `CLR_JOURNAL_DIR=<dir>` creates no
+/// JSONL file.  Mirrors EC-21 but via env vars instead of CLI flags.
+#[ test ]
+fn ec22_clr_journal_off_env_with_dir_no_file()
+{
+  let parent = tempfile::TempDir::new().expect( "parent" );
+  let jdir   = parent.path().join( "env_off_should_not_appear" );
+  let jdir_s = jdir.to_str().expect( "utf-8" );
+
+  let ( dir, path ) = fake_claude_dir( "exit 0" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "0", "x" ] )
+    .env( "PATH", &path )
+    .env( "CLR_JOURNAL", "off" )
+    .env( "CLR_JOURNAL_DIR", jdir_s )
+    .env_remove( "CLR_TIMEOUT" )
+    .env_remove( "_CLR_DEFAULT_TIMEOUT" )
+    .output()
+    .expect( "invoke clr" );
+
+  drop( dir );
+
+  assert!(
+    out.status.success(),
+    "exit must be 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  assert!(
+    !jdir.exists(),
+    "CLR_JOURNAL=off must not create journal dir. Found: {jdir_s}"
   );
 }

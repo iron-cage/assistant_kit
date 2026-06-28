@@ -1,5 +1,12 @@
 # Parameter Group :: 3. Session Identification
 
+### Scope
+
+- **Purpose**: Specify the Session Identification parameter group.
+- **Responsibility**: Member parameters, coherence semantics, and command usage for Session Identification.
+- **In Scope**: Group membership, shared behavior, command interactions.
+- **Out of Scope**: Individual parameter specs (→ `param/`), type constraints (→ `type/`).
+
 **Parameters:** `session_id::`
 
 **Pattern:** Direct session access by exact identifier

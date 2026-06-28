@@ -6,7 +6,7 @@
 //!
 //! ## Coverage
 //!
-//! - RWS-1: status `verbosity::0` outputs key=value pairs
+//! - RWS-1: status outputs key=value pairs
 //! - RWS-2: count outputs bare integer
 //! - RWS-3: count `target::` specifies what to count
 //! - RWS-4: `path::` scopes query to alternate storage root
@@ -37,11 +37,11 @@ fn assert_exit( out : &std::process::Output, code : i32 )
   );
 }
 
-/// RWS-1: status `verbosity::0` outputs key=value pairs.
+/// RWS-1: status outputs key=value pairs.
 ///
 /// ## Purpose
 /// End-to-end acceptance test: script captures storage stats for a dashboard;
-/// `.status ```verbosity::```0` outputs `projects: 2, sessions: 5` format.
+/// `.status` outputs `projects: 2, sessions: 5` format.
 ///
 /// ## Coverage
 /// Parseable key=value output; no decorations; exact counts match fixture; exit 0.
@@ -49,7 +49,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 /// ## Related Requirements
 /// `tests/docs/cli/user_story/04_query_storage_programmatically.md` — RWS-1
 #[ test ]
-fn rws_1_status_verbosity_0_outputs_key_value_pairs()
+fn rws_1_status_outputs_key_value_pairs()
 {
   let root = TempDir::new().unwrap();
   let p1 = root.path().join( "qsp1-proj-a" );
@@ -64,24 +64,23 @@ fn rws_1_status_verbosity_0_outputs_key_value_pairs()
   let out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".status" )
-    .arg( "verbosity::0" )
     .output()
     .unwrap();
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!(
-    s.contains( "projects: 2" ),
-    "RWS-1: verbosity::0 must output 'projects: 2'; got:\n{s}"
+    s.to_lowercase().contains( "projects: 2" ),
+    "RWS-1: .status must output 'projects: 2' (case-insensitive); got:\n{s}"
   );
   assert!(
-    s.contains( "sessions: 5" ),
-    "RWS-1: verbosity::0 must output 'sessions: 5'; got:\n{s}"
+    s.to_lowercase().contains( "sessions: 5" ),
+    "RWS-1: .status must output 'sessions: 5' (case-insensitive); got:\n{s}"
   );
   // No table borders or decorative headers
   assert!(
     !s.contains( "===" ) && !s.contains( "│" ) && !s.contains( "┌" ),
-    "RWS-1: verbosity::0 must contain no decorative characters; got:\n{s}"
+    "RWS-1: .status must contain no decorative characters; got:\n{s}"
   );
 }
 

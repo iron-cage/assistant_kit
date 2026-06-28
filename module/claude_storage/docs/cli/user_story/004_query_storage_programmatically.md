@@ -1,4 +1,11 @@
-# Query Storage Programmatically
+# User Story :: 4. Query Storage Programmatically
+
+### Scope
+
+- **Purpose**: Document the "Query Storage Programmatically" user story.
+- **Responsibility**: Persona, goal, acceptance criteria, and command mappings for this story.
+- **In Scope**: User persona, goal statement, acceptance criteria, referenced commands.
+- **Out of Scope**: Command specifications (→ `command/`), parameter details (→ `param/`).
 
 **Persona:** developer
 **Goal:** Query Claude Code storage from a script to get machine-readable output for integration with other tools.

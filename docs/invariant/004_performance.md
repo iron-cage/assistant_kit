@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the performance characteristics and constraints that must be respected when using storage operations.
 - **Responsibility**: State the fast-path vs full-parse cost model, concrete measurements, and API usage rules.
-- **In Scope**: .status verbosity mode costs, min_entries::N cost, count_entries() cost model, avoidance rules.
+- **In Scope**: .status output toggle costs, min_entries::N cost, count_entries() cost model, avoidance rules.
 - **Out of Scope**: Testing strategy (→ `invariant/003_testing_strategy.md`), feature design (→ `feature/001_workspace_design.md`).
 
 ### Invariant Statement
@@ -12,12 +12,12 @@
 Operations on Claude Code storage have two distinct cost modes. Callers must not unknowingly use expensive operations in hot paths.
 
 **Fast path (filesystem only) — O(P+S):**
-- `.status` at `v::0` and `v::1`: ~50ms
+- `.status` (default, without `show_tokens::1`): ~50ms
 - Uses only directory listings and filename inspection; no JSONL content is read
 - P = project count, S = total session file count
 
 **Full path (JSONL parsing) — O(total JSONL bytes):**
-- `.status` at `v::2` and above: several minutes with large storage
+- `.status show_tokens::1`: several minutes with large storage (triggers full JSONL parse for token counts)
 - `.list min_entries::N`: O(total JSONL bytes) — reads every session file
 - `Session::count_entries()` per session: fast per-file, but O(total_JSONL_bytes) aggregate
 
@@ -28,7 +28,7 @@ There is no session entry count index. `min_entries::N` filtering and entry coun
 **Measured baseline (1903 projects / 2429 sessions / ~7 GB JSONL):**
 - `.list min_entries::N` cold cache: ~12 minutes
 - `.list min_entries::N` warm cache: ~25 seconds
-- `.status v::0` / `v::1`: ~50ms regardless of cache
+- `.status` (default): ~50ms regardless of cache
 
 **`count_entries()` implementation note:** Uses byte-level string search on `"type":"user"` and `"type":"assistant"` patterns (not full JSON parsing). These patterns are unique to top-level type fields in well-formed JSONL — fast and accurate. But never call `count_entries()` in a loop over thousands of sessions without awareness of the aggregate O(total_JSONL_bytes) cost.
 

@@ -21,19 +21,19 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 | INT-11 | scope::relevant finds ancestor when path has underscores | Underscore Path (issue-024) |
 | INT-12 | scope::relevant finds topic-scoped ancestor with underscores | Underscore Path (issue-024) |
 | INT-13 | scope::under with multiple underscore components finds nested projects | Underscore Path (issue-024) |
-| INT-14 | v1 output groups sessions under project path headers | Output Format (plan-004) |
-| INT-15 | path header always present at v1 for scope::local single project | Output Format (plan-004) |
-| INT-16 | agent sessions collapsed to count line at v1 without agent:: filter | Output Format (plan-004) |
-| INT-17 | agent sessions shown individually at v2+ | Output Format (plan-004) |
-| INT-18 | entry count shown per session at v2+ | Output Format (plan-004) |
-| INT-19 | agent::1 explicit filter disables collapse at v1 | Output Format (plan-004) |
+| INT-14 | default output groups sessions under project path headers | Output Format (plan-004) |
+| INT-15 | path header always present in default mode for scope::local single project | Output Format (plan-004) |
+| INT-16 | agent sessions collapsed to count line in default mode without agent:: filter | Output Format (plan-004) |
+| INT-17 | agent sessions shown individually with show_tree::1 | Output Format (plan-004) |
+| INT-18 | entry count shown per session with show_tree::1 | Output Format (plan-004) |
+| INT-19 | agent::1 explicit filter disables collapse in default mode | Output Format (plan-004) |
 | INT-20 | scope::under displays underscore dirs without splitting at `/` | Underscore Display (issue-029) |
 | INT-21 | scope::global displays hyphen-prefixed topic dir in path header | Topic Dir Display (issue-030) |
 | INT-22 | scope::under excludes sibling with underscore-suffix name | Sibling Exclusion (issue-031) |
 | INT-23 | scope::relevant excludes sibling with underscore-suffix name | Sibling Exclusion (issue-032) |
-| INT-24 | entry count shown per session at v1 | Output Format (v1 enhancement) |
-| INT-25 | limit::N truncates main sessions shown at v1 | Output Format (v1 enhancement) |
-| INT-26 | zero-byte sessions excluded from v1 display | Output Format (v1 enhancement) |
+| INT-24 | entry count shown per session in default mode | Output Format (default mode enhancement) |
+| INT-25 | limit::N truncates main sessions shown in default mode | Output Format (default mode enhancement) |
+| INT-26 | zero-byte sessions excluded from default mode display | Output Format (default mode enhancement) |
 | INT-27 | Summary header format (id, age, count, path) | Summary Mode |
 | INT-28 | Truncation gate — message ≤ 50 chars shown in full | Summary Mode |
 | INT-29 | Truncation formula — message > 50 chars as first30...last30 | Summary Mode |
@@ -48,14 +48,14 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 | INT-38 | Childless root (no bracket suffix) | Family Display |
 | INT-39 | Meta.json agentType in breakdown | Family Display |
 | INT-40 | Empty/malformed meta.json fallback to "unknown" | Family Display |
-| INT-41 | v1 orphan shows `? (orphan)` label (bug-cc-c1) | Family Display |
-| INT-42 | v2 root entry count singular `(1 entry)` | Family Display |
-| INT-43 | v2 agent entry count singular `1 entry` | Family Display |
-| INT-41b | `verbosity::1` alone stays in summary mode (bug-is-default-verbosity) | Summary Mode |
+| INT-41 | default mode orphan shows `? (orphan)` label (bug-cc-c1) | Family Display |
+| INT-42 | show_tree::1 root entry count singular `(1 entry)` | Family Display |
+| INT-43 | show_tree::1 agent entry count singular `1 entry` | Family Display |
+| INT-41b | default invocation stays in summary mode (no explicit scope/limit) | Summary Mode |
 | INT-42b | Summary mode shows "Active project" header (task-016) | Project-Centric Output |
 | INT-43b | Summary mode shows session count aggregate (task-016) | Project-Centric Output |
 | INT-44 | List mode shows projects sorted by recency (task-016) | Project-Centric Output |
-| INT-45 | verbosity::0 outputs project paths only (task-016) | Project-Centric Output |
+| INT-45 | show_tree::1 outputs tree-indented agent sessions (task-016) | Project-Centric Output |
 | INT-46 | Topic path shown even when topic dir absent from disk | Topic Existence Guard (issue-035) |
 | INT-47 | Topic path shown when topic dir present on disk | Topic Existence Guard (issue-035) |
 | INT-48 | Default-topic path shown when topic dir absent from disk | Topic Existence Guard (issue-035) |
@@ -77,9 +77,9 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 - Topic Dir Display (issue-030): 1 test (INT-21)
 - Sibling Exclusion (issue-031): 1 test (INT-22)
 - Sibling Exclusion (issue-032): 1 test (INT-23)
-- Output Format (v1 enhancement): 3 tests (INT-24, INT-25, INT-26)
+- Output Format (default mode enhancement): 3 tests (INT-24, INT-25, INT-26)
 - Family Display: 11 tests (INT-33 through INT-40, INT-41 through INT-43)
-- Project-Centric Output (task-016): 4 tests (INT-42b, INT-43b, INT-44, INT-45)
+- Project-Centric Output (task-016): 5 tests (INT-41b, INT-42b, INT-43b, INT-44, INT-45)
 - Topic Existence Guard (issue-035): 5 tests (INT-46 through INT-50)
 
 ## Test Cases
@@ -289,12 +289,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::under path::root/my_p
 
 ---
 
-### INT-14: v1 output groups sessions under project path headers
+### INT-14: default output groups sessions under project path headers
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::1
-```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global```
 
 **Expected behavior:**
 - Fixture: two path-based projects (`/tmp/proj-a` and `/tmp/proj-b`), one session each
@@ -313,12 +312,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::1
 
 ---
 
-### INT-15: path header always present at v1 for scope::local single project
+### INT-15: path header always present in default mode for scope::local single project
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::local path::{project} verbosity::1
-```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::local path::{project}```
 
 **Expected behavior:**
 - Fixture: one path project at a known path; `path::` pointing to that project
@@ -328,12 +326,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::local path::{project}
 
 ---
 
-### INT-16: agent sessions collapsed to count line at v1 without agent:: filter
+### INT-16: agent sessions collapsed to count line in default mode without agent:: filter
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::1
-```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global```
 
 **Expected behavior:**
 - Fixture: one project containing 2 main sessions (`session-main-a`, `session-main-b`) and 3 agent sessions (`agent-task-001`, `agent-task-002`, `agent-task-003`)
@@ -351,11 +348,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::1
 
 ---
 
-### INT-17: agent sessions shown individually at v2+
+### INT-17: agent sessions shown individually with show_tree::1
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::2
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global show_tree::1
 ```
 
 **Expected behavior:**
@@ -366,11 +363,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::2
 
 ---
 
-### INT-18: entry count shown per session at v2+
+### INT-18: entry count shown per session with show_tree::1
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::2
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global show_tree::1
 ```
 
 **Expected behavior:**
@@ -387,11 +384,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::2
 
 ---
 
-### INT-19: agent::1 explicit filter disables collapse at v1
+### INT-19: agent::1 explicit filter disables collapse in default mode
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::1 agent::1
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global agent::1
 ```
 
 **Expected behavior:**
@@ -406,8 +403,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::1 a
 
 **Command:**
 ```
-clg .projects scope::under path::/tmp/{tempdir}/my_project verbosity::1
-```
+clg .projects scope::under path::/tmp/{tempdir}/my_project```
 
 **Expected behavior:**
 - Fixture: create real filesystem directories `/tmp/{tempdir}/my_project/myproject/`; `CLAUDE_STORAGE_ROOT` pointing to a fixture root with a session in the path-encoded `my_project/myproject` project
@@ -421,8 +417,7 @@ clg .projects scope::under path::/tmp/{tempdir}/my_project verbosity::1
 
 **Command:**
 ```
-clg .projects scope::global verbosity::1
-```
+clg .projects scope::global```
 
 **Expected behavior:**
 - Fixture: create real filesystem directory `{tempdir}/src/-default_topic/`; write a session for the project at that path; `CLAUDE_STORAGE_ROOT` and `HOME` set to the temp dir
@@ -462,12 +457,11 @@ clg .projects scope::relevant path::{tempdir}/base_extra
 
 ---
 
-### INT-24: entry count shown per session at v1
+### INT-24: entry count shown per session in default mode
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::1
-```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global```
 
 **Expected behavior:**
 - Fixture: one project and one session containing exactly 4 entries
@@ -483,11 +477,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::1
 
 ---
 
-### INT-25: limit::N truncates main sessions shown at v1
+### INT-25: limit::N truncates main sessions shown in default mode
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::1 limit::2
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global limit::2
 ```
 
 **Expected behavior:**
@@ -498,12 +492,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::1 l
 
 ---
 
-### INT-26: zero-byte sessions excluded from v1 display
+### INT-26: zero-byte sessions excluded from default mode display
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::1
-```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global```
 
 **Expected behavior:**
 - Fixture: one project containing one real session (`session-real`, 2 entries) and one zero-byte file (`session-placeholder.jsonl`)
@@ -718,7 +711,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::local
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::local verbosity::2
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::local show_tree::1
 ```
 
 **Expected behavior:**
@@ -729,11 +722,58 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::local verbosity::2
 
 ---
 
-### INT-41b: `verbosity::1` alone stays in summary mode (bug-is-default-verbosity)
+### INT-41: Default mode orphan shows `? (orphan)` label (bug-cc-c1)
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects verbosity::1
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::local path::{project-path}
+```
+
+**Expected behavior:**
+- Fixture: one flat agent session whose parent session ID does not exist in storage (orphan family)
+- Output contains `? (orphan)` as the family label
+- Exit code: 0
+- **Source:** `tests/cli_cmd_projects_summary_test.rs::int_41_v1_orphan_shows_orphan_label`
+
+---
+
+### INT-42: `show_tree::1` root entry count singular — `(1 entry)` not `(1 entries)`
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::local path::{project-path} show_tree::1
+```
+
+**Expected behavior:**
+- Fixture: project with exactly 1 session containing exactly 1 entry
+- Output contains `(1 entry)` (singular noun)
+- Output does NOT contain `(1 entries)`
+- Exit code: 0
+- **Source:** `tests/cli_cmd_projects_summary_test.rs::int_42_show_tree_root_entry_count_singular`
+
+---
+
+### INT-43: `show_tree::1` agent entry count singular — `1 entry` not `1 entries`
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::local path::{project-path} show_tree::1
+```
+
+**Expected behavior:**
+- Fixture: project with 1 root session and 1 hierarchical agent subagent, each with exactly 1 entry
+- Output contains `1 entry` (singular) on the agent line
+- Output does NOT contain `1 entries`
+- Exit code: 0
+- **Source:** `tests/cli_cmd_projects_summary_test.rs::int_43_show_tree_agent_entry_count_singular`
+
+---
+
+### INT-41b: default invocation stays in summary mode (no explicit scope/limit)
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects
 ```
 
 **Expected behavior:**
@@ -747,7 +787,6 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects verbosity::1
     {message text}
   ```
 - stdout does NOT contain `Found N projects:` (list-mode header must be absent)
-- **Root Cause (bug-is-default-verbosity):** `is_default` gate in `projects_routine` included `verbosity` in its all-None check (`cmd.get_integer("verbosity").is_none()`). Passing `verbosity::1` returned `Some(1)` instead of `None`, setting `is_default=false` and routing to list mode even though `verbosity::1` is semantically equivalent to the default
 - Exit code: 0
 - **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
 
@@ -798,18 +837,19 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global
 
 ---
 
-### INT-45: verbosity::0 outputs project paths only (task-016)
+### INT-45: show_tree::1 outputs tree-indented agent sessions (task-016)
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global verbosity::0
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::global show_tree::1
 ```
 
 **Expected behavior:**
-- Fixture: one project with ≥1 session
-- One line containing the project path; no other output; no `sessions,` or `Found` text
+- Fixture: one project with 1 main session and ≥1 agent session
+- Agent sessions appear tree-indented under their parent root session (with `├─`/`└─` connectors)
+- No collapse line (`+ N agent sessions`)
 - Exit code: 0
-- **Source:** `tests/projects_output_format_test.rs::it_verbosity_0_shows_paths_only`
+- **Source:** `tests/projects_output_format_test.rs::it_20_agent_sessions_shown_individually_at_v2`
 
 ---
 
@@ -877,8 +917,7 @@ clg .projects scope::local
 
 **Command:**
 ```
-clg .projects scope::global verbosity::1
-```
+clg .projects scope::global```
 
 **Expected behavior:**
 - Fixture: storage root with one project dir `{encoded_base}--default-topic--commit`; topic dirs (`-default_topic`, `-commit`) are NOT created on disk

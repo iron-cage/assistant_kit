@@ -1,5 +1,12 @@
 # Commands Reference
 
+### Scope
+
+- **Purpose**: Document all CLI commands for the `claude_storage` binary.
+- **Responsibility**: Per-command detail pages with full parameter tables and cross-refs.
+- **In Scope**: All 11 commands with syntax, parameters, examples, and exit codes.
+- **Out of Scope**: Parameter definitions (→ `param/`), type constraints (→ `type/`), parameter groups (→ `param_group/`).
+
 All commands for the `claude_storage` CLI. Parameters use `param::value` syntax. All commands are read-only except `.session.ensure`, which creates the session working directory on disk.
 
 See [param/readme.md](../param/readme.md) for full parameter specs and [type/readme.md](../type/readme.md) for type definitions.

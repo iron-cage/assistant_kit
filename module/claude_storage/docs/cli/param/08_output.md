@@ -1,5 +1,12 @@
 # Parameter :: 8. `output::`
 
+### Scope
+
+- **Purpose**: Specify the `output::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `output::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Output file path for export operations.
 
 **Type:** [`StoragePath`](../type/10_storage_path.md)
@@ -38,6 +45,10 @@ output::/nonexistent/dir/file.md     # Parent directory does not exist
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 6 | [`.export`](../command/06_export.md) | none — required | Destination path for exported file |
+
+### Referenced Parameter Groups
+
+None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

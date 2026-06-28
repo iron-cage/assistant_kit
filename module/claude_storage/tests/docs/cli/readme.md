@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clg commands, parameters, types, and export formats.
 - **Responsibility**: Index of per-command, per-parameter, per-group, per-type, per-format, and per-user-story test case planning files.
-- **In Scope**: All 11 clg commands, all 22 parameters, all 5 parameter groups, all 14 types, all 3 export formats, and all 5 user stories.
+- **In Scope**: All 11 clg commands, all 24 parameters, all 5 parameter groups, all 13 types, all 3 export formats, and all 5 user stories.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 6-tier testing organization for `claude_storage` CLI, providing distinct audience focus at each level.
@@ -44,13 +44,13 @@
 
 | Tier | Files | Tests |
 |------|-------|-------|
-| Commands | 11 files | 149 tests |
-| Parameters | 22 files | 148 tests |
+| Commands | 11 files | 151 tests |
+| Parameters | 24 files | 170 tests |
 | Parameter Groups | 5 files | 31 tests |
-| Types | 14 files | 70 tests |
+| Types | 13 files | 64 tests |
 | Formats | 3 files | 15 tests |
 | User Stories | 5 files | 25 tests |
-| **Total** | **60 files** | **438 tests** |
+| **Total** | **61 files** | **456 tests** |
 
 ### Test ID Conventions
 

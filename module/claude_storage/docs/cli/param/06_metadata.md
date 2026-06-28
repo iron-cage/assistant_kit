@@ -1,5 +1,12 @@
 # Parameter :: 6. `show_metadata::`
 
+### Scope
+
+- **Purpose**: Specify the `show_metadata::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `show_metadata::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Show session metadata only, suppressing conversation content.
 
 **Type:** Boolean
@@ -31,7 +38,11 @@ show_metadata::1    # Metadata only
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 3 | [`.show`](../command/03_show.md) | `0` | Shows metadata only when enabled; mutually exclusive with `entries::` |
+| 3 | [`.show`](../command/03_show.md) | `0` | Shows metadata only when enabled; mutually exclusive with `show_entries::` |
+
+### Referenced Parameter Groups
+
+None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

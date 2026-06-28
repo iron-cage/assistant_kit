@@ -1,5 +1,12 @@
 # Parameter :: 5. `format::`
 
+### Scope
+
+- **Purpose**: Specify the `format::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `format::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Export output format for `.export` operations.
 
 **Type:** [`ExportFormat`](../type/03_export_format.md)
@@ -38,6 +45,10 @@ format::pdf        # "format must be markdown|json|text, got pdf"
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 6 | [`.export`](../command/06_export.md) | `markdown` | Selects export rendering format |
+
+### Referenced Parameter Groups
+
+None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

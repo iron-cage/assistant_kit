@@ -1,5 +1,12 @@
 # Parameter :: 18. `type::`
 
+### Scope
+
+- **Purpose**: Specify the `type::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `type::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Project naming scheme filter for `.list`.
 
 **Type:** [`ProjectType`](../type/06_project_type.md)
@@ -39,6 +46,10 @@ type::both   # "Invalid type: both. Valid values: uuid, path, all"
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 2 | [`.list`](../command/02_list.md) | `all` | Filters projects by naming scheme |
+
+### Referenced Parameter Groups
+
+None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

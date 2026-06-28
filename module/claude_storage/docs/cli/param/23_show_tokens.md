@@ -1,5 +1,12 @@
 # Parameter :: 23. `show_tokens::`
 
+### Scope
+
+- **Purpose**: Specify the `show_tokens::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `show_tokens::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Show token usage statistics section.
 
 **Type:** Boolean
@@ -24,6 +31,11 @@ show_tokens::1    # Include token usage section
 
 **Group:** [Output Control](../param_group/01_output_control.md)
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| Boolean | Base type | Boolean flag | `0` (false) or `1` (true) |
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
@@ -34,3 +46,8 @@ show_tokens::1    # Include token usage section
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
 | 1 | [Output Control](../param_group/01_output_control.md) | Full | `show_stat::`, `show_tree::` |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Audit Session History](../user_story/001_audit_session_history.md) | developer |

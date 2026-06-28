@@ -1,5 +1,12 @@
 # Parameter Group :: 1. Output Control
 
+### Scope
+
+- **Purpose**: Specify the Output Control parameter group.
+- **Responsibility**: Member parameters, coherence semantics, and command usage for Output Control.
+- **In Scope**: Group membership, shared behavior, command interactions.
+- **Out of Scope**: Individual parameter specs (→ `param/`), type constraints (→ `type/`).
+
 **Parameters:** `show_stat::`, `show_tokens::`, `show_tree::`
 
 **Pattern:** Per-block boolean toggles for optional output sections
@@ -51,3 +58,9 @@
 | 19 | [`show_stat::`](../param/19_show_stat.md) | Boolean | `0` | Statistics footer in `.show` content mode |
 | 23 | [`show_tokens::`](../param/23_show_tokens.md) | Boolean | `0` | Token usage section in `.show` and `.status` |
 | 24 | [`show_tree::`](../param/24_show_tree.md) | Boolean | `0` | Tree-indented agent display in `.projects` |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Audit Session History](../user_story/001_audit_session_history.md) | developer |

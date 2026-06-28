@@ -35,7 +35,7 @@ tests/
 ├── search_session_partial_uuid_bug.rs     # .search session partial UUID fix (issue-020)
 ├── search_special_characters_bug.rs       # Special character handling (Bug #006, #007)
 ├── session_path_command_test.rs           # .project.path/.project.exists/.session.dir/.session.ensure lifecycle commands
-├── projects_command_test.rs               # .projects filter/validation/output formatting (verbosity, session/agent/min_entries filters, IT-14..IT-16, IT-50)
+├── projects_command_test.rs               # .projects filter/validation/output formatting (show_tree, session/agent/min_entries filters, IT-14..IT-16, IT-50)
 ├── projects_edge_case_test.rs             # .projects scope parameter acceptance/rejection (EC-1..EC-9)
 ├── projects_scope_test.rs                 # .projects scope behavioral semantics: local/under/relevant/global, underscore paths (IT-9..IT-13), topic dirs
 ├── projects_family_display_test.rs        # .projects family/agent session display (IT-1, IT-33, IT-36..IT-48)
@@ -76,7 +76,7 @@ tests/
 | `search_session_partial_uuid_bug.rs` | Test partial UUID matching in .search session filter |
 | `search_special_characters_bug.rs` | Test special character handling in queries |
 | `session_path_command_test.rs` | Test .project.path/.project.exists/.session.dir/.session.ensure lifecycle commands |
-| `projects_command_test.rs` | Test .projects filter/validation/output formatting (verbosity, session/agent/min_entries filters, IT-14..IT-16, IT-50) |
+| `projects_command_test.rs` | Test .projects filter/validation/output formatting (show_tree, session/agent/min_entries filters, IT-14..IT-16, IT-50) |
 | `projects_edge_case_test.rs` | Test .projects scope parameter acceptance/rejection edge cases (EC-1..EC-9) |
 | `projects_scope_test.rs` | Test .projects scope behavioral semantics: local/under/relevant/global, underscore paths (IT-9..IT-13), topic dirs |
 | `projects_family_display_test.rs` | Test .projects family and agent session display (IT-1, IT-33, IT-36..IT-48) |
@@ -122,7 +122,9 @@ tests/
 | `cli_param_target_test.rs` | Edge case tests for `target::` parameter |
 | `cli_param_topic_test.rs` | Edge case tests for `topic::` parameter |
 | `cli_param_type_test.rs` | Edge case tests for `type::` parameter |
-| `cli_param_verbosity_test.rs` | Edge case tests for `verbosity::` parameter |
+| `cli_param_show_stat_test.rs` | Edge case tests for `show_stat::` parameter |
+| `cli_param_show_tokens_test.rs` | Edge case tests for `show_tokens::` parameter |
+| `cli_param_show_tree_test.rs` | Edge case tests for `show_tree::` parameter |
 | `cli_param_group_output_control_test.rs` | Cross-command interaction tests for Output Control parameter group |
 | `cli_param_group_project_scope_test.rs` | Cross-command interaction tests for Project Scope parameter group |
 | `cli_param_group_scope_configuration_test.rs` | Cross-command interaction tests for Scope Configuration parameter group |
@@ -198,8 +200,8 @@ fn test_{command}_{parameter}_{issue}()
 ```
 
 **Example**:
-- Test: `tests/search_command_test.rs::test_search_verbosity_invalid`
-- Fix comment: `src/cli/mod.rs:1183-1200` (Finding #010)
+- Test: `tests/search_command_test.rs::test_search_query_required`
+- Fix comment: `src/cli/search.rs` (query parameter validation)
 
 ## Integration Test Isolation
 
@@ -217,7 +219,7 @@ test_{command}_{parameter}_{scenario}
 **Examples**:
 - `test_search_query_required` - .search command, query parameter, required validation
 - `test_export_format_invalid` - .export command, format parameter, invalid value rejection
-- `test_status_path_with_verbosity` - .status command, path+verbosity parameters, interaction
+- `test_status_path_show_tokens` - .status command, path+show_tokens parameters, interaction
 
 ## Test Organization Principles
 
@@ -245,7 +247,7 @@ Feature-specific integration tests:
 ### Documentation Quality
 
 Test documentation must be:
-- **Specific**: Technical details, not generic statements ("Fixed bug" → "search_routine missing verbosity validation")
+- **Specific**: Technical details, not generic statements ("Fixed bug" → "search_routine missing query parameter validation")
 - **Actionable**: Clear prevention steps ("Don't assume defaults prevent invalid input")
 - **Traceable**: Links to requirements (REQ-012), issues (Finding #010), source locations
 - **Concise**: Essential information only, no redundancy
@@ -329,12 +331,10 @@ cargo nextest run --all-features -- --include-ignored
 - **Fix**: Added validation at `src/cli/mod.rs:1151-1157`
 - **Documentation**: Fix(issue-009) comment in source
 
-### Finding #010: .search verbosity parameter validation
+### Finding #010: .search verbosity parameter validation ✅ Superseded (verbosity removed)
 - **Issue**: search_routine missing verbosity range validation (0-5), inconsistent with other commands
-- **Test**: `test_search_verbosity_invalid` in `search_command_test.rs`
-- **Fix**: Added validation at `src/cli/mod.rs:1183-1200`
-- **Root Cause**: Assumed default values prevent invalid input (they don't)
-- **Documentation**: Fix(issue-010) comment in source + 5-section test documentation
+- **Test**: Tests removed — verbosity parameter removed from all commands
+- **Note**: Verbosity parameter replaced by specific boolean toggles (`show_stat::`, `show_tokens::`, `show_tree::`)
 
 ### Finding #013: Relative path resolution in project parameter
 - **Issue**: parse_project_parameter does not resolve ".", "..", "~" as paths
@@ -350,24 +350,19 @@ cargo nextest run --all-features -- --include-ignored
 - **Root Cause**: status_routine passed path directly without resolving, unlike list_routine
 - **Documentation**: Fix(issue-014) comment in source + 5-section test documentation
 
-### Finding #015: list_routine missing verbosity range validation ✅ Fixed
+### Finding #015: list_routine missing verbosity range validation ✅ Superseded (verbosity removed)
 - **Issue**: `list_routine` did not validate verbosity 0-5 range; `-1` or `6` were silently accepted
-- **Tests**: 5 verbosity tests in `list_command_test.rs` (N: -1, 6; P: 0, 3, 5)
-- **Fix**: Added `if !(0..=5).contains(&verbosity)` check in `list_routine` after get_integer call
-- **Root Cause**: Verbosity extracted without bounds check, unlike `status_routine` and `search_routine`
-- **Documentation**: Fix(issue-015) comment in `src/cli/mod.rs` + 5-section test documentation
+- **Tests**: Tests removed — verbosity parameter removed from all commands
+- **Note**: Verbosity parameter replaced by specific boolean toggles (`show_stat::`, `show_tokens::`, `show_tree::`)
 
-### Finding #016: show_project_routine missing verbosity range validation ✅ Fixed (command removed in task-013)
+### Finding #016: show_project_routine missing verbosity range validation ✅ Superseded (command removed in task-013, verbosity removed)
 - **Issue**: `show_project_routine` did not validate verbosity 0-5 range; same gap as Finding #015
-- **Tests**: 4 verbosity tests existed — test file deleted with command removal (task-013)
-- **Fix**: Added `if !(0..=5).contains(&verbosity)` check in `show_project_routine` after get_integer call
-- **Root Cause**: Verbosity passed unvalidated to impl functions; invalid values produced garbled output
-- **Note**: `.show.project` command removed in task-013; pattern applies to any routine that accepts verbosity
+- **Note**: `.show.project` command removed in task-013; verbosity parameter subsequently removed from all commands
 
 ### issue-015: .status performance — global_stats() O(total JSONL bytes)
 - **Issue**: `.status` took >2 minutes with 1903 projects / 7 GB JSONL
 - **Tests**: `status_global_stats_fast_bug.rs` in `claude_storage_core/tests/`
-- **Fix**: Added `global_stats_fast()` (filesystem-only); `status_routine` uses it for verbosity 0-1
+- **Fix**: Added `global_stats_fast()` (filesystem-only); `status_routine` uses it for the default (fast) path
 - **Root Cause**: `global_stats()` parsed all session JSONL to count entries/tokens — O(total JSONL bytes)
 - **Documentation**: Fix(issue-015) in `storage.rs` + `status_global_stats_fast_bug.rs`
 
@@ -400,7 +395,7 @@ cargo nextest run --all-features -- --include-ignored
 - **Root Cause**: `writeln!(output, "Found {} noun:\n", count)` used a hardcoded plural noun string regardless of count
 - **Documentation**: 5-section doc block at issue-025 comment in each test file; source changes are minimal inline fixes
 
-### issue-027: list_routine verbosity 1 per-project session count uses wrong plural
+### issue-027: list_routine per-project session count uses wrong plural
 - **Issue**: `.list sessions::1` showed `Uuid("proj") (1 sessions)` — should be `(1 session)` (singular)
 - **Tests**: `test_list_session_count_singular_when_one_session`, `test_list_session_count_plural_when_multiple_sessions` in `list_command_test.rs`
 - **Fix**: Derive `noun` from `session_count` before format string, same pattern as issue-025 header fix
@@ -418,7 +413,7 @@ cargo nextest run --all-features -- --include-ignored
 
 - **Issue**: `.projects` output was a flat list of session IDs with opaque encoded project labels (e.g. `"-home-alice-projects"`); no project grouping, no readable paths, no agent collapse at scale
 - **Tests**: 6 tests IT-17..IT-22 in `projects_output_format_test.rs` (IT-23 covers display fix issue-029)
-- **Fix**: Redesigned `projects_routine` to group sessions by `BTreeMap<String, Vec<Session>>` keyed by decoded project path; added `decode_project_display()` helper; agent sessions collapsed at v1 with no `agent::` filter; entry counts shown per session at v2+; blank line between project groups
+- **Fix**: Redesigned `projects_routine` to group sessions by `BTreeMap<String, Vec<Session>>` keyed by decoded project path; added `decode_project_display()` helper; agent sessions collapsed by default with no `agent::` filter; entry counts shown per session with `show_tree::1`; blank line between project groups
 - **Root Cause**: Original design used flat `Vec<(label, id)>` with labels from `format!("{:?}", project.id())` — debug-format encoded strings, not human-readable paths
 - **Pitfalls**:
   1. `decode_path()` requires input starting with `-`; UUID project dirs don't → must guard with `starts_with('-')` before calling decode
@@ -428,7 +423,7 @@ cargo nextest run --all-features -- --include-ignored
 
 ### issue-029: decode_project_display splits underscore dirs as path separators
 
-- **Issue**: `.sessions scope::under` (and all verbosity ≥ 1 scopes) displayed project path headers with underscore-named directories split on `/` — e.g., `~/my_project/myproject:` shown as `~/wip/core/myproject:`
+- **Issue**: `.sessions scope::under` displayed project path headers with underscore-named directories split on `/` — e.g., `~/my_project/myproject:` shown as `~/wip/core/myproject:`
 - **Test**: `IT-23` (`test_sessions_under_display_preserves_underscores`) in `projects_command_test.rs`; marked `bug_reproducer(issue-029)`
 - **Fix**: Added `decode_path_via_fs()` + `walk_fs()` in `cli/mod.rs`; `decode_project_display` now tries the heuristic result first — if it doesn't exist on disk, falls back to FS-guided DFS that chooses `/` vs `_` at each boundary by calling `is_dir()` on candidate prefixes; final fallback is the heuristic result (handles deleted/remote projects)
 - **Root Cause**: `encode_path` maps both `_` (underscore) and `/` (path separator) to `-`; `decode_component` heuristic defaulted to `/` for all unrecognized `-` boundaries, so `wip-core` always decoded to `wip/core` regardless of whether a real `my_project` directory exists
@@ -491,7 +486,7 @@ cargo nextest run --all-features -- --include-ignored
 - **Documentation**: Fix(issue-035) in `cli/mod.rs` `decode_project_display`; 5-section test doc in `projects_path_encoding_test.rs`
 
 ### issue-028: "1 entries" — hardcoded plural "entries" in session header and project session list
-- **Issue**: (a) `.show session_id::abc` produced "Session: abc (1 entries)" — wrong plural in header; (b) `.show.project verbosity::1` with 1-entry session showed "(1 entries, last: ...)" — same root cause
+- **Issue**: (a) `.show session_id::abc` produced "Session: abc (1 entries)" — wrong plural in header; (b) `.show.project` with 1-entry session showed "(1 entries, last: ...)" — same root cause
 - **Tests**: `test_show_session_single_entry_header_says_entry_not_entries`, `test_show_session_multi_entry_header_still_says_entries` in `smart_show_command.rs`; `.show.project` tests deleted with command removal (task-013)
 - **Fix**: Added `entry_noun`/`e_noun` variables derived from count (1 → "entry", else "entries") in `show_session_routine` in `cli/mod.rs`; same fix was in `show_project_routine` (now removed)
 - **Root Cause**: Format strings hardcoded "entries" regardless of count — same pattern as issue-025/027 but for the irregular noun "entry"/"entries"

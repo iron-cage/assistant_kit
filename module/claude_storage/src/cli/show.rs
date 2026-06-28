@@ -55,9 +55,7 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   };
 
   let project_param = cmd.get_string( "project" );
-  // verbosity::0 maps to metadata-only mode (compact output without full conversation)
-  let metadata_only = cmd.get_boolean( "show_metadata" ).unwrap_or( false )
-    || cmd.get_integer( "verbosity" ).unwrap_or( 1 ) == 0;
+  let metadata_only = cmd.get_boolean( "show_metadata" ).unwrap_or( false );
   let opts = SessionDisplayOptions
   {
     show_entries  : cmd.get_boolean( "show_entries" ).unwrap_or( false ),

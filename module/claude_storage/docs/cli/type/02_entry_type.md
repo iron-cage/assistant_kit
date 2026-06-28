@@ -1,5 +1,12 @@
 # Type :: 2. `EntryType`
 
+### Scope
+
+- **Purpose**: Specify the `EntryType` semantic type.
+- **Responsibility**: Validation rules, fundamental type, and parameter mapping for `EntryType`.
+- **In Scope**: Parsing rules, valid/invalid values, error messages.
+- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
+
 **Purpose:** Semantic type representing which conversation participant authored an entry. Restricts search to user messages, assistant messages, or both.
 
 **Fundamental Type:** Wrapper around string enum

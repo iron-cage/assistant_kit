@@ -2,7 +2,7 @@
 
 Edge case tests for the `topic::` parameter. Tests validate non-empty constraint, no-slash constraint, leading-hyphen handling, and default values.
 
-**Source:** [param/17_topic.md](../../../../docs/cli/param/17_topic.md) | [type/13_topic_name.md](../../../../docs/cli/type/13_topic_name.md)
+**Source:** [param/17_topic.md](../../../../docs/cli/param/17_topic.md) | [type/12_topic_name.md](../../../../docs/cli/type/12_topic_name.md)
 
 ## Test Case Index
 

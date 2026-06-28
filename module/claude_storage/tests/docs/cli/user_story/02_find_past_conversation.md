@@ -106,6 +106,6 @@ clg .show session_id::-default_topic
 
 **Expected:**
 - Stdout shows session metadata (entry count, timestamps)
-- All entries are listed with their type and content snippets (at `verbosity::1`)
+- All entries are listed with their type and content snippets
 
 **Exit:** `0`

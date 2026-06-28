@@ -1,12 +1,32 @@
 # Environment Parameters
 
+### Scope
+
+- **Purpose**: Catalog environment variables influencing CLI behavior.
+- **Responsibility**: Variable names, defaults, and precedence rules.
+- **In Scope**: `HOME`, `CLAUDE_STORAGE_ROOT`, and any future env vars.
+- **Out of Scope**: CLI parameters (→ `param/`), config files (not applicable).
+
 Environment variables that influence `claude_storage` CLI behavior. These are read at startup and may be overridden by explicit CLI parameters.
 
-## Environment Variable Catalog
+### Environment Variable Catalog
 
 | Variable | Purpose | Default | Precedence |
 |----------|---------|---------|------------|
-| `CLAUDE_STORAGE_ROOT` | Override the storage root directory | `~/.claude/` | CLI `path::` > env var > default |
+| `HOME` | User home directory — base for default storage root | (system) | System-provided; not overridable by CLI |
+| `CLAUDE_STORAGE_ROOT` | Override the storage root directory | `$HOME/.claude/` | CLI `path::` > env var > default |
+
+---
+
+### `HOME`
+
+**Purpose:** Standard Unix user home directory. The CLI uses `HOME` to derive the default storage root (`$HOME/.claude/`) and to compress absolute paths to `~/...` in display output.
+
+**Default:** System-provided (typically set by the login shell).
+
+**Affected commands:** All commands. If `HOME` is unset, the CLI exits with an error unless `CLAUDE_STORAGE_ROOT` or an explicit `path::` provides the storage root.
+
+**Source:** `src/cli/storage.rs::create_storage`, `src/cli/projects.rs::compress_home`
 
 ---
 

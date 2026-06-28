@@ -239,7 +239,6 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     std::process::exit( 1 );
   }
 
-  let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
   let builder = build_claude_command( &cli );
 
   // Fix(BUG-248): warn when --keep-claudecode is set while CLAUDECODE is present in
@@ -268,6 +267,13 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     std::process::exit( 0 );
   }
 
+  // Fix(BUG-319): resolve journal writer AFTER the dry-run exit so that `--dry-run`
+  //   does not create the journal directory as a filesystem side effect.
+  // Root cause: `resolve_journal_writer()` calls `create_dir_all()` unconditionally;
+  //   placing it before the dry-run check meant every `--dry-run` invocation created
+  //   `~/.clr/journal/` (or the `--journal-dir` path) even though no events are emitted.
+  // Pitfall: `journal` is only consumed by `run_built_command()` — safe to defer.
+  let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
   run_built_command( &builder, &cli, journal.as_ref() );
   std::process::exit( 0 );
 }

@@ -1,5 +1,12 @@
 # Type :: 4. `PathSubstring`
 
+### Scope
+
+- **Purpose**: Specify the `PathSubstring` semantic type.
+- **Responsibility**: Validation rules, fundamental type, and parameter mapping for `PathSubstring`.
+- **In Scope**: Parsing rules, valid/invalid values, error messages.
+- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
+
 **Purpose:** Case-insensitive substring matcher against filesystem paths. Semantically distinct from `StoragePath` — this is a filter expression, not a filesystem location.
 
 **Fundamental Type:** Wrapper around string

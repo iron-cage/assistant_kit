@@ -1,4 +1,11 @@
-# Audit Session History
+# User Story :: 1. Audit Session History
+
+### Scope
+
+- **Purpose**: Document the "Audit Session History" user story.
+- **Responsibility**: Persona, goal, acceptance criteria, and command mappings for this story.
+- **In Scope**: User persona, goal statement, acceptance criteria, referenced commands.
+- **Out of Scope**: Command specifications (→ `command/`), parameter details (→ `param/`).
 
 **Persona:** developer
 **Goal:** Get an at-a-glance overview of all Claude Code projects and session counts in local storage.
@@ -23,7 +30,7 @@
 | # | Parameter | Role |
 |---|-----------|------|
 | 9 | [`path::`](../param/09_path.md) | Override default storage root for inspection |
-| 15 | [`sessions::`](../param/15_sessions.md) | Expand session list per project in `.list` |
+| 15 | [`show_sessions::`](../param/15_sessions.md) | Expand session list per project in `.list` |
 | 16 | [`target::`](../param/16_target.md) | Specify count target (projects, sessions, entries) |
 | 23 | [`show_tokens::`](../param/23_show_tokens.md) | Show token usage section in .status |
 
@@ -60,7 +67,7 @@ cls .count target::sessions
 
 **Step 4: List all projects with sessions**
 ```bash
-cls .list sessions::1
+cls .list show_sessions::1
 # Output: all projects, each with their sessions listed below
 ```
 

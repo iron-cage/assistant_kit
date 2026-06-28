@@ -1,5 +1,12 @@
 # Parameter Group :: 5. Scope Configuration
 
+### Scope
+
+- **Purpose**: Specify the Scope Configuration parameter group.
+- **Responsibility**: Member parameters, coherence semantics, and command usage for Scope Configuration.
+- **In Scope**: Group membership, shared behavior, command interactions.
+- **Out of Scope**: Individual parameter specs (→ `param/`), type constraints (→ `type/`).
+
 **Parameters:** `scope::`, `path::`
 
 **Pattern:** Discovery scope boundary and anchor

@@ -1,5 +1,12 @@
 # Command :: 7. `.projects`
 
+### Scope
+
+- **Purpose**: Specify the `.projects` CLI command.
+- **Responsibility**: Syntax, parameters, exit codes, and examples for `.projects`.
+- **In Scope**: Invocation syntax, accepted parameters, output structure, error conditions.
+- **Out of Scope**: Parameter definitions (→ `param/`), type constraints (→ `type/`).
+
 Project list with scope control; conversations are grouped by project directory and one entry is shown per project (not per session file). Bare invocation shows all projects in the bidirectional neighborhood (ancestors + current + descendants via `scope::around`).
 
 **Parameters:** `scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`, `show_tree::`
@@ -29,6 +36,13 @@ claude_storage .projects limit::5
 | `show_tree::` | Boolean | optional | `0` | Tree-indent agent sessions under root sessions |
 
 `scope::` and `path::` belong to the [Scope Configuration group](../param_group/05_scope_configuration.md). Session filters belong to [Session Filter](../param_group/04_session_filter.md). `show_tree::` belongs to [Output Control](../param_group/01_output_control.md).
+
+**Algorithm (5 steps):**
+1. Parse scope, filters, and resolve base path — validate `scope::` value, `min_entries::` non-negative, `limit::` non-negative; encode base path for scope comparison
+2. Filter projects by scope predicate — `local`: exact match + topic variants; `relevant`: ancestor chain (component-wise); `under`: subtree (component-wise); `around`: union of under + relevant; `global`: all projects
+3. Collect sessions per matching project — apply session filter (agent, min_entries, session ID substring); group by decoded display path (filesystem-guided decode resolves `_` vs `/` ambiguity)
+4. Sort and aggregate — sessions by mtime descending within each project; projects by most-recent session mtime descending; exclude zero-byte placeholder sessions
+5. Format output — family display (agents grouped under root sessions with `[N agents: breakdown]` brackets) or tree display (`show_tree::1`: `├─`/`└─` connectors); apply `limit::` cap with `... and N more` hint
 
 **Default invocation:**
 
@@ -109,6 +123,18 @@ With `show_tree::1`, agents are tree-indented under their parent:
 | 1 | [Output Control](../param_group/01_output_control.md) | Partial | `show_stat::`, `show_tokens::` |
 | 4 | [Session Filter](../param_group/04_session_filter.md) | Full | — |
 | 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Full | — |
+
+### Referenced Parameters
+
+| # | Parameter | Type | Required |
+|---|-----------|------|----------|
+| 1 | [`agent::`](../param/01_agent.md) | Boolean | optional |
+| 7 | [`min_entries::`](../param/07_min_entries.md) | [`EntryCount`](../type/01_entry_count.md) | optional |
+| 9 | [`path::`](../param/09_path.md) | [`StoragePath`](../type/10_storage_path.md) | optional |
+| 12 | [`scope::`](../param/12_scope.md) | [`ScopeValue`](../type/07_scope_value.md) | optional |
+| 13 | [`session::`](../param/13_session.md) | [`SessionFilter`](../type/08_session_filter.md) | optional |
+| 22 | [`limit::`](../param/22_limit.md) | Integer | optional |
+| 24 | [`show_tree::`](../param/24_show_tree.md) | Boolean | optional |
 
 ### Referenced User Stories
 

@@ -644,7 +644,7 @@ cargo run -p claude_runner -- tools some-arg
 All TC-1 through TC-82 must pass without unexpected errors or panics.
 TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-82 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
-CC-1 through CC-207 are automated — listed for traceability only.
+CC-1 through CC-231 are automated — listed for traceability only.
 
 ---
 
@@ -898,6 +898,34 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-206:** `clr isolated --expect "hello" --expect-strategy "default:no" "msg"` (unix: fake claude outputs "world") → exit 0; "no" on stdout (fallback value)
 - **CC-207:** `clr isolated --expect "hello" --expect-strategy retry "msg"` (unix: fake claude outputs "world") → exit 1; stderr "retry is not supported for isolated"
 - Automated in: `isolated_test.rs` IT-12–IT-27
+
+### Journal: --journal, --journal-dir, CLR_JOURNAL, CLR_JOURNAL_DIR (Plan 033)
+
+- **CC-208:** `--journal off` → no JSONL file created in journal dir
+- **CC-209:** `--journal full` → JSONL with `"type":"execution"` and stdout field
+- **CC-210:** `--journal meta` → JSONL without stdout/stderr fields
+- **CC-211:** `--journal-dir <dir>` only → default level is "full"; JSONL in custom dir
+- **CC-212:** `CLR_JOURNAL=meta` env → meta-level JSONL (no stdout/stderr)
+- **CC-213:** `CLR_JOURNAL_DIR=<dir>` env → JSONL in env-specified dir
+- **CC-214:** Retry fires → `"type":"retry"` event in JSONL
+- **CC-215:** Timeout fires → `"type":"timeout"` event in JSONL with exit_code 4
+- **CC-216:** `CLR_JOURNAL=bogus` (run/ask) → exit 1; error mentions `CLR_JOURNAL`
+- **CC-217:** Default dir = `~/.clr/journal/` when no `--journal-dir` and no `CLR_JOURNAL_DIR`
+- **CC-218:** Gate blocks → `"type":"gate_wait"` with `"gate_outcome":"acquired"`
+- **CC-219:** Validation retry → `"type":"validation_retry"` event
+- **CC-220:** Read-only journal dir → runner exit preserved; journal errors silently ignored
+- **CC-221:** `--journal-dir` CLI wins over `CLR_JOURNAL_DIR` env (precedence)
+- **CC-222:** Stdout > 1 MB → truncated with `[truncated at 1MB]` marker
+- **CC-223:** `--dry-run` does NOT create journal directory (BUG-319)
+- **CC-224:** `--journal bogus` CLI flag → exit 1
+- **CC-225:** `--journal Full` (case-sensitive) → exit 1
+- **CC-226:** `--journal` missing value → exit 1
+- **CC-227:** `--journal full --journal meta` (duplicate; last wins) → meta-level JSONL
+- **CC-228:** `--journal off --journal-dir <dir>` → no JSONL; dir not created
+- **CC-229:** `CLR_JOURNAL=off` + `CLR_JOURNAL_DIR=<dir>` → no JSONL; dir not created
+- **CC-230:** `CLR_JOURNAL=bogus` (isolated) → exit 1; error mentions `CLR_JOURNAL`
+- **CC-231:** `CLR_JOURNAL=bogus` (refresh) → exit 1; error mentions `CLR_JOURNAL`
+- Automated in: `journal_integration_test.rs` EC-01–EC-22, `isolated_test.rs` IT-37, `refresh_test.rs` IT-9
 
 ---
 

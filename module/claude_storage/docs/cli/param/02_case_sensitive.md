@@ -1,5 +1,12 @@
 # Parameter :: 2. `case_sensitive::`
 
+### Scope
+
+- **Purpose**: Specify the `case_sensitive::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `case_sensitive::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Enable case-sensitive matching in search operations.
 
 **Type:** Boolean
@@ -36,6 +43,10 @@ case_sensitive::true  # Not a boolean: "case_sensitive must be 0 or 1"
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 5 | [`.search`](../command/05_search.md) | `0` | Enables case-sensitive matching |
+
+### Referenced Parameter Groups
+
+None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

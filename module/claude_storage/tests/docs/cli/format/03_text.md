@@ -1,4 +1,4 @@
-# Format :: Text
+# Format :: 3. Text
 
 Output format verification tests for plain-text export.
 

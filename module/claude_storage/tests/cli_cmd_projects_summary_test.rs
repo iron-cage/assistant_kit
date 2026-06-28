@@ -24,11 +24,9 @@
 //! - INT-41: v1 orphan shows `? (orphan)` label (bug-cc-c1)
 //! - INT-42: v2 root entry count singular `(1 entry)`
 //! - INT-43: v2 agent entry count singular `1 entry`
-//! - INT-41b: `verbosity::1` alone — LEGACY (was: stays summary; now: shows list output)
 //! - INT-42b: "Active project" header — LEGACY (task-019: summary removed; shows "Found N projects:")
 //! - INT-43b: Session count aggregate — LEGACY (task-019: now shown in list-mode header)
 //! - INT-44: List mode shows projects sorted by recency
-//! - INT-45: `verbosity::0` outputs project paths only
 //! - INT-46: Topic path shown even when topic dir absent from disk
 //! - INT-47: Topic path shown when topic dir present on disk
 //! - INT-48: Default-topic path shown when topic dir absent from disk
@@ -87,14 +85,13 @@ fn int_26_v1_zero_byte_sessions_excluded()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!( s.contains( "session-real" ),        "real session must appear; got:\n{s}" );
-  assert!( !s.contains( "session-placeholder" ), "zero-byte placeholder must be absent at v1; got:\n{s}" );
+  assert!( !s.contains( "session-placeholder" ), "zero-byte placeholder must be absent; got:\n{s}" );
 }
 
 // ─── INT-27 ───────────────────────────────────────────────────────────────────
@@ -612,9 +609,9 @@ fn int_41_v1_orphan_shows_orphan_label()
 
 // ─── INT-42 ───────────────────────────────────────────────────────────────────
 
-/// INT-42: v2 root entry count singular — `(1 entry)` not `(1 entries)`.
+/// INT-42: `show_tree` root entry count singular — `(1 entry)` not `(1 entries)`.
 #[ test ]
-fn int_42_v2_root_entry_count_singular()
+fn int_42_show_tree_root_entry_count_singular()
 {
   let root = TempDir::new().unwrap();
   let storage_root = root.path().join( ".claude" );
@@ -628,21 +625,21 @@ fn int_42_v2_root_entry_count_singular()
     .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
-    .arg( "verbosity::2" )
+    .arg( "show_tree::1" )
     .output()
     .unwrap();
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
-  assert!( s.contains( "(1 entry)" ),  "v2 root with 1 entry must show '(1 entry)'; got:\n{s}" );
+  assert!( s.contains( "(1 entry)" ),  "show_tree root with 1 entry must show '(1 entry)'; got:\n{s}" );
   assert!( !s.contains( "(1 entries)" ), "must NOT show '(1 entries)'; got:\n{s}" );
 }
 
 // ─── INT-43 ───────────────────────────────────────────────────────────────────
 
-/// INT-43: v2 agent entry count singular — `1 entry` not `1 entries`.
+/// INT-43: `show_tree` agent entry count singular — `1 entry` not `1 entries`.
 #[ test ]
-fn int_43_v2_agent_entry_count_singular()
+fn int_43_show_tree_agent_entry_count_singular()
 {
   let root = TempDir::new().unwrap();
   let storage_root = root.path().join( ".claude" );
@@ -660,47 +657,14 @@ fn int_43_v2_agent_entry_count_singular()
     .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
-    .arg( "verbosity::2" )
+    .arg( "show_tree::1" )
     .output()
     .unwrap();
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
-  assert!( s.contains( "1 entry" ),   "v2 agent with 1 entry must show '1 entry'; got:\n{s}" );
+  assert!( s.contains( "1 entry" ),   "show_tree agent with 1 entry must show '1 entry'; got:\n{s}" );
   assert!( !s.contains( "1 entries" ), "must NOT show '1 entries'; got:\n{s}" );
-}
-
-// ─── INT-41b ──────────────────────────────────────────────────────────────────
-
-/// INT-41b: `verbosity::1` alone — LEGACY spec entry.
-///
-/// The spec said `verbosity::1` should stay in summary mode (fix for
-/// bug-is-default-verbosity). Task-019 removed summary mode entirely; the
-/// `is_default` gate that caused the bug was deleted. `verbosity::1` now
-/// produces list output like any other explicit parameter.
-#[ test ]
-fn int_41b_verbosity_1_shows_list_output()
-{
-  let root = TempDir::new().unwrap();
-  let storage_root = root.path().join( ".claude" );
-  let project = root.path().join( "proj41b" );
-  fs::create_dir_all( &project ).unwrap();
-  common::write_path_project_session( &storage_root, &project, "session-41b", 2 );
-
-  let out = common::clg_cmd()
-    .env( "HOME", root.path() )
-    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .current_dir( &project )
-    .arg( ".projects" )
-    .arg( "verbosity::1" )
-    .output()
-    .unwrap();
-
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  // After task-019: verbosity::1 yields list output; no summary mode exists.
-  assert!( s.contains( "Found" ),          "verbosity::1 must emit list-mode header; got:\n{s}" );
-  assert!( !s.contains( "Active project" ), "summary block must be absent; got:\n{s}" );
 }
 
 // ─── INT-42b ──────────────────────────────────────────────────────────────────
@@ -817,33 +781,6 @@ fn int_44_list_mode_projects_sorted_by_recency()
   );
 }
 
-// ─── INT-45 ───────────────────────────────────────────────────────────────────
-
-/// INT-45: `verbosity::0` outputs project paths only — no session IDs.
-#[ test ]
-fn int_45_verbosity_0_shows_project_paths_only()
-{
-  let root = TempDir::new().unwrap();
-  let storage_root = root.path().join( ".claude" );
-  let project = root.path().join( "proj_v0_45" );
-  fs::create_dir_all( &project ).unwrap();
-  common::write_path_project_session( &storage_root, &project, "session-v0-45", 2 );
-
-  let out = common::clg_cmd()
-    .env( "HOME", root.path() )
-    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".projects" )
-    .arg( "scope::global" )
-    .arg( "verbosity::0" )
-    .output()
-    .unwrap();
-
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  assert!( s.contains( "proj_v0_45" ),    "v0 must output project path; got:\n{s}" );
-  assert!( !s.contains( "session-v0-45" ), "v0 must NOT output session IDs; got:\n{s}" );
-}
-
 // ─── INT-46 ───────────────────────────────────────────────────────────────────
 
 /// INT-46: Topic path shown even when topic dir absent from disk.
@@ -864,7 +801,6 @@ fn int_46_topic_path_shown_when_topic_dir_absent()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -896,7 +832,6 @@ fn int_47_topic_path_shown_when_topic_dir_present()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -928,7 +863,6 @@ fn int_48_default_topic_path_shown_when_absent()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -957,7 +891,6 @@ fn int_49_base_path_shown_with_no_topic()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -988,7 +921,6 @@ fn int_50_double_topic_key_shows_both_components()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 

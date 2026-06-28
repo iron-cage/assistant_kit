@@ -1,5 +1,12 @@
 # Type :: 7. `ScopeValue`
 
+### Scope
+
+- **Purpose**: Specify the `ScopeValue` semantic type.
+- **Responsibility**: Validation rules, fundamental type, and parameter mapping for `ScopeValue`.
+- **In Scope**: Parsing rules, valid/invalid values, error messages.
+- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
+
 **Purpose:** Controls the discovery boundary for session listing in `.projects`. Defines how broadly to search for matching projects relative to a filesystem anchor path.
 
 **Fundamental Type:** Wrapper around string enum
