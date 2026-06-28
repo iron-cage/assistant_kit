@@ -1,5 +1,12 @@
 # Type :: 8. `SessionFilter`
 
+### Scope
+
+- **Purpose**: Specify the `SessionFilter` semantic type.
+- **Responsibility**: Validation rules, fundamental type, and parameter mapping for `SessionFilter`.
+- **In Scope**: Parsing rules, valid/invalid values, error messages.
+- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
+
 **Purpose:** Case-insensitive substring matcher against session IDs (JSONL filename stems). Semantically distinct from `SessionId` — this is a pattern for filtering, not a direct identifier.
 
 **Fundamental Type:** Wrapper around string

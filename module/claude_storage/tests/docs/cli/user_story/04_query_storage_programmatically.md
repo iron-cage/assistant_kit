@@ -7,7 +7,7 @@ Source: [004_query_storage_programmatically.md](../../../../docs/cli/user_story/
 
 | ID | Test Name | Criteria |
 |----|-----------|---------|
-| RWS-1 | status verbosity::0 outputs key=value pairs | AC: verbosity::0 outputs parseable key=value |
+| RWS-1 | list conversation count outputs bare integer | AC: count::1 outputs parseable integer |
 | RWS-2 | count outputs bare integer | AC: .count outputs bare integer with no decorations |
 | RWS-3 | count target:: specifies what to count | AC: can query count for specific target |
 | RWS-4 | path:: scopes query to alternate storage root | AC: scope via path:: or CLAUDE_STORAGE_ROOT |
@@ -15,21 +15,21 @@ Source: [004_query_storage_programmatically.md](../../../../docs/cli/user_story/
 
 ---
 
-### RWS-1: status verbosity::0 outputs key=value pairs
+### RWS-1: list conversation count outputs bare integer
 
-**Scenario:** Script captures storage stats for a dashboard.
+**Scenario:** Script counts conversations in a specific project for reporting.
 
-**Fixture:** 2 projects with 5 sessions total.
+**Fixture:** 1 project with 3 conversations (root sessions).
 
 **Command:**
 ```bash
-clg .status verbosity::0
+clg .list type::conversation count::1 project::{project-id}
 ```
 
 **Expected:**
-- Stdout matches format `projects: 2, sessions: 5`
-- No headers, table borders, or decorative characters
-- Parseable by `awk -F': ' '{print $2}'`
+- Stdout is a single bare integer (e.g., `3`)
+- No headers, labels, or decorative characters
+- Parseable by shell arithmetic: `[ $(clg .list type::conversation count::1 project::P) -gt 2 ]`
 
 **Exit:** `0`
 

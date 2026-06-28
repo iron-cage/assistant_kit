@@ -1,14 +1,21 @@
-# Format: JSON
+# Format :: 2. JSON
 
-## Description
+### Scope
+
+- **Purpose**: Specify the JSON export format.
+- **Responsibility**: Structure, rendering rules, and output conventions for JSON export.
+- **In Scope**: Output structure, content ordering, file conventions.
+- **Out of Scope**: Parameter specs (→ `param/`), command behavior (→ `command/`).
+
+### Description
 
 Machine-readable export preserving the complete raw JSONL entry structure. Wraps all session entries in a JSON object with session metadata. Suitable for programmatic analysis, import into other tools, or archival. Renderer: `write_json_value()` in `claude_storage_core/src/export.rs`.
 
-## Trigger
+### Trigger
 
 Activated by `format::json` on `.export`.
 
-## Structure
+### Structure
 
 ```json
 {
@@ -54,7 +61,7 @@ Activated by `format::json` on `.export`.
 - **Streaming:** reads raw JSONL lines via `BufReader`, parses each with the internal JSON parser, then pretty-prints. Memory holds one entry at a time.
 - **Validation:** parseable with `jq .` or any JSON parser
 
-## Source
+### Source
 
 `claude_storage_core/src/export.rs` — `write_json_value()`, `export_session()`
 

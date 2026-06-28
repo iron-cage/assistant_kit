@@ -1,5 +1,12 @@
 # Type :: 9. `SessionId`
 
+### Scope
+
+- **Purpose**: Specify the `SessionId` semantic type.
+- **Responsibility**: Validation rules, fundamental type, and parameter mapping for `SessionId`.
+- **In Scope**: Parsing rules, valid/invalid values, error messages.
+- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
+
 **Purpose:** Direct session identifier by filename stem. Used for single-session operations where the exact session is known.
 
 **Fundamental Type:** Wrapper around string

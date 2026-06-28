@@ -1,4 +1,11 @@
-# Type :: 14. `StrategyType`
+# Type :: 13. `StrategyType`
+
+### Scope
+
+- **Purpose**: Specify the `StrategyType` semantic type.
+- **Responsibility**: Validation rules, fundamental type, and parameter mapping for `StrategyType`.
+- **In Scope**: Parsing rules, valid/invalid values, error messages.
+- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
 
 **Purpose:** Resume strategy for `.session.ensure`. Determines whether a session should continue an existing conversation (`resume`) or start fresh (`fresh`).
 

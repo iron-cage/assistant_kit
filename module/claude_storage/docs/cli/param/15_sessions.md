@@ -1,5 +1,12 @@
 # Parameter :: 15. `show_sessions::`
 
+### Scope
+
+- **Purpose**: Specify the `show_sessions::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `show_sessions::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Explicit control over session display in `.list`.
 
 **Type:** Boolean
@@ -34,6 +41,10 @@ show_sessions::1    # Force on (show even with no filters)
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 2 | [`.list`](../command/02_list.md) | `0` (auto) | Explicit override for session display; auto-enabled by `session::`, `agent::`, `min_entries::` |
+
+### Referenced Parameter Groups
+
+None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

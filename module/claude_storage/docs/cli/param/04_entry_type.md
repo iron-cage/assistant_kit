@@ -1,5 +1,12 @@
 # Parameter :: 4. `entry_type::`
 
+### Scope
+
+- **Purpose**: Specify the `entry_type::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `entry_type::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Filter search results by conversation entry type.
 
 **Type:** [`EntryType`](../type/02_entry_type.md)
@@ -38,6 +45,10 @@ entry_type::system      # "entry_type must be user|assistant|all, got system"
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 5 | [`.search`](../command/05_search.md) | `all` | Restricts search to one entry type |
+
+### Referenced Parameter Groups
+
+None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

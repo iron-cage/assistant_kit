@@ -165,7 +165,7 @@ fn test_list_min_entries_negative_validation()
 ///
 /// ## Root Cause
 /// A prior "fix" (issue-008) added an error when `entries::1` was used in content
-/// mode (verbosity >= 1 && !`metadata_only`), intending to prevent silent-ignore of
+/// mode (content display && !`metadata_only`), intending to prevent silent-ignore of
 /// the parameter. However, the YAML spec example 6 explicitly lists
 /// `.show ``session_id::abc123`` ``entries::``1` as valid without `metadata::1`.
 /// Content mode already displays all entries by default — `entries::1` is a valid

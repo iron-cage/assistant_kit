@@ -7,7 +7,7 @@ This document covers advanced storage features discovered through deep analysis:
 ## agent sessions (sub-agents)
 
 For CLI display of session families (how agents are grouped under their parent root
-session in `.projects` output), see [001_commands.md § .projects](cli/001_commands.md#command--7-projects).
+session in `.projects` output), see [command/07_projects.md](cli/command/07_projects.md).
 
 ### what are agent sessions
 
@@ -787,5 +787,5 @@ For hierarchical format discovery, see [detecting agent sessions (hierarchical f
 - [`contract/claude_code/docs/storage/readme.md`](../../../contract/claude_code/docs/storage/readme.md) - Directory structure and storage model
 - [`contract/claude_code/docs/formats/readme.md`](../../../contract/claude_code/docs/formats/readme.md) - Ancillary file format specifications
 - [`contract/claude_code/docs/jsonl/readme.md`](../../../contract/claude_code/docs/jsonl/readme.md) - Conversation entry format details
-- [`cli/001_commands.md`](cli/001_commands.md) - CLI command specifications
+- [`cli/command/readme.md`](cli/command/readme.md) - CLI command specifications
 - [`feature/001_cli_tool.md`](feature/001_cli_tool.md) - Overall crate scope and design

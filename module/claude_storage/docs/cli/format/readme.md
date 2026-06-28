@@ -7,6 +7,14 @@
 - **In Scope**: Three named export formats (markdown, json, text) produced by `.export`.
 - **Out of Scope**: Per-command output toggles (→ `command/` per-command, `param_group/01_output_control.md`), parameter specs (→ `param/`).
 
+### Responsibility Table
+
+| File | Responsibility |
+|------|----------------|
+| `01_markdown.md` | Markdown export format — human-readable session transcript |
+| `02_json.md` | JSON export format — machine-parseable session data |
+| `03_text.md` | Text export format — plain-text session transcript |
+
 ### Taxonomy
 
 The CLI produces two categories of output:

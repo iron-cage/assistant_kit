@@ -1,5 +1,12 @@
 # Command :: 2. `.list`
 
+### Scope
+
+- **Purpose**: Specify the `.list` CLI command.
+- **Responsibility**: Syntax, parameters, exit codes, and examples for `.list`.
+- **In Scope**: Invocation syntax, accepted parameters, output structure, error conditions.
+- **Out of Scope**: Parameter definitions (→ `param/`), type constraints (→ `type/`).
+
 List projects or conversations in Claude Code storage. Project-first view: all projects are listed, with conversations optionally shown per project. Use this when navigating projects or filtering by project path.
 
 **Parameters:** `type::`, `path::`, `show_sessions::`, `session::`, `agent::`, `min_entries::`, `scope::`, `project::`, `count::`
@@ -32,6 +39,13 @@ claude_storage .list type::conversation count::1 project::PROJECT
 | `count::` | Boolean | optional | `0` | Output only the count as a bare integer |
 
 Session filter parameters belong to the [Session Filter group](../param_group/04_session_filter.md). See [Scope Configuration group](../param_group/05_scope_configuration.md) for `scope::` semantics.
+
+**Algorithm (5 steps):**
+1. Early dispatch — if `type::conversation`: load project, build session families, group into conversations, output conversation IDs (or bare count when `count::1`)
+2. Parse filter parameters — resolve `path::` (smart shell semantics: `.`, `..`, `~`), validate `min_entries::`, detect session filter presence
+3. Auto-enable session display — any session filter (`session::`, `agent::`, `min_entries::`) implicitly sets `show_sessions::1`
+4. List and filter projects by type (`uuid`/`path`/`all`) and path substring
+5. Format output — project IDs with conversation count; if sessions enabled, list filtered sessions per project
 
 **Examples:**
 ```bash
@@ -71,6 +85,20 @@ claude_storage .list type::conversation count::1 project::abc123
 | 2 | [Project Scope](../param_group/02_project_scope.md) | Full | — |
 | 4 | [Session Filter](../param_group/04_session_filter.md) | Full | — |
 | 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Partial | `path::` (PathSubstring) |
+
+### Referenced Parameters
+
+| # | Parameter | Type | Required |
+|---|-----------|------|----------|
+| 1 | [`agent::`](../param/01_agent.md) | Boolean | optional |
+| 7 | [`min_entries::`](../param/07_min_entries.md) | [`EntryCount`](../type/01_entry_count.md) | optional |
+| 9 | [`path::`](../param/09_path.md) | [`PathSubstring`](../type/04_path_substring.md) | optional |
+| 10 | [`project::`](../param/10_project.md) | String | conditional |
+| 12 | [`scope::`](../param/12_scope.md) | [`ScopeValue`](../type/07_scope_value.md) | optional |
+| 13 | [`session::`](../param/13_session.md) | [`SessionFilter`](../type/08_session_filter.md) | optional |
+| 15 | [`show_sessions::`](../param/15_sessions.md) | Boolean | optional |
+| 18 | [`type::`](../param/18_type.md) | [`ProjectType`](../type/06_project_type.md) | optional |
+| 21 | [`count::`](../param/21_count.md) | Boolean | optional |
 
 ### Referenced User Stories
 

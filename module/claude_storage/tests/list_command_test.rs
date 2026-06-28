@@ -3,11 +3,10 @@
 //! ## Purpose
 //!
 //! Validates parameter bounds and combinations for the `.list` command.
-//! Covers Finding #015 (verbosity range) and session filter empty-string validation.
+//! Covers agent, session filter, sessions Boolean, type, and pairwise validations.
 //!
 //! ## Coverage
 //!
-//! - Verbosity range validation (0-5): values outside range rejected (Finding #015)
 //! - Agent Boolean parameter: only 0 or 1 accepted (framework validation)
 //! - Session filter: non-empty string required when provided
 //! - Sessions Boolean: only 0 or 1 accepted (framework validation)
@@ -23,183 +22,6 @@
 //! REQ-010: List Command specification (spec.md)
 
 mod common;
-
-/// Test `.list ```verbosity::```-1` fails — negative verbosity rejected (Finding #015)
-///
-/// ## Root Cause
-///
-/// `list_routine` retrieved verbosity with `get_integer("verbosity").unwrap_or(1)`
-/// but never validated the 0-5 range constraint. Values like -1 or 10 were silently
-/// accepted, unlike `status_routine` and `show_routine` which include explicit range
-/// validation after the `get_integer` call.
-///
-/// ## Why Not Caught
-///
-/// The `.list` command had no parameter validation tests. Existing list tests only
-/// verified functionality with valid parameters. No tests covered out-of-range values
-/// or boundary conditions for the verbosity parameter.
-///
-/// ## Fix Applied
-///
-/// Added explicit range check `if !(0..=5).contains(&verbosity)` in `list_routine`
-/// immediately after `get_integer("verbosity").unwrap_or(1)`, matching the pattern
-/// from `status_routine` (lines 88-99). Returns `"Invalid verbosity: N. Valid range: 0-5"`.
-///
-/// ## Prevention
-///
-/// Every command with a `verbosity` parameter must validate the 0-5 range at routine
-/// entry. When adding new commands, audit existing commands for inconsistent validation.
-/// Parameters with defaults still require validation — `unwrap_or(1)` does not prevent
-/// a user from passing `verbosity::-1` or `verbosity::10`.
-///
-/// ## Pitfall
-///
-/// `get_integer("verbosity").unwrap_or(1)` only substitutes the default when the
-/// parameter is absent. When the user explicitly provides an out-of-range value, the
-/// function returns that value — range validation is always the caller's responsibility.
-///
-/// Related: Finding #015, spec.md REQ-010
-// test_kind: validation(finding-015)
-#[ test ]
-fn test_list_verbosity_negative()
-{
-  use tempfile::TempDir;
-  let storage = TempDir::new().unwrap();
-
-  let output = common::clg_cmd()
-    .args( [ ".list", "verbosity::-1" ] )
-    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
-    .output()
-    .expect( "Failed to execute .list" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-  let stdout = String::from_utf8_lossy( &output.stdout );
-  let combined = format!( "{stderr}{stdout}" );
-
-  assert!(
-    !output.status.success(),
-    "Should fail with verbosity::-1. Got: {combined}"
-  );
-
-  assert!(
-    combined.to_lowercase().contains( "verbosity" ) ||
-    combined.to_lowercase().contains( "invalid" ),
-    "Error should mention verbosity or invalid. Got: {combined}"
-  );
-}
-
-/// Test `.list ```verbosity::```6` fails — above-range verbosity rejected (Finding #015)
-///
-/// Same root cause and fix as `test_list_verbosity_negative`. Tests the upper
-/// boundary: `verbosity::5` is the maximum, `verbosity::6` must be rejected.
-///
-/// Related: Finding #015
-// test_kind: validation(finding-015)
-#[ test ]
-fn test_list_verbosity_out_of_range()
-{
-  use tempfile::TempDir;
-  let storage = TempDir::new().unwrap();
-
-  let output = common::clg_cmd()
-    .args( [ ".list", "verbosity::6" ] )
-    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
-    .output()
-    .expect( "Failed to execute .list" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-  let stdout = String::from_utf8_lossy( &output.stdout );
-  let combined = format!( "{stderr}{stdout}" );
-
-  assert!(
-    !output.status.success(),
-    "Should fail with verbosity::6. Got: {combined}"
-  );
-
-  assert!(
-    combined.to_lowercase().contains( "verbosity" ) ||
-    combined.to_lowercase().contains( "invalid" ),
-    "Error should mention verbosity or invalid. Got: {combined}"
-  );
-}
-
-/// Test `.list ```verbosity::```0` succeeds — minimum boundary accepted (Finding #015)
-///
-/// Verifies that the lower boundary of the valid range (0) is accepted after
-/// Fix(issue-015). `verbosity::0` suppresses most output but is a valid value.
-///
-/// Related: Finding #015
-// test_kind: validation(finding-015)
-#[ test ]
-fn test_list_verbosity_zero()
-{
-  use tempfile::TempDir;
-  let storage = TempDir::new().unwrap();
-  common::write_test_session( storage.path(), "list-proj-v0", "sess-v0-001", 2 );
-
-  let output = common::clg_cmd()
-    .args( [ ".list", "verbosity::0" ] )
-    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
-    .output()
-    .expect( "Failed to execute .list" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-
-  assert!(
-    output.status.success(),
-    ".list verbosity::0 should succeed. stderr: {stderr}"
-  );
-}
-
-/// Test `.list ```verbosity::```3` succeeds — mid-range value accepted (Finding #015)
-///
-/// Related: Finding #015
-// test_kind: validation(finding-015)
-#[ test ]
-fn test_list_verbosity_mid_range()
-{
-  use tempfile::TempDir;
-  let storage = TempDir::new().unwrap();
-  common::write_test_session( storage.path(), "list-proj-v3", "sess-v3-001", 2 );
-
-  let output = common::clg_cmd()
-    .args( [ ".list", "verbosity::3" ] )
-    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
-    .output()
-    .expect( "Failed to execute .list" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-
-  assert!(
-    output.status.success(),
-    ".list verbosity::3 should succeed. stderr: {stderr}"
-  );
-}
-
-/// Test `.list ```verbosity::```5` succeeds — maximum boundary accepted (Finding #015)
-///
-/// Related: Finding #015
-// test_kind: validation(finding-015)
-#[ test ]
-fn test_list_verbosity_max()
-{
-  use tempfile::TempDir;
-  let storage = TempDir::new().unwrap();
-  common::write_test_session( storage.path(), "list-proj-v5", "sess-v5-001", 2 );
-
-  let output = common::clg_cmd()
-    .args( [ ".list", "verbosity::5" ] )
-    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
-    .output()
-    .expect( "Failed to execute .list" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-
-  assert!(
-    output.status.success(),
-    ".list verbosity::5 should succeed. stderr: {stderr}"
-  );
-}
 
 /// Test `.list ```agent::```2` fails — Boolean parameter rejects non-Boolean value
 ///
@@ -381,16 +203,16 @@ fn test_list_type_uuid_with_sessions()
   );
 }
 
-/// Pairwise: `.list ```type::path``` ```verbosity::```2` succeeds
+/// Pairwise: `.list type::path` succeeds
 #[ test ]
-fn test_list_type_path_with_verbosity()
+fn test_list_type_path()
 {
   use tempfile::TempDir;
   let storage = TempDir::new().unwrap();
   common::write_test_session( storage.path(), "list-pair-path", "sess-path-001", 2 );
 
   let output = common::clg_cmd()
-    .args( [ ".list", "type::path", "verbosity::2" ] )
+    .args( [ ".list", "type::path" ] )
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .output()
     .expect( "Failed to execute .list" );
@@ -399,34 +221,7 @@ fn test_list_type_path_with_verbosity()
 
   assert!(
     output.status.success(),
-    ".list type::path verbosity::2 should succeed. stderr: {stderr}"
-  );
-}
-
-/// Pairwise: `.list ```show_sessions::0``` ```verbosity::```-1` fails — invalid verbosity
-///
-/// When multiple parameters are provided with one invalid value, the command
-/// must fail. Verbosity range validation happens before storage access.
-// test_kind: validation(finding-015)
-#[ test ]
-fn test_list_sessions_with_invalid_verbosity()
-{
-  use tempfile::TempDir;
-  let storage = TempDir::new().unwrap();
-
-  let output = common::clg_cmd()
-    .args( [ ".list", "show_sessions::0", "verbosity::-1" ] )
-    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
-    .output()
-    .expect( "Failed to execute .list" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-  let stdout = String::from_utf8_lossy( &output.stdout );
-  let combined = format!( "{stderr}{stdout}" );
-
-  assert!(
-    !output.status.success(),
-    "Should fail with verbosity::-1 even alongside valid show_sessions::0. Got: {combined}"
+    ".list type::path should succeed. stderr: {stderr}"
   );
 }
 
@@ -593,28 +388,6 @@ fn test_list_type_invalid()
   );
 }
 
-/// Test `.list ```verbosity::```1` succeeds — default value accepted explicitly
-#[ test ]
-fn test_list_verbosity_default_explicit()
-{
-  use tempfile::TempDir;
-  let storage = TempDir::new().unwrap();
-  common::write_test_session( storage.path(), "list-vdef-proj", "sess-vdef-001", 2 );
-
-  let output = common::clg_cmd()
-    .args( [ ".list", "verbosity::1" ] )
-    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
-    .output()
-    .expect( "Failed to execute .list" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-
-  assert!(
-    output.status.success(),
-    ".list verbosity::1 (default) should succeed. stderr: {stderr}"
-  );
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // issue-025 regression: "Found 1 projects:" uses wrong plural — must be
 // "Found 1 project:" (singular).
@@ -645,7 +418,7 @@ fn test_list_singular_noun_one_project()
   common::write_test_session( storage.path(), "only-proj", "sess-sing-001", 2 );
 
   let output = common::clg_cmd()
-    .args( [ ".list", "verbosity::1" ] )
+    .args( [ ".list" ] )
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .output()
     .expect( "Failed to execute .list" );
@@ -679,7 +452,7 @@ fn test_list_plural_noun_multiple_projects()
   common::write_test_session( storage.path(), "proj-b", "sess-plur-b", 2 );
 
   let output = common::clg_cmd()
-    .args( [ ".list", "verbosity::1" ] )
+    .args( [ ".list" ] )
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .output()
     .expect( "Failed to execute .list" );
@@ -698,14 +471,14 @@ fn test_list_plural_noun_multiple_projects()
 
 // ─────────────────────────────────────────────────────────────────────────────
 // issue-027 regression: ".list show_sessions::1" with 1 session shows "(1 sessions)"
-// — wrong plural in per-project session count label (verbosity 1).
+// — wrong plural in per-project session count label.
 //
-// Root Cause: list_routine verbosity==1 branch used hardcoded plural "sessions"
+// Root Cause: list_routine used hardcoded plural "sessions"
 // in the `"{:?} ({} sessions)"` format string regardless of session_count value.
 // English requires singular "session" when count == 1.
 //
 // Why Not Caught: The issue-025 fix addressed the "Found N X:" header noun but
-// missed the per-project session count label on the same verbosity level. These
+// missed the per-project session count label. These
 // are two separate format strings — fixing one left the other broken.
 //
 // Fix Applied: Derive noun ("session" vs "sessions") from session_count before

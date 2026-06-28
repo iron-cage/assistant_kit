@@ -3,9 +3,9 @@
 //! ## Coverage
 //!
 //! Parameter validation, filter behavior, and output formatting:
-//! - Verbosity level output (`v::0` no header, `v::2` project path header)
+//! - `show_tree::1` project path header (grouped format)
 //! - Session, agent, and `min_entries` filters
-//! - Invalid parameter rejection (verbosity, `min_entries`, agent out of range)
+//! - Invalid parameter rejection (`min_entries`, agent out of range)
 //! - Singular/plural noun formatting in "Found N projects:" header (IT-14..IT-16)
 //! - Header uses "conversations" not "sessions" (IT-50)
 //!
@@ -49,32 +49,6 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Behavioural: verbosity::0 → no header, just project paths
-// ────────────────────────────────────────────────────────────────────────────
-#[ test ]
-fn verbosity_zero_no_header()
-{
-  let root = TempDir::new().unwrap();
-  let storage_root = root.path().join( ".claude" );
-  let project = root.path().join( "proj" );
-  common::write_path_project_session( &storage_root, &project, "session-v0-test", 2 );
-
-  let out = common::clg_cmd()
-    .env( "HOME", root.path().to_str().unwrap() )
-    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".projects" )
-    .arg( "scope::global" )
-    .arg( "verbosity::0" )
-    .output()
-    .unwrap();
-
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  assert!( !s.contains( "Found" ),  "verbosity::0 must not emit 'Found N projects' header; got:\n{s}" );
-  assert!( s.contains( "proj" ),    "verbosity::0 must output project path; got:\n{s}" );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
 // Behavioural: session:: filter narrows results
 // ────────────────────────────────────────────────────────────────────────────
 #[ test ]
@@ -101,25 +75,6 @@ fn session_filter_narrows_results()
   let s = stdout( &out );
   assert!( s.contains( "session-keep-001" ),  "must contain matching session; got:\n{s}" );
   assert!( !s.contains( "session-drop-002" ), "must exclude non-matching session; got:\n{s}" );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// Validation: verbosity out of range → exit 1
-// ────────────────────────────────────────────────────────────────────────────
-#[ test ]
-fn invalid_verbosity_rejected()
-{
-  let root = TempDir::new().unwrap();
-  let out = common::clg_cmd()
-    .env( "HOME", root.path().to_str().unwrap() )
-    .arg( ".projects" ).arg( "verbosity::99" )
-    .output().unwrap();
-  assert_exit( &out, 1 );
-  assert!(
-    stderr( &out ).contains( "verbosity" ),
-    "error must mention verbosity; got: {}",
-    stderr( &out )
-  );
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -161,7 +116,6 @@ fn agent_filter_includes_only_agent_sessions()
     .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "agent::1" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -188,7 +142,6 @@ fn agent_filter_excludes_agent_sessions()
     .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "agent::0" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -218,7 +171,6 @@ fn min_entries_filters_by_entry_count()
     .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "min_entries::3" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -229,33 +181,33 @@ fn min_entries_filters_by_entry_count()
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Coverage: verbosity::2 shows project path header (grouped format)
+// Coverage: show_tree::1 shows project path header (grouped format)
 // ────────────────────────────────────────────────────────────────────────────
 #[ test ]
-fn verbosity_two_includes_project_label()
+fn show_tree_includes_project_label()
 {
   let root = TempDir::new().unwrap();
   let storage_root = root.path().join( ".claude" );
   let project = root.path().join( "proj" );
-  common::write_path_project_session( &storage_root, &project, "session-v2-test", 2 );
+  common::write_path_project_session( &storage_root, &project, "session-tree-test", 2 );
 
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::2" )
+    .arg( "show_tree::1" )
     .output()
     .unwrap();
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
-  assert!( s.contains( "Found" ), "verbosity::2 must emit 'Found N sessions' header; got:\n{s}" );
+  assert!( s.contains( "Found" ), "show_tree::1 must emit 'Found N sessions' header; got:\n{s}" );
   assert!(
     s.lines().any( | l | l.contains( ':' ) && ( l.contains( '/' ) || l.contains( '~' ) ) ),
-    "verbosity::2 must show project path header; got:\n{s}"
+    "show_tree::1 must show project path header; got:\n{s}"
   );
-  assert!( s.contains( "session-v2-test" ), "must list session ID; got:\n{s}" );
+  assert!( s.contains( "session-tree-test" ), "must list session ID; got:\n{s}" );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -297,7 +249,6 @@ fn output_uses_singular_noun_when_exactly_one_session_found()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -334,7 +285,6 @@ fn output_uses_plural_noun_when_multiple_sessions_found()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -361,7 +311,6 @@ fn output_uses_plural_noun_when_zero_sessions_found()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -370,40 +319,6 @@ fn output_uses_plural_noun_when_zero_sessions_found()
   assert!(
     s.contains( "Found 0 projects:" ),
     "with 0 results, header must use plural 'projects' (zero takes plural in English); got:\n{s}"
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Validation: verbosity::-1 (negative) → exit 1
-//
-// ## Purpose
-// Validates that the verbosity parameter lower bound is enforced. The valid
-// range is 0–5; negative values must be rejected with a clear error message.
-//
-// ## Coverage
-// Boundary: verbosity below minimum (< 0). Complements the existing
-// `invalid_verbosity_rejected` test which only checks the upper bound (99).
-//
-// ## Validation Strategy
-// Assert exit code 1 and that stderr mentions "verbosity" so the user knows
-// which parameter caused the error.
-//
-// ## Related Requirements
-// Same validation contract as `status_routine`, `search_routine`, etc.
-// ─────────────────────────────────────────────────────────────────────────────
-#[ test ]
-fn verbosity_negative_one_rejected()
-{
-  let root = TempDir::new().unwrap();
-  let out = common::clg_cmd()
-    .env( "HOME", root.path().to_str().unwrap() )
-    .arg( ".projects" ).arg( "verbosity::-1" )
-    .output().unwrap();
-  assert_exit( &out, 1 );
-  assert!(
-    stderr( &out ).contains( "verbosity" ),
-    "error must mention verbosity; got: {}",
-    stderr( &out )
   );
 }
 
@@ -471,7 +386,6 @@ fn min_entries_zero_includes_all_sessions()
     .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "min_entries::0" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 

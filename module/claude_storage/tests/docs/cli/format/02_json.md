@@ -1,4 +1,4 @@
-# Format :: JSON
+# Format :: 2. JSON
 
 Output format verification tests for JSON export.
 

@@ -1,5 +1,12 @@
 # Parameter :: 14. `session_id::`
 
+### Scope
+
+- **Purpose**: Specify the `session_id::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `session_id::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Direct session identifier for single-session operations.
 
 **Type:** [`SessionId`](../type/09_session_id.md)
@@ -33,16 +40,16 @@ session_id::8d795a1c-c81d-4010-8d29-b4e678272419
 |------|------|-------------|----------------|
 | [`SessionId`](../type/09_session_id.md) | String (filename stem) | String | Non-empty; session must exist |
 
-### Referenced Parameter Groups
-| # | Group | Membership | Co-members |
-|---|-------|------------|------------|
-| 3 | [Session Identification](../param_group/03_session_identification.md) | Full | *(sole member)* |
-
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 3 | [`.show`](../command/03_show.md) | unset — optional | Optional; triggers session search when provided |
 | 6 | [`.export`](../command/06_export.md) | none — required | Identifies the session to export |
+
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 3 | [Session Identification](../param_group/03_session_identification.md) | Full | *(sole member)* |
 
 ### Referenced User Stories
 | # | User Story | Persona |

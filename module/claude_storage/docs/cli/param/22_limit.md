@@ -1,5 +1,12 @@
 # Parameter :: 22. `limit::`
 
+### Scope
+
+- **Purpose**: Specify the `limit::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `limit::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Maximum number of main sessions to display per project. Zero means unlimited.
 
 **Type:** Integer
@@ -38,6 +45,10 @@ Maximum number of main sessions to display per project. Zero means unlimited.
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 7 | [`.projects`](../command/07_projects.md) | `0` | Caps sessions per project in default display |
+
+### Referenced Parameter Groups
+
+None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

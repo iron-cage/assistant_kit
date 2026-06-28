@@ -1,5 +1,12 @@
 # Parameter :: 16. `target::`
 
+### Scope
+
+- **Purpose**: Specify the `target::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `target::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Specifies what `.count` should count.
 
 **Type:** [`TargetType`](../type/11_target_type.md)
@@ -38,6 +45,10 @@ target::files      # "Invalid target: files"
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 4 | [`.count`](../command/04_count.md) | `projects` | Selects counting granularity |
+
+### Referenced Parameter Groups
+
+None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

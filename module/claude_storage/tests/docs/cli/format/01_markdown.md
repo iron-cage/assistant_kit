@@ -1,4 +1,4 @@
-# Format :: Markdown
+# Format :: 1. Markdown
 
 Output format verification tests for Markdown export.
 

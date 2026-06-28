@@ -1,5 +1,12 @@
 # Type :: 10. `StoragePath`
 
+### Scope
+
+- **Purpose**: Specify the `StoragePath` semantic type.
+- **Responsibility**: Validation rules, fundamental type, and parameter mapping for `StoragePath`.
+- **In Scope**: Parsing rules, valid/invalid values, error messages.
+- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
+
 **Purpose:** Filesystem path string for storage operations. Accepts both absolute and `~`-prefixed paths.
 
 **Fundamental Type:** Wrapper around string (filesystem path)

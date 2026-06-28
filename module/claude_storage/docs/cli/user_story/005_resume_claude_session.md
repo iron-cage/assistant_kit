@@ -1,4 +1,11 @@
-# Resume Claude Session
+# User Story :: 5. Resume Claude Session
+
+### Scope
+
+- **Purpose**: Document the "Resume Claude Session" user story.
+- **Responsibility**: Persona, goal, acceptance criteria, and command mappings for this story.
+- **In Scope**: User persona, goal statement, acceptance criteria, referenced commands.
+- **Out of Scope**: Command specifications (→ `command/`), parameter details (→ `param/`).
 
 **Persona:** developer
 **Goal:** Compute the correct session working directory path and ensure it exists before resuming or starting a Claude Code session.
@@ -23,18 +30,14 @@
 ### Referenced Parameters
 | # | Parameter | Role |
 |---|-----------|------|
-| 9 | [`path::`](../param/09_path.md) | Override default storage root |
-| 10 | [`project::`](../param/10_project.md) | Specify project directory for path computation |
-| 14 | [`session_id::`](../param/14_session_id.md) | Identify the session to resume |
+| 9 | [`path::`](../param/09_path.md) | Specify project directory for path/existence/session operations |
 | 17 | [`topic::`](../param/17_topic.md) | Session topic suffix for workspace organization |
 | 20 | [`strategy::`](../param/20_strategy.md) | Override auto-detected resume strategy |
 
 ### Referenced Parameter Groups
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 2 | [Project Scope](../param_group/02_project_scope.md) | Scope operations to a specific project |
-| 3 | [Session Identification](../param_group/03_session_identification.md) | Identify session by ID or topic |
-| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: override for non-default storage |
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: specifies project directory for all four commands |
 
 ### Related User Stories
 | # | User Story | Relationship |
@@ -45,25 +48,25 @@
 
 **Step 1: Check if the project has conversation history**
 ```bash
-cls .project.exists project::/home/user/myproject
+cls .project.exists path::/home/user/myproject
 # Exit 0: project exists; exit 1: no history yet
 ```
 
 **Step 2: Compute the Claude storage path**
 ```bash
-storage_path=$(cls .project.path project::/home/user/myproject)
+storage_path=$(cls .project.path path::/home/user/myproject)
 echo "Storage path: $storage_path"
 ```
 
 **Step 3: Compute the session working directory**
 ```bash
-session_dir=$(cls .session.dir session_id::abc123 topic::auth)
+session_dir=$(cls .session.dir path::/home/user/myproject topic::auth)
 echo "Session dir: $session_dir"
 ```
 
 **Step 4: Ensure session directory exists**
 ```bash
-cls .session.ensure session_id::abc123 topic::auth
+cls .session.ensure path::/home/user/myproject topic::auth
 # Output: strategy (resume or fresh) and directory path
 # Side effect: creates directory on disk if absent
 ```
@@ -72,14 +75,14 @@ cls .session.ensure session_id::abc123 topic::auth
 
 **Project has no history (exit 1 from .project.exists):**
 ```bash
-if ! cls .project.exists project::/home/user/myproject; then
+if ! cls .project.exists path::/home/user/myproject; then
   echo "No history — starting fresh session"
 fi
 ```
 
 **Strategy override when auto-detection is wrong:**
 ```bash
-cls .session.ensure session_id::abc123 topic::auth strategy::fresh
+cls .session.ensure path::/home/user/myproject topic::auth strategy::fresh
 # Forces fresh session even if prior session exists
 ```
 
@@ -89,12 +92,12 @@ cls .session.ensure session_id::abc123 topic::auth strategy::fresh
 ```bash
 PROJECT=/home/user/myproject
 SESSION_ID=$(cls .list type::conversation project::$PROJECT | head -1)
-cls .session.ensure session_id::$SESSION_ID topic::auth
+cls .session.ensure path::$PROJECT topic::auth
 ```
 
 **Inspect computed paths without creating anything:**
 ```bash
-cls .project.path project::$PROJECT
-cls .session.dir session_id::$SESSION_ID topic::auth
+cls .project.path path::$PROJECT
+cls .session.dir path::$PROJECT topic::auth
 # Both are read-only — only .session.ensure writes to disk
 ```

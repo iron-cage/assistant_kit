@@ -3,7 +3,7 @@
 //! ## Coverage
 //!
 //! IT-1, IT-33: Default list mode and zero-session header (post-summary-removal).
-//! IT-36..IT-48: Family/agent tree display at verbosity 1 and 2.
+//! IT-36..IT-48: Family/agent tree display at default and `show_tree::1` levels.
 //!
 //! | ID    | What it covers                                                   |
 //! |-------|------------------------------------------------------------------|
@@ -621,7 +621,7 @@ fn it45_v2_root_entry_count_singular()
     .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
-    .arg( "verbosity::2" )
+    .arg( "show_tree::1" )
     .output()
     .unwrap();
 
@@ -679,7 +679,7 @@ fn it46_v2_agent_entry_count_singular()
     .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
-    .arg( "verbosity::2" )
+    .arg( "show_tree::1" )
     .output()
     .unwrap();
 

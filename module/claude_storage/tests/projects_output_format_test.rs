@@ -200,25 +200,25 @@ fn it_20_agent_sessions_shown_individually_at_v2()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::2" )
+    .arg( "show_tree::1" )
     .output()
     .unwrap();
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
-  // All agent sessions must appear individually (tree-indented at v2+)
-  assert!( s.contains( "agent-task-001" ), "agent-task-001 must appear individually at v2; got:\n{s}" );
-  assert!( s.contains( "agent-task-002" ), "agent-task-002 must appear individually at v2; got:\n{s}" );
-  assert!( s.contains( "agent-task-003" ), "agent-task-003 must appear individually at v2; got:\n{s}" );
+  // All agent sessions must appear individually (tree-indented with show_tree::1)
+  assert!( s.contains( "agent-task-001" ), "agent-task-001 must appear individually with show_tree::1; got:\n{s}" );
+  assert!( s.contains( "agent-task-002" ), "agent-task-002 must appear individually with show_tree::1; got:\n{s}" );
+  assert!( s.contains( "agent-task-003" ), "agent-task-003 must appear individually with show_tree::1; got:\n{s}" );
   // No old-format collapse line
   assert!(
     !s.contains( "+ " ),
-    "must NOT show old '+ N agent' collapse at v2; got:\n{s}"
+    "must NOT show old '+ N agent' collapse with show_tree::1; got:\n{s}"
   );
   // Must have path header (grouped output)
   assert!(
     s.lines().any( | l | l.contains( ':' ) && ( l.contains( '/' ) || l.contains( '~' ) ) ),
-    "v2 must show project path header ending with ':'; got:\n{s}"
+    "show_tree::1 must show project path header ending with ':'; got:\n{s}"
   );
 }
 
@@ -238,7 +238,7 @@ fn it_21_entry_count_shown_at_v2()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::2" )
+    .arg( "show_tree::1" )
     .output()
     .unwrap();
 
@@ -246,7 +246,7 @@ fn it_21_entry_count_shown_at_v2()
   let s = stdout( &out );
   assert!(
     s.contains( "(4 entries)" ),
-    "v2 must show '(4 entries)' for a 4-entry session; got:\n{s}"
+    "show_tree::1 must show '(4 entries)' for a 4-entry session; got:\n{s}"
   );
 }
 
@@ -268,7 +268,6 @@ fn it_22_agent_filter_disables_collapse_at_v1()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .arg( "agent::1" )
     .output()
     .unwrap();
@@ -297,11 +296,11 @@ fn it_22_agent_filter_disables_collapse_at_v1()
 //
 // Why Not Caught: No test verified v1 output contained entry counts.
 //
-// Fix Applied: v1 now shows `  - {short_id}  {mtime}  ({n} entries)` for each
-// main session (mirrors v2 info density at the default verbosity).
+// Fix Applied: Default output now shows `  - {short_id}  {mtime}  ({n} entries)`
+// for each main session.
 //
-// Prevention: Always add a v1 entry-count assertion when adding entry count to
-// lower verbosity levels.
+// Prevention: Always add an entry-count assertion when adding entry count to
+// default output.
 //
 // Pitfall: Synthetic test IDs are not UUID-format (len != 36), so short_id
 // returns them intact — assertions against full IDs still pass at v1.
@@ -320,7 +319,6 @@ fn it_27_entry_count_shown_at_v1()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -328,19 +326,19 @@ fn it_27_entry_count_shown_at_v1()
   let s = stdout( &out );
   assert!(
     s.contains( "(4 entries)" ),
-    "v1 must show '(4 entries)' for a 4-entry session; got:\n{s}"
+    "must show '(4 entries)' for a 4-entry session; got:\n{s}"
   );
 }
 
 // IT-28: limit::N truncates main sessions shown at v1
 //
 // Root Cause: No per-project display limit existed; large projects (100+ sessions)
-// flooded output at default verbosity.
+// flooded the default output.
 //
 // Why Not Caught: No test exercised the limit:: parameter before it was added.
 //
 // Fix Applied: limit:: parameter caps the number of main sessions displayed per
-// project at v1; a trailing "... and N more" hint points to verbosity::0.
+// project; a trailing "... and N more" hint indicates truncation.
 //
 // Prevention: Always add a truncation assertion when adding a limit parameter
 // to any list command.
@@ -366,7 +364,6 @@ fn it_28_limit_truncates_display()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .arg( "limit::2" )
     .output()
     .unwrap();
@@ -420,16 +417,15 @@ fn it_29_zero_byte_sessions_excluded_at_v1()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
-  // Zero-byte placeholder must NOT appear at v1
+  // Zero-byte placeholder must NOT appear in default display
   assert!(
     !s.contains( "session-placeholder" ),
-    "zero-byte placeholder must NOT appear at v1; got:\n{s}"
+    "zero-byte placeholder must NOT appear in default display; got:\n{s}"
   );
   // Real session must still appear
   assert!(
@@ -438,7 +434,7 @@ fn it_29_zero_byte_sessions_excluded_at_v1()
   );
 }
 
-// ── IT-52..IT-53: Project-centric redesign (Task 016) ────────────────────────
+// ── IT-52: Project-centric redesign (Task 016) ───────────────────────────────
 
 // IT-52: list mode shows projects sorted by recency (most recently active first)
 //
@@ -513,58 +509,6 @@ fn it_list_mode_shows_projects_sorted_by_recency()
   );
 }
 
-// IT-53: verbosity::0 shows project paths only — no session IDs
-//
-// Root Cause: At v0, projects_routine emitted one SESSION ID per line.
-// Project-centric output at v0 must emit one PROJECT PATH per line for
-// machine-readable scripting (e.g. iterating distinct working directories).
-//
-// Why Not Caught: No test checked v0 output for project-path format.
-//
-// Fix Applied: v0 list mode now outputs one decoded project path per line
-// from aggregate_projects(), replacing the per-session ID enumeration.
-//
-// Prevention: Any v0 output change needs a test asserting the exact per-line
-// format (project path present, session IDs absent).
-//
-// Pitfall: The output contains DECODED paths (e.g. /tmp/.../proj_v0), not
-// encoded storage dir names. Assert for the directory name component, not the
-// full encoded form.
-#[ test ]
-fn it_verbosity_0_shows_paths_only()
-{
-  let root = TempDir::new().unwrap();
-  let storage_root = root.path().join( ".claude" );
-
-  let project_path = root.path().join( "proj_v0" );
-  // Create directory so decode_project_display filesystem walk succeeds.
-  std::fs::create_dir_all( &project_path ).unwrap();
-  common::write_path_project_session( &storage_root, &project_path, "session-v0-001", 2 );
-  common::write_path_project_session( &storage_root, &project_path, "session-v0-002", 2 );
-
-  let out = common::clg_cmd()
-    .env( "HOME", root.path().to_str().unwrap() )
-    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".projects" )
-    .arg( "scope::global" )
-    .arg( "verbosity::0" )
-    .output()
-    .unwrap();
-
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  // Must contain the project directory name (decoded path)
-  assert!(
-    s.contains( "proj_v0" ),
-    "v0 must output project path containing 'proj_v0'; got:\n{s}"
-  );
-  // Must NOT contain session IDs
-  assert!(
-    !s.contains( "session-v0" ),
-    "v0 must NOT output session IDs; got:\n{s}"
-  );
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // CC-P03 / CC-P04: truncation noun — "conversation" vs "conversations"
 //
@@ -600,7 +544,6 @@ fn it_truncation_noun_singular_one_hidden()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .arg( "limit::1" )
     .output()
     .unwrap();
@@ -634,7 +577,6 @@ fn it_truncation_noun_plural_two_hidden()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .arg( "limit::1" )
     .output()
     .unwrap();

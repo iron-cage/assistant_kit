@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all NNN-identified doc instances in claude_storage
-  node_count: 2
-  edge_count: 2
-  component_count: 1
-  generated: 2026-04-10
+  node_count: 7
+  edge_count: 9
+  component_count: 2
+  generated: 2026-06-28
 
 nodes:
   - id: feature/001
@@ -14,6 +14,26 @@ nodes:
     file: operation/001_migration_guide.md
     label: Migration Guide
     entity: operation
+  - id: user_story/001
+    file: cli/user_story/001_audit_session_history.md
+    label: Audit Session History
+    entity: user_story
+  - id: user_story/002
+    file: cli/user_story/002_find_past_conversation.md
+    label: Find Past Conversation
+    entity: user_story
+  - id: user_story/003
+    file: cli/user_story/003_export_session_for_review.md
+    label: Export Session for Review
+    entity: user_story
+  - id: user_story/004
+    file: cli/user_story/004_query_storage_programmatically.md
+    label: Query Storage Programmatically
+    entity: user_story
+  - id: user_story/005
+    file: cli/user_story/005_resume_claude_session.md
+    label: Resume Claude Session
+    entity: user_story
 
 edges:
   - from: feature/001
@@ -22,6 +42,27 @@ edges:
   - from: operation/001
     to: feature/001
     via: cross_references
+  - from: user_story/001
+    to: user_story/004
+    via: related_user_stories
+  - from: user_story/002
+    to: user_story/001
+    via: related_user_stories
+  - from: user_story/002
+    to: user_story/003
+    via: related_user_stories
+  - from: user_story/002
+    to: user_story/005
+    via: related_user_stories
+  - from: user_story/003
+    to: user_story/002
+    via: related_user_stories
+  - from: user_story/004
+    to: user_story/001
+    via: related_user_stories
+  - from: user_story/005
+    to: user_story/002
+    via: related_user_stories
 
 components:
   - id: 1
@@ -31,5 +72,15 @@ components:
     nodes:
       - feature/001
       - operation/001
+  - id: 2
+    label: User Stories
+    size: 5
+    isolated: false
+    nodes:
+      - user_story/001
+      - user_story/002
+      - user_story/003
+      - user_story/004
+      - user_story/005
 
 dangling_refs: []

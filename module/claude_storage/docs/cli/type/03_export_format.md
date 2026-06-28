@@ -1,5 +1,12 @@
 # Type :: 3. `ExportFormat`
 
+### Scope
+
+- **Purpose**: Specify the `ExportFormat` semantic type.
+- **Responsibility**: Validation rules, fundamental type, and parameter mapping for `ExportFormat`.
+- **In Scope**: Parsing rules, valid/invalid values, error messages.
+- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
+
 **Purpose:** Output serialization format for session export. Determines the structure and encoding of the exported file.
 
 **Fundamental Type:** Wrapper around string enum

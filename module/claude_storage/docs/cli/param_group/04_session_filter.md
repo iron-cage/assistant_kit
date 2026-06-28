@@ -1,5 +1,12 @@
 # Parameter Group :: 4. Session Filter
 
+### Scope
+
+- **Purpose**: Specify the Session Filter parameter group.
+- **Responsibility**: Member parameters, coherence semantics, and command usage for Session Filter.
+- **In Scope**: Group membership, shared behavior, command interactions.
+- **Out of Scope**: Individual parameter specs (→ `param/`), type constraints (→ `type/`).
+
 **Parameters:** `session::`, `agent::`, `min_entries::`
 
 **Pattern:** Session listing narrowing by session properties
@@ -19,21 +26,21 @@ Note: In `.count` and `.search`, `session::` behaves as a `SessionId` (exact mat
 - "Does `agent::` control which sessions appear in listing?" → YES (by session type)
 - "Does `min_entries::` control which sessions appear in listing?" → YES (by size threshold)
 
-**Why NOT `sessions::` (bool):**
-- `sessions::` controls whether sessions are shown at all — an on/off toggle for the entire session display tier
+**Why NOT `show_sessions::` (bool):**
+- `show_sessions::` controls whether sessions are shown at all — an on/off toggle for the entire session display tier
 - These three parameters determine *which* sessions appear, assuming session display is enabled
 - Different semantic level: tier visibility vs session predicate
 
 
-**Auto-enable behavior:** In `.list`, providing any of `session::`, `agent::`, or `min_entries::` automatically enables `sessions::1`. Override with `sessions::0`.
+**Auto-enable behavior:** In `.list`, providing any of `session::`, `agent::`, or `min_entries::` automatically enables `show_sessions::1`. Override with `show_sessions::0`.
 
 **Parameter Details:**
 
 | Parameter | Type | Description | Side Effect |
 |-----------|------|-------------|-------------|
-| `session::` | [`SessionFilter`](../type/08_session_filter.md) | Filter sessions by ID substring | Auto-enables `sessions::1` |
-| `agent::` | Boolean | `0`=main only, `1`=agent only, unset=all | Auto-enables `sessions::1` |
-| `min_entries::` | [`EntryCount`](../type/01_entry_count.md) | Minimum entry count threshold | Auto-enables `sessions::1` |
+| `session::` | [`SessionFilter`](../type/08_session_filter.md) | Filter sessions by ID substring | Auto-enables `show_sessions::1` |
+| `agent::` | Boolean | `0`=main only, `1`=agent only, unset=all | Auto-enables `show_sessions::1` |
+| `min_entries::` | [`EntryCount`](../type/01_entry_count.md) | Minimum entry count threshold | Auto-enables `show_sessions::1` |
 
 **Examples:**
 ```bash

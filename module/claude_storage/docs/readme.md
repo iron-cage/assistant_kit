@@ -15,6 +15,7 @@
 | `feature/` | CLI tool functional design and scope |
 | `operation/` | Operational procedures for users and maintainers |
 | `001_advanced_topics.md` | Agent sessions, command system, advanced search |
+| `entity.md` | Master doc entity and instance tables |
 | `doc_graph.yml` | Cross-reference graph for navigability analysis |
 
 ### Overview
@@ -40,11 +41,11 @@ Key entity directories there: `behavior/` (25 hypotheses), `storage/`, `filesyst
 **Complete CLI reference** for all claude_storage commands, parameters, and types.
 
 **Contents**:
-- [001_commands.md](cli/001_commands.md) — All 11 commands with syntax, parameters, examples
-- [004_params.md](cli/004_params.md) — All parameters with types, validation, bidirectional cross-refs
-- [005_types.md](cli/005_types.md) — Semantic type system with validation rules
-- [002_dictionary.md](cli/002_dictionary.md) — Domain vocabulary (project, conversation, session, entry, scope, etc.)
-- [003_parameter_groups.md](cli/003_parameter_groups.md) — Shared parameter groups (Output Control, Project Scope, Session Filter, etc.)
+- [command/readme.md](cli/command/readme.md) — All 11 commands with syntax, parameters, examples
+- [param/readme.md](cli/param/readme.md) — All parameters with types, validation, bidirectional cross-refs
+- [type/readme.md](cli/type/readme.md) — Semantic type system with validation rules
+- [dictionary.md](cli/dictionary.md) — Domain vocabulary (project, conversation, session, entry, scope, etc.)
+- [param_group/readme.md](cli/param_group/readme.md) — Shared parameter groups (Output Control, Project Scope, Session Filter, etc.)
 
 **Use this when**:
 - Using or implementing CLI commands
@@ -94,7 +95,7 @@ Key entity directories there: `behavior/` (25 hypotheses), `storage/`, `filesyst
 
 1. **`../../../contract/claude_code/docs/behavior/`** - Claude Code storage architecture, file formats, JSONL schema
 2. **`001_advanced_topics.md`** - Understand agent sessions, commands, history, search
-3. **`cli/001_commands.md`** - Understand CLI commands and parameters
-5. **`feature/001_cli_tool.md`** - Understand overall crate architecture and scope
-6. **`../readme.md`** - User-facing documentation
+3. **`cli/command/readme.md`** - Understand CLI commands and parameters
+4. **`feature/001_cli_tool.md`** - Understand overall crate architecture and scope
+5. **`../readme.md`** - User-facing documentation
 

@@ -1,5 +1,12 @@
 # Type :: 6. `ProjectType`
 
+### Scope
+
+- **Purpose**: Specify the `ProjectType` semantic type.
+- **Responsibility**: Validation rules, fundamental type, and parameter mapping for `ProjectType`.
+- **In Scope**: Parsing rules, valid/invalid values, error messages.
+- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
+
 **Purpose:** Filter for project naming scheme. Claude Code names projects either by path-encoding their filesystem path or by UUID.
 
 **Fundamental Type:** Wrapper around string enum

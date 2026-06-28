@@ -79,8 +79,8 @@ Each command must be tested with:
 
 ### REQ-011 content display
 
-- Default verbosity::1 shows content
-- verbosity::0 shows metadata only
+- Default shows content
+- show_metadata::1 shows metadata only
 - metadata::1 parameter
 - entries::1 parameter
 - Content truncation behavior
@@ -95,12 +95,9 @@ Each command must be tested with:
 
 | Test Case | Parameters | Expected Behavior | Priority |
 |-----------|------------|-------------------|----------|
-| Default verbosity | (none) | Show basic statistics | High |
-| Min verbosity | `verbosity::0` | Minimal output | High |
-| Max verbosity | `verbosity::5` | Maximum detail | High |
-| Out-of-range verbosity | `verbosity::10` | Handle gracefully | Medium |
-| Negative verbosity | `verbosity::-1` | Handle gracefully | Medium |
-| Invalid verbosity | `verbosity::abc` | Error message | Medium |
+| Default output | (none) | Show basic statistics (fast path) | High |
+| With show_tokens | `show_tokens::1` | Include token usage section | High |
+| With show_stat | `show_stat::1` | Include extended statistics | High |
 | Empty storage | (none) | Show 0 counts | High |
 | Large storage | (none) | Performance check | Low |
 
@@ -160,11 +157,8 @@ Each command must be tested with:
 | Nonexistent project | `project::/nonexistent` | Error message | High |
 | Invalid session format | `session_id::123` | Error message | Medium |
 | Invalid project format | `project::???` | Error message | Medium |
-| Verbosity 0 (metadata only) | `verbosity::0 session_id::abc` | Metadata only | High |
-| Verbosity 1 (content - default) | `verbosity::1 session_id::abc` | Full content | High |
-| Verbosity 2+ | `verbosity::2 session_id::abc` | Content + metadata | High |
+| Default (content) | `session_id::abc` | Full content | High |
 | Metadata parameter | `metadata::1 session_id::abc` | Metadata only | High |
-| Metadata + verbosity 1 | `metadata::1 verbosity::1 session_id::abc` | Which wins? | High |
 | Entries parameter | `entries::1 session_id::abc` | Show all entries | Medium |
 | Empty session (0 entries) | `session_id::{empty} project::/path` | Handle gracefully | High |
 | Large session (1000+ entries) | `session_id::{large} project::/path` | Performance + truncation | Medium |
@@ -187,13 +181,11 @@ Each command must be tested with:
 | Limit default | `scope::global` | Capped at default limit | High |
 | Limit explicit | `scope::global limit::5` | Max 5 sessions per project | High |
 | Limit zero (unlimited) | `scope::global limit::0` | All sessions listed | High |
-| Verbosity 0 | `scope::global verbosity::0` | Paths only, no session IDs | High |
-| Verbosity 1 | `scope::global verbosity::1` | Default family tree view | High |
-| Verbosity 2 | `scope::global verbosity::2` | Detailed with entry counts | High |
+| Default (family summary) | `scope::global` | Family summary with agent collapse | High |
+| Tree mode | `scope::global show_tree::1` | Tree-indented agent display | High |
 | Zero-byte sessions | project with only placeholders | Project excluded from list | High |
 | Zero-byte mixed | project with real + placeholder | Count excludes zero-byte | High |
 | Invalid scope | `scope::invalid` | Error message | Medium |
-| Invalid verbosity | `verbosity::10` | Error message | Medium |
 | Negative min_entries | `min_entries::-1` | Error message | Medium |
 
 ### `.project.path` / `.project.exists` / `.session.dir` / `.session.ensure` commands
@@ -239,8 +231,7 @@ Each command must be tested with:
 | Invalid entry_type | `query::test entry_type::invalid` | Error message | High | ✅ Phase 1B |
 | Filter by project | `query::test project::/path` | Project-specific results | High | |
 | Filter by session | `query::test session::abc` | Session-specific results | High | |
-| Invalid verbosity | `query::test verbosity::-1` | Error message | High | ✅ Phase 1B |
-| Verbosity levels | `query::test verbosity::0..5` | Different detail levels | Medium | |
+| Unknown parameter | `query::test unknown::value` | Error message | High | ✅ Phase 1B |
 | Nonexistent project | `query::test project::/nonexistent` | No results or error | Medium | |
 | Nonexistent session | `query::test session::nonexistent` | No results or error | Medium | |
 | No matches | `query::xyz999` | Empty result set | Medium | |
@@ -279,7 +270,7 @@ Each command must be tested with:
 | Case sensitivity | `session::ABC` vs `session::abc` | Case-insensitive | Medium |
 | Whitespace in params | `session:: abc ` | Trim or error | Medium |
 | Empty param values | `session::` | Handle gracefully | Medium |
-| Multiple same params | `verbosity::1 verbosity::2` | Last wins or error | Low |
+| Multiple same params | `show_tokens::0 show_tokens::1` | Last wins or error | Low |
 | Unknown params | `unknown::value` | Ignore or error | Medium |
 | Storage permission denied | No read access | Error message | Low |
 
@@ -299,7 +290,7 @@ Before manual testing, verify automated test coverage:
 - `.count` target parameter: 4 comprehensive validation tests
 - `.search` parameters: 5/8 validation tests passing (3 integration tests ignored)
 - `.export` parameters: 3/8 validation tests passing (5 integration tests ignored)
-- 1 bug found and fixed (Finding #010: verbosity validation)
+- 1 bug found and fixed (Finding #010: parameter validation — verbosity since removed)
 
 **Remaining Manual Test Focus**:
 - Integration tests for .search (project, session, entry_type parameters)
@@ -382,26 +373,26 @@ All bugs found during `/test_manual` execution. Each has a bug reproducer test.
 
 | Issue | Description | Fix Location | Test File |
 |-------|-------------|--------------|-----------|
-| #015 | `.status` performance: >2min with 1903 projects (O(total JSONL) at default verbosity) | `storage.rs::global_stats_fast()`, `cli/mod.rs::status_routine()` | `status_global_stats_fast_bug.rs` |
+| #015 | `.status` performance: >2min with 1903 projects (O(total JSONL) at default output) | `storage.rs::global_stats_fast()`, `cli/status.rs` | `status_global_stats_fast_bug.rs` |
 | #016 | `count_entries()` counted all JSONL lines (metadata + conversation), not just user/assistant | `session.rs::count_entries()` | `count_entries_bug.rs` |
 | #017 | `.count` failed with "Failed to count entries" when CWD project had any corrupted session | `cli/mod.rs::count_routine()` loop | `count_command_bug_fix.rs` |
 | #018 | issue-016 fix (full JSON parse in `count_entries()`) caused `.list min_entries::N` to SIGTERM | `session.rs::count_entries()` (string-search approach) | `count_entries_bug.rs` / `list_smart_session_display.rs` |
 | #019 | `.export format::xml` showed "I/O error during unknown operation" instead of format hint | `export.rs::ExportFormat::from_str()` | `export.rs::export_format_invalid_string_returns_clear_error` |
 | #025 | `Found 1 sessions:`/`Found 1 projects:`/`Found 1 matches:` used wrong plural form for count==1 | `cli/mod.rs` (3 writeln! calls) | `sessions_command_test.rs` IT-14..IT-16, `list_command_test.rs`, `search_command_test.rs` |
 | #026 | `.export` to nonexistent directory: "I/O error during unknown operation" — missing output path context | `claude_storage_core/src/export.rs::export_session_to_file()` | `export_command_test.rs::test_export_output_path_in_error_message` |
-| #027 | `.list sessions::1` shows `(1 sessions)` — wrong plural in per-project session count label | `cli/mod.rs::list_routine()` verbosity 1 branch | `list_command_test.rs::test_list_session_count_singular_when_one_session` |
+| #027 | `.list sessions::1` shows `(1 sessions)` — wrong plural in per-project session count label | `cli/list.rs` | `list_command_test.rs::test_list_session_count_singular_when_one_session` |
 | #028 | `.show` session header shows `(1 entries)` and `.show.project` shows `(1 entries, last:)` — wrong plural for irregular noun "entry" | `cli/mod.rs::show_session_routine()` + `show_project_routine()` | `smart_show_command.rs::test_show_session_single_entry_header_says_entry_not_entries`, `show_project_command.rs::test_show_project_single_entry_session_says_entry_not_entries` |
 | #034 | `.projects` list mode: header showed `(2 sessions)` but rendered 0 lines when project had only zero-byte placeholder sessions. Same root cause in flat branch and summary mode. | `cli/mod.rs` 3 sites: `aggregate_projects`, use_families `root_count`, flat `group_count` | `projects_zero_byte_count_bug.rs` IT-54..IT-56 |
 
-## verbosity behavior reference
+## output toggle behavior reference
 
 `.status` command (post issue-015 fix):
 
-| Verbosity | Mode | Speed | Shows |
-|-----------|------|-------|-------|
-| 0 | Fast (filesystem only) | ~50ms | Project count |
-| 1 (default) | Fast (filesystem only) | ~50ms | Projects + sessions by type |
-| 2–5 | Full (JSONL parsing) | ~minutes | Above + entry counts + token usage |
+| Toggle | Mode | Speed | Shows |
+|--------|------|-------|-------|
+| (default) | Fast (filesystem only) | ~50ms | Projects + sessions |
+| `show_tokens::1` | Full (JSONL parsing) | ~minutes | Above + entry counts + token usage |
+| `show_stat::1` | Extended stats | varies | Additional statistics |
 
 ## corner cases verified (2026-03-13)
 
@@ -409,9 +400,8 @@ All PASS unless noted:
 
 | Command | Test Case | Result |
 |---------|-----------|--------|
-| `.status` | verbosity::0 fast path | ✅ PASS 46ms |
-| `.status` | verbosity::1 default fast path | ✅ PASS 49ms |
-| `.status` | verbosity::-1 invalid | ✅ PASS error |
+| `.status` | default fast path | ✅ PASS ~50ms |
+| `.status` | show_tokens::1 full parse | ✅ PASS |
 | `.count` | target::entries empty session | ✅ PASS returns 0 |
 | `.count` | target::entries metadata-only session | ✅ PASS returns 0 |
 | `.count` | in project with corrupted session | ✅ PASS warns + skips |

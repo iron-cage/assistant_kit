@@ -11,7 +11,6 @@
 //! - query parameter required and non-empty
 //! - `case_sensitive` accepts only 0 or 1
 //! - `entry_type` accepts only user, assistant, or all
-//! - verbosity range 0-5
 //! - project existence validation (when search implemented)
 //! - session existence validation (when search implemented)
 //!
@@ -308,73 +307,6 @@ fn test_search_entry_type_all_is_valid_bug_reproducer_issue_021()
   );
 }
 
-/// Test .search verbosity parameter range validation (Finding #010)
-///
-/// ## Root Cause
-/// `search_routine` in src/cli/mod.rs:1171 retrieved verbosity parameter without
-/// validating the 0-5 range constraint, unlike `status_routine` and `show_routine`
-/// which include explicit range validation. This inconsistency allowed invalid
-/// values like -1 or 10 to be accepted and used.
-///
-/// ## Why Not Caught
-/// .search command had no parameter validation tests. The existing search tests
-/// only verified functionality with valid parameters. No tests checked edge cases
-/// or invalid parameter values.
-///
-/// ## Fix Applied
-/// Added explicit verbosity range validation (0-5) in `search_routine` at line 1190,
-/// matching the validation pattern used in `status_routine` (line 18) and
-/// `show_routine` (line 650). Returns clear error message with actual value and
-/// valid range when validation fails.
-///
-/// ## Prevention
-/// All parameters with constrained ranges must validate at routine entry, not
-/// just in commands added later. When adding new commands, audit existing commands
-/// for similar parameters and apply consistent validation patterns. Parameters
-/// with defaults still require validation since users can override with invalid values.
-///
-/// ## Pitfall
-/// Don't assume default values prevent invalid input. A parameter with `default::1`
-/// can still receive invalid values from user input. Validation is required even
-/// when defaults are sensible.
-///
-/// Related: REQ-012 V-012.5
-#[ test ]
-fn test_search_verbosity_invalid()
-{
-  // Test negative value
-  let output = common::clg_cmd()
-    .args( [ ".search", "query::test", "verbosity::-1" ] )
-    .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
-    .output()
-    .expect( "Failed to execute command" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-  let stdout = String::from_utf8_lossy( &output.stdout );
-  let combined = format!( "{stderr}{stdout}" );
-
-  assert!(
-    !output.status.success(),
-    "Should fail with verbosity::-1. Got: {combined}"
-  );
-
-  // Test value too large
-  let output = common::clg_cmd()
-    .args( [ ".search", "query::test", "verbosity::10" ] )
-    .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
-    .output()
-    .expect( "Failed to execute command" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-  let stdout = String::from_utf8_lossy( &output.stdout );
-  let combined = format!( "{stderr}{stdout}" );
-
-  assert!(
-    !output.status.success(),
-    "Should fail with verbosity::10. Got: {combined}"
-  );
-}
-
 /// Test .search project existence validation (V-012.6)
 ///
 /// ## Purpose
@@ -507,7 +439,7 @@ fn test_search_singular_noun_one_match()
   common::write_test_session( storage.path(), "search-proj-sing", "sess-sing-001", 2 );
 
   let output = common::clg_cmd()
-    .args( [ ".search", "query::entry 0", "project::search-proj-sing", "verbosity::1" ] )
+    .args( [ ".search", "query::entry 0", "project::search-proj-sing" ] )
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .output()
     .expect( "Failed to execute .search" );
@@ -542,7 +474,7 @@ fn test_search_plural_noun_multiple_matches()
   common::write_test_session( storage.path(), "search-proj-plur", "sess-plur-001", 4 );
 
   let output = common::clg_cmd()
-    .args( [ ".search", "query::entry", "project::search-proj-plur", "verbosity::1" ] )
+    .args( [ ".search", "query::entry", "project::search-proj-plur" ] )
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .output()
     .expect( "Failed to execute .search" );

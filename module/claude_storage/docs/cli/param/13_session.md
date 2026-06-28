@@ -1,5 +1,12 @@
 # Parameter :: 13. `session::`
 
+### Scope
+
+- **Purpose**: Specify the `session::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `session::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Session identifier parameter — acts as substring filter in listing commands, as exact identifier in counting/search commands.
 
 **Type:** [`SessionFilter`](../type/08_session_filter.md) (in `.list`, `.projects`) / [`SessionId`](../type/09_session_id.md) (in `.count`, `.search`)
@@ -26,7 +33,7 @@ Session identifier parameter — acts as substring filter in listing commands, a
 
 **Purpose:** Narrows results by session identity. In listing contexts (`.list`, `.projects`), acts as a substring filter for discovery. In counting/search contexts (`.count`, `.search`), acts as an exact scope pin to a specific session.
 
-**Side effect:** Auto-enables `sessions::1` in `.list`.
+**Side effect:** Auto-enables `show_sessions::1` in `.list` (see [Session Filter group](../param_group/04_session_filter.md)).
 
 **Examples:**
 ```bash
@@ -47,18 +54,18 @@ session::default      # Matches -default_topic.jsonl
 | [`SessionFilter`](../type/08_session_filter.md) | String | String | In `.list`/`.projects`: case-insensitive substring |
 | [`SessionId`](../type/09_session_id.md) | String (filename stem) | String | In `.count`/`.search`: exact match |
 
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 2 | [`.list`](../command/02_list.md) | unset | SessionFilter: substring filter; auto-enables `show_sessions::1` |
+| 4 | [`.count`](../command/04_count.md) | unset | SessionId: exact scope pin to a specific session |
+| 5 | [`.search`](../command/05_search.md) | unset | SessionId: exact scope pin to a specific session |
+| 7 | [`.projects`](../command/07_projects.md) | unset | SessionFilter: substring filter |
+
 ### Referenced Parameter Groups
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
 | 4 | [Session Filter](../param_group/04_session_filter.md) | Full | `agent::`, `min_entries::` |
-
-### Referenced Commands
-| # | Command | Default | Notes |
-|---|---------|---------|-------|
-| 2 | [`.list`](../command/02_list.md) | unset | SessionFilter: substring filter; auto-enables `sessions::1` |
-| 4 | [`.count`](../command/04_count.md) | unset | SessionId: exact scope pin to a specific session |
-| 5 | [`.search`](../command/05_search.md) | unset | SessionId: exact scope pin to a specific session |
-| 7 | [`.projects`](../command/07_projects.md) | unset | SessionFilter: substring filter |
 
 ### Referenced User Stories
 | # | User Story | Persona |

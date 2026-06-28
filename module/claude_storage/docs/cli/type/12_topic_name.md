@@ -1,4 +1,11 @@
-# Type :: 13. `TopicName`
+# Type :: 12. `TopicName`
+
+### Scope
+
+- **Purpose**: Specify the `TopicName` semantic type.
+- **Responsibility**: Validation rules, fundamental type, and parameter mapping for `TopicName`.
+- **In Scope**: Parsing rules, valid/invalid values, error messages.
+- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
 
 **Purpose:** Session topic identifier appended as `-{name}` to a base directory path. Represents the human-readable name for a Claude Code session working directory.
 

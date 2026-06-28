@@ -1,4 +1,11 @@
-# Export Session for Review
+# User Story :: 3. Export Session for Review
+
+### Scope
+
+- **Purpose**: Document the "Export Session for Review" user story.
+- **Responsibility**: Persona, goal, acceptance criteria, and command mappings for this story.
+- **In Scope**: User persona, goal statement, acceptance criteria, referenced commands.
+- **Out of Scope**: Command specifications (→ `command/`), parameter details (→ `param/`).
 
 **Persona:** developer
 **Goal:** Export a Claude Code session transcript to a file in a chosen format for offline review or sharing.
@@ -21,7 +28,7 @@
 | # | Parameter | Role |
 |---|-----------|------|
 | 5 | [`format::`](../param/05_format.md) | Select export rendering mode (markdown, json, text) |
-| 6 | [`metadata::`](../param/06_metadata.md) | Export session metadata only, without entry content |
+| 6 | [`show_metadata::`](../param/06_metadata.md) | Export session metadata only, without entry content |
 | 8 | [`output::`](../param/08_output.md) | Output file path for the exported file |
 | 9 | [`path::`](../param/09_path.md) | Override default storage root |
 | 14 | [`session_id::`](../param/14_session_id.md) | Identify the exact session to export |
@@ -82,7 +89,7 @@ cls .export session_id::abc123 output::/tmp/session.md
 
 **Export metadata only (no entry content):**
 ```bash
-cls .export session_id::abc123 metadata::1 output::meta.md
+cls .export session_id::abc123 show_metadata::1 output::meta.md
 ```
 
 **Export plain text for piping:**

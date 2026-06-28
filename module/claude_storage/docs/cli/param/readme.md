@@ -1,5 +1,12 @@
 # Parameters Reference
 
+### Scope
+
+- **Purpose**: Document individual parameter specifications for the `claude_storage` CLI.
+- **Responsibility**: Per-parameter detail pages with type, defaults, and command cross-refs.
+- **In Scope**: All 24 CLI parameters with type constraints, defaults, valid values, and command usage.
+- **Out of Scope**: Type definitions (→ `type/`), parameter group semantics (→ `param_group/`), command-level behavior (→ `command/`).
+
 All parameters for the `claude_storage` CLI. Parameters use `param::value` syntax.
 
 See [type/readme.md](../type/readme.md) for type definitions and [param_group/readme.md](../param_group/readme.md) for related parameter sets.
@@ -53,10 +60,10 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | 14 | [`session_id::`](14_session_id.md) | [`SessionId`](../type/09_session_id.md) | — | exact session ID | Direct session identifier | 2 |
 | 15 | [`show_sessions::`](15_sessions.md) | Boolean | `0` | `0`, `1` | Explicit session display toggle | 1 |
 | 16 | [`target::`](16_target.md) | [`TargetType`](../type/11_target_type.md) | `projects` | `projects`, `sessions`, `entries`, `conversations` | Count operation target | 1 |
-| 17 | [`topic::`](17_topic.md) | [`TopicName`](../type/13_topic_name.md) | — | identifier string | Session topic suffix | 4 |
+| 17 | [`topic::`](17_topic.md) | [`TopicName`](../type/12_topic_name.md) | — | identifier string | Session topic suffix | 4 |
 | 18 | [`type::`](18_type.md) | [`ProjectType`](../type/06_project_type.md) | `all` | `uuid`, `path`, `all`, `conversation` | Project naming scheme filter | 1 |
 | 19 | [`show_stat::`](19_show_stat.md) | Boolean | `0` | `0`, `1` | Session statistics footer in content mode | 1 |
-| 20 | [`strategy::`](20_strategy.md) | [`StrategyType`](../type/14_strategy_type.md) | auto-detect | `resume`, `fresh` | Resume strategy override | 1 |
+| 20 | [`strategy::`](20_strategy.md) | [`StrategyType`](../type/13_strategy_type.md) | auto-detect | `resume`, `fresh` | Resume strategy override | 1 |
 | 21 | [`count::`](21_count.md) | Boolean | `0` | `0`, `1` | Output count only flag | 1 |
 | 22 | [`limit::`](22_limit.md) | Integer | `0` | Integer ≥ 0 | Per-project session display cap | 1 |
 | 23 | [`show_tokens::`](23_show_tokens.md) | Boolean | `0` | `0`, `1` | Token usage section in output | 2 |

@@ -1,5 +1,12 @@
 # Parameter :: 1. `agent::`
 
+### Scope
+
+- **Purpose**: Specify the `agent::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `agent::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Session type filter for listing operations.
 
 **Type:** Boolean
@@ -18,7 +25,7 @@ Session type filter for listing operations.
 
 **Purpose:** Distinguishes between main conversation sessions and agent sub-sessions spawned by tool calls. Agent sessions are stored as `agent-*.jsonl` files and have `isSidechain: true`. Use `agent::1` to inspect sub-agent behavior, `agent::0` to see only top-level conversations.
 
-**Side effect:** Auto-enables `sessions::1` in `.list`.
+**Side effect:** Auto-enables `show_sessions::1` in `.list` (see [Session Filter group](../param_group/04_session_filter.md)).
 
 **Examples:**
 ```bash
@@ -39,16 +46,16 @@ agent::yes     # Not a boolean: "agent must be 0 or 1"
 |------|------|-------------|----------------|
 | Boolean | Base type | Boolean flag | `0` (false) or `1` (true); unset allowed |
 
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 2 | [`.list`](../command/02_list.md) | unset | Auto-enables `show_sessions::1`; filters by session type |
+| 7 | [`.projects`](../command/07_projects.md) | unset | Filters sessions by type |
+
 ### Referenced Parameter Groups
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
 | 4 | [Session Filter](../param_group/04_session_filter.md) | Full | `session::`, `min_entries::` |
-
-### Referenced Commands
-| # | Command | Default | Notes |
-|---|---------|---------|-------|
-| 2 | [`.list`](../command/02_list.md) | unset | Auto-enables `sessions::1`; filters by session type |
-| 7 | [`.projects`](../command/07_projects.md) | unset | Filters sessions by type |
 
 ### Referenced User Stories
 | # | User Story | Persona |

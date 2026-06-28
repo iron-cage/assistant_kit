@@ -1,5 +1,12 @@
 # Parameter :: 10. `project::`
 
+### Scope
+
+- **Purpose**: Specify the `project::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `project::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Project identifier for scoping operations to a specific project.
 
 **Type:** [`ProjectId`](../type/05_project_id.md)
@@ -41,11 +48,6 @@ project::nonexistent    # Project not found error
 |------|------|-------------|----------------|
 | [`ProjectId`](../type/05_project_id.md) | String (multi-format) | String | Non-empty; project must exist in storage |
 
-### Referenced Parameter Groups
-| # | Group | Membership | Co-members |
-|---|-------|------------|------------|
-| 2 | [Project Scope](../param_group/02_project_scope.md) | Full | *(sole member)* |
-
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
@@ -54,6 +56,11 @@ project::nonexistent    # Project not found error
 | 4 | [`.count`](../command/04_count.md) | — | Scopes count to this project |
 | 5 | [`.search`](../command/05_search.md) | — | Restricts search to this project |
 | 6 | [`.export`](../command/06_export.md) | current dir | Source project for session lookup |
+
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 2 | [Project Scope](../param_group/02_project_scope.md) | Full | *(sole member)* |
 
 ### Referenced User Stories
 | # | User Story | Persona |
