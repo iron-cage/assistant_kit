@@ -23,16 +23,16 @@ Single-level JSON object (hand-rolled formatter in `settings_io.rs`, not `serde_
 | Field | Type | Default | Semantics | Written by | Read by |
 |-------|------|---------|-----------|-----------|---------|
 | `model` | string or absent | absent | Session model shorthand (`"sonnet"`, `"opus"`, `"haiku"`, or full model ID). Controls which Claude model is used for interactive sessions. | `set_session_model()`, `switch_account()` (restores from `{name}.json`), `.model set::`, `.account.use set_model::`, `apply_model_override()` (Fix BUG-311: bidirectional), `set_session_effort()` init path | `get_session_model()`, `.usage`/`.accounts` `model::1`, `recommended_model()` in `format.rs` |
-| `effortLevel` | string or absent | absent → initialized to `"low"` by `apply_model_override()` on first use (Fix BUG-312) | Effort level for interactive sessions (`"low"`, `"normal"`, `"high"`, `"max"`). Controls extended thinking depth. | `set_session_effort()` called during rotation carry-forward; `apply_model_override()` initializes to `"low"` when absent (Fix BUG-312) | `get_session_effort()`, footer `Next` line in `.usage` |
+| `effortLevel` | string or absent | absent → initialized by `apply_model_override()` on first use | Effort level for interactive sessions (`"low"`, `"normal"`, `"high"`, `"max"`). Controls extended thinking depth. | `set_session_effort()` called during rotation carry-forward; `apply_model_override()` sets `"high"` on Opus override, `"low"` on Sonnet override (Fix BUG-322); BUG-312 init writes `"low"` when absent and no model change fires (fallback) | `get_session_effort()`, footer `Next` line in `.usage` |
 
 ### Write Rules
 
 - `clp` reads the entire `settings.json` into memory, modifies only `model` or `effortLevel`, and writes it back via `json_serialize_flat_object` — all other fields are preserved.
 - Never `serde_json::to_string` — the hand-rolled formatter already produces pretty output.
 
-### Initialization Behavior (Fix BUG-312)
+### Effort Tracking Behavior (Fix BUG-312, Fix BUG-322)
 
-When `effortLevel` is absent from `settings.json`, `apply_model_override()` writes `"low"` on first use. This prevents the `.usage` footer from showing no effort level after initial rotation.
+`apply_model_override()` sets `effortLevel` bidirectionally when the model changes: `"high"` for Opus override, `"low"` for Sonnet override (Fix BUG-322). When no model change fires (model already matches target), the BUG-312 fallback guard writes `"low"` if `effortLevel` is absent. This ensures the footer always shows an effort level after the first `apply_model_override()` call.
 
 ### Cross-References
 

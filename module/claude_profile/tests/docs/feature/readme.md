@@ -108,7 +108,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 039_decision_algorithms | [039_decision_algorithms.md](39_decision_algorithms.md) | FT-01 … FT-12 | ✅ |
 | 040_quota_measurement_history | [040_quota_measurement_history.md](40_quota_measurement_history.md) | FT-01 … FT-18 | ✅ |
 | 061_solo_token_conservation | [061_solo_token_conservation.md](61_solo_token_conservation.md) | FT-01 … FT-12 | ✅ |
-| 062_unified_session_config | [062_unified_session_config.md](62_unified_session_config.md) | FT-01 … FT-13, EC-01 | ✅ |
+| 062_unified_session_config | [062_unified_session_config.md](62_unified_session_config.md) | FT-01 … FT-18, EC-01 | ✅ |
 | 063_explicit_ownership_claim | [063_explicit_ownership_claim.md](63_explicit_ownership_claim.md) | FT-01 … FT-12 | ✅ |
 | 064_active_marker_and_owner_redesign | [064_active_marker_and_owner_redesign.md](64_active_marker_and_owner_redesign.md) | FT-01 … FT-19 | ✅ |
 | 065_assignee_param_redesign | [065_assignee_param_redesign.md](65_assignee_param_redesign.md) | FT-01 … FT-13 | ✅ |

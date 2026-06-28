@@ -556,6 +556,106 @@ fn t10_effort_preserved_when_already_configured()
   );
 }
 
+// ── BUG-322 tests: effort must track model override ───────────────────────
+
+/// `mre_bug322` — `apply_model_override()` sets effort `"low"` when overriding model to Opus.
+///
+/// # Root Cause
+/// BUG-312 fix initialized `effortLevel` to `"low"` when absent, regardless of the model
+/// being overridden to Opus. The Opus branch wrote the model but never set effort.
+/// Result: `opus/low` in the footer instead of `opus/high`.
+///
+/// # Why Not Caught
+/// No test verified effort after an Opus model override. All effort tests exercised the
+/// init-only path (BUG-312) or the carry-forward path (rotation).
+///
+/// # Fix Applied
+/// When `override_session_model_to_opus` fires (`overrode = true`), also call
+/// `set_session_effort(paths, "high")`. When `override_session_model_to_sonnet` fires
+/// (`overrode = true`), call `set_session_effort(paths, "low")`.
+///
+/// # Prevention
+/// This test asserts `effortLevel = "high"` after Opus model override, not `"low"`.
+///
+/// # Pitfall
+/// Effort must track model bidirectionally: opus→high, sonnet→low. The BUG-312 init
+/// block is now a fallback for the edge case where no model change occurred.
+#[ doc = "bug_reproducer(BUG-322)" ]
+#[ test ]
+fn mre_bug322_opus_override_sets_effort_high()
+{
+  use claude_quota::{ OauthUsageData, PeriodUsage };
+  let dir   = TempDir::new().unwrap();
+  let paths = crate::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  let quota = OauthUsageData
+  {
+    five_hour        : None,
+    seven_day        : None,
+    seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
+  };
+  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
+  assert!(
+    content.contains( "\"opus\"" ),
+    "BUG-322: model must be opus when 7d(Son) is 90% consumed, got: {content}",
+  );
+  assert!(
+    content.contains( "\"high\"" ),
+    "BUG-322: effortLevel must be 'high' when model overridden to opus, got: {content}",
+  );
+}
+
+/// BUG-322 reverse: effort resets to `"low"` when model reverts from Opus to Sonnet.
+#[ test ]
+fn t11_opus_to_sonnet_resets_effort_to_low()
+{
+  use claude_quota::{ OauthUsageData, PeriodUsage };
+  let dir   = TempDir::new().unwrap();
+  let paths = crate::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  // Pre-write opus/high — simulates state after Opus override.
+  std::fs::write( paths.settings_file(), r#"{"model":"opus","effortLevel":"high"}"# ).unwrap();
+  let quota = OauthUsageData
+  {
+    five_hour        : None,
+    seven_day        : None,
+    seven_day_sonnet : Some( PeriodUsage { utilization : 4.0, resets_at : None } ),
+  };
+  apply_model_override( &quota, &paths, false, "usage", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
+  assert!(
+    content.contains( "\"sonnet\"" ),
+    "BUG-322: model must revert to sonnet when quota recovers, got: {content}",
+  );
+  assert!(
+    content.contains( "\"low\"" ),
+    "BUG-322: effortLevel must reset to 'low' when reverting from opus to sonnet, got: {content}",
+  );
+}
+
+/// BUG-322 absent-tier: effort resets to `"low"` when absent tier forces model from Opus to Sonnet.
+#[ test ]
+fn t12_absent_tier_with_opus_resets_effort_to_low()
+{
+  use claude_quota::OauthUsageData;
+  let dir   = TempDir::new().unwrap();
+  let paths = crate::ClaudePaths::with_home( dir.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  std::fs::write( paths.settings_file(), r#"{"model":"opus","effortLevel":"high"}"# ).unwrap();
+  let quota = OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+  apply_model_override( &quota, &paths, false, "test", "test-account" );
+  let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
+  assert!(
+    content.contains( "\"sonnet\"" ),
+    "BUG-322: absent tier + opus session must write sonnet, got: {content}",
+  );
+  assert!(
+    content.contains( "\"low\"" ),
+    "BUG-322: absent tier + opus→sonnet must reset effort to 'low', got: {content}",
+  );
+}
+
 /// # MRE: BUG-245 + BUG-246 — `only_active` retain fires after HTTP fetch
 ///
 /// ## Root Cause

@@ -11,14 +11,14 @@ Bidirectionally manage the interactive session model in `~/.claude/settings.json
 
 ### Decision Table
 
-| `seven_day_sonnet` | Sonnet remaining (`100 - utilization`) | Current model | Action |
-|---|---|---|---|
-| `None` | — | Opus form | **→ Sonnet** (absent tier ≠ exhausted; restore conservatively — Fix BUG-311) |
-| `None` | — | Sonnet form | No-op |
-| `Some` | ≥ 15% | Opus form | **→ Sonnet** (sufficient capacity — Fix BUG-311) |
-| `Some` | ≥ 15% | Sonnet form | No-op |
-| `Some` | < 15% | Sonnet form | **→ Opus** (near-exhausted — preserve remaining tokens) |
-| `Some` | < 15% | Opus form | No-op |
+| `seven_day_sonnet` | Sonnet remaining (`100 - utilization`) | Current model | Action | Effort (Fix BUG-322) |
+|---|---|---|---|---|
+| `None` | — | Opus form | **→ Sonnet** (absent tier ≠ exhausted; restore conservatively — Fix BUG-311) | → `"low"` |
+| `None` | — | Sonnet form | No-op | unchanged |
+| `Some` | ≥ 15% | Opus form | **→ Sonnet** (sufficient capacity — Fix BUG-311) | → `"low"` |
+| `Some` | ≥ 15% | Sonnet form | No-op | unchanged |
+| `Some` | < 15% | Sonnet form | **→ Opus** (near-exhausted — preserve remaining tokens) | → `"high"` |
+| `Some` | < 15% | Opus form | No-op | unchanged |
 
 "Opus form" = model string matches `claude-opus-*` or `"opus"`.
 "Sonnet form" = model string matches `claude-sonnet-*` or `"sonnet"`.
@@ -31,6 +31,7 @@ Bidirectionally manage the interactive session model in `~/.claude/settings.json
 
 - **BUG-300 (Fix TSK-302):** `map_or(0.0, ...)` on `seven_day_sonnet = None` returned 0.0 < threshold → Opus override fired unconditionally for accounts without Sonnet tier. Fix: `if let Some(ref sonnet)` guard.
 - **BUG-311 (Fix 2026-06-23):** one-way ratchet — only wrote "opus" (exhaustion), never restored "sonnet" (recovery). Fix: added `else`-branch calling `override_session_model_to_sonnet()`. Tier-absent path also writes "sonnet" conservatively.
+- **BUG-322 (Fix 2026-06-28):** effort decoupled from model — BUG-312 init wrote `"low"` when absent but never matched effort to model. Opus override produced `opus/low`. Fix: when model overrides to Opus (`overrode = true`), `set_session_effort(paths, "high")`; when model reverts to Sonnet or absent-tier fallback (`overrode = true`), `set_session_effort(paths, "low")`. BUG-312 init retained as fallback for no-model-change edge case.
 
 ### Relationship to `recommended_model()`
 

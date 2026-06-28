@@ -13,10 +13,12 @@
 pub( crate ) mod shared;
 mod credentials;
 mod accounts;
+mod accounts_render;
 mod account_ops;
 mod account_relogin;
 mod account_renewal;
 mod account_inspect;
+mod account_inspect_render;
 mod limits;
 mod model;
 mod token_paths;

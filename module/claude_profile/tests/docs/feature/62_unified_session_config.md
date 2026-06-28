@@ -154,6 +154,36 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 | Expected | `settings.json` still contains `"effortLevel": "high"` — `is_none()` guard is false; init does not overwrite user-configured effort |
 | Status | ✅ `t10_effort_preserved_when_already_configured` in `src/usage/api_tests.rs` |
 
+## FT-16 — Opus override sets effort to `"high"` (BUG-322 MRE)
+
+**AC-09** | **Source**: `src/usage/api_tests.rs::mre_bug322_opus_override_sets_effort_high`
+
+| Field | Value |
+|-------|-------|
+| Input | No `settings.json`; `seven_day_sonnet.utilization = 90.0` (10% left, < 15% threshold) |
+| Expected | `settings.json` contains `"opus"` AND `"high"` — effort paired with Opus model override |
+| Status | ✅ |
+
+## FT-17 — Sonnet override resets effort to `"low"` (BUG-322 reverse)
+
+**AC-10** | **Source**: `src/usage/api_tests.rs::t11_opus_to_sonnet_resets_effort_to_low`
+
+| Field | Value |
+|-------|-------|
+| Input | `settings.json` pre-seeded with `"opus"` + `"high"`; `seven_day_sonnet.utilization = 4.0` (96% left) |
+| Expected | `settings.json` contains `"sonnet"` AND `"low"` — effort resets when model reverts |
+| Status | ✅ |
+
+## FT-18 — Absent-tier + Opus→Sonnet resets effort to `"low"` (BUG-322 absent-tier)
+
+**AC-10** | **Source**: `src/usage/api_tests.rs::t12_absent_tier_with_opus_resets_effort_to_low`
+
+| Field | Value |
+|-------|-------|
+| Input | `settings.json` pre-seeded with `"opus"` + `"high"`; `seven_day_sonnet = None` |
+| Expected | `settings.json` contains `"sonnet"` AND `"low"` — absent tier forces Sonnet + effort reset |
+| Status | ✅ |
+
 ## EC-01 — `recommended_model()` boundary: utilization = 84.999 returns sonnet (above threshold)
 
 **AC-01** | **Source**: `format.rs::recommended_model`

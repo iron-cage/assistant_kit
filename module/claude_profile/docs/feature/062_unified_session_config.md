@@ -24,7 +24,7 @@ The `Current` line already shows `{model}/{effort}`, reading both from `settings
 
 `.usage rotate::1` previously called `switch_account()` then `apply_touch()` but did not call `apply_model_override` for the winner. The pre-rotation model override (`api.rs:690-696`) updated settings.json for the **old** current account's quota, not the winner's. After Feature 062 and subsequent fixes, the rotation dispatcher additionally:
 
-1. Calls `apply_model_override(winner_data, paths)` — bidirectional model correction (Fix BUG-311): writes `"opus"` when Sonnet left < 15%; writes `"sonnet"` when Sonnet left >= 15% or tier absent. Also initializes `effortLevel: "low"` in settings.json when the key is absent (Fix BUG-312 — first-use initialization guard).
+1. Calls `apply_model_override(winner_data, paths)` — bidirectional model AND effort correction: writes `"opus"` + `effortLevel: "high"` when Sonnet left < 15% (Fix BUG-322); writes `"sonnet"` + `effortLevel: "low"` when Sonnet left >= 15% or tier absent (Fix BUG-311, Fix BUG-322). When neither model change fires, the BUG-312 init guard writes `effortLevel: "low"` if absent (first-use fallback).
 2. Calls `set_session_effort(paths, session_effort)` — writes `effortLevel` to settings.json with carry-forward value when `session_effort` is `Some`. When `session_effort` is `None` and effortLevel was absent, step 1 already initialized it to `"low"` via the BUG-312 guard; this step is a no-op.
 
 **`set_session_effort()` in `claude_profile_core`:**
@@ -39,8 +39,10 @@ Counterpart to `set_session_model()` with identical read-modify-write pattern: r
 - **AC-04**: `set_session_effort(paths: &ClaudePaths, effort_id: &str)` exists in `claude_profile_core::account`. Reads `settings.json`, sets `"effortLevel"` key to `effort_id`, writes back. Creates `~/.claude/` if absent (same guard as `set_session_model`).
 - **AC-05**: After `rotate::1` switch succeeds and winner `result = Ok(data)`, `apply_model_override(data, paths)` is called for the winner. When winner's Sonnet left < 15%, settings.json `model` becomes `"opus"`.
 - **AC-06**: After `rotate::1` switch succeeds and `session_effort` is `Some(e)`, `set_session_effort(paths, e)` is called. Settings.json `effortLevel` key reflects the carry-forward effort value.
-- **AC-07**: When `session_effort` is `None` (not set in settings.json at rotation time), the carry-forward `set_session_effort()` call is a no-op. However, `apply_model_override()` (called before carry-forward) initializes `effortLevel: "low"` when the key is absent in settings.json (Fix BUG-312). Effective result: rotation with no prior effortLevel produces `effortLevel: "low"` in settings.json.
+- **AC-07**: When `session_effort` is `None` (not set in settings.json at rotation time), the carry-forward `set_session_effort()` call is a no-op. However, `apply_model_override()` (called before carry-forward) sets effort bidirectionally when the model changes: `"high"` for Opus override, `"low"` for Sonnet override (Fix BUG-322). When no model change fires, the BUG-312 init guard writes `"low"` if absent (first-use fallback). Effective result: rotation with no prior effortLevel produces `effortLevel: "low"` (Sonnet) or `"high"` (Opus) in settings.json.
 - **AC-08**: `apply_model_override()` in `api.rs` calls `recommended_model(aq_data)` internally to determine whether the override fires, or continues to use its own equivalent logic. The threshold is authoritative in `recommended_model()`; no duplication remains.
+- **AC-09**: When `apply_model_override()` switches the model to Opus (`overrode = true`), `set_session_effort(paths, "high")` is called unconditionally. The effort write is paired with the model write — not deferred to the BUG-312 init guard. (Fix BUG-322)
+- **AC-10**: When `apply_model_override()` reverts the model to Sonnet (`overrode = true`, from either sufficient-quota or absent-tier path), `set_session_effort(paths, "low")` is called unconditionally. This resets effort when the Opus override period ends. (Fix BUG-322)
 
 ### Features
 
@@ -66,7 +68,7 @@ Counterpart to `set_session_model()` with identical read-modify-write pattern: r
 
 | File | Relationship |
 |------|--------------|
-| `tests/docs/feature/62_unified_session_config.md` | FT-01..FT-15, EC-01 — FT-01..FT-13 implemented (TSK-315); FT-14..FT-15 added for BUG-312 MRE tests |
+| `tests/docs/feature/62_unified_session_config.md` | FT-01..FT-18, EC-01 — FT-01..FT-13 implemented (TSK-315); FT-14..FT-15 for BUG-312; FT-16..FT-18 for BUG-322 |
 
 ### Algorithm Docs
 

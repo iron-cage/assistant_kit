@@ -12,6 +12,9 @@ AC test cases for `docs/algorithm/002_session_model_override.md`. Tests `apply_m
 | AC-4 | Near-exhausted Sonnet + Sonnet session → Opus written | Nominal | ✅ |
 | AC-5 | Near-exhausted Sonnet + Opus session → no-op | Boundary | ✅ |
 | AC-6 | `recommended_model()` divergence: sufficient vs near-exhausted | Regression (BUG-300) | ✅ |
+| AC-7 | Opus override sets effort to `"high"` | Fix BUG-322 | ✅ |
+| AC-8 | Sonnet override resets effort to `"low"` | Fix BUG-322 | ✅ |
+| AC-9 | Absent-tier + Opus→Sonnet resets effort to `"low"` | Fix BUG-322 | ✅ |
 
 ---
 
@@ -53,3 +56,24 @@ AC test cases for `docs/algorithm/002_session_model_override.md`. Tests `apply_m
 - **When:** `recommended_model(aq)` is called for each state independently
 - **Then:** (A) returns `"sonnet"`; (B) returns `"opus"` — the two inputs produce divergent outputs, proving `recommended_model()` governs model selection rather than returning a constant string
 - **Note:** Fix BUG-300 — pre-fix, `map_or(0.0, ...)` on `seven_day_sonnet = None` produced 0.0 < threshold, causing `recommended_model()` to return `"opus"` unconditionally for accounts without a Sonnet tier; `if let Some(ref sonnet)` guard prevents this
+
+### AC-7: Opus override sets effort to `"high"` (Fix BUG-322)
+
+- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 90.0, resets_at: None }) }` — 10% remaining (< 15%); no `settings.json` initially
+- **When:** `apply_model_override(&quota, &paths, false, "usage", "test-account")` is called
+- **Then:** `settings.json` contains `"model": "opus"` AND `"effortLevel": "high"` — effort tracks model bidirectionally
+- **Source fn:** `mre_bug322_opus_override_sets_effort_high` in `src/usage/api_tests.rs`
+
+### AC-8: Sonnet override resets effort to `"low"` (Fix BUG-322)
+
+- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 4.0, resets_at: None }) }` — 96% remaining (≥ 15%); `settings.json` pre-seeded with `"model": "opus", "effortLevel": "high"`
+- **When:** `apply_model_override(&quota, &paths, false, "usage", "test-account")` is called
+- **Then:** `settings.json` contains `"model": "sonnet"` AND `"effortLevel": "low"` — effort resets when model reverts from Opus
+- **Source fn:** `t11_opus_to_sonnet_resets_effort_to_low` in `src/usage/api_tests.rs`
+
+### AC-9: Absent-tier + Opus→Sonnet resets effort to `"low"` (Fix BUG-322)
+
+- **Given:** `OauthUsageData { seven_day_sonnet: None }` (absent tier); `settings.json` pre-seeded with `"model": "opus", "effortLevel": "high"`
+- **When:** `apply_model_override(&quota, &paths, false, "test", "test-account")` is called
+- **Then:** `settings.json` contains `"model": "sonnet"` AND `"effortLevel": "low"` — absent tier forces Sonnet restoration + effort reset
+- **Source fn:** `t12_absent_tier_with_opus_resets_effort_to_low` in `src/usage/api_tests.rs`
