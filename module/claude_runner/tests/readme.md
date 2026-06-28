@@ -35,7 +35,8 @@
 | Bug reproducers BUG-246 | `bug_reproducers_246_test.rs` | WYSIWYG: CLAUDECODE removal visible in trace/dry-run; `--keep-claudecode` suppresses prefix |
 | Bug reproducers BUG-037 (T09–T10) | `error_classification_test.rs` | Labeled per-type CLR stderr diagnostics via classify_error() |
 | Strip-fences unit (sf01–sf08) | `fence_test.rs` | `strip_fences` correctness: pair stripping, pass-through, edge cases |
-| Summary unit (EC-14, IT-1, IT-4–IT-6, +7 resolve/render) | `summary_unit_test.rs` | `render_summary`/`resolve_fields` unit: CLR envelope parsing, field profiles, BUG-309/310 regression guards |
+| Summary unit (EC-14, IT-1, IT-4–IT-6, +7 resolve/render; +3 extract_session_id) | `summary_unit_test.rs` | `render_summary`/`resolve_fields`/`extract_session_id` unit: CLR envelope parsing, field profiles, BUG-309/310/320 regression guards |
+| Session verification (SV-1–SV-4) | `session_verification_test.rs` | BUG-320 hardening: expected/actual UUID match, mismatch warning format, non-fatal exit, `--new-session` short-circuit, raw-output no-parse |
 | CLR_* env vars (E01–E17) | `env_var_test.rs` | CLR_* env var fallback for vars 1–17, CLI-wins checks |
 | CLR_* env vars extended (E18–E57, BUG-233) | `env_var_ext_test.rs` | CLR_* env var fallback for vars 18–57, BUG-233 subdir slash guard |
 | Output file capture (T01–T06) | `output_file_test.rs` | `--output-file` tee behavior, write errors, dry-run skip |
@@ -109,7 +110,8 @@
 | `param_extended_flags_test.rs` | Extended flag edge cases (S34–S57): `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`. |
 | `param_group_test.rs` | Param group combined invocations (CC-N): multi-flag interaction tests. |
 | `fence_test.rs` | `strip_fences` unit tests: fence-pair stripping, pass-through, edge cases (sf01–sf08). |
-| `summary_unit_test.rs` | `render_summary`/`resolve_fields` unit tests: CLR envelope parsing, field profiles, BUG-309/310 regression guards (EC-14, IT-1, IT-4–IT-6, +7). |
+| `summary_unit_test.rs` | `render_summary`/`resolve_fields`/`extract_session_id` unit tests: CLR envelope parsing, field profiles, BUG-309/310/320 regression guards (EC-14, IT-1, IT-4–IT-6, IT-7; +3 extract_session_id). |
+| `session_verification_test.rs` | Session mismatch detection (BUG-320 hardening): SV-1–SV-4 match/mismatch/no-session/raw-output integration tests; warning format and non-fatal exit verification. |
 | `output_file_test.rs` | `--output-file` tee behavior, write-error exit 1, dry-run file skip (T01–T06). |
 | `expect_validation_test.rs` | `--expect`/`--expect-strategy`/`--retry-on-validation` validation loop: match, mismatch, retry, default (T01–T17). |
 | `bug_reproducers_247_test.rs` | Bug reproducer BUG-247: stdout forwarded to stderr on subprocess failure. |

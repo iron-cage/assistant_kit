@@ -22,6 +22,8 @@
 
 These defaults are intentional and must not be removed without explicit design decision. They represent the automation-optimized defaults for the `clr` runner.
 
+**`-c` continuation note**: `with_resume(Some(uuid))` / `claude -r <uuid>` was evaluated as an alternative to `-c` for session continuation (BUG-320 investigation) and **explicitly rejected** — `-c` is the permanent continuation mechanism for `clr`. Do not revisit this decision. See `invariant/009_session_mismatch_detection.md § Permanent Design Decision`.
+
 ### Enforcement Mechanism
 
 The flag injection is implemented at three layers:

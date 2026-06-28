@@ -5,7 +5,7 @@
 - **Purpose**: Document the diagnostic warning emitted when the session resumed by `claude -c` differs from the session that was expected based on pre-spawn storage inspection.
 - **Responsibility**: State when the warning fires, what it means, what it does NOT do (never fails the run), and the implementation mechanism.
 - **In Scope**: `expected_session_id` capture in `build_claude_command()`, `extract_session_id()` call on success path in `run_print_mode()`, stderr warning format, non-fatal semantics.
-- **Out of Scope**: The `-c` injection decision (→ `invariant/001_default_flags.md`), continuation detection algorithm (→ `claude_storage_core/docs/feature/004_continuation_detection.md`), BUG-320 root cause analysis (→ `task/claude_runner/bug/unverified/320_continue_flag_selects_global_not_cwd.md`).
+- **Out of Scope**: The `-c` injection decision (→ `invariant/001_default_flags.md`), continuation detection algorithm (→ `claude_storage_core/docs/feature/004_continuation_detection.md`), BUG-320 root cause analysis (closed — → `task/claude_runner/bug/320_clr_dir_daemon_env_session_contamination.md`).
 
 ### Invariant Statement
 
@@ -20,9 +20,9 @@ When `clr run` or `clr ask` injects `-c` (i.e. `expected_session_id` is `Some`),
 
 ### Rationale
 
-BUG-320 documented that `clr` can resume the wrong session when a JSONL file transiently appears in the expected session storage directory (e.g. from a concurrent Claude Code invocation with an overlapping project path). By the time `-c` is injected the storage directory contains a UUID; once Claude Code starts, it may load a different, more-recently-modified session than the one observed during pre-spawn detection.
+BUG-320 confirmed root cause (H6 — closed 2026-06-29): a daemon inherited `CLR_DIR=<wrong-project>` from its launching shell (`pr_review/run.sh:78 export CLR_DIR`); `parse.rs:313` substituted `CLR_DIR` as the effective directory override; `session_exists()` found the wrong project's session; `cmd.current_dir()` redirected the subprocess; `claude -c` resumed the wrong project's session. The fix for H6 is in wplan_daemon (BUG-1129 — `execute_job_sync()` must sanitize subprocess env before spawn).
 
-The warning surfaces this condition without failing the run: by the time the mismatch is detected, Claude has already responded using the wrong session. Aborting post-hoc would discard a completed response. The warning provides the signal needed to diagnose the bug in production without requiring a dry-run probe.
+The diagnostic warning (this invariant) remains independently valuable: it detects any session mismatch regardless of cause — env contamination, filesystem race, or unknown future mechanisms — and surfaces it in stderr without failing the run. By the time the mismatch is detected, claude has already responded using the wrong session; aborting post-hoc would discard a completed result.
 
 ### Enforcement Mechanism
 
@@ -66,10 +66,22 @@ The warning is intentionally non-fatal. Reasons:
 - The user can retry with `--new-session` if the wrong context is detected.
 - Future work may introduce a pre-spawn probe (dry-run `-c` to verify UUID before commit), but this would require a second invocation and is YAGNI until the warning confirms the bug is reproducible.
 
+### Permanent Design Decision — `-c` Always Preferred Over `--resume <uuid>`
+
+`clr` always uses `with_continue_conversation(true)` / `claude -c` for session continuation. Using `with_resume(Some(uuid))` / `claude -r <uuid>` was evaluated as an alternative for BUG-320 and **explicitly rejected. Do not revisit this decision.**
+
+Reasons:
+- `-c` is semantically natural and matches `claude --help`: "continue the most recent conversation in the current directory"
+- `-c` is resilient: gracefully falls through to a fresh session when UUID files are missing, stale, or deleted; `--resume <uuid>` fails hard if the session file is gone
+- BUG-320's confirmed root cause (H6) was daemon env contamination in wplan_daemon — a defect outside claude_runner, not in the `-c` mechanism itself
+- This diagnostic warning provides the observability needed without altering the continuation mechanism
+
+`most_recent_session_id()` (added by TSK-334) is used exclusively for UUID capture pre-spawn and comparison post-execution. It does **not** drive `--resume`. See `task/claude_runner/bug/320_clr_dir_daemon_env_session_contamination.md § Fix Location`.
+
 ### Fixed Defects
 
-**BUG-320 (diagnostic hardening) — `clr -c` can resume wrong session:**
-Pre-spawn storage inspection can observe UUID-A; Claude Code loads UUID-B because a different session file became more-recently-modified between inspection and spawn. This warning detects the symptom at result time. Root cause analysis in `task/claude_runner/bug/unverified/320_continue_flag_selects_global_not_cwd.md`.
+**BUG-320 (diagnostic hardening — closed 2026-06-29) — `clr -c` resumed wrong session via daemon `CLR_DIR` env contamination (H6):**
+Daemon inherited `CLR_DIR=<wrong-project>` from launching shell; `parse.rs:313` substituted it as effective dir override; `claude -c` resumed the wrong project's session. Fix is in wplan_daemon (BUG-1129). This warning provides independent observability for any future mismatch regardless of cause. Root cause: `task/claude_runner/bug/320_clr_dir_daemon_env_session_contamination.md`.
 
 ### Sources
 
@@ -92,3 +104,9 @@ Pre-spawn storage inspection can observe UUID-A; Claude Code loads UUID-B becaus
 |------|--------------|
 | [invariant/001_default_flags.md](001_default_flags.md) | `-c` injection decision that gates this check |
 | [invariant/008_render_summary_gate.md](008_render_summary_gate.md) | `"type":"result"` gate that `extract_session_id()` inherits |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| `module/claude_storage_core/docs/feature/004_continuation_detection.md` | Upstream API spec: `most_recent_session_id()` / `most_recent_session_in_dir()` that supply `Option<SessionId>` used here |

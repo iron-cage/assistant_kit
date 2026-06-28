@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Catalog observed and confirmed external behaviors of the `claude` binary relevant to session lifecycle and storage.
-- **Responsibility**: Master file for the `behavior` collection — lists all 31 behavior instances (B1–B30 + B16h), provides the shared evidence table (E1–E55), and links to invalidation test files.
+- **Responsibility**: Master file for the `behavior` collection — lists all 32 behavior instances (B1–B31 + B16h), provides the shared evidence table (E1–E57), and links to invalidation test files.
 - **In Scope**: Session continuation, flag semantics, agent layouts, entry threading, storage path encoding, cross-session relationship absence (conversation chain foundations); runtime process model (agent subagent identity, bash subprocess identity, env propagation).
 - **Out of Scope**: Entry-level JSONL schema (→ [`../jsonl/`](../jsonl/readme.md)); storage directory architecture (→ [`../storage/`](../storage/readme.md)); filesystem paths (→ [`../filesystem/`](../filesystem/readme.md)); settings format (→ [`../settings/`](../settings/readme.md)); ancillary file formats (→ [`../formats/`](../formats/readme.md)); concept taxonomy (→ [`../taxonomy/`](../taxonomy/readme.md)).
 
@@ -55,8 +55,9 @@ Adapted from hypothesis table format. Status reflects certainty of the observati
 | [B26](026_b26_autocompact_pct_override.md) | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` env var overrides the compaction trigger as a percentage of the window | Flags | 🎯 | 80% | NEG-ONLY | v2.1.75 | E50, E51 |
 | [B27](027_b27_agent_no_os_process.md) | Agent tool subagents are not OS processes; run as API inference threads within the existing claude process — `pgrep` count unchanged before/during/after | Process Model | ✅ | 99% | UNVERIFIED | v2.1.74 | E52 |
 | [B28](028_b28_bash_rtk_subprocess.md) | Each Bash tool call spawns a transient `rtk` proxy process (~5 MB, 4 FDs) that exits immediately; parent PID is gone before the next call | Process Model | ✅ | 95% | UNVERIFIED | v2.1.74 | E53 |
-| [B29](029_b29_bash_claude_env.md) | All bash subprocesses inherit 9 `CLAUDE_*` env vars from the parent claude process, including `CLAUDECODE=1` and all timeout overrides | Process Model | ✅ | 99% | UNVERIFIED | v2.1.74 | E54 |
+| [B29](029_b29_bash_claude_env.md) | All bash subprocesses inherit the full parent OS environment (107 vars, identical between parent and subagent) — including all `CLAUDE_*` vars, project vars, API keys, and desktop session vars | Process Model | ✅ | 99% | UNVERIFIED | v2.1.74 | E54, E56 |
 | [B30](030_b30_subagent_context_inheritance.md) | Agent subagents receive full CLAUDE.md configuration (via system-reminder injection) but not the parent conversation history; scope variables (`SCOPE_DIR`/`SCOPE_READY`) are not inherited | Context | ✅ | 99% | UNVERIFIED | v2.1.74 | E55 |
+| [B31](031_b31_subagent_tool_sets.md) | Subagent tool sets are narrower than the parent session (27 tools); general-purpose lacks Agent and 13 other session-management tools; Explore and Plan are identical; claude-code-guide uses static pre-loaded tools only | Tools | ✅ | 99% | UNVERIFIED | v2.1.74 | E57 |
 
 ---
 
@@ -121,6 +122,8 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | E53 | B28 | Experiment | `/proc/self/status` inspection — this session (2026-06-28) | Agent A and B Bash tool calls | `Name: rtk`, `Pid: 3349457`, `VmRSS: 4884 kB`, `Threads: 1`; `ls /proc/self/fd \| wc -l` = 4; parent PID gone before next command; `cat /proc/self/cmdline` rewrote to `rtk read /proc/self/cmdline`; `$$` empty in some invocations due to rtk interception |
 | E54 | B29 | Experiment | `/proc/self/environ` inspection — this session (2026-06-28) | Agent A Bash tool call | `cat /proc/self/environ \| tr '\0' '\n' \| grep -i claude` returned 9 vars: CLAUDECODE=1, CLAUDE_CODE_ENTRYPOINT=cli, CLAUDE_TOOL_TIMEOUT=7200000, CLAUDE_EXEC_TIMEOUT=7200000, CLAUDE_BASH_TIMEOUT=7200000, CLAUDE_DEFAULT_TIMEOUT=7200000, CLAUDE_CODE_EFFORT_LEVEL=max, CLAUDE_COMMAND_TIMEOUT=7200000, CLAUDE_CODE_MAX_OUTPUT_TOKENS=100000 |
 | E55 | B30 | Experiment | Dual MAAV agent experiment — this session (2026-06-28) | Agents ae4bc9897199f0fef (probe) and a4ee9bfe2aedf5c12 (adversarial) | Probe agent answered 10/10 CLAUDE.md knowledge questions YES before reading any files (2-space indent, cargo fmt forbidden, scope command, MAAV, kbase — all known from system-reminder injection). Re-read `~/.claude/CLAUDE.md` and confirmed content matched context exactly. Adversarial agent confirmed zero knowledge of parent conversation; JSONL starts at `parentUuid: null`, `isSidechain: true`. `SCOPE_DIR`/`SCOPE_READY`/`SCOPE_LEVEL` absent from both agents' environments. |
+| E56 | B29 | Experiment | Full env comparison — parent vs general-purpose subagent (2026-06-29) | `cat /proc/self/environ \| tr '\0' '\n' \| sort` in both parent and subagent Bash calls | 107 variables enumerated in each context; zero differences between parent and subagent. Full environment inherited: project vars ($PRO, $GENAI, FIRECRAWL_API_KEY, etc.), non-CLAUDE_* timeouts (COMMAND_TIMEOUT=7200, TOOL_TIMEOUT=7200), NVM, desktop session (XDG_*, GNOME_*, DISPLAY), GIT_EDITOR, SSH_AUTH_SOCK, all system vars. |
+| E57 | B31 | Experiment | 4-agent parallel tool inventory — this session (2026-06-29) | Agents a0421c818fd857c2b (general-purpose), a5c1902758f7bef17 (Explore), afa16d2f3f479ce74 (Plan), a4e092d7ff1371904 (claude-code-guide) | Each agent reported its complete available-deferred-tools list verbatim. general-purpose: 12 deferred + ToolSearch pre-loaded (no Agent tool). Explore: 9 deferred + ToolSearch. Plan: 9 deferred + ToolSearch (identical to Explore). claude-code-guide: 5 pre-loaded only, no ToolSearch, no deferred. Parent session: 26 deferred + ToolSearch = 27. |
 
 ---
 
@@ -128,13 +131,13 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 
 | Status | Count | IDs |
 |--------|-------|-----|
-| ✅ Confirmed | 15 | B1, B2, B3, B6, B7, B9, B10, B12, B13, B14, B16, B27, B28, B29, B30 |
+| ✅ Confirmed | 16 | B1, B2, B3, B6, B7, B9, B10, B12, B13, B14, B16, B27, B28, B29, B30, B31 |
 | 🎯 Observed | 14 | B4, B5, B8, B11, B15, B18, B19, B20, B21, B22, B23, B24, B25, B26 |
 | ⚠️ Exception noted | 1 | B17 (self-contained except at context-compaction boundaries; < 0.2% violation rate) |
 | ❓ Uncertain | 1 | B16h |
 
-**Total behaviors:** 31 (B1–B30 + B16h sub-hypothesis; B16h shares B16's row index)
-**Confirmed (≥90% certainty):** 15
+**Total behaviors:** 32 (B1–B31 + B16h sub-hypothesis; B16h shares B16's row index)
+**Confirmed (≥90% certainty):** 16
 **Lowest certainty:** B5 (60% — current session selection mechanism)
 **Investigation priority:** B5 — can be confirmed by reading Claude Code changelog or source
 
@@ -144,10 +147,10 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | VALIDATED† | 1 | B5 (distinct mtimes proven; mtime-as-selection-key unproven) |
 | FLAG-VFY | 8 | B3, B4, B16, B19, B20, B21, B22, B24 |
 | NEG-ONLY | 4 | B11, B23, B25, B26 |
-| UNVERIFIED | 5 | B8, B27, B28, B29, B30 |
+| UNVERIFIED | 6 | B8, B27, B28, B29, B30, B31 |
 | MEASURE | 1 | B16h (lim_it; runs by default in container) |
 
-**Validation gap:** 12 of 31 behaviors are fully validated with behavioral assertions.
+**Validation gap:** 12 of 32 behaviors are fully validated with behavioral assertions.
 
 ---
 
@@ -188,6 +191,7 @@ Each behavior instance has a corresponding invalidation test in `contract/claude
 | `b28_bash_rtk_subprocess.rs` | B28 | UNVERIFIED (no automated test yet) |
 | `b29_bash_claude_env.rs` | B29 | UNVERIFIED (no automated test yet) |
 | `b30_subagent_context_inheritance.rs` | B30 | UNVERIFIED (no automated test yet) |
+| `b31_subagent_tool_sets.rs` | B31 | UNVERIFIED (no automated test yet) |
 
 To run:
 ```bash

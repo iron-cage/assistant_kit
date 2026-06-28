@@ -39,13 +39,15 @@ pre-v1.0 (unverified)
 
 The `subagent_type` parameter selects a pre-configured agent variant. The list is static and embedded in the Agent tool's schema description — there is no runtime enumeration API.
 
-| `subagent_type` | Tools Available | Can Write Files | Can Spawn Agents | Primary Use Case |
-|-----------------|----------------|-----------------|------------------|-----------------|
-| `general-purpose` (default) | All (`*`) | ✅ | ✅ | Complex multi-step tasks, research, code execution |
-| `Explore` | All except Agent, ExitPlanMode, Edit, Write, NotebookEdit | ❌ | ❌ | Codebase search, file/pattern discovery, read-only analysis |
-| `Plan` | All except Agent, ExitPlanMode, Edit, Write, NotebookEdit | ❌ | ❌ | Architecture design, implementation planning, trade-off analysis |
-| `claude-code-guide` | Glob, Grep, Read, WebFetch, WebSearch | ❌ | ❌ | Questions about Claude Code CLI, Agent SDK, Anthropic API |
-| `statusline-setup` | Read, Edit | ✅ (status line config only) | ❌ | Configure Claude Code status line display |
+| `subagent_type` | Observed Tool Set (B31) | Can Write Files | Can Spawn Agents | Primary Use Case |
+|-----------------|------------------------|-----------------|------------------|-----------------|
+| `general-purpose` (default) | ToolSearch (pre) + Bash, Edit, Write, NotebookEdit, EnterWorktree, ExitWorktree, Glob, Grep, Read, Skill, WebFetch, WebSearch (12 deferred) — **13 total** | ✅ | ❌ (Agent absent) | Complex multi-step tasks, research, code execution |
+| `Explore` | ToolSearch (pre) + Bash, EnterWorktree, ExitWorktree, Glob, Grep, Read, Skill, WebFetch, WebSearch (9 deferred) — **10 total** | ❌ | ❌ | Codebase search, file/pattern discovery, read-only analysis |
+| `Plan` | ToolSearch (pre) + Bash, EnterWorktree, ExitWorktree, Glob, Grep, Read, Skill, WebFetch, WebSearch (9 deferred) — **10 total** (identical to Explore) | ❌ | ❌ | Architecture design, implementation planning, trade-off analysis |
+| `claude-code-guide` | Glob, Grep, Read, WebFetch, WebSearch (5 pre-loaded; no ToolSearch; no deferred) — **5 total** | ❌ | ❌ | Questions about Claude Code CLI, Agent SDK, Anthropic API |
+| `statusline-setup` | Read, Edit (unverified; not experimentally confirmed) | ✅ (status line config only) | ❌ | Configure Claude Code status line display |
+
+**Parent-session-exclusive tools (14 — absent from all subagent types):** Agent, AskUserQuestion, CronCreate, CronDelete, CronList, EnterPlanMode, ExitPlanMode, LSP, TaskCreate, TaskGet, TaskList, TaskOutput, TaskStop, TaskUpdate. These are all session-management and meta-agent tools.
 
 **Enumeration**: There is no `AgentList` tool. Running agents cannot be enumerated via tools. Track agent IDs at dispatch time; use `resume` for re-entry.
 
@@ -73,3 +75,4 @@ Contrast: Skill tool invocations (`/doc_tsk`, `/role`, etc.) DO spawn new `claud
 | behavior | [../behavior/028_b28_bash_rtk_subprocess.md](../behavior/028_b28_bash_rtk_subprocess.md) | B28: bash tool calls spawn transient rtk processes |
 | behavior | [../behavior/029_b29_bash_claude_env.md](../behavior/029_b29_bash_claude_env.md) | B29: CLAUDE_* env vars propagated to all bash subprocesses including agent Bash calls |
 | behavior | [../behavior/030_b30_subagent_context_inheritance.md](../behavior/030_b30_subagent_context_inheritance.md) | B30: subagents receive full CLAUDE.md via system-reminder; parent conversation not inherited; scope not propagated |
+| behavior | [../behavior/031_b31_subagent_tool_sets.md](../behavior/031_b31_subagent_tool_sets.md) | B31: actual tool sets per subagent type; general-purpose lacks Agent; 14 tools parent-session-exclusive |
