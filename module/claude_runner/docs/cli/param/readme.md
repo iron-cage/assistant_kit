@@ -230,4 +230,4 @@
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 62, `ask` = 62, `ps` = 5, `isolated` = 6, `refresh` = 5, `kill` = 0, `tools` = 0, `help` = 0.
+**Commands by parameter count:** `run` = 62, `ask` = 62, `ps` = 5, `isolated` = 16, `refresh` = 5, `kill` = 0, `tools` = 0, `help` = 0.

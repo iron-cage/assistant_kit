@@ -14,17 +14,18 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 | IT-6 | `--creds file.json --timeout abc` → exit 1, invalid timeout error | Error: Invalid Timeout |
 | IT-7 | `--creds file.json --trace` → call details printed to stderr before execution | Trace |
 | IT-8 | `clr refresh --help` → exit 0, prints refresh-specific help | Help |
+| IT-9 | `CLR_JOURNAL=bogus` env var → exit 1, error names env var | Error: Invalid Env |
 
 ## Test Coverage Summary
 
 - Happy Path: 1 test (IT-1)
-- Error Handling: 2 tests (IT-2, IT-6)
+- Error Handling: 3 tests (IT-2, IT-6, IT-9)
 - Timeout Behavior: 2 tests (IT-3, IT-4)
 - Default Fallback: 1 test (IT-5)
 - Trace: 1 test (IT-7)
 - Help: 1 test (IT-8)
 
-**Total:** 8 test cases
+**Total:** 9 test cases
 
 ---
 
@@ -112,3 +113,14 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Exit:** 0
 - **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md)
 - **Note:** Implemented; test function `test_it8_help_exits_zero` in `tests/refresh_test.rs`
+
+---
+
+### IT-9: `CLR_JOURNAL=bogus` env var → exit 1 with error naming the env var
+
+- **Setup:** credentials JSON at temp file; `CLR_JOURNAL=bogus` in env
+- **Command:** `clr refresh --creds <f>` (with `CLR_JOURNAL=bogus` set)
+- **Expected behavior:** exit 1; stderr contains `"CLR_JOURNAL"` and `"invalid"`; no subprocess spawned
+- **Exit:** 1
+- **Source:** Fix — `apply_refresh_env_vars()` validates `CLR_JOURNAL` consistently with `apply_env_vars()` in `env.rs`
+- **Note:** Implemented; test function `test_it9_clr_journal_invalid_value_exits_1` in `tests/refresh_test.rs`

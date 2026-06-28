@@ -1,7 +1,7 @@
 //! Unix-only integration tests.
 #![ cfg( unix ) ]
 #![ allow( clippy::doc_markdown ) ] // test doc comments use code identifiers in prose
-//! Journal Integration Tests (EC-1..EC-10)
+//! Journal Integration Tests (EC-1..EC-15)
 //!
 //! ## Purpose
 //!
@@ -23,6 +23,8 @@
 //! - EC-11: Gate blocks → `"type":"gate_wait"` event with `gate_outcome::acquired`
 //! - EC-12: Validation retry → `"type":"validation_retry"` event in JSONL
 //! - EC-13: Read-only journal dir → subprocess exit preserved; journal errors ignored
+//! - EC-14: `--journal-dir <cli>` + `CLR_JOURNAL_DIR=<env>` → file in CLI dir (CLI wins)
+//! - EC-15: Stdout > 1 MB at `full` level → field contains `"[truncated at 1MB]"` marker
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ fake_claude_dir, fake_claude_binary_dir };
@@ -707,5 +709,95 @@ fn ec13_readonly_journal_dir_does_not_abort_runner()
   assert!(
     files.is_empty(),
     "no JSONL file should be writable in a read-only dir. found: {files:?}"
+  );
+}
+
+// ── EC-14: --journal-dir (CLI) wins over CLR_JOURNAL_DIR (env) ───────────────
+
+/// EC-14: When `--journal-dir <cli>` and `CLR_JOURNAL_DIR=<env>` are both present,
+/// the CLI flag wins and the JSONL file appears in the CLI-specified directory.
+///
+/// This validates the 3-tier precedence rule documented in `072_journal.md`:
+/// `--journal-dir` > `CLR_JOURNAL_DIR` > `~/.clr/journal/`.
+#[ test ]
+fn ec14_journal_dir_cli_wins_over_env()
+{
+  let cli_dir = tempfile::TempDir::new().expect( "cli_dir" );
+  let env_dir = tempfile::TempDir::new().expect( "env_dir" );
+  let cli_dir_s = cli_dir.path().to_str().expect( "utf-8" ).to_owned();
+  let env_dir_s = env_dir.path().to_str().expect( "utf-8" ).to_owned();
+
+  let ( out, _fake ) = run_with_journal(
+    &[ "--journal-dir", &cli_dir_s ],
+    &[ ( "CLR_JOURNAL_DIR", &env_dir_s ) ],
+    "printf cli_wins_test",
+  );
+
+  assert!(
+    out.status.success(),
+    "exit must be 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+
+  // CLI dir must contain the JSONL file.
+  let cli_files = find_jsonl_files( cli_dir.path() );
+  assert!(
+    !cli_files.is_empty(),
+    "--journal-dir (CLI) must create JSONL in CLI dir when CLR_JOURNAL_DIR (env) also set. \
+     cli_dir: {cli_dir_s}"
+  );
+
+  // Env dir must remain empty — CLI wins.
+  let env_files = find_jsonl_files( env_dir.path() );
+  assert!(
+    env_files.is_empty(),
+    "--journal-dir (CLI) must override CLR_JOURNAL_DIR (env). \
+     Found unexpected files in env_dir: {env_files:?}"
+  );
+}
+
+// ── EC-15: Stdout > 1 MB → truncation marker in journal event ────────────────
+
+/// EC-15: When the fake claude emits more than 1 MB on stdout, the journal event
+/// at `full` level contains a `stdout` field that ends with `"[truncated at 1MB]"`.
+///
+/// Root Cause: `emit_execution()` used `.chars().take(TRUNCATE)` without appending
+///   the truncation marker — callers could not detect whether output was truncated.
+/// Why Not Caught: no test verifying >1 MB stdout journal behaviour.
+/// Fix Applied: added marker append in `execution.rs:emit_execution()`:
+///   `if stdout.chars().count() > TRUNCATE { s.push_str("\n[truncated at 1MB]"); }`
+/// Prevention: assert `content.contains("[truncated at 1MB]")` on oversized output.
+/// Pitfall: compare via `.chars().count()` (Unicode codepoints) not `.len()` (bytes)
+///   so that multibyte sequences are counted correctly at the truncation boundary.
+#[ test ]
+fn ec15_stdout_over_1mb_has_truncation_marker()
+{
+  let jdir   = tempfile::TempDir::new().expect( "jdir" );
+  let jdir_s = jdir.path().to_str().expect( "utf-8" ).to_owned();
+
+  // Emit 1_100_000 'A' bytes on stdout — exceeds the 1 MB (1_048_576) threshold.
+  // `head -c` reads null bytes from /dev/zero; `tr` converts them to 'A'.
+  let ( out, _fake ) = run_with_journal(
+    &[ "--journal", "full", "--journal-dir", &jdir_s ],
+    &[],
+    "head -c 1100000 < /dev/zero | tr '\\0' 'A'",
+  );
+
+  assert!(
+    out.status.success(),
+    "exit must be 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+
+  let content = read_journal_content( jdir.path() );
+  assert!(
+    content.contains( r#""stdout""# ),
+    "full level must include stdout field. Got:\n{content}"
+  );
+  assert!(
+    content.contains( "[truncated at 1MB]" ),
+    "stdout exceeding 1 MB must end with '[truncated at 1MB]' marker. \
+     Content snippet:\n{}",
+    &content[ ..content.len().min( 300 ) ],
   );
 }

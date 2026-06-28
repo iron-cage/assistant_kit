@@ -7,17 +7,17 @@
 - **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (-> param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (72 total)
+### All Env Parameters (80 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
 | Input (CLR_*) — `run` subcommand | 62 | Caller env fallbacks for `run` parameters |
-| Input (CLR_*) — `isolated` and `refresh` subcommands | 3 | Caller env fallbacks for credential operation parameters |
+| Input (CLR_*) — `isolated` and `refresh` subcommands | 11 | Caller env fallbacks for credential operation parameters |
 | Input (CLR_*) — `ps` subcommand | 5 | Caller env fallbacks for session listing display and flag thresholds |
 | Runtime config (CLR_*) | 1 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 72 environment variables
+**Total:** 76 environment variables
 
 ---
 
@@ -125,8 +125,8 @@ CLR_MODEL=sonnet clr --model opus --dry-run "task"  # CLI wins; CLR_MODEL ignore
 
 ### Env Param 2: CLR_* Input Parameters — `isolated` and `refresh` Subcommands
 
-Environment variable fallbacks for the 3 credential operation parameters.
-`apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/cli/parse.rs` read these
+Environment variable fallbacks for the 11 credential operation parameters.
+`apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/cli/cred_parse.rs` read these
 after subcommand argument parsing.
 
 | # | Variable | CLI Parameter | Type | Notes |
@@ -134,6 +134,14 @@ after subcommand argument parsing.
 | 1 | `CLR_CREDS` | [`--creds`](param/019_creds.md) | string | Applied when `--creds` absent (`creds_path` is empty string) |
 | 2 | `CLR_TIMEOUT` | [`--timeout`](param/020_timeout.md) | u64 | Applied when CLI timeout equals its command default (30 for `isolated`, 45 for `refresh`); `0` = unlimited (no watchdog), matching `run`/`ask` semantics. Also applies to `run`/`ask` via Section 1 row 34 |
 | 3 | `CLR_TRACE` | [`--trace`](param/013_trace.md) | bool | Applied when `--trace` absent; also applies to `run` via Section 1 |
+| 4 | `CLR_DIR` | [`--dir`](param/008_dir.md) | string | Applied when `--dir` absent; isolated only (refresh has no `--dir`) |
+| 5 | `CLR_ADD_DIR` | [`--add-dir`](param/066_add_dir.md) | string | Applied when `--add-dir` absent; single value (not comma-split); isolated only |
+| 6 | `CLR_JOURNAL` | [`--journal`](param/072_journal.md) | string | Applied when `--journal` absent; invalid values exit 1 |
+| 7 | `CLR_JOURNAL_DIR` | [`--journal-dir`](param/073_journal_dir.md) | string | Applied when `--journal-dir` absent |
+| 8 | `CLR_OUTPUT_FILE` | [`--output-file`](param/029_output_file.md) | string | Applied when `--output-file` absent; isolated only |
+| 9 | `CLR_STRIP_FENCES` | [`--strip-fences`](param/026_strip_fences.md) | bool | Applied when `--strip-fences` absent; isolated only |
+| 10 | `CLR_OUTPUT_STYLE` | [`--output-style`](param/070_output_style.md) | string | Applied when `--output-style` absent; isolated only |
+| 11 | `CLR_SUMMARY_FIELDS` | [`--summary-fields`](param/071_summary_fields.md) | string | Applied when `--summary-fields` absent; isolated only |
 
 **Precedence (`--creds` only):**
 

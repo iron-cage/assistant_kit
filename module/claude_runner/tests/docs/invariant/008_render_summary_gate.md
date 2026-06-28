@@ -28,7 +28,7 @@ Test case planning for [invariant/008_render_summary_gate.md](../../../../docs/i
 
 ## Architectural Constraint
 
-IT-1, IT-3, IT-4, IT-5, IT-6 are unit tests inside `src/cli/summary.rs` (inline `#[cfg(test)]` module) that call `render_summary()` directly with crafted JSON strings — no subprocess needed.
+IT-1, IT-3, IT-4, IT-5, IT-6 are unit tests in `tests/summary_unit_test.rs` that call `render_summary()` directly with crafted JSON strings — no subprocess needed.
 
 IT-2 is an integration test in `tests/output_style_test.rs` (EC-14) using a fake `claude` subprocess that emits a 7-field minimal CLR envelope; the full `clr -p` execution path verifies the rendering end-to-end.
 
@@ -38,12 +38,12 @@ IT-7 is a structural test (source code search) in `tests/output_style_test.rs` t
 
 | IT | Test Function | File |
 |----|---------------|------|
-| IT-1 | `render_summary_accepts_envelope_without_session_id` | `src/cli/summary.rs` (#[cfg(test)]) |
+| IT-1 | `render_summary_accepts_envelope_without_session_id` | `tests/summary_unit_test.rs` |
 | IT-2 | `ec14_render_summary_minimal_envelope_no_session_id` | `tests/output_style_test.rs` |
-| IT-3 | `render_summary_accepts_full_envelope` | `src/cli/summary.rs` (#[cfg(test)]) |
-| IT-4 | `render_summary_rejects_non_result_type` | `src/cli/summary.rs` (#[cfg(test)]) |
-| IT-5 | `render_summary_rejects_json_without_type` | `src/cli/summary.rs` (#[cfg(test)]) |
-| IT-6 | `render_summary_rejects_non_json` | `src/cli/summary.rs` (#[cfg(test)]) |
+| IT-3 | `ec14_render_summary_clr_envelope_accepted` | `tests/summary_unit_test.rs` |
+| IT-4 | `render_summary_rejects_non_result_type` | `tests/summary_unit_test.rs` |
+| IT-5 | `render_summary_rejects_json_without_type` | `tests/summary_unit_test.rs` |
+| IT-6 | `render_summary_rejects_non_json` | `tests/summary_unit_test.rs` |
 | IT-7 | `render_summary_gate_uses_type_not_session_id` | `tests/output_style_test.rs` |
 
 ---

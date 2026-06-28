@@ -644,11 +644,11 @@ cargo run -p claude_runner -- tools some-arg
 All TC-1 through TC-82 must pass without unexpected errors or panics.
 TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-82 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
-CC-1 through CC-181 are automated — listed for traceability only.
+CC-1 through CC-207 are automated — listed for traceability only.
 
 ---
 
-## Corner Cases (CC-1 through CC-112) — Automated
+## Corner Cases (CC-1 through CC-207) — Automated
 
 These are exhaustively tested by the integration test suite (not manual). Listed here for traceability.
 
@@ -863,7 +863,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-179:** `--summary-fields " , , "` (whitespace-only tokens) → exit 1; error `"unknown field ''"`
 - **CC-180:** `--summary-fields "type,BOGUS,session_id"` (mixed valid/invalid) → exit 1; error `"unknown field 'BOGUS'"`
 - **CC-181:** Non-zero claude exit + `--summary-fields minimal` → render_summary skipped; raw error output shown
-- Automated in: `summary_fields_test.rs` (EC-01–EC-12), `summary.rs` unit tests (9 tests)
+- Automated in: `summary_fields_test.rs` (EC-01–EC-12), `summary_unit_test.rs` (13 unit tests)
 
 ### Output style: --output-style param (TSK-231)
 
@@ -878,6 +878,26 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-190:** `--output-style raw --output-format json --dry-run "test"` → exit 0; `--output-format json` forwarded verbatim (explicit CLI arg, not auto-injected)
 - **CC-191:** `--output-style summary` with `CLR_OUTPUT_FORMAT=text` set → exit 0; auto-injection skipped (output_format already set); `--output-format text` forwarded
 - Automated in: `output_style_test.rs` EC-01–EC-14, IT-7
+
+### `clr isolated` param gap closure: --dry-run, --dir, --add-dir, --file, --expect, --expect-strategy (Plan 034)
+
+- **CC-192:** `clr isolated --creds /tmp/c.json --dry-run` → exit 0; command preview on stdout; no subprocess spawned; no temp HOME created
+- **CC-193:** `clr isolated --creds /tmp/c.json --dry-run "say hello"` → exit 0; preview contains `--print` and message text
+- **CC-194:** `clr isolated --creds /tmp/c.json --dry-run --dir /tmp "msg"` → exit 0; preview contains `--dir /tmp`
+- **CC-195:** `clr isolated --creds /tmp/c.json --dry-run --add-dir /extra "msg"` → exit 0; preview contains `--add-dir /extra`
+- **CC-196:** `clr isolated --dir /tmp "msg"` (unix: fake claude `echo "$@"`) → `--dir /tmp` appears in subprocess args
+- **CC-197:** `clr isolated --dir /nonexistent-path "msg"` → exit 1; stderr contains "not found" or "No such directory"; subprocess never spawned
+- **CC-198:** `clr isolated --add-dir /extra "msg"` (unix: fake claude) → `--add-dir /extra` injected into subprocess command
+- **CC-199:** `clr isolated --dir /tmp --add-dir /extra "msg"` (unix: fake claude) → both `--dir /tmp` and `--add-dir /extra` injected
+- **CC-200:** `CLR_DIR=/tmp clr isolated --dry-run "msg"` → exit 0; preview contains `--dir /tmp` (env var fallback)
+- **CC-201:** `clr isolated --file /path/to/file "msg"` (unix: fake claude `cat`) → file content appears on stdout (piped as stdin)
+- **CC-202:** `clr isolated --file /nonexistent "msg"` → exit 1; stderr "not found" or "No such file"; pre-spawn check fires before temp HOME created
+- **CC-203:** `clr isolated --file /path/to/file "msg"` (unix: fake claude `cat`) with message → both file stdin and message args applied simultaneously
+- **CC-204:** `clr isolated --expect "hello" "msg"` (unix: fake claude outputs "hello") → exit 0; stdout preserved
+- **CC-205:** `clr isolated --expect "hello" "msg"` (unix: fake claude outputs "world") → exit 3; stderr contains expected/got; strategy default is `fail`
+- **CC-206:** `clr isolated --expect "hello" --expect-strategy "default:no" "msg"` (unix: fake claude outputs "world") → exit 0; "no" on stdout (fallback value)
+- **CC-207:** `clr isolated --expect "hello" --expect-strategy retry "msg"` (unix: fake claude outputs "world") → exit 1; stderr "retry is not supported for isolated"
+- Automated in: `isolated_test.rs` IT-12–IT-27
 
 ---
 

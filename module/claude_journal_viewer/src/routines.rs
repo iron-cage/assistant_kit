@@ -42,6 +42,10 @@ fn err( msg : impl Into< String > ) -> ErrorData
 // ── Command routines ──────────────────────────────────────────────────────────
 
 /// `.journal.list` — display a filtered event table.
+///
+/// # Errors
+///
+/// Returns `Err` when journal reading or event filtering fails.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
@@ -55,6 +59,10 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 }
 
 /// `.journal.stats` — aggregate statistics by day or model.
+///
+/// # Errors
+///
+/// Returns `Err` when journal reading or aggregation fails.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn stats_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
@@ -68,6 +76,10 @@ pub fn stats_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 }
 
 /// `.journal.search` — search events by pattern.
+///
+/// # Errors
+///
+/// Returns `Err` when journal reading or pattern matching fails.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
@@ -81,6 +93,10 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 }
 
 /// `.journal.status` — show journal health report.
+///
+/// # Errors
+///
+/// Infallible in practice; signature satisfies the unilang routine trait.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
@@ -92,6 +108,10 @@ pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 }
 
 /// `.journal.export` — export events to a file.
+///
+/// # Errors
+///
+/// Returns `Err` when journal reading or file export fails.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn export_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
@@ -105,6 +125,10 @@ pub fn export_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 }
 
 /// `.journal.prune` — delete old journal files.
+///
+/// # Errors
+///
+/// Returns `Err` when journal pruning fails.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn prune_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
@@ -120,6 +144,10 @@ pub fn prune_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// `.journal.tail` — not supported in the super-app context.
 ///
 /// `.tail` is a long-running blocking command; invoke `clj .tail` directly.
+///
+/// # Errors
+///
+/// Infallible in practice; signature satisfies the unilang routine trait.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn tail_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext )
@@ -134,6 +162,10 @@ pub fn tail_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// `.journal.serve` — not supported in the super-app context.
 ///
 /// `.serve` starts a blocking HTTP server; invoke `clj .serve` directly.
+///
+/// # Errors
+///
+/// Infallible in practice; signature satisfies the unilang routine trait.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn serve_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext )
