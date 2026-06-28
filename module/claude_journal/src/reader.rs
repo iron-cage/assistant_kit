@@ -70,11 +70,7 @@ impl JournalReader
     let now = SystemTime::now();
     let since_cutoff : Option< SystemTime > = filter.since.map( | d | now - d );
 
-    let mut files = match collect_jsonl_files( &self.dir )
-    {
-      Ok( f ) => f,
-      Err( _ ) => return results,
-    };
+    let Ok( mut files ) = collect_jsonl_files( &self.dir ) else { return results };
     files.sort();
 
     for path in &files
@@ -86,11 +82,7 @@ impl JournalReader
         continue;
       }
 
-      let lines = match read_lines( path )
-      {
-        Ok( l ) => l,
-        Err( _ ) => continue,
-      };
+      let Ok( lines ) = read_lines( path ) else { continue };
 
       for line in lines
       {
@@ -137,7 +129,7 @@ impl JournalReader
   #[ must_use ]
   pub fn file_count( &self ) -> usize
   {
-    collect_jsonl_files( &self.dir ).map( | f | f.len() ).unwrap_or( 0 )
+    collect_jsonl_files( &self.dir ).map_or( 0, | f | f.len() )
   }
 
   /// Total bytes across all `.jsonl` files.
@@ -203,7 +195,7 @@ fn read_lines( path : &Path ) -> io::Result< Vec< String > >
   let reader = io::BufReader::new( file );
   let lines = reader
     .lines()
-    .filter_map( | l | l.ok() )
+    .map_while( Result::ok )
     .filter( | l | !l.trim().is_empty() )
     .collect();
   Ok( lines )
@@ -234,7 +226,7 @@ fn parse_file_date( stem : &str ) -> Option< SystemTime >
   let dt = Utc.from_utc_datetime( &date.and_hms_opt( 0, 0, 0 )? );
   let secs = dt.timestamp();
   if secs < 0 { return None; } // pre-epoch dates are not valid journal file dates
-  Some( SystemTime::UNIX_EPOCH + std::time::Duration::from_secs( secs as u64 ) )
+  Some( SystemTime::UNIX_EPOCH + Duration::from_secs( u64::try_from(secs).unwrap_or(0) ) )
 }
 
 /// Return `true` if a file (identified by its date stem) falls within the
@@ -246,11 +238,7 @@ fn file_date_in_range(
 ) -> bool
 {
   // End-of-day for this file is stem date + 86400s.
-  let file_start = match parse_file_date( stem )
-  {
-    Some( t ) => t,
-    None      => return true, // don't skip files we can't parse
-  };
+  let Some( file_start ) = parse_file_date( stem ) else { return true };
   let file_end = file_start + Duration::from_secs( 86400 );
 
   if let Some( cutoff ) = since_cutoff
@@ -274,7 +262,7 @@ fn parse_event_time( ts : &str ) -> Option< SystemTime >
   let secs = dt.timestamp();
   let nanos = dt.timestamp_subsec_nanos();
   if secs < 0 { return None; }
-  Some( SystemTime::UNIX_EPOCH + Duration::new( secs as u64, nanos ) )
+  Some( SystemTime::UNIX_EPOCH + Duration::new( u64::try_from(secs).unwrap_or(0), nanos ) )
 }
 
 /// Return `true` if `event` matches all non-`None` fields in `filter`.
@@ -369,7 +357,7 @@ pub struct TailIter< 'a >
   date   : String,
 }
 
-impl< 'a > core::fmt::Debug for TailIter< 'a >
+impl core::fmt::Debug for TailIter< '_ >
 {
   #[ inline ]
   fn fmt( &self, f : &mut core::fmt::Formatter< '_ > ) -> core::fmt::Result
@@ -382,7 +370,7 @@ impl< 'a > core::fmt::Debug for TailIter< 'a >
   }
 }
 
-impl< 'a > Iterator for TailIter< 'a >
+impl Iterator for TailIter< '_ >
 {
   type Item = EventRecord;
 
@@ -404,24 +392,22 @@ impl< 'a > Iterator for TailIter< 'a >
       {
         use io::{ Read, Seek, SeekFrom };
         let meta = file.metadata().ok();
-        let size = meta.map( | m | m.len() ).unwrap_or( 0 );
+        let size = meta.map_or( 0, | m | m.len() );
         if size > self.offset
+          && file.seek( SeekFrom::Start( self.offset ) ).is_ok()
         {
-          if file.seek( SeekFrom::Start( self.offset ) ).is_ok()
+          let mut buf = String::new();
+          let _ = file.read_to_string( &mut buf );
+          self.offset = size;
+          for line in buf.lines()
           {
-            let mut buf = String::new();
-            let _ = file.read_to_string( &mut buf );
-            self.offset = size;
-            for line in buf.lines()
+            let line = line.trim();
+            if line.is_empty() { continue; }
+            if let Ok( event ) = serde_json::from_str::< EventRecord >( line )
             {
-              let line = line.trim();
-              if line.is_empty() { continue; }
-              if let Ok( event ) = serde_json::from_str::< EventRecord >( line )
+              if event_matches( &event, self.filter, None )
               {
-                if event_matches( &event, self.filter, None )
-                {
-                  return Some( event );
-                }
+                return Some( event );
               }
             }
           }

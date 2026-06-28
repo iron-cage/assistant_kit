@@ -23,4 +23,15 @@ path = "src/lib.rs"
 name = "clj"
 path = "src/cli_main.rs"
 
+[features]
+# Enables unilang command routines for `ast .journal.*` super-app integration.
+routines = [ "dep:unilang" ]
+
 [dependencies]
+claude_journal = { workspace = true }
+serde_json     = { workspace = true }
+tiny_http      = { workspace = true }
+unilang        = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

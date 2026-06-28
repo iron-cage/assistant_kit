@@ -59,6 +59,7 @@ emitted to stdout as-is (no trimming, no suffix).
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | — |
+| 2 | [`isolated`](../command/02_isolated.md) | fail | `fail`→exit 3, `default:<V>`→exit 0 supported; `retry` unsupported → exit 1 (one-shot semantics — no retry loop) (TSK-331) |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
 
 ### See Also

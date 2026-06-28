@@ -24,11 +24,11 @@
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
-| 1 | `run` (default) | Execute Claude Code with given parameters | 62 | `clr "Fix bug" --model sonnet` |
-| 2 | `isolated` | Run Claude with credential-isolated temp HOME | 4 | `clr isolated --creds creds.json "Fix bug"` |
-| 3 | `refresh` | Refresh OAuth credentials without running a task | 3 | `clr refresh --creds creds.json` |
+| 1 | `run` (default) | Execute Claude Code with given parameters | 64 | `clr "Fix bug" --model sonnet` |
+| 2 | `isolated` | Run Claude with credential-isolated temp HOME | 12 | `clr isolated --creds creds.json "Fix bug"` |
+| 3 | `refresh` | Refresh OAuth credentials without running a task | 5 | `clr refresh --creds creds.json` |
 | 4 | `help` | Print usage information and exit | 0 | `clr help` |
-| 5 | `ask` | Semantic alias for run (identical defaults) | 62 | `clr ask "What does X do?"` |
+| 5 | `ask` | Semantic alias for run (identical defaults) | 64 | `clr ask "What does X do?"` |
 | 6 | `ps` | List running Claude Code sessions | 5 | `clr ps` |
 | 7 | `kill` | Terminate a running Claude Code session by PID | 0 | `clr kill 12345` |
 | 8 | `tools` | List Claude Code tools with version info | 0 | `clr tools` |

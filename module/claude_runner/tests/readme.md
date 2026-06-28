@@ -26,7 +26,7 @@
 | YAML structure | `commands_yaml_test.rs` | `.claude` and `.claude.help` command definitions |
 | Library API | `lib_test.rs` | `register_commands()` callability |
 | Stale-ref guards + dep constraints (IT-2, IT-3, IT-4) | `stale_ref_guard_test.rs` | No `claude_runner_plugin` or `dream_agent` refs; dep constraint invariants |
-| Isolated subcommand | `isolated_test.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs, unknown-subcommand detection |
+| Isolated subcommand (IT-2–IT-10, EC-N, IT-12–IT-36) | `isolated_test.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs, unknown-subcommand detection; Plan 034: `--dry-run`, `--dir`/`--add-dir`, `--file`, `--expect`/`--expect-strategy`; Plan 035: `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`, env fallbacks |
 | Isolated/refresh defaults (DT-1–DT-6) | `isolated_defaults_test.rs` | Invariant 005: model constants, effort injection, passthrough override, effort-before-print order |
 | Isolated/refresh correctness (CT-1–CT-6) | `isolated_correctness_test.rs` | Correctness gaps S2–S6: no-session-persistence, skip-perms with/without message, no-chrome for refresh, timeout-0 unlimited, CLAUDE.md provisioning |
 | Refresh subcommand | `refresh_test.rs` | `clr refresh`: error cases, timeout exit 2, help text (IT-2, IT-4, IT-6, IT-8) |
@@ -35,6 +35,7 @@
 | Bug reproducers BUG-246 | `bug_reproducers_246_test.rs` | WYSIWYG: CLAUDECODE removal visible in trace/dry-run; `--keep-claudecode` suppresses prefix |
 | Bug reproducers BUG-037 (T09–T10) | `error_classification_test.rs` | Labeled per-type CLR stderr diagnostics via classify_error() |
 | Strip-fences unit (sf01–sf08) | `fence_test.rs` | `strip_fences` correctness: pair stripping, pass-through, edge cases |
+| Summary unit (EC-14, IT-1, IT-4–IT-6, +7 resolve/render) | `summary_unit_test.rs` | `render_summary`/`resolve_fields` unit: CLR envelope parsing, field profiles, BUG-309/310 regression guards |
 | CLR_* env vars (E01–E17) | `env_var_test.rs` | CLR_* env var fallback for vars 1–17, CLI-wins checks |
 | CLR_* env vars extended (E18–E57, BUG-233) | `env_var_ext_test.rs` | CLR_* env var fallback for vars 18–57, BUG-233 subdir slash guard |
 | Output file capture (T01–T06) | `output_file_test.rs` | `--output-file` tee behavior, write errors, dry-run skip |
@@ -70,6 +71,7 @@
 | Output style param (EC-01–EC-14, IT-7) | `output_style_test.rs` | `--output-style` summary/raw rendering, CLR_OUTPUT_STYLE env var, auto-inject `--output-format json`, graceful fallback, legacy alias, CLI-wins, dry-run trace, validation (EC-01–EC-13); minimal CLR envelope BUG-310 regression (EC-14); structural anti-pattern guard (IT-7) |
 | Output format param (EC-1–EC-14) | `output_format_test.rs` | `--output-format` forwarding, missing-value, text/json/stream-json variants, summary→json intercept, env var (EC-8/EC-12), summary CLR envelope header (EC-10), text body extraction (EC-11), error envelope (EC-13), non-zero exit passthrough (EC-14) |
 | Summary fields param (EC-01–EC-12) | `summary_fields_test.rs` | `--summary-fields` profile/custom/env field selection, full/standard/minimal presets, custom whitelists, validation, CLI-wins, result body preserved |
+| Journal integration (EC-1–EC-22) | `journal_integration_test.rs` | `--journal`/`--journal-dir`/`CLR_JOURNAL`/`CLR_JOURNAL_DIR`: file creation, level filtering (full/meta/off), retry/timeout/gate_wait/validation_retry event emission, 1MB truncation, CLI-wins-over-env precedence, invalid-value error, default HOME-based dir, dry-run side-effect isolation (BUG-319), case-sensitive validation, missing-value error, duplicate last-wins, off+dir no-op |
 | Max turns param (EC-1–EC-7) | `max_turns_test.rs` | `--max-turns` forwarding, missing-value, boundary, any-numeric, help, absent-by-default, env var |
 | Allowed tools param (EC-1–EC-7) | `allowed_tools_test.rs` | `--allowed-tools` forwarding (comma-preserved, hyphen-form), missing-value, any-string, help, env var |
 | Disallowed tools param (EC-1–EC-7) | `disallowed_tools_test.rs` | `--disallowed-tools` forwarding, missing-value, any-string, help, env var |
@@ -94,10 +96,10 @@
 | `commands_yaml_test.rs` | Verify YAML defines `.claude`, `.claude.help`, and rejects `.please`. |
 | `lib_test.rs` | Library API: `register_commands()` callable. |
 | `stale_ref_guard_test.rs` | Guard against stale `claude_runner_plugin` and `dream_agent` references; dep constraint invariants IT-2, IT-3, IT-4. |
-| `isolated_test.rs` | `clr isolated` subcommand: parsing, error cases, exit codes, lim_it live runs, unknown-subcommand detection. |
+| `isolated_test.rs` | `clr isolated` subcommand: parsing, error cases, exit codes, lim_it live runs, unknown-subcommand detection; Plan 034: `--dry-run` (IT-12–15), `--dir`/`--add-dir` (IT-16–20), `--file` (IT-21–23), `--expect`/`--expect-strategy` (IT-24–27), pipe buffering (IT-28); Plan 035: `--output-file` (IT-29), `--strip-fences` (IT-30), `--output-style` (IT-31), `--summary-fields` (IT-32), env fallbacks (IT-33–36); journal env validation (IT-37). |
 | `isolated_defaults_test.rs` | Invariant 005 model and effort defaults: DT-1–DT-6 covering constants, trace injection, passthrough override, arg order. |
 | `isolated_correctness_test.rs` | Isolated/refresh correctness gaps CT-1–CT-6: no-session-persistence, skip-perms condition, no-chrome, timeout-0 unlimited, CLAUDE.md provisioning. |
-| `refresh_test.rs` | `clr refresh` subcommand: error cases, timeout exit 2, and help text (IT-2, IT-4, IT-6, IT-8). |
+| `refresh_test.rs` | `clr refresh` subcommand: error cases, timeout exit 2, help text (IT-2, IT-4, IT-6, IT-8); journal env validation (IT-9). |
 | `creds_default_test.rs` | `--creds` 3-tier resolution: HOME default, CLR_CREDS tier, and refresh path (T1–T5). |
 | `bug_reproducers_239_244_test.rs` | Bug reproducers BUG-239–244: exit code passthrough, signal codes, verbosity gate, install hint, mirror sync (BUG-243 in claude_runner_core). |
 | `bug_reproducers_246_test.rs` | Bug reproducer BUG-246: CLAUDECODE removal visible in trace/dry-run output; `--keep-claudecode` suppresses prefix. |
@@ -107,6 +109,7 @@
 | `param_extended_flags_test.rs` | Extended flag edge cases (S34–S57): `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`. |
 | `param_group_test.rs` | Param group combined invocations (CC-N): multi-flag interaction tests. |
 | `fence_test.rs` | `strip_fences` unit tests: fence-pair stripping, pass-through, edge cases (sf01–sf08). |
+| `summary_unit_test.rs` | `render_summary`/`resolve_fields` unit tests: CLR envelope parsing, field profiles, BUG-309/310 regression guards (EC-14, IT-1, IT-4–IT-6, +7). |
 | `output_file_test.rs` | `--output-file` tee behavior, write-error exit 1, dry-run file skip (T01–T06). |
 | `expect_validation_test.rs` | `--expect`/`--expect-strategy`/`--retry-on-validation` validation loop: match, mismatch, retry, default (T01–T17). |
 | `bug_reproducers_247_test.rs` | Bug reproducer BUG-247: stdout forwarded to stderr on subprocess failure. |
@@ -143,6 +146,7 @@
 | `fallback_model_test.rs` | `--fallback-model` integration: forwarding, missing-value, any-string, help, absent-by-default, env var (EC-1–EC-7). |
 | `output_style_test.rs` | `--output-style` integration: summary/raw rendering, CLR_OUTPUT_STYLE env var, auto-inject `--output-format json`, graceful fallback, legacy alias, CLI-wins, dry-run trace, validation (EC-01–EC-13); minimal CLR envelope BUG-310 regression guard (EC-14); structural anti-pattern guard (IT-7). |
 | `summary_fields_test.rs` | `--summary-fields` integration: full/standard/minimal presets, custom field whitelists, validation, CLR_SUMMARY_FIELDS env var, CLI-wins, result body preserved (EC-01–EC-12). |
+| `journal_integration_test.rs` | `--journal`/`--journal-dir` and `CLR_JOURNAL`/`CLR_JOURNAL_DIR` integration: JSONL file creation, level filtering (full/meta/off), retry/timeout/gate_wait/validation_retry event emission, truncation (>1MB), CLI-wins-over-env precedence, invalid-value error, dry-run side-effect isolation (BUG-319), case-sensitive validation, missing-value, duplicate last-wins, off+dir (EC-1–EC-22). |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |

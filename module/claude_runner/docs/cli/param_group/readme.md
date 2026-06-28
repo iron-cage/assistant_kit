@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Define semantically coherent parameter clusters by runner responsibility.
-- **Responsibility**: Group 58 parameters into 5 categories based on consumption pattern (claude-native, runner-consumed, system-prompt, credential-ops, session-listing).
+- **Responsibility**: Group clr parameters into 5 semantic categories based on consumption pattern (claude-native, runner-consumed, system-prompt, credential-ops, session-listing).
 - **In Scope**: Group membership, coherence tests, invariants, and cross-references to commands/params/tests/user stories.
 - **Out of Scope**: Individual parameter semantics (-> `../param/`), type constraints (-> `../type/`).
 
@@ -21,8 +21,8 @@
 
 | # | Group | Parameters | Purpose |
 |---|-------|------------|---------|
-| 1 | Claude-Native Flags | 6 | Pass selected `claude` binary flags through without runner modification |
-| 2 | Runner Control | 42 | Control runner execution behavior -- before, during, or instead of subprocess invocation |
+| 1 | Claude-Native Flags | 13 | Pass selected `claude` binary flags through without runner modification |
+| 2 | Runner Control | 46 | Control runner execution behavior -- before, during, or instead of subprocess invocation |
 | 3 | System Prompt | 2 | Inject or extend the behavioral system context sent to the `claude` subprocess |
 | 4 | Credential Operations | 3 | Configure credential-isolated execution for `clr isolated` and `clr refresh` |
 | 5 | Session Listing | 5 | Control `clr ps` session listing display — row filtering, PID filtering, column selection, and inspect output |

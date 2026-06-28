@@ -145,8 +145,8 @@
 | 69 | `--inspect` | bool | false | present/absent | Switch `clr ps` to key:value record output showing all 12 session attributes | 1 cmd |
 | 70 | `--output-style` | enum | `summary` | `summary`/`raw` | Runner-level rendering control: `summary` routes stdout through `render_summary()`; `raw` passes through unchanged | 2 cmds |
 | 71 | `--summary-fields` | string | `full` | `minimal`/`standard`/`full`/custom | Select which CLR envelope fields appear in summary header; custom = comma-separated field names | 2 cmds |
-| 72 | `--journal` | enum | `full` | `full`/`meta`/`off` | Journal level for clr execution events: `full` captures stdout+stderr (≤1MB each), `meta` omits output, `off` disables | 2 cmds |
-| 73 | `--journal-dir` | path | `~/.clr/journal/` | Any writable path | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` | 2 cmds |
+| 72 | `--journal` | enum | `full` | `full`/`meta`/`off` | Journal level for clr execution events: `full` captures stdout+stderr (≤1MB each), `meta` omits output, `off` disables | 3 cmds |
+| 73 | `--journal-dir` | path | `~/.clr/journal/` | Any writable path | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` | 3 cmds |
 
 **Total:** 69 parameters
 
@@ -230,4 +230,4 @@
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 62, `ask` = 62, `ps` = 5, `isolated` = 4, `refresh` = 3, `kill` = 0, `tools` = 0, `help` = 0.
+**Commands by parameter count:** `run` = 62, `ask` = 62, `ps` = 5, `isolated` = 16, `refresh` = 5, `kill` = 0, `tools` = 0, `help` = 0.

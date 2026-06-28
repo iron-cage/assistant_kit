@@ -68,6 +68,8 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--output-file <PATH>".into(),            desc : "Write captured output to file (tee: stdout + file)".into() },
       OptionEntry { name : "--output-style <MODE>".into(),           desc : "Rendering mode: summary (default) or raw [env: CLR_OUTPUT_STYLE]".into() },
       OptionEntry { name : "--summary-fields <FIELDS>".into(),       desc : "Summary field selection: minimal, standard, full (default), or comma-separated [env: CLR_SUMMARY_FIELDS]".into() },
+      OptionEntry { name : "--journal <LEVEL>".into(),               desc : "Journal level: full (default), meta (no output), or off [env: CLR_JOURNAL]".into() },
+      OptionEntry { name : "--journal-dir <PATH>".into(),            desc : "Journal directory (default: ~/.clr/journal/) [env: CLR_JOURNAL_DIR]".into() },
       OptionEntry { name : "--expect <VALS>".into(),                 desc : "Pipe-separated expected values; mismatch → exit 3".into() },
       OptionEntry { name : "--expect-strategy <STRAT>".into(),       desc : "Mismatch handling: fail (default), retry, default:<VAL>".into() },
       OptionEntry { name : "--max-sessions <N>".into(),              desc : "Max concurrent sessions before blocking (0=unlimited, default: 30)".into() },
@@ -136,21 +138,37 @@ pub( crate ) fn print_isolated_help() -> !
   println!( "clr isolated — Run Claude Code with credential-isolated temp HOME" );
   println!();
   println!( "USAGE:" );
-  println!( "  clr isolated --creds <FILE> [--timeout <SECS>] [MESSAGE] [-- PASSTHROUGH...]" );
+  println!( "  clr isolated --creds <FILE> [OPTIONS] [MESSAGE] [-- PASSTHROUGH...]" );
   println!();
   println!( "ARGUMENTS:" );
   println!( "  [MESSAGE]                          Prompt message for Claude" );
   println!();
   println!( "CREDENTIAL OPTIONS:" );
-  println!( "  --creds <FILE>                     Credentials JSON file (required)" );
-  println!( "  --timeout <SECS>                   Max seconds to wait for subprocess (default: 30)" );
-  println!( "  --trace                            Print underlying call details to stderr" );
+  println!( "  --creds <FILE>                     Credentials JSON file (required) [env: CLR_CREDS]" );
+  println!( "  --timeout <SECS>                   Max seconds to wait for subprocess (default: 30) [env: CLR_TIMEOUT]" );
+  println!( "  --trace                            Print underlying call details to stderr [env: CLR_TRACE]" );
+  println!( "  --journal <LEVEL>                  Journal level: full (default), meta, or off [env: CLR_JOURNAL]" );
+  println!( "  --journal-dir <PATH>               Journal directory (default: ~/.clr/journal/) [env: CLR_JOURNAL_DIR]" );
   println!( "  -h, --help                         Show this help" );
+  println!();
+  println!( "ISOLATION OPTIONS:" );
+  println!( "  --dry-run                          Print subprocess command without executing; exit 0" );
+  println!( "  --dir <PATH>                       Working directory for the subprocess [env: CLR_DIR]" );
+  println!( "  --add-dir <PATH>                   Additional directory Claude may access (repeatable) [env: CLR_ADD_DIR]" );
+  println!( "  --file <PATH>                      Pipe file content to subprocess stdin" );
+  println!( "  --expect <VALS>                    Pipe-separated expected values; mismatch triggers strategy (case-insensitive, trimmed)" );
+  println!( "  --expect-strategy <STRAT>          Mismatch handling: fail (default) → exit 3; default:<VAL> → print VAL, exit 0" );
+  println!( "                                     Note: retry is NOT supported for isolated (one-shot semantics)" );
+  println!( "  --output-file <PATH>               Write output to file (also prints to stdout) [env: CLR_OUTPUT_FILE]" );
+  println!( "  --strip-fences                     Strip outermost markdown code fences from output [env: CLR_STRIP_FENCES]" );
+  println!( "  --output-style <MODE>              Output rendering: raw (default), summary [env: CLR_OUTPUT_STYLE]" );
+  println!( "  --summary-fields <PROFILE>         Summary field selection: full, standard, minimal, or comma-separated [env: CLR_SUMMARY_FIELDS]" );
   println!();
   println!( "EXIT CODES:" );
   println!( "  0    Success" );
-  println!( "  1    Error (bad arguments, subprocess failure)" );
+  println!( "  1    Error (bad arguments, unsupported --expect-strategy retry, subprocess failure)" );
   println!( "  2    Timeout — subprocess did not finish within --timeout seconds" );
+  println!( "  3    Expect mismatch with fail strategy" );
   std::process::exit( 0 );
 }
 
@@ -166,6 +184,8 @@ pub( crate ) fn print_refresh_help() -> !
   println!( "  --creds <FILE>                     Credentials JSON file (required)" );
   println!( "  --timeout <SECS>                   Max seconds to wait for refresh (default: 45)" );
   println!( "  --trace                            Print underlying call details to stderr" );
+  println!( "  --journal <LEVEL>                  Journal level: full (default), meta, or off [env: CLR_JOURNAL]" );
+  println!( "  --journal-dir <PATH>               Journal directory (default: ~/.clr/journal/) [env: CLR_JOURNAL_DIR]" );
   println!( "  -h, --help                         Show this help" );
   println!();
   println!( "EXIT CODES:" );

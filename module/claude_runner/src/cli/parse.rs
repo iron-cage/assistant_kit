@@ -103,6 +103,8 @@ pub( crate ) struct CliArgs
   pub( crate ) fallback_model          : Option< String >,
   pub( crate ) output_style            : Option< String >,
   pub( crate ) summary_fields         : Option< String >,
+  pub( crate ) journal                : Option< String >,
+  pub( crate ) journal_dir            : Option< String >,
 }
 
 /// Consume the next argv element as a flag's value.
@@ -471,6 +473,21 @@ fn parse_runner_value_flag(
       }
       parsed.summary_fields = Some( v.to_string() );
     }
+    "--journal" =>
+    {
+      let v = next_value( tokens, next, "--journal" )?;
+      if !matches!( v, "full" | "meta" | "off" )
+      {
+        return Err( Error::msg( format!(
+          "invalid --journal value '{v}' — expected: full, meta, off"
+        ) ) );
+      }
+      parsed.journal = Some( v.to_string() );
+    }
+    "--journal-dir" =>
+    {
+      parsed.journal_dir = Some( next_value( tokens, next, "--journal-dir" )?.to_string() );
+    }
     _ => return Ok( false ),
   }
   Ok( true )
@@ -558,6 +575,8 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       fallback_model          : None,
       output_style            : None,
       summary_fields          : None,
+      journal                 : None,
+      journal_dir             : None,
     } );
   }
 

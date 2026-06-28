@@ -1,6 +1,7 @@
 use crate::VerbosityLevel;
 use claude_core::process::find_claude_processes;
 use std::path::PathBuf;
+use claude_journal::{ EventRecord, EventType, JournalWriter };
 
 // Return the gate state directory — $CLR_GATE_DIR or <sys-temp>/clr-gate.
 //
@@ -38,6 +39,19 @@ impl Drop for GateFile
   }
 }
 
+/// Return the gate poll interval in seconds.
+///
+/// In production: always 30 seconds.
+/// In tests: `_CLR_GATE_POLL_SECS` env var overrides so tests don't wait 30s per attempt.
+/// The `_` prefix signals internal/test-only use — not exposed in `--help`.
+fn gate_poll_secs() -> u64
+{
+  std::env::var( "_CLR_GATE_POLL_SECS" )
+    .ok()
+    .and_then( | s | s.parse().ok() )
+    .unwrap_or( 30 )
+}
+
 /// Block until fewer than `max` `claude` sessions are running, or until the 100-attempt
 /// limit is exhausted.  `max == 0` means unlimited — returns immediately without checking.
 ///
@@ -49,10 +63,16 @@ impl Drop for GateFile
 /// When the 100-attempt limit is reached, applies Runner-class retry via
 /// `apply_runner_retry()` — the entire 100-attempt polling sequence is retried
 /// `--retry-on-runner N` times before giving up.
-pub( super ) fn wait_for_session_slot( max : u32, verbosity : VerbosityLevel, cli : &super::parse::CliArgs )
+pub( super ) fn wait_for_session_slot(
+  max       : u32,
+  verbosity : VerbosityLevel,
+  cli       : &super::parse::CliArgs,
+  journal   : Option< &JournalWriter >,
+)
 {
   if max == 0 { return; }
-  let poll         = core::time::Duration::from_secs( 30 );
+  let poll_secs    = gate_poll_secs();
+  let poll         = core::time::Duration::from_secs( poll_secs );
   let max_attempts = 100_u32;
 
   // Gate state file — best-effort; I/O failures must not abort the caller.
@@ -72,6 +92,8 @@ pub( super ) fn wait_for_session_slot( max : u32, verbosity : VerbosityLevel, cl
   // Drop guard ensures the gate file is removed on return, panic, or exit(1).
   let _guard         = GateFile( state_path.clone() );
   let mut runner_attempt = 0u32;
+  let wait_start     = std::time::Instant::now();
+  let mut gate_emitted = false;
 
   // Outer loop: each iteration is one full 100-poll-attempt sequence.
   // apply_runner_retry() either returns (retries the sequence) or exits.
@@ -82,6 +104,20 @@ pub( super ) fn wait_for_session_slot( max : u32, verbosity : VerbosityLevel, cl
       let count = find_claude_processes().len();
       if u32::try_from( count ).unwrap_or( u32::MAX ) < max
       {
+        // Emit GateWait event if we actually waited at least one poll cycle.
+        if gate_emitted
+        {
+          let wait_ms = u64::try_from( wait_start.elapsed().as_millis() ).unwrap_or( u64::MAX );
+          if let Some( w ) = journal
+          {
+            let mut ev              = EventRecord::new( EventType::GateWait );
+            ev.fields.max_sessions  = Some( max );
+            ev.fields.wait_ms       = Some( wait_ms );
+            ev.fields.gate_attempts = Some( attempt.saturating_sub( 1 ) );
+            ev.fields.gate_outcome  = Some( "acquired".to_string() );
+            let _ = w.append( &ev );
+          }
+        }
         return; // _guard.drop() removes the file
       }
       if attempt == max_attempts
@@ -91,15 +127,16 @@ pub( super ) fn wait_for_session_slot( max : u32, verbosity : VerbosityLevel, cl
         let e = std::io::Error::other(
           format!( "session gate timed out — {count} active sessions, max-sessions={max}" )
         );
-        super::execution::apply_runner_retry( cli, &e, &mut runner_attempt );
+        super::execution::apply_runner_retry( cli, &e, &mut runner_attempt, journal );
         break; // non-exhaustion path: restart outer poll loop
       }
       if verbosity.shows_warnings()
       {
         eprintln!(
-          "Info: {count}/{max} sessions active; waiting 30s for a slot... (attempt {attempt}/{max_attempts})"
+          "Info: {count}/{max} sessions active; waiting {poll_secs}s for a slot... (attempt {attempt}/{max_attempts})"
         );
       }
+      gate_emitted = true;
       let _ = std::fs::write(
         &state_path,
         format!( r#"{{"cwd":"{cwd}","since":{since},"attempt":{attempt},"message":"waiting for session slot"}}"# ),

@@ -44,6 +44,8 @@ enabled = [
   "claude_runner/enabled",
   "dep:claude_storage",
   "claude_storage/cli",
+  "dep:claude_journal_viewer",
+  "claude_journal_viewer/routines",
   "dep:unilang",
   "unilang/enabled",
   "dep:error_tools",
@@ -52,14 +54,15 @@ enabled = [
 ]
 
 [dependencies]
-claude_assets  = { workspace = true, optional = true }
-claude_version = { workspace = true, optional = true }
-claude_profile = { workspace = true, optional = true }
-claude_runner  = { workspace = true, optional = true }
-claude_storage = { workspace = true, optional = true }
-unilang        = { workspace = true, optional = true }
-error_tools    = { workspace = true, optional = true }
-cli_fmt        = { workspace = true, optional = true }
+claude_assets          = { workspace = true, optional = true }
+claude_version         = { workspace = true, optional = true }
+claude_profile         = { workspace = true, optional = true }
+claude_runner          = { workspace = true, optional = true }
+claude_storage         = { workspace = true, optional = true }
+claude_journal_viewer  = { workspace = true, optional = true }
+unilang                = { workspace = true, optional = true }
+error_tools            = { workspace = true, optional = true }
+cli_fmt                = { workspace = true, optional = true }
 
 [build-dependencies]
 unilang    = { workspace = true }

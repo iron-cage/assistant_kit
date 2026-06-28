@@ -5,7 +5,7 @@ use serde::{ Deserialize, Serialize };
 /// Discriminator for event categories emitted by `clr`.
 ///
 /// Each variant corresponds to a specific execution lifecycle moment.
-/// Serializes as lowercase snake_case strings in JSON (e.g. `"gate_wait"`).
+/// Serializes as lowercase `snake_case` strings in JSON (e.g. `"gate_wait"`).
 #[ derive( Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize ) ]
 #[ serde( rename_all = "snake_case" ) ]
 pub enum EventType
@@ -53,7 +53,7 @@ impl EventType
   /// Case-sensitive. Returns `None` for unrecognized strings (forward compat).
   #[ inline ]
   #[ must_use ]
-  pub fn from_str( s : &str ) -> Option< Self >
+  pub fn parse( s : &str ) -> Option< Self >
   {
     match s
     {

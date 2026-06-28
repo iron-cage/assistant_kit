@@ -9,7 +9,7 @@ OAuth token, the updated credentials are written back to `--creds` in-place.
 **Syntax:**
 
 ```sh
-clr isolated [--creds <FILE>] [--timeout <SECS>] [MESSAGE]
+clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHROUGH...]
 ```
 
 **Parameters:**
@@ -20,6 +20,18 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [MESSAGE]
 | [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | `~/.claude/.credentials.json` | Credentials JSON file path (optional; defaults to current account credentials) |
 | [`--timeout`](../param/020_timeout.md) | [`TimeoutSecs`](../type/09_timeout_secs.md) | 30 | Max seconds to wait for subprocess |
 | [`--trace`](../param/013_trace.md) | bool | false | Print underlying call details to stderr then execute |
+| [`--dry-run`](../param/011_dry_run.md) | bool | false | Print subprocess command preview to stdout; exit 0 without spawning |
+| [`--dir`](../param/008_dir.md) | path | — | Working directory injected into subprocess command; validated to exist before spawn; env: `CLR_DIR` |
+| [`--add-dir`](../param/066_add_dir.md) | path (repeatable) | — | Additional directory Claude may access; injected per entry into subprocess command; env: `CLR_ADD_DIR` |
+| [`--file`](../param/025_file.md) | path | — | File piped as stdin to the subprocess; validated to exist before spawn |
+| [`--expect`](../param/030_expect.md) | string | — | Pipe-separated expected values; mismatch triggers `--expect-strategy` (case-insensitive, trimmed) |
+| [`--expect-strategy`](../param/031_expect_strategy.md) | enum | `fail` | Mismatch strategy: `fail` → exit 3; `default:<V>` → print `<V>`, exit 0; `retry` → exit 1 (unsupported for isolated) |
+| [`--journal`](../param/072_journal.md) | enum | `full` | Journal level: `full` (stdout+stderr ≤1MB), `meta` (metadata only), `off` (disabled) |
+| [`--journal-dir`](../param/073_journal_dir.md) | path | `~/.clr/journal/` | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` |
+| [`--output-file`](../param/029_output_file.md) | path | — | Write output to file (also prints to stdout); env: `CLR_OUTPUT_FILE` |
+| [`--strip-fences`](../param/026_strip_fences.md) | bool | false | Strip outermost markdown code fences from output; env: `CLR_STRIP_FENCES` |
+| [`--output-style`](../param/070_output_style.md) | enum | `raw` | Output rendering: `raw` (default), `summary`; env: `CLR_OUTPUT_STYLE` |
+| [`--summary-fields`](../param/071_summary_fields.md) | string | — | Summary field selection: `full`, `standard`, `minimal`, or comma-separated; env: `CLR_SUMMARY_FIELDS` |
 | `-h`/`--help` | — | — | Print isolated subcommand help and exit 0 |
 
 **Exit Codes:**
@@ -27,9 +39,11 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [MESSAGE]
 | Code | Meaning |
 |------|---------|
 | 0 | Claude exited successfully (may have refreshed creds in-place) |
-| 1 | Error (creds file not found, claude not in PATH, I/O failure) |
+| 1 | Error (creds file not found, claude not in PATH, I/O failure, unsupported `--expect-strategy retry`) |
 | 2 | Timeout — subprocess did not finish within `--timeout` seconds; any partial stdout accumulated before the timeout is preserved in the error output |
+| 3 | `--expect` mismatch with `fail` strategy |
 | N | Passthrough from claude subprocess (non-zero) |
+| 128+signal | POSIX signal termination — subprocess killed by signal (e.g., 130 = SIGINT, 143 = SIGTERM); passes through from subprocess identically to any other non-zero `N` |
 
 **Examples:**
 

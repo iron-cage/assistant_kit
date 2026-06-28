@@ -20,7 +20,7 @@ name = "claude_journal"
 path = "src/lib.rs"
 
 [dependencies]
-serde     = { workspace = true }
+serde     = { workspace = true, features = [ "std" ] }
 serde_json = { workspace = true }
 chrono    = { workspace = true }
 

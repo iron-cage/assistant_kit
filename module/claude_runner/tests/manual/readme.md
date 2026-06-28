@@ -644,11 +644,11 @@ cargo run -p claude_runner -- tools some-arg
 All TC-1 through TC-82 must pass without unexpected errors or panics.
 TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-82 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
-CC-1 through CC-181 are automated — listed for traceability only.
+CC-1 through CC-231 are automated — listed for traceability only.
 
 ---
 
-## Corner Cases (CC-1 through CC-112) — Automated
+## Corner Cases (CC-1 through CC-207) — Automated
 
 These are exhaustively tested by the integration test suite (not manual). Listed here for traceability.
 
@@ -863,7 +863,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-179:** `--summary-fields " , , "` (whitespace-only tokens) → exit 1; error `"unknown field ''"`
 - **CC-180:** `--summary-fields "type,BOGUS,session_id"` (mixed valid/invalid) → exit 1; error `"unknown field 'BOGUS'"`
 - **CC-181:** Non-zero claude exit + `--summary-fields minimal` → render_summary skipped; raw error output shown
-- Automated in: `summary_fields_test.rs` (EC-01–EC-12), `summary.rs` unit tests (9 tests)
+- Automated in: `summary_fields_test.rs` (EC-01–EC-12), `summary_unit_test.rs` (13 unit tests)
 
 ### Output style: --output-style param (TSK-231)
 
@@ -878,6 +878,54 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-190:** `--output-style raw --output-format json --dry-run "test"` → exit 0; `--output-format json` forwarded verbatim (explicit CLI arg, not auto-injected)
 - **CC-191:** `--output-style summary` with `CLR_OUTPUT_FORMAT=text` set → exit 0; auto-injection skipped (output_format already set); `--output-format text` forwarded
 - Automated in: `output_style_test.rs` EC-01–EC-14, IT-7
+
+### `clr isolated` param gap closure: --dry-run, --dir, --add-dir, --file, --expect, --expect-strategy (Plan 034)
+
+- **CC-192:** `clr isolated --creds /tmp/c.json --dry-run` → exit 0; command preview on stdout; no subprocess spawned; no temp HOME created
+- **CC-193:** `clr isolated --creds /tmp/c.json --dry-run "say hello"` → exit 0; preview contains `--print` and message text
+- **CC-194:** `clr isolated --creds /tmp/c.json --dry-run --dir /tmp "msg"` → exit 0; preview contains `--dir /tmp`
+- **CC-195:** `clr isolated --creds /tmp/c.json --dry-run --add-dir /extra "msg"` → exit 0; preview contains `--add-dir /extra`
+- **CC-196:** `clr isolated --dir /tmp "msg"` (unix: fake claude `echo "$@"`) → `--dir /tmp` appears in subprocess args
+- **CC-197:** `clr isolated --dir /nonexistent-path "msg"` → exit 1; stderr contains "not found" or "No such directory"; subprocess never spawned
+- **CC-198:** `clr isolated --add-dir /extra "msg"` (unix: fake claude) → `--add-dir /extra` injected into subprocess command
+- **CC-199:** `clr isolated --dir /tmp --add-dir /extra "msg"` (unix: fake claude) → both `--dir /tmp` and `--add-dir /extra` injected
+- **CC-200:** `CLR_DIR=/tmp clr isolated --dry-run "msg"` → exit 0; preview contains `--dir /tmp` (env var fallback)
+- **CC-201:** `clr isolated --file /path/to/file "msg"` (unix: fake claude `cat`) → file content appears on stdout (piped as stdin)
+- **CC-202:** `clr isolated --file /nonexistent "msg"` → exit 1; stderr "not found" or "No such file"; pre-spawn check fires before temp HOME created
+- **CC-203:** `clr isolated --file /path/to/file "msg"` (unix: fake claude `cat`) with message → both file stdin and message args applied simultaneously
+- **CC-204:** `clr isolated --expect "hello" "msg"` (unix: fake claude outputs "hello") → exit 0; stdout preserved
+- **CC-205:** `clr isolated --expect "hello" "msg"` (unix: fake claude outputs "world") → exit 3; stderr contains expected/got; strategy default is `fail`
+- **CC-206:** `clr isolated --expect "hello" --expect-strategy "default:no" "msg"` (unix: fake claude outputs "world") → exit 0; "no" on stdout (fallback value)
+- **CC-207:** `clr isolated --expect "hello" --expect-strategy retry "msg"` (unix: fake claude outputs "world") → exit 1; stderr "retry is not supported for isolated"
+- Automated in: `isolated_test.rs` IT-12–IT-27
+
+### Journal: --journal, --journal-dir, CLR_JOURNAL, CLR_JOURNAL_DIR (Plan 033)
+
+- **CC-208:** `--journal off` → no JSONL file created in journal dir
+- **CC-209:** `--journal full` → JSONL with `"type":"execution"` and stdout field
+- **CC-210:** `--journal meta` → JSONL without stdout/stderr fields
+- **CC-211:** `--journal-dir <dir>` only → default level is "full"; JSONL in custom dir
+- **CC-212:** `CLR_JOURNAL=meta` env → meta-level JSONL (no stdout/stderr)
+- **CC-213:** `CLR_JOURNAL_DIR=<dir>` env → JSONL in env-specified dir
+- **CC-214:** Retry fires → `"type":"retry"` event in JSONL
+- **CC-215:** Timeout fires → `"type":"timeout"` event in JSONL with exit_code 4
+- **CC-216:** `CLR_JOURNAL=bogus` (run/ask) → exit 1; error mentions `CLR_JOURNAL`
+- **CC-217:** Default dir = `~/.clr/journal/` when no `--journal-dir` and no `CLR_JOURNAL_DIR`
+- **CC-218:** Gate blocks → `"type":"gate_wait"` with `"gate_outcome":"acquired"`
+- **CC-219:** Validation retry → `"type":"validation_retry"` event
+- **CC-220:** Read-only journal dir → runner exit preserved; journal errors silently ignored
+- **CC-221:** `--journal-dir` CLI wins over `CLR_JOURNAL_DIR` env (precedence)
+- **CC-222:** Stdout > 1 MB → truncated with `[truncated at 1MB]` marker
+- **CC-223:** `--dry-run` does NOT create journal directory (BUG-319)
+- **CC-224:** `--journal bogus` CLI flag → exit 1
+- **CC-225:** `--journal Full` (case-sensitive) → exit 1
+- **CC-226:** `--journal` missing value → exit 1
+- **CC-227:** `--journal full --journal meta` (duplicate; last wins) → meta-level JSONL
+- **CC-228:** `--journal off --journal-dir <dir>` → no JSONL; dir not created
+- **CC-229:** `CLR_JOURNAL=off` + `CLR_JOURNAL_DIR=<dir>` → no JSONL; dir not created
+- **CC-230:** `CLR_JOURNAL=bogus` (isolated) → exit 1; error mentions `CLR_JOURNAL`
+- **CC-231:** `CLR_JOURNAL=bogus` (refresh) → exit 1; error mentions `CLR_JOURNAL`
+- Automated in: `journal_integration_test.rs` EC-01–EC-22, `isolated_test.rs` IT-37, `refresh_test.rs` IT-9
 
 ---
 

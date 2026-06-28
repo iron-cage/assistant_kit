@@ -5,7 +5,7 @@
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
 | `api/` | Index of API doc instances covering COMMANDS_YAML, VerbosityLevel, and register_commands contracts | [api/readme.md](api/readme.md) | 1 |
-| `cli/` | Index of CLI reference instances covering commands, params, types, groups, dictionary, user stories, env params | [cli/readme.md](cli/readme.md) | 5 |
+| `cli/` | Index of CLI reference instances covering commands, params, types, groups, dictionary, user stories, env params, parity | [cli/readme.md](cli/readme.md) | 6 |
 | `cli/param/` | Index of individual parameter reference instances (69 parameters) | [cli/param/readme.md](cli/param/readme.md) | 69 |
 | `cli/user_story/` | Index of user goal and usage pattern instances (27 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 27 |
 | `feature/` | Index of feature doc instances covering the clr binary tool design and journaling integration | [feature/readme.md](feature/readme.md) | 2 |
@@ -21,6 +21,7 @@
 | cli | — | Environment Parameters | [cli/env_param.md](cli/env_param.md) |
 | cli | — | Parameter Groups | [cli/param_group/](cli/param_group/readme.md) |
 | cli | — | Types | [cli/type/](cli/type/readme.md) |
+| cli | — | Parity | [cli/parity/](cli/parity/readme.md) |
 | cli/param | 001 | [MESSAGE] | [cli/param/001_message.md](cli/param/001_message.md) |
 | cli/param | 002 | --print | [cli/param/002_print.md](cli/param/002_print.md) |
 | cli/param | 003 | --model | [cli/param/003_model.md](cli/param/003_model.md) |

@@ -24,6 +24,7 @@
 //! | `ast_usage_command_accepted` | `.usage` routed via profile programmatic registration |
 //! | `ast_paths_command_accepted` | `.paths` routed via profile programmatic registration |
 //! | `ast_account_list_command_accepted` | `.accounts` routed via profile programmatic registration |
+//! | `ast_journal_list_command_accepted` | `.journal.list` routed via journal_viewer YAML aggregation |
 
 #[test]
 fn ast_package_name_is_assistant()
@@ -143,6 +144,30 @@ fn ast_account_list_command_accepted()
   assert_eq!(
     out.status.code().unwrap_or( -1 ), 0,
     "ast .accounts should exit 0; stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+}
+
+/// Verify `.journal.list` is routed through `ast` via YAML aggregation from
+/// `claude_journal_viewer`.
+///
+/// `.journal.list` is registered via the static YAML aggregation in `assistant/build.rs`
+/// (not programmatic registration), which aggregates `claude_journal.commands.yaml`.
+/// An empty journal dir is fine — the command lists 0 events and exits 0.
+#[ test ]
+fn ast_journal_list_command_accepted()
+{
+  let home = tempfile::TempDir::new().unwrap();
+  let out  = std::process::Command::new(
+    assert_cmd::cargo::cargo_bin!( "ast" )
+  )
+    .env( "HOME", home.path() )
+    .args( [ ".journal.list" ] )
+    .output()
+    .unwrap();
+  assert_eq!(
+    out.status.code().unwrap_or( -1 ), 0,
+    "ast .journal.list should exit 0 (empty journal is valid); stderr: {}",
     String::from_utf8_lossy( &out.stderr ),
   );
 }

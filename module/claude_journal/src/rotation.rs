@@ -9,7 +9,7 @@ use chrono::{ Datelike, Utc };
 #[ must_use ]
 pub fn date_filename( year : i32, month : u32, day : u32 ) -> String
 {
-  format!( "{:04}-{:02}-{:02}.jsonl", year, month, day )
+  format!( "{year:04}-{month:02}-{day:02}.jsonl" )
 }
 
 /// Return the JSONL filename for today's UTC date.

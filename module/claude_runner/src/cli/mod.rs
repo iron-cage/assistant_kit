@@ -11,6 +11,11 @@ mod ps;
 mod kill;
 mod tools;
 mod summary;
+// summary_unit_test.rs (external test) imports render_summary/resolve_fields via the public API.
+// The unused_imports lint fires for pub use in private modules when no code in the lib crate itself
+// references the re-exported path — but the test file consumer is invisible at lib-compile time.
+#[ allow( unused_imports ) ]
+pub use summary::{ render_summary, resolve_fields };
 
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
 use parse::CliArgs;
@@ -139,14 +144,50 @@ fn is_close_typo( first : &str, sub : &str ) -> bool
   true
 }
 
-pub( super ) fn run_built_command( builder : &ClaudeCommand, cli : &CliArgs )
+/// Resolve the journal directory from CLI args, env var, or home-based default.
+fn resolve_journal_dir( journal_dir : Option< &str > ) -> std::path::PathBuf
+{
+  if let Some( d ) = journal_dir
+  {
+    return std::path::PathBuf::from( d );
+  }
+  if let Ok( v ) = std::env::var( "CLR_JOURNAL_DIR" )
+  {
+    if !v.is_empty() { return std::path::PathBuf::from( v ); }
+  }
+  std::env::var( "HOME" )
+    .map_or_else( | _ | std::path::PathBuf::from( ".clr/journal" ), | h | std::path::PathBuf::from( h ).join( ".clr" ).join( "journal" ) )
+}
+
+/// Create a `JournalWriter` from CLI args unless journaling is disabled (`--journal off`).
+///
+/// Resolution order for the directory: `--journal-dir` > `CLR_JOURNAL_DIR` > `~/.clr/journal/`.
+/// The directory is created if it does not exist. I/O errors during directory creation are
+/// silently ignored — journaling is best-effort and must not abort the runner.
+pub( super ) fn resolve_journal_writer(
+  journal     : Option< &str >,
+  journal_dir : Option< &str >,
+) -> Option< claude_journal::JournalWriter >
+{
+  let level = journal.unwrap_or( "full" );
+  if level == "off" { return None; }
+  let dir = resolve_journal_dir( journal_dir );
+  let _ = std::fs::create_dir_all( &dir );
+  Some( claude_journal::JournalWriter::new( dir ) )
+}
+
+pub( super ) fn run_built_command(
+  builder : &ClaudeCommand,
+  cli     : &CliArgs,
+  journal : Option< &claude_journal::JournalWriter >,
+)
 {
   let verbosity = cli.verbosity.unwrap_or_default();
 
   // Concurrency gate: block before subprocess launch when max active claude sessions is reached.
   // Default limit is 30; 0 = unlimited.  dry-run is bypassed by caller (never reaches here).
   let max_sessions = cli.max_sessions.unwrap_or( 30 );
-  wait_for_session_slot( max_sessions, verbosity, cli );
+  wait_for_session_slot( max_sessions, verbosity, cli, journal );
 
   if cli.trace || verbosity.shows_verbose_detail()
   {
@@ -160,11 +201,11 @@ pub( super ) fn run_built_command( builder : &ClaudeCommand, cli : &CliArgs )
 
   if cli.print_mode || ( cli.message.is_some() && !cli.interactive )
   {
-    execution::run_print_mode( builder, cli );
+    execution::run_print_mode( builder, cli, journal );
   }
   else
   {
-    execution::run_interactive( builder, cli );
+    execution::run_interactive( builder, cli, journal );
   }
 }
 
@@ -226,7 +267,14 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     std::process::exit( 0 );
   }
 
-  run_built_command( &builder, &cli );
+  // Fix(BUG-319): resolve journal writer AFTER the dry-run exit so that `--dry-run`
+  //   does not create the journal directory as a filesystem side effect.
+  // Root cause: `resolve_journal_writer()` calls `create_dir_all()` unconditionally;
+  //   placing it before the dry-run check meant every `--dry-run` invocation created
+  //   `~/.clr/journal/` (or the `--journal-dir` path) even though no events are emitted.
+  // Pitfall: `journal` is only consumed by `run_built_command()` — safe to defer.
+  let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
+  run_built_command( &builder, &cli, journal.as_ref() );
   std::process::exit( 0 );
 }
 
@@ -262,12 +310,91 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     Ok( c )  => c,
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
   };
-  apply_isolated_env_vars( &mut cli );
+  if let Err( e ) = apply_isolated_env_vars( &mut cli )
+  {
+    eprintln!( "Error: {e}" );
+    std::process::exit( 1 );
+  }
   if cli.creds_path.is_empty()
   {
     eprintln!( "{CREDS_PATH_ERROR}" );
     std::process::exit( 1 );
   }
+
+  // Phase 1: --dry-run — build preview command and print to stdout without spawning.
+  if cli.dry_run
+  {
+    let mut args : Vec< String > = Vec::new();
+    args.push( "--effort".to_string() );
+    args.push( "max".to_string() );
+    args.push( "--no-session-persistence".to_string() );
+    if cli.message.is_some() { args.push( "--dangerously-skip-permissions".to_string() ); }
+    // Phase 2: --dir and --add-dir show in preview
+    if let Some( ref d ) = cli.dir
+    {
+      args.push( "--dir".to_string() );
+      args.push( d.clone() );
+    }
+    for ad in &cli.add_dirs
+    {
+      args.push( "--add-dir".to_string() );
+      args.push( ad.clone() );
+    }
+    if let Some( ref m ) = cli.message
+    {
+      args.push( "--print".to_string() );
+      args.push( m.clone() );
+    }
+    args.extend_from_slice( &cli.passthrough_args );
+    let temp_dir = std::env::temp_dir().join( format!( "claude_isolated_{}", std::process::id() ) );
+    let mut full_args = Vec::with_capacity( args.len() + 2 );
+    if let Some( id ) = IsolatedModel::Default.model_id()
+    {
+      full_args.push( "--model".to_string() );
+      full_args.push( id.to_string() );
+    }
+    full_args.extend( args );
+    let preview = ClaudeCommand::new().with_home( &temp_dir ).with_args( full_args );
+    handle_dry_run( &preview );
+    std::process::exit( 0 );
+  }
+
+  // Phase 2: validate --dir path exists before spawning subprocess.
+  if let Some( ref d ) = cli.dir
+  {
+    if !std::path::Path::new( d ).exists()
+    {
+      eprintln!( "Error: --dir path does not exist: {d}" );
+      std::process::exit( 1 );
+    }
+  }
+
+  // Phase 3: validate --file path exists before spawning subprocess.
+  if let Some( ref f ) = cli.file
+  {
+    if !std::path::Path::new( f ).exists()
+    {
+      eprintln!( "Error: --file path does not exist: {f}" );
+      std::process::exit( 1 );
+    }
+  }
+
+  // Phase 2: inject --dir/--add-dir into the front of passthrough_args so they
+  // appear in the subprocess command before any user-supplied passthrough flags.
+  let mut passthrough : Vec< String > = Vec::new();
+  if let Some( ref d ) = cli.dir
+  {
+    passthrough.push( "--dir".to_string() );
+    passthrough.push( d.clone() );
+  }
+  for ad in &cli.add_dirs
+  {
+    passthrough.push( "--add-dir".to_string() );
+    passthrough.push( ad.clone() );
+  }
+  passthrough.extend_from_slice( &cli.passthrough_args );
+
+  let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
   run_isolated_command(
     "isolated",
     &cli.creds_path,
@@ -276,9 +403,17 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     IsolatedModel::Default,
     EffortLevel::Max,
     cli.message.as_deref(),
-    &cli.passthrough_args,
+    &passthrough,
     cli.message.is_some(), // skip-perms when a real task message is present
     false,                 // chrome stays on for isolated tasks (may use browser tools)
+    cli.file.as_deref(),
+    cli.expect.as_deref(),
+    cli.expect_strategy.as_deref(),
+    journal,
+    cli.output_file.as_deref(),
+    cli.strip_fences,
+    cli.output_style.as_deref(),
+    cli.summary_fields.as_deref(),
   )
 }
 
@@ -290,11 +425,16 @@ pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
     Ok( c )  => c,
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
   };
-  apply_refresh_env_vars( &mut cli );
+  if let Err( e ) = apply_refresh_env_vars( &mut cli )
+  {
+    eprintln!( "Error: {e}" );
+    std::process::exit( 1 );
+  }
   if cli.creds_path.is_empty()
   {
     eprintln!( "{CREDS_PATH_ERROR}" );
     std::process::exit( 1 );
   }
-  run_refresh_command( &cli.creds_path, cli.timeout_secs, cli.trace )
+  let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
+  run_refresh_command( &cli.creds_path, cli.timeout_secs, cli.trace, journal )
 }

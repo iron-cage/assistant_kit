@@ -23,8 +23,20 @@ pub( super ) struct IsolatedArgs
   pub( super ) creds_path       : String,
   pub( super ) timeout_secs     : u64,
   pub( super ) trace            : bool,
+  pub( super ) dry_run          : bool,
   pub( super ) message          : Option< String >,
   pub( super ) passthrough_args : Vec< String >,
+  pub( super ) dir              : Option< String >,
+  pub( super ) add_dirs         : Vec< String >,
+  pub( super ) file             : Option< String >,
+  pub( super ) expect           : Option< String >,
+  pub( super ) expect_strategy  : Option< String >,
+  pub( super ) journal          : Option< String >,
+  pub( super ) journal_dir      : Option< String >,
+  pub( super ) output_file      : Option< String >,
+  pub( super ) strip_fences     : bool,
+  pub( super ) output_style     : Option< String >,
+  pub( super ) summary_fields   : Option< String >,
 }
 
 /// Parsed arguments for the `refresh` subcommand.
@@ -33,6 +45,8 @@ pub( super ) struct RefreshArgs
   pub( super ) creds_path   : String,
   pub( super ) timeout_secs : u64,
   pub( super ) trace        : bool,
+  pub( super ) journal      : Option< String >,
+  pub( super ) journal_dir  : Option< String >,
 }
 
 /// Parse a raw string as a `u64` timeout in seconds.
@@ -47,6 +61,21 @@ fn parse_timeout_secs( raw : &str ) -> Result< u64 >
        Expected non-negative integer"
     ) )
   )
+}
+
+/// Validate and return a journal level string (`full`, `meta`, or `off`).
+fn validate_journal_level( v : &str ) -> Result< String >
+{
+  if matches!( v, "full" | "meta" | "off" )
+  {
+    Ok( v.to_string() )
+  }
+  else
+  {
+    Err( Error::msg( format!(
+      "invalid --journal value '{v}' — expected: full, meta, off"
+    ) ) )
+  }
 }
 
 /// Apply `CLR_CREDS`, `CLR_TIMEOUT`, and `CLR_TRACE` env var fallbacks for credential subcommands.
@@ -89,11 +118,9 @@ fn apply_cred_env_vars(
 /// Unknown flags (before `--`) are rejected with an error.
 pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedArgs >
 {
-  let mut creds_path       : Option< String > = None;
-  let mut timeout_secs     : u64              = 30;
-  let mut trace            : bool             = false;
-  let mut message_parts    : Vec< String >    = Vec::new();
-  let mut passthrough_args : Vec< String >    = Vec::new();
+  let mut args          = IsolatedArgs { timeout_secs : 30, ..Default::default() };
+  let mut creds_path_raw : Option< String > = None;
+  let mut message_parts  : Vec< String >    = Vec::new();
   let mut i = 0;
   while i < tokens.len()
   {
@@ -102,30 +129,75 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
     {
       "--" =>
       {
-        passthrough_args.extend( tokens[ i + 1 .. ].iter().cloned() );
+        args.passthrough_args.extend( tokens[ i + 1 .. ].iter().cloned() );
         break;
       }
       "--creds" =>
       {
-        creds_path = Some( next_value( tokens, i + 1, "--creds" )?.to_string() );
+        creds_path_raw = Some( next_value( tokens, i + 1, "--creds" )?.to_string() );
         i += 1;
       }
       "--timeout" =>
       {
-        let raw      = next_value( tokens, i + 1, "--timeout" )?;
-        timeout_secs = parse_timeout_secs( raw )?;
+        args.timeout_secs = parse_timeout_secs( next_value( tokens, i + 1, "--timeout" )? )?;
         i += 1;
       }
-      "--trace" =>
+      "--trace"   => { args.trace   = true; }
+      "--dry-run" => { args.dry_run = true; }
+      "--dir" =>
       {
-        trace = true;
+        args.dir = Some( next_value( tokens, i + 1, "--dir" )?.to_string() );
+        i += 1;
       }
-      // Fix(BUG-222): parse_isolated_args fell through --help to the
-      // starts_with('-') catch-all, returning Err("unknown option: --help") → exit 1.
-      // Root cause: no explicit --help arm in parse_isolated_args; global parse_args has
-      // one but parse_isolated_args was written without it.
-      // Pitfall: any catch-all for unknown flags silently swallows --help and -h;
-      // always add an explicit --help arm before the catch-all in every subcommand parser.
+      "--add-dir" =>
+      {
+        args.add_dirs.push( next_value( tokens, i + 1, "--add-dir" )?.to_string() );
+        i += 1;
+      }
+      "--file" =>
+      {
+        args.file = Some( next_value( tokens, i + 1, "--file" )?.to_string() );
+        i += 1;
+      }
+      "--expect" =>
+      {
+        args.expect = Some( next_value( tokens, i + 1, "--expect" )?.to_string() );
+        i += 1;
+      }
+      "--expect-strategy" =>
+      {
+        args.expect_strategy = Some( next_value( tokens, i + 1, "--expect-strategy" )?.to_string() );
+        i += 1;
+      }
+      "--journal" =>
+      {
+        args.journal = Some( validate_journal_level( next_value( tokens, i + 1, "--journal" )? )? );
+        i += 1;
+      }
+      "--journal-dir" =>
+      {
+        args.journal_dir = Some( next_value( tokens, i + 1, "--journal-dir" )?.to_string() );
+        i += 1;
+      }
+      "--output-file" =>
+      {
+        args.output_file = Some( next_value( tokens, i + 1, "--output-file" )?.to_string() );
+        i += 1;
+      }
+      "--strip-fences" => { args.strip_fences = true; }
+      "--output-style" =>
+      {
+        args.output_style = Some( next_value( tokens, i + 1, "--output-style" )?.to_string() );
+        i += 1;
+      }
+      "--summary-fields" =>
+      {
+        args.summary_fields = Some( next_value( tokens, i + 1, "--summary-fields" )?.to_string() );
+        i += 1;
+      }
+      // Fix(BUG-222): explicit --help arm prevents catch-all from swallowing help flags.
+      // Root cause: no --help arm in subcommand parser; catch-all returned Err.
+      // Pitfall: always add --help before the starts_with('-') catch-all.
       "-h" | "--help" => { super::help::print_isolated_help(); }
       s if s.starts_with( '-' ) =>
       {
@@ -140,19 +212,44 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
     }
     i += 1;
   }
-  // Note: creds_path validation is deferred to after apply_isolated_env_vars() is called
-  // in run_cli() so that CLR_CREDS env var can supply the value before the check.
-  let creds_path = creds_path.unwrap_or_default();
-  let message    = if message_parts.is_empty() { None } else { Some( message_parts.join( " " ) ) };
-  Ok( IsolatedArgs { creds_path, timeout_secs, trace, message, passthrough_args } )
+  // creds_path validation deferred to after apply_isolated_env_vars() so CLR_CREDS can supply it.
+  args.creds_path = creds_path_raw.unwrap_or_default();
+  args.message    = if message_parts.is_empty() { None } else { Some( message_parts.join( " " ) ) };
+  Ok( args )
 }
 
-/// Apply `CLR_CREDS`, `CLR_TIMEOUT`, and `CLR_TRACE` env var fallbacks for `isolated`.
+/// Apply `CLR_CREDS`, `CLR_TIMEOUT`, `CLR_TRACE`, `CLR_DIR`, `CLR_ADD_DIR`,
+/// `CLR_JOURNAL`, `CLR_JOURNAL_DIR`, `CLR_OUTPUT_FILE`, `CLR_STRIP_FENCES`,
+/// `CLR_OUTPUT_STYLE`, and `CLR_SUMMARY_FIELDS` env var fallbacks for `isolated`.
 ///
 /// Delegates to [`apply_cred_env_vars`] with isolated's timeout sentinel (30).
-pub( super ) fn apply_isolated_env_vars( parsed : &mut IsolatedArgs )
+pub( super ) fn apply_isolated_env_vars( parsed : &mut IsolatedArgs ) -> Result< () >
 {
   apply_cred_env_vars( &mut parsed.creds_path, &mut parsed.timeout_secs, 30, &mut parsed.trace );
+  if parsed.dir.is_none()       { parsed.dir     = env_str( "CLR_DIR" ); }
+  if parsed.add_dirs.is_empty()
+  {
+    if let Some( v ) = env_str( "CLR_ADD_DIR" ) { parsed.add_dirs.push( v ); }
+  }
+  if parsed.journal.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_JOURNAL" )
+    {
+      if !matches!( v.as_str(), "full" | "meta" | "off" )
+      {
+        return Err( Error::msg( format!(
+          "CLR_JOURNAL: invalid value '{v}' — expected: full, meta, off"
+        ) ) );
+      }
+      parsed.journal = Some( v );
+    }
+  }
+  if parsed.journal_dir.is_none()  { parsed.journal_dir  = env_str( "CLR_JOURNAL_DIR" ); }
+  if parsed.output_file.is_none()  { parsed.output_file  = env_str( "CLR_OUTPUT_FILE" ); }
+  if !parsed.strip_fences          { parsed.strip_fences = env_bool( "CLR_STRIP_FENCES" ); }
+  if parsed.output_style.is_none() { parsed.output_style = env_str( "CLR_OUTPUT_STYLE" ); }
+  if parsed.summary_fields.is_none() { parsed.summary_fields = env_str( "CLR_SUMMARY_FIELDS" ); }
+  Ok( () )
 }
 
 /// Parse `tokens` as arguments to the `refresh` subcommand.
@@ -164,6 +261,8 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
   let mut creds_path   : Option< String > = None;
   let mut timeout_secs : u64              = 45;
   let mut trace        : bool             = false;
+  let mut journal      : Option< String > = None;
+  let mut journal_dir  : Option< String > = None;
   let mut i = 0;
   while i < tokens.len()
   {
@@ -185,6 +284,16 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
       {
         trace = true;
       }
+      "--journal" =>
+      {
+        journal = Some( validate_journal_level( next_value( tokens, i + 1, "--journal" )? )? );
+        i += 1;
+      }
+      "--journal-dir" =>
+      {
+        journal_dir = Some( next_value( tokens, i + 1, "--journal-dir" )?.to_string() );
+        i += 1;
+      }
       "-h" | "--help" => { super::help::print_refresh_help(); }
       s if s.starts_with( '-' ) =>
       {
@@ -197,13 +306,29 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
     i += 1;
   }
   let creds_path = creds_path.unwrap_or_default();
-  Ok( RefreshArgs { creds_path, timeout_secs, trace } )
+  Ok( RefreshArgs { creds_path, timeout_secs, trace, journal, journal_dir } )
 }
 
-/// Apply `CLR_CREDS`, `CLR_TIMEOUT`, and `CLR_TRACE` env var fallbacks for `refresh`.
+/// Apply `CLR_CREDS`, `CLR_TIMEOUT`, `CLR_TRACE`, `CLR_JOURNAL`, and `CLR_JOURNAL_DIR`
+/// env var fallbacks for `refresh`.
 ///
 /// Delegates to [`apply_cred_env_vars`] with refresh's timeout sentinel (45).
-pub( super ) fn apply_refresh_env_vars( parsed : &mut RefreshArgs )
+pub( super ) fn apply_refresh_env_vars( parsed : &mut RefreshArgs ) -> Result< () >
 {
   apply_cred_env_vars( &mut parsed.creds_path, &mut parsed.timeout_secs, 45, &mut parsed.trace );
+  if parsed.journal.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_JOURNAL" )
+    {
+      if !matches!( v.as_str(), "full" | "meta" | "off" )
+      {
+        return Err( Error::msg( format!(
+          "CLR_JOURNAL: invalid value '{v}' — expected: full, meta, off"
+        ) ) );
+      }
+      parsed.journal = Some( v );
+    }
+  }
+  if parsed.journal_dir.is_none() { parsed.journal_dir = env_str( "CLR_JOURNAL_DIR" ); }
+  Ok( () )
 }

@@ -12,5 +12,5 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Runner Tool](001_runner_tool.md) | clr binary design: modes, default flags, and YAML library | ✅ |
-| 002 | [Journaling Integration](002_journaling_integration.md) | Integration with claude_journal for automatic event journaling | Planned |
+| 002 | [Journaling Integration](002_journaling_integration.md) | Integration with claude_journal for automatic event journaling | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

@@ -1,12 +1,140 @@
 use claude_runner_core::{ ClaudeCommand, ErrorKind, ExecutionOutput, signal_exit_code };
 use super::parse::{ CliArgs, ExpectStrategy };
 use super::fence::strip_fences;
+use claude_journal::{ EventRecord, EventType, JournalWriter };
+
+// -------------------------------------------------------------------
+// Journal helpers
+// -------------------------------------------------------------------
+
+// Emit a journal event; silently ignores write errors.
+//
+// Journaling is best-effort — a write failure must never abort the runner.
+fn emit( writer : Option< &JournalWriter >, ev : &EventRecord )
+{
+  if let Some( w ) = writer { let _ = w.append( ev ); }
+}
+
+// Return true if the journal level is "full" (stdout/stderr included in events).
+fn is_full_level( cli : &CliArgs ) -> bool
+{
+  cli.journal.as_deref().unwrap_or( "full" ) == "full"
+}
+
+// Emit an Execution event (success or error path).
+fn emit_execution(
+  writer    : Option< &JournalWriter >,
+  cli       : &CliArgs,
+  stdout    : &str,
+  stderr    : &str,
+  exit_code : i32,
+)
+{
+  let mut ev               = EventRecord::new( EventType::Execution );
+  ev.fields.exit_code      = Some( exit_code );
+  ev.fields.message.clone_from( &cli.message );
+  ev.fields.dir.clone_from( &cli.dir );
+  ev.fields.model.clone_from( &cli.model );
+  ev.fields.timeout_secs   = cli.timeout;
+  ev.fields.output_style.clone_from( &cli.output_style );
+  ev.fields.output_format.clone_from( &cli.output_format );
+  if is_full_level( cli )
+  {
+    const TRUNCATE : usize = 1_048_576;
+    const MARKER   : &str  = "\n[truncated at 1MB]";
+    if !stdout.is_empty()
+    {
+      let mut s : String = stdout.chars().take( TRUNCATE ).collect();
+      if stdout.chars().count() > TRUNCATE { s.push_str( MARKER ); }
+      ev.fields.stdout = Some( s );
+    }
+    if !stderr.is_empty()
+    {
+      let mut s : String = stderr.chars().take( TRUNCATE ).collect();
+      if stderr.chars().count() > TRUNCATE { s.push_str( MARKER ); }
+      ev.fields.stderr = Some( s );
+    }
+  }
+  emit( writer, &ev );
+}
+
+// Emit a Timeout event.
+fn emit_timeout(
+  writer       : Option< &JournalWriter >,
+  cli          : &CliArgs,
+  timeout_secs : u32,
+)
+{
+  let mut ev             = EventRecord::new( EventType::Timeout );
+  ev.fields.exit_code    = Some( 4 );
+  ev.fields.timeout_secs = Some( timeout_secs );
+  ev.fields.message.clone_from( &cli.message );
+  emit( writer, &ev );
+}
+
+// Emit a Retry event.
+fn emit_retry(
+  writer        : Option< &JournalWriter >,
+  error_class   : &str,
+  attempt       : u32,
+  limit         : u32,
+  delay_secs    : u32,
+  error_message : &str,
+)
+{
+  let mut ev              = EventRecord::new( EventType::Retry );
+  ev.fields.error_class   = Some( error_class.to_string() );
+  ev.fields.attempt       = Some( attempt );
+  ev.fields.limit         = Some( limit );
+  ev.fields.delay_secs    = Some( delay_secs );
+  ev.fields.error_message = Some( error_message.to_string() );
+  emit( writer, &ev );
+}
+
+// Emit a ValidationRetry event.
+fn emit_validation_retry(
+  writer     : Option< &JournalWriter >,
+  attempt    : u32,
+  limit      : u32,
+  delay_secs : u32,
+  msg        : &str,
+)
+{
+  let mut ev              = EventRecord::new( EventType::ValidationRetry );
+  ev.fields.attempt       = Some( attempt );
+  ev.fields.limit         = Some( limit );
+  ev.fields.delay_secs    = Some( delay_secs );
+  ev.fields.error_message = Some( msg.to_string() );
+  emit( writer, &ev );
+}
+
+// Emit an Interactive event.
+fn emit_interactive(
+  writer    : Option< &JournalWriter >,
+  cli       : &CliArgs,
+  exit_code : i32,
+)
+{
+  let mut ev           = EventRecord::new( EventType::Interactive );
+  ev.fields.exit_code  = Some( exit_code );
+  ev.fields.message.clone_from( &cli.message );
+  ev.fields.dir.clone_from( &cli.dir );
+  ev.fields.model.clone_from( &cli.model );
+  emit( writer, &ev );
+}
+
+// -------------------------------------------------------------------
 
 // Return a user-facing error message for a spawn `io::Error`.
 //
 // Distinguishes the common "not found" case (claude not installed) from other OS errors
 // so callers can surface an actionable install hint without duplicating the check.
-// Fix(BUG-298): [Runner] prefix missing from all branches — see task/claude_runner/bug/298_spawn_error_missing_runner_class_prefix.md
+// Fix(BUG-298): prepend `[Runner]` to both branches of `spawn_error_msg`.
+// Root cause: both branches returned bare strings without the class prefix, so the error
+//   classification display showed no class label — the `[Runner]` marker was present in
+//   `classify_error()` logic but never inserted into the human-facing message.
+// Pitfall: spawn errors bypass the normal `ExecutionOutput`-based classification path;
+//   the `[Runner]` label must be injected here, at message construction time.
 fn spawn_error_msg( e : &std::io::Error ) -> String
 {
   if e.kind() == std::io::ErrorKind::NotFound
@@ -184,7 +312,12 @@ fn delay_suffix( delay : u32 ) -> String
 /// Exits the process when a mismatch is not resolved:
 /// - Retry exhausted → exit 3; Fail strategy → exit 3.
 /// - Retry succeeds or Default strategy → prints result and exits 0.
-fn apply_expect_validation( cli : &CliArgs, builder : &ClaudeCommand, out : String ) -> String
+fn apply_expect_validation(
+  cli     : &CliArgs,
+  builder : &ClaudeCommand,
+  out     : String,
+  journal : Option< &JournalWriter >,
+) -> String
 {
   let Some( ref pattern ) = cli.expect else { return out; };
   let allowed : Vec< String > = pattern.split( '|' )
@@ -220,6 +353,13 @@ fn apply_expect_validation( cli : &CliArgs, builder : &ClaudeCommand, out : Stri
         {
           std::thread::sleep( core::time::Duration::from_secs( u64::from( delay ) ) );
         }
+        emit_validation_retry(
+          journal,
+          u32::try_from( attempt ).unwrap_or( u32::MAX ),
+          u32::try_from( retries + 1 ).unwrap_or( u32::MAX ),
+          delay,
+          &msg,
+        );
         let retry_output = match builder.execute()
         {
           Ok( o )  => o,
@@ -273,8 +413,9 @@ fn apply_expect_validation( cli : &CliArgs, builder : &ClaudeCommand, out : Stri
 /// Runner-class retry logic via `apply_runner_retry()`.
 ///
 /// When `timeout_secs == 0`, `builder.execute()` is used (blocking, no polling overhead).
-/// When `timeout_secs > 0`, `spawn_piped()` + `try_wait()` polling is used, mirroring the
-/// established pattern in `claude_runner_core::isolated`.
+/// When `timeout_secs > 0`, `spawn_piped()` + `try_wait()` polling is used with background
+/// reader threads draining stdout/stderr to prevent pipe-buffer deadlock when the subprocess
+/// produces more than the kernel pipe buffer (64 KiB on Linux).
 fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
   -> Result< ExecutionOutput, std::io::Error >
 {
@@ -291,9 +432,13 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
     };
   }
 
-  // Timeout path: spawn and poll with try_wait(), mirroring isolated.rs BUG-243 fix.
-  // Pitfall: keep the Child in scope so child.kill() + child.wait() can recover output
-  //   and prevent the subprocess from becoming an orphan.
+  // Timeout path: spawn with piped I/O, drain pipes in background threads, and poll
+  // for exit with try_wait().
+  //
+  // Pitfall (pipe deadlock): without background draining, a subprocess that writes more
+  //   than the kernel pipe buffer (64 KiB) blocks on write.  try_wait() then never
+  //   returns Some(_), and the test hangs until timeout fires.  Background threads prevent
+  //   this by continuously consuming the pipe, allowing the subprocess to run to completion.
   // Fix(BUG-299): return Err with descriptive message so run_print_mode() can apply runner retry.
   let mut child = match builder.spawn_piped()
   {
@@ -312,6 +457,25 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
     }
   };
 
+  // Take pipe handles before entering the poll loop so background threads own them.
+  let stdout_pipe = child.stdout.take().expect( "stdout piped by spawn_piped" );
+  let stderr_pipe = child.stderr.take().expect( "stderr piped by spawn_piped" );
+
+  let stdout_t = std::thread::spawn( move || -> Vec< u8 >
+  {
+    use std::io::Read as _;
+    let mut buf = Vec::new();
+    let _ = { let mut r = stdout_pipe; r.read_to_end( &mut buf ) };
+    buf
+  } );
+  let stderr_t = std::thread::spawn( move || -> Vec< u8 >
+  {
+    use std::io::Read as _;
+    let mut buf = Vec::new();
+    let _ = { let mut r = stderr_pipe; r.read_to_end( &mut buf ) };
+    buf
+  } );
+
   let deadline = std::time::Instant::now()
     + core::time::Duration::from_secs( u64::from( timeout_secs ) );
 
@@ -319,22 +483,25 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
   {
     match child.try_wait()
     {
-      Ok( Some( _ ) ) =>
+      Ok( Some( status ) ) =>
       {
-        let raw = match child.wait_with_output()
-        {
-          Ok( o )  => o,
-          Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
-        };
-        let exit_code = signal_exit_code( &raw.status );
-        let stdout = String::from_utf8_lossy( &raw.stdout ).to_string();
-        let stderr = String::from_utf8_lossy( &raw.stderr ).to_string();
+        // Subprocess exited: join reader threads to collect remaining buffered data.
+        let stdout_bytes = stdout_t.join().unwrap_or_default();
+        let stderr_bytes = stderr_t.join().unwrap_or_default();
+        let exit_code = signal_exit_code( &status );
+        let stdout = String::from_utf8_lossy( &stdout_bytes ).to_string();
+        let stderr = String::from_utf8_lossy( &stderr_bytes ).to_string();
         return Ok( ExecutionOutput { stdout, stderr, exit_code } );
       }
       Ok( None ) =>
       {
         if check_timeout( &mut child, deadline )
         {
+          // Drop reader threads — do NOT join.  Shell child processes (e.g. `sleep`)
+          // inherit the pipe write end; joining would block until they exit too.
+          // Dropped JoinHandles are detached; threads complete when the pipe closes.
+          drop( stdout_t );
+          drop( stderr_t );
           return Ok( ExecutionOutput
           {
             stdout   : String::new(),
@@ -361,7 +528,12 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 )
 /// Pitfall: Runner retry is caller-driven (Option B): `run_print_mode()` owns the outer loop
 ///   and calls `execute_print_attempt()` again after `apply_runner_retry()` returns `()`.
 ///   Unlike `apply_expect_validation()` (owns its loop), this function only decides+waits.
-pub( super ) fn apply_runner_retry( cli : &CliArgs, err : &std::io::Error, attempt : &mut u32 )
+pub( super ) fn apply_runner_retry(
+  cli     : &CliArgs,
+  err     : &std::io::Error,
+  attempt : &mut u32,
+  journal : Option< &JournalWriter >,
+)
 {
   let count = resolve_count( cli.retry_override, cli.retry_on_runner, cli.retry_default );
   let delay = resolve_delay( cli.retry_override_delay, cli.runner_delay, cli.retry_default_delay );
@@ -376,6 +548,15 @@ pub( super ) fn apply_runner_retry( cli : &CliArgs, err : &std::io::Error, attem
       *attempt,
       u32::from( count ) + 1
     );
+    // Emit RunnerRetry event.
+    {
+      let mut ev              = EventRecord::new( EventType::RunnerRetry );
+      ev.fields.attempt       = Some( *attempt );
+      ev.fields.limit         = Some( u32::from( count ) + 1 );
+      ev.fields.delay_secs    = Some( delay );
+      ev.fields.error_message = Some( msg.clone() );
+      emit( journal, &ev );
+    }
     if delay > 0
     {
       std::thread::sleep( core::time::Duration::from_secs( u64::from( delay ) ) );
@@ -417,7 +598,11 @@ fn default_print_timeout() -> u32
 /// Console output uses `[Class] <message>` format on stderr.
 /// Supports subprocess timeout via `--timeout` (0 = unlimited; absent = `DEFAULT_PRINT_TIMEOUT_SECS`).
 #[ allow( clippy::too_many_lines ) ]
-pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
+pub( super ) fn run_print_mode(
+  builder : &ClaudeCommand,
+  cli     : &CliArgs,
+  journal : Option< &JournalWriter >,
+)
 {
   let verbosity    = cli.verbosity.unwrap_or_default();
   // Fix(BUG-305): print-mode sessions had no default watchdog, leaving unattended sessions unbounded.
@@ -448,7 +633,11 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
     let output = match execute_print_attempt( builder, timeout_secs )
     {
       Ok( o )  => o,
-      Err( e ) => { apply_runner_retry( cli, &e, &mut runner_attempt ); continue; }
+      Err( e ) =>
+      {
+        apply_runner_retry( cli, &e, &mut runner_attempt, journal );
+        continue;
+      }
     };
 
     // Fix(BUG-317): suppress double-emission of CLR-synthesized timeout label.
@@ -458,9 +647,16 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
     //   with no newline separator — garbling every retry and exhaustion line on timeout.
     // Pitfall: storing CLR-synthesized strings in output.stderr violates the field's implicit
     //   contract (subprocess-originated only); gate on exit_code != 4 distinguishes them.
+    // Save stderr before the eprint! so we can include it in journal events.
+    let raw_stderr = output.stderr.clone();
     if !output.stderr.is_empty() && output.exit_code != 4
     {
       eprint!( "{}", output.stderr );
+    }
+
+    if output.exit_code == 4
+    {
+      emit_timeout( journal, cli, timeout_secs );
     }
 
     if output.exit_code != 0
@@ -498,6 +694,7 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
             limit + 1
           );
         }
+        emit_retry( journal, label, u32::try_from( attempts[ class_idx ] ).unwrap_or( u32::MAX ), u32::try_from( limit + 1 ).unwrap_or( u32::MAX ), delay, &msg );
         if delay > 0
         {
           std::thread::sleep( core::time::Duration::from_secs( u64::from( delay ) ) );
@@ -537,10 +734,12 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
         };
         if !rendered.is_empty() { eprint!( "{rendered}" ); }
       }
+      emit_execution( journal, cli, &output.stdout, &raw_stderr, output.exit_code );
       std::process::exit( output.exit_code );
     }
 
     // Success path — expect validation, file write, stdout.
+    let raw_stdout = output.stdout.clone();
     let out = if cli.strip_fences { strip_fences( &output.stdout ) } else { output.stdout };
     // summary format: intercept JSON output, render key:val header + text body.
     // Falls back to raw output when JSON cannot be parsed.
@@ -552,7 +751,8 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
     {
       out
     };
-    let out = apply_expect_validation( cli, builder, out );
+    let out = apply_expect_validation( cli, builder, out, journal );
+    emit_execution( journal, cli, &raw_stdout, &raw_stderr, 0 );
     write_output_file( cli.output_file.as_deref(), &out );
     print!( "{out}" );
     return;
@@ -564,7 +764,11 @@ pub( super ) fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
 /// When `timeout_secs == 0`, uses the blocking `execute_interactive()` path.
 /// When `timeout_secs > 0`, uses `spawn_tty()` + `try_wait()` polling so the
 /// subprocess can be killed after the deadline while still using the TTY.
-pub( super ) fn run_interactive( builder : &ClaudeCommand, cli : &CliArgs )
+pub( super ) fn run_interactive(
+  builder : &ClaudeCommand,
+  cli     : &CliArgs,
+  journal : Option< &JournalWriter >,
+)
 {
   let timeout_secs = cli.timeout.unwrap_or( 0 );
 
@@ -581,9 +785,11 @@ pub( super ) fn run_interactive( builder : &ClaudeCommand, cli : &CliArgs )
       Ok( s )  => s,
       Err( e ) => { eprintln!( "Error: [Runner] {e}" ); std::process::exit( 1 ); }
     };
+    let code = signal_exit_code( &status );
+    emit_interactive( journal, cli, code );
     if !status.success()
     {
-      std::process::exit( signal_exit_code( &status ) );
+      std::process::exit( code );
     }
     return;
   }
@@ -604,9 +810,11 @@ pub( super ) fn run_interactive( builder : &ClaudeCommand, cli : &CliArgs )
     {
       Ok( Some( status ) ) =>
       {
+        let code = signal_exit_code( &status );
+        emit_interactive( journal, cli, code );
         if !status.success()
         {
-          std::process::exit( signal_exit_code( &status ) );
+          std::process::exit( code );
         }
         return;
       }
@@ -614,6 +822,7 @@ pub( super ) fn run_interactive( builder : &ClaudeCommand, cli : &CliArgs )
       {
         if check_timeout( &mut child, deadline )
         {
+          emit_timeout( journal, cli, timeout_secs );
           eprintln!( "Error: timeout after {timeout_secs}s" );
           std::process::exit( 4 );
         }

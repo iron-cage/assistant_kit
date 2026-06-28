@@ -291,6 +291,20 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
       parsed.summary_fields = Some( v );
     }
   }
+  if parsed.journal.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_JOURNAL" )
+    {
+      if !matches!( v.as_str(), "full" | "meta" | "off" )
+      {
+        return Err( Error::msg( format!(
+          "CLR_JOURNAL: invalid value '{v}' — expected: full, meta, off"
+        ) ) );
+      }
+      parsed.journal = Some( v );
+    }
+  }
+  if parsed.journal_dir.is_none() { parsed.journal_dir = env_str( "CLR_JOURNAL_DIR" ); }
   Ok( () )
 }
 

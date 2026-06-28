@@ -32,6 +32,7 @@ clr --dry-run "test" --model sonnet --max-tokens 50000
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | false | — |
+| 2 | [`isolated`](../command/02_isolated.md) | false | Prints temp-HOME command preview; no dir created, no subprocess spawned (TSK-328) |
 | 5 | [`ask`](../command/05_ask.md) | false | — |
 
 ### Referenced User Stories
