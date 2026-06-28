@@ -56,3 +56,4 @@ Agent subagents receive the full configuration context (all CLAUDE.md files and 
 | behavior | [029_b29_bash_claude_env.md](029_b29_bash_claude_env.md) | B29: CLAUDE_* env vars inherited by bash subprocesses (not scope vars) |
 | behavior | [013_b13_subagent_directory.md](013_b13_subagent_directory.md) | B13: subagent session storage at `{parent-uuid}/subagents/agent-{id}.jsonl` |
 | tool | [../tool/007_agent.md](../tool/007_agent.md) | Agent tool — `prompt` parameter note: "agents start fresh unless `resume` is set" |
+| behavior | [031_b31_subagent_tool_sets.md](031_b31_subagent_tool_sets.md) | B31: tool sets per subagent type — sister concern to context inheritance |
