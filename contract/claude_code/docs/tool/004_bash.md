@@ -26,3 +26,5 @@ pre-v1.0 (unverified)
 | doc | [../params/098_bash_max_timeout_ms.md](../params/098_bash_max_timeout_ms.md) | `BASH_MAX_TIMEOUT_MS` — binary-level max timeout cap |
 | doc | [029_monitor.md](029_monitor.md) | Background shell execution variant |
 | doc | [030_powershell.md](030_powershell.md) | PowerShell alternative on Windows |
+| behavior | [../behavior/028_b28_bash_rtk_subprocess.md](../behavior/028_b28_bash_rtk_subprocess.md) | B28: each Bash call spawns a transient rtk process (~5 MB, 4 FDs, ephemeral) |
+| behavior | [../behavior/029_b29_bash_claude_env.md](../behavior/029_b29_bash_claude_env.md) | B29: all bash subprocesses inherit 9 CLAUDE_* env vars from the parent claude process |

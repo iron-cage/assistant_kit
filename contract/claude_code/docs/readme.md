@@ -4,7 +4,7 @@
 
 | Path | Responsibility |
 |------|----------------|
-| `behavior/` | Observed external behaviors of the `claude` binary — 27 instances (B1–B26 + B16h) |
+| `behavior/` | Observed external behaviors of the `claude` binary — 31 instances (B1–B30 + B16h) |
 | `storage/` | `~/.claude/` storage architecture — 3 instances (projects dir, support dirs, root files) |
 | `filesystem/` | Runtime filesystem paths accessed by claude_version — 4 instances |
 | `jsonl/` | Session JSONL entry format — 10 instances (common fields, entry types, content blocks, usage, threading, sidechain) |
