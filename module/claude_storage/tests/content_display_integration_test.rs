@@ -201,21 +201,21 @@ fn show_metadata_only_parameter()
   );
 }
 
-/// Test: `verbosity::0` is equivalent to `metadata::1`
+/// Test: `show_metadata::1` shows only metadata (no chat-log content)
 ///
 /// ## Test Organization
 ///
-/// **Root Cause**: `verbosity::0` should show minimal metadata only
+/// **Root Cause**: `show_metadata::1` should show minimal metadata only
 ///
-/// **Why Not Caught**: New verbosity semantics need validation
+/// **Why Not Caught**: Needs integration test for metadata-only mode
 ///
-/// **Fix Applied**: `verbosity::0` triggers metadata-only mode
+/// **Fix Applied**: `show_metadata::1` triggers metadata-only mode
 ///
-/// **Prevention**: Test verbosity level equivalences
+/// **Prevention**: Test metadata-only parameter behavior
 ///
 /// **Pitfall**: Don't have multiple ways to specify same behavior without tests
 #[ test ]
-fn show_verbosity_zero_is_metadata_only()
+fn show_metadata_flag_is_metadata_only()
 {
   use claude_storage_core::encode_path;
 
@@ -225,7 +225,7 @@ fn show_verbosity_zero_is_metadata_only()
   let project_dir = storage.path().join( "projects" ).join( &encoded );
   fs::create_dir_all( &project_dir ).unwrap();
 
-  let session_id = "test-verbosity-zero-mode";
+  let session_id = "test-metadata-flag-mode";
   let session_file = project_dir.join( format!( "{session_id}.jsonl" ) );
   fs::write(
     &session_file,
@@ -234,12 +234,12 @@ fn show_verbosity_zero_is_metadata_only()
       "\"timestamp\":\"2025-11-29T10:00:00Z\",\"cwd\":\"/tmp\",",
       "\"sessionId\":\"test-session\",\"version\":\"2.0.0\",\"gitBranch\":\"master\",",
       "\"userType\":\"external\",\"isSidechain\":false,",
-      "\"message\":{\"role\":\"user\",\"content\":\"test verbosity zero\"}}\n",
+      "\"message\":{\"role\":\"user\",\"content\":\"test metadata flag\"}}\n",
       "{\"type\":\"assistant\",\"uuid\":\"uuid-002\",\"parentUuid\":\"uuid-001\",",
       "\"timestamp\":\"2025-11-29T10:00:01Z\",\"cwd\":\"/tmp\",",
       "\"sessionId\":\"test-session\",\"version\":\"2.0.0\",\"gitBranch\":\"master\",",
       "\"userType\":\"external\",\"isSidechain\":false,",
-      "\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"verbosity reply\"}]}}\n"
+      "\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"metadata flag reply\"}]}}\n"
     ),
   )
   .unwrap();
@@ -250,10 +250,10 @@ fn show_verbosity_zero_is_metadata_only()
       ".show",
       &format!( "session_id::{session_id}" ),
       &format!( "project::{}", project_path.path().display() ),
-      "verbosity::0",
+      "show_metadata::1",
     ] )
     .output()
-    .expect( "Failed to execute .show verbosity::0" );
+    .expect( "Failed to execute .show show_metadata::1" );
 
   let show_output = String::from_utf8_lossy( &output.stdout );
   let stderr = String::from_utf8_lossy( &output.stderr );
@@ -271,7 +271,7 @@ fn show_verbosity_zero_is_metadata_only()
   let has_chat_format = show_output.contains( "] User:" ) || show_output.contains( "] Assistant:" );
   assert!(
     !has_chat_format,
-    "verbosity::0 should NOT show chat-log format. stdout: {show_output}"
+    "show_metadata::1 should NOT show chat-log format. stdout: {show_output}"
   );
 }
 

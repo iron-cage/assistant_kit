@@ -1,8 +1,8 @@
-# Type :: 13. `TopicName`
+# Type :: 12. `TopicName`
 
 Type constraint tests for `TopicName` — session topic identifier string.
 
-**Source:** [type/13_topic_name.md](../../../../docs/cli/type/13_topic_name.md)
+**Source:** [type/12_topic_name.md](../../../../docs/cli/type/12_topic_name.md)
 
 ## Test Case Index
 

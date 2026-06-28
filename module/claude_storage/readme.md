@@ -14,7 +14,9 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 | `docs/` | Behavioral requirements: features, CLI reference, operation docs |
 | `examples/` | Usage examples for storage API |
 | `changelog.md` | Notable changes by version |
+| `runbox/` | Container runtime scripts and configuration |
 | `verb/` | Shell scripts for each `do` protocol verb. |
+| `task/` | Task tracking and work item management |
 
 ## overview
 

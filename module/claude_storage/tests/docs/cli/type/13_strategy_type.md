@@ -1,8 +1,8 @@
-# Type :: 14. `StrategyType`
+# Type :: 13. `StrategyType`
 
 Type constraint tests for `StrategyType` — resume strategy enum.
 
-**Source:** [type/14_strategy_type.md](../../../../docs/cli/type/14_strategy_type.md)
+**Source:** [type/13_strategy_type.md](../../../../docs/cli/type/13_strategy_type.md)
 
 ## Test Case Index
 

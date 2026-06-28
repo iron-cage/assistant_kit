@@ -1,8 +1,15 @@
 # Parameter :: 17. `topic::`
 
+### Scope
+
+- **Purpose**: Specify the `topic::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `topic::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Session topic name appended as a `-{name}` suffix to the base directory path.
 
-**Type:** [`TopicName`](../type/13_topic_name.md)
+**Type:** [`TopicName`](../type/12_topic_name.md)
 
 **Fundamental Type:** String (identifier)
 
@@ -35,7 +42,7 @@ topic::-default_topic   # (legal — creates /-default_topic... but convention i
 ### Referenced Type
 | Type | Kind | Fundamental | Key Constraint |
 |------|------|-------------|----------------|
-| [`TopicName`](../type/13_topic_name.md) | String (identifier) | String | Non-empty; no `/` characters; no leading `-` |
+| [`TopicName`](../type/12_topic_name.md) | String (identifier) | String | Non-empty; no `/` characters; no leading `-` |
 
 ### Referenced Commands
 | # | Command | Default | Notes |
@@ -44,6 +51,10 @@ topic::-default_topic   # (legal — creates /-default_topic... but convention i
 | 9 | [`.project.exists`](../command/09_project_exists.md) | unset | Checks storage path with topic suffix |
 | 10 | [`.session.dir`](../command/10_session_dir.md) | `default_topic` | Appends `-{topic}` to base directory |
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | `default_topic` | Appends `-{topic}` to base directory |
+
+### Referenced Parameter Groups
+
+None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

@@ -445,11 +445,10 @@ fn uuid_project_only_matches_global_scope()
   let out_global = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".projects" ).arg( "scope::global" ).arg( "verbosity::0" )
+    .arg( ".projects" ).arg( "scope::global" )
     .output().unwrap();
   assert_exit( &out_global, 0 );
   let s_global = stdout( &out_global );
-  // v0 outputs project paths: UUID project decoded as the UUID string itself
   assert!( s_global.contains( "deadbeef-1234-5678" ), "global must include UUID project path; got:\n{s_global}" );
   assert!( s_global.contains( "proj" ), "global must include path project; got:\n{s_global}" );
 
@@ -459,7 +458,6 @@ fn uuid_project_only_matches_global_scope()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" ).arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
-    .arg( "verbosity::0" )
     .output().unwrap();
   assert_exit( &out_local, 0 );
   let s_local = stdout( &out_local );
@@ -517,7 +515,6 @@ fn scope_local_matches_topic_scoped_directory()
     .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 

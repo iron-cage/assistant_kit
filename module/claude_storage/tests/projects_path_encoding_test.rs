@@ -88,7 +88,7 @@ fn it_24_decode_display_includes_hyphen_prefixed_topic_dir()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
+
     .output()
     .unwrap();
 
@@ -146,7 +146,7 @@ fn it_23_decode_display_preserves_underscore_named_dirs()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
+
     .output()
     .unwrap();
 
@@ -353,7 +353,7 @@ fn projects_shows_topic_path_when_topic_dir_absent()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
+
     .output()
     .unwrap();
 
@@ -389,7 +389,7 @@ fn projects_shows_topic_path_when_topic_dir_present()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
+
     .output()
     .unwrap();
 
@@ -421,7 +421,7 @@ fn projects_shows_default_topic_path_when_topic_dir_absent()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
+
     .output()
     .unwrap();
 
@@ -451,7 +451,7 @@ fn projects_shows_base_path_with_no_topic()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
+
     .output()
     .unwrap();
 
@@ -509,7 +509,7 @@ fn projects_shows_both_topic_components_for_double_topic_key()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
+
     .output()
     .unwrap();
 

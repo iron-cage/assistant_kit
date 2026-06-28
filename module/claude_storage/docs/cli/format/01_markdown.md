@@ -1,14 +1,21 @@
-# Format: Markdown
+# Format :: 1. Markdown
 
-## Description
+### Scope
+
+- **Purpose**: Specify the Markdown export format.
+- **Responsibility**: Structure, rendering rules, and output conventions for Markdown export.
+- **In Scope**: Output structure, content ordering, file conventions.
+- **Out of Scope**: Parameter specs (→ `param/`), command behavior (→ `command/`).
+
+### Description
 
 Human-readable conversation export with full metadata, thinking blocks, and tool use. Designed for reading in any markdown renderer (GitHub, VS Code, Obsidian) or plain text. Default format when `format::` is omitted. Renderer: `write_markdown_entry()` in `claude_storage_core/src/export.rs`.
 
-## Trigger
+### Trigger
 
 Activated by `format::markdown` on `.export`, or by omitting `format::` entirely (this is the default format).
 
-## Structure
+### Structure
 
 ```
 # Session: {session_id}
@@ -69,7 +76,7 @@ Activated by `format::markdown` on `.export`, or by omitting `format::` entirely
 - **Metadata fields:** bold label with value (`**Path**: ...`)
 - **Default format** when `format::` is omitted
 
-## Source
+### Source
 
 `claude_storage_core/src/export.rs` — `write_markdown_entry()`, `export_session()`
 

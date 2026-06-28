@@ -1,5 +1,12 @@
 # Parameter :: 21. `count::`
 
+### Scope
+
+- **Purpose**: Specify the `count::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `count::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Boolean mode flag for `.list` that suppresses the full listing and outputs only the count as a bare integer.
 
 **Type:** Boolean
@@ -38,6 +45,10 @@ count::0    # Output full listing
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 2 | [`.list`](../command/02_list.md) | `0` | Only meaningful with `type::conversation` |
+
+### Referenced Parameter Groups
+
+None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

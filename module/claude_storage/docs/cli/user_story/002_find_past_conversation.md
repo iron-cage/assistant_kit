@@ -1,4 +1,11 @@
-# Find Past Conversation
+# User Story :: 2. Find Past Conversation
+
+### Scope
+
+- **Purpose**: Document the "Find Past Conversation" user story.
+- **Responsibility**: Persona, goal, acceptance criteria, and command mappings for this story.
+- **In Scope**: User persona, goal statement, acceptance criteria, referenced commands.
+- **Out of Scope**: Command specifications (→ `command/`), parameter details (→ `param/`).
 
 **Persona:** developer
 **Goal:** Locate a specific past Claude Code conversation by project, content, or session metadata.
@@ -25,7 +32,7 @@
 |---|-----------|------|
 | 1 | [`agent::`](../param/01_agent.md) | Include or exclude agent sub-sessions |
 | 2 | [`case_sensitive::`](../param/02_case_sensitive.md) | Enable case-sensitive keyword matching |
-| 3 | [`entries::`](../param/03_entries.md) | Show all session entries in detail view |
+| 3 | [`show_entries::`](../param/03_entries.md) | Show all session entries in detail view |
 | 4 | [`entry_type::`](../param/04_entry_type.md) | Filter search results by entry type |
 | 7 | [`min_entries::`](../param/07_min_entries.md) | Filter sessions by minimum entry count |
 | 9 | [`path::`](../param/09_path.md) | Restrict to a specific storage root |
@@ -33,10 +40,12 @@
 | 11 | [`query::`](../param/11_query.md) | Keyword to search in session content |
 | 12 | [`scope::`](../param/12_scope.md) | Discovery scope for search and listing |
 | 13 | [`session::`](../param/13_session.md) | Filter sessions by ID substring |
-| 15 | [`sessions::`](../param/15_sessions.md) | Show sessions per project in list view |
+| 15 | [`show_sessions::`](../param/15_sessions.md) | Show sessions per project in list view |
 | 17 | [`topic::`](../param/17_topic.md) | Filter by session topic suffix |
 | 18 | [`type::`](../param/18_type.md) | Filter projects by naming scheme |
+| 19 | [`show_stat::`](../param/19_show_stat.md) | Append statistics footer in session view |
 | 22 | [`limit::`](../param/22_limit.md) | Cap sessions per project when browsing |
+| 24 | [`show_tree::`](../param/24_show_tree.md) | Tree-indent agent sessions in project view |
 
 ### Referenced Parameter Groups
 | # | Parameter Group | Role |
@@ -75,7 +84,7 @@ cls .search query::authentication project::my_app
 
 **Step 4: Filter by session metadata**
 ```bash
-cls .list sessions::1 path::my_app min_entries::10 agent::0
+cls .list show_sessions::1 path::my_app min_entries::10 agent::0
 # Output: main sessions with at least 10 entries in my_app
 ```
 
@@ -109,6 +118,6 @@ cls .projects
 
 **Filter agent sub-sessions only:**
 ```bash
-cls .list sessions::1 agent::1
+cls .list show_sessions::1 agent::1
 # Output: only agent-spawned sessions
 ```

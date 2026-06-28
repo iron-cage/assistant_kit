@@ -34,22 +34,9 @@
       aliases: []
       tags: []
 
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output verbosity level (0=compact key-value, 1=standard, 2=per-project breakdown; range 0-5)"
-      hint: "Verbosity level (0-5)"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
-      tags: []
-
   examples:
     - ".status"
     - ".status show_tokens::1"
-    - ".status verbosity::0"
-    - ".status verbosity::2"
-    - ".status v::2"
   auto_help_enabled: true
 
 - name: ".list"
@@ -137,16 +124,6 @@
       hint: "Count-only mode"
       optional: true
       default: "0"
-      validation_rules: []
-      aliases: []
-      tags: []
-
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output verbosity level (0-5, default 1); values outside range are rejected"
-      hint: "Verbosity level (0-5)"
-      optional: true
-      default: "1"
       validation_rules: []
       aliases: []
       tags: []
@@ -245,16 +222,6 @@
       validation_rules: []
       aliases: []
       tags: ["scope"]
-
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output verbosity level (0=metadata only, 1=default content)"
-      hint: "Verbosity level"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: []
-      tags: []
 
   examples:
     - ".show"
@@ -386,22 +353,11 @@
       aliases: []
       tags: ["filter"]
 
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output verbosity level (0-5, default 1); higher values show more match context"
-      hint: "Verbosity level (0-5)"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
-      tags: []
-
   examples:
     - ".search query::error"
     - ".search query::\"session management\" case_sensitive::1"
     - ".search query::help entry_type::user"
     - ".search query::implement project::abc123"
-    - ".search query::error verbosity::1"
   auto_help_enabled: true
 
 - name: ".export"
@@ -522,7 +478,7 @@
 
     - name: "limit"
       kind: "Integer"
-      description: "Max main sessions to display per project at verbosity 1 (0 = unlimited, default: 0)"
+      description: "Max main sessions to display per project (0 = unlimited, default: 0)"
       hint: "Per-project display limit"
       optional: true
       validation_rules: []
@@ -539,16 +495,6 @@
       aliases: []
       tags: []
 
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output verbosity level (0=paths only, 1=standard, 2+=grouped with tree; range 0-5)"
-      hint: "Verbosity level (0-5)"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: []
-      tags: []
-
   examples:
     - ".projects"
     - ".projects scope::around"
@@ -558,8 +504,6 @@
     - ".projects scope::local session::abc123"
     - ".projects limit::5"
     - ".projects show_tree::1"
-    - ".projects verbosity::0"
-    - ".projects verbosity::2"
   auto_help_enabled: true
 
 - name: ".project.path"

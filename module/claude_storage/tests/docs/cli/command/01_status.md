@@ -1,6 +1,6 @@
 # Command :: `.status`
 
-Integration tests for the `.status` command. Tests verify storage overview, statistics output, and verbosity behavior.
+Integration tests for the `.status` command. Tests verify storage overview, statistics output, and show_tokens behavior.
 
 **Source:** [command/01_status.md](../../../../docs/cli/command/01_status.md)
 
@@ -9,8 +9,8 @@ Integration tests for the `.status` command. Tests verify storage overview, stat
 | ID | Test Name | Category |
 |----|-----------|----------|
 | INT-1 | Default output with real storage | Read Operations |
-| INT-2 | Verbosity 0 machine-readable output | Output Format |
-| INT-3 | Verbosity 2 detailed per-project output | Output Format |
+| INT-2 | show_tokens::1 includes token usage section | Output Control |
+| INT-3 | show_tokens::0 default omits token usage (fast path) | Output Control |
 | INT-4 | Custom storage path via path:: | Configuration |
 | INT-5 | Custom storage path via CLAUDE_STORAGE_ROOT env | Configuration |
 | INT-6 | Exit code 0 on success | Exit Codes |
@@ -20,7 +20,7 @@ Integration tests for the `.status` command. Tests verify storage overview, stat
 ## Test Coverage Summary
 
 - Read Operations: 2 tests (INT-1, INT-8)
-- Output Format: 2 tests (INT-2, INT-3)
+- Output Control: 2 tests (INT-2, INT-3)
 - Configuration: 2 tests (INT-4, INT-5)
 - Exit Codes: 2 tests (INT-6, INT-7)
 
@@ -43,31 +43,33 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .status
 
 ---
 
-### INT-2: Verbosity 0 machine-readable output
+### INT-2: show_tokens::1 includes token usage section
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .status verbosity::0
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .status show_tokens::1
 ```
 
 **Expected behavior:**
-- Fixture: 2 projects, 3 sessions total in storage
-- Stdout contains exactly `projects: 2` and `sessions: 3` (no table borders, no labels)
+- Fixture: at least 1 project with 1 session containing entries with token data
+- Stdout includes standard project/session counts
+- Stdout includes Tokens section with Input, Output, Cache Read, Cache Creation
 - Exit code: 0
 - **Source:** [command/01_status.md](../../../../docs/cli/command/01_status.md)
 
 ---
 
-### INT-3: Verbosity 2 detailed per-project output
+### INT-3: show_tokens::0 default omits token usage (fast path)
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .status verbosity::2
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .status
 ```
 
 **Expected behavior:**
-- Fixture: 2 projects, each with 1 session containing known entry counts
-- Stdout contains summary table plus per-project rows showing session counts and entry type breakdown (user/assistant)
+- Fixture: storage with entries containing token data
+- Stdout contains project and session counts but NO Tokens section
+- Command completes quickly (filesystem-only, no JSONL parsing)
 - Exit code: 0
 - **Source:** [command/01_status.md](../../../../docs/cli/command/01_status.md)
 

@@ -1,5 +1,12 @@
 # Parameter :: 19. `show_stat::`
 
+### Scope
+
+- **Purpose**: Specify the `show_stat::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `show_stat::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Show session statistics footer in content mode.
 
 **Type:** Boolean
@@ -20,6 +27,11 @@ show_stat::1    # Append statistics footer after session content
 
 **Group:** [Output Control](../param_group/01_output_control.md)
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| Boolean | Base type | Boolean flag | `0` (false) or `1` (true) |
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
@@ -29,3 +41,8 @@ show_stat::1    # Append statistics footer after session content
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
 | 1 | [Output Control](../param_group/01_output_control.md) | Full | `show_tokens::`, `show_tree::` |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](../user_story/002_find_past_conversation.md) | developer |

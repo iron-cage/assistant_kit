@@ -1,12 +1,19 @@
 # Domain Dictionary
 
+### Scope
+
+- **Purpose**: Define terms used in `claude_storage` CLI documentation.
+- **Responsibility**: Canonical definitions for domain vocabulary.
+- **In Scope**: CLI-specific terms, storage concepts, parameter terminology.
+- **Out of Scope**: Implementation details (→ source code), API contracts (→ contract docs).
+
 Definitions for terms used in `claude_storage` CLI documentation.
 
 For conceptual hierarchy diagrams (containment, threading, agent session layout) see [storage/readme.md](../../../../contract/claude_code/docs/storage/readme.md#conceptual-model).
 
 For the complete four-level taxonomy (Project / Conversation / Session / Entry) with pairwise relationship descriptions and ASCII containment diagram, see [taxonomy/readme.md](../../../../contract/claude_code/docs/taxonomy/readme.md).
 
-## Core Terms
+### Core Terms
 
 ### Active Project
 

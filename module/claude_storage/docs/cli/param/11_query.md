@@ -1,5 +1,12 @@
 # Parameter :: 11. `query::`
 
+### Scope
+
+- **Purpose**: Specify the `query::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `query::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Search query string. Required by `.search`.
 
 **Type:** String
@@ -38,6 +45,10 @@ query::                             # "query must be non-empty"
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 5 | [`.search`](../command/05_search.md) | none — required | Search term; alias `q` supported |
+
+### Referenced Parameter Groups
+
+None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

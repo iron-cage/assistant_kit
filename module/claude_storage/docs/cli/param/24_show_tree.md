@@ -1,5 +1,12 @@
 # Parameter :: 24. `show_tree::`
 
+### Scope
+
+- **Purpose**: Specify the `show_tree::` CLI parameter.
+- **Responsibility**: Type, defaults, valid values, and command usage for `show_tree::`.
+- **In Scope**: Value constraints, default behavior, command interactions.
+- **Out of Scope**: Type definitions (→ `type/`), command behavior (→ `command/`).
+
 Show agent sessions tree-indented under their root session.
 
 **Type:** Boolean
@@ -22,6 +29,11 @@ show_tree::1    # Tree-indented agents under root sessions
 
 **Group:** [Output Control](../param_group/01_output_control.md)
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| Boolean | Base type | Boolean flag | `0` (false) or `1` (true) |
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
@@ -31,3 +43,8 @@ show_tree::1    # Tree-indented agents under root sessions
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
 | 1 | [Output Control](../param_group/01_output_control.md) | Full | `show_stat::`, `show_tokens::` |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](../user_story/002_find_past_conversation.md) | developer |

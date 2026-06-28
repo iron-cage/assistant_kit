@@ -8,8 +8,8 @@ Source: [001_audit_session_history.md](../../../../docs/cli/user_story/001_audit
 | ID | Test Name | Criteria |
 |----|-----------|---------|
 | RWS-1 | Basic status shows project and session totals | AC: view total project and session count |
-| RWS-2 | Verbosity 2 shows per-project breakdown | AC: drill into per-project session counts |
-| RWS-3 | Verbosity 0 outputs machine-readable format | AC: verbosity::0 suitable for scripts |
+| RWS-2 | show_tokens reveals token consumption | AC: view token usage for audit |
+| RWS-3 | List with sessions shows per-project history | AC: drill into per-project session listing |
 | RWS-4 | Count target::sessions returns bare integer | AC: count specific targets independently |
 | RWS-5 | Path override inspects alternate storage root | AC: override storage root |
 
@@ -34,40 +34,39 @@ clg .status
 
 ---
 
-### RWS-2: Verbosity 2 shows per-project breakdown
+### RWS-2: show_tokens reveals token consumption
 
-**Scenario:** Developer drills into per-project session counts.
+**Scenario:** Developer audits token usage across all sessions.
 
-**Fixture:** 2 projects, each with 1 session containing at least 2 entries.
+**Fixture:** At least 1 project with 1 session containing entries with token data.
 
 **Command:**
 ```bash
-clg .status verbosity::2
+clg .status show_tokens::1
 ```
 
 **Expected:**
-- Stdout includes per-project session counts
-- Stdout includes entry breakdowns per project
-- More detail than `verbosity::1` output
+- Stdout includes standard project/session counts
+- Stdout includes Tokens section with Input, Output, Cache Read, Cache Creation values
 
 **Exit:** `0`
 
 ---
 
-### RWS-3: Verbosity 0 outputs machine-readable format
+### RWS-3: List with sessions shows per-project history
 
-**Scenario:** Developer pipes `.status` output to a script.
+**Scenario:** Developer drills into per-project session listing for audit.
 
-**Fixture:** At least 1 project with 1 session.
+**Fixture:** 2 projects, each with at least 1 session.
 
 **Command:**
 ```bash
-clg .status verbosity::0
+clg .list show_sessions::1
 ```
 
 **Expected:**
-- Stdout matches `projects: N, sessions: N` (parseable key=value)
-- No decorative headers or tables
+- Stdout lists each project with its sessions underneath
+- Session IDs are visible for further inspection
 
 **Exit:** `0`
 

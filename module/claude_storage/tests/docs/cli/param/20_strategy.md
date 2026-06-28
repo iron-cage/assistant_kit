@@ -2,7 +2,7 @@
 
 Edge case tests for the `strategy::` parameter. Tests validate enum values, case insensitivity, forcing behavior, and default (auto-detect) behavior.
 
-**Source:** [param/20_strategy.md](../../../../docs/cli/param/20_strategy.md) | [type/14_strategy_type.md](../../../../docs/cli/type/14_strategy_type.md)
+**Source:** [param/20_strategy.md](../../../../docs/cli/param/20_strategy.md) | [type/13_strategy_type.md](../../../../docs/cli/type/13_strategy_type.md)
 
 ## Test Case Index
 

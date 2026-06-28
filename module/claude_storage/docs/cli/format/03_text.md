@@ -1,14 +1,21 @@
-# Format: Text
+# Format :: 3. Text
 
-## Description
+### Scope
+
+- **Purpose**: Specify the Text export format.
+- **Responsibility**: Structure, rendering rules, and output conventions for Text export.
+- **In Scope**: Output structure, content ordering, file conventions.
+- **Out of Scope**: Parameter specs (→ `param/`), command behavior (→ `command/`).
+
+### Description
 
 Minimal plain-text transcript containing only human-readable conversation content. Strips all thinking blocks, tool use, and tool results — shows only what the user typed and what the assistant replied with text. Suitable for quick reading, sharing, or feeding into text-processing pipelines. Renderer: `write_text_entry()` in `claude_storage_core/src/export.rs`.
 
-## Trigger
+### Trigger
 
 Activated by `format::text` on `.export`.
 
-## Structure
+### Structure
 
 ```
 Session: {session_id}
@@ -48,7 +55,7 @@ Only `ContentBlock::Text` variants are rendered for assistant entries. All other
 - **No markdown:** output contains no heading syntax (`#`), no bold (`**`), no code blocks
 - **Timestamps not included in header** — only session ID, path, and entry count
 
-## Source
+### Source
 
 `claude_storage_core/src/export.rs` — `write_text_entry()`, `export_session()`
 

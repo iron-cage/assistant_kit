@@ -1,5 +1,12 @@
 # Parameter Groups
 
+### Scope
+
+- **Purpose**: Document shared parameter sets reused across command roots.
+- **Responsibility**: Per-group detail pages with membership, examples, and cross-refs.
+- **In Scope**: All 5 parameter groups with member parameters and command usage.
+- **Out of Scope**: Individual parameter specs (→ `param/`), type constraints (→ `type/`).
+
 Shared parameters reused across command roots. Groups emerge from semantic coherence — parameters that together control the same operational concern.
 
 See [param/readme.md](../param/readme.md) for individual parameter specs and [command/readme.md](../command/readme.md) for per-command usage.

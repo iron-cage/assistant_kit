@@ -1,10 +1,17 @@
 # Workflows
 
+### Scope
+
+- **Purpose**: Demonstrate end-to-end CLI usage patterns.
+- **Responsibility**: Multi-command workflow examples with expected output.
+- **In Scope**: Common scenarios, complexity matrix, best practices.
+- **Out of Scope**: Command specifications (→ `command/`), parameter details (→ `param/`), user personas (→ `user_story/`).
+
 Common usage patterns for the `claude_storage` CLI. Each workflow shows a practical scenario with commands, expected output shape, and notes.
 
 See [command/readme.md](command/readme.md) for command reference and [param/readme.md](param/readme.md) for parameter details.
 
-## Workflow Complexity Matrix
+### Workflow Complexity Matrix
 
 | Workflow | Commands Used | Complexity |
 |----------|--------------|------------|
@@ -20,7 +27,7 @@ See [command/readme.md](command/readme.md) for command reference and [param/read
 
 ---
 
-## Common Workflows
+### Common Workflows
 
 ### 1. Quick storage check
 
@@ -50,7 +57,7 @@ claude_storage .list path::assistant
 # Output: projects whose paths contain "assistant"
 
 # Step 2: List sessions for a matching project
-claude_storage .list path::assistant sessions::1
+claude_storage .list path::assistant show_sessions::1
 # Output: same projects, now with their sessions listed
 
 # Step 3: Show the session content
@@ -132,7 +139,7 @@ claude_storage .count target::entries project::-home-alice-projects-my-app sessi
 
 ```bash
 # Step 1: Find agent sessions for the current project
-claude_storage .list sessions::1 agent::1
+claude_storage .list show_sessions::1 agent::1
 # Output: projects with agent-only sessions listed
 
 # Step 2: Show a specific agent session
@@ -140,7 +147,7 @@ claude_storage .show session_id::agent-abc123
 # Output: agent session conversation content
 
 # Step 3: Show agent sessions with metadata only
-claude_storage .show session_id::agent-abc123 metadata::1
+claude_storage .show session_id::agent-abc123 show_metadata::1
 # Output: technical metadata (entry count, timestamps, agentId) without content
 ```
 
@@ -234,7 +241,7 @@ result=$(clg .session.ensure path::/home/user/project topic::work strategy::fres
 
 ---
 
-## Best Practices
+### Best Practices
 
 **Narrow scope before broad search:** Use `project::` or `path::` to restrict expensive operations. Without scoping, `.search` reads every session in storage.
 
@@ -242,6 +249,6 @@ result=$(clg .session.ensure path::/home/user/project topic::work strategy::fres
 
 **Prefer `.count` over `.list` for numbers:** `.count` avoids loading session content and is much faster on large storage.
 
-**Use `sessions::0` with session filters for project discovery:** `claude_storage .list session::commit sessions::0` finds which projects have sessions matching "commit" without expanding the session list.
+**Use `show_sessions::0` with session filters for project discovery:** `claude_storage .list session::commit show_sessions::0` finds which projects have sessions matching "commit" without expanding the session list.
 
 **Session IDs from `.show` output:** When you see sessions listed by `.show` (project view), copy the session ID directly into `session_id::` for the next command.

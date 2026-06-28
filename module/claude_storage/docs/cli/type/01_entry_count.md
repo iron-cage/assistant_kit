@@ -1,5 +1,12 @@
 # Type :: 1. `EntryCount`
 
+### Scope
+
+- **Purpose**: Specify the `EntryCount` semantic type.
+- **Responsibility**: Validation rules, fundamental type, and parameter mapping for `EntryCount`.
+- **In Scope**: Parsing rules, valid/invalid values, error messages.
+- **Out of Scope**: Parameter usage (→ `param/`), command context (→ `command/`).
+
 **Purpose:** Non-negative integer representing a minimum session entry threshold. Semantically distinct from general integers — negative values are meaningless for entry counts.
 
 **Fundamental Type:** Wrapper around unsigned integer
