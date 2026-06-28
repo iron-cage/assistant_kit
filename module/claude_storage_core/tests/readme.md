@@ -15,7 +15,8 @@ session discovery for Claude Code v2.x format) with corner case tests for subage
 ```
 tests/
 ├── readme.md                              # This file — test suite organization
-├── continuation_tests.rs                  # Integration tests for continuation detection
+├── continuation_tests.rs                  # Integration tests for continuation detection and UUID selection
+├── session_id_tests.rs                    # Unit tests for SessionId newtype
 ├── count_entries_bug.rs                   # Bug Reproducer (issue-016): count_entries vs stats mismatch
 ├── export.rs                              # Export integration tests (markdown, JSON, text)
 ├── filtering.rs                           # Session and project filtering integration tests
@@ -33,7 +34,8 @@ tests/
 
 | File | Responsibility |
 |------|----------------|
-| `continuation_tests.rs` | Integration tests for `check_continuation` and `to_storage_path_for` |
+| `continuation_tests.rs` | Integration tests for `check_continuation`, `most_recent_session_id`, `most_recent_session_in_dir`, and `to_storage_path_for` |
+| `session_id_tests.rs` | Unit tests for `SessionId` newtype: construction, display, clone, and `From` conversions |
 | `count_entries_bug.rs` | Reproduce and verify fix for count_entries() vs stats() mismatch |
 | `export.rs` | Integration tests for session export (markdown, JSON, text formats) |
 | `filtering.rs` | Session and project filter composition integration tests |
