@@ -9,7 +9,7 @@ parameter in this directory.
 - **Purpose**: Authoritative flat reference for every parameter the `claude` binary accepts at runtime.
 - **Responsibility**: Master table and per-parameter detail files for CLI flags, env vars, and settings config keys.
 - **In Scope**: All 120 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `MCP_*` env vars, `API_*` env vars, `CLAUDE_CLIENT_*` env vars, `BASH_*` env vars, `DISABLE_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys.
-- **Out of Scope**: Builder-API defaults and Rust `with_*()` methods (→ `module/claude_runner_core/docs/claude_params/`); Claude API protocol (→ Anthropic docs).
+- **Out of Scope**: Builder-API defaults and Rust `with_*()` methods (→ `module/claude_runner_core/docs/claude_param/`); Claude API protocol (→ Anthropic docs).
 
 ### Responsibility Table
 
@@ -272,4 +272,4 @@ Precedence: CLI arg > env var > settings config.
 | doc | [`../behavior/readme.md`](../behavior/readme.md) | Claude Code behavior collection master file |
 | doc | [`../behavior/readme.md`](../behavior/readme.md) | Observed flag behavior in practice |
 | doc | [`../settings/readme.md`](../settings/readme.md) | settings.json write semantics and structure |
-| doc | [`../../../../../module/claude_runner_core/docs/claude_params/readme.md`](../../../../../module/claude_runner_core/docs/claude_params/readme.md) | Builder-API perspective with Rust `with_*()` methods |
+| doc | [`../../../../../module/claude_runner_core/docs/claude_param/readme.md`](../../../../../module/claude_runner_core/docs/claude_param/readme.md) | Builder-API perspective with Rust `with_*()` methods |

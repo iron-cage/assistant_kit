@@ -20,6 +20,7 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 | claude_storage_core | — | primitives | Parse Claude JSONL files: sessions, token statistics |
 | claude_auth | — | primitives | Anthropic OAuth token refresh transport; `TokenRefreshResult`, `AuthError` |
 | claude_quota | — | primitives | Anthropic API rate-limit HTTP transport; `RateLimitData`, `QuotaError` |
+| claude_journal | — | primitives | Append-only event journal library: JSONL writer, reader, event types |
 | claude_core | — | 0 | Shared domain primitives: ClaudePaths, process utilities |
 | claude_profile_core | — | 1 | Token status + account domain logic (no CLI deps) |
 | claude_version_core | — | 1 | Version / settings_io / status domain helpers (no CLI deps) |
@@ -27,17 +28,16 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 | claude_assets_core | — | 1 | Symlink-based artifact installer domain logic (no CLI deps) |
 | claude_profile | clp / claude_profile | 2 | Manage Claude Code accounts, token status, and ~/.claude/ paths |
 | claude_storage | clg / claude_storage | 2 | CLI for exploring Claude Code filesystem storage |
+| claude_journal_viewer | clj | 2 | CLI and web viewer for CLR journal events |
 | claude_runner | clr / claude_runner | 2 | CLI for executing Claude Code with configurable parameters |
 | dream | — | 2 | Agent-agnostic library facade re-exporting all core crates (Layer 0, *, 1) under feature-gated modules |
 | claude_version | clv / claude_version | 2 | Claude Code version manager CLI |
 | claude_assets | cla / claude_assets | 2 | CLI for installing Claude Code artifacts (rules, skills, commands) via symlinks |
-| assistant | ast / assistant | 3 | Agent-agnostic super-app aggregator: all five Layer 2 CLI crates in one binary |
-| assistant_kit | — | 3 | Library facade re-exporting all Layer 2 full-featured coding agent crates |
+| assistant | ast / assistant | 3 | Agent-agnostic super-app aggregator: all Layer 2 CLI crates in one binary |
+| assistant_kit | — | 3 | Library facade for the five Claude Code Layer 2 CLI crates (excludes journal viewer) |
 | runbox | crb / runbox | * | Scaffold container runner integration files into a project |
-| claude_journal | — | 1 | Append-only JSONL event journal: writer, reader, filter, rotation |
-| claude_journal_viewer | clj | 2 | CLI viewer for CLR journal events with 8 commands and web dashboard |
 
-**Binaries** (15 targets — 7 crates expose both canonical name and short alias):
+**Binaries** (16 targets — 7 crates expose both canonical name and short alias; `claude_runner` additionally exposes alias `c`; `claude_journal_viewer` exposes alias `clj` only):
 
 | Binary | Crate | Kind | Entry point |
 |--------|-------|------|-------------|
@@ -45,17 +45,18 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 | `claude_assets` | `claude_assets` | canonical | `src/main.rs` |
 | `clg` | `claude_storage` | alias | `src/bin/clg.rs` |
 | `claude_storage` | `claude_storage` | canonical | `src/main.rs` |
+| `clj` | `claude_journal_viewer` | primary | `src/cli_main.rs` |
 | `clv` | `claude_version` | alias | `src/bin/clv.rs` |
 | `claude_version` | `claude_version` | canonical | `src/main.rs` |
 | `clp` | `claude_profile` | alias | `src/bin/clp.rs` |
 | `claude_profile` | `claude_profile` | canonical | `src/main.rs` |
 | `clr` | `claude_runner` | alias | `src/bin/clr.rs` |
+| `c` | `claude_runner` | alias | `src/bin/c.rs` |
 | `claude_runner` | `claude_runner` | canonical | `src/main.rs` |
 | `ast` | `assistant` | alias | `src/bin/ast.rs` |
 | `assistant` | `assistant` | canonical | `src/main.rs` |
 | `crb` | `runbox` | alias | `src/bin/crb.rs` |
 | `runbox` | `runbox` | canonical | `src/main.rs` |
-| `clj` | `claude_journal_viewer` | alias | `src/cli_main.rs` |
 
 **Naming convention:** Crates prefixed `claude_*` are Claude Code-specific. `dream`, `assistant`, and `runbox` are intentionally unprefixed — `dream` and `assistant` form the agent-agnostic integration layer; `runbox` is a standalone project scaffolding tool not specific to any agent.
 

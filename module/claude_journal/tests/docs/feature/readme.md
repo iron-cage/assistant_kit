@@ -13,6 +13,6 @@ Per-feature-doc test case indices for `claude_journal`. See [feature/readme.md](
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `01_event_journaling.md` | Test cases for the event journaling feature doc instance | ✅ |
-| `02_event_schema.md` | Test cases for the event schema feature doc instance | ✅ |
-| `03_rotation.md` | Test cases for the rotation feature doc instance | ✅ |
+| `001_event_journaling.md` | Test cases for the event journaling feature doc instance | ✅ |
+| `002_event_schema.md` | Test cases for the event schema feature doc instance | ✅ |
+| `003_rotation.md` | Test cases for the rotation feature doc instance | ✅ |

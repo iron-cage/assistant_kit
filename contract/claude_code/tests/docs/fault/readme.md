@@ -13,4 +13,4 @@ Fault classification behavioral test cases for the `contract/claude_code` fault 
 
 | File | Responsibility |
 |------|----------------|
-| 01_fault_classification.md | FT cases for `classify_error()` priority algorithm and dual-channel scanning |
+| 001_fault_classification.md | FT cases for `classify_error()` priority algorithm and dual-channel scanning |

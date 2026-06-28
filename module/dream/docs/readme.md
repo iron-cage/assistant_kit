@@ -10,6 +10,7 @@
 
 | File | Responsibility |
 |------|----------------|
+| `entity.md` | Doc Entity index for this crate's documentation scope |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |
 | `feature/` | Feature specifications: facade aggregation requirements (FR-1–FR-10) |
 | `invariant/` | Invariant specifications: zero-own-logic structural constraint |

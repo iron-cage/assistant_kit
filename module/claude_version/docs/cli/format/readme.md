@@ -13,12 +13,12 @@
 |------|---------------|
 | readme.md | Index, scope, and Overview Table for format instances |
 | procedure.md | Steps for adding, updating, or removing format instances |
-| 01_text.md | Human-readable labeled text output format |
-| 02_json.md | Machine-readable structured JSON output format |
+| 001_text.md | Human-readable labeled text output format |
+| 002_json.md | Machine-readable structured JSON output format |
 
 ### Overview Table
 
 | File | Format | Purpose |
 |------|--------|---------|
-| [01_text.md](01_text.md) | `text` | Human-readable labeled output |
-| [02_json.md](02_json.md) | `json` | Machine-readable structured output |
+| [001_text.md](001_text.md) | `text` | Human-readable labeled output |
+| [002_json.md](002_json.md) | `json` | Machine-readable structured output |

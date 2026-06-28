@@ -13,7 +13,7 @@
 
 `-c` / `--continue` is the explicit opt-in for resuming the most recently modified session. At the binary level, continuation is NOT the default — it must be requested with `-c`. The `clr` wrapper inverts this by passing `-c` by default (see B1).
 
-The flag is documented in `claude --help` and is a first-class CLI parameter with its own `params/` entry.
+The flag is documented in `claude --help` and is a first-class CLI parameter with its own `param/` entry.
 
 ### Evidence
 

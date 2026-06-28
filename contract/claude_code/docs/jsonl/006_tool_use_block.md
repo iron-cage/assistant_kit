@@ -48,4 +48,4 @@ pre-v1.0 (unverified)
 | jsonl | [003_assistant_entry.md](003_assistant_entry.md) | Assistant entry: `message.content` array that contains this block |
 | jsonl | [007_tool_result_block.md](007_tool_result_block.md) | Tool result block that references this block's `id` |
 | behavior | [`../behavior/016_b16_tools_flag.md`](../behavior/016_b16_tools_flag.md) | `--tools` flag that controls which tools can be invoked |
-| format | [`../formats/007_json_response.md`](../formats/007_json_response.md) | JSON response format that uses this block in its `content` array |
+| format | [`../format/007_json_response.md`](../format/007_json_response.md) | JSON response format that uses this block in its `content` array |

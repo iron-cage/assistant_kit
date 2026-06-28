@@ -36,7 +36,7 @@ pre-v1.0 (unverified)
 | doc | [readme.md](readme.md) | Master subcommand table |
 | doc | [004_doctor.md](004_doctor.md) | Auto-updater health check |
 | doc | [005_install.md](005_install.md) | Specific version installation |
-| doc | [../params/011_auto_updates.md](../params/011_auto_updates.md) | `autoUpdates` config key |
-| doc | [../params/050_preferred_version_spec.md](../params/050_preferred_version_spec.md) | Preferred version spec |
-| doc | [../params/119_disable_updates.md](../params/119_disable_updates.md) | Env var to block all updates |
-| doc | [../params/120_disable_upgrade_command.md](../params/120_disable_upgrade_command.md) | Env var to hide `/upgrade` command |
+| doc | [../param/011_auto_updates.md](../param/011_auto_updates.md) | `autoUpdates` config key |
+| doc | [../param/050_preferred_version_spec.md](../param/050_preferred_version_spec.md) | Preferred version spec |
+| doc | [../param/119_disable_updates.md](../param/119_disable_updates.md) | Env var to block all updates |
+| doc | [../param/120_disable_upgrade_command.md](../param/120_disable_upgrade_command.md) | Env var to hide `/upgrade` command |

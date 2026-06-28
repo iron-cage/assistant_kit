@@ -34,4 +34,4 @@ Controls the encoding of Claude's response on stdout (print mode only). `text` i
 | doc | [051_print.md](051_print.md) | Print mode (required for this flag) |
 | doc | [033_include_partial_messages.md](033_include_partial_messages.md) | Streaming partial messages (used with stream-json) |
 | doc | [045_output_style.md](045_output_style.md) | Visual rendering style (distinct from this) |
-| doc | [../formats/007_json_response.md](../formats/007_json_response.md) | JSON response schema (produced when `--output-format json`) |
+| doc | [../format/007_json_response.md](../format/007_json_response.md) | JSON response schema (produced when `--output-format json`) |

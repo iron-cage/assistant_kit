@@ -9,9 +9,9 @@
 | `filesystem` | Runtime filesystem paths accessed by claude_version | [filesystem/readme.md](filesystem/readme.md) | 4 |
 | `jsonl` | Session JSONL entry format: common fields, entry types, content blocks, usage, threading, sidechain | [jsonl/readme.md](jsonl/readme.md) | 10 |
 | `settings` | Settings file structure and protocols: global, project, version lock | [settings/readme.md](settings/readme.md) | 3 |
-| `formats` | Data formats: file formats, output schemas — history, credentials, debug, shell-snapshots, todos, commands, JSON response | [formats/readme.md](formats/readme.md) | 7 |
+| `formats` | Data formats: file formats, output schemas — history, credentials, debug, shell-snapshots, todos, commands, JSON response | [format/readme.md](format/readme.md) | 7 |
 | `taxonomy` | Four-level concept hierarchy: Project, Conversation, Session, Entry | [taxonomy/readme.md](taxonomy/readme.md) | 3 |
-| `params` | CLI parameter specifications for the `claude` binary | [params/readme.md](params/readme.md) | 120 |
+| `params` | CLI parameter specifications for the `claude` binary | [param/readme.md](param/readme.md) | 120 |
 | `tool` | Built-in tools available in Claude Code sessions | [tool/readme.md](tool/readme.md) | 40 |
 | `endpoint` | Wire contracts for Anthropic HTTP endpoints consumed by workspace crates | [endpoint/readme.md](endpoint/readme.md) | 10 |
 | `subcommand` | CLI subcommands: agents, auth, auto-mode, doctor, install, mcp, plugin, setup-token, update | [subcommand/readme.md](subcommand/readme.md) | 9 |
@@ -98,17 +98,17 @@
 | 002 | Project Settings | [settings/002_project_settings.md](settings/002_project_settings.md) |
 | 003 | Version Lock | [settings/003_version_lock.md](settings/003_version_lock.md) |
 
-### formats/ (7 instances)
+### format/ (7 instances)
 
 | ID | Name | File |
 |----|------|------|
-| 001 | History JSONL | [formats/001_history_jsonl.md](formats/001_history_jsonl.md) |
-| 002 | Credentials | [formats/002_credentials.md](formats/002_credentials.md) |
-| 003 | Debug Log | [formats/003_debug_log.md](formats/003_debug_log.md) |
-| 004 | Shell Snapshot | [formats/004_shell_snapshot.md](formats/004_shell_snapshot.md) |
-| 005 | Todo | [formats/005_todo.md](formats/005_todo.md) |
-| 006 | Command Definition | [formats/006_command_definition.md](formats/006_command_definition.md) |
-| 007 | JSON Response | [formats/007_json_response.md](formats/007_json_response.md) |
+| 001 | History JSONL | [format/001_history_jsonl.md](format/001_history_jsonl.md) |
+| 002 | Credentials | [format/002_credentials.md](format/002_credentials.md) |
+| 003 | Debug Log | [format/003_debug_log.md](format/003_debug_log.md) |
+| 004 | Shell Snapshot | [format/004_shell_snapshot.md](format/004_shell_snapshot.md) |
+| 005 | Todo | [format/005_todo.md](format/005_todo.md) |
+| 006 | Command Definition | [format/006_command_definition.md](format/006_command_definition.md) |
+| 007 | JSON Response | [format/007_json_response.md](format/007_json_response.md) |
 
 ### taxonomy/ (3 instances)
 
@@ -147,7 +147,7 @@
 | 008 | setup-token | [subcommand/008_setup_token.md](subcommand/008_setup_token.md) |
 | 009 | update | [subcommand/009_update.md](subcommand/009_update.md) |
 
-> `params` instances (120 files) use numbered naming and are enumerated in their master file: [params/readme.md](params/readme.md).
+> `params` instances (120 files) use numbered naming and are enumerated in their master file: [param/readme.md](param/readme.md).
 >
 > `tool` instances (40 files) use numbered naming and are enumerated in their master file: [tool/readme.md](tool/readme.md).
 >

@@ -11,4 +11,4 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `01_migration_guide.md` | OP- test cases for the migration guide (`docs/operation/001_migration_guide.md`) | ✅ |
+| `001_migration_guide.md` | OP- test cases for the migration guide (`docs/operation/001_migration_guide.md`) | ✅ |
