@@ -25,7 +25,7 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `10_session_dir.md` | Edge cases for `--session-dir` flag | ✅ |
 | `11_dry_run.md` | Edge cases for `--dry-run` flag | ✅ |
 | `12_verbosity.md` | Edge cases for `--verbosity` flag (DEPRECATED — `--verbosity` removed) | ⚠️ |
-| `74_quiet.md` | Edge cases for `--quiet` flag (suppress non-fatal runner diagnostics) | ⏳ |
+| `074_quiet.md` | Edge cases for `--quiet` flag (suppress non-fatal runner diagnostics) | ✅ |
 | `13_trace.md` | Edge cases for `--trace` flag | ✅ |
 | `14_no_ultrathink.md` | Edge cases for `--no-ultrathink` flag | ✅ |
 | `15_system_prompt.md` | Edge cases for `--system-prompt` flag | ✅ |

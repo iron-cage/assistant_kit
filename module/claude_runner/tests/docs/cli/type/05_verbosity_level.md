@@ -1,4 +1,4 @@
-> **DEPRECATED:** `VerbosityLevel` type removed. Test coverage in `tests/verbosity_test.rs` to be deleted. See `74_quiet.md` for replacement.
+> **DEPRECATED:** `VerbosityLevel` type removed. Test coverage in `tests/verbosity_test.rs` to be deleted. See `074_quiet.md` for replacement.
 
 # Type :: `VerbosityLevel` (DEPRECATED)
 

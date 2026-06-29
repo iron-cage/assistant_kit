@@ -1,4 +1,4 @@
-> **DEPRECATED:** `--verbosity` parameter removed. Test file `tests/verbosity_test.rs` to be deleted. See `74_quiet.md` for replacement test spec.
+> **DEPRECATED:** `--verbosity` parameter removed. Test file `tests/verbosity_test.rs` to be deleted. See `074_quiet.md` for replacement test spec.
 
 # Parameter :: `--verbosity` (DEPRECATED)
 

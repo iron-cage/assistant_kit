@@ -6,14 +6,13 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 
 | Entity | Responsibility | Input→Output | Scope | Out of Scope |
 |--------|---------------|--------------|-------|--------------|
-| claude_runner (lib) | YAML schema constants; `COMMANDS_YAML` path for consumers | — | YAML path constant, `VerbosityLevel` type | ❌ Process execution → `claude_runner_core` |
+| claude_runner (lib) | YAML schema constants; `COMMANDS_YAML` path for consumers | — | YAML path constant | ❌ Process execution → `claude_runner_core` |
 | clr (bin) | Standalone Claude Code CLI with session continuity by default | CLI args → process exit code | Arg parsing, session continuation, dry-run, help | ❌ Process execution → `claude_runner_core`<br>❌ Session paths → `claude_profile` |
 
 ### Scope
 
 **Library (`src/lib.rs`):**
 - `COMMANDS_YAML` constant — absolute path to `claude.commands.yaml`
-- `VerbosityLevel` — newtype `u8` (0–5) for runner output gating
 - Zero extra dependencies — always available regardless of features
 
 **Binary (`src/main.rs`, requires `enabled` feature):**
@@ -40,7 +39,7 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 ### Architecture
 
 ```
-claude_runner lib (YAML schema + COMMANDS_YAML constant + VerbosityLevel)
+claude_runner lib (YAML schema + COMMANDS_YAML constant)
     └─ COMMANDS_YAML → path to claude.commands.yaml
 
 clr binary (standalone CLI, mirrors claude's --flag syntax)
