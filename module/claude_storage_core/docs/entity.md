@@ -7,7 +7,7 @@
 | `algorithm/` | Core parsing and encoding algorithms | [algorithm/readme.md](algorithm/readme.md) | 2 |
 | `api/` | Public API contract for zero-dep storage library | [api/readme.md](api/readme.md) | 1 |
 | `data_structure/` | Domain type documentation for storage hierarchy | [data_structure/readme.md](data_structure/readme.md) | 2 |
-| `feature/` | Behavioral requirements for the storage core | [feature/readme.md](feature/readme.md) | 3 |
+| `feature/` | Behavioral requirements for the storage core | [feature/readme.md](feature/readme.md) | 4 |
 | `invariant/` | Measurable constraints for storage correctness and performance | [invariant/readme.md](invariant/readme.md) | 2 |
 
 ## Master Doc Instances Table
@@ -22,5 +22,6 @@
 | feature | 001 | Core Library | [feature/001_core_library.md](feature/001_core_library.md) |
 | feature | 002 | Content Search | [feature/002_content_search.md](feature/002_content_search.md) |
 | feature | 003 | Export Formats | [feature/003_export_formats.md](feature/003_export_formats.md) |
+| feature | 004 | Continuation Detection | [feature/004_continuation_detection.md](feature/004_continuation_detection.md) |
 | invariant | 001 | Safety Guarantees | [invariant/001_safety_guarantees.md](invariant/001_safety_guarantees.md) |
 | invariant | 002 | Performance | [invariant/002_performance.md](invariant/002_performance.md) |

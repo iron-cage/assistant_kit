@@ -3,7 +3,8 @@
 // apply_model_override, apply_post_switch_touch, and TouchCtx
 // without widening their visibility. See src/usage/readme.md § Inline Test Exception.
 
-use super::{ pre_switch_touch_ctx, apply_model_override, apply_post_switch_touch, PreSwitchOutcome, TouchCtx };
+use super::{ pre_switch_touch_ctx, apply_model_override, apply_post_switch_touch, PreSwitchOutcome };
+use crate::usage::api_switch::TouchCtx;
 use tempfile::TempDir;
 
 /// Structural test: `pre_switch_touch_ctx` with an invalid credential file (no accessToken).

@@ -17,7 +17,7 @@ The implementation is factored into two levels to support callers with different
 
 - **Lower level** — `most_recent_session_in_dir(storage_path: &Path) -> Option<SessionId>`: operates on an already-resolved storage directory. Callers that know the storage path directly (e.g. from a custom `--session-dir`) call this without path encoding.
 - **Upper level** — `most_recent_session_id(session_dir: &Path) -> Option<SessionId>`: encodes `session_dir` via `to_storage_path_for()`, then delegates to `most_recent_session_in_dir()`. Callers that work with the CWD or project directory call this.
-- **Boolean convenience** — `check_continuation(session_dir: &Path) -> bool`: delegates to `most_recent_session_id(session_dir).is_some()`. Preserved for callers that only need existence detection.
+- **Boolean convenience** — `check_continuation(session_dir: &Path) -> bool`: independent implementation that also detects legacy `conversation.json` and `.claude*` files that `most_recent_session_in_dir()` intentionally excludes. Preserved for callers that only need existence detection and must handle pre-v2 session formats. NOT a delegate to `most_recent_session_id().is_some()` — doing so would silently drop legacy format detection.
 
 **UUID selection — most-recent mtime:**
 
@@ -54,7 +54,17 @@ most_recent_session_in_dir(storage_path):
      None if no qualifying entry found
 
 check_continuation(cwd):
-  most_recent_session_id(cwd).is_some()
+  1. storage_path = to_storage_path_for(cwd)?          # encode cwd → ~/.claude/projects/{enc}/
+  2. read_dir(storage_path) → entries
+  3. for each entry:
+     a. skip if filename starts with "agent-"          # agent definitions, not user sessions
+     b. skip if file is 0 bytes                        # initialization artifacts / crash remnants
+     c. return true if extension is ".jsonl"           # v2+ session files (also yields UUIDs)
+     d. return true if filename is "conversation.json" # legacy format (no UUID)
+     e. return true if filename starts with ".claude"  # legacy format (no UUID)
+  4. return false                                      # no qualifying file found
+  # NOTE: check_continuation() is NOT most_recent_session_id().is_some() —
+  #   the extra legacy format detection (d, e) makes it deliberately independent.
 ```
 
 ### Cross-References

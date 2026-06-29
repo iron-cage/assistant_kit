@@ -12,10 +12,10 @@
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](cli/type/readme.md) | 14 |
 | `cli/user_story/` | User story catalog for runner use cases | [cli/user_story/readme.md](cli/user_story/readme.md) | 27 |
 | `feature/` | Behavioral requirements for the runner | [feature/readme.md](feature/readme.md) | 2 |
-| `invariant/` | Measurable constraints for runner behavior | [invariant/readme.md](invariant/readme.md) | 8 |
+| `invariant/` | Measurable constraints for runner behavior | [invariant/readme.md](invariant/readme.md) | 9 |
 | `tests/docs/api/` | Per-API test case specifications | [../../tests/docs/api/readme.md](../../tests/docs/api/readme.md) | 0 |
 | `tests/docs/feature/` | Per-feature test case specifications | [../../tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 2 |
-| `tests/docs/invariant/` | Per-invariant test case specifications | [../../tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 8 |
+| `tests/docs/invariant/` | Per-invariant test case specifications | [../../tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 9 |
 
 ## Master Doc Instances Table
 
@@ -32,3 +32,4 @@
 | invariant | 006 | Exit Codes | [invariant/006_exit_codes.md](invariant/006_exit_codes.md) |
 | invariant | 007 | Print Mode Timeout | [invariant/007_print_mode_timeout.md](invariant/007_print_mode_timeout.md) |
 | invariant | 008 | Render Summary Gate | [invariant/008_render_summary_gate.md](invariant/008_render_summary_gate.md) |
+| invariant | 009 | Session Mismatch Detection | [invariant/009_session_mismatch_detection.md](invariant/009_session_mismatch_detection.md) |

@@ -11,6 +11,110 @@ use unilang::types::Value;
 use crate::commands::shared::{ is_dry, resolve_account_name, io_err_to_error_data };
 use claude_profile_core::account::trace_ts;
 
+// ── Private helpers ────────────────────────────────────────────────────────────
+
+/// Inner body of the `assignee::` dispatch — sentinel expansion done by caller.
+///
+/// `av` is the sanitised, sentinel-expanded `USER@MACHINE` string.
+fn dispatch_assignee_param(
+  av               : String,
+  cmd              : &VerifiedCommand,
+  trace            : bool,
+  credential_store : &std::path::Path,
+) -> Result< Option< OutputData >, ErrorData >
+{
+  let san = | s : &str | -> String
+  {
+    s.chars()
+      .map( | c | if c.is_alphanumeric() || c == '-' || c == '.' { c } else { '_' } )
+      .collect()
+  };
+  let ( usr_raw, mch_raw ) = av.split_once( '@' ).ok_or_else( || ErrorData::new(
+    ErrorCode::ArgumentTypeMismatch,
+    "assignee:: must be USER@MACHINE format (no '@' found) — or use assignee::0 for current machine".to_string(),
+  ) )?;
+  if usr_raw.is_empty()
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "assignee:: user component (left of '@') must not be empty".to_string(),
+    ) );
+  }
+  if mch_raw.is_empty()
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "assignee:: machine component (right of '@') must not be empty".to_string(),
+    ) );
+  }
+  let su      = san( usr_raw );
+  let sm      = san( mch_raw );
+  let marker  = format!( "_active_{sm}_{su}" );
+  let display = format!( "{su}@{sm}" );
+
+  let raw_name = match cmd.arguments.get( "name" )
+  {
+    Some( Value::String( s ) ) => s.clone(),
+    _ => String::new(),
+  };
+  let name_arg = if raw_name.is_empty()
+  {
+    raw_name.clone()
+  }
+  else
+  {
+    resolve_account_name( &raw_name, credential_store )?
+  };
+
+  if !name_arg.is_empty()
+  {
+    // Assign: write marker pointing to name_arg.
+    let cred_path = credential_store.join( format!( "{name_arg}.credentials.json" ) );
+    if !cred_path.exists()
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        format!( "account '{name_arg}' not found in credential store" ),
+      ) );
+    }
+    if is_dry( cmd )
+    {
+      return Ok( Some( OutputData::new(
+        format!( "[dry-run] would assign {name_arg} for {display}  \u{2192}  {marker}\n" ),
+        "text",
+      ) ) );
+    }
+    std::fs::write( credential_store.join( &marker ), name_arg.as_bytes() )
+      .map_err( | e | io_err_to_error_data( &e, "usage assignee" ) )?;
+    if trace { eprintln!( "{}usage assignee  write marker: {marker}  →  {name_arg}", trace_ts() ) }
+    return Ok( Some( OutputData::new(
+      format!( "assigned {name_arg} for {display}  \u{2192}  {marker}\n" ),
+      "text",
+    ) ) );
+  }
+  // Unassign: clear the marker file.
+  if is_dry( cmd )
+  {
+    return Ok( Some( OutputData::new(
+      format!( "[dry-run] would unassign {display}  \u{2192}  {marker} cleared\n" ),
+      "text",
+    ) ) );
+  }
+  let marker_path = credential_store.join( &marker );
+  if marker_path.exists()
+  {
+    std::fs::remove_file( &marker_path )
+      .map_err( | e | io_err_to_error_data( &e, "usage assignee unassign" ) )?;
+  }
+  if trace { eprintln!( "{}usage assignee  cleared marker: {marker}", trace_ts() ) }
+  Ok( Some( OutputData::new(
+    format!( "unassigned {display}  \u{2192}  {marker} cleared\n" ),
+    "text",
+  ) ) )
+}
+
+// ── Public interface ───────────────────────────────────────────────────────────
+
 /// Handle all mutation-only params in `.usage`.
 ///
 /// Returns:
@@ -88,101 +192,9 @@ fn dispatch_assignee(
 {
   if let Some( Value::String( av ) ) = cmd.arguments.get( "assignee" )
   {
-    let av = if av == "0"
-    {
-      // Sentinel "0" expands to current machine identity ($USER@$HOSTNAME).
-      claude_profile_core::account::current_identity()
-    }
-    else
-    {
-      av.clone()
-    };
-    let san = | s : &str | -> String
-    {
-      s.chars().map( | c | if c.is_alphanumeric() || c == '-' || c == '.' { c } else { '_' } ).collect()
-    };
-    let ( usr_raw, mch_raw ) = av.split_once( '@' ).ok_or_else( || ErrorData::new(
-      ErrorCode::ArgumentTypeMismatch,
-      "assignee:: must be USER@MACHINE format (no '@' found) — or use assignee::0 for current machine".to_string(),
-    ) )?;
-    if usr_raw.is_empty()
-    {
-      return Err( ErrorData::new(
-        ErrorCode::ArgumentTypeMismatch,
-        "assignee:: user component (left of '@') must not be empty".to_string(),
-      ) );
-    }
-    if mch_raw.is_empty()
-    {
-      return Err( ErrorData::new(
-        ErrorCode::ArgumentTypeMismatch,
-        "assignee:: machine component (right of '@') must not be empty".to_string(),
-      ) );
-    }
-    let su      = san( usr_raw );
-    let sm      = san( mch_raw );
-    let marker  = format!( "_active_{sm}_{su}" );
-    let display = format!( "{su}@{sm}" );
-
-    let raw_name = match cmd.arguments.get( "name" )
-    {
-      Some( Value::String( s ) ) => s.clone(),
-      _ => String::new(),
-    };
-    let name_arg = if raw_name.is_empty()
-    {
-      raw_name.clone()
-    }
-    else
-    {
-      resolve_account_name( &raw_name, credential_store )?
-    };
-
-    if !name_arg.is_empty()
-    {
-      // Assign: write marker pointing to name_arg.
-      let cred_path = credential_store.join( format!( "{name_arg}.credentials.json" ) );
-      if !cred_path.exists()
-      {
-        return Err( ErrorData::new(
-          ErrorCode::ArgumentTypeMismatch,
-          format!( "account '{name_arg}' not found in credential store" ),
-        ) );
-      }
-      if is_dry( cmd )
-      {
-        return Ok( Some( OutputData::new(
-          format!( "[dry-run] would assign {name_arg} for {display}  \u{2192}  {marker}\n" ),
-          "text",
-        ) ) );
-      }
-      std::fs::write( credential_store.join( &marker ), name_arg.as_bytes() )
-        .map_err( | e | io_err_to_error_data( &e, "usage assignee" ) )?;
-      if trace { eprintln!( "{}usage assignee  write marker: {marker}  →  {name_arg}", trace_ts() ) }
-      return Ok( Some( OutputData::new(
-        format!( "assigned {name_arg} for {display}  \u{2192}  {marker}\n" ),
-        "text",
-      ) ) );
-    }
-    // Unassign: clear the marker file.
-    if is_dry( cmd )
-    {
-      return Ok( Some( OutputData::new(
-        format!( "[dry-run] would unassign {display}  \u{2192}  {marker} cleared\n" ),
-        "text",
-      ) ) );
-    }
-    let marker_path = credential_store.join( &marker );
-    if marker_path.exists()
-    {
-      std::fs::remove_file( &marker_path )
-        .map_err( | e | io_err_to_error_data( &e, "usage assignee unassign" ) )?;
-    }
-    if trace { eprintln!( "{}usage assignee  cleared marker: {marker}", trace_ts() ) }
-    return Ok( Some( OutputData::new(
-      format!( "unassigned {display}  \u{2192}  {marker} cleared\n" ),
-      "text",
-    ) ) );
+    // Sentinel "0" expands to current machine identity ($USER@$HOSTNAME).
+    let av = if av == "0" { claude_profile_core::account::current_identity() } else { av.clone() };
+    return dispatch_assignee_param( av, cmd, trace, credential_store );
   }
 
   Ok( None )

@@ -194,6 +194,10 @@ fn parse_value_flag(
         parse_effort_level( next_value( tokens, next, "--effort" )? )?
       );
     }
+    "--message" =>
+    {
+      parsed.message = Some( next_value( tokens, next, "--message" )?.to_string() );
+    }
     "--system-prompt" =>
     {
       parsed.system_prompt = Some( next_value( tokens, next, "--system-prompt" )?.to_string() );
@@ -683,7 +687,8 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
     i += 1;
   }
 
-  if !positional.is_empty()
+  // Positional args form the message only when --message was not given explicitly.
+  if !positional.is_empty() && parsed.message.is_none()
   {
     parsed.message = Some( positional.join( " " ) );
   }
