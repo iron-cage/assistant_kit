@@ -1,8 +1,8 @@
 //! Unix-only integration tests.
 #![ cfg( unix ) ]
-//! `--output-style` Integration Tests (EC-01–EC-14, IT-7)
+//! `--output-style` Integration Tests (EC-01–EC-15, IT-7)
 //!
-//! Covers EC-01 through EC-14 from `tests/docs/cli/param/070_output_style.md`;
+//! Covers EC-01 through EC-15 from `tests/docs/cli/param/070_output_style.md`;
 //! IT-7 (structural anti-pattern guard) from `tests/docs/invariant/08_render_summary_gate.md`.
 
 mod cli_binary_test_helpers;
@@ -14,6 +14,11 @@ const JSON_FIXTURE : &str = r#"{"type":"result","subtype":"success","session_id"
 /// Used by EC-14 to verify BUG-310 fix: `render_summary()` must gate on `type=="result"`,
 /// not on the optional `session_id` field.
 const MINIMAL_ENVELOPE : &str = r#"{"type":"result","subtype":"success","is_error":false,"duration_ms":1000,"duration_api_ms":900,"num_turns":1,"result":"hello"}"#;
+
+/// CLR envelope with `structured_output` field and an empty `result` — used by EC-15 to
+/// verify BUG-318 fix: raw mode + `--json-schema` must extract `structured_output` from
+/// the JSON envelope instead of returning the empty `result` text unchanged.
+const STRUCTURED_OUTPUT_FIXTURE : &str = r#"{"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"result":"","structured_output":{"x":"hello"},"usage":{"input_tokens":1,"output_tokens":1},"total_cost_usd":0.0}"#;
 
 /// Run `clr` with a fake claude that emits the JSON fixture.
 ///
@@ -58,6 +63,25 @@ fn run_minimal_claude( args : &[ &str ] ) -> std::process::Output
 fn run_text_claude( args : &[ &str ] ) -> std::process::Output
 {
   let ( _dir, path ) = fake_claude_dir( "echo hello" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  std::process::Command::new( bin )
+    .args( args )
+    .env( "PATH", &path )
+    .env_remove( "CLR_OUTPUT_STYLE" )
+    .output()
+    .expect( "Failed to invoke clr binary" )
+}
+
+/// Run `clr` with a fake claude that emits the structured-output CLR envelope.
+///
+/// Used by EC-15 to verify BUG-318 fix: `--output-style raw` combined with `--json-schema`
+/// must produce non-empty stdout containing the `structured_output` field value.  The fake
+/// claude emits `"result":""` (empty) so that only the BUG-318 fix — not the `result` field
+/// itself — produces output.
+fn run_structured_claude( args : &[ &str ] ) -> std::process::Output
+{
+  let body = format!( "echo '{STRUCTURED_OUTPUT_FIXTURE}'" );
+  let ( _dir, path ) = fake_claude_dir( &body );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   std::process::Command::new( bin )
     .args( args )
@@ -366,5 +390,54 @@ fn render_summary_gate_uses_type_not_session_id()
     !source.contains( r#"extract_str( json, "session_id" )?"# ),
     "BUG-310 anti-pattern detected: extract_str( json, \"session_id\" )? must not appear in \
     src/cli/summary.rs — gate must use the invariant 'type' field, not the optional 'session_id'"
+  );
+}
+
+// ── EC-15: --output-style raw --json-schema → structured output extracted (BUG-318) ─
+
+/// EC-15 (BUG-318 fix): `--output-style raw` + `--json-schema` must produce non-empty stdout
+/// by extracting the `structured_output` field from the CLR JSON envelope.
+///
+/// ## Root Cause
+/// The raw execution branch passed through the empty `"result"` text unchanged.  builder.rs
+/// also did not inject `--output-format json` for the raw+json-schema path, so the CLR
+/// envelope was never produced and `structured_output` was inaccessible.
+///
+/// ## Why Not Caught
+/// No test covered the combined raw+json-schema execution path with a fake claude emitting
+/// a CLR envelope where `"result"` is empty and `"structured_output"` holds the value.
+///
+/// ## Fix Applied
+/// builder.rs widened the Path B auto-inject gate to fire when `cli.json_schema.is_some()`;
+/// execution.rs added `else if cli.json_schema.is_some()` calling `extract_structured_output()`;
+/// `render_summary()` body also falls back to `structured_output` when `result` is empty.
+///
+/// ## Prevention
+/// This test verifies the combined raw+schema execution path end-to-end.
+///
+/// ## Pitfall
+/// The fake claude must emit `"result":""` (empty) to reproduce the original symptom —
+/// a non-empty `result` field would have produced output even before the fix.
+// test_kind: bug_reproducer(BUG-318)
+#[ test ]
+fn ec15_raw_style_json_schema_outputs_structured_result()
+{
+  let schema = r#"{"type":"object","properties":{"x":{"type":"string"}},"required":["x"]}"#;
+  let out = run_structured_claude(
+    &[ "-p", "--max-sessions", "0", "--output-style", "raw", "--json-schema", schema, "test" ],
+  );
+  assert!( out.status.success(), "exit must be 0 (BUG-318): {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.is_empty(),
+    "stdout must be non-empty for raw+json-schema (BUG-318 regression). Got empty."
+  );
+  assert!(
+    stdout.contains( "\"x\"" ),
+    "stdout must contain '\"x\"' from structured_output field (BUG-318). Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( "hello" ),
+    "stdout must contain 'hello' from structured_output value (BUG-318). Got:\n{stdout}"
   );
 }

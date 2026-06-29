@@ -30,9 +30,6 @@
 //!
 //! **Runtime:** Use `MultiYamlAggregator` with [`COMMANDS_YAML`].
 
-pub mod verbosity;
-pub use verbosity::VerbosityLevel;
-
 /// Absolute path to this crate's command definitions YAML.
 ///
 /// Use in `build.rs` for compile-time aggregation or at runtime for dynamic registration.

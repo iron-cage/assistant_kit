@@ -28,7 +28,7 @@
 //! - `--dir` with spaces: `cd` output is unquoted (human-readable per FR-21, not shell-safe)
 //! - All 5 Tier-1 default env vars appear in output (not just max-tokens)
 //! - No message provided: `--dry-run` outputs bare `claude --dangerously-skip-permissions --chrome --effort max -c` command with no message arg (when default session dir has sessions)
-//! - `--dry-run --verbosity 0` still shows output (verbosity does not gate dry-run; bug reproducer)
+//! - `--dry-run --quiet` still shows output (--quiet does not gate dry-run; bug reproducer)
 //! - `--system-prompt TEXT` appears in command args (param 15 round-trip)
 //! - `--append-system-prompt TEXT` appears in command args (param 16 round-trip)
 //! - Both system-prompt flags can appear together in a single invocation
@@ -304,50 +304,36 @@ fn bare_dry_run_no_message_has_no_print()
   );
 }
 
-// Bug reproducer: --dry-run output must appear regardless of --verbosity level.
+// Bug reproducer: --dry-run output must appear even with --quiet.
 //
 // ## Root Cause
 //
-// `handle_dry_run()` gated output on `verbosity.shows_progress()` (level ≥ 3).
-// At `--verbosity 0`, `shows_progress()` returned false so the entire output block
-// was skipped — `--dry-run --verbosity 0` produced empty stdout and exit 0, with
-// no indication that anything had been previewed.
-//
-// ## Why Not Caught
-//
-// All existing tests used default verbosity (3) or higher with `--dry-run`.
-// No test exercised `--dry-run` at verbosity < 3, so the gate was never hit.
+// `handle_dry_run()` previously gated output on `verbosity.shows_progress()` (level ≥ 3).
+// At low verbosity, the entire output block was skipped — `--dry-run` produced empty
+// stdout with no indication that anything had been previewed.
 //
 // ## Fix Applied
 //
-// Removed the `shows_progress()` guard from `handle_dry_run`. Verbosity controls
-// runner *diagnostics* (progress messages, error reporting); `--dry-run` output
-// is core functionality that the user explicitly requested.
-//
-// ## Prevention
-//
-// Test `--dry-run` at the extremes (verbosity 0 and verbosity 5). Core mode output
-// (`--dry-run`, `--trace`) must never be gated on verbosity.
+// Removed the verbosity guard from `handle_dry_run`. `--quiet` controls runner
+// *diagnostics* (retry warnings, gate-wait messages); `--dry-run` output is core
+// functionality that the user explicitly requested and must never be suppressed.
 //
 // ## Pitfall
 //
-// Do not confuse runner diagnostic verbosity with feature output. `--verbosity 0`
+// Do not confuse runner diagnostic suppression with feature output. `--quiet`
 // suppresses runner messages; it must never suppress the command the user asked to see.
 #[ test ]
-fn dry_run_output_appears_regardless_of_verbosity()
+fn dry_run_output_appears_with_quiet()
 {
-  for level in [ "0", "1", "2", "3", "4", "5" ]
-  {
-    let output = run_dry( &[ "--verbosity", level, "test" ] );
-    assert!(
-      output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=" ),
-      "--dry-run --verbosity {level} must show env+command output regardless of verbosity. Got:\n{output}"
-    );
-    assert!(
-      output.contains( "claude " ),
-      "--dry-run --verbosity {level} must show the claude command line. Got:\n{output}"
-    );
-  }
+  let output = run_dry( &[ "--quiet", "test" ] );
+  assert!(
+    output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=" ),
+    "--dry-run --quiet must still show env+command output. Got:\n{output}"
+  );
+  assert!(
+    output.contains( "claude " ),
+    "--dry-run --quiet must still show the claude command line. Got:\n{output}"
+  );
 }
 
 // --system-prompt value round-trips through dry-run output.

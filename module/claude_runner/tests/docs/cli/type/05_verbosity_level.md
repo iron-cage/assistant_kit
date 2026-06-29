@@ -1,4 +1,6 @@
-# Type :: `VerbosityLevel`
+> **DEPRECATED:** `VerbosityLevel` type removed. Test coverage in `tests/verbosity_test.rs` to be deleted. See `074_quiet.md` for replacement.
+
+# Type :: `VerbosityLevel` (DEPRECATED)
 
 Validation tests for the `VerbosityLevel` semantic type (u8, 0–5, default 3). Tests validate range enforcement, error messages, and default behavior.
 

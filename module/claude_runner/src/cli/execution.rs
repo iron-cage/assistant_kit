@@ -606,7 +606,6 @@ pub( super ) fn run_print_mode(
   expected_session_id : Option< &SessionId >,
 )
 {
-  let verbosity    = cli.verbosity.unwrap_or_default();
   // Fix(BUG-305): print-mode sessions had no default watchdog, leaving unattended sessions unbounded.
   // Root cause: unwrap_or( 0 ) treated absent --timeout as unlimited; print-mode should default to 1h.
   // Pitfall: DEFAULT_PRINT_TIMEOUT_SECS applies ONLY here in run_print_mode(); run_interactive() must retain unwrap_or( 0 ) — it is user-attended.
@@ -687,7 +686,7 @@ pub( super ) fn run_print_mode(
       if !is_auth_error && attempts[ class_idx ] < limit
       {
         attempts[ class_idx ] += 1;
-        if verbosity.shows_warnings()
+        if !cli.quiet
         {
           let suf = delay_suffix( delay );
           eprintln!(
@@ -705,7 +704,7 @@ pub( super ) fn run_print_mode(
       }
 
       // Non-retriable error or retries exhausted.
-      if verbosity.shows_errors()
+      if !cli.quiet
       {
         if attempts[ class_idx ] > 0
         {
@@ -748,6 +747,16 @@ pub( super ) fn run_print_mode(
     let out = if cli.output_style.as_deref().unwrap_or( "summary" ) == "summary"
     {
       super::summary::render_summary( &out, cli.summary_fields.as_deref() ).unwrap_or( out )
+    }
+    else if cli.json_schema.is_some()
+    {
+      // Fix(BUG-318): raw mode + --json-schema produced empty stdout because claude returns
+      //   an empty "result" field for structured responses; the value lives in "structured_output".
+      // Root cause: the raw else-branch passed through stdout unchanged, returning the empty
+      //   "result" text instead of extracting "structured_output" from the JSON envelope.
+      // Pitfall: only activate when json_schema is present; unconditional extraction would
+      //   silently drop output for non-structured responses that have no structured_output field.
+      super::summary::extract_structured_output( &out ).unwrap_or( out )
     }
     else
     {

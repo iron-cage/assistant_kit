@@ -1,4 +1,4 @@
-//! CLI Argument Parsing Tests — Extended (T36–T49, S58–S79, BUG-212, BUG-215, T48)
+//! CLI Argument Parsing Tests — Extended (T36–T47, T49, EC01–EC06, S58–S69, S79, BUG-212, BUG-215, BUG-302)
 //!
 //! ## Purpose
 //!
@@ -96,7 +96,7 @@ fn t39_max_tokens_empty_string_rejected()
 fn t40_all_value_flags_require_value()
 {
   for flag in &[
-    "--max-tokens", "--verbosity", "--session-dir", "--dir",
+    "--max-tokens", "--session-dir", "--dir",
     "--system-prompt", "--append-system-prompt",
   ]
   {

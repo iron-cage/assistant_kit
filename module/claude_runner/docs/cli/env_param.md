@@ -17,7 +17,7 @@
 | Runtime config (CLR_*) | 1 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 76 environment variables
+**Total:** 80 environment variables
 
 ---
 
@@ -31,7 +31,7 @@ zero/absent value** — the CLI flag always wins when both are present.
 **Bool variables** accept `"1"` or `"true"` (case-insensitive) as truthy.
 Any other value — including `"yes"`, `"0"`, `"false"`, empty, or absent — resolves to `false`.
 
-**Parsed variables** (`CLR_MAX_TOKENS`, `CLR_VERBOSITY`, `CLR_EFFORT`, `CLR_TIMEOUT`, and all `CLR_RETRY_*` / `CLR_*_DELAY` variables) silently ignore
+**Parsed variables** (`CLR_MAX_TOKENS`, `CLR_EFFORT`, `CLR_TIMEOUT`, and all `CLR_RETRY_*` / `CLR_*_DELAY` variables) silently ignore
 invalid values (parse failure → field stays at default). Exception: `CLR_RETRY_ON_VALIDATION` rejects invalid values at parse time.
 
 | # | Variable | CLI Parameter | Type | Notes |
@@ -47,7 +47,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 9 | `CLR_MAX_TOKENS` | [`--max-tokens`](param/009_max_tokens.md) | u32 | Invalid values silently ignored |
 | 10 | `CLR_SESSION_DIR` | [`--session-dir`](param/010_session_dir.md) | string | |
 | 11 | `CLR_DRY_RUN` | [`--dry-run`](param/011_dry_run.md) | bool | |
-| 12 | `CLR_VERBOSITY` | [`--verbosity`](param/012_verbosity.md) | 0–5 | Applied only when `--verbosity` is absent from CLI |
+| 12 | `CLR_QUIET` | [`--quiet`](param/074_quiet.md) | bool | Applied only when `--quiet` is absent from CLI |
 | 13 | `CLR_TRACE` | [`--trace`](param/013_trace.md) | bool | |
 | 14 | `CLR_NO_ULTRATHINK` | [`--no-ultrathink`](param/014_no_ultrathink.md) | bool | |
 | 15 | `CLR_SYSTEM_PROMPT` | [`--system-prompt`](param/015_system_prompt.md) | string | |

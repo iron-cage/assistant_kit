@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **BUG-318: `--output-style raw` + `--json-schema` produced empty stdout** (TSK-336)
+  - `builder.rs` Path B auto-inject gate widened: `effective_style == "summary" || cli.json_schema.is_some()` ensures `--output-format json` is injected when `--json-schema` is present regardless of `--output-style`
+  - `execution.rs` raw success path: added `else if cli.json_schema.is_some()` branch calling `extract_structured_output()` — extracts the `structured_output` JSON field from the CLR envelope instead of passing through the empty `result` text field
+  - `summary.rs` `render_summary()` body: falls back to `extract_structured_output()` when `result` is empty — also surfaces structured output in summary mode
+  - New `pub(super) fn extract_structured_output(json: &str) -> Option<String>` + private `fn extract_json_value(s: &str, key: &str) -> Option<String>` added to `summary.rs`
+  - Tests: EC-15 (`tests/output_style_test.rs`), S89 (`tests/param_extended_flags_test.rs`)
+
 ### Changed
+
+- **Removed `--verbosity` (0–5); replaced by `--quiet` bool flag** (TSK-337, Plan 038)
+  - `src/verbosity.rs` and `VerbosityLevel` newtype deleted entirely
+  - `--quiet` (env: `CLR_QUIET`) suppresses non-fatal CLR diagnostics: gate-wait messages, retry progress, retry-exhaustion messages, and the keep-claudecode nested-agent warning
+  - Fatal errors (spawn failures, binary-not-found) are always emitted regardless of `--quiet`; `--dry-run` and `--trace` output similarly unaffected
+  - `--verbose-detail` preview (former `--verbosity ≥ 4` behavior) removed; command preview is now exclusively via `--trace`
+  - All 4 gate sites updated from `verbosity.shows_*()` to `!cli.quiet`
+  - `tests/verbosity_test.rs` deleted; replaced by `tests/quiet_test.rs` (QT-1–QT-6)
 
 - **Dependency upgrade: `data_fmt ^0.4 → ^0.6`** (TSK-327)
   - Migrated `clr ps` and `clr tools` from `TableCaption`/`.field()`/`.caption()` to `Heading`/`.with_field()`/`.with_heading()` (renamed in data_fmt TSK-009)

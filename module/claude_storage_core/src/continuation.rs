@@ -126,7 +126,7 @@ pub fn most_recent_session_in_dir( storage_path : &Path ) -> Option< SessionId >
     let Some( stem ) = Path::new( filename )
       .file_stem()
       .and_then( | s | s.to_str() )
-      .map( std::borrow::ToOwned::to_owned )
+      .map( str::to_owned )
     else { continue };
 
     let mtime = meta.modified().ok();

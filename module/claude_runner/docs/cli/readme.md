@@ -25,8 +25,8 @@ clr <command> [OPTIONS] [MESSAGE]
 | `parity/` | Cross-command behavioral parity comparisons (2 instances) |
 | `env_param.md` | CLR_* env var fallbacks, CLR_GATE_DIR runtime config, and CLAUDE_CODE_* subprocess vars (72 vars) |
 | `param_group/` | Logical parameter groupings (5 groups) |
-| `type/` | Semantic type definitions (14 types) |
-| `param/` | Individual parameter reference docs (69 parameters) |
+| `type/` | Semantic type definitions (13 active types; 1 deprecated) |
+| `param/` | Individual parameter reference docs (69 parameters; 1 deprecated, 1 new) |
 | `user_story/` | User goal and usage pattern docs (27 user stories) |
 
 ### Completion Matrix
@@ -37,7 +37,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | command/ (8 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param/ (69 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
-| type/ (14 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| type/ (14 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param_group/ (5 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | user_story/ (27 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | env_param.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
@@ -60,7 +60,7 @@ clr <command> [OPTIONS] [MESSAGE]
 
 - [Commands](command/readme.md) — command reference (8 commands)
 - [Parameters](param/readme.md) — flag and argument reference (69 parameters)
-- [Types](type/readme.md) — semantic type definitions (14 types)
+- [Types](type/readme.md) — semantic type definitions (13 active types; 1 deprecated)
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (5 groups)
 - [Dictionary](dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — user goals and usage patterns (27 user stories)

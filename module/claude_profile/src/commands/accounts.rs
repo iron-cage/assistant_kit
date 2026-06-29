@@ -1,6 +1,6 @@
 //! `.accounts` command handler.
 
-use core::fmt::Write;
+use core::fmt::Write as _;
 use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;

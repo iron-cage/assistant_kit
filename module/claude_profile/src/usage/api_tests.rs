@@ -846,8 +846,10 @@ fn mre_bug288_post_switch_touch_refetch_updates_quota()
     let fn_start = src
       .find( "pub( crate ) fn apply_post_switch_touch(" )
       .expect( "apply_post_switch_touch not found in api_switch.rs" );
-    // apply_post_switch_touch is the last function in api_switch.rs; no end anchor needed.
-    let fn_body  = &src[ fn_start.. ];
+    let fn_end   = src[ fn_start + 1.. ]
+      .find( "\npub( crate ) fn " )
+      .map_or( src.len(), |rel| fn_start + 1 + rel );
+    let fn_body  = &src[ fn_start..fn_end ];
     assert!(
       fn_body.contains( "fetch_oauth_usage" ),
       "BUG-288: apply_post_switch_touch must call fetch_oauth_usage for AC-21 re-fetch",
@@ -1310,8 +1312,10 @@ fn ft_apply_post_switch_touch_routes_through_refresh_account_token()
   let fn_start = src
     .find( "pub( crate ) fn apply_post_switch_touch(" )
     .expect( "apply_post_switch_touch must exist in api_switch.rs (AC-34 routing entry point)" );
-  // apply_post_switch_touch is the last function in api_switch.rs; no end anchor needed.
-  let fn_body = &src[ fn_start.. ];
+  let fn_end = src[ fn_start + 1.. ]
+    .find( "\npub( crate ) fn " )
+    .map_or( src.len(), |rel| fn_start + 1 + rel );
+  let fn_body = &src[ fn_start..fn_end ];
 
   // Positive routing assertion: must delegate to refresh_account_token (AC-34).
   assert!(

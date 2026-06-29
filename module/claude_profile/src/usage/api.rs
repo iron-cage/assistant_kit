@@ -26,6 +26,8 @@ pub( crate ) use super::api_switch::{
   pre_switch_touch_ctx,
   apply_post_switch_touch,
 };
+#[ cfg( test ) ]
+pub( crate ) use super::api_switch::TouchCtx;
 
 // ── no_color post-processor ────────────────────────────────────────────────────
 

@@ -184,14 +184,12 @@ pub( super ) fn run_built_command(
   expected_session_id : Option< &SessionId >,
 )
 {
-  let verbosity = cli.verbosity.unwrap_or_default();
-
   // Concurrency gate: block before subprocess launch when max active claude sessions is reached.
   // Default limit is 30; 0 = unlimited.  dry-run is bypassed by caller (never reaches here).
   let max_sessions = cli.max_sessions.unwrap_or( 30 );
-  wait_for_session_slot( max_sessions, verbosity, cli, journal );
+  wait_for_session_slot( max_sessions, cli.quiet, cli, journal );
 
-  if cli.trace || verbosity.shows_verbose_detail()
+  if cli.trace
   {
     let env     = builder.describe_env();
     let command = builder.describe();
@@ -247,20 +245,16 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
   //   the parent environment — the child will run in nested-agent mode unintentionally.
   // Root cause: no diagnostic existed when the user explicitly disabled CLAUDECODE removal;
   //   the consequence (nested-agent context injection) is non-obvious without a warning.
-  // Pitfall: gate on shows_warnings() (level ≥ 2) so operators who suppress output at
-  //   --verbosity 0/1 still get silence; the warning is informational, not fatal.
-  //   Placed before the dry-run check so it fires in all execution modes including --dry-run.
+  // Pitfall: gate on !cli.quiet so --quiet suppresses this informational warning;
+  //   placed before the dry-run check so it fires in all execution modes including --dry-run.
+  if cli.keep_claudecode
+    && !cli.quiet
+    && std::env::var( "CLAUDECODE" ).is_ok()
   {
-    let verbosity_for_warning = cli.verbosity.unwrap_or_default();
-    if cli.keep_claudecode
-      && verbosity_for_warning.shows_warnings()
-      && std::env::var( "CLAUDECODE" ).is_ok()
-    {
-      eprintln!(
-        "Warning: --keep-claudecode is set and CLAUDECODE is present in environment; \
-         child claude will run in nested-agent mode"
-      );
-    }
+    eprintln!(
+      "Warning: --keep-claudecode is set and CLAUDECODE is present in environment; \
+       child claude will run in nested-agent mode"
+    );
   }
 
   if cli.dry_run

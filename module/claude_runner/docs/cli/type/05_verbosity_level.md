@@ -1,3 +1,5 @@
+> **DEPRECATED:** Removed with `--verbosity` parameter. Replace all call sites with `!quiet` bool. Delete `src/verbosity.rs`. See `074_quiet.md` for replacement.
+
 # CLI Type: VerbosityLevel
 
 Integer value in the range 0–5 (default 3). Controls how much diagnostic

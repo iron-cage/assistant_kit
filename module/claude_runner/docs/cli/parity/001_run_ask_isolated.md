@@ -20,8 +20,8 @@
 | Syntax | `clr [OPTIONS] [MESSAGE]` / `clr run …` | `clr ask [OPTIONS] [MESSAGE]` | `clr isolated [--creds F] [--timeout N] [MESSAGE]` |
 | Behavioral difference from `run` | — | None | Significant (see below) |
 | **--- Param Surface ---** | | | |
-| Full param set (67+ params) | Yes | Yes (identical) | No — minimal set only |
-| Param count | All 67+ | All 67+ | 12: `MESSAGE`, `--creds`, `--timeout`, `--trace`, `--dry-run`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir` |
+| Full param set (69+ params) | Yes | Yes (identical) | No — minimal set only |
+| Param count | All 69+ | All 69+ | 12: `MESSAGE`, `--creds`, `--timeout`, `--trace`, `--dry-run`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir` |
 | Passthrough override (`-- <args>`) | No | No | Yes (e.g., `-- --effort medium`) |
 | **--- Session ---** | | | |
 | Session continuation (`-c`) | Yes — auto (last session in dir) | Yes — auto | No (temp HOME has no history) |
@@ -99,9 +99,9 @@
 | `--allowed-tools` / `--disallowed-tools` | Yes | Yes | No |
 | `--max-budget-usd` | Yes | Yes | No |
 | `--max-turns` | Yes | Yes | No |
-| **--- Verbosity ---** | | | |
+| **--- Output Suppression ---** | | | |
 | `--verbose` | Yes | Yes | No |
-| `--verbosity` (gate level) | Yes (default: 3) | Yes | No |
+| `--quiet` | Yes (default: false) | Yes | No |
 | **--- Journal ---** | | | |
 | `--journal` / `--journal-dir` | Yes | Yes | Yes |
 | **--- Exit Codes ---** | | | |
@@ -140,7 +140,7 @@ Params not in the gap closure table are excluded by design. Four categories:
 | **Temp HOME = meaningless** | `--subdir`, `--session-dir`, `--new-session`, `--no-persist`, `-c` | Temp HOME has no session history; these params control session state that does not exist |
 | **One-shot = no retry** | 20 retry params, `--expect-retries`, `--max-sessions`, `--fallback-model` | No retry loop in `run_isolated_command()`; retrying bad credentials is pointless; concurrency gate conflicts with urgent credential ops |
 | **Passthrough covers it** | `--model`, `--effort`, `--no-effort-max`, `--output-format`, `--system-prompt`, `--append-system-prompt`, `--json-schema`, `--mcp-config`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--max-turns`, `--chrome`/`--no-chrome` | Claude-native flags with no CLR-level validation or transformation; override via `-- <flag>` |
-| **Architecture mismatch** | `--interactive`, `--verbose`, Ultrathink suffix | `--interactive` conflicts with message-present contract; `--verbose` subsumed by `--verbosity` (TSK-333); ultrathink conflicts with "execute immediately" CLAUDE.md directive |
+| **Architecture mismatch** | `--interactive`, `--verbose`, Ultrathink suffix | `--interactive` conflicts with message-present contract; `--verbose` is a claude-native passthrough (no CLR-internal gating); ultrathink conflicts with "execute immediately" CLAUDE.md directive |
 
 ---
 
@@ -155,7 +155,6 @@ The following gaps between `isolated` and `run`/`ask` are tracked as implementat
 | TSK-330 ✅ | `--file` not available | Input | Pipe a file as stdin to the isolated subprocess |
 | TSK-331 ✅ | `--expect` / `--expect-strategy` (fail + default) not available | Validation | Assert output matches expected pattern; exit 3 on mismatch |
 | TSK-332 ✅ | `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields` not available | Output | Tee output to file, strip code fences, render summary, select fields |
-| TSK-333 | `--verbosity` not available | Runner Control | Gate CLR verbose logging level (1-5) |
 
 ---
 

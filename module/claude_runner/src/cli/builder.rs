@@ -213,7 +213,7 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
     // Path B (auto-inject): when rendering summary and no --output-format is set, inject
     // --output-format json so claude returns parseable JSON for render_summary().
     let effective_style = cli.output_style.as_deref().unwrap_or( "summary" );
-    if effective_style == "summary"
+    if effective_style == "summary" || cli.json_schema.is_some()
     {
       builder = builder.with_arg( "--output-format" ).with_arg( "json" );
     }
