@@ -3,6 +3,28 @@
 //! `should_refresh` decides whether a quota error warrants a credential refresh.
 //! Declared `pub(super)` so `refresh.rs` can re-import without leaking outside
 //! the `usage` module.
+//!
+//! ## Architectural Constraint: No Proactive (Approaching-Expiry) Arm
+//!
+//! It is permanently forbidden to add an arm that triggers `should_refresh` when a token is
+//! valid but approaching expiry (`expires_secs > now_secs && expires_secs <= now_secs + MARGIN`).
+//!
+//! **Why:** `refresh_account_token()` calls `run_isolated(["--print", "."])`. When the access
+//! token is still valid, Claude Code uses it as-is and exits without performing an OAuth refresh,
+//! returning `credentials=None`. An approaching-expiry arm would invoke `refresh_account_token()`
+//! and get `credentials=None` back — a silent no-op that wastes 35 seconds per account per poll.
+//!
+//! **Spec reference:** `docs/feature/017_token_refresh.md` line 8 explicitly marks "proactive
+//! expiry detection before any API call" as **Out of Scope**.
+//!
+//! **Mechanism reference:** `docs/invariant/008_single_token_refresh_entry.md` — the `expiresAt=1`
+//! trick only works because it forces Claude Code to treat the AT as expired before calling the
+//! OAuth server. A genuinely valid AT cannot be force-refreshed this way via `run_isolated`.
+//!
+//! SR-11 (`sr11_approaching_expiry_must_not_trigger_refresh`) enforces this constraint in tests.
+//! If this constraint is ever proposed for removal, first resolve the subprocess limitation —
+//! until `run_isolated` supports proactive token rotation, the arm cannot be made functional.
+//! See BUG-323 for the full investigation history.
 
 use super::types::AccountQuota;
 
@@ -547,6 +569,61 @@ mod tests
     assert!(
       !should_refresh( &aq_cached_expired, 9_999 ),
       "CC-8b: G2 — non-owned cached+expired must NOT trigger refresh",
+    );
+  }
+
+  // ── SR-11: approaching-expiry MUST NOT trigger should_refresh (constraint) ───
+
+  /// SR-11 — A token that is valid but approaching expiry must NOT trigger refresh.
+  ///
+  /// This test enforces the architectural constraint documented in the module doc:
+  /// `should_refresh()` has no approaching-expiry arm and must never have one until
+  /// `run_isolated` supports proactive token rotation (currently impossible).
+  ///
+  /// # Why Not Caught (BUG-323)
+  /// The reactive predicate + 60-minute polling gap allows non-active tokens to expire
+  /// unrefreshed. A proactive arm was proposed as the fix (BUG-323). Investigation showed
+  /// the fix is unavailable: `run_isolated(["--print", "."])` with a valid AT returns
+  /// `credentials=None` — no OAuth refresh occurs. `feature/017` line 8 also explicitly
+  /// marks proactive expiry detection as Out of Scope.
+  ///
+  /// # What This Test Asserts
+  /// An `Ok` result with a token expiring in 10 minutes (within any plausible polling margin)
+  /// returns `false`. This is NOT "the predicate ignores an important case" — it is the
+  /// correct and required behavior given the subprocess constraint.
+  ///
+  /// # If You Are Considering Removing This Test
+  /// Do not remove this test without first verifying that `run_isolated` now supports
+  /// proactive AT rotation with a valid token. Otherwise removing it would re-introduce
+  /// a silent no-op arm. See BUG-323 history for prior investigation.
+  #[ test ]
+  fn sr11_approaching_expiry_must_not_trigger_refresh()
+  {
+    let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+    let now_secs : u64 = 100_000;
+    // Token expires in 10 minutes (600s) — well within any proactive margin.
+    let aq = AccountQuota
+    {
+      name                  : "a@test.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : ( now_secs + 600 ) * 1000,  // 10 min remaining
+      result                : Ok( quota ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
+      is_owned              : true,
+      owner                 : String::new(),
+    };
+    assert!(
+      !should_refresh( &aq, now_secs ),
+      "SR-11: Ok token approaching expiry (10 min remaining) must NOT trigger should_refresh — \
+       run_isolated with a valid AT returns credentials=None; proactive refresh is a silent no-op. \
+       See module doc and BUG-323 for constraint rationale.",
     );
   }
 
