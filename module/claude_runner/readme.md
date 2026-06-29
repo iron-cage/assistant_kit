@@ -22,7 +22,7 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 - Modes: interactive (default), print (`-p`), dry-run (`--dry-run`)
 - Flags: `-p`, `--interactive`, `--new-session`, `--model`, `--verbose`, `--no-skip-permissions`,
   `--max-tokens`, `--session-dir`, `--dir`, `--dry-run`, `--trace`,
-  `--system-prompt`, `--append-system-prompt`, `--verbosity`, `-h`
+  `--system-prompt`, `--append-system-prompt`, `--quiet`, `-h`
 - Exit code propagation
 
 ### Files
@@ -31,8 +31,8 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 |------|----------------|
 | `Cargo.toml` | Crate manifest: lib + binary, optional feature-gated deps |
 | `claude.commands.yaml` | Command definitions for `.claude` and `.claude.help` |
-| `src/` | Library and binary source: `COMMANDS_YAML`, `VerbosityLevel`, `clr` CLI |
-| `tests/` | CLI flag parsing, dry-run, verbosity, execution mode tests |
+| `src/` | Library and binary source: `COMMANDS_YAML`, `clr` CLI |
+| `tests/` | CLI flag parsing, dry-run, quiet gate, execution mode tests |
 | `docs/` | CLI reference and design documentation |
 | `changelog.md` | Notable changes by version |
 | `verb/` | Shell scripts for each `do` protocol verb. |

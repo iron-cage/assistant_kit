@@ -1,4 +1,3 @@
-use crate::VerbosityLevel;
 use claude_runner_core::EffortLevel;
 use error_tools::{ Error, Result };
 use super::parse::{ CliArgs, ExpectStrategy, parse_u8_bounded };
@@ -44,19 +43,7 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
   }
   if parsed.session_dir.is_none()         { parsed.session_dir          = env_str( "CLR_SESSION_DIR" ); }
   if !parsed.dry_run                       { parsed.dry_run              = env_bool( "CLR_DRY_RUN" ); }
-  // Fix(BUG-213): `CLR_VERBOSITY` overwrote an explicit `--verbosity N` CLI flag when N equalled
-  //   the default (3) — indistinguishable from an unset field because `verbosity` was non-optional.
-  // Root cause: non-optional field whose default is non-zero/non-false cannot act as a "set" sentinel;
-  //   `parsed.verbosity == VerbosityLevel::default()` misfires when the user explicitly passes that value.
-  // Pitfall: use `Option<T>` (never `T == default()`) for any env-var-fallback field whose default
-  //   is non-false/non-zero; equality-with-default is always ambiguous as a set-sentinel.
-  if parsed.verbosity.is_none()
-  {
-    if let Some( v ) = env_str( "CLR_VERBOSITY" )
-    {
-      if let Ok( level ) = v.parse::< VerbosityLevel >() { parsed.verbosity = Some( level ); }
-    }
-  }
+  if !parsed.quiet                         { parsed.quiet                = env_bool( "CLR_QUIET" ); }
   if !parsed.trace                         { parsed.trace                = env_bool( "CLR_TRACE" ); }
   if !parsed.no_ultrathink                 { parsed.no_ultrathink        = env_bool( "CLR_NO_ULTRATHINK" ); }
   if parsed.system_prompt.is_none()       { parsed.system_prompt        = env_str( "CLR_SYSTEM_PROMPT" ); }

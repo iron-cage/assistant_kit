@@ -35,6 +35,7 @@
 //! - S49: `--help` output contains `--json-schema` (`23_json_schema.md` EC-4)
 //! - S50: `--json-schema` + `--model` → both forwarded (`23_json_schema.md` EC-5)
 //! - S51: `--json-schema` without message → exit 0; schema in assembled command (`23_json_schema.md` EC-6)
+//! - S89: `--output-style raw --json-schema` → stdout non-empty (BUG-318 reproducer, `23_json_schema.md` EC-7)
 //!
 //! --mcp-config:
 //! - S52: single `--mcp-config <path> "msg"` → forwarded in assembled command (`24_mcp_config.md` EC-1)
@@ -56,6 +57,8 @@
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli;
+#[ cfg( unix ) ]
+use cli_binary_test_helpers::fake_claude_dir;
 
 // S34: `--no-chrome` suppresses default `--chrome` injection (`21_no_chrome.md` EC-1)
 #[ test ]
@@ -604,7 +607,7 @@ fn s87_subdir_rejects_slash()
 fn s88_dryrun_subdir_no_mkdir()
 {
   let unique = format!( "clr_drytest_{}", std::process::id() );
-  let base = std::env::temp_dir().join( &unique );
+  let base = std::env::temp_dir().join( unique );
   let expected_dir = base.join( "-probe" );
   // ensure clean slate
   let _ = std::fs::remove_dir_all( &base );
@@ -620,5 +623,65 @@ fn s88_dryrun_subdir_no_mkdir()
     "--dry-run must not create directory {expected_dir:?}"
   );
   // cleanup
-  let _ = std::fs::remove_dir_all( &base );
+  let _ = std::fs::remove_dir_all( base );
+}
+
+// S89: `--output-style raw --json-schema` → stdout non-empty; structured_output extracted
+// (`23_json_schema.md` EC-7 / BUG-318 fix)
+
+/// Fix(BUG-318): `--output-style raw` combined with `--json-schema` produced empty stdout
+/// because claude returns an empty `"result"` text field for structured responses.
+///
+/// ## Root Cause
+/// The raw execution branch passed through the `"result"` text field unchanged — empty for
+/// structured JSON responses where the actual data lives in `"structured_output"`.  builder.rs
+/// also did not inject `--output-format json` for the raw+json-schema combination, so no
+/// CLR envelope was produced and `structured_output` was inaccessible.
+///
+/// ## Why Not Caught
+/// No test covered the combined `--output-style raw` + `--json-schema` execution path with
+/// a fake claude emitting a CLR envelope where `"result"` is empty.
+///
+/// ## Fix Applied
+/// builder.rs widened the Path B auto-inject gate to `effective_style == "summary" ||
+/// cli.json_schema.is_some()`; execution.rs added `else if cli.json_schema.is_some()`
+/// branch calling `extract_structured_output()` from summary.rs.
+///
+/// ## Prevention
+/// This test verifies the raw+json-schema execution path end-to-end with a CLR envelope
+/// where `"result"` is empty and `"structured_output"` contains the actual value.
+///
+/// ## Pitfall
+/// The fake claude must emit `"result":""` (empty) to reproduce the original symptom —
+/// a non-empty `result` field would have produced output even before the fix.
+// test_kind: bug_reproducer(BUG-318)
+#[ cfg( unix ) ]
+#[ test ]
+fn s89_raw_style_with_json_schema_outputs_structured_result()
+{
+  let fixture = r#"{"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"result":"","structured_output":{"x":"hello"},"usage":{"input_tokens":1,"output_tokens":1},"total_cost_usd":0.0}"#;
+  let body    = format!( "echo '{fixture}'" );
+  let ( _dir, path ) = fake_claude_dir( &body );
+  let bin    = env!( "CARGO_BIN_EXE_clr" );
+  let schema = r#"{"type":"object","properties":{"x":{"type":"string"}},"required":["x"]}"#;
+  let out = std::process::Command::new( bin )
+    .args( [ "-p", "--max-sessions", "0", "--output-style", "raw", "--json-schema", schema, "test" ] )
+    .env( "PATH", &path )
+    .env_remove( "CLR_OUTPUT_STYLE" )
+    .output()
+    .expect( "Failed to invoke clr binary" );
+  assert!( out.status.success(), "exit must be 0 (BUG-318): {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.is_empty(),
+    "stdout must be non-empty for raw+json-schema (BUG-318 regression). Got empty."
+  );
+  assert!(
+    stdout.contains( "\"x\"" ),
+    "stdout must contain '\"x\"' from structured_output field (BUG-318). Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( "hello" ),
+    "stdout must contain 'hello' from structured_output value (BUG-318). Got:\n{stdout}"
+  );
 }

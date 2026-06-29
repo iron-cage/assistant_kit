@@ -155,24 +155,22 @@ cargo run -p claude_runner -- --dry-run -- --not-a-flag
 
 **Expected:** `--not-a-flag` treated as message text, not a flag. Appears quoted in dry-run output.
 
-### TC-20: Verbosity Levels
+### TC-20: Quiet Flag — Dry-run Independence
 ```sh
-cargo run -p claude_runner -- --verbosity 0 --dry-run "test"
-cargo run -p claude_runner -- --verbosity 3 --dry-run "test"
-cargo run -p claude_runner -- --verbosity 5 --dry-run "test"
+cargo run -p claude_runner -- --quiet --dry-run "test"
+```
+
+**Expected:** `--dry-run` output shown on stdout even with `--quiet` (quiet does NOT gate `--dry-run` output; core feature output is always shown).
+
+### TC-21: Quiet Flag — Diagnostic Suppression (requires CLR_QUIET env var)
+```sh
+CLAUDECODE=1 cargo run -p claude_runner -- --keep-claudecode --quiet --dry-run "task"
+CLAUDECODE=1 cargo run -p claude_runner -- --keep-claudecode --dry-run "task"
 ```
 
 **Expected:**
-- Verbosity 0: dry-run output shown on stdout (verbosity does NOT gate --dry-run output; see fix in dry_run_test.rs)
-- Verbosity 3: normal dry-run output on stdout
-- Verbosity 5: dry-run output on stdout (no crash)
-
-### TC-21: Verbosity 4 Preview Before Execution
-```sh
-cargo run -p claude_runner -- --verbosity 4 -p "What is 1+1?"
-```
-
-**Expected:** Command preview printed to stderr before execution. Claude response on stdout.
+- With `--quiet`: nested-agent warning absent from stderr; dry-run env+command shown on stdout
+- Without `--quiet`: nested-agent warning present on stderr
 
 ### TC-22: Interactive with Model
 ```sh
@@ -660,8 +658,8 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-7/8:** `--effort low` and `--effort high` accepted
 - **CC-9/10:** `--max-tokens 4294967296` (overflow) → exit 1, mentions "max-tokens"
 - **CC-11/12:** `--max-tokens 1.5` and `--max-tokens ""` → exit 1
-- **CC-13/14:** `--verbosity 6` → exit 1, mentions "verbosity"
-- **CC-15/16:** `--verbosity 5` and `--verbosity 0` → accepted with `--dry-run`
+- **CC-13/14:** `--quiet` accepted (bool flag, exit 0); `--quiet --dry-run "x"` still shows dry-run output on stdout
+- **CC-15/16:** `CLR_QUIET=true` sets quiet suppression; `CLR_QUIET=false` is NOT recognised as false (only `1`/`true` are truthy — env_bool semantics)
 - **CC-17/18:** `--subdir a/b` (slash) → exit 1, mentions "subdir"
 - **CC-19:** `--subdir .` → identity (no `-prefix` join)
 - **CC-20:** `--subdir ""` → identity (empty string filtered)
@@ -671,7 +669,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 ### Env vars
 
 - **CC-23:** `CLR_MAX_TOKENS=bad` → silently ignored (default preserved)
-- **CC-24:** `CLR_VERBOSITY=6` → silently ignored (valid values: 0–5)
+- **CC-24:** `CLR_QUIET=true` → quiet suppression active; gate-wait/retry messages suppressed when triggered
 - **CC-25:** `CLR_EFFORT=invalid` → silently ignored (default max used)
 - **CC-26:** `CLR_SUBDIR=a/b` → silently ignored (slash rejected)
 - **CC-27:** `CLR_NEW_SESSION=1` → suppresses `-c`
@@ -936,33 +934,33 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 `clr run` against a fake script that exits 2 with "Usage limit reached" in stdout → stderr contains "quota exhausted" label.
 Automated in: `error_classification_test.rs::quota_exhausted_pattern_emits_labeled_message`.
 
-### NC-2: `--keep-claudecode` Warning Suppressed at Low Verbosity
+### NC-2: `--keep-claudecode` Warning Suppressed With `--quiet`
 
 ```sh
-CLAUDECODE=1 cargo run -p claude_runner -- --keep-claudecode --verbosity 0 --dry-run "test"
+CLAUDECODE=1 cargo run -p claude_runner -- --keep-claudecode --quiet --dry-run "test"
 ```
 
-**Expected:** No warning on stderr (verbosity 0 suppresses BUG-248 warning). Exit code 0.
+**Expected:** No warning on stderr (`--quiet` suppresses keep-claudecode warning). Exit code 0. Dry-run output still shown on stdout.
 
-### NC-3: `--keep-claudecode` Warning Fires at Verbosity ≥ 2
+### NC-3: `--keep-claudecode` Warning Fires Without `--quiet`
 
 ```sh
-CLAUDECODE=1 cargo run -p claude_runner -- --keep-claudecode --verbosity 2 --dry-run "test"
+CLAUDECODE=1 cargo run -p claude_runner -- --keep-claudecode --dry-run "test"
 ```
 
 **Expected:** Warning on stderr: `Warning: CLAUDECODE is set in environment...`. Exit code 0.
 
-### NC-4: `--keep-claudecode` Warning Fires Even in Dry-Run (Verbosity ≥ 2)
+### NC-4: `--keep-claudecode` Warning Fires Even in Dry-Run (Without `--quiet`)
 
 ```sh
-CLAUDECODE=1 cargo run -p claude_runner -- --keep-claudecode --verbosity 2 --dry-run "test"
+CLAUDECODE=1 cargo run -p claude_runner -- --keep-claudecode --dry-run "test"
 ```
 
 **Expected:** Warning fires on stderr AND dry-run output on stdout. Exit code 0. Confirms BUG-248 fix fires before dry-run short-circuit.
 
 ### NC-5: g2cc4 Host Fragility — CLAUDECODE Inherited From Shell
 
-`param_group_test::g2cc4_all_runner_control_flags_no_conflict` uses `--keep-claudecode --verbosity 2`. When run inside a Claude Code session on the host, `CLAUDECODE` is inherited from the outer process environment, causing the BUG-248 warning to fire and breaking the `stderr.is_empty()` assertion.
+`param_group_test::g2cc4_all_runner_control_flags_no_conflict` uses `--keep-claudecode --quiet`. When run inside a Claude Code session on the host, `CLAUDECODE` is inherited from the outer process environment, causing the BUG-248 warning to fire and breaking the `stderr.is_empty()` assertion.
 
 Fix: test explicitly calls `.env_remove("CLAUDECODE")` to enforce CC-4 "clean environment" precondition. Automated in: `param_group_test.rs::g2cc4`.
 

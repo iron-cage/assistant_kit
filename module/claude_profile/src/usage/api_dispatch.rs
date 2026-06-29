@@ -1,7 +1,7 @@
 //! Mutation-dispatch helper for the `.usage` command.
 //!
 //! Extracted from `api.rs` to keep `usage_routine` under the 500-line ceiling.
-//! All mutation-only params (`assignee::`, `owner::`, and their REMOVED_TOGGLE
+//! All mutation-only params (`assignee::`, `owner::`, and their `REMOVED_TOGGLE`
 //! predecessors) are handled here; the caller falls through on `Ok(None)`.
 
 use core::fmt::Write as _;
@@ -54,7 +54,38 @@ pub( crate ) fn handle_mutation_dispatch(
     ) );
   }
 
-  // ── assignee:: dispatch (Feature 065) ────────────────────────────────────
+  if cmd.arguments.contains_key( "assignee" )
+  {
+    return dispatch_assignee( cmd, trace, credential_store );
+  }
+
+  // owner:: param — explicit ownership assignment/release (Feature 063 + 064).
+  let owner_value = match cmd.arguments.get( "owner" )
+  {
+    Some( Value::String( s ) ) if !s.is_empty() => Some( s.clone() ),
+    Some( Value::String( _ ) ) =>
+      return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch,
+        "owner:: value must be non-empty — use owner::0 to clear ownership".into() ) ),
+    _ => None,
+  };
+
+  if let Some( ref ov ) = owner_value
+  {
+    return dispatch_owner( cmd, trace, force, credential_store, ov );
+  }
+
+  Ok( None )
+}
+
+// ── assignee:: dispatch (Feature 065) ────────────────────────────────────────
+
+#[ allow( clippy::too_many_lines ) ]
+fn dispatch_assignee(
+  cmd              : &VerifiedCommand,
+  trace            : bool,
+  credential_store : &std::path::Path,
+) -> Result< Option< OutputData >, ErrorData >
+{
   if let Some( Value::String( av ) ) = cmd.arguments.get( "assignee" )
   {
     let av = if av == "0"
@@ -154,149 +185,178 @@ pub( crate ) fn handle_mutation_dispatch(
     ) ) );
   }
 
-  // owner:: param — explicit ownership assignment/release (Feature 063 + 064).
-  let owner_value = match cmd.arguments.get( "owner" )
+  Ok( None )
+}
+
+// ── owner:: dispatch (Feature 063 + 064) ──────────────────────────────────────
+
+fn dispatch_owner(
+  cmd              : &VerifiedCommand,
+  trace            : bool,
+  force            : bool,
+  credential_store : &std::path::Path,
+  ov               : &str,
+) -> Result< Option< OutputData >, ErrorData >
+{
+  let is_sentinel = ov == "0";
+  let is_dry_run  = is_dry( cmd );
+
+  let raw_name = match cmd.arguments.get( "name" )
   {
-    Some( Value::String( s ) ) if !s.is_empty() => Some( s.clone() ),
-    Some( Value::String( _ ) ) =>
-      return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch,
-        "owner:: value must be non-empty — use owner::0 to clear ownership".into() ) ),
-    _ => None,
+    Some( Value::String( s ) ) => s.clone(),
+    _ => String::new(),
+  };
+  let name_arg = if raw_name.is_empty() || raw_name.contains( ',' )
+  {
+    // Comma-list — defer per-component resolution to dispatch below.
+    raw_name.clone()
+  }
+  else
+  {
+    resolve_account_name( &raw_name, credential_store )?
   };
 
-  // ── owner:: explicit ownership assignment/release (Feature 063 + 064) ──────
-  if let Some( ref ov ) = owner_value
+  if raw_name.is_empty()
   {
-    let is_sentinel = ov.as_str() == "0";
-    let is_dry_run  = is_dry( cmd );
+    return owner_batch_clear( trace, force, credential_store, is_sentinel, is_dry_run );
+  }
 
-    let raw_name = match cmd.arguments.get( "name" )
+  owner_named_dispatch( trace, force, credential_store, ov, is_sentinel, is_dry_run, &raw_name, &name_arg )
+}
+
+// ── owner:: batch-clear (owner::0 with no name::) ────────────────────────────
+
+#[ allow( clippy::fn_params_excessive_bools ) ]
+fn owner_batch_clear(
+  trace            : bool,
+  force            : bool,
+  credential_store : &std::path::Path,
+  is_sentinel      : bool,
+  is_dry_run       : bool,
+) -> Result< Option< OutputData >, ErrorData >
+{
+  // No name:: → batch-clear (owner::0 only; owner::VALUE requires name::).
+  if !is_sentinel
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "owner::USER@MACHINE requires name:: to specify the target account".to_string(),
+    ) );
+  }
+  // Batch-clear all accounts currently owned by this identity.
+  // Unowned and foreign-owned accounts are skipped with a "skip" message (AC-09).
+  let all_accounts = crate::account::list( credential_store )
+    .map_err( |e| ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "cannot read credential store: {e}" ),
+    ) )?;
+  let mut out = String::new();
+  for acct in &all_accounts
+  {
+    let json_path = credential_store.join( format!( "{}.json", acct.name ) );
+    // No metadata file → silently skip (no ownership info to act on).
+    if !json_path.exists() { continue; }
+    let acct_owner = crate::account::read_owner( credential_store, &acct.name );
+    if acct_owner.is_empty()
     {
-      Some( Value::String( s ) ) => s.clone(),
-      _ => String::new(),
-    };
-    let name_arg = if raw_name.is_empty() || raw_name.contains( ',' )
-    {
-      // Comma-list — defer per-component resolution to dispatch below.
-      raw_name.clone()
+      // Unowned — nothing to clear; skip with message (AC-09).
+      writeln!( out, "skip {}", acct.name ).unwrap();
+      continue;
     }
-    else
+    if !force && !crate::account::is_owned( &acct_owner )
     {
-      resolve_account_name( &raw_name, credential_store )?
-    };
-
-    if raw_name.is_empty()
-    {
-      // No name:: → batch-clear (owner::0 only; owner::VALUE requires name::).
-      if !is_sentinel
-      {
-        return Err( ErrorData::new(
-          ErrorCode::ArgumentTypeMismatch,
-          "owner::USER@MACHINE requires name:: to specify the target account".to_string(),
-        ) );
-      }
-      // Batch-clear all accounts currently owned by this identity.
-      // Unowned and foreign-owned accounts are skipped with a "skip" message (AC-09).
-      let all_accounts = crate::account::list( credential_store )
-        .map_err( |e| ErrorData::new(
-          ErrorCode::InternalError,
-          format!( "cannot read credential store: {e}" ),
-        ) )?;
-      let mut out = String::new();
-      for acct in &all_accounts
-      {
-        let json_path = credential_store.join( format!( "{}.json", acct.name ) );
-        // No metadata file → silently skip (no ownership info to act on).
-        if !json_path.exists() { continue; }
-        let acct_owner = crate::account::read_owner( credential_store, &acct.name );
-        if acct_owner.is_empty()
-        {
-          // Unowned — nothing to clear; skip with message (AC-09).
-          writeln!( out, "skip {}", acct.name ).unwrap();
-          continue;
-        }
-        if !force && !crate::account::is_owned( &acct_owner )
-        {
-          // Owned by another identity — skip with message (AC-09).
-          if trace { eprintln!( "{}usage owner  batch-skip (foreign owner): {}  owner={acct_owner}", trace_ts(), acct.name ) }
-          writeln!( out, "skip {}", acct.name ).unwrap();
-          continue;
-        }
-        if is_dry_run
-        {
-          writeln!( out, "[dry-run] would clear owner of {}", acct.name ).unwrap();
-          continue;
-        }
-        crate::account::write_owner( &acct.name, credential_store, "" )
-          .map_err( |e| io_err_to_error_data( &e, "usage owner batch-clear" ) )?;
-        if trace { eprintln!( "{}usage owner  cleared: {}  was={acct_owner}", trace_ts(), acct.name ) }
-        writeln!( out, "unclaimed {}", acct.name ).unwrap();
-      }
-      return Ok( Some( OutputData::new( out, "text" ) ) );
+      // Owned by another identity — skip with message (AC-09).
+      if trace { eprintln!( "{}usage owner  batch-skip (foreign owner): {}  owner={acct_owner}", trace_ts(), acct.name ) }
+      writeln!( out, "skip {}", acct.name ).unwrap();
+      continue;
     }
-
-    // name:: present — resolve each component (comma-list supported for owner:: ops).
-    let target_names : Vec< String > = if raw_name.contains( ',' )
+    if is_dry_run
     {
-      raw_name.split( ',' )
-        .map( | part | resolve_account_name( part.trim(), credential_store ) )
-        .collect::< Result< Vec< _ >, _ > >()?
+      writeln!( out, "[dry-run] would clear owner of {}", acct.name ).unwrap();
+      continue;
     }
-    else
-    {
-      vec![ name_arg ]
-    };
+    crate::account::write_owner( &acct.name, credential_store, "" )
+      .map_err( |e| io_err_to_error_data( &e, "usage owner batch-clear" ) )?;
+    if trace { eprintln!( "{}usage owner  cleared: {}  was={acct_owner}", trace_ts(), acct.name ) }
+    writeln!( out, "unclaimed {}", acct.name ).unwrap();
+  }
+  Ok( Some( OutputData::new( out, "text" ) ) )
+}
 
-    let mut out = String::new();
-    for name in &target_names
+// ── owner:: named dispatch (owner:: with name::) ──────────────────────────────
+
+#[ allow( clippy::too_many_arguments ) ]
+#[ allow( clippy::fn_params_excessive_bools ) ]
+fn owner_named_dispatch(
+  trace            : bool,
+  force            : bool,
+  credential_store : &std::path::Path,
+  ov               : &str,
+  is_sentinel      : bool,
+  is_dry_run       : bool,
+  raw_name         : &str,
+  name_arg         : &str,
+) -> Result< Option< OutputData >, ErrorData >
+{
+  // name:: present — resolve each component (comma-list supported for owner:: ops).
+  let target_names : Vec< String > = if raw_name.contains( ',' )
+  {
+    raw_name.split( ',' )
+      .map( | part | resolve_account_name( part.trim(), credential_store ) )
+      .collect::< Result< Vec< _ >, _ > >()?
+  }
+  else
+  {
+    vec![ name_arg.to_owned() ]
+  };
+
+  let mut out = String::new();
+  for name in &target_names
+  {
+    let json_path = credential_store.join( format!( "{name}.json" ) );
+    if !json_path.exists()
     {
-      let json_path = credential_store.join( format!( "{name}.json" ) );
-      if !json_path.exists()
-      {
-        return Err( ErrorData::new(
-          ErrorCode::InternalError,
-          format!( "account not found: {name}" ),
-        ) );
-      }
-      // G8 ownership gate — evaluated per account, even in dry-run (AC-16/AC-17).
-      let acct_owner = crate::account::read_owner( credential_store, name );
-      if !force && !crate::account::is_owned( &acct_owner )
-      {
-        return Err( ErrorData::new(
-          ErrorCode::ArgumentTypeMismatch,
-          format!( "ownership violation: {name} is owned by {acct_owner}" ),
-        ) );
-      }
-      if is_dry_run
-      {
-        if is_sentinel
-        {
-          writeln!( out, "[dry-run] would clear owner of {name}" ).unwrap();
-        }
-        else
-        {
-          writeln!( out, "[dry-run] would set owner of {name} to {ov}" ).unwrap();
-        }
-        continue;
-      }
-      let new_owner = if is_sentinel { "" } else { ov.as_str() };
-      crate::account::write_owner( name, credential_store, new_owner )
-        .map_err( |e| io_err_to_error_data( &e, "usage owner" ) )?;
-      if trace
-      {
-        eprintln!( "{}usage owner  write_owner: OK  name={name} identity={}", trace_ts(), if is_sentinel { "(cleared)" } else { ov } );
-      }
+      return Err( ErrorData::new(
+        ErrorCode::InternalError,
+        format!( "account not found: {name}" ),
+      ) );
+    }
+    // G8 ownership gate — evaluated per account, even in dry-run (AC-16/AC-17).
+    let acct_owner = crate::account::read_owner( credential_store, name );
+    if !force && !crate::account::is_owned( &acct_owner )
+    {
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        format!( "ownership violation: {name} is owned by {acct_owner}" ),
+      ) );
+    }
+    if is_dry_run
+    {
       if is_sentinel
       {
-        writeln!( out, "unclaimed {name}" ).unwrap();
+        writeln!( out, "[dry-run] would clear owner of {name}" ).unwrap();
       }
       else
       {
-        writeln!( out, "owned {name} by {ov}" ).unwrap();
+        writeln!( out, "[dry-run] would set owner of {name} to {ov}" ).unwrap();
       }
+      continue;
     }
-    return Ok( Some( OutputData::new( out, "text" ) ) );
+    let new_owner = if is_sentinel { "" } else { ov };
+    crate::account::write_owner( name, credential_store, new_owner )
+      .map_err( |e| io_err_to_error_data( &e, "usage owner" ) )?;
+    if trace
+    {
+      eprintln!( "{}usage owner  write_owner: OK  name={name} identity={}", trace_ts(), if is_sentinel { "(cleared)" } else { ov } );
+    }
+    if is_sentinel
+    {
+      writeln!( out, "unclaimed {name}" ).unwrap();
+    }
+    else
+    {
+      writeln!( out, "owned {name} by {ov}" ).unwrap();
+    }
   }
-
-  Ok( None )
+  Ok( Some( OutputData::new( out, "text" ) ) )
 }

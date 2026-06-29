@@ -1,4 +1,3 @@
-use crate::VerbosityLevel;
 use claude_runner_core::EffortLevel;
 use error_tools::{ Error, Result };
 
@@ -54,7 +53,7 @@ pub( crate ) struct CliArgs
   pub( crate ) dir                  : Option< String >,
   pub( crate ) dry_run              : bool,
   pub( crate ) trace                : bool,
-  pub( crate ) verbosity            : Option< VerbosityLevel >,
+  pub( crate ) quiet                : bool,
   pub( crate ) help                 : bool,
   pub( crate ) system_prompt        : Option< String >,
   pub( crate ) append_system_prompt : Option< String >,
@@ -245,11 +244,6 @@ fn parse_value_flag(
         ) );
       }
       parsed.subdir = Some( val.to_string() );
-    }
-    "--verbosity" =>
-    {
-      let raw = next_value( tokens, next, "--verbosity" )?;
-      parsed.verbosity = Some( raw.parse::< VerbosityLevel >().map_err( Error::msg )? );
     }
     "--output-format" =>
     {
@@ -527,7 +521,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       dir                  : None,
       dry_run              : false,
       trace                : false,
-      verbosity            : None,
+      quiet                : false,
       system_prompt        : None,
       append_system_prompt : None,
       no_ultrathink        : false,
@@ -644,6 +638,10 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       "--keep-claudecode" =>
       {
         parsed.keep_claudecode = true;
+      }
+      "--quiet" =>
+      {
+        parsed.quiet = true;
       }
       "--" =>
       {

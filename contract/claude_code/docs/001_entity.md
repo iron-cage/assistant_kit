@@ -4,7 +4,7 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `behavior` | Observed external behaviors of the `claude` binary (B1–B31 + B16h) | [behavior/readme.md](behavior/readme.md) | 32 |
+| `behavior` | Observed external behaviors of the `claude` binary (B1–B35 + B16h) | [behavior/readme.md](behavior/readme.md) | 36 |
 | `storage` | `~/.claude/` storage architecture: projects dir, support dirs, root files | [storage/readme.md](storage/readme.md) | 3 |
 | `filesystem` | Runtime filesystem paths accessed by claude_version | [filesystem/readme.md](filesystem/readme.md) | 4 |
 | `jsonl` | Session JSONL entry format: common fields, entry types, content blocks, usage, threading, sidechain | [jsonl/readme.md](jsonl/readme.md) | 10 |
@@ -17,11 +17,11 @@
 | `subcommand` | CLI subcommands: agents, auth, auto-mode, doctor, install, mcp, plugin, setup-token, update | [subcommand/readme.md](subcommand/readme.md) | 9 |
 | `fault` | Aggregated index of all fault conditions: terminal errors (E1–E6), silent failures (F1–F4), and quirks (Q1–Q5) with detection signals and `classify_error()` priority order | [fault/readme.md](fault/readme.md) | 0 |
 
-**Total doc instances**: 241 (32 + 3 + 4 + 10 + 3 + 7 + 3 + 120 + 40 + 10 + 9)
+**Total doc instances**: 245 (36 + 3 + 4 + 10 + 3 + 7 + 3 + 120 + 40 + 10 + 9)
 
 ## Master Doc Instances Table
 
-### behavior/ (32 instances)
+### behavior/ (36 instances)
 
 | ID | Name | File |
 |----|------|------|
@@ -57,6 +57,10 @@
 | B29 | Bash CLAUDE_* Env | [behavior/029_b29_bash_claude_env.md](behavior/029_b29_bash_claude_env.md) |
 | B30 | Subagent Context Inheritance | [behavior/030_b30_subagent_context_inheritance.md](behavior/030_b30_subagent_context_inheritance.md) |
 | B31 | Subagent Tool Sets | [behavior/031_b31_subagent_tool_sets.md](behavior/031_b31_subagent_tool_sets.md) |
+| B32 | claudemd At-Ref Path Filter | [behavior/032_b32_claudemd_at_ref_path_filter.md](behavior/032_b32_claudemd_at_ref_path_filter.md) |
+| B33 | claudemd Loading Limits | [behavior/033_b33_claudemd_loading_limits.md](behavior/033_b33_claudemd_loading_limits.md) |
+| B34 | claudemd Content Pipeline | [behavior/034_b34_claudemd_content_pipeline.md](behavior/034_b34_claudemd_content_pipeline.md) |
+| B35 | Automemory Search Context Flag | [behavior/035_b35_automemory_search_context_flag.md](behavior/035_b35_automemory_search_context_flag.md) |
 
 ### storage/ (3 instances)
 

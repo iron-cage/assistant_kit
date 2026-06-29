@@ -11,7 +11,7 @@
 | US-1 | Happy path | `--dry-run` prints assembled command without executing |
 | US-2 | Default visibility | Dry-run output shows all injected defaults |
 | US-3 | Failure path | Dry-run with invalid parameter still shows assembled command |
-| US-4 | Boundary | Dry-run with `--verbosity` does not alter dry-run output |
+| US-4 | Boundary | Dry-run exit is always zero regardless of flag combination |
 
 ---
 

@@ -15,14 +15,14 @@
 //! # Fix Applied
 //!
 //! Added a warning block in `dispatch_run()` (before the dry-run check) that emits to
-//! stderr when `cli.keep_claudecode && verbosity.shows_warnings() && CLAUDECODE in env`.
+//! stderr when `cli.keep_claudecode && !cli.quiet && CLAUDECODE in env`.
 //! Placed before the dry-run check so it fires in all execution modes.
 //!
 //! # Prevention
 //!
 //! Every flag that silently alters subprocess environment should warn when the user's
-//! action has a non-obvious side-effect.  Gate warnings on `shows_warnings()` (level ≥ 2)
-//! so operators who request silence still get it.
+//! action has a non-obvious side-effect.  Gate warnings on `!cli.quiet` so operators
+//! who request silence still get it.
 //!
 //! # Pitfall
 //!
@@ -36,8 +36,8 @@
 //! | `t01_warning_when_claudecode_in_env_and_keep_flag` | CLAUDECODE=1 + --keep-claudecode | warning on stderr |
 //! | `t02_no_warning_when_claudecode_absent` | no CLAUDECODE + --keep-claudecode | no warning |
 //! | `t03_no_warning_when_keep_flag_absent` | CLAUDECODE=1, no --keep-claudecode | no warning |
-//! | `t04_no_warning_at_verbosity_1` | CLAUDECODE=1 + --keep-claudecode + --verbosity 1 | no warning |
-//! | `t05_warning_at_verbosity_2` | CLAUDECODE=1 + --keep-claudecode + --verbosity 2 | warning present |
+//! | `t04_no_warning_with_quiet` | CLAUDECODE=1 + --keep-claudecode + --quiet | no warning |
+//! | `t05_warning_without_quiet` | CLAUDECODE=1 + --keep-claudecode (no --quiet) | warning present |
 //! | `t06_warning_present_in_dry_run` | CLAUDECODE=1 + --keep-claudecode + --dry-run | warning on stderr; dry-run unaffected |
 
 mod cli_binary_test_helpers;
@@ -150,21 +150,21 @@ fn t03_no_warning_when_keep_flag_absent()
 
 // ── T04 ──────────────────────────────────────────────────────────────────────
 
-/// T04: `--verbosity 1` (errors only) suppresses the warning even with both conditions true.
+/// T04: `--quiet` suppresses the warning even with both conditions true.
 ///
-/// `shows_warnings()` returns false at level 1.  Verbosity gate must be respected.
+/// `--quiet` gates the warning; when quiet, no runner diagnostics are emitted.
 #[ test ]
 #[ doc = "bug_reproducer(BUG-248)" ]
-fn t04_no_warning_at_verbosity_1()
+fn t04_no_warning_with_quiet()
 {
   let out = run_cli_with_env(
-    &[ "--keep-claudecode", "--verbosity", "1", "--dry-run", "task" ],
+    &[ "--keep-claudecode", "--quiet", "--dry-run", "task" ],
     &[ ( "CLAUDECODE", "1" ) ],
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
     !stderr.contains( "nested-agent" ),
-    "BUG-248 T04: warning must be suppressed at --verbosity 1.\nstderr: {stderr}",
+    "BUG-248 T04: warning must be suppressed with --quiet.\nstderr: {stderr}",
   );
   assert!(
     out.status.success(),
@@ -174,21 +174,22 @@ fn t04_no_warning_at_verbosity_1()
 
 // ── T05 ──────────────────────────────────────────────────────────────────────
 
-/// T05: `--verbosity 2` is the minimum verbosity where `shows_warnings()` is true.
+/// T05: Without `--quiet`, the warning fires when both conditions hold.
 ///
-/// Warning must appear at level ≥ 2 when both conditions hold.
+/// Warning must appear when `--keep-claudecode` and `CLAUDECODE` are both set
+/// and `--quiet` is absent (the default).
 #[ test ]
 #[ doc = "bug_reproducer(BUG-248)" ]
-fn t05_warning_at_verbosity_2()
+fn t05_warning_without_quiet()
 {
   let out = run_cli_with_env(
-    &[ "--keep-claudecode", "--verbosity", "2", "--dry-run", "task" ],
+    &[ "--keep-claudecode", "--dry-run", "task" ],
     &[ ( "CLAUDECODE", "1" ) ],
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
     stderr.contains( "nested-agent" ),
-    "BUG-248 T05: warning must appear at --verbosity 2 (shows_warnings threshold).\nstderr: {stderr}",
+    "BUG-248 T05: warning must appear when --quiet is absent.\nstderr: {stderr}",
   );
   assert!(
     out.status.success(),

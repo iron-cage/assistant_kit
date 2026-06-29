@@ -6,7 +6,7 @@
 |--------|---------|-------------|----------:|
 | `api/` | Public API contract for the runner crate | [api/readme.md](api/readme.md) | 1 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](cli/command/readme.md) | 8 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 69 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 70 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](cli/param_group/readme.md) | 5 |
 | `cli/parity/` | Claude binary parity validation docs | [cli/parity/readme.md](cli/parity/readme.md) | 2 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](cli/type/readme.md) | 14 |

@@ -24,6 +24,10 @@ Test case planning for [feature/002_journaling_integration.md](../../../../docs/
 | FT-16 | `--journal full --journal meta` (last wins) → meta-level | Duplicate Handling |
 | FT-17 | `--journal off --journal-dir <dir>` → no JSONL | Off Precedence |
 | FT-18 | `CLR_JOURNAL=off` + `CLR_JOURNAL_DIR=<dir>` → no JSONL | Off Precedence |
+| FT-19 | `CLR_JOURNAL=meta` env var controls level; stdout/stderr absent | Env Var Level |
+| FT-20 | Retry event emitted with `error_class` before successful second attempt | Retry Emission |
+| FT-21 | Timeout event emitted with `exit_code:4` when watchdog kills subprocess | Timeout Emission |
+| FT-22 | Default journal dir resolves to `~/.clr/journal/` when no flag or env set | Default Dir |
 
 ## Test Coverage Summary
 
@@ -41,8 +45,12 @@ Test case planning for [feature/002_journaling_integration.md](../../../../docs/
 - Validation: 3 tests (FT-13, FT-14, FT-15)
 - Duplicate Handling: 1 test (FT-16)
 - Off Precedence: 2 tests (FT-17, FT-18)
+- Env Var Level: 1 test (FT-19)
+- Retry Emission: 1 test (FT-20)
+- Timeout Emission: 1 test (FT-21)
+- Default Dir: 1 test (FT-22)
 
-**Total:** 18 tests
+**Total:** 22 tests
 
 > **Implementation note:** The actual test file uses EC-N identifiers (EC-1..EC-22)
 > mapped to integration test scenarios. FT-N here is the spec-level identifier.
@@ -238,3 +246,43 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **Then:** `<parent>/env_off_should_not_appear` does NOT exist
 - **Exit:** 0
 - **Source:** env var precedence + resolve_journal_writer() early return on "off"
+
+---
+
+### FT-19: `CLR_JOURNAL=meta` env var controls level; stdout/stderr absent
+
+- **Given:** temporary journal dir; fake claude that exits 0 and prints `"env_meta_output"`; `CLR_JOURNAL=meta` env var set; no `--journal` CLI flag
+- **When:** `clr -p --max-sessions 0 --journal-dir <tmpdir> "x"` with `CLR_JOURNAL=meta`
+- **Then:** journal file exists; last line parses as JSON with `"type":"execution"`; `stdout` field absent; `stderr` field absent (meta level omits output fields just as `--journal meta` does)
+- **Exit:** 0
+- **Source:** `param/072_journal.md` — `CLR_JOURNAL` env var is the env-var counterpart to `--journal` flag; same level semantics apply
+
+---
+
+### FT-20: Retry event emitted with `error_class` before successful second attempt
+
+- **Given:** counter-script fake `claude` that exits 2 on first call (classified Transient/RateLimit) and exits 0 on the second call; `--retry-on-transient 1 --transient-delay 0`; temporary journal dir
+- **When:** `clr -p --retry-on-transient 1 --transient-delay 0 --max-sessions 0 --journal full --journal-dir <tmpdir> "x"`
+- **Then:** exit 0 (second attempt succeeds); JSONL contains both a `"type":"retry"` event (with `"error_class":"Transient"`) and a subsequent `"type":"execution"` event; retry event appears before the execution event in the file
+- **Exit:** 0
+- **Source:** `feature/002_journaling_integration.md` AC-009-class — retry events emitted before each re-attempt; `--transient-delay 0` required (default 30 s causes test hang)
+
+---
+
+### FT-21: Timeout event emitted with `exit_code:4` when watchdog kills subprocess
+
+- **Given:** fake `claude` that sleeps indefinitely (`sleep 300`); `_CLR_DEFAULT_TIMEOUT=2` (test-only 2 s watchdog); `--retry-override 0` (one attempt only); temporary journal dir
+- **When:** `clr -p --retry-override 0 --max-sessions 0 --journal full --journal-dir <tmpdir> "x"` with `_CLR_DEFAULT_TIMEOUT=2`
+- **Then:** exit 4 (watchdog killed subprocess); JSONL contains `"type":"timeout"` with `"exit_code":4`
+- **Exit:** 4
+- **Source:** `param/036_timeout.md` — exit 4 is the watchdog-kill exit code; `_CLR_DEFAULT_TIMEOUT` is an undocumented test-only env override (leading `_` prefix convention); `--retry-override 0` prevents the retry loop from re-attempting after watchdog fires
+
+---
+
+### FT-22: Default journal dir resolves to `~/.clr/journal/`
+
+- **Given:** fresh fake HOME directory; no `CLR_JOURNAL_DIR` env var; no `--journal-dir` flag; fake claude that exits 0 and prints output
+- **When:** `clr -p --max-sessions 0 "x"` with `HOME=<fake_home>`; `CLR_JOURNAL` and `CLR_JOURNAL_DIR` explicitly removed from env
+- **Then:** exit 0; `<fake_home>/.clr/journal/YYYY-MM-DD.jsonl` exists and contains an execution event; no other journal location is used
+- **Exit:** 0
+- **Source:** `param/073_journal_dir.md` — 3-tier resolution: CLI > `CLR_JOURNAL_DIR` env > `~/.clr/journal/` default; test validates the default tier by setting `HOME` and clearing the env var

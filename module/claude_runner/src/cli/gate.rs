@@ -1,4 +1,3 @@
-use crate::VerbosityLevel;
 use claude_core::process::find_claude_processes;
 use std::path::PathBuf;
 use claude_journal::{ EventRecord, EventType, JournalWriter };
@@ -64,9 +63,9 @@ fn gate_poll_secs() -> u64
 /// `apply_runner_retry()` — the entire 100-attempt polling sequence is retried
 /// `--retry-on-runner N` times before giving up.
 pub( super ) fn wait_for_session_slot(
-  max       : u32,
-  verbosity : VerbosityLevel,
-  cli       : &super::parse::CliArgs,
+  max   : u32,
+  quiet : bool,
+  cli   : &super::parse::CliArgs,
   journal   : Option< &JournalWriter >,
 )
 {
@@ -130,7 +129,7 @@ pub( super ) fn wait_for_session_slot(
         super::execution::apply_runner_retry( cli, &e, &mut runner_attempt, journal );
         break; // non-exhaustion path: restart outer poll loop
       }
-      if verbosity.shows_warnings()
+      if !quiet
       {
         eprintln!(
           "Info: {count}/{max} sessions active; waiting {poll_secs}s for a slot... (attempt {attempt}/{max_attempts})"

@@ -1,51 +1,54 @@
-# CLI User Story: Verbose Debugging
+# CLI User Story: Quiet Mode and Diagnostic Control
 
 ### Scope
 
-- **Purpose**: Document verbosity control for runner diagnostic output at different levels.
-- **Responsibility**: Define acceptance criteria for --verbosity gate behavior from 0 to 5.
-- **In Scope**: Verbosity levels 0–5, stderr diagnostic output, --dry-run independence, --trace independence.
-- **Out of Scope**: Subprocess output (unaffected by --verbosity), trace mode (→ 008_trace_execution.md).
+- **Purpose**: Document how to suppress or expose CLR runner diagnostic output.
+- **Responsibility**: Define acceptance criteria for `--quiet` suppression and `--trace` verbose output.
+- **In Scope**: `--quiet` bool flag, CLR_QUIET env var, `--trace` diagnostic output, `--dry-run` independence, fatal-error bypass.
+- **Out of Scope**: Subprocess output (never gated by CLR flags), subprocess verbosity (`--verbose` passes through to claude).
 
 ### Persona
 
-Developer troubleshooting unexpected runner behavior who wants to see diagnostic output at varying levels of detail.
+Developer running `clr` in automation pipelines or scripts who needs clean stdout with no CLR runner chatter, or a developer troubleshooting runner behaviour who wants to see the exact command assembled.
 
 ### Goal
 
-Control the level of runner diagnostic output to understand what `clr` is doing: from fully silent to step-by-step command preview to internal state.
+Control whether CLR runner diagnostics (retry messages, gate-wait messages, warnings) appear on stderr. Use `--quiet` to silence them for pipeline use; use `--trace` to expose full command detail for debugging.
 
 ### Acceptance Criteria
 
-- `--verbosity 4` prints a command preview to stderr before execution
-- `--verbosity 5` adds internal state, timing, and path information
-- `--verbosity 0` suppresses all runner diagnostic output (silent automation)
-- `--dry-run` output is always shown regardless of verbosity level
+- `--quiet` suppresses retry progress messages, gate-wait messages, and informational warnings from CLR on stderr
+- `--quiet` does NOT suppress fatal spawn-failure errors (always emitted)
+- `--quiet` does NOT suppress `--dry-run` preview output (core feature output, not a diagnostic)
+- `--trace` prints the assembled env block and command to stderr before execution regardless of `--quiet`
+- `CLR_QUIET=1` produces identical suppression to `--quiet` flag
+- Without `--quiet`, CLR diagnostics appear on stderr (default; shows retry/gate/warning output)
 - Runner diagnostics go to stderr; Claude's captured output on stdout is unaffected
 
 ### Referenced Commands
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`run`](../command/01_run.md) | Default command; `--verbosity` gates diagnostic output |
+| 1 | [`run`](../command/01_run.md) | Default command; `--quiet` gates CLR diagnostic output |
+| 5 | [`ask`](../command/05_ask.md) | Alias for `run`; same `--quiet` behavior |
 
 ### Referenced Parameter Groups
 
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | `--verbosity` is a runner control flag |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | `--quiet` is a runner control flag |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 11 | [`--dry-run`](../param/011_dry_run.md) | Always emits preview regardless of verbosity |
-| 12 | [`--verbosity`](../param/012_verbosity.md) | Runner output gate level (0–5) |
-| 13 | [`--trace`](../param/013_trace.md) | Independent of verbosity: always prints env+cmd |
+| 11 | [`--dry-run`](../param/011_dry_run.md) | Always emits preview regardless of `--quiet` |
+| 13 | [`--trace`](../param/013_trace.md) | Emits env+command diagnostic; always fires regardless of `--quiet` |
+| 74 | [`--quiet`](../param/074_quiet.md) | Suppress non-fatal CLR runner diagnostics |
 
 ### Related User Stories
 
 | # | User Story | Relationship |
 |---|------------|--------------|
-| 4 | [Dry-run Preview](004_dry_run_preview.md) | `--dry-run` is related to diagnosis |
-| 8 | [Trace Execution](008_trace_execution.md) | `--trace` is the complementary diagnostic flag |
+| 4 | [Dry-run Preview](004_dry_run_preview.md) | `--dry-run` preview unaffected by `--quiet` |
+| 8 | [Trace Execution](008_trace_execution.md) | `--trace` is the complementary diagnostic expansion flag |

@@ -214,7 +214,7 @@ fn most_recent_session_in_dir_returns_most_recent_of_two()
   let storage = TempDir::new().unwrap();
   // Write file A first, then sleep 10ms, then write file B — B is newer.
   std::fs::write( storage.path().join( "uuid-a.jsonl" ), b"{}" ).unwrap();
-  std::thread::sleep( std::time::Duration::from_millis( 10 ) );
+  std::thread::sleep( core::time::Duration::from_millis( 10 ) );
   std::fs::write( storage.path().join( "uuid-b.jsonl" ), b"{}" ).unwrap();
 
   let result = continuation::most_recent_session_in_dir( storage.path() );

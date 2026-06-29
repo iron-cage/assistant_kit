@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Catalog observed and confirmed external behaviors of the `claude` binary spanning session lifecycle, storage, runtime process model, subagent context, and tool availability.
-- **Responsibility**: Master file for the `behavior` collection — lists all 32 behavior instances (B1–B31 + B16h), provides the shared evidence table (E1–E57), and links to invalidation test files.
-- **In Scope**: Session continuation, flag semantics, agent layouts, entry threading, storage path encoding, cross-session relationship absence (conversation chain foundations); runtime process model (agent subagent identity, bash subprocess identity, env propagation); subagent context inheritance (CLAUDE.md injection, conversation absence, scope propagation); subagent tool availability per type (tool set differences, parent-exclusive tools).
+- **Responsibility**: Master file for the `behavior` collection — lists all 36 behavior instances (B1–B35 + B16h), provides the shared evidence table (E1–E61), and links to invalidation test files.
+- **In Scope**: Session continuation, flag semantics, agent layouts, entry threading, storage path encoding, cross-session relationship absence (conversation chain foundations); runtime process model (agent subagent identity, bash subprocess identity, env propagation); subagent context inheritance (CLAUDE.md injection, conversation absence, scope propagation); subagent tool availability per type (tool set differences, parent-exclusive tools); context loading (CLAUDE.md @-reference path filter, content pipeline transformations, silent failure and truncation modes).
 - **Out of Scope**: Entry-level JSONL schema (→ [`../jsonl/`](../jsonl/readme.md)); storage directory architecture (→ [`../storage/`](../storage/readme.md)); filesystem paths (→ [`../filesystem/`](../filesystem/readme.md)); settings format (→ [`../settings/`](../settings/readme.md)); ancillary file formats (→ [`../format/`](../format/readme.md)); concept taxonomy (→ [`../taxonomy/`](../taxonomy/readme.md)).
 
 ### Overview Table
@@ -58,6 +58,10 @@ Adapted from hypothesis table format. Status reflects certainty of the observati
 | [B29](029_b29_bash_claude_env.md) | All bash subprocesses inherit the full parent OS environment (107 vars, identical between parent and subagent) — including all `CLAUDE_*` vars, project vars, API keys, and desktop session vars | Process Model | ✅ | 99% | UNVERIFIED | v2.1.74 | E54, E56 |
 | [B30](030_b30_subagent_context_inheritance.md) | Agent subagents receive full CLAUDE.md configuration (via system-reminder injection) but not the parent conversation history; scope variables (`SCOPE_DIR`/`SCOPE_READY`) are not inherited | Context | ✅ | 99% | UNVERIFIED | v2.1.74 | E55 |
 | [B31](031_b31_subagent_tool_sets.md) | Subagent tool sets are narrower than the parent session (27 tools); general-purpose lacks Agent and 13 other session-management tools; Explore and Plan are identical; claude-code-guide uses static pre-loaded tools only | Tools | ✅ | 99% | UNVERIFIED | v2.1.74 | E57 |
+| [B32](032_b32_claudemd_at_ref_path_filter.md) | The `iy4()` path filter silently rejects `$VAR`/`%VAR%` and other non-conforming @-reference prefixes; only `./`, `~/`, `/`, and `[a-zA-Z0-9._-]`-initial paths are accepted; `C9()` correctly expands `~/` to `os.homedir()` | Context Loading | ✅ | 99% | UNVERIFIED | v2.1.74 | E58 |
+| [B33](033_b33_claudemd_loading_limits.md) | CLAUDE.md loading fails silently for ENOENT/EISDIR/EACCES and non-whitelisted extensions; `Xm=40,000` chars is a UI-warning-only threshold (file fully injected — ~10k tokens — but interactive status bar warns); hard limits: 200-line MEMORY.md cap (`$P`), 5-level @-include depth (`ny4`), 3,000-char ultra-memory (`QKT`) | Context Loading | ✅ | 99% | UNVERIFIED | v2.1.74 | E59 |
+| [B34](034_b34_claudemd_content_pipeline.md) | HTML comments stripped (`Kp6`), YAML frontmatter processed as conditional globs not injected as content, GFM disabled in @-ref lexer; `tengu_paper_halyard` Statsig flag silently drops all Project/Local CLAUDE.md; User type always bypasses external-include dialog | Context Loading | ✅ | 99% | UNVERIFIED | v2.1.74 | E60 |
+| [B35](035_b35_automemory_search_context_flag.md) | `tengu_coral_fern` Statsig flag (default false) gates a `## Searching past context` section in the auto-memory system prompt — provides grep commands for memory topic files and session JSONL transcripts; absent when flag is false | Auto-Memory | ✅ | 99% | UNVERIFIED | v2.1.74 | E61 |
 
 ---
 
@@ -124,6 +128,10 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | E55 | B30 | Experiment | Dual MAAV agent experiment — this session (2026-06-28) | Agents ae4bc9897199f0fef (probe) and a4ee9bfe2aedf5c12 (adversarial) | Probe agent answered 10/10 CLAUDE.md knowledge questions YES before reading any files (2-space indent, cargo fmt forbidden, scope command, MAAV, kbase — all known from system-reminder injection). Re-read `~/.claude/CLAUDE.md` and confirmed content matched context exactly. Adversarial agent confirmed zero knowledge of parent conversation; JSONL starts at `parentUuid: null`, `isSidechain: true`. `SCOPE_DIR`/`SCOPE_READY`/`SCOPE_LEVEL` absent from both agents' environments. |
 | E56 | B29 | Experiment | Full env comparison — parent vs general-purpose subagent (2026-06-29) | `cat /proc/self/environ \| tr '\0' '\n' \| sort` in both parent and subagent Bash calls | 107 variables enumerated in each context; zero differences between parent and subagent. Full environment inherited: project vars ($PRO, $GENAI, FIRECRAWL_API_KEY, etc.), non-CLAUDE_* timeouts (COMMAND_TIMEOUT=7200, TOOL_TIMEOUT=7200), NVM, desktop session (XDG_*, GNOME_*, DISPLAY), GIT_EDITOR, SSH_AUTH_SOCK, all system vars. |
 | E57 | B31 | Experiment | 4-agent parallel tool inventory — this session (2026-06-29) | Agents a0421c818fd857c2b (general-purpose), a5c1902758f7bef17 (Explore), afa16d2f3f479ce74 (Plan), a4e092d7ff1371904 (claude-code-guide) | Each agent reported its complete available-deferred-tools list verbatim. general-purpose: 12 deferred + ToolSearch pre-loaded (no Agent tool). Explore: 9 deferred + ToolSearch. Plan: 9 deferred + ToolSearch (identical to Explore). claude-code-guide: 5 pre-loaded only, no ToolSearch, no deferred. Parent session: 26 deferred + ToolSearch = 27. |
+| E58 | B32 | Code | Binary analysis — `strings /home/user1/.local/share/claude/versions/2.1.74` — v2.1.74 session (2026-06-29) | `iy4()` at strings line 492301; `C9()` at binary offset 108,423,272 | `iy4()` path filter: `j.startsWith("./") \|\| j.startsWith("~/") \|\| (j.startsWith("/") && j !== "/") \|\| (!j.startsWith("@") && !j.match(/^[#%^&*()]+/) && j.match(/^[a-zA-Z0-9._-]/))`. `C9()` resolver: `if(K==="~")return Uo_.homedir().normalize("NFC"); if(K.startsWith("~/"))return SZ.join(Uo_.homedir(),K.slice(2)).normalize("NFC"); if(SZ.isAbsolute(O))return SZ.normalize(O).normalize("NFC"); return SZ.resolve(q,O).normalize("NFC")`. Regex: `/(?:^|\s)@((?:[^\s\\]|\\ )+)/g`. Code/codespan skip: `if(H.type==="code"\|\|H.type==="codespan")continue`. Fragment strip: `let w=j.indexOf("#"); if(w!==-1)j=j.substring(0,w)`. |
+| E59 | B33 | Code | Binary analysis — `strings /home/user1/.local/share/claude/versions/2.1.74` — v2.1.74 session (2026-06-29) | `Kf_()` and `WN()` at strings line 492301; constants at line 492298 | Error handling: `if(K==="ENOENT"\|\|K==="EISDIR")return null; if(K==="EACCES")Q("tengu_claude_md_permission_error",...)`. Constants: `L1="MEMORY.md"`, `$P=200` (line 492298); `ny4=5` (WN depth check: `if(q.has(A)\|\|O>=ny4)return[]`); `Xm=40000` (MAX_MEMORY_CHARACTER_COUNT); `QKT=3000`. Extension whitelist `Qy4=new Set([".md",".txt",...])` at line 492307, ~50+ types. MEMORY.md warning text confirmed verbatim. Empty-content guard: `if(!D\|\|!D.content.trim())return[]`. |
+| E60 | B34 | Code | Binary analysis — `strings /home/user1/.local/share/claude/versions/2.1.74` — v2.1.74 session (2026-06-29) | `K2q()`, `S1()`, `ry4()` at lines 492298–492307 | `K2q()` assembly: `let q=Wq("tengu_paper_halyard",!1); for(let K of T){if(q&&(K.type==="Project"\|\|K.type==="Local"))continue;}`. User bypass: `q.push(...WN(J,"User",K,!0))` — always `includeExternal=true`. `ry4()` exclusion: `_p6.default.isMatch(O,R,{dot:!0})` (micromatch). Session disable: `a$()` checks `CLAUDE_CODE_DISABLE_CLAUDE_MDS\|\|sT(CLAUDE_CODE_SIMPLE)`. HTML strip: `Kp6` in `Rp6` module exports `{stripHtmlComments:()=>Kp6}`. GFM-off: `new $X({gfm:!1})` in `iy4()`. YAML frontmatter: `ly4()` processes `paths:` conditionals, content not passed to model. |
+| E61 | B35 | Code | Binary analysis — `strings /home/user1/.local/share/claude/versions/2.1.74` — v2.1.74 session (2026-06-29) | `VfT()` adjacent to auto-memory functions `cy4`, `om6` | Full function: `function VfT(T){if(!Wq("tengu_coral_fern",!1))return[];let _=qw(R8()),q=Yz(),K=q?grep -rn... --include="*.md":${GR} with pattern=...; return["## Searching past context","","When looking for past context:","1. Search topic files...","2. Session transcript logs (last resort — large files, slow):","...","Use narrow search terms..."]}`. Default confirmed false via `Wq("tengu_coral_fern",!1)` — second arg is the fallback. Also confirmed: `function so(){return null}` — `QKT=3000` ultra-memory constant inoperative; all three `so()` call sites short-circuit on null in v2.1.74. |
 
 ---
 
@@ -131,13 +139,13 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 
 | Status | Count | IDs |
 |--------|-------|-----|
-| ✅ Confirmed | 16 | B1, B2, B3, B6, B7, B9, B10, B12, B13, B14, B16, B27, B28, B29, B30, B31 |
+| ✅ Confirmed | 20 | B1, B2, B3, B6, B7, B9, B10, B12, B13, B14, B16, B27, B28, B29, B30, B31, B32, B33, B34, B35 |
 | 🎯 Observed | 14 | B4, B5, B8, B11, B15, B18, B19, B20, B21, B22, B23, B24, B25, B26 |
 | ⚠️ Exception noted | 1 | B17 (self-contained except at context-compaction boundaries; < 0.2% violation rate) |
 | ❓ Uncertain | 1 | B16h |
 
-**Total behaviors:** 32 (B1–B31 + B16h sub-hypothesis; B16h shares B16's row index)
-**Confirmed (≥90% certainty):** 16
+**Total behaviors:** 36 (B1–B35 + B16h sub-hypothesis; B16h shares B16's row index)
+**Confirmed (≥90% certainty):** 20
 **Lowest certainty:** B5 (60% — current session selection mechanism)
 **Investigation priority:** B5 — can be confirmed by reading Claude Code changelog or source
 
@@ -147,10 +155,10 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | VALIDATED† | 1 | B5 (distinct mtimes proven; mtime-as-selection-key unproven) |
 | FLAG-VFY | 8 | B3, B4, B16, B19, B20, B21, B22, B24 |
 | NEG-ONLY | 4 | B11, B23, B25, B26 |
-| UNVERIFIED | 6 | B8, B27, B28, B29, B30, B31 |
+| UNVERIFIED | 10 | B8, B27, B28, B29, B30, B31, B32, B33, B34, B35 |
 | MEASURE | 1 | B16h (lim_it; runs by default in container) |
 
-**Validation gap:** 12 of 32 behaviors are fully validated with behavioral assertions.
+**Validation gap:** 12 of 36 behaviors are fully validated with behavioral assertions.
 
 ---
 
@@ -192,6 +200,10 @@ Each behavior instance has a corresponding invalidation test in `contract/claude
 | `b29_bash_claude_env.rs` | B29 | UNVERIFIED (no automated test yet) |
 | `b30_subagent_context_inheritance.rs` | B30 | UNVERIFIED (no automated test yet) |
 | `b31_subagent_tool_sets.rs` | B31 | UNVERIFIED (no automated test yet) |
+| `b32_claudemd_at_ref_path_filter.rs` | B32 | UNVERIFIED (no automated test yet) |
+| `b33_claudemd_loading_limits.rs` | B33 | UNVERIFIED (no automated test yet) |
+| `b34_claudemd_content_pipeline.rs` | B34 | UNVERIFIED (no automated test yet) |
+| `b35_automemory_search_context_flag.rs` | B35 | UNVERIFIED (no automated test yet) |
 
 To run:
 ```bash

@@ -362,54 +362,59 @@ fn us05_4_dir_with_new_session()
   );
 }
 
-// ── US06: Verbose Debugging ─────────────────────────────────────────────────
+// ── US06: Output Suppression ─────────────────────────────────────────────────
 // Source: tests/docs/cli/user_story/06_verbose_debugging.md
 
-/// US-1: --verbosity 4 with --dry-run shows command on stdout.
+/// US-1: --quiet with --dry-run still shows assembled command on stdout.
 #[ test ]
-fn us06_1_verbosity_4_shows_command()
+fn us06_1_quiet_dry_run_shows_command()
 {
-  let output = run_dry( &[ "--verbosity", "4", "test" ] );
+  let output = run_dry( &[ "--quiet", "test" ] );
   assert!(
     output.contains( "claude" ),
-    "dry-run at verbosity 4 must show command on stdout. Got:\n{output}"
+    "--quiet --dry-run must show command on stdout. Got:\n{output}"
   );
 }
 
-/// US-2: --verbosity 0 does not suppress dry-run output.
+/// US-2: Without --quiet, dry-run output is always visible (default behavior unchanged).
 #[ test ]
-fn us06_2_verbosity_0_no_suppress()
+fn us06_2_no_quiet_dry_run_visible()
 {
-  let output = run_dry( &[ "--verbosity", "0", "test" ] );
+  let output = run_dry( &[ "test" ] );
   assert!(
     output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=" ),
-    "dry-run at verbosity 0 must still show env+command. Got:\n{output}"
+    "dry-run without --quiet must show env+command. Got:\n{output}"
   );
 }
 
-/// US-3: --verbosity 5 with --dry-run shows command on stdout.
+/// US-3: --quiet suppresses the keep-claudecode warning.
 #[ test ]
-fn us06_3_verbosity_5_shows_command()
+fn us06_3_quiet_suppresses_keep_claudecode_warning()
 {
-  let output = run_dry( &[ "--verbosity", "5", "test" ] );
-  assert!(
-    output.contains( "claude" ),
-    "dry-run at verbosity 5 must show command on stdout. Got:\n{output}"
+  let out = run_cli_with_env(
+    &[ "--keep-claudecode", "--quiet", "--dry-run", "task" ],
+    &[ ( "CLAUDECODE", "1" ) ],
   );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "nested-agent" ),
+    "--quiet must suppress keep-claudecode warning. Got:\n{stderr}"
+  );
+  assert!( out.status.success(), "must exit 0. stderr: {stderr}" );
 }
 
-/// US-4: dry-run always shows output regardless of verbosity level.
+/// US-4: --dry-run output always visible regardless of --quiet.
 #[ test ]
-fn us06_4_dry_run_independent_of_verbosity()
+fn us06_4_dry_run_independent_of_quiet()
 {
-  let output = run_dry( &[ "--verbosity", "0", "test" ] );
+  let output = run_dry( &[ "--quiet", "test" ] );
   assert!(
     output.contains( "claude" ),
-    "dry-run must show command even at verbosity 0. Got:\n{output}"
+    "--quiet --dry-run must show command on stdout. Got:\n{output}"
   );
   assert!(
     output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=" ),
-    "dry-run must show env even at verbosity 0. Got:\n{output}"
+    "--quiet --dry-run must show env on stdout. Got:\n{output}"
   );
 }
 
@@ -514,21 +519,21 @@ fn us08_2_trace_on_isolated()
   );
 }
 
-/// US-3: --trace output independent of --verbosity level.
+/// US-3: --trace output independent of --quiet flag.
 ///
-/// Trace is a separate channel from runner verbosity diagnostics.
+/// Trace is a separate channel from runner quiet flag.
 /// PATH=/nonexistent forces exit 1 but trace fires first.
 #[ test ]
-fn us08_3_trace_independent_of_verbosity()
+fn us08_3_trace_independent_of_quiet()
 {
   let out = run_cli_with_env(
-    &[ "--trace", "--verbosity", "0", "test" ],
+    &[ "--trace", "--quiet", "test" ],
     &[ ( "PATH", "/nonexistent" ) ],
   );
   let stderr = stderr_str( &out );
   assert!(
     stderr.contains( "claude" ),
-    "--trace must emit to stderr even at --verbosity 0. Got:\n{stderr}"
+    "--trace must emit to stderr even with --quiet. Got:\n{stderr}"
   );
 }
 

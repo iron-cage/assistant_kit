@@ -36,7 +36,7 @@ const UUID_A : &str = "11111111-1111-1111-1111-111111111111";
 /// UUID returned in the claude JSON envelope — simulates a different active session.
 const UUID_B : &str = "22222222-2222-2222-2222-222222222222";
 
-/// Build a minimal CLR result JSON envelope with the given session_id.
+/// Build a minimal CLR result JSON envelope with the given `session_id`.
 fn clr_envelope( session_id : &str ) -> String
 {
   format!(
@@ -95,7 +95,7 @@ fn sv1_matching_uuid_emits_no_warning()
     &envelope,
     &[
       "--session-dir", &session_path,
-      "--message", "hello",
+      "hello",
       "--max-sessions", "0",
       "--output-style", "raw",
     ],
@@ -128,7 +128,7 @@ fn sv2_mismatched_uuid_emits_warning_but_exits_zero()
     &envelope,
     &[
       "--session-dir", &session_path,
-      "--message", "hello",
+      "hello",
       "--max-sessions", "0",
       "--output-style", "raw",
     ],
@@ -169,7 +169,7 @@ fn sv3_new_session_flag_skips_mismatch_check()
     &envelope,
     &[
       "--session-dir", &session_path,
-      "--message", "hello",
+      "hello",
       "--max-sessions", "0",
       "--new-session",
       "--output-style", "raw",
@@ -204,7 +204,7 @@ fn sv4_empty_session_dir_skips_mismatch_check()
     &envelope,
     &[
       "--session-dir", &session_path,
-      "--message", "hello",
+      "hello",
       "--max-sessions", "0",
       "--output-style", "raw",
     ],

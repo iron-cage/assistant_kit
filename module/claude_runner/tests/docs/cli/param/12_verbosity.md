@@ -1,4 +1,6 @@
-# Parameter :: `--verbosity`
+> **DEPRECATED:** `--verbosity` parameter removed. Test file `tests/verbosity_test.rs` to be deleted. See `74_quiet.md` for replacement test spec.
+
+# Parameter :: `--verbosity` (DEPRECATED)
 
 Edge case tests for the runner verbosity level parameter. Tests validate level range enforcement and output gating.
 

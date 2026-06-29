@@ -48,7 +48,7 @@ effective = --retry-override ?? --retry-on-unknown ?? --retry-default (2)
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, ... |
 
 ### Referenced Commands
 

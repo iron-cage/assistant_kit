@@ -39,8 +39,8 @@ Inspect the fully assembled `claude` subprocess command — including all defaul
 | # | Parameter | Role |
 |---|-----------|------|
 | 11 | [`--dry-run`](../param/011_dry_run.md) | Gate: preview without execution |
-| 12 | [`--verbosity`](../param/012_verbosity.md) | Level 4+ also shows preview before execution |
 | 13 | [`--trace`](../param/013_trace.md) | Related: print to stderr then execute (not dry) |
+| 74 | [`--quiet`](../param/074_quiet.md) | `--quiet` does NOT suppress `--dry-run` output |
 
 ### Related User Stories
 

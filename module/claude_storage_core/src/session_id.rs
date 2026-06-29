@@ -26,6 +26,7 @@ pub struct SessionId( String );
 impl SessionId
 {
   /// Construct a `SessionId` from any string-like value.
+  #[ inline ]
   #[ must_use ]
   pub fn new( id : impl Into< String > ) -> Self
   {
@@ -33,6 +34,7 @@ impl SessionId
   }
 
   /// Return the inner UUID as a `&str`.
+  #[ inline ]
   #[ must_use ]
   pub fn as_str( &self ) -> &str
   {
@@ -40,9 +42,10 @@ impl SessionId
   }
 }
 
-impl std::fmt::Display for SessionId
+impl core::fmt::Display for SessionId
 {
-  fn fmt( &self, f : &mut std::fmt::Formatter< '_ > ) -> std::fmt::Result
+  #[ inline ]
+  fn fmt( &self, f : &mut core::fmt::Formatter< '_ > ) -> core::fmt::Result
   {
     f.write_str( &self.0 )
   }
@@ -50,15 +53,18 @@ impl std::fmt::Display for SessionId
 
 impl AsRef< str > for SessionId
 {
+  #[ inline ]
   fn as_ref( &self ) -> &str { &self.0 }
 }
 
 impl From< String > for SessionId
 {
+  #[ inline ]
   fn from( s : String ) -> Self { Self( s ) }
 }
 
 impl From< &str > for SessionId
 {
+  #[ inline ]
   fn from( s : &str ) -> Self { Self( s.to_owned() ) }
 }

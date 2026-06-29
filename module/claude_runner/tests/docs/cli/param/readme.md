@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clr parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 69 clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout` (isolated/refresh), `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--subdir`, `--output-file`, `--expect`, `--expect-strategy`, `--max-sessions`, `--retry-on-transient`, `--transient-delay`, `--timeout` (run/ask), `--retry-on-account`, `--account-delay`, `--retry-on-auth`, `--auth-delay`, `--retry-on-service`, `--service-delay`, `--retry-on-process`, `--process-delay`, `--retry-on-validation`, `--validation-delay`, `--retry-on-runner`, `--runner-delay`, `--retry-on-unknown`, `--unknown-delay`, `--retry-override`, `--retry-override-delay`, `--retry-default`, `--retry-default-delay`, `--mode`, `--columns`, `--wide`, `--pid`, `--inspect`, `--output-style`, `--summary-fields`, `--journal`, `--journal-dir`, `--output-format`, `--max-turns`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--add-dir`, `--fallback-model`.
+- **In Scope**: All active clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--quiet`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout` (isolated/refresh), `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--subdir`, `--output-file`, `--expect`, `--expect-strategy`, `--max-sessions`, `--retry-on-transient`, `--transient-delay`, `--timeout` (run/ask), `--retry-on-account`, `--account-delay`, `--retry-on-auth`, `--auth-delay`, `--retry-on-service`, `--service-delay`, `--retry-on-process`, `--process-delay`, `--retry-on-validation`, `--validation-delay`, `--retry-on-runner`, `--runner-delay`, `--retry-on-unknown`, `--unknown-delay`, `--retry-override`, `--retry-override-delay`, `--retry-default`, `--retry-default-delay`, `--mode`, `--columns`, `--wide`, `--pid`, `--inspect`, `--output-style`, `--summary-fields`, `--journal`, `--journal-dir`, `--output-format`, `--max-turns`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--add-dir`, `--fallback-model`. (`--verbosity` DEPRECATED → `12_verbosity.md` deprecated)
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
@@ -24,7 +24,8 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `09_max_tokens.md` | Edge cases for `--max-tokens` flag | ✅ |
 | `10_session_dir.md` | Edge cases for `--session-dir` flag | ✅ |
 | `11_dry_run.md` | Edge cases for `--dry-run` flag | ✅ |
-| `12_verbosity.md` | Edge cases for `--verbosity` flag | ✅ |
+| `12_verbosity.md` | Edge cases for `--verbosity` flag (DEPRECATED — `--verbosity` removed) | ⚠️ |
+| `74_quiet.md` | Edge cases for `--quiet` flag (suppress non-fatal runner diagnostics) | ⏳ |
 | `13_trace.md` | Edge cases for `--trace` flag | ✅ |
 | `14_no_ultrathink.md` | Edge cases for `--no-ultrathink` flag | ✅ |
 | `15_system_prompt.md` | Edge cases for `--system-prompt` flag | ✅ |

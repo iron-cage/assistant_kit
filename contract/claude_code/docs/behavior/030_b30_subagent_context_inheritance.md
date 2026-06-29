@@ -57,3 +57,7 @@ Agent subagents receive the full configuration context (all CLAUDE.md files and 
 | behavior | [013_b13_subagent_directory.md](013_b13_subagent_directory.md) | B13: subagent session storage at `{parent-uuid}/subagents/agent-{id}.jsonl` |
 | tool | [../tool/007_agent.md](../tool/007_agent.md) | Agent tool — `prompt` parameter note: "agents start fresh unless `resume` is set" |
 | behavior | [031_b31_subagent_tool_sets.md](031_b31_subagent_tool_sets.md) | B31: tool sets per subagent type — sister concern to context inheritance |
+| behavior | [032_b32_claudemd_at_ref_path_filter.md](032_b32_claudemd_at_ref_path_filter.md) | B32: @-reference path filter — which path formats load; `$VAR` silently rejected |
+| behavior | [033_b33_claudemd_loading_limits.md](033_b33_claudemd_loading_limits.md) | B33: loading silent failures and limits — what prevents files from loading (ENOENT, ny4 depth, etc.) |
+| behavior | [034_b34_claudemd_content_pipeline.md](034_b34_claudemd_content_pipeline.md) | B34: content pipeline and access control — what is stripped/suppressed before injection |
+| behavior | [035_b35_automemory_search_context_flag.md](035_b35_automemory_search_context_flag.md) | B35: `tengu_coral_fern` flag adds grep-based search commands to auto-memory instructions |

@@ -101,14 +101,14 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
   // Fix(BUG-320): capture expected session UUID — returned to caller for mismatch detection.
   // Root cause: bool return made the expected UUID inaccessible after -c injection.
   // Pitfall: expected_id is None when new_session is set OR when no qualifying session exists.
-  let expected_id = if !cli.new_session
+  let expected_id = if cli.new_session { None }
+  else
   {
     session_exists(
       cli.session_dir.as_deref().map( std::path::Path::new ),
       effective_working_dir.as_deref(),
     )
-  }
-  else { None };
+  };
   if expected_id.is_some()
   {
     builder = builder.with_continue_conversation( true );
@@ -213,7 +213,7 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
     // Path B (auto-inject): when rendering summary and no --output-format is set, inject
     // --output-format json so claude returns parseable JSON for render_summary().
     let effective_style = cli.output_style.as_deref().unwrap_or( "summary" );
-    if effective_style == "summary"
+    if effective_style == "summary" || cli.json_schema.is_some()
     {
       builder = builder.with_arg( "--output-format" ).with_arg( "json" );
     }

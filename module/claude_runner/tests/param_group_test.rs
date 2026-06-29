@@ -263,7 +263,7 @@ fn g2cc4_all_runner_control_flags_no_conflict()
       "--subdir", "work",
       "--max-tokens", "100000",
       "--session-dir", "/tmp/sessions",
-      "--verbosity", "2",
+      "--quiet",
       "--trace",
       "--no-ultrathink",
       "--no-effort-max",
@@ -304,7 +304,7 @@ fn g2cc4_all_runner_control_flags_no_conflict()
       "Fix bug",
     ] )
     // Spec CC-4 requires "clean environment" — unset CLAUDECODE so the BUG-248 warning
-    // (fires when --keep-claudecode + CLAUDECODE in env + verbosity >= 2) does not appear.
+    // (fires when --keep-claudecode + CLAUDECODE in env without --quiet) does not appear.
     // Root cause of fragility: host Claude Code sessions inject CLAUDECODE=1 into the
     // environment; container runs (CLAUDECODE absent) pass without this guard.
     .env_remove( "CLAUDECODE" )

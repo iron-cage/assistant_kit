@@ -4,7 +4,7 @@
 
 - **Purpose**: Document validation edge cases for clr semantic types.
 - **Responsibility**: Index of per-type validation test files covering type-level parsing and constraint enforcement.
-- **In Scope**: All 14 clr semantic types: `MessageText`, `DirectoryPath`, `TokenLimit`, `ModelName`, `VerbosityLevel`, `SystemPromptText`, `EffortLevel`, `CredentialsFilePath`, `TimeoutSecs`, `JsonSchemaText`, `McpConfigPath`, `FilePath`, `ErrorKind`, `ErrorClass`.
+- **In Scope**: 13 active clr semantic types: `MessageText`, `DirectoryPath`, `TokenLimit`, `ModelName`, `SystemPromptText`, `EffortLevel`, `CredentialsFilePath`, `TimeoutSecs`, `JsonSchemaText`, `McpConfigPath`, `FilePath`, `ErrorKind`, `ErrorClass`. (`VerbosityLevel` DEPRECATED — `05_verbosity_level.md` deprecated)
 - **Out of Scope**: Command-level tests (→ `command/`), per-parameter tests (→ `param/`).
 
 Per-type validation test indices for `clr`. See [type/readme.md](../../../../docs/cli/type/readme.md) for specification.
@@ -17,7 +17,7 @@ Per-type validation test indices for `clr`. See [type/readme.md](../../../../doc
 | `02_directory_path.md` | Validation tests for `DirectoryPath` type | ✅ |
 | `03_token_limit.md` | Validation tests for `TokenLimit` type | ✅ |
 | `04_model_name.md` | Validation tests for `ModelName` type | ✅ |
-| `05_verbosity_level.md` | Validation tests for `VerbosityLevel` type | ✅ |
+| `05_verbosity_level.md` | Validation tests for `VerbosityLevel` type (DEPRECATED — type removed) | ⚠️ |
 | `06_system_prompt_text.md` | Validation tests for `SystemPromptText` type | ✅ |
 | `07_effort_level.md` | Validation tests for `EffortLevel` type | ✅ |
 | `08_credentials_file_path.md` | Validation tests for `CredentialsFilePath` type | ✅ |

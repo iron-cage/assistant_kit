@@ -47,7 +47,7 @@ This parameter is Tier 3 — the rightmost (lowest priority, concrete default) i
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, ... |
 
 ### Referenced Commands
 

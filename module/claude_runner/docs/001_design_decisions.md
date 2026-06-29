@@ -2,11 +2,15 @@
 
 Rationale for key design choices made during the `--flag value` CLI redesign (task 031).
 
-### D2 — `--verbose` vs `--verbosity`
+### D2 — `--verbose` vs `--quiet` (supersedes `--verbosity`)
 
-`--verbose` passes through to claude (it's a claude-native flag). `--verbosity <0-5>` controls
-the runner's own output gating level. At `--verbosity 4` (verbose detail), the runner prints
-a command preview to stderr before execution.
+`--verbose` passes through to claude (it's a claude-native flag). Runner-internal diagnostic
+output is controlled by `--quiet` (bool, default false) — when set, non-fatal CLR diagnostics
+(gate-wait, retry progress, retry-exhaustion, keep-claudecode warning) are suppressed. Fatal
+errors are always emitted regardless of `--quiet`. Command preview is handled exclusively by
+`--trace` (not tied to any verbosity level). The former `--verbosity <0-5>` parameter was
+removed (TSK-337) as an anti-pattern: a 0–5 numeric scale bundles independent output concerns
+into one opaque integer, violating CLI composability.
 
 ### D3 — Print mode requires a message
 

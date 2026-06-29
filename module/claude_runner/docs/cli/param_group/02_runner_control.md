@@ -28,7 +28,7 @@ not a control flag. `--help` is handled separately as a universal override.
 **Typical usage:**
 
 ```sh
-clr --dir /project --max-tokens 50000 --verbosity 4 "test"
+clr --dir /project --max-tokens 50000 "test"
 clr --interactive "Continue this work" --dir /project
 clr --new-session --dry-run "check command"
 clr --trace "Fix bug" --dir /project
@@ -53,7 +53,7 @@ clr --trace "Fix bug" --dir /project
 | [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 200000 | Token cap | Max output tokens |
 | [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session storage | Session storage directory |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Execution gate | Preview without executing |
-| [`--verbosity`](../param/012_verbosity.md) | [`VerbosityLevel`](../type/05_verbosity_level.md) | 3 | Diagnostic level | Runner output gate level |
+| [`--quiet`](../param/074_quiet.md) | bool | false | Diagnostic suppressor | Suppress non-fatal runner diagnostics |
 | [`--trace`](../param/013_trace.md) | bool | false | Trace mode | Print env+command to stderr then execute |
 | [`--no-ultrathink`](../param/014_no_ultrathink.md) | bool | false | Injection suppressor | Disable default ultrathink message suffix |
 | [`--no-effort-max`](../param/018_no_effort_max.md) | bool | false | Injection suppressor | Suppress default `--effort max` injection |

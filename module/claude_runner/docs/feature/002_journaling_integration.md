@@ -38,7 +38,7 @@ Also configurable via `CLR_JOURNAL_DIR` env var. Resolution: CLI > env > default
 to 1 MB with a `\n[truncated at 1MB]` suffix. This prevents journal files from
 growing unboundedly with large subprocess outputs.
 
-**Error handling:** Journal write failures are logged to stderr at verbosity >= 3
+**Error handling:** Journal write failures are logged to stderr unless `--quiet`
 but never cause `clr` to exit non-zero. Journaling is best-effort — it must not
 interfere with the primary execution path.
 

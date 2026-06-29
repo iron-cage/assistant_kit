@@ -21,8 +21,7 @@ clr --max-sessions 3 --dry-run "preview"    # dry-run: gate skipped; shows assem
 whose basename is exactly `"claude"`, excluding the calling process. The count reflects
 all running Claude Code processes system-wide, not per-project.
 
-**Note:** When the gate waits, `clr` emits a message to stderr each polling cycle (only at
-verbosity ≥ 2, which is the default):
+**Note:** When the gate waits, `clr` emits a message to stderr each polling cycle (unless `--quiet`):
 `"Info: {count}/{max} sessions active; waiting 30s for a slot... (attempt {n}/{max_attempts})"`.
 When a slot opens, `clr` proceeds without a message. After 100 failed attempts (no slot
 opened), `clr` emits:
@@ -39,7 +38,7 @@ without scanning for active sessions.
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, ... |
 
 ### Referenced Commands
 

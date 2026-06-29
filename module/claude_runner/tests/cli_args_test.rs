@@ -50,7 +50,7 @@
 //! - T25: duplicate `--max-tokens` last-wins
 //! - T26: `--help` after valid flags shows help
 //! - T27: `--` separator makes everything after positional
-//! - T28: `--verbosity 6` rejected
+//! - T28: `--quiet` accepted (exit 0)
 //! - T29: `--dry-run` does not invoke claude binary
 //! - T30: `--print` with message parsed (--print in dry-run output)
 //! - T31: flag value missing rejected (`--model` without value)
@@ -263,7 +263,7 @@ fn t16_help_lists_all_options()
   for opt in &[
     "--print", "--new-session", "--model", "--verbose",
     "--no-skip-permissions", "--max-tokens", "--session-dir",
-    "--dir", "--dry-run", "--verbosity", "--help",
+    "--dir", "--dry-run", "--quiet", "--help",
     "--system-prompt", "--append-system-prompt", "--no-ultrathink",
     "--effort", "--no-effort-max", "[<MSG>]",
   ] {
@@ -398,14 +398,12 @@ fn t27_double_dash_separator()
   );
 }
 
-// T28: --verbosity 6 rejected
+// T28: --quiet flag accepted and does not produce an error
 #[ test ]
-fn t28_verbosity_six_rejected()
+fn t28_quiet_flag_accepted()
 {
-  let out = run_cli( &[ "--verbosity", "6", "--dry-run", "test" ] );
-  assert!( !out.status.success(), "--verbosity 6 must be rejected" );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!( stderr.contains( "verbosity" ), "error must mention verbosity. Got:\n{stderr}" );
+  let out = run_cli( &[ "--quiet", "--dry-run", "test" ] );
+  assert!( out.status.success(), "--quiet must be accepted (exit 0). stderr: {}", String::from_utf8_lossy( &out.stderr ) );
 }
 
 // T29: --dry-run does not invoke claude binary (succeeds without claude in PATH)
