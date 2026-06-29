@@ -55,7 +55,7 @@
 //! - S23: `--dry-run --no-ultrathink --no-effort-max --verbose "msg"` → all flags visible (`11_dry_run.md` EC-6)
 //!
 //! --quiet:
-//! - S24: `--quiet "msg"` → exit 0, `--quiet` does not appear in assembled claude command (`74_quiet.md` EC-1)
+//! - S24: `--quiet "msg"` → exit 0, `--quiet` does not appear in assembled claude command (`074_quiet.md` EC-1)
 //!
 //! --print:
 //! - S25: `clr --dry-run -p "msg"` and `clr --dry-run --print "msg"` byte-identical (`02_print.md` EC-2)
