@@ -59,6 +59,12 @@ If `render_summary()` gates on an optional field using `?`:
 |------|--------------|
 | [feature/001_runner_tool.md](../feature/001_runner_tool.md) | Defines the print-mode execution path and `render_summary()` role within it |
 
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [invariant/009_session_mismatch_detection.md](009_session_mismatch_detection.md) | `extract_session_id()` inherits the `"type":"result"` gate defined by this invariant |
+
 ### Sources
 
 | File | Relationship |

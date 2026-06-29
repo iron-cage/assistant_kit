@@ -95,13 +95,13 @@ fn t03_max_tokens_flag_accepted()
   assert!( stdout.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=1000" ), "token env var must appear. Got:\n{stdout}" );
 }
 
-// T04: --dry-run contains -c when --session-dir is non-empty.
-// session_exists(Some(dir)) checks the dir directly; a dummy file triggers -c injection.
+// T04: --dry-run contains -c when --session-dir has a qualifying .jsonl file.
+// session_exists(Some(dir)) scans for .jsonl files; a dummy .jsonl triggers -c injection.
 #[ test ]
 fn t04_dry_run_contains_continue_when_sessions_exist()
 {
   let session_dir = tempfile::tempdir().expect( "create temp session dir" );
-  std::fs::write( session_dir.path().join( "session.json" ), b"{}" )
+  std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
     .expect( "write dummy session file" );
   let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
@@ -179,9 +179,9 @@ fn t09_dry_run_without_message()
 #[ test ]
 fn t10_multiple_flags_combined()
 {
-  // Create a session dir with one dummy file so session_exists returns true.
+  // Create a session dir with one dummy .jsonl file so session_exists returns Some(SessionId).
   let session_dir = tempfile::tempdir().expect( "create temp session dir" );
-  std::fs::write( session_dir.path().join( "session.json" ), b"{}" )
+  std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
     .expect( "write dummy session file" );
   let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
 

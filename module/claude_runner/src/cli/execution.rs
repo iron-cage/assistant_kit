@@ -2,6 +2,7 @@ use claude_runner_core::{ ClaudeCommand, ErrorKind, ExecutionOutput, signal_exit
 use super::parse::{ CliArgs, ExpectStrategy };
 use super::fence::strip_fences;
 use claude_journal::{ EventRecord, EventType, JournalWriter };
+use claude_storage_core::SessionId;
 
 // -------------------------------------------------------------------
 // Journal helpers
@@ -599,9 +600,10 @@ fn default_print_timeout() -> u32
 /// Supports subprocess timeout via `--timeout` (0 = unlimited; absent = `DEFAULT_PRINT_TIMEOUT_SECS`).
 #[ allow( clippy::too_many_lines ) ]
 pub( super ) fn run_print_mode(
-  builder : &ClaudeCommand,
-  cli     : &CliArgs,
-  journal : Option< &JournalWriter >,
+  builder             : &ClaudeCommand,
+  cli                 : &CliArgs,
+  journal             : Option< &JournalWriter >,
+  expected_session_id : Option< &SessionId >,
 )
 {
   let verbosity    = cli.verbosity.unwrap_or_default();
@@ -753,6 +755,23 @@ pub( super ) fn run_print_mode(
     };
     let out = apply_expect_validation( cli, builder, out, journal );
     emit_execution( journal, cli, &raw_stdout, &raw_stderr, 0 );
+    // Fix(BUG-320): detect session mismatch — warn when claude resumed a different session.
+    // Root cause: without UUID comparison, silent session drift goes unnoticed; callers may
+    //   believe they are continuing a specific conversation but get a different one instead.
+    // Pitfall: non-fatal — emit warning to stderr but exit 0 so callers are not disrupted.
+    //   Only fires in print mode (interactive TTY output cannot be reliably parsed for UUID).
+    if let Some( expected ) = expected_session_id
+    {
+      if let Some( actual ) = super::summary::extract_session_id( &raw_stdout )
+      {
+        if actual != expected.as_str()
+        {
+          eprintln!(
+            "[Runner] warning: session mismatch — expected {expected}, got {actual} (BUG-320 detected)"
+          );
+        }
+      }
+    }
     write_output_file( cli.output_file.as_deref(), &out );
     print!( "{out}" );
     return;

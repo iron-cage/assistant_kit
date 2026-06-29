@@ -1,7 +1,7 @@
 meta:
   description: Cross-reference graph for design doc instances in claude_runner (feature, invariant, api entities). CLI reference docs (cli/) are out of scope.
-  node_count: 11
-  edge_count: 22
+  node_count: 12
+  edge_count: 28
   component_count: 1
   generated: 2026-05-16
   last_reviewed: 2026-06-24
@@ -50,6 +50,11 @@ nodes:
   - id: invariant/008
     file: invariant/008_render_summary_gate.md
     label: render_summary Gate Field
+    entity: invariant
+
+  - id: invariant/009
+    file: invariant/009_session_mismatch_detection.md
+    label: Session Mismatch Detection
     entity: invariant
 
   - id: feature/002
@@ -144,6 +149,30 @@ edges:
     via: features
 
   - from: feature/001
+    to: invariant/009
+    via: invariants
+
+  - from: invariant/009
+    to: feature/001
+    via: features
+
+  - from: invariant/009
+    to: invariant/001
+    via: invariants
+
+  - from: invariant/001
+    to: invariant/009
+    via: invariants
+
+  - from: invariant/009
+    to: invariant/008
+    via: invariants
+
+  - from: invariant/008
+    to: invariant/009
+    via: invariants
+
+  - from: feature/001
     to: feature/002
     via: features
 
@@ -154,7 +183,7 @@ edges:
 components:
   - id: 1
     label: Main corpus
-    size: 11
+    size: 12
     isolated: false
     nodes:
       - feature/001
@@ -167,6 +196,7 @@ components:
       - invariant/006
       - invariant/007
       - invariant/008
+      - invariant/009
       - api/001
 
 dangling_refs: []

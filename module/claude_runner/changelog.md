@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Session mismatch detection** (TSK-334/335, BUG-320 hardening)
+  - `session_exists()` returns `Option<SessionId>` instead of `bool`; `build_claude_command()` returns `(ClaudeCommand, Option<SessionId>)` — captures expected UUID for post-execution comparison
+  - `extract_session_id(json) -> Option<String>` in `summary.rs`: parses `session_id` from CLR result envelope, gated on `"type":"result"` per invariant/008
+  - On success path in `run_print_mode()`, if expected UUID differs from actual, emits `[Runner] warning: session mismatch` to stderr; non-fatal (exit 0)
+  - `SessionId` newtype in `claude_storage_core`: typed wrapper for UUID stems; `most_recent_session_id()` / `most_recent_session_in_dir()` APIs
+  - Tests: SV-1–SV-4 (`session_verification_test.rs`), IT-8–IT-10 (`summary_unit_test.rs`)
+  - Doc: `invariant/009_session_mismatch_detection.md`
+
 - **`clr isolated` param gap closure** (Plan 034, TSK-328–331)
   - `--dry-run` (TSK-328): print injected command without creating temp HOME or spawning; exit 0; consistent with `run`/`ask`
   - `--dir <PATH>` / `--add-dir <PATH>` (TSK-329): set working directory and grant additional read paths; validated before spawn; env fallbacks `CLR_DIR` / `CLR_ADD_DIR`

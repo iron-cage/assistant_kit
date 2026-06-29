@@ -112,7 +112,7 @@ fn combined_flags_all_appear()
 {
   // --dangerously-skip-permissions appears automatically (default-on; no explicit flag needed).
   // Note: -c is NOT checked here — /tmp has no prior Claude session so session_exists() returns
-  // false. The -c default is covered by default_continuation_always_present (same cwd as project).
+  // `None`. The -c default is covered by default_continuation_always_present (same cwd as project).
   let output = run_dry( &[
     "--dir", "/tmp", "fix it",
   ] );
@@ -182,9 +182,9 @@ fn dir_with_spaces_produces_unquoted_cd_line()
 }
 
 // No-message case: --dry-run with no message produces the bare command with all defaults
-// but WITHOUT -c because the session dir is empty → session_exists() returns false.
+// but WITHOUT -c because the session dir is empty → session_exists() returns `None`.
 // Fix(BUG-246): describe() now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
-// Do NOT use make_session_dir() here — that writes a dummy file making session_exists() true,
+// Do NOT use make_session_dir() here — that writes a dummy .jsonl making session_exists() return `Some(SessionId)`,
 // which would inject -c and break the "no -c" assertion.
 #[ test ]
 fn dry_run_without_message_shows_bare_command()
@@ -210,13 +210,13 @@ fn new_session_suppresses_continue_flag()
   );
 }
 
-// Continuation: --dry-run shows -c when --session-dir is non-empty.
-// session_exists(Some(dir)) checks the custom dir directly; a dummy file is enough.
+// Continuation: --dry-run shows -c when --session-dir has a qualifying .jsonl file.
+// session_exists(Some(dir)) scans for .jsonl files via most_recent_session_in_dir().
 #[ test ]
 fn continuation_present_when_session_dir_nonempty()
 {
   let session_dir = tempfile::tempdir().expect( "create temp session dir" );
-  std::fs::write( session_dir.path().join( "session.json" ), b"{}" )
+  std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
     .expect( "write dummy session file" );
   let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
@@ -508,7 +508,7 @@ fn trace_with_dry_run_emits_no_stderr()
 // ## Fix Applied
 //
 // session_exists(None, effective_dir) now calls
-// claude_storage_core::continuation::check_continuation(&cwd) which looks up
+// claude_storage_core::continuation::most_recent_session_id(&cwd) which looks up
 // $HOME/.claude/projects/{encoded(cwd)}/ — the project-specific storage — instead
 // of the global $HOME/.claude/ directory.
 //
@@ -564,7 +564,7 @@ fn bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag()
 #[ test ]
 fn empty_positional_arg_produces_bare_command()
 {
-  // Empty session dir → no -c (session_exists returns false for empty dir).
+  // Empty session dir → no -c (session_exists returns `None` for empty dir).
   // Fix(BUG-246): last_line now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
   let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
   let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );

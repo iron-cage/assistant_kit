@@ -15,7 +15,7 @@ Test case planning for [invariant/009_session_mismatch_detection.md](../../../..
 | SV-1 | Fake claude emits matching UUID → no warning on stderr, exit 0 | Invariant Hold |
 | SV-2 | Fake claude emits differing UUID → `[Runner] warning: session mismatch` on stderr, exit 0 | Invariant Statement |
 | SV-3 | `--new-session` (no prior session, `expected_session_id=None`) → no warning regardless of binary output | Invariant Boundary |
-| SV-4 | `--output-style raw --output-format text` (non-JSON stdout) → `extract_session_id` returns `None`, no warning | Invariant Boundary |
+| SV-4 | Empty session dir (`session_exists()` returns `None`) → no warning, comparison skipped | Invariant Boundary |
 
 ## Test Coverage Summary
 
@@ -36,13 +36,13 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 
 | ID | Test Function | File |
 |----|---------------|------|
-| IT-1 | `it_extract_session_id_returns_uuid_for_result_type` | `tests/summary_unit_test.rs` |
-| IT-2 | `it_extract_session_id_returns_none_for_non_result_type` | `tests/summary_unit_test.rs` |
-| IT-3 | `it_extract_session_id_returns_none_when_field_absent` | `tests/summary_unit_test.rs` |
-| SV-1 | `sv1_no_warning_when_session_ids_match` | `tests/session_verification_test.rs` |
-| SV-2 | `sv2_warning_emitted_when_session_ids_differ` | `tests/session_verification_test.rs` |
-| SV-3 | `sv3_no_warning_when_no_prior_session` | `tests/session_verification_test.rs` |
-| SV-4 | `sv4_no_warning_for_raw_output_style` | `tests/session_verification_test.rs` |
+| IT-1 | `extract_session_id_returns_uuid_for_valid_envelope` | `tests/summary_unit_test.rs` |
+| IT-2 | `extract_session_id_returns_none_for_non_result_type` | `tests/summary_unit_test.rs` |
+| IT-3 | `extract_session_id_returns_none_when_session_id_absent` | `tests/summary_unit_test.rs` |
+| SV-1 | `sv1_matching_uuid_emits_no_warning` | `tests/session_verification_test.rs` |
+| SV-2 | `sv2_mismatched_uuid_emits_warning_but_exits_zero` | `tests/session_verification_test.rs` |
+| SV-3 | `sv3_new_session_flag_skips_mismatch_check` | `tests/session_verification_test.rs` |
+| SV-4 | `sv4_empty_session_dir_skips_mismatch_check` | `tests/session_verification_test.rs` |
 
 ---
 
@@ -106,10 +106,10 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 
 ---
 
-### SV-4: `--output-style raw --output-format text` → no warning, exit 0
+### SV-4: Empty session dir → no warning, `expected_session_id=None`, exit 0
 
-- **Given:** Temp storage dir with `UUID_A.jsonl` (non-empty); `--session-dir <temp>`; fake claude emits plain text `"hello world"` (not JSON); `--output-style raw --output-format text`
-- **When:** `clr -p --output-style raw --output-format text --max-sessions 0 --session-dir <temp> "x"` with fake claude binary
-- **Then:** Exit 0; stderr does NOT contain `"session mismatch"`; `extract_session_id("hello world")` returns `None` (non-JSON); `if let Some(actual)` guard short-circuits; warning block not entered even though `expected_session_id = Some(UUID_A)`
+- **Given:** Empty temp storage dir (no `.jsonl` files); `--session-dir <temp>`; fake claude emits a CLR JSON envelope with `session_id=UUID_B`; `--output-style raw`
+- **When:** `clr --max-sessions 0 --session-dir <temp> --output-style raw "x"` with fake claude binary
+- **Then:** Exit 0; stderr does NOT contain `"session mismatch"`; `session_exists()` returns `None` for empty dir; `expected_session_id = None`; `if let Some(expected)` guard short-circuits before `extract_session_id()` is ever called
 - **Exit:** 0
-- **Source:** [invariant/009_session_mismatch_detection.md](../../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 4 (non-JSON stdout → comparison skipped)
+- **Source:** [invariant/009_session_mismatch_detection.md](../../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 1 (`expected_session_id` is `None` → no comparison)

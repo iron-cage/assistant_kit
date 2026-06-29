@@ -15,9 +15,10 @@ mod summary;
 // The unused_imports lint fires for pub use in private modules when no code in the lib crate itself
 // references the re-exported path — but the test file consumer is invisible at lib-compile time.
 #[ allow( unused_imports ) ]
-pub use summary::{ render_summary, resolve_fields };
+pub use summary::{ render_summary, resolve_fields, extract_session_id };
 
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
+use claude_storage_core::SessionId;
 use parse::CliArgs;
 use cred_parse::{
   parse_isolated_args, parse_refresh_args,
@@ -177,9 +178,10 @@ pub( super ) fn resolve_journal_writer(
 }
 
 pub( super ) fn run_built_command(
-  builder : &ClaudeCommand,
-  cli     : &CliArgs,
-  journal : Option< &claude_journal::JournalWriter >,
+  builder             : &ClaudeCommand,
+  cli                 : &CliArgs,
+  journal             : Option< &claude_journal::JournalWriter >,
+  expected_session_id : Option< &SessionId >,
 )
 {
   let verbosity = cli.verbosity.unwrap_or_default();
@@ -201,7 +203,7 @@ pub( super ) fn run_built_command(
 
   if cli.print_mode || ( cli.message.is_some() && !cli.interactive )
   {
-    execution::run_print_mode( builder, cli, journal );
+    execution::run_print_mode( builder, cli, journal, expected_session_id );
   }
   else
   {
@@ -239,7 +241,7 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     std::process::exit( 1 );
   }
 
-  let builder = build_claude_command( &cli );
+  let ( builder, expected_id ) = build_claude_command( &cli );
 
   // Fix(BUG-248): warn when --keep-claudecode is set while CLAUDECODE is present in
   //   the parent environment — the child will run in nested-agent mode unintentionally.
@@ -274,7 +276,7 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
   //   `~/.clr/journal/` (or the `--journal-dir` path) even though no events are emitted.
   // Pitfall: `journal` is only consumed by `run_built_command()` — safe to defer.
   let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
-  run_built_command( &builder, &cli, journal.as_ref() );
+  run_built_command( &builder, &cli, journal.as_ref(), expected_id.as_ref() );
   std::process::exit( 0 );
 }
 

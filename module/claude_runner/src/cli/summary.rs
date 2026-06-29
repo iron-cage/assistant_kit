@@ -108,6 +108,18 @@ pub( super ) fn extract_result_text( json : &str ) -> Option< String >
   extract_str( json, "result" )
 }
 
+/// Extract the `"session_id"` field from a CLR JSON envelope, gated on `"type":"result"`.
+///
+/// Returns `Some(uuid)` only when the envelope is a result message with a non-null
+/// `"session_id"` string.  Used by `run_print_mode()` for BUG-320 mismatch detection:
+/// compares the actual session UUID against the expected UUID captured before launch.
+pub fn extract_session_id( json : &str ) -> Option< String >
+{
+  let msg_type = extract_str( json, "type" )?;
+  if msg_type != "result" { return None; }
+  extract_str( json, "session_id" )
+}
+
 // ── Field constants ──────────────────────────────────────────────────────────────
 
 /// All 32 renderable CLR envelope fields in canonical order.

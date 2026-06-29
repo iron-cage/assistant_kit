@@ -2,8 +2,11 @@
 
 use super::parse::CliArgs;
 use claude_runner_core::{ ClaudeCommand, EffortLevel };
+use claude_storage_core::{ SessionId, continuation };
 
-/// Returns `true` when there is prior conversation history for the resolved session directory.
+/// Return the `SessionId` of the most-recently-modified qualifying session when prior
+/// conversation history exists for the resolved session directory, or `None` when
+/// no prior session is found.
 ///
 /// Fix(BUG-214-reopen): use project-specific storage path when no `--session-dir` is given.
 /// Root cause: the previous fallback checked `$HOME/.claude/` (always non-empty — holds
@@ -11,19 +14,24 @@ use claude_runner_core::{ ClaudeCommand, EffortLevel };
 /// Pitfall: `$HOME/.claude/` is Claude's global config dir, not per-project session storage;
 /// actual project sessions live at `$HOME/.claude/projects/{encoded(cwd)}/`.
 ///
-/// - With `--session-dir <dir>`: sessions are stored directly in `<dir>`; check its entries.
-/// - Without `--session-dir`: sessions are in `$HOME/.claude/projects/{encoded(effective_dir)}/`;
-///   use `claude_storage_core::continuation::check_continuation` which encodes the path correctly.
+/// Fix(BUG-320): returns `Option<SessionId>` instead of `bool` so the caller can record
+/// which session UUID it expects claude to resume — enabling post-execution mismatch detection.
+/// Root cause: bool return made the expected UUID inaccessible; mismatch was undetectable.
+/// Pitfall: do not use `claude_storage_core::continuation::check_continuation` here —
+///   it detects legacy `conversation.json` / `.claude*` formats that produce no UUID.
+///
+/// - With `--session-dir <dir>`: scan `<dir>` directly via `most_recent_session_in_dir`.
+/// - Without `--session-dir`: encode the effective dir and use `most_recent_session_id`.
 fn session_exists
 (
-  session_dir  : Option< &std::path::Path >,
+  session_dir   : Option< &std::path::Path >,
   effective_dir : Option< &std::path::Path >,
-) -> bool
+) -> Option< SessionId >
 {
   if let Some( dir ) = session_dir
   {
     // Custom --session-dir: claude stores sessions directly inside this directory.
-    std::fs::read_dir( dir ).is_ok_and( | mut entries | entries.next().is_some() )
+    continuation::most_recent_session_in_dir( dir )
   }
   else
   {
@@ -32,7 +40,7 @@ fn session_exists
       || std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) ),
       std::path::Path::to_path_buf,
     );
-    claude_storage_core::continuation::check_continuation( &cwd )
+    continuation::most_recent_session_id( &cwd )
   }
 }
 
@@ -66,12 +74,15 @@ fn resolve_effective_dir( cli : &CliArgs ) -> Option< std::path::PathBuf >
   }
 }
 
-/// Translate parsed CLI args into a `ClaudeCommand` builder.
+/// Translate parsed CLI args into a `ClaudeCommand` builder together with the
+/// expected `SessionId` for post-execution mismatch detection (BUG-320).
 ///
 /// Session continuation (`-c`) is applied by default unless `--new-session` is set
 /// or no prior session exists in the configured storage directory.
+/// The returned `Option<SessionId>` is `Some(uuid)` when `-c` was injected, allowing
+/// the caller to verify that claude actually resumed that session.
 #[ allow( clippy::too_many_lines ) ]
-pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
+pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Option< SessionId > )
 {
   let mut builder = ClaudeCommand::new();
 
@@ -87,10 +98,18 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
   // Fix(BUG-214): inject -c only when a prior session exists in storage
   // Root cause: unconditional -c causes claude binary to exit on first use with no session
   // Pitfall: resumption flags (-c, --continue) require state to resume; guard with existence check
-  if !cli.new_session && session_exists(
-    cli.session_dir.as_deref().map( std::path::Path::new ),
-    effective_working_dir.as_deref(),
-  )
+  // Fix(BUG-320): capture expected session UUID — returned to caller for mismatch detection.
+  // Root cause: bool return made the expected UUID inaccessible after -c injection.
+  // Pitfall: expected_id is None when new_session is set OR when no qualifying session exists.
+  let expected_id = if !cli.new_session
+  {
+    session_exists(
+      cli.session_dir.as_deref().map( std::path::Path::new ),
+      effective_working_dir.as_deref(),
+    )
+  }
+  else { None };
+  if expected_id.is_some()
   {
     builder = builder.with_continue_conversation( true );
   }
@@ -224,5 +243,5 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
     builder = builder.with_arg( "--fallback-model" ).with_arg( model.as_str() );
   }
 
-  builder
+  ( builder, expected_id )
 }

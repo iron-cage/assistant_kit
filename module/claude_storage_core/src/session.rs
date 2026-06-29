@@ -12,6 +12,7 @@ use crate::
   EntryType,
   Error,
   Result,
+  SessionId,
   stats::SessionStats,
 };
 
@@ -20,7 +21,7 @@ use crate::
 pub struct Session
 {
   /// Session UUID (filename without .jsonl extension)
-  id : String,
+  id : SessionId,
 
   /// Path to the JSONL file
   storage_path : PathBuf,
@@ -34,11 +35,11 @@ impl Session
   /// Create a session reference (doesn't load entries yet)
   #[must_use]
   #[inline]
-  pub fn new( id : String, storage_path : PathBuf ) -> Self
+  pub fn new( id : impl Into< SessionId >, storage_path : PathBuf ) -> Self
   {
     Self
     {
-      id,
+      id : id.into(),
       storage_path,
       entries : None,
     }
@@ -82,12 +83,11 @@ impl Session
       (
         path.to_path_buf(),
         "not a .jsonl file"
-      ))?
-      .to_string();
+      ))?;
 
     Ok( Self
     {
-      id,
+      id : SessionId::new( id ),
       storage_path : path.to_path_buf(),
       entries : None,
     })
@@ -98,7 +98,7 @@ impl Session
   #[inline]
   pub fn id( &self ) -> &str
   {
-    &self.id
+    self.id.as_str()
   }
 
   /// Get storage path
@@ -333,11 +333,11 @@ impl Session
   ///
   /// Agent sessions typically have filenames like "agent-{id}.jsonl"
   /// or have isSidechain: true in their entries.
-  #[must_use] 
+  #[must_use]
   #[inline]
   pub fn is_agent_session( &self ) -> bool
   {
-    self.id.starts_with( "agent-" )
+    self.id.as_str().starts_with( "agent-" )
   }
 
   /// Compute session statistics
@@ -361,7 +361,7 @@ impl Session
   {
     use crate::json::parse_json;
 
-    let mut stats = SessionStats::new( self.id.clone() );
+    let mut stats = SessionStats::new( self.id.as_str().to_string() );
     stats.is_agent_session = self.is_agent_session();
 
     // Read file content
@@ -473,7 +473,7 @@ impl Session
   /// use claude_storage_core::{ Session, SessionFilter };
   /// use std::path::PathBuf;
   ///
-  /// let mut session = Session::new( "agent-abc123".to_string(), PathBuf::from( "/tmp/test.jsonl" ) );
+  /// let mut session = Session::new( "agent-abc123", PathBuf::from( "/tmp/test.jsonl" ) );
   ///
   /// let filter = SessionFilter
   /// {
@@ -513,7 +513,7 @@ impl Session
     if let Some( ref substring ) = filter.session_id_substring
     {
       let matcher = crate::StringMatcher::new( substring );
-      if !matcher.matches( &self.id )
+      if !matcher.matches( self.id.as_str() )
       {
         return Ok( false );
       }
@@ -534,7 +534,7 @@ impl Session
   /// use std::path::PathBuf;
   ///
   /// # fn example() -> claude_storage_core::Result< () > {
-  /// let mut session = Session::new( "test-id".to_string(), PathBuf::from( "/tmp/test.jsonl" ) );
+  /// let mut session = Session::new( "test-id", PathBuf::from( "/tmp/test.jsonl" ) );
   /// let filter = SearchFilter::new( "error_tools" );
   /// let matches = session.search( &filter )?;
   ///

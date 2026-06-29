@@ -29,8 +29,8 @@
 //!   use `--trace` to verify the assembled command on stderr.
 //! - **`PATH=/nonexistent`**: Force binary-not-found for deterministic failure
 //!   testing — trace output fires before subprocess invocation attempt.
-//! - **`make_session_dir`**: Create a non-empty temp session dir so `session_exists()`
-//!   returns `true` regardless of the ambient host environment.  Tests that assert
+//! - **`make_session_dir`**: Create a temp session dir with a dummy `.jsonl` file so
+//!   `session_exists()` returns `Some(SessionId)` regardless of the ambient host environment.  Tests that assert
 //!   `-c` injection must use `--session-dir <path>` with this helper; otherwise they
 //!   are fragile and fail in clean container environments with no prior Claude sessions.
 
@@ -89,16 +89,16 @@ pub fn run_cli_with_env
     .expect( "failed to execute clr binary" )
 }
 
-/// Create a temp session directory with one dummy file; returns `(dir, path_string)`.
+/// Create a temp session directory with one dummy `.jsonl` file; returns `(dir, path_string)`.
 ///
 /// The caller must keep the returned `TempDir` alive for the duration of the test —
 /// the directory and its contents are deleted when the `TempDir` is dropped.
 /// Pass the returned `path_string` as the value of `--session-dir` to force
-/// `session_exists()` to return `true`, making `-c` injection deterministic
+/// `session_exists()` to return `Some(SessionId)`, making `-c` injection deterministic
 /// regardless of the ambient host session state.
 ///
 /// Pitfall: if the caller drops `TempDir` before passing the path to the subprocess,
-/// the directory is deleted and `session_exists()` returns `false`.
+/// the directory is deleted and `session_exists()` returns `None`.
 ///
 /// # Panics
 ///
@@ -109,7 +109,7 @@ pub fn run_cli_with_env
 pub fn make_session_dir() -> ( tempfile::TempDir, String )
 {
   let dir = tempfile::TempDir::new().expect( "failed to create temp session dir" );
-  std::fs::write( dir.path().join( "session.json" ), b"{}" )
+  std::fs::write( dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
     .expect( "failed to write dummy session file" );
   let path = dir.path().to_str().expect( "session dir path must be valid UTF-8" ).to_owned();
   ( dir, path )

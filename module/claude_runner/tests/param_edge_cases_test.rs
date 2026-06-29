@@ -602,9 +602,9 @@ fn ec7_max_sessions_no_gate_messages_below_limit()
 ///
 /// ## Fix Applied
 ///
-/// `session_exists( session_dir )` reads the target directory and returns `true`
-/// only if at least one entry is present.  The guard `!cli.new_session &&
-/// session_exists(...)` gates `-c` injection, replacing the unconditional block.
+/// `session_exists( session_dir )` reads the target directory and returns
+/// `Some(SessionId)` when at least one qualifying `.jsonl` entry is present.
+/// The guard `!cli.new_session && expected_id.is_some()` gates `-c` injection.
 ///
 /// ## Prevention
 ///

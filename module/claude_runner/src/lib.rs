@@ -62,7 +62,7 @@ pub use cli::strip_fences;
 #[ cfg( feature = "enabled" ) ]
 #[ doc( hidden ) ]
 #[ allow( unused_imports ) ]
-pub use cli::{ render_summary, resolve_fields };
+pub use cli::{ render_summary, resolve_fields, extract_session_id };
 
 #[ cfg( feature = "enabled" ) ]
 /// Run the `clr`/`claude_runner` CLI.

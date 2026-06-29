@@ -46,7 +46,7 @@ use cli_binary_test_helpers::{ make_creds_file, make_session_dir, run_cli, run_c
 ///
 /// Validated via --dry-run (no message → REPL route). Print mode is NOT injected.
 /// Note: -c is NOT asserted here — the test cwd has no prior Claude session so
-/// `session_exists()` correctly returns false. Session continuation is tested
+/// `session_exists()` correctly returns `None`. Session continuation is tested
 /// separately in `us01_2` (which uses --session-dir with a dummy session file).
 #[ test ]
 fn us01_1_bare_clr_repl_defaults()
@@ -65,12 +65,12 @@ fn us01_1_bare_clr_repl_defaults()
 
 /// US-2: session continuation flag -c present when a prior session exists.
 ///
-/// Uses --session-dir pointing to a non-empty temp dir so `session_exists()` returns true.
+/// Uses --session-dir pointing to a non-empty temp dir so `session_exists()` returns `Some(SessionId)`.
 #[ test ]
 fn us01_2_session_continuation_flag_present()
 {
   let session_dir = tempfile::tempdir().expect( "create temp session dir" );
-  std::fs::write( session_dir.path().join( "session.json" ), b"{}" )
+  std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
     .expect( "write dummy session file" );
   let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
   let output = run_dry( &[ "--session-dir", session_dir_str ] );
@@ -106,7 +106,7 @@ fn us01_4_repl_with_custom_dir()
     "--dir must produce 'cd /tmp' prefix. Got:\n{output}"
   );
   // Note: -c is NOT asserted here — /tmp has no prior Claude session so session_exists()
-  // correctly returns false. Session continuation is tested separately in us01_2 (default cwd).
+  // correctly returns `None`. Session continuation is tested separately in us01_2 (default cwd).
 }
 
 // ── US02: Print Mode Capture ────────────────────────────────────────────────
@@ -228,7 +228,7 @@ fn us03_4_interactive_with_new_session()
 /// US-1: --dry-run prints assembled command without executing.
 ///
 /// Note: -c is NOT asserted — the test cwd has no prior Claude session so
-/// `session_exists()` correctly returns false. See `us01_2` for the positive -c test.
+/// `session_exists()` correctly returns `None`. See `us01_2` for the positive -c test.
 #[ test ]
 fn us04_1_dry_run_prints_command()
 {
