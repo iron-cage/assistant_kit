@@ -3,7 +3,8 @@
 // apply_model_override, apply_post_switch_touch, and TouchCtx
 // without widening their visibility. See src/usage/readme.md § Inline Test Exception.
 
-use super::{ pre_switch_touch_ctx, apply_model_override, apply_post_switch_touch, PreSwitchOutcome, TouchCtx };
+use super::{ pre_switch_touch_ctx, apply_model_override, apply_post_switch_touch, PreSwitchOutcome };
+use crate::usage::api_switch::TouchCtx;
 use tempfile::TempDir;
 
 /// Structural test: `pre_switch_touch_ctx` with an invalid credential file (no accessToken).
@@ -781,10 +782,10 @@ fn mre_bug244_usage_routine_never_calls_apply_model_override()
 #[ test ]
 fn mre_bug285_idle_check_uses_resets_at_as_wrong_oracle()
 {
-  let src      = include_str!( "api.rs" );
+  let src      = include_str!( "api_switch.rs" );
   let fn_start = src
     .find( "pub( crate ) fn pre_switch_touch_ctx(" )
-    .expect( "pre_switch_touch_ctx not found in api.rs" );
+    .expect( "pre_switch_touch_ctx not found in api_switch.rs" );
   let fn_end   = src[ fn_start + 1.. ]
     .find( "\npub( crate ) fn " )
     .map_or( src.len(), |rel| fn_start + 1 + rel );
@@ -841,15 +842,12 @@ fn mre_bug288_post_switch_touch_refetch_updates_quota()
   // Verifies Fix(BUG-288) is present: apply_post_switch_touch must call write_quota_cache
   // on a successful fetch_oauth_usage result so subsequent .usage sees the updated resets_at.
   {
-    let src      = include_str!( "api.rs" );
+    let src      = include_str!( "api_switch.rs" );
     let fn_start = src
       .find( "pub( crate ) fn apply_post_switch_touch(" )
-      .expect( "apply_post_switch_touch not found in api.rs" );
-    let fn_end   = src[ fn_start + 1.. ]
-      .find( "\n// ── Main routine" )
-      .map( |rel| fn_start + 1 + rel )
-      .expect( "anchor '// ── Main routine' must follow apply_post_switch_touch — update structural test if section was renamed" );
-    let fn_body  = &src[ fn_start..fn_end ];
+      .expect( "apply_post_switch_touch not found in api_switch.rs" );
+    // apply_post_switch_touch is the last function in api_switch.rs; no end anchor needed.
+    let fn_body  = &src[ fn_start.. ];
     assert!(
       fn_body.contains( "fetch_oauth_usage" ),
       "BUG-288: apply_post_switch_touch must call fetch_oauth_usage for AC-21 re-fetch",
@@ -1308,15 +1306,12 @@ fn reach_structural_guard_fs_copy_follows_apply_touch_in_rotation()
 #[ test ]
 fn ft_apply_post_switch_touch_routes_through_refresh_account_token()
 {
-  let src      = include_str!( "api.rs" );
+  let src      = include_str!( "api_switch.rs" );
   let fn_start = src
     .find( "pub( crate ) fn apply_post_switch_touch(" )
-    .expect( "apply_post_switch_touch must exist in api.rs (AC-34 routing entry point)" );
-  let fn_end = src[ fn_start.. ]
-    .find( "\n// ── Main routine" )
-    .map( |rel| fn_start + rel )
-    .expect( "'// ── Main routine' anchor must follow apply_post_switch_touch in api.rs" );
-  let fn_body = &src[ fn_start..fn_end ];
+    .expect( "apply_post_switch_touch must exist in api_switch.rs (AC-34 routing entry point)" );
+  // apply_post_switch_touch is the last function in api_switch.rs; no end anchor needed.
+  let fn_body = &src[ fn_start.. ];
 
   // Positive routing assertion: must delegate to refresh_account_token (AC-34).
   assert!(

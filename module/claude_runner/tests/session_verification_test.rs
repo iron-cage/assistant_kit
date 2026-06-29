@@ -36,7 +36,7 @@ const UUID_A : &str = "11111111-1111-1111-1111-111111111111";
 /// UUID returned in the claude JSON envelope — simulates a different active session.
 const UUID_B : &str = "22222222-2222-2222-2222-222222222222";
 
-/// Build a minimal CLR result JSON envelope with the given session_id.
+/// Build a minimal CLR result JSON envelope with the given `session_id`.
 fn clr_envelope( session_id : &str ) -> String
 {
   format!(

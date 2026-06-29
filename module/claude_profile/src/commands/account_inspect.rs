@@ -6,7 +6,7 @@ use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use super::shared::{ require_claude_paths, require_credential_store, io_err_to_error_data, resolve_account_name };
 use super::account_inspect_render::{
-  InspectSnapshot, inspect_derive_status, extract_access_token,
+  inspect_derive_status, extract_access_token,
   build_inspect_snapshot, format_inspect_text, format_inspect_json,
 };
 use claude_profile_core::account::trace_ts;

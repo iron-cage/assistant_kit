@@ -20,7 +20,7 @@ use super::format::{ five_hour_left, seven_day_left, status_emoji };
 use super::api_switch::apply_model_override;
 use super::api_dispatch::handle_mutation_dispatch;
 pub( crate ) use super::api_switch::{
-  TouchCtx, PreSwitchOutcome,
+  PreSwitchOutcome,
   validate_imodel_str, validate_effort_str,
   attempt_expired_token_refresh,
   pre_switch_touch_ctx,

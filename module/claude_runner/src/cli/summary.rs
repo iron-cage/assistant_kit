@@ -113,6 +113,8 @@ pub( super ) fn extract_result_text( json : &str ) -> Option< String >
 /// Returns `Some(uuid)` only when the envelope is a result message with a non-null
 /// `"session_id"` string.  Used by `run_print_mode()` for BUG-320 mismatch detection:
 /// compares the actual session UUID against the expected UUID captured before launch.
+#[ must_use ]
+#[ inline ]
 pub fn extract_session_id( json : &str ) -> Option< String >
 {
   let msg_type = extract_str( json, "type" )?;

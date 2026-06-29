@@ -60,6 +60,7 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--verbosity <0-5>".into(),               desc : "Runner output verbosity level (default: 3)".into() },
       OptionEntry { name : "--dir <PATH>".into(),                    desc : "Working directory".into() },
       OptionEntry { name : "--subdir <NAME>".into(),                 desc : "Named subdirectory appended to --dir as /-NAME; . = identity".into() },
+      OptionEntry { name : "--message <MSG>".into(),                  desc : "Message to send (alternative to positional argument)".into() },
       OptionEntry { name : "--session-dir <PATH>".into(),            desc : "Session storage directory".into() },
       OptionEntry { name : "--dry-run".into(),                       desc : "Print command without executing".into() },
       OptionEntry { name : "--trace".into(),                         desc : "Print command to stderr then execute (like set -x)".into() },
@@ -288,6 +289,7 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --append-system-prompt <TEXT>      Append to default system prompt" );
   println!( "  --dir <PATH>                       Working directory" );
   println!( "  --subdir <NAME>                    Named subdirectory appended to --dir as /-NAME; . = identity" );
+  println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
   println!( "  --session-dir <PATH>               Session storage directory" );
   println!( "  --verbosity <0-5>                  Runner output verbosity level" );
   println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
