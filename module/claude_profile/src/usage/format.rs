@@ -7,7 +7,7 @@
 #![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate, clippy::missing_errors_doc, clippy::missing_panics_doc ) ]
 
 use crate::output::format_duration_secs;
-use super::types::{ AccountQuota, PreferStrategy, OPUS_OVERRIDE_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD };
+use super::types::{ AccountQuota, PreferStrategy, OPUS_OVERRIDE_THRESHOLD, H_EXHAUSTED_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD };
 
 // ── Token expiry label ────────────────────────────────────────────────────────
 
@@ -433,7 +433,7 @@ pub fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) 
       )
   };
   [
-    pct_emoji( data.five_hour.as_ref().map( |p| p.utilization ), OPUS_OVERRIDE_THRESHOLD ),
+    pct_emoji( data.five_hour.as_ref().map( |p| p.utilization ), H_EXHAUSTED_THRESHOLD ),
     reset_cell( data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ) ),
     pct_emoji( data.seven_day.as_ref().map( |p| p.utilization ), WEEKLY_EXHAUSTION_THRESHOLD ),
     pct_cell(  data.seven_day_sonnet.as_ref().map( |p| p.utilization ) ),
@@ -478,7 +478,7 @@ pub fn status_emoji( aq : &AccountQuota ) -> &'static str
   // Root cause: same as line 470 — BUG-319 fix premise was incorrect.
   // Pitfall: emoji and group classification must be kept in sync; divergence produces
   //   inconsistent table rows where 🔴 emoji appears in a 🟡 sort group.
-  match ( h5_left > OPUS_OVERRIDE_THRESHOLD, d7_left > WEEKLY_EXHAUSTION_THRESHOLD )
+  match ( h5_left > H_EXHAUSTED_THRESHOLD, d7_left > WEEKLY_EXHAUSTION_THRESHOLD )
   {
     ( true, true ) => "🟢",
     _              => "🟡",

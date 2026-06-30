@@ -294,13 +294,13 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ---
 
-### FT-21: `apply_refresh` trace emits `reason: cached-expired` (not `reason: ok`) for owned+cached+expired account (BUG-298 MRE)
+### FT-21: `reason_label` returns `"cached-expired"` for owned+cached+expired account (BUG-298 MRE)
 
-- **Given:** One `AccountQuota` with `is_owned = true`, `cached = true`, `result = Ok(cached_data)` (cache fallback converted Err→Ok), and `expires_at_ms = 0` (expired — BUG-255 guard fires). `apply_refresh` is called with `trace = true`.
-- **When:** The trace reason expression in `refresh.rs` evaluates for this account. The BUG-255 guard (`aq.cached && expired`) causes `should_retry = true`.
-- **Then:** Stderr contains `reason: cached-expired`. Stderr does NOT contain `reason: ok`. The `else if aq.cached` branch in `reason_label(aq, now_secs)` fires before `aq.result.as_ref().err()` — which would return `None` for `Ok(cached_data)` and produce the misleading constant `"ok"`. Within the cached branch, `(expires_at_ms / 1000) <= now_secs` is true (token expired) → `"cached-expired"`.
+- **Given:** One `AccountQuota` with `is_owned = true`, `cached = true`, `result = Ok(cached_data)` (cache fallback converted Err→Ok), and `expires_at_ms = 0` (expired — BUG-255 guard fires).
+- **When:** `reason_label(&aq, now_secs)` is called with `now_secs` large enough for token to be expired.
+- **Then:** Returns `"cached-expired"`. The `else if aq.cached` branch fires before `aq.result.as_ref().err()` — which would return `None` for `Ok(cached_data)` and produce the misleading constant `"ok"`. Within the cached branch, `(expires_at_ms / 1000) <= now_secs` is true (token expired) → `"cached-expired"`.
 - **Source fn:** `mre_bug298_apply_refresh_trace_reason_cached_expired` (in `tests/usage/refresh_tests_b.rs`)
-- **Note:** Fix for BUG-298. Root cause: `fetch.rs:229-240` cache fallback converts Err→Ok and sets `aq.cached=true`, making `aq.result.err()` always `None`. The original reason expression `map_or("ok", ...)` on that `None` produced the constant `"ok"` for all cached+owned accounts regardless of triggering cause. The fix adds an explicit branch ordered before the `err()`-based path: not-owned → `"not owned"`, owned+cached+expired → `"cached-expired"`, owned+cached+valid → `"cached"`, owned+live → error string or `"ok"`.
+- **Note:** Fix for BUG-298. Converted from gag-based stderr capture to direct `reason_label()` call. Root cause: `fetch.rs:229-240` cache fallback converts Err→Ok and sets `aq.cached=true`, making `aq.result.err()` always `None`. The original reason expression `map_or("ok", ...)` on that `None` produced the constant `"ok"` for all cached+owned accounts regardless of triggering cause. The fix adds an explicit branch ordered before the `err()`-based path: not-owned → `"not owned"`, owned+cached+expired → `"cached-expired"`, owned+cached+valid → `"cached"`, owned+live → error string or `"ok"`.
 - **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)
 
 ---

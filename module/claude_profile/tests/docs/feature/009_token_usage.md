@@ -30,7 +30,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | — |
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | — |
 | FT-24 | Trace result line emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | — |
-| FT-25 | `.usage` applies model override for current account when `7d(Son) < 15%` | AC-32 | — |
+| FT-25 | `.usage` applies model override for current account when `7d(Son) < 10%` | AC-32 | — |
 | FT-26 | `format::json` output includes `"is_owned"` bool per account object | AC-05 | — |
 | FT-27 | `.usage` model override writes `"sonnet"` conservatively when `seven_day_sonnet` is absent (`None`) — absent tier is unknown, not exhausted (BUG-300 + BUG-311) | AC-32 | — |
 | FT-28 | Footer `Current` line identifies `✓` account with model and valid count; `Next` line shows recommendation with model and metric; both use `·` delimiter and aligned columns | AC-10 | — |
@@ -81,7 +81,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | Subscription State |
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | Subscription State |
 | FT-24 | Trace result line emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | Trace Ordering |
-| FT-25 | `.usage` applies model override for current account when `7d(Son) < 15%` | AC-32 | Model Override |
+| FT-25 | `.usage` applies model override for current account when `7d(Son) < 10%` | AC-32 | Model Override |
 | FT-26 | `format::json` includes `"is_owned": bool` per account object | AC-05 | JSON Fields |
 | FT-27 | `.usage` model override writes `"sonnet"` conservatively when `seven_day_sonnet = None` (BUG-300 + BUG-311) | AC-32 | Model Override |
 | FT-28 | Footer `Current` + `Next` lines with `·` delimiter and column alignment | AC-10 | Footer |
@@ -418,10 +418,10 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ---
 
-### FT-25: `.usage` applies model override for current account when `7d(Son) < 15%`
+### FT-25: `.usage` applies model override for current account when `7d(Son) < 10%`
 
 - **Given (unit test):** One `AccountQuota` for the current account (`is_current = true`):
-  - `result = Ok(OauthUsageData)` with `seven_day_sonnet = Some(PeriodUsage { utilization: 90.0, resets_at: Some("...") })` — 10% left (< 15% threshold)
+  - `result = Ok(OauthUsageData)` with `seven_day_sonnet = Some(PeriodUsage { utilization: 91.0, resets_at: Some("...") })` — 9% left (< 10% threshold)
   - `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"`
   - `ClaudePaths` pointing to a temp directory
 - **When:** `apply_model_override(&data, &paths, false, "usage", "test@example.com")` is called with the current account's quota data.

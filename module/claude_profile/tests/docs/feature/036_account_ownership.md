@@ -31,7 +31,7 @@
 | FT-19 | AC-19 | `.account.delete name::X force::1` when X owned by different identity bypasses G6; exits 0; files deleted | ✅ `ft19_delete_force_bypasses_g6` |
 | FT-20 | AC-20 | `.account.relogin name::X force::1` when X owned by different identity bypasses G7; exits 0; 6-step relogin proceeds | ✅ `ft20_relogin_force_bypasses_g7` |
 | FT-21 | AC-21 | `force::1 dry::1` on G5/G6/G7 commands bypasses ownership gate but previews without writing; exits 0; `[dry-run]` printed | ✅ `ft21_force_dry_bypasses_gate_previews` |
-| FT-22 | AC-22 | `apply_refresh()` emits `... · refresh  <name>  should_retry=false (reason: not owned)` when `trace::1` and `aq.is_owned == false` — reason is `"not owned"`, not `"ok"` (BUG-295) | ✅ `mre_bug295_apply_refresh_trace_reason_not_owned` |
+| FT-22 | AC-22 | `reason_label()` returns `"not owned"` (not `"ok"`) when `aq.is_owned == false` — BUG-295 | ✅ `mre_bug295_apply_refresh_trace_reason_not_owned` |
 | FT-23 | AC-04 | G1 non-owned path applies polynomial approximation when history available (BUG-304) | ✅ `ft23_g1_non_owned_applies_approximation` |
 | FT-24 | AC-23 | Owned + occupied-elsewhere + non-current account: `fetch_quota_for_list` skips token read + HTTP; calls `approximate_quota()`; emits `... · fetch  <name>  skipped (reason: occupied elsewhere)` when `trace::1` — Fix(BUG-305) | ✅ `mre_bug305_fetch_skips_occupied_elsewhere_with_trace` |
 | FT-25 | AC-24 | `reason_label(aq, now_secs)` returns `"occupied elsewhere"` for owned + non-cached + occupied-elsewhere + Ok-result account — Fix(BUG-306); `apply_refresh()` trace emits correct reason | ✅ `mre_bug306_refresh_trace_reason_occupied_elsewhere` |
@@ -53,7 +53,7 @@
 - FT-18 through FT-20 are integration tests via `./verb/test` — verify exit 0 and that the expected mutation (switch/delete/relogin) proceeds despite non-owned account.
 - FT-21 is an integration test via `./verb/test` — three sub-cases (use, delete, relogin), each verifying: exit 0, `[dry-run]` line printed, no files modified. The G8 case (force+dry on `owner::0`) is deferred to Feature 037 tests (`37_accounts_usage_param_unification.md`).
 - FT-18–21 require `force::` (`058`) to be registered on `.account.use`, `.account.delete`, `.account.relogin` — Task 002 prerequisite.
-- FT-22 is a unit test in `tests/usage/refresh_tests_b.rs` — uses `gag::BufferRedirect::stderr()` for trace capture. Reproduces BUG-295: verifies `apply_refresh()` emits `reason: not owned` (not `reason: ok`) when `aq.is_owned == false`.
+- FT-22 is a unit test in `tests/usage/refresh_tests_b.rs` — calls `reason_label()` directly (converted from gag-based stderr capture). Reproduces BUG-295: verifies `reason_label` returns `"not owned"` (not `"ok"`) when `aq.is_owned == false`.
 - FT-24 is a unit test in `tests/usage/fetch_tests.rs` or `tests/cli/usage_test.rs` — creates a temp credential store with an `alice.json` owned by current identity and a `_active_{remote_host}_{remote_user}` marker file naming `alice`. Verifies no HTTP call fires and trace line emitted. Reproduces BUG-305.
 - FT-25 is a unit test in `tests/usage/refresh_tests_b.rs` — directly calls `reason_label(&aq, 0)` with `is_owned=true, cached=false, is_occupied_elsewhere=true, result=Ok(...)`. Verifies return value is `"occupied elsewhere"`. No `apply_refresh()` call needed — the extracted function is directly testable. Reproduces BUG-306.
 
@@ -315,14 +315,14 @@
 
 ---
 
-### FT-22: `apply_refresh()` emits `reason: not owned` when `aq.is_owned == false` (BUG-295)
+### FT-22: `reason_label` returns `"not owned"` when `aq.is_owned == false` (BUG-295)
 
-- **Given:** `AccountQuota` with `is_owned: false` and `result: Ok(cached_data)` (non-owned cache path, as set by G1 in `fetch.rs`). Env var `TRACE=1` (or `trace::1`) active.
-- **When:** `apply_refresh()` is called with this `aq`.
-- **Then:** stderr contains `... · refresh  <name>  should_retry=false (reason: not owned)`. The reason string is `"not owned"` — derived from the ownership gate check (`!aq.is_owned`), NOT from `aq.result.err()`.
+- **Given:** `AccountQuota` with `is_owned: false` and `result: Ok(cached_data)` (non-owned cache path, as set by G1 in `fetch.rs`).
+- **When:** `reason_label(&aq, now_secs)` is called.
+- **Then:** Returns `"not owned"`. The ownership gate (`!aq.is_owned`) is checked before `aq.result.err()`. For non-owned accounts, `result` is `Ok(cached_data)` — `.err()` would return `None`, yielding `"ok"`. The `!is_owned` branch prevents this.
 - **Exit:** reason = `"not owned"` (not `"ok"`)
 - **Source fn:** `mre_bug295_apply_refresh_trace_reason_not_owned`
-- **Note:** Reproduces BUG-295. Before fix: `aq.result = Ok(cached_data)` for non-owned accounts causes `.err()` to return `None`, yielding `reason: ok`. After fix: ownership gate checked first; emits `"not owned"` before consulting `aq.result`. Consistent with AC-07 / FT-07 (`apply_touch` trace pattern).
+- **Note:** Reproduces BUG-295. Converted from gag-based stderr capture to direct `reason_label()` call — gag captures fd 2 at OS level but Rust test harness intercepts eprintln at IO layer. Consistent with AC-07 / FT-07 (`apply_touch` trace pattern).
 - **Source:** [036_account_ownership.md AC-22](../../../docs/feature/036_account_ownership.md)
 
 ---

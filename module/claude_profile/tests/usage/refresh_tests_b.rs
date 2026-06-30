@@ -322,52 +322,40 @@ fn mre_bug256_retry_ok_stale_cached_metadata()
 /// is `false`, emit `"not owned"` as the reason regardless of `aq.result`.
 ///
 /// # Prevention
-/// This test captures stderr from `apply_refresh(trace=true)` for a non-owned account with
-/// `result: Ok(cached_data)`. Asserts `reason: not owned` present and `reason: ok` absent.
+/// This test verifies `reason_label()` returns `"not owned"` for a non-owned account with
+/// `result: Ok(cached_data)`. Converted from gag-based stderr capture to direct function
+/// test — gag captures fd 2 at OS level but Rust test harness intercepts eprintln at IO layer.
 ///
 /// # Pitfall
-/// Hold `STDERR_LOCK` before `gag::BufferRedirect::stderr()` — concurrent gag captures
-/// corrupt each other via the shared fd 2.
+/// `reason_label` must check `!aq.is_owned` BEFORE consulting `aq.result.err()` — non-owned
+/// accounts may have `result = Ok(cached_data)` set by the G1 cache read.
 #[ doc = "bug_reproducer(BUG-295)" ]
 #[ test ]
 fn mre_bug295_apply_refresh_trace_reason_not_owned()
 {
-  let store  = TempDir::new().unwrap();
   let cached = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
-  let mut accounts = vec![
-    AccountQuota
-    {
-      name                  : "alice@remote.com".to_string(),
-      is_current            : false,
-      is_active             : false,
-      is_occupied_elsewhere : false,
-      expires_at_ms         : FAR_FUTURE_MS,
-      result                : Ok( cached ),
-      account               : None,
-      host                  : String::new(),
-      role                  : String::new(),
-      renewal_at            : None,
-      cached                : true,
-      cache_age_secs        : Some( 120 ),
-      is_owned              : false,
-      owner                 : "other@remote".to_string(),
-    },
-  ];
+  let aq = AccountQuota
+  {
+    name                  : "alice@remote.com".to_string(),
+    is_current            : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms         : FAR_FUTURE_MS,
+    result                : Ok( cached ),
+    account               : None,
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
+    cached                : true,
+    cache_age_secs        : Some( 120 ),
+    is_owned              : false,
+    owner                 : "other@remote".to_string(),
+  };
 
-  use std::io::Read;
-  let _lock = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
-  let mut buf = gag::BufferRedirect::stderr().unwrap();
-  apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
-  let mut output = String::new();
-  buf.read_to_string( &mut output ).unwrap();
-
-  assert!(
-    output.contains( "reason: not owned" ),
-    "BUG-295: trace must emit 'reason: not owned' for non-owned account; got: {output}",
-  );
-  assert!(
-    !output.contains( "reason: ok" ),
-    "BUG-295: trace must NOT emit 'reason: ok' for non-owned account (misleading); got: {output}",
+  let reason = claude_profile::usage::test_bridge::reason_label( &aq, 0 );
+  assert_eq!(
+    reason, "not owned",
+    "BUG-295: reason_label must return 'not owned' for non-owned account, not 'ok'",
   );
 }
 
@@ -556,70 +544,55 @@ fn apply_touch_skips_after_refresh_none()
 /// `aq.result.err()` expression in the trace reason computation at `refresh.rs`.
 ///
 /// # Prevention
-/// This test captures stderr from `apply_refresh(trace=true)` for an owned+cached+expired
-/// account. Asserts `reason: cached-expired` present; `reason: ok` absent.
+/// This test verifies `reason_label()` returns `"cached-expired"` for an owned+cached+expired
+/// account with `result: Ok(stale_quota)`. Converted from gag-based stderr capture to direct
+/// function test — gag captures fd 2 at OS level but Rust test harness intercepts eprintln.
 ///
 /// # Pitfall
-/// Hold `STDERR_LOCK` before `gag::BufferRedirect::stderr()` — concurrent gag captures corrupt
-/// each other via the shared fd 2. Any trigger path that converts Err→Ok (cache, synthetic
-/// data injection) must add its own reason branch before `aq.result.err()` at the trace site.
+/// Any trigger path that converts `Err→Ok` (cache fallback, synthetic injection) must add
+/// its own reason branch in `reason_label` before the `aq.result.err()` expression.
 #[ doc = "bug_reproducer(BUG-298)" ]
 #[ test ]
 fn mre_bug298_apply_refresh_trace_reason_cached_expired()
 {
-  let store       = TempDir::new().unwrap();
   let stale_quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
-  let mut accounts = vec![
-    AccountQuota
-    {
-      name                  : "cached-owned@box.pro".to_string(),
-      is_current            : false,
-      is_active             : false,
-      is_occupied_elsewhere : false,
-      expires_at_ms         : 0, // expired → BUG-255 guard fires → should_refresh=true
-      result                : Ok( stale_quota ), // cache fallback converted Err→Ok
-      account               : None,
-      host                  : String::new(),
-      role                  : String::new(),
-      renewal_at            : None,
-      cached                : true,  // cache masking active
-      cache_age_secs        : Some( 7200 ),
-      is_owned              : true,  // required: non-owned skips with "not owned"
-      owner                 : String::new(),
-    },
-  ];
+  let aq = AccountQuota
+  {
+    name                  : "cached-owned@box.pro".to_string(),
+    is_current            : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms         : 0, // expired → BUG-255 guard fires → should_refresh=true
+    result                : Ok( stale_quota ), // cache fallback converted Err→Ok
+    account               : None,
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
+    cached                : true,  // cache masking active
+    cache_age_secs        : Some( 7200 ),
+    is_owned              : true,  // required: non-owned skips with "not owned"
+    owner                 : String::new(),
+  };
 
-  use std::io::Read;
-  let _lock = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
-  let mut buf = gag::BufferRedirect::stderr().unwrap();
-  apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
-  let mut output = String::new();
-  buf.read_to_string( &mut output ).unwrap();
-
-  assert!(
-    output.contains( "reason: cached-expired" ),
-    "BUG-298: trace must emit 'reason: cached-expired' for owned+cached+expired account; got: {output}",
-  );
-  assert!(
-    !output.contains( "reason: ok" ),
-    "BUG-298: trace must NOT emit 'reason: ok' for owned+cached account (misleading); got: {output}",
+  let reason = claude_profile::usage::test_bridge::reason_label( &aq, 1 );
+  assert_eq!(
+    reason, "cached-expired",
+    "BUG-298: reason_label must return 'cached-expired' for owned+cached+expired, not 'ok'",
   );
 }
 
-/// EC-7 (061): `apply_refresh` solo gate — non-current owned account is skipped with
-/// timestamped `refresh  {name}  solo-skip` line when `solo=true`.
+/// EC-7 (061): `apply_refresh` solo gate — non-current owned account is skipped when `solo=true`.
 ///
-/// With `solo=true`, the solo gate fires before G2 (non-owned check) for any account
-/// where `aq.is_current=false`. The account here is `is_owned=true` — without the solo
-/// gate it would proceed to the `should_refresh` check. With `solo=true` it is skipped
-/// immediately and the trace confirms the reason.
+/// Behavioral proof: an account with 401+expired would be refreshed without solo
+/// (result changes to `Err("refresh token expired")` via BUG-297 None path).
+/// With `solo=true`, the solo gate fires first — result stays at original `Err("401")`.
+/// Converted from gag-based stderr capture — gag captures fd 2 at OS level but Rust test
+/// harness intercepts eprintln at IO layer, making gag buffer always empty.
 ///
 /// Spec: [`tests/docs/cli/param/61_solo.md` EC-7]
 #[ test ]
 fn ec7_solo_gate_skips_non_current_with_trace()
 {
-  use std::io::Read;
-
   let store = TempDir::new().unwrap();
   let mut accounts = vec![ AccountQuota
   {
@@ -627,8 +600,8 @@ fn ec7_solo_gate_skips_non_current_with_trace()
     is_current            : false,
     is_active             : false,
     is_occupied_elsewhere : false,
-    expires_at_ms         : FAR_FUTURE_MS,
-    result                : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
+    expires_at_ms         : 0,  // expired → would trigger refresh without solo
+    result                : Err( "HTTP transport error: HTTP 401".to_string() ),
     account               : None,
     host                  : String::new(),
     role                  : String::new(),
@@ -639,19 +612,16 @@ fn ec7_solo_gate_skips_non_current_with_trace()
     owner                 : String::new(),
   } ];
 
-  let _lock = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
-  let mut buf = gag::BufferRedirect::stderr().unwrap();
-  apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, true );
-  let mut output = String::new();
-  buf.read_to_string( &mut output ).unwrap();
+  // solo=true: solo gate fires for is_current=false → account skipped → result unchanged.
+  apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto, true );
 
+  // Result must still be the original 401 — solo gate prevented refresh.
+  // Without solo, should_refresh returns true (401+expired), refresh_account_token
+  // returns None (empty store), result becomes Err("refresh token expired").
   assert!(
-    output.contains( "solo-skip" ),
-    "EC-7: solo gate must emit 'solo-skip' trace for non-current account; got: {output}",
-  );
-  assert!(
-    output.contains( "noncurrent@example.com" ),
-    "EC-7: trace must name the skipped account; got: {output}",
+    matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
+    "EC-7: solo gate must skip non-current account, preserving original error; got: {:?}",
+    accounts[ 0 ].result,
   );
 }
 
@@ -669,11 +639,8 @@ fn ec7_solo_gate_skips_non_current_with_trace()
 #[ test ]
 fn mre_bug_gap20_refresh_trace_reason_ok_owned_non_cached_ok()
 {
-  use std::io::Read;
-
-  let store    = TempDir::new().unwrap();
   let ok_quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
-  let mut accounts = vec![ AccountQuota
+  let aq = AccountQuota
   {
     name                  : "healthy@example.com".to_string(),
     is_current            : false,
@@ -689,21 +656,14 @@ fn mre_bug_gap20_refresh_trace_reason_ok_owned_non_cached_ok()
     cache_age_secs        : None,
     is_owned              : true,   // owned → not "not owned"
     owner                 : String::new(),
-  } ];
+  };
 
-  let _lock = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
-  let mut buf = gag::BufferRedirect::stderr().unwrap();
-  apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
-  let mut output = String::new();
-  buf.read_to_string( &mut output ).unwrap();
-
-  assert!(
-    output.contains( "reason: ok" ),
-    "GAP-20: owned+non-cached+Ok account must emit 'reason: ok' trace; got: {output}",
-  );
-  assert!(
-    !output.contains( "reason: not owned" ) && !output.contains( "reason: cached-expired" ),
-    "GAP-20: must not emit non-owned or cached-expired reason for this path; got: {output}",
+  // GAP-20: healthy owned+non-cached+Ok path must produce "ok" reason —
+  // this is the CORRECT label, unlike BUG-295 (non-owned) and BUG-298 (cached).
+  let reason = claude_profile::usage::test_bridge::reason_label( &aq, 0 );
+  assert_eq!(
+    reason, "ok",
+    "GAP-20: reason_label must return 'ok' for owned+non-cached+Ok account",
   );
 }
 

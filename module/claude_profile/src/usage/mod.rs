@@ -601,7 +601,7 @@ pub mod test_bridge
     pub use super::super::types::{
       AccountQuota, SortStrategy, PreferStrategy, ColsVisibility,
       SubprocessModel, SubprocessEffort,
-      OPUS_OVERRIDE_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD,
+      OPUS_OVERRIDE_THRESHOLD, H_EXHAUSTED_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD,
     };
   }
 
@@ -1065,11 +1065,11 @@ mod tests
     );
     assert!(
       output.contains( "· sonnet" ),
-      "FT-28 scenario 1: footer line 2 must show '· sonnet' when sonnet_left=50% ≥ 15%; got:\n{output}",
+      "FT-28 scenario 1: footer line 2 must show '· sonnet' when sonnet_left=50% ≥ 10%; got:\n{output}",
     );
 
-    // Scenario 2: recommended account has seven_day_sonnet.utilization = 90.0
-    //             → sonnet_left = 10.0 < 15.0 → session model = opus (override fires)
+    // Scenario 2: recommended account has seven_day_sonnet.utilization = 91.0
+    //             → sonnet_left = 9.0 < 10.0 → session model = opus (override fires)
     let mut current_2 = mk_aq_sort_weekly( "a@x.com", 10.0, 10.0, 50.0 );
     current_2.is_current = true;
     let mut opus_override = mk_aq_sort_weekly( "c@x.com", 10.0, 10.0, 50.0 );
@@ -1077,7 +1077,7 @@ mod tests
     {
       if let Some( ref mut son ) = data.seven_day_sonnet
       {
-        son.utilization = 90.0; // 10% left < 15% threshold → opus
+        son.utilization = 91.0; // 9% left < 10% threshold → opus
       }
     }
     // Footer line 2: `Next (name) · c@x.com · opus · {metric}`
@@ -1087,7 +1087,7 @@ mod tests
     );
     assert!(
       output.contains( "· opus" ),
-      "FT-28 scenario 2: footer line 2 must show '· opus' when sonnet_left=10% < 15%; got:\n{output}",
+      "FT-28 scenario 2: footer line 2 must show '· opus' when sonnet_left=9% < 10%; got:\n{output}",
     );
   }
 }

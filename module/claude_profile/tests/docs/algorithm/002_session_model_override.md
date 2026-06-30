@@ -35,40 +35,40 @@ AC test cases for `docs/algorithm/002_session_model_override.md`. Tests `apply_m
 
 ### AC-3: Sufficient Sonnet quota with Opus session restores Sonnet
 
-- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 80.0, .. }) }` — 20% remaining, at or above the 15% threshold; `settings.json` model field = `"claude-opus-4-6"` written to a temp `ClaudePaths`
+- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 80.0, .. }) }` — 20% remaining, at or above the 10% threshold; `settings.json` model field = `"claude-opus-4-6"` written to a temp `ClaudePaths`
 - **When:** `apply_model_override(&quota, &paths, false, "test", "test-account")` is called
 - **Then:** `settings.json` model field is written to `"claude-sonnet-4-6"` — capacity is sufficient; the override is reversed
 - **Note:** Fix BUG-311 — the recovery path (`Some` + sufficient + Opus → Sonnet) was absent before the fix
 
 ### AC-4: Near-exhausted Sonnet quota with Sonnet session switches to Opus
 
-- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 86.0, resets_at: Some("...") }) }` — 14% remaining, below the 15% threshold; `settings.json` model field = `"claude-sonnet-4-6"` written to a temp `ClaudePaths`
+- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 91.0, resets_at: Some("...") }) }` — 9% remaining, below the 10% threshold; `settings.json` model field = `"claude-sonnet-4-6"` written to a temp `ClaudePaths`
 - **When:** `apply_model_override(&quota, &paths, false, "test", "test-account")` is called
 - **Then:** `settings.json` model field is written to `"claude-opus-4-6"` — Sonnet is near-exhausted; switch to Opus to preserve remaining quota
 
 ### AC-5: Near-exhausted Sonnet quota with Opus session is a no-op
 
-- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 86.0, resets_at: Some("...") }) }` — 14% remaining; `settings.json` model field = `"claude-opus-4-6"` written to a temp `ClaudePaths`
+- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 91.0, resets_at: Some("...") }) }` — 9% remaining; `settings.json` model field = `"claude-opus-4-6"` written to a temp `ClaudePaths`
 - **When:** `apply_model_override(&quota, &paths, false, "test", "test-account")` is called
 - **Then:** `settings.json` model field is unchanged — session is already in Opus form; redundant write avoided
 
 ### AC-6: `recommended_model()` divergence — sufficient vs near-exhausted
 
-- **Given:** Two quota states: (A) `seven_day_sonnet = Some(PeriodUsage { utilization: 80.0 })` — 20% remaining; (B) `seven_day_sonnet = Some(PeriodUsage { utilization: 86.0 })` — 14% remaining
+- **Given:** Two quota states: (A) `seven_day_sonnet = Some(PeriodUsage { utilization: 80.0 })` — 20% remaining; (B) `seven_day_sonnet = Some(PeriodUsage { utilization: 91.0 })` — 9% remaining
 - **When:** `recommended_model(aq)` is called for each state independently
 - **Then:** (A) returns `"sonnet"`; (B) returns `"opus"` — the two inputs produce divergent outputs, proving `recommended_model()` governs model selection rather than returning a constant string
 - **Note:** Fix BUG-300 — pre-fix, `map_or(0.0, ...)` on `seven_day_sonnet = None` produced 0.0 < threshold, causing `recommended_model()` to return `"opus"` unconditionally for accounts without a Sonnet tier; `if let Some(ref sonnet)` guard prevents this
 
 ### AC-7: Opus branch sets effort to `"max"` unconditionally (Fix BUG-322, TSK-335)
 
-- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 90.0, resets_at: None }) }` — 10% remaining (< 15%); no `settings.json` initially
+- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 91.0, resets_at: None }) }` — 9% remaining (< 10%); no `settings.json` initially
 - **When:** `apply_model_override(&quota, &paths, false, "usage", "test-account")` is called
 - **Then:** `settings.json` contains `"model": "opus"` AND `"effortLevel": "max"` — effort written unconditionally in Opus branch regardless of `overrode` (TSK-335: was `"high"`, and only written when `overrode = true`)
 - **Source fn:** `mre_bug322_opus_override_sets_effort_max` (api_tests.rs)
 
 ### AC-8: Sonnet branch sets effort to `"high"` unconditionally (Fix BUG-322, TSK-335)
 
-- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 4.0, resets_at: None }) }` — 96% remaining (≥ 15%); `settings.json` pre-seeded with `"model": "opus", "effortLevel": "max"`
+- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 4.0, resets_at: None }) }` — 96% remaining (≥ 10%); `settings.json` pre-seeded with `"model": "opus", "effortLevel": "max"`
 - **When:** `apply_model_override(&quota, &paths, false, "usage", "test-account")` is called
 - **Then:** `settings.json` contains `"model": "sonnet"` AND `"effortLevel": "high"` — effort written unconditionally in Sonnet branch regardless of `overrode` (TSK-335: was `"low"`, only written when `overrode = true`)
 - **Source fn:** `t11_opus_to_sonnet_sets_effort_high` (api_tests.rs)
@@ -82,7 +82,7 @@ AC test cases for `docs/algorithm/002_session_model_override.md`. Tests `apply_m
 
 ### AC-10: Effort synced even when model is already at target (TSK-335 H2 always-sync)
 
-- **Given:** `settings.json` pre-seeded with `"model": "sonnet"` (no `effortLevel`); Sonnet left ≥ 15% — `override_session_model_to_sonnet()` returns `false` (already Sonnet, model does not change; `overrode = false`)
+- **Given:** `settings.json` pre-seeded with `"model": "sonnet"` (no `effortLevel`); Sonnet left ≥ 10% — `override_session_model_to_sonnet()` returns `false` (already Sonnet, model does not change; `overrode = false`)
 - **When:** `apply_model_override(&quota, &paths, false, "test", "test-account")` is called
 - **Then:** `settings.json` contains `"effortLevel": "high"` — effort written even though `overrode = false`; effort writes are unconditional, not gated on `if overrode`
 - **Source fn:** `ft19_effort_synced_when_model_already_at_target` — new test for TSK-335

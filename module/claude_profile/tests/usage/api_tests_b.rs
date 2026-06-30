@@ -726,7 +726,7 @@ fn ac3_sufficient_quota_with_opus_session_restores_sonnet()
 
 /// AC-4 (algorithm/002): Near-exhausted Sonnet quota with Sonnet session switches to Opus.
 ///
-/// `utilization=86.0` → `sonnet_left=14.0 < 15.0` → Opus override fires →
+/// `utilization=91.0` → `sonnet_left=9.0 < 10.0` → Opus override fires →
 /// `override_session_model_to_opus()`. Current model `"sonnet"` satisfies gate
 /// (`contains("sonnet")=true`) → writes `"opus"`.
 ///
@@ -745,7 +745,7 @@ fn ac4_near_exhausted_quota_with_sonnet_session_switches_to_opus()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage
     {
-      utilization : 86.0,
+      utilization : 91.0,
       resets_at   : Some( "2026-06-28T04:00:00+00:00".to_string() ),
     } ),
   };
@@ -753,13 +753,13 @@ fn ac4_near_exhausted_quota_with_sonnet_session_switches_to_opus()
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
     content.contains( "\"opus\"" ),
-    "AC-4: 14% Sonnet remaining + Sonnet session must write opus (near-exhausted); got: {content}",
+    "AC-4: 9% Sonnet remaining + Sonnet session must write opus (near-exhausted); got: {content}",
   );
 }
 
 /// AC-5 (algorithm/002): Near-exhausted Sonnet quota with Opus session — model field unchanged.
 ///
-/// `utilization=86.0` → Opus override path → `override_session_model_to_opus()`.
+/// `utilization=91.0` → Opus override path → `override_session_model_to_opus()`.
 /// Current model `"opus"` does NOT satisfy gate
 /// (`contains("sonnet")=false`, `=="claude-opus-4-6"=false`, `is_empty()=false`) →
 /// returns `false` — model field unchanged; session already in Opus form.
@@ -779,7 +779,7 @@ fn ac5_near_exhausted_quota_with_opus_session_model_field_unchanged()
     seven_day        : None,
     seven_day_sonnet : Some( PeriodUsage
     {
-      utilization : 86.0,
+      utilization : 91.0,
       resets_at   : Some( "2026-06-28T04:00:00+00:00".to_string() ),
     } ),
   };
@@ -787,7 +787,7 @@ fn ac5_near_exhausted_quota_with_opus_session_model_field_unchanged()
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
     content.contains( "\"opus\"" ),
-    "AC-5: 14% Sonnet remaining + Opus session must leave model = opus (no-op); got: {content}",
+    "AC-5: 9% Sonnet remaining + Opus session must leave model = opus (no-op); got: {content}",
   );
   assert!(
     !content.contains( "\"sonnet\"" ),

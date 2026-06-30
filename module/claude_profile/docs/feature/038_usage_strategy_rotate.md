@@ -28,7 +28,7 @@ When `rotate::1` is active, `find_first_eligible` applies an additional ownershi
    b. If dry::1     → append "[dry-run] would switch to '{name}'" → exit 0
    c. Ownership gate (G5): if !winner.is_owned && !force → exit 1
    d. switch_account(winner_name, credential_store, paths)
-   d'. apply_model_override(winner.result.ok(), paths) — bidirectional: "opus" when Sonnet left < 15%; "sonnet" when >= 15% or tier absent (Fix BUG-311); writes effort unconditionally: "max" for Opus, "high" for Sonnet/absent-tier (TSK-335). Carry-forward set_session_effort() removed — apply_model_override() owns all effort writes.
+   d'. apply_model_override(winner.result.ok(), paths) — bidirectional: "opus" when Sonnet left < 10%; "sonnet" when >= 10% or tier absent (Fix BUG-311); writes effort unconditionally: "max" for Opus, "high" for Sonnet/absent-tier (TSK-335). Carry-forward set_session_effort() removed — apply_model_override() owns all effort writes.
    e. apply_touch(winner) — touch subprocess may refresh token (writes to STORE only)
    e'. Re-sync: copy winner's store credentials to live session (BUG-310 fix — AC-11)
    f. append "switched to '{name}'\n" to output
