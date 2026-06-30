@@ -13,7 +13,7 @@
 
 **Four-group status partition:** Regardless of the chosen sort strategy, accounts are first partitioned into four status groups (see [dictionary](../cli/002_dictionary.md#status-groups)): 🟢 Green (both available) → 🟡 h-exhausted (5h exhausted, 7d available) → 🟡 weekly-exhausted (7d exhausted, any 5h — including both-exhausted) → 🔴 Dead (error or cancelled). Group order is fixed — sort strategy applies within each group only. `desc::1` reverses row order within each group but never changes group order. This ensures healthy accounts always appear above exhausted accounts, and exhausted accounts above dead/error accounts, regardless of sort direction or strategy.
 
-**The `prefer::` parameter** determines which weekly quota column is used by the `sort::renew` within-group tiebreak and the recommendation eligibility gate. It does **not** affect the four-group status partition — group membership always uses raw `7d Left` (AC-12).
+**The `prefer::` parameter** determines which weekly quota column is used by the `sort::renew` within-group tiebreak. It does **not** affect the four-group status partition — group membership always uses raw `7d Left` (AC-12).
 
 | Value | Weekly column used | When |
 |-------|-------------------|------|
@@ -59,7 +59,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 `sort::` drives the footer recommendation — the top eligible account in the sort order is shown in the footer's `Next (<strategy>)` line. No separate `next::` parameter exists. The flag column shows `✓`, `*`, `@`, or blank.
 
-**Eligibility:** non-current, non-active, non-occupied, not h-exhausted (`5h Left > 15%`), not weekly-exhausted (`prefer_weekly > 5.0`), valid quota data, `expires_in_secs > 0`. When no eligible account exists, the footer recommendation line is omitted.
+**Eligibility:** non-current, non-active, non-occupied, not h-exhausted (`5h Left > 15%`), not weekly-exhausted (`seven_day_left > WEEKLY_EXHAUSTION_THRESHOLD`), valid quota data, `expires_in_secs > 0`. When no eligible account exists, the footer recommendation line is omitted.
 
 **Footer:** The footer has two `·`-delimited, column-aligned lines (omitted when 0 or 1 valid accounts): (1) `Current · <name> · <model>/<effort> · N/N` — the `✓` account, session model/effort from `settings.json`, valid/total count; (2) `Next (<strategy>) · <name> · <model>/<effort> · <metric>` — the recommendation for the active strategy. When `session_effort` is absent from `settings.json`, the effort suffix and slash are omitted from the Next line. The metric uses the same `→ Next` format as the table column — `in {duration} +7d` (7d reset is soonest) or `in {duration} $ren` / `~in {duration} $ren` (renewal is soonest). The model label shows the session model after switching: `opus` when the account's `seven_day_sonnet` exists and `sonnet_left < 15%` (override fires, via `recommended_model()`); `sonnet` otherwise. Column padding aligns `·` delimiters vertically across both lines. See [009_token_usage.md AC-10](009_token_usage.md) and [062_unified_session_config.md](062_unified_session_config.md).
 
@@ -69,7 +69,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 - **AC-02**: `sort::renews` sorts by subscription renewal timer ascending; accounts without subscription data are placed last; tiebreak is alphabetical name.
 - **AC-03**: `desc::1` reverses the sort direction within each status group; `desc::0` uses the strategy's natural direction. The four-group status partition (🟢 → 🟡 h-exhausted → 🟡 weekly-exhausted → 🔴 Dead) is never reversed by `desc::`.
 - **AC-04**: Each strategy has a context-sensitive `desc::` default: `name`→`0`, `renew`→`0`, `renews`→`0`.
-- **AC-05**: `prefer::any` (default) uses `min(7d Left, 7d(Son))` when Sonnet tier present, else raw `7d Left`; `prefer::opus` uses raw `7d Left`; `prefer::sonnet` uses `7d(Son)` when present, else `0.0` (absent Sonnet tier = ineligible for recommendation).
+- **AC-05**: `prefer::any` (default) uses `min(7d Left, 7d(Son))` when Sonnet tier present, else raw `7d Left`; `prefer::opus` uses raw `7d Left`; `prefer::sonnet` uses `7d(Son)` when present, else `0.0` (absent Sonnet tier sorts last within group; eligibility is model-agnostic via raw `7d Left`).
 - **AC-06**: `prefer::` affects `sort::renew` (secondary tiebreak key).
 - **AC-07**: Invalid `sort::` value exits 1 with an error naming the valid values (`name`, `renew`, `renews`).
 - **AC-08**: Invalid `prefer::` value exits 1 with an error naming the valid values.
@@ -102,6 +102,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 | BUG-259 | BUG-259 ✅ Fixed: `sort_indices` all `sort_by` closures missing final name tiebreaker — non-deterministic row order when all numeric keys tie |
 | BUG-321 | BUG-321 ✅ Fixed (TSK-331): Both-exhausted accounts were showing 🔴 and sorting with dead accounts. Fix: `( _, false ) => StatusGroup::WeeklyExhausted` in `status_group_of()` (merges `(true,false)` and `(false,false)`); `_ => "🟡"` catch-all in `status_emoji()`. No new variant. MREs: `mre_bug321_both_exhausted_sorts_in_weekly_group`, `mre_bug321_four_group_partition_order`. |
 | BUG-299 | BUG-299 ✅ Fixed: `status_group_of()` used `prefer_weekly` for group boundary — fix: `sort.rs:35` changed to `seven_day_left( aq ) > 5.0`; `prefer` param removed from signature (TSK-301) |
+| BUG-324 | BUG-324 ✅ Fixed: `find_first_eligible()` eligibility gate used `prefer_weekly(aq, prefer) > 5.0` — green accounts with `7d(Son) ≤ 5%` blocked from rotation under `prefer::any`. Fix: `sort_next.rs` changed to `seven_day_left(aq) > WEEKLY_EXHAUSTION_THRESHOLD`. Same class as BUG-299. |
 
 ### Sources
 

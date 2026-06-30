@@ -7,7 +7,7 @@ use claude_profile::usage::test_bridge::types::{ AccountQuota, SortStrategy, Pre
 use claude_profile::usage::test_bridge::
 {
   FAR_FUTURE_MS,
-  mk_aq_sort, mk_aq_with_7d_reset, mk_aq_with_7d_reset_util,
+  mk_aq_sort, mk_aq_sort_weekly, mk_aq_with_7d_reset, mk_aq_with_7d_reset_util,
   mk_aq_cancelled,
   reset_iso_at,
 };
@@ -293,7 +293,7 @@ fn test_cc_expired_ok_account_skipped()
 
 /// Corner case: `gate_ownership = true` — non-owned accounts are skipped.
 ///
-/// `extra` predicate: `prefer_weekly(aq, prefer) > 5.0 && ( !gate_ownership || aq.is_owned )`.
+/// `extra` predicate: `seven_day_left(aq) > WEEKLY_EXHAUSTION_THRESHOLD && ( !gate_ownership || aq.is_owned )`.
 /// When `gate_ownership = true`, the `aq.is_owned` check must pass. All existing tests pass
 /// `gate_ownership = false` (bypassing this check). This test exercises the ownership-gate path.
 #[ test ]
@@ -980,4 +980,246 @@ fn mre_bug_gap8_find_first_eligible_at_exactly_85_utilization()
       "{strategy:?}: account with five_hour.utilization=85.0 must be skipped by gate 4 (>= 85.0); got: {result:?}",
     );
   }
+}
+
+// ── BUG-324 MRE: eligibility gate must be model-agnostic ─────────────────
+
+/// BUG-324 MRE — green account with `7d(Son)=0%` must be eligible under all strategies and preferences.
+///
+/// # Root Cause
+/// `find_first_eligible()` gate 7 used `prefer_weekly(aq, prefer) > 5.0` (model-aware).
+/// Under `prefer::any`, `prefer_weekly = min(7d_left, 7d_son_left) = min(31%, 0%) = 0.0`,
+/// which is `≤ 5.0` — blocking the account despite `seven_day_left = 31% > 5%`.
+/// Same class as BUG-299 (fixed in `sort.rs`), but left unfixed in `sort_next.rs`.
+///
+/// # Why Not Caught
+/// All existing `find_next_for_strategy` tests use `mk_aq_sort` (no Sonnet tier) or
+/// `mk_aq_sort_weekly` with equal `seven_day_util == seven_day_sonnet_util`, making
+/// `prefer_weekly(any) == seven_day_left`. The divergence only manifests when
+/// `seven_day_sonnet_util > seven_day_util` under `prefer::any` or `prefer::sonnet`.
+///
+/// # Fix Applied
+/// Gate 7 changed to `seven_day_left(aq) > WEEKLY_EXHAUSTION_THRESHOLD` — model-agnostic.
+/// `prefer_weekly` remains correct for sort-order tiebreaks only (within `sort_indices`).
+///
+/// # Prevention
+/// Any new `find_first_eligible` call site must use raw `seven_day_left`, never `prefer_weekly`.
+/// Tests that exercise gate 7 must use divergent `seven_day_util != seven_day_sonnet_util` values.
+///
+/// # Pitfall
+/// `prefer_weekly(any) = min(7d, 7d_son)` — absent Sonnet tier (`None`) falls back to `7d Left`
+/// (not 0). Exhaustion only fires when `seven_day_sonnet = Some({util: 100%})` is present.
+/// Model-aware gate incorrectly excluded healthy accounts when Sonnet tier is depleted.
+#[ doc = "bug_reproducer(BUG-324)" ]
+#[ test ]
+fn mre_bug324_green_account_eligible_when_7d_son_exhausted()
+{
+  let now = 0u64;
+  // target: 5h_util=0.0 (5h Left=100%), 7d_util=69.0 (7d Left=31%), 7d_son_util=100.0 (7d(Son)=0%).
+  // prefer_weekly(any) = min(31%, 0%) = 0.0 ≤ 5.0 → BLOCKED before fix.
+  // seven_day_left    = 31.0 > 5.0          → ELIGIBLE after fix.
+  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 69.0, 100.0 );
+  // current: force the engine to look past is_current accounts.
+  let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
+  current.is_current = true;
+  let accounts = vec![ target, current ];
+
+  for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
+  {
+    for prefer in [ PreferStrategy::Any, PreferStrategy::Opus, PreferStrategy::Sonnet ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false );
+      assert_eq!(
+        result, Some( 0 ),
+        "BUG-324: {strategy:?}/{prefer:?} — green account with 7d Left=31%, 7d(Son)=0% must be eligible (index 0); \
+         gate 7 must use seven_day_left not prefer_weekly; got: {result:?}",
+      );
+    }
+  }
+}
+
+/// BUG-324 regression — sole green candidate with `7d(Son)=0%` must be selected under all strategies.
+///
+/// # Root Cause
+/// Same as `mre_bug324_green_account_eligible_when_7d_son_exhausted` — gate 7 was model-aware.
+/// When the only non-blocked candidate has `7d_son=0%` and `prefer=any`, rotation returns `None`
+/// before fix despite one eligible account existing.
+///
+/// # Why Not Caught
+/// No test constructed a scenario where the SOLE remaining candidate is blocked by the divergent
+/// `prefer_weekly` gate. Existing tests always had a "healthy" fallback with equal weekly values.
+///
+/// # Fix Applied
+/// `seven_day_left(aq) > WEEKLY_EXHAUSTION_THRESHOLD` — sole candidate with raw 7d=31% passes.
+///
+/// # Prevention
+/// Regression test confirms that having `seven_day_sonnet = Some({util: 100%})` on the only
+/// available account does NOT prevent rotation when `seven_day_left > 5%`.
+///
+/// # Pitfall
+/// Missing Sonnet tier (`seven_day_sonnet = None`) never triggers the bug — `prefer_weekly(any)`
+/// falls back to `seven_day_left`. The bug only fires when `seven_day_sonnet = Some(...)` with
+/// high utilization is present alongside lower overall `seven_day` utilization.
+#[ doc = "bug_reproducer(BUG-324)" ]
+#[ test ]
+fn mre_bug324_sole_green_candidate_7d_son_zero_returns_some()
+{
+  let now = 0u64;
+  // Sole eligible: 7d Left=31%, 7d(Son)=0% — the only candidate that can pass all gates.
+  let sole = mk_aq_sort_weekly( "aaa_sole@test.com", 0.0, 69.0, 100.0 );
+  // Blocked: is_current.
+  let mut b_current = mk_aq_sort( "bbb_current@test.com", 20.0, FAR_FUTURE_MS );
+  b_current.is_current = true;
+  // Blocked: is_active.
+  let mut b_active = mk_aq_sort( "ccc_active@test.com", 20.0, FAR_FUTURE_MS );
+  b_active.is_active = true;
+  // Blocked: token expired.
+  let b_expired = mk_aq_sort( "ddd_expired@test.com", 20.0, 0 );  // expires_at_ms=0 → gate 5
+  // Blocked: h-exhausted (gate 4: utilization=92.0 >= 85.0).
+  let b_hexhausted = mk_aq_sort( "eee_hexhausted@test.com", 92.0, FAR_FUTURE_MS );
+
+  let accounts = vec![ sole, b_current, b_active, b_expired, b_hexhausted ];
+  for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
+  {
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    assert_eq!(
+      result, Some( 0 ),
+      "BUG-324: {strategy:?} — sole green candidate with 7d(Son)=0% must be selected (index 0); \
+       rotation must not return None; got: {result:?}",
+    );
+  }
+}
+
+// ── BUG-324 corner cases: gate 7 boundary + model-agnostic eligibility ────
+
+/// CC — Gate 7 boundary: `seven_day_left = 5.0` exactly → account SKIPPED in eligibility.
+///
+/// `seven_day_util = 95.0` → `seven_day_left = 100.0 - 95.0 = 5.0`.
+/// Gate 7: `5.0 > WEEKLY_EXHAUSTION_THRESHOLD (5.0) = false` → gate fires → skipped.
+/// Strict `>` operator — exactly at threshold is exhausted, not eligible.
+/// Complements `sort.rs` GAP-7b (`status_group_of` boundary) with the eligibility-gate path.
+#[ test ]
+fn test_cc_gate7_boundary_exactly_5pct_skipped_in_eligibility()
+{
+  let now = 0u64;
+  // seven_day_left = 5.0 exactly (boundary). seven_day_sonnet_util = 0.0 (no divergence).
+  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 95.0, 0.0 );
+  let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
+  current.is_current = true;
+  let accounts = vec![ target, current ];
+
+  for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
+  {
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    assert!(
+      result.is_none(),
+      "{strategy:?}: seven_day_left=5.0 (exactly at threshold) must be SKIPPED (strict > 5.0); got: {result:?}",
+    );
+  }
+}
+
+/// CC — Gate 7 just above boundary: `seven_day_left = 5.01` → account ELIGIBLE.
+///
+/// `seven_day_util = 94.99` → `seven_day_left = 100.0 - 94.99 = 5.01`.
+/// Gate 7: `5.01 > 5.0 = true` → gate does NOT fire → eligible.
+#[ test ]
+fn test_cc_gate7_just_above_boundary_eligible()
+{
+  let now = 0u64;
+  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 94.99, 0.0 );
+  let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
+  current.is_current = true;
+  let accounts = vec![ target, current ];
+
+  for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
+  {
+    let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now, false );
+    assert_eq!(
+      result, Some( 0 ),
+      "{strategy:?}: seven_day_left=5.01 (just above threshold) must be ELIGIBLE; got: {result:?}",
+    );
+  }
+}
+
+/// CC — BUG-324 class at narrowest margin: `seven_day_left = 5.01`, `seven_day_sonnet_left = 0%`.
+///
+/// `seven_day_util = 94.99` → `seven_day_left = 5.01` (just above threshold).
+/// `seven_day_sonnet_util = 100.0` → `seven_day_sonnet_left = 0.0`.
+/// `prefer_weekly(Any) = min(5.01, 0.0) = 0.0` — pre-fix: blocked (`0.0 ≤ 5.0`).
+/// `seven_day_left = 5.01` — post-fix: eligible (`5.01 > 5.0`).
+/// Narrowest margin where BUG-324 fix changes behavior.
+#[ test ]
+fn test_cc_bug324_divergent_at_boundary_eligible()
+{
+  let now = 0u64;
+  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 94.99, 100.0 );
+  let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
+  current.is_current = true;
+  let accounts = vec![ target, current ];
+
+  for strategy in [ SortStrategy::Name, SortStrategy::Renew, SortStrategy::Renews ]
+  {
+    for prefer in [ PreferStrategy::Any, PreferStrategy::Opus, PreferStrategy::Sonnet ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, prefer, now, false );
+      assert_eq!(
+        result, Some( 0 ),
+        "BUG-324 boundary: {strategy:?}/{prefer:?} — seven_day_left=5.01, 7d_son_left=0% \
+         must be ELIGIBLE; got: {result:?}",
+      );
+    }
+  }
+}
+
+/// CC — `prefer::sonnet` with absent Sonnet tier: account eligible via raw `seven_day_left`.
+///
+/// `seven_day_util = 50.0` → `seven_day_left = 50.0` (well above 5%).
+/// `seven_day_sonnet = None` → `prefer_weekly(Sonnet) = 0.0` (absent = unknown = 0%).
+/// Pre-fix: `0.0 > 5.0 = false` → BLOCKED (any account without Sonnet tier ineligible
+///   under `prefer::sonnet`).
+/// Post-fix: `seven_day_left = 50.0 > 5.0 = true` → ELIGIBLE (model-agnostic gate).
+#[ test ]
+fn test_cc_prefer_sonnet_absent_tier_eligible()
+{
+  let now = 0u64;
+  // seven_day = Some(util=50.0), seven_day_sonnet = None.
+  let mut target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 50.0, 0.0 );
+  if let Ok( ref mut d ) = target.result { d.seven_day_sonnet = None; }
+  let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
+  current.is_current = true;
+  let accounts = vec![ target, current ];
+
+  let result = find_next_for_strategy(
+    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false,
+  );
+  assert_eq!(
+    result, Some( 0 ),
+    "prefer::sonnet + absent Sonnet tier: seven_day_left=50.0 > 5.0 must be ELIGIBLE; \
+     pre-fix: prefer_weekly(Sonnet)=0.0 would block; got: {result:?}",
+  );
+}
+
+/// CC — `prefer::sonnet` with Sonnet exhausted: account eligible via raw `seven_day_left`.
+///
+/// `seven_day_util = 50.0` → `seven_day_left = 50.0`.
+/// `seven_day_sonnet_util = 100.0` → `seven_day_sonnet_left = 0%`.
+/// `prefer_weekly(Sonnet) = 100.0 - 100.0 = 0.0` — pre-fix: blocked.
+/// `seven_day_left = 50.0 > 5.0` — post-fix: eligible.
+#[ test ]
+fn test_cc_prefer_sonnet_exhausted_tier_eligible()
+{
+  let now = 0u64;
+  let target = mk_aq_sort_weekly( "aaa_target@test.com", 0.0, 50.0, 100.0 );
+  let mut current = mk_aq_sort( "zzz_current@test.com", 20.0, FAR_FUTURE_MS );
+  current.is_current = true;
+  let accounts = vec![ target, current ];
+
+  let result = find_next_for_strategy(
+    &accounts, SortStrategy::Renew, PreferStrategy::Sonnet, now, false,
+  );
+  assert_eq!(
+    result, Some( 0 ),
+    "prefer::sonnet + Sonnet exhausted (100%% util): seven_day_left=50.0 > 5.0 must be ELIGIBLE; \
+     pre-fix: prefer_weekly(Sonnet)=0.0 would block; got: {result:?}",
+  );
 }

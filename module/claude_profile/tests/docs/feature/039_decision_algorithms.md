@@ -12,12 +12,13 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 | FT-03 | Session model override: exactly 15% Sonnet left → writes Sonnet (Fix BUG-311) | Table 2 | Boundary — Phase 1 fix |
 | FT-04 | Session model override: below 15% Sonnet left → Opus | Table 2 | Boundary — Phase 1 fix |
 | FT-05 | Status groups: four-group partition order (both-exhausted in G3) | Table 3 | Unit test |
-| FT-06 | Eligibility gate G7: `prefer_weekly ≤ 5.0` → account skipped | Table 4 | Phase 2 |
-| FT-07 | Eligibility gate G7: `prefer_weekly > 5.0` → account eligible | Table 4 | Phase 2 |
+| FT-06 | Eligibility gate G7: `seven_day_left ≤ WEEKLY_EXHAUSTION_THRESHOLD` → account skipped | Table 4 | Phase 2 |
+| FT-07 | Eligibility gate G7: `seven_day_left > WEEKLY_EXHAUSTION_THRESHOLD` → account eligible | Table 4 | Phase 2 |
 | FT-08 | Positive selection: first eligible Green account wins | Table 5 | Unit test |
 | FT-10 | Quadratic extrapolation from 3+ measurements | Table 6 | Cross-ref F040 FT-04 |
 | FT-11 | Expired window returns 0.0 | Table 6 | Cross-ref F040 FT-07 |
 | FT-12 | Singular matrix falls back to constant | Table 6 | Cross-ref F040 FT-10 |
+| FT-13 | Eligibility gate G7: divergent `7d/7d_son` — model-agnostic `seven_day_left` used (BUG-324) | Table 4 | BUG-324 fix |
 
 ### Test Case Index
 
@@ -29,14 +30,15 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 | FT-03 | Session override at 15% boundary → no-op | Table 2 | Session Override |
 | FT-04 | Session override below 15% → Opus | Table 2 | Session Override |
 | FT-05 | Status group four-partition order (both-exhausted in G3) | Table 3 | Status Groups |
-| FT-06 | Gate 7 prefer_weekly ≤ 5.0 skips account | Table 4 | Eligibility |
-| FT-07 | Gate 7 prefer_weekly > 5.0 passes account | Table 4 | Eligibility |
+| FT-06 | Gate 7 seven_day_left ≤ WEEKLY_EXHAUSTION_THRESHOLD skips account | Table 4 | Eligibility |
+| FT-07 | Gate 7 seven_day_left > WEEKLY_EXHAUSTION_THRESHOLD passes account | Table 4 | Eligibility |
 | FT-08 | Positive selection first eligible wins | Table 5 | Selection |
 | FT-10 | Quadratic extrapolation from 3+ measurements | Table 6 | Approximation |
 | FT-11 | Expired window returns 0.0 | Table 6 | Approximation |
 | FT-12 | Singular matrix falls back to constant | Table 6 | Approximation |
+| FT-13 | Gate 7 divergent 7d/7d_son — model-agnostic seven_day_left (BUG-324) | Table 4 | Eligibility |
 
-**Total:** 12 FT cases
+**Total:** 13 FT cases
 
 ---
 
@@ -110,22 +112,22 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 
 ---
 
-### FT-06: Eligibility gate G7 — `prefer_weekly ≤ 5.0` skips account
+### FT-06: Eligibility gate G7 — `seven_day_left ≤ WEEKLY_EXHAUSTION_THRESHOLD` skips account
 
 - **Given:** An `AccountQuota` with `seven_day_util=96%` (7d_left=4%) and `seven_day_sonnet = None`. `prefer::any` in effect.
-- **When:** The `extra` predicate in `find_next_for_strategy()` evaluates Gate 7 (`sort_next.rs:59`): `prefer_weekly(aq, PreferStrategy::Any) <= 5.0`.
-- **Then:** `prefer_weekly` returns `4.0` (raw 7d_left when `seven_day_sonnet = None` under `prefer::any`). `4.0 ≤ 5.0` → gate fires → account is skipped. No `->` marker assigned.
-- **Note:** Table 4 gate 7. `prefer_weekly` is computed via `relevant_quotas(aq, prefer).1` (Phase 2 extraction).
+- **When:** The `extra` predicate in `find_next_for_strategy()` evaluates Gate 7 (`sort_next.rs:59`): `seven_day_left(aq) <= WEEKLY_EXHAUSTION_THRESHOLD`.
+- **Then:** `seven_day_left` returns `4.0` (raw 7d_left). `4.0 ≤ 5.0` → gate fires → account is skipped. No `->` marker assigned.
+- **Note:** Table 4 gate 7. Eligibility uses `seven_day_left` (model-agnostic raw 7d quota). `prefer_weekly` is used only for sort tiebreak (Fix BUG-324).
 - **Source fn:** `test_relevant_quotas_son_no_sonnet` (in `tests/usage/format_tests.rs`); `mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 4](../../../docs/feature/039_decision_algorithms.md)
 
 ---
 
-### FT-07: Eligibility gate G7 — `prefer_weekly > 5.0` passes account
+### FT-07: Eligibility gate G7 — `seven_day_left > WEEKLY_EXHAUSTION_THRESHOLD` passes account
 
 - **Given:** An `AccountQuota` with `seven_day_util=90%` (7d_left=10%) and `seven_day_sonnet = None`. `prefer::any` in effect. All other gates (G1–G6, G8) do not fire.
-- **When:** Gate 7 evaluates `prefer_weekly(aq, PreferStrategy::Any)`.
-- **Then:** Returns `10.0`. `10.0 > 5.0` → gate does NOT fire. Account remains eligible. `->` marker may be assigned if first in sorted order.
+- **When:** Gate 7 evaluates `seven_day_left(aq)`.
+- **Then:** Returns `10.0`. `10.0 > WEEKLY_EXHAUSTION_THRESHOLD (5.0)` → gate does NOT fire. Account remains eligible. `->` marker may be assigned if first in sorted order.
 - **Source fn:** `test_relevant_quotas_son_with_sonnet` (in `tests/usage/format_tests.rs`); `test_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 4](../../../docs/feature/039_decision_algorithms.md)
 
@@ -172,6 +174,19 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **Note:** Table 6 fallback column: "linear if singular". Detailed testing in F040 FT-10.
 - **Source fn:** `approx_singular_matrix_falls_back_to_constant` (in `src/usage/approx.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 6](../../../docs/feature/039_decision_algorithms.md)
+
+---
+
+### FT-13: Eligibility gate G7 — divergent `7d/7d_son` with `seven_day_sonnet` present; model-agnostic `seven_day_left` used (BUG-324)
+
+- **Given:** Two `AccountQuota` structs:
+  - `aaa_target@test.com`: `five_hour_util=0%`, `seven_day_util=69%` (7d_left=31%), `seven_day_sonnet_util=100%` (7d_son_left=0%). Non-current, non-active, non-occupied. `prefer::any` in effect.
+  - `current@test.com`: `is_current=true` — forces selection.
+- **When:** Gate 7 evaluates eligibility in `find_next_for_strategy()` (entry: `sort_next.rs:59`).
+- **Then:** Account passes gate 7. Fix(BUG-324): gate uses `seven_day_left(aq) = 31.0 > WEEKLY_EXHAUSTION_THRESHOLD (5.0)` — model-agnostic. Before fix: `prefer_weekly(aq, Any) = min(31.0, 0.0) = 0.0 ≤ 5.0` — model-aware value blocked a green account from rotation.
+- **Note:** Table 4 gate 7. Existing FT-06/FT-07 test with `seven_day_sonnet = None` (no divergence possible). This case exercises the divergence path where `seven_day_sonnet` is present and differs from `seven_day`. Same class as BUG-299.
+- **Source fn:** `mre_bug324_green_account_eligible_when_7d_son_exhausted` (in `tests/usage/sort_next_tests.rs`)
+- **Source:** [feature/039_decision_algorithms.md Table 4](../../../docs/feature/039_decision_algorithms.md)
 
 ---
 

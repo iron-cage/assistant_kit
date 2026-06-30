@@ -15,4 +15,5 @@ Test-lens documentation for `docs/algorithm/`. Each spec file covers one algorit
 |------|-----------|--------|
 | 001_touch_model_selection.md | AC spec for algorithm 001 — Touch Model Selection | ✅ |
 | 002_session_model_override.md | AC spec for algorithm 002 — Session Model Override | ✅ |
+| 004_eligibility_gates.md | AC spec for algorithm 004 — Next-Account Eligibility Gates | ✅ |
 | 009_oauth_usage_response_migration.md | AC spec for algorithm 009 — OAuth Usage Response Dual-Source Parsing | ✅ |

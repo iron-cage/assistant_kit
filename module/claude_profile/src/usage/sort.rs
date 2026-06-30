@@ -47,8 +47,8 @@ fn status_group_of( aq : &AccountQuota ) -> StatusGroup
   // Fix(BUG-299): use raw seven_day_left for d7_ok — group boundaries are model-agnostic per AC-12.
   // Root cause: prefer_weekly(any) = min(7d, 7d_son) can be ≤ 5.0 when 7d_son ≤ 5% even if
   //   seven_day_left > 5%, misclassifying h-exhausted accounts as Red instead of HExhausted.
-  // Pitfall: prefer_weekly is correct for sort::renew tiebreak and → eligibility (model-aware);
-  //   wrong for group boundary predicates — always use raw single-metric functions here.
+  // Pitfall: prefer_weekly is correct for sort::renew tiebreak;
+  //   wrong for group boundary predicates and eligibility gates — always use raw single-metric functions.
   let d7_ok = seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD;
   match ( h5_ok, d7_ok )
   {

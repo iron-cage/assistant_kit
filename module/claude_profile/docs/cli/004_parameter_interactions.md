@@ -146,9 +146,9 @@ clp .usage sort::renew desc::1
 
 **Affected heuristics:**
 - `sort::renew` tiebreak: lowest `weekly(prefer)` ascending — within a group, among accounts with the same renewal event time, the account with the lower prefer-selected weekly quota ranks first
-- Footer recommendation eligibility: `prefer_weekly > 5.0` required — an account whose `prefer_weekly` is at or below 5% is excluded from recommendation under the active `prefer::` value
+- Footer recommendation sort order: `prefer_weekly` determines tiebreak ranking, which indirectly determines which eligible account is recommended first. Eligibility itself uses model-agnostic `seven_day_left > WEEKLY_EXHAUSTION_THRESHOLD` (Fix BUG-324)
 
-**Rationale:** Users who know they intend to run Opus or Sonnet can tell the sort tiebreak and recommendation heuristics which model-specific quota to prefer. Group membership is model-agnostic — it reflects raw quota availability, not a preference about which model to run.
+**Rationale:** Users who know they intend to run Opus or Sonnet can tell the sort tiebreak which model-specific quota to prefer. Group membership and eligibility are model-agnostic — it reflects raw quota availability, not a preference about which model to run.
 
 **Commands affected:** [`.usage`](commands.md#command--9-usage)
 

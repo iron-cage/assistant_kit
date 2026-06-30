@@ -7,8 +7,8 @@
 
 use crate::output::format_duration_secs;
 use super::sort::sort_indices;
-use super::types::{ AccountQuota, SortStrategy, PreferStrategy };
-use super::format::{ prefer_weekly, renewal_secs, next_event_raw };
+use super::types::{ AccountQuota, SortStrategy, PreferStrategy, WEEKLY_EXHAUSTION_THRESHOLD };
+use super::format::{ seven_day_left, renewal_secs, next_event_raw };
 
 // ── Next-account recommendation ───────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ where F : Fn( &AccountQuota ) -> bool
 /// All strategies sort via `sort_indices()` then pick the first eligible
 /// (non-current, non-active, non-occupied, non-h-exhausted, non-expired, `Ok`)
 /// account via `find_first_eligible`.
-/// All strategies skip weekly-exhausted accounts (`prefer_weekly ≤ 5.0`) via
+/// All strategies skip weekly-exhausted accounts (`seven_day_left ≤ WEEKLY_EXHAUSTION_THRESHOLD`) via
 /// the `extra` predicate — an exhausted account has negligible remaining capacity
 /// regardless of its renewal timing.
 pub fn find_next_for_strategy(
@@ -64,7 +64,7 @@ pub fn find_next_for_strategy(
     SortStrategy::Name =>
     {
       let sorted = sort_indices( accounts, SortStrategy::Name, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 5.0 && ( !gate_ownership || aq.is_owned ) )
+      find_first_eligible( accounts, &sorted, now_secs, |aq| seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD && ( !gate_ownership || aq.is_owned ) )
     }
     SortStrategy::Renew =>
     {
@@ -73,19 +73,21 @@ pub fn find_next_for_strategy(
       //   sort_indices(Renew) uses prefer_weekly ascending. Any fix to sort never propagated here.
       // Pitfall: prefer_weekly ascending means LOWER weekly capacity is preferred (benefits most
       //   from the upcoming renewal) — differs from the now-removed BUG-243 five_hour_left rationale.
-      // Fix(BUG-292): weekly-floor gate (prefer_weekly > 5.0) via extra predicate — same floor
-      //   as the now-removed drain (BUG-206) and endurance (BUG-287) strategies lacked.
-      // Root cause: exhausted accounts (prefer_weekly ≤ 5.0) could be recommended by renew when
-      //   they had the soonest 7d reset event, despite having negligible remaining capacity.
+      // Fix(BUG-292): weekly-floor gate via extra predicate — same floor as the now-removed
+      //   drain (BUG-206) and endurance (BUG-287) strategies lacked.
+      // Root cause: exhausted accounts could be recommended by renew when they had the
+      //   soonest 7d reset event, despite having negligible remaining capacity.
+      // Fix(BUG-324): gate changed from `prefer_weekly > 5.0` to `seven_day_left > WEEKLY_EXHAUSTION_THRESHOLD`
+      //   — eligibility is model-agnostic; prefer_weekly is correct only for sort-order tiebreaks.
       // Pitfall: a weekly-exhausted account's imminent reset does not make it a useful target —
       //   skip it regardless of renewal timing.
       let sorted = sort_indices( accounts, SortStrategy::Renew, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 5.0 && ( !gate_ownership || aq.is_owned ) )
+      find_first_eligible( accounts, &sorted, now_secs, |aq| seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD && ( !gate_ownership || aq.is_owned ) )
     }
     SortStrategy::Renews =>
     {
       let sorted = sort_indices( accounts, SortStrategy::Renews, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 5.0 && ( !gate_ownership || aq.is_owned ) )
+      find_first_eligible( accounts, &sorted, now_secs, |aq| seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD && ( !gate_ownership || aq.is_owned ) )
     }
   }
 }
