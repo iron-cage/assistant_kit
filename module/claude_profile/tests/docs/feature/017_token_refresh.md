@@ -242,7 +242,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **When:** `apply_refresh` processes `new_creds` (unit test via `test_apply_refresh_mre_bug170_opaque_token_expires_fallback`)
 - **Then:** `account_quota.expires_at_ms` is set to the `expiresAt` value from `new_creds`; the Expires column shows a future time (not `EXPIRED`); expiry is derived from `parse_u064_field(new_creds, "expiresAt")`, not from JWT decode.
 - **Exit:** 0
-- **Source fn:** `test_jwt_exp_ms_mre_bug170_opaque_returns_none` (in `src/usage/refresh_tests.rs`)
+- **Source fn:** `test_jwt_exp_ms_mre_bug170_opaque_returns_none` (in `tests/usage/refresh_tests_b.rs`)
 - **Note:** Fix for BUG-170 — the TSK-163 fix for BUG-162 introduced this gap: `jwt_exp_ms` silently returns `None` for opaque tokens, leaving `expires_at_ms` stale. The `expiresAt` field in the returned credentials JSON is the authoritative post-refresh expiry for opaque tokens.
 - **Source:** [017_token_refresh.md AC-25](../../../docs/feature/017_token_refresh.md)
 
@@ -253,7 +253,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Given:** Active marker contains `"alice@example.com"`; `alice@example.com.credentials.json` exists in the persistent store; `{fake_home}/.claude/` directory exists; one account `"bob@example.com"` has a 401 error but no credential file in the persistent store.
 - **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), true)` is called with `trace=true` (unit test context; equivalent to `clp .usage refresh::1 trace::1`)
 - **Then:** `apply_refresh` returns without calling `switch_account`; `{fake_home}/.claude/.credentials.json` does NOT exist (no restore occurred); `{store}/_active_{hostname}_{user}` is unchanged (`"alice@example.com"`); no timestamped `... · refresh  {name}  restore switch_account:` line is emitted (restore step no longer exists).
-- **Source fn:** `test_apply_refresh_mre_bug208_restore_trace_emitted` (in `src/usage/refresh_tests.rs`)
+- **Source fn:** `test_apply_refresh_mre_bug208_restore_trace_emitted` (in `tests/usage/refresh_tests_b.rs`)
 - **Note:** Fix for BUG-211 — snapshot+restore removed from `apply_refresh`. Previous BUG-208 fix (restore trace instrumentation) is superseded: the entire restore block is gone, so there is no restore line to emit.
 - **Source:** [017_token_refresh.md AC-28](../../../docs/feature/017_token_refresh.md)
 
@@ -276,7 +276,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Given:** One `AccountQuota` with `cached: true` and `result: Ok(cached_data)` (cache fallback masked the original auth error); `refresh_account_token` returns `None` — the OAuth refresh token has expired and `run_isolated` exits without writing new credentials.
 - **When:** `apply_refresh(&mut accounts, store.path(), None, false)` processes the account and the `None` branch executes.
 - **Then:** `account_quota.result` is set to `Err("refresh token expired")` before `continue;` — it is NOT left as `Ok(cached_data)`. Downstream phases (`apply_touch`) see `Err` and skip the account, preventing a redundant subprocess on an unrecoverable account.
-- **Source fn:** `mre_bug297_refresh_none_sets_aq_result_err` (in `src/usage/refresh_tests.rs`)
+- **Source fn:** `mre_bug297_refresh_none_sets_aq_result_err` (in `tests/usage/refresh_tests_b.rs`)
 - **Note:** Fix for BUG-297. Pre-fix: `apply_refresh` left `aq.result=Ok(cached_data)` when refresh returned `None`, causing `apply_touch` to fire a subprocess on an account that cannot recover without manual browser re-authentication.
 - **Source:** [017_token_refresh.md AC-30](../../../docs/feature/017_token_refresh.md)
 
@@ -294,13 +294,13 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ---
 
-### FT-21: `apply_refresh` trace emits `reason: cached-expired` (not `reason: ok`) for owned+cached+expired account (BUG-298 MRE)
+### FT-21: `reason_label` returns `"cached-expired"` for owned+cached+expired account (BUG-298 MRE)
 
-- **Given:** One `AccountQuota` with `is_owned = true`, `cached = true`, `result = Ok(cached_data)` (cache fallback converted Err→Ok), and `expires_at_ms = 0` (expired — BUG-255 guard fires). `apply_refresh` is called with `trace = true`.
-- **When:** The trace reason expression in `refresh.rs` evaluates for this account. The BUG-255 guard (`aq.cached && expired`) causes `should_retry = true`.
-- **Then:** Stderr contains `reason: cached-expired`. Stderr does NOT contain `reason: ok`. The `else if aq.cached` branch in `reason_label(aq, now_secs)` fires before `aq.result.as_ref().err()` — which would return `None` for `Ok(cached_data)` and produce the misleading constant `"ok"`. Within the cached branch, `(expires_at_ms / 1000) <= now_secs` is true (token expired) → `"cached-expired"`.
-- **Source fn:** `mre_bug298_apply_refresh_trace_reason_cached_expired` (in `src/usage/refresh_tests.rs`)
-- **Note:** Fix for BUG-298. Root cause: `fetch.rs:229-240` cache fallback converts Err→Ok and sets `aq.cached=true`, making `aq.result.err()` always `None`. The original reason expression `map_or("ok", ...)` on that `None` produced the constant `"ok"` for all cached+owned accounts regardless of triggering cause. The fix adds an explicit branch ordered before the `err()`-based path: not-owned → `"not owned"`, owned+cached+expired → `"cached-expired"`, owned+cached+valid → `"cached"`, owned+live → error string or `"ok"`.
+- **Given:** One `AccountQuota` with `is_owned = true`, `cached = true`, `result = Ok(cached_data)` (cache fallback converted Err→Ok), and `expires_at_ms = 0` (expired — BUG-255 guard fires).
+- **When:** `reason_label(&aq, now_secs)` is called with `now_secs` large enough for token to be expired.
+- **Then:** Returns `"cached-expired"`. The `else if aq.cached` branch fires before `aq.result.as_ref().err()` — which would return `None` for `Ok(cached_data)` and produce the misleading constant `"ok"`. Within the cached branch, `(expires_at_ms / 1000) <= now_secs` is true (token expired) → `"cached-expired"`.
+- **Source fn:** `mre_bug298_apply_refresh_trace_reason_cached_expired` (in `tests/usage/refresh_tests_b.rs`)
+- **Note:** Fix for BUG-298. Converted from gag-based stderr capture to direct `reason_label()` call. Root cause: `fetch.rs:229-240` cache fallback converts Err→Ok and sets `aq.cached=true`, making `aq.result.err()` always `None`. The original reason expression `map_or("ok", ...)` on that `None` produced the constant `"ok"` for all cached+owned accounts regardless of triggering cause. The fix adds an explicit branch ordered before the `err()`-based path: not-owned → `"not owned"`, owned+cached+expired → `"cached-expired"`, owned+cached+valid → `"cached"`, owned+live → error string or `"ok"`.
 - **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)
 
 ---

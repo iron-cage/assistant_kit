@@ -247,7 +247,8 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
   // Read session state once for the footer; both render_text and render_plain consume it.
   // Reads settings.json once; extracts "model" and "effortLevel".
-  // effortLevel is carried forward after rotation when present (Feature 062, AC-06).
+  // effortLevel is model-derived and written by the model override above (TSK-335).
+  // session_effort is used only for the Current line display; Next line uses model-derived effort.
   let settings_content = crate::ClaudePaths::new()
     .and_then( |p| std::fs::read_to_string( p.settings_file() ).ok() );
   let session_model_str  = settings_content.as_deref()

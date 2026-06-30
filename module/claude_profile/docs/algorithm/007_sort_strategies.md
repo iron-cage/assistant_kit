@@ -21,12 +21,12 @@ Define how `.usage` orders accounts within each status group, and how `prefer_we
 
 ### `prefer_weekly(aq, prefer)` Computation
 
-`prefer_weekly` is the strategy-weighted 7d remaining capacity used as sort key and eligibility gate 7.
+`prefer_weekly` is the strategy-weighted 7d remaining capacity used as sort key (tiebreak within groups). Eligibility gate 7 uses model-agnostic `seven_day_left` (Fix BUG-324).
 
 | `prefer::` value | Formula |
 |---|---|
 | `any` *(default)* | `min(seven_day_left, seven_day_sonnet_left)` when Sonnet tier present; else `seven_day_left` |
-| `son` | `seven_day_sonnet_left` when Sonnet tier present; else `0.0` (absent = ineligible) |
+| `son` | `seven_day_sonnet_left` when Sonnet tier present; else `0.0` (absent = sorts last; eligibility model-agnostic) |
 | `opus` | `seven_day_left` |
 
 Where `seven_day_left = 100.0 - seven_day.utilization` and `seven_day_sonnet_left = 100.0 - seven_day_sonnet.utilization`.

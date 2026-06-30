@@ -389,13 +389,23 @@ impl SubprocessEffort
 
 // ── Quota status thresholds ────────────────────────────────────────────────────
 
-/// 5-hour session quota and Sonnet model-override boundary.
+/// Sonnet 7d model-override boundary.
 ///
-/// An account is classified **h-exhausted** when `5h Left ≤ 15%`. The same value is
-/// used by `recommended_model()` and `apply_model_override()` — Opus is selected when
-/// `Sonnet 7d Left < 15%`. All comparison sites must reference this constant; never
-/// duplicate the literal `15.0`.
-pub const OPUS_OVERRIDE_THRESHOLD : f64 = 15.0;
+/// `recommended_model()` and `apply_model_override()` select Opus when
+/// `Sonnet 7d Left < 10%` (i.e., `utilization > 90.0`). All model-override call
+/// sites must reference this constant; never duplicate the literal `10.0`.
+///
+/// 5-hour exhaustion uses the separate `H_EXHAUSTED_THRESHOLD = 15.0`.
+pub const OPUS_OVERRIDE_THRESHOLD : f64 = 10.0;
+
+/// 5-hour session quota exhaustion boundary.
+///
+/// An account is classified **h-exhausted** when `5h Left ≤ 15%`. All 5h-exhaustion
+/// call sites (`pct_emoji`, `status_emoji`, `status_group_of`) must reference this
+/// constant; never duplicate the literal `15.0`.
+///
+/// Sonnet 7d model-override uses the separate `OPUS_OVERRIDE_THRESHOLD = 10.0`.
+pub const H_EXHAUSTED_THRESHOLD : f64 = 15.0;
 
 /// 7-day weekly quota exhaustion boundary.
 ///

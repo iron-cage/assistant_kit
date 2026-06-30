@@ -8,9 +8,9 @@ Logic that gates on quota values has multiple non-obvious invariants: the correc
 
 **Root cause (BUG-299):** `status_group_of()` used `prefer_weekly(aq, prefer)` for the 7d threshold. `prefer_weekly` is strategy-weighted — with `prefer::son`, accounts without a Sonnet tier got `prefer_weekly = 0.0 ≤ 5.0`, forcing them into the weekly-exhausted group regardless of actual 7d quota.
 
-**Fix:** `status_group_of()` uses `seven_day_left(aq)` (raw, strategy-independent). `prefer_weekly` is only used for eligibility gate 7 and sort key computation (strategy-aware contexts).
+**Fix:** `status_group_of()` uses `seven_day_left(aq)` (raw, strategy-independent). `prefer_weekly` is only used for sort key computation (strategy-aware tiebreak contexts). Eligibility gate 7 uses raw `seven_day_left` (Fix BUG-324).
 
-**Rule:** Status group partition = raw per-dimension thresholds. Eligibility gates = strategy-weighted thresholds. Never mix them.
+**Rule:** Status group partition and eligibility gates = raw per-dimension thresholds. Sort tiebreaks = strategy-weighted. Never use strategy-weighted values for group/gate boundary decisions.
 
 ### Pitfall 2 — Absent Sonnet tier is NOT exhaustion
 

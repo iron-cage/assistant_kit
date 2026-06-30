@@ -39,7 +39,7 @@ Old: eprintln!( "[trace] {}  result: OK", label )
 New: eprintln!( "{}{}  result: OK", trace_ts(), label )
 ```
 
-This two-argument form is guarded by the BUG-234 MRE structural test in `src/usage/fetch.rs` (see AC-06).
+This two-argument form is guarded by the BUG-234 MRE structural test in `tests/usage/fetch_tests.rs` (see AC-06).
 
 The `#[inline]` attribute satisfies `clippy::missing_inline_in_public_items`. The `#[must_use]` attribute prevents silent discarding of the timestamp string.
 
@@ -105,7 +105,7 @@ _(none — `trace_ts()` depends only on `chrono_now_utc()` which already exists 
 | `tests/usage/api_tests_a.rs` | Unit-level trace assertions updated to ` · ` sentinel |
 | `tests/usage/api_tests_b.rs` | Unit-level trace assertions updated to ` · ` sentinel |
 | `tests/usage/touch_tests.rs` | Touch skip trace assertions updated to ` · touch  ` sentinel |
-| `src/usage/fetch.rs` | BUG-234 MRE structural test — asserts `"{}{}  result: OK"` pattern in production `eprintln!` (AC-06) |
+| `tests/usage/fetch_tests.rs` | BUG-234 MRE structural test — asserts `"{}{}  result: OK"` pattern in production `eprintln!` (AC-06) |
 | `tests/cli/usage_live_test.rs` | Integration trace sentinel assertions — live mode |
 | `tests/cli/usage_model_test.rs` | Integration trace sentinel assertions — model/effort |
 | `tests/cli/usage_solo_test.rs` | Integration trace sentinel assertions — solo mode |

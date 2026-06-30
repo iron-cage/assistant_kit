@@ -36,6 +36,6 @@ one invariant doc instance and asserts the invariant holds at normal and boundar
 | 006_param_defaults | [docs/invariant/006_param_defaults.md](../../../docs/invariant/006_param_defaults.md) | IN-1 … IN-2 | ✅ |
 | 007_json_storage_format | [docs/invariant/007_json_storage_format.md](../../../docs/invariant/007_json_storage_format.md) | IN-1 … IN-2 | ✅ |
 | 008_single_token_refresh_entry | [docs/invariant/008_single_token_refresh_entry.md](../../../docs/invariant/008_single_token_refresh_entry.md) | IN-1 … IN-4 | ✅ |
-| 009_container_only_test_execution | [docs/invariant/009_container_only_test_execution.md](../../../docs/invariant/009_container_only_test_execution.md) | IN-1 … IN-5 | ⏳ |
+| 009_container_only_test_execution | [docs/invariant/009_container_only_test_execution.md](../../../docs/invariant/009_container_only_test_execution.md) | IN-1 … IN-5 | ✅ |
 
 **Total:** 9 specs, 23 IN cases minimum.

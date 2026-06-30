@@ -28,8 +28,7 @@ When `rotate::1` is active, `find_first_eligible` applies an additional ownershi
    b. If dry::1     → append "[dry-run] would switch to '{name}'" → exit 0
    c. Ownership gate (G5): if !winner.is_owned && !force → exit 1
    d. switch_account(winner_name, credential_store, paths)
-   d'. apply_model_override(winner.result.ok(), paths) — bidirectional: "opus" when Sonnet left < 15%; "sonnet" when >= 15% or tier absent (Fix BUG-311); also initializes effortLevel: "low" when absent (Fix BUG-312)
-   d''. if session_effort.is_some() → set_session_effort(paths, session_effort) — carry-forward user-configured effort (no-op when None; BUG-312 init in d' handles absent case)
+   d'. apply_model_override(winner.result.ok(), paths) — bidirectional: "opus" when Sonnet left < 10%; "sonnet" when >= 10% or tier absent (Fix BUG-311); writes effort unconditionally: "max" for Opus, "high" for Sonnet/absent-tier (TSK-335). Carry-forward set_session_effort() removed — apply_model_override() owns all effort writes.
    e. apply_touch(winner) — touch subprocess may refresh token (writes to STORE only)
    e'. Re-sync: copy winner's store credentials to live session (BUG-310 fix — AC-11)
    f. append "switched to '{name}'\n" to output
@@ -72,7 +71,7 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 |------|--------------|
 | BUG-310 🟢 Fixed | `api.rs:824` copies pre-touch store credentials to live via `switch_account(winner)`; `api.rs:838` `apply_touch(winner)` may refresh token writing to STORE only; live session retains stale pre-refresh credentials; fix = AC-11 — `fs::copy` at `api.rs:847` re-syncs store→live after `apply_touch` (TSK-318) |
 | BUG-311 🟢 Fixed | `apply_model_override()` only wrote `"opus"`; no else-branch restored `"sonnet"` when winner had sufficient Sonnet quota. Rotation step d' retained stale `"opus"` after switching to a Sonnet-available account. Fix: bidirectional override (else-branch + tier-absent case) in `api.rs`. |
-| BUG-312 🟢 Fixed | `effortLevel` was never written on fresh install or after `.account.use` — only `rotate::1` carry-forward wrote it. Footer omitted effort for all non-carry-forward paths. Fix: `apply_model_override()` (called in step d') now initializes `effortLevel: "low"` when key is absent. |
+| BUG-312 🟢 Fixed | `effortLevel` was never written on fresh install or after `.account.use` — only `rotate::1` carry-forward wrote it. Footer omitted effort for all non-carry-forward paths. Fix: `apply_model_override()` (called in step d') now writes effort unconditionally in every branch: `"max"` for Opus, `"high"` for Sonnet/absent-tier (TSK-335). BUG-312 fallback guard retained as unreachable safety net. |
 
 ### Commands
 
@@ -99,7 +98,7 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 | [036_account_ownership.md](036_account_ownership.md) | G5 ownership gate enforced on rotation eligibility |
 | [008_auto_rotate.md](008_auto_rotate.md) | **DEPRECATED** predecessor; this feature replaces it |
 | [061_solo_token_conservation.md](061_solo_token_conservation.md) | `rotate::1` is mutually exclusive with `solo::1` — both present exits 1 before fetch |
-| [062_unified_session_config.md](062_unified_session_config.md) | Rotation dispatcher updated: calls `apply_model_override()` and `set_session_effort()` for the winner after switch |
+| [062_unified_session_config.md](062_unified_session_config.md) | Rotation dispatcher updated: calls `apply_model_override()` for the winner after switch — owns all effort writes (carry-forward removed TSK-335) |
 
 ### Sources
 
@@ -116,7 +115,7 @@ The former `.account.rotate` used `max_by_key(expires_at_ms)` — the account wi
 
 | File | Relationship |
 |------|--------------|
-| [tests/docs/feature/38_usage_strategy_rotate.md](../../tests/docs/feature/38_usage_strategy_rotate.md) | Feature behavioral requirement test surface |
+| [tests/docs/feature/038_usage_strategy_rotate.md](../../tests/docs/feature/038_usage_strategy_rotate.md) | Feature behavioral requirement test surface |
 | [tests/docs/cli/command/09_usage.md](../../tests/docs/cli/command/09_usage.md) | Integration test cases for `rotate::` parameter group |
 
 ### Subprocess Docs

@@ -154,6 +154,6 @@ Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_r
 - **When:** The rotation dispatch executes: (1) `switch_account(winner)` copies `token_A` from store to live. (2) `apply_touch(winner)` spawns a subprocess that refreshes the token — `refresh_account_token` writes `token_B` to the STORE file `{name}.credentials.json` via `save(update_marker=false)`. (3) The re-sync step copies the updated store credentials to live.
 - **Then:** The live session file (`~/.claude/.credentials.json`) contains `token_B` (post-touch refreshed token), NOT `token_A` (pre-touch stale token). Reading the live file and the store file yields the same `accessToken` value.
 - **Exit:** N/A (unit test — no exit code; tests the `api.rs` rotation dispatch block)
-- **Source fn:** `mre_bug310_rotation_touch_resyncs_live_credentials` (in `src/usage/api_tests.rs`)
+- **Source fn:** `mre_bug310_rotation_touch_resyncs_live_credentials` (in `tests/usage/api_tests_b.rs`)
 - **Note:** BUG-310 MRE. Before fix, `apply_touch` writes refreshed credentials to STORE only (via `refresh_account_token → save(update_marker=false)`); the live session retains pre-refresh `token_A`. If the OAuth server invalidates `token_A` during refresh, the live session dies. Fix: re-sync store → live after `apply_touch` at `api.rs:838`.
 - **Source:** [038_usage_strategy_rotate.md AC-11](../../../docs/feature/038_usage_strategy_rotate.md)

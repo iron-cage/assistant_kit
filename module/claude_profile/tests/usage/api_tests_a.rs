@@ -96,14 +96,14 @@ fn mre_bug238_model_override_fires_for_active_account()
   {
     five_hour        : None,
     seven_day        : None,
-    seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
+    seven_day_sonnet : Some( PeriodUsage { utilization : 91.0, resets_at : None } ),
   };
   apply_model_override( &quota, &paths, false, "account.use", "test-account" );
 
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-6" ),
-    "apply_model_override must write opus shorthand to settings.json when 7d(Son) is 90% consumed (10% left), got: {content}",
+    "apply_model_override must write opus shorthand to settings.json when 7d(Son) is 91% consumed (9% left), got: {content}",
   );
 }
 
@@ -144,7 +144,7 @@ fn mre_bug286_full_opus_id_normalized_to_shorthand()
   {
     five_hour        : None,
     seven_day        : None,
-    seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
+    seven_day_sonnet : Some( PeriodUsage { utilization : 91.0, resets_at : None } ),
   };
   apply_model_override( &quota, &paths, false, "account.use", "test-account" );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
@@ -220,13 +220,13 @@ fn t01_model_override_fires_when_sonnet_below_threshold()
   {
     five_hour        : None,
     seven_day        : None,
-    seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
+    seven_day_sonnet : Some( PeriodUsage { utilization : 91.0, resets_at : None } ),
   };
   apply_model_override( &quota, &paths, false, "usage", "test-account" );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-6" ),
-    "must write opus shorthand when 7d(Son) utilization=90% (10% left), got: {content}",
+    "must write opus shorthand when 7d(Son) utilization=91% (9% left), got: {content}",
   );
 }
 
@@ -270,7 +270,7 @@ fn t03_model_override_skips_when_already_opus()
   {
     five_hour        : None,
     seven_day        : None,
-    seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
+    seven_day_sonnet : Some( PeriodUsage { utilization : 91.0, resets_at : None } ),
   };
   apply_model_override( &quota, &paths, false, "usage", "test-account" );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
@@ -342,31 +342,31 @@ fn t06_model_override_skips_for_non_current_account()
   );
 }
 
-/// Fix(BUG-311): at the exact 15% boundary (left == 15%, not < 15%), opus override skips
+/// Fix(BUG-311): at the exact 10% boundary (left == 10%, not < 10%), opus override skips
 /// and sonnet is written as recommended model.
 #[ test ]
-fn t07_model_override_writes_sonnet_at_15pct_boundary()
+fn t07_model_override_writes_sonnet_at_10pct_boundary()
 {
   use claude_quota::{ OauthUsageData, PeriodUsage };
   let dir   = TempDir::new().unwrap();
   let paths = claude_profile::ClaudePaths::with_home( dir.path() );
   std::fs::create_dir_all( paths.base() ).unwrap();
-  // utilization=85.0 → sonnet_left = 100.0 - 85.0 = 15.0; 15.0 < 15.0 == false → sonnet wins.
+  // utilization=90.0 → sonnet_left = 100.0 - 90.0 = 10.0; 10.0 < 10.0 == false → sonnet wins.
   let quota = OauthUsageData
   {
     five_hour        : None,
     seven_day        : None,
-    seven_day_sonnet : Some( PeriodUsage { utilization : 85.0, resets_at : None } ),
+    seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
   };
   apply_model_override( &quota, &paths, false, "usage", "test-account" );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
   assert!(
     content.contains( "\"sonnet\"" ),
-    "Fix(BUG-311): exact 15% boundary (utilization=85.0) must write sonnet, got: {content}",
+    "Fix(BUG-311): exact 10% boundary (utilization=90.0) must write sonnet, got: {content}",
   );
   assert!(
     !content.contains( "\"opus\"" ),
-    "exact 15% boundary: opus override must NOT fire (strict <), got: {content}",
+    "exact 10% boundary: opus override must NOT fire (strict <), got: {content}",
   );
 }
 
@@ -595,13 +595,13 @@ fn mre_bug322_opus_override_sets_effort_max()
   {
     five_hour        : None,
     seven_day        : None,
-    seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
+    seven_day_sonnet : Some( PeriodUsage { utilization : 91.0, resets_at : None } ),
   };
   apply_model_override( &quota, &paths, false, "usage", "test-account" );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
     content.contains( "\"opus\"" ),
-    "BUG-322: model must be opus when 7d(Son) is 90% consumed, got: {content}",
+    "BUG-322: model must be opus when 7d(Son) is 91% consumed, got: {content}",
   );
   assert!(
     content.contains( "\"max\"" ),

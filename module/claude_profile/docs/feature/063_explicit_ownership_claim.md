@@ -81,5 +81,5 @@ This matches the G8 pattern used by `owner::0` (Feature 064).
 
 | File | Relationship |
 |------|--------------|
-| [tests/docs/feature/63_explicit_ownership_claim.md](../../tests/docs/feature/63_explicit_ownership_claim.md) | FT spec mapping ACs to test cases |
+| [tests/docs/feature/063_explicit_ownership_claim.md](../../tests/docs/feature/063_explicit_ownership_claim.md) | FT spec mapping ACs to test cases |
 | [tests/docs/cli/param/63_owner.md](../../tests/docs/cli/param/63_owner.md) | EC edge case spec for `owner::` parameter |

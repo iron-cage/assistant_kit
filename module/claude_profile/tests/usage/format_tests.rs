@@ -776,33 +776,33 @@ fn ft01_recommended_model_sonnet_when_tier_absent()
   );
 }
 
-/// FT-02 — `recommended_model()` returns `"sonnet"` when Sonnet left is exactly 15%.
+/// FT-02 — `recommended_model()` returns `"sonnet"` when Sonnet left is exactly 10%.
 ///
-/// Guard is strict `< OPUS_OVERRIDE_THRESHOLD`; utilization = 85.0 → 15.0% left → NOT opus.
+/// Guard is strict `< OPUS_OVERRIDE_THRESHOLD`; utilization = 90.0 → 10.0% left → NOT opus.
 ///
 /// Spec: [`tests/docs/feature/62_unified_session_config.md` FT-02]
 #[ test ]
-fn ft02_recommended_model_sonnet_at_exactly_15_pct_left()
+fn ft02_recommended_model_sonnet_at_exactly_10_pct_left()
 {
-  let aq = mk_aq_sort_weekly( "a@test.com", 0.0, 0.0, 85.0 );  // 15% left exactly
+  let aq = mk_aq_sort_weekly( "a@test.com", 0.0, 0.0, 90.0 );  // 10% left exactly
   assert_eq!(
     recommended_model( &aq ), "sonnet",
-    "utilization=85.0 (15% left) must return sonnet (strict < boundary); got: {:?}", recommended_model( &aq ),
+    "utilization=90.0 (10% left) must return sonnet (strict < boundary); got: {:?}", recommended_model( &aq ),
   );
 }
 
-/// FT-03 — `recommended_model()` returns `"opus"` when Sonnet left is < 15%.
+/// FT-03 — `recommended_model()` returns `"opus"` when Sonnet left is < 10%.
 ///
-/// utilization = 86.0 → 14.0% left → opus override fires.
+/// utilization = 91.0 → 9.0% left → opus override fires.
 ///
 /// Spec: [`tests/docs/feature/62_unified_session_config.md` FT-03]
 #[ test ]
 fn ft03_recommended_model_opus_when_sonnet_below_threshold()
 {
-  let aq = mk_aq_sort_weekly( "a@test.com", 0.0, 0.0, 86.0 );  // 14% left
+  let aq = mk_aq_sort_weekly( "a@test.com", 0.0, 0.0, 91.0 );  // 9% left
   assert_eq!(
     recommended_model( &aq ), "opus",
-    "utilization=86.0 (14% left) must return opus; got: {:?}", recommended_model( &aq ),
+    "utilization=91.0 (9% left) must return opus; got: {:?}", recommended_model( &aq ),
   );
 }
 
@@ -821,18 +821,18 @@ fn ft04_recommended_model_sonnet_on_err()
   );
 }
 
-/// EC-01 — `recommended_model()` boundary: utilization = 84.999 returns `"sonnet"`.
+/// EC-01 — `recommended_model()` boundary: utilization = 89.999 returns `"sonnet"`.
 ///
-/// 100.0 - 84.999 = 15.001% left → strictly above threshold → sonnet (not opus).
+/// 100.0 - 89.999 = 10.001% left → strictly above threshold → sonnet (not opus).
 ///
 /// Spec: [`tests/docs/feature/62_unified_session_config.md` EC-01]
 #[ test ]
-fn ec01_recommended_model_sonnet_at_15_001_pct_left()
+fn ec01_recommended_model_sonnet_at_10_001_pct_left()
 {
-  let aq = mk_aq_sort_weekly( "a@test.com", 0.0, 0.0, 84.999 );
+  let aq = mk_aq_sort_weekly( "a@test.com", 0.0, 0.0, 89.999 );
   assert_eq!(
     recommended_model( &aq ), "sonnet",
-    "utilization=84.999 (15.001% left) must return sonnet; got: {:?}", recommended_model( &aq ),
+    "utilization=89.999 (10.001% left) must return sonnet; got: {:?}", recommended_model( &aq ),
   );
 }
 
@@ -842,7 +842,7 @@ fn ec01_recommended_model_sonnet_at_15_001_pct_left()
 ///
 /// Two quota states produce divergent outputs, proving the function is non-constant:
 ///   State A: `utilization=80.0` (20% left, above threshold) → `"sonnet"`
-///   State B: `utilization=86.0` (14% left, below threshold) → `"opus"`
+///   State B: `utilization=91.0` (9% left, below threshold) → `"opus"`
 ///
 /// The divergence is necessary because `recommended_model()` is the footer's model
 /// recommendation signal — a constant return value would mean the threshold has no effect.
@@ -851,10 +851,10 @@ fn ec01_recommended_model_sonnet_at_15_001_pct_left()
 #[ test ]
 fn ac6_recommended_model_divergence_sufficient_vs_near_exhausted()
 {
-  // State A: 20% remaining — above OPUS_OVERRIDE_THRESHOLD (15.0) → sonnet
+  // State A: 20% remaining — above OPUS_OVERRIDE_THRESHOLD (10.0) → sonnet
   let aq_a = mk_aq_sort_weekly( "test", 0.0, 0.0, 80.0 );
-  // State B: 14% remaining — below OPUS_OVERRIDE_THRESHOLD (15.0) → opus
-  let aq_b = mk_aq_sort_weekly( "test", 0.0, 0.0, 86.0 );
+  // State B: 9% remaining — below OPUS_OVERRIDE_THRESHOLD (10.0) → opus
+  let aq_b = mk_aq_sort_weekly( "test", 0.0, 0.0, 91.0 );
   let model_a = recommended_model( &aq_a );
   let model_b = recommended_model( &aq_b );
   assert_eq!(
@@ -863,7 +863,7 @@ fn ac6_recommended_model_divergence_sufficient_vs_near_exhausted()
   );
   assert_eq!(
     model_b, "opus",
-    "AC-6 state B: utilization=86.0 (14% left) must return opus; got: {model_b}",
+    "AC-6 state B: utilization=91.0 (9% left) must return opus; got: {model_b}",
   );
   assert_ne!(
     model_a, model_b,

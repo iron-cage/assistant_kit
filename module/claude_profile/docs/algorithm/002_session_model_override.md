@@ -17,17 +17,17 @@ Effort is written **unconditionally** on every call to `apply_model_override()`,
 |---|---|---|---|---|
 | `None` | — | Opus form | **→ Sonnet** (absent tier ≠ exhausted; restore conservatively — Fix BUG-311) | → `"high"` |
 | `None` | — | Sonnet form | No-op | → `"high"` |
-| `Some` | ≥ 15% | Opus form | **→ Sonnet** (sufficient capacity — Fix BUG-311) | → `"high"` |
-| `Some` | ≥ 15% | Sonnet form | No-op | → `"high"` |
-| `Some` | < 15% | Sonnet form | **→ Opus** (near-exhausted — preserve remaining tokens) | → `"max"` |
-| `Some` | < 15% | Opus form | No-op | → `"max"` |
+| `Some` | ≥ 10% | Opus form | **→ Sonnet** (sufficient capacity — Fix BUG-311) | → `"high"` |
+| `Some` | ≥ 10% | Sonnet form | No-op | → `"high"` |
+| `Some` | < 10% | Sonnet form | **→ Opus** (near-exhausted — preserve remaining tokens) | → `"max"` |
+| `Some` | < 10% | Opus form | No-op | → `"max"` |
 
 "Opus form" = model string matches `claude-opus-*` or `"opus"`.
 "Sonnet form" = model string matches `claude-sonnet-*` or `"sonnet"`.
 
 ### Threshold
 
-15.0 from `OPUS_OVERRIDE_THRESHOLD` constant in `format.rs:385` (canonical) — actual gate: `100.0 - seven_day_sonnet.utilization < OPUS_OVERRIDE_THRESHOLD` (i.e., < 15% remaining).
+10.0 from `OPUS_OVERRIDE_THRESHOLD` constant in `format.rs:385` (canonical) — actual gate: `100.0 - seven_day_sonnet.utilization < OPUS_OVERRIDE_THRESHOLD` (i.e., < 10% remaining).
 
 ### Bug History
 

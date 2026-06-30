@@ -14,9 +14,9 @@ Using `seven_day_sonnet.map_or(0.0, |s| 100.0 - s.utilization)` to compute Sonne
 
 ### Pitfall 2 — One-way ratchet: only writing Opus, never restoring Sonnet (BUG-311)
 
-`apply_model_override()` had code to downgrade to Opus (when Sonnet < 15%) but no code to restore Sonnet when quota recovered. Once an account crossed the 15% threshold (causing Opus override), it stayed on Opus indefinitely — even after the 7d window reset and quota was full.
+`apply_model_override()` had code to downgrade to Opus (when Sonnet < 15%) but no code to restore Sonnet when quota recovered. Once an account crossed the 15% threshold (causing Opus override), it stayed on Opus indefinitely — even after the 7d window reset and quota was full. (Historical threshold was 15%; changed to 10% — see `OPUS_OVERRIDE_THRESHOLD`.)
 
-**Fix:** Added bidirectional logic: when `seven_day_sonnet` is absent OR ≥ 15%, call `override_session_model_to_sonnet()` if the current model is an Opus form.
+**Fix:** Added bidirectional logic: when `seven_day_sonnet` is absent OR ≥ 10%, call `override_session_model_to_sonnet()` if the current model is an Opus form.
 
 **Rule:** All bidirectional state machines need BOTH transition directions. A write-only-in-one-direction gate will drift into a permanent degraded state.
 
@@ -30,7 +30,7 @@ On a fresh install (or after clearing `settings.json`), `effortLevel` is absent,
 
 ### Pitfall 4 — Effort decoupled from model override (BUG-322)
 
-`apply_model_override()` switched the model to Opus when Sonnet < 15% but never set effort to match. BUG-312 init wrote `"low"` when absent — the Opus branch had no effort logic. Result: `opus/low` (or `opus/high` after BUG-322 fix but before TSK-335) in the footer. After TSK-335, correct values are `opus/max` and `sonnet/high`.
+`apply_model_override()` switched the model to Opus when Sonnet < 15% (historical threshold; changed to 10%) but never set effort to match. BUG-312 init wrote `"low"` when absent — the Opus branch had no effort logic. Result: `opus/low` (or `opus/high` after BUG-322 fix but before TSK-335) in the footer. After TSK-335, correct values are `opus/max` and `sonnet/high`.
 
 **Fix:** Effort is written unconditionally in each branch regardless of `overrode`. Opus branch: `set_session_effort(paths, "max")`. Sonnet branch (sufficient quota and absent-tier): `set_session_effort(paths, "high")`. BUG-312 init fallback retained as unreachable guard with value `"high"`.
 

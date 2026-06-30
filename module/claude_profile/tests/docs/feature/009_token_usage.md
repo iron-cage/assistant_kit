@@ -30,7 +30,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | — |
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | — |
 | FT-24 | Trace result line emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | — |
-| FT-25 | `.usage` applies model override for current account when `7d(Son) < 15%` | AC-32 | — |
+| FT-25 | `.usage` applies model override for current account when `7d(Son) < 10%` | AC-32 | — |
 | FT-26 | `format::json` output includes `"is_owned"` bool per account object | AC-05 | — |
 | FT-27 | `.usage` model override writes `"sonnet"` conservatively when `seven_day_sonnet` is absent (`None`) — absent tier is unknown, not exhausted (BUG-300 + BUG-311) | AC-32 | — |
 | FT-28 | Footer `Current` line identifies `✓` account with model and valid count; `Next` line shows recommendation with model and metric; both use `·` delimiter and aligned columns | AC-10 | — |
@@ -81,7 +81,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | Subscription State |
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | Subscription State |
 | FT-24 | Trace result line emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | Trace Ordering |
-| FT-25 | `.usage` applies model override for current account when `7d(Son) < 15%` | AC-32 | Model Override |
+| FT-25 | `.usage` applies model override for current account when `7d(Son) < 10%` | AC-32 | Model Override |
 | FT-26 | `format::json` includes `"is_owned": bool` per account object | AC-05 | JSON Fields |
 | FT-27 | `.usage` model override writes `"sonnet"` conservatively when `seven_day_sonnet = None` (BUG-300 + BUG-311) | AC-32 | Model Override |
 | FT-28 | Footer `Current` + `Next` lines with `·` delimiter and column alignment | AC-10 | Footer |
@@ -222,7 +222,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** Per-column emoji formatting applied to each value with its dimension's threshold.
 - **Then:** Values above threshold produce `🟢` prefix; values at or below produce `🟡` prefix. Each dimension uses its own threshold independently.
 - **Exit:** n/a (unit test — string return assertion)
-- **Source fn:** `test_ft11_009_per_column_emoji_prefix_three_cases` (in `src/usage/format_tests.rs`)
+- **Source fn:** `test_ft11_009_per_column_emoji_prefix_three_cases` (in `tests/usage/format_tests.rs`)
 - **Source:** [009_token_usage.md AC-21](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -303,7 +303,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `renews_label()` called with the above inputs.
 - **Then:** Returns `"in 3h 47m"` — no `~` prefix, exact duration format.
 - **Exit:** n/a (unit test)
-- **Source fn:** `rl_exact_from_renewal_at`, `rl_estimate_from_org_created_at`, `rl_auto_advance_past_renewal_at`, `rl_absent_returns_question` (in `src/usage/format_tests.rs`)
+- **Source fn:** `rl_exact_from_renewal_at`, `rl_estimate_from_org_created_at`, `rl_auto_advance_past_renewal_at`, `rl_absent_returns_question` (in `tests/usage/format_tests.rs`)
 - **Source:** [009_token_usage.md AC-27](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -314,7 +314,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `next_event_label()` called with `seven_day_resets_secs = Some(7200)` (2h), `renewal_secs = None`.
 - **Then:** Returns `"in 2h +7d"` — weekly reset is soonest strategic event.
 - **Exit:** n/a (unit test)
-- **Source fn:** `ne_tok_excluded_after_tsk228`, `ne_7d_soonest`, `ne_renewal_soonest_exact`, `ne_renewal_soonest_estimate`, `ne_all_none_returns_dash` (in `src/usage/format_tests.rs`)
+- **Source fn:** `ne_tok_excluded_after_tsk228`, `ne_7d_soonest`, `ne_renewal_soonest_exact`, `ne_renewal_soonest_estimate`, `ne_all_none_returns_dash` (in `tests/usage/format_tests.rs`)
 - **Source:** [009_token_usage.md AC-28](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -344,7 +344,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - In the `render_tsv()` output: the `~Renews` field contains the expected renewal date string; the TSV renews cell is NOT `(rate limited (429))`.
 - **Exit:** n/a (unit test)
 - **Note:** Fix for BUG-220. The defect had `render_text()` using `last_mut()` positional overwrite (hitting `~Renews` as the last non-host/role column) and `render_tsv()` explicitly pushing `error_str` for the renews cell. Both renderers must preserve `renews_str` (from `OauthAccountData`) regardless of `result` error state.
-- **Source fn:** `mre_bug_220_renews_preserved_for_429_accounts` (in `src/usage/render_tests.rs`)
+- **Source fn:** `mre_bug_220_renews_preserved_for_429_accounts` (in `tests/usage/render_tests_a.rs`)
 - **Source:** [009_token_usage.md AC-03](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -362,7 +362,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - No line contains both `@` and `✓` or both `@` and `*`.
 - **Exit:** n/a (unit test — string content assertion)
 - **Note:** `is_occupied_elsewhere = true` sets `@` only when neither `is_current` nor `is_active` is true (priority: `✓` > `*` > `@` > blank).
-- **Source fn:** `test_ft21_009_occupied_elsewhere_at_flag` (in `src/usage/render_tests.rs`)
+- **Source fn:** `test_ft21_009_occupied_elsewhere_at_flag` (in `tests/usage/render_tests_a.rs`)
 - **Source:** [009_token_usage.md AC-30](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -380,7 +380,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - `Sub` column (when visible via `cols::+sub`) shows `"—"` (from `sub_label` with `billing_type="none"`).
 - **Exit:** n/a (unit test)
 - **Note:** Fix(BUG-233) Class A: fetch layer now overrides `result` to `Err("no subscription")` after `account_handle.join()` when `billing_type == "none"`. The previous BUG-231 display-layer workaround (`error_label` in `format.rs`) is deleted — superseded by this data-layer fix (AC-31).
-- **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `src/usage/render_tests.rs`); `test_class_a_billing_none_override_predicate` (in `src/usage/fetch.rs`)
+- **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `tests/usage/render_tests_a.rs`); `test_class_a_billing_none_override_predicate` (in `tests/usage/fetch_tests.rs`)
 - **Source:** [009_token_usage.md AC-03, AC-31](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -397,7 +397,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - The `~Renews` column cell contains `"—"` (em dash, not `"?"`, not `"~in Nd"`).
   - Despite `org_created_at` being present and parseable, no billing estimate is shown — the subscription is cancelled.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `src/usage/render_tests.rs`)
+- **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `tests/usage/render_tests_a.rs`)
 - **Source:** [009_token_usage.md AC-27, AC-31](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -413,15 +413,15 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - Observable consequence: for `billing_type="none"` accounts, the trace result line emits `Err(no subscription)`, matching the table — no `result: OK` / `(no subscription)` contradiction.
 - **Exit:** n/a (structural unit test — assertion failure if positions violate ordering)
 - **Note:** BUG-234 fix. The bug was introduced when the BUG-233 Class A override was added after the trace block rather than before it. Structural test prevents regression without requiring live API calls. Source ordering is the correctness invariant — at runtime, any `billing_type="none"` override applied before the trace emission guarantees trace-result consistency.
-- **Source fn:** `mre_bug234_result_trace_after_billing_type_override` (in `src/usage/fetch.rs`)
+- **Source fn:** `mre_bug234_result_trace_after_billing_type_override` (in `tests/usage/fetch_tests.rs`)
 - **Source:** [009_token_usage.md AC-31](../../../docs/feature/009_token_usage.md)
 
 ---
 
-### FT-25: `.usage` applies model override for current account when `7d(Son) < 15%`
+### FT-25: `.usage` applies model override for current account when `7d(Son) < 10%`
 
 - **Given (unit test):** One `AccountQuota` for the current account (`is_current = true`):
-  - `result = Ok(OauthUsageData)` with `seven_day_sonnet = Some(PeriodUsage { utilization: 90.0, resets_at: Some("...") })` — 10% left (< 15% threshold)
+  - `result = Ok(OauthUsageData)` with `seven_day_sonnet = Some(PeriodUsage { utilization: 91.0, resets_at: Some("...") })` — 9% left (< 10% threshold)
   - `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"`
   - `ClaudePaths` pointing to a temp directory
 - **When:** `apply_model_override(&data, &paths, false, "usage", "test@example.com")` is called with the current account's quota data.
@@ -430,7 +430,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - The structural test verifies that `usage_routine()` calls `apply_model_override` after the touch loop for the current account (source position assertion or direct call test).
 - **Exit:** n/a (unit test)
 - **Note:** Fix for BUG-244. The model override was previously only reachable from `.account.use` (`account_ops.rs`). This test verifies the `.usage` path also applies it. Reuses the existing `apply_model_override()` function (tested by BUG-238 MRE) but validates it is called from the `.usage` pipeline.
-- **Source fn:** `mre_bug244_usage_routine_never_calls_apply_model_override` (in `src/usage/api_tests.rs`)
+- **Source fn:** `mre_bug244_usage_routine_never_calls_apply_model_override` (in `tests/usage/api_tests_b.rs`)
 - **Source:** [009_token_usage.md AC-32](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -446,7 +446,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - `~/.claude/settings.json` contains `"model": "sonnet"` — `override_session_model_to_sonnet()` fires conservatively (Fix BUG-311). `"opus"` does NOT appear. Absent tier is treated as unknown, not exhausted.
 - **Exit:** n/a (unit test)
 - **Note:** Fix(BUG-300): `map_or(0.0, ...)` treated `None` as 0% remaining (fully exhausted), causing unconditional Opus override for accounts without a Sonnet tier. `None` must be treated as absent/unknown — not as exhaustion. Guard changed to `if let Some(ref sonnet) = quota.seven_day_sonnet { ... }`. Fix(BUG-311): the else-branch (tier absent) now conservatively calls `override_session_model_to_sonnet()` — absent tier ≠ exhausted, so Sonnet is the safe default.
-- **Source fn:** `mre_bug300_model_override_absent_sonnet_no_override` (in `src/usage/api_tests.rs`)
+- **Source fn:** `mre_bug300_model_override_absent_sonnet_no_override` (in `tests/usage/api_tests_a.rs`)
 - **Source:** [009_token_usage.md AC-32](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -474,7 +474,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - The object for `bob@x.com` contains `"is_owned": false`.
   - `"is_owned"` is present in every account object regardless of result state.
 - **Exit:** n/a (unit test — JSON string assertion)
-- **Source fn:** `ft12_json_output_includes_is_owned` (in `src/usage/render_tests.rs`)
+- **Source fn:** `ft12_json_output_includes_is_owned` (in `tests/usage/render_tests_a.rs`)
 - **Note:** Feature 036 FT-12 is the definitive test for this behavior. This FT-26 records the same coverage from Feature 009's perspective (AC-05 lists `is_owned (bool — Feature 036)` as a required JSON field). Both specs reference the same source function.
 - **Source:** [009_token_usage.md AC-05](../../../docs/feature/009_token_usage.md)
 
@@ -491,7 +491,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - Scenario 2: footer `Current` line contains `sonnet` but NOT `sonnet/` (no trailing slash when effort absent).
   - In both scenarios, footer `Next` line is present and unaffected.
 - **Exit:** n/a (unit test — string content assertions)
-- **Source fn:** `test_ft29_009_footer_session_effort_display` (in `src/usage/render_tests.rs`)
+- **Source fn:** `test_ft29_009_footer_session_effort_display` (in `tests/usage/render_tests_b.rs`)
 - **Source:** [009_token_usage.md AC-10](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -536,7 +536,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `status_emoji(&aq)` is called.
 - **Then:** Returns `"🔴"` — the `billing_type = "none"` gate fires before quota thresholds. Without Fix(BUG-317), this would return `"🟢"` (both quotas healthy, `result = Ok`).
 - **Exit:** n/a (unit test)
-- **Source fn:** `mre_bug317_cancelled_status_emoji_is_red` (in `src/usage/format_tests.rs`)
+- **Source fn:** `mre_bug317_cancelled_status_emoji_is_red` (in `tests/usage/format_tests.rs`)
 - **Source:** [009_token_usage.md AC-18](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -550,7 +550,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Returns `"🟡"` — both-exhausted (G3 weekly-exhausted) is recoverable by waiting; it is NOT dead. `"🔴"` (Dead) is reserved for `result = Err` or `billing_type="none"` only.
 - **Exit:** n/a (unit test)
 - **Note:** Fix(BUG-321): `( _, false ) => StatusGroup::WeeklyExhausted` in `status_group_of()` (merged `(true,false)` and `(false,false)` arms; no new variant); `_ => "🟡"` catch-all in `status_emoji()` (dead gate via `billing_type` early return fires before the match). The BUG-319 fix (`(false,false)→🔴`) was premise-incorrect — both-exhausted and weekly-exhausted have identical recovery behavior (7d is the binding constraint). `mre_bug319_both_exhausted_status_emoji_is_red` assertion flipped 🔴→🟡 by this fix.
-- **Source fn:** `mre_bug321_both_exhausted_status_emoji_is_yellow` (in `src/usage/format_tests.rs`)
+- **Source fn:** `mre_bug321_both_exhausted_status_emoji_is_yellow` (in `tests/usage/format_tests.rs`)
 - **Source:** [009_token_usage.md AC-18, AC-26](../../../docs/feature/009_token_usage.md)
 
 ---

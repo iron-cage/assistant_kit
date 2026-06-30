@@ -14,23 +14,23 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 | Expected | Returns `"sonnet"` |
 | Status | ✅ |
 
-## FT-02 — `recommended_model()` returns sonnet when Sonnet left >= 15%
+## FT-02 — `recommended_model()` returns sonnet when Sonnet left >= 10%
 
 **AC-01** | **Source**: `format.rs::recommended_model`
 
 | Field | Value |
 |-------|-------|
-| Input | `AccountQuota` with `seven_day_sonnet.utilization = 85.0` (exactly 15% left) |
-| Expected | Returns `"sonnet"` (strict `< 15.0` guard — boundary is NOT opus) |
+| Input | `AccountQuota` with `seven_day_sonnet.utilization = 90.0` (exactly 10% left) |
+| Expected | Returns `"sonnet"` (strict `< 10.0` guard — boundary is NOT opus) |
 | Status | ✅ |
 
-## FT-03 — `recommended_model()` returns opus when Sonnet left < 15%
+## FT-03 — `recommended_model()` returns opus when Sonnet left < 10%
 
 **AC-01** | **Source**: `format.rs::recommended_model`
 
 | Field | Value |
 |-------|-------|
-| Input | `AccountQuota` with `seven_day_sonnet.utilization = 86.0` (14% left) |
+| Input | `AccountQuota` with `seven_day_sonnet.utilization = 91.0` (9% left) |
 | Expected | Returns `"opus"` |
 | Status | ✅ |
 
@@ -50,7 +50,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 
 | Field | Value |
 |-------|-------|
-| Input | Rec account has Sonnet left >= 15% (`seven_day_sonnet.utilization <= 85.0`) |
+| Input | Rec account has Sonnet left >= 10% (`seven_day_sonnet.utilization <= 90.0`) |
 | Expected | Footer Next line contains `sonnet/high` in the third column — `"high"` is model-derived (sonnet branch), not from `session_effort` |
 | Status | ✅ |
 
@@ -60,7 +60,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 
 | Field | Value |
 |-------|-------|
-| Input | Rec account has `seven_day_sonnet.utilization = 90.0` (10% left, Opus branch) |
+| Input | Rec account has `seven_day_sonnet.utilization = 91.0` (9% left, Opus branch) |
 | Expected | Footer Next line contains `opus/max` in third column — `"max"` is model-derived (opus branch), not from `session_effort` |
 | Status | ✅ |
 
@@ -70,7 +70,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 
 | Field | Value |
 |-------|-------|
-| Input | Current account with `session_model = "sonnet"`, `session_effort = "high"`; rec account with sonnet model (Sonnet left >= 15%) |
+| Input | Current account with `session_model = "sonnet"`, `session_effort = "high"`; rec account with sonnet model (Sonnet left >= 10%) |
 | Expected | Third `·` in both lines falls at the same column position; Next line shows `sonnet/high` (model-derived) — both lines always have `model/effort` format |
 | Status | ✅ |
 
@@ -100,7 +100,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 
 | Field | Value |
 |-------|-------|
-| Input | `.usage rotate::1`; winner has `seven_day_sonnet.utilization = 90.0` |
+| Input | `.usage rotate::1`; winner has `seven_day_sonnet.utilization = 91.0` |
 | Expected | After switch, `settings.json` `model` = `"opus"` |
 | Status | ✅ |
 
@@ -110,7 +110,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 
 | Field | Value |
 |-------|-------|
-| Input | `.usage rotate::1`; settings.json has no `effortLevel` key before rotation; winner has Sonnet left >= 15% |
+| Input | `.usage rotate::1`; settings.json has no `effortLevel` key before rotation; winner has Sonnet left >= 10% |
 | Expected | After switch, `settings.json` contains `"effortLevel": "high"` — written by `apply_model_override()` Sonnet branch (unconditional write); no carry-forward call |
 | Status | ✅ |
 
@@ -120,7 +120,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 
 | Field | Value |
 |-------|-------|
-| Input | Temp dir as `~/.claude/`; no `settings.json` present; `apply_model_override` called with Sonnet left >= 15% quota data |
+| Input | Temp dir as `~/.claude/`; no `settings.json` present; `apply_model_override` called with Sonnet left >= 10% quota data |
 | Expected | `settings.json` created; contains `"effortLevel": "high"`. Written by the Sonnet branch unconditional write (TSK-335); the BUG-312 init guard is unreachable but retained. |
 | Status | ✅ |
 
@@ -130,23 +130,23 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 
 | Field | Value |
 |-------|-------|
-| Input | `settings.json` pre-seeded with `"effortLevel": "high"`; `apply_model_override` called with Sonnet left >= 15% |
+| Input | `settings.json` pre-seeded with `"effortLevel": "high"`; `apply_model_override` called with Sonnet left >= 10% |
 | Expected | `settings.json` contains `"effortLevel": "high"` — written by unconditional Sonnet branch (TSK-335). Value happens to match pre-seeded value; mechanism has changed from preservation to model-derived overwrite. |
 | Status | ✅ |
 
 ## FT-16 — Opus branch sets effort to `"max"` (BUG-322 MRE, updated TSK-335)
 
-**AC-09** | **Source**: `src/usage/api_tests.rs::mre_bug322_opus_override_sets_effort_max`
+**AC-09** | **Source**: `tests/usage/api_tests_a.rs::mre_bug322_opus_override_sets_effort_max`
 
 | Field | Value |
 |-------|-------|
-| Input | No `settings.json`; `seven_day_sonnet.utilization = 90.0` (10% left, < 15% threshold) |
+| Input | No `settings.json`; `seven_day_sonnet.utilization = 91.0` (9% left, < 10% threshold) |
 | Expected | `settings.json` contains `"opus"` AND `"max"` — effort paired with Opus branch (TSK-335: was `"high"`) |
 | Status | ✅ |
 
 ## FT-17 — Sonnet branch sets effort to `"high"` (BUG-322 reverse, updated TSK-335)
 
-**AC-10** | **Source**: `src/usage/api_tests.rs::t11_opus_to_sonnet_sets_effort_high`
+**AC-10** | **Source**: `tests/usage/api_tests_a.rs::t11_opus_to_sonnet_sets_effort_high`
 
 | Field | Value |
 |-------|-------|
@@ -156,7 +156,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 
 ## FT-18 — Absent-tier + Opus→Sonnet sets effort to `"high"` (BUG-322 absent-tier, updated TSK-335)
 
-**AC-10** | **Source**: `src/usage/api_tests.rs::t12_absent_tier_with_opus_sets_effort_high`
+**AC-10** | **Source**: `tests/usage/api_tests_a.rs::t12_absent_tier_with_opus_sets_effort_high`
 
 | Field | Value |
 |-------|-------|
@@ -170,7 +170,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 
 | Field | Value |
 |-------|-------|
-| Input | `settings.json` pre-seeded with `"model": "sonnet"` (no effortLevel); `apply_model_override` called with Sonnet left >= 15% — `override_session_model_to_sonnet()` returns `false` (already Sonnet, no model change) |
+| Input | `settings.json` pre-seeded with `"model": "sonnet"` (no effortLevel); `apply_model_override` called with Sonnet left >= 10% — `override_session_model_to_sonnet()` returns `false` (already Sonnet, no model change) |
 | Expected | `settings.json` contains `"effortLevel": "high"` — effort written unconditionally even though `overrode = false` |
 | Status | ✅ |
 
@@ -180,16 +180,16 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 
 | Field | Value |
 |-------|-------|
-| Input | `session_effort = None`; rec account has Sonnet left >= 15% |
+| Input | `session_effort = None`; rec account has Sonnet left >= 10% |
 | Expected | Footer Next line contains `sonnet/high` — model-derived effort always shown; no conditional on `session_effort` being present |
 | Status | ✅ |
 
-## EC-01 — `recommended_model()` boundary: utilization = 84.999 returns sonnet (above threshold)
+## EC-01 — `recommended_model()` boundary: utilization = 89.999 returns sonnet (above threshold)
 
 **AC-01** | **Source**: `format.rs::recommended_model`
 
 | Field | Value |
 |-------|-------|
-| Input | `seven_day_sonnet.utilization = 84.999` (15.001% left) |
+| Input | `seven_day_sonnet.utilization = 89.999` (10.001% left) |
 | Expected | Returns `"sonnet"` (still above threshold) |
 | Status | ✅ |

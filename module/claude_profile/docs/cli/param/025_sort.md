@@ -36,7 +36,7 @@ All accounts are partitioned into four status groups before any sort strategy ru
 
 **Recommendation (footer):**
 
-`sort::` drives the footer recommendation — the top eligible account in the sort order is shown in the footer's `Next (strategy):` line. No separate `next::` parameter exists. Eligibility: non-current, non-active, non-occupied, not h-exhausted (`5h Left > 15%`), not weekly-exhausted (`prefer_weekly > 5.0`), valid quota data, `expires_in_secs > 0`. When no eligible account exists, the footer recommendation line is omitted.
+`sort::` drives the footer recommendation — the top eligible account in the sort order is shown in the footer's `Next (strategy):` line. No separate `next::` parameter exists. Eligibility: non-current, non-active, non-occupied, not h-exhausted (`5h Left > 15%`), not weekly-exhausted (`seven_day_left > WEEKLY_EXHAUSTION_THRESHOLD`), valid quota data, `expires_in_secs > 0`. When no eligible account exists, the footer recommendation line is omitted.
 
 The footer shows one recommendation line for the active `sort::` strategy (omitted when 0 or 1 valid accounts).
 

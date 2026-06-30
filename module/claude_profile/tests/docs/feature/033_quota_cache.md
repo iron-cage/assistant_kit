@@ -26,11 +26,11 @@
 ### Notes
 
 - FT-01 through FT-07 are implemented as unit tests in `claude_profile_core/tests/account_test.rs`.
-- FT-03 and FT-09 are implemented as render integration tests in `src/usage/render_tests.rs`.
+- FT-03 and FT-09 are implemented as render integration tests in `tests/usage/render_tests_a.rs`.
 - FT-08 is structural: cached rows are stored as `result: Ok(data)` with `cached: true` — all sort/strategy/next logic operates on `Ok` rows identically regardless of the `cached` flag.
 - FT-10 is implemented as a unit test in `src/usage/refresh_predicate.rs` `#[cfg(test)]` module. MRE for BUG-255.
-- FT-11 is a unit test in `src/usage/refresh_tests.rs`. Verifies the retry OK arm clears `aq.cached`/`aq.cache_age_secs` and writes the quota cache file. MRE for BUG-256.
-- FT-12 is a unit test in `src/usage/fetch.rs`. Verifies that the cache fallback match guard `Err( ref e ) if !e.contains("401") && !e.contains("403")` is present, and that a catch-all `Err` arm propagates auth errors without cache conversion. MRE for BUG-296.
+- FT-11 is a unit test in `tests/usage/refresh_tests_b.rs`. Verifies the retry OK arm clears `aq.cached`/`aq.cache_age_secs` and writes the quota cache file. MRE for BUG-256.
+- FT-12 is a unit test in `tests/usage/fetch_tests.rs`. Verifies that the cache fallback match guard `Err( ref e ) if !e.contains("401") && !e.contains("403")` is present, and that a catch-all `Err` arm propagates auth errors without cache conversion. MRE for BUG-296.
 
 ---
 
@@ -161,6 +161,6 @@
 - **When:** `fetch_all_quota` processes the auth-error result for `alice`.
 - **Then:** The 401 error propagates as `Err` — the cache fallback is NOT triggered; `Ok(cached_data)` is NOT returned. The auth error reaches `should_refresh()` unchanged, which can trigger a token refresh attempt. HTTP 403 is treated identically.
 - **Exit:** `Err("...401...")` (auth error propagates unchanged)
-- **Source fn:** `mre_bug296_cached_non_expired_401_no_refresh` (in `src/usage/fetch.rs`)
+- **Source fn:** `mre_bug296_cached_non_expired_401_no_refresh` (in `tests/usage/fetch_tests.rs`)
 - **Note:** Fix for BUG-296. Auth-error guard: `Err( ref e ) if !e.contains("401") && !e.contains("403") =>` on the cache fallback arm; a catch-all `Err( _ ) =>` arm propagates auth errors unchanged. Only transient errors (429, network, timeout) trigger cache fallback.
 - **Source:** [033_quota_cache.md AC-12](../../../docs/feature/033_quota_cache.md)

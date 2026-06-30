@@ -26,8 +26,8 @@
 ### Notes
 
 - FT-01, FT-04, FT-05, FT-06, FT-07, FT-08, FT-09, FT-10, FT-11, FT-12 are integration tests in `tests/cli/usage_test.rs`.
-- FT-02 is a unit test in `src/usage/refresh_tests.rs` (solo gate isolation at the refresh site).
-- FT-03 is a unit test in `src/usage/touch_tests.rs` (solo gate isolation at the touch site).
+- FT-02 is a unit test in `tests/usage/refresh_tests_b.rs` (solo gate isolation at the refresh site).
+- FT-03 is a unit test in `tests/usage/touch_tests.rs` (solo gate isolation at the touch site).
 - Parameter-level unit tests (`ec5_solo_and_rotate_mutual_exclusion`, `ec12_solo_rejects_integer_two`) in `src/usage/params.rs` complement FT-07 at the unit level.
 - `approximate_quota()` behavior is validated indirectly through FT-01, FT-05, FT-06 — all verify that approximated data (not raw cache) is displayed when the solo gate fires.
 
@@ -46,11 +46,11 @@
 
 ### FT-02: Refresh gate skips non-current under solo::1
 
-- **Given:** Account A is current+owned; Account B is owned but not current. Both have auth errors (401). `solo=true`, `refresh=true`.
-- **When:** `apply_refresh()` is called with `solo=true` for Account B.
-- **Then:** The solo gate fires before G2. Trace emits `solo-skip` for Account B. No refresh subprocess is spawned for Account B. Returns `Ok(())`.
-- **Exit:** Ok(())
-- **Source fn:** `ec7_solo_gate_skips_non_current_with_trace` (in `src/usage/refresh_tests.rs`)
+- **Given:** Account B is owned but not current, with auth error (401) and expired token (`expires_at_ms = 0`). Empty credential store (no cred files). `solo=true`.
+- **When:** `apply_refresh()` is called with `solo=true`.
+- **Then:** The solo gate fires before G2. Account B's result is unchanged (original 401 error preserved). Without solo, the same account would be refreshed — `should_refresh` returns true (401+expired), `refresh_account_token` returns None (empty store), result becomes `Err("refresh token expired")`. Converted from gag-based trace capture to behavioral test.
+- **Exit:** result still contains "401"
+- **Source fn:** `ec7_solo_gate_skips_non_current_with_trace` (in `tests/usage/refresh_tests_b.rs`)
 - **Source:** [061_solo_token_conservation.md AC-02](../../../docs/feature/061_solo_token_conservation.md)
 
 ---
@@ -61,7 +61,7 @@
 - **When:** `apply_touch()` is called with `solo=true` for Account B.
 - **Then:** The solo gate fires before G4. Trace emits `solo-skip` for Account B. No touch subprocess is spawned for Account B. Returns `Ok(())`.
 - **Exit:** Ok(())
-- **Source fn:** `ec8_solo_gate_skips_non_current_with_trace` (in `src/usage/touch_tests.rs`)
+- **Source fn:** `ec8_solo_gate_skips_non_current_with_trace` (in `tests/usage/touch_tests.rs`)
 - **Source:** [061_solo_token_conservation.md AC-03](../../../docs/feature/061_solo_token_conservation.md)
 
 ---

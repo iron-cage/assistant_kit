@@ -582,17 +582,17 @@ fn ft12_json_output_includes_is_owned()
 }
 
 /// FT-28 boundary — footer shows `model: sonnet` when `seven_day_sonnet` utilization = 85.0
-/// (exactly 15% left). Threshold is strict `< 15%`, so 15.0% must NOT trigger the opus override.
+/// (exactly 10% left). Threshold is strict `< 10%`, so 10.0% must NOT trigger the opus override.
 ///
-/// In RED (before fix): `15.0 < 20.0 == true` → footer shows `model: opus` → this test FAILS.
-/// In GREEN (after fix at render.rs:258): `15.0 < 15.0 == false` → footer shows `model: sonnet`.
+/// In RED (before fix): `10.0 < 20.0 == true` → footer shows `model: opus` → this test FAILS.
+/// In GREEN (after fix at render.rs:258): `10.0 < 10.0 == false` → footer shows `model: sonnet`.
 ///
 /// Spec: [`tests/docs/feature/09_token_usage.md` FT-28]
 #[ test ]
-fn test_render_footer_model_label_at_15pct_no_override()
+fn test_render_footer_model_label_at_10pct_no_override()
 {
   // a@x.com: non-current, alphabetically first → footer winner with sort::Name.
-  // son_util = 85.0 → sonnet_left = 15.0% — exactly at the 15% threshold.
+  // son_util = 90.0 → sonnet_left = 10.0% — exactly at the 10% threshold.
   let aq_a = AccountQuota
   {
     name                  : "a@x.com".to_string(),
@@ -604,7 +604,7 @@ fn test_render_footer_model_label_at_15pct_no_override()
     {
       five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
       seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
-      seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 85.0, resets_at : None } ),
+      seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 90.0, resets_at : None } ),
     } ),
     account               : None,
     host                  : String::new(),
@@ -665,25 +665,25 @@ fn test_render_footer_model_label_at_15pct_no_override()
     &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
     &ColsVisibility::default_set(), None, None, None, None, false,
   );
-  // Footer line 2: `Next (name) · a@x.com · sonnet · {metric}` — 15.0% left is NOT < 15%.
+  // Footer line 2: `Next (name) · a@x.com · sonnet · {metric}` — 10.0% left is NOT < 10%.
   assert!(
     output.contains( "· sonnet" ),
-    "FT-28 boundary: footer line 2 must show '· sonnet' when sonnet_left = 15.0% (not < 15%); got:\n{output}",
+    "FT-28 boundary: footer line 2 must show '· sonnet' when sonnet_left = 10.0% (not < 10%); got:\n{output}",
   );
 }
 
-/// FT-28 boundary — footer shows `model: opus` when `seven_day_sonnet` utilization = 85.1
-/// (~14.9% left, strictly below the 15% threshold).
+/// FT-28 boundary — footer shows `model: opus` when `seven_day_sonnet` utilization = 90.1
+/// (~9.9% left, strictly below the 10% threshold).
 ///
-/// Regression guard: both old (`< 20.0`) and new (`< 15.0`) code fire at 14.9% — opus must
+/// Regression guard: both old (`< 20.0`) and new (`< 10.0`) code fire at 9.9% — opus must
 /// appear before and after the fix. Ensures the fix doesn't break below-threshold behaviour.
 ///
 /// Spec: [`tests/docs/feature/09_token_usage.md` FT-28]
 #[ test ]
-fn test_render_footer_model_label_below_15pct_opus()
+fn test_render_footer_model_label_below_10pct_opus()
 {
   // a@x.com: non-current, alphabetically first → footer winner with sort::Name.
-  // son_util = 85.1 → sonnet_left ≈ 14.9% — strictly below 15% threshold.
+  // son_util = 90.1 → sonnet_left ≈ 9.9% — strictly below 10% threshold.
   let aq_a = AccountQuota
   {
     name                  : "a@x.com".to_string(),
@@ -695,7 +695,7 @@ fn test_render_footer_model_label_below_15pct_opus()
     {
       five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
       seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } ),
-      seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 85.1, resets_at : None } ),
+      seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 90.1, resets_at : None } ),
     } ),
     account               : None,
     host                  : String::new(),
@@ -756,10 +756,10 @@ fn test_render_footer_model_label_below_15pct_opus()
     &[ aq_cur, aq_a, aq_b ], SortStrategy::Name, None, PreferStrategy::Any,
     &ColsVisibility::default_set(), None, None, None, None, false,
   );
-  // Footer line 2: `Next (name) · a@x.com · opus · {metric}` — 14.9% left IS < 15%.
+  // Footer line 2: `Next (name) · a@x.com · opus · {metric}` — 9.9% left IS < 10%.
   assert!(
     output.contains( "· opus" ),
-    "FT-28 boundary: footer line 2 must show '· opus' when sonnet_left ≈ 14.9% (< 15%); got:\n{output}",
+    "FT-28 boundary: footer line 2 must show '· opus' when sonnet_left ≈ 9.9% (< 10%); got:\n{output}",
   );
 }
 

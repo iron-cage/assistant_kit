@@ -24,13 +24,13 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-16 | `trace::` with bad value exits 1 | AC-16 | Integration |
 | FT-17 | `touch::1` + fetch Err + expired `expiresAt` + `refresh::1` → refresh fails → exits 3; switch NOT executed | AC-17 | Integration (BUG-213 + BUG-230 MRE) |
 | FT-18 | `touch::1` + fetch Err + expired `expiresAt` + `refresh::0` → exits 3 immediately; no refresh attempt | AC-20 | Integration (BUG-230) |
-| FT-19 | Active account + 7d(Son) < 15% → model override fires after switch | AC-18 | Integration (BUG-238 MRE) |
+| FT-19 | Active account + 7d(Son) < 10% → model override fires after switch | AC-18 | Integration (BUG-238 MRE) |
 | FT-20 | `override_session_model_to_opus()` fires for shorthand `"sonnet"` input, writes `"opus"` | AC-18 | Unit (BUG-257 MRE) |
 | FT-21 | Post-subprocess re-fetch updates in-memory quota; failure preserves pre-subprocess data | AC-21 | Unit (BUG-288 MRE) |
 | FT-22 | `seven_day_sonnet = None` → override fires conservatively; writes "sonnet" (Fix BUG-311) | AC-18 | Unit (BUG-300 + BUG-311 MRE) |
 | FT-23 | model restored to sonnet when settings.json has "opus" and Sonnet quota sufficient (BUG-311 MRE) | AC-18 | Unit (BUG-311 MRE) |
 | FT-24 | `trace::1` + model override fires → `model override: opus→sonnet` trace line emitted | AC-19 | Unit (BUG-311) |
-| — | `trace::1` + model override fires → `model override: sonnet→opus` trace line emitted | AC-19 | Live-only (requires `trace::1` + `7d(Son) < 15%` + Sonnet model in snapshot) |
+| — | `trace::1` + model override fires → `model override: sonnet→opus` trace line emitted | AC-19 | Live-only (requires `trace::1` + `7d(Son) < 10%` + Sonnet model in snapshot) |
 
 ### Test Case Index
 
@@ -59,7 +59,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-16 | trace:: in .account.use --help with default 0 | AC-16 | Help Output |
 | FT-17 | touch::1 + fetch Err + expired expiresAt + refresh::1 (default) → refresh fails → exits 3 | AC-17 | BUG-213 + BUG-230 MRE |
 | FT-18 | touch::1 + fetch Err + expired expiresAt + refresh::0 → exits 3 immediately, no refresh attempt | AC-20 | BUG-230 |
-| FT-19 | active account + 7d(Son) < 15% → model override sonnet→opus after switch | AC-18 | BUG-238 MRE |
+| FT-19 | active account + 7d(Son) < 10% → model override sonnet→opus after switch | AC-18 | BUG-238 MRE |
 | FT-21 | post-subprocess re-fetch updates in-memory quota; failure preserves pre-subprocess data | AC-21 | BUG-288 MRE |
 | FT-23 | model restored to sonnet when settings.json has "opus" and Sonnet quota sufficient | AC-18 | BUG-311 MRE |
 | FT-24 | trace::1 with Sonnet quota sufficient → opus→sonnet trace line emitted | AC-19 | BUG-311 |
@@ -271,13 +271,13 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 ---
 
-### FT-19: Active account + 7d(Son) < 15% — model override sonnet→opus fires after switch (BUG-238 MRE)
+### FT-19: Active account + 7d(Son) < 10% — model override sonnet→opus fires after switch (BUG-238 MRE)
 
-- **Given:** Account `alice@home.com` saved with valid OAuth token and an ACTIVE 5h window (`five_hour.resets_at` is set). `seven_day_sonnet.utilization > 85%` (remaining < 15%). The account's `{name}.json` contains `{"model": "sonnet"}` (shorthand — the production convention Claude Code uses in `settings.json`; see BUG-257).
+- **Given:** Account `alice@home.com` saved with valid OAuth token and an ACTIVE 5h window (`five_hour.resets_at` is set). `seven_day_sonnet.utilization > 90%` (remaining < 10%). The account's `{name}.json` contains `{"model": "sonnet"}` (shorthand — the production convention Claude Code uses in `settings.json`; see BUG-257).
 - **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
 - **Then:** Exits 0. `switched to 'alice@home.com'` on stdout. After the switch, `~/.claude/settings.json` contains `"model": "opus"` (shorthand — BUG-257 write-side fix; `override_session_model_to_opus()` now writes the shorthand convention). The BUG-225 Sonnet→Opus override fires even though the account is already active (no subprocess spawned, but model override still applied). Before the BUG-238 fix: model stayed at `"sonnet"` because `pre_switch_touch_ctx()` returned `None` for active accounts, skipping the override.
 - **Exit:** 0
-- **Source fn:** `mre_bug238_model_override_fires_for_active_account` (in `src/usage/api_tests.rs`) — fixture and assertion updated to shorthand as part of TSK-261 (BUG-257 fix)
+- **Source fn:** `mre_bug238_model_override_fires_for_active_account` (in `tests/usage/api_tests_a.rs`) — fixture and assertion updated to shorthand as part of TSK-261 (BUG-257 fix)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-18](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -304,7 +304,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
   - Second scenario (regression guard): same setup with `seven_day_sonnet = Some(PeriodUsage { utilization: 90.0, ... })` (10% left) — settings.json updated to `"opus"`. Confirms `Some`+exhausted path still fires correctly.
 - **Exit:** n/a (unit test)
 - **Note (BUG-300):** `map_or(0.0, ...)` caused `None` to fire unconditional Opus override. Fixed by `if let Some(ref sonnet)` guard. **(BUG-311):** the `else` (tier-absent) now conservatively calls `override_session_model_to_sonnet()` — absent tier means unknown, not exhausted. Assertion updated: "sonnet" written (not "unchanged") because `override_session_model_to_sonnet()` normalizes `"claude-sonnet-4-6"` → `"sonnet"`.
-- **Source fn:** `mre_bug300_model_override_absent_sonnet_no_override` (in `src/usage/api_tests.rs`) — assertion updated post-BUG-311 to check "sonnet" written, "opus" absent.
+- **Source fn:** `mre_bug300_model_override_absent_sonnet_no_override` (in `tests/usage/api_tests_a.rs`) — assertion updated post-BUG-311 to check "sonnet" written, "opus" absent.
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-18](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -317,19 +317,19 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When (failure path):** Re-fetch returns `Err(...)`.
 - **Then (failure path):** Pre-subprocess quota data is preserved; function returns without panicking or aborting the switch. The re-fetch failure is non-aborting.
 - **Exit:** n/a (unit test — no exit code)
-- **Source fn:** `mre_bug288_post_switch_touch_refetch_updates_quota` (structural + no-token failure path) + `it_apply_post_switch_touch_cred_file_absent_skips_refetch` (file-absent failure path) — both in `src/usage/api_tests.rs`
+- **Source fn:** `mre_bug288_post_switch_touch_refetch_updates_quota` (structural + no-token failure path) + `it_apply_post_switch_touch_cred_file_absent_skips_refetch` (file-absent failure path) — both in `tests/usage/api_tests_b.rs`
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-21](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
 
 ### FT-23: Model restored to "sonnet" when settings.json has "opus" and Sonnet quota sufficient (BUG-311 MRE)
 
-- **Given (unit test):** `apply_model_override` called with quota data where `seven_day_sonnet = Some(PeriodUsage { utilization: 4.0 })` (96% left — well above 15% threshold). `~/.claude/settings.json` pre-seeded with `"model": "opus"` (stale from previous exhaustion cycle).
+- **Given (unit test):** `apply_model_override` called with quota data where `seven_day_sonnet = Some(PeriodUsage { utilization: 4.0 })` (96% left — well above 10% threshold). `~/.claude/settings.json` pre-seeded with `"model": "opus"` (stale from previous exhaustion cycle).
 - **When:** `apply_model_override(&data, &paths, false, "account.use", "alice@home.com")`.
 - **Then:** `~/.claude/settings.json` contains `"model": "sonnet"`. The `"opus"` stale value is overwritten. `override_session_model_to_sonnet()` returns `true`.
 - **Exit:** n/a (unit test)
 - **Note:** Reproduces the user-visible symptom of BUG-311: after `.account.use` switches to an account with plenty of Sonnet quota, the `.usage` footer still showed `opus` because `apply_model_override()` had no else-branch to restore `"sonnet"`.
-- **Source fn:** `mre_bug311_model_restored_to_sonnet_when_opus_and_quota_sufficient` (in `src/usage/api_tests.rs`)
+- **Source fn:** `mre_bug311_model_restored_to_sonnet_when_opus_and_quota_sufficient` (in `tests/usage/api_tests_a.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-18](../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -340,5 +340,5 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When:** `apply_model_override(&data, &paths, true, "account.use", "alice@home.com")`.
 - **Then:** Stderr contains `... · account.use  alice@home.com  model override: opus→sonnet (7d(Son) left=96%)`. Settings.json updated to `"sonnet"`.
 - **Exit:** n/a (unit test)
-- **Source fn:** `t09_model_override_trace_opus_to_sonnet` (in `src/usage/api_tests.rs`)
+- **Source fn:** `t09_model_override_trace_opus_to_sonnet` (in `tests/usage/api_tests_a.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-19](../../../docs/feature/027_account_use_post_switch_touch.md)

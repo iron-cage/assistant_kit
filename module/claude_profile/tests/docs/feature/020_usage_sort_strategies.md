@@ -19,6 +19,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-11 | h-exhausted + `7d(Son) ≤ 5%` → HExhausted under `prefer::any` (BUG-299) | AC-12 | Group Boundary |
 | FT-12 | `prefer::son` + absent Sonnet tier → `prefer_weekly = 0.0` (not 100.0) | AC-05 | Absent-Sonnet fix |
 | FT-13 | `sort::` drives footer recommendation — top eligible shown in `Next (<strategy>)` line; footer uses `·`-delimited 2-line format | AC-09 | Recommendation + Footer |
+| FT-14 | Green account with divergent `7d/7d_son` passes eligibility gate — model-agnostic `seven_day_left` (BUG-324) | AC-09 | Eligibility + BUG-324 |
 | — | `sort::` + `live::1` stable within each cycle | AC-12 | Live-only (requires `live::1` + real credentials) |
 
 ### Test Case Index
@@ -38,8 +39,9 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-11 | h-exhausted account with 7d_son ≤ 5% lands in HExhausted (not Red) under prefer::any (BUG-299) | AC-12 | Group Boundary |
 | FT-12 | prefer::son + absent Sonnet tier → prefer_weekly = 0.0 (not 100.0) | AC-05 | Absent-Sonnet fix |
 | FT-13 | sort:: drives footer recommendation — top eligible in Next line; `·`-delimited format | AC-09 | Recommendation + Footer |
+| FT-14 | Green account with divergent 7d/7d_son passes eligibility gate (BUG-324) | AC-09 | Eligibility + BUG-324 |
 
-**Total:** 13 FT cases
+**Total:** 14 FT cases
 
 ---
 
@@ -153,7 +155,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Renews, None, PreferStrategy::Any, now)`
 - **Then:** Order: `soon_renew@test.com` (soonest renewal), `later_renew@test.com`, `no_renew@test.com` (no data, placed last). Default `desc::0`.
 - **Exit:** n/a (unit test — index assertion)
-- **Source fn:** `test_sort_renews_ascending` (in `src/usage/sort_next_tests.rs`)
+- **Source fn:** `test_sort_renews_ascending` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-02](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -175,10 +177,10 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 - **Given:** An `AccountQuota` with `seven_day_sonnet = None` (no Sonnet tier) and `seven_day_util=30%` (7d_left=70%). `prefer::son` in effect.
 - **When:** `prefer_weekly(aq, PreferStrategy::Sonnet)` is called (internally delegates to `relevant_quotas(aq, Sonnet).1`).
-- **Then:** Returns `0.0`. Absent Sonnet tier under `prefer::son` = unknown Sonnet capacity, not 100%. The eligibility gate `prefer_weekly ≤ 5.0` fires (0.0 ≤ 5.0) → account is ineligible for next-account recommendation.
+- **Then:** Returns `0.0`. Absent Sonnet tier under `prefer::son` = unknown Sonnet capacity, not 100%. `prefer_weekly = 0.0` causes the account to sort last in within-group tiebreak. Eligibility is model-agnostic: determined by raw `seven_day_left`, not `prefer_weekly` (Fix BUG-324).
 - **Exit:** n/a (unit test — return value assertion)
 - **Note:** Phase 2 fix from Plan 019. Old code: `map_or(0.0, |p| p.utilization)` returned `100.0 - 0.0 = 100.0`, treating absent tier as fully available. Fix: `if let Some(ref son)` guard returns `0.0` when `seven_day_sonnet = None`.
-- **Source fn:** `test_relevant_quotas_son_no_sonnet` (in `src/usage/format_tests.rs`)
+- **Source fn:** `test_relevant_quotas_son_no_sonnet` (in `tests/usage/format_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-05](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -190,3 +192,17 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then:** Footer line 1 contains `Current · current@x.com · sonnet/low · 2/3` — identifies the `✓` account with session model/effort (passed-in `session_effort`, displayed as-is on the Current line) and valid/total count. Footer line 2 contains `Next (renew) · eligible@x.com · sonnet/high` — model-derived effort always shown unconditionally on the Next line (TSK-335 H3: `"high"` for Sonnet regardless of `session_effort`). `exhausted@x.com` is skipped (h-exhausted → ineligible). Both lines use `·` delimiters with column alignment.
 - **Exit:** n/a (unit test — string assertions on `render_text` output)
 - **Source:** [feature/020_usage_sort_strategies.md AC-09](../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### FT-14: Green account with divergent `7d/7d_son` passes eligibility gate — model-agnostic `seven_day_left` used (BUG-324)
+
+- **Given:** Two `AccountQuota` structs:
+  - `aaa_target@test.com`: `five_hour_util=0%` (5h_left=100%), `seven_day_util=69%` (7d_left=31%), `seven_day_sonnet_util=100%` (7d_son_left=0%). Green (both quotas above status-group thresholds). Non-current, non-active.
+  - `current@test.com`: `is_current=true` — forces selection of `aaa_target@test.com`.
+- **When:** `find_next_for_strategy(&accounts, SortStrategy::Renew, PreferStrategy::Any, now, false)` — gate 7 evaluates eligibility.
+- **Then:** Returns `Some(0)` — `aaa_target@test.com` is eligible. Gate 7 uses `seven_day_left(aq) = 31.0 > 5.0` (model-agnostic raw 7d quota). Before Fix(BUG-324): `prefer_weekly(aq, Any) = min(31.0, 0.0) = 0.0 ≤ 5.0` — gate would fire and block this green account.
+- **Exit:** n/a (unit test — return value assertion)
+- **Note:** Same class as BUG-299 (fixed in `sort.rs` status groups, left in `sort_next.rs` eligibility gate). Eligibility is model-agnostic; `apply_model_override()` handles model selection post-rotation.
+- **Source fn:** `mre_bug324_green_account_eligible_when_7d_son_exhausted` (in `tests/usage/sort_next_tests.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-09](../../../docs/feature/020_usage_sort_strategies.md); BUG-324

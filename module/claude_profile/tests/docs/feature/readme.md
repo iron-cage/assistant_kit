@@ -86,7 +86,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 017_token_refresh | [017_token_refresh.md](017_token_refresh.md) | FT-01 … FT-25 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](018_live_monitor.md) | FT-01 … FT-09 | ✅ |
 | 019_account_relogin | [019_account_relogin.md](019_account_relogin.md) | FT-01 … FT-11 | ✅ |
-| 020_usage_sort_strategies | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | FT-01 … FT-13 | ✅ |
+| 020_usage_sort_strategies | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | FT-01 … FT-14 | ✅ |
 | 021_extended_snapshot_fields | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | FT-01 … FT-09 | ✅ |
 | 022_org_identity_snapshot | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | FT-01 … FT-11 | ✅ |
 | ~~023_next_account_strategies~~ | ~~[023_next_account_strategies.md](023_next_account_strategies.md)~~ | ~~FT-01 … FT-19~~ | ⛔ DEPRECATED |
@@ -105,10 +105,10 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 036_account_ownership | [036_account_ownership.md](036_account_ownership.md) | FT-01 … FT-25 | ✅ |
 | 037_accounts_usage_param_unification | [037_accounts_usage_param_unification.md](037_accounts_usage_param_unification.md) | FT-01 … FT-21 | ✅ |
 | 038_usage_strategy_rotate | [038_usage_strategy_rotate.md](038_usage_strategy_rotate.md) | FT-01 … FT-11, CC-01 … CC-07 | ✅ |
-| 039_decision_algorithms | [039_decision_algorithms.md](039_decision_algorithms.md) | FT-01 … FT-12 | ✅ |
+| 039_decision_algorithms | [039_decision_algorithms.md](039_decision_algorithms.md) | FT-01 … FT-13 | ✅ |
 | 040_quota_measurement_history | [040_quota_measurement_history.md](040_quota_measurement_history.md) | FT-01 … FT-18 | ✅ |
 | 061_solo_token_conservation | [061_solo_token_conservation.md](061_solo_token_conservation.md) | FT-01 … FT-12 | ✅ |
-| 062_unified_session_config | [062_unified_session_config.md](062_unified_session_config.md) | FT-01 … FT-18, EC-01 | ✅ |
+| 062_unified_session_config | [062_unified_session_config.md](062_unified_session_config.md) | FT-01 … FT-20, EC-01 | ✅ |
 | 063_explicit_ownership_claim | [063_explicit_ownership_claim.md](063_explicit_ownership_claim.md) | FT-01 … FT-12 | ✅ |
 | 064_active_marker_and_owner_redesign | [064_active_marker_and_owner_redesign.md](064_active_marker_and_owner_redesign.md) | FT-01 … FT-19 | ✅ |
 | 065_assignee_param_redesign | [065_assignee_param_redesign.md](065_assignee_param_redesign.md) | FT-01 … FT-13 | ✅ |
