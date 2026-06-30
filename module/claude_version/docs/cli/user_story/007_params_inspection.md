@@ -1,62 +1,47 @@
-# User Story 007: Params Inspection
+# Inspect all Claude Code parameters and their current values
 
-### Scope
+**Persona:** developer (config inspector)
+**Goal:** Discover all Claude Code parameters, see their current effective values and sources, and identify which are persistently configurable vs. per-invocation only.
+**Benefit:** Diagnoses unexpected behavior from env var or config overrides; reveals all configuration options in one view.
+**Priority:** Medium
 
-- **Purpose**: Document the persona-goal scenario for parameter discovery and current-value inspection.
-- **Responsibility**: User story for discovering what Claude Code parameters exist, how to set them, and what their current effective values are.
-- **In Scope**: `.params` usage scenarios for discovery, diagnosis, and scripting.
-- **Out of Scope**: Config modification (→ [006_config_management.md](006_config_management.md)), version management (→ [002_version_upgrade.md](002_version_upgrade.md)).
+### Acceptance Criteria
 
-### Persona
+- [ ] `clv.params` shows all known catalog parameters with source annotations in a single view.
+- [ ] `clv.params kind::config` shows only parameters with a settings.json config key form.
+- [ ] `clv.params kind::env` shows only parameters with an env var form, with current env values.
+- [ ] `clv.params key::model` shows all forms (CLI, env, config key), current env value, current config value, default, and effective value with source.
+- [ ] `clv.params key::bash_timeout` shows env-only form with no config key entry.
+- [ ] `clv.params format::json` outputs valid parseable JSON with the same data as text mode.
+- [ ] `clv.params v::0` outputs values only with no form annotations.
+- [ ] `clv.params v::2` outputs full descriptions alongside each parameter.
+- [ ] `clv.params kind::invalid` exits 1 with a message indicating valid values are `config` or `env`.
+- [ ] `clv.params key::nonexistent_param` exits 2 indicating the key is not in the params catalog.
 
-**Developer (config inspector)** — a developer who wants to understand how Claude Code is currently configured, discover what parameters exist, and diagnose unexpected behavior caused by env var or config file overrides.
+### Referenced Commands
 
-### Goal
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.params`](../command/params.md#command--14-params) | Primary command for parameter discovery and inspection |
 
-Quickly discover all Claude Code parameters, see their current effective values and where those values come from, and identify which parameters can be persistently configured vs. which only apply per-invocation.
+### Referenced Formats
 
-### Scenario
+| # | Format | Role |
+|---|--------|------|
+| 1 | [text](../format/01_text.md) | Default human-readable param catalog output |
+| 2 | [json](../format/02_json.md) | Machine-readable param export for scripting |
 
-```
-As a developer managing Claude Code across machines,
-I want to inspect all configuration parameters and their current values in one place,
-So that I can diagnose unexpected behavior, discover configuration options I didn't know about,
-and understand the priority order (CLI > env > project config > user config > default).
-```
+### Referenced Parameter Groups
 
-### Primary Flow
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 1 | [Output Control](../param_group/01_output_control.md) | Controls verbosity and format of params output |
 
-```sh
-# 1. Discover all parameters and current observable state
-clv.params
+### Referenced Parameters
 
-# 2. Investigate a specific parameter — see all its forms and effective value
-clv.params key::model
-
-# 3. See only settings.json config params (what .config manages)
-clv.params kind::config
-
-# 4. See only env-var params — check if any unexpected overrides are active
-clv.params kind::env
-
-# 5. Get machine-readable output for scripting
-clv.params format::json | jq '.[] | select(.env_value != null)'
-```
-
-### Alternate Flows
-
-**Diagnosing an unexpected model:** User runs `claude` and it uses a different model than expected. Running `clv.params key::model` shows `CLAUDE_MODEL` is set in the env, overriding the config — the env layer wins.
-
-**Understanding persistence:** User wants to know if `CLAUDE_CODE_BASH_TIMEOUT` can be set permanently. Running `clv.params key::bash_timeout` shows it is env-only — no config key form exists. Must be set in shell profile, not via `.config`.
-
-### Acceptance Tests
-
-See [tests/docs/cli/user_story/07_params_inspection.md](../../tests/docs/cli/user_story/07_params_inspection.md).
-
-### Cross-References
-
-| Type | File | Responsibility |
-|------|------|----------------|
-| command | [command/params.md](../command/params.md) | `.params` command reference |
-| feature | [../../feature/007_params_command.md](../../feature/007_params_command.md) | Full behavioral spec with ACs |
-| user_story | [006_config_management.md](006_config_management.md) | Config read/write user story |
+| # | Parameter | Role |
+|---|-----------|------|
+| 1 | [`key::`](../param/06_key.md) | Select specific param for single-param mode |
+| 2 | [`format::`](../param/05_format.md) | Selects text or JSON rendering |
+| 3 | [`v::`](../param/04_v.md) | Controls output detail level |
+| 4 | [`kind::`](../param/13_kind.md) | Filters show-all to config or env params only |

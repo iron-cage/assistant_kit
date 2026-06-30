@@ -82,5 +82,4 @@ Both are valid invocations; the `[dry-run]` prefix presence differs.
 |----------|------|
 | `tc300_version_install_dry_shows_prefix` | `integration/mutation_commands_test.rs` |
 | `tc330_settings_set_dry_preview_no_change` | `integration/mutation_commands_test.rs` |
-| `tc311_processes_kill_dry_no_processes` | `integration/mutation_commands_test.rs` |
 | `tc303_version_install_dry_wins_over_force` | `integration/mutation_commands_test.rs` |

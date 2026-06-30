@@ -40,9 +40,18 @@ clv .config key::theme unset::1
 
 ### Referenced Commands
 
-| # | Command | Membership |
-|---|---------|-----------|
-| 1 | [`.config`](../command/config.md#command--13-config) | Full (`key::`, `value::`, `scope::`, `unset::`) |
+| # | Command | Membership | Excluded Params |
+|---|---------|-----------|----------------|
+| 1 | [`.config`](../command/config.md#command--13-config) | Full | — |
+
+### Referenced Parameters
+
+| # | Parameter | Type | Default | Role in Group |
+|---|-----------|------|---------|---------------|
+| 1 | [`key::`](../param/06_key.md) | [`ConfigKey`](../type/07_config_key.md) | (required) | Config key to read or write |
+| 2 | [`value::`](../param/07_value.md) | [`SettingsValue`](../type/05_settings_value.md) | (required) | Value to write (type-inferred) |
+| 3 | [`scope::`](../param/11_scope.md) | [`ConfigScope`](../type/06_config_scope.md) | user | Write target: user or project |
+| 4 | [`unset::`](../param/12_unset.md) | bool | false | Delete key from target scope |
 
 ### Referenced User Stories
 

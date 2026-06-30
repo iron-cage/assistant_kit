@@ -31,13 +31,20 @@ clv .processes.kill dry::1 force::1  # preview forced kill
 
 ### Referenced Commands
 
-| # | Command | Membership |
-|---|---------|-----------|
-| 1 | [`.version.install`](../command/version.md#command--4-versioninstall) | Full (`dry::`, `force::`) |
-| 2 | [`.version.guard`](../command/version.md#command--5-versionguard) | Full (`dry::`, `force::`) |
-| 3 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Full (`dry::`, `force::`) |
-| 4 | [`.settings.set`](../command/settings.md#command--11-settingsset) | Partial (`dry::` only) |
-| 5 | [`.config`](../command/config.md#command--13-config) | Partial (`dry::` only) |
+| # | Command | Membership | Excluded Params |
+|---|---------|-----------|----------------|
+| 1 | [`.version.install`](../command/version.md#command--4-versioninstall) | Full | — |
+| 2 | [`.version.guard`](../command/version.md#command--5-versionguard) | Full | — |
+| 3 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Full | — |
+| 4 | [`.settings.set`](../command/settings.md#command--11-settingsset) | Partial | `force::` |
+| 5 | [`.config`](../command/config.md#command--13-config) | Partial | `force::` |
+
+### Referenced Parameters
+
+| # | Parameter | Type | Default | Role in Group |
+|---|-----------|------|---------|---------------|
+| 1 | [`dry::`](../param/02_dry.md) | bool | false | Preview without executing |
+| 2 | [`force::`](../param/03_force.md) | bool | false | Bypass safety guards |
 
 ### Referenced User Stories
 

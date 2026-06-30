@@ -32,8 +32,15 @@ clv .settings.set key::rate value::3.14          # -> 3.14 (number)
 clv .settings.set key::special value::NaN        # -> "NaN" (string)
 ```
 
+### Referenced Commands
+
+| # | Command | Via Parameter |
+|---|---------|--------------|
+| 1 | [`.settings.set`](../command/settings.md#command--11-settingsset) | `value::` |
+| 2 | [`.config`](../command/config.md#command--13-config) | `value::` |
+
 ### Referenced Parameters
 
-| # | Parameter |
-|---|-----------|
-| 1 | [`value::`](../param/07_value.md) |
+| # | Parameter | Commands |
+|---|-----------|---------|
+| 1 | [`value::`](../param/07_value.md) | 2 |

@@ -82,4 +82,4 @@ This pattern does not apply when tracking `latest` is desired — for `latest`, 
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/pattern/01_version_lock.md](../../tests/docs/pattern/01_version_lock.md) | Pattern test spec |
+| [tests/docs/pattern/001_version_lock.md](../../tests/docs/pattern/001_version_lock.md) | Pattern test spec |

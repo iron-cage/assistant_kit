@@ -10,7 +10,7 @@
 ### Rendering Rules
 
 - **Encoding:** Standard JSON; all strings properly escaped.
-- **Top-level shape:** Object `{}` for single-result commands; array `[]` for list commands (`.processes`, `.version.list`, `.version.history`).
+- **Top-level shape:** Object `{}` for single-result commands; array `[]` for list commands (`.processes`, `.version.list`, `.version.history`, `.params` show-all mode). Note: `.params` uses array for show-all and object for single-param mode — shape is mode-dependent.
 - **Verbosity interaction:** `v::0` omits optional fields; `v::1` includes standard fields (default); `v::2` includes all available fields including diagnostics.
 - **Required keys not stripped:** Even at `v::0`, the primary payload key is always present.
 - **Case-sensitive:** The format value is `json` (lowercase only); `JSON` or `Json` are rejected with exit 1.
@@ -34,22 +34,36 @@ Field names are stable snake_case JSON keys. Common fields:
 | `.version.history` | `[].version` | string | Array of release objects |
 | `.version.history` | `[].date` | string | ISO 8601 |
 | `.version.history` | `[].summary` | string | One-line description |
+| `.params` (show-all) | `[].name` | string | Array of param objects |
+| `.params` (show-all) | `[].cli` | string \| null | CLI flag form or null |
+| `.params` (show-all) | `[].env` | string \| null | Env var name or null |
+| `.params` (show-all) | `[].config` | string \| null | Config key name or null |
+| `.params` (show-all) | `[].effective_value` | string | Resolved effective value |
+| `.params` (show-all) | `[].source` | string | Source of effective value: `env`, `config`, `default`, or `absent` |
+| `.params` (single) | `name` | string | Param name |
+| `.params` (single) | `cli` | string \| null | CLI flag form or null |
+| `.params` (single) | `env` | string \| null | Env var name or null |
+| `.params` (single) | `config` | string \| null | Config key name or null |
+| `.params` (single) | `default` | string \| null | Default value or null |
+| `.params` (single) | `effective_value` | string | Resolved effective value |
+| `.params` (single) | `source` | string | Source of effective value: `env`, `config`, `default`, or `absent` |
 
 ### Referenced Commands
 
-| # | Command |
-|---|---------|
-| 1 | [`.status`](../command/root.md#command--2-status) |
-| 2 | [`.version.show`](../command/version.md#command--3-versionshow) |
-| 3 | [`.version.install`](../command/version.md#command--4-versioninstall) |
-| 4 | [`.version.guard`](../command/version.md#command--5-versionguard) |
-| 5 | [`.version.list`](../command/version.md#command--6-versionlist) |
-| 6 | [`.processes`](../command/processes.md#command--7-processes) |
-| 7 | [`.processes.kill`](../command/processes.md#command--8-processeskill) |
-| 8 | [`.settings.show`](../command/settings.md#command--9-settingsshow) |
-| 9 | [`.settings.get`](../command/settings.md#command--10-settingsget) |
-| 10 | [`.version.history`](../command/version.md#command--12-versionhistory) |
-| 11 | [`.config`](../command/config.md#command--13-config) |
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.status`](../command/root.md#command--2-status) | Machine-readable structured output |
+| 2 | [`.version.show`](../command/version.md#command--3-versionshow) | Machine-readable structured output |
+| 3 | [`.version.install`](../command/version.md#command--4-versioninstall) | Machine-readable structured output |
+| 4 | [`.version.guard`](../command/version.md#command--5-versionguard) | Machine-readable structured output |
+| 5 | [`.version.list`](../command/version.md#command--6-versionlist) | Machine-readable structured output |
+| 6 | [`.processes`](../command/processes.md#command--7-processes) | Machine-readable structured output |
+| 7 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Machine-readable structured output |
+| 8 | [`.settings.show`](../command/settings.md#command--9-settingsshow) | Machine-readable structured output |
+| 9 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Machine-readable structured output |
+| 10 | [`.version.history`](../command/version.md#command--12-versionhistory) | Machine-readable structured output |
+| 11 | [`.config`](../command/config.md#command--13-config) | Machine-readable structured output |
+| 12 | [`.params`](../command/params.md#command--14-params) | Machine-readable structured output |
 
 ### Referenced User Stories
 
@@ -61,3 +75,4 @@ Field names are stable snake_case JSON keys. Common fields:
 | 4 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
 | 5 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
 | 6 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |
+| 7 | [007 Params Inspection](../user_story/007_params_inspection.md) | Developer (config inspector) |

@@ -12,4 +12,5 @@ Claude Code version manager: install, upgrade, and session lifecycle.
 | `Cargo.toml` | Crate manifest |
 | `unilang.commands.yaml` | YAML command metadata for all 12 manager commands (not aggregated by build.rs) |
 | `changelog.md` | Notable changes by version |
+| `runbox/` | Container runner integration scripts and config |
 | `verb/` | Shell scripts for each `do` protocol verb. |

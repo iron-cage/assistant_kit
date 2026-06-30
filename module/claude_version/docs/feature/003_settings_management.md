@@ -58,4 +58,4 @@
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/feature/03_settings_management.md](../../tests/docs/feature/03_settings_management.md) | Feature test spec |
+| [tests/docs/feature/003_settings_management.md](../../tests/docs/feature/003_settings_management.md) | Feature test spec |

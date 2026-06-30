@@ -6,7 +6,7 @@ Edge case coverage for the `format::` parameter. See [param/readme.md](../../../
 
 - **Purpose**: Edge case tests for the `format::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `format::`.
-- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`, `.config`, `.params`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -33,10 +33,11 @@ Edge case coverage for the `format::` parameter. See [param/readme.md](../../../
 | EC-8 | `format::csv` → exit 1 | Invalid |
 | EC-9 | `format::` only for output-returning commands | Command Scope |
 | EC-10 | JSON output always starts with `{` or `[` depending on command | Structure |
+| EC-20 | `.params format::json` → JSON array; each entry has `name` field | Explicit json |
 
 ## Test Coverage Summary
 
-- Explicit json: 8 tests
+- Explicit json: 9 tests
 - Type Fidelity: 1 test
 - Invalid: 3 tests
 - Invalid (case-sensitive): 2 tests
@@ -46,7 +47,7 @@ Edge case coverage for the `format::` parameter. See [param/readme.md](../../../
 - Command Scope: 1 test
 - JSON Structure: 1 test
 
-**Total:** 19 edge cases
+**Total:** 20 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (`format::json` → JSON output, exit 0) ↔ EC-6 (absent → `format::text` output, exit 0)
 
@@ -242,6 +243,16 @@ Edge case coverage for the `format::` parameter. See [param/readme.md](../../../
 
 ---
 
+### EC-20: `.params format::json` → JSON array with param field structure
+
+- **Given:** `HOME=<tmp>` (no settings.json)
+- **When:** `clv .params format::json`
+- **Then:** exit 0; stdout is valid JSON starting with `[`; each element has at minimum a `name` field; array structure (not object) distinguishes it from single-result commands
+- **Exit:** 0
+- **Source:** [command/params.md](../../../../docs/cli/command/params.md)
+
+---
+
 ### Source Functions
 
 | Function | File |
@@ -268,3 +279,4 @@ Edge case coverage for the `format::` parameter. See [param/readme.md](../../../
 | `format_ec6_absent_defaults_to_text` | `cli_args_test.rs` |
 | `format_ec7_text_explicit_same_as_absent` | `cli_args_test.rs` |
 | `format_ec8_csv_exits_1` | `cli_args_test.rs` |
+| `format_ec20_params_format_json_array` | ⏳ `integration/format_param_test.rs` |

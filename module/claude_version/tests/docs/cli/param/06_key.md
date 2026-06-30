@@ -6,7 +6,7 @@ Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../
 
 - **Purpose**: Edge case tests for the `key::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `key::`.
-- **Commands:** `.settings.get`, `.settings.set`
+- **Commands:** `.settings.get`, `.settings.set`, `.config`, `.params`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -21,7 +21,7 @@ Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../
 | EC-11 | Without `key::` on `.settings.set` → error mentions `key::` | Absent (required) |
 | EC-4 | `key::""` (empty key) on `.settings.set` → exit 1 | Empty Value |
 | EC-5 | `key::` (empty value) on `.settings.get` → exit 1 | Empty Value |
-| EC-6 | `key::` only accepted by `.settings.get` and `.settings.set` | Command Scope |
+| EC-6 | `key::` rejected by commands that don't declare it (e.g., `.status`) | Command Scope |
 | EC-7 | `key::a b c` (key with spaces) → behavior defined | Special Characters |
 | EC-8 | `key::foo.bar` (dot in key name) → stored as given | Special Characters |
 | EC-9 | `key::foo bar` (space in key) → stored as given | Special Characters |
@@ -92,7 +92,7 @@ Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../
 
 ---
 
-### EC-6: `key::` only for `.settings.get` and `.settings.set`
+### EC-6: `key::` rejected by commands that don't declare it (e.g., `.status`)
 
 - **Given:** clean environment
 - **When:** `clv .status key::foo`

@@ -627,3 +627,66 @@
     - ".config key::theme unset::1 scope::local"
     - ".config format::json"
   auto_help_enabled: true
+
+- name: ".params"
+  namespace: ""
+  description: "Inspect Claude Code params: forms, current values, defaults"
+  hint: "Inspect Claude Code parameter catalog"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "info", "config"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "key"
+      kind: "String"
+      description: "Specific param name for single-param mode"
+      hint: "Param name (e.g. model)"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "kind"
+      kind: "String"
+      description: "Filter to one param kind: config or env"
+      hint: "Param kind filter"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level (0=values only, 1=forms+values)"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".params"
+    - ".params key::model"
+    - ".params kind::config"
+    - ".params kind::env"
+    - ".params format::json"
+    - ".params v::0"
+  auto_help_enabled: true
