@@ -29,8 +29,25 @@ clv .status v::2       # verbose
 clv .status v::3       # error: out of range
 ```
 
+### Referenced Commands
+
+| # | Command | Via Parameter |
+|---|---------|--------------|
+| 1 | [`.status`](../command/root.md#command--2-status) | `v::` |
+| 2 | [`.version.show`](../command/version.md#command--3-versionshow) | `v::` |
+| 3 | [`.version.install`](../command/version.md#command--4-versioninstall) | `v::` |
+| 4 | [`.version.guard`](../command/version.md#command--5-versionguard) | `v::` |
+| 5 | [`.version.list`](../command/version.md#command--6-versionlist) | `v::` |
+| 6 | [`.processes`](../command/processes.md#command--7-processes) | `v::` |
+| 7 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | `v::` |
+| 8 | [`.settings.show`](../command/settings.md#command--9-settingsshow) | `v::` |
+| 9 | [`.settings.get`](../command/settings.md#command--10-settingsget) | `v::` |
+| 10 | [`.version.history`](../command/version.md#command--12-versionhistory) | `v::` |
+| 11 | [`.config`](../command/config.md#command--13-config) | `v::` |
+| 12 | [`.params`](../command/params.md#command--14-params) | `v::` |
+
 ### Referenced Parameters
 
-| # | Parameter |
-|---|-----------|
-| 1 | [`v::`](../param/04_v.md) |
+| # | Parameter | Commands |
+|---|-----------|---------|
+| 1 | [`v::`](../param/04_v.md) | 12 |

@@ -83,4 +83,4 @@ Optional `version::SPEC` overrides the stored preference for a single invocation
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/feature/01_version_management.md](../../tests/docs/feature/01_version_management.md) | Feature test spec |
+| [tests/docs/feature/001_version_management.md](../../tests/docs/feature/001_version_management.md) | Feature test spec |

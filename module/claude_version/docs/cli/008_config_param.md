@@ -5,7 +5,7 @@
 - **Purpose**: Config file parameter reference for the clv CLI.
 - **Responsibility**: Document whether clv reads a config file and what parameters it supports.
 - **In Scope**: Any persistent configuration files read by clv at startup.
-- **Out of Scope**: CLI parameter reference (→ `param/`), environment variable reference (→ `env_param.md`).
+- **Out of Scope**: CLI parameter reference (→ `param/`), environment variable reference (→ `007_env_param.md`).
 
 ### Config File
 

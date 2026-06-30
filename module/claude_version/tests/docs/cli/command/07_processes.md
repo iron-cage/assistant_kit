@@ -106,8 +106,9 @@ The empty-processes path (`{"processes":[]}`) is explicitly covered by IT-4.
 - **When:**
   `clv .processes`
   **Expected:** Exit 0 with session listing or empty message.
-- **Then:** see spec
+- **Then:** exit 0; stdout contains zero or more Claude process entries or an empty message; stderr is empty
 - **Exit:** 0
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -117,8 +118,9 @@ The empty-processes path (`{"processes":[]}`) is explicitly covered by IT-4.
 - **When:**
   `clv .processes v::0`
   **Expected:** Exit 0.
-- **Then:** see spec
+- **Then:** exit 0; stdout contains bare PID values or empty message with no label decoration; stderr is empty
 - **Exit:** 0
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -128,8 +130,9 @@ The empty-processes path (`{"processes":[]}`) is explicitly covered by IT-4.
 - **When:**
   `clv .processes format::json`
   **Expected:** Exit 0; stdout starts with `{` and contains `"processes"`.
-- **Then:** JSON structure valid
+- **Then:** exit 0; stdout is valid JSON starting with `{` and containing a `"processes"` array key; stderr is empty
 - **Exit:** 0
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -139,8 +142,9 @@ The empty-processes path (`{"processes":[]}`) is explicitly covered by IT-4.
 - **When:**
   `clv .processes format::json`
   **Expected:** Exit 0; output contains `"processes"`.
-- **Then:** processes key present
+- **Then:** exit 0; stdout contains `{"processes":[]}` or a JSON object with an empty `"processes"` array (no processes guaranteed); stderr is empty
 - **Exit:** 0
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -150,8 +154,9 @@ The empty-processes path (`{"processes":[]}`) is explicitly covered by IT-4.
 - **When:**
   `clv .processes bogus::x`
   **Expected:** Exit 1.
-- **Then:** see spec
+- **Then:** exit 1; stderr or stdout contains "bogus" or "unknown parameter" error message; no process entries produced
 - **Exit:** 1
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -161,8 +166,9 @@ The empty-processes path (`{"processes":[]}`) is explicitly covered by IT-4.
 - **When:**
   `clv .processes format::xml`
   **Expected:** Exit 1.
-- **Then:** see spec
+- **Then:** exit 1; stderr or stdout references invalid format value "xml" or lists valid format options; no process entries produced
 - **Exit:** 1
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -172,8 +178,9 @@ The empty-processes path (`{"processes":[]}`) is explicitly covered by IT-4.
 - **When:**
   `clv .processes v::3`
   **Expected:** Exit 1.
-- **Then:** see spec
+- **Then:** exit 1; stderr or stdout references out-of-range verbosity value "3" or expected range; no process entries produced
 - **Exit:** 1
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -183,7 +190,7 @@ The empty-processes path (`{"processes":[]}`) is explicitly covered by IT-4.
 - **When:** `clv .processes`
 - **Then:** stdout is non-empty; stderr is empty
 - **Exit:** 0
-- **Source:** [command/readme.md](../../../../docs/cli/command/readme.md)
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 

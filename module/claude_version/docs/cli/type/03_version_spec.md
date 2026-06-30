@@ -29,8 +29,15 @@ clv .version.install version::1.2.3
 clv .version.install version::1.2.3.4  # error: 4-part rejected
 ```
 
+### Referenced Commands
+
+| # | Command | Via Parameter |
+|---|---------|--------------|
+| 1 | [`.version.install`](../command/version.md#command--4-versioninstall) | `version::` |
+| 2 | [`.version.guard`](../command/version.md#command--5-versionguard) | `version::` |
+
 ### Referenced Parameters
 
-| # | Parameter |
-|---|-----------|
-| 1 | [`version::`](../param/01_version.md) |
+| # | Parameter | Commands |
+|---|-----------|---------|
+| 1 | [`version::`](../param/01_version.md) | 2 |

@@ -26,6 +26,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - One-shot mode (`interval::0`) behavior is unchanged: errors still exit non-zero
   - Spec: FR-19 — TC-415 added to regression suite
 
+- **`verbosity::` parameter now range-validated** (issue-verbosity-bypass)
+  - Only `v::` alias was guarded; `verbosity::3` exited 0, `verbosity::-1` defaulted to 1
+  - Both forms now reject values outside 0–2 range
+
+- **`count::`/`interval::` overflow produces clear error** (issue-count-overflow)
+  - Values > i64::MAX triggered opaque overflow error in unilang
+  - Now validates as non-negative integer within i64 range before dispatch
+
+- **Idempotent install now persists preferred version** (issue-358)
+  - Early return on "already at target" bypassed `store_preferred_version()`
+  - Every exit path confirming version now persists spec + resolved fields
+
+- **Process kill reports signal delivery errors** (issue-kill-silent)
+  - `let _ = kill()` silently discarded errors; EPERM was invisible
+  - Errors now collected and reported; benign ESRCH filtered from final report
+
+- **`.settings.set` rejects empty value** (issue-settings-set-empty-value)
+  - Used lenient `require_string_arg` (allows empty) instead of `require_nonempty_string_arg`
+  - `value::` with empty string now exits 1 with error message
+
 ### Changed
 
 - **Binary renamed `claude_version` → `cm`** (task 036)

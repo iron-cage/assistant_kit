@@ -4,7 +4,7 @@
 
 - **Purpose**: Test case specifications for claude_version output format doc instances.
 - **Responsibility**: Per-format FM- test specs verifying output format rendering contracts.
-- **In Scope**: Format rendering rules, verbosity interaction, JSON validity, text label behavior (FM- prefix, min 4 cases per spec).
+- **In Scope**: Format rendering rules, verbosity interaction, JSON validity, text label behavior (FM- prefix, min 5 cases per spec).
 - **Out of Scope**: Format parameter parsing (→ `../param/05_format.md`), command integration tests (→ `../command/`).
 
 ### Overview Table

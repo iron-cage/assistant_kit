@@ -15,6 +15,7 @@
 //! | cli/format/02_json.md | FM-2 | `fm02_02_json_array_output` |
 //! | cli/format/02_json.md | FM-3 | `fm03_02_json_case_sensitive` |
 //! | cli/format/02_json.md | FM-4 | `fm04_02_json_v0_primary_key` |
+//! | cli/format/01_text.md | FM-5 | `fm05_01_text_explicit_format` |
 
 use crate::subprocess_helpers::{ assert_exit, run_clm, stderr, stdout };
 
@@ -129,4 +130,21 @@ fn fm04_02_json_v0_primary_key()
   let text = stdout( &out );
   assert!( text.trim_start().starts_with( '{' ), "format::json must produce JSON object: {text}" );
   assert!( text.contains( "\"version\"" ), "JSON at v::0 must still include version key: {text}" );
+}
+
+// ─── FM-5 (cli/format/01_text.md): explicit format::text accepted ─────────────
+
+// FM-5: .version.show format::text → labeled text output; structurally matches default format
+// Conditional: .version.show requires claude in PATH; skip content assertions if absent (exit 2).
+#[ test ]
+fn fm05_01_text_explicit_format()
+{
+  let out = run_clm( &[ ".version.show", "format::text" ] );
+  if out.status.code() == Some( 0 )
+  {
+    let text = stdout( &out );
+    assert!( text.contains( "Version:" ),            "format::text must include Version: label: {text}" );
+    assert!( !text.trim_start().starts_with( '{' ),  "format::text must not produce JSON object: {text}" );
+    assert!( !text.trim_start().starts_with( '[' ),  "format::text must not produce JSON array: {text}" );
+  }
 }

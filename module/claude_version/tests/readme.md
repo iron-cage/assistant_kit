@@ -14,6 +14,7 @@ Unit and integration tests for `claude_version`.
 | `lib_test.rs` | Library API: `register_commands()` callable and registers all commands |
 | `manual/` | Manual testing plan for scenarios requiring human verification |
 | `docs/` | Test planning documentation mirroring `docs/` structure |
+| `runbox/` | Container runner test environment (Dockerfile, config) |
 
 ## Integration Test Modules
 

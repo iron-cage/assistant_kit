@@ -107,6 +107,13 @@ clv.status v::2
 |---|-------|-----------|----------------|
 | 1 | [Output Control](../param_group/01_output_control.md) | Partial | `count::` |
 
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | [`v::`](../param/04_v.md) |
+| 2 | [`format::`](../param/05_format.md) |
+
 ### Related Commands
 
 | # | Command | Relationship |

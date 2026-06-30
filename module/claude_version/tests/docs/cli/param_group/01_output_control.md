@@ -7,7 +7,7 @@ See [param_group/readme.md](../../../../docs/cli/param_group/readme.md) and [004
 
 - **Purpose**: Interaction tests for the Output Control parameter group.
 - **Responsibility**: Cross-parameter semantics between `v::` and `format::`, precedence rules, and combined behavior.
-- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`, `.config`, `.params`
 - **In Scope**: Multi-parameter interactions within the group, override semantics, format-overrides-verbosity rule.
 - **Out of Scope**: Individual parameter edge cases (→ `../param/`), command behavior (→ `../command/`).
 
@@ -15,8 +15,8 @@ See [param_group/readme.md](../../../../docs/cli/param_group/readme.md) and [004
 
 | Parameter | Type | Default | Commands |
 |-----------|------|---------|---------|
-| `v::` | u8 (0-2) | 1 | 10 commands (all except `.settings.set`) |
-| `format::` | text\|json | text | 10 commands (all except `.settings.set`) |
+| `v::` | u8 (0-2) | 1 | 12 commands (all except `.settings.set`) |
+| `format::` | text\|json | text | 12 commands (all except `.settings.set`) |
 
 ## Behavioral Divergence Pair
 

@@ -108,6 +108,7 @@ IT-12 verifies array structure. IT-15 verifies `"value"` field presence.
 - **When:** `clv .version.list`
 - **Then:** exit 0; stdout contains 3 alias lines (`stable`, `latest`, `month`)
 - **Exit:** 0
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
 
 ---
 
@@ -117,6 +118,7 @@ IT-12 verifies array structure. IT-15 verifies `"value"` field presence.
 - **When:** `clv .version.list v::0`
 - **Then:** exit 0; each output line contains only an alias name; no ` — ` description separator present
 - **Exit:** 0
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
 
 ---
 
@@ -126,6 +128,7 @@ IT-12 verifies array structure. IT-15 verifies `"value"` field presence.
 - **When:** `clv .version.list` (run twice in succession)
 - **Then:** both stdout captures are byte-identical; output order and content do not change between runs
 - **Exit:** 0
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
 
 ---
 
@@ -135,6 +138,7 @@ IT-12 verifies array structure. IT-15 verifies `"value"` field presence.
 - **When:** `clv .version.list bogus::x`
 - **Then:** exit 1; stderr or stdout mentions unknown parameter
 - **Exit:** 1
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
 
 ---
 
@@ -144,6 +148,7 @@ IT-12 verifies array structure. IT-15 verifies `"value"` field presence.
 - **When:** `clv .version.list format::xml`
 - **Then:** exit 1; error message references format or valid values
 - **Exit:** 1
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
 
 ---
 
@@ -153,6 +158,7 @@ IT-12 verifies array structure. IT-15 verifies `"value"` field presence.
 - **When:** `clv .version.list v::3`
 - **Then:** exit 1; error references out-of-range verbosity value
 - **Exit:** 1
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
 
 ---
 
@@ -162,7 +168,7 @@ IT-12 verifies array structure. IT-15 verifies `"value"` field presence.
 - **When:** `clv .version.list format::json`
 - **Then:** stdout is valid JSON containing version alias entries
 - **Exit:** 0
-- **Source:** [command/readme.md](../../../../docs/cli/command/readme.md)
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
 
 ---
 
@@ -172,7 +178,7 @@ IT-12 verifies array structure. IT-15 verifies `"value"` field presence.
 - **When:** `clv .version.list` (run 3 times)
 - **Then:** All 3 stdout captures are byte-identical
 - **Exit:** 0
-- **Source:** [command/readme.md](../../../../docs/cli/command/readme.md)
+- **Source:** [command/version.md](../../../../docs/cli/command/version.md)
 
 ---
 

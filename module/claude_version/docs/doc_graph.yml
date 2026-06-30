@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_version
-  node_count: 27
-  edge_count: 60
-  component_count: 3
-  generated: 2026-06-16
+  node_count: 29
+  edge_count: 70
+  component_count: 2
+  generated: 2026-06-30
 
 nodes:
   - id: algorithm/001
@@ -22,7 +22,7 @@ nodes:
     entity: cli
 
   - id: cli/002
-    file: cli/dictionary.md
+    file: cli/002_dictionary.md
     label: Dictionary
     entity: cli
 
@@ -47,12 +47,12 @@ nodes:
     entity: cli
 
   - id: cli/007
-    file: cli/env_param.md
+    file: cli/007_env_param.md
     label: Environment Parameters
     entity: cli
 
   - id: cli/008
-    file: cli/config_param.md
+    file: cli/008_config_param.md
     label: Config Parameters
     entity: cli
 
@@ -62,12 +62,12 @@ nodes:
     entity: user_story
 
   - id: format/01
-    file: cli/format/01_text.md
+    file: cli/format/001_text.md
     label: Text Format
     entity: format
 
   - id: format/02
-    file: cli/format/02_json.md
+    file: cli/format/002_json.md
     label: JSON Format
     entity: format
 
@@ -99,6 +99,11 @@ nodes:
   - id: feature/006
     file: feature/006_config_command.md
     label: Config Command
+    entity: feature
+
+  - id: feature/007
+    file: feature/007_params_command.md
+    label: Params Command
     entity: feature
 
   - id: pattern/001
@@ -139,6 +144,11 @@ nodes:
   - id: user_story/005
     file: cli/user_story/005_version_pinning.md
     label: "US: Version Pinning"
+    entity: user_story
+
+  - id: user_story/007
+    file: cli/user_story/007_params_inspection.md
+    label: "US: Params Inspection"
     entity: user_story
 
 edges:
@@ -232,6 +242,23 @@ edges:
     to: feature/005
     via: features
 
+  # feature/007 Params Command
+  - from: feature/007
+    to: feature/006
+    via: features
+
+  - from: feature/007
+    to: feature/003
+    via: features
+
+  - from: feature/007
+    to: feature/005
+    via: features
+
+  - from: feature/007
+    to: algorithm/002
+    via: algorithms
+
   # algorithm/001 Settings Type Inference
   - from: algorithm/001
     to: feature/003
@@ -288,6 +315,19 @@ edges:
 
   - from: cli/001
     to: feature/003
+    via: features
+
+  - from: cli/001
+    to: feature/006
+    via: features
+
+  - from: cli/001
+    to: feature/007
+    via: features
+
+  # cli/007 Environment Parameters
+  - from: cli/007
+    to: feature/007
     via: features
 
   # cli/002 Dictionary
@@ -377,7 +417,17 @@ edges:
     to: user_story/006
     via: user_stories
 
-  # user_story/001-006 → commands
+  # format/01 Text Format → user_story/007
+  - from: format/01
+    to: user_story/007
+    via: user_stories
+
+  # format/02 JSON Format → user_story/007
+  - from: format/02
+    to: user_story/007
+    via: user_stories
+
+  # user_story/001-006,007 → commands
   - from: user_story/001
     to: cli/001
     via: commands
@@ -402,10 +452,14 @@ edges:
     to: cli/001
     via: commands
 
+  - from: user_story/007
+    to: cli/001
+    via: commands
+
 components:
   - id: 1
     label: Main corpus
-    size: 25
+    size: 28
     isolated: false
     nodes:
       - algorithm/001
@@ -416,12 +470,14 @@ components:
       - cli/004
       - cli/005
       - cli/006
+      - cli/007
       - feature/001
       - feature/002
       - feature/003
       - feature/004
       - feature/005
       - feature/006
+      - feature/007
       - format/01
       - format/02
       - pattern/001
@@ -433,15 +489,9 @@ components:
       - user_story/004
       - user_story/005
       - user_story/006
+      - user_story/007
 
   - id: 2
-    label: Environment Parameters
-    size: 1
-    isolated: true
-    nodes:
-      - cli/007
-
-  - id: 3
     label: Config Parameters
     size: 1
     isolated: true

@@ -138,8 +138,9 @@ live claude processes and are manual-only tests.
 - **When:**
   `clv .processes.kill`
   **Expected:** Exit 0; stdout contains "no active processes" or similar.
-- **Then:** **Note:** TC must accept both "no processes" and "processes killed" outcomes due to global /proc
+- **Then:** exit 0; stdout contains "no active processes" message or kill completion summary; either outcome accepted due to /proc global state
 - **Exit:** 0
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -149,8 +150,9 @@ live claude processes and are manual-only tests.
 - **When:**
   `clv .processes.kill dry::1`
   **Expected:** Exit 0; appropriate message.
-- **Then:** see spec
+- **Then:** exit 0; stdout contains "[dry-run]" indicator or "no active processes" message; no kill executed; stderr is empty
 - **Exit:** 0
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -160,8 +162,9 @@ live claude processes and are manual-only tests.
 - **When:**
   `clv .processes.kill dry::1 force::1`
   **Expected:** Exit 0; no kill executed.
-- **Then:** see spec
+- **Then:** exit 0; stdout contains dry-run preview; no kill executed even though force::1 is present (dry wins); stderr is empty
 - **Exit:** 0
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -171,8 +174,9 @@ live claude processes and are manual-only tests.
 - **When:**
   `clv .processes.kill v::0`
   **Expected:** Exit 0; output produced (either "no active processes" or kill summary).
-- **Then:** (not exit 1 "unknown parameter")
+- **Then:** exit 0; stdout contains output (either "no active processes" or kill summary); v::0 accepted as valid verbosity level (not rejected as unknown)
 - **Exit:** 0
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -182,8 +186,9 @@ live claude processes and are manual-only tests.
 - **When:**
   `clv .processes.kill format::JSON`
   **Expected:** Exit 1.
-- **Then:** see spec
+- **Then:** exit 1; stderr contains error referencing case-sensitive format value or listing valid options; no kill executed
 - **Exit:** 1
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -196,6 +201,7 @@ live claude processes and are manual-only tests.
 - **Then:** Both `let _` patterns absent.
 **Note:** This is an anti-faking check for TSK-101. The signal-error path cannot be triggered through the binary without process injection; source inspection is the only reliable verification
 - **Exit:** 0
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -205,8 +211,9 @@ live claude processes and are manual-only tests.
 - **When:**
   `clv .processes.kill dry::1 format::json`
   **Expected:** Exit 0; stdout starts with `{`.
-- **Then:** JSON object output
+- **Then:** exit 0; stdout is valid JSON starting with `{`; contains dry-run process information; stderr is empty
 - **Exit:** 0
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -216,8 +223,9 @@ live claude processes and are manual-only tests.
 - **When:**
   `clv .processes.kill bogus::x`
   **Expected:** Exit 1.
-- **Then:** see spec
+- **Then:** exit 1; stderr or stdout contains "bogus" or "unknown parameter" error message; no kill executed
 - **Exit:** 1
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -227,8 +235,9 @@ live claude processes and are manual-only tests.
 - **When:**
   `clv .processes.kill dry::2`
   **Expected:** Exit 1.
-- **Then:** see spec
+- **Then:** exit 1; stderr or stdout references out-of-range boolean value "2" for dry::; no kill executed
 - **Exit:** 1
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 
@@ -238,8 +247,9 @@ live claude processes and are manual-only tests.
 - **When:**
   `clv .processes.kill force::2`
   **Expected:** Exit 1.
-- **Then:** see spec
+- **Then:** exit 1; stderr or stdout references out-of-range boolean value "2" for force::; no kill executed
 - **Exit:** 1
+- **Source:** [command/processes.md](../../../../docs/cli/command/processes.md)
 
 ---
 

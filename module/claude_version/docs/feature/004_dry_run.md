@@ -49,4 +49,4 @@
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/feature/04_dry_run.md](../../tests/docs/feature/04_dry_run.md) | Feature test spec |
+| [tests/docs/feature/004_dry_run.md](../../tests/docs/feature/004_dry_run.md) | Feature test spec |

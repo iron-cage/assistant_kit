@@ -67,4 +67,4 @@ Providing `scope::` without a write operation (without `key:: + value::` or `key
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/feature/06_config_command.md](../../tests/docs/feature/06_config_command.md) | Feature test spec |
+| [tests/docs/feature/006_config_command.md](../../tests/docs/feature/006_config_command.md) | Feature test spec |

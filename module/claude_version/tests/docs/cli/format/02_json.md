@@ -17,8 +17,9 @@ Format test surface for `json` output. See [cli/format/02_json.md](../../../../d
 | FM-2 | `format::json` on `.version.list` produces JSON array `[]` | ✅ |
 | FM-3 | `format::JSON` (uppercase) is rejected with exit 1 | ✅ |
 | FM-4 | `format::json` with `v::0` — primary payload key is always present | ✅ |
+| FM-5 | `format::json` output goes to stdout only; stderr is empty | ⏳ `fm05_02_json_stdout_only` |
 
-**Total:** 4 tests
+**Total:** 5 tests
 
 ---
 
@@ -51,6 +52,14 @@ Format test surface for `json` output. See [cli/format/02_json.md](../../../../d
 - **Given:** `format::json`, `v::0` supplied
 - **When:** `clv .status format::json v::0`
 - **Then:** stdout is valid JSON; primary payload key (`version`) is present even at v::0; exit 0
+
+---
+
+### FM-5: JSON output goes to stdout only; stderr is empty
+
+- **Given:** clean environment; `format::json` supplied
+- **When:** `clv .status format::json`
+- **Then:** exit 0; stdout is valid JSON; stderr is empty
 
 ---
 

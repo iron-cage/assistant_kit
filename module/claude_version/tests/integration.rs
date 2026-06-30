@@ -79,3 +79,6 @@ mod count_param_test;
 
 #[ path = "integration/process_isolation_test.rs" ]
 mod process_isolation_test;
+
+#[ path = "integration/params_command_test.rs" ]
+mod params_command_test;

@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all cm commands, parameters, types, and parameter groups.
 - **Responsibility**: Index of per-command, per-parameter, per-type, and per-group test case planning files.
-- **In Scope**: All 13 cm commands, all 12 parameters, all 7 types, all 4 parameter groups, all 6 user stories, and all 2 output formats.
+- **In Scope**: All 14 cm commands, all 12 parameters, all 7 types, all 4 parameter groups, all 7 user stories, and all 2 output formats.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 6-tier testing organization for `claude_version` CLI, providing distinct audience focus at each level.
@@ -55,6 +55,7 @@
 - [`.settings.set`](command/11_settings_set.md)
 - [`.version.history`](command/12_version_history.md)
 - [`.config`](command/13_config.md)
+- [`.params`](command/14_params.md)
 
 ### Parameters
 - [`version::`](param/01_version.md)
@@ -92,6 +93,7 @@
 - [Settings Management](user_story/04_settings_management.md)
 - [Version Pinning](user_story/05_version_pinning.md)
 - [Config Management](user_story/06_config_management.md)
+- [Params Inspection](user_story/07_params_inspection.md)
 
 ### Formats
 - [Text](format/01_text.md)

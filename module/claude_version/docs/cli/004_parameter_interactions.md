@@ -21,6 +21,7 @@ How clv parameters interact when combined. See [param/](param/readme.md) and [pa
 | `v::2` + `format::text` | Independent | Text output rendered with extra diagnostic lines |
 | `version::` + `force::1` | Additive | Installs specified version; skips "already installed" guard |
 | `version::` + `dry::1` | Additive | Shows install plan for specified version; no install occurs |
+| `key::` + `kind::` | Mode supersedes filter | `key::` triggers single-param mode; `kind::` filter has no effect |
 
 ### Required Combinations
 

@@ -19,6 +19,7 @@
 
 mod config;
 mod history;
+mod params;
 mod process;
 mod settings;
 mod status;
@@ -26,6 +27,7 @@ mod version;
 
 pub use config::config_routine;
 pub use history::version_history_routine;
+pub use params::params_routine;
 pub use process::{ processes_kill_routine, processes_routine };
 pub use settings::{ settings_get_routine, settings_set_routine, settings_show_routine };
 pub use status::status_routine;

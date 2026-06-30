@@ -129,11 +129,83 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 
 ---
 
+### IT-3: kind::config → only config-key params
+
+- **Given:** `HOME=<tmp>` (no settings.json)
+- **When:** `clv.params kind::config`
+- **Then:** exit 0; stdout contains params with a config key form (e.g., `model`, `theme`, `autoUpdates`); env-only params (e.g., `bash_timeout`) are absent
+- **Exit:** 0
+
+---
+
+### IT-4: kind::env → only env-var params
+
+- **Given:** `HOME=<tmp>` (no settings.json)
+- **When:** `clv.params kind::env`
+- **Then:** exit 0; stdout contains params with an env var form (e.g., `model`, `bash_timeout`); config-only params (e.g., `theme`) are absent
+- **Exit:** 0
+
+---
+
 ### IT-5: key::model with CLAUDE_MODEL set
 
 - **Given:** `HOME=<tmp>`, `CLAUDE_MODEL=claude-opus-4-6` in env
 - **When:** `clv.params key::model`
 - **Then:** exit 0; stdout contains `claude-opus-4-6` and `(env)` annotation
+- **Exit:** 0
+
+---
+
+### IT-6: key::bash_timeout → env-only param, unset
+
+- **Given:** `HOME=<tmp>`, `CLAUDE_CODE_BASH_TIMEOUT` not set
+- **When:** `clv.params key::bash_timeout`
+- **Then:** exit 0; stdout shows `CLAUDE_CODE_BASH_TIMEOUT` env form, value `unset`, default `120000`; no config key form present
+- **Exit:** 0
+
+---
+
+### IT-7: format::json → valid JSON array
+
+- **Given:** `HOME=<tmp>` (no settings.json)
+- **When:** `clv.params format::json`
+- **Then:** exit 0; stdout is valid JSON parseable as an array; each element has at minimum a `name` key
+- **Exit:** 0
+
+---
+
+### IT-8: key::print → CLI-only annotation
+
+- **Given:** `HOME=<tmp>`
+- **When:** `clv.params key::print`
+- **Then:** exit 0; stdout shows `-p / --print` form and a `CLI-only` annotation; no env value or config key shown
+- **Exit:** 0
+
+---
+
+### IT-9: v::0 → compact values-only output
+
+- **Given:** `HOME=<tmp>` (no settings.json)
+- **When:** `clv.params v::0`
+- **Then:** exit 0; stdout contains one entry per param with values only; no form labels or source annotations
+- **Exit:** 0
+
+---
+
+### IT-10: key::model no env no config → default annotation
+
+- **Given:** `HOME=<tmp>` (no settings.json), `CLAUDE_MODEL` not set
+- **When:** `clv.params key::model`
+- **Then:** exit 0; stdout contains `claude-sonnet-4-6` with `(default)` annotation; no env or config value shown
+- **Exit:** 0
+
+---
+
+### IT-11: Show-all output is alphabetically sorted
+
+- **Given:** `HOME=<tmp>` (no settings.json)
+- **When:** `clv.params`
+- **Then:** exit 0; parameter names extracted from stdout appear in ascending alphabetical order
 - **Exit:** 0
 
 ---
@@ -147,8 +219,39 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 
 ---
 
+### IT-13: kind::badvalue → exit 1
+
+- **Given:** `HOME=<tmp>`
+- **When:** `clv.params kind::badvalue`
+- **Then:** exit 1; stderr contains a message indicating valid values are `config` or `env`
+- **Exit:** 1
+
+---
+
+### IT-14: format::xml → exit 1
+
+- **Given:** `HOME=<tmp>`
+- **When:** `clv.params format::xml`
+- **Then:** exit 1; stderr contains a message indicating valid values are `text` or `json`
+- **Exit:** 1
+
+---
+
 ## Source Functions Table
 
 | Function | File | Test Cases |
 |----------|------|------------|
-| *(none yet — implementation pending)* | — | — |
+| `it01_params_show_all_min_entries` | `tests/integration/params_command_test.rs` | IT-1 |
+| `it02_params_single_model_full_detail` | `tests/integration/params_command_test.rs` | IT-2 |
+| `it03_params_kind_config_filters` | `tests/integration/params_command_test.rs` | IT-3 |
+| `it04_params_kind_env_filters` | `tests/integration/params_command_test.rs` | IT-4 |
+| `it05_params_env_override_visible` | `tests/integration/params_command_test.rs` | IT-5 |
+| `it06_params_env_only_param_unset` | `tests/integration/params_command_test.rs` | IT-6 |
+| `it07_params_json_output_structure` | `tests/integration/params_command_test.rs` | IT-7 |
+| `it08_params_cli_only_annotation` | `tests/integration/params_command_test.rs` | IT-8 |
+| `it09_params_compact_v0_output` | `tests/integration/params_command_test.rs` | IT-9 |
+| `it10_params_default_annotation` | `tests/integration/params_command_test.rs` | IT-10 |
+| `it11_params_show_all_alphabetical` | `tests/integration/params_command_test.rs` | IT-11 |
+| `it12_params_unknown_key_exits_2` | `tests/integration/params_command_test.rs` | IT-12 |
+| `it13_params_invalid_kind_exits_1` | `tests/integration/params_command_test.rs` | IT-13 |
+| `it14_params_invalid_format_exits_1` | `tests/integration/params_command_test.rs` | IT-14 |

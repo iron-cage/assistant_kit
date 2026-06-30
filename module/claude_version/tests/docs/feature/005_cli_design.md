@@ -27,16 +27,21 @@ Both are valid invocations; output length differs.
 | FT-3 | Repeated parameter → last occurrence wins | Last-Wins |
 | FT-4 | Empty argv → help output, exit 0 | Empty Argv |
 | FT-5 | `.help` anywhere in argv → help output wins | Help Anywhere |
+| FT-6 | `dry::true` rejected with exit 1; boolean params use 0/1 only (D3) | Design Decision |
+| FT-7 | Repeated `v::` parameter: last occurrence wins (D8) | Design Decision |
+| FT-8 | `CommandNotImplemented` produces exit 2 (D4) | Design Decision |
+| FT-9 | `format::` on `.settings.set` rejected with exit 1; per-command validation (D7) | Design Decision |
 
 ## Test Coverage Summary
 
 - Unknown Param: 1 test (FT-1)
 - Missing Value: 1 test (FT-2)
-- Last-Wins: 1 test (FT-3)
+- Last-Wins: 2 tests (FT-3, FT-7)
 - Empty Argv: 1 test (FT-4)
 - Help Anywhere: 1 test (FT-5)
+- Design Decision: 4 tests (FT-6, FT-7, FT-8, FT-9)
 
-**Total:** 5 tests
+**Total:** 9 tests
 
 ---
 
@@ -73,7 +78,7 @@ Both are valid invocations; output length differs.
 ### FT-4: Empty argv → help output, exit 0
 
 - **Given:** clean environment
-- **When:** `cm` (no arguments)
+- **When:** `clv` (no arguments)
 - **Then:** stdout is non-empty help text; exit 0
 - **Exit:** 0
 - **Source:** [feature/005_cli_design.md — Help listing](../../../docs/feature/005_cli_design.md)
@@ -99,52 +104,47 @@ Both are valid invocations; output length differs.
 | `ft005_3_last_param_wins` | `integration/feature_surface_test.rs` |
 | `tc093_empty_args_exits_0` | `integration/framework_test.rs` |
 | `tc04_help_anywhere_wins` | `integration/read_commands_test.rs` |
-| `dd01_001_bool_true_rejected` | `integration/catalog_surface_test.rs` |
-| `dd02_001_last_v_wins` | `integration/catalog_surface_test.rs` |
-| `dd03_001_cmd_not_implemented_exit2` | `integration/catalog_surface_test.rs` |
-| `dd04_001_per_cmd_validation` | `integration/catalog_surface_test.rs` |
+| `ft005_6_bool_true_rejected` | `integration/catalog_surface_test.rs` |
+| `ft005_7_last_v_wins` | `integration/catalog_surface_test.rs` |
+| `ft005_8_cmd_not_implemented_exit2` | `integration/catalog_surface_test.rs` |
+| `ft005_9_per_cmd_validation` | `integration/catalog_surface_test.rs` |
 
 ---
 
-## Design Decision Tests
-
-Verify that testable design decisions (D3, D4, D7, D8) are enforced. Non-testable decisions (D1, D2, D5, D6) are structural and have no directly observable test surface.
-
-| DD | Scenario | Decision |
-|----|----------|----------|
-| DD-1 | `dry::1` accepted; `dry::true` rejected with exit 1 | D3 |
-| DD-2 | Repeated `v::` parameter: last occurrence wins | D8 |
-| DD-3 | `CommandNotImplemented` produces exit 2 | D4 |
-| DD-4 | `format::` on `.settings.set` rejected with exit 1 | D7 |
-
----
-
-### DD-1: boolean parameters use 0/1 values only (D3)
+### FT-6: boolean parameters use 0/1 values only (D3)
 
 - **Given:** the `.version.install` command with `dry` parameter
 - **When:** `clv .version.install dry::true`
 - **Then:** exit 1; stderr contains error indicating invalid boolean value
+- **Exit:** 1
+- **Source:** [feature/005_cli_design.md — D3](../../../docs/feature/005_cli_design.md)
 
 ---
 
-### DD-2: last `v::` occurrence wins (D8)
+### FT-7: last `v::` occurrence wins (D8)
 
 - **Given:** `v::` supplied twice with different values
 - **When:** `clv .status v::0 v::2`
 - **Then:** output matches v::2 verbosity (detailed); last value wins; exit 0
+- **Exit:** 0
+- **Source:** [feature/005_cli_design.md — D8](../../../docs/feature/005_cli_design.md)
 
 ---
 
-### DD-3: internal error produces exit 2 (D4)
+### FT-8: internal error produces exit 2 (D4)
 
 - **Given:** a command invocation that triggers an internal unrecoverable error path
 - **When:** `CommandNotImplemented` error is returned by the command routine
 - **Then:** exit 2 (not exit 1); distinguishes internal failure from user input error
+- **Exit:** 2
+- **Source:** [feature/005_cli_design.md — D4](../../../docs/feature/005_cli_design.md)
 
 ---
 
-### DD-4: per-command parameter validation rejects unknown params (D7)
+### FT-9: per-command parameter validation rejects unknown params (D7)
 
 - **Given:** `format::` is not accepted by `.settings.set`
 - **When:** `clv .settings.set format::json key::k value::v`
 - **Then:** exit 1; stderr contains error indicating `format` is not valid for this command
+- **Exit:** 1
+- **Source:** [feature/005_cli_design.md — D7](../../../docs/feature/005_cli_design.md)
