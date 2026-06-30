@@ -35,6 +35,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Container-only test execution enforcement** (commit `40927a98`)
+  - `verb/test` rejects any `VERB_LAYER` set on the host; `verb/test.d/l0` is a hard-error stub (exits 1) — no host-native test execution path exists
+  - Workspace-level `.config/setup-require-container` registered as a nextest setup script; checks three detection signals (`/.dockerenv`, `/run/.containerenv`, `RUNBOX_CONTAINER=1`); exits 1 before any test binary on bare host
+  - `claude_runner` test suite reorganized: tests moved to flat `tests/` structure
+  - Doc: `docs/invariant/010_container_only_test_execution.md`; spec: `tests/docs/invariant/010_container_only_test_execution.md`
+  - Tests: IT-1–IT-5 (`tests/invariant_container_test.rs`): nextest.toml setup-script registration (IT-1); setup-require-container existence (IT-2); three-signal body checks (IT-3–IT-5)
+
 - **Session mismatch detection** (TSK-334/335, BUG-320 hardening)
   - `session_exists()` returns `Option<SessionId>` instead of `bool`; `build_claude_command()` returns `(ClaudeCommand, Option<SessionId>)` — captures expected UUID for post-execution comparison
   - `extract_session_id(json) -> Option<String>` in `summary.rs`: parses `session_id` from CLR result envelope, gated on `"type":"result"` per invariant/008
@@ -65,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Parameters: [`--journal`](docs/cli/param/072_journal.md) (072), [`--journal-dir`](docs/cli/param/073_journal_dir.md) (073)
   - Env vars: `CLR_JOURNAL`, `CLR_JOURNAL_DIR`; invalid `CLR_JOURNAL` exits 1
   - New dependency: `claude_journal` (workspace)
-  - Tests: `journal_integration_test.rs` (EC-1–EC-15); EC-11..EC-13: gate_wait, validation_retry, read-only isolation; EC-14: CLI-wins-over-env precedence; EC-15: 1MB truncation marker
+  - Tests: `journal_integration_test.rs` (EC-1–EC-22); EC-11..EC-13: gate_wait, validation_retry, read-only isolation; EC-14: CLI-wins-over-env precedence; EC-15: 1MB truncation; EC-16: dry-run side-effect isolation (BUG-319); EC-17: bogus-flag exits 1; EC-18: case-sensitive; EC-19: missing-value; EC-20: duplicate last-wins; EC-21–EC-22: off+dir no-op
 
 - **Help split: `RUNNER OPTIONS` / `CLAUDE CODE OPTIONS (forwarded)` sections** (TSK-232)
   - `clr --help` now uses `CliHelpTemplate` from `cli_fmt ^0.9` instead of 262-line hand-rolled `print!` calls

@@ -115,6 +115,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | [invariant/007_print_mode_timeout.md](../invariant/007_print_mode_timeout.md) | Print-mode default timeout (3600s) vs interactive (unlimited) |
 | [invariant/008_render_summary_gate.md](../invariant/008_render_summary_gate.md) | `render_summary()` must gate on `"type":"result"`; optional fields use `.unwrap_or_default()` |
 | [invariant/009_session_mismatch_detection.md](../invariant/009_session_mismatch_detection.md) | Diagnostic warning when `-c` resumes a different session than expected |
+| [invariant/010_container_only_test_execution.md](../invariant/010_container_only_test_execution.md) | All tests run inside runbox container; host-native execution is a hard error |
 
 ### Sources
 
@@ -206,9 +207,10 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/ps_columns_test.rs` | EC-1–EC-10 --columns custom column selection, BUG-303 |
 | `../../tests/ps_wide_test.rs` | EC-1–EC-5 --wide optional column display |
 | `../../tests/ps_flags_test.rs` | IT-30–IT-40, US-18–US-26, E41–E42 session flag emoji computation |
-| `../../tests/journal_integration_test.rs` | EC-1–EC-15 --journal/--journal-dir event emission, level filtering, retry/timeout/gate_wait/validation_retry events, truncation, CLI-wins precedence |
+| `../../tests/journal_integration_test.rs` | EC-1–EC-22 `--journal`/`--journal-dir` event emission, level filtering, retry/timeout/gate_wait/validation_retry events, 1MB truncation, CLI-wins precedence, dry-run isolation (BUG-319), case-sensitive validation, missing-value, duplicate last-wins, off+dir no-op |
 | `../../tests/session_verification_test.rs` | SV-1–SV-4 session mismatch detection (BUG-320 hardening): match/mismatch/no-session/raw-output |
 | `../../tests/summary_unit_test.rs` | IT-1–IT-7 render_summary unit tests; extract_session_id unit tests (invariant/008, invariant/009) |
+| `../../tests/invariant_container_test.rs` | IT-1–IT-5 container-only enforcement structural tests (invariant/010) |
 
 ### Provenance
 
