@@ -79,7 +79,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **When:** `apply_model_override(&quota, &paths, false, "usage", "test-account")` is called (canonical path: `api.rs:259-290`; uses `recommended_model(aq)` from `format.rs` — Feature 062).
 - **Then:** Writes `"sonnet"` to `settings.json`. Opus override does NOT fire (`sonnet_left < OPUS_OVERRIDE_THRESHOLD (15.0)` evaluates to `15.0 < 15.0 = false`). Sonnet-restore path fires via `override_session_model_to_sonnet()` (Fix BUG-311).
 - **Note:** Table 2 boundary. Exactly at threshold = sufficient capacity. Threshold canonicalized as `OPUS_OVERRIDE_THRESHOLD` in `format.rs` (Feature 062).
-- **Source fn:** `t07_model_override_writes_sonnet_at_15pct_boundary` (in `src/usage/api_tests.rs`); `test_render_footer_model_label_at_15pct_no_override` (in `src/usage/render_tests.rs`)
+- **Source fn:** `t07_model_override_writes_sonnet_at_15pct_boundary` (in `tests/usage/api_tests_a.rs`); `test_render_footer_model_label_at_15pct_no_override` (in `tests/usage/render_tests_a.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 2](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -90,7 +90,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **When:** `recommended_model(aq)` is called (canonical entry point: `format.rs`; called by `apply_model_override` at `api.rs:259-290` — Feature 062).
 - **Then:** Returns `"opus"`. Override fires. The gate `sonnet_left < OPUS_OVERRIDE_THRESHOLD (15.0)` evaluates to `14.9 < 15.0 = true`. Sonnet near-exhausted — preserve remaining tokens.
 - **Note:** Table 2 boundary. Threshold canonicalized as `OPUS_OVERRIDE_THRESHOLD` in `format.rs` (Feature 062).
-- **Source fn:** `test_render_footer_model_label_below_15pct_opus` (in `src/usage/render_tests.rs`)
+- **Source fn:** `test_render_footer_model_label_below_15pct_opus` (in `tests/usage/render_tests_a.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 2](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -116,7 +116,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **When:** The `extra` predicate in `find_next_for_strategy()` evaluates Gate 7 (`sort_next.rs:59`): `prefer_weekly(aq, PreferStrategy::Any) <= 5.0`.
 - **Then:** `prefer_weekly` returns `4.0` (raw 7d_left when `seven_day_sonnet = None` under `prefer::any`). `4.0 ≤ 5.0` → gate fires → account is skipped. No `->` marker assigned.
 - **Note:** Table 4 gate 7. `prefer_weekly` is computed via `relevant_quotas(aq, prefer).1` (Phase 2 extraction).
-- **Source fn:** `test_relevant_quotas_son_no_sonnet` (in `src/usage/format_tests.rs`); `mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal` (in `src/usage/sort_next_tests.rs`)
+- **Source fn:** `test_relevant_quotas_son_no_sonnet` (in `tests/usage/format_tests.rs`); `mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 4](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -126,7 +126,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **Given:** An `AccountQuota` with `seven_day_util=90%` (7d_left=10%) and `seven_day_sonnet = None`. `prefer::any` in effect. All other gates (G1–G6, G8) do not fire.
 - **When:** Gate 7 evaluates `prefer_weekly(aq, PreferStrategy::Any)`.
 - **Then:** Returns `10.0`. `10.0 > 5.0` → gate does NOT fire. Account remains eligible. `->` marker may be assigned if first in sorted order.
-- **Source fn:** `test_relevant_quotas_son_with_sonnet` (in `src/usage/format_tests.rs`); `test_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `src/usage/sort_next_tests.rs`)
+- **Source fn:** `test_relevant_quotas_son_with_sonnet` (in `tests/usage/format_tests.rs`); `test_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 4](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -137,7 +137,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 - **When:** `find_next_for_strategy()` walks the sorted list (entry point: `sort_next.rs:46-83`). `sort_indices` produces order: `a@x.com`, `b@x.com`, `c@x.com`.
 - **Then:** `a@x.com` is selected as the winner (position 0 in sorted order, first to pass all 8 gates). `->` marker assigned to `a@x.com`.
 - **Note:** Table 5 Step 3: first account in the within-group sorted order that passes all gates wins. Input insertion order does not determine the winner.
-- **Source fn:** `test_sort_name_alphabetical` (in `src/usage/sort.rs`); `test_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `src/usage/sort_next_tests.rs`)
+- **Source fn:** `test_sort_name_alphabetical` (in `src/usage/sort.rs`); `test_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 5](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -180,8 +180,8 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 | Algorithm | Unit Tests | Implementation |
 |-----------|-----------|----------------|
 | Touch model selection (Table 1) | `it_imodel_auto_selects_sonnet_when_son_idle`, `it_imodel_auto_selects_haiku_when_son_tier_absent`, `mre_bug301_son_active_with_remaining_quota_selects_sonnet` in `src/usage/subprocess.rs` | `subprocess.rs:29-59` |
-| Session model override (Table 2) | `ft01..ft04_recommended_model_*` in `src/usage/format_tests.rs` (Feature 062); `t07_model_override_writes_sonnet_at_15pct_boundary` in `src/usage/api_tests.rs`; `test_render_footer_model_label_at_15pct_no_override`, `test_render_footer_model_label_below_15pct_opus` in `src/usage/render_tests.rs` | `format.rs` (`recommended_model`, `OPUS_OVERRIDE_THRESHOLD`), `api.rs:259-290` (`apply_model_override`), `render.rs` (footer) |
+| Session model override (Table 2) | `ft01..ft04_recommended_model_*` in `tests/usage/format_tests.rs` (Feature 062); `t07_model_override_writes_sonnet_at_15pct_boundary` in `tests/usage/api_tests_a.rs`; `test_render_footer_model_label_at_15pct_no_override`, `test_render_footer_model_label_below_15pct_opus` in `tests/usage/render_tests_a.rs` | `format.rs` (`recommended_model`, `OPUS_OVERRIDE_THRESHOLD`), `api.rs:259-290` (`apply_model_override`), `render.rs` (footer) |
 | Quota status groups (Table 3) | `test_three_tier_grouping_*` in `src/usage/mod.rs` | `sort.rs:31-48` |
-| Eligibility gates (Table 4) | `test_relevant_quotas_*` in `src/usage/format_tests.rs` | `sort_next.rs:24-35, 59` |
+| Eligibility gates (Table 4) | `test_relevant_quotas_*` in `tests/usage/format_tests.rs` | `sort_next.rs:24-35, 59` |
 | Positive selection (Table 5) | `test_sort_name_alphabetical` in `src/usage/sort.rs` | `sort_next.rs:46-83` |
 | Quota approximation (Table 6) | `approx_quadratic_three_points_extrapolates`, `approx_expired_window_returns_zero`, `approx_singular_matrix_falls_back_to_constant` in `src/usage/approx.rs` | `approx.rs` |

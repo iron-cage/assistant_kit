@@ -153,7 +153,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Renews, None, PreferStrategy::Any, now)`
 - **Then:** Order: `soon_renew@test.com` (soonest renewal), `later_renew@test.com`, `no_renew@test.com` (no data, placed last). Default `desc::0`.
 - **Exit:** n/a (unit test — index assertion)
-- **Source fn:** `test_sort_renews_ascending` (in `src/usage/sort_next_tests.rs`)
+- **Source fn:** `test_sort_renews_ascending` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-02](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -178,7 +178,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then:** Returns `0.0`. Absent Sonnet tier under `prefer::son` = unknown Sonnet capacity, not 100%. The eligibility gate `prefer_weekly ≤ 5.0` fires (0.0 ≤ 5.0) → account is ineligible for next-account recommendation.
 - **Exit:** n/a (unit test — return value assertion)
 - **Note:** Phase 2 fix from Plan 019. Old code: `map_or(0.0, |p| p.utilization)` returned `100.0 - 0.0 = 100.0`, treating absent tier as fully available. Fix: `if let Some(ref son)` guard returns `0.0` when `seven_day_sonnet = None`.
-- **Source fn:** `test_relevant_quotas_son_no_sonnet` (in `src/usage/format_tests.rs`)
+- **Source fn:** `test_relevant_quotas_son_no_sonnet` (in `tests/usage/format_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-05](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---

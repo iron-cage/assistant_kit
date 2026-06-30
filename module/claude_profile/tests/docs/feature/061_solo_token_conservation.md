@@ -26,8 +26,8 @@
 ### Notes
 
 - FT-01, FT-04, FT-05, FT-06, FT-07, FT-08, FT-09, FT-10, FT-11, FT-12 are integration tests in `tests/cli/usage_test.rs`.
-- FT-02 is a unit test in `src/usage/refresh_tests.rs` (solo gate isolation at the refresh site).
-- FT-03 is a unit test in `src/usage/touch_tests.rs` (solo gate isolation at the touch site).
+- FT-02 is a unit test in `tests/usage/refresh_tests_b.rs` (solo gate isolation at the refresh site).
+- FT-03 is a unit test in `tests/usage/touch_tests.rs` (solo gate isolation at the touch site).
 - Parameter-level unit tests (`ec5_solo_and_rotate_mutual_exclusion`, `ec12_solo_rejects_integer_two`) in `src/usage/params.rs` complement FT-07 at the unit level.
 - `approximate_quota()` behavior is validated indirectly through FT-01, FT-05, FT-06 — all verify that approximated data (not raw cache) is displayed when the solo gate fires.
 
@@ -50,7 +50,7 @@
 - **When:** `apply_refresh()` is called with `solo=true` for Account B.
 - **Then:** The solo gate fires before G2. Trace emits `solo-skip` for Account B. No refresh subprocess is spawned for Account B. Returns `Ok(())`.
 - **Exit:** Ok(())
-- **Source fn:** `ec7_solo_gate_skips_non_current_with_trace` (in `src/usage/refresh_tests.rs`)
+- **Source fn:** `ec7_solo_gate_skips_non_current_with_trace` (in `tests/usage/refresh_tests_b.rs`)
 - **Source:** [061_solo_token_conservation.md AC-02](../../../docs/feature/061_solo_token_conservation.md)
 
 ---
@@ -61,7 +61,7 @@
 - **When:** `apply_touch()` is called with `solo=true` for Account B.
 - **Then:** The solo gate fires before G4. Trace emits `solo-skip` for Account B. No touch subprocess is spawned for Account B. Returns `Ok(())`.
 - **Exit:** Ok(())
-- **Source fn:** `ec8_solo_gate_skips_non_current_with_trace` (in `src/usage/touch_tests.rs`)
+- **Source fn:** `ec8_solo_gate_skips_non_current_with_trace` (in `tests/usage/touch_tests.rs`)
 - **Source:** [061_solo_token_conservation.md AC-03](../../../docs/feature/061_solo_token_conservation.md)
 
 ---

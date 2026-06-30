@@ -1,6 +1,6 @@
 # Test: Feature 067 — Trace Timestamp Prefix
 
-Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps.md`. Tests are spread across 12 existing test files — this feature modifies diagnostic output format rather than adding new commands, so assertions in existing tests were updated rather than new test functions created. The BUG-234 MRE in `src/usage/fetch.rs` is the only dedicated structural guard.
+Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps.md`. Tests are spread across 12 existing test files — this feature modifies diagnostic output format rather than adding new commands, so assertions in existing tests were updated rather than new test functions created. The BUG-234 MRE in `tests/usage/fetch_tests.rs` is the only dedicated structural guard.
 
 ### AC Coverage Index
 
@@ -18,12 +18,12 @@ Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps
 
 | FT | File | Notes |
 |----|------|-------|
-| FT-01 | `src/usage/fetch.rs` | Structural test via `src.find( ... )` on `account.rs` source |
-| FT-02 | `src/usage/touch_tests.rs`, `src/usage/api_tests.rs` | Regex or substring check on stderr output |
+| FT-01 | `tests/usage/fetch_tests.rs` | Structural test via `src.find( ... )` on `account.rs` source |
+| FT-02 | `tests/usage/touch_tests.rs`, `tests/usage/api_tests_a.rs` | Regex or substring check on stderr output |
 | FT-03 | All 12 test files (see Sources in feature doc) | Assertion pattern changed from `[trace]` to ` · ` |
-| FT-04 | `src/usage/fetch.rs` | Structural test: `trace_ts` fn body does not contain `if trace` |
-| FT-05 | `src/usage/touch_tests.rs` | `contains( " · touch  " )` assertions |
-| FT-06 | `src/usage/fetch.rs` | BUG-234 MRE: `src.find( r#"eprintln!( "{}{}  result: OK""# )` |
+| FT-04 | `tests/usage/fetch_tests.rs` | Structural test: `trace_ts` fn body does not contain `if trace` |
+| FT-05 | `tests/usage/touch_tests.rs` | `contains( " · touch  " )` assertions |
+| FT-06 | `tests/usage/fetch_tests.rs` | BUG-234 MRE: `src.find( r#"eprintln!( "{}{}  result: OK""# )` |
 | FT-07 | `tests/cli/usage_test.rs`, `tests/cli/usage_feature_test.rs` | `.filter( |l| l.contains( " · " ) )` usage |
 
 ### FT Case Descriptions
@@ -58,4 +58,4 @@ Expected: trace line count matches expected count in usage_feature_test.rs; no l
 
 ### Test Function Naming
 
-No new `ft_NNN_` functions were added for Feature 067 — assertions were updated in existing integration tests. The BUG-234 MRE in `src/usage/fetch.rs` is named per the bug convention: `mre_bug234_result_ok_uses_two_arg_eprintln` (or equivalent; name was pre-existing).
+No new `ft_NNN_` functions were added for Feature 067 — assertions were updated in existing integration tests. The BUG-234 MRE in `tests/usage/fetch_tests.rs` is named per the bug convention: `mre_bug234_result_ok_uses_two_arg_eprintln` (or equivalent; name was pre-existing).

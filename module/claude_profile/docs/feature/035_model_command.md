@@ -104,7 +104,7 @@ Similarly, `get_session_model()` MUST be introduced in `claude_profile_core/src/
 
 | File | Relationship |
 |------|--------------|
-| `tests/docs/feature/35_model_command.md` | Feature test spec (FT-01 through FT-12) |
+| `tests/docs/feature/035_model_command.md` | Feature test spec (FT-01 through FT-12) |
 | `tests/docs/cli/command/17_model.md` | Command-level integration test spec (IT-01 through IT-13) |
 
 ### Schema

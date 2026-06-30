@@ -136,7 +136,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 
 ## FT-16 — Opus branch sets effort to `"max"` (BUG-322 MRE, updated TSK-335)
 
-**AC-09** | **Source**: `src/usage/api_tests.rs::mre_bug322_opus_override_sets_effort_max`
+**AC-09** | **Source**: `tests/usage/api_tests_a.rs::mre_bug322_opus_override_sets_effort_max`
 
 | Field | Value |
 |-------|-------|
@@ -146,7 +146,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 
 ## FT-17 — Sonnet branch sets effort to `"high"` (BUG-322 reverse, updated TSK-335)
 
-**AC-10** | **Source**: `src/usage/api_tests.rs::t11_opus_to_sonnet_sets_effort_high`
+**AC-10** | **Source**: `tests/usage/api_tests_a.rs::t11_opus_to_sonnet_sets_effort_high`
 
 | Field | Value |
 |-------|-------|
@@ -156,7 +156,7 @@ Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062
 
 ## FT-18 — Absent-tier + Opus→Sonnet sets effort to `"high"` (BUG-322 absent-tier, updated TSK-335)
 
-**AC-10** | **Source**: `src/usage/api_tests.rs::t12_absent_tier_with_opus_sets_effort_high`
+**AC-10** | **Source**: `tests/usage/api_tests_a.rs::t12_absent_tier_with_opus_sets_effort_high`
 
 | Field | Value |
 |-------|-------|

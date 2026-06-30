@@ -33,8 +33,8 @@
 
 - FT-01, FT-02, FT-11, FT-13 are storage-layer unit tests in `claude_profile_core/tests/account_test.rs`.
 - FT-04, FT-06, FT-07, FT-08, FT-09, FT-10 are pure-math unit tests in `src/usage/approx.rs` `#[cfg(test)]` module.
-- FT-14..FT-18 are unit tests for `read_cached_quota()` in `src/usage/fetch.rs` — verify the centralized cache-read + approximation pipeline (BUG-304 fix, TSK-316).
-- FT-03, FT-05, FT-12 are integration tests verifying the fetch pipeline behavior in `src/usage/fetch.rs` test module.
+- FT-14..FT-18 are unit tests for `read_cached_quota()` in `tests/usage/fetch_tests.rs` — verify the centralized cache-read + approximation pipeline (BUG-304 fix, TSK-316).
+- FT-03, FT-05, FT-12 are integration tests verifying the fetch pipeline behavior in `tests/usage/fetch_tests.rs`.
 - FT-04 render integration (display with `~` prefix) may be covered by existing FT-03/033 render tests — the display path is shared.
 
 ---

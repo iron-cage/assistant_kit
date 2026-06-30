@@ -184,5 +184,5 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** Exits 0. Output includes a sessions table after the footer. The table has columns `Session` and `Account`. Each `_active_*` marker is rendered as a row: `Session` = `{user}@{host}` (parsed from filename `_active_{host}_{user}`), `Account` = file content (the account name). The current machine's own row is marked with `✓`. All three rows appear.
 - **Exit:** 0
 - **Note:** Cross-feature integration: this test validates Feature 025's `_active_*` marker data as consumed by Feature 009's sessions table (AC-33). The data source (`other_machines_active()` + own marker) is Feature 025's responsibility; the rendering is Feature 009's.
-- **Source fn:** `ft13_025_sessions_table_parses_marker_identity_from_filename` (in `src/usage/render_tests.rs`)
+- **Source fn:** `ft13_025_sessions_table_parses_marker_identity_from_filename` (in `tests/usage/render_tests_b.rs`)
 - **Source:** [feature/009_token_usage.md AC-33](../../../docs/feature/009_token_usage.md), [feature/025_per_machine_active_marker.md AC-05](../../../docs/feature/025_per_machine_active_marker.md)

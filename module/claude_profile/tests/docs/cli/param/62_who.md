@@ -25,7 +25,7 @@ See [param/061_who.md](../../../../docs/cli/param/061_who.md) for specification.
 - **When:** `clp .usage` (no `who::` parameter)
 - **Then:** Exits 0. Output includes a sessions table after the footer. Table contains rows for each `_active_*` marker; own session marked with `✓`.
 - **Exit:** 0
-- **Source fn:** `ft30_009_sessions_table_shown_auto_multiple_markers` (in `src/usage/render_tests.rs`)
+- **Source fn:** `ft30_009_sessions_table_shown_auto_multiple_markers` (in `tests/usage/render_tests_b.rs`)
 - **Source:** [param/061_who.md](../../../../docs/cli/param/061_who.md)
 
 ---
@@ -36,7 +36,7 @@ See [param/061_who.md](../../../../docs/cli/param/061_who.md) for specification.
 - **When:** `clp .usage` (no `who::` parameter)
 - **Then:** Exits 0. No sessions table appears in output.
 - **Exit:** 0
-- **Source fn:** `ft31_009_sessions_table_hidden_auto_single_marker` (in `src/usage/render_tests.rs`)
+- **Source fn:** `ft31_009_sessions_table_hidden_auto_single_marker` (in `tests/usage/render_tests_b.rs`)
 - **Source:** [param/061_who.md](../../../../docs/cli/param/061_who.md)
 
 ---
@@ -47,7 +47,7 @@ See [param/061_who.md](../../../../docs/cli/param/061_who.md) for specification.
 - **When:** `clp .usage who::1`
 - **Then:** Exits 0. Sessions table appears showing only the own session row (marked `✓`).
 - **Exit:** 0
-- **Source fn:** `ft32_009_sessions_table_who_override` (who=Some(true) arm) (in `src/usage/render_tests.rs`)
+- **Source fn:** `ft32_009_sessions_table_who_override` (who=Some(true) arm) (in `tests/usage/render_tests_b.rs`)
 - **Source:** [param/061_who.md](../../../../docs/cli/param/061_who.md)
 
 ---
@@ -58,7 +58,7 @@ See [param/061_who.md](../../../../docs/cli/param/061_who.md) for specification.
 - **When:** `clp .usage who::0`
 - **Then:** Exits 0. No sessions table in output despite multiple markers.
 - **Exit:** 0
-- **Source fn:** `ft32_009_sessions_table_who_override` (who=Some(false) arm) (in `src/usage/render_tests.rs`)
+- **Source fn:** `ft32_009_sessions_table_who_override` (who=Some(false) arm) (in `tests/usage/render_tests_b.rs`)
 - **Source:** [param/061_who.md](../../../../docs/cli/param/061_who.md)
 
 ---
@@ -69,7 +69,7 @@ See [param/061_who.md](../../../../docs/cli/param/061_who.md) for specification.
 - **When:** `clp .usage who::1`
 - **Then:** Exits 0. `build_sessions_table` returns an empty string; the `if show && !sessions_text.is_empty()` guard suppresses the append even with `who=Some(true)` — no `Sessions` heading appears in output.
 - **Exit:** 0
-- **Source fn:** `ec5_062_who_force_on_zero_markers_omits_gracefully` (in `src/usage/render_tests.rs`)
+- **Source fn:** `ec5_062_who_force_on_zero_markers_omits_gracefully` (in `tests/usage/render_tests_b.rs`)
 - **Source:** [param/061_who.md](../../../../docs/cli/param/061_who.md)
 
 ---

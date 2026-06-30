@@ -41,21 +41,21 @@
 - FT-01 is an integration test — calls `clp .account.save name::alice` and asserts existing `owner` field is UNCHANGED (`account_save_routine()` passes `owner: None`; ownership-neutral).
 - FT-02 is an integration test — calls `clp .accounts owner::0 name::alice` and asserts exit 0, `owner: ""` written, and credential file NOT re-saved (`alice.credentials.json` mtime unchanged). The `accounts_routine()` owner::0 path calls `write_owner()` directly. (Feature 064; formerly `unclaim::1`.)
 - FT-03 is structural with three cases: (a) `.account.save` rejects `owner::0` (exits 1 — not registered); (b) `.account.unclaim` and `.account.assign` are registered as redirect stubs (Feature 037) — both exit 1 with targeted migration hints; (c) `.accounts unclaim::1` and `.accounts assign::1` exit 1 with REMOVED_TOGGLE migration messages (Feature 064).
-- FT-04 is a unit test in `src/usage/fetch.rs` — mock-free: verify no `read_token()` call path was exercised and cache JSON is the returned value.
-- FT-05 is a render test in `src/usage/render_tests.rs` — uses `AccountQuota { is_owned: false, cached: true, ... }` and asserts `~` prefix; also tests `cached: false, is_owned: false` giving dashes.
+- FT-04 is a unit test in `tests/usage/fetch_tests.rs` — mock-free: verify no `read_token()` call path was exercised and cache JSON is the returned value.
+- FT-05 is a render test in `tests/usage/render_tests_a.rs` — uses `AccountQuota { is_owned: false, cached: true, ... }` and asserts `~` prefix; also tests `cached: false, is_owned: false` giving dashes.
 - FT-06 is a unit test in `src/usage/refresh_predicate.rs` `#[cfg(test)]` module.
-- FT-07 is a unit test in `src/usage/touch_tests.rs` using `gag::BufferRedirect::stderr()` for trace capture.
+- FT-07 is a unit test in `tests/usage/touch_tests.rs` using `gag::BufferRedirect::stderr()` for trace capture.
 - FT-08 through FT-10 are integration tests via `verb/test` — verify exit code 1 and message text.
 - FT-11 is a unit test in `claude_profile_core/tests/account_test.rs` — `{name}.json` with no `owner` key reads as `is_owned = true`.
-- FT-12 is a render test in `src/usage/render_tests.rs` — verifies `"is_owned": true`/`"is_owned": false` in JSON object.
+- FT-12 is a render test in `tests/usage/render_tests_a.rs` — verifies `"is_owned": true`/`"is_owned": false` in JSON object.
 - FT-13 exercises G5/G6/G7 with `dry::1` flag set — ownership guard runs first; exit 1 regardless.
 - FT-14 is a unit test in `claude_profile_core/tests/account_test.rs` — background `save()` with `owner: None` (e.g. `refresh_account_token`) on an account with `owner: "alice@host"` leaves `owner: "alice@host"` in `{name}.json`. All `save()` callers pass `owner: None` (preserves existing owner) — both background refresh and interactive `account_save_routine()` are ownership-neutral. The `accounts_routine()` assign path does NOT call `write_owner()`.
 - FT-18 through FT-20 are integration tests via `./verb/test` — verify exit 0 and that the expected mutation (switch/delete/relogin) proceeds despite non-owned account.
 - FT-21 is an integration test via `./verb/test` — three sub-cases (use, delete, relogin), each verifying: exit 0, `[dry-run]` line printed, no files modified. The G8 case (force+dry on `owner::0`) is deferred to Feature 037 tests (`37_accounts_usage_param_unification.md`).
 - FT-18–21 require `force::` (`058`) to be registered on `.account.use`, `.account.delete`, `.account.relogin` — Task 002 prerequisite.
-- FT-22 is a unit test in `src/usage/refresh_tests.rs` — uses `gag::BufferRedirect::stderr()` for trace capture. Reproduces BUG-295: verifies `apply_refresh()` emits `reason: not owned` (not `reason: ok`) when `aq.is_owned == false`.
-- FT-24 is a unit test in `src/usage/fetch.rs` or `tests/cli/usage_test.rs` — creates a temp credential store with an `alice.json` owned by current identity and a `_active_{remote_host}_{remote_user}` marker file naming `alice`. Verifies no HTTP call fires and trace line emitted. Reproduces BUG-305.
-- FT-25 is a unit test in `src/usage/refresh_tests.rs` — directly calls `reason_label(&aq, 0)` with `is_owned=true, cached=false, is_occupied_elsewhere=true, result=Ok(...)`. Verifies return value is `"occupied elsewhere"`. No `apply_refresh()` call needed — the extracted function is directly testable. Reproduces BUG-306.
+- FT-22 is a unit test in `tests/usage/refresh_tests_b.rs` — uses `gag::BufferRedirect::stderr()` for trace capture. Reproduces BUG-295: verifies `apply_refresh()` emits `reason: not owned` (not `reason: ok`) when `aq.is_owned == false`.
+- FT-24 is a unit test in `tests/usage/fetch_tests.rs` or `tests/cli/usage_test.rs` — creates a temp credential store with an `alice.json` owned by current identity and a `_active_{remote_host}_{remote_user}` marker file naming `alice`. Verifies no HTTP call fires and trace line emitted. Reproduces BUG-305.
+- FT-25 is a unit test in `tests/usage/refresh_tests_b.rs` — directly calls `reason_label(&aq, 0)` with `is_owned=true, cached=false, is_occupied_elsewhere=true, result=Ok(...)`. Verifies return value is `"occupied elsewhere"`. No `apply_refresh()` call needed — the extracted function is directly testable. Reproduces BUG-306.
 
 ---
 

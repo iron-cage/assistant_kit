@@ -70,7 +70,7 @@ Counterpart to `set_session_model()` with identical read-modify-write pattern: r
 
 | File | Relationship |
 |------|--------------|
-| `tests/docs/feature/62_unified_session_config.md` | FT-01..FT-20, EC-01 — FT-01..FT-13 implemented (TSK-315); FT-14..FT-15 for BUG-312; FT-16..FT-18 for BUG-322; FT-19..FT-20 for TSK-335 (H2 always-sync + H3 render) |
+| `tests/docs/feature/062_unified_session_config.md` | FT-01..FT-20, EC-01 — FT-01..FT-13 implemented (TSK-315); FT-14..FT-15 for BUG-312; FT-16..FT-18 for BUG-322; FT-19..FT-20 for TSK-335 (H2 always-sync + H3 render) |
 
 ### Algorithm Docs
 
