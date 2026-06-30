@@ -589,7 +589,7 @@ fn ft07_footer_next_shows_opus_and_effort_when_sonnet_exhausted()
 {
   let mut cur = mk_aq_sort( "cur@x.com", 50.0, FAR_FUTURE_MS );
   cur.is_current = true;
-  let rec = mk_aq_sort_weekly( "aaa@x.com", 50.0, 50.0, 90.0 );  // 10% Sonnet left → opus
+  let rec = mk_aq_sort_weekly( "aaa@x.com", 50.0, 50.0, 91.0 );  // 9% Sonnet left → opus
   let accounts = vec![ cur, rec ];
   let output = render_text(
     &accounts, SortStrategy::Name, None, PreferStrategy::Any,

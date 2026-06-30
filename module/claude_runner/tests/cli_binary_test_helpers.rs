@@ -36,6 +36,20 @@
 
 use std::process::Command;
 
+fn assert_container()
+{
+  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
+    || std::path::Path::new( "/run/.containerenv" ).exists()
+    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
+  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
+  assert!(
+    in_container || escaped,
+    "\n\nTests must run inside a container.\n\
+     Standard invocation: cd module/claude_profile && ./verb/test\n\
+     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
+  );
+}
+
 /// Invoke the `clr` binary with `args`, returning raw `Output` without asserting success.
 ///
 /// Used for both success-path and expected-failure cases — callers check
@@ -55,6 +69,7 @@ use std::process::Command;
 #[allow(dead_code)]
 pub fn run_cli( args : &[ &str ] ) -> std::process::Output
 {
+  assert_container();
   let bin = env!( "CARGO_BIN_EXE_clr" );
   Command::new( bin )
     .args( args )
@@ -81,6 +96,7 @@ pub fn run_cli_with_env
   env  : &[ ( &str, &str ) ],
 ) -> std::process::Output
 {
+  assert_container();
   let bin = env!( "CARGO_BIN_EXE_clr" );
   Command::new( bin )
     .args( args )
@@ -240,6 +256,7 @@ pub fn fake_claude_binary_dir() -> ( tempfile::TempDir, String )
 #[allow(dead_code)]
 pub fn spawn_fake_claude( path_val : &str ) -> std::process::Child
 {
+  assert_container();
   // Retry up to 3 times on ETXTBSY (os error 26 — ExecutableFileBusy).
   // Historically `fake_claude_binary_dir()` used fs::copy which could race with
   // concurrent copies; now uses symlinks, so ETXTBSY should not occur — but the
@@ -295,6 +312,7 @@ pub fn spawn_fake_claude( path_val : &str ) -> std::process::Child
 #[ allow( dead_code ) ]
 pub fn spawn_print_claude( path_val : &str ) -> std::process::Child
 {
+  assert_container();
   use std::os::unix::process::CommandExt as _;
   let child = std::process::Command::new( "/bin/sh" )
     .arg0( "claude" )
@@ -321,6 +339,7 @@ pub fn spawn_print_claude( path_val : &str ) -> std::process::Child
 #[allow(dead_code)]
 pub fn run_clr_ps( path_val : &str ) -> std::process::Output
 {
+  assert_container();
   let bin = env!( "CARGO_BIN_EXE_clr" );
   std::process::Command::new( bin )
     .arg( "ps" )
@@ -342,6 +361,7 @@ pub fn run_clr_ps( path_val : &str ) -> std::process::Output
 #[allow(dead_code)]
 pub fn run_ask_dry( extra_args : &[ &str ] ) -> String
 {
+  assert_container();
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let mut args = vec![ "ask", "--dry-run" ];
   args.extend_from_slice( extra_args );
@@ -400,6 +420,7 @@ pub fn fake_claude( script : &str ) -> ( tempfile::TempDir, String )
 #[ allow( dead_code ) ]
 pub fn run_dry( args : &[ &str ] ) -> String
 {
+  assert_container();
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let mut full = vec![ "--dry-run" ];
   full.extend_from_slice( args );
@@ -431,6 +452,7 @@ pub fn run_dry( args : &[ &str ] ) -> String
 #[allow(dead_code)]
 pub fn run_with_path( args : &[ &str ], path : &str ) -> std::process::Output
 {
+  assert_container();
   let bin = env!( "CARGO_BIN_EXE_clr" );
   Command::new( bin )
     .args( args )
@@ -453,6 +475,7 @@ pub fn run_with_path( args : &[ &str ], path : &str ) -> std::process::Output
 #[allow(dead_code)]
 pub fn run_clr_kill( pid : u32 ) -> std::process::Output
 {
+  assert_container();
   let bin = env!( "CARGO_BIN_EXE_clr" );
   Command::new( bin )
     .args( [ "kill", &pid.to_string() ] )

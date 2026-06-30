@@ -16,8 +16,23 @@
 const CLP           : &str = env!( "CARGO_BIN_EXE_clp" );
 const CLAUDE_PROFILE : &str = env!( "CARGO_BIN_EXE_claude_profile" );
 
+fn assert_container()
+{
+  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
+    || std::path::Path::new( "/run/.containerenv" ).exists()
+    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
+  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
+  assert!(
+    in_container || escaped,
+    "\n\nTests must run inside a container.\n\
+     Standard invocation: cd module/claude_profile && ./verb/test\n\
+     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
+  );
+}
+
 fn run( bin : &str, args : &[ &str ] ) -> std::process::Output
 {
+  assert_container();
   std::process::Command::new( bin )
     .args( args )
     .output()

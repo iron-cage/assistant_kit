@@ -15,6 +15,20 @@
 
 use tempfile::TempDir;
 
+fn assert_container()
+{
+  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
+    || std::path::Path::new( "/run/.containerenv" ).exists()
+    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
+  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
+  assert!(
+    in_container || escaped,
+    "\n\nTests must run inside a container.\n\
+     Standard invocation: cd module/claude_storage && ./verb/test\n\
+     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
+  );
+}
+
 /// OP-1: Cargo.toml updated: old dep removed, new dep added.
 ///
 /// ## Purpose
@@ -141,6 +155,7 @@ fn op_2_use_statements_updated_no_claude_storage_imports_remain()
 #[ test ]
 fn op_3_crate_compiles_after_cargo_toml_and_import_migration()
 {
+  assert_container();
   let binary = std::path::PathBuf::from( env!( "CARGO_BIN_EXE_clg" ) );
   assert!(
     binary.exists(),

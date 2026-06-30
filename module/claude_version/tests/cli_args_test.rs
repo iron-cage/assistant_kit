@@ -95,8 +95,23 @@
 //! | `tc_settings_value_empty_exits_1` | SettingsValue | Empty validation |
 //! | `tc_settings_value_absent_exits_1` | SettingsValue | Required field |
 
+fn assert_container()
+{
+  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
+    || std::path::Path::new( "/run/.containerenv" ).exists()
+    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
+  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
+  assert!(
+    in_container || escaped,
+    "\n\nTests must run inside a container.\n\
+     Standard invocation: cd module/claude_version && ./verb/test\n\
+     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
+  );
+}
+
 fn run( args : &[ &str ] ) -> std::process::Output
 {
+  assert_container();
   let bin = env!( "CARGO_BIN_EXE_claude_version" );
   std::process::Command::new( bin )
     .args( args )
@@ -790,6 +805,7 @@ fn tc493_dry_0_then_1_last_wins_dry_active()
 #[ test ]
 fn tc494_dry_1_then_0_last_wins_dry_inactive()
 {
+  assert_container();
   let dir = tempfile::TempDir::new().expect( "failed to create tmpdir" );
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_claude_version" ) )
   .args( [ ".settings.set", "key::probe", "value::check", "dry::1", "dry::0" ] )
@@ -864,6 +880,7 @@ fn tc_verbosity_level_0_minimal()
 #[ test ]
 fn tc_verbosity_level_2_verbose()
 {
+  assert_container();
   let dir = tempfile::TempDir::new().expect( "tmpdir" );
   let claude_dir = dir.path().join( ".claude" );
   std::fs::create_dir_all( &claude_dir ).unwrap();
@@ -981,6 +998,7 @@ fn tc_settings_key_absent_exits_1()
 #[ test ]
 fn tc_settings_key_dot_literal()
 {
+  assert_container();
   let dir = tempfile::TempDir::new().expect( "tmpdir" );
   let claude_dir = dir.path().join( ".claude" );
   std::fs::create_dir_all( &claude_dir ).unwrap();
@@ -1002,6 +1020,7 @@ fn tc_settings_key_dot_literal()
 #[ test ]
 fn tc_settings_key_valid_accepted()
 {
+  assert_container();
   let dir = tempfile::TempDir::new().expect( "tmpdir" );
   let claude_dir = dir.path().join( ".claude" );
   std::fs::create_dir_all( &claude_dir ).unwrap();
@@ -1043,6 +1062,7 @@ fn tc_settings_value_absent_exits_1()
 #[ test ]
 fn ec3_help_mutation_no_side_effects()
 {
+  assert_container();
   let dir = tempfile::TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   let bin = env!( "CARGO_BIN_EXE_claude_version" );

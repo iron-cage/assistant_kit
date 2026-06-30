@@ -33,12 +33,32 @@
 //! A partial rename compiles locally (cached artefact) but breaks on a
 //! clean build because `cargo_bin!` panics when the binary is not found.
 
+/// Panic if not running inside a container (or escape hatch active).
+///
+/// Checks three container signals: `/.dockerenv`, `/run/.containerenv`,
+/// `RUNBOX_CONTAINER=1`. Honors `VERB_LAYER=l0` escape hatch for host
+/// development. Called at the top of every process-spawning helper.
+pub fn assert_container()
+{
+  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
+    || std::path::Path::new( "/run/.containerenv" ).exists()
+    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
+  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
+  assert!(
+    in_container || escaped,
+    "\n\nTests must run inside a container.\n\
+     Standard invocation: cd module/claude_storage && ./verb/test\n\
+     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
+  );
+}
+
 /// Return a Command pointing to the pre-compiled `clg` binary.
 ///
 /// Uses `cargo_bin!()` macro which resolves to the binary built by
 /// nextest/cargo-test BEFORE test execution. No compilation at test time.
 pub fn clg_cmd() -> std::process::Command
 {
+  assert_container();
   std::process::Command::new( assert_cmd::cargo::cargo_bin!( "clg" ) )
 }
 
