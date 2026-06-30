@@ -18,14 +18,15 @@ These were not linked: a threshold change or logic refinement required updating 
 
 **Footer Next line — adding effort display:**
 
-The `Current` line already shows `{model}/{effort}`, reading both from `settings.json` via `parse_string_field`. The `Next` line previously showed only `{rec_model}`, omitting effort. Feature 062 adds the `session_effort` to the Next line in the same `{model}/{effort}` format when effort is present in settings.json. When `session_effort` is `None` (key absent from settings.json), the Next line shows only `{rec_model}` (no slash). Column widths are recomputed to align across both lines.
+The `Current` line shows `{model}/{effort}`, reading both from `settings.json` via `parse_string_field`. The `Next` line previously showed only `{rec_model}`, omitting effort. Feature 062 adds effort to the Next line in `{model}/{effort}` format using model-derived effort: `"max"` when `rec_model = "opus"`, `"high"` when `rec_model = "sonnet"` (TSK-335 — Fix H3: was incorrectly using `session_effort` carry-forward from current account instead of model-derived effort). The effort is always shown — no conditional on `session_effort`. Column widths are recomputed to align across both lines.
 
 **Rotation dispatcher — model and effort write for winner:**
 
 `.usage rotate::1` previously called `switch_account()` then `apply_touch()` but did not call `apply_model_override` for the winner. The pre-rotation model override (`api.rs:690-696`) updated settings.json for the **old** current account's quota, not the winner's. After Feature 062 and subsequent fixes, the rotation dispatcher additionally:
 
-1. Calls `apply_model_override(winner_data, paths)` — bidirectional model AND effort correction: writes `"opus"` + `effortLevel: "high"` when Sonnet left < 15% (Fix BUG-322); writes `"sonnet"` + `effortLevel: "low"` when Sonnet left >= 15% or tier absent (Fix BUG-311, Fix BUG-322). When neither model change fires, the BUG-312 init guard writes `effortLevel: "low"` if absent (first-use fallback).
-2. Calls `set_session_effort(paths, session_effort)` — writes `effortLevel` to settings.json with carry-forward value when `session_effort` is `Some`. When `session_effort` is `None` and effortLevel was absent, step 1 already initialized it to `"low"` via the BUG-312 guard; this step is a no-op.
+1. Calls `apply_model_override(winner_data, paths)` — bidirectional model AND effort correction: writes `"opus"` + `effortLevel: "max"` when Sonnet left < 15% (Fix BUG-322, values updated TSK-335); writes `"sonnet"` + `effortLevel: "high"` when Sonnet left >= 15% or tier absent (Fix BUG-311, values updated TSK-335). Effort is written unconditionally (TSK-335 — Fix H2) — the BUG-312 init guard is now effectively unreachable but retained as safety fallback (writes `"high"` if absent).
+
+The carry-forward `set_session_effort(paths, session_effort)` call that previously followed step 1 has been removed (TSK-335): it overwrote model-derived effort with stale pre-rotation effort when `session_effort` was `Some`.
 
 **`set_session_effort()` in `claude_profile_core`:**
 
@@ -35,14 +36,15 @@ Counterpart to `set_session_model()` with identical read-modify-write pattern: r
 
 - **AC-01**: `recommended_model(aq: &AccountQuota) -> &'static str` is a `pub(crate)` function in `format.rs`. Returns `"opus"` when `aq.result` is `Ok(data)` and `data.seven_day_sonnet` is `Some(s)` and `100.0 - s.utilization < 15.0`. Returns `"sonnet"` in all other cases (tier absent, result is Err, or Sonnet left >= 15%).
 - **AC-02**: `render.rs` footer `Next` line calls `recommended_model(rec)` instead of the previously-inline match. No inline threshold logic remains in `render.rs` for the recommendation model.
-- **AC-03**: Footer `Next` line shows `{rec_model}/{session_effort}` when `session_effort` is `Some`; shows `{rec_model}` (no slash) when `session_effort` is `None`. Column width `col3_w` accounts for the slash-delimited effort when present, aligning `·` delimiters across both footer lines.
+- **AC-03**: Footer `Next` line always shows `{rec_model}/{model-derived-effort}` where model-derived effort is `"max"` when `rec_model = "opus"` and `"high"` when `rec_model = "sonnet"`. Effort is shown unconditionally — not conditional on `session_effort`. Column width `col3_w` is always computed to include the slash-delimited effort, aligning `·` delimiters across both footer lines. (TSK-335 — Fix H3)
 - **AC-04**: `set_session_effort(paths: &ClaudePaths, effort_id: &str)` exists in `claude_profile_core::account`. Reads `settings.json`, sets `"effortLevel"` key to `effort_id`, writes back. Creates `~/.claude/` if absent (same guard as `set_session_model`).
 - **AC-05**: After `rotate::1` switch succeeds and winner `result = Ok(data)`, `apply_model_override(data, paths)` is called for the winner. When winner's Sonnet left < 15%, settings.json `model` becomes `"opus"`.
-- **AC-06**: After `rotate::1` switch succeeds and `session_effort` is `Some(e)`, `set_session_effort(paths, e)` is called. Settings.json `effortLevel` key reflects the carry-forward effort value.
-- **AC-07**: When `session_effort` is `None` (not set in settings.json at rotation time), the carry-forward `set_session_effort()` call is a no-op. However, `apply_model_override()` (called before carry-forward) sets effort bidirectionally when the model changes: `"high"` for Opus override, `"low"` for Sonnet override (Fix BUG-322). When no model change fires, the BUG-312 init guard writes `"low"` if absent (first-use fallback). Effective result: rotation with no prior effortLevel produces `effortLevel: "low"` (Sonnet) or `"high"` (Opus) in settings.json.
+- **AC-06**: After `rotate::1` switch succeeds, `apply_model_override(winner_data, paths)` sets `effortLevel` to the model-derived value (`"max"` for Opus, `"high"` for Sonnet or absent-tier). No carry-forward `set_session_effort()` call follows — the carry-forward mechanism was removed (TSK-335) because it overwrote the model-derived effort with stale pre-rotation effort.
+- **AC-07**: `apply_model_override()` writes effort unconditionally on every call regardless of whether the model changed (`overrode` flag). When model is already at the target state (no-op), effort is still written: `"max"` (Opus) or `"high"` (Sonnet/absent-tier). Effective result: any call to `apply_model_override()` always produces a fully-synced `effortLevel` in settings.json. (TSK-335 — Fix H2)
 - **AC-08**: `apply_model_override()` in `api.rs` calls `recommended_model(aq_data)` internally to determine whether the override fires, or continues to use its own equivalent logic. The threshold is authoritative in `recommended_model()`; no duplication remains.
-- **AC-09**: When `apply_model_override()` switches the model to Opus (`overrode = true`), `set_session_effort(paths, "high")` is called unconditionally. The effort write is paired with the model write — not deferred to the BUG-312 init guard. (Fix BUG-322)
-- **AC-10**: When `apply_model_override()` reverts the model to Sonnet (`overrode = true`, from either sufficient-quota or absent-tier path), `set_session_effort(paths, "low")` is called unconditionally. This resets effort when the Opus override period ends. (Fix BUG-322)
+- **AC-09**: When `apply_model_override()` is called and `seven_day_sonnet` left < 15% (Opus branch), `set_session_effort(paths, "max")` is called unconditionally regardless of `overrode`. (Fix BUG-322; value updated TSK-335: `"high"` → `"max"`)
+- **AC-10**: When `apply_model_override()` is called and `seven_day_sonnet` left ≥ 15% or tier absent (Sonnet branch), `set_session_effort(paths, "high")` is called unconditionally regardless of `overrode`. (Fix BUG-322; value updated TSK-335: `"low"` → `"high"`)
+- **AC-11**: `apply_model_override()` never leaves `effortLevel` unset after a call when a Sonnet or Opus branch fires. The BUG-312 init guard (`get_session_effort().is_none() → set_session_effort("high")`) is retained as a safety fallback but is unreachable when AC-09 or AC-10 fire — those branches always write first. (TSK-335)
 
 ### Features
 
@@ -60,15 +62,15 @@ Counterpart to `set_session_model()` with identical read-modify-write pattern: r
 | File | Relationship |
 |------|--------------|
 | `src/usage/format.rs` | `recommended_model(aq)` — canonical session model recommendation function |
-| `src/usage/render.rs` | Footer `Next` line generation — calls `recommended_model()`; adds `/{effort}` suffix when present |
-| `src/usage/api.rs` | Rotation dispatcher — calls `apply_model_override()` + `set_session_effort()` for winner |
+| `src/usage/render.rs` | Footer `Next` line generation — calls `recommended_model()`; always shows `/{model-derived-effort}` (`"max"` for opus, `"high"` for sonnet) |
+| `src/usage/api.rs` | Rotation dispatcher — calls `apply_model_override()` for winner; carry-forward `set_session_effort()` removed (TSK-335) |
 | `module/claude_profile_core/src/account.rs` | `set_session_effort(paths, effort_id)` — writes `effortLevel` to `settings.json` |
 
 ### Tests
 
 | File | Relationship |
 |------|--------------|
-| `tests/docs/feature/62_unified_session_config.md` | FT-01..FT-18, EC-01 — FT-01..FT-13 implemented (TSK-315); FT-14..FT-15 for BUG-312; FT-16..FT-18 for BUG-322 |
+| `tests/docs/feature/62_unified_session_config.md` | FT-01..FT-20, EC-01 — FT-01..FT-13 implemented (TSK-315); FT-14..FT-15 for BUG-312; FT-16..FT-18 for BUG-322; FT-19..FT-20 for TSK-335 (H2 always-sync + H3 render) |
 
 ### Algorithm Docs
 

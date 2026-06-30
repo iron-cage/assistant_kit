@@ -30,6 +30,11 @@ name = "claude_profile"
 path = "src/main.rs"
 required-features = [ "enabled" ]
 
+[[test]]
+name = "usage_integration_test"
+path = "tests/usage_integration_test.rs"
+required-features = [ "testing" ]
+
 [dependencies]
 # Zero third-party (crates.io) dependencies for core library functionality.
 # Internal workspace crates (claude_core, claude_profile_core) are allowed.
@@ -44,9 +49,10 @@ claude_quota          = { workspace = true, optional = true, features = [ "enabl
 data_fmt              = { workspace = true, optional = true }
 
 [dev-dependencies]
-gag        = { workspace = true }
+gag          = { workspace = true }
 serde_json.workspace = true
 tempfile.workspace = true
+claude_quota = { workspace = true, features = [ "enabled" ] }
 
 [features]
 # Default: full CLI build (binary + all deps). Use --no-default-features for library-only.
@@ -62,3 +68,6 @@ enabled = [
   "dep:claude_quota",
   "dep:data_fmt",
 ]
+# Exposes pub test_bridge module for integration tests in tests/usage/.
+# Requires enabled so claude_quota types are available.
+testing = [ "enabled" ]

@@ -16,7 +16,7 @@
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
 | `cli/workflow_scenario/` — DEPRECATED | Superseded by `cli/user_story/`; retained for historical reference only | [cli/workflow_scenario/readme.md](../cli/workflow_scenario/readme.md) | 10 |
 | `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 47 |
-| `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 8 |
+| `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 9 |
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 6 |
 | `research_interactive/` | Investigation findings on Claude binary behavior | [research_interactive/readme.md](../research_interactive/readme.md) | 1 |
 | `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 7 |
@@ -31,7 +31,7 @@
 | `tests/docs/cli/type/` | Per-type test case documentation | [tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) | 4 |
 | `tests/docs/cli/user_story/` | Per-story acceptance test documentation | [tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) | 5 |
 | `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 48 |
-| `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 8 |
+| `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 9 |
 | `tests/docs/pitfall/` | Per-pitfall guard verification test documentation | [tests/docs/pitfall/readme.md](../../tests/docs/pitfall/readme.md) | 1 |
 
 ## Master Doc Instances Table
@@ -209,6 +209,7 @@
 | invariant | 006 | Parameters Default to Active Context | [invariant/006_param_defaults.md](../invariant/006_param_defaults.md) |
 | invariant | 007 | JSON Storage Format | [invariant/007_json_storage_format.md](../invariant/007_json_storage_format.md) |
 | invariant | 008 | Single Token Refresh Entry Point | [invariant/008_single_token_refresh_entry.md](../invariant/008_single_token_refresh_entry.md) |
+| invariant | 009 | Container-Only Test Execution | [invariant/009_container_only_test_execution.md](../invariant/009_container_only_test_execution.md) |
 | research_interactive | 001 | Claude Interactive Session Control | [research_interactive/001_claude_interactive_session_control.md](../research_interactive/001_claude_interactive_session_control.md) |
 | schema | 001 | Credential Snapshot (`{name}.credentials.json`) | [schema/001_credentials_json.md](../schema/001_credentials_json.md) |
 | schema | 002 | Account Metadata (`{name}.json`) — unified field table | [schema/002_account_json.md](../schema/002_account_json.md) |

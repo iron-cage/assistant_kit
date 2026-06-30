@@ -1,3 +1,5 @@
+// Items are pub for test_bridge re-export; lints suppressed — internal API.
+#![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
 //! Sort strategies for the quota table.
 //!
 //! `sort_indices` is the core sort function. Recommendation strategies
@@ -76,7 +78,7 @@ fn status_group_of( aq : &AccountQuota ) -> StatusGroup
 /// `desc::` reverses the within-group sort only — group order is always fixed.
 ///
 /// See `docs/feature/020_usage_sort_strategies.md` for full algorithm specs.
-pub( crate ) fn sort_indices(
+pub fn sort_indices(
   accounts  : &[ AccountQuota ],
   strategy  : SortStrategy,
   desc      : Option< bool >,

@@ -11,14 +11,16 @@ Bidirectionally manage the interactive session model in `~/.claude/settings.json
 
 ### Decision Table
 
-| `seven_day_sonnet` | Sonnet remaining (`100 - utilization`) | Current model | Action | Effort (Fix BUG-322) |
+Effort is written **unconditionally** on every call to `apply_model_override()`, regardless of whether the model actually changed (`overrode` value). This ensures effort always matches the model state even for stable sessions (TSK-335 — Fix H2).
+
+| `seven_day_sonnet` | Sonnet remaining (`100 - utilization`) | Current model | Action | Effort (unconditional write) |
 |---|---|---|---|---|
-| `None` | — | Opus form | **→ Sonnet** (absent tier ≠ exhausted; restore conservatively — Fix BUG-311) | → `"low"` |
-| `None` | — | Sonnet form | No-op | unchanged |
-| `Some` | ≥ 15% | Opus form | **→ Sonnet** (sufficient capacity — Fix BUG-311) | → `"low"` |
-| `Some` | ≥ 15% | Sonnet form | No-op | unchanged |
-| `Some` | < 15% | Sonnet form | **→ Opus** (near-exhausted — preserve remaining tokens) | → `"high"` |
-| `Some` | < 15% | Opus form | No-op | unchanged |
+| `None` | — | Opus form | **→ Sonnet** (absent tier ≠ exhausted; restore conservatively — Fix BUG-311) | → `"high"` |
+| `None` | — | Sonnet form | No-op | → `"high"` |
+| `Some` | ≥ 15% | Opus form | **→ Sonnet** (sufficient capacity — Fix BUG-311) | → `"high"` |
+| `Some` | ≥ 15% | Sonnet form | No-op | → `"high"` |
+| `Some` | < 15% | Sonnet form | **→ Opus** (near-exhausted — preserve remaining tokens) | → `"max"` |
+| `Some` | < 15% | Opus form | No-op | → `"max"` |
 
 "Opus form" = model string matches `claude-opus-*` or `"opus"`.
 "Sonnet form" = model string matches `claude-sonnet-*` or `"sonnet"`.
@@ -32,6 +34,11 @@ Bidirectionally manage the interactive session model in `~/.claude/settings.json
 - **BUG-300 (Fix TSK-302):** `map_or(0.0, ...)` on `seven_day_sonnet = None` returned 0.0 < threshold → Opus override fired unconditionally for accounts without Sonnet tier. Fix: `if let Some(ref sonnet)` guard.
 - **BUG-311 (Fix 2026-06-23):** one-way ratchet — only wrote "opus" (exhaustion), never restored "sonnet" (recovery). Fix: added `else`-branch calling `override_session_model_to_sonnet()`. Tier-absent path also writes "sonnet" conservatively.
 - **BUG-322 (Fix 2026-06-28):** effort decoupled from model — BUG-312 init wrote `"low"` when absent but never matched effort to model. Opus override produced `opus/low`. Fix: when model overrides to Opus (`overrode = true`), `set_session_effort(paths, "high")`; when model reverts to Sonnet or absent-tier fallback (`overrode = true`), `set_session_effort(paths, "low")`. BUG-312 init retained as fallback for no-model-change edge case.
+- **TSK-335 (Fix H2 + H3, 2026-06-29):** Three related regressions fixed together:
+  - **H2 — effort stale in stable sessions:** effort write was inside `if overrode` gate — only fired when model changed. Accounts already at the correct model never got their effort synced. Fix: move all effort writes outside `if overrode` — write unconditionally on every call. BUG-312 fallback becomes effectively unreachable but retained for safety (value updated: `"low"` → `"high"`).
+  - **Effort values updated:** Opus effort `"high"` → `"max"`; Sonnet effort `"low"` → `"high"`. BUG-322 fix had the right structure but wrong values.
+  - **H3 — render.rs Next line used carry-forward session_effort instead of model-derived effort:** `rec_display` was `session_effort` (the current account's effort read from settings.json), not derived from the recommended account's model. Fix: compute `rec_effort = if rec_model == "opus" { "max" } else { "high" }` inside `render.rs` — always show model-derived effort in the Next line.
+  - **Carry-forward removal:** `api.rs` rotation dispatcher removed `if let Some(se) = session_effort { set_session_effort(paths, se) }` — carry-forward was overwriting model-derived effort from `apply_model_override()` with stale pre-rotation effort.
 
 ### Relationship to `recommended_model()`
 
@@ -56,3 +63,4 @@ This is a **temporary blind spot** until Feature 066 (dual-source parsing) popul
 | [feature/039_decision_algorithms.md](../feature/039_decision_algorithms.md) | Table 2 (legacy reference) |
 | [algorithm/009](009_oauth_usage_response_migration.md) | API response format change — why `seven_day_sonnet` is currently always `None`; dual-source parsing recovery path |
 | [schema/006](../schema/006_settings_json.md) | `model` and `effortLevel` fields in `settings.json` |
+| [pitfall/006](../pitfall/006_model_override_pitfalls.md) | Known pitfalls — absent-tier confusion, one-way ratchet, effort gate, carry-forward overwrite |

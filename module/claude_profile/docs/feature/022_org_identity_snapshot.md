@@ -121,7 +121,7 @@ Applied to `.credentials.status` (reads from live `~/.claude.json` — org field
 
 | File | Relationship |
 |------|--------------|
-| `tests/cli/accounts_test.rs` | org field rendering from `{name}.json` snapshot |
+| `tests/cli/accounts_list_test.rs` | org field rendering from `{name}.json` snapshot |
 | `tests/cli/account_mutations_test.rs` | org identity in `{name}.json` created on save; removed on delete |
 | `tests/cli/credentials_test.rs` | `org_uuid::` and `org_name::` on `.credentials.status` |
 

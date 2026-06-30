@@ -1,3 +1,5 @@
+// Items are pub for test_bridge re-export; lints suppressed — internal API.
+#![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
 //! Text-table, plain, and field-extract renderers for quota results.
 //!
 //! `render_text` produces the human-readable `data_fmt` table; `render_plain`
@@ -15,8 +17,8 @@ use super::format::{
 };
 use super::sort::{ sort_indices, find_next_for_strategy, strategy_metric };
 use super::render_sessions::append_sessions_table;
-pub( crate ) use super::render_json::render_json;
-pub( crate ) use super::render_tsv::render_tsv;
+pub use super::render_json::render_json;
+pub use super::render_tsv::render_tsv;
 
 // ── Text renderer ─────────────────────────────────────────────────────────────
 
@@ -28,7 +30,7 @@ pub( crate ) use super::render_tsv::render_tsv;
 /// ≥2 accounts have valid quota — shows the winner for the active `sort::`.
 /// Footer is omitted when < 2 accounts have valid quota data.
 #[ allow( clippy::too_many_lines, clippy::too_many_arguments ) ]
-pub( crate ) fn render_text(
+pub fn render_text(
   accounts       : &[ AccountQuota ],
   sort           : SortStrategy,
   desc           : Option< bool >,
@@ -253,12 +255,13 @@ pub( crate ) fn render_text(
 
   let rec    = &accounts[ idx ];
   let metric = strategy_metric( rec, sort, prefer, now_secs );
-  let rec_model   = recommended_model( rec );
-  let rec_display = match session_effort
-  {
-    Some( se ) => rec_model.to_string() + "/" + se,
-    None       => rec_model.to_string(),
-  };
+  let rec_model  = recommended_model( rec );
+  // Fix(H3/TSK-335): rec_display is model-derived, not carry-forward from current account's session_effort.
+  // Root cause: matching session_effort passed effort from the CURRENT account into the NEXT account display,
+  //   yielding the wrong effort level when accounts differ in model assignment.
+  // Pitfall: session_effort still governs the Current line's model_effort display — do not conflate the two.
+  let rec_effort  = if rec_model == "opus" { "max" } else { "high" };
+  let rec_display = rec_model.to_string() + "/" + rec_effort;
 
   // Build footer lines: find current (✓) account or fall back to legacy format.
   let footer = if let Some( cur ) = accounts.iter().find( |aq| aq.is_current )
@@ -438,10 +441,3 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
     }
   }
 }
-
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-#[ cfg( test ) ]
-#[ path = "render_tests.rs" ]
-mod tests;

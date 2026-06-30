@@ -39,17 +39,18 @@ pub use api::usage_routine;
 ///
 /// All helpers live here so submodule test blocks can do
 /// `use crate::usage::test_support::*` without duplicating factory code.
-#[ cfg( test ) ]
-pub( crate ) mod test_support
+#[ cfg( any( test, feature = "testing" ) ) ]
+#[ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate, missing_docs ) ]
+pub mod test_support
 {
   use super::types::AccountQuota;
   use super::format::unix_to_date;
 
   /// Token expiry far enough in the future that any expiry-aware logic treats it as valid.
-  pub( crate ) const FAR_FUTURE_MS : u64 = u64::MAX / 2;
+  pub const FAR_FUTURE_MS : u64 = u64::MAX / 2;
 
   /// Build an `AccountQuota` with a single `five_hour` period (no weekly data).
-  pub( crate ) fn mk_aq_ok( utilization : f64 ) -> AccountQuota
+  pub fn mk_aq_ok( utilization : f64 ) -> AccountQuota
   {
     let data = claude_quota::OauthUsageData
     {
@@ -77,7 +78,7 @@ pub( crate ) mod test_support
   }
 
   /// Build an `AccountQuota` in error state.
-  pub( crate ) fn mk_aq_err() -> AccountQuota
+  pub fn mk_aq_err() -> AccountQuota
   {
     AccountQuota
     {
@@ -101,7 +102,7 @@ pub( crate ) mod test_support
   /// Build an `AccountQuota` with both `five_hour` and `seven_day` periods.
   ///
   /// Used by SE-AND tests — `seven_day_sonnet` is absent.
-  pub( crate ) fn mk_aq_ok_both( h5_util : f64, d7_util : f64 ) -> AccountQuota
+  pub fn mk_aq_ok_both( h5_util : f64, d7_util : f64 ) -> AccountQuota
   {
     let data = claude_quota::OauthUsageData
     {
@@ -134,7 +135,7 @@ pub( crate ) mod test_support
   /// 0% utilization). Tests using this helper exercise the TIEBREAK path for weekly-sensitive
   /// strategies. To test `prefer_weekly` primary-key ordering with distinct weekly quotas,
   /// use `mk_aq_sort_weekly` instead.
-  pub( crate ) fn mk_aq_sort( name : &str, five_hour_util : f64, expires_at_ms : u64 ) -> AccountQuota
+  pub fn mk_aq_sort( name : &str, five_hour_util : f64, expires_at_ms : u64 ) -> AccountQuota
   {
     let data = claude_quota::OauthUsageData
     {
@@ -165,7 +166,7 @@ pub( crate ) mod test_support
   ///
   /// Use when tests need to exercise `prefer_weekly` ordering (secondary key of `sort::renew`).
   /// `resets_at` is None for all periods.
-  pub( crate ) fn mk_aq_sort_weekly(
+  pub fn mk_aq_sort_weekly(
     name                  : &str,
     five_hour_util        : f64,
     seven_day_util        : f64,
@@ -200,7 +201,7 @@ pub( crate ) mod test_support
   /// Build ISO-8601 reset string at `now_secs + offset_secs`.
   ///
   /// Used by `sort::renew` tests that need concrete `resets_at` values.
-  pub( crate ) fn reset_iso_at( now_secs : u64, offset_secs : u64 ) -> String
+  pub fn reset_iso_at( now_secs : u64, offset_secs : u64 ) -> String
   {
     let ts = now_secs + offset_secs;
     let ( y, mo, d ) = unix_to_date( ts );
@@ -216,7 +217,7 @@ pub( crate ) mod test_support
   /// Sets only the 5h reset timestamp; `seven_day` is None. Use for tests that need a concrete
   /// 5h reset value. Pitfall: Do NOT use for `sort::renew` ordering tests — the Renew arm reads
   /// `seven_day.resets_at`. Use `mk_aq_with_7d_reset` for `sort::renew` ordering tests.
-  pub( crate ) fn mk_aq_with_reset(
+  pub fn mk_aq_with_reset(
     name             : &str,
     five_hour_util   : f64,
     now_secs         : u64,
@@ -256,7 +257,7 @@ pub( crate ) mod test_support
   ///
   /// Use for `sort::renew` tests. `seven_day.utilization` is 0.0 (100% left).
   /// Pitfall: Use `mk_aq_with_reset` if you need `five_hour.resets_at` instead.
-  pub( crate ) fn mk_aq_with_7d_reset(
+  pub fn mk_aq_with_7d_reset(
     name              : &str,
     five_hour_util    : f64,
     now_secs          : u64,
@@ -298,7 +299,7 @@ pub( crate ) mod test_support
   /// `mk_aq_with_7d_reset` hardcodes `seven_day.util=0.0`; this helper lets you specify it.
   /// Pitfall: do NOT use `mk_aq_with_7d_reset` when testing weekly-exhaustion paths — its
   /// zero utilization makes every account appear fully available (`prefer_weekly=100.0`).
-  pub( crate ) fn mk_aq_with_7d_reset_util(
+  pub fn mk_aq_with_7d_reset_util(
     name              : &str,
     five_hour_util    : f64,
     seven_day_util    : f64,
@@ -338,7 +339,7 @@ pub( crate ) mod test_support
   /// Build a named `AccountQuota` with both `five_hour` and `seven_day` quota.
   ///
   /// Used by three-tier grouping tests where account name matters.
-  pub( crate ) fn mk_named_aq( name : &str, h5_util : f64, d7_util : f64 ) -> AccountQuota
+  pub fn mk_named_aq( name : &str, h5_util : f64, d7_util : f64 ) -> AccountQuota
   {
     let data = claude_quota::OauthUsageData
     {
@@ -366,7 +367,7 @@ pub( crate ) mod test_support
   }
 
   /// Build a named `AccountQuota` in error state.
-  pub( crate ) fn mk_named_aq_err( name : &str ) -> AccountQuota
+  pub fn mk_named_aq_err( name : &str ) -> AccountQuota
   {
     AccountQuota
     {
@@ -390,7 +391,7 @@ pub( crate ) mod test_support
   /// Build an `AccountQuota` with only `seven_day_sonnet` populated.
   ///
   /// Used by `resolve_model` tests in `subprocess.rs`.
-  pub( crate ) fn mk_aq_with_sonnet_util( utilization : f64 ) -> AccountQuota
+  pub fn mk_aq_with_sonnet_util( utilization : f64 ) -> AccountQuota
   {
     AccountQuota
     {
@@ -419,7 +420,7 @@ pub( crate ) mod test_support
   /// Build an `AccountQuota` with all quota fields absent.
   ///
   /// Used by `resolve_model` fallback tests in `subprocess.rs`.
-  pub( crate ) fn mk_aq_no_sonnet_data() -> AccountQuota
+  pub fn mk_aq_no_sonnet_data() -> AccountQuota
   {
     AccountQuota
     {
@@ -448,7 +449,7 @@ pub( crate ) mod test_support
   /// Build an `AccountQuota` with `five_hour.resets_at` set to the given value.
   ///
   /// Used by `apply_touch` trigger tests to distinguish active (Some) from idle (None) 5h windows.
-  pub( crate ) fn mk_aq_with_resets_at( resets_at : Option< &str > ) -> AccountQuota
+  pub fn mk_aq_with_resets_at( resets_at : Option< &str > ) -> AccountQuota
   {
     AccountQuota
     {
@@ -486,7 +487,7 @@ pub( crate ) mod test_support
   /// - `seven_day_sonnet=Some({resets_at:None})` → `son_idle=true`
   ///
   /// Used by `resolve_model` `son_idle` gate tests (BUG-289/BUG-290 fix).
-  pub( crate ) fn mk_aq_with_son_idle() -> AccountQuota
+  pub fn mk_aq_with_son_idle() -> AccountQuota
   {
     AccountQuota
     {
@@ -530,7 +531,7 @@ pub( crate ) mod test_support
   /// Pitfall: `account = None` is ambiguous (API fetch failed, not confirmed cancelled).
   /// This helper always sets `account = Some({billing_type: "none"})` — the definitive
   /// cancelled signal.
-  pub( crate ) fn mk_aq_cancelled(
+  pub fn mk_aq_cancelled(
     name    : &str,
     h5_util : f64,
     d7_util : f64,
@@ -581,7 +582,62 @@ pub( crate ) mod test_support
   /// `gag::BufferRedirect::stderr()` call; the guard is dropped automatically when
   /// the test or block ends. Uses `unwrap_or_else(|e| e.into_inner())` to ignore
   /// mutex poison from a prior panicking test and prevent cascade failures.
-  pub( crate ) static STDERR_LOCK : std::sync::Mutex< () > = std::sync::Mutex::new( () );
+  pub static STDERR_LOCK : std::sync::Mutex< () > = std::sync::Mutex::new( () );
+}
+
+// ── Test visibility bridge ─────────────────────────────────────────────────────
+//
+// Exposes pub(crate) items as pub under the `testing` feature so that
+// integration tests in `tests/usage/` can access them without widening
+// visibility in production builds. Requires `enabled` feature (claude_quota types).
+
+#[ cfg( feature = "testing" ) ]
+#[ allow( missing_docs ) ]
+pub mod test_bridge
+{
+  // ── Types sub-module ──────────────────────────────────────────────────────
+  pub mod types
+  {
+    pub use super::super::types::{
+      AccountQuota, SortStrategy, PreferStrategy, ColsVisibility,
+      SubprocessModel, SubprocessEffort,
+      OPUS_OVERRIDE_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD,
+    };
+  }
+
+  // ── Test support helpers (flat re-export) ─────────────────────────────────
+  pub use super::test_support::*;
+
+  // ── Sort ──────────────────────────────────────────────────────────────────
+  pub use super::sort::sort_indices;
+
+  // ── Sort next ─────────────────────────────────────────────────────────────
+  pub use super::sort_next::{ find_next_for_strategy, strategy_metric };
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  pub use super::render::{ render_text, render_tsv, render_json };
+
+  // ── Refresh ───────────────────────────────────────────────────────────────
+  pub use super::refresh::{ apply_refresh, reason_label };
+
+  // ── Touch ─────────────────────────────────────────────────────────────────
+  pub use super::touch::apply_touch;
+
+  // ── Format ────────────────────────────────────────────────────────────────
+  pub use super::format::{
+    token_exp_label, compute_expires_cell, unix_to_date, renewal_secs,
+    renews_label, next_event_raw, next_event_label, sub_label, shorten_error,
+    five_hour_left, seven_day_left, relevant_quotas, prefer_weekly,
+    recommended_model, quota_text_cells, status_emoji,
+  };
+
+  // ── API ───────────────────────────────────────────────────────────────────
+  pub use super::api::{ pre_switch_touch_ctx, apply_post_switch_touch, PreSwitchOutcome };
+  pub use super::api_switch::{ apply_model_override, TouchCtx };
+
+  // ── Fetch ─────────────────────────────────────────────────────────────────
+  pub use super::fetch::{ inject_synthetic_if_new, parse_u64_from_str, fetch_quota_for_list };
+  pub use super::fetch_cache::read_cached_quota;
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

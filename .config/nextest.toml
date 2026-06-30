@@ -1,5 +1,21 @@
 # Nextest configuration for assistant workspace
 #
+# Container-only enforcement (Invariant 009):
+# The setup-require-container script blocks bare-host test execution across
+# all workspace packages. See docs/invariant/009_container_only_test_execution.md
+
+[experimental]
+setup-scripts = true
+
+[scripts.setup.require-container]
+command = ".config/setup-require-container"
+
+[[profile.default.scripts]]
+filter = "all()"
+setup = ["require-container"]
+
+# ── Existing overrides ─────────────────────────────────────────────────────────
+#
 # dry_run_test invokes the real `claude` binary which takes 60-120s under load.
 # Without this override, nextest treats the test as hung and cancels it.
 #

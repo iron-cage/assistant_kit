@@ -28,7 +28,6 @@ impl SessionId
   /// Construct a `SessionId` from any string-like value.
   #[ inline ]
   #[ must_use ]
-  #[ inline ]
   pub fn new( id : impl Into< String > ) -> Self
   {
     Self( id.into() )
@@ -37,7 +36,6 @@ impl SessionId
   /// Return the inner UUID as a `&str`.
   #[ inline ]
   #[ must_use ]
-  #[ inline ]
   pub fn as_str( &self ) -> &str
   {
     &self.0

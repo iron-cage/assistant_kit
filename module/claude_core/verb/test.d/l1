@@ -17,4 +17,5 @@ export CARGO_NET_OFFLINE=true
 # Pitfall: Even with the fix in will_test source (local_nextest.rs, workspace_nextest.rs),
 # environment inheritance ensures this works with any w3 binary version.
 export NO_COLOR=1
+export RUNBOX_CONTAINER=1
 exec w3 .test level::3

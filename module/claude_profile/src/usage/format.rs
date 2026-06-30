@@ -2,6 +2,9 @@
 //!
 //! All functions here are pure data-to-string converters: no I/O, no side effects.
 //! They are called by `render.rs`, `sort.rs`, `touch.rs`, and `fetch.rs`.
+// Items are pub for test_bridge re-export; these lints are suppressed because all
+// functions here are internal API exposed only via the feature-gated test_bridge module.
+#![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate, clippy::missing_errors_doc, clippy::missing_panics_doc ) ]
 
 use crate::output::format_duration_secs;
 use super::types::{ AccountQuota, PreferStrategy, OPUS_OVERRIDE_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD };
@@ -12,7 +15,7 @@ use super::types::{ AccountQuota, PreferStrategy, OPUS_OVERRIDE_THRESHOLD, WEEKL
 ///
 /// Returns `"expired(Xd Yh ago)"` or `"valid(Xd Yh left)"` using the same
 /// duration format as `format_duration_secs`.
-pub( crate ) fn token_exp_label( expires_at_ms : u64 ) -> String
+pub fn token_exp_label( expires_at_ms : u64 ) -> String
 {
   let now_ms = u64::try_from(
     std::time::SystemTime::now()
@@ -36,7 +39,7 @@ pub( crate ) fn token_exp_label( expires_at_ms : u64 ) -> String
 ///
 /// Returns `"EXPIRED"` when `expires_at_ms / 1000 ≤ now_secs` (saturating), or
 /// `"in Xh Ym"` when the token is still valid.
-pub( crate ) fn compute_expires_cell( expires_at_ms : u64, now_secs : u64 ) -> String
+pub fn compute_expires_cell( expires_at_ms : u64, now_secs : u64 ) -> String
 {
   let remaining = ( expires_at_ms / 1000 ).saturating_sub( now_secs );
   if remaining == 0
@@ -55,7 +58,7 @@ pub( crate ) fn compute_expires_cell( expires_at_ms : u64, now_secs : u64 ) -> S
 ///
 /// Month is 1-based (1 = January). Day is 1-based (1 = first of month).
 /// No external dependencies — hand-rolled Gregorian arithmetic.
-pub( crate ) fn unix_to_date( unix_secs : u64 ) -> ( u64, u64, u64 )
+pub fn unix_to_date( unix_secs : u64 ) -> ( u64, u64, u64 )
 {
   let is_leap     = |y : u64| ( y % 4 == 0 && y % 100 != 0 ) || y % 400 == 0;
   let mut days    = unix_secs / 86_400;
@@ -122,7 +125,7 @@ fn parse_iso_secs( s : &str ) -> Option< u64 >
 /// 2. **Estimate** (`org_created_at_opt` set): derive the billing day-of-month from the
 ///    `org_created_at` string and find the next occurrence; return `(secs, true)`.
 /// 3. **Absent** (both `None`) or parse failure: return `None`.
-pub( crate ) fn renewal_secs(
+pub fn renewal_secs(
   renewal_at_opt     : Option< &str >,
   org_created_at_opt : Option< &str >,
   now_secs           : u64,
@@ -164,7 +167,7 @@ pub( crate ) fn renewal_secs(
 /// - Parse failure → `"—"` (em-dash).
 /// - Exact (`_renewal_at` set, auto-advanced) → `"in Xh Ym"` (no `~`).
 /// - Estimate (only `org_created_at`) → `"~in Xd"`.
-pub( crate ) fn renews_label(
+pub fn renews_label(
   renewal_at_opt     : Option< &str >,
   org_created_at_opt : Option< &str >,
   now_secs           : u64,
@@ -189,7 +192,7 @@ pub( crate ) fn renews_label(
 /// Candidates with `secs == 0` are excluded. Minimum-secs wins; ties by iteration order.
 /// Prefixes: `"+7d"` (7d reset), `"$ren"` (renewal). Token expiry (`!tok`) is not a candidate —
 /// it is already surfaced in the `Expires` column. 5h resets are not candidates either.
-pub( crate ) fn next_event_raw(
+pub fn next_event_raw(
   seven_day_resets_secs : Option< u64 >,
   renewal_secs_opt      : Option< u64 >,
   renewal_is_estimate   : bool,
@@ -218,7 +221,7 @@ pub( crate ) fn next_event_raw(
 /// Format the soonest upcoming strategic event as a compact label for the `→ Next` column.
 ///
 /// Candidates: `+7d` (7-day reset), `$ren` (renewal). All absent / zero → `"—"`.
-pub( crate ) fn next_event_label(
+pub fn next_event_label(
   seven_day_resets_secs : Option< u64 >,
   renewal_secs_opt      : Option< u64 >,
   renewal_is_estimate   : bool,
@@ -241,7 +244,7 @@ pub( crate ) fn next_event_label(
 /// - `has_max`                   → `"max"` (Claude Max plan)
 /// - `"stripe_subscription"` + `!has_max` → `"pro"` (paid but not Max)
 /// - anything else               → `"?"`
-pub( crate ) fn sub_label( account : Option< &claude_quota::OauthAccountData > ) -> &'static str
+pub fn sub_label( account : Option< &claude_quota::OauthAccountData > ) -> &'static str
 {
   let Some( a ) = account else { return "?"; };
   if a.billing_type == "none"                { return "\u{2014}"; }
@@ -270,7 +273,7 @@ pub( crate ) fn sub_label( account : Option< &claude_quota::OauthAccountData > )
 /// `QuotaError::MissingHeader` (displays as `"rate-limit header missing: …"`) is
 /// shortened to `"no header"`. All other strings pass through unchanged.
 /// The caller is responsible for wrapping the result in parentheses.
-pub( crate ) fn shorten_error( reason : &str ) -> &str
+pub fn shorten_error( reason : &str ) -> &str
 {
   if reason.starts_with( "HTTP transport error: HTTP 429" )
   {
@@ -300,7 +303,7 @@ pub( crate ) fn shorten_error( reason : &str ) -> &str
 ///
 /// Returns `100.0 - five_hour.utilization` for `Ok` accounts, or `-1.0` for `Err`
 /// accounts (treated as below-exhausted for drain/reset floor sinking).
-pub( crate ) fn five_hour_left( aq : &AccountQuota ) -> f64
+pub fn five_hour_left( aq : &AccountQuota ) -> f64
 {
   if let Ok( data ) = &aq.result
   {
@@ -317,7 +320,7 @@ pub( crate ) fn five_hour_left( aq : &AccountQuota ) -> f64
 /// Returns `100.0 - seven_day.utilization` for `Ok` accounts with `seven_day` data,
 /// `100.0` for `Ok` accounts where `seven_day` is absent (absent data ≠ exhausted),
 /// or `0.0` for `Err` accounts (treated as fully exhausted — no touch beneficial).
-pub( crate ) fn seven_day_left( aq : &AccountQuota ) -> f64
+pub fn seven_day_left( aq : &AccountQuota ) -> f64
 {
   let Ok( ref data ) = aq.result else { return 0.0; };
   100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization )
@@ -340,7 +343,7 @@ pub( crate ) fn seven_day_left( aq : &AccountQuota ) -> f64
 ///   but wrong for eligibility gates — absent ≠ exhausted ≠ available.
 /// Pitfall: always use `if let Some(ref son)` for quota-gate logic. `map_or` folds None into
 ///   a numeric sentinel that is indistinguishable from an actual measured value.
-pub( super ) fn relevant_quotas( aq : &AccountQuota, prefer : PreferStrategy ) -> ( f64, f64 )
+pub fn relevant_quotas( aq : &AccountQuota, prefer : PreferStrategy ) -> ( f64, f64 )
 {
   let Ok( data ) = &aq.result else { return ( -1.0, 0.0 ); };
   let five_h_left = 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
@@ -370,7 +373,7 @@ pub( super ) fn relevant_quotas( aq : &AccountQuota, prefer : PreferStrategy ) -
 ///
 /// Absent period data is treated as `0.0` left. `Err` accounts return `0.0`.
 /// Delegates to `relevant_quotas()` for the model-aware computation.
-pub( crate ) fn prefer_weekly( aq : &AccountQuota, prefer : PreferStrategy ) -> f64
+pub fn prefer_weekly( aq : &AccountQuota, prefer : PreferStrategy ) -> f64
 {
   relevant_quotas( aq, prefer ).1
 }
@@ -386,7 +389,7 @@ pub( crate ) fn prefer_weekly( aq : &AccountQuota, prefer : PreferStrategy ) -> 
 ///
 /// Mirrors the guard in `apply_model_override()`. Both reference `OPUS_OVERRIDE_THRESHOLD`
 /// — the literal must not be duplicated.
-pub( crate ) fn recommended_model( aq : &AccountQuota ) -> &'static str
+pub fn recommended_model( aq : &AccountQuota ) -> &'static str
 {
   match &aq.result
   {
@@ -406,7 +409,7 @@ pub( crate ) fn recommended_model( aq : &AccountQuota ) -> &'static str
 /// Returns `[5h_left, 5h_reset, 7d_left, 7d_son, 7d_reset]` as display strings.
 /// `5h Left` and `7d Left` cells carry a `🟢`/`🟡` prefix (same threshold as `status_emoji`).
 /// Absent periods render as em-dash; absent reset timestamps render as em-dash.
-pub( crate ) fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) -> [ String; 5 ]
+pub fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) -> [ String; 5 ]
 {
   let dash      = "\u{2014}".to_string();
   let pct_cell  = |util : Option< f64 >| -> String
@@ -453,7 +456,7 @@ pub( crate ) fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs
 // Root cause: function only inspected result; billing_type lives in account which was ignored.
 // Pitfall: account=None is ambiguous (API fetch failed, not confirmed cancelled) —
 //   only fire the cancelled gate when account=Some(billing_type="none") is definitively present.
-pub( crate ) fn status_emoji( aq : &AccountQuota ) -> &'static str
+pub fn status_emoji( aq : &AccountQuota ) -> &'static str
 {
   if aq.result.is_err() { return "🔴"; }
   // Fix(BUG-317): cancelled subscription → permanently unusable → 🔴 regardless of quota.
@@ -481,12 +484,3 @@ pub( crate ) fn status_emoji( aq : &AccountQuota ) -> &'static str
     _              => "🟡",
   }
 }
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-#[ cfg( test ) ]
-// Path-referenced: pub(crate) fns (shorten_error, compute_expires_cell, token_exp_label,
-// status_emoji, quota_text_cells, renews_label, next_event_label) are not accessible
-// from the external tests/ directory.
-#[ path = "format_tests.rs" ]
-mod tests;

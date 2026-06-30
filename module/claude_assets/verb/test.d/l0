@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
-# l0 — host-native test execution; runs w3 .test level::3 directly on the host.
-# Entered via VERB_LAYER=l0 or called directly as ./verb/test.d/l0.
-#
-# Differs from l1 (container-internal):
-#   - CARGO_NET_OFFLINE is NOT set — host cargo may update registry index
-#   - NO_COLOR is NOT set — real terminal controls colour; no PTY wrapping issue
+# l0 — host-native test execution is disabled.
+# Tests must run inside the runbox container.
+# Standard invocation: cd module/claude_assets && ./verb/test
 set -euo pipefail
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR/../.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "w3 .test level::3"; exit 0; fi
-exec w3 .test level::3
+echo "ERROR: host-native test execution (l0) is disabled." >&2
+echo "Standard invocation: cd module/claude_assets && ./verb/test" >&2
+exit 1

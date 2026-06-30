@@ -1,11 +1,13 @@
-// Path-referenced test module for format.rs — compiled as `mod tests` via `#[path]`.
-// Lives in src/usage/ (not tests/) to access pub(crate) shorten_error, compute_expires_cell,
-// token_exp_label, status_emoji, quota_text_cells, renews_label, and next_event_label
-// without widening their visibility. See src/usage/readme.md § Inline Test Exception.
+// Integration tests for format.rs — relocated from src/usage/format_tests.rs.
+// Accesses pub(crate) items through claude_profile::usage::test_bridge (testing feature).
 
-use super::*;
-use crate::usage::test_support::{ FAR_FUTURE_MS, mk_aq_ok_both, mk_aq_sort, mk_aq_sort_weekly, mk_aq_err, mk_aq_cancelled };
-use crate::usage::types::{ AccountQuota, PreferStrategy };
+use claude_profile::usage::test_bridge::{
+  token_exp_label, compute_expires_cell, renews_label, next_event_label,
+  shorten_error, relevant_quotas,
+  recommended_model, quota_text_cells, status_emoji,
+};
+use claude_profile::usage::test_bridge::{ FAR_FUTURE_MS, mk_aq_ok_both, mk_aq_sort, mk_aq_sort_weekly, mk_aq_err, mk_aq_cancelled };
+use claude_profile::usage::test_bridge::types::{ AccountQuota, PreferStrategy };
 
 // ── shorten_error ──────────────────────────────────────────────────────────
 

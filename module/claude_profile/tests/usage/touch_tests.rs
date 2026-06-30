@@ -1,10 +1,9 @@
-// Path-referenced test module for touch.rs — compiled as `mod tests` via `#[path]`.
-// Lives in src/usage/ (not tests/) to access pub(crate) apply_touch
-// without widening its visibility. See src/usage/readme.md § Inline Test Exception.
+// Integration tests for touch.rs — relocated from src/usage/touch_tests.rs.
+// Accesses pub(crate) items through claude_profile::usage::test_bridge (testing feature).
 
-use super::apply_touch;
-use crate::usage::types::{ SubprocessModel, SubprocessEffort };
-use crate::usage::test_support::mk_aq_with_resets_at;
+use claude_profile::usage::test_bridge::apply_touch;
+use claude_profile::usage::test_bridge::types::{ SubprocessModel, SubprocessEffort };
+use claude_profile::usage::test_bridge::mk_aq_with_resets_at;
 use tempfile::TempDir;
 
 /// FT-15 / BUG-211 MRE — `apply_touch` does NOT write live credentials file (no `switch_account`).
@@ -49,12 +48,12 @@ fn test_apply_touch_mre_bug208_restore_trace_emitted()
   ).unwrap();
 
   std::fs::write(
-    store.path().join( crate::account::active_marker_filename() ),
+    store.path().join( claude_profile::account::active_marker_filename() ),
     "alice@example.com",
   ).unwrap();
 
   std::fs::create_dir_all( fake_home.path().join( ".claude" ) ).unwrap();
-  let paths = crate::ClaudePaths::with_home( fake_home.path() );
+  let paths = claude_profile::ClaudePaths::with_home( fake_home.path() );
 
   // test@example.com is idle (resets_at=None) — triggers apply_touch.
   // No credential file for test@example.com — refresh_account_token returns None.
@@ -71,7 +70,7 @@ fn test_apply_touch_mre_bug208_restore_trace_emitted()
 
   // Active marker is unchanged (was "alice@example.com", never touched).
   let marker = std::fs::read_to_string(
-    store.path().join( crate::account::active_marker_filename() )
+    store.path().join( claude_profile::account::active_marker_filename() )
   ).unwrap();
   assert_eq!(
     marker, "alice@example.com",
@@ -132,7 +131,7 @@ fn test_mre_bug214_apply_touch_skips_7d_exhausted_account()
   }
 
   // Capture stderr — timestamped skip lines go to stderr via eprintln!.
-  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+  let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // claude_paths=None: subprocess never spawns (no binary path) even if guard misses.
@@ -213,7 +212,7 @@ fn test_mre_bug215_apply_touch_fires_when_7d_timer_absent()
   }
 
   // Capture stderr — timestamped skip lines go to stderr via eprintln!.
-  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+  let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // claude_paths=None: no subprocess spawns regardless of guard outcome.
@@ -311,7 +310,7 @@ fn test_mre_bug288_apply_touch_skips_touch_idle_false()
   let mut aq = mk_aq_with_resets_at( None );
 
   // Capture stderr — timestamped skip line goes to stderr via eprintln!.
-  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+  let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // claude_paths=None: subprocess never spawns regardless of guard outcome.
@@ -366,7 +365,7 @@ fn test_apply_touch_touch_idle_true_not_skipped_by_guard()
       store_a.path(), "test@example.com", "touch_idle", false,
     );
     let mut aq = mk_aq_with_resets_at( None );
-    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false
@@ -390,7 +389,7 @@ fn test_apply_touch_touch_idle_true_not_skipped_by_guard()
       store_b.path(), "test@example.com", "touch_idle", true,
     );
     let mut aq = mk_aq_with_resets_at( None );
-    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false
@@ -434,7 +433,7 @@ fn test_apply_touch_touch_idle_none_in_cache_not_skipped()
       store_a.path(), "test@example.com", "touch_idle", false,
     );
     let mut aq = mk_aq_with_resets_at( None );
-    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false
@@ -463,7 +462,7 @@ fn test_apply_touch_touch_idle_none_in_cache_not_skipped()
       "precondition: touch_idle must be None when field was never written",
     );
     let mut aq = mk_aq_with_resets_at( None );
-    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false
@@ -512,7 +511,7 @@ fn test_apply_touch_touch_idle_false_fetched_at_absent_guard_bypassed()
       store_a.path(), "test@example.com", "touch_idle", false,
     );
     let mut aq = mk_aq_with_resets_at( None );
-    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false
@@ -539,7 +538,7 @@ fn test_apply_touch_touch_idle_false_fetched_at_absent_guard_bypassed()
       "precondition: read_quota_cache must return None when fetched_at is absent",
     );
     let mut aq = mk_aq_with_resets_at( None );
-    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false
@@ -591,7 +590,7 @@ fn test_apply_touch_touch_idle_false_silent_when_trace_disabled()
   // Without this, the silence assertion in call 2 would be vacuously true (guard deleted
   // → subprocess path → trace=false → empty stderr regardless).
   {
-    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq,
@@ -611,7 +610,7 @@ fn test_apply_touch_touch_idle_false_silent_when_trace_disabled()
 
   // Call 2: trace=false — same cache state, same aq; guard fires but emits nothing.
   {
-    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch(
       &mut aq,
@@ -640,7 +639,7 @@ fn test_apply_touch_touch_idle_false_silent_when_trace_disabled()
 fn test_apply_touch_error_account_skips_before_touch_idle_guard()
 {
   use std::io::Read;
-  use crate::usage::test_support::mk_aq_err;
+  use claude_profile::usage::test_bridge::mk_aq_err;
 
   let store = tempfile::TempDir::new().unwrap();
 
@@ -659,7 +658,7 @@ fn test_apply_touch_error_account_skips_before_touch_idle_guard()
   // Error account: result=Err → error guard fires at top of apply_touch.
   let mut aq = mk_aq_err();
 
-  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+  let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   apply_touch(
@@ -748,11 +747,11 @@ fn it_apply_touch_trigger_fires_resets_at_none()
     r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
   ).unwrap();
   std::fs::write(
-    store.join( crate::account::active_marker_filename() ),
+    store.join( claude_profile::account::active_marker_filename() ),
     "test@example.com",
   ).unwrap();
   let mut aq = mk_aq_with_resets_at( None );
-  let paths  = crate::ClaudePaths::with_home( &fake_home );
+  let paths  = claude_profile::ClaudePaths::with_home( &fake_home );
   apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
   // Fix(BUG-211): no switch_account in apply_touch restore → live credentials file must NOT exist.
   assert!(
@@ -780,11 +779,11 @@ fn it_apply_touch_trigger_skips_resets_at_some()
     r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
   ).unwrap();
   std::fs::write(
-    store.join( crate::account::active_marker_filename() ),
+    store.join( claude_profile::account::active_marker_filename() ),
     "test@example.com",
   ).unwrap();
   let mut aq = mk_aq_with_resets_at( Some( "2099-01-01T00:00:00Z" ) );
-  let paths  = crate::ClaudePaths::with_home( &fake_home );
+  let paths  = claude_profile::ClaudePaths::with_home( &fake_home );
   apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto, false );
   // Trigger skipped → early return → live credentials file NOT written.
   assert!(
@@ -840,7 +839,7 @@ fn it_apply_touch_trigger_skips_resets_at_some()
 fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
 {
   use std::io::Read;
-  use crate::usage::test_support::mk_aq_with_son_idle;
+  use claude_profile::usage::test_bridge::mk_aq_with_son_idle;
 
   // Call A: prove the trigger fires for son_running=false (non-vacuity anchor).
   // If the guard were absent, touch would be skipped as "already active" (all_running=true)
@@ -865,7 +864,7 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
       } );
     }
 
-    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch( &mut aq_a, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     let mut captured_a = String::new();
@@ -898,7 +897,7 @@ fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
       } );
     }
 
-    let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+    let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
     let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
     apply_touch( &mut aq_b, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto, false );
     let mut captured_b = String::new();
@@ -934,7 +933,7 @@ fn ft07_touch_skips_non_owned_with_trace()
   // G4: override is_owned to false — account owned by a different machine.
   aq.is_owned = false;
 
-  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+  let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // trace=true; claude_paths=None so subprocess cannot fire even if G4 is bypassed.
@@ -978,7 +977,7 @@ fn ec8_solo_gate_skips_non_current_with_trace()
   // mk_aq_with_resets_at defaults: is_current=false, is_owned=true — exact preconditions.
   let mut aq = mk_aq_with_resets_at( None );
 
-  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+  let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // trace=true, solo=true: solo gate fires, emits skip trace, returns before timer check.
@@ -1044,7 +1043,7 @@ fn ft_touch_skips_occupied_elsewhere_with_trace()
   aq.is_owned = true;
   aq.is_occupied_elsewhere = true;
 
-  let _stderr_guard = crate::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
+  let _stderr_guard = claude_profile::usage::test_support::STDERR_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
   let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
 
   // trace=true; claude_paths=None so subprocess cannot fire even if guard is bypassed.
@@ -1113,7 +1112,7 @@ fn ft_touch_skips_occupied_elsewhere_with_trace()
 fn mre_bug309_apply_touch_refetch_writes_cache_and_clears_cached_flag()
 {
   let src      = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs" ) );
-  let fn_start = src.find( "pub( crate ) fn apply_touch(" ).expect( "apply_touch not found" );
+  let fn_start = src.find( "pub fn apply_touch(" ).expect( "apply_touch not found" );
 
   // Locate the re-fetch block within the function body.
   let refetch_rel = src[ fn_start.. ]

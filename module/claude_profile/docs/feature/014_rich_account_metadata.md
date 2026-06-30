@@ -102,7 +102,7 @@ This label is NOT a separate field param — it is the formatted output of the e
 | File | Relationship |
 |------|--------------|
 | `tests/cli/credentials_test.rs` | Test cases for each opt-in field on `.credentials.status` |
-| `tests/cli/accounts_test.rs` | Test cases for rich metadata fields on `.accounts` |
+| `tests/cli/accounts_list_test.rs` | Test cases for rich metadata fields on `.accounts` |
 
 ### Schema
 

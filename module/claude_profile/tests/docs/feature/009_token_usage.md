@@ -455,7 +455,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 - **Given (unit test):** Two `AccountQuota` entries rendered via `render_text()`: `a@x.com` (`is_current=true`, valid quota), `b@x.com` (valid quota, `seven_day_sonnet.utilization = 50.0`). `session_model = Some("sonnet")`, `session_effort = Some("low")`.
 - **When:** `render_text(&accounts, SortStrategy::Renew, ...)` is called.
-- **Then:** Footer contains two lines: (1) a line containing `Current` and `·` and `a@x.com` and `sonnet/low`; (2) a line containing `Next (renew)` and `·` and `b@x.com` and `sonnet`. The `·` delimiters in both lines are vertically aligned (same column positions).
+- **Then:** Footer contains two lines: (1) a line containing `Current` and `·` and `a@x.com` and `sonnet/low`; (2) a line containing `Next (renew)` and `·` and `b@x.com` and `sonnet/high` — effort is model-derived (TSK-335 H3: always shown unconditionally; `"high"` for Sonnet regardless of `session_effort`). The `·` delimiters in both lines are vertically aligned (same column positions).
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_ft28_009_footer_model_label` (in `src/usage/mod.rs`)
 - **Source:** [009_token_usage.md AC-10](../../../docs/feature/009_token_usage.md)

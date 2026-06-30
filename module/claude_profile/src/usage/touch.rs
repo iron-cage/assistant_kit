@@ -1,4 +1,6 @@
 // BUG-289 task/claude_profile/bug/289_son_running_false_haiku_touch_infinite_loop.md — son_running=false guard and re-fetch loop; Auto→Haiku cannot open Sonnet 7d window
+// Items are pub for test_bridge re-export; lints suppressed — internal API.
+#![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
 
 //! Session-touch logic for idle quota windows.
 //!
@@ -34,7 +36,7 @@ use claude_profile_core::account::trace_ts;
 // Root cause: apply_touch was added after apply_refresh and inherited the same flawed
 //   snapshot+restore pattern (see BUG-211).
 // Pitfall: do NOT re-introduce snapshot+restore here — the fix is in save(), not here.
-pub( crate ) fn apply_touch(
+pub fn apply_touch(
   aq               : &mut AccountQuota,
   credential_store : &std::path::Path,
   claude_paths     : Option< &crate::ClaudePaths >,
@@ -168,9 +170,3 @@ pub( crate ) fn apply_touch(
     }
   }
 }
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-#[ cfg( test ) ]
-#[ path = "touch_tests.rs" ]
-mod tests;

@@ -1,3 +1,5 @@
+// Items are pub for test_bridge re-export; lints suppressed — internal API.
+#![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
 //! Next-account recommendation strategies.
 //!
 //! `find_next_for_strategy` and `strategy_metric` are consumed by `render.rs`
@@ -49,7 +51,7 @@ where F : Fn( &AccountQuota ) -> bool
 /// All strategies skip weekly-exhausted accounts (`prefer_weekly ≤ 5.0`) via
 /// the `extra` predicate — an exhausted account has negligible remaining capacity
 /// regardless of its renewal timing.
-pub( crate ) fn find_next_for_strategy(
+pub fn find_next_for_strategy(
   accounts       : &[ AccountQuota ],
   strategy       : SortStrategy,
   prefer         : PreferStrategy,
@@ -91,7 +93,7 @@ pub( crate ) fn find_next_for_strategy(
 /// Format the key metric string for one strategy recommendation line.
 ///
 /// Used in the single-strategy footer (`→ Next (strategy): name   metric`).
-pub( crate ) fn strategy_metric(
+pub fn strategy_metric(
   aq       : &AccountQuota,
   strategy : SortStrategy,
   _prefer  : PreferStrategy,
@@ -143,9 +145,3 @@ pub( crate ) fn strategy_metric(
     }
   }
 }
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-#[ cfg( test ) ]
-#[ path = "sort_next_tests.rs" ]
-mod tests;

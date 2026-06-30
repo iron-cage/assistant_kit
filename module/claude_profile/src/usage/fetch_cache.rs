@@ -1,3 +1,5 @@
+// Items are pub for test_bridge re-export; lints suppressed — internal API.
+#![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
 //! Centralized quota cache read with Feature 040 polynomial approximation.
 //!
 //! All paths that need cached utilization values must call `read_cached_quota`.
@@ -33,7 +35,7 @@ fn cache_age_from_fetched_at( fetched_at : &str ) -> u64
 ///   duplicated the ~50-line approximation block, creating divergence risk.
 /// Pitfall: `read_quota_cache()` remains available for metadata-only reads (`touch_idle`,
 ///   age hints); this function is only for paths that need utilization values.
-pub( crate ) fn read_cached_quota(
+pub fn read_cached_quota(
   credential_store : &std::path::Path,
   name             : &str,
   now_secs         : u64,
