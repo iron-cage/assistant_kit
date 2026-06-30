@@ -9,7 +9,7 @@
 | `cli/param/` | Index of individual parameter reference instances (70 total; 012 deprecated) | [cli/param/readme.md](cli/param/readme.md) | 70 |
 | `cli/user_story/` | Index of user goal and usage pattern instances (27 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 27 |
 | `feature/` | Index of feature doc instances covering the clr binary tool design and journaling integration | [feature/readme.md](feature/readme.md) | 2 |
-| `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, trace universality, isolated/refresh subprocess defaults, exit code contract, print-mode timeout default, render_summary gate field, and session mismatch detection | [invariant/readme.md](invariant/readme.md) | 9 |
+| `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, trace universality, isolated/refresh subprocess defaults, exit code contract, print-mode timeout default, render_summary gate field, session mismatch detection, and container-only test execution | [invariant/readme.md](invariant/readme.md) | 10 |
 
 ### Master Doc Instances Table
 
@@ -130,3 +130,4 @@
 | invariant | 007 | Print-Mode Timeout Default | [invariant/007_print_mode_timeout.md](invariant/007_print_mode_timeout.md) |
 | invariant | 008 | render_summary() Gate Field | [invariant/008_render_summary_gate.md](invariant/008_render_summary_gate.md) |
 | invariant | 009 | Session Mismatch Detection | [invariant/009_session_mismatch_detection.md](invariant/009_session_mismatch_detection.md) |
+| invariant | 010 | Container-Only Test Execution | [invariant/010_container_only_test_execution.md](invariant/010_container_only_test_execution.md) |

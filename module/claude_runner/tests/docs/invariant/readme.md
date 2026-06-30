@@ -22,3 +22,4 @@ Per-invariant-doc test case indices for `claude_runner`. See [invariant/readme.m
 | `007_print_mode_timeout.md` | Test cases for the print-mode timeout default invariant | ✅ |
 | `008_render_summary_gate.md` | Test cases for the render_summary() gate field invariant | ✅ |
 | `009_session_mismatch_detection.md` | Test cases for the session mismatch detection invariant | ✅ |
+| `010_container_only_test_execution.md` | Test cases for the container-only test execution invariant | ✅ |

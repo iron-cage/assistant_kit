@@ -98,7 +98,15 @@ First stable release of `claude_storage_core` - a zero-dependency library for re
 
 ## [Unreleased]
 
-### Phase 4 Planning
+### Added
+
+- **`SessionId` newtype — typed wrapper for session UUID stem** (TSK-334, 2026-06-28)
+  - `SessionId` wraps the UUID string from a `.jsonl` filename stem; implements `Display`, `AsRef<str>`, `From<String>`, `From<&str>`, `Clone`, `PartialEq`, `Eq`, `Hash`
+  - `most_recent_session_id(session_dir: &Path) -> Option<SessionId>` — returns the typed session ID of the most-recently-modified qualifying `.jsonl` file for a CWD-keyed storage path
+  - `most_recent_session_in_dir(storage_path: &Path) -> Option<SessionId>` — lower-level variant operating on an already-resolved storage path
+  - Tests: `tests/session_id_tests.rs`, `tests/continuation_tests.rs`
+
+### Phase 4 Planning (future)
 
 - Complete write operations
 - Incremental parsing support

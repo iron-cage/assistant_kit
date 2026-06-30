@@ -18,4 +18,5 @@ Zero-dependency core library for reading Claude Code filesystem storage.
 | `export.rs` | Export session data to multiple formats |
 | `stats.rs` | Aggregate storage statistics |
 | `continuation.rs` | Detect session continuation chains |
+| `session_id.rs` | Typed wrapper for session UUID stem |
 | `error.rs` | Define crate error types |
