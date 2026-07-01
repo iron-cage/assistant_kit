@@ -74,6 +74,7 @@
 | 072_journal.md | `--journal` parameter spec |
 | 073_journal_dir.md | `--journal-dir` parameter spec |
 | 074_quiet.md | `--quiet` flag spec (suppress non-fatal runner diagnostics) |
+| 075_no_compact_window.md | `--no-compact-window` flag spec (suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection) |
 
 ### Retired Parameter IDs
 
@@ -86,7 +87,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 038 | Retired — parameter removed; gap predates current tracking |
 | 039 | Retired — parameter removed; gap predates current tracking |
 
-### All Parameters (69 total)
+### All Parameters (70 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -160,10 +161,11 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 72 | `--journal` | enum | `full` | `full`/`meta`/`off` | Journal level for clr execution events: `full` captures stdout+stderr (≤1MB each), `meta` omits output, `off` disables | 3 cmds |
 | 73 | `--journal-dir` | path | `~/.clr/journal/` | Any writable path | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` | 3 cmds |
 | 74 | `--quiet` | bool | false | present/absent | Suppress non-fatal runner diagnostics (retry/gate/warning messages) | 2 cmds |
+| 75 | `--no-compact-window` | bool | false | present/absent | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` injection into subprocess environment | 4 cmds |
 
-**Total:** 69 parameters (param 12 deprecated → replaced by 74; net count unchanged)
+**Total:** 70 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; param 75 is a new addition)
 
-**Groups:** Parameters 2–4, 17, 23, 24, and 61–67 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–74 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md).
+**Groups:** Parameters 2–4, 17, 23, 24, and 61–67 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–74 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 75 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md).
 
 ### Navigation
 
@@ -237,6 +239,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 - [`--add-dir`](066_add_dir.md)
 - [`--fallback-model`](067_fallback_model.md)
 - [`--quiet`](074_quiet.md)
+- [`--no-compact-window`](075_no_compact_window.md)
 
 ### Quick Reference
 
@@ -244,4 +247,4 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 62, `ask` = 62, `ps` = 5, `isolated` = 16, `refresh` = 5, `kill` = 0, `tools` = 0, `help` = 0.
+**Commands by parameter count:** `run` = 63, `ask` = 63, `ps` = 5, `isolated` = 17, `refresh` = 7, `kill` = 0, `tools` = 0, `help` = 0.

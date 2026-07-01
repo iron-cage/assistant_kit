@@ -4,7 +4,7 @@
 
 Run Claude in a credential-isolated subprocess with a temporary HOME containing only the provided credentials file. Use `clr isolated` when running Claude with alternate accounts, test tokens, or deployment-specific credentials without exposing the caller's real HOME, settings, or session history.
 
--- **Parameters:** `--creds`, `--timeout`, `--trace`, `--dry-run`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir`, `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`
+-- **Parameters:** `--creds`, `--timeout`, `--trace`, `--dry-run`, `--no-compact-window`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir`, `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`
 -- **Exit Codes:** 0 (success) | 1 (error) | 2 (timeout) | 3 (expect mismatch) | N (subprocess passthrough) | 128+signal (signal)
 
 ### Syntax
@@ -21,7 +21,8 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 | [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | `~/.claude/.credentials.json` | Credentials JSON file path (optional; defaults to current account credentials) |
 | [`--timeout`](../param/020_timeout.md) | [`TimeoutSecs`](../type/09_timeout_secs.md) | 30 | Max seconds to wait for subprocess |
 | [`--trace`](../param/013_trace.md) | bool | false | Print underlying call details to stderr then execute |
-| [`--dry-run`](../param/011_dry_run.md) | bool | false | Print subprocess command preview to stdout; exit 0 without spawning |
+| [`--dry-run`](../param/011_dry_run.md) | bool | false | Print subprocess env+command to stderr (same path as `--trace`); exit 0 without spawning |
+| [`--no-compact-window`](../param/075_no_compact_window.md) | bool | false | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` injection; env: `CLR_NO_COMPACT_WINDOW` |
 | [`--dir`](../param/008_dir.md) | path | — | Working directory injected into subprocess command; validated to exist before spawn; env: `CLR_DIR` |
 | [`--add-dir`](../param/066_add_dir.md) | path (repeatable) | — | Additional directory Claude may access; injected per entry into subprocess command; env: `CLR_ADD_DIR` |
 | [`--file`](../param/025_file.md) | path | — | File piped as stdin to the subprocess; validated to exist before spawn |
@@ -39,7 +40,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 1. Resolve credentials path: `--creds` if given, else `$HOME/.claude/.credentials.json`; exit 1 if file not found.
 2. Create temporary HOME directory; write `.claude/.credentials.json` from resolved credentials.
 3. Write minimal `~/.claude/CLAUDE.md` to temp HOME to suppress interactive prompts.
-4. Build subprocess command with injected defaults (`--model claude-opus-4-6`, `--effort max`, `--no-session-persistence`, `--dangerously-skip-permissions` when message present); prepend before `--print` and message; passthrough args appended last for last-wins override.
+4. Build subprocess command with injected defaults (`--model "opus"` alias, `--effort max`, `--no-session-persistence`, `--dangerously-skip-permissions` when message present); prepend before `--print` and message; passthrough args appended last for last-wins override.
 5. Spawn `claude` with `HOME=<temp>`; wait up to `--timeout` seconds (0 = unlimited).
 6. If credentials were refreshed at startup, write updated file back to `--creds`; delete temp HOME unconditionally; propagate subprocess exit code (or exit 2 on timeout without refresh).
 
@@ -75,7 +76,7 @@ clr isolated --creds /path/to/creds.json
 The isolated subprocess has no access to the caller's real `$HOME` — no `~/.claude/settings.json`, no previous conversation state. A minimal `~/.claude/CLAUDE.md` is written to the temp HOME before spawn instructing the subprocess to execute immediately without asking clarifying questions or requesting confirmation.
 
 Subprocess injected defaults (see [`invariant/005_isolated_subprocess_defaults.md`](../../invariant/005_isolated_subprocess_defaults.md)):
-- `--model claude-opus-4-6` (`ISOLATED_DEFAULT_MODEL` — maximum capability for real tasks)
+- `--model "opus"` alias (`ISOLATED_DEFAULT_MODEL` — maximum capability for real tasks)
 - `--effort max` (maximum reasoning effort)
 - `--no-session-persistence` (temp HOME is discarded after every run; session writes are waste)
 - `--dangerously-skip-permissions` — injected when `[MESSAGE]` is present; omitted in interactive mode (no message)
@@ -90,7 +91,7 @@ clr isolated "summarize this file" -- --effort medium
 clr isolated "what is 2+2?" -- --no-skip-permissions
 ```
 
-If the subprocess times out but already wrote refreshed credentials, `clr isolated` exits 0 and writes updated credentials back to `--creds` instead of returning exit 2. This matches the `IsolatedRunResult { exit_code: -1, credentials: Some(…) }` path in `claude_runner_core::run_isolated()`.
+If the subprocess times out but already wrote refreshed credentials, `clr isolated` exits 0 and writes updated credentials back to `--creds` instead of returning exit 2. This matches the `IsolatedRunResult { exit_code: -1, credentials: Some(…) }` path in `claude_runner_core::run_isolated_ext()`.
 
 `--timeout 0` disables the watchdog entirely (unlimited runtime), matching `run`/`ask` semantics.
 
@@ -98,13 +99,14 @@ If the subprocess times out but already wrote refreshed credentials, `clr isolat
 
 | # | Command | Relationship |
 |---|---------|--------------|
-| 1 | [`refresh`](03_refresh.md) | Both use `run_isolated()`; `refresh` sends a trivial ping to trigger token refresh only |
+| 1 | [`refresh`](03_refresh.md) | Both use `run_isolated_ext()`; `refresh` sends a trivial ping to trigger token refresh only |
 
 ### Referenced Parameter Groups
 
 | # | Group | Membership | Excluded Params |
 |---|-------|------------|-----------------|
 | 4 | [Credential Operations](../param_group/04_credential_operations.md) | Full | — |
+| 6 | [Running Commands](../param_group/06_running_commands.md) | Subset — `--timeout`, `--trace`, `--dry-run`, `--no-compact-window`, `--journal`, `--journal-dir` | `--creds` is Group 4 |
 
 ### Referenced User Stories
 
