@@ -8,6 +8,7 @@ timeout window, the updated file is written back and exit code is 0.
 - **Type:** [`TimeoutSecs`](../type/09_timeout_secs.md)
 - **Default:** 30 (`isolated`), 45 (`refresh`)
 - **Command:** [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
+- **JSON Key:** `"timeout"`
 
 ```sh
 clr isolated --creds creds.json --timeout 60 "Explain closures"

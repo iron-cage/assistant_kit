@@ -7,6 +7,7 @@ fields including complete stdout and stderr (truncated at 1 MB).
 - **Type:** `JournalLevel` (enum: `full`, `meta`, `off`)
 - **Default:** full
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
+- **JSON Key:** `"journal"`
 
 ```sh
 clr "test" --journal full    # Full output captured (default)

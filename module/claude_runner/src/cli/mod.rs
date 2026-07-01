@@ -11,6 +11,7 @@ mod ps;
 mod kill;
 mod tools;
 mod summary;
+mod json_config;
 // summary_unit_test.rs (external test) imports render_summary/resolve_fields via the public API.
 // The unused_imports lint fires for pub use in private modules when no code in the lib crate itself
 // references the re-exported path — but the test file consumer is invisible at lib-compile time.
@@ -215,11 +216,34 @@ pub( super ) fn run_built_command(
 /// `run_cli()` (after subcommand dispatch) and `dispatch_ask()`.
 pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
 {
+  // JSON config tier 2: detect stdin JSON BEFORE parse_args so stdin is consumed once.
+  // Ordering: detect_stdin_json reads stdin; parse_args reads only argv — no conflict.
+  let stdin_json = env::detect_stdin_json( tokens );
   let mut cli = match parse_args( tokens )
   {
     Ok( c )  => c,
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
   };
+  // JSON config: apply file-based or stdin-based params AFTER CLI parse (tier 1 already set)
+  // but BEFORE apply_env_vars (tier 3). apply_json_config's is_none() / !bool checks ensure
+  // CLI-set fields are never overwritten.
+  let src_path = env::resolve_args_file_path( cli.args_file.as_deref() );
+  if let Some( ref path ) = src_path
+  {
+    if let Err( e ) = json_config::load_and_apply( path, &mut cli )
+    {
+      eprintln!( "Error: {e}" );
+      std::process::exit( 1 );
+    }
+  }
+  else if let Some( ref src ) = stdin_json
+  {
+    match json_config::parse_json_object( src )
+    {
+      Ok( map ) => json_config::apply_json_config( &mut cli, &map ),
+      Err( e )  => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+    }
+  }
   if let Err( e ) = apply_env_vars( &mut cli )
   {
     eprintln!( "Error: {e}" );
@@ -301,11 +325,30 @@ pub( super ) fn dispatch_ask( tokens : &[ String ] ) -> !
 /// Parse, validate, and execute the `isolated` subcommand.  Never returns.
 pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
 {
+  // JSON config: no --file gate for isolated (--file is not a stdin-conflict source here).
+  let stdin_json = env::detect_stdin_json_unconstrained();
   let mut cli = match parse_isolated_args( &tokens[ 1 .. ] )
   {
     Ok( c )  => c,
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
   };
+  let src_path = env::resolve_args_file_path( cli.args_file.as_deref() );
+  if let Some( ref path ) = src_path
+  {
+    if let Err( e ) = json_config::load_and_apply_isolated( path, &mut cli )
+    {
+      eprintln!( "Error: {e}" );
+      std::process::exit( 1 );
+    }
+  }
+  else if let Some( ref src ) = stdin_json
+  {
+    match json_config::parse_json_object( src )
+    {
+      Ok( map ) => json_config::apply_json_config_isolated( &mut cli, &map ),
+      Err( e )  => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+    }
+  }
   if let Err( e ) = apply_isolated_env_vars( &mut cli )
   {
     eprintln!( "Error: {e}" );
@@ -416,11 +459,29 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
 /// Parse, validate, and execute the `refresh` subcommand.  Never returns.
 pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
 {
+  let stdin_json = env::detect_stdin_json_unconstrained();
   let mut cli = match parse_refresh_args( &tokens[ 1 .. ] )
   {
     Ok( c )  => c,
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
   };
+  let src_path = env::resolve_args_file_path( cli.args_file.as_deref() );
+  if let Some( ref path ) = src_path
+  {
+    if let Err( e ) = json_config::load_and_apply_refresh( path, &mut cli )
+    {
+      eprintln!( "Error: {e}" );
+      std::process::exit( 1 );
+    }
+  }
+  else if let Some( ref src ) = stdin_json
+  {
+    match json_config::parse_json_object( src )
+    {
+      Ok( map ) => json_config::apply_json_config_refresh( &mut cli, &map ),
+      Err( e )  => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+    }
+  }
   if let Err( e ) = apply_refresh_env_vars( &mut cli )
   {
     eprintln!( "Error: {e}" );

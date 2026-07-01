@@ -8,6 +8,7 @@ validates its response against the provided schema and returns structured JSON.
 - **Default:** — (unset; no structured output constraint)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
+- **JSON Key:** `"json-schema"`
 
 ```sh
 clr --json-schema '{"type":"object","properties":{"name":{"type":"string"}}}' "Get user"

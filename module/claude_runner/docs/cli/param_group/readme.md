@@ -22,7 +22,7 @@
 | # | Group | Parameters | Purpose |
 |---|-------|------------|---------|
 | 1 | Claude-Native Flags | 13 | Pass selected `claude` binary flags through without runner modification |
-| 2 | Runner Control | 46 | Control runner execution behavior -- before, during, or instead of subprocess invocation |
+| 2 | Runner Control | 47 | Control runner execution behavior -- before, during, or instead of subprocess invocation |
 | 3 | System Prompt | 2 | Inject or extend the behavioral system context sent to the `claude` subprocess |
 | 4 | Credential Operations | 3 | Configure credential-isolated execution for `clr isolated` and `clr refresh` |
 | 5 | Session Listing | 5 | Control `clr ps` session listing display — row filtering, PID filtering, column selection, and inspect output |

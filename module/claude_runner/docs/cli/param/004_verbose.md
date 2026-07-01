@@ -7,6 +7,7 @@ subprocess.
 - **Default:** false
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
+- **JSON Key:** `"verbose"`
 
 ```sh
 clr --verbose "Debug this"

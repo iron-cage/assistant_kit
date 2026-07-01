@@ -7,6 +7,7 @@ is forwarded to the `claude` subprocess.
 - **Default:** false (chrome injection is **ON** in interactive mode; **suppressed** in print mode — BUG-304)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"no-chrome"`
 
 ```sh
 clr --interactive "Fix bug" # sends: --chrome (interactive default)

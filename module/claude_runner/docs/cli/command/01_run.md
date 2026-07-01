@@ -83,9 +83,10 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--max-budget-usd`](../param/065_max_budget_usd.md) | f64 | — | Max dollar budget for session |
 | [`--add-dir`](../param/066_add_dir.md) | path | — | Additional directory for Claude Code to access |
 | [`--fallback-model`](../param/067_fallback_model.md) | string | — | Fallback model when primary unavailable |
+| [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Load clr params from JSON config file; stdin JSON auto-detected when no TTY |
 
 **Algorithm (7 steps):**
-1. Parse flags; apply CLR_* env var fallbacks for all unset parameters.
+1. Parse flags; apply JSON config (from `--args-file`/`CLR_ARGS_FILE`/stdin) for unset parameters; apply CLR_* env var fallbacks for still-unset parameters.
 2. If `--max-sessions > 0`, count active `claude` processes; block in 30-second polling loop until slot available or 100-attempt limit reached (exit 1 on limit).
 3. If `--dry-run`, render command preview via `describe()` / `describe_env()`; emit to stdout; exit 0.
 4. Resolve execution directory (`--dir` + `--subdir`); create `/-NAME` subdirectory if `--subdir` set and not `"."`.

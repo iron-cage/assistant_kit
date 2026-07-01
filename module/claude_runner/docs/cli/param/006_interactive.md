@@ -9,6 +9,7 @@ also providing an initial prompt.
 - **Default:** false (print mode when message given)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"interactive"`
 
 ```sh
 clr --interactive "Fix bug"               # TTY passthrough with initial prompt

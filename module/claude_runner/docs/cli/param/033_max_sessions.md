@@ -8,6 +8,7 @@ for up to 100 attempts, then exits with code 1. Setting `0` disables the gate en
 - **Type:** u32
 - **Default:** 30
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
+- **JSON Key:** `"max-sessions"`
 
 ```sh
 clr --max-sessions 5 "refactor module"      # block if >=5 Claude sessions active

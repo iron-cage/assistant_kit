@@ -37,6 +37,7 @@ pub( super ) struct IsolatedArgs
   pub( super ) strip_fences     : bool,
   pub( super ) output_style     : Option< String >,
   pub( super ) summary_fields   : Option< String >,
+  pub( super ) args_file        : Option< String >,
 }
 
 /// Parsed arguments for the `refresh` subcommand.
@@ -47,6 +48,7 @@ pub( super ) struct RefreshArgs
   pub( super ) trace        : bool,
   pub( super ) journal      : Option< String >,
   pub( super ) journal_dir  : Option< String >,
+  pub( super ) args_file    : Option< String >,
 }
 
 /// Parse a raw string as a `u64` timeout in seconds.
@@ -195,6 +197,11 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
         args.summary_fields = Some( next_value( tokens, i + 1, "--summary-fields" )?.to_string() );
         i += 1;
       }
+      "--args-file" =>
+      {
+        args.args_file = Some( next_value( tokens, i + 1, "--args-file" )?.to_string() );
+        i += 1;
+      }
       // Fix(BUG-222): explicit --help arm prevents catch-all from swallowing help flags.
       // Root cause: no --help arm in subcommand parser; catch-all returned Err.
       // Pitfall: always add --help before the starts_with('-') catch-all.
@@ -263,6 +270,7 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
   let mut trace        : bool             = false;
   let mut journal      : Option< String > = None;
   let mut journal_dir  : Option< String > = None;
+  let mut args_file    : Option< String > = None;
   let mut i = 0;
   while i < tokens.len()
   {
@@ -294,6 +302,11 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
         journal_dir = Some( next_value( tokens, i + 1, "--journal-dir" )?.to_string() );
         i += 1;
       }
+      "--args-file" =>
+      {
+        args_file = Some( next_value( tokens, i + 1, "--args-file" )?.to_string() );
+        i += 1;
+      }
       "-h" | "--help" => { super::help::print_refresh_help(); }
       s if s.starts_with( '-' ) =>
       {
@@ -311,7 +324,7 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
     i += 1;
   }
   let creds_path = creds_path.unwrap_or_default();
-  Ok( RefreshArgs { creds_path, timeout_secs, trace, journal, journal_dir } )
+  Ok( RefreshArgs { creds_path, timeout_secs, trace, journal, journal_dir, args_file } )
 }
 
 /// Apply `CLR_CREDS`, `CLR_TIMEOUT`, `CLR_TRACE`, `CLR_JOURNAL`, and `CLR_JOURNAL_DIR`

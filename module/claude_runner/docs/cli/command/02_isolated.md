@@ -4,7 +4,7 @@
 
 Run Claude in a credential-isolated subprocess with a temporary HOME containing only the provided credentials file. Use `clr isolated` when running Claude with alternate accounts, test tokens, or deployment-specific credentials without exposing the caller's real HOME, settings, or session history.
 
--- **Parameters:** `--creds`, `--timeout`, `--trace`, `--dry-run`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir`, `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`
+-- **Parameters:** `--creds`, `--timeout`, `--trace`, `--dry-run`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir`, `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`, `--args-file`
 -- **Exit Codes:** 0 (success) | 1 (error) | 2 (timeout) | 3 (expect mismatch) | N (subprocess passthrough) | 128+signal (signal)
 
 ### Syntax
@@ -33,6 +33,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 | [`--strip-fences`](../param/026_strip_fences.md) | bool | false | Strip outermost markdown code fences from output; env: `CLR_STRIP_FENCES` |
 | [`--output-style`](../param/070_output_style.md) | enum | `raw` | Output rendering: `raw` (default), `summary`; env: `CLR_OUTPUT_STYLE` |
 | [`--summary-fields`](../param/071_summary_fields.md) | string | — | Summary field selection: `full`, `standard`, `minimal`, or comma-separated; env: `CLR_SUMMARY_FIELDS` |
+| [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Load clr params from JSON config file; stdin JSON auto-detected when no TTY; env: `CLR_ARGS_FILE` |
 | `-h`/`--help` | — | — | Print isolated subcommand help and exit 0 |
 
 **Algorithm (6 steps):**

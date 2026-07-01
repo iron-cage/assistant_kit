@@ -7,6 +7,7 @@ since TSK-224 and appears without `--wide`.)
 - **Type:** bool
 - **Default:** false
 - **Command:** [`ps`](../command/06_ps.md)
+- **JSON Key:** — (ps subcommand; not supported by `--args-file`)
 
 ```sh
 clr ps --wide            # show all 11 columns

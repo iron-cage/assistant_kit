@@ -9,6 +9,7 @@ suppresses this transformation so the message is sent verbatim.
 - **Default:** false (ultrathink suffix is **ON** by default; this flag turns it **OFF**)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"no-ultrathink"`
 
 ```sh
 clr "Fix the auth bug"                # sends: "Fix the auth bug\n\nultrathink"

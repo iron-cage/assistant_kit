@@ -7,6 +7,7 @@ Select the Claude model for this invocation.
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **Validation:** requires a value; `--model` at end of argv → error
+- **JSON Key:** `"model"`
 
 ```sh
 clr "Explain" --model sonnet

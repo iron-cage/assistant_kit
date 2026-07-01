@@ -7,6 +7,7 @@ Add an additional directory for Claude Code to access beyond the working directo
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **Validation:** requires a value; `--add-dir` at end of argv → error
+- **JSON Key:** `"add-dir"`
 
 ```sh
 clr "Fix bug" --add-dir /path/to/shared/lib

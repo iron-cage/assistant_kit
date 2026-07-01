@@ -8,6 +8,7 @@ Select the output format for Claude Code subprocess response.
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **Validation:** requires a value; `--output-format` at end of argv → error
+- **JSON Key:** `"output-format"`
 
 ```sh
 clr "Explain" --output-format json

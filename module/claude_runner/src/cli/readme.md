@@ -16,3 +16,4 @@
 | `kill.rs` | `dispatch_kill`, `print_kill_help` — SIGTERM delivery to a validated claude PID. |
 | `tools.rs` | `dispatch_tools` — list all 26 Claude Code built-in tools in a plain-style table. |
 | `summary.rs` | `render_summary` — parse CLR result envelope, render key:val header + text body for `--output-style summary`. |
+| `json_config.rs` | JSON config loading: `load_json_source`, `parse_json_object`, `apply_json_config`, `load_and_apply`. |

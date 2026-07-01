@@ -8,6 +8,7 @@ returns the raw claude output without post-processing (`raw`).
 - **Default:** `summary`
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"output-style"`
 
 ```sh
 clr -p "summarise logs"                          # default: summary header rendered

@@ -71,6 +71,7 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--summary-fields <FIELDS>".into(),       desc : "Summary field selection: minimal, standard, full (default), or comma-separated [env: CLR_SUMMARY_FIELDS]".into() },
       OptionEntry { name : "--journal <LEVEL>".into(),               desc : "Journal level: full (default), meta (no output), or off [env: CLR_JOURNAL]".into() },
       OptionEntry { name : "--journal-dir <PATH>".into(),            desc : "Journal directory (default: ~/.clr/journal/) [env: CLR_JOURNAL_DIR]".into() },
+      OptionEntry { name : "--args-file <PATH>".into(),             desc : "Load clr params from JSON file (or stdin JSON); env: CLR_ARGS_FILE".into() },
       OptionEntry { name : "--expect <VALS>".into(),                 desc : "Pipe-separated expected values; mismatch → exit 3".into() },
       OptionEntry { name : "--expect-strategy <STRAT>".into(),       desc : "Mismatch handling: fail (default), retry, default:<VAL>".into() },
       OptionEntry { name : "--max-sessions <N>".into(),              desc : "Max concurrent sessions before blocking (0=unlimited, default: 30)".into() },
@@ -150,6 +151,7 @@ pub( crate ) fn print_isolated_help() -> !
   println!( "  --trace                            Print underlying call details to stderr [env: CLR_TRACE]" );
   println!( "  --journal <LEVEL>                  Journal level: full (default), meta, or off [env: CLR_JOURNAL]" );
   println!( "  --journal-dir <PATH>               Journal directory (default: ~/.clr/journal/) [env: CLR_JOURNAL_DIR]" );
+  println!( "  --args-file <PATH>                 Load isolated params from JSON file; env: CLR_ARGS_FILE" );
   println!( "  -h, --help                         Show this help" );
   println!();
   println!( "ISOLATION OPTIONS:" );
@@ -187,6 +189,7 @@ pub( crate ) fn print_refresh_help() -> !
   println!( "  --trace                            Print underlying call details to stderr" );
   println!( "  --journal <LEVEL>                  Journal level: full (default), meta, or off [env: CLR_JOURNAL]" );
   println!( "  --journal-dir <PATH>               Journal directory (default: ~/.clr/journal/) [env: CLR_JOURNAL_DIR]" );
+  println!( "  --args-file <PATH>                 Load refresh params from JSON file; env: CLR_ARGS_FILE" );
   println!( "  -h, --help                         Show this help" );
   println!();
   println!( "EXIT CODES:" );
@@ -292,6 +295,7 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
   println!( "  --session-dir <PATH>               Session storage directory" );
   println!( "  --quiet                            Suppress non-fatal diagnostics (gate-wait, retry, keep-claudecode) [env: CLR_QUIET]" );
+  println!( "  --args-file <PATH>                 Load clr params from JSON file (or stdin JSON); env: CLR_ARGS_FILE" );
   println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
   println!( "  --mcp-config <PATH>                MCP server config file (repeatable)" );
   println!( "  --file <PATH>                      Pipe file content to subprocess stdin" );

@@ -9,6 +9,7 @@ concrete built-in default.
 - **Default:** `30` (thirty seconds between retry attempts)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"retry-default-delay"`
 
 ```sh
 # Increase fallback delay for all classes

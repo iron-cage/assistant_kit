@@ -7,6 +7,7 @@ The directory is created if it does not exist.
 - **Type:** `Path`
 - **Default:** ~/.clr/journal/ (or `CLR_JOURNAL_DIR` env var)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
+- **JSON Key:** `"journal-dir"`
 
 ```sh
 clr "test" --journal-dir /tmp/test_journal   # Custom path

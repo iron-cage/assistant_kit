@@ -13,6 +13,7 @@ immediately (fail-fast) without sleeping or consuming retry slots (Fix BUG-315).
 - **Default:** `auto` (inherits from `--retry-default`, Tier 3 fallback)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"retry-on-auth"`
 
 ```sh
 clr -p "task" --retry-on-auth 1                 # retry once on auth failure

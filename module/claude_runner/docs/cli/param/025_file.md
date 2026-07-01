@@ -30,6 +30,8 @@ structured-output constraint forwarded to `claude`.
 **Env var:** `CLR_FILE` — accepts a file path string; applied when `--file` is absent from
 the CLI. `CLR_FILE=/path/to/file clr "task"` is equivalent to `clr --file /path/to/file "task"`.
 
+- **JSON Key:** `"file"`
+
 ### Referenced Type
 
 | Type | Kind | Fundamental | Key Constraint |

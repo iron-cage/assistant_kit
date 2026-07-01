@@ -8,6 +8,7 @@ built-in system prompt. When omitted, nothing is appended.
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [System Prompt](../param_group/03_system_prompt.md)
 - **Validation:** requires a value; `--append-system-prompt` at end of argv → error
+- **JSON Key:** `"append-system-prompt"`
 
 ```sh
 clr --append-system-prompt "Always respond in JSON." "List failing tests"

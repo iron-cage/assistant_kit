@@ -9,6 +9,7 @@ within a Claude Code session.
 - **Default:** false (CLAUDECODE is removed — subprocess runs as standalone)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"keep-claudecode"`
 
 ```sh
 clr "Fix bug"                    # CLAUDECODE removed (default — standalone behaviour)

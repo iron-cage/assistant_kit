@@ -8,6 +8,7 @@ unset. This is the only retry parameter with a concrete built-in default.
 - **Default:** `2` (two automatic retries per error class)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"retry-default"`
 
 ```sh
 # Increase fallback retry count for all classes

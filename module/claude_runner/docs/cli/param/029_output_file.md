@@ -8,6 +8,7 @@ to the file and prints it to stdout in one operation.
 - **Default:** — (output goes only to stdout)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"output-file"`
 
 ```sh
 clr ask "Summarize this module" --output-file /tmp/summary.txt

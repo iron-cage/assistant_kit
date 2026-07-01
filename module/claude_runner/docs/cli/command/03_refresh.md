@@ -4,7 +4,7 @@
 
 Refresh OAuth credentials without running an actual Claude task by spawning `claude --print "."` in a temporary isolated HOME and writing the updated token back to `--creds` in-place. Use `clr refresh` to pre-warm tokens before a batch of operations without any task side effects.
 
--- **Parameters:** `--creds`, `--timeout`, `--trace`, `--journal`, `--journal-dir`
+-- **Parameters:** `--creds`, `--timeout`, `--trace`, `--journal`, `--journal-dir`, `--args-file`
 -- **Exit Codes:** 0 (refreshed) | 1 (error) | 2 (timeout, no refresh)
 
 ### Syntax
@@ -22,6 +22,7 @@ clr refresh [--creds <FILE>] [--timeout <SECS>] [--trace]
 | [`--trace`](../param/013_trace.md) | bool | false | Print underlying call details to stderr then execute |
 | [`--journal`](../param/072_journal.md) | enum | `full` | Journal level: `full` (stdout+stderr ≤1MB), `meta` (metadata only), `off` (disabled) |
 | [`--journal-dir`](../param/073_journal_dir.md) | path | `~/.clr/journal/` | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` |
+| [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Load clr params from JSON config file; stdin JSON auto-detected when no TTY; env: `CLR_ARGS_FILE` |
 | `-h`/`--help` | — | — | Print refresh subcommand help and exit 0 |
 
 **Algorithm (5 steps):**

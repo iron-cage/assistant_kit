@@ -10,7 +10,7 @@ Interaction tests for Group 2 (Runner Control): `--no-skip-permissions`, `--inte
 `--retry-on-validation`, `--validation-delay`, `--retry-on-runner`, `--runner-delay`,
 `--retry-on-unknown`, `--unknown-delay`, `--retry-override`, `--retry-override-delay`,
 `--retry-default`, `--retry-default-delay`, `--output-style`, `--summary-fields`,
-`--journal`, `--journal-dir`. Tests validate these forty-six flags
+`--journal`, `--journal-dir`, `--args-file`. Tests validate these forty-seven flags
 coexist without conflict and are consumed by the runner, not forwarded to claude.
 
 **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)

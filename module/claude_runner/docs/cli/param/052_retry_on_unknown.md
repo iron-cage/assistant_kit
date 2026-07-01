@@ -13,6 +13,7 @@ exit code.
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Replaces:** `--retry-on-unknown-error` (renamed + renumbered from 039)
+- **JSON Key:** `"retry-on-unknown"`
 
 ```sh
 clr -p "task" --retry-on-unknown 1                # retry once on unknown failure
