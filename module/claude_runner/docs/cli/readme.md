@@ -24,7 +24,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | `command_defaults.md` | Cross-command parameter default matrix and isolated/refresh design targets |
 | `parity/` | Cross-command behavioral parity comparisons (2 instances) |
 | `env_param.md` | CLR_* env var fallbacks, CLR_GATE_DIR runtime config, and CLAUDE_CODE_* subprocess vars (72 vars) |
-| `param_group/` | Logical parameter groupings (5 groups) |
+| `param_group/` | Logical parameter groupings (6 groups) |
 | `type/` | Semantic type definitions (13 active types; 1 deprecated) |
 | `param/` | Individual parameter reference docs (70 active; 1 deprecated) |
 | `user_story/` | User goal and usage pattern docs (27 user stories) |
@@ -38,7 +38,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | param/ (71 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | type/ (14 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| param_group/ (5 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| param_group/ (6 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | user_story/ (27 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | env_param.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | parity/ (2 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
@@ -48,7 +48,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | tests/docs/cli/dictionary.md | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/command/ (8 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param/ (71 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/param_group/ (5 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/param_group/ (6 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/type/ (14 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/env_param/ (2 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/parity/ (2 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
@@ -63,7 +63,7 @@ clr <command> [OPTIONS] [MESSAGE]
 - [Commands](command/readme.md) — command reference (8 commands)
 - [Parameters](param/readme.md) — flag and argument reference (70 active; 1 deprecated)
 - [Types](type/readme.md) — semantic type definitions (13 active types; 1 deprecated)
-- [Parameter Groups](param_group/readme.md) — logical parameter groupings (5 groups)
+- [Parameter Groups](param_group/readme.md) — logical parameter groupings (6 groups)
 - [Dictionary](dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — user goals and usage patterns (27 user stories)
 - [Env Parameters](env_param.md) — input, runtime config, and subprocess environment variables (72 variables)
