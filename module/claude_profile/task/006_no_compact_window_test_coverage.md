@@ -8,7 +8,7 @@
 - **started_at:** null
 - **expires_at:** null
 - **round:** 1
-- **state:** ❓ (Unverified)
+- **state:** 🎯 (Verified)
 - **closes:** null
 - **dir:** module/claude_runner/tests/
 - **validated_by:** null
@@ -27,7 +27,12 @@ of the 27 spec cases — the remaining 15 (27 − 12 = 15) require at least one 
 exhaustive exclusion categories: (a) cross-invocation comparison (RC-1/RC-2), (b) live subprocess
 or real credentials, (c) PATH manipulation to remove `claude` (`acw:EC-6`/`ncw:EC-9` trace
 cases), (d) journaling behavior (RC-8), (e) timeout semantics (RC-9); these five categories are
-exhaustive and none of the 15 are achievable with `--dry-run` alone. Note: two spec files share the EC-1..EC-9 numbering scheme
+exhaustive; the six primary named excluded spec cases are RC-1 and RC-2 (category a), acw:EC-6
+and ncw:EC-9 (category c), RC-8 (category d), RC-9 (category e); the remaining 9 of the 15 are
+spec descriptions from the three files that overlap with in-scope test scenarios (same behavior
+verified from a different spec-file angle) and do not warrant separate dedicated functions —
+together these six primary plus nine incidental exclusions account for all 15. Note: two spec
+files share the EC-1..EC-9 numbering scheme
 independently; where spec codes appear in this document they are qualified as `acw:EC-N` (from
 `03_auto_compact_window.md`) or `ncw:EC-N` (from `075_no_compact_window.md`); `RC-N` always
 refers to `06_running_commands.md`. Eight functions invoke `clr` / `clr ask` with `--dry-run`
@@ -38,19 +43,23 @@ and assert on stdout: (1) `default_injection_run` — default injection present,
 `env_zero_does_not_suppress` — `CLR_NO_COMPACT_WINDOW=0` does NOT suppress (falsy; spec
 `acw:EC-9`), (6) `dry_run_shows_var_when_active` — verifies that `--dry-run` output reveals the injected env var
 (dry-run is What-You-See-Is-What-the-subprocess-Gets; spec `acw:EC-5`/`ncw:EC-8`); function body
-is intentionally identical to (1) — identical body IS correct, distinct function name is the sole
-verification criterion required by the spec for this discovery case, (7)
+is intentionally identical to (1) — the `--dry-run` flag is designed to output exactly what the
+subprocess would receive; checking that the env var IS present in dry-run output tests this
+fidelity directly; identical assertion body IS the right test; a separate named function makes
+this dry-run fidelity an explicit, named coverage point independent of the injection test, (7)
 `dry_run_shows_no_var_when_suppressed` — verifies that `--dry-run` output omits the suppressed
 env var (same dry-run What-You-See-Is-What-the-subprocess-Gets spec; `acw:EC-5`/`ncw:EC-8`);
-function body is intentionally identical to (2) — identical body IS correct, distinct function
-name is the sole verification criterion, (8)
+function body is intentionally identical to (2) — dry-run should omit the suppressed var (same
+dry-run fidelity property as (6), applied to the suppressed case); checking absence tests this
+fidelity; identical assertion body IS the right test; separate named function makes this
+suppression-fidelity coverage an explicit named point, (8)
 `flag_suppresses_for_ask` — `ask` alias suppression. Four functions invoke `clr isolated` /
 `clr refresh` with `--dry-run` and assert on stderr: (9) `default_injection_isolated` — isolated
 default injection present, (10) `flag_suppresses_for_isolated` — isolated `--no-compact-window`
 suppresses, (11) `default_injection_refresh` — refresh default injection present, (12)
 `flag_suppresses_for_refresh` — refresh `--no-compact-window` suppresses. All 12 tests pass under
-`RUSTFLAGS="-D warnings" cargo nextest run --all-features` run from the `module/claude_runner/`
-crate directory (the directory that contains `module/claude_runner/Cargo.toml`);
+running `cd module/claude_runner && RUSTFLAGS="-D warnings" cargo nextest run --all-features`
+from the workspace root (the directory containing the top-level `Cargo.toml`);
 `tests/readme.md` gains a new Responsibility Table row for `no_compact_window_test.rs`.
 
 ## In Scope
@@ -133,3 +142,22 @@ crate directory (the directory that contains `module/claude_runner/Cargo.toml`);
 ## History
 
 - **[2026-07-02]** `CREATED` — Implement test coverage for `--no-compact-window` / `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection (R5 feature) across all 4 running commands.
+
+## Verification Record
+
+- **Date:** 2026-07-02
+- **Rounds required:** 7 (D1, D2, D4 required multiple iterations to address EC-N namespace
+  disambiguation, MOST Goal Observable/Testable self-containment, and make_creds_file helper usage)
+- **Result:** ALL PASS
+- **D1 — Scope Coherence:** PASS — In/Out of Scope specific and consistent; acw:/ncw: qualifier
+  scheme resolves two-file EC-N collision; EC-9 split explicit; (6)/(7) duplicate-predicate
+  measurability clear; 27-vs-15 gap self-contained with 6 primary + 9 incidental exclusions.
+- **D2 — MOST Goal Quality:** PASS — Motivated (R5 gap), Observable (all 12 names + WYSIWYG
+  fidelity rationale self-contained), Scoped (five exhaustive exclusion categories in Goal),
+  Testable (`cd module/claude_runner && RUSTFLAGS="-D warnings" cargo nextest run --all-features`
+  from workspace root).
+- **D3 — Value/YAGNI:** PASS — Feature implemented, spec pre-exists, zero test coverage; all 12
+  functions trace to committed spec cases; no speculative work.
+- **D4 — Implementation Readiness:** PASS — All helpers confirmed in cli_binary_test_helpers.rs;
+  run_dry vs run_cli_with_env routing correct; make_creds_file replaces std::fs::write; Step 9
+  includes RUSTFLAGS; Test Matrix complete with 12 rows.
