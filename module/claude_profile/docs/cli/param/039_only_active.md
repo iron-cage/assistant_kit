@@ -1,4 +1,4 @@
-# Parameter :: 39. `only_active::`
+# Parameter: 39. `only_active::`
 
 Filters the `.usage` table to show only the row for the currently active account (the account matching the per-machine active marker).
 

@@ -1,5 +1,12 @@
 # Subprocess: Token Refresh Invocation
 
+### Scope
+
+- **Purpose**: Document when `.usage refresh::` triggers `refresh_account_token()` and the exact predicate (`should_refresh()`) controlling that decision.
+- **Responsibility**: Authoritative reference for the token refresh trigger predicate, invocation signature, post-refresh actions, default behavior, and the architectural constraint prohibiting approaching-expiry detection.
+- **In Scope**: `should_refresh()` predicate; `refresh_account_token()` invocation; post-refresh retry and quota re-fetch; default `refresh::1` behavior; approaching-expiry prohibition and its rationale.
+- **Out of Scope**: Credential write-back protocol (→ `subprocess/002`); session touch trigger predicate (→ `subprocess/004`); `run_isolated()` contract (→ `subprocess/001`).
+
 ### Purpose
 
 Document when `.usage refresh::` triggers `refresh_account_token()` and the exact predicate controlling that decision.
@@ -62,13 +69,28 @@ rotation while the AT is valid.
 This fix was proposed (BUG-323) and invalidated. SR-11 in `refresh_predicate.rs` tests enforce
 the constraint. See `pitfall/002 Pitfall 5` for the standing prohibition.
 
-### Cross-References
+### Features
 
 | File | Relationship |
 |------|-------------|
 | [feature/017_token_refresh.md](../feature/017_token_refresh.md) | Full feature spec, all acceptance criteria; Out of Scope line 8 |
-| [invariant/008](../invariant/008_single_token_refresh_entry.md) | `expiresAt=1` mechanism — why valid-AT refresh is a no-op |
+
+### Subprocess
+
+| File | Relationship |
+|------|-------------|
 | [subprocess/001](001_run_isolated_contract.md) | `run_isolated()` contract |
 | [subprocess/002](002_credential_writeback.md) | Credential write-back protocol |
 | [subprocess/004](004_session_touch_invocation.md) | Touch invocation (same `refresh_account_token()` call) |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
+| [invariant/008](../invariant/008_single_token_refresh_entry.md) | `expiresAt=1` mechanism — why valid-AT refresh is a no-op |
+
+### Pitfalls
+
+| File | Relationship |
+|------|-------------|
 | [pitfall/002 Pitfall 5](../pitfall/002_subprocess_integration_pitfalls.md) | Approaching-expiry arm permanently forbidden |

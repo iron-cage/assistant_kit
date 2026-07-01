@@ -1,4 +1,4 @@
-# Parameter :: 37. `count::`
+# Parameter: 37. `count::`
 
 Limits the number of rows displayed after all sorting, grouping, and filtering has been applied. Applied as the final truncation step after `offset::`.
 

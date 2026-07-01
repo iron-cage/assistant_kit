@@ -49,10 +49,12 @@ claude_quota          = { workspace = true, optional = true, features = [ "enabl
 data_fmt              = { workspace = true, optional = true }
 
 [dev-dependencies]
-gag          = { workspace = true }
+gag                = { workspace = true }
 serde_json.workspace = true
 tempfile.workspace = true
-claude_quota = { workspace = true, features = [ "enabled" ] }
+claude_quota       = { workspace = true, features = [ "enabled" ] }
+claude_runner_core = { workspace = true, features = [ "enabled" ] }
+unilang            = { workspace = true }
 
 [features]
 # Default: full CLI build (binary + all deps). Use --no-default-features for library-only.

@@ -1,5 +1,7 @@
 # Parameter 062: `owner::` — Edge Cases
 
+**Behavioral Divergence Pair:** EC-10 ↔ EC-18 — `owner::0 name::X` on a caller-owned account clears ownership and exits 0; the same command on a foreign-owned account (no `force::1`) exits 1 with ownership violation (G8 enforced).
+
 ### Test Case Index
 
 | ID | Test | Scenario | Expected | Status |
@@ -26,6 +28,96 @@
 | EC-20 | `ec20_owner_zero_batch_force_clears_foreign` | `owner::0 force::1` batch — accounts owned by foreign identity | G8 bypassed by force; all cleared; stdout `unclaimed` per account; exits 0 | ✅ |
 
 **Total:** 20 edge case tests
+
+---
+
+### EC-01: `owner::alice@laptop name::X` sets custom identity
+
+- **Given:** Account `X` exists in credential store, unowned (`"owner": ""`)
+- **When:** `clp .accounts owner::alice@laptop name::X`
+- **Then:** Exits 0. `{X}.json` contains `"owner": "alice@laptop"`. stdout confirms ownership set.
+- **Exit:** 0
+- **Source:** [param/062_owner.md](../../../../docs/cli/param/062_owner.md)
+
+---
+
+### EC-02: `owner::` with empty value rejected
+
+- **Given:** Any account state
+- **When:** `clp .accounts owner:: name::X` (empty value after `::`)
+- **Then:** Exits 1. stderr contains `"use owner::0 to clear"`.
+- **Exit:** 1
+- **Source:** [param/062_owner.md](../../../../docs/cli/param/062_owner.md)
+
+---
+
+### EC-03: `owner::user1@w003 unclaim::1 name::X` — REMOVED_TOGGLE exit 1
+
+- **Given:** Account `X` exists
+- **When:** `clp .accounts owner::user1@w003 unclaim::1 name::X`
+- **Then:** Exits 1. `unclaim::1` is a REMOVED_TOGGLE (Feature 064); stderr references removal.
+- **Exit:** 1
+- **Source:** [param/062_owner.md](../../../../docs/cli/param/062_owner.md), [feature/064_active_marker_and_owner_redesign.md](../../../../docs/feature/064_active_marker_and_owner_redesign.md)
+
+---
+
+### EC-04: `owner::user1@w003` without `name::` exits 1
+
+- **Given:** Any account state
+- **When:** `clp .accounts owner::user1@w003` (no `name::` provided)
+- **Then:** Exits 1 with usage error. `name::` is required when specifying a non-zero owner.
+- **Exit:** 1
+- **Source:** [param/062_owner.md](../../../../docs/cli/param/062_owner.md)
+
+---
+
+### EC-05: G8 blocks foreign-owner write
+
+- **Given:** `{X}.json` has `"owner": "other@host"`. Caller identity is NOT `other@host`. No `force::1`.
+- **When:** `clp .accounts owner::user1@w003 name::X`
+- **Then:** Exits 1. stderr contains ownership violation message. `{X}.json` is unchanged.
+- **Exit:** 1
+- **Source:** [param/062_owner.md](../../../../docs/cli/param/062_owner.md), [feature/064_active_marker_and_owner_redesign.md](../../../../docs/feature/064_active_marker_and_owner_redesign.md)
+
+---
+
+### EC-06: `force::1` bypasses G8 on foreign-owned account
+
+- **Given:** `{X}.json` has `"owner": "other@host"`. Caller identity is NOT `other@host`.
+- **When:** `clp .accounts owner::user1@w003 name::X force::1`
+- **Then:** Exits 0. `{X}.json` contains `"owner": "user1@w003"`. G8 bypassed by `force::1`.
+- **Exit:** 0
+- **Source:** [param/062_owner.md](../../../../docs/cli/param/062_owner.md), [param/058_force.md](../../../../docs/cli/param/058_force.md)
+
+---
+
+### EC-07: `dry::1` previews without file write
+
+- **Given:** Account `X` exists, unowned
+- **When:** `clp .accounts owner::user1@w003 name::X dry::1`
+- **Then:** Exits 0. stdout contains `[dry-run]` message. `{X}.json` is NOT modified.
+- **Exit:** 0
+- **Source:** [param/004_dry.md](../../../../docs/cli/param/004_dry.md)
+
+---
+
+### EC-08: Overwrite existing owner
+
+- **Given:** `{X}.json` has `"owner": "user1@w003"` (caller owns it)
+- **When:** `clp .accounts owner::new@identity name::X`
+- **Then:** Exits 0. `{X}.json` contains `"owner": "new@identity"`. Prior value overwritten.
+- **Exit:** 0
+- **Source:** [param/062_owner.md](../../../../docs/cli/param/062_owner.md)
+
+---
+
+### EC-09: Idempotent set — same value is a no-op
+
+- **Given:** `{X}.json` has `"owner": "user1@w003"`. Caller identity is `user1@w003`.
+- **When:** `clp .accounts owner::user1@w003 name::X`
+- **Then:** Exits 0. `{X}.json` owner field unchanged. No-op write.
+- **Exit:** 0
+- **Source:** [param/062_owner.md](../../../../docs/cli/param/062_owner.md)
 
 ---
 

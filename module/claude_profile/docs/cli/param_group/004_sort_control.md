@@ -1,8 +1,8 @@
-# Group :: 4. Sort Control
+# Group: 4. Sort Control
 
 **Parameters:** `sort::`, `desc::`, `prefer::`
 **Pattern:** Per-invocation display ordering and recommendation control
-**Purpose:** Controls how `.usage` rows are ordered and which account appears in the footer recommendation. `sort::` drives both row ordering and the footer recommendation — single parameter, no separate `next::`.
+**Purpose:** Controls how `.usage` and `.accounts` rows are ordered and which account appears in the footer recommendation. `sort::` drives both row ordering and the footer recommendation — single parameter, no separate `next::`.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -15,6 +15,7 @@
 | # | Command | Role |
 |---|---------|------|
 | 1 | [`.usage`](../command/006_usage.md#command--9-usage) | All 3 sort control params |
+| 2 | [`.accounts`](../command/001_account.md#command--3-accounts) | All 3 sort control params |
 
 **Typical Patterns:**
 
@@ -37,7 +38,7 @@ clp .usage sort::renew desc::1
 
 **Semantic Coherence Test**
 
-> "Does parameter X control **how `.usage` orders rows** (strategy, direction, or column selection for heuristics)?"
+> "Does parameter X control **how `.usage` or `.accounts` orders rows** (strategy, direction, or column selection for heuristics)?"
 
 All 3 members pass: `sort::` (ordering strategy + footer recommendation), `desc::` (sort direction), `prefer::` (which weekly column the sort heuristics reference). `refresh::` fails (fetch retry strategy, not ordering) and is correctly excluded.
 

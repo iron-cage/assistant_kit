@@ -1,4 +1,4 @@
-# Credentials
+# Noun: credentials
 
 The live OAuth credential metadata for the active Claude Code session, read directly from `~/.claude/.credentials.json`. Provides identity and session information without requiring account store setup — succeeds on any authenticated machine regardless of whether named account profiles exist.
 
@@ -84,7 +84,7 @@ The credential lifecycle is managed externally: `clp` reads but never writes `~/
 | `account` | Credentials reflect the active account; account store is not required but supplements supplementary fields | credentials → account (optional) |
 | `token` | Credentials contain the OAuth token; token status is derived from the same credential file | credentials → token |
 
-### Cross-References
+### See Also
 
 | File | Relationship |
 |------|-------------|
@@ -96,3 +96,26 @@ The credential lifecycle is managed externally: `clp` reads but never writes `~/
 | # | Command | Role |
 |---|---------|------|
 | 1 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Show live credential metadata |
+
+### Referenced Parameters
+
+| # | Parameter | Role |
+|---|-----------|------|
+| 1 | [`format::`](../param/002_format.md) | Output serialization format |
+| 2 | [`account::`](../param/005_account.md) | Show active account name line |
+| 3 | [`sub::`](../param/006_sub.md) | Show subscription type line |
+| 4 | [`tier::`](../param/007_tier.md) | Show rate-limit tier line |
+| 5 | [`token::`](../param/008_token.md) | Show token status line |
+| 6 | [`expires::`](../param/009_expires.md) | Show token expiry duration line |
+| 7 | [`email::`](../param/010_email.md) | Show email address line |
+| 8 | [`file::`](../param/011_file.md) | Show credentials file path line |
+| 9 | [`saved::`](../param/012_saved.md) | Show saved account count line |
+| 10 | [`display_name::`](../param/014_display_name.md) | Show display name line |
+| 11 | [`role::`](../param/015_role.md) | Show organisation role line |
+| 12 | [`billing::`](../param/016_billing.md) | Show billing type line |
+| 13 | [`model::`](../param/017_model.md) | Show active model line |
+| 14 | [`uuid::`](../param/028_uuid.md) | Show stable user ID line |
+| 15 | [`capabilities::`](../param/029_capabilities.md) | Show product capabilities list line |
+| 16 | [`org_uuid::`](../param/030_org_uuid.md) | Show organisation UUID line |
+| 17 | [`org_name::`](../param/031_org_name.md) | Show organisation display name line |
+| 18 | [`trace::`](../param/023_trace.md) | Diagnostic trace output |

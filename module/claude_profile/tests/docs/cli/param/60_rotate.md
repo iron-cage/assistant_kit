@@ -6,6 +6,8 @@ See [param/059_rotate.md](../../../../docs/cli/param/059_rotate.md) for specific
 `rotate::1` executes an account switch to the footer-recommended account after the quota table is rendered.
 The switch uses the same account selected by `find_next_for_strategy()`.
 
+**Behavioral Divergence Pair:** EC-1 ↔ EC-2 — `rotate::0` (default) renders the table and exits 0 without switching; `rotate::1` with empty store renders the table, attempts rotation, finds no eligible account, and exits 1.
+
 ### Test Case Index
 
 | ID | Test Name | Category |

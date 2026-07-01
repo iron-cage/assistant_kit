@@ -1,4 +1,4 @@
-# Parameter :: 9. `expires::`
+# Parameter: 9. `expires::`
 
 Controls whether the token expiry duration line appears in output. Used by both `.accounts` (per stored credential) and `.credentials.status` (from live credentials).
 

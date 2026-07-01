@@ -1,5 +1,12 @@
 # Pitfall: Credential Sync Pitfalls
 
+### Scope
+
+- **Purpose**: Document failure modes in credential copy management across live, store, and subprocess views.
+- **Responsibility**: Covers `expiresAt` staleness, live-session write contamination, marker race conditions, rotation re-sync gap, stale-boolean race, and cross-machine RT invalidation.
+- **In Scope**: `{name}.credentials.json`, `~/.claude/.credentials.json`, and `_active_*` marker sync pitfalls; BUG-162, BUG-221, BUG-208, BUG-211, BUG-310, BUG-316.
+- **Out of Scope**: Token lifecycle states (→ state_machine/002); subprocess arg constraints (→ pitfall/002).
+
 ### Pattern
 
 Managing multiple credential copies (live `~/.claude/.credentials.json`, per-account `{name}.credentials.json`, and the in-memory subprocess view) requires careful sequencing. Several bugs stem from the wrong copy being written, read, or discarded.
@@ -60,10 +67,20 @@ When multiple machines share the same credential set (same email / AT+RT pair), 
 3. Check Claude Code process lists on all machines during the window
 4. Matching AT fingerprint changes on machine B with no store push = H6 mechanism confirmed
 
-### Cross-References
+### State Machines
+
+| File | Relationship |
+|------|-------------|
+| [state_machine/002](../state_machine/002_oauth_token_lifecycle.md) | Token validity states; no `[valid]→[refreshed]` transition |
+
+### Subprocess
 
 | File | Relationship |
 |------|-------------|
 | [subprocess/002](../subprocess/002_credential_writeback.md) | Credential write-back protocol |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
 | [schema/001](../schema/001_credentials_json.md) | `{name}.credentials.json` fields |
-| [state_machine/002](../state_machine/002_oauth_token_lifecycle.md) | Token validity states; no `[valid]→[refreshed]` transition |

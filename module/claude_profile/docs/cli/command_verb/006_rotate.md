@@ -1,4 +1,4 @@
-# Verb :: rotate
+# Verb: rotate
 
 > **DEPRECATED** — The `rotate` verb and `.account.rotate` command have been removed. Use `clp .usage rotate::1` (with optional `sort::` strategy) instead. See [feature/038_usage_strategy_rotate.md](../../feature/038_usage_strategy_rotate.md).
 
@@ -45,7 +45,7 @@ Selects the inactive saved account with the highest `expiresAt` timestamp and ac
 [active] --account.rotate (prior)-----> [saved]
 ```
 
-### Cross-References
+### See Also
 
 | File | Relationship |
 |------|-------------|

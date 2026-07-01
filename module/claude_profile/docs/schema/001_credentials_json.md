@@ -3,6 +3,7 @@
 ### Scope
 
 - **Purpose**: Define the on-disk format of the per-account OAuth credential snapshot stored in the credential store.
+- **Responsibility**: Documents the on-disk format of per-account OAuth credential snapshots in the credential store.
 - **In Scope**: Field names, types, semantics, and write/read callers for `{name}.credentials.json`.
 - **Out of Scope**: The live session credential file `~/.claude/.credentials.json` (same format, different location and ownership); token refresh mechanics (→ [feature/017](../feature/017_token_refresh.md)); credential store path (→ [schema/004](004_storage_root.md)).
 
@@ -49,11 +50,21 @@ Where `{credential_store}` = `{root}/.persistent/claude/credential/` and `{root}
 | `account::list()` | `.accounts`, `.usage` — reads all `{name}.credentials.json` to build `AccountQuota` list |
 | `account::refresh_account_token()` | Per-account token refresh — reads credential to pass to `run_isolated` with forced `expiresAt: "1"` (AC-32) |
 
-### Cross-References
+### Features
 
 | File | Relationship |
 |------|-------------|
 | [feature/002_account_save.md](../feature/002_account_save.md) | Save algorithm; step 1 writes this file |
 | [feature/017_token_refresh.md](../feature/017_token_refresh.md) | Refresh lifecycle; BUG-162 (expiresAt not updated by subprocess) |
-| [schema/002](002_account_json.md) | Companion supplementary metadata file `{name}.json` |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [002_account_json.md](002_account_json.md) | Companion supplementary metadata file `{name}.json` |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
 | [invariant/007](../invariant/007_json_storage_format.md) | 2-space pretty-print + trailing newline requirement |

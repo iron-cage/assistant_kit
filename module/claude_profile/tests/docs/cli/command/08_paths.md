@@ -13,6 +13,7 @@ Integration test planning for the `.paths` command. See [command/namespace.md](.
 | IT-5 | Paths resolve from actual HOME value | Path Correctness |
 | IT-6 | `field::credential_store` outputs single raw path value | Field Selection |
 | IT-7 | `field::` with unknown name exits 1 | Error Handling |
+| IT-8 | `no_color::1` accepted; path output unchanged (no color codes emitted) | Edge Param |
 
 ### Test Coverage Summary
 
@@ -21,8 +22,9 @@ Integration test planning for the `.paths` command. See [command/namespace.md](.
 - Error Handling: 2 tests
 - Path Correctness: 2 tests
 - Field Selection: 1 test
+- Edge Param: 1 test
 
-**Total:** 7 integration tests
+**Total:** 8 integration tests
 
 ---
 
@@ -95,3 +97,13 @@ Integration test planning for the `.paths` command. See [command/namespace.md](.
 - **Exit:** 1
 - **Status:** ✅ Implemented
 - **Source:** tests/cli/token_paths_test.rs :: p010_paths_field_unknown_exits_1
+
+---
+
+### IT-8: `no_color::1` accepted; path output unchanged
+
+- **Given:** `HOME` is set to a valid temporary directory.
+- **When:** `clp .paths no_color::1`
+- **Then:** Seven labeled lines on stdout (identical to IT-1 output). No ANSI color codes present. Exit 0. `.paths` uses plain-text formatting regardless of `no_color::` — the flag is accepted without error.
+- **Exit:** 0
+- **Source:** [command/004_paths.md — .paths](../../../../docs/cli/command/004_paths.md#command--8-paths)

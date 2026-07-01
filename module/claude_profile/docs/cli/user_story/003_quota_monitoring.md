@@ -1,4 +1,4 @@
-# User Story :: 3. Multi-Account Quota Monitoring
+# User Story: 3. Multi-Account Quota Monitoring
 
 **Persona:** Power user managing multiple Claude accounts to maximize available quota
 **Goal:** See all accounts' remaining session and weekly quota in one view to decide which to use next
@@ -35,6 +35,8 @@
 | 9 | [`abs::`](../param/046_abs.md) | Show absolute token counts instead of percentages |
 | 10 | [`cols::`](../param/033_cols.md) | Column visibility modifiers |
 | 11 | [`format::`](../param/002_format.md) | Output format (text default; json for processing) |
+| 12 | [`solo::`](../param/060_solo.md) | Conserve tokens — live fetch only for current+owned account |
+| 13 | [`who::`](../param/061_who.md) | Force sessions table on/off to show active users across machines |
 
 ### Referenced Parameter Groups
 

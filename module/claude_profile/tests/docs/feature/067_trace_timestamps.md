@@ -26,35 +26,66 @@ Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps
 | FT-06 | `tests/usage/fetch_tests.rs` | BUG-234 MRE: `src.find( r#"eprintln!( "{}{}  result: OK""# )` |
 | FT-07 | `tests/cli/usage_test.rs`, `tests/cli/usage_feature_test.rs` | `.filter( |l| l.contains( " · " ) )` usage |
 
-### FT Case Descriptions
+### FT-01: `trace_ts()` is available in production code
 
-**FT-01** — `trace_ts()` production availability
-Structural check: `claude_profile_core/src/account.rs` contains `pub fn trace_ts` without a preceding `#[cfg(test)]` attribute. The function is callable from production eprintln! paths.
-Expected: source match found; no `cfg(test)` on the `trace_ts` fn definition.
+- **Given:** `claude_profile_core/src/account.rs` is the production source file.
+- **When:** The source is inspected for `pub fn trace_ts` with no preceding `#[cfg(test)]` attribute.
+- **Then:** Source match found. `trace_ts` is a `pub fn` callable from production `eprintln!` paths — not test-gated.
+- **Source fn:** structural test in `tests/usage/fetch_tests.rs`
 
-**FT-02** — Timestamp format
-When `trace_ts()` is called, the return value matches the pattern `"YYYY-MM-DD · HH:MM:SS · "`: 10 date digits, space-dot-space separator, 8 time digits, trailing space-dot-space.
-Expected: each trace line in stderr output begins with a string matching this pattern; test assertions confirm ` · ` presence in trace output.
+---
 
-**FT-03** — No `[trace]` sentinel in test assertions
-All assertions across 12 test files that formerly used `contains("[trace]")` now use `contains(" · ")` or `contains(" · label  ")`. Zero `[trace]` assertion strings remain in the test suite.
-Expected: `grep -rn 'contains.*"\[trace\]"' tests/cli/ src/usage/ --include="*.rs"` returns 0 matches.
+### FT-02: `trace_ts()` return value matches timestamp format
 
-**FT-04** — `trace_ts()` is unconditional
-The body of `trace_ts()` in `account.rs` does not contain an `if trace` or `if enabled` guard. It simply formats the UTC timestamp.
-Expected: structural source check finds no conditional in `trace_ts()` body; every call site wraps the eprintln! in its own `if trace { ... }` guard.
+- **Given:** `trace_ts()` is called at any point during a `.usage trace::1` run.
+- **When:** The return value is captured via stderr output or direct call.
+- **Then:** Return value matches `"YYYY-MM-DD · HH:MM:SS · "`: 10 date digits, space-dot-space separator, 8 time digits, trailing space-dot-space. Each trace line in stderr begins with this pattern.
+- **Source fn:** structural/regex assertions in `tests/usage/touch_tests.rs`, `tests/usage/api_tests_a.rs`
 
-**FT-05** — Touch skip trace format
-When an account is skipped during `apply_touch()` due to solo mode, the stderr line contains `" · touch  "` followed by the account name and skip reason. Replaces former `"[trace] touch  "` prefix.
-Expected: `touch_tests.rs` assertions using `contains( " · touch  " )` pass.
+---
 
-**FT-06** — BUG-234 MRE structural guard
-The production `eprintln!` in `src/usage/fetch.rs` that emits the `result: OK` line uses the two-argument form `"{}{}  result: OK"` (timestamp + label as separate arguments). The BUG-234 MRE structural test asserts this exact string is present in the source file.
-Expected: `src.find( r#"eprintln!( "{}{}  result: OK""# )` returns `Some(...)` — exactly 1 match at the production eprintln! site and 1 match at the structural assertion itself.
+### FT-03: No `[trace]` sentinel strings remain in test assertions
 
-**FT-07** — Fetch trace line format
-Trace output during `.usage trace::1` passes through lines containing `" · "` where account name and fetch action are emitted. The `usage_feature_test.rs` filter `.filter( |l| l.contains( " · " ) )` correctly captures all trace lines.
-Expected: trace line count matches expected count in usage_feature_test.rs; no lines are missed or double-counted by the ` · ` filter.
+- **Given:** All 12 test files that formerly asserted `contains("[trace]")`.
+- **When:** `grep -rn 'contains.*"\[trace\]"' tests/cli/ src/usage/ --include="*.rs"` is run.
+- **Then:** Returns 0 matches. All assertions updated to use `contains(" · ")` or `contains(" · label  ")`.
+- **Source fn:** all 12 test files updated (see Test Locations table above)
+
+---
+
+### FT-04: `trace_ts()` body contains no conditional guard
+
+- **Given:** `trace_ts()` implementation in `account.rs`.
+- **When:** The function body is inspected structurally.
+- **Then:** No `if trace`, `if enabled`, or similar conditional found in the body. The function simply formats the UTC timestamp unconditionally.
+- **Source fn:** structural test in `tests/usage/fetch_tests.rs`
+
+---
+
+### FT-05: Touch skip trace line uses ` · touch  ` sentinel
+
+- **Given:** An account is skipped during `apply_touch()` due to solo mode.
+- **When:** `clp .usage touch::1 solo::1 trace::1` (non-current account present).
+- **Then:** stderr contains `" · touch  "` followed by the account name and skip reason. No `"[trace] touch  "` prefix appears.
+- **Source fn:** `contains( " · touch  " )` assertions in `tests/usage/touch_tests.rs`
+
+---
+
+### FT-06: BUG-234 MRE — `result: OK` eprintln! uses two-argument form
+
+- **Given:** `src/usage/fetch.rs` production source file.
+- **When:** Structural test searches for `eprintln!( "{}{}  result: OK"` in the source.
+- **Then:** `src.find( r#"eprintln!( "{}{}  result: OK""# )` returns `Some(...)`. Exactly 1 match at the production site and 1 match at the structural assertion itself.
+- **Source fn:** `mre_bug234_result_ok_uses_two_arg_eprintln` (in `tests/usage/fetch_tests.rs`)
+
+---
+
+### FT-07: Fetch trace line filter captures all trace lines
+
+- **Given:** `.usage trace::1` run with multiple accounts.
+- **When:** `usage_feature_test.rs` applies `.filter( |l| l.contains( " · " ) )` to stderr lines.
+- **Then:** Trace line count matches expected count. No trace lines missed or double-counted by the ` · ` filter.
+- **Source fn:** filter assertion in `tests/cli/usage_feature_test.rs`
 
 ### Test Function Naming
 

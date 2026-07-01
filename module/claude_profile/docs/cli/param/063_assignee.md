@@ -1,4 +1,4 @@
-# Parameter :: 63. `assignee::`
+# Parameter: 63. `assignee::`
 
 Mutation param on `.accounts` and `.usage` that writes or clears the per-machine active-account marker (`_active_{machine}_{user}`) for any host+user pair. The value is either a `USER@MACHINE` identity or the sentinel `"0"` (meaning: current machine, expanded to `$USER@$HOSTNAME` before processing). When `name::X` is provided, assigns X as the active account for the target identity. When `name::` is absent, clears (unassigns) the marker for the target identity.
 
@@ -59,6 +59,12 @@ Sanitization: alphanumeric, `-`, `.` kept; all other characters become `_`. Iden
 |---|---------|------|
 | 1 | `.accounts` | Primary host — mutation param (Feature 065) |
 | 2 | `.usage` | Shared unified param set (Feature 037) |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Onboarding and Lifecycle Management](../user_story/002_onboarding.md) | Write per-machine active-account marker via `assignee::USER@MACHINE name::X` |
 
 ### See Also
 

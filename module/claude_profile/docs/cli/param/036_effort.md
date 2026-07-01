@@ -1,4 +1,4 @@
-# Parameter :: 36. `effort::`
+# Parameter: 36. `effort::`
 
 Controls the effort level (`--effort` flag) injected into isolated subprocesses spawned during `touch::` and `refresh::` operations. Default is `low` for all models that support effort.
 

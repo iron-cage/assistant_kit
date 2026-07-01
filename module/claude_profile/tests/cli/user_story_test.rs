@@ -414,7 +414,7 @@ fn quota_ua2_sort_strategies_exit_0()
 fn quota_ua3_lim_it_live_mode_produces_output()
 {
   let Some( token ) = live_active_token() else { return };
-  if !require_live_api( "quota_ua3_lim_it" ) { return; }
+  require_live_api( "quota_ua3_lim_it" );
 
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -704,7 +704,7 @@ fn diagnostics_ua3_paths_resolves_canonical_paths()
 fn diagnostics_ua4_lim_it_inspect_trace_shows_endpoints()
 {
   let Some( token ) = live_active_token() else { return };
-  if !require_live_api( "diagnostics_ua4_lim_it" ) { return; }
+  require_live_api( "diagnostics_ua4_lim_it" );
 
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();

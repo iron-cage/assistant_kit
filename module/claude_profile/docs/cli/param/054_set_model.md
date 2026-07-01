@@ -1,4 +1,4 @@
-# Parameter :: 54. `set_model::`
+# Parameter: 54. `set_model::`
 
 Explicitly writes a Claude Code session model to `~/.claude/settings.json`. When provided, overrides the automatic `apply_model_override()` logic for that invocation.
 

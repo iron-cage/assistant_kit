@@ -724,13 +724,37 @@ fn ac3_sufficient_quota_with_opus_session_restores_sonnet()
   );
 }
 
-/// AC-4 (algorithm/002): Near-exhausted Sonnet quota with Sonnet session switches to Opus.
+/// AC-4 (algorithm/002 / BUG-225): Near-exhausted Sonnet quota with Sonnet session switches to Opus.
 ///
 /// `utilization=91.0` → `sonnet_left=9.0 < 10.0` → Opus override fires →
 /// `override_session_model_to_opus()`. Current model `"sonnet"` satisfies gate
 /// (`contains("sonnet")=true`) → writes `"opus"`.
 ///
+/// ## Root Cause
+/// `switch_account()` restored the saved snapshot model blindly without consulting quota state.
+/// After switching, the session remained in Sonnet mode even with only 9 % Sonnet quota left,
+/// failing to trigger the Sonnet→Opus override.
+///
+/// ## Why Not Caught
+/// No test exercised the `apply_model_override()` call path from `account_ops.rs`
+/// (`apply_post_switch_touch`) with a near-exhausted Sonnet quota — unit tests for
+/// `apply_model_override` called it directly, not through the switch path.
+///
+/// ## Fix Applied
+/// `apply_post_switch_touch()` in `account_ops.rs` now calls `apply_model_override()` after
+/// `switch_account()`, consulting current quota state and writing `"opus"` when 7d-Sonnet
+/// utilization exceeds 90 %.
+///
+/// ## Prevention
+/// Test the full `.account.use` → `apply_post_switch_touch` → `apply_model_override` chain with
+/// near-exhausted quota data, not just isolated unit tests of `apply_model_override`.
+///
+/// ## Pitfall
+/// Model restoration from snapshot must be followed by quota-aware override; the snapshot
+/// reflects the model at save time, not current quota utilization.
+///
 /// Spec: [`tests/docs/algorithm/002_session_model_override.md` AC-4]
+#[ doc = "bug_reproducer(BUG-225)" ]
 #[ test ]
 fn ac4_near_exhausted_quota_with_sonnet_session_switches_to_opus()
 {

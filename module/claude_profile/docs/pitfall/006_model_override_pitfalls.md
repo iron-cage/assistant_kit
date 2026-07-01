@@ -1,5 +1,12 @@
 # Pitfall: Model Override Pitfalls
 
+### Scope
+
+- **Purpose**: Document failure modes in session model and effort management via `settings.json`.
+- **Responsibility**: Covers absent-tier/exhaustion confusion, one-way ratchet, missing initialization, effort decoupling, and unconditional effort write requirement.
+- **In Scope**: `apply_model_override()` and `set_session_effort()` pitfalls; BUG-300, BUG-311, BUG-312, BUG-322, TSK-335 H2.
+- **Out of Scope**: Quota gate pitfalls (→ pitfall/001); session model override algorithm (→ algorithm/002).
+
 ### Pattern
 
 Session model management in `settings.json` has three independent failure modes: absent-tier vs. exhausted confusion, one-way ratchet (write only in one direction), and missing initialization.
@@ -44,10 +51,20 @@ Gating `set_session_effort()` inside `if overrode { }` means effort is only upda
 
 **Rule:** Effort sync must be unconditional. "Model didn't change" does not mean "effort is correct" — the effort field is independent and can be absent or stale even when the model is already right.
 
-### Cross-References
+### Algorithms
 
 | File | Relationship |
 |------|-------------|
 | [algorithm/002](../algorithm/002_session_model_override.md) | Session model override algorithm |
+
+### Features
+
+| File | Relationship |
+|------|-------------|
 | [feature/062_unified_session_config.md](../feature/062_unified_session_config.md) | `recommended_model()`, `set_session_effort()` |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
 | [schema/006](../schema/006_settings_json.md) | `model` and `effortLevel` fields |

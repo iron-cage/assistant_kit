@@ -1,4 +1,4 @@
-# User Story :: 1. Automatic Account Rotation
+# User Story: 1. Automatic Account Rotation
 
 **Persona:** SWE managing multiple Claude Max accounts across projects
 **Goal:** Switch to a fresh account when the active token expires without manually copying credentials

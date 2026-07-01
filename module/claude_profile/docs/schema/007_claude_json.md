@@ -3,6 +3,7 @@
 ### Scope
 
 - **Purpose**: Define which fields in `~/.claude.json` are read by `clp`, their locations, and read callers.
+- **Responsibility**: Documents the `~/.claude.json` fields read by `clp` and their read callers.
 - **In Scope**: All `~/.claude.json` fields that `clp` reads — `oauthAccount` subtree and any auxiliary fields.
 - **Out of Scope**: Full `~/.claude.json` schema (not owned by clp — it is owned exclusively by the Claude binary). `clp` NEVER writes to this file.
 
@@ -57,12 +58,17 @@ All fields show `N/A` when:
 
 No error is ever raised for absent metadata in `~/.claude.json`.
 
-### Cross-References
+### Features
 
 | File | Relationship |
 |------|-------------|
 | [feature/012_live_credentials_status.md](../feature/012_live_credentials_status.md) | `read_live_cred_meta()` — live credential metadata reading |
 | [feature/014_rich_account_metadata.md](../feature/014_rich_account_metadata.md) | `oauthAccount` fields: `displayName`, `organizationRole`, `billingType` |
 | [feature/021_extended_snapshot_fields.md](../feature/021_extended_snapshot_fields.md) | `id`, `primaryEmailAddress`, `capabilities` |
-| [schema/002](002_account_json.md) | `oauthAccount` subtree is snapshotted into `{name}.json` at save time |
-| [schema/003](003_file_topology.md) | `claude_json_file()` path method |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [002_account_json.md](002_account_json.md) | `oauthAccount` subtree is snapshotted into `{name}.json` at save time |
+| [003_file_topology.md](003_file_topology.md) | `claude_json_file()` path method |

@@ -1,4 +1,4 @@
-# Parameter :: 27. `prefer::`
+# Parameter: 27. `prefer::`
 
 Selects which weekly quota column is used by sort strategies and recommendation heuristics. Determines whether the overall weekly quota (`7d Left`), the Sonnet-specific weekly quota (`7d(Son)`), or the more constrained of the two is considered.
 

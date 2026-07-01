@@ -13,7 +13,7 @@ clp supports multiple output format modes, selected via the [`format::`](../para
 
 **Total:** 3 format instance files (F01–F03); 3 additional `.usage`-only variants (value, tsv, plain)
 
-**Format-capable commands:** [`.accounts`](../command/001_account.md#command--3-accounts), [`.token.status`](../command/005_token.md#command--7-tokenstatus), [`.paths`](../command/004_paths.md#command--8-paths), [`.usage`](../command/006_usage.md#command--9-usage), [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus), [`.account.limits`](../command/001_account.md#command--11-accountlimits)
+**Format-capable commands:** [`.accounts`](../command/001_account.md#command--3-accounts), [`.token.status`](../command/005_token.md#command--7-tokenstatus), [`.paths`](../command/004_paths.md#command--8-paths), [`.usage`](../command/006_usage.md#command--9-usage), [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus), [`.account.limits`](../command/001_account.md#command--11-accountlimits), [`.account.inspect`](../command/001_account.md#command--15-accountinspect), [`.model`](../command/007_model.md#command--17-model)
 
 Mutation commands (`.account.save`, `.account.use`, `.account.delete`, `.account.relogin`) produce fixed confirmation-text output and do not accept `format::`.
 

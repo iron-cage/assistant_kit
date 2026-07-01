@@ -1,12 +1,17 @@
 # Research: Controlling the Claude Interactive Session
 
+### Scope
+
+- **Purpose**: Document `claude` binary execution modes, authentication subcommands, and flag inventory from live research.
+- **Responsibility**: Covers `claude auth login` discovery, `--print` mode constraints, environment variable controls, and implications for `.account.relogin`.
+- **In Scope**: Flag inventory (2026-05-26); auth subcommands; execution modes 1–4; credential write behavior; HOME override notes.
+- **Out of Scope**: Behavioral requirements (→ feature/019); test specifications.
+
 - **Date:** 2026-05-26
 - **Trigger:** User question — can `.account.relogin` avoid dropping into the full interactive REPL?
 - **Method:** `claude --help` flag inventory + `claude auth --help` + `claude auth login --help` + `claude auth status --json` live run + source analysis of `ClaudeCommand` builder and `run_isolated()`
 
----
-
-## Background
+### Background
 
 `.account.relogin` currently uses `execute_interactive()`, which calls `cmd.status()` (not `cmd.output()`) to attach the user's TTY to the subprocess. This drops the user into the full Claude REPL. The user must:
 
@@ -16,9 +21,7 @@
 
 The question was whether we could trigger browser OAuth without entering the REPL at all.
 
----
-
-## Key Discovery: `claude auth login`
+### Key Discovery: `claude auth login`
 
 `claude auth` is a dedicated authentication management subcommand. It was not previously documented in this codebase.
 
@@ -55,18 +58,16 @@ claude auth logout                   Log out from current account
 
 Fields: `loggedIn` (bool), `authMethod` ("claude.ai" | "apiKey" | unknown), `apiProvider` ("firstParty" | unknown), `email`, `orgId`, `orgName`, `subscriptionType`.
 
----
+### Full Flag Inventory (`claude --help`, 2026-05-26)
 
-## Full Flag Inventory (`claude --help`, 2026-05-26)
-
-### Execution mode flags
+#### Execution mode flags
 
 | Flag | Effect |
 |------|--------|
 | `-p` / `--print` | Non-interactive: print response and exit. Only mode that works in piped/non-TTY context. |
 | (none) | Default: interactive REPL. Requires TTY. |
 
-### Session control
+#### Session control
 
 | Flag | Effect |
 |------|--------|
@@ -76,7 +77,7 @@ Fields: `loggedIn` (bool), `authMethod` ("claude.ai" | "apiKey" | unknown), `api
 | `--session-id <uuid>` | Specify session UUID explicitly |
 | `--no-session-persistence` | Disable session persistence (only with `--print`) |
 
-### Output format (only work with `--print`)
+#### Output format (only work with `--print`)
 
 | Flag | Effect |
 |------|--------|
@@ -85,7 +86,7 @@ Fields: `loggedIn` (bool), `authMethod` ("claude.ai" | "apiKey" | unknown), `api
 | `--include-partial-messages` | Stream partial chunks (with `stream-json`) |
 | `--replay-user-messages` | Re-emit user messages on stdout (with `stream-json`) |
 
-### Model / effort
+#### Model / effort
 
 | Flag | Effect |
 |------|--------|
@@ -94,7 +95,7 @@ Fields: `loggedIn` (bool), `authMethod` ("claude.ai" | "apiKey" | unknown), `api
 | `--fallback-model <model>` | Auto-fallback on overload (only with `--print`) |
 | `--max-budget-usd <amount>` | Spending cap (only with `--print`) |
 
-### Permissions / security
+#### Permissions / security
 
 | Flag | Effect |
 |------|--------|
@@ -105,7 +106,7 @@ Fields: `loggedIn` (bool), `authMethod` ("claude.ai" | "apiKey" | unknown), `api
 | `--disallowedTools <tools>` | Blacklist specific tools |
 | `--tools <tools>` | Explicit tool list; `""` disables all |
 
-### Prompting / context
+#### Prompting / context
 
 | Flag | Effect |
 |------|--------|
@@ -115,7 +116,7 @@ Fields: `loggedIn` (bool), `authMethod` ("claude.ai" | "apiKey" | unknown), `api
 | `--file <specs>` | File resources to download at startup |
 | `--add-dir <dirs>` | Additional directories for tool access |
 
-### IDE / browser / worktree
+#### IDE / browser / worktree
 
 | Flag | Effect |
 |------|--------|
@@ -124,7 +125,7 @@ Fields: `loggedIn` (bool), `authMethod` ("claude.ai" | "apiKey" | unknown), `api
 | `--tmux` | Create tmux session (with `--worktree`) |
 | `-w` / `--worktree [name]` | Create git worktree for session |
 
-### MCP / plugins
+#### MCP / plugins
 
 | Flag | Effect |
 |------|--------|
@@ -132,7 +133,7 @@ Fields: `loggedIn` (bool), `authMethod` ("claude.ai" | "apiKey" | unknown), `api
 | `--strict-mcp-config` | Only use `--mcp-config` servers, ignore all others |
 | `--plugin-dir <paths>` | Load plugins from directories |
 
-### Agents
+#### Agents
 
 | Flag | Effect |
 |------|--------|
@@ -140,7 +141,7 @@ Fields: `loggedIn` (bool), `authMethod` ("claude.ai" | "apiKey" | unknown), `api
 | `--agents <json>` | JSON object defining custom agents |
 | `--brief` | Enable `SendUserMessage` tool for agent-to-user communication |
 
-### Diagnostics
+#### Diagnostics
 
 | Flag | Effect |
 |------|--------|
@@ -148,7 +149,7 @@ Fields: `loggedIn` (bool), `authMethod` ("claude.ai" | "apiKey" | unknown), `api
 | `--debug-file <path>` | Write debug logs to file |
 | `--verbose` | Override verbose mode from config |
 
-### Environment variables (from `ClaudeCommand` source)
+#### Environment variables (from `ClaudeCommand` source)
 
 | Variable | Effect |
 |----------|--------|
@@ -168,7 +169,7 @@ Fields: `loggedIn` (bool), `authMethod` ("claude.ai" | "apiKey" | unknown), `api
 | `HOME` | Override home dir (used by `run_isolated()`) |
 | `CLAUDECODE` | Removed by builder (`unset_claudecode=true`) to prevent nested session detection |
 
-### Top-level commands
+#### Top-level commands
 
 | Command | Effect |
 |---------|--------|
@@ -182,11 +183,9 @@ Fields: `loggedIn` (bool), `authMethod` ("claude.ai" | "apiKey" | unknown), `api
 | `claude install [target]` | Install specific version |
 | `claude update` | Update to latest |
 
----
+### Execution Mode Analysis
 
-## Execution Mode Analysis
-
-### Mode 1: Full Interactive REPL (current `execute_interactive()`)
+#### Mode 1: Full Interactive REPL (current `execute_interactive()`)
 
 ```rust
 cmd.status()  // inherited TTY, stdout/stderr not captured
@@ -197,7 +196,7 @@ cmd.status()  // inherited TTY, stdout/stderr not captured
 - Suitable for: general-purpose interactive use, debugging
 - **Problem for relogin:** user must manually `/exit` after auth
 
-### Mode 2: Non-interactive / headless (`execute()` with `--print`)
+#### Mode 2: Non-interactive / headless (`execute()` with `--print`)
 
 ```rust
 cmd.output()  // stdout/stderr captured, no TTY
@@ -210,7 +209,7 @@ With args `["--print", "."]`:
 - Suitable for: token refresh (`refresh::1`), session touch (`touch::1`)
 - **Not suitable for relogin:** cannot trigger browser OAuth in non-TTY mode
 
-### Mode 3: Auth-only (`claude auth login`) — **newly discovered**
+#### Mode 3: Auth-only (`claude auth login`) — **newly discovered**
 
 ```bash
 claude auth login [--email <email>]
@@ -223,7 +222,7 @@ claude auth login [--email <email>]
 - Suitable for: **exactly the relogin use case**
 - Needs TTY for browser redirect/display, but exits cleanly after auth
 
-### Mode 4: Auth status query (`claude auth status --json`)
+#### Mode 4: Auth status query (`claude auth status --json`)
 
 ```bash
 claude auth status --json
@@ -234,9 +233,7 @@ claude auth status --json
 - Can be used to verify auth state pre/post relogin
 - Could replace `aq.result = Err(...)` detection as a pre-flight check
 
----
-
-## Implication for `.account.relogin`
+### Implication for `.account.relogin`
 
 Current code in `account_relogin_routine()` (`commands.rs:1209`):
 ```rust
@@ -266,9 +263,7 @@ Risks / open questions:
 4. **Exit code on cancel** — what exit code does `auth login` return when the user cancels? Behavior needs testing.
 5. **Pre-spawn message** — regardless of approach, a message should be emitted before the subprocess so the user knows what's happening.
 
----
-
-## Additional Improvement: Pre-spawn Diagnostic Message
+### Additional Improvement: Pre-spawn Diagnostic Message
 
 Currently `account_relogin_routine()` emits zero output before calling `execute_interactive()`. The user is silently dropped into a subprocess. The workflow docs show expected output like:
 
@@ -278,9 +273,7 @@ Currently `account_relogin_routine()` emits zero output before calling `execute_
 
 But this `eprintln!` call doesn't exist in the source (`commands.rs:1209`). This is a UX gap independent of which subprocess approach is used.
 
----
-
-## Recommendation
+### Recommendation
 
 File two tasks:
 1. **UX fix (easy):** Add `eprintln!` before the subprocess call in `account_relogin_routine()` — tell user what's happening before auth starts.

@@ -1,4 +1,4 @@
-# Type :: 2. `OutputFormat`
+# Type: 2. `OutputFormat`
 
 **Purpose:** Selects between human-readable text, compact table, and machine-parseable JSON output. Enables pipeline composition via `format::json | jq`; enables at-a-glance multi-account comparison via `format::table`.
 

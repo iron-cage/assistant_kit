@@ -10,7 +10,8 @@
 //! Every handler takes `VerifiedCommand` by value because the `CommandRoutine`
 //! type alias requires ownership.
 
-pub( crate ) mod shared;
+pub( crate ) mod cmd_args;
+pub( crate ) mod cmd_context;
 mod credentials;
 mod accounts;
 mod accounts_render;

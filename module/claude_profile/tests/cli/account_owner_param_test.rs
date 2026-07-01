@@ -2,6 +2,23 @@
 //!
 //! Tests invoke the compiled `clp` binary as a subprocess via `CARGO_BIN_EXE_clp`.
 //!
+//! ## EC-N Spec Map
+//!
+//! Maps `ec1`..`ec9` function names to EC-01..EC-09 from
+//! `tests/docs/cli/param/63_owner.md`.
+//!
+//! | Function | EC-N (63_owner.md) |
+//! |----------|--------------------|
+//! | `ec1_owner_sets_custom_identity` | EC-01 |
+//! | `ec2_owner_empty_rejected` | EC-02 |
+//! | `ec3_owner_and_unclaim_removed_toggle` | EC-03 |
+//! | `ec4_owner_missing_name_exits_1` | EC-04 |
+//! | `ec5_owner_g8_foreign_owner_blocked` | EC-05 |
+//! | `ec6_owner_force_bypasses_g8` | EC-06 |
+//! | `ec7_owner_dry_no_file_writes` | EC-07 |
+//! | `ec8_owner_overwrite_existing` | EC-08 |
+//! | `ec9_owner_idempotent_same_value` | EC-09 |
+//!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
 //! | ft01 | `ft_owner_sets_owner_field` | `owner::user1@w003 name::X` writes owner | P |

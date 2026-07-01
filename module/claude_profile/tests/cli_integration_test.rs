@@ -11,11 +11,15 @@
 //! | Module | Domain | Test Series |
 //! |--------|--------|-------------|
 //! | `accounts_help_test` | help commands | H |
-//! | `accounts_list_test` | `.accounts` list command | ACC |
+//! | `accounts_list_test` | `.accounts` list command ACC-01–ACC-25 | ACC |
+//! | `accounts_list_test_b` | `.accounts` list command ACC-26+ | ACC |
 //! | `accounts_ft_test` | Feature 037 param unification + `mre_324` field alignment | FT, mre |
-//! | `account_mutations_test` | account save, use, delete | AS, AW, AD |
-//! | `account_relogin_test` | account relogin + trace/feature027 | AR, AW |
-//! | `account_renewal_test` | account renewal + late save tests | ARN, AS |
+//! | `account_mutations_test` | account save, use Part A | AS, AW |
+//! | `account_mutations_test_b` | account delete Part B | AD |
+//! | `account_relogin_test` | account relogin + trace/feature027 Part A | AR, AW |
+//! | `account_relogin_test_b` | account relogin `lim_it` Part B | AR, AW |
+//! | `account_renewal_test` | account renewal + early save tests Part A | ARN, AS |
+//! | `account_renewal_test_b` | late save tests Part B | AS |
 //! | `account_ownership_test` | account ownership gates + unclaim | AO, AU |
 //! | `account_owner_param_test` | `owner::` parameter EC tests | AP |
 //! | `token_paths_test` | token status, paths | TS, P |
@@ -25,19 +29,23 @@
 //! | `usage_sort_test` | .usage sort/desc/prefer/cols IT-44–IT-91 | IT |
 //! | `usage_touch_test` | .usage touch/NextStrategy IT-92–IT-121 | IT |
 //! | `usage_model_test` | .usage imodel/effort/gates IT-122–IT-153 | IT |
-//! | `usage_filter_test` | .usage row-filtering IT-154–IT-205 | IT |
-//! | `usage_lim_it_test` | .usage `lim_it` live/offline extras IT-205–IT-247 | IT |
+//! | `usage_filter_test` | .usage row-filtering IT-154–IT-177 Part A | IT |
+//! | `usage_filter_test_b` | .usage row-filtering IT-178+ Part B | IT |
+//! | `usage_lim_it_test` | .usage `lim_it` IT-205–IT-216 Part A | IT |
+//! | `usage_lim_it_test_b` | .usage `lim_it` IT-217+ Part B | IT |
 //! | `usage_solo_test` | .usage `solo::` + cross-feature IT-247–IT-271 | IT |
 //! | `usage_feature_test` | .usage feature AC coverage | FT |
 //! | `persist_test` | `PersistPaths` resolution | P |
-//! | `credentials_test` | .credentials.status | cred |
+//! | `credentials_test` | .credentials.status cred01–cred23 Part A | cred |
+//! | `credentials_test_b` | .credentials.status cred24+ Part B | cred |
 //! | `credentials_status_help_test` | .credentials.status.help descriptions | csh |
 //! | `account_limits_test` | .account.limits error paths | lim |
 //! | `account_rotate_test` | .account.rotate redirector (DEPRECATED) | ROT |
 //! | `usage_rotate_test` | Feature 038 `.usage rotate::1` strategy-driven rotation | FT |
 //! | `dot_test` | `.` / `.help` help output | dot |
 //! | `param_help_test` | convenience closure param descriptions + optionality | phd, pho |
-//! | `account_inspect_test` | .account.inspect diagnostic command | AI |
+//! | `account_inspect_test` | .account.inspect AI-01–AI-17 Part A | AI |
+//! | `account_inspect_test_b` | .account.inspect AC-18+ Part B | AI |
 //! | `account_assign_test` | `.accounts assign::1` marker write | AA |
 //! | `set_model_test` | `set_model::` explicit session model override | FT, EC |
 //! | `model_test` | `.model` get/set command (Feature 035) | FT |
@@ -65,17 +73,29 @@ mod accounts_help_test;
 #[ path = "cli/accounts_list_test.rs" ]
 mod accounts_list_test;
 
+#[ path = "cli/accounts_list_test_b.rs" ]
+mod accounts_list_test_b;
+
 #[ path = "cli/accounts_ft_test.rs" ]
 mod accounts_ft_test;
 
 #[ path = "cli/account_mutations_test.rs" ]
 mod account_mutations_test;
 
+#[ path = "cli/account_mutations_test_b.rs" ]
+mod account_mutations_test_b;
+
 #[ path = "cli/account_relogin_test.rs" ]
 mod account_relogin_test;
 
+#[ path = "cli/account_relogin_test_b.rs" ]
+mod account_relogin_test_b;
+
 #[ path = "cli/account_renewal_test.rs" ]
 mod account_renewal_test;
+
+#[ path = "cli/account_renewal_test_b.rs" ]
+mod account_renewal_test_b;
 
 #[ path = "cli/account_ownership_test.rs" ]
 mod account_ownership_test;
@@ -107,8 +127,14 @@ mod usage_model_test;
 #[ path = "cli/usage_filter_test.rs" ]
 mod usage_filter_test;
 
+#[ path = "cli/usage_filter_test_b.rs" ]
+mod usage_filter_test_b;
+
 #[ path = "cli/usage_lim_it_test.rs" ]
 mod usage_lim_it_test;
+
+#[ path = "cli/usage_lim_it_test_b.rs" ]
+mod usage_lim_it_test_b;
 
 #[ path = "cli/usage_solo_test.rs" ]
 mod usage_solo_test;
@@ -121,6 +147,9 @@ mod persist_test;
 
 #[ path = "cli/credentials_test.rs" ]
 mod credentials_test;
+
+#[ path = "cli/credentials_test_b.rs" ]
+mod credentials_test_b;
 
 #[ path = "cli/credentials_status_help_test.rs" ]
 mod credentials_status_help_test;
@@ -142,6 +171,9 @@ mod param_help_test;
 
 #[ path = "cli/account_inspect_test.rs" ]
 mod account_inspect_test;
+
+#[ path = "cli/account_inspect_test_b.rs" ]
+mod account_inspect_test_b;
 
 #[ path = "cli/account_assign_test.rs" ]
 mod account_assign_test;

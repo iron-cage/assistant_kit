@@ -73,7 +73,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `render_json(&accounts)` — no sort applied.
 - **Then:** JSON output preserves input order — `zzz@test.com` appears before `aaa@test.com`, confirming `render_json` does not re-sort.
 - **Exit:** n/a (unit test against `render_json`)
-- **Source fn:** `test_json_unaffected_by_sort` (in `src/usage/mod.rs`)
+- **Source fn:** `test_json_unaffected_by_sort` (in `tests/usage/mod_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-11](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -84,7 +84,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `clp .usage sort::bogus`
 - **Then:** Exits 1. Stderr names the three valid values: `name`, `renew`, `renews`.
 - **Exit:** 1
-- **Source fn:** `it057_sort_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_sort_strategy_parse_invalid_rejected` (in `src/usage/mod.rs`)
+- **Source fn:** `it057_sort_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_sort_strategy_parse_invalid_rejected` (in `tests/usage/mod_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-07](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -95,7 +95,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `clp .usage prefer::bogus`
 - **Then:** Exits 1. Stderr names the three valid values: `any`, `opus`, `sonnet`.
 - **Exit:** 1
-- **Source fn:** `it058_prefer_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_prefer_strategy_parse_invalid_rejected` (in `src/usage/mod.rs`)
+- **Source fn:** `it058_prefer_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_prefer_strategy_parse_invalid_rejected` (in `tests/usage/mod_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-08](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -106,7 +106,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Name, None, PreferStrategy::Any, 0)` — name sort would interleave groups alphabetically.
 - **Then:** Output order: `green@test.com` (🟢 G1), then G2 h-exhausted before G3 weekly-exhausted (both `weekly_exh` and `both_exh` — alphabetical within G3), then `dead@test.com` (🔴 G4). Four-group partition overrides alphabetical sort. Fix(BUG-321): `both_exh@test.com` sorts to G3 weekly-exhausted (🟡), not G4 Dead (🔴).
 - **Exit:** n/a (unit test)
-- **Source fn:** `mre_bug321_four_group_partition_order` (in `src/usage/sort.rs` or `src/usage/mod.rs`)
+- **Source fn:** `mre_bug321_four_group_partition_order` (in `tests/usage/sort_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-12](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -133,7 +133,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then-A (default):** Output order: `sess_a@x.com` (h-exhausted sub-group), `sess_b@x.com` (h-exhausted sub-group), `weekly@x.com` (weekly sub-group). `weekly@x.com` is last despite being alpha-first.
 - **Then-B (desc::1):** Output order: `sess_b@x.com`, `sess_a@x.com` (h-exhausted sub-group reversed), `weekly@x.com` (weekly sub-group last — not moved to front by `desc::1`).
 - **Exit:** n/a (unit test — position assertion via `output.find()`)
-- **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (When-A), `test_ft15_020_yellow_sub_grouping_not_reversed_by_desc` (When-B) (in `src/usage/mod.rs`)
+- **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (When-A), `test_ft15_020_yellow_sub_grouping_not_reversed_by_desc` (When-B) (in `tests/usage/mod_tests.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-12](../../../docs/feature/020_usage_sort_strategies.md)
 
 ---

@@ -1,10 +1,10 @@
-# Commands :: Meta
+# Commands: Meta
 
 Meta-commands and flags that control CLI-level behaviour rather than account operations.
 
 ---
 
-### Meta-flag :: `--version` / `-V`
+### Meta-flag: `--version` / `-V`
 
 Print the binary name and version string, then exit. This flag takes priority over all commands and parameters — it wins regardless of argv order. Not a command (does not appear in `.help` listing).
 
@@ -24,7 +24,7 @@ clp -V          # → identical output
 
 ---
 
-### Command :: 1. `.`
+### Command: 1. `.`
 
 Hidden alias that triggers `print_usage()` at the adapter layer — identical to typing `.help`.
 The `.` command is registered in the registry with `hidden_from_list(true)` so it never
@@ -89,7 +89,7 @@ Examples:
 
 ---
 
-### Command :: 2. `.help`
+### Command: 2. `.help`
 
 Pre-registered by the unilang `CommandRegistry`. At the adapter layer, `.help` (and bare `help`) set `needs_help=true` which intercepts execution before the unilang pipeline, causing `print_usage()` to run — producing output byte-identical to `clp .`.
 
@@ -108,3 +108,16 @@ clp help
 **Notes:**
 - Output is identical to `clp .` (both call `print_usage()`).
 - `clp .help` is the canonical help invocation; `clp .` is a convenience alias.
+
+### Referenced Parameters
+
+*No parameters accepted. The `.`, `.help` commands and `--version` flag take no `key::value` tokens.*
+
+### Referenced User Stories
+
+| Story | Incidental Use |
+|-------|----------------|
+| [002_onboarding.md](../user_story/002_onboarding.md) | `clp .` / `clp .help` used during initial tool discovery |
+| [005_credential_diagnostics.md](../user_story/005_credential_diagnostics.md) | `clp --version` used for version verification during diagnostics |
+
+*Meta-commands are not the primary action in any story. They appear incidentally across all stories during orientation and troubleshooting.*

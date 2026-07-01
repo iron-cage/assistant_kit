@@ -1,4 +1,4 @@
-# Verb :: save
+# Verb: save
 
 Captures the current active session credentials as a named account profile in the credential store. Creates `{name}.credentials.json` and `{name}.json` under the per-machine store path, performing a read-merge on any pre-existing supplementary metadata.
 
@@ -47,7 +47,7 @@ Captures the current active session credentials as a named account profile in th
 [active]  --account.save--> [active] (active account re-saved; no lifecycle change)
 ```
 
-### Cross-References
+### See Also
 
 | File | Relationship |
 |------|-------------|

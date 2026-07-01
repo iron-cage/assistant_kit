@@ -1,4 +1,4 @@
-# Parameter :: 47. `no_color::`
+# Parameter: 47. `no_color::`
 
 Strips emoji and ANSI color sequences from `.usage` output, producing plain text suitable for log files, non-TTY pipelines, and terminals that do not support color.
 

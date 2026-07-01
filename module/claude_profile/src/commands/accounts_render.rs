@@ -4,7 +4,7 @@ use core::fmt::Write as _;
 use data_fmt::{ RowBuilder, TableFormatter, Format };
 use unilang::data::{ ErrorCode, ErrorData };
 use crate::output::{ json_escape, format_duration_secs };
-use super::shared::caps_to_json;
+use super::cmd_context::caps_to_json;
 
 // ── Column visibility ─────────────────────────────────────────────────────────
 

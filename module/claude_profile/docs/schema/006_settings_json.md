@@ -3,6 +3,7 @@
 ### Scope
 
 - **Purpose**: Define which fields in `~/.claude/settings.json` are read or written by `clp`, their semantics, and the write callers.
+- **Responsibility**: Documents the `settings.json` fields that `clp` reads or writes and their write rules.
 - **In Scope**: All `settings.json` fields that `clp` touches — `model` and `effortLevel`. All other fields are owned by the Claude binary and must never be modified.
 - **Out of Scope**: Full `settings.json` schema (not owned by clp); CLI rendering of these values.
 
@@ -34,12 +35,22 @@ Single-level JSON object (hand-rolled formatter in `settings_io.rs`, not `serde_
 
 `apply_model_override()` writes `effortLevel` unconditionally on every call regardless of whether the model changed: `"max"` for Opus branch, `"high"` for Sonnet and absent-tier branches (TSK-335). The BUG-312 fallback guard (`get_session_effort().is_none()` → `"high"`) is retained as unreachable safety net. The rotation carry-forward `set_session_effort()` was removed — `apply_model_override()` owns all effort writes.
 
-### Cross-References
+### Features
 
 | File | Relationship |
 |------|-------------|
 | [feature/034_explicit_session_model_override.md](../feature/034_explicit_session_model_override.md) | `set_session_model()` and `get_session_model()` |
 | [feature/035_model_command.md](../feature/035_model_command.md) | `.model` command; `map_model_shorthand()` |
 | [feature/062_unified_session_config.md](../feature/062_unified_session_config.md) | `set_session_effort()`, footer effort display |
-| [schema/003](003_file_topology.md) | `settings_file()` path method |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [003_file_topology.md](003_file_topology.md) | `settings_file()` path method |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
 | [invariant/007](../invariant/007_json_storage_format.md) | Exception: `json_serialize_flat_object` is exempt |

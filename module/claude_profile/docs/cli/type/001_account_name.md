@@ -1,4 +1,4 @@
-# Type :: 1. `AccountName`
+# Type: 1. `AccountName`
 
 **Purpose:** Identifies a credential profile in the account store using the account's email address as the unique key. Enforces email format to guarantee correct identification and safe file creation under the credential store.
 

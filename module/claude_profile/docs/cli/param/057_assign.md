@@ -1,4 +1,4 @@
-# Parameter :: 57. `assign::`
+# Parameter: 57. `assign::`
 
 > **REMOVED (Feature 064):** The `assign::` parameter has been removed from the unified parameter set on `.accounts` and `.usage`. Marker assignment was moved to `active::USER@MACHINE name::X` (Feature 064), then `active::` was renamed to `assignee::` (Feature 065). Current CLI surface uses `assignee::`.
 >

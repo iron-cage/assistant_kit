@@ -1,4 +1,4 @@
-# Verb :: limits
+# Verb: limits
 
 Reads current rate-limit utilization for an account by making a lightweight HTTP request to the Claude API and inspecting `anthropic-ratelimit-unified-*` response headers. Returns the current usage and ceiling for the rate-limited quota window. No local state is written.
 
@@ -43,7 +43,7 @@ Reads current rate-limit utilization for an account by making a lightweight HTTP
 [saved/active] --account.limits--> [saved/active]  (state unchanged; read only)
 ```
 
-### Cross-References
+### See Also
 
 | File | Relationship |
 |------|-------------|

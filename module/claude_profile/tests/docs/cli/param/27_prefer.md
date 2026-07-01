@@ -2,6 +2,8 @@
 
 Edge case coverage for the `prefer::` parameter on `.usage`. See [param/027_prefer.md](../../../../docs/cli/param/027_prefer.md) for specification.
 
+**Behavioral Divergence Pair:** EC-1 ↔ EC-4 — `prefer::any` (valid value) exits 0 with normal output; `prefer::bogus` (invalid value) exits 1 with error listing all three valid values.
+
 ### Test Case Index
 
 | ID | Test Name | Category |
@@ -11,6 +13,7 @@ Edge case coverage for the `prefer::` parameter on `.usage`. See [param/027_pref
 | EC-3 | `prefer::sonnet` accepted with empty store | Valid Value |
 | EC-4 | `prefer::bogus` exits 1 and names valid values | Invalid Value |
 | EC-5 | `prefer::` without `sort::` accepted (no-op with default sort::renew on empty store) | Isolation |
+| EC-6 | `prefer::opus` vs `prefer::sonnet` select different `-> Next` accounts when quota profiles differ | Behavioral Divergence |
 
 ---
 
@@ -65,4 +68,16 @@ Edge case coverage for the `prefer::` parameter on `.usage`. See [param/027_pref
 
 ---
 
-> **Note:** EC-6 removed — unit test of `sort_indices()` function return not directly observable via clp output — behavior only verifiable at unit-test level. Unit test lives in `src/usage/sort.rs` as `test_prefer_sonnet_qualifies_by_sonnet_quota`.
+---
+
+### EC-6: `prefer::opus` vs `prefer::sonnet` select different `-> Next` recommendations
+
+- **Behavioral Divergence:** Two valid `prefer::` values produce observably different footer `-> Next` recommendations when two accounts tie on renewal time but differ in quota profile.
+- **Given:** Two accounts in the same renewal group (same `renewal_event_secs`, so tiebreak applies). Account P: high `7d Left` (overall quota), low `7d(Son) Left` (sonnet quota). Account Q: moderate `7d Left`, high `7d(Son) Left`.
+- **When-A:** `clp .usage prefer::opus`
+- **When-B:** `clp .usage prefer::sonnet`
+- **Then-A:** Footer `-> Next` selects P — `prefer::opus` weights on overall `7d Left`; P has more.
+- **Then-B:** Footer `-> Next` selects Q — `prefer::sonnet` weights on `7d(Son) Left`; Q has more.
+- **Exit:** 0 both cases (unit-level assertion via `sort_indices()` in `src/usage/sort.rs`)
+- **Source fn:** `test_prefer_sonnet_qualifies_by_sonnet_quota` (in `src/usage/sort.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-05/AC-06](../../../../docs/feature/020_usage_sort_strategies.md)

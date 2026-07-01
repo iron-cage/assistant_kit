@@ -1,4 +1,4 @@
-# Parameter :: 24. `field::`
+# Parameter: 24. `field::`
 
 When set, outputs the raw resolved path value for a single named field instead of the full path listing. Useful for shell scripts that need one specific path without parsing multi-line output or piping through `jq`.
 

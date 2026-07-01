@@ -6,7 +6,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 
 - **Purpose**: Document integration and edge case test plans for all clp commands and parameters.
 - **Responsibility**: Index of per-command, per-parameter, and per-group test case planning files.
-- **In Scope**: All 16 clp commands plus binary meta-flags (`--version`/`-V`), 53 active parameters (params 1–54 except retired slot 2; `current::` covered by command IT tests), and all 6 parameter groups.
+- **In Scope**: All 16 active clp commands (14 visible + 2 hidden/DEPRECATED) plus binary meta-flags (`--version`/`-V`); 2 REMOVED commands covered as regression specs (`.account.assign`, `.account.unclaim`); 58 active parameters — param slot numbering note: slot 2 retired, slot 56 unoccupied (tests slots 57–64 correspond to docs slots 056–063); tombstone slots: 14, 32, 53, 57, 58 (`active::`, `next::`, `for::`, `unclaim::`, `assign::` REMOVED); `current::` covered by command IT tests; and all 6 parameter groups.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 ### Responsibility Table
@@ -20,17 +20,19 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 | command_verb/ | Per-verb behavioral contract specs (BV-N entries) |
 | command_noun/ | Per-noun lifecycle and schema contract specs (NC-N entries) |
 | user_story/ | User acceptance scenario specs (UA-N entries) |
+| format/ | Per-format behavioral contract specs (FM-N entries) |
 
 ### Coverage Summary
 
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
-| Commands + meta-flags | 17 | >=8 IT each |
-| Parameters | 53 | >=6 EC each |
+| Commands + meta-flags | 19 | >=8 IT each (16 active + 2 REMOVED regression + 1 meta-flag) |
+| Parameters | 58 | >=6 EC each |
 | Parameter groups | 6 | >=4 IT each |
-| Command verbs | 10 | >=3 BV each |
+| Command verbs | 11 | >=3 BV each (9 active + 2 REMOVED regression) |
 | Command nouns | 3 | >=3 NC each |
 | User stories | 5 | 4–6 UA each |
+| Output formats | 3 | >=4 FM each |
 
 ### Navigation
 
@@ -51,7 +53,9 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`.account.rotate`](command/13_account_rotate.md)
 - [`.account.renewal`](command/14_account_renewal.md)
 - [`.account.inspect`](command/15_account_inspect.md)
-- [`.account.assign`](command/16_account_assign.md)
+- [`.account.assign` *(REMOVED)*](command/16_account_assign.md)
+- [`.model`](command/17_model.md)
+- [`.account.unclaim` *(REMOVED)*](command/18_account_unclaim.md)
 
 **Parameters:**
 - [`name::`](param/01_name.md)
@@ -66,7 +70,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`email::`](param/11_email.md)
 - [`file::`](param/12_file.md)
 - [`saved::`](param/13_saved.md)
-- [`active::`](param/14_active.md)
+- [`active::` *(REMOVED)*](param/14_active.md)
 - [`display_name::`](param/15_display_name.md)
 - [`role::`](param/16_role.md)
 - [`billing::`](param/17_billing.md)
@@ -84,7 +88,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`capabilities::`](param/29_capabilities.md)
 - [`org_uuid::`](param/30_org_uuid.md)
 - [`org_name::`](param/31_org_name.md)
-- [`next::`](param/32_next.md)
+- [`next::` *(REMOVED)*](param/32_next.md)
 - [`cols::`](param/33_cols.md)
 - [`touch::`](param/34_touch.md)
 - [`imodel::`](param/35_imodel.md)
@@ -105,8 +109,17 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`from_now::`](param/50_from_now.md)
 - [`clear::`](param/51_clear.md)
 - [`role::` (metadata label)](param/52_role.md)
-- [`for::`](param/53_for.md)
+- [`for::` *(REMOVED)*](param/53_for.md)
 - [`set_model::`](param/54_set_model.md)
+- [`set::`](param/55_set.md)
+- [`unclaim::` *(REMOVED)*](param/57_unclaim.md)
+- [`assign::` *(REMOVED)*](param/58_assign.md)
+- [`force::`](param/59_force.md)
+- [`rotate::`](param/60_rotate.md)
+- [`solo::`](param/61_solo.md)
+- [`who::`](param/62_who.md)
+- [`owner::`](param/63_owner.md)
+- [`assignee::`](param/64_assignee.md)
 
 **Types:**
 - [AccountName](type/01_account_name.md)
@@ -130,3 +143,6 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 
 **User Stories:**
 - [user_story/](user_story/readme.md)
+
+**Output Formats:**
+- [format/](format/readme.md)

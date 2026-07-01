@@ -1,10 +1,10 @@
-# Commands :: Token
+# Commands: Token
 
 Token status commands.
 
 ---
 
-### Command :: 7. `.token.status`
+### Command: 7. `.token.status`
 
 Reads `expiresAt` from `~/.claude/.credentials.json` and classifies the active OAuth token as Valid, ExpiringSoon, or Expired. Use this to detect when account rotation is needed.
 
@@ -43,6 +43,14 @@ clp .token.status format::json
 # {"status":"valid","expires_in_secs":2820}
 ```
 
+### Referenced Parameters
+
+| # | Parameter | Role |
+|---|-----------|------|
+| 1 | [format::](../param/002_format.md) | Output format |
+| 2 | [threshold::](../param/003_threshold.md) | ExpiringSoon threshold in seconds |
+| 3 | [trace::](../param/023_trace.md) | Diagnostic trace output |
+
 ### Referenced Features
 
 | # | Feature | Role |
@@ -56,3 +64,17 @@ clp .token.status format::json
 |---|------------|---------|
 | 1 | [Account Rotation](../user_story/001_account_rotation.md) | Token expiry check before rotation decision |
 | 2 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Live token status for diagnostic inspection |
+
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Output Control](../param_group/001_output_control.md) | `format::` |
+| 2 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `trace::` |
+
+### Referenced Formats
+
+| # | Format | Trigger |
+|---|--------|---------|
+| 1 | [text](../format/001_text.md) | `format::text` (default) |
+| 2 | [json](../format/002_json.md) | `format::json` |

@@ -35,9 +35,14 @@ The `claude_profile` **library path** must have zero third-party (crates.io) dep
 - Reduces auditability — harder to verify the crate does what it claims
 - Contradicts the "stdlib-only" design principle that makes `claude_profile` a trusted building block
 
-### Cross-References
+### Sources
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `Cargo.toml` | Dependency declarations — `enabled` feature gates optional CLI deps |
-| test | `tests/responsibility_no_process_execution_test.rs` | Verifies no std::process imports (related boundary) |
+| File | Relationship |
+|------|-------------|
+| `Cargo.toml` | Dependency declarations — `enabled` feature gates optional CLI deps |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| `tests/responsibility_no_process_execution_test.rs` | Verifies no std::process imports (related boundary) |

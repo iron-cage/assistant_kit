@@ -10,3 +10,13 @@ All ownership-release behavior is now in `.accounts owner::0 name::X` (Feature 0
 
 **Source:** [feature/037_accounts_usage_param_unification.md AC-11](../../../../docs/feature/037_accounts_usage_param_unification.md),
 [cli/command_verb/011_unclaim.md — Migration (Feature 037)](../../../../docs/cli/command_verb/011_unclaim.md#migration-feature-037)
+
+---
+
+### IT-1: Redirect stub — targeted `owner::0` migration hint
+
+- **Given:** No accounts required (command is REMOVED — always redirects)
+- **When:** `clp .account.unclaim name::alice@acme.com`
+- **Then:** Exits 1. stderr contains `"owner::0"` migration hint string. Does NOT produce a generic "unknown command" error — the message is targeted.
+- **Exit:** 1
+- **Source:** [feature/037_accounts_usage_param_unification.md](../../../../docs/feature/037_accounts_usage_param_unification.md) AC-11, [command_verb/011_unclaim.md](../../../../docs/cli/command_verb/011_unclaim.md)

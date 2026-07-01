@@ -3,6 +3,7 @@
 ### Scope
 
 - **Purpose**: Canonical reference for persistent storage path resolution via `PersistPaths`.
+- **Responsibility**: Documents the `PersistPaths` resolution chain, computed paths, and API.
 - **In Scope**: Resolution chain, computed paths, `PersistPaths` API.
 - **Out of Scope**: What is stored under these paths (→ [schema/001](001_credentials_json.md), [schema/002](002_account_json.md), [schema/005](005_active_marker.md)).
 
@@ -39,11 +40,16 @@
   _active_{host}_{user}       # Per-machine active marker (gitignored)
 ```
 
-### Cross-References
+### Features
 
 | File | Relationship |
 |------|-------------|
 | [feature/010_persistent_storage.md](../feature/010_persistent_storage.md) | Feature spec with acceptance criteria |
-| [schema/001](001_credentials_json.md) | `{name}.credentials.json` format |
-| [schema/002](002_account_json.md) | `{name}.json` format |
-| [schema/005](005_active_marker.md) | `_active_{host}_{user}` format |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [001_credentials_json.md](001_credentials_json.md) | `{name}.credentials.json` format |
+| [002_account_json.md](002_account_json.md) | `{name}.json` format |
+| [005_active_marker.md](005_active_marker.md) | `_active_{host}_{user}` format |

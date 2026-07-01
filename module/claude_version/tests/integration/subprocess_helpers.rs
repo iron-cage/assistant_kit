@@ -13,6 +13,20 @@
 //! 1. `Cargo.toml` — `[[bin]] name`
 //! 2. `env!("CARGO_BIN_EXE_<name>")` in `run_clm_with_env`
 
+fn assert_container()
+{
+  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
+    || std::path::Path::new( "/run/.containerenv" ).exists()
+    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
+  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
+  assert!(
+    in_container || escaped,
+    "\n\nTests must run inside a container.\n\
+     Standard invocation: cd module/claude_version && ./verb/test\n\
+     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
+  );
+}
+
 /// Run `clm` with the given arguments and return the full output.
 ///
 /// # Panics
@@ -40,6 +54,7 @@ pub fn run_clm_with_env(
   env_overrides : &[ ( &str, &str ) ],
 ) -> std::process::Output
 {
+  assert_container();
   let bin = env!( "CARGO_BIN_EXE_claude_version" );
   let mut cmd = std::process::Command::new( bin );
   cmd.args( args );

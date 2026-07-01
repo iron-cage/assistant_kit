@@ -1,4 +1,4 @@
-# Group :: 6. Account Targeting
+# Group: 6. Account Targeting
 
 **Parameters:** `host::`, `role::`
 **Pattern:** Metadata labels attached to a saved account's profile

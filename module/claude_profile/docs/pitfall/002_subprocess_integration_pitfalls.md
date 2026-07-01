@@ -1,5 +1,12 @@
 # Pitfall: Subprocess Integration Pitfalls
 
+### Scope
+
+- **Purpose**: Document non-obvious constraints and failure modes in `run_isolated()` subprocess integration.
+- **Responsibility**: Covers valid args invariant, Haiku/Sonnet window asymmetry, over-constrained model gate, timeout output discard, and forbidden proactive refresh.
+- **In Scope**: `run_isolated()` arg combinations; BUG-169, BUG-289, BUG-290, BUG-243, BUG-323; SR-11 sentinel rule.
+- **Out of Scope**: Credential sync after subprocess write (→ pitfall/003); ownership gate protection (→ pitfall/005).
+
 ### Pattern
 
 `run_isolated()` has several non-obvious constraints: the exact args required, model capability asymmetry for session windows, and output capture behavior on timeout.
@@ -52,13 +59,33 @@ Adding a proactive arm to `should_refresh()` that triggers on valid-but-expiring
 
 **Rule:** Never add a `should_refresh` arm for approaching-expiry without first confirming that `run_isolated` supports proactive AT rotation with a valid token. Until that capability exists, the arm cannot be made functional.
 
-### Cross-References
+### Features
+
+| File | Relationship |
+|------|-------------|
+| [feature/017](../feature/017_token_refresh.md) | Out of Scope: proactive expiry detection (line 8) |
+
+### Algorithms
+
+| File | Relationship |
+|------|-------------|
+| [algorithm/001](../algorithm/001_touch_model_selection.md) | Model selection algorithm |
+
+### State Machines
+
+| File | Relationship |
+|------|-------------|
+| [state_machine/003](../state_machine/003_session_window_lifecycle.md) | Session window model constraints |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
+| [invariant/008](../invariant/008_single_token_refresh_entry.md) | `expiresAt=1` mechanism — why valid-AT subprocess call is a no-op |
+
+### Subprocess
 
 | File | Relationship |
 |------|-------------|
 | [subprocess/001](../subprocess/001_run_isolated_contract.md) | `run_isolated()` API and required args |
 | [subprocess/003](../subprocess/003_token_refresh_invocation.md) | Token refresh invocation; Architectural Constraint section |
-| [algorithm/001](../algorithm/001_touch_model_selection.md) | Model selection algorithm |
-| [state_machine/003](../state_machine/003_session_window_lifecycle.md) | Session window model constraints |
-| [feature/017](../feature/017_token_refresh.md) | Out of Scope: proactive expiry detection (line 8) |
-| [invariant/008](../invariant/008_single_token_refresh_entry.md) | `expiresAt=1` mechanism — why valid-AT subprocess call is a no-op |

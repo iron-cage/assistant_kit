@@ -6,7 +6,7 @@ use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use crate::output::{ OutputFormat, OutputOptions, json_escape };
-use super::shared::{ require_claude_paths, require_credential_store, derive_token_state, caps_to_json };
+use super::cmd_context::{ require_claude_paths, require_credential_store, derive_token_state, caps_to_json };
 use claude_profile_core::account::trace_ts;
 
 // ── Single-consumer helpers ───────────────────────────────────────────────────

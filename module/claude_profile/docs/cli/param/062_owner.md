@@ -1,4 +1,4 @@
-# Parameter :: 62. `owner::`
+# Parameter: 62. `owner::`
 
 Mutation param on `.accounts` and `.usage` that sets or clears the `owner` field in `{name}.json`. The value `"0"` is a sentinel meaning "clear ownership" — identical to the former `unclaim::1` path. Any other non-empty value is assigned as owner. Supports comma-list `name::X,Y,Z` for batch operations.
 
@@ -43,6 +43,12 @@ owner::0 name::X force::1          → bypass G8 for ownership release
 |---|---------|------|
 | 1 | `.accounts` | Primary host — mutation param (unified param set, Feature 037) |
 | 2 | `.usage` | Shared unified param set (Feature 037) |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Onboarding and Lifecycle Management](../user_story/002_onboarding.md) | Set or release account ownership via `.accounts owner::0 name::X` |
 
 ### See Also
 

@@ -1,4 +1,4 @@
-# User Story :: 4. Scripted Pipeline Automation
+# User Story: 4. Scripted Pipeline Automation
 
 **Persona:** DevOps engineer integrating `clp` into CI/CD pipelines and shell scripts
 **Goal:** Extract account state as structured data for scripted decision-making without parsing fragile text

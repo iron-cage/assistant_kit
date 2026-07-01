@@ -528,7 +528,7 @@ fn it145_lim_it_sort_renew_places_arrow_on_soonest_refill()
     eprintln!( "it145: no live token — skipping" );
     return;
   };
-  if !require_live_api( "it145" ) { return; }
+  require_live_api( "it145" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );

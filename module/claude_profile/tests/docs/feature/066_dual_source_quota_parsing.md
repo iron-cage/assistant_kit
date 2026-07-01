@@ -23,54 +23,99 @@ Feature behavioral requirement test cases for `docs/feature/066_dual_source_quot
 
 All tests follow the convention `ft_NNN_<description>` in `claude_quota/tests/oauth_usage_test.rs`. MRE (minimal reproducer) tests for future bugs follow `mre_bugNNN_<description>`.
 
-### FT Case Descriptions
+### FT-01: Named field populated, Phase 2 skipped
 
-**FT-01** — Named field populated, Phase 2 skipped
-Input: old-format body with `"seven_day_sonnet": {"utilization": 45.0, "resets_at": "2026-06-30T..."}`.
-Expected: `OauthUsageData.seven_day_sonnet = Some(PeriodUsage { utilization: 45.0, resets_at: Some("...") })`. No `limits` scan occurs.
+- **Given:** Old-format body with `"seven_day_sonnet": {"utilization": 45.0, "resets_at": "2026-06-30T..."}`.
+- **When:** `parse_oauth_usage()` processes the response body.
+- **Then:** `OauthUsageData.seven_day_sonnet = Some(PeriodUsage { utilization: 45.0, resets_at: Some("...") })`. No `limits` scan occurs (Phase 2 skipped).
 
-**FT-02** — Named field null, `limits` match found
-Input: new-format body with `"seven_day_sonnet": null` and `limits` containing `{"kind": "weekly_sonnet", "percent": 45, "resets_at": "2026-06-30T..."}`.
-Expected: `seven_day_sonnet = Some(PeriodUsage { utilization: 45.0, resets_at: Some("...") })`.
+---
 
-**FT-03** — `percent` → `utilization` direct mapping
-Input: `limits` entry with `"percent": 73`.
-Expected: `PeriodUsage.utilization = 73.0_f64`. No multiplication or division.
+### FT-02: Named field null, `limits` match found
 
-**FT-04** — Named field null, no `limits` match
-Input: body with `"seven_day_sonnet": null` and `limits` containing only `session` and `weekly_all` entries.
-Expected: `seven_day_sonnet = None`. `Ok(OauthUsageData {...})` returned — no error.
+- **Given:** New-format body with `"seven_day_sonnet": null` and `limits` containing `{"kind": "weekly_sonnet", "percent": 45, "resets_at": "2026-06-30T..."}`.
+- **When:** `parse_oauth_usage()` processes the response body.
+- **Then:** `seven_day_sonnet = Some(PeriodUsage { utilization: 45.0, resets_at: Some("...") })`. Phase 2 `limits` scan provides the value.
 
-**FT-05** — `resets_at` from `limits` entry preserved
-Input: `limits` match with `"resets_at": "2026-06-30T04:00:00+00:00"`.
-Expected: `PeriodUsage.resets_at = Some("2026-06-30T04:00:00+00:00".to_string())`.
+---
 
-**FT-06** — `resets_at` null in `limits` entry
-Input: `limits` match with `"resets_at": null`.
-Expected: `PeriodUsage.resets_at = None`.
+### FT-03: `percent` → `utilization` direct mapping
 
-**FT-07** — Match via `kind` needle
-Input: entry with `"kind": "weekly_sonnet"`.
-Expected: matched and populated.
+- **Given:** `limits` entry with `"percent": 73`.
+- **When:** Phase 2 processes the matching `limits` entry.
+- **Then:** `PeriodUsage.utilization = 73.0_f64`. No multiplication or division applied.
 
-**FT-08** — Match via `scope` needle
-Input: entry with `"kind": "weekly_all", "scope": "sonnet"`.
-Expected: matched and populated.
+---
 
-**FT-09** — Validity guard passes for new format
-Input: post-2026-06-25 body containing `"seven_day_sonnet": null` (key present, value null).
-Expected: `parse_oauth_usage()` does not return `Err(ResponseParse("five_hour/seven_day/seven_day_sonnet"))`. Guard passes because `"seven_day_sonnet"` substring is present.
+### FT-04: Named field null, no `limits` match
 
-**FT-10** — Struct unchanged
-Structural: `OauthUsageData` has exactly 3 fields: `five_hour`, `seven_day`, `seven_day_sonnet`. No new fields added by this feature.
+- **Given:** Body with `"seven_day_sonnet": null` and `limits` containing only `session` and `weekly_all` entries (no sonnet match).
+- **When:** `parse_oauth_usage()` processes the response body.
+- **Then:** `seven_day_sonnet = None`. `Ok(OauthUsageData {...})` returned — no error raised.
 
-**FT-11** — Old format still parses
-Input: pre-2026-06-25 body with no `limits` key and `"seven_day_sonnet": {"utilization": 30.0, ...}`.
-Expected: Phase 1 populates all fields; `Ok(OauthUsageData {...})`.
+---
 
-**FT-12** — Named field wins over `limits` when both present
-Input: body with `"seven_day_sonnet": {"utilization": 30.0, ...}` AND `limits` entry with `percent: 70`.
-Expected: `seven_day_sonnet.utilization = 30.0` (Phase 1 result, not Phase 2).
+### FT-05: `resets_at` from `limits` entry preserved
+
+- **Given:** `limits` match with `"resets_at": "2026-06-30T04:00:00+00:00"`.
+- **When:** Phase 2 processes the matching entry.
+- **Then:** `PeriodUsage.resets_at = Some("2026-06-30T04:00:00+00:00".to_string())`.
+
+---
+
+### FT-06: `resets_at` null in `limits` entry
+
+- **Given:** `limits` match with `"resets_at": null`.
+- **When:** Phase 2 processes the matching entry.
+- **Then:** `PeriodUsage.resets_at = None`.
+
+---
+
+### FT-07: Match via `kind` needle
+
+- **Given:** `limits` entry with `"kind": "weekly_sonnet"`.
+- **When:** Phase 2 scans `limits` for a sonnet match.
+- **Then:** Entry is matched and `seven_day_sonnet` is populated from it.
+
+---
+
+### FT-08: Match via `scope` needle
+
+- **Given:** `limits` entry with `"kind": "weekly_all", "scope": "sonnet"`.
+- **When:** Phase 2 scans `limits` for a sonnet match.
+- **Then:** Entry matched via `scope` needle; `seven_day_sonnet` populated.
+
+---
+
+### FT-09: Validity guard passes for new format
+
+- **Given:** Post-2026-06-25 body containing `"seven_day_sonnet": null` (key present, value null).
+- **When:** `parse_oauth_usage()` processes the response body.
+- **Then:** Does not return `Err(ResponseParse("five_hour/seven_day/seven_day_sonnet"))`. Guard passes because `"seven_day_sonnet"` substring is present in the body.
+
+---
+
+### FT-10: `OauthUsageData` struct unchanged
+
+- **Given:** Feature 066 implementation merged.
+- **When:** `OauthUsageData` struct fields are inspected structurally.
+- **Then:** Exactly 3 fields: `five_hour`, `seven_day`, `seven_day_sonnet`. No new fields added, no existing fields removed.
+
+---
+
+### FT-11: Old format (no `limits` key) still parses correctly
+
+- **Given:** Pre-2026-06-25 body with no `limits` key and `"seven_day_sonnet": {"utilization": 30.0, ...}`.
+- **When:** `parse_oauth_usage()` processes the response body.
+- **Then:** Phase 1 populates all fields; `Ok(OauthUsageData {...})` returned.
+
+---
+
+### FT-12: Named field wins over `limits` when both present
+
+- **Given:** Body with `"seven_day_sonnet": {"utilization": 30.0, ...}` AND `limits` entry with `percent: 70`.
+- **When:** `parse_oauth_usage()` processes the response body.
+- **Then:** `seven_day_sonnet.utilization = 30.0` — Phase 1 result wins; Phase 2 is not invoked.
 
 ### Cross-References
 

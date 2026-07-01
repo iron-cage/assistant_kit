@@ -378,7 +378,7 @@ fn as_save_does_not_modify_owner()
 
 // ── AU: Account Unclaim (Feature 036, Command 17) ───────────────────────────
 
-/// FT-02 (AC-02, Feat 036/037): `.accounts unclaim::1 name::X` writes `owner: ""` — credential file NOT touched.
+/// FT-02 (AC-02, Feat 036/037): `.accounts owner::0 name::X` writes `owner: ""` — credential file NOT touched.
 ///
 /// Pre-seed `{name}.json` with `"owner": "user1@host1"`. Run `.accounts unclaim::1 name::alice`.
 /// Owner must be `""`. Credential file mtime must be unchanged (pure metadata operation).
@@ -410,7 +410,7 @@ fn ft02_unclaim_clears_owner()
   let cred_mtime_after = std::fs::metadata( &cred_path ).unwrap().modified().unwrap();
   assert_eq!(
     cred_mtime_before, cred_mtime_after,
-    "FT-02: credential file must NOT be touched by .accounts unclaim::1",
+    "FT-02: credential file must NOT be touched by .accounts owner::0",
   );
 }
 

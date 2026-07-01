@@ -261,7 +261,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** Four-group status partition applied; alphabetical sort within each group.
 - **Then:** Output order is `carol@x.com` (🟢) → `bob@x.com` (🟡) → `alice@x.com` (🔴). Outer group ordering 🟢 → 🟡 → 🔴 is preserved regardless of alphabetical order. (Within-🟡 sub-grouping — h-exhausted (G2) before weekly-exhausted (G3, including both-exhausted) — is tested by FT-16.)
 - **Exit:** n/a (unit test — order assertion on sorted list)
-- **Source fn:** `test_three_tier_grouping_green_before_yellow_before_red` (in `src/usage/mod.rs`)
+- **Source fn:** `test_three_tier_grouping_green_before_yellow_before_red` (in `tests/usage/mod_tests.rs`)
 - **Source:** [009_token_usage.md AC-24](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -292,7 +292,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Output row order is: `d@x.com` (🟢), then among 🟡 — `b@x.com` and `c@x.com` (h-exhausted, in alpha order), then `a@x.com` (weekly-exhausted). `a@x.com` must appear AFTER both `b@x.com` and `c@x.com` despite being alpha-first.
 - **Edge case:** An account with both `5h Left ≤ 15%` AND `7d Left ≤ 5%` falls in **G3 weekly-exhausted** (🟡), NOT G4 Dead (🔴) (Fix BUG-321). The 7d constraint is binding — when 7d resets, 5h will have long since reset too. Both-exhausted and weekly-exhausted have identical recovery behavior. FT-35 tests this boundary.
 - **Exit:** n/a (unit test — position assertion via `output.find()`)
-- **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (in `src/usage/mod.rs`)
+- **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (in `tests/usage/mod_tests.rs`)
 - **Source:** [009_token_usage.md AC-26](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -457,7 +457,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `render_text(&accounts, SortStrategy::Renew, ...)` is called.
 - **Then:** Footer contains two lines: (1) a line containing `Current` and `·` and `a@x.com` and `sonnet/low`; (2) a line containing `Next (renew)` and `·` and `b@x.com` and `sonnet/high` — effort is model-derived (TSK-335 H3: always shown unconditionally; `"high"` for Sonnet regardless of `session_effort`). The `·` delimiters in both lines are vertically aligned (same column positions).
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_ft28_009_footer_model_label` (in `src/usage/mod.rs`)
+- **Source fn:** `test_ft28_009_footer_model_label` (in `tests/usage/mod_tests.rs`)
 - **Source:** [009_token_usage.md AC-10](../../../docs/feature/009_token_usage.md)
 
 ---
@@ -565,5 +565,5 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** `both@x.com` (G3 🟡) appears before `dead@x.com` (G4 🔴) in output. G3 < G4 partition index enforces this regardless of alphabetical order. Fix(BUG-321): `(false,false)` maps to `StatusGroup::WeeklyExhausted` (G3), not `StatusGroup::Red` (G4).
 - **Exit:** n/a (unit test — order assertion)
 - **Note:** Both-exhausted accounts WILL recover when quota resets (7d resets, 5h will also have reset); dead accounts require external action. The 7d constraint is binding for both both-exhausted and weekly-exhausted — identical recovery behavior.
-- **Source fn:** `mre_bug321_both_exhausted_sorts_in_weekly_group` (in `src/usage/sort.rs` or `src/usage/mod.rs`)
+- **Source fn:** `mre_bug321_both_exhausted_sorts_in_weekly_group` (in `tests/usage/sort_tests.rs`)
 - **Source:** [009_token_usage.md AC-24, AC-26](../../../docs/feature/009_token_usage.md)

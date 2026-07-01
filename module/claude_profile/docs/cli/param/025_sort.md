@@ -1,4 +1,4 @@
-# Parameter :: 25. `sort::`
+# Parameter: 25. `sort::`
 
 Controls row ordering AND the footer recommendation in the `.usage` quota table. Single parameter — no separate `next::` parameter.
 

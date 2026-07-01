@@ -374,7 +374,7 @@ fn param_defaults_in2_require_nonempty_string_arg_only_in_use_delete()
   {
     // Skip the function definition itself
     if line.contains( "fn require_nonempty_string_arg" ) { continue; }
-    // Skip `use` import statements (e.g. `use super::shared::{ require_nonempty_string_arg, ... }`)
+    // Skip `use` import statements (e.g. `use super::cmd_args::{ require_nonempty_string_arg, ... }`)
     if line.trim_start().starts_with( "use " ) { continue; }
     assert!(
       line.contains( "account_ops" ) || line.contains( "account_renewal" ),

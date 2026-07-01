@@ -1,4 +1,4 @@
-# Format :: 1. text
+# Format: 1. text
 
 - **ID:** F01
 - **Trigger:** `format::text` (default — used when `format::` is omitted)

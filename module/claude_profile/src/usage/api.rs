@@ -282,7 +282,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   if params.rotate
   {
     use std::time::{ SystemTime, UNIX_EPOCH };
-    use crate::commands::shared::{ is_dry, io_err_to_error_data };
+    use crate::commands::cmd_args::{ is_dry, io_err_to_error_data };
 
     let now_secs       = SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().as_secs();
     // gate_ownership: true when rotate::1 without force::1 — G5 applies (AC-05).
