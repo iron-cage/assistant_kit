@@ -24,7 +24,7 @@
 
 **Optional sections**: `### Update Procedure`, `### Known Usage in Workspace Code`
 
-**Overview Table columns**: ID | Name | File | Status
+**Overview Table columns**: # | Model | API ID | Tier | Context | Max Output | Ext Thinking | Adaptive | Status
 
 **Quality checklist**:
 - [ ] All model IDs verified against `GET /v1/models` response or official Anthropic docs
@@ -34,20 +34,23 @@
 
 ### Overview Table
 
-| ID | Name | File | Status |
-|----|------|------|--------|
-| [001](001_claude_fable_5.md) | claude-fable-5 | [001_claude_fable_5.md](001_claude_fable_5.md) | GA |
-| [002](002_claude_mythos_5.md) | claude-mythos-5 | [002_claude_mythos_5.md](002_claude_mythos_5.md) | invite-only |
-| [003](003_claude_opus_4_8.md) | claude-opus-4-8 | [003_claude_opus_4_8.md](003_claude_opus_4_8.md) | current |
-| [004](004_claude_sonnet_5.md) | claude-sonnet-5 | [004_claude_sonnet_5.md](004_claude_sonnet_5.md) | current |
-| [005](005_claude_haiku_4_5.md) | claude-haiku-4-5 | [005_claude_haiku_4_5.md](005_claude_haiku_4_5.md) | current |
-| [006](006_claude_opus_4_7.md) | claude-opus-4-7 | [006_claude_opus_4_7.md](006_claude_opus_4_7.md) | legacy |
-| [007](007_claude_opus_4_6.md) | claude-opus-4-6 | [007_claude_opus_4_6.md](007_claude_opus_4_6.md) | legacy |
-| [008](008_claude_sonnet_4_6.md) | claude-sonnet-4-6 | [008_claude_sonnet_4_6.md](008_claude_sonnet_4_6.md) | legacy |
-| [009](009_claude_sonnet_4_5.md) | claude-sonnet-4-5 | [009_claude_sonnet_4_5.md](009_claude_sonnet_4_5.md) | legacy |
-| [010](010_claude_opus_4_5.md) | claude-opus-4-5 | [010_claude_opus_4_5.md](010_claude_opus_4_5.md) | legacy |
-| [011](011_claude_opus_4_1.md) | claude-opus-4-1 | [011_claude_opus_4_1.md](011_claude_opus_4_1.md) | deprecated |
-| [012](012_workspace_defaults.md) | Workspace Defaults | [012_workspace_defaults.md](012_workspace_defaults.md) | active |
+| # | Model | API ID | Tier | Context | Max Output | Ext Thinking | Adaptive | Status |
+|---|-------|--------|------|---------|------------|--------------|----------|--------|
+| [001](001_claude_fable_5.md) | claude-fable-5 | `claude-fable-5` | Fable | 1M | 128k / 300k† | No | Yes | GA |
+| [002](002_claude_mythos_5.md) | claude-mythos-5 | `claude-mythos-5` | Mythos | 1M | 128k | No | Yes | invite-only |
+| [003](003_claude_opus_4_8.md) | claude-opus-4-8 | `claude-opus-4-8` | Opus | 1M | 128k / 300k† | No | Yes | **current** |
+| [004](004_claude_sonnet_5.md) | claude-sonnet-5 | `claude-sonnet-5` | Sonnet | 1M | 128k / 300k† | No | Yes | **current** |
+| [005](005_claude_haiku_4_5.md) | claude-haiku-4-5 | `claude-haiku-4-5-20251001` | Haiku | 200k | 64k | Yes | No | **current** |
+| [006](006_claude_opus_4_7.md) | claude-opus-4-7 | `claude-opus-4-7` | Opus‡ | 1M | 128k | No | Yes | legacy |
+| [007](007_claude_opus_4_6.md) | claude-opus-4-6 | `claude-opus-4-6` | Opus | 1M | 128k | Yes | Yes | legacy |
+| [008](008_claude_sonnet_4_6.md) | claude-sonnet-4-6 | `claude-sonnet-4-6` | Sonnet | 1M | 128k | Yes | Yes | legacy |
+| [009](009_claude_sonnet_4_5.md) | claude-sonnet-4-5 | `claude-sonnet-4-5-20250929` | Sonnet | 200k | 64k | Yes | No | legacy |
+| [010](010_claude_opus_4_5.md) | claude-opus-4-5 | `claude-opus-4-5-20251101` | Opus | 200k | 64k | Yes | No | legacy |
+| [011](011_claude_opus_4_1.md) | claude-opus-4-1 | `claude-opus-4-1-20250805` | Opus | 200k | 32k | Yes | No | deprecated (retire: 2026-08-05) |
+| [012](012_workspace_defaults.md) | Workspace Defaults | — | — | — | — | — | — | active |
+
+† 300k via Batch API with `output-300k-2026-03-24` beta
+‡ Opus 4.7 introduced a new tokenizer: same text → ~30% more tokens vs pre-4.7 models; claude-fable-5 and claude-mythos-5 share this tokenizer.
 
 **Total doc instances**: 12
 

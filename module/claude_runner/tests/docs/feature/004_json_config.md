@@ -39,7 +39,7 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 - **Then:** dry-run output contains `--model claude-haiku-4-5-20251001`; `--max-sessions` count is 0 (gate disabled); JSON params applied
 - **Exit:** 0
 - **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-001; [cli/param/075_args_file.md](../../../../docs/cli/param/075_args_file.md)
-- **Implemented by:** TBD — `json_config_test.rs`
+- **Implemented by:** `json_config_test.rs::jc1_args_file_loads_json_params`
 
 ---
 
@@ -50,7 +50,7 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 - **Then:** dry-run output contains `--model claude-opus-4-6` (CLI wins); JSON value for model is overridden
 - **Exit:** 0
 - **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-003
-- **Implemented by:** TBD — `json_config_test.rs`
+- **Implemented by:** `json_config_test.rs::jc2_cli_flag_overrides_json_value`
 
 ---
 
@@ -61,7 +61,7 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 - **Then:** dry-run output contains `--model claude-haiku-4-5-20251001` (JSON wins over env var)
 - **Exit:** 0
 - **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-004
-- **Implemented by:** TBD — `json_config_test.rs`
+- **Implemented by:** `json_config_test.rs::jc3_json_overrides_clr_env_var`
 
 ---
 
@@ -72,7 +72,7 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 - **Then:** dry-run output reflects `--max-sessions 0` from JSON; behavior identical to `--args-file <path>`
 - **Exit:** 0
 - **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-005; [cli/param/075_args_file.md](../../../../docs/cli/param/075_args_file.md)
-- **Implemented by:** TBD — `json_config_test.rs`
+- **Implemented by:** `json_config_test.rs::jc4_clr_args_file_env_var`
 
 ---
 
@@ -83,7 +83,7 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 - **Then:** dry-run output reflects `--max-sessions 0` from stdin JSON; stdin JSON auto-detected and consumed as param source
 - **Exit:** 0
 - **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-002
-- **Implemented by:** TBD — `json_config_test.rs`
+- **Implemented by:** `json_config_test.rs::jc5_stdin_json_pipe_detected`
 
 ---
 
@@ -94,7 +94,7 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 - **Then:** clr exits 1; stderr contains JSON parse error message; subprocess not spawned
 - **Exit:** 1
 - **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-006
-- **Implemented by:** TBD — `json_config_test.rs`
+- **Implemented by:** `json_config_test.rs::jc6_invalid_json_exit_1`
 
 ---
 
@@ -105,7 +105,7 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 - **Then:** clr exits 1; stderr contains file-not-found or similar IO error; subprocess not spawned
 - **Exit:** 1
 - **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-007
-- **Implemented by:** TBD — `json_config_test.rs`
+- **Implemented by:** `json_config_test.rs::jc7_missing_args_file_exit_1`
 
 ---
 
@@ -116,7 +116,7 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 - **Then:** clr executes in dry-run mode (prints command without spawning); boolean `true` in JSON activates the flag; JSON `false` for any other boolean param is a no-op (absent)
 - **Exit:** 0
 - **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-008
-- **Implemented by:** TBD — `json_config_test.rs`
+- **Implemented by:** `json_config_test.rs::jc8_boolean_true_activates_flag`
 
 ---
 
@@ -127,15 +127,15 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 - **Then:** clr exits 0; no error for unknown key `_future_param`; `max-sessions: 0` is applied; forward-compatible
 - **Exit:** 0
 - **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-009
-- **Implemented by:** TBD — `json_config_test.rs`
+- **Implemented by:** `json_config_test.rs::jc9_unknown_json_key_ignored`
 
 ---
 
 ### JC-10: JSON config applies to `isolated` subcommand
 
-- **Given:** JSON file containing `{"timeout": 60}` at a temp path; `CLR_ARGS_FILE` set to that path
-- **When:** `CLR_ARGS_FILE=<tmp/fast.json> clr isolated --dry-run -c /tmp/test-creds.json`
-- **Then:** isolated subcommand uses timeout of 60s from JSON config; param applies cross-subcommand
+- **Given:** JSON file containing `{"dir": "/tmp"}` at a temp path; `CLR_ARGS_FILE` set to that path; fake creds file
+- **When:** `CLR_ARGS_FILE=<tmp/cfg.json> clr isolated --creds <creds> --dry-run`
+- **Then:** isolated dry-run trace (stderr) contains "/tmp"; param applies cross-subcommand
 - **Exit:** 0
 - **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-010
-- **Implemented by:** TBD — `json_config_test.rs`
+- **Implemented by:** `json_config_test.rs::jc10_json_config_applies_to_isolated`
