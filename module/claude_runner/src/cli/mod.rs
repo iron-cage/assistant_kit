@@ -360,61 +360,29 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     std::process::exit( 1 );
   }
 
-  // Phase 1: --dry-run — build preview command and print to stdout without spawning.
-  if cli.dry_run
+  // Phase 2: validate --dir path exists before spawning subprocess (skip in dry-run).
+  if !cli.dry_run
   {
-    let mut args : Vec< String > = Vec::new();
-    args.push( "--effort".to_string() );
-    args.push( "max".to_string() );
-    args.push( "--no-session-persistence".to_string() );
-    if cli.message.is_some() { args.push( "--dangerously-skip-permissions".to_string() ); }
-    // Phase 2: --dir and --add-dir show in preview
     if let Some( ref d ) = cli.dir
     {
-      args.push( "--dir".to_string() );
-      args.push( d.clone() );
-    }
-    for ad in &cli.add_dirs
-    {
-      args.push( "--add-dir".to_string() );
-      args.push( ad.clone() );
-    }
-    if let Some( ref m ) = cli.message
-    {
-      args.push( "--print".to_string() );
-      args.push( m.clone() );
-    }
-    args.extend_from_slice( &cli.passthrough_args );
-    let temp_dir = std::env::temp_dir().join( format!( "claude_isolated_{}", std::process::id() ) );
-    let mut full_args = Vec::with_capacity( args.len() + 2 );
-    if let Some( id ) = IsolatedModel::Default.model_id()
-    {
-      full_args.push( "--model".to_string() );
-      full_args.push( id.to_string() );
-    }
-    full_args.extend( args );
-    let preview = ClaudeCommand::new().with_home( &temp_dir ).with_args( full_args );
-    handle_dry_run( &preview );
-    std::process::exit( 0 );
-  }
-
-  // Phase 2: validate --dir path exists before spawning subprocess.
-  if let Some( ref d ) = cli.dir
-  {
-    if !std::path::Path::new( d ).exists()
-    {
-      eprintln!( "Error: --dir path does not exist: {d}" );
-      std::process::exit( 1 );
+      if !std::path::Path::new( d ).exists()
+      {
+        eprintln!( "Error: --dir path does not exist: {d}" );
+        std::process::exit( 1 );
+      }
     }
   }
 
-  // Phase 3: validate --file path exists before spawning subprocess.
-  if let Some( ref f ) = cli.file
+  // Phase 3: validate --file path exists before spawning subprocess (skip in dry-run).
+  if !cli.dry_run
   {
-    if !std::path::Path::new( f ).exists()
+    if let Some( ref f ) = cli.file
     {
-      eprintln!( "Error: --file path does not exist: {f}" );
-      std::process::exit( 1 );
+      if !std::path::Path::new( f ).exists()
+      {
+        eprintln!( "Error: --file path does not exist: {f}" );
+        std::process::exit( 1 );
+      }
     }
   }
 
@@ -433,12 +401,14 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
   }
   passthrough.extend_from_slice( &cli.passthrough_args );
 
-  let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
+  let journal = if cli.dry_run { None } else { resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() ) };
   run_isolated_command(
     "isolated",
     &cli.creds_path,
     cli.timeout_secs,
     cli.trace,
+    cli.dry_run,
+    cli.no_compact_window,
     IsolatedModel::Default,
     EffortLevel::Max,
     cli.message.as_deref(),
@@ -492,6 +462,6 @@ pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
     eprintln!( "{CREDS_PATH_ERROR}" );
     std::process::exit( 1 );
   }
-  let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
-  run_refresh_command( &cli.creds_path, cli.timeout_secs, cli.trace, journal )
+  let journal = if cli.dry_run { None } else { resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() ) };
+  run_refresh_command( &cli.creds_path, cli.timeout_secs, cli.trace, cli.dry_run, cli.no_compact_window, journal )
 }

@@ -242,6 +242,10 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
   {
     builder = builder.with_arg( "--fallback-model" ).with_arg( model.as_str() );
   }
+  if cli.no_compact_window
+  {
+    builder = builder.with_compact_window( None );
+  }
 
   ( builder, expected_id )
 }

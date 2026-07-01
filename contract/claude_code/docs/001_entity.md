@@ -13,11 +13,12 @@
 | `taxonomy` | Four-level concept hierarchy: Project, Conversation, Session, Entry | [taxonomy/readme.md](taxonomy/readme.md) | 3 |
 | `params` | CLI parameter specifications for the `claude` binary | [param/readme.md](param/readme.md) | 120 |
 | `tool` | Built-in tools available in Claude Code sessions | [tool/readme.md](tool/readme.md) | 40 |
-| `endpoint` | Wire contracts for Anthropic HTTP endpoints consumed by workspace crates | [endpoint/readme.md](endpoint/readme.md) | 10 |
+| `endpoint` | Wire contracts for Anthropic HTTP endpoints consumed by workspace crates | [endpoint/readme.md](endpoint/readme.md) | 11 |
 | `subcommand` | CLI subcommands: agents, auth, auto-mode, doctor, install, mcp, plugin, setup-token, update | [subcommand/readme.md](subcommand/readme.md) | 9 |
 | `fault` | Aggregated index of all fault conditions: terminal errors (E1–E6), silent failures (F1–F4), and quirks (Q1–Q5) with detection signals and `classify_error()` priority order | [fault/readme.md](fault/readme.md) | 0 |
+| `model` | Claude API model catalog: known model IDs, capabilities, and workspace selection defaults | [model/readme.md](model/readme.md) | 12 |
 
-**Total doc instances**: 245 (36 + 3 + 4 + 10 + 3 + 7 + 3 + 120 + 40 + 10 + 9)
+**Total doc instances**: 258 (36 + 3 + 4 + 11 + 3 + 7 + 3 + 120 + 40 + 11 + 9 + 12)
 
 ## Master Doc Instances Table
 
@@ -136,6 +137,7 @@
 | 008 | Shared Session Transcripts | [endpoint/008_shared_session_transcripts.md](endpoint/008_shared_session_transcripts.md) |
 | 009 | CLI Feedback | [endpoint/009_cli_feedback.md](endpoint/009_cli_feedback.md) |
 | 010 | Web Domain Info | [endpoint/010_web_domain_info.md](endpoint/010_web_domain_info.md) |
+| 011 | List Models | [endpoint/011_v1_models.md](endpoint/011_v1_models.md) |
 
 ### subcommand/ (9 instances)
 
@@ -156,3 +158,20 @@
 > `tool` instances (40 files) use numbered naming and are enumerated in their master file: [tool/readme.md](tool/readme.md).
 >
 > `subcommand` instances (9 files) use numbered naming and are enumerated in their master file: [subcommand/readme.md](subcommand/readme.md).
+
+### model/ (12 instances)
+
+| ID | Name | File |
+|----|------|------|
+| 001 | claude-fable-5 | [model/001_claude_fable_5.md](model/001_claude_fable_5.md) |
+| 002 | claude-mythos-5 | [model/002_claude_mythos_5.md](model/002_claude_mythos_5.md) |
+| 003 | claude-opus-4-8 | [model/003_claude_opus_4_8.md](model/003_claude_opus_4_8.md) |
+| 004 | claude-sonnet-5 | [model/004_claude_sonnet_5.md](model/004_claude_sonnet_5.md) |
+| 005 | claude-haiku-4-5 | [model/005_claude_haiku_4_5.md](model/005_claude_haiku_4_5.md) |
+| 006 | claude-opus-4-7 | [model/006_claude_opus_4_7.md](model/006_claude_opus_4_7.md) |
+| 007 | claude-opus-4-6 | [model/007_claude_opus_4_6.md](model/007_claude_opus_4_6.md) |
+| 008 | claude-sonnet-4-6 | [model/008_claude_sonnet_4_6.md](model/008_claude_sonnet_4_6.md) |
+| 009 | claude-sonnet-4-5 | [model/009_claude_sonnet_4_5.md](model/009_claude_sonnet_4_5.md) |
+| 010 | claude-opus-4-5 | [model/010_claude_opus_4_5.md](model/010_claude_opus_4_5.md) |
+| 011 | claude-opus-4-1 | [model/011_claude_opus_4_1.md](model/011_claude_opus_4_1.md) |
+| 012 | Workspace Defaults | [model/012_workspace_defaults.md](model/012_workspace_defaults.md) |

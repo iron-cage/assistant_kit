@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Define semantically coherent parameter clusters by runner responsibility.
-- **Responsibility**: Group clr parameters into 5 semantic categories based on consumption pattern (claude-native, runner-consumed, system-prompt, credential-ops, session-listing).
+- **Responsibility**: Group clr parameters into 5 semantic categories based on consumption pattern (claude-native, runner-consumed, system-prompt, credential-ops, session-listing); provide cross-command comparison for all 4 running commands.
 - **In Scope**: Group membership, coherence tests, invariants, and cross-references to commands/params/tests/user stories.
 - **Out of Scope**: Individual parameter semantics (-> `../param/`), type constraints (-> `../type/`).
 
@@ -16,8 +16,9 @@
 | 03_system_prompt.md | Group spec: system prompt injection and extension flags |
 | 04_credential_operations.md | Group spec: credential-isolated execution configuration |
 | 05_session_listing.md | Group spec: `clr ps` output display controls |
+| 06_running_commands.md | Cross-command comparison: all 4 subprocess-invoking commands |
 
-### All Groups (5 total)
+### All Groups (6 total)
 
 | # | Group | Parameters | Purpose |
 |---|-------|------------|---------|
@@ -26,5 +27,6 @@
 | 3 | System Prompt | 2 | Inject or extend the behavioral system context sent to the `claude` subprocess |
 | 4 | Credential Operations | 3 | Configure credential-isolated execution for `clr isolated` and `clr refresh` |
 | 5 | Session Listing | 5 | Control `clr ps` session listing display — row filtering, PID filtering, column selection, and inspect output |
+| 6 | Running Commands | — | Cross-command comparison: all 4 subprocess-invoking commands (`run`, `ask`, `isolated`, `refresh`) |
 
-**Total:** 5 groups
+**Total:** 6 groups

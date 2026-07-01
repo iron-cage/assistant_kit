@@ -1,33 +1,34 @@
 use claude_runner_core::{
   ClaudeCommand, EffortLevel, IsolatedModel, IsolatedRunResult, ISOLATED_CLAUDE_MD,
-  REFRESH_DEFAULT_MODEL, RunnerError, run_isolated, signal_exit_code,
+  REFRESH_DEFAULT_MODEL, RunnerError, run_isolated_ext, signal_exit_code,
 };
 use claude_journal::{ EventRecord, EventType, JournalWriter };
 
-/// Emit trace diagnostics for a credential-operation command (`isolated` or `refresh`).
+/// Emit trace/dry-run diagnostics for a credential-operation command (`isolated` or `refresh`).
 ///
-/// Reconstructs the `ClaudeCommand` exactly as `run_isolated()` would build it
-/// (model flag prepended, then `with_home(&temp_dir)`, then `with_args(args)`) and
-/// prints `describe_env()` + `describe()` to stderr, matching the format of `run` trace.
+/// Reconstructs the `ClaudeCommand` exactly as `run_isolated_ext()` would build it
+/// (model flag prepended, then `with_home(&temp_dir)`, `with_compact_window(compact_window)`,
+/// then `with_args(args)`) and prints `describe_env()` + `describe()` to stderr.
 ///
-/// `args` must be the fully-assembled arg list that will be passed to `run_isolated()`,
+/// `args` must be the fully-assembled arg list that will be passed to `run_isolated_ext()`,
 /// including all injected flags (`--effort`, `--no-session-persistence`,
 /// `--dangerously-skip-permissions`, `--no-chrome`, `--print`, message, passthrough).
-/// WYSIWYG: the reconstructed command here must match what `run_isolated()` actually runs.
+/// WYSIWYG: the reconstructed command here must match what `run_isolated_ext()` actually runs.
 ///
-/// Pitfall: if `run_isolated()` in `claude_runner_core` is updated to modify the
-/// `ClaudeCommand` beyond prepending the model flag, `with_home()`, and `with_args()`,
-/// this trace will diverge — update both together.
+/// Pitfall: if `run_isolated_ext()` in `claude_runner_core` is updated to modify the
+/// `ClaudeCommand` beyond prepending the model flag, `with_home()`, `with_compact_window()`,
+/// and `with_args()`, this trace will diverge — update both together.
 fn emit_credential_trace
 (
-  label        : &str,
-  creds_path   : &str,
-  model        : &IsolatedModel,
-  args         : &[ String ],
-  timeout_secs : u64,
+  label          : &str,
+  creds_path     : &str,
+  model          : &IsolatedModel,
+  args           : &[ String ],
+  timeout_secs   : u64,
+  compact_window : Option< u32 >,
 )
 {
-  // Reproduce the exact temp dir path and arg list that run_isolated() will create.
+  // Reproduce the exact temp dir path and arg list that run_isolated_ext() will create.
   let temp_dir = std::env::temp_dir()
     .join( format!( "claude_isolated_{}", std::process::id() ) );
   let mut full_args = Vec::with_capacity( args.len() + 2 );
@@ -39,6 +40,7 @@ fn emit_credential_trace
   full_args.extend_from_slice( args );
   let preview = ClaudeCommand::new()
     .with_home( &temp_dir )
+    .with_compact_window( compact_window )
     .with_args( full_args.iter().cloned() );
   let env_out = preview.describe_env();
   let cmd_out = preview.describe();
@@ -67,26 +69,29 @@ fn emit_credential_trace
 #[ allow( clippy::too_many_arguments, clippy::fn_params_excessive_bools ) ]
 pub( super ) fn run_isolated_command
 (
-  label            : &str,
-  creds_path       : &str,
-  timeout_secs     : u64,
-  trace            : bool,
-  model            : IsolatedModel,
-  effort           : EffortLevel,
-  message          : Option< &str >,
-  passthrough_args : &[ String ],
-  skip_perms       : bool,
-  no_chrome        : bool,
-  file_path        : Option< &str >,
-  expect           : Option< &str >,
-  expect_strategy  : Option< &str >,
-  journal          : Option< JournalWriter >,
-  output_file      : Option< &str >,
-  do_strip_fences  : bool,
-  output_style     : Option< &str >,
-  summary_fields   : Option< &str >,
+  label             : &str,
+  creds_path        : &str,
+  timeout_secs      : u64,
+  trace             : bool,
+  dry_run           : bool,
+  no_compact_window : bool,
+  model             : IsolatedModel,
+  effort            : EffortLevel,
+  message           : Option< &str >,
+  passthrough_args  : &[ String ],
+  skip_perms        : bool,
+  no_chrome         : bool,
+  file_path         : Option< &str >,
+  expect            : Option< &str >,
+  expect_strategy   : Option< &str >,
+  journal           : Option< JournalWriter >,
+  output_file       : Option< &str >,
+  do_strip_fences   : bool,
+  output_style      : Option< &str >,
+  summary_fields    : Option< &str >,
 ) -> !
 {
+  let compact_window : Option< u32 > = if no_compact_window { None } else { Some( 200_000 ) };
   // Build the full arg list with all injected defaults prepended before --print.
   // Order: [--no-chrome?] --effort <level> --no-session-persistence
   //        [--dangerously-skip-permissions?] [--print <msg>] [passthrough]
@@ -103,8 +108,10 @@ pub( super ) fn run_isolated_command
   }
   args.extend_from_slice( passthrough_args );
 
-  // Emit trace before any I/O so it fires even when the creds file is missing.
-  if trace { emit_credential_trace( label, creds_path, &model, &args, timeout_secs ); }
+  // Emit trace/dry-run diagnostics before any I/O so they fire even when the creds file is missing.
+  // Fix(R5-2): dry_run uses the same code path as trace — WYSIWYG, not a separate branch.
+  if trace || dry_run { emit_credential_trace( label, creds_path, &model, &args, timeout_secs, compact_window ); }
+  if dry_run { std::process::exit( 0 ); }
 
   let creds_json = match std::fs::read_to_string( creds_path )
   {
@@ -117,11 +124,11 @@ pub( super ) fn run_isolated_command
   };
   let run_result = if let Some( fp ) = file_path
   {
-    run_isolated_with_stdin_file( &creds_json, args, timeout_secs, model, fp )
+    run_isolated_with_stdin_file( &creds_json, args, timeout_secs, model, fp, compact_window )
   }
   else
   {
-    run_isolated( &creds_json, args, timeout_secs, model )
+    run_isolated_ext( &creds_json, args, timeout_secs, model, compact_window )
   };
   match run_result
   {
@@ -261,6 +268,7 @@ fn run_isolated_with_stdin_file
   timeout_secs     : u64,
   model            : IsolatedModel,
   file_path        : &str,
+  compact_window   : Option< u32 >,
 ) -> Result< IsolatedRunResult, RunnerError >
 {
   use core::time::Duration;
@@ -287,6 +295,7 @@ fn run_isolated_with_stdin_file
   let cmd = ClaudeCommand::new()
     .with_home( &temp_dir )
     .with_home_isolation()
+    .with_compact_window( compact_window )
     .with_stdin_file( std::path::PathBuf::from( file_path ) )
     .with_args( full_args );
 
@@ -413,10 +422,12 @@ fn run_isolated_with_stdin_file
 /// This function never returns; it always calls `std::process::exit`.
 pub( super ) fn run_refresh_command
 (
-  creds_path   : &str,
-  timeout_secs : u64,
-  trace        : bool,
-  journal      : Option< JournalWriter >,
+  creds_path        : &str,
+  timeout_secs      : u64,
+  trace             : bool,
+  dry_run           : bool,
+  no_compact_window : bool,
+  journal           : Option< JournalWriter >,
 ) -> !
 {
   run_isolated_command(
@@ -424,6 +435,8 @@ pub( super ) fn run_refresh_command
     creds_path,
     timeout_secs,
     trace,
+    dry_run,
+    no_compact_window,
     IsolatedModel::Specific( REFRESH_DEFAULT_MODEL.to_string() ),
     EffortLevel::Low,
     Some( "." ),
