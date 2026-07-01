@@ -8,6 +8,7 @@ combinations.
 - **Default:** false
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"dry-run"`
 
 ```sh
 clr --dry-run "test" --model sonnet --max-tokens 50000

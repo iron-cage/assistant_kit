@@ -7,6 +7,7 @@ Prevent Claude Code from using the specified tools.
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **Validation:** requires a value; `--disallowed-tools` at end of argv → error
+- **JSON Key:** `"disallowed-tools"`
 
 ```sh
 clr "Refactor code" --disallowed-tools "Bash"

@@ -8,6 +8,7 @@ effective retry count for Auth is 0.
 - **Default:** `auto` (inherits from `--retry-default-delay`, Tier 3 fallback)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"auth-delay"`
 
 ```sh
 clr -p "task" --retry-on-auth 1 --auth-delay 60  # wait 60s between retries

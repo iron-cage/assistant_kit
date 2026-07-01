@@ -12,6 +12,7 @@ propagates the subprocess exit code.
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Replaces:** `--retry-on-api-error` (renamed + renumbered from 037)
+- **JSON Key:** `"retry-on-service"`
 
 ```sh
 clr -p "task" --retry-on-service 3                    # retry up to 3 times on Service error

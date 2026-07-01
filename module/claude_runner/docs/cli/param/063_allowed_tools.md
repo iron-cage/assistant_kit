@@ -7,6 +7,7 @@ Restrict Claude Code to only use the specified tools.
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **Validation:** requires a value; `--allowed-tools` at end of argv → error
+- **JSON Key:** `"allowed-tools"`
 
 ```sh
 clr "Fix bug" --allowed-tools "Read,Grep,Edit"

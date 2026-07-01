@@ -7,6 +7,7 @@ Specify a fallback model to use when the primary model is unavailable.
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **Validation:** requires a value; `--fallback-model` at end of argv → error
+- **JSON Key:** `"fallback-model"`
 
 ```sh
 clr "Fix bug" --model opus --fallback-model sonnet

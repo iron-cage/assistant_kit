@@ -96,6 +96,14 @@ table with Name, Category, and Description columns. Static data sourced from
 
 **Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile` (via `--session-dir` flag passthrough or resolved externally).
 
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [feature/002_journaling_integration.md](002_journaling_integration.md) | Automatic event journaling for all execution boundaries |
+| [feature/003_retry_hierarchy.md](003_retry_hierarchy.md) | 3-tier retry resolution invoked during subprocess execution |
+| [feature/004_json_config.md](004_json_config.md) | JSON file and stdin pipe loading for all clr parameters |
+
 ### APIs
 
 | File | Relationship |

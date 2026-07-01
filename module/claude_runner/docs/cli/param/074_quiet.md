@@ -10,6 +10,7 @@ Fatal errors (spawn failures, binary-not-found) are always emitted regardless of
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Env:** `CLR_QUIET` (bool: `"1"` or `"true"`; applied only when `--quiet` absent from CLI)
+- **JSON Key:** `"quiet"`
 
 ```sh
 clr --quiet "Silent run"    # suppress retry/gate/warning output

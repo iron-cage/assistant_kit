@@ -9,6 +9,7 @@ also `auto`, the Tier 3 fallback (`--retry-default`) applies.
 - **Default:** `auto` (unset — class-specific or fallback values apply)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"retry-override"`
 
 ```sh
 # Force all error classes to retry 5 times, 60s delay

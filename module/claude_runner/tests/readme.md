@@ -82,6 +82,7 @@
 | Max budget USD param (EC-1–EC-7) | `max_budget_usd_test.rs` | `--max-budget-usd` forwarding (decimal-preserved), missing-value, any-numeric, help, env var |
 | Add dir param (EC-1–EC-7) | `add_dir_test.rs` | `--add-dir` forwarding, missing-value, non-existent path accepted, help, env var |
 | Fallback model param (EC-1–EC-7) | `fallback_model_test.rs` | `--fallback-model` forwarding, missing-value, any-string, help, env var |
+| JSON config loading (JC-1..JC-10, AF-1..AF-6) | `json_config_test.rs` | `--args-file` / `CLR_ARGS_FILE` / stdin JSON: file loading, precedence (CLI > JSON > CLR_* > default), boolean flags, error paths, isolated subcommand |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
 ### Responsibility Table
@@ -155,6 +156,7 @@
 | `output_style_test.rs` | `--output-style` integration: summary/raw rendering, CLR_OUTPUT_STYLE env var, auto-inject `--output-format json`, graceful fallback, legacy alias, CLI-wins, dry-run trace, validation (EC-01–EC-13); minimal CLR envelope BUG-310 regression guard (EC-14); raw+json-schema structured output BUG-318 fix (EC-15); structural anti-pattern guard (IT-7). |
 | `summary_fields_test.rs` | `--summary-fields` integration: full/standard/minimal presets, custom field whitelists, validation, CLR_SUMMARY_FIELDS env var, CLI-wins, result body preserved (EC-01–EC-12). |
 | `journal_integration_test.rs` | `--journal`/`--journal-dir` and `CLR_JOURNAL`/`CLR_JOURNAL_DIR` integration: JSONL file creation, level filtering (full/meta/off), retry/timeout/gate_wait/validation_retry event emission, truncation (>1MB), CLI-wins-over-env precedence, invalid-value error, dry-run side-effect isolation (BUG-319), case-sensitive validation, missing-value, duplicate last-wins, off+dir (EC-1–EC-22). |
+| `json_config_test.rs` | JSON config loading: `--args-file` / `CLR_ARGS_FILE` / stdin JSON pipe (JC-1..JC-10, AF-1..AF-6). |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |

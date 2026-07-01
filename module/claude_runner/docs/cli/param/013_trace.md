@@ -8,6 +8,7 @@ subprocess is launched. Mirrors shell `set -x` semantics.
 - **Default:** false
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md) (for `run` and `ask`), [Credential Operations](../param_group/04_credential_operations.md) (for `isolated` and `refresh`)
+- **JSON Key:** `"trace"`
 
 What `--trace` shows depends on the command:
 

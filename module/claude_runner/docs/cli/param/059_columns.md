@@ -6,6 +6,7 @@ comma-separated list of column keys. Columns are rendered in the order specified
 - **Type:** comma-separated string
 - **Default:** `idx,pid,elapsed,cpu,ram,state,mode,path,task`
 - **Command:** [`ps`](../command/06_ps.md)
+- **JSON Key:** — (ps subcommand; not supported by `--args-file`)
 
 ```sh
 clr ps --columns pid,path,mode,task   # custom subset in specified order

@@ -41,6 +41,7 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | `--dir` / `--subdir` / `--session-dir` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--system-prompt` / `--append-system-prompt` | ✅ supported | ✅ supported | via passthrough only | ➖ not supported |
 | `--json-schema` / `--mcp-config` | ✅ supported | ✅ supported | via passthrough only | ➖ not supported |
+| `--args-file` / `CLR_ARGS_FILE` / stdin JSON | ✅ supported | ✅ supported | ✅ supported | ✅ supported |
 
 ---
 

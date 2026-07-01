@@ -10,6 +10,7 @@ file is updated in-place with the new token before `clr` exits.
 - **Type:** [`CredentialsFilePath`](../type/08_credentials_file_path.md)
 - **Default:** `~/.claude/.credentials.json`
 - **Command:** [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
+- **JSON Key:** `"creds"`
 
 ```sh
 clr isolated "Fix bug"                                    # uses ~/.claude/.credentials.json

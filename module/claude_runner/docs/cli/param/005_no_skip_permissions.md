@@ -9,6 +9,7 @@ prompts.
 - **Default:** false (bypass is **ON** by default; this flag turns it **OFF**)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"no-skip-permissions"`
 
 ```sh
 clr --no-skip-permissions "Fix bug"   # bypass disabled — claude will prompt for tool approvals

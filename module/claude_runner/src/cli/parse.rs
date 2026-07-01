@@ -104,6 +104,7 @@ pub( crate ) struct CliArgs
   pub( crate ) summary_fields         : Option< String >,
   pub( crate ) journal                : Option< String >,
   pub( crate ) journal_dir            : Option< String >,
+  pub( crate ) args_file              : Option< String >,
   pub( crate ) no_compact_window      : bool,
 }
 
@@ -277,6 +278,10 @@ fn parse_value_flag(
     "--fallback-model" =>
     {
       parsed.fallback_model = Some( next_value( tokens, next, "--fallback-model" )?.to_string() );
+    }
+    "--args-file" =>
+    {
+      parsed.args_file = Some( next_value( tokens, next, "--args-file" )?.to_string() );
     }
     _ => return parse_runner_value_flag( token, tokens, next, parsed ),
   }
@@ -576,6 +581,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       summary_fields          : None,
       journal                 : None,
       journal_dir             : None,
+      args_file               : None,
       no_compact_window       : false,
     } );
   }

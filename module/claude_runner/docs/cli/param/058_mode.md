@@ -6,6 +6,7 @@ Filter `clr ps` output by session execution mode. Sessions launched with `--prin
 - **Type:** enum (`all` | `interactive` | `print`)
 - **Default:** `all`
 - **Command:** [`ps`](../command/06_ps.md)
+- **JSON Key:** — (ps subcommand; not supported by `--args-file`)
 
 ```sh
 clr ps --mode interactive    # show only interactive (TTY) sessions

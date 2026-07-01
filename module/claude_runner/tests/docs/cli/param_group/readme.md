@@ -18,4 +18,4 @@ Per-group interaction test indices for `clr`. See [param_group/readme.md](../../
 | `03_system_prompt.md` | Interaction tests for Group 3 (System Prompt) | ✅ |
 | `04_credential_operations.md` | Interaction tests for Group 4 (Credential Operations) | ✅ |
 | `05_session_listing.md` | Interaction tests for Group 5 (Session Listing) | ✅ |
-| `06_running_commands.md` | Interaction tests for Group 6 (Running Commands) | ⏳ |
+| `06_running_commands.md` | Cross-command and interaction tests for Group 6 (Running Commands) | ✅ |

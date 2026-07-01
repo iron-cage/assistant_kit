@@ -7,6 +7,7 @@ Set a maximum dollar budget for the Claude Code session.
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **Validation:** requires a value; `--max-budget-usd` at end of argv → error
+- **JSON Key:** `"max-budget-usd"`
 
 ```sh
 clr "Fix all bugs" --max-budget-usd 5.00

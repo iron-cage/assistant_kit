@@ -12,6 +12,7 @@ emits an exhaustion message to stderr and propagates exit code 2.
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Replaces:** `--retry-on-rate-limit` (renamed)
+- **JSON Key:** `"retry-on-transient"`
 
 ```sh
 clr -p "refactor module" --retry-on-transient 3     # retry up to 3 times on rate-limit exit

@@ -7,7 +7,7 @@
 
 ### Semantic Coherence Test
 
-"Is this flag consumed by the runner, not Claude?" — YES for all 46.
+"Is this flag consumed by the runner, not Claude?" — YES for all 47.
 
 ### Why NOT X
 
@@ -38,8 +38,8 @@ clr --trace "Fix bug" --dir /project
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 1 | [`run`](../command/01_run.md) | Full | — | All 46 params apply; default command |
-| 5 | [`ask`](../command/05_ask.md) | Full | — | All 46 params apply; identical behavior — pure alias for run |
+| 1 | [`run`](../command/01_run.md) | Full | — | All 47 params apply; default command |
+| 5 | [`ask`](../command/05_ask.md) | Full | — | All 47 params apply; identical behavior — pure alias for run |
 
 ### Referenced Parameters
 
@@ -91,6 +91,7 @@ clr --trace "Fix bug" --dir /project
 | [`--summary-fields`](../param/071_summary_fields.md) | string | `full` | Field selector | Select which CLR envelope fields render in summary header; presets: `minimal`/`standard`/`full`; or custom whitelist |
 | [`--journal`](../param/072_journal.md) | enum | `full` | Journal level | Journal level for execution events: `full` (stdout+stderr ≤1MB each), `meta` (metadata only), `off` (disabled) |
 | [`--journal-dir`](../param/073_journal_dir.md) | path | `~/.clr/journal/` | Journal directory | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` |
+| [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Config loader | Load all clr params from JSON file; also applies to `isolated` and `refresh` |
 
 ### Referenced Tests
 

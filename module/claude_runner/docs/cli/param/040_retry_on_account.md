@@ -11,6 +11,7 @@ exhaustion message to stderr and propagates the subprocess exit code.
 - **Default:** `auto` (inherits from `--retry-default`, Tier 3 fallback; effective default = 2)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"retry-on-account"`
 
 ```sh
 clr -p "task" --retry-on-account 3                 # retry up to 3 times on quota exhaustion

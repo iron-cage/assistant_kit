@@ -75,6 +75,7 @@
 | 073_journal_dir.md | `--journal-dir` parameter spec |
 | 074_quiet.md | `--quiet` flag spec (suppress non-fatal runner diagnostics) |
 | 075_no_compact_window.md | `--no-compact-window` flag spec (suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection) |
+| 075_args_file.md | `--args-file` parameter spec |
 
 ### Retired Parameter IDs
 
@@ -162,10 +163,11 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 73 | `--journal-dir` | path | `~/.clr/journal/` | Any writable path | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` | 3 cmds |
 | 74 | `--quiet` | bool | false | present/absent | Suppress non-fatal runner diagnostics (retry/gate/warning messages) | 2 cmds |
 | 75 | `--no-compact-window` | bool | false | present/absent | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` injection into subprocess environment | 4 cmds |
+| 76 | `--args-file` | [`FilePath`](../type/12_file_path.md) | — | Any readable file path | Load clr params from JSON config file; stdin JSON auto-detected when no TTY | 4 cmds |
 
-**Total:** 70 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; param 75 is a new addition)
+**Total:** 71 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–76 added)
 
-**Groups:** Parameters 2–4, 17, 23, 24, and 61–67 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–74 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 75 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md).
+**Groups:** Parameters 2–4, 17, 23, 24, and 61–67 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–74, 76 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 75 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md).
 
 ### Navigation
 
@@ -240,11 +242,14 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 - [`--fallback-model`](067_fallback_model.md)
 - [`--quiet`](074_quiet.md)
 - [`--no-compact-window`](075_no_compact_window.md)
+- [`--args-file`](075_args_file.md)
 
 ### Quick Reference
+
+**JSON key field:** Each parameter doc includes a `**JSON Key:**` metadata field showing the key name accepted by `--args-file` / `CLR_ARGS_FILE`. Parameters exclusive to the `ps` subcommand are not supported by `--args-file` and are marked accordingly. See [`../feature/004_json_config.md`](../feature/004_json_config.md) for the complete parity table.
 
 **Required parameters:** `[MESSAGE]` is required for print mode (which is the default when a message is given).
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 63, `ask` = 63, `ps` = 5, `isolated` = 17, `refresh` = 7, `kill` = 0, `tools` = 0, `help` = 0.
+**Commands by parameter count:** `run` = 64, `ask` = 64, `ps` = 5, `isolated` = 18, `refresh` = 8, `kill` = 0, `tools` = 0, `help` = 0.
