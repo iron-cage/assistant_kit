@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 8 clr commands, all 69 parameters, all 14 types, all 5 parameter groups, 2 env parameter specs, 27 user story specs, 2 parity specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 8 clr commands, all 70 parameters, all 14 types, all 6 parameter groups, 2 env parameter specs, 27 user story specs, 2 parity specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -27,8 +27,8 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
 | Commands | 8 | ≥8 IT each |
-| Parameters | 70 (69 active + 1 deprecated) | ≥6 EC each |
-| Parameter groups | 5 | ≥4 CC each |
+| Parameters | 71 (70 active + 1 deprecated) | ≥6 EC each |
+| Parameter groups | 6 | ≥4 CC each |
 | Types | 14 | ≥4 TC each |
 | Env params | 2 | ≥6 EC each |
 | Parity | 2 | ≥5 PC each |
@@ -118,6 +118,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`--summary-fields`](param/071_summary_fields.md)
 - [`--journal`](param/072_journal.md)
 - [`--journal-dir`](param/073_journal_dir.md)
+- [`--args-file`](param/075_args_file.md)
 
 #### Parameter Groups
 - [Claude-Native Flags](param_group/01_claude_native_flags.md)
@@ -125,6 +126,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [System Prompt](param_group/03_system_prompt.md)
 - [Credential Operations](param_group/04_credential_operations.md)
 - [Session Listing](param_group/05_session_listing.md)
+- [Running Commands](param_group/06_running_commands.md)
 
 #### Types
 - [`MessageText`](type/01_message_text.md)
@@ -177,4 +179,4 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 
 #### Env Params
 - [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)
-- [`CLR_* (69 vars)`](env_param/02_clr_input_vars.md)
+- [`CLR_* (85 vars)`](env_param/02_clr_input_vars.md)

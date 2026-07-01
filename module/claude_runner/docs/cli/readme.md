@@ -23,7 +23,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | `dictionary.md` | Domain vocabulary for clr CLI concepts |
 | `command_defaults.md` | Cross-command parameter default matrix and isolated/refresh design targets |
 | `parity/` | Cross-command behavioral parity comparisons (2 instances) |
-| `env_param.md` | CLR_* env var fallbacks, CLR_GATE_DIR runtime config, and CLAUDE_CODE_* subprocess vars (72 vars) |
+| `env_param.md` | CLR_* env var fallbacks, CLR_GATE_DIR runtime config, and CLAUDE_CODE_* subprocess vars (85 vars) |
 | `param_group/` | Logical parameter groupings (6 groups) |
 | `type/` | Semantic type definitions (13 active types; 1 deprecated) |
 | `param/` | Individual parameter reference docs (70 active; 1 deprecated) |
@@ -66,7 +66,7 @@ clr <command> [OPTIONS] [MESSAGE]
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (6 groups)
 - [Dictionary](dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — user goals and usage patterns (27 user stories)
-- [Env Parameters](env_param.md) — input, runtime config, and subprocess environment variables (72 variables)
+- [Env Parameters](env_param.md) — input, runtime config, and subprocess environment variables (85 variables)
 - [Parity](parity/readme.md) — cross-command behavioral parity comparisons (2 instances)
 
 ### See Also
