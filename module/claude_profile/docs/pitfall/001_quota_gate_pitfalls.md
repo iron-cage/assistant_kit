@@ -1,5 +1,12 @@
 # Pitfall: Quota Gate Pitfalls
 
+### Scope
+
+- **Purpose**: Document non-obvious failure modes in quota gate logic.
+- **Responsibility**: Covers raw-vs-weighted metric confusion, absent-tier/exhaustion misclassification, window capacity independence, and cancelled-subscription classification errors.
+- **In Scope**: `status_group_of()`, `apply_model_override()`, `resolve_model()` quota gate pitfalls; BUG-299, BUG-300, BUG-301, BUG-317.
+- **Out of Scope**: Model override algorithm details (→ algorithm/002); subprocess model selection (→ algorithm/001).
+
 ### Pattern
 
 Logic that gates on quota values has multiple non-obvious invariants: the correct metric (raw vs. strategy-weighted), the correct direction (absence ≠ exhaustion), and the correct utilization formula.
@@ -36,7 +43,7 @@ Logic that gates on quota values has multiple non-obvious invariants: the correc
 
 **Rule:** `billing_type` is a subscription-level signal independent of quota values. Check it before any quota threshold. `account = None` (API fetch failed) is NOT the same as `billing_type = "none"` (confirmed cancelled) — absent data is ambiguous and must not trigger the cancelled path.
 
-### Cross-References
+### Algorithms
 
 | File | Relationship |
 |------|-------------|

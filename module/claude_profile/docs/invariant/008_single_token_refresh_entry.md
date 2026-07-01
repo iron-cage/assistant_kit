@@ -33,14 +33,29 @@ Bypassing `refresh_account_token()` loses both behaviors: RT silently ages (no r
 - **Credential divergence:** For the current account, direct `run_isolated()` calls may race with the live Claude Code session. Without live credential sync, the store retains a stale RT while the live session holds a fresh one — the next `apply_refresh` cycle uses the stale RT and fails.
 - **Lost write-back:** `apply_post_switch_touch` previously called `run_isolated()` directly (fire-and-forget) — any RT rotation from that subprocess was silently discarded because no credential write-back occurred.
 
-### Cross-References
+### Sources
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `claude_profile_core/src/account.rs` | `refresh_account_token()` — sole authorized `run_isolated()` caller |
-| source | `claude_runner_core/src/isolated.rs` | `run_isolated()` — doc comment warning directing to `refresh_account_token()` |
-| feature | [017_token_refresh.md](../feature/017_token_refresh.md) | Token refresh feature — AC-32/AC-33/AC-34 implement this invariant |
-| feature | [024_session_touch.md](../feature/024_session_touch.md) | Session touch — calls `refresh_account_token()` per this invariant |
-| feature | [027_account_use_post_switch_touch.md](../feature/027_account_use_post_switch_touch.md) | Post-switch touch — Change C routes through `refresh_account_token()` |
-| invariant | [004_no_process_execution.md](004_no_process_execution.md) | Related boundary: `claude_profile` has zero `std::process` — all execution delegated |
-| test | (invariant grep test) | Automated test enforcing zero `run_isolated()` calls outside `account.rs` |
+| File | Relationship |
+|------|-------------|
+| `claude_profile_core/src/account.rs` | `refresh_account_token()` — sole authorized `run_isolated()` caller |
+| `claude_runner_core/src/isolated.rs` | `run_isolated()` — doc comment warning directing to `refresh_account_token()` |
+
+### Features
+
+| File | Relationship |
+|------|-------------|
+| [017_token_refresh.md](../feature/017_token_refresh.md) | Token refresh feature — AC-32/AC-33/AC-34 implement this invariant |
+| [024_session_touch.md](../feature/024_session_touch.md) | Session touch — calls `refresh_account_token()` per this invariant |
+| [027_account_use_post_switch_touch.md](../feature/027_account_use_post_switch_touch.md) | Post-switch touch — Change C routes through `refresh_account_token()` |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
+| [004_no_process_execution.md](004_no_process_execution.md) | Related boundary: `claude_profile` has zero `std::process` — all execution delegated |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| (invariant grep test) | Automated test enforcing zero `run_isolated()` calls outside `account.rs` |

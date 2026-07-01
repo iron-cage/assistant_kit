@@ -1,4 +1,4 @@
-# Parameter :: 58. `force::`
+# Parameter: 58. `force::`
 
 Bypasses ownership enforcement gates on mutation commands. When `force::1`, the G5–G8 ownership check is skipped regardless of whether `current_identity()` matches the stored owner field.
 
@@ -45,6 +45,12 @@ force::true  → same as force::1
 | 2 | [`.account.delete`](../command/001_account.md#command--6-accountdelete) | Bypass G6 ownership guard |
 | 3 | [`.account.relogin`](../command/001_account.md#command--12-accountrelogin) | Bypass G7 ownership guard |
 | 4 | `.accounts` | Bypass G8 when used with `owner::0` or `owner::USER@MACHINE` (Feature 064) |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Automatic Account Rotation](../user_story/001_account_rotation.md) | Bypass G5 ownership gate on rotation eligibility |
 
 ### See Also
 

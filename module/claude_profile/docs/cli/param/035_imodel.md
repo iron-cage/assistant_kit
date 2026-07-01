@@ -1,4 +1,4 @@
-# Parameter :: 35. `imodel::`
+# Parameter: 35. `imodel::`
 
 Controls which Claude model is used by isolated subprocesses spawned during `touch::` and `refresh::` operations. Determines whether `--model <id>` is injected into each subprocess invocation, and which model ID to use.
 

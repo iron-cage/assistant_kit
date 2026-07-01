@@ -12,6 +12,10 @@ Test-lens documentation for `claude_profile`. Each surface subdirectory contains
 | cli/type/ | CLI type acceptance and boundary spec (TC-N entries) |
 | pitfall/ | Pitfall guard verification specs (PP-N entries) |
 | algorithm/ | Algorithm correctness specs (AC-N entries) |
+| state_machine/ | State machine lifecycle transition specs (AC-N entries) |
+| subprocess/ | Subprocess invocation contract specs (AC-N entries) |
+| schema/ | Schema constraint specs (SC-N entries) |
+| research_interactive/ | Research constraint specs (RC-N entries) |
 
 ### Surface Index
 
@@ -25,3 +29,8 @@ Test-lens documentation for `claude_profile`. Each surface subdirectory contains
 | CLI types | `docs/cli/type/` | `TC-` | 4 each | [cli/type/](cli/type/readme.md) |
 | Pitfall docs | `docs/pitfall/` | `PP-` | 2 each | [pitfall/](pitfall/readme.md) |
 | Algorithm docs | `docs/algorithm/` | `AC-` | 4 each | [algorithm/](algorithm/readme.md) |
+| State machine docs | `docs/state_machine/` | `AC-` | 4 each | [state_machine/](state_machine/readme.md) |
+| Subprocess docs | `docs/subprocess/` | `AC-` | 4 each | [subprocess/](subprocess/readme.md) |
+| CLI user stories | `docs/cli/user_story/` | `UA-` | 4 each | [cli/user_story/](cli/user_story/readme.md) |
+| Schema docs | `docs/schema/` | `SC-` | 4 each | [schema/](schema/readme.md) |
+| Research interactive docs | `docs/research_interactive/` | `RC-` | 4 each | [research_interactive/](research_interactive/readme.md) |

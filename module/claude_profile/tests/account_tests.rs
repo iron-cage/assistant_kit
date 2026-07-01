@@ -36,6 +36,12 @@
 //! | A-32 | `validate_name_null_byte_is_error` | name with NUL byte → `Err` | N |
 //! | A-33 | `validate_name_valid` | valid email address → `Ok` | P |
 //! | A-34 | `validate_name_must_be_email` | non-email name → `Err` with email message | N |
+//! | SC-2/001 | `sc2_001_expires_at_stays_t0_manipulate_expires_at_in_memory_only` | `manipulate_expires_at` modifies in-memory only — disk file unchanged (BUG-162) | P |
+//! | SC-4/002 | `sc4_002_account_json_is_2space_pretty_with_trailing_newline` | `{name}.json` uses 2-space indent and trailing newline (invariant/007) | P |
+//! | SC-5/002 | `sc5_002_history_entry_appended_not_truncated` | second `write_history_entry` appends; first entry preserved | P |
+//! | SC-6/002 | `sc6_002_quota_cache_all_subfields_written_atomically` | `write_quota_cache` writes all subfields in one coherent object | P |
+//! | SC-2/005 | `sc2_005_active_marker_filename_uses_env_vars` | `active_marker_filename()` derives name from `HOSTNAME` + `USER` env vars | P |
+//! | SC-3/005 | `sc3_005_active_marker_sanitizes_nonalphanumeric_to_underscore` | `@` in `USER`/`HOSTNAME` becomes `_` in marker filename | P |
 
 use claude_profile::account;
 use claude_profile::ClaudePaths;
@@ -509,5 +515,183 @@ fn test_bug174_mre_switch_preserves_machine_global_commands()
   assert!(
     after_switch.contains( "mcpServers" ),
     "mcpServers must be preserved; got: {after_switch}",
+  );
+}
+
+// ── Schema 001: Credentials JSON ─────────────────────────────────────────────
+
+#[ test ]
+fn sc2_001_expires_at_stays_t0_manipulate_expires_at_in_memory_only()
+{
+  //! SC-2/001: `manipulate_expires_at()` produces `expiresAt=1` in the returned
+  //! string only — the on-disk credential file is NEVER written (BUG-162).
+  //!
+  //! Why: `run_isolated` receives the manipulated string in-memory to force a
+  //! token refresh; the subprocess writeback only updates `accessToken` and
+  //! `refreshToken`; `expiresAt` on disk retains the value from the last `save()`.
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  account::save( "alice@acme.com", &credential_store, &paths, true, None, None, None, None )
+    .expect( "save" );
+
+  let creds_path = credential_store.join( "alice@acme.com.credentials.json" );
+  let on_disk_before = std::fs::read_to_string( &creds_path ).expect( "read credentials" );
+
+  // In-memory manipulation only — must not touch the file.
+  let manipulated = account::manipulate_expires_at( &on_disk_before );
+
+  assert!(
+    manipulated.contains( "\"expiresAt\":1" ),
+    "SC-2/001: manipulated string must have expiresAt=1; got: {manipulated}",
+  );
+
+  // On-disk file must be identical to before the call.
+  let on_disk_after = std::fs::read_to_string( &creds_path ).expect( "re-read credentials" );
+  assert_eq!(
+    on_disk_before, on_disk_after,
+    "SC-2/001: manipulate_expires_at must not modify the on-disk credential file (BUG-162)",
+  );
+}
+
+// ── Schema 002: Account JSON ──────────────────────────────────────────────────
+
+#[ test ]
+fn sc4_002_account_json_is_2space_pretty_with_trailing_newline()
+{
+  //! SC-4/002: `{name}.json` is 2-space indented JSON ending with `\n`.
+  //!
+  //! Why: invariant/007 mandates this encoding for all persisted JSON files.
+  let dir = TempDir::new().expect( "temp dir" );
+  let credential_store = dir.path().join( "credential" );
+  std::fs::create_dir_all( &credential_store ).expect( "create credential store" );
+
+  account::write_quota_cache(
+    &credential_store,
+    "alice@acme.com",
+    Some( ( 50.0, Some( "2026-07-08T00:00:00Z" ) ) ),
+    Some( ( 25.0, Some( "2026-07-15T00:00:00Z" ) ) ),
+    None,
+  );
+
+  let content = std::fs::read_to_string( credential_store.join( "alice@acme.com.json" ) )
+    .expect( "SC-4/002: alice@acme.com.json must exist after write_quota_cache" );
+
+  assert!(
+    content.ends_with( '\n' ),
+    "SC-4/002: {{name}}.json must end with newline; got: {content:?}",
+  );
+  assert!(
+    content.lines().any( |l| l.starts_with( "  " ) ),
+    "SC-4/002: {{name}}.json must use 2-space indentation; got: {content}",
+  );
+}
+
+#[ test ]
+fn sc5_002_history_entry_appended_not_truncated()
+{
+  //! SC-5/002: Two `write_history_entry()` calls with distinct timestamps produce
+  //! two entries in `cache.history` — the prior entry is preserved, not overwritten.
+  let dir = TempDir::new().expect( "temp dir" );
+  let credential_store = dir.path().join( "credential" );
+  std::fs::create_dir_all( &credential_store ).expect( "create credential store" );
+
+  account::write_history_entry(
+    &credential_store,
+    "alice@acme.com",
+    1_000,
+    Some( ( 30.0, "2026-07-08T00:00:00Z" ) ),
+    None,
+    None,
+  );
+  account::write_history_entry(
+    &credential_store,
+    "alice@acme.com",
+    2_000,
+    Some( ( 40.0, "2026-07-08T05:00:00Z" ) ),
+    None,
+    None,
+  );
+
+  let content = std::fs::read_to_string( credential_store.join( "alice@acme.com.json" ) )
+    .expect( "alice@acme.com.json must exist" );
+  let val : serde_json::Value = serde_json::from_str( &content ).expect( "valid JSON" );
+  let history = val[ "cache" ][ "history" ].as_array().expect( "history must be array" );
+
+  assert_eq!(
+    history.len(), 2,
+    "SC-5/002: history must have 2 entries after 2 distinct-timestamp writes; got: {}",
+    history.len(),
+  );
+  assert_eq!(
+    history[ 0 ][ "t" ].as_u64(), Some( 1_000 ),
+    "SC-5/002: first entry must be t=1000 (original entry preserved)",
+  );
+  assert_eq!(
+    history[ 1 ][ "t" ].as_u64(), Some( 2_000 ),
+    "SC-5/002: second entry must be t=2000 (appended)",
+  );
+}
+
+#[ test ]
+fn sc6_002_quota_cache_all_subfields_written_atomically()
+{
+  //! SC-6/002: `write_quota_cache()` writes `five_hour`, `seven_day`, and
+  //! `seven_day_sonnet` as a single coherent object — no partial write leaves
+  //! mismatched fields from a prior cache state.
+  let dir = TempDir::new().expect( "temp dir" );
+  let credential_store = dir.path().join( "credential" );
+  std::fs::create_dir_all( &credential_store ).expect( "create credential store" );
+
+  account::write_quota_cache(
+    &credential_store,
+    "alice@acme.com",
+    Some( ( 12.5, Some( "2026-07-08T05:00:00Z" ) ) ),
+    Some( ( 33.3, Some( "2026-07-15T00:00:00Z" ) ) ),
+    Some( ( 75.0, Some( "2026-07-15T00:00:00Z" ) ) ),
+  );
+
+  let entry = account::read_quota_cache( &credential_store, "alice@acme.com" )
+    .expect( "SC-6/002: read_quota_cache must return Some after write_quota_cache" );
+
+  assert!( entry.five_hour.is_some(), "SC-6/002: five_hour must be present" );
+  assert!( entry.seven_day.is_some(), "SC-6/002: seven_day must be present" );
+  assert!( entry.seven_day_sonnet.is_some(), "SC-6/002: seven_day_sonnet must be present" );
+  assert!( !entry.fetched_at.is_empty(), "SC-6/002: fetched_at must be non-empty" );
+}
+
+// ── Schema 005: Active Marker ─────────────────────────────────────────────────
+
+#[ test ]
+fn sc2_005_active_marker_filename_uses_env_vars()
+{
+  //! SC-2/005: `active_marker_filename()` derives the filename from `$HOSTNAME`
+  //! and `$USER` env vars when both are present.
+  std::env::set_var( "HOSTNAME", "testhost" );
+  std::env::set_var( "USER", "testuser" );
+
+  let name = account::active_marker_filename();
+
+  assert_eq!(
+    name, "_active_testhost_testuser",
+    "SC-2/005: marker filename must be _active_{{HOSTNAME}}_{{USER}}; got: {name}",
+  );
+}
+
+#[ test ]
+fn sc3_005_active_marker_sanitizes_nonalphanumeric_to_underscore()
+{
+  //! SC-3/005: Non-alphanumeric characters in `$USER` or `$HOSTNAME` that are
+  //! not `-` or `.` are replaced with `_` in the marker filename.
+  //!
+  //! Why: `@` in an email-format username must not appear in the filename
+  //! component; only alphanumeric, `-`, and `.` are kept by the sanitizer.
+  std::env::set_var( "HOSTNAME", "myhost" );
+  std::env::set_var( "USER", "user@corp" );
+
+  let name = account::active_marker_filename();
+
+  assert_eq!(
+    name, "_active_myhost_user_corp",
+    "SC-3/005: '@' in USER must be replaced with '_'; got: {name}",
   );
 }

@@ -1,4 +1,4 @@
-# Parameter :: 29. `capabilities::`
+# Parameter: 29. `capabilities::`
 
 Shows the enabled product feature list (`capabilities`) from the `oauthAccount` object in `{name}.json`.
 

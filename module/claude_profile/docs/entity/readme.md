@@ -8,31 +8,31 @@
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](../cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 7 |
 | `cli/command_noun/` | Domain noun documentation (account, token, credentials) | [cli/command_noun/readme.md](../cli/command_noun/readme.md) | 3 |
-| `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, assign, status, unclaim) | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 11 |
+| `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, status) — 009 assign and 011 unclaim REMOVED | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 9 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](../cli/format/readme.md) | 3 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 63 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 58 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](../cli/param_group/readme.md) | 6 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 4 |
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
-| `cli/workflow_scenario/` — DEPRECATED | Superseded by `cli/user_story/`; retained for historical reference only | [cli/workflow_scenario/readme.md](../cli/workflow_scenario/readme.md) | 10 |
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 47 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 46 |
 | `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 9 |
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 6 |
 | `research_interactive/` | Investigation findings on Claude binary behavior | [research_interactive/readme.md](../research_interactive/readme.md) | 1 |
 | `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 7 |
 | `state_machine/` | Domain lifecycle state machines (account, token, session window, ownership, quota measurement) | [state_machine/readme.md](../state_machine/readme.md) | 5 |
 | `subprocess/` | Isolated subprocess contract, credential write-back protocol, and invocation sites | [subprocess/readme.md](../subprocess/readme.md) | 5 |
-| `tests/docs/algorithm/` | Per-algorithm AC-N correctness test documentation | [tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) | 3 |
+| `tests/docs/algorithm/` | Per-algorithm AC-N correctness test documentation | [tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) | 9 |
 | `tests/docs/cli/command/` | Per-command integration test case documentation | [tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 19 |
 | `tests/docs/cli/command_noun/` | Per-noun test case documentation | [tests/docs/cli/command_noun/readme.md](../../tests/docs/cli/command_noun/readme.md) | 3 |
 | `tests/docs/cli/command_verb/` | Per-verb test case documentation | [tests/docs/cli/command_verb/readme.md](../../tests/docs/cli/command_verb/readme.md) | 11 |
-| `tests/docs/cli/param/` | Per-parameter edge case test documentation | [tests/docs/cli/param/readme.md](../../tests/docs/cli/param/readme.md) | 63 |
+| `tests/docs/cli/format/` | Per-format output structure test documentation | [tests/docs/cli/format/readme.md](../../tests/docs/cli/format/readme.md) | 3 |
+| `tests/docs/cli/param/` | Per-parameter edge case test documentation | [tests/docs/cli/param/readme.md](../../tests/docs/cli/param/readme.md) | 62 |
 | `tests/docs/cli/param_group/` | Per-group interaction test documentation | [tests/docs/cli/param_group/readme.md](../../tests/docs/cli/param_group/readme.md) | 6 |
 | `tests/docs/cli/type/` | Per-type test case documentation | [tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) | 4 |
 | `tests/docs/cli/user_story/` | Per-story acceptance test documentation | [tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) | 5 |
 | `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 48 |
 | `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 9 |
-| `tests/docs/pitfall/` | Per-pitfall guard verification test documentation | [tests/docs/pitfall/readme.md](../../tests/docs/pitfall/readme.md) | 1 |
+| `tests/docs/pitfall/` | Per-pitfall guard verification test documentation | [tests/docs/pitfall/readme.md](../../tests/docs/pitfall/readme.md) | 6 |
 
 ## Master Doc Instances Table
 
@@ -60,7 +60,6 @@
 | feature | 020 | Usage Sort Strategies | [feature/020_usage_sort_strategies.md](../feature/020_usage_sort_strategies.md) |
 | feature | 021 | Extended Snapshot Fields | [feature/021_extended_snapshot_fields.md](../feature/021_extended_snapshot_fields.md) |
 | feature | 022 | Org Identity Snapshot | [feature/022_org_identity_snapshot.md](../feature/022_org_identity_snapshot.md) |
-| feature | 023 | Next Account Recommendation Strategies — DEPRECATED | [feature/023_next_account_strategies.md](../feature/023_next_account_strategies.md) |
 | feature | 024 | Session Touch via Isolated Subprocess | [feature/024_session_touch.md](../feature/024_session_touch.md) |
 | feature | 025 | Per-Machine Active Marker | [feature/025_per_machine_active_marker.md](../feature/025_per_machine_active_marker.md) |
 | feature | 026 | Subprocess Model and Effort Control | [feature/026_subprocess_model_effort.md](../feature/026_subprocess_model_effort.md) |
@@ -151,8 +150,8 @@
 | param | 053 | `for::` | [cli/param/053_for.md](../cli/param/053_for.md) |
 | param | 054 | `set_model::` | [cli/param/054_set_model.md](../cli/param/054_set_model.md) |
 | param | 055 | `set::` | [cli/param/055_set.md](../cli/param/055_set.md) |
-| param | 056 | `unclaim::` (re-activated in Feature 037 as mutation param on `.accounts`/`.usage`) | [cli/param/056_unclaim.md](../cli/param/056_unclaim.md) |
-| param | 057 | `assign::` (mutation param on `.accounts`/`.usage`, Feature 037) | [cli/param/057_assign.md](../cli/param/057_assign.md) |
+| param | 056 | `unclaim::` — REMOVED (Feature 064); replaced by `owner::0` | [cli/param/056_unclaim.md](../cli/param/056_unclaim.md) |
+| param | 057 | `assign::` — REMOVED (Feature 064); replaced by `assignee::USER@MACHINE name::X` | [cli/param/057_assign.md](../cli/param/057_assign.md) |
 | param | 058 | `force::` (bypass G5–G8 ownership enforcement) | [cli/param/058_force.md](../cli/param/058_force.md) |
 | param | 059 | `rotate::` (strategy-based rotation after quota table render) | [cli/param/059_rotate.md](../cli/param/059_rotate.md) |
 | param | 060 | `solo::` (token conservation — current+owned only) | [cli/param/060_solo.md](../cli/param/060_solo.md) |
@@ -177,16 +176,6 @@
 | user_story | 003 | Quota Monitoring | [cli/user_story/003_quota_monitoring.md](../cli/user_story/003_quota_monitoring.md) |
 | user_story | 004 | Scripted Automation | [cli/user_story/004_scripted_automation.md](../cli/user_story/004_scripted_automation.md) |
 | user_story | 005 | Credential Diagnostics | [cli/user_story/005_credential_diagnostics.md](../cli/user_story/005_credential_diagnostics.md) |
-| workflow_scenario | 001 | Account Rotation — DEPRECATED | [cli/workflow_scenario/001_account_rotation.md](../cli/workflow_scenario/001_account_rotation.md) |
-| workflow_scenario | 002 | Onboarding — DEPRECATED | [cli/workflow_scenario/002_onboarding.md](../cli/workflow_scenario/002_onboarding.md) |
-| workflow_scenario | 003 | Scripted Health Check — DEPRECATED | [cli/workflow_scenario/003_scripted_health_check.md](../cli/workflow_scenario/003_scripted_health_check.md) |
-| workflow_scenario | 004 | Account Cleanup — DEPRECATED | [cli/workflow_scenario/004_account_cleanup.md](../cli/workflow_scenario/004_account_cleanup.md) |
-| workflow_scenario | 005 | Diagnostics — DEPRECATED | [cli/workflow_scenario/005_diagnostics.md](../cli/workflow_scenario/005_diagnostics.md) |
-| workflow_scenario | 006 | Dry Run Preview — DEPRECATED | [cli/workflow_scenario/006_dry_run_preview.md](../cli/workflow_scenario/006_dry_run_preview.md) |
-| workflow_scenario | 007 | Fresh Installation — DEPRECATED | [cli/workflow_scenario/007_fresh_installation.md](../cli/workflow_scenario/007_fresh_installation.md) |
-| workflow_scenario | 008 | Live Quota Dashboard — DEPRECATED | [cli/workflow_scenario/008_live_quota_dashboard.md](../cli/workflow_scenario/008_live_quota_dashboard.md) |
-| workflow_scenario | 009 | Quota Auto Refresh — DEPRECATED | [cli/workflow_scenario/009_quota_auto_refresh.md](../cli/workflow_scenario/009_quota_auto_refresh.md) |
-| workflow_scenario | 010 | Account Relogin Recovery — DEPRECATED | [cli/workflow_scenario/010_account_relogin_recovery.md](../cli/workflow_scenario/010_account_relogin_recovery.md) |
 | command_noun | 001 | Account Noun | [cli/command_noun/001_account.md](../cli/command_noun/001_account.md) |
 | command_noun | 002 | Token Noun | [cli/command_noun/002_token.md](../cli/command_noun/002_token.md) |
 | command_noun | 003 | Credentials Noun | [cli/command_noun/003_credentials.md](../cli/command_noun/003_credentials.md) |

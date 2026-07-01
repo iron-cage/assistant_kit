@@ -5,7 +5,7 @@ use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use crate::output::{ OutputFormat, OutputOptions };
-use super::shared::require_claude_paths;
+use super::cmd_context::require_claude_paths;
 use crate::usage::map_model_shorthand;
 
 // ── Handler ───────────────────────────────────────────────────────────────────

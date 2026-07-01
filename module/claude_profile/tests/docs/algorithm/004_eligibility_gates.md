@@ -56,7 +56,7 @@ Algorithm correctness test cases for `docs/algorithm/004_eligibility_gates.md`. 
 - **Given:** An `AccountQuota` with `seven_day_util=95%` → `seven_day_left = 5.0`. Non-current, non-active.
 - **When:** Gate 7 evaluates `seven_day_left(aq) > 5.0`.
 - **Then:** `5.0 > 5.0 = false` → gate fires → account skipped. At exactly the threshold the account is considered exhausted.
-- **Source fn:** `mre_bug292_renew_skips_weekly_exhausted_even_with_soonest_renewal` (in `tests/usage/sort_next_tests.rs` — uses value below threshold; boundary-exact test TBD)
+- **Source fn:** `test_cc_gate7_boundary_exactly_5pct_skipped_in_eligibility` (in `tests/usage/sort_next_tests.rs`)
 - **Source:** [algorithm/004_eligibility_gates.md Gate 7](../../../docs/algorithm/004_eligibility_gates.md)
 
 ---

@@ -36,13 +36,23 @@ Expected result: no matches.
 - Manual inspection and debugging require external formatting tools.
 - Automated diff tests against expected fixture content will fail if format is inconsistent.
 
-### Cross-References
+### Sources
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `module/claude_profile_core/src/account.rs` | 10 JSON write sites requiring `to_string_pretty` |
-| test | `module/claude_profile/tests/usage/fetch_tests.rs` | 2 test-fixture JSON write sites |
-| test | `module/claude_profile/tests/cli/cli_runner.rs` | 1 test-fixture JSON write site |
-| exception | `module/claude_version_core/src/settings_io.rs` | `json_serialize_flat_object` — hand-rolled pretty formatter; no change needed |
-| doc | [010_persistent_storage.md](../feature/010_persistent_storage.md) | Credential store path `{root}/.persistent/claude/credential/` |
-| doc | [007_file_topology.md](../feature/007_file_topology.md) | `ClaudePaths` type — describes `.credentials.json`, `settings.json`, `~/.claude.json` |
+| File | Relationship |
+|------|-------------|
+| `module/claude_profile_core/src/account.rs` | 10 JSON write sites requiring `to_string_pretty` |
+| `module/claude_version_core/src/settings_io.rs` | `json_serialize_flat_object` — hand-rolled pretty formatter; permitted exception |
+
+### Features
+
+| File | Relationship |
+|------|-------------|
+| [010_persistent_storage.md](../feature/010_persistent_storage.md) | Credential store path `{root}/.persistent/claude/credential/` |
+| [007_file_topology.md](../feature/007_file_topology.md) | `ClaudePaths` type — describes `.credentials.json`, `settings.json`, `~/.claude.json` |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| `module/claude_profile/tests/usage/fetch_tests.rs` | 2 test-fixture JSON write sites |
+| `module/claude_profile/tests/cli/cli_runner.rs` | 1 test-fixture JSON write site |

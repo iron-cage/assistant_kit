@@ -33,7 +33,7 @@
 | 13 | `.account.rotate` | **DEPRECATED** — hidden redirector; exits 1 with notice to use `.usage rotate::1` | 0 | `clp .account.rotate` |
 | 14 | `.account.renewal` | Set/clear billing renewal timestamp override for one or all accounts | 6 | `clp .account.renewal name::alice@acme.com from_now::+0m` |
 | 15 | `.account.inspect` | Live diagnostic inspection of identity, subscription, and org fields | 4 | `clp .account.inspect` |
-| 16 | `.model` | Get or set the Claude Code session model in `~/.claude/settings.json` | 2 | `clp .model set::opus` |
+| 17 | `.model` | Get or set the Claude Code session model in `~/.claude/settings.json` | 2 | `clp .model set::opus` |
 
 ### Quick Reference
 

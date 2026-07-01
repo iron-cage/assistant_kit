@@ -80,7 +80,7 @@ fn it_ft028_17_only_active_single_http_fetch()
     eprintln!( "it_ft028_17: no live token — skipping" );
     return;
   };
-  if !require_live_api( "it_ft028_17" ) { return; }
+  require_live_api( "it_ft028_17" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();

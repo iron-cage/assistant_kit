@@ -2,7 +2,9 @@
 
 | File | Responsibility |
 |------|----------------|
-| `mod.rs` | Module declarations, public API re-exports, and shared test support. |
+| `mod.rs` | Module declarations and public API re-exports. |
+| `test_support.rs` | Shared test factory helpers: account quota builders, constants. |
+| `test_bridge.rs` | Test visibility bridge: re-exports pub(crate) items for integration tests. |
 | `types.rs` | AccountQuota and strategy enums: SortStrategy, PreferStrategy. |
 | `fetch.rs` | Quota HTTP fetch, token reads, and per-account error formatting. |
 | `fetch_cache.rs` | Centralized quota cache read with polynomial approximation. |

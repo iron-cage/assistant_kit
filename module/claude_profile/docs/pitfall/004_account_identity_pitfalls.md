@@ -1,5 +1,12 @@
 # Pitfall: Account Identity Pitfalls
 
+### Scope
+
+- **Purpose**: Document failure modes in account identity inference and active-marker naming.
+- **Responsibility**: Covers test fixture hostname collision and account name source priority ordering.
+- **In Scope**: `_active_{host}_{user}` marker identity collisions; `account_save_routine()` name inference; BUG-308, BUG-212.
+- **Out of Scope**: Active marker format (→ schema/005); multi-machine marker mechanics (→ state_machine/001).
+
 ### Pattern
 
 Account identity — name inference, machine-specific markers, and test fixture naming — has several subtle failure modes.
@@ -20,11 +27,16 @@ Early save logic read the active marker to infer the account name when `name::` 
 
 **Rule:** Account name inference priority: (1) `name::` param → (2) `oauthAccount.emailAddress` from `~/.claude.json` → (3) `_active_{host}_{user}` marker as last resort.
 
-### Cross-References
+### Features
 
 | File | Relationship |
 |------|-------------|
 | [feature/025_per_machine_active_marker.md](../feature/025_per_machine_active_marker.md) | Per-machine marker format and `active_marker_filename()` |
 | [feature/002_account_save.md](../feature/002_account_save.md) | Name inference algorithm |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
 | [schema/005](../schema/005_active_marker.md) | Active marker schema |
 | [schema/007](../schema/007_claude_json.md) | `~/.claude.json` `oauthAccount.emailAddress` field |

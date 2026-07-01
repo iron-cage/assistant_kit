@@ -1,4 +1,4 @@
-# Verb :: inspect
+# Verb: inspect
 
 Performs a unified live account diagnostic — identity, subscription, org, and quota utilization for a named account. Fetches data from three API endpoints (`GET /api/oauth/account`, `GET /api/oauth/claude_cli/roles`, `GET /api/oauth/usage`), consolidates the results, and reports identity fields (tagged_id, uuid, email, name), subscription tier, billing type, membership list, capabilities, rate-limit tier, and 5h/7d/Sonnet quota utilization with reset countdowns. Does not modify local state unless `refresh::1` triggers a token refresh subprocess.
 
@@ -45,7 +45,7 @@ Performs a unified live account diagnostic — identity, subscription, org, and 
 [saved/active] --account.inspect--> [saved/active]  (state unchanged; read only)
 ```
 
-### Cross-References
+### See Also
 
 | File | Relationship |
 |------|-------------|

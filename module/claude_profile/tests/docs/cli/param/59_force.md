@@ -8,6 +8,8 @@ See [param/058_force.md](../../../../docs/cli/param/058_force.md) for specificat
 When combined with `dry::1`: gate is bypassed but mutation is still previewed without writing.
 `force::1` without a mutation param is silently ignored (no error).
 
+**Behavioral Divergence Pair:** EC-1 ↔ EC-5 — `force::1` on an other-owned account bypasses G5 and exits 0 (switch performed); `force::0` (the default) enforces G5 and exits 1 with ownership violation message.
+
 ### Test Case Index
 
 | ID | Test Name | Category |

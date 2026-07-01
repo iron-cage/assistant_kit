@@ -1,5 +1,12 @@
 # Pitfall: Ownership Gate Pitfalls
 
+### Scope
+
+- **Purpose**: Document failure modes in ownership and occupied-elsewhere gate enforcement.
+- **Responsibility**: Covers missing `is_occupied_elsewhere` guards in refresh, touch, fetch, and trace code; scope of explicit command gates.
+- **In Scope**: G1b, G2, G4 gate pitfalls; BUG-303, BUG-302, BUG-305, BUG-306; explicit command gate scope.
+- **Out of Scope**: Ownership lifecycle states (→ state_machine/004); ownership feature parameters (→ feature/036).
+
 ### Pattern
 
 Ownership gates must guard BOTH `is_owned=false` AND `is_occupied_elsewhere=true`. Missing either half allows operations that damage active sessions on other machines.
@@ -46,7 +53,7 @@ Every gate that protects against cross-machine interference MUST check BOTH:
 
 These are independent conditions. An owned account can be occupied elsewhere; a non-owned account may or may not be occupied. Both must be guarded independently.
 
-### Cross-References
+### Features
 
 | File | Relationship |
 |------|-------------|
@@ -54,4 +61,9 @@ These are independent conditions. An owned account can be occupied elsewhere; a 
 | [feature/017_token_refresh.md](../feature/017_token_refresh.md) | G2 gate (refresh) |
 | [feature/024_session_touch.md](../feature/024_session_touch.md) | G4 gate (touch) |
 | [feature/061_solo_token_conservation.md](../feature/061_solo_token_conservation.md) | G1b gate (fetch) |
+
+### State Machines
+
+| File | Relationship |
+|------|-------------|
 | [state_machine/004](../state_machine/004_ownership_lifecycle.md) | Ownership lifecycle |

@@ -1,8 +1,8 @@
-# Group :: 5. Display Control
+# Group: 5. Display Control
 
 **Parameters:** `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`, `abs::`, `no_color::`
-**Pattern:** Column visibility, row filtering, and display modifiers for `.usage`
-**Purpose:** Controls which columns appear, which rows survive filtering, pagination/truncation, and display rendering (absolute values, color stripping) for the `.usage` quota table.
+**Pattern:** Column visibility, row filtering, and display modifiers for `.usage` and `.accounts`
+**Purpose:** Controls which columns appear, which rows survive filtering, pagination/truncation, and display rendering (absolute values, color stripping) for the `.usage` and `.accounts` quota tables.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -23,6 +23,7 @@
 | # | Command | Role |
 |---|---------|------|
 | 1 | [`.usage`](../command/006_usage.md#command--9-usage) | All 11 display and filter params |
+| 2 | [`.accounts`](../command/001_account.md#command--3-accounts) | All 11 display and filter params |
 
 **Typical Patterns:**
 
@@ -51,7 +52,7 @@ clp .usage abs::1
 
 **Semantic Coherence Test**
 
-> "Does parameter X control **what rows appear, which columns are visible, or how values are rendered** in the `.usage` quota table?"
+> "Does parameter X control **what rows appear, which columns are visible, or how values are rendered** in the `.usage` or `.accounts` quota table?"
 
 All 11 members pass:
 - `cols::` — controls which columns are visible

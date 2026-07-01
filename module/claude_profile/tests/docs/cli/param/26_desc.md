@@ -2,6 +2,8 @@
 
 Edge case coverage for the `desc::` parameter on `.usage`. See [param/026_desc.md](../../../../docs/cli/param/026_desc.md) for specification.
 
+**Behavioral Divergence Pair:** EC-1 ↔ EC-3 — `desc::0` (valid bool) is accepted and exits 0 with the usage table; `desc::2` (invalid bool) exits 1 with an error listing the valid values (`0`, `1`).
+
 ### Test Case Index
 
 | ID | Test Name | Category |
@@ -11,6 +13,7 @@ Edge case coverage for the `desc::` parameter on `.usage`. See [param/026_desc.m
 | EC-3 | `desc::2` rejected (invalid bool) | Invalid Value |
 | EC-4 | `sort::name desc::0` identical to `sort::name` (ascending default) | Context Default |
 | EC-5 | `sort::name desc::1` reverses `sort::name` alphabetical order | Direction Override |
+| EC-6 | `sort::renew desc::1` reverses renewal-based ordering vs `sort::renew desc::0` | Direction-Sort Interaction |
 
 ---
 
@@ -65,5 +68,18 @@ Edge case coverage for the `desc::` parameter on `.usage`. See [param/026_desc.m
 - **When-B:** `clp .usage sort::name desc::1`
 - **Then-A:** Row order: `a@x.com` before `z@x.com`.
 - **Then-B:** Row order: `z@x.com` before `a@x.com` (reversed).
+- **Exit:** 0 both cases
+- **Source:** [feature/020_usage_sort_strategies.md AC-05](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### EC-6: `sort::renew desc::1` reverses renewal-based ordering
+
+- **Behavioral Divergence:** `sort::renew desc::0` (ascending, soonest renewal first) vs `sort::renew desc::1` (descending, latest renewal first) produce opposite row orders for the same two accounts.
+- **Given:** Two owned accounts with different renewal times: `a@x.com` renews in 1 hour, `b@x.com` renews in 10 hours. Both have valid cached quota data.
+- **When-A:** `clp .usage sort::renew desc::0`
+- **When-B:** `clp .usage sort::renew desc::1`
+- **Then-A:** `a@x.com` appears before `b@x.com` (soonest renewal first).
+- **Then-B:** `b@x.com` appears before `a@x.com` (descending renewal order — latest renewal first).
 - **Exit:** 0 both cases
 - **Source:** [feature/020_usage_sort_strategies.md AC-05](../../../../docs/feature/020_usage_sort_strategies.md)

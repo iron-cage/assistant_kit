@@ -1,4 +1,4 @@
-# User Story :: 5. Credential Diagnostics
+# User Story: 5. Credential Diagnostics
 
 **Persona:** Developer troubleshooting authentication failures or verifying account configuration
 **Goal:** Inspect live credential and environment state without modifying the account store

@@ -1,12 +1,12 @@
 //! `.accounts` command handler.
 
-use core::fmt::Write as _;
 use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use crate::output::{ OutputFormat, OutputOptions };
-use super::shared::{ require_credential_store, io_err_to_error_data, resolve_account_name };
+use super::cmd_args::{ io_err_to_error_data, resolve_account_name };
+use super::cmd_context::require_credential_store;
 use super::accounts_render::{ IdentityCols, render_accounts_text, render_accounts_json, render_accounts_table };
 use claude_profile_core::account::trace_ts;
 
@@ -125,7 +125,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
   };
 
   // ── Mutation dispatch ──────────────────────────────────────────────────────
-  use super::shared::is_dry;
+  use super::cmd_args::is_dry;
 
   // REMOVED_TOGGLE checks: assign, unclaim, for, active → migration messages (Feature 064/065).
   if cmd.arguments.contains_key( "assign" )
@@ -269,102 +269,10 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
           "owner::USER@MACHINE requires name:: to specify the target account".to_string(),
         ) );
       }
-      // Batch-clear all accounts currently owned by this identity.
-      // Unowned and foreign-owned accounts are skipped with a "skip" message (AC-09).
-      let mut out = String::new();
-      for acct in &all_accounts
-      {
-        let json_path = credential_store.join( format!( "{}.json", acct.name ) );
-        // No metadata file → silently skip (no ownership info to act on).
-        if !json_path.exists() { continue; }
-        let acct_owner = crate::account::read_owner( &credential_store, &acct.name );
-        if acct_owner.is_empty()
-        {
-          // Unowned — nothing to clear; skip with message (AC-09).
-          writeln!( out, "skip {}", acct.name ).unwrap();
-          continue;
-        }
-        if !force && !crate::account::is_owned( &acct_owner )
-        {
-          // Owned by another identity — skip with message (AC-09).
-          if trace { eprintln!( "{}accounts owner  batch-skip (foreign owner): {}  owner={acct_owner}", trace_ts(), acct.name ) }
-          writeln!( out, "skip {}", acct.name ).unwrap();
-          continue;
-        }
-        if is_dry_run
-        {
-          writeln!( out, "[dry-run] would clear owner of {}", acct.name ).unwrap();
-          continue;
-        }
-        crate::account::write_owner( &acct.name, &credential_store, "" )
-          .map_err( |e| io_err_to_error_data( &e, "accounts owner batch-clear" ) )?;
-        if trace { eprintln!( "{}accounts owner  cleared: {}  was={acct_owner}", trace_ts(), acct.name ) }
-        writeln!( out, "unclaimed {}", acct.name ).unwrap();
-      }
-      return Ok( OutputData::new( out, "text" ) );
+      return crate::owner_dispatch::owner_batch_clear( trace, force, is_dry_run, &all_accounts, &credential_store, "accounts" );
     }
 
-    // name:: present — resolve each component (comma-list supported for owner:: ops).
-    let target_names : Vec< String > = if raw_name.contains( ',' )
-    {
-      raw_name.split( ',' )
-        .map( | part | resolve_account_name( part.trim(), &credential_store ) )
-        .collect::< Result< Vec< _ >, _ > >()?
-    }
-    else
-    {
-      vec![ name_arg.clone() ]
-    };
-
-    let mut out = String::new();
-    for name in &target_names
-    {
-      let json_path = credential_store.join( format!( "{name}.json" ) );
-      if !json_path.exists()
-      {
-        return Err( ErrorData::new(
-          ErrorCode::InternalError,
-          format!( "account not found: {name}" ),
-        ) );
-      }
-      // G8 ownership gate — evaluated per account, even in dry-run (AC-16/AC-17).
-      let acct_owner = crate::account::read_owner( &credential_store, name );
-      if !force && !crate::account::is_owned( &acct_owner )
-      {
-        return Err( ErrorData::new(
-          ErrorCode::ArgumentTypeMismatch,
-          format!( "ownership violation: {name} is owned by {acct_owner}" ),
-        ) );
-      }
-      if is_dry_run
-      {
-        if is_sentinel
-        {
-          writeln!( out, "[dry-run] would clear owner of {name}" ).unwrap();
-        }
-        else
-        {
-          writeln!( out, "[dry-run] would set owner of {name} to {ov}" ).unwrap();
-        }
-        continue;
-      }
-      let new_owner = if is_sentinel { "" } else { ov.as_str() };
-      crate::account::write_owner( name, &credential_store, new_owner )
-        .map_err( |e| io_err_to_error_data( &e, "accounts owner" ) )?;
-      if trace
-      {
-        eprintln!( "{}accounts owner  write_owner: OK  name={name} identity={}", trace_ts(), if is_sentinel { "(cleared)" } else { ov } );
-      }
-      if is_sentinel
-      {
-        writeln!( out, "unclaimed {name}" ).unwrap();
-      }
-      else
-      {
-        writeln!( out, "owned {name} by {ov}" ).unwrap();
-      }
-    }
-    return Ok( OutputData::new( out, "text" ) );
+    return crate::owner_dispatch::owner_named_dispatch( trace, force, is_dry_run, is_sentinel, ov, &raw_name, &name_arg, &credential_store, "accounts" );
   }
 
   // ── Legacy field-toggle rejection (Feature 037 — removed; use cols:: instead) ─

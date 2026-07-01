@@ -1,4 +1,4 @@
-# Format :: 2. json
+# Format: 2. json
 
 - **ID:** F02
 - **Trigger:** `format::json`

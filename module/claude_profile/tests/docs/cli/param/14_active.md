@@ -15,7 +15,7 @@ active parameter. The behavioral semantics are now exercised by `64_assignee.md`
 cover `assignee::USER@MACHINE`, `assignee::0` sentinel, sanitization, dry-run, and the `active::`
 REMOVED_TOGGLE migration path).
 
-### Superseded Test Case Index (DO NOT IMPLEMENT)
+### Superseded Cases (REMOVED — DO NOT IMPLEMENT)
 
 | ID | Test Name | Category | Status |
 |----|-----------|----------|--------|

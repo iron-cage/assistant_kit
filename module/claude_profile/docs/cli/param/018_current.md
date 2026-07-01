@@ -1,4 +1,4 @@
-# Parameter :: 18. `current::`
+# Parameter: 18. `current::`
 
 Controls whether the current (live) account line appears in `.accounts` output for each account entry. The current account is the saved account whose `accessToken` matches the live `~/.claude/.credentials.json` file — distinct from the active account (per-machine active marker). See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
 

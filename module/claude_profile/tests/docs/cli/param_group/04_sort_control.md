@@ -9,6 +9,7 @@ Interaction tests for Group 4 (Sort Control: `sort::`, `desc::`, `prefer::`). Se
 | CC-1 | `sort::` and `desc::` have no effect on `format::json` output | JSON No-op |
 | CC-2 | `prefer::` selects weekly column for `sort::renew` tiebreak; group membership unchanged | Prefer x Renew |
 | CC-3 | `sort::` drives `-> Next` recommendation in footer | Sort x Recommendation |
+| CC-4 | `sort::name` and `sort::renew` produce different TEXT row ordering for same accounts | Sort Strategy Divergence |
 
 ---
 
@@ -49,3 +50,17 @@ Interaction tests for Group 4 (Sort Control: `sort::`, `desc::`, `prefer::`). Se
 - **Then-B:** Footer: "Next (renew): b@x.com" (soonest renewal event).
 - **Exit:** 0 both cases
 - **Source:** [feature/020_usage_sort_strategies.md AC-09](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### CC-4: `sort::name` and `sort::renew` produce different TEXT row ordering
+
+- **Behavioral Divergence:** Unlike `format::json` (where row order is always alphabetical — CC-1), TEXT output row ordering is determined by `sort::`. `sort::name` uses alphabetical order; `sort::renew` uses next renewal event time within each status group.
+- **Given:** Two owned accounts: `z@x.com` (renews in 10 min) and `a@x.com` (renews in 10 hours). Both in the same status group (Green). Valid cached quota data.
+- **When-A:** `clp .usage sort::name`
+- **When-B:** `clp .usage sort::renew`
+- **Then-A:** Table row order: `a@x.com` first (alphabetical ascending).
+- **Then-B:** Table row order: `z@x.com` first (soonest renewal within the group).
+- **Note:** Both use text format. JSON format would show `a@x.com` first in both cases (CC-1).
+- **Exit:** 0 both cases
+- **Source:** [feature/020_usage_sort_strategies.md AC-11, AC-13](../../../../docs/feature/020_usage_sort_strategies.md)

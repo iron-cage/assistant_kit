@@ -257,7 +257,7 @@ fn it102_lim_it_sort_renew_shows_recommendation()
     eprintln!( "it102: no live token — skipping" );
     return;
   };
-  if !require_live_api( "it102" ) { return; }
+  require_live_api( "it102" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -288,7 +288,7 @@ fn it103_lim_it_sort_renews_shows_recommendation()
     eprintln!( "it103: no live token — skipping" );
     return;
   };
-  if !require_live_api( "it103" ) { return; }
+  require_live_api( "it103" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -319,7 +319,7 @@ fn it104_lim_it_footer_shows_strategy_recommendation()
     eprintln!( "it104: no live token — skipping" );
     return;
   };
-  if !require_live_api( "it104" ) { return; }
+  require_live_api( "it104" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -482,7 +482,7 @@ fn it110_lim_it_touch_1_subprocess_spawned_for_idle_account()
     eprintln!( "it110: no live token — skipping" );
     return;
   };
-  if !require_live_api( "it110" ) { return; }
+  require_live_api( "it110" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -681,7 +681,7 @@ fn it116_lim_it_account_with_resets_at_absent_is_touched()
     eprintln!( "it116: no live token — skipping" );
     return;
   };
-  if !require_live_api( "it116" ) { return; }
+  require_live_api( "it116" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -816,7 +816,7 @@ fn it120_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle()
     eprintln!( "it120: no live token — skipping" );
     return;
   };
-  if !require_live_api( "it120" ) { return; }
+  require_live_api( "it120" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct@test.com", &token, true );

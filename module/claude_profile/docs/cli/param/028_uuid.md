@@ -1,4 +1,4 @@
-# Parameter :: 28. `uuid::`
+# Parameter: 28. `uuid::`
 
 Shows the stable user identifier (`taggedId`) from the `oauthAccount` object in `{name}.json`.
 

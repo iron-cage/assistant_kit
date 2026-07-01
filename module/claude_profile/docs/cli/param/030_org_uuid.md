@@ -1,4 +1,4 @@
-# Parameter :: 30. `org_uuid::`
+# Parameter: 30. `org_uuid::`
 
 Shows the organization UUID from `{name}.json` (populated at `save()` time via endpoint 005).
 

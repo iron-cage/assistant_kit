@@ -31,10 +31,15 @@ All path operations in `claude_profile` must work correctly on Linux, macOS, and
 - Breaks tooling integration on macOS or Windows users
 - Creates hidden platform-specific bugs that only surface when deployed to a different OS
 
-### Cross-References
+### Sources
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/paths.rs` | `ClaudePaths` — all path construction via `PathBuf::from(home).join(...)` |
-| source | `src/persist.rs` | `PersistPaths` — `$HOME`/`$USERPROFILE`/`$PRO` resolution chain |
-| doc | [010_persistent_storage.md](../feature/010_persistent_storage.md) | `$USERPROFILE` fallback for Windows |
+| File | Relationship |
+|------|-------------|
+| `src/paths.rs` | `ClaudePaths` — all path construction via `PathBuf::from(home).join(...)` |
+| `src/persist.rs` | `PersistPaths` — `$HOME`/`$USERPROFILE`/`$PRO` resolution chain |
+
+### Features
+
+| File | Relationship |
+|------|-------------|
+| [010_persistent_storage.md](../feature/010_persistent_storage.md) | `$USERPROFILE` fallback for Windows |

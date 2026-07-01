@@ -602,18 +602,25 @@ pub fn live_active_token() -> Option< String >
   claude_profile::account::parse_string_field( &content, "accessToken" )
 }
 
-/// Check whether the live Anthropic API is accessible (not rate-limited).
+/// Check whether the live Anthropic API is accessible for `lim_it` tests.
 ///
 /// Makes a single `curl` probe on first call, then caches the result in a
 /// temp file for 60 seconds so all test processes within the same nextest
-/// run share one probe.  Returns `false` when the API returns HTTP 429.
+/// run share one probe.
 ///
-/// `lim_it` tests that require **successful** API responses should call
+/// Assert that the live Anthropic API is reachable before running a `lim_it` test.
+///
+/// `lim_it` tests that require **successful** API responses must call
 /// this guard.  Tests that handle error responses gracefully (e.g. testing
 /// the "fetch failed" trace path) do NOT need this guard.
+///
+/// # Panics
+///
+/// Panics if the API is unreachable (HTTP 0) or rate-limited (HTTP 429) —
+/// both conditions mean the test cannot produce a valid result and must fail
+/// loudly rather than silently pass.
 #[ inline ]
-#[ must_use ]
-pub fn require_live_api( label : &str ) -> bool
+pub fn require_live_api( label : &str )
 {
   let probe_path = std::env::temp_dir().join( ".lim_it_api_probe" );
 
@@ -626,11 +633,11 @@ pub fn require_live_api( label : &str ) -> bool
     {
       let cached = std::fs::read_to_string( &probe_path )
         .is_ok_and( |s| s.trim() == "1" );
-      if !cached
-      {
-        eprintln!( "{label}: API rate-limited (cached probe) — skipping" );
-      }
-      return cached;
+      assert!(
+        cached,
+        "{label}: API rate-limited (cached probe) — live API required for this test",
+      );
+      return;
     }
   }
 
@@ -651,11 +658,10 @@ pub fn require_live_api( label : &str ) -> bool
     .unwrap_or( 0 );
   let ok = http_code != 0 && http_code != 429;
   let _ = std::fs::write( &probe_path, if ok { "1" } else { "0" } );
-  if !ok
-  {
-    eprintln!( "{label}: API rate-limited (HTTP {http_code}) — skipping" );
-  }
-  ok
+  assert!(
+    ok,
+    "{label}: API rate-limited or unreachable (HTTP {http_code}) — live API required for this test",
+  );
 }
 
 /// Spawn the binary, wait `secs` seconds, kill it, and return all bytes written to stdout.

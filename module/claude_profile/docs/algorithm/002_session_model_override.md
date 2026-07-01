@@ -1,15 +1,24 @@
 # Algorithm: Session Model Override
 
-### Purpose
+### Scope
+
+- **Purpose**: Define the bidirectional session model override algorithm for `~/.claude/settings.json`.
+- **Responsibility**: Documents the model override decision table, thresholds, and `apply_model_override()` / `recommended_model()` entry points.
+- **In Scope**: `apply_model_override()` and `recommended_model()` decision logic; `OPUS_OVERRIDE_THRESHOLD`; effort coupling (Fix BUG-322, TSK-335).
+- **Out of Scope**: Session model get/set API (→ feature/034); subprocess model selection (→ algorithm/001).
+
+### Abstract
 
 Bidirectionally manage the interactive session model in `~/.claude/settings.json` based on Sonnet quota utilization. Upgrades from Opus back to Sonnet when quota recovers; downgrades to Opus when near-exhausted.
 
-### Entry Points
+### Algorithm
+
+#### Entry Points
 
 - `src/usage/api.rs` — `apply_model_override(quota, paths, trace, label, name)` (mutation; `quota: &OauthUsageData`)
 - `src/usage/format.rs` — `recommended_model(aq)` (read-only, for footer recommendation; `aq: &AccountQuota`)
 
-### Decision Table
+#### Decision Table
 
 Effort is written **unconditionally** on every call to `apply_model_override()`, regardless of whether the model actually changed (`overrode` value). This ensures effort always matches the model state even for stable sessions (TSK-335 — Fix H2).
 
@@ -25,11 +34,11 @@ Effort is written **unconditionally** on every call to `apply_model_override()`,
 "Opus form" = model string matches `claude-opus-*` or `"opus"`.
 "Sonnet form" = model string matches `claude-sonnet-*` or `"sonnet"`.
 
-### Threshold
+#### Threshold
 
 10.0 from `OPUS_OVERRIDE_THRESHOLD` constant in `format.rs:385` (canonical) — actual gate: `100.0 - seven_day_sonnet.utilization < OPUS_OVERRIDE_THRESHOLD` (i.e., < 10% remaining).
 
-### Bug History
+#### Bug History
 
 - **BUG-300 (Fix TSK-302):** `map_or(0.0, ...)` on `seven_day_sonnet = None` returned 0.0 < threshold → Opus override fired unconditionally for accounts without Sonnet tier. Fix: `if let Some(ref sonnet)` guard.
 - **BUG-311 (Fix 2026-06-23):** one-way ratchet — only wrote "opus" (exhaustion), never restored "sonnet" (recovery). Fix: added `else`-branch calling `override_session_model_to_sonnet()`. Tier-absent path also writes "sonnet" conservatively.
@@ -40,11 +49,11 @@ Effort is written **unconditionally** on every call to `apply_model_override()`,
   - **H3 — render.rs Next line used carry-forward session_effort instead of model-derived effort:** `rec_display` was `session_effort` (the current account's effort read from settings.json), not derived from the recommended account's model. Fix: compute `rec_effort = if rec_model == "opus" { "max" } else { "high" }` inside `render.rs` — always show model-derived effort in the Next line.
   - **Carry-forward removal:** `api.rs` rotation dispatcher removed `if let Some(se) = session_effort { set_session_effort(paths, se) }` — carry-forward was overwriting model-derived effort from `apply_model_override()` with stale pre-rotation effort.
 
-### Relationship to `recommended_model()`
+#### Relationship to `recommended_model()`
 
 `recommended_model(aq)` in `format.rs` returns the recommended model string without writing to disk, using `OPUS_OVERRIDE_THRESHOLD` directly. `apply_model_override()` also uses `OPUS_OVERRIDE_THRESHOLD` directly (not via `recommended_model()`) — the two functions share the same constant but are independent entry points. The footer `Next` line uses `recommended_model()` directly.
 
-### API Change Impact (2026-06-25)
+#### API Change Impact (2026-06-25)
 
 The Anthropic API restructured `GET /api/oauth/usage` between 2026-06-24T22:06Z and 2026-06-25T01:24Z. The `seven_day_sonnet` field is now always `null`. As a result:
 
@@ -53,7 +62,7 @@ The Anthropic API restructured `GET /api/oauth/usage` between 2026-06-24T22:06Z 
 
 This is a **temporary blind spot** until Feature 066 (dual-source parsing) populates `seven_day_sonnet` from the new `limits` array when Anthropic re-enables per-model entries. See [algorithm/009](009_oauth_usage_response_migration.md).
 
-### Cross-References
+### Features
 
 | File | Relationship |
 |------|-------------|
@@ -61,6 +70,21 @@ This is a **temporary blind spot** until Feature 066 (dual-source parsing) popul
 | [feature/034_explicit_session_model_override.md](../feature/034_explicit_session_model_override.md) | `set_session_model()` / `get_session_model()` |
 | [feature/062_unified_session_config.md](../feature/062_unified_session_config.md) | `recommended_model()` canonical entry point |
 | [feature/039_decision_algorithms.md](../feature/039_decision_algorithms.md) | Table 2 (legacy reference) |
+
+### Algorithms
+
+| File | Relationship |
+|------|-------------|
 | [algorithm/009](009_oauth_usage_response_migration.md) | API response format change — why `seven_day_sonnet` is currently always `None`; dual-source parsing recovery path |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
 | [schema/006](../schema/006_settings_json.md) | `model` and `effortLevel` fields in `settings.json` |
+
+### Pitfalls
+
+| File | Relationship |
+|------|-------------|
 | [pitfall/006](../pitfall/006_model_override_pitfalls.md) | Known pitfalls — absent-tier confusion, one-way ratchet, effort gate, carry-forward overwrite |

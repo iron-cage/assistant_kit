@@ -1,14 +1,23 @@
 # Algorithm: OAuth Usage Response Dual-Source Parsing
 
-### Purpose
+### Scope
+
+- **Purpose**: Define the dual-source parsing algorithm for `GET /api/oauth/usage` API responses.
+- **Responsibility**: Documents the two-phase parsing strategy, `limits` array format, and backward/forward compatibility invariants.
+- **In Scope**: `parse_oauth_usage()` algorithm; named-field Phase 1 and `limits`-array Phase 2; `scan_limits_for_kind()` logic; operational blind spots.
+- **Out of Scope**: HTTP transport mechanics (→ `claude_quota/`); downstream algorithm behavior when data changes (→ algorithm/001, algorithm/002).
+
+### Abstract
 
 Parse per-model quota data from `GET /api/oauth/usage` using two response formats: the original named-field format (`seven_day_sonnet`, etc.) and the new `limits` array format introduced 2026-06-25. When Anthropic re-enables per-model quota entries in the `limits` array, `clp` auto-recovers without downstream code changes.
 
-### Entry Point
+### Algorithm
+
+#### Entry Point
 
 `claude_quota/src/lib.rs` — `parse_oauth_usage(body: &str) -> Result<OauthUsageData, QuotaError>`
 
-### API Response Change (2026-06-24 → 2026-06-25)
+#### API Response Change (2026-06-24 → 2026-06-25)
 
 Between measurement i13 (`2026-06-24T22:06Z`, last with Sonnet data) and measurement i10 (`2026-06-25T01:24Z`, first without), Anthropic restructured the `GET /api/oauth/usage` JSON response:
 
@@ -60,7 +69,7 @@ Between measurement i13 (`2026-06-24T22:06Z`, last with Sonnet data) and measure
 
 **Current state (as of 2026-06-25):** `limits` contains only `"session"` and `"weekly_all"` entries. No per-model (Sonnet/Opus) entries exist. The `seven_day_sonnet` named field is present in the response but always `null`. Per-model `limits` entries are expected to be re-enabled in a future API change.
 
-### Operational Blind Spots (current state)
+#### Operational Blind Spots (current state)
 
 With `seven_day_sonnet = None`, three algorithms produce suboptimal or unsafe behavior:
 
@@ -74,7 +83,7 @@ With `seven_day_sonnet = None`, three algorithms produce suboptimal or unsafe be
 
 **Proxy risk:** `7d Left` (all-model weekly quota) is NOT a reliable proxy for Sonnet quota. Observed gap: one account showed `7d Left = 82%` while Sonnet-specific quota was only `11%` remaining — a 71-point difference.
 
-### Dual-Source Parsing Algorithm
+#### Dual-Source Parsing Algorithm
 
 Implemented in `parse_oauth_usage()`. Phase 1 preserves backward compatibility; Phase 2 provides forward compatibility when per-model `limits` entries are re-enabled.
 
@@ -134,19 +143,29 @@ fn scan_limits_for_kind(body: &str, kind_needles: &[&str]) -> Option<PeriodUsage
 
 **`percent` → `utilization` mapping:** The `limits` entries use `percent` (integer 0–100) for consumed quota. The named-field format uses `utilization` (f64, 0.0–100.0). Semantics are identical. Mapping: `utilization = percent as f64`. No scale conversion needed.
 
-### Parsing Invariants
+#### Parsing Invariants
 
 - Named-field guard remains valid: the new response body still contains `"five_hour"`, `"seven_day"`, and `"seven_day_sonnet"` keys (the latter as `null`) — the guard passes.
 - `parse_period()` returns `None` for `null` without error — no guard change needed.
 - Phase 2 (`scan_limits_for_kind`) is additive — runs only when Phase 1 returned `None`; a `Some` from Phase 1 is never overridden.
 - `OauthUsageData` struct is unchanged — all downstream consumers (`apply_model_override`, `resolve_model`, `recommended_model`) already handle `Some`/`None` and auto-recover when `seven_day_sonnet` becomes `Some` again.
 
-### Cross-References
+### Algorithms
 
 | File | Relationship |
 |------|-------------|
 | [algorithm/001_touch_model_selection.md](001_touch_model_selection.md) | Affected algorithm — `resolve_model(Auto)` uses `seven_day_sonnet`; blind spot row 2 above |
 | [algorithm/002_session_model_override.md](002_session_model_override.md) | Affected algorithm — `apply_model_override()` uses `seven_day_sonnet`; blind spot row 1 above |
+
+### Features
+
+| File | Relationship |
+|------|-------------|
 | [feature/009_token_usage.md](../feature/009_token_usage.md) | `7d(Son)` column sourced from `OauthUsageData.seven_day_sonnet`; `recommended_model()` uses it; blind spot row 3 above |
 | [feature/066_dual_source_quota_parsing.md](../feature/066_dual_source_quota_parsing.md) | Implementation feature spec — acceptance criteria for this algorithm |
+
+### Sources
+
+| File | Relationship |
+|------|-------------|
 | `claude_quota/src/lib.rs` | `parse_oauth_usage()`, `parse_period()`, `scan_limits_for_kind()`, `OauthUsageData`, `PeriodUsage` |

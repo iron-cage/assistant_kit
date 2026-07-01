@@ -107,7 +107,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
   - `dead@x.com`: `result = Err(...)` → 🔴 G4 Dead.
 - **When:** `status_group_of(aq)` is evaluated per account via `sort_indices` (entry point: `sort.rs:31-48`).
 - **Then:** Group assignment: `green@x.com` → Green; `h_exh@x.com` → HExhausted; `weekly@x.com` → WeeklyExhausted; `both@x.com` → WeeklyExhausted (same G3 — `(false,false)` maps to `StatusGroup::WeeklyExhausted`); `dead@x.com` → Dead. Output row order: Green (G1) → h-exhausted (G2) → weekly-exhausted (G3, including `both@x.com`) → Dead (G4 🔴). `sort::name` alpha order is overridden by group partition.
-- **Source fn:** `mre_bug321_four_group_partition_order` (in `src/usage/sort.rs` or `src/usage/mod.rs`)
+- **Source fn:** `mre_bug321_four_group_partition_order` (in `tests/usage/sort_tests.rs`)
 - **Source:** [feature/039_decision_algorithms.md Table 3](../../../docs/feature/039_decision_algorithms.md)
 
 ---
@@ -196,7 +196,7 @@ Feature behavioral requirement test cases for `docs/feature/039_decision_algorit
 |-----------|-----------|----------------|
 | Touch model selection (Table 1) | `it_imodel_auto_selects_sonnet_when_son_idle`, `it_imodel_auto_selects_haiku_when_son_tier_absent`, `mre_bug301_son_active_with_remaining_quota_selects_sonnet` in `src/usage/subprocess.rs` | `subprocess.rs:29-59` |
 | Session model override (Table 2) | `ft01..ft04_recommended_model_*` in `tests/usage/format_tests.rs` (Feature 062); `t07_model_override_writes_sonnet_at_10pct_boundary` in `tests/usage/api_tests_a.rs`; `test_render_footer_model_label_at_10pct_no_override`, `test_render_footer_model_label_below_10pct_opus` in `tests/usage/render_tests_a.rs` | `format.rs` (`recommended_model`, `OPUS_OVERRIDE_THRESHOLD`), `api.rs:259-290` (`apply_model_override`), `render.rs` (footer) |
-| Quota status groups (Table 3) | `test_three_tier_grouping_*` in `src/usage/mod.rs` | `sort.rs:31-48` |
+| Quota status groups (Table 3) | `test_three_tier_grouping_*` in `tests/usage/mod_tests.rs` | `sort.rs:31-48` |
 | Eligibility gates (Table 4) | `test_relevant_quotas_*` in `tests/usage/format_tests.rs` | `sort_next.rs:24-35, 59` |
 | Positive selection (Table 5) | `test_sort_name_alphabetical` in `src/usage/sort.rs` | `sort_next.rs:46-83` |
 | Quota approximation (Table 6) | `approx_quadratic_three_points_extrapolates`, `approx_expired_window_returns_zero`, `approx_singular_matrix_falls_back_to_constant` in `src/usage/approx.rs` | `approx.rs` |

@@ -1,4 +1,4 @@
-# Verb :: delete
+# Verb: delete
 
 Removes an account profile from the credential store. Deletes `{name}.credentials.json`, `{name}.json`, and any legacy satellite files associated with the named account. If the target account is currently active, the active marker is also cleared.
 
@@ -46,7 +46,7 @@ Removes an account profile from the credential store. Deletes `{name}.credential
 [active] --account.delete--> [absent]  (active marker also cleared)
 ```
 
-### Cross-References
+### See Also
 
 | File | Relationship |
 |------|-------------|

@@ -1,10 +1,10 @@
-# Commands :: Paths
+# Commands: Paths
 
 File path resolution commands.
 
 ---
 
-### Command :: 8. `.paths`
+### Command: 8. `.paths`
 
 Displays all canonical `~/.claude/` file and directory paths resolved from `HOME`. Use this for diagnostics and tooling integration.
 
@@ -57,6 +57,14 @@ clp .paths field::unknown
 - `field::` takes priority over `format::` — when both are provided, `format::` is ignored.
 - Field names use underscores (`session_env`), matching the JSON key names from `format::json`.
 
+### Referenced Parameters
+
+| # | Parameter | Role |
+|---|-----------|------|
+| 1 | [format::](../param/002_format.md) | Output format |
+| 2 | [field::](../param/024_field.md) | Single named path value to extract |
+| 3 | [trace::](../param/023_trace.md) | Diagnostic trace output |
+
 ### Referenced Features
 
 | # | Feature | Role |
@@ -69,3 +77,17 @@ clp .paths field::unknown
 |---|------------|---------|
 | 1 | [Scripted Pipeline Automation](../user_story/004_scripted_automation.md) | Script-accessible path resolution for tooling integration |
 | 2 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Path topology check during credential diagnostics |
+
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Output Control](../param_group/001_output_control.md) | `format::` |
+| 2 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `trace::` |
+
+### Referenced Formats
+
+| # | Format | Trigger |
+|---|--------|---------|
+| 1 | [text](../format/001_text.md) | `format::text` (default) |
+| 2 | [json](../format/002_json.md) | `format::json` |

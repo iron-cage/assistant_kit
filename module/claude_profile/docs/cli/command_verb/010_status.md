@@ -1,4 +1,4 @@
-# Verb :: status
+# Verb: status
 
 Reports the current state of a live credential or token as a formatted snapshot. Applied to `token`, returns expiry classification (`Valid`, `ExpiringSoon`, or `Expired`). Applied to `credentials`, returns live OAuth credential metadata with per-field presence control. Both operations are pure reads from `~/.claude/.credentials.json` with no side effects.
 
@@ -48,7 +48,7 @@ Field-presence parameters for `.credentials.status` (`account::`, `sub::`, `tier
 [active] --credentials.status-> [active]        (credential metadata read; no change)
 ```
 
-### Cross-References
+### See Also
 
 | File | Relationship |
 |------|-------------|

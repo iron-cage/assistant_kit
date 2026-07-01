@@ -11,8 +11,9 @@
 | `main.rs` | CLI binary entry point; delegates to `run_cli()`. |
 | `adapter.rs` | Argv-to-unilang token conversion, alias expansion, validation. |
 | `output.rs` | Output format extraction, JSON string escaping, and duration display. |
-| `commands/` | CLI command handler routines: one module per command group (accounts, account_ops, credentials, limits, token_paths, dot) plus shared utilities. |
+| `commands/` | CLI command handler routines: one module per command group (accounts, account_ops, credentials, limits, token_paths, dot) plus cmd_args (argument/error helpers) and cmd_context (environment/credentials context). |
 | `usage/` | `.usage` command modules — quota fetch, render, sort, refresh, and live loop. |
+| `owner_dispatch.rs` | Shared owner batch-clear and named-dispatch logic for `.accounts` and `.usage`. |
 | `persist.rs` | PersistPaths — persistent user storage path from $PRO/$HOME. |
 | `bin/` | Separate Cargo compilation units for each binary target. |
 | `bin/clp.rs` | `clp` short-alias binary entry point; delegates to `run_cli()`. |

@@ -69,7 +69,7 @@ fn it002_lim_it_active_account_marked()
     eprintln!( "it002: no live token — skipping" );
     return;
   };
-  if !require_live_api( "it002" ) { return; }
+  require_live_api( "it002" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -134,7 +134,7 @@ fn it004_lim_it_json_format_valid_array()
     eprintln!( "it004: no live token — skipping" );
     return;
   };
-  if !require_live_api( "it004" ) { return; }
+  require_live_api( "it004" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -353,7 +353,7 @@ fn it011_lim_it_recommendation_marker_shown()
     eprintln!( "it011: no live token — skipping" );
     return;
   };
-  if !require_live_api( "it011" ) { return; }
+  require_live_api( "it011" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -389,7 +389,7 @@ fn it012_lim_it_footer_shows_valid_count()
     eprintln!( "it012: no live token — skipping" );
     return;
   };
-  if !require_live_api( "it012" ) { return; }
+  require_live_api( "it012" );
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();

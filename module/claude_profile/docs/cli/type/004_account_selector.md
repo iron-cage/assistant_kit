@@ -1,4 +1,4 @@
-# Type :: 4. `AccountSelector`
+# Type: 4. `AccountSelector`
 
 **Purpose:** Represents any form of account identification accepted at the CLI before resolution to a concrete [`AccountName`](001_account_name.md). The adapter layer accepts all three forms and resolves them to an `AccountName` before passing to core functions.
 

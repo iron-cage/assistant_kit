@@ -1,4 +1,4 @@
-# Feature Collection
+# Feature Doc Entity
 
 ### Scope
 
@@ -11,6 +11,7 @@
 
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
+| — | [procedure](procedure.md) | Workflow for maintaining feature instances | ✅ |
 | 001 | [Account Store Initialization](001_account_store_init.md) | Initialize credential store with `$PRO`/`$HOME` path resolution | ✅ |
 | 002 | [Save Account](002_account_save.md) | Save current credentials as a named account profile | ✅ |
 | 003 | [List Accounts](003_account_list.md) | List all stored accounts with token state and metadata | ✅ |
@@ -33,7 +34,7 @@
 | 020 | [Usage Sort Strategies](020_usage_sort_strategies.md) | Row ordering and footer recommendation in `.usage` — `sort::`, `desc::`, `prefer::` with `renew` (default), `name`, `renews` strategies; single-strategy footer | ✅ |
 | 021 | [Extended Snapshot Fields](021_extended_snapshot_fields.md) | `tagged_id`, `uuid`, `capabilities` from existing `{name}.json`; `uuid::` and `capabilities::` opt-in params | ✅ |
 | 022 | [Org Identity Snapshot](022_org_identity_snapshot.md) | Org identity via endpoint 005 at save-time into `{name}.json`; `org_uuid::` and `org_name::` opt-in params | ✅ |
-| 023 | [Next Account Recommendation Strategies](023_next_account_strategies.md) | **DEPRECATED** — absorbed into feature 020; `next::` removed, footer recommendation driven by `sort::` | ⛔ |
+| 023 | [Next Account Recommendation Strategies](023_next_account_strategies.md) | **DEPRECATED** — absorbed into feature 020; `next::` removed, footer recommendation driven by `sort::` | ❌ |
 | 024 | [Session Touch via Isolated Subprocess](024_session_touch.md) | Activate idle accounts' 5h session windows by sending minimal prompt via isolated subprocess; `touch::` parameter | ✅ |
 | 025 | [Per-Machine Active Marker](025_per_machine_active_marker.md) | Machine-specific `_active_{hostname}_{user}` marker; exact local-part prefix resolution | ✅ |
 | 026 | [Subprocess Model and Effort Control](026_subprocess_model_effort.md) | `imodel::` and `effort::` parameters; auto model selection (haiku default; sonnet when `son_idle=true`); effort resolution | ✅ |
@@ -58,3 +59,7 @@
 | 065 | [Assignee Param Redesign](065_assignee_param_redesign.md) | Rename `active::` → `assignee::`; `assignee::0` sentinel = current machine (`$USER@$HOSTNAME`); `active::` REMOVED_TOGGLE | ✅ |
 | 066 | [Dual-Source OAuth Quota Parsing](066_dual_source_quota_parsing.md) | Maintain correct per-model quota data when Anthropic API format changes by parsing both named-field and `limits`-array formats | ✅ |
 | 067 | [Trace Timestamp Prefix](067_trace_timestamps.md) | Replace `[trace]` prefix with UTC timestamp on all diagnostic trace output; enables watchdog log correlation | ✅ |
+
+### Organization
+
+Feature IDs 041–060 are unassigned. Features 061–067 were allocated as a separate series before the 041–060 range was needed; those IDs remain reserved.

@@ -53,7 +53,7 @@ If any default injection is removed:
 `build_claude_command()` now calls `session_exists()` before injecting `-c`. On first invocation or with an empty `--session-dir`, `-c` is suppressed and the REPL opens unconditionally. The invariant above (`-c` on by default) now carries the implicit precondition: session storage must be non-empty.
 
 - **Root cause:** `src/cli/builder.rs` — `session_exists()` + `check_continuation()`, `Fix(BUG-214-reopen)` comment; original `cli/mod.rs` path is now `builder.rs` after refactor
-- **Bug report:** `claude_tools/task/claude_runner/bug/214_bare_clr_exits_no_session.md` (external to crate)
+- **Bug report:** `agent_kit/task/claude_runner/bug/214_bare_clr_exits_no_session.md` (external to crate)
 
 **BUG-304 (INT mitigation 2026-06-21) — `claude --print --chrome` sessions never exit:**
 `build_claude_command()` now computes `use_print` before the `--no-chrome` guard and applies `if cli.no_chrome || use_print` to suppress `--chrome` in all print-mode invocations. Root cause (EXT): Node.js/libuv registers a ref-counted 1-second timerfd (Chrome CDP reconnect) that is never `unref()`'d after `--print` response flush; event loop cannot drain; `clr`'s `cmd.output()` deadlocks. `--chrome` remains active in interactive mode.

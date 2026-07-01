@@ -1,4 +1,4 @@
-# Parameter :: `rotate::`
+# Parameter: 59. `rotate::`
 
 Execute account rotation after quota fetch — switch to the footer-recommended account selected by the active `sort::` strategy.
 
@@ -47,7 +47,23 @@ clp .usage rotate::1 trace::1               # emit trace output during rotation
 | `0` (default) | Display-only — no account switch executed |
 | `1` | Execute switch to footer-recommended account after rendering the table |
 
-### Cross-References
+### Referenced Type
+
+- **Fundamental Type:** `bool`
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Execute account rotation after quota fetch |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Automatic Account Rotation](../user_story/001_account_rotation.md) | Trigger `rotate::1` to switch to best available account |
+
+### See Also
 
 | File | Relationship |
 |------|--------------|

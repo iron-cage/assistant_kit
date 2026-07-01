@@ -10,3 +10,13 @@ All marker-write behavior is now in `.accounts assignee::USER@MACHINE name::X` (
 
 **Source:** [feature/037_accounts_usage_param_unification.md AC-12](../../../../docs/feature/037_accounts_usage_param_unification.md),
 [cli/command_verb/009_assign.md — Migration (Feature 037)](../../../../docs/cli/command_verb/009_assign.md#migration-feature-037)
+
+---
+
+### IT-1: Redirect stub — targeted `assignee::` migration hint
+
+- **Given:** No accounts required (command is REMOVED — always redirects)
+- **When:** `clp .account.assign name::alice@acme.com`
+- **Then:** Exits 1. stderr contains `"assignee::"` migration hint string. Does NOT produce a generic "unknown command" error — the message is targeted.
+- **Exit:** 1
+- **Source:** [feature/037_accounts_usage_param_unification.md](../../../../docs/feature/037_accounts_usage_param_unification.md) AC-12, [command_verb/009_assign.md](../../../../docs/cli/command_verb/009_assign.md)

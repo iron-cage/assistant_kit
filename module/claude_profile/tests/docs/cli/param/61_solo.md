@@ -5,6 +5,8 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 
 `solo::1` restricts all credential-consuming operations to the current+owned account. All other accounts display approximated historical data via `approximate_quota()`.
 
+**Behavioral Divergence Pair:** EC-1 ↔ EC-2 — `solo::0` (default) fetches live quota data for all owned accounts; `solo::1` fetches live data only for the current+owned account, showing approximated data for all others.
+
 ### Test Case Index
 
 | ID | Test Name | Category |

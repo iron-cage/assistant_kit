@@ -1,10 +1,10 @@
-# Commands :: Model
+# Commands: Model
 
 Session model management command.
 
 ---
 
-### Command :: 17. `.model`
+### Command: 18. `.model`
 
 Get or set the Claude Code session model in `~/.claude/settings.json`. Without parameters, prints the current model. With `set::`, writes the requested model.
 
@@ -77,3 +77,16 @@ clp .model set::bad
 |---|------------|---------|
 | 1 | [Account Rotation](../user_story/001_account_rotation.md) | Lock session model without requiring a full account switch |
 | 2 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Quickly inspect the active model setting |
+
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Output Control](../param_group/001_output_control.md) | `format::` |
+
+### Referenced Formats
+
+| # | Format | Trigger |
+|---|--------|---------|
+| 1 | [text](../format/001_text.md) | `format::text` (default) |
+| 2 | [json](../format/002_json.md) | `format::json` |

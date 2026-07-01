@@ -78,25 +78,35 @@ Purely functional test binaries (`usage_integration_test`, `account_tests`, `lib
 - A `VERB_LAYER=l0 ./verb/test` invocation triggers `verb/test`'s VERB_LAYER rejection — the guard detects that `VERB_LAYER` is set on the host side
 - Direct `./verb/test.d/l0` invocation hits the hard error stub
 
-### Cross-References
+### Sources
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `module/*/verb/test` (17 crates with `verb/`) | Outer dispatcher — rejects any `VERB_LAYER` on host |
-| source | `module/*/verb/test.d/l0` (17 crates with `verb/`) | Hard error stub — host-native execution disabled |
-| source | `module/*/verb/test.d/l1` (17 crates with `verb/`) | Container-internal layer — sets `RUNBOX_CONTAINER=1` |
-| source | `.config/setup-require-container` | Nextest setup script — 3-signal check, workspace-wide |
-| source | `.config/nextest.toml` | Nextest configuration — `filter = "all()"` |
-| source | `module/claude_profile/tests/cli/cli_runner.rs` | Rust guard in `run_cs()` — defense-in-depth |
-| source | `module/claude_profile/tests/cli_clp_alias_test.rs` | Rust guard in local `run()` — defense-in-depth |
-| source | `module/claude_runner/tests/cli_binary_test_helpers.rs` | Rust guard in 9 process-spawning helpers — defense-in-depth |
-| source | `module/assistant/tests/aggregation.rs` | Rust guard in `run_ast()` — defense-in-depth |
-| source | `module/assistant/tests/cli_sanity.rs` | Rust guard in `run_ast()` helper — defense-in-depth |
-| source | `module/claude_assets/tests/cli.rs` | Rust guard in `cla()` — defense-in-depth |
-| source | `module/claude_journal_viewer/tests/viewer_integration_test.rs` | Rust guard in `run_clj()` + ec11/ec12/ec13 — defense-in-depth |
-| source | `module/claude_storage/tests/common/mod.rs` | Rust guard in `clg_cmd()` — covers all ~74 claude_storage test files |
-| source | `module/claude_storage/tests/operation_migration_guide_test.rs` | Rust guard in `op_3` direct spawn — defense-in-depth |
-| source | `module/claude_version/tests/integration/subprocess_helpers.rs` | Rust guard in `run_clm_with_env()` — covers all integration tests |
-| source | `module/claude_version/tests/cli_args_test.rs` | Rust guard in `fn run()` + 6 bypass test functions — defense-in-depth |
-| source | `module/runbox/tests/init_command.rs` | Rust guard in `crb()` and `runbox_bin()` — covers all runbox tests |
-| invariant | [004_no_process_execution.md](004_no_process_execution.md) | Structural peer — zero process execution in library; all execution in container |
+| File | Relationship |
+|------|-------------|
+| `module/*/verb/test` (17 crates with `verb/`) | Outer dispatcher — rejects any `VERB_LAYER` on host |
+| `module/*/verb/test.d/l0` (17 crates with `verb/`) | Hard error stub — host-native execution disabled |
+| `module/*/verb/test.d/l1` (17 crates with `verb/`) | Container-internal layer — sets `RUNBOX_CONTAINER=1` |
+| `.config/setup-require-container` | Nextest setup script — 3-signal check, workspace-wide |
+| `.config/nextest.toml` | Nextest configuration — `filter = "all()"` |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| `module/claude_profile/tests/cli/cli_runner.rs` | Rust guard in `run_cs()` — defense-in-depth |
+| `module/claude_profile/tests/cli_clp_alias_test.rs` | Rust guard in local `run()` — defense-in-depth |
+| `module/claude_runner/tests/cli_binary_test_helpers.rs` | Rust guard in 9 process-spawning helpers — defense-in-depth |
+| `module/assistant/tests/aggregation.rs` | Rust guard in `run_ast()` — defense-in-depth |
+| `module/assistant/tests/cli_sanity.rs` | Rust guard in `run_ast()` helper — defense-in-depth |
+| `module/claude_assets/tests/cli.rs` | Rust guard in `cla()` — defense-in-depth |
+| `module/claude_journal_viewer/tests/viewer_integration_test.rs` | Rust guard in `run_clj()` + ec11/ec12/ec13 — defense-in-depth |
+| `module/claude_storage/tests/common/mod.rs` | Rust guard in `clg_cmd()` — covers all ~74 claude_storage test files |
+| `module/claude_storage/tests/operation_migration_guide_test.rs` | Rust guard in `op_3` direct spawn — defense-in-depth |
+| `module/claude_version/tests/integration/subprocess_helpers.rs` | Rust guard in `run_clm_with_env()` — covers all integration tests |
+| `module/claude_version/tests/cli_args_test.rs` | Rust guard in `fn run()` + 6 bypass test functions — defense-in-depth |
+| `module/runbox/tests/init_command.rs` | Rust guard in `crb()` and `runbox_bin()` — covers all runbox tests |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
+| [004_no_process_execution.md](004_no_process_execution.md) | Structural peer — zero process execution in library; all execution in container |

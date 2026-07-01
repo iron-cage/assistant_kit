@@ -1,5 +1,12 @@
 # Subprocess: Session Touch Invocation
 
+### Scope
+
+- **Purpose**: Document when `.usage touch::` triggers `refresh_account_token()` to activate idle quota windows and the predicate (`apply_touch()`) controlling that decision.
+- **Responsibility**: Authoritative reference for the session touch trigger predicate, skip-reason trace codes, invocation signature, post-touch actions, and ordering with `refresh::`.
+- **In Scope**: `apply_touch()` predicate; skip-reason trace system; invocation via `refresh_account_token()`; post-touch re-fetch and cache write; ordering with `refresh::`.
+- **Out of Scope**: Token refresh trigger predicate (→ `subprocess/003`); credential write-back protocol details (→ `subprocess/002`); model selection algorithm internals (→ `algorithm/001`).
+
 ### Purpose
 
 Document when `.usage touch::` triggers `refresh_account_token()` to activate idle quota windows, and the exact predicate and skip-reason trace system.
@@ -53,12 +60,22 @@ After any `refresh_account_token()` call (regardless of `credentials` result):
 
 When both `refresh::1` and `touch::1` are active, `apply_refresh()` runs first (retries auth errors), then `apply_touch()` runs on the post-refresh results.
 
-### Cross-References
+### Features
 
 | File | Relationship |
 |------|-------------|
 | [feature/024_session_touch.md](../feature/024_session_touch.md) | Full feature spec |
+
+### Algorithms
+
+| File | Relationship |
+|------|-------------|
+| [algorithm/001](../algorithm/001_touch_model_selection.md) | Model selection algorithm |
+
+### Subprocess
+
+| File | Relationship |
+|------|-------------|
 | [subprocess/001](001_run_isolated_contract.md) | `run_isolated()` contract |
 | [subprocess/002](002_credential_writeback.md) | Credential write-back protocol |
 | [subprocess/003](003_token_refresh_invocation.md) | Token refresh (same infrastructure) |
-| [algorithm/001](../algorithm/001_touch_model_selection.md) | Model selection algorithm |

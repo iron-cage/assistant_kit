@@ -6,7 +6,8 @@ use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use claude_quota::RateLimitData;
 use crate::output::{ OutputFormat, OutputOptions, json_escape, format_duration_secs };
-use super::shared::{ require_claude_paths, require_credential_store, io_err_to_error_data, resolve_account_name };
+use super::cmd_args::{ io_err_to_error_data, resolve_account_name };
+use super::cmd_context::{ require_claude_paths, require_credential_store };
 use claude_profile_core::account::trace_ts;
 
 // ── Single-consumer helpers ───────────────────────────────────────────────────
