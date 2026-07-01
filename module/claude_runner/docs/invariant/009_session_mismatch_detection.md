@@ -50,6 +50,16 @@ Three components collaborate to enforce this invariant:
    }
    ```
 
+### Violation Consequences
+
+If the mismatch comparison is removed or bypassed:
+
+- Session contamination events (like BUG-320) produce no warning — the wrong session responds silently, visible only through behavioral anomalies in output content.
+- No grep-able signal exists to identify the problem in automation logs — `(BUG-320 detected)` would be absent from stderr.
+- Automated pipelines that filter for `[Runner] warning` to detect environment contamination lose their signal.
+
+The warning is not a safeguard (the wrong session has already responded) — it is observability. Loss of the warning delays diagnosis of source bugs like BUG-1129.
+
 ### Warning Format
 
 ```

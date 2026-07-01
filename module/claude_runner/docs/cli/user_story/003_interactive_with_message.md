@@ -1,19 +1,9 @@
-# CLI User Story: Interactive With Message
+# Send an initial message and stay in interactive mode
 
-### Scope
-
-- **Purpose**: Document interactive TTY mode when an initial message is provided.
-- **Responsibility**: Define acceptance criteria for --interactive overriding default print mode when a message is given.
-- **In Scope**: --interactive with message, TTY passthrough, initial message delivery, session continuation.
-- **Out of Scope**: No-message REPL (→ 001_interactive_repl.md), print mode capture (→ 002_print_mode_capture.md).
-
-### Persona
-
-Developer who wants to send an initial prompt but remain in an interactive TTY session to continue the conversation manually rather than receive a single captured response.
-
-### Goal
-
-Send an initial message to Claude and stay in interactive mode for follow-up turns.
+**Persona:** Developer who wants to send an initial prompt but remain in an interactive TTY session to continue the conversation manually rather than receive a single captured response.
+**Goal:** Send an initial message to Claude and stay in interactive mode for follow-up turns.
+**Benefit:** Combines the immediacy of a pre-loaded prompt with the flexibility of a full REPL session.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -42,3 +32,8 @@ Send an initial message to Claude and stay in interactive mode for follow-up tur
 | 6 | [`--interactive`](../param/006_interactive.md) | Opt out of print mode; enable TTY passthrough |
 | 7 | [`--new-session`](../param/007_new_session.md) | Discard prior context |
 | 8 | [`--dir`](../param/008_dir.md) | Set working directory for the session |
+
+### Workflow Steps
+
+1. `clr --interactive "initial prompt"` — send an opening message and stay in the REPL
+2. `clr --interactive --new-session "opening message"` — start fresh with an initial message

@@ -3,6 +3,7 @@
 **Pattern:** Shared by `clr isolated` and `clr refresh`; configure the credential-isolated execution environment; not accepted by `clr run`.
 
 **Purpose:** Configure credential-isolated execution for `clr isolated` and `clr refresh`.
+**Order:** 4
 
 ### Semantic Coherence Test
 
@@ -22,7 +23,7 @@
 
 `--timeout` has different defaults per command: 30s for `isolated` (general task execution), 45s for `refresh` (allows headroom for slow OAuth token exchange).
 
-**Typical usage:**
+### Typical Patterns
 
 ```sh
 clr isolated "Fix bug"                                    # uses ~/.claude/.credentials.json
@@ -57,5 +58,6 @@ clr refresh --creds creds.json --timeout 90 --trace
 
 | # | User Story | Persona |
 |---|------------|---------|
+| 8 | [008_trace_execution.md](../user_story/008_trace_execution.md) | Developer |
 | 10 | [010_credential_isolated_execution.md](../user_story/010_credential_isolated_execution.md) | Developer |
 | 14 | [014_credential_refresh.md](../user_story/014_credential_refresh.md) | Developer |

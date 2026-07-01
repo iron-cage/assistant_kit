@@ -1,19 +1,9 @@
-# CLI User Story: Print Mode Capture
+# Send a prompt and capture the response on stdout
 
-### Scope
-
-- **Purpose**: Document print mode invocation where Claude's response is captured as stdout.
-- **Responsibility**: Define acceptance criteria for message-triggered print mode and fence stripping.
-- **In Scope**: Default print-on-message behavior, explicit --print alias, stdout capture, --strip-fences, error on print without message.
-- **Out of Scope**: Interactive TTY mode (→ 001_interactive_repl.md, 003_interactive_with_message.md).
-
-### Persona
-
-Developer or automation script that needs Claude's response as capturable stdout — to assign to a variable, pipe to another tool, or redirect to a file.
-
-### Goal
-
-Send a prompt to Claude and capture the response on stdout with no interactive TTY behavior.
+**Persona:** Developer or automation script that needs Claude's response as capturable stdout — to assign to a variable, pipe to another tool, or redirect to a file.
+**Goal:** Send a prompt to Claude and capture the response on stdout with no interactive TTY behavior.
+**Benefit:** Enables clean capture of Claude's response for pipelines, variables, and downstream tools.
+**Priority:** High
 
 ### Acceptance Criteria
 
@@ -43,3 +33,10 @@ Send a prompt to Claude and capture the response on stdout with no interactive T
 | 2 | [`--print`](../param/002_print.md) | Explicit print mode selector (alias) |
 | 3 | [`--model`](../param/003_model.md) | Select model for the response |
 | 26 | [`--strip-fences`](../param/026_strip_fences.md) | Remove outermost code fence from captured output |
+
+### Workflow Steps
+
+1. `clr "your prompt"` — send a prompt; print mode activates automatically
+2. `result=$(clr "task")` — capture the response in a shell variable
+3. `clr "task" | grep pattern` — pipe the response to another tool
+4. `clr "task" --strip-fences` — strip outermost code fence from captured output

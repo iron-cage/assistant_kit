@@ -1,26 +1,9 @@
-# CLI User Story: Output File Capture
+# Capture output to a file while printing to stdout
 
-### Scope
-
-- **Purpose**: Document `--output-file` as a runner-native tee mechanism for capturing subprocess
-  stdout to a file without shell redirection.
-- **Responsibility**: Define acceptance criteria for file creation, tee behavior, error handling,
-  and dry-run semantics.
-- **In Scope**: `--output-file <PATH>` tee behavior, write error handling (exit 1), dry-run skip,
-  `CLR_OUTPUT_FILE` env var fallback, interaction with `--strip-fences`.
-- **Out of Scope**: Stdout-only capture (→ shell redirection), `--file` input direction (→
-  011_file_input.md), structured JSON output (→ 013_structured_json_pipeline.md).
-
-### Persona
-
-Developer or CI system that runs `clr` in print mode and needs the output both on stdout (for
-immediate display or piping) and persisted to a file (for logging, review, or downstream
-consumption) without shell redirection.
-
-### Goal
-
-Capture Claude's output to a file and print it to stdout in a single `clr` invocation, so that
-automated pipelines can log results without losing real-time visibility.
+**Persona:** Developer or CI system that runs `clr` in print mode and needs the output both on stdout (for immediate display or piping) and persisted to a file (for logging, review, or downstream consumption) without shell redirection.
+**Goal:** Capture Claude's output to a file and print it to stdout in a single `clr` invocation, so that automated pipelines can log results without losing real-time visibility.
+**Benefit:** Provides simultaneous real-time visibility and durable log capture without shell redirection gymnastics.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -57,6 +40,13 @@ automated pipelines can log results without losing real-time visibility.
 | 11 | [`--dry-run`](../param/011_dry_run.md) | Skips file creation in dry-run mode |
 | 26 | [`--strip-fences`](../param/026_strip_fences.md) | Content is stripped before reaching both destinations |
 | 25 | [`--file`](../param/025_file.md) | Orthogonal — stdin input direction, unrelated to output capture |
+
+### Workflow Steps
+
+1. `clr -p --output-file /path/to/out.txt "task"` — write output to file and print to stdout simultaneously
+2. `clr -p --output-file out.txt --strip-fences "task"` — strip fences then tee to file and stdout
+3. `CLR_OUTPUT_FILE=/path/to/out.txt clr -p "task"` — set output file via environment variable
+4. `clr -p --output-file out.txt --dry-run "task"` — verify path shown in preview without creating the file
 
 ### Related User Stories
 

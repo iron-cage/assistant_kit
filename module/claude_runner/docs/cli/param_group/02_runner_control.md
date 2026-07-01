@@ -3,6 +3,7 @@
 **Pattern:** Consumed by the runner before subprocess launch; may suppress, override, or replace automatic flag injections; never forwarded directly.
 
 **Purpose:** Control runner execution behavior — before, during, or instead of subprocess invocation.
+**Order:** 2
 
 ### Semantic Coherence Test
 
@@ -22,10 +23,9 @@ No parameter is forwarded to the subprocess unchanged. Each is fully consumed by
 
 ### Notes
 
-`[MESSAGE]` is not in any group — it is a positional argument serving as input content,
-not a control flag. `--help` is handled separately as a universal override.
+`[MESSAGE]` is not in any group — it is a positional argument serving as input content, not a control flag. `--help` is handled separately as a universal override.
 
-**Typical usage:**
+### Typical Patterns
 
 ```sh
 clr --dir /project --max-tokens 50000 "test"
@@ -111,6 +111,9 @@ clr --trace "Fix bug" --dir /project
 | 8 | [008_trace_execution.md](../user_story/008_trace_execution.md) | Developer |
 | 11 | [011_file_input.md](../user_story/011_file_input.md) | Developer |
 | 12 | [012_code_block_extraction.md](../user_story/012_code_block_extraction.md) | Developer |
+| 13 | [013_structured_json_pipeline.md](../user_story/013_structured_json_pipeline.md) | Developer |
+| 15 | [015_ask_mode.md](../user_story/015_ask_mode.md) | Developer |
+| 18 | [018_env_var_configuration.md](../user_story/018_env_var_configuration.md) | Developer |
 | 20 | [020_suppress_effort_max.md](../user_story/020_suppress_effort_max.md) | Developer |
 | 21 | [021_keep_claudecode_context.md](../user_story/021_keep_claudecode_context.md) | Developer |
 | 22 | [022_session_isolation_subdir.md](../user_story/022_session_isolation_subdir.md) | Developer |

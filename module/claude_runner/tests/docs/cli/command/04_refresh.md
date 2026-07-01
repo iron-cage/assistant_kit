@@ -15,17 +15,18 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 | IT-7 | `--creds file.json --trace` → call details printed to stderr before execution | Trace |
 | IT-8 | `clr refresh --help` → exit 0, prints refresh-specific help | Help |
 | IT-9 | `CLR_JOURNAL=bogus` env var → exit 1, error names env var | Error: Invalid Env |
+| IT-10 | `clr refresh --creds <f> "message"` → exit 1, positional arg rejected | Error: Unexpected Arg |
 
 ## Test Coverage Summary
 
 - Happy Path: 1 test (IT-1)
-- Error Handling: 3 tests (IT-2, IT-6, IT-9)
+- Error Handling: 4 tests (IT-2, IT-6, IT-9, IT-10)
 - Timeout Behavior: 2 tests (IT-3, IT-4)
 - Default Fallback: 1 test (IT-5)
 - Trace: 1 test (IT-7)
 - Help: 1 test (IT-8)
 
-**Total:** 9 test cases
+**Total:** 10 test cases
 
 ---
 
@@ -124,3 +125,14 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Exit:** 1
 - **Source:** Fix — `apply_refresh_env_vars()` validates `CLR_JOURNAL` consistently with `apply_env_vars()` in `env.rs`
 - **Note:** Implemented; test function `test_it9_clr_journal_invalid_value_exits_1` in `tests/refresh_test.rs`
+
+---
+
+### IT-10: `clr refresh --creds <f> "message"` → exit 1, positional argument rejected
+
+- **Setup:** credentials JSON at temp file; positional argument passed on command line
+- **Command:** `clr refresh --creds <f> "Fix the bug"`
+- **Expected behavior:** exit 1; stderr contains `"unexpected argument"`; parse aborts before creds validation or subprocess spawn
+- **Exit:** 1
+- **Source:** Parity PC-5 — `refresh` has no `MESSAGE` parameter; `parse_refresh_args()` must reject any positional token
+- **Note:** Implemented; test function `test_it10_refresh_rejects_positional_message` in `tests/refresh_test.rs`

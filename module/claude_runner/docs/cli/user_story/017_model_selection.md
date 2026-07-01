@@ -1,19 +1,9 @@
-# CLI User Story: Model Selection
+# Override the Claude model for a single invocation
 
-### Scope
-
-- **Purpose**: Document model selection via `--model` and `CLR_MODEL` for choosing the Claude model.
-- **Responsibility**: Define acceptance criteria for explicit model override at the invocation level.
-- **In Scope**: `--model` flag forwarding, `CLR_MODEL` env var fallback, CLI precedence, ask command support.
-- **Out of Scope**: Effort-level tuning (→ 006_verbose_debugging.md), ask defaults (→ 015_ask_mode.md).
-
-### Persona
-
-Developer who needs a specific Claude model — such as a faster model for simple tasks or a more capable one for complex analysis — and wants to override the default model for a single invocation.
-
-### Goal
-
-Override the Claude model for a single invocation by passing `--model` or setting `CLR_MODEL`, with the CLI flag always winning when both are present.
+**Persona:** Developer who needs a specific Claude model — such as a faster model for simple tasks or a more capable one for complex analysis — and wants to override the default model for a single invocation.
+**Goal:** Override the Claude model for a single invocation by passing `--model` or setting `CLR_MODEL`, with the CLI flag always winning when both are present.
+**Benefit:** Enables per-invocation cost and capability tuning without changing configuration.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -40,6 +30,12 @@ Override the Claude model for a single invocation by passing `--model` or settin
 | # | Parameter | Role |
 |---|-----------|------|
 | 3 | [`--model`](../param/003_model.md) | Model name forwarded to claude subprocess |
+
+### Workflow Steps
+
+1. `clr --model sonnet "Review this function"` — override the model for a single invocation
+2. `CLR_MODEL=haiku clr "Summarize this file"` — set the model via environment variable
+3. `clr ask --model sonnet "What does this do?"` — override model in ask mode
 
 ### Related User Stories
 

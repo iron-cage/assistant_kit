@@ -9,6 +9,13 @@
 
 ---
 
+### Scope
+
+- **Purpose**: Define the six exit code classes that `clr` produces and guarantee their stability as a caller contract.
+- **Responsibility**: State the exit code mapping, per-class rules, exit-2 disambiguation requirement, and enforcement sources.
+- **In Scope**: All exit codes produced by `clr run`, `clr ask`, `clr isolated`, `clr refresh`; the `clr kill` and `clr ps` exceptions noted in Notes.
+- **Out of Scope**: `claude` binary exit codes not remapped by `clr` (relayed as-is → `ErrorKind::Unknown`); process signal semantics beyond the 128+N convention.
+
 ### Exit Code Table
 
 | Exit Code | Class | Condition | Source |
@@ -24,7 +31,9 @@
 
 ---
 
-### Invariant Rules
+### Invariant Statement
+
+`clr` MUST exit with one of the six well-defined exit codes from the table above. The mapping from condition to exit code is a caller contract — callers may unconditionally rely on it for scripting and automation. Each exit code class is exclusive: any given execution produces exactly one outcome class.
 
 **Rule 1 — Exit 0 means success:** `clr` exits 0 only when the subprocess exits 0 AND all post-processing steps (expect validation, output file write) succeed.
 
@@ -53,6 +62,30 @@ Callers check for `"You've hit your limit"` in stdout/stderr to distinguish quot
 
 ---
 
+### Enforcement Mechanism
+
+Four source components collaborate to enforce this contract:
+
+1. **`cli/execution.rs`** — `poll_timeout()` issues exit 4; `write_output_file()` issues exit 1 on write error; `apply_expect_validation()` issues exit 3 on expect mismatch; `spawn_error_msg()` issues exit 1 on spawn failure.
+2. **`cli/gate.rs`** — Session gate timeout issues exit 1 via the gate handler.
+3. **`claude_runner_core/src/types.rs`** — `ErrorKind` enum and `classify_error()` map subprocess output to error classes (`RateLimit` → exit 2, `QuotaExhausted` → exit 2); unknown exit codes relay unchanged.
+4. **`claude_runner_core/src/exit_code.rs`** — `signal_exit_code(n)` computes `128 + n` for signal-killed subprocesses.
+
+Any new subprocess-executing command added to `clr` MUST route its error outcomes through the same `ErrorKind` classification and exit code mapping.
+
+---
+
+### Violation Consequences
+
+If the exit code contract is violated (a wrong code is produced for a given condition):
+
+- **Caller scripts misroute silently**: Scripts keying on exit 2 for rate-limiting, exit 3 for expect failure, or exit 4 for timeout route to the wrong handling branch with no error signal.
+- **Internal retry logic breaks**: `clr` classifies retry eligibility by exit code and error class. A wrong exit code causes the wrong retry budget to be consumed or no retry to fire.
+- **CI/CD pipelines produce incorrect status**: Pipelines using `clr` exit codes as status signals execute the wrong handler.
+- **The `--expect` feedback loop breaks**: Exit 3 from `apply_expect_validation()` drives `--retry-on-validation` retry cycling; if exit 3 is remapped, validation retries stop.
+
+---
+
 ### Notes
 
 - The `clr kill` command is exempt from this table — it reports via exit 0 (success) or exit 1 (not a Claude session / missing PID).
@@ -72,13 +105,26 @@ Callers check for `"You've hit your limit"` in stdout/stderr to distinguish quot
 
 ---
 
-### Cross-References
+### Types
 
-- [`docs/cli/type/13_error_kind.md`](../cli/type/13_error_kind.md) — `ErrorKind` enum (subprocess classification)
-- [`docs/cli/type/14_error_class.md`](../cli/type/14_error_class.md) — caller-facing error class taxonomy
-- `claude_runner_core/docs/failure_mode/004_exit_1_ambiguity.md` — exit-1 disambiguation detail
-- [`param/020_timeout.md`](../cli/param/020_timeout.md) — subprocess timeout configuration (kill subcommand)
-- [`param/036_timeout.md`](../cli/param/036_timeout.md) — run/ask timeout configuration (CLR watchdog)
-- [`param/034_retry_on_transient.md`](../cli/param/034_retry_on_transient.md) — automatic retry on `RateLimit` (Transient class)
-- [`param/044_retry_on_service.md`](../cli/param/044_retry_on_service.md) — automatic retry on `ApiError` (Service class)
-- [`param/052_retry_on_unknown.md`](../cli/param/052_retry_on_unknown.md) — automatic retry on `Unknown` (Unknown class)
+| File | Relationship |
+|------|--------------|
+| [../cli/type/13_error_kind.md](../cli/type/13_error_kind.md) | `ErrorKind` enum — subprocess classification |
+| [../cli/type/14_error_class.md](../cli/type/14_error_class.md) | Caller-facing error class taxonomy |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [../cli/param/020_timeout.md](../cli/param/020_timeout.md) | Subprocess timeout configuration (kill subcommand) |
+| [../cli/param/034_retry_on_transient.md](../cli/param/034_retry_on_transient.md) | Automatic retry on `RateLimit` (Transient class) |
+| [../cli/param/036_timeout.md](../cli/param/036_timeout.md) | Run/ask timeout configuration (CLR watchdog) |
+| [../cli/param/044_retry_on_service.md](../cli/param/044_retry_on_service.md) | Automatic retry on `ApiError` (Service class) |
+| [../cli/param/052_retry_on_unknown.md](../cli/param/052_retry_on_unknown.md) | Automatic retry on `Unknown` (Unknown class) |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [../feature/003_retry_hierarchy.md](../feature/003_retry_hierarchy.md) | 3-tier retry system — exit codes drive error class classification and retry eligibility |
+| `claude_runner_core/docs/failure_mode/004_exit_1_ambiguity.md` | Exit-1 disambiguation detail |

@@ -1,19 +1,9 @@
-# CLI User Story: Trace Execution
+# Print diagnostic details to stderr then execute normally
 
-### Scope
-
-- **Purpose**: Document --trace mode for printing diagnostic details to stderr before executing.
-- **Responsibility**: Define acceptance criteria for trace output across all executing subcommands.
-- **In Scope**: --trace on run/isolated/refresh, stderr output, execution after trace, quiet independence.
-- **Out of Scope**: Dry-run (no execution) variant (→ 004_dry_run_preview.md).
-
-### Persona
-
-Developer who wants to see exactly what is called under the hood — CLI commands, subprocess arguments, credential paths — while still letting execution proceed normally.
-
-### Goal
-
-Print diagnostic details to stderr — like shell `set -x` — then execute normally. Works across all commands that spawn a subprocess.
+**Persona:** Developer who wants to see exactly what is called under the hood — CLI commands, subprocess arguments, credential paths — while still letting execution proceed normally.
+**Goal:** Print diagnostic details to stderr — like shell `set -x` — then execute normally. Works across all commands that spawn a subprocess.
+**Benefit:** Makes the full subprocess call visible for debugging without interrupting execution.
+**Priority:** Low
 
 ### Acceptance Criteria
 
@@ -46,6 +36,12 @@ Print diagnostic details to stderr — like shell `set -x` — then execute norm
 | 11 | [`--dry-run`](../param/011_dry_run.md) | Related: preview only, no execution |
 | 74 | [`--quiet`](../param/074_quiet.md) | Suppresses CLR diagnostics but NOT trace output |
 | 13 | [`--trace`](../param/013_trace.md) | Print env+command to stderr then execute |
+
+### Workflow Steps
+
+1. `clr --trace "task"` — print env vars and assembled command to stderr, then execute
+2. `clr isolated --trace "task"` — trace shows creds path and temp HOME before execution
+3. `clr refresh --trace` — trace shows creds path and fixed args before execution
 
 ### Related User Stories
 

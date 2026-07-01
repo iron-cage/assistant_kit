@@ -1,7 +1,7 @@
 meta:
   description: Cross-reference graph for design doc instances in claude_runner (feature, invariant, api entities). CLI reference docs (cli/) are out of scope.
-  node_count: 13
-  edge_count: 30
+  node_count: 14
+  edge_count: 34
   component_count: 1
   generated: 2026-05-16
   last_reviewed: 2026-06-30
@@ -65,6 +65,11 @@ nodes:
   - id: feature/002
     file: feature/002_journaling_integration.md
     label: Journaling Integration
+    entity: feature
+
+  - id: feature/003
+    file: feature/003_retry_hierarchy.md
+    label: Retry Hierarchy
     entity: feature
 
   - id: api/001
@@ -193,10 +198,26 @@ edges:
     to: feature/001
     via: features
 
+  - from: feature/001
+    to: feature/003
+    via: features
+
+  - from: feature/003
+    to: feature/001
+    via: features
+
+  - from: feature/003
+    to: invariant/006
+    via: invariants
+
+  - from: invariant/006
+    to: feature/003
+    via: features
+
 components:
   - id: 1
     label: Main corpus
-    size: 13
+    size: 14
     isolated: false
     nodes:
       - feature/001
@@ -211,6 +232,7 @@ components:
       - invariant/008
       - invariant/009
       - invariant/010
+      - feature/003
       - api/001
 
 dangling_refs: []

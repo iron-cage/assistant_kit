@@ -3,6 +3,7 @@
 **Pattern:** Forwarded to the `claude` subprocess via `--system-prompt` / `--append-system-prompt` flags; distinct from Claude-Native (content-injection, not control).
 
 **Purpose:** Inject or extend the behavioral system context sent to the `claude` subprocess.
+**Order:** 3
 
 Although forwarded to claude (like Claude-Native Flags), they form a dedicated
 group to keep parameter ranges contiguous: params 15–16 cannot join Group 1's
@@ -27,7 +28,7 @@ Both parameters produce system-prompt-related subprocess flags (`--system-prompt
 
 —
 
-**Typical usage:**
+### Typical Patterns
 
 ```sh
 clr --system-prompt "You are a Rust expert." "Review this PR"

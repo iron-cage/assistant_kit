@@ -1,19 +1,9 @@
-# CLI User Story: Env-var Configuration
+# Configure clr defaults with CLR_* environment variables
 
-### Scope
-
-- **Purpose**: Document the CLR_* environment variable system as a configuration layer.
-- **Responsibility**: Define acceptance criteria for env var fallback behavior, CLI precedence, bool semantics, and dry-run discoverability.
-- **In Scope**: CLR_* fallback application, CLI-wins rule, bool var semantics (1/true only), dry-run effective value display.
-- **Out of Scope**: Individual parameter semantics (→ param/ docs), subprocess env vars (→ CLAUDE_CODE_MAX_OUTPUT_TOKENS).
-
-### Persona
-
-Developer or CI system that configures `clr` defaults via environment variables for scripted or automated invocations, without modifying every command.
-
-### Goal
-
-Set `clr` defaults via CLR_* environment variables so that repeated invocations share configuration without specifying flags on every call, while allowing per-invocation overrides via explicit CLI flags.
+**Persona:** Developer or CI system that configures `clr` defaults via environment variables for scripted or automated invocations, without modifying every command.
+**Goal:** Set `clr` defaults via CLR_* environment variables so that repeated invocations share configuration without specifying flags on every call, while allowing per-invocation overrides via explicit CLI flags.
+**Benefit:** Allows persistent defaults for automation scripts without flag repetition.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -43,6 +33,12 @@ Set `clr` defaults via CLR_* environment variables so that repeated invocations 
 | 3 | [`--model`](../param/003_model.md) | `CLR_MODEL` — example env var for string type |
 | 11 | [`--dry-run`](../param/011_dry_run.md) | Reveals effective env-var values without executing |
 | 74 | [`--quiet`](../param/074_quiet.md) | `CLR_QUIET` — bool env var example |
+
+### Workflow Steps
+
+1. `CLR_MODEL=haiku CLR_QUIET=1 clr "task"` — set model and quiet mode via env vars
+2. `CLR_MODEL=haiku clr --model sonnet "task"` — CLI flag overrides env var for the same parameter
+3. `CLR_QUIET=1 clr --dry-run "task"` — verify effective env var values without executing
 
 ### Related User Stories
 

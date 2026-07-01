@@ -307,7 +307,12 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
           "unknown option: {s}\nRun with --help for usage."
         ) ) );
       }
-      _ => {} // refresh accepts no positional arguments
+      _ =>
+      {
+        return Err( Error::msg( format!(
+          "unexpected argument: {token}\n`clr refresh` accepts no positional arguments.\nRun with --help for usage."
+        ) ) );
+      }
     }
     i += 1;
   }

@@ -1,26 +1,9 @@
-# CLI User Story: Enum Output Validation
+# Validate Claude's output against a set of expected values
 
-### Scope
-
-- **Purpose**: Document `--expect` / `--expect-strategy` / `--retry-on-validation` as runner-native
-  output validation for automations that require a fixed-option response.
-- **Responsibility**: Define acceptance criteria for enum matching, strategy dispatch, retry
-  semantics, and exit code behavior.
-- **In Scope**: `--expect "val1|val2|..."` case-insensitive matching, `fail`/`retry`/`default:<V>`
-  strategies, retry re-invocation semantics, exit code 3, `CLR_EXPECT*` / `CLR_RETRY_ON_VALIDATION` env vars.
-- **Out of Scope**: JSON Schema validation (→ 013_structured_json_pipeline.md), free-text
-  validation, `--expect` in interactive mode (silently ignored).
-
-### Persona
-
-Developer or CI script that needs Claude to produce one of a finite set of values (yes/no, a
-severity level, a status word) and wants the runner to enforce the constraint — exiting non-zero
-or retrying automatically on mismatch rather than requiring post-processing in shell.
-
-### Goal
-
-Constrain Claude's print-mode output to a set of expected values so that downstream pipeline
-stages receive a validated response without additional shell scripting.
+**Persona:** Developer or CI script that needs Claude to produce one of a finite set of values (yes/no, a severity level, a status word) and wants the runner to enforce the constraint — exiting non-zero or retrying automatically on mismatch rather than requiring post-processing in shell.
+**Goal:** Constrain Claude's print-mode output to a set of expected values so that downstream pipeline stages receive a validated response without additional shell scripting.
+**Benefit:** Eliminates post-processing shell code for fixed-option response validation, reducing pipeline complexity.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -60,6 +43,13 @@ stages receive a validated response without additional shell scripting.
 | 31 | [`--expect-strategy`](../param/031_expect_strategy.md) | Mismatch handling strategy |
 | 48 | [`--retry-on-validation`](../param/048_retry_on_validation.md) | Re-invocation cap for `retry` strategy |
 | 2 | [`--print`](../param/002_print.md) | Activates print mode (capture); required for validation |
+
+### Workflow Steps
+
+1. `clr ask "Ready? Answer yes or no" --expect "yes|no"` — exit 0 on match, exit 3 on mismatch
+2. `clr ask "Severity?" --expect "low|medium|high" --expect-strategy fail` — exit immediately on first mismatch (default)
+3. `clr ask "Status?" --expect "ok|error" --expect-strategy retry --retry-on-validation 2` — retry up to 2 additional times before exiting 3
+4. `clr ask "Proceed?" --expect "yes|no" --expect-strategy default:no` — emit fallback `no` on mismatch and exit 0
 
 ### Related User Stories
 

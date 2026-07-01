@@ -1,19 +1,9 @@
-# CLI User Story: Structured JSON Pipeline
+# Generate schema-constrained JSON output for downstream processing
 
-### Scope
-
-- **Purpose**: Document generating schema-constrained JSON output from Claude for downstream processing.
-- **Responsibility**: Define acceptance criteria for --json-schema combined with --strip-fences for bare JSON delivery.
-- **In Scope**: --json-schema constraint, --strip-fences for bare output, jq piping, file-driven input.
-- **Out of Scope**: Code block extraction without schema (→ 012_code_block_extraction.md).
-
-### Persona
-
-Developer building an automated pipeline that needs structured JSON output from Claude, ready for downstream tools like `jq` or direct deserialization.
-
-### Goal
-
-Generate schema-constrained JSON output from Claude and deliver bare JSON to stdout — no fence delimiters — for immediate use in downstream processing.
+**Persona:** Developer building an automated pipeline that needs structured JSON output from Claude, ready for downstream tools like `jq` or direct deserialization.
+**Goal:** Generate schema-constrained JSON output from Claude and deliver bare JSON to stdout — no fence delimiters — for immediate use in downstream processing.
+**Benefit:** Enables schema-driven automation by delivering validated, structured JSON directly to downstream tools.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -44,6 +34,12 @@ Generate schema-constrained JSON output from Claude and deliver bare JSON to std
 | 23 | [`--json-schema`](../param/023_json_schema.md) | JSON Schema for structured output constraint |
 | 25 | [`--file`](../param/025_file.md) | Optional: supply input data for extraction |
 | 26 | [`--strip-fences`](../param/026_strip_fences.md) | Remove fence wrapping from JSON output |
+
+### Workflow Steps
+
+1. `clr -p "Extract metadata" --json-schema '{"type":"object","properties":{"name":{"type":"string"}}}' --strip-fences` — generate bare JSON constrained by schema
+2. `clr -p "Extract fields" --json-schema "$(cat schema.json)" --strip-fences | jq .` — pipe schema from file and process output with jq
+3. `clr -p "Extract from this" --file data.txt --json-schema "$(cat schema.json)" --strip-fences` — combine file input with schema constraint
 
 ### Related User Stories
 

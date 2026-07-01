@@ -15,7 +15,7 @@
 //! ## Tests
 //!
 //! - `workspace_nextest_toml_registers_setup_script` (IT-1): workspace `.config/nextest.toml`
-//!   contains `setup-scripts = true` and `require-container` reference
+//!   contains `"setup-scripts"` in the `experimental` array and `require-container` reference
 //! - `setup_script_file_exists` (IT-2): `.config/setup-require-container` exists at workspace root
 //! - `setup_script_checks_dockerenv` (IT-3): script body checks `/.dockerenv` (signal 1)
 //! - `setup_script_checks_containerenv` (IT-4): script body checks `/run/.containerenv` (signal 2)
@@ -52,8 +52,8 @@ fn workspace_nextest_toml_registers_setup_script()
   let content = fs::read_to_string( &config_path )
     .unwrap_or_else( |e| panic!( "Cannot read {}: {e}", config_path.display() ) ); // display() not Copy, can't inline
   assert!(
-    content.contains( "setup-scripts = true" ),
-    "`.config/nextest.toml` must contain `setup-scripts = true`"
+    content.contains( "\"setup-scripts\"" ),
+    "`.config/nextest.toml` must enable setup-scripts via `experimental = [\"setup-scripts\"]`"
   );
   assert!(
     content.contains( "require-container" ),

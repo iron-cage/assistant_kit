@@ -1,19 +1,9 @@
-# CLI User Story: MCP Config Injection
+# Forward MCP server configurations for tool access
 
-### Scope
-
-- **Purpose**: Document MCP server configuration injection via `--mcp-config` and `CLR_MCP_CONFIG`.
-- **Responsibility**: Define acceptance criteria for single and multiple MCP config file forwarding.
-- **In Scope**: `--mcp-config` flag forwarding, multiple configs, `CLR_MCP_CONFIG` env var fallback, absence default.
-- **Out of Scope**: MCP server configuration format (external to clr), MCP tool execution.
-
-### Persona
-
-Developer working with MCP-enabled workflows who needs to load one or more MCP server configurations for Claude Code to access external tools or data sources.
-
-### Goal
-
-Forward MCP server configuration files to the `claude` subprocess so that MCP tools are available during execution, with support for multiple configs and env var configuration.
+**Persona:** Developer working with MCP-enabled workflows who needs to load one or more MCP server configurations for Claude Code to access external tools or data sources.
+**Goal:** Forward MCP server configuration files to the `claude` subprocess so that MCP tools are available during execution, with support for multiple configs and env var configuration.
+**Benefit:** Activates MCP tool access for a session without modifying global configuration.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -40,6 +30,12 @@ Forward MCP server configuration files to the `claude` subprocess so that MCP to
 | # | Parameter | Role |
 |---|-----------|------|
 | 24 | [`--mcp-config`](../param/024_mcp_config.md) | Path to MCP server config JSON; repeatable |
+
+### Workflow Steps
+
+1. `clr --mcp-config /path/to/server.json "Task"` — forward a single MCP config to the subprocess
+2. `clr --mcp-config /path/to/a.json --mcp-config /path/to/b.json "Task"` — forward multiple MCP configs
+3. `CLR_MCP_CONFIG=/path/to/server.json clr "Task"` — set MCP config via environment variable
 
 ### Related User Stories
 
