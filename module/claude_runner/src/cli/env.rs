@@ -292,6 +292,7 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
     }
   }
   if parsed.journal_dir.is_none() { parsed.journal_dir = env_str( "CLR_JOURNAL_DIR" ); }
+  if !parsed.no_compact_window { parsed.no_compact_window = env_bool( "CLR_NO_COMPACT_WINDOW" ); }
   Ok( () )
 }
 

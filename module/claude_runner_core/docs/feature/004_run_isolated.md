@@ -31,11 +31,11 @@ pub enum RunnerError {
     Io(String),
 }
 
-/// Default model ID injected by IsolatedModel::Default.
-pub const ISOLATED_DEFAULT_MODEL: &str = "claude-opus-4-6";
+/// Short alias passed as --model for real user tasks; binary resolves to latest Opus.
+pub const ISOLATED_DEFAULT_MODEL: &str = "opus";
 
 pub enum IsolatedModel {
-    Default,           // prepends --model claude-opus-4-6
+    Default,           // prepends --model opus (binary resolves alias to latest Opus)
     KeepCurrent,       // no --model flag; Claude binary chooses
     Specific(String),  // prepends --model <id>
 }
@@ -72,7 +72,7 @@ pub fn run_isolated(
     content instructs subprocess to respond immediately without extended thinking
     on write failure → cleanup temp, return RunnerError::Io
 3.  build command; if model != KeepCurrent, prepend ["--model", <id>] to args:
-      ClaudeCommand::new().with_home(<temp>).with_args([--model <id>, <args...>])
+      ClaudeCommand::new().with_home(<temp>).with_args([--model opus, <args...>])
       env HOME=<temp>
       (all other env vars inherited from parent process)
       stdout and stderr piped

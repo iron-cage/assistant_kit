@@ -104,6 +104,7 @@ pub( crate ) struct CliArgs
   pub( crate ) summary_fields         : Option< String >,
   pub( crate ) journal                : Option< String >,
   pub( crate ) journal_dir            : Option< String >,
+  pub( crate ) no_compact_window      : bool,
 }
 
 /// Consume the next argv element as a flag's value.
@@ -575,6 +576,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       summary_fields          : None,
       journal                 : None,
       journal_dir             : None,
+      no_compact_window       : false,
     } );
   }
 
@@ -642,6 +644,10 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       "--keep-claudecode" =>
       {
         parsed.keep_claudecode = true;
+      }
+      "--no-compact-window" =>
+      {
+        parsed.no_compact_window = true;
       }
       "--quiet" =>
       {

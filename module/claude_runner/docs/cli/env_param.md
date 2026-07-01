@@ -2,22 +2,22 @@
 
 ### Scope
 
-- **Purpose**: Document CLR_* environment variable fallbacks, runtime configuration overrides, and the CLAUDE_CODE_MAX_OUTPUT_TOKENS subprocess variable.
+- **Purpose**: Document CLR_* environment variable fallbacks, runtime configuration overrides, and CLAUDE_CODE_* subprocess variables.
 - **Responsibility**: Specify env var names, corresponding CLI parameters, precedence rules, and type handling.
-- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
+- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, CLAUDE_CODE_AUTO_COMPACT_WINDOW injected default, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (-> param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (80 total)
+### All Env Parameters (84 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
-| Input (CLR_*) — `run` subcommand | 62 | Caller env fallbacks for `run` parameters |
-| Input (CLR_*) — `isolated` and `refresh` subcommands | 11 | Caller env fallbacks for credential operation parameters |
+| Input (CLR_*) — `run` subcommand | 63 | Caller env fallbacks for `run` parameters |
+| Input (CLR_*) — `isolated` and `refresh` subcommands | 13 | Caller env fallbacks for credential operation parameters |
 | Input (CLR_*) — `ps` subcommand | 5 | Caller env fallbacks for session listing display and flag thresholds |
 | Runtime config (CLR_*) | 1 | Runtime configuration overrides (not CLI parameter fallbacks) |
-| Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
+| Subprocess (CLAUDE_CODE_*) — injected | 2 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 80 environment variables
+**Total:** 84 environment variables
 
 ---
 
@@ -98,6 +98,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 60 | `CLR_SUMMARY_FIELDS` | [`--summary-fields`](param/071_summary_fields.md) | string | Preset name (`minimal`/`standard`/`full`) or comma-separated field whitelist; invalid values exit 1 |
 | 61 | `CLR_JOURNAL` | [`--journal`](param/072_journal.md) | string | Parsed as enum (`full`/`meta`/`off`); invalid values exit 1; default `full` |
 | 62 | `CLR_JOURNAL_DIR` | [`--journal-dir`](param/073_journal_dir.md) | string | Applied when `--journal-dir` absent; path to journal JSONL directory; default `~/.clr/journal/` |
+| 63 | `CLR_NO_COMPACT_WINDOW` | `--no-compact-window` | bool | Suppresses `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection — subprocess inherits caller env or uses model native window |
 
 **Precedence (current — 3 tiers):**
 
@@ -125,7 +126,7 @@ CLR_MODEL=sonnet clr --model opus --dry-run "task"  # CLI wins; CLR_MODEL ignore
 
 ### Env Param 2: CLR_* Input Parameters — `isolated` and `refresh` Subcommands
 
-Environment variable fallbacks for the 11 credential operation parameters.
+Environment variable fallbacks for the 13 credential operation parameters.
 `apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/cli/cred_parse.rs` read these
 after subcommand argument parsing.
 
@@ -142,6 +143,8 @@ after subcommand argument parsing.
 | 9 | `CLR_STRIP_FENCES` | [`--strip-fences`](param/026_strip_fences.md) | bool | Applied when `--strip-fences` absent; isolated only |
 | 10 | `CLR_OUTPUT_STYLE` | [`--output-style`](param/070_output_style.md) | string | Applied when `--output-style` absent; isolated only |
 | 11 | `CLR_SUMMARY_FIELDS` | [`--summary-fields`](param/071_summary_fields.md) | string | Applied when `--summary-fields` absent; isolated only |
+| 12 | `CLR_NO_COMPACT_WINDOW` | `--no-compact-window` | bool | Suppresses `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection; applies to both `isolated` and `refresh`. Cross-command: also applies to `run` via Section 1 row 63 |
+| 13 | `CLR_DRY_RUN` | `--dry-run` | bool | Applied when `--dry-run` absent; `refresh` only (isolated uses CLI flag; run via Section 1 row 11) |
 
 **Precedence (`--creds` only):**
 
@@ -241,3 +244,34 @@ queued CLR processes table.
 | `CLR_GATE_DIR` | `/tmp/clr-gate` | path | Override gate state directory for `gate.rs` and `ps.rs` |
 
 **No precedence rule** — this variable is always applied (there is no corresponding CLI flag).
+
+---
+
+### Env Param 6: `CLAUDE_CODE_AUTO_COMPACT_WINDOW` — Injected Default
+
+Set by `clr` before spawning any `claude` subprocess to cap the auto-compaction threshold at
+200 000 tokens. This prevents extended-context models from accumulating a 1M-token context
+window and triggering expensive compaction late in long sessions.
+
+- **Type:** integer (tokens)
+- **Injected value:** `200 000` (all 4 running commands: `run`, `ask`, `isolated`, `refresh`)
+- **Available since:** Claude Code v2.1.75 (2026-03-13)
+- **Mechanism:** injected via `ClaudeCommand::new()` default in `claude_runner_core/src/command/mod.rs`
+- **Scope:** `claude` subprocess only; not read by `clr` itself
+- **Opt-out:** `--no-compact-window` / `CLR_NO_COMPACT_WINDOW=1` — suppresses injection; subprocess inherits caller env or uses model native window
+
+**Effect:** When the subprocess conversation approaches this token count (as a percentage governed
+by `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`), Claude Code compacts the context automatically. The
+injected 200k cap prevents runaway context growth on extended-context models (e.g., 1M-window
+Opus), without affecting the hard per-turn output limit set by `CLAUDE_CODE_MAX_OUTPUT_TOKENS`.
+
+**Limitation:** Only meaningful for multi-turn interactive sessions that accumulate context.
+Single-turn `--print` mode runs never trigger compaction regardless of this setting, because
+context does not persist between invocations.
+
+| Variable | Injected value | Opt-out | Notes |
+|----------|----------------|---------|-------|
+| `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `200 000` | `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` | Caps compaction threshold, not hard context |
+
+**Cross-reference:** `contract/claude_code/docs/param/074_auto_compact_window.md` — canonical
+parameter spec (type, default, since, description, behavioral contract).

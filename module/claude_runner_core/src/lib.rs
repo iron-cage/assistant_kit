@@ -93,3 +93,14 @@ pub use crate::session_dir::{ SessionManager, Strategy };
 /// See invariant 008: `claude_profile/docs/invariant/008_single_token_refresh_entry.md`.
 #[ cfg( feature = "enabled" ) ]
 pub use crate::isolated::run_isolated;
+
+/// Re-export of [`crate::isolated::run_isolated_ext`].
+///
+/// Extended variant that accepts `compact_window: Option<u32>` — use when you need to
+/// suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` (`None`) or override the 200K default.
+///
+/// # Warning
+///
+/// Do NOT call this directly for credential refresh. See [`run_isolated`] warning.
+#[ cfg( feature = "enabled" ) ]
+pub use crate::isolated::run_isolated_ext;

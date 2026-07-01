@@ -46,6 +46,7 @@ pub struct ClaudeCommand {
   pub(super) bash_max_timeout_ms: Option<u32>,
   pub(super) auto_continue: Option<bool>,
   pub(super) telemetry: Option<bool>,
+  pub(super) compact_window: Option<u32>,
 
   // Tier 2: Essential parameters with standard defaults (security-sensitive)
   pub(super) auto_approve_tools: Option<bool>,
@@ -124,6 +125,7 @@ impl ClaudeCommand {
       bash_max_timeout_ms: Some( 7_200_000 ),      // 2 hours (vs 10 min standard)
       auto_continue: Some( true ),                 // Enable automation (vs false standard)
       telemetry: Some( false ),                    // Disable telemetry (vs true standard)
+      compact_window: Some( 200_000 ),             // Limit compaction to 200K (vs model native 200K or 1M)
 
       skip_permissions: false,
       chrome: Some( true ),  // Enable browser context by default (vs off in raw claude binary)
@@ -318,6 +320,9 @@ impl ClaudeCommand {
 
     if let Some( tokens ) = self.max_output_tokens {
       lines.push( format!( "CLAUDE_CODE_MAX_OUTPUT_TOKENS={tokens}" ) );
+    }
+    if let Some( window ) = self.compact_window {
+      lines.push( format!( "CLAUDE_CODE_AUTO_COMPACT_WINDOW={window}" ) );
     }
     if let Some( timeout ) = self.bash_default_timeout_ms {
       lines.push( format!( "CLAUDE_CODE_BASH_TIMEOUT={timeout}" ) );
@@ -528,6 +533,10 @@ impl ClaudeCommand {
     // Set max output tokens (fixes token limit bug: 32K → 200K)
     if let Some( tokens ) = self.max_output_tokens {
       cmd.env( "CLAUDE_CODE_MAX_OUTPUT_TOKENS", tokens.to_string() );
+    }
+
+    if let Some( window ) = self.compact_window {
+      cmd.env( "CLAUDE_CODE_AUTO_COMPACT_WINDOW", window.to_string() );
     }
 
     // Tier 1: Critical parameters with different defaults

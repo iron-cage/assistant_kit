@@ -11,7 +11,8 @@
 | `settings/` | Settings file structure and protocols — 3 instances (global, project, version lock) |
 | `format/` | Ancillary file formats — 7 instances (history, credentials, debug, shell-snapshots, todos, commands, JSON response) |
 | `taxonomy/` | Four-level concept hierarchy (Project/Conversation/Session/Entry) — 3 instances |
-| `endpoint/` | Anthropic HTTP endpoint wire contracts — 10 instances (URL, auth, schema, errors) |
+| `endpoint/` | Anthropic HTTP endpoint wire contracts — 11 instances (URL, auth, schema, errors) |
+| `model/` | Claude API model catalog — 12 instances (model IDs, capabilities, workspace defaults) |
 | `param/` | CLI parameter specifications — one file per runtime parameter (120 instances) |
 | `tool/` | Built-in tools available in Claude Code sessions — 40 instances (14 categories) |
 | `subcommand/` | CLI subcommands — 9 instances (agents, auth, auto-mode, doctor, install, mcp, plugin, setup-token, update) |

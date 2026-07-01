@@ -37,16 +37,19 @@ pub( super ) struct IsolatedArgs
   pub( super ) strip_fences     : bool,
   pub( super ) output_style     : Option< String >,
   pub( super ) summary_fields   : Option< String >,
+  pub( super ) no_compact_window : bool,
 }
 
 /// Parsed arguments for the `refresh` subcommand.
 pub( super ) struct RefreshArgs
 {
-  pub( super ) creds_path   : String,
-  pub( super ) timeout_secs : u64,
-  pub( super ) trace        : bool,
-  pub( super ) journal      : Option< String >,
-  pub( super ) journal_dir  : Option< String >,
+  pub( super ) creds_path       : String,
+  pub( super ) timeout_secs     : u64,
+  pub( super ) trace            : bool,
+  pub( super ) dry_run          : bool,
+  pub( super ) no_compact_window : bool,
+  pub( super ) journal          : Option< String >,
+  pub( super ) journal_dir      : Option< String >,
 }
 
 /// Parse a raw string as a `u64` timeout in seconds.
@@ -142,8 +145,9 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
         args.timeout_secs = parse_timeout_secs( next_value( tokens, i + 1, "--timeout" )? )?;
         i += 1;
       }
-      "--trace"   => { args.trace   = true; }
-      "--dry-run" => { args.dry_run = true; }
+      "--trace"            => { args.trace            = true; }
+      "--dry-run"          => { args.dry_run          = true; }
+      "--no-compact-window" => { args.no_compact_window = true; }
       "--dir" =>
       {
         args.dir = Some( next_value( tokens, i + 1, "--dir" )?.to_string() );
@@ -249,6 +253,7 @@ pub( super ) fn apply_isolated_env_vars( parsed : &mut IsolatedArgs ) -> Result<
   if !parsed.strip_fences          { parsed.strip_fences = env_bool( "CLR_STRIP_FENCES" ); }
   if parsed.output_style.is_none() { parsed.output_style = env_str( "CLR_OUTPUT_STYLE" ); }
   if parsed.summary_fields.is_none() { parsed.summary_fields = env_str( "CLR_SUMMARY_FIELDS" ); }
+  if !parsed.no_compact_window { parsed.no_compact_window = env_bool( "CLR_NO_COMPACT_WINDOW" ); }
   Ok( () )
 }
 
@@ -258,11 +263,13 @@ pub( super ) fn apply_isolated_env_vars( parsed : &mut IsolatedArgs ) -> Result<
 /// The `refresh` command takes no positional arguments — only credential options.
 pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArgs >
 {
-  let mut creds_path   : Option< String > = None;
-  let mut timeout_secs : u64              = 45;
-  let mut trace        : bool             = false;
-  let mut journal      : Option< String > = None;
-  let mut journal_dir  : Option< String > = None;
+  let mut creds_path        : Option< String > = None;
+  let mut timeout_secs      : u64              = 45;
+  let mut trace             : bool             = false;
+  let mut dry_run           : bool             = false;
+  let mut no_compact_window : bool             = false;
+  let mut journal           : Option< String > = None;
+  let mut journal_dir       : Option< String > = None;
   let mut i = 0;
   while i < tokens.len()
   {
@@ -280,10 +287,9 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
         timeout_secs = parse_timeout_secs( raw )?;
         i += 1;
       }
-      "--trace" =>
-      {
-        trace = true;
-      }
+      "--trace"             => { trace             = true; }
+      "--dry-run"           => { dry_run           = true; }
+      "--no-compact-window" => { no_compact_window = true; }
       "--journal" =>
       {
         journal = Some( validate_journal_level( next_value( tokens, i + 1, "--journal" )? )? );
@@ -306,7 +312,7 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
     i += 1;
   }
   let creds_path = creds_path.unwrap_or_default();
-  Ok( RefreshArgs { creds_path, timeout_secs, trace, journal, journal_dir } )
+  Ok( RefreshArgs { creds_path, timeout_secs, trace, dry_run, no_compact_window, journal, journal_dir } )
 }
 
 /// Apply `CLR_CREDS`, `CLR_TIMEOUT`, `CLR_TRACE`, `CLR_JOURNAL`, and `CLR_JOURNAL_DIR`
@@ -329,6 +335,8 @@ pub( super ) fn apply_refresh_env_vars( parsed : &mut RefreshArgs ) -> Result< (
       parsed.journal = Some( v );
     }
   }
-  if parsed.journal_dir.is_none() { parsed.journal_dir = env_str( "CLR_JOURNAL_DIR" ); }
+  if parsed.journal_dir.is_none()    { parsed.journal_dir    = env_str( "CLR_JOURNAL_DIR" ); }
+  if !parsed.dry_run                 { parsed.dry_run         = env_bool( "CLR_DRY_RUN" ); }
+  if !parsed.no_compact_window       { parsed.no_compact_window = env_bool( "CLR_NO_COMPACT_WINDOW" ); }
   Ok( () )
 }
