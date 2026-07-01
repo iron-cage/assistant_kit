@@ -55,7 +55,7 @@ wins when both are present.
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, ... |
 
 ### Referenced Commands
 

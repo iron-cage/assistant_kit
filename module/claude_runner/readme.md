@@ -6,14 +6,13 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 
 | Entity | Responsibility | Input→Output | Scope | Out of Scope |
 |--------|---------------|--------------|-------|--------------|
-| claude_runner (lib) | YAML schema constants; `COMMANDS_YAML` path for consumers | — | YAML path constant, `VerbosityLevel` type | ❌ Process execution → `claude_runner_core` |
+| claude_runner (lib) | YAML schema constants; `COMMANDS_YAML` path for consumers | — | YAML path constant | ❌ Process execution → `claude_runner_core` |
 | clr (bin) | Standalone Claude Code CLI with session continuity by default | CLI args → process exit code | Arg parsing, session continuation, dry-run, help | ❌ Process execution → `claude_runner_core`<br>❌ Session paths → `claude_profile` |
 
 ### Scope
 
 **Library (`src/lib.rs`):**
 - `COMMANDS_YAML` constant — absolute path to `claude.commands.yaml`
-- `VerbosityLevel` — newtype `u8` (0–5) for runner output gating
 - Zero extra dependencies — always available regardless of features
 
 **Binary (`src/main.rs`, requires `enabled` feature):**
@@ -22,7 +21,7 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 - Modes: interactive (default), print (`-p`), dry-run (`--dry-run`)
 - Flags: `-p`, `--interactive`, `--new-session`, `--model`, `--verbose`, `--no-skip-permissions`,
   `--max-tokens`, `--session-dir`, `--dir`, `--dry-run`, `--trace`,
-  `--system-prompt`, `--append-system-prompt`, `--verbosity`, `-h`
+  `--system-prompt`, `--append-system-prompt`, `--quiet`, `-h`
 - Exit code propagation
 
 ### Files
@@ -31,8 +30,8 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 |------|----------------|
 | `Cargo.toml` | Crate manifest: lib + binary, optional feature-gated deps |
 | `claude.commands.yaml` | Command definitions for `.claude` and `.claude.help` |
-| `src/` | Library and binary source: `COMMANDS_YAML`, `VerbosityLevel`, `clr` CLI |
-| `tests/` | CLI flag parsing, dry-run, verbosity, execution mode tests |
+| `src/` | Library and binary source: `COMMANDS_YAML`, `clr` CLI |
+| `tests/` | CLI flag parsing, dry-run, quiet gate, execution mode tests |
 | `docs/` | CLI reference and design documentation |
 | `changelog.md` | Notable changes by version |
 | `verb/` | Shell scripts for each `do` protocol verb. |
@@ -40,7 +39,7 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 ### Architecture
 
 ```
-claude_runner lib (YAML schema + COMMANDS_YAML constant + VerbosityLevel)
+claude_runner lib (YAML schema + COMMANDS_YAML constant)
     └─ COMMANDS_YAML → path to claude.commands.yaml
 
 clr binary (standalone CLI, mirrors claude's --flag syntax)

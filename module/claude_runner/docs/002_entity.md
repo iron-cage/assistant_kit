@@ -4,12 +4,12 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `api/` | Index of API doc instances covering COMMANDS_YAML, VerbosityLevel, and register_commands contracts | [api/readme.md](api/readme.md) | 1 |
+| `api/` | Index of API doc instances covering COMMANDS_YAML and register_commands contracts | [api/readme.md](api/readme.md) | 1 |
 | `cli/` | Index of CLI reference instances covering commands, params, types, groups, dictionary, user stories, env params, parity | [cli/readme.md](cli/readme.md) | 6 |
-| `cli/param/` | Index of individual parameter reference instances (69 parameters) | [cli/param/readme.md](cli/param/readme.md) | 69 |
+| `cli/param/` | Index of individual parameter reference instances (70 total; 012 deprecated) | [cli/param/readme.md](cli/param/readme.md) | 70 |
 | `cli/user_story/` | Index of user goal and usage pattern instances (27 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 27 |
 | `feature/` | Index of feature doc instances covering the clr binary tool design and journaling integration | [feature/readme.md](feature/readme.md) | 2 |
-| `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, trace universality, isolated/refresh subprocess defaults, exit code contract, print-mode timeout default, and render_summary gate field | [invariant/readme.md](invariant/readme.md) | 8 |
+| `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, trace universality, isolated/refresh subprocess defaults, exit code contract, print-mode timeout default, render_summary gate field, session mismatch detection, and container-only test execution | [invariant/readme.md](invariant/readme.md) | 10 |
 
 ### Master Doc Instances Table
 
@@ -33,7 +33,7 @@
 | cli/param | 009 | --max-tokens | [cli/param/009_max_tokens.md](cli/param/009_max_tokens.md) |
 | cli/param | 010 | --session-dir | [cli/param/010_session_dir.md](cli/param/010_session_dir.md) |
 | cli/param | 011 | --dry-run | [cli/param/011_dry_run.md](cli/param/011_dry_run.md) |
-| cli/param | 012 | --verbosity | [cli/param/012_verbosity.md](cli/param/012_verbosity.md) |
+| cli/param | 012 | ~~--verbosity~~ (DEPRECATED → 074) | [cli/param/012_verbosity.md](cli/param/012_verbosity.md) |
 | cli/param | 013 | --trace | [cli/param/013_trace.md](cli/param/013_trace.md) |
 | cli/param | 014 | --no-ultrathink | [cli/param/014_no_ultrathink.md](cli/param/014_no_ultrathink.md) |
 | cli/param | 015 | --system-prompt | [cli/param/015_system_prompt.md](cli/param/015_system_prompt.md) |
@@ -91,12 +91,13 @@
 | cli/param | 071 | --summary-fields | [cli/param/071_summary_fields.md](cli/param/071_summary_fields.md) |
 | cli/param | 072 | --journal | [cli/param/072_journal.md](cli/param/072_journal.md) |
 | cli/param | 073 | --journal-dir | [cli/param/073_journal_dir.md](cli/param/073_journal_dir.md) |
+| cli/param | 074 | --quiet | [cli/param/074_quiet.md](cli/param/074_quiet.md) |
 | cli/user_story | 001 | Interactive REPL | [cli/user_story/001_interactive_repl.md](cli/user_story/001_interactive_repl.md) |
 | cli/user_story | 002 | Print Mode Capture | [cli/user_story/002_print_mode_capture.md](cli/user_story/002_print_mode_capture.md) |
 | cli/user_story | 003 | Interactive With Message | [cli/user_story/003_interactive_with_message.md](cli/user_story/003_interactive_with_message.md) |
 | cli/user_story | 004 | Dry-run Preview | [cli/user_story/004_dry_run_preview.md](cli/user_story/004_dry_run_preview.md) |
 | cli/user_story | 005 | Project-specific Execution | [cli/user_story/005_project_specific_execution.md](cli/user_story/005_project_specific_execution.md) |
-| cli/user_story | 006 | Verbose Debugging | [cli/user_story/006_verbose_debugging.md](cli/user_story/006_verbose_debugging.md) |
+| cli/user_story | 006 | Quiet Mode and Diagnostic Control | [cli/user_story/006_verbose_debugging.md](cli/user_story/006_verbose_debugging.md) |
 | cli/user_story | 007 | Fresh Session | [cli/user_story/007_fresh_session.md](cli/user_story/007_fresh_session.md) |
 | cli/user_story | 008 | Trace Execution | [cli/user_story/008_trace_execution.md](cli/user_story/008_trace_execution.md) |
 | cli/user_story | 009 | Custom System Prompt | [cli/user_story/009_custom_system_prompt.md](cli/user_story/009_custom_system_prompt.md) |
@@ -128,3 +129,5 @@
 | invariant | 006 | Exit Code Contract | [invariant/006_exit_codes.md](invariant/006_exit_codes.md) |
 | invariant | 007 | Print-Mode Timeout Default | [invariant/007_print_mode_timeout.md](invariant/007_print_mode_timeout.md) |
 | invariant | 008 | render_summary() Gate Field | [invariant/008_render_summary_gate.md](invariant/008_render_summary_gate.md) |
+| invariant | 009 | Session Mismatch Detection | [invariant/009_session_mismatch_detection.md](invariant/009_session_mismatch_detection.md) |
+| invariant | 010 | Container-Only Test Execution | [invariant/010_container_only_test_execution.md](invariant/010_container_only_test_execution.md) |

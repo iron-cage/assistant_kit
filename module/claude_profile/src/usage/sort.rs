@@ -1,3 +1,5 @@
+// Items are pub for test_bridge re-export; lints suppressed — internal API.
+#![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
 //! Sort strategies for the quota table.
 //!
 //! `sort_indices` is the core sort function. Recommendation strategies
@@ -10,7 +12,7 @@
 
 pub( crate ) use super::sort_next::{ find_next_for_strategy, strategy_metric };
 
-use super::types::{ AccountQuota, SortStrategy, PreferStrategy, OPUS_OVERRIDE_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD };
+use super::types::{ AccountQuota, SortStrategy, PreferStrategy, H_EXHAUSTED_THRESHOLD, WEEKLY_EXHAUSTION_THRESHOLD };
 use super::format::{ five_hour_left, prefer_weekly, seven_day_left, renewal_secs };
 
 // ── Status group ──────────────────────────────────────────────────────────────
@@ -41,12 +43,12 @@ fn status_group_of( aq : &AccountQuota ) -> StatusGroup
   {
     return StatusGroup::Red;
   }
-  let h5_ok = five_hour_left( aq ) > OPUS_OVERRIDE_THRESHOLD;
+  let h5_ok = five_hour_left( aq ) > H_EXHAUSTED_THRESHOLD;
   // Fix(BUG-299): use raw seven_day_left for d7_ok — group boundaries are model-agnostic per AC-12.
   // Root cause: prefer_weekly(any) = min(7d, 7d_son) can be ≤ 5.0 when 7d_son ≤ 5% even if
   //   seven_day_left > 5%, misclassifying h-exhausted accounts as Red instead of HExhausted.
-  // Pitfall: prefer_weekly is correct for sort::renew tiebreak and → eligibility (model-aware);
-  //   wrong for group boundary predicates — always use raw single-metric functions here.
+  // Pitfall: prefer_weekly is correct for sort::renew tiebreak;
+  //   wrong for group boundary predicates and eligibility gates — always use raw single-metric functions.
   let d7_ok = seven_day_left( aq ) > WEEKLY_EXHAUSTION_THRESHOLD;
   match ( h5_ok, d7_ok )
   {
@@ -76,7 +78,7 @@ fn status_group_of( aq : &AccountQuota ) -> StatusGroup
 /// `desc::` reverses the within-group sort only — group order is always fixed.
 ///
 /// See `docs/feature/020_usage_sort_strategies.md` for full algorithm specs.
-pub( crate ) fn sort_indices(
+pub fn sort_indices(
   accounts  : &[ AccountQuota ],
   strategy  : SortStrategy,
   desc      : Option< bool >,

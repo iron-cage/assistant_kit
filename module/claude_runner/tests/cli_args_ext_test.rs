@@ -1,4 +1,4 @@
-//! CLI Argument Parsing Tests — Extended (T36–T49, S58–S79, BUG-212, BUG-215, T48)
+//! CLI Argument Parsing Tests — Extended (T36–T47, T49, EC01–EC06, S58–S69, S79, BUG-212, BUG-215, BUG-302)
 //!
 //! ## Purpose
 //!
@@ -66,9 +66,9 @@ fn t37_multiple_positional_words_joined()
 #[ test ]
 fn t38_double_dash_only_no_message()
 {
-  // Empty session dir → no -c injection (session_exists returns false for empty dir).
-  // Do NOT use make_session_dir() here: that writes a dummy file so session_exists()
-  // returns true and injects -c, which contradicts this test's "no -c" intent.
+  // Empty session dir → no -c injection (session_exists returns `None` for empty dir).
+  // Do NOT use make_session_dir() here: that writes a dummy .jsonl so session_exists()
+  // returns `Some(SessionId)` and injects -c, which contradicts this test's "no -c" intent.
   let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
   let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
   let out = run_cli( &[ "--dry-run", "--session-dir", session_path, "--" ] );
@@ -96,7 +96,7 @@ fn t39_max_tokens_empty_string_rejected()
 fn t40_all_value_flags_require_value()
 {
   for flag in &[
-    "--max-tokens", "--verbosity", "--session-dir", "--dir",
+    "--max-tokens", "--session-dir", "--dir",
     "--system-prompt", "--append-system-prompt",
   ]
   {

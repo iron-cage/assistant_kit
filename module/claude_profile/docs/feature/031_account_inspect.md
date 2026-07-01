@@ -256,4 +256,4 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 | File | Relationship |
 |------|--------------|
 | `tests/cli/account_inspect_test.rs` | Integration tests for AC-01..AC-25 |
-| [tests/docs/feature/31_account_inspect.md](../../tests/docs/feature/31_account_inspect.md) | FT-level behavioral test cases |
+| [tests/docs/feature/031_account_inspect.md](../../tests/docs/feature/031_account_inspect.md) | FT-level behavioral test cases |

@@ -105,8 +105,8 @@ clp .usage
 #   🟡 frank@example.com    🟡 3%      in 0h 23m  🟢 52%   12%      in 2d 11h  in 1h 12m   ~in 8d       in 2d 11h +7d
 #   🔴 dave@example.com     —          —           —        —        —          EXPIRED      ?            —
 #
-# Current      · alice@example.com · sonnet/low · 4/5
-# Next (renew) · frank@example.com · opus       · in 2d 11h +7d
+# Current      · alice@example.com · sonnet/high · 4/5
+# Next (renew) · frank@example.com · opus/max    · in 2d 11h +7d
 
 clp .usage live::1 interval::60 jitter::10
 # Quota
@@ -119,13 +119,13 @@ clp .usage live::1 interval::60 jitter::10
 **Notes:**
 - Accounts are enumerated from `{credential_store}/*.credentials.json` in alphabetical order.
 - Flag column priority: `✓` = current account, `*` = active-but-not-current (divergence), `@` = occupied on another machine (another machine's `_active_*` marker names this account). Priority: `✓` > `*` > `@` > blank. The recommended next account appears in the footer's `Next (strategy):` line, not in the flag column. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md) and [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md).
-- Status emoji column (`●`): composite of 5h and 7d status — `🟢` = both available (`5h Left > 15%` and `7d Left > 5%`); `🟡` = h-exhausted (`5h Left ≤ 15%`, 7d available) or weekly-exhausted (`7d Left ≤ 5%`, 5h available); `🔴` = both exhausted or error. Per-column emoji also embedded in `5h Left` (🟢/🟡 at ≤15% threshold) and `7d Left` (🟢/🟡 at ≤5% threshold). No JSON equivalent.
+- Status emoji column (`●`): composite of 5h and 7d status — `🟢` = both available (`5h Left > 15%` and `7d Left > 5%`); `🟡` = h-exhausted (`5h Left ≤ 15%`, 7d available) or weekly-exhausted (`7d Left ≤ 5%`, any 5h — including both-exhausted; 7d is binding, per BUG-321 fix); `🔴` = error or cancelled subscription (`billing_type = "none"`). Per-column emoji also embedded in `5h Left` (🟢/🟡 at ≤15% threshold) and `7d Left` (🟢/🟡 at ≤5% threshold). No JSON equivalent.
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails.
 - `Sub` is sourced from `GET /api/oauth/account` (parallel fetch); shows `?` when that fetch fails.
 - `~Renews` shows an exact duration (`in Xh Ym`, no `~`) when `_renewal_at` is set in `{name}.json` (via `.account.renewal`); shows an estimated `~in Xd` from `org_created_at` day-of-month when not set; shows `?` when neither source is available.
 - `→ Next` shows the soonest upcoming strategic event among 7d quota reset (`+7d`) and billing renewal (`$ren`). Token expiry (`!tok`) and 5h session resets are not candidates — already shown in `Expires` and `5h Reset`. Shows `—` when all candidates are absent or in the past.
 - Accounts with failed quota fetch (expired/missing `accessToken`, 429 rate-limit, or other API error) show `—` for all quota columns (`5h Left` through `7d Reset`) with a shortened error reason replacing the **last visible quota column**. `Expires`, `Sub`, and `~Renews` are sourced independently and retain their values regardless of quota fetch failure.
-- Footer: two `·`-delimited, column-aligned lines when ≥2 accounts have valid quota data: `Current · <name> · <model>/<effort> · N/N` (the `✓` account) and `Next (<strategy>) · <name> · <model> · <metric>` (recommendation). The flag column shows `✓`, `*`, `@`, or blank.
+- Footer: two `·`-delimited, column-aligned lines when ≥2 accounts have valid quota data: `Current · <name> · <model>/<effort> · N/N` (the `✓` account) and `Next (<strategy>) · <name> · <model>/<effort> · <metric>` (recommendation; effort is model-derived: `"max"` for Opus, `"high"` for Sonnet — TSK-335). The flag column shows `✓`, `*`, `@`, or blank.
 - Sessions table: appended after the footer when >1 `_active_*` marker exists in the credential store. Shows `Session` (`{user}@{host}`) and `Account` columns. `who::0` suppresses; `who::1` forces on. See [feature/009_token_usage.md AC-33, AC-34](../../feature/009_token_usage.md).
 - Empty credential store exits 0 with `(no accounts configured)`.
 - `refresh::1` triggers at most one retry per account per cycle. See [feature/017_token_refresh.md](../../feature/017_token_refresh.md).

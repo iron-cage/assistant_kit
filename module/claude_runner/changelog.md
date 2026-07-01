@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **BUG-318: `--output-style raw` + `--json-schema` produced empty stdout** (TSK-336)
+  - `builder.rs` Path B auto-inject gate widened: `effective_style == "summary" || cli.json_schema.is_some()` ensures `--output-format json` is injected when `--json-schema` is present regardless of `--output-style`
+  - `execution.rs` raw success path: added `else if cli.json_schema.is_some()` branch calling `extract_structured_output()` — extracts the `structured_output` JSON field from the CLR envelope instead of passing through the empty `result` text field
+  - `summary.rs` `render_summary()` body: falls back to `extract_structured_output()` when `result` is empty — also surfaces structured output in summary mode
+  - New `pub(super) fn extract_structured_output(json: &str) -> Option<String>` + private `fn extract_json_value(s: &str, key: &str) -> Option<String>` added to `summary.rs`
+  - Tests: EC-15 (`tests/output_style_test.rs`), S89 (`tests/param_extended_flags_test.rs`)
+
 ### Changed
+
+- **Removed `--verbosity` (0–5); replaced by `--quiet` bool flag** (TSK-337, Plan 038)
+  - `src/verbosity.rs` and `VerbosityLevel` newtype deleted entirely
+  - `--quiet` (env: `CLR_QUIET`) suppresses non-fatal CLR diagnostics: gate-wait messages, retry progress, retry-exhaustion messages, and the keep-claudecode nested-agent warning
+  - Fatal errors (spawn failures, binary-not-found) are always emitted regardless of `--quiet`; `--dry-run` and `--trace` output similarly unaffected
+  - `--verbose-detail` preview (former `--verbosity ≥ 4` behavior) removed; command preview is now exclusively via `--trace`
+  - All 4 gate sites updated from `verbosity.shows_*()` to `!cli.quiet`
+  - `tests/verbosity_test.rs` deleted; replaced by `tests/quiet_test.rs` (QT-1–QT-6)
 
 - **Dependency upgrade: `data_fmt ^0.4 → ^0.6`** (TSK-327)
   - Migrated `clr ps` and `clr tools` from `TableCaption`/`.field()`/`.caption()` to `Heading`/`.with_field()`/`.with_heading()` (renamed in data_fmt TSK-009)
@@ -17,6 +34,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dependency upgrade: `test_tools ^0.17 → ^0.18`** — API-compatible; no code changes required
 
 ### Added
+
+- **Container-only test execution enforcement** (commit `40927a98`)
+  - `verb/test` rejects any `VERB_LAYER` set on the host; `verb/test.d/l0` is a hard-error stub (exits 1) — no host-native test execution path exists
+  - Workspace-level `.config/setup-require-container` registered as a nextest setup script; checks three detection signals (`/.dockerenv`, `/run/.containerenv`, `RUNBOX_CONTAINER=1`); exits 1 before any test binary on bare host
+  - `claude_runner` test suite reorganized: tests moved to flat `tests/` structure
+  - Doc: `docs/invariant/010_container_only_test_execution.md`; spec: `tests/docs/invariant/010_container_only_test_execution.md`
+  - Tests: IT-1–IT-5 (`tests/invariant_container_test.rs`): nextest.toml setup-script registration (IT-1); setup-require-container existence (IT-2); three-signal body checks (IT-3–IT-5)
+
+- **Session mismatch detection** (TSK-334/335, BUG-320 hardening)
+  - `session_exists()` returns `Option<SessionId>` instead of `bool`; `build_claude_command()` returns `(ClaudeCommand, Option<SessionId>)` — captures expected UUID for post-execution comparison
+  - `extract_session_id(json) -> Option<String>` in `summary.rs`: parses `session_id` from CLR result envelope, gated on `"type":"result"` per invariant/008
+  - On success path in `run_print_mode()`, if expected UUID differs from actual, emits `[Runner] warning: session mismatch` to stderr; non-fatal (exit 0)
+  - `SessionId` newtype in `claude_storage_core`: typed wrapper for UUID stems; `most_recent_session_id()` / `most_recent_session_in_dir()` APIs
+  - Tests: SV-1–SV-4 (`session_verification_test.rs`), IT-8–IT-10 (`summary_unit_test.rs`)
+  - Doc: `invariant/009_session_mismatch_detection.md`
 
 - **`clr isolated` param gap closure** (Plan 034, TSK-328–331)
   - `--dry-run` (TSK-328): print injected command without creating temp HOME or spawning; exit 0; consistent with `run`/`ask`
@@ -40,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Parameters: [`--journal`](docs/cli/param/072_journal.md) (072), [`--journal-dir`](docs/cli/param/073_journal_dir.md) (073)
   - Env vars: `CLR_JOURNAL`, `CLR_JOURNAL_DIR`; invalid `CLR_JOURNAL` exits 1
   - New dependency: `claude_journal` (workspace)
-  - Tests: `journal_integration_test.rs` (EC-1–EC-15); EC-11..EC-13: gate_wait, validation_retry, read-only isolation; EC-14: CLI-wins-over-env precedence; EC-15: 1MB truncation marker
+  - Tests: `journal_integration_test.rs` (EC-1–EC-22); EC-11..EC-13: gate_wait, validation_retry, read-only isolation; EC-14: CLI-wins-over-env precedence; EC-15: 1MB truncation; EC-16: dry-run side-effect isolation (BUG-319); EC-17: bogus-flag exits 1; EC-18: case-sensitive; EC-19: missing-value; EC-20: duplicate last-wins; EC-21–EC-22: off+dir no-op
 
 - **Help split: `RUNNER OPTIONS` / `CLAUDE CODE OPTIONS (forwarded)` sections** (TSK-232)
   - `clr --help` now uses `CliHelpTemplate` from `cli_fmt ^0.9` instead of 262-line hand-rolled `print!` calls

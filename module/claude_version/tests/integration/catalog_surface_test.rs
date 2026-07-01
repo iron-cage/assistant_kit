@@ -1,24 +1,24 @@
-//! Design decision tests (DD- prefix) for `claude_version`.
+//! Feature tests (FT-6..FT-9) for `claude_version` CLI design decisions.
 //!
-//! Implements test cases from `tests/docs/feature/05_cli_design.md` Design Decision Tests section.
-//! Each function maps to one DD- case verifying a design decision is implemented.
+//! Implements test cases from `tests/docs/feature/005_cli_design.md` (FT-6 through FT-9).
+//! Each function maps to one FT- case verifying a design decision is implemented.
 //!
 //! # Coverage Map
 //!
-//! | DD-spec | ID | Decision | Function |
+//! | FT-spec | ID | Decision | Function |
 //! |---------|----|----------|----------|
-//! | feature/05_cli_design.md | DD-1 | D3 | `dd01_001_bool_true_rejected` |
-//! | feature/05_cli_design.md | DD-2 | D8 | `dd02_001_last_v_wins` |
-//! | feature/05_cli_design.md | DD-3 | D4 | `dd03_001_cmd_not_implemented_exit2` |
-//! | feature/05_cli_design.md | DD-4 | D7 | `dd04_001_per_cmd_validation` |
+//! | feature/005_cli_design.md | FT-6 | D3 | `ft005_6_bool_true_rejected` |
+//! | feature/005_cli_design.md | FT-7 | D8 | `ft005_7_last_v_wins` |
+//! | feature/005_cli_design.md | FT-8 | D4 | `ft005_8_cmd_not_implemented_exit2` |
+//! | feature/005_cli_design.md | FT-9 | D7 | `ft005_9_per_cmd_validation` |
 
 use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr, stdout };
 
-// ─── DD-1 (D3): boolean parameters use 0/1 only ───────────────────────────────
+// ─── FT-6 (D3): boolean parameters use 0/1 only ──────────────────────────────
 
-// DD-1: dry::true (non-integer boolean) → exit 1; confirms D3 (bool as 0/1 only)
+// FT-6: dry::true (non-integer boolean) → exit 1; confirms D3 (bool as 0/1 only)
 #[ test ]
-fn dd01_001_bool_true_rejected()
+fn ft005_6_bool_true_rejected()
 {
   let out = run_clm( &[ ".version.install", "dry::true" ] );
   assert_exit( &out, 1 );
@@ -26,11 +26,11 @@ fn dd01_001_bool_true_rejected()
   assert!( !err.is_empty(), "bool value 'true' rejection must produce error message: {err}" );
 }
 
-// ─── DD-2 (D8): last-occurrence wins for repeated parameters ─────────────────
+// ─── FT-7 (D8): last-occurrence wins for repeated parameters ─────────────────
 
-// DD-2: v::0 then v::2 → last wins → v::2 (labeled output); confirms D8
+// FT-7: v::0 then v::2 → last wins → v::2 (labeled output); confirms D8
 #[ test ]
-fn dd02_001_last_v_wins()
+fn ft005_7_last_v_wins()
 {
   let out = run_clm( &[ ".status", "v::0", "v::2" ] );
   assert_exit( &out, 0 );
@@ -42,12 +42,12 @@ fn dd02_001_last_v_wins()
   );
 }
 
-// ─── DD-3 (D4): internal error exits with code 2 ─────────────────────────────
+// ─── FT-8 (D4): internal error exits with code 2 ─────────────────────────────
 
-// DD-3: InternalError path (claude binary absent from PATH) → exit 2 (not exit 1)
+// FT-8: InternalError path (claude binary absent from PATH) → exit 2 (not exit 1)
 // Verifies D4: internal errors distinguished from user input errors by exit code.
 #[ test ]
-fn dd03_001_cmd_not_implemented_exit2()
+fn ft005_8_cmd_not_implemented_exit2()
 {
   // get_installed_version() has two paths:
   //   1. get_version_from_symlink() — reads $HOME/.local/bin/claude (no PATH needed)
@@ -58,11 +58,11 @@ fn dd03_001_cmd_not_implemented_exit2()
   assert_exit( &out, 2 );
 }
 
-// ─── DD-4 (D7): per-command parameter validation rejects unknown params ───────
+// ─── FT-9 (D7): per-command parameter validation rejects unknown params ───────
 
-// DD-4: format:: on .settings.set (unregistered param) → exit 1; confirms D7
+// FT-9: format:: on .settings.set (unregistered param) → exit 1; confirms D7
 #[ test ]
-fn dd04_001_per_cmd_validation()
+fn ft005_9_per_cmd_validation()
 {
   let out = run_clm( &[ ".settings.set", "format::json", "key::k", "value::v" ] );
   assert_exit( &out, 1 );

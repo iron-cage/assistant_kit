@@ -47,4 +47,4 @@ Cost: purging is destructive. If a different version is needed later, it require
 
 | File | Relationship |
 |------|-------------|
-| [`../../tests/docs/pitfall/02_symlink_retarget.md`](../../tests/docs/pitfall/02_symlink_retarget.md) | Regression test spec |
+| [`../../tests/docs/pitfall/002_symlink_retarget.md`](../../tests/docs/pitfall/002_symlink_retarget.md) | Regression test spec |

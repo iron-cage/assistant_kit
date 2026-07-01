@@ -45,5 +45,5 @@ pre-v1.0 (unverified)
 | storage | [`../storage/003_root_files.md`](../storage/003_root_files.md) | Root-level files: settings.json, .credentials.json, history.jsonl |
 | filesystem | [003_credential_store.md](003_credential_store.md) | Per-account credential files (separate from `~/.claude/.credentials.json`) |
 | settings | [`../settings/001_global_settings.md`](../settings/001_global_settings.md) | settings.json write protocol and key table |
-| formats | [`../formats/002_credentials.md`](../formats/002_credentials.md) | `.credentials.json` format: `claudeAiOauth` structure |
+| formats | [`../format/002_credentials.md`](../format/002_credentials.md) | `.credentials.json` format: `claudeAiOauth` structure |
 | source | `../../../../module/claude_profile/src/paths.rs` | `ClaudePaths` struct — authoritative path implementation |

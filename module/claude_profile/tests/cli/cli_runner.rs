@@ -10,6 +10,30 @@ use std::process::{ Command, Output };
 /// Path to the compiled `clp` binary (resolved at compile time).
 pub const BIN : &str = env!( "CARGO_BIN_EXE_clp" );
 
+/// Assert that the current process is running inside a container.
+///
+/// Checked on every integration test entry point to enforce Invariant 009
+/// (Container-Only Test Execution). Escape hatch: `VERB_LAYER=l0` bypasses
+/// this check for authorized host development via direct nextest invocation.
+///
+/// # Panics
+///
+/// Panics with a human-readable message when run outside a container without
+/// the `VERB_LAYER=l0` escape hatch.
+fn assert_container()
+{
+  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
+    || std::path::Path::new( "/run/.containerenv" ).exists()
+    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
+  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
+  assert!(
+    in_container || escaped,
+    "\n\nTests must run inside a container.\n\
+     Standard invocation: cd module/claude_profile && ./verb/test\n\
+     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
+  );
+}
+
 /// Run the binary with the given argv fragments, inheriting the real HOME.
 ///
 /// # Panics
@@ -19,6 +43,7 @@ pub const BIN : &str = env!( "CARGO_BIN_EXE_clp" );
 #[ must_use ]
 pub fn run_cs( args : &[ &str ] ) -> Output
 {
+  assert_container();
   Command::new( BIN )
   .args( args )
   .output()
@@ -37,6 +62,7 @@ pub fn run_cs( args : &[ &str ] ) -> Output
 #[ must_use ]
 pub fn run_cs_with_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> Output
 {
+  assert_container();
   // Fix(BUG-281): env_remove("PRO") prevents host $PRO from overriding the test HOME.
   // Root cause: PersistPaths::resolve_root() prefers $PRO over $HOME when $PRO is an existing dir;
   //   tests that only set HOME inherited $PRO from the runner, causing the binary to operate on
@@ -61,6 +87,7 @@ pub fn run_cs_with_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> Output
 #[ must_use ]
 pub fn run_cs_without_home( args : &[ &str ] ) -> Output
 {
+  assert_container();
   // Fix(BUG-281): env_remove("PRO") prevents host $PRO from substituting for HOME.
   // Root cause: removing $HOME but not $PRO left a silent fallback; the binary resolved the
   //   credential store via $PRO and succeeded instead of failing as the test expected.

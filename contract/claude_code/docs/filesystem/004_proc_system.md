@@ -44,3 +44,4 @@ pre-v1.0 (unverified)
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Filesystem master index: full directory tree, path reference table |
 | source | `../../../../module/claude_runner_core/src/process.rs` | `/proc` scanner implementation |
+| behavior | [../behavior/028_b28_bash_rtk_subprocess.md](../behavior/028_b28_bash_rtk_subprocess.md) | B28: `/proc/self/status`, `/proc/self/cmdline`, `/proc/self/environ` accessed from bash subprocesses (distinct context: subprocess self-inspection, not process scanner) |

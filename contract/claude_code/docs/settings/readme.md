@@ -5,7 +5,7 @@
 - **Purpose**: Document the structure and write semantics for settings files managed by claude_version.
 - **Responsibility**: Master file for the `settings` collection — lists all 3 settings file instances covering global user settings, project-level settings, and the version lock protocol.
 - **In Scope**: settings.json structure, atomic write protocol, project-level settings, version lock operations, preferred version storage, type inference rules, settings config parameter table.
-- **Out of Scope**: Filesystem paths and directory layout (→ [`../filesystem/`](../filesystem/readme.md)); credential file format (→ [`../formats/002_credentials.md`](../formats/002_credentials.md)); account active marker (→ [`../filesystem/003_credential_store.md`](../filesystem/003_credential_store.md)).
+- **Out of Scope**: Filesystem paths and directory layout (→ [`../filesystem/`](../filesystem/readme.md)); credential file format (→ [`../format/002_credentials.md`](../format/002_credentials.md)); account active marker (→ [`../filesystem/003_credential_store.md`](../filesystem/003_credential_store.md)).
 
 ### Overview Table
 
@@ -49,7 +49,7 @@ Config keys read by `claude` at startup from `settings.json`. Scope: **G** = use
 | `fileCheckpointingEnabled` | G | bool | `false` | Save checkpoint copy of each file before editing |
 | `remoteControlAtStartup` | G | bool | `false` | Open remote-control channel on startup |
 
-See [`../params/readme.md`](../params/readme.md) for the complete parameter table including CLI flags and env vars.
+See [`../param/readme.md`](../param/readme.md) for the complete parameter table including CLI flags and env vars.
 
 ### Type-Specific Requirements
 
@@ -65,7 +65,7 @@ All `settings` doc instances must include:
 
 **This entity depends on**:
 - `../filesystem/` — path locations for settings.json and settings.json.tmp
-- `../params/` — full parameter table (CLI flags and env vars that complement config keys)
+- `../param/` — full parameter table (CLI flags and env vars that complement config keys)
 
 **This entity consumed by**:
 - `../../../../module/claude_version/docs/` — settings management and version lock feature docs

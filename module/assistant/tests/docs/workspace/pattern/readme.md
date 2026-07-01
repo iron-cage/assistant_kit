@@ -6,4 +6,4 @@ Test specs for workspace-level pattern doc instances.
 
 | Name | Responsibility |
 |------|----------------|
-| `01_crate_layering.md` | Verify four-layer crate dependency hierarchy |
+| `001_crate_layering.md` | Verify four-layer crate dependency hierarchy |

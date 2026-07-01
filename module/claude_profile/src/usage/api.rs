@@ -19,13 +19,14 @@ use super::sort::find_next_for_strategy;
 use super::format::{ five_hour_left, seven_day_left, status_emoji };
 use super::api_switch::apply_model_override;
 use super::api_dispatch::handle_mutation_dispatch;
-pub( crate ) use super::api_switch::{
-  TouchCtx, PreSwitchOutcome,
+pub use super::api_switch::{
+  PreSwitchOutcome,
   validate_imodel_str, validate_effort_str,
   attempt_expired_token_refresh,
   pre_switch_touch_ctx,
   apply_post_switch_touch,
 };
+
 
 // ── no_color post-processor ────────────────────────────────────────────────────
 
@@ -246,7 +247,8 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
   // Read session state once for the footer; both render_text and render_plain consume it.
   // Reads settings.json once; extracts "model" and "effortLevel".
-  // effortLevel is carried forward after rotation when present (Feature 062, AC-06).
+  // effortLevel is model-derived and written by the model override above (TSK-335).
+  // session_effort is used only for the Current line display; Next line uses model-derived effort.
   let settings_content = crate::ClaudePaths::new()
     .and_then( |p| std::fs::read_to_string( p.settings_file() ).ok() );
   let session_model_str  = settings_content.as_deref()
@@ -310,15 +312,15 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     crate::account::switch_account( &winner_name, &credential_store, &claude_paths )
       .map_err( |e| io_err_to_error_data( &e, "usage rotate" ) )?;
 
-    // AC-05: model override for winner (Feature 062)
+    // AC-05..AC-07: model + effort override for winner (Feature 062, unconditional — TSK-335).
+    // Fix(carry-forward/TSK-335): removed `if let Some(se) = session_effort { set_session_effort(...) }`.
+    // Root cause: carry-forward called after apply_model_override, overwriting its model-derived effort
+    //   with the stale pre-rotation effortLevel from the previous account's settings.json.
+    // Pitfall: apply_model_override now owns all effort writes (unconditional); callers must not
+    //   call set_session_effort after it or the model-derived value will be clobbered.
     if let Ok( ref winner_data ) = accounts[ winner_idx ].result
     {
       apply_model_override( winner_data, &claude_paths, params.trace, "usage rotate", &winner_name );
-    }
-    // AC-06/AC-07: carry-forward effort when present; no default injected when absent
-    if let Some( se ) = session_effort
-    {
-      claude_profile_core::account::set_session_effort( &claude_paths, se );
     }
 
     apply_touch( &mut accounts[ winner_idx ], &credential_store, Some( &claude_paths ), params.trace, params.imodel, params.effort, params.solo );
@@ -338,11 +340,3 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
   Ok( OutputData::new( content, "text" ) )
 }
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-#[ cfg( test ) ]
-// Exception to tests-in-tests/ rule: pub(crate) fns (pre_switch_touch_ctx, apply_model_override,
-// apply_post_switch_touch, TouchCtx) are not accessible from the external tests/ directory.
-#[ path = "api_tests.rs" ]
-mod tests;

@@ -21,7 +21,7 @@ parallel pipelines.
 ### Acceptance Criteria
 
 - AC-001: When active Claude processes < `--max-sessions`, `clr` proceeds immediately with no gate messages to stderr
-- AC-002: When active Claude processes >= `--max-sessions`, `clr` emits a waiting message to stderr (at verbosity ≥ 2) and polls every 30 seconds
+- AC-002: When active Claude processes >= `--max-sessions`, `clr` emits a waiting message to stderr (unless `--quiet`) and polls every 30 seconds
 - AC-003: When 100 attempts are exhausted without a slot opening, `clr` emits an error message to stderr and exits with code 1
 - AC-004: `--max-sessions 0` disables the gate; `clr` proceeds immediately with no process scan or messages
 - AC-005: `CLR_MAX_SESSIONS=N` is equivalent to `--max-sessions N` when the CLI flag is absent; CLI flag wins when both are present

@@ -42,7 +42,7 @@ Set `clr` defaults via CLR_* environment variables so that repeated invocations 
 |---|-----------|------|
 | 3 | [`--model`](../param/003_model.md) | `CLR_MODEL` — example env var for string type |
 | 11 | [`--dry-run`](../param/011_dry_run.md) | Reveals effective env-var values without executing |
-| 12 | [`--verbosity`](../param/012_verbosity.md) | `CLR_VERBOSITY` — example env var for parsed type |
+| 74 | [`--quiet`](../param/074_quiet.md) | `CLR_QUIET` — bool env var example |
 
 ### Related User Stories
 

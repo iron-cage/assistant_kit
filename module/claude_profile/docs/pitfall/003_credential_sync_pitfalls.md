@@ -44,10 +44,26 @@ Earlier `apply_refresh`/`apply_touch` loops snapshotted the current `_active` ma
 
 **Rule:** Never cache a filesystem-derived boolean across a blocking call (subprocess, network I/O) in a multi-process environment. Re-read the active marker at each use site in `refresh_token_with_live_path` — independently before the pre-sync block and independently before the race-recovery block.
 
+### Pitfall 6 — Cross-machine RT rotation silently kills the shared credential store
+
+When multiple machines share the same credential set (same email / AT+RT pair), any machine that performs an OAuth token refresh issues a new AT+RT pair via RT rotation — immediately invalidating the old RT server-side. If that machine does NOT push the new credentials to the shared credential store, all other machines that later attempt refresh using the old (now-dead) RT get `refresh_account_token()` → `None` → `aq.result = Err("refresh token expired")` — terminal, unrecoverable without browser relogin.
+
+**Detection gap:** `_active_*` marker files are only written by `clp .account.use`. A background Claude Code CLI process on a remote machine that refreshes its AT writes no marker — it is invisible to the sessions table. `history.jsonl` is per-machine local only. No cross-machine credential usage log exists in the current architecture.
+
+**Scenario:** The watchdog credential store is a git repo synced only by the watchdog process on one machine. If another VPS runs Claude Code with the same credentials and its AT expires, the CLI refreshes it — new RT goes to that machine's `~/.claude/.credentials.json` only. The watchdog store retains the old RT. Next watchdog refresh attempt: `"refresh token expired"`.
+
+**Rule:** All machines sharing a set of credentials must push the updated credential file to the shared credential store immediately after any token refresh. An AT refresh on machine B without a corresponding store push leaves machine A's watchdog with a dead RT.
+
+**Investigation steps (when suspected):**
+1. Collect AT fingerprints (first 8 chars of `accessToken`) from ALL machines at the time of failure
+2. Check `~/.claude/history.jsonl` on ALL machines for activity in the incident window
+3. Check Claude Code process lists on all machines during the window
+4. Matching AT fingerprint changes on machine B with no store push = H6 mechanism confirmed
+
 ### Cross-References
 
 | File | Relationship |
 |------|-------------|
 | [subprocess/002](../subprocess/002_credential_writeback.md) | Credential write-back protocol |
 | [schema/001](../schema/001_credentials_json.md) | `{name}.credentials.json` fields |
-| [state_machine/002](../state_machine/002_oauth_token_lifecycle.md) | Token validity states |
+| [state_machine/002](../state_machine/002_oauth_token_lifecycle.md) | Token validity states; no `[valid]→[refreshed]` transition |

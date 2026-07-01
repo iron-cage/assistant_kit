@@ -53,6 +53,13 @@ clv.processes format::json
 |---|-------|-----------|----------------|
 | 1 | [Output Control](../param_group/01_output_control.md) | Partial | `count::` |
 
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | [`v::`](../param/04_v.md) |
+| 2 | [`format::`](../param/05_format.md) |
+
 ### Related Commands
 
 | # | Command | Relationship |
@@ -127,6 +134,15 @@ clv.processes.kill force::1  # SIGKILL immediately
 |---|-------|-----------|----------------|
 | 1 | [Output Control](../param_group/01_output_control.md) | Partial | `count::` |
 | 2 | [Execution Control](../param_group/02_execution_control.md) | Full | — |
+
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | [`dry::`](../param/02_dry.md) |
+| 2 | [`force::`](../param/03_force.md) |
+| 3 | [`v::`](../param/04_v.md) |
+| 4 | [`format::`](../param/05_format.md) |
 
 ### Related Commands
 

@@ -28,10 +28,17 @@ clv .settings.set key::theme value::dark
 
 ### Referenced Commands
 
-| # | Command | Membership |
-|---|---------|-----------|
-| 1 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Partial (`key::` only) |
-| 2 | [`.settings.set`](../command/settings.md#command--11-settingsset) | Full (`key::`, `value::`) |
+| # | Command | Membership | Excluded Params |
+|---|---------|-----------|----------------|
+| 1 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Partial | `value::` |
+| 2 | [`.settings.set`](../command/settings.md#command--11-settingsset) | Full | — |
+
+### Referenced Parameters
+
+| # | Parameter | Type | Default | Role in Group |
+|---|-----------|------|---------|---------------|
+| 1 | [`key::`](../param/06_key.md) | [`SettingsKey`](../type/04_settings_key.md) | (required) | Entry name to read or write |
+| 2 | [`value::`](../param/07_value.md) | [`SettingsValue`](../type/05_settings_value.md) | (required) | Entry value to write (type-inferred) |
 
 ### Referenced User Stories
 

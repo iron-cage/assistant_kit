@@ -26,6 +26,30 @@
 //! | `ast_account_list_command_accepted` | `.accounts` routed via profile programmatic registration |
 //! | `ast_journal_list_command_accepted` | `.journal.list` routed via journal_viewer YAML aggregation |
 
+fn assert_container()
+{
+  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
+    || std::path::Path::new( "/run/.containerenv" ).exists()
+    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
+  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
+  assert!(
+    in_container || escaped,
+    "\n\nTests must run inside a container.\n\
+     Standard invocation: cd module/assistant && ./verb/test\n\
+     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
+  );
+}
+
+fn run_ast( home : &std::path::Path, args : &[ &str ] ) -> std::process::Output
+{
+  assert_container();
+  std::process::Command::new( assert_cmd::cargo::cargo_bin!( "ast" ) )
+    .env( "HOME", home )
+    .args( args )
+    .output()
+    .unwrap()
+}
+
 #[test]
 fn ast_package_name_is_assistant()
 {
@@ -48,13 +72,7 @@ fn ast_binary_is_present()
 fn ast_processes_command_accepted()
 {
   let home = tempfile::TempDir::new().unwrap();
-  let out = std::process::Command::new(
-    assert_cmd::cargo::cargo_bin!( "ast" )
-  )
-    .env( "HOME", home.path() )
-    .args( [ ".processes" ] )
-    .output()
-    .unwrap();
+  let out  = run_ast( home.path(), &[ ".processes" ] );
   assert_eq!(
     out.status.code().unwrap_or( -1 ), 0,
     "ast.processes should exit 0; stderr: {}",
@@ -68,13 +86,7 @@ fn ast_processes_command_accepted()
 fn ast_projects_accepts_scope_param()
 {
   let home = tempfile::TempDir::new().unwrap();
-  let out = std::process::Command::new(
-    assert_cmd::cargo::cargo_bin!( "ast" )
-  )
-    .env( "HOME", home.path() )
-    .args( [ ".projects", "scope::local" ] )
-    .output()
-    .unwrap();
+  let out  = run_ast( home.path(), &[ ".projects", "scope::local" ] );
   assert_eq!(
     out.status.code().unwrap_or( -1 ), 0,
     "ast.projects scope::local must succeed (storage variant accepts scope); stderr: {}",
@@ -91,13 +103,7 @@ fn ast_projects_accepts_scope_param()
 fn ast_usage_command_accepted()
 {
   let home = tempfile::TempDir::new().unwrap();
-  let out = std::process::Command::new(
-    assert_cmd::cargo::cargo_bin!( "ast" )
-  )
-    .env( "HOME", home.path() )
-    .args( [ ".usage" ] )
-    .output()
-    .unwrap();
+  let out  = run_ast( home.path(), &[ ".usage" ] );
   let code = out.status.code().unwrap_or( -1 );
   assert!(
     code == 0 || code == 2,
@@ -111,13 +117,7 @@ fn ast_usage_command_accepted()
 fn ast_paths_command_accepted()
 {
   let home = tempfile::TempDir::new().unwrap();
-  let out = std::process::Command::new(
-    assert_cmd::cargo::cargo_bin!( "ast" )
-  )
-    .env( "HOME", home.path() )
-    .args( [ ".paths" ] )
-    .output()
-    .unwrap();
+  let out  = run_ast( home.path(), &[ ".paths" ] );
   assert_eq!(
     out.status.code().unwrap_or( -1 ), 0,
     "ast.paths should exit 0; stderr: {}",
@@ -134,13 +134,7 @@ fn ast_paths_command_accepted()
 fn ast_account_list_command_accepted()
 {
   let home = tempfile::TempDir::new().unwrap();
-  let out = std::process::Command::new(
-    assert_cmd::cargo::cargo_bin!( "ast" )
-  )
-    .env( "HOME", home.path() )
-    .args( [ ".accounts" ] )
-    .output()
-    .unwrap();
+  let out  = run_ast( home.path(), &[ ".accounts" ] );
   assert_eq!(
     out.status.code().unwrap_or( -1 ), 0,
     "ast .accounts should exit 0; stderr: {}",
@@ -158,13 +152,7 @@ fn ast_account_list_command_accepted()
 fn ast_journal_list_command_accepted()
 {
   let home = tempfile::TempDir::new().unwrap();
-  let out  = std::process::Command::new(
-    assert_cmd::cargo::cargo_bin!( "ast" )
-  )
-    .env( "HOME", home.path() )
-    .args( [ ".journal.list" ] )
-    .output()
-    .unwrap();
+  let out  = run_ast( home.path(), &[ ".journal.list" ] );
   assert_eq!(
     out.status.code().unwrap_or( -1 ), 0,
     "ast .journal.list should exit 0 (empty journal is valid); stderr: {}",

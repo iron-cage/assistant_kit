@@ -61,12 +61,13 @@ CLI flag wins when both are set (standard precedence).
 | `stream-json` | `summary` | `--output-format stream-json` forwarded; `render_summary()` receives non-JSON stream; returns `None`; raw stream passed through |
 | `summary` (legacy) | absent | builder alias translates to `json`; execution predicate fires via `output_style.unwrap_or("summary")`; key:val header rendered |
 | any | `raw` | no `--output-format json` injection; `render_summary()` not called; raw claude output |
+| absent + `--json-schema` | `raw` | **BUG-318 (fixed, TSK-336):** Path B gate widened to `effective_style == "summary" \|\| cli.json_schema.is_some()` — injects `--output-format json`; raw path calls `extract_structured_output()` from CLR envelope; `render_summary()` body also falls back to `structured_output` when `result` is empty |
 
 ### Referenced Parameter Groups
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, `--timeout`, `--output-format`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, `--timeout`, `--output-format`, ... |
 
 ### Referenced Commands
 

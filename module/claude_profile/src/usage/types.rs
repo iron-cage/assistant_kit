@@ -2,17 +2,21 @@
 //!
 //! All enums, structs, and their `impl` blocks live here so other submodules
 //! can import them without circular dependencies.
+// Items are pub for test_bridge re-export (testing feature); missing_docs and
+// missing_debug_implementations are suppressed here — these are internal types
+// exposed only via the test_bridge gated module.
+#![ allow( missing_docs, missing_debug_implementations, clippy::missing_inline_in_public_items, clippy::must_use_candidate, clippy::missing_errors_doc ) ]
 
 use claude_quota::OauthUsageData;
 
 // ── Sort and prefer strategies ─────────────────────────────────────────────────
 
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-pub( crate ) enum SortStrategy { Name, Renew, Renews }
+pub enum SortStrategy { Name, Renew, Renews }
 
 impl SortStrategy
 {
-  pub( crate ) fn parse( s : &str ) -> Result< Self, String >
+  pub fn parse( s : &str ) -> Result< Self, String >
   {
     match s
     {
@@ -28,18 +32,18 @@ impl SortStrategy
   /// Context-sensitive default `desc` direction for each strategy.
   ///
   /// All strategies default to ascending (`false`).
-  pub( crate ) fn default_desc( self ) -> bool
+  pub fn default_desc( self ) -> bool
   {
     match self { Self::Name | Self::Renew | Self::Renews => false }
   }
 }
 
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-pub( crate ) enum PreferStrategy { Any, Opus, Sonnet }
+pub enum PreferStrategy { Any, Opus, Sonnet }
 
 impl PreferStrategy
 {
-  pub( crate ) fn parse( s : &str ) -> Result< Self, String >
+  pub fn parse( s : &str ) -> Result< Self, String >
   {
     match s
     {
@@ -59,41 +63,41 @@ impl PreferStrategy
 /// All other columns follow the default set; `cols::` modifiers toggle each one.
 #[ derive( Debug ) ]
 #[ allow( clippy::struct_excessive_bools ) ]
-pub( crate ) struct ColsVisibility
+pub struct ColsVisibility
 {
   /// `●` composite status emoji column (default ON).
-  pub( crate ) status       : bool,
+  pub status       : bool,
   /// `Expires` token TTL column (default ON).
-  pub( crate ) expires      : bool,
+  pub expires      : bool,
   /// `Sub` subscription label column (default OFF).
-  pub( crate ) sub          : bool,
+  pub sub          : bool,
   /// `~Renews` next billing date column (default ON).
-  pub( crate ) renews       : bool,
+  pub renews       : bool,
   /// `5h Left` session quota remaining (default ON).
-  pub( crate ) h5_left      : bool,
+  pub h5_left      : bool,
   /// `5h Reset` session reset countdown (default ON).
-  pub( crate ) h5_reset     : bool,
+  pub h5_reset     : bool,
   /// `7d Left` weekly quota remaining (default ON).
-  pub( crate ) d7_left      : bool,
+  pub d7_left      : bool,
   /// `7d(Son)` Sonnet-only weekly quota remaining (default ON).
-  pub( crate ) d7_son       : bool,
+  pub d7_son       : bool,
   /// `7d Reset` weekly reset countdown (default ON).
-  pub( crate ) d7_reset     : bool,
+  pub d7_reset     : bool,
   /// `7d Son Reset` Sonnet weekly reset countdown (default OFF).
-  pub( crate ) d7_son_reset : bool,
+  pub d7_son_reset : bool,
   /// `Host` machine label column (default OFF).
-  pub( crate ) host         : bool,
+  pub host         : bool,
   /// `Role` user-defined role tag column (default OFF).
-  pub( crate ) role         : bool,
+  pub role         : bool,
   /// `Owner` account owner identity column (default ON).
-  pub( crate ) owner        : bool,
+  pub owner        : bool,
   /// `→ Next` soonest upcoming event column (default ON).
-  pub( crate ) next         : bool,
+  pub next         : bool,
 }
 
 impl ColsVisibility
 {
-  pub( crate ) fn default_set() -> Self
+  pub fn default_set() -> Self
   {
     Self
     {
@@ -114,7 +118,7 @@ impl ColsVisibility
     }
   }
 
-  pub( crate ) fn apply_modifier( &mut self, modifier : &str ) -> Result< (), String >
+  pub fn apply_modifier( &mut self, modifier : &str ) -> Result< (), String >
   {
     let ( show, id ) = if let Some( rest ) = modifier.strip_prefix( '+' )
     {
@@ -151,7 +155,7 @@ impl ColsVisibility
     Ok( () )
   }
 
-  pub( crate ) fn parse( s : &str ) -> Result< Self, String >
+  pub fn parse( s : &str ) -> Result< Self, String >
   {
     let mut vis = Self::default_set();
     for modifier in s.split( ',' ).map( str::trim ).filter( |m| !m.is_empty() )
@@ -166,35 +170,35 @@ impl ColsVisibility
 
 /// Per-account quota fetch result, bundling identity, state flags, and the raw usage data.
 #[ allow( clippy::struct_excessive_bools ) ]
-pub( crate ) struct AccountQuota
+pub struct AccountQuota
 {
-  pub( crate ) name                  : String,
+  pub name                  : String,
   /// Live-token match: `accessToken` in `~/.claude/.credentials.json` equals this account's stored token.
-  pub( crate ) is_current            : bool,
+  pub is_current            : bool,
   /// Active-marker match: per-machine active marker file in the credential store names this account.
-  pub( crate ) is_active             : bool,
+  pub is_active             : bool,
   /// Another machine's `_active_*` file names this account.
-  pub( crate ) is_occupied_elsewhere : bool,
-  pub( crate ) expires_at_ms         : u64,
+  pub is_occupied_elsewhere : bool,
+  pub expires_at_ms         : u64,
   /// `Ok` = live quota fetched; `Err` = reason string (expired, network, etc.).
-  pub( crate ) result                : Result< OauthUsageData, String >,
+  pub result                : Result< OauthUsageData, String >,
   /// Billing state from `GET /api/oauth/account`; `None` if the fetch failed.
-  pub( crate ) account               : Option< claude_quota::OauthAccountData >,
+  pub account               : Option< claude_quota::OauthAccountData >,
   /// Machine label from `{name}.json`; empty when absent.
-  pub( crate ) host                  : String,
+  pub host                  : String,
   /// User-defined role tag from `{name}.json`; empty when absent.
-  pub( crate ) role                  : String,
+  pub role                  : String,
   /// Override billing renewal date from `{name}.json`; `None` when not set.
-  pub( crate ) renewal_at            : Option< String >,
+  pub renewal_at            : Option< String >,
   /// `true` when result was loaded from cache (fetch failed, fallback used).
-  pub( crate ) cached                : bool,
+  pub cached                : bool,
   /// Seconds since last successful fetch; present only when `cached == true`.
-  pub( crate ) cache_age_secs        : Option< u64 >,
+  pub cache_age_secs        : Option< u64 >,
   /// `true` when `owner` in `{name}.json` is empty or matches `current_identity()`.
   /// `false` for accounts owned by a different machine — G1–G7 enforcement gates apply.
-  pub( crate ) is_owned              : bool,
+  pub is_owned              : bool,
   /// Raw owner identity string from `{name}.json`; empty when unset.
-  pub( crate ) owner                 : String,
+  pub owner                 : String,
 }
 
 // ── Command handler ────────────────────────────────────────────────────────────
@@ -202,81 +206,81 @@ pub( crate ) struct AccountQuota
 /// Parsed `.usage` parameters extracted from a `VerifiedCommand`.
 #[ derive( Debug ) ]
 #[ allow( clippy::struct_excessive_bools ) ]
-pub( crate ) struct UsageParams
+pub struct UsageParams
 {
   /// 1 = auto-refresh expired tokens (default); 0 = show errors as-is.
-  pub( crate ) refresh           : i64,
+  pub refresh           : i64,
   /// 1 = continuous live-monitor loop; 0 = single fetch (default).
-  pub( crate ) live              : i64,
+  pub live              : i64,
   /// Seconds between live-loop cycles (default 30; only validated when live=1).
-  pub( crate ) interval          : u64,
+  pub interval          : u64,
   /// Max random seconds added to each cycle (default 0; only validated when live=1).
-  pub( crate ) jitter            : u64,
+  pub jitter            : u64,
   /// true = emit timestamped diagnostic lines to stderr (`YYYY-MM-DD · HH:MM:SS · …`).
-  pub( crate ) trace             : bool,
+  pub trace             : bool,
   /// Row ordering strategy for the text table.
-  pub( crate ) sort              : SortStrategy,
+  pub sort              : SortStrategy,
   /// Sort direction override; `None` = use strategy's context-sensitive default.
-  pub( crate ) desc              : Option< bool >,
+  pub desc              : Option< bool >,
   /// Weekly quota column selector for strategies that reference weekly availability.
-  pub( crate ) prefer            : PreferStrategy,
+  pub prefer            : PreferStrategy,
   /// Column visibility modifiers applied to the text table.
-  pub( crate ) cols              : ColsVisibility,
+  pub cols              : ColsVisibility,
   /// 1 = activate idle 5h session windows via subprocess (default); 0 = off.
-  pub( crate ) touch             : i64,
+  pub touch             : i64,
   /// Subprocess model selection (default: `auto`).
-  pub( crate ) imodel            : SubprocessModel,
+  pub imodel            : SubprocessModel,
   /// Subprocess effort level (default: `auto`).
-  pub( crate ) effort            : SubprocessEffort,
+  pub effort            : SubprocessEffort,
   // ── Row filtering (TSK-223) ────────────────────────────────────────────────
   /// Max rows to display; 0 = show all.
-  pub( crate ) count             : u64,
+  pub count             : u64,
   /// Skip first N rows from the filtered result before display.
-  pub( crate ) offset            : u64,
+  pub offset            : u64,
   /// When true, show only the per-machine active account row.
-  pub( crate ) only_active       : bool,
+  pub only_active       : bool,
   /// When true, show only the row selected as the recommended next account.
-  pub( crate ) only_next         : bool,
+  pub only_next         : bool,
   /// Minimum 5h quota percentage (0–100); rows below threshold are hidden.
-  pub( crate ) min_5h            : u8,
+  pub min_5h            : u8,
   /// Minimum 7d quota percentage (0–100); rows below threshold are hidden.
-  pub( crate ) min_7d            : u8,
+  pub min_7d            : u8,
   /// When true, hide 🔴 rows (invalid/expired token).
-  pub( crate ) only_valid        : bool,
+  pub only_valid        : bool,
   /// When true, hide 🟡 and 🔴 rows; show only 🟢 rows.
-  pub( crate ) exclude_exhausted : bool,
+  pub exclude_exhausted : bool,
   // ── Format / extraction (TSK-224) ─────────────────────────────────────────
   /// Output format for the result set.
-  pub( crate ) format    : UsageOutputFormat,
+  pub format    : UsageOutputFormat,
   /// When `Some`, extract this field's value from the first row as bare string.
-  pub( crate ) get       : Option< GetField >,
+  pub get       : Option< GetField >,
   /// When true, replace percentage columns with absolute token counts (no-op when API data absent).
-  pub( crate ) abs       : bool,
+  pub abs       : bool,
   /// When true, strip emoji and ANSI sequences from the output.
-  pub( crate ) no_color  : bool,
+  pub no_color  : bool,
   /// When `Some`, write this value to `set_session_model` instead of running `apply_model_override`.
   /// String is the raw user-provided value (e.g., `"opus"`, `"default"`); resolve at use site.
-  pub( crate ) set_model : Option< String >,
+  pub set_model : Option< String >,
   // ── Rotation (Feature 038) ─────────────────────────────────────────────────
   /// When true, switch to the `→` winner after rendering the quota table.
-  pub( crate ) rotate    : bool,
+  pub rotate    : bool,
   /// When true, bypass the G5 ownership gate on the rotate path (and G8 on unclaim).
-  pub( crate ) force     : bool,
+  pub force     : bool,
   // ── Sessions table (Plan 022) ──────────────────────────────────────────────
   /// Controls sessions table visibility: `None` = auto (shown when >1 `_active_*` marker),
   /// `Some(true)` = force on, `Some(false)` = suppress.
-  pub( crate ) who       : Option< bool >,
+  pub who       : Option< bool >,
   // ── Token conservation (TSK-314) ──────────────────────────────────────────
   /// When true, restrict all fetch/refresh/touch operations to the current+owned account.
   /// All other accounts use approximated historical data from the quota cache.
-  pub( crate ) solo      : bool,
+  pub solo      : bool,
 }
 
 // ── Output format ─────────────────────────────────────────────────────────────
 
 /// Output format for the `.usage` command.
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-pub( crate ) enum UsageOutputFormat
+pub enum UsageOutputFormat
 {
   /// Human-readable table (default).
   Text,
@@ -294,7 +298,7 @@ pub( crate ) enum UsageOutputFormat
 
 /// Field selector for `get::` single-value extraction.
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-pub( crate ) enum GetField
+pub enum GetField
 {
   FiveHourLeft,
   FiveHourReset,
@@ -314,7 +318,7 @@ pub( crate ) enum GetField
 
 impl GetField
 {
-  pub( crate ) fn parse( s : &str ) -> Result< Self, String >
+  pub fn parse( s : &str ) -> Result< Self, String >
   {
     match s
     {
@@ -345,11 +349,11 @@ impl GetField
 
 /// `imodel::` parameter value — determines how the subprocess model is selected.
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-pub( crate ) enum SubprocessModel { Auto, Sonnet, Opus, Keep, Haiku }
+pub enum SubprocessModel { Auto, Sonnet, Opus, Keep, Haiku }
 
 impl SubprocessModel
 {
-  pub( crate ) fn parse( s : &str ) -> Result< Self, String >
+  pub fn parse( s : &str ) -> Result< Self, String >
   {
     match s
     {
@@ -365,11 +369,11 @@ impl SubprocessModel
 
 /// `effort::` parameter value — determines the `--effort` flag injected into subprocesses.
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-pub( crate ) enum SubprocessEffort { Auto, High, Max, Low, Normal }
+pub enum SubprocessEffort { Auto, High, Max, Low, Normal }
 
 impl SubprocessEffort
 {
-  pub( crate ) fn parse( s : &str ) -> Result< Self, String >
+  pub fn parse( s : &str ) -> Result< Self, String >
   {
     match s
     {
@@ -385,19 +389,29 @@ impl SubprocessEffort
 
 // ── Quota status thresholds ────────────────────────────────────────────────────
 
-/// 5-hour session quota and Sonnet model-override boundary.
+/// Sonnet 7d model-override boundary.
 ///
-/// An account is classified **h-exhausted** when `5h Left ≤ 15%`. The same value is
-/// used by `recommended_model()` and `apply_model_override()` — Opus is selected when
-/// `Sonnet 7d Left < 15%`. All comparison sites must reference this constant; never
-/// duplicate the literal `15.0`.
-pub( crate ) const OPUS_OVERRIDE_THRESHOLD : f64 = 15.0;
+/// `recommended_model()` and `apply_model_override()` select Opus when
+/// `Sonnet 7d Left < 10%` (i.e., `utilization > 90.0`). All model-override call
+/// sites must reference this constant; never duplicate the literal `10.0`.
+///
+/// 5-hour exhaustion uses the separate `H_EXHAUSTED_THRESHOLD = 15.0`.
+pub const OPUS_OVERRIDE_THRESHOLD : f64 = 10.0;
+
+/// 5-hour session quota exhaustion boundary.
+///
+/// An account is classified **h-exhausted** when `5h Left ≤ 15%`. All 5h-exhaustion
+/// call sites (`pct_emoji`, `status_emoji`, `status_group_of`) must reference this
+/// constant; never duplicate the literal `15.0`.
+///
+/// Sonnet 7d model-override uses the separate `OPUS_OVERRIDE_THRESHOLD = 10.0`.
+pub const H_EXHAUSTED_THRESHOLD : f64 = 15.0;
 
 /// 7-day weekly quota exhaustion boundary.
 ///
 /// An account is classified **weekly-exhausted** when `7d Left ≤ 5%`. All comparison
 /// sites must reference this constant; never duplicate the literal `5.0`.
-pub( crate ) const WEEKLY_EXHAUSTION_THRESHOLD : f64 = 5.0;
+pub const WEEKLY_EXHAUSTION_THRESHOLD : f64 = 5.0;
 
 /// Map a model shorthand to its full model ID.
 ///
@@ -409,7 +423,7 @@ pub( crate ) const WEEKLY_EXHAUSTION_THRESHOLD : f64 = 5.0;
 /// and the `.model` command handler. The model-ID table lives here exactly once.
 // `Option<Option<T>>` is intentional: tri-state (known model / remove key / unknown input).
 #[ allow( clippy::option_option ) ]
-pub( crate ) fn map_model_shorthand( s : &str ) -> Option< Option< &'static str > >
+pub fn map_model_shorthand( s : &str ) -> Option< Option< &'static str > >
 {
   match s
   {
@@ -426,7 +440,7 @@ pub( crate ) fn map_model_shorthand( s : &str ) -> Option< Option< &'static str 
 /// Returns `Ok(Some(model_id))` for `opus`, `sonnet`, `haiku`;
 /// `Ok(None)` for `default` (removes the `model` key from `settings.json`);
 /// `Err(message)` for unknown values.
-pub( crate ) fn validate_set_model( s : &str ) -> Result< Option< &'static str >, String >
+pub fn validate_set_model( s : &str ) -> Result< Option< &'static str >, String >
 {
   map_model_shorthand( s )
     .ok_or_else( || format!( "set_model:: must be one of: opus, sonnet, haiku, default; got {s:?}" ) )

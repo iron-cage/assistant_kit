@@ -18,9 +18,24 @@
 //! | `ic2_no_orphan_yaml_commands` | IC-2 | every PHF-mapped command reachable |
 //! | `unknown_command_exits_1` | — | exit-code-1 contract for unknown commands |
 
+fn assert_container()
+{
+  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
+    || std::path::Path::new( "/run/.containerenv" ).exists()
+    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
+  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
+  assert!(
+    in_container || escaped,
+    "\n\nTests must run inside a container.\n\
+     Standard invocation: cd module/assistant && ./verb/test\n\
+     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
+  );
+}
+
 /// Run `ast <args>` in an isolated HOME, return `(exit_code, stdout, stderr)`.
 fn run_ast( args : &[ &str ] ) -> ( i32, String, String )
 {
+  assert_container();
   let home = tempfile::TempDir::new().unwrap();
   let out = std::process::Command::new(
     assert_cmd::cargo::cargo_bin!( "ast" )

@@ -28,7 +28,7 @@
 //! - `--dir` with spaces: `cd` output is unquoted (human-readable per FR-21, not shell-safe)
 //! - All 5 Tier-1 default env vars appear in output (not just max-tokens)
 //! - No message provided: `--dry-run` outputs bare `claude --dangerously-skip-permissions --chrome --effort max -c` command with no message arg (when default session dir has sessions)
-//! - `--dry-run --verbosity 0` still shows output (verbosity does not gate dry-run; bug reproducer)
+//! - `--dry-run --quiet` still shows output (--quiet does not gate dry-run; bug reproducer)
 //! - `--system-prompt TEXT` appears in command args (param 15 round-trip)
 //! - `--append-system-prompt TEXT` appears in command args (param 16 round-trip)
 //! - Both system-prompt flags can appear together in a single invocation
@@ -112,7 +112,7 @@ fn combined_flags_all_appear()
 {
   // --dangerously-skip-permissions appears automatically (default-on; no explicit flag needed).
   // Note: -c is NOT checked here — /tmp has no prior Claude session so session_exists() returns
-  // false. The -c default is covered by default_continuation_always_present (same cwd as project).
+  // `None`. The -c default is covered by default_continuation_always_present (same cwd as project).
   let output = run_dry( &[
     "--dir", "/tmp", "fix it",
   ] );
@@ -182,9 +182,9 @@ fn dir_with_spaces_produces_unquoted_cd_line()
 }
 
 // No-message case: --dry-run with no message produces the bare command with all defaults
-// but WITHOUT -c because the session dir is empty → session_exists() returns false.
+// but WITHOUT -c because the session dir is empty → session_exists() returns `None`.
 // Fix(BUG-246): describe() now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
-// Do NOT use make_session_dir() here — that writes a dummy file making session_exists() true,
+// Do NOT use make_session_dir() here — that writes a dummy .jsonl making session_exists() return `Some(SessionId)`,
 // which would inject -c and break the "no -c" assertion.
 #[ test ]
 fn dry_run_without_message_shows_bare_command()
@@ -210,13 +210,13 @@ fn new_session_suppresses_continue_flag()
   );
 }
 
-// Continuation: --dry-run shows -c when --session-dir is non-empty.
-// session_exists(Some(dir)) checks the custom dir directly; a dummy file is enough.
+// Continuation: --dry-run shows -c when --session-dir has a qualifying .jsonl file.
+// session_exists(Some(dir)) scans for .jsonl files via most_recent_session_in_dir().
 #[ test ]
 fn continuation_present_when_session_dir_nonempty()
 {
   let session_dir = tempfile::tempdir().expect( "create temp session dir" );
-  std::fs::write( session_dir.path().join( "session.json" ), b"{}" )
+  std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
     .expect( "write dummy session file" );
   let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
@@ -304,50 +304,36 @@ fn bare_dry_run_no_message_has_no_print()
   );
 }
 
-// Bug reproducer: --dry-run output must appear regardless of --verbosity level.
+// Bug reproducer: --dry-run output must appear even with --quiet.
 //
 // ## Root Cause
 //
-// `handle_dry_run()` gated output on `verbosity.shows_progress()` (level ≥ 3).
-// At `--verbosity 0`, `shows_progress()` returned false so the entire output block
-// was skipped — `--dry-run --verbosity 0` produced empty stdout and exit 0, with
-// no indication that anything had been previewed.
-//
-// ## Why Not Caught
-//
-// All existing tests used default verbosity (3) or higher with `--dry-run`.
-// No test exercised `--dry-run` at verbosity < 3, so the gate was never hit.
+// `handle_dry_run()` previously gated output on `verbosity.shows_progress()` (level ≥ 3).
+// At low verbosity, the entire output block was skipped — `--dry-run` produced empty
+// stdout with no indication that anything had been previewed.
 //
 // ## Fix Applied
 //
-// Removed the `shows_progress()` guard from `handle_dry_run`. Verbosity controls
-// runner *diagnostics* (progress messages, error reporting); `--dry-run` output
-// is core functionality that the user explicitly requested.
-//
-// ## Prevention
-//
-// Test `--dry-run` at the extremes (verbosity 0 and verbosity 5). Core mode output
-// (`--dry-run`, `--trace`) must never be gated on verbosity.
+// Removed the verbosity guard from `handle_dry_run`. `--quiet` controls runner
+// *diagnostics* (retry warnings, gate-wait messages); `--dry-run` output is core
+// functionality that the user explicitly requested and must never be suppressed.
 //
 // ## Pitfall
 //
-// Do not confuse runner diagnostic verbosity with feature output. `--verbosity 0`
+// Do not confuse runner diagnostic suppression with feature output. `--quiet`
 // suppresses runner messages; it must never suppress the command the user asked to see.
 #[ test ]
-fn dry_run_output_appears_regardless_of_verbosity()
+fn dry_run_output_appears_with_quiet()
 {
-  for level in [ "0", "1", "2", "3", "4", "5" ]
-  {
-    let output = run_dry( &[ "--verbosity", level, "test" ] );
-    assert!(
-      output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=" ),
-      "--dry-run --verbosity {level} must show env+command output regardless of verbosity. Got:\n{output}"
-    );
-    assert!(
-      output.contains( "claude " ),
-      "--dry-run --verbosity {level} must show the claude command line. Got:\n{output}"
-    );
-  }
+  let output = run_dry( &[ "--quiet", "test" ] );
+  assert!(
+    output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=" ),
+    "--dry-run --quiet must still show env+command output. Got:\n{output}"
+  );
+  assert!(
+    output.contains( "claude " ),
+    "--dry-run --quiet must still show the claude command line. Got:\n{output}"
+  );
 }
 
 // --system-prompt value round-trips through dry-run output.
@@ -508,7 +494,7 @@ fn trace_with_dry_run_emits_no_stderr()
 // ## Fix Applied
 //
 // session_exists(None, effective_dir) now calls
-// claude_storage_core::continuation::check_continuation(&cwd) which looks up
+// claude_storage_core::continuation::most_recent_session_id(&cwd) which looks up
 // $HOME/.claude/projects/{encoded(cwd)}/ — the project-specific storage — instead
 // of the global $HOME/.claude/ directory.
 //
@@ -564,7 +550,7 @@ fn bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag()
 #[ test ]
 fn empty_positional_arg_produces_bare_command()
 {
-  // Empty session dir → no -c (session_exists returns false for empty dir).
+  // Empty session dir → no -c (session_exists returns `None` for empty dir).
   // Fix(BUG-246): last_line now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
   let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
   let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );

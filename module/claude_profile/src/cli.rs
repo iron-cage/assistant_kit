@@ -158,8 +158,7 @@ pub( super ) fn run( binary : &str, argv : &[ String ] )
   };
 
   // Intercept help requests before entering the unilang pipeline.
-  // Triggered by: no args, `.`.
-  // Explicit `.help` does NOT set needs_help, so it still goes through unilang.
+  // Triggered by: empty args, `.`, `.help` anywhere in argv, or bare `help`.
   if needs_help
   {
     print_usage( binary );

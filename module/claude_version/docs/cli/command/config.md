@@ -97,6 +97,18 @@ clv.config key::theme unset::1
 | 2 | [Execution Control](../param_group/02_execution_control.md) | Partial | `force::` |
 | 3 | [Config Identity](../param_group/04_config_identity.md) | Full | — |
 
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | [`key::`](../param/06_key.md) |
+| 2 | [`value::`](../param/07_value.md) |
+| 3 | [`scope::`](../param/11_scope.md) |
+| 4 | [`format::`](../param/05_format.md) |
+| 5 | [`v::`](../param/04_v.md) |
+| 6 | [`dry::`](../param/02_dry.md) |
+| 7 | [`unset::`](../param/12_unset.md) |
+
 ### Related Commands
 
 | # | Command | Relationship |

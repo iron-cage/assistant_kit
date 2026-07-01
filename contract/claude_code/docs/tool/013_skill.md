@@ -19,6 +19,7 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
-| doc | [../params/021_disable_slash_commands.md](../params/021_disable_slash_commands.md) | Disable slash commands parameter |
-| doc | [../params/078_disable_bundled_skills.md](../params/078_disable_bundled_skills.md) | Disable bundled skills only |
-| doc | [../formats/006_command_definition.md](../formats/006_command_definition.md) | Command definition format for skill files |
+| doc | [../param/021_disable_slash_commands.md](../param/021_disable_slash_commands.md) | Disable slash commands parameter |
+| doc | [../param/078_disable_bundled_skills.md](../param/078_disable_bundled_skills.md) | Disable bundled skills only |
+| doc | [../format/006_command_definition.md](../format/006_command_definition.md) | Command definition format for skill files |
+| behavior | [../behavior/027_b27_agent_no_os_process.md](../behavior/027_b27_agent_no_os_process.md) | B27: contrast — Skill invocations observed as `claude --print --output-format json` OS processes; Agent subagents are not |

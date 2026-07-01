@@ -20,6 +20,7 @@
 | 05_settings_value.md | `SettingsValue` — String, settings entry value with type inference |
 | 06_config_scope.md | `ConfigScope` — enum user\|project, write target for `.config` |
 | 07_config_key.md | `ConfigKey` — String with catalog context; known + arbitrary keys |
+| 08_param_kind.md | `ParamKind` — enum config\|env, kind filter for `.params` show-all |
 
 ### All Types
 
@@ -32,6 +33,7 @@
 | 5 | [`SettingsValue`](05_settings_value.md) | String | [`value::`](../param/07_value.md) | Settings entry value (type-inferred) |
 | 6 | [`ConfigScope`](06_config_scope.md) | String enum | [`scope::`](../param/11_scope.md) | Write target: user or project |
 | 7 | [`ConfigKey`](07_config_key.md) | String | [`key::`](../param/06_key.md) | Config key with catalog context |
+| 8 | [`ParamKind`](08_param_kind.md) | enum | [`kind::`](../param/13_kind.md) | Param kind filter for `.params` show-all |
 
 ### See Also
 

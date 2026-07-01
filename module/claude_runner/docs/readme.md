@@ -10,7 +10,7 @@
 
 | File | Responsibility |
 |------|----------------|
-| `api/` | Public library API contracts (COMMANDS_YAML, VerbosityLevel) |
+| `api/` | Public library API contracts (COMMANDS_YAML, register_commands) |
 | `cli/` | CLI reference: commands, flags, modes, examples |
 | `001_design_decisions.md` | Design rationale for `--flag value` CLI redesign |
 | `002_entity.md` | Cross-entity index: Master Doc Entities Table and Master Doc Instances Table |

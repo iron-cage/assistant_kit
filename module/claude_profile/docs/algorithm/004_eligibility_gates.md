@@ -20,7 +20,7 @@ Filter candidates for next-account recommendation and auto-switch. An account is
 | 4 | Error | `result = Err(...)` | `sort_next.rs:30` |
 | 5 | h-exhausted | `five_hour.utilization >= 85.0` (≤ 15% left) | `sort_next.rs:30` |
 | 6 | Expired | `expires_at_ms / 1000 ≤ now_secs` | `sort_next.rs:31` |
-| 7 | Weekly-exhausted | `prefer_weekly(aq, prefer) ≤ 5.0` | `sort_next.rs:59` (extra) |
+| 7 | Weekly-exhausted | `seven_day_left(aq) ≤ WEEKLY_EXHAUSTION_THRESHOLD` | `sort_next.rs:59` (extra) |
 | 8 | Foreign-owned | `is_owned = false AND gate_ownership = true` | `sort_next.rs:59` (extra) |
 
 ### Gate 8 Context — `gate_ownership` varies by call site

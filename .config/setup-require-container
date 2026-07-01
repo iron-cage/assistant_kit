@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# setup-require-container — nextest setup script enforcing container execution.
+#
+# Registered in .config/nextest.toml under [scripts.setup.require-container].
+# Runs before any test binary in any package. Exits 1 on bare host.
+#
+# Three container detection signals (any one sufficient):
+#   1. /.dockerenv exists (Docker-based containers)
+#   2. /run/.containerenv exists (Podman-based containers — runbox uses Podman)
+#   3. RUNBOX_CONTAINER=1 (exported by verb/test.d/l1 before invoking nextest)
+#
+# Escape hatch: VERB_LAYER=l0 bypasses this check for authorized host development.
+# Usage: VERB_LAYER=l0 cargo nextest run (bypasses verb/test; this script exits 0)
+set -euo pipefail
+if [[ "${VERB_LAYER:-}" == "l0" ]]; then
+  exit 0
+fi
+if [[ -f "/.dockerenv" ]] \
+  || [[ -f "/run/.containerenv" ]] \
+  || [[ "${RUNBOX_CONTAINER:-}" == "1" ]]; then
+  exit 0
+fi
+echo "ERROR: Tests must run inside a container." >&2
+echo "Standard invocation: cd module/claude_profile && ./verb/test" >&2
+exit 1

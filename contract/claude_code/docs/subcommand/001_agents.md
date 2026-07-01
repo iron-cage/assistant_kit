@@ -35,6 +35,6 @@ v1.0.60 (2025-07-24); enhanced with agent view in v2.1.139
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master subcommand table |
-| doc | [../params/003_agent.md](../params/003_agent.md) | `--agent` override parameter |
-| doc | [../params/004_agents.md](../params/004_agents.md) | `--agents` JSON definitions |
+| doc | [../param/003_agent.md](../param/003_agent.md) | `--agent` override parameter |
+| doc | [../param/004_agents.md](../param/004_agents.md) | `--agents` JSON definitions |
 | doc | [../tool/007_agent.md](../tool/007_agent.md) | Agent tool that uses these agents |

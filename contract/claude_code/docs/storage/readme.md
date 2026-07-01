@@ -5,7 +5,7 @@
 - **Purpose**: Describe how Claude Code organizes conversation data, settings, and metadata on disk within the `~/.claude/` root.
 - **Responsibility**: Master file for the `storage` collection — lists all 3 storage area instances, defines the conceptual model, and declares scope boundaries.
 - **In Scope**: Storage root layout, project/session/entry containment hierarchy, agent storage layouts (flat and hierarchical), directory purposes, access patterns, growth characteristics, security considerations, design principles.
-- **Out of Scope**: Entry-level JSONL field schema (→ [`../jsonl/`](../jsonl/readme.md)); settings and credentials file format internals (→ [`../settings/`](../settings/readme.md), [`../formats/`](../formats/readme.md)); runtime filesystem paths managed by claude_version (→ [`../filesystem/`](../filesystem/readme.md)).
+- **Out of Scope**: Entry-level JSONL field schema (→ [`../jsonl/`](../jsonl/readme.md)); settings and credentials file format internals (→ [`../settings/`](../settings/readme.md), [`../format/`](../format/readme.md)); runtime filesystem paths managed by claude_version (→ [`../filesystem/`](../filesystem/readme.md)).
 
 ### Conceptual Model
 
@@ -89,7 +89,7 @@ All `storage` doc instances must include:
 **This entity depends on**:
 - `../jsonl/` — entry schema for session JSONL files
 - `../settings/` — settings.json and credentials format
-- `../formats/` — ancillary format specs (history.jsonl, debug, shell-snapshots, todos, commands)
+- `../format/` — ancillary format specs (history.jsonl, debug, shell-snapshots, todos, commands)
 
 **This entity consumed by**:
 - `../../../../module/claude_storage/docs/` — storage implementation docs

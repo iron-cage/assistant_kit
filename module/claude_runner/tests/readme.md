@@ -2,7 +2,7 @@
 
 ### Scope
 
-**Responsibilities:** Automated integration tests for the `claude_runner` crate — CLI flag parsing, param edge cases, param group interactions, CLR_* env var fallbacks, execution mode routing, dry-run output, verbosity behavior, YAML structure, isolated subcommand, stale-reference guards, and library API.
+**Responsibilities:** Automated integration tests for the `claude_runner` crate — CLI flag parsing, param edge cases, param group interactions, CLR_* env var fallbacks, execution mode routing, dry-run output, quiet gate behavior, YAML structure, isolated subcommand, stale-reference guards, and library API.
 **In Scope:** All crate functionality exercised via the compiled `clr` binary and the public library API; bug reproducers for tracked issues.
 **Out of Scope:** Manual testing (→ `manual/`), test planning documents (→ `docs/`), performance benchmarks.
 
@@ -13,29 +13,31 @@
 | ask subcommand (IT-1–IT-8) | `ask_command_test.rs` | `clr ask` pure-alias equivalence, param passthrough, and live-trace path |
 | Trace Universality invariant (IT-1–IT-5) | `invariant_trace_universality_test.rs` | `--trace` on all subprocess-executing commands |
 | CLI flags (T01–T35) | `cli_args_test.rs` | Core flag parsing and builder translation |
-| CLI flags extended (T36–T49, S58–S79, BUG-212, BUG-215, BUG-302) | `cli_args_ext_test.rs` | Positional edge cases, session combos, new flags, bug reproducers |
+| CLI flags extended (T36–T47, T49, EC01–EC06, S58–S69, S79, BUG-212, BUG-215, BUG-302) | `cli_args_ext_test.rs` | Positional edge cases, session combos, new flags, help section, bug reproducers |
 | Ultrathink (T50–T58) | `ultrathink_args_test.rs` | Message suffix injection and opt-out |
 | Effort flags (T59–T70) | `effort_args_test.rs` | Default max injection, overrides, suppression |
-| Param edge cases (EC-N) | `param_edge_cases_test.rs` | Per-param positive/negative edge cases: help, model, verbose, no-skip-permissions, interactive, new-session, dir, session-dir, dry-run, verbosity, print, system-prompt, append-system-prompt, no-effort-max, invariant |
+| Param edge cases (EC-N) | `param_edge_cases_test.rs` | Per-param positive/negative edge cases: help, model, verbose, no-skip-permissions, interactive, new-session, dir, session-dir, dry-run, quiet, print, system-prompt, append-system-prompt, no-effort-max, invariant |
 | Trace edge cases (S04–S06, S58–S60) | `param_trace_edge_cases_test.rs` | `--trace` parameter edge cases including isolated/refresh credential trace format |
-| Extended flag edge cases (S34–S57) | `param_extended_flags_test.rs` | Per-param edge cases for `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config` |
+| Extended flag edge cases (S34–S57, S81–S89) | `param_extended_flags_test.rs` | Per-param edge cases for `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--subdir`; S89: raw+json-schema structured output (BUG-318 fix) |
 | Param groups (CC-N) | `param_group_test.rs` | Combined-flag interaction tests for param groups |
 | Dry-run output | `dry_run_test.rs` | Env vars, command line structure, message quoting |
-| Execution modes | `execution_mode_test.rs` | Interactive/print routing, exit codes, stderr |
-| Verbosity | `verbosity_test.rs` | Output gating levels 0–5, dry-run independence |
+| Execution modes (E01–E13, S76–S78, S80) | `execution_mode_test.rs` | Interactive/print routing, exit codes, stderr; S76 `--strip-fences`, S77 `--keep-claudecode`, S78 `--file` stdin pipe, S80 `--file` nonexistent path |
+| Quiet gate (QT-1–QT-6) | `quiet_test.rs` | Non-fatal diagnostic suppression, fatal error passthrough, dry-run independence |
 | YAML structure | `commands_yaml_test.rs` | `.claude` and `.claude.help` command definitions |
 | Library API | `lib_test.rs` | `register_commands()` callability |
 | Stale-ref guards + dep constraints (IT-2, IT-3, IT-4) | `stale_ref_guard_test.rs` | No `claude_runner_plugin` or `dream_agent` refs; dep constraint invariants |
-| Isolated subcommand (IT-2–IT-10, EC-N, IT-12–IT-36) | `isolated_test.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs, unknown-subcommand detection; Plan 034: `--dry-run`, `--dir`/`--add-dir`, `--file`, `--expect`/`--expect-strategy`; Plan 035: `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`, env fallbacks |
+| Container enforcement invariant (IT-1–IT-5) | `invariant_container_test.rs` | Structural: nextest.toml registers setup script; setup-require-container checks 3 detection signals |
+| Isolated subcommand (IT-2–IT-10, EC-N, IT-12–IT-37) | `isolated_test.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs, unknown-subcommand detection; Plan 034: `--dry-run`, `--dir`/`--add-dir`, `--file`, `--expect`/`--expect-strategy`; Plan 035: `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`, env fallbacks, journal env validation |
 | Isolated/refresh defaults (DT-1–DT-6) | `isolated_defaults_test.rs` | Invariant 005: model constants, effort injection, passthrough override, effort-before-print order |
 | Isolated/refresh correctness (CT-1–CT-6) | `isolated_correctness_test.rs` | Correctness gaps S2–S6: no-session-persistence, skip-perms with/without message, no-chrome for refresh, timeout-0 unlimited, CLAUDE.md provisioning |
 | Refresh subcommand | `refresh_test.rs` | `clr refresh`: error cases, timeout exit 2, help text (IT-2, IT-4, IT-6, IT-8) |
 | Credential defaults (T1–T5) | `creds_default_test.rs` | `--creds` 3-tier resolution: HOME default, CLR_CREDS tier, and refresh path |
-| Bug reproducers BUG-239–244 | `bug_reproducers_239_244_test.rs` | Silent-failure: exit code propagation, signal codes, verbosity gate, install hint, mirror sync (BUG-243 moved to claude_runner_core) |
+| Bug reproducers BUG-239–244 | `bug_reproducers_239_244_test.rs` | Silent-failure: exit code propagation, signal codes, quiet gate, install hint, mirror sync (BUG-243 moved to claude_runner_core) |
 | Bug reproducers BUG-246 | `bug_reproducers_246_test.rs` | WYSIWYG: CLAUDECODE removal visible in trace/dry-run; `--keep-claudecode` suppresses prefix |
 | Bug reproducers BUG-037 (T09–T10) | `error_classification_test.rs` | Labeled per-type CLR stderr diagnostics via classify_error() |
 | Strip-fences unit (sf01–sf08) | `fence_test.rs` | `strip_fences` correctness: pair stripping, pass-through, edge cases |
-| Summary unit (EC-14, IT-1, IT-4–IT-6, +7 resolve/render) | `summary_unit_test.rs` | `render_summary`/`resolve_fields` unit: CLR envelope parsing, field profiles, BUG-309/310 regression guards |
+| Summary unit (EC-14, IT-1, IT-4–IT-6, +7 resolve/render; +3 extract_session_id) | `summary_unit_test.rs` | `render_summary`/`resolve_fields`/`extract_session_id` unit: CLR envelope parsing, field profiles, BUG-309/310/320 regression guards |
+| Session verification (SV-1–SV-4) | `session_verification_test.rs` | BUG-320 hardening: expected/actual UUID match, mismatch warning format, non-fatal exit, `--new-session` short-circuit, raw-output no-parse |
 | CLR_* env vars (E01–E17) | `env_var_test.rs` | CLR_* env var fallback for vars 1–17, CLI-wins checks |
 | CLR_* env vars extended (E18–E57, BUG-233) | `env_var_ext_test.rs` | CLR_* env var fallback for vars 18–57, BUG-233 subdir slash guard |
 | Output file capture (T01–T06) | `output_file_test.rs` | `--output-file` tee behavior, write errors, dry-run skip |
@@ -68,7 +70,7 @@
 | `clr ps` session flags (IT-30–IT-40, US-18–US-26, E41–E42) | `ps_flags_test.rs` | Two-pass Flags column (👈🖨⚡🕰🐘⚠🐳), legend line, `CLR_PS_ANCIENT_SECS`, `CLR_PS_HIGH_RAM_MB` env vars, TOCTOU-dead-metrics via fake proc, CPU delta active flag (IT-39/IT-40) |
 | `clr kill` subcommand (IT-1–IT-9) | `kill_command_test.rs` | `clr kill` PID validation, SIGTERM delivery, error handling, help text, typo guard |
 | `clr tools` subcommand (IT-1–IT-9) | `tools_command_test.rs` | `clr tools` exit 0, tool names, categories, caption, help, scheduling/mode tools, main help mention, unknown-arg exit 1 |
-| Output style param (EC-01–EC-14, IT-7) | `output_style_test.rs` | `--output-style` summary/raw rendering, CLR_OUTPUT_STYLE env var, auto-inject `--output-format json`, graceful fallback, legacy alias, CLI-wins, dry-run trace, validation (EC-01–EC-13); minimal CLR envelope BUG-310 regression (EC-14); structural anti-pattern guard (IT-7) |
+| Output style param (EC-01–EC-15, IT-7) | `output_style_test.rs` | `--output-style` summary/raw rendering, CLR_OUTPUT_STYLE env var, auto-inject `--output-format json`, graceful fallback, legacy alias, CLI-wins, dry-run trace, validation (EC-01–EC-13); minimal CLR envelope BUG-310 regression (EC-14); raw+json-schema structured output BUG-318 fix (EC-15); structural anti-pattern guard (IT-7) |
 | Output format param (EC-1–EC-14) | `output_format_test.rs` | `--output-format` forwarding, missing-value, text/json/stream-json variants, summary→json intercept, env var (EC-8/EC-12), summary CLR envelope header (EC-10), text body extraction (EC-11), error envelope (EC-13), non-zero exit passthrough (EC-14) |
 | Summary fields param (EC-01–EC-12) | `summary_fields_test.rs` | `--summary-fields` profile/custom/env field selection, full/standard/minimal presets, custom whitelists, validation, CLI-wins, result body preserved |
 | Journal integration (EC-1–EC-22) | `journal_integration_test.rs` | `--journal`/`--journal-dir`/`CLR_JOURNAL`/`CLR_JOURNAL_DIR`: file creation, level filtering (full/meta/off), retry/timeout/gate_wait/validation_retry event emission, 1MB truncation, CLI-wins-over-env precedence, invalid-value error, default HOME-based dir, dry-run side-effect isolation (BUG-319), case-sensitive validation, missing-value error, duplicate last-wins, off+dir no-op |
@@ -87,29 +89,31 @@
 | `ask_command_test.rs` | `clr ask` subcommand: pure-alias equivalence, param passthrough, and live-trace tests IT-1–IT-8. |
 | `invariant_trace_universality_test.rs` | Trace Universality invariant (INV-004): `--trace` on all subprocess-executing commands IT-1–IT-5. |
 | `cli_args_test.rs` | CLI flag parsing: core flags T01–T35, correct translation to builder calls. |
-| `cli_args_ext_test.rs` | CLI flag parsing extended: T36–T49, S58–S79, BUG-212, BUG-215, BUG-302 reproducers. |
+| `cli_args_ext_test.rs` | CLI flag parsing extended: T36–T47, T49 (positional, session combos, new flags); EC01–EC06 (help section); S58–S69, S79 (strip-fences, keep-claudecode, file flags); BUG-212, BUG-215, BUG-302 reproducers. |
 | `ultrathink_args_test.rs` | Ultrathink suffix injection and `--no-ultrathink` opt-out (T50–T58). |
 | `effort_args_test.rs` | Effort flag defaults, overrides, suppression, and corner cases (T59–T70). |
 | `dry_run_test.rs` | Dry-run output: env vars and command line structure. |
-| `execution_mode_test.rs` | Execution modes: interactive/print paths, error handling, exit codes. |
-| `verbosity_test.rs` | Verbosity flag: output gating levels 0–5, default behavior. |
+| `execution_mode_test.rs` | Execution modes: interactive/print paths, error handling, exit codes (E01–E13); `--strip-fences` (S76), `--keep-claudecode` (S77), `--file` stdin pipe (S78), `--file` nonexistent path (S80). |
+| `quiet_test.rs` | Quiet gate: `--quiet`/`CLR_QUIET` non-fatal suppression, fatal error passthrough, dry-run and trace independence (QT-1–QT-6). |
 | `commands_yaml_test.rs` | Verify YAML defines `.claude`, `.claude.help`, and rejects `.please`. |
 | `lib_test.rs` | Library API: `register_commands()` callable. |
 | `stale_ref_guard_test.rs` | Guard against stale `claude_runner_plugin` and `dream_agent` references; dep constraint invariants IT-2, IT-3, IT-4. |
+| `invariant_container_test.rs` | Container-only enforcement (invariant/010): nextest config registers setup script (IT-1); setup-require-container exists (IT-2); checks `/.dockerenv` (IT-3), `/run/.containerenv` (IT-4), `RUNBOX_CONTAINER` (IT-5). |
 | `isolated_test.rs` | `clr isolated` subcommand: parsing, error cases, exit codes, lim_it live runs, unknown-subcommand detection; Plan 034: `--dry-run` (IT-12–15), `--dir`/`--add-dir` (IT-16–20), `--file` (IT-21–23), `--expect`/`--expect-strategy` (IT-24–27), pipe buffering (IT-28); Plan 035: `--output-file` (IT-29), `--strip-fences` (IT-30), `--output-style` (IT-31), `--summary-fields` (IT-32), env fallbacks (IT-33–36); journal env validation (IT-37). |
 | `isolated_defaults_test.rs` | Invariant 005 model and effort defaults: DT-1–DT-6 covering constants, trace injection, passthrough override, arg order. |
 | `isolated_correctness_test.rs` | Isolated/refresh correctness gaps CT-1–CT-6: no-session-persistence, skip-perms condition, no-chrome, timeout-0 unlimited, CLAUDE.md provisioning. |
 | `refresh_test.rs` | `clr refresh` subcommand: error cases, timeout exit 2, help text (IT-2, IT-4, IT-6, IT-8); journal env validation (IT-9). |
 | `creds_default_test.rs` | `--creds` 3-tier resolution: HOME default, CLR_CREDS tier, and refresh path (T1–T5). |
-| `bug_reproducers_239_244_test.rs` | Bug reproducers BUG-239–244: exit code passthrough, signal codes, verbosity gate, install hint, mirror sync (BUG-243 in claude_runner_core). |
+| `bug_reproducers_239_244_test.rs` | Bug reproducers BUG-239–244: exit code passthrough, signal codes, quiet gate, install hint, mirror sync (BUG-243 in claude_runner_core). |
 | `bug_reproducers_246_test.rs` | Bug reproducer BUG-246: CLAUDECODE removal visible in trace/dry-run output; `--keep-claudecode` suppresses prefix. |
 | `error_classification_test.rs` | Bug reproducer BUG-037: labeled per-type stderr diagnostics from classify_error() (T09–T10). |
 | `param_edge_cases_test.rs` | Per-param edge cases (S01–S33): help, core param flags, and invariant checks. |
 | `param_trace_edge_cases_test.rs` | Trace edge cases (S04–S06, S58–S60): basic trace behavior and credential trace format. |
-| `param_extended_flags_test.rs` | Extended flag edge cases (S34–S57): `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`. |
+| `param_extended_flags_test.rs` | Extended flag edge cases (S34–S57, S81–S89): `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--subdir`; S89 (unix): raw+json-schema structured output BUG-318 fix. |
 | `param_group_test.rs` | Param group combined invocations (CC-N): multi-flag interaction tests. |
 | `fence_test.rs` | `strip_fences` unit tests: fence-pair stripping, pass-through, edge cases (sf01–sf08). |
-| `summary_unit_test.rs` | `render_summary`/`resolve_fields` unit tests: CLR envelope parsing, field profiles, BUG-309/310 regression guards (EC-14, IT-1, IT-4–IT-6, +7). |
+| `summary_unit_test.rs` | `render_summary`/`resolve_fields`/`extract_session_id` unit tests: CLR envelope parsing, field profiles, BUG-309/310/320 regression guards (EC-14, IT-1, IT-4–IT-6, IT-7; +3 extract_session_id). |
+| `session_verification_test.rs` | Session mismatch detection (BUG-320 hardening): SV-1–SV-4 match/mismatch/no-session/raw-output integration tests; warning format and non-fatal exit verification. |
 | `output_file_test.rs` | `--output-file` tee behavior, write-error exit 1, dry-run file skip (T01–T06). |
 | `expect_validation_test.rs` | `--expect`/`--expect-strategy`/`--retry-on-validation` validation loop: match, mismatch, retry, default (T01–T17). |
 | `bug_reproducers_247_test.rs` | Bug reproducer BUG-247: stdout forwarded to stderr on subprocess failure. |
@@ -144,7 +148,7 @@
 | `max_budget_usd_test.rs` | `--max-budget-usd` integration: forwarding (decimal-preserved), missing-value, any-numeric, help, absent-by-default, env var (EC-1–EC-7). |
 | `add_dir_test.rs` | `--add-dir` integration: forwarding, missing-value, non-existent path accepted, help, absent-by-default, env var (EC-1–EC-7). |
 | `fallback_model_test.rs` | `--fallback-model` integration: forwarding, missing-value, any-string, help, absent-by-default, env var (EC-1–EC-7). |
-| `output_style_test.rs` | `--output-style` integration: summary/raw rendering, CLR_OUTPUT_STYLE env var, auto-inject `--output-format json`, graceful fallback, legacy alias, CLI-wins, dry-run trace, validation (EC-01–EC-13); minimal CLR envelope BUG-310 regression guard (EC-14); structural anti-pattern guard (IT-7). |
+| `output_style_test.rs` | `--output-style` integration: summary/raw rendering, CLR_OUTPUT_STYLE env var, auto-inject `--output-format json`, graceful fallback, legacy alias, CLI-wins, dry-run trace, validation (EC-01–EC-13); minimal CLR envelope BUG-310 regression guard (EC-14); raw+json-schema structured output BUG-318 fix (EC-15); structural anti-pattern guard (IT-7). |
 | `summary_fields_test.rs` | `--summary-fields` integration: full/standard/minimal presets, custom field whitelists, validation, CLR_SUMMARY_FIELDS env var, CLI-wins, result body preserved (EC-01–EC-12). |
 | `journal_integration_test.rs` | `--journal`/`--journal-dir` and `CLR_JOURNAL`/`CLR_JOURNAL_DIR` integration: JSONL file creation, level filtering (full/meta/off), retry/timeout/gate_wait/validation_retry event emission, truncation (>1MB), CLI-wins-over-env precedence, invalid-value error, dry-run side-effect isolation (BUG-319), case-sensitive validation, missing-value, duplicate last-wins, off+dir (EC-1–EC-22). |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |

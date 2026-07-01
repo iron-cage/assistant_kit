@@ -15,16 +15,17 @@ use claude_profile_core::account::trace_ts;
 /// Created by [`pre_switch_touch_ctx`] before the account switch; consumed by
 /// [`apply_post_switch_touch`] after. `commands.rs` treats this as a black box.
 #[ derive( Debug ) ]
-pub( crate ) struct TouchCtx
+pub struct TouchCtx
 {
   /// Pre-fetched quota data used to resolve the subprocess model.
   pub( super ) quota : OauthUsageData,
 }
 
-#[ cfg( test ) ]
+#[ cfg( any( test, feature = "testing" ) ) ]
+#[ allow( missing_docs, clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
 impl TouchCtx
 {
-  pub( crate ) fn for_test( quota : claude_quota::OauthUsageData ) -> Self
+  pub fn for_test( quota : claude_quota::OauthUsageData ) -> Self
   {
     Self { quota }
   }
@@ -46,7 +47,7 @@ impl TouchCtx
 //   subprocess. Using it as an identity oracle conflates two unrelated concepts.
 // Pitfall: never use server-side timer state to infer local subprocess lifecycle.
 #[ derive( Debug ) ]
-pub( crate ) enum PreSwitchOutcome
+pub enum PreSwitchOutcome
 {
   /// Quota fetched — spawn subprocess touch after switch.
   NeedTouch( TouchCtx ),
@@ -60,7 +61,7 @@ pub( crate ) enum PreSwitchOutcome
 ///
 /// Returns `Err(message)` if unrecognised. Called by `account_use_routine` during
 /// argument parsing, before any switch occurs.
-pub( crate ) fn validate_imodel_str( s : &str ) -> Result< (), String >
+pub fn validate_imodel_str( s : &str ) -> Result< (), String >
 {
   SubprocessModel::parse( s ).map( |_| () )
 }
@@ -69,7 +70,7 @@ pub( crate ) fn validate_imodel_str( s : &str ) -> Result< (), String >
 ///
 /// Returns `Err(message)` if unrecognised. Called by `account_use_routine` during
 /// argument parsing, before any switch occurs.
-pub( crate ) fn validate_effort_str( s : &str ) -> Result< (), String >
+pub fn validate_effort_str( s : &str ) -> Result< (), String >
 {
   SubprocessEffort::parse( s ).map( |_| () )
 }
@@ -91,7 +92,7 @@ pub( crate ) fn validate_effort_str( s : &str ) -> Result< (), String >
 ///   recoverable via OAuth refresh, not a fatal condition when `refresh::1`.
 /// Pitfall: this path requires `credential_store` (not `paths.credentials_file()`) because
 ///   the per-account file is the refresh source, not the live session credentials file.
-pub( crate ) fn attempt_expired_token_refresh(
+pub fn attempt_expired_token_refresh(
   name             : &str,
   credential_store : &std::path::Path,
   paths            : &crate::ClaudePaths,
@@ -151,7 +152,8 @@ pub( crate ) fn attempt_expired_token_refresh(
 //   trace:: on commands performing fetch operations.
 // Pitfall: Any command extended to perform HTTP/file/subprocess operations must add trace:: in
 //   the same pass — grep trace_ts() call sites in source and verify each emitting command registers trace::.
-pub( crate ) fn pre_switch_touch_ctx(
+#[ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
+pub fn pre_switch_touch_ctx(
   name       : &str,
   store_path : &std::path::Path,
   trace      : bool,
@@ -219,7 +221,8 @@ pub( crate ) fn pre_switch_touch_ctx(
 // Fix(BUG-244): apply_model_override was never called from usage_routine; trace prefix was hardcoded.
 // Root cause: function had no label param; caller context (account.use vs usage) was indistinguishable.
 // Pitfall: insert the usage_routine call BEFORE row-filter pipeline — filters can remove is_current from slice.
-pub( crate ) fn apply_model_override(
+#[ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
+pub fn apply_model_override(
   quota : &OauthUsageData,
   paths : &crate::ClaudePaths,
   trace : bool,
@@ -246,33 +249,29 @@ pub( crate ) fn apply_model_override(
         claude_profile_core::account::write_cache_string(
           paths.base(), name, "model_override", "opus",
         );
-        // Fix(BUG-322): Opus override must pair with high effort.
-        // Root cause: BUG-312 init only wrote "low" when absent — never matched effort to model.
-        // Pitfall: set unconditionally (overrode=true means model just changed to opus).
-        claude_profile_core::account::set_session_effort( paths, "high" );
         if trace
         {
           use std::io::Write as _;
-          let _ = writeln!( std::io::stderr(), "{}{label}  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)  effort→high", trace_ts() );
+          let _ = writeln!( std::io::stderr(), "{}{label}  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)  effort→max", trace_ts() );
         }
       }
+      // Fix(H2/TSK-335): effort synced unconditionally — stable sessions must get effort even when model unchanged.
+      // Root cause: gating set_session_effort on overrode=true left effortLevel stale when model already matched target.
+      // Pitfall: write AFTER the overrode block so model is finalized before effort is set.
+      claude_profile_core::account::set_session_effort( paths, "max" );
     }
     else
     {
       let overrode = crate::account::override_session_model_to_sonnet( paths );
-      if overrode
+      if overrode && trace
       {
-        // Fix(BUG-322): restore effort to "low" when reverting model to Sonnet.
-        // Root cause: same as site 1 — BUG-312 init only wrote "low" when absent;
-        //   effort was never reset when model reverted, leaving "high" after opus→sonnet recovery.
-        // Pitfall: set unconditionally when overrode=true; model just changed, so effort must follow.
-        claude_profile_core::account::set_session_effort( paths, "low" );
-        if trace
-        {
-          use std::io::Write as _;
-          let _ = writeln!( std::io::stderr(), "{}{label}  {name}  model override: opus→sonnet (7d(Son) left={sonnet_left:.0}%)  effort→low", trace_ts() );
-        }
+        use std::io::Write as _;
+        let _ = writeln!( std::io::stderr(), "{}{label}  {name}  model override: opus→sonnet (7d(Son) left={sonnet_left:.0}%)  effort→high", trace_ts() );
       }
+      // Fix(H2/TSK-335): effort synced unconditionally — stable sessions must get effort even when model unchanged.
+      // Root cause: gating set_session_effort on overrode=true left effortLevel stale when model already matched target.
+      // Pitfall: write AFTER the overrode block so model is finalized before effort is set.
+      claude_profile_core::account::set_session_effort( paths, "high" );
     }
   }
   else
@@ -280,20 +279,20 @@ pub( crate ) fn apply_model_override(
     // Sonnet tier absent — write "sonnet" conservatively (absent tier ≠ exhausted).
     // Fix(BUG-322): also reset effort when model changes away from opus.
     // Root cause: same as site 1 — effort was never paired with model at any fix site except site 1.
-    // Pitfall: guard on override_session_model_to_sonnet() return value — absent tier does not
-    //   always change the model (it's already "sonnet" if no prior opus override fired).
-    if crate::account::override_session_model_to_sonnet( paths )
-    {
-      claude_profile_core::account::set_session_effort( paths, "low" );
-    }
+    // Fix(H2/TSK-335): effort synced unconditionally regardless of override_session_model_to_sonnet return.
+    // Root cause: gating effort on return value left stable sessions stale when model already matched.
+    // Pitfall: call override_session_model_to_sonnet for its side effect; always write "high" after.
+    let _ = crate::account::override_session_model_to_sonnet( paths );
+    claude_profile_core::account::set_session_effort( paths, "high" );
   }
   // Fix(BUG-312): effortLevel never initialized; footer always omitted effort.
   // Root cause: set_session_effort() only called in .usage rotate::1 (carry-forward);
   //   neither .account.use nor plain .usage ever initialized effortLevel in settings.json.
-  // Pitfall: only initialize — never overwrite user-configured effort.
+  // Pitfall: after TSK-335, this guard is unreachable — all 3 branches above write effort
+  //   unconditionally. Retained as safety net for unforeseen absent-effort states.
   if claude_profile_core::account::get_session_effort( paths ).is_none()
   {
-    claude_profile_core::account::set_session_effort( paths, "low" );
+    claude_profile_core::account::set_session_effort( paths, "high" );
   }
 }
 
@@ -308,7 +307,8 @@ pub( crate ) fn apply_model_override(
 //   `~/.persistent/claude/credential/`. Passing `paths.base()` causes `refresh_account_token`
 //   to silently fail — `{name}.credentials.json` doesn't exist in `~/.claude/`, so
 //   `refresh_token_with_live_path` returns `None` immediately without rotating the RT.
-pub( crate ) fn apply_post_switch_touch(
+#[ allow( missing_docs, clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
+pub fn apply_post_switch_touch(
   name             : &str,
   ctx              : TouchCtx,
   imodel_str       : &str,

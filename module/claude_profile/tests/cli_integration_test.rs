@@ -10,11 +10,24 @@
 //!
 //! | Module | Domain | Test Series |
 //! |--------|--------|-------------|
-//! | `accounts_test` | help, `.accounts` command | H, ACC |
-//! | `account_mutations_test` | account save, use, delete, relogin | AS, AW, AD, AR |
+//! | `accounts_help_test` | help commands | H |
+//! | `accounts_list_test` | `.accounts` list command | ACC |
+//! | `accounts_ft_test` | Feature 037 param unification + `mre_324` field alignment | FT, mre |
+//! | `account_mutations_test` | account save, use, delete | AS, AW, AD |
+//! | `account_relogin_test` | account relogin + trace/feature027 | AR, AW |
+//! | `account_renewal_test` | account renewal + late save tests | ARN, AS |
+//! | `account_ownership_test` | account ownership gates + unclaim | AO, AU |
+//! | `account_owner_param_test` | `owner::` parameter EC tests | AP |
 //! | `token_paths_test` | token status, paths | TS, P |
 //! | `cross_cutting_test` | idempotency, param order, exit codes, env | X, E |
-//! | `usage_test` | .usage live quota (all accounts) | IT |
+//! | `usage_core_test` | .usage core display IT-01–IT-20 | IT |
+//! | `usage_live_test` | .usage live mode IT-21–IT-52 | IT |
+//! | `usage_sort_test` | .usage sort/desc/prefer/cols IT-44–IT-91 | IT |
+//! | `usage_touch_test` | .usage touch/NextStrategy IT-92–IT-121 | IT |
+//! | `usage_model_test` | .usage imodel/effort/gates IT-122–IT-153 | IT |
+//! | `usage_filter_test` | .usage row-filtering IT-154–IT-205 | IT |
+//! | `usage_lim_it_test` | .usage `lim_it` live/offline extras IT-205–IT-247 | IT |
+//! | `usage_solo_test` | .usage `solo::` + cross-feature IT-247–IT-271 | IT |
 //! | `usage_feature_test` | .usage feature AC coverage | FT |
 //! | `persist_test` | `PersistPaths` resolution | P |
 //! | `credentials_test` | .credentials.status | cred |
@@ -46,11 +59,29 @@
 #[ path = "cli/cli_runner.rs" ]
 pub mod cli_runner;
 
-#[ path = "cli/accounts_test.rs" ]
-mod accounts_test;
+#[ path = "cli/accounts_help_test.rs" ]
+mod accounts_help_test;
+
+#[ path = "cli/accounts_list_test.rs" ]
+mod accounts_list_test;
+
+#[ path = "cli/accounts_ft_test.rs" ]
+mod accounts_ft_test;
 
 #[ path = "cli/account_mutations_test.rs" ]
 mod account_mutations_test;
+
+#[ path = "cli/account_relogin_test.rs" ]
+mod account_relogin_test;
+
+#[ path = "cli/account_renewal_test.rs" ]
+mod account_renewal_test;
+
+#[ path = "cli/account_ownership_test.rs" ]
+mod account_ownership_test;
+
+#[ path = "cli/account_owner_param_test.rs" ]
+mod account_owner_param_test;
 
 #[ path = "cli/token_paths_test.rs" ]
 mod token_paths_test;
@@ -58,8 +89,29 @@ mod token_paths_test;
 #[ path = "cli/cross_cutting_test.rs" ]
 mod cross_cutting_test;
 
-#[ path = "cli/usage_test.rs" ]
-mod usage_test;
+#[ path = "cli/usage_core_test.rs" ]
+mod usage_core_test;
+
+#[ path = "cli/usage_live_test.rs" ]
+mod usage_live_test;
+
+#[ path = "cli/usage_sort_test.rs" ]
+mod usage_sort_test;
+
+#[ path = "cli/usage_touch_test.rs" ]
+mod usage_touch_test;
+
+#[ path = "cli/usage_model_test.rs" ]
+mod usage_model_test;
+
+#[ path = "cli/usage_filter_test.rs" ]
+mod usage_filter_test;
+
+#[ path = "cli/usage_lim_it_test.rs" ]
+mod usage_lim_it_test;
+
+#[ path = "cli/usage_solo_test.rs" ]
+mod usage_solo_test;
 
 #[ path = "cli/usage_feature_test.rs" ]
 mod usage_feature_test;

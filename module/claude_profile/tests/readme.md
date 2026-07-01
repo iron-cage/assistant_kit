@@ -9,8 +9,10 @@
 | `lib_test.rs` | Library exports: COMMANDS_YAML, register_commands(), command presence. |
 | `cli_adapter_test.rs` | Adapter and output module: argv conversion, aliases, bool normalization, validation, json_escape, format_duration_secs. |
 | `cli_clp_alias_test.rs` | Binary alias smoke tests: both `clp` and `claude_profile` aliases run and self-identify. |
-| `cli_integration_test.rs` | CLI binary integration: entry point for cli/ modules. |
-| `cli/` | Split integration test modules (help, accounts, mutations, rotate, token, paths, usage, persist, credentials, limits, param-help, dot, cross-cutting, account-inspect, set-model, type-contracts, invariants, command-verbs, command-nouns, user-stories). |
+| `cli_integration_test.rs` | CLI binary integration: entry point for all cli/ submodules. |
+| `usage_integration_test.rs` | Entry point wiring all tests/usage/ integration test modules. |
+| `cli/` | Split integration test modules (help, accounts-list, accounts-ft, mutations, relogin, renewal, ownership, owner-param, rotate, token, paths, usage-core, usage-live, usage-sort, usage-touch, usage-model, usage-filter, usage-lim_it, usage-solo, usage-feature, usage-rotate, persist, credentials, limits, param-help, dot, cross-cutting, account-inspect, set-model, type-contracts, invariants, command-verbs, command-nouns, user-stories). |
+| `usage/` | Integration tests for src/usage/ internals via test_bridge (format, render, sort_next, touch, refresh, fetch, api). |
 | `manual/` | Manual testing plan: live Claude Code account switching. |
 | `docs/` | Test-lens documentation: per-command, per-parameter, per-group, and per-feature test case indices. |
 
@@ -55,18 +57,32 @@ tests/
 ├── cli_adapter_test.rs                   # adapter + output unit tests
 ├── cli_clp_alias_test.rs                 # binary alias smoke tests (clp + claude_profile)
 ├── cli_integration_test.rs               # integration test entry point
+├── usage_integration_test.rs             # usage integration test entry point
 ├── responsibility_no_process_execution_test.rs  # arch boundary guard
 ├── cli/
 │   ├── readme.md                         # integration submodule index
 │   ├── cli_runner.rs                     # shared binary runner + fixtures
-│   ├── accounts_test.rs                  # help output and .accounts command
-│   ├── account_mutations_test.rs         # account save, use, delete
+│   ├── accounts_help_test.rs             # help output tests (h01–h07)
+│   ├── accounts_list_test.rs             # .accounts list command tests (acc01–acc50 + mre_324)
+│   ├── accounts_ft_test.rs               # Feature 037 param unification + mre_324 field alignment (ft01–ft21)
+│   ├── account_mutations_test.rs         # account save, use, delete (as01–as18, aw01–aw17, ad01–ad15)
+│   ├── account_relogin_test.rs           # account relogin + AW trace/feature027 (ar01–ar09, aw22–aw35)
+│   ├── account_renewal_test.rs           # account renewal + late save tests (arn01–arn21, as19–as35)
+│   ├── account_ownership_test.rs         # account ownership gates + unclaim (ao01–ao11, it01–it11)
+│   ├── account_owner_param_test.rs       # owner:: parameter EC tests (ft01–ft11, ec01–ec20)
 │   ├── account_rotate_test.rs            # .account.rotate deprecated redirector (rot01–rot03)
 │   ├── token_paths_test.rs               # token status + paths commands
 │   ├── cross_cutting_test.rs             # idempotency, param order, exit codes
-│   ├── usage_test.rs                     # .usage command tests (IT-1–IT-37, 36 fns)
+│   ├── usage_core_test.rs                # .usage core display: heading, JSON, error paths (IT-01–IT-20)
+│   ├── usage_live_test.rs                # .usage live mode, streaming, session window (IT-21–IT-52)
+│   ├── usage_sort_test.rs                # .usage sort, desc, prefer, cols, next:: migration (IT-44–IT-91)
+│   ├── usage_touch_test.rs               # .usage touch:: and NextStrategy parameters (IT-92–IT-121)
+│   ├── usage_model_test.rs               # .usage imodel::, effort::, structural gates (IT-122–IT-153)
+│   ├── usage_filter_test.rs              # .usage row-filtering, get::, abs::, no_color:: (IT-154–IT-205)
+│   ├── usage_lim_it_test.rs              # .usage live lim_it filter, get::, format tests (IT-205–IT-247)
+│   ├── usage_solo_test.rs                # .usage solo::, cross-feature corner cases (IT-247–IT-271)
 │   ├── usage_feature_test.rs             # .usage feature AC coverage (FT-01–FT-05)
-│   ├── usage_rotate_test.rs             # .usage rotate::1 strategy-driven rotation (FT-01–FT-10, EC-05–EC-07)
+│   ├── usage_rotate_test.rs              # .usage rotate::1 strategy-driven rotation (FT-01–FT-10, EC-05–EC-07)
 │   ├── persist_test.rs                   # PersistPaths resolution tests
 │   ├── credentials_test.rs               # .credentials.status command tests
 │   ├── credentials_status_help_test.rs   # .credentials.status help descriptions
@@ -105,13 +121,25 @@ tests/
 | Library exports | `lib_test.rs` | COMMANDS_YAML, register_commands, command presence |
 | Adapter + output | `cli_adapter_test.rs` | argv_to_unilang_tokens, OutputOptions, json_escape, format_duration_secs |
 | Binary alias smoke | `cli_clp_alias_test.rs` | `clp` and `claude_profile` aliases run and self-identify |
-| Help CLI | `cli/accounts_test.rs` (H series) | --help, .help, no-args, unknown command |
-| Accounts CLI | `cli/accounts_test.rs` (acc series) | list text/json, empty dir, sorted, field-presence, named-account |
-| Account save/use/delete CLI | `cli/account_mutations_test.rs` | save, use, delete with all edge cases |
+| Help CLI | `cli/accounts_help_test.rs` | --help, .help, no-args, unknown command (h01–h07) |
+| Accounts CLI | `cli/accounts_list_test.rs` | list text/json, empty dir, sorted, field-presence (acc01–acc50, mre_324) |
+| Accounts feature unification CLI | `cli/accounts_ft_test.rs` | Feature 037 param unification + mre_324 field alignment (ft01–ft21) |
+| Account save/use/delete CLI | `cli/account_mutations_test.rs` | save, use, delete (as01–as18, aw01–aw17, ad01–ad15) |
+| Account relogin CLI | `cli/account_relogin_test.rs` | relogin + AW trace/feature027 (ar01–ar09, aw22–aw35) |
+| Account renewal CLI | `cli/account_renewal_test.rs` | renewal + late save (arn01–arn21, as19–as35) |
+| Account ownership CLI | `cli/account_ownership_test.rs` | ownership gates + unclaim (ao01–ao11, it01–it11) |
+| Account owner:: param CLI | `cli/account_owner_param_test.rs` | owner:: EC tests (ft01–ft11, ec01–ec20) |
 | Account rotate CLI | `cli/account_rotate_test.rs` | .account.rotate deprecated redirector, rot01–rot03 |
 | Token status + paths CLI | `cli/token_paths_test.rs` | .token.status and .paths all verbosity/format |
 | Cross-cutting CLI | `cli/cross_cutting_test.rs` | idempotency, param order, exit code contracts, env |
-| Usage CLI | `cli/usage_test.rs` | .usage live quota table, JSON output, error paths |
+| Usage core CLI | `cli/usage_core_test.rs` | .usage heading, JSON, error paths (IT-01–IT-20) |
+| Usage live CLI | `cli/usage_live_test.rs` | .usage live mode, streaming, session window (IT-21–IT-52) |
+| Usage sort CLI | `cli/usage_sort_test.rs` | .usage sort, desc, prefer, cols, next:: (IT-44–IT-91) |
+| Usage touch CLI | `cli/usage_touch_test.rs` | .usage touch:: and NextStrategy (IT-92–IT-121) |
+| Usage model CLI | `cli/usage_model_test.rs` | .usage imodel::, effort::, structural gates (IT-122–IT-153) |
+| Usage filter CLI | `cli/usage_filter_test.rs` | .usage row-filtering, get::, abs::, no_color:: (IT-154–IT-205) |
+| Usage lim_it CLI | `cli/usage_lim_it_test.rs` | .usage lim_it filter, get::, format (IT-205–IT-247) |
+| Usage solo CLI | `cli/usage_solo_test.rs` | .usage solo::, cross-feature corner cases (IT-247–IT-271) |
 | Usage feature AC | `cli/usage_feature_test.rs` | .usage acceptance criteria (AC-01–AC-06) |
 | Usage rotate CLI | `cli/usage_rotate_test.rs` | .usage rotate::1 strategy-driven rotation, FT-01–FT-10, EC-05–EC-07 |
 | Persist paths | `cli/persist_test.rs` | PersistPaths PRO/HOME resolution, ensure_exists |

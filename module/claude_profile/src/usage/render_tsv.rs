@@ -1,3 +1,5 @@
+// Items are pub for test_bridge re-export; lints suppressed — internal API.
+#![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate, clippy::missing_panics_doc ) ]
 //! TSV renderer for quota results.
 
 use crate::output::format_duration_secs;
@@ -14,7 +16,7 @@ use super::sort::sort_indices;
 /// `5h Left` and `7d Left` are rendered without the emoji prefix. No tier grouping
 /// or footer; rows are in sort strategy order. First row is a header.
 #[ allow( clippy::too_many_lines ) ]
-pub( crate ) fn render_tsv(
+pub fn render_tsv(
   accounts : &[ AccountQuota ],
   sort     : SortStrategy,
   desc     : Option< bool >,

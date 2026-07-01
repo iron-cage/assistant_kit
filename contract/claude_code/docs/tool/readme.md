@@ -147,6 +147,6 @@ The tool set exposed to the model depends on `--tools`, `--allowed-tools`, and
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| doc | [../params/068_tools.md](../params/068_tools.md) | `--tools` parameter for overriding available tool set |
-| doc | [../params/006_allowed_tools.md](../params/006_allowed_tools.md) | `--allowed-tools` for tool allowlisting |
-| doc | [../params/022_disallowed_tools.md](../params/022_disallowed_tools.md) | `--disallowed-tools` for tool denylisting |
+| doc | [../param/068_tools.md](../param/068_tools.md) | `--tools` parameter for overriding available tool set |
+| doc | [../param/006_allowed_tools.md](../param/006_allowed_tools.md) | `--allowed-tools` for tool allowlisting |
+| doc | [../param/022_disallowed_tools.md](../param/022_disallowed_tools.md) | `--disallowed-tools` for tool denylisting |

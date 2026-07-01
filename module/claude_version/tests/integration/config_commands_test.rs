@@ -377,13 +377,13 @@ fn it17_config_dry_out_of_range_exits_1()
 
 // ─── FT-01: AC-01 show-all text format ───────────────────────────────────────
 
-// FT-01: .config (no params) prints resolved settings in text format; exit 0
+// FT-1: .config (no params) prints resolved settings in text format; exit 0
 //
 // Uses a separate cwd_dir (not HOME) so the project config walk does not find
 // HOME/.claude/settings.json (which would mis-classify user config as project config).
 // Also avoids the container-mounted /workspace/.claude/settings.json.
 #[ test ]
-fn ft01_006_config_show_all_text()
+fn ft1_006_config_show_all_text()
 {
   let dir     = TempDir::new().unwrap();
   let cwd_dir = TempDir::new().unwrap();
@@ -411,9 +411,9 @@ fn ft01_006_config_show_all_text()
 
 // ─── FT-02: AC-02 get shows source layer ─────────────────────────────────────
 
-// FT-02: .config key::theme with user config → shows value and (user) source; exit 0
+// FT-2: .config key::theme with user config → shows value and (user) source; exit 0
 #[ test ]
-fn ft02_006_config_get_shows_source()
+fn ft2_006_config_get_shows_source()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -431,9 +431,9 @@ fn ft02_006_config_get_shows_source()
 
 // ─── FT-03: AC-03 set writes with type inference ─────────────────────────────
 
-// FT-03: .config key::autoUpdates value::false → settings.json contains false (JSON bool); exit 0
+// FT-3: .config key::autoUpdates value::false → settings.json contains false (JSON bool); exit 0
 #[ test ]
-fn ft03_006_config_set_user_scope()
+fn ft3_006_config_set_user_scope()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -455,9 +455,9 @@ fn ft03_006_config_set_user_scope()
 
 // ─── FT-04: AC-04 set with scope::project ────────────────────────────────────
 
-// FT-04: .config key::model value::claude-haiku scope::project → project settings written; exit 0
+// FT-4: .config key::model value::claude-haiku scope::project → project settings written; exit 0
 #[ test ]
-fn ft04_006_config_set_project_scope()
+fn ft4_006_config_set_project_scope()
 {
   let home_dir    = TempDir::new().unwrap();
   let project_dir = TempDir::new().unwrap();
@@ -486,9 +486,9 @@ fn ft04_006_config_set_project_scope()
 
 // ─── FT-05: AC-05 unset removes key ──────────────────────────────────────────
 
-// FT-05: .config key::theme unset::1 → theme key removed; other keys preserved; exit 0
+// FT-5: .config key::theme unset::1 → theme key removed; other keys preserved; exit 0
 #[ test ]
-fn ft05_006_config_unset_removes_key()
+fn ft5_006_config_unset_removes_key()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -508,9 +508,9 @@ fn ft05_006_config_unset_removes_key()
 
 // ─── FT-06: AC-06 format::json with source fields ────────────────────────────
 
-// FT-06: .config format::json → JSON object with source field per key; exit 0
+// FT-6: .config format::json → JSON object with source field per key; exit 0
 #[ test ]
-fn ft06_006_config_show_all_json()
+fn ft6_006_config_show_all_json()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -532,9 +532,9 @@ fn ft06_006_config_show_all_json()
 
 // ─── FT-07: AC-07 env var overrides user config ──────────────────────────────
 
-// FT-07: CLAUDE_MODEL=claude-opus-4-6 overrides user settings model → shows (env); exit 0
+// FT-7: CLAUDE_MODEL=claude-opus-4-6 overrides user settings model → shows (env); exit 0
 #[ test ]
-fn ft07_006_config_env_overrides_user()
+fn ft7_006_config_env_overrides_user()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -552,9 +552,9 @@ fn ft07_006_config_env_overrides_user()
 
 // ─── FT-08: AC-08 catalog default shown when no user config ──────────────────
 
-// FT-08: hasCompletedOnboarding not in user config → shows false (default); exit 0
+// FT-8: hasCompletedOnboarding not in user config → shows false (default); exit 0
 #[ test ]
-fn ft08_006_config_get_absent_key()
+fn ft8_006_config_get_absent_key()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -571,9 +571,9 @@ fn ft08_006_config_get_absent_key()
 
 // ─── FT-09: AC-09 dry::1 previews set ────────────────────────────────────────
 
-// FT-09: .config key::theme value::dark dry::1 → preview shown, file unchanged; exit 0
+// FT-9: .config key::theme value::dark dry::1 → preview shown, file unchanged; exit 0
 #[ test ]
-fn ft09_006_config_set_dry_run()
+fn ft9_006_config_set_dry_run()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();

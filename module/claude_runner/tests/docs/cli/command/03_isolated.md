@@ -65,8 +65,9 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - Output Style: 1 test (IT-31)
 - Summary Fields: 1 test (IT-32)
 - Output Env: 4 tests (IT-33 through IT-36)
+- Error: Invalid Env: 1 test (IT-37)
 
-**Total:** 36 test cases
+**Total:** 37 test cases
 
 ---
 

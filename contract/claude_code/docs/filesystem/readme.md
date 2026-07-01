@@ -5,7 +5,7 @@
 - **Purpose**: Centralized reference for all filesystem paths that `claude_version` reads, writes, or inspects at runtime.
 - **Responsibility**: Master file for the `filesystem` collection — lists all 4 filesystem location cluster instances and provides the authoritative directory tree and path reference table.
 - **In Scope**: Every filesystem path accessed by claude_version commands and the `/proc/` scanner: `~/.claude/`, `~/.local/`, `{credential_store}`, and `/proc/{pid}/`.
-- **Out of Scope**: File format internals and write protocols (→ [`../settings/`](../settings/readme.md), [`../formats/`](../formats/readme.md)); paths internal to the Claude Code binary (npm cache, node internals); storage directory organization and containment model (→ [`../storage/`](../storage/readme.md)).
+- **Out of Scope**: File format internals and write protocols (→ [`../settings/`](../settings/readme.md), [`../format/`](../format/readme.md)); paths internal to the Claude Code binary (npm cache, node internals); storage directory organization and containment model (→ [`../storage/`](../storage/readme.md)).
 
 ### Overview Table
 

@@ -28,7 +28,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 200000 | Max output tokens |
 | [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session storage directory |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Print command without executing |
-| [`--verbosity`](../param/012_verbosity.md) | [`VerbosityLevel`](../type/05_verbosity_level.md) | 3 | Runner output gate level |
+| [`--quiet`](../param/074_quiet.md) | bool | false | Suppress non-fatal runner diagnostics |
 | [`--trace`](../param/013_trace.md) | bool | false | Print env+command to stderr then execute (like `set -x`) |
 | [`--no-ultrathink`](../param/014_no_ultrathink.md) | bool | false | Disable default ultrathink message suffix |
 | [`--system-prompt`](../param/015_system_prompt.md) | [`SystemPromptText`](../type/06_system_prompt_text.md) | — | Set system prompt (replaces the default) |

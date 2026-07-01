@@ -4,7 +4,7 @@
 
 - **Purpose**: Document --trace mode for printing diagnostic details to stderr before executing.
 - **Responsibility**: Define acceptance criteria for trace output across all executing subcommands.
-- **In Scope**: --trace on run/isolated/refresh, stderr output, execution after trace, verbosity independence.
+- **In Scope**: --trace on run/isolated/refresh, stderr output, execution after trace, quiet independence.
 - **Out of Scope**: Dry-run (no execution) variant (→ 004_dry_run_preview.md).
 
 ### Persona
@@ -22,7 +22,7 @@ Print diagnostic details to stderr — like shell `set -x` — then execute norm
 - `--trace` on `refresh`: emits creds path, temp HOME, timeout, fixed args `["--print", "."]` to stderr
 - Subprocess executes after the trace output (unlike `--dry-run` which does not execute)
 - Trace output goes to stderr only; captured stdout in print mode is unaffected
-- Independent of `--verbosity` level: always prints when set
+- Independent of `--quiet`: always emits to stderr even when diagnostics are suppressed
 
 ### Referenced Commands
 
@@ -44,7 +44,7 @@ Print diagnostic details to stderr — like shell `set -x` — then execute norm
 | # | Parameter | Role |
 |---|-----------|------|
 | 11 | [`--dry-run`](../param/011_dry_run.md) | Related: preview only, no execution |
-| 12 | [`--verbosity`](../param/012_verbosity.md) | Level 4 also shows preview but via different path |
+| 74 | [`--quiet`](../param/074_quiet.md) | Suppresses CLR diagnostics but NOT trace output |
 | 13 | [`--trace`](../param/013_trace.md) | Print env+command to stderr then execute |
 
 ### Related User Stories
@@ -52,4 +52,4 @@ Print diagnostic details to stderr — like shell `set -x` — then execute norm
 | # | User Story | Relationship |
 |---|------------|--------------|
 | 4 | [Dry-run Preview](004_dry_run_preview.md) | `--dry-run` is the non-executing variant |
-| 6 | [Verbose Debugging](006_verbose_debugging.md) | Complementary diagnostic: `--verbosity` gates runner output |
+| 6 | [Quiet Mode and Diagnostic Control](006_verbose_debugging.md) | Complementary diagnostic: `--quiet` suppresses non-fatal CLR output |

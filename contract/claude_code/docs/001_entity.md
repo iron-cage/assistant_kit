@@ -4,24 +4,24 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `behavior` | Observed external behaviors of the `claude` binary (B1–B26 + B16h) | [behavior/readme.md](behavior/readme.md) | 27 |
+| `behavior` | Observed external behaviors of the `claude` binary (B1–B35 + B16h) | [behavior/readme.md](behavior/readme.md) | 36 |
 | `storage` | `~/.claude/` storage architecture: projects dir, support dirs, root files | [storage/readme.md](storage/readme.md) | 3 |
 | `filesystem` | Runtime filesystem paths accessed by claude_version | [filesystem/readme.md](filesystem/readme.md) | 4 |
 | `jsonl` | Session JSONL entry format: common fields, entry types, content blocks, usage, threading, sidechain | [jsonl/readme.md](jsonl/readme.md) | 10 |
 | `settings` | Settings file structure and protocols: global, project, version lock | [settings/readme.md](settings/readme.md) | 3 |
-| `formats` | Data formats: file formats, output schemas — history, credentials, debug, shell-snapshots, todos, commands, JSON response | [formats/readme.md](formats/readme.md) | 7 |
+| `formats` | Data formats: file formats, output schemas — history, credentials, debug, shell-snapshots, todos, commands, JSON response | [format/readme.md](format/readme.md) | 7 |
 | `taxonomy` | Four-level concept hierarchy: Project, Conversation, Session, Entry | [taxonomy/readme.md](taxonomy/readme.md) | 3 |
-| `params` | CLI parameter specifications for the `claude` binary | [params/readme.md](params/readme.md) | 120 |
+| `params` | CLI parameter specifications for the `claude` binary | [param/readme.md](param/readme.md) | 120 |
 | `tool` | Built-in tools available in Claude Code sessions | [tool/readme.md](tool/readme.md) | 40 |
 | `endpoint` | Wire contracts for Anthropic HTTP endpoints consumed by workspace crates | [endpoint/readme.md](endpoint/readme.md) | 10 |
 | `subcommand` | CLI subcommands: agents, auth, auto-mode, doctor, install, mcp, plugin, setup-token, update | [subcommand/readme.md](subcommand/readme.md) | 9 |
 | `fault` | Aggregated index of all fault conditions: terminal errors (E1–E6), silent failures (F1–F4), and quirks (Q1–Q5) with detection signals and `classify_error()` priority order | [fault/readme.md](fault/readme.md) | 0 |
 
-**Total doc instances**: 236 (27 + 3 + 4 + 10 + 3 + 7 + 3 + 120 + 40 + 10 + 9)
+**Total doc instances**: 245 (36 + 3 + 4 + 10 + 3 + 7 + 3 + 120 + 40 + 10 + 9)
 
 ## Master Doc Instances Table
 
-### behavior/ (27 instances)
+### behavior/ (36 instances)
 
 | ID | Name | File |
 |----|------|------|
@@ -52,6 +52,15 @@
 | B24 | From PR | [behavior/024_b24_from_pr.md](behavior/024_b24_from_pr.md) |
 | B25 | Auto Compact Window | [behavior/025_b25_auto_compact_window.md](behavior/025_b25_auto_compact_window.md) |
 | B26 | Autocompact Pct Override | [behavior/026_b26_autocompact_pct_override.md](behavior/026_b26_autocompact_pct_override.md) |
+| B27 | Agent No OS Process | [behavior/027_b27_agent_no_os_process.md](behavior/027_b27_agent_no_os_process.md) |
+| B28 | Bash rtk Subprocess | [behavior/028_b28_bash_rtk_subprocess.md](behavior/028_b28_bash_rtk_subprocess.md) |
+| B29 | Bash CLAUDE_* Env | [behavior/029_b29_bash_claude_env.md](behavior/029_b29_bash_claude_env.md) |
+| B30 | Subagent Context Inheritance | [behavior/030_b30_subagent_context_inheritance.md](behavior/030_b30_subagent_context_inheritance.md) |
+| B31 | Subagent Tool Sets | [behavior/031_b31_subagent_tool_sets.md](behavior/031_b31_subagent_tool_sets.md) |
+| B32 | claudemd At-Ref Path Filter | [behavior/032_b32_claudemd_at_ref_path_filter.md](behavior/032_b32_claudemd_at_ref_path_filter.md) |
+| B33 | claudemd Loading Limits | [behavior/033_b33_claudemd_loading_limits.md](behavior/033_b33_claudemd_loading_limits.md) |
+| B34 | claudemd Content Pipeline | [behavior/034_b34_claudemd_content_pipeline.md](behavior/034_b34_claudemd_content_pipeline.md) |
+| B35 | Automemory Search Context Flag | [behavior/035_b35_automemory_search_context_flag.md](behavior/035_b35_automemory_search_context_flag.md) |
 
 ### storage/ (3 instances)
 
@@ -93,17 +102,17 @@
 | 002 | Project Settings | [settings/002_project_settings.md](settings/002_project_settings.md) |
 | 003 | Version Lock | [settings/003_version_lock.md](settings/003_version_lock.md) |
 
-### formats/ (7 instances)
+### format/ (7 instances)
 
 | ID | Name | File |
 |----|------|------|
-| 001 | History JSONL | [formats/001_history_jsonl.md](formats/001_history_jsonl.md) |
-| 002 | Credentials | [formats/002_credentials.md](formats/002_credentials.md) |
-| 003 | Debug Log | [formats/003_debug_log.md](formats/003_debug_log.md) |
-| 004 | Shell Snapshot | [formats/004_shell_snapshot.md](formats/004_shell_snapshot.md) |
-| 005 | Todo | [formats/005_todo.md](formats/005_todo.md) |
-| 006 | Command Definition | [formats/006_command_definition.md](formats/006_command_definition.md) |
-| 007 | JSON Response | [formats/007_json_response.md](formats/007_json_response.md) |
+| 001 | History JSONL | [format/001_history_jsonl.md](format/001_history_jsonl.md) |
+| 002 | Credentials | [format/002_credentials.md](format/002_credentials.md) |
+| 003 | Debug Log | [format/003_debug_log.md](format/003_debug_log.md) |
+| 004 | Shell Snapshot | [format/004_shell_snapshot.md](format/004_shell_snapshot.md) |
+| 005 | Todo | [format/005_todo.md](format/005_todo.md) |
+| 006 | Command Definition | [format/006_command_definition.md](format/006_command_definition.md) |
+| 007 | JSON Response | [format/007_json_response.md](format/007_json_response.md) |
 
 ### taxonomy/ (3 instances)
 
@@ -142,7 +151,7 @@
 | 008 | setup-token | [subcommand/008_setup_token.md](subcommand/008_setup_token.md) |
 | 009 | update | [subcommand/009_update.md](subcommand/009_update.md) |
 
-> `params` instances (120 files) use numbered naming and are enumerated in their master file: [params/readme.md](params/readme.md).
+> `params` instances (120 files) use numbered naming and are enumerated in their master file: [param/readme.md](param/readme.md).
 >
 > `tool` instances (40 files) use numbered naming and are enumerated in their master file: [tool/readme.md](tool/readme.md).
 >

@@ -34,5 +34,5 @@ v2.1.158
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master subcommand table |
-| doc | [../params/046_permission_mode.md](../params/046_permission_mode.md) | Permission mode including `auto` |
-| doc | [../params/081_enable_auto_mode.md](../params/081_enable_auto_mode.md) | Auto mode enable env var |
+| doc | [../param/046_permission_mode.md](../param/046_permission_mode.md) | Permission mode including `auto` |
+| doc | [../param/081_enable_auto_mode.md](../param/081_enable_auto_mode.md) | Auto mode enable env var |

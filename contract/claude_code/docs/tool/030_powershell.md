@@ -37,4 +37,4 @@ v1.0.51 (2025-07-11) — Windows native support
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
 | doc | [004_bash.md](004_bash.md) | Bash shell execution (alternative) |
-| doc | [../params/084_ps_execution_policy.md](../params/084_ps_execution_policy.md) | `CLAUDE_CODE_POWERSHELL_RESPECT_EXECUTION_POLICY` |
+| doc | [../param/084_ps_execution_policy.md](../param/084_ps_execution_policy.md) | `CLAUDE_CODE_POWERSHELL_RESPECT_EXECUTION_POLICY` |

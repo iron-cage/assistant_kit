@@ -54,4 +54,4 @@ pre-v1.0 (unverified)
 | entity | [readme.md](readme.md) | JSONL master index |
 | jsonl | [003_assistant_entry.md](003_assistant_entry.md) | Assistant entry: `message.usage` field |
 | endpoint | `../endpoint/003_v1_messages.md` | API endpoint that returns usage data |
-| format | [`../formats/007_json_response.md`](../formats/007_json_response.md) | JSON response format that uses this object as its `usage` field |
+| format | [`../format/007_json_response.md`](../format/007_json_response.md) | JSON response format that uses this object as its `usage` field |

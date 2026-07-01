@@ -28,7 +28,7 @@ v0.2.93 (2025-04-30); disabled by default since v2.1.142 (superseded by Task too
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
-| doc | [../formats/005_todo.md](../formats/005_todo.md) | Todo JSON format this tool writes |
+| doc | [../format/005_todo.md](../format/005_todo.md) | Todo JSON format this tool writes |
 | doc | [014_task_create.md](014_task_create.md) | TaskCreate — supersedes this tool (default since v2.1.142) |
 | doc | [015_task_get.md](015_task_get.md) | TaskGet — get task status/output |
 | doc | [016_task_list.md](016_task_list.md) | TaskList — list tasks (replaces todo visibility) |

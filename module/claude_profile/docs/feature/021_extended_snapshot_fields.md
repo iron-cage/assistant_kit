@@ -68,7 +68,7 @@ The `{name}.json` snapshot (a copy of `~/.claude.json` taken at `save()` time) c
 | File | Relationship |
 |------|--------------|
 | `tests/cli/credentials_test.rs` | Test cases for `uuid::` and `capabilities::` on `.credentials.status` |
-| `tests/cli/accounts_test.rs` | Test cases for `uuid::` and `capabilities::` on `.accounts` |
+| `tests/cli/accounts_list_test.rs` | Test cases for `uuid::` and `capabilities::` on `.accounts` |
 
 ### Schema
 

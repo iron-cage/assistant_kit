@@ -91,5 +91,5 @@ Edge case coverage for the `exclude_exhausted::` parameter on `.usage`. See [par
 - **Then:** The account is excluded — `status_emoji(&aq)` returns `"🔴"` due to the `billing_type="none"` gate (Fix BUG-317 in `format.rs`), so it fails the `== "🟢"` predicate. Without Fix(BUG-317), `status_emoji` would return `"🟢"` and the cancelled account would pass.
 - **Exit:** n/a (unit test — retain predicate via status_emoji)
 - **Note:** This path is transitive: `exclude_exhausted` calls `status_emoji(&aq)` which now returns 🔴 for cancelled accounts. The fix is in `format.rs`, not in the filter predicate itself.
-- **Source fn:** covers via `mre_bug317_cancelled_status_emoji_is_red` (in `src/usage/format_tests.rs`) — confirms 🔴 output; filter behavior follows from that.
+- **Source fn:** covers via `mre_bug317_cancelled_status_emoji_is_red` (in `tests/usage/format_tests.rs`) — confirms 🔴 output; filter behavior follows from that.
 - **Source:** [param/044_exclude_exhausted.md](../../../../docs/cli/param/044_exclude_exhausted.md)

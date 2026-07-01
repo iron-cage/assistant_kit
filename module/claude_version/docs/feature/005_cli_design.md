@@ -89,4 +89,4 @@ Decisions by concern area: **Syntax**: D1, D2 | **Pipeline**: D4, D5, D7 | **Par
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/feature/05_cli_design.md](../../tests/docs/feature/05_cli_design.md) | Feature test spec |
+| [tests/docs/feature/005_cli_design.md](../../tests/docs/feature/005_cli_design.md) | Feature test spec |

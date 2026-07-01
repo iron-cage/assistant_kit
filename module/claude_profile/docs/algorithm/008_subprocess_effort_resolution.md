@@ -34,9 +34,22 @@ When `imodel::keep`, no model is known at dispatch time → `effort::auto` resol
 
 Haiku has no extended thinking support → no `--effort` flag. Explicit `effort::low/normal/high/max` with `imodel::haiku` pass through to the subprocess (Claude CLI may ignore or reject).
 
+### Scope: Subprocess Effort Only
+
+This algorithm governs the `--effort` flag for **subprocess invocations** (isolated keep-alive `["--print", "."]` calls). It is entirely distinct from **session effort** — the `effortLevel` field in `settings.json` that governs the interactive Claude session.
+
+| Concept | Governs | Managed by | Storage |
+|---|---|---|---|
+| Subprocess effort (this algo) | `--effort` flag for isolated subprocess calls | `resolve_effort()` via `imodel::`/`effort::` params | transient — per invocation |
+| Session effort | Thinking depth for the current interactive session | `apply_model_override()` + `set_session_effort()` | persisted — `settings.json "effortLevel"` |
+
+**Session effort is model-coupled** (Fix BUG-322, updated TSK-335): `apply_model_override()` writes effort unconditionally in every branch — `"max"` for Opus, `"high"` for Sonnet and absent-tier. Subprocess effort is independent — always defaults to `low` for keep-alive prompts regardless of session model.
+
 ### Cross-References
 
 | File | Relationship |
 |------|-------------|
 | [feature/026_subprocess_model_effort.md](../feature/026_subprocess_model_effort.md) | Full feature spec; `effort::` parameter values (AC-05 through AC-16) |
 | [algorithm/001](001_touch_model_selection.md) | `resolved_model` input to this algorithm |
+| [algorithm/002](002_session_model_override.md) | Session model + effort coupling (Fix BUG-322) |
+| [feature/062_unified_session_config.md](../feature/062_unified_session_config.md) | `set_session_effort()` and model-derived `effortLevel` |

@@ -19,9 +19,9 @@ claude_runner serves two distinct consumers from one crate:
 
 **Default flag injection:** See [invariant/001_default_flags.md](../invariant/001_default_flags.md) for the complete default injection rules and opt-out mechanisms.
 
-**Verbosity gate:** The `--verbosity <0-5>` flag (default 3) controls how much runner diagnostic output is emitted. At level 0 all runner diagnostic output is suppressed — except fatal errors (spawn failures, binary not found), which are always emitted to stderr regardless of verbosity level. When the `claude` binary is not found, the message is: `claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code`. At level 4 a command preview is printed to stderr before execution. `--dry-run` output is always shown regardless of verbosity level.
+**Quiet gate:** The `--quiet` bool flag (default false; env: `CLR_QUIET`) suppresses non-fatal CLR runner diagnostics: gate-wait messages, retry progress, retry-exhaustion messages, and the keep-claudecode nested-agent warning. Fatal errors (spawn failures, binary not found) are always emitted to stderr regardless of `--quiet`. When the `claude` binary is not found, the message is: `claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code`. `--dry-run` and `--trace` output are similarly unaffected by `--quiet`.
 
-**Trace mode:** `--trace` prints environment variables and the full command to stderr (like `set -x`), then executes normally. This is independent of verbosity level.
+**Trace mode:** `--trace` prints environment variables and the full command to stderr (like `set -x`), then executes normally. This is independent of `--quiet`.
 
 **Stdin file piping:** `--file <PATH>` opens the given file and pipes its content as standard input to the `claude` subprocess. Equivalent to `cat file | clr -p "..."` but without a shell pipeline. The file is opened at spawn time; a non-readable path causes `clr` to exit with an error. Applies to `run`, `ask`, and `isolated` subcommands (isolated uses a separate `run_isolated_with_stdin_file()` code path in `credential.rs`).
 
@@ -88,9 +88,11 @@ table with Name, Category, and Description columns. Static data sourced from
 
 **Error output in summary mode:** In summary mode (default), `first_message()` in `execution.rs` extracts the `"result"` field from the JSON envelope when stdout is JSON — yielding a human-readable single line (e.g., `"You've hit your limit · resets 2:40pm"`) rather than the full raw JSON blob. On error exhaustion, captured stdout is rendered through `render_summary()` before emit to stderr — the same formatted key:val output produced on the success path. In raw mode (`--output-style raw`), both paths emit stdout unmodified.
 
-**Journaling:** `--journal <level>` (default: `full`) enables automatic event recording via `claude_journal::JournalWriter`. At `full` level all event fields are recorded including complete stdout and stderr (each truncated at 1 MB); at `meta` only metadata (timestamp, command, exit code, duration, cost, model) is recorded; at `off` journaling is disabled. `--journal-dir <path>` overrides the default `~/.clr/journal/` directory. Events are emitted at eight execution boundaries: subprocess exit (`execution`), credential ops completion (`credential`), concurrency gate block (`gate_wait`), rate-limit retry (`retry`), watchdog timeout (`timeout`), runner retry (`runner_retry`), expect-validation retry (`validation_retry`), and interactive session start/end (`interactive`). Journal write failures are logged to stderr at verbosity >= 3 but never alter `clr`'s exit code — journaling is best-effort. Applies to all four executing subcommands: `run`, `ask`, `isolated`, `refresh`. See [feature/002_journaling_integration.md](002_journaling_integration.md).
+**Journaling:** `--journal <level>` (default: `full`) enables automatic event recording via `claude_journal::JournalWriter`. At `full` level all event fields are recorded including complete stdout and stderr (each truncated at 1 MB); at `meta` only metadata (timestamp, command, exit code, duration, cost, model) is recorded; at `off` journaling is disabled. `--journal-dir <path>` overrides the default `~/.clr/journal/` directory. Events are emitted at eight execution boundaries: subprocess exit (`execution`), credential ops completion (`credential`), concurrency gate block (`gate_wait`), rate-limit retry (`retry`), watchdog timeout (`timeout`), runner retry (`runner_retry`), expect-validation retry (`validation_retry`), and interactive session start/end (`interactive`). Journal write failures are logged to stderr unless `--quiet` but never alter `clr`'s exit code — journaling is best-effort. Applies to all four executing subcommands: `run`, `ask`, `isolated`, `refresh`. See [feature/002_journaling_integration.md](002_journaling_integration.md).
 
 **Isolated subcommand extended params (Plan 034):** `clr isolated` gained six params that mirror existing `run`/`ask` capabilities: `--dry-run` (print injected temp-HOME command without creating a directory or spawning; exit 0), `--dir <PATH>` (working directory injected into subprocess; validated before spawn; `CLR_DIR` env fallback), `--add-dir <PATH>` (repeatable; additional read paths; `CLR_ADD_DIR` env fallback), `--file <PATH>` (pipe file content as stdin; pre-spawn existence check; exit 1 if missing), `--expect <VALS>` (pipe-separated match patterns; case-insensitive trimmed), `--expect-strategy <STRAT>` (`fail`→exit 3, `default:<V>`→exit 0; `retry` unsupported → exit 1). `isolated` param count went from 6 to 12; it now shares 9 params with `run`/`ask` (was 3). Exit code 3 applies to `isolated` on `--expect` mismatch with `fail` strategy.
+
+**Session mismatch detection (BUG-320 hardening):** When `-c` is injected, `session_exists()` captures the UUID of the most-recently-modified `.jsonl` file in the session storage directory as `expected_session_id: Option<SessionId>`. On the success path in `run_print_mode()`, `extract_session_id()` in `summary.rs` parses the `session_id` field from claude's JSON result envelope. If `expected_session_id` is `Some` and the actual UUID differs, a `[Runner] warning: session mismatch` line is emitted to stderr. The run is not failed — the warning is diagnostic only. See [invariant/009_session_mismatch_detection.md](../invariant/009_session_mismatch_detection.md).
 
 **Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile` (via `--session-dir` flag passthrough or resolved externally).
 
@@ -98,7 +100,7 @@ table with Name, Category, and Description columns. Static data sourced from
 
 | File | Relationship |
 |------|--------------|
-| [api/001_public_api.md](../api/001_public_api.md) | COMMANDS_YAML and VerbosityLevel public API |
+| [api/001_public_api.md](../api/001_public_api.md) | COMMANDS_YAML and register_commands public API |
 
 ### Invariants
 
@@ -112,6 +114,8 @@ table with Name, Category, and Description columns. Static data sourced from
 | [invariant/006_exit_codes.md](../invariant/006_exit_codes.md) | Exit code semantics (0-4, 128+signal) |
 | [invariant/007_print_mode_timeout.md](../invariant/007_print_mode_timeout.md) | Print-mode default timeout (3600s) vs interactive (unlimited) |
 | [invariant/008_render_summary_gate.md](../invariant/008_render_summary_gate.md) | `render_summary()` must gate on `"type":"result"`; optional fields use `.unwrap_or_default()` |
+| [invariant/009_session_mismatch_detection.md](../invariant/009_session_mismatch_detection.md) | Diagnostic warning when `-c` resumes a different session than expected |
+| [invariant/010_container_only_test_execution.md](../invariant/010_container_only_test_execution.md) | All tests run inside runbox container; host-native execution is a hard error |
 
 ### Sources
 
@@ -131,7 +135,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../src/cli/cred_parse.rs` | `IsolatedArgs`, `RefreshArgs`, their parsers and env-var fallbacks |
 | `../../src/cli/fence.rs` | `strip_fences` utility — outermost code-fence stripping for `--strip-fences` |
 | `../../src/cli/tools.rs` | `clr tools` — list Claude Code built-in tools in a plain-style table |
-| `../../src/cli/summary.rs` | `render_summary()` — JSON→key:val summary; called in `run_print_mode()` when `--output-style summary` (default); falls back to raw on non-JSON input |
+| `../../src/cli/summary.rs` | `render_summary()` — JSON→key:val summary; called in `run_print_mode()` when `--output-style summary` (default); falls back to raw on non-JSON input; `extract_structured_output()` — extracts `structured_output` field from CLR envelope for raw mode + `--json-schema` (BUG-318 fix) |
 
 ### Tests
 
@@ -141,7 +145,7 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/cli_args_ext_test.rs` | T36–T49, S58–S79 extended flags; BUG-212, BUG-215 reproducers |
 | `../../tests/dry_run_test.rs` | Validates dry-run preview output including all injected flags |
 | `../../tests/execution_mode_test.rs` | E01–E13 live mode dispatch via fake claude binary |
-| `../../tests/isolated_test.rs` | `clr isolated` parsing, error cases, lim_it live runs, unknown-subcommand detection; Plan 034: `--dry-run` (IT-12–15), `--dir`/`--add-dir` (IT-16–20), `--file` (IT-21–23), `--expect`/`--expect-strategy` (IT-24–27), pipe buffering (IT-28); Plan 035: `--output-file` (IT-29), `--strip-fences` (IT-30), `--output-style` (IT-31), `--summary-fields` (IT-32), env fallbacks (IT-33–36) |
+| `../../tests/isolated_test.rs` | `clr isolated` parsing, error cases, lim_it live runs, unknown-subcommand detection; Plan 034: `--dry-run` (IT-12–15), `--dir`/`--add-dir` (IT-16–20), `--file` (IT-21–23), `--expect`/`--expect-strategy` (IT-24–27), pipe buffering (IT-28); Plan 035: `--output-file` (IT-29), `--strip-fences` (IT-30), `--output-style` (IT-31), `--summary-fields` (IT-32), env fallbacks (IT-33–36), journal env validation (IT-37) |
 | `../../tests/output_file_test.rs` | T01–T06 --output-file tee behavior, write errors, dry-run skip |
 | `../../tests/expect_validation_test.rs` | T01–T17 --expect / --expect-strategy / --retry-on-validation validation loop |
 | `../../tests/bug_reproducers_247_test.rs` | BUG-247 stdout-to-stderr forwarding on subprocess failure |
@@ -166,12 +170,12 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/timeout_test.rs` | Default timeout constant, watchdog activation, unlimited flag/env, default-path kill via `_CLR_DEFAULT_TIMEOUT` (TSK-228); BUG-317 double-emission guard (`ec_timeout_retry_no_double_emission`) |
 | `../../tests/tools_command_test.rs` | IT-01–IT-09 clr tools table output, help, unknown args |
 | `../../tests/output_format_test.rs` | --output-format summary rendering and fallback |
-| `../../tests/output_style_test.rs` | EC-01–EC-14 --output-style summary/raw rendering, CLR_OUTPUT_STYLE env var, legacy alias, graceful fallback, minimal CLR envelope (BUG-310 regression) |
+| `../../tests/output_style_test.rs` | EC-01–EC-15 --output-style summary/raw rendering, CLR_OUTPUT_STYLE env var, legacy alias, graceful fallback, minimal CLR envelope (BUG-310 regression), raw+json-schema structured output (BUG-318 fix) |
 | `../../tests/summary_fields_test.rs` | EC-01–EC-12 --summary-fields profile/custom/env field selection |
 | `../../tests/ask_command_test.rs` | clr ask dispatch, help intercept, BUG-249/250 |
 | `../../tests/env_var_test.rs` | E01–E17 CLR_* env-variable fallback for run params |
 | `../../tests/env_var_ext_test.rs` | E18–E34 extended env-variable fallback (output-file, expect, retry) |
-| `../../tests/verbosity_test.rs` | Verbosity gate levels 0–5, fatal error passthrough |
+| `../../tests/quiet_test.rs` | Quiet gate: non-fatal diagnostic suppression, fatal error passthrough |
 | `../../tests/param_group_test.rs` | G1–G5 param group composition and count contracts |
 | `../../tests/param_edge_cases_test.rs` | Edge cases for flag parsing (empty values, duplicates, ordering) |
 | `../../tests/param_extended_flags_test.rs` | Extended flag parsing for retry, gate, output params |
@@ -203,7 +207,10 @@ table with Name, Category, and Description columns. Static data sourced from
 | `../../tests/ps_columns_test.rs` | EC-1–EC-10 --columns custom column selection, BUG-303 |
 | `../../tests/ps_wide_test.rs` | EC-1–EC-5 --wide optional column display |
 | `../../tests/ps_flags_test.rs` | IT-30–IT-40, US-18–US-26, E41–E42 session flag emoji computation |
-| `../../tests/journal_integration_test.rs` | EC-1–EC-15 --journal/--journal-dir event emission, level filtering, retry/timeout/gate_wait/validation_retry events, truncation, CLI-wins precedence |
+| `../../tests/journal_integration_test.rs` | EC-1–EC-22 `--journal`/`--journal-dir` event emission, level filtering, retry/timeout/gate_wait/validation_retry events, 1MB truncation, CLI-wins precedence, dry-run isolation (BUG-319), case-sensitive validation, missing-value, duplicate last-wins, off+dir no-op |
+| `../../tests/session_verification_test.rs` | SV-1–SV-4 session mismatch detection (BUG-320 hardening): match/mismatch/no-session/raw-output |
+| `../../tests/summary_unit_test.rs` | IT-1–IT-7 render_summary unit tests; extract_session_id unit tests (invariant/008, invariant/009) |
+| `../../tests/invariant_container_test.rs` | IT-1–IT-5 container-only enforcement structural tests (invariant/010) |
 
 ### Provenance
 

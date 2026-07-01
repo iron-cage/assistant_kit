@@ -17,4 +17,5 @@
 | `feature/` | Execution control, dry-run, describe, isolated subprocess, stdin file piping, and CLAUDECODE unsetting features |
 | `invariant/` | Single execution point and NFR conformance constraints |
 | `failure_mode/` | Known silent failure modes of the `claude` CLI — exit-code traps, channel misrouting, env-var leaks |
+| `entity.md` | Doc Entity index for this crate's documentation scope |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |

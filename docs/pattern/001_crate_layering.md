@@ -4,12 +4,12 @@
 
 - **Purpose**: Document the four-layer crate dependency hierarchy governing the assistant workspace.
 - **Responsibility**: Describe the layer definitions, Layer Invariant, permitted dep directions, and crate-to-layer assignments.
-- **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps), dependency table, Layer * position (claude_storage_core, claude_auth, claude_quota, runbox — outside hierarchy).
+- **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps), dependency table, Layer * position (claude_storage_core, claude_auth, claude_quota, claude_journal, runbox — outside hierarchy).
 - **Out of Scope**: Cross-workspace integration (→ `integration/001_consumer_integration.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`).
 
 ### Problem
 
-A workspace with 17 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
+A workspace with 19 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
 
 ### Solution
 
@@ -19,7 +19,7 @@ Strict four-layer hierarchy with one rule: **dependencies flow downward only**. 
 Layer 3: assistant · assistant_kit                                   (cli + lib — not claude_-prefixed by design)
              ↓
 Layer 2: dream                                                      (lib — not claude_-prefixed by design)
-         claude_assets · claude_version · claude_runner · claude_profile · claude_storage  (cli)
+         claude_assets · claude_version · claude_runner · claude_profile · claude_storage · claude_journal_viewer  (cli)
              ↓
 Layer 1: claude_assets_core · claude_profile_core · claude_version_core · claude_runner_core
              ↓
@@ -27,6 +27,7 @@ Layer 0: claude_core                                                  (zero work
 *        claude_storage_core                                            (zero-dep JSONL parser — no claude_core dep)
 *        claude_auth                                                    (zero workspace deps — OAuth token refresh transport)
 *        claude_quota                                                   (zero workspace deps — API rate-limit HTTP transport)
+*        claude_journal                                                  (zero workspace deps — append-only event journal library)
 *        runbox                                                         (zero workspace deps — container runner scaffold CLI)
 ```
 
@@ -38,6 +39,7 @@ Layer 0: claude_core                                                  (zero work
 | * | `claude_storage_core` | lib | — |
 | * | `claude_auth` | lib | — |
 | * | `claude_quota` | lib | — |
+| * | `claude_journal` | lib | — |
 | * | `runbox` | cli | `runbox`, `crb` |
 | 1 | `claude_assets_core` | lib | — |
 | 1 | `claude_profile_core` | lib | — |
@@ -47,17 +49,19 @@ Layer 0: claude_core                                                  (zero work
 | 2 | `claude_assets` | cli | `claude_assets`, `cla` |
 | 2 | `claude_profile` | cli | `clp`, `claude_profile` |
 | 2 | `claude_storage` | cli | `clg`, `claude_storage` |
-| 2 | `claude_runner` | cli | `clr`, `claude_runner` |
+| 2 | `claude_runner` | cli | `clr`, `c`, `claude_runner` |
 | 2 | `claude_version` | cli | `clv`, `claude_version` |
+| 2 | `claude_journal_viewer` | cli | `clj` |
 | 3 | `assistant` | cli | `ast`, `assistant` |
 | 3 | `assistant_kit` | lib | — |
 
 `*` = outside layer hierarchy.
 
-**Layer `*` position:** Four crates sit outside the numbered layer hierarchy. They have no workspace dependencies (only an optional `ureq` or no external dep):
+**Layer `*` position:** Five crates sit outside the numbered layer hierarchy. They have no workspace dependencies (only external crate deps):
 - `claude_storage_core` — zero-dep JSONL parsing primitive; uses env-var paths, not `ClaudePaths`; wrapped by Layer 2's `claude_storage`
 - `claude_auth` — OAuth token refresh transport; standalone primitive usable without any workspace dep
 - `claude_quota` — API rate-limit HTTP transport; standalone primitive usable without any workspace dep
+- `claude_journal` — append-only event journal library; zero workspace deps; wrapped by Layer 2's `claude_journal_viewer`
 - `runbox` — container runner scaffold CLI; zero workspace deps; generates `runbox/runbox`, `runbox/runbox.yml`, `runbox/runbox.dockerfile` in a target project
 
 ### Applicability

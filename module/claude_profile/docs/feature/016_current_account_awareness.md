@@ -124,5 +124,5 @@ work@acme.com
 
 | File | Relationship |
 |------|--------------|
-| `tests/cli/accounts_test.rs` | IT-26, IT-27, IT-28 — current detection in `.accounts` |
-| `tests/cli/usage_test.rs` | IT-13..IT-16 — live detection and active divergence in `.usage` |
+| `tests/cli/accounts_list_test.rs` | IT-26, IT-27, IT-28 — current detection in `.accounts` |
+| `tests/cli/usage_core_test.rs` | IT-13..IT-16 — live detection and active divergence in `.usage` |

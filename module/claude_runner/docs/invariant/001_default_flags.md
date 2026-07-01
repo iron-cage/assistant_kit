@@ -13,7 +13,7 @@
 
 | Flag | Default | Override | Rationale |
 |------|---------|----------|-----------|
-| `-c` (continue conversation) | ON (when session exists) | `--new-session` | Automation expects session continuity by default; injected only when session storage is non-empty (`session_exists()` guard) |
+| `-c` (continue conversation) | ON (when session exists) | `--new-session` | Automation expects session continuity by default; injected only when session storage is non-empty (`session_exists()` guard); expected session UUID captured for post-execution mismatch detection (→ `invariant/009_session_mismatch_detection.md`) |
 | `--dangerously-skip-permissions` | ON | `--no-skip-permissions` | Automation pipelines must not stall on permission prompts |
 | `--chrome` | ON (interactive only; suppressed in print mode — BUG-304) | `--no-chrome` | Browser context for web-aware automation; suppressed in print mode to prevent permanent session hang |
 | `"\n\nultrathink"` message suffix | ON | `--no-ultrathink` | Extended thinking mode should be the automation default |
@@ -22,10 +22,12 @@
 
 These defaults are intentional and must not be removed without explicit design decision. They represent the automation-optimized defaults for the `clr` runner.
 
+**`-c` continuation note**: `with_resume(Some(uuid))` / `claude -r <uuid>` was evaluated as an alternative to `-c` for session continuation (BUG-320 investigation) and **explicitly rejected** — `-c` is the permanent continuation mechanism for `clr`. Do not revisit this decision. See `invariant/009_session_mismatch_detection.md § Permanent Design Decision`.
+
 ### Enforcement Mechanism
 
 The flag injection is implemented at three layers:
-- `-c`: injected by `build_claude_command()` via `session_exists()` guard — only when `!cli.new_session` AND the configured session directory (or `$HOME/.claude/projects/{encoded(effective_dir)}/` default, checked via `check_continuation()`) contains conversation files. `--dangerously-skip-permissions`: injected unconditionally unless `--no-skip-permissions` is set.
+- `-c`: injected by `build_claude_command()` via `session_exists()` guard — only when `!cli.new_session` AND the configured session directory (or `$HOME/.claude/projects/{encoded(effective_dir)}/` default, checked via `most_recent_session_id()`) contains conversation files. `session_exists()` now returns `Option<SessionId>` (the UUID of the most-recently-modified `.jsonl` file) rather than `bool`; this UUID is threaded as `expected_session_id` through `build_claude_command()` → `run_built_command()` → `run_print_mode()` for post-execution mismatch detection. `--dangerously-skip-permissions`: injected unconditionally unless `--no-skip-permissions` is set.
 - `--chrome`: injected via `ClaudeCommand::new()` builder default (`chrome: Some(true)`). CLI opt-out: `--no-chrome`. Rust API callers can also override with `with_chrome(None)` or `with_chrome(Some(false))`. Print-mode suppression (Fix(BUG-304)): `builder.rs` computes `use_print` early and applies `if cli.no_chrome || use_print { chrome = None }` — prevents `--chrome` emission for all print-mode invocations without requiring `--no-chrome`.
 - `"\n\nultrathink"` message suffix: appended to the message string inside `build_claude_command()` before `builder.with_message()` is called. Skipped when `cli.no_ultrathink` is set or the message already ends with `"ultrathink"` (idempotent guard — `msg.trim_end().ends_with("ultrathink")`).
 - `--effort max`: injected by `build_claude_command()` via `builder.with_effort(cli.effort.unwrap_or(EffortLevel::Max))`. Skipped entirely when `cli.no_effort_max` is set. Overridden to a different level when `cli.effort` is `Some(level)`.

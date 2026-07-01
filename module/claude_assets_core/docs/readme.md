@@ -12,4 +12,5 @@
 |------|----------------|
 | `feature/` | Artifact installer design and installation semantics |
 | `invariant/` | Symlink-only install constraint and enforcement rules |
+| `entity.md` | Doc Entity index for this crate's documentation scope |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |
