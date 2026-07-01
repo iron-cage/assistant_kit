@@ -1,19 +1,9 @@
-# CLI User Story: Keep ClaudeCode Context
+# Preserve CLAUDECODE for nested-agent subprocess behavior
 
-### Scope
-
-- **Purpose**: Document the `--keep-claudecode` opt-out flag that preserves CLAUDECODE in the subprocess env.
-- **Responsibility**: Define acceptance criteria for the nested-agent mode opt-in via env var preservation.
-- **In Scope**: Default CLAUDECODE removal, `--keep-claudecode` preservation, `CLR_KEEP_CLAUDECODE` env var, no-op without parent CLAUDECODE.
-- **Out of Scope**: Claude Code nested-agent mode internals, permission handling in nested context.
-
-### Persona
-
-Developer running `clr` from within a Claude Code session who specifically wants the subprocess to operate in nested-agent mode (rare use case; the default covers virtually all automation needs).
-
-### Goal
-
-Opt into nested-agent subprocess behavior by preserving the `CLAUDECODE` environment variable, overriding the default behavior that removes it to ensure clean standalone execution.
+**Persona:** Developer running `clr` from within a Claude Code session who specifically wants the subprocess to operate in nested-agent mode (rare use case; the default covers virtually all automation needs).
+**Goal:** Opt into nested-agent subprocess behavior by preserving the `CLAUDECODE` environment variable, overriding the default behavior that removes it to ensure clean standalone execution.
+**Benefit:** Enables nested-agent mode for advanced use cases where the subprocess must behave as a Claude Code plugin.
+**Priority:** Low
 
 ### Acceptance Criteria
 
@@ -39,6 +29,12 @@ Opt into nested-agent subprocess behavior by preserving the `CLAUDECODE` environ
 | # | Parameter | Role |
 |---|-----------|------|
 | 27 | [`--keep-claudecode`](../param/027_keep_claudecode.md) | Preserve CLAUDECODE env var in subprocess |
+
+### Workflow Steps
+
+1. `clr --keep-claudecode "Task"` — preserve the parent's `CLAUDECODE` value in the subprocess
+2. `CLR_KEEP_CLAUDECODE=1 clr "Task"` — apply preservation via environment variable
+3. `clr --keep-claudecode --dry-run "Task"` — verify `CLAUDECODE` is preserved in the assembled env block
 
 ### Related User Stories
 

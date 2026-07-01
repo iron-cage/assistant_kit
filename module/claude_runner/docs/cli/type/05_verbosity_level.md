@@ -1,6 +1,6 @@
 > **DEPRECATED:** Removed with `--verbosity` parameter. Replace all call sites with `!quiet` bool. Delete `src/verbosity.rs`. See `074_quiet.md` for replacement.
 
-# CLI Type: VerbosityLevel (DEPRECATED)
+# CLI Type: VerbosityLevel
 
 Removed in v1.2.0 (TSK-337, Plan 038). `src/verbosity.rs` and the `VerbosityLevel` newtype were deleted.
 

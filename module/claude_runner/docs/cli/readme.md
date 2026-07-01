@@ -26,7 +26,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | `env_param.md` | CLR_* env var fallbacks, CLR_GATE_DIR runtime config, and CLAUDE_CODE_* subprocess vars (72 vars) |
 | `param_group/` | Logical parameter groupings (5 groups) |
 | `type/` | Semantic type definitions (13 active types; 1 deprecated) |
-| `param/` | Individual parameter reference docs (69 parameters; 1 deprecated, 1 new) |
+| `param/` | Individual parameter reference docs (69 active; 1 deprecated) |
 | `user_story/` | User goal and usage pattern docs (27 user stories) |
 
 ### Completion Matrix
@@ -35,21 +35,23 @@ clr <command> [OPTIONS] [MESSAGE]
 |--------|----|----|----|----|----|----|
 | readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | command/ (8 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| param/ (69 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| param/ (70 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | type/ (14 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param_group/ (5 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | user_story/ (27 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | env_param.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| parity/ (2 instances) | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
+| parity/ (2 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | config_param.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — no config file mechanism |
 | format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — no named output formats |
 | tests/docs/cli/readme.md | ➖ | ➖ | ➖ | ✅ | ➖ | Complete |
+| tests/docs/cli/dictionary.md | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/command/ (8 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/param/ (69 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/param/ (70 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param_group/ (5 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/type/ (14 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/env_param/ (2 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/parity/ (2 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/user_story/ (27 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 
 **Current Level:** L5
@@ -59,7 +61,7 @@ clr <command> [OPTIONS] [MESSAGE]
 ### Navigation
 
 - [Commands](command/readme.md) — command reference (8 commands)
-- [Parameters](param/readme.md) — flag and argument reference (69 parameters)
+- [Parameters](param/readme.md) — flag and argument reference (69 active; 1 deprecated)
 - [Types](type/readme.md) — semantic type definitions (13 active types; 1 deprecated)
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (5 groups)
 - [Dictionary](dictionary.md) — domain vocabulary

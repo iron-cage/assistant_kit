@@ -122,7 +122,11 @@ pub( super ) fn wait_for_session_slot(
       if attempt == max_attempts
       {
         // Fix(BUG-298): add [Runner] prefix + correct message text to match 14_error_class.md.
-        // Fix(BUG-299): wrap gate-timeout in runner retry instead of unconditional exit(1).
+        // Root cause: gate-timeout message lacked [Runner] class prefix; display showed no class label.
+        // Pitfall: every message-construction site must inject the [Runner] prefix, not only spawn paths.
+        // Fix(BUG-299): wrap gate-timeout in apply_runner_retry() instead of unconditional exit(1).
+        // Root cause: gate-timeout path called exit(1) directly; runner retry system not invoked here.
+        // Pitfall: every early-exit path (including gate timeouts) must route through apply_runner_retry().
         let e = std::io::Error::other(
           format!( "session gate timed out — {count} active sessions, max-sessions={max}" )
         );

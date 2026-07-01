@@ -1,18 +1,19 @@
 # CLI Command: refresh
 
-Refresh OAuth credentials without running an actual Claude task. Creates a
-temporary `HOME` (like `isolated`), spawns `claude --print "."` to trigger the
-startup token refresh, then writes the updated credentials back to `--creds`
-in-place. No user task is executed — the subprocess returns immediately after
-the token refresh completes.
+### Description
 
-**Syntax:**
+Refresh OAuth credentials without running an actual Claude task by spawning `claude --print "."` in a temporary isolated HOME and writing the updated token back to `--creds` in-place. Use `clr refresh` to pre-warm tokens before a batch of operations without any task side effects.
+
+-- **Parameters:** `--creds`, `--timeout`, `--trace`, `--journal`, `--journal-dir`
+-- **Exit Codes:** 0 (refreshed) | 1 (error) | 2 (timeout, no refresh)
+
+### Syntax
 
 ```sh
 clr refresh [--creds <FILE>] [--timeout <SECS>] [--trace]
 ```
 
-**Parameters:**
+### Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -23,7 +24,14 @@ clr refresh [--creds <FILE>] [--timeout <SECS>] [--trace]
 | [`--journal-dir`](../param/073_journal_dir.md) | path | `~/.clr/journal/` | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` |
 | `-h`/`--help` | — | — | Print refresh subcommand help and exit 0 |
 
-**Exit Codes:**
+**Algorithm (5 steps):**
+1. Resolve credentials path: `--creds` if given, else `$HOME/.claude/.credentials.json`; exit 1 if file not found.
+2. Create temporary HOME directory; write `.claude/.credentials.json` from resolved path.
+3. Write minimal `~/.claude/CLAUDE.md` to temp HOME to suppress interactive prompts.
+4. Spawn `claude --print "."` with `HOME=<temp>`, `--model claude-sonnet-4-6`, `--effort low`, `--no-session-persistence`, `--no-chrome`; wait up to `--timeout` seconds.
+5. If credentials were refreshed at subprocess startup, write updated file back to `--creds` and exit 0; otherwise exit 1 (no refresh) or 2 (timeout); delete temp HOME unconditionally.
+
+### Exit Codes
 
 | Code | Meaning |
 |------|---------|
@@ -31,7 +39,7 @@ clr refresh [--creds <FILE>] [--timeout <SECS>] [--trace]
 | 1 | Error (creds file not found, claude not in PATH, I/O failure, no refresh occurred) |
 | 2 | Timeout — subprocess did not finish within `--timeout` seconds and no refresh occurred |
 
-**Examples:**
+### Examples
 
 ```sh
 # Refresh current account credentials (no --creds needed)
@@ -47,26 +55,25 @@ clr refresh --creds /path/to/creds.json --timeout 90
 clr refresh --trace
 ```
 
-**Notes:**
+### Notes
 
-Internally calls `run_isolated()` with fixed args. The `claude` binary refreshes
-its OAuth token at startup before processing the trivial `.` prompt, then exits.
-If the token was refreshed, `clr refresh` writes the updated credentials back to
-`--creds` and exits 0.
+Internally calls `run_isolated()` with fixed args. The `claude` binary refreshes its OAuth token at startup before processing the trivial `.` prompt, then exits. If the token was refreshed, `clr refresh` writes the updated credentials back to `--creds` and exits 0.
 
-The default timeout of 45 seconds (vs 30 for `isolated`) allows headroom for slow
-networks and API rate limiting during the OAuth token exchange. `--timeout 0`
-disables the watchdog entirely (unlimited runtime).
+The default timeout of 45 seconds (vs 30 for `isolated`) allows headroom for slow networks and API rate limiting during the OAuth token exchange. `--timeout 0` disables the watchdog entirely (unlimited runtime).
 
-The subprocess is invoked with the following injected defaults (see
-[`invariant/005_isolated_subprocess_defaults.md`](../../invariant/005_isolated_subprocess_defaults.md)):
-
+Subprocess injected defaults (see [`invariant/005_isolated_subprocess_defaults.md`](../../invariant/005_isolated_subprocess_defaults.md)):
 - `--model claude-sonnet-4-6` (`REFRESH_DEFAULT_MODEL` — Sonnet is sufficient for a trivial ping)
 - `--effort low` (minimal reasoning for a one-character OAuth-trigger prompt)
 - `--no-session-persistence` (temp HOME is discarded after run; session writes are waste)
 - `--no-chrome` (OAuth token exchange is pure HTTP; browser context adds overhead with no benefit)
 - No `--dangerously-skip-permissions` (refresh invokes no tools; no permission prompts)
 - CLAUDE.md written to temp HOME (same as isolated; suppresses interactive prompts)
+
+### Related Commands
+
+| # | Command | Relationship |
+|---|---------|--------------|
+| 1 | [`isolated`](02_isolated.md) | Both use `run_isolated()`; `refresh` sends a trivial ping instead of a real task |
 
 ### Referenced Parameter Groups
 
@@ -78,4 +85,13 @@ The subprocess is invoked with the following injected defaults (see
 
 | # | User Story | Persona |
 |---|------------|---------|
+| 8 | [008_trace_execution.md](../user_story/008_trace_execution.md) | Developer |
 | 14 | [014_credential_refresh.md](../user_story/014_credential_refresh.md) | Developer |
+
+---
+
+**Category:** Credential management
+**Complexity:** 5
+**API Requirement:** None
+**Idempotent:** Yes
+**Risk Level:** Low

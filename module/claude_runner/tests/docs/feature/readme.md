@@ -15,3 +15,4 @@ Per-feature-doc test case indices for `claude_runner`. See [feature/readme.md](.
 |------|---------|--------|
 | `001_runner_tool.md` | Test cases for the runner tool feature doc instance | ✅ |
 | `002_journaling_integration.md` | Test cases for the journaling integration feature doc instance | ✅ |
+| `003_retry_hierarchy.md` | Test cases for the retry hierarchy feature doc instance | ✅ |

@@ -1,19 +1,9 @@
-# CLI User Story: Session Isolation via Subdirectory
+# Isolate Claude sessions by named subdirectory
 
-### Scope
-
-- **Purpose**: Document named workspace isolation using --subdir for per-topic session separation.
-- **Responsibility**: Define acceptance criteria for directing Claude to a named subdirectory derived from the working directory.
-- **In Scope**: --subdir name appending, automatic directory creation, session isolation by working directory, default . identity behavior, CLR_SUBDIR env var.
-- **Out of Scope**: Session storage override (→ 010_session_dir.md), base project-dir scoping (→ 005_project_specific_execution.md).
-
-### Persona
-
-Developer working on multiple parallel tasks in the same project who needs Claude sessions isolated by task name without changing the base project directory or managing session paths manually.
-
-### Goal
-
-Run Claude in a named subdirectory of the current project directory so each task maintains its own conversation history without any `--session-dir` bookkeeping.
+**Persona:** Developer working on multiple parallel tasks in the same project who needs Claude sessions isolated by task name without changing the base project directory or managing session paths manually.
+**Goal:** Run Claude in a named subdirectory of the current project directory so each task maintains its own conversation history without any `--session-dir` bookkeeping.
+**Benefit:** Keeps per-task conversation histories separate without managing session paths manually.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -42,6 +32,13 @@ Run Claude in a named subdirectory of the current project directory so each task
 |---|-----------|------|
 | 8 | [`--dir`](../param/008_dir.md) | Base directory to which the subdirectory is appended |
 | 28 | [`--subdir`](../param/028_subdir.md) | Named subdirectory appended to base dir |
+
+### Workflow Steps
+
+1. `clr --subdir auth "Fix authentication bug"` — scope the session to a named subdirectory
+2. `clr ask --subdir refactor "Explain this module"` — subdirectory isolation in ask mode
+3. `CLR_SUBDIR=auth clr "task"` — set subdirectory via environment variable
+4. `clr --subdir . "task"` — explicit default; base directory unchanged
 
 ### Related User Stories
 

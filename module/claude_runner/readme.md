@@ -4,7 +4,7 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 
 ### Responsibility Table
 
-| Entity | Responsibility | Input→Output | Scope | Out of Scope |
+| Component | Responsibility | Input→Output | Scope | Out of Scope |
 |--------|---------------|--------------|-------|--------------|
 | claude_runner (lib) | YAML schema constants; `COMMANDS_YAML` path for consumers | — | YAML path constant | ❌ Process execution → `claude_runner_core` |
 | clr (bin) | Standalone Claude Code CLI with session continuity by default | CLI args → process exit code | Arg parsing, session continuation, dry-run, help | ❌ Process execution → `claude_runner_core`<br>❌ Session paths → `claude_profile` |
@@ -35,6 +35,7 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 | `docs/` | CLI reference and design documentation |
 | `changelog.md` | Notable changes by version |
 | `verb/` | Shell scripts for each `do` protocol verb. |
+| `runbox/` | Container environment scripts for test execution |
 
 ### Architecture
 

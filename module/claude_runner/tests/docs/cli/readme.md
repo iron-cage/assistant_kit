@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 8 clr commands, all 69 parameters, all 14 types, all 5 parameter groups, 2 env parameter specs, 27 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 8 clr commands, all 69 parameters, all 14 types, all 5 parameter groups, 2 env parameter specs, 27 user story specs, 2 parity specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -18,6 +18,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | param_group/ | Per-parameter-group interaction test indices |
 | type/ | Per-type validation test indices |
 | env_param/ | Per-env-parameter edge case indices |
+| parity/ | Per-parity-matrix cross-command test case indices |
 | user_story/ | Per-user-story end-to-end workflow test specs |
 | dictionary.md | Dictionary vocabulary completeness and accuracy checks |
 
@@ -26,10 +27,11 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
 | Commands | 8 | ≥8 IT each |
-| Parameters | 69 | ≥6 EC each |
+| Parameters | 70 (69 active + 1 deprecated) | ≥6 EC each |
 | Parameter groups | 5 | ≥4 CC each |
 | Types | 14 | ≥4 TC each |
 | Env params | 2 | ≥6 EC each |
+| Parity | 2 | ≥5 PC each |
 | User stories | 27 | ≥4 US each |
 | Dictionary | 1 | ≥4 DT total |
 
@@ -168,6 +170,10 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [Session Concurrency Gate](user_story/25_concurrency_gate.md)
 - [Session Listing](user_story/26_session_listing.md)
 - [Session Termination](user_story/27_session_termination.md)
+
+#### Parity
+- [run / ask / isolated](parity/01_run_ask_isolated.md)
+- [isolated / refresh](parity/02_isolated_refresh.md)
 
 #### Env Params
 - [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)

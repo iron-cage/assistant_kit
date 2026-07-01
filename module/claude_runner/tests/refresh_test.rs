@@ -10,6 +10,7 @@
 //! | IT-6 | `--creds <f> --timeout abc` → exit 1, invalid timeout | No |
 //! | IT-8 | `clr refresh --help` → exit 0, help text shown | No |
 //! | IT-9 | `CLR_JOURNAL=bogus` → exit 1 with error message | No |
+//! | IT-10 | `clr refresh --creds <f> "message"` → exit 1, positional arg rejected | No |
 //!
 //! Tests containing `lim_it` (not present in this file) would require a live
 //! OAuth-capable `claude` binary.  All tests here run without live credentials.
@@ -204,5 +205,35 @@ fn test_it9_clr_journal_invalid_value_exits_1()
   assert!(
     stderr.to_lowercase().contains( "invalid" ),
     "error must describe the value as invalid. Got:\n{stderr}"
+  );
+}
+
+// ── IT-10: positional MESSAGE rejected ───────────────────────────────────────
+
+/// IT-10: `clr refresh --creds <f> "Fix the bug"` exits 1 — positional MESSAGE rejected.
+///
+/// Parity PC-5: `refresh` has no `MESSAGE` parameter — it always uses a hardcoded `"."`
+/// prompt. Passing a positional argument must be rejected at parse time, not silently
+/// ignored. Before this fix, `parse_refresh_args()` had a wildcard arm `_ => {}` that
+/// silently discarded any unrecognised token.
+///
+/// Source: tests/docs/cli/parity/02_isolated_refresh.md#pc-5
+#[ test ]
+fn test_it10_refresh_rejects_positional_message()
+{
+  let creds = make_creds_file( "{}" );
+  let path  = creds.path().to_str().unwrap();
+  let out   = run_refresh( &[ "--creds", path, "Fix the bug" ] );
+  assert_eq!(
+    exit_code( &out ),
+    1,
+    "refresh must reject a positional MESSAGE argument (exit 1); got {:?}; stderr: {}",
+    out.status.code(),
+    stderr_str( &out ),
+  );
+  let err = stderr_str( &out );
+  assert!(
+    err.contains( "unexpected argument" ) || err.contains( "positional" ),
+    "stderr must mention unexpected/positional argument; got: {err}"
   );
 }

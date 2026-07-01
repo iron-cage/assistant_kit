@@ -1,19 +1,9 @@
-# CLI User Story: Credential Refresh
+# Refresh OAuth credentials without running a task
 
-### Scope
-
-- **Purpose**: Document refreshing OAuth credentials via clr refresh without executing a user task.
-- **Responsibility**: Define acceptance criteria for the `refresh` subcommand and its exit codes.
-- **In Scope**: Token refresh via --print . invocation, writeback to --creds file, exit codes, default 45s timeout.
-- **Out of Scope**: Full task execution with isolation (→ 010_credential_isolated_execution.md).
-
-### Persona
-
-Automation operator who needs to refresh an OAuth token before a batch of Claude operations, without running an actual task.
-
-### Goal
-
-Refresh the OAuth credentials in a given file — triggering the `claude` binary's startup token refresh — and write the updated token back, with no task execution.
+**Persona:** Automation operator who needs to refresh an OAuth token before a batch of Claude operations, without running an actual task.
+**Goal:** Refresh the OAuth credentials in a given file — triggering the `claude` binary's startup token refresh — and write the updated token back, with no task execution.
+**Benefit:** Enables pre-batch token refresh without side-effecting task execution, ensuring credentials are fresh.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -43,6 +33,13 @@ Refresh the OAuth credentials in a given file — triggering the `claude` binary
 | 13 | [`--trace`](../param/013_trace.md) | Print underlying call details to stderr |
 | 19 | [`--creds`](../param/019_creds.md) | Path to credentials JSON file (optional; defaults to `~/.claude/.credentials.json`) |
 | 20 | [`--timeout`](../param/020_timeout.md) | Max seconds to wait (default: 45 for refresh) |
+
+### Workflow Steps
+
+1. `clr refresh` — refresh the default credentials file at `~/.claude/.credentials.json`
+2. `clr refresh --creds /path/to/creds.json` — refresh an alternate credentials file in-place
+3. `clr refresh --creds /path/to/creds.json --timeout 90` — refresh with a custom timeout
+4. `clr refresh --trace` — show underlying call details to stderr before refreshing
 
 ### Related User Stories
 

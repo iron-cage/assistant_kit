@@ -1,19 +1,9 @@
-# CLI User Story: Quiet Mode and Diagnostic Control
+# Control CLR runner diagnostic output on stderr
 
-### Scope
-
-- **Purpose**: Document how to suppress or expose CLR runner diagnostic output.
-- **Responsibility**: Define acceptance criteria for `--quiet` suppression and `--trace` verbose output.
-- **In Scope**: `--quiet` bool flag, CLR_QUIET env var, `--trace` diagnostic output, `--dry-run` independence, fatal-error bypass.
-- **Out of Scope**: Subprocess output (never gated by CLR flags), subprocess verbosity (`--verbose` passes through to claude).
-
-### Persona
-
-Developer running `clr` in automation pipelines or scripts who needs clean stdout with no CLR runner chatter, or a developer troubleshooting runner behaviour who wants to see the exact command assembled.
-
-### Goal
-
-Control whether CLR runner diagnostics (retry messages, gate-wait messages, warnings) appear on stderr. Use `--quiet` to silence them for pipeline use; use `--trace` to expose full command detail for debugging.
+**Persona:** Developer running `clr` in automation pipelines or scripts who needs clean stdout with no CLR runner chatter, or a developer troubleshooting runner behaviour who wants to see the exact command assembled.
+**Goal:** Control whether CLR runner diagnostics (retry messages, gate-wait messages, warnings) appear on stderr. Use `--quiet` to silence them for pipeline use; use `--trace` to expose full command detail for debugging.
+**Benefit:** Keeps automation output clean by default and provides detailed diagnostics on demand.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -45,6 +35,13 @@ Control whether CLR runner diagnostics (retry messages, gate-wait messages, warn
 | 11 | [`--dry-run`](../param/011_dry_run.md) | Always emits preview regardless of `--quiet` |
 | 13 | [`--trace`](../param/013_trace.md) | Emits env+command diagnostic; always fires regardless of `--quiet` |
 | 74 | [`--quiet`](../param/074_quiet.md) | Suppress non-fatal CLR runner diagnostics |
+
+### Workflow Steps
+
+1. `clr --quiet "task"` — suppress CLR diagnostic output on stderr
+2. `CLR_QUIET=1 clr "task"` — apply quiet mode via environment variable
+3. `clr --quiet --dry-run "task"` — dry-run output still shows despite `--quiet`
+4. `clr --quiet --trace "task"` — trace output still shows despite `--quiet`
 
 ### Related User Stories
 

@@ -21,6 +21,7 @@
 //! | `spawn_print_claude` (unix) | `ps_command_test`, `user_story_ps_test`, `ps_mode_test`, `ps_columns_test`, `ps_inspect_test`, `param_group_test` |
 //! | `run_clr_ps` (unix) | `ps_command_test`, `user_story_ps_test` |
 //! | `run_clr_kill` (unix) | `kill_command_test`, `user_story_kill_test` |
+//! | `run_isolated` | `isolated_test`, `isolated_plan034_test`, `isolated_plan035_test` |
 //!
 //! # Testing Techniques
 //!
@@ -458,4 +459,19 @@ pub fn run_clr_kill( pid : u32 ) -> std::process::Output
     .args( [ "kill", &pid.to_string() ] )
     .output()
     .expect( "run clr kill" )
+}
+
+/// Invoke `clr isolated <args>` and return raw output.
+///
+/// Prepends the `"isolated"` subcommand to the caller-supplied arguments and
+/// delegates to `run_cli`.  Shared by `isolated_test`, `isolated_plan034_test`,
+/// and `isolated_plan035_test` to avoid duplicating the subcommand prefix logic.
+#[ must_use ]
+#[ inline ]
+#[ allow( dead_code ) ]
+pub fn run_isolated( args : &[ &str ] ) -> std::process::Output
+{
+  let mut full = vec![ "isolated" ];
+  full.extend_from_slice( args );
+  run_cli( &full )
 }

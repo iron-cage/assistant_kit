@@ -75,6 +75,17 @@
 | 073_journal_dir.md | `--journal-dir` parameter spec |
 | 074_quiet.md | `--quiet` flag spec (suppress non-fatal runner diagnostics) |
 
+### Retired Parameter IDs
+
+These parameter IDs exist in the sequence but have no corresponding file. The IDs are retired and must not be reused.
+
+| ID | Notes |
+|----|-------|
+| 032 | Retired — parameter removed; gap predates current tracking |
+| 037 | Retired — parameter removed; gap predates current tracking |
+| 038 | Retired — parameter removed; gap predates current tracking |
+| 039 | Retired — parameter removed; gap predates current tracking |
+
 ### All Parameters (69 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |

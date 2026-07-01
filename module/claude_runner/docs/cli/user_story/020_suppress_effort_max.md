@@ -1,19 +1,9 @@
-# CLI User Story: Suppress Effort Max
+# Suppress automatic effort-max injection
 
-### Scope
-
-- **Purpose**: Document the `--no-effort-max` flag that suppresses automatic `--effort max` injection.
-- **Responsibility**: Define acceptance criteria for suppression behavior, flag precedence, and env var fallback.
-- **In Scope**: Default `--effort max` injection, `--no-effort-max` suppression, precedence over `--effort`, `CLR_NO_EFFORT_MAX` env var.
-- **Out of Scope**: Effort level selection (→ `--effort` param), ask mode effort defaults (→ 015_ask_mode.md).
-
-### Persona
-
-Developer targeting models or configurations that do not support the `--effort` flag, or who needs Claude's native default effort level without any override.
-
-### Goal
-
-Suppress the automatic `--effort max` injection to run Claude with no effort override, either for compatibility with models that don't support the flag or when native defaults are preferred.
+**Persona:** Developer targeting models or configurations that do not support the `--effort` flag, or who needs Claude's native default effort level without any override.
+**Goal:** Suppress the automatic `--effort max` injection to run Claude with no effort override, either for compatibility with models that don't support the flag or when native defaults are preferred.
+**Benefit:** Enables compatibility with models that do not support the effort flag and access to Claude's native effort defaults.
+**Priority:** Low
 
 ### Acceptance Criteria
 
@@ -40,6 +30,12 @@ Suppress the automatic `--effort max` injection to run Claude with no effort ove
 |---|-----------|------|
 | 17 | [`--effort`](../param/017_effort.md) | Effort level; default max is suppressed by `--no-effort-max` |
 | 18 | [`--no-effort-max`](../param/018_no_effort_max.md) | Suppress automatic effort max injection |
+
+### Workflow Steps
+
+1. `clr --no-effort-max "Task"` — run without automatic `--effort max` injection
+2. `CLR_NO_EFFORT_MAX=1 clr "Task"` — suppress effort max via environment variable
+3. `clr --no-effort-max --dry-run "Task"` — verify that `--effort` is absent from the assembled command
 
 ### Related User Stories
 

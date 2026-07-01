@@ -1,18 +1,19 @@
 # CLI Command: isolated
 
-Run Claude in a credential-isolated subprocess. Creates a temporary `HOME`
-directory containing only `.claude/.credentials.json` populated from
-`--creds`, then spawns Claude with `HOME=<temp>`. Waits at most `--timeout`
-seconds, then deletes the temp HOME unconditionally. If Claude refreshes its
-OAuth token, the updated credentials are written back to `--creds` in-place.
+### Description
 
-**Syntax:**
+Run Claude in a credential-isolated subprocess with a temporary HOME containing only the provided credentials file. Use `clr isolated` when running Claude with alternate accounts, test tokens, or deployment-specific credentials without exposing the caller's real HOME, settings, or session history.
+
+-- **Parameters:** `--creds`, `--timeout`, `--trace`, `--dry-run`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir`, `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`
+-- **Exit Codes:** 0 (success) | 1 (error) | 2 (timeout) | 3 (expect mismatch) | N (subprocess passthrough) | 128+signal (signal)
+
+### Syntax
 
 ```sh
 clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHROUGH...]
 ```
 
-**Parameters:**
+### Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -34,7 +35,15 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 | [`--summary-fields`](../param/071_summary_fields.md) | string | — | Summary field selection: `full`, `standard`, `minimal`, or comma-separated; env: `CLR_SUMMARY_FIELDS` |
 | `-h`/`--help` | — | — | Print isolated subcommand help and exit 0 |
 
-**Exit Codes:**
+**Algorithm (6 steps):**
+1. Resolve credentials path: `--creds` if given, else `$HOME/.claude/.credentials.json`; exit 1 if file not found.
+2. Create temporary HOME directory; write `.claude/.credentials.json` from resolved credentials.
+3. Write minimal `~/.claude/CLAUDE.md` to temp HOME to suppress interactive prompts.
+4. Build subprocess command with injected defaults (`--model claude-opus-4-6`, `--effort max`, `--no-session-persistence`, `--dangerously-skip-permissions` when message present); prepend before `--print` and message; passthrough args appended last for last-wins override.
+5. Spawn `claude` with `HOME=<temp>`; wait up to `--timeout` seconds (0 = unlimited).
+6. If credentials were refreshed at startup, write updated file back to `--creds`; delete temp HOME unconditionally; propagate subprocess exit code (or exit 2 on timeout without refresh).
+
+### Exit Codes
 
 | Code | Meaning |
 |------|---------|
@@ -45,7 +54,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 | N | Passthrough from claude subprocess (non-zero) |
 | 128+signal | POSIX signal termination — subprocess killed by signal (e.g., 130 = SIGINT, 143 = SIGTERM); passes through from subprocess identically to any other non-zero `N` |
 
-**Examples:**
+### Examples
 
 ```sh
 # Quick prompt with isolated credentials
@@ -61,26 +70,18 @@ clr isolated --creds /path/to/creds.json -- --version
 clr isolated --creds /path/to/creds.json
 ```
 
-**Notes:**
+### Notes
 
-The isolated subprocess has no access to the caller's real `$HOME` — no
-`~/.claude/settings.json`, no previous conversation state. A minimal
-`~/.claude/CLAUDE.md` is written to the temp HOME before spawn instructing
-the subprocess to execute immediately without asking clarifying questions or
-requesting confirmation.
+The isolated subprocess has no access to the caller's real `$HOME` — no `~/.claude/settings.json`, no previous conversation state. A minimal `~/.claude/CLAUDE.md` is written to the temp HOME before spawn instructing the subprocess to execute immediately without asking clarifying questions or requesting confirmation.
 
-The subprocess is invoked with the following injected defaults (see
-[`invariant/005_isolated_subprocess_defaults.md`](../../invariant/005_isolated_subprocess_defaults.md)):
-
+Subprocess injected defaults (see [`invariant/005_isolated_subprocess_defaults.md`](../../invariant/005_isolated_subprocess_defaults.md)):
 - `--model claude-opus-4-6` (`ISOLATED_DEFAULT_MODEL` — maximum capability for real tasks)
 - `--effort max` (maximum reasoning effort)
 - `--no-session-persistence` (temp HOME is discarded after every run; session writes are waste)
-- `--dangerously-skip-permissions` — injected when `[MESSAGE]` is present (tool calls must
-  not block interactively); omitted in interactive mode (no message)
+- `--dangerously-skip-permissions` — injected when `[MESSAGE]` is present; omitted in interactive mode (no message)
 - `--chrome` active (ClaudeCommand default; isolated tasks may use browser tools)
 
-Injected flags are prepended before `--print` and message so passthrough args can
-override them via last-wins semantics:
+Injected flags are prepended before `--print` and message so passthrough args override via last-wins:
 
 ```sh
 # Override effort for a lighter task:
@@ -89,14 +90,15 @@ clr isolated "summarize this file" -- --effort medium
 clr isolated "what is 2+2?" -- --no-skip-permissions
 ```
 
-If the subprocess times out but already wrote refreshed credentials (OAuth
-token refresh at startup before blocking on input), `clr isolated` exits 0
-and writes updated credentials back to `--creds` instead of returning exit 2.
-This matches the `IsolatedRunResult { exit_code: -1, credentials: Some(…) }`
-path in `claude_runner_core::run_isolated()`.
+If the subprocess times out but already wrote refreshed credentials, `clr isolated` exits 0 and writes updated credentials back to `--creds` instead of returning exit 2. This matches the `IsolatedRunResult { exit_code: -1, credentials: Some(…) }` path in `claude_runner_core::run_isolated()`.
 
-`--timeout 0` disables the watchdog entirely (unlimited runtime), matching
-`run`/`ask` semantics.
+`--timeout 0` disables the watchdog entirely (unlimited runtime), matching `run`/`ask` semantics.
+
+### Related Commands
+
+| # | Command | Relationship |
+|---|---------|--------------|
+| 1 | [`refresh`](03_refresh.md) | Both use `run_isolated()`; `refresh` sends a trivial ping to trigger token refresh only |
 
 ### Referenced Parameter Groups
 
@@ -108,4 +110,13 @@ path in `claude_runner_core::run_isolated()`.
 
 | # | User Story | Persona |
 |---|------------|---------|
+| 8 | [008_trace_execution.md](../user_story/008_trace_execution.md) | Developer |
 | 10 | [010_credential_isolated_execution.md](../user_story/010_credential_isolated_execution.md) | Developer |
+
+---
+
+**Category:** Credential management
+**Complexity:** 15
+**API Requirement:** Write
+**Idempotent:** No
+**Risk Level:** Low

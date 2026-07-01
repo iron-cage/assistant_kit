@@ -10,7 +10,7 @@
 
 | Domain | File | Tests What |
 |--------|------|------------|
-| ask subcommand (IT-1–IT-8) | `ask_command_test.rs` | `clr ask` pure-alias equivalence, param passthrough, and live-trace path |
+| ask subcommand (T01–T13) | `ask_command_test.rs` | `clr ask` pure-alias equivalence, param passthrough, and live-trace path |
 | Trace Universality invariant (IT-1–IT-5) | `invariant_trace_universality_test.rs` | `--trace` on all subprocess-executing commands |
 | CLI flags (T01–T35) | `cli_args_test.rs` | Core flag parsing and builder translation |
 | CLI flags extended (T36–T47, T49, EC01–EC06, S58–S69, S79, BUG-212, BUG-215, BUG-302) | `cli_args_ext_test.rs` | Positional edge cases, session combos, new flags, help section, bug reproducers |
@@ -27,10 +27,12 @@
 | Library API | `lib_test.rs` | `register_commands()` callability |
 | Stale-ref guards + dep constraints (IT-2, IT-3, IT-4) | `stale_ref_guard_test.rs` | No `claude_runner_plugin` or `dream_agent` refs; dep constraint invariants |
 | Container enforcement invariant (IT-1–IT-5) | `invariant_container_test.rs` | Structural: nextest.toml registers setup script; setup-require-container checks 3 detection signals |
-| Isolated subcommand (IT-2–IT-10, EC-N, IT-12–IT-37) | `isolated_test.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs, unknown-subcommand detection; Plan 034: `--dry-run`, `--dir`/`--add-dir`, `--file`, `--expect`/`--expect-strategy`; Plan 035: `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`, env fallbacks, journal env validation |
+| Isolated subcommand (IT-1–IT-9, EC-N) | `isolated_test.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs, unknown-subcommand detection |
+| Isolated subcommand Plan 034 (IT-12–IT-28) | `isolated_plan034_test.rs` | `clr isolated` Plan 034: `--dry-run`, `--dir`/`--add-dir`, `--file`, `--expect`/`--expect-strategy`, pipe buffering |
+| Isolated subcommand Plan 035 (IT-29–IT-37, IT-10) | `isolated_plan035_test.rs` | `clr isolated` Plan 035: `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields`, env fallbacks, journal env validation, trace |
 | Isolated/refresh defaults (DT-1–DT-6) | `isolated_defaults_test.rs` | Invariant 005: model constants, effort injection, passthrough override, effort-before-print order |
-| Isolated/refresh correctness (CT-1–CT-6) | `isolated_correctness_test.rs` | Correctness gaps S2–S6: no-session-persistence, skip-perms with/without message, no-chrome for refresh, timeout-0 unlimited, CLAUDE.md provisioning |
-| Refresh subcommand | `refresh_test.rs` | `clr refresh`: error cases, timeout exit 2, help text (IT-2, IT-4, IT-6, IT-8) |
+| Isolated/refresh correctness (CT-1–CT-7) | `isolated_correctness_test.rs` | Correctness gaps S2–S6: no-session-persistence, skip-perms with/without message, no-chrome for refresh, timeout-0 unlimited, CLAUDE.md provisioning, subprocess HOME env var |
+| Refresh subcommand | `refresh_test.rs` | `clr refresh`: error cases, timeout exit 2, help text, journal env validation, positional arg rejection (IT-2, IT-4, IT-6, IT-8, IT-9, IT-10) |
 | Credential defaults (T1–T5) | `creds_default_test.rs` | `--creds` 3-tier resolution: HOME default, CLR_CREDS tier, and refresh path |
 | Bug reproducers BUG-239–244 | `bug_reproducers_239_244_test.rs` | Silent-failure: exit code propagation, signal codes, quiet gate, install hint, mirror sync (BUG-243 moved to claude_runner_core) |
 | Bug reproducers BUG-246 | `bug_reproducers_246_test.rs` | WYSIWYG: CLAUDECODE removal visible in trace/dry-run; `--keep-claudecode` suppresses prefix |
@@ -86,7 +88,7 @@
 
 | File | Responsibility |
 |------|----------------|
-| `ask_command_test.rs` | `clr ask` subcommand: pure-alias equivalence, param passthrough, and live-trace tests IT-1–IT-8. |
+| `ask_command_test.rs` | `clr ask` subcommand: pure-alias equivalence, param passthrough, and live-trace tests T01–T13. |
 | `invariant_trace_universality_test.rs` | Trace Universality invariant (INV-004): `--trace` on all subprocess-executing commands IT-1–IT-5. |
 | `cli_args_test.rs` | CLI flag parsing: core flags T01–T35, correct translation to builder calls. |
 | `cli_args_ext_test.rs` | CLI flag parsing extended: T36–T47, T49 (positional, session combos, new flags); EC01–EC06 (help section); S58–S69, S79 (strip-fences, keep-claudecode, file flags); BUG-212, BUG-215, BUG-302 reproducers. |
@@ -99,10 +101,12 @@
 | `lib_test.rs` | Library API: `register_commands()` callable. |
 | `stale_ref_guard_test.rs` | Guard against stale `claude_runner_plugin` and `dream_agent` references; dep constraint invariants IT-2, IT-3, IT-4. |
 | `invariant_container_test.rs` | Container-only enforcement (invariant/010): nextest config registers setup script (IT-1); setup-require-container exists (IT-2); checks `/.dockerenv` (IT-3), `/run/.containerenv` (IT-4), `RUNBOX_CONTAINER` (IT-5). |
-| `isolated_test.rs` | `clr isolated` subcommand: parsing, error cases, exit codes, lim_it live runs, unknown-subcommand detection; Plan 034: `--dry-run` (IT-12–15), `--dir`/`--add-dir` (IT-16–20), `--file` (IT-21–23), `--expect`/`--expect-strategy` (IT-24–27), pipe buffering (IT-28); Plan 035: `--output-file` (IT-29), `--strip-fences` (IT-30), `--output-style` (IT-31), `--summary-fields` (IT-32), env fallbacks (IT-33–36); journal env validation (IT-37). |
+| `isolated_test.rs` | `clr isolated` subcommand: parsing, error cases, exit codes, lim_it live runs, unknown-subcommand detection (IT-1–IT-9, EC-N). |
+| `isolated_plan034_test.rs` | `clr isolated` Plan 034: `--dry-run` (IT-12–15), `--dir`/`--add-dir` (IT-16–20), `--file` (IT-21–23), `--expect`/`--expect-strategy` (IT-24–27), pipe buffering (IT-28). |
+| `isolated_plan035_test.rs` | `clr isolated` Plan 035: `--output-file` (IT-29), `--strip-fences` (IT-30), `--output-style` (IT-31), `--summary-fields` (IT-32), env fallbacks (IT-33–36), journal env validation (IT-37), trace (IT-10). |
 | `isolated_defaults_test.rs` | Invariant 005 model and effort defaults: DT-1–DT-6 covering constants, trace injection, passthrough override, arg order. |
-| `isolated_correctness_test.rs` | Isolated/refresh correctness gaps CT-1–CT-6: no-session-persistence, skip-perms condition, no-chrome, timeout-0 unlimited, CLAUDE.md provisioning. |
-| `refresh_test.rs` | `clr refresh` subcommand: error cases, timeout exit 2, help text (IT-2, IT-4, IT-6, IT-8); journal env validation (IT-9). |
+| `isolated_correctness_test.rs` | Isolated/refresh correctness gaps CT-1–CT-7: no-session-persistence, skip-perms condition, no-chrome, timeout-0 unlimited, CLAUDE.md provisioning, subprocess HOME env var divergence. |
+| `refresh_test.rs` | `clr refresh` subcommand: error cases, timeout exit 2, help text (IT-2, IT-4, IT-6, IT-8); journal env validation (IT-9); positional arg rejection (IT-10). |
 | `creds_default_test.rs` | `--creds` 3-tier resolution: HOME default, CLR_CREDS tier, and refresh path (T1–T5). |
 | `bug_reproducers_239_244_test.rs` | Bug reproducers BUG-239–244: exit code passthrough, signal codes, quiet gate, install hint, mirror sync (BUG-243 in claude_runner_core). |
 | `bug_reproducers_246_test.rs` | Bug reproducer BUG-246: CLAUDECODE removal visible in trace/dry-run output; `--keep-claudecode` suppresses prefix. |

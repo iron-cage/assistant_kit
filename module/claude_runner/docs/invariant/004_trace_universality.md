@@ -78,4 +78,3 @@ Emitted via `emit_credential_trace()`:
 |------|--------------|
 | `../../tests/docs/invariant/004_trace_universality.md` | IN-1 through IN-5 trace acceptance across all commands |
 | `../../tests/cli_args_test.rs` | `--trace` flag parsing via `parse_args()` |
-| `../../tests/docs/cli/param/13_trace.md` | EC-1 through EC-8 per-parameter trace edge cases |

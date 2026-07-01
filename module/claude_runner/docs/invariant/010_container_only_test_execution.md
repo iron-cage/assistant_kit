@@ -56,14 +56,24 @@ Note: `claude_runner` has no Rust guard layer (unlike `claude_profile` which add
 |------|-------|
 | `../../tests/invariant_container_test.rs` | IT-1–IT-5: nextest.toml setup script registration (IT-1); setup-require-container existence (IT-2); three-signal coverage (IT-3–IT-5) |
 
-### Cross-References
+### Sources
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `verb/test` | Outer dispatcher — rejects any `VERB_LAYER` on host |
-| source | `verb/test.d/l0` | Hard error stub — host-native execution disabled |
-| source | `verb/test.d/l1` | Container-internal layer — sets `RUNBOX_CONTAINER=1` |
-| source | `.config/setup-require-container` | Nextest setup script — 3-signal check, workspace-wide |
-| source | `.config/nextest.toml` | Nextest configuration — `filter = "all()"` |
-| invariant | `claude_profile/docs/invariant/009_container_only_test_execution.md` | Workspace-wide invariant — full enforcement story for all 19 crates |
-| feature | [feature/001_runner_tool.md](../feature/001_runner_tool.md) | Runner tool design — this invariant governs `claude_runner` test execution |
+| File | Relationship |
+|------|--------------|
+| `verb/test` | Outer dispatcher — rejects any `VERB_LAYER` on host |
+| `verb/test.d/l0` | Hard error stub — host-native execution disabled |
+| `verb/test.d/l1` | Container-internal layer — sets `RUNBOX_CONTAINER=1` |
+| `.config/setup-require-container` | Nextest setup script — 3-signal check, workspace-wide |
+| `.config/nextest.toml` | Nextest configuration — `filter = "all()"` |
+
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| `claude_profile/docs/invariant/009_container_only_test_execution.md` | Workspace-wide invariant — full enforcement story for all 19 crates |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [feature/001_runner_tool.md](../feature/001_runner_tool.md) | Runner tool design — this invariant governs `claude_runner` test execution |

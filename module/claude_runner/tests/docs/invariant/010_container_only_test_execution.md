@@ -9,7 +9,7 @@ Test case planning for [invariant/010_container_only_test_execution.md](../../..
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IT-1 | `workspace_nextest_toml_registers_setup_script` — workspace `.config/nextest.toml` contains `setup-scripts = true` and references `require-container` | Structural |
+| IT-1 | `workspace_nextest_toml_registers_setup_script` — workspace `.config/nextest.toml` contains `"setup-scripts"` in the `experimental` array and references `require-container` | Structural |
 | IT-2 | `setup_script_file_exists` — `.config/setup-require-container` file exists at workspace root | Structural |
 | IT-3 | `setup_script_checks_dockerenv` — setup script body contains `/.dockerenv` detection | Structural |
 | IT-4 | `setup_script_checks_containerenv` — setup script body contains `/run/.containerenv` detection | Structural |

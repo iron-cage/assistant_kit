@@ -1,19 +1,9 @@
-# CLI User Story: File Input
+# Pipe a file's content as stdin to Claude
 
-### Scope
-
-- **Purpose**: Document piping a file's content as subprocess stdin using --file.
-- **Responsibility**: Define acceptance criteria for --file behavior including error handling and path resolution.
-- **In Scope**: --file path piping, error on non-readable path, path resolution relative to caller cwd.
-- **Out of Scope**: JSON-schema structured output (→ 013_structured_json_pipeline.md), shell-pipeline equivalent.
-
-### Persona
-
-Developer who wants to feed a file's content to Claude as stdin alongside a prompt, without constructing a shell pipeline.
-
-### Goal
-
-Pipe a file's content as stdin to the claude subprocess using a single `clr` invocation.
+**Persona:** Developer who wants to feed a file's content to Claude as stdin alongside a prompt, without constructing a shell pipeline.
+**Goal:** Pipe a file's content as stdin to the claude subprocess using a single `clr` invocation.
+**Benefit:** Simplifies file-driven workflows by eliminating shell pipeline boilerplate.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -43,6 +33,11 @@ Pipe a file's content as stdin to the claude subprocess using a single `clr` inv
 | 2 | [`--print`](../param/002_print.md) | Print mode (typically used with file input) |
 | 25 | [`--file`](../param/025_file.md) | Path to file piped as subprocess stdin |
 | 26 | [`--strip-fences`](../param/026_strip_fences.md) | Strip output fences after file-driven generation |
+
+### Workflow Steps
+
+1. `clr -p "Summarize this file" --file document.txt` — pipe a file as stdin alongside a prompt
+2. `clr -p "Extract functions" --file source.rs --strip-fences` — pipe source file and strip fences from output
 
 ### Related User Stories
 

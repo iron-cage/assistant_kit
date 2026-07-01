@@ -1,22 +1,9 @@
-# CLI User Story: Session Concurrency Gate
+# Gate new invocations when concurrent session limit is reached
 
-### Scope
-
-- **Purpose**: Document `--max-sessions` as a rate-limit guard that limits concurrent Claude Code sessions before a new invocation proceeds.
-- **Responsibility**: Define acceptance criteria for the session concurrency gate: waiting behavior, timeout behavior, disabled state, env-var fallback.
-- **In Scope**: `--max-sessions` limit, 30s polling interval, 100-attempt limit, `0` = unlimited semantics, `CLR_MAX_SESSIONS` env var, stderr status messages, dry-run bypass.
-- **Out of Scope**: Per-project session scoping (-> 022_session_isolation_subdir.md), subprocess execution timeout (-> 020_timeout.md).
-
-### Persona
-
-Developer or CI system that runs multiple automated `clr` invocations in parallel and needs
-to avoid hitting Claude API rate limits caused by too many concurrent sessions.
-
-### Goal
-
-Limit the number of concurrent Claude Code sessions so that new `clr` invocations wait when
-the system already has `--max-sessions` active sessions, reducing rate limit errors from
-parallel pipelines.
+**Persona:** Developer or CI system that runs multiple automated `clr` invocations in parallel and needs to avoid hitting Claude API rate limits caused by too many concurrent sessions.
+**Goal:** Limit the number of concurrent Claude Code sessions so that new `clr` invocations wait when the system already has `--max-sessions` active sessions, reducing rate limit errors from parallel pipelines.
+**Benefit:** Prevents rate-limit errors from parallel automation by serializing new invocations when the session limit is reached.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -45,6 +32,13 @@ parallel pipelines.
 | # | Parameter | Role |
 |---|-----------|------|
 | 33 | [`--max-sessions`](../param/033_max_sessions.md) | Session count limit; `0` = unlimited |
+
+### Workflow Steps
+
+1. `clr --max-sessions 5 "task"` — gate new invocations when 5 or more Claude sessions are active
+2. `CLR_MAX_SESSIONS=3 clr "task"` — apply session limit via environment variable
+3. `clr --max-sessions 0 "task"` — disable the gate; proceed immediately regardless of active sessions
+4. `clr --max-sessions 5 --dry-run "task"` — bypass the gate in dry-run mode
 
 ### Related User Stories
 
