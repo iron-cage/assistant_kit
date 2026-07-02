@@ -142,13 +142,13 @@ Acceptance tests for User Story 006. See [user_story/006_config_management.md](.
 
 | Function | File |
 |----------|------|
-| `us1_006_config_show_all_source_annotations` | `integration/user_story_test.rs` |
-| `us2_006_config_single_key_shows_source` | `integration/user_story_test.rs` |
-| `us3_006_config_key_format_json` | `integration/user_story_test.rs` |
-| `us4_006_config_write_type_inference` | `integration/user_story_test.rs` |
-| `us5_006_config_write_project_scope` | `integration/user_story_test.rs` |
-| `us6_006_config_dry_run_no_write` | `integration/user_story_test.rs` |
-| `us7_006_config_unset_user_key` | `integration/user_story_test.rs` |
-| `us8_006_config_unset_project_key` | `integration/user_story_test.rs` |
-| `us9_006_config_type_inference` | `integration/user_story_test.rs` |
-| `us10_006_config_value_and_unset_exclusive` | `integration/user_story_test.rs` |
+| `us1_006_config_show_all_source_annotations` | `tests/cli/user_story_test.rs` |
+| `us2_006_config_single_key_shows_source` | `tests/cli/user_story_test.rs` |
+| `us3_006_config_key_format_json` | `tests/cli/user_story_test.rs` |
+| `us4_006_config_write_type_inference` | `tests/cli/user_story_test.rs` |
+| `us5_006_config_write_project_scope` | `tests/cli/user_story_test.rs` |
+| `us6_006_config_dry_run_no_write` | `tests/cli/user_story_test.rs` |
+| `us7_006_config_unset_user_key` | `tests/cli/user_story_test.rs` |
+| `us8_006_config_unset_project_key` | `tests/cli/user_story_test.rs` |
+| `us9_006_config_type_inference` | `tests/cli/user_story_test.rs` |
+| `us10_006_config_value_and_unset_exclusive` | `tests/cli/user_story_test.rs` |

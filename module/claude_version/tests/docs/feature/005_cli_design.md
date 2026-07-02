@@ -99,15 +99,14 @@ Both are valid invocations; output length differs.
 
 | Function | File |
 |----------|------|
-| `ft005_1_unknown_param_exits_1` | `integration/feature_surface_test.rs` |
-| `ft005_2_empty_bool_param_value_exits_1` | `integration/feature_surface_test.rs` |
-| `ft005_3_last_param_wins` | `integration/feature_surface_test.rs` |
-| `tc093_empty_args_exits_0` | `integration/framework_test.rs` |
-| `tc04_help_anywhere_wins` | `integration/read_commands_test.rs` |
-| `ft005_6_bool_true_rejected` | `integration/catalog_surface_test.rs` |
-| `ft005_7_last_v_wins` | `integration/catalog_surface_test.rs` |
-| `ft005_8_cmd_not_implemented_exit2` | `integration/catalog_surface_test.rs` |
-| `ft005_9_per_cmd_validation` | `integration/catalog_surface_test.rs` |
+| `ft005_1_unknown_param_exits_1` | `tests/cli/feature_surface_test.rs` |
+| `ft005_2_empty_bool_param_value_exits_1` | `tests/cli/feature_surface_test.rs` |
+| `ft005_3_last_param_wins` | `tests/cli/feature_surface_test.rs` |
+| `tc093_empty_args_exits_0` | `tests/cli/framework_test.rs` |
+| `ft005_6_bool_true_rejected` | `tests/cli/catalog_surface_test.rs` |
+| `ft005_7_last_v_wins` | `tests/cli/catalog_surface_test.rs` |
+| `ft005_8_cmd_not_implemented_exit2` | `tests/cli/catalog_surface_test.rs` |
+| `ft005_9_per_cmd_validation` | `tests/cli/catalog_surface_test.rs` |
 
 ---
 

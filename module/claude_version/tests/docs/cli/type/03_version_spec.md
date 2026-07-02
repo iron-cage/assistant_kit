@@ -144,7 +144,7 @@ Type compliance and validation tests for `VersionSpec`. See [type/03_version_spe
 
 | Function | File |
 |----------|------|
-| `tc304_version_install_wrong_case_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc305_version_install_empty_version_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc_version_spec_month_alias_accepted` | `cli_args_test.rs` |
-| `tc_version_spec_latest_alias_accepted` | `cli_args_test.rs` |
+| `tc304_version_install_wrong_case_exits_1` | `tests/cli/mutation_version_install_test.rs` |
+| `tc305_version_install_empty_version_exits_1` | `tests/cli/mutation_version_install_test.rs` |
+| `tc_version_spec_month_alias_accepted` | `cli_args_test/type_surface_test.rs` |
+| `tc_version_spec_latest_alias_accepted` | `cli_args_test/type_surface_test.rs` |

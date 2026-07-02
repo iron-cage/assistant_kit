@@ -41,6 +41,7 @@
 | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .settings.set |
 | [feature/005_cli_design.md](005_cli_design.md) | CLI routing and required parameter validation |
 | [feature/006_config_command.md](006_config_command.md) | Unified `.config` command replacing `.settings.*` |
+| [feature/007_params_command.md](007_params_command.md) | `.params` reads settings.json config values for display (read-only) |
 
 ### Sources
 

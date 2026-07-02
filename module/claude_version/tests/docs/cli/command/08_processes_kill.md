@@ -79,21 +79,21 @@ and non-empty /proc results gracefully.
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-1 | No processes → "no active processes", exit 0 | P | 0 | F1=absent, F4=none | [mutation_commands_test.rs] |
-| IT-2 | `dry::1` no processes → "no active processes" | P | 0 | F1=1, F4=none | [mutation_commands_test.rs] |
-| IT-3 | `dry::1 force::1` no processes → "no active processes" | P | 0 | F1=1, F2=1, F3, F4=none | [mutation_commands_test.rs] |
-| IT-4 | `v::0` → accepted, exit 0 | P | 0 | F6=0 | [mutation_commands_test.rs] |
-| IT-6 | Source-level AF: `let _ = send_sig` absent from commands/process.rs | P | 0 | — | [mutation_commands_test.rs] |
-| IT-7 | `dry::1 format::json` → JSON object output, exit 0 | P | 0 | F1=1, F7=json | [mutation_commands_test.rs] |
+| IT-1 | No processes → "no active processes", exit 0 | P | 0 | F1=absent, F4=none | [mutation_processes_kill_test.rs] |
+| IT-2 | `dry::1` no processes → "no active processes" | P | 0 | F1=1, F4=none | [mutation_processes_kill_test.rs] |
+| IT-3 | `dry::1 force::1` no processes → "no active processes" | P | 0 | F1=1, F2=1, F3, F4=none | [mutation_processes_kill_test.rs] |
+| IT-4 | `v::0` → accepted, exit 0 | P | 0 | F6=0 | [mutation_processes_kill_test.rs] |
+| IT-6 | Source-level AF: `let _ = send_sig` absent from commands/process.rs | P | 0 | — | [mutation_processes_kill_test.rs] |
+| IT-7 | `dry::1 format::json` → JSON object output, exit 0 | P | 0 | F1=1, F7=json | [mutation_processes_kill_test.rs] |
 
 ### Negative Tests
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-5 | `format::JSON` (uppercase) → exit 1 | N | 1 | F7=JSON | [mutation_commands_test.rs] |
-| IT-8 | `bogus::x` → exit 1 | N | 1 | F5=present | [mutation_commands_test.rs] |
-| IT-9 | `dry::2` → exit 1, out-of-range boolean | N | 1 | F1=2 | [mutation_commands_test.rs] |
-| IT-10 | `force::2` → exit 1, out-of-range boolean | N | 1 | F2=2 | [mutation_commands_test.rs] |
+| IT-5 | `format::JSON` (uppercase) → exit 1 | N | 1 | F7=JSON | [mutation_processes_kill_test.rs] |
+| IT-8 | `bogus::x` → exit 1 | N | 1 | F5=present | [mutation_processes_kill_test.rs] |
+| IT-9 | `dry::2` → exit 1, out-of-range boolean | N | 1 | F1=2 | [mutation_processes_kill_test.rs] |
+| IT-10 | `force::2` → exit 1, out-of-range boolean | N | 1 | F2=2 | [mutation_processes_kill_test.rs] |
 
 ### Summary
 
@@ -257,11 +257,11 @@ live claude processes and are manual-only tests.
 
 | Function | File |
 |----------|------|
-| `tc310_processes_kill_dry_exits_0` | `integration/mutation_commands_test.rs` |
-| `tc311_processes_kill_dry_mentions_sigterm` | `integration/mutation_commands_test.rs` |
-| `tc312_processes_kill_dry_force_mentions_sigkill` | `integration/mutation_commands_test.rs` |
-| `tc313_processes_kill_v0_accepted` | `integration/mutation_commands_test.rs` |
-| `tc314_processes_kill_format_uppercase_rejected` | `integration/mutation_commands_test.rs` |
-| `tc315_processes_kill_no_let_underscore_on_send_sig` | `integration/mutation_commands_test.rs` |
-| `tc316_processes_kill_dry_format_json` | `integration/mutation_commands_test.rs` |
-| `tc251_processes_kill_dry_force_dry_wins` | `integration/cross_cutting_test.rs` |
+| `tc310_processes_kill_dry_exits_0` | `tests/cli/mutation_processes_kill_test.rs` |
+| `tc311_processes_kill_dry_mentions_sigterm` | `tests/cli/mutation_processes_kill_test.rs` |
+| `tc312_processes_kill_dry_force_mentions_sigkill` | `tests/cli/mutation_processes_kill_test.rs` |
+| `tc313_processes_kill_v0_accepted` | `tests/cli/mutation_processes_kill_test.rs` |
+| `tc314_processes_kill_format_uppercase_rejected` | `tests/cli/mutation_processes_kill_test.rs` |
+| `tc315_processes_kill_no_let_underscore_on_send_sig` | `tests/cli/mutation_processes_kill_test.rs` |
+| `tc316_processes_kill_dry_format_json` | `tests/cli/mutation_processes_kill_test.rs` |
+| `tc251_processes_kill_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |

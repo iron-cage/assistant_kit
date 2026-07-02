@@ -29,7 +29,6 @@ use claude_version_core::settings_io::get_setting;
 /// Returns `Err(ArgumentTypeMismatch)` for an unrecognised `kind::` or `format::` value (exit 1).
 /// Returns `Err(InternalError)` when `key::` is specified but not in the catalog (exit 2).
 #[ allow(
-  clippy::needless_pass_by_value,
   clippy::missing_inline_in_public_items,
 ) ]
 pub fn params_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >

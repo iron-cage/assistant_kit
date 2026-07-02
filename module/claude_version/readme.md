@@ -9,6 +9,7 @@ Claude Code version manager: install, upgrade, and session lifecycle.
 | `docs/` | Design and CLI documentation (feature/, algorithm/, pattern/, cli/) |
 | `src/` | Binary and library source code |
 | `tests/` | Unit and integration test suite |
+| `task/` | Task entity directory — task files and lifecycle |
 | `Cargo.toml` | Crate manifest |
 | `unilang.commands.yaml` | YAML command metadata for all manager commands (not aggregated by build.rs) |
 | `changelog.md` | Notable changes by version |

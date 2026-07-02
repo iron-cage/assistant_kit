@@ -99,9 +99,9 @@ Type compliance and validation tests for `ConfigKey`. See [type/07_config_key.md
 
 | Function | File | Status |
 |----------|------|--------|
-| `tc01_007_config_key_catalog_default` | `integration/config_commands_test.rs` | ✅ |
-| `tc02_007_config_key_arbitrary_absent` | `integration/config_commands_test.rs` | ✅ |
-| `tc03_007_config_key_catalog_user_config` | `integration/config_commands_test.rs` | ✅ |
-| `tc04_007_config_key_dot_literal` | `integration/config_commands_test.rs` | ✅ |
-| `tc05_007_config_key_absent_show_all` | `integration/config_commands_test.rs` | ✅ |
-| `tc06_007_config_key_empty_exits_1` | `integration/config_commands_test.rs` | ✅ |
+| `tc01_007_config_key_catalog_default` | `tests/cli/config_commands_test.rs` | ✅ |
+| `tc02_007_config_key_arbitrary_absent` | `tests/cli/config_commands_test.rs` | ✅ |
+| `tc03_007_config_key_catalog_user_config` | `tests/cli/config_commands_test.rs` | ✅ |
+| `tc04_007_config_key_dot_literal` | `tests/cli/config_commands_test.rs` | ✅ |
+| `tc05_007_config_key_absent_show_all` | `tests/cli/config_commands_test.rs` | ✅ |
+| `tc06_007_config_key_empty_exits_1` | `tests/cli/config_commands_test.rs` | ✅ |

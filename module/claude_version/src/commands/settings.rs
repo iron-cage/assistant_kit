@@ -12,7 +12,7 @@ use claude_version_core::settings_io::{ StoredAs, get_setting, infer_type, read_
 /// # Errors
 ///
 /// Returns `Err(InternalError)` when HOME is missing or settings unreadable.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn settings_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts  = OutputOptions::from_cmd( &cmd )?;
@@ -68,7 +68,7 @@ pub fn settings_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
 ///
 /// Returns `Err(ArgumentMissing)` when `key::` is missing.
 /// Returns `Err(InternalError)` when HOME is missing or key not found.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn settings_get_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let key   = super::require_nonempty_string_arg( &cmd, "key" )?;
@@ -115,7 +115,7 @@ pub fn settings_get_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 ///   for the `value::` parameter, silently bypassing the FR-04 empty-value rejection.
 /// Pitfall: `cm .settings.set key::k value::` appeared to succeed but wrote a meaningless
 ///   empty-string entry — indistinguishable from "key not set" when read back via `.settings.get`.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn settings_set_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let key   = super::require_nonempty_string_arg( &cmd, "key" )?;

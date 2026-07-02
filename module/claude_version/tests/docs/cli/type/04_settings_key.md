@@ -88,7 +88,7 @@ Type compliance and validation tests for `SettingsKey`. See [type/04_settings_ke
 
 | Function | File |
 |----------|------|
-| `tc_settings_key_empty_exits_1` | `cli_args_test.rs` |
-| `tc_settings_key_absent_exits_1` | `cli_args_test.rs` |
-| `tc_settings_key_dot_literal` | `cli_args_test.rs` |
-| `tc_settings_key_valid_accepted` | `cli_args_test.rs` |
+| `tc_settings_key_empty_exits_1` | `cli_args_test/type_surface_test.rs` |
+| `tc_settings_key_absent_exits_1` | `cli_args_test/type_surface_test.rs` |
+| `tc_settings_key_dot_literal` | `cli_args_test/type_surface_test.rs` |
+| `tc_settings_key_valid_accepted` | `cli_args_test/type_surface_test.rs` |

@@ -22,7 +22,7 @@ use claude_version_core::version::{
 /// # Errors
 ///
 /// Returns `Err(InternalError)` if `claude` is not found in PATH.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts    = OutputOptions::from_cmd( &cmd )?;
@@ -71,7 +71,7 @@ pub fn version_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 ///
 /// Returns `Err(ArgumentTypeMismatch)` when the version spec or format is invalid.
 /// Returns `Err(InternalError)` when `curl` is not found or the install fails.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts = OutputOptions::from_cmd( &cmd )?;
@@ -217,7 +217,7 @@ fn install_dry_content(
 ///
 /// Returns `Err(ArgumentMissing)` when `version::` is present but empty.
 /// Returns `Err(InternalError)` when HOME is unset or the install fails.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts  = OutputOptions::from_cmd( &cmd )?;
@@ -574,7 +574,7 @@ fn current_timestamp() -> String
 /// # Errors
 ///
 /// Returns `Err` if `format::` has an unrecognised value.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts = OutputOptions::from_cmd( &cmd )?;

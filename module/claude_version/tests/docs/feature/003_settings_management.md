@@ -93,8 +93,8 @@ Both are valid invocations; the stored JSON type differs.
 
 | Function | File |
 |----------|------|
-| `tc322_settings_set_value_true_stores_bool` | `integration/mutation_commands_test.rs` |
-| `tc325_settings_set_value_42_stores_number` | `integration/mutation_commands_test.rs` |
-| `ft003_settings_set_get_round_trip` | `integration/feature_surface_test.rs` |
-| `tc328_settings_set_creates_file_when_absent` | `integration/mutation_commands_test.rs` |
-| `tc331_settings_set_home_not_set_exits_2` | `integration/mutation_commands_test.rs` |
+| `tc322_settings_set_stores_boolean_true` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc325_settings_set_stores_number` | `tests/cli/mutation_settings_set_test.rs` |
+| `ft003_settings_set_get_round_trip` | `tests/cli/feature_surface_test.rs` |
+| `tc328_settings_set_creates_file_when_absent` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc331_settings_set_no_home_exits_2` | `tests/cli/mutation_settings_set_test.rs` |

@@ -29,7 +29,7 @@ fn get_active_account() -> Option< String >
 /// # Errors
 ///
 /// Returns `Err` only when `format::` has an unrecognised value.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts     = OutputOptions::from_cmd( &cmd )?;
