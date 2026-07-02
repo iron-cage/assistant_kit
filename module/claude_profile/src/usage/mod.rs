@@ -31,6 +31,7 @@ pub( crate ) use api::{
   PreSwitchOutcome,
 };
 pub( crate ) use types::{ validate_set_model, map_model_shorthand };
+pub( crate ) use fetch_cache::read_cached_quota;
 pub use api::usage_routine;
 
 // ── Test support ──────────────────────────────────────────────────────────────

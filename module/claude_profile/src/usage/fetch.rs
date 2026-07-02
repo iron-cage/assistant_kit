@@ -166,6 +166,39 @@ pub fn fetch_quota_for_list(
       continue;
     }
 
+    // Cache-first guard: use recently-fetched cache without hitting the live API.
+    // Prevents API flooding from rapid-succession .usage invocations — test suites and
+    // polling scripts commonly invoke .usage every few seconds. The 120s window matches
+    // the per-token /oauth/usage burst-rate limit observed in practice.
+    // Pitfall: cache-first fires AFTER the G1/G1b/solo gates, so non-owned and
+    // occupied-elsewhere accounts are already handled above; `is_current` is resolved.
+    const CACHE_FRESH_SECS : u64 = 120;
+    if let Some( ( data, age ) ) = read_cached_quota( credential_store, &acct.name, now_secs )
+      .filter( |( _, age )| *age <= CACHE_FRESH_SECS )
+    {
+      if trace { eprintln!( "{}{}  cache-first ({}s old, skipping API)", trace_ts(), acct.name, age ); }
+      let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
+      let renewal_at     = read_renewal_at( credential_store, &acct.name );
+      results.push( AccountQuota
+      {
+        name                  : acct.name.clone(),
+        is_current,
+        is_active             : acct.is_active,
+        is_occupied_elsewhere : occupied_elsewhere.contains( &acct.name ),
+        expires_at_ms         : acct.expires_at_ms,
+        result                : Ok( data ),
+        account               : None,
+        host,
+        role,
+        renewal_at,
+        cached                : true,
+        cache_age_secs        : Some( age ),
+        is_owned              : true,
+        owner,
+      } );
+      continue;
+    }
+
     // Fix(BUG-233): skip both API calls for locally-expired tokens — guaranteed 401 otherwise.
     // Root cause: no pre-flight expiry check; both thread spawn + main-thread HTTP always fired.
     // Pitfall: expires_at_ms is in milliseconds; now_secs is in seconds — divide before comparing.

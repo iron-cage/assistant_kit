@@ -31,7 +31,7 @@ path = "src/bin/crb.rs"
 required-features = [ "enabled" ]
 
 [features]
-default = []
+default = [ "enabled" ]
 full    = [ "enabled" ]
 enabled = [
   "dep:unilang",
