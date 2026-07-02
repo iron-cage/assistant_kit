@@ -21,13 +21,13 @@ Select the Claude model for isolated subprocess keep-alive pings (`touch::`, `re
 
 | `imodel_param` | `seven_day_sonnet` | `resets_at` | `100 - utilization` | Selected Model |
 |---|---|---|---|---|
-| `"sonnet"` | — | — | — | `claude-sonnet-4-6` (forced) |
-| `"opus"` | — | — | — | `claude-opus-4-6` (forced) |
+| `"sonnet"` | — | — | — | `claude-sonnet-5` (forced) |
+| `"opus"` | — | — | — | `claude-opus-4-8` (forced) |
 | `"haiku"` | — | — | — | `claude-haiku-4-5-20251001` (forced) |
 | `"keep"` | — | — | — | `KeepCurrent` (no `--model` flag) |
 | `"auto"` | `None` | — | — | `claude-haiku-4-5-20251001` (no Sonnet tier) |
-| `"auto"` | `Some` | `None` | any | `claude-sonnet-4-6` (`son_idle=true` — Haiku cannot open the idle window) |
-| `"auto"` | `Some` | `Some` | > 20% | `claude-sonnet-4-6` (`son_available=true` — avoid wasting quota as window expires) |
+| `"auto"` | `Some` | `None` | any | `claude-sonnet-5` (`son_idle=true` — Haiku cannot open the idle window) |
+| `"auto"` | `Some` | `Some` | > 20% | `claude-sonnet-5` (`son_available=true` — avoid wasting quota as window expires) |
 | `"auto"` | `Some` | `Some` | ≤ 20% | `claude-haiku-4-5-20251001` (Sonnet near-exhausted — conserve reserves) |
 
 #### Pseudocode
@@ -35,8 +35,8 @@ Select the Claude model for isolated subprocess keep-alive pings (`touch::`, `re
 ```
 fn resolve_model(aq, imodel_param):
   match imodel_param:
-    "sonnet" → Specific("claude-sonnet-4-6")
-    "opus"   → Specific("claude-opus-4-6")
+    "sonnet" → Specific("claude-sonnet-5")
+    "opus"   → Specific("claude-opus-4-8")
     "haiku"  → Specific("claude-haiku-4-5-20251001")
     "keep"   → KeepCurrent
     "auto"   →
@@ -44,7 +44,7 @@ fn resolve_model(aq, imodel_param):
         son_idle      = son.resets_at is None
         son_available = (100.0 - son.utilization) > 20.0
         if son_idle or son_available:
-          return Specific("claude-sonnet-4-6")
+          return Specific("claude-sonnet-5")
       Specific("claude-haiku-4-5-20251001")
 ```
 

@@ -15,8 +15,8 @@
 
 | Input | Result |
 |-------|--------|
-| `opus` | `Some("claude-opus-4-6")` |
-| `sonnet` | `Some("claude-sonnet-4-6")` |
+| `opus` | `Some("claude-opus-4-8")` |
+| `sonnet` | `Some("claude-sonnet-5")` |
 | `haiku` | `Some("claude-haiku-4-5-20251001")` |
 | `default` | `None` (removes `model` key) |
 | anything else | `Err(...)` → exit 1 |
@@ -47,8 +47,8 @@ if let Some( ref sm ) = set_model_str
 
 ### Acceptance Criteria
 
-- **AC-01**: `set_model::opus` writes `"model": "claude-opus-4-6"` to `~/.claude/settings.json` on both `.account.use` and `.usage`.
-- **AC-02**: `set_model::sonnet` writes `"model": "claude-sonnet-4-6"` to `~/.claude/settings.json` on both commands.
+- **AC-01**: `set_model::opus` writes `"model": "claude-opus-4-8"` to `~/.claude/settings.json` on both `.account.use` and `.usage`.
+- **AC-02**: `set_model::sonnet` writes `"model": "claude-sonnet-5"` to `~/.claude/settings.json` on both commands.
 - **AC-03**: `set_model::haiku` writes `"model": "claude-haiku-4-5-20251001"` to `~/.claude/settings.json` on both commands.
 - **AC-04**: `set_model::default` removes the `"model"` key from `~/.claude/settings.json` on both commands; existing keys are unaffected.
 - **AC-05**: When `set_model::` is provided, `apply_model_override()` is NOT called — the explicit value is the final write to `settings.json`.
@@ -56,8 +56,8 @@ if let Some( ref sm ) = set_model_str
 - **AC-07**: `set_model::bad` exits 1 with stderr containing all four valid values: `opus`, `sonnet`, `haiku`, `default`.
 - **AC-08**: `set_model::` appears in `.account.use --help` and `.usage --help` output.
 - **AC-09**: `set_model::` does not affect `format::json` output structure or subprocess model selection (`imodel::` governs that).
-- **AC-10**: `set_session_model()` preserves all existing keys in `~/.claude/settings.json` — a write with `model_id = Some("claude-opus-4-6")` does not remove other keys such as `theme` or `autoUpdaterStatus`.
-- **AC-11**: When `~/.claude/settings.json` does not exist and `set_model::opus` is invoked, the file is created with `{"model":"claude-opus-4-6"}`.
+- **AC-10**: `set_session_model()` preserves all existing keys in `~/.claude/settings.json` — a write with `model_id = Some("claude-opus-4-8")` does not remove other keys such as `theme` or `autoUpdaterStatus`.
+- **AC-11**: When `~/.claude/settings.json` does not exist and `set_model::opus` is invoked, the file is created with `{"model":"claude-opus-4-8"}`.
 
 ### Features
 

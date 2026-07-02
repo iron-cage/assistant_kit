@@ -22,7 +22,7 @@ non-managed fields via read-modify-write, and the Opus/Sonnet effort level mappi
 
 - **Given:** `settings.json` contains `"model": "sonnet"`
 - **When:** `get_session_model()` is called
-- **Then:** Returns `Some("claude-sonnet-4-6")` — the model shorthand maps to the full model ID used for interactive sessions
+- **Then:** Returns `Some("claude-sonnet-5")` — the model shorthand maps to the full model ID used for interactive sessions
 - **Source fn:** `mre_bug322_opus_override_sets_effort_max` (usage/api_tests_a.rs; verifies model written alongside effort)
 - **Source:** [docs/schema/006_settings_json.md §Fields Managed by clp](../../../../docs/schema/006_settings_json.md)
 

@@ -286,7 +286,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 - **Given:** `~/.claude/` directory exists. `~/.claude/settings.json` contains `{"model": "sonnet"}` (Claude Code shorthand alias).
 - **When:** `override_session_model_to_opus(&paths)` is called directly.
-- **Then:** Returns `true`. `~/.claude/settings.json` now contains `"model": "opus"`. Additional scenarios verified in the same test: full-ID input `"claude-sonnet-4-6"` also returns `true` and writes `"opus"`; absent model (empty settings.json) returns `true` and writes `"opus"`; non-Sonnet `"opus"` returns `false`, settings.json unchanged; non-Sonnet `"haiku"` returns `false`, settings.json unchanged; full-ID `"claude-opus-4-6"` returns `true` and writes `"opus"` shorthand — not full ID (Fix(BUG-286)).
+- **Then:** Returns `true`. `~/.claude/settings.json` now contains `"model": "opus"`. Additional scenarios verified in the same test: full-ID input `"claude-sonnet-5"` also returns `true` and writes `"opus"`; absent model (empty settings.json) returns `true` and writes `"opus"`; non-Sonnet `"opus"` returns `false`, settings.json unchanged; non-Sonnet `"haiku"` returns `false`, settings.json unchanged; full-ID `"claude-opus-4-8"` returns `true` and writes `"opus"` shorthand — not full ID (Fix(BUG-286)).
 - **Exit:** n/a (unit test)
 - **Source fn:** `mre_bug257_override_shorthand_alias` (in `claude_profile_core/tests/account_test.rs`) — ✅ TSK-261
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-18](../../../docs/feature/027_account_use_post_switch_touch.md)
@@ -296,14 +296,14 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 ### FT-22: `seven_day_sonnet = None` — override fires conservatively; writes "sonnet" (BUG-300 + BUG-311)
 
 - **Given (unit test):** `apply_model_override` called with quota data where `seven_day_sonnet = None` (absent tier):
-  - `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"` (full-ID Sonnet form)
+  - `~/.claude/settings.json` contains `"model": "claude-sonnet-5"` (full-ID Sonnet form)
   - `ClaudePaths` pointing to a temp directory
 - **When:** `apply_model_override(&data, &paths, false, "account.use", "alice@home.com")` called with `seven_day_sonnet = None`.
 - **Then:**
-  - `~/.claude/settings.json` contains `"model": "sonnet"` (normalized shorthand). `"opus"` does NOT appear. The absent-tier path now calls `override_session_model_to_sonnet()`, which normalizes `"claude-sonnet-4-6"` to `"sonnet"` shorthand (Fix BUG-311).
+  - `~/.claude/settings.json` contains `"model": "sonnet"` (normalized shorthand). `"opus"` does NOT appear. The absent-tier path now calls `override_session_model_to_sonnet()`, which normalizes `"claude-sonnet-5"` to `"sonnet"` shorthand (Fix BUG-311).
   - Second scenario (regression guard): same setup with `seven_day_sonnet = Some(PeriodUsage { utilization: 90.0, ... })` (10% left) — settings.json updated to `"opus"`. Confirms `Some`+exhausted path still fires correctly.
 - **Exit:** n/a (unit test)
-- **Note (BUG-300):** `map_or(0.0, ...)` caused `None` to fire unconditional Opus override. Fixed by `if let Some(ref sonnet)` guard. **(BUG-311):** the `else` (tier-absent) now conservatively calls `override_session_model_to_sonnet()` — absent tier means unknown, not exhausted. Assertion updated: "sonnet" written (not "unchanged") because `override_session_model_to_sonnet()` normalizes `"claude-sonnet-4-6"` → `"sonnet"`.
+- **Note (BUG-300):** `map_or(0.0, ...)` caused `None` to fire unconditional Opus override. Fixed by `if let Some(ref sonnet)` guard. **(BUG-311):** the `else` (tier-absent) now conservatively calls `override_session_model_to_sonnet()` — absent tier means unknown, not exhausted. Assertion updated: "sonnet" written (not "unchanged") because `override_session_model_to_sonnet()` normalizes `"claude-sonnet-5"` → `"sonnet"`.
 - **Source fn:** `mre_bug300_model_override_absent_sonnet_no_override` (in `tests/usage/api_tests_a.rs`) — assertion updated post-BUG-311 to check "sonnet" written, "opus" absent.
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-18](../../../docs/feature/027_account_use_post_switch_touch.md)
 

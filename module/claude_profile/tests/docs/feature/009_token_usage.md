@@ -422,11 +422,11 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 - **Given (unit test):** One `AccountQuota` for the current account (`is_current = true`):
   - `result = Ok(OauthUsageData)` with `seven_day_sonnet = Some(PeriodUsage { utilization: 91.0, resets_at: Some("...") })` — 9% left (< 10% threshold)
-  - `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"`
+  - `~/.claude/settings.json` contains `"model": "claude-sonnet-5"`
   - `ClaudePaths` pointing to a temp directory
 - **When:** `apply_model_override(&data, &paths, false, "usage", "test@example.com")` is called with the current account's quota data.
 - **Then:**
-  - `~/.claude/settings.json` now contains `"model": "claude-opus-4-6"` — the override fired.
+  - `~/.claude/settings.json` now contains `"model": "claude-opus-4-8"` — the override fired.
   - The structural test verifies that `usage_routine()` calls `apply_model_override` after the touch loop for the current account (source position assertion or direct call test).
 - **Exit:** n/a (unit test)
 - **Note:** Fix for BUG-244. The model override was previously only reachable from `.account.use` (`account_ops.rs`). This test verifies the `.usage` path also applies it. Reuses the existing `apply_model_override()` function (tested by BUG-238 MRE) but validates it is called from the `.usage` pipeline.

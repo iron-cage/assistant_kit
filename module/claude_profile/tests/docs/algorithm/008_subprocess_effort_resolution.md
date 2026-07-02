@@ -47,7 +47,7 @@ effort initialization path in `apply_model_override()` in `src/usage/api.rs`.
 
 ### AC-5: `effort::auto` + Opus → `low`
 
-- **Given:** `effort_param = "auto"`; `resolved_model = Specific("claude-opus-4-6")`.
+- **Given:** `effort_param = "auto"`; `resolved_model = Specific("claude-opus-4-8")`.
 - **When:** `resolve_effort` is called.
 - **Then:** Returns `Some("low")` — Opus supports extended thinking but isolated subprocesses
   use `.` keep-alive prompts; `low` prevents unnecessary extended thinking overhead.
@@ -59,7 +59,7 @@ effort initialization path in `apply_model_override()` in `src/usage/api.rs`.
 
 ### AC-6: `effort::auto` + Sonnet → `low`
 
-- **Given:** `effort_param = "auto"`; `resolved_model = Specific("claude-sonnet-4-6")`.
+- **Given:** `effort_param = "auto"`; `resolved_model = Specific("claude-sonnet-5")`.
 - **When:** `resolve_effort` is called.
 - **Then:** Returns `Some("low")` — Sonnet supports extended thinking; `low` is used for
   keep-alive subprocesses to avoid timeout.
@@ -94,7 +94,7 @@ effort initialization path in `apply_model_override()` in `src/usage/api.rs`.
 ### AC-9: Model override to Opus sets `effortLevel` to `"max"` (BUG-322 fix)
 
 - **Given:** `apply_model_override()` determines Sonnet is exhausted and writes
-  `"claude-opus-4-6"` to `settings.json`.
+  `"claude-opus-4-8"` to `settings.json`.
 - **When:** The Opus override branch executes.
 - **Then:** `effortLevel` in `settings.json` is also written to `"max"` — Opus benefits from
   maximum effort for quality. Before Fix(BUG-322), only the model field was written; effort
@@ -107,7 +107,7 @@ effort initialization path in `apply_model_override()` in `src/usage/api.rs`.
 ### AC-10: Model override to Sonnet sets `effortLevel` to `"high"`
 
 - **Given:** `apply_model_override()` determines Sonnet quota is sufficient and writes
-  `"claude-sonnet-4-6"` to `settings.json`.
+  `"claude-sonnet-5"` to `settings.json`.
 - **When:** The Sonnet restore branch executes.
 - **Then:** `effortLevel` in `settings.json` is also written to `"high"` — Sonnet's optimal
   effort for keep-alive subprocesses. Fix BUG-322 / TSK-335.
@@ -145,7 +145,7 @@ effort initialization path in `apply_model_override()` in `src/usage/api.rs`.
 
 ### AC-13: Effort synced even when model is already at target (no-op model path)
 
-- **Given:** `settings.json` model is already `"claude-sonnet-4-6"` and Sonnet quota is
+- **Given:** `settings.json` model is already `"claude-sonnet-5"` and Sonnet quota is
   sufficient (no model write needed).
 - **When:** `apply_model_override()` runs.
 - **Then:** `effortLevel` is STILL written to `"high"` even though no model change occurred —

@@ -6,23 +6,23 @@
 |------|---------|-------------|----------:|
 | `algorithm/` | Decision algorithm references (model selection, quota classification, sort, approximation) | [algorithm/readme.md](../algorithm/readme.md) | 9 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](../cli/readme.md) | 4 |
-| `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 7 |
+| `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 8 |
 | `cli/command_noun/` | Domain noun documentation (account, token, credentials) | [cli/command_noun/readme.md](../cli/command_noun/readme.md) | 3 |
 | `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, status) — 009 assign and 011 unclaim REMOVED | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 9 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](../cli/format/readme.md) | 3 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 58 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 61 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](../cli/param_group/readme.md) | 6 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 4 |
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 46 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 48 |
 | `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 9 |
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 6 |
 | `research_interactive/` | Investigation findings on Claude binary behavior | [research_interactive/readme.md](../research_interactive/readme.md) | 1 |
-| `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 7 |
+| `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 8 |
 | `state_machine/` | Domain lifecycle state machines (account, token, session window, ownership, quota measurement) | [state_machine/readme.md](../state_machine/readme.md) | 5 |
 | `subprocess/` | Isolated subprocess contract, credential write-back protocol, and invocation sites | [subprocess/readme.md](../subprocess/readme.md) | 5 |
 | `tests/docs/algorithm/` | Per-algorithm AC-N correctness test documentation | [tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) | 9 |
-| `tests/docs/cli/command/` | Per-command integration test case documentation | [tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 19 |
+| `tests/docs/cli/command/` | Per-command integration test case documentation | [tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 21 |
 | `tests/docs/cli/command_noun/` | Per-noun test case documentation | [tests/docs/cli/command_noun/readme.md](../../tests/docs/cli/command_noun/readme.md) | 3 |
 | `tests/docs/cli/command_verb/` | Per-verb test case documentation | [tests/docs/cli/command_verb/readme.md](../../tests/docs/cli/command_verb/readme.md) | 11 |
 | `tests/docs/cli/format/` | Per-format output structure test documentation | [tests/docs/cli/format/readme.md](../../tests/docs/cli/format/readme.md) | 3 |
@@ -30,7 +30,7 @@
 | `tests/docs/cli/param_group/` | Per-group interaction test documentation | [tests/docs/cli/param_group/readme.md](../../tests/docs/cli/param_group/readme.md) | 6 |
 | `tests/docs/cli/type/` | Per-type test case documentation | [tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) | 4 |
 | `tests/docs/cli/user_story/` | Per-story acceptance test documentation | [tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) | 5 |
-| `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 48 |
+| `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 50 |
 | `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 9 |
 | `tests/docs/pitfall/` | Per-pitfall guard verification test documentation | [tests/docs/pitfall/readme.md](../../tests/docs/pitfall/readme.md) | 6 |
 
@@ -84,6 +84,8 @@
 | feature | 065 | Assignee Param Redesign | [feature/065_assignee_param_redesign.md](../feature/065_assignee_param_redesign.md) |
 | feature | 066 | Dual-Source OAuth Quota Parsing | [feature/066_dual_source_quota_parsing.md](../feature/066_dual_source_quota_parsing.md) |
 | feature | 067 | Trace Timestamp Prefix | [feature/067_trace_timestamps.md](../feature/067_trace_timestamps.md) |
+| feature | 068 | Models List Command | [feature/068_models_list_command.md](../feature/068_models_list_command.md) |
+| feature | 069 | Model Select Command | [feature/069_model_select_command.md](../feature/069_model_select_command.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](../cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](../cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](../cli/003_env_param.md) |
@@ -95,6 +97,7 @@
 | command | 005 | Token Commands | [cli/command/005_token.md](../cli/command/005_token.md) |
 | command | 006 | Usage Commands | [cli/command/006_usage.md](../cli/command/006_usage.md) |
 | command | 007 | Model Command | [cli/command/007_model.md](../cli/command/007_model.md) |
+| command | 008 | Models Command | [cli/command/008_models.md](../cli/command/008_models.md) |
 | param | 001 | `name::` | [cli/param/001_name.md](../cli/param/001_name.md) |
 | param | 002 | `format::` | [cli/param/002_format.md](../cli/param/002_format.md) |
 | param | 003 | `threshold::` | [cli/param/003_threshold.md](../cli/param/003_threshold.md) |
@@ -158,6 +161,9 @@
 | param | 061 | `who::` (sessions table visibility) | [cli/param/061_who.md](../cli/param/061_who.md) |
 | param | 062 | `owner::` (explicit ownership assignment) | [cli/param/062_owner.md](../cli/param/062_owner.md) |
 | param | 063 | `assignee::` (marker assignment/unassign; `assignee::0` = current machine) | [cli/param/063_assignee.md](../cli/param/063_assignee.md) |
+| param | 064 | `id::` (full model ID to pin for subprocess) | [cli/param/064_id.md](../cli/param/064_id.md) |
+| param | 065 | `offline::` (static model catalog vs live API) | [cli/param/065_offline.md](../cli/param/065_offline.md) |
+| param | 066 | `reset::` (remove subprocess_model preference) | [cli/param/066_reset.md](../cli/param/066_reset.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](../cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](../cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](../cli/param_group/003_fetch_behavior.md) |
@@ -207,6 +213,7 @@
 | schema | 005 | Active Marker (`_active_{host}_{user}`) | [schema/005_active_marker.md](../schema/005_active_marker.md) |
 | schema | 006 | Session Settings (`~/.claude/settings.json`) | [schema/006_settings_json.md](../schema/006_settings_json.md) |
 | schema | 007 | Claude State (`~/.claude.json`) | [schema/007_claude_json.md](../schema/007_claude_json.md) |
+| schema | 008 | CLR Preferences (`~/.clr/prefs.json`) | [schema/008_clr_prefs_json.md](../schema/008_clr_prefs_json.md) |
 | algorithm | 001 | Touch Model Selection | [algorithm/001_touch_model_selection.md](../algorithm/001_touch_model_selection.md) |
 | algorithm | 002 | Session Model Override | [algorithm/002_session_model_override.md](../algorithm/002_session_model_override.md) |
 | algorithm | 003 | Quota Status Groups | [algorithm/003_quota_status_groups.md](../algorithm/003_quota_status_groups.md) |

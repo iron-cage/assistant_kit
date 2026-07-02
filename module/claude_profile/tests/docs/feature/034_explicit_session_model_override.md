@@ -10,8 +10,8 @@
 
 | FT | AC | Scenario | Source fn |
 |----|----|----------|-----------|
-| FT-01 | AC-01 | `set_model::opus` writes `claude-opus-4-6` to `settings.json` | ✅ `ft01_set_model_opus_writes_full_id` |
-| FT-02 | AC-02 | `set_model::sonnet` writes `claude-sonnet-4-6` to `settings.json` | ✅ `ft02_set_model_sonnet_writes_full_id` |
+| FT-01 | AC-01 | `set_model::opus` writes `claude-opus-4-8` to `settings.json` | ✅ `ft01_set_model_opus_writes_full_id` |
+| FT-02 | AC-02 | `set_model::sonnet` writes `claude-sonnet-5` to `settings.json` | ✅ `ft02_set_model_sonnet_writes_full_id` |
 | FT-03 | AC-03 | `set_model::haiku` writes `claude-haiku-4-5-20251001` to `settings.json` | ✅ `ft03_set_model_haiku_writes_full_id` |
 | FT-04 | AC-04 | `set_model::default` removes `model` key; other keys preserved | ✅ `ft04_set_model_default_removes_key_preserves_others` |
 | FT-05 | AC-05 | Explicit `set_model::` wins over `switch_account` per-account model restore (`.account.use` path) | ✅ `ft05_explicit_set_model_wins_over_switch_restore` |
@@ -31,22 +31,22 @@
 
 ---
 
-### FT-01: `set_model::opus` writes `claude-opus-4-6` to `settings.json`
+### FT-01: `set_model::opus` writes `claude-opus-4-8` to `settings.json`
 
 - **Given:** An account `alice` in the credential store. `~/.claude/settings.json` exists (may have existing keys).
 - **When:** `clp .account.use name::alice set_model::opus` (or `clp .usage set_model::opus`)
-- **Then:** `~/.claude/settings.json` contains `"model": "claude-opus-4-6"`. Exits 0.
+- **Then:** `~/.claude/settings.json` contains `"model": "claude-opus-4-8"`. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft01_set_model_opus_writes_full_id`
 - **Source:** [034_explicit_session_model_override.md AC-01](../../../docs/feature/034_explicit_session_model_override.md)
 
 ---
 
-### FT-02: `set_model::sonnet` writes `claude-sonnet-4-6` to `settings.json`
+### FT-02: `set_model::sonnet` writes `claude-sonnet-5` to `settings.json`
 
 - **Given:** An account `alice` in the credential store.
 - **When:** `clp .account.use name::alice set_model::sonnet`
-- **Then:** `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"`. Exits 0.
+- **Then:** `~/.claude/settings.json` contains `"model": "claude-sonnet-5"`. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft02_set_model_sonnet_writes_full_id`
 - **Source:** [034_explicit_session_model_override.md AC-02](../../../docs/feature/034_explicit_session_model_override.md)
@@ -66,7 +66,7 @@
 
 ### FT-04: `set_model::default` removes `model` key; other keys preserved
 
-- **Given:** `~/.claude/settings.json` contains `{"model": "claude-opus-4-6", "theme": "dark"}`.
+- **Given:** `~/.claude/settings.json` contains `{"model": "claude-opus-4-8", "theme": "dark"}`.
 - **When:** `clp .account.use name::alice set_model::default`
 - **Then:** `~/.claude/settings.json` no longer contains the `"model"` key. `"theme": "dark"` is preserved. Exits 0.
 - **Exit:** 0
@@ -77,9 +77,9 @@
 
 ### FT-05: Explicit `set_model::` wins over `switch_account` model restore
 
-- **Given:** An account `alice` whose `{name}.json` stores `"model": "claude-opus-4-6"` (what `switch_account` would restore to `settings.json`).
+- **Given:** An account `alice` whose `{name}.json` stores `"model": "claude-opus-4-8"` (what `switch_account` would restore to `settings.json`).
 - **When:** `clp .account.use name::alice set_model::sonnet`
-- **Then:** `settings.json` contains `"model": "claude-sonnet-4-6"` — the explicit post-match write overwrites the per-account restore. Exits 0.
+- **Then:** `settings.json` contains `"model": "claude-sonnet-5"` — the explicit post-match write overwrites the per-account restore. Exits 0.
 - **Exit:** 0
 - **Note:** Tests the `.account.use` post-match ordering (explicit `set_session_model` runs AFTER `switch_account`). The `.usage` path's `apply_model_override` mutual exclusion (`if set_model.is_some() { write } else { apply_model_override }`) is covered by EC-7.
 - **Source fn:** ✅ `ft05_explicit_set_model_wins_over_switch_restore`
@@ -135,7 +135,7 @@
 
 - **Given:** Account `alice` in credential store. `~/.claude/settings.json` contains `{"theme": "dark", "autoUpdaterStatus": "disabled"}`.
 - **When:** `clp .account.use name::alice set_model::opus`
-- **Then:** `~/.claude/settings.json` contains `"theme": "dark"`, `"autoUpdaterStatus": "disabled"`, and `"model": "claude-opus-4-6"`. No pre-existing keys removed. Exits 0.
+- **Then:** `~/.claude/settings.json` contains `"theme": "dark"`, `"autoUpdaterStatus": "disabled"`, and `"model": "claude-opus-4-8"`. No pre-existing keys removed. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft10_set_session_model_preserves_existing_keys`
 - **Source:** [034_explicit_session_model_override.md AC-10](../../../docs/feature/034_explicit_session_model_override.md)
@@ -146,7 +146,7 @@
 
 - **Given:** Account `alice` in credential store. `~/.claude/settings.json` does not exist.
 - **When:** `clp .account.use name::alice set_model::opus`
-- **Then:** `~/.claude/settings.json` is created and contains `"model": "claude-opus-4-6"`. Exits 0.
+- **Then:** `~/.claude/settings.json` is created and contains `"model": "claude-opus-4-8"`. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft11_set_session_model_creates_file_when_absent`
 - **Source:** [034_explicit_session_model_override.md AC-11](../../../docs/feature/034_explicit_session_model_override.md)

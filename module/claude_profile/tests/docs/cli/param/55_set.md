@@ -7,8 +7,8 @@ Edge case coverage for the `set::` parameter on `.model`. See [param/055_set.md]
 | ID | Test Name | Category |
 |----|-----------|----------|
 | EC-1 | `set::` absent — `.model` operates in get mode; reads and prints model | Behavioral Divergence |
-| EC-2 | `set::opus` present — `.model` operates in set mode; writes `claude-opus-4-6` | Behavioral Divergence |
-| EC-3 | `set::sonnet` accepted; writes `claude-sonnet-4-6` to `settings.json` | Valid Value |
+| EC-2 | `set::opus` present — `.model` operates in set mode; writes `claude-opus-4-8` | Behavioral Divergence |
+| EC-3 | `set::sonnet` accepted; writes `claude-sonnet-5` to `settings.json` | Valid Value |
 | EC-4 | `set::haiku` accepted; writes `claude-haiku-4-5-20251001` to `settings.json` | Valid Value |
 | EC-5 | `set::default` removes `model` key; other `settings.json` keys preserved | Valid Value |
 | EC-6 | `set::bad` exits 1; stderr names all four valid values | Invalid Value |
@@ -30,18 +30,18 @@ Edge case coverage for the `set::` parameter on `.model`. See [param/055_set.md]
 
 - **Given:** `~/.claude/settings.json` exists (any state).
 - **When:** `clp .model set::opus`
-- **Then:** Exits 0. `~/.claude/settings.json` contains `"model": "claude-opus-4-6"`. No model text printed to stdout.
+- **Then:** Exits 0. `~/.claude/settings.json` contains `"model": "claude-opus-4-8"`. No model text printed to stdout.
 - **Exit:** 0
 - **Source fn:** `ft05_set_opus_writes_full_id`
 - **Source:** [param/055_set.md](../../../../docs/cli/param/055_set.md)
 
 ---
 
-### EC-3: `set::sonnet` accepted; writes `claude-sonnet-4-6`
+### EC-3: `set::sonnet` accepted; writes `claude-sonnet-5`
 
 - **Given:** Any `settings.json` state.
 - **When:** `clp .model set::sonnet`
-- **Then:** Exits 0. `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"`.
+- **Then:** Exits 0. `~/.claude/settings.json` contains `"model": "claude-sonnet-5"`.
 - **Exit:** 0
 - **Source fn:** `ft06_set_sonnet_writes_full_id`
 - **Source:** [param/055_set.md](../../../../docs/cli/param/055_set.md)
@@ -61,7 +61,7 @@ Edge case coverage for the `set::` parameter on `.model`. See [param/055_set.md]
 
 ### EC-5: `set::default` removes model key; other keys preserved
 
-- **Given:** `~/.claude/settings.json` contains `{"model": "claude-opus-4-6", "theme": "dark"}`.
+- **Given:** `~/.claude/settings.json` contains `{"model": "claude-opus-4-8", "theme": "dark"}`.
 - **When:** `clp .model set::default`
 - **Then:** Exits 0. `settings.json` no longer contains `"model"` key. `"theme": "dark"` is preserved.
 - **Exit:** 0

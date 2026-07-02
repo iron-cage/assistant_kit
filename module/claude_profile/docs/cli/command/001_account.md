@@ -298,7 +298,7 @@ clp .account.use name::alice@home.com set_model::default
 | `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (haiku — sufficient for keep-alive), `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (`low` for any model; no flag for haiku/keep), `low`, `normal`, `high`, `max` |
 | `trace::` | `bool` | `0` | Print timestamped `account.use` diagnostic lines to stderr: credential read, quota fetch, model resolution, subprocess dispatch |
-| `set_model::` | `enum` | *(omit)* | Explicitly write session model to `settings.json`: `opus` (`claude-opus-4-6`), `sonnet` (`claude-sonnet-4-6`), `haiku` (`claude-haiku-4-5-20251001`), `default` (removes override); takes precedence over automatic `apply_model_override()` |
+| `set_model::` | `enum` | *(omit)* | Explicitly write session model to `settings.json`: `opus` (`claude-opus-4-8`), `sonnet` (`claude-sonnet-5`), `haiku` (`claude-haiku-4-5-20251001`), `default` (removes override); takes precedence over automatic `apply_model_override()` |
 
 **Algorithm (7 steps):**
 1. Resolve `name::` via `AccountSelector`; load `{name}.credentials.json`
@@ -326,7 +326,7 @@ clp .account.use name::alice@home.com trace::1
 # 2026-06-25 · 16:40:04 · account.use  alice@home.com  reading: OK
 # 2026-06-25 · 16:40:04 · account.use  alice@home.com  quota fetch: OK
 # 2026-06-25 · 16:40:04 · account.use  alice@home.com  subprocess: scheduled (idle check removed)
-# 2026-06-25 · 16:40:04 · account.use  alice@home.com  model: claude-opus-4-6  effort: low
+# 2026-06-25 · 16:40:04 · account.use  alice@home.com  model: claude-opus-4-8  effort: low
 # 2026-06-25 · 16:40:04 · account.use  alice@home.com  subprocess: spawned
 # switched to 'alice@home.com'
 ```

@@ -25,8 +25,8 @@ Select the `--effort` flag value for isolated subprocess invocations, defaulting
 | `"normal"` | any | `normal` |
 | `"high"` | any | `high` |
 | `"max"` | any | `max` |
-| `"auto"` | `Specific("claude-opus-4-6")` | `low` |
-| `"auto"` | `Specific("claude-sonnet-4-6")` | `low` |
+| `"auto"` | `Specific("claude-opus-4-8")` | `low` |
+| `"auto"` | `Specific("claude-sonnet-5")` | `low` |
 | `"auto"` | `Specific("claude-haiku-4-5-20251001")` | *(none)* — Haiku has no extended thinking |
 | `"auto"` | `KeepCurrent` | *(none)* — unknown model; avoid injecting effort flag |
 | `"auto"` | other Specific | `low` (conservative default) |

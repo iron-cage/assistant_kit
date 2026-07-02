@@ -11,10 +11,10 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 | EC-3 | `imodel::opus` accepted with empty credential store | Valid Value |
 | EC-4 | `imodel::keep` accepted with empty credential store | Valid Value |
 | EC-5 | `imodel::bad` exits 1, stderr names all five valid values | Invalid Value |
-| EC-6 | `imodel::sonnet` — args contain `--model claude-sonnet-4-6` | Arg Construction |
+| EC-6 | `imodel::sonnet` — args contain `--model claude-sonnet-5` | Arg Construction |
 | EC-11 | `imodel::haiku` accepted with empty credential store | Valid Value |
 | EC-13 | `imodel::auto` (`son_idle=false`) — subprocess uses `--model claude-haiku-4-5-20251001` | Behavioral Divergence |
-| EC-14 | `imodel::auto` (`son_idle=true`) — subprocess uses `--model claude-sonnet-4-6` | Behavioral Divergence |
+| EC-14 | `imodel::auto` (`son_idle=true`) — subprocess uses `--model claude-sonnet-5` | Behavioral Divergence |
 
 ---
 
@@ -73,11 +73,11 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 
 ---
 
-### EC-6: `imodel::sonnet` — subprocess arg slice contains `--model claude-sonnet-4-6`
+### EC-6: `imodel::sonnet` — subprocess arg slice contains `--model claude-sonnet-5`
 
 - **Given:** One account with valid quota data and idle 5h window (`five_hour.resets_at = None`); `imodel::sonnet touch::1`.
 - **When:** `clp .usage imodel::sonnet touch::1 trace::1`
-- **Then:** Exits 0. `resolve_model()` returns `IsolatedModel::Specific("claude-sonnet-4-6")`. Args passed to `run_isolated()` include `--model claude-sonnet-4-6`. Verified via unit test on `resolve_model()` with `imodel="sonnet"`.
+- **Then:** Exits 0. `resolve_model()` returns `IsolatedModel::Specific("claude-sonnet-5")`. Args passed to `run_isolated()` include `--model claude-sonnet-5`. Verified via unit test on `resolve_model()` with `imodel="sonnet"`.
 - **Exit:** 0
 - **Source fn:** `it_imodel_sonnet_explicit` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-02](../../../../docs/feature/026_subprocess_model_effort.md)
@@ -110,11 +110,11 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 
 ---
 
-### EC-14: `imodel::auto` (`son_idle=true`) — subprocess uses `--model claude-sonnet-4-6` (BUG-289/BUG-290 fix)
+### EC-14: `imodel::auto` (`son_idle=true`) — subprocess uses `--model claude-sonnet-5` (BUG-289/BUG-290 fix)
 
 - **Given:** One account with `son_idle=true` (`seven_day_sonnet=Some({resets_at:None})`); any 5h/7d state. `imodel::auto touch::1`.
 - **When:** `clp .usage imodel::auto touch::1 trace::1`
-- **Then:** Exits 0. `resolve_model()` returns `IsolatedModel::Specific("claude-sonnet-4-6")`. `son_idle=true` → `son_idle` gate fires regardless of 5h/7d state. The 7d-Sonnet window activates only on Sonnet-family calls; a single Sonnet touch opens all idle dimensions simultaneously. Fix(BUG-289, BUG-290, TSK-292). Verified via unit test `it_imodel_auto_selects_sonnet_when_son_idle` in `src/usage/subprocess.rs`.
+- **Then:** Exits 0. `resolve_model()` returns `IsolatedModel::Specific("claude-sonnet-5")`. `son_idle=true` → `son_idle` gate fires regardless of 5h/7d state. The 7d-Sonnet window activates only on Sonnet-family calls; a single Sonnet touch opens all idle dimensions simultaneously. Fix(BUG-289, BUG-290, TSK-292). Verified via unit test `it_imodel_auto_selects_sonnet_when_son_idle` in `src/usage/subprocess.rs`.
 - **Exit:** 0
 - **Source fn:** `it_imodel_auto_selects_sonnet_when_son_idle` (in `src/usage/subprocess.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01 FT-22](../../../../docs/feature/026_subprocess_model_effort.md)

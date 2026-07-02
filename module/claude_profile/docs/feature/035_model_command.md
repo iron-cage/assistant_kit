@@ -41,15 +41,15 @@ or, when absent:
 
 **No-Duplication Contract:**
 
-Feature 034 introduced `validate_set_model()` in `src/usage/types.rs` which embeds the `opus → "claude-opus-4-6"` mapping. This feature MUST NOT duplicate that table. The implementation extracts a shared inner function:
+Feature 034 introduced `validate_set_model()` in `src/usage/types.rs` which embeds the `opus → "claude-opus-4-8"` mapping. This feature MUST NOT duplicate that table. The implementation extracts a shared inner function:
 
 ```rust
 fn map_model_shorthand( s : &str ) -> Option< Option< &'static str > >
 {
   match s
   {
-    "opus"    => Some( Some( "claude-opus-4-6" ) ),
-    "sonnet"  => Some( Some( "claude-sonnet-4-6" ) ),
+    "opus"    => Some( Some( "claude-opus-4-8" ) ),
+    "sonnet"  => Some( Some( "claude-sonnet-5" ) ),
     "haiku"   => Some( Some( "claude-haiku-4-5-20251001" ) ),
     "default" => Some( None ),
     _         => None,
@@ -67,13 +67,13 @@ Similarly, `get_session_model()` MUST be introduced in `claude_profile_core/src/
 - **AC-02**: `clp .model` prints `model: sonnet` when `~/.claude/settings.json` contains `{"model": "sonnet"}`.
 - **AC-03**: `clp .model` prints `model: (unset)` when the `"model"` key is absent from `~/.claude/settings.json`.
 - **AC-04**: `clp .model` prints `model: (unset)` when `~/.claude/settings.json` does not exist.
-- **AC-05**: `clp .model set::opus` writes `"model": "claude-opus-4-6"` to `~/.claude/settings.json`. Exits 0.
-- **AC-06**: `clp .model set::sonnet` writes `"model": "claude-sonnet-4-6"` to `~/.claude/settings.json`. Exits 0.
+- **AC-05**: `clp .model set::opus` writes `"model": "claude-opus-4-8"` to `~/.claude/settings.json`. Exits 0.
+- **AC-06**: `clp .model set::sonnet` writes `"model": "claude-sonnet-5"` to `~/.claude/settings.json`. Exits 0.
 - **AC-07**: `clp .model set::haiku` writes `"model": "claude-haiku-4-5-20251001"` to `~/.claude/settings.json`. Exits 0.
 - **AC-08**: `clp .model set::default` removes the `"model"` key from `~/.claude/settings.json`; all other keys are preserved. Exits 0.
 - **AC-09**: `clp .model set::bad` exits 1 with stderr containing all four valid values: `opus`, `sonnet`, `haiku`, `default`.
-- **AC-10**: `clp .model set::opus` creates `~/.claude/settings.json` when absent; file contains `{"model":"claude-opus-4-6"}`. Exits 0.
-- **AC-11**: `clp .model set::opus` on an existing `settings.json` with `{"theme":"dark"}` — file contains both `"theme":"dark"` and `"model":"claude-opus-4-6"`.
+- **AC-10**: `clp .model set::opus` creates `~/.claude/settings.json` when absent; file contains `{"model":"claude-opus-4-8"}`. Exits 0.
+- **AC-11**: `clp .model set::opus` on an existing `settings.json` with `{"theme":"dark"}` — file contains both `"theme":"dark"` and `"model":"claude-opus-4-8"`.
 - **AC-12**: `clp .model format::json` prints `{"model":"opus"}` when model is set; `{"model":null}` when absent.
 - **AC-13**: `clp .model` is listed in `clp .help` output.
 - **AC-14**: Implementation calls `set_session_model()` from `claude_profile_core` (no inline JSON write) and `map_model_shorthand()` from `src/usage/types.rs` (no inline model table).

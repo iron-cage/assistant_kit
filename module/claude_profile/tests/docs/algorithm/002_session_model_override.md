@@ -22,33 +22,33 @@ AC test cases for `docs/algorithm/002_session_model_override.md`. Tests `apply_m
 
 ### AC-1: Absent Sonnet tier with Opus session restores Sonnet
 
-- **Given:** `OauthUsageData { seven_day_sonnet: None }`; `settings.json` model field = `"claude-opus-4-6"` written to a temp `ClaudePaths`
+- **Given:** `OauthUsageData { seven_day_sonnet: None }`; `settings.json` model field = `"claude-opus-4-8"` written to a temp `ClaudePaths`
 - **When:** `apply_model_override(&quota, &paths, false, "test", "test-account")` is called
-- **Then:** `settings.json` model field is written to `"claude-sonnet-4-6"` — tier absence is treated as a conservative restore signal, not as exhaustion
+- **Then:** `settings.json` model field is written to `"claude-sonnet-5"` — tier absence is treated as a conservative restore signal, not as exhaustion
 - **Note:** Fix BUG-311 — pre-fix code had a one-way ratchet that only wrote `"opus"` (the `None` row had no `else`-branch); `override_session_model_to_sonnet()` was added for the `None` + Opus combination
 
 ### AC-2: Absent Sonnet tier with Sonnet session is a no-op
 
-- **Given:** `OauthUsageData { seven_day_sonnet: None }`; `settings.json` model field = `"claude-sonnet-4-6"` written to a temp `ClaudePaths`
+- **Given:** `OauthUsageData { seven_day_sonnet: None }`; `settings.json` model field = `"claude-sonnet-5"` written to a temp `ClaudePaths`
 - **When:** `apply_model_override(&quota, &paths, false, "test", "test-account")` is called
 - **Then:** `settings.json` model field is unchanged — session is already in Sonnet form; no write occurs
 
 ### AC-3: Sufficient Sonnet quota with Opus session restores Sonnet
 
-- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 80.0, .. }) }` — 20% remaining, at or above the 10% threshold; `settings.json` model field = `"claude-opus-4-6"` written to a temp `ClaudePaths`
+- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 80.0, .. }) }` — 20% remaining, at or above the 10% threshold; `settings.json` model field = `"claude-opus-4-8"` written to a temp `ClaudePaths`
 - **When:** `apply_model_override(&quota, &paths, false, "test", "test-account")` is called
-- **Then:** `settings.json` model field is written to `"claude-sonnet-4-6"` — capacity is sufficient; the override is reversed
+- **Then:** `settings.json` model field is written to `"claude-sonnet-5"` — capacity is sufficient; the override is reversed
 - **Note:** Fix BUG-311 — the recovery path (`Some` + sufficient + Opus → Sonnet) was absent before the fix
 
 ### AC-4: Near-exhausted Sonnet quota with Sonnet session switches to Opus
 
-- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 91.0, resets_at: Some("...") }) }` — 9% remaining, below the 10% threshold; `settings.json` model field = `"claude-sonnet-4-6"` written to a temp `ClaudePaths`
+- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 91.0, resets_at: Some("...") }) }` — 9% remaining, below the 10% threshold; `settings.json` model field = `"claude-sonnet-5"` written to a temp `ClaudePaths`
 - **When:** `apply_model_override(&quota, &paths, false, "test", "test-account")` is called
-- **Then:** `settings.json` model field is written to `"claude-opus-4-6"` — Sonnet is near-exhausted; switch to Opus to preserve remaining quota
+- **Then:** `settings.json` model field is written to `"claude-opus-4-8"` — Sonnet is near-exhausted; switch to Opus to preserve remaining quota
 
 ### AC-5: Near-exhausted Sonnet quota with Opus session is a no-op
 
-- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 91.0, resets_at: Some("...") }) }` — 9% remaining; `settings.json` model field = `"claude-opus-4-6"` written to a temp `ClaudePaths`
+- **Given:** `OauthUsageData { seven_day_sonnet: Some(PeriodUsage { utilization: 91.0, resets_at: Some("...") }) }` — 9% remaining; `settings.json` model field = `"claude-opus-4-8"` written to a temp `ClaudePaths`
 - **When:** `apply_model_override(&quota, &paths, false, "test", "test-account")` is called
 - **Then:** `settings.json` model field is unchanged — session is already in Opus form; redundant write avoided
 

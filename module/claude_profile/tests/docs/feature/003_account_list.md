@@ -175,9 +175,9 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ### FT-10: `cols::+host,+role,+billing,+model` show lines; absent by default
 
-- **Given:** An account with `{name}.json` containing `host = "alice@workstation"`, `role = "work"` (user-defined label), `billingType = "stripe_subscription"`, and `model = "claude-opus-4-6"`.
+- **Given:** An account with `{name}.json` containing `host = "alice@workstation"`, `role = "work"` (user-defined label), `billingType = "stripe_subscription"`, and `model = "claude-opus-4-8"`.
 - **When (opt-in):** `clp .accounts cols::+host,+role,+billing,+model`
-- **Then:** Block includes `Host:  alice@workstation`, `Role:  work`, `Billing:  stripe_subscription`, `Model:  claude-opus-4-6`.
+- **Then:** Block includes `Host:  alice@workstation`, `Role:  work`, `Billing:  stripe_subscription`, `Model:  claude-opus-4-8`.
 - **When (default):** `clp .accounts`
 - **Then:** None of those four lines appear in the block.
 - **Exit:** 0

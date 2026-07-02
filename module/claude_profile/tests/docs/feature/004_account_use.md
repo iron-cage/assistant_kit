@@ -126,9 +126,9 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 
 ### FT-08: Model preference restored from `{name}.json`; cleared when absent
 
-- **Given (restore):** Account `alice@acme.com` with `alice@acme.com.json` containing `{"model": "claude-opus-4-6"}`. `~/.claude/settings.json` currently contains `{"model": "claude-sonnet-4-6"}`.
+- **Given (restore):** Account `alice@acme.com` with `alice@acme.com.json` containing `{"model": "claude-opus-4-8"}`. `~/.claude/settings.json` currently contains `{"model": "claude-sonnet-5"}`.
 - **When:** `clp .account.use name::alice@acme.com`
-- **Then:** `~/.claude/settings.json` `model` field is updated to `"claude-opus-4-6"`. All other keys in `~/.claude/settings.json` are preserved.
+- **Then:** `~/.claude/settings.json` `model` field is updated to `"claude-opus-4-8"`. All other keys in `~/.claude/settings.json` are preserved.
 - **Given (clear):** Account `bob@acme.com` with no `model` field in `bob@acme.com.json` snapshot. `~/.claude/settings.json` currently has `model` set from a prior account.
 - **When:** `clp .account.use name::bob@acme.com`
 - **Then:** `~/.claude/settings.json` `model` key is removed (preventing prior account's model from persisting). Other keys preserved.

@@ -35,9 +35,9 @@ is in place and prevents the described session model management failure mode.
 ### PP-2: Bidirectional model override — Sonnet restore path exists
 
 - **Given:** An account with `seven_day_sonnet.utilization = 80%` (20% remaining, above 10%
-  threshold) and `settings.json` model = `"claude-opus-4-6"` (previously overridden to Opus).
+  threshold) and `settings.json` model = `"claude-opus-4-8"` (previously overridden to Opus).
 - **When:** `apply_model_override()` runs.
-- **Then:** `settings.json` model is restored to `"claude-sonnet-4-6"` — the recovery path
+- **Then:** `settings.json` model is restored to `"claude-sonnet-5"` — the recovery path
   (Opus → Sonnet when quota recovers) executes. Fix BUG-311: the pre-fix implementation
   only had an Opus-write branch; once an account was overridden to Opus, it stayed on Opus
   indefinitely even after the 7d window reset.

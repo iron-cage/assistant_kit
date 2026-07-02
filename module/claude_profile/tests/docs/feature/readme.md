@@ -61,6 +61,8 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 065_assignee_param_redesign.md | FT cases for Feature 065 — Assignee Param Redesign |
 | 066_dual_source_quota_parsing.md | FT cases for Feature 066 — Dual-Source OAuth Quota Parsing |
 | 067_trace_timestamps.md | FT cases for Feature 067 — Trace Timestamp Prefix |
+| 068_models_list_command.md | FT cases for Feature 068 — Models List Command |
+| 069_model_select_command.md | FT cases for Feature 069 — Model Select Command |
 
 ### Coverage Summary
 
@@ -114,8 +116,10 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 065_assignee_param_redesign | [065_assignee_param_redesign.md](065_assignee_param_redesign.md) | FT-01 … FT-13 | ✅ |
 | 066_dual_source_quota_parsing | [066_dual_source_quota_parsing.md](066_dual_source_quota_parsing.md) | FT-01 … FT-12 | ✅ |
 | 067_trace_timestamps | [067_trace_timestamps.md](067_trace_timestamps.md) | FT-01 … FT-07 | ✅ |
+| 068_models_list_command | [068_models_list_command.md](068_models_list_command.md) | FT-01 … FT-10 | 🔲 |
+| 069_model_select_command | [069_model_select_command.md](069_model_select_command.md) | FT-01 … FT-12 | 🔲 |
 
-**Total:** 48 specs — 47 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+**Total:** 50 specs — 49 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
 
 ### Cross-Reference Depth
 
