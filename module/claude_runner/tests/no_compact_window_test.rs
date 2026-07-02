@@ -23,7 +23,7 @@
 //! by `timeout_test.rs`), plus 9 incidental cases already verified from other spec angles.
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stdout_str, stderr_str, make_creds_file };
+use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stdout_str, make_creds_file };
 
 // RC-3/run, acw:EC-1, ncw:EC-1
 #[ test ]
@@ -137,10 +137,10 @@ fn default_injection_isolated()
 {
   let creds = make_creds_file( "{}" );
   let tmp_path = creds.path().to_str().unwrap();
-  let output = stderr_str( &run_cli( &[ "isolated", "--creds", tmp_path, "--dry-run" ] ) );
+  let output = stdout_str( &run_cli( &[ "isolated", "--creds", tmp_path, "--dry-run" ] ) );
   assert!(
     output.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000" ),
-    "Default injection must be present in isolated dry-run stderr. Got:\n{output}"
+    "Default injection must be present in isolated dry-run stdout. Got:\n{output}"
   );
 }
 
@@ -150,7 +150,7 @@ fn flag_suppresses_for_isolated()
 {
   let creds = make_creds_file( "{}" );
   let tmp_path = creds.path().to_str().unwrap();
-  let output = stderr_str( &run_cli( &[
+  let output = stdout_str( &run_cli( &[
     "isolated", "--creds", tmp_path, "--no-compact-window", "--dry-run",
   ] ) );
   assert!(
@@ -165,10 +165,10 @@ fn default_injection_refresh()
 {
   let creds = make_creds_file( "{}" );
   let tmp_path = creds.path().to_str().unwrap();
-  let output = stderr_str( &run_cli( &[ "refresh", "--creds", tmp_path, "--dry-run" ] ) );
+  let output = stdout_str( &run_cli( &[ "refresh", "--creds", tmp_path, "--dry-run" ] ) );
   assert!(
     output.contains( "CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000" ),
-    "Default injection must be present in refresh dry-run stderr. Got:\n{output}"
+    "Default injection must be present in refresh dry-run stdout. Got:\n{output}"
   );
 }
 
@@ -178,7 +178,7 @@ fn flag_suppresses_for_refresh()
 {
   let creds = make_creds_file( "{}" );
   let tmp_path = creds.path().to_str().unwrap();
-  let output = stderr_str( &run_cli( &[
+  let output = stdout_str( &run_cli( &[
     "refresh", "--creds", tmp_path, "--no-compact-window", "--dry-run",
   ] ) );
   assert!(
