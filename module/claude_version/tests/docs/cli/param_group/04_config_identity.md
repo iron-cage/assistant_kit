@@ -142,13 +142,13 @@ Interaction tests for Parameter Group 4 (Config Identity). See [param_group/04_c
 
 | Function | File |
 |----------|------|
-| `config_identity_gi1_set_mode_writes_user_config` | `integration/config_identity_test.rs` |
-| `config_identity_gi2_set_mode_project_scope` | `integration/config_identity_test.rs` |
-| `config_identity_gi3_unset_mode_removes_from_user_config` | `integration/config_identity_test.rs` |
-| `config_identity_gi4_unset_mode_project_scope` | `integration/config_identity_test.rs` |
-| `config_identity_gi5_value_unset_mutual_exclusion_exits_1` | `integration/config_identity_test.rs` |
-| `config_identity_gi6_value_without_key_exits_1` | `integration/config_identity_test.rs` |
-| `config_identity_gi7_unset_without_key_exits_1` | `integration/config_identity_test.rs` |
-| `config_identity_gi8_scope_without_write_exits_1` | `integration/config_identity_test.rs` |
-| `config_identity_gi9_key_alone_get_mode` | `integration/config_identity_test.rs` |
-| `config_identity_gi10_dry_run_no_file_modification` | `integration/config_identity_test.rs` |
+| `config_identity_gi1_set_mode_writes_user_config` | `tests/cli/config_identity_test.rs` |
+| `config_identity_gi2_set_mode_project_scope` | `tests/cli/config_identity_test.rs` |
+| `config_identity_gi3_unset_mode_removes_from_user_config` | `tests/cli/config_identity_test.rs` |
+| `config_identity_gi4_unset_mode_project_scope` | `tests/cli/config_identity_test.rs` |
+| `config_identity_gi5_value_unset_mutual_exclusion_exits_1` | `tests/cli/config_identity_test.rs` |
+| `config_identity_gi6_value_without_key_exits_1` | `tests/cli/config_identity_test.rs` |
+| `config_identity_gi7_unset_without_key_exits_1` | `tests/cli/config_identity_test.rs` |
+| `config_identity_gi8_scope_without_write_exits_1` | `tests/cli/config_identity_test.rs` |
+| `config_identity_gi9_key_alone_get_mode` | `tests/cli/config_identity_test.rs` |
+| `config_identity_gi10_dry_run_no_file_modification` | `tests/cli/config_identity_test.rs` |

@@ -41,11 +41,13 @@ Removes `subprocess_model` key from `~/.clr/prefs.json`. Preserves other keys. P
 2. If present and non-empty: use this model ID instead of `ISOLATED_DEFAULT_MODEL`.
 3. If absent, error, or empty: use `ISOLATED_DEFAULT_MODEL` as before.
 
-The preference applies to all four executing commands: `run`, `ask`, `isolated`, `refresh`.
+The preference applies to `run`, `ask`, and `isolated`. `refresh` always uses `REFRESH_DEFAULT_MODEL`; see below.
 
 **Why not affect touch/refresh subprocess model:**
 
 Touch (`imodel::`) is quota-adaptive by design. The auto model selection (Haiku vs Sonnet based on quota) is a feature, not a configuration. Pinning it would defeat the purpose. `imodel::` per-invocation override remains the right mechanism for explicit touch model control.
+
+Refresh (`clr refresh`) passes `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` regardless of the preference — credential stability requires a known working model. The user pin is intentionally excluded from the refresh path.
 
 ### Acceptance Criteria
 

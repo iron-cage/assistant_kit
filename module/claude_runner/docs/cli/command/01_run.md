@@ -86,7 +86,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Load clr params from JSON config file; stdin JSON auto-detected when no TTY |
 
 **Algorithm (7 steps):**
-1. Parse flags; apply JSON config (from `--args-file`/`CLR_ARGS_FILE`/stdin) for unset parameters; apply CLR_* env var fallbacks for still-unset parameters.
+1. Parse flags; apply JSON config (from `--args-file`/`CLR_ARGS_FILE`/stdin) for unset parameters; apply CLR_* env var fallbacks for still-unset parameters; if `--model` is still unset, read `subprocess_model` from `~/.clr/prefs.json` via `read_subprocess_model_pref()` (applies to `--model` only — all other parameters stop at the CLR_* env var tier).
 2. If `--max-sessions > 0`, count active `claude` processes; block in 30-second polling loop until slot available or 100-attempt limit reached (exit 1 on limit).
 3. If `--dry-run`, render command preview via `describe()` / `describe_env()`; emit to stdout; exit 0.
 4. Resolve execution directory (`--dir` + `--subdir`); create `/-NAME` subdirectory if `--subdir` set and not `"."`.

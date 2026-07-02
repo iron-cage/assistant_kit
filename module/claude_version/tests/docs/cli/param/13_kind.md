@@ -111,10 +111,10 @@ Edge case coverage for the `kind::` parameter. See [param/13_kind.md](../../../.
 
 | Function | File |
 |----------|------|
-| `kind_ec1_config_shows_config_params` | `integration/kind_param_test.rs` |
-| `kind_ec2_env_shows_env_params` | `integration/kind_param_test.rs` |
-| `kind_ec3_absent_shows_all_params` | `integration/kind_param_test.rs` |
-| `kind_ec4_invalid_exits_1` | `integration/kind_param_test.rs` |
-| `kind_ec5_empty_exits_1` | `integration/kind_param_test.rs` |
-| `kind_ec6_uppercase_exits_1` | `integration/kind_param_test.rs` |
-| `kind_ec7_ignored_when_key_present` | `integration/kind_param_test.rs` |
+| `kind_ec1_config_shows_config_params` | `tests/cli/kind_param_test.rs` |
+| `kind_ec2_env_shows_env_params` | `tests/cli/kind_param_test.rs` |
+| `kind_ec3_absent_shows_all_params` | `tests/cli/kind_param_test.rs` |
+| `kind_ec4_invalid_exits_1` | `tests/cli/kind_param_test.rs` |
+| `kind_ec5_empty_exits_1` | `tests/cli/kind_param_test.rs` |
+| `kind_ec6_uppercase_exits_1` | `tests/cli/kind_param_test.rs` |
+| `kind_ec7_ignored_when_key_present` | `tests/cli/kind_param_test.rs` |

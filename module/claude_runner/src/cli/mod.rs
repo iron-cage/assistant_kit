@@ -252,6 +252,17 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     std::process::exit( 1 );
   }
 
+  // Fix(BUG-008): read subprocess model preference when no explicit --model / CLR_MODEL given.
+  // Root cause: read_subprocess_model_pref() was only wired into run_isolated_ext();
+  //   dispatch_run() and dispatch_ask() never read ~/.clr/prefs.json.
+  // Pitfall: when a preference-reading function is added to one dispatch path, all other
+  //   paths honoring the same preference must be updated in the same change.
+  #[ cfg( feature = "enabled" ) ]
+  if cli.model.is_none()
+  {
+    cli.model = claude_runner_core::read_subprocess_model_pref();
+  }
+
   if cli.help
   {
     print_help();

@@ -50,11 +50,11 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 
 **Current Level:** L5 (Test Detail Complete)
 **Design Completeness:** 100%
-**Implementation Status:** 100% (16/16 active commands; 2 REMOVED: .account.assign, .account.unclaim)
+**Implementation Status:** 100% (18/18 active commands; 2 REMOVED: .account.assign, .account.unclaim)
 
 ### Navigation
 
-- [Commands](command/readme.md) — 16 commands (14 visible + 2 hidden) across 6 namespaces
+- [Commands](command/readme.md) — 18 commands (16 visible + 2 hidden) across 6 namespaces
 - [Parameters](param/readme.md) — 58 active parameter specifications (63 files; 5 REMOVED: 013, 032, 053, 056, 057)
 - [Types](type/readme.md) — 4 CLI types (AccountName, OutputFormat, WarningThreshold, AccountSelector)
 - [Parameter Groups](param_group/readme.md) — 6 groups (Output Control, Field Presence, Fetch Behavior, Sort Control, Display Control, Account Targeting)
