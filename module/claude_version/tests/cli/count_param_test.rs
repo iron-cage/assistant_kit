@@ -4,13 +4,13 @@
 //! EC-1 through EC-11 are covered in `cli_args_test.rs` and
 //! `integration/read_commands_test.rs`.
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, stdout };
 
 /// EC-12: `count::3` → output has at most 3 version entries
 #[ test ]
 fn count_ec12_count_3_at_most_3_entries()
 {
-  let out = run_clm( &[ ".version.history", "count::3" ] );
+  let out = run_clv( &[ ".version.history", "count::3" ] );
   if out.status.code() == Some( 0 )
   {
     let text  = stdout( &out );
@@ -24,7 +24,7 @@ fn count_ec12_count_3_at_most_3_entries()
 #[ test ]
 fn count_ec13_count_1_v0_exactly_one_line()
 {
-  let out = run_clm( &[ ".version.history", "count::1", "v::0" ] );
+  let out = run_clv( &[ ".version.history", "count::1", "v::0" ] );
   if out.status.code() == Some( 0 )
   {
     let text  = stdout( &out );
@@ -37,7 +37,7 @@ fn count_ec13_count_1_v0_exactly_one_line()
 #[ test ]
 fn count_ec14_count_0_json_empty_array()
 {
-  let out = run_clm( &[ ".version.history", "count::0", "format::json" ] );
+  let out = run_clv( &[ ".version.history", "count::0", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out ).trim().to_string();
   assert_eq!( text, "[]", "count::0 format::json must produce exactly []: {text}" );
@@ -47,6 +47,6 @@ fn count_ec14_count_0_json_empty_array()
 #[ test ]
 fn count_ec15_v_abc_type_mismatch_exits_1()
 {
-  let out = run_clm( &[ ".version.history", "v::abc" ] );
+  let out = run_clv( &[ ".version.history", "v::abc" ] );
   assert_exit( &out, 1 );
 }

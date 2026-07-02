@@ -11,7 +11,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm_with_env, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv_with_env, stdout, write_settings };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // US-001: Environment Check
@@ -21,7 +21,7 @@ use crate::subprocess_helpers::{ assert_exit, run_clm_with_env, stdout, write_se
 #[ test ]
 fn us01_001_status_exits_0()
 {
-  let out = run_clm_with_env( &[ ".status" ], &[] );
+  let out = run_clv_with_env( &[ ".status" ], &[] );
   assert_exit( &out, 0 );
   assert!( !stdout( &out ).is_empty(), ".status must produce output" );
 }
@@ -30,7 +30,7 @@ fn us01_001_status_exits_0()
 #[ test ]
 fn us02_001_status_json_format()
 {
-  let out = run_clm_with_env( &[ ".status", "format::json" ], &[] );
+  let out = run_clv_with_env( &[ ".status", "format::json" ], &[] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.trim_start().starts_with( '{' ), "JSON output must start with {{: {text}" );
@@ -40,7 +40,7 @@ fn us02_001_status_json_format()
 #[ test ]
 fn us03_001_status_verbose()
 {
-  let out = run_clm_with_env( &[ ".status", "v::2" ], &[] );
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[] );
   assert_exit( &out, 0 );
 }
 
@@ -51,7 +51,7 @@ fn us03_001_status_verbose()
 #[ test ]
 fn us04_001_status_no_home_graceful()
 {
-  let out = run_clm_with_env( &[ ".status" ], &[ ( "HOME", "" ) ] );
+  let out = run_clv_with_env( &[ ".status" ], &[ ( "HOME", "" ) ] );
   assert_exit( &out, 0 );
 }
 
@@ -63,7 +63,7 @@ fn us04_001_status_no_home_graceful()
 #[ test ]
 fn us01_002_version_install_dry_preview()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.install", "version::stable", "dry::1" ],
     &[],
   );
@@ -78,7 +78,7 @@ fn us01_002_version_install_dry_preview()
 #[ test ]
 fn us02_002_version_install_plan_accepted()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.install", "version::stable", "dry::1" ],
     &[],
   );
@@ -89,11 +89,11 @@ fn us02_002_version_install_plan_accepted()
 #[ test ]
 fn us03_002_version_install_idempotent()
 {
-  let out1 = run_clm_with_env(
+  let out1 = run_clv_with_env(
     &[ ".version.install", "version::stable", "dry::1" ],
     &[],
   );
-  let out2 = run_clm_with_env(
+  let out2 = run_clv_with_env(
     &[ ".version.install", "version::stable", "dry::1" ],
     &[],
   );
@@ -108,7 +108,7 @@ fn us03_002_version_install_idempotent()
 #[ test ]
 fn us04_002_version_show_exits_0()
 {
-  let out = run_clm_with_env( &[ ".version.show" ], &[] );
+  let out = run_clv_with_env( &[ ".version.show" ], &[] );
   if out.status.code() == Some( 0 )
   {
     assert!( !stdout( &out ).is_empty(), ".version.show must produce version output" );
@@ -122,7 +122,7 @@ fn us04_002_version_show_exits_0()
 #[ test ]
 fn us05_002_version_history_exits_0()
 {
-  let out = run_clm_with_env( &[ ".version.history" ], &[] );
+  let out = run_clv_with_env( &[ ".version.history" ], &[] );
   if out.status.code() == Some( 0 )
   {
     assert!( !stdout( &out ).is_empty(), ".version.history must produce output" );
@@ -133,7 +133,7 @@ fn us05_002_version_history_exits_0()
 #[ test ]
 fn us06_002_version_guard_exits_0()
 {
-  let out = run_clm_with_env( &[ ".version.guard", "dry::1" ], &[] );
+  let out = run_clv_with_env( &[ ".version.guard", "dry::1" ], &[] );
   assert_exit( &out, 0 );
 }
 
@@ -145,7 +145,7 @@ fn us06_002_version_guard_exits_0()
 #[ test ]
 fn us01_003_processes_exits_0()
 {
-  let out = run_clm_with_env( &[ ".processes" ], &[] );
+  let out = run_clv_with_env( &[ ".processes" ], &[] );
   assert_exit( &out, 0 );
 }
 
@@ -153,7 +153,7 @@ fn us01_003_processes_exits_0()
 #[ test ]
 fn us02_003_processes_json_format()
 {
-  let out = run_clm_with_env( &[ ".processes", "format::json" ], &[] );
+  let out = run_clv_with_env( &[ ".processes", "format::json" ], &[] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let t = text.trim_start();
@@ -167,7 +167,7 @@ fn us02_003_processes_json_format()
 #[ test ]
 fn us03_003_processes_kill_dry_preview()
 {
-  let out = run_clm_with_env( &[ ".processes.kill", "dry::1" ], &[] );
+  let out = run_clv_with_env( &[ ".processes.kill", "dry::1" ], &[] );
   assert_exit( &out, 0 );
 }
 
@@ -177,7 +177,7 @@ fn us03_003_processes_kill_dry_preview()
 #[ test ]
 fn us04_003_processes_kill_graceful()
 {
-  let out = run_clm_with_env( &[ ".processes.kill", "dry::1" ], &[] );
+  let out = run_clv_with_env( &[ ".processes.kill", "dry::1" ], &[] );
   assert_exit( &out, 0 );
 }
 
@@ -185,7 +185,7 @@ fn us04_003_processes_kill_graceful()
 #[ test ]
 fn us05_003_processes_kill_force()
 {
-  let out = run_clm_with_env( &[ ".processes.kill", "force::1", "dry::1" ], &[] );
+  let out = run_clv_with_env( &[ ".processes.kill", "force::1", "dry::1" ], &[] );
   assert_exit( &out, 0 );
 }
 
@@ -196,7 +196,7 @@ fn us05_003_processes_kill_force()
 #[ test ]
 fn us06_003_processes_empty_after_kill()
 {
-  let out = run_clm_with_env( &[ ".processes" ], &[] );
+  let out = run_clv_with_env( &[ ".processes" ], &[] );
   assert_exit( &out, 0 );
 }
 
@@ -212,7 +212,7 @@ fn us01_004_settings_show_all_pairs()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ), ( "autoUpdates", "true" ) ] );
 
-  let out = run_clm_with_env( &[ ".settings.show" ], &[ ( "HOME", home ) ] );
+  let out = run_clv_with_env( &[ ".settings.show" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "theme" ), "show must include theme key: {text}" );
@@ -227,7 +227,7 @@ fn us02_004_settings_show_json()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.show", "format::json" ],
     &[ ( "HOME", home ) ],
   );
@@ -244,14 +244,14 @@ fn us03_004_settings_get_found_and_missing()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let found = run_clm_with_env(
+  let found = run_clv_with_env(
     &[ ".settings.get", "key::theme" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &found, 0 );
   assert!( stdout( &found ).contains( "dark" ), "get must return the stored value" );
 
-  let missing = run_clm_with_env(
+  let missing = run_clv_with_env(
     &[ ".settings.get", "key::nonexistent" ],
     &[ ( "HOME", home ) ],
   );
@@ -266,7 +266,7 @@ fn us04_004_settings_set_dry_preview()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::theme", "value::light", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -287,7 +287,7 @@ fn us05_004_settings_set_writes_atomically()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::theme", "value::light" ],
     &[ ( "HOME", home ) ],
   );
@@ -306,17 +306,17 @@ fn us06_004_settings_set_type_inference()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out_a = run_clm_with_env(
+  let out_a = run_clv_with_env(
     &[ ".settings.set", "key::flag", "value::true" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out_a, 0 );
-  let out_b = run_clm_with_env(
+  let out_b = run_clv_with_env(
     &[ ".settings.set", "key::count", "value::42" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out_b, 0 );
-  let out_c = run_clm_with_env(
+  let out_c = run_clv_with_env(
     &[ ".settings.set", "key::ratio", "value::3.14" ],
     &[ ( "HOME", home ) ],
   );
@@ -339,7 +339,7 @@ fn us06_004_settings_set_type_inference()
 #[ test ]
 fn us01_005_version_list_shows_aliases()
 {
-  let out = run_clm_with_env( &[ ".version.list" ], &[] );
+  let out = run_clv_with_env( &[ ".version.list" ], &[] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "stable" ), "version list must include the stable alias: {text}" );
@@ -349,7 +349,7 @@ fn us01_005_version_list_shows_aliases()
 #[ test ]
 fn us02_005_version_install_month_dry()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.install", "version::month", "dry::1" ],
     &[],
   );
@@ -362,7 +362,7 @@ fn us02_005_version_install_month_dry()
 #[ test ]
 fn us03_005_version_install_month_accepted()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.install", "version::month", "dry::1" ],
     &[],
   );
@@ -373,7 +373,7 @@ fn us03_005_version_install_month_accepted()
 #[ test ]
 fn us04_005_version_install_idempotent()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.install", "version::month", "dry::1" ],
     &[],
   );
@@ -387,7 +387,7 @@ fn us04_005_version_install_idempotent()
 #[ test ]
 fn us05_005_version_show_confirms_active()
 {
-  let out = run_clm_with_env( &[ ".version.show" ], &[] );
+  let out = run_clv_with_env( &[ ".version.show" ], &[] );
   if out.status.code() == Some( 0 )
   {
     assert!( !stdout( &out ).is_empty(), ".version.show must print the active version" );
@@ -403,7 +403,7 @@ fn us05_005_version_show_confirms_active()
 #[ test ]
 fn us06_005_version_guard_drift_watch()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.guard", "interval::0", "dry::1" ],
     &[],
   );
@@ -422,7 +422,7 @@ fn us1_006_config_show_all_source_annotations()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -443,7 +443,7 @@ fn us2_006_config_single_key_shows_source()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme" ],
     &[ ( "HOME", home ) ],
   );
@@ -461,7 +461,7 @@ fn us3_006_config_key_format_json()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "format::json" ],
     &[ ( "HOME", home ) ],
   );
@@ -478,7 +478,7 @@ fn us4_006_config_write_type_inference()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark" ],
     &[ ( "HOME", home ) ],
   );
@@ -525,7 +525,7 @@ fn us6_006_config_dry_run_no_write()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "light" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -546,7 +546,7 @@ fn us7_006_config_unset_user_key()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ), ( "autoUpdates", "true" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "unset::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -597,15 +597,15 @@ fn us9_006_config_type_inference()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  assert_exit( &run_clm_with_env(
+  assert_exit( &run_clv_with_env(
     &[ ".config", "key::enabled", "value::true" ],
     &[ ( "HOME", home ) ],
   ), 0 );
-  assert_exit( &run_clm_with_env(
+  assert_exit( &run_clv_with_env(
     &[ ".config", "key::count", "value::42" ],
     &[ ( "HOME", home ) ],
   ), 0 );
-  assert_exit( &run_clm_with_env(
+  assert_exit( &run_clv_with_env(
     &[ ".config", "key::label", "value::hello" ],
     &[ ( "HOME", home ) ],
   ), 0 );
@@ -634,7 +634,7 @@ fn us10_006_config_value_and_unset_exclusive()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "unset::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -657,7 +657,7 @@ fn us01_007_params_show_all_entries()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -679,7 +679,7 @@ fn us02_007_params_single_model_forms()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::model" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -698,7 +698,7 @@ fn us03_007_params_kind_config_only()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "kind::config" ],
     &[ ( "HOME", home ) ],
   );
@@ -715,7 +715,7 @@ fn us04_007_params_kind_env_only()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "kind::env" ],
     &[ ( "HOME", home ) ],
   );
@@ -732,7 +732,7 @@ fn us05_007_params_env_override_annotated()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::model" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
   );
@@ -749,7 +749,7 @@ fn us06_007_params_cli_only_print()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::print" ],
     &[ ( "HOME", home ) ],
   );
@@ -770,7 +770,7 @@ fn us07_007_params_json_array_output()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "format::json" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -785,7 +785,7 @@ fn us07_007_params_json_array_output()
 #[ test ]
 fn us08_007_params_unknown_key_exits_2()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::UNKNOWN" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -796,7 +796,7 @@ fn us08_007_params_unknown_key_exits_2()
 #[ test ]
 fn us09_007_params_invalid_kind_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "kind::bad" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -810,7 +810,7 @@ fn us10_007_params_show_all_alphabetical()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );

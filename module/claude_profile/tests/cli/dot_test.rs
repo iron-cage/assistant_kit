@@ -110,15 +110,15 @@ fn dot04_all_visible_commands_present()
   assert!( !text.contains( ".account.status" ), ".account.status must not appear (removed)" );
 }
 
-// ── dot05 — exactly 16 command rows in listing ────────────────────────────────
+// ── dot05 — exactly 18 command rows in listing ────────────────────────────────
 
 #[ test ]
-fn dot05_exactly_sixteen_command_rows()
+fn dot05_exactly_eighteen_command_rows()
 {
   let out   = run_cs( &[ "." ] );
   let text  = stdout( &out );
   let count = text.lines().filter( |l| l.starts_with( "    ." ) ).count();
-  assert_eq!( count, 16, "expected 16 command rows starting with '    .', got {count}" );
+  assert_eq!( count, 18, "expected 18 command rows starting with '    .', got {count}" );
 }
 
 // ── dot06 — usage line includes `<command>` syntax ───────────────────────────

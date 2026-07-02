@@ -50,6 +50,7 @@ pub( crate ) struct CliArgs
   pub( crate ) no_skip_permissions  : bool,
   pub( crate ) max_tokens           : Option< u32 >,
   pub( crate ) session_dir          : Option< String >,
+  pub( crate ) session_from         : Option< String >,
   pub( crate ) dir                  : Option< String >,
   pub( crate ) dry_run              : bool,
   pub( crate ) trace                : bool,
@@ -220,7 +221,11 @@ fn parse_value_flag(
     {
       parsed.session_dir = Some( next_value( tokens, next, "--session-dir" )?.to_string() );
     }
-    "--dir" =>
+    "--session-from" | "--from" =>
+    {
+      parsed.session_from = Some( next_value( tokens, next, "--session-from" )?.to_string() );
+    }
+    "--dir" | "--to" =>
     {
       parsed.dir = Some( next_value( tokens, next, "--dir" )?.to_string() );
     }
@@ -504,7 +509,7 @@ fn parse_runner_value_flag(
 ///
 /// `--help`/`-h` wins regardless of other flags or unknown tokens: if either appears
 /// anywhere in `tokens`, parsing short-circuits and returns `CliArgs { help: true, .. }`.
-#[ allow( clippy::too_many_lines ) ]
+#[ allow( clippy::too_many_lines ) ] // mechanical dispatch — one arm per CLI flag token
 pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
 {
   // --help/-h always wins — return early before any other token is parsed.
@@ -528,6 +533,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       no_skip_permissions  : false,
       max_tokens           : None,
       session_dir          : None,
+      session_from         : None,
       dir                  : None,
       dry_run              : false,
       trace                : false,

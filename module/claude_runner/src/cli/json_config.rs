@@ -127,6 +127,13 @@ pub( super ) fn apply_json_config( parsed : &mut CliArgs, map : &Map< String, Va
           if let Value::String( s ) = v { parsed.session_dir = Some( s.clone() ); }
         }
       }
+      "session-from" =>
+      {
+        if parsed.session_from.is_none()
+        {
+          if let Value::String( s ) = v { parsed.session_from = Some( s.clone() ); }
+        }
+      }
       "dir" =>
       {
         if parsed.dir.is_none()

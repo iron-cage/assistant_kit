@@ -4,13 +4,13 @@
 //! EC-1, EC-3..EC-6, EC-10, EC-11 are covered in `cli_args_test.rs`,
 //! `mutation_commands_test.rs`, and `cross_cutting_test.rs`.
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, stdout };
 
 /// EC-7: `force::` only for `.version.install`, `.version.guard`, `.processes.kill`
 #[ test ]
 fn force_ec7_command_scope_rejects_on_settings_set()
 {
-  let out = run_clm( &[ ".settings.set", "key::k", "value::v", "force::1" ] );
+  let out = run_clv( &[ ".settings.set", "key::k", "value::v", "force::1" ] );
   assert_exit( &out, 1 );
 }
 
@@ -18,7 +18,7 @@ fn force_ec7_command_scope_rejects_on_settings_set()
 #[ test ]
 fn force_ec8_default_force_zero()
 {
-  let out = run_clm( &[ ".version.guard", "dry::1" ] );
+  let out = run_clv( &[ ".version.guard", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -31,8 +31,8 @@ fn force_ec8_default_force_zero()
 #[ test ]
 fn force_ec9_explicit_zero_same_as_absent()
 {
-  let out_absent  = run_clm( &[ ".version.guard", "dry::1" ] );
-  let out_zero    = run_clm( &[ ".version.guard", "force::0", "dry::1" ] );
+  let out_absent  = run_clv( &[ ".version.guard", "dry::1" ] );
+  let out_zero    = run_clv( &[ ".version.guard", "force::0", "dry::1" ] );
   assert_exit( &out_absent, 0 );
   assert_exit( &out_zero, 0 );
   let text_absent = stdout( &out_absent );
@@ -44,7 +44,7 @@ fn force_ec9_explicit_zero_same_as_absent()
 #[ test ]
 fn force_ec10_processes_kill_dry_wins()
 {
-  let out = run_clm( &[ ".processes.kill", "dry::1", "force::1" ] );
+  let out = run_clv( &[ ".processes.kill", "dry::1", "force::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -57,7 +57,7 @@ fn force_ec10_processes_kill_dry_wins()
 #[ test ]
 fn force_ec11_version_guard_dry_wins_over_force()
 {
-  let out = run_clm( &[ ".version.guard", "force::1", "dry::1" ] );
+  let out = run_clv( &[ ".version.guard", "force::1", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "[dry-run]" ), "dry must win over force on .version.guard: {text}" );

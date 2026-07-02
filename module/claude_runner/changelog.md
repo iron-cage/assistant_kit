@@ -178,7 +178,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     must use `MAIN_SEPARATOR`; (3) negative `!contains("/-")` assertions are equally broken on
     Windows — `\-` goes undetected; fix both directions when adding cross-platform guards
 
-- **`run_print_mode` retry loop now fails fast on auth errors** (BUG-315, TSK-323)
+- **`--retry-on-auth` dead parameter — Auth now uses same 3-tier retry resolution as all classes** (BUG-325)
+  - BUG-315 introduced `!is_auth_error` guard that blocked retry-block entry unconditionally for
+    all Auth-class errors, making `--retry-on-auth` a permanently dead parameter regardless of its
+    configured value; operator requirement: ALL error classes must use identical 3-tier resolution
+  - Fix: removed `let is_auth_error = matches!(class, ErrorClass::Auth)` variable and
+    `!is_auth_error &&` prefix from retry-block entry guard in `run_print_mode`; Auth now flows
+    through `if attempts[class_idx] < limit` identically to Transient/Account/Service/Process/Unknown;
+    `--retry-on-auth 0` still works as explicit opt-out (resolves to limit=0, guard false on entry)
+  - Supersedes the BUG-315 entry below: Auth fail-fast was operator-rejected; the guard was a
+    regression, not a design. BUG-315 fix for credential-recovery-hook path remains invalid.
+  - Tests: `ec7_auth_error_retries_on_explicit_budget`, `ec8_auth_error_exhausts_retry_budget`,
+    `mre_bug325_auth_retry_fires_on_configured_budget`, `b4_authentication_error_401_format_retries_and_exhausts`
+    in `tests/retry_auth_test.rs`
+
+- **`run_print_mode` retry loop now fails fast on auth errors** (BUG-315, TSK-323) ⚠️ SUPERSEDED by BUG-325
   - Auth errors (`ErrorKind::AuthError`) are persistent — the auth token is invalid and requires
     explicit credential recovery; the retry loop had no recovery mechanism, so each `sleep + continue`
     iteration reproduced the same 401 failure and exhausted N×delay seconds without useful output
@@ -189,6 +203,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     recovery; retrying consumes budget without recovery path; Pitfall: a retry loop operating on
     auth-class errors without a credential recovery hook deterministically exhausts its budget
   - Tests: `mre_bug315_auth_error_exits_retry_loop_immediately` in `tests/retry_auth_test.rs`
+  - ⚠️ This guard was reversed by BUG-325: operator requirement confirmed Auth must retry under
+    same 3-tier resolution as all other classes. `mre_bug315` test renamed to `mre_bug325`.
 
 - **`authentication_error` 401 now correctly classified as `[Auth]`** (BUG-314, TSK-322)
   - `ERROR_PATTERNS` had no entry for `"authentication_error"`; the `"API Error: "` catch-all

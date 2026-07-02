@@ -17,7 +17,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm_with_env };
+use crate::subprocess_helpers::{ assert_exit, run_clv_with_env };
 
 // ─── EC-1: scope::user writes to user settings ────────────────────────────────
 
@@ -28,7 +28,7 @@ fn scope_ec1_user_writes_to_user_settings()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "scope::user" ],
     &[ ( "HOME", home ) ],
   );
@@ -78,7 +78,7 @@ fn scope_ec2_project_writes_to_project_settings()
 #[ test ]
 fn scope_ec3_invalid_scope_value_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "scope::invalid" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -91,7 +91,7 @@ fn scope_ec3_invalid_scope_value_exits_1()
 #[ test ]
 fn scope_ec4_empty_scope_value_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "scope::" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -104,7 +104,7 @@ fn scope_ec4_empty_scope_value_exits_1()
 #[ test ]
 fn scope_ec5_scope_without_write_op_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "scope::user" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -148,7 +148,7 @@ fn scope_ec6_project_creates_directory_when_absent()
 #[ test ]
 fn scope_ec7_project_in_show_all_mode_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "scope::project" ],
     &[ ( "HOME", "/tmp" ) ],
   );

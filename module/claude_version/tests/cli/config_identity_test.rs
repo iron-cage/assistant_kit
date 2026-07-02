@@ -23,7 +23,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm_with_env, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv_with_env, stdout, write_settings };
 
 // ─── GI-1: key::K value::V → set mode writes to user config ──────────────────
 
@@ -34,7 +34,7 @@ fn config_identity_gi1_set_mode_writes_user_config()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::plugin", "value::enabled" ],
     &[ ( "HOME", home ) ],
   );
@@ -87,7 +87,7 @@ fn config_identity_gi3_unset_mode_removes_from_user_config()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "plugin", "enabled" ), ( "model", "claude-sonnet-5" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::plugin", "unset::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -145,7 +145,7 @@ fn config_identity_gi4_unset_mode_project_scope()
 #[ test ]
 fn config_identity_gi5_value_unset_mutual_exclusion_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "unset::1" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -158,7 +158,7 @@ fn config_identity_gi5_value_unset_mutual_exclusion_exits_1()
 #[ test ]
 fn config_identity_gi6_value_without_key_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "value::somevalue" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -171,7 +171,7 @@ fn config_identity_gi6_value_without_key_exits_1()
 #[ test ]
 fn config_identity_gi7_unset_without_key_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "unset::1" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -184,7 +184,7 @@ fn config_identity_gi7_unset_without_key_exits_1()
 #[ test ]
 fn config_identity_gi8_scope_without_write_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "scope::project" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -201,7 +201,7 @@ fn config_identity_gi9_key_alone_get_mode()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme" ],
     &[ ( "HOME", home ) ],
   );
@@ -224,7 +224,7 @@ fn config_identity_gi10_dry_run_no_file_modification()
   let settings_path = dir.path().join( ".claude/settings.json" );
   let before        = std::fs::read_to_string( &settings_path ).unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "dry::1" ],
     &[ ( "HOME", home ) ],
   );

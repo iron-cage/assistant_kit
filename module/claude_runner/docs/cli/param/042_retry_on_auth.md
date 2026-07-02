@@ -3,11 +3,10 @@
 Maximum number of automatic retries when the Claude subprocess exits with an
 `ErrorKind::AuthError` classification (Auth error class; output contains
 `"authentication_error"` (Fix BUG-314) or `"Your organization does not have access to Claude"`).
-When `classify_error()` returns `AuthError` and a credential recovery hook is configured
-(`--on-auth-error switch`), `clr` waits `--auth-delay` seconds and re-invokes the subprocess,
-decrementing the retry counter. When no credential recovery hook is configured, `clr` exits
-immediately (fail-fast) without sleeping or consuming retry slots (Fix BUG-315). On exhaustion,
-`clr` emits an exhaustion message to stderr and propagates the subprocess exit code.
+When `classify_error()` returns `AuthError`, `clr` waits `--auth-delay` seconds and
+re-invokes the subprocess up to `--retry-on-auth` times, using the same 3-tier retry
+resolution as all other error classes (Fix BUG-325). On exhaustion, `clr` emits an
+exhaustion message to stderr and propagates the subprocess exit code.
 
 - **Type:** u8 (0–255)
 - **Default:** `auto` (inherits from `--retry-default`, Tier 3 fallback)

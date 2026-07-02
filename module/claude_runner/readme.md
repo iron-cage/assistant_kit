@@ -37,6 +37,7 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 | `rulebook.md` | Local code-style exception: mechanical dispatch function length |
 | `verb/` | Shell scripts for each `do` protocol verb. |
 | `runbox/` | Container environment scripts for test execution |
+| `bug/` | Bug reports: open and closed defects for this crate |
 
 ### Architecture
 

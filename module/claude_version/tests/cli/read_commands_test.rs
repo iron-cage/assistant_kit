@@ -129,7 +129,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stderr, stdout, write_settings };
 
 // ─── E1: help ────────────────────────────────────────────────────────────────
 
@@ -137,7 +137,7 @@ use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr,
 #[ test ]
 fn tc01_dot_alias_shows_help()
 {
-  let out = run_clm( &[ "." ] );
+  let out = run_clv( &[ "." ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( ".status" ), "expected help listing, got: {text}" );
@@ -147,7 +147,7 @@ fn tc01_dot_alias_shows_help()
 #[ test ]
 fn tc02_empty_argv_shows_help()
 {
-  let out = run_clm( &[] );
+  let out = run_clv( &[] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( ".status" ), "expected help listing, got: {text}" );
@@ -159,7 +159,7 @@ fn tc02_empty_argv_shows_help()
 #[ test ]
 fn tc099_status_exits_0()
 {
-  let out = run_clm( &[ ".status" ] );
+  let out = run_clv( &[ ".status" ] );
   assert_exit( &out, 0 );
 }
 
@@ -169,7 +169,7 @@ fn tc096_status_no_claude_in_path_exits_0()
 {
   let dir = TempDir::new().unwrap();
   let fake_home = dir.path().to_str().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".status" ],
     &[ ( "PATH", "" ), ( "HOME", fake_home ) ],
   );
@@ -188,7 +188,7 @@ fn tc097_status_v0_has_3_lines()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[] );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".status", "v::0" ],
     &[ ( "HOME", home ) ],
   );
@@ -202,7 +202,7 @@ fn tc097_status_v0_has_3_lines()
 #[ test ]
 fn tc098_status_v1_has_labels()
 {
-  let out = run_clm( &[ ".status", "v::1" ] );
+  let out = run_clv( &[ ".status", "v::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "Version:" ),  "missing 'Version:' label, got: {text}" );
@@ -214,7 +214,7 @@ fn tc098_status_v1_has_labels()
 #[ test ]
 fn tc100_status_format_json()
 {
-  let out = run_clm( &[ ".status", "format::json" ] );
+  let out = run_clv( &[ ".status", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "\"version\"" ),  "missing 'version' key in JSON: {text}" );
@@ -226,8 +226,8 @@ fn tc100_status_format_json()
 #[ test ]
 fn tc104_status_v0_fewer_lines_than_v1()
 {
-  let out0 = run_clm( &[ ".status", "v::0" ] );
-  let out1 = run_clm( &[ ".status", "v::1" ] );
+  let out0 = run_clv( &[ ".status", "v::0" ] );
+  let out1 = run_clv( &[ ".status", "v::1" ] );
   assert_exit( &out0, 0 );
   assert_exit( &out1, 0 );
   let n0 = stdout( &out0 ).lines().count();
@@ -241,7 +241,7 @@ fn tc105_status_no_home_shows_unknown_account()
 {
   // get_active_account() checks $PRO before $HOME; both must be cleared to force
   // "unknown" — clearing only HOME still resolves the account via $PRO on dev machines.
-  let out = run_clm_with_env( &[ ".status" ], &[ ( "HOME", "" ), ( "PRO", "" ) ] );
+  let out = run_clv_with_env( &[ ".status" ], &[ ( "HOME", "" ), ( "PRO", "" ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -258,7 +258,7 @@ fn tc107_version_show_no_claude_exits_2()
 {
   let dir = TempDir::new().unwrap();
   let fake_home = dir.path().to_str().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.show" ],
     &[ ( "PATH", "" ), ( "HOME", fake_home ) ],
   );
@@ -269,7 +269,7 @@ fn tc107_version_show_no_claude_exits_2()
 #[ test ]
 fn tc108_version_show_v0_bare_string()
 {
-  let out = run_clm( &[ ".version.show", "v::0" ] );
+  let out = run_clv( &[ ".version.show", "v::0" ] );
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
@@ -285,7 +285,7 @@ fn tc108_version_show_v0_bare_string()
 #[ test ]
 fn tc109_version_show_v1_labeled()
 {
-  let out = run_clm( &[ ".version.show", "v::1" ] );
+  let out = run_clv( &[ ".version.show", "v::1" ] );
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
@@ -297,7 +297,7 @@ fn tc109_version_show_v1_labeled()
 #[ test ]
 fn tc111_version_show_format_json()
 {
-  let out = run_clm( &[ ".version.show", "format::json" ] );
+  let out = run_clv( &[ ".version.show", "format::json" ] );
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
@@ -311,7 +311,7 @@ fn tc111_version_show_format_json()
 #[ test ]
 fn tc115_version_list_exits_0()
 {
-  let out = run_clm( &[ ".version.list" ] );
+  let out = run_clv( &[ ".version.list" ] );
   assert_exit( &out, 0 );
 }
 
@@ -319,7 +319,7 @@ fn tc115_version_list_exits_0()
 #[ test ]
 fn tc116_version_list_includes_stable()
 {
-  let out = run_clm( &[ ".version.list" ] );
+  let out = run_clv( &[ ".version.list" ] );
   assert_exit( &out, 0 );
   assert!( stdout( &out ).contains( "stable" ), "output must contain 'stable'" );
 }
@@ -328,7 +328,7 @@ fn tc116_version_list_includes_stable()
 #[ test ]
 fn tc117_version_list_includes_latest()
 {
-  let out = run_clm( &[ ".version.list" ] );
+  let out = run_clv( &[ ".version.list" ] );
   assert_exit( &out, 0 );
   assert!( stdout( &out ).contains( "latest" ), "output must contain 'latest'" );
 }
@@ -337,7 +337,7 @@ fn tc117_version_list_includes_latest()
 #[ test ]
 fn tc118_version_list_v0_names_only()
 {
-  let out = run_clm( &[ ".version.list", "v::0" ] );
+  let out = run_clv( &[ ".version.list", "v::0" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   for line in text.lines()
@@ -353,7 +353,7 @@ fn tc118_version_list_v0_names_only()
 #[ test ]
 fn tc119_version_list_v1_has_descriptions()
 {
-  let out = run_clm( &[ ".version.list", "v::1" ] );
+  let out = run_clv( &[ ".version.list", "v::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( " \u{2014} " ) || text.contains( ": " ),
@@ -364,8 +364,8 @@ fn tc119_version_list_v1_has_descriptions()
 #[ test ]
 fn tc120_version_list_is_idempotent()
 {
-  let out1 = run_clm( &[ ".version.list" ] );
-  let out2 = run_clm( &[ ".version.list" ] );
+  let out1 = run_clv( &[ ".version.list" ] );
+  let out2 = run_clv( &[ ".version.list" ] );
   assert_exit( &out1, 0 );
   assert_exit( &out2, 0 );
   assert_eq!( stdout( &out1 ), stdout( &out2 ), "version list must be deterministic" );
@@ -375,7 +375,7 @@ fn tc120_version_list_is_idempotent()
 #[ test ]
 fn tc121_version_list_format_json_array()
 {
-  let out = run_clm( &[ ".version.list", "format::json" ] );
+  let out = run_clv( &[ ".version.list", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -388,7 +388,7 @@ fn tc121_version_list_format_json_array()
 #[ test ]
 fn tc122_version_list_includes_month()
 {
-  let out = run_clm( &[ ".version.list" ] );
+  let out = run_clv( &[ ".version.list" ] );
   assert_exit( &out, 0 );
   assert!( stdout( &out ).contains( "month" ), "output must contain 'month'" );
 }
@@ -397,7 +397,7 @@ fn tc122_version_list_includes_month()
 #[ test ]
 fn tc123_version_list_v1_shows_pinned_versions()
 {
-  let out = run_clm( &[ ".version.list", "v::1" ] );
+  let out = run_clv( &[ ".version.list", "v::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "(v" ), "v::1 must show pinned version in parens, got: {text}" );
@@ -407,7 +407,7 @@ fn tc123_version_list_v1_shows_pinned_versions()
 #[ test ]
 fn tc124_version_list_json_has_value_field()
 {
-  let out = run_clm( &[ ".version.list", "format::json" ] );
+  let out = run_clv( &[ ".version.list", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "\"value\"" ), "JSON must have 'value' field for pinned aliases: {text}" );
@@ -417,7 +417,7 @@ fn tc124_version_list_json_has_value_field()
 #[ test ]
 fn it04_version_list_bogus_param_exits_1()
 {
-  let out = run_clm( &[ ".version.list", "bogus::x" ] );
+  let out = run_clv( &[ ".version.list", "bogus::x" ] );
   assert_exit( &out, 1 );
 }
 
@@ -425,7 +425,7 @@ fn it04_version_list_bogus_param_exits_1()
 #[ test ]
 fn it05_version_list_format_xml_exits_1()
 {
-  let out = run_clm( &[ ".version.list", "format::xml" ] );
+  let out = run_clv( &[ ".version.list", "format::xml" ] );
   assert_exit( &out, 1 );
 }
 
@@ -433,7 +433,7 @@ fn it05_version_list_format_xml_exits_1()
 #[ test ]
 fn it06_version_list_v3_exits_1()
 {
-  let out = run_clm( &[ ".version.list", "v::3" ] );
+  let out = run_clv( &[ ".version.list", "v::3" ] );
   assert_exit( &out, 1 );
 }
 
@@ -441,7 +441,7 @@ fn it06_version_list_v3_exits_1()
 #[ test ]
 fn it07_version_list_format_json_valid()
 {
-  let out = run_clm( &[ ".version.list", "format::json" ] );
+  let out = run_clv( &[ ".version.list", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let t = text.trim_start();
@@ -455,9 +455,9 @@ fn it07_version_list_format_json_valid()
 #[ test ]
 fn it08_version_list_output_stable()
 {
-  let out1 = run_clm( &[ ".version.list" ] );
-  let out2 = run_clm( &[ ".version.list" ] );
-  let out3 = run_clm( &[ ".version.list" ] );
+  let out1 = run_clv( &[ ".version.list" ] );
+  let out2 = run_clv( &[ ".version.list" ] );
+  let out3 = run_clv( &[ ".version.list" ] );
   assert_exit( &out1, 0 );
   assert_exit( &out2, 0 );
   assert_exit( &out3, 0 );
@@ -474,7 +474,7 @@ fn it08_version_list_output_stable()
 #[ test ]
 fn tc137_processes_exits_0()
 {
-  let out = run_clm( &[ ".processes" ] );
+  let out = run_clv( &[ ".processes" ] );
   assert_exit( &out, 0 );
 }
 
@@ -482,7 +482,7 @@ fn tc137_processes_exits_0()
 #[ test ]
 fn tc141_processes_v0_no_crash()
 {
-  let out = run_clm( &[ ".processes", "v::0" ] );
+  let out = run_clv( &[ ".processes", "v::0" ] );
   assert_exit( &out, 0 );
 }
 
@@ -490,7 +490,7 @@ fn tc141_processes_v0_no_crash()
 #[ test ]
 fn tc144_processes_format_json_valid()
 {
-  let out = run_clm( &[ ".processes", "format::json" ] );
+  let out = run_clv( &[ ".processes", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "\"processes\"" ), "missing 'processes' key in JSON: {text}" );
@@ -504,7 +504,7 @@ fn tc144_processes_format_json_valid()
 #[ test ]
 fn tc145_processes_format_json_empty_when_no_processes()
 {
-  let out = run_clm( &[ ".processes", "format::json" ] );
+  let out = run_clv( &[ ".processes", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "\"processes\"" ), "format::json must have 'processes' key: {text}" );
@@ -517,7 +517,7 @@ fn tc145_processes_format_json_empty_when_no_processes()
 fn tc161_settings_show_file_missing_exits_2()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.show" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -530,7 +530,7 @@ fn tc162_settings_show_empty_file_exits_0()
 {
   let dir = TempDir::new().unwrap();
   write_settings( dir.path(), &[] );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.show" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -545,7 +545,7 @@ fn tc163_settings_show_valid_file()
 {
   let dir = TempDir::new().unwrap();
   write_settings( dir.path(), &[ ( "myKey", "myValue" ) ] );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.show" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -561,7 +561,7 @@ fn tc164_settings_show_v0_key_equals_value()
 {
   let dir = TempDir::new().unwrap();
   write_settings( dir.path(), &[ ( "alpha", "beta" ) ] );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.show", "v::0" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -579,7 +579,7 @@ fn tc167_settings_show_format_json()
 {
   let dir = TempDir::new().unwrap();
   write_settings( dir.path(), &[ ( "k1", "v1" ) ] );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.show", "format::json" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -597,7 +597,7 @@ fn tc170_settings_show_malformed_file_exits_2()
   let claude_dir = dir.path().join( ".claude" );
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write( claude_dir.join( "settings.json" ), "{ bad json!!" ).unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.show" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -608,7 +608,7 @@ fn tc170_settings_show_malformed_file_exits_2()
 #[ test ]
 fn tc171_settings_show_no_home_exits_2()
 {
-  let out = run_clm_with_env( &[ ".settings.show" ], &[ ( "HOME", "" ) ] );
+  let out = run_clv_with_env( &[ ".settings.show" ], &[ ( "HOME", "" ) ] );
   assert_exit( &out, 2 );
 }
 
@@ -616,7 +616,7 @@ fn tc171_settings_show_no_home_exits_2()
 #[ test ]
 fn it05_settings_show_bogus_param_exits_1()
 {
-  let out = run_clm( &[ ".settings.show", "bogus::x" ] );
+  let out = run_clv( &[ ".settings.show", "bogus::x" ] );
   assert_exit( &out, 1 );
 }
 
@@ -624,7 +624,7 @@ fn it05_settings_show_bogus_param_exits_1()
 #[ test ]
 fn it06_settings_show_format_xml_exits_1()
 {
-  let out = run_clm( &[ ".settings.show", "format::xml" ] );
+  let out = run_clv( &[ ".settings.show", "format::xml" ] );
   assert_exit( &out, 1 );
 }
 
@@ -632,7 +632,7 @@ fn it06_settings_show_format_xml_exits_1()
 #[ test ]
 fn it07_settings_show_v3_exits_1()
 {
-  let out = run_clm( &[ ".settings.show", "v::3" ] );
+  let out = run_clv( &[ ".settings.show", "v::3" ] );
   assert_exit( &out, 1 );
 }
 
@@ -644,7 +644,7 @@ fn it08_settings_show_stdout_only()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env( &[ ".settings.show" ], &[ ( "HOME", home ) ] );
+  let out = run_clv_with_env( &[ ".settings.show" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   assert!( !stdout( &out ).is_empty(), "stdout must be non-empty for valid settings" );
   assert!( stderr( &out ).is_empty(), "stderr must be empty on success: {}", stderr( &out ) );
@@ -656,7 +656,7 @@ fn it08_settings_show_stdout_only()
 #[ test ]
 fn tc174_settings_get_no_key_exits_1()
 {
-  let out = run_clm( &[ ".settings.get" ] );
+  let out = run_clv( &[ ".settings.get" ] );
   assert_exit( &out, 1 );
 }
 
@@ -666,7 +666,7 @@ fn tc176_settings_get_existing_key()
 {
   let dir = TempDir::new().unwrap();
   write_settings( dir.path(), &[ ( "myKey", "myValue" ) ] );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.get", "key::myKey" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -681,7 +681,7 @@ fn tc177_settings_get_missing_key_exits_2()
 {
   let dir = TempDir::new().unwrap();
   write_settings( dir.path(), &[ ( "existing", "val" ) ] );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.get", "key::nosuchkey" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -694,7 +694,7 @@ fn tc179_settings_get_v0_bare_value()
 {
   let dir = TempDir::new().unwrap();
   write_settings( dir.path(), &[ ( "k", "thevalue" ) ] );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.get", "key::k", "v::0" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -713,7 +713,7 @@ fn tc180_settings_get_v1_labeled()
 {
   let dir = TempDir::new().unwrap();
   write_settings( dir.path(), &[ ( "mykey", "myval" ) ] );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.get", "key::mykey", "v::1" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -729,7 +729,7 @@ fn tc182_settings_get_format_json()
 {
   let dir = TempDir::new().unwrap();
   write_settings( dir.path(), &[ ( "alpha", "omega" ) ] );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.get", "key::alpha", "format::json" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -744,7 +744,7 @@ fn tc182_settings_get_format_json()
 fn tc184_settings_get_file_missing_exits_2()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.get", "key::anything" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -757,7 +757,7 @@ fn tc184_settings_get_file_missing_exits_2()
 #[ test ]
 fn tc237_settings_get_missing_key_error_format()
 {
-  let out = run_clm( &[ ".settings.get" ] );
+  let out = run_clv( &[ ".settings.get" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!( err.contains( "key:: is required" ), "error must contain 'key:: is required': {err}" );
@@ -767,7 +767,7 @@ fn tc237_settings_get_missing_key_error_format()
 #[ test ]
 fn tc238_settings_set_missing_key_error_format()
 {
-  let out = run_clm( &[ ".settings.set" ] );
+  let out = run_clv( &[ ".settings.set" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!( err.contains( "key:: is required" ), "error must contain 'key:: is required': {err}" );
@@ -777,7 +777,7 @@ fn tc238_settings_set_missing_key_error_format()
 #[ test ]
 fn tc239_settings_set_missing_value_error_format()
 {
-  let out = run_clm( &[ ".settings.set", "key::foo" ] );
+  let out = run_clv( &[ ".settings.set", "key::foo" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!( err.contains( "value:: is required" ), "error must contain 'value:: is required': {err}" );
@@ -796,7 +796,7 @@ fn tc241_settings_show_json_preserves_types()
     claude_dir.join( "settings.json" ),
     "{\"boolKey\":true,\"numKey\":42,\"strKey\":\"hello\"}"
   ).unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.show", "format::json" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -828,7 +828,7 @@ fn tc490_settings_get_json_bool_unquoted()
   let claude_dir = dir.path().join( ".claude" );
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write( claude_dir.join( "settings.json" ), "{\"autoUpdates\":true}" ).unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.get", "key::autoUpdates", "format::json" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -848,7 +848,7 @@ fn tc491_settings_get_json_number_unquoted()
   let claude_dir = dir.path().join( ".claude" );
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write( claude_dir.join( "settings.json" ), "{\"maxRetries\":42}" ).unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.get", "key::maxRetries", "format::json" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -868,7 +868,7 @@ fn tc492_settings_get_json_string_quoted()
   let claude_dir = dir.path().join( ".claude" );
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write( claude_dir.join( "settings.json" ), "{\"name\":\"hello\"}" ).unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.get", "key::name", "format::json" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -886,7 +886,7 @@ fn tc492_settings_get_json_string_quoted()
 #[ test ]
 fn tc242_unknown_format_exits_1()
 {
-  let out = run_clm( &[ ".status", "format::xml" ] );
+  let out = run_clv( &[ ".status", "format::xml" ] );
   assert_exit( &out, 1 );
 }
 
@@ -894,7 +894,7 @@ fn tc242_unknown_format_exits_1()
 #[ test ]
 fn tc243_uppercase_format_exits_1()
 {
-  let out = run_clm( &[ ".status", "format::JSON" ] );
+  let out = run_clv( &[ ".status", "format::JSON" ] );
   assert_exit( &out, 1 );
 }
 
@@ -902,7 +902,7 @@ fn tc243_uppercase_format_exits_1()
 #[ test ]
 fn tc244_empty_format_exits_1()
 {
-  let out = run_clm( &[ ".status", "format::" ] );
+  let out = run_clv( &[ ".status", "format::" ] );
   assert_exit( &out, 1 );
 }
 
@@ -910,7 +910,7 @@ fn tc244_empty_format_exits_1()
 #[ test ]
 fn tc245_last_occurrence_wins_for_verbosity()
 {
-  let out = run_clm( &[ ".status", "v::2", "v::0" ] );
+  let out = run_clv( &[ ".status", "v::2", "v::0" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   // v::0 is last → bare output (no labels)
@@ -930,7 +930,7 @@ fn tc419_status_no_preference_no_preferred_line()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".status" ],
     &[ ( "HOME", home ) ],
   );
@@ -956,7 +956,7 @@ fn tc420_status_with_preference_shows_preferred()
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write( claude_dir.join( "settings.json" ), settings_json ).unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".status" ],
     &[ ( "HOME", home ) ],
   );
@@ -989,7 +989,7 @@ fn skip_if_no_network( out : &std::process::Output ) -> bool
 #[ test ]
 fn tc425_version_history_defaults_exit_0()
 {
-  let out = run_clm( &[ ".version.history" ] );
+  let out = run_clv( &[ ".version.history" ] );
   if skip_if_no_network( &out ) { return; }
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -1000,7 +1000,7 @@ fn tc425_version_history_defaults_exit_0()
 #[ test ]
 fn tc426_version_history_count_3()
 {
-  let out = run_clm( &[ ".version.history", "count::3", "v::0" ] );
+  let out = run_clv( &[ ".version.history", "count::3", "v::0" ] );
   if skip_if_no_network( &out ) { return; }
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -1012,7 +1012,7 @@ fn tc426_version_history_count_3()
 #[ test ]
 fn tc427_version_history_count_0_empty()
 {
-  let out = run_clm( &[ ".version.history", "count::0" ] );
+  let out = run_clv( &[ ".version.history", "count::0" ] );
   if skip_if_no_network( &out ) { return; }
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -1023,7 +1023,7 @@ fn tc427_version_history_count_0_empty()
 #[ test ]
 fn tc428_version_history_v0_bare()
 {
-  let out = run_clm( &[ ".version.history", "v::0", "count::3" ] );
+  let out = run_clv( &[ ".version.history", "v::0", "count::3" ] );
   if skip_if_no_network( &out ) { return; }
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -1043,7 +1043,7 @@ fn tc428_version_history_v0_bare()
 #[ test ]
 fn tc429_version_history_v1_with_summary()
 {
-  let out = run_clm( &[ ".version.history", "v::1", "count::3" ] );
+  let out = run_clv( &[ ".version.history", "v::1", "count::3" ] );
   if skip_if_no_network( &out ) { return; }
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -1062,7 +1062,7 @@ fn tc429_version_history_v1_with_summary()
 #[ test ]
 fn tc430_version_history_v2_full_changelog()
 {
-  let out = run_clm( &[ ".version.history", "v::2", "count::2" ] );
+  let out = run_clv( &[ ".version.history", "v::2", "count::2" ] );
   if skip_if_no_network( &out ) { return; }
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -1074,7 +1074,7 @@ fn tc430_version_history_v2_full_changelog()
 #[ test ]
 fn tc431_version_history_format_json()
 {
-  let out = run_clm( &[ ".version.history", "format::json", "count::3" ] );
+  let out = run_clv( &[ ".version.history", "format::json", "count::3" ] );
   if skip_if_no_network( &out ) { return; }
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -1088,7 +1088,7 @@ fn tc431_version_history_format_json()
 #[ test ]
 fn tc432_version_history_count_1_json()
 {
-  let out = run_clm( &[ ".version.history", "count::1", "format::json" ] );
+  let out = run_clv( &[ ".version.history", "count::1", "format::json" ] );
   if skip_if_no_network( &out ) { return; }
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -1100,7 +1100,7 @@ fn tc432_version_history_count_1_json()
 #[ test ]
 fn tc433_version_history_count_1_v0()
 {
-  let out = run_clm( &[ ".version.history", "count::1", "v::0" ] );
+  let out = run_clv( &[ ".version.history", "count::1", "v::0" ] );
   if skip_if_no_network( &out ) { return; }
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -1112,7 +1112,7 @@ fn tc433_version_history_count_1_v0()
 #[ test ]
 fn tc434_version_history_count_1_v2()
 {
-  let out = run_clm( &[ ".version.history", "count::1", "v::2" ] );
+  let out = run_clv( &[ ".version.history", "count::1", "v::2" ] );
   if skip_if_no_network( &out ) { return; }
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -1127,7 +1127,7 @@ fn tc434_version_history_count_1_v2()
 #[ test ]
 fn tc435_version_history_default_count_le_10()
 {
-  let out = run_clm( &[ ".version.history", "v::0" ] );
+  let out = run_clv( &[ ".version.history", "v::0" ] );
   if skip_if_no_network( &out ) { return; }
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -1139,7 +1139,7 @@ fn tc435_version_history_default_count_le_10()
 #[ test ]
 fn tc436_version_history_count_100_all()
 {
-  let out = run_clm( &[ ".version.history", "count::100", "v::0" ] );
+  let out = run_clv( &[ ".version.history", "count::100", "v::0" ] );
   if skip_if_no_network( &out ) { return; }
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -1152,9 +1152,9 @@ fn tc436_version_history_count_100_all()
 #[ test ]
 fn tc437_version_history_idempotent()
 {
-  let out1 = run_clm( &[ ".version.history", "count::1", "v::0" ] );
+  let out1 = run_clv( &[ ".version.history", "count::1", "v::0" ] );
   if skip_if_no_network( &out1 ) { return; }
-  let out2 = run_clm( &[ ".version.history", "count::1", "v::0" ] );
+  let out2 = run_clv( &[ ".version.history", "count::1", "v::0" ] );
   if skip_if_no_network( &out2 ) { return; }
   assert_exit( &out1, 0 );
   assert_exit( &out2, 0 );
@@ -1165,9 +1165,9 @@ fn tc437_version_history_idempotent()
 #[ test ]
 fn tc438_version_history_param_order()
 {
-  let out_a = run_clm( &[ ".version.history", "count::3", "v::0" ] );
+  let out_a = run_clv( &[ ".version.history", "count::3", "v::0" ] );
   if skip_if_no_network( &out_a ) { return; }
-  let out_b = run_clm( &[ ".version.history", "v::0", "count::3" ] );
+  let out_b = run_clv( &[ ".version.history", "v::0", "count::3" ] );
   if skip_if_no_network( &out_b ) { return; }
   assert_exit( &out_a, 0 );
   assert_exit( &out_b, 0 );
@@ -1178,7 +1178,7 @@ fn tc438_version_history_param_order()
 #[ test ]
 fn tc439_version_history_count_0_json_empty_array()
 {
-  let out = run_clm( &[ ".version.history", "count::0", "format::json" ] );
+  let out = run_clv( &[ ".version.history", "count::0", "format::json" ] );
   if skip_if_no_network( &out ) { return; }
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -1189,7 +1189,7 @@ fn tc439_version_history_count_0_json_empty_array()
 #[ test ]
 fn tc440_version_history_format_xml_exits_1()
 {
-  let out = run_clm( &[ ".version.history", "format::xml" ] );
+  let out = run_clv( &[ ".version.history", "format::xml" ] );
   assert_exit( &out, 1 );
 }
 
@@ -1197,7 +1197,7 @@ fn tc440_version_history_format_xml_exits_1()
 #[ test ]
 fn tc441_version_history_format_uppercase_exits_1()
 {
-  let out = run_clm( &[ ".version.history", "format::JSON" ] );
+  let out = run_clv( &[ ".version.history", "format::JSON" ] );
   assert_exit( &out, 1 );
 }
 
@@ -1205,7 +1205,7 @@ fn tc441_version_history_format_uppercase_exits_1()
 #[ test ]
 fn tc442_version_history_format_empty_exits_1()
 {
-  let out = run_clm( &[ ".version.history", "format::" ] );
+  let out = run_clv( &[ ".version.history", "format::" ] );
   assert_exit( &out, 1 );
 }
 
@@ -1213,7 +1213,7 @@ fn tc442_version_history_format_empty_exits_1()
 #[ test ]
 fn tc443_version_history_unknown_param_exits_1()
 {
-  let out = run_clm( &[ ".version.history", "bogus::x" ] );
+  let out = run_clv( &[ ".version.history", "bogus::x" ] );
   assert_exit( &out, 1 );
 }
 
@@ -1225,7 +1225,7 @@ fn tc443_version_history_unknown_param_exits_1()
 #[ test ]
 fn tc445_version_history_no_home_exits_2()
 {
-  let out = run_clm_with_env( &[ ".version.history" ], &[ ( "HOME", "" ) ] );
+  let out = run_clv_with_env( &[ ".version.history" ], &[ ( "HOME", "" ) ] );
   assert_exit( &out, 2 );
 }
 
@@ -1233,7 +1233,7 @@ fn tc445_version_history_no_home_exits_2()
 #[ test ]
 fn tc446_version_history_negative_count_exits_1()
 {
-  let out = run_clm( &[ ".version.history", "count::-1" ] );
+  let out = run_clv( &[ ".version.history", "count::-1" ] );
   assert_exit( &out, 1 );
 }
 
@@ -1241,7 +1241,7 @@ fn tc446_version_history_negative_count_exits_1()
 #[ test ]
 fn tc447_version_history_v_abc_exits_1()
 {
-  let out = run_clm( &[ ".version.history", "v::abc" ] );
+  let out = run_clv( &[ ".version.history", "v::abc" ] );
   assert_exit( &out, 1 );
 }
 
@@ -1249,7 +1249,7 @@ fn tc447_version_history_v_abc_exits_1()
 #[ test ]
 fn tc448_version_history_count_abc_exits_1()
 {
-  let out = run_clm( &[ ".version.history", "count::abc" ] );
+  let out = run_clv( &[ ".version.history", "count::abc" ] );
   assert_exit( &out, 1 );
 }
 
@@ -1257,7 +1257,7 @@ fn tc448_version_history_count_abc_exits_1()
 #[ test ]
 fn tc449_version_history_flag_style_exits_1()
 {
-  let out = run_clm( &[ ".version.history", "--verbose" ] );
+  let out = run_clv( &[ ".version.history", "--verbose" ] );
   assert_exit( &out, 1 );
 }
 
@@ -1289,7 +1289,7 @@ fn tc450_version_history_utf8_body_preserved()
      \"body\": \"- Feature with em{em_dash}dash and smart{rt_quote}s\"}}]"
   );
   std::fs::write( cache_dir.join( "version_history_cache.json" ), &cache_json ).unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.history", "v::2", "count::1" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );

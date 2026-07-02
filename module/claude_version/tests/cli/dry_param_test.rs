@@ -6,13 +6,13 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stdout };
 
 /// EC-10: `dry::` only for mutation commands — rejected on `.version.list`
 #[ test ]
 fn dry_ec10_command_scope_rejects_on_read()
 {
-  let out = run_clm( &[ ".version.list", "dry::1" ] );
+  let out = run_clv( &[ ".version.list", "dry::1" ] );
   assert_exit( &out, 1 );
 }
 
@@ -20,7 +20,7 @@ fn dry_ec10_command_scope_rejects_on_read()
 #[ test ]
 fn dry_ec11_processes_kill_dry_run()
 {
-  let out = run_clm( &[ ".processes.kill", "dry::1" ] );
+  let out = run_clv( &[ ".processes.kill", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "[dry-run]" ) || text.contains( "dry" ) || text.contains( "no active" ),
@@ -33,7 +33,7 @@ fn dry_ec12_settings_set_dry_no_file()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.set", "key::theme", "value::dark", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -48,7 +48,7 @@ fn dry_ec12_settings_set_dry_no_file()
 #[ test ]
 fn dry_ec13_processes_kill_dry_wins_over_force()
 {
-  let out = run_clm( &[ ".processes.kill", "dry::1", "force::1" ] );
+  let out = run_clv( &[ ".processes.kill", "dry::1", "force::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(

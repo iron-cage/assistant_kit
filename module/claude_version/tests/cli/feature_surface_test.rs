@@ -28,7 +28,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stdout, write_settings };
 
 // ─── FT-3 (feature/003_settings_management.md): set+get round-trip ───────────
 
@@ -39,13 +39,13 @@ fn ft003_settings_set_get_round_trip()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let set_out = run_clm_with_env(
+  let set_out = run_clv_with_env(
     &[ ".settings.set", "key::color", "value::blue" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &set_out, 0 );
 
-  let get_out = run_clm_with_env(
+  let get_out = run_clv_with_env(
     &[ ".settings.get", "key::color" ],
     &[ ( "HOME", home ) ],
   );
@@ -62,7 +62,7 @@ fn ft004_processes_kill_force_no_procs()
 {
   // Use PATH="" so no `claude` binary is found in /proc scan from subprocess lookup,
   // though /proc scan is global. The test verifies the force path exits cleanly.
-  let out = run_clm( &[ ".processes.kill", "force::1" ] );
+  let out = run_clv( &[ ".processes.kill", "force::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "no active" ) || text.contains( "process" ),
@@ -75,7 +75,7 @@ fn ft004_processes_kill_force_no_procs()
 #[ test ]
 fn ft005_1_unknown_param_exits_1()
 {
-  let out = run_clm( &[ ".status", "bogus::x" ] );
+  let out = run_clv( &[ ".status", "bogus::x" ] );
   assert_exit( &out, 1 );
 }
 
@@ -85,7 +85,7 @@ fn ft005_1_unknown_param_exits_1()
 #[ test ]
 fn ft005_2_empty_bool_param_value_exits_1()
 {
-  let out = run_clm( &[ ".version.install", "dry::" ] );
+  let out = run_clv( &[ ".version.install", "dry::" ] );
   assert_exit( &out, 1 );
 }
 
@@ -96,7 +96,7 @@ fn ft005_2_empty_bool_param_value_exits_1()
 fn ft005_3_last_param_wins()
 {
   // stable is first, month is last → month (2.1.74) must win
-  let out = run_clm( &[ ".version.install", "version::stable", "version::month", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::stable", "version::month", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "2.1.74" ), "last version:: param (month=2.1.74) must win: {text}" );
@@ -136,7 +136,7 @@ fn ft1_007_params_show_all_min_entries()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -161,7 +161,7 @@ fn ft2_007_params_single_model_full_detail()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "model", "claude-sonnet-5" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::model" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -181,7 +181,7 @@ fn ft3_007_params_kind_config_filters()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "kind::config" ],
     &[ ( "HOME", home ) ],
   );
@@ -200,7 +200,7 @@ fn ft4_007_params_kind_env_filters()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "kind::env" ],
     &[ ( "HOME", home ) ],
   );
@@ -219,7 +219,7 @@ fn ft5_007_params_env_override_visible()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::model" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
   );
@@ -238,7 +238,7 @@ fn ft6_007_params_env_only_param()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::bash_timeout" ],
     &[ ( "HOME", home ), ( "CLAUDE_CODE_BASH_TIMEOUT", "" ) ],
   );
@@ -257,7 +257,7 @@ fn ft7_007_params_json_output_structure()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "format::json" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -278,7 +278,7 @@ fn ft8_007_params_cli_only_annotation()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::print" ],
     &[ ( "HOME", home ) ],
   );
@@ -298,7 +298,7 @@ fn ft8_007_params_cli_only_annotation()
 #[ test ]
 fn ft9_007_params_unknown_key_exits_2()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::NONEXISTENT" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -311,7 +311,7 @@ fn ft9_007_params_unknown_key_exits_2()
 #[ test ]
 fn ft10_007_params_invalid_kind_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "kind::badvalue" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -352,7 +352,7 @@ fn ft12_007_params_show_all_alphabetical()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );

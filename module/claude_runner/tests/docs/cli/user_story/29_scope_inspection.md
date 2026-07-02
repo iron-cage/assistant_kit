@@ -6,14 +6,14 @@ Test case spec for [029_scope_inspection.md](../../../../docs/cli/user_story/029
 
 | ID | Test Name | AC | Status |
 |----|-----------|-----|--------|
-| US-1 | `clr scope` (no args) prints 6 vars for CWD | AC-1 | ⏳ |
-| US-2 | `clr scope --dir <path>` prints 6 vars for that directory | AC-2 | ⏳ |
-| US-3 | `CLAUDE_SESSION_FILE` populated when session file exists | AC-3 | ⏳ |
-| US-4 | `CLAUDE_SESSION_FILE=` printed empty when no session history | AC-4 | ⏳ |
-| US-5 | `CLAUDE_HOME` override reflected in all 6 variables | AC-5 | ⏳ |
-| US-6 | `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE` reflected in memory vars | AC-6 | ⏳ |
-| US-7 | Output is eval-safe `key=value` format, one var per line | AC-7 | ⏳ |
-| US-8 | Exit 0 on success; exit 1 when `--dir` path does not exist | AC-8 | ⏳ |
+| US-1 | `clr scope` (no args) prints 6 vars for CWD | AC-1 | ✅ |
+| US-2 | `clr scope --dir <path>` prints 6 vars for that directory | AC-2 | ✅ |
+| US-3 | `CLAUDE_SESSION_FILE` populated when session file exists | AC-3 | ✅ |
+| US-4 | `CLAUDE_SESSION_FILE=` printed empty when no session history | AC-4 | ✅ |
+| US-5 | `CLAUDE_HOME` override reflected in all 6 variables | AC-5 | ✅ |
+| US-6 | `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE` reflected in memory vars | AC-6 | ✅ |
+| US-7 | Output is eval-safe `key=value` format, one var per line | AC-7 | ✅ |
+| US-8 | Exit 0 on success; exit 1 when `--dir` path does not exist | AC-8 | ✅ |
 
 ---
 

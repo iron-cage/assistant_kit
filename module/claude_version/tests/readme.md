@@ -45,3 +45,5 @@ Unit and integration tests for `claude_version`.
 | `cli/value_param_test.rs` | EC- edge case tests for the `value::` parameter |
 | `cli/count_param_test.rs` | EC- edge case tests for the `count::` parameter |
 | `cli/process_isolation_test.rs` | Kill-isolation regression: guard does not send kill signals |
+| `cli/params_command_test.rs` | `.params` command integration tests |
+| `cli/kind_param_test.rs` | EC- edge case tests for the `kind::` parameter |

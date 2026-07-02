@@ -32,7 +32,7 @@ use tempfile::TempDir;
 use claude_version_core::config_catalog;
 use claude_version_core::config_resolve::{ resolve, Layer };
 
-use crate::subprocess_helpers::{ assert_exit, run_clm_with_env };
+use crate::subprocess_helpers::{ assert_exit, run_clv_with_env };
 
 // ─── AC-4: finite float stored as JSON float ──────────────────────────────────
 
@@ -41,7 +41,7 @@ use crate::subprocess_helpers::{ assert_exit, run_clm_with_env };
 fn ac004_float_inference()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::pi", "value::3.14" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -60,7 +60,7 @@ fn ac004_float_inference()
 fn ac005_nan_stores_string()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::bad", "value::nan" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );

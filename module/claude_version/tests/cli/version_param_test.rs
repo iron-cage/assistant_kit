@@ -3,13 +3,13 @@
 //! Covers gap cases from `tests/docs/cli/param/01_version.md`.
 //! EC-1 through EC-6 are in `cli_args_test.rs`.
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, stdout };
 
 /// EC-7: `version::LATEST` → wrong case, exit 1
 #[ test ]
 fn version_ec7_latest_wrong_case_exits_1()
 {
-  let out = run_clm( &[ ".version.install", "version::LATEST" ] );
+  let out = run_clv( &[ ".version.install", "version::LATEST" ] );
   assert_exit( &out, 1 );
 }
 
@@ -17,7 +17,7 @@ fn version_ec7_latest_wrong_case_exits_1()
 #[ test ]
 fn version_ec8_month_wrong_case_exits_1()
 {
-  let out = run_clm( &[ ".version.install", "version::MONTH" ] );
+  let out = run_clv( &[ ".version.install", "version::MONTH" ] );
   assert_exit( &out, 1 );
 }
 
@@ -25,7 +25,7 @@ fn version_ec8_month_wrong_case_exits_1()
 #[ test ]
 fn version_ec9_command_scope_rejects_on_processes()
 {
-  let out = run_clm( &[ ".processes", "version::stable" ] );
+  let out = run_clv( &[ ".processes", "version::stable" ] );
   assert_exit( &out, 1 );
 }
 
@@ -33,7 +33,7 @@ fn version_ec9_command_scope_rejects_on_processes()
 #[ test ]
 fn version_ec10_stable_alias_dry()
 {
-  let out = run_clm( &[ ".version.install", "version::stable", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::stable", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "stable" ), "output must reference stable alias: {text}" );
@@ -43,7 +43,7 @@ fn version_ec10_stable_alias_dry()
 #[ test ]
 fn version_ec11_month_alias_dry()
 {
-  let out = run_clm( &[ ".version.install", "version::month", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::month", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "month" ), "output must reference month alias: {text}" );
@@ -53,7 +53,7 @@ fn version_ec11_month_alias_dry()
 #[ test ]
 fn version_ec12_latest_alias_dry()
 {
-  let out = run_clm( &[ ".version.install", "version::latest", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::latest", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "latest" ), "output must reference latest alias: {text}" );
@@ -63,7 +63,7 @@ fn version_ec12_latest_alias_dry()
 #[ test ]
 fn version_ec13_exact_semver_dry()
 {
-  let out = run_clm( &[ ".version.install", "version::1.2.3", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::1.2.3", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "1.2.3" ), "output must contain 1.2.3: {text}" );
@@ -73,7 +73,7 @@ fn version_ec13_exact_semver_dry()
 #[ test ]
 fn version_ec14_older_semver_dry()
 {
-  let out = run_clm( &[ ".version.install", "version::2.1.50", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::2.1.50", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "2.1.50" ), "output must contain 2.1.50: {text}" );
@@ -83,7 +83,7 @@ fn version_ec14_older_semver_dry()
 #[ test ]
 fn version_ec15_zero_patch_semver_dry()
 {
-  let out = run_clm( &[ ".version.install", "version::0.0.0", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::0.0.0", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "0.0.0" ), "zero-patch semver must appear in dry-run output: {text}" );
@@ -93,6 +93,6 @@ fn version_ec15_zero_patch_semver_dry()
 #[ test ]
 fn version_ec16_unknown_alias_exits_1()
 {
-  let out = run_clm( &[ ".version.install", "version::x" ] );
+  let out = run_clv( &[ ".version.install", "version::x" ] );
   assert_exit( &out, 1 );
 }

@@ -12,7 +12,7 @@
 //! | feature/005_cli_design.md | FT-8 | D4 | `ft005_8_cmd_not_implemented_exit2` |
 //! | feature/005_cli_design.md | FT-9 | D7 | `ft005_9_per_cmd_validation` |
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stderr, stdout };
 
 // ─── FT-6 (D3): boolean parameters use 0/1 only ──────────────────────────────
 
@@ -20,7 +20,7 @@ use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr,
 #[ test ]
 fn ft005_6_bool_true_rejected()
 {
-  let out = run_clm( &[ ".version.install", "dry::true" ] );
+  let out = run_clv( &[ ".version.install", "dry::true" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!( !err.is_empty(), "bool value 'true' rejection must produce error message: {err}" );
@@ -32,7 +32,7 @@ fn ft005_6_bool_true_rejected()
 #[ test ]
 fn ft005_7_last_v_wins()
 {
-  let out = run_clm( &[ ".status", "v::0", "v::2" ] );
+  let out = run_clv( &[ ".status", "v::0", "v::2" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   // v::2 produces labeled output; v::0 would suppress labels
@@ -54,7 +54,7 @@ fn ft005_8_cmd_not_implemented_exit2()
   //   2. get_claude_version_raw()   — runs `bash -c "claude --version"` (needs PATH)
   // Clearing PATH alone is insufficient when a symlink exists; HOME must also be cleared
   // so that get_version_from_symlink() fails, guaranteeing InternalError → exit 2.
-  let out = run_clm_with_env( &[ ".version.show" ], &[ ( "HOME", "" ), ( "PATH", "" ) ] );
+  let out = run_clv_with_env( &[ ".version.show" ], &[ ( "HOME", "" ), ( "PATH", "" ) ] );
   assert_exit( &out, 2 );
 }
 
@@ -64,7 +64,7 @@ fn ft005_8_cmd_not_implemented_exit2()
 #[ test ]
 fn ft005_9_per_cmd_validation()
 {
-  let out = run_clm( &[ ".settings.set", "format::json", "key::k", "value::v" ] );
+  let out = run_clv( &[ ".settings.set", "format::json", "key::k", "value::v" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(

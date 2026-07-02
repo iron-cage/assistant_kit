@@ -274,7 +274,7 @@ fn apply_isolated_expect( stdout : &str, expect : Option< &str >, strategy : Opt
 /// Pitfall: this function duplicates the temp-HOME lifecycle from `run_isolated()` in
 /// `claude_runner_core` to avoid modifying out-of-scope code. If `run_isolated()` gains
 /// new setup steps, update both together.
-#[ allow( clippy::too_many_lines ) ]
+#[ allow( clippy::too_many_lines ) ] // subprocess lifecycle — setup, spawn, drain, and cleanup steps cannot be split without losing clarity
 fn run_isolated_with_stdin_file
 (
   credentials_json : &str,

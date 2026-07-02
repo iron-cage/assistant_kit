@@ -39,8 +39,8 @@ use crate::{ encode_path, SessionId };
 /// # Returns
 ///
 /// `Some(PathBuf)` with the `~/.claude/projects/{encoded}/` path,
-/// or `None` if `HOME` is not set or the path cannot be encoded
-/// (empty path, invalid UTF-8).
+/// or `None` if neither `CLAUDE_HOME` nor `HOME` is set, or the path cannot
+/// be encoded (empty path, invalid UTF-8).
 ///
 /// # Examples
 ///
@@ -54,19 +54,24 @@ use crate::{ encode_path, SessionId };
 ///   println!( "Claude stores sessions at: {}", storage.display() );
 /// }
 /// ```
+// Fix(TSK-338): honour CLAUDE_HOME override — consistent with scope_for().
+// Root cause: CLAUDE_HOME was never consulted; to_storage_path_for() always used
+//   $HOME/.claude, diverging from scope_for() when CLAUDE_HOME is set.
+//   Default continuation detection (no --session-from) looked in the wrong dir.
+// Pitfall: CLAUDE_HOME replaces the entire base — do NOT append .claude; only
+//   the HOME fallback appends .claude (single suffix, matching scope_for()).
 #[ inline ]
 #[ must_use ]
 pub fn to_storage_path_for( session_dir : &Path ) -> Option< PathBuf >
 {
-  let home_dir = std::env::var( "HOME" ).ok()?;
+  let claude_base = std::env::var( "CLAUDE_HOME" )
+    .map( PathBuf::from )
+    .or_else( | _ |
+      std::env::var( "HOME" ).map( | h | PathBuf::from( h ).join( ".claude" ) )
+    )
+    .ok()?;
   let encoded = encode_path( session_dir ).ok()?;
-  Some
-  (
-    PathBuf::from( home_dir )
-      .join( ".claude" )
-      .join( "projects" )
-      .join( encoded )
-  )
+  Some( claude_base.join( "projects" ).join( encoded ) )
 }
 
 /// Return the `SessionId` of the most-recently-modified qualifying `.jsonl` session

@@ -6,7 +6,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stdout, write_settings };
 
 /// EC-12: `.status v::0` → 3 bare lines with no label prefixes
 #[ test ]
@@ -15,7 +15,7 @@ fn verbosity_ec12_status_v0_bare_lines()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[] );
-  let out  = run_clm_with_env( &[ ".status", "v::0" ], &[ ( "HOME", home ) ] );
+  let out  = run_clv_with_env( &[ ".status", "v::0" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( !text.contains( "Version:" ), "v::0 must not have label prefixes: {text}" );
@@ -26,7 +26,7 @@ fn verbosity_ec12_status_v0_bare_lines()
 #[ test ]
 fn verbosity_ec13_status_v1_labeled_lines()
 {
-  let out = run_clm( &[ ".status", "v::1" ] );
+  let out = run_clv( &[ ".status", "v::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -39,7 +39,7 @@ fn verbosity_ec13_status_v1_labeled_lines()
 #[ test ]
 fn verbosity_ec14_version_show_v0_bare_semver()
 {
-  let out = run_clm( &[ ".version.show", "v::0" ] );
+  let out = run_clv( &[ ".version.show", "v::0" ] );
   // may exit 2 if claude not in PATH; only check label absent if exit 0
   if out.status.code() == Some( 0 )
   {
@@ -52,7 +52,7 @@ fn verbosity_ec14_version_show_v0_bare_semver()
 #[ test ]
 fn verbosity_ec15_version_show_v1_labeled()
 {
-  let out = run_clm( &[ ".version.show", "v::1" ] );
+  let out = run_clv( &[ ".version.show", "v::1" ] );
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
@@ -64,7 +64,7 @@ fn verbosity_ec15_version_show_v1_labeled()
 #[ test ]
 fn verbosity_ec16_version_list_v0_names_only()
 {
-  let out = run_clm( &[ ".version.list", "v::0" ] );
+  let out = run_clv( &[ ".version.list", "v::0" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "stable" ), "v::0 list must include alias names: {text}" );
@@ -76,7 +76,7 @@ fn verbosity_ec16_version_list_v0_names_only()
 #[ test ]
 fn verbosity_ec17_version_list_v1_with_descriptions()
 {
-  let out = run_clm( &[ ".version.list", "v::1" ] );
+  let out = run_clv( &[ ".version.list", "v::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "stable" ), "v::1 list must include stable alias: {text}" );
@@ -90,7 +90,7 @@ fn verbosity_ec18_settings_show_v0_compact_format()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "myKey", "myVal" ) ] );
-  let out  = run_clm_with_env( &[ ".settings.show", "v::0" ], &[ ( "HOME", home ) ] );
+  let out  = run_clv_with_env( &[ ".settings.show", "v::0" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "myKey=myVal" ), "v::0 must show key=value format: {text}" );
@@ -103,7 +103,7 @@ fn verbosity_ec19_settings_get_v0_bare_value()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "myKey", "myVal" ) ] );
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.get", "key::myKey", "v::0" ],
     &[ ( "HOME", home ) ],
   );
@@ -116,7 +116,7 @@ fn verbosity_ec19_settings_get_v0_bare_value()
 #[ test ]
 fn verbosity_ec20_history_v0_bare_lines()
 {
-  let out = run_clm( &[ ".version.history", "v::0", "count::3" ] );
+  let out = run_clv( &[ ".version.history", "v::0", "count::3" ] );
   // allow exit 2 (network unavailable) — only verify format if exit 0
   if out.status.code() == Some( 0 )
   {
@@ -130,7 +130,7 @@ fn verbosity_ec20_history_v0_bare_lines()
 #[ test ]
 fn verbosity_ec21_history_v2_full_changelog()
 {
-  let out = run_clm( &[ ".version.history", "v::2", "count::2" ] );
+  let out = run_clv( &[ ".version.history", "v::2", "count::2" ] );
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );

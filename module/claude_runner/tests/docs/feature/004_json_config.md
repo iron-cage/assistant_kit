@@ -14,6 +14,7 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 | JC-6 | Invalid JSON in config file → exit 1 with parse error | Error Handling |
 | JC-7 | Non-existent `--args-file` path → exit 1 with file-not-found | Error Handling |
 | JC-8 | Boolean flag `true` activates flag; `false` is no-op | Boolean Handling |
+| JC-8b | Boolean flag `false` is a no-op — subprocess spawned | Boolean Handling |
 | JC-9 | Unknown JSON key silently ignored; other keys applied | Forward Compat |
 | JC-10 | JSON config applies to `isolated` subcommand | Subcommand |
 
@@ -24,11 +25,11 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 - Env Var: 1 test (JC-4)
 - Stdin Pipe: 1 test (JC-5)
 - Error Handling: 2 tests (JC-6, JC-7)
-- Boolean Handling: 1 test (JC-8)
+- Boolean Handling: 2 tests (JC-8, JC-8b)
 - Forward Compat: 1 test (JC-9)
 - Subcommand: 1 test (JC-10)
 
-**Total:** 10 tests
+**Total:** 11 tests
 
 ---
 
@@ -120,6 +121,17 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 
 ---
 
+### JC-8b: Boolean flag `false` is a no-op — subprocess spawned
+
+- **Given:** JSON file containing `{"dry-run": false}`; fake claude binary in PATH that emits a recognisable token to stdout
+- **When:** `clr --args-file <tmp/cfg.json> "task"` (no `--dry-run` on CLI)
+- **Then:** subprocess is spawned and its output appears in stdout; `false` does not activate the flag; dry-run mode is NOT entered
+- **Exit:** 0 (from fake claude)
+- **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-008 (false-branch); [cli/param/075_args_file.md](../../../../docs/cli/param/075_args_file.md)
+- **Implemented by:** `json_config_test.rs::jc8b_boolean_false_is_noop_subprocess_spawned`
+
+---
+
 ### JC-9: Unknown JSON key silently ignored; other keys applied
 
 - **Given:** JSON file containing `{"_future_param": "x", "max-sessions": 0}` (one unknown key, one known)
@@ -135,7 +147,7 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 
 - **Given:** JSON file containing `{"dir": "/tmp"}` at a temp path; `CLR_ARGS_FILE` set to that path; fake creds file
 - **When:** `CLR_ARGS_FILE=<tmp/cfg.json> clr isolated --creds <creds> --dry-run`
-- **Then:** isolated dry-run trace (stderr) contains "/tmp"; param applies cross-subcommand
+- **Then:** isolated dry-run preview (stdout) contains "/tmp"; param applies cross-subcommand
 - **Exit:** 0
 - **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-010
 - **Implemented by:** `json_config_test.rs::jc10_json_config_applies_to_isolated`

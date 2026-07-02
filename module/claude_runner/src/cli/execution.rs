@@ -598,7 +598,7 @@ fn default_print_timeout() -> u32
 /// Every error class is retried when its effective count > 0.
 /// Console output uses `[Class] <message>` format on stderr.
 /// Supports subprocess timeout via `--timeout` (0 = unlimited; absent = `DEFAULT_PRINT_TIMEOUT_SECS`).
-#[ allow( clippy::too_many_lines ) ]
+#[ allow( clippy::too_many_lines ) ] // retry orchestration — per-class attempt counters, delay logic, and exit handling in one coherent loop
 pub( super ) fn run_print_mode(
   builder             : &ClaudeCommand,
   cli                 : &CliArgs,
@@ -667,14 +667,12 @@ pub( super ) fn run_print_mode(
       // Pitfall: classify_error() scans stdout AND stderr — rate-limit reason may be in stdout.
       let kind = output.classify_error();
       let class = classify_to_class( kind.as_ref(), output.exit_code );
-      // Fix(BUG-315): auth errors exit immediately without sleeping (fail-fast).
-      // Root cause: retry loop had no is_auth_error guard; auth failures burned retry
-      //   budget sleeping between guaranteed re-failures — same stale credential, same
-      //   401 outcome. Auth failures cannot be recovered without credential injection.
+      // Fix(BUG-325): Auth uses the same 3-tier retry resolution as all other classes.
+      // Root cause: BUG-315 introduced `!is_auth_error` guard that blocked retry-block
+      //   entry unconditionally, making `--retry-on-auth` a dead parameter.
       // Pitfall: never use `break` inside this retry block — break exits the loop and
       //   falls through to the function's implicit return (), bypassing the
       //   process::exit(exit_code) call below. Guard the block ENTRY instead.
-      let is_auth_error = matches!( class, ErrorClass::Auth );
       let class_idx = class as usize;
       let label = class.label();
       let ( count_field, delay_field ) = class_fields( cli, class );
@@ -683,7 +681,7 @@ pub( super ) fn run_print_mode(
       let use_summary = cli.output_style.as_deref().unwrap_or( "summary" ) == "summary";
       let msg = first_message( &output, class, use_summary );
 
-      if !is_auth_error && attempts[ class_idx ] < limit
+      if attempts[ class_idx ] < limit
       {
         attempts[ class_idx ] += 1;
         if !cli.quiet

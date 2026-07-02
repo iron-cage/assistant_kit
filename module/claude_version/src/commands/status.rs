@@ -12,13 +12,10 @@ use claude_version_core::version::{
 
 /// Read the active account name from the credential store `_active` marker.
 ///
-/// Checks `$PRO/.persistent/claude/credential/_active` first, falling back to
-/// `$HOME/.persistent/claude/credential/_active`.
+/// Checks `$HOME/.persistent/claude/credential/_active`.
 fn get_active_account() -> Option< String >
 {
-  let root = std::env::var_os( "PRO" )
-    .filter( | v | !v.is_empty() )
-    .or_else( || std::env::var_os( "HOME" ).filter( | v | !v.is_empty() ) )?;
+  let root = std::env::var_os( "HOME" ).filter( | v | !v.is_empty() )?;
   let marker = std::path::Path::new( &root )
     .join( ".persistent" ).join( "claude" ).join( "credential" ).join( "_active" );
   std::fs::read_to_string( marker )

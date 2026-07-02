@@ -10,6 +10,7 @@ mod gate;
 mod ps;
 mod kill;
 mod tools;
+mod scope;
 mod summary;
 mod json_config;
 // summary_unit_test.rs (external test) imports render_summary/resolve_fields via the public API.
@@ -35,6 +36,7 @@ use gate::wait_for_session_slot;
 pub( super ) use ps::dispatch_ps;
 pub( super ) use kill::dispatch_kill;
 pub( super ) use tools::dispatch_tools;
+pub( crate ) use scope::dispatch_scope;
 
 pub( super ) use parse::parse_args;
 pub( super ) use env::apply_env_vars;
@@ -59,7 +61,7 @@ pub( super ) fn handle_dry_run( builder : &ClaudeCommand )
 // Fix(BUG-212): `run` was absent; typing `clr running` produced no helpful error.
 // Root cause: list was never updated when `run` became an explicit subcommand.
 // Pitfall: update both this list and the dispatch match in lib.rs when adding a subcommand.
-const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill", "tools" ];
+const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill", "tools", "scope" ];
 
 // Fix(BUG-225): Guard against typos/truncations of known subcommand names.
 // Root cause: `run_cli()` dispatched subcommands by exact string match only — any

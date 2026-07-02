@@ -6,12 +6,12 @@
 //! # Binary Name Coupling
 //!
 //! The compile-time macro `env!("CARGO_BIN_EXE_claude_version")` inside
-//! `run_clm_with_env` is tightly coupled to `[[bin]] name = "claude_version"`
+//! `run_clv_with_env` is tightly coupled to `[[bin]] name = "claude_version"`
 //! in `Cargo.toml`.  If the binary is ever renamed, both must change atomically —
 //! a partial rename compiles fine locally (cached artefact) but breaks on a clean build:
 //!
 //! 1. `Cargo.toml` — `[[bin]] name`
-//! 2. `env!("CARGO_BIN_EXE_<name>")` in `run_clm_with_env`
+//! 2. `env!("CARGO_BIN_EXE_<name>")` in `run_clv_with_env`
 
 fn assert_container()
 {
@@ -27,19 +27,19 @@ fn assert_container()
   );
 }
 
-/// Run `clm` with the given arguments and return the full output.
+/// Run `clv` with the given arguments and return the full output.
 ///
 /// # Panics
 ///
 /// Panics if the binary cannot be executed.
 #[ inline ]
 #[ must_use ]
-pub fn run_clm( args : &[ &str ] ) -> std::process::Output
+pub fn run_clv( args : &[ &str ] ) -> std::process::Output
 {
-  run_clm_with_env( args, &[] )
+  run_clv_with_env( args, &[] )
 }
 
-/// Run `clm` with arguments and explicit environment overrides.
+/// Run `clv` with arguments and explicit environment overrides.
 ///
 /// `env_overrides` is a list of `(key, value)` pairs appended to the
 /// inherited environment.  Use `HOME` to isolate from the real `~/.claude/`.
@@ -49,7 +49,7 @@ pub fn run_clm( args : &[ &str ] ) -> std::process::Output
 /// Panics if the binary cannot be executed.
 #[ inline ]
 #[ must_use ]
-pub fn run_clm_with_env(
+pub fn run_clv_with_env(
   args         : &[ &str ],
   env_overrides : &[ ( &str, &str ) ],
 ) -> std::process::Output
@@ -96,6 +96,11 @@ pub fn write_settings(
   std::fs::write( &path, json ).unwrap();
 }
 
+/// Path segments for the credential store directory, relative to `$HOME`.
+///
+/// Used by [`write_account`] to locate `_active` and individual credential files.
+const CREDENTIAL_PATH : &[ &str ] = &[ ".persistent", "claude", "credential" ];
+
 /// Write a credential file into `{home_dir}/.persistent/claude/credential/{name}.credentials.json`
 /// and optionally write `_active` to mark it as active.
 ///
@@ -109,15 +114,13 @@ pub fn write_account(
   make_active : bool,
 )
 {
-  let credential_store = home_dir.join( ".persistent" ).join( "claude" ).join( "credential" );
+  let credential_store = CREDENTIAL_PATH
+    .iter()
+    .fold( home_dir.to_path_buf(), | p, seg | p.join( seg ) );
   std::fs::create_dir_all( &credential_store ).unwrap();
 
-  // Minimal credential JSON (expires far in the future)
-  let expires_ms = 9_999_999_999_000_u64; // year ~2286
-  let cred_json = format!(
-    r#"{{"oauthAccount":{{"subscriptionType":"pro","rateLimitTier":"standard"}},"expiresAt":{expires_ms}}}"#
-  );
-  std::fs::write( credential_store.join( format!( "{name}.credentials.json" ) ), &cred_json ).unwrap();
+  // Minimal credential stub — clv reads only `_active`; credential file content is not parsed.
+  std::fs::write( credential_store.join( format!( "{name}.credentials.json" ) ), b"{}" ).unwrap();
 
   if make_active
   {
