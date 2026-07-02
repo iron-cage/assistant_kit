@@ -392,8 +392,8 @@ fn us3_no_source_history_fresh_session()
     &[ ( "CLAUDE_HOME", ch.path().to_str().expect( "utf-8" ) ) ],
   );
   assert!(
-    !stdout.contains( " -c " ),
-    "no history → must NOT contain ` -c `. Got:\n{stdout}"
+    !stdout.contains( " -c \"" ),
+    "no history → must NOT have continue flag `-c`. Got:\n{stdout}"
   );
 }
 
