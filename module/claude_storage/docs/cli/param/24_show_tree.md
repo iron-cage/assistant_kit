@@ -34,15 +34,15 @@ show_tree::1    # Tree-indented agents under root sessions
 |------|------|-------------|----------------|
 | Boolean | Base type | Boolean flag | `0` (false) or `1` (true) |
 
-### Referenced Commands
-| # | Command | Default | Notes |
-|---|---------|---------|-------|
-| 7 | [`.projects`](../command/07_projects.md) | `0` | Tree-indented agent display instead of compact |
-
 ### Referenced Parameter Groups
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
 | 1 | [Output Control](../param_group/01_output_control.md) | Full | `show_stat::`, `show_tokens::` |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 7 | [`.projects`](../command/07_projects.md) | `0` | Tree-indented agent display instead of compact |
 
 ### Referenced User Stories
 | # | User Story | Persona |

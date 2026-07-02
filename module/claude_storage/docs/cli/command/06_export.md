@@ -59,14 +59,6 @@ claude_storage .export session_id::ID output::PATH scope::global
 - Both `session_id::` and `output::` are required; command exits with `1` if either is missing
 - Output file is overwritten without warning if it already exists
 
-### Referenced Parameter Groups
-
-| # | Group | Membership | Excluded Params |
-|---|-------|------------|-----------------|
-| 2 | [Project Scope](../param_group/02_project_scope.md) | Full | — |
-| 3 | [Session Identification](../param_group/03_session_identification.md) | Full | — |
-| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Full | — |
-
 ### Referenced Formats
 
 | # | Format | Role |
@@ -74,6 +66,14 @@ claude_storage .export session_id::ID output::PATH scope::global
 | 1 | [markdown](../format/01_markdown.md) | Default human-readable transcript output |
 | 2 | [json](../format/02_json.md) | Machine-parseable structured export |
 | 3 | [text](../format/03_text.md) | Plain text transcript output |
+
+### Referenced Parameter Groups
+
+| # | Group | Membership | Excluded Params |
+|---|-------|------------|-----------------|
+| 2 | [Project Scope](../param_group/02_project_scope.md) | Full | — |
+| 3 | [Session Identification](../param_group/03_session_identification.md) | Full | — |
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Full | — |
 
 ### Referenced Parameters
 

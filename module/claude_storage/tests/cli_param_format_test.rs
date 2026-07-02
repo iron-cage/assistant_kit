@@ -18,12 +18,6 @@ mod common;
 
 use tempfile::TempDir;
 
-#[ allow( dead_code ) ]
-fn stdout( out : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
-
 fn stderr( out : &std::process::Output ) -> String
 {
   String::from_utf8_lossy( &out.stderr ).into_owned()

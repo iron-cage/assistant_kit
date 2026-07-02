@@ -48,6 +48,11 @@ project::nonexistent    # Project not found error
 |------|------|-------------|----------------|
 | [`ProjectId`](../type/05_project_id.md) | String (multi-format) | String | Non-empty; project must exist in storage |
 
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 2 | [Project Scope](../param_group/02_project_scope.md) | Full | *(sole member)* |
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
@@ -57,13 +62,7 @@ project::nonexistent    # Project not found error
 | 5 | [`.search`](../command/05_search.md) | — | Restricts search to this project |
 | 6 | [`.export`](../command/06_export.md) | current dir | Source project for session lookup |
 
-### Referenced Parameter Groups
-| # | Group | Membership | Co-members |
-|---|-------|------------|------------|
-| 2 | [Project Scope](../param_group/02_project_scope.md) | Full | *(sole member)* |
-
 ### Referenced User Stories
 | # | User Story | Persona |
 |---|------------|---------|
 | 2 | [Find Past Conversation](../user_story/002_find_past_conversation.md) | developer |
-| 5 | [Resume Claude Session](../user_story/005_resume_claude_session.md) | developer |

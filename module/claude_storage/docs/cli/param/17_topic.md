@@ -44,6 +44,10 @@ topic::-default_topic   # (legal — creates /-default_topic... but convention i
 |------|------|-------------|----------------|
 | [`TopicName`](../type/12_topic_name.md) | String (identifier) | String | Non-empty; no `/` characters; no leading `-` |
 
+### Referenced Parameter Groups
+
+None.
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
@@ -51,10 +55,6 @@ topic::-default_topic   # (legal — creates /-default_topic... but convention i
 | 9 | [`.project.exists`](../command/09_project_exists.md) | unset | Checks storage path with topic suffix |
 | 10 | [`.session.dir`](../command/10_session_dir.md) | `default_topic` | Appends `-{topic}` to base directory |
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | `default_topic` | Appends `-{topic}` to base directory |
-
-### Referenced Parameter Groups
-
-None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

@@ -41,14 +41,14 @@ count::0    # Output full listing
 |------|------|-------------|----------------|
 | Boolean | Base type | Boolean flag | `0` (full listing) or `1` (count only) |
 
+### Referenced Parameter Groups
+
+None.
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 2 | [`.list`](../command/02_list.md) | `0` | Only meaningful with `type::conversation` |
-
-### Referenced Parameter Groups
-
-None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

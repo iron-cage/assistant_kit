@@ -1,19 +1,40 @@
 meta:
   description: Cross-reference graph for all NNN-identified doc instances in claude_storage
-  node_count: 7
-  edge_count: 9
-  component_count: 2
-  generated: 2026-06-28
+  node_count: 70
+  edge_count: 82
+  component_count: 3
+  generated: 2026-07-02
 
 nodes:
+  # feature/ entity (1)
   - id: feature/001
     file: feature/001_cli_tool.md
     label: CLI Tool
     entity: feature
+  # operation/ entity (1)
   - id: operation/001
     file: operation/001_migration_guide.md
     label: Migration Guide
     entity: operation
+  # guide/ entity (1)
+  - id: guide/001
+    file: guide/001_advanced_storage_topics.md
+    label: Advanced Storage Topics
+    entity: guide
+  # invariant/ entity (3)
+  - id: invariant/01
+    file: invariant/01_path_encoding.md
+    label: Path Encoding
+    entity: invariant
+  - id: invariant/02
+    file: invariant/02_session_family.md
+    label: Session Family
+    entity: invariant
+  - id: invariant/03
+    file: invariant/03_entry_type_format.md
+    label: Entry Type Format
+    entity: invariant
+  # cli/user_story/ entity (5)
   - id: user_story/001
     file: cli/user_story/001_audit_session_history.md
     label: Audit Session History
@@ -34,14 +55,296 @@ nodes:
     file: cli/user_story/005_resume_claude_session.md
     label: Resume Claude Session
     entity: user_story
+  # cli/command/ entity (11)
+  - id: command/01
+    file: cli/command/01_status.md
+    label: Status
+    entity: command
+  - id: command/02
+    file: cli/command/02_list.md
+    label: List
+    entity: command
+  - id: command/03
+    file: cli/command/03_show.md
+    label: Show
+    entity: command
+  - id: command/04
+    file: cli/command/04_count.md
+    label: Count
+    entity: command
+  - id: command/05
+    file: cli/command/05_search.md
+    label: Search
+    entity: command
+  - id: command/06
+    file: cli/command/06_export.md
+    label: Export
+    entity: command
+  - id: command/07
+    file: cli/command/07_projects.md
+    label: Projects
+    entity: command
+  - id: command/08
+    file: cli/command/08_project_path.md
+    label: Project Path
+    entity: command
+  - id: command/09
+    file: cli/command/09_project_exists.md
+    label: Project Exists
+    entity: command
+  - id: command/10
+    file: cli/command/10_session_dir.md
+    label: Session Dir
+    entity: command
+  - id: command/11
+    file: cli/command/11_session_ensure.md
+    label: Session Ensure
+    entity: command
+  # cli/format/ entity (3)
+  - id: format/01
+    file: cli/format/01_markdown.md
+    label: Markdown
+    entity: format
+  - id: format/02
+    file: cli/format/02_json.md
+    label: JSON
+    entity: format
+  - id: format/03
+    file: cli/format/03_text.md
+    label: Text
+    entity: format
+  # cli/param/ entity (24)
+  - id: param/01
+    file: cli/param/01_agent.md
+    label: Agent
+    entity: param
+  - id: param/02
+    file: cli/param/02_case_sensitive.md
+    label: Case Sensitive
+    entity: param
+  - id: param/03
+    file: cli/param/03_entries.md
+    label: Show Entries
+    entity: param
+  - id: param/04
+    file: cli/param/04_entry_type.md
+    label: Entry Type
+    entity: param
+  - id: param/05
+    file: cli/param/05_format.md
+    label: Format
+    entity: param
+  - id: param/06
+    file: cli/param/06_metadata.md
+    label: Show Metadata
+    entity: param
+  - id: param/07
+    file: cli/param/07_min_entries.md
+    label: Min Entries
+    entity: param
+  - id: param/08
+    file: cli/param/08_output.md
+    label: Output
+    entity: param
+  - id: param/09
+    file: cli/param/09_path.md
+    label: Path
+    entity: param
+  - id: param/10
+    file: cli/param/10_project.md
+    label: Project
+    entity: param
+  - id: param/11
+    file: cli/param/11_query.md
+    label: Query
+    entity: param
+  - id: param/12
+    file: cli/param/12_scope.md
+    label: Scope
+    entity: param
+  - id: param/13
+    file: cli/param/13_session.md
+    label: Session
+    entity: param
+  - id: param/14
+    file: cli/param/14_session_id.md
+    label: Session ID
+    entity: param
+  - id: param/15
+    file: cli/param/15_sessions.md
+    label: Show Sessions
+    entity: param
+  - id: param/16
+    file: cli/param/16_target.md
+    label: Target
+    entity: param
+  - id: param/17
+    file: cli/param/17_topic.md
+    label: Topic
+    entity: param
+  - id: param/18
+    file: cli/param/18_type.md
+    label: Type
+    entity: param
+  - id: param/19
+    file: cli/param/19_show_stat.md
+    label: Show Stat
+    entity: param
+  - id: param/20
+    file: cli/param/20_strategy.md
+    label: Strategy
+    entity: param
+  - id: param/21
+    file: cli/param/21_count.md
+    label: Count
+    entity: param
+  - id: param/22
+    file: cli/param/22_limit.md
+    label: Limit
+    entity: param
+  - id: param/23
+    file: cli/param/23_show_tokens.md
+    label: Show Tokens
+    entity: param
+  - id: param/24
+    file: cli/param/24_show_tree.md
+    label: Show Tree
+    entity: param
+  # cli/param_group/ entity (5)
+  - id: param_group/01
+    file: cli/param_group/01_output_control.md
+    label: Output Control
+    entity: param_group
+  - id: param_group/02
+    file: cli/param_group/02_project_scope.md
+    label: Project Scope
+    entity: param_group
+  - id: param_group/03
+    file: cli/param_group/03_session_identification.md
+    label: Session Identification
+    entity: param_group
+  - id: param_group/04
+    file: cli/param_group/04_session_filter.md
+    label: Session Filter
+    entity: param_group
+  - id: param_group/05
+    file: cli/param_group/05_scope_configuration.md
+    label: Scope Configuration
+    entity: param_group
+  # cli/type/ entity (13)
+  - id: type/01
+    file: cli/type/01_entry_count.md
+    label: Entry Count
+    entity: type
+  - id: type/02
+    file: cli/type/02_entry_type.md
+    label: Entry Type
+    entity: type
+  - id: type/03
+    file: cli/type/03_export_format.md
+    label: Export Format
+    entity: type
+  - id: type/04
+    file: cli/type/04_path_substring.md
+    label: Path Substring
+    entity: type
+  - id: type/05
+    file: cli/type/05_project_id.md
+    label: Project ID
+    entity: type
+  - id: type/06
+    file: cli/type/06_project_type.md
+    label: Project Type
+    entity: type
+  - id: type/07
+    file: cli/type/07_scope_value.md
+    label: Scope Value
+    entity: type
+  - id: type/08
+    file: cli/type/08_session_filter.md
+    label: Session Filter
+    entity: type
+  - id: type/09
+    file: cli/type/09_session_id.md
+    label: Session ID
+    entity: type
+  - id: type/10
+    file: cli/type/10_storage_path.md
+    label: Storage Path
+    entity: type
+  - id: type/11
+    file: cli/type/11_target_type.md
+    label: Target Type
+    entity: type
+  - id: type/12
+    file: cli/type/12_topic_name.md
+    label: Topic Name
+    entity: type
+  - id: type/13
+    file: cli/type/13_strategy_type.md
+    label: Strategy Type
+    entity: type
+  # cli/pitfall/ entity (3)
+  - id: pitfall/01
+    file: cli/pitfall/01_parameter_validation.md
+    label: Parameter Validation Not Implied By Default
+    entity: pitfall
+  - id: pitfall/02
+    file: cli/pitfall/02_cross_command_propagation.md
+    label: Cross-Command Bug Propagation
+    entity: pitfall
+  - id: pitfall/03
+    file: cli/pitfall/03_test_data_format.md
+    label: Test Data Must Match Production Format
+    entity: pitfall
 
 edges:
+  # feature ↔ operation
   - from: feature/001
     to: operation/001
     via: cross_references
   - from: operation/001
     to: feature/001
     via: cross_references
+  # guide ↔ feature
+  - from: guide/001
+    to: feature/001
+    via: cross_references
+  - from: feature/001
+    to: guide/001
+    via: cross_references
+  # guide → invariants
+  - from: guide/001
+    to: invariant/01
+    via: cross_references
+  - from: guide/001
+    to: invariant/02
+    via: cross_references
+  - from: guide/001
+    to: invariant/03
+    via: cross_references
+  # invariants → feature
+  - from: invariant/01
+    to: feature/001
+    via: cross_references
+  - from: invariant/02
+    to: feature/001
+    via: cross_references
+  - from: invariant/03
+    to: feature/001
+    via: cross_references
+  # pitfall/03 → invariant/03 (unidirectional: pitfall references invariant as its formal contract)
+  - from: pitfall/03
+    to: invariant/03
+    via: cross_references
+  # pitfalls → feature
+  - from: pitfall/01
+    to: feature/001
+    via: cross_references
+  - from: pitfall/02
+    to: feature/001
+    via: cross_references
+  # user_story ↔ user_story
   - from: user_story/001
     to: user_story/004
     via: related_user_stories
@@ -63,18 +366,216 @@ edges:
   - from: user_story/005
     to: user_story/002
     via: related_user_stories
+  # user_story/001 → commands, param_groups, params
+  - from: user_story/001
+    to: command/01
+    via: referenced_commands
+  - from: user_story/001
+    to: command/02
+    via: referenced_commands
+  - from: user_story/001
+    to: command/04
+    via: referenced_commands
+  - from: user_story/001
+    to: param_group/01
+    via: referenced_param_groups
+  - from: user_story/001
+    to: param_group/05
+    via: referenced_param_groups
+  - from: user_story/001
+    to: param/09
+    via: referenced_params
+  - from: user_story/001
+    to: param/15
+    via: referenced_params
+  - from: user_story/001
+    to: param/16
+    via: referenced_params
+  - from: user_story/001
+    to: param/23
+    via: referenced_params
+  # user_story/002 → commands, param_groups, params
+  - from: user_story/002
+    to: command/02
+    via: referenced_commands
+  - from: user_story/002
+    to: command/03
+    via: referenced_commands
+  - from: user_story/002
+    to: command/05
+    via: referenced_commands
+  - from: user_story/002
+    to: command/07
+    via: referenced_commands
+  - from: user_story/002
+    to: param_group/02
+    via: referenced_param_groups
+  - from: user_story/002
+    to: param_group/03
+    via: referenced_param_groups
+  - from: user_story/002
+    to: param_group/04
+    via: referenced_param_groups
+  - from: user_story/002
+    to: param_group/05
+    via: referenced_param_groups
+  - from: user_story/002
+    to: param/01
+    via: referenced_params
+  - from: user_story/002
+    to: param/02
+    via: referenced_params
+  - from: user_story/002
+    to: param/03
+    via: referenced_params
+  - from: user_story/002
+    to: param/04
+    via: referenced_params
+  - from: user_story/002
+    to: param/07
+    via: referenced_params
+  - from: user_story/002
+    to: param/09
+    via: referenced_params
+  - from: user_story/002
+    to: param/10
+    via: referenced_params
+  - from: user_story/002
+    to: param/11
+    via: referenced_params
+  - from: user_story/002
+    to: param/12
+    via: referenced_params
+  - from: user_story/002
+    to: param/13
+    via: referenced_params
+  - from: user_story/002
+    to: param/14
+    via: referenced_params
+  - from: user_story/002
+    to: param/15
+    via: referenced_params
+  - from: user_story/002
+    to: param/17
+    via: referenced_params
+  - from: user_story/002
+    to: param/18
+    via: referenced_params
+  - from: user_story/002
+    to: param/19
+    via: referenced_params
+  - from: user_story/002
+    to: param/22
+    via: referenced_params
+  - from: user_story/002
+    to: param/24
+    via: referenced_params
+  # user_story/003 → command, param_groups, formats, params
+  - from: user_story/003
+    to: command/06
+    via: referenced_commands
+  - from: user_story/003
+    to: param_group/03
+    via: referenced_param_groups
+  - from: user_story/003
+    to: param_group/05
+    via: referenced_param_groups
+  - from: user_story/003
+    to: format/01
+    via: referenced_formats
+  - from: user_story/003
+    to: format/02
+    via: referenced_formats
+  - from: user_story/003
+    to: format/03
+    via: referenced_formats
+  - from: user_story/003
+    to: param/05
+    via: referenced_params
+  - from: user_story/003
+    to: param/06
+    via: referenced_params
+  - from: user_story/003
+    to: param/08
+    via: referenced_params
+  - from: user_story/003
+    to: param/09
+    via: referenced_params
+  - from: user_story/003
+    to: param/14
+    via: referenced_params
+  # user_story/004 → commands, param_groups, formats, params
+  - from: user_story/004
+    to: command/01
+    via: referenced_commands
+  - from: user_story/004
+    to: command/02
+    via: referenced_commands
+  - from: user_story/004
+    to: command/04
+    via: referenced_commands
+  - from: user_story/004
+    to: param_group/05
+    via: referenced_param_groups
+  - from: user_story/004
+    to: format/02
+    via: referenced_formats
+  - from: user_story/004
+    to: param/09
+    via: referenced_params
+  - from: user_story/004
+    to: param/12
+    via: referenced_params
+  - from: user_story/004
+    to: param/16
+    via: referenced_params
+  - from: user_story/004
+    to: param/21
+    via: referenced_params
+  # user_story/005 → commands, param_groups, params
+  - from: user_story/005
+    to: command/08
+    via: referenced_commands
+  - from: user_story/005
+    to: command/09
+    via: referenced_commands
+  - from: user_story/005
+    to: command/10
+    via: referenced_commands
+  - from: user_story/005
+    to: command/11
+    via: referenced_commands
+  - from: user_story/005
+    to: param_group/05
+    via: referenced_param_groups
+  - from: user_story/005
+    to: param/09
+    via: referenced_params
+  - from: user_story/005
+    to: param/17
+    via: referenced_params
+  - from: user_story/005
+    to: param/20
+    via: referenced_params
 
 components:
   - id: 1
-    label: CLI Tool + Migration Guide
-    size: 2
+    label: CLI Tool + Guides + Invariants + Pitfalls
+    size: 9
     isolated: false
     nodes:
       - feature/001
       - operation/001
+      - guide/001
+      - invariant/01
+      - invariant/02
+      - invariant/03
+      - pitfall/01
+      - pitfall/02
+      - pitfall/03
   - id: 2
-    label: User Stories
-    size: 5
+    label: User Stories + Commands + Params + Param Groups + Formats
+    size: 48
     isolated: false
     nodes:
       - user_story/001
@@ -82,5 +583,66 @@ components:
       - user_story/003
       - user_story/004
       - user_story/005
+      - command/01
+      - command/02
+      - command/03
+      - command/04
+      - command/05
+      - command/06
+      - command/07
+      - command/08
+      - command/09
+      - command/10
+      - command/11
+      - format/01
+      - format/02
+      - format/03
+      - param/01
+      - param/02
+      - param/03
+      - param/04
+      - param/05
+      - param/06
+      - param/07
+      - param/08
+      - param/09
+      - param/10
+      - param/11
+      - param/12
+      - param/13
+      - param/14
+      - param/15
+      - param/16
+      - param/17
+      - param/18
+      - param/19
+      - param/20
+      - param/21
+      - param/22
+      - param/23
+      - param/24
+      - param_group/01
+      - param_group/02
+      - param_group/03
+      - param_group/04
+      - param_group/05
+  - id: 3
+    label: CLI Types (no inter-entity cross-references yet)
+    size: 13
+    isolated: true
+    nodes:
+      - type/01
+      - type/02
+      - type/03
+      - type/04
+      - type/05
+      - type/06
+      - type/07
+      - type/08
+      - type/09
+      - type/10
+      - type/11
+      - type/12
+      - type/13
 
 dangling_refs: []
