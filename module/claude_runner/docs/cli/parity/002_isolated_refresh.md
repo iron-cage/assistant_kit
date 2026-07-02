@@ -28,7 +28,7 @@
 | `-h` / `--help` | Yes | Yes |
 | Passthrough (`-- <args>`) | Yes | No |
 | **--- Auto-Injections ---** | | |
-| Default model | `claude-opus-4-8` (`ISOLATED_DEFAULT_MODEL`) | `claude-sonnet-5` (`REFRESH_DEFAULT_MODEL`) |
+| Default model | `opus` (`ISOLATED_DEFAULT_MODEL`) | `claude-sonnet-5` (`REFRESH_DEFAULT_MODEL`) |
 | Default effort | `max` | `low` |
 | `--dangerously-skip-permissions` | Yes — when MESSAGE present; No in no-message REPL | No — never (refresh invokes no tools) |
 | `--no-session-persistence` | Yes — always | Yes — always |

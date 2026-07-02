@@ -16,6 +16,8 @@ use crate::commands::
   account_renewal_routine,
   account_inspect_routine,
   model_routine,
+  models_routine,
+  model_select_routine,
   token_status_routine,
   paths_routine,
   usage_routine,
@@ -228,6 +230,20 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       fmt(),
     ],
     Box::new( model_routine ) );
+  reg_cmd( registry, ".models", "List available Claude API models from the static catalog or live endpoint",
+    vec![
+      reg_arg_opt( "offline", Kind::Integer ).with_description( "Use static embedded catalog without network (1 = offline, 0 = live fetch, default: 0)" ),
+      reg_arg_opt( "name",    Kind::String  ).with_description( "Filter by substring match on model ID (case-insensitive)" ),
+      fmt(),
+    ],
+    Box::new( models_routine ) );
+  reg_cmd( registry, ".model.select", "Get or pin the clr subprocess model preference in ~/.clr/prefs.json",
+    vec![
+      reg_arg_opt( "id",    Kind::String  ).with_description( "Full model ID to pin (e.g. claude-opus-4-8); use .models to list available IDs" ),
+      reg_arg_opt( "reset", Kind::Integer ).with_description( "Remove the subprocess_model preference and revert to ISOLATED_DEFAULT_MODEL (1 = reset)" ),
+      fmt(),
+    ],
+    Box::new( model_select_routine ) );
   reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr(), trc() ], Box::new( token_status_routine   ) );
   reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",
     vec![

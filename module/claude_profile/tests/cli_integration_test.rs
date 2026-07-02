@@ -49,6 +49,8 @@
 //! | `account_assign_test` | `.accounts assign::1` marker write | AA |
 //! | `set_model_test` | `set_model::` explicit session model override | FT, EC |
 //! | `model_test` | `.model` get/set command (Feature 035) | FT |
+//! | `models_test` | `.models` list command | IT, FT |
+//! | `model_select_test` | `.model.select` preference command | IT, FT |
 //! | `type_test` | CLI type boundary contracts (`AccountName`, `OutputFormat`, `WarningThreshold`, `AccountSelector`) | TC |
 //! | `invariant_test` | Architectural invariant assertions (zero deps, cross-platform, clear errors, atomic, etc.) | IN |
 //! | `command_verb_test` | Command-verb behavioral contracts (save, use, delete, limits, relogin, rotate, renewal, inspect, assign, status) | BV |
@@ -183,6 +185,12 @@ mod set_model_test;
 
 #[ path = "cli/model_test.rs" ]
 mod model_test;
+
+#[ path = "cli/models_test.rs" ]
+mod models_test;
+
+#[ path = "cli/model_select_test.rs" ]
+mod model_select_test;
 
 #[ path = "cli/type_test.rs" ]
 mod type_test;

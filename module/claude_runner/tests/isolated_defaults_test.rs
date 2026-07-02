@@ -12,7 +12,7 @@
 //! disabling the watchdog.
 //!
 //! ## Fix Applied
-//! S1/S7: `ISOLATED_DEFAULT_MODEL = "claude-opus-4-8"` + `REFRESH_DEFAULT_MODEL`;
+//! S1/S7: `ISOLATED_DEFAULT_MODEL = "opus"` + `REFRESH_DEFAULT_MODEL`;
 //!   `EffortLevel::Max` injected for isolated, `EffortLevel::Low` for refresh.
 //! S2: `timeout_secs == 0` → `deadline = None` (no watchdog).
 //! S3: `--no-session-persistence` prepended for both commands.
@@ -53,13 +53,13 @@ mod isolated_defaults_test
 
   // ── ISD-1 / ISD-2 : model constants ──────────────────────────────────────
 
-  /// ISD-1: `ISOLATED_DEFAULT_MODEL` constant equals `"claude-opus-4-8"`.
+  /// ISD-1: `ISOLATED_DEFAULT_MODEL` constant equals `"opus"`.
   #[ test ]
   fn isd_01_isolated_default_model_is_opus()
   {
     assert_eq!(
-      ISOLATED_DEFAULT_MODEL, "claude-opus-4-8",
-      "ISOLATED_DEFAULT_MODEL must be claude-opus-4-8 for real user tasks"
+      ISOLATED_DEFAULT_MODEL, "opus",
+      "ISOLATED_DEFAULT_MODEL must be the Opus capability alias (binary resolves to latest Opus)"
     );
   }
 

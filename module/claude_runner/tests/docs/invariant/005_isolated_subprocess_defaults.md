@@ -6,7 +6,7 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| ISD-1 | `ISOLATED_DEFAULT_MODEL` constant equals `"claude-opus-4-8"` | Model Constant |
+| ISD-1 | `ISOLATED_DEFAULT_MODEL` constant equals `"opus"` | Model Constant |
 | ISD-2 | `REFRESH_DEFAULT_MODEL` constant equals `"claude-sonnet-5"` | Model Constant |
 | ISD-3 | `clr isolated --trace "x"` stderr shows `--effort max` | Effort Injection |
 | ISD-4 | `clr refresh --trace` stderr shows `--effort low` | Effort Injection |
@@ -35,11 +35,11 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 
 ---
 
-### ISD-1: `ISOLATED_DEFAULT_MODEL` constant equals `"claude-opus-4-8"`
+### ISD-1: `ISOLATED_DEFAULT_MODEL` constant equals `"opus"`
 
 - **Given:** `module/claude_runner_core/src/isolated.rs` compiled with `ISOLATED_DEFAULT_MODEL` constant
 - **When:** static check of the constant value
-- **Then:** `ISOLATED_DEFAULT_MODEL` equals `"claude-opus-4-8"`
+- **Then:** `ISOLATED_DEFAULT_MODEL` equals `"opus"` (the Opus capability alias; binary resolves to latest Opus at runtime)
 - **Exit:** 0
 - **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
 

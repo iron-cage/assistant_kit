@@ -901,6 +901,201 @@ pub fn fetch_claude_cli_roles( token : &str ) -> Result< ClaudeCliRolesData, Quo
   parse_claude_cli_roles( &body )
 }
 
+// ── ModelInfo ─────────────────────────────────────────────────────────────────
+
+/// A Claude model entry from the `/v1/models` API or the embedded static catalog.
+///
+/// String fields use `&'static str` so that [`STATIC_MODELS`] is a `const`.
+/// Entries created by [`fetch_models`] are heap-allocated and leaked once per
+/// process — acceptable for a short-lived CLI tool.
+#[ derive( Debug, Clone, Copy ) ]
+pub struct ModelInfo
+{
+  /// Stable model identifier (e.g. `"claude-opus-4-8"`).
+  pub id               : &'static str,
+  /// Human-readable display name.
+  pub display_name     : &'static str,
+  /// ISO-8601 creation timestamp; `None` for static catalog entries.
+  pub created_at       : Option< &'static str >,
+  /// Maximum tokens accepted in the context window; `None` when unknown.
+  pub max_input_tokens : Option< u64 >,
+  /// Maximum tokens that can be generated; `None` when unknown.
+  pub max_tokens       : Option< u64 >,
+  /// Capability tags (e.g. `"extended-thinking"`); empty slice when none or unknown.
+  pub capabilities     : &'static [ &'static str ],
+}
+
+/// Static model catalog embedded at compile time.
+///
+/// Derived from `contract/claude_code/docs/model/readme.md`.
+/// Use [`fetch_models`] for a live, authoritative listing.
+pub const STATIC_MODELS : &[ ModelInfo ] = &[
+  ModelInfo
+  {
+    id               : "claude-opus-4-8",
+    display_name     : "Claude Opus 4.8",
+    created_at       : None,
+    max_input_tokens : Some( 200_000 ),
+    max_tokens       : Some( 32_000 ),
+    capabilities     : &[ "extended-thinking" ],
+  },
+  ModelInfo
+  {
+    id               : "claude-sonnet-5",
+    display_name     : "Claude Sonnet 5",
+    created_at       : None,
+    max_input_tokens : Some( 200_000 ),
+    max_tokens       : Some( 64_000 ),
+    capabilities     : &[],
+  },
+  ModelInfo
+  {
+    id               : "claude-haiku-4-5-20251001",
+    display_name     : "Claude Haiku 4.5",
+    created_at       : None,
+    max_input_tokens : Some( 200_000 ),
+    max_tokens       : Some( 32_000 ),
+    capabilities     : &[],
+  },
+  ModelInfo
+  {
+    id               : "claude-opus-4-5-20251101",
+    display_name     : "Claude Opus 4.5",
+    created_at       : None,
+    max_input_tokens : Some( 200_000 ),
+    max_tokens       : Some( 32_000 ),
+    capabilities     : &[ "extended-thinking" ],
+  },
+  ModelInfo
+  {
+    id               : "claude-sonnet-4-5-20250929",
+    display_name     : "Claude Sonnet 4.5",
+    created_at       : None,
+    max_input_tokens : Some( 200_000 ),
+    max_tokens       : Some( 64_000 ),
+    capabilities     : &[],
+  },
+];
+
+/// URL for the Anthropic models list endpoint.
+pub const MODELS_URL : &str = "https://api.anthropic.com/v1/models";
+
+/// Parse the `data` array from a `GET /v1/models` JSON response body.
+///
+/// Returns one [`ModelInfo`] per object in `data[]`. String fields are
+/// heap-allocated and leaked to produce `&'static str` — acceptable for a
+/// short-lived CLI process.
+#[ cfg( feature = "enabled" ) ]
+fn parse_models_response( body : &str ) -> Vec< ModelInfo >
+{
+  let mut models = Vec::new();
+
+  let needle = "\"data\":";
+  let Some( pos ) = body.find( needle ) else { return models };
+  let after  = body[ pos + needle.len() .. ].trim_start();
+  if !after.starts_with( '[' ) { return models; }
+
+  let mut rest = &after[ 1 .. ]; // skip '['
+  loop
+  {
+    rest = rest.trim_start();
+    if rest.starts_with( ']' ) || rest.is_empty() { break; }
+    if !rest.starts_with( '{' ) { break; }
+
+    // Find balanced closing brace
+    let mut depth = 0_usize;
+    let mut end   = 0_usize;
+    for ( i, c ) in rest.char_indices()
+    {
+      match c
+      {
+        '{' => depth += 1,
+        '}' =>
+        {
+          depth = depth.saturating_sub( 1 );
+          if depth == 0 { end = i + 1; break; }
+        }
+        _   => {}
+      }
+    }
+    if end == 0 { break; }
+
+    let block = &rest[ ..end ];
+
+    if let Some( id_owned ) = parse_optional_string_in_block( block, "id" )
+    {
+      let dn_owned = parse_optional_string_in_block( block, "display_name" )
+        .unwrap_or_else( || id_owned.clone() );
+      let ca_owned = parse_optional_string_in_block( block, "created_at" );
+
+      // Leak: one-time cost per process invocation for CLI tool.
+      let id_s : &'static str           = Box::leak( id_owned.into_boxed_str() );
+      let dn_s : &'static str           = Box::leak( dn_owned.into_boxed_str() );
+      let ca_s : Option< &'static str > = ca_owned
+        .map( | s | Box::leak( s.into_boxed_str() ) as &'static str );
+
+      models.push( ModelInfo
+      {
+        id               : id_s,
+        display_name     : dn_s,
+        created_at       : ca_s,
+        max_input_tokens : None,
+        max_tokens       : None,
+        capabilities     : &[],
+      } );
+    }
+
+    rest = &rest[ end .. ];
+    rest = rest.trim_start();
+    if rest.starts_with( ',' ) { rest = &rest[ 1 .. ]; }
+  }
+
+  models
+}
+
+/// Fetch the list of available Claude models from the Anthropic API.
+///
+/// Makes a `GET /v1/models?limit=1000` request using the provided OAuth access
+/// token. Returns [`ModelInfo`] entries for each model in the `data[]` array.
+/// `max_input_tokens`, `max_tokens`, and `capabilities` are `None`/empty because
+/// the listing endpoint does not return those fields.
+///
+/// # Errors
+///
+/// Returns [`QuotaError::HttpTransport`] on network or HTTP ≥ 400 errors.
+/// Returns [`QuotaError::ResponseParse`] if the response body has no `data` array.
+#[ cfg( feature = "enabled" ) ]
+#[ inline ]
+pub fn fetch_models( token : &str ) -> Result< Vec< ModelInfo >, QuotaError >
+{
+  let url  = format!( "{MODELS_URL}?limit=1000" );
+  let mut resp = http_agent()
+    .get( &url )
+    .header( "Authorization",     &format!( "Bearer {token}" ) )
+    .header( "anthropic-version", ANTHROPIC_VERSION )
+    .header( "anthropic-beta",    ANTHROPIC_BETA )
+    .call()
+    .map_err( | e | QuotaError::HttpTransport( e.to_string() ) )?;
+
+  let status = resp.status().as_u16();
+  if status >= 400
+  {
+    return Err( QuotaError::HttpTransport( format!( "HTTP {status}" ) ) );
+  }
+
+  let body = resp
+    .body_mut()
+    .read_to_string()
+    .map_err( | e | QuotaError::HttpTransport( e.to_string() ) )?;
+
+  let models = parse_models_response( &body );
+  if models.is_empty()
+  {
+    return Err( QuotaError::ResponseParse( "data".to_string() ) );
+  }
+  Ok( models )
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[ cfg( test ) ]

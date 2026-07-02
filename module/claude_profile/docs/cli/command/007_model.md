@@ -162,7 +162,7 @@ clp .model.select id::claude-opus-4-8 reset::1
 **Notes:**
 - `.model.select` governs only the subprocess model for `clr run/ask/isolated/refresh`. For the interactive Claude Code session model, use `clp .model set::opus` instead.
 - Run `clp .models` first to discover available full model IDs.
-- After reset, `clr` uses `ISOLATED_DEFAULT_MODEL` (currently `claude-opus-4-8`, defined in `claude_runner_core/src/isolated.rs`).
+- After reset, `clr` uses `ISOLATED_DEFAULT_MODEL` (currently `"opus"`, defined in `claude_runner_core/src/isolated.rs`).
 - `.model.select` appears in the "Status & info" group of `clp .help`.
 
 ### Referenced Features

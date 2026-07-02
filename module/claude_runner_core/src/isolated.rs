@@ -19,13 +19,11 @@ use core::fmt;
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
-/// Short alias passed as `--model` to the Claude binary for real user tasks.
+/// Short alias passed as `--model` to the Claude binary for isolated subprocess invocations.
 ///
-/// Full model identifier passed as `--model` for isolated subprocess invocations.
-///
-/// Pinned to the explicit `claude-opus-4-8` model ID so callers see exactly
-/// which model is being used.  Update this constant when the target model changes.
-pub const ISOLATED_DEFAULT_MODEL : &str = "claude-opus-4-8";
+/// The Claude binary resolves the `"opus"` alias to the latest available Opus model at
+/// runtime.  Use `IsolatedModel::Specific` to pin an exact model ID instead.
+pub const ISOLATED_DEFAULT_MODEL : &str = "opus";
 
 /// CLAUDE.md content written to the isolated temp HOME before subprocess spawn.
 ///
@@ -206,6 +204,49 @@ pub fn run_isolated
   run_isolated_ext( credentials_json, args, timeout_secs, model, Some( 200_000 ) )
 }
 
+/// Read `subprocess_model` from `~/.clr/prefs.json`, if present and non-empty.
+///
+/// Returns `Some(id)` when a pinned model is stored; `None` when the file is
+/// absent, unreadable, or the key is missing or empty.  Called by
+/// `run_isolated_ext()` to override `IsolatedModel::Default` without requiring
+/// the caller to read prefs directly.
+#[ cfg( feature = "enabled" ) ]
+fn read_subprocess_model_pref() -> Option< String >
+{
+  let home      = std::env::var( "HOME" ).ok()?;
+  let prefs     = std::path::Path::new( &home ).join( ".clr" ).join( "prefs.json" );
+  let content   = std::fs::read_to_string( prefs ).ok()?;
+  // Locate "subprocess_model" key at a JSON key boundary (preceded by `{` or `,`).
+  // A boundary check prevents false matches when the key name appears inside a value.
+  let key     = "\"subprocess_model\"";
+  let key_pos =
+  {
+    let mut found = None;
+    let mut start = 0usize;
+    while let Some( rel ) = content[ start.. ].find( key )
+    {
+      let abs = start + rel;
+      if content[ ..abs ].trim_end().ends_with( ['{', ','] )
+      {
+        found = Some( abs );
+        break;
+      }
+      start = abs + key.len();
+      if start >= content.len() { break; }
+    }
+    found
+  }?;
+  let after_key = &content[ key_pos + key.len().. ];
+  let colon_pos = after_key.find( ':' )?;
+  let after_colon = after_key[ colon_pos + 1.. ].trim_start();
+  if !after_colon.starts_with( '"' ) { return None; }
+  let inner     = &after_colon[ 1.. ];
+  let end_quote = inner.find( '"' )?;
+  let value     = &inner[ ..end_quote ];
+  if value.is_empty() { return None; }
+  Some( value.to_string() )
+}
+
 /// Spawn Claude in an isolated `HOME` with an explicit compact-window override.
 ///
 /// Identical to [`run_isolated`] but accepts `compact_window: Option<u32>` to control
@@ -258,8 +299,17 @@ pub fn run_isolated_ext
     .map_err( |e| RunnerError::Io( e.to_string() ) )?;
 
   // Step 3: Build command — prepend --model flag then user args
+  //
+  // When IsolatedModel::Default, check ~/.clr/prefs.json for a pinned
+  // `subprocess_model` preference before falling back to ISOLATED_DEFAULT_MODEL.
+  let pref_override = match &model
+  {
+    IsolatedModel::Default => read_subprocess_model_pref(),
+    _                      => None,
+  };
   let mut full_args = Vec::with_capacity( args.len() + 2 );
-  if let Some( id ) = model.model_id()
+  let model_id = pref_override.as_deref().or_else( || model.model_id() );
+  if let Some( id ) = model_id
   {
     full_args.push( "--model".to_string() );
     full_args.push( id.to_string() );

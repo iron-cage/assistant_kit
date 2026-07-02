@@ -38,7 +38,7 @@
 | `--chrome` | Yes in interactive / No in print (auto-suppressed; `--no-chrome` opt-out) | No (always print) | Yes (ClaudeCommand default; no suppression flag) |
 | Ultrathink suffix on MESSAGE | Yes (suppressed by `--no-ultrathink`) | Yes | No |
 | `--no-session-persistence` | Via `--no-persist` flag | Via `--no-persist` | Always injected |
-| Default model injection | No (uses claude binary default) | No | Yes — `claude-opus-4-8` (`ISOLATED_DEFAULT_MODEL`) |
+| Default model injection | No (uses claude binary default) | No | Yes — `opus` (`ISOLATED_DEFAULT_MODEL`) |
 | Minimal `CLAUDE.md` written to HOME | No | No | Yes (instructs: execute immediately, no clarifying questions, no confirmation) |
 | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `200,000` | `200,000` | `200,000` |
 | **--- Execution Modes ---** | | | |
