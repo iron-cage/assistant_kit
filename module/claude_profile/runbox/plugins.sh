@@ -24,6 +24,21 @@ _plugin_test_args()
   then
     # Normal full-suite path — delegate entirely to the workspace plugin.
     _ws_plugin_test_args
+    # Fix(BUG-TMP): PersistPaths::new() in container uses $HOME=/workspace to
+    #   resolve credential_store → /workspace/.persistent/claude/credential/.
+    #   Without this mount that path is empty → host_quota_snapshot_from_cache()
+    #   returns None → live_quota_snapshot() returns None → quota cache not
+    #   pre-populated → lim_it tests hit live /api/oauth/usage → 429 → failures.
+    # Root cause: plugin_mount only mounts ~/.claude; the credential store lives
+    #   under $PRO/.persistent (when $PRO is set and is-dir) or $HOME/.persistent.
+    #   Mirror PersistPaths::resolve_root() — prefer $PRO, fall back to $HOME.
+    # Pitfall: mark optional (false) — absent on CI; absent host silently skips mount.
+    local _persist_root="$HOME"
+    if [[ -n "${PRO:-}" ]] && [[ -d "${PRO:-}" ]]; then _persist_root="$PRO"; fi
+    local persist_spec="$_persist_root/.persistent:/workspace/.persistent:directory"
+    local persist_mount
+    persist_mount="$(_resolve_mount "$persist_spec" false rw)"
+    [[ -n "$persist_mount" ]] && mount_args+=( -v "$persist_mount" )
     return
   fi
   # Targeted single-test path:
