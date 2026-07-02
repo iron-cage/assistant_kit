@@ -167,7 +167,7 @@ fn jc5_stdin_json_pipe_detected()
   let json = b"{\"model\":\"claude-haiku-4-5-20251001\"}";
 
   let mut child = std::process::Command::new( bin )
-    .args( &[ "--dry-run", "task" ] )
+    .args( [ "--dry-run", "task" ] )
     .stdin(  std::process::Stdio::piped() )
     .stdout( std::process::Stdio::piped() )
     .stderr( std::process::Stdio::piped() )
@@ -305,11 +305,11 @@ fn jc10_json_config_applies_to_isolated()
     exit_code( &out ), 0,
     "isolated must exit 0 with CLR_ARGS_FILE; stderr: {}", stderr_str( &out )
   );
-  // isolated --dry-run emits trace to stderr (emit_credential_trace → eprintln!)
-  let stderr = stderr_str( &out );
+  // isolated --dry-run emits preview to stdout (to_stdout=true in emit_credential_trace)
+  let stdout = stdout_str( &out );
   assert!(
-    stderr.contains( "/tmp" ),
-    "isolated dry-run trace must show --dir /tmp from JSON config. Got:\n{stderr}"
+    stdout.contains( "/tmp" ),
+    "isolated dry-run trace must show --dir /tmp from JSON config. Got:\n{stdout}"
   );
 }
 

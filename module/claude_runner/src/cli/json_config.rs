@@ -50,7 +50,8 @@ pub( super ) fn parse_json_object( src : &str ) -> Result< Map< String, Value > 
 /// field type is: `Option<T>` → `is_none()`, `bool` → `!field`, `Vec<T>` → `is_empty()`.
 /// `bool` fields set to JSON `false` are a no-op (no unset semantics).
 /// Unknown JSON keys are silently skipped.
-#[ allow( clippy::too_many_lines ) ] // mechanical dispatch — one arm per configurable parameter.
+#[ allow( clippy::too_many_lines ) ]    // mechanical dispatch — one arm per configurable parameter
+#[ allow( clippy::collapsible_match ) ] // each arm is one condition + one pattern check
 pub( super ) fn apply_json_config( parsed : &mut CliArgs, map : &Map< String, Value > )
 {
   for ( key, v ) in map

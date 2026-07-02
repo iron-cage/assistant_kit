@@ -8,7 +8,10 @@ use claude_journal::{ EventRecord, EventType, JournalWriter };
 ///
 /// Reconstructs the `ClaudeCommand` exactly as `run_isolated_ext()` would build it
 /// (model flag prepended, then `with_home(&temp_dir)`, `with_compact_window(compact_window)`,
-/// then `with_args(args)`) and prints `describe_env()` + `describe()` to stderr.
+/// then `with_args(args)`) and prints `describe_env()` + `describe()`.
+///
+/// `to_stdout`: `true` for `--dry-run` (user-facing preview → stdout, like `handle_dry_run`);
+/// `false` for `--trace` (diagnostic → stderr).
 ///
 /// `args` must be the fully-assembled arg list that will be passed to `run_isolated_ext()`,
 /// including all injected flags (`--effort`, `--no-session-persistence`,
@@ -26,6 +29,7 @@ fn emit_credential_trace
   args           : &[ String ],
   timeout_secs   : u64,
   compact_window : Option< u32 >,
+  to_stdout      : bool,
 )
 {
   // Reproduce the exact temp dir path and arg list that run_isolated_ext() will create.
@@ -44,11 +48,19 @@ fn emit_credential_trace
     .with_args( full_args.iter().cloned() );
   let env_out = preview.describe_env();
   let cmd_out = preview.describe();
-  eprintln!( "# clr {label}" );
-  eprintln!( "# creds: {creds_path}" );
-  eprintln!( "# timeout: {timeout_secs}s" );
-  if !env_out.is_empty() { eprintln!( "{env_out}" ); }
-  eprintln!( "{cmd_out}" );
+  if to_stdout
+  {
+    if !env_out.is_empty() { println!( "{env_out}" ); }
+    println!( "{cmd_out}" );
+  }
+  else
+  {
+    eprintln!( "# clr {label}" );
+    eprintln!( "# creds: {creds_path}" );
+    eprintln!( "# timeout: {timeout_secs}s" );
+    if !env_out.is_empty() { eprintln!( "{env_out}" ); }
+    eprintln!( "{cmd_out}" );
+  }
 }
 
 /// Execute an `isolated` or `refresh` subprocess command.
@@ -66,7 +78,7 @@ fn emit_credential_trace
 /// - **Other errors:** exits 1 with an error message.
 ///
 /// This function never returns; it always calls `std::process::exit`.
-#[ allow( clippy::too_many_arguments, clippy::fn_params_excessive_bools ) ]
+#[ allow( clippy::too_many_arguments, clippy::fn_params_excessive_bools, clippy::too_many_lines ) ]
 pub( super ) fn run_isolated_command
 (
   label             : &str,
@@ -110,8 +122,10 @@ pub( super ) fn run_isolated_command
 
   // Emit trace/dry-run diagnostics before any I/O so they fire even when the creds file is missing.
   // Fix(R5-2): dry_run uses the same code path as trace — WYSIWYG, not a separate branch.
-  if trace || dry_run { emit_credential_trace( label, creds_path, &model, &args, timeout_secs, compact_window ); }
-  if dry_run { std::process::exit( 0 ); }
+  // dry_run → stdout (user-facing preview, matches handle_dry_run behaviour for `run`).
+  // trace   → stderr (diagnostic).
+  if trace    { emit_credential_trace( label, creds_path, &model, &args, timeout_secs, compact_window, false ); }
+  if dry_run  { emit_credential_trace( label, creds_path, &model, &args, timeout_secs, compact_window, true ); std::process::exit( 0 ); }
 
   let creds_json = match std::fs::read_to_string( creds_path )
   {

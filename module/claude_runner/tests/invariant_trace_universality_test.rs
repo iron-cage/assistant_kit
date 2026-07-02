@@ -132,8 +132,8 @@ fn it_04_refresh_trace_stderr_output()
     "refresh --trace must emit env var block including CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000. Got:\n{stderr}"
   );
   assert!(
-    stderr.contains( "--model sonnet" ),
-    "refresh --trace must show default model alias 'sonnet' (REFRESH_DEFAULT_MODEL). Got:\n{stderr}"
+    stderr.contains( "--model claude-sonnet-4-6" ),
+    "refresh --trace must show REFRESH_DEFAULT_MODEL 'claude-sonnet-4-6'. Got:\n{stderr}"
   );
   assert!(
     stderr.contains( "--effort low" ),

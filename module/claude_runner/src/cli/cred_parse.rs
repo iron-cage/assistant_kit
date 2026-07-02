@@ -18,6 +18,7 @@ use super::env::{ env_bool, env_str };
 
 /// Parsed arguments for the `isolated` subcommand.
 #[ derive( Default ) ]
+#[ allow( clippy::struct_excessive_bools ) ] // CLI arg struct — bool per flag is idiomatic
 pub( super ) struct IsolatedArgs
 {
   pub( super ) creds_path       : String,
