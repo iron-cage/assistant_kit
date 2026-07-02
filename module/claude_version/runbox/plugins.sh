@@ -5,7 +5,7 @@
 # Provides NEXTEST_FILTER pass-through for targeted single-test execution
 # (verb/test1).  When NEXTEST_FILTER is set, overrides TEST_SCRIPT to
 # verb/test1.d/l1 and injects the filter as a container env var.
-# The bin plugin and .claude mount are skipped for targeted runs;
+# The w3 binary plugin and .claude mount are skipped for targeted runs;
 # cargo uses the pre-seeded /workspace/target volume for fast first-run.
 
 # ── Compose with workspace _plugin_test_args ──────────────────────────────────
@@ -28,7 +28,7 @@ _plugin_test_args()
   fi
   # Targeted single-test path:
   #   - redirect TEST_SCRIPT to test1.d/l1 (reads $NEXTEST_FILTER inside container)
-  #   - skip the bin plugin and .claude mount (not needed for unit tests)
+  #   - skip the w3 binary plugin and .claude mount (not needed for unit tests)
   #   - use /workspace/target (pre-seeded from image) for fast incremental builds
   TEST_SCRIPT="module/claude_version/verb/test1.d/l1"
   bin_args=( -e "NEXTEST_FILTER=$NEXTEST_FILTER" )

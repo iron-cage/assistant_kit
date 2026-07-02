@@ -49,3 +49,39 @@
 | 5 | [`format::`](../param/05_format.md) | Selects text or JSON rendering |
 | 6 | [`count::`](../param/09_count.md) | Limits number of history entries shown |
 | 7 | [`.help`](../param/10_help.md) | Universal help override for any command |
+
+### Workflow Steps
+
+**Step 1 — Browse recent releases to select a target:**
+
+```bash
+clv .version.history count::5
+# 1.2.34  2024-01-15  Fixes tool-call streaming edge case
+# 1.2.33  2024-01-08  Improves context window utilization
+# 1.2.32  2024-01-01  Adds prompt caching support
+```
+
+**Step 2 — Preview the install plan without executing:**
+
+```bash
+clv .version.install version::stable dry::1
+# [dry-run] Would install claude-code@1.2.34
+# [dry-run] autoUpdates = false   (version lock applied)
+# [dry-run] purge cached binary at ~/.npm/_npx/.../claude
+```
+
+**Step 3 — Execute the install:**
+
+```bash
+clv .version.install version::stable
+# Installing claude-code@1.2.34 ...
+# Version lock applied (autoUpdates = false)
+# Done.
+```
+
+**Step 4 — Confirm the new version is active:**
+
+```bash
+clv .version.show
+# 1.2.34
+```

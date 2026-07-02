@@ -45,3 +45,41 @@
 | 2 | [`format::`](../param/05_format.md) | Selects text or JSON rendering |
 | 3 | [`v::`](../param/04_v.md) | Controls output detail level |
 | 4 | [`kind::`](../param/13_kind.md) | Filters show-all to config or env params only |
+
+### Workflow Steps
+
+**Step 1 — Browse the full parameter catalog:**
+
+```bash
+clv .params
+# bash_timeout   env: CLAUDE_CODE_BASH_TIMEOUT   default: 120000          (env)
+# model          cli: --model  env: CLAUDE_MODEL  config: model  default: claude-sonnet-5
+# theme          config: theme                    current: dark            (user)
+# ...  (35+ entries)
+```
+
+**Step 2 — Filter to config-key parameters only:**
+
+```bash
+clv .params kind::config
+# model   config: model   current: claude-sonnet-5  (catalog default)
+# theme   config: theme   current: dark             (user)
+# ...
+```
+
+**Step 3 — Inspect a single parameter in depth:**
+
+```bash
+clv .params key::model
+# CLI:     --model
+# Env:     CLAUDE_MODEL   (unset)
+# Config:  model          claude-sonnet-5  (catalog default)
+# Default: claude-sonnet-5
+```
+
+**Step 4 — Export the full catalog as JSON for tooling:**
+
+```bash
+clv .params format::json
+# [{"name":"model","cli":"--model","env":"CLAUDE_MODEL","config":"model",...}, ...]
+```

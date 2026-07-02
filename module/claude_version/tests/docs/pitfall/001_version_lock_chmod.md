@@ -49,6 +49,6 @@ Pitfall test surface for chmod side effects. See [pitfall/001_version_lock_chmod
 
 | Function | File |
 |----------|------|
-| `pf01_001_chmod_auto_handled` | `integration/pitfall_surface_test.rs` |
-| `pf02_001_chmod_dry_shows_chmod` | `integration/pitfall_surface_test.rs` |
-| `pf03_001_guard_shows_restore` | `integration/pitfall_surface_test.rs` |
+| `pf01_001_chmod_auto_handled` | `tests/cli/pitfall_surface_test.rs` |
+| `pf02_001_chmod_dry_shows_chmod` | `tests/cli/pitfall_surface_test.rs` |
+| `pf03_001_guard_shows_restore` | `tests/cli/pitfall_surface_test.rs` |

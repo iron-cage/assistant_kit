@@ -48,3 +48,38 @@
 | 4 | [`v::`](../param/04_v.md) | Controls diagnostic detail level |
 | 5 | [`format::`](../param/05_format.md) | Selects text or JSON rendering |
 | 6 | [`interval::`](../param/08_interval.md) | Sets watch loop interval for continuous drift detection |
+
+### Workflow Steps
+
+**Step 1 — Resolve available version aliases:**
+
+```bash
+clv .version.list
+# stable   1.2.34
+# month    1.2.30
+# latest   1.2.34
+```
+
+**Step 2 — Preview the team-baseline install:**
+
+```bash
+clv .version.install version::month dry::1
+# [dry-run] Would install claude-code@1.2.30
+# [dry-run] autoUpdates = false   (version lock applied)
+```
+
+**Step 3 — Install and lock the pinned version:**
+
+```bash
+clv .version.install version::month
+# Installing claude-code@1.2.30 ...
+# Version lock applied (autoUpdates = false)
+# Done.
+```
+
+**Step 4 — Start continuous drift detection:**
+
+```bash
+clv .version.guard interval::60
+# Watching for drift every 60 s ...  (runs until interrupted)
+```

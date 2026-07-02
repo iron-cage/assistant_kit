@@ -12,9 +12,9 @@
 |------|---------------|
 | `build` | Compile project artifacts via `cargo build`. |
 | `test` | Dispatcher: run full test suite; delegates to `test.d/` layer by `VERB_LAYER`. |
-| `test.d/` | Layer directory: `l0` (disabled; host-native execution forbidden), `l1` (container-internal). |
-| `test1` | Targeted test run: single nextest filter in the container; no doc tests or clippy. |
-| `test1.d/` | Layer directory: `l1` (container-internal targeted nextest run). |
+| `test.d/` | Layer directory: `l0` (host-native), `l1` (container-internal). |
+| `test1` | Dispatcher: run a single test by nextest filter; delegates via `NEXTEST_FILTER`. |
+| `test1.d/` | Layer directory: `l1` (container-internal targeted run). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `install` | Install crate binaries to `~/.cargo/bin` via `cargo install`. |
 | `run` | Dispatcher: execute entry point; delegates to `run.d/` layer by `VERB_LAYER`. |

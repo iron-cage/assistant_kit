@@ -33,7 +33,6 @@ use claude_version_core::settings_io::{ StoredAs, infer_type, remove_setting, se
 /// Panics only on internal invariant violations (unreachable code paths that
 /// indicate a programming error, not user input error).
 #[ allow(
-  clippy::needless_pass_by_value,
   clippy::missing_inline_in_public_items,
   clippy::too_many_lines,
 ) ]

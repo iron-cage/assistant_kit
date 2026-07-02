@@ -690,3 +690,22 @@
     - ".params format::json"
     - ".params v::0"
   auto_help_enabled: true
+
+- name: ".runtime_files"
+  namespace: ""
+  description: "List all file paths managed by clv at runtime (one absolute path per line)"
+  hint: "List runtime-managed file paths"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "info"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments: []
+
+  examples:
+    - ".runtime_files"
+  auto_help_enabled: true

@@ -162,11 +162,11 @@ Both are valid invocations; the format of the output differs.
 
 | Function | File |
 |----------|------|
-| `tc255_status_v0_fewer_lines_than_v1` | `integration/cross_cutting_test.rs` |
-| `tc257_v_param_identical` | `integration/cross_cutting_test.rs` |
-| `tc258_status_format_json_is_valid_json` | `integration/cross_cutting_test.rs` |
-| `tc259_status_format_json_v0_still_complete` | `integration/cross_cutting_test.rs` |
-| `tc260_format_uppercase_rejected` | `integration/cross_cutting_test.rs` |
-| `tc261_version_install_format_json_accepted` | `integration/cross_cutting_test.rs` |
-| `tc262_version_guard_v0_accepted` | `integration/cross_cutting_test.rs` |
-| `tc245_last_occurrence_wins_for_verbosity` | `integration/read_commands_test.rs` |
+| `tc255_status_v0_fewer_lines_than_v1` | `tests/cli/cross_cutting_test.rs` |
+| `tc257_v_param_identical` | `tests/cli/cross_cutting_test.rs` |
+| `tc258_status_format_json_is_valid_json` | `tests/cli/cross_cutting_test.rs` |
+| `tc259_status_format_json_v0_still_complete` | `tests/cli/cross_cutting_test.rs` |
+| `tc260_format_uppercase_rejected` | `tests/cli/cross_cutting_test.rs` |
+| `tc261_version_install_format_json_accepted` | `tests/cli/cross_cutting_test.rs` |
+| `tc262_version_guard_v0_accepted` | `tests/cli/cross_cutting_test.rs` |
+| `tc245_last_occurrence_wins_for_verbosity` | `tests/cli/read_status_test.rs` |

@@ -13,7 +13,7 @@
 |------|---------------|
 | readme.md | Index and navigation for command namespace files |
 | procedure.md | Steps for adding, updating, or removing command instances |
-| root.md | Root-namespace commands: `.help`, `.status` |
+| root.md | Root-namespace commands: `.help`, `.status`, `.runtime_files` |
 | version.md | Version-namespace commands: `.version.*` |
 | processes.md | Process-namespace commands: `.processes`, `.processes.kill` |
 | settings.md | Settings-namespace commands: `.settings.*` (deprecated) |
@@ -38,10 +38,11 @@
 | 12 | `.version.history` | version | [version.md](version.md) |
 | 13 | `.config` | config | [config.md](config.md) |
 | 14 | `.params` | params | [params.md](params.md) |
+| 15 | `.runtime_files` | root | [root.md](root.md) |
 
 ### Navigation
 
-- [Root Commands](root.md) — `.help`, `.status`
+- [Root Commands](root.md) — `.help`, `.status`, `.runtime_files`
 - [Version Commands](version.md) — `.version.show`, `.version.install`, `.version.guard`, `.version.list`, `.version.history`
 - [Process Commands](processes.md) — `.processes`, `.processes.kill`
 - [Settings Commands](settings.md) — `.settings.show`, `.settings.get`, `.settings.set` *(deprecated)*

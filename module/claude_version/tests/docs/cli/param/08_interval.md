@@ -123,6 +123,6 @@ Edge case coverage for the `interval::` parameter. See [param/readme.md](../../.
 
 | Function | File |
 |----------|------|
-| `tc409_guard_interval_zero_oneshot` | `integration/mutation_commands_test.rs` |
-| `tc415_watch_loop_continues_after_install_error` | `integration/mutation_commands_test.rs` |
-| `tc491_interval_u64_max_rejected_with_clear_error` | `cli_args_test.rs` |
+| `tc409_guard_interval_zero_oneshot` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc415_watch_loop_continues_after_install_error` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc491_interval_u64_max_rejected_with_clear_error` | `cli_args_test/param_numeric_test.rs` |

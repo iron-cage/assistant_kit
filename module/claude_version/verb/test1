@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# test1 — targeted test run; runs a single nextest filter expression inside the container.
+# test1 — run a single test by nextest filter inside the runbox container.
 #
 # Usage: ./verb/test1 <nextest-filter>
 #   nextest-filter — test name substring or full nextest -E expression
 #
 # Examples:
-#   ./verb/test1 tc358_version_install_idempotent_stores_preference
-#   ./verb/test1 "test(tc358)"
+#   ./verb/test1 tc001_empty_argv_shows_help
+#   ./verb/test1 tc_verbosity_level_0_minimal
 #
-# Prefer this over ./verb/test when a specific test name or filter is known.
-# ./verb/test  — full suite: all tests + doc tests + clippy.
-# ./verb/test1 — only the matching nextest filter; no doc tests, no clippy.
+# How it works: sets NEXTEST_FILTER in the host env and delegates to
+# ./runbox/runbox .test.  The project runbox/plugins.sh hook detects
+# NEXTEST_FILTER, overrides TEST_SCRIPT to verb/test1.d/l1, and injects
+# the filter as a container env var.
 set -euo pipefail
 if [[ -n "${VERB_LAYER:-}" ]]; then
   echo "ERROR: VERB_LAYER is not valid on the host side." >&2
@@ -19,7 +20,7 @@ if [[ -n "${VERB_LAYER:-}" ]]; then
 fi
 if [[ "${1:-}" == "--dry-run" ]]; then
   DRY_FILTER="${2:-<filter>}"
-  echo "./runbox/runbox .test1 $DRY_FILTER  →  cargo nextest run --workspace --all-features -E \"$DRY_FILTER\""
+  echo "NEXTEST_FILTER=$DRY_FILTER ./runbox/runbox .test  →  cargo nextest run --all-features \"$DRY_FILTER\""
   exit 0
 fi
 FILTER="${1:-}"
@@ -28,4 +29,4 @@ if [[ -z "$FILTER" ]]; then
   echo "Usage: ./verb/test1 <nextest-filter-expression>" >&2
   exit 1
 fi
-exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test1 "$@"
+NEXTEST_FILTER="$FILTER" exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test

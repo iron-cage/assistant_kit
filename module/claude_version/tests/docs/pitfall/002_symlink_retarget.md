@@ -49,6 +49,6 @@ Pitfall test surface for symlink retarget. See [pitfall/002_symlink_retarget.md]
 
 | Function | File |
 |----------|------|
-| `pf01_002_purge_in_install_preview` | `integration/pitfall_surface_test.rs` |
-| `pf02_002_guard_dry_detects_drift` | `integration/pitfall_surface_test.rs` |
-| `pf03_002_no_drift_after_install` | `integration/pitfall_surface_test.rs` |
+| `pf01_002_purge_in_install_preview` | `tests/cli/pitfall_surface_test.rs` |
+| `pf02_002_guard_dry_detects_drift` | `tests/cli/pitfall_surface_test.rs` |
+| `pf03_002_no_drift_after_install` | `tests/cli/pitfall_surface_test.rs` |

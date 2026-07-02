@@ -7,11 +7,11 @@
 # image build) for fast incremental compilation.
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-# Workspace root is 4 levels up from test1.d/ (test1.d → verb → claude_runner → module → workspace).
+# Workspace root is 4 levels up from test_only.d/ (test_only.d → verb → claude_runner → module → workspace).
 WORKSPACE_ROOT="$( cd "$SCRIPT_DIR/../../../.." && pwd )"
 cd "$SCRIPT_DIR/../.."
 if [[ -z "${NEXTEST_FILTER:-}" ]]; then
-  echo "ERROR: NEXTEST_FILTER is not set — invoke via ./verb/test1 <filter> on the host." >&2
+  echo "ERROR: NEXTEST_FILTER is not set — invoke via ./verb/test_only <filter> on the host." >&2
   exit 1
 fi
 if [[ "${1:-}" == "--dry-run" ]]; then
@@ -24,13 +24,13 @@ export CARGO_NET_OFFLINE=true
 export NO_COLOR=1
 export RUNBOX_CONTAINER=1
 export RUSTFLAGS="-D warnings"
-# Fix(test1-cargo-target-dir): Override host .cargo/config.toml target-dir redirect.
+# Fix(test_only-cargo-target-dir): Override host .cargo/config.toml target-dir redirect.
 # Root cause: the host workspace is bind-mounted :ro into the container, bringing
 # .cargo/config.toml (which has target-dir = "-host-target") into the container at
 # /workspace/.cargo/config.toml.  Without this override, cargo nextest would try to
 # write to /workspace/-host-target/ — part of the :ro bind-mount → EROFS on first write.
 # Containers must use /workspace/target/ where the pre-seeded cook-stage volume is mounted.
 # Pitfall: CARGO_TARGET_DIR env var overrides config.toml target-dir; set it explicitly here
-# because test1 skips the w3 bin_plugin that sets CARGO_TARGET_DIR in the full test path.
+# because test_only skips the w3 bin_plugin that sets CARGO_TARGET_DIR in the full test path.
 export CARGO_TARGET_DIR="$WORKSPACE_ROOT/target"
 exec cargo nextest run --workspace --all-features "$NEXTEST_FILTER"

@@ -98,9 +98,9 @@ Acceptance tests for User Story 005. See [user_story/005_version_pinning.md](../
 
 | Function | File | Status |
 |----------|------|--------|
-| `us01_005_version_list_shows_aliases` | `integration/user_story_test.rs` | ✅ |
-| `us02_005_version_install_month_dry` | `integration/user_story_test.rs` | ✅ |
-| `us03_005_version_install_month_accepted` | `integration/user_story_test.rs` | ✅ |
-| `us04_005_version_install_idempotent` | `integration/user_story_test.rs` | ✅ |
-| `us05_005_version_show_confirms_active` | `integration/user_story_test.rs` | ✅ |
-| `us06_005_version_guard_drift_watch` | `integration/user_story_test.rs` | ✅ |
+| `us01_005_version_list_shows_aliases` | `tests/cli/user_story_test.rs` | ✅ |
+| `us02_005_version_install_month_dry` | `tests/cli/user_story_test.rs` | ✅ |
+| `us03_005_version_install_month_accepted` | `tests/cli/user_story_test.rs` | ✅ |
+| `us04_005_version_install_idempotent` | `tests/cli/user_story_test.rs` | ✅ |
+| `us05_005_version_show_confirms_active` | `tests/cli/user_story_test.rs` | ✅ |
+| `us06_005_version_guard_drift_watch` | `tests/cli/user_story_test.rs` | ✅ |
