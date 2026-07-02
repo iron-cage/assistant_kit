@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# test_only — run a single test or group by nextest filter inside the runbox container.
+# test1 — run a single test by nextest filter inside the runbox container.
 #
-# Usage: ./verb/test_only <nextest-filter>
+# Usage: ./verb/test1 <nextest-filter>
 #   nextest-filter — test name substring or full nextest -E expression
 #
 # Examples:
-#   ./verb/test_only us19_container_flag_for_cwd_outside_home
-#   ./verb/test_only ft7_session_from_resumes_source_session
+#   ./verb/test1 test_session_discovery
+#   ./verb/test1 test_export_json
 #
 # How it works: sets NEXTEST_FILTER in the host env and delegates to
 # ./runbox/runbox .test.  The project runbox/plugins.sh hook detects
-# NEXTEST_FILTER, overrides TEST_SCRIPT to verb/test_only.d/l1, and injects
+# NEXTEST_FILTER, overrides TEST_SCRIPT to verb/test1.d/l1, and injects
 # the filter as a container env var.
 set -euo pipefail
 if [[ -n "${VERB_LAYER:-}" ]]; then
   echo "ERROR: VERB_LAYER is not valid on the host side." >&2
-  echo "Standard invocation: cd module/claude_runner && ./verb/test_only <filter>" >&2
+  echo "Standard invocation: cd module/claude_storage && ./verb/test1 <filter>" >&2
   exit 1
 fi
 if [[ "${1:-}" == "--dry-run" ]]; then
@@ -25,9 +25,8 @@ if [[ "${1:-}" == "--dry-run" ]]; then
 fi
 FILTER="${1:-}"
 if [[ -z "$FILTER" ]]; then
-  echo "ERROR: test_only requires a test name filter." >&2
-  echo "Usage: ./verb/test_only <nextest-filter-expression>" >&2
+  echo "ERROR: test1 requires a test name filter." >&2
+  echo "Usage: ./verb/test1 <nextest-filter-expression>" >&2
   exit 1
 fi
-shift
-exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test1 "$FILTER" "$@"
+NEXTEST_FILTER="$FILTER" exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test
