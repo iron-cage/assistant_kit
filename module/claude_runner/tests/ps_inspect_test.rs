@@ -20,7 +20,7 @@ mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, stdout_str };
 
 #[ cfg( unix ) ]
-use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+use cli_binary_test_helpers::{ fake_claude_binary_dir, make_proc_dir, spawn_fake_claude };
 
 // The 12 expected attribute key prefixes present in every inspect block.
 #[ cfg( unix ) ]
@@ -40,11 +40,13 @@ fn ec1_inspect_output_is_key_value_not_table()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--inspect" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --inspect" );
 
@@ -72,11 +74,13 @@ fn ec2_inspect_contains_all_12_keys()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--inspect" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --inspect" );
 
@@ -106,11 +110,13 @@ fn ec3_inspect_with_pid_shows_only_matching()
   let pid_a    = bg_a.id();
   let mut bg_b = spawn_fake_claude( &path_val );
   let pid_b    = bg_b.id();
+  let proc     = make_proc_dir( &[ pid_a, pid_b ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--inspect", "--pid", &pid_a.to_string() ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --inspect --pid <A>" );
 
@@ -147,11 +153,13 @@ fn ec4_inspect_with_mode_filter_applied()
   let pid_interactive    = bg_interactive.id();
   let mut bg_print       = spawn_print_claude( &path_val );
   let pid_print          = bg_print.id();
+  let proc               = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--inspect", "--mode", "interactive" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --inspect --mode interactive" );
 
@@ -179,11 +187,13 @@ fn ec5_inspect_ignores_columns()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--inspect", "--columns", "pid" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --inspect --columns pid" );
 
@@ -210,11 +220,13 @@ fn ec6_inspect_ignores_wide()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--inspect", "--wide" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --inspect --wide" );
 
@@ -248,6 +260,7 @@ fn ec7_inspect_suppresses_queued_table()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   // Create a fake gate dir with a mock gate file so a queued table WOULD appear
   // without --inspect.
@@ -263,6 +276,7 @@ fn ec7_inspect_suppresses_queued_table()
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--inspect" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .env( "CLR_GATE_DIR", gate_dir.path() )
     .output()
     .expect( "run clr ps --inspect with gate file present" );
