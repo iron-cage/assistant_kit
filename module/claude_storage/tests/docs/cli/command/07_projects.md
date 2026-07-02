@@ -61,6 +61,8 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 | INT-48 | Default-topic path shown when topic dir absent from disk | Topic Existence Guard (issue-035) |
 | INT-49 | Base path shown correctly with no topic suffix | Topic Existence Guard (issue-035) |
 | INT-50 | Double-topic key shows both topic components unconditionally | Topic Existence Guard (issue-035) |
+| INT-51 | scope:: with invalid value rejected | Invalid Parameter Rejection |
+| INT-52 | agent:: with non-boolean value rejected | Invalid Parameter Rejection |
 
 ## Test Coverage Summary
 
@@ -81,6 +83,7 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 - Family Display: 11 tests (INT-33 through INT-40, INT-41 through INT-43)
 - Project-Centric Output (task-016): 5 tests (INT-41b, INT-42b, INT-43b, INT-44, INT-45)
 - Topic Existence Guard (issue-035): 5 tests (INT-46 through INT-50)
+- Invalid Parameter Rejection: 2 tests (INT-51, INT-52)
 
 ## Test Cases
 
@@ -924,3 +927,35 @@ clg .projects scope::global```
 - Path header contains `/-default_topic` AND `/-commit`
 - Exit code: 0
 - **Source:** `tests/projects_path_encoding_test.rs::projects_shows_both_topic_components_for_double_topic_key`
+
+---
+
+### INT-51: scope:: with invalid value rejected
+
+**Command:**
+```
+clg .projects scope::badvalue
+```
+
+**Expected behavior:**
+- `badvalue` is not a valid option for `scope::` (accepted: `local`, `under`, `relevant`, `global`, `around`)
+- Error message on stderr naming the invalid value
+- No project output on stdout
+- Exit code: 1
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)
+
+---
+
+### INT-52: agent:: with non-boolean value rejected
+
+**Command:**
+```
+clg .projects agent::invalid
+```
+
+**Expected behavior:**
+- `invalid` is not a valid boolean value for `agent::` (accepted: `0`, `1`)
+- Error message on stderr describing the argument error
+- No project output on stdout
+- Exit code: 1
+- **Source:** [command/07_projects.md](../../../../docs/cli/command/07_projects.md)

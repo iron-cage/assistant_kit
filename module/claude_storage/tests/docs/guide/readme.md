@@ -13,4 +13,4 @@ Direct contract verification for the behaviors documented in `docs/guide/`.
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `001_advanced_storage_topics.md` | GD- test cases for advanced storage topics guide (`docs/guide/001_advanced_storage_topics.md`) | ⏳ |
+| `001_advanced_storage_topics.md` | GD- test cases for advanced storage topics guide (`docs/guide/001_advanced_storage_topics.md`) | ✅ |

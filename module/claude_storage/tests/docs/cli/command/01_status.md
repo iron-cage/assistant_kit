@@ -16,6 +16,7 @@ Integration tests for the `.status` command. Tests verify storage overview, stat
 | INT-6 | Exit code 0 on success | Exit Codes |
 | INT-7 | Exit code 2 on unreadable storage path | Exit Codes |
 | INT-8 | Output contains project count and session count | Read Operations |
+| INT-9 | show_tokens:: with invalid value rejected | Invalid Parameter Rejection |
 
 ## Test Coverage Summary
 
@@ -23,6 +24,7 @@ Integration tests for the `.status` command. Tests verify storage overview, stat
 - Output Control: 2 tests (INT-2, INT-3)
 - Configuration: 2 tests (INT-4, INT-5)
 - Exit Codes: 2 tests (INT-6, INT-7)
+- Invalid Parameter Rejection: 1 test (INT-9)
 
 ## Test Cases
 
@@ -145,4 +147,20 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .status
 - Fixture: 3 projects, 5 sessions total in storage
 - Output includes labeled project count (`3`) and labeled session count (`5`)
 - Exit code: 0
+- **Source:** [command/01_status.md](../../../../docs/cli/command/01_status.md)
+
+---
+
+### INT-9: show_tokens:: with invalid value rejected
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .status show_tokens::invalid
+```
+
+**Expected behavior:**
+- `show_tokens::invalid` is not a valid boolean value (accepted: `0`, `1`)
+- Error message on stderr describing the argument error
+- No storage output on stdout
+- Exit code: 1
 - **Source:** [command/01_status.md](../../../../docs/cli/command/01_status.md)

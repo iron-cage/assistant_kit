@@ -20,5 +20,5 @@ next_id: 3
 
 | Order | ID | Advisability | Value | Easiness | Safety | Priority | State | Executor | Dir | Task | Purpose |
 |-------|----|-------------|-------|----------|--------|----------|-------|----------|-----|------|---------|
-| 1 | 001 | — | 8 | 9 | 5 | 1 | 🎯 (Verified) | any | tests/cli/ | [Verify kind_param and format tests in container](001_verify_kind_format_tests.md) | Run 15 new test functions in container and fix any failures |
-| 2 | 002 | — | 8 | 9 | 5 | 2 | 🎯 (Verified) | any | tests/cli/ | [Verify .params and story 007 tests in container](002_verify_params_story007_tests.md) | Run 24 new test functions in container and fix any failures |
+| 1 | 001 | — | 8 | 9 | 5 | 1 | ✅ (Closed) | any | tests/cli/ | [Verify kind_param and format tests in container](completed/001_verify_kind_format_tests.md) | Run 15 new test functions in container and fix any failures |
+| 2 | 002 | — | 8 | 9 | 5 | 2 | ✅ (Closed) | any | tests/cli/ | [Verify .params and story 007 tests in container](completed/002_verify_params_story007_tests.md) | Run 24 new test functions in container and fix any failures |
