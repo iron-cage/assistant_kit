@@ -338,14 +338,14 @@ pub fn spawn_print_claude( path_val : &str ) -> std::process::Child
   child
 }
 
-/// Build a proc isolation dir for CLR_PROC_DIR: one `/proc/{pid}` symlink per PID.
+/// Build a proc isolation dir for `CLR_PROC_DIR`: one `/proc/{pid}` symlink per PID.
 ///
 /// Each symlink points at the real `/proc/{pid}` directory.  When the process exits the
 /// kernel removes `/proc/{pid}`, so a broken symlink (ENOENT) causes
 /// `find_claude_processes()` to skip that entry — count falls to 0 and `clr ps`
 /// terminates cleanly.
 ///
-/// Without CLR_PROC_DIR, ambient `claude` processes visible in real `/proc` can cause
+/// Without `CLR_PROC_DIR`, ambient `claude` processes visible in real `/proc` can cause
 /// `RowBuilder::validate_row_length` to panic (exit 101) when tests run in parallel
 /// with `ec11_gate_wait_event_emitted_when_gate_blocks` (which spawns its own ELF process).
 /// Call `make_proc_dir` AFTER any post-spawn sleep so `/proc/{pid}` exists by the time
@@ -391,7 +391,7 @@ pub fn run_clr_ps( path_val : &str ) -> std::process::Output
     .expect( "run clr ps" )
 }
 
-/// Run `clr ps` with PATH env and CLR_PROC_DIR proc isolation; return the raw `Output`.
+/// Run `clr ps` with PATH env and `CLR_PROC_DIR` proc isolation; return the raw `Output`.
 ///
 /// `proc_dir` must be the path of a dir produced by `make_proc_dir` for the PIDs of all
 /// background processes spawned by the test.  Prevents ambient `claude` processes in real
