@@ -116,7 +116,7 @@ fn run( args : &[ &str ] ) -> std::process::Output
   std::process::Command::new( bin )
     .args( args )
     .output()
-    .expect( "failed to run cm" )
+    .expect( "failed to run clv" )
 }
 
 fn out_stdout( out : &std::process::Output ) -> String
@@ -378,25 +378,25 @@ fn tc032_unknown_param_key()
 
 // TC-033: dry::true (non-0/1 boolean) → exit 1
 //
-// ## Root Cause
+// Root Cause
 //
 // Parser accepted any string for `dry::` — only "1" set the flag,
 // everything else silently treated as false.  `dry::true` appeared
 // to enable dry-run but actually executed real operations.
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // Previous tests only used `dry::1`.  No test supplied a non-0/1 value.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // Parser rejects any `dry::` value that is not "0" or "1".
 //
-// ## Prevention
+// Prevention
 //
 // These tests lock down the accepted value set for boolean params.
 //
-// ## Pitfall
+// Pitfall
 //
 // Silent boolean coercion is dangerous: users who type `dry::true`
 // expect preview mode but get real execution.
@@ -446,27 +446,27 @@ fn tc037_force_0_accepted()
 
 // TC-038: .help in second position → exit 0, help output
 //
-// ## Root Cause
+// Root Cause
 //
 // `argv_to_unilang_tokens` only checked for `.help` as `argv[0]`.  Tokens in
 // positions 1+ that lacked `::` were rejected as malformed params, so
 // `.status .help` raised a parse error instead of showing help (FR-02 violation).
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // Only TC-002 tested `.help`, and only as the sole argument.  No test supplied
 // `.help` after a command name.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // Added a pre-scan pass over all argv for the exact token `".help"`.  If found
 // anywhere, routes to `".help"` immediately (satisfies FR-02).
 //
-// ## Prevention
+// Prevention
 //
 // TC-038..TC-040 lock down `".help"` anywhere-in-argv behaviour.
 //
-// ## Pitfall
+// Pitfall
 //
 // Without the pre-scan, `.status .help` raises a parse error instead of
 // showing help, breaking the discoverable help pattern that FR-02 requires.
@@ -501,28 +501,28 @@ fn tc040_help_after_params()
 
 // TC-484: verbosity::3 (canonical key) rejected like v::3
 //
-// ## Root Cause
+// Root Cause
 //
 // The adapter validated `v::` (alias) but not `verbosity::` (canonical key).
 // `verbosity::3` bypassed range checks: u8::try_from(3) succeeds, and the
 // handler silently treated it as level 2 (v >= 2 branch).
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // All existing tests used `v::N` (alias form). No test supplied `verbosity::N`
 // (canonical form) with an out-of-range value.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // Adapter now validates both `v::` and `verbosity::` in the same branch,
 // rejecting any value outside 0–2 with a clear error message using the key
 // name the user supplied.
 //
-// ## Prevention
+// Prevention
 //
 // TC-484/TC-485 lock the canonical-key path; TC-006 already guards the alias.
 //
-// ## Pitfall
+// Pitfall
 //
 // Skipping canonical-key validation creates an asymmetry: `v::3` fails but
 // `verbosity::3` silently succeeds, misleading users about accepted values.
@@ -540,7 +540,7 @@ fn tc484_verbosity_canonical_out_of_range_rejected()
 
 // TC-485: verbosity::-1 (canonical negative) rejected
 //
-// ## Root Cause
+// Root Cause
 //
 // Same bypass as TC-484: `verbosity::` skipped adapter range validation.
 // parse::<u8>() on "-1" fails with `InvalidDigit`, so the error is actually
@@ -548,19 +548,19 @@ fn tc484_verbosity_canonical_out_of_range_rejected()
 // and unilang parsed -1 as i64 then u8::try_from(-1).unwrap_or(1) silently
 // produced verbosity=1.
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // Only `v::-1` was tried. `verbosity::-1` was not tested.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // Same fix as TC-484: canonical key now goes through the same validation path.
 //
-// ## Prevention
+// Prevention
 //
 // TC-485 covers the negative-value path for the canonical key.
 //
-// ## Pitfall
+// Pitfall
 //
 // Without the fix, `verbosity::-1` silently defaulted to verbosity=1 instead
 // of exiting with a clear error, masking a user typo.
@@ -588,7 +588,7 @@ fn tc486_verbosity_canonical_zero_accepted()
 
 // TC-487: count::18446744073709551615 (u64 max, exceeds i64 max) → clear error, exit 1
 //
-// ## Root Cause
+// Root Cause
 //
 // The adapter parsed count:: with u64 (accepting values > i64::MAX), then
 // passed the raw string to unilang, which uses i64 internally. The unilang
@@ -596,22 +596,22 @@ fn tc486_verbosity_canonical_zero_accepted()
 // error instead of the adapter's user-friendly "must be a non-negative integer"
 // message.
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // Tests only used small values (0, 1, 10, 66). The u64/i64 boundary was not
 // exercised.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // Adapter now rejects count:: / interval:: values > i64::MAX with a clear
 // "value too large" message before the token reaches unilang.
 //
-// ## Prevention
+// Prevention
 //
 // TC-487 reproduces the overflow scenario; TC-488 ensures the valid boundary
 // (i64::MAX) is still accepted.
 //
-// ## Pitfall
+// Pitfall
 //
 // Documenting count:: as "non-negative integer" implies the full u64 range is
 // valid. Without the upper bound check, values just above i64::MAX sneak through
@@ -650,7 +650,7 @@ fn tc488_count_i64_max_accepted()
 
 // TC-489: bare `help` after command → routes to `.help`, exit 0
 //
-// ## Root Cause
+// Root Cause
 //
 // The adapter recognised `.help` anywhere in argv (Step 1b) but not bare `help`
 // (without the leading dot). The unilang help footer instructs users
@@ -659,22 +659,22 @@ fn tc488_count_i64_max_accepted()
 // check, the adapter rejected `help` with "expected param::value syntax, got: 'help'"
 // because `help` lacks the `::` separator required for key::value tokens.
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // All existing tests used `.help` (with dot). The help footer's example was
 // never tested against the actual adapter behaviour; the mismatch went unnoticed.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // Step 1b of `argv_to_unilang_tokens` now checks for both `".help"` and `"help"`,
 // routing either form to the global `.help` command.
 //
-// ## Prevention
+// Prevention
 //
 // TC-489 and TC-490 lock the bare-`help` path. Any future regression in
 // Step 1b will be caught immediately.
 //
-// ## Pitfall
+// Pitfall
 //
 // The help footer is generated by the `unilang` crate and cannot be patched here.
 // The adapter must accept both spellings so the documented syntax actually works.
@@ -699,28 +699,28 @@ fn tc490_bare_help_after_params_routes_to_help()
 
 // TC-491: interval::u64max (exceeds i64::MAX) → clear error, exit 1
 //
-// ## Root Cause
+// Root Cause
 //
 // Same overflow boundary as count:: (TC-487): the adapter parses interval::
 // as u64, then rejects values above i64::MAX before they reach unilang's i64
 // parser. Without this guard, u64_max would produce a cryptic type-error.
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // TC-487/TC-488 document the count:: boundary but no parallel tests existed
 // for interval::, leaving the overflow guard path untested for that param.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // Both count:: and interval:: share the same `validate_non_neg_int` path —
 // the fix was already present; this test locks it down.
 //
-// ## Prevention
+// Prevention
 //
 // Any non-negative integer param added in future must have a corresponding
 // u64_max rejection test alongside its i64_max acceptance note.
 //
-// ## Pitfall
+// Pitfall
 //
 // Documenting a param as "non-negative integer" implies the full u64 range.
 // Without an explicit upper-bound check (i64::MAX), values just above the
@@ -743,26 +743,26 @@ fn tc491_interval_u64_max_rejected_with_clear_error()
 
 // TC-493: dry::0 dry::1 — last occurrence wins → dry::1 active (dry-run)
 //
-// ## Root Cause
+// Root Cause
 //
 // The adapter implements last-occurrence-wins for all repeated params via
 // `pairs.iter_mut().find(...)`. Without a test, a regression could silently
 // reverse the semantics so the FIRST occurrence wins, causing dry::0 dry::1
 // to run real operations while appearing to accept the dry::1 override.
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // TC-010 tests last-wins for v::, but no test covered dry:: or force::.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // Behaviour was already correct; this test locks the contract.
 //
-// ## Prevention
+// Prevention
 //
 // TC-493/TC-494 together verify both directions of dry:: last-wins.
 //
-// ## Pitfall
+// Pitfall
 //
 // If first-wins semantics were accidentally introduced, `dry::0 dry::1` would
 // silently execute destructive operations despite the user's dry::1 intention.
@@ -780,25 +780,25 @@ fn tc493_dry_0_then_1_last_wins_dry_active()
 
 // TC-494: dry::1 dry::0 — last occurrence wins → dry::0 active (no dry-run)
 //
-// ## Root Cause
+// Root Cause
 //
 // Same as TC-493: verifies the other direction. With dry::0 winning, the
 // command attempts real execution. Uses .settings.set in an isolated tmp dir
 // to avoid destructive side effects.
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // Only TC-010 tested last-wins; dry:: was not covered.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // Behaviour was already correct.
 //
-// ## Prevention
+// Prevention
 //
 // Isolation via temp HOME ensures no real settings are modified.
 //
-// ## Pitfall
+// Pitfall
 //
 // Without this test, a regression where first-wins takes hold would mean
 // dry::1 dry::0 silently enables dry-run mode, suppressing real writes.
@@ -811,7 +811,7 @@ fn tc494_dry_1_then_0_last_wins_dry_inactive()
   .args( [ ".settings.set", "key::probe", "value::check", "dry::1", "dry::0" ] )
   .env( "HOME", dir.path() )
   .output()
-  .expect( "failed to run cm" );
+  .expect( "failed to run clv" );
 
   // dry::0 wins → real write, so settings file must exist
   let settings_file = dir.path().join( ".claude/settings.json" );
@@ -829,25 +829,25 @@ fn tc494_dry_1_then_0_last_wins_dry_inactive()
 
 // TC-495: format::text format::json — last occurrence wins → json output
 //
-// ## Root Cause
+// Root Cause
 //
 // Last-wins is already verified for v:: (TC-010) but not for format::.
 // A regression where first-wins takes hold would silently emit text instead
 // of json when both params are supplied, breaking pipe-based tooling.
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // TC-010 only tested v::. No test verified format:: last-wins.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // Behaviour was already correct; this test locks it.
 //
-// ## Prevention
+// Prevention
 //
 // Test both orderings to catch either direction of regression.
 //
-// ## Pitfall
+// Pitfall
 //
 // format:: errors are silent: wrong format produces valid but differently-
 // structured output that downstream consumers may silently misparse.
@@ -1010,7 +1010,7 @@ fn tc_settings_key_dot_literal()
     .args( [ ".settings.get", "key::api.endpoint" ] )
     .env( "HOME", dir.path() )
     .output()
-    .expect( "failed to run cm" );
+    .expect( "failed to run clv" );
   assert_eq!( code( &out ), 0, "key::api.endpoint must exit 0" );
   let text = out_stdout( &out );
   assert!( text.contains( "v1" ), "must retrieve dot-named key value: {text}" );
@@ -1032,7 +1032,7 @@ fn tc_settings_key_valid_accepted()
     .args( [ ".settings.get", "key::theme" ] )
     .env( "HOME", dir.path() )
     .output()
-    .expect( "failed to run cm" );
+    .expect( "failed to run clv" );
   assert_eq!( code( &out ), 0, "key::theme must exit 0" );
   let text = out_stdout( &out );
   assert!( text.contains( "dark" ), "must retrieve key value: {text}" );

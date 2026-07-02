@@ -60,7 +60,7 @@ fn normalise_bool_value( key : &str, raw_val : &str ) -> Result< String >
 /// Returns the canonical key `"verbosity"` on success, or an error if the value
 /// is not a `u8` in `[0, MAX_VERBOSITY]`.
 ///
-/// Fix(issue-verbosity-bypass): `verbosity::` canonical key bypassed 0–2 range check.
+/// Fix(BUG-002): `verbosity::` canonical key bypassed 0–2 range check.
 /// Root cause: range validation only guarded `v::` alias; `verbosity::` reached unilang unchecked.
 /// Pitfall: `verbosity::3` exited 0 (treated as level 2); `verbosity::-1` exited 0 (defaulted to 1).
 #[ inline ]
@@ -84,7 +84,7 @@ fn normalise_verbosity( key : &str, raw_val : &str ) -> Result< String >
 /// upper bound of unilang's internal integer type — so that oversized inputs are
 /// caught here with a clear message rather than producing a cryptic type error later.
 ///
-/// Fix(issue-count-overflow): `count::` / `interval::` accepted `u64` values > `i64::MAX`.
+/// Fix(BUG-003): `count::` / `interval::` accepted `u64` values > `i64::MAX`.
 /// Root cause: parsed as `u64`; values above `i64::MAX` reached unilang and triggered an opaque overflow error.
 /// Pitfall: confusing "number too large to fit in target type" message instead of the adapter's user-friendly text.
 #[ inline ]
