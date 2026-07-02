@@ -1,6 +1,6 @@
-# test1.d/
+# test_only.d/
 
-Layer scripts for the `test1` verb dispatcher.
+Layer scripts for the `test_only` verb dispatcher.
 
 | File | Responsibility |
 |------|----------------|

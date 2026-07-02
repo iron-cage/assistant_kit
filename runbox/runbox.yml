@@ -13,8 +13,8 @@ cmd_filter: "all()"
 
 # script invoked by `.test` inside the container (path relative to /workspace)
 test_script: verb/test.d/l1
-# script invoked by `.test1` inside the container (path relative to /workspace)
-test1_script: verb/test1.d/l1
+# script invoked by `.test1 <filter>` inside the container (path relative to /workspace)
+test1_script: verb/test.d/l1_filter
 
 # data directory plugin: host_path:container_path:check_type
 # .test mounts as required+rw; .shell mounts as optional+ro

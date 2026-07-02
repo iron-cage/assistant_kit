@@ -56,6 +56,7 @@ Unit and integration tests for `claude_version`.
 | `cli/process_isolation_test.rs` | Kill-isolation regression: guard does not send kill signals |
 | `cli/params_command_test.rs` | `.params` command integration tests |
 | `cli/kind_param_test.rs` | EC- edge case tests for the `kind::` parameter |
+| `cli/runtime_files_test.rs` | Integration tests for `.runtime_files` (IT-1..IT-9, FT-1..FT-5) |
 
 ## Arg Parsing Test Modules (`cli_args_test/`)
 

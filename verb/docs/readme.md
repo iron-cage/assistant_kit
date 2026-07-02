@@ -22,6 +22,7 @@ Per-verb reference for the `do` Universal Action Protocol.
 | `006_verbs.md` | `verbs` meta-verb: list available verbs |
 | `007_package_info.md` | `package_info` meta-verb: report deterministic package metadata as JSON |
 | `008_verify.md` | `verify` verb: full checks including dependency analysis and audit |
+| `009_test1.md` | `test1` verb: run a single nextest filter inside container |
 
 ### Overview Table
 
