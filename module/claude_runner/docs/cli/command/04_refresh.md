@@ -76,7 +76,7 @@ Subprocess injected defaults (see [`invariant/005_isolated_subprocess_defaults.m
 
 | # | Command | Relationship |
 |---|---------|--------------|
-| 1 | [`isolated`](02_isolated.md) | Both use `run_isolated_ext()`; `refresh` sends a trivial ping instead of a real task |
+| 1 | [`isolated`](03_isolated.md) | Both use `run_isolated_ext()`; `refresh` sends a trivial ping instead of a real task |
 
 ### Referenced Parameter Groups
 

@@ -157,8 +157,8 @@ clr --dry-run "Run tests" --max-tokens 50000
 | # | Command | Relationship |
 |---|---------|--------------|
 | 1 | [`ask`](05_ask.md) | Pure semantic alias for `run` with identical behavior |
-| 2 | [`isolated`](02_isolated.md) | Credential-isolated variant; does not share session state |
-| 3 | [`refresh`](03_refresh.md) | Credential refresh only; no task execution |
+| 2 | [`isolated`](03_isolated.md) | Credential-isolated variant; does not share session state |
+| 3 | [`refresh`](04_refresh.md) | Credential refresh only; no task execution |
 
 ### Referenced Parameter Groups
 

@@ -19,8 +19,8 @@
 | # | Command | Role |
 |---|---------|------|
 | 1 | [`run`](../command/01_run.md) | `--trace` emits env+command before launch |
-| 2 | [`isolated`](../command/02_isolated.md) | `--trace` emits creds path and temp HOME |
-| 3 | [`refresh`](../command/03_refresh.md) | `--trace` emits creds path and fixed args |
+| 2 | [`isolated`](../command/03_isolated.md) | `--trace` emits creds path and temp HOME |
+| 3 | [`refresh`](../command/04_refresh.md) | `--trace` emits creds path and fixed args |
 
 ### Referenced Parameter Groups
 

@@ -5,7 +5,7 @@ Enables repeatable automation configurations without long flag lists.
 
 - **Type:** [`FilePath`](../type/12_file_path.md)
 - **Default:** — (none; no JSON config loaded)
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/03_isolated.md), [`refresh`](../command/04_refresh.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Env:** `CLR_ARGS_FILE` (path; applied only when `--args-file` absent from CLI)
 - **JSON Key:** `"args-file"` *(not re-processed inside a JSON source; chaining not supported)*
@@ -53,8 +53,8 @@ Introduced in the JSON Config Loading feature (feature/004_json_config.md).
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | Applies JSON config before flag parsing |
-| 2 | [`isolated`](../command/02_isolated.md) | — | Applies JSON config before flag parsing |
-| 3 | [`refresh`](../command/03_refresh.md) | — | Applies JSON config before flag parsing |
+| 2 | [`isolated`](../command/03_isolated.md) | — | Applies JSON config before flag parsing |
+| 3 | [`refresh`](../command/04_refresh.md) | — | Applies JSON config before flag parsing |
 | 5 | [`ask`](../command/05_ask.md) | — | Applies JSON config before flag parsing |
 
 ### Referenced User Stories

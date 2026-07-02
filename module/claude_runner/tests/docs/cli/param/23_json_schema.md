@@ -65,7 +65,7 @@ Edge case coverage for the `--json-schema` parameter. See [023_json_schema.md](.
 - **When:** `clr --help`
 - **Then:** Stdout contains `--json-schema`
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 - **Commands:** run, ask
 
 ---

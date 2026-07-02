@@ -63,7 +63,7 @@ Edge case coverage for the `--mcp-config` parameter. See [024_mcp_config.md](../
 - **When:** `clr --help`
 - **Then:** Stdout contains `--mcp-config`
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 - **Commands:** run, ask
 
 ---

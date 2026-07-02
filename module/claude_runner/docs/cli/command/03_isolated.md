@@ -100,7 +100,7 @@ If the subprocess times out but already wrote refreshed credentials, `clr isolat
 
 | # | Command | Relationship |
 |---|---------|--------------|
-| 1 | [`refresh`](03_refresh.md) | Both use `run_isolated_ext()`; `refresh` sends a trivial ping to trigger token refresh only |
+| 1 | [`refresh`](04_refresh.md) | Both use `run_isolated_ext()`; `refresh` sends a trivial ping to trigger token refresh only |
 
 ### Referenced Parameter Groups
 

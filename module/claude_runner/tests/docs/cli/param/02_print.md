@@ -85,5 +85,5 @@ Edge case tests for the print mode flag. Tests validate auto-enable with message
 - **When:** `clr --help`
 - **Then:** Stdout contains `--print` and `-p`
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 - **Commands:** run, ask

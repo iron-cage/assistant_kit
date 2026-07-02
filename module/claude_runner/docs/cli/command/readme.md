@@ -12,9 +12,9 @@
 | File | Responsibility |
 |------|----------------|
 | 01_run.md | Command spec: default execution with configurable flags |
-| 02_isolated.md | Command spec: credential-isolated subprocess execution |
-| 03_refresh.md | Command spec: OAuth credential refresh without running a task |
-| 04_help.md | Command spec: print usage information and exit |
+| 02_help.md | Command spec: print usage information and exit |
+| 03_isolated.md | Command spec: credential-isolated subprocess execution |
+| 04_refresh.md | Command spec: OAuth credential refresh without running a task |
 | 05_ask.md | Command spec: semantic alias for run (identical defaults) |
 | 06_ps.md | Command spec: list running Claude Code sessions and queued waiters in two plain-style tables |
 | 07_kill.md | Command spec: terminate a running Claude Code session by PID via SIGTERM |

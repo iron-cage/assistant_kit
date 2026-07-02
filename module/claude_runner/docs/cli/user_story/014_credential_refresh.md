@@ -18,7 +18,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 3 | [`refresh`](../command/03_refresh.md) | OAuth credential refresh without task execution |
+| 3 | [`refresh`](../command/04_refresh.md) | OAuth credential refresh without task execution |
 
 ### Referenced Parameter Groups
 

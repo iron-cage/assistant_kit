@@ -681,6 +681,9 @@ pub( super ) fn load_and_apply( path : &str, parsed : &mut CliArgs ) -> Result< 
 ///
 /// Covers the subset of `IsolatedArgs` fields that JSON config can supply.
 /// Same default-check semantics as `apply_json_config`: only fills fields still at default.
+#[ allow( clippy::too_many_lines ) ]    // mechanical dispatch — grows linearly with IsolatedArgs parameter set (see rulebook).
+#[ allow( clippy::collapsible_match ) ] // mechanical dispatch — each arm is one condition + one pattern check
+#[ allow( clippy::assigning_clones ) ]  // field = s.clone() is clearer than clone_from in this dispatch context
 pub( super ) fn apply_json_config_isolated(
   parsed : &mut super::cred_parse::IsolatedArgs,
   map    : &Map< String, Value >,
@@ -837,6 +840,9 @@ pub( super ) fn apply_json_config_isolated(
 /// Apply a JSON config map to `parsed` for the `refresh` subcommand.
 ///
 /// Covers the small set of `RefreshArgs` fields that JSON config can supply.
+#[ allow( clippy::too_many_lines ) ]    // mechanical dispatch — grows linearly with RefreshArgs parameter set (see rulebook).
+#[ allow( clippy::collapsible_match ) ] // mechanical dispatch — each arm is one condition + one pattern check
+#[ allow( clippy::assigning_clones ) ]  // field = s.clone() is clearer than clone_from in this dispatch context
 pub( super ) fn apply_json_config_refresh(
   parsed : &mut super::cred_parse::RefreshArgs,
   map    : &Map< String, Value >,

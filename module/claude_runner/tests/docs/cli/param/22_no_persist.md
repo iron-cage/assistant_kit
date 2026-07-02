@@ -63,7 +63,7 @@ Edge case coverage for the `--no-persist` parameter. See [022_no_persist.md](../
 - **When:** `clr --help`
 - **Then:** Stdout contains `--no-persist`
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 - **Commands:** run, ask
 
 ---

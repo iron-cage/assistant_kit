@@ -80,8 +80,8 @@
 
 | Type | Path | Responsibility |
 |------|------|----------------|
-| command | `command/02_isolated.md` | `isolated` full reference |
-| command | `command/03_refresh.md` | `refresh` full reference |
+| command | `command/03_isolated.md` | `isolated` full reference |
+| command | `command/04_refresh.md` | `refresh` full reference |
 | parity | `001_run_ask_isolated.md` | `run` / `ask` / `isolated` comprehensive comparison |
 | doc | `command_defaults.md` | Default injection matrix (all 4 commands) with Plan 009 traceability |
 | invariant | `../invariant/005_isolated_subprocess_defaults.md` | Isolated/refresh subprocess injection contracts |

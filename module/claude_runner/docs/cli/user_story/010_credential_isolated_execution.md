@@ -18,7 +18,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 2 | [`isolated`](../command/02_isolated.md) | Credential-isolated subprocess execution |
+| 2 | [`isolated`](../command/03_isolated.md) | Credential-isolated subprocess execution |
 
 ### Referenced Parameter Groups
 
