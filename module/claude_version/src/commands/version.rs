@@ -98,7 +98,7 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   }
 
   // Idempotency guard: skip install if already at target version.
-  // Fix(issue-358): store preference even on idempotent skip
+  // Fix(BUG-004): store preference even on idempotent skip
   // Root cause: early return bypassed store_preferred_version()
   // Pitfall: every exit path that confirms a version must persist the preference
   if !super::is_force( &cmd ) && !is_latest
@@ -265,7 +265,7 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
       }
       Err( e ) =>
       {
-        // Fix(issue-415): watch loop terminated on any install error in watch mode.
+        // Fix(BUG-005): watch loop terminated on any install error in watch mode.
         // Root cause: prior code had `return result` here, which exited the daemon
         //   on the first failure; ETXTBSY ("Text file busy") from a running claude
         //   binary silently killed the guard after one drift-restore attempt.

@@ -1,12 +1,12 @@
-//! Integration tests for read-only `cm` commands.
+//! Integration tests for read-only `clv` commands.
 //!
 //! # Test Matrix
 //!
 //! ## E1 — `.help`
 //! | TC | Description | P/N | Exit |
 //! |----|-------------|-----|------|
-//! | TC-01 | `cm .` → help output, exit 0 | P | 0 |
-//! | TC-02 | `cm` (empty argv) → help output, exit 0 | P | 0 |
+//! | TC-01 | `clv .` → help output, exit 0 | P | 0 |
+//! | TC-02 | `clv` (empty argv) → help output, exit 0 | P | 0 |
 //!
 //! ## E2 — `.status`
 //! | TC | Description | P/N | Exit |
@@ -239,14 +239,12 @@ fn tc104_status_v0_fewer_lines_than_v1()
 #[ test ]
 fn tc105_status_no_home_shows_unknown_account()
 {
-  // get_active_account() checks $PRO before $HOME; both must be cleared to force
-  // "unknown" — clearing only HOME still resolves the account via $PRO on dev machines.
-  let out = run_clv_with_env( &[ ".status" ], &[ ( "HOME", "" ), ( "PRO", "" ) ] );
+  let out = run_clv_with_env( &[ ".status" ], &[ ( "HOME", "" ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
     text.contains( "unknown" ),
-    "expected 'unknown' account with no HOME or PRO, got: {text}"
+    "expected 'unknown' account with no HOME, got: {text}"
   );
 }
 
@@ -970,19 +968,18 @@ fn tc420_status_with_preference_shows_preferred()
 
 // ─── E15: version history ─────────────────────────────────────────────────────
 
-/// Returns `true` when the command failed due to network unavailability,
-/// allowing network-dependent tests to pass vacuously in offline CI.
-fn skip_if_no_network( out : &std::process::Output ) -> bool
+/// Panics if the command output indicates network unavailability.
+/// Network-dependent tests must fail loudly — silent returns hide real failures.
+fn require_network_or_fail( out : &std::process::Output )
 {
   if out.status.code() == Some( 2 )
   {
     let err = String::from_utf8_lossy( &out.stderr );
-    if err.contains( "failed to fetch" ) || err.contains( "empty response" )
-    {
-      return true;
-    }
+    assert!(
+      !err.contains( "failed to fetch" ) && !err.contains( "empty response" ),
+      "network required — run this test suite in an environment with network access\nstderr: {err}"
+    );
   }
-  false
 }
 
 // TC-425: default invocation exits 0
@@ -990,7 +987,7 @@ fn skip_if_no_network( out : &std::process::Output ) -> bool
 fn tc425_version_history_defaults_exit_0()
 {
   let out = run_clv( &[ ".version.history" ] );
-  if skip_if_no_network( &out ) { return; }
+  require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( !text.is_empty(), "default output must be non-empty" );
@@ -1001,7 +998,7 @@ fn tc425_version_history_defaults_exit_0()
 fn tc426_version_history_count_3()
 {
   let out = run_clv( &[ ".version.history", "count::3", "v::0" ] );
-  if skip_if_no_network( &out ) { return; }
+  require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let lines : Vec< &str > = text.lines().filter( | l | !l.is_empty() ).collect();
@@ -1013,7 +1010,7 @@ fn tc426_version_history_count_3()
 fn tc427_version_history_count_0_empty()
 {
   let out = run_clv( &[ ".version.history", "count::0" ] );
-  if skip_if_no_network( &out ) { return; }
+  require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.trim().is_empty(), "count::0 must produce empty output, got: {text}" );
@@ -1024,7 +1021,7 @@ fn tc427_version_history_count_0_empty()
 fn tc428_version_history_v0_bare()
 {
   let out = run_clv( &[ ".version.history", "v::0", "count::3" ] );
-  if skip_if_no_network( &out ) { return; }
+  require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   for line in text.lines().filter( | l | !l.is_empty() )
@@ -1044,7 +1041,7 @@ fn tc428_version_history_v0_bare()
 fn tc429_version_history_v1_with_summary()
 {
   let out = run_clv( &[ ".version.history", "v::1", "count::3" ] );
-  if skip_if_no_network( &out ) { return; }
+  require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   for line in text.lines().filter( | l | !l.is_empty() )
@@ -1063,7 +1060,7 @@ fn tc429_version_history_v1_with_summary()
 fn tc430_version_history_v2_full_changelog()
 {
   let out = run_clv( &[ ".version.history", "v::2", "count::2" ] );
-  if skip_if_no_network( &out ) { return; }
+  require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "## " ), "v::2 must contain '## ' header lines: {text}" );
@@ -1075,7 +1072,7 @@ fn tc430_version_history_v2_full_changelog()
 fn tc431_version_history_format_json()
 {
   let out = run_clv( &[ ".version.history", "format::json", "count::3" ] );
-  if skip_if_no_network( &out ) { return; }
+  require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.trim_start().starts_with( '[' ), "JSON must start with [: {text}" );
@@ -1089,7 +1086,7 @@ fn tc431_version_history_format_json()
 fn tc432_version_history_count_1_json()
 {
   let out = run_clv( &[ ".version.history", "count::1", "format::json" ] );
-  if skip_if_no_network( &out ) { return; }
+  require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let count = text.matches( "\"version\"" ).count();
@@ -1101,7 +1098,7 @@ fn tc432_version_history_count_1_json()
 fn tc433_version_history_count_1_v0()
 {
   let out = run_clv( &[ ".version.history", "count::1", "v::0" ] );
-  if skip_if_no_network( &out ) { return; }
+  require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let lines : Vec< &str > = text.lines().filter( | l | !l.is_empty() ).collect();
@@ -1113,7 +1110,7 @@ fn tc433_version_history_count_1_v0()
 fn tc434_version_history_count_1_v2()
 {
   let out = run_clv( &[ ".version.history", "count::1", "v::2" ] );
-  if skip_if_no_network( &out ) { return; }
+  require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   // Count version headers (## X.Y.Z (date)), not changelog body headers like ## What's changed
@@ -1128,7 +1125,7 @@ fn tc434_version_history_count_1_v2()
 fn tc435_version_history_default_count_le_10()
 {
   let out = run_clv( &[ ".version.history", "v::0" ] );
-  if skip_if_no_network( &out ) { return; }
+  require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let lines : Vec< &str > = text.lines().filter( | l | !l.is_empty() ).collect();
@@ -1140,7 +1137,7 @@ fn tc435_version_history_default_count_le_10()
 fn tc436_version_history_count_100_all()
 {
   let out = run_clv( &[ ".version.history", "count::100", "v::0" ] );
-  if skip_if_no_network( &out ) { return; }
+  require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let lines : Vec< &str > = text.lines().filter( | l | !l.is_empty() ).collect();
@@ -1153,9 +1150,9 @@ fn tc436_version_history_count_100_all()
 fn tc437_version_history_idempotent()
 {
   let out1 = run_clv( &[ ".version.history", "count::1", "v::0" ] );
-  if skip_if_no_network( &out1 ) { return; }
+  require_network_or_fail( &out1 );
   let out2 = run_clv( &[ ".version.history", "count::1", "v::0" ] );
-  if skip_if_no_network( &out2 ) { return; }
+  require_network_or_fail( &out2 );
   assert_exit( &out1, 0 );
   assert_exit( &out2, 0 );
   assert_eq!( stdout( &out1 ), stdout( &out2 ), "two calls must produce identical output" );
@@ -1166,9 +1163,9 @@ fn tc437_version_history_idempotent()
 fn tc438_version_history_param_order()
 {
   let out_a = run_clv( &[ ".version.history", "count::3", "v::0" ] );
-  if skip_if_no_network( &out_a ) { return; }
+  require_network_or_fail( &out_a );
   let out_b = run_clv( &[ ".version.history", "v::0", "count::3" ] );
-  if skip_if_no_network( &out_b ) { return; }
+  require_network_or_fail( &out_b );
   assert_exit( &out_a, 0 );
   assert_exit( &out_b, 0 );
   assert_eq!( stdout( &out_a ), stdout( &out_b ), "param order must not affect output" );
@@ -1179,7 +1176,7 @@ fn tc438_version_history_param_order()
 fn tc439_version_history_count_0_json_empty_array()
 {
   let out = run_clv( &[ ".version.history", "count::0", "format::json" ] );
-  if skip_if_no_network( &out ) { return; }
+  require_network_or_fail( &out );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert_eq!( text.trim(), "[]", "count::0 format::json must be [], got: {text}" );

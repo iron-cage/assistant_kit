@@ -68,7 +68,7 @@ use crate::cli_runner::{
   write_account, write_account_with_token,
   write_account_owner,
   write_live_credentials_with_token, require_live_api,
-  FAR_FUTURE_MS, PAST_MS,
+  FAR_FUTURE_MS,
 };
 use claude_profile::output::jwt_exp_ms;
 use tempfile::TempDir;
@@ -103,22 +103,34 @@ fn ft01_missing_access_token_short_error()
 
 // ── FT-02: HTTP 401 shortens to (auth expired (401)) (AC-03) ─────────────────
 
-/// Write a saved account credential with `PAST_MS` expiry AND an `accessToken`
-/// so `read_token()` succeeds but the usage API rejects the token with 401.
-fn write_account_with_expired_token( home : &std::path::Path, name : &str, token : &str )
+/// Write a saved account credential with `FAR_FUTURE_MS` expiry AND an invalid `accessToken`
+/// so `read_token()` succeeds and the usage API rejects the token with 401.
+///
+/// Uses `FAR_FUTURE_MS` (not `PAST_MS`) so the locally-valid expiry lets the code
+/// reach the live API call. Fix(BUG-233) skips the API for locally-expired tokens
+/// (guaranteed 401 path) and attempts OAuth refresh instead — `PAST_MS` would hit
+/// the refresh path and display "(refresh token expired)" rather than "auth expired (401)".
+fn write_account_with_invalid_token( home : &std::path::Path, name : &str, token : &str )
 {
   let store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::create_dir_all( &store ).unwrap();
   let json = format!(
-    r#"{{"oauthAccount":{{"subscriptionType":"max","rateLimitTier":"default_claude_max_20x"}},"expiresAt":{PAST_MS},"accessToken":"{token}"}}"#,
+    r#"{{"oauthAccount":{{"subscriptionType":"max","rateLimitTier":"default_claude_max_20x"}},"expiresAt":{FAR_FUTURE_MS},"accessToken":"{token}"}}"#,
   );
   std::fs::write( store.join( format!( "{name}.credentials.json" ) ), json ).unwrap();
 }
 
-/// FT-02 (AC-03, `lim_it`): saved account has `PAST_MS` `expiresAt` and a token
-/// the usage API rejects with HTTP 401 → rendered row shows `EXPIRED` in the
-/// Expires column and `auth expired (401)` in the 7d Reset column, NOT the
-/// verbose `HTTP transport error: HTTP 401` string. Exit 0.
+/// FT-02 (AC-03, `lim_it`): saved account has a locally-valid expiry but an
+/// invalid token the usage API rejects with HTTP 401 → rendered row shows
+/// `auth expired (401)` in the quota column, NOT the verbose
+/// `HTTP transport error: HTTP 401` string. Exit 0.
+///
+/// Root cause: Fix(BUG-233) now skips the API for locally-expired tokens (`PAST_MS`)
+///   and routes to the OAuth refresh path instead; a `PAST_MS` token no longer
+///   triggers a 401 from the server. `FAR_FUTURE_MS` keeps the token locally valid
+///   so the live API call fires and returns 401.
+/// Pitfall: using `PAST_MS` here would display "(refresh token expired)" instead of
+///   "auth expired (401)" because the refresh path fires before any API call.
 ///
 /// Requires network access — the fake token triggers a real API 401 response.
 /// Source: `tests/docs/feature/09_token_usage.md § FT-02`.
@@ -128,19 +140,15 @@ fn ft02_lim_it_http_401_shortens_to_auth_expired()
   require_live_api( "ft02" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account_with_expired_token( dir.path(), "expired@test.com", "invalid-token-for-401-test" );
+  write_account_with_invalid_token( dir.path(), "invalid@test.com", "invalid-token-for-401-test" );
 
   let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
   assert!(
-    text.contains( "expired@test.com" ),
+    text.contains( "invalid@test.com" ),
     "account row must appear in the table, got:\n{text}",
-  );
-  assert!(
-    text.contains( "EXPIRED" ),
-    "account with PAST_MS expiresAt must show EXPIRED in Expires column, got:\n{text}",
   );
   assert!(
     text.contains( "auth expired (401)" ),

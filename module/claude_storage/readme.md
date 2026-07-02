@@ -16,6 +16,7 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 | `changelog.md` | Notable changes by version |
 | `runbox/` | Container runtime scripts and configuration |
 | `verb/` | Shell scripts for each `do` protocol verb. |
+| `rulebook.md` | Project-level convention overrides for this crate |
 
 ## overview
 

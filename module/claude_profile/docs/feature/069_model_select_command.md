@@ -34,18 +34,22 @@ Removes `subprocess_model` key from `~/.clr/prefs.json`. Preserves other keys. P
 
 **Mutual exclusion:** `id::` and `reset::1` together → exits 1 with stderr `model.select: id:: and reset::1 are mutually exclusive`.
 
-**clr integration** (`claude_runner_core/src/isolated.rs`):
+**clr integration:**
 
-`run_isolated_ext()` before resolving the `--model` flag:
+`dispatch_run()` / `dispatch_ask()` (`claude_runner/src/cli/mod.rs`) and `run_isolated_ext()` (`claude_runner_core/src/isolated.rs`) all read the preference. After `apply_env_vars()` resolves CLI flags and `CLR_*` env vars, if `--model` is still unset:
 1. Try to read `~/.clr/prefs.json` → parse `subprocess_model` field.
-2. If present and non-empty: use this model ID instead of `ISOLATED_DEFAULT_MODEL`.
-3. If absent, error, or empty: use `ISOLATED_DEFAULT_MODEL` as before.
+2. If present and non-empty: use this model ID instead of the command's default model.
+3. If absent, error, or empty: use the default model as before.
 
-The preference applies to all four executing commands: `run`, `ask`, `isolated`, `refresh`.
+Precedence (highest to lowest): explicit `--model` flag → `CLR_MODEL` env var → `prefs.json` pin → built-in default.
+
+The preference applies to `run`, `ask`, and `isolated`. `refresh` always uses `REFRESH_DEFAULT_MODEL`; see below.
 
 **Why not affect touch/refresh subprocess model:**
 
 Touch (`imodel::`) is quota-adaptive by design. The auto model selection (Haiku vs Sonnet based on quota) is a feature, not a configuration. Pinning it would defeat the purpose. `imodel::` per-invocation override remains the right mechanism for explicit touch model control.
+
+Refresh (`clr refresh`) passes `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` regardless of the preference — credential stability requires a known working model. The user pin is intentionally excluded from the refresh path.
 
 ### Acceptance Criteria
 

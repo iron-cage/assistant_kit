@@ -59,7 +59,7 @@ fn account_unclaim_redirector( _cmd : VerifiedCommand, _ctx : ExecutionContext )
 
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 16 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set, token status, paths, usage).
+/// Registers 18 commands (credentials status, account management including limits, relogin, renewal, and inspect, model get/set/select, models discovery, token status, paths, usage).
 /// `.account.rotate` is registered as a deprecated redirector (always exits 1 with migration notice).
 /// `.account.assign` and `.account.unclaim` are registered as removed redirectors (always exits 1 with migration notice pointing to Feature 065/037 replacements).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT

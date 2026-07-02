@@ -421,9 +421,12 @@ fn quota_ua3_lim_it_live_mode_produces_output()
   write_account_with_token( dir.path(), "alice@acme.com", &token, true );
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
 
-  // Run live mode for 3 seconds then kill it
+  // Run live mode for 3 seconds then kill it.
+  // No explicit interval:: — the default (30s) satisfies the >= 30 minimum.
+  // The loop renders on the first pass before waiting, so 3 seconds is enough to
+  // capture output even though the countdown interval is 30s.
   let bytes = run_cs_bytes_for_secs(
-    &[ ".usage", "live::1", "interval::2" ],
+    &[ ".usage", "live::1" ],
     &[ ( "HOME", home ) ],
     3,
   );

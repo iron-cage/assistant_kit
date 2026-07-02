@@ -697,7 +697,7 @@ clp .account.inspect trace::1          # show timestamped diagnostic endpoint ca
 **Algorithm (5 steps):**
 1. Resolve `name::` (omit → active account from `_active_{hostname}_{user}` marker); load credentials
 2. `(when refresh::1 + locally expired)` Call `refresh_account_token()` to obtain a fresh token
-3. Call endpoint 002 (`GET /api/oauth/account`), endpoint 005 (`GET /api/oauth/claude_cli/roles`), and endpoint 001 (`GET /api/oauth/usage`) — each independently; failure falls back to local snapshots with `(snapshot)` suffix per field (quota fields show `N/A` with no snapshot fallback)
+3. Call endpoint 002 (`GET /api/oauth/account`), endpoint 005 (`GET /api/oauth/claude_cli/roles`), and endpoint 001 (`GET /api/oauth/usage`) — each independently; identity/org failure falls back to local snapshots with `(snapshot)` suffix per field; quota failure (transient errors — not 401/403) falls back to the local quota cache (Feature 033); quota section omitted only when both live endpoint and cache are unavailable
 4. Apply membership selection priority: `billing_type=stripe_subscription + claude_max` > `billing_type=stripe_subscription` > `memberships[0]`
 5. Render all fields in requested `format::`
 
@@ -761,7 +761,7 @@ clp .account.inspect format::json | jq '.memberships | length'
 ```
 
 **Notes:**
-- Endpoints 002, 005, and 001 are called independently. A failure on one endpoint falls back to the local snapshot from `{name}.json` with a `(snapshot)` suffix per field; quota fields (endpoint 001) have no snapshot fallback and are omitted when unavailable.
+- Endpoints 002, 005, and 001 are called independently. A failure on one endpoint falls back to the local snapshot from `{name}.json` with a `(snapshot)` suffix per field; quota fields (endpoint 001) fall back to the local quota cache on transient errors (not 401/403); the quota section is omitted only when both the live endpoint and the cache are unavailable.
 - `refresh::1` (default) behaves identically to `.usage`'s `refresh::1`: calls `refresh_account_token()` once when `expiresAt` is locally expired; retries endpoint calls with the fresh token.
 - See [feature/031_account_inspect.md](../../feature/031_account_inspect.md) for full design, graceful fallback semantics, and all acceptance criteria.
 

@@ -24,15 +24,29 @@
 //! ## Maintenance: adding or removing a command
 //!
 //! `print_usage()` in `src/cli.rs` derives its entries from the command registry —
-//! no manual list. When a command is added or removed, TWO places must be updated
-//! together or dot04/dot05 will fail:
+//! no manual list. When a command is added or removed, FOUR places must be updated
+//! together or tests will fail or silently misrepresent the system state:
 //!
 //! 1. **`src/lib.rs` `register_commands()`** — add/remove the command registration.
 //! 2. **This file** — update the `visible` array in `dot04` and change the
 //!    `assert_eq!(count, N, ...)` literal in `dot05` to the new total.
+//! 3. **Test Matrix table** (above) — update the dot04 and dot05 rows to reflect
+//!    the new command count and any renamed `dot05` function.
+//! 4. **Section comment for `dot04`** — update the count in the `//── dot04 …` header.
 //!
 //! Failure symptom when step 1 is skipped: command absent from help output.
 //! Failure symptom when step 2 is skipped: `dot05` assertion mismatch on count.
+//! Failure symptom when steps 3–4 are skipped: stale comments that silently mislead.
+//!
+//! ## Bug History
+//!
+//! **BUG-325 (2026-07-02):** Maintenance protocol originally listed only three update sites,
+//! omitting the Test Matrix table as a required location.  When `.models` (TSK-007) and
+//! `.model.select` (TSK-008) were added, `dot04`'s `visible` array was not extended — it
+//! stayed at 16 entries while `dot05` correctly asserted 18 rows.  The gap meant
+//! name-level presence was unverified for the two new commands.  Fix (TSK-364): inserted
+//! `".models"` and `".model.select"` after `".model"` in the `visible` array.  The
+//! protocol now lists FOUR update sites (step 3, Test Matrix, was previously absent).
 
 use crate::cli_runner::{ run_cs, stdout, assert_exit };
 

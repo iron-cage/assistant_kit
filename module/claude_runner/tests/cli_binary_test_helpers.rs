@@ -64,6 +64,12 @@ fn assert_container()
 /// explicitly exercise `CLR_DIR`/`CLR_SESSION_DIR` behavior use `run_cli_with_env`
 /// instead, which adds those vars explicitly.
 ///
+/// `HOME` is set to a fixed, empty-by-design path (`/tmp/clr-isolated-home`) so that
+/// a host `~/.clr/prefs.json` cannot inject `--model` or other preference values into
+/// tests that assert a clean default state (Fix(BUG-008) isolation guard). Tests that
+/// need a populated `HOME` (e.g., pref-reading tests) use `run_cli_with_env` with an
+/// explicit `("HOME", temp_dir)` pair.
+///
 /// # Panics
 ///
 /// Panics if the `clr` binary cannot be launched (process spawn failure).
@@ -76,6 +82,7 @@ pub fn run_cli( args : &[ &str ] ) -> std::process::Output
   let bin = env!( "CARGO_BIN_EXE_clr" );
   Command::new( bin )
     .args( args )
+    .env( "HOME", "/tmp/clr-isolated-home" )
     .env_remove( "CLR_DIR" )
     .env_remove( "CLR_SESSION_DIR" )
     .output()
@@ -428,6 +435,7 @@ pub fn run_ask_dry( extra_args : &[ &str ] ) -> String
   args.extend_from_slice( extra_args );
   let out = Command::new( bin )
     .args( &args )
+    .env( "HOME", "/tmp/clr-isolated-home" )
     .output()
     .expect( "failed to invoke clr binary" );
   assert!(
@@ -487,6 +495,7 @@ pub fn run_dry( args : &[ &str ] ) -> String
   full.extend_from_slice( args );
   let out = Command::new( bin )
     .args( &full )
+    .env( "HOME", "/tmp/clr-isolated-home" )
     .env_remove( "CLR_DIR" )
     .env_remove( "CLR_SESSION_DIR" )
     .output()

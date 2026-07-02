@@ -357,23 +357,28 @@ fn it011_lim_it_recommendation_marker_shown()
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "acct-a", &token, true  );
-  write_account_with_token( dir.path(), "acct-b", &token, false );
+  // write_live_credentials_with_token makes acct-a is_current (token matches).
+  // acct-b uses a distinct fake token so it is not is_current — eligible as "Next".
+  write_live_credentials_with_token( dir.path(), &token );
+  write_account_with_token( dir.path(), "acct-a", &token,       true  );
+  write_account_with_token( dir.path(), "acct-b", "fake-token", false );
 
-  // sort::renew (default) places → on the non-active account (the recommended next).
+  // sort::renew (default) recommends the non-current, non-active account in footer.
   let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
-  let rec_marked = text.lines().any( |line| line.contains( '→' ) && line.contains( "acct-b" ) );
+  // Footer "Next (renew) · acct-b · ..." contains both "Next" and "acct-b".
+  // The → column header and data rows never share a line with account names.
+  let rec_marked = text.lines().any( |line| line.contains( "Next" ) && line.contains( "acct-b" ) );
   assert!(
     rec_marked,
-    "sort::renew: a line must contain both → and non-active account 'acct-b', got:\n{text}",
+    "sort::renew: footer must recommend 'acct-b' (line containing 'Next' and 'acct-b'), got:\n{text}",
   );
-  let active_rec = text.lines().any( |line| line.contains( '→' ) && line.contains( "acct-a" ) );
+  let active_rec = text.lines().any( |line| line.contains( "Next" ) && line.contains( "acct-a" ) );
   assert!(
     !active_rec,
-    "active account 'acct-a' must not be marked with →, got:\n{text}",
+    "active account 'acct-a' must not appear in 'Next' recommendation line, got:\n{text}",
   );
 }
 
@@ -393,20 +398,25 @@ fn it012_lim_it_footer_shows_valid_count()
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "acct-a", &token, true  );
-  write_account_with_token( dir.path(), "acct-b", &token, false );
+  // write_live_credentials_with_token makes acct-a is_current; acct-b uses a
+  // distinct fake token so it is eligible as the "Next" recommendation.
+  write_live_credentials_with_token( dir.path(), &token );
+  write_account_with_token( dir.path(), "acct-a", &token,       true  );
+  write_account_with_token( dir.path(), "acct-b", "fake-token", false );
 
   let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
+  // Footer with is_current: "Current · name · model · N/M" (valid count in N/M form).
   assert!(
-    text.contains( "Valid: 2" ),
-    "footer must contain 'Valid: 2', got:\n{text}",
+    text.contains( "2/2" ),
+    "footer must show 2/2 valid accounts, got:\n{text}",
   );
+  // Footer format: "Next (renew) · name · model · metric" uses · not :.
   assert!(
-    text.contains( "Next:" ),
-    "footer must contain 'Next:', got:\n{text}",
+    text.contains( "Next (" ),
+    "footer must contain 'Next (' recommendation line, got:\n{text}",
   );
 }
 

@@ -8,7 +8,8 @@
 use crate::cli_runner::{
   run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
-  write_account, write_account_with_token, live_active_token, require_live_api,
+  write_account, write_account_with_token, write_live_credentials_with_token,
+  live_active_token, require_live_api,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -260,16 +261,19 @@ fn it102_lim_it_sort_renew_shows_recommendation()
   require_live_api( "it102" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
-  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+  // acct-a is is_current (token matches credentials); acct-b uses fake token → eligible as Next.
+  write_live_credentials_with_token( dir.path(), &token );
+  write_account_with_token( dir.path(), "acct-a@test.com", &token,       true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", "fake-token", false );
 
   let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
+  // Footer format: "Next (renew) · name · ..." uses · not :.
   assert!(
-    text.contains( "Next (renew):" ),
-    "sort::renew must show 'Next (renew):' recommendation in footer (IT-51/020), got:\n{text}",
+    text.contains( "Next (renew)" ),
+    "sort::renew must show 'Next (renew)' recommendation in footer (IT-51/020), got:\n{text}",
   );
 }
 
@@ -291,16 +295,19 @@ fn it103_lim_it_sort_renews_shows_recommendation()
   require_live_api( "it103" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
-  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+  // acct-a is is_current; acct-b uses fake token → eligible as Next.
+  write_live_credentials_with_token( dir.path(), &token );
+  write_account_with_token( dir.path(), "acct-a@test.com", &token,       true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", "fake-token", false );
 
   let out = run_cs_with_env( &[ ".usage", "sort::renews" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
+  // Footer format: "Next (renews) · name · ..." uses · not :.
   assert!(
-    text.contains( "Next (renews):" ),
-    "sort::renews must show 'Next (renews):' recommendation in footer (IT-52/020), got:\n{text}",
+    text.contains( "Next (renews)" ),
+    "sort::renews must show 'Next (renews)' recommendation in footer (IT-52/020), got:\n{text}",
   );
 }
 
@@ -322,8 +329,10 @@ fn it104_lim_it_footer_shows_strategy_recommendation()
   require_live_api( "it104" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
-  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+  // acct-a is is_current; acct-b uses fake token → eligible as Next recommendation.
+  write_live_credentials_with_token( dir.path(), &token );
+  write_account_with_token( dir.path(), "acct-a@test.com", &token,       true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", "fake-token", false );
 
   let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
@@ -487,12 +496,14 @@ fn it110_lim_it_touch_1_subprocess_spawned_for_idle_account()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
-  // Pre-check: account must be IDLE (resets_at absent — EM-DASH present).
-  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  // Pre-check: specifically verify the 5h Reset column is idle (shows —).
+  // get::5h_reset extracts only the 5h Reset field so other — columns (e.g. 7d(Son))
+  // do not cause a false positive pre-check pass when the 5h session is actually active.
+  let pre = run_cs_with_env( &[ ".usage", "get::5h_reset" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
-  if !stdout( &pre ).contains( "\u{2014}" )
+  if stdout( &pre ).trim() != "\u{2014}"
   {
-    eprintln!( "it110: account is active (resets_at present) — idle condition not met, skipping" );
+    eprintln!( "it110: account has active 5h session (5h Reset ≠ —) — idle condition not met, skipping" );
     return;
   }
 
@@ -686,13 +697,14 @@ fn it116_lim_it_account_with_resets_at_absent_is_touched()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
-  // Pre-check: account must be IDLE (resets_at absent — EM-DASH in output).
-  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  // Pre-check: specifically verify the 5h Reset column is idle (shows —).
+  // get::5h_reset isolates the 5h Reset field; other — columns (e.g. 7d(Son))
+  // must not trigger a false positive skip when the 5h session is actually active.
+  let pre = run_cs_with_env( &[ ".usage", "get::5h_reset" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
-  let pre_text = stdout( &pre );
-  if !pre_text.contains( "\u{2014}" )
+  if stdout( &pre ).trim() != "\u{2014}"
   {
-    eprintln!( "it116: account is active (resets_at present) — idle condition not met, skipping" );
+    eprintln!( "it116: account has active 5h session (5h Reset ≠ —) — idle condition not met, skipping" );
     return;
   }
 
@@ -821,12 +833,14 @@ fn it120_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct@test.com", &token, true );
 
-  // Pre-check: account must be IDLE (resets_at absent — EM-DASH present in output).
-  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  // Pre-check: specifically verify the 5h Reset column is idle (shows —).
+  // get::5h_reset isolates the 5h Reset field; checking any — in .usage output
+  // causes false positives when other columns (e.g. 7d(Son)) show — while 5h is active.
+  let pre = run_cs_with_env( &[ ".usage", "get::5h_reset" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
-  if !stdout( &pre ).contains( "\u{2014}" )
+  if stdout( &pre ).trim() != "\u{2014}"
   {
-    eprintln!( "it120: account is active (resets_at present) — idle condition not met, skipping" );
+    eprintln!( "it120: account has active 5h session (5h Reset ≠ —) — idle condition not met, skipping" );
     return;
   }
 

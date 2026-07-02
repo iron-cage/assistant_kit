@@ -104,3 +104,12 @@ pub use crate::isolated::run_isolated;
 /// Do NOT call this directly for credential refresh. See [`run_isolated`] warning.
 #[ cfg( feature = "enabled" ) ]
 pub use crate::isolated::run_isolated_ext;
+
+/// Re-export of [`crate::isolated::read_subprocess_model_pref`].
+///
+/// Reads `subprocess_model` from `~/.clr/prefs.json`.
+/// Returns `None` if the file is absent, unreadable, or the key is missing/empty.
+/// Used by `dispatch_run()` to apply the pinned model preference when no `--model` flag
+/// or `CLR_MODEL` env var is set.
+#[ cfg( feature = "enabled" ) ]
+pub use crate::isolated::read_subprocess_model_pref;
