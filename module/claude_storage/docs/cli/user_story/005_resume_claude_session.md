@@ -27,17 +27,17 @@
 | 10 | [`.session.dir`](../command/10_session_dir.md) | Compute session working directory path |
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | Create session directory and report resume strategy |
 
+### Referenced Parameter Groups
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: specifies project directory for all four commands |
+
 ### Referenced Parameters
 | # | Parameter | Role |
 |---|-----------|------|
 | 9 | [`path::`](../param/09_path.md) | Specify project directory for path/existence/session operations |
 | 17 | [`topic::`](../param/17_topic.md) | Session topic suffix for workspace organization |
 | 20 | [`strategy::`](../param/20_strategy.md) | Override auto-detected resume strategy |
-
-### Referenced Parameter Groups
-| # | Parameter Group | Role |
-|---|-----------------|------|
-| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: specifies project directory for all four commands |
 
 ### Related User Stories
 | # | User Story | Relationship |
@@ -49,26 +49,28 @@
 **Step 1: Check if the project has conversation history**
 ```bash
 cls .project.exists path::/home/user/myproject
-# Exit 0: project exists; exit 1: no history yet
+# sessions exist
 ```
 
 **Step 2: Compute the Claude storage path**
 ```bash
 storage_path=$(cls .project.path path::/home/user/myproject)
 echo "Storage path: $storage_path"
+# Storage path: /home/user/.claude/projects/-home-user-myproject/
 ```
 
 **Step 3: Compute the session working directory**
 ```bash
 session_dir=$(cls .session.dir path::/home/user/myproject topic::auth)
 echo "Session dir: $session_dir"
+# Session dir: /home/user/.claude/projects/-home-user-myproject/-auth/
 ```
 
 **Step 4: Ensure session directory exists**
 ```bash
 cls .session.ensure path::/home/user/myproject topic::auth
-# Output: strategy (resume or fresh) and directory path
-# Side effect: creates directory on disk if absent
+# /home/user/.claude/projects/-home-user-myproject/-auth/
+# resume
 ```
 
 ### Error Handling

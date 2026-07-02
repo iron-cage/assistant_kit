@@ -4,7 +4,7 @@
 
 - **Purpose:** Documentation hub for the `claude_storage` CLI crate.
 - **Responsibility:** Behavioral requirements, CLI reference, and operational procedures.
-- **In Scope:** CLI command and parameter reference (`cli/`), feature requirements (`feature/`), operational procedures (`operation/`), advanced topics, and doc cross-reference graph.
+- **In Scope:** CLI command and parameter reference (`cli/`), feature requirements (`feature/`), operational procedures (`operation/`), architecture guides (`guide/`), system invariants (`invariant/`), and doc cross-reference graph.
 - **Out of Scope:** Source code (→ `src/`), automated tests (→ `tests/`), build scripts (→ `verb/`).
 
 ### Responsibility Table
@@ -14,7 +14,8 @@
 | `cli/` | CLI command, parameter, and type specifications |
 | `feature/` | CLI tool functional design and scope |
 | `operation/` | Operational procedures for users and maintainers |
-| `001_advanced_topics.md` | Agent sessions, command system, advanced search |
+| `guide/` | Architecture internals reference guides |
+| `invariant/` | System behavioral contracts |
 | `entity.md` | Master doc entity and instance tables |
 | `doc_graph.yml` | Cross-reference graph for navigability analysis |
 
@@ -55,9 +56,9 @@ Key entity directories there: `behavior/` (25 hypotheses), `storage/`, `filesyst
 
 ---
 
-### Advanced Topics
+### Architecture Guides
 
-#### [Advanced Topics](001_advanced_topics.md)
+#### [Advanced Storage Topics](guide/001_advanced_storage_topics.md)
 
 **Deep dive into advanced Claude Code storage features**.
 
@@ -94,7 +95,7 @@ Key entity directories there: `behavior/` (25 hypotheses), `storage/`, `filesyst
 ### Key Files to Read First
 
 1. **`../../../contract/claude_code/docs/behavior/`** - Claude Code storage architecture, file formats, JSONL schema
-2. **`001_advanced_topics.md`** - Understand agent sessions, commands, history, search
+2. **`guide/001_advanced_storage_topics.md`** - Understand agent sessions, commands, history, search
 3. **`cli/command/readme.md`** - Understand CLI commands and parameters
 4. **`feature/001_cli_tool.md`** - Understand overall crate architecture and scope
 5. **`../readme.md`** - User-facing documentation

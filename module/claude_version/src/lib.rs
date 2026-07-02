@@ -10,6 +10,7 @@
 #![ cfg_attr( not( feature = "enabled" ), allow( unused ) ) ]
 #![ warn( missing_docs ) ]
 #![ warn( missing_debug_implementations ) ]
+#![ doc( html_root_url = "https://docs.rs/claude_version/" ) ]
 
 /// Path to the YAML command definitions for this crate.
 ///

@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Document interaction tests for cm parameter groups.
+- **Purpose**: Document interaction tests for clv parameter groups.
 - **Responsibility**: Index of per-parameter-group interaction test files covering group-level behavior.
-- **In Scope**: All 4 cm parameter group test files.
+- **In Scope**: All 4 clv parameter group test files.
 - **Out of Scope**: Per-command tests (-> `command/`), per-parameter edge cases (-> `param/`).
 
 ### Overview Table

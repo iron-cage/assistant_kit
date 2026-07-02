@@ -61,4 +61,3 @@ project::Path("/home/alice/projects/my-app") # Path(...) from .list output
 | # | User Story | Persona |
 |---|------------|---------|
 | 2 | [Find Past Conversation](../user_story/002_find_past_conversation.md) | developer |
-| 5 | [Resume Claude Session](../user_story/005_resume_claude_session.md) | developer |

@@ -41,14 +41,14 @@ output::/nonexistent/dir/file.md     # Parent directory does not exist
 |------|------|-------------|----------------|
 | [`StoragePath`](../type/10_storage_path.md) | String (filesystem path) | String | Non-empty; parent directory must exist |
 
+### Referenced Parameter Groups
+
+None.
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 6 | [`.export`](../command/06_export.md) | none — required | Destination path for exported file |
-
-### Referenced Parameter Groups
-
-None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

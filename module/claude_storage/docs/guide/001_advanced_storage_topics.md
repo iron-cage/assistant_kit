@@ -1,13 +1,20 @@
-# advanced topics
+# Guide: Advanced Storage Topics
 
-## overview
+### Scope
+
+- **Purpose**: Reference guide for storage architecture internals.
+- **Responsibility**: Agent session formats, command system, history format, session environment.
+- **In Scope**: Storage layout details, format specifications, implementation patterns.
+- **Out of Scope**: CLI command specs (→ `../cli/command/`), parameter specs (→ `../cli/param/`).
+
+### Overview
 
 This document covers advanced storage features discovered through deep analysis: agent sessions, command system, history tracking, and session environment management.
 
-## agent sessions (sub-agents)
+### Agent Sessions
 
 For CLI display of session families (how agents are grouped under their parent root
-session in `.projects` output), see [command/07_projects.md](cli/command/07_projects.md).
+session in `.projects` output), see [command/07_projects.md](../cli/command/07_projects.md).
 
 ### what are agent sessions
 
@@ -44,7 +51,7 @@ projects/-home-alice-projects-project-a--default-topic/
     └── tool-results/                                   # Tool output artifacts
 ```
 
-Both formats form a **Session Family** — a root session and all its agents. See [`claude_storage_core/docs/data_structure/001_storage_hierarchy.md`](../../claude_storage_core/docs/data_structure/001_storage_hierarchy.md) for the formal definition.
+Both formats form a **Session Family** — a root session and all its agents. See [`claude_storage_core/docs/data_structure/001_storage_hierarchy.md`](../../../claude_storage_core/docs/data_structure/001_storage_hierarchy.md) for the formal definition.
 
 ### agent session format
 
@@ -232,7 +239,7 @@ fn find_hierarchical_agents( project_dir : &Path ) -> Result< Vec< PathBuf > >
 }
 ```
 
-## command system
+### Command System
 
 ### command file format
 
@@ -410,7 +417,7 @@ You will be provided with the following real-time repository information to info
 
 **Storage access**: No need to parse command files for conversation reading (out of scope for claude_storage).
 
-## history tracking (history.jsonl)
+### History Tracking
 
 ### detailed format
 
@@ -573,7 +580,7 @@ pub struct HistoryEntry
 
 **Display truncation**: Remember that display is truncated (~50 chars) - not full message.
 
-## session environment (session-env/)
+### Session Environment
 
 ### directory purpose
 
@@ -645,7 +652,7 @@ fn list_active_sessions() -> Result<Vec<String>> {
 
 **Future use**: May be populated with session-specific metadata in future Claude Code versions.
 
-## advanced search capabilities
+### Advanced Search Capabilities
 
 ### cross-project search
 
@@ -782,10 +789,16 @@ pub fn find_agent_sessions( session : &Session ) -> Result< Vec< AgentSession > 
 
 For hierarchical format discovery, see [detecting agent sessions (hierarchical format)](#detecting-agent-sessions-hierarchical-format).
 
-## related documentation
+### Referenced Commands
 
-- [`contract/claude_code/docs/storage/readme.md`](../../../contract/claude_code/docs/storage/readme.md) - Directory structure and storage model
-- [`contract/claude_code/docs/formats/readme.md`](../../../contract/claude_code/docs/formats/readme.md) - Ancillary file format specifications
-- [`contract/claude_code/docs/jsonl/readme.md`](../../../contract/claude_code/docs/jsonl/readme.md) - Conversation entry format details
-- [`cli/command/readme.md`](cli/command/readme.md) - CLI command specifications
-- [`feature/001_cli_tool.md`](feature/001_cli_tool.md) - Overall crate scope and design
+| # | Command | Context |
+|---|---------|---------|
+| 7 | [`.projects`](../cli/command/07_projects.md) | Agent session grouping under root sessions for CLI display |
+
+### Sources
+
+- [`contract/claude_code/docs/storage/readme.md`](../../../../contract/claude_code/docs/storage/readme.md) - Directory structure and storage model
+- [`contract/claude_code/docs/formats/readme.md`](../../../../contract/claude_code/docs/formats/readme.md) - Ancillary file format specifications
+- [`contract/claude_code/docs/jsonl/readme.md`](../../../../contract/claude_code/docs/jsonl/readme.md) - Conversation entry format details
+- [`cli/command/readme.md`](../cli/command/readme.md) - CLI command specifications
+- [`feature/001_cli_tool.md`](../feature/001_cli_tool.md) - Overall crate scope and design

@@ -54,4 +54,3 @@
 |---|------------|---------|
 | 2 | [Find Past Conversation](../user_story/002_find_past_conversation.md) | developer |
 | 3 | [Export Session for Review](../user_story/003_export_session_for_review.md) | developer |
-| 5 | [Resume Claude Session](../user_story/005_resume_claude_session.md) | developer |

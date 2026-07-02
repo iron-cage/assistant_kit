@@ -45,6 +45,4 @@ required-features = [ "cli" ]
 
 [features]
 default = [ "cli" ]
-enabled = [ "dep:unilang" ]
-full = [ "enabled", "cli" ]
-cli = [ "dep:unilang", "dep:cli_fmt" ]
+cli = [ "dep:unilang", "dep:cli_fmt", "unilang/enabled", "cli_fmt/cli_help_template" ]

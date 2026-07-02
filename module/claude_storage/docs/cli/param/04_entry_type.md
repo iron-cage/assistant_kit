@@ -41,14 +41,14 @@ entry_type::system      # "entry_type must be user|assistant|all, got system"
 |------|------|-------------|----------------|
 | [`EntryType`](../type/02_entry_type.md) | String enum wrapper | String | `user`, `assistant`, or `all` |
 
+### Referenced Parameter Groups
+
+None.
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 5 | [`.search`](../command/05_search.md) | `all` | Restricts search to one entry type |
-
-### Referenced Parameter Groups
-
-None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

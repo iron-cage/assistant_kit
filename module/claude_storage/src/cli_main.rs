@@ -4,18 +4,20 @@
 //! (eliminating the Cargo "same file in multiple targets" warning) while
 //! keeping the REPL and one-shot pipeline in a single compiled location.
 
-// The generated static command registry has no doc comments — allow that
-// for this module only; the outer lib enforces missing_docs everywhere else.
-// The generated static_commands.rs uses unreadable integer literals in phf map keys.
-#![ allow( missing_docs ) ]
-#![ allow( clippy::unreadable_literal ) ]
-
 use std::{ env, io::{ self, Write }, process };
 use crate::cli;
 use unilang::prelude::*;
 
 // Include compile-time generated static commands (produced by build.rs).
-include!( concat!( env!( "OUT_DIR" ), "/static_commands.rs" ) );
+// Lint suppression is scoped to the generated module — file-wide attrs are forbidden
+// by dep/l1_imp.rulebook.md § Strict Workspace Lint Inheritance.
+mod generated
+{
+  #![ allow( missing_docs ) ]
+  #![ allow( clippy::unreadable_literal ) ]
+  include!( concat!( env!( "OUT_DIR" ), "/static_commands.rs" ) );
+}
+use generated::AGGREGATED_COMMANDS;
 
 /// Build a `CommandRegistry` wired to all `claude_storage` routines.
 fn build_command_registry() -> CommandRegistry

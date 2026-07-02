@@ -270,7 +270,7 @@ Integration test planning for the `.version.guard` command. See [command/readme.
 ### IT-20: watch loop continues after install error
 
 - **Given:** `~/.claude/settings.json` contains `preferredVersionSpec="9.9.9"` / `preferredVersionResolved="9.9.9"`; no claude binary installed; empty `PATH` (forces install failure).
-- **When:** `timeout 2 cm .version.guard interval::1`
+- **When:** `timeout 2 clv .version.guard interval::1`
 - **Then:** Process runs until killed by `timeout` (2 seconds); stderr contains `#1` and `#2` iteration headers.; Process survives first install error; daemon continues watching.
 - **Bug:** `return result` in watch loop error branch — fixed by continuing the loop instead
 - **Exit:** 0

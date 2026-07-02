@@ -40,14 +40,14 @@ strategy::restart   # "strategy must be resume|fresh, got restart"
 |------|------|-------------|----------------|
 | [`StrategyType`](../type/13_strategy_type.md) | String enum wrapper | String | `resume` or `fresh`; case-insensitive |
 
+### Referenced Parameter Groups
+
+None.
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | auto-detect | Overrides auto-detected resume strategy |
-
-### Referenced Parameter Groups
-
-None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

@@ -54,9 +54,7 @@
 //! }
 //! ```
 
-#![ doc( html_root_url = "https://docs.rs/claude_storage/1.2.0/claude_storage/" ) ]
-#![ deny( missing_docs ) ]
-#![ warn( rust_2018_idioms ) ]
+#![ doc( html_root_url = "https://docs.rs/claude_storage/latest/claude_storage/" ) ]
 
 // Re-export core library types for convenience
 pub use claude_storage_core::

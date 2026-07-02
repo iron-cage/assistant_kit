@@ -1,6 +1,6 @@
 //! EC- edge-case tests for the `format::` parameter.
 //!
-//! Covers gap cases EC-11 through EC-19 from `tests/docs/cli/param/05_format.md`.
+//! Covers gap cases EC-11 through EC-20 from `tests/docs/cli/param/05_format.md`.
 //! EC-1 through EC-10 are covered in `cli_args_test.rs`, `read_commands_test.rs`,
 //! `cross_cutting_test.rs`, and `error_messages_test.rs`.
 
@@ -112,4 +112,20 @@ fn format_ec19_history_format_json_uppercase_exits_1()
 {
   let out = run_clm( &[ ".version.history", "format::JSON" ] );
   assert_exit( &out, 1 );
+}
+
+/// EC-20: `.params format::json` → JSON array; each entry has `name` field
+#[ test ]
+fn format_ec20_params_format_json_array()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let out  = run_clm_with_env(
+    &[ ".params", "format::json" ],
+    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.trim_start().starts_with( '[' ), ".params format::json must be a JSON array: {text}" );
+  assert!( text.contains( "\"name\"" ), "each param entry must have a 'name' field: {text}" );
 }
