@@ -7,7 +7,7 @@
 //! | Test | Covers |
 //! |------|--------|
 //! | FT-6 | `clr scope` prints 6 `CLAUDE_*` vars in `key=value` format |
-//! | FT-7 | `--session-from` resumes most recent session from source dir |
+//! | FT-7 | `--session-from` sets `CLAUDE_CODE_SESSION_DIR` to source dir storage |
 //! | FT-8 | `--to` + `--session-from`: Claude runs in target, loads from source |
 //! | FT-9 | `--to` is an alias for `--dir`; behavior is identical |
 //! | FT-10 | `--session-dir` takes precedence over `--session-from` |
@@ -139,7 +139,8 @@ fn ft6_scope_prints_six_vars_in_key_value_format()
 
 // ── FT-7: --session-from resumes most recent session from source dir ───────────
 
-/// FT-7: `--session-from <src>` injects `-c <uuid>` from source dir's session storage.
+/// FT-7: `--session-from <src>` sets `CLAUDE_CODE_SESSION_DIR` to source storage and
+/// activates continue mode when a session file exists there.
 ///
 /// The subprocess working directory is CWD (no `--to` flag; no `cd` prefix).
 #[ test ]
@@ -148,11 +149,16 @@ fn ft7_session_from_resumes_source_session()
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/ft7-src";
   make_session_for( ch.path(), src, "hhh-101" );
+  let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
     &[ "--session-from", src, "Continue" ],
-    &[ ( "CLAUDE_HOME", ch.path().to_str().expect( "utf-8" ) ) ],
+    &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  assert!( stdout.contains( "hhh-101" ), "must contain `-c hhh-101`. Got:\n{stdout}" );
+  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  assert!(
+    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
+    "session dir must point to source storage. Got:\n{stdout}"
+  );
   // No --to → no cd prefix for the source dir
   assert!(
     !stdout.contains( &format!( "cd {src}" ) ),
@@ -163,6 +169,8 @@ fn ft7_session_from_resumes_source_session()
 // ── FT-8: --to + --session-from: runs in target, loads from source ─────────────
 
 /// FT-8: `--to <tgt> --session-from <src>` sets working dir to target, loads from source.
+///
+/// `CLAUDE_CODE_SESSION_DIR` must point to source storage; subprocess `cd` must be target.
 #[ test ]
 fn ft8_to_plus_session_from_target_dir_source_session()
 {
@@ -171,11 +179,16 @@ fn ft8_to_plus_session_from_target_dir_source_session()
   make_session_for( ch.path(), src, "iii-202" );
   let tgt = tempfile::TempDir::new().expect( "tgt tmpdir" );
   let tgt_str = tgt.path().to_str().expect( "utf-8" );
+  let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
     &[ "--to", tgt_str, "--session-from", src, "Continue" ],
-    &[ ( "CLAUDE_HOME", ch.path().to_str().expect( "utf-8" ) ) ],
+    &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  assert!( stdout.contains( "iii-202" ), "must contain `-c iii-202`. Got:\n{stdout}" );
+  let expected_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  assert!(
+    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),
+    "session dir must point to source storage. Got:\n{stdout}"
+  );
   assert!(
     stdout.contains( &format!( "cd {tgt_str}" ) ),
     "subprocess dir must be target `{tgt_str}`. Got:\n{stdout}"
@@ -221,26 +234,36 @@ fn ft9_to_alias_identical_to_dir()
 // ── FT-10: --session-dir takes precedence over --session-from ─────────────────
 
 /// FT-10: `--session-dir` raw path wins over `--session-from` computed path.
+///
+/// `CLAUDE_CODE_SESSION_DIR` must equal the raw `--session-dir` path, not the
+/// computed source storage path.
 #[ test ]
 fn ft10_session_dir_wins_over_session_from()
 {
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/ft10-src";
-  // Source session — should be ignored
+  // Source session — should be ignored (--session-dir wins)
   make_session_for( ch.path(), src, "jjj-303" );
   // Raw session dir that wins
   let raw_dir = tempfile::TempDir::new().expect( "raw tmpdir" );
   std::fs::write( raw_dir.path().join( "kkk-404.jsonl" ), b"{}" )
     .expect( "write raw session" );
   let raw_str = raw_dir.path().to_str().expect( "utf-8" );
+  let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
     &[ "--session-from", src, "--session-dir", raw_str, "test" ],
-    &[ ( "CLAUDE_HOME", ch.path().to_str().expect( "utf-8" ) ) ],
+    &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  assert!( stdout.contains( "kkk-404" ), "`--session-dir` UUID must win. Got:\n{stdout}" );
+  // Raw --session-dir must be used as CLAUDE_CODE_SESSION_DIR
   assert!(
-    !stdout.contains( "jjj-303" ),
-    "`jjj-303` must NOT appear. Got:\n{stdout}"
+    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={raw_str}" ) ),
+    "`--session-dir` raw path must win. Got:\n{stdout}"
+  );
+  // Source computed path must NOT appear
+  let src_dir = format!( "{ch_str}/projects/{}", df( src ) );
+  assert!(
+    !stdout.contains( &src_dir ),
+    "source computed path `{src_dir}` must NOT appear. Got:\n{stdout}"
   );
 }
 

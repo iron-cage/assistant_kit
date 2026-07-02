@@ -25,8 +25,8 @@
 //! - EC-4: `CLR_RETRY_ON_AUTH` env var applied
 //! - EC-5: CLI wins over env var
 //! - EC-6: invalid env var silently ignored
-//! - EC-7: fake emits auth pattern; retries=1, delay=0 → exit 1 immediately (fail-fast; no retry); `[Auth]` in stderr
-//! - EC-8: fake always emits auth pattern; retries=2, delay=0 → exit 1 immediately (fail-fast; no retry or exhaustion)
+//! - EC-7: fake emits auth pattern (exits 1 on first call, exits 0 on second); retries=1, delay=0 → retry fires; invocation count=2; exit 0; `[Auth]` in stderr
+//! - EC-8: fake always emits auth pattern; retries=2, delay=0 → 2 retries fire; invocation count=3; "retries exhausted" in stderr
 //!
 //! ### --auth-delay (param 43)
 //! - EC-1 (delay): help lists flag
@@ -145,34 +145,35 @@ fn ec6_clr_retry_on_auth_invalid_ignored()
   );
 }
 
-// ── EC-7: One auth error then success → retried; exit 0 ──────────────────────
+// ── EC-7: One auth error then success → retry fires; exit 0 ──────────────────
 
-/// EC-7 (param 42): auth error exits immediately (fail-fast) even when `--retry-on-auth 1`.
+/// EC-7 (param 42): auth error retries when `--retry-on-auth 1`; recovery succeeds on 2nd call.
 ///
-/// Fix(BUG-315): auth errors never retry regardless of `--retry-on-auth` setting.
-/// The retry block is guarded by `!is_auth_error` in `execution.rs`; when an Auth-class
-/// error is detected, the guard prevents entry and the process exits immediately.
+/// Fix(BUG-325): removed `!is_auth_error` guard — Auth uses same 3-tier retry resolution
+/// as all other error classes. `--retry-on-auth 1` allows one retry; the fake exits 0 on
+/// the 2nd call, so clr recovers and exits 0.
 ///
-/// Fake emits auth pattern + exits 1 (would exit 0 on 2nd call, but 2nd call never fires).
-/// retries=1, delay=0 → exit 1 immediately; invocation count = 1; `[Auth]` in stderr.
+/// Fake emits auth pattern + exits 1 on 1st call; exits 0 on 2nd call.
+/// retries=1, delay=0 → retry fires; invocation count=2; `[Auth]…retrying` in stderr; exit 0.
 ///
-/// Root Cause: retry loop lacked is_auth_error guard (BUG-315); auth failures consumed
-///   retry budget sleeping between guaranteed re-failures.
-/// Why Not Caught: no test asserted invocation count or wall-clock fail-fast behavior.
-/// Fix Applied: `!is_auth_error` guard at retry block entry in execution.rs.
-/// Prevention: assert exit=1 and invocation count=1 (not 2).
-/// Pitfall: `--retry-on-auth N > 0` does NOT enable auth retries — the fail-fast guard
-///   applies unconditionally; setting retry-on-auth has no effect on auth-class errors.
+/// Root Cause: `!is_auth_error` guard (BUG-315) blocked retry-block entry unconditionally,
+///   making `--retry-on-auth` a dead parameter regardless of configured budget.
+/// Why Not Caught: EC-7/EC-8/mre_bug315 all asserted fail-fast as correct; no test verified
+///   the retry-fires path for Auth class.
+/// Fix Applied: removed `!is_auth_error` guard and BUG-315 comment block (execution.rs:670–677).
+/// Prevention: assert invocation count=2 (retry fired) and exit 0 (recovery succeeded).
+/// Pitfall: guard tested class identity, not retry budget — class-identity gates bypass the
+///   limit check entirely, making per-class retry params unconditionally dead.
 #[ cfg( unix ) ]
 #[ test ]
-fn ec7_auth_error_exits_immediately_without_retry()
+fn ec7_auth_error_retries_on_explicit_budget()
 {
   let tmp   = tempfile::tempdir().expect( "create temp dir" );
   let fake  = tmp.path().join( "claude" );
   let count = tmp.path().join( "count" );
 
   let count_path = count.to_str().expect( "counter path utf-8" );
-  // Fake: exits 0 on 2nd call, but 2nd call never fires after BUG-315 fix.
+  // Fake: exits 1 with auth pattern on 1st call; exits 0 on 2nd call (recovery).
   let script = format!(
     "#!/bin/sh\n\
      printf '1' >> \"{count_path}\"\n\
@@ -197,45 +198,53 @@ fn ec7_auth_error_exits_immediately_without_retry()
     .output()
     .expect( "invoke clr" );
 
-  // Auth errors fail-fast: exits 1 immediately, even with --retry-on-auth 1.
-  assert_eq!(
-    out.status.code(),
-    Some( 1 ),
-    "EC-7: auth error must exit 1 immediately (fail-fast). exit={:?} stderr={}",
+  // Retry fires and 2nd call succeeds — clr exits 0.
+  assert!(
+    out.status.success(),
+    "EC-7: retry must fire and recovery must succeed (exit 0). exit={:?} stderr={}",
     out.status.code(),
     String::from_utf8_lossy( &out.stderr )
   );
-  // Exactly 1 invocation — retry guard prevents the 2nd call.
+  // Exactly 2 invocations — initial failure + 1 retry.
   let invocation_count = std::fs::read_to_string( &count ).unwrap_or_default().len();
   assert_eq!(
-    invocation_count, 1,
-    "EC-7: fake must be invoked exactly once (no retry). Got: {invocation_count}"
+    invocation_count, 2,
+    "EC-7: fake must be invoked exactly twice (1 retry fired). Got: {invocation_count}"
   );
-  // [Auth] class label still appears in the terminal error line.
+  // [Auth] retry line appears in stderr.
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
     stderr.contains( "[Auth]" ),
     "EC-7: stderr must contain [Auth] class label. Got:\n{stderr}"
   );
+  assert!(
+    stderr.contains( "retrying" ),
+    "EC-7: stderr must contain retry progress line. Got:\n{stderr}"
+  );
 }
 
-// ── EC-8: All Auth retries exhausted → exit 1; [Auth] exhaustion ──────────────
+// ── EC-8: All Auth retries exhausted → exit 1; exhaustion message ─────────────
 
-/// EC-8 (param 42): auth error exits immediately (fail-fast) even when `--retry-on-auth 2`.
+/// EC-8 (param 42): auth error exhausts full budget when `--retry-on-auth 2`; 3 total invocations.
 ///
-/// Fix(BUG-315): auth errors never retry regardless of `--retry-on-auth` setting.
-/// Fake always emits auth pattern + exits 1; retries=2, delay=0 → exit 1 immediately;
-/// invocation count = 1; no "exhausted" message (exhaustion requires ≥1 retry attempt).
+/// Fix(BUG-325): removed `!is_auth_error` guard — Auth uses same 3-tier retry resolution
+/// as all other error classes. `--retry-on-auth 2` allows 2 retries; fake always fails;
+/// budget exhausted after 3 total invocations; clr exits 1 with "retries exhausted".
 ///
-/// Root Cause: retry loop lacked is_auth_error guard (BUG-315).
-/// Why Not Caught: no test verified that auth errors with retry>0 still don't retry.
-/// Fix Applied: `!is_auth_error` guard at retry block entry in execution.rs.
-/// Prevention: assert exit=1 and invocation count=1 and no "exhaust" in stderr.
-/// Pitfall: "retries exhausted" only appears when at least one retry fires; with fail-fast
-///   no retry ever fires, so the error message uses the non-retry form: `Error: [Auth] ... (exit 1)`.
+/// Fake always emits auth pattern + exits 1.
+/// retries=2, delay=0 → 2 retries fire; invocation count=3; "retries exhausted" in stderr; exit 1.
+///
+/// Root Cause: `!is_auth_error` guard (BUG-315) blocked retry-block entry unconditionally.
+/// Why Not Caught: EC-8 previously asserted invocation_count=1 and no "exhaust" — both were
+///   wrong behavior locked in as correct by tests written to validate the BUG-315 guard.
+/// Fix Applied: removed `!is_auth_error` guard (execution.rs:670–677); Auth now enters
+///   retry block identically to Transient, Service, Account, Process, Unknown.
+/// Prevention: assert invocation count=3 (2 retries) and "retries exhausted" in stderr.
+/// Pitfall: "retries exhausted" requires ≥1 retry to have fired (attempts[idx] > 0 gate
+///   in execution.rs); with the old guard, no retry ever fired so the non-retry form appeared.
 #[ cfg( unix ) ]
 #[ test ]
-fn ec8_auth_error_exits_immediately_regardless_of_retry_budget()
+fn ec8_auth_error_exhausts_retry_budget()
 {
   let tmp   = tempfile::tempdir().expect( "create temp dir" );
   let fake  = tmp.path().join( "claude" );
@@ -265,27 +274,27 @@ fn ec8_auth_error_exits_immediately_regardless_of_retry_budget()
     .output()
     .expect( "invoke clr" );
 
-  // Auth errors fail-fast: exits 1 immediately, even with --retry-on-auth 2.
+  // Budget exhausted — exits 1.
   assert_eq!(
     out.status.code(),
     Some( 1 ),
-    "EC-8: auth error must exit 1 immediately (fail-fast). Got: {:?}", out.status.code()
+    "EC-8: all retries exhausted, must exit 1. Got: {:?}", out.status.code()
   );
-  // Exactly 1 invocation — no retries fired.
+  // 2 retries + 1 initial = 3 total invocations.
   let invocation_count = std::fs::read_to_string( &count ).unwrap_or_default().len();
   assert_eq!(
-    invocation_count, 1,
-    "EC-8: fake must be invoked exactly once (no retry). Got: {invocation_count}"
+    invocation_count, 3,
+    "EC-8: fake must be invoked 3 times (1 initial + 2 retries). Got: {invocation_count}"
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
     stderr.contains( "[Auth]" ),
     "EC-8: stderr must contain [Auth] class label. Got:\n{stderr}"
   );
-  // No retry attempt occurred, so "exhausted" must NOT appear (non-retry error form used).
+  // Budget fully consumed — exhaustion message must appear.
   assert!(
-    !stderr.to_lowercase().contains( "exhaust" ),
-    "EC-8: no retry fired, so 'exhausted' must not appear in stderr. Got:\n{stderr}"
+    stderr.to_lowercase().contains( "exhausted" ),
+    "EC-8: 'retries exhausted' must appear after budget consumed. Got:\n{stderr}"
   );
 }
 
@@ -387,46 +396,48 @@ fn ec6_clr_auth_delay_invalid_ignored()
 
 // ── MRE BUG-315: auth error exits retry loop immediately ──────────────────────
 
-/// MRE BUG-315: `authentication_error` 401 in print-mode exits immediately (fail-fast).
+/// MRE BUG-325: `--retry-on-auth` fires configured retry count for persistent auth failures.
 ///
 /// # Root Cause
 ///
-/// `run_print_mode` retry loop had no `is_auth_error` guard; auth failures burned the entire
-/// retry budget sleeping between guaranteed re-failures (same stale credential, same 401 on
-/// every attempt). With `--retry-on-auth 3 --auth-delay 5` this wasted 3 × 5s = 15s.
+/// BUG-315 introduced `!is_auth_error` guard at retry-block entry in `execution.rs`,
+/// unconditionally blocking the retry block for ALL Auth-class errors. `--retry-on-auth`
+/// was parsed and stored in `CliArgs`, passed through `resolve_count()` into `limit`,
+/// but `limit` was never consulted for Auth class — the guard fired first.
 ///
 /// # Why Not Caught
 ///
-/// EC-7/EC-8 verify Auth-class retry counting (success after 1, exhaustion after N) but do
-/// not verify fail-fast on a persistent auth error. No test asserted wall-clock exit time.
+/// mre_bug315 asserted invocation_count=1 and elapsed<10s, cementing the broken guard
+/// as the correct invariant. No test existed asserting the retry-fires path for Auth.
 ///
 /// # Fix Applied
 ///
-/// Added `is_auth_error` flag; retry block entry guarded by `!is_auth_error` in
-/// `execution.rs` — auth errors fall through directly to `process::exit(exit_code)`.
+/// Removed `!is_auth_error` guard and BUG-315 comment block (execution.rs lines 670–677).
+/// Auth now enters retry block on the same `attempts[class_idx] < limit` gate as all
+/// other error classes.
 ///
 /// # Prevention
 ///
-/// This test fails immediately if the guard is removed: the binary would sleep 3 × 5s = 15s
-/// before exiting, exceeding the 10s wall-clock assertion.
+/// This test fails if the `!is_auth_error` guard is re-introduced: invocation_count
+/// would be 1 instead of 4, and "retries exhausted" would not appear in stderr.
 ///
 /// # Pitfall
 ///
-/// Never use `break` inside the retry loop to exit early — `break` bypasses
-/// `process::exit`. Guard the block ENTRY instead (`!is_auth_error && attempts < limit`).
+/// Never gate the retry block on class identity — class-identity tests bypass the
+/// limit check entirely, making per-class retry parameters unconditionally dead.
 #[ cfg( unix ) ]
 #[ test ]
-fn mre_bug315_auth_error_exits_retry_loop_immediately()
+fn mre_bug325_auth_retry_fires_on_configured_budget()
 {
-  // test_kind: bug_reproducer(BUG-315)
+  // test_kind: bug_reproducer(BUG-325)
   let tmp   = tempfile::tempdir().expect( "create temp dir" );
   let fake  = tmp.path().join( "claude" );
   let count = tmp.path().join( "count" );
 
   let count_path = count.to_str().expect( "counter path utf-8" );
   // Fake always emits an auth-class pattern and exits 1.
-  // Without the fix the binary sleeps 3 × 5s before exiting.
-  // With the fix it exits after exactly 1 invocation, well under 10s.
+  // With the fix: 3 retries fire → 4 total invocations, "retries exhausted" in stderr.
+  // Without the fix (guard present): invocation_count = 1, no "retries exhausted".
   let script = format!(
     "#!/bin/sh\n\
      printf '1' >> \"{count_path}\"\n\
@@ -441,81 +452,83 @@ fn mre_bug315_auth_error_exits_retry_loop_immediately()
   let new_path = format!( "{}:{old_path}", tmp.path().display() );
   let bin = env!( "CARGO_BIN_EXE_clr" );
 
-  let start = std::time::Instant::now();
-  let out   = Command::new( bin )
+  let out = Command::new( bin )
     .args( [
-      "-p", "--retry-on-auth", "3", "--auth-delay", "5",
+      "-p", "--retry-on-auth", "3", "--auth-delay", "0",
       "--max-sessions", "0", "x"
     ] )
     .env( "PATH", &new_path )
     .output()
     .expect( "invoke clr" );
-  let elapsed = start.elapsed();
 
   assert_eq!(
     out.status.code(),
     Some( 1 ),
-    "MRE BUG-315: exit must be code 1. Got: {:?}  stderr: {}",
+    "MRE BUG-325: budget exhausted, must exit 1. Got: {:?}  stderr: {}",
     out.status.code(),
     String::from_utf8_lossy( &out.stderr )
   );
-  // Exactly 1 invocation — no retries fired.
+  // 3 retries + 1 initial = 4 total invocations.
   let invocation_count = std::fs::read_to_string( &count ).unwrap_or_default().len();
   assert_eq!(
-    invocation_count, 1,
-    "MRE BUG-315: fake must be invoked exactly once (no retries). Got: {invocation_count}"
+    invocation_count, 4,
+    "MRE BUG-325: fake must be invoked 4 times (1 initial + 3 retries). Got: {invocation_count} \
+     — if 1: !is_auth_error guard is present (BUG-325 regression)"
   );
-  // No sleep delay consumed — must exit well under the first retry delay (5s × 1 attempt).
+  let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    elapsed.as_secs() < 10,
-    "MRE BUG-315: exit must be immediate (< 10s). Elapsed: {elapsed:?} — \
-     auth error retries sleeping means the fail-fast guard is missing"
+    stderr.to_lowercase().contains( "exhausted" ),
+    "MRE BUG-325: 'retries exhausted' must appear after budget consumed. Got:\n{stderr}"
   );
 }
 
-// ── B4: authentication_error 401 format fail-fast (BUG-314 + BUG-315 combined) ─
+// ── B4: authentication_error 401 format retries (BUG-314 + BUG-325 combined) ──
 
-/// B4: Full Claude CLI 401 `authentication_error` format also triggers fail-fast.
+/// B4: Full Claude CLI 401 `authentication_error` format retries and exhausts budget.
 ///
-/// Integration test verifying BUG-314 and BUG-315 fixes work together end-to-end.
+/// Integration test verifying BUG-314 and BUG-325 fixes work together end-to-end.
 ///
 /// BUG-314 pre-fix: `"authentication_error"` 401 string contains `"API Error: "` as a
 /// substring — the `ERROR_PATTERNS` catch-all fired first → `ApiError` → `ErrorClass::Service`
 /// → retry loop consumed the full budget sleeping between guaranteed re-failures.
 ///
-/// BUG-315 pre-fix: even if correctly classified as `AuthError`, no `!is_auth_error` guard
-/// existed, so auth errors still retried.
+/// BUG-325 pre-fix: even after BUG-314 correctly classified as `AuthError`, the
+/// `!is_auth_error` guard added by BUG-315 blocked retry-block entry unconditionally —
+/// `--retry-on-auth` was a dead parameter, no retries ever fired.
 ///
-/// Post-fix (both): `"authentication_error"` matches BEFORE `"API Error: "` in `ERROR_PATTERNS`
-/// → `AuthError` → `ErrorClass::Auth` → `!is_auth_error` guard fires → fail-fast, 1 invocation.
+/// Post-fix (BUG-314 + BUG-325): `"authentication_error"` matches BEFORE `"API Error: "` in
+/// `ERROR_PATTERNS` → `AuthError` → `ErrorClass::Auth` → same 3-tier retry resolution as all
+/// other classes → `--retry-on-auth 3` fires 3 retries → 4 invocations total → "retries
+/// exhausted" emitted.
 ///
 /// # Root Cause
 ///
 /// BUG-314: `ERROR_PATTERNS` priority let `"API Error: "` catch-all fire before `"authentication_error"`.
-/// BUG-315: No `is_auth_error` guard in `run_print_mode` retry block entry.
+/// BUG-325: `!is_auth_error` guard (BUG-315 regression) blocked retry-block entry for all Auth errors.
 ///
 /// # Why Not Caught
 ///
 /// EC-7/EC-8/MRE-315 all use `"Your organization does not have access to Claude"` — a simple auth
 /// string without `"API Error: "` conflict. No prior test used the actual 401 format string in a
-/// live subprocess to verify end-to-end fail-fast behavior for `authentication_error` responses.
+/// live subprocess to verify end-to-end retry behavior for `authentication_error` responses.
 ///
 /// # Fix Applied
 ///
-/// BUG-314 + BUG-315 (see FT-19 in `classify_error_test.rs` and `mre_bug315_...` in this file).
+/// BUG-314 (see FT-19 in `classify_error_test.rs`) + BUG-325 (`!is_auth_error` guard removed
+/// from `run_print_mode` in `execution.rs`).
 ///
 /// # Prevention
 ///
-/// If either fix regresses: the `[Auth]` check fails (BUG-314 regression → `[Service]`) OR the
-/// timing/count check fails (BUG-315 regression → 3 invocations, ~15s elapsed).
+/// If either fix regresses: `[Auth]` check fails (BUG-314 regression → `[Service]`) OR
+/// invocation_count != 4 (BUG-325 regression → 1 invocation, no retries fired).
 ///
 /// # Pitfall
 ///
-/// Neither fix alone is sufficient. BUG-314 ensures correct classification; BUG-315 ensures
-/// the correct class triggers fail-fast. Regression in either produces full retry-budget waste.
+/// Neither fix alone is sufficient. BUG-314 ensures correct classification; BUG-325 ensures
+/// retry fires for Auth class. Regression in either yields wrong invocation count or wrong class.
 #[ cfg( unix ) ]
 #[ test ]
-fn b4_authentication_error_401_format_exits_immediately()
+fn b4_authentication_error_401_format_retries_and_exhausts()
 {
   let tmp   = tempfile::tempdir().expect( "create temp dir" );
   let fake  = tmp.path().join( "claude" );
@@ -523,8 +536,8 @@ fn b4_authentication_error_401_format_exits_immediately()
 
   let count_path = count.to_str().expect( "counter path utf-8" );
   // Emits the exact Claude CLI 401 format: contains BOTH "authentication_error" AND "API Error: ".
-  // Before BUG-314 fix: "API Error: " catch-all matched first → ApiError → Service → retries.
-  // After BUG-314 fix: "authentication_error" matches first → AuthError → Auth → fail-fast (BUG-315).
+  // Before BUG-314 fix: "API Error: " catch-all matched first → ApiError → Service → wrong class.
+  // After BUG-314 fix: "authentication_error" matches first → AuthError → Auth → retries fire (BUG-325).
   let script = format!(
     "#!/bin/sh\n\
      printf '1' >> \"{count_path}\"\n\
@@ -539,40 +552,37 @@ fn b4_authentication_error_401_format_exits_immediately()
   let new_path = format!( "{}:{old_path}", tmp.path().display() );
   let bin = env!( "CARGO_BIN_EXE_clr" );
 
-  let start = std::time::Instant::now();
-  let out   = Command::new( bin )
+  let out = Command::new( bin )
     .args( [
-      "-p", "--retry-on-auth", "3", "--auth-delay", "5",
+      "-p", "--retry-on-auth", "3", "--auth-delay", "0",
       "--max-sessions", "0", "x"
     ] )
     .env( "PATH", &new_path )
     .output()
     .expect( "invoke clr" );
-  let elapsed = start.elapsed();
 
-  // BUG-314 + BUG-315 combined: authentication_error 401 must fail-fast.
+  // BUG-314 + BUG-325 combined: authentication_error 401 must retry and exhaust.
   assert_eq!(
     out.status.code(),
     Some( 1 ),
-    "B4: authentication_error 401 must exit 1 immediately. Got: {:?}  stderr: {}",
+    "B4: authentication_error 401 must exit 1 after exhausting retries. Got: {:?}  stderr: {}",
     out.status.code(),
     String::from_utf8_lossy( &out.stderr )
   );
-  // Exactly 1 invocation — fail-fast prevents all 3 retries from firing.
+  // 4 invocations: 1 initial + 3 retries (--retry-on-auth 3).
   let invocation_count = std::fs::read_to_string( &count ).unwrap_or_default().len();
   assert_eq!(
-    invocation_count, 1,
-    "B4: fake must be invoked exactly once (no retries). Got: {invocation_count} — \
-     if >1: BUG-315 guard is missing or BUG-314 misclassified as Service"
+    invocation_count, 4,
+    "B4: fake must be invoked 4 times (1 + 3 retries). Got: {invocation_count} — \
+     if 1: BUG-325 guard still present or BUG-314 misclassified as Service"
   );
-  // No sleep consumed — must exit well under 3 × 5s = 15s budget.
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  // "retries exhausted" confirms retry budget was consumed (not fail-fast, not pass-through).
   assert!(
-    elapsed.as_secs() < 10,
-    "B4: exit must be immediate (< 10s). Elapsed: {elapsed:?} — \
-     if ≥ 10s: either BUG-314 or BUG-315 fix is missing"
+    stderr.contains( "exhausted" ),
+    "B4: stderr must contain 'exhausted' (retries consumed). Got:\n{stderr}"
   );
   // [Auth] class label confirms BUG-314 classification is correct ([Service] = regression).
-  let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
     stderr.contains( "[Auth]" ),
     "B4: stderr must contain [Auth] (not [Service]); [Service] means BUG-314 regression — \

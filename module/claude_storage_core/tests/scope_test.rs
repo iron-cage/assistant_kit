@@ -10,9 +10,10 @@
 //! ## Test Strategy
 //!
 //! Each test isolates environment variables via `std::env::set_var` / `remove_var`.
-//! nextest runs every test in its own process, so cross-test env var contamination
-//! is impossible.  Filesystem operations use `tempfile::TempDir` for automatic
-//! cleanup on test exit.
+//! Because `std::env` mutations are process-wide, all env-var-touching tests acquire
+//! `ENV_LOCK` at entry so they serialize correctly under both `cargo test` (threads)
+//! and `cargo nextest` (processes).  Filesystem operations use `tempfile::TempDir`
+//! for automatic cleanup on test exit.
 //!
 //! ## Related Requirements
 //!
@@ -21,6 +22,13 @@
 
 use tempfile::TempDir;
 use claude_storage_core::{ scope_for, git_root_for, encode_path };
+
+/// Serializes all tests that mutate process-wide env vars.
+///
+/// `std::env::set_var` / `remove_var` are not thread-safe across concurrent tests.
+/// Every test that calls either function must acquire this lock before any env mutation
+/// and hold it for the duration of the test body.
+static ENV_LOCK : std::sync::Mutex<()> = std::sync::Mutex::new( () );
 
 // ============================================================================
 // FT-1: scope_for default — uses $HOME/.claude when CLAUDE_HOME unset
@@ -44,6 +52,7 @@ use claude_storage_core::{ scope_for, git_root_for, encode_path };
 #[ test ]
 fn scope_for_default_claude_home()
 {
+  let _guard   = ENV_LOCK.lock().unwrap();
   let home_dir = TempDir::new().unwrap();
   let proj_dir = TempDir::new().unwrap();
 
@@ -97,6 +106,7 @@ fn scope_for_default_claude_home()
 #[ test ]
 fn scope_for_claude_home_override_no_double_suffix()
 {
+  let _guard          = ENV_LOCK.lock().unwrap();
   let claude_home_dir = TempDir::new().unwrap();
   let proj_dir        = TempDir::new().unwrap();
 
@@ -148,6 +158,7 @@ fn scope_for_claude_home_override_no_double_suffix()
 #[ test ]
 fn scope_for_memory_path_override()
 {
+  let _guard          = ENV_LOCK.lock().unwrap();
   let home_dir        = TempDir::new().unwrap();
   let shared_mem_dir  = TempDir::new().unwrap();
   let proj_dir        = TempDir::new().unwrap();
@@ -201,6 +212,7 @@ fn scope_for_memory_path_override()
 #[ test ]
 fn scope_for_memory_anchored_to_git_root()
 {
+  let _guard   = ENV_LOCK.lock().unwrap();
   let home_dir = TempDir::new().unwrap();
   // repo_dir acts as git root
   let repo_dir = TempDir::new().unwrap();
@@ -254,6 +266,7 @@ fn scope_for_memory_anchored_to_git_root()
 #[ test ]
 fn scope_for_none_when_no_session_dir()
 {
+  let _guard   = ENV_LOCK.lock().unwrap();
   let home_dir = TempDir::new().unwrap();
   let proj_dir = TempDir::new().unwrap();
 
@@ -292,8 +305,9 @@ fn scope_for_none_when_no_session_dir()
 #[ test ]
 fn scope_for_some_when_session_file_exists()
 {
-  let home_dir  = TempDir::new().unwrap();
-  let proj_dir  = TempDir::new().unwrap();
+  let _guard   = ENV_LOCK.lock().unwrap();
+  let home_dir = TempDir::new().unwrap();
+  let proj_dir = TempDir::new().unwrap();
 
   std::env::remove_var( "CLAUDE_HOME" );
   std::env::remove_var( "CLAUDE_COWORK_MEMORY_PATH_OVERRIDE" );
@@ -379,8 +393,13 @@ fn git_root_for_falls_back_to_dir_when_no_git()
   // itself is inside a git repo (extremely unlikely in CI).
   let root = git_root_for( &deep_dir );
 
-  // When no .git found: fallback is dir itself.
-  // If the TempDir happens to be inside a git repo (CI checkout), the function
-  // will correctly return the repo root. We only assert it does not panic.
-  let _ = root; // Absence of panic is the core assertion.
+  // The returned path must always be an ancestor of or equal to the input:
+  // when inside a git repo (CI), returns the repo root (an ancestor);
+  // when outside, returns deep_dir itself (equal).  Both satisfy starts_with.
+  assert!(
+    deep_dir.starts_with( &root ),
+    "git_root_for must return the input dir or an ancestor; got {:?} for {:?}",
+    root,
+    deep_dir
+  );
 }

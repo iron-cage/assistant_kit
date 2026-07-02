@@ -279,17 +279,34 @@ fn ec6_to_plus_session_from()
 ///
 /// No `--session-from` on CLI; `CLR_SESSION_FROM` provides the source path.
 /// `CLAUDE_CODE_SESSION_DIR` must point to the computed source storage path.
+///
+/// Note: cannot use `run_dry_env` here because it calls `env_remove("CLR_SESSION_FROM")`
+/// which would strip the very variable this test passes in.
 #[ test ]
 fn ec7_clr_session_from_env_var()
 {
+  container_check();
   let ch  = tempfile::TempDir::new().expect( "tmpdir" );
   let src = "/tmp/076ec7-src";
   make_session_for( ch.path(), src, "fff-666" );
   let home_str = ch.path().to_str().expect( "utf-8" );
-  let stdout = run_dry_env(
-    &[ "Continue" ],
-    &[ ( "CLAUDE_HOME", home_str ), ( "CLR_SESSION_FROM", src ) ],
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "--dry-run", "Continue" ] )
+    .env( "CLAUDE_HOME", home_str )
+    .env( "CLR_SESSION_FROM", src )
+    .env_remove( "CLR_DIR" )
+    .env_remove( "CLR_SESSION_DIR" )
+    .output()
+    .expect( "failed to invoke clr binary" );
+  assert!(
+    out.status.success(),
+    "dry-run failed (exit {})\nstdout: {}\nstderr: {}",
+    out.status.code().unwrap_or( -1 ),
+    String::from_utf8_lossy( &out.stdout ),
+    String::from_utf8_lossy( &out.stderr ),
   );
+  let stdout = String::from_utf8_lossy( &out.stdout ).into_owned();
   let expected_dir = format!( "{home_str}/projects/{}", df( src ) );
   assert!(
     stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={expected_dir}" ) ),

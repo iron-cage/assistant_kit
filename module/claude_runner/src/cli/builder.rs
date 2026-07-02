@@ -81,7 +81,7 @@ fn resolve_effective_dir( cli : &CliArgs ) -> Option< std::path::PathBuf >
 /// or no prior session exists in the configured storage directory.
 /// The returned `Option<SessionId>` is `Some(uuid)` when `-c` was injected, allowing
 /// the caller to verify that claude actually resumed that session.
-#[ allow( clippy::too_many_lines ) ]
+#[ allow( clippy::too_many_lines ) ] // mechanical dispatch — one block per CLI flag mapped to the command builder
 pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Option< SessionId > )
 {
   let mut builder = ClaudeCommand::new();

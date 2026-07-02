@@ -183,9 +183,11 @@ fn it8_main_help_mentions_scope()
 #[ test ]
 fn it9_nonexistent_dir_exits_one()
 {
-  let path = "/tmp/nonexistent_scope_it9_x7q2m";
-  let _ = std::fs::remove_dir_all( path );
-  let out = run_cli( &[ "scope", "--dir", path ] );
+  let tmp      = tempfile::TempDir::new().unwrap();
+  let path     = tmp.path().to_owned();
+  drop( tmp );
+  let path_str = path.to_string_lossy();
+  let out      = run_cli( &[ "scope", "--dir", &path_str ] );
   assert_eq!(
     exit_code( &out ),
     1,
@@ -359,11 +361,10 @@ fn us6_memory_override_reflected()
   let mem_line = stdout.lines()
     .find( | l | l.starts_with( "CLAUDE_MEMORY_DIR=" ) )
     .expect( "CLAUDE_MEMORY_DIR must be present" );
-  // scope command adds trailing `/` to directory paths (scope.rs line 61)
   assert_eq!(
     mem_line,
-    &format!( "CLAUDE_MEMORY_DIR={mem_str}/" ),
-    "CLAUDE_MEMORY_DIR must equal override (with trailing slash). Got: `{mem_line}`"
+    &format!( "CLAUDE_MEMORY_DIR={mem_str}" ),
+    "CLAUDE_MEMORY_DIR must equal override. Got: `{mem_line}`"
   );
   let memfile_line = stdout.lines()
     .find( | l | l.starts_with( "CLAUDE_MEMORY_FILE=" ) )
@@ -411,9 +412,11 @@ fn us8_exit_codes()
   let ok = run_cli( &[ "scope", "--dir", "/tmp" ] );
   assert!( ok.status.success(), "`clr scope --dir /tmp` must exit 0" );
 
-  let path = "/tmp/nonexistent_scope_dir_us8_x7q2m";
-  let _ = std::fs::remove_dir_all( path );
-  let fail = run_cli( &[ "scope", "--dir", path ] );
+  let tmp      = tempfile::TempDir::new().unwrap();
+  let path     = tmp.path().to_owned();
+  drop( tmp );
+  let path_str = path.to_string_lossy();
+  let fail     = run_cli( &[ "scope", "--dir", &path_str ] );
   assert_eq!(
     exit_code( &fail ),
     1,
@@ -421,7 +424,7 @@ fn us8_exit_codes()
   );
   let err = stderr_str( &fail );
   assert!(
-    err.contains( "nonexistent_scope_dir_us8" ) || !err.is_empty(),
+    !err.is_empty(),
     "stderr must contain an error message. Got:\n{err}"
   );
 }

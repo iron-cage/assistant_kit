@@ -1,6 +1,6 @@
 # Test: Feature — Retry Hierarchy
 
-Test case planning for [feature/003_retry_hierarchy.md](../../../../docs/feature/003_retry_hierarchy.md). Tests validate the 3-tier retry count and delay resolution contracts: per-class Tier 2 budgets, per-invocation Tier 1 override, Tier 3 global fallback, auth fail-fast rule, and delay tier priority.
+Test case planning for [feature/003_retry_hierarchy.md](../../../../docs/feature/003_retry_hierarchy.md). Tests validate the 3-tier retry count and delay resolution contracts: per-class Tier 2 budgets, per-invocation Tier 1 override, Tier 3 global fallback, Auth retry parity, and delay tier priority.
 
 ## Test Case Index
 
@@ -8,7 +8,7 @@ Test case planning for [feature/003_retry_hierarchy.md](../../../../docs/feature
 |----|-----------|----------|
 | FT-1 | Tier 2 per-class budget governs retry count | Tier 2 Count Resolution |
 | FT-2 | Tier 3 fallback fires for unspecified class | Tier 3 Fallback |
-| FT-3 | Auth fail-fast — 0 retries by default regardless of retry-default | Auth Fail-Fast |
+| FT-3 | Auth uses 3-tier retry resolution — same default of 2 as all classes (BUG-325) | Auth Retry Behavior |
 | FT-4 | Tier 1 override 0 disables retries for all classes | Tier 1 Override |
 | FT-5 | Tier 1 override beats Tier 2 class-specific budget | Tier 1 Override |
 | FT-6 | Tier 3 fallback customized via --retry-default | Tier 3 Fallback |
@@ -19,7 +19,7 @@ Test case planning for [feature/003_retry_hierarchy.md](../../../../docs/feature
 
 - Tier 2 Count Resolution: 1 test (FT-1)
 - Tier 3 Fallback: 2 tests (FT-2, FT-6)
-- Auth Fail-Fast: 1 test (FT-3)
+- Auth Retry Behavior: 1 test (FT-3)
 - Tier 1 Override: 2 tests (FT-4, FT-5)
 - Tier Priority Ordering: 1 test (FT-7)
 - Delay Tier Resolution: 1 test (FT-8)
@@ -50,14 +50,14 @@ Test case planning for [feature/003_retry_hierarchy.md](../../../../docs/feature
 
 ---
 
-### FT-3: Auth fail-fast — 0 retries by default regardless of retry-default
+### FT-3: Auth uses 3-tier retry resolution — same default of 2 as all classes (BUG-325)
 
-- **Given:** fake claude binary that exits with auth failure signal; `--retry-default` left at its default of 2
-- **When:** `clr "task"` — auth error is triggered; no `--retry-on-auth` set
-- **Then:** `clr` exits immediately without retrying; retry-default (2) does NOT apply to auth class; auth error is surfaced on first failure
-- **Exit:** non-zero (auth failure code)
+- **Given:** fake claude binary that always exits with auth failure; `--retry-on-auth 2 --auth-delay 0`
+- **When:** `clr -p --retry-on-auth 2 --auth-delay 0 --max-sessions 0 "task"` with fake binary in PATH
+- **Then:** `clr` retries 2 times (budget exhausted); total invocation count = 3 (1 initial + 2 retries); "retries exhausted" in stderr; `[Auth]` class label present; exit 1
+- **Exit:** 1
 - **Source:** [feature/003_retry_hierarchy.md](../../../../docs/feature/003_retry_hierarchy.md) AC-002; [cli/param/042_retry_on_auth.md](../../../../docs/cli/param/042_retry_on_auth.md)
-- **Implemented by:** `retry_auth_test.rs::ec7_auth_error_exits_immediately_without_retry`, `retry_auth_test.rs::ec8_auth_error_exits_immediately_regardless_of_retry_budget`
+- **Implemented by:** `retry_auth_test.rs::ec8_auth_error_exhausts_retry_budget`
 
 ---
 
@@ -87,7 +87,7 @@ Test case planning for [feature/003_retry_hierarchy.md](../../../../docs/feature
 
 - **Given:** fake claude binary that always exits 2; `--retry-default 5`; no class-specific or override params
 - **When:** `clr --retry-default 5 "task"` with fake binary
-- **Then:** `clr` retries exactly 5 times then exits 2; `--retry-default` sets the Tier 3 global fallback for all non-auth classes without higher-tier configuration
+- **Then:** `clr` retries exactly 5 times then exits 2; `--retry-default` sets the Tier 3 global fallback for all classes without higher-tier configuration
 - **Exit:** 2
 - **Source:** [feature/003_retry_hierarchy.md](../../../../docs/feature/003_retry_hierarchy.md) AC-007; [cli/param/056_retry_default.md](../../../../docs/cli/param/056_retry_default.md)
 - **Implemented by:** `retry_default_test.rs::ec8_retry_default_fires_when_no_class_or_override`, `retry_default_test.rs::ec9_retry_default_fires_for_account_class`

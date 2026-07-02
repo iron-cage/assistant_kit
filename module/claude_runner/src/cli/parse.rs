@@ -509,7 +509,7 @@ fn parse_runner_value_flag(
 ///
 /// `--help`/`-h` wins regardless of other flags or unknown tokens: if either appears
 /// anywhere in `tokens`, parsing short-circuits and returns `CliArgs { help: true, .. }`.
-#[ allow( clippy::too_many_lines ) ]
+#[ allow( clippy::too_many_lines ) ] // mechanical dispatch — one arm per CLI flag token
 pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
 {
   // --help/-h always wins — return early before any other token is parsed.

@@ -56,9 +56,9 @@ pub( crate ) fn dispatch_scope( tokens : &[ String ] ) -> !
   let scope = claude_storage_core::scope_for( &dir );
 
   println!( "CLAUDE_HOME={}", scope.claude_home.display() );
-  println!( "CLAUDE_PROJECTS_DIR={}/", scope.claude_projects_dir.display() );
+  println!( "CLAUDE_PROJECTS_DIR={}", scope.claude_projects_dir.display() );
   println!( "CLAUDE_SESSION_DIR={}", scope.claude_session_dir.display() );
-  println!( "CLAUDE_MEMORY_DIR={}/", scope.claude_memory_dir.display() );
+  println!( "CLAUDE_MEMORY_DIR={}", scope.claude_memory_dir.display() );
   println!( "CLAUDE_MEMORY_FILE={}", scope.claude_memory_file.display() );
   match scope.claude_session_file
   {

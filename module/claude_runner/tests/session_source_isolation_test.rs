@@ -2,20 +2,20 @@
 //!
 //! Covers IN-1–IN-5 from `tests/docs/invariant/011_session_source_isolation.md`.
 //!
-//! These tests verify that when `--session-from` is used, the session UUID is
-//! read from the source directory's storage (not the target's), the subprocess
-//! working directory is the target (not the source), and the source session
-//! files are never written to during the cross-loaded run.
+//! These tests verify that when `--session-from` is used, `CLAUDE_CODE_SESSION_DIR`
+//! is set to the source directory's computed storage path (not the target's), the
+//! subprocess working directory is the target (not the source), and the source
+//! session files are never written to during the cross-loaded run.
 //!
 //! All tests use `--dry-run` so no real Claude binary is needed.
 //!
 //! | Test | Property |
 //! |------|----------|
-//! | IN-1 | Session UUID is read from source dir, not target |
+//! | IN-1 | `CLAUDE_CODE_SESSION_DIR` points to source storage, not target |
 //! | IN-2 | Subprocess working directory is target dir, not source |
 //! | IN-3 | Source session file mtime and size unchanged after cross-loaded run |
 //! | IN-4 | `--session-dir` raw path wins over `--session-from` computed path |
-//! | IN-5 | `--session-from` + `--to`: session UUID from source, cwd is target |
+//! | IN-5 | `--session-from` + `--to`: session dir from source, cwd is target |
 
 // IN-3 is the most critical: if source files are written to during a cross-loaded
 // run, the isolation contract is broken and source history would be polluted.
@@ -106,10 +106,11 @@ fn run_dry_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> String
 
 // ── IN-1: Session UUID from source dir, not target ────────────────────────────
 
-/// IN-1: UUID is read from source dir's `CLAUDE_SESSION_DIR`, not target's.
+/// IN-1: `CLAUDE_CODE_SESSION_DIR` points to source storage, not target storage.
 ///
 /// Target dir has no `.jsonl` files; source dir has `lll-001.jsonl`.
-/// The dry-run must inject `-c lll-001` (from source), not any UUID from target.
+/// The dry-run must set `CLAUDE_CODE_SESSION_DIR` to source's computed path,
+/// not to any path derived from the target.
 #[ test ]
 fn in1_uuid_read_from_source_not_target()
 {
@@ -119,13 +120,22 @@ fn in1_uuid_read_from_source_not_target()
   // Target dir exists but has NO session files in Claude storage
   let tgt = tempfile::TempDir::new().expect( "tgt tmpdir" );
   let tgt_str = tgt.path().to_str().expect( "utf-8" );
+  let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
     &[ "--session-from", src, "--to", tgt_str, "task" ],
-    &[ ( "CLAUDE_HOME", ch.path().to_str().expect( "utf-8" ) ) ],
+    &[ ( "CLAUDE_HOME", ch_str ) ],
   );
+  // CLAUDE_CODE_SESSION_DIR must point to source storage path
+  let src_session_dir = format!( "{ch_str}/projects/{}", df( src ) );
   assert!(
-    stdout.contains( "lll-001" ),
-    "UUID must come from source. Got:\n{stdout}"
+    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={src_session_dir}" ) ),
+    "session dir must come from source storage. Got:\n{stdout}"
+  );
+  // Target's encoded path must NOT be used as session dir
+  let tgt_session_dir = format!( "{ch_str}/projects/{}", df( tgt_str ) );
+  assert!(
+    !stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={tgt_session_dir}" ) ),
+    "session dir must NOT be derived from target. Got:\n{stdout}"
   );
 }
 
@@ -200,8 +210,8 @@ fn in3_source_session_file_unchanged()
 
 /// IN-4: `--session-dir` raw path wins over `--session-from` computed path.
 ///
-/// Source: `ooo-004.jsonl`; `--session-dir` override: `ppp-005.jsonl`.
-/// Output must use `ppp-005` (from `--session-dir`); `ooo-004` must not appear.
+/// `CLAUDE_CODE_SESSION_DIR` must equal the raw `--session-dir` path; the
+/// computed source storage path must not appear in the output.
 #[ test ]
 fn in4_session_dir_raw_path_wins()
 {
@@ -213,24 +223,29 @@ fn in4_session_dir_raw_path_wins()
   std::fs::write( raw_dir.path().join( "ppp-005.jsonl" ), b"{}" )
     .expect( "write raw session" );
   let raw_str = raw_dir.path().to_str().expect( "utf-8" );
+  let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
     &[ "--session-from", src, "--session-dir", raw_str, "test" ],
-    &[ ( "CLAUDE_HOME", ch.path().to_str().expect( "utf-8" ) ) ],
+    &[ ( "CLAUDE_HOME", ch_str ) ],
   );
+  // Raw path must be used as CLAUDE_CODE_SESSION_DIR
   assert!(
-    stdout.contains( "ppp-005" ),
-    "`--session-dir` UUID must win (`ppp-005`). Got:\n{stdout}"
+    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={raw_str}" ) ),
+    "`--session-dir` raw path must win. Got:\n{stdout}"
   );
+  // Source computed path must NOT appear
+  let src_dir = format!( "{ch_str}/projects/{}", df( src ) );
   assert!(
-    !stdout.contains( "ooo-004" ),
-    "`ooo-004` from `--session-from` must NOT appear. Got:\n{stdout}"
+    !stdout.contains( &src_dir ),
+    "source computed path `{src_dir}` must NOT appear. Got:\n{stdout}"
   );
 }
 
 // ── IN-5: --session-from + --to: session UUID from source, cwd is target ───────
 
-/// IN-5: Both read isolation (UUID from source) and run isolation (cwd = target)
-///       hold simultaneously when `--to` and `--session-from` are combined.
+/// IN-5: Both read isolation (`CLAUDE_CODE_SESSION_DIR` from source) and run
+///       isolation (cwd = target) hold simultaneously when `--to` and
+///       `--session-from` are combined.
 #[ test ]
 fn in5_combined_source_uuid_and_target_cwd()
 {
@@ -239,14 +254,16 @@ fn in5_combined_source_uuid_and_target_cwd()
   make_session_for( ch.path(), src, "qqq-006" );
   let tgt = tempfile::TempDir::new().expect( "tgt tmpdir" );
   let tgt_str = tgt.path().to_str().expect( "utf-8" );
+  let ch_str = ch.path().to_str().expect( "utf-8" );
   let stdout = run_dry_env(
     &[ "--to", tgt_str, "--session-from", src, "Continue" ],
-    &[ ( "CLAUDE_HOME", ch.path().to_str().expect( "utf-8" ) ) ],
+    &[ ( "CLAUDE_HOME", ch_str ) ],
   );
-  // Read isolation: UUID comes from source
+  // Read isolation: session dir comes from source storage
+  let src_session_dir = format!( "{ch_str}/projects/{}", df( src ) );
   assert!(
-    stdout.contains( "qqq-006" ),
-    "UUID must come from source (`qqq-006`). Got:\n{stdout}"
+    stdout.contains( &format!( "CLAUDE_CODE_SESSION_DIR={src_session_dir}" ) ),
+    "session dir must come from source storage. Got:\n{stdout}"
   );
   // Run isolation: subprocess runs in target
   assert!(
