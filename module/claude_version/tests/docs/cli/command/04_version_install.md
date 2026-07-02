@@ -101,41 +101,41 @@ Boundary set: `0.0.0`, `latest`, two-part, leading-zeros.
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-1 | `dry::1` → `[dry-run]` prefix, exit 0 | P | 0 | F2=1 | [mutation_commands_test.rs] |
-| IT-9 | `version::stable dry::1` → preview shows `stable` | P | 0 | F1=stable, F2=1 | [mutation_commands_test.rs] |
-| IT-10 | `version::1.2.3 dry::1` → preview shows exact version | P | 0 | F1=semver, F2=1 | [mutation_commands_test.rs] |
-| IT-2 | `dry::1 force::1` → dry wins | P | 0 | F2=1, F3=1, F4 | [mutation_commands_test.rs] |
-| IT-11 | Absent `version::` with `dry::1` → uses `stable` | P | 0 | F1=absent, F2=1 | [mutation_commands_test.rs] |
-| IT-12 | `version::month dry::1` → resolves to pinned semver (2.1.74) | P | 0 | F1=month, F2=1 | [mutation_commands_test.rs] |
-| IT-13 | `version::latest dry::1` → autoUpdates=true in preview | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_commands_test.rs] |
-| IT-14 | `version::stable dry::1` → autoUpdates=false in preview | P | 0 | F1=stable, F2=1, F5=lock | [mutation_commands_test.rs] |
-| IT-15 | `version::2.1.50 dry::1` → autoUpdates=false in preview | P | 0 | F1=semver, F2=1, F5=lock | [mutation_commands_test.rs] |
-| IT-16 | `version::latest dry::1` → previews unlock actions | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_commands_test.rs] |
-| IT-17 | `version::0.0.0 dry::1` → single-zero parts valid | P | 0 | F1=0.0.0, F2=1 | [mutation_commands_test.rs] |
-| IT-18 | `dry::1` output mentions preferred version storage | P | 0 | F2=1, F6 | [mutation_commands_test.rs] |
-| IT-19 | `dry::1` does NOT write preference keys | P | 0 | F2=1, F6=no-write | [mutation_commands_test.rs] |
-| IT-20 | Idempotent skip still stores preference | P | 0 | F6=idempotent | [mutation_commands_test.rs] |
-| IT-21 | `version::stable dry::1` → output includes purge line | P | 0 | F2=1, F5=layer4 | [mutation_commands_test.rs] |
-| IT-22 | `version::latest dry::1` → output does NOT contain "purge" | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_commands_test.rs] |
-| IT-6 | `dry::1 format::json` → JSON object output, exit 0 | P | 0 | F2=1, F9=json | [mutation_commands_test.rs] |
+| IT-1 | `dry::1` → `[dry-run]` prefix, exit 0 | P | 0 | F2=1 | [mutation_version_install_test.rs] |
+| IT-9 | `version::stable dry::1` → preview shows `stable` | P | 0 | F1=stable, F2=1 | [mutation_version_install_test.rs] |
+| IT-10 | `version::1.2.3 dry::1` → preview shows exact version | P | 0 | F1=semver, F2=1 | [mutation_version_install_test.rs] |
+| IT-2 | `dry::1 force::1` → dry wins | P | 0 | F2=1, F3=1, F4 | [mutation_version_install_test.rs] |
+| IT-11 | Absent `version::` with `dry::1` → uses `stable` | P | 0 | F1=absent, F2=1 | [mutation_version_install_test.rs] |
+| IT-12 | `version::month dry::1` → resolves to pinned semver (2.1.74) | P | 0 | F1=month, F2=1 | [mutation_version_install_test.rs] |
+| IT-13 | `version::latest dry::1` → autoUpdates=true in preview | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_version_install_test.rs] |
+| IT-14 | `version::stable dry::1` → autoUpdates=false in preview | P | 0 | F1=stable, F2=1, F5=lock | [mutation_version_install_test.rs] |
+| IT-15 | `version::2.1.50 dry::1` → autoUpdates=false in preview | P | 0 | F1=semver, F2=1, F5=lock | [mutation_version_install_test.rs] |
+| IT-16 | `version::latest dry::1` → previews unlock actions | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_version_install_test.rs] |
+| IT-17 | `version::0.0.0 dry::1` → single-zero parts valid | P | 0 | F1=0.0.0, F2=1 | [mutation_version_install_test.rs] |
+| IT-18 | `dry::1` output mentions preferred version storage | P | 0 | F2=1, F6 | [mutation_version_install_test.rs] |
+| IT-19 | `dry::1` does NOT write preference keys | P | 0 | F2=1, F6=no-write | [mutation_version_install_test.rs] |
+| IT-20 | Idempotent skip still stores preference | P | 0 | F6=idempotent | [mutation_version_install_test.rs] |
+| IT-21 | `version::stable dry::1` → output includes purge line | P | 0 | F2=1, F5=layer4 | [mutation_version_install_test.rs] |
+| IT-22 | `version::latest dry::1` → output does NOT contain "purge" | P | 0 | F1=latest, F2=1, F5=unlock | [mutation_version_install_test.rs] |
+| IT-6 | `dry::1 format::json` → JSON object output, exit 0 | P | 0 | F2=1, F9=json | [mutation_version_install_test.rs] |
 
 ### Negative Tests
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-3 | `version::STABLE` → wrong case, exit 1 | N | 1 | F1=STABLE | [mutation_commands_test.rs] |
-| IT-23 | `version::` (empty) → exit 1 | N | 1 | F1=empty | [mutation_commands_test.rs] |
-| IT-24 | `version::1.2` → two-part semver, exit 1 | N | 1 | F1=1.2 | [mutation_commands_test.rs] |
-| IT-25 | `version::x` → unknown alias, exit 1 | N | 1 | F1=x | [mutation_commands_test.rs] |
-| IT-4 | `version::01.02.03` → leading zeros, exit 1 | N | 1 | F1=leading-zeros | [mutation_commands_test.rs] |
+| IT-3 | `version::STABLE` → wrong case, exit 1 | N | 1 | F1=STABLE | [mutation_version_install_test.rs] |
+| IT-23 | `version::` (empty) → exit 1 | N | 1 | F1=empty | [mutation_version_install_test.rs] |
+| IT-24 | `version::1.2` → two-part semver, exit 1 | N | 1 | F1=1.2 | [mutation_version_install_test.rs] |
+| IT-25 | `version::x` → unknown alias, exit 1 | N | 1 | F1=x | [mutation_version_install_test.rs] |
+| IT-4 | `version::01.02.03` → leading zeros, exit 1 | N | 1 | F1=leading-zeros | [mutation_version_install_test.rs] |
 | IT-5 | `bogus::x` → unknown param, exit 1 | N | 1 | F7=present | new |
-| IT-7 | `format::JSON` (uppercase) → exit 1 | N | 1 | F9=JSON | [mutation_commands_test.rs] |
-| IT-8 | `dry::2` → out-of-range boolean, exit 1 | N | 1 | F2=2 | [mutation_commands_test.rs] |
+| IT-7 | `format::JSON` (uppercase) → exit 1 | N | 1 | F9=JSON | [mutation_version_install_test.rs] |
+| IT-8 | `dry::2` → out-of-range boolean, exit 1 | N | 1 | F2=2 | [mutation_version_install_test.rs] |
 
 ### Summary
 
 - **Total:** 25 tests (17 positive, 8 negative)
-- **Negative ratio:** 32.0% — supplemented by cross-cutting `tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`, `tc261_version_install_format_json_accepted` in `read_commands_test.rs` / `cross_cutting_test.rs`
+- **Negative ratio:** 32.0% — supplemented by cross-cutting `tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`, `tc261_version_install_format_json_accepted` in `read_status_test.rs` / `cross_cutting_test.rs`
 - **Combined with cross-cutting:** 11/26 = 42.3% ✅
 - **IT range:** IT-1 to IT-25
 
@@ -433,27 +433,27 @@ IT-19 verifies dry-run has zero side effects on settings.
 
 | Function | File |
 |----------|------|
-| `tc300_version_install_dry_shows_prefix` | `integration/mutation_commands_test.rs` |
-| `tc301_version_install_dry_stable` | `integration/mutation_commands_test.rs` |
-| `tc302_version_install_dry_exact_semver` | `integration/mutation_commands_test.rs` |
-| `tc303_version_install_dry_wins_over_force` | `integration/mutation_commands_test.rs` |
-| `tc304_version_install_wrong_case_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc305_version_install_empty_version_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc306_version_install_two_part_semver_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc307_version_install_unknown_alias_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc308_version_install_absent_version_defaults_to_stable` | `integration/mutation_commands_test.rs` |
-| `tc309_version_install_dry_month` | `integration/mutation_commands_test.rs` |
-| `tc350_version_install_dry_latest_auto_updates_true` | `integration/mutation_commands_test.rs` |
-| `tc351_version_install_dry_stable_auto_updates_false` | `integration/mutation_commands_test.rs` |
-| `tc352_version_install_dry_semver_auto_updates_false` | `integration/mutation_commands_test.rs` |
-| `tc353_version_install_dry_latest_shows_unlock` | `integration/mutation_commands_test.rs` |
-| `tc354_version_install_leading_zeros_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc355_version_install_zero_parts_valid_dry` | `integration/mutation_commands_test.rs` |
-| `tc356_version_install_dry_mentions_preferred` | `integration/mutation_commands_test.rs` |
-| `tc357_version_install_dry_no_preference_written` | `integration/mutation_commands_test.rs` |
-| `tc358_version_install_idempotent_stores_preference` | `integration/mutation_commands_test.rs` |
-| `tc359_version_install_dry_stable_includes_purge_line` | `integration/mutation_commands_test.rs` |
-| `tc360_version_install_dry_latest_no_purge_line` | `integration/mutation_commands_test.rs` |
-| `tc361_version_install_dry_format_json` | `integration/mutation_commands_test.rs` |
-| `tc362_version_install_format_uppercase_rejected` | `integration/mutation_commands_test.rs` |
-| `tc510_version_install_wrong_case_error` | `integration/error_messages_test.rs` |
+| `tc300_version_install_dry_shows_prefix` | `tests/cli/mutation_version_install_test.rs` |
+| `tc301_version_install_dry_stable` | `tests/cli/mutation_version_install_test.rs` |
+| `tc302_version_install_dry_exact_semver` | `tests/cli/mutation_version_install_test.rs` |
+| `tc303_version_install_dry_wins_over_force` | `tests/cli/mutation_version_install_test.rs` |
+| `tc304_version_install_wrong_case_exits_1` | `tests/cli/mutation_version_install_test.rs` |
+| `tc305_version_install_empty_version_exits_1` | `tests/cli/mutation_version_install_test.rs` |
+| `tc306_version_install_two_part_semver_exits_1` | `tests/cli/mutation_version_install_test.rs` |
+| `tc307_version_install_unknown_alias_exits_1` | `tests/cli/mutation_version_install_test.rs` |
+| `tc308_version_install_absent_version_defaults_to_stable` | `tests/cli/mutation_version_install_test.rs` |
+| `tc309_version_install_dry_month` | `tests/cli/mutation_version_install_test.rs` |
+| `tc350_version_install_dry_latest_auto_updates_true` | `tests/cli/mutation_version_install_test.rs` |
+| `tc351_version_install_dry_stable_auto_updates_false` | `tests/cli/mutation_version_install_test.rs` |
+| `tc352_version_install_dry_semver_auto_updates_false` | `tests/cli/mutation_version_install_test.rs` |
+| `tc353_version_install_dry_latest_shows_unlock` | `tests/cli/mutation_version_install_test.rs` |
+| `tc354_version_install_leading_zeros_exits_1` | `tests/cli/mutation_version_install_test.rs` |
+| `tc355_version_install_zero_parts_valid_dry` | `tests/cli/mutation_version_install_test.rs` |
+| `tc356_version_install_dry_mentions_preferred` | `tests/cli/mutation_version_install_test.rs` |
+| `tc357_version_install_dry_no_preference_written` | `tests/cli/mutation_version_install_test.rs` |
+| `tc358_version_install_idempotent_stores_preference` | `tests/cli/mutation_version_install_test.rs` |
+| `tc359_version_install_dry_stable_includes_purge_line` | `tests/cli/mutation_version_install_test.rs` |
+| `tc360_version_install_dry_latest_no_purge_line` | `tests/cli/mutation_version_install_test.rs` |
+| `tc361_version_install_dry_format_json` | `tests/cli/mutation_version_install_test.rs` |
+| `tc362_version_install_format_uppercase_rejected` | `tests/cli/mutation_version_install_test.rs` |
+| `tc510_version_install_wrong_case_error` | `tests/cli/error_messages_test.rs` |

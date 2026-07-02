@@ -10,8 +10,16 @@ Module files for CLI tests, organised by domain. All files are included by `test
 |------|----------------|
 | `subprocess_helpers.rs` | Subprocess execution and fixture helpers for integration tests |
 | `framework_test.rs` | Pipeline smoke tests: `.help`, unknown command, exit codes |
-| `read_commands_test.rs` | Integration tests for 8 read-only commands |
-| `mutation_commands_test.rs` | Integration tests for 4 mutation commands |
+| `read_help_test.rs` | Integration tests for `.help` (E1) |
+| `read_status_test.rs` | Integration tests for `.status` and format edge cases (E2) |
+| `read_version_test.rs` | Integration tests for `.version.show` and `.version.list` (E3, E4) |
+| `read_processes_test.rs` | Integration tests for `.processes` (E6) |
+| `read_settings_test.rs` | Integration tests for `.settings.show` and `.settings.get` (E8, E9) |
+| `read_version_history_test.rs` | Integration tests for `.version.history` (E15) |
+| `mutation_version_install_test.rs` | Integration tests for `.version.install` (E5) |
+| `mutation_processes_kill_test.rs` | Integration tests for `.processes.kill` (E7) |
+| `mutation_version_guard_test.rs` | Integration tests for `.version.guard` (E14) |
+| `mutation_settings_set_test.rs` | Integration tests for `.settings.set` and value type inference (E10) |
 | `config_commands_test.rs` | Integration tests for `.config` command (IT + FT) |
 | `cross_cutting_test.rs` | Cross-cutting: dry+force interaction, verbosity parity, format parity |
 | `error_messages_test.rs` | Error message content and format validation |
@@ -35,3 +43,4 @@ Module files for CLI tests, organised by domain. All files are included by `test
 | `process_isolation_test.rs` | Kill-isolation regression: guard does not send kill signals to processes |
 | `params_command_test.rs` | IT- integration tests for the `.params` command (IT-1 through IT-14) |
 | `kind_param_test.rs` | EC- and TC- tests for the `kind::` parameter and `ParamKind` type |
+| `runtime_files_test.rs` | Integration tests for `.runtime_files` (IT-1..IT-9, FT-1..FT-5) |

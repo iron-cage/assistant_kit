@@ -105,9 +105,9 @@ Both are valid values; the stored JSON type differs because `"1"` is not `"true"
 
 | Function | File |
 |----------|------|
-| `tc322_settings_set_value_true_stores_bool` | `integration/mutation_commands_test.rs` |
-| `tc323_settings_set_value_false_stores_bool` | `integration/mutation_commands_test.rs` |
-| `tc324_settings_set_value_0_stores_number` | `integration/mutation_commands_test.rs` |
-| `ac004_float_inference` | `integration/algorithm_surface_test.rs` |
-| `ac005_nan_stores_string` | `integration/algorithm_surface_test.rs` |
-| `tc326_settings_set_value_hello_stores_string` | `integration/mutation_commands_test.rs` |
+| `tc322_settings_set_stores_boolean_true` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc323_settings_set_stores_boolean_false` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc324_settings_set_zero_stored_as_number` | `tests/cli/mutation_settings_set_test.rs` |
+| `ac004_float_inference` | `tests/cli/algorithm_surface_test.rs` |
+| `ac005_nan_stores_string` | `tests/cli/algorithm_surface_test.rs` |
+| `tc326_settings_set_stores_string` | `tests/cli/mutation_settings_set_test.rs` |

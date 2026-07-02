@@ -102,11 +102,11 @@ Test surface for `claude_version_core::config_resolve`. See [algorithm/002_confi
 
 | Function | File |
 |----------|------|
-| `ac01_002_env_overrides_user` | ✅ `integration/algorithm_surface_test.rs` |
-| `ac02_002_user_config_wins_without_env` | ✅ `integration/algorithm_surface_test.rs` |
-| `ac03_002_project_config_key` | ✅ `integration/algorithm_surface_test.rs` |
-| `ac04_002_catalog_default_returned` | ✅ `integration/algorithm_surface_test.rs` |
-| `ac05_002_all_layers_absent` | ✅ `integration/algorithm_surface_test.rs` |
-| `ac06_002_project_overrides_user` | ✅ `integration/algorithm_surface_test.rs` |
-| `ac07_002_home_unset_skips_user_config` | ✅ `integration/algorithm_surface_test.rs` |
-| `ac08_002_ancestor_project_config_found` | ✅ `integration/algorithm_surface_test.rs` |
+| `ac01_002_env_overrides_user` | ✅ `tests/cli/algorithm_surface_test.rs` |
+| `ac02_002_user_config_wins_without_env` | ✅ `tests/cli/algorithm_surface_test.rs` |
+| `ac03_002_project_config_key` | ✅ `tests/cli/algorithm_surface_test.rs` |
+| `ac04_002_catalog_default_returned` | ✅ `tests/cli/algorithm_surface_test.rs` |
+| `ac05_002_all_layers_absent` | ✅ `tests/cli/algorithm_surface_test.rs` |
+| `ac06_002_project_overrides_user` | ✅ `tests/cli/algorithm_surface_test.rs` |
+| `ac07_002_home_unset_skips_user_config` | ✅ `tests/cli/algorithm_surface_test.rs` |
+| `ac08_002_ancestor_project_config_found` | ✅ `tests/cli/algorithm_surface_test.rs` |

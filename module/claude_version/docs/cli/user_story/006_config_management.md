@@ -52,3 +52,35 @@
 | 6 | [`.help`](../param/10_help.md) | Universal help override for any command |
 | 7 | [`scope::`](../param/11_scope.md) | Selects write target: user or project |
 | 8 | [`unset::`](../param/12_unset.md) | Deletes the key from target scope instead of writing |
+
+### Workflow Steps
+
+**Step 1 — Show all resolved settings with source annotations:**
+
+```bash
+clv .config
+# model:       claude-sonnet-5   (catalog default)
+# theme:       dark              (user)
+# autoUpdates: false             (user)
+```
+
+**Step 2 — Get the effective value for one key:**
+
+```bash
+clv .config key::model
+# claude-sonnet-5  (catalog default)
+```
+
+**Step 3 — Preview a write to user scope:**
+
+```bash
+clv .config key::theme value::light dry::1
+# [dry-run] Would write to ~/.claude/settings.json: theme = "light"  (string)
+```
+
+**Step 4 — Write a key to project scope:**
+
+```bash
+clv .config key::theme value::dark scope::project
+# Written to .claude/settings.json: theme = "dark"  (string)
+```

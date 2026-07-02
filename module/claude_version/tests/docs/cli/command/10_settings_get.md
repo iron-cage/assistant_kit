@@ -61,19 +61,19 @@ Integration test planning for the `.settings.get` command. See [command/readme.m
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-2 | `key::existing` → value returned, exit 0 | P | 0 | F1=existing | [read_commands_test.rs] |
-| IT-4 | `v::0` → bare value only | P | 0 | F1=existing, F2=0 | [read_commands_test.rs] |
-| IT-9 | `v::1` → `key: value` labeled | P | 0 | F1=existing, F2=1 | [read_commands_test.rs] |
-| IT-10 | `format::json` → `{"key":"..","value":".."}` | P | 0 | F1=existing, F3=json | [read_commands_test.rs] |
+| IT-2 | `key::existing` → value returned, exit 0 | P | 0 | F1=existing | [read_settings_test.rs] |
+| IT-4 | `v::0` → bare value only | P | 0 | F1=existing, F2=0 | [read_settings_test.rs] |
+| IT-9 | `v::1` → `key: value` labeled | P | 0 | F1=existing, F2=1 | [read_settings_test.rs] |
+| IT-10 | `format::json` → `{"key":"..","value":".."}` | P | 0 | F1=existing, F3=json | [read_settings_test.rs] |
 
 ### Negative Tests
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-1 | No `key::` → exit 1, required parameter | N | 1 | F1=absent | [read_commands_test.rs] |
-| IT-3 | `key::nonexistent` → exit 2, key not found | N | 2 | F1=missing | [read_commands_test.rs] |
-| IT-11 | File missing → exit 2 | N | 2 | F4=missing | [read_commands_test.rs] |
-| IT-12 | Without `key::` → error mentions `key::` | N | 1 | F1=absent | [read_commands_test.rs] |
+| IT-1 | No `key::` → exit 1, required parameter | N | 1 | F1=absent | [read_settings_test.rs] |
+| IT-3 | `key::nonexistent` → exit 2, key not found | N | 2 | F1=missing | [read_settings_test.rs] |
+| IT-11 | File missing → exit 2 | N | 2 | F4=missing | [read_settings_test.rs] |
+| IT-12 | Without `key::` → error mentions `key::` | N | 1 | F1=absent | [read_settings_test.rs] |
 | IT-5 | `key::` (empty value) → exit 1 | N | 1 | F1=empty | new |
 | IT-6 | `format::xml` → exit 1 | N | 1 | F3=xml | new |
 | IT-7 | `bogus::x` → exit 1 | N | 1 | F5=present | new |
@@ -245,16 +245,16 @@ This is critical for script consumption.
 
 | Function | File |
 |----------|------|
-| `tc174_settings_get_no_key_exits_1` | `integration/read_commands_test.rs` |
-| `tc176_settings_get_existing_key` | `integration/read_commands_test.rs` |
-| `tc177_settings_get_missing_key_exits_2` | `integration/read_commands_test.rs` |
-| `tc179_settings_get_v0_bare_value` | `integration/read_commands_test.rs` |
-| `tc180_settings_get_v1_labeled` | `integration/read_commands_test.rs` |
-| `tc182_settings_get_format_json` | `integration/read_commands_test.rs` |
-| `tc184_settings_get_file_missing_exits_2` | `integration/read_commands_test.rs` |
-| `tc237_settings_get_missing_key_error_format` | `integration/read_commands_test.rs` |
-| `tc490_settings_get_json_bool_unquoted` | `integration/read_commands_test.rs` |
-| `tc491_settings_get_json_number_unquoted` | `integration/read_commands_test.rs` |
-| `tc492_settings_get_json_string_quoted` | `integration/read_commands_test.rs` |
-| `tc505_settings_get_missing_key_error_contains_key` | `integration/error_messages_test.rs` |
-| `tc511_settings_get_absent_key_error_mentions_key` | `integration/error_messages_test.rs` |
+| `tc174_settings_get_no_key_exits_1` | `tests/cli/read_settings_test.rs` |
+| `tc176_settings_get_existing_key` | `tests/cli/read_settings_test.rs` |
+| `tc177_settings_get_missing_key_exits_2` | `tests/cli/read_settings_test.rs` |
+| `tc179_settings_get_v0_bare_value` | `tests/cli/read_settings_test.rs` |
+| `tc180_settings_get_v1_labeled` | `tests/cli/read_settings_test.rs` |
+| `tc182_settings_get_format_json` | `tests/cli/read_settings_test.rs` |
+| `tc184_settings_get_file_missing_exits_2` | `tests/cli/read_settings_test.rs` |
+| `tc237_settings_get_missing_key_error_format` | `tests/cli/read_settings_test.rs` |
+| `tc490_settings_get_json_bool_unquoted` | `tests/cli/read_settings_test.rs` |
+| `tc491_settings_get_json_number_unquoted` | `tests/cli/read_settings_test.rs` |
+| `tc492_settings_get_json_string_quoted` | `tests/cli/read_settings_test.rs` |
+| `tc505_settings_get_missing_key_error_contains_key` | `tests/cli/error_messages_test.rs` |
+| `tc511_settings_get_absent_key_error_mentions_key` | `tests/cli/error_messages_test.rs` |

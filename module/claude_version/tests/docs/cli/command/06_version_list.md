@@ -47,16 +47,16 @@ Every invocation exits 0 in a valid environment. No runtime failures exist.
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-1 | `.version.list` exits 0 | P | 0 | F1=absent, F2=absent | [read_commands_test.rs] |
-| IT-9 | Output includes "stable" alias | P | 0 | F1=absent | [read_commands_test.rs] |
-| IT-10 | Output includes "latest" alias | P | 0 | F1=absent | [read_commands_test.rs] |
-| IT-2 | `v::0` → names only, no descriptions | P | 0 | F1=0 | [read_commands_test.rs] |
-| IT-11 | `v::1` → aliases with descriptions | P | 0 | F1=1 | [read_commands_test.rs] |
-| IT-3 | Output is deterministic on two calls | P | 0 | F1=absent | [read_commands_test.rs] |
-| IT-12 | `format::json` → valid JSON array or object | P | 0 | F2=json | [read_commands_test.rs] |
-| IT-13 | Output includes "month" alias | P | 0 | F1=absent | [read_commands_test.rs] |
-| IT-14 | `v::1` shows pinned versions in parens `(vX.Y.Z)` | P | 0 | F1=1 | [read_commands_test.rs] |
-| IT-15 | `format::json` has `"value"` field | P | 0 | F2=json | [read_commands_test.rs] |
+| IT-1 | `.version.list` exits 0 | P | 0 | F1=absent, F2=absent | [read_version_test.rs] |
+| IT-9 | Output includes "stable" alias | P | 0 | F1=absent | [read_version_test.rs] |
+| IT-10 | Output includes "latest" alias | P | 0 | F1=absent | [read_version_test.rs] |
+| IT-2 | `v::0` → names only, no descriptions | P | 0 | F1=0 | [read_version_test.rs] |
+| IT-11 | `v::1` → aliases with descriptions | P | 0 | F1=1 | [read_version_test.rs] |
+| IT-3 | Output is deterministic on two calls | P | 0 | F1=absent | [read_version_test.rs] |
+| IT-12 | `format::json` → valid JSON array or object | P | 0 | F2=json | [read_version_test.rs] |
+| IT-13 | Output includes "month" alias | P | 0 | F1=absent | [read_version_test.rs] |
+| IT-14 | `v::1` shows pinned versions in parens `(vX.Y.Z)` | P | 0 | F1=1 | [read_version_test.rs] |
+| IT-15 | `format::json` has `"value"` field | P | 0 | F2=json | [read_version_test.rs] |
 | IT-7 | `format::json` → valid JSON output | P | 0 | F2=json | new |
 | IT-8 | Output is stable across repeated invocations | P | 0 | F1=absent | new |
 
@@ -71,7 +71,7 @@ Every invocation exits 0 in a valid environment. No runtime failures exist.
 ### Summary
 
 - **Total:** 15 tests (12 positive, 3 negative)
-- **Negative ratio:** 20.0% command-local; 40.0% combined with cross-cutting `tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1` in `read_commands_test.rs` ✅
+- **Negative ratio:** 20.0% command-local; 40.0% combined with cross-cutting `tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1` in `read_status_test.rs` ✅
 - **IT range:** IT-1 to IT-15
 
 ---
@@ -256,18 +256,18 @@ IT-12 verifies array structure. IT-15 verifies `"value"` field presence.
 
 | Function | File |
 |----------|------|
-| `tc115_version_list_exits_0` | `integration/read_commands_test.rs` |
-| `tc116_version_list_includes_stable` | `integration/read_commands_test.rs` |
-| `tc117_version_list_includes_latest` | `integration/read_commands_test.rs` |
-| `tc118_version_list_v0_names_only` | `integration/read_commands_test.rs` |
-| `tc119_version_list_v1_has_descriptions` | `integration/read_commands_test.rs` |
-| `tc120_version_list_is_idempotent` | `integration/read_commands_test.rs` |
-| `tc121_version_list_format_json_array` | `integration/read_commands_test.rs` |
-| `tc122_version_list_includes_month` | `integration/read_commands_test.rs` |
-| `tc123_version_list_v1_shows_pinned_versions` | `integration/read_commands_test.rs` |
-| `tc124_version_list_json_has_value_field` | `integration/read_commands_test.rs` |
-| `it04_version_list_bogus_param_exits_1` | `integration/read_commands_test.rs` |
-| `it05_version_list_format_xml_exits_1` | `integration/read_commands_test.rs` |
-| `it06_version_list_v3_exits_1` | `integration/read_commands_test.rs` |
-| `it07_version_list_format_json_valid` | `integration/read_commands_test.rs` |
-| `it08_version_list_output_stable` | `integration/read_commands_test.rs` |
+| `tc115_version_list_exits_0` | `tests/cli/read_version_test.rs` |
+| `tc116_version_list_includes_stable` | `tests/cli/read_version_test.rs` |
+| `tc117_version_list_includes_latest` | `tests/cli/read_version_test.rs` |
+| `tc118_version_list_v0_names_only` | `tests/cli/read_version_test.rs` |
+| `tc119_version_list_v1_has_descriptions` | `tests/cli/read_version_test.rs` |
+| `tc120_version_list_is_idempotent` | `tests/cli/read_version_test.rs` |
+| `tc121_version_list_format_json_array` | `tests/cli/read_version_test.rs` |
+| `tc122_version_list_includes_month` | `tests/cli/read_version_test.rs` |
+| `tc123_version_list_v1_shows_pinned_versions` | `tests/cli/read_version_test.rs` |
+| `tc124_version_list_json_has_value_field` | `tests/cli/read_version_test.rs` |
+| `it04_version_list_bogus_param_exits_1` | `tests/cli/read_version_test.rs` |
+| `it05_version_list_format_xml_exits_1` | `tests/cli/read_version_test.rs` |
+| `it06_version_list_v3_exits_1` | `tests/cli/read_version_test.rs` |
+| `it07_version_list_format_json_valid` | `tests/cli/read_version_test.rs` |
+| `it08_version_list_output_stable` | `tests/cli/read_version_test.rs` |

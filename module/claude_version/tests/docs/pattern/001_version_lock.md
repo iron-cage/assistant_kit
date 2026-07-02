@@ -70,6 +70,6 @@ Both are valid invocations; the `autoUpdates` value in the preview is opposite.
 
 | Function | File |
 |----------|------|
-| `tc351_version_install_dry_stable_auto_updates_false` | `integration/mutation_commands_test.rs` |
-| `tc350_version_install_dry_latest_auto_updates_true` | `integration/mutation_commands_test.rs` |
-| `tc359_version_install_dry_stable_includes_purge` | `integration/mutation_commands_test.rs` |
+| `tc351_version_install_dry_stable_auto_updates_false` | `tests/cli/mutation_version_install_test.rs` |
+| `tc350_version_install_dry_latest_auto_updates_true` | `tests/cli/mutation_version_install_test.rs` |
+| `tc359_version_install_dry_stable_includes_purge_line` | `tests/cli/mutation_version_install_test.rs` |

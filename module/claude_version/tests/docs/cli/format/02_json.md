@@ -67,8 +67,8 @@ Format test surface for `json` output. See [cli/format/02_json.md](../../../../d
 
 | Function | File |
 |----------|------|
-| `fm01_02_json_object_output` | `integration/format_surface_test.rs` |
-| `fm02_02_json_array_output` | `integration/format_surface_test.rs` |
-| `fm03_02_json_case_sensitive` | `integration/format_surface_test.rs` |
-| `fm04_02_json_v0_primary_key` | `integration/format_surface_test.rs` |
-| `fm05_02_json_stdout_only` | `integration/format_surface_test.rs` |
+| `fm01_02_json_object_output` | `tests/cli/format_surface_test.rs` |
+| `fm02_02_json_array_output` | `tests/cli/format_surface_test.rs` |
+| `fm03_02_json_case_sensitive` | `tests/cli/format_surface_test.rs` |
+| `fm04_02_json_v0_primary_key` | `tests/cli/format_surface_test.rs` |
+| `fm05_02_json_stdout_only` | `tests/cli/format_surface_test.rs` |

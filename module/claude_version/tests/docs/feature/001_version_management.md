@@ -105,9 +105,9 @@ Both are valid invocations; the resolved semver strings differ.
 
 | Function | File |
 |----------|------|
-| `tc301_version_install_dry_stable` | `integration/mutation_commands_test.rs` |
-| `tc309_version_install_dry_month` | `integration/mutation_commands_test.rs` |
-| `tc400_guard_no_preference_defaults_stable` | `integration/mutation_commands_test.rs` |
-| `tc403_guard_preference_latest_dry` | `integration/mutation_commands_test.rs` |
-| `tc357_version_install_dry_does_not_write_preference` | `integration/mutation_commands_test.rs` |
-| `tc410_guard_reresoves_stale_alias` | `integration/mutation_commands_test.rs` |
+| `tc301_version_install_dry_stable` | `tests/cli/mutation_version_install_test.rs` |
+| `tc309_version_install_dry_month` | `tests/cli/mutation_version_install_test.rs` |
+| `tc400_guard_no_preference` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc403_guard_latest_dry` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc357_version_install_dry_no_preference_written` | `tests/cli/mutation_version_install_test.rs` |
+| `tc410_guard_reresoves_stale_alias` | `tests/cli/mutation_version_guard_test.rs` |

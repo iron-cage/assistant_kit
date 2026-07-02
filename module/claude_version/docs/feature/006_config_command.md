@@ -54,6 +54,7 @@ Providing `scope::` without a write operation (without `key:: + value::` or `key
 | [feature/003_settings_management.md](003_settings_management.md) | Deprecated .settings.* commands; I/O atomics |
 | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode semantics |
 | [feature/005_cli_design.md](005_cli_design.md) | CLI routing and required parameter validation |
+| [feature/007_params_command.md](007_params_command.md) | `.params` companion command — read-only parameter inspection |
 
 ### Sources
 
