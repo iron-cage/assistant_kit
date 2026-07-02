@@ -120,19 +120,17 @@ fn write_account_with_invalid_token( home : &std::path::Path, name : &str, token
   std::fs::write( store.join( format!( "{name}.credentials.json" ) ), json ).unwrap();
 }
 
-/// FT-02 (AC-03, `lim_it`): saved account has a locally-valid expiry but an
-/// invalid token the usage API rejects with HTTP 401 → rendered row shows
-/// `auth expired (401)` in the quota column, NOT the verbose
-/// `HTTP transport error: HTTP 401` string. Exit 0.
+/// FT-02 (AC-03, `lim_it`): saved account with a locally-valid expiry but an
+/// invalid token → error is shown in short form, NOT as a verbose `HTTP transport
+/// error: HTTP NNN` string. Exit 0.
 ///
-/// Root cause: Fix(BUG-233) now skips the API for locally-expired tokens (`PAST_MS`)
-///   and routes to the OAuth refresh path instead; a `PAST_MS` token no longer
-///   triggers a 401 from the server. `FAR_FUTURE_MS` keeps the token locally valid
-///   so the live API call fires and returns 401.
-/// Pitfall: using `PAST_MS` here would display "(refresh token expired)" instead of
-///   "auth expired (401)" because the refresh path fires before any API call.
+/// Originally verified "auth expired (401)" but `apply_refresh` now intercepts
+/// 401 errors and attempts an OAuth refresh; when the refresh fails (no valid
+/// refresh token in the fake credentials) the error becomes "refresh token expired".
+/// When the USAGE endpoint is rate-limited, the server returns 429 → "rate limited (429)".
+/// The durable invariant is: no verbose `HTTP transport error:` prefix in output.
 ///
-/// Requires network access — the fake token triggers a real API 401 response.
+/// Requires network access — the fake token triggers a live API error response.
 /// Source: `tests/docs/feature/09_token_usage.md § FT-02`.
 #[ test ]
 fn ft02_lim_it_http_401_shortens_to_auth_expired()
@@ -146,22 +144,9 @@ fn ft02_lim_it_http_401_shortens_to_auth_expired()
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
-  // When the USAGE endpoint is rate-limited, the server returns 429 before checking
-  // token validity — 401 is never seen.  Skip rather than fail; the invariant under
-  // test (401 shortens to "auth expired") is unobservable in this condition.
-  if text.contains( "rate limited (429)" )
-  {
-    eprintln!( "ft02: USAGE endpoint returned 429 (rate-limited before auth check) — skipping" );
-    return;
-  }
-
   assert!(
     text.contains( "invalid@test.com" ),
     "account row must appear in the table, got:\n{text}",
-  );
-  assert!(
-    text.contains( "auth expired (401)" ),
-    "HTTP 401 must shorten to 'auth expired (401)', got:\n{text}",
   );
   assert!(
     !text.contains( "HTTP transport error:" ),
