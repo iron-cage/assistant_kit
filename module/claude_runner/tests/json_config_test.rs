@@ -69,7 +69,7 @@ fn jc2_cli_flag_overrides_json_value()
   let cfg  = write_json_file( r#"{"model":"claude-haiku-4-5-20251001"}"# );
   let path = cfg.path().to_str().unwrap();
   let out  = run_cli(
-    &[ "--args-file", path, "--model", "claude-opus-4-6", "--dry-run", "task" ]
+    &[ "--args-file", path, "--model", "claude-opus-4-8", "--dry-run", "task" ]
   );
   assert_eq!(
     exit_code( &out ), 0,
@@ -77,7 +77,7 @@ fn jc2_cli_flag_overrides_json_value()
   );
   let stdout = stdout_str( &out );
   assert!(
-    stdout.contains( "claude-opus-4-6" ),
+    stdout.contains( "claude-opus-4-8" ),
     "CLI model must appear in dry-run. Got:\n{stdout}"
   );
   assert!(
@@ -88,7 +88,7 @@ fn jc2_cli_flag_overrides_json_value()
 
 // ── JC-3: JSON config overrides CLR_* env var ────────────────────────────────
 
-/// JC-3: JSON `{"model":"claude-haiku-4-5-20251001"}` wins over `CLR_MODEL=claude-opus-4-6`.
+/// JC-3: JSON `{"model":"claude-haiku-4-5-20251001"}` wins over `CLR_MODEL=claude-opus-4-8`.
 ///
 /// Source: tests/docs/feature/004_json_config.md#jc-3
 #[ test ]
@@ -98,7 +98,7 @@ fn jc3_json_overrides_clr_env_var()
   let path = cfg.path().to_str().unwrap();
   let out  = run_cli_with_env(
     &[ "--args-file", path, "--dry-run", "task" ],
-    &[ ( "CLR_MODEL", "claude-opus-4-6" ) ],
+    &[ ( "CLR_MODEL", "claude-opus-4-8" ) ],
   );
   assert_eq!(
     exit_code( &out ), 0,
@@ -110,7 +110,7 @@ fn jc3_json_overrides_clr_env_var()
     "JSON model must appear (wins over CLR_MODEL). Got:\n{stdout}"
   );
   assert!(
-    !stdout.contains( "claude-opus-4-6" ),
+    !stdout.contains( "claude-opus-4-8" ),
     "CLR_MODEL must not win when JSON overrides it. Got:\n{stdout}"
   );
 }

@@ -13,7 +13,7 @@ Selects which settings file is modified by `.config key::K value::V` or `.config
 - **Validation:** must be `user` or `project`; any other value → exit 1
 
 ```sh
-clv.config key::model value::claude-opus-4-6 scope::user     # writes ~/.claude/settings.json
+clv.config key::model value::claude-opus-4-8 scope::user     # writes ~/.claude/settings.json
 clv.config key::model value::claude-haiku-4-5-20251001 scope::project  # writes {cwd}/.claude/settings.json
 ```
 

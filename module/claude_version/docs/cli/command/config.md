@@ -70,7 +70,7 @@ clv.config key::theme format::json
 
 # Set a value in user settings (default scope)
 clv.config key::theme value::dark
-clv.config key::model value::claude-opus-4-6
+clv.config key::model value::claude-opus-4-8
 
 # Set a value in project settings
 clv.config key::model value::claude-haiku-4-5-20251001 scope::project

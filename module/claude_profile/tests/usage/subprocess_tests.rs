@@ -21,7 +21,7 @@ fn it_imodel_auto_selects_sonnet_when_5h_absent()
   let model    = resolve_model( &aq, SubprocessModel::Auto );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
   assert_eq!(
-    model_id, "claude-sonnet-4-6",
+    model_id, "claude-sonnet-5",
     "imodel::auto must select sonnet when son_idle=true (5h absent does not block)",
   );
 }
@@ -34,7 +34,7 @@ fn it_imodel_auto_selects_sonnet_when_5h_absent_high_util()
   let model    = resolve_model( &aq, SubprocessModel::Auto );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
   assert_eq!(
-    model_id, "claude-sonnet-4-6",
+    model_id, "claude-sonnet-5",
     "imodel::auto must select sonnet when son_idle=true regardless of utilization",
   );
 }
@@ -47,7 +47,7 @@ fn it_imodel_auto_selects_sonnet_when_5h_absent_boundary_util()
   let model    = resolve_model( &aq, SubprocessModel::Auto );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
   assert_eq!(
-    model_id, "claude-sonnet-4-6",
+    model_id, "claude-sonnet-5",
     "imodel::auto must select sonnet when son_idle=true at util boundary",
   );
 }
@@ -99,7 +99,7 @@ fn it_imodel_auto_selects_sonnet_when_son_idle()
   let model    = resolve_model( &aq, SubprocessModel::Auto );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
   assert_eq!(
-    model_id, "claude-sonnet-4-6",
+    model_id, "claude-sonnet-5",
     "imodel::auto must select sonnet when son_idle=true (BUG-289/BUG-290 fix)",
   );
 }
@@ -142,7 +142,7 @@ fn it_imodel_auto_selects_sonnet_when_5h_idle()
   let model    = resolve_model( &aq, SubprocessModel::Auto );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
   assert_eq!(
-    model_id, "claude-sonnet-4-6",
+    model_id, "claude-sonnet-5",
     "imodel::auto must select sonnet when son_idle=true (5h idle does not block new gate)",
   );
 }
@@ -176,7 +176,7 @@ fn it_imodel_auto_selects_sonnet_when_d7_idle()
   let model    = resolve_model( &aq, SubprocessModel::Auto );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
   assert_eq!(
-    model_id, "claude-sonnet-4-6",
+    model_id, "claude-sonnet-5",
     "imodel::auto must select sonnet when son_idle=true (d7 idle does not block new gate)",
   );
 }
@@ -197,7 +197,7 @@ fn it_imodel_auto_selects_sonnet_when_d7_running_explicit()
   let model    = resolve_model( &aq, SubprocessModel::Auto );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
   assert_eq!(
-    model_id, "claude-sonnet-4-6",
+    model_id, "claude-sonnet-5",
     "imodel::auto must select sonnet when son_idle=true; d7 and 5h state irrelevant to new gate",
   );
 }
@@ -219,7 +219,7 @@ fn it_imodel_auto_selects_sonnet_when_5h_absent_d7_some_running()
   let model    = resolve_model( &aq, SubprocessModel::Auto );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
   assert_eq!(
-    model_id, "claude-sonnet-4-6",
+    model_id, "claude-sonnet-5",
     "imodel::auto must select sonnet when son_idle=true (5h absent does not block new gate)",
   );
 }
@@ -304,7 +304,7 @@ fn mre_bug301_son_active_with_remaining_quota_selects_sonnet()
   let model    = resolve_model( &aq, SubprocessModel::Auto );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
   assert_eq!(
-    model_id, "claude-sonnet-4-6",
+    model_id, "claude-sonnet-5",
     "imodel::auto must select sonnet when son_idle=false but son_available=true (40% remaining); Fix(BUG-301)",
   );
 }
@@ -335,24 +335,24 @@ fn it_imodel_auto_selects_haiku_when_d7_some_running_and_son_running()
   );
 }
 
-/// EC-6: `imodel::sonnet` always returns `IsolatedModel::Specific("claude-sonnet-4-6")`.
+/// EC-6: `imodel::sonnet` always returns `IsolatedModel::Specific("claude-sonnet-5")`.
 #[ test ]
 fn it_imodel_sonnet_explicit()
 {
   let aq       = mk_aq_no_sonnet_data();
   let model    = resolve_model( &aq, SubprocessModel::Sonnet );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
-  assert_eq!( model_id, "claude-sonnet-4-6", "imodel::sonnet must always return claude-sonnet-4-6" );
+  assert_eq!( model_id, "claude-sonnet-5", "imodel::sonnet must always return claude-sonnet-5" );
 }
 
-/// EC-7: `imodel::opus` always returns `IsolatedModel::Specific("claude-opus-4-6")`.
+/// EC-7: `imodel::opus` always returns `IsolatedModel::Specific("claude-opus-4-8")`.
 #[ test ]
 fn it_imodel_opus_explicit()
 {
   let aq       = mk_aq_no_sonnet_data();
   let model    = resolve_model( &aq, SubprocessModel::Opus );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
-  assert_eq!( model_id, "claude-opus-4-6", "imodel::opus must always return claude-opus-4-6" );
+  assert_eq!( model_id, "claude-opus-4-8", "imodel::opus must always return claude-opus-4-8" );
 }
 
 /// EC-8: `imodel::keep` returns `IsolatedModel::KeepCurrent` — no `--model` flag.
@@ -390,8 +390,8 @@ fn ac2_sonnet_explicit_selects_sonnet_regardless_of_quota()
   let model    = resolve_model( &aq, SubprocessModel::Sonnet );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
   assert_eq!(
-    model_id, "claude-sonnet-4-6",
-    "AC-2: SubprocessModel::Sonnet must return claude-sonnet-4-6 regardless of quota",
+    model_id, "claude-sonnet-5",
+    "AC-2: SubprocessModel::Sonnet must return claude-sonnet-5 regardless of quota",
   );
 }
 
@@ -416,7 +416,7 @@ fn ac4_auto_idle_sonnet_window_selects_sonnet()
   let model    = resolve_model( &aq, SubprocessModel::Auto );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
   assert_eq!(
-    model_id, "claude-sonnet-4-6",
+    model_id, "claude-sonnet-5",
     "AC-4: Auto with son_idle=true (resets_at=None) must select Sonnet",
   );
 }
@@ -437,7 +437,7 @@ fn ac5_auto_active_sonnet_with_capacity_selects_sonnet()
   let model    = resolve_model( &aq, SubprocessModel::Auto );
   let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
   assert_eq!(
-    model_id, "claude-sonnet-4-6",
+    model_id, "claude-sonnet-5",
     "AC-5: Auto with active Sonnet window and 25% remaining must select Sonnet; Fix(BUG-301)",
   );
 }
@@ -469,8 +469,8 @@ fn ac6_auto_active_sonnet_nearly_exhausted_selects_haiku()
 #[ test ]
 fn it_effort_high_explicit()
 {
-  let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
-  let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-4-6".to_string() );
+  let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-5".to_string() );
+  let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-4-8".to_string() );
   let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
   assert_eq!( resolve_effort( &sonnet, SubprocessEffort::High ), Some( "high" ) );
   assert_eq!( resolve_effort( &opus,   SubprocessEffort::High ), Some( "high" ) );
@@ -481,8 +481,8 @@ fn it_effort_high_explicit()
 #[ test ]
 fn it_effort_max_explicit()
 {
-  let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
-  let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-4-6".to_string() );
+  let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-5".to_string() );
+  let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-4-8".to_string() );
   let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
   assert_eq!( resolve_effort( &sonnet, SubprocessEffort::Max ), Some( "max" ) );
   assert_eq!( resolve_effort( &opus,   SubprocessEffort::Max ), Some( "max" ) );
@@ -493,8 +493,8 @@ fn it_effort_max_explicit()
 #[ test ]
 fn it_effort_auto_uniform_low()
 {
-  let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
-  let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-4-6".to_string() );
+  let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-5".to_string() );
+  let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-4-8".to_string() );
   let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
   assert_eq!( resolve_effort( &sonnet, SubprocessEffort::Auto ), Some( "low" ), "auto+sonnet must be low" );
   assert_eq!( resolve_effort( &opus,   SubprocessEffort::Auto ), Some( "low" ), "auto+opus must be low" );
@@ -533,7 +533,7 @@ fn it_imodel_haiku_explicit()
 #[ test ]
 fn it_effort_low_explicit()
 {
-  let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
+  let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-5".to_string() );
   let haiku  = claude_runner_core::IsolatedModel::Specific( "claude-haiku-4-5-20251001".to_string() );
   let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
   assert_eq!( resolve_effort( &sonnet, SubprocessEffort::Low ), Some( "low" ), "effort::low with sonnet must be low" );
@@ -545,7 +545,7 @@ fn it_effort_low_explicit()
 #[ test ]
 fn it_effort_normal_explicit()
 {
-  let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
+  let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-5".to_string() );
   let haiku  = claude_runner_core::IsolatedModel::Specific( "claude-haiku-4-5-20251001".to_string() );
   let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
   assert_eq!( resolve_effort( &sonnet, SubprocessEffort::Normal ), Some( "normal" ), "effort::normal with sonnet must be normal" );

@@ -427,8 +427,8 @@ pub fn map_model_shorthand( s : &str ) -> Option< Option< &'static str > >
 {
   match s
   {
-    "opus"    => Some( Some( "claude-opus-4-6" ) ),
-    "sonnet"  => Some( Some( "claude-sonnet-4-6" ) ),
+    "opus"    => Some( Some( "claude-opus-4-8" ) ),
+    "sonnet"  => Some( Some( "claude-sonnet-5" ) ),
     "haiku"   => Some( Some( "claude-haiku-4-5-20251001" ) ),
     "default" => Some( None ),
     _         => None,

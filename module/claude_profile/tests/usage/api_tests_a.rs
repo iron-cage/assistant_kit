@@ -102,18 +102,18 @@ fn mre_bug238_model_override_fires_for_active_account()
 
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
-    content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-6" ),
+    content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-8" ),
     "apply_model_override must write opus shorthand to settings.json when 7d(Son) is 91% consumed (9% left), got: {content}",
   );
 }
 
-/// `mre_bug286` — full model ID `"claude-opus-4-6"` in settings.json must be
+/// `mre_bug286` — full model ID `"claude-opus-4-8"` in settings.json must be
 /// normalized to shorthand `"opus"` by `apply_model_override`.
 ///
 /// # Root Cause
 /// BUG-257 fix added `contains("sonnet")` for sonnet alias coverage, but did not
 /// add the analogous full-ID opus → shorthand normalization path. When settings.json
-/// contained `"claude-opus-4-6"` (written by a prior `set_session_model`), the gate
+/// contained `"claude-opus-4-8"` (written by a prior `set_session_model`), the gate
 /// `contains("sonnet") || is_empty()` was false — override never fired.
 ///
 /// # Why Not Caught
@@ -121,7 +121,7 @@ fn mre_bug238_model_override_fires_for_active_account()
 /// `apply_model_override`. All existing tests started from empty or shorthand values.
 ///
 /// # Fix Applied
-/// Added `current == "claude-opus-4-6"` arm to the gate condition in
+/// Added `current == "claude-opus-4-8"` arm to the gate condition in
 /// `override_session_model_to_opus`.
 ///
 /// # Prevention
@@ -129,7 +129,7 @@ fn mre_bug238_model_override_fires_for_active_account()
 ///
 /// # Pitfall
 /// Any path that writes model to settings.json must write Claude Code shorthand
-/// ("opus"/"sonnet"), never full IDs ("claude-opus-4-6").
+/// ("opus"/"sonnet"), never full IDs ("claude-opus-4-8").
 #[ doc = "bug_reproducer(BUG-286)" ]
 #[ test ]
 fn mre_bug286_full_opus_id_normalized_to_shorthand()
@@ -139,7 +139,7 @@ fn mre_bug286_full_opus_id_normalized_to_shorthand()
   let paths = claude_profile::ClaudePaths::with_home( dir.path() );
   std::fs::create_dir_all( paths.base() ).unwrap();
   // Pre-write full opus ID — as stored in {name}.json snapshots from older convention.
-  std::fs::write( paths.settings_file(), r#"{"model":"claude-opus-4-6"}"# ).unwrap();
+  std::fs::write( paths.settings_file(), r#"{"model":"claude-opus-4-8"}"# ).unwrap();
   let quota = OauthUsageData
   {
     five_hour        : None,
@@ -149,7 +149,7 @@ fn mre_bug286_full_opus_id_normalized_to_shorthand()
   apply_model_override( &quota, &paths, false, "account.use", "test-account" );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
-    content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-6" ),
+    content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-8" ),
     "BUG-286: full-ID opus must be normalized to shorthand 'opus', got: {content}",
   );
 }
@@ -225,7 +225,7 @@ fn t01_model_override_fires_when_sonnet_below_threshold()
   apply_model_override( &quota, &paths, false, "usage", "test-account" );
   let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
   assert!(
-    content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-6" ),
+    content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-8" ),
     "must write opus shorthand when 7d(Son) utilization=91% (9% left), got: {content}",
   );
 }
@@ -540,7 +540,7 @@ fn t10_sonnet_branch_writes_effort_high()
   let paths = claude_profile::ClaudePaths::with_home( dir.path() );
   std::fs::create_dir_all( paths.base() ).unwrap();
   // Pre-seed settings.json with effort "low" — Sonnet branch must overwrite it with "high".
-  std::fs::write( paths.settings_file(), r#"{"model":"claude-sonnet-4-6","effortLevel":"low"}"# ).unwrap();
+  std::fs::write( paths.settings_file(), r#"{"model":"claude-sonnet-5","effortLevel":"low"}"# ).unwrap();
   let quota = OauthUsageData
   {
     five_hour        : None,
@@ -691,9 +691,9 @@ fn ft19_effort_synced_when_model_already_at_target()
   let paths = claude_profile::ClaudePaths::with_home( dir.path() );
   std::fs::create_dir_all( paths.base() ).unwrap();
   // Pre-seed settings.json with Sonnet model but no effortLevel — stable-model state.
-  std::fs::write( paths.settings_file(), r#"{"model":"claude-sonnet-4-6"}"# ).unwrap();
+  std::fs::write( paths.settings_file(), r#"{"model":"claude-sonnet-5"}"# ).unwrap();
   // 80% utilization → 20% left → ≥ 15% threshold → Sonnet branch fires.
-  // override_session_model_to_sonnet() returns false (model already "claude-sonnet-4-6").
+  // override_session_model_to_sonnet() returns false (model already "claude-sonnet-5").
   // Without fix: overrode=false → no effort write; BUG-312 fallback wrote "low".
   // With fix: Sonnet branch unconditionally writes "high".
   let quota = OauthUsageData

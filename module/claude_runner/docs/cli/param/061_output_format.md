@@ -63,7 +63,7 @@ Complete field table for the JSON object emitted by `claude --output-format json
 | 20 | `web_fetch_requests` | `usage.server_tool_use` | u64 | `web_fetch_requests: N` |
 | 21 | `cache_ephemeral_1h_input_tokens` | `usage.cache_creation` | u64 | `cache_ephemeral_1h_input_tokens: N` |
 | 22 | `cache_ephemeral_5m_input_tokens` | `usage.cache_creation` | u64 | `cache_ephemeral_5m_input_tokens: N` |
-| 23 | `model` | `modelUsage` key | string | `model: claude-opus-4-6` |
+| 23 | `model` | `modelUsage` key | string | `model: claude-opus-4-8` |
 | 24 | `model_input_tokens` | `modelUsage.<m>` | u64 | `model_input_tokens: N` |
 | 25 | `model_output_tokens` | `modelUsage.<m>` | u64 | `model_output_tokens: N` |
 | 26 | `model_cache_read_input_tokens` | `modelUsage.<m>` | u64 | `model_cache_read_input_tokens: N` |
@@ -75,7 +75,7 @@ Complete field table for the JSON object emitted by `claude --output-format json
 | 32 | `permission_denials` | top-level | count | `permission_denials: N` |
 | — | `result` | top-level | string | text body after `---` separator (always rendered, not filterable) |
 
-**`modelUsage` note:** The `modelUsage` object is keyed by model name (e.g., `"claude-opus-4-6"`). When multiple models are used (fallback), the first model's stats are rendered. Fields 23–31 flatten the nested per-model object into `model_*` prefixed header lines.
+**`modelUsage` note:** The `modelUsage` object is keyed by model name (e.g., `"claude-opus-4-8"`). When multiple models are used (fallback), the first model's stats are rendered. Fields 23–31 flatten the nested per-model object into `model_*` prefixed header lines.
 
 ### Referenced Parameter Groups
 

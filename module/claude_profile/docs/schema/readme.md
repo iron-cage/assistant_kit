@@ -4,7 +4,7 @@
 
 - **Purpose**: Define the on-disk file formats written and read by `claude_profile`, including field names, types, and default values.
 - **Responsibility**: Authoritative structural reference for every JSON/text file clp touches — credential snapshots, account metadata, settings, and state markers.
-- **In Scope**: All files under the credential store (`{name}.credentials.json`, `{name}.json`, `_active_*`), all global Claude files clp reads or writes (`~/.claude/.credentials.json`, `~/.claude/settings.json`, `~/.claude.json`), and path resolution schemas (`PersistPaths`, `ClaudePaths`).
+- **In Scope**: All files under the credential store (`{name}.credentials.json`, `{name}.json`, `_active_*`), all global Claude files clp reads or writes (`~/.claude/.credentials.json`, `~/.claude/settings.json`, `~/.claude.json`), clr preference files (`~/.clr/prefs.json`), and path resolution schemas (`PersistPaths`, `ClaudePaths`).
 - **Out of Scope**: HTTP API request/response payloads; in-memory type definitions (see `claude_profile_core/src/account.rs`); read-only paths owned by `claude` binary.
 
 ### Type Declaration

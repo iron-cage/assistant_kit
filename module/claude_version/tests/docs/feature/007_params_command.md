@@ -76,9 +76,9 @@ Two valid `.params` invocations that produce structurally different output:
 
 ### FT-2: single param shows all three forms, current values, and default
 
-- **Given:** clean environment; HOME set; `settings.json` has `model: "claude-sonnet-4-6"`; `CLAUDE_MODEL` unset
+- **Given:** clean environment; HOME set; `settings.json` has `model: "claude-sonnet-5"`; `CLAUDE_MODEL` unset
 - **When:** `clv .params key::model`
-- **Then:** exit 0; output shows CLI form (`--model`), env form (`CLAUDE_MODEL`), config form (`model`); shows current config value, default `claude-sonnet-4-6`, and effective value with source
+- **Then:** exit 0; output shows CLI form (`--model`), env form (`CLAUDE_MODEL`), config form (`model`); shows current config value, default `claude-sonnet-5`, and effective value with source
 - **Exit:** 0
 - **Source:** [feature/007_params_command.md — AC-2](../../../docs/feature/007_params_command.md)
 
@@ -106,9 +106,9 @@ Two valid `.params` invocations that produce structurally different output:
 
 ### FT-5: env override visible with (env) annotation
 
-- **Given:** clean environment; `CLAUDE_MODEL=claude-opus-4-6` set in env; HOME set
+- **Given:** clean environment; `CLAUDE_MODEL=claude-opus-4-8` set in env; HOME set
 - **When:** `clv .params key::model`
-- **Then:** exit 0; output shows env value `claude-opus-4-6` annotated with `(env)` source; env layer wins over config and default
+- **Then:** exit 0; output shows env value `claude-opus-4-8` annotated with `(env)` source; env layer wins over config and default
 - **Exit:** 0
 - **Source:** [feature/007_params_command.md — AC-5](../../../docs/feature/007_params_command.md)
 
@@ -168,7 +168,7 @@ Two valid `.params` invocations that produce structurally different output:
 
 - **Given:** clean environment; empty `settings.json`; `CLAUDE_MODEL` unset; HOME set
 - **When:** `clv .params key::model`
-- **Then:** exit 0; output shows catalog default `claude-sonnet-4-6` annotated with `(default)` source
+- **Then:** exit 0; output shows catalog default `claude-sonnet-5` annotated with `(default)` source
 - **Exit:** 0
 - **Source:** [feature/007_params_command.md — AC-11](../../../docs/feature/007_params_command.md)
 

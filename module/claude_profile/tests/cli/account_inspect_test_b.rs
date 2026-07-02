@@ -294,7 +294,7 @@ fn lim_it_ai14_identity_fields_from_endpoint_002()
   );
 }
 
-/// Spec: [tests/docs/cli/command/15_account_inspect.md IT-11]
+/// Spec: [`tests/docs/cli/command/15_account_inspect.md` IT-11]
 #[ test ]
 /// AC-02: Memberships section is shown with a count line.
 ///
@@ -317,7 +317,7 @@ fn lim_it_ai15_memberships_shown_with_count()
   assert!( has_count, "Memberships: line must show numeric count, got:\n{text}" );
 }
 
-/// Spec: [tests/docs/cli/command/15_account_inspect.md IT-8/IT-9]
+/// Spec: [`tests/docs/cli/command/15_account_inspect.md` IT-8/IT-9]
 #[ test ]
 /// AC-03/AC-04: `← selected` appears exactly once for multi-membership accounts;
 /// single-membership accounts show no marker.
@@ -401,7 +401,7 @@ fn lim_it_ai18_billing_from_selected_membership()
   );
 }
 
-/// Spec: [tests/docs/cli/command/15_account_inspect.md IT-16]
+/// Spec: [`tests/docs/cli/command/15_account_inspect.md` IT-16]
 #[ test ]
 /// AC-01,AC-13: `format::json` with live token shows `data_source: "live"` when all endpoints succeed.
 ///
@@ -426,7 +426,7 @@ fn lim_it_ai19_valid_token_live_data_source_json()
   assert!( text.contains( "\"valid\"" ), "status must be valid with far-future token, got:\n{text}" );
 }
 
-/// Spec: [tests/docs/cli/command/15_account_inspect.md IT-5/IT-12]
+/// Spec: [`tests/docs/cli/command/15_account_inspect.md` IT-5/IT-12]
 #[ test ]
 /// AC-10: Locally-expired token with `refresh::1` (default) — refresh is attempted;
 /// command exits 0 regardless of whether the refresh succeeds.
@@ -480,7 +480,7 @@ fn lim_it_ai21_trace_endpoint_lines_on_live_account()
   );
 }
 
-/// Spec: [tests/docs/cli/command/15_account_inspect.md IT-13]
+/// Spec: [`tests/docs/cli/command/15_account_inspect.md` IT-13]
 #[ test ]
 /// AC-20: Name and Email fields shown from live endpoint 002 (not snapshot).
 ///
@@ -512,7 +512,7 @@ fn lim_it_ai22_name_and_email_from_endpoint_002()
   }
 }
 
-/// Spec: [tests/docs/cli/command/15_account_inspect.md IT-14]
+/// Spec: [`tests/docs/cli/command/15_account_inspect.md` IT-14]
 #[ test ]
 /// AC-21: Capabilities and Tier fields from live selected membership.
 ///
@@ -536,7 +536,7 @@ fn lim_it_ai23_capabilities_and_tier_from_membership()
   assert!( text.contains( "Tier:" ), "must show Tier label from live membership, got:\n{text}" );
 }
 
-/// Spec: [tests/docs/cli/command/15_account_inspect.md IT-15]
+/// Spec: [`tests/docs/cli/command/15_account_inspect.md` IT-15]
 #[ test ]
 /// AC-22: Usage data (Session/Weekly/Sonnet) shown when endpoint 001 returns utilization.
 ///

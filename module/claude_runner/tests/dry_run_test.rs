@@ -80,9 +80,9 @@ fn max_tokens_override_updates_env_var()
 #[ test ]
 fn model_param_appears_in_command()
 {
-  let output = run_dry( &[ "--model", "claude-opus-4-6", "test" ] );
+  let output = run_dry( &[ "--model", "claude-opus-4-8", "test" ] );
   assert!(
-    output.contains( "claude-opus-4-6" ),
+    output.contains( "claude-opus-4-8" ),
     "--model must appear in command line. Got:\n{output}"
   );
 }

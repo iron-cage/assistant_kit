@@ -27,7 +27,7 @@ fn unset_ec1_removes_key_from_settings()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_settings( dir.path(), &[ ( "theme", "dark" ), ( "model", "claude-sonnet-4-6" ) ] );
+  write_settings( dir.path(), &[ ( "theme", "dark" ), ( "model", "claude-sonnet-5" ) ] );
 
   let out = run_clm_with_env(
     &[ ".config", "key::theme", "unset::1" ],
@@ -51,7 +51,7 @@ fn unset_ec2_nonexistent_key_is_idempotent()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_settings( dir.path(), &[ ( "model", "claude-sonnet-4-6" ) ] );
+  write_settings( dir.path(), &[ ( "model", "claude-sonnet-5" ) ] );
 
   let out = run_clm_with_env(
     &[ ".config", "key::nonexistentKey123", "unset::1" ],

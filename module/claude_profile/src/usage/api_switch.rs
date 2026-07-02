@@ -212,7 +212,7 @@ pub fn pre_switch_touch_ctx(
 /// Called AFTER `switch_account()` for every fetch-succeeded case — both idle and
 /// already-active accounts. When `seven_day_sonnet` remaining is below 15% and the
 /// current session model is Sonnet (or empty), overrides `~/.claude/settings.json`
-/// to `claude-opus-4-6`.
+/// to `claude-opus-4-8`.
 ///
 /// # Limitation (BUG-226)
 ///

@@ -73,7 +73,7 @@ Integration test planning for `.config`. See [command/config.md](../../../../doc
 | IT-1 | No params → show-all with source labels | show-all | 0 | F1=no-params |
 | IT-2 | `key::theme` → get with source annotation | get | 0 | F1=key-only |
 | IT-3 | `key::theme value::dark` → set user, bool inferred | set | 0 | F1=key+value |
-| IT-4 | `key::model value::claude-opus-4-6 scope::project` → project write | set | 0 | F1=scope-project, F4=project |
+| IT-4 | `key::model value::claude-opus-4-8 scope::project` → project write | set | 0 | F1=scope-project, F4=project |
 | IT-5 | `key::theme unset::1` → key removed from user settings | unset | 0 | F1=unset |
 | IT-6 | `format::json` → JSON with source fields | show-all | 0 | F2=json |
 | IT-7 | `key::model` with `CLAUDE_MODEL` set → shows env value | get | 0 | F1=key-only |
@@ -157,11 +157,11 @@ Integration test planning for `.config`. See [command/config.md](../../../../doc
 
 ---
 
-### IT-4: `key::model value::claude-opus-4-6 scope::project` → project write
+### IT-4: `key::model value::claude-opus-4-8 scope::project` → project write
 
 - **Given:** `HOME=<tmp>`; cwd accessible for `.claude/settings.json` write
-- **When:** `clv .config key::model value::claude-opus-4-6 scope::project`
-- **Then:** exit 0; `{cwd}/.claude/settings.json` contains `"model": "claude-opus-4-6"`; user config unchanged
+- **When:** `clv .config key::model value::claude-opus-4-8 scope::project`
+- **Then:** exit 0; `{cwd}/.claude/settings.json` contains `"model": "claude-opus-4-8"`; user config unchanged
 - **Exit:** 0
 - **Source:** [command/config.md](../../../../docs/cli/command/config.md)
 
@@ -189,9 +189,9 @@ Integration test planning for `.config`. See [command/config.md](../../../../doc
 
 ### IT-7: `key::model` with `CLAUDE_MODEL` set → shows env value
 
-- **Given:** `HOME=<tmp>`; `CLAUDE_MODEL=claude-opus-4-6` in environment; user config omits `model`
+- **Given:** `HOME=<tmp>`; `CLAUDE_MODEL=claude-opus-4-8` in environment; user config omits `model`
 - **When:** `clv .config key::model`
-- **Then:** exit 0; output shows `claude-opus-4-6` with source annotation `(env)` or `(environment)`
+- **Then:** exit 0; output shows `claude-opus-4-8` with source annotation `(env)` or `(environment)`
 - **Exit:** 0
 - **Source:** [command/config.md](../../../../docs/cli/command/config.md)
 
@@ -211,7 +211,7 @@ Integration test planning for `.config`. See [command/config.md](../../../../doc
 
 - **Given:** `HOME=<tmp>` with empty `~/.claude/settings.json`; `CLAUDE_MODEL` unset
 - **When:** `clv .config key::model`
-- **Then:** exit 0; output shows `claude-sonnet-4-6` (catalog default) with source annotation `(default)`
+- **Then:** exit 0; output shows `claude-sonnet-5` (catalog default) with source annotation `(default)`
 - **Exit:** 0
 - **Source:** [command/config.md](../../../../docs/cli/command/config.md)
 

@@ -834,7 +834,7 @@ fn arn25_from_now_single_day_unit_accepted()
 /// `oauthAccount` field — including nested fields — must be unchanged afterward.
 ///
 /// Spec: [`tests/docs/cli/param/051_clear.md` EC-3]
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-12]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-12]
 #[ test ]
 fn arc02_clear_preserves_oauth_account_content()
 {

@@ -27,7 +27,7 @@ Quick-reference for all 70 parameters (#1–#70). Type: **CLI** = flag only, **E
 | 2 | [print](042_print.md) | CLI | `-p` / `--print` | — | off | `with_print()` | Print response and exit; skip TTY |
 | 3 | [dry_run](022_dry_run.md) | Builder | — | — | false | `with_dry_run()` | Inspect command without spawning process |
 | 4 | [continue_conversation](016_continue_conversation.md) | CLI | `-c` / `--continue` | — | off | `with_continue_conversation()` | Continue most recent conversation |
-| 5 | [model](037_model.md) | CLI | `--model <model>` | — | `claude-sonnet-4-6` | `with_model()` | Model alias or full model ID |
+| 5 | [model](037_model.md) | CLI | `--model <model>` | — | `claude-sonnet-5` | `with_model()` | Model alias or full model ID |
 | 6 | [verbose](059_verbose.md) | CLI | `--verbose` | — | off | `with_verbose()` | Override verbose mode from config |
 
 ### Authentication

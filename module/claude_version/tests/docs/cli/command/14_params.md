@@ -124,7 +124,7 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 
 - **Given:** `HOME=<tmp>` (no settings.json), `CLAUDE_MODEL` not set
 - **When:** `clv.params key::model`
-- **Then:** exit 0; stdout contains strings `--model`, `CLAUDE_MODEL`, `config model`, and `claude-sonnet-4-6` (default)
+- **Then:** exit 0; stdout contains strings `--model`, `CLAUDE_MODEL`, `config model`, and `claude-sonnet-5` (default)
 - **Exit:** 0
 
 ---
@@ -149,9 +149,9 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 
 ### IT-5: key::model with CLAUDE_MODEL set
 
-- **Given:** `HOME=<tmp>`, `CLAUDE_MODEL=claude-opus-4-6` in env
+- **Given:** `HOME=<tmp>`, `CLAUDE_MODEL=claude-opus-4-8` in env
 - **When:** `clv.params key::model`
-- **Then:** exit 0; stdout contains `claude-opus-4-6` and `(env)` annotation
+- **Then:** exit 0; stdout contains `claude-opus-4-8` and `(env)` annotation
 - **Exit:** 0
 
 ---
@@ -196,7 +196,7 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 
 - **Given:** `HOME=<tmp>` (no settings.json), `CLAUDE_MODEL` not set
 - **When:** `clv.params key::model`
-- **Then:** exit 0; stdout contains `claude-sonnet-4-6` with `(default)` annotation; no env or config value shown
+- **Then:** exit 0; stdout contains `claude-sonnet-5` with `(default)` annotation; no env or config value shown
 - **Exit:** 0
 
 ---

@@ -10,7 +10,7 @@
 - **round:** 1
 - **state:** 🎯 (Verified)
 - **closes:** null
-- **dir:** src/
+- **dir:** src/ + module/claude_runner_core/src/
 - **validated_by:** null
 - **validation_date:** null
 
@@ -20,7 +20,7 @@ The model IDs `claude-opus-4-6` and `claude-sonnet-4-6` are no longer accepted b
 
 Replace stale model ID strings `claude-opus-4-6` and `claude-sonnet-4-6` with the current IDs `claude-opus-4-8` and `claude-sonnet-5` in all source code functions in `claude_profile` that map model shorthands or resolve subprocess models.
 
-Observable end-state: `clp .model set::opus` writes `claude-opus-4-8` to `settings.json`; `clp .model set::sonnet` writes `claude-sonnet-5`; the `imodel::opus` shorthand in `.usage` and `.account.use` resolves to `claude-opus-4-8`; the `imodel::sonnet` shorthand resolves to `claude-sonnet-5`; the auto-select path in `src/usage/subprocess.rs` yields `claude-sonnet-5` when sonnet conditions are met; existing tests FT-05 and FT-06 in `tests/cli/model_test.rs` pass with the updated assertions; `w3 .test level::3` passes with zero failures.
+Observable end-state: `clp .model set::opus` writes `claude-opus-4-8` to `settings.json`; `clp .model set::sonnet` writes `claude-sonnet-5`; the `imodel::opus` shorthand in `.usage` and `.account.use` resolves to `claude-opus-4-8`; the `imodel::sonnet` shorthand resolves to `claude-sonnet-5`; the auto-select path in `src/usage/subprocess.rs` yields `claude-sonnet-5` when sonnet conditions are met; `ISOLATED_DEFAULT_MODEL = "claude-opus-4-8"` and `REFRESH_DEFAULT_MODEL = "claude-sonnet-5"` in `claude_runner_core/src/isolated.rs`; existing tests FT-05 and FT-06 in `tests/cli/model_test.rs` pass with the updated assertions; `isolated_defaults_test.rs` and `invariant_trace_universality_test.rs` pass; `w3 .test level::3` passes with zero failures in `claude_profile`, `claude_runner_core`, and `claude_runner`.
 
 ## In Scope
 
@@ -29,11 +29,14 @@ Observable end-state: `clp .model set::opus` writes `claude-opus-4-8` to `settin
 - `src/registry.rs` — parameter description strings (lines 192, 227, 253, 268): update inline model ID examples in `with_description()` calls from `claude-opus-4-6` → `claude-opus-4-8` and `claude-sonnet-4-6` → `claude-sonnet-5`
 - `src/usage/api_switch.rs` — doc comment (line 215): update `claude-opus-4-6` reference in the comment to `claude-opus-4-8`
 - Existing test assertions in `tests/cli/model_test.rs` (FT-05, FT-06): update expected values if currently asserting the old stale IDs
+- `module/claude_runner_core/src/isolated.rs` — `ISOLATED_DEFAULT_MODEL` constant (line 28): change `"claude-opus-4-6"` → `"claude-opus-4-8"`; `REFRESH_DEFAULT_MODEL` constant (line 50): change `"claude-sonnet-4-6"` → `"claude-sonnet-5"`; update doc comments on lines 26–28 and 47–50 to reflect current IDs
+- `module/claude_runner/tests/isolated_defaults_test.rs` — assertions at lines 61 and 71: update expected strings from `"claude-opus-4-6"` → `"claude-opus-4-8"` and `"claude-sonnet-4-6"` → `"claude-sonnet-5"`
+- `module/claude_runner/tests/invariant_trace_universality_test.rs` — assertion at line 135: update expected `--model claude-sonnet-4-6` → `--model claude-sonnet-5`
+- `module/claude_runner/tests/docs/invariant/005_isolated_subprocess_defaults.md` — update documented constant values from stale IDs to current IDs
 
 ## Out of Scope
 
 - Documentation files — stale IDs in `docs/` and `tests/docs/` were already bulk-replaced in the preceding documentation phase; no doc edits needed here
-- Model IDs in `ISOLATED_DEFAULT_MODEL` / `REFRESH_DEFAULT_MODEL` in `claude_runner_core/src/isolated.rs` — those are already correct (`claude-opus-4-8` and `claude-sonnet-5`) and are out of scope
 - `STATIC_MODELS` in `claude_quota` — populated by Task 007 with correct current IDs
 - Adding new model shorthands or values — only ID string updates; no behavioral change
 
@@ -48,8 +51,12 @@ Observable end-state: `clp .model set::opus` writes `claude-opus-4-8` to `settin
 7. Apply fixes in `src/registry.rs`: update all four `with_description()` strings
 8. Apply fix in `src/usage/api_switch.rs`: update the doc comment
 8b. Update test assertion strings in `tests/cli/model_test.rs`: search for all occurrences of `claude-opus-4-6` and `claude-sonnet-4-6` in the test file (FT-05 line 144, FT-06 line 161, test matrix header lines 20-21, and any additional fixture occurrences); replace with `claude-opus-4-8` and `claude-sonnet-5` respectively; run `grep -n "claude-opus-4-6\|claude-sonnet-4-6" tests/cli/model_test.rs` to confirm zero remaining
-9. Run `grep -rn "claude-opus-4-6\|claude-sonnet-4-6" src/` to confirm zero remaining occurrences in source
-10. Run `w3 .test level::3`; confirm FT-05 (`set::opus` → `claude-opus-4-8`) and FT-06 (`set::sonnet` → `claude-sonnet-5`) pass; zero failures
+8c. In `module/claude_runner_core/src/isolated.rs`: change `ISOLATED_DEFAULT_MODEL = "claude-opus-4-6"` → `"claude-opus-4-8"` (line 28) and `REFRESH_DEFAULT_MODEL = "claude-sonnet-4-6"` → `"claude-sonnet-5"` (line 50); update surrounding doc comments to match
+8d. In `module/claude_runner/tests/isolated_defaults_test.rs`: change assertion at line 61 from `"claude-opus-4-6"` → `"claude-opus-4-8"` and at line 71 from `"claude-sonnet-4-6"` → `"claude-sonnet-5"`
+8e. In `module/claude_runner/tests/invariant_trace_universality_test.rs`: change assertion at line 135 from `--model claude-sonnet-4-6` → `--model claude-sonnet-5`
+8f. In `module/claude_runner/tests/docs/invariant/005_isolated_subprocess_defaults.md`: update all stale ID values to current IDs
+9. Run `grep -rn "claude-opus-4-6\|claude-sonnet-4-6" src/ module/claude_runner_core/src/ module/claude_runner/tests/` from `WORKSPACE_ROOT` to confirm zero remaining occurrences
+10. Run `w3 .test level::3` in `module/claude_profile/`; then run `w3 .test level::3` in `module/claude_runner_core/` and `module/claude_runner/`; confirm FT-05 (`set::opus` → `claude-opus-4-8`) and FT-06 (`set::sonnet` → `claude-sonnet-5`) pass; zero failures across all three crates
 
 ## Test Matrix
 
@@ -60,8 +67,12 @@ Observable end-state: `clp .model set::opus` writes `claude-opus-4-8` to `settin
 | `imodel::opus` on `.usage`/`.account.use` | `resolve_model()` | Subprocess launched with `--model claude-opus-4-8` |
 | `imodel::sonnet` on `.usage`/`.account.use` | `resolve_model()` | Subprocess launched with `--model claude-sonnet-5` |
 | Auto-select sonnet condition met (`son_idle=true`) | `resolve_model()` auto branch | Subprocess launched with `--model claude-sonnet-5` |
-| `grep -rn "claude-opus-4-6\|claude-sonnet-4-6" src/` | Exhaustive search | Zero matches in all source files |
-| `w3 .test level::3` | Full test suite | Zero failures; zero clippy warnings |
+| `ISOLATED_DEFAULT_MODEL` in `claude_runner_core/src/isolated.rs` | Constant value | `"claude-opus-4-8"`; doc comment updated |
+| `REFRESH_DEFAULT_MODEL` in `claude_runner_core/src/isolated.rs` | Constant value | `"claude-sonnet-5"`; doc comment updated |
+| `isolated_defaults_test.rs` assertions (lines 61, 71) | Test assertions | Assert `"claude-opus-4-8"` and `"claude-sonnet-5"`; pass |
+| `invariant_trace_universality_test.rs` assertion (line 135) | Test assertion | Asserts `--model claude-sonnet-5`; passes |
+| `grep -rn "claude-opus-4-6\|claude-sonnet-4-6" src/ module/` | Exhaustive search | Zero matches across all source files and test files |
+| `w3 .test level::3` (all three crates) | Full test suite | Zero failures; zero clippy warnings in `claude_profile`, `claude_runner_core`, `claude_runner` |
 
 ## Related Documentation
 

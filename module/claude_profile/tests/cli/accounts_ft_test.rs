@@ -210,7 +210,7 @@ fn ft11_account_unclaim_fully_deregistered()
   );
 }
 
-/// Spec: [tests/docs/cli/command/16_account_assign.md IT-1]
+/// Spec: [`tests/docs/cli/command/16_account_assign.md` IT-1]
 #[ test ]
 /// FT-12 (AC-12): `.account.assign` is a removed redirector — exits 1 with targeted `assignee::` migration hint.
 ///
@@ -234,7 +234,7 @@ fn ft12_account_assign_fully_deregistered()
   );
 }
 
-/// Spec: [tests/docs/cli/command/18_account_unclaim.md IT-1]
+/// Spec: [`tests/docs/cli/command/18_account_unclaim.md` IT-1]
 #[ test ]
 /// FT-11b: `.account.unclaim` with no arguments still exits 1 with `owner::0` migration hint.
 ///

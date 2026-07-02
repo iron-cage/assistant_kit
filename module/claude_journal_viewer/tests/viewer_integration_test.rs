@@ -39,7 +39,7 @@ fn write_fixture_events( dir : &Path )
 
   let mut ev1        = EventRecord::new( EventType::Execution );
   ev1.fields.command       = Some( "run".to_owned() );
-  ev1.fields.model         = Some( "claude-sonnet-4-6".to_owned() );
+  ev1.fields.model         = Some( "claude-sonnet-5".to_owned() );
   ev1.fields.exit_code     = Some( 0 );
   ev1.fields.duration_ms   = Some( 1_500 );
   ev1.fields.cost_usd      = Some( 0.012 );
@@ -170,7 +170,7 @@ fn ec4_stats_by_model_shows_aggregation()
   assert!( stdout.contains( "COUNT" ), "missing COUNT header: {stdout}" );
   assert!( stdout.contains( "COST" ),  "missing COST header: {stdout}" );
   // Should show both models from fixture
-  assert!( stdout.contains( "claude-sonnet-4-6" ), "missing sonnet model: {stdout}" );
+  assert!( stdout.contains( "claude-sonnet-5" ), "missing sonnet model: {stdout}" );
   assert!( stdout.contains( "claude-haiku" ),      "missing haiku model: {stdout}" );
 }
 

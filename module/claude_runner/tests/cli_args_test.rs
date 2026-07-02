@@ -79,10 +79,10 @@ fn t01_message_accepted()
 #[ test ]
 fn t02_model_flag_accepted()
 {
-  let out = run_cli( &[ "--dry-run", "--model", "claude-opus-4-6", "test" ] );
+  let out = run_cli( &[ "--dry-run", "--model", "claude-opus-4-8", "test" ] );
   assert!( out.status.success(), "--model must be accepted" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  assert!( stdout.contains( "claude-opus-4-6" ), "model must appear in command. Got:\n{stdout}" );
+  assert!( stdout.contains( "claude-opus-4-8" ), "model must appear in command. Got:\n{stdout}" );
 }
 
 // T03: --max-tokens accepted, appears as env var
@@ -189,7 +189,7 @@ fn t10_multiple_flags_combined()
     .args( [
       "--dry-run", "--dir", "/tmp",
       "--session-dir", session_dir_str,
-      "--model", "claude-sonnet-4-6", "fix it",
+      "--model", "claude-sonnet-5", "fix it",
     ] )
     .output()
     .expect( "invoke clr" );
@@ -198,7 +198,7 @@ fn t10_multiple_flags_combined()
   assert!( stdout.contains( "cd /tmp" ), "Must have cd line. Got:\n{stdout}" );
   assert!( stdout.contains( "--dangerously-skip-permissions" ), "Must have skip-permissions (default-on). Got:\n{stdout}" );
   assert!( stdout.contains( " -c" ), "Must have -c when session-dir is non-empty. Got:\n{stdout}" );
-  assert!( stdout.contains( "claude-sonnet-4-6" ), "Must have model. Got:\n{stdout}" );
+  assert!( stdout.contains( "claude-sonnet-5" ), "Must have model. Got:\n{stdout}" );
   assert!( stdout.contains( "\"fix it\n\nultrathink\"" ), "Must have ultrathink-suffixed quoted message. Got:\n{stdout}" );
 }
 

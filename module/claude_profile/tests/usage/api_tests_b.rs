@@ -665,7 +665,7 @@ fn ac1_absent_tier_with_opus_session_restores_sonnet()
 ///
 /// `seven_day_sonnet=None` → calls `override_session_model_to_sonnet()`.
 /// Current model `"sonnet"` shorthand does NOT satisfy the gate
-/// (`contains("opus")=false`, `=="claude-sonnet-4-6"=false`, `is_empty()=false`) →
+/// (`contains("opus")=false`, `=="claude-sonnet-5"=false`, `is_empty()=false`) →
 /// returns `false` — model field unchanged; session already in Sonnet form.
 ///
 /// Spec: [`tests/docs/algorithm/002_session_model_override.md` AC-2]
@@ -785,7 +785,7 @@ fn ac4_near_exhausted_quota_with_sonnet_session_switches_to_opus()
 ///
 /// `utilization=91.0` → Opus override path → `override_session_model_to_opus()`.
 /// Current model `"opus"` does NOT satisfy gate
-/// (`contains("sonnet")=false`, `=="claude-opus-4-6"=false`, `is_empty()=false`) →
+/// (`contains("sonnet")=false`, `=="claude-opus-4-8"=false`, `is_empty()=false`) →
 /// returns `false` — model field unchanged; session already in Opus form.
 ///
 /// Spec: [`tests/docs/algorithm/002_session_model_override.md` AC-5]

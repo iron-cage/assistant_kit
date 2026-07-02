@@ -84,11 +84,11 @@ fn ac01_002_env_overrides_user()
 {
   let home_dir = TempDir::new().unwrap();
   let cwd      = TempDir::new().unwrap();
-  crate::subprocess_helpers::write_settings( home_dir.path(), &[ ( "model", "claude-sonnet-4-6" ) ] );
-  std::env::set_var( "CLAUDE_MODEL", "claude-opus-4-6" );
+  crate::subprocess_helpers::write_settings( home_dir.path(), &[ ( "model", "claude-sonnet-5" ) ] );
+  std::env::set_var( "CLAUDE_MODEL", "claude-opus-4-8" );
   let r = resolve( "model", home_dir.path(), cwd.path(), config_catalog::catalog() );
   assert_eq!( r.source, Layer::Env,                             "env must beat user config: got {:?}", r.source );
-  assert_eq!( r.value,  Some( "claude-opus-4-6".to_string() ),  "wrong value: {:?}", r.value );
+  assert_eq!( r.value,  Some( "claude-opus-4-8".to_string() ),  "wrong value: {:?}", r.value );
 }
 
 // AC-2: env var absent, key in user config → source=User
@@ -111,11 +111,11 @@ fn ac03_002_project_config_key()
   let home_dir = TempDir::new().unwrap();
   let cwd      = TempDir::new().unwrap();
   // Write project settings at cwd/.claude/settings.json (found by ancestor walk).
-  crate::subprocess_helpers::write_settings( cwd.path(), &[ ( "model", "claude-opus-4-6" ) ] );
+  crate::subprocess_helpers::write_settings( cwd.path(), &[ ( "model", "claude-opus-4-8" ) ] );
   std::env::remove_var( "CLAUDE_MODEL" );
   let r = resolve( "model", home_dir.path(), cwd.path(), config_catalog::catalog() );
   assert_eq!( r.source, Layer::Project,                        "project config must supply value: got {:?}", r.source );
-  assert_eq!( r.value,  Some( "claude-opus-4-6".to_string() ), "wrong value: {:?}", r.value );
+  assert_eq!( r.value,  Some( "claude-opus-4-8".to_string() ), "wrong value: {:?}", r.value );
 }
 
 // AC-4: key only in catalog defaults → source=Default
@@ -124,11 +124,11 @@ fn ac04_002_catalog_default_returned()
 {
   let home_dir = TempDir::new().unwrap();
   let cwd      = TempDir::new().unwrap();
-  // No settings files written; "model" has catalog default "claude-sonnet-4-6".
+  // No settings files written; "model" has catalog default "claude-sonnet-5".
   std::env::remove_var( "CLAUDE_MODEL" );
   let r = resolve( "model", home_dir.path(), cwd.path(), config_catalog::catalog() );
   assert_eq!( r.source, Layer::Default,                           "catalog default must be returned: got {:?}", r.source );
-  assert_eq!( r.value,  Some( "claude-sonnet-4-6".to_string() ),  "wrong default value: {:?}", r.value );
+  assert_eq!( r.value,  Some( "claude-sonnet-5".to_string() ),  "wrong default value: {:?}", r.value );
 }
 
 // AC-5: key absent everywhere → source=Absent, value=None

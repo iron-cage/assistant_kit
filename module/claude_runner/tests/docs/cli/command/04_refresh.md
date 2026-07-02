@@ -100,7 +100,7 @@ Integration test planning for the `refresh` command. See [command/04_refresh.md]
 
 - **Setup:** credentials JSON written to a temp file at `/tmp/it7_refresh_creds.json` (file is readable; content `{}`; no live credentials needed — trace fires before subprocess attempt)
 - **Command:** `clr refresh --creds /tmp/it7_refresh_creds.json --trace`
-- **Expected behavior:** stderr contains `# clr refresh`, `# creds: /tmp/it7_refresh_creds.json`, `# timeout: 45s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --model claude-sonnet-4-6 --no-chrome --effort low --no-session-persistence --print "."` before any subprocess attempt; subprocess attempt fails (claude absent in test environment)
+- **Expected behavior:** stderr contains `# clr refresh`, `# creds: /tmp/it7_refresh_creds.json`, `# timeout: 45s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."` before any subprocess attempt; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
 - **Source:** [command/04_refresh.md](../../../../docs/cli/command/04_refresh.md), [--trace](../../../../docs/cli/param/013_trace.md), [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md)
 - **Note:** Implemented; test function `it_04_refresh_trace_stderr_output` in `tests/invariant_trace_universality_test.rs`

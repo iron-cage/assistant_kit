@@ -50,11 +50,11 @@
 ```
 model
   Forms:   CLI --model <model>  |  config model
-  Env:     CLAUDE_MODEL → "claude-opus-4-6" (set)
-  Config:  model = "claude-sonnet-4-6" (user)
-  Default: claude-sonnet-4-6
+  Env:     CLAUDE_MODEL → "claude-opus-4-8" (set)
+  Config:  model = "claude-sonnet-5" (user)
+  Default: claude-sonnet-5
   ───────────────────────────────────────
-  Effective (via .config): claude-opus-4-6 (env)
+  Effective (via .config): claude-opus-4-8 (env)
 ```
 
 **Text output (v::1, env-only param):**

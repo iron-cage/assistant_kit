@@ -53,7 +53,7 @@ Acceptance tests for User Story 007. See [user_story/007_params_inspection.md](.
 
 - **Given:** `HOME=<tmp>` (no settings.json), `CLAUDE_MODEL` not set
 - **When:** `clv.params key::model`
-- **Then:** exit 0; stdout contains `--model`, `CLAUDE_MODEL`, `config model`, default `claude-sonnet-4-6`, and a `(default)` annotation
+- **Then:** exit 0; stdout contains `--model`, `CLAUDE_MODEL`, `config model`, default `claude-sonnet-5`, and a `(default)` annotation
 - **Exit:** 0
 
 ---
@@ -78,9 +78,9 @@ Acceptance tests for User Story 007. See [user_story/007_params_inspection.md](.
 
 ### US-5: `.params key::model` with env override shows (env) annotation
 
-- **Given:** `HOME=<tmp>`, `CLAUDE_MODEL=claude-opus-4-6` in env
+- **Given:** `HOME=<tmp>`, `CLAUDE_MODEL=claude-opus-4-8` in env
 - **When:** `clv.params key::model`
-- **Then:** exit 0; stdout contains `claude-opus-4-6` with `(env)` annotation indicating env layer wins
+- **Then:** exit 0; stdout contains `claude-opus-4-8` with `(env)` annotation indicating env layer wins
 - **Exit:** 0
 
 ---

@@ -31,7 +31,7 @@ Type compliance and validation tests for `ConfigKey`. See [type/07_config_key.md
 
 **Total:** 6 tests
 
-**Behavioral Divergence Pair:** TC-1 (`key::model` -> catalog key with env mapping and default `claude-sonnet-4-6`) <-> TC-2 (`key::myCustomSetting` -> arbitrary key with no catalog entry, no default, no env mapping)
+**Behavioral Divergence Pair:** TC-1 (`key::model` -> catalog key with env mapping and default `claude-sonnet-5`) <-> TC-2 (`key::myCustomSetting` -> arbitrary key with no catalog entry, no default, no env mapping)
 
 ---
 
@@ -39,7 +39,7 @@ Type compliance and validation tests for `ConfigKey`. See [type/07_config_key.md
 
 - **Given:** clean HOME; no `CLAUDE_MODEL` env var; no user config
 - **When:** `clv .config key::model`
-- **Then:** exit 0; output contains `claude-sonnet-4-6` and source annotation `(default)`
+- **Then:** exit 0; output contains `claude-sonnet-5` and source annotation `(default)`
 - **Exit:** 0
 - **Source:** [type/07_config_key.md -- Known catalog keys](../../../../docs/cli/type/07_config_key.md)
 

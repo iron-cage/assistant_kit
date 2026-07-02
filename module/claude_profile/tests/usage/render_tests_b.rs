@@ -90,16 +90,16 @@ fn test_ft29_009_footer_session_effort_display()
   }
 
   // Scenario 1 — both session_model and session_effort supplied.
-  // Footer line 1: `Current · cur@x.com · claude-sonnet-4-6/low · N/M`
+  // Footer line 1: `Current · cur@x.com · claude-sonnet-5/low · N/M`
   {
     let accounts = make_accounts();
     let output = render_text(
       &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), Some( "claude-sonnet-4-6" ), Some( "low" ), None, None, false,
+      &ColsVisibility::default_set(), Some( "claude-sonnet-5" ), Some( "low" ), None, None, false,
     );
     assert!(
-      output.contains( "claude-sonnet-4-6/low" ),
-      "FT-29 s1: footer Current line col3 must be 'claude-sonnet-4-6/low'; got:\n{output}",
+      output.contains( "claude-sonnet-5/low" ),
+      "FT-29 s1: footer Current line col3 must be 'claude-sonnet-5/low'; got:\n{output}",
     );
     assert!(
       output.contains( "Current" ),
@@ -108,15 +108,15 @@ fn test_ft29_009_footer_session_effort_display()
   }
 
   // Scenario 2 — session_model only; effort must be absent.
-  // Footer line 1: `Current · cur@x.com · claude-sonnet-4-6 · N/M` (no slash)
+  // Footer line 1: `Current · cur@x.com · claude-sonnet-5 · N/M` (no slash)
   {
     let accounts = make_accounts();
     let output = render_text(
       &accounts, SortStrategy::Renew, None, PreferStrategy::Any,
-      &ColsVisibility::default_set(), Some( "claude-sonnet-4-6" ), None, None, None, false,
+      &ColsVisibility::default_set(), Some( "claude-sonnet-5" ), None, None, None, false,
     );
     assert!(
-      output.contains( "claude-sonnet-4-6" ),
+      output.contains( "claude-sonnet-5" ),
       "FT-29 s2: footer Current line must contain model name; got:\n{output}",
     );
     assert!(

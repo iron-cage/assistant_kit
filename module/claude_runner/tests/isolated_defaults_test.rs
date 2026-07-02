@@ -5,14 +5,14 @@
 //! subprocess invocation.
 //!
 //! ## Root Cause (Invariant 005 gap)
-//! `clr isolated` previously used `claude-sonnet-4-6` at binary-default effort
+//! `clr isolated` previously used `claude-sonnet-5` at binary-default effort
 //! with no `--no-session-persistence`, `--dangerously-skip-permissions`, or
 //! CLAUDE.md.  `clr refresh` used `--chrome` despite being a pure HTTP OAuth
 //! exchange.  `--timeout 0` killed the subprocess immediately instead of
 //! disabling the watchdog.
 //!
 //! ## Fix Applied
-//! S1/S7: `ISOLATED_DEFAULT_MODEL = "claude-opus-4-6"` + `REFRESH_DEFAULT_MODEL`;
+//! S1/S7: `ISOLATED_DEFAULT_MODEL = "claude-opus-4-8"` + `REFRESH_DEFAULT_MODEL`;
 //!   `EffortLevel::Max` injected for isolated, `EffortLevel::Low` for refresh.
 //! S2: `timeout_secs == 0` → `deadline = None` (no watchdog).
 //! S3: `--no-session-persistence` prepended for both commands.
@@ -53,23 +53,23 @@ mod isolated_defaults_test
 
   // ── ISD-1 / ISD-2 : model constants ──────────────────────────────────────
 
-  /// ISD-1: `ISOLATED_DEFAULT_MODEL` constant equals `"claude-opus-4-6"`.
+  /// ISD-1: `ISOLATED_DEFAULT_MODEL` constant equals `"claude-opus-4-8"`.
   #[ test ]
   fn isd_01_isolated_default_model_is_opus()
   {
     assert_eq!(
-      ISOLATED_DEFAULT_MODEL, "claude-opus-4-6",
-      "ISOLATED_DEFAULT_MODEL must be claude-opus-4-6 for real user tasks"
+      ISOLATED_DEFAULT_MODEL, "claude-opus-4-8",
+      "ISOLATED_DEFAULT_MODEL must be claude-opus-4-8 for real user tasks"
     );
   }
 
-  /// ISD-2: `REFRESH_DEFAULT_MODEL` constant equals `"claude-sonnet-4-6"`.
+  /// ISD-2: `REFRESH_DEFAULT_MODEL` constant equals `"claude-sonnet-5"`.
   #[ test ]
   fn isd_02_refresh_default_model_is_sonnet()
   {
     assert_eq!(
-      REFRESH_DEFAULT_MODEL, "claude-sonnet-4-6",
-      "REFRESH_DEFAULT_MODEL must be claude-sonnet-4-6 for trivial OAuth ping"
+      REFRESH_DEFAULT_MODEL, "claude-sonnet-5",
+      "REFRESH_DEFAULT_MODEL must be claude-sonnet-5 for trivial OAuth ping"
     );
   }
 

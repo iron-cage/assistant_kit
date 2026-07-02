@@ -15,14 +15,14 @@ use super::types::{ AccountQuota, SubprocessModel, SubprocessEffort };
 /// AC-01: `auto` selects Haiku for general keep-alive pings — Haiku conserves Sonnet
 ///        and Opus quota.
 ///        Utilization-aware Sonnet gate (Fix BUG-289, BUG-290, TSK-292; extended Fix BUG-301, TSK-311):
-///        Selects `claude-sonnet-4-6` when `seven_day_sonnet` present AND either:
+///        Selects `claude-sonnet-5` when `seven_day_sonnet` present AND either:
 ///          • `son_idle=true` (`resets_at=None`) — Haiku cannot start the Sonnet window; a single
 ///            Sonnet touch opens all idle dimensions simultaneously (5h, 7d, Son); OR
 ///          • `son_available=true` (`(100 - utilization) > 20%`) — remaining Sonnet quota should
 ///            not expire unused while Haiku pings keep sessions alive.
 ///        Falls through to Haiku when Sonnet tier absent or utilization ≥ 80% (≤ 20% remaining).
-/// AC-02: `sonnet` always maps to `claude-sonnet-4-6`.
-/// AC-03: `opus` always maps to `claude-opus-4-6`.
+/// AC-02: `sonnet` always maps to `claude-sonnet-5`.
+/// AC-03: `opus` always maps to `claude-opus-4-8`.
 /// AC-04: `keep` passes `IsolatedModel::KeepCurrent` — no `--model` flag injected.
 /// AC-13: `haiku` always maps to `claude-haiku-4-5-20251001`.
 #[ must_use ]
@@ -32,8 +32,8 @@ pub fn resolve_model( aq : &AccountQuota, imodel : SubprocessModel ) -> claude_r
   use claude_runner_core::IsolatedModel;
   match imodel
   {
-    SubprocessModel::Sonnet => IsolatedModel::Specific( "claude-sonnet-4-6".to_string() ),
-    SubprocessModel::Opus   => IsolatedModel::Specific( "claude-opus-4-6".to_string() ),
+    SubprocessModel::Sonnet => IsolatedModel::Specific( "claude-sonnet-5".to_string() ),
+    SubprocessModel::Opus   => IsolatedModel::Specific( "claude-opus-4-8".to_string() ),
     SubprocessModel::Keep   => IsolatedModel::KeepCurrent,
     SubprocessModel::Haiku  => IsolatedModel::Specific( "claude-haiku-4-5-20251001".to_string() ),
     SubprocessModel::Auto   =>
@@ -49,7 +49,7 @@ pub fn resolve_model( aq : &AccountQuota, imodel : SubprocessModel ) -> claude_r
           let son_available = 100.0 - son.utilization > 20.0;
           if son_idle || son_available
           {
-            return IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
+            return IsolatedModel::Specific( "claude-sonnet-5".to_string() );
           }
         }
       }

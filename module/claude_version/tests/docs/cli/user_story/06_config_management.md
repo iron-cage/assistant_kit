@@ -40,7 +40,7 @@ Acceptance tests for User Story 006. See [user_story/006_config_management.md](.
 
 ### US-1: `.config` shows all settings with source annotations
 
-- **Given:** user settings has `theme: "dark"`; project settings has `model: "claude-opus-4-6"`; CLAUDE_MODEL is unset
+- **Given:** user settings has `theme: "dark"`; project settings has `model: "claude-opus-4-8"`; CLAUDE_MODEL is unset
 - **When:** `clv .config`
 - **Then:** exit 0; output lists all resolved keys, each annotated with its source layer (env/project/user/catalog)
 - **Exit:** 0

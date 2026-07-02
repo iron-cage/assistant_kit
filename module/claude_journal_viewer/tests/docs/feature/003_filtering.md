@@ -9,7 +9,7 @@ Test case planning for [feature/003_filtering.md](../../../docs/feature/003_filt
 | FT-1 | Empty filter matches all events | Match-All |
 | FT-2 | `type::execution command::ask` combines as AND — only ask-execution events | AND Combination |
 | FT-3 | `since::1h` parses as "last 60 minutes" and excludes older events | Time Filter |
-| FT-4 | `model::opus` uses substring match: includes `claude-opus-4-6`, excludes `claude-sonnet-4-6` | Substring Match |
+| FT-4 | `model::opus` uses substring match: includes `claude-opus-4-8`, excludes `claude-sonnet-5` | Substring Match |
 | FT-5 | `exit::0` matches only exit-0 events; `exit::2` matches only exit-2 events | Exact Exit Match |
 | FT-6 | Invalid `since::abc` → error message on stderr; exit 1 | Invalid Duration |
 | FT-7 | Invalid `type::bogus` → error message on stderr; exit 1 | Invalid Type |
@@ -34,7 +34,7 @@ All tests use `clj .list --journal-dir <dir>` (or the applicable viewing command
 
 FT-3 uses an event with `ts = "2000-01-01T00:00:00.000Z"` to represent "definitely old"; the filter `since::1h` must exclude it.
 
-FT-4 requires two events: one with `fields.model = Some("claude-opus-4-6")` and one with `fields.model = Some("claude-sonnet-4-6")`.
+FT-4 requires two events: one with `fields.model = Some("claude-opus-4-8")` and one with `fields.model = Some("claude-sonnet-5")`.
 
 ---
 
@@ -67,7 +67,7 @@ FT-4 requires two events: one with `fields.model = Some("claude-opus-4-6")` and 
 
 ### FT-4: `model::opus` uses substring match
 
-- **Given:** journal with event A (`model = "claude-opus-4-6"`) and event B (`model = "claude-sonnet-4-6"`)
+- **Given:** journal with event A (`model = "claude-opus-4-8"`) and event B (`model = "claude-sonnet-5"`)
 - **When:** `clj .list model::opus --journal-dir <dir>`
 - **Then:** exit 0; event A present; event B absent
 - **Source:** [feature/003_filtering.md](../../../docs/feature/003_filtering.md) AC-004

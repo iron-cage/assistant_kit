@@ -52,7 +52,7 @@ Cross-command behavioral parity test planning for `clr run`, `clr ask`, and `clr
 
 - **Given:** clr binary; valid credentials file; `--trace` flag
 - **When:** `clr isolated --creds <f> --trace "Fix bug"` vs `clr run --trace "Fix bug"`
-- **Then:** isolated stderr contains `--model claude-opus-4-6` in the assembled command; run stderr does not contain `--model` (uses claude binary default)
+- **Then:** isolated stderr contains `--model claude-opus-4-8` in the assembled command; run stderr does not contain `--model` (uses claude binary default)
 - **Exit:** 1 (claude absent in test env)
 - **Source:** [parity/001_run_ask_isolated.md](../../../../docs/cli/parity/001_run_ask_isolated.md), [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
 - **Implemented by:** `isolated_defaults_test.rs::isd_01_isolated_default_model_is_opus`

@@ -57,7 +57,7 @@ use tempfile::TempDir;
 
 // ── ARN: Account Renewal ──────────────────────────────────────────────────────
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-1]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-1]
 #[ test ]
 fn ft01_account_renewal_at_writes_renewal_at()
 {
@@ -89,7 +89,7 @@ fn ft01_account_renewal_at_writes_renewal_at()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-2]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-2]
 #[ test ]
 fn ft02_account_renewal_from_now_positive()
 {
@@ -147,7 +147,7 @@ fn ft03_account_renewal_from_now_negative()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-3]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-3]
 #[ test ]
 fn ft04_account_renewal_clear_removes_key()
 {
@@ -179,7 +179,7 @@ fn ft04_account_renewal_clear_removes_key()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-9]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-9]
 #[ test ]
 fn ft05_account_renewal_name_all_updates_all()
 {
@@ -209,7 +209,7 @@ fn ft05_account_renewal_name_all_updates_all()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-8]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-8]
 #[ test ]
 fn ft06_account_renewal_dry_no_write()
 {
@@ -237,7 +237,7 @@ fn ft06_account_renewal_dry_no_write()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-4]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-4]
 #[ test ]
 fn ft07_account_renewal_at_from_now_conflict()
 {
@@ -263,7 +263,7 @@ fn ft07_account_renewal_at_from_now_conflict()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-5]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-5]
 #[ test ]
 fn ft08_account_renewal_at_clear_conflict()
 {
@@ -289,7 +289,7 @@ fn ft08_account_renewal_at_clear_conflict()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-6]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-6]
 #[ test ]
 fn ft09_account_renewal_from_now_clear_conflict()
 {
@@ -315,7 +315,7 @@ fn ft09_account_renewal_from_now_clear_conflict()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-7]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-7]
 #[ test ]
 fn ft10_account_renewal_no_operation_exits_1()
 {
@@ -339,7 +339,7 @@ fn ft10_account_renewal_no_operation_exits_1()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-10]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-10]
 #[ test ]
 fn ft11_account_renewal_unknown_account_exits_2()
 {
@@ -364,7 +364,7 @@ fn ft11_account_renewal_unknown_account_exits_2()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-11]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-11]
 #[ test ]
 fn ft12_account_renewal_comma_list_updates_both()
 {
@@ -426,7 +426,7 @@ fn ft13_account_renewal_partial_comma_list()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-13]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-13]
 #[ test ]
 fn ft14_account_renewal_past_at_accepted()
 {
@@ -450,7 +450,7 @@ fn ft14_account_renewal_past_at_accepted()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-14]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-14]
 #[ test ]
 fn ft15_account_renewal_unknown_param_exits_1()
 {
@@ -503,7 +503,7 @@ fn ft16_account_renewal_creates_new_claude_json()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-15]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-15]
 #[ test ]
 fn ft17_account_renewal_single_prefix_resolves()
 {
@@ -529,7 +529,7 @@ fn ft17_account_renewal_single_prefix_resolves()
   );
 }
 
-/// Spec: [tests/docs/cli/command/14_account_renewal.md IT-16]
+/// Spec: [`tests/docs/cli/command/14_account_renewal.md` IT-16]
 #[ test ]
 fn ft18_account_renewal_comma_list_prefix_tokens()
 {

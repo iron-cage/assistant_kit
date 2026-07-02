@@ -13,7 +13,7 @@
 //! | IT-1  | No params → show-all with source labels | show-all | 0 |
 //! | IT-2  | `key::theme` → get with source annotation | get | 0 |
 //! | IT-3  | `key::theme value::dark` → set user, bool inferred | set | 0 |
-//! | IT-4  | `key::model value::claude-opus-4-6 scope::project` → project write | set | 0 |
+//! | IT-4  | `key::model value::claude-opus-4-8 scope::project` → project write | set | 0 |
 //! | IT-5  | `key::theme unset::1` → key removed from user settings | unset | 0 |
 //! | IT-6  | `format::json` → JSON with source fields | show-all | 0 |
 //! | IT-7  | `key::model` with `CLAUDE_MODEL` set → shows env value | get | 0 |
@@ -43,7 +43,7 @@
 //! | FT-09 | AC-09 | dry::1 previews set, no file change | 0 |
 //! | FT-10 | AC-10 | HOME unset → exit 2 | 2 |
 //! | FT-11 | AC-11 | non-catalog key accepted and written | 0 |
-//! | FT-12 | AC-12 | catalog default for model is claude-sonnet-4-6 | 0 |
+//! | FT-12 | AC-12 | catalog default for model is claude-sonnet-5 | 0 |
 
 use tempfile::TempDir;
 
@@ -114,7 +114,7 @@ fn it03_config_set_user_scope()
 
 // ─── IT-4: set project scope ─────────────────────────────────────────────────
 
-// IT-4: key::model value::claude-opus-4-6 scope::project → writes project settings; exit 0
+// IT-4: key::model value::claude-opus-4-8 scope::project → writes project settings; exit 0
 #[ test ]
 fn it04_config_set_project_scope()
 {
@@ -126,7 +126,7 @@ fn it04_config_set_project_scope()
   // std::env::current_dir() reads /proc/self/cwd on Linux — must set cwd via Command.
   let bin = env!( "CARGO_BIN_EXE_claude_version" );
   let out = std::process::Command::new( bin )
-    .args( [ ".config", "key::model", "value::claude-opus-4-6", "scope::project" ] )
+    .args( [ ".config", "key::model", "value::claude-opus-4-8", "scope::project" ] )
     .env( "HOME", home )
     .current_dir( project )
     .output()
@@ -135,11 +135,11 @@ fn it04_config_set_project_scope()
   let proj_settings = project_dir.path().join( ".claude/settings.json" );
   assert!( proj_settings.exists(), "project settings.json must be created" );
   let content = std::fs::read_to_string( &proj_settings ).unwrap();
-  assert!( content.contains( "claude-opus-4-6" ), "project settings must contain model value: {content}" );
+  assert!( content.contains( "claude-opus-4-8" ), "project settings must contain model value: {content}" );
   // User settings must NOT be changed.
   assert!( !home_dir.path().join( ".claude/settings.json" ).exists()
     || !std::fs::read_to_string( home_dir.path().join( ".claude/settings.json" ) )
-         .unwrap_or_default().contains( "claude-opus-4-6" ),
+         .unwrap_or_default().contains( "claude-opus-4-8" ),
     "user settings must not be modified by project scope write" );
 }
 
@@ -197,11 +197,11 @@ fn it07_config_get_env_override()
 
   let out = run_clm_with_env(
     &[ ".config", "key::model" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-6" ) ],
+    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "claude-opus-4-6" ), "must show env value: {text}" );
+  assert!( text.contains( "claude-opus-4-8" ), "must show env value: {text}" );
   assert!( text.contains( "(env)" ), "must show (env) source annotation: {text}" );
 }
 
@@ -250,7 +250,7 @@ fn it09_config_catalog_default_model()
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "claude-sonnet-4-6" ), "must show catalog default: {text}" );
+  assert!( text.contains( "claude-sonnet-5" ), "must show catalog default: {text}" );
   assert!( text.contains( "(default)" ), "must show (default) source annotation: {text}" );
 }
 
@@ -402,7 +402,7 @@ fn ft1_006_config_show_all_text()
   assert_exit( &out, 0 );
   let text = stdout( &out );
   // Catalog default for model must appear with (default) annotation.
-  assert!( text.contains( "claude-sonnet-4-6" ), "must include catalog default for model: {text}" );
+  assert!( text.contains( "claude-sonnet-5" ), "must include catalog default for model: {text}" );
   assert!( text.contains( "(default)" ), "must include (default) annotation: {text}" );
   // User setting for theme must appear with (user) annotation.
   assert!( text.contains( "theme" ), "must include theme: {text}" );
@@ -492,7 +492,7 @@ fn ft5_006_config_unset_removes_key()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_settings( dir.path(), &[ ( "theme", "dark" ), ( "model", "claude-sonnet-4-6" ) ] );
+  write_settings( dir.path(), &[ ( "theme", "dark" ), ( "model", "claude-sonnet-5" ) ] );
 
   let out = run_clm_with_env(
     &[ ".config", "key::theme", "unset::1" ],
@@ -532,21 +532,21 @@ fn ft6_006_config_show_all_json()
 
 // ─── FT-07: AC-07 env var overrides user config ──────────────────────────────
 
-// FT-7: CLAUDE_MODEL=claude-opus-4-6 overrides user settings model → shows (env); exit 0
+// FT-7: CLAUDE_MODEL=claude-opus-4-8 overrides user settings model → shows (env); exit 0
 #[ test ]
 fn ft7_006_config_env_overrides_user()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_settings( dir.path(), &[ ( "model", "claude-sonnet-4-6" ) ] );
+  write_settings( dir.path(), &[ ( "model", "claude-sonnet-5" ) ] );
 
   let out = run_clm_with_env(
     &[ ".config", "key::model" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-6" ) ],
+    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "claude-opus-4-6" ), "env value must override user config: {text}" );
+  assert!( text.contains( "claude-opus-4-8" ), "env value must override user config: {text}" );
   assert!( text.contains( "(env)" ), "must show (env) source annotation: {text}" );
 }
 
@@ -628,7 +628,7 @@ fn ft11_006_config_arbitrary_key_accepted()
 
 // ─── FT-12: AC-12 catalog default for model ──────────────────────────────────
 
-// FT-12: catalog default for model is claude-sonnet-4-6 when no env or config; exit 0
+// FT-12: catalog default for model is claude-sonnet-5 when no env or config; exit 0
 //
 // Uses an isolated cwd to prevent the project config walk from finding the
 // container-mounted /workspace/.claude/settings.json.
@@ -649,7 +649,7 @@ fn ft12_006_config_catalog_default_model()
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "claude-sonnet-4-6" ), "must show catalog default: {text}" );
+  assert!( text.contains( "claude-sonnet-5" ), "must show catalog default: {text}" );
   assert!( text.contains( "(default)" ), "must show (default) source annotation: {text}" );
 }
 
@@ -770,7 +770,7 @@ fn tc06_006_scope_empty_exits_1()
 
 // ─── TC-1: key::model → catalog key resolves default ─────────────────────────
 
-// TC-1: key::model with no env/config → catalog default claude-sonnet-4-6; exit 0
+// TC-1: key::model with no env/config → catalog default claude-sonnet-5; exit 0
 //
 // Uses isolated cwd to avoid project config walk finding container-mounted settings.
 #[ test ]
@@ -789,7 +789,7 @@ fn tc01_007_config_key_catalog_default()
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "claude-sonnet-4-6" ), "must show catalog default: {text}" );
+  assert!( text.contains( "claude-sonnet-5" ), "must show catalog default: {text}" );
   assert!( text.contains( "(default)" ), "must show (default) source annotation: {text}" );
 }
 

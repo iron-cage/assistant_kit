@@ -134,7 +134,7 @@ fn ai01_credential_file_absent_exits_2()
   );
 }
 
-/// Spec: [tests/docs/cli/command/15_account_inspect.md IT-6]
+/// Spec: [`tests/docs/cli/command/15_account_inspect.md` IT-6]
 #[ test ]
 /// AC-12: Prefix name resolves to nothing → exit 2 with account not found.
 ///
@@ -176,7 +176,7 @@ fn ai04_no_active_account_exits_2()
   assert!( err.contains( "no active account" ), "must report no active account, got: {err}" );
 }
 
-/// Spec: [tests/docs/cli/command/15_account_inspect.md IT-7]
+/// Spec: [`tests/docs/cli/command/15_account_inspect.md` IT-7]
 #[ test ]
 /// AC-13: Invalid `format::` value → exit 1.
 fn ai05_format_invalid_exits_1()
@@ -190,7 +190,7 @@ fn ai05_format_invalid_exits_1()
   assert!( err.contains( "format" ), "must mention format error, got: {err}" );
 }
 
-/// Spec: [tests/docs/cli/command/15_account_inspect.md IT-1]
+/// Spec: [`tests/docs/cli/command/15_account_inspect.md` IT-1]
 #[ test ]
 /// AC-12: When `name::` is omitted the per-machine active marker file determines the account.
 fn ai06_active_marker_used_when_no_name()
@@ -209,7 +209,7 @@ fn ai06_active_marker_used_when_no_name()
   );
 }
 
-/// Spec: [tests/docs/cli/command/15_account_inspect.md IT-2/IT-10]
+/// Spec: [`tests/docs/cli/command/15_account_inspect.md` IT-2/IT-10]
 #[ test ]
 /// AC-12: Bare prefix `name::alice` resolves to `alice@acme.com` when unambiguous.
 ///
@@ -292,7 +292,7 @@ fn ai10_memberships_endpoint_unavailable_message()
   );
 }
 
-/// Spec: [tests/docs/cli/command/15_account_inspect.md IT-3]
+/// Spec: [`tests/docs/cli/command/15_account_inspect.md` IT-3]
 #[ test ]
 /// AC-13: `format::json` output includes all required top-level fields.
 ///
@@ -348,7 +348,7 @@ fn ai12_json_data_source_snapshot_when_all_fail()
   );
 }
 
-/// Spec: [tests/docs/cli/command/15_account_inspect.md IT-4]
+/// Spec: [`tests/docs/cli/command/15_account_inspect.md` IT-4]
 #[ test ]
 /// AC-14: `trace::1` emits timestamped diagnostic lines to stderr (verified on the status trace line).
 ///

@@ -188,7 +188,7 @@ fn it_apply_touch_trigger_skips_resets_at_some()
 /// # Fix Applied
 ///
 /// TSK-292 (BUG-289): `resolve_model` now reads `aq.result` in the `Auto` arm.
-/// When `son_idle=true`, returns `Specific("claude-sonnet-4-6")` instead of Haiku
+/// When `son_idle=true`, returns `Specific("claude-sonnet-5")` instead of Haiku
 /// (`son_idle` gate; Fix: BUG-289, BUG-290). Sonnet-family API calls activate the
 /// 7d-Sonnet window, clearing `son_idle` and breaking the loop.
 ///

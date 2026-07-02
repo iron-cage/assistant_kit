@@ -46,18 +46,18 @@ fn at01_002_env_overrides_user()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path();
-  write_settings( home, "model", "claude-sonnet-4-6" );
+  write_settings( home, "model", "claude-sonnet-5" );
 
   // Set env var in this process for the test duration.
   // Using a non-existent cwd to avoid project config interference.
   let no_project = TempDir::new().unwrap();
 
-  std::env::set_var( "CLAUDE_MODEL", "claude-opus-4-6" );
+  std::env::set_var( "CLAUDE_MODEL", "claude-opus-4-8" );
   let rv = resolve( "model", home, no_project.path(), catalog() );
   std::env::remove_var( "CLAUDE_MODEL" );
 
   assert_eq!( rv.source, Layer::Env, "source must be Env when env var is set" );
-  assert_eq!( rv.value.as_deref(), Some( "claude-opus-4-6" ), "value must come from env var" );
+  assert_eq!( rv.value.as_deref(), Some( "claude-opus-4-8" ), "value must come from env var" );
 }
 
 // ─── AT-02: user config wins when env absent ──────────────────────────────────
@@ -92,7 +92,7 @@ fn at03_002_project_config_key()
   // Write to project .claude/settings.json (cwd itself).
   let proj_claude = project_dir.path().join( ".claude" );
   std::fs::create_dir_all( &proj_claude ).unwrap();
-  set_setting( &proj_claude.join( "settings.json" ), "model", "claude-opus-4-6" ).unwrap();
+  set_setting( &proj_claude.join( "settings.json" ), "model", "claude-opus-4-8" ).unwrap();
 
   // User settings is empty (no model key).
 
@@ -100,7 +100,7 @@ fn at03_002_project_config_key()
   let rv = resolve( "model", home_dir.path(), project_dir.path(), catalog() );
 
   assert_eq!( rv.source, Layer::Project, "source must be Project when key in project config" );
-  assert_eq!( rv.value.as_deref(), Some( "claude-opus-4-6" ),
+  assert_eq!( rv.value.as_deref(), Some( "claude-opus-4-8" ),
     "value must come from project config" );
 }
 
@@ -117,8 +117,8 @@ fn at04_002_catalog_default_returned()
   let rv = resolve( "model", home_dir.path(), no_project.path(), catalog() );
 
   assert_eq!( rv.source, Layer::Default, "source must be Default when all other layers absent" );
-  assert_eq!( rv.value.as_deref(), Some( "claude-sonnet-4-6" ),
-    "catalog default for model must be claude-sonnet-4-6" );
+  assert_eq!( rv.value.as_deref(), Some( "claude-sonnet-5" ),
+    "catalog default for model must be claude-sonnet-5" );
 }
 
 // ─── AT-05: absent everywhere ─────────────────────────────────────────────────

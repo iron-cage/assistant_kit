@@ -16,7 +16,7 @@ A `ConfigKey` is any non-empty UTF-8 string. Known keys have registered defaults
 
 | Key | Env var | Default |
 |-----|---------|---------|
-| `model` | `CLAUDE_MODEL` | `claude-sonnet-4-6` |
+| `model` | `CLAUDE_MODEL` | `claude-sonnet-5` |
 | `preferredVersionSpec` | — | `stable` |
 | `preferredVersionResolved` | — | (absent) |
 | `autoUpdates` | — | `true` |

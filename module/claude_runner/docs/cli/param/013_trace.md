@@ -13,8 +13,8 @@ subprocess is launched. Mirrors shell `set -x` semantics.
 What `--trace` shows depends on the command:
 
 - **`run`** / **`ask`**: assembled env vars + full `claude` subprocess command (printed to stderr before execution)
-- **`isolated`**: header lines (`# clr isolated`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation (including `--model claude-opus-4-6`, `--effort max`, `--no-session-persistence`, `--dangerously-skip-permissions` when message present)
-- **`refresh`**: header lines (`# clr refresh`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation with `--model claude-sonnet-4-6`, `--no-chrome`, `--effort low`, `--no-session-persistence`
+- **`isolated`**: header lines (`# clr isolated`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation (including `--model claude-opus-4-8`, `--effort max`, `--no-session-persistence`, `--dangerously-skip-permissions` when message present)
+- **`refresh`**: header lines (`# clr refresh`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation with `--model claude-sonnet-5`, `--no-chrome`, `--effort low`, `--no-session-persistence`
 
 ```sh
 # Trace on run
@@ -39,7 +39,7 @@ clr isolated --creds creds.json --trace "Fix bug"
 # Stderr: CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
 # Stderr: CLAUDE_CODE_AUTO_CONTINUE=true
 # Stderr: CLAUDE_CODE_TELEMETRY=false
-# Stderr: claude --model claude-opus-4-6 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"
+# Stderr: claude --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"
 # Then: run_isolated() executes
 
 # Trace on refresh
@@ -52,7 +52,7 @@ clr refresh --creds creds.json --trace
 # Stderr: CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
 # Stderr: CLAUDE_CODE_AUTO_CONTINUE=true
 # Stderr: CLAUDE_CODE_TELEMETRY=false
-# Stderr: claude --model claude-sonnet-4-6 --no-chrome --effort low --no-session-persistence --print "."
+# Stderr: claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."
 # Then: run_isolated() executes
 ```
 

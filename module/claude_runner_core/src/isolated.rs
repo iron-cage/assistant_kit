@@ -23,9 +23,9 @@ use core::fmt;
 ///
 /// Full model identifier passed as `--model` for isolated subprocess invocations.
 ///
-/// Pinned to the explicit `claude-opus-4-6` model ID so callers see exactly
+/// Pinned to the explicit `claude-opus-4-8` model ID so callers see exactly
 /// which model is being used.  Update this constant when the target model changes.
-pub const ISOLATED_DEFAULT_MODEL : &str = "claude-opus-4-6";
+pub const ISOLATED_DEFAULT_MODEL : &str = "claude-opus-4-8";
 
 /// CLAUDE.md content written to the isolated temp HOME before subprocess spawn.
 ///
@@ -44,10 +44,10 @@ Execute the given task immediately and exit.\n\n\
 
 /// Full model identifier passed as `--model` for OAuth credential-refresh pings.
 ///
-/// Pinned to the explicit `claude-sonnet-4-6` model ID.  Sonnet is fast and
+/// Pinned to the explicit `claude-sonnet-5` model ID.  Sonnet is fast and
 /// quota-efficient for the trivial `"."` no-op refresh prompt.
 /// Update this constant when the target model changes.
-pub const REFRESH_DEFAULT_MODEL : &str = "claude-sonnet-4-6";
+pub const REFRESH_DEFAULT_MODEL : &str = "claude-sonnet-5";
 
 /// Claude model selection for isolated subprocess invocations.
 ///

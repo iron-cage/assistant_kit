@@ -85,7 +85,7 @@ fn config_identity_gi3_unset_mode_removes_from_user_config()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_settings( dir.path(), &[ ( "plugin", "enabled" ), ( "model", "claude-sonnet-4-6" ) ] );
+  write_settings( dir.path(), &[ ( "plugin", "enabled" ), ( "model", "claude-sonnet-5" ) ] );
 
   let out = run_clm_with_env(
     &[ ".config", "key::plugin", "unset::1" ],

@@ -570,7 +570,7 @@ fn us8_006_config_unset_project_key()
   std::fs::create_dir_all( &proj_claude ).unwrap();
   std::fs::write(
     proj_claude.join( "settings.json" ),
-    r#"{"model":"claude-opus-4-6"}"#,
+    r#"{"model":"claude-opus-4-8"}"#,
   ).unwrap();
 
   let bin = env!( "CARGO_BIN_EXE_claude_version" );
@@ -687,7 +687,7 @@ fn us02_007_params_single_model_forms()
   let text = stdout( &out );
   assert!( text.contains( "--model" ),           "must show CLI form --model: {text}" );
   assert!( text.contains( "CLAUDE_MODEL" ),      "must show env form CLAUDE_MODEL: {text}" );
-  assert!( text.contains( "claude-sonnet-4-6" ), "must show default: {text}" );
+  assert!( text.contains( "claude-sonnet-5" ), "must show default: {text}" );
   assert!( text.contains( "(default)" ),         "must show (default) annotation: {text}" );
 }
 
@@ -734,11 +734,11 @@ fn us05_007_params_env_override_annotated()
 
   let out = run_clm_with_env(
     &[ ".params", "key::model" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-6" ) ],
+    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "claude-opus-4-6" ), "must show env value: {text}" );
+  assert!( text.contains( "claude-opus-4-8" ), "must show env value: {text}" );
   assert!( text.contains( "(env)" ),            "env override must be annotated (env): {text}" );
 }
 

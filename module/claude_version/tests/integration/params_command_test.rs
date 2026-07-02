@@ -68,7 +68,7 @@ fn it02_params_single_model_full_detail()
   let text = stdout( &out );
   assert!( text.contains( "--model" ),           "must show CLI form --model: {text}" );
   assert!( text.contains( "CLAUDE_MODEL" ),      "must show env form CLAUDE_MODEL: {text}" );
-  assert!( text.contains( "claude-sonnet-4-6" ), "must show default value: {text}" );
+  assert!( text.contains( "claude-sonnet-5" ), "must show default value: {text}" );
 }
 
 // ─── IT-3: kind::config → only config-key params ─────────────────────────────
@@ -111,7 +111,7 @@ fn it04_params_kind_env_filters()
 
 // ─── IT-5: key::model with CLAUDE_MODEL set ──────────────────────────────────
 
-// IT-5: CLAUDE_MODEL=claude-opus-4-6 → env value shown with (env) annotation; exit 0
+// IT-5: CLAUDE_MODEL=claude-opus-4-8 → env value shown with (env) annotation; exit 0
 #[ test ]
 fn it05_params_env_override_visible()
 {
@@ -120,11 +120,11 @@ fn it05_params_env_override_visible()
 
   let out = run_clm_with_env(
     &[ ".params", "key::model" ],
-    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-6" ) ],
+    &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "claude-opus-4-6" ), "must show env value: {text}" );
+  assert!( text.contains( "claude-opus-4-8" ), "must show env value: {text}" );
   assert!( text.contains( "(env)" ),            "must annotate with (env): {text}" );
 }
 
@@ -211,7 +211,7 @@ fn it09_params_compact_v0_output()
 
 // ─── IT-10: key::model no env no config → (default) annotation ──────────────
 
-// IT-10: key::model no env no config → shows claude-sonnet-4-6 with (default); exit 0
+// IT-10: key::model no env no config → shows claude-sonnet-5 with (default); exit 0
 //
 // Uses isolated cwd to prevent project config walk from finding container settings.
 #[ test ]
@@ -230,7 +230,7 @@ fn it10_params_default_annotation()
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "claude-sonnet-4-6" ), "must show catalog default: {text}" );
+  assert!( text.contains( "claude-sonnet-5" ), "must show catalog default: {text}" );
   assert!( text.contains( "(default)" ),          "must show (default) annotation: {text}" );
 }
 

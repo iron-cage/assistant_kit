@@ -70,7 +70,7 @@ The known settings catalog is implemented in `claude_version_core::config_catalo
 
 | Key | Type | Env var | Default | Notes |
 |-----|------|---------|---------|-------|
-| `model` | String | `CLAUDE_MODEL` | `claude-sonnet-4-6` | Active model name |
+| `model` | String | `CLAUDE_MODEL` | `claude-sonnet-5` | Active model name |
 | `preferredVersionSpec` | String | — | `stable` | Version channel: stable/beta/exact |
 | `preferredVersionResolved` | String | — | — (absent) | Last resolved concrete version |
 | `autoUpdates` | Bool | — | `true` | Auto-update on launch |

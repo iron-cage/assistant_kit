@@ -1,7 +1,7 @@
 # CLI Parameter: model
 
 Filter events by the Claude model name used. Substring match —
-`opus` matches `claude-opus-4-6`, `sonnet` matches `claude-sonnet-4-6`.
+`opus` matches `claude-opus-4-8`, `sonnet` matches `claude-sonnet-5`.
 Only events that recorded a `model` field are matched.
 
 - **Type:** [`String`](../type/03_string.md)

@@ -45,9 +45,9 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 
 ### JC-2: CLI flag overrides JSON config value
 
-- **Given:** JSON file containing `{"model": "claude-haiku-4-5-20251001"}`; CLI passes `--model claude-opus-4-6`
-- **When:** `clr --args-file <tmp/fast.json> --model claude-opus-4-6 --dry-run "task"`
-- **Then:** dry-run output contains `--model claude-opus-4-6` (CLI wins); JSON value for model is overridden
+- **Given:** JSON file containing `{"model": "claude-haiku-4-5-20251001"}`; CLI passes `--model claude-opus-4-8`
+- **When:** `clr --args-file <tmp/fast.json> --model claude-opus-4-8 --dry-run "task"`
+- **Then:** dry-run output contains `--model claude-opus-4-8` (CLI wins); JSON value for model is overridden
 - **Exit:** 0
 - **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-003
 - **Implemented by:** `json_config_test.rs::jc2_cli_flag_overrides_json_value`
@@ -56,8 +56,8 @@ Test case planning for [feature/004_json_config.md](../../../../docs/feature/004
 
 ### JC-3: JSON config overrides CLR_* env var
 
-- **Given:** JSON file containing `{"model": "claude-haiku-4-5-20251001"}`; `CLR_MODEL=claude-opus-4-6` set in environment
-- **When:** `CLR_MODEL=claude-opus-4-6 clr --args-file <tmp/fast.json> --dry-run "task"`
+- **Given:** JSON file containing `{"model": "claude-haiku-4-5-20251001"}`; `CLR_MODEL=claude-opus-4-8` set in environment
+- **When:** `CLR_MODEL=claude-opus-4-8 clr --args-file <tmp/fast.json> --dry-run "task"`
 - **Then:** dry-run output contains `--model claude-haiku-4-5-20251001` (JSON wins over env var)
 - **Exit:** 0
 - **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-004

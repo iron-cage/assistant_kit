@@ -17,7 +17,7 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 |-----------|-----|-----|----------|---------|
 | **mode** | print if message present; else interactive | print (always) | print (always) | print (always, message `"."`) |
 | **message** | user-supplied positional | user-supplied positional | user-supplied positional (optional) | `"."` hardcoded |
-| **model** | user-specified; none = claude binary default | user-specified; none = claude binary default | `"claude-opus-4-6"` (`ISOLATED_DEFAULT_MODEL`) | `"claude-sonnet-4-6"` (`REFRESH_DEFAULT_MODEL`) |
+| **model** | user-specified; none = claude binary default | user-specified; none = claude binary default | `"claude-opus-4-8"` (`ISOLATED_DEFAULT_MODEL`) | `"claude-sonnet-5"` (`REFRESH_DEFAULT_MODEL`) |
 | `--effort` | `max` (default; `--no-effort-max` opts out; `--effort <level>` overrides) | `max` (same) | `max` (injected) | `low` (injected) |
 | `ultrathink` suffix | appended to message (unless `--no-ultrathink` or already present) | appended | ➖ not injected | ➖ not injected |
 | `-c` (continue) | injected when session exists and not `--new-session` | injected when session exists | ➖ not injected | ➖ not injected |
@@ -50,7 +50,7 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | ID | Issue | Commands | Resolution |
 |----|-------|----------|------------|
 | I1 | `--effort` not injected | isolated, refresh | ✅ `--effort max` for isolated, `--effort low` for refresh (S1) |
-| I7 | Model was hardcoded string for isolated | isolated | ✅ Changed to `ISOLATED_DEFAULT_MODEL = "claude-opus-4-6"`; `REFRESH_DEFAULT_MODEL = "claude-sonnet-4-6"` added for refresh (S7) |
+| I7 | Model was hardcoded string for isolated | isolated | ✅ Changed to `ISOLATED_DEFAULT_MODEL = "claude-opus-4-8"`; `REFRESH_DEFAULT_MODEL = "claude-sonnet-5"` added for refresh (S7) |
 | I2 | `--timeout 0` = immediate kill | isolated, refresh | ✅ Fixed: `0` = unlimited (no watchdog), matching run/ask semantics (S2) |
 | I3 | `--no-session-persistence` not injected | isolated, refresh | ✅ Always injected for both commands (S3) |
 | I4 | `--chrome` injected for refresh | refresh | ✅ `--no-chrome` injected for refresh (S4) |
@@ -64,7 +64,7 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | # | Change | Affected code | Implemented behavior |
 |---|--------|---------------|----------------------|
 | S1 | Inject `--effort max` for isolated; `--effort low` for refresh | `credential.rs::run_isolated_command()` — `effort: EffortLevel` param | ✅ Isolated passes `Max`, refresh passes `Low` |
-| S7 | `ISOLATED_DEFAULT_MODEL` = `"claude-opus-4-6"`; `REFRESH_DEFAULT_MODEL` = `"claude-sonnet-4-6"` | `isolated.rs` constants | ✅ `ISOLATED_DEFAULT_MODEL = "claude-opus-4-6"`, `REFRESH_DEFAULT_MODEL = "claude-sonnet-4-6"` |
+| S7 | `ISOLATED_DEFAULT_MODEL` = `"claude-opus-4-8"`; `REFRESH_DEFAULT_MODEL` = `"claude-sonnet-5"` | `isolated.rs` constants | ✅ `ISOLATED_DEFAULT_MODEL = "claude-opus-4-8"`, `REFRESH_DEFAULT_MODEL = "claude-sonnet-5"` |
 | S2 | Fix `--timeout 0` semantics | `isolated.rs::run_isolated()` — `Option<Instant>` deadline | ✅ `None` when `timeout_secs == 0` = no watchdog |
 | S3 | Inject `--no-session-persistence` | `credential.rs::run_isolated_command()` — prepended to args vec | ✅ Always injected for both commands |
 | S4 | Suppress `--chrome` for refresh | `credential.rs::run_isolated_command()` — `no_chrome: bool` param | ✅ `--no-chrome` prepended for refresh |

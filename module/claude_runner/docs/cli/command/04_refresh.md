@@ -65,7 +65,7 @@ Internally calls `run_isolated_ext()` with fixed args. The `claude` binary refre
 The default timeout of 45 seconds (vs 30 for `isolated`) allows headroom for slow networks and API rate limiting during the OAuth token exchange. `--timeout 0` disables the watchdog entirely (unlimited runtime).
 
 Subprocess injected defaults (see [`invariant/005_isolated_subprocess_defaults.md`](../../invariant/005_isolated_subprocess_defaults.md)):
-- `--model "claude-sonnet-4-6"` (`REFRESH_DEFAULT_MODEL` — Sonnet is sufficient for a trivial ping)
+- `--model "claude-sonnet-5"` (`REFRESH_DEFAULT_MODEL` — Sonnet is sufficient for a trivial ping)
 - `--effort low` (minimal reasoning for a one-character OAuth-trigger prompt)
 - `--no-session-persistence` (temp HOME is discarded after run; session writes are waste)
 - `--no-chrome` (OAuth token exchange is pure HTTP; browser context adds overhead with no benefit)

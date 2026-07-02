@@ -85,11 +85,11 @@ clv.params v::0
 ```
 model
   Forms:   CLI --model <model>  |  env CLAUDE_MODEL  |  config model
-  Env:     CLAUDE_MODEL → "claude-opus-4-6" (set)
+  Env:     CLAUDE_MODEL → "claude-opus-4-8" (set)
   Config:  model = (absent in user config)
-  Default: claude-sonnet-4-6
+  Default: claude-sonnet-5
   ────────────────────────────────────────────────────
-  Effective (via .config): claude-opus-4-6 (env)
+  Effective (via .config): claude-opus-4-8 (env)
 ```
 
 **Sample text output (v::1, `clv.params key::bash_timeout`):**

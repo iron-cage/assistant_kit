@@ -33,7 +33,7 @@ Both are valid; the scope of resolution differs.
 | FT-9 | AC-9 | `.config key::K value::V dry::1` → preview, no file change | ✅ `ft9_006_config_set_dry_run` |
 | FT-10 | AC-10 | HOME unset → exit 2 for any filesystem operation | ✅ `ft10_006_config_home_unset_exits_2` |
 | FT-11 | AC-11 | Non-catalog key is accepted and written without error | ✅ `ft11_006_config_arbitrary_key_accepted` |
-| FT-12 | AC-12 | Catalog default for `model` is `claude-sonnet-4-6` when no env or config | ✅ `ft12_006_config_catalog_default_model` |
+| FT-12 | AC-12 | Catalog default for `model` is `claude-sonnet-5` when no env or config | ✅ `ft12_006_config_catalog_default_model` |
 
 ## Test Coverage Summary
 
@@ -53,7 +53,7 @@ Both are valid; the scope of resolution differs.
 
 - **Given:** isolated HOME with `settings.json` containing `{"theme": "dark"}`; no project config; `CLAUDE_MODEL` unset
 - **When:** `clv .config`
-- **Then:** stdout contains `model` with default value `claude-sonnet-4-6` (source: default) and `theme` with value `dark` (source: user); exit 0
+- **Then:** stdout contains `model` with default value `claude-sonnet-5` (source: default) and `theme` with value `dark` (source: user); exit 0
 - **Exit:** 0
 - **Source:** [feature/006_config_command.md — AC-1](../../../docs/feature/006_config_command.md)
 
@@ -111,9 +111,9 @@ Both are valid; the scope of resolution differs.
 
 ### FT-7: env var overrides user config for model key
 
-- **Given:** isolated HOME; `settings.json` contains `{"model": "claude-sonnet-4-6"}`; `CLAUDE_MODEL=claude-opus-4-6` set in env
+- **Given:** isolated HOME; `settings.json` contains `{"model": "claude-sonnet-5"}`; `CLAUDE_MODEL=claude-opus-4-8` set in env
 - **When:** `clv .config key::model`
-- **Then:** stdout shows `claude-opus-4-6` with `(env)` source annotation; exit 0
+- **Then:** stdout shows `claude-opus-4-8` with `(env)` source annotation; exit 0
 - **Exit:** 0
 - **Source:** [feature/006_config_command.md — AC-7](../../../docs/feature/006_config_command.md)
 
@@ -159,11 +159,11 @@ Both are valid; the scope of resolution differs.
 
 ---
 
-### FT-12: catalog default for model is claude-sonnet-4-6
+### FT-12: catalog default for model is claude-sonnet-5
 
 - **Given:** isolated HOME; empty `settings.json`; `CLAUDE_MODEL` unset; no project config
 - **When:** `clv .config key::model`
-- **Then:** stdout shows `claude-sonnet-4-6` with `(default)` annotation; exit 0
+- **Then:** stdout shows `claude-sonnet-5` with `(default)` annotation; exit 0
 - **Exit:** 0
 - **Source:** [feature/006_config_command.md — AC-12](../../../docs/feature/006_config_command.md)
 

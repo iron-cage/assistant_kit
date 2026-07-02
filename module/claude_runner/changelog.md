@@ -403,11 +403,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`clr ps` `$PRO` path shortening** — `Absolute Path` (active) and `CWD` (queued) columns replace the `$PRO` prefix with the literal `"$PRO"` string when the `PRO` env var is set (TSK-199)
 
-- **Isolated subprocess model upgraded to Claude Opus 4.6** — `ISOLATED_DEFAULT_MODEL` changed from `claude-sonnet-4-6` to `claude-opus-4-6`; effort set to `EffortLevel::Max` (TSK-021)
+- **Isolated subprocess model upgraded to Claude Opus 4.6** — `ISOLATED_DEFAULT_MODEL` changed from `claude-sonnet-5` to `claude-opus-4-8`; effort set to `EffortLevel::Max` (TSK-021)
   - `--dangerously-skip-permissions` injected when a message is present; `--no-session-persistence` always injected
   - Rationale: isolated mode runs high-stakes, single-shot tasks requiring maximum capability
 
-- **Refresh subprocess model set to Claude Sonnet 4.6** — new `REFRESH_DEFAULT_MODEL` = `"claude-sonnet-4-6"`; effort set to `EffortLevel::Low`; `--no-chrome` and `--no-session-persistence` always injected (TSK-021)
+- **Refresh subprocess model set to Claude Sonnet 4.6** — new `REFRESH_DEFAULT_MODEL` = `"claude-sonnet-5"`; effort set to `EffortLevel::Low`; `--no-chrome` and `--no-session-persistence` always injected (TSK-021)
   - Rationale: refresh is a lightweight credential-ping task; Sonnet at low effort is sufficient and faster
 
 - **`--max-sessions` default raised 25 → 30** (Plan 011)
