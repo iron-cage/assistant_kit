@@ -34,7 +34,7 @@
 #![ cfg( unix ) ]
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::stdout_str;
+use cli_binary_test_helpers::{ make_proc_dir, stdout_str };
 
 // ── IT-30: Flags column absent when no session has any flag ────────────────
 
@@ -179,10 +179,12 @@ fn it32_ancient_flag_fires_with_zero_threshold()
   // Sleep 1 100 ms total: ensures unix_now() > started_at so elapsed > 0 with threshold 0.
   std::thread::sleep( core::time::Duration::from_millis( 1_100 ) );
 
+  let proc = make_proc_dir( &[ bg.id() ] );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .env( "CLR_PS_ANCIENT_SECS", "0" )
     .env( "CLR_PS_HIGH_RAM_MB", "999999" )
     .output()
@@ -220,10 +222,12 @@ fn it33_high_ram_flag_fires_with_zero_threshold()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  let proc = make_proc_dir( &[ bg.id() ] );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
     .env( "CLR_PS_HIGH_RAM_MB", "0" )
     .output()
@@ -302,10 +306,12 @@ fn it35_print_mode_flag_for_print_session()
     .expect( "spawn print-mode claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  let proc = make_proc_dir( &[ bg.id() ] );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
     .env( "CLR_PS_HIGH_RAM_MB", "999999" )
     .output()
@@ -348,11 +354,13 @@ fn it36_legend_present_when_flags_fire()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  let proc = make_proc_dir( &[ bg.id() ] );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
     .env( "HOME", temp_home.path() )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
     .env( "CLR_PS_HIGH_RAM_MB", "999999" )
     .output()
@@ -453,11 +461,13 @@ fn it38_high_thresholds_suppress_time_and_ram_flags()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  let proc = make_proc_dir( &[ bg.id() ] );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
     .env( "HOME", temp_home.path() )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
     .env( "CLR_PS_HIGH_RAM_MB", "999999" )
     .output()
@@ -524,11 +534,20 @@ fn us18_flags_column_absent_when_no_flags_apply()
 
 /// US-19: Developer sees 🐳 flag for a Claude session running inside a container
 /// (cwd outside `$HOME`).
+///
+/// ## Why `CLR_PROC_DIR` isolation is required
+///
+/// Without `CLR_PROC_DIR`, `clr ps` scans real `/proc` and may pick up ambient
+/// `claude` processes spawned by other tests running in parallel.  Those processes
+/// have their own cwd which may or may not lie outside `$HOME`, causing the 🐳 flag
+/// assertion to produce a false negative (missing 🐳) or false positive depending on
+/// what processes happen to be alive at assertion time.  `make_proc_dir` confines
+/// the scan to exactly the one fake-claude PID spawned by this test.
 #[ cfg( target_os = "linux" ) ]
 #[ test ]
 fn us19_container_flag_for_cwd_outside_home()
 {
-  use cli_binary_test_helpers::fake_claude_binary_dir;
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, make_proc_dir };
 
   let ( _bin_dir, path_val ) = fake_claude_binary_dir();
   let temp_home    = tempfile::TempDir::new().expect( "tmp home" );
@@ -547,12 +566,14 @@ fn us19_container_flag_for_cwd_outside_home()
     .spawn()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+  let proc = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
     .env( "HOME", temp_home.path() )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps" );
 
@@ -592,10 +613,12 @@ fn us20_ancient_flag_with_zero_threshold()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 1_100 ) );
 
+  let proc = make_proc_dir( &[ bg.id() ] );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .env( "CLR_PS_ANCIENT_SECS", "0" )
     .env( "CLR_PS_HIGH_RAM_MB", "999999" )
     .output()
@@ -636,10 +659,12 @@ fn us21_high_ram_flag_with_zero_threshold()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  let proc = make_proc_dir( &[ bg.id() ] );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
     .env( "CLR_PS_HIGH_RAM_MB", "0" )
     .output()
@@ -725,10 +750,12 @@ fn us23_active_flag_for_cpu_intensive_session()
     .expect( "spawn busy-loop claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  let proc = make_proc_dir( &[ bg.id() ] );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
     .env( "CLR_PS_HIGH_RAM_MB", "999999" )
     .output()
@@ -774,10 +801,12 @@ fn us24_print_mode_flag_for_print_session()
     .expect( "spawn print-mode claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  let proc = make_proc_dir( &[ bg.id() ] );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
     .env( "CLR_PS_HIGH_RAM_MB", "999999" )
     .output()
@@ -826,11 +855,13 @@ fn us25_legend_appears_when_flags_present()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  let proc = make_proc_dir( &[ bg.id() ] );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
     .env( "HOME", temp_home.path() )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps" );
 
@@ -922,11 +953,13 @@ fn e41_ancient_secs_env_var()
     .spawn()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 1_100 ) );
+  let proc_a = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out_valid = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc_a.path().to_str().expect( "proc dir UTF-8" ) )
     .env( "CLR_PS_ANCIENT_SECS", "0" )
     .env( "CLR_PS_HIGH_RAM_MB", "999999" )
     .output()
@@ -958,10 +991,12 @@ fn e41_ancient_secs_env_var()
     .expect( "spawn fake claude 2" );
   let pid2 = bg2.id().to_string();
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+  let proc_b = make_proc_dir( &[ bg2.id() ] );
 
   let out_invalid = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val2 )
+    .env( "CLR_PROC_DIR", proc_b.path().to_str().expect( "proc dir UTF-8" ) )
     .env( "CLR_PS_ANCIENT_SECS", "not_a_number" )
     .env( "CLR_PS_HIGH_RAM_MB", "999999" )
     .output()
@@ -1164,10 +1199,12 @@ fn it40_busy_loop_process_active_flag()
     .expect( "spawn busy-loop claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  let proc = make_proc_dir( &[ bg.id() ] );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
     .env( "CLR_PS_HIGH_RAM_MB", "999999" )
     .output()
