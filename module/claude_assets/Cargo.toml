@@ -41,6 +41,7 @@ enabled = [
   "error_tools/enabled",
   "error_tools/error_untyped",
   "dep:cli_fmt",
+  "cli_fmt/cli_help_template",
 ]
 
 [dependencies]

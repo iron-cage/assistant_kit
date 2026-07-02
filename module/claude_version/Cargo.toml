@@ -43,6 +43,7 @@ enabled = [
   "claude_core/enabled",
   "dep:claude_version_core",
   "dep:cli_fmt",
+  "cli_fmt/cli_help_template",
   "dep:unilang",
   "unilang/enabled",
   "dep:error_tools",

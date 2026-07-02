@@ -62,13 +62,16 @@ default = [ "enabled" ]
 # Master switch: activates CLI binary dependencies (error_tools, unilang, claude_quota, data_fmt).
 enabled = [
   "dep:cli_fmt",
+  "cli_fmt/cli_help_template",
   "dep:claude_runner_core",
   "dep:error_tools",
   "error_tools/enabled",
   "error_tools/error_untyped",
   "dep:unilang",
+  "unilang/enabled",
   "dep:claude_quota",
   "dep:data_fmt",
+  "data_fmt/enabled",
 ]
 # Exposes pub test_bridge module for integration tests in tests/usage/.
 # Requires enabled so claude_quota types are available.

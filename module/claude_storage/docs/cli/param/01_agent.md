@@ -46,16 +46,16 @@ agent::yes     # Not a boolean: "agent must be 0 or 1"
 |------|------|-------------|----------------|
 | Boolean | Base type | Boolean flag | `0` (false) or `1` (true); unset allowed |
 
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 4 | [Session Filter](../param_group/04_session_filter.md) | Full | `session::`, `min_entries::` |
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 2 | [`.list`](../command/02_list.md) | unset | Auto-enables `show_sessions::1`; filters by session type |
 | 7 | [`.projects`](../command/07_projects.md) | unset | Filters sessions by type |
-
-### Referenced Parameter Groups
-| # | Group | Membership | Co-members |
-|---|-------|------------|------------|
-| 4 | [Session Filter](../param_group/04_session_filter.md) | Full | `session::`, `min_entries::` |
 
 ### Referenced User Stories
 | # | User Story | Persona |

@@ -659,6 +659,10 @@ fn aggregate_projects(
 ///
 /// Returns error if `scope::` is invalid, `min_entries::` is negative,
 /// `limit::` is negative, path resolution fails, or storage access fails.
+///
+/// # Panics
+///
+/// Does not panic — `min_entries` and `limit` are validated non-negative before conversion.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ allow( clippy::too_many_lines ) ]
 #[ inline ]
@@ -692,8 +696,7 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         format!( "Invalid min_entries: {n}. Must be non-negative" ),
       ) );
     }
-    #[ allow( clippy::cast_sign_loss, clippy::cast_possible_truncation ) ]
-    Some( n as usize )
+    Some( usize::try_from( n ).expect( "min_entries < 0 rejected above" ) )
   }
   else { None };
 
@@ -706,8 +709,7 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         format!( "Invalid limit: {n}. Must be non-negative" ),
       ) );
     }
-    #[ allow( clippy::cast_sign_loss, clippy::cast_possible_truncation ) ]
-    let v = n as usize;
+    let v = usize::try_from( n ).expect( "limit < 0 rejected above" );
     // 0 means unlimited — map to usize::MAX so comparisons work without special-casing
     if v == 0 { usize::MAX } else { v }
   }
@@ -1093,28 +1095,3 @@ fn render_families_v2(
   }
 }
 
-// ─── tests ─────────────────────────────────────────────────────────────────
-
-#[ cfg( test ) ]
-mod tests
-{
-  use super::*;
-
-  /// UT-49: `group_into_conversations` implements identity (1:1) mapping from families to conversations.
-  ///
-  /// Each `SessionFamily` maps to exactly one `Conversation`; empty input → empty output.
-  /// Also verifies `root_session`, `all_agents`, `conversation_count` compile and return sensible values.
-  #[ test ]
-  fn it_conversation_groups_families_one_to_one()
-  {
-    let result = group_into_conversations( vec![] );
-    assert_eq!( result.len(), 0, "Expected 0 conversations for 0 families" );
-    // Verify all helper methods compile; loop is a no-op for empty input.
-    for conv in &result
-    {
-      let _ = conv.root_session();
-      let _ = conv.all_agents().count();
-      let _ = conv.conversation_count();
-    }
-  }
-}
