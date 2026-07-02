@@ -55,10 +55,10 @@ accept both "no processes" and "processes exist" paths.
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-1 | `.processes` exits 0 | P | 0 | F3=any | [read_commands_test.rs] |
-| IT-2 | `.processes v::0` → no crash | P | 0 | F1=0, F3=any | [read_commands_test.rs] |
-| IT-3 | `.processes format::json` → `{"processes":[...]}` valid JSON | P | 0 | F2=json, F3=any | [read_commands_test.rs] |
-| IT-4 | `.processes format::json` no processes → `{"processes":[]}` | P | 0 | F2=json, F3=none | [read_commands_test.rs] |
+| IT-1 | `.processes` exits 0 | P | 0 | F3=any | [read_processes_test.rs] |
+| IT-2 | `.processes v::0` → no crash | P | 0 | F1=0, F3=any | [read_processes_test.rs] |
+| IT-3 | `.processes format::json` → `{"processes":[...]}` valid JSON | P | 0 | F2=json, F3=any | [read_processes_test.rs] |
+| IT-4 | `.processes format::json` no processes → `{"processes":[]}` | P | 0 | F2=json, F3=none | [read_processes_test.rs] |
 
 ### Negative Tests
 
@@ -198,7 +198,7 @@ The empty-processes path (`{"processes":[]}`) is explicitly covered by IT-4.
 
 | Function | File |
 |----------|------|
-| `tc137_processes_exits_0` | `integration/read_commands_test.rs` |
-| `tc141_processes_v0_no_crash` | `integration/read_commands_test.rs` |
-| `tc144_processes_format_json_valid` | `integration/read_commands_test.rs` |
-| `tc145_processes_format_json_empty_when_no_processes` | `integration/read_commands_test.rs` |
+| `tc137_processes_exits_0` | `tests/cli/read_processes_test.rs` |
+| `tc141_processes_v0_no_crash` | `tests/cli/read_processes_test.rs` |
+| `tc144_processes_format_json_valid` | `tests/cli/read_processes_test.rs` |
+| `tc145_processes_format_json_empty_when_no_processes` | `tests/cli/read_processes_test.rs` |

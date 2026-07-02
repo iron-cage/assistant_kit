@@ -157,18 +157,18 @@ Edge case coverage for the `force::` parameter. See [param/readme.md](../../../.
 
 | Function | File |
 |----------|------|
-| `tc021_force_param` | `cli_args_test.rs` |
-| `tc035_force_true_rejected` | `cli_args_test.rs` |
-| `tc037_force_0_accepted` | `cli_args_test.rs` |
-| `force_ec3_2_exits_1` | `cli_args_test.rs` |
-| `force_ec4_negative_exits_1` | `cli_args_test.rs` |
-| `force_ec6_empty_exits_1` | `cli_args_test.rs` |
-| `tc250_version_install_dry_force_dry_wins` | `integration/cross_cutting_test.rs` |
-| `tc251_processes_kill_dry_force_dry_wins` | `integration/cross_cutting_test.rs` |
-| `tc303_version_install_dry_wins_over_force` | `integration/mutation_commands_test.rs` |
-| `tc406_guard_dry_force_no_install` | `integration/mutation_commands_test.rs` |
-| `force_ec7_command_scope_rejects_on_settings_set` | `integration/force_param_test.rs` |
-| `force_ec8_default_force_zero` | `integration/force_param_test.rs` |
-| `force_ec9_explicit_zero_same_as_absent` | `integration/force_param_test.rs` |
-| `force_ec10_processes_kill_dry_wins` | `integration/force_param_test.rs` |
-| `force_ec11_version_guard_dry_wins_over_force` | `integration/force_param_test.rs` |
+| `tc021_force_param` | `cli_args_test/param_bool_test.rs` |
+| `tc035_force_true_rejected` | `cli_args_test/param_bool_test.rs` |
+| `tc037_force_0_accepted` | `cli_args_test/param_bool_test.rs` |
+| `force_ec3_2_exits_1` | `cli_args_test/param_bool_test.rs` |
+| `force_ec4_negative_exits_1` | `cli_args_test/param_bool_test.rs` |
+| `force_ec6_empty_exits_1` | `cli_args_test/param_bool_test.rs` |
+| `tc250_version_install_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
+| `tc251_processes_kill_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
+| `tc303_version_install_dry_wins_over_force` | `tests/cli/mutation_version_install_test.rs` |
+| `tc406_guard_dry_force_no_install` | `tests/cli/mutation_version_guard_test.rs` |
+| `force_ec7_command_scope_rejects_on_settings_set` | `tests/cli/force_param_test.rs` |
+| `force_ec8_default_force_zero` | `tests/cli/force_param_test.rs` |
+| `force_ec9_explicit_zero_same_as_absent` | `tests/cli/force_param_test.rs` |
+| `force_ec10_processes_kill_dry_wins` | `tests/cli/force_param_test.rs` |
+| `force_ec11_version_guard_dry_wins_over_force` | `tests/cli/force_param_test.rs` |

@@ -71,15 +71,15 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-1 | `.status` exits 0 always | P | 0 | F1=absent, F2=absent | [read_commands_test.rs] |
-| IT-2 | `.status` with empty PATH → "not found", exits 0 | P | 0 | F3=empty PATH | [read_commands_test.rs] |
-| IT-3 | `.status v::0` → exactly 3 bare lines | P | 0 | F1=0 | [read_commands_test.rs] |
-| IT-4 | `.status v::1` → labeled Version/Processes/Account lines | P | 0 | F1=1 | [read_commands_test.rs] |
-| IT-5 | `.status format::json` → valid JSON with required keys | P | 0 | F2=json | [read_commands_test.rs] |
-| IT-6 | `.status v::0` has fewer/equal lines than `.status v::1` | P | 0 | F1=0 vs 1 | [read_commands_test.rs] |
-| IT-7 | `.status` HOME not set → account "unknown", no crash | P | 0 | F4=empty | [read_commands_test.rs] |
-| IT-8 | `.status` with no preference → no "Preferred" line | P | 0 | F5=absent | [read_commands_test.rs] |
-| IT-9 | `.status` with preference → shows "Preferred" line | P | 0 | F5=set | [read_commands_test.rs] |
+| IT-1 | `.status` exits 0 always | P | 0 | F1=absent, F2=absent | [read_status_test.rs] |
+| IT-2 | `.status` with empty PATH → "not found", exits 0 | P | 0 | F3=empty PATH | [read_status_test.rs] |
+| IT-3 | `.status v::0` → exactly 3 bare lines | P | 0 | F1=0 | [read_status_test.rs] |
+| IT-4 | `.status v::1` → labeled Version/Processes/Account lines | P | 0 | F1=1 | [read_status_test.rs] |
+| IT-5 | `.status format::json` → valid JSON with required keys | P | 0 | F2=json | [read_status_test.rs] |
+| IT-6 | `.status v::0` has fewer/equal lines than `.status v::1` | P | 0 | F1=0 vs 1 | [read_status_test.rs] |
+| IT-7 | `.status` HOME not set → account "unknown", no crash | P | 0 | F4=empty | [read_status_test.rs] |
+| IT-8 | `.status` with no preference → no "Preferred" line | P | 0 | F5=absent | [read_status_test.rs] |
+| IT-9 | `.status` with preference → shows "Preferred" line | P | 0 | F5=set | [read_status_test.rs] |
 
 ### Negative Tests
 
@@ -92,7 +92,7 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 ### Summary
 
 - **Total:** 12 tests (9 positive, 3 negative)
-- **Negative ratio:** 25.0% — below ≥40% threshold; covered by cross-cutting `tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`, `tc245_last_occurrence_wins_for_verbosity` in `read_commands_test.rs` which apply to `.status` among other commands
+- **Negative ratio:** 25.0% — below ≥40% threshold; covered by cross-cutting `tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`, `tc245_last_occurrence_wins_for_verbosity` in `read_status_test.rs` which apply to `.status` among other commands
 - **Existing cross-cutting negatives applying to `.status`:** `tc242` (`format::xml`), `tc243` (`format::JSON`), `tc244` (`format::`), `tc245` (`v::` duplication)
 - **Combined negative count (command-specific + cross-cutting):** 7/16 = 43.8% ✅
 - **TC range:** IT-1 to IT-12
@@ -232,13 +232,13 @@ rather than exit 2. This is by design (FR-01: status is read-only, never fails).
 
 | Function | File |
 |----------|------|
-| `tc099_status_exits_0` | `integration/read_commands_test.rs` |
-| `tc096_status_no_claude_in_path_exits_0` | `integration/read_commands_test.rs` |
-| `tc097_status_v0_has_3_lines` | `integration/read_commands_test.rs` |
-| `tc098_status_v1_has_labels` | `integration/read_commands_test.rs` |
-| `tc100_status_format_json` | `integration/read_commands_test.rs` |
-| `tc104_status_v0_fewer_lines_than_v1` | `integration/read_commands_test.rs` |
-| `tc105_status_no_home_shows_unknown_account` | `integration/read_commands_test.rs` |
-| `tc419_status_no_preference_no_preferred_line` | `integration/read_commands_test.rs` |
-| `tc420_status_with_preference_shows_preferred` | `integration/read_commands_test.rs` |
-| `tc255_status_v0_fewer_lines_than_v1` | `integration/cross_cutting_test.rs` |
+| `tc099_status_exits_0` | `tests/cli/read_status_test.rs` |
+| `tc096_status_no_claude_in_path_exits_0` | `tests/cli/read_status_test.rs` |
+| `tc097_status_v0_has_3_lines` | `tests/cli/read_status_test.rs` |
+| `tc098_status_v1_has_labels` | `tests/cli/read_status_test.rs` |
+| `tc100_status_format_json` | `tests/cli/read_status_test.rs` |
+| `tc104_status_v0_fewer_lines_than_v1` | `tests/cli/read_status_test.rs` |
+| `tc105_status_no_home_shows_unknown_account` | `tests/cli/read_status_test.rs` |
+| `tc419_status_no_preference_no_preferred_line` | `tests/cli/read_status_test.rs` |
+| `tc420_status_with_preference_shows_preferred` | `tests/cli/read_status_test.rs` |
+| `tc255_status_v0_fewer_lines_than_v1` | `tests/cli/cross_cutting_test.rs` |

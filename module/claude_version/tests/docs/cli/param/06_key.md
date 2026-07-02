@@ -156,16 +156,16 @@ Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../
 
 | Function | File |
 |----------|------|
-| `tc320_settings_set_missing_key_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc332_settings_set_empty_key_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc238_settings_set_missing_key_error_format` | `integration/read_commands_test.rs` |
-| `tc505_settings_get_missing_key_error_contains_key` | `integration/error_messages_test.rs` |
-| `key_ec1_existing_key_returns_value` | `integration/key_param_test.rs` |
-| `key_ec2_nonexistent_key_exits_2` | `integration/key_param_test.rs` |
-| `key_ec5_empty_key_on_get_exits_1` | `integration/key_param_test.rs` |
-| `key_ec6_command_scope_rejects_on_status` | `integration/key_param_test.rs` |
-| `key_ec7_key_with_spaces_behavior` | `integration/key_param_test.rs` |
-| `key_ec8_dot_in_key_round_trips` | `integration/key_param_test.rs` |
-| `key_ec9_space_in_key_round_trips` | `integration/key_param_test.rs` |
-| `key_ec10_missing_key_error_contains_key_token` | `integration/key_param_test.rs` |
-| `key_ec11_missing_key_on_set_error_contains_key_token` | `integration/key_param_test.rs` |
+| `tc320_settings_set_missing_key_exits_1` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc332_settings_set_empty_key_exits_1` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc238_settings_set_missing_key_error_format` | `tests/cli/read_settings_test.rs` |
+| `tc505_settings_get_missing_key_error_contains_key` | `tests/cli/error_messages_test.rs` |
+| `key_ec1_existing_key_returns_value` | `tests/cli/key_param_test.rs` |
+| `key_ec2_nonexistent_key_exits_2` | `tests/cli/key_param_test.rs` |
+| `key_ec5_empty_key_on_get_exits_1` | `tests/cli/key_param_test.rs` |
+| `key_ec6_command_scope_rejects_on_status` | `tests/cli/key_param_test.rs` |
+| `key_ec7_key_with_spaces_behavior` | `tests/cli/key_param_test.rs` |
+| `key_ec8_dot_in_key_round_trips` | `tests/cli/key_param_test.rs` |
+| `key_ec9_space_in_key_round_trips` | `tests/cli/key_param_test.rs` |
+| `key_ec10_missing_key_error_contains_key_token` | `tests/cli/key_param_test.rs` |
+| `key_ec11_missing_key_on_set_error_contains_key_token` | `tests/cli/key_param_test.rs` |

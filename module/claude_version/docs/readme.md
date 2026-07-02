@@ -15,6 +15,7 @@
 | `feature/` | Version management, process lifecycle, settings, dry-run, CLI design, config command |
 | `pattern/` | 5-layer version lock design pattern |
 | `pitfall/` | Confirmed design traps: chmod side effects, symlink retarget bypass |
+| `runtime_file/` | On-disk files created and managed by clv at known paths |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |
 | `entity.md` | Master index of doc entity types and instances |
 

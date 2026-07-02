@@ -69,19 +69,19 @@ Integration test planning for the `.settings.show` command. See [command/readme.
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-2 | Empty `{}` → empty output, exit 0 | P | 0 | F3=empty | [read_commands_test.rs] |
-| IT-3 | Valid settings → keys shown, exit 0 | P | 0 | F3=valid | [read_commands_test.rs] |
-| IT-9 | `v::0` → `key=value` format | P | 0 | F1=0, F3=valid | [read_commands_test.rs] |
-| IT-10 | `format::json` → valid JSON object | P | 0 | F2=json, F3=valid | [read_commands_test.rs] |
-| IT-4 | `format::json` preserves bool/number types | P | 0 | F2=json, F5=boolean | [read_commands_test.rs] |
+| IT-2 | Empty `{}` → empty output, exit 0 | P | 0 | F3=empty | [read_settings_test.rs] |
+| IT-3 | Valid settings → keys shown, exit 0 | P | 0 | F3=valid | [read_settings_test.rs] |
+| IT-9 | `v::0` → `key=value` format | P | 0 | F1=0, F3=valid | [read_settings_test.rs] |
+| IT-10 | `format::json` → valid JSON object | P | 0 | F2=json, F3=valid | [read_settings_test.rs] |
+| IT-4 | `format::json` preserves bool/number types | P | 0 | F2=json, F5=boolean | [read_settings_test.rs] |
 
 ### Negative Tests
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-1 | File missing → exit 2 | N | 2 | F3=missing | [read_commands_test.rs] |
-| IT-11 | Malformed JSON → exit 2 | N | 2 | F3=malformed | [read_commands_test.rs] |
-| IT-12 | HOME not set → exit 2 | N | 2 | F4=empty | [read_commands_test.rs] |
+| IT-1 | File missing → exit 2 | N | 2 | F3=missing | [read_settings_test.rs] |
+| IT-11 | Malformed JSON → exit 2 | N | 2 | F3=malformed | [read_settings_test.rs] |
+| IT-12 | HOME not set → exit 2 | N | 2 | F4=empty | [read_settings_test.rs] |
 | IT-5 | `bogus::x` → exit 1 | N | 1 | F6=present | new |
 | IT-6 | `format::xml` → exit 1 | N | 1 | F2=xml | new |
 | IT-7 | `v::3` → exit 1, out of range | N | 1 | F1=3 | new |
@@ -251,17 +251,17 @@ Integration test planning for the `.settings.show` command. See [command/readme.
 
 | Function | File |
 |----------|------|
-| `tc161_settings_show_file_missing_exits_2` | `integration/read_commands_test.rs` |
-| `tc162_settings_show_empty_file_exits_0` | `integration/read_commands_test.rs` |
-| `tc163_settings_show_valid_file` | `integration/read_commands_test.rs` |
-| `tc164_settings_show_v0_key_equals_value` | `integration/read_commands_test.rs` |
-| `tc167_settings_show_format_json` | `integration/read_commands_test.rs` |
-| `tc170_settings_show_malformed_file_exits_2` | `integration/read_commands_test.rs` |
-| `tc171_settings_show_no_home_exits_2` | `integration/read_commands_test.rs` |
-| `tc241_settings_show_json_preserves_types` | `integration/read_commands_test.rs` |
-| `it05_settings_show_bogus_param_exits_1` | `integration/read_commands_test.rs` |
-| `it06_settings_show_format_xml_exits_1` | `integration/read_commands_test.rs` |
-| `it07_settings_show_v3_exits_1` | `integration/read_commands_test.rs` |
-| `it08_settings_show_stdout_only` | `integration/read_commands_test.rs` |
-| `tc507_settings_show_no_home_error_mentions_home` | `integration/error_messages_test.rs` |
-| `tc508_settings_show_home_unset_error_mentions_home` | `integration/error_messages_test.rs` |
+| `tc161_settings_show_file_missing_exits_2` | `tests/cli/read_settings_test.rs` |
+| `tc162_settings_show_empty_file_exits_0` | `tests/cli/read_settings_test.rs` |
+| `tc163_settings_show_valid_file` | `tests/cli/read_settings_test.rs` |
+| `tc164_settings_show_v0_key_equals_value` | `tests/cli/read_settings_test.rs` |
+| `tc167_settings_show_format_json` | `tests/cli/read_settings_test.rs` |
+| `tc170_settings_show_malformed_file_exits_2` | `tests/cli/read_settings_test.rs` |
+| `tc171_settings_show_no_home_exits_2` | `tests/cli/read_settings_test.rs` |
+| `tc241_settings_show_json_preserves_types` | `tests/cli/read_settings_test.rs` |
+| `it05_settings_show_bogus_param_exits_1` | `tests/cli/read_settings_test.rs` |
+| `it06_settings_show_format_xml_exits_1` | `tests/cli/read_settings_test.rs` |
+| `it07_settings_show_v3_exits_1` | `tests/cli/read_settings_test.rs` |
+| `it08_settings_show_stdout_only` | `tests/cli/read_settings_test.rs` |
+| `tc507_settings_show_no_home_error_mentions_home` | `tests/cli/error_messages_test.rs` |
+| `tc508_settings_show_home_unset_error_mentions_home` | `tests/cli/error_messages_test.rs` |

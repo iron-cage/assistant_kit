@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Reference for root-namespace clv commands.
-- **Responsibility**: Command syntax, parameters, exit codes, and cross-references for `.help` and `.status`.
-- **In Scope**: `.help`, `.status`.
+- **Responsibility**: Command syntax, parameters, exit codes, and cross-references for `.help`, `.status`, and `.runtime_files`.
+- **In Scope**: `.help`, `.status`, `.runtime_files`.
 - **Out of Scope**: Version commands (→ [version.md](version.md)), process commands (→ [processes.md](processes.md)), settings commands (→ [settings.md](settings.md)).
 
 ---
@@ -133,6 +133,41 @@ clv.status v::2
 
 **Category:** status
 **Complexity:** 2
+**API Requirement:** None
+**Idempotent:** Yes
+**Risk Level:** Low
+
+---
+
+### Command :: 15. `.runtime_files`
+
+Enumerate all on-disk paths managed by clv for the current configuration. Output represents paths that WILL exist after relevant commands are run — not only paths currently on disk. Suitable for operator tooling, health checks, and cleanup scripts.
+
+-- **Exit Codes:** 0 (success) | 2 (HOME unset or I/O error)
+
+**Syntax:**
+
+```sh
+clv.runtime_files
+```
+
+**Parameters:** none
+
+**Algorithm (3 steps):**
+1. Read `$HOME` from the environment; exit 2 if absent.
+2. Compute all runtime file paths for the current configuration: `$HOME/.claude/.transient/version_history_cache.json`.
+3. Print each path as an absolute path, one per line, to stdout; exit 0.
+
+### Related Commands
+
+| # | Command | Relationship |
+|---|---------|-------------|
+| 1 | [`.version.history`](version.md#command--12-version-history) | Creates the version history cache path enumerated here |
+
+---
+
+**Category:** discovery
+**Complexity:** 0
 **API Requirement:** None
 **Idempotent:** Yes
 **Risk Level:** Low
