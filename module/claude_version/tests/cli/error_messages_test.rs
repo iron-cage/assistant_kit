@@ -18,13 +18,13 @@
 //! | 511 | `.settings.get key::absent` → stderr mentions key name | N | 2 |
 //! | 512 | First arg `::value` → exit 1 | N | 1 |
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stderr };
 
 // TC-500: unknown command → stderr mentions "unknown command"
 #[ test ]
 fn tc500_unknown_command_error_mentions_available()
 {
-  let out = run_clm( &[ ".nonexistent" ] );
+  let out = run_clv( &[ ".nonexistent" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
@@ -37,7 +37,7 @@ fn tc500_unknown_command_error_mentions_available()
 #[ test ]
 fn tc501_unknown_param_error()
 {
-  let out = run_clm( &[ ".status", "bogus::1" ] );
+  let out = run_clv( &[ ".status", "bogus::1" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
@@ -50,7 +50,7 @@ fn tc501_unknown_param_error()
 #[ test ]
 fn tc502_unknown_param_exits_1()
 {
-  let out = run_clm( &[ ".status", "bogus::x" ] );
+  let out = run_clv( &[ ".status", "bogus::x" ] );
   assert_exit( &out, 1 );
 }
 
@@ -58,7 +58,7 @@ fn tc502_unknown_param_exits_1()
 #[ test ]
 fn tc503_verbosity_out_of_range_error_message()
 {
-  let out = run_clm( &[ ".status", "v::3" ] );
+  let out = run_clv( &[ ".status", "v::3" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
@@ -71,7 +71,7 @@ fn tc503_verbosity_out_of_range_error_message()
 #[ test ]
 fn tc504_format_unknown_error_mentions_valid()
 {
-  let out = run_clm( &[ ".status", "format::xml" ] );
+  let out = run_clv( &[ ".status", "format::xml" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
@@ -84,7 +84,7 @@ fn tc504_format_unknown_error_mentions_valid()
 #[ test ]
 fn tc505_settings_get_missing_key_error_contains_key()
 {
-  let out = run_clm( &[ ".settings.get" ] );
+  let out = run_clv( &[ ".settings.get" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!( err.contains( "key" ), "error must mention key: {err}" );
@@ -94,7 +94,7 @@ fn tc505_settings_get_missing_key_error_contains_key()
 #[ test ]
 fn tc506_settings_set_missing_value_error_contains_value()
 {
-  let out = run_clm( &[ ".settings.set", "key::k" ] );
+  let out = run_clv( &[ ".settings.set", "key::k" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!( err.contains( "value" ), "error must mention value: {err}" );
@@ -104,7 +104,7 @@ fn tc506_settings_set_missing_value_error_contains_value()
 #[ test ]
 fn tc507_settings_show_no_home_error_mentions_home()
 {
-  let out = run_clm_with_env( &[ ".settings.show" ], &[ ( "HOME", "" ) ] );
+  let out = run_clv_with_env( &[ ".settings.show" ], &[ ( "HOME", "" ) ] );
   assert_exit( &out, 2 );
   let err = stderr( &out );
   assert!( err.contains( "HOME" ), "error must mention HOME: {err}" );
@@ -119,7 +119,7 @@ fn tc507_settings_show_no_home_error_mentions_home()
 // Fix Applied: the outer `_` branch (HOME unset/empty) keeps the HOME message.
 // Prevention: TC-508 ensures HOME-unset path still surfaces HOME in the error.
 // Pitfall: env::remove_var is unsafe in multi-threaded tests (other tests may run
-//   concurrently with HOME set); use run_clm_with_env with an explicit empty value
+//   concurrently with HOME set); use run_clv_with_env with an explicit empty value
 //   rather than removing the var, since the OS treats a missing HOME and an empty
 //   HOME the same way for the outer guard branch.
 #[ test ]
@@ -127,7 +127,7 @@ fn tc508_settings_show_home_unset_error_mentions_home()
 {
   // Use an empty HOME rather than unsetting it to stay thread-safe.
   // The outer guard branch fires for both missing and empty HOME.
-  let out = run_clm_with_env( &[ ".settings.show" ], &[ ( "HOME", "" ) ] );
+  let out = run_clv_with_env( &[ ".settings.show" ], &[ ( "HOME", "" ) ] );
   assert_exit( &out, 2 );
   let err = stderr( &out );
   assert!( err.contains( "HOME" ), "HOME-absent error must mention HOME: {err}" );
@@ -148,7 +148,7 @@ fn tc509_version_show_no_claude_error()
 {
   let dir = tempfile::TempDir::new().unwrap();
   let fake_home = dir.path().to_str().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.show" ],
     &[ ( "PATH", "" ), ( "HOME", fake_home ) ],
   );
@@ -164,7 +164,7 @@ fn tc509_version_show_no_claude_error()
 #[ test ]
 fn tc510_version_install_wrong_case_error()
 {
-  let out = run_clm( &[ ".version.install", "version::STABLE" ] );
+  let out = run_clv( &[ ".version.install", "version::STABLE" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
@@ -181,7 +181,7 @@ fn tc511_settings_get_absent_key_error_mentions_key()
   let claude_dir = dir.path().join( ".claude" );
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write( claude_dir.join( "settings.json" ), "{}" ).unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.get", "key::absent_key" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -194,6 +194,6 @@ fn tc511_settings_get_absent_key_error_mentions_key()
 #[ test ]
 fn tc512_first_arg_param_syntax_exits_1()
 {
-  let out = run_clm( &[ "::value" ] );
+  let out = run_clv( &[ "::value" ] );
   assert_exit( &out, 1 );
 }

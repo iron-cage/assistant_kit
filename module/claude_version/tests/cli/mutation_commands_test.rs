@@ -98,7 +98,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stderr, stdout, write_settings };
 
 // ─── E5: version install ─────────────────────────────────────────────────────
 
@@ -106,7 +106,7 @@ use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr,
 #[ test ]
 fn tc300_version_install_dry_shows_prefix()
 {
-  let out = run_clm( &[ ".version.install", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "[dry-run]" ), "must contain [dry-run]: {text}" );
@@ -116,7 +116,7 @@ fn tc300_version_install_dry_shows_prefix()
 #[ test ]
 fn tc301_version_install_dry_stable()
 {
-  let out = run_clm( &[ ".version.install", "version::stable", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::stable", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "stable" ), "must contain stable: {text}" );
@@ -126,7 +126,7 @@ fn tc301_version_install_dry_stable()
 #[ test ]
 fn tc302_version_install_dry_exact_semver()
 {
-  let out = run_clm( &[ ".version.install", "version::1.2.3", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::1.2.3", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "1.2.3" ), "must contain 1.2.3: {text}" );
@@ -136,7 +136,7 @@ fn tc302_version_install_dry_exact_semver()
 #[ test ]
 fn tc303_version_install_dry_wins_over_force()
 {
-  let out = run_clm( &[ ".version.install", "dry::1", "force::1" ] );
+  let out = run_clv( &[ ".version.install", "dry::1", "force::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "[dry-run]" ), "dry must win over force: {text}" );
@@ -146,7 +146,7 @@ fn tc303_version_install_dry_wins_over_force()
 #[ test ]
 fn tc304_version_install_wrong_case_exits_1()
 {
-  let out = run_clm( &[ ".version.install", "version::STABLE" ] );
+  let out = run_clv( &[ ".version.install", "version::STABLE" ] );
   assert_exit( &out, 1 );
 }
 
@@ -154,7 +154,7 @@ fn tc304_version_install_wrong_case_exits_1()
 #[ test ]
 fn tc305_version_install_empty_version_exits_1()
 {
-  let out = run_clm( &[ ".version.install", "version::" ] );
+  let out = run_clv( &[ ".version.install", "version::" ] );
   assert_exit( &out, 1 );
 }
 
@@ -162,7 +162,7 @@ fn tc305_version_install_empty_version_exits_1()
 #[ test ]
 fn tc306_version_install_two_part_semver_exits_1()
 {
-  let out = run_clm( &[ ".version.install", "version::1.2" ] );
+  let out = run_clv( &[ ".version.install", "version::1.2" ] );
   assert_exit( &out, 1 );
 }
 
@@ -170,7 +170,7 @@ fn tc306_version_install_two_part_semver_exits_1()
 #[ test ]
 fn tc307_version_install_unknown_alias_exits_1()
 {
-  let out = run_clm( &[ ".version.install", "version::x" ] );
+  let out = run_clv( &[ ".version.install", "version::x" ] );
   assert_exit( &out, 1 );
 }
 
@@ -178,7 +178,7 @@ fn tc307_version_install_unknown_alias_exits_1()
 #[ test ]
 fn tc308_version_install_absent_version_defaults_to_stable()
 {
-  let out = run_clm( &[ ".version.install", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "stable" ), "default version must be stable: {text}" );
@@ -188,7 +188,7 @@ fn tc308_version_install_absent_version_defaults_to_stable()
 #[ test ]
 fn tc309_version_install_dry_month()
 {
-  let out = run_clm( &[ ".version.install", "version::month", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::month", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "month" ), "must contain alias name 'month': {text}" );
@@ -199,7 +199,7 @@ fn tc309_version_install_dry_month()
 #[ test ]
 fn tc350_version_install_dry_latest_auto_updates_true()
 {
-  let out = run_clm( &[ ".version.install", "version::latest", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::latest", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "autoUpdates = true" ), "latest must preview autoUpdates = true: {text}" );
@@ -209,7 +209,7 @@ fn tc350_version_install_dry_latest_auto_updates_true()
 #[ test ]
 fn tc351_version_install_dry_stable_auto_updates_false()
 {
-  let out = run_clm( &[ ".version.install", "version::stable", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::stable", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "autoUpdates = false" ), "stable must preview autoUpdates = false: {text}" );
@@ -221,7 +221,7 @@ fn tc351_version_install_dry_stable_auto_updates_false()
 #[ test ]
 fn tc352_version_install_dry_semver_auto_updates_false()
 {
-  let out = run_clm( &[ ".version.install", "version::2.1.50", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::2.1.50", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "autoUpdates = false" ), "semver must preview autoUpdates = false: {text}" );
@@ -232,7 +232,7 @@ fn tc352_version_install_dry_semver_auto_updates_false()
 #[ test ]
 fn tc353_version_install_dry_latest_shows_unlock()
 {
-  let out = run_clm( &[ ".version.install", "version::latest", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::latest", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "remove env.DISABLE_AUTOUPDATER" ), "latest must show remove: {text}" );
@@ -243,7 +243,7 @@ fn tc353_version_install_dry_latest_shows_unlock()
 #[ test ]
 fn tc359_version_install_dry_stable_includes_purge_line()
 {
-  let out = run_clm( &[ ".version.install", "version::stable", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::stable", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -256,7 +256,7 @@ fn tc359_version_install_dry_stable_includes_purge_line()
 #[ test ]
 fn tc360_version_install_dry_latest_no_purge_line()
 {
-  let out = run_clm( &[ ".version.install", "version::latest", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::latest", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -269,7 +269,7 @@ fn tc360_version_install_dry_latest_no_purge_line()
 #[ test ]
 fn tc361_version_install_dry_format_json()
 {
-  let out = run_clm( &[ ".version.install", "dry::1", "format::json" ] );
+  let out = run_clv( &[ ".version.install", "dry::1", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -282,7 +282,7 @@ fn tc361_version_install_dry_format_json()
 #[ test ]
 fn tc362_version_install_format_uppercase_rejected()
 {
-  let out = run_clm( &[ ".version.install", "format::JSON" ] );
+  let out = run_clv( &[ ".version.install", "format::JSON" ] );
   assert_exit( &out, 1 );
 }
 
@@ -292,7 +292,7 @@ fn tc362_version_install_format_uppercase_rejected()
 #[ test ]
 fn tc310_processes_kill_dry_exits_0()
 {
-  let out = run_clm( &[ ".processes.kill", "dry::1" ] );
+  let out = run_clv( &[ ".processes.kill", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -305,7 +305,7 @@ fn tc310_processes_kill_dry_exits_0()
 #[ test ]
 fn tc311_processes_kill_dry_mentions_sigterm()
 {
-  let out = run_clm( &[ ".processes.kill", "dry::1" ] );
+  let out = run_clv( &[ ".processes.kill", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   if !text.contains( "no active processes" )
@@ -318,7 +318,7 @@ fn tc311_processes_kill_dry_mentions_sigterm()
 #[ test ]
 fn tc312_processes_kill_dry_force_mentions_sigkill()
 {
-  let out = run_clm( &[ ".processes.kill", "dry::1", "force::1" ] );
+  let out = run_clv( &[ ".processes.kill", "dry::1", "force::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   if !text.contains( "no active processes" )
@@ -364,7 +364,7 @@ fn tc315_processes_kill_no_let_underscore_on_send_sig()
 #[ test ]
 fn tc313_processes_kill_v0_accepted()
 {
-  let out = run_clm( &[ ".processes.kill", "v::0" ] );
+  let out = run_clv( &[ ".processes.kill", "v::0" ] );
   assert_exit( &out, 0 );
 }
 
@@ -372,7 +372,7 @@ fn tc313_processes_kill_v0_accepted()
 #[ test ]
 fn tc314_processes_kill_format_uppercase_rejected()
 {
-  let out = run_clm( &[ ".processes.kill", "format::JSON" ] );
+  let out = run_clv( &[ ".processes.kill", "format::JSON" ] );
   assert_exit( &out, 1 );
 }
 
@@ -380,7 +380,7 @@ fn tc314_processes_kill_format_uppercase_rejected()
 #[ test ]
 fn tc316_processes_kill_dry_format_json()
 {
-  let out = run_clm( &[ ".processes.kill", "dry::1", "format::json" ] );
+  let out = run_clv( &[ ".processes.kill", "dry::1", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -395,7 +395,7 @@ fn tc316_processes_kill_dry_format_json()
 #[ test ]
 fn tc320_settings_set_missing_key_exits_1()
 {
-  let out = run_clm( &[ ".settings.set" ] );
+  let out = run_clv( &[ ".settings.set" ] );
   assert_exit( &out, 1 );
 }
 
@@ -403,7 +403,7 @@ fn tc320_settings_set_missing_key_exits_1()
 #[ test ]
 fn tc321_settings_set_missing_value_exits_1()
 {
-  let out = run_clm( &[ ".settings.set", "key::foo" ] );
+  let out = run_clv( &[ ".settings.set", "key::foo" ] );
   assert_exit( &out, 1 );
 }
 
@@ -412,7 +412,7 @@ fn tc321_settings_set_missing_value_exits_1()
 fn tc322_settings_set_stores_boolean_true()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::myBool", "value::true" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -429,7 +429,7 @@ fn tc322_settings_set_stores_boolean_true()
 fn tc323_settings_set_stores_boolean_false()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::myBool", "value::false" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -445,7 +445,7 @@ fn tc323_settings_set_stores_boolean_false()
 fn tc324_settings_set_zero_stored_as_number()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::testkey", "value::0" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -462,7 +462,7 @@ fn tc324_settings_set_zero_stored_as_number()
 fn tc325_settings_set_stores_number()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::num", "value::42" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -478,7 +478,7 @@ fn tc325_settings_set_stores_number()
 fn tc326_settings_set_stores_string()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::str", "value::hello" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -524,7 +524,7 @@ fn tc326_settings_set_stores_string()
 fn tc327_settings_set_empty_value_rejected()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::empty", "value::" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -545,7 +545,7 @@ fn tc328_settings_set_creates_file_when_absent()
   let dir = TempDir::new().unwrap();
   let settings_path = dir.path().join( ".claude/settings.json" );
   assert!( !settings_path.exists(), "precondition: settings file must not exist" );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::newkey", "value::newval" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -559,7 +559,7 @@ fn tc329_settings_set_updates_existing_key()
 {
   let dir = TempDir::new().unwrap();
   write_settings( dir.path(), &[ ( "mykey", "old" ) ] );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::mykey", "value::new" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -580,7 +580,7 @@ fn tc330_settings_set_dry_shows_preview_no_write()
 {
   let dir = TempDir::new().unwrap();
   let settings_path = dir.path().join( ".claude/settings.json" );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::k", "value::v", "dry::1" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -594,7 +594,7 @@ fn tc330_settings_set_dry_shows_preview_no_write()
 #[ test ]
 fn tc331_settings_set_no_home_exits_2()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::k", "value::v" ],
     &[ ( "HOME", "" ) ],
   );
@@ -605,7 +605,7 @@ fn tc331_settings_set_no_home_exits_2()
 #[ test ]
 fn tc332_settings_set_empty_key_exits_1()
 {
-  let out = run_clm( &[ ".settings.set", "key::", "value::v" ] );
+  let out = run_clv( &[ ".settings.set", "key::", "value::v" ] );
   assert_exit( &out, 1 );
 }
 
@@ -615,7 +615,7 @@ fn tc333_settings_set_adds_new_key_preserves_existing()
 {
   let dir = TempDir::new().unwrap();
   write_settings( dir.path(), &[ ( "existing", "val" ) ] );
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::added", "value::new" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -637,7 +637,7 @@ fn tc333_settings_set_adds_new_key_preserves_existing()
 fn tc334_settings_set_empty_value_with_dry_still_rejected()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::k", "value::", "dry::1" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -674,7 +674,7 @@ fn tc334_settings_set_empty_value_with_dry_still_rejected()
 #[ test ]
 fn tc354_version_install_leading_zeros_exits_1()
 {
-  let out = run_clm( &[ ".version.install", "version::01.02.03" ] );
+  let out = run_clv( &[ ".version.install", "version::01.02.03" ] );
   assert_exit( &out, 1 );
   let text = stderr( &out );
   assert!( text.contains( "unknown version" ), "must reject leading zeros: {text}" );
@@ -684,7 +684,7 @@ fn tc354_version_install_leading_zeros_exits_1()
 #[ test ]
 fn tc355_version_install_zero_parts_valid_dry()
 {
-  let out = run_clm( &[ ".version.install", "version::0.0.0", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::0.0.0", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "0.0.0" ), "single-zero parts are valid semver: {text}" );
@@ -696,7 +696,7 @@ fn tc355_version_install_zero_parts_valid_dry()
 #[ test ]
 fn tc356_version_install_dry_mentions_preferred()
 {
-  let out = run_clm( &[ ".version.install", "version::stable", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::stable", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -713,7 +713,7 @@ fn tc357_version_install_dry_no_preference_written()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.install", "version::stable", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -761,7 +761,7 @@ fn tc358_version_install_idempotent_stores_preference()
   // that preference keys were written. If versions differ, install is
   // attempted — it may fail (network), but the test still checks that the
   // idempotent path stores preference when it fires.
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.install", "version::stable" ],
     &[ ( "HOME", home ) ],
   );
@@ -789,7 +789,7 @@ fn tc400_guard_no_preference()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.guard" ],
     &[ ( "HOME", home ) ],
   );
@@ -809,7 +809,7 @@ fn tc401_guard_dry_no_preference()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.guard", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -825,7 +825,7 @@ fn tc401_guard_dry_no_preference()
 #[ test ]
 fn tc402_guard_no_home()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.guard" ],
     &[ ( "HOME", "" ) ],
   );
@@ -852,7 +852,7 @@ fn tc403_guard_latest_dry()
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write( claude_dir.join( "settings.json" ), settings_json ).unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.guard", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -879,7 +879,7 @@ fn tc406_guard_dry_force_no_install()
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write( claude_dir.join( "settings.json" ), settings_json ).unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.guard", "dry::1", "force::1" ],
     &[ ( "HOME", home ), ( "PATH", "" ) ],
   );
@@ -933,7 +933,7 @@ fn tc410_guard_reresoves_stale_alias()
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write( claude_dir.join( "settings.json" ), settings_json ).unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.guard", "dry::1" ],
     &[ ( "HOME", home ), ( "PATH", "" ) ],
   );
@@ -958,7 +958,7 @@ fn tc409_guard_interval_zero_oneshot()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.guard", "interval::0" ],
     &[ ( "HOME", home ) ],
   );
@@ -978,7 +978,7 @@ fn tc411_guard_version_override_dry()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.guard", "version::9.9.9", "dry::1" ],
     &[ ( "HOME", home ), ( "PATH", "" ) ],
   );
@@ -994,7 +994,7 @@ fn tc411_guard_version_override_dry()
 #[ test ]
 fn tc412_guard_unknown_param_rejected()
 {
-  let out = run_clm( &[ ".version.guard", "bogus::x" ] );
+  let out = run_clv( &[ ".version.guard", "bogus::x" ] );
   assert_exit( &out, 1 );
 }
 
@@ -1006,7 +1006,7 @@ fn tc413_guard_version_override_dry_wins_over_force()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.guard", "version::9.9.9", "force::1", "dry::1" ],
     &[ ( "HOME", home ), ( "PATH", "" ) ],
   );
@@ -1026,7 +1026,7 @@ fn tc413_guard_version_override_dry_wins_over_force()
 #[ test ]
 fn tc414_guard_version_empty_rejected()
 {
-  let out = run_clm( &[ ".version.guard", "version::" ] );
+  let out = run_clv( &[ ".version.guard", "version::" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
@@ -1114,7 +1114,7 @@ fn tc416_guard_version_latest_override_dry()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   // No settings written — override must not read from settings (FR-21).
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.guard", "version::latest", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -1134,11 +1134,11 @@ fn tc417_guard_v0_shorter_than_v1()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[] );  // no preference → defaults to stable
 
-  let out0 = run_clm_with_env(
+  let out0 = run_clv_with_env(
     &[ ".version.guard", "dry::1", "v::0" ],
     &[ ( "HOME", home ) ],
   );
-  let out1 = run_clm_with_env(
+  let out1 = run_clv_with_env(
     &[ ".version.guard", "dry::1", "v::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -1160,7 +1160,7 @@ fn tc417_guard_v0_shorter_than_v1()
 fn tc_settings_value_bool_true_inferred()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::flag", "value::true" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -1177,7 +1177,7 @@ fn tc_settings_value_bool_true_inferred()
 fn tc_settings_value_bool_false_inferred()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::flag", "value::false" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -1194,7 +1194,7 @@ fn tc_settings_value_bool_false_inferred()
 fn tc_settings_value_integer_inferred()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::count", "value::42" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -1211,7 +1211,7 @@ fn tc_settings_value_integer_inferred()
 fn tc_settings_value_float_inferred()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::rate", "value::3.14" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -1228,7 +1228,7 @@ fn tc_settings_value_float_inferred()
 fn tc_settings_value_string_fallback()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::theme", "value::dark" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -1244,7 +1244,7 @@ fn tc_settings_value_string_fallback()
 fn tc_settings_value_nan_as_string()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::special", "value::NaN" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -1262,7 +1262,7 @@ fn tc_settings_value_nan_as_string()
 fn it04_settings_set_dry2_exits_1()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::k", "value::v", "dry::2" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -1274,7 +1274,7 @@ fn it04_settings_set_dry2_exits_1()
 fn it05_settings_set_bogus_param_exits_1()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::k", "value::v", "bogus::x" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -1286,7 +1286,7 @@ fn it05_settings_set_bogus_param_exits_1()
 fn it06_settings_set_key_without_value_exits_1()
 {
   let dir = TempDir::new().unwrap();
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".settings.set", "key::foo" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );

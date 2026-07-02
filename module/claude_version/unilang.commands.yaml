@@ -583,7 +583,7 @@
 
     - name: "scope"
       kind: "String"
-      description: "Scope to target for set/unset (global, local, project, env)"
+      description: "Scope to target for set/unset: user (default) or project"
       hint: "Config scope"
       optional: true
       validation_rules: []
@@ -623,8 +623,8 @@
   examples:
     - ".config"
     - ".config key::theme"
-    - ".config key::theme value::dark scope::local"
-    - ".config key::theme unset::1 scope::local"
+    - ".config key::theme value::dark scope::user"
+    - ".config key::theme unset::1 scope::project"
     - ".config format::json"
   auto_help_enabled: true
 

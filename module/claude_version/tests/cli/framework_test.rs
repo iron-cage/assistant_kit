@@ -14,7 +14,7 @@
 //! | TC-095 | All 12 visible commands appear in help output | 0 |
 //! | IT-9 | `.help` contains all 4 section headers | 0 |
 
-use crate::subprocess_helpers::{ run_clm, stdout, assert_exit };
+use crate::subprocess_helpers::{ run_clv, stdout, assert_exit };
 
 const VISIBLE_COMMANDS : &[ &str ] = &[
   ".status",
@@ -35,7 +35,7 @@ const VISIBLE_COMMANDS : &[ &str ] = &[
 #[ test ]
 fn tc079_help_command_exits_0()
 {
-  let out = run_clm( &[ ".help" ] );
+  let out = run_clv( &[ ".help" ] );
   assert_exit( &out, 0 );
 }
 
@@ -43,7 +43,7 @@ fn tc079_help_command_exits_0()
 #[ test ]
 fn tc080_help_lists_12_commands()
 {
-  let out = run_clm( &[ ".help" ] );
+  let out = run_clv( &[ ".help" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
@@ -57,7 +57,7 @@ fn tc080_help_lists_12_commands()
 #[ test ]
 fn tc082_help_includes_available_commands_section()
 {
-  let out = run_clm( &[ ".help" ] );
+  let out = run_clv( &[ ".help" ] );
   let text = stdout( &out );
   assert!( text.contains( "Version Management" ), "help must include section headers: {text}" );
 }
@@ -66,7 +66,7 @@ fn tc082_help_includes_available_commands_section()
 #[ test ]
 fn tc091_unknown_command_exits_1()
 {
-  let out = run_clm( &[ ".nonexistent" ] );
+  let out = run_clv( &[ ".nonexistent" ] );
   assert_exit( &out, 1 );
 }
 
@@ -74,7 +74,7 @@ fn tc091_unknown_command_exits_1()
 #[ test ]
 fn tc092_another_unknown_command_exits_1()
 {
-  let out = run_clm( &[ ".zzz.nope" ] );
+  let out = run_clv( &[ ".zzz.nope" ] );
   assert_exit( &out, 1 );
 }
 
@@ -82,7 +82,7 @@ fn tc092_another_unknown_command_exits_1()
 #[ test ]
 fn tc093_empty_args_exits_0()
 {
-  let out = run_clm( &[] );
+  let out = run_clv( &[] );
   assert_exit( &out, 0 );
   assert!( stdout( &out ).contains( "Version Management" ), "empty args must show help" );
 }
@@ -91,7 +91,7 @@ fn tc093_empty_args_exits_0()
 #[ test ]
 fn tc094_help_exits_0_and_shows_commands()
 {
-  let out = run_clm( &[ ".help" ] );
+  let out = run_clv( &[ ".help" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   for cmd in &[ ".status", ".processes", ".settings.get" ]
@@ -104,7 +104,7 @@ fn tc094_help_exits_0_and_shows_commands()
 #[ test ]
 fn tc095_all_visible_commands_in_help()
 {
-  let out = run_clm( &[ ".help" ] );
+  let out = run_clv( &[ ".help" ] );
   let text = stdout( &out );
   for cmd in VISIBLE_COMMANDS
   {
@@ -116,7 +116,7 @@ fn tc095_all_visible_commands_in_help()
 #[ test ]
 fn it9_help_contains_grouped_section_headers()
 {
-  let out = run_clm( &[ ".help" ] );
+  let out = run_clv( &[ ".help" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   for header in &[ "Version Management", "Settings & Config", "Process Lifecycle", "Status" ]

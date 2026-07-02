@@ -27,7 +27,7 @@
 //! | 261 | `format::json dry::1` on `.version.install` → accepted, JSON output | P | 0 |
 //! | 262 | `v::0` on `.version.guard` → accepted, exit 0 | P | 0 |
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, stdout };
 
 // ─── F1: dry + force interaction ────────────────────────────────────────────
 
@@ -35,7 +35,7 @@ use crate::subprocess_helpers::{ assert_exit, run_clm, stdout };
 #[ test ]
 fn tc250_version_install_dry_force_dry_wins()
 {
-  let out = run_clm( &[ ".version.install", "dry::1", "force::1" ] );
+  let out = run_clv( &[ ".version.install", "dry::1", "force::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "[dry-run]" ), "dry must win over force: {text}" );
@@ -45,7 +45,7 @@ fn tc250_version_install_dry_force_dry_wins()
 #[ test ]
 fn tc251_processes_kill_dry_force_dry_wins()
 {
-  let out = run_clm( &[ ".processes.kill", "dry::1", "force::1" ] );
+  let out = run_clv( &[ ".processes.kill", "dry::1", "force::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -59,7 +59,7 @@ fn tc251_processes_kill_dry_force_dry_wins()
 fn tc252_settings_set_dry_no_write()
 {
   let dir = tempfile::TempDir::new().unwrap();
-  let out = crate::subprocess_helpers::run_clm_with_env(
+  let out = crate::subprocess_helpers::run_clv_with_env(
     &[ ".settings.set", "key::k", "value::v", "dry::1" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );
@@ -75,8 +75,8 @@ fn tc252_settings_set_dry_no_write()
 #[ test ]
 fn tc255_status_v0_fewer_lines_than_v1()
 {
-  let out0 = run_clm( &[ ".status", "v::0" ] );
-  let out1 = run_clm( &[ ".status", "v::1" ] );
+  let out0 = run_clv( &[ ".status", "v::0" ] );
+  let out1 = run_clv( &[ ".status", "v::1" ] );
   assert_exit( &out0, 0 );
   assert_exit( &out1, 0 );
   let lines0 = stdout( &out0 ).lines().count();
@@ -91,8 +91,8 @@ fn tc255_status_v0_fewer_lines_than_v1()
 #[ test ]
 fn tc257_v_param_identical()
 {
-  let out_a = run_clm( &[ ".version.list", "v::0" ] );
-  let out_b = run_clm( &[ ".version.list", "v::0" ] );
+  let out_a = run_clv( &[ ".version.list", "v::0" ] );
+  let out_b = run_clv( &[ ".version.list", "v::0" ] );
   assert_exit( &out_a, 0 );
   assert_exit( &out_b, 0 );
   assert_eq!(
@@ -107,7 +107,7 @@ fn tc257_v_param_identical()
 #[ test ]
 fn tc258_status_format_json_is_valid_json()
 {
-  let out = run_clm( &[ ".status", "format::json" ] );
+  let out = run_clv( &[ ".status", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.trim_start().starts_with( '{' ), "must start with '{{': {text}" );
@@ -118,7 +118,7 @@ fn tc258_status_format_json_is_valid_json()
 #[ test ]
 fn tc259_status_format_json_v0_still_complete()
 {
-  let out = run_clm( &[ ".status", "format::json", "v::0" ] );
+  let out = run_clv( &[ ".status", "format::json", "v::0" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "\"version\"" ), "JSON must contain version key: {text}" );
@@ -130,7 +130,7 @@ fn tc259_status_format_json_v0_still_complete()
 #[ test ]
 fn tc260_format_uppercase_rejected()
 {
-  let out = run_clm( &[ ".version.list", "format::JSON" ] );
+  let out = run_clv( &[ ".version.list", "format::JSON" ] );
   assert_exit( &out, 1 );
 }
 
@@ -138,7 +138,7 @@ fn tc260_format_uppercase_rejected()
 #[ test ]
 fn tc261_version_install_format_json_accepted()
 {
-  let out = run_clm( &[ ".version.install", "format::json", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "format::json", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -152,7 +152,7 @@ fn tc261_version_install_format_json_accepted()
 fn tc262_version_guard_v0_accepted()
 {
   let dir  = tempfile::TempDir::new().unwrap();
-  let out = crate::subprocess_helpers::run_clm_with_env(
+  let out = crate::subprocess_helpers::run_clv_with_env(
     &[ ".version.guard", "dry::1", "v::0" ],
     &[ ( "HOME", dir.path().to_str().unwrap() ) ],
   );

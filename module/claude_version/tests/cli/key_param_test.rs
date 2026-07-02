@@ -6,7 +6,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stderr, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stderr, stdout, write_settings };
 
 /// EC-1: `key::existing` on `.settings.get` → returns value, exit 0
 #[ test ]
@@ -15,7 +15,7 @@ fn key_ec1_existing_key_returns_value()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "myKey", "myVal" ) ] );
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.get", "key::myKey" ],
     &[ ( "HOME", home ) ],
   );
@@ -31,7 +31,7 @@ fn key_ec2_nonexistent_key_exits_2()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "otherKey", "val" ) ] );
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.get", "key::nosuchkey" ],
     &[ ( "HOME", home ) ],
   );
@@ -42,7 +42,7 @@ fn key_ec2_nonexistent_key_exits_2()
 #[ test ]
 fn key_ec5_empty_key_on_get_exits_1()
 {
-  let out = run_clm( &[ ".settings.get", "key::" ] );
+  let out = run_clv( &[ ".settings.get", "key::" ] );
   assert_exit( &out, 1 );
 }
 
@@ -50,7 +50,7 @@ fn key_ec5_empty_key_on_get_exits_1()
 #[ test ]
 fn key_ec6_command_scope_rejects_on_status()
 {
-  let out = run_clm( &[ ".status", "key::foo" ] );
+  let out = run_clv( &[ ".status", "key::foo" ] );
   assert_exit( &out, 1 );
 }
 
@@ -60,7 +60,7 @@ fn key_ec7_key_with_spaces_behavior()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.set", "key::a b c", "value::x" ],
     &[ ( "HOME", home ) ],
   );
@@ -76,12 +76,12 @@ fn key_ec8_dot_in_key_round_trips()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let set_out = run_clm_with_env(
+  let set_out = run_clv_with_env(
     &[ ".settings.set", "key::foo.bar", "value::baz" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &set_out, 0 );
-  let get_out = run_clm_with_env(
+  let get_out = run_clv_with_env(
     &[ ".settings.get", "key::foo.bar" ],
     &[ ( "HOME", home ) ],
   );
@@ -96,7 +96,7 @@ fn key_ec9_space_in_key_round_trips()
 {
   let dir     = TempDir::new().unwrap();
   let home    = dir.path().to_str().unwrap();
-  let set_out = run_clm_with_env(
+  let set_out = run_clv_with_env(
     &[ ".settings.set", "key::foo bar", "value::baz" ],
     &[ ( "HOME", home ) ],
   );
@@ -104,7 +104,7 @@ fn key_ec9_space_in_key_round_trips()
   // Spec allows exit 0 or exit 1 — if exit 0, verify round-trip
   if code == 0
   {
-    let get_out = run_clm_with_env(
+    let get_out = run_clv_with_env(
       &[ ".settings.get", "key::foo bar" ],
       &[ ( "HOME", home ) ],
     );
@@ -122,7 +122,7 @@ fn key_ec9_space_in_key_round_trips()
 #[ test ]
 fn key_ec10_missing_key_error_contains_key_token()
 {
-  let out = run_clm( &[ ".settings.get" ] );
+  let out = run_clv( &[ ".settings.get" ] );
   assert_exit( &out, 1 );
   let combined = format!( "{}{}", stdout( &out ), stderr( &out ) );
   assert!( combined.contains( "key::" ), "error must mention 'key::': {combined}" );
@@ -132,7 +132,7 @@ fn key_ec10_missing_key_error_contains_key_token()
 #[ test ]
 fn key_ec11_missing_key_on_set_error_contains_key_token()
 {
-  let out = run_clm( &[ ".settings.set", "value::dark" ] );
+  let out = run_clv( &[ ".settings.set", "value::dark" ] );
   assert_exit( &out, 1 );
   let combined = format!( "{}{}", stdout( &out ), stderr( &out ) );
   assert!( combined.contains( "key::" ), "error must mention 'key::': {combined}" );

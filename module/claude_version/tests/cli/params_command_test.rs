@@ -24,7 +24,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm_with_env, stderr, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv_with_env, stderr, stdout };
 
 // ─── IT-1: show-all ≥35 entries ──────────────────────────────────────────────
 
@@ -35,7 +35,7 @@ fn it01_params_show_all_min_entries()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -60,7 +60,7 @@ fn it02_params_single_model_full_detail()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::model" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -80,7 +80,7 @@ fn it03_params_kind_config_filters()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "kind::config" ],
     &[ ( "HOME", home ) ],
   );
@@ -99,7 +99,7 @@ fn it04_params_kind_env_filters()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "kind::env" ],
     &[ ( "HOME", home ) ],
   );
@@ -118,7 +118,7 @@ fn it05_params_env_override_visible()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::model" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
   );
@@ -137,7 +137,7 @@ fn it06_params_env_only_param_unset()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::bash_timeout" ],
     &[ ( "HOME", home ), ( "CLAUDE_CODE_BASH_TIMEOUT", "" ) ],
   );
@@ -156,7 +156,7 @@ fn it07_params_json_output_structure()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "format::json" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -177,7 +177,7 @@ fn it08_params_cli_only_annotation()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::print" ],
     &[ ( "HOME", home ) ],
   );
@@ -199,7 +199,7 @@ fn it09_params_compact_v0_output()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "v::0" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -243,7 +243,7 @@ fn it11_params_show_all_alphabetical()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -265,7 +265,7 @@ fn it11_params_show_all_alphabetical()
 #[ test ]
 fn it12_params_unknown_key_exits_2()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "key::NONEXISTENT_KEY" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -280,7 +280,7 @@ fn it12_params_unknown_key_exits_2()
 #[ test ]
 fn it13_params_invalid_kind_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "kind::badvalue" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -298,7 +298,7 @@ fn it13_params_invalid_kind_exits_1()
 #[ test ]
 fn it14_params_invalid_format_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".params", "format::xml" ],
     &[ ( "HOME", "/tmp" ) ],
   );

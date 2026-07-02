@@ -24,7 +24,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm_with_env, stderr, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv_with_env, stderr, stdout };
 
 // ─── EC-1 (cli/param/13_kind.md): kind::config shows config-key params only ──
 
@@ -34,7 +34,7 @@ fn kind_ec1_config_shows_config_params()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params", "kind::config" ],
     &[ ( "HOME", home ) ],
   );
@@ -53,7 +53,7 @@ fn kind_ec2_env_shows_env_params()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params", "kind::env" ],
     &[ ( "HOME", home ) ],
   );
@@ -72,7 +72,7 @@ fn kind_ec3_absent_shows_all_params()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params" ],
     &[ ( "HOME", home ) ],
   );
@@ -95,7 +95,7 @@ fn kind_ec4_invalid_exits_1()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params", "kind::invalid" ],
     &[ ( "HOME", home ) ],
   );
@@ -115,7 +115,7 @@ fn kind_ec5_empty_exits_1()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params", "kind::" ],
     &[ ( "HOME", home ) ],
   );
@@ -132,7 +132,7 @@ fn kind_ec6_uppercase_exits_1()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params", "kind::CONFIG" ],
     &[ ( "HOME", home ) ],
   );
@@ -149,7 +149,7 @@ fn kind_ec7_ignored_when_key_present()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params", "key::model", "kind::env" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -168,7 +168,7 @@ fn kind_tc1_config_shows_config_params_only()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params", "kind::config" ],
     &[ ( "HOME", home ) ],
   );
@@ -187,7 +187,7 @@ fn kind_tc2_env_shows_env_params_only()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params", "kind::env" ],
     &[ ( "HOME", home ) ],
   );
@@ -206,7 +206,7 @@ fn kind_tc3_absent_shows_all_params()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params" ],
     &[ ( "HOME", home ) ],
   );
@@ -224,7 +224,7 @@ fn kind_tc4_mixed_case_exits_1()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params", "kind::Config" ],
     &[ ( "HOME", home ) ],
   );
@@ -241,7 +241,7 @@ fn kind_tc5_unknown_variant_exits_1()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params", "kind::all" ],
     &[ ( "HOME", home ) ],
   );
@@ -261,7 +261,7 @@ fn kind_tc6_empty_exits_1()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params", "kind::" ],
     &[ ( "HOME", home ) ],
   );

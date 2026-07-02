@@ -47,7 +47,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm_with_env, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv_with_env, stdout, write_settings };
 
 // ─── IT-1: show-all with source labels ───────────────────────────────────────
 
@@ -59,7 +59,7 @@ fn it01_config_show_all_source_labels()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -81,7 +81,7 @@ fn it02_config_get_shows_source_annotation()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme" ],
     &[ ( "HOME", home ) ],
   );
@@ -100,7 +100,7 @@ fn it03_config_set_user_scope()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark" ],
     &[ ( "HOME", home ) ],
   );
@@ -153,7 +153,7 @@ fn it05_config_unset_removes_key()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ), ( "autoUpdates", "true" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "unset::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -175,7 +175,7 @@ fn it06_config_show_all_json_format()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "format::json" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -195,7 +195,7 @@ fn it07_config_get_env_override()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::model" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
   );
@@ -214,7 +214,7 @@ fn it08_config_arbitrary_key_accepted()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::unknownArbitraryKey", "value::myval" ],
     &[ ( "HOME", home ) ],
   );
@@ -264,7 +264,7 @@ fn it10_config_set_dry_run_no_write()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "light" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -286,7 +286,7 @@ fn it10_config_set_dry_run_no_write()
 #[ test ]
 fn it11_config_value_without_key_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "value::somevalue" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -299,7 +299,7 @@ fn it11_config_value_without_key_exits_1()
 #[ test ]
 fn it12_config_unset_without_key_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "unset::1" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -312,7 +312,7 @@ fn it12_config_unset_without_key_exits_1()
 #[ test ]
 fn it13_config_value_and_unset_together_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::k", "value::v", "unset::1" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -325,7 +325,7 @@ fn it13_config_value_and_unset_together_exits_1()
 #[ test ]
 fn it14_config_invalid_scope_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "scope::global" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -338,7 +338,7 @@ fn it14_config_invalid_scope_exits_1()
 #[ test ]
 fn it15_config_invalid_format_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "format::xml" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -351,7 +351,7 @@ fn it15_config_invalid_format_exits_1()
 #[ test ]
 fn it16_config_home_unset_exits_2()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::model" ],
     &[ ( "HOME", "" ) ],
   );
@@ -364,7 +364,7 @@ fn it16_config_home_unset_exits_2()
 #[ test ]
 fn it17_config_dry_out_of_range_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "dry::2" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -419,7 +419,7 @@ fn ft2_006_config_get_shows_source()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "light" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme" ],
     &[ ( "HOME", home ) ],
   );
@@ -438,7 +438,7 @@ fn ft3_006_config_set_user_scope()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::autoUpdates", "value::false" ],
     &[ ( "HOME", home ) ],
   );
@@ -494,7 +494,7 @@ fn ft5_006_config_unset_removes_key()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ), ( "model", "claude-sonnet-5" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "unset::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -516,7 +516,7 @@ fn ft6_006_config_show_all_json()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "format::json" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -540,7 +540,7 @@ fn ft7_006_config_env_overrides_user()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "model", "claude-sonnet-5" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::model" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "claude-opus-4-8" ) ],
   );
@@ -559,7 +559,7 @@ fn ft8_006_config_get_absent_key()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::hasCompletedOnboarding" ],
     &[ ( "HOME", home ) ],
   );
@@ -579,7 +579,7 @@ fn ft9_006_config_set_dry_run()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "light" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -598,7 +598,7 @@ fn ft9_006_config_set_dry_run()
 #[ test ]
 fn ft10_006_config_home_unset_exits_2()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme" ],
     &[ ( "HOME", "" ) ],
   );
@@ -614,7 +614,7 @@ fn ft11_006_config_arbitrary_key_accepted()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::myCustomKey", "value::customValue" ],
     &[ ( "HOME", home ) ],
   );
@@ -667,7 +667,7 @@ fn tc01_006_scope_user_accepted()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "scope::user" ],
     &[ ( "HOME", home ) ],
   );
@@ -714,7 +714,7 @@ fn tc03_006_scope_absent_defaults_to_user()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark" ],
     &[ ( "HOME", home ) ],
   );
@@ -731,7 +731,7 @@ fn tc03_006_scope_absent_defaults_to_user()
 #[ test ]
 fn tc04_006_scope_global_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "scope::global" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -744,7 +744,7 @@ fn tc04_006_scope_global_exits_1()
 #[ test ]
 fn tc05_006_scope_wrong_case_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "scope::USER" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -757,7 +757,7 @@ fn tc05_006_scope_wrong_case_exits_1()
 #[ test ]
 fn tc06_006_scope_empty_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "scope::" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -802,7 +802,7 @@ fn tc02_007_config_key_arbitrary_absent()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::myCustomSetting" ],
     &[ ( "HOME", home ) ],
   );
@@ -819,7 +819,7 @@ fn tc03_007_config_key_catalog_user_config()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme" ],
     &[ ( "HOME", home ) ],
   );
@@ -839,7 +839,7 @@ fn tc04_007_config_key_dot_literal()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "a.b.c", "test" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::a.b.c" ],
     &[ ( "HOME", home ) ],
   );
@@ -858,7 +858,7 @@ fn tc05_007_config_key_absent_show_all()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );
@@ -873,7 +873,7 @@ fn tc05_007_config_key_absent_show_all()
 #[ test ]
 fn tc06_007_config_key_empty_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::" ],
     &[ ( "HOME", "/tmp" ) ],
   );

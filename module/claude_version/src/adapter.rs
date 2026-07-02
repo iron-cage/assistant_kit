@@ -124,7 +124,7 @@ fn validate_non_neg_int( key : &str, raw_val : &str ) -> Result< String >
 /// - First arg starts with `"-"` but is not `"--help"` or `"-h"`.
 /// - Any subsequent arg missing `"::"` separator.
 /// - `v::` / `verbosity::` value not in range `[0, 2]`.
-/// - Bool param value other than `0`, `1`, `true`, `false`.
+/// - `dry::` / `force::` value other than `0` or `1`; `true` and `false` are intentionally rejected.
 /// - `interval::` / `count::` value is not a non-negative integer.
 #[ inline ]
 pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, bool ) >
