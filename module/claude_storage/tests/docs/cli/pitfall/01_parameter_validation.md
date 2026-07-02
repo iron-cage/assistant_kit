@@ -22,7 +22,7 @@ Contract tests verifying that every constrained parameter type performs explicit
 
 **Total:** 4 pitfall contract cases
 
-**Implementation target:** `tests/cli_param_format_test.rs`
+**Implementation target:** `tests/cli_param_validation_test.rs`
 
 ## Test Cases
 
@@ -36,11 +36,13 @@ Contract tests verifying that every constrained parameter type performs explicit
 
 ---
 
-### PF-2: Integer param rejects non-integer and negative input
+### PF-2: Integer param rejects non-integer and out-of-range input
 
-- **Given:** a command accepting an integer parameter (e.g., `min_entries::`, `limit::`) invoked with value `"abc"` or `"-5"`
+- **Given:** a command accepting an integer parameter (e.g., `min_entries::`, `limit::`) invoked with value `"abc"` (non-integer) or `"-5"` (negative, always invalid)
 - **When:** the command routine processes the parameter
 - **Then:** command returns an argument error; no partial result is produced
+
+**Implementation note:** Also test values above the parameter's documented upper bound when applicable — source doc requires rejection of "values outside range," not only negative values.
 
 ---
 

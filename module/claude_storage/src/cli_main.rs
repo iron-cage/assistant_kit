@@ -7,6 +7,7 @@
 use std::{ env, io::{ self, Write }, process };
 use crate::cli;
 use unilang::prelude::*;
+use unilang::phf;
 
 // Include compile-time generated static commands (produced by build.rs).
 // Lint suppression is scoped to the generated module — file-wide attrs are forbidden
