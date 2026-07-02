@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 # Universal runbox test runner.
 # Usage: runbox-run <config.yml> [command]
-#   command: .build | .run | .test | .test.offline | .lint | .list | .shell | .help  (default: help)
+#   command: .build | .run | .test | .test1 | .test.offline | .lint | .list | .shell | .help  (default: help)
 set -euo pipefail
 
 CONFIG="$1"
 COMMAND="${2:-.}"
 FORCE_REBUILD=0
+FILTER=""
 for _arg in "${@:3}"
 do
   case "$_arg" in
     --rebuild|-R) FORCE_REBUILD=1 ;;
+    *)            [[ -z "$FILTER" ]] && FILTER="$_arg" ;;
   esac
 done
 
@@ -367,6 +369,55 @@ cmd_test_offline()
     "$IMAGE"
 }
 
+cmd_test1()
+{
+  if [[ -z "$FILTER" ]]; then
+    echo "error: .test1 requires a nextest filter expression" >&2
+    echo "Usage: ./runbox/runbox .test1 '<filter>'" >&2
+    exit 1
+  fi
+  local filter_script="verb/test.d/l1_filter"
+  if [[ ! -f "$WORKSPACE_ROOT/$filter_script" ]]; then
+    echo "error: filter script '$filter_script' not found at $WORKSPACE_ROOT/$filter_script" >&2
+    exit 1
+  fi
+  local bin_args=() mount_args=()
+  _plugin_test_args
+  _ensure_image
+  _ensure_build_cache
+  _ensure_plugin_targets
+  echo "▶ $IMAGE ($CONTAINER_CMD) — filter: $FILTER"
+  local userns_arg=()
+  [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
+  # Fix(BUG-001): Pre-create plugin_mount target directories (same as cmd_test).
+  local i
+  for (( i=0; i<${#mount_args[@]}; i++ ))
+  do
+    if [[ "${mount_args[$i]}" == "-v" ]] && [[ $((i+1)) -lt ${#mount_args[@]} ]]
+    then
+      local container_path
+      container_path="$( cut -d: -f2 <<< "${mount_args[$((i+1))]}" )"
+      if [[ "$container_path" == "$WORKSPACE_DIR/"* ]]
+      then
+        mkdir -p "$WORKSPACE_ROOT/${container_path#"$WORKSPACE_DIR/"}"
+      fi
+    fi
+  done
+  # Fix(BUG-003): Pre-generate Cargo.lock on host (same as cmd_test).
+  cargo metadata --manifest-path "$WORKSPACE_ROOT/Cargo.toml" \
+    --format-version 1 > /dev/null
+  "$CONTAINER_CMD" run --rm \
+    "${userns_arg[@]}" \
+    --user "$(id -u):$(id -g)" \
+    -e NEXTEST_FILTER="$FILTER" \
+    "${mount_args[@]}" \
+    -v "$WORKSPACE_ROOT:$WORKSPACE_DIR:ro" \
+    -v "${IMAGE}_${CACHE_DIR}:$WORKSPACE_DIR/$CACHE_DIR" \
+    "${bin_args[@]}" \
+    "$IMAGE" \
+    "$WORKSPACE_DIR/$filter_script"
+}
+
 cmd_lint()
 {
   if [[ -z "$LINT_SCRIPT" ]]; then
@@ -472,6 +523,7 @@ cmd_help()
   echo ""
   echo "Testing:"
   echo "  .test           Run all tests${plugin_hint}"
+  echo "  .test1 <filter> Run a single targeted test matching <filter> (no clippy/doc overhead)"
   echo "  .test.offline   Run offline tests only (no external data needed)"
   echo "  .lint           Run linter (requires lint_script in runbox.yml)"
   echo "  .list           List all test names without running"
@@ -490,6 +542,7 @@ case "$COMMAND" in
   .build)        cmd_build ;;
   .run)          cmd_run ;;
   .test)         cmd_test ;;
+  .test1)        cmd_test1 ;;
   .test.offline) cmd_test_offline ;;
   .lint)         cmd_lint ;;
   .list)         cmd_list ;;

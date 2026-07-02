@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# l1_filter — targeted test execution inside the container; runs a single nextest filter.
+# Companion to l1 — omits clippy and doc tests; invoked by verb/test1 via runbox-run .test1.
+# Requires NEXTEST_FILTER env var (set by runbox-run cmd_test1 via -e NEXTEST_FILTER).
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/../.."
+if [[ -z "${NEXTEST_FILTER:-}" ]]; then
+  echo "error: NEXTEST_FILTER not set — invoke via verb/test1 <filter>" >&2
+  exit 1
+fi
+# Same env as l1: offline registry, fixed target dir, plain output.
+export CARGO_NET_OFFLINE=true
+export CARGO_TARGET_DIR=/workspace/target
+export NO_COLOR=1
+exec RUSTFLAGS="-D warnings" cargo nextest run --all-features -E "$NEXTEST_FILTER"
