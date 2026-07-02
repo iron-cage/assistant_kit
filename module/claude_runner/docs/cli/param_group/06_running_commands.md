@@ -98,8 +98,8 @@ These parameters apply identically across all 4 running commands:
 |---|---------|------------|-------|
 | 1 | [`run`](../command/01_run.md) | Full — all running params apply | Default command |
 | 5 | [`ask`](../command/05_ask.md) | Full — identical to run | Pure alias for run |
-| 2 | [`isolated`](../command/02_isolated.md) | Subset — no retries, no session control | Credential-isolated execution |
-| 3 | [`refresh`](../command/03_refresh.md) | Minimal — creds + timeout + trace/dry-run | OAuth token refresh only |
+| 2 | [`isolated`](../command/03_isolated.md) | Subset — no retries, no session control | Credential-isolated execution |
+| 3 | [`refresh`](../command/04_refresh.md) | Minimal — creds + timeout + trace/dry-run | OAuth token refresh only |
 
 ### Cross-References
 

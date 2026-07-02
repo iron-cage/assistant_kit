@@ -43,7 +43,7 @@ the captured stdout against literal values after execution.
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | — |
-| 2 | [`isolated`](../command/02_isolated.md) | — | Validates stdout after exit; `retry` strategy unsupported → exit 1 with error (TSK-331) |
+| 2 | [`isolated`](../command/03_isolated.md) | — | Validates stdout after exit; `retry` strategy unsupported → exit 1 with error (TSK-331) |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
 
 ### See Also

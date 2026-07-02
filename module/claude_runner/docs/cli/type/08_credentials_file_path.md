@@ -25,8 +25,8 @@ clr isolated --creds /tmp/test_creds.json --timeout 10 "hi"
 
 | # | Command | Via Parameter |
 |---|---------|---------------|
-| 2 | [`isolated`](../command/02_isolated.md) | `--creds` |
-| 3 | [`refresh`](../command/03_refresh.md) | `--creds` |
+| 2 | [`isolated`](../command/03_isolated.md) | `--creds` |
+| 3 | [`refresh`](../command/04_refresh.md) | `--creds` |
 
 ### Referenced Parameters
 

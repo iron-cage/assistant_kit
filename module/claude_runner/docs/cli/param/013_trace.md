@@ -6,7 +6,7 @@ subprocess is launched. Mirrors shell `set -x` semantics.
 
 - **Type:** bool (standalone flag)
 - **Default:** false
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/03_isolated.md), [`refresh`](../command/04_refresh.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md) (for `run` and `ask`), [Credential Operations](../param_group/04_credential_operations.md) (for `isolated` and `refresh`)
 - **JSON Key:** `"trace"`
 
@@ -77,8 +77,8 @@ Combine with `--dry-run` if you want to preview without executing (`run` and `as
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | false | Emits env vars + claude command |
-| 2 | [`isolated`](../command/02_isolated.md) | false | Emits creds path, temp HOME, timeout |
-| 3 | [`refresh`](../command/03_refresh.md) | false | Emits creds path, fixed args |
+| 2 | [`isolated`](../command/03_isolated.md) | false | Emits creds path, temp HOME, timeout |
+| 3 | [`refresh`](../command/04_refresh.md) | false | Emits creds path, fixed args |
 | 5 | [`ask`](../command/05_ask.md) | false | Emits env vars + claude command |
 
 ### Referenced User Stories

@@ -18,7 +18,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 4 | [`help`](../command/04_help.md) | Prints usage information and exits |
+| 4 | [`help`](../command/02_help.md) | Prints usage information and exits |
 
 ### Referenced Parameter Groups
 

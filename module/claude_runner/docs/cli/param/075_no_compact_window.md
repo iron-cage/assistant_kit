@@ -8,7 +8,7 @@ undesirable for a specific invocation.
 
 - **Type:** bool
 - **Default:** false
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/03_isolated.md), [`refresh`](../command/04_refresh.md)
 - **Group:** [Running Commands](../param_group/06_running_commands.md)
 - **Env:** `CLR_NO_COMPACT_WINDOW` (bool: `"1"` or `"true"`; applied only when `--no-compact-window` absent from CLI)
 
@@ -45,8 +45,8 @@ resolved value (or absence) accurately.
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | false | — |
-| 2 | [`isolated`](../command/02_isolated.md) | false | — |
-| 3 | [`refresh`](../command/03_refresh.md) | false | — |
+| 2 | [`isolated`](../command/03_isolated.md) | false | — |
+| 3 | [`refresh`](../command/04_refresh.md) | false | — |
 | 5 | [`ask`](../command/05_ask.md) | false | — |
 
 ### Referenced User Stories

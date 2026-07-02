@@ -34,6 +34,7 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 | `tests/` | CLI flag parsing, dry-run, quiet gate, execution mode tests |
 | `docs/` | CLI reference and design documentation |
 | `changelog.md` | Notable changes by version |
+| `rulebook.md` | Local code-style exception: mechanical dispatch function length |
 | `verb/` | Shell scripts for each `do` protocol verb. |
 | `runbox/` | Container environment scripts for test execution |
 

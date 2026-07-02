@@ -9,7 +9,7 @@ file is updated in-place with the new token before `clr` exits.
 
 - **Type:** [`CredentialsFilePath`](../type/08_credentials_file_path.md)
 - **Default:** `~/.claude/.credentials.json`
-- **Command:** [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
+- **Command:** [`isolated`](../command/03_isolated.md), [`refresh`](../command/04_refresh.md)
 - **JSON Key:** `"creds"`
 
 ```sh
@@ -46,8 +46,8 @@ are NOT resolved against the temp HOME created for the subprocess.
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 2 | [`isolated`](../command/02_isolated.md) | `~/.claude/.credentials.json` | Optional; defaults to current account credentials |
-| 3 | [`refresh`](../command/03_refresh.md) | `~/.claude/.credentials.json` | Optional; defaults to current account credentials |
+| 2 | [`isolated`](../command/03_isolated.md) | `~/.claude/.credentials.json` | Optional; defaults to current account credentials |
+| 3 | [`refresh`](../command/04_refresh.md) | `~/.claude/.credentials.json` | Optional; defaults to current account credentials |
 
 ### Referenced User Stories
 

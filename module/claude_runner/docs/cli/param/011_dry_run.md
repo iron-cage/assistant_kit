@@ -33,8 +33,8 @@ clr --dry-run "test" --model sonnet --max-tokens 50000
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | false | — |
-| 2 | [`isolated`](../command/02_isolated.md) | false | Prints temp-HOME env+command to stderr (same `emit_credential_trace` path as `--trace`); no temp HOME created, no subprocess spawned |
-| 3 | [`refresh`](../command/03_refresh.md) | false | Same as isolated: stderr env+command output via `emit_credential_trace`; no subprocess spawned |
+| 2 | [`isolated`](../command/03_isolated.md) | false | Prints temp-HOME env+command to stderr (same `emit_credential_trace` path as `--trace`); no temp HOME created, no subprocess spawned |
+| 3 | [`refresh`](../command/04_refresh.md) | false | Same as isolated: stderr env+command output via `emit_credential_trace`; no subprocess spawned |
 | 5 | [`ask`](../command/05_ask.md) | false | — |
 
 ### Referenced User Stories

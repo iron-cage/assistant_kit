@@ -77,8 +77,8 @@ If any default is removed or reverted:
 |------|--------------|
 | [`001_default_flags.md`](001_default_flags.md) | Default flags for `run`/`ask` — counterpart for the main execution paths |
 | [`../cli/command_defaults.md`](../cli/command_defaults.md) | Design analysis: full parameter matrix, issues I1–I7, changes S1–S7 |
-| [`../cli/command/02_isolated.md`](../cli/command/02_isolated.md) | Command reference for `isolated` |
-| [`../cli/command/03_refresh.md`](../cli/command/03_refresh.md) | Command reference for `refresh` |
+| [`../cli/command/03_isolated.md`](../cli/command/03_isolated.md) | Command reference for `isolated` |
+| [`../cli/command/04_refresh.md`](../cli/command/04_refresh.md) | Command reference for `refresh` |
 
 ### Sources
 

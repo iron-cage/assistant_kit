@@ -53,7 +53,7 @@ Term accuracy and completeness checks for the CLI dictionary at
 - **When:** `clr help`
 - **Then:** exit 0; stdout contains usage information; output identical to `clr --help` and `clr -h`
 - **Exit:** 0
-- **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [command/04_help.md](../../../docs/cli/command/04_help.md)
+- **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [command/02_help.md](../../../docs/cli/command/02_help.md)
 
 ---
 

@@ -215,6 +215,11 @@ pub fn run_isolated
 ///
 /// Use this when the caller needs to opt out of the 200K cap, e.g. for `--no-compact-window`.
 ///
+/// # Errors
+///
+/// Returns `Err(RunnerError)` when the subprocess cannot be spawned, times out before
+/// credential data is written, or the isolated HOME directory cannot be created.
+///
 /// # Warning
 ///
 /// Do NOT call this directly for credential refresh. See [`run_isolated`] warning.

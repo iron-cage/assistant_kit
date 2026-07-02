@@ -1,6 +1,6 @@
 # Test: `help`
 
-Integration test planning for help output. See [command/04_help.md](../../../../docs/cli/command/04_help.md) for specification.
+Integration test planning for help output. See [command/02_help.md](../../../../docs/cli/command/02_help.md) for specification.
 
 ## Test Case Index
 
@@ -40,7 +40,7 @@ Integration test planning for help output. See [command/04_help.md](../../../../
 - **Command:** `clr --help`
 - **Expected behavior:** Contains "Commands:", "RUNNER OPTIONS:", "CLAUDE CODE OPTIONS (forwarded):", known flags
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 
 ---
 
@@ -49,7 +49,7 @@ Integration test planning for help output. See [command/04_help.md](../../../../
 - **Command:** `clr -h`
 - **Expected behavior:** Same as `clr --help`
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 
 ---
 
@@ -67,7 +67,7 @@ Integration test planning for help output. See [command/04_help.md](../../../../
 - **Command:** `clr --model sonnet --help "Fix bug"`
 - **Expected behavior:** Help output shown; not an execution
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 
 ---
 
@@ -76,7 +76,7 @@ Integration test planning for help output. See [command/04_help.md](../../../../
 - **Command:** `clr --unknown-flag --help "msg"` and `clr --help --unknown-flag "msg"`
 - **Expected behavior:** Help shown; exit 0 for both orderings; unknown flags are ignored when `--help` is present
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 
 ---
 
@@ -85,7 +85,7 @@ Integration test planning for help output. See [command/04_help.md](../../../../
 - **Command:** `clr --help`
 - **Expected behavior:** stdout is non-empty; stderr is empty
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 
 ---
 
@@ -94,7 +94,7 @@ Integration test planning for help output. See [command/04_help.md](../../../../
 - **Command:** `clr -h` and `clr --help`
 - **Expected behavior:** stdout of both invocations is byte-identical
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 
 ---
 
@@ -103,7 +103,7 @@ Integration test planning for help output. See [command/04_help.md](../../../../
 - **Command:** `clr --help` (run 3 times)
 - **Expected behavior:** all 3 stdout captures are byte-identical
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 
 ---
 

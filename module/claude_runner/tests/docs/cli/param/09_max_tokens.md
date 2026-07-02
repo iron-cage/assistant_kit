@@ -75,7 +75,7 @@ Edge case tests for the max tokens parameter. Tests validate numeric value forwa
 - **When:** `clr --help`
 - **Then:** Stdout contains `--max-tokens`
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 - **Commands:** run, ask
 ---
 

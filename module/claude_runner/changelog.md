@@ -62,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `isolated` param count: 6 → 16; shared params with `run`/`ask` now 13 (was 3)
   - Exit code 3 now applies to `isolated` (`--expect` mismatch with `fail` strategy)
   - Tests: IT-12–IT-36 in `tests/isolated_test.rs` (25 new cases); spec: `tests/docs/cli/command/03_isolated.md`
-  - Docs: `docs/cli/command/02_isolated.md`, `docs/cli/parity/001_run_ask_isolated.md`
+  - Docs: `docs/cli/command/03_isolated.md`, `docs/cli/parity/001_run_ask_isolated.md`
 
 - **Event journaling integration** (Plan 033, TSK-326)
   - `--journal <full|meta|off>` controls event emission level; `full` (default) captures stdout/stderr (≤1MB each), `meta` records metadata only, `off` disables journaling

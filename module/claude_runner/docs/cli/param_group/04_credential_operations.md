@@ -37,8 +37,8 @@ clr refresh --creds creds.json --timeout 90 --trace
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 2 | [`isolated`](../command/02_isolated.md) | Full | — | All 3 params apply |
-| 3 | [`refresh`](../command/03_refresh.md) | Full | — | All 3 params apply |
+| 2 | [`isolated`](../command/03_isolated.md) | Full | — | All 3 params apply |
+| 3 | [`refresh`](../command/04_refresh.md) | Full | — | All 3 params apply |
 
 ### Referenced Parameters
 

@@ -74,7 +74,7 @@ Edge case tests for the new session flag. Tests validate continuation suppressio
 - **When:** `clr --help`
 - **Then:** Stdout contains `--new-session`
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 - **Commands:** run, ask
 ---
 

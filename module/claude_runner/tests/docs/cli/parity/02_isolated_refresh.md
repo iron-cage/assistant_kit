@@ -64,7 +64,7 @@ Both commands share `run_isolated()` infrastructure but diverge on purpose, defa
 - **When:** `clr isolated --creds <f> --trace "x"` vs `clr refresh --creds <f> --trace`
 - **Then:** isolated trace shows `--chrome` in assembled command (ClaudeCommand default, not suppressed); refresh trace shows `--no-chrome` (OAuth exchange is HTTP-only, no browser interaction needed)
 - **Exit:** 1 (claude absent)
-- **Source:** [parity/002_isolated_refresh.md](../../../../docs/cli/parity/002_isolated_refresh.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md), [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md)
+- **Source:** [parity/002_isolated_refresh.md](../../../../docs/cli/parity/002_isolated_refresh.md), [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [command/04_refresh.md](../../../../docs/cli/command/04_refresh.md)
 - **Implemented by:** `isolated_defaults_test.rs::isd_09_refresh_trace_shows_no_chrome`, `isolated_defaults_test.rs::isd_10_isolated_trace_does_not_suppress_chrome`
 
 ---
@@ -75,5 +75,5 @@ Both commands share `run_isolated()` infrastructure but diverge on purpose, defa
 - **When:** `clr isolated --creds <f> --dry-run "Fix the bug"` (preview confirms MESSAGE in assembled command) and `clr refresh --creds <f> "Fix the bug"` (positional arg triggers parse-time rejection)
 - **Then:** isolated dry-run preview contains `"Fix the bug"` in the assembled subprocess command; refresh exits 1 with an "unexpected argument" error and does not attempt to spawn claude
 - **Exit:** 0 (isolated dry-run); 1 (refresh: parse error before spawn)
-- **Source:** [parity/002_isolated_refresh.md](../../../../docs/cli/parity/002_isolated_refresh.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md), [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md)
+- **Source:** [parity/002_isolated_refresh.md](../../../../docs/cli/parity/002_isolated_refresh.md), [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [command/04_refresh.md](../../../../docs/cli/command/04_refresh.md)
 - **Implemented by:** `isolated_plan034_test.rs::it13_dry_run_includes_message` (isolated MESSAGE acceptance ✅), `refresh_test.rs::test_it10_refresh_rejects_positional_message` (refresh MESSAGE rejection ✅)

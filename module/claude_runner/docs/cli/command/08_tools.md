@@ -37,7 +37,7 @@ Tool data is sourced from the contract documentation at `contract/claude_code/do
 | # | Command | Relationship |
 |---|---------|--------------|
 | 1 | [`run`](01_run.md) | `--allowed-tools` and `--disallowed-tools` flags reference tool names listed here |
-| 2 | [`help`](04_help.md) | Complementary discovery: `help` lists commands; `tools` lists tools |
+| 2 | [`help`](02_help.md) | Complementary discovery: `help` lists commands; `tools` lists tools |
 
 ### Referenced Parameter Groups
 

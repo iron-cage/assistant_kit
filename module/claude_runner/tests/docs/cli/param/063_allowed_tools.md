@@ -76,7 +76,7 @@ Edge case tests for the allowed tools parameter. Tests validate value forwarding
 - **When:** `clr --help`
 - **Then:** Stdout contains `--allowed-tools`
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 - **Commands:** run, ask
 ---
 

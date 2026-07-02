@@ -65,7 +65,7 @@ Cross-command behavioral parity test planning for `clr run`, `clr ask`, and `clr
 - **When:** `clr isolated --creds <f> "x"` with a fake `claude` binary that echoes `$HOME` (fake-binary pattern per CT-6)
 - **Then:** fake-binary stdout contains a temp path (not the real `$HOME`) as the subprocess HOME env var; isolated's temp HOME contains `.claude/.credentials.json` from `--creds` and a minimal `CLAUDE.md` (CT-6)
 - **Exit:** 0
-- **Source:** [parity/001_run_ask_isolated.md](../../../../docs/cli/parity/001_run_ask_isolated.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Source:** [parity/001_run_ask_isolated.md](../../../../docs/cli/parity/001_run_ask_isolated.md), [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
 - **Implemented by:** `isolated_correctness_test.rs` CT-1 through CT-6 (HOME isolation and CLAUDE.md structure), `isolated_correctness_test.rs::ct7_isolated_subprocess_sees_temp_home` (subprocess HOME env var ✅)
 
 ---

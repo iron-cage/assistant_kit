@@ -48,7 +48,7 @@ is present on the CLI.
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | Triggers print mode when present |
-| 2 | [`isolated`](../command/02_isolated.md) | — | Forwarded to claude subprocess |
+| 2 | [`isolated`](../command/03_isolated.md) | — | Forwarded to claude subprocess |
 | 5 | [`ask`](../command/05_ask.md) | — | Always print mode |
 
 ### Referenced User Stories
