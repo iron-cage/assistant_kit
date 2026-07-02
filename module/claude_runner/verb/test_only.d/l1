@@ -13,7 +13,7 @@ if [[ -z "${NEXTEST_FILTER:-}" ]]; then
 fi
 # Prevent cargo from updating the registry index (deps are pre-cooked in the image).
 export CARGO_NET_OFFLINE=true
-# Disable nextest PTY progress bar (same reason as test.d/l1 — wrun_core PTY isatty).
+# Disable nextest PTY progress bar (same reason as test.d/l1 — PTY isatty detection).
 export NO_COLOR=1
 export RUSTFLAGS="-D warnings"
 # Fix(test_only-cargo-target-dir): Override host .cargo/config.toml target-dir redirect.
@@ -23,6 +23,6 @@ export RUSTFLAGS="-D warnings"
 # write to /workspace/-host-target/ — part of the :ro bind-mount → EROFS on first write.
 # Containers must use /workspace/target/ where the pre-seeded cook-stage volume is mounted.
 # Pitfall: CARGO_TARGET_DIR env var overrides config.toml target-dir; set it explicitly here
-# because test_only skips the w3 bin_plugin that sets CARGO_TARGET_DIR in the full test path.
+# because test_only doesn't inherit CARGO_TARGET_DIR from the container's plugin environment.
 export CARGO_TARGET_DIR="$WORKSPACE_ROOT/target"
 exec cargo nextest run --workspace --all-features --no-fail-fast -E "$NEXTEST_FILTER"
