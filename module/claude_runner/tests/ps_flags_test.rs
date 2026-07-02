@@ -122,11 +122,19 @@ fn it31_container_flag_for_session_outside_home()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  let fake_proc     = tempfile::TempDir::new().expect( "fake_proc" );
+  let fake_proc_str = fake_proc.path().to_str().expect( "fake_proc UTF-8" );
+  std::os::unix::fs::symlink(
+    format!( "/proc/{}", bg.id() ),
+    fake_proc.path().join( bg.id().to_string() ),
+  ).expect( "pid symlink" );
+
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
     .env( "HOME", temp_home.path() )
+    .env( "CLR_PROC_DIR", fake_proc_str )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
     .env( "CLR_PS_HIGH_RAM_MB", "999999" )
     .output()
@@ -1000,9 +1008,17 @@ fn e42_high_ram_mb_env_var()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  let proc_dir_zero     = tempfile::TempDir::new().expect( "proc_dir_zero" );
+  let zero_ram_proc_dir = proc_dir_zero.path().to_str().expect( "proc_dir_zero UTF-8" );
+  std::os::unix::fs::symlink(
+    format!( "/proc/{}", bg.id() ),
+    proc_dir_zero.path().join( bg.id().to_string() ),
+  ).expect( "pid symlink zero-ram" );
+
   let out_valid = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", zero_ram_proc_dir )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
     .env( "CLR_PS_HIGH_RAM_MB", "0" )
     .output()
@@ -1035,9 +1051,17 @@ fn e42_high_ram_mb_env_var()
   let pid2 = bg2.id().to_string();
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
 
+  let proc_dir_bogus     = tempfile::TempDir::new().expect( "proc_dir_bogus" );
+  let bogus_ram_proc_dir = proc_dir_bogus.path().to_str().expect( "proc_dir_bogus UTF-8" );
+  std::os::unix::fs::symlink(
+    format!( "/proc/{}", bg2.id() ),
+    proc_dir_bogus.path().join( bg2.id().to_string() ),
+  ).expect( "pid symlink bogus-ram" );
+
   let out_invalid = std::process::Command::new( bin )
     .args( [ "ps" ] )
     .env( "PATH", &path_val2 )
+    .env( "CLR_PROC_DIR", bogus_ram_proc_dir )
     .env( "CLR_PS_ANCIENT_SECS", "999999" )
     .env( "CLR_PS_HIGH_RAM_MB", "bogus" )
     .output()
