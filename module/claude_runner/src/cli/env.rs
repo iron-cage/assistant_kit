@@ -89,6 +89,7 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
     if let Some( v ) = env_str( "CLR_MAX_TOKENS" ) { parsed.max_tokens = v.parse::< u32 >().ok(); }
   }
   if parsed.session_dir.is_none()         { parsed.session_dir          = env_str( "CLR_SESSION_DIR" ); }
+  if parsed.session_from.is_none()       { parsed.session_from         = env_str( "CLR_SESSION_FROM" ); }
   if !parsed.dry_run                       { parsed.dry_run              = env_bool( "CLR_DRY_RUN" ); }
   if !parsed.quiet                         { parsed.quiet                = env_bool( "CLR_QUIET" ); }
   if !parsed.trace                         { parsed.trace                = env_bool( "CLR_TRACE" ); }

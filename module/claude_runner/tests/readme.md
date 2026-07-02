@@ -84,6 +84,10 @@
 | Fallback model param (EC-1–EC-7) | `fallback_model_test.rs` | `--fallback-model` forwarding, missing-value, any-string, help, env var |
 | JSON config loading (JC-1..JC-10, AF-1..AF-6) | `json_config_test.rs` | `--args-file` / `CLR_ARGS_FILE` / stdin JSON: file loading, precedence (CLI > JSON > CLR_* > default), boolean flags, error paths, isolated subcommand |
 | `--no-compact-window` / `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection (RC-3..RC-7, acw:EC-1..EC-9, ncw:EC-1..EC-8) | `no_compact_window_test.rs` | Default injection presence, flag/env suppression, falsy-zero boundary, dry-run WYSIWYG fidelity, cross-command coverage for `ask`/`isolated`/`refresh` |
+| `scope` subcommand (IT-1–IT-9, US-1–US-8) | `scope_command_test.rs` | `clr scope` exit codes, 6 variable output, `--dir` override, `CLAUDE_HOME`/memory env overrides, empty session file, help flags, nonexistent path rejection |
+| `--session-from` param edge cases (EC-1–EC-8, US-1–US-7) | `session_from_test.rs` | `-c` injection from source session, `--from` alias, empty source, `--session-dir` precedence, `--new-session` suppression, `--to` combo, `CLR_SESSION_FROM` env var, dry-run WYSIWYG, cross-loading user stories |
+| Session path resolution feature (FT-6–FT-10) | `session_path_resolution_test.rs` | `clr scope` 6-var format, `--session-from` session resumption, `--to`+`--session-from` combo, `--to`/`--dir` alias equivalence, `--session-dir` precedence over `--session-from` |
+| Session source isolation invariant (IN-1–IN-5) | `session_source_isolation_test.rs` | Read isolation (UUID from source), run isolation (cwd = target), write isolation (source file mtime/size unchanged), `--session-dir` raw-path wins, combined isolation invariants |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
 ### Responsibility Table
@@ -160,5 +164,9 @@
 | `json_config_test.rs` | JSON config loading: `--args-file` / `CLR_ARGS_FILE` / stdin JSON pipe (JC-1..JC-10, AF-1..AF-6). |
 | `no_compact_window_test.rs` | Tests for `--no-compact-window` flag and `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection across all 4 running commands. |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
+| `scope_command_test.rs` | `scope` subcommand tests: IT-1–IT-9 (exit codes, 6-var output, dir override, env overrides, help, error rejection) + US-1–US-8 (scope inspection user stories). |
+| `session_from_test.rs` | `--session-from` parameter edge cases: EC-1–EC-8 (injection, alias, empty source, precedence, suppression, env var, WYSIWYG) + US-1–US-7 (session transplant user stories). |
+| `session_path_resolution_test.rs` | Feature 005 session path resolution: FT-6–FT-10 (scope output format, `--session-from` resumption, `--to` combo, `--to`/`--dir` alias, `--session-dir` precedence). |
+| `session_source_isolation_test.rs` | Invariant 011 session source isolation: IN-1–IN-5 (read/run/write isolation, `--session-dir` wins, combined invariants). |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |

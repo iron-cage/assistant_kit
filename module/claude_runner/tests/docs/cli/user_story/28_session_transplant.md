@@ -6,13 +6,13 @@ Test case spec for [028_session_transplant.md](../../../../docs/cli/user_story/0
 
 | ID | Test Name | AC | Status |
 |----|-----------|-----|-----|
-| US-1 | Clone outward: `-c` injected from source session dir | AC-1 | ⏳ |
-| US-2 | Inject inward: runs in CWD, loads session from source | AC-2 | ⏳ |
-| US-3 | No source history → no `-c`; fresh session starts | AC-3 | ⏳ |
-| US-4 | `--from` alias accepted; behavior identical to `--session-from` | AC-4 | ⏳ |
-| US-5 | `--to` alias accepted; behavior identical to `--dir` | AC-5 | ⏳ |
-| US-6 | `--session-dir` takes precedence over `--session-from` | AC-6 | ⏳ |
-| US-7 | Source session files not modified after cross-loaded run | AC-7 | ⏳ |
+| US-1 | Clone outward: `-c` injected from source session dir | AC-1 | ✅ |
+| US-2 | Inject inward: runs in CWD, loads session from source | AC-2 | ✅ |
+| US-3 | No source history → no `-c`; fresh session starts | AC-3 | ✅ |
+| US-4 | `--from` alias accepted; behavior identical to `--session-from` | AC-4 | ✅ |
+| US-5 | `--to` alias accepted; behavior identical to `--dir` | AC-5 | ✅ |
+| US-6 | `--session-dir` takes precedence over `--session-from` | AC-6 | ✅ |
+| US-7 | Source session files not modified after cross-loaded run | AC-7 | ✅ |
 
 ---
 
