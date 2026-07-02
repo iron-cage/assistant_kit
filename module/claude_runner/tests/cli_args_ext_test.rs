@@ -719,7 +719,9 @@ fn bug_reproducer_215_run_help_dispatches_help()
 fn bug_reproducer_302_prefix_guard_false_positive_is()
 {
   // "is" shares a 2-char prefix with "isolated" — must NOT trigger the guard.
-  let out    = run_cli( &[ "is", "it", "so?" ] );
+  // Fix: --dry-run avoids a real claude invocation; the guard fires before
+  // dry-run processing so the assertion is unaffected.
+  let out    = run_cli( &[ "--dry-run", "is", "it", "so?" ] );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
     !stderr.contains( "unknown subcommand" ),

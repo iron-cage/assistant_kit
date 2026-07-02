@@ -16,7 +16,7 @@ mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, stdout_str };
 
 #[ cfg( unix ) ]
-use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+use cli_binary_test_helpers::{ fake_claude_binary_dir, make_proc_dir, spawn_fake_claude };
 
 // ── EC-1: `--wide` shows all 11 columns ──────────────────────────────────────
 
@@ -27,11 +27,13 @@ fn ec1_wide_shows_all_columns()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--wide" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --wide" );
 
@@ -61,11 +63,13 @@ fn ec2_short_form_w_shows_wide_columns()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "-w" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps -w" );
 
@@ -89,11 +93,13 @@ fn ec3_columns_overrides_wide()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--wide", "--columns", "pid,task" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --wide --columns pid,task" );
 
@@ -119,12 +125,14 @@ fn ec4_default_hides_wide_columns()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env_remove( "CLR_PS_COLUMNS" )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps (no --wide)" );
 
