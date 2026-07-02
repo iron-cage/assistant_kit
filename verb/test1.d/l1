@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# l1 — targeted test execution; runs a single nextest filter inside the container.
+# Entered by cmd_test1 in runbox-run with VERB_FILTER set to the nextest filter expression.
+# No level-3 overhead (no clippy, no doc tests) — nextest only.
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/../.."
+if [[ -z "${VERB_FILTER:-}" ]]; then
+  echo "error: VERB_FILTER is not set — invoke via './verb/test1 <filter>' or './runbox/runbox .test1 <filter>'" >&2
+  exit 1
+fi
+# Prevent cargo from trying to update the registry index inside the container.
+# All deps are pre-cooked via cargo-chef during image build; registry is read-only.
+export CARGO_NET_OFFLINE=true
+# Override target-dir: .cargo/config.toml (bind-mounted from host) redirects to -host-target
+# which is read-only inside the container.  Force cargo to use /workspace/target.
+export CARGO_TARGET_DIR=/workspace/target
+export NO_COLOR=1
+exec cargo nextest run --workspace --all-features --no-fail-fast -E "$VERB_FILTER"

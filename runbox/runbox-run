@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Universal runbox test runner.
-# Usage: runbox-run <config.yml> [command]
-#   command: .build | .run | .test | .test.offline | .lint | .list | .shell | .help  (default: help)
+# Usage: runbox-run <config.yml> [command] [filter]
+#   command: .build | .run | .test | .test1 | .test.offline | .lint | .list | .shell | .help  (default: help)
+#   filter:  nextest filter expression, required for .test1 (e.g. test_my_function)
 set -euo pipefail
 
 CONFIG="$1"
 COMMAND="${2:-.}"
 FORCE_REBUILD=0
+TEST1_FILTER="${3:-}"          # filter expression forwarded by .test1 (position 3)
 for _arg in "${@:3}"
 do
   case "$_arg" in
@@ -36,6 +38,7 @@ TEST_USER="$(cfg test_user)"                      # forwarded as --build-arg; no
 CMD_SCOPE="$(cfg cmd_scope)"                      # crate filter for nextest run and cargo chef cook
 CMD_FILTER="$(cfg cmd_filter)"                    # forwarded as --build-arg; nextest filter baked into offline CMD
 TEST_SCRIPT="$(cfg test_script)"                  # path (relative to /workspace) exec'd by cmd_test
+TEST1_SCRIPT="$(cfg test1_script)"                # path (relative to /workspace) exec'd by cmd_test1
 LINT_SCRIPT="$(cfg lint_script)"                  # path (relative to /workspace) exec'd by cmd_lint
 RUN_SCRIPT="$(cfg run_script)"                    # path (relative to /workspace) exec'd by cmd_run
 BASE_IMAGE="$(cfg_or base_image rust:slim)"             # FROM image for chef and test stages
@@ -367,6 +370,60 @@ cmd_test_offline()
     "$IMAGE"
 }
 
+cmd_test1()
+{
+  if [[ -z "$TEST1_FILTER" ]]; then
+    echo "error: .test1 requires a filter expression" >&2
+    echo "Usage: ./runbox/runbox <config> .test1 '<nextest-filter-expression>'" >&2
+    exit 1
+  fi
+  if [[ -z "$TEST1_SCRIPT" ]]; then
+    echo "error: test1_script not configured in $(basename "$CONFIG")" >&2
+    exit 1
+  fi
+  if [[ ! -f "$WORKSPACE_ROOT/$TEST1_SCRIPT" ]]; then
+    echo "error: test1_script '$TEST1_SCRIPT' not found at $WORKSPACE_ROOT/$TEST1_SCRIPT" >&2
+    echo "Check test1_script path in $(basename "$CONFIG")" >&2
+    exit 1
+  fi
+  local bin_args=() mount_args=()
+  _plugin_test_args
+  _ensure_image
+  _ensure_build_cache
+  _ensure_plugin_targets
+  echo "▶ $IMAGE ($CONTAINER_CMD) filter: $TEST1_FILTER"
+  local userns_arg=()
+  [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
+  # Fix(BUG-001): Pre-create plugin_mount target dirs so :ro workspace mount does not block them.
+  local i
+  for (( i=0; i<${#mount_args[@]}; i++ ))
+  do
+    if [[ "${mount_args[$i]}" == "-v" ]] && [[ $((i+1)) -lt ${#mount_args[@]} ]]
+    then
+      local container_path
+      container_path="$( cut -d: -f2 <<< "${mount_args[$((i+1))]}" )"
+      if [[ "$container_path" == "$WORKSPACE_DIR/"* ]]
+      then
+        mkdir -p "$WORKSPACE_ROOT/${container_path#"$WORKSPACE_DIR/"}"
+      fi
+    fi
+  done
+  # Fix(BUG-003): Pre-generate Cargo.lock so :ro workspace mount does not block cargo metadata.
+  cargo metadata --manifest-path "$WORKSPACE_ROOT/Cargo.toml" \
+    --format-version 1 > /dev/null
+  "$CONTAINER_CMD" run --rm \
+    "${userns_arg[@]}" \
+    --user "$(id -u):$(id -g)" \
+    -e VERB_LAYER=l1 \
+    -e VERB_FILTER="$TEST1_FILTER" \
+    "${mount_args[@]}" \
+    -v "$WORKSPACE_ROOT:$WORKSPACE_DIR:ro" \
+    -v "${IMAGE}_${CACHE_DIR}:$WORKSPACE_DIR/$CACHE_DIR" \
+    "${bin_args[@]}" \
+    "$IMAGE" \
+    "$WORKSPACE_DIR/$TEST1_SCRIPT"
+}
+
 cmd_lint()
 {
   if [[ -z "$LINT_SCRIPT" ]]; then
@@ -472,6 +529,7 @@ cmd_help()
   echo ""
   echo "Testing:"
   echo "  .test           Run all tests${plugin_hint}"
+  echo "  .test1 <filter> Run a single test by nextest filter expression (no level-3 overhead)"
   echo "  .test.offline   Run offline tests only (no external data needed)"
   echo "  .lint           Run linter (requires lint_script in runbox.yml)"
   echo "  .list           List all test names without running"
@@ -490,6 +548,7 @@ case "$COMMAND" in
   .build)        cmd_build ;;
   .run)          cmd_run ;;
   .test)         cmd_test ;;
+  .test1)        cmd_test1 ;;
   .test.offline) cmd_test_offline ;;
   .lint)         cmd_lint ;;
   .list)         cmd_list ;;
