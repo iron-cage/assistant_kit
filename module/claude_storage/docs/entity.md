@@ -23,6 +23,9 @@
 | `tests/docs/cli/user_story/` | Index of per-story acceptance test case files covering user story criteria | [../../tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) | 5 |
 | `tests/docs/feature/` | FT-prefixed test spec files mirroring each `docs/feature/` instance | [../../tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 1 |
 | `tests/docs/operation/` | OP-prefixed test spec files mirroring each `docs/operation/` instance | [../../tests/docs/operation/readme.md](../../tests/docs/operation/readme.md) | 1 |
+| `tests/docs/invariant/` | IN-prefixed contract test spec files mirroring each `docs/invariant/` instance | [../../tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 3 |
+| `tests/docs/guide/` | GD-prefixed contract test spec files mirroring each `docs/guide/` instance | [../../tests/docs/guide/readme.md](../../tests/docs/guide/readme.md) | 1 |
+| `tests/docs/cli/pitfall/` | PF-prefixed contract test spec files mirroring each `docs/cli/pitfall/` instance | [../../tests/docs/cli/pitfall/readme.md](../../tests/docs/cli/pitfall/readme.md) | 3 |
 
 ### Master Doc Instances Table
 

@@ -54,17 +54,14 @@ Direct contract tests for the path encode/decode behavioral invariant.
 
 ### IN-4: `encode(decode(k)) == k` round-trip
 
-- **Given:** an encoded key `k` = `-home-alice-projects-my-app` where the corresponding directory exists on disk
-- **When:** `encode_path(decode_path_via_fs(storage_root, k))` is called
-- **Then:** the result equals `k` (round-trip holds)
+- **Given:** a project path containing an underscore component (e.g., `/tmp/my_proj`) where the directory exists on disk and a session has been written to the storage directory keyed by `encode_path(path)`
+- **When:** `.projects scope::global` is run with `CLAUDE_STORAGE_ROOT` set to a temp storage root
+- **Then:** the display path in the output contains the original path string including the underscore component (round-trip holds: the filesystem-guided decode restores `_` correctly, not `/`)
 
 ---
 
 ### IN-5: Two collision paths disambiguated by filesystem DFS
 
-- **Given:** two project directories exist on disk:
-  - `/home/alice/projects/my-app` (with hyphen)
-  - `/home/alice/projects/my_app` (with underscore)
-  both encoding to `-home-alice-projects-my-app`
-- **When:** `decode_path_via_fs(storage_root, "-home-alice-projects-my-app")` is called with the first directory present
-- **Then:** returns the filesystem-confirmed path (whichever exists), not an error
+- **Given:** two directories encoding to the same storage key (e.g., `/tmp/my-app` with hyphen and `/tmp/my_app` with underscore both encoding to `-tmp-my-app`); a session written under that storage key; at least one of the two directories present on disk
+- **When:** `.projects scope::global` is run with `CLAUDE_STORAGE_ROOT` set to a temp storage root
+- **Then:** the session display path matches a real filesystem candidate (not a garbled path); when neither candidate directory exists on disk, the raw encoded key is shown rather than a silently corrupted path

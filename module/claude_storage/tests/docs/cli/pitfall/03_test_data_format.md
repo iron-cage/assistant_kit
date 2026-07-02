@@ -11,7 +11,7 @@ Contract tests verifying that JSONL test fixtures use production-format fields a
 | PF-1 | JSONL with correct `"type": "user"` entries produces non-zero entry count | Correct Format |
 | PF-2 | JSONL with `"type": "message"` entries produces entry count of 0 | Wrong Type Rejection |
 | PF-3 | JSONL entry missing `"uuid"` field is silently skipped; count excludes it | UUID Requirement |
-| PF-4 | JSONL entry with non-UUID `"uuid"` value is silently skipped | UUID Format |
+| PF-4 | JSONL entry with non-UUID `"uuid"` value is parsed normally (no format validation) | UUID Format |
 
 ## Test Coverage Summary
 
@@ -47,13 +47,13 @@ Contract tests verifying that JSONL test fixtures use production-format fields a
 ### PF-3: JSONL entry missing `"uuid"` field is silently skipped
 
 - **Given:** JSONL file where one entry has `"type": "user"` but no `"uuid"` field; remaining entries are well-formed
-- **When:** the entry parser counts entries
-- **Then:** the entry without `"uuid"` is skipped; count equals the number of well-formed entries only
+- **When:** entries are loaded via `session.entries()` (full parse path — `from_json_line()` requires `"uuid"` field)
+- **Then:** the entry without `"uuid"` is skipped; `entries().len()` equals the number of well-formed entries only; the entry is not counted (note: `count_entries()` uses a type-only fast path and does not check `"uuid"` presence)
 
 ---
 
-### PF-4: JSONL entry with non-UUID `"uuid"` value is silently skipped
+### PF-4: JSONL entry with non-UUID `"uuid"` value is parsed normally (no format validation)
 
-- **Given:** JSONL file where one entry has `"uuid": "entry-1"` (simple identifier, not UUID format)
-- **When:** the entry parser processes the line
-- **Then:** the entry is silently skipped; no parse error is raised; subsequent entries continue to parse normally
+- **Given:** JSONL file where one well-formed entry has `"uuid": "entry-1"` (simple identifier, not UUID format) and all other required fields (`type`, `timestamp`, `cwd`, `sessionId`, `version`, `userType`, `message`)
+- **When:** entries are loaded via `session.entries()`
+- **Then:** the entry is included in the result; `"uuid"` is accepted as any non-empty string — no UUID format validation is applied; `entries().len()` reflects the entry as present (not skipped)
