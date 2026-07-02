@@ -8,9 +8,9 @@ Edge case tests for the `--session-from <DIR>` parameter (alias `--from`), which
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | `--session-from` injects `-c <uuid>` when source has session | Behavioral |
+| EC-1 | `--session-from` injects `-c <uuid>` when source has session | Behavioral Divergence |
 | EC-2 | `--from` alias behaves identically to `--session-from` | Alias |
-| EC-3 | Source dir with no `.jsonl` → no `-c` injected; fresh session | Behavioral |
+| EC-3 | Source dir with no `.jsonl` → no `-c` injected; fresh session | Behavioral Divergence |
 | EC-4 | `--session-dir` takes precedence over `--session-from` | Precedence |
 | EC-5 | `--new-session` takes precedence over `--session-from` | Precedence |
 | EC-6 | `--to` + `--session-from`: Claude runs in target dir, loads from source | Behavioral |
@@ -19,7 +19,8 @@ Edge case tests for the `--session-from <DIR>` parameter (alias `--from`), which
 
 ## Test Coverage Summary
 
-- Behavioral: 3 tests (EC-1, EC-3, EC-6)
+- Behavioral Divergence: 2 tests (EC-1, EC-3)
+- Behavioral: 1 test (EC-6)
 - Alias: 1 test (EC-2)
 - Precedence: 2 tests (EC-4, EC-5)
 - EnvFallback: 1 test (EC-7)

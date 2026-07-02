@@ -6,30 +6,30 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| SF-1 | `scope_for()` default: uses `$HOME/.claude` when CLAUDE_HOME unset | scope_for |
-| SF-2 | `scope_for()` respects `CLAUDE_HOME` env var override | scope_for |
-| SF-3 | `scope_for()` respects `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE` | scope_for |
-| SF-4 | `scope_for()` anchors memory dir to git root, not subdirectory | scope_for |
-| SF-5 | `scope_for()` returns `None` for session file when dir is empty | scope_for |
-| SF-6 | `clr scope` prints 6 `CLAUDE_*` vars in `key=value` format | clr scope |
-| SF-7 | `--session-from` resumes most recent session from source dir | cross-loading |
-| SF-8 | `--to` + `--session-from`: Claude runs in target, loads from source | cross-loading |
-| SF-9 | `--to` is an alias for `--dir`; behavior is identical | alias |
-| SF-10 | `--session-dir` takes precedence over `--session-from` | precedence |
+| FT-1 | `scope_for()` default: uses `$HOME/.claude` when CLAUDE_HOME unset | scope_for |
+| FT-2 | `scope_for()` respects `CLAUDE_HOME` env var override | scope_for |
+| FT-3 | `scope_for()` respects `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE` | scope_for |
+| FT-4 | `scope_for()` anchors memory dir to git root, not subdirectory | scope_for |
+| FT-5 | `scope_for()` returns `None` for session file when dir is empty | scope_for |
+| FT-6 | `clr scope` prints 6 `CLAUDE_*` vars in `key=value` format | clr scope |
+| FT-7 | `--session-from` resumes most recent session from source dir | cross-loading |
+| FT-8 | `--to` + `--session-from`: Claude runs in target, loads from source | cross-loading |
+| FT-9 | `--to` is an alias for `--dir`; behavior is identical | alias |
+| FT-10 | `--session-dir` takes precedence over `--session-from` | precedence |
 
 ## Test Coverage Summary
 
-- scope_for: 5 tests (SF-1–SF-5)
-- clr scope: 1 test (SF-6)
-- cross-loading: 2 tests (SF-7, SF-8)
-- alias: 1 test (SF-9)
-- precedence: 1 test (SF-10)
+- scope_for: 5 tests (FT-1–FT-5)
+- clr scope: 1 test (FT-6)
+- cross-loading: 2 tests (FT-7, FT-8)
+- alias: 1 test (FT-9)
+- precedence: 1 test (FT-10)
 
 **Total:** 10 tests
 
 ---
 
-### SF-1: `scope_for()` default: uses `$HOME/.claude` when CLAUDE_HOME unset
+### FT-1: `scope_for()` default: uses `$HOME/.claude` when CLAUDE_HOME unset
 
 - **Given:** `CLAUDE_HOME` is unset in environment; target dir `/tmp/sf1_proj`
 - **When:** `clr scope --dir /tmp/sf1_proj` (no CLAUDE_HOME override)
@@ -39,7 +39,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 
 ---
 
-### SF-2: `scope_for()` respects `CLAUDE_HOME` env var override
+### FT-2: `scope_for()` respects `CLAUDE_HOME` env var override
 
 - **Given:** `CLAUDE_HOME=/tmp/sf2_claude_home`; target dir `/tmp/sf2_proj`
 - **When:** `CLAUDE_HOME=/tmp/sf2_claude_home clr scope --dir /tmp/sf2_proj`
@@ -49,7 +49,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 
 ---
 
-### SF-3: `scope_for()` respects `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE`
+### FT-3: `scope_for()` respects `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE`
 
 - **Given:** `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE=/tmp/sf3_shared`; target dir `/tmp/sf3_proj`
 - **When:** `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE=/tmp/sf3_shared clr scope --dir /tmp/sf3_proj`
@@ -59,7 +59,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 
 ---
 
-### SF-4: `scope_for()` anchors memory dir to git root, not subdirectory
+### FT-4: `scope_for()` anchors memory dir to git root, not subdirectory
 
 - **Given:** git repo at `/tmp/sf4_repo` with `.git`; target dir is `/tmp/sf4_repo/src` (a subdirectory)
 - **When:** `clr scope --dir /tmp/sf4_repo/src`
@@ -69,7 +69,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 
 ---
 
-### SF-5: `scope_for()` returns `None` for session file when dir has no sessions
+### FT-5: `scope_for()` returns `None` for session file when dir has no sessions
 
 - **Given:** target dir `/tmp/sf5_empty_proj` has no `.jsonl` files in its Claude storage
 - **When:** `clr scope --dir /tmp/sf5_empty_proj`
@@ -79,7 +79,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 
 ---
 
-### SF-6: `clr scope` prints 6 `CLAUDE_*` vars in `key=value` format
+### FT-6: `clr scope` prints 6 `CLAUDE_*` vars in `key=value` format
 
 - **Given:** any valid directory
 - **When:** `clr scope --dir /tmp`
@@ -89,7 +89,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 
 ---
 
-### SF-7: `--session-from` resumes most recent session from source dir
+### FT-7: `--session-from` resumes most recent session from source dir
 
 - **Given:** source dir `/tmp/sf7_src` has session `hhh-101.jsonl` (highest mtime); CWD is `/tmp/sf7_cwd`; fake claude binary in PATH
 - **When:** `clr --session-from /tmp/sf7_src --dry-run "Continue"`
@@ -99,7 +99,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 
 ---
 
-### SF-8: `--to` + `--session-from`: Claude runs in target, loads from source
+### FT-8: `--to` + `--session-from`: Claude runs in target, loads from source
 
 - **Given:** source dir `/tmp/sf8_src` has session `iii-202.jsonl`; target dir `/tmp/sf8_tgt` exists; fake claude binary in PATH
 - **When:** `clr --to /tmp/sf8_tgt --session-from /tmp/sf8_src --dry-run "Continue"`
@@ -109,7 +109,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 
 ---
 
-### SF-9: `--to` is an alias for `--dir`; behavior is identical
+### FT-9: `--to` is an alias for `--dir`; behavior is identical
 
 - **Given:** target dir `/tmp/sf9_tgt` exists; fake claude binary in PATH
 - **When (a):** `clr --dir /tmp/sf9_tgt --dry-run "task"` and **When (b):** `clr --to /tmp/sf9_tgt --dry-run "task"`
@@ -119,7 +119,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 
 ---
 
-### SF-10: `--session-dir` takes precedence over `--session-from`
+### FT-10: `--session-dir` takes precedence over `--session-from`
 
 - **Given:** source dir `/tmp/sf10_src` has session `jjj-303.jsonl`; raw session dir `/tmp/sf10_raw` has session `kkk-404.jsonl`; fake claude binary in PATH
 - **When:** `clr --session-from /tmp/sf10_src --session-dir /tmp/sf10_raw --dry-run "test"`

@@ -11,7 +11,7 @@
 | 005_no_skip_permissions.md | `--no-skip-permissions` flag spec |
 | 006_interactive.md | `--interactive` flag spec |
 | 007_new_session.md | `--new-session` flag spec |
-| 008_dir.md | `--dir` parameter spec |
+| 008_dir.md | `--dir` / `--to` parameter spec |
 | 009_max_tokens.md | `--max-tokens` parameter spec |
 | 010_session_dir.md | `--session-dir` parameter spec |
 | 011_dry_run.md | `--dry-run` flag spec |
