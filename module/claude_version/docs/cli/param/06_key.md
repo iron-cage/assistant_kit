@@ -33,7 +33,7 @@ clv.settings.set key::theme value::dark
 | 1 | [Settings Identity](../param_group/03_settings_identity.md) | Full | `value::` |
 | 2 | [Config Identity](../param_group/04_config_identity.md) | Full | `value::`, `scope::`, `unset::` |
 
-### Referenced Types
+### Referenced Type
 
 | # | Type |
 |---|------|

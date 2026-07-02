@@ -5,8 +5,12 @@
 | Type | Purpose | Master File | Instances |
 |--------|---------|-------------|----------:|
 | `algorithm/` | Documented algorithms with step-by-step procedures | [algorithm/readme.md](algorithm/readme.md) | 2 |
-| `cli/` | CLI reference: commands, parameters, types, groups | [cli/readme.md](cli/readme.md) | 8 |
+| `cli/` | Shared CLI reference: dictionary, parameter interactions, and environment context | [cli/readme.md](cli/readme.md) | 4 |
+| `cli/command/` | Per-namespace command reference for the clv CLI | [cli/command/readme.md](cli/command/readme.md) | 6 |
 | `cli/format/` | Named output format catalog | [cli/format/readme.md](cli/format/readme.md) | 2 |
+| `cli/param/` | Per-parameter reference for all clv parameters | [cli/param/readme.md](cli/param/readme.md) | 13 |
+| `cli/param_group/` | Logical groupings of clv parameters by shared purpose | [cli/param_group/readme.md](cli/param_group/readme.md) | 4 |
+| `cli/type/` | Semantic type definitions for clv parameter values | [cli/type/readme.md](cli/type/readme.md) | 8 |
 | `cli/user_story/` | User story catalog with persona-goal scenarios | [cli/user_story/readme.md](cli/user_story/readme.md) | 7 |
 | `feature/` | Behavioral requirements for claude_version capabilities | [feature/readme.md](feature/readme.md) | 7 |
 | `pattern/` | Reusable design patterns applied in the crate | [pattern/readme.md](pattern/readme.md) | 1 |
@@ -28,16 +32,12 @@
 |--------|----|------|------|
 | algorithm | 001 | Settings Type Inference | [algorithm/001_settings_type_inference.md](algorithm/001_settings_type_inference.md) |
 | algorithm | 002 | Config Resolution | [algorithm/002_config_resolution.md](algorithm/002_config_resolution.md) |
-| cli | 001 | Commands | [cli/command/readme.md](cli/command/readme.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](cli/002_dictionary.md) |
-| cli | 003 | Parameter Groups | [cli/param_group/readme.md](cli/param_group/readme.md) |
 | cli | 004 | Parameter Interactions | [cli/004_parameter_interactions.md](cli/004_parameter_interactions.md) |
-| cli | 005 | Parameters | [cli/param/readme.md](cli/param/readme.md) |
-| cli | 006 | Types | [cli/type/readme.md](cli/type/readme.md) |
 | cli | 007 | Environment Parameters | [cli/007_env_param.md](cli/007_env_param.md) |
 | cli | 008 | Config Parameters | [cli/008_config_param.md](cli/008_config_param.md) |
-| cli/format | 001 | Text | [cli/format/001_text.md](cli/format/001_text.md) |
-| cli/format | 002 | JSON | [cli/format/002_json.md](cli/format/002_json.md) |
+| cli/format | 01 | Text | [cli/format/01_text.md](cli/format/01_text.md) |
+| cli/format | 02 | JSON | [cli/format/02_json.md](cli/format/02_json.md) |
 | cli/user_story | 001 | Environment Check | [cli/user_story/001_environment_check.md](cli/user_story/001_environment_check.md) |
 | cli/user_story | 002 | Version Upgrade | [cli/user_story/002_version_upgrade.md](cli/user_story/002_version_upgrade.md) |
 | cli/user_story | 003 | Process Lifecycle | [cli/user_story/003_process_lifecycle.md](cli/user_story/003_process_lifecycle.md) |

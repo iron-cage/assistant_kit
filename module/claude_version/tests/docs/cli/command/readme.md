@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Document integration test cases for each cm command.
+- **Purpose**: Document integration test cases for each clv command.
 - **Responsibility**: Index of per-command integration test case files covering command-level behavior.
-- **In Scope**: All 14 cm command test files.
+- **In Scope**: All 14 clv command test files.
 - **Out of Scope**: Per-parameter edge cases (→ `param/`), parameter group interactions (→ `param_group/`).
 
 ### Overview Table

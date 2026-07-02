@@ -241,17 +241,17 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 
 | Function | File | Test Cases |
 |----------|------|------------|
-| `it01_params_show_all_min_entries` | `tests/integration/params_command_test.rs` | IT-1 |
-| `it02_params_single_model_full_detail` | `tests/integration/params_command_test.rs` | IT-2 |
-| `it03_params_kind_config_filters` | `tests/integration/params_command_test.rs` | IT-3 |
-| `it04_params_kind_env_filters` | `tests/integration/params_command_test.rs` | IT-4 |
-| `it05_params_env_override_visible` | `tests/integration/params_command_test.rs` | IT-5 |
-| `it06_params_env_only_param_unset` | `tests/integration/params_command_test.rs` | IT-6 |
-| `it07_params_json_output_structure` | `tests/integration/params_command_test.rs` | IT-7 |
-| `it08_params_cli_only_annotation` | `tests/integration/params_command_test.rs` | IT-8 |
-| `it09_params_compact_v0_output` | `tests/integration/params_command_test.rs` | IT-9 |
-| `it10_params_default_annotation` | `tests/integration/params_command_test.rs` | IT-10 |
-| `it11_params_show_all_alphabetical` | `tests/integration/params_command_test.rs` | IT-11 |
-| `it12_params_unknown_key_exits_2` | `tests/integration/params_command_test.rs` | IT-12 |
-| `it13_params_invalid_kind_exits_1` | `tests/integration/params_command_test.rs` | IT-13 |
-| `it14_params_invalid_format_exits_1` | `tests/integration/params_command_test.rs` | IT-14 |
+| `it01_params_show_all_min_entries` | `tests/cli/params_command_test.rs` | IT-1 |
+| `it02_params_single_model_full_detail` | `tests/cli/params_command_test.rs` | IT-2 |
+| `it03_params_kind_config_filters` | `tests/cli/params_command_test.rs` | IT-3 |
+| `it04_params_kind_env_filters` | `tests/cli/params_command_test.rs` | IT-4 |
+| `it05_params_env_override_visible` | `tests/cli/params_command_test.rs` | IT-5 |
+| `it06_params_env_only_param_unset` | `tests/cli/params_command_test.rs` | IT-6 |
+| `it07_params_json_output_structure` | `tests/cli/params_command_test.rs` | IT-7 |
+| `it08_params_cli_only_annotation` | `tests/cli/params_command_test.rs` | IT-8 |
+| `it09_params_compact_v0_output` | `tests/cli/params_command_test.rs` | IT-9 |
+| `it10_params_default_annotation` | `tests/cli/params_command_test.rs` | IT-10 |
+| `it11_params_show_all_alphabetical` | `tests/cli/params_command_test.rs` | IT-11 |
+| `it12_params_unknown_key_exits_2` | `tests/cli/params_command_test.rs` | IT-12 |
+| `it13_params_invalid_kind_exits_1` | `tests/cli/params_command_test.rs` | IT-13 |
+| `it14_params_invalid_format_exits_1` | `tests/cli/params_command_test.rs` | IT-14 |

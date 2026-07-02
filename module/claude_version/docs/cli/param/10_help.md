@@ -37,6 +37,12 @@ clv.version.install .help    # still shows help, ignores install
 | 13 | [`.config`](../command/config.md#command--13-config) | false | Universal override |
 | 14 | [`.params`](../command/params.md#command--14-params) | false | Universal override |
 
+### Referenced Type
+
+| # | Type |
+|---|------|
+| 1 | `bool` |
+
 ### Referenced User Stories
 
 | # | User Story | Persona |

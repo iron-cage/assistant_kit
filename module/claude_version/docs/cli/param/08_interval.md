@@ -26,6 +26,12 @@ clv.version.guard interval::3600   # check every hour
 |---|---------|---------|-------|
 | 1 | [`.version.guard`](../command/version.md#command--5-versionguard) | 0 (one-shot) | >0 enables watch mode; loops every N seconds until interrupted |
 
+### Referenced Type
+
+| # | Type |
+|---|------|
+| 1 | `u64` |
+
 ### Referenced User Stories
 
 | # | User Story | Persona |

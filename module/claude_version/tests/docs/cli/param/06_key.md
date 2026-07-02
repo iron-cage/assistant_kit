@@ -115,7 +115,7 @@ Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../
 ### EC-8: `key::foo.bar` (dot in key name)
 
 - **Given:** `HOME=<tmp>`; no existing settings.
-- **When:** `clv .settings.set key::foo.bar value::baz && cm .settings.get key::foo.bar`
+- **When:** `clv .settings.set key::foo.bar value::baz && clv .settings.get key::foo.bar`
 - **Then:** `baz` returned for key `foo.bar`.; key round-trips correctly.
 **Note:** Tests that the key is treated as an opaque string, not a nested path
 - **Exit:** 0

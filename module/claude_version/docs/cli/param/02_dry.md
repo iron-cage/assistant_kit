@@ -29,6 +29,12 @@ clv.settings.set key::theme value::dark dry::1
 | 4 | [`.settings.set`](../command/settings.md#command--11-settingsset) | false | Preview write without file change |
 | 5 | [`.config`](../command/config.md#command--13-config) | false | Preview set/unset without file change |
 
+### Referenced Type
+
+| # | Type |
+|---|------|
+| 1 | `bool` |
+
 ### Referenced Parameter Groups
 
 | # | Group | Membership | Co-members |

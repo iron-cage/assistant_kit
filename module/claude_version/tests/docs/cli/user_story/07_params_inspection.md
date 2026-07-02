@@ -134,13 +134,13 @@ Acceptance tests for User Story 007. See [user_story/007_params_inspection.md](.
 
 | Function | File | Test Cases |
 |----------|------|------------|
-| `us01_007_params_show_all_entries` | `tests/integration/user_story_test.rs` | US-1 |
-| `us02_007_params_single_model_forms` | `tests/integration/user_story_test.rs` | US-2 |
-| `us03_007_params_kind_config_only` | `tests/integration/user_story_test.rs` | US-3 |
-| `us04_007_params_kind_env_only` | `tests/integration/user_story_test.rs` | US-4 |
-| `us05_007_params_env_override_annotated` | `tests/integration/user_story_test.rs` | US-5 |
-| `us06_007_params_cli_only_print` | `tests/integration/user_story_test.rs` | US-6 |
-| `us07_007_params_json_array_output` | `tests/integration/user_story_test.rs` | US-7 |
-| `us08_007_params_unknown_key_exits_2` | `tests/integration/user_story_test.rs` | US-8 |
-| `us09_007_params_invalid_kind_exits_1` | `tests/integration/user_story_test.rs` | US-9 |
-| `us10_007_params_show_all_alphabetical` | `tests/integration/user_story_test.rs` | US-10 |
+| `us01_007_params_show_all_entries` | `tests/cli/user_story_test.rs` | US-1 |
+| `us02_007_params_single_model_forms` | `tests/cli/user_story_test.rs` | US-2 |
+| `us03_007_params_kind_config_only` | `tests/cli/user_story_test.rs` | US-3 |
+| `us04_007_params_kind_env_only` | `tests/cli/user_story_test.rs` | US-4 |
+| `us05_007_params_env_override_annotated` | `tests/cli/user_story_test.rs` | US-5 |
+| `us06_007_params_cli_only_print` | `tests/cli/user_story_test.rs` | US-6 |
+| `us07_007_params_json_array_output` | `tests/cli/user_story_test.rs` | US-7 |
+| `us08_007_params_unknown_key_exits_2` | `tests/cli/user_story_test.rs` | US-8 |
+| `us09_007_params_invalid_kind_exits_1` | `tests/cli/user_story_test.rs` | US-9 |
+| `us10_007_params_show_all_alphabetical` | `tests/cli/user_story_test.rs` | US-10 |

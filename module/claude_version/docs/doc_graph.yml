@@ -62,12 +62,12 @@ nodes:
     entity: user_story
 
   - id: format/01
-    file: cli/format/001_text.md
+    file: cli/format/01_text.md
     label: Text Format
     entity: format
 
   - id: format/02
-    file: cli/format/002_json.md
+    file: cli/format/02_json.md
     label: JSON Format
     entity: format
 
