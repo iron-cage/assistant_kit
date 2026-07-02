@@ -23,5 +23,6 @@ Provides `.list`, `.tail`, `.stats`, `.search`, `.serve`, `.prune`, `.status`, a
 | `src/cli/export.rs` | `.export` command — multi-format file export |
 | `src/web/index.html` | Embedded single-page web viewer |
 | `claude_journal.commands.yaml` | Unilang command definitions |
+| `verb/` | Shell scripts implementing do-protocol verbs for this crate. |
 | `docs/` | Feature docs, CLI reference, invariant constraints |
 | `tests/` | Command integration tests |
