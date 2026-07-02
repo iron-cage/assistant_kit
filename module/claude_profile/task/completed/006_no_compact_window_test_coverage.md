@@ -8,11 +8,11 @@
 - **started_at:** null
 - **expires_at:** null
 - **round:** 1
-- **state:** 🎯 (Verified)
+- **state:** ✅ (Done)
 - **closes:** null
 - **dir:** module/claude_runner/tests/
-- **validated_by:** null
-- **validation_date:** null
+- **validated_by:** agent
+- **validation_date:** 2026-07-02
 
 ## Goal
 

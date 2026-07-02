@@ -75,7 +75,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     version_guard_routine, version_list_routine, version_history_routine,
     processes_routine, processes_kill_routine,
     settings_show_routine, settings_get_routine, settings_set_routine,
-    config_routine, params_routine,
+    config_routine, params_routine, runtime_files_routine,
   };
   let v   = || reg_arg_opt( "verbosity", Kind::Integer );
   let fmt = || reg_arg_opt( "format",    Kind::String  );
@@ -103,6 +103,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".settings.set",    "Write a single setting atomically",                          vec![ key(), val(), dry() ],             Box::new( settings_set_routine    ) );
   reg_cmd( registry, ".config",          "Show, get, set, or unset settings with 4-layer resolution",  vec![ key(), val(), scp(), uns(), dry(), v(), fmt() ], Box::new( config_routine ) );
   reg_cmd( registry, ".params",          "Inspect Claude Code params: forms, current values, defaults", vec![ key(), knd(), v(), fmt() ],       Box::new( params_routine          ) );
+  reg_cmd( registry, ".runtime_files",   "List all paths managed by clv at runtime",                   vec![],                                  Box::new( runtime_files_routine   ) );
 }
 
 /// Render grouped help output via `cli_fmt::CliHelpTemplate`.
@@ -157,7 +158,8 @@ fn print_usage( binary : &str )
       name    : "Status".to_string(),
       entries : vec!
       [
-        CommandEntry { name : ".status".to_string(), desc : "Show installation state, process count, and active account".to_string() },
+        CommandEntry { name : ".status".to_string(),        desc : "Show installation state, process count, and active account".to_string() },
+        CommandEntry { name : ".runtime_files".to_string(), desc : "List all paths managed by clv at runtime".to_string() },
       ],
     },
   ];

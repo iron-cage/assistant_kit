@@ -67,8 +67,8 @@ Format test surface for `text` output. See [cli/format/01_text.md](../../../../d
 
 | Function | File |
 |----------|------|
-| `fm01_01_text_default_labeled` | `integration/format_surface_test.rs` |
-| `fm02_01_text_v0_raw` | `integration/format_surface_test.rs` |
-| `fm03_01_text_v1_labeled` | `integration/format_surface_test.rs` |
-| `fm04_01_text_not_json` | `integration/format_surface_test.rs` |
-| `fm05_01_text_explicit_format` | `integration/format_surface_test.rs` |
+| `fm01_01_text_default_labeled` | `tests/cli/format_surface_test.rs` |
+| `fm02_01_text_v0_raw` | `tests/cli/format_surface_test.rs` |
+| `fm03_01_text_v1_labeled` | `tests/cli/format_surface_test.rs` |
+| `fm04_01_text_not_json` | `tests/cli/format_surface_test.rs` |
+| `fm05_01_text_explicit_format` | `tests/cli/format_surface_test.rs` |

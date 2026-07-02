@@ -104,3 +104,17 @@ Edge case coverage for the `scope::` parameter. See [param/11_scope.md](../../..
 - **Then:** exit 1; error: `scope::` requires a write operation (`key::` + `value::` or `unset::1`)
 - **Exit:** 1
 - **Source:** [param/11_scope.md](../../../../docs/cli/param/11_scope.md)
+
+---
+
+### Source Functions
+
+| Function | File |
+|----------|------|
+| `scope_ec1_user_writes_to_user_settings` | `tests/cli/scope_param_test.rs` |
+| `scope_ec2_project_writes_to_project_settings` | `tests/cli/scope_param_test.rs` |
+| `scope_ec3_invalid_scope_value_exits_1` | `tests/cli/scope_param_test.rs` |
+| `scope_ec4_empty_scope_value_exits_1` | `tests/cli/scope_param_test.rs` |
+| `scope_ec5_scope_without_write_op_exits_1` | `tests/cli/scope_param_test.rs` |
+| `scope_ec6_project_creates_directory_when_absent` | `tests/cli/scope_param_test.rs` |
+| `scope_ec7_project_in_show_all_mode_exits_1` | `tests/cli/scope_param_test.rs` |

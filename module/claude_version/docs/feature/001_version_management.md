@@ -55,6 +55,12 @@ Optional `version::SPEC` overrides the stored preference for a single invocation
 | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .version.install and .version.guard |
 | [feature/005_cli_design.md](005_cli_design.md) | CLI routing, parameter parsing, exit codes |
 
+### Runtime Files
+
+| File | Relationship |
+|------|-------------|
+| [runtime_file/001_version_history_cache.md](../runtime_file/001_version_history_cache.md) | Cache file written by .version.history |
+
 ### Patterns
 
 | File | Relationship |

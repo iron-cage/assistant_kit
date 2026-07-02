@@ -98,9 +98,9 @@ Acceptance tests for User Story 004. See [user_story/004_settings_management.md]
 
 | Function | File | Status |
 |----------|------|--------|
-| `us01_004_settings_show_all_pairs` | `integration/user_story_test.rs` | ✅ |
-| `us02_004_settings_show_json` | `integration/user_story_test.rs` | ✅ |
-| `us03_004_settings_get_found_and_missing` | `integration/user_story_test.rs` | ✅ |
-| `us04_004_settings_set_dry_preview` | `integration/user_story_test.rs` | ✅ |
-| `us05_004_settings_set_writes_atomically` | `integration/user_story_test.rs` | ✅ |
-| `us06_004_settings_set_type_inference` | `integration/user_story_test.rs` | ✅ |
+| `us01_004_settings_show_all_pairs` | `tests/cli/user_story_test.rs` | ✅ |
+| `us02_004_settings_show_json` | `tests/cli/user_story_test.rs` | ✅ |
+| `us03_004_settings_get_found_and_missing` | `tests/cli/user_story_test.rs` | ✅ |
+| `us04_004_settings_set_dry_preview` | `tests/cli/user_story_test.rs` | ✅ |
+| `us05_004_settings_set_writes_atomically` | `tests/cli/user_story_test.rs` | ✅ |
+| `us06_004_settings_set_type_inference` | `tests/cli/user_story_test.rs` | ✅ |

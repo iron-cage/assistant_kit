@@ -11,11 +11,35 @@ pub mod subprocess_helpers;
 #[ path = "cli/framework_test.rs" ]
 mod framework_test;
 
-#[ path = "cli/read_commands_test.rs" ]
-mod read_commands_test;
+#[ path = "cli/read_help_test.rs" ]
+mod read_help_test;
 
-#[ path = "cli/mutation_commands_test.rs" ]
-mod mutation_commands_test;
+#[ path = "cli/read_status_test.rs" ]
+mod read_status_test;
+
+#[ path = "cli/read_version_test.rs" ]
+mod read_version_test;
+
+#[ path = "cli/read_processes_test.rs" ]
+mod read_processes_test;
+
+#[ path = "cli/read_settings_test.rs" ]
+mod read_settings_test;
+
+#[ path = "cli/read_version_history_test.rs" ]
+mod read_version_history_test;
+
+#[ path = "cli/mutation_version_install_test.rs" ]
+mod mutation_version_install_test;
+
+#[ path = "cli/mutation_processes_kill_test.rs" ]
+mod mutation_processes_kill_test;
+
+#[ path = "cli/mutation_version_guard_test.rs" ]
+mod mutation_version_guard_test;
+
+#[ path = "cli/mutation_settings_set_test.rs" ]
+mod mutation_settings_set_test;
 
 #[ path = "cli/config_commands_test.rs" ]
 mod config_commands_test;
@@ -85,3 +109,6 @@ mod params_command_test;
 
 #[ path = "cli/kind_param_test.rs" ]
 mod kind_param_test;
+
+#[ path = "cli/runtime_files_test.rs" ]
+mod runtime_files_test;

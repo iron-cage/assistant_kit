@@ -47,3 +47,35 @@
 | 3 | [`format::`](../param/05_format.md) | Selects text or JSON rendering |
 | 4 | [`key::`](../param/06_key.md) | Identifies the setting key to read or write |
 | 5 | [`value::`](../param/07_value.md) | Provides the value to write with type inference |
+
+### Workflow Steps
+
+**Step 1 — Inspect all current settings:**
+
+```bash
+clv .settings.show
+# autoUpdates: false
+# theme: dark
+# model: claude-sonnet-5
+```
+
+**Step 2 — Read a specific setting:**
+
+```bash
+clv .settings.get key::autoUpdates
+# false
+```
+
+**Step 3 — Preview a write without modifying the file:**
+
+```bash
+clv .settings.set key::theme value::light dry::1
+# [dry-run] Would write: theme = "light"  (string)
+```
+
+**Step 4 — Apply the write with type inference:**
+
+```bash
+clv .settings.set key::autoUpdates value::false
+# Written: autoUpdates = false  (bool)
+```
