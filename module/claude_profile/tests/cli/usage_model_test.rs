@@ -10,7 +10,7 @@ use crate::cli_runner::{
   run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
   write_account, write_account_with_token, write_account_renewal_json,
-  live_active_token, require_live_api,
+  write_live_credentials_with_token, live_active_token, require_live_api,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -531,8 +531,10 @@ fn it145_lim_it_sort_renew_places_arrow_on_soonest_refill()
   require_live_api( "it145" );
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
-  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+  // acct-a is is_current (token matches credentials); acct-b uses fake token → eligible as Next.
+  write_live_credentials_with_token( dir.path(), &token );
+  write_account_with_token( dir.path(), "acct-a@test.com", &token,       true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", "fake-token", false );
 
   let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );

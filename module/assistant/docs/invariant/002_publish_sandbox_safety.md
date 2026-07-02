@@ -15,7 +15,7 @@
 
 2. **Sandbox-safe fallback required** — when any sibling YAML file is absent, `build.rs` must complete with exit 0 and produce a valid (possibly empty) build artifact. `cargo package` must not emit `panicked at build.rs` in stderr.
 
-**Current status (2026-06-24):** FIX APPLIED — `build.rs` lines 117-127 add an existence guard; absent sibling YAML files produce an empty registry instead of panicking (BUG-003 fix, Option B). Full `cargo package` verification pending: requires `claude_version v1.5.1` to be published to crates.io (bumped 2026-06-24 from `1.4.1`; prior version pinned `claude_runner_core = "=1.4.1"` conflicting with `claude_profile v1.4.1`'s `=1.5.1` pin — unrelated to BUG-003). Regression suite confirms normal workspace builds are unaffected (all 14 tests pass, including 6 aggregation tests).
+**Current status (2026-07-02):** FIX APPLIED — `build.rs` lines 117-127 add an existence guard; absent sibling YAML files produce an empty registry instead of panicking (BUG-003 fix, Option B). Full `cargo package` verification blocked: `claude_journal v0.1.0` and `claude_journal_viewer v0.1.0` are not yet published to crates.io; `cargo package --verify` fails with "no matching package named `claude_journal_viewer` found". Publication order: (1) `cargo publish -p claude_journal`, (2) `cargo publish -p claude_journal_viewer` (after index propagates), (3) re-run `cargo package --allow-dirty -p assistant` to verify. `claude_journal` has only external deps (`serde`, `serde_json`, `chrono`) and is ready to publish immediately.
 
 ### Enforcement Mechanism
 

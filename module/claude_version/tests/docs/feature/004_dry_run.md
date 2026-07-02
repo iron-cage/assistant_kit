@@ -80,6 +80,6 @@ Both are valid invocations; the `[dry-run]` prefix presence differs.
 
 | Function | File |
 |----------|------|
-| `tc300_version_install_dry_shows_prefix` | `integration/mutation_commands_test.rs` |
-| `tc330_settings_set_dry_preview_no_change` | `integration/mutation_commands_test.rs` |
-| `tc303_version_install_dry_wins_over_force` | `integration/mutation_commands_test.rs` |
+| `tc300_version_install_dry_shows_prefix` | `tests/cli/mutation_version_install_test.rs` |
+| `tc330_settings_set_dry_shows_preview_no_write` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc303_version_install_dry_wins_over_force` | `tests/cli/mutation_version_install_test.rs` |

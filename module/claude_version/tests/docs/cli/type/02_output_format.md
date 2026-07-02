@@ -110,8 +110,8 @@ Type compliance and validation tests for `OutputFormat`. See [type/02_output_for
 
 | Function | File |
 |----------|------|
-| `tc258_status_format_json_is_valid_json` | `integration/cross_cutting_test.rs` |
-| `tc260_format_uppercase_rejected` | `integration/cross_cutting_test.rs` |
-| `tc_output_format_text_explicit` | `cli_args_test.rs` |
-| `tc_output_format_xml_rejected` | `cli_args_test.rs` |
-| `tc_output_format_empty_rejected` | `cli_args_test.rs` |
+| `tc258_status_format_json_is_valid_json` | `tests/cli/cross_cutting_test.rs` |
+| `tc260_format_uppercase_rejected` | `tests/cli/cross_cutting_test.rs` |
+| `tc_output_format_text_explicit` | `cli_args_test/type_surface_test.rs` |
+| `tc_output_format_xml_rejected` | `cli_args_test/type_surface_test.rs` |
+| `tc_output_format_empty_rejected` | `cli_args_test/type_surface_test.rs` |

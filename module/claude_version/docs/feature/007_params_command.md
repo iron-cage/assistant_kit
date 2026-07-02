@@ -95,12 +95,6 @@ print
 | [feature/006_config_command.md](006_config_command.md) | `.config` command — manages settings.json (write); `.params` is read-only |
 | [feature/003_settings_management.md](003_settings_management.md) | Settings I/O underlying config reads |
 
-### Algorithms
-
-| File | Relationship |
-|------|-------------|
-| [algorithm/002_config_resolution.md](../algorithm/002_config_resolution.md) | 4-layer resolution used for config-layer values in single-param mode |
-
 ### Sources
 
 | File | Relationship |

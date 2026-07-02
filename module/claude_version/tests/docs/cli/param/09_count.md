@@ -203,18 +203,18 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 
 | Function | File |
 |----------|------|
-| `tc426_version_history_count_3` | `integration/read_commands_test.rs` |
-| `tc427_version_history_count_0_empty` | `integration/read_commands_test.rs` |
-| `tc432_version_history_count_1_json` | `integration/read_commands_test.rs` |
-| `tc433_version_history_count_1_v0` | `integration/read_commands_test.rs` |
-| `tc434_version_history_count_1_v2` | `integration/read_commands_test.rs` |
-| `tc435_version_history_default_count_le_10` | `integration/read_commands_test.rs` |
-| `tc436_version_history_count_100_all` | `integration/read_commands_test.rs` |
-| `tc446_version_history_negative_count_exits_1` | `integration/read_commands_test.rs` |
-| `tc448_version_history_count_abc_exits_1` | `integration/read_commands_test.rs` |
-| `tc487_count_u64_max_rejected_with_clear_error` | `cli_args_test.rs` |
-| `tc488_count_i64_max_accepted` | `cli_args_test.rs` |
-| `count_ec12_count_3_at_most_3_entries` | `integration/count_param_test.rs` |
-| `count_ec13_count_1_v0_exactly_one_line` | `integration/count_param_test.rs` |
-| `count_ec14_count_0_json_empty_array` | `integration/count_param_test.rs` |
-| `count_ec15_v_abc_type_mismatch_exits_1` | `integration/count_param_test.rs` |
+| `tc426_version_history_count_3` | `tests/cli/read_version_history_test.rs` |
+| `tc427_version_history_count_0_empty` | `tests/cli/read_version_history_test.rs` |
+| `tc432_version_history_count_1_json` | `tests/cli/read_version_history_test.rs` |
+| `tc433_version_history_count_1_v0` | `tests/cli/read_version_history_test.rs` |
+| `tc434_version_history_count_1_v2` | `tests/cli/read_version_history_test.rs` |
+| `tc435_version_history_default_count_le_10` | `tests/cli/read_version_history_test.rs` |
+| `tc436_version_history_count_100_all` | `tests/cli/read_version_history_test.rs` |
+| `tc446_version_history_negative_count_exits_1` | `tests/cli/read_version_history_test.rs` |
+| `tc448_version_history_count_abc_exits_1` | `tests/cli/read_version_history_test.rs` |
+| `tc487_count_u64_max_rejected_with_clear_error` | `cli_args_test/param_numeric_test.rs` |
+| `tc488_count_i64_max_accepted` | `cli_args_test/param_numeric_test.rs` |
+| `count_ec12_count_3_at_most_3_entries` | `tests/cli/count_param_test.rs` |
+| `count_ec13_count_1_v0_exactly_one_line` | `tests/cli/count_param_test.rs` |
+| `count_ec14_count_0_json_empty_array` | `tests/cli/count_param_test.rs` |
+| `count_ec15_v_abc_type_mismatch_exits_1` | `tests/cli/count_param_test.rs` |

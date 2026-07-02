@@ -85,13 +85,13 @@ Both are valid invocations; the direction of data flow differs (write vs read).
 
 | Function | File |
 |----------|------|
-| `tc320_settings_set_missing_key_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc321_settings_set_missing_value_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc322_settings_set_stores_boolean_true` | `integration/mutation_commands_test.rs` |
-| `tc323_settings_set_stores_boolean_false` | `integration/mutation_commands_test.rs` |
-| `tc324_settings_set_zero_stored_as_number` | `integration/mutation_commands_test.rs` |
-| `tc325_settings_set_stores_number` | `integration/mutation_commands_test.rs` |
-| `tc326_settings_set_stores_string` | `integration/mutation_commands_test.rs` |
-| `tc176_settings_get_existing_key` | `integration/read_commands_test.rs` |
-| `tc179_settings_get_v0_bare_value` | `integration/read_commands_test.rs` |
-| `tc182_settings_get_format_json` | `integration/read_commands_test.rs` |
+| `tc320_settings_set_missing_key_exits_1` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc321_settings_set_missing_value_exits_1` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc322_settings_set_stores_boolean_true` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc323_settings_set_stores_boolean_false` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc324_settings_set_zero_stored_as_number` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc325_settings_set_stores_number` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc326_settings_set_stores_string` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc176_settings_get_existing_key` | `tests/cli/read_settings_test.rs` |
+| `tc179_settings_get_v0_bare_value` | `tests/cli/read_settings_test.rs` |
+| `tc182_settings_get_format_json` | `tests/cli/read_settings_test.rs` |

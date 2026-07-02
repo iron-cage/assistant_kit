@@ -13,7 +13,7 @@
 | [007_model.md](007_model.md) | Model namespace: `.model`, `.model.select` |
 | [008_models.md](008_models.md) | Models discovery: `.models` |
 
-**Total:** 18 commands (16 visible + 2 hidden)
+**Total:** 20 commands (18 visible + 2 hidden)
 
 ### All Commands
 

@@ -44,3 +44,37 @@
 | 2 | [`force::`](../param/03_force.md) | Sends SIGKILL directly, skipping SIGTERM wait |
 | 3 | [`v::`](../param/04_v.md) | Controls diagnostic detail level |
 | 4 | [`format::`](../param/05_format.md) | Selects text or JSON rendering |
+
+### Workflow Steps
+
+**Step 1 — List all running Claude Code processes:**
+
+```bash
+clv .processes
+# PID    DIR
+# 12345  /home/user/projects/frontend
+# 12890  /home/user/projects/api
+```
+
+**Step 2 — Preview the kill sequence without sending signals:**
+
+```bash
+clv .processes.kill dry::1
+# [dry-run] Would send SIGTERM to PID 12345 (/home/user/projects/frontend)
+# [dry-run] Would send SIGTERM to PID 12890 (/home/user/projects/api)
+```
+
+**Step 3 — Execute the kill sequence:**
+
+```bash
+clv .processes.kill
+# Sent SIGTERM to PID 12345 ... done
+# Sent SIGTERM to PID 12890 ... done
+```
+
+**Step 4 — Verify no processes remain:**
+
+```bash
+clv .processes
+# (no output — empty list, exit 0)
+```

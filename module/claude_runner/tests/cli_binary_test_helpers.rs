@@ -64,6 +64,12 @@ fn assert_container()
 /// explicitly exercise `CLR_DIR`/`CLR_SESSION_DIR` behavior use `run_cli_with_env`
 /// instead, which adds those vars explicitly.
 ///
+/// `HOME` is set to a fixed, empty-by-design path (`/tmp/clr-isolated-home`) so that
+/// a host `~/.clr/prefs.json` cannot inject `--model` or other preference values into
+/// tests that assert a clean default state (Fix(BUG-008) isolation guard). Tests that
+/// need a populated `HOME` (e.g., pref-reading tests) use `run_cli_with_env` with an
+/// explicit `("HOME", temp_dir)` pair.
+///
 /// # Panics
 ///
 /// Panics if the `clr` binary cannot be launched (process spawn failure).
@@ -76,6 +82,7 @@ pub fn run_cli( args : &[ &str ] ) -> std::process::Output
   let bin = env!( "CARGO_BIN_EXE_clr" );
   Command::new( bin )
     .args( args )
+    .env( "HOME", "/tmp/clr-isolated-home" )
     .env_remove( "CLR_DIR" )
     .env_remove( "CLR_SESSION_DIR" )
     .output()
@@ -331,6 +338,39 @@ pub fn spawn_print_claude( path_val : &str ) -> std::process::Child
   child
 }
 
+/// Build a proc isolation dir for `CLR_PROC_DIR`: one `/proc/{pid}` symlink per PID.
+///
+/// Each symlink points at the real `/proc/{pid}` directory.  When the process exits the
+/// kernel removes `/proc/{pid}`, so a broken symlink (ENOENT) causes
+/// `find_claude_processes()` to skip that entry — count falls to 0 and `clr ps`
+/// terminates cleanly.
+///
+/// Without `CLR_PROC_DIR`, ambient `claude` processes visible in real `/proc` can cause
+/// `RowBuilder::validate_row_length` to panic (exit 101) when tests run in parallel
+/// with `ec11_gate_wait_event_emitted_when_gate_blocks` (which spawns its own ELF process).
+/// Call `make_proc_dir` AFTER any post-spawn sleep so `/proc/{pid}` exists by the time
+/// the dir is used.
+///
+/// # Panics
+///
+/// Panics if the temp directory or any symlink cannot be created.
+#[ cfg( unix ) ]
+#[ inline ]
+#[ must_use ]
+#[ allow( dead_code ) ]
+pub fn make_proc_dir( pids : &[ u32 ] ) -> tempfile::TempDir
+{
+  let dir = tempfile::TempDir::new().expect( "make_proc_dir" );
+  for pid in pids
+  {
+    std::os::unix::fs::symlink(
+      format!( "/proc/{pid}" ),
+      dir.path().join( pid.to_string() ),
+    ).expect( "proc pid symlink" );
+  }
+  dir
+}
+
 /// Run `clr ps` with the given PATH env; return the raw `Output`.
 ///
 /// # Panics
@@ -349,6 +389,31 @@ pub fn run_clr_ps( path_val : &str ) -> std::process::Output
     .env( "PATH", path_val )
     .output()
     .expect( "run clr ps" )
+}
+
+/// Run `clr ps` with PATH env and `CLR_PROC_DIR` proc isolation; return the raw `Output`.
+///
+/// `proc_dir` must be the path of a dir produced by `make_proc_dir` for the PIDs of all
+/// background processes spawned by the test.  Prevents ambient `claude` processes in real
+/// `/proc` from reaching `RowBuilder::validate_row_length` and causing a panic (exit 101).
+///
+/// # Panics
+///
+/// Panics if the subprocess cannot be launched.
+#[ cfg( unix ) ]
+#[ inline ]
+#[ must_use ]
+#[ allow( dead_code ) ]
+pub fn run_clr_ps_proc( path_val : &str, proc_dir : &str ) -> std::process::Output
+{
+  assert_container();
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  std::process::Command::new( bin )
+    .arg( "ps" )
+    .env( "PATH", path_val )
+    .env( "CLR_PROC_DIR", proc_dir )
+    .output()
+    .expect( "run clr ps (proc-isolated)" )
 }
 
 /// Invoke `clr ask --dry-run` with extra args; assert exit 0 and return stdout as `String`.
@@ -370,6 +435,7 @@ pub fn run_ask_dry( extra_args : &[ &str ] ) -> String
   args.extend_from_slice( extra_args );
   let out = Command::new( bin )
     .args( &args )
+    .env( "HOME", "/tmp/clr-isolated-home" )
     .output()
     .expect( "failed to invoke clr binary" );
   assert!(
@@ -429,6 +495,7 @@ pub fn run_dry( args : &[ &str ] ) -> String
   full.extend_from_slice( args );
   let out = Command::new( bin )
     .args( &full )
+    .env( "HOME", "/tmp/clr-isolated-home" )
     .env_remove( "CLR_DIR" )
     .env_remove( "CLR_SESSION_DIR" )
     .output()

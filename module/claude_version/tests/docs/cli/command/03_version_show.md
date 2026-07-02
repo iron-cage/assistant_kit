@@ -52,15 +52,15 @@ Integration test planning for the `.version.show` command. See [command/readme.m
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-2 | `.version.show v::0` → bare semver string | P | 0 | F1=0, F3=available | [read_commands_test.rs] |
-| IT-3 | `.version.show v::1` → "Version: X.Y.Z" | P | 0 | F1=1, F3=available | [read_commands_test.rs] |
-| IT-4 | `.version.show format::json` → `{"version":"..."}` | P | 0 | F2=json, F3=available | [read_commands_test.rs] |
+| IT-2 | `.version.show v::0` → bare semver string | P | 0 | F1=0, F3=available | [read_version_test.rs] |
+| IT-3 | `.version.show v::1` → "Version: X.Y.Z" | P | 0 | F1=1, F3=available | [read_version_test.rs] |
+| IT-4 | `.version.show format::json` → `{"version":"..."}` | P | 0 | F2=json, F3=available | [read_version_test.rs] |
 
 ### Negative Tests
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-1 | `.version.show` with no claude in PATH → exit 2 | N | 2 | F3=unavailable | [read_commands_test.rs] |
+| IT-1 | `.version.show` with no claude in PATH → exit 2 | N | 2 | F3=unavailable | [read_version_test.rs] |
 | IT-5 | `.version.show format::xml` → exit 1 | N | 1 | F2=xml | new |
 | IT-6 | `.version.show v::3` → exit 1, out of range | N | 1 | F1=3 | new |
 | IT-7 | `.version.show bogus::x` → exit 1 | N | 1 | F4=present | new |
@@ -192,8 +192,8 @@ IT-1 is the inverse: it explicitly removes claude from PATH to force the exit 2 
 
 | Function | File |
 |----------|------|
-| `tc107_version_show_no_claude_exits_2` | `integration/read_commands_test.rs` |
-| `tc108_version_show_v0_bare_string` | `integration/read_commands_test.rs` |
-| `tc109_version_show_v1_labeled` | `integration/read_commands_test.rs` |
-| `tc111_version_show_format_json` | `integration/read_commands_test.rs` |
-| `tc509_version_show_no_claude_error` | `integration/error_messages_test.rs` |
+| `tc107_version_show_no_claude_exits_2` | `tests/cli/read_version_test.rs` |
+| `tc108_version_show_v0_bare_string` | `tests/cli/read_version_test.rs` |
+| `tc109_version_show_v1_labeled` | `tests/cli/read_version_test.rs` |
+| `tc111_version_show_format_json` | `tests/cli/read_version_test.rs` |
+| `tc509_version_show_no_claude_error` | `tests/cli/error_messages_test.rs` |

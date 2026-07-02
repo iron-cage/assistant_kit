@@ -5,8 +5,8 @@
 #   nextest-filter — test name substring or full nextest -E expression
 #
 # Examples:
-#   ./verb/test1 test_profile_load
-#   ./verb/test1 ft7_session_from_resumes_source_session
+#   ./verb/test1 dot04_all_visible_commands_present
+#   ./verb/test1 dispatch_run_uses_pinned_model_from_prefs_json
 #
 # How it works: sets NEXTEST_FILTER in the host env and delegates to
 # ./runbox/runbox .test.  The project runbox/plugins.sh hook detects
@@ -20,7 +20,7 @@ if [[ -n "${VERB_LAYER:-}" ]]; then
 fi
 if [[ "${1:-}" == "--dry-run" ]]; then
   DRY_FILTER="${2:-<filter>}"
-  echo "NEXTEST_FILTER=$DRY_FILTER ./runbox/runbox .test  →  cargo nextest run -p claude_profile --all-features \"$DRY_FILTER\""
+  echo "NEXTEST_FILTER=$DRY_FILTER ./runbox/runbox .test  →  cargo nextest run --workspace --all-features \"$DRY_FILTER\""
   exit 0
 fi
 FILTER="${1:-}"

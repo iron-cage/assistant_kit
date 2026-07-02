@@ -104,4 +104,4 @@
 ### Exception Records
 
 **Exception to `cli_doc_des.rulebook.md` test ID prefix convention (`INT-` → `IT-` for command tests):**
-Command integration test files use `IT-` as the test case ID prefix (e.g., `IT-1`, `IT-2`) rather than the rulebook-specified `INT-`. Rationale: `IT-` was established early and is consistent across all 14 command test files and their corresponding `integration/` source functions; renaming would require synchronized changes across 14 spec files and all source function tables without any functional benefit.
+Command integration test files use `IT-` as the test case ID prefix (e.g., `IT-1`, `IT-2`) rather than the rulebook-specified `INT-`. Rationale: `IT-` was established early and is consistent across all 14 command test files and their corresponding `tests/cli/` source functions; renaming would require synchronized changes across 14 spec files and all source function tables without any functional benefit.

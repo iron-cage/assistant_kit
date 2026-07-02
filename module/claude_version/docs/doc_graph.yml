@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_version
-  node_count: 29
-  edge_count: 70
+  node_count: 31
+  edge_count: 79
   component_count: 2
-  generated: 2026-06-30
+  generated: 2026-07-02
 
 nodes:
   - id: algorithm/001
@@ -106,6 +106,11 @@ nodes:
     label: Params Command
     entity: feature
 
+  - id: feature/008
+    file: feature/008_runtime_file_discovery.md
+    label: Runtime File Discovery
+    entity: feature
+
   - id: pattern/001
     file: pattern/001_version_lock.md
     label: Version Lock
@@ -120,6 +125,11 @@ nodes:
     file: pitfall/002_symlink_retarget.md
     label: Auto-Updater Symlink Retarget
     entity: pitfall
+
+  - id: runtime_file/001
+    file: runtime_file/001_version_history_cache.md
+    label: Version History Cache
+    entity: runtime_file
 
   - id: user_story/001
     file: cli/user_story/001_environment_check.md
@@ -165,6 +175,10 @@ edges:
     to: pattern/001
     via: patterns
 
+  - from: feature/001
+    to: pitfall/002
+    via: pitfalls
+
   # feature/002 Process Lifecycle
   - from: feature/002
     to: feature/004
@@ -191,6 +205,10 @@ edges:
     to: feature/006
     via: features
 
+  - from: feature/003
+    to: feature/007
+    via: features
+
   # feature/004 Dry Run
   - from: feature/004
     to: feature/001
@@ -202,6 +220,10 @@ edges:
 
   - from: feature/004
     to: feature/003
+    via: features
+
+  - from: feature/004
+    to: feature/006
     via: features
 
   # feature/005 CLI Design
@@ -242,6 +264,10 @@ edges:
     to: feature/005
     via: features
 
+  - from: feature/006
+    to: feature/007
+    via: features
+
   # feature/007 Params Command
   - from: feature/007
     to: feature/006
@@ -251,14 +277,6 @@ edges:
     to: feature/003
     via: features
 
-  - from: feature/007
-    to: feature/005
-    via: features
-
-  - from: feature/007
-    to: algorithm/002
-    via: algorithms
-
   # algorithm/001 Settings Type Inference
   - from: algorithm/001
     to: feature/003
@@ -267,6 +285,11 @@ edges:
   - from: algorithm/001
     to: feature/006
     via: features
+
+  # algorithm/001 Settings Type Inference (additional — bidirectionality with algorithm/002)
+  - from: algorithm/001
+    to: algorithm/002
+    via: algorithms
 
   # algorithm/002 Config Resolution
   - from: algorithm/002
@@ -304,6 +327,24 @@ edges:
     to: feature/001
     via: features
 
+  # feature/008 Runtime File Discovery
+  - from: feature/008
+    to: runtime_file/001
+    via: runtime_files
+
+  # runtime_file/001 Version History Cache
+  - from: runtime_file/001
+    to: feature/001
+    via: features
+
+  - from: runtime_file/001
+    to: feature/008
+    via: features
+
+  - from: feature/001
+    to: runtime_file/001
+    via: runtime_files
+
   # cli/001 Commands
   - from: cli/001
     to: feature/001
@@ -325,9 +366,17 @@ edges:
     to: feature/007
     via: features
 
+  - from: cli/001
+    to: feature/008
+    via: features
+
   # cli/007 Environment Parameters
   - from: cli/007
     to: feature/007
+    via: features
+
+  - from: cli/007
+    to: feature/006
     via: features
 
   # cli/002 Dictionary
@@ -459,7 +508,7 @@ edges:
 components:
   - id: 1
     label: Main corpus
-    size: 28
+    size: 30
     isolated: false
     nodes:
       - algorithm/001
@@ -478,11 +527,13 @@ components:
       - feature/005
       - feature/006
       - feature/007
+      - feature/008
       - format/01
       - format/02
       - pattern/001
       - pitfall/001
       - pitfall/002
+      - runtime_file/001
       - user_story/001
       - user_story/002
       - user_story/003
@@ -495,6 +546,7 @@ components:
     label: Config Parameters
     size: 1
     isolated: true
+    gap: "cli/008_config_param.md has no typed-reference sections to feature/006 or algorithm/002 — pending enrichment"
     nodes:
       - cli/008
 
