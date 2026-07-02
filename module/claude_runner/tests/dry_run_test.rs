@@ -557,6 +557,7 @@ fn empty_positional_arg_produces_bare_command()
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
     .args( [ "--dry-run", "--session-dir", session_path, "" ] )
+    .env( "HOME", "/tmp/clr-isolated-home" ) // Fix(BUG-008) isolation: prevent host prefs from injecting --model
     .output()
     .expect( "Failed to invoke clr binary" );
   assert!( out.status.success(), "empty positional arg must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );

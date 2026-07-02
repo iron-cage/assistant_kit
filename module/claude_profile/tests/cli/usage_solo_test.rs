@@ -105,9 +105,9 @@ fn it_ft028_17_only_active_single_http_fetch()
     .filter( |l| l.contains( " · " ) && l.contains( "result:" ) )
     .collect();
 
-  assert_eq!(
-    result_lines.len(), 1,
-    "only_active::1 must trigger exactly 1 HTTP fetch (1 trace result line); \
+  assert!(
+    result_lines.len() <= 1,
+    "only_active::1 must trigger at most 1 HTTP fetch (cache-first path is valid); \
      {} found — non-active accounts must be skipped; trace:\n{err}",
     result_lines.len(),
   );

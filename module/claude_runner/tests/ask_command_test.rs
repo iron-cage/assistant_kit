@@ -38,6 +38,7 @@ fn run_run_dry( extra_args : &[ &str ] ) -> String
   args.extend_from_slice( extra_args );
   let out = Command::new( bin )
     .args( &args )
+    .env( "HOME", "/tmp/clr-isolated-home" )
     .output()
     .expect( "failed to invoke clr binary" );
   assert!(

@@ -3,7 +3,7 @@
 <!-- task_system_metadata
 type: root
 registry_prefix: null
-next_id: 10
+next_id: 11
 -->
 
 ## Tasks Index
@@ -19,3 +19,4 @@ next_id: 10
 | 7 | 007 | — | 8 | 6 | 5 | 1 | 🎯 (Verified) | any | src/ + claude_quota/src/ | [Models List Command](007_models_list_command.md) | Implement `.models` command with offline/live modes, name filter, and three output formats; add fetch_models() and STATIC_MODELS to claude_quota |
 | 8 | 008 | — | 9 | 6 | 5 | 1 | 🎯 (Verified) | any | src/ + module/claude_runner_core/src/ | [Model Select Command](008_model_select_command.md) | Implement `.model.select` command (get/set/reset modes) and ~/.clr/prefs.json subprocess model preference reader in claude_runner_core |
 | 9 | 009 | — | 7 | 9 | 5 | 1 | 🎯 (Verified) | any | src/ | [Stale Model IDs Fix](009_stale_model_ids_fix.md) | Replace claude-opus-4-8 and claude-sonnet-5 with claude-opus-4-8 and claude-sonnet-5 in map_model_shorthand(), resolve_model(), registry descriptions, and test assertions |
+| 10 | 010 | — | 8 | 9 | 5 | 1 | ✅ (Completed) | any | tests/cli/ | [Fix BUG-325 — dot04 Visible Array](completed/010_fix_bug325_dot04_visible_array.md) | Extend dot04_all_visible_commands_present visible array from 16 to 18 entries: add .models and .model.select after .model |

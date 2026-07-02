@@ -34,12 +34,14 @@ Removes `subprocess_model` key from `~/.clr/prefs.json`. Preserves other keys. P
 
 **Mutual exclusion:** `id::` and `reset::1` together → exits 1 with stderr `model.select: id:: and reset::1 are mutually exclusive`.
 
-**clr integration** (`claude_runner_core/src/isolated.rs`):
+**clr integration:**
 
-`run_isolated_ext()` before resolving the `--model` flag:
+`dispatch_run()` / `dispatch_ask()` (`claude_runner/src/cli/mod.rs`) and `run_isolated_ext()` (`claude_runner_core/src/isolated.rs`) all read the preference. After `apply_env_vars()` resolves CLI flags and `CLR_*` env vars, if `--model` is still unset:
 1. Try to read `~/.clr/prefs.json` → parse `subprocess_model` field.
-2. If present and non-empty: use this model ID instead of `ISOLATED_DEFAULT_MODEL`.
-3. If absent, error, or empty: use `ISOLATED_DEFAULT_MODEL` as before.
+2. If present and non-empty: use this model ID instead of the command's default model.
+3. If absent, error, or empty: use the default model as before.
+
+Precedence (highest to lowest): explicit `--model` flag → `CLR_MODEL` env var → `prefs.json` pin → built-in default.
 
 The preference applies to `run`, `ask`, and `isolated`. `refresh` always uses `REFRESH_DEFAULT_MODEL`; see below.
 
