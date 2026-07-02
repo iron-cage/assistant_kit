@@ -1,4 +1,4 @@
-# Parameter :: 7. `tier::`
+# Parameter: 7. `tier::`
 
 Controls whether the rate-limit tier line appears in output. Used by both `.accounts` (per stored credential) and `.credentials.status` (from live credentials).
 

@@ -9,11 +9,11 @@
 //!
 //! ### ROT — Account Rotate redirector
 //!
-//! | ID | Test Function | Condition | P/N |
-//! |----|---------------|-----------|-----|
-//! | rot01 | `rot01_always_exits_1` | any invocation → exit 1 | N |
-//! | rot02 | `rot02_message_contains_usage_rotate` | stderr/stdout contains `.usage rotate` | N |
-//! | rot03 | `rot03_no_mutation_on_exit_1` | _active file unchanged after deprecated call | N |
+//! | ID | Test Function | Condition | P/N | IT-N |
+//! |----|---------------|-----------|-----|------|
+//! | rot01 | `rot01_always_exits_1` | any invocation → exit 1 | N | IT-1 |
+//! | rot02 | `rot02_message_contains_usage_rotate` | stderr/stdout contains `.usage rotate` | N | IT-2 |
+//! | rot03 | `rot03_no_mutation_on_exit_1` | _active file unchanged after deprecated call | N | IT-3 |
 
 use crate::cli_runner::{
   run_cs_with_env,
@@ -25,6 +25,7 @@ use tempfile::TempDir;
 
 // ── ROT: Account Rotate redirector ────────────────────────────────────────────
 
+/// Spec: [`tests/docs/cli/command/13_account_rotate.md` IT-1]
 #[ test ]
 fn rot01_always_exits_1()
 {
@@ -36,6 +37,7 @@ fn rot01_always_exits_1()
   assert_exit( &out, 1 );
 }
 
+/// Spec: [`tests/docs/cli/command/13_account_rotate.md` IT-2]
 #[ test ]
 fn rot02_message_contains_usage_rotate()
 {
@@ -53,6 +55,7 @@ fn rot02_message_contains_usage_rotate()
   );
 }
 
+/// Spec: [`tests/docs/cli/command/13_account_rotate.md` IT-3]
 #[ test ]
 fn rot03_no_mutation_on_exit_1()
 {

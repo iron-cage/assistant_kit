@@ -1,19 +1,9 @@
-# CLI User Story: Project-specific Execution
+# Run Claude scoped to a project directory with isolated session storage
 
-### Scope
-
-- **Purpose**: Document project-scoped execution using --dir and --session-dir for isolation.
-- **Responsibility**: Define acceptance criteria for directing Claude to a specific directory with isolated session state.
-- **In Scope**: --dir subprocess cwd, --session-dir session storage, combined usage, --new-session at project start.
-- **Out of Scope**: Credential isolation (→ 010_credential_isolated_execution.md).
-
-### Persona
-
-Developer working across multiple projects who needs Claude to operate in a specific project directory with isolated session state.
-
-### Goal
-
-Run Claude scoped to a specific project directory and session storage location so context does not bleed between projects.
+**Persona:** Developer working across multiple projects who needs Claude to operate in a specific project directory with isolated session state.
+**Goal:** Run Claude scoped to a specific project directory and session storage location so context does not bleed between projects.
+**Benefit:** Prevents cross-project context contamination and keeps Claude's working context relevant.
+**Priority:** High
 
 ### Acceptance Criteria
 
@@ -42,6 +32,12 @@ Run Claude scoped to a specific project directory and session storage location s
 | 7 | [`--new-session`](../param/007_new_session.md) | Discard prior session at that location |
 | 8 | [`--dir`](../param/008_dir.md) | Set subprocess working directory |
 | 10 | [`--session-dir`](../param/010_session_dir.md) | Set project-specific session storage path |
+
+### Workflow Steps
+
+1. `clr --dir /path/to/project "task"` — run Claude with the project directory as working directory
+2. `clr --dir /path/to/project --session-dir /path/to/sessions "task"` — add project-specific session storage
+3. `clr --dir /path/to/project --new-session "task"` — start a new task session in that project directory
 
 ### Related User Stories
 

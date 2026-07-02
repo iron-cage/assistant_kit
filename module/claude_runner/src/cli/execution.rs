@@ -2,6 +2,7 @@ use claude_runner_core::{ ClaudeCommand, ErrorKind, ExecutionOutput, signal_exit
 use super::parse::{ CliArgs, ExpectStrategy };
 use super::fence::strip_fences;
 use claude_journal::{ EventRecord, EventType, JournalWriter };
+use claude_storage_core::SessionId;
 
 // -------------------------------------------------------------------
 // Journal helpers
@@ -597,14 +598,14 @@ fn default_print_timeout() -> u32
 /// Every error class is retried when its effective count > 0.
 /// Console output uses `[Class] <message>` format on stderr.
 /// Supports subprocess timeout via `--timeout` (0 = unlimited; absent = `DEFAULT_PRINT_TIMEOUT_SECS`).
-#[ allow( clippy::too_many_lines ) ]
+#[ allow( clippy::too_many_lines ) ] // retry orchestration — per-class attempt counters, delay logic, and exit handling in one coherent loop
 pub( super ) fn run_print_mode(
-  builder : &ClaudeCommand,
-  cli     : &CliArgs,
-  journal : Option< &JournalWriter >,
+  builder             : &ClaudeCommand,
+  cli                 : &CliArgs,
+  journal             : Option< &JournalWriter >,
+  expected_session_id : Option< &SessionId >,
 )
 {
-  let verbosity    = cli.verbosity.unwrap_or_default();
   // Fix(BUG-305): print-mode sessions had no default watchdog, leaving unattended sessions unbounded.
   // Root cause: unwrap_or( 0 ) treated absent --timeout as unlimited; print-mode should default to 1h.
   // Pitfall: DEFAULT_PRINT_TIMEOUT_SECS applies ONLY here in run_print_mode(); run_interactive() must retain unwrap_or( 0 ) — it is user-attended.
@@ -666,14 +667,12 @@ pub( super ) fn run_print_mode(
       // Pitfall: classify_error() scans stdout AND stderr — rate-limit reason may be in stdout.
       let kind = output.classify_error();
       let class = classify_to_class( kind.as_ref(), output.exit_code );
-      // Fix(BUG-315): auth errors exit immediately without sleeping (fail-fast).
-      // Root cause: retry loop had no is_auth_error guard; auth failures burned retry
-      //   budget sleeping between guaranteed re-failures — same stale credential, same
-      //   401 outcome. Auth failures cannot be recovered without credential injection.
+      // Fix(BUG-325): Auth uses the same 3-tier retry resolution as all other classes.
+      // Root cause: BUG-315 introduced `!is_auth_error` guard that blocked retry-block
+      //   entry unconditionally, making `--retry-on-auth` a dead parameter.
       // Pitfall: never use `break` inside this retry block — break exits the loop and
       //   falls through to the function's implicit return (), bypassing the
       //   process::exit(exit_code) call below. Guard the block ENTRY instead.
-      let is_auth_error = matches!( class, ErrorClass::Auth );
       let class_idx = class as usize;
       let label = class.label();
       let ( count_field, delay_field ) = class_fields( cli, class );
@@ -682,10 +681,10 @@ pub( super ) fn run_print_mode(
       let use_summary = cli.output_style.as_deref().unwrap_or( "summary" ) == "summary";
       let msg = first_message( &output, class, use_summary );
 
-      if !is_auth_error && attempts[ class_idx ] < limit
+      if attempts[ class_idx ] < limit
       {
         attempts[ class_idx ] += 1;
-        if verbosity.shows_warnings()
+        if !cli.quiet
         {
           let suf = delay_suffix( delay );
           eprintln!(
@@ -703,7 +702,7 @@ pub( super ) fn run_print_mode(
       }
 
       // Non-retriable error or retries exhausted.
-      if verbosity.shows_errors()
+      if !cli.quiet
       {
         if attempts[ class_idx ] > 0
         {
@@ -747,12 +746,39 @@ pub( super ) fn run_print_mode(
     {
       super::summary::render_summary( &out, cli.summary_fields.as_deref() ).unwrap_or( out )
     }
+    else if cli.json_schema.is_some()
+    {
+      // Fix(BUG-318): raw mode + --json-schema produced empty stdout because claude returns
+      //   an empty "result" field for structured responses; the value lives in "structured_output".
+      // Root cause: the raw else-branch passed through stdout unchanged, returning the empty
+      //   "result" text instead of extracting "structured_output" from the JSON envelope.
+      // Pitfall: only activate when json_schema is present; unconditional extraction would
+      //   silently drop output for non-structured responses that have no structured_output field.
+      super::summary::extract_structured_output( &out ).unwrap_or( out )
+    }
     else
     {
       out
     };
     let out = apply_expect_validation( cli, builder, out, journal );
     emit_execution( journal, cli, &raw_stdout, &raw_stderr, 0 );
+    // Fix(BUG-320): detect session mismatch — warn when claude resumed a different session.
+    // Root cause: without UUID comparison, silent session drift goes unnoticed; callers may
+    //   believe they are continuing a specific conversation but get a different one instead.
+    // Pitfall: non-fatal — emit warning to stderr but exit 0 so callers are not disrupted.
+    //   Only fires in print mode (interactive TTY output cannot be reliably parsed for UUID).
+    if let Some( expected ) = expected_session_id
+    {
+      if let Some( actual ) = super::summary::extract_session_id( &raw_stdout )
+      {
+        if actual != expected.as_str()
+        {
+          eprintln!(
+            "[Runner] warning: session mismatch — expected {expected}, got {actual} (BUG-320 detected)"
+          );
+        }
+      }
+    }
     write_output_file( cli.output_file.as_deref(), &out );
     print!( "{out}" );
     return;

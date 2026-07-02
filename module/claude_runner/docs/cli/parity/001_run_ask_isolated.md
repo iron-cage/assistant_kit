@@ -20,8 +20,8 @@
 | Syntax | `clr [OPTIONS] [MESSAGE]` / `clr run …` | `clr ask [OPTIONS] [MESSAGE]` | `clr isolated [--creds F] [--timeout N] [MESSAGE]` |
 | Behavioral difference from `run` | — | None | Significant (see below) |
 | **--- Param Surface ---** | | | |
-| Full param set (67+ params) | Yes | Yes (identical) | No — minimal set only |
-| Param count | All 67+ | All 67+ | 12: `MESSAGE`, `--creds`, `--timeout`, `--trace`, `--dry-run`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir` |
+| Full param set (69+ params) | Yes | Yes (identical) | No — minimal set only |
+| Param count | All 69+ | All 69+ | 12: `MESSAGE`, `--creds`, `--timeout`, `--trace`, `--dry-run`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal`, `--journal-dir` |
 | Passthrough override (`-- <args>`) | No | No | Yes (e.g., `-- --effort medium`) |
 | **--- Session ---** | | | |
 | Session continuation (`-c`) | Yes — auto (last session in dir) | Yes — auto | No (temp HOME has no history) |
@@ -38,7 +38,7 @@
 | `--chrome` | Yes in interactive / No in print (auto-suppressed; `--no-chrome` opt-out) | No (always print) | Yes (ClaudeCommand default; no suppression flag) |
 | Ultrathink suffix on MESSAGE | Yes (suppressed by `--no-ultrathink`) | Yes | No |
 | `--no-session-persistence` | Via `--no-persist` flag | Via `--no-persist` | Always injected |
-| Default model injection | No (uses claude binary default) | No | Yes — `claude-opus-4-6` (`ISOLATED_DEFAULT_MODEL`) |
+| Default model injection | Reads `subprocess_model` from `~/.clr/prefs.json` when set (BUG-008); uses claude binary default otherwise | Reads `subprocess_model` from `~/.clr/prefs.json` when set (BUG-008); uses claude binary default otherwise | Yes — `opus` (`ISOLATED_DEFAULT_MODEL`) |
 | Minimal `CLAUDE.md` written to HOME | No | No | Yes (instructs: execute immediately, no clarifying questions, no confirmation) |
 | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `200,000` | `200,000` | `200,000` |
 | **--- Execution Modes ---** | | | |
@@ -69,7 +69,7 @@
 | Temp HOME cleanup | No | No | Yes (unconditional delete after subprocess exits) |
 | **--- Model & Effort ---** | | | |
 | `--model` flag | Yes | Yes | No (override via passthrough `-- --model`) |
-| Default model | claude binary default | claude binary default | `claude-opus-4-6` (hardcoded) |
+| Default model | prefs.json `subprocess_model` if set; otherwise claude binary default | prefs.json `subprocess_model` if set; otherwise claude binary default | `claude-opus-4-8` (hardcoded) |
 | `--fallback-model` | Yes | Yes | No |
 | `--effort` flag | Yes | Yes | No (override via passthrough `-- --effort`) |
 | Default effort | `max` (injected) | `max` (injected) | `max` (always injected) |
@@ -99,9 +99,9 @@
 | `--allowed-tools` / `--disallowed-tools` | Yes | Yes | No |
 | `--max-budget-usd` | Yes | Yes | No |
 | `--max-turns` | Yes | Yes | No |
-| **--- Verbosity ---** | | | |
+| **--- Output Suppression ---** | | | |
 | `--verbose` | Yes | Yes | No |
-| `--verbosity` (gate level) | Yes (default: 3) | Yes | No |
+| `--quiet` | Yes (default: false) | Yes | No |
 | **--- Journal ---** | | | |
 | `--journal` / `--journal-dir` | Yes | Yes | Yes |
 | **--- Exit Codes ---** | | | |
@@ -122,6 +122,7 @@
 
 ### Key Takeaways
 
+- `run` and `ask` read `subprocess_model` from `~/.clr/prefs.json` as a fourth model-resolution tier when `--model` is absent and `CLR_MODEL` is unset (BUG-008 fix); `isolated` always uses `ISOLATED_DEFAULT_MODEL` (`opus`) as its default model regardless of prefs.json.
 - `run` vs `ask` — zero behavioral difference; `ask` is a pure documentation signal for "this is a question".
 - `isolated` shares 9 params with `run`/`ask` (`MESSAGE`, `--trace`, `--dry-run`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal*`); everything else is stripped down or hardcoded.
 - The defining `isolated`-specific behaviors: temp HOME lifecycle, credential writeback, timeout exits as `2` (not `4`), and `--dangerously-skip-permissions` conditional on MESSAGE presence.
@@ -140,7 +141,7 @@ Params not in the gap closure table are excluded by design. Four categories:
 | **Temp HOME = meaningless** | `--subdir`, `--session-dir`, `--new-session`, `--no-persist`, `-c` | Temp HOME has no session history; these params control session state that does not exist |
 | **One-shot = no retry** | 20 retry params, `--expect-retries`, `--max-sessions`, `--fallback-model` | No retry loop in `run_isolated_command()`; retrying bad credentials is pointless; concurrency gate conflicts with urgent credential ops |
 | **Passthrough covers it** | `--model`, `--effort`, `--no-effort-max`, `--output-format`, `--system-prompt`, `--append-system-prompt`, `--json-schema`, `--mcp-config`, `--allowed-tools`, `--disallowed-tools`, `--max-budget-usd`, `--max-turns`, `--chrome`/`--no-chrome` | Claude-native flags with no CLR-level validation or transformation; override via `-- <flag>` |
-| **Architecture mismatch** | `--interactive`, `--verbose`, Ultrathink suffix | `--interactive` conflicts with message-present contract; `--verbose` subsumed by `--verbosity` (TSK-333); ultrathink conflicts with "execute immediately" CLAUDE.md directive |
+| **Architecture mismatch** | `--interactive`, `--verbose`, Ultrathink suffix | `--interactive` conflicts with message-present contract; `--verbose` is a claude-native passthrough (no CLR-internal gating); ultrathink conflicts with "execute immediately" CLAUDE.md directive |
 
 ---
 
@@ -155,7 +156,6 @@ The following gaps between `isolated` and `run`/`ask` are tracked as implementat
 | TSK-330 ✅ | `--file` not available | Input | Pipe a file as stdin to the isolated subprocess |
 | TSK-331 ✅ | `--expect` / `--expect-strategy` (fail + default) not available | Validation | Assert output matches expected pattern; exit 3 on mismatch |
 | TSK-332 ✅ | `--output-file`, `--strip-fences`, `--output-style`, `--summary-fields` not available | Output | Tee output to file, strip code fences, render summary, select fields |
-| TSK-333 | `--verbosity` not available | Runner Control | Gate CLR verbose logging level (1-5) |
 
 ---
 
@@ -165,7 +165,7 @@ The following gaps between `isolated` and `run`/`ask` are tracked as implementat
 |------|------|----------------|
 | command | `command/01_run.md` | `run` full reference |
 | command | `command/05_ask.md` | `ask` reference (alias) |
-| command | `command/02_isolated.md` | `isolated` full reference |
+| command | `command/03_isolated.md` | `isolated` full reference |
 | doc | `command_defaults.md` | Injection defaults with Plan 009 design traceability |
 | parity | `002_isolated_refresh.md` | `isolated` vs `refresh` credential command comparison |
 | invariant | `../invariant/005_isolated_subprocess_defaults.md` | Isolated subprocess injection contracts |

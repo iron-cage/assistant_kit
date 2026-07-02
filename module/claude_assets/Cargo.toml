@@ -31,7 +31,7 @@ path = "src/bin/cla.rs"
 required-features = [ "enabled" ]
 
 [features]
-default = []
+default = [ "enabled" ]
 full    = [ "enabled" ]
 enabled = [
   "dep:claude_assets_core",
@@ -41,6 +41,7 @@ enabled = [
   "error_tools/enabled",
   "error_tools/error_untyped",
   "dep:cli_fmt",
+  "cli_fmt/cli_help_template",
 ]
 
 [dependencies]

@@ -88,6 +88,6 @@ Edge case coverage for the `only_valid::` parameter on `.usage`. See [param/043_
 - **When:** `only_valid::1` filter applied (via `accounts.retain(...)` in `api.rs`).
 - **Then:** The account is excluded from the result set. Without Fix(BUG-317), this account would pass `only_valid::1` because only `result.is_ok()` was checked.
 - **Exit:** n/a (unit test — retain predicate)
-- **Source fn:** `mre_bug317_cancelled_excluded_by_only_valid` (in `src/usage/api_tests.rs`)
+- **Source fn:** `mre_bug317_cancelled_excluded_by_only_valid` (in `tests/usage/api_tests_b.rs`)
 - **Note:** Fix(BUG-317): predicate is now `result.is_ok() && !account.as_ref().is_some_and(|a| a.billing_type == "none")`. Both conditions must pass independently.
 - **Source:** [param/043_only_valid.md](../../../../docs/cli/param/043_only_valid.md)

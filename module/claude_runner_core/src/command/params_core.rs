@@ -278,4 +278,25 @@ impl ClaudeCommand {
     self.telemetry = Some( telemetry );
     self
   }
+
+  /// Set auto-compaction window in tokens (default: `Some(200_000)`)
+  ///
+  /// Controls `CLAUDE_CODE_AUTO_COMPACT_WINDOW`. The default `Some(200_000)` prevents
+  /// accidental use of extended 1M windows in automation contexts.
+  /// Pass `None` to suppress the env var entirely (defers to model native window).
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// use claude_runner_core::ClaudeCommand;
+  ///
+  /// let cmd = ClaudeCommand::new()
+  ///   .with_compact_window( None );  // use model native window (up to 1M for extended)
+  /// ```
+  #[inline]
+  #[must_use]
+  pub fn with_compact_window( mut self, tokens: Option<u32> ) -> Self {
+    self.compact_window = tokens;
+    self
+  }
 }

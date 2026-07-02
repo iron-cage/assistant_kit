@@ -4,7 +4,7 @@
 //!
 //! Cover spec test cases from `tests/docs/cli/param/` and `tests/docs/cli/command/`
 //! not already exercised by `cli_args_test.rs`, `dry_run_test.rs`,
-//! `ultrathink_args_test.rs`, `effort_args_test.rs`, or `verbosity_test.rs`.
+//! `ultrathink_args_test.rs`, `effort_args_test.rs`, or `quiet_test.rs`.
 //! Trace tests live in `param_trace_edge_cases_test.rs`.
 //! Extended flag tests (`--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`)
 //! live in `param_extended_flags_test.rs`.
@@ -54,8 +54,8 @@
 //! --dry-run:
 //! - S23: `--dry-run --no-ultrathink --no-effort-max --verbose "msg"` → all flags visible (`11_dry_run.md` EC-6)
 //!
-//! --verbosity:
-//! - S24: `--verbosity high "msg"` → exit 1, error on stderr (`12_verbosity.md` EC-6)
+//! --quiet:
+//! - S24: `--quiet "msg"` → exit 0, `--quiet` does not appear in assembled claude command (`074_quiet.md` EC-1)
 //!
 //! --print:
 //! - S25: `clr --dry-run -p "msg"` and `clr --dry-run --print "msg"` byte-identical (`02_print.md` EC-2)
@@ -375,16 +375,20 @@ fn s23_dry_run_with_multiple_opt_out_flags_full_preview()
   assert!( !stdout.contains( "ultrathink" ), "ultrathink suffix must be absent (--no-ultrathink). Got:\n{stdout}" );
 }
 
-// S24: --verbosity with non-numeric value → exit 1
+// S24: --quiet is a runner-only flag and must not appear in the assembled claude command
 #[ test ]
-fn s24_verbosity_non_numeric_value_rejected()
+fn s24_quiet_not_forwarded_to_claude()
 {
-  let out = run_cli( &[ "--verbosity", "high", "--dry-run", "Fix bug" ] );
-  assert!( !out.status.success(), "--verbosity with non-numeric value must exit non-zero" );
-  let stderr = String::from_utf8_lossy( &out.stderr );
+  let out = run_cli( &[ "--quiet", "--dry-run", "Fix bug" ] );
+  assert!( out.status.success(), "--quiet must be accepted. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    !stderr.is_empty(),
-    "error must go to stderr for invalid --verbosity value. Got:\n{stderr}"
+    !stdout.contains( "--quiet" ),
+    "--quiet must not be forwarded to claude command. Got:\n{stdout}"
+  );
+  assert!(
+    stdout.contains( "claude " ),
+    "assembled command must still contain claude. Got:\n{stdout}"
   );
 }
 
@@ -602,9 +606,9 @@ fn ec7_max_sessions_no_gate_messages_below_limit()
 ///
 /// ## Fix Applied
 ///
-/// `session_exists( session_dir )` reads the target directory and returns `true`
-/// only if at least one entry is present.  The guard `!cli.new_session &&
-/// session_exists(...)` gates `-c` injection, replacing the unconditional block.
+/// `session_exists( session_dir )` reads the target directory and returns
+/// `Some(SessionId)` when at least one qualifying `.jsonl` entry is present.
+/// The guard `!cli.new_session && expected_id.is_some()` gates `-c` injection.
 ///
 /// ## Prevention
 ///

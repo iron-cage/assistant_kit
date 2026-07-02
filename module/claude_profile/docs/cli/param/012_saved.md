@@ -1,4 +1,4 @@
-# Parameter :: 12. `saved::`
+# Parameter: 12. `saved::`
 
 Controls whether the saved account count line appears in `.credentials.status` output. Opt-in (default `0`). Counts `*.credentials.json` files in the credential store.
 

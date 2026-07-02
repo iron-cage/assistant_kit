@@ -64,6 +64,6 @@ The consumer workspace depends on assistant; assistant does not depend on the co
 
 ### Provenance
 
-| File | Relationship |
-|------|--------------|
+| File | Notes |
+|------|-------|
 | `spec.md` (deleted — migrated here) | Privacy Invariant, Dependency Flow sections |

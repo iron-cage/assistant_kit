@@ -54,6 +54,11 @@ session::default      # Matches -default_topic.jsonl
 | [`SessionFilter`](../type/08_session_filter.md) | String | String | In `.list`/`.projects`: case-insensitive substring |
 | [`SessionId`](../type/09_session_id.md) | String (filename stem) | String | In `.count`/`.search`: exact match |
 
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 4 | [Session Filter](../param_group/04_session_filter.md) | Full | `agent::`, `min_entries::` |
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
@@ -61,11 +66,6 @@ session::default      # Matches -default_topic.jsonl
 | 4 | [`.count`](../command/04_count.md) | unset | SessionId: exact scope pin to a specific session |
 | 5 | [`.search`](../command/05_search.md) | unset | SessionId: exact scope pin to a specific session |
 | 7 | [`.projects`](../command/07_projects.md) | unset | SessionFilter: substring filter |
-
-### Referenced Parameter Groups
-| # | Group | Membership | Co-members |
-|---|-------|------------|------------|
-| 4 | [Session Filter](../param_group/04_session_filter.md) | Full | `agent::`, `min_entries::` |
 
 ### Referenced User Stories
 | # | User Story | Persona |

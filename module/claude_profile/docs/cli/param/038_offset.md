@@ -1,4 +1,4 @@
-# Parameter :: 38. `offset::`
+# Parameter: 38. `offset::`
 
 Skips the first N rows from the filtered result before applying `count::` and rendering. Enables pagination through the quota table output.
 

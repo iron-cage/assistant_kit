@@ -27,7 +27,7 @@ ast .help                    # all ~40 commands in one place
 | `module/` | Fifteen workspace crates (see Crates below) |
 | `contract/` | Behavioral contract test suites for external dependencies |
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, error |
-| `../task/workspace/` | Workspace task registry — External Layout (see `../task/`) |
+| `../../agent_kit/task/workspace/` | Workspace task registry — External Layout (see `../../agent_kit/task/`) |
 | `verb/` | Universal Action Protocol: per-verb reference docs for all 7 `do` protocol verbs. |
 | `vision.md` | Project vision, design rationale, and open problems |
 | `../locales.md` | Locale and internationalisation notes |

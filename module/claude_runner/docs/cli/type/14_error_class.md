@@ -34,7 +34,7 @@ All classes default to **retry = 2**, **delay = 30s** (Validation delay = 0s —
 
 **Service** — API-layer error from the Anthropic backend (HTTP 4xx/5xx). The `"API Error: "` prefix (colon-space, not parenthesis) identifies these. May be transient infrastructure issues. Automatic retry via `--retry-on-service N` with `--service-delay SECS` cooldown.
 
-**Auth** — Credential or authorization failure. The subprocess rejects the current credentials. Detected by `"authentication_error"` in output (Fix BUG-314: this pattern fires before the `"API Error: "` catch-all, covering the Claude CLI 401 form) or by `"Your organization does not have access to Claude"`. Rotating or re-issuing credentials is required. When auth error is detected and no credential recovery hook (`--on-auth-error switch`) is configured, the retry loop exits immediately (fail-fast) without sleeping or consuming retry slots (Fix BUG-315).
+**Auth** — Credential or authorization failure. The subprocess rejects the current credentials. Detected by `"authentication_error"` in output (Fix BUG-314: this pattern fires before the `"API Error: "` catch-all, covering the Claude CLI 401 form) or by `"Your organization does not have access to Claude"`. Rotating or re-issuing credentials is required. Retries via the same 3-tier resolution as all other classes (Fix BUG-325): `--retry-override ?? --retry-on-auth ?? --retry-default (2)`.
 
 **Process** — Subprocess died from an OS signal or was killed by the CLR timeout watchdog. `Signal` variants have exit code > 128; `Timeout` variants have exit 4 with the `"Error: timeout after {N}s"` stderr line. Increasing `--timeout` or investigating external process killers is the response.
 
@@ -197,6 +197,12 @@ Error: [Service] API Error: 503 Service Unavailable (exit 1)
 ```
 
 **Auth / AuthError** (exit 1):
+```
+[Auth] Your organization does not have access to Claude. Please check your subscription. — retrying in 30s (attempt 1/2)…
+[Auth] Your organization does not have access to Claude. Please check your subscription. — retrying in 30s (attempt 2/2)…
+Error: [Auth] Your organization does not have access to Claude. Please check your subscription. — retries exhausted (exit 1)
+```
+Without retry configured:
 ```
 Error: [Auth] Your organization does not have access to Claude. Please check your subscription. (exit 1)
 ```

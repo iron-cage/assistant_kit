@@ -1,5 +1,12 @@
 # Subprocess: Credential Write-Back Protocol
 
+### Scope
+
+- **Purpose**: Define how refreshed OAuth credentials flow from an isolated subprocess back to the credential store and live session.
+- **Responsibility**: Authoritative protocol for credential write-back in `refresh_account_token()` — step sequence, safety rules, expiry derivation, and RT rotation mechanism.
+- **In Scope**: `refresh_account_token()` protocol steps; live session write prohibition (BUG-221 fix); post-refresh expiry derivation; RT rotation via `expiresAt=1`; post-rotation live sync (BUG-310 fix).
+- **Out of Scope**: `run_isolated()` API contract (→ `subprocess/001`); per-invocation trigger predicates (→ `subprocess/003–004`); credential file format (→ `schema/001`).
+
 ### Purpose
 
 Define how refreshed OAuth credentials flow from an isolated subprocess back to the credential store and (when applicable) the live session, without disrupting the user's active Claude session.
@@ -46,13 +53,28 @@ After `.usage rotate::1` calls `switch_account(winner)` then `apply_touch(winner
 - BUG-310: live session retains stale `token_A` while store has `token_B`
 - Fix (AC-11 Feature 038): after `apply_touch`, `std::fs::copy(store → live)` re-syncs for the current-account case
 
-### Cross-References
+### Features
+
+| File | Relationship |
+|------|-------------|
+| [feature/017_token_refresh.md](../feature/017_token_refresh.md) | AC-20/AC-25/AC-29/AC-32/AC-33 (write-back, expiry, live safety) |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [schema/001](../schema/001_credentials_json.md) | `{name}.credentials.json` format |
+
+### Subprocess
 
 | File | Relationship |
 |------|-------------|
 | [subprocess/001](001_run_isolated_contract.md) | `run_isolated()` API and `IsolatedRunResult` |
 | [subprocess/003](003_token_refresh_invocation.md) | Token refresh invocation |
 | [subprocess/004](004_session_touch_invocation.md) | Session touch invocation |
-| [feature/017_token_refresh.md](../feature/017_token_refresh.md) | AC-20/AC-25/AC-29/AC-32/AC-33 (write-back, expiry, live safety) |
-| [schema/001](../schema/001_credentials_json.md) | `{name}.credentials.json` format |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
 | [invariant/008](../invariant/008_single_token_refresh_entry.md) | Single-entry-point invariant |

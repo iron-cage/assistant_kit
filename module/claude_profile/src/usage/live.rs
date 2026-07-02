@@ -27,7 +27,9 @@ extern "C" fn on_sigint( _ : std::os::raw::c_int )
 
 /// Format a Unix timestamp as `HH:MM:SS` in UTC (no external dep).
 #[ cfg_attr( not( unix ), allow( dead_code ) ) ]
-fn secs_to_hms_utc( unix_secs : u64 ) -> String
+#[ must_use ]
+#[ inline ]
+pub fn secs_to_hms_utc( unix_secs : u64 ) -> String
 {
   let sod = unix_secs % 86400;
   let h   = sod / 3600;
@@ -157,38 +159,4 @@ pub( crate ) fn execute_live_mode(
   std::process::exit( 1 )
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-#[ cfg( test ) ]
-mod tests
-{
-  use super::secs_to_hms_utc;
-
-  /// C15 — Zero seconds → "00:00:00".
-  #[ test ]
-  fn test_secs_to_hms_utc_zero()
-  {
-    assert_eq!( secs_to_hms_utc( 0 ), "00:00:00" );
-  }
-
-  /// C16 — End of day → "23:59:59".
-  #[ test ]
-  fn test_secs_to_hms_utc_end_of_day()
-  {
-    assert_eq!( secs_to_hms_utc( 86399 ), "23:59:59" );
-  }
-
-  /// C17 — Exactly one day wraps to "00:00:00".
-  #[ test ]
-  fn test_secs_to_hms_utc_day_wrap()
-  {
-    assert_eq!( secs_to_hms_utc( 86400 ), "00:00:00" );
-  }
-
-  /// C18 — Mid-day timestamp.
-  #[ test ]
-  fn test_secs_to_hms_utc_midday()
-  {
-    assert_eq!( secs_to_hms_utc( 45045 ), "12:30:45" );
-  }
-}
+// Tests live in tests/usage/live_tests.rs (integration tests via test_bridge).

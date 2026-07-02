@@ -1,21 +1,25 @@
 # CLI Command: ask
 
-Semantic alias for `run`. Accepts the same parameters with identical defaults and
-execution behavior. Use `ask` in scripts and shell history to signal intent — the
-invocation is a single-turn question rather than a long-running task.
+### Description
 
-**Syntax:**
+Semantic alias for `run` — identical parameter set, identical execution path, identical defaults. Use `ask` in scripts and shell history to signal intent: the invocation is a single-turn question rather than a long-running task.
+
+-- **Parameters:** all parameters from `run` (identical defaults)
+-- **Exit Codes:** 0 (success) | 1 (error) | 2 (rate-limit/transient) | 3 (expect mismatch) | 4 (timeout) | N (subprocess passthrough) | 128+signal (signal)
+
+### Syntax
 
 ```sh
 clr ask [OPTIONS] [MESSAGE]
 ```
 
-**Parameters:**
+### Parameters
 
-All parameters from [`run`](01_run.md) are accepted with identical defaults.
-No behavioral differences exist between `ask` and `run`.
+All parameters from [`run`](01_run.md) are accepted with identical defaults. No behavioral differences exist between `ask` and `run`.
 
-**Execution Modes:**
+**Algorithm (1 step):** Delegate to `run` execution path with identical parameters; no `ask`-specific logic exists.
+
+### Execution Modes
 
 | Invocation | Mode | Path |
 |------------|------|------|
@@ -25,7 +29,7 @@ No behavioral differences exist between `ask` and `run`.
 | `clr ask --dry-run "What is X?"` | Preview only | `describe()` / `describe_env()` |
 | `clr ask --trace "What is X?"` | Trace (print then execute) | `describe_env()` + `describe()` to stderr, then `execute()` |
 
-**Exit Codes:**
+### Exit Codes
 
 | Code | Meaning |
 |------|---------|
@@ -37,7 +41,7 @@ No behavioral differences exist between `ask` and `run`.
 | N | Passthrough from claude subprocess |
 | 128+signal | Subprocess killed by signal; follows POSIX convention (e.g., SIGTERM → 143, SIGKILL → 137) |
 
-**Examples:**
+### Examples
 
 ```sh
 # Quick Q&A
@@ -53,11 +57,15 @@ clr ask --effort high "What does this function return?"
 clr ask --dir ~/project "What is the entry point?"
 ```
 
-**Notes:**
+### Notes
 
-`ask` is a pure semantic alias for `run` — identical parameter set, identical
-execution path, identical defaults. The distinction is documentation only: `ask`
-communicates that the invocation is a question, not a task.
+`ask` is a pure semantic alias for `run` — identical parameter set, identical execution path, identical defaults. The distinction is documentation only: `ask` communicates that the invocation is a question, not a task.
+
+### Related Commands
+
+| # | Command | Relationship |
+|---|---------|--------------|
+| 1 | [`run`](01_run.md) | `ask` is a pure semantic alias for `run` with identical behavior |
 
 ### Referenced Parameter Groups
 
@@ -71,5 +79,19 @@ communicates that the invocation is a question, not a task.
 
 | # | User Story | Persona |
 |---|------------|---------|
+| 6 | [006_verbose_debugging.md](../user_story/006_verbose_debugging.md) | Developer |
 | 15 | [015_ask_mode.md](../user_story/015_ask_mode.md) | Developer |
+| 17 | [017_model_selection.md](../user_story/017_model_selection.md) | Developer |
+| 19 | [019_mcp_config_injection.md](../user_story/019_mcp_config_injection.md) | Developer |
 | 22 | [022_session_isolation_subdir.md](../user_story/022_session_isolation_subdir.md) | Developer |
+| 23 | [023_output_file_capture.md](../user_story/023_output_file_capture.md) | Developer |
+| 24 | [024_enum_output_validation.md](../user_story/024_enum_output_validation.md) | Developer |
+| 25 | [025_concurrency_gate.md](../user_story/025_concurrency_gate.md) | Developer |
+
+---
+
+**Category:** Task execution
+**Complexity:** 25
+**API Requirement:** Write
+**Idempotent:** No
+**Risk Level:** Low

@@ -17,8 +17,8 @@
 //! | FT-02 | `ft02_get_model_sonnet`                         | `{"model":"sonnet"}` → `model: sonnet\n`                        | P   |
 //! | FT-03 | `ft03_get_model_unset_key_absent`               | key absent in settings.json → `model: (unset)\n`               | P   |
 //! | FT-04 | `ft04_get_model_unset_file_absent`              | settings.json absent → `model: (unset)\n`                      | P   |
-//! | FT-05 | `ft05_set_opus_writes_full_id`                  | `set::opus` → writes `claude-opus-4-6`                         | P   |
-//! | FT-06 | `ft06_set_sonnet_writes_full_id`                | `set::sonnet` → writes `claude-sonnet-4-6`                     | P   |
+//! | FT-05 | `ft05_set_opus_writes_full_id`                  | `set::opus` → writes `claude-opus-4-8`                         | P   |
+//! | FT-06 | `ft06_set_sonnet_writes_full_id`                | `set::sonnet` → writes `claude-sonnet-5`                     | P   |
 //! | FT-07 | `ft07_set_haiku_writes_full_id`                 | `set::haiku` → writes `claude-haiku-4-5-20251001`              | P   |
 //! | FT-08 | `ft08_set_default_removes_key_preserves_others` | `set::default` removes model key; other keys preserved          | P   |
 //! | FT-09 | `ft09_set_bad_value_exits_1`                    | `set::bad` → exit 1; stderr names all four valid values        | N   |
@@ -34,7 +34,7 @@
 //! | CC-E  | `cc_e_set_default_absent_settings_exits_0`      | `set::default` when settings.json absent → exit 0, no crash   | P   |
 //! | CC-F  | `cc_f_model_null_value_treated_as_unset`        | `{"model": null}` → `model: (unset)` (null is not a string)   | P   |
 //! | CC-G  | `cc_g_set_mode_stdout_format`                   | set mode stdout is `model set: opus\n` (shorthand, not ID)     | P   |
-//! | CC-H  | `cc_h_set_overwrites_existing_model`            | `set::haiku` overwrites pre-existing `claude-opus-4-6`         | P   |
+//! | CC-H  | `cc_h_set_overwrites_existing_model`            | `set::haiku` overwrites pre-existing `claude-opus-4-8`         | P   |
 
 use crate::cli_runner::{ run_cs, run_cs_with_env, stdout, stderr, assert_exit };
 use tempfile::TempDir;
@@ -130,7 +130,7 @@ fn ft04_get_model_unset_file_absent()
   );
 }
 
-/// FT-05 (AC-05): `clp .model set::opus` writes `claude-opus-4-6` to settings.json. Exit 0.
+/// FT-05 (AC-05): `clp .model set::opus` writes `claude-opus-4-8` to settings.json. Exit 0.
 #[ test ]
 fn ft05_set_opus_writes_full_id()
 {
@@ -141,13 +141,13 @@ fn ft05_set_opus_writes_full_id()
   assert_exit( &out, 0 );
   let model = read_settings_model( dir.path() );
   assert_eq!(
-    model.as_deref(), Some( "claude-opus-4-6" ),
-    "FT-05: set::opus must write `claude-opus-4-6`; got: {model:?}\nstderr: {}",
+    model.as_deref(), Some( "claude-opus-4-8" ),
+    "FT-05: set::opus must write `claude-opus-4-8`; got: {model:?}\nstderr: {}",
     stderr( &out ),
   );
 }
 
-/// FT-06 (AC-06): `clp .model set::sonnet` writes `claude-sonnet-4-6` to settings.json. Exit 0.
+/// FT-06 (AC-06): `clp .model set::sonnet` writes `claude-sonnet-5` to settings.json. Exit 0.
 #[ test ]
 fn ft06_set_sonnet_writes_full_id()
 {
@@ -158,8 +158,8 @@ fn ft06_set_sonnet_writes_full_id()
   assert_exit( &out, 0 );
   let model = read_settings_model( dir.path() );
   assert_eq!(
-    model.as_deref(), Some( "claude-sonnet-4-6" ),
-    "FT-06: set::sonnet must write `claude-sonnet-4-6`; got: {model:?}",
+    model.as_deref(), Some( "claude-sonnet-5" ),
+    "FT-06: set::sonnet must write `claude-sonnet-5`; got: {model:?}",
   );
 }
 
@@ -191,7 +191,7 @@ fn ft08_set_default_removes_key_preserves_others()
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write(
     claude_dir.join( "settings.json" ),
-    r#"{"model":"claude-opus-4-6","theme":"dark"}"#,
+    r#"{"model":"claude-opus-4-8","theme":"dark"}"#,
   ).unwrap();
 
   let out = run_cs_with_env( &[ ".model", "set::default" ], &[ ( "HOME", home ) ] );
@@ -243,8 +243,8 @@ fn ft10_set_creates_file_when_absent()
   assert_exit( &out, 0 );
   let model = read_settings_model( dir.path() );
   assert_eq!(
-    model.as_deref(), Some( "claude-opus-4-6" ),
-    "FT-10: set::opus must create settings.json with `claude-opus-4-6` when file was absent; got: {model:?}\nstderr: {}",
+    model.as_deref(), Some( "claude-opus-4-8" ),
+    "FT-10: set::opus must create settings.json with `claude-opus-4-8` when file was absent; got: {model:?}\nstderr: {}",
     stderr( &out ),
   );
 }
@@ -267,7 +267,7 @@ fn ft11_set_preserves_existing_keys()
   let content = std::fs::read_to_string( claude_dir.join( "settings.json" ) )
     .expect( "settings.json must exist after set::opus" );
   assert!(
-    content.contains( "\"model\"" ) && content.contains( "claude-opus-4-6" ),
+    content.contains( "\"model\"" ) && content.contains( "claude-opus-4-8" ),
     "FT-11: settings.json must contain model key after set::opus; got: {content}",
   );
   assert!(
@@ -442,7 +442,7 @@ fn cc_d_malformed_settings_json_set_writes_model()
   assert_exit( &out, 0 );
   let model = read_settings_model( dir.path() );
   assert_eq!(
-    model.as_deref(), Some( "claude-opus-4-6" ),
+    model.as_deref(), Some( "claude-opus-4-8" ),
     "CC-D: malformed settings.json must be treated as {{}} — model must be written; got: {model:?}\nstderr: {}",
     stderr( &out ),
   );
@@ -519,7 +519,7 @@ fn cc_g_set_mode_stdout_format()
   );
 }
 
-/// CC-H: `set::haiku` overwrites a pre-existing `claude-opus-4-6` model value.
+/// CC-H: `set::haiku` overwrites a pre-existing `claude-opus-4-8` model value.
 ///
 /// Verifies the write is not additive — the existing `model` key is replaced,
 /// not duplicated. After the overwrite, only `claude-haiku-4-5-20251001` must
@@ -533,7 +533,7 @@ fn cc_h_set_overwrites_existing_model()
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write(
     claude_dir.join( "settings.json" ),
-    r#"{"model":"claude-opus-4-6"}"#,
+    r#"{"model":"claude-opus-4-8"}"#,
   ).unwrap();
 
   let out = run_cs_with_env( &[ ".model", "set::haiku" ], &[ ( "HOME", home ) ] );
@@ -541,6 +541,6 @@ fn cc_h_set_overwrites_existing_model()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(), Some( "claude-haiku-4-5-20251001" ),
-    "CC-H: set::haiku must overwrite `claude-opus-4-6` with `claude-haiku-4-5-20251001`; got: {model:?}",
+    "CC-H: set::haiku must overwrite `claude-opus-4-8` with `claude-haiku-4-5-20251001`; got: {model:?}",
   );
 }

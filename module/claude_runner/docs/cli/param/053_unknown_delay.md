@@ -8,6 +8,7 @@ effective retry count for Unknown is 0.
 - **Default:** `auto` (inherits from `--retry-default-delay`, Tier 3 fallback)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"unknown-delay"`
 
 ```sh
 clr -p "task" --retry-on-unknown 2 --unknown-delay 15  # wait 15s between retries
@@ -37,7 +38,7 @@ effective = --retry-override-delay ?? --unknown-delay ?? --retry-default-delay (
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, ... |
 
 ### Referenced Commands
 

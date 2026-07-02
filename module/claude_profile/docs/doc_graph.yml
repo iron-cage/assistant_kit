@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for feature/ and invariant/ doc instances in claude_profile
-  node_count: 44
-  edge_count: 96
-  component_count: 8
-  generated: 2026-06-21
+  node_count: 55
+  edge_count: 126
+  component_count: 5
+  generated: 2026-07-01
   scope_note: >
     Covers feature/ and invariant/ cross-references only. CLI entities
     (command, param, param_group, type, format, workflow_scenario) and
@@ -216,6 +216,31 @@ nodes:
     label: Unified Session Config Recommendation
     entity: feature
 
+  - id: feature/063
+    file: feature/063_explicit_ownership_claim.md
+    label: Explicit Ownership Claim
+    entity: feature
+
+  - id: feature/064
+    file: feature/064_active_marker_and_owner_redesign.md
+    label: Active Marker and Owner Param Redesign
+    entity: feature
+
+  - id: feature/065
+    file: feature/065_assignee_param_redesign.md
+    label: Assignee Param Redesign
+    entity: feature
+
+  - id: feature/066
+    file: feature/066_dual_source_quota_parsing.md
+    label: Dual-Source OAuth Quota Parsing
+    entity: feature
+
+  - id: feature/067
+    file: feature/067_trace_timestamps.md
+    label: Trace Timestamp Prefix
+    entity: feature
+
   - id: invariant/001
     file: invariant/001_zero_third_party_deps.md
     label: Zero Third-Party Dependencies
@@ -244,6 +269,21 @@ nodes:
   - id: invariant/006
     file: invariant/006_param_defaults.md
     label: Parameters Default to Active Context
+    entity: invariant
+
+  - id: invariant/007
+    file: invariant/007_json_storage_format.md
+    label: JSON Storage Format
+    entity: invariant
+
+  - id: invariant/008
+    file: invariant/008_single_token_refresh_entry.md
+    label: Single Token Refresh Entry Point
+    entity: invariant
+
+  - id: invariant/009
+    file: invariant/009_container_only_test_execution.md
+    label: Container-Only Test Execution
     entity: invariant
 
 edges:
@@ -491,9 +531,63 @@ edges:
   - {from: feature/026, to: feature/062, label: "session effortLevel distinct from subprocess effort:: param"}
   - {from: feature/039, to: feature/062, label: "recommended_model() documented as canonical entry point in Table 2"}
 
+  # ── feature/063: Explicit Ownership Claim ──────────────────────────────────
+
+  - {from: feature/063, to: feature/036, label: "owner:: write path; G8 gate enforcement via write_owner()"}
+  - {from: feature/063, to: feature/032, label: "contrast: assignee:: is marker-only; owner:: sets owner field in {name}.json"}
+
+  # ── feature/064: Active Marker and Owner Param Redesign ────────────────────
+
+  - {from: feature/064, to: feature/025, label: "marker filename derivation; active_marker_filename() sanitization used by active:: value"}
+  - {from: feature/064, to: feature/032, label: "former assign::1 + for:: behavior replaced by active::USER@MACHINE"}
+  - {from: feature/064, to: feature/036, label: "owner::0 sentinel triggers write_owner(name, store, empty) — G8 gate enforced"}
+  - {from: feature/064, to: feature/063, label: "owner::0 sentinel and batch comma-list in name:: for owner:: operations"}
+  - {from: feature/064, to: feature/065, label: "predecessor: introduced active::Kind::String; 065 renames to assignee::"}
+
+  # ── feature/065: Assignee Param Redesign ───────────────────────────────────
+
+  - {from: feature/065, to: feature/025, label: "marker filename derivation; active_marker_filename() sanitization reused by assignee:: value"}
+  - {from: feature/065, to: feature/032, label: "original assign::1 + for:: marker write behavior superseded"}
+  - {from: feature/065, to: feature/036, label: "assignee:: bypasses all ownership gates — no ownership gate applies"}
+  - {from: feature/065, to: feature/063, label: "G8 gate shared with owner::0 — contrast: assignee:: has no ownership gate"}
+  - {from: feature/065, to: feature/064, label: "predecessor: introduced active::Kind::String; this feature renames to assignee::"}
+
+  # ── feature/066: Dual-Source OAuth Quota Parsing ───────────────────────────
+
+  - {from: feature/066, to: feature/009, label: "7d(Son) column sourced from OauthUsageData.seven_day_sonnet; affected by API format change"}
+  - {from: feature/066, to: feature/026, label: "resolve_model(Auto) uses seven_day_sonnet for touch model selection"}
+  - {from: feature/066, to: feature/062, label: "recommended_model() uses seven_day_sonnet for footer Opus/Sonnet recommendation"}
+
+  # ── feature/067: Trace Timestamp Prefix ────────────────────────────────────
+
+  - {from: feature/067, to: feature/009, label: ".usage — primary command emitting fetch, refresh, touch trace lines with timestamp prefix"}
+  - {from: feature/067, to: feature/017, label: "token refresh subprocess — refresh label trace lines in refresh.rs"}
+  - {from: feature/067, to: feature/024, label: "session touch subprocess — touch label trace lines in touch.rs"}
+  - {from: feature/067, to: feature/027, label: "post-switch touch — account.use label trace lines in account_ops.rs"}
+  - {from: feature/067, to: feature/031, label: ".account.inspect — per-endpoint GET trace lines in account_inspect.rs"}
+  - {from: feature/067, to: feature/034, label: "model override trace lines in account_ops.rs"}
+  - {from: feature/067, to: feature/061, label: "solo mode — solo-skip trace lines in touch.rs and fetch.rs"}
+  - {from: feature/067, to: feature/063, label: "ownership write trace lines in accounts.rs"}
+
+  # ── invariant/007: JSON Storage Format ─────────────────────────────────────
+
+  - {from: invariant/007, to: feature/010, label: "credential store path where serde_json::to_string_pretty JSON files are written"}
+  - {from: invariant/007, to: feature/007, label: "ClaudePaths type describes credential, settings, and state files governed by this invariant"}
+
+  # ── invariant/008: Single Token Refresh Entry Point ────────────────────────
+
+  - {from: invariant/008, to: feature/017, label: "AC-32/AC-33/AC-34 implement this invariant — all refresh via refresh_account_token()"}
+  - {from: invariant/008, to: feature/024, label: "session touch calls refresh_account_token() per this invariant"}
+  - {from: invariant/008, to: feature/027, label: "post-switch touch routes through refresh_account_token() — Change C"}
+  - {from: invariant/008, to: invariant/004, label: "related boundary: zero process execution in library; all execution delegated"}
+
+  # ── invariant/009: Container-Only Test Execution ────────────────────────────
+
+  - {from: invariant/009, to: invariant/004, label: "structural peer — no process execution in production; all test execution in container"}
+
 components:
   - id: 1
-    size: 39
+    size: 49
     isolated: false
     nodes:
       - feature/001
@@ -524,6 +618,7 @@ components:
       - feature/028
       - feature/029
       - feature/030
+      - feature/031
       - feature/032
       - feature/033
       - feature/034
@@ -534,43 +629,30 @@ components:
       - feature/040
       - feature/061
       - feature/062
+      - feature/063
+      - feature/064
+      - feature/065
+      - feature/066
+      - feature/067
+      - invariant/001
+      - invariant/004
       - invariant/005
+      - invariant/008
+      - invariant/009
 
   - id: 2
-    size: 2
-    isolated: true
-    nodes: [invariant/001, invariant/004]
+    size: 3
+    isolated: false
+    nodes: [feature/007, feature/010, invariant/007]
     gap: >
-      These two boundary-constraint invariants (zero deps, no process execution) have no
-      cross-references to the feature or feature-linked invariant components. Isolation is
-      expected: they govern library-level constraints rather than any specific feature flow.
+      File Topology (feature/007), Persistent Storage Path (feature/010), and the JSON
+      Storage Format invariant (invariant/007) form a cohesive file-system structure cluster.
+      invariant/007 enforces pretty-print on the same files that feature/007 (ClaudePaths)
+      and feature/010 (PersistPaths) describe. No edges connect this cluster to the main
+      component — the structural invariant governs how files are written, not how they
+      participate in feature workflows. Partial isolation is expected.
 
   - id: 3
-    size: 1
-    isolated: true
-    nodes: [feature/007]
-    gap: >
-      File Topology is a foundational path-registry capability consumed by all other features
-      but not cross-referenced back to them in the doc instances. Isolation is expected.
-
-  - id: 4
-    size: 1
-    isolated: true
-    nodes: [feature/010]
-    gap: >
-      Persistent Storage Path is an orthogonal path-resolution capability with no
-      cross-references to other doc instances. Isolation is expected.
-
-  - id: 5
-    size: 1
-    isolated: true
-    nodes: [feature/031]
-    gap: >
-      Account Inspect is a live-only read command (endpoints 001/002/005) that does not
-      extend any persisted feature flow. It has no doc-level cross-references to other
-      feature instances. Isolation is expected.
-
-  - id: 6
     size: 1
     isolated: true
     nodes: [invariant/002]
@@ -578,7 +660,7 @@ components:
       Cross-Platform Compatibility is a broad constraint that applies across all features
       but is not cross-referenced from individual feature doc instances. Isolation is expected.
 
-  - id: 7
+  - id: 4
     size: 1
     isolated: true
     nodes: [invariant/003]
@@ -586,7 +668,7 @@ components:
       Clear Error Messages is a broad quality constraint that applies across all features
       but is not cross-referenced from individual feature doc instances. Isolation is expected.
 
-  - id: 8
+  - id: 5
     size: 1
     isolated: true
     nodes: [invariant/006]

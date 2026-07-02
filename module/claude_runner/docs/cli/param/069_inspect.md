@@ -6,6 +6,7 @@ attributes for each session as a multi-line block rather than a table row.
 - **Type:** bool
 - **Default:** false
 - **Command:** [`ps`](../command/06_ps.md)
+- **JSON Key:** — (ps subcommand; not supported by `--args-file`)
 
 ```sh
 clr ps --inspect                    # inspect blocks for all sessions

@@ -10,6 +10,30 @@ use std::process::{ Command, Output };
 /// Path to the compiled `clp` binary (resolved at compile time).
 pub const BIN : &str = env!( "CARGO_BIN_EXE_clp" );
 
+/// Assert that the current process is running inside a container.
+///
+/// Checked on every integration test entry point to enforce Invariant 009
+/// (Container-Only Test Execution). Escape hatch: `VERB_LAYER=l0` bypasses
+/// this check for authorized host development via direct nextest invocation.
+///
+/// # Panics
+///
+/// Panics with a human-readable message when run outside a container without
+/// the `VERB_LAYER=l0` escape hatch.
+fn assert_container()
+{
+  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
+    || std::path::Path::new( "/run/.containerenv" ).exists()
+    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
+  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
+  assert!(
+    in_container || escaped,
+    "\n\nTests must run inside a container.\n\
+     Standard invocation: cd module/claude_profile && ./verb/test\n\
+     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
+  );
+}
+
 /// Run the binary with the given argv fragments, inheriting the real HOME.
 ///
 /// # Panics
@@ -19,6 +43,7 @@ pub const BIN : &str = env!( "CARGO_BIN_EXE_clp" );
 #[ must_use ]
 pub fn run_cs( args : &[ &str ] ) -> Output
 {
+  assert_container();
   Command::new( BIN )
   .args( args )
   .output()
@@ -37,6 +62,7 @@ pub fn run_cs( args : &[ &str ] ) -> Output
 #[ must_use ]
 pub fn run_cs_with_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> Output
 {
+  assert_container();
   // Fix(BUG-281): env_remove("PRO") prevents host $PRO from overriding the test HOME.
   // Root cause: PersistPaths::resolve_root() prefers $PRO over $HOME when $PRO is an existing dir;
   //   tests that only set HOME inherited $PRO from the runner, causing the binary to operate on
@@ -61,6 +87,7 @@ pub fn run_cs_with_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> Output
 #[ must_use ]
 pub fn run_cs_without_home( args : &[ &str ] ) -> Output
 {
+  assert_container();
   // Fix(BUG-281): env_remove("PRO") prevents host $PRO from substituting for HOME.
   // Root cause: removing $HOME but not $PRO left a silent fallback; the binary resolved the
   //   credential store via $PRO and succeeded instead of failing as the test expected.
@@ -537,6 +564,20 @@ pub fn write_account_with_token(
   {
     std::fs::write( credential_store.join( claude_profile::account::active_marker_filename() ), name ).unwrap();
   }
+  // Pre-populate quota cache from the live snapshot so clp's 120s cache-first guard
+  // (fetch.rs) skips the live API call entirely.  Without this, every parallel clp
+  // invocation hits /api/oauth/usage and the burst of 429 rejections contaminates the
+  // test run.  With the snapshot written here, total API calls per process = 1.
+  if let Some( snap ) = live_quota_snapshot()
+  {
+    claude_profile::account::write_quota_cache(
+      &credential_store,
+      name,
+      snap.five_hour.as_ref().map( |( u, r )| ( *u, r.as_deref() ) ),
+      snap.seven_day.as_ref().map( |( u, r )| ( *u, r.as_deref() ) ),
+      snap.seven_day_sonnet.as_ref().map( |( u, r )| ( *u, r.as_deref() ) ),
+    );
+  }
 }
 
 /// Write `~/.claude/.credentials.json` with an `accessToken` field.
@@ -575,60 +616,119 @@ pub fn live_active_token() -> Option< String >
   claude_profile::account::parse_string_field( &content, "accessToken" )
 }
 
-/// Check whether the live Anthropic API is accessible (not rate-limited).
-///
-/// Makes a single `curl` probe on first call, then caches the result in a
-/// temp file for 60 seconds so all test processes within the same nextest
-/// run share one probe.  Returns `false` when the API returns HTTP 429.
-///
-/// `lim_it` tests that require **successful** API responses should call
-/// this guard.  Tests that handle error responses gracefully (e.g. testing
-/// the "fetch failed" trace path) do NOT need this guard.
-#[ inline ]
-#[ must_use ]
-pub fn require_live_api( label : &str ) -> bool
+// ── Live quota snapshot ────────────────────────────────────────────────────────
+
+/// Raw quota data fetched from `/api/oauth/usage` for cache pre-population.
+struct QuotaSnapshot
 {
-  let probe_path = std::env::temp_dir().join( ".lim_it_api_probe" );
+  five_hour        : Option< ( f64, Option< String > ) >,
+  seven_day        : Option< ( f64, Option< String > ) >,
+  seven_day_sonnet : Option< ( f64, Option< String > ) >,
+}
 
-  // Reuse a recent probe result (same nextest run — typically < 30s).
-  if let Ok( meta ) = std::fs::metadata( &probe_path )
+/// Fetch `/api/oauth/usage` exactly once per test process (OnceLock-protected).
+///
+/// On first call one thread performs the live fetch; all parallel callers block
+/// until it completes and then share the cached result.  Returns `None` on
+/// HTTP 401/403 (auth failure) or absent live token.
+///
+/// Transient errors (429, network failure) fall back to the HOST credential store
+/// cache via `host_quota_snapshot_from_cache()` — so tests proceed even when the
+/// active token is currently rate-limited.
+///
+/// The snapshot pre-populates the per-account quota cache in `write_account_with_token`
+/// so `clp .usage` hits fetch.rs's 120-second cache-first guard and skips the live
+/// endpoint entirely — keeping total `/api/oauth/usage` calls to **1** per test process.
+fn live_quota_snapshot() -> Option< &'static QuotaSnapshot >
+{
+  static SNAPSHOT : std::sync::OnceLock< Option< QuotaSnapshot > > = std::sync::OnceLock::new();
+  SNAPSHOT.get_or_init( ||
   {
-    if meta.modified().ok()
-      .and_then( |m| m.elapsed().ok() )
-      .is_some_and( |age| age.as_secs() < 60 )
+    let token = live_active_token()?;
+    match claude_quota::fetch_oauth_usage( &token )
     {
-      let cached = std::fs::read_to_string( &probe_path )
-        .is_ok_and( |s| s.trim() == "1" );
-      if !cached
+      Ok( data ) => Some( QuotaSnapshot
       {
-        eprintln!( "{label}: API rate-limited (cached probe) — skipping" );
+        five_hour        : data.five_hour.map( |p| ( p.utilization, p.resets_at ) ),
+        seven_day        : data.seven_day.map( |p| ( p.utilization, p.resets_at ) ),
+        seven_day_sonnet : data.seven_day_sonnet.map( |p| ( p.utilization, p.resets_at ) ),
+      } ),
+      Err( e ) =>
+      {
+        let msg = e.to_string();
+        // Auth failures mean the token is bad — no point reading stale cache.
+        if msg.contains( "HTTP 401" ) || msg.contains( "HTTP 403" ) { return None; }
+        // Transient error (429, network) — read from HOST credential store cache.
+        host_quota_snapshot_from_cache()
       }
-      return cached;
     }
-  }
+  } ).as_ref()
+}
 
-  // First probe in this nextest run: hit the API WITH the live token.
-  // Per-token 429 means this session is rate-limited even if the global
-  // endpoint would accept unauthenticated requests.
-  let token = live_active_token().unwrap_or_default();
-  let http_code = std::process::Command::new( "curl" )
-    .args([
-      "-s", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", "5",
-      "-H", &format!( "Authorization: Bearer {token}" ),
-      "https://api.claude.ai/api/oauth/usage",
-    ])
-    .output()
-    .ok()
-    .and_then( |o| String::from_utf8( o.stdout ).ok() )
-    .and_then( |s| s.trim().parse::< u16 >().ok() )
-    .unwrap_or( 0 );
-  let ok = http_code != 0 && http_code != 429;
-  let _ = std::fs::write( &probe_path, if ok { "1" } else { "0" } );
-  if !ok
+/// Read a `QuotaSnapshot` from the HOST credential store cache.
+///
+/// Used as a fallback when the live `/api/oauth/usage` call fails with a
+/// transient error (e.g. 429). Reads the active account's `.json` metadata
+/// from the real `PersistPaths` credential store and parses the `cache`
+/// section written by `account::write_quota_cache`.
+///
+/// Returns `None` if the credential store, active marker, metadata file,
+/// or cache section is absent or the cache status is not `"ok"`.
+fn host_quota_snapshot_from_cache() -> Option< QuotaSnapshot >
+{
+  let persist          = claude_profile::PersistPaths::new().ok()?;
+  let credential_store = persist.credential_store();
+  let marker           = credential_store.join( claude_profile::account::active_marker_filename() );
+  let raw_name         = std::fs::read_to_string( &marker ).ok()?;
+  let name             = raw_name.trim();
+  if name.is_empty() { return None; }
+  let meta_str = std::fs::read_to_string( credential_store.join( format!( "{name}.json" ) ) ).ok()?;
+  let val      : serde_json::Value = serde_json::from_str( &meta_str ).ok()?;
+  let cache    = val.get( "cache" )?;
+  if cache.get( "status" ).and_then( |v| v.as_str() ) != Some( "ok" ) { return None; }
+  let parse_period = | key : &str | -> Option< ( f64, Option< String > ) >
   {
-    eprintln!( "{label}: API rate-limited (HTTP {http_code}) — skipping" );
-  }
-  ok
+    let p      = cache.get( key )?;
+    let util   = p.get( "left_pct" )?.as_f64()?;
+    let resets = p.get( "resets_at" ).and_then( |v| v.as_str() ).map( std::string::ToString::to_string );
+    Some( ( util, resets ) )
+  };
+  Some( QuotaSnapshot
+  {
+    five_hour        : parse_period( "five_hour" ),
+    seven_day        : parse_period( "seven_day" ),
+    seven_day_sonnet : parse_period( "seven_day_sonnet" ),
+  } )
+}
+
+/// Assert that the live Anthropic API is reachable before running a `lim_it` test.
+///
+/// Probes `GET /api/oauth/account` with the active OAuth token on the first call
+/// in this process; all parallel test threads block on `OnceLock` until the
+/// single probe completes and share the cached result.
+///
+/// Uses `/api/oauth/account` (not `/api/oauth/usage`) — the account endpoint has
+/// a higher rate limit than usage, so this probe does not burn the quota slot that
+/// the tests themselves need. `live_quota_snapshot()` handles the usage fetch for
+/// cache pre-population in `write_account_with_token`.
+///
+/// # Panics
+///
+/// Panics if the API is unreachable — the test cannot produce a valid result and
+/// must fail loudly rather than silently passing with Err data.
+#[ inline ]
+pub fn require_live_api( label : &str )
+{
+  static LIVE_ACCOUNT_PROBE : std::sync::OnceLock< bool > = std::sync::OnceLock::new();
+  let ok = LIVE_ACCOUNT_PROBE.get_or_init( ||
+  {
+    let token = live_active_token().unwrap_or_default();
+    claude_quota::fetch_oauth_account( &token ).is_ok()
+  } );
+  assert!(
+    *ok,
+    "{label}: API unreachable — live API required for this test",
+  );
 }
 
 /// Spawn the binary, wait `secs` seconds, kill it, and return all bytes written to stdout.

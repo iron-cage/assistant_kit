@@ -1,4 +1,4 @@
-# Verb :: renewal
+# Verb: renewal
 
 Sets or clears the billing renewal timestamp override (`_renewal_at`) for a named account. The override is stored in `{name}.json` via read-merge write and is used to compute the `~Renews` display field shown in `.accounts` output. Supports absolute timestamp (`at::`), relative duration (`from_now::`), or explicit clear (`clear::`).
 
@@ -49,7 +49,7 @@ Sets or clears the billing renewal timestamp override (`_renewal_at`) for a name
 [saved/active] --account.renewal clear::1-> [saved/active]  (_renewal_at removed)
 ```
 
-### Cross-References
+### See Also
 
 | File | Relationship |
 |------|-------------|

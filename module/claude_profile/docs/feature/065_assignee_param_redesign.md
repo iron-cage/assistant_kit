@@ -120,5 +120,5 @@ assignee::0                               # clear current machine's marker
 
 | File | Relationship |
 |------|--------------|
-| [tests/docs/feature/65_assignee_param_redesign.md](../../tests/docs/feature/65_assignee_param_redesign.md) | FT spec mapping ACs to test cases |
+| [tests/docs/feature/065_assignee_param_redesign.md](../../tests/docs/feature/065_assignee_param_redesign.md) | FT spec mapping ACs to test cases |
 | [tests/docs/cli/param/64_assignee.md](../../tests/docs/cli/param/64_assignee.md) | EC edge cases for `assignee::` param |

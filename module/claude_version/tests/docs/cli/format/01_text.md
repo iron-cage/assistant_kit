@@ -17,8 +17,9 @@ Format test surface for `text` output. See [cli/format/01_text.md](../../../../d
 | FM-2 | `v::0` with text format suppresses labels — raw value only | ✅ |
 | FM-3 | `v::1` (default verbosity) produces labeled key: value pairs | ✅ |
 | FM-4 | Text output is not valid JSON | ✅ |
+| FM-5 | Explicit `format::text` accepted; same labeled output as default | ✅ `fm05_01_text_explicit_format` |
 
-**Total:** 4 tests
+**Total:** 5 tests
 
 ---
 
@@ -54,11 +55,20 @@ Format test surface for `text` output. See [cli/format/01_text.md](../../../../d
 
 ---
 
+### FM-5: explicit `format::text` accepted; same labeled output as default
+
+- **Given:** clean environment
+- **When:** `clv .version.show format::text`
+- **Then:** exit 0; stdout contains `version:` label and a version string; output structurally matches invocation with no `format::` argument
+
+---
+
 ### Source Functions
 
 | Function | File |
 |----------|------|
-| `fm01_01_text_default_labeled` | `integration/format_surface_test.rs` |
-| `fm02_01_text_v0_raw` | `integration/format_surface_test.rs` |
-| `fm03_01_text_v1_labeled` | `integration/format_surface_test.rs` |
-| `fm04_01_text_not_json` | `integration/format_surface_test.rs` |
+| `fm01_01_text_default_labeled` | `tests/cli/format_surface_test.rs` |
+| `fm02_01_text_v0_raw` | `tests/cli/format_surface_test.rs` |
+| `fm03_01_text_v1_labeled` | `tests/cli/format_surface_test.rs` |
+| `fm04_01_text_not_json` | `tests/cli/format_surface_test.rs` |
+| `fm05_01_text_explicit_format` | `tests/cli/format_surface_test.rs` |

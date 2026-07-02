@@ -95,6 +95,6 @@ v2.0.12 (2025-10-09)
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master subcommand table |
-| doc | [../params/024_enabled_plugins.md](../params/024_enabled_plugins.md) | `enabledPlugins` config key |
-| doc | [../params/048_plugin_dir.md](../params/048_plugin_dir.md) | `--plugin-dir` parameter |
-| doc | [../params/088_plugin_prefer_https.md](../params/088_plugin_prefer_https.md) | Plugin HTTPS preference |
+| doc | [../param/024_enabled_plugins.md](../param/024_enabled_plugins.md) | `enabledPlugins` config key |
+| doc | [../param/048_plugin_dir.md](../param/048_plugin_dir.md) | `--plugin-dir` parameter |
+| doc | [../param/088_plugin_prefer_https.md](../param/088_plugin_prefer_https.md) | Plugin HTTPS preference |

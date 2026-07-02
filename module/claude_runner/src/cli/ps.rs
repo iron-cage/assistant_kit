@@ -53,7 +53,7 @@ fn classify_mode( args : &[ String ] ) -> &str
 /// Accepts `--mode`, `--columns`, `--wide`, `--pid`, `--inspect` (and their short forms).
 /// Exits 0 with the tables (or inspect blocks, or empty-state message);
 /// exits 1 on unknown or invalid arguments.
-#[ allow( clippy::too_many_lines ) ]
+#[ allow( clippy::too_many_lines ) ] // mechanical dispatch — one arm per CLI flag
 pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
 {
   // Env-var defaults applied first; CLI tokens overwrite (CLI-wins).

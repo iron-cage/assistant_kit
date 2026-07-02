@@ -37,4 +37,4 @@ pre-v1.0 (unverified)
 |------|------|----------------|
 | entity | [readme.md](readme.md) | JSONL master index |
 | jsonl | [003_assistant_entry.md](003_assistant_entry.md) | Assistant entry: `message.content` array that contains this block |
-| format | [`../formats/007_json_response.md`](../formats/007_json_response.md) | JSON response format that uses this block in its `content` array |
+| format | [`../format/007_json_response.md`](../format/007_json_response.md) | JSON response format that uses this block in its `content` array |

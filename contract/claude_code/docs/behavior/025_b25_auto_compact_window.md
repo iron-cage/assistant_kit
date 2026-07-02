@@ -31,5 +31,5 @@ Introduced in Claude Code v2.1.75 (2026-03-13) alongside 1M context windows for 
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
 | behavior | [026_b26_autocompact_pct_override.md](026_b26_autocompact_pct_override.md) | Companion env var: percentage applied to this window |
 | behavior | [011_b11_auto_continue_env.md](011_b11_auto_continue_env.md) | `CLAUDE_CODE_AUTO_CONTINUE` env var (same NEG-ONLY pattern) |
-| param | [../params/074_auto_compact_window.md](../params/074_auto_compact_window.md) | Parameter detail: type, default, description |
+| param | [../param/074_auto_compact_window.md](../param/074_auto_compact_window.md) | Parameter detail: type, default, description |
 | test | `../../tests/behavior/b25_auto_compact_window.rs` | Invalidation test (NEG-ONLY) |

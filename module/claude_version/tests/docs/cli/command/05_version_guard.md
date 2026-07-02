@@ -270,7 +270,7 @@ Integration test planning for the `.version.guard` command. See [command/readme.
 ### IT-20: watch loop continues after install error
 
 - **Given:** `~/.claude/settings.json` contains `preferredVersionSpec="9.9.9"` / `preferredVersionResolved="9.9.9"`; no claude binary installed; empty `PATH` (forces install failure).
-- **When:** `timeout 2 cm .version.guard interval::1`
+- **When:** `timeout 2 clv .version.guard interval::1`
 - **Then:** Process runs until killed by `timeout` (2 seconds); stderr contains `#1` and `#2` iteration headers.; Process survives first install error; daemon continues watching.
 - **Bug:** `return result` in watch loop error branch — fixed by continuing the loop instead
 - **Exit:** 0
@@ -314,18 +314,17 @@ Integration test planning for the `.version.guard` command. See [command/readme.
 
 | Function | File |
 |----------|------|
-| `tc400_guard_no_preference` | `integration/mutation_commands_test.rs` |
-| `tc401_guard_dry_no_preference` | `integration/mutation_commands_test.rs` |
-| `tc402_guard_no_home` | `integration/mutation_commands_test.rs` |
-| `tc403_guard_latest_dry` | `integration/mutation_commands_test.rs` |
-| `tc406_guard_dry_force_no_install` | `integration/mutation_commands_test.rs` |
-| `tc409_guard_interval_zero_oneshot` | `integration/mutation_commands_test.rs` |
-| `tc410_guard_reresoves_stale_alias` | `integration/mutation_commands_test.rs` |
-| `tc411_guard_version_override_dry` | `integration/mutation_commands_test.rs` |
-| `tc412_guard_unknown_param_rejected` | `integration/mutation_commands_test.rs` |
-| `tc413_guard_version_override_dry_wins_over_force` | `integration/mutation_commands_test.rs` |
-| `tc414_guard_version_empty_rejected` | `integration/mutation_commands_test.rs` |
-| `tc415_watch_loop_continues_after_install_error` | `integration/mutation_commands_test.rs` |
-| `tc416_guard_version_latest_override_dry` | `integration/mutation_commands_test.rs` |
-| `tc417_guard_v0_shorter_than_v1` | `integration/mutation_commands_test.rs` |
-| `tc418_guard_format_json_dry` | `integration/mutation_commands_test.rs` |
+| `tc400_guard_no_preference` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc401_guard_dry_no_preference` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc402_guard_no_home` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc403_guard_latest_dry` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc406_guard_dry_force_no_install` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc409_guard_interval_zero_oneshot` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc410_guard_reresoves_stale_alias` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc411_guard_version_override_dry` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc412_guard_unknown_param_rejected` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc413_guard_version_override_dry_wins_over_force` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc414_guard_version_empty_rejected` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc415_watch_loop_continues_after_install_error` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc416_guard_version_latest_override_dry` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc417_guard_v0_shorter_than_v1` | `tests/cli/mutation_version_guard_test.rs` |

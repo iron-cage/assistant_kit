@@ -25,13 +25,29 @@ use tempfile::TempDir;
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
+fn assert_container()
+{
+  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
+    || std::path::Path::new( "/run/.containerenv" ).exists()
+    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
+  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
+  assert!(
+    in_container || escaped,
+    "\n\nTests must run inside a container.\n\
+     Standard invocation: cd module/runbox && ./verb/test\n\
+     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
+  );
+}
+
 fn crb() -> Command
 {
+  assert_container();
   Command::cargo_bin( "crb" ).unwrap()
 }
 
 fn runbox_bin() -> Command
 {
+  assert_container();
   Command::cargo_bin( "runbox" ).unwrap()
 }
 

@@ -8,6 +8,7 @@ multiple times to load multiple MCP server configs.
 - **Default:** — (unset; no MCP servers loaded)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
+- **JSON Key:** `"mcp-config"`
 
 ```sh
 clr --mcp-config ~/.claude/mcp.json "Fix bug"

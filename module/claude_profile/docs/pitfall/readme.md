@@ -1,4 +1,4 @@
-# Pitfall
+# Pitfall Doc Entity
 
 ### Scope
 
@@ -9,11 +9,12 @@
 
 ### Overview Table
 
-| ID | Name | Bug refs |
-|----|------|---------|
-| 001 | [Quota Gate Pitfalls](001_quota_gate_pitfalls.md) | BUG-299, BUG-300, BUG-301 |
-| 002 | [Subprocess Integration Pitfalls](002_subprocess_integration_pitfalls.md) | BUG-169, BUG-243, BUG-289, BUG-290 |
-| 003 | [Credential Sync Pitfalls](003_credential_sync_pitfalls.md) | BUG-162, BUG-170, BUG-208, BUG-211, BUG-221, BUG-310 |
-| 004 | [Account Identity Pitfalls](004_account_identity_pitfalls.md) | BUG-212, BUG-308 |
-| 005 | [Ownership Gate Pitfalls](005_ownership_gate_pitfalls.md) | BUG-302, BUG-303, BUG-305, BUG-306 |
-| 006 | [Model Override Pitfalls](006_model_override_pitfalls.md) | BUG-300, BUG-311, BUG-312 |
+| ID | Name | Purpose | Status |
+|----|------|---------|--------|
+| — | [procedure](procedure.md) | Workflow for maintaining pitfall instances | ✅ |
+| 001 | [Quota Gate Pitfalls](001_quota_gate_pitfalls.md) | Quota gate ordering and cross-feature visibility constraints | ✅ |
+| 002 | [Subprocess Integration Pitfalls](002_subprocess_integration_pitfalls.md) | Subprocess invocation ordering and write-back race conditions | ✅ |
+| 003 | [Credential Sync Pitfalls](003_credential_sync_pitfalls.md) | Credential file sync timing and write-back protocol pitfalls | ✅ |
+| 004 | [Account Identity Pitfalls](004_account_identity_pitfalls.md) | Account identity resolution and marker matching pitfalls | ✅ |
+| 005 | [Ownership Gate Pitfalls](005_ownership_gate_pitfalls.md) | Ownership gate enforcement edge cases and bypass scenarios | ✅ |
+| 006 | [Model Override Pitfalls](006_model_override_pitfalls.md) | Model override ordering and settings persistence pitfalls | ✅ |

@@ -1,7 +1,9 @@
-# run
+# runbox/
 
-Shell scripts for `claude_runner` container operations.
+Container operation files for `claude_runner`.
 
 | File | Responsibility |
 |------|----------------|
-| `plugins.sh` | NEXTEST_FILTER hook: redirects to test1.d/l1 for targeted single-test runs. |
+| `runbox` | Wrapper: auto-discovers and delegates to `runbox-run` with `runbox.yml`. |
+| `runbox.yml` | Configuration: image, test/lint/run scripts, plugins, and build contexts. |
+| `plugins.sh` | Project plugin: forwards `NEXTEST_FILTER` into container for `verb/test1`. |

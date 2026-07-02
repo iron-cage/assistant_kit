@@ -24,6 +24,19 @@
 |---|---------|------|
 | 6 | [`.export`](../command/06_export.md) | Write session transcript to a file in chosen format |
 
+### Referenced Formats
+| # | Format | Role |
+|---|--------|------|
+| 1 | [markdown](../format/01_markdown.md) | Human-readable export for notes, sharing, and reading |
+| 2 | [json](../format/02_json.md) | Machine-parseable export for processing and integration |
+| 3 | [text](../format/03_text.md) | Plain text export for piping and minimal readers |
+
+### Referenced Parameter Groups
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 3 | [Session Identification](../param_group/03_session_identification.md) | Pin the export to a specific session by ID |
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: override for non-default storage |
+
 ### Referenced Parameters
 | # | Parameter | Role |
 |---|-----------|------|
@@ -32,19 +45,6 @@
 | 8 | [`output::`](../param/08_output.md) | Output file path for the exported file |
 | 9 | [`path::`](../param/09_path.md) | Override default storage root |
 | 14 | [`session_id::`](../param/14_session_id.md) | Identify the exact session to export |
-
-### Referenced Parameter Groups
-| # | Parameter Group | Role |
-|---|-----------------|------|
-| 3 | [Session Identification](../param_group/03_session_identification.md) | Pin the export to a specific session by ID |
-| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: override for non-default storage |
-
-### Referenced Formats
-| # | Format | Role |
-|---|--------|------|
-| 1 | [markdown](../format/01_markdown.md) | Human-readable export for notes, sharing, and reading |
-| 2 | [json](../format/02_json.md) | Machine-parseable export for processing and integration |
-| 3 | [text](../format/03_text.md) | Plain text export for piping and minimal readers |
 
 ### Related User Stories
 | # | User Story | Relationship |
@@ -56,19 +56,22 @@
 **Step 1: Identify the session to export**
 ```bash
 cls .search query::authentication
-# Note the session_id from the output
+# 3 matches
+#
+# [2024-01-15T14-30-22-abc1] user
+#   "The authentication flow needs to handle OAuth tokens properly"
 ```
 
 **Step 2: Export as markdown (default)**
 ```bash
 cls .export session_id::abc123 output::session.md
-# Output: session.md written with all entries in markdown format
+# (exit 0, no output — session.md written to current directory)
 ```
 
 **Step 3: Export as JSON for processing**
 ```bash
 cls .export session_id::abc123 format::json output::session.json
-# Output: session.json with one JSONL entry per line
+# (exit 0, no output — session.json written to current directory)
 ```
 
 ### Error Handling

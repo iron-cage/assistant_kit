@@ -11,6 +11,7 @@ code.
 - **Default:** `auto` (inherits from `--retry-default`, Tier 3 fallback)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"retry-on-process"`
 
 ```sh
 clr -p "task" --retry-on-process 2                # retry twice on signal kill
@@ -50,7 +51,7 @@ effective = --retry-override ?? --retry-on-process ?? --retry-default (2)
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, ... |
 
 ### Referenced Commands
 

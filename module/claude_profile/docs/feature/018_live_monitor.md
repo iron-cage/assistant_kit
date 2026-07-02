@@ -140,4 +140,4 @@ In live mode, `format::json` is rejected before the first fetch (see Validation)
 
 | File | Relationship |
 |------|--------------|
-| `tests/cli/usage_test.rs` | it21 (live loop), it22–it24 (guards), it25–it29 (boundary/edge), it30 (SIGINT clean-exit) |
+| `tests/cli/usage_live_test.rs` | it21 (live loop), it22–it24 (guards), it25–it29 (boundary/edge), it30 (SIGINT clean-exit) |

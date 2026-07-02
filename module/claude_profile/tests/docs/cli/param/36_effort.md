@@ -2,6 +2,8 @@
 
 Edge case coverage for the `effort::` parameter on `.usage`. For `.account.use` `effort::` validation, see [command/005_account_use.md](../command/05_account_use.md) (IT-22). See [param/036_effort.md](../../../../docs/cli/param/036_effort.md) for specification.
 
+**Behavioral Divergence Pair:** EC-1 ↔ EC-4 — `effort::auto` (valid value) exits 0 with "(no accounts configured)"; `effort::bad` (invalid value) exits 1 with error listing all five valid values.
+
 ### Test Case Index
 
 | ID | Test Name | Category |

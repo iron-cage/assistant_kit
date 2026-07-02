@@ -9,6 +9,7 @@ also `auto`, the Tier 3 fallback (`--retry-default`) applies.
 - **Default:** `auto` (unset — class-specific or fallback values apply)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"retry-override"`
 
 ```sh
 # Force all error classes to retry 5 times, 60s delay
@@ -51,7 +52,7 @@ This parameter is Tier 1 — the leftmost (highest priority) in the chain.
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, ... |
 
 ### Referenced Commands
 

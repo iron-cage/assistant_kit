@@ -32,6 +32,15 @@ The public API exposes the storage hierarchy (Storage, Project, Session, Entry),
 - `encode_path(path) -> String` — encode a filesystem path as a storage directory name.
 - `decode_path(encoded) -> Result<PathBuf>` — decode a storage directory name back to a path.
 
+**Continuation detection:**
+- `check_continuation(session_dir: &Path) -> bool` — returns `true` when non-empty, non-agent conversation files exist for the given working directory.
+- `most_recent_session_id(session_dir: &Path) -> Option<SessionId>` — encodes `session_dir`, scans `~/.claude/projects/{encoded}/`, and returns the `SessionId` of the most-recently-modified qualifying `.jsonl` file.
+- `most_recent_session_in_dir(storage_path: &Path) -> Option<SessionId>` — lower-level variant: operates directly on an already-resolved storage directory without path encoding. Used when the caller has a custom session directory.
+- `to_storage_path_for(session_dir: &Path) -> Option<PathBuf>` — compute the Claude storage directory for a CWD without scanning it.
+
+**Session identifier:**
+- `SessionId` — opaque newtype wrapping the UUID string from a `.jsonl` filename stem. Implements `Display`, `AsRef<str>`, `From<String>`, `From<&str>`, `Clone`, `PartialEq`, `Eq`, and `Hash`. Use `as_str()` for raw string access.
+
 **JSON parsing:**
 - `parse_json(input) -> Result<JsonValue>` — parse arbitrary JSON into a value tree.
 
@@ -55,6 +64,7 @@ Major version bumps are used for breaking changes. A changelog entry is required
 | source | `../../src/error.rs` | Error type definition |
 | doc | `../data_structure/001_storage_hierarchy.md` | Storage, Project, Session, Entry types |
 | doc | `../data_structure/002_filter_types.md` | Filter types |
+| doc | `../feature/004_continuation_detection.md` | Continuation detection API design and algorithm |
 | doc | `../feature/002_content_search.md` | Search API design |
 | doc | `../feature/003_export_formats.md` | Export API design |
 | doc | `../algorithm/001_path_encoding.md` | Path utility functions |

@@ -55,6 +55,13 @@ clv.settings.show format::json
 |---|-------|-----------|----------------|
 | 1 | [Output Control](../param_group/01_output_control.md) | Partial | `count::` |
 
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | [`v::`](../param/04_v.md) |
+| 2 | [`format::`](../param/05_format.md) |
+
 ### Related Commands
 
 | # | Command | Relationship |
@@ -125,6 +132,14 @@ clv.settings.get key::autoUpdate format::json
 | 1 | [Output Control](../param_group/01_output_control.md) | Partial | `count::` |
 | 2 | [Settings Identity](../param_group/03_settings_identity.md) | Partial | `value::` |
 
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | [`key::`](../param/06_key.md) |
+| 2 | [`v::`](../param/04_v.md) |
+| 3 | [`format::`](../param/05_format.md) |
+
 ### Related Commands
 
 | # | Command | Relationship |
@@ -190,6 +205,14 @@ clv.settings.set key::theme value::dark dry::1
 |---|-------|-----------|----------------|
 | 1 | [Execution Control](../param_group/02_execution_control.md) | Partial | `force::` |
 | 2 | [Settings Identity](../param_group/03_settings_identity.md) | Full | — |
+
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | [`key::`](../param/06_key.md) |
+| 2 | [`value::`](../param/07_value.md) |
+| 3 | [`dry::`](../param/02_dry.md) |
 
 ### Related Commands
 

@@ -21,7 +21,7 @@ use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str
 
 #[ cfg( unix ) ]
 use cli_binary_test_helpers::{
-  fake_claude_binary_dir, run_clr_ps, spawn_fake_claude, spawn_print_claude,
+  fake_claude_binary_dir, make_proc_dir, run_clr_ps_proc, spawn_fake_claude, spawn_print_claude,
 };
 
 // ── US-1: No sessions ─────────────────────────────────────────────────────────
@@ -76,14 +76,19 @@ fn us_03_typo_guard()
 /// Only the first non-blank line is checked for `┌`: task-column data from real
 /// host sessions may contain unicode box characters; the structural caption line
 /// will never have `┌` in plain style.
+///
+/// `CLR_PROC_DIR` is set to a fake proc dir so `find_claude_processes()` sees only
+/// the test's background process — ambient sessions do not reach
+/// `RowBuilder::validate_row_length` and cannot cause a panic (exit 101).
 #[ cfg( unix ) ]
 #[ test ]
 fn us_04_sessions_plain_style_with_headers()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
-  let out = run_clr_ps( &path_val );
+  let out = run_clr_ps_proc( &path_val, proc.path().to_str().expect( "proc dir UTF-8" ) );
 
   let _ = bg.kill();
   let _ = bg.wait();
@@ -124,12 +129,14 @@ fn us_05_pro_prefix_shortened_in_path()
     .spawn()
     .expect( "spawn fake claude in workspace" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+  let proc = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env( "PRO", pro_str )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps with PRO set" );
 
@@ -187,14 +194,17 @@ fn us_06_queued_clr_shows_queued_headers()
 /// The heading is emitted by `Heading::new("Active Sessions").with_field(format!("{} running", n))`.
 /// This test confirms the caption text is present in the rendered output so that
 /// AC-010 is machine-verifiable.
+///
+/// `CLR_PROC_DIR` isolates proc scanning to this test's process only.
 #[ cfg( unix ) ]
 #[ test ]
 fn us_07_active_table_caption()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
-  let out = run_clr_ps( &path_val );
+  let out = run_clr_ps_proc( &path_val, proc.path().to_str().expect( "proc dir UTF-8" ) );
 
   let _ = bg.kill();
   let _ = bg.wait();
@@ -266,8 +276,9 @@ fn us_09_active_sessions_ordered_oldest_first()
   let pid_b = bg_b.id();
 
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+  let proc = make_proc_dir( &[ pid_a, pid_b ] );
 
-  let out = run_clr_ps( &path_val );
+  let out = run_clr_ps_proc( &path_val, proc.path().to_str().expect( "proc dir UTF-8" ) );
 
   let _ = bg_a.kill();
   let _ = bg_a.wait();
@@ -308,11 +319,13 @@ fn us_10_mode_print_filters_sessions()
 
   let mut bg_print = spawn_print_claude( &path_val );
   let pid_print    = bg_print.id();
+  let proc         = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--mode", "print" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --mode print" );
 
@@ -357,11 +370,13 @@ fn us_12_columns_custom_subset()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--columns", "pid,path,task" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --columns" );
 
@@ -403,11 +418,13 @@ fn us_14_wide_shows_all_columns()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--wide" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --wide" );
 
@@ -430,11 +447,13 @@ fn us_15_columns_overrides_wide()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--wide", "--columns", "pid,task" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --wide --columns" );
 
@@ -465,12 +484,14 @@ fn us_16_clr_ps_mode_env_var()
 
   let mut bg_print = spawn_print_claude( &path_val );
   let pid_print    = bg_print.id();
+  let proc         = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env( "CLR_PS_MODE", "print" )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps with CLR_PS_MODE=print" );
 
@@ -500,12 +521,14 @@ fn us_17_clr_ps_columns_env_var()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env( "CLR_PS_COLUMNS", "pid,elapsed" )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps with CLR_PS_COLUMNS=pid,elapsed" );
 

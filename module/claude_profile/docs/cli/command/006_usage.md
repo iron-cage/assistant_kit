@@ -1,10 +1,10 @@
-# Commands :: Usage
+# Commands: Usage
 
 Live quota utilization commands.
 
 ---
 
-### Command :: 9. `.usage`
+### Command: 9. `.usage`
 
 Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with a status emoji column (`●`: 🟢/🟡/🔴), plus 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, ~Renews, and → Next columns, and a footer recommendation line. `~Renews` shows a duration countdown (exact `in Xh Ym` when `_renewal_at` override is set, estimated `~in Xd` from `org_created_at`). `→ Next` shows the soonest strategic quota reset event (`+7d`/`$ren`); token expiry and 5h resets are not included since they are already shown in `Expires` and `5h Reset`. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
 
@@ -105,8 +105,8 @@ clp .usage
 #   🟡 frank@example.com    🟡 3%      in 0h 23m  🟢 52%   12%      in 2d 11h  in 1h 12m   ~in 8d       in 2d 11h +7d
 #   🔴 dave@example.com     —          —           —        —        —          EXPIRED      ?            —
 #
-# Current      · alice@example.com · sonnet/low · 4/5
-# Next (renew) · frank@example.com · opus       · in 2d 11h +7d
+# Current      · alice@example.com · sonnet/high · 4/5
+# Next (renew) · frank@example.com · opus/max    · in 2d 11h +7d
 
 clp .usage live::1 interval::60 jitter::10
 # Quota
@@ -119,13 +119,13 @@ clp .usage live::1 interval::60 jitter::10
 **Notes:**
 - Accounts are enumerated from `{credential_store}/*.credentials.json` in alphabetical order.
 - Flag column priority: `✓` = current account, `*` = active-but-not-current (divergence), `@` = occupied on another machine (another machine's `_active_*` marker names this account). Priority: `✓` > `*` > `@` > blank. The recommended next account appears in the footer's `Next (strategy):` line, not in the flag column. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md) and [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md).
-- Status emoji column (`●`): composite of 5h and 7d status — `🟢` = both available (`5h Left > 15%` and `7d Left > 5%`); `🟡` = h-exhausted (`5h Left ≤ 15%`, 7d available) or weekly-exhausted (`7d Left ≤ 5%`, 5h available); `🔴` = both exhausted or error. Per-column emoji also embedded in `5h Left` (🟢/🟡 at ≤15% threshold) and `7d Left` (🟢/🟡 at ≤5% threshold). No JSON equivalent.
+- Status emoji column (`●`): composite of 5h and 7d status — `🟢` = both available (`5h Left > 15%` and `7d Left > 5%`); `🟡` = h-exhausted (`5h Left ≤ 15%`, 7d available) or weekly-exhausted (`7d Left ≤ 5%`, any 5h — including both-exhausted; 7d is binding, per BUG-321 fix); `🔴` = error or cancelled subscription (`billing_type = "none"`). Per-column emoji also embedded in `5h Left` (🟢/🟡 at ≤15% threshold) and `7d Left` (🟢/🟡 at ≤5% threshold). No JSON equivalent.
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails.
 - `Sub` is sourced from `GET /api/oauth/account` (parallel fetch); shows `?` when that fetch fails.
 - `~Renews` shows an exact duration (`in Xh Ym`, no `~`) when `_renewal_at` is set in `{name}.json` (via `.account.renewal`); shows an estimated `~in Xd` from `org_created_at` day-of-month when not set; shows `?` when neither source is available.
 - `→ Next` shows the soonest upcoming strategic event among 7d quota reset (`+7d`) and billing renewal (`$ren`). Token expiry (`!tok`) and 5h session resets are not candidates — already shown in `Expires` and `5h Reset`. Shows `—` when all candidates are absent or in the past.
 - Accounts with failed quota fetch (expired/missing `accessToken`, 429 rate-limit, or other API error) show `—` for all quota columns (`5h Left` through `7d Reset`) with a shortened error reason replacing the **last visible quota column**. `Expires`, `Sub`, and `~Renews` are sourced independently and retain their values regardless of quota fetch failure.
-- Footer: two `·`-delimited, column-aligned lines when ≥2 accounts have valid quota data: `Current · <name> · <model>/<effort> · N/N` (the `✓` account) and `Next (<strategy>) · <name> · <model> · <metric>` (recommendation). The flag column shows `✓`, `*`, `@`, or blank.
+- Footer: two `·`-delimited, column-aligned lines when ≥2 accounts have valid quota data: `Current · <name> · <model>/<effort> · N/N` (the `✓` account) and `Next (<strategy>) · <name> · <model>/<effort> · <metric>` (recommendation; effort is model-derived: `"max"` for Opus, `"high"` for Sonnet — TSK-335). The flag column shows `✓`, `*`, `@`, or blank.
 - Sessions table: appended after the footer when >1 `_active_*` marker exists in the credential store. Shows `Session` (`{user}@{host}`) and `Account` columns. `who::0` suppresses; `who::1` forces on. See [feature/009_token_usage.md AC-33, AC-34](../../feature/009_token_usage.md).
 - Empty credential store exits 0 with `(no accounts configured)`.
 - `refresh::1` triggers at most one retry per account per cycle. See [feature/017_token_refresh.md](../../feature/017_token_refresh.md).
@@ -139,6 +139,44 @@ clp .usage live::1 interval::60 jitter::10
 - `touch::` (default `1`) activates accounts with any quota timer absent (no active 5h, 7d, or 7d-Sonnet window) by sending a minimal prompt; pass `touch::0` to suppress. Runs after `refresh::` when both active. See [feature/024_session_touch.md](../../feature/024_session_touch.md) for full trigger conditions including skip guards (h-exhausted, 7d-exhausted).
 - `imodel::` controls the Claude model injected into `touch::` and `refresh::` subprocesses. `auto` (default) selects Haiku by default; Sonnet when `son_idle=true` (7d-Sonnet window present but not yet started — activates idle window). See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).
 - `effort::` controls the effort level (`--effort` flag) for those subprocesses. `auto` (default) uses `low` for any model; no flag for `imodel::haiku` or `imodel::keep`. Low effort prevents extended thinking in keep-alive subprocesses, avoiding timeouts. See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).
+
+### Referenced Parameters
+
+| # | Parameter | Role |
+|---|-----------|------|
+| 1 | [name::](../param/001_name.md) | Restrict mutation to named account |
+| 2 | [format::](../param/002_format.md) | Output format |
+| 3 | [dry::](../param/004_dry.md) | Preview mutation without writing |
+| 4 | [refresh::](../param/019_refresh.md) | Auto-refresh on auth error |
+| 5 | [live::](../param/020_live.md) | Continuous refresh loop |
+| 6 | [interval::](../param/021_interval.md) | Seconds between refresh cycles |
+| 7 | [jitter::](../param/022_jitter.md) | Random delay added to interval |
+| 8 | [trace::](../param/023_trace.md) | Diagnostic trace output |
+| 9 | [sort::](../param/025_sort.md) | Row ordering strategy |
+| 10 | [desc::](../param/026_desc.md) | Reverse sort direction |
+| 11 | [prefer::](../param/027_prefer.md) | Weekly column for sort heuristics |
+| 12 | [cols::](../param/033_cols.md) | Column visibility modifiers |
+| 13 | [touch::](../param/034_touch.md) | Activate idle accounts via subprocess |
+| 14 | [imodel::](../param/035_imodel.md) | Model for touch/refresh subprocesses |
+| 15 | [effort::](../param/036_effort.md) | Effort level for subprocesses |
+| 16 | [count::](../param/037_count.md) | Maximum rows to display |
+| 17 | [offset::](../param/038_offset.md) | Skip first N rows |
+| 18 | [only_active::](../param/039_only_active.md) | Show only active account row |
+| 19 | [only_next::](../param/040_only_next.md) | Show only recommended next row |
+| 20 | [min_5h::](../param/041_min_5h.md) | Hide rows below 5h percentage |
+| 21 | [min_7d::](../param/042_min_7d.md) | Hide rows below 7d percentage |
+| 22 | [only_valid::](../param/043_only_valid.md) | Hide invalid token rows |
+| 23 | [exclude_exhausted::](../param/044_exclude_exhausted.md) | Hide exhausted rows |
+| 24 | [get::](../param/045_get.md) | Extract single column value |
+| 25 | [abs::](../param/046_abs.md) | Show absolute token counts |
+| 26 | [no_color::](../param/047_no_color.md) | Strip emoji and ANSI colors |
+| 27 | [set_model::](../param/054_set_model.md) | Explicitly write session model |
+| 28 | [force::](../param/058_force.md) | Bypass G8 ownership gate |
+| 29 | [rotate::](../param/059_rotate.md) | Execute account rotation after fetch |
+| 30 | [solo::](../param/060_solo.md) | Token conservation mode |
+| 31 | [who::](../param/061_who.md) | Sessions table visibility |
+| 32 | [owner::](../param/062_owner.md) | Set or release account ownership |
+| 33 | [assignee::](../param/063_assignee.md) | Write per-machine active marker |
 
 ### Referenced Features
 
@@ -163,3 +201,22 @@ clp .usage live::1 interval::60 jitter::10
 |---|------------|---------|
 | 1 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | Primary command for live quota monitoring across accounts |
 | 2 | [Scripted Pipeline Automation](../user_story/004_scripted_automation.md) | Machine-readable quota data for automation scripts |
+
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Output Control](../param_group/001_output_control.md) | `format::`, `get::` |
+| 2 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::`, `solo::` |
+| 3 | [Sort Control](../param_group/004_sort_control.md) | `sort::`, `desc::`, `prefer::` |
+| 4 | [Display Control](../param_group/005_display_control.md) | `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`, `abs::`, `no_color::` |
+
+### Referenced Formats
+
+| # | Format | Trigger | Note |
+|---|--------|---------|------|
+| 1 | [text](../format/001_text.md) | `format::text` (default) | — |
+| 2 | [json](../format/002_json.md) | `format::json` | Incompatible with `live::1` |
+| 3 | — value | `format::value` / `get::` | `.usage` only; implied by any `get::` field |
+| 4 | — tsv | `format::tsv` | `.usage` only |
+| 5 | — plain | `format::plain` | `.usage` only; equivalent to `no_color::1` |

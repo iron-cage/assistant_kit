@@ -194,19 +194,16 @@ default-features = false
 
 [workspace.dependencies.unilang]
 version = "^0.57"
-features = [ "enabled", "approach_yaml_multi_build" ]
 default-features = false
 
 [workspace.dependencies.cli_fmt]
 # Published companion crate (crates.io: cli_fmt ^0.10). Path removed — use registry version.
 version = "^0.10"
 default-features = false
-features = [ "cli_help_template" ]
 
 [workspace.dependencies.data_fmt]
 version = "^0.6"
 default-features = false
-features = [ "enabled" ]
 
 [workspace.dependencies.ureq]
 version = "^3"
@@ -215,12 +212,10 @@ version = "^3"
 
 [workspace.dependencies.serde]
 version = "^1.0"
-features = [ "derive" ]
 default-features = false
 
 [workspace.dependencies.chrono]
 version = "^0.4"
-features = [ "clock", "std" ]
 default-features = false
 
 ## Dev dependencies

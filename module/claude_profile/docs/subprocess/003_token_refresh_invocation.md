@@ -1,5 +1,12 @@
 # Subprocess: Token Refresh Invocation
 
+### Scope
+
+- **Purpose**: Document when `.usage refresh::` triggers `refresh_account_token()` and the exact predicate (`should_refresh()`) controlling that decision.
+- **Responsibility**: Authoritative reference for the token refresh trigger predicate, invocation signature, post-refresh actions, default behavior, and the architectural constraint prohibiting approaching-expiry detection.
+- **In Scope**: `should_refresh()` predicate; `refresh_account_token()` invocation; post-refresh retry and quota re-fetch; default `refresh::1` behavior; approaching-expiry prohibition and its rationale.
+- **Out of Scope**: Credential write-back protocol (→ `subprocess/002`); session touch trigger predicate (→ `subprocess/004`); `run_isolated()` contract (→ `subprocess/001`).
+
 ### Purpose
 
 Document when `.usage refresh::` triggers `refresh_account_token()` and the exact predicate controlling that decision.
@@ -46,11 +53,44 @@ After `refresh_account_token()` returns `None`:
 
 `refresh::1` is the default. Every `clp .usage` call automatically retries 401/403. Pass `refresh::0` to disable.
 
-### Cross-References
+### Architectural Constraint: Approaching-Expiry Detection Is Out of Scope
+
+Do NOT add an arm to `should_refresh()` that triggers when a token is valid but approaching expiry.
+
+**Reason:** `run_isolated(["--print", "."])` uses the access token as-is when it is still valid.
+Claude Code performs the OAuth refresh only when `expiresAt` is in the past (or forced to `"1"`
+by `refresh_account_token()`). With a genuinely valid AT, the subprocess exits without writing
+new credentials → `credentials=None` → the approaching-expiry arm is a silent 35-second no-op.
+
+**Spec:** `feature/017` line 8 explicitly marks "proactive expiry detection before any API call"
+as **Out of Scope**. This is not an oversight — the subprocess simply cannot perform proactive
+rotation while the AT is valid.
+
+This fix was proposed (BUG-323) and invalidated. SR-11 in `refresh_predicate.rs` tests enforce
+the constraint. See `pitfall/002 Pitfall 5` for the standing prohibition.
+
+### Features
 
 | File | Relationship |
 |------|-------------|
-| [feature/017_token_refresh.md](../feature/017_token_refresh.md) | Full feature spec, all acceptance criteria |
+| [feature/017_token_refresh.md](../feature/017_token_refresh.md) | Full feature spec, all acceptance criteria; Out of Scope line 8 |
+
+### Subprocess
+
+| File | Relationship |
+|------|-------------|
 | [subprocess/001](001_run_isolated_contract.md) | `run_isolated()` contract |
 | [subprocess/002](002_credential_writeback.md) | Credential write-back protocol |
 | [subprocess/004](004_session_touch_invocation.md) | Touch invocation (same `refresh_account_token()` call) |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
+| [invariant/008](../invariant/008_single_token_refresh_entry.md) | `expiresAt=1` mechanism — why valid-AT refresh is a no-op |
+
+### Pitfalls
+
+| File | Relationship |
+|------|-------------|
+| [pitfall/002 Pitfall 5](../pitfall/002_subprocess_integration_pitfalls.md) | Approaching-expiry arm permanently forbidden |

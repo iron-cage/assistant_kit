@@ -3,10 +3,11 @@
 **Pattern:** Consumed by the runner before subprocess launch; may suppress, override, or replace automatic flag injections; never forwarded directly.
 
 **Purpose:** Control runner execution behavior — before, during, or instead of subprocess invocation.
+**Order:** 2
 
 ### Semantic Coherence Test
 
-"Is this flag consumed by the runner, not Claude?" — YES for all 46.
+"Is this flag consumed by the runner, not Claude?" — YES for all 48.
 
 ### Why NOT X
 
@@ -22,13 +23,12 @@ No parameter is forwarded to the subprocess unchanged. Each is fully consumed by
 
 ### Notes
 
-`[MESSAGE]` is not in any group — it is a positional argument serving as input content,
-not a control flag. `--help` is handled separately as a universal override.
+`[MESSAGE]` is not in any group — it is a positional argument serving as input content, not a control flag. `--help` is handled separately as a universal override.
 
-**Typical usage:**
+### Typical Patterns
 
 ```sh
-clr --dir /project --max-tokens 50000 --verbosity 4 "test"
+clr --dir /project --max-tokens 50000 "test"
 clr --interactive "Continue this work" --dir /project
 clr --new-session --dry-run "check command"
 clr --trace "Fix bug" --dir /project
@@ -38,8 +38,8 @@ clr --trace "Fix bug" --dir /project
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 1 | [`run`](../command/01_run.md) | Full | — | All 46 params apply; default command |
-| 5 | [`ask`](../command/05_ask.md) | Full | — | All 46 params apply; identical behavior — pure alias for run |
+| 1 | [`run`](../command/01_run.md) | Full | — | All 47 params apply; default command |
+| 5 | [`ask`](../command/05_ask.md) | Full | — | All 47 params apply; identical behavior — pure alias for run |
 
 ### Referenced Parameters
 
@@ -48,12 +48,12 @@ clr --trace "Fix bug" --dir /project
 | [`--no-skip-permissions`](../param/005_no_skip_permissions.md) | bool | false | Injection suppressor | Disable automatic permission bypass |
 | [`--interactive`](../param/006_interactive.md) | bool | false | Mode selector | Interactive TTY passthrough when message given |
 | [`--new-session`](../param/007_new_session.md) | bool | false | Session mode | Start fresh session (disable default continuation) |
-| [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory | Working directory for subprocess |
+| [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory | Working directory for subprocess (alias: `--to`) |
 | [`--subdir`](../param/028_subdir.md) | string | `.` | Named workspace | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity |
 | [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 200000 | Token cap | Max output tokens |
 | [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session storage | Session storage directory |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Execution gate | Preview without executing |
-| [`--verbosity`](../param/012_verbosity.md) | [`VerbosityLevel`](../type/05_verbosity_level.md) | 3 | Diagnostic level | Runner output gate level |
+| [`--quiet`](../param/074_quiet.md) | bool | false | Diagnostic suppressor | Suppress non-fatal runner diagnostics |
 | [`--trace`](../param/013_trace.md) | bool | false | Trace mode | Print env+command to stderr then execute |
 | [`--no-ultrathink`](../param/014_no_ultrathink.md) | bool | false | Injection suppressor | Disable default ultrathink message suffix |
 | [`--no-effort-max`](../param/018_no_effort_max.md) | bool | false | Injection suppressor | Suppress default `--effort max` injection |
@@ -91,6 +91,8 @@ clr --trace "Fix bug" --dir /project
 | [`--summary-fields`](../param/071_summary_fields.md) | string | `full` | Field selector | Select which CLR envelope fields render in summary header; presets: `minimal`/`standard`/`full`; or custom whitelist |
 | [`--journal`](../param/072_journal.md) | enum | `full` | Journal level | Journal level for execution events: `full` (stdout+stderr ≤1MB each), `meta` (metadata only), `off` (disabled) |
 | [`--journal-dir`](../param/073_journal_dir.md) | path | `~/.clr/journal/` | Journal directory | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` |
+| [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Config loader | Load all clr params from JSON file; also applies to `isolated` and `refresh` |
+| [`--session-from`](../param/076_session_from.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session source | Compute session storage for this dir and use it for `-c` injection (alias: `--from`) |
 
 ### Referenced Tests
 
@@ -111,9 +113,13 @@ clr --trace "Fix bug" --dir /project
 | 8 | [008_trace_execution.md](../user_story/008_trace_execution.md) | Developer |
 | 11 | [011_file_input.md](../user_story/011_file_input.md) | Developer |
 | 12 | [012_code_block_extraction.md](../user_story/012_code_block_extraction.md) | Developer |
+| 13 | [013_structured_json_pipeline.md](../user_story/013_structured_json_pipeline.md) | Developer |
+| 15 | [015_ask_mode.md](../user_story/015_ask_mode.md) | Developer |
+| 18 | [018_env_var_configuration.md](../user_story/018_env_var_configuration.md) | Developer |
 | 20 | [020_suppress_effort_max.md](../user_story/020_suppress_effort_max.md) | Developer |
 | 21 | [021_keep_claudecode_context.md](../user_story/021_keep_claudecode_context.md) | Developer |
 | 22 | [022_session_isolation_subdir.md](../user_story/022_session_isolation_subdir.md) | Developer |
 | 23 | [023_output_file_capture.md](../user_story/023_output_file_capture.md) | Developer |
 | 24 | [024_enum_output_validation.md](../user_story/024_enum_output_validation.md) | Developer |
 | 25 | [025_concurrency_gate.md](../user_story/025_concurrency_gate.md) | Developer |
+| 28 | [028_session_transplant.md](../user_story/028_session_transplant.md) | Developer |

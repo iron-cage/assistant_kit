@@ -50,7 +50,7 @@
 //! - T25: duplicate `--max-tokens` last-wins
 //! - T26: `--help` after valid flags shows help
 //! - T27: `--` separator makes everything after positional
-//! - T28: `--verbosity 6` rejected
+//! - T28: `--quiet` accepted (exit 0)
 //! - T29: `--dry-run` does not invoke claude binary
 //! - T30: `--print` with message parsed (--print in dry-run output)
 //! - T31: flag value missing rejected (`--model` without value)
@@ -79,10 +79,10 @@ fn t01_message_accepted()
 #[ test ]
 fn t02_model_flag_accepted()
 {
-  let out = run_cli( &[ "--dry-run", "--model", "claude-opus-4-6", "test" ] );
+  let out = run_cli( &[ "--dry-run", "--model", "claude-opus-4-8", "test" ] );
   assert!( out.status.success(), "--model must be accepted" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  assert!( stdout.contains( "claude-opus-4-6" ), "model must appear in command. Got:\n{stdout}" );
+  assert!( stdout.contains( "claude-opus-4-8" ), "model must appear in command. Got:\n{stdout}" );
 }
 
 // T03: --max-tokens accepted, appears as env var
@@ -95,13 +95,13 @@ fn t03_max_tokens_flag_accepted()
   assert!( stdout.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=1000" ), "token env var must appear. Got:\n{stdout}" );
 }
 
-// T04: --dry-run contains -c when --session-dir is non-empty.
-// session_exists(Some(dir)) checks the dir directly; a dummy file triggers -c injection.
+// T04: --dry-run contains -c when --session-dir has a qualifying .jsonl file.
+// session_exists(Some(dir)) scans for .jsonl files; a dummy .jsonl triggers -c injection.
 #[ test ]
 fn t04_dry_run_contains_continue_when_sessions_exist()
 {
   let session_dir = tempfile::tempdir().expect( "create temp session dir" );
-  std::fs::write( session_dir.path().join( "session.json" ), b"{}" )
+  std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
     .expect( "write dummy session file" );
   let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
   let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
@@ -179,9 +179,9 @@ fn t09_dry_run_without_message()
 #[ test ]
 fn t10_multiple_flags_combined()
 {
-  // Create a session dir with one dummy file so session_exists returns true.
+  // Create a session dir with one dummy .jsonl file so session_exists returns Some(SessionId).
   let session_dir = tempfile::tempdir().expect( "create temp session dir" );
-  std::fs::write( session_dir.path().join( "session.json" ), b"{}" )
+  std::fs::write( session_dir.path().join( "00000000-0000-0000-0000-000000000000.jsonl" ), b"{}" )
     .expect( "write dummy session file" );
   let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
 
@@ -189,7 +189,7 @@ fn t10_multiple_flags_combined()
     .args( [
       "--dry-run", "--dir", "/tmp",
       "--session-dir", session_dir_str,
-      "--model", "claude-sonnet-4-6", "fix it",
+      "--model", "claude-sonnet-5", "fix it",
     ] )
     .output()
     .expect( "invoke clr" );
@@ -198,7 +198,7 @@ fn t10_multiple_flags_combined()
   assert!( stdout.contains( "cd /tmp" ), "Must have cd line. Got:\n{stdout}" );
   assert!( stdout.contains( "--dangerously-skip-permissions" ), "Must have skip-permissions (default-on). Got:\n{stdout}" );
   assert!( stdout.contains( " -c" ), "Must have -c when session-dir is non-empty. Got:\n{stdout}" );
-  assert!( stdout.contains( "claude-sonnet-4-6" ), "Must have model. Got:\n{stdout}" );
+  assert!( stdout.contains( "claude-sonnet-5" ), "Must have model. Got:\n{stdout}" );
   assert!( stdout.contains( "\"fix it\n\nultrathink\"" ), "Must have ultrathink-suffixed quoted message. Got:\n{stdout}" );
 }
 
@@ -263,7 +263,7 @@ fn t16_help_lists_all_options()
   for opt in &[
     "--print", "--new-session", "--model", "--verbose",
     "--no-skip-permissions", "--max-tokens", "--session-dir",
-    "--dir", "--dry-run", "--verbosity", "--help",
+    "--dir", "--dry-run", "--quiet", "--help",
     "--system-prompt", "--append-system-prompt", "--no-ultrathink",
     "--effort", "--no-effort-max", "[<MSG>]",
   ] {
@@ -398,14 +398,12 @@ fn t27_double_dash_separator()
   );
 }
 
-// T28: --verbosity 6 rejected
+// T28: --quiet flag accepted and does not produce an error
 #[ test ]
-fn t28_verbosity_six_rejected()
+fn t28_quiet_flag_accepted()
 {
-  let out = run_cli( &[ "--verbosity", "6", "--dry-run", "test" ] );
-  assert!( !out.status.success(), "--verbosity 6 must be rejected" );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!( stderr.contains( "verbosity" ), "error must mention verbosity. Got:\n{stderr}" );
+  let out = run_cli( &[ "--quiet", "--dry-run", "test" ] );
+  assert!( out.status.success(), "--quiet must be accepted (exit 0). stderr: {}", String::from_utf8_lossy( &out.stderr ) );
 }
 
 // T29: --dry-run does not invoke claude binary (succeeds without claude in PATH)

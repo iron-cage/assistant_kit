@@ -3,6 +3,8 @@
 //! `apply_refresh` drives the refresh loop across an accounts slice, delegating
 //! to `crate::account::refresh_account_token` for the full lifecycle.
 //! The decision predicate (`should_refresh`) lives in `refresh_predicate`.
+// Items are pub for test_bridge re-export; lints suppressed — internal API.
+#![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate, missing_docs ) ]
 
 use super::refresh_predicate::should_refresh;
 
@@ -20,7 +22,7 @@ use claude_profile_core::account::trace_ts;
 //   was introduced.
 //   Pitfall: every new predicate gate in should_refresh must have a corresponding
 //   branch in reason_label — the predicate–reason 1:1 contract.
-pub( crate ) fn reason_label( aq : &AccountQuota, now_secs : u64 ) -> &str
+pub fn reason_label( aq : &AccountQuota, now_secs : u64 ) -> &str
 {
   if !aq.is_owned
   {
@@ -64,7 +66,7 @@ pub( crate ) fn reason_label( aq : &AccountQuota, now_secs : u64 ) -> &str
 // Root cause: original design assumed background refresh callers own the active-account
 //   identity, but .account.use can fire during the ~35s subprocess window.
 // Pitfall: do NOT re-introduce snapshot+restore here — the fix is in save(), not here.
-pub( crate ) fn apply_refresh(
+pub fn apply_refresh(
   accounts         : &mut [ AccountQuota ],
   credential_store : &std::path::Path,
   claude_paths     : Option< &crate::ClaudePaths >,
@@ -190,10 +192,3 @@ pub( crate ) fn apply_refresh(
   }
 
 }
-
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-#[ cfg( test ) ]
-#[ path = "refresh_tests.rs" ]
-mod tests;

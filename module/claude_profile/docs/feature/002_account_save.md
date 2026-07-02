@@ -104,7 +104,7 @@
 
 | File | Relationship |
 |------|--------------|
-| `tests/cli/accounts_test.rs` | Verifies credential file and metadata snapshots created with correct content |
+| `tests/cli/accounts_list_test.rs` | Verifies credential file and metadata snapshots created with correct content |
 | `claude_profile_core/tests/account_test.rs` | `as_save_writes_active_marker` — unit test: active marker written after `save()` |
 | `tests/cli/credentials_test.rs` | `cred14` — CLI: `.credentials.status` shows `Account: {name}` after `.account.save` |
 | `tests/cli/account_mutations_test.rs` | `as15` — name inferred from active marker (AC-08); `as16` — active marker written after save (AC-10); `as17`/`as18` — path-unsafe chars in local part exit 1 (AC-11); `mre_bug_209_account_save_uses_active_marker_not_stale_email` — BUG-209 regression: stale `emailAddress` ignored (AC-08); `mre_bug_212_account_save_stale_marker_uses_oauth_email` — BUG-212 regression: stale `_active` overridden by `oauthAccount.emailAddress` (AC-16) |

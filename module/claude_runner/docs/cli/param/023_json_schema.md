@@ -8,6 +8,7 @@ validates its response against the provided schema and returns structured JSON.
 - **Default:** — (unset; no structured output constraint)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
+- **JSON Key:** `"json-schema"`
 
 ```sh
 clr --json-schema '{"type":"object","properties":{"name":{"type":"string"}}}' "Get user"
@@ -17,8 +18,15 @@ clr --json-schema "$(cat schema.json)" "List failing tests"
 **Note:** The value must be a valid JSON object string. The subprocess will
 return a JSON-encoded response matching the schema shape, not free-form text.
 
-**Note:** Combine with `--output-format json` (when implemented) for fully
-machine-readable output pipelines.
+**Note:** When `--output-format json` is set (or auto-injected by `--output-style summary`),
+the CLR result envelope contains a `structured_output` field with the schema-conforming response.
+The `result` text field is empty for structured output responses.
+
+**BUG-318 (fixed, TSK-336):** `--output-style raw` combined with `--json-schema` previously
+produced empty stdout. Fix applied: `builder.rs` Path B gate now also injects `--output-format json`
+when `--json-schema` is present; `execution.rs` raw path extracts `structured_output` from the CLR
+envelope via `extract_structured_output()` in `summary.rs`; `render_summary()` body also falls back
+to `structured_output` when the `result` field is empty.
 
 ### Referenced Type
 

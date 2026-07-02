@@ -12,6 +12,7 @@ Edge case coverage for the `--json-schema` parameter. See [023_json_schema.md](.
 | EC-4 | `--help` output contains `--json-schema` | Documentation |
 | EC-5 | `--json-schema` + `--model` → both forwarded, no conflict | Interaction |
 | EC-6 | `--json-schema` without message → accepted; schema in assembled command | Edge Case |
+| EC-7 | `--output-style raw --json-schema` → stdout contains structured JSON (BUG-318) | Cross-Product |
 
 ## Test Coverage Summary
 
@@ -19,8 +20,9 @@ Edge case coverage for the `--json-schema` parameter. See [023_json_schema.md](.
 - Edge Case: 2 tests
 - Interaction: 1 test
 - Documentation: 1 test
+- Cross-Product: 1 test (EC-7)
 
-**Total:** 6 edge cases
+**Total:** 7 edge cases
 
 ---
 
@@ -63,7 +65,7 @@ Edge case coverage for the `--json-schema` parameter. See [023_json_schema.md](.
 - **When:** `clr --help`
 - **Then:** Stdout contains `--json-schema`
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 - **Commands:** run, ask
 
 ---
@@ -86,4 +88,15 @@ Edge case coverage for the `--json-schema` parameter. See [023_json_schema.md](.
 - **Then:** Exit 0; assembled command contains `--json-schema`
 - **Exit:** 0
 - **Source:** [--json-schema](../../../../docs/cli/param/023_json_schema.md)
+- **Commands:** run, ask
+
+---
+
+### EC-7: `--output-style raw --json-schema` → stdout contains structured JSON (BUG-318)
+
+- **Given:** fake claude emitting CLR JSON envelope with `"structured_output":{"x":"hello"}` and `"result":""`; `-p --max-sessions 0`; `--output-style raw`; `--json-schema '{"type":"object","properties":{"x":{"type":"string"}},"required":["x"]}'`
+- **When:** `clr -p --max-sessions 0 --output-style raw --json-schema '...' "test"` with fake claude
+- **Then:** Exit 0; stdout is non-empty; stdout contains `"x"` (structured output extracted from JSON envelope); raw mode + json-schema does not produce empty stdout
+- **Exit:** 0
+- **Source:** [--json-schema](../../../../docs/cli/param/023_json_schema.md) Known Limitation (BUG-318); [--output-style](../../../../docs/cli/param/070_output_style.md) Combinations table
 - **Commands:** run, ask

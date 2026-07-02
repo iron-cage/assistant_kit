@@ -9,6 +9,7 @@ that default to any supported level.
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **Validation:** requires a value; unknown level → error listing valid values (`low`, `medium`, `high`, `max`)
+- **JSON Key:** `"effort"`
 
 ```sh
 clr "Fix the bug"                  # sends: --effort max (default)

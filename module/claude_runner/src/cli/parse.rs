@@ -1,4 +1,3 @@
-use crate::VerbosityLevel;
 use claude_runner_core::EffortLevel;
 use error_tools::{ Error, Result };
 
@@ -51,10 +50,11 @@ pub( crate ) struct CliArgs
   pub( crate ) no_skip_permissions  : bool,
   pub( crate ) max_tokens           : Option< u32 >,
   pub( crate ) session_dir          : Option< String >,
+  pub( crate ) session_from         : Option< String >,
   pub( crate ) dir                  : Option< String >,
   pub( crate ) dry_run              : bool,
   pub( crate ) trace                : bool,
-  pub( crate ) verbosity            : Option< VerbosityLevel >,
+  pub( crate ) quiet                : bool,
   pub( crate ) help                 : bool,
   pub( crate ) system_prompt        : Option< String >,
   pub( crate ) append_system_prompt : Option< String >,
@@ -105,6 +105,8 @@ pub( crate ) struct CliArgs
   pub( crate ) summary_fields         : Option< String >,
   pub( crate ) journal                : Option< String >,
   pub( crate ) journal_dir            : Option< String >,
+  pub( crate ) args_file              : Option< String >,
+  pub( crate ) no_compact_window      : bool,
 }
 
 /// Consume the next argv element as a flag's value.
@@ -195,6 +197,10 @@ fn parse_value_flag(
         parse_effort_level( next_value( tokens, next, "--effort" )? )?
       );
     }
+    "--message" =>
+    {
+      parsed.message = Some( next_value( tokens, next, "--message" )?.to_string() );
+    }
     "--system-prompt" =>
     {
       parsed.system_prompt = Some( next_value( tokens, next, "--system-prompt" )?.to_string() );
@@ -215,7 +221,11 @@ fn parse_value_flag(
     {
       parsed.session_dir = Some( next_value( tokens, next, "--session-dir" )?.to_string() );
     }
-    "--dir" =>
+    "--session-from" | "--from" =>
+    {
+      parsed.session_from = Some( next_value( tokens, next, "--session-from" )?.to_string() );
+    }
+    "--dir" | "--to" =>
     {
       parsed.dir = Some( next_value( tokens, next, "--dir" )?.to_string() );
     }
@@ -246,11 +256,6 @@ fn parse_value_flag(
       }
       parsed.subdir = Some( val.to_string() );
     }
-    "--verbosity" =>
-    {
-      let raw = next_value( tokens, next, "--verbosity" )?;
-      parsed.verbosity = Some( raw.parse::< VerbosityLevel >().map_err( Error::msg )? );
-    }
     "--output-format" =>
     {
       parsed.output_format = Some( next_value( tokens, next, "--output-format" )?.to_string() );
@@ -278,6 +283,10 @@ fn parse_value_flag(
     "--fallback-model" =>
     {
       parsed.fallback_model = Some( next_value( tokens, next, "--fallback-model" )?.to_string() );
+    }
+    "--args-file" =>
+    {
+      parsed.args_file = Some( next_value( tokens, next, "--args-file" )?.to_string() );
     }
     _ => return parse_runner_value_flag( token, tokens, next, parsed ),
   }
@@ -500,7 +509,7 @@ fn parse_runner_value_flag(
 ///
 /// `--help`/`-h` wins regardless of other flags or unknown tokens: if either appears
 /// anywhere in `tokens`, parsing short-circuits and returns `CliArgs { help: true, .. }`.
-#[ allow( clippy::too_many_lines ) ]
+#[ allow( clippy::too_many_lines ) ] // mechanical dispatch — one arm per CLI flag token
 pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
 {
   // --help/-h always wins — return early before any other token is parsed.
@@ -524,10 +533,11 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       no_skip_permissions  : false,
       max_tokens           : None,
       session_dir          : None,
+      session_from         : None,
       dir                  : None,
       dry_run              : false,
       trace                : false,
-      verbosity            : None,
+      quiet                : false,
       system_prompt        : None,
       append_system_prompt : None,
       no_ultrathink        : false,
@@ -577,6 +587,8 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       summary_fields          : None,
       journal                 : None,
       journal_dir             : None,
+      args_file               : None,
+      no_compact_window       : false,
     } );
   }
 
@@ -645,6 +657,14 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       {
         parsed.keep_claudecode = true;
       }
+      "--no-compact-window" =>
+      {
+        parsed.no_compact_window = true;
+      }
+      "--quiet" =>
+      {
+        parsed.quiet = true;
+      }
       "--" =>
       {
         // Everything after `--` is positional.
@@ -685,7 +705,8 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
     i += 1;
   }
 
-  if !positional.is_empty()
+  // Positional args form the message only when --message was not given explicitly.
+  if !positional.is_empty() && parsed.message.is_none()
   {
     parsed.message = Some( positional.join( " " ) );
   }

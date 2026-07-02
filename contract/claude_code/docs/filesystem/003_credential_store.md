@@ -51,5 +51,5 @@ pre-v1.0 (unverified)
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Filesystem master index: full directory tree, path reference table |
 | filesystem | [001_claude_home.md](001_claude_home.md) | `~/.claude/.credentials.json` (active OAuth token, separate from this store) |
-| formats | [`../formats/002_credentials.md`](../formats/002_credentials.md) | Credential JSON structure |
+| formats | [`../format/002_credentials.md`](../format/002_credentials.md) | Credential JSON structure |
 | source | `../../../../module/claude_profile/src/paths.rs` | `PersistPaths::credential_store()` implementation |

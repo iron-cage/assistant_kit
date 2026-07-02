@@ -26,6 +26,16 @@
 | 2 | [`.list`](../command/02_list.md) | Enumerate projects for scripted iteration |
 | 4 | [`.count`](../command/04_count.md) | Bare integer count output for comparison and thresholds |
 
+### Referenced Formats
+| # | Format | Role |
+|---|--------|------|
+| 2 | [json](../format/02_json.md) | Machine-parseable session export for pipeline integration |
+
+### Referenced Parameter Groups
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: and scope:: for integration targets |
+
 ### Referenced Parameters
 | # | Parameter | Role |
 |---|-----------|------|
@@ -33,15 +43,6 @@
 | 12 | [`scope::`](../param/12_scope.md) | Constrain discovery to a project or subtree |
 | 16 | [`target::`](../param/16_target.md) | Specify what to count (projects, sessions, entries) |
 | 21 | [`count::`](../param/21_count.md) | Output count only as bare integer for scripting |
-
-### Referenced Parameter Groups
-| # | Parameter Group | Role |
-|---|-----------------|------|
-| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: and scope:: for integration targets |
-### Referenced Formats
-| # | Format | Role |
-|---|--------|------|
-| 2 | [json](../format/02_json.md) | Machine-parseable session export for pipeline integration |
 
 ### Related User Stories
 | # | User Story | Relationship |
@@ -53,7 +54,9 @@
 **Step 1: Get storage summary**
 ```bash
 cls .status
-# Output: "Storage: ~/.claude/\nProjects: N (UUID: X, Path: Y)\nSessions: N (Main: X, Agent: Y)"
+# Storage: ~/.claude/
+# Projects: 42 (UUID: 10, Path: 32)
+# Sessions: 187 (Main: 164, Agent: 23)
 ```
 
 **Step 2: Count sessions for a threshold check**
@@ -62,6 +65,7 @@ session_count=$(cls .count target::sessions)
 if [ "$session_count" -gt 100 ]; then
   echo "Warning: large session count"
 fi
+# Warning: large session count
 ```
 
 **Step 3: Iterate over projects in a script**
@@ -69,6 +73,9 @@ fi
 cls .list | grep '^/' | while read -r project_line; do
   echo "Processing: $project_line"
 done
+# Processing: /home/user/projects/my_app (14)
+# Processing: /home/user/projects/web_service (8)
+# Processing: /home/user/projects/data_pipeline (3)
 ```
 
 ### Error Handling

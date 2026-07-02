@@ -5,7 +5,7 @@
 - **Purpose**: Document the global files at the `~/.claude/` root that are not inside any subdirectory.
 - **Responsibility**: Authoritative instance for root-level files — `history.jsonl`, `.credentials.json`, and `settings.json` — purpose, format, access patterns, and security considerations.
 - **In Scope**: `history.jsonl` (global project index), `.credentials.json` (API tokens), `settings.json` (user settings), `cld-timeout-config.json` (timeout config), `stats-cache.json` (usage stats cache).
-- **Out of Scope**: `projects/` directory (→ [001_projects_directory.md](001_projects_directory.md)); support directories (→ [002_support_directories.md](002_support_directories.md)); settings file format internals (→ [`../settings/`](../settings/readme.md)); credentials file format (→ [`../formats/002_credentials.md`](../formats/002_credentials.md)).
+- **Out of Scope**: `projects/` directory (→ [001_projects_directory.md](001_projects_directory.md)); support directories (→ [002_support_directories.md](002_support_directories.md)); settings file format internals (→ [`../settings/`](../settings/readme.md)); credentials file format (→ [`../format/002_credentials.md`](../format/002_credentials.md)).
 
 ### Structure
 
@@ -38,7 +38,7 @@
 **Access frequency**: Medium — read at project start.
 **Maintenance**: Can be truncated if very large; loses project history but not conversations.
 
-See [`../formats/001_history_jsonl.md`](../formats/001_history_jsonl.md) for full field spec.
+See [`../format/001_history_jsonl.md`](../format/001_history_jsonl.md) for full field spec.
 
 #### .credentials.json — Active API Tokens (~1KB)
 
@@ -51,7 +51,7 @@ See [`../formats/001_history_jsonl.md`](../formats/001_history_jsonl.md) for ful
 { "claudeAiOauth": { "... authentication data ..." } }
 ```
 
-Never delete unless intentionally deauthenticating. Written atomically by `.account.switch`. See [`../formats/002_credentials.md`](../formats/002_credentials.md) for format spec.
+Never delete unless intentionally deauthenticating. Written atomically by `.account.switch`. See [`../format/002_credentials.md`](../format/002_credentials.md) for format spec.
 
 #### settings.json — User Settings (~5KB)
 
@@ -103,6 +103,6 @@ pre-v1.0 (unverified)
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Storage master index: full directory structure |
 | settings | [`../settings/001_global_settings.md`](../settings/001_global_settings.md) | settings.json structure, write protocol, key table |
-| formats | [`../formats/001_history_jsonl.md`](../formats/001_history_jsonl.md) | history.jsonl entry schema |
-| formats | [`../formats/002_credentials.md`](../formats/002_credentials.md) | .credentials.json structure |
+| formats | [`../format/001_history_jsonl.md`](../format/001_history_jsonl.md) | history.jsonl entry schema |
+| formats | [`../format/002_credentials.md`](../format/002_credentials.md) | .credentials.json structure |
 | filesystem | [`../filesystem/001_claude_home.md`](../filesystem/001_claude_home.md) | Path resolution for all `~/.claude/` files |

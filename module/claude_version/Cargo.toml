@@ -21,13 +21,13 @@ name = "claude_version"
 path = "src/lib.rs"
 
 [[bin]]
-name = "claude_version"
-path = "src/main.rs"
+name = "clv"
+path = "src/bin/clv.rs"
 required-features = [ "enabled" ]
 
 [[bin]]
-name = "clv"
-path = "src/bin/clv.rs"
+name = "claude_version"
+path = "src/main.rs"
 required-features = [ "enabled" ]
 
 [features]
@@ -35,7 +35,9 @@ required-features = [ "enabled" ]
 # Library consumers must opt in via `features = ["enabled"]`; the default
 # does not impose transitive dependencies on library-only users.
 default = [ "enabled" ]
+# Activates all functionality; alias for `enabled` (no additional granular features yet).
 full    = [ "enabled" ]
+# Master switch: enables all CLI commands, adapters, and output modules.
 enabled = [
   "dep:claude_runner_core",
   "claude_runner_core/enabled",
@@ -43,6 +45,7 @@ enabled = [
   "claude_core/enabled",
   "dep:claude_version_core",
   "dep:cli_fmt",
+  "cli_fmt/cli_help_template",
   "dep:unilang",
   "unilang/enabled",
   "dep:error_tools",

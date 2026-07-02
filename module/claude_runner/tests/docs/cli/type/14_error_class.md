@@ -167,8 +167,8 @@ Validation tests for the `ErrorClass` taxonomy. `ErrorClass` is a documentation-
 ### TC-13: Auth 401 `authentication_error` → `[Auth]` class label in output
 
 - **Given:** fake `claude` that exits 1 and prints to stderr: `"Failed to authenticate. API Error: 401 {\"type\":\"authentication_error\",\"message\":\"Invalid authentication credentials\"}"`
-- **When:** `clr --print --max-sessions 0 "msg"` (no `--on-auth-error switch` configured)
-- **Then:** exit 1; stderr contains `"[Auth]"` class label (not `"[Service]"`); process exits immediately without retrying (fail-fast, no sleep)
+- **When:** `clr --print --retry-on-auth 3 --auth-delay 0 --max-sessions 0 "msg"` with fake binary always exiting 1
+- **Then:** exit 1; stderr contains `"[Auth]"` class label (not `"[Service]"`); invocation count = 4 (1 initial + 3 retries); stderr contains "retries exhausted"
 - **Exit:** 1
-- **Note:** test_kind: bug_reproducer(BUG-314, BUG-315). BUG-314: `"authentication_error"` pattern must fire before the `"API Error: "` catch-all to produce `[Auth]` not `[Service]`. BUG-315: no retry sleep occurs when no credential recovery hook is configured.
+- **Note:** test_kind: bug_reproducer(BUG-314, BUG-325). BUG-314: `"authentication_error"` pattern must fire before the `"API Error: "` catch-all to produce `[Auth]` not `[Service]`. BUG-325: Auth retry fires — invocation count must be 4 confirming `--retry-on-auth 3` is no longer dead.
 - **Source:** [type/14_error_class.md](../../../../docs/cli/type/14_error_class.md)

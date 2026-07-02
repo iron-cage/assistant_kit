@@ -37,14 +37,14 @@ show_sessions::1    # Force on (show even with no filters)
 |------|------|-------------|----------------|
 | Boolean | Base type | Boolean flag | `0` (suppress), `1` (force), or unset (auto) |
 
+### Referenced Parameter Groups
+
+None.
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 2 | [`.list`](../command/02_list.md) | `0` (auto) | Explicit override for session display; auto-enabled by `session::`, `agent::`, `min_entries::` |
-
-### Referenced Parameter Groups
-
-None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

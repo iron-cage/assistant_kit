@@ -20,17 +20,17 @@ clv.settings.set key::autoUpdate value::true  # -> true (bool)
 
 ### Referenced Commands
 
-| # | Command |
-|---|---------|
-| 1 | [`.settings.set`](../command/settings.md#command--11-settingsset) |
-| 2 | [`.config`](../command/config.md#command--13-config) |
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 1 | [`.settings.set`](../command/settings.md#command--11-settingsset) | (required) | Value to write; type-inferred |
+| 2 | [`.config`](../command/config.md#command--13-config) | — | Present alongside key:: triggers set mode |
 
 ### Referenced Parameter Groups
 
-| # | Group |
-|---|-------|
-| 1 | [Settings Identity](../param_group/03_settings_identity.md) |
-| 2 | [Config Identity](../param_group/04_config_identity.md) |
+| # | Group | Membership | Co-members |
+|---|-------|-----------|-----------|
+| 1 | [Settings Identity](../param_group/03_settings_identity.md) | Partial | `key::` |
+| 2 | [Config Identity](../param_group/04_config_identity.md) | Full | `key::`, `scope::`, `unset::` |
 
 ### Referenced Type
 

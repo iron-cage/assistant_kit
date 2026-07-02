@@ -1,4 +1,4 @@
-# Parameter :: 13. `active::`
+# Parameter: 13. `active::`
 
 > **REMOVED (Feature 065):** The `active::` parameter has been removed from the unified parameter set on `.accounts` and `.usage`. Marker assignment is now performed via `assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine).
 >

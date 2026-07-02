@@ -34,7 +34,7 @@ clv.params [key::K] [kind::KIND] [format::FMT] [v::N]
 | Parameter | Type | Default | Required | Purpose |
 |-----------|------|---------|----------|---------|
 | [`key::`](../param/06_key.md) | string | — | No | Specific param name for single-param mode |
-| `kind::` | enum: `config`, `env` | — | No | Filter show-all to one param kind only |
+| [`kind::`](../param/13_kind.md) | [`ParamKind`](../type/08_param_kind.md) | — | No | Filter show-all to one param kind only |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Detail level: 0=values only, 1=forms+values, 2=with descriptions |
 
@@ -85,11 +85,11 @@ clv.params v::0
 ```
 model
   Forms:   CLI --model <model>  |  env CLAUDE_MODEL  |  config model
-  Env:     CLAUDE_MODEL → "claude-opus-4-6" (set)
+  Env:     CLAUDE_MODEL → "claude-opus-4-8" (set)
   Config:  model = (absent in user config)
-  Default: claude-sonnet-4-6
+  Default: claude-sonnet-5
   ────────────────────────────────────────────────────
-  Effective (via .config): claude-opus-4-6 (env)
+  Effective (via .config): claude-opus-4-8 (env)
 ```
 
 **Sample text output (v::1, `clv.params key::bash_timeout`):**
@@ -116,6 +116,21 @@ print
 |---|--------|------|
 | 1 | [text](../format/01_text.md) | Default human-readable output |
 | 2 | [json](../format/02_json.md) | Machine-readable structured output |
+
+### Referenced Parameter Groups
+
+| # | Group | Membership | Excluded Params |
+|---|-------|-----------|----------------|
+| 1 | [Output Control](../param_group/01_output_control.md) | Partial | `count::` |
+
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | [`key::`](../param/06_key.md) |
+| 2 | [`format::`](../param/05_format.md) |
+| 3 | [`v::`](../param/04_v.md) |
+| 4 | [`kind::`](../param/13_kind.md) |
 
 ### Related Commands
 

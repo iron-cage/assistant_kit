@@ -40,6 +40,8 @@
 | Q3 | `parentUuid` compaction exceptions | < 0.2% of entries have orphaned `parentUuid` after context compaction | Thread-walking code must handle broken chains | [behavior/B17](../behavior/017_b17_parentuuid_self_contained.md) |
 | Q4 | Tool definitions in system prompt despite `--tools ""` | ~12k tokens of tool definitions remain even when all tools disabled | Token budget waste; unconfirmed | [behavior/B16h](../behavior/016h_b16h_tools_system_prompt.md) |
 | Q5 | Autocompact thrash | Large tool output immediately refills context after compaction | Session becomes unusable; `/clear` required | [error/003](../../../../docs/error/003_context_limit_reached.md) |
+| Q6 | `$VAR`/`%VAR%` @-reference prefixes silently rejected | Environment variable syntax in CLAUDE.md `@`-references yields 0 tokens — no warning, no error; `@$GENAI/…`, `@$PRO/…`, `@%PATH%/…` all silently discarded | Referenced rulebook or config absent from context without any explanation | [behavior/B32](../behavior/032_b32_claudemd_at_ref_path_filter.md) |
+| Q7 | `tengu_paper_halyard` Statsig flag silently suppresses all Project/Local CLAUDE.md files | Server-side feature flag can zero out all project instructions with no UI notification; project CLAUDE.md appears syntactically correct but contributes 0 tokens | Project rules and vocabulary entirely absent from model context while source file looks fine | [behavior/B34](../behavior/034_b34_claudemd_content_pipeline.md) |
 
 ---
 

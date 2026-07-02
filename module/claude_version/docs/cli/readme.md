@@ -16,9 +16,9 @@ Manage Claude Code installation: versions, processes, and settings.
 | readme.md | Index, completion matrix, and navigation for the CLI doc |
 | procedure.md | Steps for adding, updating, or removing CLI doc entities |
 | 004_parameter_interactions.md | Cross-parameter constraints and dependency rules |
-| dictionary.md | Domain vocabulary for all CLI concepts |
-| env_param.md | Environment variable reference |
-| config_param.md | Config file reference (null — clv has no config file) |
+| 002_dictionary.md | Domain vocabulary for all CLI concepts |
+| 007_env_param.md | Environment variable reference |
+| 008_config_param.md | Config file reference (null — clv has no config file) |
 | command/ | Command namespace reference files |
 | param/ | Parameter reference files |
 | type/ | Semantic type definition files |
@@ -41,11 +41,11 @@ clv <.command> [param::value ...]
 | param/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
 | type/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
 | param_group/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
-| dictionary.md | ➖ | ✅ | ➖ | ➖ | ➖ | Complete |
-| 004_parameter_interactions.md | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| 002_dictionary.md | ➖ | ✅ | ➖ | ➖ | ➖ | Complete |
+| 004_parameter_interactions.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
 | procedure.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
-| env_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
-| config_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
+| 007_env_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
+| 008_config_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
 | user_story/ | ➖ | ➖ | ✅ | ✅ | ✅ | Complete |
 | format/ | ➖ | ➖ | ✅ | ✅ | ✅ | Complete |
 
@@ -60,11 +60,11 @@ clv <.command> [param::value ...]
 - [Types](type/readme.md) — semantic type definitions
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings
 - [Parameter Interactions](004_parameter_interactions.md) — cross-parameter constraints
-- [Dictionary](dictionary.md) — domain vocabulary
+- [Dictionary](002_dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — persona-goal scenarios
 - [Formats](format/readme.md) — output format catalog
-- [Environment Parameters](env_param.md) — environment variable reference
-- [Config Parameters](config_param.md) — config file reference
+- [Environment Parameters](007_env_param.md) — environment variable reference
+- [Config Parameters](008_config_param.md) — config file reference
 
 ### See Also
 

@@ -1,4 +1,4 @@
-# Parameter :: 3. `threshold::`
+# Parameter: 3. `threshold::`
 
 Overrides the default 60-minute warning window for token expiry classification. Tokens expiring within `threshold::` seconds are classified as `ExpiringSoon` instead of `Valid`.
 

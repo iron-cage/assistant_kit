@@ -67,8 +67,11 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [061_who.md](061_who.md) | `who::` — sessions table visibility in `.usage` (auto: shown when >1 active marker) |
 | [062_owner.md](062_owner.md) | `owner::` — ownership set (`USER@MACHINE`) or release (`owner::0`); batch via comma-list `name::` |
 | [063_assignee.md](063_assignee.md) | `assignee::` — `USER@MACHINE` (or sentinel `0` = current machine) mutation param: assign/unassign active-account marker (Feature 065) |
+| [064_id.md](064_id.md) | `id::` — full model ID to pin as subprocess model via `~/.clr/prefs.json`; activates set mode on `.model.select` |
+| [065_offline.md](065_offline.md) | `offline::` — use static embedded model catalog instead of live `GET /v1/models`; no credentials required |
+| [066_reset.md](066_reset.md) | `reset::` — remove `subprocess_model` from `~/.clr/prefs.json`; idempotent; mutually exclusive with `id::` on `.model.select` |
 
-**Total:** 58 active parameters (Feature 065: param 013 `active::` REMOVED; param 063 `assignee::` added as replacement; Feature 064: params 053 `for::`, 056 `unclaim::`, 057 `assign::` REMOVED; param 062 `owner::` extended with `owner::0` sentinel + batch)
+**Total:** 61 active parameters (Feature 065: param 013 `active::` REMOVED; param 063 `assignee::` added as replacement; Feature 064: params 053 `for::`, 056 `unclaim::`, 057 `assign::` REMOVED; param 062 `owner::` extended with `owner::0` sentinel + batch)
 
 ### Overview Table
 
@@ -137,8 +140,11 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 61 | `who::` | `i64` | `-1` | `-1` (auto), `0` (hide), `1` (show) | Sessions table visibility in `.usage` output | `.usage` |
 | 62 | `owner::` | `string` | *(omit)* | `USER@MACHINE`, `0` (release) | Set ownership (`USER@MACHINE`) or release (`0`); batch via comma-list `name::` | `.accounts`, `.usage` |
 | 63 | `assignee::` | `string` | *(omit)* | `USER@MACHINE`, `0` (current machine) | Assign/unassign active-account marker; `0` sentinel expands to `$USER@$HOSTNAME` (Feature 065) | `.accounts`, `.usage` |
+| 64 | `id::` | `string` | *(omit)* | Any non-empty model ID string | Pin subprocess model to `~/.clr/prefs.json`; activates set mode when present | `.model.select` |
+| 65 | `offline::` | `bool` | `0` | `0`, `1`, `false`, `true` | Use static embedded model catalog instead of live API; no network call made | `.models` |
+| 66 | `reset::` | `bool` | `0` | `0`, `1`, `false`, `true` | Remove `subprocess_model` from `~/.clr/prefs.json`; idempotent; mutually exclusive with `id::` | `.model.select` |
 
-*Param 1 = cross-command account selector (no formal group); params 48, 52 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = ungrouped (`.model`-specific); param 56 = REMOVED; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54, 60 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file)*
+*Param 1 = cross-command account selector (no formal group); params 48, 52 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = ungrouped (`.model`-specific); param 56 = REMOVED; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54, 60 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file); params 64, 66 = ungrouped (`.model.select`-specific); param 65 = ungrouped (`.models`-specific)*
 
 ### See Also
 

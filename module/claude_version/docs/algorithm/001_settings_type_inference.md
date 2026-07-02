@@ -51,6 +51,12 @@ The inference is applied in strict priority order. The first matching rule wins:
 | `"hello"` | `"hello"` | Step 4 |
 | `"it's"` | `"it's"` | Step 4 |
 
+### Algorithms
+
+| File | Relationship |
+|------|-------------|
+| [algorithm/002_config_resolution.md](002_config_resolution.md) | 4-layer resolution that consumes typed values produced by this algorithm |
+
 ### Features
 
 | File | Relationship |
@@ -74,4 +80,4 @@ The inference is applied in strict priority order. The first matching rule wins:
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/algorithm/01_settings_type_inference.md](../../tests/docs/algorithm/01_settings_type_inference.md) | Algorithm test spec |
+| [tests/docs/algorithm/001_settings_type_inference.md](../../tests/docs/algorithm/001_settings_type_inference.md) | Algorithm test spec |

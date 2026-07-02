@@ -4,7 +4,7 @@
 //! Data-gathering and HTTP calls live in `account_inspect.rs`.
 
 use crate::output::json_escape;
-use super::shared::caps_to_json;
+use super::cmd_context::caps_to_json;
 
 // ── Snapshot type ─────────────────────────────────────────────────────────────
 

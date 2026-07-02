@@ -1,6 +1,6 @@
 # Test: `isolated`
 
-Integration test planning for the `isolated` command. See [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md) for specification.
+Integration test planning for the `isolated` command. See [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md) for specification.
 
 ## Test Case Index
 
@@ -65,8 +65,9 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - Output Style: 1 test (IT-31)
 - Summary Fields: 1 test (IT-32)
 - Output Env: 4 tests (IT-33 through IT-36)
+- Error: Invalid Env: 1 test (IT-37)
 
-**Total:** 36 test cases
+**Total:** 37 test cases
 
 ---
 
@@ -76,7 +77,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --creds /tmp/it1_creds.json "What is 2+2?"`
 - **Expected behavior:** subprocess runs with `HOME=<temp>`; temp HOME contains only `.claude/.credentials.json`; claude produces output; exit 0
 - **Exit:** 0
-- **Source:** [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
 
 ---
 
@@ -86,7 +87,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --creds /tmp/it2_missing.json "test"`
 - **Expected behavior:** exit 1; stderr contains "not found" or equivalent; no subprocess launched
 - **Exit:** 1
-- **Source:** [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
 
 ---
 
@@ -96,7 +97,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --creds /tmp/it3_creds.json --timeout 0 "Long running task"`
 - **Expected behavior:** subprocess attempted; wait window expires immediately; creds not refreshed → exit 2
 - **Exit:** 2
-- **Source:** [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md), [--timeout](../../../../docs/cli/param/020_timeout.md)
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [--timeout](../../../../docs/cli/param/020_timeout.md)
 
 ---
 
@@ -106,7 +107,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --creds /tmp/it4_creds.json --timeout 0`
 - **Expected behavior:** subprocess refreshes token before blocking; `clr isolated` detects refresh → exit 0; `/tmp/it4_creds.json` contains updated token
 - **Exit:** 0
-- **Source:** [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md), [--timeout](../../../../docs/cli/param/020_timeout.md)
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [--timeout](../../../../docs/cli/param/020_timeout.md)
 
 ---
 
@@ -116,7 +117,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --creds /tmp/it5_creds.json` (no message)
 - **Expected behavior:** Claude starts in interactive REPL mode inside isolated HOME; stdin/stdout connected to subprocess; no `--print` injected
 - **Exit:** 0 (when REPL exits)
-- **Source:** [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
 
 ---
 
@@ -126,7 +127,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --creds /tmp/it6_creds.json -- --version`
 - **Expected behavior:** subprocess receives `--version` flag; version string printed to stdout; exit 0
 - **Exit:** 0
-- **Source:** [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
 
 ---
 
@@ -146,7 +147,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --trace "test"`
 - **Expected behavior:** trace stderr contains `# creds: <HOME>/.claude/.credentials.json`; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
-- **Source:** [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md), [--creds](../../../../docs/cli/param/019_creds.md)
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md), [--creds](../../../../docs/cli/param/019_creds.md)
 
 ---
 
@@ -155,7 +156,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --help` (also: `clr isolated -h`)
 - **Expected behavior:** exit 0; stdout contains `--creds`, `--timeout`, and `--help`; no subprocess launched; no error in stderr
 - **Exit:** 0
-- **Source:** [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Source:** [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
 
 ---
 
@@ -163,7 +164,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 
 - **Setup:** credentials JSON written to a temp file `<f>` (file is readable); claude binary absent in test environment
 - **Command:** `clr isolated --creds <f> --trace "Fix bug"` (no `--dry-run`; trace fires before subprocess attempt)
-- **Expected behavior:** stderr contains `# clr isolated`, `# creds: <path>`, `# timeout: 30s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --chrome --model claude-opus-4-6 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"` before any subprocess attempt; subprocess attempt fails (claude absent in test environment)
+- **Expected behavior:** stderr contains `# clr isolated`, `# creds: <path>`, `# timeout: 30s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --chrome --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"` before any subprocess attempt; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
 - **Source:** [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md), [--trace](../../../../docs/cli/param/013_trace.md)
 
@@ -175,7 +176,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --creds /tmp/it11_creds.json --timeout 1 "test"`
 - **Expected behavior:** subprocess is killed after 1 second; exit 2 (timeout without credentials refresh); the partial stdout emitted before the timeout is included in the error output — diagnostic context is not discarded
 - **Exit:** 2
-- **Source:** [--timeout](../../../../docs/cli/param/020_timeout.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Source:** [--timeout](../../../../docs/cli/param/020_timeout.md), [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
 - **Note:** Implemented in TSK-196 (BUG-243); test function `timeout_includes_partial_stdout` in `tests/bug_reproducers_239_244_test.rs`; also covered by EC-7 in [tests/docs/cli/param/20_timeout.md](../param/20_timeout.md)
 
 ---
@@ -186,7 +187,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --creds <f> --dry-run`
 - **Expected behavior:** exit 0; stdout contains command preview (claude binary + injected flags); no subprocess spawn; stderr empty
 - **Exit:** 0
-- **Source:** [--dry-run](../../../../docs/cli/param/011_dry_run.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Source:** [--dry-run](../../../../docs/cli/param/011_dry_run.md), [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
 
 ---
 
@@ -226,7 +227,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --creds <f> --dir /tmp "msg"` (PATH set to fake claude dir)
 - **Expected behavior:** exit 0; fake claude stdout contains `--dir`; proving `--dir /tmp` was injected into subprocess argv
 - **Exit:** 0
-- **Source:** [--dir](../../../../docs/cli/param/008_dir.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Source:** [--dir](../../../../docs/cli/param/008_dir.md), [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
 
 ---
 
@@ -276,7 +277,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --creds <f> --file <input> "process this"` (PATH set to fake claude dir)
 - **Expected behavior:** exit 0; stdout contains `file_content_it21` (file content piped as stdin to subprocess)
 - **Exit:** 0
-- **Source:** [--file](../../../../docs/cli/param/025_file.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Source:** [--file](../../../../docs/cli/param/025_file.md), [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
 
 ---
 
@@ -346,7 +347,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --creds <f> --file <input> "msg"` (PATH set to fake claude dir)
 - **Expected behavior:** exit 0; all output captured without deadlock; background reader threads drain stdout/stderr concurrently
 - **Exit:** 0
-- **Source:** [--file](../../../../docs/cli/param/025_file.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Source:** [--file](../../../../docs/cli/param/025_file.md), [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
 
 ---
 
@@ -356,7 +357,7 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Command:** `clr isolated --creds <f> --output-file <path> "msg"` (PATH set to fake claude dir)
 - **Expected behavior:** exit 0; stdout contains known text; output file at `<path>` contains same text
 - **Exit:** 0
-- **Source:** [--output-file](../../../../docs/cli/param/029_output_file.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Source:** [--output-file](../../../../docs/cli/param/029_output_file.md), [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
 
 ---
 

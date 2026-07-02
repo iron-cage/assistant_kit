@@ -1,19 +1,9 @@
-# CLI User Story: CLI Discoverability
+# View complete usage information without executing Claude
 
-### Scope
-
-- **Purpose**: Document the help command as the CLI's self-documentation entry point.
-- **Responsibility**: Define acceptance criteria for discovering available commands, flags, and usage patterns.
-- **In Scope**: `clr help`, `clr -h`, `clr --help` invocations and expected output.
-- **Out of Scope**: Individual parameter semantics (-> `param/`), runtime behavior (-> `command/`).
-
-### Persona
-
-New user evaluating the `clr` CLI who needs to discover available commands, parameters, and usage patterns before running any task.
-
-### Goal
-
-View a complete usage summary — commands, flags, and invocation syntax — without executing any Claude subprocess or modifying any state.
+**Persona:** New user evaluating the `clr` CLI who needs to discover available commands, parameters, and usage patterns before running any task.
+**Goal:** View a complete usage summary — commands, flags, and invocation syntax — without executing any Claude subprocess or modifying any state.
+**Benefit:** Enables self-service onboarding without consulting external documentation.
+**Priority:** Low
 
 ### Acceptance Criteria
 
@@ -28,7 +18,7 @@ View a complete usage summary — commands, flags, and invocation syntax — wit
 
 | # | Command | Role |
 |---|---------|------|
-| 4 | [`help`](../command/04_help.md) | Prints usage information and exits |
+| 4 | [`help`](../command/02_help.md) | Prints usage information and exits |
 
 ### Referenced Parameter Groups
 
@@ -37,3 +27,9 @@ View a complete usage summary — commands, flags, and invocation syntax — wit
 ### Referenced Parameters
 
 *None — `help` is a zero-parameter command.*
+
+### Workflow Steps
+
+1. `clr help` — print full usage information and exit with code 0
+2. `clr --help` — identical output via long flag
+3. `clr -h` — identical output via short flag

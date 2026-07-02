@@ -38,7 +38,7 @@ Validation tests for the `ModelName` semantic type (any non-empty string). Tests
 ### TC-2: Model name with hyphens → accepted
 
 - **Given:** clean environment
-- **When:** `clr --dry-run "Fix bug" --model claude-sonnet-4-6`
+- **When:** `clr --dry-run "Fix bug" --model claude-sonnet-5`
 - **Then:** Exit 0; hyphenated model name accepted and forwarded intact
 - **Exit:** 0
 - **Source:** [type/04_model_name.md](../../../../docs/cli/type/04_model_name.md)

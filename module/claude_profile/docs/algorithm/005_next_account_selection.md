@@ -1,14 +1,23 @@
 # Algorithm: Next-Account Positive Selection
 
-### Purpose
+### Scope
+
+- **Purpose**: Define the positive selection algorithm for next-account footer recommendation and auto-switch.
+- **Responsibility**: Documents the 3-step selection process: status group partition, sort strategy application, and first-eligible winner.
+- **In Scope**: `find_next_for_strategy()` logic; sort key computation; Green-only selection invariant; `prefer_weekly` computation.
+- **Out of Scope**: Eligibility gates (→ algorithm/004); status group computation (→ algorithm/003); sort strategy definitions (→ algorithm/007).
+
+### Abstract
 
 Select the **winner** account for footer recommendation and auto-switch from among eligible accounts.
 
-### Entry Point
+### Algorithm
+
+#### Entry Point
 
 `src/usage/sort_next.rs:46-83` — `find_next_for_strategy(strategy, accounts, prefer, gate_ownership, now_secs)`
 
-### Algorithm (3 steps)
+#### Algorithm (3 steps)
 
 #### Step 1 — Partition into status groups (display order)
 
@@ -31,17 +40,22 @@ Key definitions:
 
 Walk the sorted list from position 0. The first account passing all 8 eligibility gates (see [algorithm/004](004_eligibility_gates.md)) is the winner — marked `→` in the table, shown in footer `Next` line. If no account passes, result is `None` (no recommendation; auto-switch returns error).
 
-### Why `sort::renew` uses ascending `prefer_weekly` as secondary key
+#### Why `sort::renew` uses ascending `prefer_weekly` as secondary key
 
 Lower weekly capacity = account benefits most from the upcoming renewal event. An account at 10% weekly capacity benefits more from an imminent renewal than one at 50%. This ensures the recommendation prioritizes accounts whose renewal will have the greatest regenerative impact.
 
-### Cross-References
+### Features
 
 | File | Relationship |
 |------|-------------|
 | [feature/039_decision_algorithms.md](../feature/039_decision_algorithms.md) | Table 5 (legacy reference) |
+| [feature/020_usage_sort_strategies.md](../feature/020_usage_sort_strategies.md) | `sort::`, `prefer::` parameters |
+| [feature/038_usage_strategy_rotate.md](../feature/038_usage_strategy_rotate.md) | Auto-switch uses this winner |
+
+### Algorithms
+
+| File | Relationship |
+|------|-------------|
 | [algorithm/003](003_quota_status_groups.md) | Status groups (Green-only selection) |
 | [algorithm/004](004_eligibility_gates.md) | Eligibility gates applied in step 3 |
 | [algorithm/007](007_sort_strategies.md) | Sort key computation |
-| [feature/020_usage_sort_strategies.md](../feature/020_usage_sort_strategies.md) | `sort::`, `prefer::` parameters |
-| [feature/038_usage_strategy_rotate.md](../feature/038_usage_strategy_rotate.md) | Auto-switch uses this winner |

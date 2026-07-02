@@ -3,6 +3,7 @@
 ### Scope
 
 - **Purpose**: Define the per-machine active-account marker file format and naming convention.
+- **Responsibility**: Documents the per-machine active-account marker filename derivation and content format.
 - **In Scope**: Filename derivation, content format, sanitization rules, `.gitignore` exclusion.
 - **Out of Scope**: Old shared `_active` file (deprecated, ignored); switching logic (→ [feature/004](../feature/004_account_use.md)).
 
@@ -48,11 +49,16 @@ Reads all `_active_*` files in the credential store **except** the current machi
 
 The previous single-file `_active` marker is silently ignored. Running `.account.use` once on a machine populates the machine-specific marker and there is no migration step.
 
-### Cross-References
+### Features
 
 | File | Relationship |
 |------|-------------|
 | [feature/025_per_machine_active_marker.md](../feature/025_per_machine_active_marker.md) | Feature spec with acceptance criteria |
-| [schema/004](004_storage_root.md) | Credential store path (parent directory) |
 | [feature/004_account_use.md](../feature/004_account_use.md) | Switch writes this marker |
 | [feature/009_token_usage.md](../feature/009_token_usage.md) | Sessions table reads all `_active_*` markers |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [004_storage_root.md](004_storage_root.md) | Credential store path (parent directory) |

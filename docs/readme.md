@@ -15,6 +15,7 @@ Workspace-level behavioral requirements, structural patterns, integration contra
 | `pattern/` | Four-layer crate dependency architecture pattern |
 | `integration/` | Cross-workspace integration protocol |
 | `error/` | Claude Code error message catalog |
+| `entity.md` | Doc Entity index for all documentation scopes in this workspace |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |
 
 ## Doc Entity Index

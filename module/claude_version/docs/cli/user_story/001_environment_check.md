@@ -38,3 +38,31 @@
 |---|-----------|------|
 | 1 | [`v::`](../param/04_v.md) | Controls diagnostic detail level |
 | 2 | [`format::`](../param/05_format.md) | Selects text or JSON rendering |
+
+### Workflow Steps
+
+**Step 1 — Check environment state:**
+
+```bash
+clv .status
+# Version:   2.1.78
+# Processes: 2
+# Account:   user@example.com
+```
+
+**Step 2 — Get machine-readable output for scripting:**
+
+```bash
+clv .status format::json
+# {"version":"2.1.78","processes":2,"account":"user@example.com","preferred":{"spec":"stable","resolved":"2.1.78"}}
+```
+
+**Step 3 — Show additional diagnostic context:**
+
+```bash
+clv .status v::2
+# Version:   2.1.78
+# Processes: 2
+# Account:   user@example.com
+# Preferred: stable (v2.1.78)  (settings.json → preferredVersionSpec)
+```

@@ -14,8 +14,8 @@
 | IT-02 | AC-02 | Get: settings.json has `{"model":"sonnet"}` → prints `model: sonnet` | `ft02_get_model_sonnet` |
 | IT-03 | AC-03 | Get: model key absent → prints `model: (unset)` | `ft03_get_model_unset_key_absent` |
 | IT-04 | AC-04 | Get: settings.json does not exist → prints `model: (unset)` | `ft04_get_model_unset_file_absent` |
-| IT-05 | AC-05 | `set::opus` → writes `claude-opus-4-6` to settings.json | `ft05_set_opus_writes_full_id` |
-| IT-06 | AC-06 | `set::sonnet` → writes `claude-sonnet-4-6` | `ft06_set_sonnet_writes_full_id` |
+| IT-05 | AC-05 | `set::opus` → writes `claude-opus-4-8` to settings.json | `ft05_set_opus_writes_full_id` |
+| IT-06 | AC-06 | `set::sonnet` → writes `claude-sonnet-5` | `ft06_set_sonnet_writes_full_id` |
 | IT-07 | AC-07 | `set::haiku` → writes `claude-haiku-4-5-20251001` | `ft07_set_haiku_writes_full_id` |
 | IT-08 | AC-08 | `set::default` → removes model key; other keys preserved | `ft08_set_default_removes_key_preserves_others` |
 | IT-09 | AC-09 | `set::bad` → exit 1, stderr names all 4 valid values | `ft09_set_bad_value_exits_1` |
@@ -77,22 +77,22 @@
 
 ---
 
-### IT-05: `set::opus` writes `claude-opus-4-6`
+### IT-05: `set::opus` writes `claude-opus-4-8`
 
 - **Given:** Any `settings.json` state (may or may not exist).
 - **When:** `clp .model set::opus`
-- **Then:** `~/.claude/settings.json` contains `"model": "claude-opus-4-6"`. Exits 0.
+- **Then:** `~/.claude/settings.json` contains `"model": "claude-opus-4-8"`. Exits 0.
 - **Exit:** 0
 - **Source fn:** `ft05_set_opus_writes_full_id`
 - **Source:** [035_model_command.md AC-05](../../../../docs/feature/035_model_command.md)
 
 ---
 
-### IT-06: `set::sonnet` writes `claude-sonnet-4-6`
+### IT-06: `set::sonnet` writes `claude-sonnet-5`
 
 - **Given:** Any `settings.json` state.
 - **When:** `clp .model set::sonnet`
-- **Then:** `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"`. Exits 0.
+- **Then:** `~/.claude/settings.json` contains `"model": "claude-sonnet-5"`. Exits 0.
 - **Exit:** 0
 - **Source fn:** `ft06_set_sonnet_writes_full_id`
 - **Source:** [035_model_command.md AC-06](../../../../docs/feature/035_model_command.md)
@@ -112,7 +112,7 @@
 
 ### IT-08: `set::default` removes model key; other keys preserved
 
-- **Given:** `~/.claude/settings.json` contains `{"model": "claude-opus-4-6", "theme": "dark"}`.
+- **Given:** `~/.claude/settings.json` contains `{"model": "claude-opus-4-8", "theme": "dark"}`.
 - **When:** `clp .model set::default`
 - **Then:** `settings.json` no longer contains `"model"` key. `"theme": "dark"` is preserved. Exits 0.
 - **Exit:** 0
@@ -136,7 +136,7 @@
 
 - **Given:** `~/.claude/settings.json` does not exist.
 - **When:** `clp .model set::opus`
-- **Then:** `~/.claude/settings.json` is created; contains `"model": "claude-opus-4-6"`. Exits 0.
+- **Then:** `~/.claude/settings.json` is created; contains `"model": "claude-opus-4-8"`. Exits 0.
 - **Exit:** 0
 - **Source fn:** `ft10_set_creates_file_when_absent`
 - **Source:** [035_model_command.md AC-10](../../../../docs/feature/035_model_command.md)
@@ -147,7 +147,7 @@
 
 - **Given:** `~/.claude/settings.json` contains `{"theme": "dark", "autoUpdaterStatus": "disabled"}`.
 - **When:** `clp .model set::opus`
-- **Then:** All pre-existing keys preserved; `"model": "claude-opus-4-6"` added. Exits 0.
+- **Then:** All pre-existing keys preserved; `"model": "claude-opus-4-8"` added. Exits 0.
 - **Exit:** 0
 - **Source fn:** `ft11_set_preserves_existing_keys`
 - **Source:** [035_model_command.md AC-11](../../../../docs/feature/035_model_command.md)

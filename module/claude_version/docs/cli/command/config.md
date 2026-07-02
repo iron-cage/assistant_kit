@@ -70,7 +70,7 @@ clv.config key::theme format::json
 
 # Set a value in user settings (default scope)
 clv.config key::theme value::dark
-clv.config key::model value::claude-opus-4-6
+clv.config key::model value::claude-opus-4-8
 
 # Set a value in project settings
 clv.config key::model value::claude-haiku-4-5-20251001 scope::project
@@ -96,6 +96,18 @@ clv.config key::theme unset::1
 | 1 | [Output Control](../param_group/01_output_control.md) | Partial | `count::` |
 | 2 | [Execution Control](../param_group/02_execution_control.md) | Partial | `force::` |
 | 3 | [Config Identity](../param_group/04_config_identity.md) | Full | — |
+
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | [`key::`](../param/06_key.md) |
+| 2 | [`value::`](../param/07_value.md) |
+| 3 | [`scope::`](../param/11_scope.md) |
+| 4 | [`format::`](../param/05_format.md) |
+| 5 | [`v::`](../param/04_v.md) |
+| 6 | [`dry::`](../param/02_dry.md) |
+| 7 | [`unset::`](../param/12_unset.md) |
 
 ### Related Commands
 

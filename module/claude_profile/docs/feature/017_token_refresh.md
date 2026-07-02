@@ -5,7 +5,7 @@
 - **Purpose**: Allow `.usage` to silently refresh expired OAuth tokens before fetching quota, so users see current quota data rather than per-account auth error rows.
 - **Responsibility**: Documents the `refresh::` parameter, its retry-on-auth-error trigger, the `claude_profile_core::account::refresh_account_token()` call from `usage.rs`, and credential write-back to disk.
 - **In Scope**: `refresh::` parameter semantics; HTTP auth error detection from `fetch_oauth_usage`; `account::refresh_account_token()` call from `usage.rs`; credential write-back; one-retry-per-account semantics; non-aborting error handling.
-- **Out of Scope**: `run_isolated()` internals (→ `claude_runner_core/docs/feature/004_run_isolated.md`); live monitor mode (→ `018_live_monitor.md`); `fetch_oauth_usage` implementation (→ `claude_quota`); proactive expiry detection before any API call.
+- **Out of Scope**: `run_isolated()` internals (→ `claude_runner_core/docs/feature/004_run_isolated.md`); live monitor mode (→ `018_live_monitor.md`); `fetch_oauth_usage` implementation (→ `claude_quota`); **proactive expiry detection before any API call** — permanently excluded because `run_isolated(["--print", "."])` with a valid AT returns `credentials=None`; no OAuth refresh occurs; any approaching-expiry arm in `should_refresh()` would be a silent no-op. This constraint was validated during BUG-323 investigation and is enforced by SR-11 in `refresh_predicate.rs`. See `pitfall/002 Pitfall 5` and `subprocess/003 Architectural Constraint` section.
 
 ### Design
 

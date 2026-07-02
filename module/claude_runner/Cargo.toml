@@ -48,8 +48,11 @@ enabled = [
   "dep:unilang",
   "unilang/enabled",
   "dep:data_fmt",
+  "data_fmt/enabled",
   "dep:cli_fmt",
+  "cli_fmt/cli_help_template",
   "dep:claude_journal",
+  "dep:serde_json",
 ]
 
 [dependencies]
@@ -61,6 +64,7 @@ unilang             = { workspace = true, optional = true }
 data_fmt            = { workspace = true, optional = true }
 cli_fmt             = { workspace = true, optional = true }
 claude_journal      = { workspace = true, optional = true }
+serde_json          = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

@@ -1,26 +1,9 @@
-# CLI User Story: Session Listing
+# Inspect running Claude Code sessions and queued waiters
 
-### Scope
-
-- **Purpose**: Document `clr ps` as a session inspection tool that lists all running Claude Code processes and queued `clr` waiters with per-session metadata in two plain-style tables.
-- **Responsibility**: Define acceptance criteria for the session listing command: plain-style table output, elapsed column, queued-sessions table, empty-session state, column presence, help discoverability, typo guard, self-exclusion, mode filtering, column selection, wide output, session flags, and flag legend.
-- **In Scope**: `clr ps` plain-style table output, 9 default columns (`#`/`PID`/`Elapsed`/`CPU%`/`RAM`/`State`/`Mode`/`Absolute Path`/`Task`), optional 2 columns (`Command`/`Binary`), conditional `Flags` column (shown only when ≥1 flag applies to any row), flag legend below active table (shown only when ≥1 flag present), 7 session flags (👈 this-session, 🖨 print-mode, ⚡ active, 🕰 ancient, 🐘 high-RAM, ⚠ dead-metrics, 🐳 container), `CLR_PS_ANCIENT_SECS` and `CLR_PS_HIGH_RAM_MB` threshold env vars, queued CLR processes table (`#`/`PID`/`CWD`/`Waiting`/`Attempt` columns), no-sessions message, `clr --help` listing, typo-guard for `clr p` / `clr pss`, self-PID exclusion, `$PRO` path shortening, gate state files, `CLR_GATE_DIR` override, `--mode` filtering, `--columns` selection, `--wide` expansion, `CLR_PS_MODE` / `CLR_PS_COLUMNS` env var fallbacks.
-- **Out of Scope**: Watch/auto-refresh mode, non-Linux platforms. (Session termination implemented as `clr kill` in US-027 / TSK-201.)
-
-### Persona
-
-Developer or CI operator running multiple `clr` sessions who needs a quick
-overview of active Claude Code processes — their PIDs, resource usage, working
-directories, and current tasks — without reaching for system tools like `pgrep`
-or `ps aux`.
-
-### Goal
-
-Inspect all running Claude Code sessions and queued `clr` waiters at a glance so
-that the developer can understand which sessions are active, how long they have been
-running, what they are doing, and whether any `clr` processes are blocked waiting
-for a session slot — with full control over which rows and columns are displayed —
-enabling them to identify stale, stuck, or piled-up sessions.
+**Persona:** Developer or CI operator running multiple `clr` sessions who needs a quick overview of active Claude Code processes — their PIDs, resource usage, working directories, and current tasks — without reaching for system tools like `pgrep` or `ps aux`.
+**Goal:** Inspect all running Claude Code sessions and queued `clr` waiters at a glance so that the developer can understand which sessions are active, how long they have been running, what they are doing, and whether any `clr` processes are blocked waiting for a session slot — with full control over which rows and columns are displayed — enabling them to identify stale, stuck, or piled-up sessions.
+**Benefit:** Provides immediate visibility into all Claude sessions without relying on system-level tools.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -78,6 +61,14 @@ enabling them to identify stale, stuck, or piled-up sessions.
 | 69 | [`--inspect`](../param/069_inspect.md) | — |
 | — | `CLR_PS_ANCIENT_SECS` | AC-024 |
 | — | `CLR_PS_HIGH_RAM_MB` | AC-025 |
+
+### Workflow Steps
+
+1. `clr ps` — list all active Claude Code sessions and queued waiters
+2. `clr ps --mode print` — show only print-mode sessions
+3. `clr ps --columns pid,path,task` — display only the specified columns in order
+4. `clr ps --wide` — show all 11 columns including Mode, Command, and Binary
+5. `clr ps --mode print --columns pid,elapsed,task` — filter by mode and select columns together
 
 ### Related User Stories
 

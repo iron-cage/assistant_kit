@@ -21,19 +21,25 @@ clv.settings.set key::theme value::dark dry::1
 
 ### Referenced Commands
 
-| # | Command |
-|---|---------|
-| 1 | [`.version.install`](../command/version.md#command--4-versioninstall) |
-| 2 | [`.version.guard`](../command/version.md#command--5-versionguard) |
-| 3 | [`.processes.kill`](../command/processes.md#command--8-processeskill) |
-| 4 | [`.settings.set`](../command/settings.md#command--11-settingsset) |
-| 5 | [`.config`](../command/config.md#command--13-config) |
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 1 | [`.version.install`](../command/version.md#command--4-versioninstall) | false | Preview install steps |
+| 2 | [`.version.guard`](../command/version.md#command--5-versionguard) | false | Preview guard restore |
+| 3 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | false | Preview kill targets without sending signals |
+| 4 | [`.settings.set`](../command/settings.md#command--11-settingsset) | false | Preview write without file change |
+| 5 | [`.config`](../command/config.md#command--13-config) | false | Preview set/unset without file change |
+
+### Referenced Type
+
+| # | Type |
+|---|------|
+| 1 | `bool` |
 
 ### Referenced Parameter Groups
 
-| # | Group |
-|---|-------|
-| 1 | [Execution Control](../param_group/02_execution_control.md) |
+| # | Group | Membership | Co-members |
+|---|-------|-----------|-----------|
+| 1 | [Execution Control](../param_group/02_execution_control.md) | Full | `force::` |
 
 ### Referenced User Stories
 

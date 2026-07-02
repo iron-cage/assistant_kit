@@ -40,7 +40,7 @@ assistant_kit = { version = "^0.1", features = ["profile", "runner"] }
 
 ```rust,no_run
 use assistant_kit::profile::ClaudePaths;
-use assistant_kit::runner::VerbosityLevel;
+use assistant_kit::runner::strip_fences;
 ```
 
 ## Architecture

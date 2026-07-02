@@ -8,6 +8,7 @@ identity value — the working directory is used as-is, with no subdirectory app
 - **Default:** `.` (identity — no subdirectory appended)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"subdir"`
 
 ```sh
 clr "Fix bug"                           # effective dir = cwd (default: --subdir .)

@@ -19,15 +19,15 @@ TSK-286 is the authorizing source for the BV- prefix until a separate rulebook-u
 | `06_rotate.md` | rotate | No | Transitions | BV-1/2/3 |
 | `07_renewal.md` | renewal | Yes | Accumulates | BV-1/2/3 |
 | `08_inspect.md` | inspect | Yes | Reads | BV-1/2/3 |
-| `09_assign.md` | assign | Yes | Accumulates | BV-1/2/3 |
+| `09_assign.md` | assign *(REMOVED — Feature 037)* | — | — | BV-1/2/3/4 (regression + REMOVED_TOGGLE) |
 | `10_status.md` | status | Yes | Reads | BV-1/2/3/4 (2 nouns) |
-| `11_unclaim.md` | unclaim | Yes | Metadata mutation | BV-1/2/3 |
+| `11_unclaim.md` | unclaim *(REMOVED — Feature 064)* | — | — | BV-1/2/3/4 (regression + REMOVED_TOGGLE) |
 
 ### Coverage Summary
 
 | Verb Files | Min Cases | Total |
 |------------|-----------|-------|
-| 11 | ≥ 3 each | 34 (10 × 3 + 1 × 4) |
+| 9 active + 2 REMOVED regression | ≥ 3 each | 28 active (8 × 3 + 1 × 4) + 8 regression (2 × 4) |
 
 ### See Also
 

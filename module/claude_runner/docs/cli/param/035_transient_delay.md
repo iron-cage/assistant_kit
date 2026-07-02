@@ -9,6 +9,7 @@ effective retry count for Transient is 0.
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Replaces:** `--retry-delay` (renamed; no longer shared with Unknown class)
+- **JSON Key:** `"transient-delay"`
 
 ```sh
 clr -p "task" --retry-on-transient 2 --transient-delay 60  # wait 60s between retries
@@ -40,7 +41,7 @@ effective = --retry-override-delay ?? --transient-delay ?? --retry-default-delay
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, ... |
 
 ### Referenced Commands
 

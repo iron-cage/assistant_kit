@@ -76,7 +76,7 @@ Edge case tests for the add-dir parameter. Tests validate value forwarding, miss
 - **When:** `clr --help`
 - **Then:** Stdout contains `--add-dir`
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 - **Commands:** run, ask
 ---
 

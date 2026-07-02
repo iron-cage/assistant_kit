@@ -69,27 +69,27 @@ Integration test planning for the `.settings.set` command. See [command/readme.m
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-1 | `value::true` → stores boolean `true` | P | 0 | F1=set, F2=true | [mutation_commands_test.rs] |
-| IT-9 | `value::false` → stores boolean `false` | P | 0 | F1=set, F2=false | [mutation_commands_test.rs] |
-| IT-2 | `value::0` → stores number `0` (NOT boolean) | P | 0 | F1=set, F2=0 | [mutation_commands_test.rs] |
-| IT-10 | `value::42` → stores integer `42` | P | 0 | F1=set, F2=int | [mutation_commands_test.rs] |
-| IT-11 | `value::hello` → stores quoted `"hello"` | P | 0 | F1=set, F2=string | [mutation_commands_test.rs] |
-| IT-12 | `value::""` → stores empty string `""` | P | 0 | F1=set, F2=empty-string | [mutation_commands_test.rs] |
-| IT-13 | Creates file when settings.json absent | P | 0 | F4=missing | [mutation_commands_test.rs] |
-| IT-14 | Updates existing key without duplication | P | 0 | F4=existing-with-key | [mutation_commands_test.rs] |
-| IT-3 | `dry::1` → shows preview, no file change | P | 0 | F3=1 | [mutation_commands_test.rs] |
-| IT-15 | Adds new key to existing file | P | 0 | F4=existing-without-key | [mutation_commands_test.rs] |
+| IT-1 | `value::true` → stores boolean `true` | P | 0 | F1=set, F2=true | [mutation_settings_set_test.rs] |
+| IT-9 | `value::false` → stores boolean `false` | P | 0 | F1=set, F2=false | [mutation_settings_set_test.rs] |
+| IT-2 | `value::0` → stores number `0` (NOT boolean) | P | 0 | F1=set, F2=0 | [mutation_settings_set_test.rs] |
+| IT-10 | `value::42` → stores integer `42` | P | 0 | F1=set, F2=int | [mutation_settings_set_test.rs] |
+| IT-11 | `value::hello` → stores quoted `"hello"` | P | 0 | F1=set, F2=string | [mutation_settings_set_test.rs] |
+| IT-12 | `value::""` → stores empty string `""` | P | 0 | F1=set, F2=empty-string | [mutation_settings_set_test.rs] |
+| IT-13 | Creates file when settings.json absent | P | 0 | F4=missing | [mutation_settings_set_test.rs] |
+| IT-14 | Updates existing key without duplication | P | 0 | F4=existing-with-key | [mutation_settings_set_test.rs] |
+| IT-3 | `dry::1` → shows preview, no file change | P | 0 | F3=1 | [mutation_settings_set_test.rs] |
+| IT-15 | Adds new key to existing file | P | 0 | F4=existing-without-key | [mutation_settings_set_test.rs] |
 
 ### Negative Tests
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
-| IT-16 | Without `key::` → error mentions `key::` | N | 1 | F1=absent | [read_commands_test.rs] |
-| IT-17 | `key::foo` without `value::` → error mentions `value::` | N | 1 | F2=absent | [read_commands_test.rs] |
-| IT-18 | No `key::` → exit 1 | N | 1 | F1=absent | [mutation_commands_test.rs] |
-| IT-19 | `key::` present but no `value::` → exit 1 | N | 1 | F1=set, F2=absent | [mutation_commands_test.rs] |
-| IT-20 | HOME not set → exit 2 | N | 2 | F5=empty | [mutation_commands_test.rs] |
-| IT-21 | `key::""` (empty key) → exit 1 | N | 1 | F1=empty | [mutation_commands_test.rs] |
+| IT-16 | Without `key::` → error mentions `key::` | N | 1 | F1=absent | [read_settings_test.rs] |
+| IT-17 | `key::foo` without `value::` → error mentions `value::` | N | 1 | F2=absent | [read_settings_test.rs] |
+| IT-18 | No `key::` → exit 1 | N | 1 | F1=absent | [mutation_settings_set_test.rs] |
+| IT-19 | `key::` present but no `value::` → exit 1 | N | 1 | F1=set, F2=absent | [mutation_settings_set_test.rs] |
+| IT-20 | HOME not set → exit 2 | N | 2 | F5=empty | [mutation_settings_set_test.rs] |
+| IT-21 | `key::""` (empty key) → exit 1 | N | 1 | F1=empty | [mutation_settings_set_test.rs] |
 | IT-4 | `dry::2` → exit 1, out-of-range boolean | N | 1 | F3=2 | new |
 | IT-5 | `bogus::x` → exit 1, unknown param | N | 1 | F6=present | new |
 | IT-6 | `key::foo` without `value::` → exit 1, value required | N | 1 | F2=absent | new |
@@ -231,7 +231,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key::flag value::false`
 - **Then:** exit 0; settings.json has `"flag": false` (unquoted boolean)
 - **Exit:** 0
-- **Source:** [mutation_commands_test.rs]
+- **Source:** [mutation_settings_set_test.rs]
 
 ---
 
@@ -241,7 +241,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key::count value::42`
 - **Then:** exit 0; settings.json has `"count": 42` (unquoted integer)
 - **Exit:** 0
-- **Source:** [mutation_commands_test.rs]
+- **Source:** [mutation_settings_set_test.rs]
 
 ---
 
@@ -251,7 +251,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key::name value::hello`
 - **Then:** exit 0; settings.json has `"name": "hello"` (quoted string)
 - **Exit:** 0
-- **Source:** [mutation_commands_test.rs]
+- **Source:** [mutation_settings_set_test.rs]
 
 ---
 
@@ -261,7 +261,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key::empty value::""`
 - **Then:** exit 0; settings.json has `"empty": ""` (valid empty string)
 - **Exit:** 0
-- **Source:** [mutation_commands_test.rs]
+- **Source:** [mutation_settings_set_test.rs]
 
 ---
 
@@ -271,7 +271,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key::theme value::dark`
 - **Then:** exit 0; settings.json created at `~/.claude/settings.json`; contains `"theme": "dark"`
 - **Exit:** 0
-- **Source:** [mutation_commands_test.rs]
+- **Source:** [mutation_settings_set_test.rs]
 
 ---
 
@@ -281,7 +281,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key::theme value::dark`
 - **Then:** exit 0; settings.json has `"theme": "dark"` exactly once; other keys unchanged
 - **Exit:** 0
-- **Source:** [mutation_commands_test.rs]
+- **Source:** [mutation_settings_set_test.rs]
 
 ---
 
@@ -291,7 +291,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key::newKey value::newVal`
 - **Then:** exit 0; settings.json has both old key and `"newKey": "newVal"`; no corruption
 - **Exit:** 0
-- **Source:** [mutation_commands_test.rs]
+- **Source:** [mutation_settings_set_test.rs]
 
 ---
 
@@ -301,7 +301,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set value::dark`
 - **Then:** exit 1; error message contains the string `key::`
 - **Exit:** 1
-- **Source:** [read_commands_test.rs]
+- **Source:** [read_settings_test.rs]
 
 ---
 
@@ -311,7 +311,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key::foo`
 - **Then:** exit 1; error message contains the string `value::`
 - **Exit:** 1
-- **Source:** [read_commands_test.rs]
+- **Source:** [read_settings_test.rs]
 
 ---
 
@@ -321,7 +321,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set`
 - **Then:** exit 1; error: `key::` is required
 - **Exit:** 1
-- **Source:** [mutation_commands_test.rs]
+- **Source:** [mutation_settings_set_test.rs]
 
 ---
 
@@ -331,7 +331,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key::theme`
 - **Then:** exit 1; error: `value::` is required
 - **Exit:** 1
-- **Source:** [mutation_commands_test.rs]
+- **Source:** [mutation_settings_set_test.rs]
 
 ---
 
@@ -341,7 +341,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key::theme value::dark`
 - **Then:** exit 2; error references HOME or settings path resolution failure
 - **Exit:** 2
-- **Source:** [mutation_commands_test.rs]
+- **Source:** [mutation_settings_set_test.rs]
 
 ---
 
@@ -351,7 +351,7 @@ IT-15 verifies append to existing file without corruption.
 - **When:** `clv .settings.set key:: value::dark`
 - **Then:** exit 1; error: key value cannot be empty
 - **Exit:** 1
-- **Source:** [mutation_commands_test.rs]
+- **Source:** [mutation_settings_set_test.rs]
 
 ---
 
@@ -359,25 +359,25 @@ IT-15 verifies append to existing file without corruption.
 
 | Function | File |
 |----------|------|
-| `tc320_settings_set_missing_key_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc321_settings_set_missing_value_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc322_settings_set_stores_boolean_true` | `integration/mutation_commands_test.rs` |
-| `tc323_settings_set_stores_boolean_false` | `integration/mutation_commands_test.rs` |
-| `tc324_settings_set_zero_stored_as_number` | `integration/mutation_commands_test.rs` |
-| `tc325_settings_set_stores_number` | `integration/mutation_commands_test.rs` |
-| `tc326_settings_set_stores_string` | `integration/mutation_commands_test.rs` |
-| `tc327_settings_set_empty_value_rejected` | `integration/mutation_commands_test.rs` |
-| `tc328_settings_set_creates_file_when_absent` | `integration/mutation_commands_test.rs` |
-| `tc329_settings_set_updates_existing_key` | `integration/mutation_commands_test.rs` |
-| `tc330_settings_set_dry_shows_preview_no_write` | `integration/mutation_commands_test.rs` |
-| `tc331_settings_set_no_home_exits_2` | `integration/mutation_commands_test.rs` |
-| `tc332_settings_set_empty_key_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc333_settings_set_adds_new_key_preserves_existing` | `integration/mutation_commands_test.rs` |
-| `tc334_settings_set_empty_value_with_dry_still_rejected` | `integration/mutation_commands_test.rs` |
-| `tc238_settings_set_missing_key_error_format` | `integration/read_commands_test.rs` |
-| `tc239_settings_set_missing_value_error_format` | `integration/read_commands_test.rs` |
-| `tc252_settings_set_dry_no_write` | `integration/cross_cutting_test.rs` |
-| `it04_settings_set_dry2_exits_1` | `integration/mutation_commands_test.rs` |
-| `it05_settings_set_bogus_param_exits_1` | `integration/mutation_commands_test.rs` |
-| `it06_settings_set_key_without_value_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc506_settings_set_missing_value_error_contains_value` | `integration/error_messages_test.rs` |
+| `tc320_settings_set_missing_key_exits_1` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc321_settings_set_missing_value_exits_1` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc322_settings_set_stores_boolean_true` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc323_settings_set_stores_boolean_false` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc324_settings_set_zero_stored_as_number` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc325_settings_set_stores_number` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc326_settings_set_stores_string` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc327_settings_set_empty_value_rejected` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc328_settings_set_creates_file_when_absent` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc329_settings_set_updates_existing_key` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc330_settings_set_dry_shows_preview_no_write` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc331_settings_set_no_home_exits_2` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc332_settings_set_empty_key_exits_1` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc333_settings_set_adds_new_key_preserves_existing` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc334_settings_set_empty_value_with_dry_still_rejected` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc238_settings_set_missing_key_error_format` | `tests/cli/read_settings_test.rs` |
+| `tc239_settings_set_missing_value_error_format` | `tests/cli/read_settings_test.rs` |
+| `tc252_settings_set_dry_no_write` | `tests/cli/cross_cutting_test.rs` |
+| `it04_settings_set_dry2_exits_1` | `tests/cli/mutation_settings_set_test.rs` |
+| `it05_settings_set_bogus_param_exits_1` | `tests/cli/mutation_settings_set_test.rs` |
+| `it06_settings_set_key_without_value_exits_1` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc506_settings_set_missing_value_error_contains_value` | `tests/cli/error_messages_test.rs` |

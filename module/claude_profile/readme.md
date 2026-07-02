@@ -13,7 +13,10 @@ Claude Code account credential management.
 | `unilang.commands.yaml` | YAML command metadata for 16 profile commands |
 | `verb/` | Shell scripts for each `do` protocol verb (build, test, clean, run, lint). |
 | `vision.md` | Crate vision, design decisions, and open problems |
+| `runbox/` | Container run environment definitions and entry scripts |
+| `license` | Crate license text |
 | `changelog.md` | Notable changes by version |
+| `task/` | Task tracking: verified and completed work items. |
 
 ### Responsibility Table
 

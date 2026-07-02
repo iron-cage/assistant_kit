@@ -30,6 +30,8 @@ structured-output constraint forwarded to `claude`.
 **Env var:** `CLR_FILE` — accepts a file path string; applied when `--file` is absent from
 the CLI. `CLR_FILE=/path/to/file clr "task"` is equivalent to `clr --file /path/to/file "task"`.
 
+- **JSON Key:** `"file"`
+
 ### Referenced Type
 
 | Type | Kind | Fundamental | Key Constraint |
@@ -47,7 +49,7 @@ the CLI. `CLR_FILE=/path/to/file clr "task"` is equivalent to `clr --file /path/
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | — |
-| 2 | [`isolated`](../command/02_isolated.md) | — | Pre-spawn existence check (exit 1 if missing); uses `run_isolated_with_stdin_file()` code path (TSK-330) |
+| 2 | [`isolated`](../command/03_isolated.md) | — | Pre-spawn existence check (exit 1 if missing); uses `run_isolated_with_stdin_file()` code path (TSK-330) |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
 
 ### Referenced User Stories

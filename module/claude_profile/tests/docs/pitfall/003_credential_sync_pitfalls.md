@@ -82,4 +82,4 @@ is in place and prevents the described credential corruption failure mode.
   `A.credentials.json` in the store is unchanged — B's credentials are NOT written into A's slot.
 - **Note:** BUG-316 guard. Verified by `mre_bug316_stale_is_active_race_recovery_copies_wrong_account_creds`
   in `claude_profile_core/tests/account_refresh_test.rs`. See also FT-26 in
-  `tests/docs/feature/17_token_refresh.md` for full behavioral description.
+  `tests/docs/feature/017_token_refresh.md` for full behavioral description.

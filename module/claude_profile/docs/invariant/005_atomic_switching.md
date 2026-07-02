@@ -34,10 +34,20 @@ Account switching (FR-9) must use write-then-rename to prevent credential corrup
 - Data loss: original credentials are overwritten before new ones are fully written
 - Unrecoverable without manual intervention or backup — `claude_profile` provides no backup/restore
 
-### Cross-References
+### Sources
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/account.rs` | `switch_account()` — write-then-rename implementation |
-| test | `tests/account_tests.rs::switch_account_overwrites_credentials_file` | Verifies atomic overwrite semantics |
-| doc | [004_account_use.md](../feature/004_account_use.md) | Feature design for account switching |
+| File | Relationship |
+|------|-------------|
+| `src/account.rs` | `switch_account()` — write-then-rename implementation |
+
+### Features
+
+| File | Relationship |
+|------|-------------|
+| [004_account_use.md](../feature/004_account_use.md) | Feature design for account switching |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| `tests/account_tests.rs::switch_account_overwrites_credentials_file` | Verifies atomic overwrite semantics |

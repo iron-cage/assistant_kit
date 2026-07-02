@@ -104,4 +104,4 @@ pre-v1.0 (unverified)
 | doc | `../../../../module/claude_profile/docs/feature/013_account_limits.md` | `.account.limits` command — consumer of this endpoint |
 | doc | [001_oauth_usage.md](001_oauth_usage.md) | Alternative quota source via GET JSON (no inference request, no `anthropic-beta` required) |
 | doc | [002_oauth_account.md](002_oauth_account.md) | Account identity endpoint — also references this endpoint for rate-limit headers |
-| doc | [../formats/007_json_response.md](../formats/007_json_response.md) | JSON response format produced by the upstream Messages API |
+| doc | [../format/007_json_response.md](../format/007_json_response.md) | JSON response format produced by the upstream Messages API |

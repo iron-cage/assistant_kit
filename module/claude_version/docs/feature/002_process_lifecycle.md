@@ -54,4 +54,4 @@ Signal delivery uses `Command::new("kill")` (no `libc`, enforced by `unsafe-code
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/feature/02_process_lifecycle.md](../../tests/docs/feature/02_process_lifecycle.md) | Feature test spec |
+| [tests/docs/feature/002_process_lifecycle.md](../../tests/docs/feature/002_process_lifecycle.md) | Feature test spec |

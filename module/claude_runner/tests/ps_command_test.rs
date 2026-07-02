@@ -32,7 +32,8 @@ use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str
 
 #[ cfg( unix ) ]
 use cli_binary_test_helpers::{
-  fake_claude_binary_dir, run_clr_ps, spawn_fake_claude, spawn_print_claude,
+  fake_claude_binary_dir, make_proc_dir, run_clr_ps_proc,
+  spawn_fake_claude, spawn_print_claude,
 };
 
 // ── IT-1: 0 sessions ──────────────────────────────────────────────────────────
@@ -70,8 +71,9 @@ fn it_02_sessions_present_plain_style()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
-  let out = run_clr_ps( &path_val );
+  let out = run_clr_ps_proc( &path_val, proc.path().to_str().expect( "proc dir UTF-8" ) );
 
   let _ = bg.kill();
   let _ = bg.wait();
@@ -129,8 +131,9 @@ fn it_05_table_headers_present()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
-  let out = run_clr_ps( &path_val );
+  let out = run_clr_ps_proc( &path_val, proc.path().to_str().expect( "proc dir UTF-8" ) );
 
   let _ = bg.kill();
   let _ = bg.wait();
@@ -172,8 +175,9 @@ fn it_07_self_exclusion()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
-  let out = run_clr_ps( &path_val );
+  let out = run_clr_ps_proc( &path_val, proc.path().to_str().expect( "proc dir UTF-8" ) );
 
   let _ = bg.kill();
   let _ = bg.wait();
@@ -229,12 +233,14 @@ fn it_09_pro_prefix_shortened_in_path_column()
     .spawn()
     .expect( "spawn fake claude in sub_dir" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+  let proc = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env( "PRO", pro_str )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps with PRO set" );
 
@@ -335,8 +341,9 @@ fn it_12_active_table_has_caption()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
-  let out = run_clr_ps( &path_val );
+  let out = run_clr_ps_proc( &path_val, proc.path().to_str().expect( "proc dir UTF-8" ) );
 
   let _ = bg.kill();
   let _ = bg.wait();
@@ -496,6 +503,7 @@ fn it_16_task_column_form_a()
     .spawn()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+  let proc = make_proc_dir( &[ bg.id() ] );
 
   // Build synthetic JSONL at the correctly-encoded project path.
   let encoded      = cwd_str.replace( ['/', '_'], "-" );
@@ -513,6 +521,7 @@ fn it_16_task_column_form_a()
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env( "HOME", home_tmp.path() )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps" );
 
@@ -569,6 +578,7 @@ fn it_17_task_column_form_a_over_form_b()
     .spawn()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+  let proc = make_proc_dir( &[ bg.id() ] );
 
   let encoded      = cwd_str.replace( ['/', '_'], "-" );
   let home_tmp     = tempfile::TempDir::new().expect( "create temp HOME" );
@@ -592,6 +602,7 @@ fn it_17_task_column_form_a_over_form_b()
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env( "HOME", home_tmp.path() )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps" );
 
@@ -670,6 +681,7 @@ fn it_19_task_column_no_underscores()
     .spawn()
     .expect( "spawn fake claude" );
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+  let proc = make_proc_dir( &[ bg.id() ] );
 
   // Encode with only '/' → '-' (no underscores to replace; result is same as before fix).
   let encoded      = cwd_str.replace( '/', "-" );
@@ -687,6 +699,7 @@ fn it_19_task_column_no_underscores()
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env( "HOME", home_tmp.path() )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps" );
 
@@ -756,8 +769,9 @@ fn it_20_active_sessions_sorted_by_age()
   let pid_b = bg_b.id();
 
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+  let proc = make_proc_dir( &[ pid_a, pid_b ] );
 
-  let out = run_clr_ps( &path_val );
+  let out = run_clr_ps_proc( &path_val, proc.path().to_str().expect( "proc dir UTF-8" ) );
 
   let _ = bg_a.kill();
   let _ = bg_a.wait();
@@ -799,11 +813,13 @@ fn it_21_mode_print_shows_only_print_sessions()
 
   let mut bg_print = spawn_print_claude( &path_val );
   let pid_print    = bg_print.id();
+  let proc         = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--mode", "print" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --mode print" );
 
@@ -838,11 +854,13 @@ fn it_22_mode_interactive_shows_only_interactive_sessions()
 
   let mut bg_print = spawn_print_claude( &path_val );
   let pid_print    = bg_print.id();
+  let proc         = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--mode", "interactive" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --mode interactive" );
 
@@ -888,11 +906,13 @@ fn it_24_columns_custom_subset()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--columns", "pid,path,task" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --columns" );
 
@@ -936,11 +956,13 @@ fn it_26_wide_shows_all_columns()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--wide" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --wide" );
 
@@ -963,11 +985,13 @@ fn it_27_columns_wins_over_wide()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--wide", "--columns", "pid,task" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --wide --columns" );
 
@@ -998,12 +1022,14 @@ fn it_28_clr_ps_mode_env_var()
 
   let mut bg_print = spawn_print_claude( &path_val );
   let pid_print    = bg_print.id();
+  let proc         = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env( "CLR_PS_MODE", "print" )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps with CLR_PS_MODE=print" );
 
@@ -1027,6 +1053,12 @@ fn it_28_clr_ps_mode_env_var()
 // ── IT-29: `CLR_PS_COLUMNS=pid,elapsed` env var fallback ─────────────────────
 
 /// IT-29: `CLR_PS_COLUMNS=pid,elapsed` env var selects PID and Elapsed columns only.
+///
+/// `CLR_PROC_DIR` is set to a fake proc dir containing only the background process
+/// so `find_claude_processes()` returns exactly one entry regardless of ambient sessions.
+/// Pitfall: without `CLR_PROC_DIR`, ambient claude processes on the host cause
+/// `clr ps` to find unexpected process counts, producing row/header mismatches that
+/// panic in `RowBuilder::validate_row_length`.
 #[ cfg( unix ) ]
 #[ test ]
 fn it_29_clr_ps_columns_env_var()
@@ -1034,11 +1066,19 @@ fn it_29_clr_ps_columns_env_var()
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
 
+  let fake_proc     = tempfile::TempDir::new().expect( "fake_proc" );
+  let fake_proc_str = fake_proc.path().to_str().expect( "fake_proc UTF-8" );
+  std::os::unix::fs::symlink(
+    format!( "/proc/{}", bg.id() ),
+    fake_proc.path().join( bg.id().to_string() ),
+  ).expect( "pid symlink" );
+
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env( "CLR_PS_COLUMNS", "pid,elapsed" )
+    .env( "CLR_PROC_DIR", fake_proc_str )
     .output()
     .expect( "run clr ps with CLR_PS_COLUMNS=pid,elapsed" );
 

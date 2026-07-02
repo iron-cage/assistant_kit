@@ -41,14 +41,14 @@ query::                             # "query must be non-empty"
 |------|------|-------------|----------------|
 | String | Base type | String | Non-empty |
 
+### Referenced Parameter Groups
+
+None.
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 5 | [`.search`](../command/05_search.md) | none — required | Search term; alias `q` supported |
-
-### Referenced Parameter Groups
-
-None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

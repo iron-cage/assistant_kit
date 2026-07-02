@@ -37,4 +37,4 @@ v2.1.139+ (unverified) — agent teams research preview
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master tool table |
 | doc | [007_agent.md](007_agent.md) | Launch subagent processes |
-| doc | [../params/080_experimental_agent_teams.md](../params/080_experimental_agent_teams.md) | Agent teams env var |
+| doc | [../param/080_experimental_agent_teams.md](../param/080_experimental_agent_teams.md) | Agent teams env var |

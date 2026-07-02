@@ -99,7 +99,7 @@ _build()
 {
   echo "Building $IMAGE using $CONTAINER_CMD..."
 
-  # Fix(issue-runbox-build-safety): Serialize concurrent _build() calls via atomic mkdir lock.
+  # Fix(BUG-009): Serialize concurrent _build() calls via atomic mkdir lock.
   # Root cause: Multiple simultaneous `runbox .build` / `_ensure_image` invocations (7 observed
   #   in production) each spawn an independent `podman build` process with no coordination,
   #   causing disk oscillation (9.9 G–54 G), storage corruption, and graphroot migration mid-build.
@@ -162,7 +162,7 @@ _build()
     -t "$IMAGE" \
     "$WORKSPACE_ROOT"
 
-  # Fix(issue-runbox-build-safety): Verify image is accessible immediately after build.
+  # Fix(BUG-009): Verify image is accessible immediately after build.
   # Root cause: `podman build` exits 0 when the image tag is written to storage, but if the
   #   storage.conf graphroot was migrated mid-build (triggered by concurrent builds corrupting
   #   storage), the image is orphaned in the old graphroot. Subsequent `image inspect` fails

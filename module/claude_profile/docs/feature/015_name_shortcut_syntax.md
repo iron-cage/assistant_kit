@@ -94,5 +94,5 @@ Prefix resolution applies AFTER positional rewriting: `clp .account.use car` →
 | File | Relationship |
 |------|--------------|
 | `tests/cli/account_mutations_test.rs` | account.use (aw13–aw15, aw36), account.delete (ad13–ad14, ad16), account.relogin (ar10), and account.renewal (ar15–ar16) positional, prefix, reversed-order, and comma-list cases |
-| `tests/cli/accounts_test.rs` | accounts (acc29–acc30, acc51) positional, prefix, and reversed-order cases |
+| `tests/cli/accounts_list_test.rs` | accounts (acc29–acc30, acc51) positional, prefix, and reversed-order cases |
 | `tests/cli/account_limits_test.rs` | account.limits (lim09–lim11) positional, prefix, and reversed-order cases |

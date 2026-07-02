@@ -75,6 +75,8 @@ pub mod usage;
 #[ cfg( feature = "enabled" ) ]
 pub mod registry;
 #[ cfg( feature = "enabled" ) ]
+pub( crate ) mod owner_dispatch;
+#[ cfg( feature = "enabled" ) ]
 mod cli;
 
 pub use paths::ClaudePaths;

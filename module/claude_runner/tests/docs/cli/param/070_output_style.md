@@ -22,6 +22,7 @@ Edge case coverage for the `--output-style` parameter on the `run`/`ask` dispatc
 | EC-12 | `CLR_OUTPUT_STYLE=bogus clr run -m "x"` → exit 1; stderr contains `"CLR_OUTPUT_STYLE: invalid value 'bogus'"` | Env Var Validation |
 | EC-13 | `--output-format stream-json --output-style summary -m "x"` → stdout does NOT contain `---`; exit 0 | Behavioral Divergence |
 | EC-14 | Minimal CLR envelope (no `session_id`) → stdout contains `---`; exit 0 | Minimal Envelope |
+| EC-15 | `--output-style raw --json-schema` → stdout contains structured output (BUG-318) | Cross-Product |
 
 ## Test Coverage Summary
 
@@ -35,12 +36,13 @@ Edge case coverage for the `--output-style` parameter on the `run`/`ask` dispatc
 - CLI-wins: 1 test (EC-11)
 - Env Var Validation: 1 test (EC-12)
 - Minimal Envelope: 1 test (EC-14)
+- Cross-Product: 1 test (EC-15)
 
-**Total:** 14 test cases
+**Total:** 15 test cases
 
 ## Architectural Constraint
 
-All 14 tests use a fake `claude` subprocess to avoid live API calls. The standard fake claude fixture emits the CLR result envelope produced by `claude --output-format json` in production:
+All 15 tests use a fake `claude` subprocess to avoid live API calls. The standard fake claude fixture emits the CLR result envelope produced by `claude --output-format json` in production:
 
 ```json
 {"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"result":"hello","usage":{"input_tokens":1,"output_tokens":1},"total_cost_usd":0.0}
@@ -59,6 +61,8 @@ Tests assert `---` presence (`stdout.contains("---")`) or absence (`!stdout.cont
 EC-08 verifies two independent code paths both fire for `--output-format summary` legacy alias: (1) `builder.rs` translates `"summary"` → `"json"` for the subprocess via the `if let Some(ref fmt)` block; (2) `execution.rs` predicate `output_style.unwrap_or("summary") == "summary"` fires because `output_style` is `None` — triggering `render_summary()`. Both paths are required for the legacy alias to work.
 
 EC-10 dry-run verifies that when `--output-style summary` is set and `--output-format` is absent, `builder.rs` injects `--output-format json` into the subprocess command. The dry-run stderr trace must contain the literal substring `"--output-format json"`.
+
+**EC-15** uses a fake claude emitting a CLR envelope with `"structured_output":{"x":"hello"}` and `"result":""`. This tests the BUG-318 fix: `--output-style raw` combined with `--json-schema` must produce non-empty stdout by extracting the `structured_output` field from the JSON envelope. The fake claude must receive `--output-format json` (auto-injected by the widened Path B gate when `--json-schema` is present).
 
 ---
 
@@ -199,3 +203,13 @@ EC-10 dry-run verifies that when `--output-style summary` is set and `--output-f
 - **Then:** Exit 0; stdout contains `---`; `render_summary()` returns `Some(_)` because gate is on `type=="result"` (invariant field); `session_id` absence does NOT cause `None` return; renders available fields
 - **Exit:** 0
 - **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Default-summary behavior; BUG-310 regression coverage
+
+---
+
+### EC-15: `--output-style raw --json-schema` → stdout contains structured output (BUG-318)
+
+- **Given:** fake claude emitting CLR JSON envelope with `"structured_output":{"x":"hello"}` and `"result":""`; `-p --max-sessions 0`; `--output-style raw`; `--json-schema '{"type":"object","properties":{"x":{"type":"string"}},"required":["x"]}'`
+- **When:** `clr -p --max-sessions 0 --output-style raw --json-schema '...' "test"` with fake claude
+- **Then:** Exit 0; stdout is non-empty; stdout contains `"x"` and `"hello"` (structured output extracted from JSON envelope's `structured_output` field); raw mode + json-schema must not produce empty stdout
+- **Exit:** 0
+- **Source:** [070_output_style.md](../../../../docs/cli/param/070_output_style.md) Combinations table (BUG-318 row)

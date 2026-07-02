@@ -8,6 +8,7 @@ custom text. When omitted, Claude's built-in system prompt remains in effect.
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [System Prompt](../param_group/03_system_prompt.md)
 - **Validation:** requires a value; `--system-prompt` at end of argv → error
+- **JSON Key:** `"system-prompt"`
 
 ```sh
 clr --system-prompt "You are a Rust expert. Be concise." "Review PR"

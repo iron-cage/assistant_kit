@@ -30,9 +30,6 @@
 //!
 //! **Runtime:** Use `MultiYamlAggregator` with [`COMMANDS_YAML`].
 
-pub mod verbosity;
-pub use verbosity::VerbosityLevel;
-
 /// Absolute path to this crate's command definitions YAML.
 ///
 /// Use in `build.rs` for compile-time aggregation or at runtime for dynamic registration.
@@ -62,7 +59,7 @@ pub use cli::strip_fences;
 #[ cfg( feature = "enabled" ) ]
 #[ doc( hidden ) ]
 #[ allow( unused_imports ) ]
-pub use cli::{ render_summary, resolve_fields };
+pub use cli::{ render_summary, resolve_fields, extract_session_id };
 
 #[ cfg( feature = "enabled" ) ]
 /// Run the `clr`/`claude_runner` CLI.
@@ -74,7 +71,7 @@ pub fn run_cli()
   use cli::{
     print_help, dispatch_run,
     dispatch_ask, dispatch_isolated, dispatch_refresh, dispatch_ps, dispatch_kill,
-    dispatch_tools, guard_unknown_subcommand,
+    dispatch_tools, dispatch_scope, guard_unknown_subcommand,
   };
 
   let tokens : Vec< String > = std::env::args().skip( 1 ).collect();
@@ -115,6 +112,7 @@ pub fn run_cli()
     Some( "ps" )       => dispatch_ps( &tokens ),
     Some( "kill" )     => dispatch_kill( &tokens ),
     Some( "tools" )    => dispatch_tools( &tokens ),
+    Some( "scope" )    => dispatch_scope( &tokens ),
     _                  => {}
   }
 

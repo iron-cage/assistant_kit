@@ -1,19 +1,9 @@
-# CLI User Story: Interactive REPL
+# Open the REPL with automatic session continuation
 
-### Scope
-
-- **Purpose**: Document the interactive REPL invocation with automatic session continuation.
-- **Responsibility**: Define acceptance criteria for opening the REPL without an explicit message.
-- **In Scope**: No-message REPL launch, session continuation, --dir project scoping, --new-session override.
-- **Out of Scope**: Message-driven invocation (→ 003_interactive_with_message.md), print mode (→ 002_print_mode_capture.md).
-
-### Persona
-
-Developer exploring a codebase or continuing an ongoing task; wants to converse with Claude interactively over multiple turns without specifying an up-front prompt.
-
-### Goal
-
-Open the Claude Code REPL with automatic session continuation so the conversation context from the last session is immediately available.
+**Persona:** Developer exploring a codebase or continuing an ongoing task; wants to converse with Claude interactively over multiple turns without specifying an up-front prompt.
+**Goal:** Open the Claude Code REPL with automatic session continuation so the conversation context from the last session is immediately available.
+**Benefit:** Enables fluid multi-turn exploration without manually tracking conversation state.
+**Priority:** High
 
 ### Acceptance Criteria
 
@@ -41,3 +31,9 @@ Open the Claude Code REPL with automatic session continuation so the conversatio
 | 7 | [`--new-session`](../param/007_new_session.md) | Discard prior context; start fresh |
 | 8 | [`--dir`](../param/008_dir.md) | Set working directory for the REPL session |
 | 10 | [`--session-dir`](../param/010_session_dir.md) | Override session storage location |
+
+### Workflow Steps
+
+1. `clr` — launch the REPL; session continues automatically from the most recent conversation
+2. `clr --dir <path>` — scope the REPL to a specific project directory
+3. `clr --new-session` — start a fresh conversation with no prior context

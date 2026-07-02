@@ -1,4 +1,4 @@
-# Parameter :: 21. `interval::`
+# Parameter: 21. `interval::`
 
 Sets the number of seconds between full refresh cycles in live mode. Ignored (and not validated) when `live::0`.
 

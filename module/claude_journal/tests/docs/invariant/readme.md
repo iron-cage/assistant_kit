@@ -13,6 +13,6 @@ Per-invariant-doc test case indices for `claude_journal`. See [invariant/readme.
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `01_append_only.md` | Test cases for the append-only invariant | ✅ |
-| `02_crash_safety.md` | Test cases for the crash-safety invariant | ✅ |
-| `03_schema_version.md` | Test cases for the schema-version invariant | ✅ |
+| `001_append_only.md` | Test cases for the append-only invariant | ✅ |
+| `002_crash_safety.md` | Test cases for the crash-safety invariant | ✅ |
+| `003_schema_version.md` | Test cases for the schema-version invariant | ✅ |

@@ -143,7 +143,7 @@ fn ft10_non_owned_no_force_exits_1()
 #[ test ]
 fn ft01_lim_it_rotates_to_next_winner()
 {
-  if !require_live_api( "ft01_lim_it_rotates_to_next_winner" ) { return; }
+  require_live_api( "ft01_lim_it_rotates_to_next_winner" );
   let Some( token ) = live_active_token() else { eprintln!( "ft01: no live token — skipping" ); return; };
 
   let dir  = TempDir::new().unwrap();
@@ -180,7 +180,7 @@ fn ft01_lim_it_rotates_to_next_winner()
 #[ test ]
 fn ft02_lim_it_dry_run_no_switch()
 {
-  if !require_live_api( "ft02_lim_it_dry_run_no_switch" ) { return; }
+  require_live_api( "ft02_lim_it_dry_run_no_switch" );
   let Some( token ) = live_active_token() else { eprintln!( "ft02: no live token — skipping" ); return; };
 
   let dir  = TempDir::new().unwrap();
@@ -221,7 +221,7 @@ fn ft02_lim_it_dry_run_no_switch()
 #[ test ]
 fn ft05_lim_it_g5_gate_skips_non_owned()
 {
-  if !require_live_api( "ft05_lim_it_g5_gate_skips_non_owned" ) { return; }
+  require_live_api( "ft05_lim_it_g5_gate_skips_non_owned" );
   let Some( token ) = live_active_token() else { eprintln!( "ft05: no live token — skipping" ); return; };
 
   let dir  = TempDir::new().unwrap();
@@ -259,7 +259,7 @@ fn ft05_lim_it_g5_gate_skips_non_owned()
 #[ test ]
 fn ft06_lim_it_force_bypasses_g5()
 {
-  if !require_live_api( "ft06_lim_it_force_bypasses_g5" ) { return; }
+  require_live_api( "ft06_lim_it_force_bypasses_g5" );
   let Some( token ) = live_active_token() else { eprintln!( "ft06: no live token — skipping" ); return; };
 
   let dir  = TempDir::new().unwrap();
@@ -294,7 +294,7 @@ fn ft06_lim_it_force_bypasses_g5()
 #[ test ]
 fn ft07_lim_it_sort_renews()
 {
-  if !require_live_api( "ft07_lim_it_sort_renews" ) { return; }
+  require_live_api( "ft07_lim_it_sort_renews" );
   let Some( token ) = live_active_token() else { eprintln!( "ft07: no live token — skipping" ); return; };
 
   let dir  = TempDir::new().unwrap();
@@ -327,7 +327,7 @@ fn ft07_lim_it_sort_renews()
 #[ test ]
 fn ft08_lim_it_format_json_switch_executes()
 {
-  if !require_live_api( "ft08_lim_it_format_json_switch_executes" ) { return; }
+  require_live_api( "ft08_lim_it_format_json_switch_executes" );
   let Some( token ) = live_active_token() else { eprintln!( "ft08: no live token — skipping" ); return; };
 
   let dir  = TempDir::new().unwrap();
@@ -373,14 +373,14 @@ fn ft08_lim_it_format_json_switch_executes()
 ///
 /// Black-box verification: command exits 0 and output contains "switched to"
 /// when eligible. The no-extra-API guarantee is verified by code inspection
-/// (`apply_touch(&mut winner_aq)` in `src/usage/mod.rs`) rather than by
+/// (`apply_touch(&mut accounts[ winner_idx ])` in `src/usage/api.rs`) rather than by
 /// counting network requests from a subprocess.
 ///
 /// Source: `tests/docs/feature/38_usage_strategy_rotate.md § FT-09`.
 #[ test ]
 fn ft09_lim_it_touch_reuse_no_extra_api_call()
 {
-  if !require_live_api( "ft09_lim_it_touch_reuse_no_extra_api_call" ) { return; }
+  require_live_api( "ft09_lim_it_touch_reuse_no_extra_api_call" );
   let Some( token ) = live_active_token() else { eprintln!( "ft09: no live token — skipping" ); return; };
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();

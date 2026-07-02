@@ -263,7 +263,7 @@ fn g2cc4_all_runner_control_flags_no_conflict()
       "--subdir", "work",
       "--max-tokens", "100000",
       "--session-dir", "/tmp/sessions",
-      "--verbosity", "2",
+      "--quiet",
       "--trace",
       "--no-ultrathink",
       "--no-effort-max",
@@ -304,7 +304,7 @@ fn g2cc4_all_runner_control_flags_no_conflict()
       "Fix bug",
     ] )
     // Spec CC-4 requires "clean environment" — unset CLAUDECODE so the BUG-248 warning
-    // (fires when --keep-claudecode + CLAUDECODE in env + verbosity >= 2) does not appear.
+    // (fires when --keep-claudecode + CLAUDECODE in env without --quiet) does not appear.
     // Root cause of fragility: host Claude Code sessions inject CLAUDECODE=1 into the
     // environment; container runs (CLAUDECODE absent) pass without this guard.
     .env_remove( "CLAUDECODE" )
@@ -504,15 +504,17 @@ fn g4cc6_trace_on_credential_ops()
 #[ test ]
 fn g5cc1_ps_consumes_params_no_subprocess()
 {
-  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, make_proc_dir, spawn_fake_claude };
 
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--mode", "all", "--columns", "pid,task" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --mode all --columns pid,task" );
 
@@ -536,15 +538,17 @@ fn g5cc1_ps_consumes_params_no_subprocess()
 #[ test ]
 fn g5cc2_all_three_params_accepted()
 {
-  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, make_proc_dir, spawn_fake_claude };
 
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--mode", "all", "--columns", "pid,task", "--wide" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --mode all --columns pid,task --wide" );
 
@@ -572,17 +576,22 @@ fn g5cc2_all_three_params_accepted()
 #[ test ]
 fn g5cc3_columns_wins_mode_filter_applied()
 {
-  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude, spawn_print_claude };
+  use cli_binary_test_helpers::{
+    fake_claude_binary_dir, make_proc_dir, spawn_fake_claude, spawn_print_claude,
+  };
 
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg_interactive = spawn_fake_claude( &path_val );
+  let     pid_interactive = bg_interactive.id();
   let mut bg_print       = spawn_print_claude( &path_val );
   let     pid_print      = bg_print.id();
+  let proc               = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--mode", "print", "--columns", "pid,task", "--wide" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --mode print --columns pid,task --wide" );
 
@@ -645,13 +654,16 @@ fn g5cc4_session_listing_params_not_in_run_help()
 #[ test ]
 fn g5cc5_env_vars_respected()
 {
-  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude, spawn_print_claude };
+  use cli_binary_test_helpers::{
+    fake_claude_binary_dir, make_proc_dir, spawn_fake_claude, spawn_print_claude,
+  };
 
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg_interactive  = spawn_fake_claude( &path_val );
   let     pid_interactive = bg_interactive.id();
   let mut bg_print        = spawn_print_claude( &path_val );
   let     pid_print       = bg_print.id();
+  let proc                = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
@@ -659,6 +671,7 @@ fn g5cc5_env_vars_respected()
     .env( "PATH", &path_val )
     .env( "CLR_PS_MODE", "interactive" )
     .env( "CLR_PS_COLUMNS", "pid,elapsed" )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps with CLR_PS_MODE=interactive CLR_PS_COLUMNS=pid,elapsed" );
 
@@ -691,19 +704,21 @@ fn g5cc5_env_vars_respected()
 #[ test ]
 fn g5cc6_clr_ps_pid_env_var_filters_active_table()
 {
-  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, make_proc_dir, spawn_fake_claude };
 
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg_a = spawn_fake_claude( &path_val );
   let pid_a    = bg_a.id();
   let mut bg_b = spawn_fake_claude( &path_val );
   let pid_b    = bg_b.id();
+  let proc     = make_proc_dir( &[ pid_a, pid_b ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env( "CLR_PS_PID", pid_a.to_string() )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps with CLR_PS_PID=A" );
 
@@ -732,15 +747,17 @@ fn g5cc6_clr_ps_pid_env_var_filters_active_table()
 #[ test ]
 fn g5cc7_inspect_switches_format_ignores_columns_wide()
 {
-  use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+  use cli_binary_test_helpers::{ fake_claude_binary_dir, make_proc_dir, spawn_fake_claude };
 
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--inspect", "--columns", "pid", "--wide" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --inspect --columns pid --wide" );
 

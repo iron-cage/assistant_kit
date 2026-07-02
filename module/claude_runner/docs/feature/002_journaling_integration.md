@@ -38,7 +38,7 @@ Also configurable via `CLR_JOURNAL_DIR` env var. Resolution: CLI > env > default
 to 1 MB with a `\n[truncated at 1MB]` suffix. This prevents journal files from
 growing unboundedly with large subprocess outputs.
 
-**Error handling:** Journal write failures are logged to stderr at verbosity >= 3
+**Error handling:** Journal write failures are logged to stderr unless `--quiet`
 but never cause `clr` to exit non-zero. Journaling is best-effort — it must not
 interfere with the primary execution path.
 
@@ -60,13 +60,26 @@ interfere with the primary execution path.
 | AC-012 | Interactive session events include session_duration |
 | AC-013 | Validation-retry events are emitted when `--expect-strategy retry` fires a retry |
 
-### Cross-References
+### Features
 
-- Parent feature: [feature/001_runner_tool.md](001_runner_tool.md) — runner tool design (journaling section)
-- Library API: [claude_journal/docs/api/001_journal_writer.md](../../claude_journal/docs/api/001_journal_writer.md)
-- Event schema: [claude_journal/docs/feature/002_event_schema.md](../../claude_journal/docs/feature/002_event_schema.md)
-- Viewer: [claude_journal_viewer/docs/feature/001_cli_viewing.md](../../claude_journal_viewer/docs/feature/001_cli_viewing.md)
-- Params: [cli/param/072_journal.md](../cli/param/072_journal.md), [cli/param/073_journal_dir.md](../cli/param/073_journal_dir.md)
+| File | Relationship |
+|------|--------------|
+| [feature/001_runner_tool.md](001_runner_tool.md) | Parent feature — runner tool design (journaling section) |
+| [claude_journal/docs/feature/002_event_schema.md](../../claude_journal/docs/feature/002_event_schema.md) | Event schema for journal entries |
+| [claude_journal_viewer/docs/feature/001_cli_viewing.md](../../claude_journal_viewer/docs/feature/001_cli_viewing.md) | Viewer CLI for journal files |
+
+### APIs
+
+| File | Relationship |
+|------|--------------|
+| [claude_journal/docs/api/001_journal_writer.md](../../claude_journal/docs/api/001_journal_writer.md) | `JournalWriter` API — write-side contract |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/072_journal.md](../cli/param/072_journal.md) | `--journal` level control (full / meta / off) |
+| [cli/param/073_journal_dir.md](../cli/param/073_journal_dir.md) | `--journal-dir` directory override |
 
 ### Since
 

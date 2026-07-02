@@ -3,7 +3,7 @@
 ### Scope
 
 **Responsibilities:** Shell scripts implementing the `do` protocol verbs for `claude_profile` (cargo ecosystem).
-**In Scope:** Canonical verbs (`build`, `test`, `lint`, `run`, `clean`, `verify`), layer dispatchers (`*.d/`), and meta verbs (`verbs`, `package_info`).
+**In Scope:** Canonical verbs (`build`, `test`, `test1`, `lint`, `run`, `clean`, `verify`), layer dispatchers (`*.d/`), and meta verbs (`verbs`, `package_info`).
 **Out of Scope:** Source code (→ `src/`), test logic (→ `tests/`), documentation (→ `docs/`).
 
 ### Responsibility Table
@@ -13,7 +13,10 @@
 | `build` | Compile project artifacts via `cargo build`. |
 | `test` | Dispatcher: run full test suite; delegates to `test.d/` layer by `VERB_LAYER`. |
 | `test.d/` | Layer directory: `l0` (host-native), `l1` (container-internal). |
+| `test1` | Dispatcher: run single test by nextest filter inside container; sets `NEXTEST_FILTER`. |
+| `test1.d/` | Layer directory: `l1` (container-internal targeted run). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
+| `install` | Install crate binaries to `~/.cargo/bin` via `cargo install`. |
 | `run` | Dispatcher: execute entry point; delegates to `run.d/` layer by `VERB_LAYER`. |
 | `run.d/` | Layer directory: `l1` (direct; default). |
 | `lint` | Dispatcher: run linter; delegates to `lint.d/` layer by `VERB_LAYER`. |

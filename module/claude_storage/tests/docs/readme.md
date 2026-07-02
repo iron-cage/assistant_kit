@@ -13,4 +13,6 @@
 |------|----------------|
 | `cli/` | CLI testing documentation mirroring `docs/cli/` |
 | `feature/` | Feature-level test specs mirroring `docs/feature/` |
+| `invariant/` | Invariant contract test specs mirroring `docs/invariant/` |
+| `guide/` | Guide-level contract test specs mirroring `docs/guide/` |
 | `operation/` | Operation-level test specs mirroring `docs/operation/` |

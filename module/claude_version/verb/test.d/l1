@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
-# l1 — bare test execution (VERB_LAYER=l1); runs w3 directly.
+# l1 — bare test execution (VERB_LAYER=l1); runs the workspace test suite inside the container.
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "w3 .test level::3"; exit 0; fi
+if [[ "${1:-}" == "--dry-run" ]]; then echo "RUSTFLAGS=-D warnings cargo nextest run + doc test + clippy"; exit 0; fi
 # Prevent cargo from trying to update the registry index inside the container.
 # All deps are pre-cooked via cargo-chef during image build; registry is read-only.
 export CARGO_NET_OFFLINE=true
-# Fix(issue-nextest-pty-output): Disable nextest's interactive PTY progress bar.
-# Root cause: wrun_core spawns subprocesses via PTY, causing nextest to detect isatty()=true
-# and activate indicatif's cursor-movement progress display. wrun_core's ANSI normalization
-# (consolidate_carriage_returns + extract_ansi_erase_codes) then discards this output,
-# making all test results invisible (exit 0, zero per-test lines visible).
-# With NO_COLOR=1, indicatif returns hidden()=true regardless of isatty(), and nextest
-# falls back to plain \n-terminated output that survives wrun_core's normalization intact.
-# Pitfall: Even with the fix in will_test source (local_nextest.rs, workspace_nextest.rs),
-# environment inheritance ensures this works with any w3 binary version.
+# Fix(BUG-008): Disable nextest's interactive PTY progress bar inside the container.
+# Root cause: The container runner spawns subprocesses via PTY, causing nextest to detect
+#   isatty()=true and activate indicatif's cursor-movement progress display. The runner's
+#   output normalization then discards this ANSI output, making all test results invisible
+#   (exit 0, zero per-test lines visible in the collected output).
+# Pitfall: NO_COLOR=1 makes indicatif return hidden()=true regardless of isatty(); nextest
+#   falls back to plain newline-terminated output that survives the runner's normalization.
 export NO_COLOR=1
-exec w3 .test level::3
+export RUNBOX_CONTAINER=1
+RUSTFLAGS="-D warnings" cargo nextest run --all-features
+RUSTDOCFLAGS="-D warnings" cargo test --doc --all-features
+exec cargo clippy --all-targets --all-features -- -D warnings

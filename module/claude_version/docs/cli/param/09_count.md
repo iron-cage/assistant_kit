@@ -21,15 +21,21 @@ clv.version.history count::0       # empty output (valid, exit 0)
 
 ### Referenced Commands
 
-| # | Command |
-|---|---------|
-| 1 | [`.version.history`](../command/version.md#command--12-versionhistory) |
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 1 | [`.version.history`](../command/version.md#command--12-versionhistory) | 10 | Values exceeding available releases return all available |
+
+### Referenced Type
+
+| # | Type |
+|---|------|
+| 1 | `u64` |
 
 ### Referenced Parameter Groups
 
-| # | Group |
-|---|-------|
-| 1 | [Output Control](../param_group/01_output_control.md) |
+| # | Group | Membership | Co-members |
+|---|-------|-----------|-----------|
+| 1 | [Output Control](../param_group/01_output_control.md) | Partial | `v::`, `format::` |
 
 ### Referenced User Stories
 

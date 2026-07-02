@@ -1,12 +1,12 @@
 # Test: `format::`
 
-Edge case coverage for the `format::` parameter. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
+Edge case coverage for the `format::` parameter. See [param/05_format.md](../../../../docs/cli/param/05_format.md) for specification.
 
 ### Scope
 
 - **Purpose**: Edge case tests for the `format::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `format::`.
-- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`, `.config`, `.params`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -33,10 +33,11 @@ Edge case coverage for the `format::` parameter. See [param/readme.md](../../../
 | EC-8 | `format::csv` → exit 1 | Invalid |
 | EC-9 | `format::` only for output-returning commands | Command Scope |
 | EC-10 | JSON output always starts with `{` or `[` depending on command | Structure |
+| EC-20 | `.params format::json` → JSON array; each entry has `name` field | Explicit json |
 
 ## Test Coverage Summary
 
-- Explicit json: 8 tests
+- Explicit json: 9 tests
 - Type Fidelity: 1 test
 - Invalid: 3 tests
 - Invalid (case-sensitive): 2 tests
@@ -46,7 +47,7 @@ Edge case coverage for the `format::` parameter. See [param/readme.md](../../../
 - Command Scope: 1 test
 - JSON Structure: 1 test
 
-**Total:** 19 edge cases
+**Total:** 20 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (`format::json` → JSON output, exit 0) ↔ EC-6 (absent → `format::text` output, exit 0)
 
@@ -242,29 +243,42 @@ Edge case coverage for the `format::` parameter. See [param/readme.md](../../../
 
 ---
 
+### EC-20: `.params format::json` → JSON array with param field structure
+
+- **Given:** `HOME=<tmp>` (no settings.json)
+- **When:** `clv .params format::json`
+- **Then:** exit 0; stdout is valid JSON starting with `[`; each element has at minimum a `name` field; array structure (not object) distinguishes it from single-result commands
+- **Exit:** 0
+- **Source:** [command/params.md](../../../../docs/cli/command/params.md)
+
+---
+
 ### Source Functions
 
 | Function | File |
 |----------|------|
-| `tc015_format_empty_value` | `cli_args_test.rs` |
-| `tc030_format_text_wrong_case_rejected` | `cli_args_test.rs` |
-| `tc495_format_text_then_json_last_wins_json` | `cli_args_test.rs` |
-| `tc242_unknown_format_exits_1` | `integration/read_commands_test.rs` |
-| `tc243_uppercase_format_exits_1` | `integration/read_commands_test.rs` |
-| `tc244_empty_format_exits_1` | `integration/read_commands_test.rs` |
-| `tc258_status_format_json_is_valid_json` | `integration/cross_cutting_test.rs` |
-| `tc260_format_uppercase_rejected` | `integration/cross_cutting_test.rs` |
-| `tc261_version_install_format_json_accepted` | `integration/cross_cutting_test.rs` |
-| `tc504_format_unknown_error_mentions_valid` | `integration/error_messages_test.rs` |
-| `format_ec11_status_format_json_object` | `integration/format_param_test.rs` |
-| `format_ec12_version_show_format_json_has_version_key` | `integration/format_param_test.rs` |
-| `format_ec13_version_list_format_json_array` | `integration/format_param_test.rs` |
-| `format_ec14_processes_format_json_has_processes_key` | `integration/format_param_test.rs` |
-| `format_ec15_settings_show_format_json_object` | `integration/format_param_test.rs` |
-| `format_ec16_settings_get_format_json_has_key_value` | `integration/format_param_test.rs` |
-| `format_ec17_history_format_json_fields` | `integration/format_param_test.rs` |
-| `format_ec18_history_format_xml_exits_1` | `integration/format_param_test.rs` |
-| `format_ec19_history_format_json_uppercase_exits_1` | `integration/format_param_test.rs` |
-| `format_ec6_absent_defaults_to_text` | `cli_args_test.rs` |
-| `format_ec7_text_explicit_same_as_absent` | `cli_args_test.rs` |
-| `format_ec8_csv_exits_1` | `cli_args_test.rs` |
+| `tc015_format_empty_value` | `cli_args_test/param_format_test.rs` |
+| `tc030_format_text_wrong_case_rejected` | `cli_args_test/param_format_test.rs` |
+| `tc495_format_text_then_json_last_wins_json` | `cli_args_test/param_format_test.rs` |
+| `tc242_unknown_format_exits_1` | `tests/cli/read_status_test.rs` |
+| `tc243_uppercase_format_exits_1` | `tests/cli/read_status_test.rs` |
+| `tc244_empty_format_exits_1` | `tests/cli/read_status_test.rs` |
+| `tc258_status_format_json_is_valid_json` | `tests/cli/cross_cutting_test.rs` |
+| `tc260_format_uppercase_rejected` | `tests/cli/cross_cutting_test.rs` |
+| `tc261_version_install_format_json_accepted` | `tests/cli/cross_cutting_test.rs` |
+| `tc504_format_unknown_error_mentions_valid` | `tests/cli/error_messages_test.rs` |
+| `format_ec11_status_format_json_object` | `tests/cli/format_param_test.rs` |
+| `format_ec12_version_show_format_json_has_version_key` | `tests/cli/format_param_test.rs` |
+| `format_ec13_version_list_format_json_array` | `tests/cli/format_param_test.rs` |
+| `format_ec14_processes_format_json_has_processes_key` | `tests/cli/format_param_test.rs` |
+| `format_ec15_settings_show_format_json_object` | `tests/cli/format_param_test.rs` |
+| `format_ec16_settings_get_format_json_has_key_value` | `tests/cli/format_param_test.rs` |
+| `format_ec17_history_format_json_fields` | `tests/cli/format_param_test.rs` |
+| `format_ec18_history_format_xml_exits_1` | `tests/cli/format_param_test.rs` |
+| `format_ec19_history_format_json_uppercase_exits_1` | `tests/cli/format_param_test.rs` |
+| `format_ec6_absent_defaults_to_text` | `cli_args_test/param_format_test.rs` |
+| `format_ec7_text_explicit_same_as_absent` | `cli_args_test/param_format_test.rs` |
+| `format_ec8_csv_exits_1` | `cli_args_test/param_format_test.rs` |
+| `format_ec20_params_format_json_array` | `tests/cli/format_param_test.rs` |
+| `tc241_settings_show_json_preserves_types` | `tests/cli/read_settings_test.rs` |
+| `ft005_9_per_cmd_validation` | `tests/cli/catalog_surface_test.rs` |

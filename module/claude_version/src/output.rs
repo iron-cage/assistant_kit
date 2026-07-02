@@ -10,6 +10,16 @@ use unilang::types::Value;
 use core::fmt::Write as _;
 
 /// Available output formats for command results.
+///
+/// # Examples
+///
+/// ```
+/// use claude_version::output::OutputFormat;
+///
+/// let text = OutputFormat::Text;
+/// assert_eq!( text, OutputFormat::Text );
+/// assert_ne!( text, OutputFormat::Json );
+/// ```
 #[ derive( Debug, Clone, Copy, PartialEq ) ]
 pub enum OutputFormat
 {
@@ -37,6 +47,19 @@ impl OutputOptions
   ///
   /// Returns `Err(ErrorData)` with `ErrorCode::ArgumentTypeMismatch` if
   /// `format::` has an unrecognised value.
+  ///
+  /// # Examples
+  ///
+  /// ```no_run
+  /// use claude_version::output::OutputOptions;
+  /// use unilang::semantic::VerifiedCommand;
+  ///
+  /// fn handle( cmd : &VerifiedCommand )
+  /// {
+  ///   let opts = OutputOptions::from_cmd( cmd ).expect( "valid format argument" );
+  ///   // opts.format and opts.verbosity are available
+  /// }
+  /// ```
   #[ inline ]
   pub fn from_cmd( cmd : &VerifiedCommand ) -> Result< Self, ErrorData >
   {
@@ -76,6 +99,17 @@ impl OutputOptions
 ///
 /// Handles: `"`, `\`, newline, carriage return, tab, and all C0 control
 /// characters (U+0000–U+001F) per RFC 8259 § 7.
+///
+/// # Examples
+///
+/// ```
+/// use claude_version::output::json_escape;
+///
+/// assert_eq!( json_escape( "hello" ),       "hello"         );
+/// assert_eq!( json_escape( "say \"hi\"" ),  r#"say \"hi\""# );
+/// assert_eq!( json_escape( "line\nbreak" ), r"line\nbreak"   );
+/// assert_eq!( json_escape( "tab\there" ),   r"tab\there"     );
+/// ```
 #[ inline ]
 #[ must_use ]
 pub fn json_escape( s : &str ) -> String

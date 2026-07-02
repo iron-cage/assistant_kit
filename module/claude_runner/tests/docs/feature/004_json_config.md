@@ -1,0 +1,153 @@
+# Test: Feature — JSON Config Loading
+
+Test case planning for [feature/004_json_config.md](../../../../docs/feature/004_json_config.md). Tests validate JSON file loading via `--args-file`, stdin JSON pipe detection, precedence ordering (CLI > JSON > CLR_* > defaults), boolean flag handling, error cases, and subcommand coverage.
+
+## Test Case Index
+
+| ID | Test Name | Category |
+|----|-----------|----------|
+| JC-1 | `--args-file` loads JSON and applies params | File Loading |
+| JC-2 | CLI flag overrides JSON config value | Precedence |
+| JC-3 | JSON config overrides CLR_* env var | Precedence |
+| JC-4 | `CLR_ARGS_FILE` env var equivalent to `--args-file` | Env Var |
+| JC-5 | Stdin JSON pipe detected when stdin not a TTY | Stdin Pipe |
+| JC-6 | Invalid JSON in config file → exit 1 with parse error | Error Handling |
+| JC-7 | Non-existent `--args-file` path → exit 1 with file-not-found | Error Handling |
+| JC-8 | Boolean flag `true` activates flag; `false` is no-op | Boolean Handling |
+| JC-8b | Boolean flag `false` is a no-op — subprocess spawned | Boolean Handling |
+| JC-9 | Unknown JSON key silently ignored; other keys applied | Forward Compat |
+| JC-10 | JSON config applies to `isolated` subcommand | Subcommand |
+
+## Test Coverage Summary
+
+- File Loading: 1 test (JC-1)
+- Precedence: 2 tests (JC-2, JC-3)
+- Env Var: 1 test (JC-4)
+- Stdin Pipe: 1 test (JC-5)
+- Error Handling: 2 tests (JC-6, JC-7)
+- Boolean Handling: 2 tests (JC-8, JC-8b)
+- Forward Compat: 1 test (JC-9)
+- Subcommand: 1 test (JC-10)
+
+**Total:** 11 tests
+
+---
+
+### JC-1: `--args-file` loads JSON and applies params
+
+- **Given:** JSON file containing `{"model": "claude-haiku-4-5-20251001", "max-sessions": 0}` written to a temp path; fake claude binary in PATH
+- **When:** `clr --args-file <tmp/fast.json> --dry-run "task"`
+- **Then:** dry-run output contains `--model claude-haiku-4-5-20251001`; `--max-sessions` count is 0 (gate disabled); JSON params applied
+- **Exit:** 0
+- **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-001; [cli/param/075_args_file.md](../../../../docs/cli/param/075_args_file.md)
+- **Implemented by:** `json_config_test.rs::jc1_args_file_loads_json_params`
+
+---
+
+### JC-2: CLI flag overrides JSON config value
+
+- **Given:** JSON file containing `{"model": "claude-haiku-4-5-20251001"}`; CLI passes `--model claude-opus-4-8`
+- **When:** `clr --args-file <tmp/fast.json> --model claude-opus-4-8 --dry-run "task"`
+- **Then:** dry-run output contains `--model claude-opus-4-8` (CLI wins); JSON value for model is overridden
+- **Exit:** 0
+- **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-003
+- **Implemented by:** `json_config_test.rs::jc2_cli_flag_overrides_json_value`
+
+---
+
+### JC-3: JSON config overrides CLR_* env var
+
+- **Given:** JSON file containing `{"model": "claude-haiku-4-5-20251001"}`; `CLR_MODEL=claude-opus-4-8` set in environment
+- **When:** `CLR_MODEL=claude-opus-4-8 clr --args-file <tmp/fast.json> --dry-run "task"`
+- **Then:** dry-run output contains `--model claude-haiku-4-5-20251001` (JSON wins over env var)
+- **Exit:** 0
+- **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-004
+- **Implemented by:** `json_config_test.rs::jc3_json_overrides_clr_env_var`
+
+---
+
+### JC-4: `CLR_ARGS_FILE` env var equivalent to `--args-file`
+
+- **Given:** JSON file at a temp path containing `{"max-sessions": 0}`; `CLR_ARGS_FILE` set to that path
+- **When:** `CLR_ARGS_FILE=<tmp/fast.json> clr --dry-run "task"` (no `--args-file` on CLI)
+- **Then:** dry-run output reflects `--max-sessions 0` from JSON; behavior identical to `--args-file <path>`
+- **Exit:** 0
+- **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-005; [cli/param/075_args_file.md](../../../../docs/cli/param/075_args_file.md)
+- **Implemented by:** `json_config_test.rs::jc4_clr_args_file_env_var`
+
+---
+
+### JC-5: Stdin JSON pipe detected when stdin not a TTY
+
+- **Given:** JSON input `{"max-sessions": 0}` piped to stdin; stdin is not a TTY (pipe context); no `--args-file` flag; no `--file` flag
+- **When:** `echo '{"max-sessions":0}' | clr --dry-run "task"`
+- **Then:** dry-run output reflects `--max-sessions 0` from stdin JSON; stdin JSON auto-detected and consumed as param source
+- **Exit:** 0
+- **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-002
+- **Implemented by:** `json_config_test.rs::jc5_stdin_json_pipe_detected`
+
+---
+
+### JC-6: Invalid JSON in config file → exit 1 with parse error
+
+- **Given:** File at temp path containing malformed JSON (`{model: bad}` — no quotes)
+- **When:** `clr --args-file <tmp/bad.json> "task"` with fake claude binary
+- **Then:** clr exits 1; stderr contains JSON parse error message; subprocess not spawned
+- **Exit:** 1
+- **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-006
+- **Implemented by:** `json_config_test.rs::jc6_invalid_json_exit_1`
+
+---
+
+### JC-7: Non-existent `--args-file` path → exit 1 with file-not-found
+
+- **Given:** `--args-file` path points to a file that does not exist
+- **When:** `clr --args-file /tmp/nonexistent_clr_config_xyz.json "task"` with fake claude binary
+- **Then:** clr exits 1; stderr contains file-not-found or similar IO error; subprocess not spawned
+- **Exit:** 1
+- **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-007
+- **Implemented by:** `json_config_test.rs::jc7_missing_args_file_exit_1`
+
+---
+
+### JC-8: Boolean flag `true` activates flag; `false` is no-op
+
+- **Given:** JSON file containing `{"dry-run": true}`
+- **When:** `clr --args-file <tmp/fast.json> "task"` with fake claude binary (no `--dry-run` on CLI)
+- **Then:** clr executes in dry-run mode (prints command without spawning); boolean `true` in JSON activates the flag; JSON `false` for any other boolean param is a no-op (absent)
+- **Exit:** 0
+- **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-008
+- **Implemented by:** `json_config_test.rs::jc8_boolean_true_activates_flag`
+
+---
+
+### JC-8b: Boolean flag `false` is a no-op — subprocess spawned
+
+- **Given:** JSON file containing `{"dry-run": false}`; fake claude binary in PATH that emits a recognisable token to stdout
+- **When:** `clr --args-file <tmp/cfg.json> "task"` (no `--dry-run` on CLI)
+- **Then:** subprocess is spawned and its output appears in stdout; `false` does not activate the flag; dry-run mode is NOT entered
+- **Exit:** 0 (from fake claude)
+- **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-008 (false-branch); [cli/param/075_args_file.md](../../../../docs/cli/param/075_args_file.md)
+- **Implemented by:** `json_config_test.rs::jc8b_boolean_false_is_noop_subprocess_spawned`
+
+---
+
+### JC-9: Unknown JSON key silently ignored; other keys applied
+
+- **Given:** JSON file containing `{"_future_param": "x", "max-sessions": 0}` (one unknown key, one known)
+- **When:** `clr --args-file <tmp/fast.json> --dry-run "task"`
+- **Then:** clr exits 0; no error for unknown key `_future_param`; `max-sessions: 0` is applied; forward-compatible
+- **Exit:** 0
+- **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-009
+- **Implemented by:** `json_config_test.rs::jc9_unknown_json_key_ignored`
+
+---
+
+### JC-10: JSON config applies to `isolated` subcommand
+
+- **Given:** JSON file containing `{"dir": "/tmp"}` at a temp path; `CLR_ARGS_FILE` set to that path; fake creds file
+- **When:** `CLR_ARGS_FILE=<tmp/cfg.json> clr isolated --creds <creds> --dry-run`
+- **Then:** isolated dry-run preview (stdout) contains "/tmp"; param applies cross-subcommand
+- **Exit:** 0
+- **Source:** [feature/004_json_config.md](../../../../docs/feature/004_json_config.md) AC-010
+- **Implemented by:** `json_config_test.rs::jc10_json_config_applies_to_isolated`

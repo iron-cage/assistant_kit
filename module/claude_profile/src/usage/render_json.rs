@@ -1,3 +1,5 @@
+// Items are pub for test_bridge re-export; lints suppressed — internal API.
+#![ allow( clippy::missing_inline_in_public_items, clippy::must_use_candidate ) ]
 //! JSON renderer for quota results.
 
 use crate::output::json_escape;
@@ -17,7 +19,7 @@ fn cache_json_fields( cached : bool, age : Option< u64 > ) -> String
 /// fields using `_left_pct` naming (remaining, not consumed); failed accounts
 /// include `error`.
 #[ allow( clippy::too_many_lines ) ]
-pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
+pub fn render_json( accounts : &[ AccountQuota ] ) -> String
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
 

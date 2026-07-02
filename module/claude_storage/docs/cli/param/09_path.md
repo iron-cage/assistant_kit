@@ -69,6 +69,11 @@ Path argument. Semantics differ by command — see command sections for exact be
 | [`StoragePath`](../type/10_storage_path.md) | String (filesystem path) | String | Filesystem path; `~` expansion supported |
 | [`PathSubstring`](../type/04_path_substring.md) | String | String | In `.list` only: substring filter on project paths |
 
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Full | `scope::` |
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
@@ -83,11 +88,6 @@ Path argument. Semantics differ by command — see command sections for exact be
 | 9 | [`.project.exists`](../command/09_project_exists.md) | cwd | Directory to check for history |
 | 10 | [`.session.dir`](../command/10_session_dir.md) | cwd | Base directory |
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | cwd | Base directory |
-
-### Referenced Parameter Groups
-| # | Group | Membership | Co-members |
-|---|-------|------------|------------|
-| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Full | `scope::` |
 
 ### Referenced User Stories
 | # | User Story | Persona |

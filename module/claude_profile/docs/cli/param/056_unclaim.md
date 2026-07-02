@@ -1,4 +1,4 @@
-# Parameter :: 56. `unclaim::`
+# Parameter: 56. `unclaim::`
 
 > **REMOVED (Feature 064):** The `unclaim::` parameter has been removed from the unified parameter set on `.accounts` and `.usage`. Ownership release is now performed via `owner::0`.
 >

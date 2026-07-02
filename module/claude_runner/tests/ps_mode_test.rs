@@ -19,7 +19,9 @@ mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, stderr_str, stdout_str };
 
 #[ cfg( unix ) ]
-use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude, spawn_print_claude };
+use cli_binary_test_helpers::{
+  fake_claude_binary_dir, make_proc_dir, spawn_fake_claude, spawn_print_claude,
+};
 
 // ── EC-1: `--mode interactive` shows only interactive sessions ────────────────
 
@@ -35,11 +37,13 @@ fn ec1_mode_interactive_shows_only_interactive()
 
   let mut bg_print = spawn_print_claude( &path_val );
   let pid_print    = bg_print.id();
+  let proc         = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--mode", "interactive" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --mode interactive" );
 
@@ -74,11 +78,13 @@ fn ec2_mode_print_shows_only_print()
 
   let mut bg_print = spawn_print_claude( &path_val );
   let pid_print    = bg_print.id();
+  let proc         = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--mode", "print" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --mode print" );
 
@@ -113,11 +119,13 @@ fn ec3_mode_all_shows_both()
 
   let mut bg_print = spawn_print_claude( &path_val );
   let pid_print    = bg_print.id();
+  let proc         = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--mode", "all" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --mode all" );
 
@@ -169,12 +177,14 @@ fn ec5_clr_ps_mode_env_var_filters()
 
   let mut bg_print = spawn_print_claude( &path_val );
   let pid_print    = bg_print.id();
+  let proc         = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env( "CLR_PS_MODE", "print" )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps with CLR_PS_MODE=print" );
 
@@ -209,12 +219,14 @@ fn ec6_cli_mode_wins_over_env_var()
 
   let mut bg_print = spawn_print_claude( &path_val );
   let pid_print    = bg_print.id();
+  let proc         = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--mode", "interactive" ] )
     .env( "PATH", &path_val )
     .env( "CLR_PS_MODE", "print" ) // CLI wins over this env var
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --mode interactive with CLR_PS_MODE=print" );
 
@@ -249,12 +261,14 @@ fn ec7_default_mode_shows_all()
 
   let mut bg_print = spawn_print_claude( &path_val );
   let pid_print    = bg_print.id();
+  let proc         = make_proc_dir( &[ pid_interactive, pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env_remove( "CLR_PS_MODE" ) // ensure env var is absent
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps (no mode filter)" );
 

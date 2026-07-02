@@ -1,4 +1,4 @@
-# Algorithm
+# Algorithm Doc Entity
 
 ### Scope
 
@@ -9,14 +9,15 @@
 
 ### Overview Table
 
-| ID | Name | Entry Point | Feature Refs |
-|----|------|-------------|-------------|
-| 001 | [Touch Model Selection](001_touch_model_selection.md) | `subprocess.rs` `resolve_model()` | 024, 026, 027 |
-| 002 | [Session Model Override](002_session_model_override.md) | `api.rs` `apply_model_override()`, `format.rs` `recommended_model()` | 009, 034, 062 |
-| 003 | [Quota Status Groups](003_quota_status_groups.md) | `sort.rs` `status_group_of()` | 020, 038 |
-| 004 | [Next-Account Eligibility Gates](004_eligibility_gates.md) | `sort_next.rs` `find_first_eligible()` | 020, 036, 038, 061 |
-| 005 | [Next-Account Positive Selection](005_next_account_selection.md) | `sort_next.rs` `find_next_for_strategy()` | 020, 038 |
-| 006 | [Quota Polynomial Approximation](006_quota_approximation.md) | `approx.rs` `approximate_utilization()` | 033, 040, 061 |
-| 007 | [Sort Strategies](007_sort_strategies.md) | `sort.rs` `sort_indices()` | 020 |
-| 008 | [Subprocess Effort Resolution](008_subprocess_effort_resolution.md) | `subprocess.rs` `resolve_effort()` | 026 |
-| 009 | [OAuth Usage Response Dual-Source Parsing](009_oauth_usage_response_migration.md) | `claude_quota/src/lib.rs` `parse_oauth_usage()` | 009, 066 |
+| ID | Name | Purpose | Status |
+|----|------|---------|--------|
+| — | [procedure](procedure.md) | Workflow for maintaining algorithm instances | ✅ |
+| 001 | [Touch Model Selection](001_touch_model_selection.md) | Select subprocess model from quota state and configuration | ✅ |
+| 002 | [Session Model Override](002_session_model_override.md) | Override session model based on quota headroom and account state | ✅ |
+| 003 | [Quota Status Groups](003_quota_status_groups.md) | Classify quota usage percentage into discrete status bands | ✅ |
+| 004 | [Next-Account Eligibility Gates](004_eligibility_gates.md) | Apply eligibility gates to filter candidate accounts for next-account selection | ✅ |
+| 005 | [Next-Account Positive Selection](005_next_account_selection.md) | Select best eligible account by sort strategy from candidate list | ✅ |
+| 006 | [Quota Polynomial Approximation](006_quota_approximation.md) | Approximate quota utilization via polynomial regression on measurement history | ✅ |
+| 007 | [Sort Strategies](007_sort_strategies.md) | Order account list by configurable sort strategies | ✅ |
+| 008 | [Subprocess Effort Resolution](008_subprocess_effort_resolution.md) | Resolve subprocess effort level from explicit param and account state | ✅ |
+| 009 | [OAuth Usage Response Dual-Source Parsing](009_oauth_usage_response_migration.md) | Parse OAuth usage response from named-field or limits-array format | ✅ |

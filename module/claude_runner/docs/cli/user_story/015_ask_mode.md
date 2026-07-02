@@ -1,24 +1,9 @@
-# CLI User Story: Ask Mode
+# Send a single-turn question using ask as a semantic alias for run
 
-### Scope
-
-- **Purpose**: Document `ask` as a pure semantic alias for `run` with no behavioral differences.
-- **Responsibility**: Define acceptance criteria for `ask` equivalence and intent-signaling role.
-- **In Scope**: `ask` parameter acceptance, dry-run equivalence with `run`, intent-signaling role.
-- **Out of Scope**: General run mode (→ 001_interactive_repl.md, 002_print_mode_capture.md),
-  ask-specific defaults (none exist — `ask` is a pure alias).
-
-### Persona
-
-Developer who wants to signal intent — the invocation is a question, not a task — without any
-behavioral difference from `run`. Scripts and shell history benefit from the semantic distinction
-even when the mechanics are identical.
-
-### Goal
-
-Use `clr ask` to send a single-turn question to Claude and get a clean answer on stdout, with the
-same parameter set, same defaults, and same execution path as `clr run`. The distinction is
-documentation only: `ask` communicates that the invocation is a question.
+**Persona:** Developer who wants to signal intent — the invocation is a question, not a task — without any behavioral difference from `run`. Scripts and shell history benefit from the semantic distinction even when the mechanics are identical.
+**Goal:** Use `clr ask` to send a single-turn question to Claude and get a clean answer on stdout, with the same parameter set, same defaults, and same execution path as `clr run`. The distinction is documentation only: `ask` communicates that the invocation is a question.
+**Benefit:** Improves script readability and intent clarity with no behavioral overhead.
+**Priority:** Low
 
 ### Acceptance Criteria
 
@@ -52,6 +37,12 @@ documentation only: `ask` communicates that the invocation is a question.
 | 17 | [`--effort`](../param/017_effort.md) | Same default as run (max); overridable |
 | 9 | [`--max-tokens`](../param/009_max_tokens.md) | Same default as run (200000); overridable |
 | 28 | [`--subdir`](../param/028_subdir.md) | Named workspace isolation within ask |
+
+### Workflow Steps
+
+1. `clr ask "What does this function do?"` — send a question; identical to `clr run "..."`
+2. `clr ask --dry-run "What is the return type?"` — preview the assembled command without executing
+3. `clr ask --new-session "Explain this error"` — ask a question in a fresh conversation
 
 ### Related User Stories
 

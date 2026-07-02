@@ -132,5 +132,5 @@
 
 | File | Relationship |
 |------|--------------|
-| `src/usage/mod.rs` | filter pipeline application and orchestration |
+| `src/usage/api.rs` | filter pipeline application and orchestration |
 | `src/usage/render.rs` | `get::` field extraction, `format::value`/`tsv`/`plain` rendering |

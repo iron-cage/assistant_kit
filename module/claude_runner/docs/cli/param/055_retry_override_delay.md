@@ -10,6 +10,7 @@ class-specific delay is used; if that is also `auto`, the Tier 3 fallback
 - **Default:** `auto` (unset — class-specific or fallback values apply)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"retry-override-delay"`
 
 ```sh
 # Force all error classes to use 60s delay
@@ -44,7 +45,7 @@ This parameter is Tier 1 — the leftmost (highest priority) in the chain.
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, ... |
 
 ### Referenced Commands
 

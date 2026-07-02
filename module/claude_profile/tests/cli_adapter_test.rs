@@ -333,8 +333,8 @@ mod adapter
   // A-29: `.help` as sole arg → tokens=[".help"], needs_help=true
   //
   // Step 1b pre-scan matches `.help` anywhere in argv (including as the
-  // sole argument) and returns needs_help=true. Callers discard this flag
-  // (`_needs_help`), so the CLI output is identical regardless of its value.
+  // sole argument) and returns needs_help=true. The `run()` caller uses
+  // this flag to call `print_usage()` directly, bypassing the unilang pipeline.
   #[ test ]
   fn adapter_help_as_command()
   {

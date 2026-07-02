@@ -22,8 +22,8 @@ clr isolated --creds creds.json --timeout -1 "test"   # error: negative
 
 | # | Command | Via Parameter |
 |---|---------|---------------|
-| 2 | [`isolated`](../command/02_isolated.md) | `--timeout` |
-| 3 | [`refresh`](../command/03_refresh.md) | `--timeout` |
+| 2 | [`isolated`](../command/03_isolated.md) | `--timeout` |
+| 3 | [`refresh`](../command/04_refresh.md) | `--timeout` |
 
 ### Referenced Parameters
 

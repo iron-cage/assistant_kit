@@ -1,5 +1,12 @@
 # Subprocess: Browser Relogin Invocation
 
+### Scope
+
+- **Purpose**: Document how `.account.relogin` spawns `claude` with an inherited TTY to recover accounts whose OAuth refresh token has expired and cannot be recovered via isolated subprocess.
+- **Responsibility**: Authoritative reference for the relogin mechanism, TTY inheritance, active account restore procedure, and comparison with `run_isolated()`.
+- **In Scope**: Relogin mechanism steps; TTY inheritance; active account credential restore; key differences from `run_isolated()`; when relogin is the correct recovery path.
+- **Out of Scope**: `run_isolated()` API contract (→ `subprocess/001`); credential write-back for batch refresh (→ `subprocess/002`); full `.account.relogin` acceptance criteria (→ `feature/019`).
+
 ### Purpose
 
 Document how `.account.relogin` spawns `claude` with an inherited TTY to recover accounts whose OAuth refresh token has expired (unrecoverable via isolated subprocess).
@@ -31,10 +38,15 @@ Unlike `run_isolated()` (which uses an isolated temp `HOME`), relogin:
 
 After relogin completes, the previously-active account's credentials are restored to `~/.claude/.credentials.json` so the user's live session is undisturbed. Relogin targets a named account (not the active one).
 
-### Cross-References
+### Features
 
 | File | Relationship |
 |------|-------------|
 | [feature/019_account_relogin.md](../feature/019_account_relogin.md) | Full feature spec |
+
+### Subprocess
+
+| File | Relationship |
+|------|-------------|
 | [subprocess/001](001_run_isolated_contract.md) | `run_isolated()` — different mechanism |
 | [subprocess/003](003_token_refresh_invocation.md) | Token refresh (prerequisite attempt before relogin) |
