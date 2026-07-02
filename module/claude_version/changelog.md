@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`.config` command** — unified 4-layer configuration management; replaces `.settings.show`, `.settings.get`, `.settings.set`
+  - Modes: show-all / get / set / unset; `scope::` (`user` or `project`), `unset::1`, `dry::` preview
+  - 4-layer resolution: env → project → user → catalog default; see `algorithm/002_config_resolution.md`
+
+- **`.params` command** — read-only Claude Code parameter catalog inspector
+  - Shows all params with CLI flag, env var, config key forms and current observable values
+  - `key::K` deep-dive mode; `kind::config` / `kind::env` filter; `format::json` output
+
 ### Changed
 
 - **Binary renamed `clm` → `claude_version`; `clv` alias added**

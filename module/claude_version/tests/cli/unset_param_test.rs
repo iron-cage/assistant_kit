@@ -17,7 +17,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm_with_env, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv_with_env, write_settings };
 
 // ─── EC-1: unset::1 removes key from settings ────────────────────────────────
 
@@ -29,7 +29,7 @@ fn unset_ec1_removes_key_from_settings()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ), ( "model", "claude-sonnet-5" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "unset::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -53,7 +53,7 @@ fn unset_ec2_nonexistent_key_is_idempotent()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "model", "claude-sonnet-5" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::nonexistentKey123", "unset::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -72,7 +72,7 @@ fn unset_ec2_nonexistent_key_is_idempotent()
 #[ test ]
 fn unset_ec3_without_key_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "unset::1" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -85,7 +85,7 @@ fn unset_ec3_without_key_exits_1()
 #[ test ]
 fn unset_ec4_value_and_unset_mutually_exclusive_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::dark", "unset::1" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -101,7 +101,7 @@ fn unset_ec5_zero_treated_as_normal_set_mode()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "value::light", "unset::0" ],
     &[ ( "HOME", home ) ],
   );
@@ -119,7 +119,7 @@ fn unset_ec5_zero_treated_as_normal_set_mode()
 #[ test ]
 fn unset_ec6_invalid_boolean_value_exits_1()
 {
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "unset::2" ],
     &[ ( "HOME", "/tmp" ) ],
   );
@@ -136,7 +136,7 @@ fn unset_ec7_dry_run_prevents_deletion()
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "theme", "dark" ) ] );
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".config", "key::theme", "unset::1", "dry::1" ],
     &[ ( "HOME", home ) ],
   );

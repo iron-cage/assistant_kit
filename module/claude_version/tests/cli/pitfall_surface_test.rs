@@ -16,7 +16,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stdout };
 
 // ─── PF-1 (pitfall/001_version_lock_chmod.md): install handles chmod automatically
 
@@ -24,7 +24,7 @@ use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stdout 
 #[ test ]
 fn pf01_001_chmod_auto_handled()
 {
-  let out = run_clm( &[ ".version.install", "version::stable", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::stable", "dry::1" ] );
   // Command manages permissions internally; no manual chmod required from caller
   assert_exit( &out, 0 );
 }
@@ -35,7 +35,7 @@ fn pf01_001_chmod_auto_handled()
 #[ test ]
 fn pf02_001_chmod_dry_shows_chmod()
 {
-  let out = run_clm( &[ ".version.install", "version::stable", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::stable", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "chmod" ), "install dry-run must preview chmod step: {text}" );
@@ -47,7 +47,7 @@ fn pf02_001_chmod_dry_shows_chmod()
 #[ test ]
 fn pf03_001_guard_shows_restore()
 {
-  let out = run_clm( &[ ".version.guard", "dry::1" ] );
+  let out = run_clv( &[ ".version.guard", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   // Guard must convey it can restore/reinstall (not merely detect drift)
@@ -63,7 +63,7 @@ fn pf03_001_guard_shows_restore()
 #[ test ]
 fn pf01_002_purge_in_install_preview()
 {
-  let out = run_clm( &[ ".version.install", "version::stable", "dry::1" ] );
+  let out = run_clv( &[ ".version.install", "version::stable", "dry::1" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -90,7 +90,7 @@ fn pf02_002_guard_dry_detects_drift()
 }"#;
   std::fs::write( claude_dir.join( "settings.json" ), settings_json ).unwrap();
 
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.guard", "dry::1" ],
     &[ ( "HOME", home ) ],
   );
@@ -125,7 +125,7 @@ fn pf03_002_no_drift_after_install()
   std::fs::write( claude_dir.join( "settings.json" ), settings_json ).unwrap();
 
   // Use real PATH so guard can find the installed claude binary at 2.1.78
-  let out = run_clm_with_env(
+  let out = run_clv_with_env(
     &[ ".version.guard", "dry::1" ],
     &[ ( "HOME", home ) ],
   );

@@ -4,7 +4,7 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stdout };
 
 fn read_settings_json( home_dir : &std::path::Path ) -> String
 {
@@ -18,7 +18,7 @@ fn value_ec1_true_stored_as_boolean()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.set", "key::flag", "value::true" ],
     &[ ( "HOME", home ) ],
   );
@@ -35,7 +35,7 @@ fn value_ec2_zero_stored_as_integer_not_boolean()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.set", "key::n", "value::0" ],
     &[ ( "HOME", home ) ],
   );
@@ -51,7 +51,7 @@ fn value_ec2_zero_stored_as_integer_not_boolean()
 #[ test ]
 fn value_ec4_command_scope_rejects_on_get()
 {
-  let out = run_clm( &[ ".settings.get", "key::k", "value::v" ] );
+  let out = run_clv( &[ ".settings.get", "key::k", "value::v" ] );
   assert_exit( &out, 1 );
 }
 
@@ -61,7 +61,7 @@ fn value_ec5_float_stored_as_json_float()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.set", "key::f", "value::1.5" ],
     &[ ( "HOME", home ) ],
   );
@@ -77,7 +77,7 @@ fn value_ec6_nan_stored_as_string()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.set", "key::x", "value::NaN" ],
     &[ ( "HOME", home ) ],
   );
@@ -92,12 +92,12 @@ fn value_ec7_round_trip_set_get()
 {
   let dir     = TempDir::new().unwrap();
   let home    = dir.path().to_str().unwrap();
-  let set_out = run_clm_with_env(
+  let set_out = run_clv_with_env(
     &[ ".settings.set", "key::roundtrip", "value::hello" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &set_out, 0 );
-  let get_out = run_clm_with_env(
+  let get_out = run_clv_with_env(
     &[ ".settings.get", "key::roundtrip" ],
     &[ ( "HOME", home ) ],
   );
@@ -112,7 +112,7 @@ fn value_ec8_infinity_stored_as_string()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.set", "key::x", "value::Infinity" ],
     &[ ( "HOME", home ) ],
   );
@@ -127,7 +127,7 @@ fn value_ec9_space_in_value_stored_as_string()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.set", "key::x", "value::true false" ],
     &[ ( "HOME", home ) ],
   );
@@ -143,7 +143,7 @@ fn value_ec11_false_stored_as_boolean()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.set", "key::flag", "value::false" ],
     &[ ( "HOME", home ) ],
   );
@@ -160,7 +160,7 @@ fn value_ec12_integer_stored_unquoted()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.set", "key::count", "value::42" ],
     &[ ( "HOME", home ) ],
   );
@@ -177,7 +177,7 @@ fn value_ec13_string_stored_quoted()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.set", "key::name", "value::hello" ],
     &[ ( "HOME", home ) ],
   );
@@ -192,7 +192,7 @@ fn value_ec10_empty_value_exits_1()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.set", "key::theme", "value::" ],
     &[ ( "HOME", home ) ],
   );
@@ -203,7 +203,7 @@ fn value_ec10_empty_value_exits_1()
 #[ test ]
 fn value_ec14_missing_value_exits_1()
 {
-  let out = run_clm( &[ ".settings.set", "key::theme" ] );
+  let out = run_clv( &[ ".settings.set", "key::theme" ] );
   assert_exit( &out, 1 );
 }
 
@@ -211,7 +211,7 @@ fn value_ec14_missing_value_exits_1()
 #[ test ]
 fn value_ec15_missing_value_error_mentions_value_token()
 {
-  let out = run_clm( &[ ".settings.set", "key::theme" ] );
+  let out = run_clv( &[ ".settings.set", "key::theme" ] );
   assert_exit( &out, 1 );
   let err = crate::subprocess_helpers::stderr( &out );
   assert!(

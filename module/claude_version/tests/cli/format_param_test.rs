@@ -6,13 +6,13 @@
 
 use tempfile::TempDir;
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, run_clm_with_env, stdout, write_settings };
+use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stdout, write_settings };
 
 /// EC-11: `.status format::json` → valid JSON object starting with `{`
 #[ test ]
 fn format_ec11_status_format_json_object()
 {
-  let out = run_clm( &[ ".status", "format::json" ] );
+  let out = run_clv( &[ ".status", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.trim_start().starts_with( '{' ), "status format::json must start with {{: {text}" );
@@ -22,7 +22,7 @@ fn format_ec11_status_format_json_object()
 #[ test ]
 fn format_ec12_version_show_format_json_has_version_key()
 {
-  let out = run_clm( &[ ".version.show", "format::json" ] );
+  let out = run_clv( &[ ".version.show", "format::json" ] );
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
@@ -35,7 +35,7 @@ fn format_ec12_version_show_format_json_has_version_key()
 #[ test ]
 fn format_ec13_version_list_format_json_array()
 {
-  let out = run_clm( &[ ".version.list", "format::json" ] );
+  let out = run_clv( &[ ".version.list", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.trim_start().starts_with( '[' ), "version.list format::json must start with [: {text}" );
@@ -45,7 +45,7 @@ fn format_ec13_version_list_format_json_array()
 #[ test ]
 fn format_ec14_processes_format_json_has_processes_key()
 {
-  let out = run_clm( &[ ".processes", "format::json" ] );
+  let out = run_clv( &[ ".processes", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "\"processes\"" ), "processes json must have 'processes' key: {text}" );
@@ -58,7 +58,7 @@ fn format_ec15_settings_show_format_json_object()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "myKey", "myVal" ) ] );
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.show", "format::json" ],
     &[ ( "HOME", home ) ],
   );
@@ -75,7 +75,7 @@ fn format_ec16_settings_get_format_json_has_key_value()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_settings( dir.path(), &[ ( "myKey", "myVal" ) ] );
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".settings.get", "key::myKey", "format::json" ],
     &[ ( "HOME", home ) ],
   );
@@ -89,7 +89,7 @@ fn format_ec16_settings_get_format_json_has_key_value()
 #[ test ]
 fn format_ec17_history_format_json_fields()
 {
-  let out = run_clm( &[ ".version.history", "format::json", "count::3" ] );
+  let out = run_clv( &[ ".version.history", "format::json", "count::3" ] );
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
@@ -102,7 +102,7 @@ fn format_ec17_history_format_json_fields()
 #[ test ]
 fn format_ec18_history_format_xml_exits_1()
 {
-  let out = run_clm( &[ ".version.history", "format::xml" ] );
+  let out = run_clv( &[ ".version.history", "format::xml" ] );
   assert_exit( &out, 1 );
 }
 
@@ -110,7 +110,7 @@ fn format_ec18_history_format_xml_exits_1()
 #[ test ]
 fn format_ec19_history_format_json_uppercase_exits_1()
 {
-  let out = run_clm( &[ ".version.history", "format::JSON" ] );
+  let out = run_clv( &[ ".version.history", "format::JSON" ] );
   assert_exit( &out, 1 );
 }
 
@@ -120,7 +120,7 @@ fn format_ec20_params_format_json_array()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let out  = run_clm_with_env(
+  let out  = run_clv_with_env(
     &[ ".params", "format::json" ],
     &[ ( "HOME", home ), ( "CLAUDE_MODEL", "" ) ],
   );

@@ -18,7 +18,7 @@
 //! | cli/format/02_json.md | FM-5 | `fm05_02_json_stdout_only` |
 //! | cli/format/01_text.md | FM-5 | `fm05_01_text_explicit_format` |
 
-use crate::subprocess_helpers::{ assert_exit, run_clm, stderr, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, stderr, stdout };
 
 // ─── FM-1 (cli/format/01_text.md): default text format is labeled ─────────────
 
@@ -27,7 +27,7 @@ use crate::subprocess_helpers::{ assert_exit, run_clm, stderr, stdout };
 #[ test ]
 fn fm01_01_text_default_labeled()
 {
-  let out = run_clm( &[ ".version.show" ] );
+  let out = run_clv( &[ ".version.show" ] );
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
@@ -43,7 +43,7 @@ fn fm01_01_text_default_labeled()
 #[ test ]
 fn fm02_01_text_v0_raw()
 {
-  let out = run_clm( &[ ".version.show", "v::0" ] );
+  let out = run_clv( &[ ".version.show", "v::0" ] );
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
@@ -60,7 +60,7 @@ fn fm02_01_text_v0_raw()
 #[ test ]
 fn fm03_01_text_v1_labeled()
 {
-  let out = run_clm( &[ ".version.show", "v::1" ] );
+  let out = run_clv( &[ ".version.show", "v::1" ] );
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );
@@ -74,7 +74,7 @@ fn fm03_01_text_v1_labeled()
 #[ test ]
 fn fm04_01_text_not_json()
 {
-  let out = run_clm( &[ ".status" ] );
+  let out = run_clv( &[ ".status" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
@@ -89,7 +89,7 @@ fn fm04_01_text_not_json()
 #[ test ]
 fn fm01_02_json_object_output()
 {
-  let out = run_clm( &[ ".status", "format::json" ] );
+  let out = run_clv( &[ ".status", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.trim_start().starts_with( '{' ), "format::json must produce JSON object: {text}" );
@@ -102,7 +102,7 @@ fn fm01_02_json_object_output()
 #[ test ]
 fn fm02_02_json_array_output()
 {
-  let out = run_clm( &[ ".version.list", "format::json" ] );
+  let out = run_clv( &[ ".version.list", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.trim_start().starts_with( '[' ), "format::json on list command must produce JSON array: {text}" );
@@ -114,7 +114,7 @@ fn fm02_02_json_array_output()
 #[ test ]
 fn fm03_02_json_case_sensitive()
 {
-  let out = run_clm( &[ ".status", "format::JSON" ] );
+  let out = run_clv( &[ ".status", "format::JSON" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!( !err.is_empty(), "format::JSON rejection must produce error message: {err}" );
@@ -126,7 +126,7 @@ fn fm03_02_json_case_sensitive()
 #[ test ]
 fn fm04_02_json_v0_primary_key()
 {
-  let out = run_clm( &[ ".status", "format::json", "v::0" ] );
+  let out = run_clv( &[ ".status", "format::json", "v::0" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.trim_start().starts_with( '{' ), "format::json must produce JSON object: {text}" );
@@ -139,7 +139,7 @@ fn fm04_02_json_v0_primary_key()
 #[ test ]
 fn fm05_02_json_stdout_only()
 {
-  let out = run_clm( &[ ".status", "format::json" ] );
+  let out = run_clv( &[ ".status", "format::json" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.trim_start().starts_with( '{' ), "format::json must produce JSON: {text}" );
@@ -154,7 +154,7 @@ fn fm05_02_json_stdout_only()
 #[ test ]
 fn fm05_01_text_explicit_format()
 {
-  let out = run_clm( &[ ".version.show", "format::text" ] );
+  let out = run_clv( &[ ".version.show", "format::text" ] );
   if out.status.code() == Some( 0 )
   {
     let text = stdout( &out );

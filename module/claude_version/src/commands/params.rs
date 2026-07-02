@@ -185,9 +185,24 @@ fn render_show_all_text(
   {
     if verbosity == 0
     {
-      // Compact: one line, value only, no annotations.
-      let ( val, _ ) = resolve_effective( param, user_settings );
-      let _ = writeln!( out, "{}: {val}", param.name );
+      // Compact: one line per param — `name = value (source)` per feature/007 § Show-all v::0.
+      if param.is_cli_only()
+      {
+        let _ = writeln!( out, "{} = (CLI-only)", param.name );
+      }
+      else
+      {
+        let ( val, source ) = resolve_effective( param, user_settings );
+        let display = if source == "absent"
+        {
+          "(unset)".to_string()
+        }
+        else
+        {
+          format!( "{val} ({source})" )
+        };
+        let _ = writeln!( out, "{} = {display}", param.name );
+      }
     }
     else
     {
@@ -225,10 +240,21 @@ fn render_show_all_json(
   let entries : Vec< String > = params.iter().map( | p |
   {
     let ( eff_val, source ) = resolve_effective( p, user_settings );
-    let cli_json = opt_json_str( p.cli_flag );
-    let env_json = opt_json_str( p.env_var );
-    let cfg_json = opt_json_str( p.config_key );
-    let val_json = if source == "absent"
+    let cli_json     = opt_json_str( p.cli_flag );
+    let env_json     = opt_json_str( p.env_var );
+    let cfg_json     = opt_json_str( p.config_key );
+    let def_json     = opt_json_str( p.default );
+    let env_val_json = match read_env_val( p )
+    {
+      Some( v ) => format!( "\"{}\"", json_escape( &v ) ),
+      None      => "null".to_string(),
+    };
+    let cfg_val_json = match read_config_val( p, user_settings )
+    {
+      Some( v ) => format!( "\"{}\"", json_escape( &v ) ),
+      None      => "null".to_string(),
+    };
+    let eff_json = if source == "absent"
     {
       "null".to_string()
     }
@@ -237,7 +263,7 @@ fn render_show_all_json(
       format!( "\"{}\"", json_escape( &eff_val ) )
     };
     format!(
-      "  {{\"name\": \"{}\", \"cli\": {cli_json}, \"env\": {env_json}, \"config\": {cfg_json}, \"effective_value\": {val_json}, \"source\": \"{}\"}}",
+      "  {{\"name\": \"{}\", \"cli_flag\": {cli_json}, \"env_var\": {env_json}, \"config_key\": {cfg_json}, \"env_value\": {env_val_json}, \"config_value\": {cfg_val_json}, \"default\": {def_json}, \"effective\": {eff_json}, \"source\": \"{}\"}}",
       json_escape( p.name ), source
     )
   } ).collect();
@@ -326,11 +352,21 @@ fn render_single_param_text( param : &ParamDef, user_settings : Option< &Path > 
 fn render_single_param_json( param : &ParamDef, user_settings : Option< &Path > ) -> String
 {
   let ( eff_val, source ) = resolve_effective( param, user_settings );
-  let cli_json    = opt_json_str( param.cli_flag );
-  let env_json    = opt_json_str( param.env_var );
-  let cfg_json    = opt_json_str( param.config_key );
-  let def_json    = opt_json_str( param.default );
-  let val_json    = if source == "absent"
+  let cli_json     = opt_json_str( param.cli_flag );
+  let env_json     = opt_json_str( param.env_var );
+  let cfg_json     = opt_json_str( param.config_key );
+  let def_json     = opt_json_str( param.default );
+  let env_val_json = match read_env_val( param )
+  {
+    Some( v ) => format!( "\"{}\"", json_escape( &v ) ),
+    None      => "null".to_string(),
+  };
+  let cfg_val_json = match read_config_val( param, user_settings )
+  {
+    Some( v ) => format!( "\"{}\"", json_escape( &v ) ),
+    None      => "null".to_string(),
+  };
+  let eff_json = if source == "absent"
   {
     "null".to_string()
   }
@@ -340,8 +376,9 @@ fn render_single_param_json( param : &ParamDef, user_settings : Option< &Path > 
   };
 
   format!(
-    "{{\"name\": \"{}\", \"cli\": {cli_json}, \"env\": {env_json}, \"config\": {cfg_json}, \
-     \"default\": {def_json}, \"effective_value\": {val_json}, \"source\": \"{source}\"}}\n",
+    "{{\"name\": \"{}\", \"cli_flag\": {cli_json}, \"env_var\": {env_json}, \"config_key\": {cfg_json}, \
+     \"env_value\": {env_val_json}, \"config_value\": {cfg_val_json}, \"default\": {def_json}, \
+     \"effective\": {eff_json}, \"source\": \"{source}\"}}\n",
     json_escape( param.name )
   )
 }
