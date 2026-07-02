@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Document the eight clr subcommands and their parameters, modes, and usage examples.
+- **Purpose**: Document the nine clr subcommands and their parameters, modes, and usage examples.
 - **Responsibility**: Specify each command's behavior, accepted parameters, and usage.
-- **In Scope**: run, ask, isolated, refresh, help, ps, kill, tools commands and their invocation modes.
+- **In Scope**: run, ask, isolated, refresh, help, ps, kill, tools, scope commands and their invocation modes.
 - **Out of Scope**: Parameter definitions (-> `../param/`), type definitions (-> `../type/`), user stories (-> `../user_story/`).
 
 ### Responsibility Table
@@ -19,6 +19,7 @@
 | 06_ps.md | Command spec: list running Claude Code sessions and queued waiters in two plain-style tables |
 | 07_kill.md | Command spec: terminate a running Claude Code session by PID via SIGTERM |
 | 08_tools.md | Command spec: list Claude Code tools with version information |
+| 09_scope.md | Command spec: print all 6 CLAUDE_* path variables for a directory |
 
 ### All Commands (8 total)
 
@@ -32,7 +33,8 @@
 | 6 | `ps` | List running Claude Code sessions | 5 | `clr ps` |
 | 7 | `kill` | Terminate a running Claude Code session by PID | 0 | `clr kill 12345` |
 | 8 | `tools` | List Claude Code tools with version info | 0 | `clr tools` |
+| 9 | `scope` | Print all 6 CLAUDE_* path variables for a directory | 1 | `clr scope --dir /project` |
 
-**Total:** 8 commands
+**Total:** 9 commands
 
 **Maintenance note:** When a new param is added to the Runner Control group (`docs/cli/param_group/02_runner_control.md`), these files must ALL be updated manually: (1) `01_run.md` Parameters table, (2) the Params count column above, (3) `docs/entity.md` param count + row, (4) `docs/cli/env_param.md` if it has an env var, (5) `tests/docs/cli/param/readme.md` status. `ask` inherits all `run` params automatically via the "All parameters from run are accepted" shortcut — no separate table update needed for `05_ask.md`.

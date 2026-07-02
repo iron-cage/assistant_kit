@@ -31,6 +31,10 @@ use super::projects::{ build_families, group_into_conversations };
 ///
 /// Returns error if `min_entries` is negative, path resolution fails,
 /// project type is invalid, storage creation fails, or listing projects fails.
+///
+/// # Panics
+///
+/// Does not panic — `min_entries` is validated non-negative before conversion.
 #[ allow( clippy::too_many_lines ) ]
 // CLI routine handler processes many parameters and filter branches — extraction
 // would obscure the command's logic without reducing complexity.
@@ -89,9 +93,7 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         )
       );
     }
-    // min_entries validated as non-negative above, so cast is safe
-    #[ allow( clippy::cast_sign_loss, clippy::cast_possible_truncation ) ]
-    Some( n as usize )
+    Some( usize::try_from( n ).expect( "min_entries < 0 rejected above" ) )
   }
   else
   {

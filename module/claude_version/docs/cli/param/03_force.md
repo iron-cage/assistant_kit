@@ -27,6 +27,12 @@ clv.processes.kill force::1           # SIGKILL immediately
 | 2 | [`.version.guard`](../command/version.md#command--5-versionguard) | false | Reinstall even if version matches preferred |
 | 3 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | false | SIGKILL directly, skipping SIGTERM grace period |
 
+### Referenced Type
+
+| # | Type |
+|---|------|
+| 1 | `bool` |
+
 ### Referenced Parameter Groups
 
 | # | Group | Membership | Co-members |

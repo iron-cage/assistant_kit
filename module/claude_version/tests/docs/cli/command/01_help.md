@@ -14,7 +14,7 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 | ID | Test Name | Category |
 |----|-----------|----------|
 | IT-1 | `clv .` → help output, exit 0 | Alias |
-| IT-2 | `cm` (empty argv) → help output, exit 0 | Empty State |
+| IT-2 | `clv` (empty argv) → help output, exit 0 | Empty State |
 | IT-3 | `clv .help` → help output, exit 0 | Happy Path |
 | IT-4 | `clv .status .help` → `.help` anywhere in argv triggers help, exit 0 | FR-02 |
 | IT-5 | Help output goes to stdout; stderr is empty | Output Stream |
@@ -49,10 +49,10 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 
 ---
 
-### IT-2: `cm` (empty argv) → help output, exit 0
+### IT-2: `clv` (empty argv) → help output, exit 0
 
 - **Given:** clean environment
-- **When:** `cm` (no arguments)
+- **When:** `clv` (no arguments)
 - **Then:** Same help output as `.help`.; help output shown
 - **Exit:** 0
 - **Source:** [command/readme.md — .help](../../../../docs/cli/command/readme.md#command--1-help), [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)

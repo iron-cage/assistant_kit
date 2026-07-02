@@ -101,7 +101,7 @@ Both are valid invocations; the dry-run flag presence in output differs.
 ### CC-5: `interval::N` (N>0) starts watch loop
 
 - **Given:** no preference stored
-- **When:** `timeout 3 cm .version.guard interval::5`
+- **When:** `timeout 3 clv .version.guard interval::5`
 - **Then:** at least one status line emitted; process stays alive until killed by timeout
 - **Exit:** 0
 - **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
@@ -141,7 +141,7 @@ Both are valid invocations; the dry-run flag presence in output differs.
 ### CC-9: `interval::5 dry::1` → watch loop with dry-run
 
 - **Given:** no preference stored
-- **When:** `timeout 6 cm .version.guard interval::5 dry::1`
+- **When:** `timeout 6 clv .version.guard interval::5 dry::1`
 - **Then:** at least one `[dry-run]` line in output; process loops with dry-run on each iteration
 - **Exit:** 0
 - **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)

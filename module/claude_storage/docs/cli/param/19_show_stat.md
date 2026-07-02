@@ -32,15 +32,15 @@ show_stat::1    # Append statistics footer after session content
 |------|------|-------------|----------------|
 | Boolean | Base type | Boolean flag | `0` (false) or `1` (true) |
 
-### Referenced Commands
-| # | Command | Default | Notes |
-|---|---------|---------|-------|
-| 3 | [`.show`](../command/03_show.md) | `0` | Appends statistics footer in content mode |
-
 ### Referenced Parameter Groups
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
 | 1 | [Output Control](../param_group/01_output_control.md) | Full | `show_tokens::`, `show_tree::` |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 3 | [`.show`](../command/03_show.md) | `0` | Appends statistics footer in content mode |
 
 ### Referenced User Stories
 | # | User Story | Persona |

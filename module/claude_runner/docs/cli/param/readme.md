@@ -76,6 +76,7 @@
 | 074_quiet.md | `--quiet` flag spec (suppress non-fatal runner diagnostics) |
 | 075_no_compact_window.md | `--no-compact-window` flag spec (suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection) |
 | 075_args_file.md | `--args-file` parameter spec |
+| 076_session_from.md | `--session-from` / `--from` parameter spec (session cross-loading source dir) |
 
 ### Retired Parameter IDs
 

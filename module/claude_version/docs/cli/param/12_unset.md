@@ -24,6 +24,12 @@ clv.config key::theme unset::1 dry::1     # previews removal without changing fi
 |---|---------|---------|-------|
 | 1 | [`.config`](../command/config.md#command--13-config) | false | Requires key::; mutually exclusive with value:: |
 
+### Referenced Type
+
+| # | Type |
+|---|------|
+| 1 | `bool` |
+
 ### Referenced Parameter Groups
 
 | # | Group | Membership | Co-members |

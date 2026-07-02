@@ -36,16 +36,16 @@ show_tokens::1    # Include token usage section
 |------|------|-------------|----------------|
 | Boolean | Base type | Boolean flag | `0` (false) or `1` (true) |
 
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 1 | [Output Control](../param_group/01_output_control.md) | Full | `show_stat::`, `show_tree::` |
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`.status`](../command/01_status.md) | `0` | Triggers slow JSONL parse for token totals |
 | 3 | [`.show`](../command/03_show.md) | `0` | Appends token usage to session output |
-
-### Referenced Parameter Groups
-| # | Group | Membership | Co-members |
-|---|-------|------------|------------|
-| 1 | [Output Control](../param_group/01_output_control.md) | Full | `show_stat::`, `show_tree::` |
 
 ### Referenced User Stories
 | # | User Story | Persona |

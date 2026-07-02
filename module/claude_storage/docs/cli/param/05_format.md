@@ -41,14 +41,14 @@ format::pdf        # "format must be markdown|json|text, got pdf"
 |------|------|-------------|----------------|
 | [`ExportFormat`](../type/03_export_format.md) | String enum wrapper | String | `markdown`, `json`, or `text` |
 
+### Referenced Parameter Groups
+
+None.
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 6 | [`.export`](../command/06_export.md) | `markdown` | Selects export rendering format |
-
-### Referenced Parameter Groups
-
-None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

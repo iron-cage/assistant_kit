@@ -25,6 +25,12 @@ clv.version.history count::0       # empty output (valid, exit 0)
 |---|---------|---------|-------|
 | 1 | [`.version.history`](../command/version.md#command--12-versionhistory) | 10 | Values exceeding available releases return all available |
 
+### Referenced Type
+
+| # | Type |
+|---|------|
+| 1 | `u64` |
+
 ### Referenced Parameter Groups
 
 | # | Group | Membership | Co-members |

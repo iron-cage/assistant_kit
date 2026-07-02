@@ -42,7 +42,7 @@ clv <.command> [param::value ...]
 | type/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
 | param_group/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
 | 002_dictionary.md | ➖ | ✅ | ➖ | ➖ | ➖ | Complete |
-| 004_parameter_interactions.md | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| 004_parameter_interactions.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
 | procedure.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
 | 007_env_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
 | 008_config_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |

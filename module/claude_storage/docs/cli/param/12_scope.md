@@ -55,6 +55,11 @@ scope::all        # "scope must be relevant|local|under|global|around, got all"
 |------|------|-------------|----------------|
 | [`ScopeValue`](../type/07_scope_value.md) | String enum wrapper | String | `relevant`, `local`, `under`, `global`, `around` |
 
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Full | `path::` |
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
@@ -64,11 +69,6 @@ scope::all        # "scope must be relevant|local|under|global|around, got all"
 | 5 | [`.search`](../command/05_search.md) | `global` | Boundary for what gets searched |
 | 6 | [`.export`](../command/06_export.md) | `local` | Project search boundary |
 | 7 | [`.projects`](../command/07_projects.md) | `around` | Session discovery scope |
-
-### Referenced Parameter Groups
-| # | Group | Membership | Co-members |
-|---|-------|------------|------------|
-| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Full | `path::` |
 
 ### Referenced User Stories
 | # | User Story | Persona |

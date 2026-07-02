@@ -49,18 +49,18 @@ Two valid `.params` invocations that produce structurally different output:
 
 | Function | File | Test Cases |
 |----------|------|------------|
-| `ft1_007_params_show_all_min_entries` | `tests/integration/feature_surface_test.rs` | FT-1 |
-| `ft2_007_params_single_model_full_detail` | `tests/integration/feature_surface_test.rs` | FT-2 |
-| `ft3_007_params_kind_config_filters` | `tests/integration/feature_surface_test.rs` | FT-3 |
-| `ft4_007_params_kind_env_filters` | `tests/integration/feature_surface_test.rs` | FT-4 |
-| `ft5_007_params_env_override_visible` | `tests/integration/feature_surface_test.rs` | FT-5 |
-| `ft6_007_params_env_only_param` | `tests/integration/feature_surface_test.rs` | FT-6 |
-| `ft7_007_params_json_output_structure` | `tests/integration/feature_surface_test.rs` | FT-7 |
-| `ft8_007_params_cli_only_annotation` | `tests/integration/feature_surface_test.rs` | FT-8 |
-| `ft9_007_params_unknown_key_exits_2` | `tests/integration/feature_surface_test.rs` | FT-9 |
-| `ft10_007_params_invalid_kind_exits_1` | `tests/integration/feature_surface_test.rs` | FT-10 |
-| `ft11_007_params_default_source_annotation` | `tests/integration/feature_surface_test.rs` | FT-11 |
-| `ft12_007_params_show_all_alphabetical` | `tests/integration/feature_surface_test.rs` | FT-12 |
+| `ft1_007_params_show_all_min_entries` | `tests/cli/feature_surface_test.rs` | FT-1 |
+| `ft2_007_params_single_model_full_detail` | `tests/cli/feature_surface_test.rs` | FT-2 |
+| `ft3_007_params_kind_config_filters` | `tests/cli/feature_surface_test.rs` | FT-3 |
+| `ft4_007_params_kind_env_filters` | `tests/cli/feature_surface_test.rs` | FT-4 |
+| `ft5_007_params_env_override_visible` | `tests/cli/feature_surface_test.rs` | FT-5 |
+| `ft6_007_params_env_only_param` | `tests/cli/feature_surface_test.rs` | FT-6 |
+| `ft7_007_params_json_output_structure` | `tests/cli/feature_surface_test.rs` | FT-7 |
+| `ft8_007_params_cli_only_annotation` | `tests/cli/feature_surface_test.rs` | FT-8 |
+| `ft9_007_params_unknown_key_exits_2` | `tests/cli/feature_surface_test.rs` | FT-9 |
+| `ft10_007_params_invalid_kind_exits_1` | `tests/cli/feature_surface_test.rs` | FT-10 |
+| `ft11_007_params_default_source_annotation` | `tests/cli/feature_surface_test.rs` | FT-11 |
+| `ft12_007_params_show_all_alphabetical` | `tests/cli/feature_surface_test.rs` | FT-12 |
 
 ---
 

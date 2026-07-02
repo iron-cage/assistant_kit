@@ -48,7 +48,9 @@ enabled = [
   "dep:unilang",
   "unilang/enabled",
   "dep:data_fmt",
+  "data_fmt/enabled",
   "dep:cli_fmt",
+  "cli_fmt/cli_help_template",
   "dep:claude_journal",
   "dep:serde_json",
 ]

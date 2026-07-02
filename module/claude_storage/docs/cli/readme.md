@@ -22,6 +22,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `format/` | Output format catalog for export rendering modes |
 | `env_param.md` | Environment variable catalog with precedence rules |
 | `user_story/` | User story index covering persona goals and acceptance criteria |
+| `pitfall/` | CLI implementation pitfalls and anti-patterns |
 
 ### Completion Matrix
 
@@ -43,6 +44,8 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `env_param.md` | ✅ | ✅ | ✅ | ➖ | ➖ | L3 |
 | `user_story/readme.md` | ✅ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `user_story/*.md` (5 files) | ✅ | ✅ | ✅ | ✅ | ✅ | L5 |
+| `pitfall/readme.md` | ➖ | ✅ | ✅ | ➖ | ➖ | L3 |
+| `pitfall/*.md` (3 files) | ➖ | ➖ | ✅ | ➖ | ➖ | L3 |
 **Current Level:** L5 (Test Detail Complete)
 **Design Completeness:** 100%
 **Implementation Status:** 100% (11/11 commands implemented)
@@ -58,6 +61,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 - [Formats](format/readme.md) — Export output format rendering specifications
 - [Environment Parameters](env_param.md) — Environment variables and precedence rules
 - [User Stories](user_story/readme.md) — Persona goals, acceptance criteria, and workflows
+- [Pitfalls](pitfall/readme.md) — CLI implementation pitfalls and anti-patterns
 
 ### Related Documentation
 
@@ -67,3 +71,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 - [`contract/claude_code/docs/storage/readme.md`](../../../../contract/claude_code/docs/storage/readme.md) — Storage layout (`~/.claude/projects/`)
 - `../../unilang.commands.yaml` — Machine-readable command definitions
 - [tests/docs/cli/](../../tests/docs/cli/readme.md) — test case planning (commands, params, groups)
+
+### Local Style Conventions
+
+**Doc Instance H1 Title Format:** Doc instance files in `docs/cli/` use the format `# {DocEntityType} :: {N}. {Title}` (e.g., `# User Story :: 1. Audit Session History`). The `::` and `. ` separator is a project-specific convention for typing and sequencing instances within a doc entity; it is not a heading structure violation — the H1/H3-only rule governs heading levels, not title content.

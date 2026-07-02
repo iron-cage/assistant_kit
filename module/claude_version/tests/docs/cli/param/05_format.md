@@ -1,6 +1,6 @@
 # Test: `format::`
 
-Edge case coverage for the `format::` parameter. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
+Edge case coverage for the `format::` parameter. See [param/05_format.md](../../../../docs/cli/param/05_format.md) for specification.
 
 ### Scope
 
@@ -279,4 +279,6 @@ Edge case coverage for the `format::` parameter. See [param/readme.md](../../../
 | `format_ec6_absent_defaults_to_text` | `cli_args_test.rs` |
 | `format_ec7_text_explicit_same_as_absent` | `cli_args_test.rs` |
 | `format_ec8_csv_exits_1` | `cli_args_test.rs` |
-| `format_ec20_params_format_json_array` | ⏳ `integration/format_param_test.rs` |
+| `format_ec20_params_format_json_array` | `integration/format_param_test.rs` |
+| `tc241_settings_show_json_preserves_types` | `integration/read_commands_test.rs` |
+| `ft005_9_per_cmd_validation` | `integration/catalog_surface_test.rs` |

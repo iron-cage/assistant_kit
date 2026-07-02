@@ -1,6 +1,6 @@
-# tests/integration/
+# tests/cli/
 
-Module files for integration tests. All files are included by `tests/integration.rs`
+Module files for CLI tests, organised by domain. All files are included by `tests/cli.rs`
 (the test crate entry point). Tests invoke the `claude_version` binary via
 `std::process::Command` using the `CARGO_BIN_EXE_claude_version` env macro.
 
@@ -33,3 +33,5 @@ Module files for integration tests. All files are included by `tests/integration
 | `value_param_test.rs` | EC- edge case tests for the `value::` parameter |
 | `count_param_test.rs` | EC- edge case tests for the `count::` parameter |
 | `process_isolation_test.rs` | Kill-isolation regression: guard does not send kill signals to processes |
+| `params_command_test.rs` | IT- integration tests for the `.params` command (IT-1 through IT-14) |
+| `kind_param_test.rs` | EC- and TC- tests for the `kind::` parameter and `ParamKind` type |
