@@ -95,6 +95,20 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
   {
     builder = builder.with_max_output_tokens( n );
   }
+  // --session-from: resolve source session dir (--session-dir wins when both are present).
+  // Computes scope_for(source_dir).claude_session_dir so the subprocess reads sessions from
+  // the source project's encoded storage path rather than the current working directory.
+  let session_from_dir : Option< std::path::PathBuf > = if cli.session_dir.is_none()
+  {
+    cli.session_from.as_deref().map( | src |
+      claude_storage_core::scope_for( std::path::Path::new( src ) ).claude_session_dir
+    )
+  }
+  else { None };
+  if let Some( ref src_dir ) = session_from_dir
+  {
+    builder = builder.with_session_dir( src_dir.to_string_lossy().into_owned() );
+  }
   // Fix(BUG-214): inject -c only when a prior session exists in storage
   // Root cause: unconditional -c causes claude binary to exit on first use with no session
   // Pitfall: resumption flags (-c, --continue) require state to resume; guard with existence check
@@ -105,7 +119,8 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ( ClaudeCommand, Optio
   else
   {
     session_exists(
-      cli.session_dir.as_deref().map( std::path::Path::new ),
+      cli.session_dir.as_deref().map( std::path::Path::new )
+        .or( session_from_dir.as_deref() ),
       effective_working_dir.as_deref(),
     )
   };

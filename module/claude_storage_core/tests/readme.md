@@ -15,6 +15,7 @@ session discovery for Claude Code v2.x format) with corner case tests for subage
 ```
 tests/
 ├── readme.md                              # This file — test suite organization
+├── scope_test.rs                          # Unit tests for scope_for(), git_root_for(), ClaudeScope
 ├── continuation_tests.rs                  # Integration tests for continuation detection and UUID selection
 ├── session_id_tests.rs                    # Unit tests for SessionId newtype
 ├── count_entries_bug.rs                   # Bug Reproducer (issue-016): count_entries vs stats mismatch
@@ -34,6 +35,7 @@ tests/
 
 | File | Responsibility |
 |------|----------------|
+| `scope_test.rs` | Unit tests for `scope_for()`, `git_root_for()`, and `ClaudeScope` path computation |
 | `continuation_tests.rs` | Integration tests for `check_continuation`, `most_recent_session_id`, `most_recent_session_in_dir`, and `to_storage_path_for` |
 | `session_id_tests.rs` | Unit tests for `SessionId` newtype: construction, display, clone, and `From` conversions |
 | `count_entries_bug.rs` | Reproduce and verify fix for count_entries() vs stats() mismatch |
