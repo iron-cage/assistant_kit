@@ -11,6 +11,8 @@ cmd_filter: "!binary(behavior)"
 
 # script invoked by `.test` inside the container (path relative to /workspace)
 test_script: module/claude_runner/verb/test.d/l1
+# script invoked by `.test1` inside the container (path relative to /workspace)
+test1_script: module/claude_runner/verb/test1.d/l1
 
 # script invoked by `.lint` inside the container (path relative to /workspace)
 lint_script: module/claude_runner/verb/lint.d/l1

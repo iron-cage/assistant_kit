@@ -59,8 +59,8 @@
 | 065 | [Assignee Param Redesign](065_assignee_param_redesign.md) | Rename `active::` → `assignee::`; `assignee::0` sentinel = current machine (`$USER@$HOSTNAME`); `active::` REMOVED_TOGGLE | ✅ |
 | 066 | [Dual-Source OAuth Quota Parsing](066_dual_source_quota_parsing.md) | Maintain correct per-model quota data when Anthropic API format changes by parsing both named-field and `limits`-array formats | ✅ |
 | 067 | [Trace Timestamp Prefix](067_trace_timestamps.md) | Replace `[trace]` prefix with UTC timestamp on all diagnostic trace output; enables watchdog log correlation | ✅ |
-| 068 | [Models List Command](068_models_list_command.md) | `.models` command: list available Claude models via live API or static offline catalog; `name::` filter; `format::` output | 🔲 |
-| 069 | [Model Select Command](069_model_select_command.md) | `.model.select` command: get/set/reset subprocess model preference in `~/.clr/prefs.json` for `clr run/ask/isolated/refresh` | 🔲 |
+| 068 | [Models List Command](068_models_list_command.md) | `.models` command: list available Claude models via live API or static offline catalog; `name::` filter; `format::` output | ✅ |
+| 069 | [Model Select Command](069_model_select_command.md) | `.model.select` command: get/set/reset subprocess model preference in `~/.clr/prefs.json` for `clr run/ask/isolated/refresh` | ✅ |
 
 ### Organization
 

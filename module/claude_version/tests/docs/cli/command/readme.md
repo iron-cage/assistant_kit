@@ -25,5 +25,5 @@
 | 12_version_history.md | Integration tests for `.version.history` command | ✅ |
 | 13_config.md | Integration tests for `.config` command (show-all/get/set/unset modes) | ✅ |
 | 14_params.md | Integration tests for `.params` command (show-all/single/kind-filter modes) | ✅ |
-| 15_runtime_files.md | Integration tests for `.runtime_files` command (path enumeration, HOME, exit codes) | ⏳ |
+| 15_runtime_files.md | Integration tests for `.runtime_files` command (path enumeration, HOME, exit codes) | ✅ |
 | procedure.md | Workflow for creating and updating command test specs | ✅ |

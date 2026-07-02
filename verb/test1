@@ -1,19 +1,15 @@
 #!/usr/bin/env bash
-# test1 — run a single targeted test inside the container.
+# test1 — run a single nextest filter inside the container.
 # Usage: ./verb/test1 <nextest-filter>
-#   e.g. ./verb/test1 test_name
-#        ./verb/test1 'test(my_test)'
-# Prefer over verb/test whenever a specific test name or filter is known — avoids
-# full level-3 suite overhead (all tests + clippy + doc tests).
+#   filter: nextest filter expression (e.g. 'test_name', 'test::module::')
+#   Runs only matching tests — no clippy, no doc tests.  Prefer over ./verb/test
+#   whenever a specific test name or filter is known (mandatory per rulebook.md).
 set -euo pipefail
-LAYER="${VERB_LAYER:-}"
-DIR="$(dirname "${BASH_SOURCE[0]}")/test.d"
-[[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
-if [[ $# -lt 1 || "${1:-}" == "--help" ]]; then
-  echo "usage: ./verb/test1 <nextest-filter>" >&2
-  echo "  e.g. ./verb/test1 test_name" >&2
-  echo "       ./verb/test1 'test(my_test)'" >&2
+FILTER="${1:-}"
+if [[ -z "$FILTER" ]]; then
+  echo "error: usage: ./verb/test1 <nextest-filter>" >&2
+  echo "  example: ./verb/test1 test_config_get" >&2
   exit 1
 fi
-if [[ "${1:-}" == "--dry-run" ]]; then echo "./runbox/runbox .test1 <filter>"; exit 0; fi
-exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test1 "$@"
+if [[ "$FILTER" == "--dry-run" ]]; then echo "./runbox/runbox .test1 '<filter>'"; exit 0; fi
+exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test1 "$FILTER"
