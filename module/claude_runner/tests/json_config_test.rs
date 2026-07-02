@@ -15,9 +15,12 @@ use cli_binary_test_helpers::
   make_creds_file,
   run_cli,
   run_cli_with_env,
+  run_with_path,
   stderr_str,
   stdout_str,
 };
+#[ cfg( unix ) ]
+use cli_binary_test_helpers::fake_claude_dir;
 
 // ── Local helper ─────────────────────────────────────────────────────────────
 
@@ -448,5 +451,30 @@ fn af6_missing_args_file_exit_1()
   assert!(
     !stderr_str( &out ).is_empty(),
     "stderr must contain a file-not-found error. Got empty stderr"
+  );
+}
+
+// ── JC-8b / AF-4b: JSON `false` is a no-op — subprocess spawned ─────────────
+
+/// JC-8b / AF-4b: JSON `{"dry-run": false}` is a no-op; subprocess is spawned.
+///
+/// Proves the `false`-branch contract: `false` for any boolean param in JSON must not
+/// activate dry-run or otherwise suppress subprocess invocation.  The fake claude emits
+/// a recognisable token; its presence in stdout confirms the subprocess was invoked.
+///
+/// Source: tests/docs/feature/004_json_config.md#jc-8 (false-branch)
+///         tests/docs/cli/param/075_args_file.md#af-4 (false-branch)
+#[ cfg( unix ) ]
+#[ test ]
+fn jc8b_boolean_false_is_noop_subprocess_spawned()
+{
+  let cfg            = write_json_file( r#"{"dry-run": false}"# );
+  let json_path      = cfg.path().to_str().unwrap();
+  let ( _dir, path ) = fake_claude_dir( "echo 'jc8b_invoked'" );
+  let out            = run_with_path( &[ "--args-file", json_path, "task" ], &path );
+  let stdout = stdout_str( &out );
+  assert!(
+    stdout.contains( "jc8b_invoked" ),
+    "JSON dry-run:false must not suppress subprocess — fake claude output must appear. Got:\n{stdout}"
   );
 }
