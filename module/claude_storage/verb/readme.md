@@ -14,6 +14,7 @@
 | `test` | Dispatcher: run full test suite; delegates to `test.d/` layer by `VERB_LAYER`. |
 | `test.d/` | Layer directory: `l0` (host-native), `l1` (container-internal). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
+| `install` | Install crate binaries to `~/.cargo/bin` via `cargo install`. |
 | `run` | Dispatcher: execute entry point; delegates to `run.d/` layer by `VERB_LAYER`. |
 | `run.d/` | Layer directory: `l1` (direct; default). |
 | `lint` | Dispatcher: run linter; delegates to `lint.d/` layer by `VERB_LAYER`. |

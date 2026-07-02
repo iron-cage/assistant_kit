@@ -3,8 +3,8 @@
 //! ## Purpose
 //!
 //! Verify that `scope_for()` correctly computes all 6 `CLAUDE_*` path variables
-//! under each supported override condition: default HOME layout, CLAUDE_HOME
-//! override, CLAUDE_COWORK_MEMORY_PATH_OVERRIDE, git-root anchoring, and
+//! under each supported override condition: default `HOME` layout, `CLAUDE_HOME`
+//! override, `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE`, git-root anchoring, and
 //! session-file presence/absence.
 //!
 //! ## Test Strategy
@@ -21,7 +21,7 @@
 //! Corresponds to FT-1 through FT-5 in `tests/docs/feature/005_session_path_resolution.md`.
 
 use tempfile::TempDir;
-use claude_storage_core::{ scope_for, git_root_for, encode_path };
+use claude_storage_core::{ scope_for, git_root_for, encode_path, to_storage_path_for };
 
 /// Serializes all tests that mutate process-wide env vars.
 ///
@@ -34,18 +34,18 @@ static ENV_LOCK : std::sync::Mutex<()> = std::sync::Mutex::new( () );
 // FT-1: scope_for default — uses $HOME/.claude when CLAUDE_HOME unset
 // ============================================================================
 
-/// Test scope_for default CLAUDE_HOME computation.
+/// Test `scope_for` default `CLAUDE_HOME` computation.
 ///
 /// ## Purpose
-/// Verify that when CLAUDE_HOME is not set, claude_home is derived from
-/// $HOME + "/.claude" and all 6 path variables reflect that base.
+/// Verify that when `CLAUDE_HOME` is not set, `claude_home` is derived from
+/// `$HOME` + `"/.claude"` and all 6 path variables reflect that base.
 ///
 /// ## Coverage
-/// AC-1: scope_for returns correct values when CLAUDE_HOME is unset.
+/// AC-1: `scope_for` returns correct values when `CLAUDE_HOME` is unset.
 ///
 /// ## Validation Strategy
-/// Override HOME to a known temp dir; assert claude_home ends with ".claude";
-/// assert all other paths are descendants of claude_home.
+/// Override `HOME` to a known temp dir; assert `claude_home` ends with `".claude"`;
+/// assert all other paths are descendants of `claude_home`.
 ///
 /// ## Related Requirements
 /// FT-1 — `tests/docs/feature/005_session_path_resolution.md`
@@ -87,19 +87,19 @@ fn scope_for_default_claude_home()
 // FT-2: scope_for respects CLAUDE_HOME env var override
 // ============================================================================
 
-/// Test scope_for CLAUDE_HOME override — no .claude suffix appended.
+/// Test `scope_for` `CLAUDE_HOME` override — no `.claude` suffix appended.
 ///
 /// ## Purpose
-/// Verify that when CLAUDE_HOME=/custom, claude_home equals /custom exactly —
-/// the double-.claude defect (appending ".claude" to an already-resolved path)
+/// Verify that when `CLAUDE_HOME=/custom`, `claude_home` equals `/custom` exactly —
+/// the double-`.claude` defect (appending `.claude` to an already-resolved path)
 /// must NOT occur.
 ///
 /// ## Coverage
-/// AC-2: scope_for respects CLAUDE_HOME; double-.claude defect absent.
+/// AC-2: `scope_for` respects `CLAUDE_HOME`; double-`.claude` defect absent.
 ///
 /// ## Validation Strategy
-/// Set CLAUDE_HOME to a temp dir; assert claude_home equals that dir exactly
-/// (no ".claude" suffix); assert all 6 paths reflect the custom home.
+/// Set `CLAUDE_HOME` to a temp dir; assert `claude_home` equals that dir exactly
+/// (no `".claude"` suffix); assert all 6 paths reflect the custom home.
 ///
 /// ## Related Requirements
 /// FT-2 — `tests/docs/feature/005_session_path_resolution.md`
@@ -130,7 +130,7 @@ fn scope_for_claude_home_override_no_double_suffix()
     "all paths must be under the custom CLAUDE_HOME"
   );
   assert!(
-    scope.claude_session_dir.starts_with( &claude_home_dir.path() ),
+    scope.claude_session_dir.starts_with( claude_home_dir.path() ),
     "claude_session_dir must start with CLAUDE_HOME"
   );
 }
@@ -139,18 +139,18 @@ fn scope_for_claude_home_override_no_double_suffix()
 // FT-3: scope_for respects CLAUDE_COWORK_MEMORY_PATH_OVERRIDE
 // ============================================================================
 
-/// Test scope_for memory path override via CLAUDE_COWORK_MEMORY_PATH_OVERRIDE.
+/// Test `scope_for` memory path override via `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE`.
 ///
 /// ## Purpose
-/// Verify that when CLAUDE_COWORK_MEMORY_PATH_OVERRIDE is set, claude_memory_dir
-/// equals the override value and claude_memory_file is override/MEMORY.md, while
-/// claude_session_dir continues to use normal derivation.
+/// Verify that when `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE` is set, `claude_memory_dir`
+/// equals the override value and `claude_memory_file` is `override/MEMORY.md`, while
+/// `claude_session_dir` continues to use normal derivation.
 ///
 /// ## Coverage
-/// AC-3: CLAUDE_COWORK_MEMORY_PATH_OVERRIDE overrides only memory fields.
+/// AC-3: `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE` overrides only memory fields.
 ///
 /// ## Validation Strategy
-/// Set override; assert memory_dir equals override path; assert session_dir
+/// Set override; assert `memory_dir` equals override path; assert `session_dir`
 /// is NOT affected by the override (still uses normal derivation).
 ///
 /// ## Related Requirements
@@ -194,18 +194,18 @@ fn scope_for_memory_path_override()
 // FT-4: scope_for anchors memory dir to git root, not subdirectory
 // ============================================================================
 
-/// Test scope_for git-root anchoring for claude_memory_dir.
+/// Test `scope_for` git-root anchoring for `claude_memory_dir`.
 ///
 /// ## Purpose
-/// Verify that when the target dir is a subdirectory of a git repo, claude_memory_dir
+/// Verify that when the target dir is a subdirectory of a git repo, `claude_memory_dir`
 /// is anchored to the git root (not the subdirectory).
 ///
 /// ## Coverage
-/// AC-4: scope_for("/project/src") with .git at /project → memory_dir uses /project.
+/// AC-4: `scope_for("/project/src")` with `.git` at `/project` → `memory_dir` uses `/project`.
 ///
 /// ## Validation Strategy
-/// Create a temp git repo (dir with .git entry); call scope_for on a subdirectory;
-/// assert claude_memory_dir contains the encoded git root, not the subdirectory.
+/// Create a temp git repo (dir with `.git` entry); call `scope_for` on a subdirectory;
+/// assert `claude_memory_dir` contains the encoded git root, not the subdirectory.
 ///
 /// ## Related Requirements
 /// FT-4 — `tests/docs/feature/005_session_path_resolution.md`
@@ -249,17 +249,17 @@ fn scope_for_memory_anchored_to_git_root()
 // FT-5: scope_for returns None for session file when dir has no sessions
 // ============================================================================
 
-/// Test scope_for returns None for claude_session_file when no session exists.
+/// Test `scope_for` returns `None` for `claude_session_file` when no session exists.
 ///
 /// ## Purpose
-/// Verify that claude_session_file is None when claude_session_dir does not exist
-/// on disk (or exists but has no qualifying .jsonl files).
+/// Verify that `claude_session_file` is `None` when `claude_session_dir` does not exist
+/// on disk (or exists but has no qualifying `.jsonl` files).
 ///
 /// ## Coverage
-/// AC-5: scope_for(dir) returns claude_session_file = None when storage is empty.
+/// AC-5: `scope_for(dir)` returns `claude_session_file = None` when storage is empty.
 ///
 /// ## Validation Strategy
-/// Call scope_for on a dir that has no corresponding Claude storage; assert None.
+/// Call `scope_for` on a dir that has no corresponding Claude storage; assert `None`.
 ///
 /// ## Related Requirements
 /// FT-5 — `tests/docs/feature/005_session_path_resolution.md`
@@ -287,18 +287,18 @@ fn scope_for_none_when_no_session_dir()
 // FT-6 (unit): scope_for returns Some when a session file exists
 // ============================================================================
 
-/// Test scope_for returns Some(path) for claude_session_file when a session exists.
+/// Test `scope_for` returns `Some(path)` for `claude_session_file` when a session exists.
 ///
 /// ## Purpose
-/// Verify that when a qualifying .jsonl file exists in claude_session_dir, scope_for
-/// returns Some(PathBuf) pointing to that file.
+/// Verify that when a qualifying `.jsonl` file exists in `claude_session_dir`, `scope_for`
+/// returns `Some(PathBuf)` pointing to that file.
 ///
 /// ## Coverage
-/// Complement to FT-5: confirms Some path when storage is populated.
+/// Complement to FT-5: confirms `Some` path when storage is populated.
 ///
 /// ## Validation Strategy
-/// Create claude_session_dir with a .jsonl file; call scope_for; assert Some(path)
-/// ending with .jsonl.
+/// Create `claude_session_dir` with a `.jsonl` file; call `scope_for`; assert `Some(path)`
+/// ending with `.jsonl`.
 ///
 /// ## Related Requirements
 /// AC-5 (positive case) — `docs/feature/005_session_path_resolution.md`
@@ -324,7 +324,7 @@ fn scope_for_some_when_session_file_exists()
 
   let got = scope.claude_session_file.expect( "claude_session_file must be Some when .jsonl exists" );
   assert!(
-    got.display().to_string().ends_with( ".jsonl" ),
+    got.extension().is_some_and( | e | e.eq_ignore_ascii_case( "jsonl" ) ),
     "claude_session_file must point to a .jsonl file, got: {}",
     got.display()
   );
@@ -338,16 +338,16 @@ fn scope_for_some_when_session_file_exists()
 // git_root_for: unit tests
 // ============================================================================
 
-/// Test git_root_for returns the repo root when .git exists.
+/// Test `git_root_for` returns the repo root when `.git` exists.
 ///
 /// ## Purpose
-/// Verify that git_root_for correctly identifies the git root by walking up.
+/// Verify that `git_root_for` correctly identifies the git root by walking up.
 ///
 /// ## Coverage
-/// git_root_for("/repo/src") returns "/repo" when .git exists at "/repo".
+/// `git_root_for("/repo/src")` returns `"/repo"` when `.git` exists at `"/repo"`.
 ///
 /// ## Validation Strategy
-/// Create temp dir with .git subdir; call git_root_for on a subdirectory;
+/// Create temp dir with `.git` subdir; call `git_root_for` on a subdirectory;
 /// assert returned path equals repo root.
 ///
 /// ## Related Requirements
@@ -365,17 +365,17 @@ fn git_root_for_finds_parent_git_dir()
   assert_eq!( root, repo.path(), "git_root_for must return the repo root" );
 }
 
-/// Test git_root_for falls back to dir when no .git found.
+/// Test `git_root_for` falls back to dir when no `.git` found.
 ///
 /// ## Purpose
-/// Verify that when no .git is found anywhere up the tree, git_root_for returns
-/// the input dir itself (not None or a panic).
+/// Verify that when no `.git` is found anywhere up the tree, `git_root_for` returns
+/// the input dir itself (not `None` or a panic).
 ///
 /// ## Coverage
-/// Non-git directory: git_root_for(dir) == dir.
+/// Non-git directory: `git_root_for(dir) == dir`.
 ///
 /// ## Validation Strategy
-/// Create a temp dir with no .git entry anywhere; call git_root_for; assert dir returned.
+/// Create a temp dir with no `.git` entry anywhere; call `git_root_for`; assert dir returned.
 ///
 /// ## Related Requirements
 /// `docs/algorithm/002_git_root_detection.md` fallback contract.
@@ -398,8 +398,62 @@ fn git_root_for_falls_back_to_dir_when_no_git()
   // when outside, returns deep_dir itself (equal).  Both satisfy starts_with.
   assert!(
     deep_dir.starts_with( &root ),
-    "git_root_for must return the input dir or an ancestor; got {:?} for {:?}",
-    root,
-    deep_dir
+    "git_root_for must return the input dir or an ancestor; got {root:?} for {deep_dir:?}"
+  );
+}
+
+// ============================================================================
+// to_storage_path_for: CLAUDE_HOME override (Fix TSK-338)
+// ============================================================================
+
+/// Test that `to_storage_path_for` honours `CLAUDE_HOME` when set.
+///
+/// ## Purpose
+/// Verify that when `CLAUDE_HOME` is set, `to_storage_path_for()` uses it directly
+/// as the base path — no `.claude` suffix appended — matching `scope_for()` semantics.
+/// This is the TSK-338 fix: the two functions must agree on the storage base whenever
+/// `CLAUDE_HOME` is configured.
+///
+/// ## Coverage
+/// Fix(TSK-338): `to_storage_path_for` `CLAUDE_HOME` parity with `scope_for`.
+///
+/// ## Validation Strategy
+/// Set `CLAUDE_HOME` to a temp dir; call `to_storage_path_for`; assert the result is
+/// under `CLAUDE_HOME` directly (not under `CLAUDE_HOME/.claude`).
+///
+/// ## Related Requirements
+/// `docs/variable/001_claude_home.md`; `docs/feature/005_session_path_resolution.md`
+#[ test ]
+fn to_storage_path_for_honours_claude_home()
+{
+  let _guard       = ENV_LOCK.lock().unwrap();
+  let claude_home  = TempDir::new().unwrap();
+  let proj_dir     = TempDir::new().unwrap();
+
+  std::env::set_var( "CLAUDE_HOME", claude_home.path() );
+  std::env::remove_var( "HOME" ); // ensure HOME fallback is not used
+
+  let storage = to_storage_path_for( proj_dir.path() )
+    .expect( "to_storage_path_for must return Some when CLAUDE_HOME is set" );
+
+  // Must start with CLAUDE_HOME directly — no .claude appended (double-suffix defect).
+  assert!(
+    storage.starts_with( claude_home.path() ),
+    "storage must be under CLAUDE_HOME. Got: {}",
+    storage.display()
+  );
+  // Must NOT be under CLAUDE_HOME/.claude.
+  assert!(
+    !storage.starts_with( claude_home.path().join( ".claude" ) ),
+    "to_storage_path_for must NOT append .claude to CLAUDE_HOME. Got: {}",
+    storage.display()
+  );
+  // Must contain 'projects' under CLAUDE_HOME.
+  let expected_prefix = claude_home.path().join( "projects" );
+  assert!(
+    storage.starts_with( &expected_prefix ),
+    "storage must be under CLAUDE_HOME/projects. Expected prefix: {}. Got: {}",
+    expected_prefix.display(),
+    storage.display()
   );
 }
