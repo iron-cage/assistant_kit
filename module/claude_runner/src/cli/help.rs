@@ -64,7 +64,7 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--subdir <NAME>".into(),                 desc : "Named subdirectory appended to --dir as /-NAME; . = identity".into() },
       OptionEntry { name : "--message <MSG>".into(),                  desc : "Message to send (alternative to positional argument)".into() },
       OptionEntry { name : "--session-dir <PATH>".into(),            desc : "Session storage directory".into() },
-      OptionEntry { name : "--session-from <DIR>, --from <DIR>".into(), desc : "Cross-load most-recent session from source directory [env: CLR_SESSION_FROM]".into() },
+      OptionEntry { name : "--session-from <DIR>".into(),              desc : "Cross-load most-recent session from source directory (alias: --from) [env: CLR_SESSION_FROM]".into() },
       OptionEntry { name : "--dry-run".into(),                       desc : "Print command without executing".into() },
       OptionEntry { name : "--trace".into(),                         desc : "Print command to stderr then execute (like set -x)".into() },
       OptionEntry { name : "--file <PATH>".into(),                   desc : "Pipe file content to subprocess stdin".into() },

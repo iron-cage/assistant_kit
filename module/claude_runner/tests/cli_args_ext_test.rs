@@ -293,17 +293,17 @@ fn ec02_help_contains_claude_code_options_section()
   );
 }
 
-// EC-03: help has eight usage forms (one per command)
+// EC-03: help has nine usage forms (one per command, including scope)
 #[ test ]
-fn ec03_help_has_eight_usage_forms()
+fn ec03_help_has_nine_usage_forms()
 {
   let out = run_cli( &[ "--help" ] );
   assert!( out.status.success() );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let count = stdout.lines().filter( | l | l.starts_with( "  clr " ) ).count();
   assert_eq!(
-    count, 8,
-    "help must have 8 usage lines starting with '  clr '. Got {count}:\n{stdout}"
+    count, 9,
+    "help must have 9 usage lines starting with '  clr '. Got {count}:\n{stdout}"
   );
 }
 

@@ -394,7 +394,7 @@ fn ec6_clr_auth_delay_invalid_ignored()
   );
 }
 
-// ── MRE BUG-315: auth error exits retry loop immediately ──────────────────────
+// ── MRE BUG-325: auth retry fires on configured budget ────────────────────────
 
 /// MRE BUG-325: `--retry-on-auth` fires configured retry count for persistent auth failures.
 ///
