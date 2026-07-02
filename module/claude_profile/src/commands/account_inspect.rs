@@ -113,7 +113,8 @@ fn inspect_call_roles(
 ///
 /// Calls endpoints 002 (account), 005 (roles), and 001 (usage) independently.
 /// Falls back to local `{name}.json` snapshot per-endpoint on failure.
-/// Quota (endpoint 001) has no snapshot fallback — omitted when unavailable.
+/// Quota (endpoint 001) falls back to the local quota cache on transient errors (e.g. 429);
+/// the section is omitted only when both the live call and the cache are unavailable.
 ///
 /// # Errors
 ///
@@ -179,7 +180,26 @@ pub fn account_inspect_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let tok        = live_token.as_deref().unwrap_or( "" );
   let ep_account = inspect_call_account( tok, trace, &name );
   let ep_roles   = inspect_call_roles( tok, trace, &name );
-  let ep_usage   = inspect_call_usage( tok, trace, &name );
+  let ep_usage   =
+  {
+    let live = inspect_call_usage( tok, trace, &name );
+    // Cache fallback for transient errors (429, network failure, etc.).
+    // Auth failures (401, 403) indicate the token is bad — don't serve stale data.
+    if live.is_err() && !live.as_ref().unwrap_err().to_string().contains( "HTTP 401" )
+                     && !live.as_ref().unwrap_err().to_string().contains( "HTTP 403" )
+    {
+      let now_secs = std::time::SystemTime::now()
+        .duration_since( std::time::UNIX_EPOCH )
+        .map_or( 0, |d| d.as_secs() );
+      if let Some( ( data, age ) ) = crate::usage::read_cached_quota( &credential_store, &name, now_secs )
+      {
+        if trace { eprintln!( "{}account.inspect  {name}  usage cache fallback ({age}s old)", trace_ts() ) }
+        Ok( data )
+      }
+      else { live }
+    }
+    else { live }
+  };
 
   let meta_json = std::fs::read_to_string( credential_store.join( format!( "{name}.json" ) ) )
     .unwrap_or_default();
