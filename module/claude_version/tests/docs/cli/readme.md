@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clv commands, parameters, types, and parameter groups.
 - **Responsibility**: Index of per-command, per-parameter, per-type, and per-group test case planning files.
-- **In Scope**: All 14 clv commands, all 13 parameters, all 8 types, all 4 parameter groups, all 7 user stories, and all 2 output formats.
+- **In Scope**: All 15 clv commands, all 13 parameters, all 8 types, all 4 parameter groups, all 7 user stories, and all 2 output formats.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 6-tier testing organization for `claude_version` CLI, providing distinct audience focus at each level.
@@ -56,6 +56,7 @@
 - [`.version.history`](command/12_version_history.md)
 - [`.config`](command/13_config.md)
 - [`.params`](command/14_params.md)
+- [`.runtime_files`](command/15_runtime_files.md)
 
 ### Parameters
 - [`version::`](param/01_version.md)

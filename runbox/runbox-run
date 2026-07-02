@@ -36,6 +36,7 @@ TEST_USER="$(cfg test_user)"                      # forwarded as --build-arg; no
 CMD_SCOPE="$(cfg cmd_scope)"                      # crate filter for nextest run and cargo chef cook
 CMD_FILTER="$(cfg cmd_filter)"                    # forwarded as --build-arg; nextest filter baked into offline CMD
 TEST_SCRIPT="$(cfg test_script)"                  # path (relative to /workspace) exec'd by cmd_test
+TEST1_SCRIPT="$(cfg test1_script)"               # path (relative to /workspace) exec'd by cmd_test1
 LINT_SCRIPT="$(cfg lint_script)"                  # path (relative to /workspace) exec'd by cmd_lint
 RUN_SCRIPT="$(cfg run_script)"                    # path (relative to /workspace) exec'd by cmd_run
 BASE_IMAGE="$(cfg_or base_image rust:slim)"             # FROM image for chef and test stages
@@ -357,6 +358,60 @@ cmd_test()
     "$WORKSPACE_DIR/$TEST_SCRIPT"
 }
 
+cmd_test1()
+{
+  local FILTER="${1:-}"
+  if [[ -z "$FILTER" ]]; then
+    echo "error: .test1 requires a nextest filter argument" >&2
+    echo "Usage: ./runbox/runbox .test1 '<nextest filter>'" >&2
+    exit 1
+  fi
+  if [[ -n "$TEST1_SCRIPT" ]] && [[ ! -f "$WORKSPACE_ROOT/$TEST1_SCRIPT" ]]
+  then
+    echo "error: test1_script '$TEST1_SCRIPT' not found at $WORKSPACE_ROOT/$TEST1_SCRIPT" >&2
+    echo "Check test1_script path in $(basename "$CONFIG")" >&2
+    exit 1
+  fi
+  local bin_args=() mount_args=()
+  _plugin_test_args
+  _ensure_image
+  _ensure_build_cache
+  _ensure_plugin_targets
+  echo "▶ $IMAGE ($CONTAINER_CMD) [filter: $FILTER]"
+  local userns_arg=()
+  [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
+  # Fix(BUG-001): Pre-create plugin_mount target directories inside the host workspace.
+  # See cmd_test() for full rationale.
+  local i
+  for (( i=0; i<${#mount_args[@]}; i++ ))
+  do
+    if [[ "${mount_args[$i]}" == "-v" ]] && [[ $((i+1)) -lt ${#mount_args[@]} ]]
+    then
+      local container_path
+      container_path="$( cut -d: -f2 <<< "${mount_args[$((i+1))]}" )"
+      if [[ "$container_path" == "$WORKSPACE_DIR/"* ]]
+      then
+        mkdir -p "$WORKSPACE_ROOT/${container_path#"$WORKSPACE_DIR/"}"
+      fi
+    fi
+  done
+  # Fix(BUG-003): Pre-generate Cargo.lock on host so :ro workspace mount does not block
+  # cargo metadata inside the container. See cmd_test() for full rationale.
+  cargo metadata --manifest-path "$WORKSPACE_ROOT/Cargo.toml" \
+    --format-version 1 > /dev/null
+  "$CONTAINER_CMD" run --rm \
+    "${userns_arg[@]}" \
+    --user "$(id -u):$(id -g)" \
+    -e VERB_LAYER=l1 \
+    -e NEXTEST_FILTER="$FILTER" \
+    "${mount_args[@]}" \
+    -v "$WORKSPACE_ROOT:$WORKSPACE_DIR:ro" \
+    -v "${IMAGE}_${CACHE_DIR}:$WORKSPACE_DIR/$CACHE_DIR" \
+    "${bin_args[@]}" \
+    "$IMAGE" \
+    "$WORKSPACE_DIR/$TEST1_SCRIPT"
+}
+
 cmd_test_offline()
 {
   _ensure_image
@@ -472,6 +527,7 @@ cmd_help()
   echo ""
   echo "Testing:"
   echo "  .test           Run all tests${plugin_hint}"
+  echo "  .test1 <filter> Run matching tests only (nextest filter, no clippy/doc overhead)"
   echo "  .test.offline   Run offline tests only (no external data needed)"
   echo "  .lint           Run linter (requires lint_script in runbox.yml)"
   echo "  .list           List all test names without running"
@@ -490,6 +546,7 @@ case "$COMMAND" in
   .build)        cmd_build ;;
   .run)          cmd_run ;;
   .test)         cmd_test ;;
+  .test1)        cmd_test1 "${@:3}" ;;
   .test.offline) cmd_test_offline ;;
   .lint)         cmd_lint ;;
   .list)         cmd_list ;;

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# test1 — run a single nextest filter inside the container.
+# Usage: ./verb/test1 <nextest-filter>
+#   filter: nextest filter expression (e.g. 'test_name', 'test::module::')
+#   Runs only matching tests — no clippy, no doc tests.  Prefer over ./verb/test
+#   whenever a specific test name or filter is known (mandatory per rulebook.md).
+set -euo pipefail
+FILTER="${1:-}"
+if [[ -z "$FILTER" ]]; then
+  echo "error: usage: ./verb/test1 <nextest-filter>" >&2
+  echo "  example: ./verb/test1 test_config_get" >&2
+  exit 1
+fi
+if [[ "$FILTER" == "--dry-run" ]]; then echo "./runbox/runbox .test1 '<filter>'"; exit 0; fi
+exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test1 "$FILTER"
