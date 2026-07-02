@@ -77,7 +77,7 @@ clr isolated --creds /path/to/creds.json
 The isolated subprocess has no access to the caller's real `$HOME` — no `~/.claude/settings.json`, no previous conversation state. A minimal `~/.claude/CLAUDE.md` is written to the temp HOME before spawn instructing the subprocess to execute immediately without asking clarifying questions or requesting confirmation.
 
 Subprocess injected defaults (see [`invariant/005_isolated_subprocess_defaults.md`](../../invariant/005_isolated_subprocess_defaults.md)):
-- `--model "opus"` alias (`ISOLATED_DEFAULT_MODEL` — maximum capability for real tasks)
+- `--model "claude-opus-4-6"` (`ISOLATED_DEFAULT_MODEL` — maximum capability for real tasks)
 - `--effort max` (maximum reasoning effort)
 - `--no-session-persistence` (temp HOME is discarded after every run; session writes are waste)
 - `--dangerously-skip-permissions` — injected when `[MESSAGE]` is present; omitted in interactive mode (no message)

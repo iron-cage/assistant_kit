@@ -21,11 +21,11 @@ use core::fmt;
 
 /// Short alias passed as `--model` to the Claude binary for real user tasks.
 ///
-/// The `claude` binary resolves `"opus"` to the latest available Opus model at
-/// runtime — no code change needed when a new Opus generation is released.
-/// See `contract/claude_code/docs/model/readme.md` for the current model catalog
-/// and `012_workspace_defaults.md` for update policy.
-pub const ISOLATED_DEFAULT_MODEL : &str = "opus";
+/// Full model identifier passed as `--model` for isolated subprocess invocations.
+///
+/// Pinned to the explicit `claude-opus-4-6` model ID so callers see exactly
+/// which model is being used.  Update this constant when the target model changes.
+pub const ISOLATED_DEFAULT_MODEL : &str = "claude-opus-4-6";
 
 /// CLAUDE.md content written to the isolated temp HOME before subprocess spawn.
 ///
@@ -42,12 +42,12 @@ Execute the given task immediately and exit.\n\n\
 - Output only the direct result of the task; no preamble, no summary.\n\
 - If the input is a single character or whitespace only, reply with a single period.\n";
 
-/// Short alias passed as `--model` for OAuth credential-refresh pings (trivial `"."` prompt).
+/// Full model identifier passed as `--model` for OAuth credential-refresh pings.
 ///
-/// The `claude` binary resolves `"sonnet"` to the latest Sonnet model at runtime.
-/// Sonnet is fast and quota-efficient for no-op refresh requests.
-/// See `contract/claude_code/docs/model/012_workspace_defaults.md` for update policy.
-pub const REFRESH_DEFAULT_MODEL : &str = "sonnet";
+/// Pinned to the explicit `claude-sonnet-4-6` model ID.  Sonnet is fast and
+/// quota-efficient for the trivial `"."` no-op refresh prompt.
+/// Update this constant when the target model changes.
+pub const REFRESH_DEFAULT_MODEL : &str = "claude-sonnet-4-6";
 
 /// Claude model selection for isolated subprocess invocations.
 ///

@@ -13,7 +13,7 @@
 
 | Behavior | isolated | refresh | Rationale |
 |----------|----------|---------|-----------|
-| Model | `"opus"` alias (`ISOLATED_DEFAULT_MODEL`) | `"sonnet"` alias (`REFRESH_DEFAULT_MODEL`) | Isolated runs real user tasks requiring maximum capability; refresh executes a trivial `"."` ping to trigger OAuth token exchange only |
+| Model | `"claude-opus-4-6"` (`ISOLATED_DEFAULT_MODEL`) | `"claude-sonnet-4-6"` (`REFRESH_DEFAULT_MODEL`) | Isolated runs real user tasks requiring maximum capability; refresh executes a trivial `"."` ping to trigger OAuth token exchange only |
 | `--effort` | `max` (injected) | `low` (injected) | Real tasks need maximum reasoning; credential ping needs minimal reasoning |
 | `--dangerously-skip-permissions` | ON when message present | not injected | Isolated tasks invoke tools; without this flag, every tool call blocks on an interactive permission prompt |
 | `--no-session-persistence` | always injected | always injected | Temp HOME is unconditionally discarded after run; writing session files to it is pure I/O waste |
@@ -56,7 +56,7 @@ clr isolated "what is 2+2?" -- --no-skip-permissions
 - Chrome (refresh only): prepended as `["--no-chrome"]` for refresh before `--print` and message
 
 **In `module/claude_runner_core/src/isolated.rs::run_isolated()`:**
-- Model: prepended via `IsolatedModel::Default` → `ISOLATED_DEFAULT_MODEL = "opus"` alias for isolated; `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` for refresh where `REFRESH_DEFAULT_MODEL = "sonnet"` alias
+- Model: prepended via `IsolatedModel::Default` → `ISOLATED_DEFAULT_MODEL = "claude-opus-4-6"` for isolated; `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` for refresh where `REFRESH_DEFAULT_MODEL = "claude-sonnet-4-6"`
 - `CLAUDE_CODE_AUTO_COMPACT_WINDOW`: set to `200000` in subprocess env via `ClaudeCommand::new()` → `compact_window: Some(200_000)`; suppressed by `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` (same as all 4 running commands)
 - CLAUDE.md: written to `claude_dir/CLAUDE.md` before subprocess spawn
 - Timeout=0: deadline is skipped when `timeout_secs == 0` (no watchdog)
@@ -69,7 +69,7 @@ If any default is removed or reverted:
 - Refresh sets up browser context for a pure HTTP operation (chrome suppression removed)
 - Subprocess asks clarifying questions or prompts for confirmation, blocking permanently (CLAUDE.md removed)
 - `--timeout 0` kills subprocess immediately, making unlimited timeout impossible (timeout fix reverted)
-- Isolated user tasks run on `"sonnet"` instead of `"opus"` alias (model reverted)
+- Isolated user tasks run on `"sonnet"`/`"claude-sonnet-4-6"` instead of `"claude-opus-4-6"` (model reverted)
 
 ### Related Docs
 

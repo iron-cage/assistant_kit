@@ -25,7 +25,7 @@ pub( super ) fn env_str( var : &str ) -> Option< String >
 /// otherwise `CLR_ARGS_FILE` provides the path.  Returns `None` when neither is set.
 pub( super ) fn resolve_args_file_path( cli_path : Option< &str > ) -> Option< String >
 {
-  cli_path.map( | p | p.to_string() ).or_else( || env_str( "CLR_ARGS_FILE" ) )
+  cli_path.map( ToString::to_string ).or_else( || env_str( "CLR_ARGS_FILE" ) )
 }
 
 /// Detect and read a JSON config object piped to stdin.
