@@ -108,7 +108,7 @@ fn ft01_missing_access_token_short_error()
 ///
 /// Uses `FAR_FUTURE_MS` (not `PAST_MS`) so the locally-valid expiry lets the code
 /// reach the live API call. Fix(BUG-233) skips the API for locally-expired tokens
-/// (guaranteed 401 path) and attempts OAuth refresh instead — PAST_MS would hit
+/// (guaranteed 401 path) and attempts OAuth refresh instead — `PAST_MS` would hit
 /// the refresh path and display "(refresh token expired)" rather than "auth expired (401)".
 fn write_account_with_invalid_token( home : &std::path::Path, name : &str, token : &str )
 {
@@ -125,11 +125,11 @@ fn write_account_with_invalid_token( home : &std::path::Path, name : &str, token
 /// `auth expired (401)` in the quota column, NOT the verbose
 /// `HTTP transport error: HTTP 401` string. Exit 0.
 ///
-/// Root cause: Fix(BUG-233) now skips the API for locally-expired tokens (PAST_MS)
-///   and routes to the OAuth refresh path instead; a PAST_MS token no longer
-///   triggers a 401 from the server. FAR_FUTURE_MS keeps the token locally valid
+/// Root cause: Fix(BUG-233) now skips the API for locally-expired tokens (`PAST_MS`)
+///   and routes to the OAuth refresh path instead; a `PAST_MS` token no longer
+///   triggers a 401 from the server. `FAR_FUTURE_MS` keeps the token locally valid
 ///   so the live API call fires and returns 401.
-/// Pitfall: using PAST_MS here would display "(refresh token expired)" instead of
+/// Pitfall: using `PAST_MS` here would display "(refresh token expired)" instead of
 ///   "auth expired (401)" because the refresh path fires before any API call.
 ///
 /// Requires network access — the fake token triggers a real API 401 response.

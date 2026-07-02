@@ -211,7 +211,9 @@ pub fn run_isolated
 /// `run_isolated_ext()` to override `IsolatedModel::Default` without requiring
 /// the caller to read prefs directly.
 #[ cfg( feature = "enabled" ) ]
-fn read_subprocess_model_pref() -> Option< String >
+#[ must_use ]
+#[ inline ]
+pub fn read_subprocess_model_pref() -> Option< String >
 {
   let home      = std::env::var( "HOME" ).ok()?;
   let prefs     = std::path::Path::new( &home ).join( ".clr" ).join( "prefs.json" );

@@ -630,7 +630,11 @@ struct QuotaSnapshot
 ///
 /// On first call one thread performs the live fetch; all parallel callers block
 /// until it completes and then share the cached result.  Returns `None` on
-/// network failure, HTTP 429, or absent live token.
+/// HTTP 401/403 (auth failure) or absent live token.
+///
+/// Transient errors (429, network failure) fall back to the HOST credential store
+/// cache via `host_quota_snapshot_from_cache()` — so tests proceed even when the
+/// active token is currently rate-limited.
 ///
 /// The snapshot pre-populates the per-account quota cache in `write_account_with_token`
 /// so `clp .usage` hits fetch.rs's 120-second cache-first guard and skips the live
@@ -641,14 +645,60 @@ fn live_quota_snapshot() -> Option< &'static QuotaSnapshot >
   SNAPSHOT.get_or_init( ||
   {
     let token = live_active_token()?;
-    let data  = claude_quota::fetch_oauth_usage( &token ).ok()?;
-    Some( QuotaSnapshot
+    match claude_quota::fetch_oauth_usage( &token )
     {
-      five_hour        : data.five_hour.map( |p| ( p.utilization, p.resets_at ) ),
-      seven_day        : data.seven_day.map( |p| ( p.utilization, p.resets_at ) ),
-      seven_day_sonnet : data.seven_day_sonnet.map( |p| ( p.utilization, p.resets_at ) ),
-    } )
+      Ok( data ) => Some( QuotaSnapshot
+      {
+        five_hour        : data.five_hour.map( |p| ( p.utilization, p.resets_at ) ),
+        seven_day        : data.seven_day.map( |p| ( p.utilization, p.resets_at ) ),
+        seven_day_sonnet : data.seven_day_sonnet.map( |p| ( p.utilization, p.resets_at ) ),
+      } ),
+      Err( e ) =>
+      {
+        let msg = e.to_string();
+        // Auth failures mean the token is bad — no point reading stale cache.
+        if msg.contains( "HTTP 401" ) || msg.contains( "HTTP 403" ) { return None; }
+        // Transient error (429, network) — read from HOST credential store cache.
+        host_quota_snapshot_from_cache()
+      }
+    }
   } ).as_ref()
+}
+
+/// Read a `QuotaSnapshot` from the HOST credential store cache.
+///
+/// Used as a fallback when the live `/api/oauth/usage` call fails with a
+/// transient error (e.g. 429). Reads the active account's `.json` metadata
+/// from the real `PersistPaths` credential store and parses the `cache`
+/// section written by `account::write_quota_cache`.
+///
+/// Returns `None` if the credential store, active marker, metadata file,
+/// or cache section is absent or the cache status is not `"ok"`.
+fn host_quota_snapshot_from_cache() -> Option< QuotaSnapshot >
+{
+  let persist          = claude_profile::PersistPaths::new().ok()?;
+  let credential_store = persist.credential_store();
+  let marker           = credential_store.join( claude_profile::account::active_marker_filename() );
+  let raw_name         = std::fs::read_to_string( &marker ).ok()?;
+  let name             = raw_name.trim();
+  if name.is_empty() { return None; }
+  let meta_str = std::fs::read_to_string( credential_store.join( format!( "{name}.json" ) ) ).ok()?;
+  let val      : serde_json::Value = serde_json::from_str( &meta_str ).ok()?;
+  let cache    = val.get( "cache" )?;
+  if cache.get( "status" ).and_then( |v| v.as_str() ) != Some( "ok" ) { return None; }
+  let parse_period = | key : &str | -> Option< ( f64, Option< String > ) >
+  {
+    let p      = cache.get( key )?;
+    let util   = p.get( "left_pct" )?.as_f64()?;
+    let resets = p.get( "resets_at" ).and_then( |v| v.as_str() ).map( std::string::ToString::to_string );
+    Some( ( util, resets ) )
+  };
+  Some( QuotaSnapshot
+  {
+    five_hour        : parse_period( "five_hour" ),
+    seven_day        : parse_period( "seven_day" ),
+    seven_day_sonnet : parse_period( "seven_day_sonnet" ),
+  } )
 }
 
 /// Assert that the live Anthropic API is reachable before running a `lim_it` test.
