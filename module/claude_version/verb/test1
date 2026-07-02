@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# test1 — targeted test run; runs a single nextest filter expression inside the container.
+#
+# Usage: ./verb/test1 <nextest-filter>
+#   nextest-filter — test name substring or full nextest -E expression
+#
+# Examples:
+#   ./verb/test1 tc358_version_install_idempotent_stores_preference
+#   ./verb/test1 "test(tc358)"
+#
+# Prefer this over ./verb/test when a specific test name or filter is known.
+# ./verb/test  — full suite: all tests + doc tests + clippy.
+# ./verb/test1 — only the matching nextest filter; no doc tests, no clippy.
+set -euo pipefail
+if [[ -n "${VERB_LAYER:-}" ]]; then
+  echo "ERROR: VERB_LAYER is not valid on the host side." >&2
+  echo "Standard invocation: cd module/claude_version && ./verb/test1 <filter>" >&2
+  exit 1
+fi
+if [[ "${1:-}" == "--dry-run" ]]; then
+  DRY_FILTER="${2:-<filter>}"
+  echo "./runbox/runbox .test1 $DRY_FILTER  →  cargo nextest run --workspace --all-features -E \"$DRY_FILTER\""
+  exit 0
+fi
+FILTER="${1:-}"
+if [[ -z "$FILTER" ]]; then
+  echo "ERROR: test1 requires a test name filter." >&2
+  echo "Usage: ./verb/test1 <nextest-filter-expression>" >&2
+  exit 1
+fi
+exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test1 "$@"

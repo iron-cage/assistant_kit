@@ -7,10 +7,12 @@ set -euo pipefail
 CONFIG="$1"
 COMMAND="${2:-.}"
 FORCE_REBUILD=0
+FILTER=""
 for _arg in "${@:3}"
 do
   case "$_arg" in
     --rebuild|-R) FORCE_REBUILD=1 ;;
+    *) [[ -z "$FILTER" ]] && FILTER="$_arg" ;;
   esac
 done
 
@@ -357,6 +359,60 @@ cmd_test()
     "$WORKSPACE_DIR/$TEST_SCRIPT"
 }
 
+cmd_test1()
+{
+  if [[ -z "$FILTER" ]]
+  then
+    echo "error: .test1 requires a nextest filter expression" >&2
+    echo "Usage: ./runbox/runbox .test1 <filter>" >&2
+    echo "Example: ./runbox/runbox .test1 tc358_version_install_idempotent_stores_preference" >&2
+    exit 1
+  fi
+  local bin_args=() mount_args=()
+  _plugin_test_args
+  _ensure_image
+  _ensure_build_cache
+  _ensure_plugin_targets
+  echo "▶ $IMAGE ($CONTAINER_CMD) [filter: $FILTER]"
+  local userns_arg=()
+  [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
+  # Pre-create plugin_mount target directories — same pre-flight as cmd_test.
+  local i
+  for (( i=0; i<${#mount_args[@]}; i++ ))
+  do
+    if [[ "${mount_args[$i]}" == "-v" ]] && [[ $((i+1)) -lt ${#mount_args[@]} ]]
+    then
+      local container_path
+      container_path="$( cut -d: -f2 <<< "${mount_args[$((i+1))]}" )"
+      if [[ "$container_path" == "$WORKSPACE_DIR/"* ]]
+      then
+        mkdir -p "$WORKSPACE_ROOT/${container_path#"$WORKSPACE_DIR/"}"
+      fi
+    fi
+  done
+  # Pre-generate Cargo.lock — same pre-flight as cmd_test.
+  cargo metadata --manifest-path "$WORKSPACE_ROOT/Cargo.toml" \
+    --format-version 1 > /dev/null
+  # CARGO_TARGET_DIR must point at the named volume mounted at $WORKSPACE_DIR/$CACHE_DIR.
+  # The host workspace is bind-mounted :ro; any .cargo/config.toml target-dir redirect in
+  # the host workspace would cause cargo to write to a :ro path (EROFS).
+  # Setting CARGO_TARGET_DIR explicitly routes artifact writes to the :rw named volume.
+  "$CONTAINER_CMD" run --rm \
+    "${userns_arg[@]}" \
+    --user "$(id -u):$(id -g)" \
+    -e CARGO_NET_OFFLINE=true \
+    -e NO_COLOR=1 \
+    -e RUNBOX_CONTAINER=1 \
+    -e "CARGO_TARGET_DIR=$WORKSPACE_DIR/$CACHE_DIR" \
+    -e "NEXTEST_FILTER=$FILTER" \
+    "${mount_args[@]}" \
+    -v "$WORKSPACE_ROOT:$WORKSPACE_DIR:ro" \
+    -v "${IMAGE}_${CACHE_DIR}:$WORKSPACE_DIR/$CACHE_DIR" \
+    "${bin_args[@]}" \
+    "$IMAGE" \
+    bash -c "cd $WORKSPACE_DIR && RUSTFLAGS='-D warnings' cargo nextest run $CMD_SCOPE $CARGO_FEATURES -E \"\$NEXTEST_FILTER\""
+}
+
 cmd_test_offline()
 {
   _ensure_image
@@ -471,7 +527,8 @@ cmd_help()
   echo "  .run            Run the entry point (requires run_script in runbox.yml)"
   echo ""
   echo "Testing:"
-  echo "  .test           Run all tests${plugin_hint}"
+  echo "  .test           Run all tests (full suite: nextest + doc tests + clippy)${plugin_hint}"
+  echo "  .test1 <filter> Run a single nextest filter — no doc tests or clippy overhead${plugin_hint}"
   echo "  .test.offline   Run offline tests only (no external data needed)"
   echo "  .lint           Run linter (requires lint_script in runbox.yml)"
   echo "  .list           List all test names without running"
@@ -490,6 +547,7 @@ case "$COMMAND" in
   .build)        cmd_build ;;
   .run)          cmd_run ;;
   .test)         cmd_test ;;
+  .test1)        cmd_test1 ;;
   .test.offline) cmd_test_offline ;;
   .lint)         cmd_lint ;;
   .list)         cmd_list ;;
