@@ -165,7 +165,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 # Cargo includes RUSTFLAGS in its fingerprint hash.  A mismatch between cook and test
 # causes cargo to discard all cook-stage artifacts and recompile every external dep from
 # scratch on every test run — defeating the entire purpose of the cook stage.
-# Fix(issue-rustflags-fingerprint): set the same RUSTFLAGS here as in the test runner.
+# Fix(BUG-010): set the same RUSTFLAGS here as in the test runner.
 
 FROM chef AS cook
 ARG WORKSPACE_DIR=/workspace
@@ -276,7 +276,7 @@ RUN mkdir -p $WORKSPACE_DIR/.claude
 # (--user $(id -u):$(id -g)) to access host-owned ~/.claude credentials, while also
 # being able to write build artifacts and cargo lock files as that uid.
 #
-# Fix(issue-chown-fuse-overlayfs): fuse-overlayfs reports phantom registry index cache
+# Fix(BUG-011): fuse-overlayfs reports phantom registry index cache
 #   entries (e.g. .cache/js, .cache/sm) in readdir that fail stat/chown individually —
 #   a known behaviour when overlay whiteout entries from the cook COPY conflict with
 #   cargo fetch's fresh writes in a later layer.  Suppress chown errors; the affected

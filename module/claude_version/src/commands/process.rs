@@ -114,7 +114,7 @@ fn send_kill_signals( procs : &[ ProcessInfo ], force : bool ) -> Result< (), Er
 ///
 /// Returns `Err(InternalError)` if signal delivery fails or processes survive.
 ///
-/// Fix(issue-kill-silent): signal delivery results were discarded via the
+/// Fix(BUG-007): signal delivery results were discarded via the
 ///   `let _ = …` pattern on `send_sigterm`/`send_sigkill`, so EPERM and other
 ///   errors were silently swallowed — surviving processes only surfaced via the
 ///   trailing `remaining > 0` check; stale-list errors were completely invisible.

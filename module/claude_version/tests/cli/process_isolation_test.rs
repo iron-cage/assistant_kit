@@ -13,7 +13,7 @@
 
 // IT-1: `.version.guard` does not kill running processes.
 //
-// ## Root Cause
+// Root Cause
 //
 // `send_kill_signals()` and `processes_kill_routine()` are isolated to the
 // `.processes.kill` explicit user command. No automatic path (guard, install,
@@ -21,26 +21,26 @@
 // isolation invariant is expected to hold without any code change; the task
 // formalizes it as a tested and documented guarantee.
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // No prior integration test verified that a process running during a guard
 // invocation survived the guard exit path. The invariant was correct but
 // undocumented and untested.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // Isolation doc comments added to `send_kill_signals()` and
 // `processes_kill_routine()` in `src/commands/process.rs` naming the
 // exact caller/callee relationship. This test creates a structural
 // regression tripwire for the guard execution path.
 //
-// ## Prevention
+// Prevention
 //
 // This test catches any future wiring of kill functions from guard/install
 // paths. `kill -0 PID` exits 0 if alive, non-0 if dead — a dead process
 // here means a kill signal was sent, causing an immediate, loud test failure.
 //
-// ## Pitfall
+// Pitfall
 //
 // Without the `~/.local/bin/claude` symlink pointing to a semver-named file,
 // `get_installed_version()` falls back to running `claude --version` via PATH,

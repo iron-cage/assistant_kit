@@ -14,7 +14,7 @@ Claude Code version manager: install, upgrade, and session lifecycle.
 | `changelog.md` | Notable changes by version |
 | `runbox/` | Container runner integration scripts and config |
 | `verb/` | Shell scripts for each `do` protocol verb. |
-| `task/` | Task tracking and design decision log |
+| `license` | License text for this crate |
 
 ## Scope
 

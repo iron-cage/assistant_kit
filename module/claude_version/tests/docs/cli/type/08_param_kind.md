@@ -99,9 +99,9 @@ Type compliance and validation tests for `ParamKind`. See [type/08_param_kind.md
 
 | Function | File |
 |----------|------|
-| `kind_tc1_config_shows_config_params_only` | `integration/kind_param_test.rs` |
-| `kind_tc2_env_shows_env_params_only` | `integration/kind_param_test.rs` |
-| `kind_tc3_absent_shows_all_params` | `integration/kind_param_test.rs` |
-| `kind_tc4_mixed_case_exits_1` | `integration/kind_param_test.rs` |
-| `kind_tc5_unknown_variant_exits_1` | `integration/kind_param_test.rs` |
-| `kind_tc6_empty_exits_1` | `integration/kind_param_test.rs` |
+| `kind_tc1_config_shows_config_params_only` | `tests/cli/kind_param_test.rs` |
+| `kind_tc2_env_shows_env_params_only` | `tests/cli/kind_param_test.rs` |
+| `kind_tc3_absent_shows_all_params` | `tests/cli/kind_param_test.rs` |
+| `kind_tc4_mixed_case_exits_1` | `tests/cli/kind_param_test.rs` |
+| `kind_tc5_unknown_variant_exits_1` | `tests/cli/kind_param_test.rs` |
+| `kind_tc6_empty_exits_1` | `tests/cli/kind_param_test.rs` |

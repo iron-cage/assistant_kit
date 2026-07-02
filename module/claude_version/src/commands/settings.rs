@@ -110,7 +110,7 @@ pub fn settings_get_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 /// Returns `Err(ArgumentMissing)` when `key::` or `value::` is missing or empty.
 /// Returns `Err(InternalError)` when HOME is missing or write fails.
 ///
-/// Fix(issue-settings-set-empty-value): `value::` (empty) was accepted and stored `""` in JSON.
+/// Fix(BUG-006): `value::` (empty) was accepted and stored `""` in JSON.
 /// Root cause: used `require_string_arg` (allows empty) instead of `require_nonempty_string_arg`
 ///   for the `value::` parameter, silently bypassing the FR-04 empty-value rejection.
 /// Pitfall: `cm .settings.set key::k value::` appeared to succeed but wrote a meaningless

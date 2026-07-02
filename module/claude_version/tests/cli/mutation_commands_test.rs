@@ -491,33 +491,33 @@ fn tc326_settings_set_stores_string()
 
 // TC-327: value:: (empty) → exit 1, error must mention "value"
 //
-// ## Root Cause
+// Root Cause
 //
 // `settings_set_routine` used `require_string_arg` (which allows empty strings)
 // for the `value::` parameter instead of `require_nonempty_string_arg`.  The
 // FR-04 "empty value → exit 1" rule was silently bypassed: `value::` wrote `""`
 // into settings.json and exited 0.
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // TC-327 was originally written as a POSITIVE test ("stores empty string `""`"),
 // which codified the buggy behavior.  No test verified that empty `value::` is
 // rejected.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // Changed `require_string_arg` to `require_nonempty_string_arg` for `value::` in
 // `settings_set_routine`, and removed the now-unused `require_string_arg` helper.
 //
-// ## Prevention
+// Prevention
 //
 // This TC-327 now locks down that `value::` (empty) is rejected with exit 1 and
 // an error message that mentions the parameter name.  TC-334 covers the dry::1
 // case to ensure validation precedes the dry-run short-circuit.
 //
-// ## Pitfall
+// Pitfall
 //
-// Without this guard, `cm .settings.set key::k value::` appears to succeed but
+// Without this guard, `clv .settings.set key::k value::` appears to succeed but
 // writes a meaningless `""` entry — indistinguishable from "not set" via
 // `.settings.get`, silently masking the user typo.
 #[ test ]
@@ -729,26 +729,26 @@ fn tc357_version_install_dry_no_preference_written()
 
 // TC-358: idempotent skip ("already at") still stores preference
 //
-// ## Root Cause
+// Root Cause
 // version_install_handler() returned early at the idempotent guard
 // BEFORE calling store_preferred_version(). After a no-op install,
 // `version guard` found no preference keys and reported "no preferred version
 // set" even though the user explicitly ran `version install`.
 //
-// ## Why Not Caught Initially
+// Why Not Caught
 // All install tests used `dry::1` or invalid PATH. No test exercised the
 // idempotent early-return path with a writable HOME that could verify settings.
 //
-// ## Fix Applied
+// Fix Applied
 // Store preference in the idempotent early-return path, not only after install.
 //
-// ## Prevention
+// Prevention
 // Every successful exit path in install must store the preference.
 //
-// ## Pitfall
+// Pitfall
 // Early returns that skip post-action bookkeeping silently break downstream
 // commands that depend on that bookkeeping.
-// test_kind: bug_reproducer(issue-358)
+// test_kind: bug_reproducer(BUG-004)
 #[ test ]
 fn tc358_version_install_idempotent_stores_preference()
 {
@@ -767,14 +767,23 @@ fn tc358_version_install_idempotent_stores_preference()
   );
   let text = stdout( &out );
 
-  // Only assert on the idempotent path — if versions don't match, install
-  // runs and may fail; that's not what this test checks.
   if text.contains( "already at" )
   {
+    // idempotent path: verify preference stored even on early return
     let content = std::fs::read_to_string( dir.path().join( ".claude/settings.json" ) ).unwrap();
     assert!(
       content.contains( "preferredVersionSpec" ),
       "idempotent skip must still store preference: {content}"
+    );
+  }
+  else
+  {
+    // install ran (versions differ or install failed); assert observable output
+    let stderr = String::from_utf8_lossy( &out.stderr );
+    assert!(
+      !text.is_empty() || !stderr.is_empty(),
+      "version.install produced no output on stdout or stderr: exit {:?}",
+      out.status.code()
     );
   }
 }
@@ -893,29 +902,29 @@ fn tc406_guard_dry_force_no_install()
 
 // TC-410: stale preferredVersionResolved → guard re-resolves alias
 //
-// ## Root Cause
+// Root Cause
 //
 // After an alias bump (e.g. month 2.1.50 → 2.1.74) the stored
 // `preferredVersionResolved` in settings.json becomes stale.
 // `guard_once()` must re-resolve the alias through the current table
 // rather than blindly trusting the stored resolved value.
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // Previous tests never wrote a stale resolved value that diverged
 // from the compile-time alias table.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // `guard_once()` calls `resolve_version_spec()` on `spec` before
 // using it, so the current alias value always wins.
 //
-// ## Prevention
+// Prevention
 //
 // This test explicitly writes a stale resolved value and asserts the
 // output uses the current alias mapping.
 //
-// ## Pitfall
+// Pitfall
 //
 // Any code path that reads `preferredVersionResolved` for comparison
 // must re-resolve the alias name first; the stored value is advisory.
@@ -1035,7 +1044,7 @@ fn tc414_guard_version_empty_rejected()
   );
 }
 
-// TC-415: watch loop continues after install error  —  bug_reproducer(issue-415)
+// TC-415: watch loop continues after install error  —  bug_reproducer(BUG-005)
 //
 // # Root Cause
 // The watch loop in `version_guard_routine` calls `return result` when
@@ -1052,7 +1061,7 @@ fn tc414_guard_version_empty_rejected()
 // loop fall through to `sleep` and continue to the next iteration.
 //
 // # Prevention
-// Uses `timeout 2 cm .version.guard interval::1` with empty PATH to force
+// Uses `timeout 2 clv .version.guard interval::1` with empty PATH to force
 // install failure on every iteration.  If the loop exits early (bug), the
 // process returns exit 2 before the 2-second deadline.  If the loop
 // continues (fix), `timeout` kills it and returns 124.
