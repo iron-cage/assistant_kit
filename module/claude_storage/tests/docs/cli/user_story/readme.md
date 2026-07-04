@@ -15,11 +15,11 @@ Mirror of [user_story/](../../../../docs/cli/user_story/readme.md).
 | Name | Purpose | Status |
 |------|---------|--------|
 | `procedure.md` | Test execution procedure for user story acceptance tests | — |
-| `01_audit_session_history.md` | Acceptance tests for Audit Session History (developer) | ✅ |
-| `02_find_past_conversation.md` | Acceptance tests for Find Past Conversation (developer) | ✅ |
-| `03_export_session_for_review.md` | Acceptance tests for Export Session for Review (developer) | ✅ |
-| `04_query_storage_programmatically.md` | Acceptance tests for Query Storage Programmatically (developer) | ✅ |
-| `05_resume_claude_session.md` | Acceptance tests for Resume Claude Session (developer) | ✅ |
+| `001_audit_session_history.md` | Acceptance tests for Audit Session History (developer) | ✅ |
+| `002_find_past_conversation.md` | Acceptance tests for Find Past Conversation (developer) | ✅ |
+| `003_export_session_for_review.md` | Acceptance tests for Export Session for Review (developer) | ✅ |
+| `004_query_storage_programmatically.md` | Acceptance tests for Query Storage Programmatically (developer) | ✅ |
+| `005_resume_claude_session.md` | Acceptance tests for Resume Claude Session (developer) | ✅ |
 
 ### Test ID Convention
 
@@ -31,11 +31,11 @@ Mirror of [user_story/](../../../../docs/cli/user_story/readme.md).
 
 | File | Tests |
 |------|-------|
-| `01_audit_session_history.md` | 5 |
-| `02_find_past_conversation.md` | 5 |
-| `03_export_session_for_review.md` | 5 |
-| `04_query_storage_programmatically.md` | 5 |
-| `05_resume_claude_session.md` | 5 |
+| `001_audit_session_history.md` | 5 |
+| `002_find_past_conversation.md` | 5 |
+| `003_export_session_for_review.md` | 5 |
+| `004_query_storage_programmatically.md` | 5 |
+| `005_resume_claude_session.md` | 5 |
 | **Total** | **25** |
 
 ### Related Documentation

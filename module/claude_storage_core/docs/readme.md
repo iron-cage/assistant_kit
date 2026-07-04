@@ -17,3 +17,9 @@
 | `api/` | Public library interface and stability guarantees |
 | `entity.md` | Doc Entity index for this crate's documentation scope |
 | `doc_graph.yml` | Cross-reference graph for navigability analysis |
+
+### Related Crates
+
+| Crate | Relationship |
+|-------|--------------|
+| `claude_runner` | Depends on `algorithm/001_path_encoding.md` (Df() path encoding) via `scope_for()` and `to_storage_path_for()`; see `claude_runner/docs/algorithm/001_path_encoding.md` for its consumption-side documentation |

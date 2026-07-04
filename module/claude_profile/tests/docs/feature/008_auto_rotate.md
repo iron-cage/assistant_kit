@@ -1,5 +1,11 @@
 # Test: Feature 008 — Auto Rotate
 
+### Scope
+
+- **Purpose**: Test cases for automatic rotation to the inactive account with highest expiry (deprecated feature).
+- **Source**: `docs/feature/008_auto_rotate.md`
+- **Covers**: AC-01 through AC-03
+
 > **DEPRECATED** — `auto_rotate()` and `.account.rotate` removed. Tests superseded by `tests/docs/feature/038_usage_strategy_rotate.md`.
 
 Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` (FR-13). Each FT case maps to one or more acceptance criteria.

@@ -2,7 +2,7 @@
 //!
 //! ## Source
 //!
-//! - Spec: `tests/docs/cli/user_story/03_export_session_for_review.md`
+//! - Spec: `tests/docs/cli/user_story/003_export_session_for_review.md`
 //!
 //! ## Coverage
 //!
@@ -47,7 +47,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 /// Markdown output file created; user/assistant entries distinguishable; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/03_export_session_for_review.md` — RWS-1
+/// `tests/docs/cli/user_story/003_export_session_for_review.md` — RWS-1
 #[ test ]
 fn rws_1_export_as_markdown_writes_output_file()
 {
@@ -96,7 +96,7 @@ fn rws_1_export_as_markdown_writes_output_file()
 /// JSONL output file created; each line is parseable JSON; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/03_export_session_for_review.md` — RWS-2
+/// `tests/docs/cli/user_story/003_export_session_for_review.md` — RWS-2
 #[ test ]
 fn rws_2_export_as_json_produces_jsonl_output()
 {
@@ -148,7 +148,7 @@ fn rws_2_export_as_json_produces_jsonl_output()
 /// Plain text output file created; no markdown syntax; human-readable; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/03_export_session_for_review.md` — RWS-3
+/// `tests/docs/cli/user_story/003_export_session_for_review.md` — RWS-3
 #[ test ]
 fn rws_3_export_as_text_produces_plain_text_transcript()
 {
@@ -197,7 +197,7 @@ fn rws_3_export_as_text_produces_plain_text_transcript()
 /// Exit 1 on missing `session_id::`; error on stderr; no output file created.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/03_export_session_for_review.md` — RWS-4
+/// `tests/docs/cli/user_story/003_export_session_for_review.md` — RWS-4
 #[ test ]
 fn rws_4_missing_session_id_exits_with_error()
 {
@@ -238,7 +238,7 @@ fn rws_4_missing_session_id_exits_with_error()
 /// Exit 1 on missing `output::`; error on stderr; no file written.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/03_export_session_for_review.md` — RWS-5
+/// `tests/docs/cli/user_story/003_export_session_for_review.md` — RWS-5
 #[ test ]
 fn rws_5_missing_output_exits_with_error()
 {

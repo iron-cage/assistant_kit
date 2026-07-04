@@ -1,12 +1,5 @@
 # User Story :: 2. Find Past Conversation
 
-### Scope
-
-- **Purpose**: Document the "Find Past Conversation" user story.
-- **Responsibility**: Persona, goal, acceptance criteria, and command mappings for this story.
-- **In Scope**: User persona, goal statement, acceptance criteria, referenced commands.
-- **Out of Scope**: Command specifications (→ `command/`), parameter details (→ `param/`).
-
 **Persona:** developer
 **Goal:** Locate a specific past Claude Code conversation by project, content, or session metadata.
 **Benefit:** Resume or reference earlier work without manually browsing `~/.claude/projects/`.

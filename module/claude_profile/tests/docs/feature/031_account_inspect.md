@@ -1,5 +1,11 @@
 # Test: Feature 031 — Account Inspect
 
+### Scope
+
+- **Purpose**: Test cases for `.account.inspect` identity, membership selection, org fields, and endpoint fallback behavior.
+- **Source**: `docs/feature/031_account_inspect.md`
+- **Covers**: AC-01 through AC-25
+
 Feature behavioral requirement test cases for `docs/feature/031_account_inspect.md` (FR-31). Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

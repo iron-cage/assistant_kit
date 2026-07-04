@@ -1,5 +1,12 @@
 # 01_super_app_aggregation
 
+### Scope
+
+- **Purpose**: FT- test cases verifying Layer 2 command registration, first-wins precedence, and static YAML aggregation in the `ast` binary.
+- **Responsibility**: Acceptance criteria confirming every Layer 2 crate is reachable through the aggregated registry with correct precedence and routing.
+- **In Scope**: `build_registry()` completeness across all five Layer 2 crates, command-name collision precedence, static YAML PHF dispatch, `.claude` stub redirect behavior.
+- **Out of Scope**: Aggregation completeness invariant (-> `../../../docs/invariant/001_aggregation_completeness.md`), publish sandbox safety invariant (-> `../../../docs/invariant/002_publish_sandbox_safety.md`).
+
 ## Overview
 
 | Case ID | Category | Status |

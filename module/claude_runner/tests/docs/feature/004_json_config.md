@@ -1,5 +1,12 @@
 # Test: Feature — JSON Config Loading
 
+### Scope
+
+- **Purpose**: JC- test cases verifying JSON file and stdin-pipe config loading, precedence ordering, and error handling for `clr` parameter sources.
+- **Responsibility**: Acceptance criteria confirming `--args-file`/`CLR_ARGS_FILE` loading, stdin JSON pipe detection, CLI > JSON > env > default precedence, boolean flag semantics, and subcommand coverage.
+- **In Scope**: `--args-file` loading, stdin JSON pipe auto-detection, CLI/JSON/env precedence, malformed JSON and missing-file errors, boolean `true`/`false` handling, unknown-key forward compatibility, `isolated` subcommand application.
+- **Out of Scope**: retry tier resolution (-> `003_retry_hierarchy.md`), session path resolution and `--session-from`/`--to` (-> `005_session_path_resolution.md`).
+
 Test case planning for [feature/004_json_config.md](../../../../docs/feature/004_json_config.md). Tests validate JSON file loading via `--args-file`, stdin JSON pipe detection, precedence ordering (CLI > JSON > CLR_* > defaults), boolean flag handling, error cases, and subcommand coverage.
 
 ## Test Case Index

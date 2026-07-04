@@ -1,5 +1,11 @@
 # Test: Feature 030 — Account Billing Renewal Override
 
+### Scope
+
+- **Purpose**: Test cases for billing renewal date override, clearing, auto-advance, and `~Renews` rendering.
+- **Source**: `docs/feature/030_account_renewal_override.md`
+- **Covers**: AC-01 through AC-15
+
 Feature behavioral requirement test cases for `docs/feature/030_account_renewal_override.md`. Each FT case maps to one acceptance criterion. Command-level tests (IT-N) are in [cli/command/014_account_renewal.md](../cli/command/14_account_renewal.md).
 
 ### AC Coverage Index

@@ -1,5 +1,11 @@
 # Test: Feature 038 — Usage Strategy Rotate
 
+### Scope
+
+- **Purpose**: Test cases for `rotate::1` account switching, ownership gating, dry-run preview, and post-switch touch behavior.
+- **Source**: `docs/feature/038_usage_strategy_rotate.md`
+- **Covers**: AC-01 through AC-11
+
 Feature behavioral requirement test cases for `docs/feature/038_usage_strategy_rotate.md`. Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

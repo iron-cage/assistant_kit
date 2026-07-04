@@ -1,10 +1,17 @@
 # Feature :: CLI Tool
 
+### Scope
+
+- **Purpose**: FT- test cases verifying CLI invocation modes, project identifier schemes, and storage layout transparency.
+- **Responsibility**: Acceptance criteria confirming one-shot command execution, error handling for unknown commands, and correct handling of both project schemes and storage layouts.
+- **In Scope**: One-shot invocation and exit codes, path-encoded and UUID-named project listing, flat-layout (B7) and hierarchical-layout (B13) session access.
+- **Out of Scope**: Migration procedure to `claude_storage_core` (-> `../operation/001_migration_guide.md`), core storage library design (-> `../../../../claude_storage_core/docs/feature/001_core_library.md`).
+
 Feature-level test cases for the `claude_storage` CLI tool. Tests validate the tool's
 two invocation modes, its transparent handling of both storage layouts, and its support
 for both project identifier schemes.
 
-**Source:** [001_cli_tool.md](../../../../docs/feature/001_cli_tool.md)
+**Source:** [001_cli_tool.md](../../../docs/feature/001_cli_tool.md)
 
 ## Test Case Index
 

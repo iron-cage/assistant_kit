@@ -46,7 +46,7 @@ started. The flag is parsed and accepted; dry-run output is produced immediately
 When `--timeout N` is given explicitly, both paths use `N`.
 
 **Env var:** `CLR_TIMEOUT` — also applies to `isolated`/`refresh` (see
-[env_param.md](../env_param.md) Section 2 for the isolated/refresh mechanics).
+[003_env_param.md](../003_env_param.md) Section 2 for the isolated/refresh mechanics).
 For `run`/`ask`, `CLR_TIMEOUT` is read as a u32; `0` means unlimited. Invalid
 values are silently ignored (parse failure → field stays at `None`, resolved to
 `DEFAULT_PRINT_TIMEOUT_SECS` for print-mode or `0` for interactive). CLI flag

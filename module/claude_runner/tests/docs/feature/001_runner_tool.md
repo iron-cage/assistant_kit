@@ -1,5 +1,12 @@
 # Test: Feature — Runner Tool
 
+### Scope
+
+- **Purpose**: FT- test cases verifying default command assembly, dry-run output format, and execution mode gates for the `clr` runner tool.
+- **Responsibility**: Acceptance criteria confirming combined default injection, dry-run preview structure, quiet/trace flag interaction, enum validation exit codes, and the concurrency gate.
+- **In Scope**: default flag injection, dry-run env-vars/command blocks, `--quiet`, `--trace`, `--print` mode selection, `--output-file` dry-run skip, `--expect` mismatch exit 3, `--max-sessions` gate skip in dry-run.
+- **Out of Scope**: journaling emission (-> `002_journaling_integration.md`), retry tier resolution (-> `003_retry_hierarchy.md`), JSON config loading (-> `004_json_config.md`), session path resolution (-> `005_session_path_resolution.md`).
+
 Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md). Tests validate runner tool behavioral contracts: default command assembly, dry-run output format, quiet gate, trace mode, and execution delegation.
 
 ## Test Case Index

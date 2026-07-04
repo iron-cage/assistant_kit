@@ -1,5 +1,11 @@
 # Test: Feature 003 — Accounts
 
+### Scope
+
+- **Purpose**: Test cases for the `.accounts` listing command — formatting, column control, and JSON output.
+- **Source**: `docs/feature/003_account_list.md`
+- **Covers**: AC-01 through AC-21
+
 Feature behavioral requirement test cases for `docs/feature/003_account_list.md` (FR-8). Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

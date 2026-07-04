@@ -1,5 +1,11 @@
 # Test: Feature 020 — Usage Sort Strategies
 
+### Scope
+
+- **Purpose**: Test cases for usage table sort strategies.
+- **Source**: `docs/feature/020_usage_sort_strategies.md`
+- **Covers**: AC-01 through AC-12
+
 Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strategies.md`. Each FT case maps to one acceptance criterion. Command-level tests (IT-N) are in [cli/command/009_usage.md](../cli/command/09_usage.md).
 
 ### AC Coverage Index

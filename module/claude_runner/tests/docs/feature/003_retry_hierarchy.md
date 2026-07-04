@@ -1,5 +1,12 @@
 # Test: Feature — Retry Hierarchy
 
+### Scope
+
+- **Purpose**: FT- test cases verifying the 3-tier retry count and delay resolution contracts for `clr` subprocess retries.
+- **Responsibility**: Acceptance criteria confirming per-class Tier 2 budgets, per-invocation Tier 1 override, Tier 3 global fallback, Auth retry parity, and delay tier priority ordering.
+- **In Scope**: `--retry-on-transient`, `--retry-on-auth`, `--retry-override`, `--retry-default`, `--retry-override-delay`, `--transient-delay`, `--retry-default-delay`, tier precedence resolution for both count and delay.
+- **Out of Scope**: retry/timeout journal event emission (-> `002_journaling_integration.md`), default command assembly (-> `001_runner_tool.md`).
+
 Test case planning for [feature/003_retry_hierarchy.md](../../../../docs/feature/003_retry_hierarchy.md). Tests validate the 3-tier retry count and delay resolution contracts: per-class Tier 2 budgets, per-invocation Tier 1 override, Tier 3 global fallback, Auth retry parity, and delay tier priority.
 
 ## Test Case Index

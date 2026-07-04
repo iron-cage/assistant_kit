@@ -1,5 +1,11 @@
 # Feature 063 — Explicit Ownership Claim
 
+### Scope
+
+- **Purpose**: Test cases for explicit `owner::` claim writes, the G8 ownership gate, and force/dry-run interactions.
+- **Source**: `docs/feature/063_explicit_ownership_claim.md`
+- **Covers**: AC-01 through AC-12
+
 ### Test Case Index
 
 | ID | Test | Verifies | Status |

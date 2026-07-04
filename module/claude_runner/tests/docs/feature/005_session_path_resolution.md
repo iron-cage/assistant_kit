@@ -1,5 +1,12 @@
 # Test: Feature — Session Path Resolution
 
+### Scope
+
+- **Purpose**: FT- test cases verifying `scope_for()` output correctness and session cross-loading behaviors for `clr`.
+- **Responsibility**: Acceptance criteria confirming CLAUDE_HOME/memory-path override handling, git-root anchoring, the `clr scope` command output, and `--session-from`/`--to` precedence.
+- **In Scope**: `scope_for()` defaults and overrides (`CLAUDE_HOME`, `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE`), git-root memory anchoring, `clr scope` 6-variable output, `--session-from`, `--to` alias, `--session-dir` precedence.
+- **Out of Scope**: JSON/stdin config loading (-> `004_json_config.md`), default command assembly (-> `001_runner_tool.md`).
+
 Test case planning for [feature/005_session_path_resolution.md](../../../../docs/feature/005_session_path_resolution.md). Tests validate `scope_for()` output correctness, CLAUDE_HOME and memory path override handling, git-root anchoring for memory dir, the `clr scope` command, and the `--session-from`/`--to` cross-loading behaviors.
 
 ## Test Case Index

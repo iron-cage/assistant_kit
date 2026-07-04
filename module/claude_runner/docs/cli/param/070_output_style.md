@@ -33,7 +33,7 @@ by default, which routes stdout through `render_summary()`. The render gate is
 when `--output-format text` is explicitly set), `render_summary()` returns `None` and
 `clr` falls back to the raw output unchanged (`unwrap_or(out)` in `execution.rs`). The
 default therefore degrades gracefully for non-CLR input while rendering all CLR envelopes
-regardless of optional field presence. See D15 in `docs/001_design_decisions.md`.
+regardless of optional field presence. See D15 in `docs/feature/006_cli_design.md`.
 
 **Validation:** Invalid values exit 1 immediately with:
 `invalid output-style '{v}' — expected: summary, raw`

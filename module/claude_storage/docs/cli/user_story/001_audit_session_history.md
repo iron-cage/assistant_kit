@@ -1,12 +1,5 @@
 # User Story :: 1. Audit Session History
 
-### Scope
-
-- **Purpose**: Document the "Audit Session History" user story.
-- **Responsibility**: Persona, goal, acceptance criteria, and command mappings for this story.
-- **In Scope**: User persona, goal statement, acceptance criteria, referenced commands.
-- **Out of Scope**: Command specifications (→ `command/`), parameter details (→ `param/`).
-
 **Persona:** developer
 **Goal:** Get an at-a-glance overview of all Claude Code projects and session counts in local storage.
 **Benefit:** Quickly understand storage usage and verify the storage root is working correctly without manually browsing the filesystem.

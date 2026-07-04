@@ -1,5 +1,12 @@
 # Feature Tests: `run_isolated` / `IsolatedModel`
 
+### Scope
+
+- **Purpose**: FT- test cases verifying the `IsolatedModel` enum, `ISOLATED_DEFAULT_MODEL` constant, and `run_isolated()` home-isolation behavior.
+- **Responsibility**: Acceptance criteria confirming model-id resolution per `IsolatedModel` variant, isolated `CLAUDE.md` content, and `--chrome` suppression under home isolation.
+- **In Scope**: `IsolatedModel::Default`/`KeepCurrent`/`Specific` `.model_id()`, `ISOLATED_DEFAULT_MODEL` value, `run_isolated()` CLAUDE.md write, `with_home_isolation()` chrome-flag suppression.
+- **Out of Scope**: stdin file piping (-> `005_stdin_file.md`), CLAUDECODE env var unsetting (-> `006_unset_claudecode.md`).
+
 Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md). Tests validate the `IsolatedModel` enum and `ISOLATED_DEFAULT_MODEL` constant introduced alongside the model parameter to `run_isolated()`.
 
 ## Test Case Index

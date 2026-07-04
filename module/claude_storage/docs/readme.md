@@ -45,7 +45,7 @@ Key entity directories there: `behavior/` (25 hypotheses), `storage/`, `filesyst
 - [command/readme.md](cli/command/readme.md) — All 11 commands with syntax, parameters, examples
 - [param/readme.md](cli/param/readme.md) — All parameters with types, validation, bidirectional cross-refs
 - [type/readme.md](cli/type/readme.md) — Semantic type system with validation rules
-- [dictionary.md](cli/dictionary.md) — Domain vocabulary (project, conversation, session, entry, scope, etc.)
+- [001_dictionary.md](cli/001_dictionary.md) — Domain vocabulary (project, conversation, session, entry, scope, etc.)
 - [param_group/readme.md](cli/param_group/readme.md) — Shared parameter groups (Output Control, Project Scope, Session Filter, etc.)
 
 **Use this when**:

@@ -282,4 +282,4 @@ Error: [Unknown] unknown error (exit 1)
 - [`param/057_retry_default_delay.md`](../param/057_retry_default_delay.md) — Tier 3 fallback delay
 - [`param/033_max_sessions.md`](../param/033_max_sessions.md) — Runner class gate configuration (unchanged)
 - [`param/036_timeout.md`](../param/036_timeout.md) — Process class timeout threshold (unchanged)
-- [`env_param.md`](../env_param.md) — complete env var mapping and precedence rules
+- [`003_env_param.md`](../003_env_param.md) — complete env var mapping and precedence rules

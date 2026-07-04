@@ -1,5 +1,11 @@
 # Test: Feature 026 — Subprocess Model and Effort Control
 
+### Scope
+
+- **Purpose**: Test cases for subprocess model and effort control resolution.
+- **Source**: `docs/feature/026_subprocess_model_effort.md`
+- **Covers**: AC-01 through AC-16
+
 Feature behavioral requirement test cases for `docs/feature/026_subprocess_model_effort.md`. Each FT case maps to one acceptance criterion. Parameter edge cases are in [cli/param/035_imodel.md](../cli/param/35_imodel.md) and [cli/param/036_effort.md](../cli/param/36_effort.md). Command-level tests (IT-N) are in [cli/command/009_usage.md](../cli/command/09_usage.md).
 
 ### AC Coverage Index

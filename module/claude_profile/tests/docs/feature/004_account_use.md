@@ -1,5 +1,11 @@
 # Test: Feature 004 — Switch Account
 
+### Scope
+
+- **Purpose**: Test cases for atomic account switching, including ownership gating and metadata restoration.
+- **Source**: `docs/feature/004_account_use.md`
+- **Covers**: AC-01 through AC-11
+
 Feature behavioral requirement test cases for `docs/feature/004_account_use.md` (FR-9). Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

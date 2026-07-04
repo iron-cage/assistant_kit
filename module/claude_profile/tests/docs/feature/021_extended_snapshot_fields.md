@@ -1,5 +1,11 @@
 # Test: Feature 021 — Extended Snapshot Fields
 
+### Scope
+
+- **Purpose**: Test cases for extended snapshot fields capture.
+- **Source**: `docs/feature/021_extended_snapshot_fields.md`
+- **Covers**: AC-01 through AC-09
+
 Feature behavioral requirement test cases for `docs/feature/021_extended_snapshot_fields.md` (FR-21). Each FT case maps to one acceptance criterion. Parameter edge cases are in [cli/param/028_uuid.md](../cli/param/28_uuid.md) and [cli/param/029_capabilities.md](../cli/param/29_capabilities.md).
 
 ### AC Coverage Index

@@ -1,5 +1,11 @@
 # Test: Feature 032 — Account Marker Assignment
 
+### Scope
+
+- **Purpose**: Test cases for the current-machine active marker assignment and unassignment.
+- **Source**: `docs/feature/032_account_assign.md`
+- **Covers**: AC-01 through AC-13 (AC-04 covered by Feature 065 replacement FTs — see 065_assignee_param_redesign.md)
+
 Feature behavioral requirement test cases for `docs/feature/032_account_assign.md`. Each FT case maps to one or more acceptance criteria.
 
 > **Feature 065 migration:** The `assign::1 name::X for::USER@MACHINE` interface is REMOVED (Feature 064). The `active::USER@MACHINE name::X` interface introduced by Feature 064 is also REMOVED (Feature 065). These FTs use the current `assignee::USER@MACHINE name::X` interface; `assignee::0` is the current-machine sentinel. `active::` now exits 1 with a REMOVED_TOGGLE migration message.

@@ -1,5 +1,11 @@
 # Test: Feature 015 — Account Name Shortcut Syntax
 
+### Scope
+
+- **Purpose**: Test cases for account name shortcut syntax resolution.
+- **Source**: `docs/feature/015_name_shortcut_syntax.md`
+- **Covers**: AC-01 through AC-14
+
 Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_syntax.md`. Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

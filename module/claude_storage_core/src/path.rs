@@ -41,7 +41,9 @@
 //! **Impact**: Decoding requires heuristics. Our decoder assumes:
 //! - `--` marks hyphen-prefixed components (like `/-default_topic`)
 //! - `-` within hyphen-prefixed components represents `_` (not `/`)
-//! - `-` between normal components represents `/`
+//! - `-` between normal components usually represents `/`, with positional exceptions for
+//!   crate-name reconstruction and literal-hyphen preservation — see
+//!   `docs/algorithm/001_path_encoding.md` for the full decoding heuristic
 //!
 //! ## Never Use Naive String Replacement
 //!

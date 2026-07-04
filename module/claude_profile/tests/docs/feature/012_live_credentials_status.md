@@ -1,5 +1,11 @@
 # Test: Feature 012 — Live Credentials Status
 
+### Scope
+
+- **Purpose**: Test cases for `.credentials.status` — store-independent live credential inspection and field toggles.
+- **Source**: `docs/feature/012_live_credentials_status.md`
+- **Covers**: AC-01 through AC-07
+
 Feature behavioral requirement test cases for `docs/feature/012_live_credentials_status.md` (FR-17). Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

@@ -1,12 +1,5 @@
 # User Story :: 4. Query Storage Programmatically
 
-### Scope
-
-- **Purpose**: Document the "Query Storage Programmatically" user story.
-- **Responsibility**: Persona, goal, acceptance criteria, and command mappings for this story.
-- **In Scope**: User persona, goal statement, acceptance criteria, referenced commands.
-- **Out of Scope**: Command specifications (→ `command/`), parameter details (→ `param/`).
-
 **Persona:** developer
 **Goal:** Query Claude Code storage from a script to get machine-readable output for integration with other tools.
 **Benefit:** Embed storage statistics and session data in dashboards, monitoring scripts, or data pipelines without parsing human-readable terminal output.
@@ -67,6 +60,8 @@ if [ "$session_count" -gt 100 ]; then
 fi
 # Warning: large session count
 ```
+
+**Note:** `.count` is optimized for performance and avoids loading full session content — prefer it over `.list` when a script only needs a number.
 
 **Step 3: Iterate over projects in a script**
 ```bash

@@ -1,5 +1,12 @@
 # Test: Feature — Filtering
 
+### Scope
+
+- **Purpose**: FT- test cases verifying filter combination logic, time/substring/exit matching, invalid-input errors, and result limiting.
+- **Responsibility**: Acceptance criteria confirming filter parameters combine correctly and reject invalid values with the expected exit codes.
+- **In Scope**: Empty filter match-all, AND combination of `type`/`command`, `since::` time parsing, `model::` substring match, `exit::` exact match, invalid `since`/`type` errors, `limit::` capping.
+- **Out of Scope**: CLI command dispatch and output formatting (-> `001_cli_viewing.md`), web `/api/events` endpoint behavior (-> `002_web_viewing.md`).
+
 Test case planning for [feature/003_filtering.md](../../../docs/feature/003_filtering.md). Tests validate empty filter (match-all), AND combination, time filter parsing, substring model matching, exact exit code matching, invalid input errors, and limit behavior.
 
 ## Test Case Index

@@ -41,10 +41,6 @@ target::files      # "Invalid target: files"
 |------|------|-------------|----------------|
 | [`TargetType`](../type/11_target_type.md) | String enum wrapper | String | `projects`, `sessions`, `entries`, `conversations` |
 
-### Referenced Parameter Groups
-
-None.
-
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|

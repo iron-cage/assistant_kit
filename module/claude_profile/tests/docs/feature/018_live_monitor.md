@@ -1,5 +1,11 @@
 # Test: Feature 018 — Live Quota Monitor Mode
 
+### Scope
+
+- **Purpose**: Test cases for live quota monitor mode.
+- **Source**: `docs/feature/018_live_monitor.md`
+- **Covers**: AC-24 through AC-32
+
 Feature behavioral requirement test cases for `docs/feature/018_live_monitor.md`. Each FT case maps to one acceptance criterion. Command-level tests (IT-N) are in [cli/command/009_usage.md](../cli/command/09_usage.md).
 
 ### AC Coverage Index

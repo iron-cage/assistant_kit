@@ -1,5 +1,11 @@
 # Test: Feature 019 — Browser Re-Authentication for Named Account
 
+### Scope
+
+- **Purpose**: Test cases for browser re-authentication of a named account.
+- **Source**: `docs/feature/019_account_relogin.md`
+- **Covers**: AC-01 through AC-11
+
 Feature behavioral requirement test cases for `docs/feature/019_account_relogin.md`. Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

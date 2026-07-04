@@ -12,7 +12,7 @@
 | `cli/parity/` | Cross-command behavioral parity comparison docs | [cli/parity/readme.md](cli/parity/readme.md) | 2 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](cli/type/readme.md) | 14 |
 | `cli/user_story/` | User story catalog for runner use cases | [cli/user_story/readme.md](cli/user_story/readme.md) | 29 |
-| `feature/` | Behavioral requirements for the runner | [feature/readme.md](feature/readme.md) | 5 |
+| `feature/` | Behavioral requirements for the runner | [feature/readme.md](feature/readme.md) | 6 |
 | `invariant/` | Measurable constraints for runner behavior | [invariant/readme.md](invariant/readme.md) | 11 |
 | `variable/` | Output variable definitions for the six CLAUDE_* paths | [variable/readme.md](variable/readme.md) | 6 |
 | `tests/docs/api/` | Per-API test case specifications | [../tests/docs/api/readme.md](../tests/docs/api/readme.md) | 1 |
@@ -39,6 +39,7 @@
 | feature | 003 | Retry Hierarchy | [feature/003_retry_hierarchy.md](feature/003_retry_hierarchy.md) |
 | feature | 004 | JSON Config Loading | [feature/004_json_config.md](feature/004_json_config.md) |
 | feature | 005 | Session Path Resolution | [feature/005_session_path_resolution.md](feature/005_session_path_resolution.md) |
+| feature | 006 | CLI Design | [feature/006_cli_design.md](feature/006_cli_design.md) |
 | invariant | 001 | Default Flags | [invariant/001_default_flags.md](invariant/001_default_flags.md) |
 | invariant | 002 | Dependency Constraints | [invariant/002_dep_constraints.md](invariant/002_dep_constraints.md) |
 | invariant | 003 | Command Naming | [invariant/003_command_naming.md](invariant/003_command_naming.md) |

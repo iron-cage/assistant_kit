@@ -1,4 +1,4 @@
-# Feature Test Specs
+# Feature Doc Entity
 
 ### Scope
 

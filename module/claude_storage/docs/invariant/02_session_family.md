@@ -29,6 +29,9 @@ Both layouts coexist within a single project directory. Neither is deprecated.
 - In flat layout: agent-to-root mapping is established via the `sessionId` field in the first agent entry
 - In hierarchical layout: agent-to-root mapping is established by directory structure (`{uuid}/subagents/`)
 - Both layouts must be discovered and supported simultaneously
+- Agent entries thread internally via `parentUuid`: the first entry has `parentUuid: null`, subsequent entries reference the previous entry within the same agent session — never a root-session entry
+- Agent metadata sidecars (`.meta.json`) may be empty (0 bytes); parsers must treat this as absent metadata, not a parse error
+- All agents spawned from the same parent session share an identical `slug` value (three hyphenated words, e.g. `jaunty-painting-hinton`) — a human-friendly Session Family identifier
 
 ### Violation Conditions
 
@@ -47,5 +50,5 @@ Both layouts coexist within a single project directory. Neither is deprecated.
 
 ### Sources
 
-- [`guide/001_advanced_storage_topics.md § Agent Sessions`](../guide/001_advanced_storage_topics.md) — layout examples and detection algorithms
+- [`algorithm/001_agent_session_tracking.md`](../algorithm/001_agent_session_tracking.md) — layout examples and detection algorithms
 - `claude_storage_core` — `SessionFamily` Domain Type definition

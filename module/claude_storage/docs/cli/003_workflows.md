@@ -252,3 +252,9 @@ result=$(clg .session.ensure path::/home/user/project topic::work strategy::fres
 **Use `show_sessions::0` with session filters for project discovery:** `claude_storage .list session::commit show_sessions::0` finds which projects have sessions matching "commit" without expanding the session list.
 
 **Session IDs from `.show` output:** When you see sessions listed by `.show` (project view), copy the session ID directly into `session_id::` for the next command.
+
+### Provenance
+
+| File | Notes |
+|------|-------|
+| `workflows.md` (deleted — migrated here) | Original un-migrated source; content fully absorbed into this file |

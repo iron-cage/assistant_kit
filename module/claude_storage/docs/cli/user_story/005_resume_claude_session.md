@@ -1,12 +1,5 @@
 # User Story :: 5. Resume Claude Session
 
-### Scope
-
-- **Purpose**: Document the "Resume Claude Session" user story.
-- **Responsibility**: Persona, goal, acceptance criteria, and command mappings for this story.
-- **In Scope**: User persona, goal statement, acceptance criteria, referenced commands.
-- **Out of Scope**: Command specifications (→ `command/`), parameter details (→ `param/`).
-
 **Persona:** developer
 **Goal:** Compute the correct session working directory path and ensure it exists before resuming or starting a Claude Code session.
 **Benefit:** Automate the session setup ceremony — checking project history, computing paths, and creating the session directory — with a single reliable sequence of commands.
