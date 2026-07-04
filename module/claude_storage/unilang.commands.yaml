@@ -667,3 +667,52 @@
     - ".session.ensure path::/home/user/project topic::work"
     - ".session.ensure path::/home/user/project topic::work strategy::fresh"
   auto_help_enabled: true
+
+- name: ".tail"
+  namespace: ""
+  description: "Print the last N entries of the current directory's conversation (default: 4)"
+  hint: "Print last N conversation entries"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["storage", "info"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "tail"
+      kind: "Integer"
+      description: "Number of trailing entries to print (0 = show all, default: 4)"
+      hint: "Entry count"
+      optional: true
+      default: "4"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "path"
+      kind: "String"
+      description: "Directory to resolve project from (default: current directory)"
+      hint: "Directory path"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "topic"
+      kind: "String"
+      description: "Session topic name (default: default_topic)"
+      hint: "Session topic"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".tail"
+    - ".tail tail::10"
+    - ".tail topic::work"
+    - ".tail tail::0"
+  auto_help_enabled: true

@@ -17,6 +17,7 @@ lint_script: module/claude_runner/verb/lint.d/l1
 
 # script invoked by `.run` inside the container (path relative to /workspace)
 run_script: module/claude_runner/verb/run.d/l1
+
 # optional binary plugin: name:container_path (binary found via 'which name' on host)
 bin_plugin: w3:/usr/local/bin/w3
 # container mount point for bin_plugin working volume (persists compilation artifacts)

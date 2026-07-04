@@ -7,7 +7,7 @@ Mirror of [user_story/](../../../../docs/cli/user_story/readme.md).
 
 - **Purpose**: Verify acceptance criteria for all user story personas.
 - **Responsibility**: RWS-N acceptance test plans per user story.
-- **In Scope**: All 5 user stories, acceptance criteria verification.
+- **In Scope**: All 6 user stories, acceptance criteria verification.
 - **Out of Scope**: Parameter edge cases (→ `param/`), command integration (→ `command/`).
 
 ### Responsibility Table
@@ -20,6 +20,7 @@ Mirror of [user_story/](../../../../docs/cli/user_story/readme.md).
 | `003_export_session_for_review.md` | Acceptance tests for Export Session for Review (developer) | ✅ |
 | `004_query_storage_programmatically.md` | Acceptance tests for Query Storage Programmatically (developer) | ✅ |
 | `005_resume_claude_session.md` | Acceptance tests for Resume Claude Session (developer) | ✅ |
+| `006_quick_context_refresh.md` | Acceptance tests for Quick Context Refresh (developer) | ✅ |
 
 ### Test ID Convention
 
@@ -36,7 +37,8 @@ Mirror of [user_story/](../../../../docs/cli/user_story/readme.md).
 | `003_export_session_for_review.md` | 5 |
 | `004_query_storage_programmatically.md` | 5 |
 | `005_resume_claude_session.md` | 5 |
-| **Total** | **25** |
+| `006_quick_context_refresh.md` | 4 |
+| **Total** | **29** |
 
 ### Related Documentation
 

@@ -778,14 +778,7 @@ fn resolve_task( proc : &ProcessInfo ) -> String
 fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
 {
   let home    = std::env::var( "HOME" ).ok()?;
-  let cwd_str = proc.cwd.to_str()?;
-
-  // Fix(BUG-295): Claude encodes both `/` and `_` as `-` in project directory names.
-  // Root cause: the original `replace('/', "-")` only handled slashes; underscore-
-  //   containing paths produced a wrong encoded key, so the JSONL dir was never found.
-  // Pitfall: Claude's encoding maps both `/` and `_` to `-` in one pass, producing a
-  //   flat lowercase-hyphen-only directory name.
-  let encoded = cwd_str.replace( [ '/', '_' ], "-" );
+  let encoded = claude_storage_core::encode_path( &proc.cwd ).ok()?;
   let dir     = std::path::Path::new( &home )
     .join( ".claude" )
     .join( "projects" )

@@ -16,6 +16,7 @@
 | `003_export_session_for_review.md` | Export Session for Review — save session to file |
 | `004_query_storage_programmatically.md` | Query Storage Programmatically — scripted storage access |
 | `005_resume_claude_session.md` | Resume Claude Session — set up session directory for continuation |
+| `006_quick_context_refresh.md` | Quick Context Refresh — view recent content in the current directory |
 
 ### User Story Index
 
@@ -26,3 +27,4 @@
 | 3 | Export Session for Review | developer | Medium | [003_export_session_for_review.md](003_export_session_for_review.md) |
 | 4 | Query Storage Programmatically | developer | Medium | [004_query_storage_programmatically.md](004_query_storage_programmatically.md) |
 | 5 | Resume Claude Session | developer | High | [005_resume_claude_session.md](005_resume_claude_session.md) |
+| 6 | Quick Context Refresh | developer | Medium | [006_quick_context_refresh.md](006_quick_context_refresh.md) |

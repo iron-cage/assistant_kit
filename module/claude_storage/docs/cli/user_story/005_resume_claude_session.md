@@ -36,6 +36,7 @@
 | # | User Story | Relationship |
 |---|------------|--------------|
 | 2 | [Find Past Conversation](002_find_past_conversation.md) | Typically look up session before resuming |
+| 6 | [Quick Context Refresh](006_quick_context_refresh.md) | Both resume work in a known directory; 006 shows content instead of setting up paths |
 
 ### Workflow Steps
 

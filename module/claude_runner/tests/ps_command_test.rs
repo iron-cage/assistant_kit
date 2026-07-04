@@ -491,8 +491,6 @@ fn it_16_task_column_form_a()
   let proj_tmp = tempfile::TempDir::new().expect( "create project tmp" );
   let cwd      = proj_tmp.path().join( "wip_core" ).join( "proj" );
   std::fs::create_dir_all( &cwd ).expect( "create CWD with underscores" );
-  let cwd_str  = cwd.to_str().expect( "CWD UTF-8" );
-
   // Spawn fake claude in the underscore CWD and wait for it to appear in /proc.
   let mut bg = std::process::Command::new( "claude" )
     .arg( "30" )
@@ -506,7 +504,7 @@ fn it_16_task_column_form_a()
   let proc = make_proc_dir( &[ bg.id() ] );
 
   // Build synthetic JSONL at the correctly-encoded project path.
-  let encoded      = cwd_str.replace( ['/', '_'], "-" );
+  let encoded      = claude_storage_core::encode_path( &cwd ).expect( "encode cwd" );
   let home_tmp     = tempfile::TempDir::new().expect( "create temp HOME" );
   let project_path = home_tmp.path()
     .join( ".claude" ).join( "projects" ).join( &encoded );
@@ -567,8 +565,6 @@ fn it_17_task_column_form_a_over_form_b()
   let proj_tmp = tempfile::TempDir::new().expect( "create project tmp" );
   let cwd      = proj_tmp.path().join( "wip_core" ).join( "proj" );
   std::fs::create_dir_all( &cwd ).expect( "create CWD" );
-  let cwd_str  = cwd.to_str().expect( "CWD UTF-8" );
-
   let mut bg = std::process::Command::new( "claude" )
     .arg( "30" )
     .env( "PATH", &path_val )
@@ -580,7 +576,7 @@ fn it_17_task_column_form_a_over_form_b()
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
   let proc = make_proc_dir( &[ bg.id() ] );
 
-  let encoded      = cwd_str.replace( ['/', '_'], "-" );
+  let encoded      = claude_storage_core::encode_path( &cwd ).expect( "encode cwd" );
   let home_tmp     = tempfile::TempDir::new().expect( "create temp HOME" );
   let project_path = home_tmp.path()
     .join( ".claude" ).join( "projects" ).join( &encoded );

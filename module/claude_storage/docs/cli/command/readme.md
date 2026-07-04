@@ -4,7 +4,7 @@
 
 - **Purpose**: Document all CLI commands for the `claude_storage` binary.
 - **Responsibility**: Per-command detail pages with full parameter tables and cross-refs.
-- **In Scope**: All 11 commands with syntax, parameters, examples, and exit codes.
+- **In Scope**: All 12 commands with syntax, parameters, examples, and exit codes.
 - **Out of Scope**: Parameter definitions (→ `param/`), type constraints (→ `type/`), parameter groups (→ `param_group/`).
 
 All commands for the `claude_storage` CLI. Parameters use `param::value` syntax. All commands are read-only except `.session.ensure`, which creates the session working directory on disk.
@@ -26,6 +26,7 @@ See [param/readme.md](../param/readme.md) for full parameter specs and [type/rea
 | `09_project_exists.md` | .project.exists — check conversation history exists |
 | `10_session_dir.md` | .session.dir — compute session working directory path |
 | `11_session_ensure.md` | .session.ensure — ensure session directory exists |
+| `12_tail.md` | .tail — print last N conversation entries for current directory |
 
 ### Commands Table
 
@@ -42,5 +43,6 @@ See [param/readme.md](../param/readme.md) for full parameter specs and [type/rea
 | 9 | [`.project.exists`](09_project_exists.md) | Check conversation history exists (exits 1 when absent) | 2 | `claude_storage .project.exists` |
 | 10 | [`.session.dir`](10_session_dir.md) | Compute session working directory path | 2 | `claude_storage .session.dir` |
 | 11 | [`.session.ensure`](11_session_ensure.md) | Ensure session directory exists, report resume strategy | 3 | `claude_storage .session.ensure` |
+| 12 | [`.tail`](12_tail.md) | Print last N conversation entries for current directory | 3 | `claude_storage .tail` |
 
-**Total:** 11 commands
+**Total:** 12 commands
