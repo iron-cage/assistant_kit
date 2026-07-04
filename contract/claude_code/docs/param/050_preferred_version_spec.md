@@ -34,3 +34,4 @@ The user's preferred version alias or semver constraint written by `cm .version.
 | doc | [049_preferred_version_resolved.md](049_preferred_version_resolved.md) | Resolved concrete version (companion) |
 | doc | [../subcommand/005_install.md](../subcommand/005_install.md) | Install subcommand (reads this) |
 | doc | [../subcommand/009_update.md](../subcommand/009_update.md) | Update subcommand (reads this) |
+| doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |

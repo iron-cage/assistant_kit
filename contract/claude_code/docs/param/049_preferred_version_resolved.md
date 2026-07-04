@@ -33,3 +33,4 @@ The concrete semver string resolved at the time of the last `cm .version.install
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [050_preferred_version_spec.md](050_preferred_version_spec.md) | Version alias spec (companion) |
 | doc | [../subcommand/005_install.md](../subcommand/005_install.md) | Install subcommand (writes this) |
+| doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |

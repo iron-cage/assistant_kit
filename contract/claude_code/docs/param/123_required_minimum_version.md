@@ -29,3 +29,4 @@ v2.1.163
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [122_minimum_version.md](122_minimum_version.md) | Soft update-only floor (vs. this hard startup floor) |
 | doc | [124_required_maximum_version.md](124_required_maximum_version.md) | Companion startup ceiling |
+| doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |

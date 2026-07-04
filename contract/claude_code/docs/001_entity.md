@@ -18,8 +18,9 @@
 | `fault` | Aggregated index of all fault conditions: terminal errors (E1–E6), silent failures (F1–F4), and quirks (Q1–Q5) with detection signals and `classify_error()` priority order | [fault/readme.md](fault/readme.md) | 0 |
 | `model` | Claude API model catalog: known model IDs, capabilities, and workspace selection defaults | [model/readme.md](model/readme.md) | 12 |
 | `version` | Claude Code release changelog: one doc instance per published release version | [version/readme.md](version/readme.md) | 95 |
+| `pattern` | Reusable design-pattern documentation: official version-pinning landscape | [pattern/readme.md](pattern/readme.md) | 1 |
 
-**Total doc instances**: 359 (36 + 3 + 4 + 10 + 3 + 7 + 3 + 126 + 40 + 11 + 9 + 12 + 95)
+**Total doc instances**: 360 (36 + 3 + 4 + 10 + 3 + 7 + 3 + 126 + 40 + 11 + 9 + 12 + 95 + 1)
 
 ## Master Doc Instances Table
 
@@ -178,3 +179,9 @@
 | 010 | claude-opus-4-5 | [model/010_claude_opus_4_5.md](model/010_claude_opus_4_5.md) |
 | 011 | claude-opus-4-1 | [model/011_claude_opus_4_1.md](model/011_claude_opus_4_1.md) |
 | 012 | Workspace Defaults | [model/012_workspace_defaults.md](model/012_workspace_defaults.md) |
+
+### pattern/ (1 instance)
+
+| ID | Name | File |
+|----|------|------|
+| 001 | Version Pinning | [pattern/001_version_pinning.md](pattern/001_version_pinning.md) |

@@ -31,3 +31,4 @@ pre-v1.0 (unverified)
 | doc | [099_disable_autoupdater.md](099_disable_autoupdater.md) | Env var to disable background auto-updates entirely |
 | doc | [119_disable_updates.md](119_disable_updates.md) | Env var to block all updates (auto + manual) |
 | doc | [122_minimum_version.md](122_minimum_version.md) | Version floor set automatically on channel downgrade |
+| doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |

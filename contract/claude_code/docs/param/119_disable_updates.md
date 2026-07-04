@@ -32,3 +32,4 @@ pre-v1.0 (unverified)
 | doc | [120_disable_upgrade_command.md](120_disable_upgrade_command.md) | Hide upgrade command |
 | doc | [121_auto_updates_channel.md](121_auto_updates_channel.md) | Release channel selector (latest/stable) |
 | doc | [../subcommand/009_update.md](../subcommand/009_update.md) | Update subcommand |
+| doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |

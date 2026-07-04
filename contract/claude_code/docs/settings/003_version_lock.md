@@ -50,4 +50,5 @@ pre-v1.0 (unverified)
 | settings | [001_global_settings.md](001_global_settings.md) | `autoUpdates`, `env` keys and atomic write protocol |
 | filesystem | [`../filesystem/002_local_install.md`](../filesystem/002_local_install.md) | `~/.local/share/claude/versions/` path and chmod operations |
 | doc | `../../../../module/claude_version/docs/pattern/001_version_lock.md` | Version lock pattern feature doc |
+| doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Full official version-pinning landscape (channels, floors/ceilings, install methods) |
 | source | `../../../../module/claude_version/src/commands.rs` | Version lock implementation |
