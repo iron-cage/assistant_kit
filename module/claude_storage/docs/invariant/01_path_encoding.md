@@ -71,5 +71,7 @@ environment matches the storage origin.
 
 ### Sources
 
-- `src/` — `decode_path_via_fs()` implementation in `claude_storage_core`
-- [`algorithm/001_agent_session_tracking.md`](../algorithm/001_agent_session_tracking.md) — layout examples and detection algorithms
+| File | Relationship |
+|------|--------------|
+| `src/` | `decode_path_via_fs()` implementation in `claude_storage_core` |
+| [`algorithm/001_agent_session_tracking.md`](../algorithm/001_agent_session_tracking.md) | Layout examples and detection algorithms |

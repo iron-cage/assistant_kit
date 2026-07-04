@@ -1,4 +1,4 @@
-# Endpoint Reference
+# Endpoint Doc Entity
 
 ### Scope
 

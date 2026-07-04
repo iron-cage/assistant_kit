@@ -39,8 +39,8 @@
 
 ### Provenance
 
-| File | Relationship |
-|------|-------------|
+| File | Notes |
+|------|-------|
 | `spec.md` (deleted) | Combined specification; responsibility, design principles, and scope sections extracted here; data model extracted to `claude_storage_core/docs/data_structure/001_storage_hierarchy.md` |
 
 ### Sources

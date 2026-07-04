@@ -4,7 +4,7 @@
 
 - **Purpose**: Documents the release history of Claude Code through per-version changelog records.
 - **Responsibility**: One doc instance per Claude Code version documented in the official changelog, capturing all changes introduced by that release.
-- **In Scope**: Claude Code releases with published changelog entries (versions 2.1.74 through 2.1.198 and beyond as new releases appear).
+- **In Scope**: Claude Code releases with published changelog entries (versions 2.1.74 through 2.1.201 and beyond as new releases appear).
 - **Out of Scope**: Claude Code internals, API wire contracts, observed runtime behaviors (see behavior/, endpoint/, and settings/ collections).
 
 ### Type Declaration
@@ -26,6 +26,7 @@ Versions are assigned sequential IDs in chronological order (oldest first), so n
 - **025–048**: Versions 2.1.108–2.1.138
 - **049–072**: Versions 2.1.139–2.1.166
 - **073–095**: Versions 2.1.167–2.1.198
+- **096–098**: Versions 2.1.199–2.1.201
 
 ### Overview Table
 
@@ -126,3 +127,6 @@ Versions are assigned sequential IDs in chronological order (oldest first), so n
 | 093 | [2.1.196](093_v2_1_196.md) | Added support for organization default models —... | ✅ |
 | 094 | [2.1.197](094_v2_1_197.md) | Introducing Claude Sonnet 5: now the default mo... | ✅ |
 | 095 | [2.1.198](095_v2_1_198.md) | Claude in Chrome is now generally available | ✅ |
+| 096 | [2.1.199](096_v2_1_199.md) | Stacked slash-skill invocations like `/skill-a /... | ✅ |
+| 097 | [2.1.200](097_v2_1_200.md) | Changed `AskUserQuestion` dialogs to no longer a... | ✅ |
+| 098 | [2.1.201](098_v2_1_201.md) | Claude Sonnet 5 sessions no longer use the mid-c... | ✅ |

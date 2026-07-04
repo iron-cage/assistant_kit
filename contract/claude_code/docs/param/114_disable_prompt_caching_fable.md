@@ -16,11 +16,12 @@ Not set (prompt caching enabled for Fable)
 
 ### Description
 
-Disables prompt caching for Fable models only.
+Disables prompt caching for Fable models only. Introduced in Claude Code
+v2.1.170, alongside the release of Fable 5.
 
 ### Since
 
-v2.1.170+ (unverified) — Fable 5 introduced v2.1.170
+v2.1.170 (inferred from Fable 5's launch version; no direct changelog citation for the env var itself)
 
 ### Cross-References
 

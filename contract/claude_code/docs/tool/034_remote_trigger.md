@@ -25,11 +25,13 @@ or Foundry.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `action` | string | yes | Action to perform: create, update, run, or list |
+| `action` | string (enum) | yes | One of: `list`, `get`, `create`, `update`, `run` |
+| `trigger_id` | string | conditional | Required for `get`, `update`, and `run` |
+| `body` | object | conditional | Required for `create` and `update`; optional for `run` |
 
 ### Since
 
-v2.0+ (unverified)
+pre-2.1.101 (unverified) — confirmed to exist by v2.1.101 (bugfix reference); no changelog line documents its introduction
 
 ### Cross-References
 

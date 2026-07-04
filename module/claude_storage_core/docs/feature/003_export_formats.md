@@ -17,7 +17,7 @@ Export converts a `Session` into a writer-based stream in one of three formats:
 
 **Streaming.** Export writes to any `Write` implementor. Memory usage is O(1) — entries are serialized incrementally without loading all of them simultaneously. The format is selected via `ExportFormat` enum.
 
-**Graceful degradation.** Non-conversation metadata entries (queue-operation, summary, file-history-snapshot) are automatically skipped during export. Corrupted entries emit a warning and are skipped without aborting the export.
+**Graceful degradation.** Non-conversation metadata entries (e.g. queue-operation, summary) are automatically skipped during export — see [03_entry_type_format.md](../../../claude_storage/docs/invariant/03_entry_type_format.md) for the full type contract and evidence tiers. Corrupted entries emit a warning and are skipped without aborting the export.
 
 ### Cross-References
 
@@ -27,6 +27,7 @@ Export converts a `Session` into a writer-based stream in one of three formats:
 | source | `../../src/session.rs` | Session entry iteration used by export |
 | test | `../../tests/export.rs` | Export format correctness tests |
 | doc | `../invariant/002_performance.md` | Export throughput targets |
+| doc | `../../../claude_storage/docs/invariant/03_entry_type_format.md` | Non-conversation `type` value contract and evidence tiers |
 
 ### Sources
 

@@ -1,4 +1,4 @@
-# Fault Collection
+# Fault Doc Entity
 
 ### Scope
 

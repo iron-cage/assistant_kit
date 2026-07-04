@@ -12,24 +12,30 @@ No
 
 ### Description
 
-Sends a message to an agent team teammate, or resumes a subagent by its agent ID.
-Only available when experimental agent teams are enabled via
-`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
+Sends a message to another agent. Three distinct uses: resuming a previously
+spawned background subagent by ID (general-purpose, no special configuration
+required), a background subagent messaging back to the main conversation via
+`to: "main"`, or messaging a named teammate in an agent team (requires
+experimental agent teams).
 
 ### Availability
 
-Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` environment variable.
+No special requirement for resuming a previously spawned subagent
+(`to: <agentId>`) or for a background subagent messaging the main conversation
+(`to: "main"`). Messaging a named teammate (`to: <teammate-name>`) requires
+`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
 
 ### Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `agentId` | string | yes | Target agent or teammate ID |
-| `message` | string | yes | Message content to send |
+| `to` | string | yes | Recipient: a teammate name, `"main"` (the main conversation; background subagents only), or a previously-spawned agent's ID (format `a...-...`) to resume it |
+| `message` | string | yes | Plain text message content |
+| `summary` | string | conditional | Required when `message` is a string; 5-10 word summary shown as a UI preview (max 200 chars) |
 
 ### Since
 
-v2.1.139+ (unverified) — agent teams research preview
+v2.1.32+ — agent-teams teammate messaging (research preview, requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`); v2.1.77+ — general subagent-resume capability (`SendMessage({to: agentId})`, replaces the Agent tool's removed `resume` parameter, no flag required)
 
 ### Cross-References
 

@@ -1,4 +1,4 @@
-# Formats
+# Format Doc Entity
 
 ### Scope
 
