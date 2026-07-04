@@ -2,19 +2,21 @@
 
 ## Master Doc Entities Table
 
+**Instances convention:** this column counts the rows for that type in the Master Doc Instances Table below. Two lifecycle conventions apply depending on type: (a) generic ❌-deprecated instances (e.g. `feature/008`, `feature/023`) are excluded from both tables entirely — the Instances figure omits them; (b) CLI-specific REMOVED instances (e.g. `cli/param/` 013/032/053/056/057, `cli/command_verb/` 009/011) are kept as annotated rows in both tables — the Instances figure includes them. See each type's own readme.md for active-vs-total breakdowns.
+
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
 | `algorithm/` | Decision algorithm references (model selection, quota classification, sort, approximation) | [algorithm/readme.md](../algorithm/readme.md) | 9 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](../cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 8 |
 | `cli/command_noun/` | Domain noun documentation (account, token, credentials) | [cli/command_noun/readme.md](../cli/command_noun/readme.md) | 3 |
-| `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, status) — 009 assign and 011 unclaim REMOVED | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 9 |
+| `cli/command_verb/` | Domain verb documentation (save, use, delete, limits, relogin, rotate, renewal, inspect, status) — 006 rotate DEPRECATED (Feature 038); 009 assign and 011 unclaim REMOVED | [cli/command_verb/readme.md](../cli/command_verb/readme.md) | 11 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](../cli/format/readme.md) | 3 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 61 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](../cli/param/readme.md) | 66 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](../cli/param_group/readme.md) | 6 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 4 |
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 48 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 47 |
 | `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 9 |
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 6 |
 | `research_interactive/` | Investigation findings on Claude binary behavior | [research_interactive/readme.md](../research_interactive/readme.md) | 1 |
@@ -33,6 +35,10 @@
 | `tests/docs/feature/` | Per-feature behavioral test documentation | [tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 50 |
 | `tests/docs/invariant/` | Per-invariant constraint test documentation | [tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 9 |
 | `tests/docs/pitfall/` | Per-pitfall guard verification test documentation | [tests/docs/pitfall/readme.md](../../tests/docs/pitfall/readme.md) | 6 |
+| `tests/docs/research_interactive/` | Per-investigation RC-N research constraint test documentation | [tests/docs/research_interactive/readme.md](../../tests/docs/research_interactive/readme.md) | 1 |
+| `tests/docs/schema/` | Per-schema SC-N constraint test documentation | [tests/docs/schema/readme.md](../../tests/docs/schema/readme.md) | 7 |
+| `tests/docs/state_machine/` | Per-state-machine AC-N lifecycle test documentation | [tests/docs/state_machine/readme.md](../../tests/docs/state_machine/readme.md) | 5 |
+| `tests/docs/subprocess/` | Per-subprocess AC-N invocation test documentation | [tests/docs/subprocess/readme.md](../../tests/docs/subprocess/readme.md) | 5 |
 
 ## Master Doc Instances Table
 
@@ -45,7 +51,6 @@
 | feature | 005 | Delete Account | [feature/005_account_delete.md](../feature/005_account_delete.md) |
 | feature | 006 | Token Status | [feature/006_token_status.md](../feature/006_token_status.md) |
 | feature | 007 | File Topology | [feature/007_file_topology.md](../feature/007_file_topology.md) |
-| feature | 008 | Auto Rotate | [feature/008_auto_rotate.md](../feature/008_auto_rotate.md) |
 | feature | 009 | Token Usage Reporting | [feature/009_token_usage.md](../feature/009_token_usage.md) |
 | feature | 010 | Persistent Storage Path | [feature/010_persistent_storage.md](../feature/010_persistent_storage.md) |
 | feature | 011 | Account Status by Name | [feature/011_account_status_by_name.md](../feature/011_account_status_by_name.md) |
@@ -190,12 +195,12 @@
 | command_verb | 003 | delete | [cli/command_verb/003_delete.md](../cli/command_verb/003_delete.md) |
 | command_verb | 004 | limits | [cli/command_verb/004_limits.md](../cli/command_verb/004_limits.md) |
 | command_verb | 005 | relogin | [cli/command_verb/005_relogin.md](../cli/command_verb/005_relogin.md) |
-| command_verb | 006 | rotate | [cli/command_verb/006_rotate.md](../cli/command_verb/006_rotate.md) |
+| command_verb | 006 | rotate — DEPRECATED (Feature 038); use `.usage rotate::1` | [cli/command_verb/006_rotate.md](../cli/command_verb/006_rotate.md) |
 | command_verb | 007 | renewal | [cli/command_verb/007_renewal.md](../cli/command_verb/007_renewal.md) |
 | command_verb | 008 | inspect | [cli/command_verb/008_inspect.md](../cli/command_verb/008_inspect.md) |
-| command_verb | 009 | assign | [cli/command_verb/009_assign.md](../cli/command_verb/009_assign.md) |
+| command_verb | 009 | assign — REMOVED (Feature 037); use `assignee::` | [cli/command_verb/009_assign.md](../cli/command_verb/009_assign.md) |
 | command_verb | 010 | status | [cli/command_verb/010_status.md](../cli/command_verb/010_status.md) |
-| command_verb | 011 | unclaim | [cli/command_verb/011_unclaim.md](../cli/command_verb/011_unclaim.md) |
+| command_verb | 011 | unclaim — REMOVED (Feature 064); use `owner::0` | [cli/command_verb/011_unclaim.md](../cli/command_verb/011_unclaim.md) |
 | invariant | 001 | Zero Third-Party Dependencies | [invariant/001_zero_third_party_deps.md](../invariant/001_zero_third_party_deps.md) |
 | invariant | 002 | Cross-Platform Compatibility | [invariant/002_cross_platform.md](../invariant/002_cross_platform.md) |
 | invariant | 003 | Clear Error Messages | [invariant/003_clear_errors.md](../invariant/003_clear_errors.md) |

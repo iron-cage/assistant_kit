@@ -1,6 +1,6 @@
-# Verb: rotate
+# Verb: rotate *(DEPRECATED — Feature 038)*
 
-> **DEPRECATED** — The `rotate` verb and `.account.rotate` command have been removed. Use `clp .usage rotate::1` (with optional `sort::` strategy) instead. See [feature/038_usage_strategy_rotate.md](../../feature/038_usage_strategy_rotate.md).
+> **DEPRECATED** — The `rotate` verb and `.account.rotate` command are retained only as a hidden redirector stub that always exits 1 with a migration notice; the rotation logic described below has been removed from the live code path. Use `clp .usage rotate::1` (with optional `sort::` strategy) instead. See [feature/038_usage_strategy_rotate.md](../../feature/038_usage_strategy_rotate.md).
 
 Selects the inactive saved account with the highest `expiresAt` timestamp and activates it. Designed for automated rotation workflows where maintaining a valid active session is critical. Skips the currently active account and any accounts with exhausted or expired tokens.
 
@@ -45,11 +45,21 @@ Selects the inactive saved account with the highest `expiresAt` timestamp and ac
 [active] --account.rotate (prior)-----> [saved]
 ```
 
+### Migration (Feature 038)
+
+| Old | New | Notes |
+|-----|-----|-------|
+| `clp .account.rotate` | `clp .usage rotate::1` | Default `sort::renew` (soonest renewal). Former default was `max_by_key(expires_at_ms)`. |
+| `clp .account.rotate dry::1` | `clp .usage rotate::1 dry::1` | Same semantics. |
+| `clp .account.rotate trace::1` | `clp .usage rotate::1 trace::1` | Same semantics. |
+| *(no equivalent)* | `clp .usage rotate::1 sort::renews` | New: rotate to account with soonest billing renewal. |
+
 ### See Also
 
 | File | Relationship |
 |------|-------------|
 | [feature/008_auto_rotate.md](../../feature/008_auto_rotate.md) | Auto-rotation selection algorithm and trigger conditions |
+| [feature/038_usage_strategy_rotate.md](../../feature/038_usage_strategy_rotate.md) | Replacement feature — `.usage rotate::1`; see Migration table above |
 
 ### Referenced Commands
 

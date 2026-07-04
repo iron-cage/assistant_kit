@@ -1,4 +1,4 @@
-# model
+# Model Doc Entity
 
 ### Scope
 

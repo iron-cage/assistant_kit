@@ -1,4 +1,4 @@
-# Behavior
+# Behavior Doc Entity
 
 ### Scope
 

@@ -40,3 +40,4 @@ pre-v1.0 (unverified)
 | doc | [../param/050_preferred_version_spec.md](../param/050_preferred_version_spec.md) | Preferred version spec |
 | doc | [../param/119_disable_updates.md](../param/119_disable_updates.md) | Env var to block all updates |
 | doc | [../param/120_disable_upgrade_command.md](../param/120_disable_upgrade_command.md) | Env var to hide `/upgrade` command |
+| doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |

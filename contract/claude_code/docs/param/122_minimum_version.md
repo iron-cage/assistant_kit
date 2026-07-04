@@ -29,3 +29,4 @@ pre-v1.0 (unverified)
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [121_auto_updates_channel.md](121_auto_updates_channel.md) | Release channel selector (triggers this on downgrade) |
 | doc | [123_required_minimum_version.md](123_required_minimum_version.md) | Managed-only hard startup floor (vs. this soft update floor) |
+| doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |

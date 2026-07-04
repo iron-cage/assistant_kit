@@ -120,7 +120,6 @@ First stable release of `claude_storage_core` - a zero-dependency library for re
 - [Repository](https://github.com/Wandalen/wTools/tree/alpha/module/claude_storage_core)
 - [Documentation](https://docs.rs/claude_storage_core)
 - [Specification](./docs/readme.md)
-- [Investigation Reports](./docs/investigations/) (if published)
 
 ## Release Notes Template
 

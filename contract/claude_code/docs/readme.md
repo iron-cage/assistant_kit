@@ -13,9 +13,10 @@
 | `taxonomy/` | Four-level concept hierarchy (Project/Conversation/Session/Entry) — 3 instances |
 | `endpoint/` | Anthropic HTTP endpoint wire contracts — 11 instances (URL, auth, schema, errors) |
 | `model/` | Claude API model catalog — 12 instances (model IDs, capabilities, workspace defaults) |
-| `param/` | CLI parameter specifications — one file per runtime parameter (120 instances) |
+| `param/` | CLI parameter specifications — one file per runtime parameter (126 instances) |
 | `tool/` | Built-in tools available in Claude Code sessions — 40 instances (14 categories) |
 | `subcommand/` | CLI subcommands — 9 instances (agents, auth, auto-mode, doctor, install, mcp, plugin, setup-token, update) |
 | `version/` | Claude Code release changelog — 95 instances (2.1.74–2.1.198) |
 | `001_entity.md` | Cross-entity index: all collection types with instance counts |
 | `fault/` | Fault collection — all known error, silent failure, and quirk conditions of the `claude` binary |
+| `pattern/` | Reusable version-pinning design pattern documentation — 1 instance |

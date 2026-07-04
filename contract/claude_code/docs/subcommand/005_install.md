@@ -44,3 +44,4 @@ pre-v1.0 (unverified)
 | doc | [009_update.md](009_update.md) | Update/upgrade subcommand |
 | doc | [../param/050_preferred_version_spec.md](../param/050_preferred_version_spec.md) | Preferred version specification |
 | doc | [../param/049_preferred_version_resolved.md](../param/049_preferred_version_resolved.md) | Resolved version tracking |
+| doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |

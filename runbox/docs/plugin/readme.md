@@ -1,4 +1,4 @@
-# Runbox Plugins
+# Plugin Doc Entity
 
 One file per swappable behavioral slot in the container test infrastructure.
 Plugins have lifecycle management — their absence changes the execution shape, not just a value.

@@ -117,11 +117,11 @@ Schema:
 - **Metadata**: parse `.meta.json` sidecars for `agentType` and `description` (hierarchical format only, B14).
 - **Display**: mark agent sessions distinctly in CLI output (e.g., "agent-64bdad98 (sub-agent)").
 
-### Commands
+### Referenced Commands
 
-| File | Relationship |
-|------|-------------|
-| `../cli/command/07_projects.md` | CLI display of session families (`.projects`, #7) |
+| # | Command | Context |
+|---|---------|---------|
+| 7 | [`.projects`](../cli/command/07_projects.md) | CLI display of session families |
 
 ### Features
 

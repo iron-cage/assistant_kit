@@ -13,7 +13,7 @@
 | [007_model.md](007_model.md) | Model namespace: `.model`, `.model.select` |
 | [008_models.md](008_models.md) | Models discovery: `.models` |
 
-**Total:** 20 commands (18 visible + 2 hidden)
+**Total:** 20 commands (15 visible + 2 hidden + 1 DEPRECATED: `.account.rotate` (Feature 038) + 2 REMOVED: `.account.assign`, `.account.unclaim`)
 
 ### All Commands
 
@@ -34,7 +34,9 @@
 | 13 | `.account.rotate` | **DEPRECATED** — hidden redirector; exits 1 with notice to use `.usage rotate::1` | 0 | `clp .account.rotate` |
 | 14 | `.account.renewal` | Set/clear billing renewal timestamp override for one or all accounts | 6 | `clp .account.renewal name::alice@acme.com from_now::+0m` |
 | 15 | `.account.inspect` | Live diagnostic inspection of identity, subscription, and org fields | 4 | `clp .account.inspect` |
-| 17 | `.model` | Get or set the Claude Code session model in `~/.claude/settings.json` | 2 | `clp .model set::opus` |
+| 16 | `.account.assign` | **REMOVED** (Feature 037) — writes per-machine active marker only; use `.accounts assignee::USER@MACHINE name::X` | 0 | `clp .account.assign name::alice@acme.com` |
+| 17 | `.account.unclaim` | **REMOVED** (Feature 037; absorbed param further REMOVED Feature 064) — releases account ownership; use `.accounts owner::0 name::X` | 0 | `clp .account.unclaim name::alice@acme.com` |
+| 18 | `.model` | Get or set the Claude Code session model in `~/.claude/settings.json` | 2 | `clp .model set::opus` |
 | 19 | `.models` | List available Claude models via live API or static offline catalog | 3 | `clp .models offline::1` |
 | 20 | `.model.select` | Get/set/reset subprocess model preference in `~/.clr/prefs.json` | 3 | `clp .model.select id::claude-opus-4-8` |
 

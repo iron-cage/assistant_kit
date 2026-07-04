@@ -28,3 +28,4 @@ v2.1.163
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [123_required_minimum_version.md](123_required_minimum_version.md) | Companion startup floor |
+| doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |

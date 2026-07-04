@@ -27,4 +27,4 @@
 | 005 | [Active Marker (`_active_{host}_{user}`)](005_active_marker.md) | Per-machine active-account marker file format | ✅ |
 | 006 | [Session Settings (`~/.claude/settings.json`)](006_settings_json.md) | Fields in `settings.json` that `clp` reads or writes | ✅ |
 | 007 | [Claude State (`~/.claude.json`)](007_claude_json.md) | Fields in `~/.claude.json` that `clp` reads (read-only) | ✅ |
-| 008 | [CLR Preferences (`~/.clr/prefs.json`)](008_clr_prefs_json.md) | Subprocess model preference and other clr runtime prefs written/read by `clp .model.select` | 🔲 |
+| 008 | [CLR Preferences (`~/.clr/prefs.json`)](008_clr_prefs_json.md) | Subprocess model preference and other clr runtime prefs written/read by `clp .model.select` | ✅ |

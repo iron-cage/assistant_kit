@@ -56,4 +56,6 @@ Both layouts coexist within a single project directory. Neither is deprecated.
 
 ### Sources
 
-- `claude_storage_core` — `SessionFamily` Domain Type definition
+| File | Relationship |
+|------|--------------|
+| `claude_storage_core` | `SessionFamily` Domain Type definition |
