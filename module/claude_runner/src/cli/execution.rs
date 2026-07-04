@@ -23,17 +23,21 @@ fn is_full_level( cli : &CliArgs ) -> bool
 }
 
 // Emit an Execution event (success or error path).
+//
+// `fallback_message` overrides `cli.message` in the journal when BUG-327's one-shot
+// fallback substitution fired for this attempt — Some(FALLBACK_MESSAGE) once set, else None.
 fn emit_execution(
-  writer    : Option< &JournalWriter >,
-  cli       : &CliArgs,
-  stdout    : &str,
-  stderr    : &str,
-  exit_code : i32,
+  writer           : Option< &JournalWriter >,
+  cli              : &CliArgs,
+  stdout           : &str,
+  stderr           : &str,
+  exit_code        : i32,
+  fallback_message : Option< &str >,
 )
 {
   let mut ev               = EventRecord::new( EventType::Execution );
   ev.fields.exit_code      = Some( exit_code );
-  ev.fields.message.clone_from( &cli.message );
+  ev.fields.message         = fallback_message.map( ToOwned::to_owned ).or_else( || cli.message.clone() );
   ev.fields.dir.clone_from( &cli.dir );
   ev.fields.model.clone_from( &cli.model );
   ev.fields.timeout_secs   = cli.timeout;
@@ -573,6 +577,15 @@ pub( super ) fn apply_runner_retry(
 /// Interactive mode retains `unwrap_or( 0 )` (unlimited) — `run_interactive()` must NOT adopt this constant.
 const DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600;
 
+/// Diagnostic Claude Code prints when a resumed session's deferred-tool marker is stale
+/// (tool already ran) or falls outside the tail-scan window (BUG-327).
+/// Resending the original message reproduces the same stale-marker state, so this class
+/// cannot recover via the standard same-message retry path — see `run_print_mode()`.
+const DEFERRED_TOOL_MARKER : &str = "No deferred tool marker found in the resumed session";
+
+/// One-shot substitute message sent when `DEFERRED_TOOL_MARKER` fires (BUG-327).
+const FALLBACK_MESSAGE : &str = "Continue.";
+
 /// Resolve the default print-mode timeout.
 ///
 /// In production: always returns `DEFAULT_PRINT_TIMEOUT_SECS` (3600).
@@ -624,14 +637,21 @@ pub( super ) fn run_print_mode(
   let mut attempts = [ 0usize; 6 ];
   // Fix(BUG-299): Runner retry counter — tracks spawn failure attempts separately from class retries.
   let mut runner_attempt = 0u32;
+  // Fix(BUG-327): one-shot fallback builder — Some(..) once the deferred-tool marker has
+  // fired, substituting FALLBACK_MESSAGE for the original message on the next attempt.
+  let mut fallback_builder : Option< ClaudeCommand > = None;
 
   loop
   {
+    let active = fallback_builder.as_ref().unwrap_or( builder );
+    // Fix(BUG-327): journaled message must reflect the fallback substitution, not the
+    // original cli.message, once fallback_builder is set — see emit_execution().
+    let fallback_note = fallback_builder.is_some().then_some( FALLBACK_MESSAGE );
     // Fix(BUG-240): spawn errors always emitted regardless of verbosity (inside execute_print_attempt).
     // Root cause: Err(e) branch was guarded by verbosity check; verbosity 0 swallowed fatal spawn errors.
     // Pitfall: verbosity gates diagnostics only — fatal errors must surface regardless of verbosity level.
     // Fix(BUG-299): handle Err(spawn_err) from execute_print_attempt() via apply_runner_retry().
-    let output = match execute_print_attempt( builder, timeout_secs )
+    let output = match execute_print_attempt( active, timeout_secs )
     {
       Ok( o )  => o,
       Err( e ) =>
@@ -662,6 +682,26 @@ pub( super ) fn run_print_mode(
 
     if output.exit_code != 0
     {
+      // Fix(BUG-327): resumed session with a stale/out-of-window deferred-tool marker.
+      // Root cause: classify_error() has no pattern for this diagnostic, so it fell through
+      //   to the generic Unknown class and retried with the *same* message — which reproduces
+      //   the same stale-marker state forever. One-shot substitution of FALLBACK_MESSAGE breaks the loop.
+      // Pitfall: checked before classify_error() and gated on fallback_builder.is_none() so it
+      //   can only fire once per run — a subprocess that keeps emitting the marker still falls
+      //   through to the bounded classify_error()/retry-count path on the next iteration.
+      if fallback_builder.is_none()
+        && ( output.stdout.contains( DEFERRED_TOOL_MARKER ) || output.stderr.contains( DEFERRED_TOOL_MARKER ) )
+      {
+        if !cli.quiet
+        {
+          eprintln!( "[Runner] deferred tool marker not found in resumed session — retrying with fallback prompt…" );
+        }
+        emit_retry( journal, "FallbackPrompt", 1, 2, 0, "deferred tool marker not found in resumed session" );
+        let fallback = active.clone().with_message( FALLBACK_MESSAGE.to_string() );
+        fallback_builder = Some( fallback );
+        continue;
+      }
+
       // Fix(BUG-037): classify non-zero exit for labeled diagnostic.
       // Root cause: no error classification existed; all non-zero exits produced identical log output.
       // Pitfall: classify_error() scans stdout AND stderr — rate-limit reason may be in stdout.
@@ -733,7 +773,7 @@ pub( super ) fn run_print_mode(
         };
         if !rendered.is_empty() { eprint!( "{rendered}" ); }
       }
-      emit_execution( journal, cli, &output.stdout, &raw_stderr, output.exit_code );
+      emit_execution( journal, cli, &output.stdout, &raw_stderr, output.exit_code, fallback_note );
       std::process::exit( output.exit_code );
     }
 
@@ -760,8 +800,8 @@ pub( super ) fn run_print_mode(
     {
       out
     };
-    let out = apply_expect_validation( cli, builder, out, journal );
-    emit_execution( journal, cli, &raw_stdout, &raw_stderr, 0 );
+    let out = apply_expect_validation( cli, active, out, journal );
+    emit_execution( journal, cli, &raw_stdout, &raw_stderr, 0, fallback_note );
     // Fix(BUG-320): detect session mismatch — warn when claude resumed a different session.
     // Root cause: without UUID comparison, silent session drift goes unnoticed; callers may
     //   believe they are continuing a specific conversation but get a different one instead.

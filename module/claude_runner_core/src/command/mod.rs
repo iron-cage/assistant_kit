@@ -33,7 +33,7 @@ mod params_extended;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[ allow( clippy::struct_excessive_bools ) ] // four independent flags (continue, skip_permissions, dry_run, unset_claudecode) — enum refactor adds no clarity
-#[derive( Debug )]
+#[derive( Debug, Clone )]
 pub struct ClaudeCommand {
   pub(super) working_directory: Option<PathBuf>,
   pub(super) max_output_tokens: Option<u32>,

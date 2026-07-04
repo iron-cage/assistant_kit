@@ -89,6 +89,7 @@
 | `--session-from` param edge cases (EC-1–EC-8, US-1–US-7) | `session_from_test.rs` | `-c` injection from source session, `--from` alias, empty source, `--session-dir` precedence, `--new-session` suppression, `--to` combo, `CLR_SESSION_FROM` env var, dry-run WYSIWYG, cross-loading user stories |
 | Session path resolution feature (FT-6–FT-10) | `session_path_resolution_test.rs` | `clr scope` 6-var format, `--session-from` session resumption, `--to`+`--session-from` combo, `--to`/`--dir` alias equivalence, `--session-dir` precedence over `--session-from` |
 | Session source isolation invariant (IN-1–IN-5) | `session_source_isolation_test.rs` | Read isolation (UUID from source), run isolation (cwd = target), write isolation (source file mtime/size unchanged), `--session-dir` raw-path wins, combined isolation invariants |
+| Bug reproducer BUG-327 | `bug_reproducers_327_test.rs` | Stale deferred-tool-marker fallback retry: one-shot "Continue." substitution fires and succeeds; non-marker errors unaffected |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
 ### Responsibility Table
@@ -170,5 +171,6 @@
 | `session_from_test.rs` | `--session-from` parameter edge cases: EC-1–EC-8 (injection, alias, empty source, precedence, suppression, env var, WYSIWYG) + US-1–US-7 (session transplant user stories). |
 | `session_path_resolution_test.rs` | Feature 005 session path resolution: FT-6–FT-10 (scope output format, `--session-from` resumption, `--to` combo, `--to`/`--dir` alias, `--session-dir` precedence). |
 | `session_source_isolation_test.rs` | Invariant 011 session source isolation: IN-1–IN-5 (read/run/write isolation, `--session-dir` wins, combined invariants). |
+| `bug_reproducers_327_test.rs` | Bug reproducer BUG-327: stale deferred-tool-marker one-shot fallback retry fires and substitutes "Continue."; non-marker errors unaffected. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |
