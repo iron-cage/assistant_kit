@@ -124,7 +124,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 29 | `--output-file` | string | — | Any writable path | Write stdout to file in addition to printing (tee behavior) | 2 cmds |
 | 30 | `--expect` | string | — | `val1\|val2\|…` | Pipe-separated enum values; stdout must match one after trim+lowercase | 2 cmds |
 | 31 | `--expect-strategy` | enum | `fail` | `fail`/`retry`/`default:<V>` | Mismatch handling: exit 3, retry N times, or output fallback value | 2 cmds |
-| 33 | `--max-sessions` | u32 | 30 | 0 to 4294967295 | Max concurrent Claude Code sessions before blocking; 0 = unlimited | 2 cmds |
+| 33 | `--max-sessions` | u32 | 10 | 0 to 4294967295 | Max concurrent non-interactive Claude Code sessions before blocking; 0 = unlimited; interactive exempt | 2 cmds |
 | 34 | `--retry-on-transient` | u8 | auto | 0–255 | Transient class retry count (Tier 2) | 2 cmds |
 | 35 | `--transient-delay` | u32 | auto | 0 to 4294967295 | Transient class delay (Tier 2) | 2 cmds |
 | 36 | `--timeout` | u32 | `3600` (print) / `0` (interactive) | 0 to 4294967295 | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only; contrast with param 20) | 2 cmds |
