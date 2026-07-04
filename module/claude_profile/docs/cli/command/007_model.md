@@ -4,7 +4,7 @@ Session model management command.
 
 ---
 
-### Command: 17. `.model`
+### Command: 18. `.model`
 
 Get or set the Claude Code session model in `~/.claude/settings.json`. Without parameters, prints the current model. With `set::`, writes the requested model.
 

@@ -15,8 +15,8 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 
 | Entry | Responsibility |
 |-------|----------------|
-| [command/](command/readme.md) | Per-namespace command specifications (account, token, credentials, usage, paths, meta) |
-| [param/](param/readme.md) | Individual parameter specifications (58 active params, 63 files; 5 REMOVED: 013, 032, 053, 056, 057) |
+| [command/](command/readme.md) | Per-namespace command specifications (account, token, credentials, usage, paths, model, models, meta) |
+| [param/](param/readme.md) | Individual parameter specifications (61 active params, 66 files; 5 REMOVED: 013, 032, 053, 056, 057) |
 | [type/](type/readme.md) | CLI type definitions (AccountName, OutputFormat, WarningThreshold, AccountSelector) |
 | [param_group/](param_group/readme.md) | Parameter group semantics (Output Control, Field Presence, Fetch Behavior, Sort Control, Display Control, Account Targeting) |
 | [user_story/](user_story/readme.md) | Five canonical user stories mapping personas and goals to commands |
@@ -54,8 +54,8 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 
 ### Navigation
 
-- [Commands](command/readme.md) — 18 commands (16 visible + 2 hidden) across 6 namespaces
-- [Parameters](param/readme.md) — 58 active parameter specifications (63 files; 5 REMOVED: 013, 032, 053, 056, 057)
+- [Commands](command/readme.md) — 20 commands (15 visible + 2 hidden + 1 DEPRECATED: `.account.rotate` (Feature 038) + 2 REMOVED: `.account.assign`, `.account.unclaim`) across 6 namespaces
+- [Parameters](param/readme.md) — 61 active parameter specifications (66 files; 5 REMOVED: 013, 032, 053, 056, 057)
 - [Types](type/readme.md) — 4 CLI types (AccountName, OutputFormat, WarningThreshold, AccountSelector)
 - [Parameter Groups](param_group/readme.md) — 6 groups (Output Control, Field Presence, Fetch Behavior, Sort Control, Display Control, Account Targeting)
 - [User Stories](user_story/readme.md) — 5 user stories (Account Rotation, Onboarding, Quota Monitoring, Scripted Automation, Credential Diagnostics)

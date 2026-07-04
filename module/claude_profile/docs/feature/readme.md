@@ -19,7 +19,7 @@
 | 005 | [Delete Account](005_account_delete.md) | Remove a named account with an active-account safety guard | ✅ |
 | 006 | [Token Status](006_token_status.md) | Classify the active OAuth token as Valid, ExpiringSoon, or Expired | ✅ |
 | 007 | [File Topology](007_file_topology.md) | Expose all `~/.claude/` canonical paths via a typed API | ✅ |
-| 008 | [Auto Rotate](008_auto_rotate.md) | Rotate to the inactive account with the highest token expiry | ✅ |
+| 008 | [Auto Rotate](008_auto_rotate.md) | **DEPRECATED** — replaced by `.usage rotate::1` (feature 038); `auto_rotate()` API and `.account.rotate` CLI dropped | ❌ |
 | 009 | [Token Usage Reporting](009_token_usage.md) | Show live quota utilization for all saved accounts via API | ✅ |
 | 010 | [Persistent Storage Path](010_persistent_storage.md) | Resolve persistent storage root and credential store from `$PRO` / `$HOME` | ✅ |
 | 011 | [Account Status by Name](011_account_status_by_name.md) | Inspect any stored account's token state without switching | ✅ |

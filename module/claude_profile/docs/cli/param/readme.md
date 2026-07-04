@@ -71,7 +71,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [065_offline.md](065_offline.md) | `offline::` — use static embedded model catalog instead of live `GET /v1/models`; no credentials required |
 | [066_reset.md](066_reset.md) | `reset::` — remove `subprocess_model` from `~/.clr/prefs.json`; idempotent; mutually exclusive with `id::` on `.model.select` |
 
-**Total:** 61 active parameters (Feature 065: param 013 `active::` REMOVED; param 063 `assignee::` added as replacement; Feature 064: params 053 `for::`, 056 `unclaim::`, 057 `assign::` REMOVED; param 062 `owner::` extended with `owner::0` sentinel + batch)
+**Total:** 61 active parameters (Feature 023 deprecated: param 032 `next::` REMOVED, absorbed into feature 020's `sort::`; Feature 065: param 013 `active::` REMOVED; param 063 `assignee::` added as replacement; Feature 064: params 053 `for::`, 056 `unclaim::`, 057 `assign::` REMOVED; param 062 `owner::` extended with `owner::0` sentinel + batch)
 
 ### Overview Table
 
@@ -137,7 +137,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 58 | `force::` | `bool` | `0` | `0`, `1`, `false`, `true` | Bypass G5–G8 ownership enforcement on mutation commands | `.account.use`, `.account.delete`, `.account.relogin`, `.accounts`, `.usage` |
 | 59 | `rotate::` | `bool` | `0` | `0`, `1` | After quota table render, switch to footer-recommended account; mutually exclusive with `live::1`; G5 ownership gate | `.usage` |
 | 60 | `solo::` | `bool` | `0` | `0`, `1` | Token conservation: restrict all credential-consuming operations to current+owned account; others use `approximate_quota()` | `.usage` |
-| 61 | `who::` | `i64` | `-1` | `-1` (auto), `0` (hide), `1` (show) | Sessions table visibility in `.usage` output | `.usage` |
+| 61 | `who::` | `bool` | `auto` | `0` (hide), `1` (show); omit = auto | Sessions table visibility in `.usage` output | `.usage` |
 | 62 | `owner::` | `string` | *(omit)* | `USER@MACHINE`, `0` (release) | Set ownership (`USER@MACHINE`) or release (`0`); batch via comma-list `name::` | `.accounts`, `.usage` |
 | 63 | `assignee::` | `string` | *(omit)* | `USER@MACHINE`, `0` (current machine) | Assign/unassign active-account marker; `0` sentinel expands to `$USER@$HOSTNAME` (Feature 065) | `.accounts`, `.usage` |
 | 64 | `id::` | `string` | *(omit)* | Any non-empty model ID string | Pin subprocess model to `~/.clr/prefs.json`; activates set mode when present | `.model.select` |
