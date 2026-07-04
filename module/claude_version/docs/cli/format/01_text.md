@@ -30,18 +30,18 @@ Output fields differ per command. Common patterns:
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.status`](../command/root.md#command--2-status) | Default human-readable output |
-| 2 | [`.version.show`](../command/version.md#command--3-versionshow) | Default human-readable output |
-| 3 | [`.version.install`](../command/version.md#command--4-versioninstall) | Default human-readable output |
-| 4 | [`.version.guard`](../command/version.md#command--5-versionguard) | Default human-readable output |
-| 5 | [`.version.list`](../command/version.md#command--6-versionlist) | Default human-readable output |
-| 6 | [`.processes`](../command/processes.md#command--7-processes) | Default human-readable output |
-| 7 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Default human-readable output |
-| 8 | [`.settings.show`](../command/settings.md#command--9-settingsshow) | Default human-readable output |
-| 9 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Default human-readable output |
-| 10 | [`.version.history`](../command/version.md#command--12-versionhistory) | Default human-readable output |
-| 11 | [`.config`](../command/config.md#command--13-config) | Default human-readable output |
-| 12 | [`.params`](../command/params.md#command--14-params) | Default human-readable output |
+| 1 | [`.status`](../command/root.md#command-2-status) | Default human-readable output |
+| 2 | [`.version.show`](../command/version.md#command-3-versionshow) | Default human-readable output |
+| 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | Default human-readable output |
+| 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | Default human-readable output |
+| 5 | [`.version.list`](../command/version.md#command-6-versionlist) | Default human-readable output |
+| 6 | [`.processes`](../command/processes.md#command-7-processes) | Default human-readable output |
+| 7 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | Default human-readable output |
+| 8 | [`.settings.show`](../command/settings.md#command-9-settingsshow) | Default human-readable output |
+| 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | Default human-readable output |
+| 10 | [`.version.history`](../command/version.md#command-12-versionhistory) | Default human-readable output |
+| 11 | [`.config`](../command/config.md#command-13-config) | Default human-readable output |
+| 12 | [`.params`](../command/params.md#command-14-params) | Default human-readable output |
 
 ### Referenced User Stories
 

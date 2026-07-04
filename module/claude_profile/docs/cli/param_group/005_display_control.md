@@ -22,8 +22,8 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | All 11 display and filter params |
-| 2 | [`.accounts`](../command/001_account.md#command--3-accounts) | All 11 display and filter params |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | All 11 display and filter params |
+| 2 | [`.accounts`](../command/001_account.md#command-3-accounts) | All 11 display and filter params |
 
 **Typical Patterns:**
 

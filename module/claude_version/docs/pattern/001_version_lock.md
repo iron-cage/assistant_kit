@@ -75,8 +75,8 @@ This pattern does not apply when tracking `latest` is desired — for `latest`, 
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands/version.rs` | Lock application in perform_install() |
-| `../../src/settings_io.rs` | settings.json write for layers 1, 2, 5 |
+| `../../../claude_version_core/src/version.rs` | Lock application: `perform_install()` calls `lock_version()` |
+| `../../../claude_version_core/src/settings_io.rs` | `settings.json` read/write primitives used by layers 1, 2, 5 |
 
 ### Provenance
 

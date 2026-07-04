@@ -21,7 +21,7 @@ clr refresh [--creds <FILE>] [--timeout <SECS>] [--trace] [--dry-run] [--no-comp
 | [`--timeout`](../param/020_timeout.md) | [`TimeoutSecs`](../type/09_timeout_secs.md) | 45 | Max seconds to wait for refresh |
 | [`--trace`](../param/013_trace.md) | bool | false | Print underlying call details to stderr then execute |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Print subprocess env+command to stderr (same path as `--trace`); exit 0 without spawning |
-| [`--no-compact-window`](../param/075_no_compact_window.md) | bool | false | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` injection; env: `CLR_NO_COMPACT_WINDOW` |
+| [`--no-compact-window`](../param/075_no_compact_window.md) | bool | false | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection; env: `CLR_NO_COMPACT_WINDOW` |
 | [`--journal`](../param/072_journal.md) | enum | `full` | Journal level: `full` (stdout+stderr ≤1MB), `meta` (metadata only), `off` (disabled) |
 | [`--journal-dir`](../param/073_journal_dir.md) | path | `~/.clr/journal/` | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` |
 | [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Load clr params from JSON config file; stdin JSON auto-detected when no TTY; env: `CLR_ARGS_FILE` |

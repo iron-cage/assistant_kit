@@ -69,7 +69,7 @@ Status values: `"valid"`, `"expiring_soon"`, `"expired"`.
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | Classify active OAuth token expiry state |
+| 1 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | Classify active OAuth token expiry state |
 
 ### Referenced Parameters
 

@@ -1,6 +1,6 @@
 # Test: Field Presence Group
 
-Integration and edge case coverage for the Field Presence parameter group. See [parameter_groups.md](../../../../docs/cli/param_group/readme.md#group--2-field-presence) for specification.
+Integration and edge case coverage for the Field Presence parameter group. See [parameter_groups.md](../../../../docs/cli/param_group/002_field_presence.md) for specification.
 
 > **Feature 037/065 note:** `.accounts` field-presence toggles (`active::`, `sub::`, `tier::`, `expires::`, `email::`, etc.) were removed in Feature 037 and replaced by `cols::`. CCs that invoke these on `.accounts` (CC-4, CC-8, CC-11) describe pre-Feature-037 behavior — the tests now exit 1 instead of 0. Additionally, `active::` was further repurposed (Feature 064) and then REMOVED_TOGGLE'd (Feature 065); on `.accounts` it now exits 1 with a migration message pointing to `assignee::`. CC-8 has been updated to reflect this.
 
@@ -48,7 +48,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 - **When:** `clp .accounts`
 - **Then:** Each account block contains `Active:`, `Sub:`, `Tier:`, `Expires:`, `Email:` lines.; all five on-by-default fields present without any params
 - **Exit:** 0
-- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
+- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/002_field_presence.md)
 
 ---
 
@@ -58,7 +58,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 - **When:** `clp .credentials.status`
 - **Then:** Output contains `Account:`, `Sub:`, `Tier:`, `Token:`, `Expires:`, `Email:` lines.; all six on-by-default fields present without any params
 - **Exit:** 0
-- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
+- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/002_field_presence.md)
 
 ---
 
@@ -68,7 +68,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 - **When:** `clp .accounts sub::0`
 - **Then:** Account block contains `Active:`, `Tier:`, `Expires:`, `Email:` but NOT `Sub:`.; only `Sub:` line absent; all other on-by-default fields remain
 - **Exit:** 0
-- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
+- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/002_field_presence.md)
 
 ---
 
@@ -78,7 +78,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 - **When:** `clp .accounts active::0 sub::0 tier::0 expires::0 email::0`
 - **Then:** Only account name lines (unindented), no field lines, no blank separators.; bare name list when all on-by-default fields disabled
 - **Exit:** 0
-- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
+- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/002_field_presence.md)
 
 ---
 
@@ -88,7 +88,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 - **When:** `clp .credentials.status file::1 saved::1 display_name::1 role::1 billing::1 model::1`
 - **Then:** All six default-on fields plus `File:`, `Saved:`, `Display:`, `Role:`, `Billing:`, and `Model:` lines.; all 6 opt-in fields appear when explicitly enabled
 - **Exit:** 0
-- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
+- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/002_field_presence.md)
 
 ---
 
@@ -101,7 +101,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 - **Then:** 1. `.accounts` blocks contain `Active:` but NOT `Sub:`, `Tier:`, `Expires:`, `Email:`
 2. `.credentials.status` contains `Account:`, `Token:` but NOT `Sub:`, `Tier:`, `Expires:`, `Email:`; for both; shared params suppress the same fields on both commands
 - **Exit:** 0
-- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
+- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/002_field_presence.md)
 
 ---
 
@@ -111,7 +111,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 - **When:** `clp .accounts sub::0 tier::0 format::json`
 - **Then:** Valid JSON array where each object still contains `subscription_type` and `rate_limit_tier`.; field-presence params do not strip JSON keys
 - **Exit:** 0
-- **Source:** [004_parameter_interactions.md — Interaction 3](../../../../docs/cli/004_parameter_interactions.md#interaction--3-formatjson-overrides-field-presence-params)
+- **Source:** [004_parameter_interactions.md — Interaction 3](../../../../docs/cli/004_parameter_interactions.md#interaction-2-formatjson-overrides-field-presence-params)
 
 ---
 
@@ -125,7 +125,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
   2. `clp .credentials.status active::0` — exits 1 (unknown param)
 - **Then:** Both exit 1. `active::` is a REMOVED_TOGGLE on `.accounts`; `.credentials.status` rejects it as unknown.
 - **Exit:** 1 (both cases)
-- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
+- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/002_field_presence.md)
 
 ---
 
@@ -137,7 +137,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
   2. `clp .accounts account::0` — should fail (unknown param)
 - **Then:** `account::` applies to `.credentials.status` only; `.accounts` rejects it
 - **Exit:** 0
-- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
+- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/002_field_presence.md)
 
 ---
 
@@ -147,7 +147,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 - **When:** `clp .accounts token::0`
 - **Then:** Exit 1 with an unrecognised-parameter error.; `token::` is `.credentials.status`-only and rejected by `.accounts`
 - **Exit:** 1
-- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
+- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/002_field_presence.md)
 
 ---
 
@@ -157,7 +157,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 - **When:** `clp .accounts active::0 sub::0 tier::0 expires::0 email::0`
 - **Then:** Exit 0 with `(no accounts configured)` — the empty-store case is not an error.; field-presence params do not affect exit code semantics
 - **Exit:** 0
-- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
+- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/002_field_presence.md)
 
 ---
 
@@ -167,7 +167,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 - **When:** `clp .accounts display_name::1 role::1 billing::1 model::1`
 - **Then:** Account block contains `Display:`, `Role:`, `Billing:`, `Model:` lines with values from saved snapshots.; all 4 opt-in metadata fields render from per-account snapshots
 - **Exit:** 0
-- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
+- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/002_field_presence.md)
 
 ---
 
@@ -179,4 +179,4 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
   2. `clp .accounts display_name::1 role::1`
 - **Then:** Both commands show `Display:` and `Role:` lines with values from their respective data sources (live vs saved).; opt-in field params suppress/show identically on both commands
 - **Exit:** 0
-- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/readme.md#group--2-field-presence)
+- **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/param_group/002_field_presence.md)

@@ -98,7 +98,7 @@ When `trace::1` and `touch::0`: no timestamped `account.use` diagnostic lines (n
 
 | File | Relationship |
 |------|--------------|
-| [cli/command/001_account.md](../cli/command/001_account.md#command--5-accountuse) | `.account.use` CLI specification |
+| [cli/command/001_account.md](../cli/command/001_account.md#command-5-accountuse) | `.account.use` CLI specification |
 
 ### Dependencies
 
@@ -135,7 +135,7 @@ When `trace::1` and `touch::0`: no timestamped `account.use` diagnostic lines (n
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.use`](../cli/command/001_account.md#command--5-accountuse) | CLI surface for this feature |
+| 1 | [`.account.use`](../cli/command/001_account.md#command-5-accountuse) | CLI surface for this feature |
 
 ### Sources
 
