@@ -24,6 +24,7 @@ See [command/readme.md](command/readme.md) for command reference and [param/read
 | [Navigate project hierarchy](#7-navigate-project-hierarchy) | `.projects`, `.project.exists` | medium |
 | [Find substantial sessions](#8-find-substantial-sessions) | `.list` | medium |
 | [Session lifecycle management](#9-session-lifecycle-management) | `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure` | medium |
+| [Quick context refresh](#10-quick-context-refresh) | `.tail` | low |
 
 ---
 
@@ -238,6 +239,27 @@ result=$(clg .session.ensure path::/home/user/project topic::work strategy::fres
 - `.project.exists` exits 1 intentionally for scripting — non-zero exit signals "no history" to the calling shell
 - `.session.ensure` is the only command that creates directories; it is idempotent (safe to call repeatedly)
 - All four commands accept `.`, `..`, `~`, and `~/path` in `path::`
+
+---
+
+### 10. Quick context refresh
+
+**Scenario:** You just returned to a project directory and want to see what you were last discussing, without running a lookup command first.
+
+```bash
+# Zero parameters: last 4 entries of this directory's default-topic session
+cd /home/alice/projects/my-app
+claude_storage .tail
+# Output: last 4 conversation entries, oldest-first
+
+# See more context
+claude_storage .tail tail::10
+
+# Check a non-default topic
+claude_storage .tail topic::work
+```
+
+**Notes:** `.tail` is the fastest path to a content refresher — no `session_id::` or `.show` lookup needed when you're already in the right directory. Use `.show` instead when you need full session metadata or a non-default project.
 
 ---
 

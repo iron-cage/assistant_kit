@@ -17,7 +17,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 
 **Default:** Command-dependent
 
-**Commands:** `.status`, `.list`, `.projects`, `.count`, `.search`, `.show`, `.export`, `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`
+**Commands:** `.status`, `.list`, `.projects`, `.count`, `.search`, `.show`, `.export`, `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`, `.tail`
 
 **Per-command semantics:**
 
@@ -34,6 +34,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 | `.project.exists` | StoragePath | cwd | Directory to check for history |
 | `.session.dir` | StoragePath | cwd | Base directory |
 | `.session.ensure` | StoragePath | cwd | Base directory |
+| `.tail` | StoragePath | cwd | Directory to resolve project from |
 
 **Purpose:** Provides a path context appropriate to each command. In `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list`, it is a substring filter on project paths. In `.projects`, `.count`, `.search`, `.show`, and `.export`, it anchors the scope discovery when paired with `scope::`.
 
@@ -59,6 +60,9 @@ Path argument. Semantics differ by command — see command sections for exact be
 .projects scope::under path::/home/alice/projects
 .count scope::under path::/home/alice/projects
 .search query::error scope::under path::/home/alice/projects
+
+# .tail: directory to resolve project from
+.tail path::/home/alice/projects/my-app
 ```
 
 **Group (scope anchor context):** [Scope Configuration](../param_group/05_scope_configuration.md) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.count`, `.search`, `.show`, and `.export`; its role in `.status`, `.list`, `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
@@ -88,6 +92,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 | 9 | [`.project.exists`](../command/09_project_exists.md) | cwd | Directory to check for history |
 | 10 | [`.session.dir`](../command/10_session_dir.md) | cwd | Base directory |
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | cwd | Base directory |
+| 12 | [`.tail`](../command/12_tail.md) | cwd | Directory to resolve project from |
 
 ### Referenced User Stories
 | # | User Story | Persona |
@@ -97,3 +102,4 @@ Path argument. Semantics differ by command — see command sections for exact be
 | 3 | [Export Session for Review](../user_story/003_export_session_for_review.md) | developer |
 | 4 | [Query Storage Programmatically](../user_story/004_query_storage_programmatically.md) | developer |
 | 5 | [Resume Claude Session](../user_story/005_resume_claude_session.md) | developer |
+| 6 | [Quick Context Refresh](../user_story/006_quick_context_refresh.md) | developer |

@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clg parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 24 clg parameter test files.
+- **In Scope**: All 25 clg parameter test files.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 ### Responsibility Table
@@ -35,3 +35,4 @@
 | 22_limit.md | Edge case tests for `limit::` parameter | ✅ |
 | 23_show_tokens.md | Edge case tests for `show_tokens::` parameter | ✅ |
 | 24_show_tree.md | Edge case tests for `show_tree::` parameter | ✅ |
+| 25_tail.md | Edge case tests for `tail::` parameter | ✅ |

@@ -42,7 +42,7 @@ Key entity directories there: `behavior/` (25 hypotheses), `storage/`, `filesyst
 **Complete CLI reference** for all claude_storage commands, parameters, and types.
 
 **Contents**:
-- [command/readme.md](cli/command/readme.md) — All 11 commands with syntax, parameters, examples
+- [command/readme.md](cli/command/readme.md) — All 12 commands with syntax, parameters, examples
 - [param/readme.md](cli/param/readme.md) — All parameters with types, validation, bidirectional cross-refs
 - [type/readme.md](cli/type/readme.md) — Semantic type system with validation rules
 - [001_dictionary.md](cli/001_dictionary.md) — Domain vocabulary (project, conversation, session, entry, scope, etc.)

@@ -8,7 +8,7 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 |------|----------------|
 | `Cargo.toml` | Crate manifest: deps, features, build script |
 | `build.rs` | Transforms YAML command definitions to static PHF registry |
-| `unilang.commands.yaml` | Command definitions (11 commands) |
+| `unilang.commands.yaml` | Command definitions (12 commands) |
 | `src/` | CLI pipeline, command routines, binary entry points |
 | `tests/` | Integration and parameter validation tests |
 | `docs/` | Behavioral requirements: features, CLI reference, operation docs |
@@ -386,7 +386,7 @@ fn main() -> claude_storage_core::Result< () >
 
 **Build system**:
 - `build.rs` - Transforms YAML command definitions to static PHF registry
-- `unilang.commands.yaml` - Command definitions (11 commands)
+- `unilang.commands.yaml` - Command definitions (12 commands)
 - Generated code: Static command map with O(1) lookup
 
 **Command routines** (`src/cli/mod.rs`):

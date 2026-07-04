@@ -68,6 +68,7 @@ The `scope` + `path` pair uses a consistent discovery model across tools (scope,
 | 9 | [`.project.exists`](../command/09_project_exists.md) | Partial | `scope::` | `path::` only |
 | 10 | [`.session.dir`](../command/10_session_dir.md) | Partial | `scope::` | `path::` only |
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | Partial | `scope::` | `path::` only |
+| 12 | [`.tail`](../command/12_tail.md) | Partial | `scope::` | `path::` only |
 
 ### Referenced Parameters
 

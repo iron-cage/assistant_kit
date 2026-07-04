@@ -8,7 +8,7 @@ Comprehensive manual testing coverage for all CLI commands, parameter combinatio
 
 ### commands to test
 
-Current command set (11 commands as of v1.4.0):
+Current command set (12 commands as of v1.4.0):
 
 1. `.status` - Storage statistics (path parameter tested in Phase 1D)
 2. `.list` - Project/session listing with filtering
@@ -21,6 +21,7 @@ Current command set (11 commands as of v1.4.0):
 9. `.project.exists` - Exit-code check whether a topic has session history
 10. `.session.dir` - Print or create session directory for a topic
 11. `.session.ensure` - Ensure session directory exists for a topic
+12. `.tail` - Print last N conversation entries for current directory (not yet implemented — see task system)
 
 **Removed commands (do not test):**
 - `.show.project` — removed in task-013 (deprecated stub)

@@ -20,9 +20,9 @@ Session topic name appended as a `-{name}` suffix to the base directory path.
 - Error on empty: `"topic must be non-empty"`
 - Error on slash: `"topic must not contain path separators"`
 
-**Default:** unset (no suffix applied) for `.project.path`, `.project.exists`; `default_topic` for `.session.dir`, `.session.ensure`
+**Default:** unset (no suffix applied) for `.project.path`, `.project.exists`; `default_topic` for `.session.dir`, `.session.ensure`, `.tail`
 
-**Commands:** `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`
+**Commands:** `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`, `.tail`
 
 **Purpose:** Identifies a named session topic within a base directory. Claude Code uses hyphen-prefixed directories (`-default_topic`, `-work`, `-commit`) as session working directories. `topic::` takes the name without the leading hyphen and appends it as `{base}/-{topic}`.
 
@@ -51,9 +51,11 @@ topic::-default_topic   # (legal — creates /-default_topic... but convention i
 | 9 | [`.project.exists`](../command/09_project_exists.md) | unset | Checks storage path with topic suffix |
 | 10 | [`.session.dir`](../command/10_session_dir.md) | `default_topic` | Appends `-{topic}` to base directory |
 | 11 | [`.session.ensure`](../command/11_session_ensure.md) | `default_topic` | Appends `-{topic}` to base directory |
+| 12 | [`.tail`](../command/12_tail.md) | `default_topic` | Session topic suffix for the resolved session |
 
 ### Referenced User Stories
 | # | User Story | Persona |
 |---|------------|---------|
 | 2 | [Find Past Conversation](../user_story/002_find_past_conversation.md) | developer |
 | 5 | [Resume Claude Session](../user_story/005_resume_claude_session.md) | developer |
+| 6 | [Quick Context Refresh](../user_story/006_quick_context_refresh.md) | developer |

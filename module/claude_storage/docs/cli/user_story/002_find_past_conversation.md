@@ -55,6 +55,7 @@
 | 1 | [Audit Session History](001_audit_session_history.md) | Overlapping commands used for browsing |
 | 3 | [Export Session for Review](003_export_session_for_review.md) | Typically export after locating session |
 | 5 | [Resume Claude Session](005_resume_claude_session.md) | Typically resume after finding session |
+| 6 | [Quick Context Refresh](006_quick_context_refresh.md) | 006 skips lookup entirely when already in the right directory |
 
 ### Workflow Steps
 
