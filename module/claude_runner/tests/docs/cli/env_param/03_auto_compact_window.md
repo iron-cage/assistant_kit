@@ -9,7 +9,7 @@ mechanism and its `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` opt-out.
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | Default injection — `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` present without flag | Default |
+| EC-1 | Default injection — `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` present without flag | Default |
 | EC-2 | `--no-compact-window` suppresses injection entirely | Opt-Out |
 | EC-3 | `CLR_NO_COMPACT_WINDOW=1` env var fallback suppresses injection | EnvFallback |
 | EC-4 | `CLR_NO_COMPACT_WINDOW=true` also accepted | EnvFallback |
@@ -33,11 +33,11 @@ mechanism and its `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` opt-out.
 ## Test Cases
 ---
 
-### EC-1: Default injection — `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` present without flag
+### EC-1: Default injection — `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` present without flag
 
 - **Given:** clean environment, no `CLR_NO_COMPACT_WINDOW`
 - **When:** `clr --dry-run "test" 2>&1`
-- **Then:** output contains `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000`
+- **Then:** output contains `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000`
 - **Exit:** 0
 - **Source:** [env_param.md](../../../../docs/cli/env_param.md)
 
@@ -76,7 +76,7 @@ mechanism and its `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` opt-out.
 ### EC-5: `--dry-run` reflects presence or absence accurately
 
 - **Given:** clean environment
-- **When (with):** `clr --dry-run "test" 2>&1` → `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` visible
+- **When (with):** `clr --dry-run "test" 2>&1` → `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` visible
 - **When (without):** `clr --no-compact-window --dry-run "test" 2>&1` → var absent
 - **Then:** dry-run output WYSIWYG matches what would be passed to subprocess; no phantom entries
 - **Exit:** 0 both cases
@@ -88,7 +88,7 @@ mechanism and its `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` opt-out.
 
 - **Given:** clean environment; claude not in PATH
 - **When:** `clr --trace "test" 2>&1`
-- **Then:** stderr contains `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` before command line; subprocess attempt fails
+- **Then:** stderr contains `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` before command line; subprocess attempt fails
 - **Exit:** 1 (claude absent)
 - **Source:** [env_param.md](../../../../docs/cli/env_param.md), [param/013_trace.md](../../../../docs/cli/param/013_trace.md)
 
@@ -98,7 +98,7 @@ mechanism and its `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` opt-out.
 
 - **Given:** credentials JSON at `/tmp/ec7.creds.json` (content `{}`); no `CLR_NO_COMPACT_WINDOW`
 - **When:** `clr isolated --creds /tmp/ec7.creds.json --dry-run 2>&1`
-- **Then:** output contains `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000`
+- **Then:** output contains `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000`
 - **Exit:** 0
 - **Source:** [env_param.md](../../../../docs/cli/env_param.md)
 
@@ -108,7 +108,7 @@ mechanism and its `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` opt-out.
 
 - **Given:** credentials JSON at `/tmp/ec8.creds.json` (content `{}`); no `CLR_NO_COMPACT_WINDOW`
 - **When:** `clr refresh --creds /tmp/ec8.creds.json --dry-run 2>&1`
-- **Then:** output contains `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000`
+- **Then:** output contains `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000`
 - **Exit:** 0
 - **Source:** [env_param.md](../../../../docs/cli/env_param.md)
 
@@ -118,6 +118,6 @@ mechanism and its `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` opt-out.
 
 - **Given:** `CLR_NO_COMPACT_WINDOW=0` in environment (falsy value)
 - **When:** `CLR_NO_COMPACT_WINDOW=0 clr --dry-run "test" 2>&1`
-- **Then:** output CONTAINS `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` — `"0"` is not a truthy value for this bool env var
+- **Then:** output CONTAINS `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` — `"0"` is not a truthy value for this bool env var
 - **Exit:** 0
 - **Source:** [env_param.md](../../../../docs/cli/env_param.md)
