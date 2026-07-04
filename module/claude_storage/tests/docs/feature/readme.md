@@ -11,4 +11,4 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `01_cli_tool.md` | FT- test cases for the CLI tool feature (`docs/feature/001_cli_tool.md`) | ✅ |
+| `001_cli_tool.md` | FT- test cases for the CLI tool feature (`docs/feature/001_cli_tool.md`) | ✅ |

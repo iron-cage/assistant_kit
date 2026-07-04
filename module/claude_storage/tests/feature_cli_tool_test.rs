@@ -2,7 +2,7 @@
 //!
 //! ## Source
 //!
-//! - Spec: `tests/docs/feature/01_cli_tool.md`
+//! - Spec: `tests/docs/feature/001_cli_tool.md`
 //! - Feature doc: `docs/feature/001_cli_tool.md`
 //!
 //! ## Coverage
