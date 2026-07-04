@@ -44,5 +44,5 @@ clj .stats by::hour since::1d        # Hourly activity today
 
 | # | User Story |
 |---|-----------|
-| 1 | [Cost Tracking](../user_story/01_cost_tracking.md) |
-| 4 | [Capacity Planning](../user_story/04_capacity_planning.md) |
+| 1 | [Cost Tracking](../user_story/001_cost_tracking.md) |
+| 4 | [Capacity Planning](../user_story/004_capacity_planning.md) |

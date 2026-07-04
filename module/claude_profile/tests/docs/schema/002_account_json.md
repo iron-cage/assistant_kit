@@ -4,7 +4,7 @@ SC test cases for `docs/schema/002_account_json.md`. Verifies the supplementary 
 metadata file: read-merge write semantics, field-specific preservation rules, encoding
 format compliance, and append-only history behavior.
 
-**Source:** [docs/schema/002_account_json.md](../../../../docs/schema/002_account_json.md)
+**Source:** [docs/schema/002_account_json.md](../../../docs/schema/002_account_json.md)
 
 ### SC Case Index
 
@@ -25,7 +25,7 @@ format compliance, and append-only history behavior.
 - **When:** `.account.save` is invoked again for the same account (without specifying `_renewal_at`, `host::`, or `role::`)
 - **Then:** All 3 preserved-only fields remain in `{name}.json` unchanged — `save()` performs a read-merge, not a clobber
 - **Source fn:** `as29_resave_credentials_unchanged` (cli/account_renewal_test_b.rs)
-- **Source:** [docs/schema/002_account_json.md §Format §Preserved-Only Fields](../../../../docs/schema/002_account_json.md)
+- **Source:** [docs/schema/002_account_json.md §Format §Preserved-Only Fields](../../../docs/schema/002_account_json.md)
 
 ---
 
@@ -35,7 +35,7 @@ format compliance, and append-only history behavior.
 - **When:** `.account.save` is invoked without providing `at::` or `from_now::`
 - **Then:** `_renewal_at` remains unchanged in `{name}.json` — `.account.save` never touches this field
 - **Source fn:** `as29_resave_credentials_unchanged` (cli/account_renewal_test_b.rs)
-- **Source:** [docs/schema/002_account_json.md §Preserved-Only Fields](../../../../docs/schema/002_account_json.md)
+- **Source:** [docs/schema/002_account_json.md §Preserved-Only Fields](../../../docs/schema/002_account_json.md)
 
 ---
 
@@ -45,7 +45,7 @@ format compliance, and append-only history behavior.
 - **When:** `.account.save` is invoked without `owner::` parameter
 - **Then:** `owner` field remains in `{name}.json` unchanged — ownership state survives re-save
 - **Source fn:** `ft12_save_does_not_stamp_owner` (cli/account_ownership_test.rs)
-- **Source:** [docs/schema/002_account_json.md §Preserved-Only Fields](../../../../docs/schema/002_account_json.md)
+- **Source:** [docs/schema/002_account_json.md §Preserved-Only Fields](../../../docs/schema/002_account_json.md)
 
 ---
 
@@ -53,9 +53,9 @@ format compliance, and append-only history behavior.
 
 - **Given:** A valid `.account.save` operation completes
 - **When:** `{name}.json` is read as raw bytes
-- **Then:** The content is valid JSON with 2-space indentation and ends with a newline character — complies with [invariant/007](../../../../docs/invariant/007_json_storage_format.md)
+- **Then:** The content is valid JSON with 2-space indentation and ends with a newline character — complies with [invariant/007](../../../docs/invariant/007_json_storage_format.md)
 - **Source fn:** `sc4_002_account_json_is_2space_pretty_with_trailing_newline` (account_tests.rs)
-- **Source:** [docs/schema/002_account_json.md §Format](../../../../docs/schema/002_account_json.md)
+- **Source:** [docs/schema/002_account_json.md §Format](../../../docs/schema/002_account_json.md)
 
 ---
 
@@ -65,7 +65,7 @@ format compliance, and append-only history behavior.
 - **When:** A successful `fetch_oauth_usage()` call completes
 - **Then:** `history` contains N+1 entries — the new measurement is appended and the prior entries are preserved
 - **Source fn:** `sc5_002_history_entry_appended_not_truncated` (account_tests.rs)
-- **Source:** [docs/schema/002_account_json.md §Field Table (history)](../../../../docs/schema/002_account_json.md)
+- **Source:** [docs/schema/002_account_json.md §Field Table (history)](../../../docs/schema/002_account_json.md)
 
 ---
 
@@ -75,4 +75,4 @@ format compliance, and append-only history behavior.
 - **When:** A successful `fetch_oauth_usage()` call completes and `write_quota_cache()` is invoked
 - **Then:** All `_quota_cache` subfields (`five_hour`, `seven_day`, `seven_day_sonnet`, `cached_at`) are written as a single coherent object — no partial write leaves mismatched fields
 - **Source fn:** `sc6_002_quota_cache_all_subfields_written_atomically` (account_tests.rs)
-- **Source:** [docs/schema/002_account_json.md §Field Table (_quota_cache)](../../../../docs/schema/002_account_json.md)
+- **Source:** [docs/schema/002_account_json.md §Field Table (_quota_cache)](../../../docs/schema/002_account_json.md)

@@ -12,11 +12,11 @@ package scope). This directory is the authorizing source for the UA- prefix.
 
 | File | Story | Persona | UA-N Cases |
 |------|-------|---------|-----------|
-| `01_account_rotation.md` | Automatic Account Rotation | SWE multi-account | UA-1 through UA-5 |
-| `02_onboarding.md` | Account Onboarding and Lifecycle | Developer setup | UA-1 through UA-6 |
-| `03_quota_monitoring.md` | Multi-Account Quota Monitoring | Power user | UA-1 through UA-5 |
-| `04_scripted_automation.md` | Scripted Pipeline Automation | DevOps engineer | UA-1 through UA-4 |
-| `05_credential_diagnostics.md` | Credential Diagnostics | Troubleshooting developer | UA-1 through UA-4 |
+| `001_account_rotation.md` | Automatic Account Rotation | SWE multi-account | UA-1 through UA-5 |
+| `002_onboarding.md` | Account Onboarding and Lifecycle | Developer setup | UA-1 through UA-6 |
+| `003_quota_monitoring.md` | Multi-Account Quota Monitoring | Power user | UA-1 through UA-5 |
+| `004_scripted_automation.md` | Scripted Pipeline Automation | DevOps engineer | UA-1 through UA-4 |
+| `005_credential_diagnostics.md` | Credential Diagnostics | Troubleshooting developer | UA-1 through UA-4 |
 
 ### Coverage Summary
 

@@ -2,7 +2,7 @@
 //!
 //! ## Source
 //!
-//! - Spec: `tests/docs/cli/user_story/05_resume_claude_session.md`
+//! - Spec: `tests/docs/cli/user_story/005_resume_claude_session.md`
 //!
 //! ## Coverage
 //!
@@ -56,7 +56,7 @@ fn setup_history( home : &std::path::Path, session_dir : &std::path::Path )
 /// Exit 0 with history; stdout "sessions exist"; suitable for shell conditionals.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/05_resume_claude_session.md` — RWS-1
+/// `tests/docs/cli/user_story/005_resume_claude_session.md` — RWS-1
 #[ test ]
 fn rws_1_project_exists_exits_0_when_project_has_history()
 {
@@ -90,7 +90,7 @@ fn rws_1_project_exists_exits_0_when_project_has_history()
 /// Exit 1 without history; stderr "no sessions"; suitable for shell conditionals.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/05_resume_claude_session.md` — RWS-2
+/// `tests/docs/cli/user_story/005_resume_claude_session.md` — RWS-2
 #[ test ]
 fn rws_2_project_exists_exits_1_when_project_has_no_history()
 {
@@ -123,7 +123,7 @@ fn rws_2_project_exists_exits_1_when_project_has_no_history()
 /// Single-line output; absolute storage path; ends with slash; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/05_resume_claude_session.md` — RWS-3
+/// `tests/docs/cli/user_story/005_resume_claude_session.md` — RWS-3
 #[ test ]
 fn rws_3_project_path_outputs_encoded_storage_path()
 {
@@ -166,7 +166,7 @@ fn rws_3_project_path_outputs_encoded_storage_path()
 /// Correct path format; directory NOT created; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/05_resume_claude_session.md` — RWS-4
+/// `tests/docs/cli/user_story/005_resume_claude_session.md` — RWS-4
 #[ test ]
 fn rws_4_session_dir_outputs_session_working_directory_path()
 {
@@ -210,7 +210,7 @@ fn rws_4_session_dir_outputs_session_working_directory_path()
 /// Directory created; line 1 is path; line 2 is "fresh" for new project; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/05_resume_claude_session.md` — RWS-5
+/// `tests/docs/cli/user_story/005_resume_claude_session.md` — RWS-5
 #[ test ]
 fn rws_5_session_ensure_creates_directory_and_reports_strategy()
 {

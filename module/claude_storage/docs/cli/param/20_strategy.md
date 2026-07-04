@@ -40,10 +40,6 @@ strategy::restart   # "strategy must be resume|fresh, got restart"
 |------|------|-------------|----------------|
 | [`StrategyType`](../type/13_strategy_type.md) | String enum wrapper | String | `resume` or `fresh`; case-insensitive |
 
-### Referenced Parameter Groups
-
-None.
-
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|

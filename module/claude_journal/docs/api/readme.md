@@ -1,4 +1,4 @@
-# api/
+# API Doc Entity
 
 ### Scope
 

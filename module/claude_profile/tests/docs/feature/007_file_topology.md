@@ -1,5 +1,11 @@
 # Test: Feature 007 — File Topology
 
+### Scope
+
+- **Purpose**: Test cases for `ClaudePaths` construction and path resolution methods relative to `HOME`.
+- **Source**: `docs/feature/007_file_topology.md`
+- **Covers**: AC-01 through AC-06
+
 Feature behavioral requirement test cases for `docs/feature/007_file_topology.md` (FR-12, FR-19). Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

@@ -1,12 +1,5 @@
 # User Story :: 3. Export Session for Review
 
-### Scope
-
-- **Purpose**: Document the "Export Session for Review" user story.
-- **Responsibility**: Persona, goal, acceptance criteria, and command mappings for this story.
-- **In Scope**: User persona, goal statement, acceptance criteria, referenced commands.
-- **Out of Scope**: Command specifications (→ `command/`), parameter details (→ `param/`).
-
 **Persona:** developer
 **Goal:** Export a Claude Code session transcript to a file in a chosen format for offline review or sharing.
 **Benefit:** Preserve conversation history in a portable format (markdown, JSON, or plain text) without depending on Claude Code storage access.

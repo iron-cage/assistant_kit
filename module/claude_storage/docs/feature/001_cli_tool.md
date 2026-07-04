@@ -19,11 +19,17 @@
 
 **Data model.** The tool exposes a four-level hierarchy: Storage Root → Project → Session → Entry. Projects are either UUID-based (web/IDE sessions) or path-encoded (CLI sessions). Two session storage layouts coexist: flat layout (older projects, B7) and hierarchical layout (newer projects with sub-agent directories, B13/B14/B15). The tool handles both transparently.
 
+### Algorithms
+
+| File | Relationship |
+|------|-------------|
+| `../algorithm/001_agent_session_tracking.md` | Agent session discovery algorithm used by this CLI |
+
 ### Features
 
 | File | Relationship |
 |------|-------------|
-| `../../module/claude_storage_core/docs/feature/001_core_library.md` | Core library this CLI wraps |
+| `../../../claude_storage_core/docs/feature/001_core_library.md` | Core library this CLI wraps |
 
 ### Operations
 

@@ -37,4 +37,4 @@ clj .serve refresh::5 open::1        # Fast refresh, auto-open
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 1 | [Cost Tracking](../user_story/01_cost_tracking.md) | Developer |
+| 1 | [Cost Tracking](../user_story/001_cost_tracking.md) | Developer |

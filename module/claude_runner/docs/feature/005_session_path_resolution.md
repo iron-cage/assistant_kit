@@ -24,7 +24,7 @@
 
 **`git_root_for(dir: &Path) -> PathBuf`** — pure helper that walks up from `dir` looking for `.git`; falls back to `dir` if none found. Used by `scope_for()` to anchor `claude_memory_dir` to the project root.
 
-**CLAUDE_HOME env var fix:** The existing `to_storage_path_for()` in `continuation.rs` hardcodes `$HOME/.claude`. `scope_for()` will check `$CLAUDE_HOME` first, falling back to `$HOME/.claude`. This fix also ensures `clr scope` and `--session-from` respect `CLAUDE_HOME` overrides.
+**CLAUDE_HOME env var handling:** Both `to_storage_path_for()` (`continuation.rs`) and `scope_for()` (`scope.rs`) check `$CLAUDE_HOME` first, falling back to `$HOME/.claude`. This ensures `clr scope` and `--session-from` respect `CLAUDE_HOME` overrides.
 
 ### Session Cross-Loading
 

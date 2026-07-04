@@ -1,9 +1,9 @@
 # Test: Invariant — Container-Only Test Execution
 
-Test case planning for [invariant/010_container_only_test_execution.md](../../../../docs/invariant/010_container_only_test_execution.md). Tests verify that the two enforcement layers (shell and nextest setup script) are structurally present and correctly configured.
+Test case planning for [invariant/010_container_only_test_execution.md](../../../docs/invariant/010_container_only_test_execution.md). Tests verify that the two enforcement layers (shell and nextest setup script) are structurally present and correctly configured.
 
-**Source:** [invariant/010_container_only_test_execution.md](../../../../docs/invariant/010_container_only_test_execution.md)
-**Related:** [claude_profile/docs/invariant/009_container_only_test_execution.md](../../../../../../claude_profile/docs/invariant/009_container_only_test_execution.md)
+**Source:** [invariant/010_container_only_test_execution.md](../../../docs/invariant/010_container_only_test_execution.md)
+**Related:** [claude_profile/docs/invariant/009_container_only_test_execution.md](../../../../claude_profile/docs/invariant/009_container_only_test_execution.md)
 
 ## Test Case Index
 

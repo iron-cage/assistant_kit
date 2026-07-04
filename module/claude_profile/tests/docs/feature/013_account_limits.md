@@ -1,5 +1,11 @@
 # Test: Feature 013 — Account Rate-Limit Utilization
 
+### Scope
+
+- **Purpose**: Test cases for `.account.limits` — 5h/7d utilization display, named account selection, and JSON output.
+- **Source**: `docs/feature/013_account_limits.md`
+- **Covers**: AC-01 through AC-04
+
 Feature behavioral requirement test cases for `docs/feature/013_account_limits.md` (FR-18). Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

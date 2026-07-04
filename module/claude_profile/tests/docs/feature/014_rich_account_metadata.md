@@ -1,5 +1,11 @@
 # Test: Feature 014 — Rich Account Metadata
 
+### Scope
+
+- **Purpose**: Test cases for rich account metadata capture and display.
+- **Source**: `docs/feature/014_rich_account_metadata.md`
+- **Covers**: AC-01 through AC-12
+
 Feature behavioral requirement test cases for `docs/feature/014_rich_account_metadata.md` (FR-20). Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

@@ -1,4 +1,4 @@
-# API Doc Tests
+# API Doc Entity
 
 ### Scope
 

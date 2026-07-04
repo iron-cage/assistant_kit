@@ -135,7 +135,7 @@ tests/
 | `cli_user_story_export_session_for_review_test.rs` | Acceptance tests for Export Session for Review user story |
 | `cli_user_story_query_storage_programmatically_test.rs` | Acceptance tests for Query Storage Programmatically user story |
 | `cli_user_story_resume_claude_session_test.rs` | Acceptance tests for Resume Claude Session user story |
-| `invariant_contracts_test.rs` | Contract tests for IN-/PF-/GD- behavioral invariant, pitfall, and guide cases |
+| `invariant_contracts_test.rs` | Contract tests for IN-/PF-/AL- behavioral invariant, pitfall, and algorithm cases |
 | `cli_param_validation_test.rs` | Contract tests for PF-1..4 parameter validation pitfall cases |
 
 ## Test Documentation Standards

@@ -1,4 +1,4 @@
-# Data Structure Collection
+# Data Structure Doc Entity
 
 ### Scope
 

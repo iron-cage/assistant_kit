@@ -105,7 +105,7 @@ These parameters apply identically across all 4 running commands:
 
 | Type | Path | Responsibility |
 |------|------|----------------|
-| doc | [`command_defaults.md`](../command_defaults.md) | Injected env var defaults and behavior matrix |
-| doc | [`env_param.md`](../env_param.md) | All `CLR_*` environment variable fallbacks |
+| doc | [`002_command_defaults.md`](../002_command_defaults.md) | Injected env var defaults and behavior matrix |
+| doc | [`003_env_param.md`](../003_env_param.md) | All `CLR_*` environment variable fallbacks |
 | group | [`04_credential_operations.md`](04_credential_operations.md) | Params exclusive to `isolated`/`refresh` |
 | group | [`02_runner_control.md`](02_runner_control.md) | Params consumed by the runner before subprocess launch |

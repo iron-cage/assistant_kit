@@ -1,8 +1,14 @@
 # Feature 064: Active Marker and Owner Param Redesign — Test Cases
 
+### Scope
+
+- **Purpose**: Test cases for the `active::`/`owner::0` param redesign, including REMOVED_TOGGLE migration messages for `assign::`/`unclaim::`.
+- **Source**: `docs/feature/064_active_marker_and_owner_redesign.md`
+- **Covers**: AC-01 through AC-19 (FT-01..04, FT-13, FT-14, FT-18, FT-19 partially superseded by Feature 065 — see 065_assignee_param_redesign.md)
+
 **Source:** [feature/064_active_marker_and_owner_redesign.md](../../../docs/feature/064_active_marker_and_owner_redesign.md)
 
-> **Partially superseded (Feature 065):** FTs referencing `active::USER@MACHINE` (FT-01..04, FT-13, FT-14, FT-18, FT-19) now apply via `assignee::USER@MACHINE` in the live codebase. The `owner::0` FTs (FT-08..12, FT-15..17) remain current. See [65_assignee_param_redesign.md](65_assignee_param_redesign.md) for replacement test cases.
+> **Partially superseded (Feature 065):** FTs referencing `active::USER@MACHINE` (FT-01..04, FT-13, FT-14, FT-18, FT-19) now apply via `assignee::USER@MACHINE` in the live codebase. The `owner::0` FTs (FT-08..12, FT-15..17) remain current. See [065_assignee_param_redesign.md](065_assignee_param_redesign.md) for replacement test cases.
 
 ## Test Case Index
 

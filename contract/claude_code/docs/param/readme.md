@@ -284,4 +284,4 @@ Precedence: CLI arg > env var > settings config.
 | doc | [`../behavior/readme.md`](../behavior/readme.md) | Claude Code behavior collection master file |
 | doc | [`../behavior/readme.md`](../behavior/readme.md) | Observed flag behavior in practice |
 | doc | [`../settings/readme.md`](../settings/readme.md) | settings.json write semantics and structure |
-| doc | [`../../../../../module/claude_runner_core/docs/claude_param/readme.md`](../../../../../module/claude_runner_core/docs/claude_param/readme.md) | Builder-API perspective with Rust `with_*()` methods |
+| doc | [`../../../../module/claude_runner_core/docs/claude_params/readme.md`](../../../../module/claude_runner_core/docs/claude_params/readme.md) | Builder-API perspective with Rust `with_*()` methods |

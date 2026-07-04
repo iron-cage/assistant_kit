@@ -23,5 +23,5 @@ surface (see `tests/docs/cli/readme.md`). Min 4 FM- cases per spec.
 
 ### See Also
 
-- [docs/cli/format/](../../../../../docs/cli/format/readme.md) — format source docs
+- [docs/cli/format/](../../../../docs/cli/format/readme.md) — format source docs
 - [tests/docs/cli/param/03_format.md](../param/03_format.md) — `format::` parameter edge cases

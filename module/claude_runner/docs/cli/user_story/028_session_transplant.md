@@ -59,8 +59,8 @@ clr "Continue" --to /b --from /a
 |------|--------------|
 | [`../param/076_session_from.md`](../param/076_session_from.md) | `--session-from` parameter spec |
 | [`../param/008_dir.md`](../param/008_dir.md) | `--dir` / `--to` parameter spec |
-| [`../feature/005_session_path_resolution.md`](../feature/005_session_path_resolution.md) | Feature hub: `scope_for()` and cross-loading |
-| [`../invariant/011_session_source_isolation.md`](../invariant/011_session_source_isolation.md) | Read/write isolation invariant |
+| [`../feature/005_session_path_resolution.md`](../../feature/005_session_path_resolution.md) | Feature hub: `scope_for()` and cross-loading |
+| [`../invariant/011_session_source_isolation.md`](../../invariant/011_session_source_isolation.md) | Read/write isolation invariant |
 
 ### Related User Stories
 

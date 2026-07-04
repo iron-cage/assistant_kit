@@ -42,10 +42,6 @@ type::both   # "Invalid type: both. Valid values: uuid, path, all"
 |------|------|-------------|----------------|
 | [`ProjectType`](../type/06_project_type.md) | String enum wrapper | String | `uuid`, `path`, `all`, `conversation` |
 
-### Referenced Parameter Groups
-
-None.
-
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|

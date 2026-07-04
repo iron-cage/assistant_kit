@@ -1,5 +1,11 @@
 # Test: Feature 024 — Session Touch via Isolated Subprocess
 
+### Scope
+
+- **Purpose**: Test cases for session touch via isolated subprocess.
+- **Source**: `docs/feature/024_session_touch.md`
+- **Covers**: AC-01 through AC-18
+
 Feature behavioral requirement test cases for `docs/feature/024_session_touch.md`. Each FT case maps to one acceptance criterion. Parameter edge cases are in [cli/param/034_touch.md](../cli/param/34_touch.md). Command-level tests (IT-N) are in [cli/command/009_usage.md](../cli/command/09_usage.md).
 
 ### AC Coverage Index

@@ -50,4 +50,4 @@ When `build.rs` panics in the sandbox, `cargo publish` aborts with `error: faile
 
 | File | Relationship |
 |------|--------------|
-| [../../tests/docs/invariant/02_publish_sandbox_safety.md](../../tests/docs/invariant/02_publish_sandbox_safety.md) | Test spec: PS-1 publish-safe build verification |
+| [../../tests/docs/invariant/002_publish_sandbox_safety.md](../../tests/docs/invariant/002_publish_sandbox_safety.md) | Test spec: PS-1 publish-safe build verification |

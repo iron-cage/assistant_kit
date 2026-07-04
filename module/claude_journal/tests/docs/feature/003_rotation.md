@@ -1,5 +1,12 @@
 # Test: Feature — Rotation
 
+### Scope
+
+- **Purpose**: FT- test cases verifying daily journal filename generation, file listing order, and age/size-based pruning.
+- **Responsibility**: Acceptance criteria confirming rotation filenames, listing filters, and pruning routines behave correctly including guard conditions.
+- **In Scope**: `date_filename()` format, `list_journal_files()` ordering and filtering, `prune_by_age()`, `prune_by_size()`, empty-directory and last-file guard behavior.
+- **Out of Scope**: Journal file creation and level control (-> `001_event_journaling.md`), event field schema (-> `002_event_schema.md`), append-only invariant (-> `../invariant/001_append_only.md`).
+
 Test case planning for [feature/003_rotation.md](../../../docs/feature/003_rotation.md). Tests validate daily filename generation, file listing order, age-based pruning, size-based pruning, non-matching file filtering, and empty-directory behavior.
 
 ## Test Case Index

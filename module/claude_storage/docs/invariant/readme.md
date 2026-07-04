@@ -1,4 +1,4 @@
-# `claude_storage` Invariant Documentation
+# Invariant Doc Entity
 
 ### Scope
 

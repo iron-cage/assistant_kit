@@ -24,6 +24,18 @@ uniquely identify the original path. Decoding is non-deterministic without exter
 - Input path: `/home/alice/projects/my_app/module`
 - Encoded key: `-home-alice-projects-my-app-module`
 
+### Project Path Format
+
+Claude Code project paths are always absolute, e.g.:
+- `/home/alice/projects/my-app/module/reasoner`
+- `/home/alice/projects/my-project`
+- `/home/alice/projects/project-a`
+
+**Mapping to storage**:
+- Path: `/home/alice/projects/my-app/module/reasoner`
+- Encoded: `-home-alice-projects-my-app-module-reasoner`
+- Storage: `~/.claude/projects/-home-alice-projects-my-app-module-reasoner/`
+
 ### Disambiguation
 
 `decode_path_via_fs()` resolves the encoding ambiguity by DFS-walking the filesystem,
@@ -60,4 +72,4 @@ environment matches the storage origin.
 ### Sources
 
 - `src/` — `decode_path_via_fs()` implementation in `claude_storage_core`
-- [`guide/001_advanced_storage_topics.md`](../guide/001_advanced_storage_topics.md) — encoding examples and project path format
+- [`algorithm/001_agent_session_tracking.md`](../algorithm/001_agent_session_tracking.md) — layout examples and detection algorithms

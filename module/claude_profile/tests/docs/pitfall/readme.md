@@ -1,4 +1,4 @@
-# Pitfall Guard Tests
+# Pitfall Doc Entity
 
 Test cases verifying that each design pitfall documented in `docs/pitfall/` is guarded against.
 Each spec covers one pitfall document instance and asserts that the described guard holds.

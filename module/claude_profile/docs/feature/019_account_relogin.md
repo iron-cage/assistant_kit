@@ -82,7 +82,7 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 
 | File | Relationship |
 |------|--------------|
-| [tests/docs/cli/command/012_account_relogin.md](../../tests/docs/cli/command/012_account_relogin.md) | Integration test plan |
+| [tests/docs/cli/command/12_account_relogin.md](../../tests/docs/cli/command/12_account_relogin.md) | Integration test plan |
 
 ### Subprocess Docs
 

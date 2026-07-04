@@ -23,25 +23,25 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 
 ### Interaction :: 1. `dry::` is orthogonal to output control
 
-**Parameters:** [`dry::`](params.md#parameter--4-dry), [`format::`](params.md#parameter--2-format)
+**Parameters:** [`dry::`](param/004_dry.md), [`format::`](param/002_format.md)
 
 **Effect:** `dry::` controls whether the mutation executes; it does not affect output formatting. The `[dry-run]` prefix is always added to the confirmation message regardless of `format::`. The `dry::` parameter is only available on mutation commands (`.account.save`, `.account.use`, `.account.delete`), which do not belong to the Output Control group.
 
 **Rationale:** Mutation commands produce single fixed-line confirmation messages, not parameterized output; the Output Control parameter has no effect on them. The two concerns — execution mode and output formatting — are fully independent.
 
-**Commands affected:** [`.account.save`](commands.md#command--4-accountsave), [`.account.use`](commands.md#command--5-accountuse), [`.account.delete`](commands.md#command--6-accountdelete)
+**Commands affected:** [`.account.save`](command/001_account.md#command-4-accountsave), [`.account.use`](command/001_account.md#command-5-accountuse), [`.account.delete`](command/001_account.md#command-6-accountdelete)
 
 ---
 
 ### Interaction :: 2. `format::json` overrides field-presence params
 
-**Parameters:** [`format::`](params.md#parameter--2-format), [`account::`](params.md#parameter--5-account), [`sub::`](params.md#parameter--6-sub), [`tier::`](params.md#parameter--7-tier), [`token::`](params.md#parameter--8-token), [`expires::`](params.md#parameter--9-expires), [`email::`](params.md#parameter--10-email), [`file::`](params.md#parameter--11-file), [`saved::`](params.md#parameter--12-saved), [`display_name::`](params.md#parameter--14-display_name), [`role::`](params.md#parameter--15-role), [`billing::`](params.md#parameter--16-billing), [`model::`](params.md#parameter--17-model)
+**Parameters:** [`format::`](param/002_format.md), [`account::`](param/005_account.md), [`sub::`](param/006_sub.md), [`tier::`](param/007_tier.md), [`token::`](param/008_token.md), [`expires::`](param/009_expires.md), [`email::`](param/010_email.md), [`file::`](param/011_file.md), [`saved::`](param/012_saved.md), [`display_name::`](param/014_display_name.md), [`role::`](param/015_role.md), [`billing::`](param/016_billing.md), [`model::`](param/017_model.md)
 
 **Effect:** When `format::json` is specified on `.accounts` or `.credentials.status`, the JSON output always includes all fields regardless of field-presence param values. Setting `sub::0` only suppresses that field in text output, not in JSON.
 
 **Rationale:** JSON consumers rely on stable schemas; selectively omitting fields based on presence params would break pipeline consumers that expect consistent structure. The field-presence params are a text-output formatting concern, not a data-selection concern.
 
-**Commands affected:** [`.accounts`](commands.md#command--3-accounts), [`.credentials.status`](commands.md#command--10-credentialsstatus)
+**Commands affected:** [`.accounts`](command/001_account.md#command-3-accounts), [`.credentials.status`](command/002_credentials.md#command-10-credentialsstatus)
 
 **Examples:**
 
@@ -59,13 +59,13 @@ clp .credentials.status format::json
 
 ### Interaction :: 3. `format::table` ignores field-presence params
 
-**Parameters:** [`format::`](params.md#parameter--2-format), [`sub::`](params.md#parameter--6-sub), [`tier::`](params.md#parameter--7-tier), [`expires::`](params.md#parameter--9-expires), [`email::`](params.md#parameter--10-email), [`display_name::`](params.md#parameter--14-display_name), [`role::`](params.md#parameter--15-role), [`billing::`](params.md#parameter--16-billing), [`model::`](params.md#parameter--17-model)
+**Parameters:** [`format::`](param/002_format.md), [`sub::`](param/006_sub.md), [`tier::`](param/007_tier.md), [`expires::`](param/009_expires.md), [`email::`](param/010_email.md), [`display_name::`](param/014_display_name.md), [`role::`](param/015_role.md), [`billing::`](param/016_billing.md), [`model::`](param/017_model.md)
 
 **Effect:** When `format::table` is specified on `.accounts`, the table always uses a fixed column set (flag, Account, Sub, Tier, Expires, Email) regardless of field-presence param values. Passing `sub::0` or `tier::0` alongside `format::table` has no effect on table columns.
 
 **Rationale:** Table layout requires fixed column widths computed across all rows; selectively omitting columns based on field-presence params would break alignment and produce inconsistent table structures. Field-presence params are a text-output concern; table is a distinct, fixed-schema rendering mode.
 
-**Commands affected:** [`.accounts`](commands.md#command--3-accounts)
+**Commands affected:** [`.accounts`](command/001_account.md#command-3-accounts)
 
 **Examples:**
 
@@ -81,13 +81,13 @@ clp .accounts sub::0 tier::0 format::table
 
 ### Interaction :: 4. `live::1` is incompatible with `format::json`
 
-**Parameters:** [`live::`](params.md#parameter--20-live), [`format::`](params.md#parameter--2-format)
+**Parameters:** [`live::`](param/020_live.md), [`format::`](param/002_format.md)
 
 **Effect:** When both `live::1` and `format::json` are specified on `.usage`, the command exits 1 before any fetch with `"live monitor mode is incompatible with format::json"`.
 
 **Rationale:** Live monitor mode requires interactive terminal control — ANSI screen clear (`\x1B[2J\x1B[H`) and a countdown footer line rewritten in-place via carriage return (`\r`). JSON output is a machine-readable, one-shot, newline-terminated format for pipeline consumption. Mixing the two rendering modes would corrupt JSON parsers with control codes and produce an unstable stream that no pipeline consumer could reliably parse. The guard runs once at startup before any network call.
 
-**Commands affected:** [`.usage`](commands.md#command--9-usage)
+**Commands affected:** [`.usage`](command/006_usage.md#command-9-usage)
 
 **Examples:**
 
@@ -121,7 +121,7 @@ clp .usage format::json
 
 **Rationale:** Each strategy has a single natural direction that matches its workflow goal. Requiring explicit `desc::` in every invocation would be noisy; the default makes the common case require no extra flag.
 
-**Commands affected:** [`.usage`](commands.md#command--9-usage)
+**Commands affected:** [`.usage`](command/006_usage.md#command-9-usage)
 
 **Examples:**
 
@@ -142,7 +142,7 @@ clp .usage sort::renew desc::1
 
 **Effect:** `prefer::` determines which weekly quota column is used by the `sort::renew` within-group tiebreak and the footer recommendation eligibility gate. `prefer::any` (default) uses `min(7d Left, 7d(Son))`; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
 
-**`prefer::` does NOT affect group membership.** The four-group status partition always uses raw `7d Left` for the weekly boundary (`7d Left > 5%` for Green/h-exhausted vs weekly-exhausted/Dead). An account's status group is determined by `5h Left` and `7d Left` columns only — not by `prefer_weekly`. See [AC-12](../../feature/020_usage_sort_strategies.md#acceptance-criteria).
+**`prefer::` does NOT affect group membership.** The four-group status partition always uses raw `7d Left` for the weekly boundary (`7d Left > 5%` for Green/h-exhausted vs weekly-exhausted/Dead). An account's status group is determined by `5h Left` and `7d Left` columns only — not by `prefer_weekly`. See [AC-12](../feature/020_usage_sort_strategies.md#acceptance-criteria).
 
 **Affected heuristics:**
 - `sort::renew` tiebreak: lowest `weekly(prefer)` ascending — within a group, among accounts with the same renewal event time, the account with the lower prefer-selected weekly quota ranks first
@@ -150,7 +150,7 @@ clp .usage sort::renew desc::1
 
 **Rationale:** Users who know they intend to run Opus or Sonnet can tell the sort tiebreak which model-specific quota to prefer. Group membership and eligibility are model-agnostic — it reflects raw quota availability, not a preference about which model to run.
 
-**Commands affected:** [`.usage`](commands.md#command--9-usage)
+**Commands affected:** [`.usage`](command/006_usage.md#command-9-usage)
 
 **Examples:**
 
@@ -178,7 +178,7 @@ clp .usage sort::renew prefer::sonnet
 
 **Rationale:** JSON consumers rely on stable, predictable schemas. Row ordering is a visual/display concern for human-readable text output; injecting sort-strategy-dependent ordering into JSON would break pipeline consumers that expect consistent structure and make scripts fragile to `sort::` changes.
 
-**Commands affected:** [`.usage`](commands.md#command--9-usage)
+**Commands affected:** [`.usage`](command/006_usage.md#command-9-usage)
 
 **Examples:**
 
@@ -202,7 +202,7 @@ clp .usage sort::name desc::1 format::json
 
 **Rationale:** Column visibility is a text-format display concern — it controls which columns appear in the human-readable table. JSON consumers rely on a stable schema and must not receive partial objects based on display preferences. Injecting column-visibility decisions into JSON would break pipeline consumers that expect consistent structure.
 
-**Commands affected:** [`.usage`](commands.md#command--9-usage)
+**Commands affected:** [`.usage`](command/006_usage.md#command-9-usage)
 
 **Examples:**
 
@@ -226,7 +226,7 @@ clp .usage cols::-renews format::json
 
 **Rationale:** JSON consumers that parse `.usage` output need a stable, predictable array structure for scripting and automation. Injecting recommendation-dependent ordering into JSON would make scripts fragile to `sort::` changes. The footer recommendation is a human-readable text affordance; it has no JSON equivalent.
 
-**Commands affected:** [`.usage`](commands.md#command--9-usage)
+**Commands affected:** [`.usage`](command/006_usage.md#command-9-usage)
 
 **Examples:**
 
@@ -250,7 +250,7 @@ clp .usage format::json
 
 **Rationale:** JSON consumers rely on a stable schema. Subprocess configuration (which model runs internally) is a fetch-behavior concern, not an output-structure concern. The JSON array fields are fixed regardless of how subprocesses are invoked.
 
-**Commands affected:** [`.usage`](command/006_usage.md#command--9-usage)
+**Commands affected:** [`.usage`](command/006_usage.md#command-9-usage)
 
 **Examples:**
 
@@ -274,7 +274,7 @@ clp .usage effort::max format::json
 
 **Rationale:** `effort::auto` resolves to `low` for any known model. When `imodel::keep`, the model is unknown at dispatch time; injecting an effort level without knowing the model risks unexpected behavior. The safe resolution is no effort override.
 
-**Commands affected:** [`.usage`](command/006_usage.md#command--9-usage)
+**Commands affected:** [`.usage`](command/006_usage.md#command-9-usage)
 
 **Examples:**
 
@@ -298,7 +298,7 @@ clp .usage imodel::keep effort::high
 
 **Rationale:** `rotate::1` needs live quota data from all candidate accounts to select the best switch target. `solo::1` prevents live-fetching any account except the current+owned one — candidates would have approximated data only, making rotation decisions unreliable. The two intents conflict: solo conserves tokens by avoiding API calls, while rotation requires API calls to make an informed decision.
 
-**Commands affected:** [`.usage`](command/006_usage.md#command--9-usage)
+**Commands affected:** [`.usage`](command/006_usage.md#command-9-usage)
 
 **Examples:**
 

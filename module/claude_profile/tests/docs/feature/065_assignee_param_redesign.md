@@ -1,5 +1,11 @@
 # Feature 065: Assignee Param Redesign — Test Cases
 
+### Scope
+
+- **Purpose**: Test cases for the `assignee::` param replacing `active::`, including the `0` current-machine sentinel.
+- **Source**: `docs/feature/065_assignee_param_redesign.md`
+- **Covers**: AC-01 through AC-13
+
 **Source:** [feature/065_assignee_param_redesign.md](../../../docs/feature/065_assignee_param_redesign.md)
 
 ## Test Case Index

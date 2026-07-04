@@ -13,5 +13,5 @@
 | `feature/` | Viewer design: CLI viewing, web viewing, query filtering |
 | `invariant/` | Structural constraints: read-only access, web security |
 | `cli/` | CLI reference: commands, params, types, groups, stories |
-| `002_entity.md` | Cross-entity index: Master Doc Entities and Instances tables |
+| `entity/` | Cross-entity index: Master Doc Entities and Instances tables |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |

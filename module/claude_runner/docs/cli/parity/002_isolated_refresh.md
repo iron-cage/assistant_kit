@@ -83,7 +83,7 @@
 | command | `command/03_isolated.md` | `isolated` full reference |
 | command | `command/04_refresh.md` | `refresh` full reference |
 | parity | `001_run_ask_isolated.md` | `run` / `ask` / `isolated` comprehensive comparison |
-| doc | `command_defaults.md` | Default injection matrix (all 4 commands) with Plan 009 traceability |
+| doc | `002_command_defaults.md` | Default injection matrix (all 4 commands) with Plan 009 traceability |
 | invariant | `../invariant/005_isolated_subprocess_defaults.md` | Isolated/refresh subprocess injection contracts |
 | param | `../param/019_creds.md` | `--creds` file path parameter |
 | param | `../param/020_timeout.md` | `--timeout` for isolated/refresh (exit 2) |

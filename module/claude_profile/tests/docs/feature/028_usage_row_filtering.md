@@ -1,5 +1,11 @@
 # Test: Feature 028 — Usage Row Filtering and Extraction
 
+### Scope
+
+- **Purpose**: Test cases for `.usage` row filtering, pagination, threshold filters, and value extraction via `get::`.
+- **Source**: `docs/feature/028_usage_row_filtering.md`
+- **Covers**: AC-01 through AC-17
+
 Feature behavioral requirement test cases for `docs/feature/028_usage_row_filtering.md`. Each FT case maps to one acceptance criterion.
 
 ### AC Coverage Index

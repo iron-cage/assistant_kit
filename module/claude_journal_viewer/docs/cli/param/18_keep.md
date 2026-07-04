@@ -38,4 +38,4 @@ clj .prune keep::1gb confirm::1      # Delete without confirmation
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 4 | [Capacity Planning](../user_story/04_capacity_planning.md) | Developer |
+| 4 | [Capacity Planning](../user_story/004_capacity_planning.md) | Developer |

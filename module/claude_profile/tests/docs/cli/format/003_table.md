@@ -4,7 +4,7 @@ FM test cases for `docs/cli/format/003_table.md`. Verifies the `format::table` o
 contract: exclusive `.accounts` scope, table structural layout, flag column semantics
 (`✓`/`*`/`@`), and field-presence param ignorance in table mode.
 
-**Source:** [docs/cli/format/003_table.md](../../../../../docs/cli/format/003_table.md)
+**Source:** [docs/cli/format/003_table.md](../../../../docs/cli/format/003_table.md)
 
 ### FM Case Index
 
@@ -25,7 +25,7 @@ contract: exclusive `.accounts` scope, table structural layout, flag column sema
 - **When:** Each command is invoked
 - **Then:** All exit 1 with an error message like `unknown format 'table': expected text or json` — only `.accounts format::table` exits 0
 - **Source fn:** `acc34_accounts_table_format` (cli/accounts_list_test_b.rs; verifies table accepted for .accounts)
-- **Source:** [docs/cli/format/003_table.md §Scope](../../../../../docs/cli/format/003_table.md)
+- **Source:** [docs/cli/format/003_table.md §Scope](../../../../docs/cli/format/003_table.md)
 
 ---
 
@@ -35,7 +35,7 @@ contract: exclusive `.accounts` scope, table structural layout, flag column sema
 - **When:** Output is captured
 - **Then:** Output contains exactly: title line (`Accounts`), blank line, header row (column names), separator row (`-` chars), and one data row per account — five structural sections in order
 - **Source fn:** `acc34_accounts_table_format` (cli/accounts_list_test_b.rs)
-- **Source:** [docs/cli/format/003_table.md §Structure](../../../../../docs/cli/format/003_table.md)
+- **Source:** [docs/cli/format/003_table.md §Structure](../../../../docs/cli/format/003_table.md)
 
 ---
 
@@ -45,7 +45,7 @@ contract: exclusive `.accounts` scope, table structural layout, flag column sema
 - **When:** `.accounts format::table` output is captured
 - **Then:** The live session account has `✓` in the flag column; the non-current active marker account has `*`; all other accounts have a space — flag priority: `✓` > `*` > `@` > blank
 - **Source fn:** `acc34_accounts_table_format` (cli/accounts_list_test_b.rs)
-- **Source:** [docs/cli/format/003_table.md §Flag semantics](../../../../../docs/cli/format/003_table.md)
+- **Source:** [docs/cli/format/003_table.md §Flag semantics](../../../../docs/cli/format/003_table.md)
 
 ---
 
@@ -55,4 +55,4 @@ contract: exclusive `.accounts` scope, table structural layout, flag column sema
 - **When:** The command runs
 - **Then:** Table output contains all columns (Account, Sub, Tier, Expires, Email) regardless of the suppression params — `format::table` overrides field-presence toggles just like `format::json`
 - **Source fn:** `acc34_accounts_table_format` (cli/accounts_list_test_b.rs; all columns present in table output)
-- **Source:** [docs/cli/format/003_table.md §Notes](../../../../../docs/cli/format/003_table.md)
+- **Source:** [docs/cli/format/003_table.md §Notes](../../../../docs/cli/format/003_table.md)

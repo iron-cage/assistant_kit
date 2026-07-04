@@ -3,7 +3,7 @@
 ### Scope
 
 **Responsibilities:** Shell scripts implementing the `do` protocol verbs for `assistant` (cargo ecosystem).
-**In Scope:** Canonical verbs (`build`, `test`, `lint`, `run`, `clean`, `verify`), layer dispatchers (`*.d/`), and meta verbs (`verbs`, `package_info`).
+**In Scope:** Canonical verbs (`build`, `test`, `test_only`, `lint`, `run`, `clean`, `verify`), layer dispatchers (`*.d/`), and meta verbs (`verbs`, `package_info`).
 **Out of Scope:** Source code (→ `src/`), test logic (→ `tests/`), documentation (→ `docs/`).
 
 ### Responsibility Table
@@ -13,6 +13,8 @@
 | `build` | Compile project artifacts via `cargo build`. |
 | `test` | Dispatcher: run full test suite; default dispatches to `runbox/runbox .test`; delegates to `test.d/` layer when `VERB_LAYER` is set. |
 | `test.d/` | Layer directory: `l0` (host-native), `l1` (container-internal). |
+| `test_only` | Dispatcher: run single test by nextest filter inside container; sets `NEXTEST_FILTER`. |
+| `test_only.d/` | Layer directory: `l1` (container-internal targeted run). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `install` | Install crate binaries to `~/.cargo/bin` via `cargo install`. |
 | `run` | Dispatcher: execute entry point; delegates to `run.d/` layer by `VERB_LAYER`. |

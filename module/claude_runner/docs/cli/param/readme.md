@@ -247,7 +247,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 
 ### Quick Reference
 
-**JSON key field:** Each parameter doc includes a `**JSON Key:**` metadata field showing the key name accepted by `--args-file` / `CLR_ARGS_FILE`. Parameters exclusive to the `ps` subcommand are not supported by `--args-file` and are marked accordingly. See [`../feature/004_json_config.md`](../feature/004_json_config.md) for the complete parity table.
+**JSON key field:** Each parameter doc includes a `**JSON Key:**` metadata field showing the key name accepted by `--args-file` / `CLR_ARGS_FILE`. Parameters exclusive to the `ps` subcommand are not supported by `--args-file` and are marked accordingly. See [`../feature/004_json_config.md`](../../feature/004_json_config.md) for the complete parity table.
 
 **Required parameters:** `[MESSAGE]` is required for print mode (which is the default when a message is given).
 

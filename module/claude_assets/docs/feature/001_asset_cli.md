@@ -50,5 +50,5 @@
 | source | `src/adapter.rs` | argv_to_unilang_tokens(): alias expansion and validation |
 | source | `unilang.commands.yaml` | CLI command metadata (names, arguments, examples) |
 | doc | [invariant/001_source_root_resolution.md](../invariant/001_source_root_resolution.md) | Rule: $PRO_CLAUDE must resolve before any install/list |
-| doc | [claude_assets_core/docs/feature/001_artifact_installer.md](../../claude_assets_core/docs/feature/001_artifact_installer.md) | Domain install/uninstall semantics called by the routines |
-| doc | [assistant/docs/feature/001_super_app_aggregation.md](../../assistant/docs/feature/001_super_app_aggregation.md) | How register_commands() is consumed by ast |
+| doc | [claude_assets_core/docs/feature/001_artifact_installer.md](../../../claude_assets_core/docs/feature/001_artifact_installer.md) | Domain install/uninstall semantics called by the routines |
+| doc | [assistant/docs/feature/001_super_app_aggregation.md](../../../assistant/docs/feature/001_super_app_aggregation.md) | How register_commands() is consumed by ast |

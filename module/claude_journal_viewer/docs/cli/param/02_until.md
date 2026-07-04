@@ -40,4 +40,4 @@ clj .export until::90d               # Export all events older than 90 days
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 4 | [Capacity Planning](../user_story/04_capacity_planning.md) | Developer |
+| 4 | [Capacity Planning](../user_story/004_capacity_planning.md) | Developer |

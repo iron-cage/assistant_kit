@@ -4,7 +4,7 @@ FM test cases for `docs/cli/format/001_text.md`. Verifies the `format::text` (de
 output contract: labeled key-value structure, default-when-omitted behavior, scope across
 all format-capable commands, and column alignment for `.usage` table output.
 
-**Source:** [docs/cli/format/001_text.md](../../../../../docs/cli/format/001_text.md)
+**Source:** [docs/cli/format/001_text.md](../../../../docs/cli/format/001_text.md)
 
 ### FM Case Index
 
@@ -25,7 +25,7 @@ all format-capable commands, and column alignment for `.usage` table output.
 - **When:** The command runs
 - **Then:** Output is human-readable labeled key-value text (e.g., `Label:   value`), NOT JSON or table — the `format::text` mode is active by default
 - **Source fn:** `p02_paths_text_v1_labeled` (cli/token_paths_test.rs)
-- **Source:** [docs/cli/format/001_text.md §Trigger](../../../../../docs/cli/format/001_text.md)
+- **Source:** [docs/cli/format/001_text.md §Trigger](../../../../docs/cli/format/001_text.md)
 
 ---
 
@@ -35,7 +35,7 @@ all format-capable commands, and column alignment for `.usage` table output.
 - **When:** Output is captured
 - **Then:** Each path appears on its own line with a label (e.g., `Claude JSON:     /home/user/.claude.json`), padded to align values — the `data_fmt` text renderer is used
 - **Source fn:** `p02_paths_text_v1_labeled` (cli/token_paths_test.rs)
-- **Source:** [docs/cli/format/001_text.md §Structure](../../../../../docs/cli/format/001_text.md)
+- **Source:** [docs/cli/format/001_text.md §Structure](../../../../docs/cli/format/001_text.md)
 
 ---
 
@@ -45,7 +45,7 @@ all format-capable commands, and column alignment for `.usage` table output.
 - **When:** Output is captured
 - **Then:** Output contains a header row (column labels), one or more data rows (one per account), and a footer line containing the session model, effort, and `Next` recommendation — three distinct structural sections
 - **Source fn:** `test_ft28_009_footer_model_label` (usage/mod_tests.rs)
-- **Source:** [docs/cli/format/001_text.md §Structure](../../../../../docs/cli/format/001_text.md)
+- **Source:** [docs/cli/format/001_text.md §Structure](../../../../docs/cli/format/001_text.md)
 
 ---
 
@@ -55,4 +55,4 @@ all format-capable commands, and column alignment for `.usage` table output.
 - **When:** Both outputs are captured
 - **Then:** Text output contains labeled lines (e.g., `Active:  yes`); JSON output contains a single-line JSON array — the two formats are structurally incompatible, proving `format::` controls output structure meaningfully
 - **Source fn:** `acc33_accounts_current_param_and_json` (cli/accounts_list_test_b.rs; captures JSON output for comparison)
-- **Source:** [docs/cli/format/001_text.md §Scope](../../../../../docs/cli/format/001_text.md)
+- **Source:** [docs/cli/format/001_text.md §Scope](../../../../docs/cli/format/001_text.md)

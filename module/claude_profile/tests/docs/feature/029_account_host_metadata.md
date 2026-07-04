@@ -1,5 +1,11 @@
 # Test: Feature 029 — Account Host and Role Metadata
 
+### Scope
+
+- **Purpose**: Test cases for account host/role profile metadata capture, display, and isolation from credentials.
+- **Source**: `docs/feature/029_account_host_metadata.md`
+- **Covers**: AC-01 through AC-10
+
 Feature behavioral requirement test cases for `docs/feature/029_account_host_metadata.md`. Each FT case maps to one acceptance criterion.
 
 ### AC Coverage Index

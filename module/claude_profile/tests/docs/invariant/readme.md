@@ -1,4 +1,4 @@
-# Invariant Tests
+# Invariant Doc Entity
 
 Test cases verifying measurable architectural constraints from `docs/invariant/`. Each spec covers
 one invariant doc instance and asserts the invariant holds at normal and boundary conditions.

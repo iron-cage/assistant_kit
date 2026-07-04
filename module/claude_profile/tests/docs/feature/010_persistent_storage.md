@@ -1,5 +1,11 @@
 # Test: Feature 010 — Persistent Storage Path
 
+### Scope
+
+- **Purpose**: Test cases for `PersistPaths` resolution — `$PRO`/`$HOME` fallback and idempotent directory creation.
+- **Source**: `docs/feature/010_persistent_storage.md`
+- **Covers**: AC-01 through AC-07
+
 Feature behavioral requirement test cases for `docs/feature/010_persistent_storage.md` (FR-15). Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

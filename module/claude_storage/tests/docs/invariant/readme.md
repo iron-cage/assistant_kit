@@ -1,4 +1,4 @@
-# Invariant Testing Collection
+# Invariant Doc Entity
 
 ### Scope
 

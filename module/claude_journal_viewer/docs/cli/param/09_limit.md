@@ -37,5 +37,5 @@ clj .search pattern::"error" limit::10  # First 10 matches
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 1 | [Cost Tracking](../user_story/01_cost_tracking.md) | Developer |
-| 4 | [Capacity Planning](../user_story/04_capacity_planning.md) | Developer |
+| 1 | [Cost Tracking](../user_story/001_cost_tracking.md) | Developer |
+| 4 | [Capacity Planning](../user_story/004_capacity_planning.md) | Developer |

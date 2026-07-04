@@ -11,8 +11,8 @@
 | `cli/user_story/` | User story catalog for journal viewing use cases | [cli/user_story/readme.md](cli/user_story/readme.md) | 5 |
 | `feature/` | Behavioral requirements for the journal viewer | [feature/readme.md](feature/readme.md) | 3 |
 | `invariant/` | Measurable constraints for the viewer | [invariant/readme.md](invariant/readme.md) | 2 |
-| `tests/docs/feature/` | Per-feature test case specifications | [../../tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 3 |
-| `tests/docs/invariant/` | Per-invariant test case specifications | [../../tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 2 |
+| `tests/docs/feature/` | Per-feature test case specifications | [../../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 3 |
+| `tests/docs/invariant/` | Per-invariant test case specifications | [../../tests/docs/invariant/readme.md](../tests/docs/invariant/readme.md) | 2 |
 
 ## Master Doc Instances Table
 

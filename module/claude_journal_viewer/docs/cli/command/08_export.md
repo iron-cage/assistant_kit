@@ -42,5 +42,5 @@ clj .export format::table since::1d command::ask            # Table format
 
 | # | User Story |
 |---|-----------|
-| 3 | [Automation Audit](../user_story/03_automation_audit.md) |
-| 4 | [Capacity Planning](../user_story/04_capacity_planning.md) |
+| 3 | [Automation Audit](../user_story/003_automation_audit.md) |
+| 4 | [Capacity Planning](../user_story/004_capacity_planning.md) |

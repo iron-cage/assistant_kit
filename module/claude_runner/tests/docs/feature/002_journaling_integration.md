@@ -1,6 +1,13 @@
 # Test: Feature — Journaling Integration
 
-Test case planning for [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md). Tests validate journaling emission at execution boundaries, level control (full/meta/off), directory resolution, truncation, and error isolation.
+### Scope
+
+- **Purpose**: FT- test cases verifying journal event emission, level control, and directory resolution for `clr` execution boundaries.
+- **Responsibility**: Acceptance criteria confirming journal level semantics (full/meta/off), directory precedence, truncation, error isolation, and gate/retry/timeout event emission.
+- **In Scope**: `--journal` levels, `--journal-dir`/`CLR_JOURNAL_DIR` resolution and precedence, stdout truncation at 1MB, write-failure isolation, gate/validation/retry/timeout event emission, flag validation errors.
+- **Out of Scope**: default command assembly and dry-run gates (-> `001_runner_tool.md`), retry count/delay tier resolution (-> `003_retry_hierarchy.md`), JSON config loading (-> `004_json_config.md`).
+
+Test case planning for [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md). Tests validate journaling emission at execution boundaries, level control (full/meta/off), directory resolution, truncation, and error isolation.
 
 ## Test Case Index
 
@@ -75,7 +82,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **When:** `clr -p --max-sessions 0 --journal full --journal-dir <tmpdir> "task"`
 - **Then:** journal file `<tmpdir>/YYYY-MM-DD.jsonl` exists; last line parses as JSON; `event.fields.stdout` is `Some("hello")`; `event.event_type == EventType::Execution`
 - **Exit:** 0
-- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) AC-001
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-001
 
 ---
 
@@ -85,7 +92,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **When:** `clr -p --max-sessions 0 --journal meta --journal-dir <tmpdir> "task"`
 - **Then:** journal file exists; last line parses as JSON; `event.fields.stdout` is `None`; `event.fields.stderr` is `None`; `event.fields.exit_code` is `Some(0)` (metadata present)
 - **Exit:** 0
-- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) AC-002
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-002
 
 ---
 
@@ -95,7 +102,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **When:** `clr -p --max-sessions 0 --journal off --journal-dir <tmpdir> "task"`
 - **Then:** `<tmpdir>` either does not exist or contains no `.jsonl` files (journaling disabled)
 - **Exit:** 0
-- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) AC-003
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-003
 
 ---
 
@@ -105,7 +112,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **When:** `clr -p --max-sessions 0 --journal-dir <tmpdir> "task"` (no --journal flag)
 - **Then:** journal file exists; last line parses as JSON; `event.fields.stdout` is `Some("result")` — confirms default level is `full`
 - **Exit:** 0
-- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) AC-004
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-004
 
 ---
 
@@ -115,7 +122,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **When:** `clr -p --max-sessions 0 --journal-dir <dir_a> "task"`
 - **Then:** `<dir_a>/YYYY-MM-DD.jsonl` exists and contains one event line; `<dir_b>` has no `.jsonl` files
 - **Exit:** 0
-- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) AC-005
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-005
 
 ---
 
@@ -125,7 +132,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **When:** `clr -p --max-sessions 0 "task"` with `CLR_JOURNAL_DIR` set (no `--journal-dir` flag)
 - **Then:** `<tmpdir>/YYYY-MM-DD.jsonl` exists and contains one event line
 - **Exit:** 0
-- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) AC-006
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-006
 
 ---
 
@@ -135,7 +142,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **When:** `clr -p --max-sessions 0 --journal-dir <readonly_dir> "task"`
 - **Then:** exit 0 (clr exit code unchanged by journal write failure); journal event may or may not be present (best-effort)
 - **Exit:** 0
-- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) AC-008
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-008
 
 ---
 
@@ -145,7 +152,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **When:** `clr -p --max-sessions 0 --journal full --journal-dir <tmpdir> "task"`
 - **Then:** journal event `fields.stdout` is `Some(s)` where `s.ends_with("\n[truncated at 1MB]")` and `s.len() <= 1_100_000` (truncated to 1 MB + suffix)
 - **Exit:** 0
-- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) AC-007
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-007
 
 ---
 
@@ -155,7 +162,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **When:** `clr -p --max-sessions 0 --journal-dir <cli_dir> "task"` with `CLR_JOURNAL_DIR=<env_dir>`
 - **Then:** JSONL file appears in `<cli_dir>`; `<env_dir>` contains no `.jsonl` files (CLI flag takes precedence)
 - **Exit:** 0
-- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) design — "Resolution: CLI > env > default"
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) design — "Resolution: CLI > env > default"
 
 ---
 
@@ -165,7 +172,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **When:** `clr -p --max-sessions 1 --journal full --journal-dir <tmpdir> "x"` with `_CLR_GATE_POLL_SECS=1`
 - **Then:** JSONL contains a line with `"type":"gate_wait"` and `"gate_outcome":"acquired"`; `clr` exits 0 once gate releases
 - **Exit:** 0
-- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) AC-009
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-009
 
 ---
 
@@ -175,7 +182,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **When:** `clr -p --max-sessions 0 --expect right --expect-strategy retry --retry-on-validation 1 --validation-delay 0 --journal full --journal-dir <tmpdir> "x"`
 - **Then:** JSONL contains a line with `"type":"validation_retry"` (emitted before the re-attempt); second attempt matches `"right"`; `clr` exits 0
 - **Exit:** 0
-- **Source:** [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md) AC-013
+- **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-013
 
 ---
 
@@ -195,7 +202,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **When:** `clr --dry-run --journal bogus "test"`
 - **Then:** exit 1; stderr contains `--journal` and `bogus`
 - **Exit:** 1
-- **Source:** [param/072_journal.md](../../../../docs/cli/param/072_journal.md) — valid values: full, meta, off
+- **Source:** [param/072_journal.md](../../../docs/cli/param/072_journal.md) — valid values: full, meta, off
 
 ---
 
@@ -205,7 +212,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 - **When:** `clr --dry-run --journal Full "test"` (also: FULL, Meta, META, Off, OFF)
 - **Then:** exit 1 for each case variant; only lowercase accepted
 - **Exit:** 1
-- **Source:** [param/072_journal.md](../../../../docs/cli/param/072_journal.md) — enum values are lowercase only
+- **Source:** [param/072_journal.md](../../../docs/cli/param/072_journal.md) — enum values are lowercase only
 
 ---
 

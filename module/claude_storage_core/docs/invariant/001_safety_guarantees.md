@@ -32,6 +32,7 @@ An append-only violation (accidental truncation or overwrite) would silently des
 | source | `../../src/session.rs` | append_entry() implementation, atomic write pattern |
 | source | `../../src/json.rs` | Format validation during JSONL parse |
 | doc | `../data_structure/001_storage_hierarchy.md` | Session type that enforces append-only semantics |
+| doc | `../algorithm/001_path_encoding.md` | encode_path()/decode_path() — path safety mechanism referenced above |
 
 ### Sources
 

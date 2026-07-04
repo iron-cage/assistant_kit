@@ -1,5 +1,12 @@
 # Feature :: CLAUDECODE Environment Variable Unsetting
 
+### Scope
+
+- **Purpose**: FT- test cases verifying the `unset_claudecode` field on `ClaudeCommand` and its effect on env removal and describe output.
+- **Responsibility**: Acceptance criteria confirming default CLAUDECODE removal, opt-out behavior, `build_command()` wiring location, override semantics, and WYSIWYG `describe()` parity.
+- **In Scope**: `with_unset_claudecode(true/false)` env-pair effect via `get_envs()`, default-true behavior, `build_command_for_test()` wiring, last-write-wins override, `describe()` prefix (`"env -u CLAUDECODE"` vs plain `"claude"`).
+- **Out of Scope**: stdin file piping (-> `005_stdin_file.md`), `run_isolated()`/`IsolatedModel` behavior (-> `004_run_isolated.md`).
+
 Behavioral requirement cases for the `unset_claudecode` field on `ClaudeCommand`. See
 [feature/006_unset_claudecode.md](../../../docs/feature/006_unset_claudecode.md) for the specification.
 

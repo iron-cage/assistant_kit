@@ -1,6 +1,12 @@
 # Test: Feature 025 — Per-Machine Active Marker
 
-Feature behavioral requirement test cases for `docs/feature/025_per_machine_active_marker.md`. Each FT case maps to one acceptance criterion. Prefix resolution edge cases are in [cli/command/001_account.md](../cli/command/01_account.md) and [feature/015_name_shortcut_syntax.md](../../../docs/feature/015_name_shortcut_syntax.md).
+### Scope
+
+- **Purpose**: Test cases for per-machine active marker filenames and isolation.
+- **Source**: `docs/feature/025_per_machine_active_marker.md`
+- **Covers**: AC-01 through AC-05 (FT-06..FT-10, FT-13 cross-reference ACs in Features 002, 009, 015)
+
+Feature behavioral requirement test cases for `docs/feature/025_per_machine_active_marker.md`. Each FT case maps to one acceptance criterion. Prefix resolution edge cases are in [cli/command/001_account.md](../../../docs/cli/command/001_account.md) and [feature/015_name_shortcut_syntax.md](../../../docs/feature/015_name_shortcut_syntax.md).
 
 ### AC Coverage Index
 

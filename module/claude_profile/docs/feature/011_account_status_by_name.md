@@ -63,4 +63,4 @@
 | File | Relationship |
 |------|--------------|
 | `tests/cli/accounts_list_test.rs` | Named-account path coverage (acc04, acc05, acc06) |
-| [tests/docs/cli/command/003_accounts.md](../../tests/docs/cli/command/003_accounts.md) | Integration tests IT-4, IT-5, IT-6 |
+| [tests/docs/cli/command/03_accounts.md](../../tests/docs/cli/command/03_accounts.md) | Integration tests IT-4, IT-5, IT-6 |

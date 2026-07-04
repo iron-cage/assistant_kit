@@ -1,5 +1,11 @@
 # Feature 062 Tests — Unified Session Config Recommendation
 
+### Scope
+
+- **Purpose**: Test cases for model/effort recommendation logic and its application during rendering and rotation.
+- **Source**: `docs/feature/062_unified_session_config.md`
+- **Covers**: AC-01 through AC-11
+
 Feature doc: [docs/feature/062_unified_session_config.md](../../docs/feature/062_unified_session_config.md)
 
 **Behavioral Divergence Pair:** FT-02 ↔ FT-03 — `seven_day_sonnet.utilization = 90.0` (exactly 10% left) returns `"sonnet"` (boundary is NOT opus); `utilization = 91.0` (9% left) returns `"opus"` — demonstrating the strict `< 10.0` threshold.

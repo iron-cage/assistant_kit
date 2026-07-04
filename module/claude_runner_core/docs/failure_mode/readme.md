@@ -1,4 +1,4 @@
-# Failure Mode Collection
+# Failure Mode Doc Entity
 
 ### Scope
 

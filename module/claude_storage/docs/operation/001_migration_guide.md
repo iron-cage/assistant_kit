@@ -32,13 +32,13 @@ Revert `Cargo.toml` to point back to `claude_storage` and revert `use` statement
 
 | File | Relationship |
 |------|-------------|
-| `../../module/claude_storage_core/docs/api/001_public_api.md` | API stability guarantees for migrated consumers |
+| `../../../claude_storage_core/docs/api/001_public_api.md` | API stability guarantees for migrated consumers |
 
 ### Features
 
 | File | Relationship |
 |------|-------------|
-| `../../module/claude_storage_core/docs/feature/001_core_library.md` | Core library design rationale |
+| `../../../claude_storage_core/docs/feature/001_core_library.md` | Core library design rationale |
 
 ### Provenance
 

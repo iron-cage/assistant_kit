@@ -13,5 +13,5 @@
 | `feature/` | Event journaling design: append-only logging, schema, rotation |
 | `invariant/` | Structural constraints: append-only, crash safety, schema versioning |
 | `api/` | Public library API contracts: JournalWriter, JournalReader, EventType |
-| `002_entity.md` | Cross-entity index: Master Doc Entities and Instances tables |
+| `entity/` | Master index of all doc entities and instances |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |

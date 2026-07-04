@@ -19,7 +19,7 @@ Absolute filesystem path to a directory. Never ends with `/`.
 CLAUDE_HOME = ${CLAUDE_HOME:-$HOME/.claude}
 ```
 
-1. If the `CLAUDE_HOME` environment variable is set and non-empty: use its value.
+1. If the `CLAUDE_HOME` environment variable is set: use its value directly (an empty value is used as-is; the implementation does not special-case it).
 2. Otherwise: use `$HOME/.claude`.
 
 `HOME` is the standard POSIX home directory env var. On Linux/macOS, `HOME` is always set for interactive users. In containerized environments, `HOME` may need to be set explicitly.

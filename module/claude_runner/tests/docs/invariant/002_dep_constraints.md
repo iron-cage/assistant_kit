@@ -1,6 +1,6 @@
 # Test: Invariant — Dependency Constraints
 
-Test case planning for [invariant/002_dep_constraints.md](../../../../docs/invariant/002_dep_constraints.md). Tests validate that structural dependency constraint invariants are maintained: no consumer workspace deps, no prohibited files, and binary deps gated by feature flag.
+Test case planning for [invariant/002_dep_constraints.md](../../../docs/invariant/002_dep_constraints.md). Tests validate that structural dependency constraint invariants are maintained: no consumer workspace deps, no prohibited files, and binary deps gated by feature flag.
 
 ## Test Case Index
 
@@ -28,7 +28,7 @@ Test case planning for [invariant/002_dep_constraints.md](../../../../docs/invar
 - **When:** `cargo check --no-default-features` run against the `claude_runner` crate
 - **Then:** Exit 0; no compile errors; crate has zero required workspace-level consumer dependencies when default features are disabled
 - **Exit:** 0
-- **Source:** [invariant/002_dep_constraints.md](../../../../docs/invariant/002_dep_constraints.md)
+- **Source:** [invariant/002_dep_constraints.md](../../../docs/invariant/002_dep_constraints.md)
 
 ---
 
@@ -38,7 +38,7 @@ Test case planning for [invariant/002_dep_constraints.md](../../../../docs/invar
 - **When:** check whether `src/routines.rs` exists in the `claude_runner` crate
 - **Then:** File does not exist; `routines.rs` is a prohibited filename per dependency constraints
 - **Exit:** 0
-- **Source:** [invariant/002_dep_constraints.md](../../../../docs/invariant/002_dep_constraints.md)
+- **Source:** [invariant/002_dep_constraints.md](../../../docs/invariant/002_dep_constraints.md)
 
 ---
 
@@ -48,7 +48,7 @@ Test case planning for [invariant/002_dep_constraints.md](../../../../docs/invar
 - **When:** check whether `build.rs` exists at the `claude_runner` crate root
 - **Then:** File does not exist; `build.rs` is prohibited per dependency constraints
 - **Exit:** 0
-- **Source:** [invariant/002_dep_constraints.md](../../../../docs/invariant/002_dep_constraints.md)
+- **Source:** [invariant/002_dep_constraints.md](../../../docs/invariant/002_dep_constraints.md)
 
 ---
 
@@ -58,4 +58,4 @@ Test case planning for [invariant/002_dep_constraints.md](../../../../docs/invar
 - **When:** inspect `Cargo.toml` of the `claude_runner` crate
 - **Then:** Any binary-only dependencies appear exclusively under `[features]` `enabled` feature or equivalent gating; no binary dep is unconditionally required
 - **Exit:** 0
-- **Source:** [invariant/002_dep_constraints.md](../../../../docs/invariant/002_dep_constraints.md)
+- **Source:** [invariant/002_dep_constraints.md](../../../docs/invariant/002_dep_constraints.md)

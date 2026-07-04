@@ -1,0 +1,258 @@
+# Workflows
+
+### Scope
+
+- **Purpose**: Demonstrate end-to-end CLI usage patterns.
+- **Responsibility**: Multi-command workflow examples with expected output.
+- **In Scope**: Common scenarios, complexity matrix, best practices.
+- **Out of Scope**: Command specifications (→ `command/`), parameter details (→ `param/`), user personas (→ `user_story/`).
+
+Common usage patterns for the `claude_storage` CLI. Each workflow shows a practical scenario with commands, expected output shape, and notes.
+
+See [command/readme.md](command/readme.md) for command reference and [param/readme.md](param/readme.md) for parameter details.
+
+### Workflow Complexity Matrix
+
+| Workflow | Commands Used | Complexity |
+|----------|--------------|------------|
+| [Quick storage check](#1-quick-storage-check) | `.status` | low |
+| [Find a past conversation](#2-find-a-past-conversation) | `.list`, `.show` | low |
+| [Export a conversation](#3-export-a-conversation) | `.show`, `.export` | low |
+| [Search for a topic](#4-search-for-a-topic) | `.search`, `.show` | low |
+| [Count storage by scope](#5-count-storage-by-scope) | `.count` | low |
+| [Inspect agent sessions](#6-inspect-agent-sessions) | `.list`, `.show` | medium |
+| [Navigate project hierarchy](#7-navigate-project-hierarchy) | `.projects`, `.project.exists` | medium |
+| [Find substantial sessions](#8-find-substantial-sessions) | `.list` | medium |
+| [Session lifecycle management](#9-session-lifecycle-management) | `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure` | medium |
+
+---
+
+### Common Workflows
+
+### 1. Quick storage check
+
+**Scenario:** You want to see how much conversation history exists and where the storage root is.
+
+```bash
+# Default summary
+claude_storage .status
+# Output: projects: N, sessions: N, storage root path
+
+# Full stats including token usage (slow — parses all JSONL)
+claude_storage .status show_tokens::1
+# Output: summary + entry counts + token breakdown (input, output, cache)
+```
+
+**Notes:** For scripting, use `.count` for bare integer output: `count=$(claude_storage .count target::projects)`.
+
+---
+
+### 2. Find a past conversation
+
+**Scenario:** You remember working on a specific project last week and want to find the session.
+
+```bash
+# Step 1: List projects matching path keyword
+claude_storage .list path::assistant
+# Output: projects whose paths contain "assistant"
+
+# Step 2: List sessions for a matching project
+claude_storage .list path::assistant show_sessions::1
+# Output: same projects, now with their sessions listed
+
+# Step 3: Show the session content
+claude_storage .show project::/home/alice/projects/my-app session_id::-default_topic
+# Output: conversation content
+```
+
+**Notes:** If the project matches the current directory, `.show` without `project::` uses the cwd automatically.
+
+---
+
+### 3. Export a conversation
+
+**Scenario:** You want to save a conversation as a Markdown file to share or review offline.
+
+```bash
+# Step 1: Find the session ID (if unknown)
+claude_storage .show
+# Output: lists sessions for current project; note the session ID
+
+# Step 2: Export it
+claude_storage .export session_id::-default_topic output::conversation.md
+# Output: writes conversation.md in current directory
+
+# Alternative: export as JSON for programmatic processing
+claude_storage .export session_id::-default_topic format::json output::session.json
+```
+
+**Notes:** `output::` parent directory must exist; the file is overwritten without warning.
+
+---
+
+### 4. Search for a topic
+
+**Scenario:** You remember discussing a specific feature ("session management") but don't know which project or session.
+
+```bash
+# Step 1: Broad search across all storage
+claude_storage .search query::"session management"
+# Output: list of matching sessions with snippets
+
+# Step 2: Narrow to user messages only (what you asked about)
+claude_storage .search query::"session management" entry_type::user
+# Output: sessions where you asked about session management
+
+# Step 3: Show the full conversation
+claude_storage .show session_id::FOUND_SESSION_ID project::FOUND_PROJECT
+```
+
+**Notes:** Without `project::`, search scans all projects — may be slow on large storage (2000+ projects). Narrow with `project::` when project is known.
+
+---
+
+### 5. Count storage by scope
+
+**Scenario:** You want numbers without loading listings.
+
+```bash
+# Count all projects
+claude_storage .count
+# Output: projects: N
+
+# Count sessions in a project
+claude_storage .count target::sessions project::-home-alice-projects-my-app
+# Output: sessions: N
+
+# Count entries in a session
+claude_storage .count target::entries project::-home-alice-projects-my-app session::-default_topic
+# Output: entries: N
+```
+
+**Notes:** `.count` is optimized for performance and avoids loading full session content.
+
+---
+
+### 6. Inspect agent sessions
+
+**Scenario:** You want to understand what sub-agents were spawned during a Claude Code session.
+
+```bash
+# Step 1: Find agent sessions for the current project
+claude_storage .list show_sessions::1 agent::1
+# Output: projects with agent-only sessions listed
+
+# Step 2: Show a specific agent session
+claude_storage .show session_id::agent-abc123
+# Output: agent session conversation content
+
+# Step 3: Show agent sessions with metadata only
+claude_storage .show session_id::agent-abc123 show_metadata::1
+# Output: technical metadata (entry count, timestamps, agentId) without content
+```
+
+**Notes:** Agent sessions are stored as `agent-*.jsonl` files. They have `isSidechain: true` and carry an `agentId` linking them to the parent session.
+
+---
+
+### 7. Navigate project hierarchy
+
+**Scenario:** You're in a subdirectory and want to find all sessions in ancestor projects.
+
+```bash
+# Find all ancestor project summaries from cwd up to filesystem root
+clg .projects scope::relevant
+# Output: project summary for cwd + every ancestor that has sessions
+
+# Narrow to a specific starting path
+clg .projects scope::relevant path::/home/alice/projects/my-app
+# Output: project summaries for my-app and all its ancestor projects
+
+# Check if a specific directory has any recorded history (scripting)
+clg .project.exists path::/home/alice/projects
+# Exit 0: has history; Exit 1: no history
+```
+
+**Notes:** `scope::relevant` walks from `path::` (or cwd if omitted) up to the filesystem root, returning a summary line for each ancestor project that has at least one session. Use `.project.exists` when you only need a boolean check without loading the full listing.
+
+---
+
+### 8. Find substantial sessions
+
+**Scenario:** You want to find substantive conversations (skip short one-message sessions).
+
+```bash
+# Find sessions with at least 20 entries
+claude_storage .list min_entries::20
+# Output: projects with sessions meeting the threshold, sessions auto-shown
+
+# Find substantive agent sessions
+claude_storage .list agent::1 min_entries::10
+# Output: agent sessions with 10+ entries
+
+# Find substantial sessions in a specific project by path
+claude_storage .list path::assistant min_entries::50
+# Output: assistant projects with sessions having 50+ entries
+```
+
+**Notes:** `min_entries::` counts all entries including both user and assistant turns, so a 10-entry session has roughly 5 user-assistant exchange pairs.
+
+---
+
+### 9. Session lifecycle management
+
+**Scenario:** A shell script needs to set up a session working directory, detect whether it's a resume or a fresh start, and report the path to the caller.
+
+```bash
+# Step 1: Inspect the storage path for the project
+claude_storage .project.path path::/home/user/project topic::work
+# Output: /home/user/.claude/projects/-home-user-project--work/
+
+# Step 2: Check if history exists before doing anything
+if clg .project.exists path::/home/user/project topic::work; then
+  echo "Will resume existing conversation"
+else
+  echo "Will start fresh"
+fi
+
+# Step 3: Compute session directory without creating it
+SESSION_DIR=$(clg .session.dir path::/home/user/project topic::work)
+# Output: /home/user/project/-work
+
+# Step 4: Ensure directory exists and get strategy in one call
+result=$(clg .session.ensure path::/home/user/project topic::work)
+session_dir=$(echo "$result" | head -1)
+strategy=$(echo "$result" | tail -1)
+echo "Session directory: $session_dir"
+echo "Strategy: $strategy"     # "resume" or "fresh"
+
+# Step 5: Force a specific strategy
+result=$(clg .session.ensure path::/home/user/project topic::work strategy::fresh)
+# Output (two lines):
+# /home/user/project/-work
+# fresh
+```
+
+**Notes:**
+- `.project.path` and `.session.dir` never modify the filesystem; they only compute paths
+- `.project.exists` exits 1 intentionally for scripting — non-zero exit signals "no history" to the calling shell
+- `.session.ensure` is the only command that creates directories; it is idempotent (safe to call repeatedly)
+- All four commands accept `.`, `..`, `~`, and `~/path` in `path::`
+
+---
+
+### Best Practices
+
+**Narrow scope before broad search:** Use `project::` or `path::` to restrict expensive operations. Without scoping, `.search` reads every session in storage.
+
+**Use `.count` for scripting:** `.count` outputs a bare integer — no decorations, no parsing needed. Use `show_tokens::1` on `.status` when you need token breakdowns.
+
+**Prefer `.count` over `.list` for numbers:** `.count` avoids loading session content and is much faster on large storage.
+
+**Use `show_sessions::0` with session filters for project discovery:** `claude_storage .list session::commit show_sessions::0` finds which projects have sessions matching "commit" without expanding the session list.
+
+**Session IDs from `.show` output:** When you see sessions listed by `.show` (project view), copy the session ID directly into `session_id::` for the next command.
+
+### Provenance
+
+This file's content was consolidated from a previously separate, now-fully-absorbed source document; no content was lost in the merge.

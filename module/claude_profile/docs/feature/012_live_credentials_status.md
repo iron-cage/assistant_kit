@@ -85,4 +85,4 @@ Each output line is independently controlled by a boolean param. All default to 
 | File | Relationship |
 |------|--------------|
 | `tests/cli/credentials_test.rs::cred01–cred07` | Account-store independence, field presence, JSON, N/A cases |
-| [tests/docs/cli/command/010_credentials_status.md](../../tests/docs/cli/command/010_credentials_status.md) | Test case planning |
+| [tests/docs/cli/command/10_credentials_status.md](../../tests/docs/cli/command/10_credentials_status.md) | Test case planning |

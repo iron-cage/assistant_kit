@@ -4,7 +4,7 @@ SC test cases for `docs/schema/006_settings_json.md`. Verifies the `settings.jso
 write contract: model field semantics, effortLevel unconditional write, preservation of
 non-managed fields via read-modify-write, and the Opus/Sonnet effort level mapping.
 
-**Source:** [docs/schema/006_settings_json.md](../../../../docs/schema/006_settings_json.md)
+**Source:** [docs/schema/006_settings_json.md](../../../docs/schema/006_settings_json.md)
 
 ### SC Case Index
 
@@ -24,7 +24,7 @@ non-managed fields via read-modify-write, and the Opus/Sonnet effort level mappi
 - **When:** `get_session_model()` is called
 - **Then:** Returns `Some("claude-sonnet-5")` — the model shorthand maps to the full model ID used for interactive sessions
 - **Source fn:** `mre_bug322_opus_override_sets_effort_max` (usage/api_tests_a.rs; verifies model written alongside effort)
-- **Source:** [docs/schema/006_settings_json.md §Fields Managed by clp](../../../../docs/schema/006_settings_json.md)
+- **Source:** [docs/schema/006_settings_json.md §Fields Managed by clp](../../../docs/schema/006_settings_json.md)
 
 ---
 
@@ -34,7 +34,7 @@ non-managed fields via read-modify-write, and the Opus/Sonnet effort level mappi
 - **When:** `apply_model_override()` completes
 - **Then:** `settings.json` contains `"effortLevel": "max"` — effort is written unconditionally in the Opus branch regardless of whether the model changed
 - **Source fn:** `mre_bug322_opus_override_sets_effort_max` (usage/api_tests_a.rs)
-- **Source:** [docs/schema/006_settings_json.md §Effort Tracking Behavior](../../../../docs/schema/006_settings_json.md)
+- **Source:** [docs/schema/006_settings_json.md §Effort Tracking Behavior](../../../docs/schema/006_settings_json.md)
 
 ---
 
@@ -44,7 +44,7 @@ non-managed fields via read-modify-write, and the Opus/Sonnet effort level mappi
 - **When:** `apply_model_override()` completes
 - **Then:** `settings.json` contains `"effortLevel": "high"` — effort is written unconditionally in the Sonnet branch
 - **Source fn:** `t11_opus_to_sonnet_sets_effort_high` (usage/api_tests_b.rs)
-- **Source:** [docs/schema/006_settings_json.md §Effort Tracking Behavior](../../../../docs/schema/006_settings_json.md)
+- **Source:** [docs/schema/006_settings_json.md §Effort Tracking Behavior](../../../docs/schema/006_settings_json.md)
 
 ---
 
@@ -54,7 +54,7 @@ non-managed fields via read-modify-write, and the Opus/Sonnet effort level mappi
 - **When:** `clp` writes `model` or `effortLevel` via `apply_model_override()` or `set_session_model()`
 - **Then:** All other fields in `settings.json` remain unchanged — `clp` reads the entire file, modifies only its owned fields, and writes the complete object back
 - **Source fn:** `acc28_save_succeeds_without_settings_json` (cli/accounts_list_test_b.rs; verifies settings.json absent is graceful)
-- **Source:** [docs/schema/006_settings_json.md §Write Rules](../../../../docs/schema/006_settings_json.md)
+- **Source:** [docs/schema/006_settings_json.md §Write Rules](../../../docs/schema/006_settings_json.md)
 
 ---
 
@@ -64,4 +64,4 @@ non-managed fields via read-modify-write, and the Opus/Sonnet effort level mappi
 - **When:** `get_session_model()` or `get_session_effort()` is called
 - **Then:** Returns `None` (field treated as absent) — no panic, no error propagation that blocks the calling command
 - **Source fn:** `cc_c_malformed_settings_json_get_returns_unset` (cli/model_test.rs)
-- **Source:** [docs/schema/006_settings_json.md §Fields Managed by clp](../../../../docs/schema/006_settings_json.md)
+- **Source:** [docs/schema/006_settings_json.md §Fields Managed by clp](../../../docs/schema/006_settings_json.md)

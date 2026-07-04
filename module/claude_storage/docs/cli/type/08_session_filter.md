@@ -31,13 +31,6 @@ Validate non-empty string:
 
 **Commands:** `.list`, `.count`, `.search`, `.projects`
 
-**Usage:**
-```
-session::commit
-# Matches: -commit.jsonl, auto-commit.jsonl, pre-commit.jsonl
-# Does not match: -default_topic.jsonl
-```
-
 ### Referenced Commands
 
 | # | Command | Via Parameter |

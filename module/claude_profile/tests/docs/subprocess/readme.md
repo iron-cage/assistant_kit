@@ -1,4 +1,4 @@
-# Subprocess Test Cases
+# Subprocess Doc Entity
 
 Test-lens documentation for `docs/subprocess/`. Each spec file covers one subprocess
 contract and documents AC-N cases for invocation correctness verification. Tests live

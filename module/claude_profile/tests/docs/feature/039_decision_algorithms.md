@@ -1,5 +1,11 @@
 # Test: Feature 039 — Decision Algorithm Reference
 
+### Scope
+
+- **Purpose**: Test cases for the six core decision algorithms — touch model selection, session override, status groups, eligibility gates, positive selection, and quota approximation.
+- **Source**: `docs/feature/039_decision_algorithms.md`
+- **Covers**: Table 1 through Table 6 (this file indexes by algorithm Table, not AC-NN — see AC Coverage Index below)
+
 Feature behavioral requirement test cases for `docs/feature/039_decision_algorithms.md`. Tests verify the six core decision algorithms: touch model selection (Table 1), session model override (Table 2), quota status groups (Table 3), next-account eligibility gates (Table 4), next-account positive selection (Table 5), and quota approximation (Table 6).
 
 ### AC Coverage Index

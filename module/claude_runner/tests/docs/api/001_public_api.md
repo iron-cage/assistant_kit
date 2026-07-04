@@ -1,6 +1,6 @@
 # Test: API — Public API
 
-Test case planning for [api/001_public_api.md](../../../../docs/api/001_public_api.md). Tests validate the two public API surface contracts: `COMMANDS_YAML` constant and `register_commands` function.
+Test case planning for [api/001_public_api.md](../../../docs/api/001_public_api.md). Tests validate the two public API surface contracts: `COMMANDS_YAML` constant and `register_commands` function.
 
 ## Test Case Index
 
@@ -28,7 +28,7 @@ Test case planning for [api/001_public_api.md](../../../../docs/api/001_public_a
 - **When:** access `claude_runner::COMMANDS_YAML` constant at compile or runtime
 - **Then:** The constant is a non-empty `&str`; the string is accessible and non-null
 - **Exit:** 0
-- **Source:** [api/001_public_api.md](../../../../docs/api/001_public_api.md)
+- **Source:** [api/001_public_api.md](../../../docs/api/001_public_api.md)
 
 ---
 
@@ -38,7 +38,7 @@ Test case planning for [api/001_public_api.md](../../../../docs/api/001_public_a
 - **When:** parse `claude_runner::COMMANDS_YAML` with a YAML parser
 - **Then:** Parse succeeds with no errors; the YAML structure is valid
 - **Exit:** 0
-- **Source:** [api/001_public_api.md](../../../../docs/api/001_public_api.md)
+- **Source:** [api/001_public_api.md](../../../docs/api/001_public_api.md)
 
 ---
 
@@ -48,6 +48,6 @@ Test case planning for [api/001_public_api.md](../../../../docs/api/001_public_a
 - **When:** call `claude_runner::register_commands()` in a unit test
 - **Then:** Function returns without panic or error; return type is unit (`()`); no side effects that cause failure
 - **Exit:** 0
-- **Source:** [api/001_public_api.md](../../../../docs/api/001_public_api.md)
+- **Source:** [api/001_public_api.md](../../../docs/api/001_public_api.md)
 
 

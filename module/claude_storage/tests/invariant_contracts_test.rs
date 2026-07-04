@@ -1,13 +1,13 @@
-//! Contract tests for behavioral invariants, CLI pitfalls, and guide properties.
+//! Contract tests for behavioral invariants, CLI pitfalls, and algorithm properties.
 //!
 //! ## Coverage
 //!
 //! - `tests/docs/invariant/01_path_encoding.md` — IN-1..IN-5: path encode/decode contracts
-//! - `tests/docs/invariant/02_session_family.md` — IN-1..IN-5: session family grouping contracts
+//! - `tests/docs/invariant/02_session_family.md` — IN-1..IN-8: session family grouping contracts
 //! - `tests/docs/invariant/03_entry_type_format.md` — IN-1..IN-6: JSONL entry type classification contracts
 //! - `tests/docs/cli/pitfall/02_cross_command_propagation.md` — PF-1..PF-3: propagation fix annotation contracts
 //! - `tests/docs/cli/pitfall/03_test_data_format.md` — PF-1..PF-4: test data JSONL format contracts
-//! - `tests/docs/guide/001_advanced_storage_topics.md` — GD-1..GD-7: advanced storage architecture contracts
+//! - `tests/docs/algorithm/001_agent_session_tracking.md` — AL-1..AL-2: agent session detection contracts
 
 mod common;
 
@@ -23,7 +23,6 @@ use claude_storage_core::
 {
   Entry,
   EntryType,
-  JsonValue,
   Session,
   Storage,
   encode_path,
@@ -414,6 +413,207 @@ fn in_5_flat_and_hierarchical_coexist()
   assert!( has_hierarchical, "IN-5: hierarchical agent def456 must be discovered" );
 }
 
+/// IN-6: Empty `.meta.json` (0 bytes) parsed without error via CLI `.projects`.
+///
+/// Creates an agent session with a 0-byte `.meta.json` sidecar file. The CLI
+/// `.projects` command must succeed (exit 0) — no parse error from empty metadata.
+///
+/// ## Related Requirements
+/// `tests/docs/invariant/02_session_family.md` — IN-6
+#[ test ]
+fn in_6_empty_meta_json_parsed_without_error()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path();
+  let project_id = "proj-gd3";
+  let root_session_id = "gd3gd3gd-3333-3333-3333-gd3gd3gd3gd3";
+
+  // Write root session and hierarchical agent
+  common::write_hierarchical_session(
+    storage_root,
+    project_id,
+    root_session_id,
+    &[ ( "empty-meta", "default" ) ],
+    2,
+  );
+
+  // Overwrite the meta.json with a 0-byte file
+  let meta_path = storage_root
+    .join( "projects" )
+    .join( project_id )
+    .join( root_session_id )
+    .join( "subagents" )
+    .join( "agent-empty-meta.meta.json" );
+  std::fs::write( &meta_path, b"" ).expect( "IN-6: write empty meta.json" );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .output()
+    .unwrap();
+
+  assert_exit(
+    &out,
+    0,
+    // 0-byte meta.json must not cause a parse error
+  );
+  // Verify project appears in output (confirms it was processed)
+  let s = stdout( &out );
+  assert!(
+    !s.is_empty(),
+    "IN-6: .projects must produce non-empty output when meta.json is empty; stderr: {}",
+    stderr( &out )
+  );
+}
+
+/// IN-7: Agent `slug` field is identical across agents from the same parent session.
+///
+/// Parses two agent entries with the same `sessionId` via `parse_json()` and verifies
+/// both carry identical `slug` values.
+///
+/// ## Related Requirements
+/// `tests/docs/invariant/02_session_family.md` — IN-7
+#[ test ]
+fn in_7_agent_slug_identical_across_same_parent_session()
+{
+  let session_id = "gd6gd6gd-6666-6666-6666-gd6gd6gd6gd6";
+  let shared_slug = "my-project-slug";
+
+  let agent_entry_1 = format!(
+    r#"{{"type":"user","uuid":"gd6-uuid-a001","parentUuid":null,"timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp","sessionId":"{session_id}","version":"2.0.0","gitBranch":null,"userType":"human","isSidechain":true,"slug":"{shared_slug}","message":{{"role":"user","content":"agent 1"}}}}"#
+  );
+  let agent_entry_2 = format!(
+    r#"{{"type":"user","uuid":"gd6-uuid-b002","parentUuid":null,"timestamp":"2025-01-01T00:00:01Z","cwd":"/tmp","sessionId":"{session_id}","version":"2.0.0","gitBranch":null,"userType":"human","isSidechain":true,"slug":"{shared_slug}","message":{{"role":"user","content":"agent 2"}}}}"#
+  );
+
+  let json1 = parse_json( &agent_entry_1 ).expect( "IN-7: parse agent entry 1" );
+  let json2 = parse_json( &agent_entry_2 ).expect( "IN-7: parse agent entry 2" );
+
+  let slug1 = json1.as_object()
+    .and_then( | o | o.get( "slug" ) )
+    .and_then( | v | v.as_str() )
+    .expect( "IN-7: slug field must be present in agent entry 1" );
+
+  let slug2 = json2.as_object()
+    .and_then( | o | o.get( "slug" ) )
+    .and_then( | v | v.as_str() )
+    .expect( "IN-7: slug field must be present in agent entry 2" );
+
+  assert_eq!(
+    slug1,
+    slug2,
+    "IN-7: slug must be identical across agents from the same parent session; got {slug1:?} vs {slug2:?}"
+  );
+}
+
+/// IN-8: Agent entries thread within their own session via `parentUuid`, not back to root session.
+///
+/// In an agent JSONL: first entry has `parentUuid: null`; subsequent entries have
+/// `parentUuid` referencing a UUID from within the agent JSONL itself — NOT from the
+/// root session JSONL.
+///
+/// ## Related Requirements
+/// `tests/docs/invariant/02_session_family.md` — IN-8
+#[ test ]
+fn in_8_agent_entries_thread_via_parent_uuid_within_agent()
+{
+  let tmp = TempDir::new().unwrap();
+  let agent_path = tmp.path().join( "agent-gd7test.jsonl" );
+
+  let agent_uuid_1 = "gd7-agent-0001-0001-0001-gd7agent0001";
+  let agent_uuid_2 = "gd7-agent-0002-0002-0002-gd7agent0002";
+  // Root session UUID that agent entries must NOT reference as parentUuid
+  let root_session_uuid = "root0000-0000-0000-0000-root00000000";
+
+  // Entry 1: parentUuid is null (first entry in agent session)
+  let entry_1 = format!(
+    r#"{{"type":"user","uuid":"{agent_uuid_1}","parentUuid":null,"timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp","sessionId":"{root_session_uuid}","version":"2.0.0","gitBranch":null,"userType":"human","isSidechain":true,"message":{{"role":"user","content":"first"}}}}"#
+  );
+  // Entry 2: parentUuid references agent_uuid_1 (within agent), NOT root_session_uuid
+  let entry_2 = format!(
+    r#"{{"type":"user","uuid":"{agent_uuid_2}","parentUuid":"{agent_uuid_1}","timestamp":"2025-01-01T00:00:01Z","cwd":"/tmp","sessionId":"{root_session_uuid}","version":"2.0.0","gitBranch":null,"userType":"human","isSidechain":true,"message":{{"role":"user","content":"second"}}}}"#
+  );
+
+  std::fs::write( &agent_path, format!( "{entry_1}\n{entry_2}\n" ) )
+    .expect( "IN-8: write agent JSONL" );
+
+  let mut session = Session::load( &agent_path ).expect( "IN-8: session must load" );
+  let entries = session.entries().expect( "IN-8: entries must load" );
+
+  assert_eq!( entries.len(), 2, "IN-8: must have 2 entries" );
+
+  // First entry: parentUuid must be None
+  assert!(
+    entries[ 0 ].parent_uuid.is_none(),
+    "IN-8: first agent entry parentUuid must be null; got {:?}",
+    entries[ 0 ].parent_uuid
+  );
+
+  // Second entry: parentUuid must reference agent_uuid_1 (within agent), not root
+  let second_parent = entries[ 1 ].parent_uuid.as_deref()
+    .expect( "IN-8: second agent entry must have a parentUuid" );
+  assert_eq!(
+    second_parent,
+    agent_uuid_1,
+    "IN-8: second entry parentUuid must reference UUID within agent JSONL; got {second_parent:?}"
+  );
+  assert_ne!(
+    second_parent,
+    root_session_uuid,
+    "IN-8: second entry parentUuid must NOT reference root session UUID"
+  );
+}
+
+// ─── algorithm/001 — agent session tracking ───────────────────────────────────
+
+/// AL-1: Agent JSONL first entry has `isSidechain: true`.
+///
+/// ## Related Requirements
+/// `tests/docs/algorithm/001_agent_session_tracking.md` — AL-1
+#[ test ]
+fn al_1_agent_entry_is_sidechain_true()
+{
+  // Manually craft an agent JSONL with isSidechain:true
+  let agent_entry = r#"{"type":"user","uuid":"gd1-uuid-0001-0001-0001-gd1uuid0001","parentUuid":null,"timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp","sessionId":"gd1-session-id","version":"2.0.0","gitBranch":null,"userType":"human","isSidechain":true,"message":{"role":"user","content":"agent message"}}"#;
+
+  let entry = Entry::from_json_line( agent_entry ).expect( "AL-1: agent entry must parse" );
+  assert!(
+    entry.is_sidechain,
+    "AL-1: agent JSONL first entry must have isSidechain:true; got isSidechain:{}",
+    entry.is_sidechain
+  );
+}
+
+/// AL-2: Agent entry `agentId` matches the agent filename suffix.
+///
+/// Parses via `parse_json()` to access the raw `agentId` field (not in Entry struct).
+///
+/// ## Related Requirements
+/// `tests/docs/algorithm/001_agent_session_tracking.md` — AL-2
+#[ test ]
+fn al_2_agent_entry_agent_id_matches_filename_suffix()
+{
+  // Agent file would be named agent-64bdad98.jsonl
+  let expected_suffix = "64bdad98";
+  let agent_entry = format!(
+    r#"{{"type":"user","uuid":"gd2-uuid-0002-0002-0002-gd2uuid0002","parentUuid":null,"timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp","sessionId":"gd2-session","version":"2.0.0","gitBranch":null,"userType":"human","isSidechain":true,"agentId":"{expected_suffix}","message":{{"role":"user","content":"agent"}}}}"#
+  );
+
+  let json = parse_json( &agent_entry ).expect( "AL-2: parse_json must succeed" );
+  let obj = json.as_object().expect( "AL-2: must be object" );
+  let agent_id = obj.get( "agentId" )
+    .and_then( | v | v.as_str() )
+    .expect( "AL-2: agentId field must be present" );
+
+  assert_eq!(
+    agent_id,
+    expected_suffix,
+    "AL-2: agentId field must equal filename suffix '64bdad98'"
+  );
+}
+
 // ─── invariant/03 — entry type format ────────────────────────────────────────
 
 /// IN-1: `"type":"user"` top-level entry classified as User.
@@ -727,265 +927,5 @@ fn pf_4_entry_with_non_uuid_value_is_parsed_normally()
     entries[ 0 ].uuid,
     "entry-1",
     "PF-4: uuid field must be preserved as-is without format coercion"
-  );
-}
-
-// ─── guide/001 — advanced storage architecture ────────────────────────────────
-
-/// GD-1: Agent JSONL first entry has `isSidechain: true`.
-///
-/// ## Related Requirements
-/// `tests/docs/guide/001_advanced_storage_topics.md` — GD-1
-#[ test ]
-fn gd_1_agent_entry_is_sidechain_true()
-{
-  // Manually craft an agent JSONL with isSidechain:true
-  let agent_entry = r#"{"type":"user","uuid":"gd1-uuid-0001-0001-0001-gd1uuid0001","parentUuid":null,"timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp","sessionId":"gd1-session-id","version":"2.0.0","gitBranch":null,"userType":"human","isSidechain":true,"message":{"role":"user","content":"agent message"}}"#;
-
-  let entry = Entry::from_json_line( agent_entry ).expect( "GD-1: agent entry must parse" );
-  assert!(
-    entry.is_sidechain,
-    "GD-1: agent JSONL first entry must have isSidechain:true; got isSidechain:{}",
-    entry.is_sidechain
-  );
-}
-
-/// GD-2: Agent entry `agentId` matches the agent filename suffix.
-///
-/// Parses via `parse_json()` to access the raw `agentId` field (not in Entry struct).
-///
-/// ## Related Requirements
-/// `tests/docs/guide/001_advanced_storage_topics.md` — GD-2
-#[ test ]
-fn gd_2_agent_entry_agent_id_matches_filename_suffix()
-{
-  // Agent file would be named agent-64bdad98.jsonl
-  let expected_suffix = "64bdad98";
-  let agent_entry = format!(
-    r#"{{"type":"user","uuid":"gd2-uuid-0002-0002-0002-gd2uuid0002","parentUuid":null,"timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp","sessionId":"gd2-session","version":"2.0.0","gitBranch":null,"userType":"human","isSidechain":true,"agentId":"{expected_suffix}","message":{{"role":"user","content":"agent"}}}}"#
-  );
-
-  let json = parse_json( &agent_entry ).expect( "GD-2: parse_json must succeed" );
-  let obj = json.as_object().expect( "GD-2: must be object" );
-  let agent_id = obj.get( "agentId" )
-    .and_then( | v | v.as_str() )
-    .expect( "GD-2: agentId field must be present" );
-
-  assert_eq!(
-    agent_id,
-    expected_suffix,
-    "GD-2: agentId field must equal filename suffix '64bdad98'"
-  );
-}
-
-/// GD-3: Empty `.meta.json` (0 bytes) parsed without error via CLI `.projects`.
-///
-/// Creates an agent session with a 0-byte `.meta.json` sidecar file. The CLI
-/// `.projects` command must succeed (exit 0) — no parse error from empty metadata.
-///
-/// ## Related Requirements
-/// `tests/docs/guide/001_advanced_storage_topics.md` — GD-3
-#[ test ]
-fn gd_3_empty_meta_json_parsed_without_error()
-{
-  let root = TempDir::new().unwrap();
-  let storage_root = root.path();
-  let project_id = "proj-gd3";
-  let root_session_id = "gd3gd3gd-3333-3333-3333-gd3gd3gd3gd3";
-
-  // Write root session and hierarchical agent
-  common::write_hierarchical_session(
-    storage_root,
-    project_id,
-    root_session_id,
-    &[ ( "empty-meta", "default" ) ],
-    2,
-  );
-
-  // Overwrite the meta.json with a 0-byte file
-  let meta_path = storage_root
-    .join( "projects" )
-    .join( project_id )
-    .join( root_session_id )
-    .join( "subagents" )
-    .join( "agent-empty-meta.meta.json" );
-  std::fs::write( &meta_path, b"" ).expect( "GD-3: write empty meta.json" );
-
-  let out = common::clg_cmd()
-    .env( "HOME", root.path().to_str().unwrap() )
-    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".projects" )
-    .arg( "scope::global" )
-    .output()
-    .unwrap();
-
-  assert_exit(
-    &out,
-    0,
-    // 0-byte meta.json must not cause a parse error
-  );
-  // Verify project appears in output (confirms it was processed)
-  let s = stdout( &out );
-  assert!(
-    !s.is_empty(),
-    "GD-3: .projects must produce non-empty output when meta.json is empty; stderr: {}",
-    stderr( &out )
-  );
-}
-
-/// GD-4: `history.jsonl` entry `timestamp` field value > 10^12 (milliseconds-since-epoch).
-///
-/// ## Related Requirements
-/// `tests/docs/guide/001_advanced_storage_topics.md` — GD-4
-#[ test ]
-fn gd_4_history_entry_timestamp_is_milliseconds()
-{
-  let tmp = TempDir::new().unwrap();
-  let history_path = tmp.path().join( "history.jsonl" );
-
-  // Use a known millisecond timestamp (2025-01-01 00:00:00 UTC = 1735689600000 ms)
-  let timestamp_ms : u64 = 1_735_689_600_000u64;
-  let history_entry = format!(
-    r#"{{"type":"user","uuid":"gd4-uuid-0004","parentUuid":null,"timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp","sessionId":"gd4-session","version":"2.0.0","gitBranch":null,"userType":"human","isSidechain":false,"unixMs":{timestamp_ms},"message":{{"role":"user","content":"test"}}}}"#
-  );
-
-  std::fs::write( &history_path, format!( "{history_entry}\n" ) )
-    .expect( "GD-4: write history.jsonl" );
-
-  let content = std::fs::read_to_string( &history_path ).expect( "GD-4: read history" );
-  let line = content.lines().next().expect( "GD-4: must have one line" );
-  let json = parse_json( line ).expect( "GD-4: parse_json must succeed" );
-  let obj = json.as_object().expect( "GD-4: must be object" );
-
-  // Verify the raw millisecond value we wrote is preserved and > 10^12
-  let raw = obj.get( "unixMs" )
-    .and_then( JsonValue::as_number )
-    .expect( "GD-4: unixMs field must be present and numeric" );
-
-  assert!(
-    raw > 1_000_000_000_000.0,
-    "GD-4: history entry timestamp must be > 10^12 (milliseconds-since-epoch); got {raw}"
-  );
-}
-
-/// GD-5: `session-env/{uuid}/` directory is empty (contains no files).
-///
-/// ## Related Requirements
-/// `tests/docs/guide/001_advanced_storage_topics.md` — GD-5
-#[ test ]
-fn gd_5_session_env_directory_is_empty()
-{
-  let tmp = TempDir::new().unwrap();
-  let session_uuid = "gd5gd5gd-5555-5555-5555-gd5gd5gd5gd5";
-  let env_dir = tmp.path().join( "session-env" ).join( session_uuid );
-  std::fs::create_dir_all( &env_dir ).expect( "GD-5: create session-env dir" );
-
-  let entries : Vec< _ > = std::fs::read_dir( &env_dir )
-    .expect( "GD-5: read session-env dir must succeed" )
-    .filter_map( Result::ok )
-    .collect();
-
-  assert!(
-    entries.is_empty(),
-    "GD-5: session-env/{session_uuid}/ must be empty (contains no files or subdirs); found {} entries",
-    entries.len()
-  );
-}
-
-/// GD-6: Agent `slug` field is identical across agents from the same parent session.
-///
-/// Parses two agent entries with the same `sessionId` via `parse_json()` and verifies
-/// both carry identical `slug` values.
-///
-/// ## Related Requirements
-/// `tests/docs/guide/001_advanced_storage_topics.md` — GD-6
-#[ test ]
-fn gd_6_agent_slug_identical_across_same_parent_session()
-{
-  let session_id = "gd6gd6gd-6666-6666-6666-gd6gd6gd6gd6";
-  let shared_slug = "my-project-slug";
-
-  let agent_entry_1 = format!(
-    r#"{{"type":"user","uuid":"gd6-uuid-a001","parentUuid":null,"timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp","sessionId":"{session_id}","version":"2.0.0","gitBranch":null,"userType":"human","isSidechain":true,"slug":"{shared_slug}","message":{{"role":"user","content":"agent 1"}}}}"#
-  );
-  let agent_entry_2 = format!(
-    r#"{{"type":"user","uuid":"gd6-uuid-b002","parentUuid":null,"timestamp":"2025-01-01T00:00:01Z","cwd":"/tmp","sessionId":"{session_id}","version":"2.0.0","gitBranch":null,"userType":"human","isSidechain":true,"slug":"{shared_slug}","message":{{"role":"user","content":"agent 2"}}}}"#
-  );
-
-  let json1 = parse_json( &agent_entry_1 ).expect( "GD-6: parse agent entry 1" );
-  let json2 = parse_json( &agent_entry_2 ).expect( "GD-6: parse agent entry 2" );
-
-  let slug1 = json1.as_object()
-    .and_then( | o | o.get( "slug" ) )
-    .and_then( | v | v.as_str() )
-    .expect( "GD-6: slug field must be present in agent entry 1" );
-
-  let slug2 = json2.as_object()
-    .and_then( | o | o.get( "slug" ) )
-    .and_then( | v | v.as_str() )
-    .expect( "GD-6: slug field must be present in agent entry 2" );
-
-  assert_eq!(
-    slug1,
-    slug2,
-    "GD-6: slug must be identical across agents from the same parent session; got {slug1:?} vs {slug2:?}"
-  );
-}
-
-/// GD-7: Agent entries thread within their own session via `parentUuid`, not back to root session.
-///
-/// In an agent JSONL: first entry has `parentUuid: null`; subsequent entries have
-/// `parentUuid` referencing a UUID from within the agent JSONL itself — NOT from the
-/// root session JSONL.
-///
-/// ## Related Requirements
-/// `tests/docs/guide/001_advanced_storage_topics.md` — GD-7
-#[ test ]
-fn gd_7_agent_entries_thread_via_parent_uuid_within_agent()
-{
-  let tmp = TempDir::new().unwrap();
-  let agent_path = tmp.path().join( "agent-gd7test.jsonl" );
-
-  let agent_uuid_1 = "gd7-agent-0001-0001-0001-gd7agent0001";
-  let agent_uuid_2 = "gd7-agent-0002-0002-0002-gd7agent0002";
-  // Root session UUID that agent entries must NOT reference as parentUuid
-  let root_session_uuid = "root0000-0000-0000-0000-root00000000";
-
-  // Entry 1: parentUuid is null (first entry in agent session)
-  let entry_1 = format!(
-    r#"{{"type":"user","uuid":"{agent_uuid_1}","parentUuid":null,"timestamp":"2025-01-01T00:00:00Z","cwd":"/tmp","sessionId":"{root_session_uuid}","version":"2.0.0","gitBranch":null,"userType":"human","isSidechain":true,"message":{{"role":"user","content":"first"}}}}"#
-  );
-  // Entry 2: parentUuid references agent_uuid_1 (within agent), NOT root_session_uuid
-  let entry_2 = format!(
-    r#"{{"type":"user","uuid":"{agent_uuid_2}","parentUuid":"{agent_uuid_1}","timestamp":"2025-01-01T00:00:01Z","cwd":"/tmp","sessionId":"{root_session_uuid}","version":"2.0.0","gitBranch":null,"userType":"human","isSidechain":true,"message":{{"role":"user","content":"second"}}}}"#
-  );
-
-  std::fs::write( &agent_path, format!( "{entry_1}\n{entry_2}\n" ) )
-    .expect( "GD-7: write agent JSONL" );
-
-  let mut session = Session::load( &agent_path ).expect( "GD-7: session must load" );
-  let entries = session.entries().expect( "GD-7: entries must load" );
-
-  assert_eq!( entries.len(), 2, "GD-7: must have 2 entries" );
-
-  // First entry: parentUuid must be None
-  assert!(
-    entries[ 0 ].parent_uuid.is_none(),
-    "GD-7: first agent entry parentUuid must be null; got {:?}",
-    entries[ 0 ].parent_uuid
-  );
-
-  // Second entry: parentUuid must reference agent_uuid_1 (within agent), not root
-  let second_parent = entries[ 1 ].parent_uuid.as_deref()
-    .expect( "GD-7: second agent entry must have a parentUuid" );
-  assert_eq!(
-    second_parent,
-    agent_uuid_1,
-    "GD-7: second entry parentUuid must reference UUID within agent JSONL; got {second_parent:?}"
-  );
-  assert_ne!(
-    second_parent,
-    root_session_uuid,
-    "GD-7: second entry parentUuid must NOT reference root session UUID"
   );
 }

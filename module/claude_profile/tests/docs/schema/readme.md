@@ -1,4 +1,4 @@
-# Test: Schema
+# Schema Doc Entity
 
 SC-N schema constraint specs for `claude_profile`. Each spec covers the on-disk format
 contracts defined in `docs/schema/`, verifying field presence, type rules, encoding
@@ -28,5 +28,5 @@ surface (see `tests/docs/readme.md` Surface Index). Min 4 SC- cases per spec.
 
 ### See Also
 
-- [docs/schema/](../../../../docs/schema/readme.md) — schema source docs
-- [docs/invariant/007_json_storage_format.md](../../../../docs/invariant/007_json_storage_format.md) — JSON encoding invariant
+- [docs/schema/](../../../docs/schema/readme.md) — schema source docs
+- [docs/invariant/007_json_storage_format.md](../../../docs/invariant/007_json_storage_format.md) — JSON encoding invariant

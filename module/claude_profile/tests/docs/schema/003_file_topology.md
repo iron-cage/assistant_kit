@@ -4,7 +4,7 @@ SC test cases for `docs/schema/003_file_topology.md`. Verifies the `ClaudePaths`
 method contracts: correct resolved paths, the sibling invariant for `claude_json_file()`,
 and the pure-computation guarantee (no filesystem access in any path method).
 
-**Source:** [docs/schema/003_file_topology.md](../../../../docs/schema/003_file_topology.md)
+**Source:** [docs/schema/003_file_topology.md](../../../docs/schema/003_file_topology.md)
 
 ### SC Case Index
 
@@ -23,7 +23,7 @@ and the pure-computation guarantee (no filesystem access in any path method).
 - **When:** `credentials_file()` is called
 - **Then:** Returns `{home}/.claude/.credentials.json` — the live session credential file path; inside `.claude/` subdirectory
 - **Source fn:** `credentials_file_returns_dot_credentials_json` (paths_tests.rs)
-- **Source:** [docs/schema/003_file_topology.md §Path Methods](../../../../docs/schema/003_file_topology.md)
+- **Source:** [docs/schema/003_file_topology.md §Path Methods](../../../docs/schema/003_file_topology.md)
 
 ---
 
@@ -34,7 +34,7 @@ and the pure-computation guarantee (no filesystem access in any path method).
 - **Then:** Returns `{home}/.claude.json` — a sibling file to the `{home}/.claude/` directory, NOT `{home}/.claude/claude.json`
 - **Note:** Key invariant — callers must not assume this path is inside `.claude/`. Constructing it as `.claude/claude.json` would target a different file.
 - **Source fn:** `ft04_claude_json_file_returns_home_dot_claude_json` and `ft05_claude_json_file_is_sibling_not_inside_dot_claude` (paths_tests.rs)
-- **Source:** [docs/schema/003_file_topology.md §Key Invariant](../../../../docs/schema/003_file_topology.md)
+- **Source:** [docs/schema/003_file_topology.md §Key Invariant](../../../docs/schema/003_file_topology.md)
 
 ---
 
@@ -44,7 +44,7 @@ and the pure-computation guarantee (no filesystem access in any path method).
 - **When:** `settings_file()` is called
 - **Then:** Returns `{home}/.claude/settings.json` — the Claude session settings file; inside `.claude/` subdirectory
 - **Source fn:** `settings_file_returns_settings_json` (paths_tests.rs)
-- **Source:** [docs/schema/003_file_topology.md §Path Methods](../../../../docs/schema/003_file_topology.md)
+- **Source:** [docs/schema/003_file_topology.md §Path Methods](../../../docs/schema/003_file_topology.md)
 
 ---
 
@@ -54,4 +54,4 @@ and the pure-computation guarantee (no filesystem access in any path method).
 - **When:** Any of `credentials_file()`, `claude_json_file()`, `settings_file()`, `projects_dir()`, `stats_file()`, `session_env_dir()`, `sessions_dir()` are called
 - **Then:** All return `PathBuf` values without error, without filesystem access, and without panicking — path derivation is purely string manipulation on the `HOME` root
 - **Source fn:** `ft05_claude_json_file_is_sibling_not_inside_dot_claude` (paths_tests.rs; uses non-existent temp path)
-- **Source:** [docs/schema/003_file_topology.md §Construction](../../../../docs/schema/003_file_topology.md)
+- **Source:** [docs/schema/003_file_topology.md §Construction](../../../docs/schema/003_file_topology.md)

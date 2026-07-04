@@ -35,4 +35,4 @@ clj .prune keep::100mb dry_run::1    # Preview size-based pruning
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 4 | [Capacity Planning](../user_story/04_capacity_planning.md) | Developer |
+| 4 | [Capacity Planning](../user_story/004_capacity_planning.md) | Developer |

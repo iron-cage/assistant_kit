@@ -59,6 +59,6 @@ clj .list exit::2 model::opus               # Rate-limit errors on opus model
 
 | # | User Story |
 |---|-----------|
-| 1 | [Cost Tracking](../user_story/01_cost_tracking.md) |
-| 2 | [Failure Diagnosis](../user_story/02_failure_diagnosis.md) |
-| 4 | [Capacity Planning](../user_story/04_capacity_planning.md) |
+| 1 | [Cost Tracking](../user_story/001_cost_tracking.md) |
+| 2 | [Failure Diagnosis](../user_story/002_failure_diagnosis.md) |
+| 4 | [Capacity Planning](../user_story/004_capacity_planning.md) |

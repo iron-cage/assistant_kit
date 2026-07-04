@@ -1,4 +1,4 @@
-# Test: Research Interactive
+# Research Interactive Doc Entity
 
 RC-N research constraint specs for `claude_profile`. Covers testable constraints and
 implementation properties discovered via research into `claude` binary execution modes and
@@ -23,5 +23,5 @@ from research findings. Min 4 RC- cases per spec.
 
 ### See Also
 
-- [docs/research_interactive/001_claude_interactive_session_control.md](../../../../docs/research_interactive/001_claude_interactive_session_control.md) — research source doc
+- [docs/research_interactive/001_claude_interactive_session_control.md](../../../docs/research_interactive/001_claude_interactive_session_control.md) — research source doc
 - [tests/docs/cli/command/12_account_relogin.md](../cli/command/12_account_relogin.md) — relogin command integration tests

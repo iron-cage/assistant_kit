@@ -1,5 +1,11 @@
 # Test: Feature 011 — Named Account Scoping
 
+### Scope
+
+- **Purpose**: Test cases for scoping `.accounts` output to a single named account via `name::`.
+- **Source**: `docs/feature/011_account_status_by_name.md`
+- **Covers**: AC-01 through AC-05
+
 Feature behavioral requirement test cases for `docs/feature/011_account_status_by_name.md` (FR-16). Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

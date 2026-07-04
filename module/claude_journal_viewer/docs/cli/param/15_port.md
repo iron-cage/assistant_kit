@@ -35,5 +35,5 @@ clj .serve port::0                    # OS-assigned port
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 1 | [Cost Tracking](../user_story/01_cost_tracking.md) | Developer |
-| 3 | [Automation Audit](../user_story/03_automation_audit.md) | Developer |
+| 1 | [Cost Tracking](../user_story/001_cost_tracking.md) | Developer |
+| 3 | [Automation Audit](../user_story/003_automation_audit.md) | Developer |

@@ -27,7 +27,7 @@ Missing optional fields (`session_id`, `usage`, `total_cost_usd`, and any other 
 
 **Invariant field:** `"type":"result"` is the ONLY field permitted to gate the `None`-vs-`Some` return decision. It is present in every CLR result envelope across all observed claude binary versions.
 
-**Anti-pattern:** Gating on optional fields (e.g. `session_id`) using Rust's `?` operator on an `Option` restores the raw-JSON fallback symptom for any CLR binary version that omits that field. This is the structural root of BUG-309 (field name `"id"` absent) and BUG-310 (field name `"session_id"` absent from 7-field minimal envelopes). See D15 in `../001_design_decisions.md`.
+**Anti-pattern:** Gating on optional fields (e.g. `session_id`) using Rust's `?` operator on an `Option` restores the raw-JSON fallback symptom for any CLR binary version that omits that field. This is the structural root of BUG-309 (field name `"id"` absent) and BUG-310 (field name `"session_id"` absent from 7-field minimal envelopes). See D15 in `../feature/006_cli_design.md`.
 
 ### Enforcement Mechanism
 
@@ -85,4 +85,4 @@ If `render_summary()` gates on an optional field using `?`:
 | TSK-236 | Verified task implementing the gate fix and EC-14 test |
 | BUG-310 | Root bug: `extract_str(json,"session_id")?` in `render_summary()` returns `None` for minimal envelopes lacking `session_id` |
 | BUG-309 | Prior structural instance: gate was on `"id"` (changed to `"session_id"` in TSK-233) — same `?`-gate anti-pattern |
-| D15 | Design decision in `docs/001_design_decisions.md` documenting the invariant-field gate rationale |
+| D15 | Design decision in `docs/feature/006_cli_design.md` documenting the invariant-field gate rationale |

@@ -1,4 +1,4 @@
-# Feature Tests
+# Feature Doc Entity
 
 Feature behavioral requirement test cases for `claude_profile`. Each file covers one feature doc instance from `docs/feature/` and maps its acceptance criteria to `FT-N` test cases.
 

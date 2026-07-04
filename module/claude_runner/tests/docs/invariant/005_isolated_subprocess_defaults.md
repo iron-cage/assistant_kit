@@ -1,6 +1,6 @@
 # Test: Invariant — Isolated Subprocess Defaults
 
-Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md). Tests validate that `isolated` and `refresh` inject the required model, effort level, flags, and CLAUDE.md behavior in every subprocess invocation.
+Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md). Tests validate that `isolated` and `refresh` inject the required model, effort level, flags, and CLAUDE.md behavior in every subprocess invocation.
 
 ## Test Case Index
 
@@ -41,7 +41,7 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** static check of the constant value
 - **Then:** `ISOLATED_DEFAULT_MODEL` equals `"opus"` (the Opus capability alias; binary resolves to latest Opus at runtime)
 - **Exit:** 0
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md)
 
 ---
 
@@ -51,7 +51,7 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** static check of the constant value
 - **Then:** `REFRESH_DEFAULT_MODEL` equals `"claude-sonnet-5"`
 - **Exit:** 0
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md)
 
 ---
 
@@ -61,7 +61,7 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** `clr isolated --creds <f> --dry-run "x"` or trace inspection of args
 - **Then:** trace/dry-run output contains `--effort max` before `--print` in the assembled command line
 - **Exit:** 0
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md)
 
 ---
 
@@ -71,7 +71,7 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** `clr refresh --creds <f> --trace` (no spawn; trace fires before invoke)
 - **Then:** stderr contains `--effort low` in the assembled command line before `--print`
 - **Exit:** 1 (claude absent) or 0 (claude present)
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md)
 
 ---
 
@@ -81,7 +81,7 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** `clr isolated --creds <f> --trace "x"`
 - **Then:** trace stderr contains `--dangerously-skip-permissions` in the assembled command line
 - **Exit:** 1 (claude absent) or 0 (claude present)
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md)
 
 ---
 
@@ -91,7 +91,7 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** `clr isolated --creds <f> --trace`
 - **Then:** trace stderr does NOT contain `--dangerously-skip-permissions`; subprocess enters interactive mode
 - **Exit:** 1 (claude absent) or 0 (claude present; interactive)
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md)
 
 ---
 
@@ -101,7 +101,7 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** `clr isolated --creds <f> --trace "x"`
 - **Then:** trace stderr contains `--no-session-persistence` in the assembled command line
 - **Exit:** 1 (claude absent) or 0 (claude present)
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md)
 
 ---
 
@@ -111,7 +111,7 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** `clr refresh --creds <f> --trace`
 - **Then:** trace stderr contains `--no-session-persistence` in the assembled command line
 - **Exit:** 1 (claude absent) or 0 (claude present)
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md)
 
 ---
 
@@ -121,7 +121,7 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** `clr refresh --creds <f> --trace`
 - **Then:** trace stderr contains `--no-chrome` in the assembled command line; `--chrome` is suppressed for refresh
 - **Exit:** 1 (claude absent) or 0 (claude present)
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md)
 
 ---
 
@@ -131,7 +131,7 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** `clr isolated --creds <f> --trace "x"`
 - **Then:** trace stderr does NOT contain `--no-chrome`; chrome is active (ClaudeCommand default) for isolated tasks
 - **Exit:** 1 (claude absent) or 0 (claude present)
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md)
 
 ---
 
@@ -141,7 +141,7 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** inspect the temp HOME directory after CLAUDE.md write step but before subprocess starts (unit-level test or via static verification in `run_isolated()`)
 - **Then:** `<temp_home>/.claude/CLAUDE.md` exists and contains `# Isolated subprocess` header and all five behavioral directives from `invariant/005`; file is written before `Command::spawn()` is called
 - **Exit:** 0
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md)
 
 ---
 
@@ -151,7 +151,7 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** subprocess sleeps 1s then exits 0
 - **Then:** subprocess is not killed; exit code 0 is returned; watchdog is disabled when `timeout_secs == 0`
 - **Exit:** 0
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md), [param/020_timeout.md](../../../../docs/cli/param/020_timeout.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md), [param/020_timeout.md](../../../docs/cli/param/020_timeout.md)
 
 ---
 
@@ -161,4 +161,4 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** `clr isolated --creds <f> --trace "x" -- --effort medium`
 - **Then:** trace stderr shows `--effort max` injected first, then `--effort medium` after `--` — claude binary last-wins semantics cause `medium` to be effective; both flags appear in the command line in injection-before-passthrough order
 - **Exit:** 1 (claude absent) or 0 (claude present)
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md), [`command_defaults.md` Injection Order Convention](../../../../docs/cli/command_defaults.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../docs/invariant/005_isolated_subprocess_defaults.md), [`002_command_defaults.md` Injection Order Convention](../../../docs/cli/002_command_defaults.md)

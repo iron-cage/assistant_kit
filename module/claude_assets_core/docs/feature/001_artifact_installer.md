@@ -53,4 +53,4 @@ The target root is always the current working directory. `AssetPaths::new(source
 | source | `src/install.rs` | install() and uninstall() implementation |
 | source | `src/registry.rs` | list_available, list_installed, list_all for survey queries |
 | doc | [invariant/001_symlink_only.md](../invariant/001_symlink_only.md) | Rule: install() must use symlink only, never copy |
-| doc | [claude_assets/docs/feature/001_asset_cli.md](../../claude_assets/docs/feature/001_asset_cli.md) | CLI layer that calls install/uninstall |
+| doc | [claude_assets/docs/feature/001_asset_cli.md](../../../claude_assets/docs/feature/001_asset_cli.md) | CLI layer that calls install/uninstall |

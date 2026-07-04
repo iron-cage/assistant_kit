@@ -17,8 +17,8 @@
 //! - `/foo_bar` vs `/foo-bar` vs `/foo/bar` (all encode to `-foo-bar`)
 //! - `/-default` vs `//default` (both encode to `--default`)
 //!
-//! This affected 89% of path-based projects (228 of 256) that used hyphen-prefixed
-//! directory names like `-default_topic`, `-commit`, `-plan`.
+//! This affected any path-based project using hyphen-prefixed directory names like
+//! `-default_topic`, `-commit`, `-plan`.
 //!
 //! ## Why Not Caught
 //!

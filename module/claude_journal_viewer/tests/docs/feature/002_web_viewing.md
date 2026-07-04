@@ -1,5 +1,12 @@
 # Test: Feature — Web Viewing
 
+### Scope
+
+- **Purpose**: FT- test cases verifying the HTTP server's startup, HTML/API responses, port override, and shutdown behavior.
+- **Responsibility**: Acceptance criteria confirming `.serve` starts correctly, serves embedded HTML and JSON APIs, and shuts down cleanly.
+- **In Scope**: `.serve` default bind/port, `GET /` HTML response, `/api/events` and `/api/health` JSON responses, port override, CDN-free HTML, SIGTERM shutdown.
+- **Out of Scope**: CLI command behaviors (-> `001_cli_viewing.md`), detailed filter semantics (-> `003_filtering.md`), localhost-only invariant (-> `../invariant/002_localhost_only.md`).
+
 Test case planning for [feature/002_web_viewing.md](../../../docs/feature/002_web_viewing.md). Tests validate HTTP server startup, default bind address and port, HTML embedding, `/api/events` filtering, `/api/health` response structure, and SIGTERM shutdown.
 
 ## Test Case Index

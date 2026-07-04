@@ -1,5 +1,11 @@
 # Test: Feature 009 — All-Accounts Live Quota Reporting
 
+### Scope
+
+- **Purpose**: Test cases for the `.usage` all-accounts live quota table — status emoji, sorting, columns, and footer.
+- **Source**: `docs/feature/009_token_usage.md`
+- **Covers**: AC-01 through AC-34
+
 Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` (FR-14). Each FT case maps to one acceptance criterion. Command-level tests (IT-N) are in [cli/command/009_usage.md](../cli/command/09_usage.md).
 
 ### AC Coverage Index

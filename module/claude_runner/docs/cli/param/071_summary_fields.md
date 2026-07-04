@@ -82,4 +82,4 @@ All field names correspond to the flattened CLR result envelope keys rendered by
 
 - [`070_output_style.md`](070_output_style.md) — controls whether `render_summary()` fires at all
 - [`061_output_format.md`](061_output_format.md) — CLR result envelope schema and field table
-- [`summary.rs`](../../../../src/cli/summary.rs) — `render_summary()` implementation
+- [`summary.rs`](../../../src/cli/summary.rs) — `render_summary()` implementation

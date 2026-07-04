@@ -1,8 +1,8 @@
 # Test: Invariant — Session Source Isolation
 
-Test case planning for [invariant/011_session_source_isolation.md](../../../../docs/invariant/011_session_source_isolation.md). Tests verify that session reads use the source directory's storage, Claude runs in the target directory, source files are never modified, cross-loading is one-time, and `--session-dir` takes precedence over `--session-from`.
+Test case planning for [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md). Tests verify that session reads use the source directory's storage, Claude runs in the target directory, source files are never modified, cross-loading is one-time, and `--session-dir` takes precedence over `--session-from`.
 
-**Source:** [invariant/011_session_source_isolation.md](../../../../docs/invariant/011_session_source_isolation.md)
+**Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md)
 
 ## Test Case Index
 
@@ -32,7 +32,7 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../../d
 - **When:** `clr --session-from /tmp/011it1_src --to /tmp/011it1_tgt --dry-run "task"`
 - **Then:** dry-run output contains `-c lll-001` (from source); no UUID from target is used
 - **Exit:** 0
-- **Source:** [invariant/011_session_source_isolation.md](../../../../docs/invariant/011_session_source_isolation.md) point 1
+- **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) point 1
 
 ---
 
@@ -42,7 +42,7 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../../d
 - **When:** `clr --session-from /tmp/011it2_src --to /tmp/011it2_tgt --dry-run "task"`
 - **Then:** dry-run output shows subprocess working directory as `/tmp/011it2_tgt`; `/tmp/011it2_src` does NOT appear as the working directory
 - **Exit:** 0
-- **Source:** [invariant/011_session_source_isolation.md](../../../../docs/invariant/011_session_source_isolation.md) point 2
+- **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) point 2
 
 ---
 
@@ -52,7 +52,7 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../../d
 - **When:** `clr --session-from /tmp/011it3_src --to /tmp/011it3_tgt --dry-run "Continue"`; run completes
 - **Then:** `nnn-003.jsonl` mtime is still T1; file size is unchanged; source dir contents are identical to before the run
 - **Exit:** 0
-- **Source:** [invariant/011_session_source_isolation.md](../../../../docs/invariant/011_session_source_isolation.md) point 3
+- **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) point 3
 
 ---
 
@@ -62,7 +62,7 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../../d
 - **When:** `clr --session-from /tmp/011it4_src --session-dir /tmp/011it4_raw --dry-run "test"`
 - **Then:** dry-run output contains `-c ppp-005`; `ooo-004` is NOT used; `--session-dir` raw path wins over `--session-from` computed path
 - **Exit:** 0
-- **Source:** [invariant/011_session_source_isolation.md](../../../../docs/invariant/011_session_source_isolation.md) point 5
+- **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) point 5
 
 ---
 
@@ -72,7 +72,7 @@ Test case planning for [invariant/011_session_source_isolation.md](../../../../d
 - **When:** `clr --to /tmp/011it5_tgt --session-from /tmp/011it5_src --dry-run "Continue"`
 - **Then:** dry-run output contains `-c qqq-006`; subprocess working directory is `/tmp/011it5_tgt`; source UUID is injected into a subprocess that runs in target — confirming both read isolation (source) and run isolation (target) hold simultaneously
 - **Exit:** 0
-- **Source:** [invariant/011_session_source_isolation.md](../../../../docs/invariant/011_session_source_isolation.md) points 1–2
+- **Source:** [invariant/011_session_source_isolation.md](../../../docs/invariant/011_session_source_isolation.md) points 1–2
 
 ## Notes
 

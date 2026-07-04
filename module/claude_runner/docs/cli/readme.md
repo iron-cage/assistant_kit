@@ -20,10 +20,10 @@ clr <command> [OPTIONS] [MESSAGE]
 | File | Responsibility |
 |------|----------------|
 | `command/` | Command reference: run, ask, isolated, refresh, help, ps, kill, tools, scope (9 commands) |
-| `dictionary.md` | Domain vocabulary for clr CLI concepts |
-| `command_defaults.md` | Cross-command parameter default matrix and isolated/refresh design targets |
+| `001_dictionary.md` | Domain vocabulary for clr CLI concepts |
+| `002_command_defaults.md` | Cross-command parameter default matrix and isolated/refresh design targets |
 | `parity/` | Cross-command behavioral parity comparisons (2 instances) |
-| `env_param.md` | CLR_* env var fallbacks, CLR_GATE_DIR runtime config, and CLAUDE_CODE_* subprocess vars (85 vars) |
+| `003_env_param.md` | CLR_* env var fallbacks, CLR_GATE_DIR runtime config, and CLAUDE_CODE_* subprocess vars (85 vars) |
 | `param_group/` | Logical parameter groupings (6 groups) |
 | `type/` | Semantic type definitions (13 active types; 1 deprecated) |
 | `param/` | Individual parameter reference docs (72 active; 1 deprecated) |
@@ -36,11 +36,11 @@ clr <command> [OPTIONS] [MESSAGE]
 | readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | command/ (9 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param/ (72 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
+| 001_dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | type/ (14 instances; 1 deprecated) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param_group/ (6 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | user_story/ (29 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| env_param.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| 003_env_param.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | parity/ (2 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | config_param.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — JSON config documented in feature/004 and param/075 |
 | format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — no named output formats |
@@ -64,13 +64,13 @@ clr <command> [OPTIONS] [MESSAGE]
 - [Parameters](param/readme.md) — flag and argument reference (72 active; 1 deprecated)
 - [Types](type/readme.md) — semantic type definitions (13 active types; 1 deprecated)
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (6 groups)
-- [Dictionary](dictionary.md) — domain vocabulary
+- [Dictionary](001_dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — user goals and usage patterns (29 user stories)
-- [Env Parameters](env_param.md) — input, runtime config, and subprocess environment variables (85 variables)
+- [Env Parameters](003_env_param.md) — input, runtime config, and subprocess environment variables (85 variables)
 - [Parity](parity/readme.md) — cross-command behavioral parity comparisons (2 instances)
 
 ### See Also
 
 - [feature/001_runner_tool.md](../feature/001_runner_tool.md) — architecture, separation of concerns, constraints
-- [001_design_decisions.md](../001_design_decisions.md) — CLI redesign rationale
+- [feature/006_cli_design.md](../feature/006_cli_design.md) — CLI redesign rationale
 - [tests/docs/cli/](../../tests/docs/cli/readme.md) — test case planning (commands, params, types, groups, env params)

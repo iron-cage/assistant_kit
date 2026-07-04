@@ -4,7 +4,7 @@ FM test cases for `docs/cli/format/002_json.md`. Verifies the `format::json` out
 contract: single-line JSON, object vs array shape by command type, field-presence param
 ignorance, incompatibility with `live::1`, and error row representation.
 
-**Source:** [docs/cli/format/002_json.md](../../../../../docs/cli/format/002_json.md)
+**Source:** [docs/cli/format/002_json.md](../../../../docs/cli/format/002_json.md)
 
 ### FM Case Index
 
@@ -25,7 +25,7 @@ ignorance, incompatibility with `live::1`, and error row representation.
 - **When:** Both commands are invoked
 - **Then:** `.accounts` output is a JSON array `[{...}]`; `.credentials.status` output is a JSON object `{...}` — the record multiplicity determines the top-level JSON shape
 - **Source fn:** `acc33_accounts_current_param_and_json` (cli/accounts_list_test_b.rs)
-- **Source:** [docs/cli/format/002_json.md §Structure](../../../../../docs/cli/format/002_json.md)
+- **Source:** [docs/cli/format/002_json.md §Structure](../../../../docs/cli/format/002_json.md)
 
 ---
 
@@ -35,7 +35,7 @@ ignorance, incompatibility with `live::1`, and error row representation.
 - **When:** The command runs
 - **Then:** JSON output contains both `sub` and `tier` fields — `format::json` overrides field-presence toggles; all fields serialize unconditionally
 - **Source fn:** `ft09_033_render_json_cached_includes_fields` (usage/render_tests_a.rs)
-- **Source:** [docs/cli/format/002_json.md §Notes](../../../../../docs/cli/format/002_json.md)
+- **Source:** [docs/cli/format/002_json.md §Notes](../../../../docs/cli/format/002_json.md)
 
 ---
 
@@ -45,7 +45,7 @@ ignorance, incompatibility with `live::1`, and error row representation.
 - **When:** The command runs
 - **Then:** Exits with code 1 before performing any API fetch — `format::json` and `live::1` are mutually incompatible; an error message is emitted
 - **Source fn:** `it024_live_incompatible_with_json` (cli/usage_live_test.rs)
-- **Source:** [docs/cli/format/002_json.md §Notes](../../../../../docs/cli/format/002_json.md)
+- **Source:** [docs/cli/format/002_json.md §Notes](../../../../docs/cli/format/002_json.md)
 
 ---
 
@@ -55,4 +55,4 @@ ignorance, incompatibility with `live::1`, and error row representation.
 - **When:** The command runs
 - **Then:** The error account appears in the JSON array as `{"account": "alice@example.com", "error": "..."}` — no full quota fields; error is inline alongside successful account objects
 - **Source fn:** `it027_json_error_field_on_failed_account` (cli/usage_live_test.rs)
-- **Source:** [docs/cli/format/002_json.md §Structure §Notes](../../../../../docs/cli/format/002_json.md)
+- **Source:** [docs/cli/format/002_json.md §Structure §Notes](../../../../docs/cli/format/002_json.md)
