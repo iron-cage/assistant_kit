@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# test — run full test suite; dispatches by VERB_LAYER to test.d/ layer.
+set -euo pipefail
+DIR="$(dirname "${BASH_SOURCE[0]}")/test.d"
+LAYER="${VERB_LAYER:-}"
+if [[ -n "${VERB_LAYER:-}" ]]; then
+  echo "ERROR: VERB_LAYER is not valid on the host side." >&2
+  echo "Standard invocation: cd module/claude_journal && ./verb/test" >&2
+  exit 1
+fi
+[[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
+if [[ "${1:-}" == "--dry-run" ]]; then echo "./runbox/runbox .test"; exit 0; fi
+exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test "$@"

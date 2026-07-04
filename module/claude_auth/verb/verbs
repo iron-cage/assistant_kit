@@ -3,6 +3,7 @@
 set -euo pipefail
 printf '%-13s %-11s %s\n' build   available   "cargo build -p claude_auth"
 printf '%-13s %-11s %s\n' test    available   "w3 .test level::3"
+printf '%-13s %-11s %s\n' test_only available "cargo nextest run --workspace --all-features <filter>"
 printf '%-13s %-11s %s\n' clean   available   "cargo clean -p claude_auth"
 printf '%-13s %-11s %s\n' run     unavailable "-"
 printf '%-13s %-11s %s\n' lint    available   "cargo clippy -p claude_auth --all-features -- -D warnings"

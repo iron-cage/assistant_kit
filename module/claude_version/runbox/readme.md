@@ -6,4 +6,4 @@ Container runner integration scripts and config for `claude_version`.
 |------|----------------|
 | `runbox` | Entry point script for container-based test execution |
 | `runbox.yml` | Container runner configuration |
-| `plugins.sh` | NEXTEST_FILTER hook; redirects to `test1.d/l1` for targeted runs |
+| `plugins.sh` | NEXTEST_FILTER hook; redirects to `test_only.d/l1` for targeted runs |

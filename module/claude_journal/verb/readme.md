@@ -3,7 +3,7 @@
 ### Scope
 
 **Responsibilities:** Shell scripts implementing the `do` protocol verbs for `claude_journal` (cargo ecosystem).
-**In Scope:** Canonical verbs (`test`, `lint`, `clean`, `install`, `verify`), layer dispatchers (`*.d/`), and meta verbs (`verbs`, `package_info`).
+**In Scope:** Canonical verbs (`test`, `test_only`, `lint`, `clean`, `install`, `verify`), layer dispatchers (`*.d/`), and meta verbs (`verbs`, `package_info`).
 **Out of Scope:** Source code (→ `src/`), test logic (→ `tests/`), documentation (→ `docs/`).
 
 ### Responsibility Table
@@ -12,6 +12,8 @@
 |------|---------------|
 | `test` | Dispatcher: run full test suite; delegates to `test.d/` layer by `VERB_LAYER`. |
 | `test.d/` | Layer directory: `l0` (host-native), `l1` (container-internal). |
+| `test_only` | Dispatcher: run single test by nextest filter inside container; sets `NEXTEST_FILTER`. |
+| `test_only.d/` | Layer directory: `l1` (container-internal targeted run). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `install` | Install crate binary — unavailable for this library crate. |
 | `run` | Execute entry point binary — unavailable for this library crate. |
