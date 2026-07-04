@@ -7,7 +7,7 @@
 - **In Scope**: `scope_for()` defaults and overrides (`CLAUDE_HOME`, `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE`), git-root memory anchoring, `clr scope` 6-variable output, `--session-from`, `--to` alias, `--session-dir` precedence.
 - **Out of Scope**: JSON/stdin config loading (-> `004_json_config.md`), default command assembly (-> `001_runner_tool.md`).
 
-Test case planning for [feature/005_session_path_resolution.md](../../../../docs/feature/005_session_path_resolution.md). Tests validate `scope_for()` output correctness, CLAUDE_HOME and memory path override handling, git-root anchoring for memory dir, the `clr scope` command, and the `--session-from`/`--to` cross-loading behaviors.
+Test case planning for [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md). Tests validate `scope_for()` output correctness, CLAUDE_HOME and memory path override handling, git-root anchoring for memory dir, the `clr scope` command, and the `--session-from`/`--to` cross-loading behaviors.
 
 ## Test Case Index
 
@@ -42,7 +42,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 - **When:** `clr scope --dir /tmp/sf1_proj` (no CLAUDE_HOME override)
 - **Then:** `CLAUDE_HOME` line in output is `<HOME>/.claude`; `CLAUDE_PROJECTS_DIR` is `<HOME>/.claude/projects/`
 - **Exit:** 0
-- **Source:** [feature/005_session_path_resolution.md](../../../../docs/feature/005_session_path_resolution.md) AC-1
+- **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-1
 - **Implemented by:** `claude_storage_core/tests/scope_test.rs::scope_for_default_claude_home`
 
 ---
@@ -53,7 +53,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 - **When:** `CLAUDE_HOME=/tmp/sf2_claude_home clr scope --dir /tmp/sf2_proj`
 - **Then:** all 6 variables reflect the custom home; `CLAUDE_HOME=/tmp/sf2_claude_home`; `CLAUDE_SESSION_DIR` starts with `/tmp/sf2_claude_home`
 - **Exit:** 0
-- **Source:** [feature/005_session_path_resolution.md](../../../../docs/feature/005_session_path_resolution.md) AC-2
+- **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-2
 - **Implemented by:** `claude_storage_core/tests/scope_test.rs::scope_for_claude_home_override_no_double_suffix`
 
 ---
@@ -64,7 +64,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 - **When:** `CLAUDE_COWORK_MEMORY_PATH_OVERRIDE=/tmp/sf3_shared clr scope --dir /tmp/sf3_proj`
 - **Then:** `CLAUDE_MEMORY_DIR=/tmp/sf3_shared`; `CLAUDE_MEMORY_FILE=/tmp/sf3_shared/MEMORY.md`; `CLAUDE_SESSION_DIR` unchanged (uses normal derivation)
 - **Exit:** 0
-- **Source:** [feature/005_session_path_resolution.md](../../../../docs/feature/005_session_path_resolution.md) AC-3
+- **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-3
 - **Implemented by:** `claude_storage_core/tests/scope_test.rs::scope_for_memory_path_override`
 
 ---
@@ -75,7 +75,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 - **When:** `clr scope --dir /tmp/sf4_repo/src`
 - **Then:** `CLAUDE_MEMORY_DIR` contains the encoded form of `/tmp/sf4_repo` (git root), NOT `/tmp/sf4_repo/src`; `CLAUDE_SESSION_DIR` uses `/tmp/sf4_repo/src` encoding
 - **Exit:** 0
-- **Source:** [feature/005_session_path_resolution.md](../../../../docs/feature/005_session_path_resolution.md) AC-4
+- **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-4
 - **Implemented by:** `claude_storage_core/tests/scope_test.rs::scope_for_memory_anchored_to_git_root`
 
 ---
@@ -86,7 +86,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 - **When:** `clr scope --dir /tmp/sf5_empty_proj`
 - **Then:** `CLAUDE_SESSION_FILE=` is an empty assignment (no path after `=`)
 - **Exit:** 0
-- **Source:** [feature/005_session_path_resolution.md](../../../../docs/feature/005_session_path_resolution.md) AC-5
+- **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-5
 - **Implemented by:** `claude_storage_core/tests/scope_test.rs::scope_for_none_when_no_session_dir`
 
 ---
@@ -97,7 +97,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 - **When:** `clr scope --dir /tmp`
 - **Then:** stdout has exactly 6 lines matching `^CLAUDE_[A-Z_]+=.*$`; output is valid for `eval`; printed in order: HOME, PROJECTS_DIR, SESSION_DIR, MEMORY_DIR, MEMORY_FILE, SESSION_FILE
 - **Exit:** 0
-- **Source:** [feature/005_session_path_resolution.md](../../../../docs/feature/005_session_path_resolution.md) AC-6
+- **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-6
 - **Implemented by:** `session_path_resolution_test.rs::ft6_scope_prints_six_vars_in_key_value_format`
 
 ---
@@ -108,7 +108,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 - **When:** `clr --session-from /tmp/sf7_src --dry-run "Continue"`
 - **Then:** dry-run output includes `-c hhh-101`; subprocess working directory is CWD (not `/tmp/sf7_src`)
 - **Exit:** 0
-- **Source:** [feature/005_session_path_resolution.md](../../../../docs/feature/005_session_path_resolution.md) AC-7
+- **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-7
 - **Implemented by:** `session_path_resolution_test.rs::ft7_session_from_resumes_source_session`
 
 ---
@@ -119,7 +119,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 - **When:** `clr --to /tmp/sf8_tgt --session-from /tmp/sf8_src --dry-run "Continue"`
 - **Then:** dry-run output includes `-c iii-202`; subprocess working directory is `/tmp/sf8_tgt`
 - **Exit:** 0
-- **Source:** [feature/005_session_path_resolution.md](../../../../docs/feature/005_session_path_resolution.md) AC-8
+- **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-8
 - **Implemented by:** `session_path_resolution_test.rs::ft8_to_plus_session_from_target_dir_source_session`
 
 ---
@@ -130,7 +130,7 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 - **When (a):** `clr --dir /tmp/sf9_tgt --dry-run "task"` and **When (b):** `clr --to /tmp/sf9_tgt --dry-run "task"`
 - **Then:** both produce identical dry-run output; subprocess working directory is `/tmp/sf9_tgt` in both cases
 - **Exit:** 0 both cases
-- **Source:** [feature/005_session_path_resolution.md](../../../../docs/feature/005_session_path_resolution.md) AC-9
+- **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-9
 - **Implemented by:** `session_path_resolution_test.rs::ft9_to_alias_identical_to_dir`
 
 ---
@@ -141,5 +141,5 @@ Test case planning for [feature/005_session_path_resolution.md](../../../../docs
 - **When:** `clr --session-from /tmp/sf10_src --session-dir /tmp/sf10_raw --dry-run "test"`
 - **Then:** dry-run output contains `-c kkk-404`; `jjj-303` is NOT used; `--session-dir` (raw path) wins
 - **Exit:** 0
-- **Source:** [feature/005_session_path_resolution.md](../../../../docs/feature/005_session_path_resolution.md) AC-10
+- **Source:** [feature/005_session_path_resolution.md](../../../docs/feature/005_session_path_resolution.md) AC-10
 - **Implemented by:** `session_path_resolution_test.rs::ft10_session_dir_wins_over_session_from`

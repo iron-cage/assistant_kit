@@ -35,4 +35,4 @@ clj .list dir::myproject since::7d   # Substring match, last week
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 3 | [Automation Audit](../user_story/03_automation_audit.md) | Developer |
+| 3 | [Automation Audit](../user_story/003_automation_audit.md) | Developer |

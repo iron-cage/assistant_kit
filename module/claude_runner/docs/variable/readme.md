@@ -1,4 +1,4 @@
-# variable/
+# Variable Doc Entity
 
 Output variable definitions for the six CLAUDE_* paths computed by `scope_for()`.
 

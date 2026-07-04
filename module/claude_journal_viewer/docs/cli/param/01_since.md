@@ -39,6 +39,6 @@ clj .search pattern::"err" since::1d   # Search last day
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 1 | [Cost Tracking](../user_story/01_cost_tracking.md) | Developer |
-| 2 | [Failure Diagnosis](../user_story/02_failure_diagnosis.md) | Developer |
-| 4 | [Capacity Planning](../user_story/04_capacity_planning.md) | Developer |
+| 1 | [Cost Tracking](../user_story/001_cost_tracking.md) | Developer |
+| 2 | [Failure Diagnosis](../user_story/002_failure_diagnosis.md) | Developer |
+| 4 | [Capacity Planning](../user_story/004_capacity_planning.md) | Developer |

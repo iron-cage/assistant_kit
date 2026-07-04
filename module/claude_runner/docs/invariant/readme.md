@@ -1,4 +1,4 @@
-# Invariant Collection
+# Invariant Doc Entity
 
 ### Scope
 

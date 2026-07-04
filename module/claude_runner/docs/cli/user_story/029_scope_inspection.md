@@ -62,9 +62,9 @@ clr run --to /home/alice/project-b --session-from /home/alice/project-a "Continu
 | File | Relationship |
 |------|--------------|
 | [`../command/09_scope.md`](../command/09_scope.md) | `clr scope` command reference |
-| [`../feature/005_session_path_resolution.md`](../feature/005_session_path_resolution.md) | Feature hub: `scope_for()` |
-| [`../variable/001_claude_home.md`](../variable/001_claude_home.md) | CLAUDE_HOME |
-| [`../variable/006_claude_session_file.md`](../variable/006_claude_session_file.md) | CLAUDE_SESSION_FILE |
+| [`../feature/005_session_path_resolution.md`](../../feature/005_session_path_resolution.md) | Feature hub: `scope_for()` |
+| [`../variable/001_claude_home.md`](../../variable/001_claude_home.md) | CLAUDE_HOME |
+| [`../variable/006_claude_session_file.md`](../../variable/006_claude_session_file.md) | CLAUDE_SESSION_FILE |
 
 ### Related User Stories
 

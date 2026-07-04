@@ -36,4 +36,4 @@ clj .serve bind::192.168.1.5 port::9090  # Specific interface
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 1 | [Cost Tracking](../user_story/01_cost_tracking.md) | Developer |
+| 1 | [Cost Tracking](../user_story/001_cost_tracking.md) | Developer |

@@ -1,4 +1,4 @@
-# invariant/
+# Invariant Doc Entity
 
 ### Scope
 

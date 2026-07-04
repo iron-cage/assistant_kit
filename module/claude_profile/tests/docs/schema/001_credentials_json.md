@@ -4,7 +4,7 @@ SC test cases for `docs/schema/001_credentials_json.md`. Verifies the on-disk fo
 contract of the per-account OAuth credential snapshot: required fields, encoding format,
 write callers, read callers, and isolation from the live session credential file.
 
-**Source:** [docs/schema/001_credentials_json.md](../../../../docs/schema/001_credentials_json.md)
+**Source:** [docs/schema/001_credentials_json.md](../../../docs/schema/001_credentials_json.md)
 
 ### SC Case Index
 
@@ -24,7 +24,7 @@ write callers, read callers, and isolation from the live session credential file
 - **When:** `.account.save` is invoked with a valid account name
 - **Then:** `{name}.credentials.json` in the credential store contains all 3 fields with values matching the source
 - **Source fn:** `save_copies_credentials_to_named_file` (account_tests.rs)
-- **Source:** [docs/schema/001_credentials_json.md §Fields](../../../../docs/schema/001_credentials_json.md)
+- **Source:** [docs/schema/001_credentials_json.md §Fields](../../../docs/schema/001_credentials_json.md)
 
 ---
 
@@ -35,7 +35,7 @@ write callers, read callers, and isolation from the live session credential file
 - **Then:** `expiresAt` in `{name}.credentials.json` remains `T0` — `run_isolated` does not update this field; callers must use the JWT `exp` claim for expiry instead
 - **Note:** BUG-162 root cause — `run_isolated` subprocess refresh never updates `expiresAt` (the OAuth server controls this value at token issuance; the subprocess writes only `accessToken` and `refreshToken` during rotation)
 - **Source fn:** `sc2_001_expires_at_stays_t0_manipulate_expires_at_in_memory_only` (account_tests.rs)
-- **Source:** [docs/schema/001_credentials_json.md §Write Callers](../../../../docs/schema/001_credentials_json.md)
+- **Source:** [docs/schema/001_credentials_json.md §Write Callers](../../../docs/schema/001_credentials_json.md)
 
 ---
 
@@ -45,7 +45,7 @@ write callers, read callers, and isolation from the live session credential file
 - **When:** `.account.save` or any token refresh path runs
 - **Then:** `~/.claude/.credentials.json` is NOT modified — all writes go to `{name}.credentials.json` in the credential store only (BUG-221 fix)
 - **Source fn:** `reach_bulk_touch_does_not_write_live_credentials` (usage/touch_tests_b.rs)
-- **Source:** [docs/schema/001_credentials_json.md §Write Callers](../../../../docs/schema/001_credentials_json.md)
+- **Source:** [docs/schema/001_credentials_json.md §Write Callers](../../../docs/schema/001_credentials_json.md)
 
 ---
 
@@ -55,7 +55,7 @@ write callers, read callers, and isolation from the live session credential file
 - **When:** `.account.save` is invoked
 - **Then:** The credential store directory is created before writing `{name}.credentials.json` — no error occurs due to missing directory
 - **Source fn:** `save_creates_credential_store_when_missing` (account_tests.rs)
-- **Source:** [docs/schema/001_credentials_json.md §Write Callers](../../../../docs/schema/001_credentials_json.md)
+- **Source:** [docs/schema/001_credentials_json.md §Write Callers](../../../docs/schema/001_credentials_json.md)
 
 ---
 
@@ -65,4 +65,4 @@ write callers, read callers, and isolation from the live session credential file
 - **When:** Any read caller (`.accounts`, `.usage`, token refresh) attempts to read the file
 - **Then:** The read returns a graceful empty/None result — no panic, no unhandled error
 - **Source fn:** `e05_credential_store_absent_list_empty` (cli/cross_cutting_test.rs)
-- **Source:** [docs/schema/001_credentials_json.md §Read Callers](../../../../docs/schema/001_credentials_json.md)
+- **Source:** [docs/schema/001_credentials_json.md §Read Callers](../../../docs/schema/001_credentials_json.md)

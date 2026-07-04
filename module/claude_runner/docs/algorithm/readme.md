@@ -1,4 +1,4 @@
-# algorithm/
+# Algorithm Doc Entity
 
 Path computation algorithm specifications for the `claude_runner` crate.
 

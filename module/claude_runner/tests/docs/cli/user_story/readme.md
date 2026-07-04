@@ -11,32 +11,32 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `01_interactive_repl.md` | `user_story` spec for Interactive REPL | ✅ |
-| `02_print_mode_capture.md` | `user_story` spec for Print Mode Capture | ✅ |
-| `03_interactive_with_message.md` | `user_story` spec for Interactive With Message | ✅ |
-| `04_dry_run_preview.md` | `user_story` spec for Dry-run Preview | ✅ |
-| `05_project_specific_execution.md` | `user_story` spec for Project-specific Execution | ✅ |
-| `06_verbose_debugging.md` | `user_story` spec for Verbose Debugging | ✅ |
-| `07_fresh_session.md` | `user_story` spec for Fresh Session | ✅ |
-| `08_trace_execution.md` | `user_story` spec for Trace Execution | ✅ |
-| `09_custom_system_prompt.md` | `user_story` spec for Custom System Prompt | ✅ |
-| `10_credential_isolated_execution.md` | `user_story` spec for Credential-isolated Execution | ✅ |
-| `11_file_input.md` | `user_story` spec for File Input | ✅ |
-| `12_code_block_extraction.md` | `user_story` spec for Code Block Extraction | ✅ |
-| `13_structured_json_pipeline.md` | `user_story` spec for Structured JSON Pipeline | ✅ |
-| `14_credential_refresh.md` | `user_story` spec for Credential Refresh | ✅ |
-| `15_ask_mode.md` | `user_story` spec for Ask Mode | ✅ |
-| `16_cli_discoverability.md` | `user_story` spec for CLI Discoverability | ✅ |
-| `17_model_selection.md` | `user_story` spec for Model Selection | ✅ |
-| `18_env_var_configuration.md` | `user_story` spec for Env-var Configuration | ✅ |
-| `19_mcp_config_injection.md` | `user_story` spec for MCP Config Injection | ✅ |
-| `20_suppress_effort_max.md` | `user_story` spec for Suppress Effort Max | ✅ |
-| `21_keep_claudecode_context.md` | `user_story` spec for Keep ClaudeCode Context | ✅ |
-| `22_session_isolation_subdir.md` | `user_story` spec for Session Isolation via Subdirectory | ✅ |
-| `23_output_file_capture.md` | `user_story` spec for Output File Capture | ✅ |
-| `24_enum_output_validation.md` | `user_story` spec for Enum Output Validation | ✅ |
-| `25_concurrency_gate.md` | `user_story` spec for Session Concurrency Gate | ✅ |
-| `26_session_listing.md` | `user_story` spec for Session Listing | ✅ |
-| `27_session_termination.md` | `user_story` spec for Session Termination | ✅ |
-| `28_session_transplant.md` | `user_story` spec for Session Cross-Loading (Transplant) | ⏳ |
-| `29_scope_inspection.md` | `user_story` spec for Scope Inspection | ⏳ |
+| `001_interactive_repl.md` | `user_story` spec for Interactive REPL | ✅ |
+| `002_print_mode_capture.md` | `user_story` spec for Print Mode Capture | ✅ |
+| `003_interactive_with_message.md` | `user_story` spec for Interactive With Message | ✅ |
+| `004_dry_run_preview.md` | `user_story` spec for Dry-run Preview | ✅ |
+| `005_project_specific_execution.md` | `user_story` spec for Project-specific Execution | ✅ |
+| `006_verbose_debugging.md` | `user_story` spec for Verbose Debugging | ✅ |
+| `007_fresh_session.md` | `user_story` spec for Fresh Session | ✅ |
+| `008_trace_execution.md` | `user_story` spec for Trace Execution | ✅ |
+| `009_custom_system_prompt.md` | `user_story` spec for Custom System Prompt | ✅ |
+| `010_credential_isolated_execution.md` | `user_story` spec for Credential-isolated Execution | ✅ |
+| `011_file_input.md` | `user_story` spec for File Input | ✅ |
+| `012_code_block_extraction.md` | `user_story` spec for Code Block Extraction | ✅ |
+| `013_structured_json_pipeline.md` | `user_story` spec for Structured JSON Pipeline | ✅ |
+| `014_credential_refresh.md` | `user_story` spec for Credential Refresh | ✅ |
+| `015_ask_mode.md` | `user_story` spec for Ask Mode | ✅ |
+| `016_cli_discoverability.md` | `user_story` spec for CLI Discoverability | ✅ |
+| `017_model_selection.md` | `user_story` spec for Model Selection | ✅ |
+| `018_env_var_configuration.md` | `user_story` spec for Env-var Configuration | ✅ |
+| `019_mcp_config_injection.md` | `user_story` spec for MCP Config Injection | ✅ |
+| `020_suppress_effort_max.md` | `user_story` spec for Suppress Effort Max | ✅ |
+| `021_keep_claudecode_context.md` | `user_story` spec for Keep ClaudeCode Context | ✅ |
+| `022_session_isolation_subdir.md` | `user_story` spec for Session Isolation via Subdirectory | ✅ |
+| `023_output_file_capture.md` | `user_story` spec for Output File Capture | ✅ |
+| `024_enum_output_validation.md` | `user_story` spec for Enum Output Validation | ✅ |
+| `025_concurrency_gate.md` | `user_story` spec for Session Concurrency Gate | ✅ |
+| `026_session_listing.md` | `user_story` spec for Session Listing | ✅ |
+| `027_session_termination.md` | `user_story` spec for Session Termination | ✅ |
+| `028_session_transplant.md` | `user_story` spec for Session Cross-Loading (Transplant) | ⏳ |
+| `029_scope_inspection.md` | `user_story` spec for Scope Inspection | ⏳ |

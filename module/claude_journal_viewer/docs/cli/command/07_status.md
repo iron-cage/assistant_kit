@@ -45,4 +45,4 @@ clj .status verbosity::2          # Per-file breakdown
 
 | # | User Story |
 |---|-----------|
-| 4 | [Capacity Planning](../user_story/04_capacity_planning.md) |
+| 4 | [Capacity Planning](../user_story/004_capacity_planning.md) |

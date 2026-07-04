@@ -36,4 +36,4 @@
 
 | File | Notes |
 |------|-------|
-| [../dictionary.md](../dictionary.md) | Original un-migrated source; retained as reference |
+| [../dictionary.md](dictionary.md) | Original un-migrated source; retained as reference |

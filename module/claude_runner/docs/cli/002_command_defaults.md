@@ -120,4 +120,4 @@ Execute the given task immediately and exit.
 
 | File | Notes |
 |------|-------|
-| [../command_defaults.md](../command_defaults.md) | Original un-migrated source; retained as reference |
+| [../command_defaults.md](command_defaults.md) | Original un-migrated source; retained as reference |

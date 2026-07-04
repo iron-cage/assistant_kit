@@ -1,17 +1,17 @@
-# claude_params Collection
+# claude_params Doc Entity
 
 ### Scope
 
 - **Purpose**: Document the builder-API perspective of all ClaudeCommand parameters.
 - **Responsibility**: Index of per-parameter reference docs covering all ClaudeCommand with_*() methods and the claude binary flags they wrap.
 - **In Scope**: All 70 ClaudeCommand parameters: with_*() methods, types, builder defaults, and underlying binary flag mappings.
-- **Out of Scope**: Binary-perspective reference (→ `contract/claude_code/docs/params/`), execution mode design (→ `feature/`).
+- **Out of Scope**: Binary-perspective reference (→ `contract/claude_code/docs/param/`), execution mode design (→ `feature/`).
 
 Builder-API reference for `ClaudeCommand` — documents Rust `with_*()` methods,
 builder-specific defaults, and the underlying `claude` binary parameters they wrap.
 
 > **Binary-perspective reference** (actual `claude` flags, env vars, config keys with
-> binary defaults): [`contract/claude_code/docs/params/readme.md`](../../../../contract/claude_code/docs/params/readme.md).
+> binary defaults): [`contract/claude_code/docs/param/readme.md`](../../../../contract/claude_code/docs/param/readme.md).
 > This file is the **builder-API perspective** — defaults here are intentionally tuned
 > for automation and may differ from the binary defaults shown there.
 
@@ -166,10 +166,10 @@ These parameters are read from the settings file on startup. No builder method �
 ### Notes
 
 - **Builder defaults vs claude defaults**: `max_output_tokens` (#48), `bash_timeout` (#49), `bash_max_timeout` (#50), `auto_continue` (#51), `telemetry` (#52), and `chrome` (#40) have **different** defaults in `claude_runner_core` than in the `claude` binary. The builder values are tuned for programmatic/automation use. Notably, `chrome` defaults to **on** in the builder (vs off in the raw `claude` binary) so browser context is available by default in automation.
-- **`--api-key` removed from CLI**: `api_key` (#7) is listed as `Both` (CLI + env) in this doc, but `--api-key` is no longer present in `claude --help` as of current builds — env var `ANTHROPIC_API_KEY` is the only runtime form. The binary-perspective reference in `contract/claude_code/docs/params/007_api_key.md` reflects this correctly; this doc retains the builder method which still passes the value via env var internally.
+- **`--api-key` removed from CLI**: `api_key` (#7) is listed as `Both` (CLI + env) in this doc, but `--api-key` is no longer present in `claude --help` as of current builds — env var `ANTHROPIC_API_KEY` is the only runtime form. The binary-perspective reference in `contract/claude_code/docs/param/007_api_key.md` reflects this correctly; this doc retains the builder method which still passes the value via env var internally.
 - **Deprecated**: `mcp_debug` (#47) documents `--mcp-debug` which is deprecated in favor of `--debug` (#41).
 - **Builder-only**: `dry_run` (#3) is not a `claude` binary parameter — it controls whether `ClaudeCommand` spawns a process or returns `describe_compact()` as stdout.
 - **Config vs runtime**: Settings config parameters (#61–#70) are loaded once at startup from `~/.claude/settings.json`; runtime parameters (#1–#60) are passed per-invocation via CLI flags or env vars.
 - **Precedence**: CLI arg > env var > settings config.
-- **Dual-form params**: `model` (#5) and `effort` (#27) each have both a CLI flag form (with builder method) and a config key form (`model`, `effortLevel`). Similarly, `allowed_tools` (#19), `disallowed_tools` (#20), and `permission_mode` (#12) accept a `allowedTools`/`disallowedTools`/`permissionMode` config key in project-level `.claude/settings.json`. These dual forms are not listed separately in this table; see `contract/claude_code/docs/params/readme.md` for the complete picture.
+- **Dual-form params**: `model` (#5) and `effort` (#27) each have both a CLI flag form (with builder method) and a config key form (`model`, `effortLevel`). Similarly, `allowed_tools` (#19), `disallowed_tools` (#20), and `permission_mode` (#12) accept a `allowedTools`/`disallowedTools`/`permissionMode` config key in project-level `.claude/settings.json`. These dual forms are not listed separately in this table; see `contract/claude_code/docs/param/readme.md` for the complete picture.
 - **Source**: CLI flags from `claude --help`; env vars from `src/command.rs` `build_command()`; settings keys from `contract/claude_code/docs/settings/readme.md`.

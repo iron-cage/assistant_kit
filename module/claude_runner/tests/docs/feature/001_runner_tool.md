@@ -7,7 +7,7 @@
 - **In Scope**: default flag injection, dry-run env-vars/command blocks, `--quiet`, `--trace`, `--print` mode selection, `--output-file` dry-run skip, `--expect` mismatch exit 3, `--max-sessions` gate skip in dry-run.
 - **Out of Scope**: journaling emission (-> `002_journaling_integration.md`), retry tier resolution (-> `003_retry_hierarchy.md`), JSON config loading (-> `004_json_config.md`), session path resolution (-> `005_session_path_resolution.md`).
 
-Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md). Tests validate runner tool behavioral contracts: default command assembly, dry-run output format, quiet gate, trace mode, and execution delegation.
+Test case planning for [feature/001_runner_tool.md](../../../docs/feature/001_runner_tool.md). Tests validate runner tool behavioral contracts: default command assembly, dry-run output format, quiet gate, trace mode, and execution delegation.
 
 ## Test Case Index
 
@@ -47,7 +47,7 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **When:** `clr --dry-run "Fix bug"`
 - **Then:** Assembled command contains `--dangerously-skip-permissions`, `--effort max`, and the message has `ultrathink` suffix; `--chrome` is absent (print mode — BUG-304 suppression; present only in interactive mode); `-c` is present when run from a directory with prior Claude sessions (verified separately by `default_continuation_always_present` using the project cwd, and by `t10_multiple_flags_combined` via explicit `--session-dir`)
 - **Exit:** 0
-- **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md), [invariant/001_default_flags.md](../../../../docs/invariant/001_default_flags.md)
+- **Source:** [feature/001_runner_tool.md](../../../docs/feature/001_runner_tool.md), [invariant/001_default_flags.md](../../../docs/invariant/001_default_flags.md)
 
 ---
 
@@ -57,7 +57,7 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **When:** `clr --dry-run "Fix bug"`
 - **Then:** Stdout contains at minimum two sections: one showing environment variables set for the subprocess, and one showing the assembled `claude ...` command line
 - **Exit:** 0
-- **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md), [--dry-run](../../../../docs/cli/param/011_dry_run.md)
+- **Source:** [feature/001_runner_tool.md](../../../docs/feature/001_runner_tool.md), [--dry-run](../../../docs/cli/param/011_dry_run.md)
 
 ---
 
@@ -67,7 +67,7 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **When:** `clr --dry-run --quiet "Fix bug"`
 - **Then:** Stdout still contains the assembled command preview; `--quiet` does not suppress dry-run output
 - **Exit:** 0
-- **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md)
+- **Source:** [feature/001_runner_tool.md](../../../docs/feature/001_runner_tool.md)
 
 ---
 
@@ -77,7 +77,7 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **When:** `clr --trace --dry-run "Fix bug"`
 - **Then:** Stdout contains the dry-run command preview; stderr is EMPTY (`handle_dry_run` returns before the trace output block fires)
 - **Exit:** 0
-- **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md), [--trace](../../../../docs/cli/param/013_trace.md)
+- **Source:** [feature/001_runner_tool.md](../../../docs/feature/001_runner_tool.md), [--trace](../../../docs/cli/param/013_trace.md)
 
 ---
 
@@ -87,7 +87,7 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **When:** `clr --dry-run "Fix bug"`
 - **Then:** The assembled command line in the dry-run output contains `claude` (the binary being invoked is `claude`, not `clr`); execution is delegated to the claude binary. The line starts with `env -u CLAUDECODE claude` by default (BUG-246 WYSIWYG fix).
 - **Exit:** 0
-- **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md)
+- **Source:** [feature/001_runner_tool.md](../../../docs/feature/001_runner_tool.md)
 
 ---
 
@@ -97,7 +97,7 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **When:** `clr --dry-run "Fix bug"`
 - **Then:** Assembled command contains `--print`; print mode is the default when a message is supplied
 - **Exit:** 0
-- **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md), [--print](../../../../docs/cli/param/002_print.md)
+- **Source:** [feature/001_runner_tool.md](../../../docs/feature/001_runner_tool.md), [--print](../../../docs/cli/param/002_print.md)
 
 ---
 
@@ -107,7 +107,7 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **When:** `clr --quiet "Fix bug" 2>&1 | cat`
 - **Then:** stderr is NOT empty; error message contains "not found" and "install" regardless of `--quiet`
 - **Exit:** non-zero
-- **Source:** [feature/001_runner_tool.md — quiet gate](../../../../docs/feature/001_runner_tool.md)
+- **Source:** [feature/001_runner_tool.md — quiet gate](../../../docs/feature/001_runner_tool.md)
 - **Note:** Implemented in TSK-196 (BUG-240 + BUG-241); test function `spawn_error_visible_when_quiet` in `tests/bug_reproducers_239_244_test.rs`; also `e07_interactive_not_found_quiet_flag` and `e08_print_not_found_quiet_flag` in `tests/execution_mode_test.rs`
 
 ---
@@ -118,7 +118,7 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **When:** `clr --dry-run --output-file /tmp/feature_test_out.txt "task"`
 - **Then:** exit 0; dry-run preview printed to stdout; file at the specified path does NOT exist (output file creation is skipped in dry-run mode)
 - **Exit:** 0
-- **Source:** [feature/001_runner_tool.md — output file capture](../../../../docs/feature/001_runner_tool.md), [--output-file](../../../../docs/cli/param/029_output_file.md)
+- **Source:** [feature/001_runner_tool.md — output file capture](../../../docs/feature/001_runner_tool.md), [--output-file](../../../docs/cli/param/029_output_file.md)
 
 ---
 
@@ -128,7 +128,7 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **When:** `clr -p --expect "yes|no" "task"` with fake-claude in PATH
 - **Then:** `clr` exits 3; exit code 3 is exclusive to `--expect` mismatch and does not overlap with subprocess exit codes
 - **Exit:** 3
-- **Source:** [feature/001_runner_tool.md — enum output validation](../../../../docs/feature/001_runner_tool.md), [--expect](../../../../docs/cli/param/030_expect.md)
+- **Source:** [feature/001_runner_tool.md — enum output validation](../../../docs/feature/001_runner_tool.md), [--expect](../../../docs/cli/param/030_expect.md)
 
 ---
 
@@ -138,4 +138,4 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **When:** `clr --dry-run --max-sessions 5 "task"`
 - **Then:** no "waiting" message on stderr; session count scan is skipped in dry-run mode; exit 0
 - **Exit:** 0
-- **Source:** [feature/001_runner_tool.md — session concurrency gate](../../../../docs/feature/001_runner_tool.md), [--max-sessions](../../../../docs/cli/param/033_max_sessions.md)
+- **Source:** [feature/001_runner_tool.md — session concurrency gate](../../../docs/feature/001_runner_tool.md), [--max-sessions](../../../docs/cli/param/033_max_sessions.md)

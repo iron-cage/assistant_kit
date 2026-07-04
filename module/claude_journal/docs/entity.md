@@ -7,9 +7,9 @@
 | `api/` | Public API contracts for JournalWriter, JournalReader, and EventType | [api/readme.md](api/readme.md) | 3 |
 | `feature/` | Behavioral requirements for the journal subsystem | [feature/readme.md](feature/readme.md) | 3 |
 | `invariant/` | Measurable constraints for the journal write/read protocol | [invariant/readme.md](invariant/readme.md) | 3 |
-| `tests/docs/api/` | Per-API test case specifications | [../../tests/docs/api/readme.md](../../tests/docs/api/readme.md) | 3 |
-| `tests/docs/feature/` | Per-feature test case specifications | [../../tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 3 |
-| `tests/docs/invariant/` | Per-invariant test case specifications | [../../tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 3 |
+| `tests/docs/api/` | Per-API test case specifications | [../../tests/docs/api/readme.md](../tests/docs/api/readme.md) | 3 |
+| `tests/docs/feature/` | Per-feature test case specifications | [../../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 3 |
+| `tests/docs/invariant/` | Per-invariant test case specifications | [../../tests/docs/invariant/readme.md](../tests/docs/invariant/readme.md) | 3 |
 
 ## Master Doc Instances Table
 

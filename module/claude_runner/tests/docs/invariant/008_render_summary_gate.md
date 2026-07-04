@@ -1,9 +1,9 @@
 # Test: Invariant — render_summary() Gate Field
 
-Test case planning for [invariant/008_render_summary_gate.md](../../../../docs/invariant/008_render_summary_gate.md). Tests validate that `render_summary()` returns `Some(_)` for any CLR result envelope containing `"type":"result"`, regardless of which optional fields are absent, and returns `None` only for non-CLR-result input.
+Test case planning for [invariant/008_render_summary_gate.md](../../../docs/invariant/008_render_summary_gate.md). Tests validate that `render_summary()` returns `Some(_)` for any CLR result envelope containing `"type":"result"`, regardless of which optional fields are absent, and returns `None` only for non-CLR-result input.
 
-**Source:** [invariant/008_render_summary_gate.md](../../../../docs/invariant/008_render_summary_gate.md)
-**Related:** [cli/param/070_output_style.md](../cli/param/070_output_style.md), [docs/feature/006_cli_design.md](../../../../docs/feature/006_cli_design.md) (D15)
+**Source:** [invariant/008_render_summary_gate.md](../../../docs/invariant/008_render_summary_gate.md)
+**Related:** [cli/param/070_output_style.md](../cli/param/070_output_style.md), [docs/feature/006_cli_design.md](../../../docs/feature/006_cli_design.md) (D15)
 
 ## Test Case Index
 
@@ -54,7 +54,7 @@ IT-7 is a structural test (source code search) in `tests/output_style_test.rs` t
 - **When:** `render_summary(json, None)` called directly (unit test)
 - **Then:** Returns `Some(rendered)` — gate `msg_type == "result"` is satisfied; `session_id.unwrap_or_default()` handles absence; rendered output contains `---` separator and `hello` result text
 - **Exit:** N/A (unit test; assertion: `assert!(result.is_some())`)
-- **Source:** [invariant/008_render_summary_gate.md](../../../../docs/invariant/008_render_summary_gate.md) Invariant Statement; BUG-310 regression coverage
+- **Source:** [invariant/008_render_summary_gate.md](../../../docs/invariant/008_render_summary_gate.md) Invariant Statement; BUG-310 regression coverage
 
 ---
 
@@ -64,7 +64,7 @@ IT-7 is a structural test (source code search) in `tests/output_style_test.rs` t
 - **When:** `clr -p --max-sessions 0 "x"` with minimal-envelope fake claude
 - **Then:** Exit 0; stdout contains `---`; render_summary returned `Some(_)` through the full execution path
 - **Exit:** 0
-- **Source:** [invariant/008_render_summary_gate.md](../../../../docs/invariant/008_render_summary_gate.md) Invariant Statement; EC-14 in [070_output_style.md test spec](../cli/param/070_output_style.md)
+- **Source:** [invariant/008_render_summary_gate.md](../../../docs/invariant/008_render_summary_gate.md) Invariant Statement; EC-14 in [070_output_style.md test spec](../cli/param/070_output_style.md)
 
 ---
 
@@ -74,7 +74,7 @@ IT-7 is a structural test (source code search) in `tests/output_style_test.rs` t
 - **When:** `render_summary(json, None)` called directly (unit test)
 - **Then:** Returns `Some(rendered)` — gate satisfied; all field extractors return real values; rendered output contains all expected fields
 - **Exit:** N/A (unit test; assertion: `assert!(result.is_some())`)
-- **Source:** [invariant/008_render_summary_gate.md](../../../../docs/invariant/008_render_summary_gate.md) Invariant Statement; regression guard for EC-01..EC-13 parity
+- **Source:** [invariant/008_render_summary_gate.md](../../../docs/invariant/008_render_summary_gate.md) Invariant Statement; regression guard for EC-01..EC-13 parity
 
 ---
 
@@ -84,7 +84,7 @@ IT-7 is a structural test (source code search) in `tests/output_style_test.rs` t
 - **When:** `render_summary(json, None)` called directly (unit test)
 - **Then:** Returns `None` — `msg_type != "result"` gate fires; non-CLR-result input is rejected
 - **Exit:** N/A (unit test; assertion: `assert!(result.is_none())`)
-- **Source:** [invariant/008_render_summary_gate.md](../../../../docs/invariant/008_render_summary_gate.md) Invariant Statement (condition 2)
+- **Source:** [invariant/008_render_summary_gate.md](../../../docs/invariant/008_render_summary_gate.md) Invariant Statement (condition 2)
 
 ---
 
@@ -94,7 +94,7 @@ IT-7 is a structural test (source code search) in `tests/output_style_test.rs` t
 - **When:** `render_summary(json, None)` called directly (unit test)
 - **Then:** Returns `None` — `extract_str(json, "type")?` returns `None` (field absent); gate propagates `None` via `?`; non-CLR envelope rejected
 - **Exit:** N/A (unit test; assertion: `assert!(result.is_none())`)
-- **Source:** [invariant/008_render_summary_gate.md](../../../../docs/invariant/008_render_summary_gate.md) Invariant Statement (condition 2)
+- **Source:** [invariant/008_render_summary_gate.md](../../../docs/invariant/008_render_summary_gate.md) Invariant Statement (condition 2)
 
 ---
 
@@ -104,7 +104,7 @@ IT-7 is a structural test (source code search) in `tests/output_style_test.rs` t
 - **When:** `render_summary(text, None)` called directly (unit test)
 - **Then:** Returns `None` — all `extract_str()` calls return `None` for non-JSON; gate propagates `None`; raw text bypassed
 - **Exit:** N/A (unit test; assertion: `assert!(result.is_none())`)
-- **Source:** [invariant/008_render_summary_gate.md](../../../../docs/invariant/008_render_summary_gate.md) Invariant Statement (condition 1)
+- **Source:** [invariant/008_render_summary_gate.md](../../../docs/invariant/008_render_summary_gate.md) Invariant Statement (condition 1)
 
 ---
 
@@ -114,4 +114,4 @@ IT-7 is a structural test (source code search) in `tests/output_style_test.rs` t
 - **When:** File contents read at test run time
 - **Then:** File does NOT contain the substring `extract_str( json, "session_id" )?` — the BUG-310 anti-pattern is absent; gate is on `type` field, not `session_id`
 - **Exit:** 0
-- **Source:** [invariant/008_render_summary_gate.md](../../../../docs/invariant/008_render_summary_gate.md) Enforcement Mechanism; Anti-pattern section
+- **Source:** [invariant/008_render_summary_gate.md](../../../docs/invariant/008_render_summary_gate.md) Enforcement Mechanism; Anti-pattern section

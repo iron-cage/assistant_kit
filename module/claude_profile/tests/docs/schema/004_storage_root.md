@@ -4,7 +4,7 @@ SC test cases for `docs/schema/004_storage_root.md`. Verifies the `PersistPaths`
 resolution chain ($PRO → $HOME → error), the computed path shapes, and the
 `ensure_exists()` idempotent directory creation API.
 
-**Source:** [docs/schema/004_storage_root.md](../../../../docs/schema/004_storage_root.md)
+**Source:** [docs/schema/004_storage_root.md](../../../docs/schema/004_storage_root.md)
 
 ### SC Case Index
 
@@ -23,7 +23,7 @@ resolution chain ($PRO → $HOME → error), the computed path shapes, and the
 - **When:** `PersistPaths::new()` or equivalent is called
 - **Then:** `base()` returns `{$PRO}/.persistent/claude_profile/` and `credential_store()` returns `{$PRO}/.persistent/claude/credential/`
 - **Source fn:** `p16_credential_store_under_pro` (cli/persist_test.rs)
-- **Source:** [docs/schema/004_storage_root.md §Resolution Chain](../../../../docs/schema/004_storage_root.md)
+- **Source:** [docs/schema/004_storage_root.md §Resolution Chain](../../../docs/schema/004_storage_root.md)
 
 ---
 
@@ -33,7 +33,7 @@ resolution chain ($PRO → $HOME → error), the computed path shapes, and the
 - **When:** `PersistPaths::new()` is called
 - **Then:** Falls through to `$HOME`-based resolution — `base()` returns `{$HOME}/.persistent/claude_profile/`; no error is raised for the non-existent `$PRO` path
 - **Source fn:** `p09_path_shape_ends_with_persistent_claude_profile_under_home` (cli/persist_test.rs)
-- **Source:** [docs/schema/004_storage_root.md §Resolution Chain](../../../../docs/schema/004_storage_root.md)
+- **Source:** [docs/schema/004_storage_root.md §Resolution Chain](../../../docs/schema/004_storage_root.md)
 
 ---
 
@@ -43,7 +43,7 @@ resolution chain ($PRO → $HOME → error), the computed path shapes, and the
 - **When:** `base()` is called
 - **Then:** The returned path ends with `/.persistent/claude_profile/` regardless of the root source
 - **Source fn:** `p04_base_path_shape_ends_with_persistent_claude_profile` (cli/persist_test.rs)
-- **Source:** [docs/schema/004_storage_root.md §PersistPaths API](../../../../docs/schema/004_storage_root.md)
+- **Source:** [docs/schema/004_storage_root.md §PersistPaths API](../../../docs/schema/004_storage_root.md)
 
 ---
 
@@ -53,4 +53,4 @@ resolution chain ($PRO → $HOME → error), the computed path shapes, and the
 - **When:** `ensure_exists()` is called
 - **Then:** The directory is created; calling `ensure_exists()` again on an already-existing directory succeeds without error (idempotent)
 - **Source fn:** `p05_ensure_exists_creates_directory` and `p10_ensure_exists_is_idempotent` (cli/persist_test.rs)
-- **Source:** [docs/schema/004_storage_root.md §PersistPaths API](../../../../docs/schema/004_storage_root.md)
+- **Source:** [docs/schema/004_storage_root.md §PersistPaths API](../../../docs/schema/004_storage_root.md)

@@ -104,7 +104,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 **Precedence (current — 4 tiers):**
 
 1. CLI flag (wins unconditionally when provided)
-2. JSON config (from `--args-file`, `CLR_ARGS_FILE`, or stdin JSON pipe — see [feature/004_json_config.md](../../feature/004_json_config.md))
+2. JSON config (from `--args-file`, `CLR_ARGS_FILE`, or stdin JSON pipe — see [feature/004_json_config.md](../feature/004_json_config.md))
 3. `CLR_*` env var (applied when CLI field absent and no JSON source)
 4. Built-in default
 

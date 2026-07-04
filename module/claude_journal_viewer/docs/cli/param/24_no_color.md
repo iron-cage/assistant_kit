@@ -39,4 +39,4 @@ NO_COLOR=1 clj .stats                 # Via environment
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 5 | [Team Reporting](../user_story/05_team_reporting.md) | Lead |
+| 5 | [Team Reporting](../user_story/005_team_reporting.md) | Lead |

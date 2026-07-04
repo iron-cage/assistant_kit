@@ -68,4 +68,4 @@ wins when both are present.
 ### See Also
 
 - [`020_timeout.md`](020_timeout.md) — `--timeout` for `isolated`/`refresh` (same semantics: 0 = unlimited)
-- [`invariant/007_print_mode_timeout.md`](../invariant/007_print_mode_timeout.md) — invariant governing `DEFAULT_PRINT_TIMEOUT_SECS` and the print-mode vs interactive asymmetry
+- [`invariant/007_print_mode_timeout.md`](../../invariant/007_print_mode_timeout.md) — invariant governing `DEFAULT_PRINT_TIMEOUT_SECS` and the print-mode vs interactive asymmetry

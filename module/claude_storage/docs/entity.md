@@ -15,17 +15,17 @@
 | `algorithm/` | Index of algorithm doc instances covering procedure design and correctness guarantees | [algorithm/readme.md](algorithm/readme.md) | 1 |
 | `invariant/` | System behavioral invariants | [invariant/readme.md](invariant/readme.md) | 3 |
 | `cli/pitfall/` | CLI implementation pitfall documentation | [cli/pitfall/readme.md](cli/pitfall/readme.md) | 3 |
-| `tests/docs/cli/command/` | Index of per-command integration test case files covering command-level behavior | [../../tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 11 |
-| `tests/docs/cli/param/` | Index of per-parameter edge case test files covering parameter-level behavior | [../../tests/docs/cli/param/readme.md](../../tests/docs/cli/param/readme.md) | 24 |
-| `tests/docs/cli/param_group/` | Index of per-group interaction test files covering parameter group behavior | [../../tests/docs/cli/param_group/readme.md](../../tests/docs/cli/param_group/readme.md) | 5 |
-| `tests/docs/cli/type/` | Index of per-type constraint test case files covering type parsing and validation | [../../tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) | 13 |
-| `tests/docs/cli/format/` | Index of per-format output verification test case files covering export format structure | [../../tests/docs/cli/format/readme.md](../../tests/docs/cli/format/readme.md) | 3 |
-| `tests/docs/cli/user_story/` | Index of per-story acceptance test case files covering user story criteria | [../../tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) | 5 |
-| `tests/docs/feature/` | FT-prefixed test spec files mirroring each `docs/feature/` instance | [../../tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 1 |
-| `tests/docs/operation/` | OP-prefixed test spec files mirroring each `docs/operation/` instance | [../../tests/docs/operation/readme.md](../../tests/docs/operation/readme.md) | 1 |
-| `tests/docs/invariant/` | IN-prefixed contract test spec files mirroring each `docs/invariant/` instance | [../../tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 3 |
-| `tests/docs/algorithm/` | AL-prefixed contract test spec files mirroring each `docs/algorithm/` instance | [../../tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) | 1 |
-| `tests/docs/cli/pitfall/` | PF-prefixed contract test spec files mirroring each `docs/cli/pitfall/` instance | [../../tests/docs/cli/pitfall/readme.md](../../tests/docs/cli/pitfall/readme.md) | 3 |
+| `tests/docs/cli/command/` | Index of per-command integration test case files covering command-level behavior | [../../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 11 |
+| `tests/docs/cli/param/` | Index of per-parameter edge case test files covering parameter-level behavior | [../../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 24 |
+| `tests/docs/cli/param_group/` | Index of per-group interaction test files covering parameter group behavior | [../../tests/docs/cli/param_group/readme.md](../tests/docs/cli/param_group/readme.md) | 5 |
+| `tests/docs/cli/type/` | Index of per-type constraint test case files covering type parsing and validation | [../../tests/docs/cli/type/readme.md](../tests/docs/cli/type/readme.md) | 13 |
+| `tests/docs/cli/format/` | Index of per-format output verification test case files covering export format structure | [../../tests/docs/cli/format/readme.md](../tests/docs/cli/format/readme.md) | 3 |
+| `tests/docs/cli/user_story/` | Index of per-story acceptance test case files covering user story criteria | [../../tests/docs/cli/user_story/readme.md](../tests/docs/cli/user_story/readme.md) | 5 |
+| `tests/docs/feature/` | FT-prefixed test spec files mirroring each `docs/feature/` instance | [../../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 1 |
+| `tests/docs/operation/` | OP-prefixed test spec files mirroring each `docs/operation/` instance | [../../tests/docs/operation/readme.md](../tests/docs/operation/readme.md) | 1 |
+| `tests/docs/invariant/` | IN-prefixed contract test spec files mirroring each `docs/invariant/` instance | [../../tests/docs/invariant/readme.md](../tests/docs/invariant/readme.md) | 3 |
+| `tests/docs/algorithm/` | AL-prefixed contract test spec files mirroring each `docs/algorithm/` instance | [../../tests/docs/algorithm/readme.md](../tests/docs/algorithm/readme.md) | 1 |
+| `tests/docs/cli/pitfall/` | PF-prefixed contract test spec files mirroring each `docs/cli/pitfall/` instance | [../../tests/docs/cli/pitfall/readme.md](../tests/docs/cli/pitfall/readme.md) | 3 |
 
 ## Master Doc Instances Table
 

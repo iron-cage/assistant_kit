@@ -75,8 +75,8 @@
 | cli/param_group | 03 | Aggregation | [cli/param_group/03_aggregation.md](../cli/param_group/03_aggregation.md) |
 | cli/param_group | 04 | Search | [cli/param_group/04_search.md](../cli/param_group/04_search.md) |
 | cli/param_group | 05 | Global | [cli/param_group/05_global.md](../cli/param_group/05_global.md) |
-| cli/user_story | 01 | Cost Tracking | [cli/user_story/01_cost_tracking.md](../cli/user_story/01_cost_tracking.md) |
-| cli/user_story | 02 | Failure Diagnosis | [cli/user_story/02_failure_diagnosis.md](../cli/user_story/02_failure_diagnosis.md) |
-| cli/user_story | 03 | Automation Audit | [cli/user_story/03_automation_audit.md](../cli/user_story/03_automation_audit.md) |
-| cli/user_story | 04 | Capacity Planning | [cli/user_story/04_capacity_planning.md](../cli/user_story/04_capacity_planning.md) |
-| cli/user_story | 05 | Team Reporting | [cli/user_story/05_team_reporting.md](../cli/user_story/05_team_reporting.md) |
+| cli/user_story | 001 | Cost Tracking | [cli/user_story/001_cost_tracking.md](../cli/user_story/001_cost_tracking.md) |
+| cli/user_story | 002 | Failure Diagnosis | [cli/user_story/002_failure_diagnosis.md](../cli/user_story/002_failure_diagnosis.md) |
+| cli/user_story | 003 | Automation Audit | [cli/user_story/003_automation_audit.md](../cli/user_story/003_automation_audit.md) |
+| cli/user_story | 004 | Capacity Planning | [cli/user_story/004_capacity_planning.md](../cli/user_story/004_capacity_planning.md) |
+| cli/user_story | 005 | Team Reporting | [cli/user_story/005_team_reporting.md](../cli/user_story/005_team_reporting.md) |

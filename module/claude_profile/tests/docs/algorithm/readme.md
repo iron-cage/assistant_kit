@@ -1,4 +1,4 @@
-# Algorithm Test Cases
+# Algorithm Doc Entity
 
 Test-lens documentation for `docs/algorithm/`. Each spec file covers one algorithm and documents AC-N cases for algorithmic correctness verification. Tests live in `tests/` of the crate that owns the algorithm.
 

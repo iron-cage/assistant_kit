@@ -1,9 +1,9 @@
 # Test: Invariant — Session Mismatch Detection
 
-Test case planning for [invariant/009_session_mismatch_detection.md](../../../../docs/invariant/009_session_mismatch_detection.md). Tests validate that `run_print_mode()` emits a `[Runner] warning: session mismatch` diagnostic to stderr when the actual `session_id` in claude's JSON result envelope differs from the expected UUID, and that matching UUIDs, absent prior sessions, and non-JSON output all produce no warning.
+Test case planning for [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md). Tests validate that `run_print_mode()` emits a `[Runner] warning: session mismatch` diagnostic to stderr when the actual `session_id` in claude's JSON result envelope differs from the expected UUID, and that matching UUIDs, absent prior sessions, and non-JSON output all produce no warning.
 
-**Source:** [invariant/009_session_mismatch_detection.md](../../../../docs/invariant/009_session_mismatch_detection.md)
-**Related:** [invariant/001_default_flags.md](../../../../docs/invariant/001_default_flags.md) (`-c` injection decision), [invariant/008_render_summary_gate.md](../../../../docs/invariant/008_render_summary_gate.md) (`"type":"result"` gate inherited by `extract_session_id`)
+**Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md)
+**Related:** [invariant/001_default_flags.md](../../../docs/invariant/001_default_flags.md) (`-c` injection decision), [invariant/008_render_summary_gate.md](../../../docs/invariant/008_render_summary_gate.md) (`"type":"result"` gate inherited by `extract_session_id`)
 
 ## Test Case Index
 
@@ -52,7 +52,7 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 - **When:** `extract_session_id(json)` called directly (unit test)
 - **Then:** Returns `Some("abc-123")` — `"type":"result"` guard satisfied; `session_id` field present and extracted
 - **Exit:** N/A (unit test; assertion: `assert_eq!(result, Some("abc-123".to_string()))`)
-- **Source:** [invariant/009_session_mismatch_detection.md](../../../../docs/invariant/009_session_mismatch_detection.md) Enforcement Mechanism § summary.rs
+- **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Enforcement Mechanism § summary.rs
 
 ---
 
@@ -62,7 +62,7 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 - **When:** `extract_session_id(json)` called directly (unit test)
 - **Then:** Returns `None` — `msg_type != "result"` guard fires; non-result type excluded per invariant/009 table row 4
 - **Exit:** N/A (unit test; assertion: `assert_eq!(result, None)`)
-- **Source:** [invariant/009_session_mismatch_detection.md](../../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 4
+- **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 4
 
 ---
 
@@ -72,7 +72,7 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 - **When:** `extract_session_id(json)` called directly (unit test)
 - **Then:** Returns `None` — `"type":"result"` guard satisfied; `extract_str(stdout, "session_id")` returns `None` (field absent); `?` propagates `None` to caller
 - **Exit:** N/A (unit test; assertion: `assert_eq!(result, None)`)
-- **Source:** [invariant/009_session_mismatch_detection.md](../../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 4
+- **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 4
 
 ---
 
@@ -82,7 +82,7 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 - **When:** `clr -p --max-sessions 0 --session-dir <temp> "x"` with fake claude binary in PATH
 - **Then:** Exit 0; stderr does NOT contain `"session mismatch"`; `expected_session_id == actual` comparison is equal; warning block not entered
 - **Exit:** 0
-- **Source:** [invariant/009_session_mismatch_detection.md](../../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 2 (match → silent success)
+- **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 2 (match → silent success)
 
 ---
 
@@ -92,7 +92,7 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 - **When:** `clr -p --max-sessions 0 --session-dir <temp> "x"` with fake claude binary in PATH
 - **Then:** Exit 0 (non-fatal — warning is diagnostic only); stderr contains exactly one line matching `"[Runner] warning: session mismatch — expected UUID_A, got UUID_B (BUG-320 detected)"`
 - **Exit:** 0
-- **Source:** [invariant/009_session_mismatch_detection.md](../../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 3; Warning Format section
+- **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 3; Warning Format section
 
 ---
 
@@ -102,7 +102,7 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 - **When:** `clr -p --new-session --max-sessions 0 --session-dir <temp> "x"` with fake claude binary
 - **Then:** Exit 0; stderr does NOT contain `"session mismatch"`; `session_exists()` returns `None`; `-c` not injected; `expected_session_id = None`; `if let Some(expected)` guard short-circuits before `extract_session_id()` is ever called
 - **Exit:** 0
-- **Source:** [invariant/009_session_mismatch_detection.md](../../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 1 (`expected_session_id` is `None` → no comparison)
+- **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 1 (`expected_session_id` is `None` → no comparison)
 
 ---
 
@@ -112,4 +112,4 @@ SV-1 through SV-4 are integration tests in `tests/session_verification_test.rs` 
 - **When:** `clr --max-sessions 0 --session-dir <temp> --output-style raw "x"` with fake claude binary
 - **Then:** Exit 0; stderr does NOT contain `"session mismatch"`; `session_exists()` returns `None` for empty dir; `expected_session_id = None`; `if let Some(expected)` guard short-circuits before `extract_session_id()` is ever called
 - **Exit:** 0
-- **Source:** [invariant/009_session_mismatch_detection.md](../../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 1 (`expected_session_id` is `None` → no comparison)
+- **Source:** [invariant/009_session_mismatch_detection.md](../../../docs/invariant/009_session_mismatch_detection.md) Invariant Statement table row 1 (`expected_session_id` is `None` → no comparison)

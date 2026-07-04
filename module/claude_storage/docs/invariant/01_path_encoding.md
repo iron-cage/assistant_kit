@@ -72,4 +72,4 @@ environment matches the storage origin.
 ### Sources
 
 - `src/` — `decode_path_via_fs()` implementation in `claude_storage_core`
-- `guide/001_advanced_storage_topics.md` (deleted — project path format migrated here)
+- [`algorithm/001_agent_session_tracking.md`](../algorithm/001_agent_session_tracking.md) — layout examples and detection algorithms

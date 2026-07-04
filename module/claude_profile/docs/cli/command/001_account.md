@@ -244,7 +244,7 @@ clp .account.save host::workstation role::work
 
 | # | Feature | Role |
 |---|---------|------|
-| 1 | [Store Init](../../feature/001_store_init.md) | Credential store initialization before save |
+| 1 | [Store Init](../../feature/001_account_store_init.md) | Credential store initialization before save |
 | 2 | [Save Account](../../feature/002_account_save.md) | Core save algorithm and file layout |
 | 3 | [Persistent Storage](../../feature/010_persistent_storage.md) | Unified `{name}.json` merge semantics |
 | 4 | [Per-Machine Active Marker](../../feature/025_per_machine_active_marker.md) | `_active_{hostname}_{user}` marker written on save |

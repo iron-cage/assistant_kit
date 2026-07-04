@@ -35,4 +35,4 @@ clj .prune keep::30d                  # Interactive confirmation (default)
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 4 | [Capacity Planning](../user_story/04_capacity_planning.md) | Developer |
+| 4 | [Capacity Planning](../user_story/004_capacity_planning.md) | Developer |

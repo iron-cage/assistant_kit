@@ -40,6 +40,12 @@ Both layouts coexist within a single project directory. Neither is deprecated.
 - Using `sessionId` in hierarchical agents to establish family membership (use directory structure instead)
 - Displaying root and agent sessions as siblings without family grouping
 
+### Algorithms
+
+| File | Relationship |
+|------|-------------|
+| `../algorithm/001_agent_session_tracking.md` | Layout examples and detection algorithms |
+
 ### Referenced Commands
 
 | # | Command | Context |
@@ -50,5 +56,4 @@ Both layouts coexist within a single project directory. Neither is deprecated.
 
 ### Sources
 
-- [`algorithm/001_agent_session_tracking.md`](../algorithm/001_agent_session_tracking.md) — layout examples and detection algorithms
 - `claude_storage_core` — `SessionFamily` Domain Type definition

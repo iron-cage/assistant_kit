@@ -40,5 +40,5 @@ clj .list columns::time,dir,command,duration    # Per-project timing
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 1 | [Cost Tracking](../user_story/01_cost_tracking.md) | Developer |
-| 5 | [Team Reporting](../user_story/05_team_reporting.md) | Lead |
+| 1 | [Cost Tracking](../user_story/001_cost_tracking.md) | Developer |
+| 5 | [Team Reporting](../user_story/005_team_reporting.md) | Lead |

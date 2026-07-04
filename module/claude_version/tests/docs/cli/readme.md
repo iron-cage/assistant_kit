@@ -90,13 +90,13 @@
 - [Config Identity](param_group/04_config_identity.md)
 
 ### User Stories
-- [Environment Check](user_story/01_environment_check.md)
-- [Version Upgrade](user_story/02_version_upgrade.md)
-- [Process Lifecycle](user_story/03_process_lifecycle.md)
-- [Settings Management](user_story/04_settings_management.md)
-- [Version Pinning](user_story/05_version_pinning.md)
-- [Config Management](user_story/06_config_management.md)
-- [Params Inspection](user_story/07_params_inspection.md)
+- [Environment Check](user_story/001_environment_check.md)
+- [Version Upgrade](user_story/002_version_upgrade.md)
+- [Process Lifecycle](user_story/003_process_lifecycle.md)
+- [Settings Management](user_story/004_settings_management.md)
+- [Version Pinning](user_story/005_version_pinning.md)
+- [Config Management](user_story/006_config_management.md)
+- [Params Inspection](user_story/007_params_inspection.md)
 
 ### Formats
 - [Text](format/01_text.md)

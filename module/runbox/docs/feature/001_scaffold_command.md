@@ -69,4 +69,4 @@
 | source | `src/commands.rs` | `init_routine` — file generation logic |
 | source | `src/templates.rs` | Ecosystem-specific file content templates |
 | source | `unilang.commands.yaml` | CLI command metadata (names, arguments, examples) |
-| doc | [`feature/001_workspace_design.md`](../../../../../../docs/feature/001_workspace_design.md) | Workspace crate inventory (runbox member) |
+| doc | [`feature/001_workspace_design.md`](../../../../docs/feature/001_workspace_design.md) | Workspace crate inventory (runbox member) |

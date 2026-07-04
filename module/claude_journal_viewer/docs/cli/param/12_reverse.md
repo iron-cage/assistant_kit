@@ -36,4 +36,4 @@ clj .list sort::duration reverse::1  # Longest first
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 1 | [Cost Tracking](../user_story/01_cost_tracking.md) | Developer |
+| 1 | [Cost Tracking](../user_story/001_cost_tracking.md) | Developer |

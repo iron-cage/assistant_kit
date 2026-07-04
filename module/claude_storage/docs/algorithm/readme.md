@@ -1,4 +1,4 @@
-# Algorithm Collection
+# Algorithm Doc Entity
 
 ### Scope
 
@@ -12,4 +12,3 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Agent Session Tracking](001_agent_session_tracking.md) | Discover and enumerate agent sessions across flat and hierarchical storage layouts | ✅ |
-| — | [procedure.md](procedure.md) | Workflow for creating and updating algorithm doc instances | ✅ |

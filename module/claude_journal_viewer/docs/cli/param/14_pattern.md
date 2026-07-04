@@ -39,5 +39,5 @@ clj .search pattern::"(?i)panic"               # Case-insensitive search
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 2 | [Failure Diagnosis](../user_story/02_failure_diagnosis.md) | Developer |
-| 3 | [Automation Audit](../user_story/03_automation_audit.md) | Developer |
+| 2 | [Failure Diagnosis](../user_story/002_failure_diagnosis.md) | Developer |
+| 3 | [Automation Audit](../user_story/003_automation_audit.md) | Developer |

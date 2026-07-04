@@ -40,5 +40,5 @@ clj .export format::csv output::/tmp/events.csv  # CSV file export
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 3 | [Automation Audit](../user_story/03_automation_audit.md) | Developer |
-| 5 | [Team Reporting](../user_story/05_team_reporting.md) | Lead |
+| 3 | [Automation Audit](../user_story/003_automation_audit.md) | Developer |
+| 5 | [Team Reporting](../user_story/005_team_reporting.md) | Lead |

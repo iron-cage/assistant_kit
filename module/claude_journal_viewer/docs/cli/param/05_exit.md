@@ -37,4 +37,4 @@ clj .list exit::1 command::ask       # Ask failures
 
 | # | User Story | Persona |
 |---|------------|---------|
-| 2 | [Failure Diagnosis](../user_story/02_failure_diagnosis.md) | Developer |
+| 2 | [Failure Diagnosis](../user_story/002_failure_diagnosis.md) | Developer |

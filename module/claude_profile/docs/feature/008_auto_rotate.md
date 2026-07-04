@@ -68,4 +68,4 @@
 | File | Relationship |
 |------|--------------|
 | `tests/account_tests.rs::auto_rotate_*` | Rotation selection and switch tests |
-| [tests/docs/cli/command/013_account_rotate.md](../../tests/docs/cli/command/013_account_rotate.md) | CLI integration test spec (IT-1..IT-8) |
+| [tests/docs/cli/command/13_account_rotate.md](../../tests/docs/cli/command/13_account_rotate.md) | CLI integration test spec (IT-1..IT-8) |

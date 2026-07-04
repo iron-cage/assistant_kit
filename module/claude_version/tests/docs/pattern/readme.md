@@ -1,4 +1,4 @@
-# Pattern Test Surface
+# Pattern Doc Entity
 
 ### Scope
 

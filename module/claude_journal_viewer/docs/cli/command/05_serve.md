@@ -40,5 +40,5 @@ clj .serve refresh::30             # 30-second auto-refresh
 
 | # | User Story |
 |---|-----------|
-| 1 | [Cost Tracking](../user_story/01_cost_tracking.md) |
-| 3 | [Automation Audit](../user_story/03_automation_audit.md) |
+| 1 | [Cost Tracking](../user_story/001_cost_tracking.md) |
+| 3 | [Automation Audit](../user_story/003_automation_audit.md) |

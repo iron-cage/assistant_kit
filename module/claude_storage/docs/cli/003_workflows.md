@@ -255,6 +255,4 @@ result=$(clg .session.ensure path::/home/user/project topic::work strategy::fres
 
 ### Provenance
 
-| File | Notes |
-|------|-------|
-| `workflows.md` (deleted — migrated here) | Original un-migrated source; content fully absorbed into this file |
+This file's content was consolidated from a previously separate, now-fully-absorbed source document; no content was lost in the merge.

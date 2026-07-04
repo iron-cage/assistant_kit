@@ -214,7 +214,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 
 - **Given:** Active credentials exist at `~/.claude/.credentials.json`. `~/.claude.json` exists and contains `"oauthAccount":{"emailAddress":"alice@acme.com"}` (primary inference source). No `name::` argument is passed.
 - **When:** `clp .account.save` (no `name::` argument)
-- **Then:** Exit 0; stdout: `saved current credentials as 'alice@acme.com'`; credential file created using the inferred email as the account name. `name::` behaves as optional on `.account.save` when `oauthAccount.emailAddress` is present. When `oauthAccount.emailAddress` is absent, inference falls back to the per-machine `_active` marker (see FT-04 in [feature/002_account_save.md](../../feature/02_account_save.md)).
+- **Then:** Exit 0; stdout: `saved current credentials as 'alice@acme.com'`; credential file created using the inferred email as the account name. `name::` behaves as optional on `.account.save` when `oauthAccount.emailAddress` is present. When `oauthAccount.emailAddress` is absent, inference falls back to the per-machine `_active` marker (see FT-04 in [feature/002_account_save.md](../../feature/002_account_save.md)).
 - **Exit:** 0
 - **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md)
 
@@ -238,7 +238,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **Exit:** 0
 - **Commands:** `.account.save`
 - **Note:** Tests the `_active` marker fallback path. Primary path (`oauthAccount.emailAddress` present) is covered by EC-17. Both paths together form the name inference divergence pair.
-- **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/002_account_save.md FT-04](../../feature/02_account_save.md)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/002_account_save.md FT-04](../../feature/002_account_save.md)
 
 ---
 
@@ -270,4 +270,4 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **Exit:** 0
 - **Commands:** `.account.save`
 - **Note:** BUG-212 regression guard. `oauthAccount.emailAddress` is updated by both clp ops (snapshot restore) and external OAuth login. `_active` is written only by clp ops — external login leaves it stale.
-- **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/002_account_save.md FT-10](../../feature/02_account_save.md), [feature/025_per_machine_active_marker.md](../../feature/25_per_machine_active_marker.md)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/002_account_save.md FT-10](../../feature/002_account_save.md), [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md)

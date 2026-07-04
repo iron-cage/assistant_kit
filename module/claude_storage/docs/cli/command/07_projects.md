@@ -116,6 +116,12 @@ With `show_tree::1`, agents are tree-indented under their parent:
 - `limit::N` caps families per project; truncated projects show `... and N more sessions` hint
 - `show_tree::1` — agents tree-indented under parent (`├─`/`└─`); full IDs shown
 
+### Algorithms
+
+| File | Relationship |
+|------|-------------|
+| `../algorithm/001_agent_session_tracking.md` | Agent session discovery algorithm this command displays |
+
 ### Referenced Parameter Groups
 
 | # | Group | Membership | Excluded Params |

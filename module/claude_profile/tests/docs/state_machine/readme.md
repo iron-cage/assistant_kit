@@ -1,4 +1,4 @@
-# State Machine Test Cases
+# State Machine Doc Entity
 
 Test-lens documentation for `docs/state_machine/`. Each spec file covers one state machine
 and documents AC-N cases for lifecycle transition and gate enforcement verification. Tests

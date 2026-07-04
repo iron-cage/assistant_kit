@@ -5,7 +5,7 @@
 - **Purpose**: Wire contract for the Anthropic `GET /v1/models` endpoint that returns the list of available Claude API models.
 - **Responsibility**: Documents this endpoint's request shape, response schema, pagination model, and OAuth compatibility notes for workspace callers implementing a live model listing command.
 - **In Scope**: URL, auth headers, query parameters, full response JSON schema, error codes, pagination cursor fields.
-- **Out of Scope**: Model capability details (→ `../model/001_model_catalog.md`); workspace model selection policy (→ `../model/002_workspace_defaults.md`); OAuth token acquisition (→ `004_oauth_token.md`); Bedrock/Vertex model IDs.
+- **Out of Scope**: Model capability details (→ `../model/readme.md`); workspace model selection policy (→ `../model/012_workspace_defaults.md`); OAuth token acquisition (→ `004_oauth_token.md`); Bedrock/Vertex model IDs.
 
 ### Request
 
@@ -86,7 +86,7 @@
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master endpoint table |
-| doc | [../model/001_model_catalog.md](../model/001_model_catalog.md) | Known model catalog with workspace usage |
-| doc | [../model/002_workspace_defaults.md](../model/002_workspace_defaults.md) | Role-to-model assignment for workspace callers |
+| doc | [../model/readme.md](../model/readme.md) | Known model catalog with workspace usage |
+| doc | [../model/012_workspace_defaults.md](../model/012_workspace_defaults.md) | Role-to-model assignment for workspace callers |
 | doc | [003_v1_messages.md](003_v1_messages.md) | POST /v1/messages — same OAuth bearer token pattern |
 | doc | [004_oauth_token.md](004_oauth_token.md) | OAuth token refresh — provides the bearer token |

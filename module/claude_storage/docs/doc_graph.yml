@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all NNN-identified doc instances in claude_storage
   node_count: 70
-  edge_count: 82
-  component_count: 3
-  generated: 2026-07-02
+  edge_count: 83
+  component_count: 2
+  generated: 2026-07-04
 
 nodes:
   # feature/ entity (1)
@@ -16,11 +16,11 @@ nodes:
     file: operation/001_migration_guide.md
     label: Migration Guide
     entity: operation
-  # guide/ entity (1)
-  - id: guide/001
-    file: guide/001_advanced_storage_topics.md
-    label: Advanced Storage Topics
-    entity: guide
+  # algorithm/ entity (1)
+  - id: algorithm/001
+    file: algorithm/001_agent_session_tracking.md
+    label: Agent Session Tracking
+    entity: algorithm
   # invariant/ entity (3)
   - id: invariant/01
     file: invariant/01_path_encoding.md
@@ -306,22 +306,26 @@ edges:
   - from: operation/001
     to: feature/001
     via: cross_references
-  # guide ↔ feature
-  - from: guide/001
+  # algorithm ↔ feature
+  - from: algorithm/001
     to: feature/001
     via: cross_references
   - from: feature/001
-    to: guide/001
+    to: algorithm/001
     via: cross_references
-  # guide → invariants
-  - from: guide/001
-    to: invariant/01
-    via: cross_references
-  - from: guide/001
+  # algorithm ↔ invariants
+  - from: algorithm/001
     to: invariant/02
     via: cross_references
-  - from: guide/001
-    to: invariant/03
+  - from: invariant/02
+    to: algorithm/001
+    via: cross_references
+  # algorithm ↔ commands
+  - from: algorithm/001
+    to: command/07
+    via: cross_references
+  - from: command/07
+    to: algorithm/001
     via: cross_references
   # invariants → feature
   - from: invariant/01
@@ -560,24 +564,19 @@ edges:
 
 components:
   - id: 1
-    label: CLI Tool + Guides + Invariants + Pitfalls
-    size: 9
+    label: CLI Tool + Algorithms + Invariants + Pitfalls + User Stories + Commands + Params + Param Groups + Formats
+    size: 57
     isolated: false
     nodes:
       - feature/001
       - operation/001
-      - guide/001
+      - algorithm/001
       - invariant/01
       - invariant/02
       - invariant/03
       - pitfall/01
       - pitfall/02
       - pitfall/03
-  - id: 2
-    label: User Stories + Commands + Params + Param Groups + Formats
-    size: 48
-    isolated: false
-    nodes:
       - user_story/001
       - user_story/002
       - user_story/003
@@ -626,7 +625,7 @@ components:
       - param_group/03
       - param_group/04
       - param_group/05
-  - id: 3
+  - id: 2
     label: CLI Types (no inter-entity cross-references yet)
     size: 13
     isolated: true

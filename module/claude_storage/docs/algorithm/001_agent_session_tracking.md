@@ -117,16 +117,34 @@ Schema:
 - **Metadata**: parse `.meta.json` sidecars for `agentType` and `description` (hierarchical format only, B14).
 - **Display**: mark agent sessions distinctly in CLI output (e.g., "agent-64bdad98 (sub-agent)").
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | `../invariant/02_session_family.md` | Session Family membership contract — threading, meta.json edge case, slug field |
-| doc | `../cli/command/07_projects.md` | CLI display of session families |
-| doc | `../feature/001_cli_tool.md` | Overall crate scope and design |
+| File | Relationship |
+|------|-------------|
+| `../cli/command/07_projects.md` | CLI display of session families (`.projects`, #7) |
+
+### Features
+
+| File | Relationship |
+|------|-------------|
+| `../feature/001_cli_tool.md` | Overall crate scope and design |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
+| `../invariant/02_session_family.md` | Session Family membership contract — threading, meta.json edge case, slug field |
 
 ### Sources
 
-- [`../../../../contract/claude_code/docs/storage/readme.md`](../../../../contract/claude_code/docs/storage/readme.md) — directory structure and storage model
-- [`../../../../contract/claude_code/docs/format/readme.md`](../../../../contract/claude_code/docs/format/readme.md) — ancillary file format specifications
-- [`../../../../contract/claude_code/docs/jsonl/readme.md`](../../../../contract/claude_code/docs/jsonl/readme.md) — conversation entry format details
+| File | Notes |
+|------|-------|
+| `../../../../contract/claude_code/docs/storage/readme.md` | directory structure and storage model |
+| `../../../../contract/claude_code/docs/format/readme.md` | ancillary file format specifications |
+| `../../../../contract/claude_code/docs/jsonl/readme.md` | conversation entry format details |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| `../../tests/invariant_contracts_test.rs` | AL-1, AL-2 — agent session format contract tests |

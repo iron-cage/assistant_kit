@@ -1,9 +1,9 @@
 # Test: Invariant — Print-Mode Timeout Default
 
-Test case planning for [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md). Tests validate that `run_print_mode()` applies the `DEFAULT_PRINT_TIMEOUT_SECS = 3600` watchdog when no explicit `--timeout` is given, and that `run_interactive()` remains unbounded.
+Test case planning for [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md). Tests validate that `run_print_mode()` applies the `DEFAULT_PRINT_TIMEOUT_SECS = 3600` watchdog when no explicit `--timeout` is given, and that `run_interactive()` remains unbounded.
 
-**Source:** [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md)
-**Related:** [cli/param/36_timeout.md](../cli/param/36_timeout.md), [invariant/006_exit_codes.md](06_exit_codes.md)
+**Source:** [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md)
+**Related:** [cli/param/36_timeout.md](../cli/param/36_timeout.md), [invariant/006_exit_codes.md](006_exit_codes.md)
 
 ## Test Case Index
 
@@ -54,7 +54,7 @@ IT-2 and IT-3 use a fake `claude` subprocess to avoid live API calls. IT-3 uses 
 - **When:** static source inspection at test run time
 - **Then:** File contains (1) `DEFAULT_PRINT_TIMEOUT_SECS : u32 = 3600` — constant exists with correct value; (2) `unwrap_or( DEFAULT_PRINT_TIMEOUT_SECS )` — constant used inside `default_print_timeout()` helper (not inlined at call site); (3) `unwrap_or( default_print_timeout() )` — `run_print_mode()` call site delegates to helper, not the constant directly (TSK-228)
 - **Exit:** 0
-- **Source:** [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md) Enforcement Mechanism
+- **Source:** [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md) Enforcement Mechanism
 
 ---
 
@@ -64,7 +64,7 @@ IT-2 and IT-3 use a fake `claude` subprocess to avoid live API calls. IT-3 uses 
 - **When:** `clr -p --max-sessions 0 "x"` with fast-exit fake; `CLR_TIMEOUT` unset
 - **Then:** Exit 0; stderr does NOT contain "timeout"; 3600s watchdog does not trigger for a quickly-exiting subprocess
 - **Exit:** 0
-- **Source:** [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md) Invariant Statement
+- **Source:** [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md) Invariant Statement
 
 ---
 
@@ -74,7 +74,7 @@ IT-2 and IT-3 use a fake `claude` subprocess to avoid live API calls. IT-3 uses 
 - **When:** `clr -p --max-sessions 0 "x"` with 2s-sleep fake; `CLR_TIMEOUT` unset
 - **Then:** Exit 0 within ≤ 10s; no "timeout" on stderr; 3600s watchdog is set but the subprocess exits before the deadline
 - **Exit:** 0
-- **Source:** [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md) Invariant Statement
+- **Source:** [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md) Invariant Statement
 
 ---
 
@@ -84,7 +84,7 @@ IT-2 and IT-3 use a fake `claude` subprocess to avoid live API calls. IT-3 uses 
 - **When:** `clr -p --timeout 7200 --max-sessions 0 "x"` with fast-exit fake
 - **Then:** Exit 0; no "timeout" on stderr; `Some(7200).unwrap_or(3600) = 7200` — explicit wins
 - **Exit:** 0
-- **Source:** [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md) "Explicit override still wins"
+- **Source:** [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md) "Explicit override still wins"
 
 ---
 
@@ -94,7 +94,7 @@ IT-2 and IT-3 use a fake `claude` subprocess to avoid live API calls. IT-3 uses 
 - **When:** `clr -p --timeout 0 --max-sessions 0 "x"` with fast-exit fake
 - **Then:** Exit 0; no "timeout" on stderr; `Some(0).unwrap_or(3600) = 0` → unlimited
 - **Exit:** 0
-- **Source:** [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md) "Explicit override still wins"
+- **Source:** [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md) "Explicit override still wins"
 
 ---
 
@@ -104,7 +104,7 @@ IT-2 and IT-3 use a fake `claude` subprocess to avoid live API calls. IT-3 uses 
 - **When:** `CLR_TIMEOUT=0 clr -p --max-sessions 0 "x"` with fast-exit fake
 - **Then:** Exit 0; no "timeout" on stderr; env var sets `cli.timeout = Some(0)` → `Some(0).unwrap_or(3600) = 0` → unlimited
 - **Exit:** 0
-- **Source:** [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md) "Explicit override still wins"
+- **Source:** [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md) "Explicit override still wins"
 
 ---
 
@@ -114,7 +114,7 @@ IT-2 and IT-3 use a fake `claude` subprocess to avoid live API calls. IT-3 uses 
 - **When:** `CLR_TIMEOUT=3600 clr --dry-run "task"`
 - **Then:** Exit 0; env var parsed successfully without error; dry-run completes normally
 - **Exit:** 0
-- **Source:** [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md), [cli/param/36_timeout.md](../cli/param/36_timeout.md) ec_timeout_env_matches_default
+- **Source:** [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md), [cli/param/36_timeout.md](../cli/param/36_timeout.md) ec_timeout_env_matches_default
 
 ---
 
@@ -124,4 +124,4 @@ IT-2 and IT-3 use a fake `claude` subprocess to avoid live API calls. IT-3 uses 
 - **When:** `_CLR_DEFAULT_TIMEOUT=2 clr -p --max-sessions 0 --retry-override 0 "x"` with 30s-sleeping fake; `CLR_TIMEOUT` unset
 - **Then:** Exit 4 within ~5s; stderr contains "timeout"; subprocess killed by default watchdog. This proves the `None → unwrap_or(default_print_timeout())` path fires `poll_timeout()` and kills the subprocess — the gap that EC-7 (explicit `--timeout 1`) does not cover.
 - **Exit:** 4
-- **Source:** [invariant/007_print_mode_timeout.md](../../../../docs/invariant/007_print_mode_timeout.md) Invariant Statement, Enforcement Mechanism
+- **Source:** [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md) Invariant Statement, Enforcement Mechanism
