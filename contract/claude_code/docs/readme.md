@@ -16,5 +16,6 @@
 | `param/` | CLI parameter specifications — one file per runtime parameter (120 instances) |
 | `tool/` | Built-in tools available in Claude Code sessions — 40 instances (14 categories) |
 | `subcommand/` | CLI subcommands — 9 instances (agents, auth, auto-mode, doctor, install, mcp, plugin, setup-token, update) |
+| `version/` | Claude Code release changelog — 95 instances (2.1.74–2.1.198) |
 | `001_entity.md` | Cross-entity index: all collection types with instance counts |
 | `fault/` | Fault collection — all known error, silent failure, and quirk conditions of the `claude` binary |

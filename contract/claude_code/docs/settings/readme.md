@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the structure and write semantics for settings files managed by claude_version.
 - **Responsibility**: Master file for the `settings` collection — lists all 3 settings file instances covering global user settings, project-level settings, and the version lock protocol.
-- **In Scope**: settings.json structure, atomic write protocol, project-level settings, version lock operations, preferred version storage, type inference rules, settings config parameter table.
+- **In Scope**: settings.json structure, atomic write protocol, project-level settings, managed-settings.json enforcement keys, version lock operations, preferred version storage, type inference rules, settings config parameter table.
 - **Out of Scope**: Filesystem paths and directory layout (→ [`../filesystem/`](../filesystem/readme.md)); credential file format (→ [`../format/002_credentials.md`](../format/002_credentials.md)); account active marker (→ [`../filesystem/003_credential_store.md`](../filesystem/003_credential_store.md)).
 
 ### Overview Table
@@ -25,12 +25,16 @@ All settings modifications use a temp-file rename pattern to prevent corruption:
 
 ### Settings Config Parameter Table
 
-Config keys read by `claude` at startup from `settings.json`. Scope: **G** = user-global only, **P** = project-level only, **G+P** = both. Precedence: CLI arg > env var > settings config.
+Config keys read by `claude` at startup from `settings.json`. Scope: **G** = user-global only, **P** = project-level only, **G+P** = both, **M** = managed settings only. Precedence: CLI arg > env var > settings config.
 
 | Key | Scope | Type | Default | Description |
 |-----|-------|------|---------|-------------|
 | `theme` | G | string | `"dark"` | UI color theme |
 | `autoUpdates` | G | bool | `true` | Auto-update binary on startup |
+| `autoUpdatesChannel` | G+P | string | `"latest"` | Release channel for auto-updates: `latest` or `stable` |
+| `minimumVersion` | G+P | string (semver) | — | Update floor; blocks auto-update/`claude update` below this version |
+| `requiredMinimumVersion` | M | string (semver) | — | Startup floor; Claude Code exits at launch if older |
+| `requiredMaximumVersion` | M | string (semver) | — | Startup ceiling; Claude Code exits at launch if newer |
 | `preferredVersionSpec` | G | string/null | `null` | Preferred version alias or semver |
 | `preferredVersionResolved` | G | string/null | `null` | Concrete semver resolved at last install |
 | `env` | G | object | `{}` | Persistent env var overrides injected at startup |

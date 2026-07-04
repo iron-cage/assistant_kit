@@ -11,14 +11,15 @@
 | `settings` | Settings file structure and protocols: global, project, version lock | [settings/readme.md](settings/readme.md) | 3 |
 | `formats` | Data formats: file formats, output schemas — history, credentials, debug, shell-snapshots, todos, commands, JSON response | [format/readme.md](format/readme.md) | 7 |
 | `taxonomy` | Four-level concept hierarchy: Project, Conversation, Session, Entry | [taxonomy/readme.md](taxonomy/readme.md) | 3 |
-| `params` | CLI parameter specifications for the `claude` binary | [param/readme.md](param/readme.md) | 120 |
+| `params` | CLI parameter specifications for the `claude` binary | [param/readme.md](param/readme.md) | 126 |
 | `tool` | Built-in tools available in Claude Code sessions | [tool/readme.md](tool/readme.md) | 40 |
 | `endpoint` | Wire contracts for Anthropic HTTP endpoints consumed by workspace crates | [endpoint/readme.md](endpoint/readme.md) | 11 |
 | `subcommand` | CLI subcommands: agents, auth, auto-mode, doctor, install, mcp, plugin, setup-token, update | [subcommand/readme.md](subcommand/readme.md) | 9 |
 | `fault` | Aggregated index of all fault conditions: terminal errors (E1–E6), silent failures (F1–F4), and quirks (Q1–Q5) with detection signals and `classify_error()` priority order | [fault/readme.md](fault/readme.md) | 0 |
 | `model` | Claude API model catalog: known model IDs, capabilities, and workspace selection defaults | [model/readme.md](model/readme.md) | 12 |
+| `version` | Claude Code release changelog: one doc instance per published release version | [version/readme.md](version/readme.md) | 95 |
 
-**Total doc instances**: 258 (36 + 3 + 4 + 11 + 3 + 7 + 3 + 120 + 40 + 11 + 9 + 12)
+**Total doc instances**: 359 (36 + 3 + 4 + 10 + 3 + 7 + 3 + 126 + 40 + 11 + 9 + 12 + 95)
 
 ## Master Doc Instances Table
 
@@ -123,7 +124,7 @@
 | 002 | Relationships | [taxonomy/002_relationships.md](taxonomy/002_relationships.md) |
 | 003 | Implementation | [taxonomy/003_implementation.md](taxonomy/003_implementation.md) |
 
-### endpoint/ (10 instances)
+### endpoint/ (11 instances)
 
 | ID | Name | File |
 |----|------|------|
@@ -153,11 +154,13 @@
 | 008 | setup-token | [subcommand/008_setup_token.md](subcommand/008_setup_token.md) |
 | 009 | update | [subcommand/009_update.md](subcommand/009_update.md) |
 
-> `params` instances (120 files) use numbered naming and are enumerated in their master file: [param/readme.md](param/readme.md).
+> `params` instances (126 files) use numbered naming and are enumerated in their master file: [param/readme.md](param/readme.md).
 >
 > `tool` instances (40 files) use numbered naming and are enumerated in their master file: [tool/readme.md](tool/readme.md).
 >
 > `subcommand` instances (9 files) use numbered naming and are enumerated in their master file: [subcommand/readme.md](subcommand/readme.md).
+>
+> `version` instances (95 files) use NNN_vX_Y_Z.md naming and are enumerated in their master file: [version/readme.md](version/readme.md).
 
 ### model/ (12 instances)
 

@@ -8,7 +8,7 @@ parameter in this directory.
 
 - **Purpose**: Authoritative flat reference for every parameter the `claude` binary accepts at runtime.
 - **Responsibility**: Master table and per-parameter detail files for CLI flags, env vars, and settings config keys.
-- **In Scope**: All 120 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `MCP_*` env vars, `API_*` env vars, `CLAUDE_CLIENT_*` env vars, `BASH_*` env vars, `DISABLE_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys.
+- **In Scope**: All 126 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `MCP_*` env vars, `API_*` env vars, `CLAUDE_CLIENT_*` env vars, `BASH_*` env vars, `DISABLE_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys, `managed-settings.json` config keys.
 - **Out of Scope**: Builder-API defaults and Rust `with_*()` methods (→ `module/claude_runner_core/docs/claude_param/`); Claude API protocol (→ Anthropic docs).
 
 ### Responsibility Table
@@ -136,6 +136,12 @@ parameter in this directory.
 | 118_disable_telemetry.md | `DISABLE_TELEMETRY` — opt out of telemetry |
 | 119_disable_updates.md | `DISABLE_UPDATES` — block all updates |
 | 120_disable_upgrade_command.md | `DISABLE_UPGRADE_COMMAND` — hide /upgrade |
+| 121_auto_updates_channel.md | `autoUpdatesChannel` config key — release channel (latest/stable) |
+| 122_minimum_version.md | `minimumVersion` config key — update floor version |
+| 123_required_minimum_version.md | `requiredMinimumVersion` managed config key — startup floor |
+| 124_required_maximum_version.md | `requiredMaximumVersion` managed config key — startup ceiling |
+| 125_package_manager_auto_update.md | `CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE` — auto-run brew/winget upgrade |
+| 126_disable_nonessential_traffic.md | `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` — combined disable of 4 vars |
 
 ### Parameter Table
 
@@ -264,6 +270,12 @@ Precedence: CLI arg > env var > settings config.
 | 118 | [disable_telemetry](118_disable_telemetry.md) | — | `DISABLE_TELEMETRY` | — | bool | off | pre-v1.0 | Opt out of telemetry |
 | 119 | [disable_updates](119_disable_updates.md) | — | `DISABLE_UPDATES` | — | bool | off | pre-v1.0 | Block all updates (auto + manual) |
 | 120 | [disable_upgrade_command](120_disable_upgrade_command.md) | — | `DISABLE_UPGRADE_COMMAND` | — | bool | off | pre-v1.0 | Hide /upgrade slash command |
+| 121 | [auto_updates_channel](121_auto_updates_channel.md) | — | — | `autoUpdatesChannel` | string | `"latest"` | pre-v1.0 | Release channel for auto-updates: latest or stable |
+| 122 | [minimum_version](122_minimum_version.md) | — | — | `minimumVersion` | string (semver) | — | pre-v1.0 | Update floor; blocks auto-update/claude update below this version |
+| 123 | [required_minimum_version](123_required_minimum_version.md) | — | — | `requiredMinimumVersion` | string (semver) | — | v2.1.163 | Managed-only startup floor; exits at launch if older |
+| 124 | [required_maximum_version](124_required_maximum_version.md) | — | — | `requiredMaximumVersion` | string (semver) | — | v2.1.163 | Managed-only startup ceiling; exits at launch if newer |
+| 125 | [package_manager_auto_update](125_package_manager_auto_update.md) | — | `CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE` | — | bool | off | v2.1.129 | Auto-run brew/winget upgrade in background |
+| 126 | [disable_nonessential_traffic](126_disable_nonessential_traffic.md) | — | `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | — | bool | off | pre-v1.0 | Equivalent to 4 DISABLE_* vars combined |
 
 ### Cross-References
 

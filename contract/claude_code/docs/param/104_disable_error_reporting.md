@@ -29,3 +29,4 @@ pre-v1.0 (unverified)
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [118_disable_telemetry.md](118_disable_telemetry.md) | Disable telemetry |
+| doc | [126_disable_nonessential_traffic.md](126_disable_nonessential_traffic.md) | Combined opt-out including this var |
