@@ -34,7 +34,7 @@ field::unknown            → exit 1: "unknown field 'unknown'; valid: base, cre
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.paths`](../command/004_paths.md#command--8-paths) | Single path value extraction |
+| 1 | [`.paths`](../command/004_paths.md#command-8-paths) | Single path value extraction |
 
 ### Referenced User Stories
 

@@ -1,4 +1,4 @@
-# CLI Parameter Groups
+# Parameter Groups
 
 ### Scope
 

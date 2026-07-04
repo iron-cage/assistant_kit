@@ -27,7 +27,7 @@ token::0   → line omitted
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Token validity status line visibility |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Token validity status line visibility |
 
 ### Referenced User Stories
 

@@ -38,6 +38,7 @@ fn build_command_registry() -> CommandRegistry
     ".project.exists" => cli::project_exists_routine,
     ".session.dir"    => cli::session_dir_routine,
     ".session.ensure" => cli::session_ensure_routine,
+    ".tail"           => cli::tail_routine,
   };
 
   let mut registry = CommandRegistry::new();

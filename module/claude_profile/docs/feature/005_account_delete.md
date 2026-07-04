@@ -42,7 +42,7 @@
 
 | File | Relationship |
 |------|--------------|
-| [command/001_account.md](../cli/command/001_account.md#command--6-accountdelete) | CLI command specification |
+| [command/001_account.md](../cli/command/001_account.md#command-6-accountdelete) | CLI command specification |
 
 ### Features
 
@@ -57,7 +57,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.delete`](../cli/command/001_account.md#command--6-accountdelete) | CLI surface for this feature |
+| 1 | [`.account.delete`](../cli/command/001_account.md#command-6-accountdelete) | CLI surface for this feature |
 
 ### Sources
 

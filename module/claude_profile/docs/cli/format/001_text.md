@@ -60,12 +60,12 @@ clp .paths
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Default — account list labeled output |
-| 2 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | Default — token classification labeled output |
-| 3 | [`.paths`](../command/004_paths.md#command--8-paths) | Default — path resolution labeled output |
-| 4 | [`.usage`](../command/006_usage.md#command--9-usage) | Default — multi-account quota table |
-| 5 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Default — credential metadata labeled output |
-| 6 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | Default — quota limits labeled output |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Default — account list labeled output |
+| 2 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | Default — token classification labeled output |
+| 3 | [`.paths`](../command/004_paths.md#command-8-paths) | Default — path resolution labeled output |
+| 4 | [`.usage`](../command/006_usage.md#command-9-usage) | Default — multi-account quota table |
+| 5 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Default — credential metadata labeled output |
+| 6 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | Default — quota limits labeled output |
 
 ### Referenced User Stories
 

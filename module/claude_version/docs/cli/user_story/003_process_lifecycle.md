@@ -18,9 +18,9 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.help`](../command/root.md#command--1-help) | Provides discovery of available commands |
-| 2 | [`.processes`](../command/processes.md#command--7-processes) | Lists all running Claude Code PIDs |
-| 3 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Terminates detected processes via signal sequence |
+| 1 | [`.help`](../command/root.md#command-1-help) | Provides discovery of available commands |
+| 2 | [`.processes`](../command/processes.md#command-7-processes) | Lists all running Claude Code PIDs |
+| 3 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | Terminates detected processes via signal sequence |
 
 ### Referenced Formats
 

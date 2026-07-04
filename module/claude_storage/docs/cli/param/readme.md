@@ -1,4 +1,4 @@
-# Parameters Reference
+# Parameters
 
 ### Scope
 

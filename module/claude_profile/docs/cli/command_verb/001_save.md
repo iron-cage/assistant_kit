@@ -59,4 +59,4 @@ Captures the current active session credentials as a named account profile in th
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.save`](../command/001_account.md#command--4-accountsave) | Capture current credentials as named profile |
+| 1 | [`.account.save`](../command/001_account.md#command-4-accountsave) | Capture current credentials as named profile |

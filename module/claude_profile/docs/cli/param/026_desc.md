@@ -39,7 +39,7 @@ sort::renews desc::1     → latest billing renewal on top (reversed)
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Sort direction override for quota table |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Sort direction override for quota table |
 
 ### Referenced User Stories
 

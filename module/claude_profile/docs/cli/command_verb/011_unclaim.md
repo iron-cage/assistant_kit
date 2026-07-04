@@ -1,6 +1,6 @@
 # Verb: unclaim *(REMOVED — Feature 064)*
 
-> **REMOVED.** `.account.unclaim` was removed as a standalone command in Feature 037. The absorbed `unclaim::1` param was itself removed in Feature 064. Use `.accounts owner::0 name::X`. See the [Migration](#migration-feature-037--feature-064) section for the full chain.
+> **REMOVED.** `.account.unclaim` was removed as a standalone command in Feature 037. The absorbed `unclaim::1` param was itself removed in Feature 064. Use `.accounts owner::0 name::X`. See the [Migration](#migration-feature-037-feature-064) section for the full chain.
 
 Releases ownership of a saved account profile by writing `owner: ""` to `{name}.json` via `write_owner()` directly. Does not touch credentials (`{name}.credentials.json`), does not modify the active marker (`_active_{machine}_{user}`), does not call `save()`. This is a pure metadata-only operation.
 
@@ -80,4 +80,4 @@ This matches the pattern of G5/G6/G7 — gate evaluates before any mutation.
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.unclaim`](../command/001_account.md#command--17-accountunclaim) | Release ownership of saved account profile (removed in Feature 037; `unclaim::1` further REMOVED in Feature 064 — use `.accounts owner::0 name::X`) |
+| 1 | [`.account.unclaim`](../command/001_account.md#command-17-accountunclaim-removed-feature-037-migration-path-superseded-feature-064) | Release ownership of saved account profile (removed in Feature 037; `unclaim::1` further REMOVED in Feature 064 — use `.accounts owner::0 name::X`) |
