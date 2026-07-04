@@ -10,6 +10,7 @@ layer before or after subprocess execution — they do not go through
 - **Default:** `auto` (inherits from `--retry-default`, Tier 3 fallback)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"retry-on-runner"`
 
 ```sh
 clr -p "task" --retry-on-runner 1                 # retry once on runner failure
@@ -45,7 +46,7 @@ effective = --retry-override ?? --retry-on-runner ?? --retry-default (2)
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, ... |
 
 ### Referenced Commands
 

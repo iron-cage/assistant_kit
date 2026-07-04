@@ -39,7 +39,7 @@ Use `with_agents()` — Accepts a single JSON string defining multiple agents.
 ```rust
 use claude_runner_core::ClaudeCommand;
 
-let json = r#"[{"name":"reviewer","model":"claude-opus-4-6"}]"#;
+let json = r#"[{"name":"reviewer","model":"claude-opus-4-8"}]"#;
 let cmd = ClaudeCommand::new()
   .with_agents( json )
   .with_message( "Use custom agent config" );

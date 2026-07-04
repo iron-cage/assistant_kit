@@ -1,4 +1,4 @@
-# Parameter :: 48. `host::`
+# Parameter: 48. `host::`
 
 Specifies the host/machine label to store in the account profile at `.account.save` time. Displayed via `cols::+host` in `.usage`.
 

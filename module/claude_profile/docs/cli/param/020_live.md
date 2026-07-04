@@ -1,4 +1,4 @@
-# Parameter :: 20. `live::`
+# Parameter: 20. `live::`
 
 Enables continuous refresh mode for `.usage`. When `live::1`, the command enters a loop: fetch all accounts, clear the screen, render the table, display a countdown footer, wait `interval::` seconds (plus up to `jitter::` seconds), then repeat. Ctrl-C exits cleanly.
 

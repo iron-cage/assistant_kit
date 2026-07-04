@@ -42,9 +42,9 @@ All errors produced by `claude_profile` must provide actionable messages — mes
 - Support burden increases — users need external help to diagnose common issues
 - Reduces trust in the tool, especially for operations on credential files where mistakes matter
 
-### Cross-References
+### Sources
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/commands/` | Error message formatting for all CLI command handlers |
-| source | `src/account.rs` | Account CRUD error messages (NotFound, PermissionDenied) |
+| File | Relationship |
+|------|-------------|
+| `src/commands/` | Error message formatting for all CLI command handlers |
+| `src/account.rs` | Account CRUD error messages (NotFound, PermissionDenied) |

@@ -2,6 +2,8 @@
 
 Edge case coverage for the `sort::` parameter on `.usage`. See [param/025_sort.md](../../../../docs/cli/param/025_sort.md) for specification.
 
+**Behavioral Divergence Pair:** EC-1 ↔ EC-4 — `sort::name` (valid value) exits 0 with output; `sort::bogus` (invalid value) exits 1 with error naming all three valid values.
+
 ### Test Case Index
 
 | ID | Test Name | Category |

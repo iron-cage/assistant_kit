@@ -117,6 +117,6 @@ The identity set (`.accounts` default) includes: Account, Owner, Active, Current
 
 | File | Relationship |
 |------|--------------|
-| `tests/cli/accounts_test.rs` | Integration tests for `.accounts` — absorbs assign and unclaim test cases |
+| `tests/cli/accounts_ft_test.rs` | Integration tests for `.accounts` — absorbs assign and unclaim test cases |
 | `tests/cli/account_assign_test.rs` | Integration tests for `.accounts assignee::USER@MACHINE` — verifies marker-only write behavior per AC-08/AC-09/AC-10 |
-| `tests/cli/usage_test.rs` | Integration tests for `.usage` — gains mutation param tests |
+| `tests/cli/usage_feature_test.rs` | Integration tests for `.usage` — gains mutation param tests |

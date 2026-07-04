@@ -1,4 +1,4 @@
-# Parameter :: 34. `touch::`
+# Parameter: 34. `touch::`
 
 Activate idle quota windows by sending a minimal prompt via an isolated subprocess. Trigger condition: any of the three quota timers absent — `five_hour.resets_at`, `seven_day.resets_at`, or `seven_day_sonnet.resets_at` — meaning no active session for that quota dimension.
 

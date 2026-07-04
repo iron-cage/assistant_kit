@@ -7,6 +7,7 @@ meaningful when `--expect` is set; silently ignored otherwise.
 - **Default:** `fail`
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"expect-strategy"`
 
 **Strategies:**
 
@@ -59,7 +60,7 @@ emitted to stdout as-is (no trimming, no suffix).
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | — |
-| 2 | [`isolated`](../command/02_isolated.md) | fail | `fail`→exit 3, `default:<V>`→exit 0 supported; `retry` unsupported → exit 1 (one-shot semantics — no retry loop) (TSK-331) |
+| 2 | [`isolated`](../command/03_isolated.md) | fail | `fail`→exit 3, `default:<V>`→exit 0 supported; `retry` unsupported → exit 1 (one-shot semantics — no retry loop) (TSK-331) |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
 
 ### See Also

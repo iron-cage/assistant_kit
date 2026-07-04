@@ -10,7 +10,7 @@
 |----|----------|---------|
 | US-1 | Happy path | `--trace` prints command to stderr before executing |
 | US-2 | Cross-command | `--trace` works on `isolated` command |
-| US-3 | Independence | `--trace` output independent of `--verbosity` level |
+| US-3 | Independence | `--trace` output independent of `--quiet` flag |
 | US-4 | Parameter interaction | `--trace` with `--dry-run` shows trace but no execution |
 
 ---
@@ -29,12 +29,12 @@
 - **Then:** stderr contains the trace of the assembled `isolated` command including credential path; stdout has dry-run output
 - **Exit:** 0
 
-### US-3: trace independent of verbosity
+### US-3: trace independent of --quiet
 
 - **Given:** Terminal with TTY attached
-- **When:** `clr --trace --verbosity 0 "test" --dry-run`
-- **Then:** stderr still contains trace output even at verbosity 0 — trace is a separate channel from runner verbosity diagnostics
-- **Exit:** 0
+- **When:** `clr --trace --quiet "test"` (PATH=/nonexistent)
+- **Then:** stderr still contains trace output even with --quiet — trace is a separate channel from runner diagnostic suppression
+- **Exit:** non-zero (binary not found, but trace fires first)
 
 ### US-4: trace with dry-run
 

@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Document the `.params` command that displays all Claude Code parameters with their forms, current observable values, and defaults.
-- **Responsibility**: Describe the param catalog, operating modes, output format, observable vs. unobservable distinction, and acceptance criteria.
+- **Responsibility**: Describe the param catalog, operating modes, output format, and observable vs. unobservable distinction.
 - **In Scope**: `.params` (show-all / single / filtered modes), params catalog schema, observable param resolution (env + config), CLI-only annotation, `kind::` filter, `format::` output.
 - **Out of Scope**: 4-layer config resolution for write operations (→ `feature/006_config_command.md`), settings.json read/write atomics (→ `feature/003_settings_management.md`), type inference for set operations (→ `algorithm/001_settings_type_inference.md`).
 
@@ -50,11 +50,11 @@
 ```
 model
   Forms:   CLI --model <model>  |  config model
-  Env:     CLAUDE_MODEL → "claude-opus-4-6" (set)
-  Config:  model = "claude-sonnet-4-6" (user)
-  Default: claude-sonnet-4-6
+  Env:     CLAUDE_MODEL → "claude-opus-4-8" (set)
+  Config:  model = "claude-sonnet-5" (user)
+  Default: claude-sonnet-5
   ───────────────────────────────────────
-  Effective (via .config): claude-opus-4-6 (env)
+  Effective (via .config): claude-opus-4-8 (env)
 ```
 
 **Text output (v::1, env-only param):**
@@ -87,28 +87,6 @@ print
 | 1 | Invalid `kind::` value or invalid `format::` value |
 | 2 | `key::K` specified but K not found in params catalog |
 
-### Acceptance Criteria
-
-- **AC-01**: `clv.params` exits 0; stdout contains at least 35 parameter entries; each entry includes a source annotation or CLI-only marker.
-- **AC-02**: `clv.params key::model` exits 0; output shows all three forms (CLI `--model`, env `CLAUDE_MODEL`, config `model`), the current resolved value and its source, and the default `claude-sonnet-4-6`.
-- **AC-03**: `clv.params kind::config` exits 0; output contains only params that have a config key form; env-only params (`bash_timeout`, `api_key`, etc.) are absent from output.
-- **AC-04**: `clv.params kind::env` exits 0; output contains only params that have an env var form; config-only params (`theme`, `voiceEnabled`, etc.) are absent from output.
-- **AC-05**: `clv.params key::model` when `CLAUDE_MODEL` env var is set exits 0; output shows the env value and annotates it as `(env)` (env layer wins).
-- **AC-06**: `clv.params key::bash_timeout` exits 0; output shows `CLAUDE_CODE_BASH_TIMEOUT` current env value (or `unset`) and default `120000`.
-- **AC-07**: `clv.params format::json` exits 0; output is valid JSON array with `name`, `cli_flag`, `env_var`, `config_key`, `env_value`, `config_value`, `default`, `effective`, `source` fields per entry.
-- **AC-08**: `clv.params key::print` exits 0; output contains the `--print` CLI flag form and a `(CLI-only, unobservable)` annotation.
-- **AC-09**: `clv.params key::NONEXISTENT` exits 2.
-- **AC-10**: `clv.params kind::badvalue` exits 1.
-- **AC-11**: `clv.params key::model` with no env var set and no config value exits 0; output shows catalog default `claude-sonnet-4-6` with `(default)` annotation.
-- **AC-12**: Show-all mode lists params in alphabetical order.
-
-### Data Sources
-
-| Source | Role |
-|--------|------|
-| `params_catalog.rs` | Static registry of all Claude Code params (forms, defaults, descriptions) |
-| `config_resolve.rs` | Provides config-layer value (user + project) via 4-layer resolution |
-| `std::env::var()` | Provides live env var value at command invocation time |
 
 ### Features
 
@@ -116,12 +94,6 @@ print
 |------|-------------|
 | [feature/006_config_command.md](006_config_command.md) | `.config` command — manages settings.json (write); `.params` is read-only |
 | [feature/003_settings_management.md](003_settings_management.md) | Settings I/O underlying config reads |
-
-### Algorithms
-
-| File | Relationship |
-|------|-------------|
-| [algorithm/002_config_resolution.md](../algorithm/002_config_resolution.md) | 4-layer resolution used for config-layer values in single-param mode |
 
 ### Sources
 
@@ -134,5 +106,5 @@ print
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/feature/07_params_command.md](../../tests/docs/feature/07_params_command.md) | Feature test spec |
+| [tests/docs/feature/007_params_command.md](../../tests/docs/feature/007_params_command.md) | Feature test spec |
 | [tests/docs/cli/command/14_params.md](../../tests/docs/cli/command/14_params.md) | Command integration test spec |

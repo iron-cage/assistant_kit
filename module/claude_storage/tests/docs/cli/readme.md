@@ -19,6 +19,7 @@
 | `type/` | Type constraint validation tests per type |
 | `format/` | Export output format verification tests per format |
 | `user_story/` | Acceptance criterion tests per user story |
+| `pitfall/` | Pitfall contract tests mirroring `docs/cli/pitfall/` |
 
 ### Overview
 

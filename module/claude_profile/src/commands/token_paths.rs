@@ -5,7 +5,8 @@ use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use crate::output::{ OutputFormat, OutputOptions, json_escape };
-use super::shared::{ require_claude_paths, require_credential_store, io_err_to_error_data };
+use super::cmd_args::io_err_to_error_data;
+use super::cmd_context::{ require_claude_paths, require_credential_store };
 use claude_profile_core::account::trace_ts;
 
 /// `.token.status` — show active OAuth token expiry classification.

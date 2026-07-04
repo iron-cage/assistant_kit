@@ -14,18 +14,18 @@ claude --model <model>
 
 ## Default
 
-`claude-sonnet-4-6` (current default as of 2026-03)
+`claude-sonnet-5` (current default as of 2026-03)
 
 ## Description
 
 Overrides the model used for this session. Accepts both short aliases and full model IDs.
 
 Supported aliases (latest as of knowledge cutoff):
-- `opus` → `claude-opus-4-6`
-- `sonnet` → `claude-sonnet-4-6`
+- `opus` → `claude-opus-4-8`
+- `sonnet` → `claude-sonnet-5`
 - `haiku` → `claude-haiku-4-5-20251001`
 
-Full model IDs can also be specified directly (e.g., `claude-sonnet-4-6`).
+Full model IDs can also be specified directly (e.g., `claude-sonnet-5`).
 
 The model setting from config files is overridden by this flag for the session only.
 
@@ -35,7 +35,7 @@ The model setting from config files is overridden by this flag for the session o
 use claude_runner_core::ClaudeCommand;
 
 let cmd = ClaudeCommand::new()
-  .with_model( "claude-opus-4-6" );
+  .with_model( "claude-opus-4-8" );
 
 // or with alias
 let cmd = ClaudeCommand::new()

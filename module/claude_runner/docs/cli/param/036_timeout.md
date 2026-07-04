@@ -9,6 +9,7 @@ disables the watchdog entirely (unlimited runtime).
 - **Default:** `3600` for print-mode (`run`/`ask`); `0` (unlimited) for interactive mode
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"timeout"`
 
 ```sh
 clr -p "long task" --timeout 300          # kill after 5 minutes
@@ -55,7 +56,7 @@ wins when both are present.
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, ... |
 
 ### Referenced Commands
 

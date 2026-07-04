@@ -10,7 +10,7 @@
 //! |------|-----|------------|----------------------|
 //! | `print_mode_propagates_exit_42`        | BUG-239 | `exit(1)` hardcoded | No |
 //! | `print_mode_propagates_exit_0`         | BUG-239 | `exit(1)` hardcoded | No |
-//! | `spawn_error_visible_at_verbosity_0`   | BUG-240 | Err gated on verbosity | No |
+//! | `spawn_error_visible_when_quiet`       | BUG-240 | Err gated on verbosity | No |
 //! | `binary_not_found_shows_install_hint`  | BUG-241 | Raw OS error emitted | No |
 //! | (none — add spawn format test)         | BUG-298 | [Runner] prefix absent from spawn error output | No |
 //! | `signal_sigterm_exits_143`             | BUG-242 | `unwrap_or(1)` collapsed | No (Unix) |
@@ -47,26 +47,26 @@
 //! # Root Cause (BUG-240)
 //!
 //! The `Err(e)` spawn-failure branch in `run_print_mode` and `run_interactive` was guarded
-//! by `if verbosity.shows_errors()` — at `CLR_VERBOSITY=0` the error was swallowed.
+//! by `if verbosity.shows_errors()` — at low verbosity the error was swallowed silently.
 //!
 //! # Why Not Caught (BUG-240)
 //!
-//! All verbosity tests ran with the default verbosity (3). No test combined
-//! `CLR_VERBOSITY=0` with a binary-not-found scenario.
+//! All tests ran with default verbosity. No test combined quiet/low-verbosity mode
+//! with a binary-not-found scenario.
 //!
 //! # Fix Applied (BUG-240)
 //!
-//! Removed the `if verbosity.shows_errors()` guard from both `run_print_mode` and
-//! `run_interactive`. Fatal errors are always emitted regardless of verbosity.
+//! Removed the verbosity guard from both `run_print_mode` and `run_interactive`.
+//! Fatal errors are always emitted regardless of `--quiet`.
 //!
 //! # Prevention (BUG-240)
 //!
-//! For every code path that calls `eprintln!` on a fatal error, test it with verbosity=0.
+//! For every code path that calls `eprintln!` on a fatal error, test it with `--quiet`.
 //!
 //! # Pitfall (BUG-240)
 //!
-//! Verbosity gates runner diagnostics (progress, trace output), never fatal errors. A
-//! fatal error that the user can't see is worse than no verbosity filtering at all.
+//! `--quiet` gates runner diagnostics (retry warnings, gate-wait), never fatal errors. A
+//! fatal error that the user can't see is worse than no suppression at all.
 //!
 //! ---
 //!
@@ -201,23 +201,24 @@ fn print_mode_propagates_exit_0()
 
 // ── BUG-240 ──────────────────────────────────────────────────────────────────
 
-/// BUG-240 reproducer T3: `CLR_VERBOSITY=0` + binary absent → error must appear on stderr.
+/// BUG-240 reproducer T3: `CLR_QUIET=true` + binary absent → error must appear on stderr.
 ///
-/// Before fix: `Err(e)` branch was inside `if verbosity.shows_errors()` — at verbosity 0
-/// the error was swallowed; stderr was empty while clr still exited 1.
+/// Before fix: `Err(e)` branch was inside a verbosity gate — at low verbosity the error
+/// was swallowed; stderr was empty while clr still exited 1.
+/// Pitfall: `--quiet` suppresses runner diagnostics, never fatal spawn errors.
 #[ test ]
 #[ doc = "bug_reproducer(BUG-240)" ]
-fn spawn_error_visible_at_verbosity_0()
+fn spawn_error_visible_when_quiet()
 {
   let out = run_cli_with_env(
     &[ "--print", "--retry-override", "0", "test" ],
-    &[ ( "PATH", "/tmp" ), ( "CLR_VERBOSITY", "0" ) ],
+    &[ ( "PATH", "/tmp" ), ( "CLR_QUIET", "true" ) ],
   );
   assert_ne!( exit_code( &out ), 0, "BUG-240: must exit non-zero when binary absent" );
   let err = stderr_str( &out );
   assert!(
     !err.is_empty(),
-    "BUG-240: stderr must contain an error message at CLR_VERBOSITY=0; got empty stderr"
+    "BUG-240: stderr must contain an error message with CLR_QUIET=true; got empty stderr"
   );
 }
 

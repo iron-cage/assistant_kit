@@ -1,0 +1,733 @@
+//! Integration tests: ACC — `.accounts` list command.
+//!
+//! Tests invoke the compiled `clp` binary as a subprocess via `CARGO_BIN_EXE_clp`.
+//!
+//! | ID | Test Function | Condition | P/N |
+//! |----|---------------|-----------|-----|
+//! | acc01 | `acc01_lists_accounts_as_indented_blocks` | all accounts → indented key-val blocks | P |
+//! | acc02 | `acc02_active_shows_yes_inactive_shows_no` | active=yes / inactive=no per account | P |
+//! | acc03 | `acc03_empty_store_shows_advisory` | empty store → advisory message, exit 0 | P |
+//! | acc04 | `acc04_name_scopes_to_single_block` | `name::EMAIL` → only that account's block | P |
+//! | acc05 | `acc05_name_not_found_exits_2` | valid but unknown name → exit 2 | N |
+//! | acc06 | `acc06_name_invalid_exits_1` | `name::a/b` (path-unsafe prefix) → exit 1 | N |
+//! | acc07 | `acc07_field_presence_suppresses_lines` | `cols::-sub,-tier` → Sub/Tier absent | P |
+//! | acc08 | `acc08_all_fields_off_bare_names` | all fields off → bare name list | P |
+//! | acc09 | `acc09_json_format_array` | `format::json` → valid JSON array | P |
+//! | acc10 | `acc10_json_ignores_field_presence` | `format::json` always includes all fields | P |
+//! | acc11 | `acc11_missing_store_shows_advisory` | absent credential dir → advisory, exit 0 | P |
+//! | acc12 | `acc12_sorted_alphabetically` | accounts listed in alpha order | P |
+//! | acc13 | `acc13_blank_line_between_blocks` | multiple accounts → blank line between each block | P |
+//! | acc14 | `acc14_nonactive_shows_own_stored_expires` | non-active uses own stored expires | P |
+//! | acc15 | `acc15_missing_sub_field_shows_na` | missing subscriptionType → Sub: N/A | P |
+//! | acc16 | `acc16_missing_tier_field_shows_na` | missing rateLimitTier → Tier: N/A | P |
+//! | acc17 | `acc17_json_format_empty_store` | `format::json` + absent store → `[]` | P |
+//! | acc18 | `acc18_single_account_no_trailing_blank` | single account text → no trailing blank | P |
+//! | acc19 | `acc19_missing_expires_at_shows_expired` | missing expiresAt → Expires: expired | P |
+//! | acc20 | `acc20_display_name_shows_from_snapshot` | `cols::+display_name` → Display: | P |
+//! | acc21 | `acc21_role_billing_model_from_snapshots` | `cols::+role,+billing,+model` | P |
+//! | acc22 | `acc22_no_snapshot_shows_na_for_new_fields` | no snapshot → N/A for new fields | P |
+//! | acc23 | `acc23_json_includes_new_fields` | `format::json` → new fields present | P |
+//! | acc24 | `acc24_new_fields_absent_by_default` | no opt-in → Display/Role/Billing/Model absent | P |
+//! | acc25 | `acc25_email_reads_from_snapshot` | Email: real email from snapshot | P |
+//! | acc26 | `acc26_save_creates_snapshot_files` | `save` creates `{name}.json` (BUG-222) | P |
+//! | acc27 | `acc27_save_succeeds_without_claude_json` | save OK when `~/.claude.json` absent | P |
+//! | acc28 | `acc28_save_succeeds_without_settings_json` | save OK without settings.json | P |
+//! | acc29 | `acc29_accounts_positional_bare_arg` | positional email → single account block | P |
+//! | acc30 | `acc30_accounts_prefix_resolves` | prefix `alice` resolves to `alice@acme.com` | P |
+//! | acc31 | `acc31_accounts_shows_current_yes_no` | live creds match → Current: yes/no | P |
+//! | acc32 | `acc32_accounts_suppresses_current_when_creds_absent` | no live creds → no Current: | P |
+//! | acc33 | `acc33_accounts_current_param_and_json` | `cols::-current` + json | P |
+//! | acc34 | `acc34_accounts_table_format` | `format::table` → exit 0 + headers | P |
+//! | acc35 | `acc35_uuid_shows_id_from_snapshot` | `cols::+uuid` → ID: from snapshot | P |
+//! | acc36 | `acc36_uuid_absent_by_default` | no `cols::+uuid` → ID: absent | P |
+//! | acc37 | `acc37_json_includes_tagged_id` | `format::json` → `tagged_id` present | P |
+//! | acc38 | `acc38_capabilities_shows_list_from_snapshot` | `cols::+capabilities` → Capabilities: | P |
+//! | acc39 | `acc39_capabilities_absent_by_default` | no `cols::+capabilities` → absent | P |
+//! | acc40 | `acc40_json_includes_capabilities` | `format::json` → capabilities key present | P |
+//! | acc41 | `acc41_no_snapshot_uuid_capabilities_na` | no snapshot → uuid/capabilities N/A | P |
+//! | acc42 | `acc42_org_uuid_shows_from_roles_json` | `cols::+org_uuid` → Org ID: | P |
+//! | acc43 | `acc43_org_uuid_absent_by_default` | no `cols::+org_uuid` → absent | P |
+//! | acc44 | `acc44_org_uuid_missing_roles_json_na` | missing roles.json → Org ID: N/A | P |
+//! | acc45 | `acc45_json_includes_org_uuid` | `format::json` → `organization_uuid` present | P |
+//! | acc46 | `acc46_org_name_shows_from_roles_json` | `cols::+org_name` → Org: | P |
+//! | acc47 | `acc47_org_name_absent_by_default` | no `cols::+org_name` → absent | P |
+//! | acc48 | `acc48_org_name_missing_roles_json_na` | missing roles.json → Org: N/A | P |
+//! | acc49 | `acc49_accounts_host_role_shows_profile_metadata` | `cols::+host,+role` → Host/Role | P |
+//! | acc50 | `acc50_accounts_host_no_profile_json_exits_0` | absent profile.json → Host: N/A | P |
+//! | `mre_324_a` | `mre_324_role_toggle_shows_user_label` | `cols::+role` → user-defined label | P |
+//! | `mre_324_b` | `mre_324_host_role_na_when_metadata_absent` | no snapshot → Host/Role N/A | P |
+//! | `mre_324_c` | `mre_324_json_output_keys` | `format::json` → AC-12 canonical keys | P |
+//! | `mre_324_d` | `mre_324_json_owner_is_owned_values` | `format::json` → owner/is_owned | P |
+//! | `mre_324_e` | `mre_324_json_renewal_at_values` | `format::json` → renewal_at | P |
+//! | `mre_324_f` | `mre_324_json_is_owned_false_for_foreign_owner` | foreign owner → is_owned: false | P |
+//! | `mre_324_g` | `mre_324_json_host_role_org_role_values` | `format::json` → VALUES | P |
+
+use crate::cli_runner::{
+  run_cs_with_env,
+  stdout, stderr, assert_exit,
+  write_account, write_account_claude_json, write_account_settings_json,
+  write_account_profile_json,
+  FAR_FUTURE_MS, PAST_MS,
+};
+use tempfile::TempDir;
+
+// ── ACC: .accounts command ────────────────────────────────────────────────────
+
+#[ test ]
+fn acc01_lists_accounts_as_indented_blocks()
+{
+  // IT-1: all accounts listed as indented key-val blocks.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",     "max", "tier4",    FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "personal@home.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "work@acme.com" ),     "must list work@acme.com, got:\n{text}" );
+  assert!( text.contains( "personal@home.com" ), "must list personal@home.com, got:\n{text}" );
+  assert!( text.contains( "Active:" ),  "must show Active: field, got:\n{text}" );
+  assert!( text.contains( "Sub:" ),     "must show Sub: field, got:\n{text}" );
+  assert!( text.contains( "Expires:" ), "must show Expires: field, got:\n{text}" );
+  // Exactly 2 unindented name-header lines
+  let name_lines : Vec< &str > = text.lines()
+    .filter( | l | !l.starts_with( ' ' ) && !l.is_empty() )
+    .collect();
+  assert_eq!( name_lines.len(), 2, "must have exactly 2 account name lines, got:\n{text}" );
+}
+
+#[ test ]
+fn acc02_active_shows_yes_inactive_shows_no()
+{
+  // IT-2: active account shows Active:  yes; inactive shows Active:  no.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",     "max", "tier4",    FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "personal@home.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Active:  yes" ), "active account must show Active:  yes, got:\n{text}" );
+  assert!( text.contains( "Active:  no" ),  "inactive account must show Active:  no, got:\n{text}" );
+}
+
+#[ test ]
+fn acc03_empty_store_shows_advisory()
+{
+  // IT-3: empty credential store → advisory message, exit 0.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  std::fs::create_dir_all(
+    dir.path().join( ".persistent" ).join( "claude" ).join( "credential" )
+  ).unwrap();
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "no accounts configured" ), "empty store must say no accounts, got:\n{text}" );
+}
+
+#[ test ]
+fn acc04_name_scopes_to_single_block()
+{
+  // IT-4: name::EMAIL shows only that account's block.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",     "max", "tier4",    FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "personal@home.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".accounts", "name::work@acme.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(  text.contains( "work@acme.com" ),     "must show named account, got:\n{text}" );
+  assert!( !text.contains( "personal@home.com" ), "must not show other account, got:\n{text}" );
+  assert!(  text.contains( "Active:  yes" ), "named active account must show Active:  yes, got:\n{text}" );
+}
+
+#[ test ]
+fn acc05_name_not_found_exits_2()
+{
+  // IT-5: valid but non-existent name → exit 2.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+
+  let out = run_cs_with_env( &[ ".accounts", "name::ghost@example.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "not found" ) || err.contains( "ghost@example.com" ),
+    "must report account not found, got:\n{err}",
+  );
+}
+
+#[ test ]
+fn acc06_name_invalid_exits_1()
+{
+  // IT-6: path-unsafe prefix chars → ArgumentTypeMismatch (exit 1).
+  // With resolve_account_name(): bare names (no @) are prefix queries, not email validations.
+  // Path-unsafe chars (/, \, *) are still rejected with exit 1 before prefix matching runs.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  std::fs::create_dir_all( dir.path().join( ".claude" ) ).unwrap();
+
+  let out = run_cs_with_env( &[ ".accounts", "name::a/b" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+#[ test ]
+fn acc07_field_presence_suppresses_lines()
+{
+  // IT-7: cols::-sub,-tier → Sub/Tier absent; Active/Expires/Email remain.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+
+  let out  = run_cs_with_env( &[ ".accounts", "cols::-sub,-tier" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(  text.contains( "Active:" ),  "Active: must remain when cols::-sub,-tier, got:\n{text}" );
+  assert!(  text.contains( "Expires:" ), "Expires: must remain when cols::-sub,-tier, got:\n{text}" );
+  assert!(  text.contains( "Email:" ),   "Email: must remain when cols::-sub,-tier, got:\n{text}"  );
+  assert!( !text.contains( "Sub:" ),     "Sub: must be suppressed, got:\n{text}" );
+  assert!( !text.contains( "Tier:" ),    "Tier: must be suppressed, got:\n{text}" );
+}
+
+#[ test ]
+fn acc08_all_fields_off_bare_names()
+{
+  // IT-8: all default-on fields off → bare name per line, no indented fields.
+  // cols::-active,-owner,-current,-sub,-tier,-expires,-email suppresses the entire default set.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",     "max", "tier4",    FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "personal@home.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "cols::-active,-owner,-current,-sub,-tier,-expires,-email" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let lines : Vec< &str > = text.lines().filter( | l | !l.is_empty() ).collect();
+  assert_eq!( lines.len(), 2, "all fields off must produce exactly 2 lines (names), got:\n{text}" );
+  assert!( !text.contains( "Active:" ),  "Active: must be absent, got:\n{text}" );
+  assert!( !text.contains( "Owner:" ),   "Owner: must be absent, got:\n{text}" );
+  assert!( !text.contains( "Sub:" ),     "Sub: must be absent, got:\n{text}" );
+  assert!( !text.contains( "Tier:" ),    "Tier: must be absent, got:\n{text}" );
+  assert!( !text.contains( "Expires:" ), "Expires: must be absent, got:\n{text}" );
+  assert!( !text.contains( "Email:" ),   "Email: must be absent, got:\n{text}" );
+}
+
+#[ test ]
+fn acc09_json_format_array()
+{
+  // IT-9: format::json → valid JSON array with expected keys.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",     "max", "tier4",    FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "personal@home.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".accounts", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.trim_start().starts_with( '[' ), "JSON must start with '[', got:\n{text}" );
+  assert!( text.contains( "\"is_active\":true" ),  "active account must have is_active:true, got:\n{text}" );
+  assert!( text.contains( "\"is_active\":false" ), "inactive account must have is_active:false, got:\n{text}" );
+  assert!( text.contains( "\"subscription_type\"" ), "JSON must include subscription_type, got:\n{text}" );
+  assert!( text.contains( "\"rate_limit_tier\"" ),   "JSON must include rate_limit_tier, got:\n{text}" );
+  assert!( text.contains( "\"expires_at_ms\"" ),     "JSON must include expires_at_ms, got:\n{text}" );
+}
+
+#[ test ]
+fn acc10_json_ignores_field_presence()
+{
+  // IT-10: format::json always includes all fields, even when field-presence params are off.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "cols::-sub,-tier,-active", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"subscription_type\"" ), "JSON must include subscription_type despite cols::-sub, got:\n{text}" );
+  assert!( text.contains( "\"rate_limit_tier\"" ),   "JSON must include rate_limit_tier despite cols::-tier, got:\n{text}" );
+  assert!( text.contains( "\"is_active\"" ),          "JSON must include is_active despite cols::-active, got:\n{text}" );
+}
+
+#[ test ]
+fn acc11_missing_store_shows_advisory()
+{
+  // IT-11: absent credential store directory → advisory, exit 0.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  std::fs::create_dir_all( dir.path().join( ".claude" ) ).unwrap();
+  // Deliberately do NOT create .persistent/claude/credential/
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "no accounts configured" ), "absent store must say no accounts, got:\n{text}" );
+  assert!( stderr( &out ).is_empty(), "absent store must not produce stderr, got:\n{}", stderr( &out ) );
+}
+
+#[ test ]
+fn acc12_sorted_alphabetically()
+{
+  // IT-12: accounts listed in alphabetical order regardless of creation order.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "zed@acme.com",   "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "mike@acme.com",  "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "cols::-active,-owner,-current,-sub,-tier,-expires,-email" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text  = stdout( &out );
+  let lines : Vec< &str > = text.lines().filter( | l | !l.is_empty() ).map( str::trim ).collect();
+  assert_eq!(
+    lines,
+    vec![ "alice@acme.com", "mike@acme.com", "zed@acme.com" ],
+    "accounts must be sorted alphabetically, got:\n{text}",
+  );
+}
+
+#[ test ]
+fn acc13_blank_line_between_blocks()
+{
+  // IT-13: when any field is shown, a blank line separates each account block.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4",    FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "alice@home.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "\n\n" ),
+    "multiple accounts with fields must have blank line between blocks, got:\n{text}",
+  );
+}
+
+// ── acc14: P2 guard — non-active account uses its own stored expires ──────────
+
+// Root Cause: The old `.account.status` active-account path called `status_with_threshold()`
+//   which reads `~/.claude/.credentials.json` — the ACTIVE account's live credentials file.
+//   For non-active accounts, a similar leak was possible. `.accounts` must always use stored
+//   `expiresAt` via `token_status_from_ms()` for every account to avoid leaking the active
+//   account's token state into a non-active account's Expires: line.
+// Why Not Caught: Prior tests used FAR_FUTURE_MS for all accounts — no test exercised
+//   a non-active account with PAST_MS while an active account had a valid token.
+// Fix Applied: `accounts_routine` uses `token_status_from_ms(a.expires_at_ms)` for every
+//   account in the list — the live credentials file is never read.
+// Prevention: Never call `status_with_threshold()` inside `accounts_routine`; all
+//   per-account data must come from the stored credential struct.
+// Pitfall: Future fields that seem to require live credential reads (e.g. token validation)
+//   must be refused for non-active accounts — use stored data only for consistency.
+#[ doc = "bug_reproducer(BUG-276)" ]
+#[ test ]
+fn acc14_nonactive_shows_own_stored_expires()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Active account has a far-future (valid) token
+  write_account( dir.path(), "alice@acme.com", "max", "tier4",    FAR_FUTURE_MS, true  );
+  // Non-active account has an already-expired token
+  write_account( dir.path(), "alice@home.com", "pro", "standard", PAST_MS,       false );
+
+  let out  = run_cs_with_env( &[ ".accounts", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "expired" ),
+    "non-active account must show its OWN stored expired state, not active account's valid state, got:\n{text}",
+  );
+  assert!(
+    !text.contains( "in " ),
+    "must not leak active account's valid expiry duration into non-active query, got:\n{text}",
+  );
+}
+
+// ── acc15: missing subscriptionType → Sub: N/A (not blank) ───────────────────
+
+// Root Cause: `account::list()` uses `unwrap_or_default()` for missing JSON fields,
+//   yielding `""` when `subscriptionType` is absent from the credential file. Without
+//   the `.is_empty()` guard, the empty string produces a blank "Sub:     " line rather
+//   than "Sub:     N/A".
+// Why Not Caught: All prior tests used `write_account()` which always writes non-empty
+//   sub/tier values. No test used a raw credential file with a missing field.
+// Fix Applied: `accounts_routine` guards with `if a.subscription_type.is_empty() { "N/A" }`
+//   before formatting the Sub: line — same pattern as `credentials_status_routine`.
+// Prevention: Every field read from `account::list()` for display must guard with
+//   `.is_empty()` because `account::list()` returns "" for absent JSON fields.
+// Pitfall: `account::list()` returns "" (not None) for missing fields; Option-based
+//   patterns like `.unwrap_or("N/A")` will NOT catch it — check `.is_empty()`.
+#[ doc = "bug_reproducer(BUG-269)" ]
+#[ test ]
+fn acc15_missing_sub_field_shows_na()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  // Credential file with NO subscriptionType field — account::list() yields "" for it
+  std::fs::write(
+    credential_store.join( "alice@home.com.credentials.json" ),
+    r#"{"oauthAccount":{"rateLimitTier":"standard"},"expiresAt":9999999999000}"#,
+  ).unwrap();
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Sub:     N/A" ),
+    "missing subscriptionType must display 'Sub:     N/A', got:\n{text}",
+  );
+}
+
+// ── acc16: missing rateLimitTier → Tier: N/A (not blank) ─────────────────────
+
+#[ test ]
+fn acc16_missing_tier_field_shows_na()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  // Credential file with NO rateLimitTier field — account::list() yields "" for it
+  std::fs::write(
+    credential_store.join( "alice@home.com.credentials.json" ),
+    r#"{"oauthAccount":{"subscriptionType":"pro"},"expiresAt":9999999999000}"#,
+  ).unwrap();
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Tier:    N/A" ),
+    "missing rateLimitTier must display 'Tier:    N/A', got:\n{text}",
+  );
+}
+
+// ── acc17: format::json + absent store → [] ───────────────────────────────────
+
+/// acc17: `format::json` with no credential store directory → returns `[]`.
+///
+/// Root Cause: The `Json` branch has an explicit `if accounts.is_empty()` guard
+///   that returns `"[]\n"` — this code path was not directly tested.
+/// Why Not Caught: acc09 (json format) requires accounts to be present; acc11
+///   (absent store) uses text format only. The intersection was untested.
+/// Fix Applied: No fix needed — the guard was already correct. Test confirms it.
+/// Prevention: For every format × store-state combination (json+empty, text+empty)
+///   add an explicit test — do not assume format handling is symmetric.
+/// Pitfall: An empty JSON array `[]` and the text advisory `(no accounts configured)`
+///   are NOT interchangeable — callers of `format::json` must parse `[]`, not text.
+#[ test ]
+fn acc17_json_format_empty_store()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Deliberately do NOT create .persistent/claude/credential/ — account::list returns []
+  std::fs::create_dir_all( dir.path().join( ".claude" ) ).unwrap();
+
+  let out  = run_cs_with_env( &[ ".accounts", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.trim_start().starts_with( '[' ),
+    "json format must start with '[', got:\n{text}",
+  );
+  assert!(
+    text.contains( "[]" ),
+    "json format with absent store must return empty array '[]', got:\n{text}",
+  );
+  assert!(
+    !text.contains( "no accounts" ),
+    "json format must not return text advisory, got:\n{text}",
+  );
+}
+
+// ── acc18: single account text → no trailing blank line ───────────────────────
+
+/// acc18: A single account in text mode produces no trailing blank line.
+///
+/// Root Cause: `render_accounts_text` adds a blank separator only between blocks
+///   (`if idx < last_idx`). For a single account (`idx=0, last_idx=0`) the condition
+///   is false — no blank line is appended after the final block.
+/// Why Not Caught: acc13 confirms a blank line EXISTS between two accounts, but
+///   never asserts the last block has no trailing blank. acc04 confirms single-block
+///   content but does not check for absence of trailing blank.
+/// Fix Applied: No fix needed — the guard was already correct. Test confirms it.
+/// Prevention: When testing separator logic, test both the presence case (multiple
+///   blocks) and the absence case (single block) explicitly.
+/// Pitfall: A trailing blank line in text output breaks scripts that read the last
+///   line of output — always verify last-block is not followed by a blank.
+#[ test ]
+fn acc18_single_account_no_trailing_blank()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "solo@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "solo@example.com" ),
+    "must list the sole account, got:\n{text}",
+  );
+  assert!(
+    !text.ends_with( "\n\n" ),
+    "single account must not have a trailing blank line, got:\n{text:?}",
+  );
+}
+
+// ── acc19: missing expiresAt → Expires: expired ───────────────────────────────
+
+/// acc19: A credential file missing `expiresAt` is displayed as expired.
+///
+/// Root Cause: `account::list()` calls `parse_u64_field(&content, "expiresAt")`
+///   which returns `None` for a missing field, then `unwrap_or(0)` yields 0 ms
+///   (Unix epoch). Any current time is >> 0 ms → `token_status_from_ms(0)` →
+///   `TokenStatus::Expired` → `Expires: expired`.
+/// Why Not Caught: All prior tests use `write_account()` which always writes a
+///   non-zero `expiresAt`. No test used a raw credential file with the field absent.
+/// Fix Applied: No fix needed — `unwrap_or(0)` correctly maps missing → expired.
+///   Test documents the contract and prevents future regressions.
+/// Prevention: When adding or changing `parse_u64_field` call sites, verify
+///   the fallback for a missing field produces the expected sentinel behaviour.
+/// Pitfall: A missing `expiresAt` silently renders as expired — do not mistake
+///   this for a credential-read error; the account IS listed, just marked expired.
+#[ test ]
+fn acc19_missing_expires_at_shows_expired()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  // No `expiresAt` field → parse_u64_field returns None → unwrap_or(0) → epoch → expired
+  std::fs::write(
+    credential_store.join( "ghost@example.com.credentials.json" ),
+    r#"{"oauthAccount":{"subscriptionType":"pro","rateLimitTier":"standard"}}"#,
+  ).unwrap();
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "ghost@example.com" ),
+    "must list the account, got:\n{text}",
+  );
+  assert!(
+    text.contains( "Expires: expired" ),
+    "missing expiresAt must display 'Expires: expired', got:\n{text}",
+  );
+}
+
+// ── acc20–acc28: Rich account metadata (FR-20, feature/014) ──────────────────
+
+/// acc20 (T01): `display_name::1` renders `Display:` line from saved snapshot.
+///
+/// Root Cause (before fix): `Account` struct lacked `display_name` field; `list()` never
+///   read snapshot files; `render_accounts_text()` did not accept `show_display_name` param.
+/// Why Not Caught: All prior tests used only the 5 original Account fields.
+/// Fix Applied: `Account` gains `display_name`; `list()` reads `{name}.json`;
+///   `render_accounts_text()` renders `Display:` when `show_display_name` is true.
+/// Prevention: Whenever adding opt-in fields, write a snapshot-present test (acc20)
+///   and a snapshot-absent test (acc22) to cover both code paths.
+/// Pitfall: `parse_string_field()` searches the flat string — it finds nested keys like
+///   `"displayName"` regardless of JSON depth. Do NOT add custom JSON parsing.
+#[ test ]
+fn acc20_display_name_shows_from_snapshot()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json( dir.path(), "alice@acme.com", "alice@acme.com", "Alice K", "admin", "stripe" );
+
+  let out  = run_cs_with_env( &[ ".accounts", "cols::+display_name" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Display: Alice K" ),
+    "cols::+display_name must render Display: line from snapshot, got:\n{text}",
+  );
+}
+
+/// acc21 (T02+T03+T04): `role::1 billing::1 model::1` renders three lines.
+///
+/// After TSK-225: `role::1` shows the profile.json role label (`profile_role` field), not
+/// the OAuth snapshot org role. The test now writes `profile.json` with `role: "admin"`
+/// so the assertion "Role: admin" still holds — the source is profile.json, not
+/// the claude.json snapshot. Snapshot org role lives in `a.role` and is still surfaced
+/// via the JSON format output.
+///
+/// Root Cause (before fix): `Account` struct lacked `role`, `billing`, `model` fields;
+///   `list()` did not read snapshot files; rendering did not handle these params.
+/// Why Not Caught: Only original 5 fields were tested.
+/// Fix Applied: `Account` gains `role`, `billing`, `model`; `list()` reads both snapshot
+///   files; `render_accounts_text()` renders the three new lines when enabled.
+/// Prevention: Test all three in one function to catch the common mistake of reading
+///   one snapshot file but forgetting the other.
+/// Pitfall: `model` comes from `{name}.json`, not `{name}.json`. A single
+///   snapshot read call is insufficient — both files must be read independently.
+#[ test ]
+fn acc21_role_billing_model_from_snapshots()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json( dir.path(), "alice@acme.com", "alice@acme.com", "Alice K", "admin", "stripe_sub" );
+  write_account_settings_json( dir.path(), "alice@acme.com", "claude-sonnet" );
+  // role::1 now shows profile.json role label (TSK-225); write profile.json so the
+  // "Role: admin" assertion holds with the new profile-based semantics.
+  write_account_profile_json( dir.path(), "alice@acme.com", None, Some( "admin" ) );
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "cols::+role,+billing,+model" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Role:    admin"         ), "cols::+role must render Role: from profile.json, got:\n{text}"  );
+  assert!( text.contains( "Billing: stripe_sub"    ), "cols::+billing must render Billing: from snapshot, got:\n{text}" );
+  assert!( text.contains( "Model:   claude-sonnet" ), "cols::+model must render Model: from snapshot, got:\n{text}"  );
+}
+
+/// acc22 (T05): when no snapshot files exist, opt-in fields show `N/A`.
+///
+/// Root Cause (before fix): Without snapshot files, `list()` would yield empty strings
+///   for all new fields, but `render_accounts_text()` lacked the empty-string → N/A guard.
+/// Why Not Caught: Implementation gap: snapshot reading not yet coded.
+/// Fix Applied: `list()` uses `unwrap_or_default()` → empty string; `render_accounts_text()`
+///   guards each new field with `if field.is_empty() { "N/A" }`.
+/// Prevention: Always pair a snapshot-absent test with each snapshot-present test so both
+///   the reading path and the fallback path are verified.
+/// Pitfall: `unwrap_or_default()` on a missing file yields `""` — callers must guard
+///   against empty string, not `None`. Pattern: `if s.is_empty() { "N/A" } else { s }`.
+#[ test ]
+fn acc22_no_snapshot_shows_na_for_new_fields()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  // No snapshot files written — all new fields must fall back to N/A.
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "cols::+display_name,+role,+billing,+model" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Display: N/A" ), "absent snapshot must show Display: N/A, got:\n{text}" );
+  assert!( text.contains( "Role:    N/A" ), "absent snapshot must show Role:    N/A, got:\n{text}" );
+  assert!( text.contains( "Billing: N/A" ), "absent snapshot must show Billing: N/A, got:\n{text}" );
+  assert!( text.contains( "Model:   N/A" ), "absent snapshot must show Model:   N/A, got:\n{text}" );
+}
+
+/// acc23 (T06): `format::json` always includes the four new field keys.
+///
+/// Root Cause (before fix): JSON format string in `accounts_routine()` hardcoded only
+///   legacy fields; no `display_name`, `role`, `billing`, `model` keys were emitted.
+/// Why Not Caught: acc10 (`json_ignores_field_presence`) only checked original fields.
+/// Fix Applied: Extend the JSON format string with all four new fields using
+///   `json_escape(&a.display_name)` etc. — matches the `.credentials.status` JSON pattern.
+/// Prevention: When adding struct fields, always extend BOTH text rendering AND JSON output
+///   in the same phase to avoid silent key omissions.
+/// Pitfall: `format::json` emits all fields unconditionally — do NOT gate new JSON keys
+///   on the field-presence booleans (`show_display_name` etc.); those control text only.
+#[ test ]
+fn acc23_json_includes_new_fields()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json( dir.path(), "alice@acme.com", "alice@acme.com", "Alice K", "admin", "stripe_sub" );
+  write_account_settings_json( dir.path(), "alice@acme.com", "claude-sonnet" );
+
+  let out  = run_cs_with_env( &[ ".accounts", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"email\""         ), "JSON must include email key, got:\n{text}"        );
+  assert!( text.contains( "\"display_name\"" ), "JSON must include display_name key, got:\n{text}" );
+  assert!( text.contains( "\"role\""         ), "JSON must include role key, got:\n{text}"         );
+  assert!( text.contains( "\"billing\""      ), "JSON must include billing key, got:\n{text}"      );
+  assert!( text.contains( "\"model\""        ), "JSON must include model key, got:\n{text}"        );
+  assert!( text.contains( "alice@acme.com"   ), "JSON email must contain actual value, got:\n{text}"        );
+  assert!( text.contains( "Alice K"          ), "JSON display_name must contain actual value, got:\n{text}" );
+  assert!( text.contains( "claude-sonnet"    ), "JSON model must contain actual value, got:\n{text}"        );
+}
+
+/// acc24 (T07): new opt-in fields absent from output by default.
+///
+/// Root Cause (invariant guard): Opt-in fields use `Some(Value::Boolean(true))` without
+///   `| None` fallback, so absence of the param = field hidden. No `None` in the match
+///   is the ONLY difference from default-on params.
+/// Why Not Caught: No test verified that the new params are truly off by default.
+/// Fix Applied: Invariant confirmed by test; `accounts_routine()` reads each new param
+///   with `matches!(..., Some(Value::Boolean(true)))` (no `None`).
+/// Prevention: For every opt-in param, pair an opt-in-enabled test (acc20) with an
+///   opt-in-absent test (acc24) so regressions to default-on are caught immediately.
+/// Pitfall: Adding `| None` to an opt-in param silently makes it default-on — a
+///   runtime-invisible change that only a test like this one catches.
+#[ test ]
+fn acc24_new_fields_absent_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json( dir.path(), "alice@acme.com", "alice@acme.com", "Alice K", "admin", "stripe" );
+  write_account_settings_json( dir.path(), "alice@acme.com", "claude-sonnet" );
+
+  // Default .accounts call — no opt-in params.
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "Display:" ), "Display: must be absent by default, got:\n{text}" );
+  assert!( !text.contains( "Role:"    ), "Role: must be absent by default, got:\n{text}"    );
+  assert!( !text.contains( "Billing:" ), "Billing: must be absent by default, got:\n{text}" );
+  assert!( !text.contains( "Model:"   ), "Model: must be absent by default, got:\n{text}"   );
+}
+
+/// acc25 (T08): `Email:` default-on renders real email from saved snapshot.
+///
+/// Root Cause (before fix): `list()` read `organizationName` for `Account.org`; the
+///   `emailAddress` field was never read from the per-account snapshot file.
+/// Why Not Caught: No test verified that Email: shows the actual stored emailAddress value.
+/// Fix Applied: `list()` reads `{name}.json` → `emailAddress` and populates
+///   `Account.email`; `render_accounts_text()` uses `a.email` with empty-string → N/A guard.
+/// Prevention: When a display value is derived from a data source, write a test that
+///   verifies the ACTUAL VALUE appears — not just the label line.
+/// Pitfall: An empty-string fallback silently shows "N/A" — always add a snapshot-present
+///   test like this one so the read path is exercised, not just the fallback.
+#[ test ]
+fn acc25_email_reads_from_snapshot()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json( dir.path(), "alice@acme.com", "alice@acme.com", "Alice K", "admin", "stripe" );
+
+  // Email is default-on — no toggle needed.
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Email:   alice@acme.com" ),
+    "Email: must show real email from snapshot, got:\n{text}",
+  );
+  assert!(
+    !text.contains( "Email:   N/A" ),
+    "Email: must not show N/A when snapshot has emailAddress, got:\n{text}",
+  );
+}
+

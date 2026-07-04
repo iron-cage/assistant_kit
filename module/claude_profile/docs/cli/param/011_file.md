@@ -1,4 +1,4 @@
-# Parameter :: 11. `file::`
+# Parameter: 11. `file::`
 
 Controls whether the credentials file path line appears in `.credentials.status` output. Opt-in (default `0`).
 

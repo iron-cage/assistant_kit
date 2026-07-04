@@ -1,4 +1,4 @@
-# Parameter :: 1. `name::`
+# Parameter: 1. `name::`
 
 Identifies the target account. Accepted as an explicit `name::EMAIL` pair, as a bare positional argument after the command name (no `name::` prefix required), or as a prefix shortcut (no `@`) that resolves to the first saved account whose name starts with that value.
 

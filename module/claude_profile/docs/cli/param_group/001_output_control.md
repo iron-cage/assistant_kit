@@ -1,4 +1,4 @@
-# Group :: 1. Output Control
+# Group: 1. Output Control
 
 **Parameters:** `format::`, `get::`
 **Pattern:** Read-only output formatting and value extraction

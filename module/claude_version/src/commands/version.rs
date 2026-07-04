@@ -22,7 +22,7 @@ use claude_version_core::version::{
 /// # Errors
 ///
 /// Returns `Err(InternalError)` if `claude` is not found in PATH.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts    = OutputOptions::from_cmd( &cmd )?;
@@ -71,7 +71,7 @@ pub fn version_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 ///
 /// Returns `Err(ArgumentTypeMismatch)` when the version spec or format is invalid.
 /// Returns `Err(InternalError)` when `curl` is not found or the install fails.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts = OutputOptions::from_cmd( &cmd )?;
@@ -98,7 +98,7 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   }
 
   // Idempotency guard: skip install if already at target version.
-  // Fix(issue-358): store preference even on idempotent skip
+  // Fix(BUG-004): store preference even on idempotent skip
   // Root cause: early return bypassed store_preferred_version()
   // Pitfall: every exit path that confirms a version must persist the preference
   if !super::is_force( &cmd ) && !is_latest
@@ -217,7 +217,7 @@ fn install_dry_content(
 ///
 /// Returns `Err(ArgumentMissing)` when `version::` is present but empty.
 /// Returns `Err(InternalError)` when HOME is unset or the install fails.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts  = OutputOptions::from_cmd( &cmd )?;
@@ -265,7 +265,7 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
       }
       Err( e ) =>
       {
-        // Fix(issue-415): watch loop terminated on any install error in watch mode.
+        // Fix(BUG-005): watch loop terminated on any install error in watch mode.
         // Root cause: prior code had `return result` here, which exited the daemon
         //   on the first failure; ETXTBSY ("Text file busy") from a running claude
         //   binary silently killed the guard after one drift-restore attempt.
@@ -574,7 +574,7 @@ fn current_timestamp() -> String
 /// # Errors
 ///
 /// Returns `Err` if `format::` has an unrecognised value.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts = OutputOptions::from_cmd( &cmd )?;

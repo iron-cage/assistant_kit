@@ -1,4 +1,4 @@
-# Parameter :: 33. `cols::`
+# Parameter: 33. `cols::`
 
 Controls column visibility in the `.usage` quota table. Accepts comma-separated `+name` (show) and `-name` (hide) modifiers relative to the default column set.
 

@@ -1,6 +1,6 @@
 # Test: `refresh`
 
-Integration test planning for the `refresh` command. See [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md) for specification.
+Integration test planning for the `refresh` command. See [command/04_refresh.md](../../../../docs/cli/command/04_refresh.md) for specification.
 
 ## Test Case Index
 
@@ -15,17 +15,18 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 | IT-7 | `--creds file.json --trace` → call details printed to stderr before execution | Trace |
 | IT-8 | `clr refresh --help` → exit 0, prints refresh-specific help | Help |
 | IT-9 | `CLR_JOURNAL=bogus` env var → exit 1, error names env var | Error: Invalid Env |
+| IT-10 | `clr refresh --creds <f> "message"` → exit 1, positional arg rejected | Error: Unexpected Arg |
 
 ## Test Coverage Summary
 
 - Happy Path: 1 test (IT-1)
-- Error Handling: 3 tests (IT-2, IT-6, IT-9)
+- Error Handling: 4 tests (IT-2, IT-6, IT-9, IT-10)
 - Timeout Behavior: 2 tests (IT-3, IT-4)
 - Default Fallback: 1 test (IT-5)
 - Trace: 1 test (IT-7)
 - Help: 1 test (IT-8)
 
-**Total:** 9 test cases
+**Total:** 10 test cases
 
 ---
 
@@ -36,7 +37,7 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Expected behavior:** subprocess spawned with `HOME=<temp>` and `["--print", "."]`; OAuth token refreshed; `/tmp/it1_refresh_creds.json` overwritten with updated token; exit 0
 - **Exit:** 0
 - **Note:** lim_it — requires valid but expiring credentials
-- **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md)
+- **Source:** [command/04_refresh.md](../../../../docs/cli/command/04_refresh.md)
 
 ---
 
@@ -46,7 +47,7 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Command:** `clr refresh --creds /tmp/it2_refresh_missing.json`
 - **Expected behavior:** exit 1; stderr contains "not found" or equivalent; no subprocess launched
 - **Exit:** 1
-- **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md)
+- **Source:** [command/04_refresh.md](../../../../docs/cli/command/04_refresh.md)
 - **Note:** Implemented; test function `test_it2_creds_file_not_found` in `tests/refresh_test.rs`
 
 ---
@@ -58,7 +59,7 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Expected behavior:** subprocess launched with 90-second deadline (not the 45-second default); behavior identical to an explicit `--timeout 90`; exit 0 on successful refresh
 - **Exit:** 0
 - **Note:** lim_it — requires valid credentials; validates explicit timeout overrides default
-- **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md), [--timeout](../../../../docs/cli/param/020_timeout.md)
+- **Source:** [command/04_refresh.md](../../../../docs/cli/command/04_refresh.md), [--timeout](../../../../docs/cli/param/020_timeout.md)
 
 ---
 
@@ -69,7 +70,7 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Expected behavior:** `0` disables the watchdog entirely — subprocess runs until it exits naturally (matching `run`/`ask` semantics); exit code is the subprocess exit code, not 2
 - **Exit:** 0 or passthrough
 - **Note:** lim_it variant for live-credential environments; offline fake-claude variant `test_it4_timeout_zero_unlimited` in `tests/refresh_test.rs`
-- **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md)
+- **Source:** [command/04_refresh.md](../../../../docs/cli/command/04_refresh.md)
 
 ---
 
@@ -79,7 +80,7 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Command:** `clr refresh --trace`
 - **Expected behavior:** trace stderr contains `# creds: <HOME>/.claude/.credentials.json`; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
-- **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md), [--creds](../../../../docs/cli/param/019_creds.md)
+- **Source:** [command/04_refresh.md](../../../../docs/cli/command/04_refresh.md), [--creds](../../../../docs/cli/param/019_creds.md)
 - **Note:** Implemented; test function `t2_refresh_no_creds_uses_home_default` in `tests/creds_default_test.rs`
 
 ---
@@ -99,9 +100,9 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 
 - **Setup:** credentials JSON written to a temp file at `/tmp/it7_refresh_creds.json` (file is readable; content `{}`; no live credentials needed — trace fires before subprocess attempt)
 - **Command:** `clr refresh --creds /tmp/it7_refresh_creds.json --trace`
-- **Expected behavior:** stderr contains `# clr refresh`, `# creds: /tmp/it7_refresh_creds.json`, `# timeout: 45s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --model claude-sonnet-4-6 --no-chrome --effort low --no-session-persistence --print "."` before any subprocess attempt; subprocess attempt fails (claude absent in test environment)
+- **Expected behavior:** stderr contains `# clr refresh`, `# creds: /tmp/it7_refresh_creds.json`, `# timeout: 45s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."` before any subprocess attempt; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
-- **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md), [--trace](../../../../docs/cli/param/013_trace.md), [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md)
+- **Source:** [command/04_refresh.md](../../../../docs/cli/command/04_refresh.md), [--trace](../../../../docs/cli/param/013_trace.md), [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md)
 - **Note:** Implemented; test function `it_04_refresh_trace_stderr_output` in `tests/invariant_trace_universality_test.rs`
 
 ---
@@ -111,7 +112,7 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Command:** `clr refresh --help` (also: `clr refresh -h`)
 - **Expected behavior:** exit 0; stdout contains `--creds`, `--timeout`, `--trace`, and `--help`; no subprocess launched; no error in stderr
 - **Exit:** 0
-- **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md)
+- **Source:** [command/04_refresh.md](../../../../docs/cli/command/04_refresh.md)
 - **Note:** Implemented; test function `test_it8_help_exits_zero` in `tests/refresh_test.rs`
 
 ---
@@ -124,3 +125,14 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Exit:** 1
 - **Source:** Fix — `apply_refresh_env_vars()` validates `CLR_JOURNAL` consistently with `apply_env_vars()` in `env.rs`
 - **Note:** Implemented; test function `test_it9_clr_journal_invalid_value_exits_1` in `tests/refresh_test.rs`
+
+---
+
+### IT-10: `clr refresh --creds <f> "message"` → exit 1, positional argument rejected
+
+- **Setup:** credentials JSON at temp file; positional argument passed on command line
+- **Command:** `clr refresh --creds <f> "Fix the bug"`
+- **Expected behavior:** exit 1; stderr contains `"unexpected argument"`; parse aborts before creds validation or subprocess spawn
+- **Exit:** 1
+- **Source:** Parity PC-5 — `refresh` has no `MESSAGE` parameter; `parse_refresh_args()` must reject any positional token
+- **Note:** Implemented; test function `test_it10_refresh_rejects_positional_message` in `tests/refresh_test.rs`

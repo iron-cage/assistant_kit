@@ -155,7 +155,7 @@ fn tc038_negative_integer_inferred_as_number()
 
 // TC-061: "NaN" must be Str (non-finite float → not valid JSON number)
 //
-// ## Root Cause
+// Root Cause
 //
 // `infer_type` used `f64::from_str` without checking `is_finite()`.
 // Rust parses `"NaN"`, `"inf"`, `"infinity"` (and case variants) as valid
@@ -163,20 +163,20 @@ fn tc038_negative_integer_inferred_as_number()
 // as bare values (e.g., `"key": NaN`) produces invalid JSON that cannot be
 // read back, corrupting the settings file.
 //
-// ## Why Not Caught
+// Why Not Caught
 //
 // Existing tests only covered well-behaved inputs ("42", "3.14", "-1").
 // No test exercised non-finite float parsing.
 //
-// ## Fix Applied
+// Fix Applied
 //
 // Added `is_finite()` guard: `f64::from_str(s).map_or(false, |n| n.is_finite())`.
 //
-// ## Prevention
+// Prevention
 //
 // This test covers all non-finite float variants accepted by Rust's parser.
 //
-// ## Pitfall
+// Pitfall
 //
 // `f64::from_str` silently accepts locale-agnostic special values that are
 // not valid in JSON, YAML, or TOML.  Always gate with `is_finite()` before

@@ -1,4 +1,4 @@
-# Parameter :: 43. `only_valid::`
+# Parameter: 43. `only_valid::`
 
 Filters the `.usage` table to hide accounts with invalid or missing tokens, or cancelled subscriptions (🔴 rows).
 

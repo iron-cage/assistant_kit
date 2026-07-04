@@ -5,6 +5,8 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 
 `solo::1` restricts all credential-consuming operations to the current+owned account. All other accounts display approximated historical data via `approximate_quota()`.
 
+**Behavioral Divergence Pair:** EC-1 ↔ EC-2 — `solo::0` (default) fetches live quota data for all owned accounts; `solo::1` fetches live data only for the current+owned account, showing approximated data for all others.
+
 ### Test Case Index
 
 | ID | Test Name | Category |
@@ -96,7 +98,7 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::1 refresh::1 trace::1`
 - **Then:** Exits 0. Refresh solo gate fires for Bob — stderr contains `"solo-skip"` in a refresh trace line. Alice passes the solo gate; no subprocess fires (no 401 error from HTTP fetch).
 - **Exit:** 0
-- **Source fn:** `it263_solo_refresh_composition_allowed` (in `tests/cli/usage_test.rs`); `ec7_solo_gate_skips_non_current_with_trace` (in `src/usage/refresh_tests.rs`)
+- **Source fn:** `it263_solo_refresh_composition_allowed` (in `tests/cli/usage_test.rs`); `ec7_solo_gate_skips_non_current_with_trace` (in `tests/usage/refresh_tests_b.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---
@@ -107,7 +109,7 @@ See [param/060_solo.md](../../../../docs/cli/param/060_solo.md) for specificatio
 - **When:** `clp .usage solo::1 touch::1 trace::1`
 - **Then:** Exits 0. Touch solo gate fires for Bob — stderr contains `"solo-skip"` in a touch trace line. Alice passes the solo gate; no subprocess fires (no active idle window without real quota data).
 - **Exit:** 0
-- **Source fn:** `it264_solo_touch_composition_allowed` (in `tests/cli/usage_test.rs`); `ec8_solo_gate_skips_non_current_with_trace` (in `src/usage/touch_tests.rs`)
+- **Source fn:** `it264_solo_touch_composition_allowed` (in `tests/cli/usage_test.rs`); `ec8_solo_gate_skips_non_current_with_trace` (in `tests/usage/touch_tests.rs`)
 - **Source:** [param/060_solo.md](../../../../docs/cli/param/060_solo.md)
 
 ---

@@ -10,6 +10,7 @@ decrementing the retry counter. On exhaustion, the runner exits with code 3.
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Replaces:** `--expect-retries` (renamed + renumbered from 032)
+- **JSON Key:** `"retry-on-validation"`
 
 ```sh
 # Try up to 4 times total (1 initial + 3 retries)
@@ -54,7 +55,7 @@ effective = --retry-override ?? --retry-on-validation ?? --retry-default (2)
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, ... |
 
 ### Referenced Commands
 

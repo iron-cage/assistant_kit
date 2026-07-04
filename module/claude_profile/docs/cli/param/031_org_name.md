@@ -1,4 +1,4 @@
-# Parameter :: 31. `org_name::`
+# Parameter: 31. `org_name::`
 
 Shows the organization display name from `{name}.json` (populated at `save()` time via endpoint 005).
 

@@ -7,6 +7,7 @@ use `--interactive` to override to TTY passthrough.
 - **Type:** [`MessageText`](../type/01_message_text.md)
 - **Default:** — (none; interactive REPL when absent)
 - **Command:** [`run`](../command/01_run.md)
+- **JSON Key:** `"message"`
 
 ```sh
 clr "Fix the bug in auth.rs"
@@ -47,7 +48,7 @@ is present on the CLI.
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | Triggers print mode when present |
-| 2 | [`isolated`](../command/02_isolated.md) | — | Forwarded to claude subprocess |
+| 2 | [`isolated`](../command/03_isolated.md) | — | Forwarded to claude subprocess |
 | 5 | [`ask`](../command/05_ask.md) | — | Always print mode |
 
 ### Referenced User Stories

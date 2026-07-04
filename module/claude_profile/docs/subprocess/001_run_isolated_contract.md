@@ -1,5 +1,12 @@
 # Subprocess: `run_isolated()` Contract
 
+### Scope
+
+- **Purpose**: Define the API contract, isolation mechanism, and result types for `run_isolated()` — the sole subprocess execution mechanism in `claude_profile`.
+- **Responsibility**: Authoritative reference for callers of `run_isolated()`; includes required args, timeout behavior, `IsolatedRunResult` fields, and `RunnerError` variants.
+- **In Scope**: Function signature, isolation mechanism, result and error types, timeout behavior, required subprocess args, feature gate, and authorized caller constraint.
+- **Out of Scope**: Internal implementation (→ `claude_runner_core/src/isolated.rs`); credential write-back protocol (→ `subprocess/002`); invocation-specific call sites (→ `subprocess/003–005`).
+
 ### Purpose
 
 `run_isolated()` spawns the Claude binary in a temporary isolated `HOME` directory containing only the supplied credentials. It is the sole mechanism by which `claude_profile` executes credential-refreshing subprocesses.
@@ -65,12 +72,22 @@ fn run_isolated(
 
 All token refresh operations MUST go through `account::refresh_account_token()` in `claude_profile_core`. Direct `run_isolated()` calls for credential refresh are forbidden. See [invariant/008](../invariant/008_single_token_refresh_entry.md).
 
-### Cross-References
+### Sources
 
 | File | Relationship |
 |------|-------------|
 | `claude_runner_core/src/isolated.rs` | Implementation source |
+
+### Subprocess
+
+| File | Relationship |
+|------|-------------|
 | [subprocess/002](002_credential_writeback.md) | How `credentials` field flows back to disk |
 | [subprocess/003](003_token_refresh_invocation.md) | Token refresh invocation |
 | [subprocess/004](004_session_touch_invocation.md) | Session touch invocation |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
 | [invariant/008](../invariant/008_single_token_refresh_entry.md) | Single-entry-point invariant |

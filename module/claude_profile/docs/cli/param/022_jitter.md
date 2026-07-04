@@ -1,4 +1,4 @@
-# Parameter :: 22. `jitter::`
+# Parameter: 22. `jitter::`
 
 Adds a random number of seconds in the range `[0, jitter]` to each outer cycle delay, preventing synchronized refreshes when multiple users run `.usage live::1` with the same `interval::`. Ignored (and not validated) when `live::0`.
 

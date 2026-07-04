@@ -44,7 +44,7 @@ Domain vocabulary for the `clr` CLI. Terms are organized by category below.
 | Term | Definition |
 |------|------------|
 | Claude-native flag | A flag forwarded to the claude subprocess (e.g., `--model`, `--verbose`) |
-| runner-specific flag | A flag consumed by the runner itself, not forwarded to claude (e.g., `--dry-run`, `--verbosity`, `--new-session`) |
+| runner-specific flag | A flag consumed by the runner itself, not forwarded to claude (e.g., `--dry-run`, `--quiet`, `--new-session`) |
 | session continuation (automatic) | Default behavior: `-c` is passed to the claude subprocess when a prior session exists for the effective working directory and `--new-session` is not given; resumes the most recent conversation |
 | ClaudeCommand | Builder pattern from `claude_runner_core` that assembles the subprocess invocation |
 | session directory | Filesystem location where Claude Code persists conversation state; `clr` continues the session stored here by default |

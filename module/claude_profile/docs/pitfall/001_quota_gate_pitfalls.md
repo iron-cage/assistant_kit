@@ -1,5 +1,12 @@
 # Pitfall: Quota Gate Pitfalls
 
+### Scope
+
+- **Purpose**: Document non-obvious failure modes in quota gate logic.
+- **Responsibility**: Covers raw-vs-weighted metric confusion, absent-tier/exhaustion misclassification, window capacity independence, and cancelled-subscription classification errors.
+- **In Scope**: `status_group_of()`, `apply_model_override()`, `resolve_model()` quota gate pitfalls; BUG-299, BUG-300, BUG-301, BUG-317.
+- **Out of Scope**: Model override algorithm details (→ algorithm/002); subprocess model selection (→ algorithm/001).
+
 ### Pattern
 
 Logic that gates on quota values has multiple non-obvious invariants: the correct metric (raw vs. strategy-weighted), the correct direction (absence ≠ exhaustion), and the correct utilization formula.
@@ -8,9 +15,9 @@ Logic that gates on quota values has multiple non-obvious invariants: the correc
 
 **Root cause (BUG-299):** `status_group_of()` used `prefer_weekly(aq, prefer)` for the 7d threshold. `prefer_weekly` is strategy-weighted — with `prefer::son`, accounts without a Sonnet tier got `prefer_weekly = 0.0 ≤ 5.0`, forcing them into the weekly-exhausted group regardless of actual 7d quota.
 
-**Fix:** `status_group_of()` uses `seven_day_left(aq)` (raw, strategy-independent). `prefer_weekly` is only used for eligibility gate 7 and sort key computation (strategy-aware contexts).
+**Fix:** `status_group_of()` uses `seven_day_left(aq)` (raw, strategy-independent). `prefer_weekly` is only used for sort key computation (strategy-aware tiebreak contexts). Eligibility gate 7 uses raw `seven_day_left` (Fix BUG-324).
 
-**Rule:** Status group partition = raw per-dimension thresholds. Eligibility gates = strategy-weighted thresholds. Never mix them.
+**Rule:** Status group partition and eligibility gates = raw per-dimension thresholds. Sort tiebreaks = strategy-weighted. Never use strategy-weighted values for group/gate boundary decisions.
 
 ### Pitfall 2 — Absent Sonnet tier is NOT exhaustion
 
@@ -36,7 +43,7 @@ Logic that gates on quota values has multiple non-obvious invariants: the correc
 
 **Rule:** `billing_type` is a subscription-level signal independent of quota values. Check it before any quota threshold. `account = None` (API fetch failed) is NOT the same as `billing_type = "none"` (confirmed cancelled) — absent data is ambiguous and must not trigger the cancelled path.
 
-### Cross-References
+### Algorithms
 
 | File | Relationship |
 |------|-------------|

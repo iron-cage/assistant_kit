@@ -1,19 +1,9 @@
-# CLI User Story: Custom System Prompt
+# Replace or extend the system prompt for domain-specific automation
 
-### Scope
-
-- **Purpose**: Document replacing or extending the default system prompt for domain-specific automation.
-- **Responsibility**: Define acceptance criteria for --system-prompt and --append-system-prompt behavior.
-- **In Scope**: Full replacement, additive extension, tool definition survival, combined usage.
-- **Out of Scope**: User-turn message content (→ param/001_message.md).
-
-### Persona
-
-Developer building a domain-specific automation agent who needs to constrain or replace Claude's default behavioral context for a specific task.
-
-### Goal
-
-Replace or extend the default system prompt to shape Claude's behavior for domain-specific automation (e.g. "respond only in JSON", "act as a Rust expert").
+**Persona:** Developer building a domain-specific automation agent who needs to constrain or replace Claude's default behavioral context for a specific task.
+**Goal:** Replace or extend the default system prompt to shape Claude's behavior for domain-specific automation (e.g. "respond only in JSON", "act as a Rust expert").
+**Benefit:** Enables domain-specific automation by shaping Claude's behavior context without modifying the user-turn prompt.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -40,3 +30,9 @@ Replace or extend the default system prompt to shape Claude's behavior for domai
 |---|-----------|------|
 | 15 | [`--system-prompt`](../param/015_system_prompt.md) | Full replacement of the system prompt |
 | 16 | [`--append-system-prompt`](../param/016_append_system_prompt.md) | Additive extension of the default |
+
+### Workflow Steps
+
+1. `clr --system-prompt "You are a Rust expert." "Review this function"` — replace the built-in system prompt
+2. `clr --append-system-prompt "Always respond in JSON." "List failing tests"` — extend the default system prompt
+3. `clr --system-prompt "Base prompt." --append-system-prompt "Additional constraint." "task"` — replace then append

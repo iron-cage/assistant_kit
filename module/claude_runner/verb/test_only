@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# test_only — run a single test or group by nextest filter inside the runbox container.
+#
+# Usage: ./verb/test_only <nextest-filter>
+#   nextest-filter — test name substring or full nextest -E expression
+#
+# Examples:
+#   ./verb/test_only us19_container_flag_for_cwd_outside_home
+#   ./verb/test_only ft7_session_from_resumes_source_session
+#
+# How it works: passes the filter as a positional arg to ./runbox/runbox .test1;
+# cmd_test1() in runbox-run reads the filter and injects NEXTEST_FILTER into the
+# container, where verb/test_only.d/l1 runs nextest with -E "$NEXTEST_FILTER".
+set -euo pipefail
+if [[ -n "${VERB_LAYER:-}" ]]; then
+  echo "ERROR: VERB_LAYER is not valid on the host side." >&2
+  echo "Standard invocation: cd module/claude_runner && ./verb/test_only <filter>" >&2
+  exit 1
+fi
+if [[ "${1:-}" == "--dry-run" ]]; then
+  DRY_FILTER="${2:-<filter>}"
+  echo "./runbox/runbox .test1 \"$DRY_FILTER\"  →  cargo nextest run --workspace --all-features --no-fail-fast -E \"$DRY_FILTER\""
+  exit 0
+fi
+FILTER="${1:-}"
+if [[ -z "$FILTER" ]]; then
+  echo "ERROR: test_only requires a test name filter." >&2
+  echo "Usage: ./verb/test_only <nextest-filter-expression>" >&2
+  exit 1
+fi
+shift
+exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test1 "$FILTER" "$@"

@@ -3,6 +3,7 @@
 ### Scope
 
 - **Purpose**: Unified field table for the per-account supplementary metadata file stored alongside `{name}.credentials.json`.
+- **Responsibility**: Documents all fields in the per-account supplementary metadata file `{name}.json` across all features.
 - **In Scope**: All fields written or read by `clp` across all features — core identity, OAuth metadata, org identity, extended snapshot fields, host/role labels, renewal override, ownership, quota cache, and measurement history.
 - **Out of Scope**: `{name}.credentials.json` (→ [schema/001](001_credentials_json.md)); HTTP API response shapes.
 
@@ -95,11 +96,16 @@ These fields are written by one caller and never touched by others (preserved vi
 }
 ```
 
-### Cross-References
+### Schema
 
 | File | Relationship |
 |------|-------------|
-| [schema/001](001_credentials_json.md) | Companion credential file `{name}.credentials.json` |
+| [001_credentials_json.md](001_credentials_json.md) | Companion credential file `{name}.credentials.json` |
+
+### Features
+
+| File | Relationship |
+|------|-------------|
 | [feature/002_account_save.md](../feature/002_account_save.md) | Save algorithm — read-merge semantics |
 | [feature/014_rich_account_metadata.md](../feature/014_rich_account_metadata.md) | `oauthAccount` subtree, `model` field |
 | [feature/021_extended_snapshot_fields.md](../feature/021_extended_snapshot_fields.md) | `tagged_id`, `uuid`, `capabilities` |
@@ -110,4 +116,9 @@ These fields are written by one caller and never touched by others (preserved vi
 | [feature/036_account_ownership.md](../feature/036_account_ownership.md) | `owner` field |
 | [feature/040_quota_measurement_history.md](../feature/040_quota_measurement_history.md) | `history` array |
 | [feature/063_explicit_ownership_claim.md](../feature/063_explicit_ownership_claim.md) | `owner::` param write path |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
 | [invariant/007](../invariant/007_json_storage_format.md) | 2-space pretty-print + trailing newline |

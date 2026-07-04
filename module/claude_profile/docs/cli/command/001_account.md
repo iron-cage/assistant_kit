@@ -1,10 +1,10 @@
-# Commands :: Account
+# Commands: Account
 
 Account management commands: list, save, use, delete, limits, and relogin.
 
 ---
 
-### Command :: 3. `.accounts`
+### Command: 3. `.accounts`
 
 List all saved accounts (identity view) or run per-account mutations (`assignee::USER@MACHINE`, `owner::0`, `owner::USER@MACHINE`). Without `name::`: shows all accounts; with `name::EMAIL`: shows that account only. Column visibility controlled via `cols::` (modifies from default identity set: Account, Owner, Active, Current, Sub, Tier, Expires, Email). When data-source params are active (`refresh::1`, `touch::1`), fetches live quota using the same pipeline as `.usage` — defaults to local-only read with no HTTP fetch.
 
@@ -110,6 +110,41 @@ clp .accounts assignee::bob@laptop name::alice@acme.com
 - G8 ownership gate evaluates BEFORE `dry::1` on `owner::0 name::X` (Feature 064) — a non-owner gets exit 1 even in dry-run mode.
 - `current::` field (in text mode) shows `Current: yes` for the account whose `accessToken` matches `~/.claude/.credentials.json`. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
 
+### Referenced Parameters
+
+| # | Parameter | Role |
+|---|-----------|------|
+| 1 | [`name::`](../param/001_name.md) | Account identifier or prefix |
+| 2 | [`cols::`](../param/033_cols.md) | Column visibility modifiers |
+| 3 | [`assignee::`](../param/063_assignee.md) | Write per-machine active-account marker |
+| 4 | [`owner::`](../param/062_owner.md) | Set or release account ownership |
+| 5 | [`force::`](../param/058_force.md) | Bypass G8 ownership gate |
+| 6 | [`dry::`](../param/004_dry.md) | Preview mutation without writing |
+| 7 | [`set_model::`](../param/054_set_model.md) | Write session model after operation |
+| 8 | [`refresh::`](../param/019_refresh.md) | Force token refresh |
+| 9 | [`touch::`](../param/034_touch.md) | Activate idle 5h session window |
+| 10 | [`imodel::`](../param/035_imodel.md) | Model for post-switch subprocess |
+| 11 | [`effort::`](../param/036_effort.md) | Effort for post-switch subprocess |
+| 12 | [`sort::`](../param/025_sort.md) | Row ordering strategy |
+| 13 | [`desc::`](../param/026_desc.md) | Reverse sort direction |
+| 14 | [`prefer::`](../param/027_prefer.md) | Tiebreaker sort strategy |
+| 15 | [`count::`](../param/037_count.md) | Limit row count after filtering |
+| 16 | [`offset::`](../param/038_offset.md) | Skip first N rows |
+| 17 | [`only_active::`](../param/039_only_active.md) | Keep only active account row |
+| 18 | [`only_next::`](../param/040_only_next.md) | Keep only recommended next account row |
+| 19 | [`min_5h::`](../param/041_min_5h.md) | Keep rows with 5h quota ≥ N% |
+| 20 | [`min_7d::`](../param/042_min_7d.md) | Keep rows with 7d quota ≥ N% |
+| 21 | [`only_valid::`](../param/043_only_valid.md) | Keep non-exhausted non-expired rows |
+| 22 | [`exclude_exhausted::`](../param/044_exclude_exhausted.md) | Remove exhausted rows |
+| 23 | [`get::`](../param/045_get.md) | Extract bare field value from first row |
+| 24 | [`abs::`](../param/046_abs.md) | Show absolute token counts |
+| 25 | [`no_color::`](../param/047_no_color.md) | Strip emoji and ANSI sequences |
+| 26 | [`live::`](../param/020_live.md) | Continuous monitor mode |
+| 27 | [`interval::`](../param/021_interval.md) | Seconds between live refresh cycles |
+| 28 | [`jitter::`](../param/022_jitter.md) | Random jitter added to interval |
+| 29 | [`format::`](../param/002_format.md) | Output serialization format |
+| 30 | [`trace::`](../param/023_trace.md) | Diagnostic trace output |
+
 ### Referenced Features
 
 | # | Feature | Role |
@@ -132,10 +167,28 @@ clp .accounts assignee::bob@laptop name::alice@acme.com
 |---|------------|---------|
 | 1 | [Account Rotation](../user_story/001_account_rotation.md) | Inspect accounts before and after rotation |
 | 2 | [Account Onboarding](../user_story/002_onboarding.md) | Verify saved account metadata during onboarding |
+| 3 | [Scripted Pipeline Automation](../user_story/004_scripted_automation.md) | Enumerate all accounts as JSON for pipeline consumption |
+
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Output Control](../param_group/001_output_control.md) | `format::`, `get::` |
+| 2 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::` |
+| 3 | [Sort Control](../param_group/004_sort_control.md) | `sort::`, `desc::`, `prefer::` |
+| 4 | [Display Control](../param_group/005_display_control.md) | `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`, `abs::`, `no_color::` |
+
+### Referenced Formats
+
+| # | Format | Trigger |
+|---|--------|---------|
+| 1 | [text](../format/001_text.md) | `format::text` (default) |
+| 2 | [json](../format/002_json.md) | `format::json` |
+| 3 | [table](../format/003_table.md) | `format::table` |
 
 ---
 
-### Command :: 4. `.account.save`
+### Command: 4. `.account.save`
 
 Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and merges identity, model, roles, and profile metadata into the unified `{name}.json`. Machine-global state (`commands.*`, `mcpServers`, `projects`) is not captured. Use this to preserve account identity before switching.
 
@@ -204,9 +257,16 @@ clp .account.save host::workstation role::work
 |---|------------|---------|
 | 1 | [Account Onboarding](../user_story/002_onboarding.md) | Saving credentials during initial account setup |
 
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Account Targeting](../param_group/006_account_targeting.md) | `host::`, `role::` |
+| 2 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `trace::` |
+
 ---
 
-### Command :: 5. `.account.use`
+### Command: 5. `.account.use`
 
 Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched. When `touch::1` (default), fetches quota for the target account and spawns an isolated subprocess to activate its idle 5h session window if `five_hour.resets_at` is absent.
 
@@ -238,7 +298,7 @@ clp .account.use name::alice@home.com set_model::default
 | `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (haiku — sufficient for keep-alive), `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (`low` for any model; no flag for haiku/keep), `low`, `normal`, `high`, `max` |
 | `trace::` | `bool` | `0` | Print timestamped `account.use` diagnostic lines to stderr: credential read, quota fetch, model resolution, subprocess dispatch |
-| `set_model::` | `enum` | *(omit)* | Explicitly write session model to `settings.json`: `opus` (`claude-opus-4-6`), `sonnet` (`claude-sonnet-4-6`), `haiku` (`claude-haiku-4-5-20251001`), `default` (removes override); takes precedence over automatic `apply_model_override()` |
+| `set_model::` | `enum` | *(omit)* | Explicitly write session model to `settings.json`: `opus` (`claude-opus-4-8`), `sonnet` (`claude-sonnet-5`), `haiku` (`claude-haiku-4-5-20251001`), `default` (removes override); takes precedence over automatic `apply_model_override()` |
 
 **Algorithm (7 steps):**
 1. Resolve `name::` via `AccountSelector`; load `{name}.credentials.json`
@@ -266,7 +326,7 @@ clp .account.use name::alice@home.com trace::1
 # 2026-06-25 · 16:40:04 · account.use  alice@home.com  reading: OK
 # 2026-06-25 · 16:40:04 · account.use  alice@home.com  quota fetch: OK
 # 2026-06-25 · 16:40:04 · account.use  alice@home.com  subprocess: scheduled (idle check removed)
-# 2026-06-25 · 16:40:04 · account.use  alice@home.com  model: claude-opus-4-6  effort: low
+# 2026-06-25 · 16:40:04 · account.use  alice@home.com  model: claude-opus-4-8  effort: low
 # 2026-06-25 · 16:40:04 · account.use  alice@home.com  subprocess: spawned
 # switched to 'alice@home.com'
 ```
@@ -295,9 +355,15 @@ clp .account.use name::alice@home.com trace::1
 |---|------------|---------|
 | 1 | [Account Rotation](../user_story/001_account_rotation.md) | Primary command for switching to a named account |
 
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `trace::`, `touch::`, `imodel::`, `effort::` |
+
 ---
 
-### Command :: 6. `.account.delete`
+### Command: 6. `.account.delete`
 
 Removes `{credential_store}/{name}.credentials.json` and `{name}.json` from the credential store, plus any legacy satellite files from pre-consolidation layout.
 
@@ -352,9 +418,15 @@ clp .account.delete name::alice@oldco.com dry::1
 |---|------------|---------|
 | 1 | [Account Onboarding](../user_story/002_onboarding.md) | Removing stale accounts during account management |
 
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `trace::` |
+
 ---
 
-### Command :: 11. `.account.limits`
+### Command: 11. `.account.limits`
 
 Show rate-limit utilization for the active or named account. Displays session (5h) usage, weekly all-model (7d) usage, and rate-limit status with percentage consumed and reset times.
 
@@ -410,9 +482,23 @@ clp .account.limits format::json
 |---|------------|---------|
 | 1 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | Per-account rate-limit utilization check |
 
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Output Control](../param_group/001_output_control.md) | `format::` |
+| 2 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `trace::` |
+
+### Referenced Formats
+
+| # | Format | Trigger |
+|---|--------|---------|
+| 1 | [text](../format/001_text.md) | `format::text` (default) |
+| 2 | [json](../format/002_json.md) | `format::json` |
+
 ---
 
-### Command :: 12. `.account.relogin`
+### Command: 12. `.account.relogin`
 
 Force browser-based re-authentication for a named account whose `refreshToken` is expired or revoked. This is the recovery path when `refresh::1` silently fails (trace shows `run_isolated: OK credentials=None` — Claude starts but performs no OAuth refresh because the refresh token itself is dead).
 
@@ -476,9 +562,15 @@ clp .account.relogin name::carol@example.com dry::1
 |---|------------|---------|
 | 1 | [Account Onboarding](../user_story/002_onboarding.md) | Re-authenticating an account with expired refresh token |
 
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `trace::` |
+
 ---
 
-### Command :: 13. `.account.rotate` *(deprecated — Feature 038)*
+### Command: 13. `.account.rotate` *(deprecated — Feature 038)*
 
 **DEPRECATED** — hidden redirector; always exits 1. Use `.usage rotate::1` instead.
 
@@ -490,9 +582,15 @@ clp .usage rotate::1 dry::1
 
 See [feature/038_usage_strategy_rotate.md](../../feature/038_usage_strategy_rotate.md) for full behavioral specification.
 
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Scripted Pipeline Automation](../user_story/004_scripted_automation.md) | Automated account selection in pipelines |
+
 ---
 
-### Command :: 14. `.account.renewal`
+### Command: 14. `.account.renewal`
 
 Set, preview, or clear the billing renewal timestamp override (`_renewal_at`) stored in `{name}.json`. When set, the `.usage` `~Renews` column shows an exact duration (`in Xh Ym`) instead of the estimated `~`-prefixed value derived from `org_created_at`. Supports single account, comma-separated list, or `name::all` to update every saved account in one operation.
 
@@ -563,9 +661,15 @@ clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
 |---|------------|---------|
 | 1 | [Account Onboarding](../user_story/002_onboarding.md) | Set accurate billing renewal dates during account setup |
 
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `trace::` |
+
 ---
 
-### Command :: 15. `.account.inspect`
+### Command: 15. `.account.inspect`
 
 Unified live account diagnostic — identity, subscription, org, and quota utilization for one account. Calls endpoints 002 (`GET /api/oauth/account`), 005 (`GET /api/oauth/claude_cli/roles`), and 001 (`GET /api/oauth/usage`) and renders identity fields (tagged_id, uuid, email, name), ALL membership entries with a selection-priority indicator, capabilities, rate-limit tier, and 5h/7d/Sonnet quota utilization with reset countdowns. Primary use case: diagnosing account state and remaining quota (see BUG-237 / feature 031).
 
@@ -593,7 +697,7 @@ clp .account.inspect trace::1          # show timestamped diagnostic endpoint ca
 **Algorithm (5 steps):**
 1. Resolve `name::` (omit → active account from `_active_{hostname}_{user}` marker); load credentials
 2. `(when refresh::1 + locally expired)` Call `refresh_account_token()` to obtain a fresh token
-3. Call endpoint 002 (`GET /api/oauth/account`), endpoint 005 (`GET /api/oauth/claude_cli/roles`), and endpoint 001 (`GET /api/oauth/usage`) — each independently; failure falls back to local snapshots with `(snapshot)` suffix per field (quota fields show `N/A` with no snapshot fallback)
+3. Call endpoint 002 (`GET /api/oauth/account`), endpoint 005 (`GET /api/oauth/claude_cli/roles`), and endpoint 001 (`GET /api/oauth/usage`) — each independently; identity/org failure falls back to local snapshots with `(snapshot)` suffix per field; quota failure (transient errors — not 401/403) falls back to the local quota cache (Feature 033); quota section omitted only when both live endpoint and cache are unavailable
 4. Apply membership selection priority: `billing_type=stripe_subscription + claude_max` > `billing_type=stripe_subscription` > `memberships[0]`
 5. Render all fields in requested `format::`
 
@@ -657,7 +761,7 @@ clp .account.inspect format::json | jq '.memberships | length'
 ```
 
 **Notes:**
-- Endpoints 002, 005, and 001 are called independently. A failure on one endpoint falls back to the local snapshot from `{name}.json` with a `(snapshot)` suffix per field; quota fields (endpoint 001) have no snapshot fallback and are omitted when unavailable.
+- Endpoints 002, 005, and 001 are called independently. A failure on one endpoint falls back to the local snapshot from `{name}.json` with a `(snapshot)` suffix per field; quota fields (endpoint 001) fall back to the local quota cache on transient errors (not 401/403); the quota section is omitted only when both the live endpoint and the cache are unavailable.
 - `refresh::1` (default) behaves identically to `.usage`'s `refresh::1`: calls `refresh_account_token()` once when `expiresAt` is locally expired; retries endpoint calls with the fresh token.
 - See [feature/031_account_inspect.md](../../feature/031_account_inspect.md) for full design, graceful fallback semantics, and all acceptance criteria.
 
@@ -673,9 +777,23 @@ clp .account.inspect format::json | jq '.memberships | length'
 |---|------------|---------|
 | 1 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Live multi-endpoint inspection for subscription diagnosis |
 
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Output Control](../param_group/001_output_control.md) | `format::` |
+| 2 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `refresh::`, `trace::` |
+
+### Referenced Formats
+
+| # | Format | Trigger |
+|---|--------|---------|
+| 1 | [text](../format/001_text.md) | `format::text` (default) |
+| 2 | [json](../format/002_json.md) | `format::json` |
+
 ---
 
-### Command :: 16. `.account.assign` *(removed — Feature 037; migration path superseded — Feature 064/065)*
+### Command: 16. `.account.assign` *(removed — Feature 037; migration path superseded — Feature 064/065)*
 
 **Fully removed (Feature 037).** The interim `.accounts assign::1 name::X` migration path is also removed (Feature 064 — `assign::` is now a REMOVED_TOGGLE). The `active::` migration path introduced in Feature 064 is itself now a REMOVED_TOGGLE (Feature 065). Use `.accounts assignee::USER@MACHINE name::X` (or `assignee::0 name::X` for current machine) instead.
 
@@ -689,7 +807,7 @@ clp .accounts assignee::0                               # unassign current machi
 
 ---
 
-### Command :: 17. `.account.unclaim` *(removed — Feature 037; migration path superseded — Feature 064)*
+### Command: 17. `.account.unclaim` *(removed — Feature 037; migration path superseded — Feature 064)*
 
 **Fully removed (Feature 037).** The interim `.accounts unclaim::1 name::X` migration path is also removed (Feature 064 — `unclaim::` is now a REMOVED_TOGGLE). Use `.accounts owner::0 name::X` instead.
 

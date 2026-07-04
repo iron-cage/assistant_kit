@@ -21,7 +21,9 @@ mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, stderr_str, stdout_str };
 
 #[ cfg( unix ) ]
-use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude, spawn_print_claude };
+use cli_binary_test_helpers::{
+  fake_claude_binary_dir, make_proc_dir, spawn_fake_claude, spawn_print_claude,
+};
 
 // ── EC-1: Custom column subset ────────────────────────────────────────────────
 
@@ -33,11 +35,13 @@ fn ec1_custom_columns_correct_headers()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--columns", "pid,path,task" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --columns pid,path,task" );
 
@@ -83,6 +87,12 @@ fn ec2_unknown_column_exits_1()
 // ── EC-3: `CLR_PS_COLUMNS` env var fallback ──────────────────────────────────
 
 /// EC-3: `CLR_PS_COLUMNS=pid,elapsed` env var shows PID and Elapsed; hides CPU%, RAM, Task.
+///
+/// `CLR_PROC_DIR` is set to a fake proc dir containing only the background process
+/// so `find_claude_processes()` returns exactly one entry regardless of ambient sessions.
+/// Pitfall: without `CLR_PROC_DIR`, ambient claude processes on the host cause
+/// `clr ps` to find unexpected process counts, producing row/header mismatches that
+/// panic in `RowBuilder::validate_row_length`.
 #[ cfg( unix ) ]
 #[ test ]
 fn ec3_env_var_columns_fallback()
@@ -90,11 +100,19 @@ fn ec3_env_var_columns_fallback()
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
 
+  let fake_proc     = tempfile::TempDir::new().expect( "fake_proc" );
+  let fake_proc_str = fake_proc.path().to_str().expect( "fake_proc UTF-8" );
+  std::os::unix::fs::symlink(
+    format!( "/proc/{}", bg.id() ),
+    fake_proc.path().join( bg.id().to_string() ),
+  ).expect( "pid symlink" );
+
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env( "CLR_PS_COLUMNS", "pid,elapsed" )
+    .env( "CLR_PROC_DIR", fake_proc_str )
     .output()
     .expect( "run clr ps with CLR_PS_COLUMNS=pid,elapsed" );
 
@@ -121,12 +139,14 @@ fn ec4_cli_columns_wins_over_env_var()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--columns", "pid,path" ] )
     .env( "PATH", &path_val )
     .env( "CLR_PS_COLUMNS", "pid,elapsed" )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --columns pid,path with CLR_PS_COLUMNS=pid,elapsed" );
 
@@ -155,11 +175,13 @@ fn ec5_columns_wins_over_wide()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--columns", "pid,task", "--wide" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --columns pid,task --wide" );
 
@@ -185,11 +207,13 @@ fn ec6_optional_columns_displayed()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--columns", "idx,pid,mode,cmd,binary" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --columns idx,pid,mode,cmd,binary" );
 
@@ -214,12 +238,14 @@ fn ec7_default_columns_shown()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
+  let proc   = make_proc_dir( &[ bg.id() ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env_remove( "CLR_PS_COLUMNS" )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps (default columns)" );
 
@@ -269,11 +295,13 @@ fn ec9_idx_counter_reflects_filtered_rows()
   let mut bg_interactive = spawn_fake_claude( &path_val );
   let mut bg_print       = spawn_print_claude( &path_val );
   let     pid_print      = bg_print.id();
+  let proc               = make_proc_dir( &[ bg_interactive.id(), pid_print ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--mode", "print", "--columns", "idx,pid,task" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --mode print --columns idx,pid,task" );
 

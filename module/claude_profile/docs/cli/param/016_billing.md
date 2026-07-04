@@ -1,4 +1,4 @@
-# Parameter :: 16. `billing::`
+# Parameter: 16. `billing::`
 
 Controls whether the billing type line appears in output. Opt-in (default `0`). Source: `billingType` field in `oauthAccount` — read from live `~/.claude.json` (`.credentials.status`) or from the saved `{name}.json` snapshot (`.accounts`).
 

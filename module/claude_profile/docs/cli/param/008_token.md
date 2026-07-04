@@ -1,4 +1,4 @@
-# Parameter :: 8. `token::`
+# Parameter: 8. `token::`
 
 Controls whether the token validity status line appears in `.credentials.status` output.
 

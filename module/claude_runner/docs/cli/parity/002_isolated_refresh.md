@@ -28,7 +28,7 @@
 | `-h` / `--help` | Yes | Yes |
 | Passthrough (`-- <args>`) | Yes | No |
 | **--- Auto-Injections ---** | | |
-| Default model | `claude-opus-4-6` (`ISOLATED_DEFAULT_MODEL`) | `claude-sonnet-4-6` (`REFRESH_DEFAULT_MODEL`) |
+| Default model | `opus` (`ISOLATED_DEFAULT_MODEL`) | `claude-sonnet-5` (`REFRESH_DEFAULT_MODEL`) |
 | Default effort | `max` | `low` |
 | `--dangerously-skip-permissions` | Yes — when MESSAGE present; No in no-message REPL | No — never (refresh invokes no tools) |
 | `--no-session-persistence` | Yes — always | Yes — always |
@@ -80,8 +80,8 @@
 
 | Type | Path | Responsibility |
 |------|------|----------------|
-| command | `command/02_isolated.md` | `isolated` full reference |
-| command | `command/03_refresh.md` | `refresh` full reference |
+| command | `command/03_isolated.md` | `isolated` full reference |
+| command | `command/04_refresh.md` | `refresh` full reference |
 | parity | `001_run_ask_isolated.md` | `run` / `ask` / `isolated` comprehensive comparison |
 | doc | `command_defaults.md` | Default injection matrix (all 4 commands) with Plan 009 traceability |
 | invariant | `../invariant/005_isolated_subprocess_defaults.md` | Isolated/refresh subprocess injection contracts |

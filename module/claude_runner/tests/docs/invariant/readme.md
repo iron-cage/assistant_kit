@@ -13,11 +13,14 @@ Per-invariant-doc test case indices for `claude_runner`. See [invariant/readme.m
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| `01_default_flags.md` | Test cases for the default flags invariant | ✅ |
-| `02_dep_constraints.md` | Test cases for the dependency constraints invariant | ✅ |
-| `03_command_naming.md` | Test cases for the command naming invariant | ✅ |
-| `04_trace_universality.md` | Test cases for the trace universality invariant | ✅ |
-| `05_isolated_subprocess_defaults.md` | Test cases for the isolated/refresh subprocess defaults invariant | ✅ |
-| `06_exit_codes.md` | Test cases for the exit code contract invariant | ✅ |
-| `07_print_mode_timeout.md` | Test cases for the print-mode timeout default invariant | ✅ |
-| `08_render_summary_gate.md` | Test cases for the render_summary() gate field invariant | ✅ |
+| `001_default_flags.md` | Test cases for the default flags invariant | ✅ |
+| `002_dep_constraints.md` | Test cases for the dependency constraints invariant | ✅ |
+| `003_command_naming.md` | Test cases for the command naming invariant | ✅ |
+| `004_trace_universality.md` | Test cases for the trace universality invariant | ✅ |
+| `005_isolated_subprocess_defaults.md` | Test cases for the isolated/refresh subprocess defaults invariant | ✅ |
+| `006_exit_codes.md` | Test cases for the exit code contract invariant | ✅ |
+| `007_print_mode_timeout.md` | Test cases for the print-mode timeout default invariant | ✅ |
+| `008_render_summary_gate.md` | Test cases for the render_summary() gate field invariant | ✅ |
+| `009_session_mismatch_detection.md` | Test cases for the session mismatch detection invariant | ✅ |
+| `010_container_only_test_execution.md` | Test cases for the container-only test execution invariant | ✅ |
+| `011_session_source_isolation.md` | Test cases for the session source isolation invariant | ⏳ |

@@ -20,6 +20,8 @@ Integration tests for the `.list` command. Tests verify project listing, session
 | INT-10 | show_sessions::0 suppresses display even with session:: | Override |
 | INT-11 | Combined path:: session:: filter | Filtering |
 | INT-12 | Exit code 0 on empty storage | Exit Codes |
+| INT-13 | type:: with invalid value rejected | Invalid Parameter Rejection |
+| INT-14 | agent:: with non-boolean value rejected | Invalid Parameter Rejection |
 
 ## Test Coverage Summary
 
@@ -30,6 +32,7 @@ Integration tests for the `.list` command. Tests verify project listing, session
 - Override: 1 test (INT-10)
 - Filtering (combined): 1 test (INT-11)
 - Exit Codes: 1 test (INT-12)
+- Invalid Parameter Rejection: 2 tests (INT-13, INT-14)
 
 ## Test Cases
 
@@ -211,4 +214,36 @@ CLAUDE_STORAGE_ROOT=/tmp/empty-fixture clg .list
 - Fixture: empty `projects/` directory, no project subdirectories
 - Empty output or a "no projects found" message; no error
 - Exit code: 0
+- **Source:** [command/02_list.md](../../../../docs/cli/command/02_list.md)
+
+---
+
+### INT-13: type:: with invalid value rejected
+
+**Command:**
+```
+clg .list type::badvalue
+```
+
+**Expected behavior:**
+- `badvalue` is not a valid option for `type::` (accepted: `uuid`, `path`, `conversation`)
+- Error message on stderr naming the invalid value
+- No listing output on stdout
+- Exit code: 1
+- **Source:** [command/02_list.md](../../../../docs/cli/command/02_list.md)
+
+---
+
+### INT-14: agent:: with non-boolean value rejected
+
+**Command:**
+```
+clg .list agent::invalid
+```
+
+**Expected behavior:**
+- `invalid` is not a valid boolean value for `agent::` (accepted: `0`, `1`)
+- Error message on stderr describing the argument error
+- No listing output on stdout
+- Exit code: 1
 - **Source:** [command/02_list.md](../../../../docs/cli/command/02_list.md)

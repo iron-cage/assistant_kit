@@ -11,8 +11,8 @@
 //! | dot01 | `dot01_dot_and_help_byte_identical`     | `.` and `.help` stdout byte-identical         | P   |
 //! | dot02 | `dot02_dot_exits_0`                     | `.` exits 0                                   | P   |
 //! | dot03 | `dot03_dot_hidden_from_listing`         | no bare `.` command row in listing            | P   |
-//! | dot04 | `dot04_all_visible_commands_present`    | 16 commands present; removed commands absent  | P   |
-//! | dot05 | `dot05_exactly_sixteen_command_rows`    | exactly 16 lines starting with `"    ."`      | P   |
+//! | dot04 | `dot04_all_visible_commands_present`    | 18 commands present; removed commands absent  | P   |
+//! | dot05 | `dot05_exactly_eighteen_command_rows`   | exactly 18 lines starting with `"    ."`      | P   |
 //! | dot06 | `dot06_usage_line_present`              | stdout contains `"Usage: clp <command>"`      | P   |
 //! | dot07 | `dot07_unknown_param_ignored`           | `. foo::bar` output identical to bare `.`     | P   |
 //! | dot08 | `dot08_output_stable_across_invocations`| 3 invocations all byte-identical              | P   |
@@ -24,15 +24,29 @@
 //! ## Maintenance: adding or removing a command
 //!
 //! `print_usage()` in `src/cli.rs` derives its entries from the command registry —
-//! no manual list. When a command is added or removed, TWO places must be updated
-//! together or dot04/dot05 will fail:
+//! no manual list. When a command is added or removed, FOUR places must be updated
+//! together or tests will fail or silently misrepresent the system state:
 //!
 //! 1. **`src/lib.rs` `register_commands()`** — add/remove the command registration.
 //! 2. **This file** — update the `visible` array in `dot04` and change the
 //!    `assert_eq!(count, N, ...)` literal in `dot05` to the new total.
+//! 3. **Test Matrix table** (above) — update the dot04 and dot05 rows to reflect
+//!    the new command count and any renamed `dot05` function.
+//! 4. **Section comment for `dot04`** — update the count in the `//── dot04 …` header.
 //!
 //! Failure symptom when step 1 is skipped: command absent from help output.
 //! Failure symptom when step 2 is skipped: `dot05` assertion mismatch on count.
+//! Failure symptom when steps 3–4 are skipped: stale comments that silently mislead.
+//!
+//! ## Bug History
+//!
+//! **BUG-325 (2026-07-02):** Maintenance protocol originally listed only three update sites,
+//! omitting the Test Matrix table as a required location.  When `.models` (TSK-007) and
+//! `.model.select` (TSK-008) were added, `dot04`'s `visible` array was not extended — it
+//! stayed at 16 entries while `dot05` correctly asserted 18 rows.  The gap meant
+//! name-level presence was unverified for the two new commands.  Fix (TSK-364): inserted
+//! `".models"` and `".model.select"` after `".model"` in the `visible` array.  The
+//! protocol now lists FOUR update sites (step 3, Test Matrix, was previously absent).
 
 use crate::cli_runner::{ run_cs, stdout, assert_exit };
 
@@ -74,7 +88,7 @@ fn dot03_dot_hidden_from_listing()
   );
 }
 
-// ── dot04 — all 16 visible commands present; truly-absent names absent ────────
+// ── dot04 — all 18 visible commands present; truly-absent names absent ────────
 
 #[ test ]
 fn dot04_all_visible_commands_present()
@@ -99,6 +113,8 @@ fn dot04_all_visible_commands_present()
     ".paths",
     ".usage",
     ".model",
+    ".models",
+    ".model.select",
   ];
   for name in &visible
   {
@@ -110,15 +126,15 @@ fn dot04_all_visible_commands_present()
   assert!( !text.contains( ".account.status" ), ".account.status must not appear (removed)" );
 }
 
-// ── dot05 — exactly 16 command rows in listing ────────────────────────────────
+// ── dot05 — exactly 18 command rows in listing ────────────────────────────────
 
 #[ test ]
-fn dot05_exactly_sixteen_command_rows()
+fn dot05_exactly_eighteen_command_rows()
 {
   let out   = run_cs( &[ "." ] );
   let text  = stdout( &out );
   let count = text.lines().filter( |l| l.starts_with( "    ." ) ).count();
-  assert_eq!( count, 16, "expected 16 command rows starting with '    .', got {count}" );
+  assert_eq!( count, 18, "expected 18 command rows starting with '    .', got {count}" );
 }
 
 // ── dot06 — usage line includes `<command>` syntax ───────────────────────────

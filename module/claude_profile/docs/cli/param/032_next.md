@@ -1,4 +1,4 @@
-# Parameter :: 32. `next::` — REMOVED
+# Parameter: 32. `next::` — REMOVED
 
 Removed. The footer recommendation is now driven by [`sort::`](025_sort.md) — a single parameter controls both row ordering and the recommendation. The top eligible account in the active sort order is shown in the footer's `Next (strategy):` line.
 

@@ -38,6 +38,8 @@
 | 025_concurrency_gate.md | User story: limit concurrent Claude Code sessions with --max-sessions |
 | 026_session_listing.md | User story: list running Claude Code sessions with clr ps |
 | 027_session_termination.md | User story: terminate a Claude Code session by PID with clr kill |
+| 028_session_transplant.md | User story: run Claude in target dir while loading session from source dir |
+| 029_scope_inspection.md | User story: inspect all 6 CLAUDE_* path variables for any directory |
 
 ### Index
 
@@ -48,7 +50,7 @@
 | 003 | Interactive With Message | `--interactive` | `run` |
 | 004 | Dry-run Preview | `--dry-run` | `run` |
 | 005 | Project-specific Execution | `--dir`, `--session-dir` | `run` |
-| 006 | Verbose Debugging | `--verbosity` | `run` |
+| 006 | Quiet Mode and Diagnostic Control | `--quiet` | `run` |
 | 007 | Fresh Session | `--new-session` | `run` |
 | 008 | Trace Execution | `--trace` | `run` |
 | 009 | Custom System Prompt | `--system-prompt`, `--append-system-prompt` | `run` |
@@ -70,6 +72,8 @@
 | 025 | Session Concurrency Gate | `--max-sessions` | `run`, `ask` |
 | 026 | Session Listing | (none) | `ps` |
 | 027 | Session Termination | `<PID>` | `kill` |
+| 028 | Session Cross-Loading | `--session-from`, `--from`, `--to` | `run`, `ask` |
+| 029 | Scope Inspection | `--dir` | `scope` |
 
 ### Adding User Stories
 
@@ -81,7 +85,7 @@ When adding new user stories, update these files in order:
 4. `docs/cli/user_story/readme.md` — Responsibility Table row + Index row *(this file)*
 5. `tests/docs/cli/user_story/readme.md` — Responsibility Table row + In Scope count
 6. `docs/cli/param/NNN_*.md` — Referenced User Stories for each param involved
-7. `docs/002_entity.md` — count in header row + new instance row
+7. `docs/entity.md` — count in header row + new instance row
 8. `docs/cli/readme.md` — count in 4 places (Responsibility Table, Completion Matrix ×2, Navigation)
 9. `tests/readme.md` — count in 2 places (Domain Map, Responsibility Table)
 10. `tests/docs/cli/readme.md` — count in Scope, Coverage Summary, nav links

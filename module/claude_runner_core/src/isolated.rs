@@ -19,8 +19,11 @@ use core::fmt;
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
-/// Default model ID used by [`IsolatedModel::Default`] for real user tasks.
-pub const ISOLATED_DEFAULT_MODEL : &str = "claude-opus-4-6";
+/// Short alias passed as `--model` to the Claude binary for isolated subprocess invocations.
+///
+/// The Claude binary resolves the `"opus"` alias to the latest available Opus model at
+/// runtime.  Use `IsolatedModel::Specific` to pin an exact model ID instead.
+pub const ISOLATED_DEFAULT_MODEL : &str = "opus";
 
 /// CLAUDE.md content written to the isolated temp HOME before subprocess spawn.
 ///
@@ -37,8 +40,12 @@ Execute the given task immediately and exit.\n\n\
 - Output only the direct result of the task; no preamble, no summary.\n\
 - If the input is a single character or whitespace only, reply with a single period.\n";
 
-/// Default model ID for OAuth credential-refresh pings (trivial `"."` prompt).
-pub const REFRESH_DEFAULT_MODEL : &str = "claude-sonnet-4-6";
+/// Full model identifier passed as `--model` for OAuth credential-refresh pings.
+///
+/// Pinned to the explicit `claude-sonnet-5` model ID.  Sonnet is fast and
+/// quota-efficient for the trivial `"."` no-op refresh prompt.
+/// Update this constant when the target model changes.
+pub const REFRESH_DEFAULT_MODEL : &str = "claude-sonnet-5";
 
 /// Claude model selection for isolated subprocess invocations.
 ///
@@ -49,7 +56,7 @@ pub const REFRESH_DEFAULT_MODEL : &str = "claude-sonnet-4-6";
 #[ derive( Debug, Clone ) ]
 pub enum IsolatedModel
 {
-  /// Prepend `--model claude-opus-4-6` to subprocess args.
+  /// Prepend `--model opus` to subprocess args (binary resolves to latest Opus).
   Default,
   /// Pass no `--model` flag; the Claude binary chooses the model.
   KeepCurrent,
@@ -185,13 +192,90 @@ impl core::error::Error for RunnerError {}
 /// `claude_profile/docs/invariant/008_single_token_refresh_entry.md`.
 #[ cfg( feature = "enabled" ) ]
 #[ inline ]
-#[ allow( clippy::too_many_lines ) ]
 pub fn run_isolated
 (
   credentials_json : &str,
   args             : Vec< String >,
   timeout_secs     : u64,
   model            : IsolatedModel,
+) -> Result< IsolatedRunResult, RunnerError >
+{
+  // Delegate to extended variant; compact_window=Some(200_000) matches ClaudeCommand::new() default.
+  run_isolated_ext( credentials_json, args, timeout_secs, model, Some( 200_000 ) )
+}
+
+/// Read `subprocess_model` from `~/.clr/prefs.json`, if present and non-empty.
+///
+/// Returns `Some(id)` when a pinned model is stored; `None` when the file is
+/// absent, unreadable, or the key is missing or empty.  Called by
+/// `run_isolated_ext()` to override `IsolatedModel::Default` without requiring
+/// the caller to read prefs directly.
+#[ cfg( feature = "enabled" ) ]
+#[ must_use ]
+#[ inline ]
+pub fn read_subprocess_model_pref() -> Option< String >
+{
+  let home      = std::env::var( "HOME" ).ok()?;
+  let prefs     = std::path::Path::new( &home ).join( ".clr" ).join( "prefs.json" );
+  let content   = std::fs::read_to_string( prefs ).ok()?;
+  // Locate "subprocess_model" key at a JSON key boundary (preceded by `{` or `,`).
+  // A boundary check prevents false matches when the key name appears inside a value.
+  let key     = "\"subprocess_model\"";
+  let key_pos =
+  {
+    let mut found = None;
+    let mut start = 0usize;
+    while let Some( rel ) = content[ start.. ].find( key )
+    {
+      let abs = start + rel;
+      if content[ ..abs ].trim_end().ends_with( ['{', ','] )
+      {
+        found = Some( abs );
+        break;
+      }
+      start = abs + key.len();
+      if start >= content.len() { break; }
+    }
+    found
+  }?;
+  let after_key = &content[ key_pos + key.len().. ];
+  let colon_pos = after_key.find( ':' )?;
+  let after_colon = after_key[ colon_pos + 1.. ].trim_start();
+  if !after_colon.starts_with( '"' ) { return None; }
+  let inner     = &after_colon[ 1.. ];
+  let end_quote = inner.find( '"' )?;
+  let value     = &inner[ ..end_quote ];
+  if value.is_empty() { return None; }
+  Some( value.to_string() )
+}
+
+/// Spawn Claude in an isolated `HOME` with an explicit compact-window override.
+///
+/// Identical to [`run_isolated`] but accepts `compact_window: Option<u32>` to control
+/// `CLAUDE_CODE_AUTO_COMPACT_WINDOW` on the subprocess:
+/// - `Some(n)` — set window to `n` tokens (default via `run_isolated()` is `Some(200_000)`)
+/// - `None` — suppress the env var (defer to model native window; up to 1M for extended models)
+///
+/// Use this when the caller needs to opt out of the 200K cap, e.g. for `--no-compact-window`.
+///
+/// # Errors
+///
+/// Returns `Err(RunnerError)` when the subprocess cannot be spawned, times out before
+/// credential data is written, or the isolated HOME directory cannot be created.
+///
+/// # Warning
+///
+/// Do NOT call this directly for credential refresh. See [`run_isolated`] warning.
+#[ cfg( feature = "enabled" ) ]
+#[ inline ]
+#[ allow( clippy::too_many_lines ) ]
+pub fn run_isolated_ext
+(
+  credentials_json : &str,
+  args             : Vec< String >,
+  timeout_secs     : u64,
+  model            : IsolatedModel,
+  compact_window   : Option< u32 >,
 ) -> Result< IsolatedRunResult, RunnerError >
 {
   use core::time::Duration;
@@ -217,8 +301,17 @@ pub fn run_isolated
     .map_err( |e| RunnerError::Io( e.to_string() ) )?;
 
   // Step 3: Build command — prepend --model flag then user args
+  //
+  // When IsolatedModel::Default, check ~/.clr/prefs.json for a pinned
+  // `subprocess_model` preference before falling back to ISOLATED_DEFAULT_MODEL.
+  let pref_override = match &model
+  {
+    IsolatedModel::Default => read_subprocess_model_pref(),
+    _                      => None,
+  };
   let mut full_args = Vec::with_capacity( args.len() + 2 );
-  if let Some( id ) = model.model_id()
+  let model_id = pref_override.as_deref().or_else( || model.model_id() );
+  if let Some( id ) = model_id
   {
     full_args.push( "--model".to_string() );
     full_args.push( id.to_string() );
@@ -227,6 +320,7 @@ pub fn run_isolated
   let cmd = crate::ClaudeCommand::new()
     .with_home( &temp_dir )
     .with_home_isolation()
+    .with_compact_window( compact_window )
     .with_args( full_args );
 
   // Step 4: Spawn subprocess with piped I/O so we keep the Child handle.

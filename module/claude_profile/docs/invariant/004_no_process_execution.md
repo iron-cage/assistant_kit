@@ -32,11 +32,21 @@
 - Introduces platform dependencies (processes behave differently across OS)
 - Creates impossible-to-test scenarios in unit tests (process spawning requires real environment)
 
-### Cross-References
+### Sources
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/` | Entire source tree — must have zero `std::process` occurrences |
-| test | `tests/responsibility_no_process_execution_test.rs` | Grep audit that fails CI if `std::process` appears in src/ |
-| doc | [001_zero_third_party_deps.md](001_zero_third_party_deps.md) | Related boundary: zero crates.io deps in library path |
-| invariant | [008_single_token_refresh_entry.md](008_single_token_refresh_entry.md) | Related boundary: single entry point for token refresh — `refresh_account_token()` delegates to `run_isolated()` in `claude_runner_core` |
+| File | Relationship |
+|------|-------------|
+| `src/` | Entire source tree — must have zero `std::process` occurrences |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| `tests/responsibility_no_process_execution_test.rs` | Grep audit that fails CI if `std::process` appears in src/ |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
+| [001_zero_third_party_deps.md](001_zero_third_party_deps.md) | Related boundary: zero crates.io deps in library path |
+| [008_single_token_refresh_entry.md](008_single_token_refresh_entry.md) | Related boundary: single entry point for token refresh — `refresh_account_token()` delegates to `run_isolated()` in `claude_runner_core` |

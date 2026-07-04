@@ -7,9 +7,10 @@
 //!
 //! Tests create real storage directories under a temporary home directory using
 //! the canonical `encode_path` encoding, write fixture files, run detection,
-//! and verify the result. `HOME` is overridden per-test via `set_var` (safe
-//! because nextest runs each test in its own process). This exercises the full
-//! detection path against real filesystem without touching the host `~/.claude/`.
+//! and verify the result. `HOME` is overridden per-test via `set_var`.
+//! Under nextest each test runs in its own process so no lock is needed, but
+//! under `cargo test` threads share a process — all tests that mutate `HOME`
+//! acquire `ENV_LOCK` to prevent the env-var race.
 //!
 //! # Encoding Note
 //!
@@ -19,7 +20,11 @@
 
 use std::path::{ Path, PathBuf };
 use tempfile::TempDir;
-use claude_storage_core::{ encode_path, continuation };
+use claude_storage_core::{ encode_path, continuation, SessionId };
+
+/// Serializes tests that mutate `HOME` (or `CLAUDE_HOME`) so they run safely
+/// under `cargo test` thread-parallelism as well as nextest process-isolation.
+static ENV_LOCK : std::sync::Mutex< () > = std::sync::Mutex::new( () );
 
 // ============================================================================
 // to_storage_path_for
@@ -69,6 +74,7 @@ fn check_continuation_returns_false_for_nonexistent_directory()
 #[ test ]
 fn check_continuation_returns_false_without_conversation_files()
 {
+  let _guard   = ENV_LOCK.lock().unwrap();
   let temp_dir = TempDir::new().unwrap();
   let home_dir = TempDir::new().unwrap();
   std::env::set_var( "HOME", home_dir.path() );
@@ -85,6 +91,7 @@ fn check_continuation_returns_false_without_conversation_files()
 #[ test ]
 fn check_continuation_returns_true_with_jsonl_conversation_file()
 {
+  let _guard   = ENV_LOCK.lock().unwrap();
   let temp_dir = TempDir::new().unwrap();
   let home_dir = TempDir::new().unwrap();
   std::env::set_var( "HOME", home_dir.path() );
@@ -108,6 +115,7 @@ fn check_continuation_returns_true_with_jsonl_conversation_file()
 #[ test ]
 fn check_continuation_skips_agent_definition_files()
 {
+  let _guard   = ENV_LOCK.lock().unwrap();
   let temp_dir = TempDir::new().unwrap();
   let home_dir = TempDir::new().unwrap();
   std::env::set_var( "HOME", home_dir.path() );
@@ -128,6 +136,7 @@ fn check_continuation_skips_agent_definition_files()
 #[ test ]
 fn check_continuation_skips_empty_files()
 {
+  let _guard   = ENV_LOCK.lock().unwrap();
   let temp_dir = TempDir::new().unwrap();
   let home_dir = TempDir::new().unwrap();
   std::env::set_var( "HOME", home_dir.path() );
@@ -152,6 +161,7 @@ fn check_continuation_skips_empty_files()
 #[ test ]
 fn check_continuation_detects_conversation_json()
 {
+  let _guard   = ENV_LOCK.lock().unwrap();
   let temp_dir = TempDir::new().unwrap();
   let home_dir = TempDir::new().unwrap();
   std::env::set_var( "HOME", home_dir.path() );
@@ -171,6 +181,7 @@ fn check_continuation_detects_conversation_json()
 #[ test ]
 fn check_continuation_detects_claude_dotfile()
 {
+  let _guard   = ENV_LOCK.lock().unwrap();
   let temp_dir = TempDir::new().unwrap();
   let home_dir = TempDir::new().unwrap();
   std::env::set_var( "HOME", home_dir.path() );
@@ -185,6 +196,82 @@ fn check_continuation_detects_claude_dotfile()
   ).unwrap();
 
   assert!( continuation::check_continuation( &session_dir ), ".claude* file should be detected" );
+}
+
+// ============================================================================
+// most_recent_session_in_dir
+// ============================================================================
+
+#[ test ]
+fn most_recent_session_in_dir_empty_dir_returns_none()
+{
+  let storage = TempDir::new().unwrap();
+  let result  = continuation::most_recent_session_in_dir( storage.path() );
+  assert!( result.is_none(), "empty dir must return None" );
+}
+
+#[ test ]
+fn most_recent_session_in_dir_single_file_returns_its_uuid()
+{
+  let storage = TempDir::new().unwrap();
+  std::fs::write( storage.path().join( "uuid-a.jsonl" ), b"{}" ).unwrap();
+  let result = continuation::most_recent_session_in_dir( storage.path() );
+  assert_eq!( result, Some( SessionId::new( "uuid-a" ) ) );
+}
+
+#[ test ]
+fn most_recent_session_in_dir_returns_most_recent_of_two()
+{
+  let storage = TempDir::new().unwrap();
+  // Write file A first, then sleep 10ms, then write file B — B is newer.
+  std::fs::write( storage.path().join( "uuid-a.jsonl" ), b"{}" ).unwrap();
+  std::thread::sleep( core::time::Duration::from_millis( 10 ) );
+  std::fs::write( storage.path().join( "uuid-b.jsonl" ), b"{}" ).unwrap();
+
+  let result = continuation::most_recent_session_in_dir( storage.path() );
+  assert_eq!( result, Some( SessionId::new( "uuid-b" ) ), "must return the more recently written file" );
+}
+
+#[ test ]
+fn most_recent_session_in_dir_skips_agent_files()
+{
+  let storage = TempDir::new().unwrap();
+  std::fs::write( storage.path().join( "agent-abc.jsonl" ), b"{}" ).unwrap();
+  let result = continuation::most_recent_session_in_dir( storage.path() );
+  assert!( result.is_none(), "agent-* files must be excluded" );
+}
+
+#[ test ]
+fn most_recent_session_in_dir_skips_empty_files()
+{
+  let storage = TempDir::new().unwrap();
+  std::fs::write( storage.path().join( "zero.jsonl" ), b"" ).unwrap(); // 0-byte
+  let result = continuation::most_recent_session_in_dir( storage.path() );
+  assert!( result.is_none(), "0-byte files must be excluded" );
+}
+
+#[ test ]
+fn most_recent_session_in_dir_skips_non_jsonl()
+{
+  let storage = TempDir::new().unwrap();
+  std::fs::write( storage.path().join( "conversation.json" ), b"{}" ).unwrap();
+  let result = continuation::most_recent_session_in_dir( storage.path() );
+  assert!( result.is_none(), "non-.jsonl files must be excluded" );
+}
+
+#[ test ]
+fn most_recent_session_id_encodes_cwd_and_finds_file()
+{
+  let _guard   = ENV_LOCK.lock().unwrap();
+  let home_dir = TempDir::new().unwrap();
+  std::env::set_var( "HOME", home_dir.path() );
+  let session_dir = TempDir::new().unwrap();
+  let claude_storage = make_claude_storage( session_dir.path(), home_dir.path() );
+  std::fs::create_dir_all( &claude_storage ).unwrap();
+  std::fs::write( claude_storage.join( "test-uuid.jsonl" ), b"{}" ).unwrap();
+
+  let result = continuation::most_recent_session_id( session_dir.path() );
+  assert_eq!( result, Some( SessionId::new( "test-uuid" ) ) );
 }
 
 // ============================================================================

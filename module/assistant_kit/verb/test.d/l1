@@ -6,4 +6,5 @@ cd "$SCRIPT_DIR/../.."
 if [[ "${1:-}" == "--dry-run" ]]; then echo "w3 .test level::3"; exit 0; fi
 export CARGO_NET_OFFLINE=true
 export NO_COLOR=1
+export RUNBOX_CONTAINER=1
 exec w3 .test level::3

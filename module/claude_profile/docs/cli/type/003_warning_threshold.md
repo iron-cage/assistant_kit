@@ -1,4 +1,4 @@
-# Type :: 3. `WarningThreshold`
+# Type: 3. `WarningThreshold`
 
 **Purpose:** Configures the boundary between `Valid` and `ExpiringSoon` token classification. Allows callers to tune early-warning sensitivity for automation or interactive use.
 

@@ -10,6 +10,7 @@ the TTY.
 - **Default:** auto (active when message given; inactive for bare REPL)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
+- **JSON Key:** `"print"`
 
 ```sh
 clr "Explain this function"        # print mode by default

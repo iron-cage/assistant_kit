@@ -1,4 +1,3 @@
-use crate::VerbosityLevel;
 use claude_core::process::find_claude_processes;
 use std::path::PathBuf;
 use claude_journal::{ EventRecord, EventType, JournalWriter };
@@ -64,9 +63,9 @@ fn gate_poll_secs() -> u64
 /// `apply_runner_retry()` — the entire 100-attempt polling sequence is retried
 /// `--retry-on-runner N` times before giving up.
 pub( super ) fn wait_for_session_slot(
-  max       : u32,
-  verbosity : VerbosityLevel,
-  cli       : &super::parse::CliArgs,
+  max   : u32,
+  quiet : bool,
+  cli   : &super::parse::CliArgs,
   journal   : Option< &JournalWriter >,
 )
 {
@@ -123,14 +122,18 @@ pub( super ) fn wait_for_session_slot(
       if attempt == max_attempts
       {
         // Fix(BUG-298): add [Runner] prefix + correct message text to match 14_error_class.md.
-        // Fix(BUG-299): wrap gate-timeout in runner retry instead of unconditional exit(1).
+        // Root cause: gate-timeout message lacked [Runner] class prefix; display showed no class label.
+        // Pitfall: every message-construction site must inject the [Runner] prefix, not only spawn paths.
+        // Fix(BUG-299): wrap gate-timeout in apply_runner_retry() instead of unconditional exit(1).
+        // Root cause: gate-timeout path called exit(1) directly; runner retry system not invoked here.
+        // Pitfall: every early-exit path (including gate timeouts) must route through apply_runner_retry().
         let e = std::io::Error::other(
           format!( "session gate timed out — {count} active sessions, max-sessions={max}" )
         );
         super::execution::apply_runner_retry( cli, &e, &mut runner_attempt, journal );
         break; // non-exhaustion path: restart outer poll loop
       }
-      if verbosity.shows_warnings()
+      if !quiet
       {
         eprintln!(
           "Info: {count}/{max} sessions active; waiting {poll_secs}s for a slot... (attempt {attempt}/{max_attempts})"

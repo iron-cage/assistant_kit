@@ -16,7 +16,7 @@ A `ConfigKey` is any non-empty UTF-8 string. Known keys have registered defaults
 
 | Key | Env var | Default |
 |-----|---------|---------|
-| `model` | `CLAUDE_MODEL` | `claude-sonnet-4-6` |
+| `model` | `CLAUDE_MODEL` | `claude-sonnet-5` |
 | `preferredVersionSpec` | — | `stable` |
 | `preferredVersionResolved` | — | (absent) |
 | `autoUpdates` | — | `true` |
@@ -30,11 +30,17 @@ clv .config key::theme              # catalog key — resolves user config + def
 clv .config key::myCustomSetting    # arbitrary key — resolves user/project config only
 ```
 
+### Referenced Commands
+
+| # | Command | Via Parameter |
+|---|---------|--------------|
+| 1 | [`.config`](../command/config.md#command--13-config) | `key::` |
+
 ### Referenced Parameters
 
-| # | Parameter |
-|---|-----------|
-| 1 | [`key::`](../param/06_key.md) |
+| # | Parameter | Commands |
+|---|-----------|---------|
+| 1 | [`key::`](../param/06_key.md) | 1 |
 
 ### See Also
 

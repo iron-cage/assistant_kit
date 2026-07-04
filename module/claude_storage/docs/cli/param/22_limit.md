@@ -41,14 +41,14 @@ Maximum number of main sessions to display per project. Zero means unlimited.
 |------|------|-------------|----------------|
 | Integer | Base type | Integer | Non-negative (≥ 0); `0` means no cap |
 
+### Referenced Parameter Groups
+
+None.
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 7 | [`.projects`](../command/07_projects.md) | `0` | Caps sessions per project in default display |
-
-### Referenced Parameter Groups
-
-None.
 
 ### Referenced User Stories
 | # | User Story | Persona |

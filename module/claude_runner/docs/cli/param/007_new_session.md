@@ -9,6 +9,7 @@ with no prior context.
 - **Default:** false (continuation is automatic)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"new-session"`
 
 ```sh
 clr --new-session "Analyse this new codebase from scratch"

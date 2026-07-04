@@ -10,9 +10,10 @@
 | [002_credentials.md](002_credentials.md) | Credentials namespace: `.credentials.status` |
 | [006_usage.md](006_usage.md) | Usage namespace: `.usage` |
 | [004_paths.md](004_paths.md) | Paths namespace: `.paths` |
-| [007_model.md](007_model.md) | Model namespace: `.model` |
+| [007_model.md](007_model.md) | Model namespace: `.model`, `.model.select` |
+| [008_models.md](008_models.md) | Models discovery: `.models` |
 
-**Total:** 16 commands (14 visible + 2 hidden)
+**Total:** 20 commands (18 visible + 2 hidden)
 
 ### All Commands
 
@@ -33,7 +34,9 @@
 | 13 | `.account.rotate` | **DEPRECATED** — hidden redirector; exits 1 with notice to use `.usage rotate::1` | 0 | `clp .account.rotate` |
 | 14 | `.account.renewal` | Set/clear billing renewal timestamp override for one or all accounts | 6 | `clp .account.renewal name::alice@acme.com from_now::+0m` |
 | 15 | `.account.inspect` | Live diagnostic inspection of identity, subscription, and org fields | 4 | `clp .account.inspect` |
-| 16 | `.model` | Get or set the Claude Code session model in `~/.claude/settings.json` | 2 | `clp .model set::opus` |
+| 17 | `.model` | Get or set the Claude Code session model in `~/.claude/settings.json` | 2 | `clp .model set::opus` |
+| 19 | `.models` | List available Claude models via live API or static offline catalog | 3 | `clp .models offline::1` |
+| 20 | `.model.select` | Get/set/reset subprocess model preference in `~/.clr/prefs.json` | 3 | `clp .model.select id::claude-opus-4-8` |
 
 ### Quick Reference
 
@@ -41,7 +44,7 @@
 - `name::` — required on `.account.use`, `.account.delete`, `.account.relogin`, `.account.renewal`; optional on `.account.save` (inferred), `.accounts`, `.account.limits`, `.account.inspect` (defaults to active account). For ownership release, use `.accounts owner::0 name::X` (Feature 064).
 
 **Most-Used Parameters:**
-- `format::` — 7 commands (`.accounts`, `.token.status`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`, `.account.inspect`)
+- `format::` — 9 commands (`.accounts`, `.token.status`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`, `.account.inspect`, `.models`, `.model.select`)
 
 **Commands by Parameter Count:**
 
@@ -49,7 +52,7 @@
 |-------|----------|
 | 0 | `.`, `.help` |
 | 2 | `.model` |
-| 3 | `.paths`, `.account.delete`, `.token.status`, `.account.limits`, `.account.relogin` |
+| 3 | `.paths`, `.account.delete`, `.token.status`, `.account.limits`, `.account.relogin`, `.models`, `.model.select` |
 | 4 | `.account.inspect` |
 | 5 | `.account.save` |
 | 6 | `.account.renewal` |

@@ -54,6 +54,6 @@ There is no session entry count index. `min_entries::N` filtering and entry coun
 
 ### Provenance
 
-| File | Relationship |
-|------|--------------|
+| File | Notes |
+|------|-------|
 | `spec.md` (deleted — migrated here) | Performance Characteristics section |

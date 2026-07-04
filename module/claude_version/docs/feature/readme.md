@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Document user-facing capabilities of the claude_version crate.
-- **Responsibility**: Index of feature doc instances covering version management, process lifecycle, settings management, dry-run, CLI design, and config command.
+- **Responsibility**: Index of feature doc instances covering version management, process lifecycle, settings management, dry-run, CLI design, config command, params command, and runtime file discovery.
 - **In Scope**: All CLI commands, their parameters, execution modes, and behavioral contracts.
 - **Out of Scope**: Version lock design pattern (→ `pattern/`), type inference algorithm (→ `algorithm/`).
 
@@ -17,4 +17,5 @@
 | 004 | [Dry Run](004_dry_run.md) | Mutation preview via dry::1 across all mutation commands | ✅ |
 | 005 | [CLI Design](005_cli_design.md) | Command routing, parameter parsing, exit codes, help listing | ✅ |
 | 006 | [Config Command](006_config_command.md) | Unified `.config` command with 4-layer resolution and catalog | ✅ |
-| 007 | [Params Command](007_params_command.md) | `.params` command — full param catalog inspection with observable values | ⏳ |
+| 007 | [Params Command](007_params_command.md) | `.params` command — full param catalog inspection with observable values | ✅ |
+| 008 | [Runtime File Discovery](008_runtime_file_discovery.md) | `.runtime_files` command — enumerate all clv-managed runtime file paths | ✅ |

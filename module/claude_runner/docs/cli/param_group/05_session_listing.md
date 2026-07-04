@@ -3,6 +3,7 @@
 **Pattern:** Consumed by `dispatch_ps()` to filter rows, select columns, and control output format in the `clr ps` active sessions table. Not forwarded to any subprocess.
 
 **Purpose:** Control session listing display — filter by execution mode, filter by PID, select visible columns, expand to full-width output, or switch to key:value inspect format.
+**Order:** 5
 
 ### Semantic Coherence Test
 
@@ -15,6 +16,20 @@
 ### Invariants
 
 All 5 parameters are consumed by `dispatch_ps()` in `ps.rs` before table rendering. None affect subprocess execution or command construction.
+
+### Notes
+
+—
+
+### Typical Patterns
+
+```sh
+clr ps
+clr ps --mode print
+clr ps --columns pid,path,task
+clr ps --wide --mode interactive
+clr ps --pid 1234567 --inspect
+```
 
 ### Referenced Commands
 

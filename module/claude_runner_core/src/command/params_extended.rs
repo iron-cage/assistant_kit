@@ -488,7 +488,7 @@ impl ClaudeCommand {
   /// use claude_runner_core::ClaudeCommand;
   ///
   /// let cmd = ClaudeCommand::new()
-  ///   .with_agents( r#"[{"name":"bot","model":"claude-opus-4-6"}]"# );
+  ///   .with_agents( r#"[{"name":"bot","model":"claude-opus-4-8"}]"# );
   /// ```
   #[inline]
   #[must_use]

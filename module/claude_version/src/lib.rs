@@ -10,6 +10,7 @@
 #![ cfg_attr( not( feature = "enabled" ), allow( unused ) ) ]
 #![ warn( missing_docs ) ]
 #![ warn( missing_debug_implementations ) ]
+#![ doc( html_root_url = "https://docs.rs/claude_version/" ) ]
 
 /// Path to the YAML command definitions for this crate.
 ///
@@ -74,7 +75,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     version_guard_routine, version_list_routine, version_history_routine,
     processes_routine, processes_kill_routine,
     settings_show_routine, settings_get_routine, settings_set_routine,
-    config_routine,
+    config_routine, params_routine, runtime_files_routine,
   };
   let v   = || reg_arg_opt( "verbosity", Kind::Integer );
   let fmt = || reg_arg_opt( "format",    Kind::String  );
@@ -87,6 +88,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   let cnt = || reg_arg_opt( "count",     Kind::Integer );
   let scp = || reg_arg_opt( "scope",     Kind::String  );
   let uns = || reg_arg_opt( "unset",     Kind::Boolean );
+  let knd = || reg_arg_opt( "kind",      Kind::String  );
 
   reg_cmd( registry, ".status",          "Show installation state, process count, and active account", vec![ v(), fmt() ],                      Box::new( status_routine          ) );
   reg_cmd( registry, ".version.show",    "Print the currently installed Claude Code version",          vec![ v(), fmt() ],                      Box::new( version_show_routine    ) );
@@ -100,6 +102,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".settings.get",    "Read a single setting by key",                               vec![ key(), v(), fmt() ],               Box::new( settings_get_routine    ) );
   reg_cmd( registry, ".settings.set",    "Write a single setting atomically",                          vec![ key(), val(), dry() ],             Box::new( settings_set_routine    ) );
   reg_cmd( registry, ".config",          "Show, get, set, or unset settings with 4-layer resolution",  vec![ key(), val(), scp(), uns(), dry(), v(), fmt() ], Box::new( config_routine ) );
+  reg_cmd( registry, ".params",          "Inspect Claude Code params: forms, current values, defaults", vec![ key(), knd(), v(), fmt() ],       Box::new( params_routine          ) );
+  reg_cmd( registry, ".runtime_files",   "List all paths managed by clv at runtime",                   vec![],                                  Box::new( runtime_files_routine   ) );
 }
 
 /// Render grouped help output via `cli_fmt::CliHelpTemplate`.
@@ -137,6 +141,7 @@ fn print_usage( binary : &str )
         CommandEntry { name : ".settings.get".to_string(),  desc : "Read a single setting by key".to_string() },
         CommandEntry { name : ".settings.set".to_string(),  desc : "Write a single setting atomically".to_string() },
         CommandEntry { name : ".config".to_string(),        desc : "Show, get, set, or unset settings with 4-layer resolution".to_string() },
+        CommandEntry { name : ".params".to_string(),        desc : "Inspect Claude Code params: forms, current values, defaults".to_string() },
       ],
     },
     CommandGroup
@@ -153,7 +158,8 @@ fn print_usage( binary : &str )
       name    : "Status".to_string(),
       entries : vec!
       [
-        CommandEntry { name : ".status".to_string(), desc : "Show installation state, process count, and active account".to_string() },
+        CommandEntry { name : ".status".to_string(),        desc : "Show installation state, process count, and active account".to_string() },
+        CommandEntry { name : ".runtime_files".to_string(), desc : "List all paths managed by clv at runtime".to_string() },
       ],
     },
   ];

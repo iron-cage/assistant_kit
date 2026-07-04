@@ -145,9 +145,9 @@ fn t53_help_lists_no_ultrathink()
 #[ test ]
 fn t54_empty_positional_arg_ignored()
 {
-  // Empty session dir → no -c (session_exists returns false for empty dir).
+  // Empty session dir → no -c (session_exists returns `None` for empty dir).
   // Fix(BUG-246): last_line now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
-  // Do NOT use make_session_dir() here — that writes a file causing -c injection.
+  // Do NOT use make_session_dir() here — that writes a .jsonl causing -c injection.
   let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
   let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
   let out = run_cli( &[ "--dry-run", "--session-dir", session_path, "" ] );
@@ -269,7 +269,7 @@ fn t56_help_wins_over_preceding_unknown_flag()
 #[ test ]
 fn t57_empty_positional_after_double_dash_ignored()
 {
-  // Empty session dir → no -c (session_exists returns false for empty dir).
+  // Empty session dir → no -c (session_exists returns `None` for empty dir).
   // Fix(BUG-246): last_line now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
   let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
   let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );

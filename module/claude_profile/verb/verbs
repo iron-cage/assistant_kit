@@ -3,9 +3,11 @@
 set -euo pipefail
 printf '%-13s %-10s %s\n' build   available "cargo build -p claude_profile"
 printf '%-13s %-10s %s\n' test    available "w3 .test level::3"
+printf '%-13s %-10s %s\n' test1   available "cargo nextest run --workspace --all-features <filter>"
 printf '%-13s %-10s %s\n' clean   available "cargo clean -p claude_profile"
 printf '%-13s %-10s %s\n' run     available "cargo run -p claude_profile --bin clp"
 printf '%-13s %-10s %s\n' lint    available "cargo clippy -p claude_profile --all-features -- -D warnings"
 printf '%-13s %-10s %s\n' verify   available "w3 .test level::4"
+printf '%-13s %-10s %s\n' install  available  "cargo install --path ."
 printf '%-13s %-10s %s\n' verbs   built-in  "-"
 printf '%-13s %-10s %s\n' package_info built-in  "-"

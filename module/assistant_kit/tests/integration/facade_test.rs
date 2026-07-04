@@ -30,8 +30,8 @@ fn profile_re_exports_accessible()
 #[ test ]
 fn runner_re_exports_accessible()
 {
-  use assistant_kit::runner::VerbosityLevel;
-  let _ = core::any::TypeId::of::< VerbosityLevel >();
+  // COMMANDS_YAML is the public surface sentinel for the runner feature.
+  let _ = assistant_kit::runner::COMMANDS_YAML;
 }
 
 // ─── feature: version ───────────────────────────────────────────────────────

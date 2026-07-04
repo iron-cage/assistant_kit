@@ -3,7 +3,7 @@
 -- **Summary:** Identify the settings entry to read or write.
 -- **Type:** `SettingsKey`
 -- **Default:** (required)
--- **Commands:** `.settings.get`, `.settings.set`, `.config`
+-- **Commands:** `.settings.get`, `.settings.set`, `.config`, `.params`
 -- **Group:** Settings Identity, Config Identity
 
 Required for `.settings.get` and `.settings.set`. Optional for `.config` — absent means show-all mode. When present, value must not be empty.
@@ -19,18 +19,19 @@ clv.settings.set key::theme value::dark
 
 ### Referenced Commands
 
-| # | Command |
-|---|---------|
-| 1 | [`.settings.get`](../command/settings.md#command--10-settingsget) |
-| 2 | [`.settings.set`](../command/settings.md#command--11-settingsset) |
-| 3 | [`.config`](../command/config.md#command--13-config) |
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 1 | [`.settings.get`](../command/settings.md#command--10-settingsget) | (required) | Identifies entry to read |
+| 2 | [`.settings.set`](../command/settings.md#command--11-settingsset) | (required) | Identifies entry to write |
+| 3 | [`.config`](../command/config.md#command--13-config) | — | Absent = show-all mode; present = get/set/unset mode |
+| 4 | [`.params`](../command/params.md#command--14-params) | — | Absent = show-all; present = single-param deep-dive |
 
 ### Referenced Parameter Groups
 
-| # | Group |
-|---|-------|
-| 1 | [Settings Identity](../param_group/03_settings_identity.md) |
-| 2 | [Config Identity](../param_group/04_config_identity.md) |
+| # | Group | Membership | Co-members |
+|---|-------|-----------|-----------|
+| 1 | [Settings Identity](../param_group/03_settings_identity.md) | Full | `value::` |
+| 2 | [Config Identity](../param_group/04_config_identity.md) | Full | `value::`, `scope::`, `unset::` |
 
 ### Referenced Type
 
@@ -45,3 +46,4 @@ clv.settings.set key::theme value::dark
 |---|-----------|---------|
 | 1 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
 | 2 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |
+| 3 | [007 Params Inspection](../user_story/007_params_inspection.md) | Developer (config inspector) |

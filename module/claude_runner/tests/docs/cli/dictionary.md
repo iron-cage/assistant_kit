@@ -53,7 +53,7 @@ Term accuracy and completeness checks for the CLI dictionary at
 - **When:** `clr help`
 - **Then:** exit 0; stdout contains usage information; output identical to `clr --help` and `clr -h`
 - **Exit:** 0
-- **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [command/04_help.md](../../../docs/cli/command/04_help.md)
+- **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [command/02_help.md](../../../docs/cli/command/02_help.md)
 
 ---
 
@@ -70,10 +70,10 @@ Term accuracy and completeness checks for the CLI dictionary at
 ### DT-5: `last-wins` architecture term → final flag value wins
 
 - **Given:** clean environment; dictionary `last-wins` entry states "when a flag appears multiple times, the last occurrence takes effect"
-- **When:** `clr --verbosity 1 --verbosity 3 --dry-run "x"`
-- **Then:** assembled command reflects verbosity 3 (last value), not 1 (first value); no error for duplicate flag
+- **When:** `clr --model haiku --model sonnet --dry-run "x"`
+- **Then:** assembled command reflects `sonnet` (last value), not `haiku` (first value); no error for duplicate flag
 - **Exit:** 0
-- **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [param/012_verbosity.md](../../../docs/cli/param/012_verbosity.md)
+- **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [param/03_model.md](../../../docs/cli/param/03_model.md)
 
 ---
 

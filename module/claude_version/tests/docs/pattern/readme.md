@@ -11,5 +11,5 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| 01_version_lock.md | PT- test cases for 5-layer version lock strategy | ✅ |
+| 001_version_lock.md | PT- test cases for 5-layer version lock strategy | ✅ |
 | procedure.md | Workflow for creating and updating pattern test specs | ✅ |

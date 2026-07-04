@@ -12,4 +12,5 @@
 |------|----------------|
 | `feature/` | Super-app aggregation design and Layer 2 command registration |
 | `invariant/` | Aggregation completeness constraint for Layer 2 crates |
+| `entity.md` | Doc Entity index for this crate's documentation scope |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |

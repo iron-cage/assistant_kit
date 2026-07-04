@@ -12,7 +12,7 @@
 //! - Message given → print mode (`execute()` + `--print`) **unless** `--interactive` is set
 //! - `--interactive` flag → forces TTY passthrough even when message given
 //!
-//! Covers error handling, exit code propagation, stderr forwarding, verbosity gating.
+//! Covers error handling, exit code propagation, stderr forwarding, quiet gating.
 //!
 //! ## Strategy
 //!
@@ -30,9 +30,8 @@
 //! | E04 | Subprocess exits non-zero + stderr populated | print (-p flag) | Subprocess stderr forwarded, exit non-zero |
 //! | E05 | Print mode: stderr forwarded | print (-p flag) | Subprocess stderr appears in runner stderr |
 //! | E06 | Print mode: stdout captured | print (-p flag) | Subprocess stdout appears in runner stdout |
-//! | E07 | Interactive mode: binary not found, verbosity 0 | interactive (no msg) | Exit 1, stderr empty |
-//! | E08 | Print mode: binary not found, verbosity 0 | print (-p flag) | Exit 1, stderr empty |
-//! | E09 | Verbosity 4: preview to stderr before print execution | print (-p flag) | Stderr has env vars |
+//! | E07 | Interactive mode: binary not found, --quiet | interactive (no msg) | Exit 1, stderr non-empty (fatal) |
+//! | E08 | Print mode: binary not found, --quiet | print (-p flag) | Exit 1, stderr non-empty (fatal) |
 //! | E10 | Message forwarded + -c (print mode) | default print (msg given) | Binary receives --print, -c, and message arg |
 //! | E11 | --new-session flag | interactive (no msg) | Subprocess does not receive -c |
 //! | E12 | message, no -p | default print | Subprocess receives `--print` |
@@ -127,76 +126,51 @@ fn e06_print_stdout_captured()
   );
 }
 
-// E07: Interactive mode: binary not found + verbosity 0 → stderr empty.
-// Fix(BUG-213): env_remove CLR_TRACE prevents dev-shell trace activation from
-//   printing the command preview to stderr regardless of --verbosity 0.
+// E07: Interactive mode: binary not found + --quiet → fatal error still on stderr.
+// --quiet suppresses runner diagnostics, never fatal spawn errors.
 #[ test ]
-fn e07_interactive_not_found_verbosity_zero()
+fn e07_interactive_not_found_quiet_flag()
 {
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( [ "--verbosity", "0", "test" ] )
+    .args( [ "--quiet", "test" ] )
     .env( "PATH", "/nonexistent" )
-    .env_remove( "CLR_TRACE" ) // Fix(BUG-213)
+    .env_remove( "CLR_TRACE" ) // prevent trace output from contaminating stderr
     .output()
     .expect( "Failed to invoke" );
   assert!( !out.status.success(), "must exit non-zero" );
   let stderr = String::from_utf8_lossy( &out.stderr );
-  // Fix(BUG-240): fatal spawn errors must be visible at verbosity 0.
-  // Root cause: prior code gated the Err branch on shows_errors(); at verbosity 0
-  //   spawn failures produced zero stderr output — a perfectly silent failure.
-  // Pitfall: verbosity 0 suppresses runner diagnostics, never fatal errors.
+  // Fix(BUG-240): fatal spawn errors must be visible even with --quiet.
+  // Root cause: prior code gated the Err branch on shows_errors(); spawn
+  //   failures produced zero stderr output — a perfectly silent failure.
+  // Pitfall: --quiet suppresses runner diagnostics, never fatal errors.
   assert!(
     !stderr.is_empty(),
-    "--verbosity 0 must still emit fatal spawn errors (BUG-240 fix). Got empty stderr"
+    "--quiet must still emit fatal spawn errors (BUG-240 fix). Got empty stderr"
   );
 }
 
-// E08: Print mode: binary not found + verbosity 0 → stderr empty.
-// Fix(BUG-213): env_remove CLR_TRACE prevents dev-shell trace activation from
-//   printing the command preview to stderr regardless of --verbosity 0.
+// E08: Print mode: binary not found + --quiet → fatal error still on stderr.
+// --quiet suppresses runner diagnostics, never fatal spawn errors.
 #[ test ]
-fn e08_print_not_found_verbosity_zero()
+fn e08_print_not_found_quiet_flag()
 {
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( [ "--verbosity", "0", "-p", "test" ] )
+    .args( [ "--quiet", "-p", "test" ] )
     .env( "PATH", "/nonexistent" )
-    .env_remove( "CLR_TRACE" ) // Fix(BUG-213)
+    .env_remove( "CLR_TRACE" ) // prevent trace output from contaminating stderr
     .output()
     .expect( "Failed to invoke" );
   assert!( !out.status.success(), "must exit non-zero" );
   let stderr = String::from_utf8_lossy( &out.stderr );
-  // Fix(BUG-240): fatal spawn errors must be visible at verbosity 0.
-  // Root cause: prior code gated the Err branch on shows_errors(); at verbosity 0
-  //   spawn failures produced zero stderr output — a perfectly silent failure.
-  // Pitfall: verbosity 0 suppresses runner diagnostics, never fatal errors.
+  // Fix(BUG-240): fatal spawn errors must be visible even with --quiet.
+  // Root cause: prior code gated the Err branch on shows_errors(); spawn
+  //   failures produced zero stderr output — a perfectly silent failure.
+  // Pitfall: --quiet suppresses runner diagnostics, never fatal errors.
   assert!(
     !stderr.is_empty(),
-    "--verbosity 0 must still emit fatal spawn errors (BUG-240 fix). Got empty stderr"
-  );
-}
-
-// E09: Verbosity 4 prints command preview to stderr before print-mode execution.
-#[ test ]
-fn e09_verbosity_four_stderr_preview()
-{
-  let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho OK\n" );
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
-    .args( [ "--verbosity", "4", "-p", "test" ] )
-    .env( "PATH", &path )
-    .output()
-    .expect( "Failed to invoke" );
-  assert!( out.status.success(), "must exit 0" );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=" ),
-    "--verbosity 4 must print env preview to stderr. Got:\n{stderr}"
-  );
-  assert!(
-    stderr.contains( "claude" ),
-    "--verbosity 4 must print command preview to stderr. Got:\n{stderr}"
+    "--quiet must still emit fatal spawn errors (BUG-240 fix). Got empty stderr"
   );
 }
 

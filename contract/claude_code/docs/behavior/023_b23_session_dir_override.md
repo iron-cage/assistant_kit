@@ -23,7 +23,7 @@ The env var affects only the current invocation; other Claude Code behavior is u
 
 | ID | Supports | Type | Source | Location | Content |
 |----|----------|------|--------|----------|---------|
-| E43 | B23 | Doc | `../params/057_session_dir.md` | Description | Documents `CLAUDE_CODE_SESSION_DIR` env var that overrides session storage directory |
+| E43 | B23 | Doc | `../param/057_session_dir.md` | Description | Documents `CLAUDE_CODE_SESSION_DIR` env var that overrides session storage directory |
 | E44 | B23 | Test | `../../tests/behavior/b23_session_dir_override.rs` | `b23_session_dir_env_var_not_rejected` | Binary does not explicitly reject `CLAUDE_CODE_SESSION_DIR` env var at startup |
 
 ### Cross-References
@@ -34,5 +34,5 @@ The env var affects only the current invocation; other Claude Code behavior is u
 | behavior | [009_b9_storage_path_encoding.md](009_b9_storage_path_encoding.md) | Default path encoding that this env var overrides |
 | behavior | [011_b11_auto_continue_env.md](011_b11_auto_continue_env.md) | `CLAUDE_CODE_AUTO_CONTINUE` env var (related env var, same NEG-ONLY pattern) |
 | behavior | [022_b22_no_session_persistence.md](022_b22_no_session_persistence.md) | `--no-session-persistence` (disables rather than redirects) |
-| params | `../params/057_session_dir.md` | Canonical parameter definition |
+| params | `../param/057_session_dir.md` | Canonical parameter definition |
 | test | `../../tests/behavior/b23_session_dir_override.rs` | Invalidation test (NEG-ONLY) |

@@ -1,19 +1,9 @@
-# CLI User Story: Dry-run Preview
+# Preview the assembled command without executing
 
-### Scope
-
-- **Purpose**: Document the --dry-run preview mode for inspecting the assembled subprocess command.
-- **Responsibility**: Define acceptance criteria for dry-run showing the full command without executing.
-- **In Scope**: --dry-run output format, default injection visibility, env var reflection, exit 0.
-- **Out of Scope**: Trace mode with execution (→ 008_trace_execution.md).
-
-### Persona
-
-Developer debugging a flag combination or verifying the exact subprocess command before committing to execution.
-
-### Goal
-
-Inspect the fully assembled `claude` subprocess command — including all default injections — without spawning the subprocess.
+**Persona:** Developer debugging a flag combination or verifying the exact subprocess command before committing to execution.
+**Goal:** Inspect the fully assembled `claude` subprocess command — including all default injections — without spawning the subprocess.
+**Benefit:** Eliminates guesswork about injected flags and lets developers verify flag combinations before committing to execution.
+**Priority:** Medium
 
 ### Acceptance Criteria
 
@@ -39,8 +29,14 @@ Inspect the fully assembled `claude` subprocess command — including all defaul
 | # | Parameter | Role |
 |---|-----------|------|
 | 11 | [`--dry-run`](../param/011_dry_run.md) | Gate: preview without execution |
-| 12 | [`--verbosity`](../param/012_verbosity.md) | Level 4+ also shows preview before execution |
 | 13 | [`--trace`](../param/013_trace.md) | Related: print to stderr then execute (not dry) |
+| 74 | [`--quiet`](../param/074_quiet.md) | `--quiet` does NOT suppress `--dry-run` output |
+
+### Workflow Steps
+
+1. `clr --dry-run "task"` — preview the assembled command without spawning the subprocess
+2. `CLR_MODEL=haiku clr --dry-run "task"` — verify env var is reflected in the preview
+3. `clr --dry-run --no-effort-max "task"` — confirm the effort flag is omitted from the assembled command
 
 ### Related User Stories
 

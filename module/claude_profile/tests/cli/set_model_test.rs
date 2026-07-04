@@ -10,8 +10,8 @@
 //!
 //! | ID    | Test Function                                         | Condition                                                        | P/N |
 //! |-------|-------------------------------------------------------|------------------------------------------------------------------|-----|
-//! | FT-01 | `ft01_set_model_opus_writes_full_id`                  | `.account.use set_model::opus` → `claude-opus-4-6`               | P   |
-//! | FT-02 | `ft02_set_model_sonnet_writes_full_id`                | `.account.use set_model::sonnet` → `claude-sonnet-4-6`           | P   |
+//! | FT-01 | `ft01_set_model_opus_writes_full_id`                  | `.account.use set_model::opus` → `claude-opus-4-8`               | P   |
+//! | FT-02 | `ft02_set_model_sonnet_writes_full_id`                | `.account.use set_model::sonnet` → `claude-sonnet-5`           | P   |
 //! | FT-03 | `ft03_set_model_haiku_writes_full_id`                 | `.account.use set_model::haiku` → `claude-haiku-4-5-20251001`    | P   |
 //! | FT-04 | `ft04_set_model_default_removes_key_preserves_others` | `default` removes `model`; unrelated keys preserved              | P   |
 //! | FT-05 | `ft05_explicit_set_model_wins_over_switch_restore`    | `set_model::sonnet` wins over `switch_account` model restore     | P   |
@@ -19,13 +19,13 @@
 //! | FT-07 | `ft07_set_model_bad_value_exits_1`                    | `set_model::bad` → exit 1, stderr names all 4 valid values       | N   |
 //! | FT-08 | `ft08_set_model_appears_in_help_output`               | `.account.use.help` and `.usage.help` both show `set_model`      | P   |
 //! | FT-09 | `ft09_set_model_no_set_model_key_in_json`             | `format::json` output has no `set_model` key                     | P   |
-//! | EC-1  | `ec1_set_model_opus_accepted_no_unrecognized_error`   | accepted; no "unrecognized" in stderr; writes `claude-opus-4-6`  | P   |
-//! | EC-2  | `ec2_set_model_sonnet_accepted_writes_full_id`        | accepted; writes `claude-sonnet-4-6`                             | P   |
+//! | EC-1  | `ec1_set_model_opus_accepted_no_unrecognized_error`   | accepted; no "unrecognized" in stderr; writes `claude-opus-4-8`  | P   |
+//! | EC-2  | `ec2_set_model_sonnet_accepted_writes_full_id`        | accepted; writes `claude-sonnet-5`                             | P   |
 //! | EC-3  | `ec3_set_model_haiku_accepted_writes_full_id`         | accepted; writes `claude-haiku-4-5-20251001`                     | P   |
 //! | EC-4  | `ec4_set_model_default_accepted_removes_key`          | accepted; removes `model` key from `settings.json`               | P   |
 //! | EC-5  | `ec5_set_model_bad_exits_1_all_valid_values_named`    | exit 1; stderr names opus, sonnet, haiku, default                | N   |
 //! | EC-6  | `ec6_account_use_set_model_wins_over_switch_restore`  | explicit `set_model::sonnet` wins over `switch_account` restore  | P   |
-//! | EC-7  | `ec7_usage_set_model_writes_to_settings`              | `.usage set_model::sonnet` writes `claude-sonnet-4-6`            | P   |
+//! | EC-7  | `ec7_usage_set_model_writes_to_settings`              | `.usage set_model::sonnet` writes `claude-sonnet-5`            | P   |
 //! | CC-1  | `cc1_account_use_set_model_bad_exits_1`               | `.account.use set_model::bad` exits 1 (same as FT-07 on .usage) | N   |
 //! | CC-2  | `cc2_account_use_dry_run_does_not_write_settings`     | `dry::1` early-return → settings.json NOT written               | P   |
 //! | CC-3  | `cc3_usage_set_model_format_json_also_writes_settings`| `format::json` + `set_model::opus` still writes settings.json   | P   |
@@ -61,7 +61,7 @@ fn read_settings_model( home : &std::path::Path ) -> Option< String >
 
 // ── FT: Feature Tests ─────────────────────────────────────────────────────────
 
-/// FT-01 (AC-01): `set_model::opus` writes `"claude-opus-4-6"` to `settings.json`. Exit 0.
+/// FT-01 (AC-01): `set_model::opus` writes `"claude-opus-4-8"` to `settings.json`. Exit 0.
 #[ test ]
 fn ft01_set_model_opus_writes_full_id()
 {
@@ -78,13 +78,13 @@ fn ft01_set_model_opus_writes_full_id()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-opus-4-6" ),
-    "set_model::opus must write `claude-opus-4-6` to settings.json, got: {model:?}\nstdout: {}\nstderr: {}",
+    Some( "claude-opus-4-8" ),
+    "set_model::opus must write `claude-opus-4-8` to settings.json, got: {model:?}\nstdout: {}\nstderr: {}",
     stdout( &out ), stderr( &out ),
   );
 }
 
-/// FT-02 (AC-02): `set_model::sonnet` writes `"claude-sonnet-4-6"` to `settings.json`. Exit 0.
+/// FT-02 (AC-02): `set_model::sonnet` writes `"claude-sonnet-5"` to `settings.json`. Exit 0.
 #[ test ]
 fn ft02_set_model_sonnet_writes_full_id()
 {
@@ -101,8 +101,8 @@ fn ft02_set_model_sonnet_writes_full_id()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-sonnet-4-6" ),
-    "set_model::sonnet must write `claude-sonnet-4-6` to settings.json, got: {model:?}",
+    Some( "claude-sonnet-5" ),
+    "set_model::sonnet must write `claude-sonnet-5` to settings.json, got: {model:?}",
   );
 }
 
@@ -144,7 +144,7 @@ fn ft04_set_model_default_removes_key_preserves_others()
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write(
     claude_dir.join( "settings.json" ),
-    r#"{"model":"claude-opus-4-6","theme":"dark"}"#,
+    r#"{"model":"claude-opus-4-8","theme":"dark"}"#,
   ).unwrap();
 
   let out = run_cs_with_env(
@@ -179,7 +179,7 @@ fn ft05_explicit_set_model_wins_over_switch_restore()
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
   write_account( dir.path(), "alice@example.com", "max", "default", FAR_FUTURE_MS, false );
   // {name}.json stores opus; switch_account restores it to settings.json first.
-  write_account_settings_json( dir.path(), "alice@example.com", "claude-opus-4-6" );
+  write_account_settings_json( dir.path(), "alice@example.com", "claude-opus-4-8" );
 
   let out = run_cs_with_env(
     &[ ".account.use", "name::alice@example.com", "set_model::sonnet", "touch::0" ],
@@ -189,7 +189,7 @@ fn ft05_explicit_set_model_wins_over_switch_restore()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-sonnet-4-6" ),
+    Some( "claude-sonnet-5" ),
     "explicit set_model::sonnet must win over switch_account model restore (opus), got: {model:?}",
   );
 }
@@ -295,7 +295,7 @@ fn ft09_set_model_no_set_model_key_in_json()
 // ── EC: Edge Cases ────────────────────────────────────────────────────────────
 
 /// EC-1: `set_model::opus` accepted — no "unrecognized" error in stderr;
-/// writes `claude-opus-4-6`. Exit 0.
+/// writes `claude-opus-4-8`. Exit 0.
 #[ test ]
 fn ec1_set_model_opus_accepted_no_unrecognized_error()
 {
@@ -317,12 +317,12 @@ fn ec1_set_model_opus_accepted_no_unrecognized_error()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-opus-4-6" ),
-    "set_model::opus must write `claude-opus-4-6`, got: {model:?}",
+    Some( "claude-opus-4-8" ),
+    "set_model::opus must write `claude-opus-4-8`, got: {model:?}",
   );
 }
 
-/// EC-2: `set_model::sonnet` accepted; writes `claude-sonnet-4-6`. Exit 0.
+/// EC-2: `set_model::sonnet` accepted; writes `claude-sonnet-5`. Exit 0.
 #[ test ]
 fn ec2_set_model_sonnet_accepted_writes_full_id()
 {
@@ -339,8 +339,8 @@ fn ec2_set_model_sonnet_accepted_writes_full_id()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-sonnet-4-6" ),
-    "set_model::sonnet must write `claude-sonnet-4-6`, got: {model:?}",
+    Some( "claude-sonnet-5" ),
+    "set_model::sonnet must write `claude-sonnet-5`, got: {model:?}",
   );
 }
 
@@ -375,7 +375,7 @@ fn ec4_set_model_default_accepted_removes_key()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
   write_account( dir.path(), "alice@example.com", "max", "default", FAR_FUTURE_MS, false );
-  write_settings_json( dir.path(), "claude-opus-4-6" );
+  write_settings_json( dir.path(), "claude-opus-4-8" );
 
   let out = run_cs_with_env(
     &[ ".account.use", "name::alice@example.com", "set_model::default", "touch::0" ],
@@ -426,7 +426,7 @@ fn ec6_account_use_set_model_wins_over_switch_restore()
   write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
   write_account( dir.path(), "alice@example.com", "max", "default", FAR_FUTURE_MS, false );
   // Pre-seed {name}.json with opus so switch_account restores opus first.
-  write_account_settings_json( dir.path(), "alice@example.com", "claude-opus-4-6" );
+  write_account_settings_json( dir.path(), "alice@example.com", "claude-opus-4-8" );
 
   let out = run_cs_with_env(
     &[ ".account.use", "name::alice@example.com", "set_model::sonnet", "touch::0" ],
@@ -436,12 +436,12 @@ fn ec6_account_use_set_model_wins_over_switch_restore()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-sonnet-4-6" ),
+    Some( "claude-sonnet-5" ),
     "set_model::sonnet must win over switch_account model restore (opus), got: {model:?}",
   );
 }
 
-/// EC-7: `.usage set_model::sonnet` writes `"claude-sonnet-4-6"` to `settings.json`.
+/// EC-7: `.usage set_model::sonnet` writes `"claude-sonnet-5"` to `settings.json`.
 ///
 /// When `set_model` is `Some`, the `apply_model_override` branch in `usage_routine`
 /// is skipped (if-else mutual exclusion). Asserting that the pre-seeded opus value
@@ -453,7 +453,7 @@ fn ec7_usage_set_model_writes_to_settings()
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@example.com", "max", "default", FAR_FUTURE_MS, false );
   // Pre-seed settings.json with opus to simulate what apply_model_override would write.
-  write_settings_json( dir.path(), "claude-opus-4-6" );
+  write_settings_json( dir.path(), "claude-opus-4-8" );
 
   let out = run_cs_with_env(
     &[ ".usage", "set_model::sonnet" ],
@@ -463,8 +463,8 @@ fn ec7_usage_set_model_writes_to_settings()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-sonnet-4-6" ),
-    "`.usage set_model::sonnet` must write `claude-sonnet-4-6` to settings.json, got: {model:?}",
+    Some( "claude-sonnet-5" ),
+    "`.usage set_model::sonnet` must write `claude-sonnet-5` to settings.json, got: {model:?}",
   );
 }
 
@@ -548,8 +548,8 @@ fn cc3_usage_set_model_format_json_also_writes_settings()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-opus-4-6" ),
-    "`.usage set_model::opus format::json` must write `claude-opus-4-6` to settings.json even when ~/.claude/ was absent; got: {model:?}\nstderr: {}",
+    Some( "claude-opus-4-8" ),
+    "`.usage set_model::opus format::json` must write `claude-opus-4-8` to settings.json even when ~/.claude/ was absent; got: {model:?}\nstderr: {}",
     stderr( &out ),
   );
 }
@@ -583,7 +583,7 @@ fn cc6_usage_set_model_default_removes_key()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@example.com", "max", "default", FAR_FUTURE_MS, false );
-  write_settings_json( dir.path(), "claude-opus-4-6" );
+  write_settings_json( dir.path(), "claude-opus-4-8" );
 
   let out = run_cs_with_env(
     &[ ".usage", "set_model::default" ],
@@ -599,14 +599,14 @@ fn cc6_usage_set_model_default_removes_key()
   );
 }
 
-/// CC-7: `.usage set_model::haiku` overwrites a pre-existing `claude-opus-4-6` value.
+/// CC-7: `.usage set_model::haiku` overwrites a pre-existing `claude-opus-4-8` value.
 #[ test ]
 fn cc7_usage_set_model_haiku_overwrites_existing_opus()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@example.com", "max", "default", FAR_FUTURE_MS, false );
-  write_settings_json( dir.path(), "claude-opus-4-6" );
+  write_settings_json( dir.path(), "claude-opus-4-8" );
 
   let out = run_cs_with_env(
     &[ ".usage", "set_model::haiku" ],
@@ -617,7 +617,7 @@ fn cc7_usage_set_model_haiku_overwrites_existing_opus()
   assert_eq!(
     model.as_deref(),
     Some( "claude-haiku-4-5-20251001" ),
-    "`.usage set_model::haiku` must overwrite `claude-opus-4-6` with `claude-haiku-4-5-20251001`; got: {model:?}",
+    "`.usage set_model::haiku` must overwrite `claude-opus-4-8` with `claude-haiku-4-5-20251001`; got: {model:?}",
   );
 }
 
@@ -671,7 +671,7 @@ fn cc8_usage_set_model_creates_dir_when_absent()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-opus-4-6" ),
+    Some( "claude-opus-4-8" ),
     "`.usage set_model::opus` must write settings.json even when `~/.claude/` was absent; got: {model:?}\nstderr: {}",
     stderr( &out ),
   );
@@ -705,7 +705,7 @@ fn cc9_set_model_recovers_from_malformed_settings_json()
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
-    Some( "claude-opus-4-6" ),
+    Some( "claude-opus-4-8" ),
     "malformed `settings.json` must be treated as `{{}}` — `set_model::opus` must still \
      write the model key; got: {model:?}\nstderr: {}",
     stderr( &out ),
@@ -722,7 +722,7 @@ fn cc13_usage_set_model_no_trace_line_emitted()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@example.com", "max", "default", FAR_FUTURE_MS, false );
-  write_settings_json( dir.path(), "claude-sonnet-4-6" );
+  write_settings_json( dir.path(), "claude-sonnet-5" );
 
   let out = run_cs_with_env(
     &[ ".usage", "set_model::opus", "trace::1" ],

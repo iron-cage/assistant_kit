@@ -1,4 +1,4 @@
-# Token
+# Noun: token
 
 The OAuth access token embedded in `~/.claude/.credentials.json` for the active Claude Code session. Represents the credential used to authenticate API requests; classified as `Valid`, `ExpiringSoon`, or `Expired` relative to a configurable warning threshold.
 
@@ -57,7 +57,7 @@ Status values: `"valid"`, `"expiring_soon"`, `"expired"`.
 |----------------|-------------|---------|
 | `account` | Token is embedded in the active account's credential file; account lifecycle governs token state | token → account |
 
-### Cross-References
+### See Also
 
 | File | Relationship |
 |------|-------------|
@@ -70,3 +70,11 @@ Status values: `"valid"`, `"expiring_soon"`, `"expired"`.
 | # | Command | Role |
 |---|---------|------|
 | 1 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | Classify active OAuth token expiry state |
+
+### Referenced Parameters
+
+| # | Parameter | Role |
+|---|-----------|------|
+| 1 | [`format::`](../param/002_format.md) | Output format (text or json) |
+| 2 | [`threshold::`](../param/003_threshold.md) | Warning threshold for expiry classification |
+| 3 | [`trace::`](../param/023_trace.md) | Diagnostic trace output |

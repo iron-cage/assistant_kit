@@ -1,4 +1,4 @@
-# Parameter :: 51. `clear::`
+# Parameter: 51. `clear::`
 
 Removes the `_renewal_at` billing renewal override from `{name}.json`. After clearing, `.usage` reverts to the `~`-prefixed estimate derived from `org_created_at`.
 

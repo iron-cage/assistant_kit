@@ -105,3 +105,17 @@ Edge case coverage for the `unset::` parameter. See [param/12_unset.md](../../..
 - **Then:** exit 0; output shows `[dry-run] would remove key K`; settings file not modified
 - **Exit:** 0
 - **Source:** [param/12_unset.md](../../../../docs/cli/param/12_unset.md)
+
+---
+
+### Source Functions
+
+| Function | File |
+|----------|------|
+| `unset_ec1_removes_key_from_settings` | `tests/cli/unset_param_test.rs` |
+| `unset_ec2_nonexistent_key_is_idempotent` | `tests/cli/unset_param_test.rs` |
+| `unset_ec3_without_key_exits_1` | `tests/cli/unset_param_test.rs` |
+| `unset_ec4_value_and_unset_mutually_exclusive_exits_1` | `tests/cli/unset_param_test.rs` |
+| `unset_ec5_zero_treated_as_normal_set_mode` | `tests/cli/unset_param_test.rs` |
+| `unset_ec6_invalid_boolean_value_exits_1` | `tests/cli/unset_param_test.rs` |
+| `unset_ec7_dry_run_prevents_deletion` | `tests/cli/unset_param_test.rs` |

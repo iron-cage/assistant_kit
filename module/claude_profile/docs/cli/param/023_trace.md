@@ -1,4 +1,4 @@
-# Parameter :: 23. `trace::`
+# Parameter: 23. `trace::`
 
 When enabled, writes timestamped diagnostic lines to stderr (prefix format: `YYYY-MM-DD · HH:MM:SS · `, UTC) for internal operations performed by any `clp` command: file reads, API calls, subprocess lifecycle steps, and multi-step operation outcomes.
 
@@ -46,7 +46,7 @@ trace::1   → print timestamped diagnostic lines to stderr; stdout output uncha
   2026-06-25 · 16:40:04 · account.use  alice@home.com  reading: OK
   2026-06-25 · 16:40:04 · account.use  alice@home.com  quota fetch: OK
   2026-06-25 · 16:40:04 · account.use  alice@home.com  subprocess: scheduled (idle check removed)
-  2026-06-25 · 16:40:04 · account.use  alice@home.com  model: claude-opus-4-6  effort: low
+  2026-06-25 · 16:40:04 · account.use  alice@home.com  model: claude-opus-4-8  effort: low
   2026-06-25 · 16:40:04 · account.use  alice@home.com  subprocess: spawned
   ```
 

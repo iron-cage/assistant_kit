@@ -5,7 +5,7 @@
 - **Purpose**: Document the operational support directories in `~/.claude/` that store debug logs, task tracking, shell environment, session metadata, and command definitions.
 - **Responsibility**: Authoritative instance for the 9 support directories — purpose, format, growth characteristics, and maintenance guidance for each.
 - **In Scope**: `debug/`, `todos/`, `shell-snapshots/`, `session-env/`, `commands/`, `sessions/`, `agents/`, `skills/`, `hooks/`.
-- **Out of Scope**: `projects/` (conversation storage, → [001_projects_directory.md](001_projects_directory.md)); global root files (→ [003_root_files.md](003_root_files.md)); file format internals (→ [`../formats/`](../formats/readme.md)).
+- **Out of Scope**: `projects/` (conversation storage, → [001_projects_directory.md](001_projects_directory.md)); global root files (→ [003_root_files.md](003_root_files.md)); file format internals (→ [`../format/`](../format/readme.md)).
 
 ### Structure
 
@@ -33,7 +33,7 @@
 
 Content types: setting file watching, plugin loading, LSP server init, shell snapshot creation, process lifecycle events.
 
-See [`../formats/003_debug_log.md`](../formats/003_debug_log.md) for format spec.
+See [`../format/003_debug_log.md`](../format/003_debug_log.md) for format spec.
 
 #### todos/ — Task Tracking (63MB)
 
@@ -43,7 +43,7 @@ See [`../formats/003_debug_log.md`](../formats/003_debug_log.md) for format spec
 **Growth**: One file per active session; updated on task status changes.
 **Maintenance**: Can be deleted if corresponding sessions are no longer needed.
 
-See [`../formats/005_todo.md`](../formats/005_todo.md) for format spec.
+See [`../format/005_todo.md`](../format/005_todo.md) for format spec.
 
 #### shell-snapshots/ — Shell Environment Captures (45MB)
 
@@ -53,7 +53,7 @@ See [`../formats/005_todo.md`](../formats/005_todo.md) for format spec.
 **Growth**: One file per CLI session with shell context. Size: 5KB–500KB per snapshot.
 **Maintenance**: Old snapshots can be deleted safely; only affects ability to restore old sessions.
 
-See [`../formats/004_shell_snapshot.md`](../formats/004_shell_snapshot.md) for format spec.
+See [`../format/004_shell_snapshot.md`](../format/004_shell_snapshot.md) for format spec.
 
 #### session-env/ — Session Metadata (2.2MB)
 
@@ -69,7 +69,7 @@ See [`../formats/004_shell_snapshot.md`](../formats/004_shell_snapshot.md) for f
 **Growth**: Static — only grows when user adds new custom commands.
 **Maintenance**: Do not delete unless removing custom commands intentionally.
 
-See [`../formats/006_command_definition.md`](../formats/006_command_definition.md) for format spec.
+See [`../format/006_command_definition.md`](../format/006_command_definition.md) for format spec.
 
 #### sessions/ — Session Tracking Metadata
 
@@ -106,7 +106,7 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Storage master index: full directory structure |
-| formats | [`../formats/003_debug_log.md`](../formats/003_debug_log.md) | Debug log `[DEBUG]` line format |
-| formats | [`../formats/004_shell_snapshot.md`](../formats/004_shell_snapshot.md) | Shell snapshot bash script format |
-| formats | [`../formats/005_todo.md`](../formats/005_todo.md) | Todo JSON array format |
-| formats | [`../formats/006_command_definition.md`](../formats/006_command_definition.md) | Command definition markdown format |
+| formats | [`../format/003_debug_log.md`](../format/003_debug_log.md) | Debug log `[DEBUG]` line format |
+| formats | [`../format/004_shell_snapshot.md`](../format/004_shell_snapshot.md) | Shell snapshot bash script format |
+| formats | [`../format/005_todo.md`](../format/005_todo.md) | Todo JSON array format |
+| formats | [`../format/006_command_definition.md`](../format/006_command_definition.md) | Command definition markdown format |

@@ -75,7 +75,7 @@ Edge case coverage for the `--no-ultrathink` parameter. See [014_no_ultrathink.m
 - **When:** `clr --help`
 - **Then:** Stdout contains `--no-ultrathink`.; flag present in help
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 - **Commands:** run, ask
 
 ---

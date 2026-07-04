@@ -7,7 +7,8 @@ timeout window, the updated file is written back and exit code is 0.
 
 - **Type:** [`TimeoutSecs`](../type/09_timeout_secs.md)
 - **Default:** 30 (`isolated`), 45 (`refresh`)
-- **Command:** [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
+- **Command:** [`isolated`](../command/03_isolated.md), [`refresh`](../command/04_refresh.md)
+- **JSON Key:** `"timeout"`
 
 ```sh
 clr isolated --creds creds.json --timeout 60 "Explain closures"
@@ -44,8 +45,8 @@ with no deadline enforced.
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 2 | [`isolated`](../command/02_isolated.md) | 30 | 30s for general task execution |
-| 3 | [`refresh`](../command/03_refresh.md) | 45 | 45s for slow OAuth token exchange |
+| 2 | [`isolated`](../command/03_isolated.md) | 30 | 30s for general task execution |
+| 3 | [`refresh`](../command/04_refresh.md) | 45 | 45s for slow OAuth token exchange |
 
 ### Referenced User Stories
 

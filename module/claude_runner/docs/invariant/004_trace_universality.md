@@ -15,8 +15,8 @@ Every `clr` command that invokes or manages a subprocess must accept `--trace` a
 |---------|-----------|-------------------|--------------------------|
 | `run` | `claude` binary | yes | env vars + assembled `claude` command line |
 | `ask` | `claude` binary | yes | env vars + assembled `claude` command line (identical to `run` — pure alias) |
-| `isolated` | `claude` binary (temp HOME) | yes | credential headers (`# clr isolated`, `# creds: {path}`, `# timeout: 30s`), env vars, assembled `claude --model claude-opus-4-6 --effort max --no-session-persistence [--dangerously-skip-permissions] --print {msg}` |
-| `refresh` | `claude` binary (temp HOME, fixed args) | yes | credential headers (`# clr refresh`, `# creds: {path}`, `# timeout: 45s`), env vars, assembled `claude --model claude-sonnet-4-6 --no-chrome --effort low --no-session-persistence --print "."` |
+| `isolated` | `claude` binary (temp HOME) | yes | credential headers (`# clr isolated`, `# creds: {path}`, `# timeout: 30s`), env vars, assembled `claude --model claude-opus-4-8 --effort max --no-session-persistence [--dangerously-skip-permissions] --print {msg}` |
+| `refresh` | `claude` binary (temp HOME, fixed args) | yes | credential headers (`# clr refresh`, `# creds: {path}`, `# timeout: 45s`), env vars, assembled `claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."` |
 | `help` | — | exempt | no subprocess; `--trace` is not parsed |
 
 `--trace` prints to stderr so it does not pollute captured stdout in print mode. The subprocess is always launched after trace output (unlike `--dry-run`, which suppresses execution).
@@ -57,7 +57,7 @@ Emitted via `emit_credential_trace()`:
 - `# creds: {path}`
 - `# timeout: {N}s` (isolated default: 30s; refresh default: 45s)
 - `describe_env()` block: `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`, `CLAUDE_CODE_BASH_TIMEOUT=3600000`, `CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000`, `CLAUDE_CODE_AUTO_CONTINUE=true`, `CLAUDE_CODE_TELEMETRY=false`
-- `describe()` block: `claude --model {model} [injected flags] [args]` (e.g., `--model claude-opus-4-6 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"` for isolated; `--model claude-sonnet-4-6 --no-chrome --effort low --no-session-persistence --print "."` for refresh)
+- `describe()` block: `claude --model {model} [injected flags] [args]` (e.g., `--model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"` for isolated; `--model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."` for refresh)
 
 ### Features
 
@@ -78,4 +78,3 @@ Emitted via `emit_credential_trace()`:
 |------|--------------|
 | `../../tests/docs/invariant/004_trace_universality.md` | IN-1 through IN-5 trace acceptance across all commands |
 | `../../tests/cli_args_test.rs` | `--trace` flag parsing via `parse_args()` |
-| `../../tests/docs/cli/param/13_trace.md` | EC-1 through EC-8 per-parameter trace edge cases |

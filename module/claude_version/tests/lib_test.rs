@@ -5,10 +5,10 @@
 //! | TC | Description | P/N |
 //! |----|-------------|-----|
 //! | TC-001 | `register_commands()` is callable and adds commands to a registry | P |
-//! | TC-002 | all 11 explicitly-registered commands present (`.help` auto-registered = 12 total) | P |
+//! | TC-002 | all 14 explicitly-registered commands present (`.help` auto-registered = 15 total) | P |
 //! | TC-003 | `unilang.commands.yaml` file exists at `COMMANDS_YAML` path | P |
-//! | TC-004 | YAML contains exactly the 11 expected command names | P |
-//! | TC-005 | all 11 YAML command names are also registered programmatically (no drift) | P |
+//! | TC-004 | YAML contains exactly the 14 expected command names | P |
+//! | TC-005 | all 14 YAML command names are also registered programmatically (no drift) | P |
 
 /// Canonical command list — single source of truth for TC-002, TC-004, TC-005.
 const EXPECTED_COMMANDS : &[ &str ] = &[
@@ -23,6 +23,9 @@ const EXPECTED_COMMANDS : &[ &str ] = &[
   ".settings.show",
   ".settings.get",
   ".settings.set",
+  ".config",
+  ".params",
+  ".runtime_files",
 ];
 
 #[ cfg( feature = "enabled" ) ]
@@ -67,7 +70,7 @@ mod enabled
     );
   }
 
-  // TC-004: YAML contains all 11 expected command names (drift detection: YAML side).
+  // TC-004: YAML contains all 14 expected command names (drift detection: YAML side).
   #[ test ]
   fn tc004_yaml_contains_all_expected_commands()
   {

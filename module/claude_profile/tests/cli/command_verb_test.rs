@@ -72,13 +72,14 @@
 //! | BV-2 | `inspect_bv2_lim_it_read_is_non_mutating` | mtime unchanged after call (`lim_it`) | P |
 //! | BV-3 | `inspect_bv3_without_credentials_exits_2` | empty store → exit 2 | N |
 //!
-//! ### `verb::assign` (BV-1..3)
+//! ### `verb::assign` (BV-1..4)
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
 //! | BV-1 | `assign_bv1_reassigning_same_account_idempotent` | same account → marker unchanged | P |
 //! | BV-2 | `assign_bv2_writes_marker_without_touching_credential_files` | marker written, creds unchanged | P |
 //! | BV-3 | `assign_bv3_nonexistent_account_exits_2` | missing account → exit 2 | N |
+//! | BV-4 | `assign_bv4_assign_1_removed_toggle_exits_1` | `assign::1` REMOVED → exit 1 + migration hint | N |
 //!
 //! ### `verb::status` (BV-1..4)
 //!
@@ -88,6 +89,15 @@
 //! | BV-2 | `status_bv2_token_status_non_mutating` | mtime unchanged after call | P |
 //! | BV-3 | `status_bv3_token_status_absent_creds_exits_2` | absent creds file → exit 2 | N |
 //! | BV-4 | `status_bv4_credentials_status_twice_same_output` | two calls → identical stdout | P |
+//!
+//! ### `verb::unclaim` (BV-1..4)
+//!
+//! | ID | Test Function | Condition | P/N |
+//! |----|---------------|-----------|-----|
+//! | BV-1 | `it04_unclaim_idempotent` (account_ownership_test.rs) | re-clear unowned → unchanged | P |
+//! | BV-2 | `ft02_unclaim_clears_owner` (account_ownership_test.rs) | owner::0 writes `owner: ""` | P |
+//! | BV-3 | `ft16_unclaim_g8_gate` (account_ownership_test.rs) | other owner → exit 1 (G8) | N |
+//! | BV-4 | `unclaim_bv4_unclaim_1_removed_toggle_exits_1` | `unclaim::1` REMOVED → exit 1 + migration hint | N |
 
 use tempfile::TempDir;
 use super::cli_runner::
@@ -96,7 +106,7 @@ use super::cli_runner::
   write_credentials, write_account, write_account_renewal_json,
   write_account_profile_json,
   live_active_token, require_live_api,
-  write_account_with_token,
+  write_account_with_token, write_account_owner,
   FAR_FUTURE_MS,
 };
 
@@ -342,7 +352,7 @@ fn delete_bv3_nonexistent_account_exits_2()
 fn limits_bv1_lim_it_repeated_calls_no_side_effects()
 {
   let Some( token ) = live_active_token() else { return };
-  if !require_live_api( "limits_bv1_lim_it" ) { return; }
+  require_live_api( "limits_bv1_lim_it" );
 
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -378,7 +388,7 @@ fn limits_bv1_lim_it_repeated_calls_no_side_effects()
 fn limits_bv2_lim_it_read_is_non_mutating()
 {
   let Some( token ) = live_active_token() else { return };
-  if !require_live_api( "limits_bv2_lim_it" ) { return; }
+  require_live_api( "limits_bv2_lim_it" );
 
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -640,7 +650,7 @@ fn renewal_bv3_without_operation_param_exits_1()
 fn inspect_bv1_lim_it_repeated_calls_no_side_effects()
 {
   let Some( token ) = live_active_token() else { return };
-  if !require_live_api( "inspect_bv1_lim_it" ) { return; }
+  require_live_api( "inspect_bv1_lim_it" );
 
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -676,7 +686,7 @@ fn inspect_bv1_lim_it_repeated_calls_no_side_effects()
 fn inspect_bv2_lim_it_read_is_non_mutating()
 {
   let Some( token ) = live_active_token() else { return };
-  if !require_live_api( "inspect_bv2_lim_it" ) { return; }
+  require_live_api( "inspect_bv2_lim_it" );
 
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -817,6 +827,52 @@ fn assign_bv3_nonexistent_account_exits_2()
     &[ ( "HOME", home ), ( "USER", "testuser" ), ( "HOSTNAME", "testmachine" ) ],
   );
   assert_exit( &out, 1 );
+}
+
+// BV-4: assign::1 REMOVED_TOGGLE exits 1 with migration message
+#[ test ]
+fn assign_bv4_assign_1_removed_toggle_exits_1()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "assign::1", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "assignee::" ),
+    "BV-4: assign::1 REMOVED_TOGGLE stderr must contain \"assignee::\" migration hint",
+  );
+}
+
+// ── verb::unclaim ─────────────────────────────────────────────────────────────
+
+// BV-1..3 covered in account_ownership_test.rs:
+//   BV-1 → it04_unclaim_idempotent
+//   BV-2 → ft02_unclaim_clears_owner
+//   BV-3 → ft16_unclaim_g8_gate
+
+// BV-4: unclaim::1 REMOVED_TOGGLE exits 1 with migration message
+#[ test ]
+fn unclaim_bv4_unclaim_1_removed_toggle_exits_1()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, false );
+  write_account_owner( dir.path(), "alice@acme.com", "" );
+
+  let out = run_cs_with_env(
+    &[ ".accounts", "unclaim::1", "name::alice@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    stderr( &out ).contains( "owner::0" ),
+    "BV-4: unclaim::1 REMOVED_TOGGLE stderr must contain \"owner::0\" migration hint",
+  );
 }
 
 // ── verb::status ──────────────────────────────────────────────────────────────

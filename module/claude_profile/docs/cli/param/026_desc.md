@@ -1,4 +1,4 @@
-# Parameter :: 26. `desc::`
+# Parameter: 26. `desc::`
 
 Controls sort direction for the `.usage` quota table. Each `sort::` strategy has a context-sensitive default; `desc::` overrides it.
 

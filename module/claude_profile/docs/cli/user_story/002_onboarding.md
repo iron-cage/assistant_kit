@@ -1,4 +1,4 @@
-# User Story :: 2. Account Onboarding and Lifecycle Management
+# User Story: 2. Account Onboarding and Lifecycle Management
 
 **Persona:** Developer setting up Claude Code or managing saved account profiles
 **Goal:** Persist, update, and remove named credential profiles without touching raw credential files
@@ -37,6 +37,7 @@
 | 6 | [`from_now::`](../param/050_from_now.md) | Delta-from-now renewal timestamp |
 | 7 | [`clear::`](../param/051_clear.md) | Remove `_renewal_at` override from `{name}.json` |
 | 8 | [`assignee::`](../param/063_assignee.md) | Target `USER@MACHINE` (or `"0"` for current machine) for per-machine marker write (Feature 065; formerly `active::` / `for::`) |
+| 9 | [`owner::`](../param/062_owner.md) | Set or release account ownership via `.accounts owner::0 name::X` |
 
 ### Referenced Parameter Groups
 

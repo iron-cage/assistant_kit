@@ -6,7 +6,8 @@ fields including complete stdout and stderr (truncated at 1 MB).
 
 - **Type:** `JournalLevel` (enum: `full`, `meta`, `off`)
 - **Default:** full
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/03_isolated.md), [`refresh`](../command/04_refresh.md)
+- **JSON Key:** `"journal"`
 
 ```sh
 clr "test" --journal full    # Full output captured (default)
@@ -36,8 +37,8 @@ journaling entirely.
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | full | Print and interactive mode |
-| 2 | [`isolated`](../command/02_isolated.md) | full | Credential-isolated execution |
-| 3 | [`refresh`](../command/03_refresh.md) | full | Credential refresh |
+| 2 | [`isolated`](../command/03_isolated.md) | full | Credential-isolated execution |
+| 3 | [`refresh`](../command/04_refresh.md) | full | Credential refresh |
 | 5 | [`ask`](../command/05_ask.md) | full | Ask mode |
 
 ### Referenced User Stories

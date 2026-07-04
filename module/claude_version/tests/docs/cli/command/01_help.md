@@ -14,7 +14,7 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 | ID | Test Name | Category |
 |----|-----------|----------|
 | IT-1 | `clv .` → help output, exit 0 | Alias |
-| IT-2 | `cm` (empty argv) → help output, exit 0 | Empty State |
+| IT-2 | `clv` (empty argv) → help output, exit 0 | Empty State |
 | IT-3 | `clv .help` → help output, exit 0 | Happy Path |
 | IT-4 | `clv .status .help` → `.help` anywhere in argv triggers help, exit 0 | FR-02 |
 | IT-5 | Help output goes to stdout; stderr is empty | Output Stream |
@@ -49,10 +49,10 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 
 ---
 
-### IT-2: `cm` (empty argv) → help output, exit 0
+### IT-2: `clv` (empty argv) → help output, exit 0
 
 - **Given:** clean environment
-- **When:** `cm` (no arguments)
+- **When:** `clv` (no arguments)
 - **Then:** Same help output as `.help`.; help output shown
 - **Exit:** 0
 - **Source:** [command/readme.md — .help](../../../../docs/cli/command/readme.md#command--1-help), [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
@@ -133,12 +133,12 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 
 | Function | File |
 |----------|------|
-| `tc079_help_command_exits_0` | `integration/framework_test.rs` |
-| `tc080_help_lists_12_commands` | `integration/framework_test.rs` |
-| `tc082_help_includes_available_commands_section` | `integration/framework_test.rs` |
-| `tc091_unknown_command_exits_1` | `integration/framework_test.rs` |
-| `tc093_empty_args_exits_0` | `integration/framework_test.rs` |
-| `tc094_help_exits_0_and_shows_commands` | `integration/framework_test.rs` |
-| `tc095_all_visible_commands_in_help` | `integration/framework_test.rs` |
-| `tc01_dot_alias_shows_help` | `integration/read_commands_test.rs` |
-| `tc02_empty_argv_shows_help` | `integration/read_commands_test.rs` |
+| `tc079_help_command_exits_0` | `tests/cli/framework_test.rs` |
+| `tc080_help_lists_12_commands` | `tests/cli/framework_test.rs` |
+| `tc082_help_includes_available_commands_section` | `tests/cli/framework_test.rs` |
+| `tc091_unknown_command_exits_1` | `tests/cli/framework_test.rs` |
+| `tc093_empty_args_exits_0` | `tests/cli/framework_test.rs` |
+| `tc094_help_exits_0_and_shows_commands` | `tests/cli/framework_test.rs` |
+| `tc095_all_visible_commands_in_help` | `tests/cli/framework_test.rs` |
+| `tc01_dot_alias_shows_help` | `tests/cli/read_help_test.rs` |
+| `tc02_empty_argv_shows_help` | `tests/cli/read_help_test.rs` |

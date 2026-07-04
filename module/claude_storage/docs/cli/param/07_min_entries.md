@@ -45,16 +45,16 @@ min_entries::abc  # "min_entries must be a non-negative integer, got abc"
 |------|------|-------------|----------------|
 | [`EntryCount`](../type/01_entry_count.md) | Integer wrapper | Integer (≥0) | Non-negative; negative rejected |
 
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 4 | [Session Filter](../param_group/04_session_filter.md) | Full | `session::`, `agent::` |
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 2 | [`.list`](../command/02_list.md) | unset | Auto-enables `show_sessions::1`; excludes sessions below threshold |
 | 7 | [`.projects`](../command/07_projects.md) | unset | Excludes sessions below threshold |
-
-### Referenced Parameter Groups
-| # | Group | Membership | Co-members |
-|---|-------|------------|------------|
-| 4 | [Session Filter](../param_group/04_session_filter.md) | Full | `session::`, `agent::` |
 
 ### Referenced User Stories
 | # | User Story | Persona |

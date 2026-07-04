@@ -1,4 +1,4 @@
-# Parameter :: 2. `format::` / `fmt::`
+# Parameter: 2. `format::` / `fmt::`
 
 Selects between human-readable text output and machine-parseable JSON. Text is the default for interactive use; JSON enables pipeline integration.
 

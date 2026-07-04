@@ -101,7 +101,7 @@ Both are valid invocations; the dry-run flag presence in output differs.
 ### CC-5: `interval::N` (N>0) starts watch loop
 
 - **Given:** no preference stored
-- **When:** `timeout 3 cm .version.guard interval::5`
+- **When:** `timeout 3 clv .version.guard interval::5`
 - **Then:** at least one status line emitted; process stays alive until killed by timeout
 - **Exit:** 0
 - **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
@@ -141,7 +141,7 @@ Both are valid invocations; the dry-run flag presence in output differs.
 ### CC-9: `interval::5 dry::1` → watch loop with dry-run
 
 - **Given:** no preference stored
-- **When:** `timeout 6 cm .version.guard interval::5 dry::1`
+- **When:** `timeout 6 clv .version.guard interval::5 dry::1`
 - **Then:** at least one `[dry-run]` line in output; process loops with dry-run on each iteration
 - **Exit:** 0
 - **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
@@ -172,12 +172,12 @@ Both are valid invocations; the dry-run flag presence in output differs.
 
 | Function | File |
 |----------|------|
-| `tc250_version_install_dry_force_dry_wins` | `integration/cross_cutting_test.rs` |
-| `tc251_processes_kill_dry_force_dry_wins` | `integration/cross_cutting_test.rs` |
-| `tc252_settings_set_dry_no_write` | `integration/cross_cutting_test.rs` |
-| `tc303_version_install_dry_wins_over_force` | `integration/mutation_commands_test.rs` |
-| `tc406_guard_dry_force_no_install` | `integration/mutation_commands_test.rs` |
-| `tc409_guard_interval_zero_oneshot` | `integration/mutation_commands_test.rs` |
-| `tc415_watch_loop_continues_after_install_error` | `integration/mutation_commands_test.rs` |
-| `tc493_dry_0_then_1_last_wins_dry_active` | `cli_args_test.rs` |
-| `tc494_dry_1_then_0_last_wins_dry_inactive` | `cli_args_test.rs` |
+| `tc250_version_install_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
+| `tc251_processes_kill_dry_force_dry_wins` | `tests/cli/cross_cutting_test.rs` |
+| `tc252_settings_set_dry_no_write` | `tests/cli/cross_cutting_test.rs` |
+| `tc303_version_install_dry_wins_over_force` | `tests/cli/mutation_version_install_test.rs` |
+| `tc406_guard_dry_force_no_install` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc409_guard_interval_zero_oneshot` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc415_watch_loop_continues_after_install_error` | `tests/cli/mutation_version_guard_test.rs` |
+| `tc493_dry_0_then_1_last_wins_dry_active` | `cli_args_test/param_bool_test.rs` |
+| `tc494_dry_1_then_0_last_wins_dry_inactive` | `cli_args_test/param_bool_test.rs` |

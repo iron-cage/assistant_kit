@@ -20,7 +20,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 | E09 | `CLR_MAX_TOKENS` sets limit | `CLR_MAX_TOKENS` | token value appears in assembled command |
 | E10 | `CLR_SESSION_DIR` sets session dir | `CLR_SESSION_DIR` | session dir path appears in assembled command |
 | E11 | `CLR_DRY_RUN` enables preview | `CLR_DRY_RUN` | exit 0 and command printed without execution |
-| E12 | `CLR_VERBOSITY=5` triggers verbose detail | `CLR_VERBOSITY` | assembled command preview appears in stderr |
+| E12 | `CLR_QUIET=true` suppresses diagnostic warning | `CLR_QUIET` | nested-agent warning absent from stderr |
 | E13 | `CLR_TRACE` prints command to stderr | `CLR_TRACE` | assembled command preview appears in stderr |
 | E14 | `CLR_NO_ULTRATHINK` suppresses suffix | `CLR_NO_ULTRATHINK` | `ultrathink` absent from assembled command |
 | E15 | `CLR_SYSTEM_PROMPT` sets system prompt | `CLR_SYSTEM_PROMPT` | `--system-prompt` appears in assembled command |
@@ -185,12 +185,11 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 
 ---
 
-### E12: CLR_VERBOSITY=5 triggers verbose-detail preview in stderr
+### E12: CLR_QUIET=true suppresses diagnostic warning
 
-- **Given:** `CLR_VERBOSITY=5`; no `--verbosity` on CLI
-- **When:** `clr task`
-- **Then:** stderr contains assembled command preview (contains `--effort`)
-- **Note:** `shows_verbose_detail()` returns true for level ≥ 4; default level 3 does not
+- **Given:** `CLR_QUIET=true`; `CLAUDECODE=1`; `--keep-claudecode` flag used
+- **When:** `clr --keep-claudecode --dry-run task`
+- **Then:** stderr does NOT contain nested-agent warning; `--quiet` gate applied via env var
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
 
 ---

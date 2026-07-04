@@ -30,9 +30,9 @@
 //! Gate only on `"type":"result"` (invariant).
 #![ cfg( feature = "enabled" ) ]
 
-use claude_runner::{ render_summary, resolve_fields };
+use claude_runner::{ render_summary, resolve_fields, extract_session_id };
 
-const FULL_ENVELOPE : &str = r#"{"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"duration_ms":100,"duration_api_ms":90,"num_turns":1,"result":"hello","stop_reason":"end_turn","total_cost_usd":0.001,"uuid":"00000000-0000-0000-0000-000000000002","fast_mode_state":"off","usage":{"input_tokens":3,"output_tokens":4,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"service_tier":"standard","speed":"standard","inference_geo":"","server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"cache_creation":{"ephemeral_1h_input_tokens":0,"ephemeral_5m_input_tokens":0},"iterations":[]},"modelUsage":{"claude-opus-4-6":{"inputTokens":3,"outputTokens":4,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":0.001,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[]}"#;
+const FULL_ENVELOPE : &str = r#"{"type":"result","subtype":"success","session_id":"00000000-0000-0000-0000-000000000001","is_error":false,"duration_ms":100,"duration_api_ms":90,"num_turns":1,"result":"hello","stop_reason":"end_turn","total_cost_usd":0.001,"uuid":"00000000-0000-0000-0000-000000000002","fast_mode_state":"off","usage":{"input_tokens":3,"output_tokens":4,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"service_tier":"standard","speed":"standard","inference_geo":"","server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"cache_creation":{"ephemeral_1h_input_tokens":0,"ephemeral_5m_input_tokens":0},"iterations":[]},"modelUsage":{"claude-opus-4-8":{"inputTokens":3,"outputTokens":4,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":0.001,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[]}"#;
 
 const MINIMAL_ENVELOPE : &str =
   r#"{"type":"result","subtype":"success","is_error":false,"duration_ms":1000,"duration_api_ms":900,"num_turns":1,"result":"hello"}"#;
@@ -161,4 +161,33 @@ fn render_summary_rejects_non_json()
 {
   let result = render_summary( "this is not json at all", None );
   assert!( result.is_none(), "must return None for non-JSON input; got Some" );
+}
+
+// ── extract_session_id tests (IT-8–IT-10) ────────────────────────────────────
+
+/// IT-8: Valid `"type":"result"` envelope with `"session_id"` returns the UUID.
+#[ test ]
+fn extract_session_id_returns_uuid_for_valid_envelope()
+{
+  let json   = r#"{"type":"result","subtype":"success","session_id":"abc-123","is_error":false,"result":"ok"}"#;
+  let result = extract_session_id( json );
+  assert_eq!( result, Some( "abc-123".to_string() ), "must return the session_id from a result envelope" );
+}
+
+/// IT-9: Envelope with `"type":"message"` (not `"result"`) must return `None`.
+#[ test ]
+fn extract_session_id_returns_none_for_non_result_type()
+{
+  let json   = r#"{"type":"message","session_id":"abc-123","content":"stream output"}"#;
+  let result = extract_session_id( json );
+  assert!( result.is_none(), "must return None when type is not 'result'; got Some" );
+}
+
+/// IT-10: Valid `"type":"result"` envelope without `"session_id"` field returns `None`.
+#[ test ]
+fn extract_session_id_returns_none_when_session_id_absent()
+{
+  let json   = r#"{"type":"result","subtype":"success","is_error":false,"result":"hello"}"#;
+  let result = extract_session_id( json );
+  assert!( result.is_none(), "must return None when session_id field is absent; got Some" );
 }

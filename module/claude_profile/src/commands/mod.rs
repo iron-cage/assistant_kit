@@ -10,7 +10,8 @@
 //! Every handler takes `VerifiedCommand` by value because the `CommandRoutine`
 //! type alias requires ownership.
 
-pub( crate ) mod shared;
+pub( crate ) mod cmd_args;
+pub( crate ) mod cmd_context;
 mod credentials;
 mod accounts;
 mod accounts_render;
@@ -21,6 +22,8 @@ mod account_inspect;
 mod account_inspect_render;
 mod limits;
 mod model;
+mod models;
+mod model_select;
 mod token_paths;
 mod dot;
 
@@ -36,6 +39,8 @@ pub use account_renewal::account_renewal_routine;
 pub use account_inspect::account_inspect_routine;
 pub use limits::account_limits_routine;
 pub use model::model_routine;
+pub use models::models_routine;
+pub use model_select::model_select_routine;
 pub use token_paths::{ token_status_routine, paths_routine };
 pub use dot::dot_routine;
 pub use crate::usage::usage_routine;

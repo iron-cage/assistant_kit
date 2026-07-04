@@ -102,7 +102,7 @@ fn with_agent_adds_flag_and_value() {
 
 #[test]
 fn with_agents_adds_flag_and_json_string() {
-  let json = r#"[{"name":"bot","model":"claude-opus-4-6"}]"#;
+  let json = r#"[{"name":"bot","model":"claude-opus-4-8"}]"#;
   let cmd = ClaudeCommand::new().with_agents( json );
   let args = args_of( &cmd );
   assert!( args.contains( &"--agents".to_string() ) );

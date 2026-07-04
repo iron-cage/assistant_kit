@@ -1,4 +1,4 @@
-# Parameter :: `solo::`
+# Parameter: 60. `solo::`
 
 Token conservation mode — restrict all credential-consuming operations (HTTP fetch, refresh subprocess, touch subprocess) to the account that is both current and owned. All other accounts display approximated historical data.
 
@@ -97,7 +97,29 @@ clp .usage solo::1 only_active::1           # solo + display only active row
 | `0` (default) | All owned accounts receive live API calls (existing behavior) |
 | `1` | Only the current+owned account receives live API calls; others use `approximate_quota()` |
 
-### Cross-References
+### Referenced Type
+
+- **Fundamental Type:** `bool`
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 1 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | Member parameter |
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Token-conserving quota fetch for current+owned account only |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | Conserve tokens during quota monitoring — live fetch only for current+owned account |
+
+### See Also
 
 | File | Relationship |
 |------|--------------|
@@ -105,4 +127,3 @@ clp .usage solo::1 only_active::1           # solo + display only active row
 | [feature/039_decision_algorithms.md](../../feature/039_decision_algorithms.md) | Decision algorithm reference — solo gate added to fetch/refresh/touch |
 | [param/059_rotate.md](059_rotate.md) | `rotate::1` is mutually exclusive with `solo::1` |
 | [param/039_only_active.md](039_only_active.md) | `only_active::` is a display filter, orthogonal to solo |
-| [param_group/003_fetch_behavior.md](../param_group/003_fetch_behavior.md) | Fetch Behavior group membership |

@@ -7,6 +7,7 @@ Disable session persistence. Forwards `--no-session-persistence` to the
 - **Default:** false (session persistence is **ON** by default; this flag turns it **OFF**)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"no-persist"`
 
 ```sh
 clr "Fix bug"              # session saved to disk (default)

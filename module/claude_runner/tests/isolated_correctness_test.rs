@@ -16,6 +16,7 @@
 //! | CT-4 | isolated trace without message: --dangerously-skip-permissions absent | No |
 //! | CT-5 | --timeout 0 (unlimited): fake subprocess NOT killed within 2s | No (fake binary) |
 //! | CT-6 | CLAUDE.md written to temp HOME before subprocess spawn | No (fake binary) |
+//! | CT-7 | isolated subprocess sees temp HOME, not real `$HOME` | No (fake binary) |
 
 #![ cfg( feature = "enabled" ) ]
 #![ cfg( unix ) ]
@@ -248,5 +249,56 @@ fn ct6_claude_md_written_to_temp_home()
   assert!(
     stdout.contains( "Execute the given task immediately" ),
     "CLAUDE.md must contain 'Execute the given task immediately'; got:\n{stdout}"
+  );
+}
+
+// ── CT-7: subprocess HOME is temp, not real $HOME ─────────────────────────────
+
+/// CT-7: `clr isolated` subprocess sees a temp `HOME`, not the real `$HOME`.
+///
+/// Root Cause: PC-4 parity gap — no test verified that the subprocess process
+///   environment has `HOME` set to the temp dir created during isolated setup.
+///   CT-6 verified `CLAUDE.md` exists in temp `HOME` but not that `HOME` itself
+///   differs from the real `$HOME`.
+/// Why Not Caught: subprocess HOME env var not inspected; CT-6 was considered sufficient.
+/// Fix Applied: no source change needed — HOME isolation already works; this test
+///   adds direct assertion via a fake binary that echoes its `HOME`.
+/// Prevention: this test; subprocess HOME verified on every CI run.
+/// Pitfall: on macOS, `/tmp` is a symlink to `/private/tmp` — do NOT assert a specific
+///   temp prefix; instead assert that the reported HOME is NOT the real HOME.
+#[ test ]
+fn ct7_isolated_subprocess_sees_temp_home()
+{
+  let tmp  = tempfile::tempdir().expect( "create temp dir" );
+  let fake = tmp.path().join( "claude" );
+
+  // Script: prints the subprocess HOME env var so we can assert it differs from the
+  // caller's real HOME.
+  std::fs::write( &fake, b"#!/bin/sh\nprintf 'SUBPROCESS_HOME=%s\\n' \"$HOME\"\n" )
+    .expect( "write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake claude" );
+
+  let creds      = make_creds_file( "{}" );
+  let creds_path = creds.path().to_str().unwrap();
+  let old_path   = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path   = format!( "{}:{old_path}", tmp.path().display() );
+  let real_home  = std::env::var( "HOME" ).expect( "HOME must be set" );
+
+  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [ "isolated", "--creds", creds_path, "x" ] )
+    .env( "PATH", &new_path )
+    .env_remove( "CLAUDECODE" )
+    .output()
+    .expect( "invoke clr isolated" );
+
+  let stdout = stdout_str( &out );
+  assert!(
+    stdout.contains( "SUBPROCESS_HOME=" ),
+    "fake claude must report its HOME; got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( &format!( "SUBPROCESS_HOME={real_home}" ) ),
+    "isolated subprocess must NOT see the real HOME ({real_home}); got:\n{stdout}"
   );
 }

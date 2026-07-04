@@ -11,6 +11,6 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| 01_settings_type_inference.md | AC- test cases for 4-step type inference cascade | ✅ |
-| 02_config_resolution.md | AC- test cases for 4-layer resolution algorithm (env/project/user/default) | ✅ |
+| 001_settings_type_inference.md | AC- test cases for 4-step type inference cascade | ✅ |
+| 002_config_resolution.md | AC- test cases for 4-layer resolution algorithm (env/project/user/default) | ✅ |
 | procedure.md | Workflow for creating and updating algorithm test specs | ✅ |

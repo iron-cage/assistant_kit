@@ -19,25 +19,26 @@ clv.settings.show format::text
 
 ### Referenced Commands
 
-| # | Command |
-|---|---------|
-| 1 | [`.status`](../command/root.md#command--2-status) |
-| 2 | [`.version.show`](../command/version.md#command--3-versionshow) |
-| 3 | [`.version.install`](../command/version.md#command--4-versioninstall) |
-| 4 | [`.version.guard`](../command/version.md#command--5-versionguard) |
-| 5 | [`.version.list`](../command/version.md#command--6-versionlist) |
-| 6 | [`.processes`](../command/processes.md#command--7-processes) |
-| 7 | [`.processes.kill`](../command/processes.md#command--8-processeskill) |
-| 8 | [`.settings.show`](../command/settings.md#command--9-settingsshow) |
-| 9 | [`.settings.get`](../command/settings.md#command--10-settingsget) |
-| 10 | [`.version.history`](../command/version.md#command--12-versionhistory) |
-| 11 | [`.config`](../command/config.md#command--13-config) |
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 1 | [`.status`](../command/root.md#command--2-status) | text | |
+| 2 | [`.version.show`](../command/version.md#command--3-versionshow) | text | |
+| 3 | [`.version.install`](../command/version.md#command--4-versioninstall) | text | |
+| 4 | [`.version.guard`](../command/version.md#command--5-versionguard) | text | |
+| 5 | [`.version.list`](../command/version.md#command--6-versionlist) | text | |
+| 6 | [`.processes`](../command/processes.md#command--7-processes) | text | |
+| 7 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | text | |
+| 8 | [`.settings.show`](../command/settings.md#command--9-settingsshow) | text | |
+| 9 | [`.settings.get`](../command/settings.md#command--10-settingsget) | text | |
+| 10 | [`.version.history`](../command/version.md#command--12-versionhistory) | text | |
+| 11 | [`.config`](../command/config.md#command--13-config) | text | |
+| 12 | [`.params`](../command/params.md#command--14-params) | text | |
 
 ### Referenced Parameter Groups
 
-| # | Group |
-|---|-------|
-| 1 | [Output Control](../param_group/01_output_control.md) |
+| # | Group | Membership | Co-members |
+|---|-------|-----------|-----------|
+| 1 | [Output Control](../param_group/01_output_control.md) | Full | `v::`, `count::` |
 
 ### Referenced Type
 
@@ -55,3 +56,4 @@ clv.settings.show format::text
 | 4 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |
 | 5 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
 | 6 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |
+| 7 | [007 Params Inspection](../user_story/007_params_inspection.md) | Developer (config inspector) |

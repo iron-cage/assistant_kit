@@ -27,7 +27,7 @@ AC test cases for `docs/algorithm/001_touch_model_selection.md`. Tests `resolve_
 
 - **Given:** An account quota with `seven_day_sonnet = None` — no Sonnet tier present
 - **When:** `resolve_model(aq, SubprocessModel::Sonnet)` is called
-- **Then:** Returns `Specific("claude-sonnet-4-6")` — explicit `imodel` overrides all quota data; tier absence is irrelevant
+- **Then:** Returns `Specific("claude-sonnet-5")` — explicit `imodel` overrides all quota data; tier absence is irrelevant
 
 ### AC-3: Auto mode with no Sonnet tier selects Haiku
 
@@ -40,13 +40,13 @@ AC test cases for `docs/algorithm/001_touch_model_selection.md`. Tests `resolve_
 
 - **Given:** An account quota with `seven_day_sonnet = Some(PeriodUsage { utilization: 30.0, resets_at: None })` — Sonnet weekly window is idle (`son_idle = true`; no active tracking period)
 - **When:** `resolve_model(aq, SubprocessModel::Auto)` is called
-- **Then:** Returns `Specific("claude-sonnet-4-6")` — `son_idle = true`; a Haiku touch cannot open an idle Sonnet session window, so Sonnet is selected to hold the window open
+- **Then:** Returns `Specific("claude-sonnet-5")` — `son_idle = true`; a Haiku touch cannot open an idle Sonnet session window, so Sonnet is selected to hold the window open
 
 ### AC-5: Auto mode with active Sonnet window and capacity selects Sonnet
 
 - **Given:** An account quota with `seven_day_sonnet = Some(PeriodUsage { utilization: 75.0, resets_at: Some("2026-06-28T04:00:00+00:00") })` — 25% remaining, which is > 20% threshold
 - **When:** `resolve_model(aq, SubprocessModel::Auto)` is called
-- **Then:** Returns `Specific("claude-sonnet-4-6")` — `son_available = (100.0 - 75.0) > 20.0 = true`; quota available, avoid wasting the expiring window
+- **Then:** Returns `Specific("claude-sonnet-5")` — `son_available = (100.0 - 75.0) > 20.0 = true`; quota available, avoid wasting the expiring window
 - **Note:** BUG-301 regression — before fix, the binary `son_idle` gate (only `resets_at == None`) ignored utilization entirely; `son_available` was not computed, causing Haiku to be selected when a Sonnet window was active with remaining quota
 
 ### AC-6: Auto mode with nearly-exhausted Sonnet window selects Haiku

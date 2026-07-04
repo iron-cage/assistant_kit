@@ -212,7 +212,7 @@ fn fetch_releases_json( base : &std::path::Path ) -> Result< String, ErrorData >
 ///
 /// Returns `Err(InternalError)` when HOME is missing or the network request fails.
 /// Returns `Err(ArgumentTypeMismatch)` when `format::` has an invalid value.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ allow( clippy::missing_inline_in_public_items ) ]
 pub fn version_history_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts  = OutputOptions::from_cmd( &cmd )?;

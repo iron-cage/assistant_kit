@@ -8,6 +8,7 @@ Passed via the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable.
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Validation:** must be a valid u32 (0–4294967295); non-numeric → error
+- **JSON Key:** `"max-tokens"`
 
 ```sh
 clr "Summarize" --max-tokens 50000

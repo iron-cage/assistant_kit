@@ -1,4 +1,4 @@
-//! CLI Argument Parsing Tests — Extended (T36–T49, S58–S79, BUG-212, BUG-215, T48)
+//! CLI Argument Parsing Tests — Extended (T36–T47, T49, EC01–EC06, S58–S69, S79, BUG-212, BUG-215, BUG-302)
 //!
 //! ## Purpose
 //!
@@ -66,9 +66,9 @@ fn t37_multiple_positional_words_joined()
 #[ test ]
 fn t38_double_dash_only_no_message()
 {
-  // Empty session dir → no -c injection (session_exists returns false for empty dir).
-  // Do NOT use make_session_dir() here: that writes a dummy file so session_exists()
-  // returns true and injects -c, which contradicts this test's "no -c" intent.
+  // Empty session dir → no -c injection (session_exists returns `None` for empty dir).
+  // Do NOT use make_session_dir() here: that writes a dummy .jsonl so session_exists()
+  // returns `Some(SessionId)` and injects -c, which contradicts this test's "no -c" intent.
   let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
   let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
   let out = run_cli( &[ "--dry-run", "--session-dir", session_path, "--" ] );
@@ -96,7 +96,7 @@ fn t39_max_tokens_empty_string_rejected()
 fn t40_all_value_flags_require_value()
 {
   for flag in &[
-    "--max-tokens", "--verbosity", "--session-dir", "--dir",
+    "--max-tokens", "--session-dir", "--dir",
     "--system-prompt", "--append-system-prompt",
   ]
   {
@@ -293,17 +293,17 @@ fn ec02_help_contains_claude_code_options_section()
   );
 }
 
-// EC-03: help has eight usage forms (one per command)
+// EC-03: help has nine usage forms (one per command, including scope)
 #[ test ]
-fn ec03_help_has_eight_usage_forms()
+fn ec03_help_has_nine_usage_forms()
 {
   let out = run_cli( &[ "--help" ] );
   assert!( out.status.success() );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let count = stdout.lines().filter( | l | l.starts_with( "  clr " ) ).count();
   assert_eq!(
-    count, 8,
-    "help must have 8 usage lines starting with '  clr '. Got {count}:\n{stdout}"
+    count, 9,
+    "help must have 9 usage lines starting with '  clr '. Got {count}:\n{stdout}"
   );
 }
 
@@ -719,7 +719,9 @@ fn bug_reproducer_215_run_help_dispatches_help()
 fn bug_reproducer_302_prefix_guard_false_positive_is()
 {
   // "is" shares a 2-char prefix with "isolated" — must NOT trigger the guard.
-  let out    = run_cli( &[ "is", "it", "so?" ] );
+  // Fix: --dry-run avoids a real claude invocation; the guard fires before
+  // dry-run processing so the assertion is unaffected.
+  let out    = run_cli( &[ "--dry-run", "is", "it", "so?" ] );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
     !stderr.contains( "unknown subcommand" ),

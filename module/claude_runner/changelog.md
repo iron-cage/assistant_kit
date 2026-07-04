@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **BUG-318: `--output-style raw` + `--json-schema` produced empty stdout** (TSK-336)
+  - `builder.rs` Path B auto-inject gate widened: `effective_style == "summary" || cli.json_schema.is_some()` ensures `--output-format json` is injected when `--json-schema` is present regardless of `--output-style`
+  - `execution.rs` raw success path: added `else if cli.json_schema.is_some()` branch calling `extract_structured_output()` — extracts the `structured_output` JSON field from the CLR envelope instead of passing through the empty `result` text field
+  - `summary.rs` `render_summary()` body: falls back to `extract_structured_output()` when `result` is empty — also surfaces structured output in summary mode
+  - New `pub(super) fn extract_structured_output(json: &str) -> Option<String>` + private `fn extract_json_value(s: &str, key: &str) -> Option<String>` added to `summary.rs`
+  - Tests: EC-15 (`tests/output_style_test.rs`), S89 (`tests/param_extended_flags_test.rs`)
+
 ### Changed
+
+- **Removed `--verbosity` (0–5); replaced by `--quiet` bool flag** (TSK-337, Plan 038)
+  - `src/verbosity.rs` and `VerbosityLevel` newtype deleted entirely
+  - `--quiet` (env: `CLR_QUIET`) suppresses non-fatal CLR diagnostics: gate-wait messages, retry progress, retry-exhaustion messages, and the keep-claudecode nested-agent warning
+  - Fatal errors (spawn failures, binary-not-found) are always emitted regardless of `--quiet`; `--dry-run` and `--trace` output similarly unaffected
+  - `--verbose-detail` preview (former `--verbosity ≥ 4` behavior) removed; command preview is now exclusively via `--trace`
+  - All 4 gate sites updated from `verbosity.shows_*()` to `!cli.quiet`
+  - `tests/verbosity_test.rs` deleted; replaced by `tests/quiet_test.rs` (QT-1–QT-6)
 
 - **Dependency upgrade: `data_fmt ^0.4 → ^0.6`** (TSK-327)
   - Migrated `clr ps` and `clr tools` from `TableCaption`/`.field()`/`.caption()` to `Heading`/`.with_field()`/`.with_heading()` (renamed in data_fmt TSK-009)
@@ -17,6 +34,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dependency upgrade: `test_tools ^0.17 → ^0.18`** — API-compatible; no code changes required
 
 ### Added
+
+- **Container-only test execution enforcement** (commit `40927a98`)
+  - `verb/test` rejects any `VERB_LAYER` set on the host; `verb/test.d/l0` is a hard-error stub (exits 1) — no host-native test execution path exists
+  - Workspace-level `.config/setup-require-container` registered as a nextest setup script; checks three detection signals (`/.dockerenv`, `/run/.containerenv`, `RUNBOX_CONTAINER=1`); exits 1 before any test binary on bare host
+  - `claude_runner` test suite reorganized: tests moved to flat `tests/` structure
+  - Doc: `docs/invariant/010_container_only_test_execution.md`; spec: `tests/docs/invariant/010_container_only_test_execution.md`
+  - Tests: IT-1–IT-5 (`tests/invariant_container_test.rs`): nextest.toml setup-script registration (IT-1); setup-require-container existence (IT-2); three-signal body checks (IT-3–IT-5)
+
+- **Session mismatch detection** (TSK-334/335, BUG-320 hardening)
+  - `session_exists()` returns `Option<SessionId>` instead of `bool`; `build_claude_command()` returns `(ClaudeCommand, Option<SessionId>)` — captures expected UUID for post-execution comparison
+  - `extract_session_id(json) -> Option<String>` in `summary.rs`: parses `session_id` from CLR result envelope, gated on `"type":"result"` per invariant/008
+  - On success path in `run_print_mode()`, if expected UUID differs from actual, emits `[Runner] warning: session mismatch` to stderr; non-fatal (exit 0)
+  - `SessionId` newtype in `claude_storage_core`: typed wrapper for UUID stems; `most_recent_session_id()` / `most_recent_session_in_dir()` APIs
+  - Tests: SV-1–SV-4 (`session_verification_test.rs`), IT-8–IT-10 (`summary_unit_test.rs`)
+  - Doc: `invariant/009_session_mismatch_detection.md`
 
 - **`clr isolated` param gap closure** (Plan 034, TSK-328–331)
   - `--dry-run` (TSK-328): print injected command without creating temp HOME or spawning; exit 0; consistent with `run`/`ask`
@@ -30,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `isolated` param count: 6 → 16; shared params with `run`/`ask` now 13 (was 3)
   - Exit code 3 now applies to `isolated` (`--expect` mismatch with `fail` strategy)
   - Tests: IT-12–IT-36 in `tests/isolated_test.rs` (25 new cases); spec: `tests/docs/cli/command/03_isolated.md`
-  - Docs: `docs/cli/command/02_isolated.md`, `docs/cli/parity/001_run_ask_isolated.md`
+  - Docs: `docs/cli/command/03_isolated.md`, `docs/cli/parity/001_run_ask_isolated.md`
 
 - **Event journaling integration** (Plan 033, TSK-326)
   - `--journal <full|meta|off>` controls event emission level; `full` (default) captures stdout/stderr (≤1MB each), `meta` records metadata only, `off` disables journaling
@@ -40,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Parameters: [`--journal`](docs/cli/param/072_journal.md) (072), [`--journal-dir`](docs/cli/param/073_journal_dir.md) (073)
   - Env vars: `CLR_JOURNAL`, `CLR_JOURNAL_DIR`; invalid `CLR_JOURNAL` exits 1
   - New dependency: `claude_journal` (workspace)
-  - Tests: `journal_integration_test.rs` (EC-1–EC-15); EC-11..EC-13: gate_wait, validation_retry, read-only isolation; EC-14: CLI-wins-over-env precedence; EC-15: 1MB truncation marker
+  - Tests: `journal_integration_test.rs` (EC-1–EC-22); EC-11..EC-13: gate_wait, validation_retry, read-only isolation; EC-14: CLI-wins-over-env precedence; EC-15: 1MB truncation; EC-16: dry-run side-effect isolation (BUG-319); EC-17: bogus-flag exits 1; EC-18: case-sensitive; EC-19: missing-value; EC-20: duplicate last-wins; EC-21–EC-22: off+dir no-op
 
 - **Help split: `RUNNER OPTIONS` / `CLAUDE CODE OPTIONS (forwarded)` sections** (TSK-232)
   - `clr --help` now uses `CliHelpTemplate` from `cli_fmt ^0.9` instead of 262-line hand-rolled `print!` calls
@@ -146,7 +178,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     must use `MAIN_SEPARATOR`; (3) negative `!contains("/-")` assertions are equally broken on
     Windows — `\-` goes undetected; fix both directions when adding cross-platform guards
 
-- **`run_print_mode` retry loop now fails fast on auth errors** (BUG-315, TSK-323)
+- **`--retry-on-auth` dead parameter — Auth now uses same 3-tier retry resolution as all classes** (BUG-325)
+  - BUG-315 introduced `!is_auth_error` guard that blocked retry-block entry unconditionally for
+    all Auth-class errors, making `--retry-on-auth` a permanently dead parameter regardless of its
+    configured value; operator requirement: ALL error classes must use identical 3-tier resolution
+  - Fix: removed `let is_auth_error = matches!(class, ErrorClass::Auth)` variable and
+    `!is_auth_error &&` prefix from retry-block entry guard in `run_print_mode`; Auth now flows
+    through `if attempts[class_idx] < limit` identically to Transient/Account/Service/Process/Unknown;
+    `--retry-on-auth 0` still works as explicit opt-out (resolves to limit=0, guard false on entry)
+  - Supersedes the BUG-315 entry below: Auth fail-fast was operator-rejected; the guard was a
+    regression, not a design. BUG-315 fix for credential-recovery-hook path remains invalid.
+  - Tests: `ec7_auth_error_retries_on_explicit_budget`, `ec8_auth_error_exhausts_retry_budget`,
+    `mre_bug325_auth_retry_fires_on_configured_budget`, `b4_authentication_error_401_format_retries_and_exhausts`
+    in `tests/retry_auth_test.rs`
+
+- **`run_print_mode` retry loop now fails fast on auth errors** (BUG-315, TSK-323) ⚠️ SUPERSEDED by BUG-325
   - Auth errors (`ErrorKind::AuthError`) are persistent — the auth token is invalid and requires
     explicit credential recovery; the retry loop had no recovery mechanism, so each `sleep + continue`
     iteration reproduced the same 401 failure and exhausted N×delay seconds without useful output
@@ -157,6 +203,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     recovery; retrying consumes budget without recovery path; Pitfall: a retry loop operating on
     auth-class errors without a credential recovery hook deterministically exhausts its budget
   - Tests: `mre_bug315_auth_error_exits_retry_loop_immediately` in `tests/retry_auth_test.rs`
+  - ⚠️ This guard was reversed by BUG-325: operator requirement confirmed Auth must retry under
+    same 3-tier resolution as all other classes. `mre_bug315` test renamed to `mre_bug325`.
 
 - **`authentication_error` 401 now correctly classified as `[Auth]`** (BUG-314, TSK-322)
   - `ERROR_PATTERNS` had no entry for `"authentication_error"`; the `"API Error: "` catch-all
@@ -371,11 +419,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`clr ps` `$PRO` path shortening** — `Absolute Path` (active) and `CWD` (queued) columns replace the `$PRO` prefix with the literal `"$PRO"` string when the `PRO` env var is set (TSK-199)
 
-- **Isolated subprocess model upgraded to Claude Opus 4.6** — `ISOLATED_DEFAULT_MODEL` changed from `claude-sonnet-4-6` to `claude-opus-4-6`; effort set to `EffortLevel::Max` (TSK-021)
+- **Isolated subprocess model upgraded to Claude Opus 4.6** — `ISOLATED_DEFAULT_MODEL` changed from `claude-sonnet-5` to `claude-opus-4-8`; effort set to `EffortLevel::Max` (TSK-021)
   - `--dangerously-skip-permissions` injected when a message is present; `--no-session-persistence` always injected
   - Rationale: isolated mode runs high-stakes, single-shot tasks requiring maximum capability
 
-- **Refresh subprocess model set to Claude Sonnet 4.6** — new `REFRESH_DEFAULT_MODEL` = `"claude-sonnet-4-6"`; effort set to `EffortLevel::Low`; `--no-chrome` and `--no-session-persistence` always injected (TSK-021)
+- **Refresh subprocess model set to Claude Sonnet 4.6** — new `REFRESH_DEFAULT_MODEL` = `"claude-sonnet-5"`; effort set to `EffortLevel::Low`; `--no-chrome` and `--no-session-persistence` always injected (TSK-021)
   - Rationale: refresh is a lightweight credential-ping task; Sonnet at low effort is sufficient and faster
 
 - **`--max-sessions` default raised 25 → 30** (Plan 011)

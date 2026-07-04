@@ -532,13 +532,21 @@ fn ec10_default_journal_dir_is_home_clr_journal()
 /// Root Cause: gate_wait events only emit when `gate_emitted=true` (i.e. ≥1 full
 /// poll cycle elapsed), which requires an actual blocking process to be running.
 /// Why Not Caught: no test spawning a real ELF process before invoking clr
-/// Fix Applied: N/A — existing emission code verified by this test
+/// Fix Applied: Added fake_proc TempDir + symlink /proc/{child_pid}; .env(CLR_PROC_DIR) on clr
+///   Command builder — gate now reads synthetic proc dir only (BUG-326)
 /// Prevention: assert "type":"gate_wait" + "gate_outcome":"acquired" appear in JSONL
 /// Pitfall: shell-script fakes appear as `sh` in `/proc/{pid}/cmdline` — invisible to
 /// `find_claude_processes()`.  Must use `fake_claude_binary_dir()` (real ELF).
 /// Pitfall: `_CLR_GATE_POLL_SECS=1` reduces poll interval from 30s to 1s for tests.
+/// Fix(BUG-326): `CLR_PROC_DIR` MUST be set on the `clr` Command builder so that
+/// `find_claude_processes()` reads only the synthetic proc dir, not real `/proc`.
+/// Pitfall: `fake_claude_binary_dir()` provides PATH isolation only — it is NOT a proc
+/// filesystem root.  Use a separate `TempDir` for `CLR_PROC_DIR` with a symlink to
+/// `/proc/{pid}`.  Do NOT use a static `cmdline` file: it persists after child exits,
+/// keeping count=1 forever so the gate never releases and `.output()` deadlocks.
 #[ cfg( unix ) ]
 #[ test ]
+#[ doc = "bug_reproducer(BUG-326)" ]
 fn ec11_gate_wait_event_emitted_when_gate_blocks()
 {
   let jdir   = tempfile::TempDir::new().expect( "jdir" );
@@ -559,6 +567,18 @@ fn ec11_gate_wait_event_emitted_when_gate_blocks()
   // Brief delay — let the spawned process register in /proc.
   std::thread::sleep( core::time::Duration::from_millis( 300 ) );
 
+  // Fix(BUG-326): synthetic proc dir — gate sees only the blocker, not ambient sessions.
+  // Root cause: CLR_PROC_DIR absent → find_claude_processes() reads real /proc →
+  //   count=20-24 → max=1 never satisfied → timeout.
+  // Pitfall: symlink (not static cmdline) — symlink target vanishes when child exits
+  //   (kernel removes /proc/{pid}); ENOENT causes process.rs to skip, count→0, gate releases.
+  let fake_proc     = tempfile::TempDir::new().expect( "fake_proc" );
+  let fake_proc_str = fake_proc.path().to_str().expect( "fake_proc UTF-8" );
+  std::os::unix::fs::symlink(
+    format!( "/proc/{}", child.id() ),
+    fake_proc.path().join( child.id().to_string() ),
+  ).expect( "pid symlink" );
+
   // Shell-script fake claude for the actual subprocess that clr runs (exits 0).
   let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
 
@@ -572,6 +592,7 @@ fn ec11_gate_wait_event_emitted_when_gate_blocks()
       "x",
     ] )
     .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", fake_proc_str )    // BUG-326: isolate gate's proc scan
     .env( "_CLR_GATE_POLL_SECS", "1" )
     .env_remove( "CLR_JOURNAL" )
     .env_remove( "CLR_JOURNAL_DIR" )

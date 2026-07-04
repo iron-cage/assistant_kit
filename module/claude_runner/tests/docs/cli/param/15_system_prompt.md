@@ -76,7 +76,7 @@ Edge case coverage for the `--system-prompt` parameter. See [015_system_prompt.m
 - **When:** `clr --help`
 - **Then:** Stdout contains `--system-prompt`.; flag present in help
 - **Exit:** 0
-- **Source:** [command/04_help.md](../../../../docs/cli/command/04_help.md)
+- **Source:** [command/02_help.md](../../../../docs/cli/command/02_help.md)
 - **Commands:** run, ask
 
 ---

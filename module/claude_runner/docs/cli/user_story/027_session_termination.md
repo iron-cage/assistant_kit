@@ -1,29 +1,9 @@
-# CLI User Story: Session Termination
+# Terminate a Claude Code session by PID
 
-### Scope
-
-- **Purpose**: Document `clr kill <PID>` as a session management tool that sends SIGTERM to a
-  running Claude Code process identified by its PID.
-- **Responsibility**: Define acceptance criteria for the session termination command: PID
-  validation, SIGTERM delivery, non-Claude PID rejection, missing PID error, help
-  discoverability, and typo guard.
-- **In Scope**: `clr kill <PID>` command, SIGTERM delivery, PID validation via
-  `find_claude_processes()`, error handling for invalid/missing/non-Claude PIDs, `clr
-  --help` listing, typo guard for `clr kil`.
-- **Out of Scope**: SIGKILL support (escalation), kill-all mode, kill by path/pattern,
-  non-Linux platforms.
-
-### Persona
-
-Developer or CI operator running multiple `clr` sessions who needs to cleanly stop a
-specific Claude Code process — identified by its PID from `clr ps` — without resorting
-to system-level `kill` commands and without risking terminating the wrong process.
-
-### Goal
-
-Terminate a specific Claude Code session by PID so the developer can free up a session
-slot, stop a stuck task, or cancel an unwanted run — with confidence that only a verified
-`claude` process will be targeted.
+**Persona:** Developer or CI operator running multiple `clr` sessions who needs to cleanly stop a specific Claude Code process — identified by its PID from `clr ps` — without resorting to system-level `kill` commands and without risking terminating the wrong process.
+**Goal:** Terminate a specific Claude Code session by PID so the developer can free up a session slot, stop a stuck task, or cancel an unwanted run — with confidence that only a verified `claude` process will be targeted.
+**Benefit:** Enables safe, targeted session cleanup without risk of terminating unintended processes.
+**Priority:** Low
 
 ### Acceptance Criteria
 
@@ -43,6 +23,11 @@ slot, stop a stuck task, or cancel an unwanted run — with confidence that only
 ### Referenced Parameter Groups
 
 None. `kill` accepts a single positional argument, not named parameters.
+
+### Workflow Steps
+
+1. `clr ps` — list active sessions and identify the target PID
+2. `clr kill <PID>` — send SIGTERM to the Claude Code session with the given PID
 
 ### Related User Stories
 

@@ -1,4 +1,4 @@
-# Parameter :: 19. `refresh::`
+# Parameter: 19. `refresh::`
 
 Attempt a token refresh via `claude_profile_core::account::refresh_account_token()` and retry once before reporting failure; trigger and semantics vary by command — HTTP auth error (`.usage`, `.account.use`) or locally-expired `expiresAt` before endpoint calls (`.account.inspect`). See Purpose below for per-command details.
 

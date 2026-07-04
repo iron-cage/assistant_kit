@@ -8,6 +8,7 @@ effective retry count for Account is 0.
 - **Default:** `auto` (inherits from `--retry-default-delay`, Tier 3 fallback)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"account-delay"`
 
 ```sh
 clr -p "task" --retry-on-account 2 --account-delay 300  # wait 5 min between retries
@@ -39,7 +40,7 @@ effective = --retry-override-delay ?? --account-delay ?? --retry-default-delay (
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--verbosity`, `--trace`, ... |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | `--dry-run`, `--quiet`, `--trace`, ... |
 
 ### Referenced Commands
 

@@ -9,6 +9,7 @@ Accepts preset profile names or a custom comma-separated field whitelist.
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Requires:** `--output-style summary` (the default); ignored when `--output-style raw`
+- **JSON Key:** `"summary-fields"`
 
 ```sh
 clr -p "task"                                       # default: full (all 32 header fields)

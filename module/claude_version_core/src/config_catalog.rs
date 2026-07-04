@@ -28,7 +28,7 @@ pub struct SettingDef
 pub fn catalog() -> &'static [ SettingDef ]
 {
   static ENTRIES : &[ SettingDef ] = &[
-    SettingDef { key : "model",                   env_var : Some( "CLAUDE_MODEL" ), default : Some( "claude-sonnet-4-6" ) },
+    SettingDef { key : "model",                   env_var : Some( "CLAUDE_MODEL" ), default : Some( "claude-sonnet-5" ) },
     SettingDef { key : "preferredVersionSpec",     env_var : None,                  default : Some( "stable" )           },
     SettingDef { key : "preferredVersionResolved", env_var : None,                  default : None                       },
     SettingDef { key : "autoUpdates",              env_var : None,                  default : Some( "true" )             },

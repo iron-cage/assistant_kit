@@ -1,10 +1,10 @@
-# Commands :: Credentials
+# Commands: Credentials
 
 Credential metadata commands.
 
 ---
 
-### Command :: 10. `.credentials.status`
+### Command: 10. `.credentials.status`
 
 Show live credential metadata by reading `~/.claude/.credentials.json` directly. Succeeds on any authenticated machine regardless of whether account store setup exists.
 
@@ -77,6 +77,29 @@ clp .credentials.status format::json
 - `account::` reads the per-machine active marker; shows `N/A` on machines where no account has ever been saved.
 - `saved::` counts `*.credentials.json` files in the credential store; shows `0` when the credential store is absent.
 
+### Referenced Parameters
+
+| # | Parameter | Role |
+|---|-----------|------|
+| 1 | [format::](../param/002_format.md) | Output format |
+| 2 | [account::](../param/005_account.md) | Show active account name |
+| 3 | [sub::](../param/006_sub.md) | Show subscription type |
+| 4 | [tier::](../param/007_tier.md) | Show rate-limit tier |
+| 5 | [token::](../param/008_token.md) | Show token status |
+| 6 | [expires::](../param/009_expires.md) | Show token expiry duration |
+| 7 | [email::](../param/010_email.md) | Show email address |
+| 8 | [file::](../param/011_file.md) | Show credentials file path |
+| 9 | [saved::](../param/012_saved.md) | Show saved account count |
+| 10 | [display_name::](../param/014_display_name.md) | Show display name |
+| 11 | [role::](../param/015_role.md) | Show organisation role |
+| 12 | [billing::](../param/016_billing.md) | Show billing type |
+| 13 | [model::](../param/017_model.md) | Show active model |
+| 14 | [uuid::](../param/028_uuid.md) | Show stable user ID |
+| 15 | [capabilities::](../param/029_capabilities.md) | Show product capabilities |
+| 16 | [org_uuid::](../param/030_org_uuid.md) | Show organisation UUID |
+| 17 | [org_name::](../param/031_org_name.md) | Show organisation display name |
+| 18 | [trace::](../param/023_trace.md) | Diagnostic trace output |
+
 ### Referenced Features
 
 | # | Feature | Role |
@@ -92,3 +115,18 @@ clp .credentials.status format::json
 |---|------------|---------|
 | 1 | [Account Onboarding](../user_story/002_onboarding.md) | Verify live credential state during account setup |
 | 2 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Primary command for live credential inspection |
+
+### Referenced Parameter Groups
+
+| # | Group | Parameters Used |
+|---|-------|-----------------|
+| 1 | [Output Control](../param_group/001_output_control.md) | `format::` |
+| 2 | [Field Presence](../param_group/002_field_presence.md) | All 16 params (`account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`) |
+| 3 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | `trace::` |
+
+### Referenced Formats
+
+| # | Format | Trigger |
+|---|--------|---------|
+| 1 | [text](../format/001_text.md) | `format::text` (default) |
+| 2 | [json](../format/002_json.md) | `format::json` |

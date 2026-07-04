@@ -16,6 +16,8 @@
 - `.version.guard dry::1`
 - `.processes.kill dry::1`
 - `.settings.set dry::1`
+- `.config set dry::1`
+- `.config unset dry::1`
 
 **Output parity requirement:** The `[dry-run] would ...` output must exactly mirror the actual action message produced without `dry::1`. Both modes share identical argument extraction logic to prevent divergence over time. If the actual action says `"Installing version 2.1.78"`, the dry-run must say `"[dry-run] would: Installing version 2.1.78"`.
 
@@ -30,6 +32,7 @@
 | [feature/001_version_management.md](001_version_management.md) | Version mutation commands supporting dry::1 |
 | [feature/002_process_lifecycle.md](002_process_lifecycle.md) | Kill command supporting dry::1 |
 | [feature/003_settings_management.md](003_settings_management.md) | Settings set command supporting dry::1 |
+| [feature/006_config_command.md](006_config_command.md) | .config set and .config unset commands supporting dry::1 |
 
 ### Sources
 
@@ -38,6 +41,7 @@
 | `../../src/commands/version.rs` | dry-run branches in install/guard |
 | `../../src/commands/process.rs` | dry-run branch in kill command |
 | `../../src/commands/settings.rs` | dry-run branch in settings set |
+| `../../src/commands/config.rs` | dry-run branches in .config set and .config unset |
 
 ### Provenance
 
@@ -49,4 +53,4 @@
 
 | File | Relationship |
 |------|-------------|
-| [tests/docs/feature/04_dry_run.md](../../tests/docs/feature/04_dry_run.md) | Feature test spec |
+| [tests/docs/feature/004_dry_run.md](../../tests/docs/feature/004_dry_run.md) | Feature test spec |

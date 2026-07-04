@@ -1,4 +1,4 @@
-# Format :: 3. table
+# Format: 3. table
 
 - **ID:** F03
 - **Trigger:** `format::table`

@@ -8,6 +8,7 @@ Override the session storage directory. Passed via the
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 - **Validation:** requires a value
+- **JSON Key:** `"session-dir"`
 
 ```sh
 clr "Fix bug" --session-dir /tmp/my-sessions

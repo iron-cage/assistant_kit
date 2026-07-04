@@ -24,6 +24,7 @@
 //! - T09: `clr ask --unknown-flag "X"` — unknown flag rejected (exit 1, stderr error)
 //! - T10: `clr ask --subdir NAME "X"` — effective dir ends with `/-NAME`
 //! - T12: `clr assk …` — edit-distance-1 typo caught by guard; exits 1, "Did you mean 'ask'?"
+//! - T13: `clr ask --dry-run --effort high "q"` — explicit `--effort high` preserved unchanged (passthrough)
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_ask_dry, run_cli };
@@ -37,6 +38,7 @@ fn run_run_dry( extra_args : &[ &str ] ) -> String
   args.extend_from_slice( extra_args );
   let out = Command::new( bin )
     .args( &args )
+    .env( "HOME", "/tmp/clr-isolated-home" )
     .output()
     .expect( "failed to invoke clr binary" );
   assert!(
@@ -285,5 +287,28 @@ fn t12_ask_edit_distance_typo_caught_by_guard()
   assert!(
     stderr.contains( "ask" ),
     "stderr must suggest 'ask'; got: {stderr}"
+  );
+}
+
+// T13: explicit --effort value passes through to the assembled command unchanged.
+/// T13: `clr ask --dry-run --effort high "q"` → `--effort high` in assembled output.
+///
+/// Verifies PC-2 parity: ask is a pure run alias — user-supplied `--effort` values pass
+/// through unchanged.  T06 only tests the default-injection path (no `--effort` flag →
+/// injects `--effort max`); this test covers the explicit-override path, confirming that
+/// the `unwrap_or(EffortLevel::Max)` fallback does not fire when effort is already set.
+///
+/// Source: tests/docs/cli/parity/01_run_ask_isolated.md#pc-2
+#[ test ]
+fn t13_ask_explicit_effort_passthrough()
+{
+  let output = run_ask_dry( &[ "--effort", "high", "q" ] );
+  assert!(
+    output.contains( "--effort high" ),
+    "ask --effort high must pass through unchanged in dry-run output; got:\n{output}"
+  );
+  assert!(
+    !output.contains( "--effort max" ),
+    "ask must not inject --effort max when --effort high is explicitly given; got:\n{output}"
   );
 }

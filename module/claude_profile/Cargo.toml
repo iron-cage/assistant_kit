@@ -30,6 +30,11 @@ name = "claude_profile"
 path = "src/main.rs"
 required-features = [ "enabled" ]
 
+[[test]]
+name = "usage_integration_test"
+path = "tests/usage_integration_test.rs"
+required-features = [ "testing" ]
+
 [dependencies]
 # Zero third-party (crates.io) dependencies for core library functionality.
 # Internal workspace crates (claude_core, claude_profile_core) are allowed.
@@ -44,9 +49,12 @@ claude_quota          = { workspace = true, optional = true, features = [ "enabl
 data_fmt              = { workspace = true, optional = true }
 
 [dev-dependencies]
-gag        = { workspace = true }
+gag                = { workspace = true }
 serde_json.workspace = true
 tempfile.workspace = true
+claude_quota       = { workspace = true, features = [ "enabled" ] }
+claude_runner_core = { workspace = true, features = [ "enabled" ] }
+unilang            = { workspace = true }
 
 [features]
 # Default: full CLI build (binary + all deps). Use --no-default-features for library-only.
@@ -54,11 +62,17 @@ default = [ "enabled" ]
 # Master switch: activates CLI binary dependencies (error_tools, unilang, claude_quota, data_fmt).
 enabled = [
   "dep:cli_fmt",
+  "cli_fmt/cli_help_template",
   "dep:claude_runner_core",
   "dep:error_tools",
   "error_tools/enabled",
   "error_tools/error_untyped",
   "dep:unilang",
+  "unilang/enabled",
   "dep:claude_quota",
   "dep:data_fmt",
+  "data_fmt/enabled",
 ]
+# Exposes pub test_bridge module for integration tests in tests/usage/.
+# Requires enabled so claude_quota types are available.
+testing = [ "enabled" ]

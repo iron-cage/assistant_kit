@@ -1,9 +1,14 @@
 # CLI Command: run
 
-Execute Claude Code as a subprocess with configurable flags. This is the
-default command — invoked whenever no explicit subcommand is given.
+### Description
 
-**Syntax:**
+Execute Claude Code as a subprocess with configurable flags — the default command invoked whenever no explicit subcommand is given. Use `clr` for interactive REPL sessions or `clr "message"` for single-turn print-mode execution with automatic session continuation.
+
+-- **Parameters:** `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--subdir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--quiet`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--output-file`, `--expect`, `--expect-strategy`, `--max-sessions`, and retry/output flags
+-- **Exit Codes:** 0 (success) | 1 (error) | 2 (rate-limit/transient) | 3 (expect mismatch) | 4 (timeout) | N (subprocess passthrough) | 128+signal (signal)
+-- **Modes:** interactive, print, dry-run, trace
+
+### Syntax
 
 ```sh
 clr [OPTIONS] [MESSAGE]
@@ -12,7 +17,7 @@ clr run [OPTIONS] [MESSAGE]
 
 The `run` token is optional — both forms are equivalent. When `run` appears as the first positional token it is stripped before delegation to the default run mode.
 
-**Parameters:**
+### Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -28,7 +33,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 200000 | Max output tokens |
 | [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session storage directory |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Print command without executing |
-| [`--verbosity`](../param/012_verbosity.md) | [`VerbosityLevel`](../type/05_verbosity_level.md) | 3 | Runner output gate level |
+| [`--quiet`](../param/074_quiet.md) | bool | false | Suppress non-fatal runner diagnostics |
 | [`--trace`](../param/013_trace.md) | bool | false | Print env+command to stderr then execute (like `set -x`) |
 | [`--no-ultrathink`](../param/014_no_ultrathink.md) | bool | false | Disable default ultrathink message suffix |
 | [`--system-prompt`](../param/015_system_prompt.md) | [`SystemPromptText`](../type/06_system_prompt_text.md) | — | Set system prompt (replaces the default) |
@@ -78,8 +83,18 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--max-budget-usd`](../param/065_max_budget_usd.md) | f64 | — | Max dollar budget for session |
 | [`--add-dir`](../param/066_add_dir.md) | path | — | Additional directory for Claude Code to access |
 | [`--fallback-model`](../param/067_fallback_model.md) | string | — | Fallback model when primary unavailable |
+| [`--args-file`](../param/075_args_file.md) | [`FilePath`](../type/12_file_path.md) | — | Load clr params from JSON config file; stdin JSON auto-detected when no TTY |
 
-**Execution Modes:**
+**Algorithm (7 steps):**
+1. Parse flags; apply JSON config (from `--args-file`/`CLR_ARGS_FILE`/stdin) for unset parameters; apply CLR_* env var fallbacks for still-unset parameters; if `--model` is still unset, read `subprocess_model` from `~/.clr/prefs.json` via `read_subprocess_model_pref()` (applies to `--model` only — all other parameters stop at the CLR_* env var tier).
+2. If `--max-sessions > 0`, count active `claude` processes; block in 30-second polling loop until slot available or 100-attempt limit reached (exit 1 on limit).
+3. If `--dry-run`, render command preview via `describe()` / `describe_env()`; emit to stdout; exit 0.
+4. Resolve execution directory (`--dir` + `--subdir`); create `/-NAME` subdirectory if `--subdir` set and not `"."`.
+5. Assemble subprocess command with injected defaults (`--dangerously-skip-permissions`, `--effort max`, `ultrathink` suffix, `-c` continuation unless `--new-session`).
+6. Execute subprocess (`execute()` for print mode with `--timeout` watchdog, `execute_interactive()` for REPL).
+7. Post-process output: strip fences if `--strip-fences`; validate against `--expect` if set; tee to `--output-file` if set; propagate subprocess exit code.
+
+### Execution Modes
 
 All modes apply `-c` automatically (continuing the previous session).
 Use `--new-session` to start fresh.
@@ -96,7 +111,7 @@ Use `--new-session` to start fresh.
 | `clr --trace "Fix bug"` | Trace (print then execute) | `describe_env()` + `describe()` to stderr, then `execute()` |
 | `clr --new-session "Fix bug"` | Fresh session, print | `execute()` + `--print` (no `-c`) |
 
-**Exit Codes:**
+### Exit Codes
 
 | Code | Meaning |
 |------|---------|
@@ -108,7 +123,7 @@ Use `--new-session` to start fresh.
 | N | Passthrough from claude subprocess (print mode propagates the subprocess exit code exactly) |
 | 128+signal | Subprocess killed by signal; follows POSIX convention (e.g., SIGTERM → 143, SIGKILL → 137) |
 
-**Examples:**
+### Examples
 
 ```sh
 # Interactive REPL (no message)
@@ -133,9 +148,17 @@ clr --new-session "Analyse this new codebase"
 clr --dry-run "Run tests" --max-tokens 50000
 ```
 
-**Notes:**
+### Notes
 
 `--dry-run` takes precedence over execution regardless of other flags. If present, no subprocess is launched.
+
+### Related Commands
+
+| # | Command | Relationship |
+|---|---------|--------------|
+| 1 | [`ask`](05_ask.md) | Pure semantic alias for `run` with identical behavior |
+| 2 | [`isolated`](03_isolated.md) | Credential-isolated variant; does not share session state |
+| 3 | [`refresh`](04_refresh.md) | Credential refresh only; no task execution |
 
 ### Referenced Parameter Groups
 
@@ -161,7 +184,20 @@ clr --dry-run "Run tests" --max-tokens 50000
 | 11 | [011_file_input.md](../user_story/011_file_input.md) | Developer |
 | 12 | [012_code_block_extraction.md](../user_story/012_code_block_extraction.md) | Developer |
 | 13 | [013_structured_json_pipeline.md](../user_story/013_structured_json_pipeline.md) | Developer |
+| 17 | [017_model_selection.md](../user_story/017_model_selection.md) | Developer |
+| 18 | [018_env_var_configuration.md](../user_story/018_env_var_configuration.md) | Developer |
+| 19 | [019_mcp_config_injection.md](../user_story/019_mcp_config_injection.md) | Developer |
+| 20 | [020_suppress_effort_max.md](../user_story/020_suppress_effort_max.md) | Developer |
+| 21 | [021_keep_claudecode_context.md](../user_story/021_keep_claudecode_context.md) | Developer |
 | 22 | [022_session_isolation_subdir.md](../user_story/022_session_isolation_subdir.md) | Developer |
 | 23 | [023_output_file_capture.md](../user_story/023_output_file_capture.md) | Developer |
 | 24 | [024_enum_output_validation.md](../user_story/024_enum_output_validation.md) | Developer |
 | 25 | [025_concurrency_gate.md](../user_story/025_concurrency_gate.md) | Developer |
+
+---
+
+**Category:** Task execution
+**Complexity:** 25
+**API Requirement:** Write
+**Idempotent:** No
+**Risk Level:** Low

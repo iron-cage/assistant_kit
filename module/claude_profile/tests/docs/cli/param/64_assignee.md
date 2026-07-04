@@ -4,29 +4,31 @@ Edge case tests for the `assignee::` parameter (Feature 065). Renamed from `acti
 
 **Source:** [params.md#parameter--63-assignee](../../../../docs/cli/param/063_assignee.md)
 
+**Behavioral Divergence Pair:** EC-1 ↔ EC-5 — `assignee::user@host name::X` with valid `USER@MACHINE` format writes the marker file and exits 0; `assignee::badvalue` without `@` exits 1 with a format error before any marker write.
+
 ## Test Case Index
 
-| ID | Test Name | Category | Status |
-|----|-----------|----------|--------|
-| EC-1 | `assignee::user@host name::X` writes `_active_host_user = X` | Behavioral | ✅ |
-| EC-2 | `assignee::0 name::X` expands to current machine, writes marker | Sentinel | ✅ |
-| EC-3 | `assignee::user@host` (no `name::`) clears `_active_host_user` | Behavioral | ✅ |
-| EC-4 | `assignee::0` (no `name::`) clears current machine marker | Sentinel | ✅ |
-| EC-5 | `assignee::badvalue` (no `@`, not `"0"`) exits 1 | Validation | ✅ |
-| EC-6 | `assignee::@host` (empty user component) exits 1 | Validation | ✅ |
-| EC-7 | `assignee::user@` (empty machine component) exits 1 | Validation | ✅ |
-| EC-8 | `assignee::user@host name::X dry::1` previews without writing | Dry-run | ✅ |
-| EC-9 | `assignee::0 name::X dry::1` sentinel dry-run preview | Dry-run | ✅ |
-| EC-10 | `assignee::0 dry::1` (no `name::`) sentinel unassign dry-run | Dry-run | ✅ |
-| EC-11 | `assignee::user@host name::unknown` exits 1 (account not in store) | Validation | ✅ |
-| EC-12 | Space in machine component sanitized to `_` | Sanitization | ✅ |
-| EC-13 | Dot and hyphen in machine component preserved | Sanitization | ✅ |
-| EC-14 | `assignee::` absent — no marker write (default omit) | Default | ✅ |
-| EC-15 | `assignee::user@host name::X` does NOT modify `owner` field | Isolation | ✅ |
-| EC-16 | `force::1 assignee::user@host name::X` — `force::1` silently ignored | No-op | ✅ |
-| EC-17 | `active::user@host name::X` exits 1 — REMOVED_TOGGLE migration message | Migration | ✅ |
-| EC-18 | `assignee::user@host` (no `name::`) when marker absent — no-op exit 0 | Behavioral | ✅ |
-| EC-19 | Multiple `@` in value — `assignee::alice@corp.com@laptop` splits on first `@` | Sanitization | ✅ |
+| ID | Test Name | Category |
+|----|-----------|----------|
+| EC-1 | `assignee::user@host name::X` writes `_active_host_user = X` | Behavioral |
+| EC-2 | `assignee::0 name::X` expands to current machine, writes marker | Sentinel |
+| EC-3 | `assignee::user@host` (no `name::`) clears `_active_host_user` | Behavioral |
+| EC-4 | `assignee::0` (no `name::`) clears current machine marker | Sentinel |
+| EC-5 | `assignee::badvalue` (no `@`, not `"0"`) exits 1 | Validation |
+| EC-6 | `assignee::@host` (empty user component) exits 1 | Validation |
+| EC-7 | `assignee::user@` (empty machine component) exits 1 | Validation |
+| EC-8 | `assignee::user@host name::X dry::1` previews without writing | Dry-run |
+| EC-9 | `assignee::0 name::X dry::1` sentinel dry-run preview | Dry-run |
+| EC-10 | `assignee::0 dry::1` (no `name::`) sentinel unassign dry-run | Dry-run |
+| EC-11 | `assignee::user@host name::unknown` exits 1 (account not in store) | Validation |
+| EC-12 | Space in machine component sanitized to `_` | Sanitization |
+| EC-13 | Dot and hyphen in machine component preserved | Sanitization |
+| EC-14 | `assignee::` absent — no marker write (default omit) | Default |
+| EC-15 | `assignee::user@host name::X` does NOT modify `owner` field | Isolation |
+| EC-16 | `force::1 assignee::user@host name::X` — `force::1` silently ignored | No-op |
+| EC-17 | `active::user@host name::X` exits 1 — REMOVED_TOGGLE migration message | Migration |
+| EC-18 | `assignee::user@host` (no `name::`) when marker absent — no-op exit 0 | Behavioral |
+| EC-19 | Multiple `@` in value — `assignee::alice@corp.com@laptop` splits on first `@` | Sanitization |
 
 ## Test Coverage Summary
 

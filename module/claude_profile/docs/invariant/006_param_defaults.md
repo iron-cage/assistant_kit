@@ -51,7 +51,7 @@ All other account-name parameters must default to the active account or active c
 
 **Detection command:**
 ```bash
-grep -n "require_nonempty_string_arg" dev/module/claude_profile/src/commands/shared.rs
+grep -n "require_nonempty_string_arg" dev/module/claude_profile/src/commands/cmd_args.rs
 # Expected: only .account.use and .account.delete sites
 ```
 
@@ -61,12 +61,22 @@ grep -n "require_nonempty_string_arg" dev/module/claude_profile/src/commands/sha
 - Discoverability suffers — commands appear harder to use than necessary
 - UX regression: users must remember to pass `name::` even in single-account setups where the intent is unambiguous
 
-### Cross-References
+### Sources
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| governing principle | `cli_doc.rulebook.md § Parameters Documentation : Default-First Design Principle` | Universal rulebook origin of this invariant — default strategy table, permitted exceptions, design health metric |
-| feature | `docs/feature/019_account_relogin.md` | First command fixed to satisfy this invariant — `name::` now defaults to active account |
-| source | `src/commands/limits.rs` | `account_limits_routine` — reference pattern for optional-name-with-fallback |
-| source | `src/commands/account_relogin.rs` | `account_relogin_routine` — updated to use active-account fallback (TSK-173) |
-| invariant | `docs/invariant/003_clear_errors.md` | Complementary: errors when fallback fails must be actionable |
+| File | Relationship |
+|------|-------------|
+| `cli_doc.rulebook.md § Parameters Documentation : Default-First Design Principle` | Universal rulebook origin of this invariant — default strategy table, permitted exceptions, design health metric |
+| `src/commands/limits.rs` | `account_limits_routine` — reference pattern for optional-name-with-fallback |
+| `src/commands/account_relogin.rs` | `account_relogin_routine` — updated to use active-account fallback (TSK-173) |
+
+### Features
+
+| File | Relationship |
+|------|-------------|
+| [019_account_relogin.md](../feature/019_account_relogin.md) | First command fixed to satisfy this invariant — `name::` now defaults to active account |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
+| [003_clear_errors.md](003_clear_errors.md) | Complementary: errors when fallback fails must be actionable |

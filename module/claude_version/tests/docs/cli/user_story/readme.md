@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Acceptance test cases for all 6 cm user story scenarios.
+- **Purpose**: Acceptance test cases for all 7 clv user story scenarios.
 - **Responsibility**: Index of per-user-story test files covering end-to-end workflow acceptance.
-- **In Scope**: All 6 cm user stories: Environment Check, Version Upgrade, Process Lifecycle, Settings Management, Version Pinning, Config Management.
+- **In Scope**: All 7 clv user stories: Environment Check, Version Upgrade, Process Lifecycle, Settings Management, Version Pinning, Config Management, Params Inspection.
 - **Out of Scope**: Command-level tests (-> `../command/`), parameter edge cases (-> `../param/`).
 
 ### Overview Table
@@ -16,8 +16,8 @@
 | 03_process_lifecycle.md | US- acceptance tests for process inspection and termination | ✅ |
 | 04_settings_management.md | US- acceptance tests for settings read/write workflow | ✅ |
 | 05_version_pinning.md | US- acceptance tests for team-wide version pinning | ✅ |
-| 06_config_management.md | AT- acceptance tests for config inspection/modification via `.config` | ✅ |
-| 07_params_inspection.md | AT- acceptance tests for param inspection via `.params` | ⏳ |
+| 06_config_management.md | US- acceptance tests for config inspection/modification via `.config` | ✅ |
+| 07_params_inspection.md | US- acceptance tests for param inspection via `.params` | ✅ |
 | procedure.md | Workflow for creating and updating user story test specs | ✅ |
 
 ### Navigation
@@ -28,6 +28,7 @@
 - [Settings Management](04_settings_management.md) -- `.settings.*` read/write
 - [Version Pinning](05_version_pinning.md) -- team version alignment
 - [Config Management](06_config_management.md) -- `.config` read/write workflow
+- [Params Inspection](07_params_inspection.md) -- `.params` parameter catalog
 
 ### See Also
 

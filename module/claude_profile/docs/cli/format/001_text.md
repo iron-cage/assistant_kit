@@ -1,4 +1,4 @@
-# Format :: 1. text
+# Format: 1. text
 
 - **ID:** F01
 - **Trigger:** `format::text` (default — used when `format::` is omitted)
@@ -43,7 +43,7 @@ clp .usage
 #   🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%   28%      in 6d 14h  in 5h 02m   ~in 30d      in 6d 14h +7d
 # ✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%   35%      in 4d 23h  in 7h 24m   ~in 6d       in 4d 23h +7d
 #
-# Valid: 2 / 2   session: claude-sonnet-4-6  effort: low
+# Valid: 2 / 2   session: claude-sonnet-5  effort: low
 # Next (renew): bob@example.com  in 6d 14h +7d  model: sonnet
 
 clp .token.status

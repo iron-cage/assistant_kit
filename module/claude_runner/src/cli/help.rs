@@ -14,6 +14,7 @@ pub( crate ) fn print_help()
     "clr ps [OPTIONS]".to_string(),
     "clr kill <PID>".to_string(),
     "clr tools".to_string(),
+    "clr scope [--dir <PATH>]".to_string(),
     "clr isolated [OPTIONS]".to_string(),
     "clr refresh [OPTIONS]".to_string(),
   ];
@@ -30,6 +31,7 @@ pub( crate ) fn print_help()
         CommandEntry { name : "refresh".to_string(),  desc : "Refresh OAuth credentials without a task".to_string() },
         CommandEntry { name : "ps".to_string(),       desc : "List running Claude Code sessions".to_string() },
         CommandEntry { name : "kill".to_string(),     desc : "Terminate a Claude Code session by PID".to_string() },
+        CommandEntry { name : "scope".to_string(),    desc : "Print all 6 CLAUDE_* path variables for a directory".to_string() },
         CommandEntry { name : "tools".to_string(),    desc : "List all Claude Code built-in tools".to_string() },
         CommandEntry { name : "help".to_string(),     desc : "Print this help and exit".to_string() },
       ],
@@ -57,10 +59,12 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--no-persist".into(),                    desc : "Disable session persistence (--no-session-persistence)".into() },
       OptionEntry { name : "--keep-claudecode".into(),               desc : "Preserve CLAUDECODE env var in subprocess (default: removed)".into() },
       OptionEntry { name : "--verbose".into(),                       desc : "Enable verbose output".into() },
-      OptionEntry { name : "--verbosity <0-5>".into(),               desc : "Runner output verbosity level (default: 3)".into() },
-      OptionEntry { name : "--dir <PATH>".into(),                    desc : "Working directory".into() },
+      OptionEntry { name : "--quiet".into(),                         desc : "Suppress non-fatal CLR diagnostics (gate-wait, retry progress, keep-claudecode warning) [env: CLR_QUIET]".into() },
+      OptionEntry { name : "--dir <PATH>, --to <PATH>".into(),       desc : "Working directory (alias: --to)".into() },
       OptionEntry { name : "--subdir <NAME>".into(),                 desc : "Named subdirectory appended to --dir as /-NAME; . = identity".into() },
+      OptionEntry { name : "--message <MSG>".into(),                  desc : "Message to send (alternative to positional argument)".into() },
       OptionEntry { name : "--session-dir <PATH>".into(),            desc : "Session storage directory".into() },
+      OptionEntry { name : "--session-from <DIR>".into(),              desc : "Cross-load most-recent session from source directory (alias: --from) [env: CLR_SESSION_FROM]".into() },
       OptionEntry { name : "--dry-run".into(),                       desc : "Print command without executing".into() },
       OptionEntry { name : "--trace".into(),                         desc : "Print command to stderr then execute (like set -x)".into() },
       OptionEntry { name : "--file <PATH>".into(),                   desc : "Pipe file content to subprocess stdin".into() },
@@ -70,6 +74,7 @@ fn runner_option_group() -> cli_fmt::help::OptionGroup
       OptionEntry { name : "--summary-fields <FIELDS>".into(),       desc : "Summary field selection: minimal, standard, full (default), or comma-separated [env: CLR_SUMMARY_FIELDS]".into() },
       OptionEntry { name : "--journal <LEVEL>".into(),               desc : "Journal level: full (default), meta (no output), or off [env: CLR_JOURNAL]".into() },
       OptionEntry { name : "--journal-dir <PATH>".into(),            desc : "Journal directory (default: ~/.clr/journal/) [env: CLR_JOURNAL_DIR]".into() },
+      OptionEntry { name : "--args-file <PATH>".into(),             desc : "Load clr params from JSON file (or stdin JSON); env: CLR_ARGS_FILE".into() },
       OptionEntry { name : "--expect <VALS>".into(),                 desc : "Pipe-separated expected values; mismatch → exit 3".into() },
       OptionEntry { name : "--expect-strategy <STRAT>".into(),       desc : "Mismatch handling: fail (default), retry, default:<VAL>".into() },
       OptionEntry { name : "--max-sessions <N>".into(),              desc : "Max concurrent sessions before blocking (0=unlimited, default: 30)".into() },
@@ -149,6 +154,7 @@ pub( crate ) fn print_isolated_help() -> !
   println!( "  --trace                            Print underlying call details to stderr [env: CLR_TRACE]" );
   println!( "  --journal <LEVEL>                  Journal level: full (default), meta, or off [env: CLR_JOURNAL]" );
   println!( "  --journal-dir <PATH>               Journal directory (default: ~/.clr/journal/) [env: CLR_JOURNAL_DIR]" );
+  println!( "  --args-file <PATH>                 Load isolated params from JSON file; env: CLR_ARGS_FILE" );
   println!( "  -h, --help                         Show this help" );
   println!();
   println!( "ISOLATION OPTIONS:" );
@@ -186,6 +192,7 @@ pub( crate ) fn print_refresh_help() -> !
   println!( "  --trace                            Print underlying call details to stderr" );
   println!( "  --journal <LEVEL>                  Journal level: full (default), meta, or off [env: CLR_JOURNAL]" );
   println!( "  --journal-dir <PATH>               Journal directory (default: ~/.clr/journal/) [env: CLR_JOURNAL_DIR]" );
+  println!( "  --args-file <PATH>                 Load refresh params from JSON file; env: CLR_ARGS_FILE" );
   println!( "  -h, --help                         Show this help" );
   println!();
   println!( "EXIT CODES:" );
@@ -286,10 +293,13 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --trace                            Print command to stderr then execute" );
   println!( "  --system-prompt <TEXT>             Set system prompt" );
   println!( "  --append-system-prompt <TEXT>      Append to default system prompt" );
-  println!( "  --dir <PATH>                       Working directory" );
+  println!( "  --dir <PATH>, --to <PATH>          Working directory (alias: --to)" );
   println!( "  --subdir <NAME>                    Named subdirectory appended to --dir as /-NAME; . = identity" );
+  println!( "  --message <MSG>                    Message to send (alternative to positional argument)" );
   println!( "  --session-dir <PATH>               Session storage directory" );
-  println!( "  --verbosity <0-5>                  Runner output verbosity level" );
+  println!( "  --session-from <DIR>, --from <DIR> Cross-load most-recent session from source directory [env: CLR_SESSION_FROM]" );
+  println!( "  --quiet                            Suppress non-fatal diagnostics (gate-wait, retry, keep-claudecode) [env: CLR_QUIET]" );
+  println!( "  --args-file <PATH>                 Load clr params from JSON file (or stdin JSON); env: CLR_ARGS_FILE" );
   println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
   println!( "  --mcp-config <PATH>                MCP server config file (repeatable)" );
   println!( "  --file <PATH>                      Pipe file content to subprocess stdin" );
@@ -306,5 +316,39 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  -h, --help                         Show this help" );
   println!();
   println!( "See `clr --help` for the full retry option list (20 params, 3-tier hierarchy)." );
+  std::process::exit( 0 );
+}
+
+/// Print help for the `scope` subcommand and exit 0.
+///
+/// Called when `--help` or `-h` is detected in `dispatch_scope`.
+/// Terminates the process via `std::process::exit(0)`.
+pub( crate ) fn print_scope_help() -> !
+{
+  println!( "clr scope — Print all 6 CLAUDE_* path variables for a directory" );
+  println!();
+  println!( "USAGE:" );
+  println!( "  clr scope [--dir <PATH>]" );
+  println!();
+  println!( "Print all 6 CLAUDE_* environment variables for the target directory" );
+  println!( "in key=value format, one per line, suitable for eval:" );
+  println!();
+  println!( "  eval \"$(clr scope)\"" );
+  println!();
+  println!( "OUTPUT VARIABLES (in order):" );
+  println!( "  CLAUDE_HOME          Claude Code home directory" );
+  println!( "  CLAUDE_PROJECTS_DIR  Root of all project-scoped storage" );
+  println!( "  CLAUDE_SESSION_DIR   Session storage for the target directory" );
+  println!( "  CLAUDE_MEMORY_DIR    Memory directory (anchored to git root)" );
+  println!( "  CLAUDE_MEMORY_FILE   Path to MEMORY.md" );
+  println!( "  CLAUDE_SESSION_FILE  Most recent session file; empty when absent" );
+  println!();
+  println!( "OPTIONS:" );
+  println!( "  --dir <PATH>         Target directory (default: current working directory)" );
+  println!( "  -h, --help           Show this help" );
+  println!();
+  println!( "ENVIRONMENT OVERRIDES:" );
+  println!( "  CLAUDE_HOME                     Override Claude Code home (no .claude appended)" );
+  println!( "  CLAUDE_COWORK_MEMORY_PATH_OVERRIDE  Override CLAUDE_MEMORY_DIR" );
   std::process::exit( 0 );
 }

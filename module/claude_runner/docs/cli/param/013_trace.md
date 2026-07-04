@@ -6,14 +6,15 @@ subprocess is launched. Mirrors shell `set -x` semantics.
 
 - **Type:** bool (standalone flag)
 - **Default:** false
-- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/03_isolated.md), [`refresh`](../command/04_refresh.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md) (for `run` and `ask`), [Credential Operations](../param_group/04_credential_operations.md) (for `isolated` and `refresh`)
+- **JSON Key:** `"trace"`
 
 What `--trace` shows depends on the command:
 
 - **`run`** / **`ask`**: assembled env vars + full `claude` subprocess command (printed to stderr before execution)
-- **`isolated`**: header lines (`# clr isolated`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation (including `--model claude-opus-4-6`, `--effort max`, `--no-session-persistence`, `--dangerously-skip-permissions` when message present)
-- **`refresh`**: header lines (`# clr refresh`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation with `--model claude-sonnet-4-6`, `--no-chrome`, `--effort low`, `--no-session-persistence`
+- **`isolated`**: header lines (`# clr isolated`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation (including `--model claude-opus-4-8`, `--effort max`, `--no-session-persistence`, `--dangerously-skip-permissions` when message present)
+- **`refresh`**: header lines (`# clr refresh`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation with `--model claude-sonnet-5`, `--no-chrome`, `--effort low`, `--no-session-persistence`
 
 ```sh
 # Trace on run
@@ -38,7 +39,7 @@ clr isolated --creds creds.json --trace "Fix bug"
 # Stderr: CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
 # Stderr: CLAUDE_CODE_AUTO_CONTINUE=true
 # Stderr: CLAUDE_CODE_TELEMETRY=false
-# Stderr: claude --model claude-opus-4-6 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"
+# Stderr: claude --model claude-opus-4-8 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"
 # Then: run_isolated() executes
 
 # Trace on refresh
@@ -51,7 +52,7 @@ clr refresh --creds creds.json --trace
 # Stderr: CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
 # Stderr: CLAUDE_CODE_AUTO_CONTINUE=true
 # Stderr: CLAUDE_CODE_TELEMETRY=false
-# Stderr: claude --model claude-sonnet-4-6 --no-chrome --effort low --no-session-persistence --print "."
+# Stderr: claude --model claude-sonnet-5 --no-chrome --effort low --no-session-persistence --print "."
 # Then: run_isolated() executes
 ```
 
@@ -76,8 +77,8 @@ Combine with `--dry-run` if you want to preview without executing (`run` and `as
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | false | Emits env vars + claude command |
-| 2 | [`isolated`](../command/02_isolated.md) | false | Emits creds path, temp HOME, timeout |
-| 3 | [`refresh`](../command/03_refresh.md) | false | Emits creds path, fixed args |
+| 2 | [`isolated`](../command/03_isolated.md) | false | Emits creds path, temp HOME, timeout |
+| 3 | [`refresh`](../command/04_refresh.md) | false | Emits creds path, fixed args |
 | 5 | [`ask`](../command/05_ask.md) | false | Emits env vars + claude command |
 
 ### Referenced User Stories

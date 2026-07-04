@@ -4,7 +4,8 @@ use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
-use super::shared::{ is_dry, require_claude_paths, require_credential_store, io_err_to_error_data, resolve_account_name };
+use super::cmd_args::{ is_dry, io_err_to_error_data, resolve_account_name };
+use super::cmd_context::{ require_claude_paths, require_credential_store };
 use claude_profile_core::account::trace_ts;
 
 /// `.account.relogin` — force browser re-authentication for a named account with dead refreshToken.

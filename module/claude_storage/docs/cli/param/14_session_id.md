@@ -40,19 +40,19 @@ session_id::8d795a1c-c81d-4010-8d29-b4e678272419
 |------|------|-------------|----------------|
 | [`SessionId`](../type/09_session_id.md) | String (filename stem) | String | Non-empty; session must exist |
 
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 3 | [Session Identification](../param_group/03_session_identification.md) | Full | *(sole member)* |
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 3 | [`.show`](../command/03_show.md) | unset — optional | Optional; triggers session search when provided |
 | 6 | [`.export`](../command/06_export.md) | none — required | Identifies the session to export |
 
-### Referenced Parameter Groups
-| # | Group | Membership | Co-members |
-|---|-------|------------|------------|
-| 3 | [Session Identification](../param_group/03_session_identification.md) | Full | *(sole member)* |
-
 ### Referenced User Stories
 | # | User Story | Persona |
 |---|------------|---------|
+| 2 | [Find Past Conversation](../user_story/002_find_past_conversation.md) | developer |
 | 3 | [Export Session for Review](../user_story/003_export_session_for_review.md) | developer |
-| 5 | [Resume Claude Session](../user_story/005_resume_claude_session.md) | developer |

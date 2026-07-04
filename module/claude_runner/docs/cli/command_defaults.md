@@ -17,7 +17,7 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 |-----------|-----|-----|----------|---------|
 | **mode** | print if message present; else interactive | print (always) | print (always) | print (always, message `"."`) |
 | **message** | user-supplied positional | user-supplied positional | user-supplied positional (optional) | `"."` hardcoded |
-| **model** | user-specified; none = claude binary default | user-specified; none = claude binary default | `claude-opus-4-6` (`ISOLATED_DEFAULT_MODEL`) | `claude-sonnet-4-6` (`REFRESH_DEFAULT_MODEL`) |
+| **model** | user-specified; none = claude binary default | user-specified; none = claude binary default | `"opus"` (`ISOLATED_DEFAULT_MODEL`) | `"claude-sonnet-5"` (`REFRESH_DEFAULT_MODEL`) |
 | `--effort` | `max` (default; `--no-effort-max` opts out; `--effort <level>` overrides) | `max` (same) | `max` (injected) | `low` (injected) |
 | `ultrathink` suffix | appended to message (unless `--no-ultrathink` or already present) | appended | ➖ not injected | ➖ not injected |
 | `-c` (continue) | injected when session exists and not `--new-session` | injected when session exists | ➖ not injected | ➖ not injected |
@@ -27,6 +27,7 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | `--chrome` | ON interactive / OFF print (BUG-304; `--no-chrome` opts out) | OFF (always print — BUG-304) | ON (ClaudeCommand default) | OFF (`--no-chrome` injected) |
 | `env -u CLAUDECODE` | ON (unless `--keep-claudecode`) | ON (unless `--keep-claudecode`) | ON (ClaudeCommand default) | ON (ClaudeCommand default) |
 | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `200,000` | `200,000` | `200,000` | `200,000` |
+| `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `200,000` (`--no-compact-window` opts out) | `200,000` (same) | `200,000` (same) | `200,000` (same) |
 | `CLAUDE_CODE_AUTO_CONTINUE` | `true` | `true` | `true` | `true` |
 | `CLAUDE_CODE_TELEMETRY` | `false` | `false` | `false` | `false` |
 | `CLAUDE_CODE_BASH_TIMEOUT` | `3,600,000 ms` (1 h) | `3,600,000 ms` | `3,600,000 ms` | `3,600,000 ms` |
@@ -40,6 +41,7 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | `--dir` / `--subdir` / `--session-dir` | ✅ supported | ✅ supported | ➖ not supported | ➖ not supported |
 | `--system-prompt` / `--append-system-prompt` | ✅ supported | ✅ supported | via passthrough only | ➖ not supported |
 | `--json-schema` / `--mcp-config` | ✅ supported | ✅ supported | via passthrough only | ➖ not supported |
+| `--args-file` / `CLR_ARGS_FILE` / stdin JSON | ✅ supported | ✅ supported | ✅ supported | ✅ supported |
 
 ---
 
@@ -48,7 +50,7 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | ID | Issue | Commands | Resolution |
 |----|-------|----------|------------|
 | I1 | `--effort` not injected | isolated, refresh | ✅ `--effort max` for isolated, `--effort low` for refresh (S1) |
-| I7 | Model was `claude-sonnet-4-6` for isolated | isolated | ✅ Changed to `claude-opus-4-6` (`ISOLATED_DEFAULT_MODEL`); `REFRESH_DEFAULT_MODEL` added for refresh (S7) |
+| I7 | Model was hardcoded string for isolated | isolated | ✅ Changed to `ISOLATED_DEFAULT_MODEL = "opus"`; `REFRESH_DEFAULT_MODEL = "claude-sonnet-5"` added for refresh (S7) |
 | I2 | `--timeout 0` = immediate kill | isolated, refresh | ✅ Fixed: `0` = unlimited (no watchdog), matching run/ask semantics (S2) |
 | I3 | `--no-session-persistence` not injected | isolated, refresh | ✅ Always injected for both commands (S3) |
 | I4 | `--chrome` injected for refresh | refresh | ✅ `--no-chrome` injected for refresh (S4) |
@@ -62,7 +64,7 @@ Rows are parameters or behaviors. Columns are the four commands. Key: ✅ = acti
 | # | Change | Affected code | Implemented behavior |
 |---|--------|---------------|----------------------|
 | S1 | Inject `--effort max` for isolated; `--effort low` for refresh | `credential.rs::run_isolated_command()` — `effort: EffortLevel` param | ✅ Isolated passes `Max`, refresh passes `Low` |
-| S7 | `ISOLATED_DEFAULT_MODEL` → `claude-opus-4-6`; add `REFRESH_DEFAULT_MODEL` | `isolated.rs` constants | ✅ `ISOLATED_DEFAULT_MODEL = "claude-opus-4-6"`, `REFRESH_DEFAULT_MODEL = "claude-sonnet-4-6"` |
+| S7 | `ISOLATED_DEFAULT_MODEL` = `"opus"`; `REFRESH_DEFAULT_MODEL` = `"claude-sonnet-5"` | `isolated.rs` constants | ✅ `ISOLATED_DEFAULT_MODEL = "opus"`, `REFRESH_DEFAULT_MODEL = "claude-sonnet-5"` |
 | S2 | Fix `--timeout 0` semantics | `isolated.rs::run_isolated()` — `Option<Instant>` deadline | ✅ `None` when `timeout_secs == 0` = no watchdog |
 | S3 | Inject `--no-session-persistence` | `credential.rs::run_isolated_command()` — prepended to args vec | ✅ Always injected for both commands |
 | S4 | Suppress `--chrome` for refresh | `credential.rs::run_isolated_command()` — `no_chrome: bool` param | ✅ `--no-chrome` prepended for refresh |

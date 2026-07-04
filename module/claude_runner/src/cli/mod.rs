@@ -10,14 +10,17 @@ mod gate;
 mod ps;
 mod kill;
 mod tools;
+mod scope;
 mod summary;
+mod json_config;
 // summary_unit_test.rs (external test) imports render_summary/resolve_fields via the public API.
 // The unused_imports lint fires for pub use in private modules when no code in the lib crate itself
 // references the re-exported path — but the test file consumer is invisible at lib-compile time.
 #[ allow( unused_imports ) ]
-pub use summary::{ render_summary, resolve_fields };
+pub use summary::{ render_summary, resolve_fields, extract_session_id };
 
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
+use claude_storage_core::SessionId;
 use parse::CliArgs;
 use cred_parse::{
   parse_isolated_args, parse_refresh_args,
@@ -33,6 +36,7 @@ use gate::wait_for_session_slot;
 pub( super ) use ps::dispatch_ps;
 pub( super ) use kill::dispatch_kill;
 pub( super ) use tools::dispatch_tools;
+pub( crate ) use scope::dispatch_scope;
 
 pub( super ) use parse::parse_args;
 pub( super ) use env::apply_env_vars;
@@ -57,7 +61,7 @@ pub( super ) fn handle_dry_run( builder : &ClaudeCommand )
 // Fix(BUG-212): `run` was absent; typing `clr running` produced no helpful error.
 // Root cause: list was never updated when `run` became an explicit subcommand.
 // Pitfall: update both this list and the dispatch match in lib.rs when adding a subcommand.
-const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill", "tools" ];
+const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps", "kill", "tools", "scope" ];
 
 // Fix(BUG-225): Guard against typos/truncations of known subcommand names.
 // Root cause: `run_cli()` dispatched subcommands by exact string match only — any
@@ -177,19 +181,18 @@ pub( super ) fn resolve_journal_writer(
 }
 
 pub( super ) fn run_built_command(
-  builder : &ClaudeCommand,
-  cli     : &CliArgs,
-  journal : Option< &claude_journal::JournalWriter >,
+  builder             : &ClaudeCommand,
+  cli                 : &CliArgs,
+  journal             : Option< &claude_journal::JournalWriter >,
+  expected_session_id : Option< &SessionId >,
 )
 {
-  let verbosity = cli.verbosity.unwrap_or_default();
-
   // Concurrency gate: block before subprocess launch when max active claude sessions is reached.
   // Default limit is 30; 0 = unlimited.  dry-run is bypassed by caller (never reaches here).
   let max_sessions = cli.max_sessions.unwrap_or( 30 );
-  wait_for_session_slot( max_sessions, verbosity, cli, journal );
+  wait_for_session_slot( max_sessions, cli.quiet, cli, journal );
 
-  if cli.trace || verbosity.shows_verbose_detail()
+  if cli.trace
   {
     let env     = builder.describe_env();
     let command = builder.describe();
@@ -201,7 +204,7 @@ pub( super ) fn run_built_command(
 
   if cli.print_mode || ( cli.message.is_some() && !cli.interactive )
   {
-    execution::run_print_mode( builder, cli, journal );
+    execution::run_print_mode( builder, cli, journal, expected_session_id );
   }
   else
   {
@@ -215,15 +218,49 @@ pub( super ) fn run_built_command(
 /// `run_cli()` (after subcommand dispatch) and `dispatch_ask()`.
 pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
 {
+  // JSON config tier 2: detect stdin JSON BEFORE parse_args so stdin is consumed once.
+  // Ordering: detect_stdin_json reads stdin; parse_args reads only argv — no conflict.
+  let stdin_json = env::detect_stdin_json( tokens );
   let mut cli = match parse_args( tokens )
   {
     Ok( c )  => c,
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
   };
+  // JSON config: apply file-based or stdin-based params AFTER CLI parse (tier 1 already set)
+  // but BEFORE apply_env_vars (tier 3). apply_json_config's is_none() / !bool checks ensure
+  // CLI-set fields are never overwritten.
+  let src_path = env::resolve_args_file_path( cli.args_file.as_deref() );
+  if let Some( ref path ) = src_path
+  {
+    if let Err( e ) = json_config::load_and_apply( path, &mut cli )
+    {
+      eprintln!( "Error: {e}" );
+      std::process::exit( 1 );
+    }
+  }
+  else if let Some( ref src ) = stdin_json
+  {
+    match json_config::parse_json_object( src )
+    {
+      Ok( map ) => json_config::apply_json_config( &mut cli, &map ),
+      Err( e )  => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+    }
+  }
   if let Err( e ) = apply_env_vars( &mut cli )
   {
     eprintln!( "Error: {e}" );
     std::process::exit( 1 );
+  }
+
+  // Fix(BUG-008): read subprocess model preference when no explicit --model / CLR_MODEL given.
+  // Root cause: read_subprocess_model_pref() was only wired into run_isolated_ext();
+  //   dispatch_run() and dispatch_ask() never read ~/.clr/prefs.json.
+  // Pitfall: when a preference-reading function is added to one dispatch path, all other
+  //   paths honoring the same preference must be updated in the same change.
+  #[ cfg( feature = "enabled" ) ]
+  if cli.model.is_none()
+  {
+    cli.model = claude_runner_core::read_subprocess_model_pref();
   }
 
   if cli.help
@@ -239,26 +276,22 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
     std::process::exit( 1 );
   }
 
-  let builder = build_claude_command( &cli );
+  let ( builder, expected_id ) = build_claude_command( &cli );
 
   // Fix(BUG-248): warn when --keep-claudecode is set while CLAUDECODE is present in
   //   the parent environment — the child will run in nested-agent mode unintentionally.
   // Root cause: no diagnostic existed when the user explicitly disabled CLAUDECODE removal;
   //   the consequence (nested-agent context injection) is non-obvious without a warning.
-  // Pitfall: gate on shows_warnings() (level ≥ 2) so operators who suppress output at
-  //   --verbosity 0/1 still get silence; the warning is informational, not fatal.
-  //   Placed before the dry-run check so it fires in all execution modes including --dry-run.
+  // Pitfall: gate on !cli.quiet so --quiet suppresses this informational warning;
+  //   placed before the dry-run check so it fires in all execution modes including --dry-run.
+  if cli.keep_claudecode
+    && !cli.quiet
+    && std::env::var( "CLAUDECODE" ).is_ok()
   {
-    let verbosity_for_warning = cli.verbosity.unwrap_or_default();
-    if cli.keep_claudecode
-      && verbosity_for_warning.shows_warnings()
-      && std::env::var( "CLAUDECODE" ).is_ok()
-    {
-      eprintln!(
-        "Warning: --keep-claudecode is set and CLAUDECODE is present in environment; \
-         child claude will run in nested-agent mode"
-      );
-    }
+    eprintln!(
+      "Warning: --keep-claudecode is set and CLAUDECODE is present in environment; \
+       child claude will run in nested-agent mode"
+    );
   }
 
   if cli.dry_run
@@ -274,7 +307,7 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
   //   `~/.clr/journal/` (or the `--journal-dir` path) even though no events are emitted.
   // Pitfall: `journal` is only consumed by `run_built_command()` — safe to defer.
   let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
-  run_built_command( &builder, &cli, journal.as_ref() );
+  run_built_command( &builder, &cli, journal.as_ref(), expected_id.as_ref() );
   std::process::exit( 0 );
 }
 
@@ -305,11 +338,30 @@ pub( super ) fn dispatch_ask( tokens : &[ String ] ) -> !
 /// Parse, validate, and execute the `isolated` subcommand.  Never returns.
 pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
 {
+  // JSON config: no --file gate for isolated (--file is not a stdin-conflict source here).
+  let stdin_json = env::detect_stdin_json_unconstrained();
   let mut cli = match parse_isolated_args( &tokens[ 1 .. ] )
   {
     Ok( c )  => c,
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
   };
+  let src_path = env::resolve_args_file_path( cli.args_file.as_deref() );
+  if let Some( ref path ) = src_path
+  {
+    if let Err( e ) = json_config::load_and_apply_isolated( path, &mut cli )
+    {
+      eprintln!( "Error: {e}" );
+      std::process::exit( 1 );
+    }
+  }
+  else if let Some( ref src ) = stdin_json
+  {
+    match json_config::parse_json_object( src )
+    {
+      Ok( map ) => json_config::apply_json_config_isolated( &mut cli, &map ),
+      Err( e )  => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+    }
+  }
   if let Err( e ) = apply_isolated_env_vars( &mut cli )
   {
     eprintln!( "Error: {e}" );
@@ -321,61 +373,29 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     std::process::exit( 1 );
   }
 
-  // Phase 1: --dry-run — build preview command and print to stdout without spawning.
-  if cli.dry_run
+  // Phase 2: validate --dir path exists before spawning subprocess (skip in dry-run).
+  if !cli.dry_run
   {
-    let mut args : Vec< String > = Vec::new();
-    args.push( "--effort".to_string() );
-    args.push( "max".to_string() );
-    args.push( "--no-session-persistence".to_string() );
-    if cli.message.is_some() { args.push( "--dangerously-skip-permissions".to_string() ); }
-    // Phase 2: --dir and --add-dir show in preview
     if let Some( ref d ) = cli.dir
     {
-      args.push( "--dir".to_string() );
-      args.push( d.clone() );
-    }
-    for ad in &cli.add_dirs
-    {
-      args.push( "--add-dir".to_string() );
-      args.push( ad.clone() );
-    }
-    if let Some( ref m ) = cli.message
-    {
-      args.push( "--print".to_string() );
-      args.push( m.clone() );
-    }
-    args.extend_from_slice( &cli.passthrough_args );
-    let temp_dir = std::env::temp_dir().join( format!( "claude_isolated_{}", std::process::id() ) );
-    let mut full_args = Vec::with_capacity( args.len() + 2 );
-    if let Some( id ) = IsolatedModel::Default.model_id()
-    {
-      full_args.push( "--model".to_string() );
-      full_args.push( id.to_string() );
-    }
-    full_args.extend( args );
-    let preview = ClaudeCommand::new().with_home( &temp_dir ).with_args( full_args );
-    handle_dry_run( &preview );
-    std::process::exit( 0 );
-  }
-
-  // Phase 2: validate --dir path exists before spawning subprocess.
-  if let Some( ref d ) = cli.dir
-  {
-    if !std::path::Path::new( d ).exists()
-    {
-      eprintln!( "Error: --dir path does not exist: {d}" );
-      std::process::exit( 1 );
+      if !std::path::Path::new( d ).exists()
+      {
+        eprintln!( "Error: --dir path does not exist: {d}" );
+        std::process::exit( 1 );
+      }
     }
   }
 
-  // Phase 3: validate --file path exists before spawning subprocess.
-  if let Some( ref f ) = cli.file
+  // Phase 3: validate --file path exists before spawning subprocess (skip in dry-run).
+  if !cli.dry_run
   {
-    if !std::path::Path::new( f ).exists()
+    if let Some( ref f ) = cli.file
     {
-      eprintln!( "Error: --file path does not exist: {f}" );
-      std::process::exit( 1 );
+      if !std::path::Path::new( f ).exists()
+      {
+        eprintln!( "Error: --file path does not exist: {f}" );
+        std::process::exit( 1 );
+      }
     }
   }
 
@@ -394,12 +414,14 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
   }
   passthrough.extend_from_slice( &cli.passthrough_args );
 
-  let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
+  let journal = if cli.dry_run { None } else { resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() ) };
   run_isolated_command(
     "isolated",
     &cli.creds_path,
     cli.timeout_secs,
     cli.trace,
+    cli.dry_run,
+    cli.no_compact_window,
     IsolatedModel::Default,
     EffortLevel::Max,
     cli.message.as_deref(),
@@ -420,11 +442,29 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
 /// Parse, validate, and execute the `refresh` subcommand.  Never returns.
 pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
 {
+  let stdin_json = env::detect_stdin_json_unconstrained();
   let mut cli = match parse_refresh_args( &tokens[ 1 .. ] )
   {
     Ok( c )  => c,
     Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
   };
+  let src_path = env::resolve_args_file_path( cli.args_file.as_deref() );
+  if let Some( ref path ) = src_path
+  {
+    if let Err( e ) = json_config::load_and_apply_refresh( path, &mut cli )
+    {
+      eprintln!( "Error: {e}" );
+      std::process::exit( 1 );
+    }
+  }
+  else if let Some( ref src ) = stdin_json
+  {
+    match json_config::parse_json_object( src )
+    {
+      Ok( map ) => json_config::apply_json_config_refresh( &mut cli, &map ),
+      Err( e )  => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+    }
+  }
   if let Err( e ) = apply_refresh_env_vars( &mut cli )
   {
     eprintln!( "Error: {e}" );
@@ -435,6 +475,6 @@ pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
     eprintln!( "{CREDS_PATH_ERROR}" );
     std::process::exit( 1 );
   }
-  let journal = resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() );
-  run_refresh_command( &cli.creds_path, cli.timeout_secs, cli.trace, journal )
+  let journal = if cli.dry_run { None } else { resolve_journal_writer( cli.journal.as_deref(), cli.journal_dir.as_deref() ) };
+  run_refresh_command( &cli.creds_path, cli.timeout_secs, cli.trace, cli.dry_run, cli.no_compact_window, journal )
 }

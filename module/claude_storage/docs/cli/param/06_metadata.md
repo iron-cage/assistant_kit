@@ -35,17 +35,16 @@ show_metadata::1    # Metadata only
 |------|------|-------------|----------------|
 | Boolean | Base type | Boolean flag | `0` (false) or `1` (true) |
 
+### Referenced Parameter Groups
+
+None.
+
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 3 | [`.show`](../command/03_show.md) | `0` | Shows metadata only when enabled; mutually exclusive with `show_entries::` |
 
-### Referenced Parameter Groups
-
-None.
-
 ### Referenced User Stories
 | # | User Story | Persona |
 |---|------------|---------|
-| 2 | [Find Past Conversation](../user_story/002_find_past_conversation.md) | developer |
 | 3 | [Export Session for Review](../user_story/003_export_session_for_review.md) | developer |

@@ -1,4 +1,4 @@
-# Verb :: relogin
+# Verb: relogin
 
 Forces browser re-authentication for an account whose OAuth refresh token has expired or become invalid. Executes a TTY subprocess sequence: switch to target account, spawn the `claude` binary (which opens a browser OAuth flow), detect the resulting credential change, save the new credentials back to the named profile, then restore the prior session.
 
@@ -50,7 +50,7 @@ Forces browser re-authentication for an account whose OAuth refresh token has ex
 [active] --account.relogin--> [active]  (credentials refreshed; state unchanged)
 ```
 
-### Cross-References
+### See Also
 
 | File | Relationship |
 |------|-------------|

@@ -1,4 +1,4 @@
-# Parameter :: 52. `role::` (metadata label)
+# Parameter: 52. `role::` (metadata label)
 
 Specifies a user-defined role label to store in the account profile at `.account.save` time. Displayed via `cols::+role` in `.usage`.
 

@@ -15,9 +15,9 @@
 
 | Value | Model injected via `--model` | When to use |
 |-------|------------------------------|-------------|
-| `auto` (default) | `claude-haiku-4-5-20251001` (default); `claude-sonnet-4-6` when `son_idle=true` OR `son_available=true` | Haiku for general session activation; Sonnet whenever Sonnet window idle (opens all dimensions simultaneously) OR window active with > 20% remaining (avoid wasting quota). Fix(BUG-289, BUG-290, TSK-292, BUG-301, TSK-311) |
-| `sonnet` | `claude-sonnet-4-6` always | Force Sonnet regardless of quota state |
-| `opus` | `claude-opus-4-6` always | Force Opus regardless of quota state |
+| `auto` (default) | `claude-haiku-4-5-20251001` (default); `claude-sonnet-5` when `son_idle=true` OR `son_available=true` | Haiku for general session activation; Sonnet whenever Sonnet window idle (opens all dimensions simultaneously) OR window active with > 20% remaining (avoid wasting quota). Fix(BUG-289, BUG-290, TSK-292, BUG-301, TSK-311) |
+| `sonnet` | `claude-sonnet-5` always | Force Sonnet regardless of quota state |
+| `opus` | `claude-opus-4-8` always | Force Opus regardless of quota state |
 | `haiku` | `claude-haiku-4-5-20251001` always | Force Haiku — lightweight model; note: no extended thinking support |
 | `keep` | No `--model` flag injected | Preserve whatever model the Claude binary would normally select |
 
@@ -28,9 +28,9 @@
 ```
 fn resolve_model(account_quota, imodel_param) -> IsolatedModel:
     if imodel_param == "sonnet":
-        return Specific("claude-sonnet-4-6")
+        return Specific("claude-sonnet-5")
     if imodel_param == "opus":
-        return Specific("claude-opus-4-6")
+        return Specific("claude-opus-4-8")
     if imodel_param == "haiku":
         return Specific("claude-haiku-4-5-20251001")
     if imodel_param == "keep":
@@ -41,7 +41,7 @@ fn resolve_model(account_quota, imodel_param) -> IsolatedModel:
             son_idle      = son.resets_at is None                // window not started; Haiku cannot open it
             son_available = (100.0 - son.utilization) > 20.0    // window running, >20% remaining
             if son_idle or son_available:
-                return Specific("claude-sonnet-4-6")
+                return Specific("claude-sonnet-5")
     return Specific("claude-haiku-4-5-20251001")   // no Son tier, Err/absent account, or Son exhausted
 ```
 
@@ -69,8 +69,8 @@ fn resolve_effort(resolved_model, effort_param) -> Option<&str>:
         return Some("max")
     // auto:
     match resolved_model:
-        Specific("claude-opus-4-6")            => Some("low")
-        Specific("claude-sonnet-4-6")          => Some("low")
+        Specific("claude-opus-4-8")            => Some("low")
+        Specific("claude-sonnet-5")          => Some("low")
         Specific("claude-haiku-4-5-20251001")  => None   // Haiku has no extended thinking
         KeepCurrent                            => None   // unknown model; inject no effort flag
         _                                      => Some("low")   // conservative default
@@ -106,9 +106,9 @@ if let Some(effort) = effort_opt {
 
 ### Acceptance Criteria
 
-- **AC-01**: `imodel::auto` (default) selects `claude-haiku-4-5-20251001` for general keep-alive pings; conserves Sonnet and Opus quota. **Utilization-aware Sonnet gate:** Selects `claude-sonnet-4-6` when `seven_day_sonnet` present AND either `son_idle=true` (`resets_at=None` — the 7d-Sonnet window only activates on Sonnet-family API calls; Haiku cannot start it; a single Sonnet touch opens all idle dimensions simultaneously) OR `son_available=true` (`(100 - utilization) > 20%` — remaining Sonnet quota must not expire unused while Haiku pings maintain sessions). Falls through to Haiku when Sonnet tier absent or utilization ≥ 80% (≤ 20% remaining). Fix(BUG-289, BUG-290, TSK-292, BUG-301, TSK-311).
-- **AC-02**: `imodel::sonnet` always injects `--model claude-sonnet-4-6` into subprocess args regardless of quota state.
-- **AC-03**: `imodel::opus` always injects `--model claude-opus-4-6` into subprocess args regardless of quota state.
+- **AC-01**: `imodel::auto` (default) selects `claude-haiku-4-5-20251001` for general keep-alive pings; conserves Sonnet and Opus quota. **Utilization-aware Sonnet gate:** Selects `claude-sonnet-5` when `seven_day_sonnet` present AND either `son_idle=true` (`resets_at=None` — the 7d-Sonnet window only activates on Sonnet-family API calls; Haiku cannot start it; a single Sonnet touch opens all idle dimensions simultaneously) OR `son_available=true` (`(100 - utilization) > 20%` — remaining Sonnet quota must not expire unused while Haiku pings maintain sessions). Falls through to Haiku when Sonnet tier absent or utilization ≥ 80% (≤ 20% remaining). Fix(BUG-289, BUG-290, TSK-292, BUG-301, TSK-311).
+- **AC-02**: `imodel::sonnet` always injects `--model claude-sonnet-5` into subprocess args regardless of quota state.
+- **AC-03**: `imodel::opus` always injects `--model claude-opus-4-8` into subprocess args regardless of quota state.
 - **AC-04**: `imodel::keep` injects no `--model` flag; `IsolatedModel::KeepCurrent` is passed to `run_isolated()`.
 - **AC-05**: `effort::auto` (default) injects `--effort low` for Sonnet and Opus; injects no `--effort` flag when `imodel::keep` or `imodel::haiku`. Rationale: isolated subprocesses run `--print .` keep-alive prompts; low effort prevents extended thinking which would cause timeout.
 - **AC-06**: `effort::high` always injects `--effort high` regardless of model.

@@ -1,4 +1,4 @@
-# Account
+# Noun: account
 
 A saved credential profile stored in the per-machine account store (`{credential_store}/{name}.credentials.json` + `{name}.json`). Represents a named Claude Code identity that can be activated, inspected, modified, or removed.
 
@@ -149,7 +149,7 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | `token` | Account contains an OAuth access token; token state derives from account credentials | account → token |
 | `credentials` | Live session credentials reflect the active account; independent read path | account → credentials |
 
-### Cross-References
+### See Also
 
 | File | Relationship |
 |------|-------------|
@@ -178,3 +178,43 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 | 9 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | Live identity and subscription diagnostic |
 | 10 | [`.account.assign`](../command/001_account.md#command--16-accountassign) *(removed Feature 037)* | Use `.accounts assignee::USER@MACHINE name::X` (Feature 065) |
 | 11 | [`.account.unclaim`](../command/001_account.md#command--17-accountunclaim) *(removed Feature 037; `unclaim::1` REMOVED Feature 064)* | Use `.accounts owner::0 name::X` (Feature 064) |
+
+### Referenced Parameters
+
+| # | Parameter | Role |
+|---|-----------|------|
+| 1 | [`name::`](../param/001_name.md) | Account identifier (email or prefix) |
+| 2 | [`format::`](../param/002_format.md) | Output serialization format |
+| 3 | [`dry::`](../param/004_dry.md) | Preview mutation without writing |
+| 4 | [`trace::`](../param/023_trace.md) | Diagnostic trace output |
+| 5 | [`refresh::`](../param/019_refresh.md) | Force token refresh before operation |
+| 6 | [`touch::`](../param/034_touch.md) | Activate idle 5h window after use |
+| 7 | [`imodel::`](../param/035_imodel.md) | Model for post-switch activation subprocess |
+| 8 | [`effort::`](../param/036_effort.md) | Effort for post-switch activation subprocess |
+| 9 | [`set_model::`](../param/054_set_model.md) | Set session model after switch |
+| 10 | [`host::`](../param/048_host.md) | Machine label for save/display |
+| 11 | [`role::`](../param/052_role.md) | User-defined role label for save/display |
+| 12 | [`at::`](../param/049_at.md) | Absolute billing renewal timestamp override |
+| 13 | [`from_now::`](../param/050_from_now.md) | Delta-from-now renewal timestamp |
+| 14 | [`clear::`](../param/051_clear.md) | Remove `_renewal_at` override |
+| 15 | [`force::`](../param/058_force.md) | Bypass G5–G8 ownership gates |
+| 16 | [`owner::`](../param/062_owner.md) | Set or release account ownership |
+| 17 | [`assignee::`](../param/063_assignee.md) | Write per-machine active-account marker |
+| 18 | [`sort::`](../param/025_sort.md) | Row ordering strategy |
+| 19 | [`desc::`](../param/026_desc.md) | Reverse sort direction |
+| 20 | [`prefer::`](../param/027_prefer.md) | Tiebreaker sort strategy |
+| 21 | [`cols::`](../param/033_cols.md) | Column set modifiers for quota table |
+| 22 | [`count::`](../param/037_count.md) | Limit row count after filtering |
+| 23 | [`offset::`](../param/038_offset.md) | Skip first N rows |
+| 24 | [`only_active::`](../param/039_only_active.md) | Keep only currently active account row |
+| 25 | [`only_next::`](../param/040_only_next.md) | Keep only recommended next account row |
+| 26 | [`min_5h::`](../param/041_min_5h.md) | Keep only rows with 5h quota ≥ N% |
+| 27 | [`min_7d::`](../param/042_min_7d.md) | Keep only rows with 7d quota ≥ N% |
+| 28 | [`only_valid::`](../param/043_only_valid.md) | Keep only non-exhausted non-expired rows |
+| 29 | [`exclude_exhausted::`](../param/044_exclude_exhausted.md) | Remove exhausted rows |
+| 30 | [`abs::`](../param/046_abs.md) | Show absolute token counts |
+| 31 | [`no_color::`](../param/047_no_color.md) | Strip emoji and ANSI sequences |
+| 32 | [`get::`](../param/045_get.md) | Extract bare field value from first row |
+| 33 | [`live::`](../param/020_live.md) | Continuous monitor mode |
+| 34 | [`interval::`](../param/021_interval.md) | Seconds between live refresh cycles |
+| 35 | [`jitter::`](../param/022_jitter.md) | Random jitter added to interval |

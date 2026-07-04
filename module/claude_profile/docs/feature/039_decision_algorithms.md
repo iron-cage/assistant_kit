@@ -1,11 +1,13 @@
-# Feature 039 — Decision Algorithm Reference
+# Feature: Decision Algorithm Reference
 
-- **Purpose**: Unified reference for the six core decision algorithms that govern model selection, quota classification, next-account recommendation, and quota approximation.
-- **Cross-references**: [020](020_usage_sort_strategies.md) (sort strategies, status groups), [026](026_subprocess_model_effort.md) (touch model), [027](027_account_use_post_switch_touch.md) (session model override), [036](036_account_ownership.md) (ownership gates), [038](038_usage_strategy_rotate.md) (auto-switch), [040](040_quota_measurement_history.md) (measurement history and approximation), [061](061_solo_token_conservation.md) (solo gate predicate), [062](062_unified_session_config.md) (`recommended_model()` canonical entry point — see algorithm/002)
+### Scope
 
----
+- **Purpose**: Unified reference index for the eight core decision algorithms governing model selection, quota classification, next-account recommendation, and quota approximation.
+- **Responsibility**: Documents the algorithm index table linking each algorithm to its canonical `algorithm/` doc instance and entry point.
+- **In Scope**: Algorithm index (algorithms 1–8); canonical entry points; `algorithm/` doc cross-references.
+- **Out of Scope**: Individual algorithm logic (→ `algorithm/` doc instances).
 
-## Algorithm Index
+### Algorithm Index
 
 Each algorithm is documented in its canonical `algorithm/` doc — single source of truth. Source file paths are in each canonical doc.
 
@@ -19,3 +21,16 @@ Each algorithm is documented in its canonical `algorithm/` doc — single source
 | 6 | Quota polynomial approximation | [algorithm/006](../algorithm/006_quota_approximation.md) | `approx.rs` `approximate_utilization()` |
 | 7 | Sort strategies + `prefer_weekly` | [algorithm/007](../algorithm/007_sort_strategies.md) | `sort.rs` `sort_indices()`, `relevant_quotas()` |
 | 8 | Subprocess effort resolution | [algorithm/008](../algorithm/008_subprocess_effort_resolution.md) | `subprocess.rs` `resolve_effort()` |
+
+### Features
+
+| File | Relationship |
+|------|-------------|
+| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies, status groups |
+| [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | Touch model parameter spec |
+| [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Session model override |
+| [036_account_ownership.md](036_account_ownership.md) | Ownership gates |
+| [038_usage_strategy_rotate.md](038_usage_strategy_rotate.md) | Auto-switch |
+| [040_quota_measurement_history.md](040_quota_measurement_history.md) | Measurement history and approximation |
+| [061_solo_token_conservation.md](061_solo_token_conservation.md) | Solo gate predicate |
+| [062_unified_session_config.md](062_unified_session_config.md) | `recommended_model()` canonical entry point |

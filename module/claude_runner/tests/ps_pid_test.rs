@@ -19,7 +19,7 @@ mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, stderr_str, stdout_str };
 
 #[ cfg( unix ) ]
-use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+use cli_binary_test_helpers::{ fake_claude_binary_dir, make_proc_dir, spawn_fake_claude };
 
 // ── EC-1: Single PID filter ────────────────────────────────────────────────
 
@@ -33,11 +33,13 @@ fn ec1_single_pid_shows_only_matching()
   let pid_a    = bg_a.id();
   let mut bg_b = spawn_fake_claude( &path_val );
   let pid_b    = bg_b.id();
+  let proc     = make_proc_dir( &[ pid_a, pid_b ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--pid", &pid_a.to_string() ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --pid <A>" );
 
@@ -70,12 +72,14 @@ fn ec2_multi_pid_shows_both_matching()
   let pid_b    = bg_b.id();
   let mut bg_c = spawn_fake_claude( &path_val );
   let pid_c    = bg_c.id();
+  let proc     = make_proc_dir( &[ pid_a, pid_b, pid_c ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let pids_arg = format!( "{pid_a},{pid_b}" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--pid", &pids_arg ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --pid <A>,<B>" );
 
@@ -146,11 +150,13 @@ fn ec5_pid_and_mode_filter_and_semantics()
   let pid_a    = bg_a.id();
   let mut bg_b = spawn_fake_claude( &path_val );
   let pid_b    = bg_b.id();
+  let proc     = make_proc_dir( &[ pid_a, pid_b ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--pid", &pid_a.to_string(), "--mode", "interactive" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --pid <A> --mode interactive" );
 
@@ -181,11 +187,13 @@ fn ec6_pid_with_inspect_shows_inspect_block()
   let pid_a    = bg_a.id();
   let mut bg_b = spawn_fake_claude( &path_val );
   let pid_b    = bg_b.id();
+  let proc     = make_proc_dir( &[ pid_a, pid_b ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "ps", "--pid", &pid_a.to_string(), "--inspect" ] )
     .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps --pid <A> --inspect" );
 
@@ -235,12 +243,14 @@ fn ec8_clr_ps_pid_env_var_filters()
   let pid_a    = bg_a.id();
   let mut bg_b = spawn_fake_claude( &path_val );
   let pid_b    = bg_b.id();
+  let proc     = make_proc_dir( &[ pid_a, pid_b ] );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .arg( "ps" )
     .env( "PATH", &path_val )
     .env( "CLR_PS_PID", pid_a.to_string() )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output()
     .expect( "run clr ps with CLR_PS_PID=<A>" );
 

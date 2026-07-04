@@ -3,6 +3,7 @@
 ### Scope
 
 - **Purpose**: Canonical reference for all `~/.claude/` paths and `~/.claude.json` exposed by the `ClaudePaths` type.
+- **Responsibility**: Documents all path methods on `ClaudePaths` and their resolved values.
 - **In Scope**: Every path method on `ClaudePaths`, their resolved values, ownership boundaries.
 - **Out of Scope**: Credential store paths (→ [schema/004](004_storage_root.md)); file formats at these paths (→ [schema/006](006_settings_json.md), [schema/007](007_claude_json.md)).
 
@@ -31,11 +32,16 @@ All methods return `PathBuf` computed from `HOME`. No filesystem access is perfo
 
 `claude_json_file()` returns `$HOME/.claude.json` — it is a **sibling** to `$HOME/.claude/`, not inside it. Callers must not construct this path as `$HOME/.claude/claude.json`.
 
-### Cross-References
+### Features
 
 | File | Relationship |
 |------|-------------|
 | [feature/007_file_topology.md](../feature/007_file_topology.md) | Feature spec with acceptance criteria and test refs |
-| [schema/006](006_settings_json.md) | Fields clp reads/writes in `settings_file()` |
-| [schema/007](007_claude_json.md) | Fields clp reads from `claude_json_file()` |
-| [schema/004](004_storage_root.md) | Credential store path (separate from `ClaudePaths`) |
+
+### Schema
+
+| File | Relationship |
+|------|-------------|
+| [004_storage_root.md](004_storage_root.md) | Credential store path (separate from `ClaudePaths`) |
+| [006_settings_json.md](006_settings_json.md) | Fields clp reads/writes in `settings_file()` |
+| [007_claude_json.md](007_claude_json.md) | Fields clp reads from `claude_json_file()` |

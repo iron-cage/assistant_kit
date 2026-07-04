@@ -117,8 +117,8 @@ owner::user1@w003 name::X,Y,Z      → set ownership for X, Y, and Z
 
 | File | Relationship |
 |------|--------------|
-| [tests/docs/feature/64_active_marker_and_owner_redesign.md](../../tests/docs/feature/64_active_marker_and_owner_redesign.md) | FT spec mapping ACs to test cases |
+| [tests/docs/feature/064_active_marker_and_owner_redesign.md](../../tests/docs/feature/064_active_marker_and_owner_redesign.md) | FT spec mapping ACs to test cases |
 | [tests/docs/cli/param/14_active.md](../../tests/docs/cli/param/14_active.md) | EC edge cases for repurposed `active::` param (REMOVED — superseded by `64_assignee.md`) |
 | [tests/docs/cli/param/63_owner.md](../../tests/docs/cli/param/63_owner.md) | EC edge cases for `owner::0` sentinel + batch |
 | [tests/docs/cli/param/64_assignee.md](../../tests/docs/cli/param/64_assignee.md) | EC edge cases for `assignee::` param (Feature 065 replacement) |
-| [tests/docs/feature/65_assignee_param_redesign.md](../../tests/docs/feature/65_assignee_param_redesign.md) | FT spec for Feature 065 — `assignee::` rename + `assignee::0` sentinel |
+| [tests/docs/feature/065_assignee_param_redesign.md](../../tests/docs/feature/065_assignee_param_redesign.md) | FT spec for Feature 065 — `assignee::` rename + `assignee::0` sentinel |

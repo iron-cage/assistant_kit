@@ -1,4 +1,4 @@
-use crate::VerbosityLevel;
+use std::io::IsTerminal;
 use claude_runner_core::EffortLevel;
 use error_tools::{ Error, Result };
 use super::parse::{ CliArgs, ExpectStrategy, parse_u8_bounded };
@@ -16,6 +16,52 @@ pub( super ) fn env_bool( var : &str ) -> bool
 pub( super ) fn env_str( var : &str ) -> Option< String >
 {
   std::env::var( var ).ok().filter( | v | !v.is_empty() )
+}
+
+/// Return the path to the JSON config source: `--args-file` CLI value or `CLR_ARGS_FILE` env var.
+///
+/// CLI value wins over env var — mirrors the 4-tier precedence (CLI > JSON > CLR_* > default)
+/// at the "which file?" level: if the user named a file on the command line, it is used;
+/// otherwise `CLR_ARGS_FILE` provides the path.  Returns `None` when neither is set.
+pub( super ) fn resolve_args_file_path( cli_path : Option< &str > ) -> Option< String >
+{
+  cli_path.map( ToString::to_string ).or_else( || env_str( "CLR_ARGS_FILE" ) )
+}
+
+/// Detect and read a JSON config object piped to stdin.
+///
+/// Returns `Some(json_string)` when ALL three conditions hold:
+/// - `--file` is absent from `tokens` (raw scan; `--file` gates out stdin JSON detection
+///   for `run`/`ask` because `--file` already reserves stdin/file content for the message)
+/// - stdin is not attached to a TTY (i.e. it is a pipe or redirect)
+/// - The first non-whitespace byte of stdin content is `{` (JSON object opener)
+///
+/// Returns `None` in any other case. Consumes stdin — must be called before any other
+/// operation that reads from stdin.
+pub( super ) fn detect_stdin_json( tokens : &[ String ] ) -> Option< String >
+{
+  // Gate 1: --file bypasses stdin JSON detection for run/ask.
+  if tokens.iter().any( | t | t == "--file" ) { return None; }
+  // Gate 2: TTY stdin is interactive — not a config pipe.
+  if std::io::stdin().is_terminal() { return None; }
+  // Read stdin content.
+  let mut src = String::new();
+  std::io::Read::read_to_string( &mut std::io::stdin().lock(), &mut src ).ok();
+  // Gate 3: JSON object detection — must open with `{`.
+  if src.trim_start().starts_with( '{' ) { Some( src ) } else { None }
+}
+
+/// Detect and read a JSON config object piped to stdin, without any token gating.
+///
+/// Used by `isolated` and `refresh` dispatchers — unlike `detect_stdin_json`, there is no
+/// `--file` guard because these subcommands do not use `--file` to pipe message content.
+/// Returns `Some(json_string)` when stdin is not a TTY and the content starts with `{`.
+pub( super ) fn detect_stdin_json_unconstrained() -> Option< String >
+{
+  if std::io::stdin().is_terminal() { return None; }
+  let mut src = String::new();
+  std::io::Read::read_to_string( &mut std::io::stdin().lock(), &mut src ).ok();
+  if src.trim_start().starts_with( '{' ) { Some( src ) } else { None }
 }
 
 /// Apply `CLR_*` environment variable fallbacks for the 60 run parameters.
@@ -43,20 +89,9 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
     if let Some( v ) = env_str( "CLR_MAX_TOKENS" ) { parsed.max_tokens = v.parse::< u32 >().ok(); }
   }
   if parsed.session_dir.is_none()         { parsed.session_dir          = env_str( "CLR_SESSION_DIR" ); }
+  if parsed.session_from.is_none()       { parsed.session_from         = env_str( "CLR_SESSION_FROM" ); }
   if !parsed.dry_run                       { parsed.dry_run              = env_bool( "CLR_DRY_RUN" ); }
-  // Fix(BUG-213): `CLR_VERBOSITY` overwrote an explicit `--verbosity N` CLI flag when N equalled
-  //   the default (3) — indistinguishable from an unset field because `verbosity` was non-optional.
-  // Root cause: non-optional field whose default is non-zero/non-false cannot act as a "set" sentinel;
-  //   `parsed.verbosity == VerbosityLevel::default()` misfires when the user explicitly passes that value.
-  // Pitfall: use `Option<T>` (never `T == default()`) for any env-var-fallback field whose default
-  //   is non-false/non-zero; equality-with-default is always ambiguous as a set-sentinel.
-  if parsed.verbosity.is_none()
-  {
-    if let Some( v ) = env_str( "CLR_VERBOSITY" )
-    {
-      if let Ok( level ) = v.parse::< VerbosityLevel >() { parsed.verbosity = Some( level ); }
-    }
-  }
+  if !parsed.quiet                         { parsed.quiet                = env_bool( "CLR_QUIET" ); }
   if !parsed.trace                         { parsed.trace                = env_bool( "CLR_TRACE" ); }
   if !parsed.no_ultrathink                 { parsed.no_ultrathink        = env_bool( "CLR_NO_ULTRATHINK" ); }
   if parsed.system_prompt.is_none()       { parsed.system_prompt        = env_str( "CLR_SYSTEM_PROMPT" ); }
@@ -305,6 +340,7 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
     }
   }
   if parsed.journal_dir.is_none() { parsed.journal_dir = env_str( "CLR_JOURNAL_DIR" ); }
+  if !parsed.no_compact_window { parsed.no_compact_window = env_bool( "CLR_NO_COMPACT_WINDOW" ); }
   Ok( () )
 }
 

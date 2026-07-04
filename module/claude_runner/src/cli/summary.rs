@@ -108,6 +108,93 @@ pub( super ) fn extract_result_text( json : &str ) -> Option< String >
   extract_str( json, "result" )
 }
 
+/// Extract the `"session_id"` field from a CLR JSON envelope, gated on `"type":"result"`.
+///
+/// Returns `Some(uuid)` only when the envelope is a result message with a non-null
+/// `"session_id"` string.  Used by `run_print_mode()` for BUG-320 mismatch detection:
+/// compares the actual session UUID against the expected UUID captured before launch.
+#[ inline ]
+#[ must_use ]
+pub fn extract_session_id( json : &str ) -> Option< String >
+{
+  let msg_type = extract_str( json, "type" )?;
+  if msg_type != "result" { return None; }
+  extract_str( json, "session_id" )
+}
+
+/// Extract the `"structured_output"` field value from a CLR JSON envelope as a raw JSON string.
+///
+/// Returns `Some(json)` only when the envelope contains `"type":"result"` (invariant/008 gate)
+/// and a `"structured_output"` key whose value is not `null`.  Used by the raw execution path
+/// when `--json-schema` is active and the `"result"` text field is empty (BUG-318).
+#[ inline ]
+#[ must_use ]
+pub( super ) fn extract_structured_output( json : &str ) -> Option< String >
+{
+  let msg_type = extract_str( json, "type" )?;
+  if msg_type != "result" { return None; }
+  extract_json_value( json, "structured_output" )
+}
+
+/// Extract an arbitrary JSON value (object, array, string, or scalar) for `key`.
+///
+/// Scans for `"<key>":` then captures the balanced value that follows.
+/// Returns `None` when the key is absent or the value is the JSON literal `null`.
+fn extract_json_value( s : &str, key : &str ) -> Option< String >
+{
+  let needle = format!( "\"{key}\":" );
+  let start  = s.find( &needle )? + needle.len();
+  let rest   = s[ start.. ].trim_start();
+  if rest.starts_with( "null" ) { return None; }
+  let first = rest.chars().next()?;
+  let (open, close) = match first
+  {
+    '{' => ( '{', '}' ),
+    '[' => ( '[', ']' ),
+    '"' =>
+    {
+      // JSON string — walk to the closing unescaped quote.
+      let mut chars   = rest.char_indices().skip( 1 );
+      let mut escaped = false;
+      loop
+      {
+        let (i, c) = chars.next()?;
+        if escaped { escaped = false; continue; }
+        if c == '\\' { escaped = true; continue; }
+        if c == '"' { return Some( rest[ ..= i ].to_owned() ); }
+      }
+    }
+    _ =>
+    {
+      // Scalar literal — read until delimiter.
+      let end = rest.find( [ ',', '}', ']' ] ).unwrap_or( rest.len() );
+      return Some( rest[ ..end ].trim_end().to_owned() );
+    }
+  };
+  // Balanced brace/bracket extraction.
+  let mut depth   = 0usize;
+  let mut in_str  = false;
+  let mut escaped = false;
+  for (i, c) in rest.char_indices()
+  {
+    if escaped { escaped = false; continue; }
+    if in_str
+    {
+      if c == '\\' { escaped = true; }
+      else if c == '"' { in_str = false; }
+      continue;
+    }
+    if c == '"' { in_str = true; continue; }
+    if c == open  { depth += 1; }
+    if c == close
+    {
+      depth -= 1;
+      if depth == 0 { return Some( rest[ ..= i ].to_owned() ); }
+    }
+  }
+  None
+}
+
 // ── Field constants ──────────────────────────────────────────────────────────────
 
 /// All 32 renderable CLR envelope fields in canonical order.
@@ -339,8 +426,16 @@ pub fn render_summary( json : &str, fields : Option< &str > ) -> Option< String 
   }
 
   let _ = writeln!( out, "{DIM}---{RESET}" );
-  out.push_str( &result );
-  if !result.is_empty() && !result.ends_with( '\n' ) { out.push( '\n' ); }
+  let body = if result.is_empty()
+  {
+    extract_structured_output( json ).unwrap_or_default()
+  }
+  else
+  {
+    result
+  };
+  out.push_str( &body );
+  if !body.is_empty() && !body.ends_with( '\n' ) { out.push( '\n' ); }
 
   Some( out )
 }

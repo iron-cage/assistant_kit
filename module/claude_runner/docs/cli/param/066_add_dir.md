@@ -7,6 +7,7 @@ Add an additional directory for Claude Code to access beyond the working directo
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **Validation:** requires a value; `--add-dir` at end of argv → error
+- **JSON Key:** `"add-dir"`
 
 ```sh
 clr "Fix bug" --add-dir /path/to/shared/lib
@@ -24,5 +25,5 @@ clr --add-dir ../common "Review dependencies"
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | — |
-| 2 | [`isolated`](../command/02_isolated.md) | — | Repeatable; `CLR_ADD_DIR` env fallback; injected into subprocess command (TSK-329) |
+| 2 | [`isolated`](../command/03_isolated.md) | — | Repeatable; `CLR_ADD_DIR` env fallback; injected into subprocess command (TSK-329) |
 | 5 | [`ask`](../command/05_ask.md) | — | — |

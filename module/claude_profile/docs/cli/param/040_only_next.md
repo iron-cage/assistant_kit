@@ -1,4 +1,4 @@
-# Parameter :: 40. `only_next::`
+# Parameter: 40. `only_next::`
 
 Filters the `.usage` table to show only the row selected as the recommended next account by the active `sort::` strategy.
 

@@ -11,6 +11,7 @@ proceeds normally. When it does not match, the strategy set by
 - **Default:** — (no output validation)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"expect"`
 
 ```sh
 clr ask "Ready to deploy? Answer yes or no" --expect "yes|no"
@@ -42,7 +43,7 @@ the captured stdout against literal values after execution.
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | — | — |
-| 2 | [`isolated`](../command/02_isolated.md) | — | Validates stdout after exit; `retry` strategy unsupported → exit 1 with error (TSK-331) |
+| 2 | [`isolated`](../command/03_isolated.md) | — | Validates stdout after exit; `retry` strategy unsupported → exit 1 with error (TSK-331) |
 | 5 | [`ask`](../command/05_ask.md) | — | — |
 
 ### See Also

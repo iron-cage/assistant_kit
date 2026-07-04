@@ -55,7 +55,7 @@
 | File | Relationship |
 |------|--------------|
 | BUG-213 | BUG-213 ✅ Fixed by TSK-216: expiry guard inserted in `account_use_routine()` before `switch_account()`; exits 3 when `now_ms > expiresAt` on the fetch-failed path (→ Feature 027 AC-17) |
-| BUG-286 | BUG-286 🔴 Open: `switch_account()` step 6 writes raw model value from `{name}.json` snapshot to settings.json without normalization; `override_session_model_to_opus` gate `contains("sonnet") \|\| is_empty()` does not match full-ID `"claude-opus-4-6"` — shorthand `"opus"` not written |
+| BUG-286 | BUG-286 🔴 Open: `switch_account()` step 6 writes raw model value from `{name}.json` snapshot to settings.json without normalization; `override_session_model_to_opus` gate `contains("sonnet") \|\| is_empty()` does not match full-ID `"claude-opus-4-8"` — shorthand `"opus"` not written |
 | BUG-217 | BUG-217 🟢 Fixed: `switch_account()` now enforces `emailAddress == name` before inserting `oauthAccount`; `oauth["emailAddress"] = name` assignment added at `account.rs:335` |
 | BUG-219 | BUG-219 ✅ Fixed by TSK-221: `switch_account()` now reads org identity from `{name}.json` and overrides `organizationName` + `organizationUuid` after the BUG-217 `emailAddress` insert |
 | BUG-222 | BUG-222 ✅ Fixed (TSK-234): `switch_account()` now reads `{name}.json` and restores/clears `model` in `~/.claude/settings.json` (step 6) |

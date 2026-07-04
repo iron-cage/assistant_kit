@@ -12,4 +12,5 @@
 |------|----------------|
 | `feature/` | Asset CLI command design and adapter behavior |
 | `invariant/` | Source root resolution constraint and env var requirement |
+| `entity.md` | Doc Entity index for this crate's documentation scope |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |

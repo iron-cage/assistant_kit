@@ -197,7 +197,7 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 - **AC-20**: `Name:` and `Email:` fields are shown from endpoint 002's `full_name`, `display_name`, and `email_address` user-level fields. Format: `full_name (display_name)` when both differ; `full_name` alone when identical.
 - **AC-21**: `Capabilities:` shows the selected membership's `capabilities[]` array; `Tier:` shows the selected membership's `rate_limit_tier` string.
 - **AC-22**: Endpoint 001 (`GET /api/oauth/usage`) is called; `Session (5h):`, `Weekly (7d):`, and `Sonnet (7d):` show utilization percentages and reset countdowns.
-- **AC-23**: When endpoint 001 fails, the quota section is omitted (no snapshot fallback for quota data).
+- **AC-23**: When endpoint 001 fails with a transient error (network, 429, etc.), quota data falls back to the local quota cache (Feature 033); the quota section is omitted only when both the live endpoint and the cache are unavailable. Auth errors (401, 403) do not fall back to cache — the quota section is omitted immediately.
 - **AC-24**: `format::json` includes new fields: `email_address`, `full_name`, `display_name`, `capabilities`, `rate_limit_tier`, `session_5h_pct`, `session_5h_reset_ts`, `weekly_7d_pct`, `weekly_7d_reset_ts`, `sonnet_7d_pct`, `sonnet_7d_reset_ts`.
 - **AC-25**: Identity fields (`tagged_id`, `uuid`, `email_address`) come from endpoint 002 (`GET /api/oauth/account`), NOT from `/api/oauth/userinfo` (removed — BUG-295).
 
@@ -256,4 +256,4 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 | File | Relationship |
 |------|--------------|
 | `tests/cli/account_inspect_test.rs` | Integration tests for AC-01..AC-25 |
-| [tests/docs/feature/31_account_inspect.md](../../tests/docs/feature/31_account_inspect.md) | FT-level behavioral test cases |
+| [tests/docs/feature/031_account_inspect.md](../../tests/docs/feature/031_account_inspect.md) | FT-level behavioral test cases |

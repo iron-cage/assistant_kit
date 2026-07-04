@@ -7,6 +7,7 @@ Limit the number of agentic turns Claude Code may take before stopping.
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Claude-Native Flags](../param_group/01_claude_native_flags.md)
 - **Validation:** requires a value; `--max-turns` at end of argv → error
+- **JSON Key:** `"max-turns"`
 
 ```sh
 clr "Fix all tests" --max-turns 5

@@ -3,7 +3,8 @@
 | File | Responsibility |
 |------|----------------|
 | `mod.rs` | Module declarations and command routine re-exports. |
-| `shared.rs` | Output helpers shared across command routines. |
+| `cmd_args.rs` | Argument parsing and I/O error helpers for command handlers. |
+| `cmd_context.rs` | Environment and credentials context resolution for command handlers. |
 | `credentials.rs` | `.credentials.status` command routine. |
 | `accounts.rs` | `.accounts` list command routine. |
 | `accounts_render.rs` | Account list renderers and column-visibility for `.accounts`. |

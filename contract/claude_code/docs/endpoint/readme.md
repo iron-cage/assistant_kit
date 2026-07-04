@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Authoritative wire contract for every Anthropic HTTP endpoint consumed by or observable from workspace crates.
-- **Responsibility**: Master file for the `endpoint` collection — lists all 10 instances, declares scope boundaries, and links to supplementary cross-endpoint reference material.
+- **Responsibility**: Master file for the `endpoint` collection — lists all 11 instances, declares scope boundaries, and links to supplementary cross-endpoint reference material.
 - **In Scope**: All endpoints callable or observed via `strings $(which claude) | grep "^https://"` — whether actively implemented or partially blocked.
 - **Out of Scope**: Anthropic public inference API contract (→ Anthropic docs); internal Rust parsing implementation (→ respective crate `src/lib.rs`); caller command design (→ respective crate `docs/feature/`).
 
@@ -21,6 +21,7 @@
 | [008](008_shared_session_transcripts.md) | Shared Session Transcripts | `api.anthropic.com/api/claude_code_shared_session_transcripts` | POST | — | 🔒 scope insufficient |
 | [009](009_cli_feedback.md) | CLI Feedback | `api.anthropic.com/api/claude_cli_feedback` | POST | — | 🔒 scope insufficient |
 | [010](010_web_domain_info.md) | Web Domain Info | `api.anthropic.com/api/web/domain_info` | GET | — | 📄 documented only |
+| [011](011_v1_models.md) | List Models | `api.anthropic.com/v1/models` | GET | — | 🔲 planned |
 
 ### Supplementary Reference
 

@@ -6,7 +6,7 @@ Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../
 
 - **Purpose**: Edge case tests for the `key::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `key::`.
-- **Commands:** `.settings.get`, `.settings.set`
+- **Commands:** `.settings.get`, `.settings.set`, `.config`, `.params`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -21,7 +21,7 @@ Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../
 | EC-11 | Without `key::` on `.settings.set` → error mentions `key::` | Absent (required) |
 | EC-4 | `key::""` (empty key) on `.settings.set` → exit 1 | Empty Value |
 | EC-5 | `key::` (empty value) on `.settings.get` → exit 1 | Empty Value |
-| EC-6 | `key::` only accepted by `.settings.get` and `.settings.set` | Command Scope |
+| EC-6 | `key::` rejected by commands that don't declare it (e.g., `.status`) | Command Scope |
 | EC-7 | `key::a b c` (key with spaces) → behavior defined | Special Characters |
 | EC-8 | `key::foo.bar` (dot in key name) → stored as given | Special Characters |
 | EC-9 | `key::foo bar` (space in key) → stored as given | Special Characters |
@@ -92,7 +92,7 @@ Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../
 
 ---
 
-### EC-6: `key::` only for `.settings.get` and `.settings.set`
+### EC-6: `key::` rejected by commands that don't declare it (e.g., `.status`)
 
 - **Given:** clean environment
 - **When:** `clv .status key::foo`
@@ -115,7 +115,7 @@ Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../
 ### EC-8: `key::foo.bar` (dot in key name)
 
 - **Given:** `HOME=<tmp>`; no existing settings.
-- **When:** `clv .settings.set key::foo.bar value::baz && cm .settings.get key::foo.bar`
+- **When:** `clv .settings.set key::foo.bar value::baz && clv .settings.get key::foo.bar`
 - **Then:** `baz` returned for key `foo.bar`.; key round-trips correctly.
 **Note:** Tests that the key is treated as an opaque string, not a nested path
 - **Exit:** 0
@@ -156,16 +156,16 @@ Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../
 
 | Function | File |
 |----------|------|
-| `tc320_settings_set_missing_key_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc332_settings_set_empty_key_exits_1` | `integration/mutation_commands_test.rs` |
-| `tc238_settings_set_missing_key_error_format` | `integration/read_commands_test.rs` |
-| `tc505_settings_get_missing_key_error_contains_key` | `integration/error_messages_test.rs` |
-| `key_ec1_existing_key_returns_value` | `integration/key_param_test.rs` |
-| `key_ec2_nonexistent_key_exits_2` | `integration/key_param_test.rs` |
-| `key_ec5_empty_key_on_get_exits_1` | `integration/key_param_test.rs` |
-| `key_ec6_command_scope_rejects_on_status` | `integration/key_param_test.rs` |
-| `key_ec7_key_with_spaces_behavior` | `integration/key_param_test.rs` |
-| `key_ec8_dot_in_key_round_trips` | `integration/key_param_test.rs` |
-| `key_ec9_space_in_key_round_trips` | `integration/key_param_test.rs` |
-| `key_ec10_missing_key_error_contains_key_token` | `integration/key_param_test.rs` |
-| `key_ec11_missing_key_on_set_error_contains_key_token` | `integration/key_param_test.rs` |
+| `tc320_settings_set_missing_key_exits_1` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc332_settings_set_empty_key_exits_1` | `tests/cli/mutation_settings_set_test.rs` |
+| `tc238_settings_set_missing_key_error_format` | `tests/cli/read_settings_test.rs` |
+| `tc505_settings_get_missing_key_error_contains_key` | `tests/cli/error_messages_test.rs` |
+| `key_ec1_existing_key_returns_value` | `tests/cli/key_param_test.rs` |
+| `key_ec2_nonexistent_key_exits_2` | `tests/cli/key_param_test.rs` |
+| `key_ec5_empty_key_on_get_exits_1` | `tests/cli/key_param_test.rs` |
+| `key_ec6_command_scope_rejects_on_status` | `tests/cli/key_param_test.rs` |
+| `key_ec7_key_with_spaces_behavior` | `tests/cli/key_param_test.rs` |
+| `key_ec8_dot_in_key_round_trips` | `tests/cli/key_param_test.rs` |
+| `key_ec9_space_in_key_round_trips` | `tests/cli/key_param_test.rs` |
+| `key_ec10_missing_key_error_contains_key_token` | `tests/cli/key_param_test.rs` |
+| `key_ec11_missing_key_on_set_error_contains_key_token` | `tests/cli/key_param_test.rs` |

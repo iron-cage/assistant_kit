@@ -10,6 +10,7 @@ unmodified.
 - **Default:** false (fence stripping disabled)
 - **Command:** [`run`](../command/01_run.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
+- **JSON Key:** `"strip-fences"`
 
 ```sh
 clr --strip-fences "Generate a Rust struct for Config"

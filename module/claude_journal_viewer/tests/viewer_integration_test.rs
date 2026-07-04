@@ -12,6 +12,20 @@ use std::process::{ Command, Stdio };
 
 const CLJ : &str = env!( "CARGO_BIN_EXE_clj" );
 
+fn assert_container()
+{
+  let in_container = std::path::Path::new( "/.dockerenv" ).exists()
+    || std::path::Path::new( "/run/.containerenv" ).exists()
+    || std::env::var( "RUNBOX_CONTAINER" ).as_deref() == Ok( "1" );
+  let escaped = std::env::var( "VERB_LAYER" ).as_deref() == Ok( "l0" );
+  assert!(
+    in_container || escaped,
+    "\n\nTests must run inside a container.\n\
+     Standard invocation: ./verb/test (from workspace root)\n\
+     Host bypass:         VERB_LAYER=l0 cargo nextest run --all-features\n"
+  );
+}
+
 // ── Fixture helpers ───────────────────────────────────────────────────────────
 
 /// Write a mix of events to `dir` using `JournalWriter`.
@@ -25,7 +39,7 @@ fn write_fixture_events( dir : &Path )
 
   let mut ev1        = EventRecord::new( EventType::Execution );
   ev1.fields.command       = Some( "run".to_owned() );
-  ev1.fields.model         = Some( "claude-sonnet-4-6".to_owned() );
+  ev1.fields.model         = Some( "claude-sonnet-5".to_owned() );
   ev1.fields.exit_code     = Some( 0 );
   ev1.fields.duration_ms   = Some( 1_500 );
   ev1.fields.cost_usd      = Some( 0.012 );
@@ -61,6 +75,7 @@ fn write_fixture_events( dir : &Path )
 /// Run `clj` with the given args, always appending `dir::<dir>`.
 fn run_clj( args : &[ &str ], dir : &Path ) -> std::process::Output
 {
+  assert_container();
   Command::new( CLJ )
     .args( args )
     .arg( format!( "dir::{}", dir.display() ) )
@@ -155,7 +170,7 @@ fn ec4_stats_by_model_shows_aggregation()
   assert!( stdout.contains( "COUNT" ), "missing COUNT header: {stdout}" );
   assert!( stdout.contains( "COST" ),  "missing COST header: {stdout}" );
   // Should show both models from fixture
-  assert!( stdout.contains( "claude-sonnet-4-6" ), "missing sonnet model: {stdout}" );
+  assert!( stdout.contains( "claude-sonnet-5" ), "missing sonnet model: {stdout}" );
   assert!( stdout.contains( "claude-haiku" ),      "missing haiku model: {stdout}" );
 }
 
@@ -329,6 +344,7 @@ fn ec10_type_validation_at_parse_time()
 #[ test ]
 fn ec11_no_color_suppresses_ansi()
 {
+  assert_container();
   let dir = tempfile::TempDir::new().unwrap();
   write_fixture_events( dir.path() );
 
@@ -362,6 +378,7 @@ fn ec11_no_color_suppresses_ansi()
 #[ test ]
 fn ec12_serve_http_returns_html()
 {
+  assert_container();
   let dir = tempfile::TempDir::new().unwrap();
   write_fixture_events( dir.path() );
 
@@ -436,6 +453,7 @@ fn ec12_serve_http_returns_html()
 #[ test ]
 fn ec13_tail_starts_and_can_be_killed()
 {
+  assert_container();
   let dir = tempfile::TempDir::new().unwrap();
   write_fixture_events( dir.path() );
 

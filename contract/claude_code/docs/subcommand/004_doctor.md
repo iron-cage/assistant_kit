@@ -34,5 +34,5 @@ v2.0.12 (2025-10-09)
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master subcommand table |
 | doc | [009_update.md](009_update.md) | Update/upgrade subcommand |
-| doc | [../params/011_auto_updates.md](../params/011_auto_updates.md) | Auto-updates config key |
-| doc | [../params/103_disable_doctor_command.md](../params/103_disable_doctor_command.md) | Env var to hide `/doctor` slash command |
+| doc | [../param/011_auto_updates.md](../param/011_auto_updates.md) | Auto-updates config key |
+| doc | [../param/103_disable_doctor_command.md](../param/103_disable_doctor_command.md) | Env var to hide `/doctor` slash command |

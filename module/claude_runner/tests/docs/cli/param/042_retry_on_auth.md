@@ -13,8 +13,8 @@ See [042_retry_on_auth.md](../../../../docs/cli/param/042_retry_on_auth.md) for 
 | EC-4 | `CLR_RETRY_ON_AUTH=2 --dry-run` → exit 0; env var applied | Env Var |
 | EC-5 | `CLR_RETRY_ON_AUTH=1 --retry-on-auth 3 --dry-run` → CLI 3 wins | CLI-wins |
 | EC-6 | `CLR_RETRY_ON_AUTH=notanumber --dry-run` → silently ignored | Validation |
-| EC-7 | Fake emits auth pattern + exits 1; retries=1, delay=0 → exit 1 immediately (fail-fast, no retry); `[Auth]` in stderr; invocation count=1 | Integration (BUG-315) |
-| EC-8 | Fake always emits auth pattern + exits 1; retries=2, delay=0 → exit 1 immediately (fail-fast, no retry, no "exhausted"); invocation count=1 | Integration (BUG-315) |
+| EC-7 | Fake emits auth pattern + exits 1 on first call, exits 0 on second; retries=1, delay=0 → retry fires; invocation count=2; exit 0 | Integration (BUG-325) |
+| EC-8 | Fake always emits auth pattern + exits 1; retries=2, delay=0 → 2 retries fire; invocation count=3; "retries exhausted" in stderr | Integration (BUG-325) |
 
 ## Test Coverage Summary
 
@@ -23,7 +23,7 @@ See [042_retry_on_auth.md](../../../../docs/cli/param/042_retry_on_auth.md) for 
 - Env Var: 1 test (EC-4)
 - CLI-wins: 1 test (EC-5)
 - Validation: 1 test (EC-6)
-- Integration (BUG-315): 2 tests (EC-7, EC-8)
+- Integration (BUG-325): 2 tests (EC-7, EC-8)
 
 **Total:** 8 edge cases
 
@@ -42,8 +42,8 @@ stdout or stderr and exiting nonzero. `--auth-delay 0` is required in integratio
 | EC-4 | `ec4_clr_retry_on_auth_env_var_accepted` | `retry_auth_test.rs` |
 | EC-5 | `ec5_retry_on_auth_cli_wins_over_env` | `retry_auth_test.rs` |
 | EC-6 | `ec6_clr_retry_on_auth_invalid_ignored` | `retry_auth_test.rs` |
-| EC-7 | `ec7_auth_error_exits_immediately_without_retry` | `retry_auth_test.rs` |
-| EC-8 | `ec8_auth_error_exits_immediately_regardless_of_retry_budget` | `retry_auth_test.rs` |
+| EC-7 | `ec7_auth_error_retries_on_explicit_budget` | `retry_auth_test.rs` |
+| EC-8 | `ec8_auth_error_exhausts_retry_budget` | `retry_auth_test.rs` |
 
 ---
 
@@ -113,24 +113,24 @@ stdout or stderr and exiting nonzero. `--auth-delay 0` is required in integratio
 
 ---
 
-### EC-7: Auth error exits immediately even with `--retry-on-auth 1` (fail-fast; BUG-315)
+### EC-7: Auth error retries on explicit budget of 1 (BUG-325)
 
-- **Given:** fake emits auth pattern + exits 1 (would exit 0 on 2nd call, but 2nd call never fires); `--retry-on-auth 1 --auth-delay 0 -p "x"`
+- **Given:** fake emits auth pattern + exits 1 on first call, exits 0 on second call; `--retry-on-auth 1 --auth-delay 0 -p "x"`
 - **When:** `clr --retry-on-auth 1 --auth-delay 0 --max-sessions 0 -p "x"` using fake
-- **Then:** Exit 1 immediately; stderr contains `[Auth]`; invocation count = 1 (no retry); no "retry" or "retrying" in stderr
-- **Exit:** 1
-- **Note:** Fix(BUG-315): auth errors never retry regardless of `--retry-on-auth` value. The `!is_auth_error` guard prevents retry-block entry unconditionally.
+- **Then:** Exit 0; stderr contains `[Auth]` and `retrying`; invocation count = 2 (initial + 1 retry fires)
+- **Exit:** 0
+- **Note:** Fix(BUG-325): `!is_auth_error` guard removed — Auth uses same 3-tier retry resolution as all other classes. `--retry-on-auth 1` now fires 1 retry.
 - **Source:** [042_retry_on_auth.md](../../../../docs/cli/param/042_retry_on_auth.md)
 - **Commands:** run, ask
 
 ---
 
-### EC-8: Auth error exits immediately even with `--retry-on-auth 2` (fail-fast; BUG-315)
+### EC-8: Auth error exhausts retry budget of 2 (BUG-325)
 
 - **Given:** fake always emits auth pattern + exits 1; `--retry-on-auth 2 --auth-delay 0 -p "x"`
 - **When:** `clr --retry-on-auth 2 --auth-delay 0 --max-sessions 0 -p "x"` using fake
-- **Then:** Exit 1 immediately; stderr contains `[Auth]`; invocation count = 1; no "exhaust" in stderr (exhaustion message requires ≥1 retry; no retry fires)
+- **Then:** Exit 1; stderr contains `[Auth]`; invocation count = 3 (1 initial + 2 retries); "exhausted" in stderr
 - **Exit:** 1
-- **Note:** Fix(BUG-315): same fail-fast guard. Pair with EC-7 to verify multiple `--retry-on-auth` values all yield identical immediate-exit behavior.
+- **Note:** Fix(BUG-325): retry fires 2 times, exhausts budget, emits "retries exhausted". Pair with EC-7 to verify different budget values produce correct invocation counts.
 - **Source:** [042_retry_on_auth.md](../../../../docs/cli/param/042_retry_on_auth.md)
 - **Commands:** run, ask
