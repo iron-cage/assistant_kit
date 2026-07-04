@@ -1,5 +1,11 @@
 # Test: Feature 016 — Current Account Awareness
 
+### Scope
+
+- **Purpose**: Test cases for current account awareness tracking and display.
+- **Source**: `docs/feature/016_current_account_awareness.md`
+- **Covers**: AC-01 through AC-11
+
 Feature behavioral requirement test cases for `docs/feature/016_current_account_awareness.md`. Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

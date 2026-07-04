@@ -1,6 +1,6 @@
 # Doc Entities
 
-### Master Doc Entities Table
+## Master Doc Entities Table
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
@@ -12,7 +12,7 @@
 | `cli/user_story/` | Index of user story instances capturing persona intent and acceptance criteria | [cli/user_story/readme.md](cli/user_story/readme.md) | 5 |
 | `feature/` | Index of feature doc instances covering CLI tool scope and design decisions | [feature/readme.md](feature/readme.md) | 1 |
 | `operation/` | Index of operation doc instances covering upgrade and migration procedures | [operation/readme.md](operation/readme.md) | 1 |
-| `guide/` | Architecture internals reference guides | [guide/readme.md](guide/readme.md) | 1 |
+| `algorithm/` | Index of algorithm doc instances covering procedure design and correctness guarantees | [algorithm/readme.md](algorithm/readme.md) | 1 |
 | `invariant/` | System behavioral invariants | [invariant/readme.md](invariant/readme.md) | 3 |
 | `cli/pitfall/` | CLI implementation pitfall documentation | [cli/pitfall/readme.md](cli/pitfall/readme.md) | 3 |
 | `tests/docs/cli/command/` | Index of per-command integration test case files covering command-level behavior | [../../tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 11 |
@@ -24,10 +24,10 @@
 | `tests/docs/feature/` | FT-prefixed test spec files mirroring each `docs/feature/` instance | [../../tests/docs/feature/readme.md](../../tests/docs/feature/readme.md) | 1 |
 | `tests/docs/operation/` | OP-prefixed test spec files mirroring each `docs/operation/` instance | [../../tests/docs/operation/readme.md](../../tests/docs/operation/readme.md) | 1 |
 | `tests/docs/invariant/` | IN-prefixed contract test spec files mirroring each `docs/invariant/` instance | [../../tests/docs/invariant/readme.md](../../tests/docs/invariant/readme.md) | 3 |
-| `tests/docs/guide/` | GD-prefixed contract test spec files mirroring each `docs/guide/` instance | [../../tests/docs/guide/readme.md](../../tests/docs/guide/readme.md) | 1 |
+| `tests/docs/algorithm/` | AL-prefixed contract test spec files mirroring each `docs/algorithm/` instance | [../../tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) | 1 |
 | `tests/docs/cli/pitfall/` | PF-prefixed contract test spec files mirroring each `docs/cli/pitfall/` instance | [../../tests/docs/cli/pitfall/readme.md](../../tests/docs/cli/pitfall/readme.md) | 3 |
 
-### Master Doc Instances Table
+## Master Doc Instances Table
 
 | Entity | ID | Name | File |
 |--------|----|------|------|
@@ -94,7 +94,7 @@
 | cli/type | 11 | Target Type | [cli/type/11_target_type.md](cli/type/11_target_type.md) |
 | cli/type | 12 | Topic Name | [cli/type/12_topic_name.md](cli/type/12_topic_name.md) |
 | cli/type | 13 | Strategy Type | [cli/type/13_strategy_type.md](cli/type/13_strategy_type.md) |
-| guide | 001 | Advanced Storage Topics | [guide/001_advanced_storage_topics.md](guide/001_advanced_storage_topics.md) |
+| algorithm | 001 | Agent Session Tracking | [algorithm/001_agent_session_tracking.md](algorithm/001_agent_session_tracking.md) |
 | invariant | 01 | Path Encoding | [invariant/01_path_encoding.md](invariant/01_path_encoding.md) |
 | invariant | 02 | Session Family | [invariant/02_session_family.md](invariant/02_session_family.md) |
 | invariant | 03 | Entry Type Format | [invariant/03_entry_type_format.md](invariant/03_entry_type_format.md) |

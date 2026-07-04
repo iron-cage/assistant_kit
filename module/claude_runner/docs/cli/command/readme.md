@@ -37,4 +37,4 @@
 
 **Total:** 9 commands
 
-**Maintenance note:** When a new param is added to the Runner Control group (`docs/cli/param_group/02_runner_control.md`), these files must ALL be updated manually: (1) `01_run.md` Parameters table, (2) the Params count column above, (3) `docs/entity.md` param count + row, (4) `docs/cli/env_param.md` if it has an env var, (5) `tests/docs/cli/param/readme.md` status. `ask` inherits all `run` params automatically via the "All parameters from run are accepted" shortcut — no separate table update needed for `05_ask.md`.
+**Maintenance note:** When a new param is added to the Runner Control group (`docs/cli/param_group/02_runner_control.md`), these files must ALL be updated manually: (1) `01_run.md` Parameters table, (2) the Params count column above, (3) `docs/entity.md` param count + row, (4) `docs/cli/003_env_param.md` if it has an env var, (5) `tests/docs/cli/param/readme.md` status. `ask` inherits all `run` params automatically via the "All parameters from run are accepted" shortcut — no separate table update needed for `05_ask.md`.

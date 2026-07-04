@@ -41,10 +41,6 @@ Maximum number of main sessions to display per project. Zero means unlimited.
 |------|------|-------------|----------------|
 | Integer | Base type | Integer | Non-negative (≥ 0); `0` means no cap |
 
-### Referenced Parameter Groups
-
-None.
-
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|

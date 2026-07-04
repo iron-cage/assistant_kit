@@ -1,5 +1,12 @@
 # Test: Feature — Event Journaling
 
+### Scope
+
+- **Purpose**: FT- test cases verifying journal file creation, level-based field population, truncation, and concurrent read/write safety.
+- **Responsibility**: Acceptance criteria confirming `JournalWriter::append()` and `JournalReader::query()` behave correctly under directory auto-creation, level divergence, and concurrent access.
+- **In Scope**: `append()` directory/file creation, `full`/`meta`/`off` level field population, 1 MB stdout truncation, concurrent reader/writer safety.
+- **Out of Scope**: Event schema field structure (-> `002_event_schema.md`), file rotation and pruning (-> `003_rotation.md`), append-only and crash-safety invariants (-> `../invariant/`).
+
 Test case planning for [feature/001_event_journaling.md](../../../docs/feature/001_event_journaling.md). Tests validate file creation, level control (full/meta/off), directory auto-creation, concurrent read safety, and stdout/stderr truncation.
 
 ## Test Case Index

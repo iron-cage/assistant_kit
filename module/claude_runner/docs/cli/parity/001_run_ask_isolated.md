@@ -166,6 +166,6 @@ The following gaps between `isolated` and `run`/`ask` are tracked as implementat
 | command | `command/01_run.md` | `run` full reference |
 | command | `command/05_ask.md` | `ask` reference (alias) |
 | command | `command/03_isolated.md` | `isolated` full reference |
-| doc | `command_defaults.md` | Injection defaults with Plan 009 design traceability |
+| doc | `002_command_defaults.md` | Injection defaults with Plan 009 design traceability |
 | parity | `002_isolated_refresh.md` | `isolated` vs `refresh` credential command comparison |
 | invariant | `../invariant/005_isolated_subprocess_defaults.md` | Isolated subprocess injection contracts |

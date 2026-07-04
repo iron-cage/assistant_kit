@@ -1,4 +1,4 @@
-# Guide Testing Collection
+# Guide Doc Entity
 
 ### Scope
 

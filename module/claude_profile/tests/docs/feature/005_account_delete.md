@@ -1,5 +1,11 @@
 # Test: Feature 005 — Delete Account
 
+### Scope
+
+- **Purpose**: Test cases for account deletion, including snapshot cleanup and ownership gating.
+- **Source**: `docs/feature/005_account_delete.md`
+- **Covers**: AC-01 through AC-07
+
 Feature behavioral requirement test cases for `docs/feature/005_account_delete.md` (FR-10). Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

@@ -161,4 +161,4 @@ Test case planning for [invariant/005_isolated_subprocess_defaults.md](../../../
 - **When:** `clr isolated --creds <f> --trace "x" -- --effort medium`
 - **Then:** trace stderr shows `--effort max` injected first, then `--effort medium` after `--` — claude binary last-wins semantics cause `medium` to be effective; both flags appear in the command line in injection-before-passthrough order
 - **Exit:** 1 (claude absent) or 0 (claude present)
-- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md), [`command_defaults.md` Injection Order Convention](../../../../docs/cli/command_defaults.md)
+- **Source:** [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md), [`002_command_defaults.md` Injection Order Convention](../../../../docs/cli/002_command_defaults.md)

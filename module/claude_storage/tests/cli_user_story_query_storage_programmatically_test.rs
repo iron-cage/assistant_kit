@@ -2,7 +2,7 @@
 //!
 //! ## Source
 //!
-//! - Spec: `tests/docs/cli/user_story/04_query_storage_programmatically.md`
+//! - Spec: `tests/docs/cli/user_story/004_query_storage_programmatically.md`
 //!
 //! ## Coverage
 //!
@@ -47,7 +47,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 /// Parseable key=value output; no decorations; exact counts match fixture; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/04_query_storage_programmatically.md` — RWS-1
+/// `tests/docs/cli/user_story/004_query_storage_programmatically.md` — RWS-1
 #[ test ]
 fn rws_1_status_outputs_key_value_pairs()
 {
@@ -94,7 +94,7 @@ fn rws_1_status_outputs_key_value_pairs()
 /// Single bare integer on stdout; no labels or decorators; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/04_query_storage_programmatically.md` — RWS-2
+/// `tests/docs/cli/user_story/004_query_storage_programmatically.md` — RWS-2
 #[ test ]
 fn rws_2_count_outputs_bare_integer()
 {
@@ -136,7 +136,7 @@ fn rws_2_count_outputs_bare_integer()
 /// Session count returned; correct total from multi-project fixture; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/04_query_storage_programmatically.md` — RWS-3
+/// `tests/docs/cli/user_story/004_query_storage_programmatically.md` — RWS-3
 #[ test ]
 fn rws_3_count_target_specifies_what_to_count()
 {
@@ -181,7 +181,7 @@ fn rws_3_count_target_specifies_what_to_count()
 /// Alternate storage root via `path::`; count from alternate fixture; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/04_query_storage_programmatically.md` — RWS-4
+/// `tests/docs/cli/user_story/004_query_storage_programmatically.md` — RWS-4
 #[ test ]
 fn rws_4_path_scopes_query_to_alternate_storage_root()
 {
@@ -219,7 +219,7 @@ fn rws_4_path_scopes_query_to_alternate_storage_root()
 /// Exit code 2; error on stderr; handles inaccessible path.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/04_query_storage_programmatically.md` — RWS-5
+/// `tests/docs/cli/user_story/004_query_storage_programmatically.md` — RWS-5
 #[ test ]
 fn rws_5_non_existent_storage_root_exits_non_zero()
 {

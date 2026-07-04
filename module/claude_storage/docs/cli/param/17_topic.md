@@ -44,10 +44,6 @@ topic::-default_topic   # (legal — creates /-default_topic... but convention i
 |------|------|-------------|----------------|
 | [`TopicName`](../type/12_topic_name.md) | String (identifier) | String | Non-empty; no `/` characters; no leading `-` |
 
-### Referenced Parameter Groups
-
-None.
-
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|

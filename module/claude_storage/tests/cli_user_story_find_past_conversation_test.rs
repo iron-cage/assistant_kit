@@ -2,7 +2,7 @@
 //!
 //! ## Source
 //!
-//! - Spec: `tests/docs/cli/user_story/02_find_past_conversation.md`
+//! - Spec: `tests/docs/cli/user_story/002_find_past_conversation.md`
 //!
 //! ## Coverage
 //!
@@ -47,7 +47,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 /// All 3 project paths visible; no sessions shown by default; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/02_find_past_conversation.md` — RWS-1
+/// `tests/docs/cli/user_story/002_find_past_conversation.md` — RWS-1
 #[ test ]
 fn rws_1_list_all_projects_shows_projects_in_storage()
 {
@@ -95,7 +95,7 @@ fn rws_1_list_all_projects_shows_projects_in_storage()
 /// Keyword match returns matching project; non-matching project absent; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/02_find_past_conversation.md` — RWS-2
+/// `tests/docs/cli/user_story/002_find_past_conversation.md` — RWS-2
 #[ test ]
 fn rws_2_search_by_keyword_finds_matching_sessions()
 {
@@ -140,7 +140,7 @@ fn rws_2_search_by_keyword_finds_matching_sessions()
 /// `project::` scopes search; only target project sessions returned; other project excluded; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/02_find_past_conversation.md` — RWS-3
+/// `tests/docs/cli/user_story/002_find_past_conversation.md` — RWS-3
 #[ test ]
 fn rws_3_project_filter_restricts_search_to_one_project()
 {
@@ -193,7 +193,7 @@ fn rws_3_project_filter_restricts_search_to_one_project()
 /// Combined filter; below-threshold session excluded; agent session excluded; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/02_find_past_conversation.md` — RWS-4
+/// `tests/docs/cli/user_story/002_find_past_conversation.md` — RWS-4
 #[ test ]
 fn rws_4_session_metadata_filters_narrow_listing()
 {
@@ -243,7 +243,7 @@ fn rws_4_session_metadata_filters_narrow_listing()
 /// Session metadata visible; entries listed with type and content; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/02_find_past_conversation.md` — RWS-5
+/// `tests/docs/cli/user_story/002_find_past_conversation.md` — RWS-5
 #[ test ]
 fn rws_5_show_session_displays_full_session_details()
 {

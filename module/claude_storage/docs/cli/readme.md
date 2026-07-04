@@ -16,11 +16,11 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `command/` | Per-command detail pages with full parameter tables and cross-refs |
 | `param/` | Per-parameter detail pages with type, defaults, and command cross-refs |
 | `type/` | Per-type constraint and parsing reference (13 type pages) |
-| `dictionary.md` | Domain vocabulary and term definitions |
+| `001_dictionary.md` | Domain vocabulary and term definitions |
 | `param_group/` | Per-group detail pages with membership, examples, and cross-refs |
-| `workflows.md` | Usage scenarios, best practices, complexity matrix |
+| `003_workflows.md` | Usage scenarios, best practices, complexity matrix |
 | `format/` | Output format catalog for export rendering modes |
-| `env_param.md` | Environment variable catalog with precedence rules |
+| `002_env_param.md` | Environment variable catalog with precedence rules |
 | `user_story/` | User story index covering persona goals and acceptance criteria |
 | `pitfall/` | CLI implementation pitfalls and anti-patterns |
 
@@ -33,15 +33,15 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `command/*.md` (11 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param/*.md` (24 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `dictionary.md` | ➖ | ✅ | ✅ | ✅ | ✅ | L5 |
+| `001_dictionary.md` | ➖ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `type/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `type/*.md` (13 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param_group/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `param_group/*.md` (5 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `workflows.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `003_workflows.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `format/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
 | `format/*.md` (3 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
-| `env_param.md` | ✅ | ✅ | ✅ | ➖ | ➖ | L3 |
+| `002_env_param.md` | ✅ | ✅ | ✅ | ➖ | ➖ | L3 |
 | `user_story/readme.md` | ✅ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `user_story/*.md` (5 files) | ✅ | ✅ | ✅ | ✅ | ✅ | L5 |
 | `pitfall/readme.md` | ➖ | ✅ | ✅ | ➖ | ➖ | L3 |
@@ -55,11 +55,11 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 - [Commands](command/readme.md) — What operations exist and how to invoke them
 - [Parameters](param/readme.md) — What inputs control each command
 - [Types](type/readme.md) — Semantic type constraints and validation rules
-- [Dictionary](dictionary.md) — Domain vocabulary
+- [Dictionary](001_dictionary.md) — Domain vocabulary
 - [Parameter Groups](param_group/readme.md) — Related parameter sets and their coherence
-- [Workflows](workflows.md) — Common usage patterns and best practices
+- [Workflows](003_workflows.md) — Common usage patterns and best practices
 - [Formats](format/readme.md) — Export output format rendering specifications
-- [Environment Parameters](env_param.md) — Environment variables and precedence rules
+- [Environment Parameters](002_env_param.md) — Environment variables and precedence rules
 - [User Stories](user_story/readme.md) — Persona goals, acceptance criteria, and workflows
 - [Pitfalls](pitfall/readme.md) — CLI implementation pitfalls and anti-patterns
 

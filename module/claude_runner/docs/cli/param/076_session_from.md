@@ -80,7 +80,7 @@ CLR_SESSION_FROM=/home/alice/project-a clr "Continue"
 | [`../feature/005_session_path_resolution.md`](../feature/005_session_path_resolution.md) | Feature hub: `scope_for()` and session cross-loading |
 | [`../invariant/011_session_source_isolation.md`](../invariant/011_session_source_isolation.md) | Isolation invariant: reads from source, writes to target |
 | [`../variable/003_claude_session_dir.md`](../variable/003_claude_session_dir.md) | CLAUDE_SESSION_DIR — computed for both source and target |
-| [`../algorithm/001_path_encoding.md`](../algorithm/001_path_encoding.md) | Df() — applied to `<DIR>` to find its session storage |
+| [`../../algorithm/001_path_encoding.md`](../../algorithm/001_path_encoding.md) | Df() — applied to `<DIR>` to find its session storage |
 | [`../algorithm/003_session_file_selection.md`](../algorithm/003_session_file_selection.md) | Session selection — how the source session UUID is picked |
 
 ### Referenced User Stories

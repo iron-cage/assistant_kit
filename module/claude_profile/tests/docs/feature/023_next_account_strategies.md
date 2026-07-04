@@ -1,5 +1,11 @@
 # DEPRECATED — Feature 023 — Next Account Recommendation Strategies
 
+### Scope
+
+- **Purpose**: Deprecated — `next::`/`NextStrategy` removed; no active test cases remain.
+- **Source**: `docs/feature/023_next_account_strategies.md`
+- **Covers**: N/A — deprecated, no active test cases (coverage migrated to `020_usage_sort_strategies.md`)
+
 > **DEPRECATED:** `next::` parameter and `NextStrategy` enum removed (Feature 037/038). The
 > `sort::` parameter now drives both row ordering and the `-> Next` footer recommendation.
 > Surviving test cases have been migrated to `tests/docs/feature/020_usage_sort_strategies.md`.

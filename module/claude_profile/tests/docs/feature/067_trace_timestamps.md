@@ -1,5 +1,11 @@
 # Test: Feature 067 — Trace Timestamp Prefix
 
+### Scope
+
+- **Purpose**: Test cases for the unconditional `trace_ts()` timestamp prefix replacing the `[trace]` sentinel.
+- **Source**: `docs/feature/067_trace_timestamps.md`
+- **Covers**: AC-01 through AC-06
+
 Feature behavioral requirement test cases for `docs/feature/067_trace_timestamps.md`. Tests are spread across 12 existing test files — this feature modifies diagnostic output format rather than adding new commands, so assertions in existing tests were updated rather than new test functions created. The BUG-234 MRE in `tests/usage/fetch_tests.rs` is the only dedicated structural guard.
 
 ### AC Coverage Index

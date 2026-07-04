@@ -1,10 +1,17 @@
 # Operation :: Migration Guide
 
+### Scope
+
+- **Purpose**: OP- test cases verifying each step of the `claude_storage` → `claude_storage_core` migration procedure produces its documented outcome.
+- **Responsibility**: Acceptance criteria confirming Cargo.toml and import updates, successful compilation/test pass, and reversible rollback.
+- **In Scope**: `Cargo.toml` dependency swap, `use claude_storage::` import replacement, post-migration build and test pass, rollback to prior state.
+- **Out of Scope**: CLI usage changes (CLI users unaffected by this migration -> `../feature/001_cli_tool.md`), core library design rationale (-> `../../../../claude_storage_core/docs/feature/001_core_library.md`).
+
 Operational test cases for the `claude_storage` → `claude_storage_core` migration procedure.
 Tests validate that each procedure step produces the documented outcome and that the migration
 is reversible.
 
-**Source:** [001_migration_guide.md](../../../../docs/operation/001_migration_guide.md)
+**Source:** [001_migration_guide.md](../../../docs/operation/001_migration_guide.md)
 
 ## Test Case Index
 

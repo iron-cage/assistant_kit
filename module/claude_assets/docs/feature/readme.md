@@ -1,4 +1,4 @@
-# Feature Collection
+# Feature Doc Entity
 
 ### Scope
 

@@ -1,5 +1,11 @@
 # Doc Structure Validation — Feature Collection
 
+### Scope
+
+- **Purpose**: Structural compliance validation cases for the `docs/feature/` collection's Rule 9a cross-references format migration.
+- **Source**: `docs/feature/` (whole collection — no single numbered spec file; validates cross-cutting structural compliance)
+- **Covers**: DT-01 through DT-07
+
 Structural compliance validation cases for the `docs/feature/` collection (47 files). Validates that all feature doc instances conform to the per-type H3 section format required by doc.rulebook.md § Feature Documentation : Rule 9a.
 
 These are grep-executable and manual validation cases, not automated behavioral tests. They are the verification surface for the Rule 9a cross-references format migration.

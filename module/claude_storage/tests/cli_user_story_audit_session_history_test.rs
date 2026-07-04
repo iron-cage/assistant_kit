@@ -2,7 +2,7 @@
 //!
 //! ## Source
 //!
-//! - Spec: `tests/docs/cli/user_story/01_audit_session_history.md`
+//! - Spec: `tests/docs/cli/user_story/001_audit_session_history.md`
 //!
 //! ## Coverage
 //!
@@ -47,7 +47,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 /// Summary output present; project count in output; session count in output; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/01_audit_session_history.md` — RWS-1
+/// `tests/docs/cli/user_story/001_audit_session_history.md` — RWS-1
 #[ test ]
 fn rws_1_basic_status_shows_project_and_session_totals()
 {
@@ -86,7 +86,7 @@ fn rws_1_basic_status_shows_project_and_session_totals()
 /// Token section present with `show_tokens::1`; more detail than default; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/01_audit_session_history.md` — RWS-2
+/// `tests/docs/cli/user_story/001_audit_session_history.md` — RWS-2
 #[ test ]
 fn rws_2_show_tokens_reveals_token_consumption()
 {
@@ -133,7 +133,7 @@ fn rws_2_show_tokens_reveals_token_consumption()
 /// Machine-readable format; no decorative headers; parseable output; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/01_audit_session_history.md` — RWS-3
+/// `tests/docs/cli/user_story/001_audit_session_history.md` — RWS-3
 #[ test ]
 fn rws_3_status_outputs_machine_readable_format()
 {
@@ -176,7 +176,7 @@ fn rws_3_status_outputs_machine_readable_format()
 /// Bare integer output; no labels; usable in shell arithmetic; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/01_audit_session_history.md` — RWS-4
+/// `tests/docs/cli/user_story/001_audit_session_history.md` — RWS-4
 #[ test ]
 fn rws_4_count_target_sessions_returns_bare_integer()
 {
@@ -219,7 +219,7 @@ fn rws_4_count_target_sessions_returns_bare_integer()
 /// Alternate storage root via `path::`; counts from alternate fixture; exit 0.
 ///
 /// ## Related Requirements
-/// `tests/docs/cli/user_story/01_audit_session_history.md` — RWS-5
+/// `tests/docs/cli/user_story/001_audit_session_history.md` — RWS-5
 #[ test ]
 fn rws_5_path_override_inspects_alternate_storage_root()
 {

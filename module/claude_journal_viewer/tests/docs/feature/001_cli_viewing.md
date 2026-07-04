@@ -1,5 +1,12 @@
 # Test: Feature — CLI Viewing
 
+### Scope
+
+- **Purpose**: FT- test cases verifying CLI command dispatch, listing, tailing, stats, export, status, and prune behaviors.
+- **Responsibility**: Acceptance criteria confirming all 8 viewer commands are registered and produce correct output against a populated journal.
+- **In Scope**: Command registration/dispatch, `.list` default and filtered output, `.tail` streaming, `.stats` aggregation, `.export`, `.status`, `.prune`.
+- **Out of Scope**: HTTP server and web UI (-> `002_web_viewing.md`), detailed filter semantics (-> `003_filtering.md`), read-only invariant (-> `../invariant/001_read_only.md`).
+
 Test case planning for [feature/001_cli_viewing.md](../../../docs/feature/001_cli_viewing.md). Tests validate command dispatch, default `.list` output, filtering, `.tail` streaming, `.stats` aggregation, and `.export` file output.
 
 ## Test Case Index

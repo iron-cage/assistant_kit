@@ -31,14 +31,6 @@ Validate non-empty string:
 
 **Commands:** `.list` (via `path::`)
 
-**Usage:**
-```
-.list path::assistant
-# Matches: /home/alice/projects/assistant/module/core
-# Matches: /home/alice/projects/assistant
-# Does not match: /home/alice/projects/claude-storage
-```
-
 ### Referenced Commands
 
 | # | Command | Via Parameter |

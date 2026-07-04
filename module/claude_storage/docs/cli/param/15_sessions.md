@@ -37,10 +37,6 @@ show_sessions::1    # Force on (show even with no filters)
 |------|------|-------------|----------------|
 | Boolean | Base type | Boolean flag | `0` (suppress), `1` (force), or unset (auto) |
 
-### Referenced Parameter Groups
-
-None.
-
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|

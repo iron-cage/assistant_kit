@@ -1,5 +1,11 @@
 # Test: Feature 002 — Save Account
 
+### Scope
+
+- **Purpose**: Test cases for saving current credentials as a named account, including metadata snapshotting and name inference.
+- **Source**: `docs/feature/002_account_save.md`
+- **Covers**: AC-01 through AC-19
+
 Feature behavioral requirement test cases for `docs/feature/002_account_save.md`. Each FT case maps to one or more acceptance criteria. Name inference cases (AC-08, AC-09) are expanded in [feature/025_per_machine_active_marker.md](025_per_machine_active_marker.md) (FT-09) and the command spec [cli/command/004_account_save.md](../cli/command/04_account_save.md) (IT-10, IT-14).
 
 ### AC Coverage Index

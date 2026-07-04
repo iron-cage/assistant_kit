@@ -205,8 +205,9 @@ pub( super ) fn run_isolated_command
       // WHY exit 2 and not exit 4: isolated/refresh timeout is semantically distinct from
       // run/ask timeout.  run/ask uses poll_timeout() in execution.rs → exit 4 (TSK-202).
       // isolated/refresh use RunnerError::Timeout from claude_runner_core::isolated — exit 2
-      // signals "no credentials refreshed, no subprocess output" (see 001_design_decisions.md
-      // line 138).  Do NOT change to exit 4; that would break the isolated/refresh contract.
+      // signals "no credentials refreshed, no subprocess output" (see D14 in
+      // docs/feature/006_cli_design.md).  Do NOT change to exit 4; that would break the
+      // isolated/refresh contract.
       if let Some( ref w ) = journal
       {
         let mut ev             = EventRecord::new( EventType::Credential );

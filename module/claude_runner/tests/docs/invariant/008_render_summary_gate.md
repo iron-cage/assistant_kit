@@ -3,7 +3,7 @@
 Test case planning for [invariant/008_render_summary_gate.md](../../../../docs/invariant/008_render_summary_gate.md). Tests validate that `render_summary()` returns `Some(_)` for any CLR result envelope containing `"type":"result"`, regardless of which optional fields are absent, and returns `None` only for non-CLR-result input.
 
 **Source:** [invariant/008_render_summary_gate.md](../../../../docs/invariant/008_render_summary_gate.md)
-**Related:** [cli/param/070_output_style.md](../cli/param/070_output_style.md), [docs/001_design_decisions.md](../../../../docs/001_design_decisions.md) (D15)
+**Related:** [cli/param/070_output_style.md](../cli/param/070_output_style.md), [docs/feature/006_cli_design.md](../../../../docs/feature/006_cli_design.md) (D15)
 
 ## Test Case Index
 

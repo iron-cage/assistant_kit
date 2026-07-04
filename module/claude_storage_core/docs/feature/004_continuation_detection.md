@@ -9,7 +9,7 @@
 
 ### Design
 
-Claude Code v2.0+ stores conversation files in `~/.claude/projects/{encoded}/` where `{encoded}` is the lossy v1 encoding of the CWD (see `algorithm/001_path_encoding.md`). Continuation detection answers the question: "Does a prior session exist for this working directory, and if so, which one?"
+Claude Code v2.0+ stores conversation files in `~/.claude/projects/{encoded}/` where `{encoded}` is the lossy encoding of the CWD (see `algorithm/001_path_encoding.md`). Continuation detection answers the question: "Does a prior session exist for this working directory, and if so, which one?"
 
 **Two-level API:**
 

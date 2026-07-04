@@ -57,12 +57,10 @@ CLAUDE_MEMORY_DIR = ~/.claude/projects/-tmp-scratch/memory/
 
 ### Implementation
 
-**Not yet implemented as a standalone function.** The new `scope_for()` function in `claude_storage_core::scope` will implement `git_root_for(dir: &Path) -> PathBuf` following this algorithm. The function will be used internally by `scope_for()` to compute `CLAUDE_MEMORY_DIR`.
-
-| Planned Location | Symbol | Role |
-|------------------|--------|------|
-| `claude_storage_core/src/scope.rs` (new) | `git_root_for(dir: &Path) -> PathBuf` | Upward-walk git root detector |
-| `claude_storage_core/src/scope.rs` (new) | `scope_for(dir: &Path) -> ClaudeScope` | Calls `git_root_for()` to compute `claude_memory_dir` |
+| Location | Symbol | Role |
+|----------|--------|------|
+| `claude_storage_core/src/scope.rs` | `git_root_for(dir: &Path) -> PathBuf` | Upward-walk git root detector |
+| `claude_storage_core/src/scope.rs` | `scope_for(dir: &Path) -> ClaudeScope` | Calls `git_root_for()` to compute `claude_memory_dir` |
 
 ### Related Docs
 

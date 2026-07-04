@@ -1,5 +1,11 @@
 # Test: Feature 001 — Account Store Initialization
 
+### Scope
+
+- **Purpose**: Test cases for credential store directory creation and `$PRO`/`$HOME` path resolution.
+- **Source**: `docs/feature/001_account_store_init.md`
+- **Covers**: AC-01 through AC-04
+
 Feature behavioral requirement test cases for `docs/feature/001_account_store_init.md` (FR-6). Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

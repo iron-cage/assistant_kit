@@ -1,5 +1,11 @@
 # Test: Feature 066 — Dual-Source OAuth Quota Parsing
 
+### Scope
+
+- **Purpose**: Test cases for the two-phase OAuth usage response parser — named-field primary, `limits` array fallback.
+- **Source**: `docs/feature/066_dual_source_quota_parsing.md`
+- **Covers**: AC-01 through AC-08 (AC-05 has no dedicated FT — see AC Coverage Index below)
+
 Feature behavioral requirement test cases for `docs/feature/066_dual_source_quota_parsing.md`. Each FT case maps to one acceptance criterion. All tests live in `claude_quota/tests/oauth_usage_test.rs`.
 
 ### AC Coverage Index

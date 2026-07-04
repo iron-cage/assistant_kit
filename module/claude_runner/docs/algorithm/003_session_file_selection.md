@@ -56,9 +56,8 @@ CLAUDE_SESSION_FILE = ~/.claude/projects/-home-alice-project/bb4c9e01-abcd-1234-
 | Location | Symbol | Role |
 |----------|--------|------|
 | `claude_storage_core/src/continuation.rs` | `most_recent_session_in_dir(storage_path: &Path) -> Option<SessionId>` | Core scan returning UUID stem as `SessionId` |
-| `claude_storage_core/src/continuation.rs` | `most_recent_session_id(dir: &Path) -> Option<SessionId>` | Encodes `dir` via Df() then delegates to `most_recent_session_in_dir` |
-
-**Gap for `scope_for()`:** The existing `most_recent_session_in_dir()` returns a `SessionId` (UUID stem only). The new `scope_for()` function needs the **full path** for `CLAUDE_SESSION_FILE`. The scope implementation will reconstruct the full path as `storage_path / session_id.as_str() + ".jsonl"`.
+| `claude_storage_core/src/continuation.rs` | `most_recent_session_id(session_dir: &Path) -> Option<SessionId>` | Encodes `session_dir` via Df() then delegates to `most_recent_session_in_dir` |
+| `claude_storage_core/src/scope.rs` | `scope_for(dir: &Path) -> ClaudeScope` | Calls `most_recent_session_in_dir()` and reconstructs the full path as `storage_path.join(format!("{}.jsonl", id.as_str()))` for `claude_session_file` |
 
 ### Related Docs
 

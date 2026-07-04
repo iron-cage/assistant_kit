@@ -1,5 +1,11 @@
 # Test: Feature 006 — Token Status
 
+### Scope
+
+- **Purpose**: Test cases for token expiry classification (Valid/ExpiringSoon/Expired) and threshold behavior.
+- **Source**: `docs/feature/006_token_status.md`
+- **Covers**: AC-01 through AC-04
+
 Feature behavioral requirement test cases for `docs/feature/006_token_status.md` (FR-11). Each FT case maps to one or more acceptance criteria.
 
 ### AC Coverage Index

@@ -1,5 +1,12 @@
 # Test: Feature — Journaling Integration
 
+### Scope
+
+- **Purpose**: FT- test cases verifying journal event emission, level control, and directory resolution for `clr` execution boundaries.
+- **Responsibility**: Acceptance criteria confirming journal level semantics (full/meta/off), directory precedence, truncation, error isolation, and gate/retry/timeout event emission.
+- **In Scope**: `--journal` levels, `--journal-dir`/`CLR_JOURNAL_DIR` resolution and precedence, stdout truncation at 1MB, write-failure isolation, gate/validation/retry/timeout event emission, flag validation errors.
+- **Out of Scope**: default command assembly and dry-run gates (-> `001_runner_tool.md`), retry count/delay tier resolution (-> `003_retry_hierarchy.md`), JSON config loading (-> `004_json_config.md`).
+
 Test case planning for [feature/002_journaling_integration.md](../../../../docs/feature/002_journaling_integration.md). Tests validate journaling emission at execution boundaries, level control (full/meta/off), directory resolution, truncation, and error isolation.
 
 ## Test Case Index

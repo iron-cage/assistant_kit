@@ -1,5 +1,12 @@
 # Test: Feature — Event Schema
 
+### Scope
+
+- **Purpose**: FT- test cases verifying `EventRecord` JSON serialization fields, types, and value formats.
+- **Responsibility**: Acceptance criteria confirming required fields, schema version, event-type discriminators, timestamp format, and numeric/array field serialization are correct.
+- **In Scope**: `v`/`ts`/`type` required fields, schema version value, 8 `EventType` discriminator strings, ISO 8601 timestamp format, `retry_class_counts` array shape, numeric field JSON types.
+- **Out of Scope**: File creation and level-control behavior (-> `001_event_journaling.md`), rotation and pruning (-> `003_rotation.md`), schema-version invariant (-> `../invariant/003_schema_version.md`).
+
 Test case planning for [feature/002_event_schema.md](../../../docs/feature/002_event_schema.md). Tests validate required fields, schema version, timestamp format, event type discriminators, array field structure, and numeric type serialization.
 
 ## Test Case Index

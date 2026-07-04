@@ -39,10 +39,6 @@ case_sensitive::true  # Not a boolean: "case_sensitive must be 0 or 1"
 |------|------|-------------|----------------|
 | Boolean | Base type | Boolean flag | `0` (false) or `1` (true) |
 
-### Referenced Parameter Groups
-
-None.
-
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|

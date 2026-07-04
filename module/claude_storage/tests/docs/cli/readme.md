@@ -66,8 +66,8 @@
 
 ### Related Documentation
 
-- [command/readme.md](../../../../docs/cli/command/readme.md) — Command specifications
-- [param/readme.md](../../../../docs/cli/param/readme.md) — Parameter specifications
-- [param_group/readme.md](../../../../docs/cli/param_group/readme.md) — Group specifications
-- [type/readme.md](../../../../docs/cli/type/readme.md) — Type specifications
-- [format/readme.md](../../../../docs/cli/format/readme.md) — Export format specifications
+- [command/readme.md](../../../docs/cli/command/readme.md) — Command specifications
+- [param/readme.md](../../../docs/cli/param/readme.md) — Parameter specifications
+- [param_group/readme.md](../../../docs/cli/param_group/readme.md) — Group specifications
+- [type/readme.md](../../../docs/cli/type/readme.md) — Type specifications
+- [format/readme.md](../../../docs/cli/format/readme.md) — Export format specifications

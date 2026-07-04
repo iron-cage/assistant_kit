@@ -1,5 +1,11 @@
 # Test: Feature 027 — `.account.use` Post-Switch Touch
 
+### Scope
+
+- **Purpose**: Test cases for post-switch touch after `.account.use`.
+- **Source**: `docs/feature/027_account_use_post_switch_touch.md`
+- **Covers**: AC-01 through AC-21
+
 Feature behavioral requirement test cases for `docs/feature/027_account_use_post_switch_touch.md`. Each FT case maps to one acceptance criterion. Command-level integration tests (IT-N) are in [cli/command/005_account_use.md](../cli/command/05_account_use.md) (IT-17 through IT-23). Model/effort resolution unit tests are in [feature/026_subprocess_model_effort.md](026_subprocess_model_effort.md).
 
 ### AC Coverage Index

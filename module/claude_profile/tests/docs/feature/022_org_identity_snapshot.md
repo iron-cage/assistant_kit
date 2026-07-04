@@ -1,5 +1,11 @@
 # Test: Feature 022 — Org Identity Snapshot
 
+### Scope
+
+- **Purpose**: Test cases for org identity snapshot capture.
+- **Source**: `docs/feature/022_org_identity_snapshot.md`
+- **Covers**: AC-01 through AC-11
+
 Feature behavioral requirement test cases for `docs/feature/022_org_identity_snapshot.md` (FR-22). Each FT case maps to one acceptance criterion. Parameter edge cases are in [cli/param/030_org_uuid.md](../cli/param/30_org_uuid.md) and [cli/param/031_org_name.md](../cli/param/31_org_name.md).
 
 ### AC Coverage Index

@@ -1,5 +1,12 @@
 # Feature :: Stdin File Piping
 
+### Scope
+
+- **Purpose**: FT- test cases verifying the `stdin_file` field on `ClaudeCommand` and its effect on describe output and execution.
+- **Responsibility**: Acceptance criteria confirming stdin-file describe rendering, nonexistent-path error propagation, dry-run file-open skipping, override semantics, and `execute()`/`execute_interactive()` parity.
+- **In Scope**: `with_stdin_file()` describe output, absence of stdin reference when unset, `Err` on nonexistent path (both `execute()` and `execute_interactive()`), dry-run skip of file open, last-write-wins override, `describe_compact()` inline placement.
+- **Out of Scope**: `run_isolated()`/`IsolatedModel` behavior (-> `004_run_isolated.md`), CLAUDECODE env var unsetting (-> `006_unset_claudecode.md`).
+
 Behavioral requirement cases for the `stdin_file` field on `ClaudeCommand`. See
 [feature/005_stdin_file.md](../../../docs/feature/005_stdin_file.md) for the specification.
 
