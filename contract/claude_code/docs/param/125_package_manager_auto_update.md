@@ -29,3 +29,4 @@ v2.1.129
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [099_disable_autoupdater.md](099_disable_autoupdater.md) | Disables background auto-updates (native installs) |
 | doc | [../subcommand/009_update.md](../subcommand/009_update.md) | Manual update subcommand |
+| doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |

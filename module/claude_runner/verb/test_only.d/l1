@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # l1 — targeted nextest execution; runs a single nextest filter expression inside the container.
-# Entered via cmd_test + plugin hook with NEXTEST_FILTER set to the nextest filter expression.
+# Entered via runbox-run's .test dispatch when NEXTEST_FILTER is set (runbox/plugins.sh
+# hook overrides TEST_SCRIPT to point here instead of test.d/l1).
 # No level-3 overhead (no clippy, no doc tests) — nextest only.
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -15,6 +16,7 @@ fi
 export CARGO_NET_OFFLINE=true
 # Disable nextest PTY progress bar (same reason as test.d/l1 — PTY isatty detection).
 export NO_COLOR=1
+export RUNBOX_CONTAINER=1
 export RUSTFLAGS="-D warnings"
 # Fix(test_only-cargo-target-dir): Override host .cargo/config.toml target-dir redirect.
 # Root cause: the host workspace is bind-mounted :ro into the container, bringing
@@ -25,4 +27,4 @@ export RUSTFLAGS="-D warnings"
 # Pitfall: CARGO_TARGET_DIR env var overrides config.toml target-dir; set it explicitly here
 # because test_only doesn't inherit CARGO_TARGET_DIR from the container's plugin environment.
 export CARGO_TARGET_DIR="$WORKSPACE_ROOT/target"
-exec cargo nextest run --workspace --all-features --no-fail-fast -E "$NEXTEST_FILTER"
+exec cargo nextest run --all-features --no-fail-fast "$NEXTEST_FILTER"

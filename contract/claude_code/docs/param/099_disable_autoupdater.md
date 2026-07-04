@@ -35,3 +35,4 @@ pre-v1.0 (unverified)
 | doc | [125_package_manager_auto_update.md](125_package_manager_auto_update.md) | Homebrew/WinGet auto-upgrade opt-in |
 | doc | [126_disable_nonessential_traffic.md](126_disable_nonessential_traffic.md) | Combined opt-out including this var |
 | doc | [../subcommand/009_update.md](../subcommand/009_update.md) | Update subcommand |
+| doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |

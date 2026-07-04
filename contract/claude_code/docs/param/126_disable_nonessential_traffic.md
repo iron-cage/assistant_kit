@@ -31,3 +31,4 @@ pre-v1.0 (unverified)
 | doc | [104_disable_error_reporting.md](104_disable_error_reporting.md) | One of four vars this subsumes |
 | doc | [106_disable_feedback_command.md](106_disable_feedback_command.md) | One of four vars this subsumes |
 | doc | [118_disable_telemetry.md](118_disable_telemetry.md) | One of four vars this subsumes |
+| doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Synthesis: full version-pinning landscape |
