@@ -16,10 +16,10 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Primary: live credential metadata without store dependency |
-| 2 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | Token expiry classification with configurable threshold |
-| 3 | [`.paths`](../command/004_paths.md#command--8-paths) | Canonical file path resolution |
-| 4 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | Deep live diagnostic with endpoint trace |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Primary: live credential metadata without store dependency |
+| 2 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | Token expiry classification with configurable threshold |
+| 3 | [`.paths`](../command/004_paths.md#command-8-paths) | Canonical file path resolution |
+| 4 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | Deep live diagnostic with endpoint trace |
 
 ### Referenced Parameters
 

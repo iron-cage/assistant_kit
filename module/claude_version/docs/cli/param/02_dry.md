@@ -23,11 +23,11 @@ clv.settings.set key::theme value::dark dry::1
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`.version.install`](../command/version.md#command--4-versioninstall) | false | Preview install steps |
-| 2 | [`.version.guard`](../command/version.md#command--5-versionguard) | false | Preview guard restore |
-| 3 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | false | Preview kill targets without sending signals |
-| 4 | [`.settings.set`](../command/settings.md#command--11-settingsset) | false | Preview write without file change |
-| 5 | [`.config`](../command/config.md#command--13-config) | false | Preview set/unset without file change |
+| 1 | [`.version.install`](../command/version.md#command-4-versioninstall) | false | Preview install steps |
+| 2 | [`.version.guard`](../command/version.md#command-5-versionguard) | false | Preview guard restore |
+| 3 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | false | Preview kill targets without sending signals |
+| 4 | [`.settings.set`](../command/settings.md#command-11-settingsset) | false | Preview write without file change |
+| 5 | [`.config`](../command/config.md#command-13-config) | false | Preview set/unset without file change |
 
 ### Referenced Type
 

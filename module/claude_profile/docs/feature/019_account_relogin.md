@@ -50,7 +50,7 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 
 | File | Relationship |
 |------|--------------|
-| [command/001_account.md](../cli/command/001_account.md#command--12-accountrelogin) | CLI command specification |
+| [command/001_account.md](../cli/command/001_account.md#command-12-accountrelogin) | CLI command specification |
 
 ### Features
 
@@ -69,7 +69,7 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.relogin`](../cli/command/001_account.md#command--12-accountrelogin) | CLI surface for this feature |
+| 1 | [`.account.relogin`](../cli/command/001_account.md#command-12-accountrelogin) | CLI surface for this feature |
 
 ### Sources
 

@@ -65,4 +65,4 @@ See [docs/cli/command_verb/009_assign.md](../../../../docs/cli/command_verb/009_
 - **When:** `clp .accounts assign::1 name::alice@acme.com`
 - **Then:** Exit 1. Migration message: "REMOVED — use `assignee::USER@MACHINE name::X`". No marker file written.
 - **Exit:** 1
-- **Source:** [009_assign.md — Migration](../../../../docs/cli/command_verb/009_assign.md#migration-feature-037--feature-064)
+- **Source:** [009_assign.md — Migration](../../../../docs/cli/command_verb/009_assign.md#migration-feature-037-feature-064-feature-065)

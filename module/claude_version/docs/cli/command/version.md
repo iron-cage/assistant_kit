@@ -64,11 +64,11 @@ clv.version.show format::json
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.version.install`](#command--4-version-install) | Installs the version currently displayed |
-| 2 | [`.version.guard`](#command--5-version-guard) | Restores preferred version if drift detected |
-| 3 | [`.version.list`](#command--6-version-list) | Lists aliases that may resolve to installed version |
-| 4 | [`.version.history`](#command--12-version-history) | Shows release history for version selection |
-| 5 | [`.status`](root.md#command--2-status) | Includes version in broader environment snapshot |
+| 1 | [`.version.install`](#command-4-versioninstall) | Installs the version currently displayed |
+| 2 | [`.version.guard`](#command-5-versionguard) | Restores preferred version if drift detected |
+| 3 | [`.version.list`](#command-6-versionlist) | Lists aliases that may resolve to installed version |
+| 4 | [`.version.history`](#command-12-versionhistory) | Shows release history for version selection |
+| 5 | [`.status`](root.md#command-2-status) | Includes version in broader environment snapshot |
 
 ### Referenced User Stories
 
@@ -164,10 +164,10 @@ clv.version.install version::latest
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.version.show`](#command--3-version-show) | Verifies installed version after install |
-| 2 | [`.version.guard`](#command--5-version-guard) | Guards against drift from newly installed version |
-| 3 | [`.version.list`](#command--6-version-list) | Lists version aliases before selecting a target |
-| 4 | [`.version.history`](#command--12-version-history) | Shows release history for version selection |
+| 1 | [`.version.show`](#command-3-versionshow) | Verifies installed version after install |
+| 2 | [`.version.guard`](#command-5-versionguard) | Guards against drift from newly installed version |
+| 3 | [`.version.list`](#command-6-versionlist) | Lists version aliases before selecting a target |
+| 4 | [`.version.history`](#command-12-versionhistory) | Shows release history for version selection |
 
 ### Referenced User Stories
 
@@ -267,9 +267,9 @@ clv.version.guard force::1
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.version.install`](#command--4-version-install) | Performs the install step when drift detected |
-| 2 | [`.version.show`](#command--3-version-show) | Verifies version after restoration |
-| 3 | [`.version.list`](#command--6-version-list) | Lists aliases that guard can target |
+| 1 | [`.version.install`](#command-4-versioninstall) | Performs the install step when drift detected |
+| 2 | [`.version.show`](#command-3-versionshow) | Verifies version after restoration |
+| 3 | [`.version.list`](#command-6-versionlist) | Lists aliases that guard can target |
 
 ### Referenced User Stories
 
@@ -343,9 +343,9 @@ clv.version.list format::json
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.version.show`](#command--3-version-show) | Shows which alias is currently installed |
-| 2 | [`.version.install`](#command--4-version-install) | Installs one of the listed version aliases |
-| 3 | [`.version.guard`](#command--5-version-guard) | Guards against drift from a listed alias |
+| 1 | [`.version.show`](#command-3-versionshow) | Shows which alias is currently installed |
+| 2 | [`.version.install`](#command-4-versioninstall) | Installs one of the listed version aliases |
+| 3 | [`.version.guard`](#command-5-versionguard) | Guards against drift from a listed alias |
 
 ### Referenced User Stories
 
@@ -433,8 +433,8 @@ clv.version.history format::json count::5
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.version.show`](#command--3-version-show) | Checks which release from history is installed |
-| 2 | [`.version.install`](#command--4-version-install) | Installs a release from history |
+| 1 | [`.version.show`](#command-3-versionshow) | Checks which release from history is installed |
+| 2 | [`.version.install`](#command-4-versioninstall) | Installs a release from history |
 
 ### Referenced User Stories
 

@@ -35,9 +35,9 @@ refresh::0   → auth errors appear as error rows in the table (explicit disable
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Auto-refresh expired tokens before quota fetch |
-| 2 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Refresh before switch when token locally expired |
-| 3 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | Refresh before endpoint calls when locally expired |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Auto-refresh expired tokens before quota fetch |
+| 2 | [`.account.use`](../command/001_account.md#command-5-accountuse) | Refresh before switch when token locally expired |
+| 3 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | Refresh before endpoint calls when locally expired |
 
 ### Referenced User Stories
 

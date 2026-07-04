@@ -24,7 +24,7 @@ clv.params kind::Config     # error: case-sensitive
 
 | # | Command | Via Parameter |
 |---|---------|--------------|
-| 1 | [`.params`](../command/params.md#command--14-params) | `kind::` |
+| 1 | [`.params`](../command/params.md#command-14-params) | `kind::` |
 
 ### Referenced Parameters
 

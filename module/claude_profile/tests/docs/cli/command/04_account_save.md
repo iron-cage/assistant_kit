@@ -1,6 +1,6 @@
 # Test: `.account.save`
 
-Integration test planning for the `.account.save` command. See [command/namespace.md](../../../../docs/cli/command/001_account.md#command--4-accountsave) for specification.
+Integration test planning for the `.account.save` command. See [command/namespace.md](../../../../docs/cli/command/001_account.md#command-4-accountsave) for specification.
 
 ### Test Case Index
 
@@ -56,7 +56,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::work@acme.com`
 - **Then:** stdout: `saved current credentials as 'work@acme.com'`. File `~/.persistent/claude/credential/work@acme.com.credentials.json` now exists.; credential file created at expected path
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -66,7 +66,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::work@acme.com`
 - **Then:** stdout: `saved current credentials as 'work@acme.com'`. Both `~/.persistent/claude/credential/` directory and `~/.persistent/claude/credential/work@acme.com.credentials.json` file now exist.; directory auto-created; credential file created
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -76,7 +76,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::work@acme.com`
 - **Then:** stdout: `saved current credentials as 'work@acme.com'`. File `~/.persistent/claude/credential/work@acme.com.credentials.json` now contains V2 content.; file overwritten with current credentials; no error output
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -86,7 +86,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::notanemail`
 - **Then:** Error message on stderr indicating the name must be a valid email address. No file created.; no file created; error message references email format
 - **Exit:** 1
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -96,7 +96,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::`
 - **Then:** Error message indicating the account name must not be empty. No file created.; no file created; error message about empty name
 - **Exit:** 1
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -106,7 +106,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::work@acme.com`
 - **Then:** Error message indicating credentials file is unreadable or missing. No account file created.; no file created; error message about missing credentials
 - **Exit:** 2
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -116,7 +116,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::work@acme.com dry::1`
 - **Then:** stdout: `[dry-run] would save current credentials as 'work@acme.com'`. No file created.; dry-run message printed; no file created on disk
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -126,7 +126,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::work@acme.com dry::1` followed by `clp .account.save name::work@acme.com`
 - **Then:** First command: `[dry-run] would save current credentials as 'work@acme.com'` (no file). Second command: `saved current credentials as 'work@acme.com'` (file created).; on both; dry run creates nothing; real run creates exactly the previewed file
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -136,7 +136,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::work@acme.com`
 - **Then:** `~/.persistent/claude/credential/work@acme.com.credentials.json` is a byte-identical copy of `~/.claude/.credentials.json`.; saved file is byte-identical to source credentials
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -146,7 +146,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save`
 - **Then:** Error message: `cannot infer account name: no active account set — pass name:: explicitly`. No file created.
 - **Exit:** 1
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -156,7 +156,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::work@acme.com`
 - **Then:** `{credential_store}/work@acme.com.json` created containing `{"oauthAccount": {...}, "model": "sonnet"}` (BUG-222 fix: model preference captured for restore by `switch_account()`).
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -166,7 +166,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::work@acme.com`
 - **Then:** Credential file created. `{name}.json` created but contains no `oauthAccount` field (source absent — best-effort skipped). No error emitted; save completes successfully; no error for absent optional source.
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -176,7 +176,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::work@acme.com`
 - **Then:** Credential file created. `{name}.json` created but contains no `oauthAccount` key (absent in source — extraction skipped). No error emitted; save completes successfully.
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -186,7 +186,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save`
 - **Then:** stdout: `saved current credentials as 'alice@acme.com'`. Credential file `{credential_store}/alice@acme.com.credentials.json` created; `name::` inferred from `oauthAccount.emailAddress`; behaves identically to explicit `name::alice@acme.com`.
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave), [002_account_save.md AC-08](../../../../docs/feature/002_account_save.md)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave), [002_account_save.md AC-08](../../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -196,7 +196,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::work@acme.com`
 - **Then:** `{credential_store}/_active_{hostname}_{user}` contains the text `work@acme.com`. Subsequent `clp .credentials.status` shows `Account: work@acme.com` (not `N/A`).
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave)
 
 ---
 
@@ -206,7 +206,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **When:** `clp .account.save name::a/b@c.com`
 - **Then:** Error message on stderr indicating path-unsafe characters in account name, exit 1. No credential file created in the store.
 - **Exit:** 1
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave), [002_account_save.md AC-11](../../../../docs/feature/002_account_save.md), [as17/as18 in account_mutations_test.rs]
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command-4-accountsave), [002_account_save.md AC-11](../../../../docs/feature/002_account_save.md), [as17/as18 in account_mutations_test.rs]
 
 ---
 

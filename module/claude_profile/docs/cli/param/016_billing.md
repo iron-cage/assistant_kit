@@ -27,8 +27,8 @@ billing::1   → Billing: stripe_subscription
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Billing type line per stored account |
-| 2 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Billing type line for live credentials |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Billing type line per stored account |
+| 2 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Billing type line for live credentials |
 
 ### Referenced User Stories
 

@@ -1,4 +1,4 @@
-# CLI Types
+# Types
 
 ### Scope
 

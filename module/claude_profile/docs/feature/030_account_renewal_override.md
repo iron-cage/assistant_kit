@@ -70,7 +70,7 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 
 | File | Relationship |
 |------|--------------|
-| [cli/command/001_account.md](../cli/command/001_account.md#command--14-accountrenewal) | CLI command specification |
+| [cli/command/001_account.md](../cli/command/001_account.md#command-14-accountrenewal) | CLI command specification |
 
 ### Features
 
@@ -93,7 +93,7 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.renewal`](../cli/command/001_account.md#command--14-accountrenewal) | CLI surface for this feature |
+| 1 | [`.account.renewal`](../cli/command/001_account.md#command-14-accountrenewal) | CLI surface for this feature |
 
 ### Sources
 

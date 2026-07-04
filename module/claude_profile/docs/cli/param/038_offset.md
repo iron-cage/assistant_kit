@@ -31,7 +31,7 @@ offset::1 count::1    -> show only the 2nd row in sorted order
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Row skip before count truncation |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Row skip before count truncation |
 
 ### Referenced User Stories
 
