@@ -2,7 +2,7 @@
 
 ## Master Doc Entities Table
 
-**Instances convention:** this column counts the rows for that type in the Master Doc Instances Table below. Two lifecycle conventions apply depending on type: (a) generic ❌-deprecated instances (e.g. `feature/008`, `feature/023`) are excluded from both tables entirely — the Instances figure omits them; (b) CLI-specific REMOVED instances (e.g. `cli/param/` 013/032/053/056/057, `cli/command_verb/` 009/011) are kept as annotated rows in both tables — the Instances figure includes them. See each type's own readme.md for active-vs-total breakdowns.
+**Instances convention:** this column counts the rows for that type in the Master Doc Instances Table below. Three lifecycle conventions apply depending on type: (a) generic ❌-deprecated instances (e.g. `feature/008`, `feature/023`) are excluded from both tables entirely — the Instances figure omits them; (b) CLI-specific REMOVED instances (e.g. `cli/param/` 013/032/053/056/057, `cli/command_verb/` 009/011) are kept as annotated rows in both tables — the Instances figure includes them; (c) CLI-specific DEPRECATED-but-not-REMOVED instances (e.g. `cli/command_verb/` 006 rotate, Feature 038 — a callable hidden-redirector stub that always exits 1, distinct from REMOVED's zero runtime presence) are also kept as annotated rows — the Instances figure includes them identically to (b). See each type's own readme.md for active-vs-total breakdowns.
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|

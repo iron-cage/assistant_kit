@@ -168,11 +168,12 @@ pub fn fetch_quota_for_list(
 
     // Cache-first guard: use recently-fetched cache without hitting the live API.
     // Prevents API flooding from rapid-succession .usage invocations — test suites and
-    // polling scripts commonly invoke .usage every few seconds. The 120s window matches
-    // the per-token /oauth/usage burst-rate limit observed in practice.
+    // polling scripts commonly invoke .usage every few seconds. Window tightened to 30s
+    // for fresher data — note this permits live calls ~4x more often than the prior 120s
+    // setting, which had been calibrated against the observed /oauth/usage burst-rate limit.
     // Pitfall: cache-first fires AFTER the G1/G1b/solo gates, so non-owned and
     // occupied-elsewhere accounts are already handled above; `is_current` is resolved.
-    const CACHE_FRESH_SECS : u64 = 120;
+    const CACHE_FRESH_SECS : u64 = 30;
     if let Some( ( data, age ) ) = read_cached_quota( credential_store, &acct.name, now_secs )
       .filter( |( _, age )| *age <= CACHE_FRESH_SECS )
     {

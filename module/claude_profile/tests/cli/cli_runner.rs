@@ -564,7 +564,7 @@ pub fn write_account_with_token(
   {
     std::fs::write( credential_store.join( claude_profile::account::active_marker_filename() ), name ).unwrap();
   }
-  // Pre-populate quota cache from the live snapshot so clp's 120s cache-first guard
+  // Pre-populate quota cache from the live snapshot so clp's 30s cache-first guard
   // (fetch.rs) skips the live API call entirely.  Without this, every parallel clp
   // invocation hits /api/oauth/usage and the burst of 429 rejections contaminates the
   // test run.  With the snapshot written here, total API calls per process = 1.
@@ -637,7 +637,7 @@ struct QuotaSnapshot
 /// active token is currently rate-limited.
 ///
 /// The snapshot pre-populates the per-account quota cache in `write_account_with_token`
-/// so `clp .usage` hits fetch.rs's 120-second cache-first guard and skips the live
+/// so `clp .usage` hits fetch.rs's 30-second cache-first guard and skips the live
 /// endpoint entirely — keeping total `/api/oauth/usage` calls to **1** per test process.
 fn live_quota_snapshot() -> Option< &'static QuotaSnapshot >
 {
@@ -660,7 +660,7 @@ fn live_quota_snapshot() -> Option< &'static QuotaSnapshot >
         if msg.contains( "HTTP 401" ) || msg.contains( "HTTP 403" ) { return None; }
         // Transient error (429, network) — read from HOST credential store cache.
         // When the store is unavailable (e.g. container without ~/.persistent
-        // mounted), fall back to synthetic defaults so the 120s cache-first guard
+        // mounted), fall back to synthetic defaults so the 30s cache-first guard
         // in fetch.rs skips the live API call for all test subprocess invocations.
         host_quota_snapshot_from_cache().or_else( || Some( synthetic_quota_snapshot() ) )
       }
