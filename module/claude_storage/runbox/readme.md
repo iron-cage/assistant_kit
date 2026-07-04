@@ -6,4 +6,4 @@ Shell scripts for `claude_storage` container operations.
 |------|----------------|
 | `runbox` | Container entry point script |
 | `runbox.yml` | Container runtime configuration |
-| `plugins.sh` | Project plugin: forwards `NEXTEST_FILTER` into container for `verb/test1`. |
+| `plugins.sh` | Project plugin: forwards `NEXTEST_FILTER` into container for `verb/test_only`. |

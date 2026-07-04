@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# test_only — run a single test or group by nextest filter inside the runbox container.
+#
+# Usage: ./verb/test_only <nextest-filter>
+#   nextest-filter — test name substring or full nextest -E expression
+#
+# How it works: sets NEXTEST_FILTER in the host env and delegates to
+# ./runbox/runbox .test.  The project runbox/plugins.sh hook detects
+# NEXTEST_FILTER, overrides TEST_SCRIPT to verb/test_only.d/l1, and injects
+# the filter as a container env var.
+set -euo pipefail
+if [[ -n "${VERB_LAYER:-}" ]]; then
+  echo "ERROR: VERB_LAYER is not valid on the host side." >&2
+  echo "Standard invocation: cd module/assistant && ./verb/test_only <filter>" >&2
+  exit 1
+fi
+if [[ "${1:-}" == "--dry-run" ]]; then
+  DRY_FILTER="${2:-<filter>}"
+  echo "NEXTEST_FILTER=$DRY_FILTER ./runbox/runbox .test  →  cargo nextest run --workspace --all-features \"$DRY_FILTER\""
+  exit 0
+fi
+FILTER="${1:-}"
+if [[ -z "$FILTER" ]]; then
+  echo "ERROR: test_only requires a test name filter." >&2
+  echo "Usage: ./verb/test_only <nextest-filter-expression>" >&2
+  exit 1
+fi
+NEXTEST_FILTER="$FILTER" exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test

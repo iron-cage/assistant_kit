@@ -3,7 +3,7 @@
 set -euo pipefail
 printf '%-13s %-11s %s\n' build        available "cargo build -p claude_version"
 printf '%-13s %-11s %s\n' test         available "./runbox/runbox .test  (full suite: nextest + doc tests + clippy)"
-printf '%-13s %-11s %s\n' test1        available "./runbox/runbox .test1 <filter>  (targeted: nextest filter only)"
+printf '%-13s %-11s %s\n' test_only        available "./runbox/runbox .test_only <filter>  (targeted: nextest filter only)"
 printf '%-13s %-11s %s\n' clean        available "cargo clean -p claude_version"
 printf '%-13s %-11s %s\n' run          available "cargo run -p claude_version --bin clv"
 printf '%-13s %-11s %s\n' lint         available "cargo clippy -p claude_version --all-features -- -D warnings"
