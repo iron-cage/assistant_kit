@@ -1,4 +1,4 @@
-# Taxonomy
+# Taxonomy Doc Entity
 
 ### Scope
 

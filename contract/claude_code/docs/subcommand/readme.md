@@ -1,4 +1,4 @@
-# Claude Code: Subcommands
+# Subcommand Doc Entity
 
 All subcommands exposed by the `claude` binary beyond the default interactive/print session mode.
 

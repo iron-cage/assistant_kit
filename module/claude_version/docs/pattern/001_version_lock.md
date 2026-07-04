@@ -58,6 +58,12 @@ This pattern does not apply when tracking `latest` is desired — for `latest`, 
 |------|-------------|
 | [feature/001_version_management.md](../feature/001_version_management.md) | .version.install and .version.guard that apply/read the lock |
 
+### Patterns
+
+| File | Relationship |
+|------|-------------|
+| [../../../../contract/claude_code/docs/pattern/001_version_pinning.md](../../../../contract/claude_code/docs/pattern/001_version_pinning.md) | Official upstream pinning mechanisms this repo's lock enforces on top of |
+
 ### Pitfalls
 
 | File | Relationship |

@@ -1,4 +1,4 @@
-# Claude Code: Parameters
+# Param Doc Entity
 
 All runtime parameters accepted by the `claude` binary — CLI flags, environment
 variables, and settings config keys — unified in one flat table. One file per
@@ -263,7 +263,7 @@ Precedence: CLI arg > env var > settings config.
 | 111 | [disable_login_command](111_disable_login_command.md) | — | `DISABLE_LOGIN_COMMAND` | — | bool | off | pre-v1.0 | Hide /login slash command |
 | 112 | [disable_logout_command](112_disable_logout_command.md) | — | `DISABLE_LOGOUT_COMMAND` | — | bool | off | pre-v1.0 | Hide /logout slash command |
 | 113 | [disable_prompt_caching](113_disable_prompt_caching.md) | — | `DISABLE_PROMPT_CACHING` | — | bool | off | pre-v1.0 | Disable prompt caching for all models |
-| 114 | [disable_prompt_caching_fable](114_disable_prompt_caching_fable.md) | — | `DISABLE_PROMPT_CACHING_FABLE` | — | bool | off | v2.1.170+ | Disable prompt caching for Fable |
+| 114 | [disable_prompt_caching_fable](114_disable_prompt_caching_fable.md) | — | `DISABLE_PROMPT_CACHING_FABLE` | — | bool | off | v2.1.170 | Disable prompt caching for Fable |
 | 115 | [disable_prompt_caching_haiku](115_disable_prompt_caching_haiku.md) | — | `DISABLE_PROMPT_CACHING_HAIKU` | — | bool | off | pre-v1.0 | Disable prompt caching for Haiku |
 | 116 | [disable_prompt_caching_opus](116_disable_prompt_caching_opus.md) | — | `DISABLE_PROMPT_CACHING_OPUS` | — | bool | off | pre-v1.0 | Disable prompt caching for Opus |
 | 117 | [disable_prompt_caching_sonnet](117_disable_prompt_caching_sonnet.md) | — | `DISABLE_PROMPT_CACHING_SONNET` | — | bool | off | pre-v1.0 | Disable prompt caching for Sonnet |

@@ -24,12 +24,12 @@ Not available on Bedrock, Vertex AI, or Foundry.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `title` | string | yes | Notification title |
-| `body` | string | yes | Notification body text |
+| `message` | string | yes | Notification body text (keep under 200 characters; mobile OSes truncate) |
+| `status` | string (const `"proactive"`) | yes | Fixed marker value identifying the notification as agent-initiated |
 
 ### Since
 
-v2.0+ (unverified)
+v2.1.110
 
 ### Cross-References
 

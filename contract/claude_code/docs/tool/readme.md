@@ -1,4 +1,4 @@
-# Claude Code: Built-in Tools
+# Tool Doc Entity
 
 All built-in tools available in Claude Code sessions. One file per tool in this directory.
 
@@ -112,7 +112,7 @@ Not all tools are available in all versions or configurations:
   Set `CLAUDE_CODE_ENABLE_TASKS=0` to re-enable.
 - **PowerShell (30)**: Auto-enabled on Windows without Git Bash. Opt-in on
   Linux/macOS via `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.
-- **SendMessage (36)**: Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
+- **SendMessage (36)**: Agent-resume (`to: <agentId>`) and main-conversation messaging (`to: "main"`) always available; teammate-messaging (`to: <teammate-name>`) requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
 - **ToolSearch (38)** / **WaitForMcpServers (39)**: Mutually exclusive — ToolSearch
   appears when MCP tool search is enabled, WaitForMcpServers when disabled.
 - **Artifact (28)**, **RemoteTrigger (34)**, **ScheduleWakeup (35)**,

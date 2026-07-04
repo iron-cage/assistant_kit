@@ -1,4 +1,4 @@
-# Runbox Parameters
+# Parameter Doc Entity
 
 One file per scalar configuration slot in the container test infrastructure.
 Parameters have fixed presence — they always exist; only their value changes.

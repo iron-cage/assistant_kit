@@ -2,7 +2,7 @@ meta:
   description: Cross-reference graph for all NNN-identified doc instances in claude_storage
   node_count: 70
   edge_count: 83
-  component_count: 2
+  component_count: 14
   generated: 2026-07-04
 
 nodes:
@@ -626,22 +626,82 @@ components:
       - param_group/04
       - param_group/05
   - id: 2
-    label: CLI Types (no inter-entity cross-references yet)
-    size: 13
+    label: "CLI Type: Entry Count (no inter-entity cross-references yet)"
+    size: 1
     isolated: true
     nodes:
       - type/01
+  - id: 3
+    label: "CLI Type: Entry Type (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
       - type/02
+  - id: 4
+    label: "CLI Type: Export Format (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
       - type/03
+  - id: 5
+    label: "CLI Type: Path Substring (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
       - type/04
+  - id: 6
+    label: "CLI Type: Project ID (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
       - type/05
+  - id: 7
+    label: "CLI Type: Project Type (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
       - type/06
+  - id: 8
+    label: "CLI Type: Scope Value (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
       - type/07
+  - id: 9
+    label: "CLI Type: Session Filter (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
       - type/08
+  - id: 10
+    label: "CLI Type: Session ID (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
       - type/09
+  - id: 11
+    label: "CLI Type: Storage Path (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
       - type/10
+  - id: 12
+    label: "CLI Type: Target Type (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
       - type/11
+  - id: 13
+    label: "CLI Type: Topic Name (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
       - type/12
+  - id: 14
+    label: "CLI Type: Strategy Type (no inter-entity cross-references yet)"
+    size: 1
+    isolated: true
+    nodes:
       - type/13
 
 dangling_refs: []

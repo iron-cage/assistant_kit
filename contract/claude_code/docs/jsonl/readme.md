@@ -1,4 +1,4 @@
-# JSONL
+# JSONL Doc Entity
 
 ### Scope
 

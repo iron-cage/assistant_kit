@@ -66,6 +66,7 @@ Optional `version::SPEC` overrides the stored preference for a single invocation
 | File | Relationship |
 |------|-------------|
 | [pattern/001_version_lock.md](../pattern/001_version_lock.md) | 5-layer lock applied after successful install |
+| [../../../../contract/claude_code/docs/pattern/001_version_pinning.md](../../../../contract/claude_code/docs/pattern/001_version_pinning.md) | Official upstream pinning landscape this feature's `.version.install`/`.version.guard` operate within |
 
 ### Pitfalls
 
