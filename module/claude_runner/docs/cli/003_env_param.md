@@ -245,11 +245,11 @@ queued CLR processes table.
 ### Env Param 6: `CLAUDE_CODE_AUTO_COMPACT_WINDOW` — Injected Default
 
 Set by `clr` before spawning any `claude` subprocess to cap the auto-compaction threshold at
-200 000 tokens. This prevents extended-context models from accumulating a 1M-token context
+300 000 tokens. This prevents extended-context models from accumulating a 1M-token context
 window and triggering expensive compaction late in long sessions.
 
 - **Type:** integer (tokens)
-- **Injected value:** `200 000` (all 4 running commands: `run`, `ask`, `isolated`, `refresh`)
+- **Injected value:** `300 000` (all 4 running commands: `run`, `ask`, `isolated`, `refresh`)
 - **Available since:** Claude Code v2.1.75 (2026-03-13)
 - **Mechanism:** injected via `ClaudeCommand::new()` default in `claude_runner_core/src/command/mod.rs`
 - **Scope:** `claude` subprocess only; not read by `clr` itself
@@ -257,7 +257,7 @@ window and triggering expensive compaction late in long sessions.
 
 **Effect:** When the subprocess conversation approaches this token count (as a percentage governed
 by `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`), Claude Code compacts the context automatically. The
-injected 200k cap prevents runaway context growth on extended-context models (e.g., 1M-window
+injected 300k cap prevents runaway context growth on extended-context models (e.g., 1M-window
 Opus), without affecting the hard per-turn output limit set by `CLAUDE_CODE_MAX_OUTPUT_TOKENS`.
 
 **Limitation:** Only meaningful for multi-turn interactive sessions that accumulate context.
@@ -266,7 +266,7 @@ context does not persist between invocations.
 
 | Variable | Injected value | Opt-out | Notes |
 |----------|----------------|---------|-------|
-| `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `200 000` | `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` | Caps compaction threshold, not hard context |
+| `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `300 000` | `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` | Caps compaction threshold, not hard context |
 
 **Cross-reference:** `contract/claude_code/docs/param/074_auto_compact_window.md` — canonical
 parameter spec (type, default, since, description, behavioral contract).

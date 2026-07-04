@@ -163,7 +163,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 72 | `--journal` | enum | `full` | `full`/`meta`/`off` | Journal level for clr execution events: `full` captures stdout+stderr (≤1MB each), `meta` omits output, `off` disables | 3 cmds |
 | 73 | `--journal-dir` | path | `~/.clr/journal/` | Any writable path | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` | 3 cmds |
 | 74 | `--quiet` | bool | false | present/absent | Suppress non-fatal runner diagnostics (retry/gate/warning messages) | 2 cmds |
-| 75 | `--no-compact-window` | bool | false | present/absent | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` injection into subprocess environment | 4 cmds |
+| 75 | `--no-compact-window` | bool | false | present/absent | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection into subprocess environment | 4 cmds |
 | 76 | `--args-file` | [`FilePath`](../type/12_file_path.md) | — | Any readable file path | Load clr params from JSON config file; stdin JSON auto-detected when no TTY | 4 cmds |
 
 **Total:** 71 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–76 added)
