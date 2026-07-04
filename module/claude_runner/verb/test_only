@@ -8,10 +8,9 @@
 #   ./verb/test_only us19_container_flag_for_cwd_outside_home
 #   ./verb/test_only ft7_session_from_resumes_source_session
 #
-# How it works: sets NEXTEST_FILTER in the host env and delegates to
-# ./runbox/runbox .test.  The project runbox/plugins.sh hook detects
-# NEXTEST_FILTER, overrides TEST_SCRIPT to verb/test_only.d/l1, and injects
-# the filter as a container env var.
+# How it works: passes the filter as a positional arg to ./runbox/runbox .test1;
+# cmd_test1() in runbox-run reads the filter and injects NEXTEST_FILTER into the
+# container, where verb/test_only.d/l1 runs nextest with -E "$NEXTEST_FILTER".
 set -euo pipefail
 if [[ -n "${VERB_LAYER:-}" ]]; then
   echo "ERROR: VERB_LAYER is not valid on the host side." >&2
@@ -20,7 +19,7 @@ if [[ -n "${VERB_LAYER:-}" ]]; then
 fi
 if [[ "${1:-}" == "--dry-run" ]]; then
   DRY_FILTER="${2:-<filter>}"
-  echo "NEXTEST_FILTER=$DRY_FILTER ./runbox/runbox .test  →  cargo nextest run --workspace --all-features \"$DRY_FILTER\""
+  echo "./runbox/runbox .test1 \"$DRY_FILTER\"  →  cargo nextest run --workspace --all-features --no-fail-fast -E \"$DRY_FILTER\""
   exit 0
 fi
 FILTER="${1:-}"
@@ -29,4 +28,5 @@ if [[ -z "$FILTER" ]]; then
   echo "Usage: ./verb/test_only <nextest-filter-expression>" >&2
   exit 1
 fi
-NEXTEST_FILTER="$FILTER" exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test
+shift
+exec "$(dirname "${BASH_SOURCE[0]}")/../runbox/runbox" .test1 "$FILTER" "$@"

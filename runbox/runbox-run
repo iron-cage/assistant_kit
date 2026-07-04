@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 # Universal runbox test runner.
-# Usage: runbox-run <config.yml> [command]
-#   command: .build | .run | .test | .test.offline | .lint | .list | .shell | .help  (default: help)
+# Usage: runbox-run <config.yml> [command] [filter]
+#   command: .build | .run | .test | .test1 | .test.offline | .lint | .list | .shell | .help  (default: help)
+#   filter:  nextest filter expression, required for .test1 (e.g. test_my_function)
 set -euo pipefail
 
 CONFIG="$1"
 COMMAND="${2:-.}"
 FORCE_REBUILD=0
+FILTER=""
 for _arg in "${@:3}"
 do
   case "$_arg" in
     --rebuild|-R) FORCE_REBUILD=1 ;;
+    *) [[ -z "$FILTER" ]] && FILTER="$_arg" ;;
   esac
 done
 

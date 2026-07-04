@@ -11,16 +11,14 @@ cmd_filter: "!binary(behavior)"
 
 # script invoked by `.test` inside the container (path relative to /workspace)
 test_script: module/claude_runner/verb/test.d/l1
+# script invoked by `.test1` inside the container (path relative to /workspace)
+test1_script: module/claude_runner/verb/test_only.d/l1
 
 # script invoked by `.lint` inside the container (path relative to /workspace)
 lint_script: module/claude_runner/verb/lint.d/l1
 
 # script invoked by `.run` inside the container (path relative to /workspace)
 run_script: module/claude_runner/verb/run.d/l1
-# optional binary plugin: name:container_path (binary found via 'which name' on host)
-bin_plugin: w3:/usr/local/bin/w3
-# container mount point for bin_plugin working volume (persists compilation artifacts)
-bin_plugin_volume: /tmp/will_test_targets
 # data directory plugin: host_path:container_path:check_type
 # .test mounts as required+rw; .shell mounts as optional+ro
 plugin_mount: ~/.claude:/workspace/.claude:directory

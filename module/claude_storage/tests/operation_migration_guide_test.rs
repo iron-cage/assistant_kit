@@ -2,7 +2,7 @@
 //!
 //! ## Source
 //!
-//! - Spec: `tests/docs/operation/01_migration_guide.md`
+//! - Spec: `tests/docs/operation/001_migration_guide.md`
 //! - Operation doc: `docs/operation/001_migration_guide.md`
 //!
 //! ## Coverage

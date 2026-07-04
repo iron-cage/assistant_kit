@@ -1,7 +1,21 @@
 #!/usr/bin/env bash
-# do verify — full checks: tests, lints, dependency analysis, audit (cargo ecosystem)
+# do verify — full pre-push gate: container test suite + dependency analysis + audit
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR/.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "w3 .test level::4"; exit 0; fi
-exec w3 .test level::4
+WORKSPACE_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
+if [[ "${1:-}" == "--dry-run" ]]
+then
+  echo "./runbox/runbox .test && cargo +nightly udeps --all-targets --all-features && cargo +nightly audit"
+  exit 0
+fi
+# Full test suite (nextest + doc tests + clippy) runs inside the container.
+"$SCRIPT_DIR/../runbox/runbox" .test "$@"
+# Dependency and audit checks run on the host (static analysis — no crate code executed).
+cd "$WORKSPACE_ROOT"
+cargo +nightly udeps --all-targets --all-features
+if [ -f "Cargo.lock" ]
+then
+  cargo +nightly audit
+else
+  echo "ℹ Library crate — skipping audit (no Cargo.lock)"
+fi

@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
-# l1 — targeted nextest execution (VERB_LAYER=l1); runs a single NEXTEST_FILTER.
-#
-# Invoked by runbox-run cmd_test when NEXTEST_FILTER is set (via runbox/plugins.sh).
-# Does NOT use w3; runs cargo nextest directly so the filter is applied without
-# the level::3 full-suite overhead.  Uses /workspace/target (pre-seeded from the
-# image build) for fast incremental compilation.
+# l1 — targeted nextest execution; runs a single nextest filter expression inside the container.
+# Entered via cmd_test + plugin hook with NEXTEST_FILTER set to the nextest filter expression.
+# No level-3 overhead (no clippy, no doc tests) — nextest only.
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Workspace root is 4 levels up from test_only.d/ (test_only.d → verb → claude_runner → module → workspace).
@@ -14,15 +11,10 @@ if [[ -z "${NEXTEST_FILTER:-}" ]]; then
   echo "ERROR: NEXTEST_FILTER is not set — invoke via ./verb/test_only <filter> on the host." >&2
   exit 1
 fi
-if [[ "${1:-}" == "--dry-run" ]]; then
-  echo "RUSTFLAGS=\"-D warnings\" cargo nextest run --workspace --all-features \"$NEXTEST_FILTER\""
-  exit 0
-fi
 # Prevent cargo from updating the registry index (deps are pre-cooked in the image).
 export CARGO_NET_OFFLINE=true
-# Disable nextest PTY progress bar (same reason as test.d/l1 — wrun_core PTY isatty).
+# Disable nextest PTY progress bar (same reason as test.d/l1 — PTY isatty detection).
 export NO_COLOR=1
-export RUNBOX_CONTAINER=1
 export RUSTFLAGS="-D warnings"
 # Fix(test_only-cargo-target-dir): Override host .cargo/config.toml target-dir redirect.
 # Root cause: the host workspace is bind-mounted :ro into the container, bringing
@@ -31,6 +23,6 @@ export RUSTFLAGS="-D warnings"
 # write to /workspace/-host-target/ — part of the :ro bind-mount → EROFS on first write.
 # Containers must use /workspace/target/ where the pre-seeded cook-stage volume is mounted.
 # Pitfall: CARGO_TARGET_DIR env var overrides config.toml target-dir; set it explicitly here
-# because test_only skips the w3 bin_plugin that sets CARGO_TARGET_DIR in the full test path.
+# because test_only doesn't inherit CARGO_TARGET_DIR from the container's plugin environment.
 export CARGO_TARGET_DIR="$WORKSPACE_ROOT/target"
-exec cargo nextest run --workspace --all-features "$NEXTEST_FILTER"
+exec cargo nextest run --workspace --all-features --no-fail-fast -E "$NEXTEST_FILTER"
