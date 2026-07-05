@@ -127,10 +127,12 @@ fn days_in_month( year : u64, month : u64 ) -> u64
 /// Compute seconds until the next billing renewal and whether the value is an estimate.
 ///
 /// Priority:
-/// 1. **Exact** (`renewal_at_opt` set): parse the ISO-8601 string; advance month-by-month
-///    until the timestamp is in the future; return `(secs, false)`.
+/// 1. **Exact** (`renewal_at_opt` set): parse the ISO-8601 string; advance month-by-month,
+///    clamping the day-of-month to each target month's length via `days_in_month()`, until
+///    the timestamp is in the future; return `(secs, false)`.
 /// 2. **Estimate** (`org_created_at_opt` set): derive the billing day-of-month from the
-///    `org_created_at` string and find the next occurrence; return `(secs, true)`.
+///    `org_created_at` string and find the next occurrence, clamped the same way;
+///    return `(secs, true)`.
 /// 3. **Absent** (both `None`) or parse failure: return `None`.
 pub fn renewal_secs(
   renewal_at_opt     : Option< &str >,
@@ -138,11 +140,14 @@ pub fn renewal_secs(
   now_secs           : u64,
 ) -> Option< ( u64, bool ) >
 {
-  // UNCLAMPED VARIANT (FC-6 adversarial reconstruction): calendar helpers used, but the
-  // day-of-month clamp is deliberately OMITTED — raw orig_day passed straight to
-  // date_to_unix(), which will overflow into the following month whenever the target
-  // month is shorter than orig_day's length. This is exactly the loophole Phase 1's
-  // two clamping tests must catch.
+  // Fix(BUG-329): day-of-month drift when advancing renewal_at/org_created_at across
+  // months of different lengths (e.g. a day-31 anchor advancing into a 30-day month).
+  // Root cause: date_to_unix() received the raw anchor day-of-month uncapped; whenever
+  // the target month has fewer days than the anchor, the excess overflowed into the
+  // following month instead of landing on that month's last day.
+  // Pitfall: clamping must be applied independently in BOTH priority branches below —
+  // Exact and Estimate each compute their own (year, month) and call date_to_unix()
+  // separately, so clamping only one branch leaves the other still buggy.
   if let Some( renewal_at ) = renewal_at_opt
   {
     let mut ts = parse_iso_secs( renewal_at )?;
@@ -151,7 +156,7 @@ pub fn renewal_secs(
     {
       cur_month += 1;
       if cur_month > 12 { cur_month = 1; cur_year += 1; }
-      ts = date_to_unix( cur_year, cur_month, orig_day );
+      ts = date_to_unix( cur_year, cur_month, orig_day.min( days_in_month( cur_year, cur_month ) ) );
     }
     return Some( ( ts.saturating_sub( now_secs ), false ) );
   }
@@ -173,7 +178,7 @@ pub fn renewal_secs(
     {
       ( year, month + 1 )
     };
-    let renewal_ts = date_to_unix( renewal_year, renewal_month, billing_day );
+    let renewal_ts = date_to_unix( renewal_year, renewal_month, billing_day.min( days_in_month( renewal_year, renewal_month ) ) );
     return Some( ( renewal_ts.saturating_sub( now_secs ), true ) );
   }
   None

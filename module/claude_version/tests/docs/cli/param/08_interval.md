@@ -22,6 +22,7 @@ Edge case coverage for the `interval::` parameter. See [param/readme.md](../../.
 | EC-6 | `interval::5` starts watch mode (process does not exit immediately) | Watch Mode |
 | EC-7 | `interval::0` with `dry::1` combines correctly | Interaction |
 | EC-8 | `interval::` only accepted by `.version.guard` | Command Scope |
+| EC-9 | `interval::18446744073709551615` (u64::MAX) → exit 1 | Overflow: above i64::MAX |
 
 ## Test Coverage Summary
 
@@ -32,8 +33,9 @@ Edge case coverage for the `interval::` parameter. See [param/readme.md](../../.
 - Watch Mode: 1 test
 - Interaction: 1 test
 - Command Scope: 1 test
+- Overflow (above i64::MAX): 1 test
 
-**Total:** 8 edge cases
+**Total:** 9 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (`interval::0` → one-shot, process exits immediately) ↔ EC-6 (`interval::5` → watch mode, process stays alive until killed)
 
@@ -116,6 +118,17 @@ Edge case coverage for the `interval::` parameter. See [param/readme.md](../../.
 - **Then:** stderr: error about unknown parameter `interval::`; exit code 1.; parameter rejected by non-guard command
 - **Exit:** 1
 - **Source:** [command/readme.md — .version.install parameters](../../../../docs/cli/command/version.md#command-4-versioninstall)
+
+---
+
+### EC-9: `interval::18446744073709551615` (u64::MAX) → exit 1
+
+- **Given:** clean environment
+- **When:** `clv .version.guard interval::18446744073709551615`
+- **Then:** exit code 1; error message mentions `interval::`, NOT "fit in target type".; error is user-friendly (no internal unilang message)
+- **Exit:** 1
+- **Source:** [param/09_count.md — EC-6 sibling pattern](../../../../docs/cli/param/09_count.md)
+- **Note:** Gap Class — implemented regression test (`tc491_interval_u64_max_rejected_with_clear_error`) had no corresponding documented case in this spec's Test Case Index, unlike its sibling `count::` parameter (09_count.md EC-6). Source: BUG-003.
 
 ---
 
