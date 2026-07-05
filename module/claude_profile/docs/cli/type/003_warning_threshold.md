@@ -33,7 +33,7 @@ pub fn new( s : &str ) -> Result< Self, String >
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | Token expiry classification with this threshold |
+| 1 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | Token expiry classification with this threshold |
 
 ### Referenced User Stories
 

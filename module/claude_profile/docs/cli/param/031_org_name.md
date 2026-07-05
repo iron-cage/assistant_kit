@@ -34,8 +34,8 @@ Org: alice@example.com's Organization
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Organisation name line per stored account |
-| 2 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Organisation name line for live credentials |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Organisation name line per stored account |
+| 2 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Organisation name line for live credentials |
 
 ### Referenced User Stories
 

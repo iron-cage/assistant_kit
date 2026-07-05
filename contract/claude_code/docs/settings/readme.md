@@ -73,4 +73,4 @@ All `settings` doc instances must include:
 
 **This entity consumed by**:
 - `../../../../module/claude_version/docs/` — settings management and version lock feature docs
-- `../../../../module/claude_version/src/settings_io.rs` — `set_setting()`, `get_setting()`, `read_all_settings()`, `infer_type()`
+- `../../../../module/claude_version_core/src/settings_io.rs` — `set_setting()`, `get_setting()`, `read_all_settings()`, `infer_type()`

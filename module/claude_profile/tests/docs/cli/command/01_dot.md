@@ -1,6 +1,6 @@
 # Test: `.`
 
-Integration test planning for the `.` command. See [command/namespace.md](../../../../docs/cli/command/003_meta.md#command--1-) for specification.
+Integration test planning for the `.` command. See [command/namespace.md](../../../../docs/cli/command/003_meta.md#command-1) for specification.
 
 ### Test Case Index
 
@@ -40,7 +40,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 - **When:** `clp .` and `clp .help`
 - **Then:** stdout of both invocations is byte-identical
 - **Exit:** 0
-- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
+- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command-1)
 
 ---
 
@@ -50,7 +50,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 - **When:** `clp .`
 - **Then:** process exits with code 0
 - **Exit:** 0
-- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
+- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command-1)
 
 ---
 
@@ -60,7 +60,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 - **When:** `clp .`
 - **Then:** stdout does not contain a bare `.` command entry in the Commands section
 - **Exit:** 0
-- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
+- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command-1)
 
 ---
 
@@ -70,7 +70,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 - **When:** `clp .`
 - **Then:** stdout contains all 13 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.renewal`, `.account.inspect`, `.credentials.status`, `.token.status`, `.paths`, `.usage`, `.model`); does NOT contain `.account.list`, `.account.status`, `.account.assign`, `.account.unclaim`, or `.account.rotate` (deprecated redirector)
 - **Exit:** 0
-- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
+- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command-1)
 
 ---
 
@@ -80,7 +80,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 - **When:** `clp .`
 - **Then:** the Commands section contains exactly 16 entries; no entry matches a bare `.` standalone command
 - **Exit:** 0
-- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
+- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command-1)
 
 ---
 
@@ -90,7 +90,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 - **When:** `clp .`
 - **Then:** stdout contains `Usage: clp <command>`
 - **Exit:** 0
-- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
+- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command-1)
 
 ---
 
@@ -100,7 +100,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 - **When:** `clp . foo::bar`
 - **Then:** stdout is identical to bare `clp .` output; unknown param silently ignored
 - **Exit:** 0
-- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
+- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command-1)
 
 ---
 
@@ -110,7 +110,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 - **When:** `clp .` (run 3 times)
 - **Then:** all 3 stdout captures are byte-identical
 - **Exit:** 0
-- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
+- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command-1)
 
 ---
 
@@ -120,7 +120,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 - **When:** `clp .`
 - **Then:** stdout contains both "Account management" and "Status & info" as group headers; commands appear indented under each group
 - **Exit:** 0
-- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
+- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command-1)
 
 ---
 
@@ -130,7 +130,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 - **When:** `clp .`
 - **Then:** stdout does NOT contain `[name::EMAIL]`, does NOT contain `format::text|json` within a command line (Options section mentions it, but command rows do not)
 - **Exit:** 0
-- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
+- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command-1)
 
 ---
 
@@ -140,7 +140,7 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 - **When:** `clp .`
 - **Then:** stdout contains "Options:" followed by "format::text|json", "dry::bool", and "name::EMAIL" on separate lines
 - **Exit:** 0
-- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
+- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command-1)
 
 ---
 
@@ -150,4 +150,4 @@ Integration test planning for the `.` command. See [command/namespace.md](../../
 - **When:** `clp .` (stdout captured as bytes, not a terminal)
 - **Then:** stdout contains no ESC (`\x1b`) characters; all text is plain ASCII
 - **Exit:** 0
-- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command--1-)
+- **Source:** [command/003_meta.md — .](../../../../docs/cli/command/003_meta.md#command-1)

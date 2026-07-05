@@ -1,4 +1,4 @@
-# param_group/ — clv Parameter Groups
+# Parameter Groups
 
 ### Scope
 

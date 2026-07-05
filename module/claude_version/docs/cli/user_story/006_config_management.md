@@ -22,8 +22,8 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.help`](../command/root.md#command--1-help) | Provides discovery of config modes and parameters |
-| 2 | [`.config`](../command/config.md#command--13-config) | Primary command: inspect and modify settings |
+| 1 | [`.help`](../command/root.md#command-1-help) | Provides discovery of config modes and parameters |
+| 2 | [`.config`](../command/config.md#command-13-config) | Primary command: inspect and modify settings |
 
 ### Referenced Formats
 
