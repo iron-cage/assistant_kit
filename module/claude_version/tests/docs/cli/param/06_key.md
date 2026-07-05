@@ -102,13 +102,14 @@ Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../
 
 ---
 
-### EC-7: `key::a b c` (key with spaces) → behavior defined
+### EC-7: `key::a b c` (key with spaces) → accepted as opaque string
 
 - **Given:** `HOME=<tmp>`; no existing settings
 - **When:** `clv .settings.set "key::a b c" value::x`
-- **Then:** behavior is defined by spec — either accepted as opaque key string or rejected; exit code is consistent with spec
+- **Then:** exit 0; key `a b c` accepted and stored verbatim, spaces included; round-trips via `.settings.get`.
 - **Exit:** 0
-- **Source:** [param/06_key.md](../../../../docs/cli/param/06_key.md)
+- **Source:** [key_ec7_key_with_spaces_behavior](../../../cli/key_param_test.rs)
+- **Note:** Bug-driven correction: this case previously hedged ("either accepted... or rejected") and was backed only by a test asserting `code == 0 || code == 1` — a contract that cannot fail regardless of actual behavior. `key::` and `value::` share the same opaque-string parsing/storage path (`require_nonempty_string_arg` → `set_setting`, which performs zero character validation); the analogous `value::` case with an embedded space (`07_value.md` EC-9) already proved this exact path is deterministic. Gap Class — a spec case whose documented outcome is not backed by any test exercising that exact scenario, whether the case hedges between outcomes, confidently asserts an outcome contradicted by real behavior, confidently asserts an outcome that happens to be correct but unverified, or is missing from the spec's index entirely despite a passing implementation test existing for it. In every variant, the spec's authoritative record cannot be trusted to catch a future regression in that exact scenario. Source: BUG-006.
 
 ---
 
@@ -126,9 +127,10 @@ Edge case coverage for the `key::` parameter. See [param/readme.md](../../../../
 
 - **Given:** `HOME=<tmp>`; no existing settings
 - **When:** `clv .settings.set "key::foo bar" value::baz`
-- **Then:** exit 0 (or per-spec); key `foo bar` treated as opaque string; round-trip get returns same value
+- **Then:** exit 0; key `foo bar` treated as opaque string; round-trip get returns same value.
 - **Exit:** 0
-- **Source:** [param/06_key.md](../../../../docs/cli/param/06_key.md)
+- **Source:** [key_ec9_space_in_key_round_trips](../../../cli/key_param_test.rs)
+- **Note:** Bug-driven correction: this case previously hedged ("exit 0 (or per-spec)") and its test only verified the round-trip conditionally (`if code == 0`), silently skipping verification on the untaken branch. Gap Class — a spec case whose documented outcome is not backed by any test exercising that exact scenario, whether the case hedges between outcomes, confidently asserts an outcome contradicted by real behavior, confidently asserts an outcome that happens to be correct but unverified, or is missing from the spec's index entirely despite a passing implementation test existing for it. In every variant, the spec's authoritative record cannot be trusted to catch a future regression in that exact scenario. Source: BUG-006.
 
 ---
 

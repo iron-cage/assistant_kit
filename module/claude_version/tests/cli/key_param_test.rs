@@ -54,7 +54,7 @@ fn key_ec6_command_scope_rejects_on_status()
   assert_exit( &out, 1 );
 }
 
-/// EC-7: `key::a b c` (key with spaces) → behavior defined by spec
+/// EC-7: `key::a b c` (key with spaces) → accepted, stored as opaque string
 #[ test ]
 fn key_ec7_key_with_spaces_behavior()
 {
@@ -64,10 +64,14 @@ fn key_ec7_key_with_spaces_behavior()
     &[ ".settings.set", "key::a b c", "value::x" ],
     &[ ( "HOME", home ) ],
   );
-  // The spec says "behavior is defined" — check it is consistent (exit 0 or exit 1, no crash)
-  let code = out.status.code().unwrap_or( -1 );
-  assert!( code == 0 || code == 1,
-    "key with spaces must exit 0 or 1 consistently, got: {code}" );
+  assert_exit( &out, 0 );
+  let get_out = run_clv_with_env(
+    &[ ".settings.get", "key::a b c" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &get_out, 0 );
+  let text = stdout( &get_out );
+  assert!( text.contains( "x" ), "key 'a b c' round-trip must return x: {text}" );
 }
 
 /// EC-8: `key::foo.bar` (dot in key name) → stored and retrieved as given
@@ -100,22 +104,14 @@ fn key_ec9_space_in_key_round_trips()
     &[ ".settings.set", "key::foo bar", "value::baz" ],
     &[ ( "HOME", home ) ],
   );
-  let code = set_out.status.code().unwrap_or( -1 );
-  // Spec allows exit 0 or exit 1 — if exit 0, verify round-trip
-  if code == 0
-  {
-    let get_out = run_clv_with_env(
-      &[ ".settings.get", "key::foo bar" ],
-      &[ ( "HOME", home ) ],
-    );
-    assert_exit( &get_out, 0 );
-    let text = stdout( &get_out );
-    assert!( text.contains( "baz" ), "key 'foo bar' round-trip must return baz: {text}" );
-  }
-  else
-  {
-    assert_eq!( code, 1, "key with space must exit 0 or 1, not {code}" );
-  }
+  assert_exit( &set_out, 0 );
+  let get_out = run_clv_with_env(
+    &[ ".settings.get", "key::foo bar" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &get_out, 0 );
+  let text = stdout( &get_out );
+  assert!( text.contains( "baz" ), "key 'foo bar' round-trip must return baz: {text}" );
 }
 
 /// EC-10: Without `key::` on `.settings.get` → error message contains `key::`
