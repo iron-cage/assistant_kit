@@ -18,10 +18,10 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.help`](../command/root.md#command--1-help) | Provides discovery of available commands |
-| 2 | [`.settings.show`](../command/settings.md#command--9-settingsshow) | Displays all current settings key-value pairs |
-| 3 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Reads a specific setting value by key |
-| 4 | [`.settings.set`](../command/settings.md#command--11-settingsset) | Writes a setting with type inference and atomic rename |
+| 1 | [`.help`](../command/root.md#command-1-help) | Provides discovery of available commands |
+| 2 | [`.settings.show`](../command/settings.md#command-9-settingsshow) | Displays all current settings key-value pairs |
+| 3 | [`.settings.get`](../command/settings.md#command-10-settingsget) | Reads a specific setting value by key |
+| 4 | [`.settings.set`](../command/settings.md#command-11-settingsset) | Writes a setting with type inference and atomic rename |
 
 ### Referenced Formats
 

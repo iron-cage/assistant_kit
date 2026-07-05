@@ -25,8 +25,8 @@ clv.version.guard version::month
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`.version.install`](../command/version.md#command--4-versioninstall) | stable | Selects version to install |
-| 2 | [`.version.guard`](../command/version.md#command--5-versionguard) | *(stored preference)* | Overrides stored preference for one invocation |
+| 1 | [`.version.install`](../command/version.md#command-4-versioninstall) | stable | Selects version to install |
+| 2 | [`.version.guard`](../command/version.md#command-5-versionguard) | *(stored preference)* | Overrides stored preference for one invocation |
 
 ### Referenced Type
 

@@ -31,7 +31,7 @@ exclude_exhausted::1 count::1  -> top healthy account (first after sort)
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Filter to fully healthy (🟢) accounts only |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Filter to fully healthy (🟢) accounts only |
 
 ### Referenced User Stories
 

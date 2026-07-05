@@ -42,7 +42,7 @@ clv .config key::theme unset::1
 
 | # | Command | Membership | Excluded Params |
 |---|---------|-----------|----------------|
-| 1 | [`.config`](../command/config.md#command--13-config) | Full | — |
+| 1 | [`.config`](../command/config.md#command-13-config) | Full | — |
 
 ### Referenced Parameters
 

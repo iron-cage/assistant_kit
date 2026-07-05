@@ -68,7 +68,7 @@ The inference is applied in strict priority order. The first matching rule wins:
 
 | File | Relationship |
 |------|-------------|
-| `../../src/settings_io.rs` | Type inference implementation |
+| `../../../claude_version_core/src/settings_io.rs` | Type inference implementation |
 
 ### Provenance
 

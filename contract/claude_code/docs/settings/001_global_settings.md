@@ -92,4 +92,4 @@ pre-v1.0 (unverified)
 | settings | [002_project_settings.md](002_project_settings.md) | Project-level settings (G+P keys and P-only keys) |
 | settings | [003_version_lock.md](003_version_lock.md) | Version lock: `autoUpdates`, `env.DISABLE_AUTOUPDATER`, chmod layer |
 | filesystem | [`../filesystem/001_claude_home.md`](../filesystem/001_claude_home.md) | `~/.claude/settings.json` and `settings.json.tmp` paths |
-| source | `../../../../module/claude_version/src/settings_io.rs` | `set_setting()`, `get_setting()`, `read_all_settings()`, `infer_type()` |
+| source | `../../../../module/claude_version_core/src/settings_io.rs` | `set_setting()`, `get_setting()`, `read_all_settings()`, `infer_type()` |

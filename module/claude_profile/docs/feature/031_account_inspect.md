@@ -217,7 +217,7 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 
 | File | Relationship |
 |------|--------------|
-| [cli/command/001_account.md](../cli/command/001_account.md#command--15-accountinspect) | CLI command specification |
+| [cli/command/001_account.md](../cli/command/001_account.md#command-15-accountinspect) | CLI command specification |
 
 ### Contracts
 
@@ -240,7 +240,7 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.inspect`](../cli/command/001_account.md#command--15-accountinspect) | CLI surface for this feature |
+| 1 | [`.account.inspect`](../cli/command/001_account.md#command-15-accountinspect) | CLI surface for this feature |
 
 ### Sources
 

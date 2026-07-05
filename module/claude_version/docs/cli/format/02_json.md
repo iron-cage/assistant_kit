@@ -52,18 +52,18 @@ Field names are stable snake_case JSON keys. Common fields:
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.status`](../command/root.md#command--2-status) | Machine-readable structured output |
-| 2 | [`.version.show`](../command/version.md#command--3-versionshow) | Machine-readable structured output |
-| 3 | [`.version.install`](../command/version.md#command--4-versioninstall) | Machine-readable structured output |
-| 4 | [`.version.guard`](../command/version.md#command--5-versionguard) | Machine-readable structured output |
-| 5 | [`.version.list`](../command/version.md#command--6-versionlist) | Machine-readable structured output |
-| 6 | [`.processes`](../command/processes.md#command--7-processes) | Machine-readable structured output |
-| 7 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Machine-readable structured output |
-| 8 | [`.settings.show`](../command/settings.md#command--9-settingsshow) | Machine-readable structured output |
-| 9 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Machine-readable structured output |
-| 10 | [`.version.history`](../command/version.md#command--12-versionhistory) | Machine-readable structured output |
-| 11 | [`.config`](../command/config.md#command--13-config) | Machine-readable structured output |
-| 12 | [`.params`](../command/params.md#command--14-params) | Machine-readable structured output |
+| 1 | [`.status`](../command/root.md#command-2-status) | Machine-readable structured output |
+| 2 | [`.version.show`](../command/version.md#command-3-versionshow) | Machine-readable structured output |
+| 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | Machine-readable structured output |
+| 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | Machine-readable structured output |
+| 5 | [`.version.list`](../command/version.md#command-6-versionlist) | Machine-readable structured output |
+| 6 | [`.processes`](../command/processes.md#command-7-processes) | Machine-readable structured output |
+| 7 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | Machine-readable structured output |
+| 8 | [`.settings.show`](../command/settings.md#command-9-settingsshow) | Machine-readable structured output |
+| 9 | [`.settings.get`](../command/settings.md#command-10-settingsget) | Machine-readable structured output |
+| 10 | [`.version.history`](../command/version.md#command-12-versionhistory) | Machine-readable structured output |
+| 11 | [`.config`](../command/config.md#command-13-config) | Machine-readable structured output |
+| 12 | [`.params`](../command/params.md#command-14-params) | Machine-readable structured output |
 
 ### Referenced User Stories
 
