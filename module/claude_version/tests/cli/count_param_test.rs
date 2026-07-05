@@ -1,10 +1,10 @@
 //! EC- edge-case tests for the `count::` parameter.
 //!
-//! Covers gap cases EC-12 through EC-15 from `tests/docs/cli/param/09_count.md`.
-//! EC-1 through EC-11 are covered in `cli_args_test.rs` and
-//! `integration/read_commands_test.rs`.
+//! Covers gap cases EC-9, EC-12 through EC-15 from `tests/docs/cli/param/09_count.md`.
+//! EC-1 through EC-5 are covered in `tests/cli/read_version_history_test.rs`;
+//! EC-6/EC-7 (overflow boundary) are covered in `cli_args_test/param_numeric_test.rs`.
 
-use crate::subprocess_helpers::{ assert_exit, run_clv, stdout };
+use crate::subprocess_helpers::{ assert_exit, run_clv, stdout, stderr };
 
 /// EC-12: `count::3` → output has at most 3 version entries
 #[ test ]
@@ -49,4 +49,14 @@ fn count_ec15_v_abc_type_mismatch_exits_1()
 {
   let out = run_clv( &[ ".version.history", "v::abc" ] );
   assert_exit( &out, 1 );
+}
+
+/// EC-9: `count::` (empty) → exit 1; error mentions `count::`
+#[ test ]
+fn count_ec9_empty_value_exits_1()
+{
+  let out = run_clv( &[ ".version.history", "count::" ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!( err.contains( "count::" ), "error must mention count:: {err}" );
 }

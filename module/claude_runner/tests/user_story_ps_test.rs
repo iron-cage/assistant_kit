@@ -176,8 +176,10 @@ fn us_06_queued_clr_shows_queued_headers()
     &gate_file,
     r#"{"cwd":"/tmp/us6-project","since":1720000000,"attempt":1,"message":"waiting for session slot"}"#,
   ).expect( "write gate file" );
+  let proc          = make_proc_dir( &[] );
+  let proc_dir_path = proc.path().to_str().expect( "proc dir UTF-8" );
 
-  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ) ] );
+  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ), ( "CLR_PROC_DIR", proc_dir_path ) ] );
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "exit 0 expected" );
   assert!( stdout.contains( "PID" ), "queued table must show PID: {stdout}" );

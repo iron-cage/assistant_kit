@@ -19,7 +19,7 @@ Edge case coverage for the `value::` parameter. See [param/readme.md](../../../.
 | EC-2 | `value::0` → JSON integer `0` (not boolean false) | Type Inference |
 | EC-12 | `value::42` → JSON integer `42` | Type Inference |
 | EC-13 | `value::hello` → JSON string `"hello"` | Type Inference |
-| EC-3 | `value::""` → JSON string `""` (empty string valid) | Type Inference |
+| EC-3 | `value::""` (shell-empty) → exit 1, rejected | Empty Value |
 | EC-14 | `key::k` present but no `value::` → exit 1 | Absent (required) |
 | EC-15 | Without `value::` → error message mentions `value::` | Error Content |
 | EC-5 | `value::1.5` → JSON float (parseable as f64 but not i64) | Type Inference |
@@ -34,12 +34,12 @@ Edge case coverage for the `value::` parameter. See [param/readme.md](../../../.
 
 - Type Inference (boolean): 2 tests
 - Type Inference (integer): 2 tests
-- Type Inference (string): 2 tests
+- Type Inference (string): 1 test
 - Type Inference (float): 1 test
 - Type Inference (edge: NaN/Infinity): 2 tests
 - Absent (required): 1 test
 - Error Content: 1 test
-- Empty Value: 1 test
+- Empty Value: 2 tests
 - Command Scope: 1 test
 - Persistence: 1 test
 
@@ -82,15 +82,14 @@ The type inference chain processes in this order:
 
 ---
 
-### EC-3: `value::""` → empty string
+### EC-3: `value::""` (shell-empty) → exit 1, rejected
 
 - **Given:** `HOME=<tmp>`.
-- **When:** `clv .settings.set key::s value::`
-- **Then:** exit 0 (or exit 1 if empty value is rejected — need to verify behavior).
-**Note:** If `value::` with empty is treated as absent (missing value), exit 1. If accepted
-as empty string, exit 0 with `"s": ""`. Check FR-04 vs FR-07 interaction.; Consistent with spec; no crash
-- **Exit:** 0
-- **Source:** [feature/003_settings_management.md](../../../../docs/feature/003_settings_management.md)
+- **When:** `clv .settings.set key::s value::""` (shell-empty value, equivalent to `value::` with nothing after)
+- **Then:** exit 1; error mentions `value::`; no file modified.; consistent with EC-10 — empty value is rejected, never stored
+- **Exit:** 1
+- **Source:** [param/07_value.md — EC-10](../../../../docs/cli/param/07_value.md)
+- **Note:** Bug-driven correction: this case previously hedged ("exit 0 or exit 1 — need to verify") and had no backing test function. Gap Class — a spec case whose documented outcome is not backed by any test exercising that exact scenario, whether the case hedges between outcomes, confidently asserts an outcome contradicted by real behavior, confidently asserts an outcome that happens to be correct but unverified, or is missing from the spec's index entirely despite a passing implementation test existing for it. In every variant, the spec's authoritative record cannot be trusted to catch a future regression in that exact scenario. Source: BUG-006.
 
 ---
 
