@@ -22,7 +22,7 @@ Format rule: ✅ Decided entries show only the selected option as a single state
 **🔍 Unverified · dev · 2026_07_04**
 What mechanism should trace mutating function calls?
 
-**Assumed unconditional `eprintln!` trace lines** at the entry point of every public mutating function, with no new logging crate dependency, based on the existing ungated `eprintln!` diagnostic idiom already used at `version.rs:263,274,448` and `lib.rs:243,263,275,293` and the absence of any `log`/`tracing` dependency in either `claude_version/Cargo.toml` or `claude_version_core/Cargo.toml`. Validated by Task 006's Verification Gate and code review. If wrong (trace volume becomes unmanageable or structured/filterable output is later needed): introduce a proper logging crate (`log`+`env_logger` or `tracing`) as a follow-up task, and INVALIDATE this entry.
+**Assumed unconditional `eprintln!` trace lines** at the entry point of every public mutating function, with no new logging crate dependency, based on the existing ungated `eprintln!` diagnostic idiom already used in the `claude_version` CLI crate at `src/commands/version.rs:263,274,448` and `src/lib.rs:243,263,275,293` (not yet present in `claude_version_core` itself — this task introduces the convention there for the first time) and the absence of any `log`/`tracing` dependency in either `claude_version/Cargo.toml` or `claude_version_core/Cargo.toml`. Validated by Task 006's Verification Gate and code review. If wrong (trace volume becomes unmanageable or structured/filterable output is later needed): introduce a proper logging crate (`log`+`env_logger` or `tracing`) as a follow-up task, and INVALIDATE this entry.
 
 ---
 
