@@ -49,7 +49,7 @@ after filter:  0 points → None
 
 - Maximum 10 entries per period per account
 - Written to `{name}.json → history` array — see [schema/002](../schema/002_account_json.md)
-- `write_quota_cache()` in `account.rs` preserves the `history` key when updating `_quota_cache`
+- `write_quota_cache()` in `account.rs` preserves the `history` key when updating `cache`
 
 ### Behavioral Invariants
 

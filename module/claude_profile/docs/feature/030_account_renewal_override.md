@@ -108,3 +108,9 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 | File | Relationship |
 |------|--------------|
 | `tests/cli/account_mutations_test.rs` | AC-01…AC-15 test cases |
+
+### Algorithm Docs
+
+| File | Relationship |
+|------|--------------|
+| [algorithm/010_renewal_date_computation.md](../algorithm/010_renewal_date_computation.md) | Implements AC-10's exact/estimate renewal computation; documents the open BUG-329 day-of-month drift in the exact branch's auto-advance step |

@@ -29,9 +29,7 @@ mod search;
 mod export;
 mod projects;
 mod session;
-mod tail;
 
-pub use tail::tail_routine;
 pub use storage::parse_project_parameter;
 pub use format::truncate_if_needed;
 pub use projects::{ Conversation, projects_routine };

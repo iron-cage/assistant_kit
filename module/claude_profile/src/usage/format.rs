@@ -115,13 +115,20 @@ fn parse_iso_secs( s : &str ) -> Option< u64 >
   Some( date_to_unix( year, month, day ) + hour * 3_600 + min * 60 + sec )
 }
 
+/// Return the number of days in `(year, month)` — Gregorian, leap-aware.
+fn days_in_month( year : u64, month : u64 ) -> u64
+{
+  let is_leap = ( year % 4 == 0 && year % 100 != 0 ) || year % 400 == 0;
+  match month { 2 => if is_leap { 29 } else { 28 }, 4 | 6 | 9 | 11 => 30, _ => 31 }
+}
+
 // ── Renewal timing ─────────────────────────────────────────────────────────────
 
 /// Compute seconds until the next billing renewal and whether the value is an estimate.
 ///
 /// Priority:
-/// 1. **Exact** (`renewal_at_opt` set): parse the ISO-8601 string; auto-advance monthly
-///    (+ 2 592 000 s per step) until the timestamp is in the future; return `(secs, false)`.
+/// 1. **Exact** (`renewal_at_opt` set): parse the ISO-8601 string; advance month-by-month
+///    until the timestamp is in the future; return `(secs, false)`.
 /// 2. **Estimate** (`org_created_at_opt` set): derive the billing day-of-month from the
 ///    `org_created_at` string and find the next occurrence; return `(secs, true)`.
 /// 3. **Absent** (both `None`) or parse failure: return `None`.
@@ -131,10 +138,21 @@ pub fn renewal_secs(
   now_secs           : u64,
 ) -> Option< ( u64, bool ) >
 {
+  // UNCLAMPED VARIANT (FC-6 adversarial reconstruction): calendar helpers used, but the
+  // day-of-month clamp is deliberately OMITTED — raw orig_day passed straight to
+  // date_to_unix(), which will overflow into the following month whenever the target
+  // month is shorter than orig_day's length. This is exactly the loophole Phase 1's
+  // two clamping tests must catch.
   if let Some( renewal_at ) = renewal_at_opt
   {
     let mut ts = parse_iso_secs( renewal_at )?;
-    while ts < now_secs { ts = ts.saturating_add( 2_592_000 ); }
+    let ( mut cur_year, mut cur_month, orig_day ) = unix_to_date( ts );
+    while ts < now_secs
+    {
+      cur_month += 1;
+      if cur_month > 12 { cur_month = 1; cur_year += 1; }
+      ts = date_to_unix( cur_year, cur_month, orig_day );
+    }
     return Some( ( ts.saturating_sub( now_secs ), false ) );
   }
   if let Some( org_created_at ) = org_created_at_opt

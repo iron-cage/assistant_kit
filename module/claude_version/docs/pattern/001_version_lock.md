@@ -52,11 +52,36 @@ This pattern does not apply when tracking `latest` is desired — for `latest`, 
 - `chmod 555` on the versions directory blocks not just the auto-updater but also manual operations — the user must `chmod 755` before manual work and restore afterwards
 - Layer 4 (purging cached binaries) is destructive: it permanently removes cached binaries, requiring a full re-download if a different version is needed
 
+### Mechanism Coverage
+
+Cross-references this repo's 5-layer lock (see § Solution) against every mechanism enumerated in the official upstream pattern's Solution list ([../../../../contract/claude_code/docs/pattern/001_version_pinning.md](../../../../contract/claude_code/docs/pattern/001_version_pinning.md), items 1-8).
+
+| # | Official mechanism | Key(s) | Used by this repo? | Evidence |
+|---|---------------------|--------|---------------------|----------|
+| 1 | Channel selection | `autoUpdatesChannel` | ❌ Not used | No occurrence anywhere in `module/` |
+| 2 | Soft update floor | `minimumVersion` | ❌ Not used | No occurrence anywhere in `module/` |
+| 3 | Hard organizational bounds | `requiredMinimumVersion` / `requiredMaximumVersion` | ❌ Not used | No occurrence anywhere in `module/` |
+| 4 | Update suppression | `DISABLE_AUTOUPDATER` / `DISABLE_UPDATES` | ⚠️ Half of the pair | `DISABLE_AUTOUPDATER` is Layer 2 above; `DISABLE_UPDATES` has no occurrence anywhere in `module/` |
+| 5 | Install-method restriction | `installMethod` | ❌ Not used | No occurrence anywhere in `module/` |
+| 6 | Install-time version selection | `claude install` / bootstrap script / package managers / npm | ⚠️ One of four paths | Only the bootstrap curl script path is used, inside `perform_install()`; `claude install`, npm, and package-manager installs are never invoked by this repo's tooling |
+| 7 | Recovery bridge (flagged non-official by the upstream doc itself) | `preferredVersionSpec` / `preferredVersionResolved` | ✅ Used | This IS this repo's own Layer 5 |
+| 8 | Integrity complement | `manifest.json`, codesign/GPG/Authenticode | ❌ Not used | No occurrence anywhere in `module/` |
+
+This repo also sets the plain `autoUpdates` boolean ([../../../../contract/claude_code/docs/param/011_auto_updates.md](../../../../contract/claude_code/docs/param/011_auto_updates.md)) as Layer 1 above — an official Claude Code parameter, but a separate one from the 8 items above (the upstream pattern's item 1 is the *channel* selector `autoUpdatesChannel`, not this boolean).
+
+This repo's lock additionally applies enforcement with no official upstream equivalent: `chmod 555`/`755` on the versions directory (Layer 3) and purging cached binaries to close the symlink-retarget loophole (Layer 4) — see [pitfall/002_symlink_retarget.md](../pitfall/002_symlink_retarget.md).
+
 ### Features
 
 | File | Relationship |
 |------|-------------|
 | [feature/001_version_management.md](../feature/001_version_management.md) | .version.install and .version.guard that apply/read the lock |
+
+### Params
+
+| File | Relationship |
+|------|-------------|
+| [../../../../contract/claude_code/docs/param/011_auto_updates.md](../../../../contract/claude_code/docs/param/011_auto_updates.md) | Official `autoUpdates` boolean this repo's Layer 1 sets directly |
 
 ### Patterns
 

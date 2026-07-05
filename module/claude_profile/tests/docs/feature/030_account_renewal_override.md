@@ -21,8 +21,8 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 | FT-07 | `at::` + `from_now::` together exits 1 | AC-07 | account_mutations_test.rs |
 | FT-08 | `at::` + `clear::` together exits 1 | AC-08 | account_mutations_test.rs |
 | FT-09 | `from_now::` + `clear::` together exits 1 | AC-09 | account_mutations_test.rs |
-| FT-10 | Past `_renewal_at` auto-advanced monthly at render | AC-10 | usage_test.rs / unit |
-| FT-11 | `~Renews` exact/estimated/absent rendering | AC-11 | usage_test.rs / unit |
+| FT-10 | Past `_renewal_at` auto-advanced monthly at render | AC-10 | usage_model_test.rs |
+| FT-11 | `~Renews` exact/estimated/absent rendering | AC-11 | format_tests.rs / unit |
 | FT-12 | No operation param exits 1 | AC-12 | account_mutations_test.rs |
 | FT-13 | Unknown account exits 2 | AC-13 | account_mutations_test.rs |
 | FT-14 | Comma-list updates two accounts | AC-14 | account_mutations_test.rs |
@@ -82,7 +82,7 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 - **Then (render):** `.usage` auto-advances the past timestamp by monthly increments until future. `~Renews` column shows `in Xd` (exact, no `~`) for a value within the next 30 days.
 - **Exit:** 0 (both steps)
 - **Live:** yes (second step)
-- **Source fn:** `ft03_account_renewal_from_now_negative` (write, in `tests/cli/account_mutations_test.rs`); `it151_past_renewal_at_auto_advances_in_usage` (render, in `tests/cli/usage_test.rs`)
+- **Source fn:** `ft03_account_renewal_from_now_negative` (write, in `tests/cli/account_mutations_test.rs`); `it151_past_renewal_at_auto_advances_in_usage` (render, in `tests/cli/usage_model_test.rs`)
 - **Source:** [030_account_renewal_override.md AC-03](../../../docs/feature/030_account_renewal_override.md)
 
 ---
@@ -157,10 +157,11 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 
 - **Given:** Account `test@example.com` has `_renewal_at: "2020-03-15T00:00:00Z"` (past timestamp, day-15).
 - **When:** `clp .usage`
-- **Then:** `~Renews` column for `test@example.com` shows `in Xd` format where X ≤ 31 (next day-15 occurrence after today is within 30 days). Display uses exact format (no `~` prefix). The stored value is NOT modified; auto-advance is read-only at render.
+- **Then:** `~Renews` column for `test@example.com` shows `in Xd` format (exact, no `~` prefix) — confirms the value is treated as an exact override even after auto-advance. The stored value is NOT modified; auto-advance is read-only at render.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** `it151_past_renewal_at_auto_advances_in_usage` (in `tests/cli/usage_test.rs`)
+- **Note:** this test does not assert day-of-month preservation across auto-advance steps — it only checks the exact-vs-estimate `~` prefix. AC-10 requires the same day-of-month as the original `_renewal_at`; the current implementation violates this on months not exactly 30 days long. See BUG-329 (open, `/home/user1/pro/lib/yrd_core/assistant_kit/task/claude_profile/bug/329_auto_advance_flat_step_drifts_day_of_month.md`) and `docs/algorithm/010_renewal_date_computation.md` for the full mechanism.
+- **Source fn:** `it151_past_renewal_at_auto_advances_in_usage` (in `tests/cli/usage_model_test.rs`)
 - **Source:** [030_account_renewal_override.md AC-10](../../../docs/feature/030_account_renewal_override.md)
 
 ---

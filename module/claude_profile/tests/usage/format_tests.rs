@@ -5,6 +5,7 @@ use claude_profile::usage::test_bridge::{
   token_exp_label, compute_expires_cell, renews_label, next_event_label,
   shorten_error, relevant_quotas,
   recommended_model, quota_text_cells, status_emoji,
+  renewal_secs, unix_to_date,
 };
 use claude_profile::usage::test_bridge::{ FAR_FUTURE_MS, mk_aq_ok_both, mk_aq_sort, mk_aq_sort_weekly, mk_aq_err, mk_aq_cancelled };
 use claude_profile::usage::test_bridge::types::{ AccountQuota, PreferStrategy };
@@ -599,6 +600,57 @@ fn rl_absent_returns_question()
 {
   let result = renews_label( None, None, 1_893_456_000 );
   assert_eq!( result, "?", "both absent must return '?', got: {result}" );
+}
+
+/// Single 30-day auto-advance step must land on the SAME day-of-month (15), not one
+/// day short. Isolates the exact off-by-one mechanism.
+#[ doc = "bug_reproducer(BUG-329)" ]
+#[ test ]
+fn rl_auto_advance_single_step_preserves_day_across_31_day_month()
+{
+  let now_secs    = 1_768_867_200_u64; // 2026-01-20T00:00:00Z
+  let result      = renewal_secs( Some( "2026-01-15T00:00:00Z" ), None, now_secs ).unwrap();
+  let ( _, _, d ) = unix_to_date( now_secs + result.0 );
+  assert_eq!( d, 15, "auto-advance must preserve day-of-month 15, got day {d}" );
+}
+
+/// ~120 auto-advance steps over 10 years must still land on the original day-of-month
+/// (1), not an accumulated drift.
+#[ doc = "bug_reproducer(BUG-329)" ]
+#[ test ]
+fn rl_auto_advance_multi_year_preserves_day_of_month()
+{
+  let now_secs    = 1_893_456_000_u64; // 2030-01-01T00:00:00Z
+  let result      = renewal_secs( Some( "2020-01-01T00:00:00Z" ), None, now_secs ).unwrap();
+  let ( _, _, d ) = unix_to_date( now_secs + result.0 );
+  assert_eq!( d, 1, "10-year auto-advance must preserve day-of-month 1, got day {d}" );
+}
+
+/// Direct regression port of BUG-329's own filed MRE. A day-31 anchor advanced past
+/// 2026-03-02 must clamp through February (28 days) and land on March 31 — not roll
+/// over to April 1 as the unfixed flat-step implementation does. NEW now_secs (per
+/// FC-6 Round 7/8 fix): 2026-03-02T00:00:00Z.
+#[ doc = "bug_reproducer(BUG-329)" ]
+#[ test ]
+fn rl_auto_advance_clamps_day_31_anchor_at_shorter_month_end()
+{
+  let now_secs    = 1_772_409_600_u64; // 2026-03-02T00:00:00Z (NEW value)
+  let result      = renewal_secs( Some( "2026-01-31T21:00:00Z" ), None, now_secs ).unwrap();
+  let ( y, m, d ) = unix_to_date( now_secs + result.0 );
+  assert_eq!( ( y, m, d ), ( 2026, 3, 31 ), "must clamp through Feb and land on Mar 31, got {y}-{m:02}-{d:02}" );
+}
+
+/// A day-29 anchor (valid only in leap-year Februaries) must clamp to day 28 advancing
+/// through a common-year February, then recover to day 29 the following March. NEW
+/// now_secs (per FC-6 Round 7/8 fix): 2025-02-28T12:00:00Z.
+#[ doc = "bug_reproducer(BUG-329)" ]
+#[ test ]
+fn rl_auto_advance_day29_clamps_in_common_february_then_recovers()
+{
+  let now_secs    = 1_740_744_000_u64; // 2025-02-28T12:00:00Z (NEW value), after Feb 2025 (28d)
+  let result      = renewal_secs( Some( "2024-01-29T00:00:00Z" ), None, now_secs ).unwrap();
+  let ( _, m, d ) = unix_to_date( now_secs + result.0 );
+  assert_eq!( ( m, d ), ( 3, 29 ), "must recover to day 29 in March after clamping Feb to 28, got {m:02}-{d}" );
 }
 
 // ── next_event_label ───────────────────────────────────────────────────────
