@@ -10,6 +10,8 @@
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ exit_code, make_creds_file, run_ask_dry, run_cli, run_cli_with_env, run_dry, stderr_str };
+#[ cfg( unix ) ]
+use cli_binary_test_helpers::make_proc_dir;
 use std::process::Command;
 
 // ── US10: Credential-isolated Execution ─────────────────────────────────────
@@ -126,10 +128,22 @@ fn us11_2_file_with_print_mode()
 }
 
 /// US-3: --file with non-readable path → exit non-zero with path in error.
+///
+/// This is a real (non-dry-run) `run` invocation with a message, so it reaches
+/// `run_built_command()`'s concurrency gate (`wait_for_session_slot()`) before the
+/// `--file` existence check fires inside `run_print_mode()`.  `CLR_PROC_DIR` points
+/// at an empty proc-isolation dir so `find_claude_processes()` never scans the real
+/// host `/proc` (BUG-326 defect class — ambient `/proc` racing concurrent nextest runs).
+#[ cfg( unix ) ]
 #[ test ]
 fn us11_3_nonreadable_file_errors()
 {
-  let out = run_cli( &[ "--file", "/tmp/clr_us11_nonexistent_99999.txt", "test" ] );
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = run_cli_with_env(
+    &[ "--file", "/tmp/clr_us11_nonexistent_99999.txt", "test" ],
+    &[ ( "CLR_PROC_DIR", proc_dir ) ],
+  );
   assert!(
     !out.status.success(),
     "--file with nonexistent path must exit non-zero. Got exit: {:?}",

@@ -7,6 +7,8 @@
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ make_creds_file, stderr_str };
+#[ cfg( unix ) ]
+use cli_binary_test_helpers::make_proc_dir;
 
 // ── tests ─────────────────────────────────────────────────────────────────────
 
@@ -16,15 +18,25 @@ use cli_binary_test_helpers::{ make_creds_file, stderr_str };
 /// prevents claude from being found.  PATH is restricted to avoid hanging: without it,
 /// an installed claude binary starts an interactive session and the test never completes.
 ///
+/// This is a real (non-dry-run) `run` invocation with a message and no
+/// `--max-sessions 0`, so it reaches `wait_for_session_slot()` before the trace print
+/// (gate check happens first in `run_built_command()`).  `CLR_PROC_DIR` isolates
+/// `find_claude_processes()` from ambient host `/proc` content racing against
+/// concurrent test processes under nextest's parallel execution (same defect class
+/// as BUG-326 / tasks 378/381).
+///
 /// Source: tests/docs/invariant/004_trace_universality.md#it-1
+#[ cfg( unix ) ]
 #[ test ]
 fn it_01_run_trace_stderr_output()
 {
   // PATH=/nonexistent: trace fires first, then spawn fails immediately (claude not found).
   // Without this, an installed claude binary would open an interactive TTY and hang forever.
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
   let out    = cli_binary_test_helpers::run_cli_with_env(
     &[ "--trace", "Fix bug" ],
-    &[ ( "PATH", "/nonexistent" ) ],
+    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ) ],
   );
   let stderr = stderr_str( &out );
   assert!(
@@ -50,13 +62,21 @@ fn it_01_run_trace_stderr_output()
 /// Not a duplicate of IT-9 (`ask_command_test.rs`) — these two tests cover the same behavior
 /// from different test entry points (command coverage vs. invariant coverage).
 ///
+/// `ask` delegates straight to `dispatch_run()`, so — like IT-1 — this is a real invocation
+/// with a message and no `--max-sessions 0`; it reaches `wait_for_session_slot()` before the
+/// trace print.  `CLR_PROC_DIR` isolates `find_claude_processes()` from ambient host `/proc`
+/// content (same defect class as BUG-326 / tasks 378/381).
+///
 /// Source: tests/docs/invariant/004_trace_universality.md#it-2
+#[ cfg( unix ) ]
 #[ test ]
 fn it_02_ask_trace_stderr_output()
 {
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
   let out    = cli_binary_test_helpers::run_cli_with_env(
     &[ "ask", "--trace", "What is X?" ],
-    &[ ( "PATH", "/nonexistent" ) ],
+    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ) ],
   );
   let stderr = stderr_str( &out );
   assert!(

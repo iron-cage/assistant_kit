@@ -15,12 +15,11 @@ use cli_binary_test_helpers::
   make_creds_file,
   run_cli,
   run_cli_with_env,
-  run_with_path,
   stderr_str,
   stdout_str,
 };
 #[ cfg( unix ) ]
-use cli_binary_test_helpers::fake_claude_dir;
+use cli_binary_test_helpers::{ fake_claude_dir, make_proc_dir };
 
 // ── Local helper ─────────────────────────────────────────────────────────────
 
@@ -464,6 +463,13 @@ fn af6_missing_args_file_exit_1()
 ///
 /// Source: tests/docs/feature/004_json_config.md#jc-8 (false-branch)
 ///         tests/docs/cli/param/075_args_file.md#af-4 (false-branch)
+///
+/// Real (non-dry-run) `run` invocation with no `--max-sessions 0` — reaches
+/// `wait_for_session_slot()`, which calls `find_claude_processes()`.  Without
+/// `CLR_PROC_DIR`, this reads the real host `/proc`, racing against concurrent
+/// test processes under nextest's parallel execution (same defect class as BUG-326).
+/// `run_with_path` only injects `PATH`, so the `Command` is built directly here to
+/// add `CLR_PROC_DIR` alongside it.
 #[ cfg( unix ) ]
 #[ test ]
 fn jc8b_boolean_false_is_noop_subprocess_spawned()
@@ -471,7 +477,15 @@ fn jc8b_boolean_false_is_noop_subprocess_spawned()
   let cfg            = write_json_file( r#"{"dry-run": false}"# );
   let json_path      = cfg.path().to_str().unwrap();
   let ( _dir, path ) = fake_claude_dir( "echo 'jc8b_invoked'" );
-  let out            = run_with_path( &[ "--args-file", json_path, "task" ], &path );
+  let proc           = make_proc_dir( &[] );
+  let proc_dir       = proc.path().to_str().expect( "proc dir UTF-8" );
+  let bin            = env!( "CARGO_BIN_EXE_clr" );
+  let out            = std::process::Command::new( bin )
+    .args( [ "--args-file", json_path, "task" ] )
+    .env( "PATH", &path )
+    .env( "CLR_PROC_DIR", proc_dir )
+    .output()
+    .expect( "invoke clr for jc8b" );
   let stdout = stdout_str( &out );
   assert!(
     stdout.contains( "jc8b_invoked" ),

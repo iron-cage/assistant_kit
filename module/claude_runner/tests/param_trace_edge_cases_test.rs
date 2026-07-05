@@ -23,12 +23,25 @@
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ make_creds_file, run_cli };
+#[ cfg( unix ) ]
+use cli_binary_test_helpers::make_proc_dir;
 
 // S04: --trace without --dry-run → stderr has command; exit 1 (claude absent)
+//
+// Real (non-dry-run) `run` invocation with no `--max-sessions 0` — reaches
+// `wait_for_session_slot()`, which calls `find_claude_processes()`.  Without
+// `CLR_PROC_DIR`, this reads the real host `/proc`, racing against concurrent
+// test processes under nextest's parallel execution (same defect class as BUG-326).
+#[ cfg( unix ) ]
 #[ test ]
 fn s04_trace_without_dry_run_echoes_command_to_stderr()
 {
-  let out = cli_binary_test_helpers::run_cli_with_env( &[ "--trace", "Fix bug" ], &[ ( "PATH", "/nonexistent" ) ] );
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = cli_binary_test_helpers::run_cli_with_env(
+    &[ "--trace", "Fix bug" ],
+    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ) ],
+  );
   assert!(
     !out.status.success(),
     "--trace without --dry-run must fail (claude not found)"
@@ -59,10 +72,18 @@ fn s05_trace_with_dry_run_no_message_stderr_empty()
 }
 
 // S06: --trace (no --dry-run) stderr includes env vars and command
+//
+// Real (non-dry-run) `run` invocation — see S04 comment for why CLR_PROC_DIR is required.
+#[ cfg( unix ) ]
 #[ test ]
 fn s06_trace_stderr_includes_env_vars_and_command()
 {
-  let out = cli_binary_test_helpers::run_cli_with_env( &[ "--trace", "Fix bug" ], &[ ( "PATH", "/nonexistent" ) ] );
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = cli_binary_test_helpers::run_cli_with_env(
+    &[ "--trace", "Fix bug" ],
+    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ) ],
+  );
   assert!( !out.status.success(), "must fail (claude absent)" );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
