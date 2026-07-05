@@ -23,7 +23,7 @@ clv.version.history count::0       # empty output (valid, exit 0)
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`.version.history`](../command/version.md#command--12-versionhistory) | 10 | Values exceeding available releases return all available |
+| 1 | [`.version.history`](../command/version.md#command-12-versionhistory) | 10 | Values exceeding available releases return all available |
 
 ### Referenced Type
 

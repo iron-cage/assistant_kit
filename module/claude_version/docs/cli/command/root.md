@@ -35,10 +35,10 @@ clv.status .help  # .help anywhere in argv triggers help (FR-02)
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.status`](#command--2-status) | First operational check after reviewing help |
-| 2 | [`.version.show`](version.md#command--3-version-show) | Confirms installed version |
-| 3 | [`.processes`](processes.md#command--7-processes) | Lists running sessions |
-| 4 | [`.settings.show`](settings.md#command--9-settings-show) | Inspects current settings |
+| 1 | [`.status`](#command-2-status) | First operational check after reviewing help |
+| 2 | [`.version.show`](version.md#command-3-versionshow) | Confirms installed version |
+| 3 | [`.processes`](processes.md#command-7-processes) | Lists running sessions |
+| 4 | [`.settings.show`](settings.md#command-9-settingsshow) | Inspects current settings |
 
 ### Referenced User Stories
 
@@ -118,10 +118,10 @@ clv.status v::2
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.help`](#command--1-help) | Command reference and usage listing |
-| 2 | [`.version.show`](version.md#command--3-version-show) | Version-only view without full status |
-| 3 | [`.processes`](processes.md#command--7-processes) | Process-only view |
-| 4 | [`.settings.show`](settings.md#command--9-settings-show) | Settings-only view |
+| 1 | [`.help`](#command-1-help) | Command reference and usage listing |
+| 2 | [`.version.show`](version.md#command-3-versionshow) | Version-only view without full status |
+| 3 | [`.processes`](processes.md#command-7-processes) | Process-only view |
+| 4 | [`.settings.show`](settings.md#command-9-settingsshow) | Settings-only view |
 
 ### Referenced User Stories
 
@@ -162,7 +162,7 @@ clv.runtime_files
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.version.history`](version.md#command--12-version-history) | Creates the version history cache path enumerated here |
+| 1 | [`.version.history`](version.md#command-12-versionhistory) | Creates the version history cache path enumerated here |
 
 ---
 

@@ -20,7 +20,7 @@ if [[ -n "${VERB_LAYER:-}" ]]; then
 fi
 if [[ "${1:-}" == "--dry-run" ]]; then
   DRY_FILTER="${2:-<filter>}"
-  echo "NEXTEST_FILTER=$DRY_FILTER ./runbox/runbox .test  →  cargo nextest run --workspace --all-features \"$DRY_FILTER\""
+  echo "NEXTEST_FILTER=$DRY_FILTER ./runbox/runbox .test  →  cargo nextest run --all-features \"$DRY_FILTER\""
   exit 0
 fi
 FILTER="${1:-}"

@@ -1,4 +1,4 @@
-# Type System
+# Types
 
 ### Scope
 

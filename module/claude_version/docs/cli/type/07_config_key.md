@@ -34,7 +34,7 @@ clv .config key::myCustomSetting    # arbitrary key — resolves user/project co
 
 | # | Command | Via Parameter |
 |---|---------|--------------|
-| 1 | [`.config`](../command/config.md#command--13-config) | `key::` |
+| 1 | [`.config`](../command/config.md#command-13-config) | `key::` |
 
 ### Referenced Parameters
 
