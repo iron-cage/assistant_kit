@@ -126,7 +126,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../cli/command/006_usage.md#command--9-usage) | CLI surface for this feature |
+| 1 | [`.usage`](../cli/command/006_usage.md#command-9-usage) | CLI surface for this feature |
 
 ### Sources
 

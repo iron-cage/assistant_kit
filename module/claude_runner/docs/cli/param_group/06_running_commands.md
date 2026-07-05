@@ -61,7 +61,7 @@ Key: ✅ = supported, ⬜ = not injected/not applicable, ➖ = not accepted, `*`
 | `--max-sessions` | ✅ | ✅ | ➖ | ➖ | concurrency gate; run/ask only |
 | **Injected subprocess env vars** | | | | | |
 | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `200,000` | `200,000` | `200,000` | `200,000` | always injected; `--max-tokens` overrides |
-| `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `200,000` | `200,000` | `200,000` | `200,000` | always injected; `--no-compact-window` suppresses |
+| `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `300,000` | `300,000` | `300,000` | `300,000` | always injected; `--no-compact-window` suppresses |
 | `CLAUDE_CODE_AUTO_CONTINUE` | `true` | `true` | `true` | `true` | always injected |
 | `CLAUDE_CODE_TELEMETRY` | `false` | `false` | `false` | `false` | always injected |
 | `CLAUDE_CODE_BASH_TIMEOUT` | `3,600,000 ms` | `3,600,000 ms` | `3,600,000 ms` | `3,600,000 ms` | always injected |
@@ -75,13 +75,13 @@ These parameters apply identically across all 4 running commands:
 | `--timeout` | Max subprocess wait time (default differs per command) |
 | `--trace` | Emit resolved env vars + command line to stderr before executing |
 | `--dry-run` | Emit resolved env vars + command line to stderr; do not spawn subprocess |
-| `--no-compact-window` | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` injection |
+| `--no-compact-window` | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection |
 | `--journal` | Enable journaling (`full`/`meta`/`off`) |
 | `--journal-dir` | Override journal output directory |
 
 ### Invariants
 
-1. All 4 running commands inject `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` (opt-out via `--no-compact-window`).
+1. All 4 running commands inject `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` (opt-out via `--no-compact-window`).
 2. `--dry-run` and `--trace` use the same code path for all 4 commands — `emit_credential_trace` for `isolated`/`refresh`, `handle_dry_run` for `run`/`ask`. Both emit WYSIWYG output matching actual subprocess arguments.
 3. `run` and `ask` are functionally identical — `ask` is an alias for `run` with distinct help text.
 4. `isolated` and `refresh` run in an isolated temp HOME; session persistence is always suppressed.

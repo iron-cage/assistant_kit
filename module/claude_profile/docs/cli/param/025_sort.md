@@ -64,7 +64,7 @@ sort::renews     → soonest billing renewal first; recommends soonest-renewal a
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Row ordering in quota table |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Row ordering in quota table |
 
 ### Referenced User Stories
 

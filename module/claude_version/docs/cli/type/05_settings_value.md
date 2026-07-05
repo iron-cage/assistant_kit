@@ -36,8 +36,8 @@ clv .settings.set key::special value::NaN        # -> "NaN" (string)
 
 | # | Command | Via Parameter |
 |---|---------|--------------|
-| 1 | [`.settings.set`](../command/settings.md#command--11-settingsset) | `value::` |
-| 2 | [`.config`](../command/config.md#command--13-config) | `value::` |
+| 1 | [`.settings.set`](../command/settings.md#command-11-settingsset) | `value::` |
+| 2 | [`.config`](../command/config.md#command-13-config) | `value::` |
 
 ### Referenced Parameters
 

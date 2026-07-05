@@ -15,7 +15,7 @@ if [[ -z "${NEXTEST_FILTER:-}" ]]; then
   exit 1
 fi
 if [[ "${1:-}" == "--dry-run" ]]; then
-  echo "RUSTFLAGS=\"-D warnings\" cargo nextest run --workspace --all-features \"$NEXTEST_FILTER\""
+  echo "RUSTFLAGS=\"-D warnings\" cargo nextest run --all-features \"$NEXTEST_FILTER\""
   exit 0
 fi
 # Prevent cargo from updating the registry index (deps are pre-cooked in the image).
@@ -33,4 +33,4 @@ export RUSTFLAGS="-D warnings"
 # Pitfall: CARGO_TARGET_DIR env var overrides config.toml target-dir; set it explicitly here
 # because test_only skips the w3 bin_plugin that sets CARGO_TARGET_DIR in the full test path.
 export CARGO_TARGET_DIR="$WORKSPACE_ROOT/target"
-exec cargo nextest run --workspace --all-features "$NEXTEST_FILTER"
+exec cargo nextest run --all-features "$NEXTEST_FILTER"

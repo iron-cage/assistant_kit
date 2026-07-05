@@ -164,6 +164,7 @@ pub fn encode_path( path : &Path ) -> Result< String >
     // - ALL components: underscores → hyphens (lossy encoding, like `/` → `-`)
     // - The decoder uses different heuristics to decide if hyphens should decode to `/` or `_`
     // - For hyphen-prefixed components, decoder converts ALL hyphens back to underscores
+    // BUG-366 ../../../task/claude_storage_core/bug/unverified/366_encode_path_dot_handling_divergence.md — only substitutes '_', never generalizes to all non-alphanumerics (e.g. '.'); also missing the real algorithm's 200-char/hash-fallback
     let component_normalized = component.replace( '_', "-" );
 
     if i > 0

@@ -15,6 +15,7 @@ Integration tests for the `.tail` command. Tests verify zero-parameter defaults,
 | INT-5 | path:: resolves a different directory's project | Project Scope |
 | INT-6 | Fewer entries than requested prints all available | Boundary |
 | INT-7 | Exit code 2 when cwd has no project | Exit Codes |
+| INT-8 | Negative tail:: is rejected with exit code 1 | Input Validation |
 
 ## Test Coverage Summary
 
@@ -24,6 +25,7 @@ Integration tests for the `.tail` command. Tests verify zero-parameter defaults,
 - Project Scope: 1 test (INT-5)
 - Boundary: 1 test (INT-6)
 - Exit Codes: 1 test (INT-7)
+- Input Validation: 1 test (INT-8)
 
 ## Test Cases
 
@@ -131,3 +133,18 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail
 - Error message on stderr indicating the current directory has no project in storage
 - Exit code: 2
 - **Source:** [command/12_tail.md](../../../../docs/cli/command/12_tail.md)
+
+---
+
+### INT-8: Negative tail:: is rejected with exit code 1
+
+**Command:**
+```
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .tail tail::-1
+```
+
+**Expected behavior:**
+- Fixture: same project, `-default_topic` session with 6 known entries (rejection happens before entries are loaded)
+- Error message on stderr: exactly `"tail must be non-negative"`
+- Exit code: 1
+- **Source:** [command/12_tail.md](../../../../docs/cli/command/12_tail.md), [param/25_tail.md](../../../../docs/cli/param/25_tail.md)

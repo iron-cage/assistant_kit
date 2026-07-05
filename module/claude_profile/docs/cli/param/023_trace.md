@@ -64,18 +64,18 @@ trace::1   → print timestamped diagnostic lines to stderr; stdout output uncha
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | File-read and credential diagnostic traces |
-| 2 | [`.accounts`](../command/001_account.md#command--3-accounts) | Per-account read traces |
-| 3 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | File-read and write step traces |
-| 4 | [`.account.save`](../command/001_account.md#command--4-accountsave) | Credential save step traces |
-| 5 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Quota fetch, idle check, subprocess dispatch traces |
-| 6 | [`.account.delete`](../command/001_account.md#command--6-accountdelete) | Credential removal step traces |
-| 7 | [`.account.relogin`](../command/001_account.md#command--12-accountrelogin) | Re-authentication step traces |
-| 8 | [`.account.rotate`](../command/001_account.md#command--13-accountrotate) | Token rotation step traces |
-| 9 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | Per-endpoint call and HTTP status traces |
-| 10 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | Token classification step traces |
-| 11 | [`.paths`](../command/004_paths.md#command--8-paths) | Path resolution step traces |
-| 12 | [`.usage`](../command/006_usage.md#command--9-usage) | Credential reads, API calls, refresh retry traces |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | File-read and credential diagnostic traces |
+| 2 | [`.accounts`](../command/001_account.md#command-3-accounts) | Per-account read traces |
+| 3 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | File-read and write step traces |
+| 4 | [`.account.save`](../command/001_account.md#command-4-accountsave) | Credential save step traces |
+| 5 | [`.account.use`](../command/001_account.md#command-5-accountuse) | Quota fetch, idle check, subprocess dispatch traces |
+| 6 | [`.account.delete`](../command/001_account.md#command-6-accountdelete) | Credential removal step traces |
+| 7 | [`.account.relogin`](../command/001_account.md#command-12-accountrelogin) | Re-authentication step traces |
+| 8 | [`.account.rotate`](../command/001_account.md#command-13-accountrotate-deprecated-feature-038) | Token rotation step traces |
+| 9 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | Per-endpoint call and HTTP status traces |
+| 10 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | Token classification step traces |
+| 11 | [`.paths`](../command/004_paths.md#command-8-paths) | Path resolution step traces |
+| 12 | [`.usage`](../command/006_usage.md#command-9-usage) | Credential reads, API calls, refresh retry traces |
 
 ### Referenced User Stories
 
