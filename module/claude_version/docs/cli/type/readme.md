@@ -1,4 +1,4 @@
-# type/ — clv Type Reference
+# Types
 
 ### Scope
 

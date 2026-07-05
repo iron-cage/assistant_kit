@@ -51,7 +51,7 @@ cols::+host,+role              -> show machine/host tag and user-defined role la
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Column visibility customization for quota table |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Column visibility customization for quota table |
 
 ### Referenced User Stories
 

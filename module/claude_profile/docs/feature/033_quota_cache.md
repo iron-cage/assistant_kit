@@ -5,7 +5,7 @@
 - **Purpose**: Persist last-known quota data in `{name}.json` so that when the usage API is unavailable (429, timeout, network error), the display shows cached values with a staleness indicator instead of dashes.
 - **Responsibility**: Documents the cache write-on-success, read-on-failure mechanism, the `"cache"` key structure in `{name}.json`, staleness display, and touch/model state persistence.
 - **In Scope**: Cache write after every successful `fetch_oauth_usage` call, proactive cache-first read when cache is ≤30 s old (skips live API call entirely — prevents burst-rate flooding), cache read when fetch returns any transient error, staleness indicator in display (`~` prefix on percentages, `(Nm ago)` age suffix), model override and touch state persistence in the same cache object, `{name}.json` read-merge-write (no new files).
-- **Out of Scope**: Cache invalidation by time (stale data is always better than no data), separate cache files (all data goes into existing `{name}.json`), cache for `fetch_oauth_account` identity data (already persisted in `oauthAccount` field).
+- **Out of Scope**: Cache invalidation by time (stale data is always better than no data), separate cache files (all data goes into existing `{name}.json`), cache for `fetch_oauth_account` identity data (`org_created_at` has no persisted slot anywhere in `{name}.json` — tracked as BUG-327, not yet implemented).
 
 ### Design
 
@@ -78,6 +78,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 | BUG-288 🟢 Fixed (Fix A) | Fix A complete: `apply_post_switch_touch` now calls `write_quota_cache` with post-subprocess quota data; subsequent `apply_touch` reads updated quota (`resets_at = Some`) and skips the redundant subprocess. Fix B (`touch_idle` read site in `apply_touch` as defense-in-depth for server-side propagation lag) deferred; `touch_idle=false` write (AC-06) remains dead code pending follow-on task. |
 | BUG-296 🟢 Fixed (TSK-306) | Auth-error guard added: `fetch.rs:235` changes fallback arm to `Err( ref e ) if !e.contains("401") && !e.contains("403")` — auth errors propagate as `Err`; transient errors still fall back to cache; fix = AC-12 |
 | BUG-304 🟢 Fixed (TSK-316) | Three independent cache-read paths reconstructed `OauthUsageData` for utilization; G1 (non-owned) applied no approximation, HTTP-error fallback and `approximate_quota()` each inlined 40–55 lines of duplicated approximation. Fixed: centralized `read_cached_quota()` function |
+| BUG-327 🔴 Open | `QuotaCacheEntry` (`claude_profile_core/src/account.rs:1506-1522`) has no `org_created_at` field — every non-live-fetch branch in `fetch.rs` hardcodes `account: None`, so `~Renews` shows `?` for 15/18 accounts. Root cause: false premise at this doc's own Out of Scope line (identity data was never persisted anywhere, despite this file previously claiming otherwise). Two accounts escape via the fully-decoupled `_renewal_at` manual override. |
 
 ### Features
 
@@ -105,4 +106,4 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 
 | File | Relationship |
 |------|-------------|
-| [schema/002_account_json.md](../schema/002_account_json.md) | Unified `{name}.json` field table — `_quota_cache` subtree owned by this feature |
+| [schema/002_account_json.md](../schema/002_account_json.md) | Unified `{name}.json` field table — `cache` subtree owned by this feature |

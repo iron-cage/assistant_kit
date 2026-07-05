@@ -30,7 +30,7 @@
 //! | 22 | Session Isolation via Subdirectory | US-1..5 | dry-run / env var |
 //! | 23 | Output File Capture | US-1..4 | dry-run / fake claude / error path |
 //! | 24 | Enum Output Validation | US-1..4 | fake claude / parse error |
-//! | 25 | Session Concurrency Gate | US-1..4 | dry-run / env var |
+//! | 25 | Session Concurrency Gate | US-1..6 | dry-run / env var / `$CLR_PROC_DIR` fixture |
 
 #![ cfg( feature = "enabled" ) ]
 
@@ -39,6 +39,11 @@ use cli_binary_test_helpers::{ run_cli, run_cli_with_env, run_dry };
 
 #[ cfg( unix ) ]
 use std::os::unix::fs::PermissionsExt as _;
+
+#[ cfg( unix ) ]
+use cli_binary_test_helpers::{
+  fake_claude_dir, fake_claude_binary_dir, spawn_fake_claude, spawn_print_claude, make_proc_dir,
+};
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -495,5 +500,104 @@ fn us25_4_dry_run_bypasses_gate()
   assert!(
     !stderr.contains( "waiting" ),
     "US25-4: dry-run must not emit any waiting message. Got stderr:\n{stderr}",
+  );
+}
+
+/// US25-5: `--interactive` bypasses the session gate entirely, regardless of active count.
+///
+/// Spawns 20 fake print-mode processes (visible via `$CLR_PROC_DIR`) and sets
+/// `--max-sessions 1` — strict enough to block a print-mode invocation immediately.
+/// An `--interactive` invocation must still proceed without any gate wait, since
+/// interactive invocations skip the gate outright.
+///
+/// Source: `tests/docs/cli/user_story/025_concurrency_gate.md` US-5 / AC-007.
+#[ cfg( unix ) ]
+#[ test ]
+fn us25_5_interactive_bypasses_gate_regardless_of_count()
+{
+  let ( _fake_dir, fake_path ) = fake_claude_binary_dir();
+  let mut background : Vec< std::process::Child > = Vec::new();
+  let mut pids : Vec< u32 > = Vec::new();
+  for _ in 0 .. 20
+  {
+    let child = spawn_print_claude( &fake_path );
+    pids.push( child.id() );
+    background.push( child );
+  }
+  let proc = make_proc_dir( &pids );
+
+  let ( _clr_claude_dir, clr_path ) = fake_claude_dir( "printf 'ok\\n'" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "--interactive", "--max-sessions", "1", "task" ] )
+    .env( "HOME", "/tmp/clr-isolated-home" )
+    .env( "PATH", &clr_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "_CLR_GATE_POLL_SECS", "1" )
+    .output()
+    .expect( "run clr --interactive" );
+
+  for mut child in background { let _ = child.kill(); let _ = child.wait(); }
+
+  assert!(
+    out.status.success(),
+    "US25-5: --interactive must exit 0 despite 20 active print sessions. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "waiting" ) && !stderr.contains( "sessions active" ),
+    "US25-5: --interactive must skip the gate entirely — no wait messages. Got stderr:\n{stderr}"
+  );
+}
+
+/// US25-6: the gate's active-session count excludes interactive sessions.
+///
+/// Spawns 5 fake interactive processes and 1 fake print-mode process (visible via
+/// `$CLR_PROC_DIR`), sets `--max-sessions 2`, and issues a non-interactive (print-mode)
+/// invocation. Only the 1 print-mode fake counts toward the limit — below 2 — so the
+/// invocation proceeds immediately; the 5 interactive fakes are excluded from the count.
+///
+/// Source: `tests/docs/cli/user_story/025_concurrency_gate.md` US-6 / AC-008.
+#[ cfg( unix ) ]
+#[ test ]
+fn us25_6_gate_count_excludes_interactive_sessions()
+{
+  let ( _fake_dir, fake_path ) = fake_claude_binary_dir();
+  let mut background : Vec< std::process::Child > = Vec::new();
+  let mut pids : Vec< u32 > = Vec::new();
+  for _ in 0 .. 5
+  {
+    let child = spawn_fake_claude( &fake_path );
+    pids.push( child.id() );
+    background.push( child );
+  }
+  let print_child = spawn_print_claude( &fake_path );
+  pids.push( print_child.id() );
+  background.push( print_child );
+  let proc = make_proc_dir( &pids );
+
+  let ( _clr_claude_dir, clr_path ) = fake_claude_dir( "printf 'ok\\n'" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "--max-sessions", "2", "task" ] )
+    .env( "HOME", "/tmp/clr-isolated-home" )
+    .env( "PATH", &clr_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "_CLR_GATE_POLL_SECS", "1" )
+    .output()
+    .expect( "run clr (print mode, max-sessions 2)" );
+
+  for mut child in background { let _ = child.kill(); let _ = child.wait(); }
+
+  assert!(
+    out.status.success(),
+    "US25-6: non-interactive invocation must exit 0 (1 print session < limit 2). stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "waiting" ),
+    "US25-6: must not wait — interactive fakes must be excluded from the count. Got stderr:\n{stderr}"
   );
 }

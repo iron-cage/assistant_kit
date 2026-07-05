@@ -40,12 +40,12 @@ pub fn new( s : &str ) -> Result< Self, String >
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Account list with text/json/table |
-| 2 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | Token classification output |
-| 3 | [`.paths`](../command/004_paths.md#command--8-paths) | Path resolution output |
-| 4 | [`.usage`](../command/006_usage.md#command--9-usage) | Multi-account usage output |
-| 5 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Credential metadata output |
-| 6 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | Quota limits output |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Account list with text/json/table |
+| 2 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | Token classification output |
+| 3 | [`.paths`](../command/004_paths.md#command-8-paths) | Path resolution output |
+| 4 | [`.usage`](../command/006_usage.md#command-9-usage) | Multi-account usage output |
+| 5 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Credential metadata output |
+| 6 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | Quota limits output |
 
 ### Referenced User Stories
 

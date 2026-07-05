@@ -27,8 +27,8 @@ expires::0   → line omitted
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Expiry duration line per stored account |
-| 2 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Expiry duration line for live credentials |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Expiry duration line per stored account |
+| 2 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Expiry duration line for live credentials |
 
 ### Referenced User Stories
 

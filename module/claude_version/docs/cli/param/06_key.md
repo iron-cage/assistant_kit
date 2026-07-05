@@ -21,10 +21,10 @@ clv.settings.set key::theme value::dark
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`.settings.get`](../command/settings.md#command--10-settingsget) | (required) | Identifies entry to read |
-| 2 | [`.settings.set`](../command/settings.md#command--11-settingsset) | (required) | Identifies entry to write |
-| 3 | [`.config`](../command/config.md#command--13-config) | — | Absent = show-all mode; present = get/set/unset mode |
-| 4 | [`.params`](../command/params.md#command--14-params) | — | Absent = show-all; present = single-param deep-dive |
+| 1 | [`.settings.get`](../command/settings.md#command-10-settingsget) | (required) | Identifies entry to read |
+| 2 | [`.settings.set`](../command/settings.md#command-11-settingsset) | (required) | Identifies entry to write |
+| 3 | [`.config`](../command/config.md#command-13-config) | — | Absent = show-all mode; present = get/set/unset mode |
+| 4 | [`.params`](../command/params.md#command-14-params) | — | Absent = show-all; present = single-param deep-dive |
 
 ### Referenced Parameter Groups
 

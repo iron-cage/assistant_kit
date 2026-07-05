@@ -7,7 +7,7 @@
 - **In Scope**: `.help`, `.`, empty argv, `.help` anywhere in argv.
 - **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`).
 
-Integration test planning for help output triggers. See [command/readme.md](../../../../docs/cli/command/readme.md#command--1-help) for specification.
+Integration test planning for help output triggers. See [command/readme.md](../../../../docs/cli/command/root.md#command-1-help) for specification.
 
 ## Test Case Index
 
@@ -45,7 +45,7 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 - **When:** `clv .`
 - **Then:** Contains command listing; mentions `.help`.; help output shown
 - **Exit:** 0
-- **Source:** [command/readme.md — .help](../../../../docs/cli/command/readme.md#command--1-help), adapter.rs bare-dot handling
+- **Source:** [command/readme.md — .help](../../../../docs/cli/command/root.md#command-1-help), adapter.rs bare-dot handling
 
 ---
 
@@ -55,7 +55,7 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 - **When:** `clv` (no arguments)
 - **Then:** Same help output as `.help`.; help output shown
 - **Exit:** 0
-- **Source:** [command/readme.md — .help](../../../../docs/cli/command/readme.md#command--1-help), [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+- **Source:** [command/readme.md — .help](../../../../docs/cli/command/root.md#command-1-help), [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
 
 ---
 
@@ -65,7 +65,7 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 - **When:** `clv .help`
 - **Then:** All visible commands listed; usage line present; help listing complete
 - **Exit:** 0
-- **Source:** [command/readme.md — .help](../../../../docs/cli/command/readme.md#command--1-help), [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+- **Source:** [command/readme.md — .help](../../../../docs/cli/command/root.md#command-1-help), [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
 
 ---
 
@@ -85,7 +85,7 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 - **When:** `clv .help`
 - **Then:** stdout is non-empty; stderr is empty
 - **Exit:** 0
-- **Source:** [command/readme.md — .help](../../../../docs/cli/command/readme.md#command--1-help)
+- **Source:** [command/readme.md — .help](../../../../docs/cli/command/root.md#command-1-help)
 
 ---
 
@@ -95,7 +95,7 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 - **When:** `clv .help`
 - **Then:** All visible command names present in stdout output
 - **Exit:** 0
-- **Source:** [command/readme.md — .help](../../../../docs/cli/command/readme.md#command--1-help)
+- **Source:** [command/readme.md — .help](../../../../docs/cli/command/root.md#command-1-help)
 
 ---
 
@@ -105,7 +105,7 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 - **When:** `clv .help`
 - **Then:** The command listing section does not contain a `.help` entry
 - **Exit:** 0
-- **Source:** [command/readme.md — .help](../../../../docs/cli/command/readme.md#command--1-help)
+- **Source:** [command/readme.md — .help](../../../../docs/cli/command/root.md#command-1-help)
 
 ---
 
@@ -115,7 +115,7 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 - **When:** `clv .help` (run 3 times)
 - **Then:** all 3 stdout captures are byte-identical
 - **Exit:** 0
-- **Source:** [command/readme.md — .help](../../../../docs/cli/command/readme.md#command--1-help)
+- **Source:** [command/readme.md — .help](../../../../docs/cli/command/root.md#command-1-help)
 
 ---
 
@@ -125,7 +125,7 @@ Integration test planning for help output triggers. See [command/readme.md](../.
 - **When:** `clv .help`
 - **Then:** stdout contains all 4 section header strings: "Version Management", "Settings & Config", "Process Lifecycle", "Status"
 - **Exit:** 0
-- **Source:** [command/root.md — .help](../../../../docs/cli/command/root.md#command--1-help), [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+- **Source:** [command/root.md — .help](../../../../docs/cli/command/root.md#command-1-help), [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
 
 ---
 

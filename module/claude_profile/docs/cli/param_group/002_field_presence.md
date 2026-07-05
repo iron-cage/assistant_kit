@@ -27,7 +27,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | All 16 field-presence params |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | All 16 field-presence params |
 
 **Typical Patterns:**
 

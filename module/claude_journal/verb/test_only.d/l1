@@ -25,4 +25,4 @@ export RUSTFLAGS="-D warnings"
 # Pitfall: CARGO_TARGET_DIR env var overrides config.toml target-dir; set it explicitly here
 # because test_only doesn't inherit CARGO_TARGET_DIR from the container's plugin environment.
 export CARGO_TARGET_DIR="$WORKSPACE_ROOT/target"
-exec cargo nextest run --workspace --all-features --no-fail-fast -E "$NEXTEST_FILTER"
+exec cargo nextest run --all-features --no-fail-fast "$NEXTEST_FILTER"

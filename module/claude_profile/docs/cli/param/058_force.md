@@ -41,9 +41,9 @@ force::true  → same as force::1
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Bypass G5 ownership guard |
-| 2 | [`.account.delete`](../command/001_account.md#command--6-accountdelete) | Bypass G6 ownership guard |
-| 3 | [`.account.relogin`](../command/001_account.md#command--12-accountrelogin) | Bypass G7 ownership guard |
+| 1 | [`.account.use`](../command/001_account.md#command-5-accountuse) | Bypass G5 ownership guard |
+| 2 | [`.account.delete`](../command/001_account.md#command-6-accountdelete) | Bypass G6 ownership guard |
+| 3 | [`.account.relogin`](../command/001_account.md#command-12-accountrelogin) | Bypass G7 ownership guard |
 | 4 | `.accounts` | Bypass G8 when used with `owner::0` or `owner::USER@MACHINE` (Feature 064) |
 
 ### Referenced User Stories

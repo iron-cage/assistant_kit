@@ -279,9 +279,9 @@ impl ClaudeCommand {
     self
   }
 
-  /// Set auto-compaction window in tokens (default: `Some(200_000)`)
+  /// Set auto-compaction window in tokens (default: `Some(300_000)`)
   ///
-  /// Controls `CLAUDE_CODE_AUTO_COMPACT_WINDOW`. The default `Some(200_000)` prevents
+  /// Controls `CLAUDE_CODE_AUTO_COMPACT_WINDOW`. The default `Some(300_000)` prevents
   /// accidental use of extended 1M windows in automation contexts.
   /// Pass `None` to suppress the env var entirely (defers to model native window).
   ///
