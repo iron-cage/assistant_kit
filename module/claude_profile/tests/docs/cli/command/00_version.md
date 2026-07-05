@@ -35,7 +35,7 @@ Integration test planning for the `--version` and `-V` meta-flags. See [`src/lib
 - **When:** `clp --version`
 - **Then:** stdout contains one non-empty line matching `clp \d+\.\d+\.\d+`
 - **Exit:** 0
-- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag----version---v)
+- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag---version--v)
 
 ---
 
@@ -45,7 +45,7 @@ Integration test planning for the `--version` and `-V` meta-flags. See [`src/lib
 - **When:** `clp -V`
 - **Then:** stdout is byte-identical to output of `clp --version`
 - **Exit:** 0
-- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag----version---v)
+- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag---version--v)
 
 ---
 
@@ -55,7 +55,7 @@ Integration test planning for the `--version` and `-V` meta-flags. See [`src/lib
 - **When:** `clp --version`
 - **Then:** process exits with code 0
 - **Exit:** 0
-- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag----version---v)
+- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag---version--v)
 
 ---
 
@@ -65,7 +65,7 @@ Integration test planning for the `--version` and `-V` meta-flags. See [`src/lib
 - **When:** `clp --version`
 - **Then:** stdout is non-empty; stderr is empty
 - **Exit:** 0
-- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag----version---v)
+- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag---version--v)
 
 ---
 
@@ -75,7 +75,7 @@ Integration test planning for the `--version` and `-V` meta-flags. See [`src/lib
 - **When:** `clp --version` (run 3 times)
 - **Then:** all 3 stdout captures are byte-identical
 - **Exit:** 0
-- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag----version---v)
+- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag---version--v)
 
 ---
 
@@ -85,7 +85,7 @@ Integration test planning for the `--version` and `-V` meta-flags. See [`src/lib
 - **When:** `clp --version --unknown-flag`
 - **Then:** stdout contains the version string; process does not error out
 - **Exit:** 0
-- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag----version---v)
+- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag---version--v)
 
 ---
 
@@ -95,7 +95,7 @@ Integration test planning for the `--version` and `-V` meta-flags. See [`src/lib
 - **When:** `clp --version`
 - **Then:** stdout contains exactly one line and that line is non-empty; no blank lines before or after
 - **Exit:** 0
-- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag----version---v)
+- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag---version--v)
 
 ---
 
@@ -105,4 +105,4 @@ Integration test planning for the `--version` and `-V` meta-flags. See [`src/lib
 - **When:** `clp --version`
 - **Then:** stdout matches the regex `^clp \d+\.\d+\.\d+$`
 - **Exit:** 0
-- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag----version---v)
+- **Source:** [command/003_meta.md — --version](../../../../docs/cli/command/003_meta.md#meta-flag---version--v)

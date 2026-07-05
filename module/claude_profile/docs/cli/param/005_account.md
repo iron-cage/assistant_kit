@@ -27,7 +27,7 @@ account::0   → line omitted
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Active account name line visibility |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Active account name line visibility |
 
 ### Referenced User Stories
 

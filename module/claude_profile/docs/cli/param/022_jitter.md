@@ -29,7 +29,7 @@ jitter::70   → exit 1: "jitter must not exceed interval" (when interval::60)
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Spreads live mode refresh calls across time window |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Spreads live mode refresh calls across time window |
 
 ### Referenced User Stories
 

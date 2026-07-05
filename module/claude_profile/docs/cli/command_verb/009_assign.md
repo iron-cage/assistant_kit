@@ -1,6 +1,6 @@
 # Verb: assign *(REMOVED — Feature 037)*
 
-> **REMOVED.** `.account.assign` was removed as a standalone command in Feature 037. Behavior migrated through `assign::1` (Feature 037) → `active::USER@MACHINE` (Feature 064) → `assignee::USER@MACHINE` (Feature 065). Use `.accounts assignee::USER@MACHINE name::X`. See the [Migration](#migration-feature-037--feature-064--feature-065) section for the full chain.
+> **REMOVED.** `.account.assign` was removed as a standalone command in Feature 037. Behavior migrated through `assign::1` (Feature 037) → `active::USER@MACHINE` (Feature 064) → `assignee::USER@MACHINE` (Feature 065). Use `.accounts assignee::USER@MACHINE name::X`. See the [Migration](#migration-feature-037-feature-064-feature-065) section for the full chain.
 
 Writes the per-machine active marker (`_active_{machine}_{user}`) for a named account — without rotating credentials or modifying the `owner` field. Unlike `use`, `assign` does not touch `~/.claude/.credentials.json`. It is the canonical command for marker assignment only; ownership is managed by `.account.save` (see Feature 036).
 
@@ -71,4 +71,4 @@ Writes the per-machine active marker (`_active_{machine}_{user}`) for a named ac
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.assign`](../command/001_account.md#command--16-accountassign) | Write per-machine active marker without credential rotation (removed in Feature 037; `assign::1` further REMOVED in Feature 064; `active::` further REMOVED in Feature 065 — use `.accounts assignee::USER@MACHINE name::X`) |
+| 1 | [`.account.assign`](../command/001_account.md#command-16-accountassign-removed-feature-037-migration-path-superseded-feature-064065) | Write per-machine active marker without credential rotation (removed in Feature 037; `assign::1` further REMOVED in Feature 064; `active::` further REMOVED in Feature 065 — use `.accounts assignee::USER@MACHINE name::X`) |

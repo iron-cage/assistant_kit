@@ -167,17 +167,17 @@ An account is created by `save`, activated by `use`, and removed by `delete`. Th
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | List all saved accounts |
-| 2 | [`.account.save`](../command/001_account.md#command--4-accountsave) | Save current credentials as named profile |
-| 3 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Switch active account |
-| 4 | [`.account.delete`](../command/001_account.md#command--6-accountdelete) | Delete account from store |
-| 5 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | Show rate-limit utilization |
-| 6 | [`.account.relogin`](../command/001_account.md#command--12-accountrelogin) | Browser re-authentication |
-| 7 | [`.account.rotate`](../command/001_account.md#command--13-accountrotate) | **DEPRECATED** — redirector; use `.usage rotate::1` |
-| 8 | [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) | Set or clear billing renewal override |
-| 9 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | Live identity and subscription diagnostic |
-| 10 | [`.account.assign`](../command/001_account.md#command--16-accountassign) *(removed Feature 037)* | Use `.accounts assignee::USER@MACHINE name::X` (Feature 065) |
-| 11 | [`.account.unclaim`](../command/001_account.md#command--17-accountunclaim) *(removed Feature 037; `unclaim::1` REMOVED Feature 064)* | Use `.accounts owner::0 name::X` (Feature 064) |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | List all saved accounts |
+| 2 | [`.account.save`](../command/001_account.md#command-4-accountsave) | Save current credentials as named profile |
+| 3 | [`.account.use`](../command/001_account.md#command-5-accountuse) | Switch active account |
+| 4 | [`.account.delete`](../command/001_account.md#command-6-accountdelete) | Delete account from store |
+| 5 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | Show rate-limit utilization |
+| 6 | [`.account.relogin`](../command/001_account.md#command-12-accountrelogin) | Browser re-authentication |
+| 7 | [`.account.rotate`](../command/001_account.md#command-13-accountrotate-deprecated-feature-038) | **DEPRECATED** — redirector; use `.usage rotate::1` |
+| 8 | [`.account.renewal`](../command/001_account.md#command-14-accountrenewal) | Set or clear billing renewal override |
+| 9 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | Live identity and subscription diagnostic |
+| 10 | [`.account.assign`](../command/001_account.md#command-16-accountassign-removed-feature-037-migration-path-superseded-feature-064065) *(removed Feature 037)* | Use `.accounts assignee::USER@MACHINE name::X` (Feature 065) |
+| 11 | [`.account.unclaim`](../command/001_account.md#command-17-accountunclaim-removed-feature-037-migration-path-superseded-feature-064) *(removed Feature 037; `unclaim::1` REMOVED Feature 064)* | Use `.accounts owner::0 name::X` (Feature 064) |
 
 ### Referenced Parameters
 

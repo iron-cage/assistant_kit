@@ -1,6 +1,6 @@
 # Test: `.help`
 
-Integration test planning for the `.help` command. See [command/namespace.md](../../../../docs/cli/command/003_meta.md#command--2-help) for specification.
+Integration test planning for the `.help` command. See [command/namespace.md](../../../../docs/cli/command/003_meta.md#command-2-help) for specification.
 
 ### Test Case Index
 
@@ -33,7 +33,7 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 - **When:** `clp .help`
 - **Then:** stdout contains all 13 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.renewal`, `.account.inspect`, `.credentials.status`, `.token.status`, `.paths`, `.usage`, `.model`); does NOT contain `.account.list`, `.account.status`, `.account.assign`, `.account.unclaim`, or `.account.rotate` (deprecated redirector)
 - **Exit:** 0
-- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command--2-help)
+- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command-2-help)
 
 ---
 
@@ -43,7 +43,7 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 - **When:** `clp .help`
 - **Then:** bare `.` is absent from the Commands section; `.help` itself does not appear as a listed command; exactly 16 entries present
 - **Exit:** 0
-- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command--2-help)
+- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command-2-help)
 
 ---
 
@@ -53,7 +53,7 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 - **When:** `clp .help`
 - **Then:** stdout contains `Usage: clp <command>`
 - **Exit:** 0
-- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command--2-help)
+- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command-2-help)
 
 ---
 
@@ -63,7 +63,7 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 - **When:** `clp .help`
 - **Then:** process exits with code 0; stdout is non-empty; stderr is empty
 - **Exit:** 0
-- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command--2-help)
+- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command-2-help)
 
 ---
 
@@ -73,7 +73,7 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 - **When:** `clp .help`
 - **Then:** stdout contains both "Account management" and "Status & info" as group headers; commands appear indented under each group
 - **Exit:** 0
-- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command--2-help)
+- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command-2-help)
 
 ---
 
@@ -83,7 +83,7 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 - **When:** `clp .help`
 - **Then:** stdout does NOT contain `[name::EMAIL]`, does NOT contain `[format::text|json]`, does NOT contain bracket-enclosed parameter syntax in command rows; the Commands section shows names and one-line descriptions only
 - **Exit:** 0
-- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command--2-help)
+- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command-2-help)
 
 ---
 
@@ -93,7 +93,7 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 - **When:** `clp .help`
 - **Then:** stdout contains "Options:" followed by "format::text|json", "dry::bool", and "name::EMAIL" on separate lines
 - **Exit:** 0
-- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command--2-help)
+- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command-2-help)
 
 ---
 
@@ -103,4 +103,4 @@ Integration test planning for the `.help` command. See [command/namespace.md](..
 - **When:** `clp .help` (run 3 times)
 - **Then:** all 3 stdout captures are byte-identical
 - **Exit:** 0
-- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command--2-help)
+- **Source:** [commands.md — .help](../../../../docs/cli/command/003_meta.md#command-2-help)

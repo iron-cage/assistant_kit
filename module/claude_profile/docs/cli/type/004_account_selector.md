@@ -46,12 +46,12 @@ input contains '@'?
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Optional — account list display |
-| 2 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Activates selected account |
-| 3 | [`.account.delete`](../command/001_account.md#command--6-accountdelete) | Removes selected account |
-| 4 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | Optional — limits for selected account |
-| 5 | [`.account.relogin`](../command/001_account.md#command--12-accountrelogin) | Refreshes credentials for selected account |
-| 6 | [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) | Schedules renewal for selected account |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Optional — account list display |
+| 2 | [`.account.use`](../command/001_account.md#command-5-accountuse) | Activates selected account |
+| 3 | [`.account.delete`](../command/001_account.md#command-6-accountdelete) | Removes selected account |
+| 4 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | Optional — limits for selected account |
+| 5 | [`.account.relogin`](../command/001_account.md#command-12-accountrelogin) | Refreshes credentials for selected account |
+| 6 | [`.account.renewal`](../command/001_account.md#command-14-accountrenewal) | Schedules renewal for selected account |
 
 ### Referenced User Stories
 

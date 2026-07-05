@@ -1,4 +1,4 @@
-# CLI User Stories
+# User Stories
 
 ### Scope
 
