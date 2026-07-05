@@ -310,6 +310,17 @@ Integration test planning for the `.version.guard` command. See [command/readme.
 
 ---
 
+### IT-24: `format::json interval::N` watch mode → raw JSON passthrough, no dot separator
+
+- **Given:** installed version matches stored preference (guard reports "ok" match)
+- **When:** `timeout 2 clv .version.guard interval::1 format::json`
+- **Then:** each stderr line is the check result verbatim (starts with `{`, ends with `}`, contains `"status":"ok"`); no ` · ` text-format separator appears — the compact dot-separated wrapper documented in `docs/cli/command/version.md § Watch Mode Log Format` applies only to `format::text`
+- **Bug:** ok-path branch discriminator compared raw output against the literal string `"ok"`, which `format::json` never produces — every JSON iteration fell into the "detailed" branch and got embedded whole inside the dot-separated line
+- **Exit:** 0
+- **Source:** [commands/version.rs — version_guard_routine watch loop, format-aware ok-path branch](../../../../src/commands/version.rs)
+
+---
+
 ### Source Functions
 
 | Function | File |

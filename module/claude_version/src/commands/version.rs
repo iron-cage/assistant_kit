@@ -258,14 +258,23 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
     {
       Ok( out ) =>
       {
-        let status = out.content.trim_end();
-        if status == "ok"
+        match opts.format
         {
-          eprintln!( "{date} · {time} · ok · next check in {next_check}" );
-        }
-        else
-        {
-          eprintln!( "{date} · {time} · ok · {status} · next check in {next_check}" );
+          // JSON consumers get the check result verbatim, one line per iteration —
+          // the compact dot-separated wrapper is a text-format convention only.
+          OutputFormat::Json => eprintln!( "{}", out.content.trim_end() ),
+          OutputFormat::Text =>
+          {
+            let status = out.content.trim_end();
+            if status == "ok"
+            {
+              eprintln!( "{date} · {time} · ok · next check in {next_check}" );
+            }
+            else
+            {
+              eprintln!( "{date} · {time} · ok · {status} · next check in {next_check}" );
+            }
+          }
         }
         if dry { return Ok( out ); }
       }

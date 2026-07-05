@@ -16,6 +16,7 @@
 //! | 415 | watch loop continues after install error (`bug_reproducer`) | P | 124 |
 //! | 416 | `version::latest dry::1` override → "no version pin to guard" | P | 0 |
 //! | 417 | `dry::1 v::0` → output shorter than `v::1` | P | 0 |
+//! | 418 | `format::json` watch mode → raw JSON passthrough, no dot separator | P | 124 |
 
 use tempfile::TempDir;
 
@@ -396,4 +397,79 @@ fn tc417_guard_v0_shorter_than_v1()
     "v::0 output ({} chars) must be shorter than v::1 ({} chars): v0={s0:?} v1={s1:?}",
     s0.len(), s1.len()
   );
+}
+
+// TC-418: format::json watch mode → raw JSON passthrough, no dot-separated wrapper
+//
+// # Root Cause
+// The ok-path branch discriminator in the watch loop compared the raw check
+// output against the literal string "ok" to decide bare-vs-detailed text
+// formatting. Under `format::json`, `check_installed_guard()` never emits
+// that literal string — it emits a JSON object — so the comparison always
+// fell through to the "detailed" branch and embedded the whole JSON blob
+// inside the compact dot-separated line, corrupting it for JSON consumers.
+//
+// # Why Not Caught
+// No test exercised `format::json` combined with watch mode (`interval::N>0`);
+// the Test Matrix only covered format::text at both verbosity levels.
+//
+// # Fix Applied
+// The ok-path branch now matches on `opts.format` first: `OutputFormat::Json`
+// prints the check result verbatim (one JSON line per iteration); only
+// `OutputFormat::Text` uses the bare-vs-detailed dot-separated wrapper.
+//
+// # Prevention
+// Fakes an installed version via the `~/.local/bin/claude` symlink
+// convention (`get_version_from_symlink`) so the guard reports a match
+// ("ok") without any network/install activity, then confirms the stderr
+// line is a well-formed JSON object with no ` · ` text-format separator.
+//
+// # Pitfall
+// `format::text` (the default) must still show the compact dot-separated
+// wrapper — this test only asserts on the `format::json` case; the text
+// path is covered separately by TC-415/417 and IT-20.
+#[ test ]
+fn tc418_watch_mode_json_format_passthrough()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Fake an installed version via symlink so the guard hits the "match" (ok)
+  // path deterministically, without any real install/network activity.
+  let local_bin = dir.path().join( ".local" ).join( "bin" );
+  std::fs::create_dir_all( &local_bin ).unwrap();
+  std::fs::write( local_bin.join( "9.9.9" ), "" ).unwrap();
+  std::os::unix::fs::symlink( "9.9.9", local_bin.join( "claude" ) ).unwrap();
+
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  let settings_json = r#"{"preferredVersionSpec":"9.9.9","preferredVersionResolved":"9.9.9"}"#;
+  std::fs::write( claude_dir.join( "settings.json" ), settings_json ).unwrap();
+
+  let bin = env!( "CARGO_BIN_EXE_claude_version" );
+  let out = std::process::Command::new( "/usr/bin/timeout" )
+    .args( [ "2", bin, ".version.guard", "interval::1", "format::json" ] )
+    .env( "HOME", home )
+    .output()
+    .expect( "timeout command failed to launch" );
+
+  let err = String::from_utf8_lossy( &out.stderr );
+  let lines : Vec< &str > = err.lines().filter( | l | !l.trim().is_empty() ).collect();
+  assert!( !lines.is_empty(), "expected at least one watch-mode log line; stderr: {err}" );
+
+  for line in &lines
+  {
+    assert!(
+      !line.contains( " · " ),
+      "format::json watch-mode line must not contain the text-format dot separator: {line:?}"
+    );
+    assert!(
+      line.starts_with( '{' ) && line.ends_with( '}' ),
+      "format::json watch-mode line must be a raw JSON object, got: {line:?}"
+    );
+    assert!(
+      line.contains( "\"status\":\"ok\"" ),
+      "expected a matched (ok) status in the JSON passthrough line, got: {line:?}"
+    );
+  }
 }

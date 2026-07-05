@@ -233,14 +233,16 @@ In watch mode, each check emits one line to stderr:
 | `{date}` | `YYYY-MM-DD`, UTC |
 | `{time}` | `HH:MM:SS`, UTC |
 | `ok` / `error` | Outcome of this check |
-| `{detail}` | Check result text (e.g. `2.1.197 matches preferred v2.1.197`); omitted when the result is the bare terse `ok` (`v::0`) |
+| `{detail}` | Check result text (e.g. `version 2.1.197 matches preferred v2.1.197`); omitted when the result is the bare terse `ok` (`v::0`) |
 | `{duration}` | The `interval::` value formatted as `Ns` or `Nm` |
 
 Example:
 
 ```
-2026-07-05 · 16:58:29 · ok · 2.1.197 matches preferred v2.1.197 · next check in 30s
+2026-07-05 · 16:58:29 · ok · version 2.1.197 matches preferred v2.1.197 · next check in 30s
 ```
+
+This compact format applies to `format::text` (the default). Under `format::json`, watch mode instead prints each iteration's check result verbatim as one JSON line, without the dot-separated wrapper — e.g. `{"status":"ok","installed":"2.1.197","preferred":"v2.1.197"}` — so JSON consumers get parseable output rather than a JSON blob embedded inside `{detail}`.
 
 **Examples:**
 
