@@ -18,5 +18,5 @@
 | 005_cli_design.md | FT- test cases for 5-phase unilang pipeline and exit codes | ✅ |
 | 006_config_command.md | FT- test cases for `.config` command: show-all/get/set/unset/resolution/catalog | ✅ |
 | 007_params_command.md | FT- test cases for `.params` command: show-all/single/kind-filter/format/errors | ✅ |
-| 008_runtime_file_discovery.md | FT- test cases for `.runtime_files` command: path output, format, HOME dependency | ⏳ |
+| 008_runtime_file_discovery.md | FT- test cases for `.runtime_files` command: path output, format, HOME dependency | ✅ |
 | procedure.md | Workflow for creating and updating feature test specs | ✅ |

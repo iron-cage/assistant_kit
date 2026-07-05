@@ -12,7 +12,7 @@
 |------|---------------|
 | `build` | Compile project artifacts via `cargo build`. |
 | `test` | Dispatcher: run full test suite; delegates to `test.d/` layer by `VERB_LAYER`. |
-| `test.d/` | Layer directory: `l0` (host-native), `l1` (container-internal). |
+| `test.d/` | Layer directory: `l0` (disabled), `l1` (container-internal). |
 | `test_only` | Dispatcher: run a single test by nextest filter; delegates via `NEXTEST_FILTER`. |
 | `test_only.d/` | Layer directory: `l1` (container-internal targeted run). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |

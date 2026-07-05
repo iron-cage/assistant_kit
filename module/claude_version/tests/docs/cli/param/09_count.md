@@ -113,9 +113,10 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 
 - **Given:** clean environment
 - **When:** `clv .version.history count::`
-- **Then:** exit code 1.
+- **Then:** exit code 1; error message mentions `count::`.
 - **Exit:** 1
-- **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+- **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md); [count_ec9_empty_value_exits_1](../../../cli/count_param_test.rs)
+- **Note:** Bug-driven expansion: this case asserted a confident outcome with no test anywhere exercising it (verified correct against `validate_non_neg_int()` in `src/adapter.rs`, which rejects unparseable input including empty strings before any command routine runs, but had zero regression protection until now). Gap Class — a spec case whose documented outcome is not backed by any test exercising that exact scenario, whether the case hedges between outcomes, confidently asserts an outcome contradicted by real behavior, confidently asserts an outcome that happens to be correct but unverified, or is missing from the spec's index entirely despite a passing implementation test existing for it. In every variant, the spec's authoritative record cannot be trusted to catch a future regression in that exact scenario. Source: BUG-006.
 
 ---
 
@@ -218,3 +219,4 @@ Edge case coverage for the `count::` parameter. See [param/readme.md](../../../.
 | `count_ec13_count_1_v0_exactly_one_line` | `tests/cli/count_param_test.rs` |
 | `count_ec14_count_0_json_empty_array` | `tests/cli/count_param_test.rs` |
 | `count_ec15_v_abc_type_mismatch_exits_1` | `tests/cli/count_param_test.rs` |
+| `count_ec9_empty_value_exits_1` | `tests/cli/count_param_test.rs` |
