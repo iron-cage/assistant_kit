@@ -6,7 +6,7 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `algorithm/` | Decision algorithm references (model selection, quota classification, sort, approximation) | [algorithm/readme.md](../algorithm/readme.md) | 9 |
+| `algorithm/` | Decision algorithm references (model selection, quota classification, sort, approximation) | [algorithm/readme.md](../algorithm/readme.md) | 10 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](../cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 8 |
 | `cli/command_noun/` | Domain noun documentation (account, token, credentials) | [cli/command_noun/readme.md](../cli/command_noun/readme.md) | 3 |
@@ -23,7 +23,7 @@
 | `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 8 |
 | `state_machine/` | Domain lifecycle state machines (account, token, session window, ownership, quota measurement) | [state_machine/readme.md](../state_machine/readme.md) | 5 |
 | `subprocess/` | Isolated subprocess contract, credential write-back protocol, and invocation sites | [subprocess/readme.md](../subprocess/readme.md) | 5 |
-| `tests/docs/algorithm/` | Per-algorithm AC-N correctness test documentation | [tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) | 9 |
+| `tests/docs/algorithm/` | Per-algorithm AC-N correctness test documentation | [tests/docs/algorithm/readme.md](../../tests/docs/algorithm/readme.md) | 10 |
 | `tests/docs/cli/command/` | Per-command integration test case documentation | [tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 21 |
 | `tests/docs/cli/command_noun/` | Per-noun test case documentation | [tests/docs/cli/command_noun/readme.md](../../tests/docs/cli/command_noun/readme.md) | 3 |
 | `tests/docs/cli/command_verb/` | Per-verb test case documentation | [tests/docs/cli/command_verb/readme.md](../../tests/docs/cli/command_verb/readme.md) | 11 |
@@ -228,6 +228,7 @@
 | algorithm | 007 | Sort Strategies | [algorithm/007_sort_strategies.md](../algorithm/007_sort_strategies.md) |
 | algorithm | 008 | Subprocess Effort Resolution | [algorithm/008_subprocess_effort_resolution.md](../algorithm/008_subprocess_effort_resolution.md) |
 | algorithm | 009 | OAuth Usage Response Dual-Source Parsing | [algorithm/009_oauth_usage_response_migration.md](../algorithm/009_oauth_usage_response_migration.md) |
+| algorithm | 010 | Renewal Date Computation | [algorithm/010_renewal_date_computation.md](../algorithm/010_renewal_date_computation.md) |
 | subprocess | 001 | `run_isolated()` Contract | [subprocess/001_run_isolated_contract.md](../subprocess/001_run_isolated_contract.md) |
 | subprocess | 002 | Credential Write-Back Protocol | [subprocess/002_credential_writeback.md](../subprocess/002_credential_writeback.md) |
 | subprocess | 003 | Token Refresh Invocation | [subprocess/003_token_refresh_invocation.md](../subprocess/003_token_refresh_invocation.md) |

@@ -278,3 +278,4 @@ Next (renew)     · alice@example.com   · sonnet/high · in 3h 47m $ren
 | [algorithm/005_next_account_selection.md](../algorithm/005_next_account_selection.md) | Positive selection — 3-step algorithm producing the `Next` footer recommendation |
 | [algorithm/007_sort_strategies.md](../algorithm/007_sort_strategies.md) | `sort::` strategies and `prefer_weekly` computation |
 | [algorithm/009_oauth_usage_response_migration.md](../algorithm/009_oauth_usage_response_migration.md) | API response format change (2026-06-25) — `seven_day_sonnet` now always `null`; dual-source parsing recovery algorithm |
+| [algorithm/010_renewal_date_computation.md](../algorithm/010_renewal_date_computation.md) | `~Renews` column source — exact/estimate renewal computation consumed via `renews_label()`; AC-27/AC-28/AC-29 |
