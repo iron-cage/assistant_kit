@@ -33,6 +33,7 @@ All accounts are partitioned into four status groups before any sort strategy ru
 - **`sort::renew` secondary key** is governed by `prefer::`: `prefer::opus` → 7d Left %; `prefer::sonnet` → 7d(Son) Left %; `prefer::any` → min(7d, Son) Left %.
 - **`sort::renews`**: accounts without subscription data (`renewal_at` absent and no `org_created_at`) are placed last.
 - **Determinism** (Fix(BUG-259)): all strategies use account name as final tiebreaker.
+- **Cross-invocation stability** <!-- BUG-330 ../../../../task/claude_profile/bug/330_ordinary_invocation_row_order_stability_undocumented.md — no stability guarantee documented for ordinary invocations; only live::1 (AC-10) is covered -->: the name tiebreaker above is a within-invocation determinism guarantee for tied sort keys given fixed input data. It does NOT guarantee that row order or the `✓` (`is_current`) flag placement stays the same across two successive ordinary (non-`live::1`) invocations — quota data can shift slightly between fetches, and `is_current` is resolved independently via live-token comparison on every call. Only `live::1` carries an explicit cross-cycle stability guarantee (AC-10, `020_usage_sort_strategies.md`).
 
 **Recommendation (footer):**
 

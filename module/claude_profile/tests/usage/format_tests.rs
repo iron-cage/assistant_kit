@@ -567,6 +567,51 @@ fn rl_estimate_from_org_created_at()
   );
 }
 
+/// Estimate branch (`org_created_at`-derived billing day) must ALSO clamp the day-of-month —
+/// a day-31 anchor evaluated while the current month is April (30 days) must land on
+/// April 30, not overflow to May 1. This branch computes its own (year, month)
+/// independently of the Exact branch, so it needs its own clamp call; unclamped, this
+/// case computes May 1 instead (`date_to_unix`'s day-index 30 overflows a 30-day month).
+///
+/// # Root Cause
+/// The Estimate branch computes its own `(renewal_year, renewal_month)` independently
+/// of the Exact branch and passed the raw `billing_day` straight into `date_to_unix()`
+/// unclamped — a day-31 billing anchor projected onto April (30 days) silently
+/// overflowed into May 1st, the same root defect as the Exact branch's clamping gap,
+/// just at a second, independent call site.
+///
+/// # Why Not Caught
+/// The only pre-existing Estimate-branch test (`rl_estimate_from_org_created_at`) uses
+/// billing day 15, which never reaches a month-length boundary. This gap was
+/// originally catalogued in `docs/algorithm/010_renewal_date_computation.md` as a
+/// non-blocking "Caveat" rather than a defect, and consequently was never given test
+/// coverage until this fix.
+///
+/// # Fix Applied
+/// Added `.min( days_in_month( renewal_year, renewal_month ) )` to the Estimate
+/// branch's `date_to_unix()` call — the identical clamping pattern used by the Exact
+/// branch, applied at its own independent call site.
+///
+/// # Prevention
+/// Empirically confirmed red before the fix: reverting only this clamp and re-running
+/// produced `assertion left == right failed: ... left: (5, 1) / right: (4, 30)` —
+/// confirming the test genuinely discriminates clamped vs. unclamped behavior.
+///
+/// # Pitfall
+/// Clamping the Exact branch alone is insufficient — the Estimate branch calls
+/// `date_to_unix()` at its own separate call site and needs its own clamp; fixing one
+/// branch and assuming the other is "probably fine by extension" is exactly the
+/// mistake that let this second instance go uncatalogued as a mere caveat.
+#[ doc = "bug_reproducer(BUG-329)" ]
+#[ test ]
+fn rl_estimate_clamps_day31_billing_anchor_at_shorter_month_end()
+{
+  let now_secs    = 1_776_211_200_u64; // 2026-04-15T00:00:00Z
+  let result      = renewal_secs( None, Some( "2020-01-31T00:00:00Z" ), now_secs ).unwrap();
+  let ( _, m, d ) = unix_to_date( now_secs + result.0 );
+  assert_eq!( ( m, d ), ( 4, 30 ), "must clamp billing day 31 to Apr 30, got {m:02}-{d}" );
+}
+
 /// FT-17 variant — `renews_label` auto-advance: past `_renewal_at` advanced monthly.
 ///
 /// `renewal_at = "2020-01-01T00:00:00Z"` (unix `1_577_836_800`);
@@ -604,6 +649,30 @@ fn rl_absent_returns_question()
 
 /// Single 30-day auto-advance step must land on the SAME day-of-month (15), not one
 /// day short. Isolates the exact off-by-one mechanism.
+///
+/// # Root Cause
+/// The exact branch's auto-advance loop originally added a flat `2_592_000`s (30-day)
+/// increment per iteration instead of calendar-correct month-stepping. Every calendar
+/// month except April/June/September/November (30 days exactly) is either 31 or 28/29
+/// days, so a flat 30-day step drifts the day-of-month by ±1-3 days per iteration.
+///
+/// # Why Not Caught
+/// `rl_auto_advance_past_renewal_at` (the only prior auto-advance test) asserts a loose
+/// `≤30d` bound and never inspects the resulting day-of-month.
+///
+/// # Fix Applied
+/// Replaced the flat-step loop with `unix_to_date()`/`date_to_unix()` calendar
+/// decomposition, advancing month-by-month and re-encoding the original day-of-month
+/// each step.
+///
+/// # Prevention
+/// This test isolates a single iteration with no month-length boundary crossed —
+/// regressing to a flat-step increment fails this test immediately (day 14, not 15).
+///
+/// # Pitfall
+/// This test alone doesn't cover day-of-month clamping (anchor day 15 never approaches
+/// a month-length boundary) — see `rl_auto_advance_clamps_day_31_anchor_at_shorter_month_end`
+/// for that coverage.
 #[ doc = "bug_reproducer(BUG-329)" ]
 #[ test ]
 fn rl_auto_advance_single_step_preserves_day_across_31_day_month()
@@ -616,6 +685,30 @@ fn rl_auto_advance_single_step_preserves_day_across_31_day_month()
 
 /// ~120 auto-advance steps over 10 years must still land on the original day-of-month
 /// (1), not an accumulated drift.
+///
+/// # Root Cause
+/// Same flat `2_592_000`s-per-step defect as the single-step case, accumulated over
+/// ~120 iterations (10 years) — confirms the drift is real accumulated error, not a
+/// single rounding artifact that self-corrects.
+///
+/// # Why Not Caught
+/// `rl_auto_advance_past_renewal_at` covers a ~10-year span too, but only asserts a
+/// loose `≤30d` bound — insufficient to detect day-of-month drift regardless of
+/// magnitude.
+///
+/// # Fix Applied
+/// Same calendar-stepping fix as the single-step test — the accumulation self-corrects
+/// once each step lands on the correct calendar month rather than +30 flat days.
+///
+/// # Prevention
+/// Strict day-of-month equality (day 1, present in every month) across ~120 steps —
+/// any residual per-step drift compounds into an easily observable multi-day mismatch
+/// by year 10.
+///
+/// # Pitfall
+/// Day 1 never crosses a month-length boundary, so this test cannot detect a missing
+/// clamp — it only proves calendar-stepping arithmetic is correct, not that clamping
+/// exists.
 #[ doc = "bug_reproducer(BUG-329)" ]
 #[ test ]
 fn rl_auto_advance_multi_year_preserves_day_of_month()
@@ -628,26 +721,79 @@ fn rl_auto_advance_multi_year_preserves_day_of_month()
 
 /// Direct regression port of BUG-329's own filed MRE. A day-31 anchor advanced past
 /// 2026-03-02 must clamp through February (28 days) and land on March 31 — not roll
-/// over to April 1 as the unfixed flat-step implementation does. NEW now_secs (per
-/// FC-6 Round 7/8 fix): 2026-03-02T00:00:00Z.
+/// over to April 1 as the unfixed flat-step implementation does. `now_secs` is pinned
+/// to 2026-03-02T00:00:00Z.
+///
+/// # Root Cause
+/// Two independent defects compound here: (1) the flat 30-day step (see the
+/// single-step test), and (2) even after switching to calendar-stepping, the
+/// day-of-month must be clamped to `min(orig_day, days_in_month(target_year,
+/// target_month))` — an unclamped day-31 anchor advancing into a 28-day February
+/// silently overflows `date_to_unix()`'s day-index arithmetic into March.
+///
+/// # Why Not Caught
+/// No existing test anchored on a day-of-month value (29/30/31) absent from every
+/// month — every pre-existing test used a "safe" anchor day (1 or 15) that can never
+/// expose the clamping requirement.
+///
+/// # Fix Applied
+/// Added `.min( days_in_month( cur_year, cur_month ) )` to the exact branch's
+/// `date_to_unix()` call, clamping the preserved day-of-month at every month-stepping
+/// iteration.
+///
+/// # Prevention
+/// Direct regression port of BUG-329's own filed MRE — day-31 anchor advancing through
+/// February must land on March 31, not roll over to April 1.
+///
+/// # Pitfall
+/// `now_secs` is pinned just past Feb 28 (2026-03-02), not some later "rounder" date —
+/// an unclamped overflow lands on Mar 3, and any `now_secs` at or after Mar 3 lets the
+/// loop take one extra iteration and self-correct to the SAME Mar 31 the clamped path
+/// reaches, silently passing a fix that omits clamping entirely.
 #[ doc = "bug_reproducer(BUG-329)" ]
 #[ test ]
 fn rl_auto_advance_clamps_day_31_anchor_at_shorter_month_end()
 {
-  let now_secs    = 1_772_409_600_u64; // 2026-03-02T00:00:00Z (NEW value)
+  let now_secs    = 1_772_409_600_u64; // 2026-03-02T00:00:00Z
   let result      = renewal_secs( Some( "2026-01-31T21:00:00Z" ), None, now_secs ).unwrap();
   let ( y, m, d ) = unix_to_date( now_secs + result.0 );
   assert_eq!( ( y, m, d ), ( 2026, 3, 31 ), "must clamp through Feb and land on Mar 31, got {y}-{m:02}-{d:02}" );
 }
 
 /// A day-29 anchor (valid only in leap-year Februaries) must clamp to day 28 advancing
-/// through a common-year February, then recover to day 29 the following March. NEW
-/// now_secs (per FC-6 Round 7/8 fix): 2025-02-28T12:00:00Z.
+/// through a common-year February, then recover to day 29 the following March.
+/// `now_secs` is pinned to 2025-02-28T12:00:00Z.
+///
+/// # Root Cause
+/// Same missing-clamp defect as the day-31 case, exercised on the day-29 boundary and
+/// extended to verify recovery: a day-29 anchor must clamp to day 28 in a common-year
+/// February, then recover to day 29 the following March once the target month is long
+/// enough again.
+///
+/// # Why Not Caught
+/// BUG-329's Prevention item 2 explicitly calls for a "full advance cycle" (clamp,
+/// then recover) test; none existed before this fix.
+///
+/// # Fix Applied
+/// Same `.min( days_in_month(...) )` clamp as the day-31 case — clamping is
+/// re-evaluated fresh at every iteration, so a clamped February is followed by an
+/// unclamped (recovered) March automatically.
+///
+/// # Prevention
+/// Confirms clamping doesn't permanently truncate the anchor day — a naive
+/// "clamp once and keep the clamped value" implementation would fail this test's
+/// March recovery assertion.
+///
+/// # Pitfall
+/// `now_secs` is pinned to Feb 28 noon, not early March — an unclamped day 29 overflows
+/// common-year Feb 28 by exactly 1 day to Mar 1, and any `now_secs` at or after Mar 1
+/// lets the loop self-correct to the SAME Mar 29 the clamped path reaches, silently
+/// passing a fix that omits clamping entirely.
 #[ doc = "bug_reproducer(BUG-329)" ]
 #[ test ]
 fn rl_auto_advance_day29_clamps_in_common_february_then_recovers()
 {
-  let now_secs    = 1_740_744_000_u64; // 2025-02-28T12:00:00Z (NEW value), after Feb 2025 (28d)
+  let now_secs    = 1_740_744_000_u64; // 2025-02-28T12:00:00Z, after Feb 2025 (28d)
   let result      = renewal_secs( Some( "2024-01-29T00:00:00Z" ), None, now_secs ).unwrap();
   let ( _, m, d ) = unix_to_date( now_secs + result.0 );
   assert_eq!( ( m, d ), ( 3, 29 ), "must recover to day 29 in March after clamping Feb to 28, got {m:02}-{d}" );

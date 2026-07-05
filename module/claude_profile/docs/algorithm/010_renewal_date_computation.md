@@ -9,7 +9,7 @@
 
 ### Abstract
 
-`renewal_secs()` answers one question: how many seconds remain until the next billing renewal, and is that figure exact or an estimate? Two mutually-exclusive input branches produce the answer, selected by priority — a manually-set `_renewal_at` timestamp (exact) takes precedence over an `org_created_at`-derived billing day (estimate). Both branches are intended to preserve the same day-of-month across renewal cycles; only the estimate branch currently does so correctly, using calendar arithmetic (`date_to_unix`/`unix_to_date`). The exact branch's auto-advance step instead adds a flat 30-day (`2_592_000`s) increment per iteration, which drifts the day-of-month on any month that is not exactly 30 days long — an open defect (BUG-329).
+`renewal_secs()` answers one question: how many seconds remain until the next billing renewal, and is that figure exact or an estimate? Two mutually-exclusive input branches produce the answer, selected by priority — a manually-set `_renewal_at` timestamp (exact) takes precedence over an `org_created_at`-derived billing day (estimate). Both branches preserve the same day-of-month across renewal cycles using calendar arithmetic (`date_to_unix`/`unix_to_date`), clamping the day-of-month to each target month's actual length via a shared `days_in_month()` helper. Prior to the BUG-329 fix, the exact branch instead added a flat 30-day (`2_592_000`s) increment per iteration, drifting the day-of-month on any month not exactly 30 days long; separately, neither branch clamped the day-of-month at month-length boundaries, so a day-29/30/31 anchor could silently overflow into the following month. Both are now fixed.
 
 ### Algorithm
 
@@ -29,21 +29,24 @@ Returns `(seconds_until_renewal, is_estimate)`. `is_estimate = false` for the ex
 
 The exact branch is checked first and returns unconditionally once entered — an estimate is never computed when an exact `_renewal_at` is present (feature/030 AC-10 context).
 
-#### Exact Branch (`format.rs:134-138`)
+#### Exact Branch (`format.rs:151-162`)
 
 ```
 if let Some( renewal_at ) = renewal_at_opt:
-  ts = parse_iso_secs( renewal_at )?          // ISO-8601 UTC -> Unix seconds
+  ts = parse_iso_secs( renewal_at )?                    // ISO-8601 UTC -> Unix seconds
+  ( cur_year, cur_month, orig_day ) = unix_to_date( ts )
   while ts < now_secs:
-    ts = ts.saturating_add( 2_592_000 )       // flat 30-day step
+    cur_month += 1
+    if cur_month > 12: cur_month = 1; cur_year += 1
+    ts = date_to_unix( cur_year, cur_month, orig_day.min( days_in_month( cur_year, cur_month ) ) )
   return Some( ( ts.saturating_sub( now_secs ), false ) )
 ```
 
-When `_renewal_at` is a past timestamp, the loop advances it in fixed 2,592,000-second (30-day) increments until it lands in the future. Intended behavior (feature/030 AC-10): the auto-advanced timestamp preserves the same day-of-month as the original `_renewal_at`.
+When `_renewal_at` is a past timestamp, the loop decomposes it once via `unix_to_date()`, then advances month-by-month (carrying year on December→January wraparound), clamping the preserved day-of-month to `min(orig_day, days_in_month(cur_year, cur_month))` at each step before re-encoding via `date_to_unix()`. This satisfies feature/030 AC-10: the auto-advanced timestamp preserves the same day-of-month as the original `_renewal_at`, except where the target month is shorter than the original day — there, the clamp lands on that month's last valid day instead of overflowing into the next month.
 
-**Known Defect (BUG-329, open):** the flat 30-day step does not preserve day-of-month across months whose length is not exactly 30 days (Jan/Mar/May/Jul/Aug/Oct/Dec = 31 days; Feb = 28 or 29 days). An original day-of-month of 29, 30, or 31 drifts backward by 1-3 days per step through any 31-day or February month it crosses. See BUG-329 (`task/claude_profile/bug/329_auto_advance_flat_step_drifts_day_of_month.md`) for the full evidence trail. Fix location: replace the flat-step loop with calendar arithmetic mirroring the Estimate Branch below — decompose `ts` via `unix_to_date()`, advance to the next calendar month (carrying year), and re-encode via `date_to_unix()` using the original day-of-month.
+**Fixed defect (BUG-329):** the exact branch previously added a flat 30-day (`2_592_000`s) increment per loop iteration instead of calendar-correct stepping, which drifted the day-of-month on any month whose length is not exactly 30 days (Jan/Mar/May/Jul/Aug/Oct/Dec = 31 days; Feb = 28 or 29 days) by 1-3 days per step. See BUG-329 (`task/claude_profile/bug/329_auto_advance_flat_step_drifts_day_of_month.md`, closed) for the full evidence trail and fix history — the underlying defect is fixed and verified in code, and the bug-tracking file's own lifecycle closure is complete.
 
-#### Estimate Branch (`format.rs:140-159`)
+#### Estimate Branch (`format.rs:163-183`)
 
 ```
 if let Some( org_created_at ) = org_created_at_opt:
@@ -55,13 +58,13 @@ if let Some( org_created_at ) = org_created_at_opt:
     if billing_day > day:        ( year, month )          // renewal still upcoming this month
     else if month == 12:         ( year + 1, 1 )          // wrap December -> January
     else:                        ( year, month + 1 )      // next calendar month
-  renewal_ts = date_to_unix( renewal_year, renewal_month, billing_day )
+  renewal_ts = date_to_unix( renewal_year, renewal_month, billing_day.min( days_in_month( renewal_year, renewal_month ) ) )
   return Some( ( renewal_ts.saturating_sub( now_secs ), true ) )
 ```
 
-The billing day-of-month is read once from `org_created_at` and never recomputed — every renewal estimate reuses the same `billing_day` value, projected onto the next occurring month via calendar-correct `date_to_unix()`. This is the pattern the Exact Branch's fix (BUG-329) is expected to mirror.
+The billing day-of-month is read once from `org_created_at` and never recomputed — every renewal estimate reuses the same `billing_day` value, projected onto the next occurring month via calendar-correct `date_to_unix()`, clamped to that month's actual length the same way as the Exact Branch.
 
-**Caveat (not a defect):** `date_to_unix(renewal_year, renewal_month, billing_day)` does not clamp `billing_day` to the target month's actual length — e.g. `billing_day = 31` projected onto April (30 days) overflows into May 1st via the flat day-count arithmetic in `date_to_unix()`. This caveat is inherited by whatever day-of-month resolution the BUG-329 fix adopts for the Exact Branch.
+**Fixed defect (BUG-329):** this branch previously passed `billing_day` to `date_to_unix()` unclamped — e.g. `billing_day = 31` projected onto April (30 days) silently overflowed into May 1st via the flat day-count arithmetic in `date_to_unix()`. Originally catalogued here as a non-blocking "Caveat" inherited from the Exact Branch's then-open defect; once clamping became the established pattern for this function, the same gap in this branch was closed as part of the same fix rather than left as an accepted caveat. The underlying defect is fixed and verified in code, and the bug-tracking file's own lifecycle closure is complete.
 
 #### Calendar Helpers
 
@@ -90,4 +93,4 @@ Both `unix_to_date()` and `date_to_unix()` share an inline `is_leap` closure: `(
 
 | File | Relationship |
 |------|--------------|
-| `tests/usage/format_tests.rs` | `rl_auto_advance_past_renewal_at` (exact-branch auto-advance, exercises the BUG-329 defect path); estimate-branch coverage |
+| `tests/usage/format_tests.rs` | `rl_auto_advance_past_renewal_at`, `rl_auto_advance_single_step_preserves_day_across_31_day_month`, `rl_auto_advance_multi_year_preserves_day_of_month`, `rl_auto_advance_clamps_day_31_anchor_at_shorter_month_end`, `rl_auto_advance_day29_clamps_in_common_february_then_recovers` (exact-branch clamping regression suite, BUG-329); `rl_estimate_from_org_created_at`, `rl_estimate_clamps_day31_billing_anchor_at_shorter_month_end` (estimate-branch coverage, including BUG-329's clamping gap) |
