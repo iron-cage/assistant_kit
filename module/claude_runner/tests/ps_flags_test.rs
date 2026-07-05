@@ -30,6 +30,7 @@
 //! | US-26  | Legend absent when no flags present                                 | User Story   |
 //! | E41    | `CLR_PS_ANCIENT_SECS` env var: valid triggers 🕰; invalid silently ignored | Env Var |
 //! | E42    | `CLR_PS_HIGH_RAM_MB` env var: valid triggers 🐘; invalid silently ignored  | Env Var |
+//! | IT-41  | 🐳 flag for sibling-prefix cwd, e.g. `/home/alice2` vs `$HOME=/home/alice` (BUG-383) | Behavioral |
 
 #![ cfg( unix ) ]
 
@@ -1227,5 +1228,75 @@ fn it40_busy_loop_process_active_flag()
   assert!(
     stdout.contains( "Active" ),
     "IT-40: legend must contain 'Active'. Got:\n{stdout}"
+  );
+}
+
+// ── IT-41: 🐳 flag for sibling-prefix cwd (BUG-383) ─────────────────────────
+
+/// IT-41 (BUG-383): 🐳 flag fires when session cwd shares `$HOME`'s string
+/// prefix without being a true path descendant of it (e.g. `home=/tmp/.tmpABC`,
+/// `cwd=/tmp/.tmpABC2/project`). A raw `starts_with` comparison would wrongly
+/// treat this sibling directory as "inside home" and suppress the flag; IT-31
+/// and US-19 cannot exercise this case because two independent `TempDir`s
+/// never share a string prefix by construction.
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it41_container_flag_for_sibling_prefix_cwd()
+{
+  use cli_binary_test_helpers::fake_claude_binary_dir;
+
+  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+  let temp_home = tempfile::TempDir::new().expect( "tmp home" );
+  let home_str  = temp_home.path().to_string_lossy().to_string();
+
+  // Sibling cwd: shares home's full string prefix but is NOT a path descendant
+  // (no `/` boundary immediately after the shared prefix).
+  let sibling_cwd = format!( "{home_str}2/project" );
+  std::fs::create_dir_all( &sibling_cwd ).expect( "create sibling cwd" );
+  assert!(
+    sibling_cwd.starts_with( &home_str ),
+    "IT-41: precondition — sibling_cwd must share home's string prefix"
+  );
+  assert!(
+    !sibling_cwd.starts_with( &format!( "{home_str}/" ) ),
+    "IT-41: precondition — sibling_cwd must not be a true path descendant of home"
+  );
+
+  let mut bg = std::process::Command::new( "claude" )
+    .env( "PATH", &path_val )
+    .arg( "30" )
+    .current_dir( &sibling_cwd )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn fake claude" );
+  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+
+  let fake_proc     = tempfile::TempDir::new().expect( "fake_proc" );
+  let fake_proc_str = fake_proc.path().to_str().expect( "fake_proc UTF-8" );
+  std::os::unix::fs::symlink(
+    format!( "/proc/{}", bg.id() ),
+    fake_proc.path().join( bg.id().to_string() ),
+  ).expect( "pid symlink" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps" ] )
+    .env( "PATH", &path_val )
+    .env( "HOME", temp_home.path() )
+    .env( "CLR_PROC_DIR", fake_proc_str )
+    .env( "CLR_PS_ANCIENT_SECS", "999999" )
+    .env( "CLR_PS_HIGH_RAM_MB", "999999" )
+    .output()
+    .expect( "run clr ps" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-41: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( "🐳" ),
+    "IT-41 (BUG-383): 🐳 flag must fire for sibling-prefix cwd outside home. Got:\n{stdout}"
   );
 }

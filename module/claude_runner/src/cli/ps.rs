@@ -537,11 +537,19 @@ fn compute_flags(
   }
 
   // 🐳 Container: working directory is outside $HOME.
-  // BUG-383: raw starts_with has no path-separator boundary test — a cwd that merely
-  // shares home's string prefix (e.g. home=/home/alice, cwd=/home/alice2/x) is wrongly
-  // treated as "inside home", suppressing the flag. Fix not yet applied; see bug file.
+  // Fix(BUG-383): path-component-aware check — cwd is "inside home" only if it
+  // equals home exactly, or the byte immediately after the shared prefix is a
+  // path separator. A plain `starts_with` wrongly matched a sibling directory
+  // like /home/alice2 against home=/home/alice.
+  // Root cause: `starts_with` is a byte-sequence test, not a path-component test.
+  // Pitfall: never use raw `str::starts_with` to test path descendance — always
+  // verify a `/` boundary (or exact equality) after the shared prefix.
   let cwd_str = proc.cwd.to_str().unwrap_or( "" );
-  if !home.is_empty() && !cwd_str.starts_with( home )
+  let is_inside_home = !home.is_empty() && (
+    cwd_str == home
+    || cwd_str.strip_prefix( home ).is_some_and( | rest | rest.starts_with( '/' ) )
+  );
+  if !home.is_empty() && !is_inside_home
   {
     push_flag( &mut flags, '🐳' );
   }
@@ -857,7 +865,10 @@ fn parse_json_str( content : &str, key : &str ) -> Option< String >
 }
 
 // Extract a u64 value for `key` from a compact JSON object in `content`.
-fn parse_json_u64( content : &str, key : &str ) -> Option< u64 >
+//
+// `pub(super)`: also called from `gate.rs` to read a slot reservation file's
+// `pid` field for staleness checks (Fix(BUG-387)).
+pub( super ) fn parse_json_u64( content : &str, key : &str ) -> Option< u64 >
 {
   let marker = format!( r#""{key}":"# );
   let start  = content.find( marker.as_str() )? + marker.len();

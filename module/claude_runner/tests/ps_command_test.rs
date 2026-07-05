@@ -657,24 +657,32 @@ fn it_18_ps_help_positional()
 /// IT-19: `clr ps` Task column works for a session whose CWD contains no
 /// underscores — regression guard for the BUG-295 fix.
 ///
-/// ## Root Cause
-/// The BUG-295 fix adds `replace('_', "-")`. This test verifies the fix does not
-/// break paths that encoded correctly with slash-only replacement.
+/// ## Root Cause (BUG-385, fixture-only — superseded the BUG-295 note below)
+/// This test's own fixture line hand-rolled `cwd_str.replace('/', "-")` instead of
+/// calling `claude_storage_core::encode_path()`. That diverged from production once
+/// `encode_path()` was generalized (BUG-366) to map every non-alphanumeric character,
+/// not just `_`, to `-` — `tempfile::TempDir`'s dot-prefixed names exposed the gap.
 ///
 /// ## Why Not Caught
-/// IT-16 only covered underscore-containing paths; the no-underscore path was
-/// never exercised end-to-end after BUG-295 fix.
+/// IT-16 (line 526) was already updated to call `encode_path()` directly when `ps.rs`
+/// switched to it; this test's separate, duplicate encoding line never was, and no
+/// check enforces that fixture-encoding logic stays in sync with the shared function.
 ///
 /// ## Fix Applied
-/// No fix needed — regression test only. Verifies the two-step replacement chain
-/// is idempotent for paths without underscores.
+/// Replaced the hand-rolled `cwd_str.replace('/', "-")` with a direct call to
+/// `claude_storage_core::encode_path(&cwd)`, matching IT-16's pattern. The `cwd_str`
+/// binding (only used by the old encoding line) was removed as unused.
 ///
 /// ## Prevention
-/// Always include a no-underscore regression test alongside any path-encoding fix.
+/// Never hand-roll production encoding/formatting logic inside a test fixture — call
+/// the shared function directly so the fixture cannot drift when that function's
+/// behavior changes.
 ///
 /// ## Pitfall
-/// The encoded path for a no-underscore CWD is identical whether you apply the
-/// `replace('_', "-")` step or not — so this test confirms there is no regression.
+/// A fixture encoding that matches production "for this specific input" is not proof
+/// it will keep matching — `replace('_', "-")` alone looked equivalent to slash-only
+/// replacement for a no-underscore CWD until `encode_path()`'s substitution scope
+/// widened to cover dots too.
 #[ cfg( unix ) ]
 #[ test ]
 fn it_19_task_column_no_underscores()
@@ -685,7 +693,6 @@ fn it_19_task_column_no_underscores()
   let proj_tmp = tempfile::TempDir::new().expect( "create project tmp" );
   let cwd      = proj_tmp.path().join( "work" ).join( "proj" );
   std::fs::create_dir_all( &cwd ).expect( "create CWD without underscores" );
-  let cwd_str  = cwd.to_str().expect( "CWD UTF-8" );
 
   let mut bg = std::process::Command::new( "claude" )
     .arg( "30" )
@@ -698,10 +705,17 @@ fn it_19_task_column_no_underscores()
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
   let proc = make_proc_dir( &[ bg.id() ] );
 
-  // Encode with only '/' → '-' (no underscores to replace; result is same as before fix).
-  // BUG-385: stale hand-rolled encoding diverges from claude_storage_core::encode_path()
-  // for dot-containing CWDs (e.g. tempfile::TempDir's ".tmpXXXXXX"); see Fix Location.
-  let encoded      = cwd_str.replace( '/', "-" );
+  // Fix(BUG-385): encode via the same shared function try_jsonl_task() calls in
+  // production — never hand-roll the encoding, so this fixture cannot drift from
+  // real lookup behavior (matches IT-16's already-correct pattern at line 526).
+  // Root cause: this line used to hand-roll `cwd_str.replace('/', "-")`, which
+  // diverged from claude_storage_core::encode_path() once that function was
+  // generalized (BUG-366) to convert every non-alphanumeric character (not just
+  // '_') to '-' — tempfile::TempDir's dot-prefixed names exposed the divergence.
+  // Pitfall: a test fixture that duplicates production encoding logic instead of
+  // calling the shared function directly silently diverges the moment that
+  // function's behavior changes — always call the real function from fixtures.
+  let encoded      = claude_storage_core::encode_path( &cwd ).expect( "encode cwd" );
   let home_tmp     = tempfile::TempDir::new().expect( "create temp HOME" );
   let project_path = home_tmp.path()
     .join( ".claude" ).join( "projects" ).join( &encoded );
