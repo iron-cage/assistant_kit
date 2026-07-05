@@ -113,4 +113,4 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 
 | File | Relationship |
 |------|--------------|
-| [algorithm/010_renewal_date_computation.md](../algorithm/010_renewal_date_computation.md) | Implements AC-10's exact/estimate renewal computation; documents the open BUG-329 day-of-month drift in the exact branch's auto-advance step |
+| [algorithm/010_renewal_date_computation.md](../algorithm/010_renewal_date_computation.md) | Implements AC-10's exact/estimate renewal computation; documents the BUG-329 day-of-month drift fix in both the exact branch's auto-advance step and the estimate branch's billing-day projection |
