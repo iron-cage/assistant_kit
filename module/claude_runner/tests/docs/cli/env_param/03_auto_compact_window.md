@@ -3,7 +3,7 @@
 Edge case tests for the `CLAUDE_CODE_AUTO_COMPACT_WINDOW` environment variable injection
 mechanism and its `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` opt-out.
 
-**Source:** [env_param.md](../../../../docs/cli/env_param.md), [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md)
+**Source:** [env_param.md](../../../../docs/cli/env_param.md), [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md)
 
 ## Test Case Index
 
@@ -49,7 +49,7 @@ mechanism and its `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` opt-out.
 - **When:** `clr --no-compact-window --dry-run "test" 2>&1`
 - **Then:** output does NOT contain `CLAUDE_CODE_AUTO_COMPACT_WINDOW`
 - **Exit:** 0
-- **Source:** [env_param.md](../../../../docs/cli/env_param.md), [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md)
+- **Source:** [env_param.md](../../../../docs/cli/env_param.md), [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md)
 
 ---
 

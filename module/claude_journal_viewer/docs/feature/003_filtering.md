@@ -2,6 +2,13 @@
 
 **Status**: Planned | **Since**: 1.3.0
 
+### Scope
+
+- **Purpose**: Provide a shared query filter system used by all viewing commands and the web API.
+- **Responsibility**: Documents the 8 AND-combined filter dimensions and their CLI `param::value` mapping to `JournalFilter` fields.
+- **In Scope**: Filter parameter syntax, match semantics per dimension, and duration-string parsing.
+- **Out of Scope**: The commands that consume filters (→ `docs/feature/001_cli_viewing.md`, `docs/feature/002_web_viewing.md`), filter struct definition (→ `claude_journal` `docs/api/002_journal_reader.md`).
+
 ## Description
 
 Query filter system shared by all viewing commands (`.list`, `.search`, `.stats`, `.export`) and the web API. Filters are AND-combined: all non-empty filter parameters must match for an event to be included. The filter system maps CLI `param::value` arguments to `JournalFilter` fields.

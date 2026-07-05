@@ -2,6 +2,13 @@
 
 **Status**: Planned | **Since**: 1.3.0
 
+### Scope
+
+- **Purpose**: Provide a crash-safe, append-only writer for recording structured journal events to daily JSONL files.
+- **Responsibility**: Documents the `JournalWriter` struct, its `new()`/`append()`/`dir()` operations, and their behavioral contract.
+- **In Scope**: Directory/file creation on first write, per-event JSON serialization, and thread-safety guarantees for concurrent appends.
+- **Out of Scope**: Event schema definition (→ `docs/api/003_event_type.md`), reading/querying journal data (→ `docs/api/002_journal_reader.md`).
+
 ## Description
 
 Append-only writer that records structured events to daily JSONL files. Each `append()` call opens the current day's file (creating it and the directory if absent), serializes the `EventRecord` to a single JSON line, writes it with a trailing newline, and closes the file handle. The open-write-close pattern makes each append crash-safe — no state is held between calls.

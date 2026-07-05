@@ -432,7 +432,7 @@ fn e17_clr_effort_sets_level()
 /// path (`None` → `unwrap_or(3600)`) produce the same `timeout_secs` value; this test confirms the
 /// env-var path reaches the same numeric value without being silently ignored.
 ///
-/// Spec: `tests/docs/cli/param/36_timeout.md` `ec_timeout_env_matches_default`
+/// Spec: `tests/docs/cli/param/036_timeout.md` `ec_timeout_env_matches_default`
 #[ test ]
 fn ec_timeout_env_matches_default()
 {

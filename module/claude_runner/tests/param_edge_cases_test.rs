@@ -22,63 +22,63 @@
 //! - S03: `--help` output stable across three invocations (`02_help.md` IT-8)
 //!
 //! --model:
-//! - S07: positional then `--model` at end of argv → exit 1 (`03_model.md` EC-3)
-//! - S08: without `--model` → `--model` absent from command (`03_model.md` EC-7)
+//! - S07: positional then `--model` at end of argv → exit 1 (`003_model.md` EC-3)
+//! - S08: without `--model` → `--model` absent from command (`003_model.md` EC-7)
 //!
 //! --verbose:
-//! - S09: without `--verbose` → absent from command (`04_verbose.md` EC-2)
-//! - S10: `--verbose` without message → accepted, forwarded (`04_verbose.md` EC-4)
-//! - S11: `--verbose` specified twice → appears at most once (`04_verbose.md` EC-6)
+//! - S09: without `--verbose` → absent from command (`004_verbose.md` EC-2)
+//! - S10: `--verbose` without message → accepted, forwarded (`004_verbose.md` EC-4)
+//! - S11: `--verbose` specified twice → appears at most once (`004_verbose.md` EC-6)
 //!
 //! --no-skip-permissions:
-//! - S12: `--no-skip-permissions "msg"` → message still forwarded (`05_no_skip_permissions.md` EC-3)
-//! - S13: `--no-skip-permissions` alone → exit 0 (`05_no_skip_permissions.md` EC-4)
-//! - S14: `--no-skip-permissions --verbose "msg"` → both coexist (`05_no_skip_permissions.md` EC-6)
+//! - S12: `--no-skip-permissions "msg"` → message still forwarded (`005_no_skip_permissions.md` EC-3)
+//! - S13: `--no-skip-permissions` alone → exit 0 (`005_no_skip_permissions.md` EC-4)
+//! - S14: `--no-skip-permissions --verbose "msg"` → both coexist (`005_no_skip_permissions.md` EC-6)
 //!
 //! --interactive:
-//! - S15: `--interactive --verbose "msg"` → --verbose present, --print absent (`06_interactive.md` EC-6)
+//! - S15: `--interactive --verbose "msg"` → --verbose present, --print absent (`006_interactive.md` EC-6)
 //!
 //! --new-session:
-//! - S16: `--new-session` without message → exit 0, no `-c` (`07_new_session.md` EC-3)
-//! - S17: `--new-session --session-dir /path "msg"` → both accepted (`07_new_session.md` EC-6)
+//! - S16: `--new-session` without message → exit 0, no `-c` (`007_new_session.md` EC-3)
+//! - S17: `--new-session --session-dir /path "msg"` → both accepted (`007_new_session.md` EC-6)
 //!
 //! --dir:
-//! - S18: without `--dir` → no `cd` line in output (`08_dir.md` EC-3)
-//! - S19: `--dir /no/such/path` → accepted without validation (`08_dir.md` EC-4)
+//! - S18: without `--dir` → no `cd` line in output (`008_dir.md` EC-3)
+//! - S19: `--dir /no/such/path` → accepted without validation (`008_dir.md` EC-4)
 //!
 //! --session-dir:
-//! - S20: without `--session-dir` → `CLAUDE_CODE_SESSION_DIR` absent (`10_session_dir.md` EC-3)
-//! - S21: `--session-dir --new-session` → both accepted (`10_session_dir.md` EC-4)
-//! - S22: `--session-dir /no/such/dir` → accepted without validation (`10_session_dir.md` EC-6)
+//! - S20: without `--session-dir` → `CLAUDE_CODE_SESSION_DIR` absent (`010_session_dir.md` EC-3)
+//! - S21: `--session-dir --new-session` → both accepted (`010_session_dir.md` EC-4)
+//! - S22: `--session-dir /no/such/dir` → accepted without validation (`010_session_dir.md` EC-6)
 //!
 //! --dry-run:
-//! - S23: `--dry-run --no-ultrathink --no-effort-max --verbose "msg"` → all flags visible (`11_dry_run.md` EC-6)
+//! - S23: `--dry-run --no-ultrathink --no-effort-max --verbose "msg"` → all flags visible (`011_dry_run.md` EC-6)
 //!
 //! --quiet:
 //! - S24: `--quiet "msg"` → exit 0, `--quiet` does not appear in assembled claude command (`074_quiet.md` EC-1)
 //!
 //! --print:
-//! - S25: `clr --dry-run -p "msg"` and `clr --dry-run --print "msg"` byte-identical (`02_print.md` EC-2)
-//! - S26: `--print "msg"` (long form) → `--print` in output (`02_print.md` EC-5)
+//! - S25: `clr --dry-run -p "msg"` and `clr --dry-run --print "msg"` byte-identical (`002_print.md` EC-2)
+//! - S26: `--print "msg"` (long form) → `--print` in output (`002_print.md` EC-5)
 //!
 //! --system-prompt:
-//! - S27: `--system-prompt ""` → forwarded, exit 0 (`15_system_prompt.md` EC-3)
-//! - S28: `--system-prompt "Be concise and accurate."` → value forwarded as single arg (`15_system_prompt.md` EC-6)
+//! - S27: `--system-prompt ""` → forwarded, exit 0 (`015_system_prompt.md` EC-3)
+//! - S28: `--system-prompt "Be concise and accurate."` → value forwarded as single arg (`015_system_prompt.md` EC-6)
 //!
 //! --append-system-prompt:
-//! - S29: `--append-system-prompt ""` → forwarded, exit 0 (`16_append_system_prompt.md` EC-3)
-//! - S30: `--append-system-prompt "Always respond in JSON."` → single arg (`16_append_system_prompt.md` EC-6)
+//! - S29: `--append-system-prompt ""` → forwarded, exit 0 (`016_append_system_prompt.md` EC-3)
+//! - S30: `--append-system-prompt "Always respond in JSON."` → single arg (`016_append_system_prompt.md` EC-6)
 //!
 //! --no-effort-max:
-//! - S31: `--no-effort-max` without message → exit 0, no --effort (`18_no_effort_max.md` EC-2)
-//! - S32: `--no-effort-max --new-session "msg"` → no --effort, no -c (`18_no_effort_max.md` EC-6)
+//! - S31: `--no-effort-max` without message → exit 0, no --effort (`018_no_effort_max.md` EC-2)
+//! - S32: `--no-effort-max --new-session "msg"` → no --effort, no -c (`018_no_effort_max.md` EC-6)
 //!
 //! invariant:
 //! - S33: all opt-outs together remove all suppressible defaults (`invariant/001_default_flags.md` IT-6)
 //!
 //! --max-sessions:
-//! - EC-1: `--help` output contains `--max-sessions` (`33_max_sessions.md` EC-1)
-//! - EC-7: `--dry-run` with default max and 0 active sessions → no gate messages (`33_max_sessions.md` EC-7)
+//! - EC-1: `--help` output contains `--max-sessions` (`033_max_sessions.md` EC-1)
+//! - EC-7: `--dry-run` with default max and 0 active sessions → no gate messages (`033_max_sessions.md` EC-7)
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli;
@@ -537,7 +537,7 @@ fn s33_all_opt_outs_together_remove_all_suppressible_defaults()
 /// EC-1: `clr --help` output contains `--max-sessions`.
 ///
 /// Documentation hygiene: the flag must be discoverable via help text.
-/// Covers `33_max_sessions.md` EC-1.
+/// Covers `033_max_sessions.md` EC-1.
 #[ test ]
 fn ec1_max_sessions_help_listed()
 {
@@ -553,7 +553,7 @@ fn ec1_max_sessions_help_listed()
 /// EC-9: `clr --help` shows `default: 30` for `--max-sessions`.
 ///
 /// Prevents regression where help text and code default diverge silently.
-/// Covers `33_max_sessions.md` EC-9.
+/// Covers `033_max_sessions.md` EC-9.
 #[ test ]
 fn ec9_max_sessions_help_shows_default_thirty()
 {
@@ -569,13 +569,13 @@ fn ec9_max_sessions_help_shows_default_thirty()
 /// EC-7: With default max-sessions and 0 active sessions, no gate messages are emitted.
 ///
 /// Dry-run bypasses gate so no /proc scan occurs, and stderr must be silent.
-/// Covers `33_max_sessions.md` EC-7.
+/// Covers `033_max_sessions.md` EC-7.
 ///
 /// **Architectural constraint:** gate-triggered behavior (waiting messages when sessions ≥ limit)
 /// cannot be tested without live Claude processes. Dry-run is used here to avoid spawning a real
 /// subprocess. The divergence from EC-2 (max=0) is at the code-path level: max=0 bypasses
 /// `find_claude_processes()` entirely; max=30 (default) enters the gate code path in non-dry-run
-/// execution. See `33_max_sessions.md § Architectural Constraint`.
+/// execution. See `033_max_sessions.md § Architectural Constraint`.
 #[ test ]
 fn ec7_max_sessions_no_gate_messages_below_limit()
 {

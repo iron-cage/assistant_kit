@@ -2,6 +2,13 @@
 
 **Status**: Planned | **Since**: 1.3.0
 
+### Scope
+
+- **Purpose**: Provide CLI commands for exploring and managing journal data via unilang syntax.
+- **Responsibility**: Documents the 8 `.command param::value` commands, their default output, and their dual standalone/super-app registration.
+- **In Scope**: Command list and purpose, default `.list` table columns, and `clj`/`ast .journal.*` dual dispatch.
+- **Out of Scope**: Web dashboard viewing (→ `docs/feature/002_web_viewing.md`), filter semantics shared across commands (→ `docs/feature/003_filtering.md`).
+
 ## Description
 
 Eight CLI commands for exploring journal data using unilang `.command param::value` syntax. Commands are registered via `claude_journal.commands.yaml` and dispatched through the unilang `CommandRegistry`.

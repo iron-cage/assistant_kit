@@ -2,6 +2,13 @@
 
 **Status**: Planned | **Since**: 1.3.0
 
+### Scope
+
+- **Purpose**: Provide a read-side API for querying and tailing journal events across daily JSONL files.
+- **Responsibility**: Documents the `JournalReader`/`JournalFilter` types, their `open()`/`query()`/`tail()` and metadata operations, and their behavioral contract.
+- **In Scope**: Chronological file iteration, AND-combined filter matching, blocking tail semantics, and parse-failure tolerance.
+- **Out of Scope**: Event schema definition (→ `docs/api/003_event_type.md`), writing journal events (→ `docs/api/001_journal_writer.md`).
+
 ## Description
 
 Read-side API for querying and tailing journal events. Opens a journal directory and iterates over daily JSONL files in chronological order, applying a `JournalFilter` to select matching events. Supports both batch query (returns all matching events) and streaming tail (watches for new events).

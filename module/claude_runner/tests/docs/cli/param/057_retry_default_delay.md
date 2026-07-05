@@ -27,8 +27,8 @@ See [057_retry_default_delay.md](../../../../docs/cli/param/057_retry_default_de
 ## Architectural Constraint
 
 `--retry-default-delay` is Tier 3 in the delay resolution chain. Delay integration is
-demonstrated across the per-class EC-10 tests (e.g., `34_retry_on_transient.md` EC-10,
-`44_retry_on_service.md` EC-10) which use `--retry-default-delay 0` to avoid sleep in
+demonstrated across the per-class EC-10 tests (e.g., `034_retry_on_transient.md` EC-10,
+`044_retry_on_service.md` EC-10) which use `--retry-default-delay 0` to avoid sleep in
 fallback-default integration tests. The built-in default is 30s (applies when
 `--retry-default-delay` is also absent). These tests verify parse and env-var behavior
 only via dry-run.

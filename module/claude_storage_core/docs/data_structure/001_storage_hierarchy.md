@@ -33,7 +33,7 @@ The hierarchy mirrors the `~/.claude/` directory layout exactly. Each level is a
 - Role: user or assistant.
 - Content blocks: text, thinking, tool_use, tool_result.
 - Metadata: timestamp, cwd, git branch, token usage.
-- Non-conversation entries (e.g. queue-operation, summary) are silently skipped during loading — see [03_entry_type_format.md](../../../claude_storage/docs/invariant/03_entry_type_format.md) for the full type contract and evidence tiers.
+- Non-conversation entries (e.g. queue-operation, summary) are silently skipped during loading — see [003_entry_type_format.md](../../../claude_storage/docs/invariant/003_entry_type_format.md) for the full type contract and evidence tiers.
 
 **Statistics types** — aggregated metrics.
 - `SessionStats`: per-session totals (entries, input/output tokens, first/last timestamps).
@@ -59,7 +59,7 @@ The hierarchy mirrors the `~/.claude/` directory layout exactly. Each level is a
 | source | `../../src/stats.rs` | SessionStats, ProjectStats, GlobalStats |
 | doc | `../algorithm/001_path_encoding.md` | Path encoding for path-based project names |
 | doc | `../invariant/001_safety_guarantees.md` | Append-only and atomic write invariants |
-| doc | `../../../claude_storage/docs/invariant/03_entry_type_format.md` | Non-conversation `type` value contract and evidence tiers |
+| doc | `../../../claude_storage/docs/invariant/003_entry_type_format.md` | Non-conversation `type` value contract and evidence tiers |
 | doc | `../../../../contract/claude_code/docs/taxonomy/readme.md` | User-facing four-level taxonomy (Project/Conversation/Session/Entry) that maps onto this storage model |
 
 ### Sources

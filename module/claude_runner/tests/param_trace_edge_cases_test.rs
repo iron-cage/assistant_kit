@@ -2,7 +2,7 @@
 //!
 //! ## Purpose
 //!
-//! Cover trace-mode spec test cases from `tests/docs/cli/param/13_trace.md`
+//! Cover trace-mode spec test cases from `tests/docs/cli/param/013_trace.md`
 //! and `tests/docs/cli/command/` not exercised by other test files.
 //!
 //! ## Strategy
@@ -14,11 +14,11 @@
 //! ## Spec Coverage
 //!
 //! trace:
-//! - S04: `--trace "msg"` without `--dry-run` → stderr has command, exit 1 (`01_run.md` IT-5, `13_trace.md` EC-1, `11_dry_run.md` EC-2)
-//! - S05: `--trace --dry-run` no message → stdout preview, stderr empty (`13_trace.md` EC-4)
-//! - S06: `--trace "msg"` stderr contains env vars and command (`13_trace.md` EC-6)
-//! - S58: `isolated --creds <f> --trace "msg"` → `# clr isolated`, `# creds:`, `# timeout: 30s` on stderr (`13_trace.md` EC-7)
-//! - S59: `refresh --creds <f> --trace` → `# clr refresh`, `# creds:`, `# timeout: 45s` on stderr (`13_trace.md` EC-8)
+//! - S04: `--trace "msg"` without `--dry-run` → stderr has command, exit 1 (`01_run.md` IT-5, `013_trace.md` EC-1, `011_dry_run.md` EC-2)
+//! - S05: `--trace --dry-run` no message → stdout preview, stderr empty (`013_trace.md` EC-4)
+//! - S06: `--trace "msg"` stderr contains env vars and command (`013_trace.md` EC-6)
+//! - S58: `isolated --creds <f> --trace "msg"` → `# clr isolated`, `# creds:`, `# timeout: 30s` on stderr (`013_trace.md` EC-7)
+//! - S59: `refresh --creds <f> --trace` → `# clr refresh`, `# creds:`, `# timeout: 45s` on stderr (`013_trace.md` EC-8)
 //! - S60: `isolated --creds /nonexistent --trace "msg"` → trace fires on stderr before creds-read failure (bug reproducer)
 
 mod cli_binary_test_helpers;
@@ -75,7 +75,7 @@ fn s06_trace_stderr_includes_env_vars_and_command()
   );
 }
 
-// S58: `isolated --creds <f> --trace "msg"` → credential trace format on stderr (`13_trace.md` EC-7)
+// S58: `isolated --creds <f> --trace "msg"` → credential trace format on stderr (`013_trace.md` EC-7)
 #[ test ]
 fn s58_isolated_trace_credential_format()
 {
@@ -163,7 +163,7 @@ fn s60_isolated_trace_fires_even_with_missing_creds()
   );
 }
 
-// S59: `refresh --creds <f> --trace` → credential trace format on stderr with 45s timeout (`13_trace.md` EC-8)
+// S59: `refresh --creds <f> --trace` → credential trace format on stderr with 45s timeout (`013_trace.md` EC-8)
 #[ test ]
 fn s59_refresh_trace_credential_format()
 {

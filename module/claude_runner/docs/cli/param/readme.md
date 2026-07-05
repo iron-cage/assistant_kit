@@ -74,9 +74,9 @@
 | 072_journal.md | `--journal` parameter spec |
 | 073_journal_dir.md | `--journal-dir` parameter spec |
 | 074_quiet.md | `--quiet` flag spec (suppress non-fatal runner diagnostics) |
-| 075_no_compact_window.md | `--no-compact-window` flag spec (suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection) |
 | 075_args_file.md | `--args-file` parameter spec |
 | 076_session_from.md | `--session-from` / `--from` parameter spec (session cross-loading source dir) |
+| 077_no_compact_window.md | `--no-compact-window` flag spec (suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection) |
 
 ### Retired Parameter IDs
 
@@ -163,12 +163,13 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 72 | `--journal` | enum | `full` | `full`/`meta`/`off` | Journal level for clr execution events: `full` captures stdout+stderr (≤1MB each), `meta` omits output, `off` disables | 3 cmds |
 | 73 | `--journal-dir` | path | `~/.clr/journal/` | Any writable path | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` | 3 cmds |
 | 74 | `--quiet` | bool | false | present/absent | Suppress non-fatal runner diagnostics (retry/gate/warning messages) | 2 cmds |
-| 75 | `--no-compact-window` | bool | false | present/absent | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection into subprocess environment | 4 cmds |
-| 76 | `--args-file` | [`FilePath`](../type/12_file_path.md) | — | Any readable file path | Load clr params from JSON config file; stdin JSON auto-detected when no TTY | 4 cmds |
+| 75 | `--args-file` | [`FilePath`](../type/12_file_path.md) | — | Any readable file path | Load clr params from JSON config file; stdin JSON auto-detected when no TTY | 4 cmds |
+| 76 | `--session-from` | [`DirectoryPath`](../type/02_directory_path.md) | absent | Any existing directory path | Cross-load most recent session UUID from another directory's session dir | 2 cmds |
+| 77 | `--no-compact-window` | bool | false | present/absent | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection into subprocess environment | 4 cmds |
 
-**Total:** 71 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–76 added)
+**Total:** 72 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added)
 
-**Groups:** Parameters 2–4, 17, 23, 24, and 61–67 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–74, 76 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 75 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md).
+**Groups:** Parameters 2–4, 17, 23, 24, and 61–67 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–76 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 77 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md).
 
 ### Navigation
 
@@ -242,8 +243,9 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 - [`--add-dir`](066_add_dir.md)
 - [`--fallback-model`](067_fallback_model.md)
 - [`--quiet`](074_quiet.md)
-- [`--no-compact-window`](075_no_compact_window.md)
 - [`--args-file`](075_args_file.md)
+- [`--session-from`](076_session_from.md)
+- [`--no-compact-window`](077_no_compact_window.md)
 
 ### Quick Reference
 

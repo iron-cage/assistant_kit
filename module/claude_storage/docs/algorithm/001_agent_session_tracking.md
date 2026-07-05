@@ -5,7 +5,7 @@
 - **Purpose**: Discover and enumerate agent sessions spawned from a root session, across both flat and hierarchical storage layouts.
 - **Responsibility**: Agent session naming/entry markers and the discovery procedure for both storage formats.
 - **In Scope**: Filename/entry detection, flat and hierarchical discovery procedures, agent metadata sidecars.
-- **Out of Scope**: Session Family membership contract (→ `../invariant/02_session_family.md`), CLI display of session families (→ `../cli/command/07_projects.md`).
+- **Out of Scope**: Session Family membership contract (→ `../invariant/002_session_family.md`), CLI display of session families (→ `../cli/command/07_projects.md`).
 
 ### Abstract
 
@@ -14,7 +14,7 @@
 - **Flat** (older projects, B7): `agent-{id}.jsonl` alongside the main session at project root.
 - **Hierarchical** (newer projects, B13): `{session-uuid}/subagents/agent-{id}.jsonl`.
 
-Both formats form a **Session Family** — a root session and all its agents. See [`../invariant/02_session_family.md`](../invariant/02_session_family.md) for the formal membership contract.
+Both formats form a **Session Family** — a root session and all its agents. See [`../invariant/002_session_family.md`](../invariant/002_session_family.md) for the formal membership contract.
 
 **File naming**: `agent-{id}.jsonl` where `{id}` is a variable-length identifier. Two patterns observed:
 - **Pure hex** (68%): 7 or 17 hex characters (e.g., `aec970f`, `a6061d6e2a0c37a78`)
@@ -68,7 +68,7 @@ pub fn find_agent_sessions( session : &Session ) -> Result< Vec< AgentSession > 
 }
 ```
 
-**Discovery (hierarchical format)**: family membership is established by directory structure, not by field matching — every `agent-*.jsonl` under `{uuid}/subagents/` belongs to that root session by construction (see [`../invariant/02_session_family.md`](../invariant/02_session_family.md) Violation Conditions — using `sessionId` here instead of directory structure is a contract violation).
+**Discovery (hierarchical format)**: family membership is established by directory structure, not by field matching — every `agent-*.jsonl` under `{uuid}/subagents/` belongs to that root session by construction (see [`../invariant/002_session_family.md`](../invariant/002_session_family.md) Violation Conditions — using `sessionId` here instead of directory structure is a contract violation).
 
 ```rust
 fn find_hierarchical_agents( project_dir : &Path ) -> Result< Vec< PathBuf > >
@@ -108,7 +108,7 @@ Schema:
 | `agentType` | yes | Agent type: `Explore`, `general-purpose`, `Plan`, or `claude-code-guide` |
 | `description` | no | Human-readable task description (present on some Explore agents) |
 
-**Edge case**: some `.meta.json` files are empty (0 bytes) — parsers must handle this gracefully (see [`../invariant/02_session_family.md`](../invariant/02_session_family.md)).
+**Edge case**: some `.meta.json` files are empty (0 bytes) — parsers must handle this gracefully (see [`../invariant/002_session_family.md`](../invariant/002_session_family.md)).
 
 **Considerations**:
 - **Session listing**: include agent sessions in project session lists (with an `is_agent` flag); must discover both flat and hierarchical agents.
@@ -133,7 +133,7 @@ Schema:
 
 | File | Relationship |
 |------|-------------|
-| `../invariant/02_session_family.md` | Session Family membership contract — threading, meta.json edge case, slug field |
+| `../invariant/002_session_family.md` | Session Family membership contract — threading, meta.json edge case, slug field |
 
 ### Sources
 

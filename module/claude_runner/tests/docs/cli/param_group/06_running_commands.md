@@ -141,7 +141,7 @@ behave consistently and interact correctly across all four commands.
 - **When:** `clr --no-compact-window --dry-run "test" 2>&1`
 - **Then:** output does NOT contain `CLAUDE_CODE_AUTO_COMPACT_WINDOW`
 - **Exit:** 0
-- **Source:** [param_group/06_running_commands.md](../../../../docs/cli/param_group/06_running_commands.md), [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md)
+- **Source:** [param_group/06_running_commands.md](../../../../docs/cli/param_group/06_running_commands.md), [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md)
 - **Commands:** run
 
 ---
@@ -152,7 +152,7 @@ behave consistently and interact correctly across all four commands.
 - **When:** `clr isolated --creds /tmp/rc5.creds.json --no-compact-window --dry-run 2>&1`
 - **Then:** output does NOT contain `CLAUDE_CODE_AUTO_COMPACT_WINDOW`
 - **Exit:** 0
-- **Source:** [param_group/06_running_commands.md](../../../../docs/cli/param_group/06_running_commands.md), [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md)
+- **Source:** [param_group/06_running_commands.md](../../../../docs/cli/param_group/06_running_commands.md), [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md)
 - **Commands:** isolated
 
 ---
@@ -163,7 +163,7 @@ behave consistently and interact correctly across all four commands.
 - **When:** `clr refresh --creds /tmp/rc6.creds.json --no-compact-window --dry-run 2>&1`
 - **Then:** output does NOT contain `CLAUDE_CODE_AUTO_COMPACT_WINDOW`
 - **Exit:** 0
-- **Source:** [param_group/06_running_commands.md](../../../../docs/cli/param_group/06_running_commands.md), [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md)
+- **Source:** [param_group/06_running_commands.md](../../../../docs/cli/param_group/06_running_commands.md), [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md)
 - **Commands:** refresh
 
 ---

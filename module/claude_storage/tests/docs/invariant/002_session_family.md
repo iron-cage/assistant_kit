@@ -2,7 +2,7 @@
 
 Direct contract tests for the session family grouping behavioral invariant.
 
-**Source:** [invariant/02_session_family.md](../../../docs/invariant/02_session_family.md)
+**Source:** [invariant/002_session_family.md](../../../docs/invariant/002_session_family.md)
 
 ## Test Case Index
 

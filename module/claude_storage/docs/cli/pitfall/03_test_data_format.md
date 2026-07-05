@@ -55,4 +55,4 @@ Test JSONL entries must include **all** of:
 
 - `tests/cli_commands.rs:85` — Known Pitfalls section with production format validation
 - `changelog.md:106` — pitfall documented after issue-011
-- [`invariant/03_entry_type_format.md`](../../invariant/03_entry_type_format.md) — formal entry type contract
+- [`invariant/003_entry_type_format.md`](../../invariant/003_entry_type_format.md) — formal entry type contract

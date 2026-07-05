@@ -27,7 +27,7 @@ See [045_service_delay.md](../../../../docs/cli/param/045_service_delay.md) for 
 
 ## Architectural Constraint
 
-Delay integration is covered by `44_retry_on_service.md` EC-7 (`--service-delay 0` used there).
+Delay integration is covered by `044_retry_on_service.md` EC-7 (`--service-delay 0` used there).
 These tests verify parse and env-var behavior only via dry-run. Old flag `--api-error-delay`
 must be confirmed rejected (EC-7).
 

@@ -3,7 +3,7 @@
 Edge case tests for the `--no-compact-window` flag, which suppresses injection of
 `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` into the subprocess environment.
 
-**Source:** [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md)
+**Source:** [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md)
 
 ## Test Case Index
 
@@ -38,7 +38,7 @@ Edge case tests for the `--no-compact-window` flag, which suppresses injection o
 - **When:** `clr --dry-run "test" 2>&1`
 - **Then:** output contains `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000`
 - **Exit:** 0
-- **Source:** [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md)
+- **Source:** [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md)
 
 ---
 
@@ -48,7 +48,7 @@ Edge case tests for the `--no-compact-window` flag, which suppresses injection o
 - **When:** `clr --no-compact-window --dry-run "test" 2>&1`
 - **Then:** output does NOT contain `CLAUDE_CODE_AUTO_COMPACT_WINDOW`
 - **Exit:** 0
-- **Source:** [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md)
+- **Source:** [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md)
 
 ---
 
@@ -58,7 +58,7 @@ Edge case tests for the `--no-compact-window` flag, which suppresses injection o
 - **When:** `clr isolated --creds /tmp/075ec3.creds.json --no-compact-window --dry-run 2>&1`
 - **Then:** output does NOT contain `CLAUDE_CODE_AUTO_COMPACT_WINDOW`
 - **Exit:** 0
-- **Source:** [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md), [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
+- **Source:** [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md), [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
 
 ---
 
@@ -68,7 +68,7 @@ Edge case tests for the `--no-compact-window` flag, which suppresses injection o
 - **When:** `clr refresh --creds /tmp/075ec4.creds.json --no-compact-window --dry-run 2>&1`
 - **Then:** output does NOT contain `CLAUDE_CODE_AUTO_COMPACT_WINDOW`
 - **Exit:** 0
-- **Source:** [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md), [command/04_refresh.md](../../../../docs/cli/command/04_refresh.md)
+- **Source:** [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md), [command/04_refresh.md](../../../../docs/cli/command/04_refresh.md)
 
 ---
 
@@ -78,7 +78,7 @@ Edge case tests for the `--no-compact-window` flag, which suppresses injection o
 - **When:** `clr ask --no-compact-window --dry-run "test" 2>&1`
 - **Then:** output does NOT contain `CLAUDE_CODE_AUTO_COMPACT_WINDOW`
 - **Exit:** 0
-- **Source:** [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md)
+- **Source:** [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md)
 
 ---
 
@@ -88,7 +88,7 @@ Edge case tests for the `--no-compact-window` flag, which suppresses injection o
 - **When:** `CLR_NO_COMPACT_WINDOW=1 clr --dry-run "test" 2>&1`
 - **Then:** output does NOT contain `CLAUDE_CODE_AUTO_COMPACT_WINDOW`; identical to passing `--no-compact-window`
 - **Exit:** 0
-- **Source:** [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md), [env_param.md](../../../../docs/cli/env_param.md)
+- **Source:** [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md), [env_param.md](../../../../docs/cli/env_param.md)
 
 ---
 
@@ -98,7 +98,7 @@ Edge case tests for the `--no-compact-window` flag, which suppresses injection o
 - **When:** `clr --dry-run "test" 2>&1`
 - **Then:** output CONTAINS `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` — confirms opt-in default
 - **Exit:** 0
-- **Source:** [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md)
+- **Source:** [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md)
 
 ---
 
@@ -109,7 +109,7 @@ Edge case tests for the `--no-compact-window` flag, which suppresses injection o
 - **When (opt-out):** `clr --no-compact-window --dry-run "test" 2>&1` → var absent
 - **Then:** dry-run output matches exactly what subprocess would receive; no misleading env entries
 - **Exit:** 0 both cases
-- **Source:** [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md), [param/011_dry_run.md](../../../../docs/cli/param/011_dry_run.md)
+- **Source:** [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md), [param/011_dry_run.md](../../../../docs/cli/param/011_dry_run.md)
 
 ---
 
@@ -119,4 +119,4 @@ Edge case tests for the `--no-compact-window` flag, which suppresses injection o
 - **When:** `clr --no-compact-window --trace "test" 2>&1`
 - **Then:** stderr does NOT contain `CLAUDE_CODE_AUTO_COMPACT_WINDOW`; subprocess attempt fails after trace
 - **Exit:** 1 (claude absent)
-- **Source:** [param/075_no_compact_window.md](../../../../docs/cli/param/075_no_compact_window.md), [param/013_trace.md](../../../../docs/cli/param/013_trace.md)
+- **Source:** [param/077_no_compact_window.md](../../../../docs/cli/param/077_no_compact_window.md), [param/013_trace.md](../../../../docs/cli/param/013_trace.md)

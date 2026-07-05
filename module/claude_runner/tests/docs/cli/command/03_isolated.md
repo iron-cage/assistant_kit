@@ -177,7 +177,7 @@ Integration test planning for the `isolated` command. See [command/03_isolated.m
 - **Expected behavior:** subprocess is killed after 1 second; exit 2 (timeout without credentials refresh); the partial stdout emitted before the timeout is included in the error output — diagnostic context is not discarded
 - **Exit:** 2
 - **Source:** [--timeout](../../../../docs/cli/param/020_timeout.md), [command/03_isolated.md](../../../../docs/cli/command/03_isolated.md)
-- **Note:** Implemented in TSK-196 (BUG-243); test function `timeout_includes_partial_stdout` in `tests/bug_reproducers_239_244_test.rs`; also covered by EC-7 in [tests/docs/cli/param/20_timeout.md](../param/20_timeout.md)
+- **Note:** Implemented in TSK-196 (BUG-243); test function `timeout_includes_partial_stdout` in `tests/bug_reproducers_239_244_test.rs`; also covered by EC-7 in [tests/docs/cli/param/020_timeout.md](../param/020_timeout.md)
 
 ---
 

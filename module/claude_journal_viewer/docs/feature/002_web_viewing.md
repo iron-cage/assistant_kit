@@ -2,6 +2,13 @@
 
 **Status**: Planned | **Since**: 1.3.0
 
+### Scope
+
+- **Purpose**: Provide an embedded web dashboard for interactive journal viewing.
+- **Responsibility**: Documents the `tiny-http`-served HTML dashboard, its JSON API endpoints, and its visualization components.
+- **In Scope**: The `/`, `/api/events`, `/api/stats`, `/api/health` endpoints and the embedded, dependency-free HTML/JS app.
+- **Out of Scope**: CLI command equivalents (→ `docs/feature/001_cli_viewing.md`), filter semantics shared across commands (→ `docs/feature/003_filtering.md`).
+
 ## Description
 
 Embedded single-page web dashboard served by `tiny-http` (pure Rust, zero transitive C deps). The HTML is embedded in the binary via `include_str!()` — no external file dependencies. The dashboard provides the same data as the CLI commands but with interactive filtering and visualization.

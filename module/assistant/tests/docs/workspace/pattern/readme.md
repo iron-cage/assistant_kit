@@ -1,4 +1,4 @@
-# pattern/
+# Pattern Doc Entity
 
 Test specs for workspace-level pattern doc instances.
 

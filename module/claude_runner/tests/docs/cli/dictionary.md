@@ -73,7 +73,7 @@ Term accuracy and completeness checks for the CLI dictionary at
 - **When:** `clr --model haiku --model sonnet --dry-run "x"`
 - **Then:** assembled command reflects `sonnet` (last value), not `haiku` (first value); no error for duplicate flag
 - **Exit:** 0
-- **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [param/03_model.md](../../docs/cli/param/03_model.md)
+- **Source:** [dictionary.md](../../../docs/cli/dictionary.md), [param/003_model.md](../../docs/cli/param/003_model.md)
 
 ---
 

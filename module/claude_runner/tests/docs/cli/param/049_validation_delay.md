@@ -26,7 +26,7 @@ See [049_validation_delay.md](../../../../docs/cli/param/049_validation_delay.md
 
 ## Architectural Constraint
 
-Delay integration is covered by `48_retry_on_validation.md` EC-7 (`--validation-delay 0` used there).
+Delay integration is covered by `048_retry_on_validation.md` EC-7 (`--validation-delay 0` used there).
 These tests verify parse and env-var behavior only via dry-run. No predecessor flag existed
 for validation delay — this param is entirely new.
 

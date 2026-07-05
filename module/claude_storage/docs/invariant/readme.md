@@ -11,6 +11,6 @@
 
 | File | Responsibility |
 |------|----------------|
-| `01_path_encoding.md` | Path encode/decode contract |
-| `02_session_family.md` | Session family grouping contract |
-| `03_entry_type_format.md` | JSONL entry type field contract |
+| `001_path_encoding.md` | Path encode/decode contract |
+| `002_session_family.md` | Session family grouping contract |
+| `003_entry_type_format.md` | JSONL entry type field contract |

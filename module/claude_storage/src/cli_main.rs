@@ -30,6 +30,7 @@ fn build_command_registry() -> CommandRegistry
     ".status"         => cli::status_routine,
     ".list"           => cli::list_routine,
     ".show"           => cli::show_routine,
+    ".tail"           => cli::tail_routine,
     ".count"          => cli::count_routine,
     ".search"         => cli::search_routine,
     ".export"         => cli::export_routine,

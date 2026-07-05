@@ -26,7 +26,7 @@ See [043_auth_delay.md](../../../../docs/cli/param/043_auth_delay.md) for specif
 
 ## Architectural Constraint
 
-Delay integration is covered by `42_retry_on_auth.md` EC-7 (`--auth-delay 0` used there).
+Delay integration is covered by `042_retry_on_auth.md` EC-7 (`--auth-delay 0` used there).
 These tests verify parse and env-var behavior only via dry-run.
 
 ## Implementation Notes

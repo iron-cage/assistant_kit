@@ -2,6 +2,13 @@
 
 **Status**: Planned | **Since**: 1.3.0
 
+### Scope
+
+- **Purpose**: Provide append-only structured event logging for every CLR automation session.
+- **Responsibility**: Documents the end-to-end event-journaling capability — what triggers a journal write, what each record captures, and where journal files live.
+- **In Scope**: Journal levels (`full`/`meta`/`off`), the daily JSONL file layout, and the configurable journal directory.
+- **Out of Scope**: Event field schema (→ `docs/feature/002_event_schema.md`), file rotation/pruning (→ `docs/feature/003_rotation.md`).
+
 ## Description
 
 Append-only structured event logging for CLR automation sessions. Every CLR execution (print-mode, interactive, credential subprocess) emits a structured event record to a daily JSONL file. The journal captures the full lifecycle of each invocation — command, parameters, model, timing, exit code, error classification, retry history, cost, token usage, and complete stdout/stderr output.

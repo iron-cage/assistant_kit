@@ -2,9 +2,9 @@
 //!
 //! ## Coverage
 //!
-//! - `tests/docs/invariant/01_path_encoding.md` — IN-1..IN-5: path encode/decode contracts
-//! - `tests/docs/invariant/02_session_family.md` — IN-1..IN-8: session family grouping contracts
-//! - `tests/docs/invariant/03_entry_type_format.md` — IN-1..IN-6: JSONL entry type classification contracts
+//! - `tests/docs/invariant/001_path_encoding.md` — IN-1..IN-5: path encode/decode contracts
+//! - `tests/docs/invariant/002_session_family.md` — IN-1..IN-8: session family grouping contracts
+//! - `tests/docs/invariant/003_entry_type_format.md` — IN-1..IN-6: JSONL entry type classification contracts
 //! - `tests/docs/cli/pitfall/02_cross_command_propagation.md` — PF-1..PF-3: propagation fix annotation contracts
 //! - `tests/docs/cli/pitfall/03_test_data_format.md` — PF-1..PF-4: test data JSONL format contracts
 //! - `tests/docs/algorithm/001_agent_session_tracking.md` — AL-1..AL-2: agent session detection contracts
@@ -73,7 +73,7 @@ fn assistant_jsonl_line( uuid : &str, session_id : &str ) -> String
 /// IN-1: `/` encodes to `-`.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/01_path_encoding.md` — IN-1
+/// `tests/docs/invariant/001_path_encoding.md` — IN-1
 #[ test ]
 fn in_1_slash_encodes_to_dash()
 {
@@ -89,7 +89,7 @@ fn in_1_slash_encodes_to_dash()
 /// IN-2: `_` encodes to `-` (lossy — identical result to IN-1).
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/01_path_encoding.md` — IN-2
+/// `tests/docs/invariant/001_path_encoding.md` — IN-2
 #[ test ]
 fn in_2_underscore_encodes_to_dash()
 {
@@ -105,7 +105,7 @@ fn in_2_underscore_encodes_to_dash()
 /// IN-3: encode output contains only `[a-zA-Z0-9-]` characters.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/01_path_encoding.md` — IN-3
+/// `tests/docs/invariant/001_path_encoding.md` — IN-3
 #[ test ]
 fn in_3_output_contains_only_safe_chars()
 {
@@ -128,7 +128,7 @@ fn in_3_output_contains_only_safe_chars()
 /// on `/`), so the display path preserves the underscore.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/01_path_encoding.md` — IN-4
+/// `tests/docs/invariant/001_path_encoding.md` — IN-4
 #[ test ]
 fn in_4_encode_decode_round_trip_via_cli()
 {
@@ -165,7 +165,7 @@ fn in_4_encode_decode_round_trip_via_cli()
 /// the display path must match that real filesystem candidate.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/01_path_encoding.md` — IN-5
+/// `tests/docs/invariant/001_path_encoding.md` — IN-5
 #[ test ]
 fn in_5_collision_paths_disambiguated_by_dfs()
 {
@@ -213,7 +213,7 @@ fn in_5_collision_paths_disambiguated_by_dfs()
 /// IN-1: Flat layout: `agent-*.jsonl` at project root is discovered as agent session.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/02_session_family.md` — IN-1
+/// `tests/docs/invariant/002_session_family.md` — IN-1
 #[ test ]
 fn in_1_flat_agent_discovered_by_filename()
 {
@@ -249,7 +249,7 @@ fn in_1_flat_agent_discovered_by_filename()
 /// IN-2: Flat layout: family membership established via `sessionId` field in first agent entry.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/02_session_family.md` — IN-2
+/// `tests/docs/invariant/002_session_family.md` — IN-2
 #[ test ]
 fn in_2_flat_agent_membership_via_session_id()
 {
@@ -288,7 +288,7 @@ fn in_2_flat_agent_membership_via_session_id()
 /// IN-3: Hierarchical layout: agents in `{uuid}/subagents/` are discovered.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/02_session_family.md` — IN-3
+/// `tests/docs/invariant/002_session_family.md` — IN-3
 #[ test ]
 fn in_3_hierarchical_agent_discovered_in_subagents_dir()
 {
@@ -330,7 +330,7 @@ fn in_3_hierarchical_agent_discovered_in_subagents_dir()
 /// by virtue of its directory placement, not by matching `sessionId`.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/02_session_family.md` — IN-4
+/// `tests/docs/invariant/002_session_family.md` — IN-4
 #[ test ]
 fn in_4_hierarchical_membership_by_directory_not_session_id()
 {
@@ -375,7 +375,7 @@ fn in_4_hierarchical_membership_by_directory_not_session_id()
 /// IN-5: Both flat and hierarchical agents coexist without conflict.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/02_session_family.md` — IN-5
+/// `tests/docs/invariant/002_session_family.md` — IN-5
 #[ test ]
 fn in_5_flat_and_hierarchical_coexist()
 {
@@ -419,7 +419,7 @@ fn in_5_flat_and_hierarchical_coexist()
 /// `.projects` command must succeed (exit 0) — no parse error from empty metadata.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/02_session_family.md` — IN-6
+/// `tests/docs/invariant/002_session_family.md` — IN-6
 #[ test ]
 fn in_6_empty_meta_json_parsed_without_error()
 {
@@ -474,7 +474,7 @@ fn in_6_empty_meta_json_parsed_without_error()
 /// both carry identical `slug` values.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/02_session_family.md` — IN-7
+/// `tests/docs/invariant/002_session_family.md` — IN-7
 #[ test ]
 fn in_7_agent_slug_identical_across_same_parent_session()
 {
@@ -515,7 +515,7 @@ fn in_7_agent_slug_identical_across_same_parent_session()
 /// root session JSONL.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/02_session_family.md` — IN-8
+/// `tests/docs/invariant/002_session_family.md` — IN-8
 #[ test ]
 fn in_8_agent_entries_thread_via_parent_uuid_within_agent()
 {
@@ -619,7 +619,7 @@ fn al_2_agent_entry_agent_id_matches_filename_suffix()
 /// IN-1: `"type":"user"` top-level entry classified as User.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/03_entry_type_format.md` — IN-1
+/// `tests/docs/invariant/003_entry_type_format.md` — IN-1
 #[ test ]
 fn in_1_user_type_counted_as_conversation_entry()
 {
@@ -636,7 +636,7 @@ fn in_1_user_type_counted_as_conversation_entry()
 /// IN-2: `"type":"assistant"` top-level entry classified as Assistant.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/03_entry_type_format.md` — IN-2
+/// `tests/docs/invariant/003_entry_type_format.md` — IN-2
 #[ test ]
 fn in_2_assistant_type_counted_as_conversation_entry()
 {
@@ -653,7 +653,7 @@ fn in_2_assistant_type_counted_as_conversation_entry()
 /// IN-3: `"type":"queue-operation"` is silently skipped (returns parse error).
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/03_entry_type_format.md` — IN-3
+/// `tests/docs/invariant/003_entry_type_format.md` — IN-3
 #[ test ]
 fn in_3_queue_operation_type_skipped()
 {
@@ -668,7 +668,7 @@ fn in_3_queue_operation_type_skipped()
 /// IN-4: `"type":"summary"` is silently skipped (returns parse error).
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/03_entry_type_format.md` — IN-4
+/// `tests/docs/invariant/003_entry_type_format.md` — IN-4
 #[ test ]
 fn in_4_summary_type_skipped()
 {
@@ -683,7 +683,7 @@ fn in_4_summary_type_skipped()
 /// IN-5: Entry missing `"uuid"` field is silently skipped via `session.entries()`.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/03_entry_type_format.md` — IN-5
+/// `tests/docs/invariant/003_entry_type_format.md` — IN-5
 #[ test ]
 fn in_5_entry_missing_uuid_skipped()
 {
@@ -717,7 +717,7 @@ fn in_5_entry_missing_uuid_skipped()
 /// Entry B: `"type":"assistant"` with `"message":{"role":"user"}` → classified as Assistant.
 ///
 /// ## Related Requirements
-/// `tests/docs/invariant/03_entry_type_format.md` — IN-6
+/// `tests/docs/invariant/003_entry_type_format.md` — IN-6
 #[ test ]
 fn in_6_message_role_not_used_for_classification()
 {

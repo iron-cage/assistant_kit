@@ -3,7 +3,7 @@
 Test case planning for [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md). Tests validate that `run_print_mode()` applies the `DEFAULT_PRINT_TIMEOUT_SECS = 3600` watchdog when no explicit `--timeout` is given, and that `run_interactive()` remains unbounded.
 
 **Source:** [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md)
-**Related:** [cli/param/36_timeout.md](../cli/param/36_timeout.md), [invariant/006_exit_codes.md](006_exit_codes.md)
+**Related:** [cli/param/036_timeout.md](../cli/param/036_timeout.md), [invariant/006_exit_codes.md](006_exit_codes.md)
 
 ## Test Case Index
 
@@ -114,7 +114,7 @@ IT-2 and IT-3 use a fake `claude` subprocess to avoid live API calls. IT-3 uses 
 - **When:** `CLR_TIMEOUT=3600 clr --dry-run "task"`
 - **Then:** Exit 0; env var parsed successfully without error; dry-run completes normally
 - **Exit:** 0
-- **Source:** [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md), [cli/param/36_timeout.md](../cli/param/36_timeout.md) ec_timeout_env_matches_default
+- **Source:** [invariant/007_print_mode_timeout.md](../../../docs/invariant/007_print_mode_timeout.md), [cli/param/036_timeout.md](../cli/param/036_timeout.md) ec_timeout_env_matches_default
 
 ---
 

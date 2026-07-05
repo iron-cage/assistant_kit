@@ -3,9 +3,9 @@
 Edge case coverage for the `--timeout` parameter on the `run`/`ask` dispatch paths. See [036_timeout.md](../../../../docs/cli/param/036_timeout.md) for specification.
 
 **Scope note:** This file covers `--timeout` for the `run`/`ask` commands only. `--timeout` for
-the `isolated`/`refresh` commands is covered in [20_timeout.md](20_timeout.md). All four commands
+the `isolated`/`refresh` commands is covered in [020_timeout.md](020_timeout.md). All four commands
 now share the same semantics: `--timeout 0` means **unlimited** (no watchdog). Tests in this file
-must not be confused with those in `20_timeout.md`.
+must not be confused with those in `020_timeout.md`.
 
 ## Test Case Index
 
@@ -52,9 +52,9 @@ sleeps 30 seconds but the timeout fires after 1 second, producing exit 4 and a s
 containing "timeout". EC-8 verifies the no-timeout path: the fake script exits immediately and
 the timeout watchdog is disarmed without firing.
 
-**Cross-command parity with 20_timeout.md:** All four commands now use the same `--timeout 0`
+**Cross-command parity with 020_timeout.md:** All four commands now use the same `--timeout 0`
 semantics: unlimited (no watchdog). Tests in this file cover `run`/`ask` only;
-`isolated`/`refresh` timeout tests are in `20_timeout.md`.
+`isolated`/`refresh` timeout tests are in `020_timeout.md`.
 
 ## Implementation Notes
 

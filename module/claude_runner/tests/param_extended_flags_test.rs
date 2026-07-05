@@ -13,44 +13,44 @@
 //! ## Spec Coverage
 //!
 //! --no-chrome:
-//! - S34: `--no-chrome "msg"` → no `--chrome` in assembled command (`21_no_chrome.md` EC-1)
-//! - S35: default (no `--no-chrome`) → `--chrome` present in assembled command (`21_no_chrome.md` EC-2)
-//! - S36: `--no-chrome` without message → exit 0; no `--chrome` in preview (`21_no_chrome.md` EC-3)
-//! - S37: `--help` output contains `--no-chrome` (`21_no_chrome.md` EC-4)
-//! - S38: `--no-chrome` + `--no-skip-permissions` → neither default flag in assembled command (`21_no_chrome.md` EC-5)
-//! - S39: `--no-chrome` + `--dry-run` → preview without `--chrome`; stderr empty (`21_no_chrome.md` EC-6)
+//! - S34: `--no-chrome "msg"` → no `--chrome` in assembled command (`021_no_chrome.md` EC-1)
+//! - S35: default (no `--no-chrome`) → `--chrome` present in assembled command (`021_no_chrome.md` EC-2)
+//! - S36: `--no-chrome` without message → exit 0; no `--chrome` in preview (`021_no_chrome.md` EC-3)
+//! - S37: `--help` output contains `--no-chrome` (`021_no_chrome.md` EC-4)
+//! - S38: `--no-chrome` + `--no-skip-permissions` → neither default flag in assembled command (`021_no_chrome.md` EC-5)
+//! - S39: `--no-chrome` + `--dry-run` → preview without `--chrome`; stderr empty (`021_no_chrome.md` EC-6)
 //!
 //! --no-persist:
-//! - S40: `--no-persist "msg"` → `--no-session-persistence` in assembled command (`22_no_persist.md` EC-1)
-//! - S41: default (no `--no-persist`) → no `--no-session-persistence` in assembled command (`22_no_persist.md` EC-2)
-//! - S42: `--no-persist` without message → exit 0 (`22_no_persist.md` EC-3)
-//! - S43: `--help` output contains `--no-persist` (`22_no_persist.md` EC-4)
-//! - S44: `--no-persist` + `--new-session` → both accepted; `--no-session-persistence` present, no `-c` (`22_no_persist.md` EC-5)
-//! - S45: `--no-persist` + `--dry-run` → preview shows `--no-session-persistence`; stderr empty (`22_no_persist.md` EC-6)
+//! - S40: `--no-persist "msg"` → `--no-session-persistence` in assembled command (`022_no_persist.md` EC-1)
+//! - S41: default (no `--no-persist`) → no `--no-session-persistence` in assembled command (`022_no_persist.md` EC-2)
+//! - S42: `--no-persist` without message → exit 0 (`022_no_persist.md` EC-3)
+//! - S43: `--help` output contains `--no-persist` (`022_no_persist.md` EC-4)
+//! - S44: `--no-persist` + `--new-session` → both accepted; `--no-session-persistence` present, no `-c` (`022_no_persist.md` EC-5)
+//! - S45: `--no-persist` + `--dry-run` → preview shows `--no-session-persistence`; stderr empty (`022_no_persist.md` EC-6)
 //!
 //! --json-schema:
-//! - S46: `--json-schema <val> "msg"` → forwarded in assembled command (`23_json_schema.md` EC-1)
-//! - S47: default (no `--json-schema`) → no `--json-schema` in assembled command (`23_json_schema.md` EC-2)
-//! - S48: complex schema → forwarded verbatim (`23_json_schema.md` EC-3)
-//! - S49: `--help` output contains `--json-schema` (`23_json_schema.md` EC-4)
-//! - S50: `--json-schema` + `--model` → both forwarded (`23_json_schema.md` EC-5)
-//! - S51: `--json-schema` without message → exit 0; schema in assembled command (`23_json_schema.md` EC-6)
-//! - S89: `--output-style raw --json-schema` → stdout non-empty (BUG-318 reproducer, `23_json_schema.md` EC-7)
+//! - S46: `--json-schema <val> "msg"` → forwarded in assembled command (`023_json_schema.md` EC-1)
+//! - S47: default (no `--json-schema`) → no `--json-schema` in assembled command (`023_json_schema.md` EC-2)
+//! - S48: complex schema → forwarded verbatim (`023_json_schema.md` EC-3)
+//! - S49: `--help` output contains `--json-schema` (`023_json_schema.md` EC-4)
+//! - S50: `--json-schema` + `--model` → both forwarded (`023_json_schema.md` EC-5)
+//! - S51: `--json-schema` without message → exit 0; schema in assembled command (`023_json_schema.md` EC-6)
+//! - S89: `--output-style raw --json-schema` → stdout non-empty (BUG-318 reproducer, `023_json_schema.md` EC-7)
 //!
 //! --mcp-config:
-//! - S52: single `--mcp-config <path> "msg"` → forwarded in assembled command (`24_mcp_config.md` EC-1)
-//! - S53: default (no `--mcp-config`) → no `--mcp-config` in assembled command (`24_mcp_config.md` EC-2)
-//! - S54: multiple `--mcp-config` flags → all forwarded individually (`24_mcp_config.md` EC-3)
-//! - S55: `--help` output contains `--mcp-config` (`24_mcp_config.md` EC-4)
-//! - S56: `--mcp-config` + `--model` → both forwarded (`24_mcp_config.md` EC-5)
-//! - S57: `--mcp-config` without message → exit 0; path in assembled command (`24_mcp_config.md` EC-6)
+//! - S52: single `--mcp-config <path> "msg"` → forwarded in assembled command (`024_mcp_config.md` EC-1)
+//! - S53: default (no `--mcp-config`) → no `--mcp-config` in assembled command (`024_mcp_config.md` EC-2)
+//! - S54: multiple `--mcp-config` flags → all forwarded individually (`024_mcp_config.md` EC-3)
+//! - S55: `--help` output contains `--mcp-config` (`024_mcp_config.md` EC-4)
+//! - S56: `--mcp-config` + `--model` → both forwarded (`024_mcp_config.md` EC-5)
+//! - S57: `--mcp-config` without message → exit 0; path in assembled command (`024_mcp_config.md` EC-6)
 //!
 //! --subdir:
-//! - S81: default (no `--subdir`) → no `/-` path component in dry-run output (`28_subdir.md` EC-1)
-//! - S82: `--subdir NAME` → effective dir ends with `/-NAME` (`28_subdir.md` EC-2)
-//! - S83: `--subdir .` → identity; no `/-` suffix in dry-run output (`28_subdir.md` EC-3)
-//! - S84: `--help` output contains `--subdir` (`28_subdir.md` EC-4)
-//! - S85: `--subdir NAME` + `--dir PATH` → effective dir is `PATH/-NAME` (`28_subdir.md` EC-5)
+//! - S81: default (no `--subdir`) → no `/-` path component in dry-run output (`028_subdir.md` EC-1)
+//! - S82: `--subdir NAME` → effective dir ends with `/-NAME` (`028_subdir.md` EC-2)
+//! - S83: `--subdir .` → identity; no `/-` suffix in dry-run output (`028_subdir.md` EC-3)
+//! - S84: `--help` output contains `--subdir` (`028_subdir.md` EC-4)
+//! - S85: `--subdir NAME` + `--dir PATH` → effective dir is `PATH/-NAME` (`028_subdir.md` EC-5)
 //! - S86: `--subdir ""` → identity (BUG-229 reproducer)
 //! - S87: `--subdir "a/b"` → rejected, slash in name (BUG-230 reproducer)
 //! - S88: `--dry-run --subdir NAME` → no directory created (BUG-231 reproducer)
@@ -60,7 +60,7 @@ use cli_binary_test_helpers::run_cli;
 #[ cfg( unix ) ]
 use cli_binary_test_helpers::fake_claude_dir;
 
-// S34: `--no-chrome` suppresses default `--chrome` injection (`21_no_chrome.md` EC-1)
+// S34: `--no-chrome` suppresses default `--chrome` injection (`021_no_chrome.md` EC-1)
 #[ test ]
 fn s34_no_chrome_suppresses_chrome_flag()
 {
@@ -73,7 +73,7 @@ fn s34_no_chrome_suppresses_chrome_flag()
   );
 }
 
-// S35: default (no `--no-chrome`) → `--chrome` present in interactive mode (`21_no_chrome.md` EC-2)
+// S35: default (no `--no-chrome`) → `--chrome` present in interactive mode (`021_no_chrome.md` EC-2)
 // Fix(BUG-304): chrome is suppressed automatically in print mode; only injected for interactive.
 #[ test ]
 fn s35_default_chrome_injected_interactive()
@@ -88,7 +88,7 @@ fn s35_default_chrome_injected_interactive()
   );
 }
 
-// S35b: print mode (message given, no explicit --no-chrome) → `--chrome` absent (`21_no_chrome.md` EC-2b)
+// S35b: print mode (message given, no explicit --no-chrome) → `--chrome` absent (`021_no_chrome.md` EC-2b)
 // Fix(BUG-304): chrome is automatically suppressed in print mode to prevent session hang.
 #[ test ]
 fn s35b_print_mode_suppresses_chrome()
@@ -103,7 +103,7 @@ fn s35b_print_mode_suppresses_chrome()
   );
 }
 
-// S36: `--no-chrome` without message → exit 0; no `--chrome` in preview (`21_no_chrome.md` EC-3)
+// S36: `--no-chrome` without message → exit 0; no `--chrome` in preview (`021_no_chrome.md` EC-3)
 #[ test ]
 fn s36_no_chrome_without_message_accepted()
 {
@@ -120,7 +120,7 @@ fn s36_no_chrome_without_message_accepted()
   );
 }
 
-// S37: `--help` output lists `--no-chrome` (`21_no_chrome.md` EC-4)
+// S37: `--help` output lists `--no-chrome` (`021_no_chrome.md` EC-4)
 #[ test ]
 fn s37_help_lists_no_chrome()
 {
@@ -134,7 +134,7 @@ fn s37_help_lists_no_chrome()
 }
 
 // S38: `--no-chrome` + `--no-skip-permissions` → neither `--chrome` nor
-// `--dangerously-skip-permissions` in assembled command (`21_no_chrome.md` EC-5)
+// `--dangerously-skip-permissions` in assembled command (`021_no_chrome.md` EC-5)
 #[ test ]
 fn s38_no_chrome_with_no_skip_permissions_both_suppressed()
 {
@@ -151,7 +151,7 @@ fn s38_no_chrome_with_no_skip_permissions_both_suppressed()
   );
 }
 
-// S39: `--no-chrome` + `--dry-run` → preview without `--chrome`; stderr empty (`21_no_chrome.md` EC-6)
+// S39: `--no-chrome` + `--dry-run` → preview without `--chrome`; stderr empty (`021_no_chrome.md` EC-6)
 #[ test ]
 fn s39_no_chrome_with_dry_run_preview_clean()
 {
@@ -169,7 +169,7 @@ fn s39_no_chrome_with_dry_run_preview_clean()
   );
 }
 
-// S40: `--no-persist` → `--no-session-persistence` in assembled command (`22_no_persist.md` EC-1)
+// S40: `--no-persist` → `--no-session-persistence` in assembled command (`022_no_persist.md` EC-1)
 #[ test ]
 fn s40_no_persist_forwards_no_session_persistence()
 {
@@ -182,7 +182,7 @@ fn s40_no_persist_forwards_no_session_persistence()
   );
 }
 
-// S41: default (no `--no-persist`) → no `--no-session-persistence` in assembled command (`22_no_persist.md` EC-2)
+// S41: default (no `--no-persist`) → no `--no-session-persistence` in assembled command (`022_no_persist.md` EC-2)
 #[ test ]
 fn s41_default_no_session_persistence_absent()
 {
@@ -195,7 +195,7 @@ fn s41_default_no_session_persistence_absent()
   );
 }
 
-// S42: `--no-persist` without message → exit 0 (`22_no_persist.md` EC-3)
+// S42: `--no-persist` without message → exit 0 (`022_no_persist.md` EC-3)
 #[ test ]
 fn s42_no_persist_without_message_accepted()
 {
@@ -212,7 +212,7 @@ fn s42_no_persist_without_message_accepted()
   );
 }
 
-// S43: `--help` output lists `--no-persist` (`22_no_persist.md` EC-4)
+// S43: `--help` output lists `--no-persist` (`022_no_persist.md` EC-4)
 #[ test ]
 fn s43_help_lists_no_persist()
 {
@@ -225,7 +225,7 @@ fn s43_help_lists_no_persist()
   );
 }
 
-// S44: `--no-persist` + `--new-session` → `--no-session-persistence` present, no `-c` (`22_no_persist.md` EC-5)
+// S44: `--no-persist` + `--new-session` → `--no-session-persistence` present, no `-c` (`022_no_persist.md` EC-5)
 #[ test ]
 fn s44_no_persist_with_new_session_accepted()
 {
@@ -242,7 +242,7 @@ fn s44_no_persist_with_new_session_accepted()
   );
 }
 
-// S45: `--no-persist` + `--dry-run` → preview shows `--no-session-persistence`; stderr empty (`22_no_persist.md` EC-6)
+// S45: `--no-persist` + `--dry-run` → preview shows `--no-session-persistence`; stderr empty (`022_no_persist.md` EC-6)
 #[ test ]
 fn s45_no_persist_with_dry_run_preview_shows_flag()
 {
@@ -260,7 +260,7 @@ fn s45_no_persist_with_dry_run_preview_shows_flag()
   );
 }
 
-// S46: `--json-schema <val>` forwarded in assembled command (`23_json_schema.md` EC-1)
+// S46: `--json-schema <val>` forwarded in assembled command (`023_json_schema.md` EC-1)
 #[ test ]
 fn s46_json_schema_forwarded()
 {
@@ -277,7 +277,7 @@ fn s46_json_schema_forwarded()
   );
 }
 
-// S47: default (no `--json-schema`) → absent from assembled command (`23_json_schema.md` EC-2)
+// S47: default (no `--json-schema`) → absent from assembled command (`023_json_schema.md` EC-2)
 #[ test ]
 fn s47_default_json_schema_absent()
 {
@@ -290,7 +290,7 @@ fn s47_default_json_schema_absent()
   );
 }
 
-// S48: complex nested schema forwarded verbatim (`23_json_schema.md` EC-3)
+// S48: complex nested schema forwarded verbatim (`023_json_schema.md` EC-3)
 #[ test ]
 fn s48_json_schema_complex_forwarded_verbatim()
 {
@@ -304,7 +304,7 @@ fn s48_json_schema_complex_forwarded_verbatim()
   );
 }
 
-// S49: `--help` output lists `--json-schema` (`23_json_schema.md` EC-4)
+// S49: `--help` output lists `--json-schema` (`023_json_schema.md` EC-4)
 #[ test ]
 fn s49_help_lists_json_schema()
 {
@@ -317,7 +317,7 @@ fn s49_help_lists_json_schema()
   );
 }
 
-// S50: `--json-schema` + `--model` → both forwarded (`23_json_schema.md` EC-5)
+// S50: `--json-schema` + `--model` → both forwarded (`023_json_schema.md` EC-5)
 #[ test ]
 fn s50_json_schema_with_model_both_forwarded()
 {
@@ -334,7 +334,7 @@ fn s50_json_schema_with_model_both_forwarded()
   );
 }
 
-// S51: `--json-schema` without message → exit 0; schema in assembled command (`23_json_schema.md` EC-6)
+// S51: `--json-schema` without message → exit 0; schema in assembled command (`023_json_schema.md` EC-6)
 #[ test ]
 fn s51_json_schema_without_message_accepted()
 {
@@ -351,7 +351,7 @@ fn s51_json_schema_without_message_accepted()
   );
 }
 
-// S52: single `--mcp-config <path>` forwarded in assembled command (`24_mcp_config.md` EC-1)
+// S52: single `--mcp-config <path>` forwarded in assembled command (`024_mcp_config.md` EC-1)
 #[ test ]
 fn s52_mcp_config_forwarded()
 {
@@ -364,7 +364,7 @@ fn s52_mcp_config_forwarded()
   );
 }
 
-// S53: default (no `--mcp-config`) → absent from assembled command (`24_mcp_config.md` EC-2)
+// S53: default (no `--mcp-config`) → absent from assembled command (`024_mcp_config.md` EC-2)
 #[ test ]
 fn s53_default_mcp_config_absent()
 {
@@ -377,7 +377,7 @@ fn s53_default_mcp_config_absent()
   );
 }
 
-// S54: multiple `--mcp-config` flags → all forwarded as separate occurrences (`24_mcp_config.md` EC-3)
+// S54: multiple `--mcp-config` flags → all forwarded as separate occurrences (`024_mcp_config.md` EC-3)
 #[ test ]
 fn s54_mcp_config_multiple_forwarded_individually()
 {
@@ -401,7 +401,7 @@ fn s54_mcp_config_multiple_forwarded_individually()
   );
 }
 
-// S55: `--help` output lists `--mcp-config` (`24_mcp_config.md` EC-4)
+// S55: `--help` output lists `--mcp-config` (`024_mcp_config.md` EC-4)
 #[ test ]
 fn s55_help_lists_mcp_config()
 {
@@ -414,7 +414,7 @@ fn s55_help_lists_mcp_config()
   );
 }
 
-// S56: `--mcp-config` + `--model` → both forwarded (`24_mcp_config.md` EC-5)
+// S56: `--mcp-config` + `--model` → both forwarded (`024_mcp_config.md` EC-5)
 #[ test ]
 fn s56_mcp_config_with_model_both_forwarded()
 {
@@ -431,7 +431,7 @@ fn s56_mcp_config_with_model_both_forwarded()
   );
 }
 
-// S57: `--mcp-config` without message → exit 0; path in assembled command (`24_mcp_config.md` EC-6)
+// S57: `--mcp-config` without message → exit 0; path in assembled command (`024_mcp_config.md` EC-6)
 #[ test ]
 fn s57_mcp_config_without_message_accepted()
 {
@@ -449,10 +449,10 @@ fn s57_mcp_config_without_message_accepted()
 }
 
 // ─── --subdir ─────────────────────────────────────────────────────────────────
-// Source: tests/docs/cli/param/28_subdir.md
+// Source: tests/docs/cli/param/028_subdir.md
 // EC-6 (env var) and EC-7 (CLI-wins) are covered by env_var_ext_test.rs E29.
 
-// S81: default (no `--subdir`) → no `/-` path component in dry-run output (`28_subdir.md` EC-1)
+// S81: default (no `--subdir`) → no `/-` path component in dry-run output (`028_subdir.md` EC-1)
 #[ test ]
 fn s81_default_no_subdir_no_hyphen_prefix()
 {
@@ -466,7 +466,7 @@ fn s81_default_no_subdir_no_hyphen_prefix()
   );
 }
 
-// S82: `--subdir NAME` → effective dir ends with `/-NAME` (`28_subdir.md` EC-2)
+// S82: `--subdir NAME` → effective dir ends with `/-NAME` (`028_subdir.md` EC-2)
 #[ test ]
 fn s82_subdir_name_appends_hyphen_prefix()
 {
@@ -480,7 +480,7 @@ fn s82_subdir_name_appends_hyphen_prefix()
   );
 }
 
-// S83: `--subdir .` → identity; no `/-` suffix in dry-run output (`28_subdir.md` EC-3)
+// S83: `--subdir .` → identity; no `/-` suffix in dry-run output (`028_subdir.md` EC-3)
 #[ test ]
 fn s83_subdir_dot_identity_no_suffix()
 {
@@ -494,7 +494,7 @@ fn s83_subdir_dot_identity_no_suffix()
   );
 }
 
-// S84: `--help` output contains `--subdir` (`28_subdir.md` EC-4)
+// S84: `--help` output contains `--subdir` (`028_subdir.md` EC-4)
 #[ test ]
 fn s84_help_lists_subdir()
 {
@@ -507,7 +507,7 @@ fn s84_help_lists_subdir()
   );
 }
 
-// S85: `--subdir NAME` + `--dir PATH` → effective dir is `PATH/-NAME` (`28_subdir.md` EC-5)
+// S85: `--subdir NAME` + `--dir PATH` → effective dir is `PATH/-NAME` (`028_subdir.md` EC-5)
 #[ cfg( unix ) ]
 #[ test ]
 fn s85_subdir_with_dir_combined()
@@ -627,7 +627,7 @@ fn s88_dryrun_subdir_no_mkdir()
 }
 
 // S89: `--output-style raw --json-schema` → stdout non-empty; structured_output extracted
-// (`23_json_schema.md` EC-7 / BUG-318 fix)
+// (`023_json_schema.md` EC-7 / BUG-318 fix)
 
 /// Fix(BUG-318): `--output-style raw` combined with `--json-schema` produced empty stdout
 /// because claude returns an empty `"result"` text field for structured responses.

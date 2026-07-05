@@ -5,7 +5,7 @@
 //! ## Purpose
 //!
 //! Verify T01–T18 covering the expect-group parameters:
-//! `30_expect.md` and `31_expect_strategy.md`.
+//! `030_expect.md` and `031_expect_strategy.md`.
 //!
 //! ## Key Design Note
 //!

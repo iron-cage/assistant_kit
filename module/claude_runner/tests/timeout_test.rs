@@ -5,7 +5,7 @@
 //!
 //! ## Purpose
 //!
-//! Verify EC-1 through EC-8 from `tests/docs/cli/param/36_timeout.md`, the
+//! Verify EC-1 through EC-8 from `tests/docs/cli/param/036_timeout.md`, the
 //! default-timeout tests (`ec_timeout_default_*`, `ec_timeout_explicit_*`, `ec_timeout_unlimited_*`)
 //! introduced by TSK-227/228 (BUG-305: print-mode had no default watchdog), and the
 //! BUG-317 double-emission guard (`ec_timeout_retry_no_double_emission`).

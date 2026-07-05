@@ -5,8 +5,8 @@
 //!
 //! ## Purpose
 //!
-//! Verify EC-1 through EC-10 from `tests/docs/cli/param/34_retry_on_transient.md` and
-//! EC-1 through EC-7 from `tests/docs/cli/param/35_transient_delay.md`.
+//! Verify EC-1 through EC-10 from `tests/docs/cli/param/034_retry_on_transient.md` and
+//! EC-1 through EC-7 from `tests/docs/cli/param/035_transient_delay.md`.
 //!
 //! Both parameter specs share this test file (see Implementation Notes in each spec).
 //!

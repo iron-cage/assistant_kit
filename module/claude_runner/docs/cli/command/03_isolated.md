@@ -22,7 +22,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 | [`--timeout`](../param/020_timeout.md) | [`TimeoutSecs`](../type/09_timeout_secs.md) | 30 | Max seconds to wait for subprocess |
 | [`--trace`](../param/013_trace.md) | bool | false | Print underlying call details to stderr then execute |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Print subprocess env+command to stderr (same path as `--trace`); exit 0 without spawning |
-| [`--no-compact-window`](../param/075_no_compact_window.md) | bool | false | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection; env: `CLR_NO_COMPACT_WINDOW` |
+| [`--no-compact-window`](../param/077_no_compact_window.md) | bool | false | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection; env: `CLR_NO_COMPACT_WINDOW` |
 | [`--dir`](../param/008_dir.md) | path | — | Working directory injected into subprocess command; validated to exist before spawn; env: `CLR_DIR` |
 | [`--add-dir`](../param/066_add_dir.md) | path (repeatable) | — | Additional directory Claude may access; injected per entry into subprocess command; env: `CLR_ADD_DIR` |
 | [`--file`](../param/025_file.md) | path | — | File piped as stdin to the subprocess; validated to exist before spawn |

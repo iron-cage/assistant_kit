@@ -2,7 +2,7 @@
 
 Direct contract tests for the JSONL entry type field behavioral invariant.
 
-**Source:** [invariant/03_entry_type_format.md](../../../docs/invariant/03_entry_type_format.md)
+**Source:** [invariant/003_entry_type_format.md](../../../docs/invariant/003_entry_type_format.md)
 
 ## Test Case Index
 

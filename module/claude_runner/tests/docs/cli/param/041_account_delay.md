@@ -26,7 +26,7 @@ See [041_account_delay.md](../../../../docs/cli/param/041_account_delay.md) for 
 
 ## Architectural Constraint
 
-Delay integration is covered by `40_retry_on_account.md` EC-7 (`--account-delay 0` used there).
+Delay integration is covered by `040_retry_on_account.md` EC-7 (`--account-delay 0` used there).
 These tests verify parse and env-var behavior only via dry-run.
 
 ## Implementation Notes

@@ -2,6 +2,13 @@
 
 **Status**: Planned | **Since**: 1.3.0
 
+### Scope
+
+- **Purpose**: Define the core data model shared by every journal event record.
+- **Responsibility**: Documents the `EventType` enum, `EventRecord` struct, and `EventFields` field bag, plus their serialization behavior.
+- **In Scope**: The 8 event-type discriminators, the flat optional-field bag, and JSON (de)serialization rules.
+- **Out of Scope**: Writing events to disk (→ `docs/api/001_journal_writer.md`), reading/filtering events (→ `docs/api/002_journal_reader.md`).
+
 ## Description
 
 Core data model for the journal system: the `EventType` enum, `EventRecord` struct, and `EventFields` field bag. `EventType` discriminates the 8 event categories. `EventRecord` is the top-level serializable unit containing version, timestamp, type, and fields. `EventFields` is a flat struct with all possible fields as `Option` — each event type populates its relevant subset.

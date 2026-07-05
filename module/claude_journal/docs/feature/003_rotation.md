@@ -2,6 +2,13 @@
 
 **Status**: Planned | **Since**: 1.3.0
 
+### Scope
+
+- **Purpose**: Provide daily file rotation and retention pruning for journal storage.
+- **Responsibility**: Documents the age-based and size-based pruning strategies and the filename-driven file listing they rely on.
+- **In Scope**: Explicit `.prune`-triggered pruning, filename-date ordering, and non-matching-filename handling.
+- **Out of Scope**: Journal file creation/writing (→ `docs/feature/001_event_journaling.md`), the CLI `.prune` command surface (→ `claude_journal_viewer` `docs/feature/001_cli_viewing.md`).
+
 ## Description
 
 Daily file rotation and retention pruning for journal storage. Journal files are named by UTC date (`YYYY-MM-DD.jsonl`) — one file per day, created on first write. Two pruning strategies are supported: age-based (delete files older than N days) and size-based (delete oldest files until total size is under a threshold).

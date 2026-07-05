@@ -139,7 +139,7 @@ fn test_it8_missing_creds_flag()
 
 /// EC-creds-4: Nonexistent creds file → exit 1, file-not-found error.
 ///
-/// Source: tests/docs/cli/param/19_creds.md#ec-4
+/// Source: tests/docs/cli/param/019_creds.md#ec-4
 #[ test ]
 fn test_ec_creds4_file_not_found()
 {
@@ -154,7 +154,7 @@ fn test_ec_creds4_file_not_found()
 
 /// EC-creds-5: `--creds` without value → exit 1, argument requires value.
 ///
-/// Source: tests/docs/cli/param/19_creds.md#ec-5
+/// Source: tests/docs/cli/param/019_creds.md#ec-5
 #[ test ]
 fn test_ec_creds5_no_value()
 {
@@ -168,7 +168,7 @@ fn test_ec_creds5_no_value()
 
 /// EC-creds-6: `--creds` omitted, `CLR_CREDS` unset → trace confirms default `$HOME/.claude/.credentials.json`.
 ///
-/// Source: tests/docs/cli/param/19_creds.md#ec-6
+/// Source: tests/docs/cli/param/019_creds.md#ec-6
 #[ test ]
 fn test_ec_creds6_required_flag()
 {
@@ -203,7 +203,7 @@ fn test_ec_creds6_required_flag()
 /// `-1` starts with `-` so it is consumed as the value of `--timeout`,
 /// then `parse_timeout` rejects it because `u64` cannot represent negatives.
 ///
-/// Source: tests/docs/cli/param/20_timeout.md#ec-4
+/// Source: tests/docs/cli/param/020_timeout.md#ec-4
 #[ test ]
 fn test_ec_timeout4_negative()
 {
@@ -219,7 +219,7 @@ fn test_ec_timeout4_negative()
 
 /// EC-timeout-5: `--timeout abc` → exit 1, non-numeric rejected.
 ///
-/// Source: tests/docs/cli/param/20_timeout.md#ec-5
+/// Source: tests/docs/cli/param/020_timeout.md#ec-5
 #[ test ]
 fn test_ec_timeout5_non_numeric()
 {
@@ -235,7 +235,7 @@ fn test_ec_timeout5_non_numeric()
 
 /// EC-timeout-6: `--timeout` without value → exit 1, requires argument.
 ///
-/// Source: tests/docs/cli/param/20_timeout.md#ec-6
+/// Source: tests/docs/cli/param/020_timeout.md#ec-6
 #[ test ]
 fn test_ec_timeout6_no_value()
 {
@@ -254,7 +254,7 @@ fn test_ec_timeout6_no_value()
 /// The subprocess may fail (e.g. `ClaudeNotFound` → exit 1) but the error
 /// must NOT be an invalid-timeout parse error.
 ///
-/// Source: tests/docs/cli/param/20_timeout.md#ec-1
+/// Source: tests/docs/cli/param/020_timeout.md#ec-1
 #[ test ]
 fn test_ec_timeout1_value_accepted()
 {
@@ -272,7 +272,7 @@ fn test_ec_timeout1_value_accepted()
 /// Subprocess may exit 1 (`ClaudeNotFound`) or 2 (immediate timeout) — we only
 /// assert the value itself is parsed without error.
 ///
-/// Source: tests/docs/cli/param/20_timeout.md#ec-2
+/// Source: tests/docs/cli/param/020_timeout.md#ec-2
 #[ test ]
 fn test_ec_timeout2_zero_accepted()
 {
@@ -287,7 +287,7 @@ fn test_ec_timeout2_zero_accepted()
 
 /// EC-timeout-3: `--timeout 3600` → accepted, no parse error.
 ///
-/// Source: tests/docs/cli/param/20_timeout.md#ec-3
+/// Source: tests/docs/cli/param/020_timeout.md#ec-3
 #[ test ]
 fn test_ec_timeout3_large_accepted()
 {
@@ -429,7 +429,7 @@ fn it6_lim_it_flag_passthrough()
 
 /// EC-creds-1: Valid file path → subprocess runs without startup error.
 ///
-/// Source: tests/docs/cli/param/19_creds.md#ec-1
+/// Source: tests/docs/cli/param/019_creds.md#ec-1
 #[ test ]
 fn ec_creds1_lim_it_valid_file_path()
 {
@@ -444,7 +444,7 @@ fn ec_creds1_lim_it_valid_file_path()
 
 /// EC-creds-2: Absolute path → resolved correctly.
 ///
-/// Source: tests/docs/cli/param/19_creds.md#ec-2
+/// Source: tests/docs/cli/param/019_creds.md#ec-2
 #[ test ]
 fn ec_creds2_lim_it_absolute_path()
 {
@@ -464,7 +464,7 @@ fn ec_creds2_lim_it_absolute_path()
 /// Creates a creds file inside a temp directory, then invokes `clr isolated`
 /// with the bare filename and that directory as the working directory.
 ///
-/// Source: tests/docs/cli/param/19_creds.md#ec-3
+/// Source: tests/docs/cli/param/019_creds.md#ec-3
 #[ test ]
 fn ec_creds3_lim_it_relative_path()
 {

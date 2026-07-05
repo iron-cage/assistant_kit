@@ -1,4 +1,4 @@
-# invariant/
+# Invariant Doc Entity
 
 Test specs for workspace-level invariant doc instances.
 

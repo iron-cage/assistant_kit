@@ -13,7 +13,7 @@
 //! |------|---------------|
 //! | `tests/docs/cli/param_group/06_running_commands.md` | RC-3, RC-4, RC-5, RC-6, RC-7 |
 //! | `tests/docs/cli/env_param/03_auto_compact_window.md` | acw:EC-1..EC-5, acw:EC-7..EC-9 |
-//! | `tests/docs/cli/param/075_no_compact_window.md` | ncw:EC-1..EC-8 |
+//! | `tests/docs/cli/param/077_no_compact_window.md` | ncw:EC-1..EC-8 |
 //!
 //! ## Exclusions
 //!

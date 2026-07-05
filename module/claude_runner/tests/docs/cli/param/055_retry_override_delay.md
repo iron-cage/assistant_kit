@@ -27,7 +27,7 @@ See [055_retry_override_delay.md](../../../../docs/cli/param/055_retry_override_
 ## Architectural Constraint
 
 `--retry-override-delay` is Tier 1 in the delay resolution chain: when set, it overrides the
-delay for ALL error classes. Delay integration is demonstrated by `54_retry_override.md`
+delay for ALL error classes. Delay integration is demonstrated by `054_retry_override.md`
 EC-8/EC-9 (using `--transient-delay 0` / `--service-delay 0` because override-delay=0 also works).
 These tests verify parse and env-var behavior only via dry-run.
 

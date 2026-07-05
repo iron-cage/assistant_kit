@@ -22,16 +22,16 @@ nodes:
     label: Agent Session Tracking
     entity: algorithm
   # invariant/ entity (3)
-  - id: invariant/01
-    file: invariant/01_path_encoding.md
+  - id: invariant/001
+    file: invariant/001_path_encoding.md
     label: Path Encoding
     entity: invariant
-  - id: invariant/02
-    file: invariant/02_session_family.md
+  - id: invariant/002
+    file: invariant/002_session_family.md
     label: Session Family
     entity: invariant
-  - id: invariant/03
-    file: invariant/03_entry_type_format.md
+  - id: invariant/003
+    file: invariant/003_entry_type_format.md
     label: Entry Type Format
     entity: invariant
   # cli/user_story/ entity (5)
@@ -315,9 +315,9 @@ edges:
     via: cross_references
   # algorithm ↔ invariants
   - from: algorithm/001
-    to: invariant/02
+    to: invariant/002
     via: cross_references
-  - from: invariant/02
+  - from: invariant/002
     to: algorithm/001
     via: cross_references
   # algorithm ↔ commands
@@ -328,18 +328,18 @@ edges:
     to: algorithm/001
     via: cross_references
   # invariants → feature
-  - from: invariant/01
+  - from: invariant/001
     to: feature/001
     via: cross_references
-  - from: invariant/02
+  - from: invariant/002
     to: feature/001
     via: cross_references
-  - from: invariant/03
+  - from: invariant/003
     to: feature/001
     via: cross_references
-  # pitfall/03 → invariant/03 (unidirectional: pitfall references invariant as its formal contract)
+  # pitfall/03 → invariant/003 (unidirectional: pitfall references invariant as its formal contract)
   - from: pitfall/03
-    to: invariant/03
+    to: invariant/003
     via: cross_references
   # pitfalls → feature
   - from: pitfall/01
@@ -571,9 +571,9 @@ components:
       - feature/001
       - operation/001
       - algorithm/001
-      - invariant/01
-      - invariant/02
-      - invariant/03
+      - invariant/001
+      - invariant/002
+      - invariant/003
       - pitfall/01
       - pitfall/02
       - pitfall/03

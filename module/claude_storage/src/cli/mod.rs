@@ -29,6 +29,7 @@ mod search;
 mod export;
 mod projects;
 mod session;
+mod tail;
 
 pub use storage::parse_project_parameter;
 pub use format::truncate_if_needed;
@@ -40,3 +41,4 @@ pub use count::count_routine;
 pub use search::search_routine;
 pub use export::export_routine;
 pub use session::{ project_path_routine, project_exists_routine, session_dir_routine, session_ensure_routine };
+pub use tail::tail_routine;

@@ -2,7 +2,7 @@
 //!
 //! ## Purpose
 //!
-//! Verify EC-1 through EC-6 from `tests/docs/cli/param/29_output_file.md`:
+//! Verify EC-1 through EC-6 from `tests/docs/cli/param/029_output_file.md`:
 //! tee behavior, dry-run skip, write error, env var, CLI-wins, help text.
 //!
 //! ## Test Layout

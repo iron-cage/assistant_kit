@@ -2,6 +2,13 @@
 
 **Status**: Planned | **Since**: 1.3.0
 
+### Scope
+
+- **Purpose**: Guarantee the viewer never modifies journal file content.
+- **Responsibility**: Documents which viewer commands may touch journal files and in what mode.
+- **In Scope**: Read-only file access for all viewing commands and whole-file (not content) deletion by `.prune`.
+- **Out of Scope**: Journal writing (→ `claude_journal` `docs/api/001_journal_writer.md`), network exposure of served data (→ `docs/invariant/002_localhost_only.md`).
+
 ## Description
 
 The viewer never modifies journal file content. All viewing commands (`.list`, `.tail`, `.stats`, `.search`, `.serve`, `.status`, `.export`) open journal files in read-only mode. The `.prune` command deletes whole files but never modifies their content. No command truncates, seeks, or writes to any `.jsonl` file.

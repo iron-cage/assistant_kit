@@ -26,7 +26,7 @@ See [047_process_delay.md](../../../../docs/cli/param/047_process_delay.md) for 
 
 ## Architectural Constraint
 
-Delay integration is covered by `46_retry_on_process.md` EC-7 (`--process-delay 0` used there).
+Delay integration is covered by `046_retry_on_process.md` EC-7 (`--process-delay 0` used there).
 These tests verify parse and env-var behavior only via dry-run.
 
 ## Implementation Notes

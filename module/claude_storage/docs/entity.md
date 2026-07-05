@@ -98,9 +98,9 @@
 | cli/type | 12 | Topic Name | [cli/type/12_topic_name.md](cli/type/12_topic_name.md) |
 | cli/type | 13 | Strategy Type | [cli/type/13_strategy_type.md](cli/type/13_strategy_type.md) |
 | algorithm | 001 | Agent Session Tracking | [algorithm/001_agent_session_tracking.md](algorithm/001_agent_session_tracking.md) |
-| invariant | 01 | Path Encoding | [invariant/01_path_encoding.md](invariant/01_path_encoding.md) |
-| invariant | 02 | Session Family | [invariant/02_session_family.md](invariant/02_session_family.md) |
-| invariant | 03 | Entry Type Format | [invariant/03_entry_type_format.md](invariant/03_entry_type_format.md) |
+| invariant | 001 | Path Encoding | [invariant/001_path_encoding.md](invariant/001_path_encoding.md) |
+| invariant | 002 | Session Family | [invariant/002_session_family.md](invariant/002_session_family.md) |
+| invariant | 003 | Entry Type Format | [invariant/003_entry_type_format.md](invariant/003_entry_type_format.md) |
 | cli/pitfall | 01 | Parameter Validation Not Implied By Default | [cli/pitfall/01_parameter_validation.md](cli/pitfall/01_parameter_validation.md) |
 | cli/pitfall | 02 | Cross-Command Bug Propagation | [cli/pitfall/02_cross_command_propagation.md](cli/pitfall/02_cross_command_propagation.md) |
 | cli/pitfall | 03 | Test Data Must Match Production Format | [cli/pitfall/03_test_data_format.md](cli/pitfall/03_test_data_format.md) |

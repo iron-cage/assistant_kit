@@ -2,7 +2,7 @@
 
 Direct contract tests for the path encode/decode behavioral invariant.
 
-**Source:** [invariant/01_path_encoding.md](../../../docs/invariant/01_path_encoding.md)
+**Source:** [invariant/001_path_encoding.md](../../../docs/invariant/001_path_encoding.md)
 
 ## Test Case Index
 

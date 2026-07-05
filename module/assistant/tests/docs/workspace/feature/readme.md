@@ -1,4 +1,4 @@
-# feature/
+# Feature Doc Entity
 
 Test specs for workspace-level feature doc instances.
 
