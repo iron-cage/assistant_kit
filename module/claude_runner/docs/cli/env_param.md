@@ -65,7 +65,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 27 | `CLR_OUTPUT_FILE` | [`--output-file`](param/029_output_file.md) | string | `"output-file"` | Applied when `--output-file` absent; value is the output file path |
 | 28 | `CLR_EXPECT` | [`--expect`](param/030_expect.md) | string | `"expect"` | Applied when `--expect` absent; same `val1\|val2\|…` syntax |
 | 29 | `CLR_EXPECT_STRATEGY` | [`--expect-strategy`](param/031_expect_strategy.md) | string | `"expect-strategy"` | Applied when `--expect-strategy` absent; accepts `fail`, `retry`, or `default:<V>` |
-| 30 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | `"max-sessions"` | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 30) |
+| 30 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | `"max-sessions"` | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 10) |
 | 31 | `CLR_RETRY_ON_TRANSIENT` | [`--retry-on-transient`](param/034_retry_on_transient.md) | u8 | `"retry-on-transient"` | Transient class retry count (Tier 2); default auto → fallback |
 | 32 | `CLR_TRANSIENT_DELAY` | [`--transient-delay`](param/035_transient_delay.md) | u32 | `"transient-delay"` | Transient class delay (Tier 2); default auto → fallback |
 | 33 | `CLR_TIMEOUT` | [`--timeout`](param/036_timeout.md) | u32 | `"timeout"` | Applied when `--timeout` absent; `0` = unlimited (no watchdog); invalid values silently ignored. **Cross-command:** also applies to `isolated`/`refresh` via Section 2 (same semantics: `0` = unlimited) |
