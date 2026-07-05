@@ -17,7 +17,7 @@
 //! | IT-9  | `$PRO` prefix replaced by `"$PRO"` in path    | Path shortening  |
 //! | IT-10 | Gate file present → queued table with headers  | Queued present   |
 //! | IT-11 | No gate files → no queued table in output      | Queued absent    |
-//! | IT-12 | Active table caption contains `Active Sessions` and `running` | Caption presence |
+//! | IT-12 | Active table caption contains `Active Sessions` and interactive/print breakdown | Caption presence |
 //! | IT-13 | Orphaned gate file (dead PID) filtered out of queued table    | BUG-293 repro    |
 //! | IT-14 | `clr ps --help` → exit 0, stdout non-empty                    | BUG-294 help     |
 //! | IT-15 | `clr ps -h` → exit 0, stdout non-empty                       | BUG-294 short    |
@@ -26,6 +26,11 @@
 //! | IT-18 | `clr ps help` (positional) → exit 0, stdout non-empty         | BUG-294 positional|
 //! | IT-19 | Task column works for CWD with no underscores (regression)     | BUG-295 regression|
 //! | IT-20 | Active sessions ordered oldest-first (row #1 has longest elapsed) | BUG-301 repro   |
+//! | IT-30 | `--mode all`, 1 interactive + 1 print → breakdown "1 interactive, 1 print" | Caption breakdown |
+//! | IT-31 | `--mode all`, 3 interactive → breakdown "3 interactive, 0 print"          | Caption breakdown |
+//! | IT-32 | `--mode all`, 3 print → breakdown "0 interactive, 3 print"                | Caption breakdown |
+//! | IT-33 | `--mode interactive`, mixed set → plain caption, no breakdown             | Caption plain     |
+//! | IT-34 | `--mode print`, mixed set → plain caption, no breakdown                   | Caption plain     |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
@@ -329,12 +334,13 @@ fn it_11_no_gate_files_no_queued_table()
 // ── IT-12: active table caption ───────────────────────────────────────────────
 
 /// IT-12: with a fake `claude` process running, the active sessions table output
-/// contains the titled caption rule line ("Active Sessions · N running") above
-/// the column headers.
+/// contains the titled caption rule line ("Active Sessions · N running (I interactive,
+/// P print)") above the column headers, under the default `--mode all`.
 ///
-/// The heading is rendered by `Heading::new("Active Sessions").with_field(format!("{} running", n))`
-/// via `data_fmt`; this test confirms end-to-end that the heading text appears in
-/// the output and is not accidentally dropped by the formatter.
+/// The heading is rendered by `Heading::new("Active Sessions").with_field(...)` via
+/// `data_fmt`; this test confirms end-to-end that the heading text — including the
+/// interactive/print breakdown — appears in the output and is not accidentally
+/// dropped by the formatter.
 #[ cfg( unix ) ]
 #[ test ]
 fn it_12_active_table_has_caption()
@@ -355,8 +361,8 @@ fn it_12_active_table_has_caption()
     "IT-12: active table caption must contain 'Active Sessions', got: {stdout}"
   );
   assert!(
-    stdout.contains( "running" ),
-    "IT-12: active table caption must contain 'running' count suffix, got: {stdout}"
+    stdout.contains( "1 running (1 interactive, 0 print)" ),
+    "IT-12: active table caption must contain the interactive/print breakdown, got: {stdout}"
   );
 }
 
@@ -1091,4 +1097,194 @@ fn it_29_clr_ps_columns_env_var()
   assert!( !header.contains( "RAM" ),           "IT-29: RAM must be absent from headers: {stdout}" );
   assert!( !header.contains( "Task" ),          "IT-29: Task must be absent from headers: {stdout}" );
   assert!( !header.contains( "Absolute Path" ), "IT-29: Absolute Path must be absent from headers: {stdout}" );
+}
+
+// ── Caption breakdown helper (AF1 anti-faking check) ─────────────────────────
+
+/// Locate the `"Active Sessions"` caption line in `stdout`. Panics with the
+/// full `stdout` on failure so assertion failures are self-diagnosing.
+#[ cfg( unix ) ]
+fn caption_line( stdout : &str ) -> &str
+{
+  stdout.lines().find( | l | l.contains( "Active Sessions" ) )
+    .unwrap_or_else( || panic!( "no 'Active Sessions' caption line found in:\n{stdout}" ) )
+}
+
+/// Parse the leading `N` from `"N running..."` in the `Active Sessions` caption,
+/// anchored on the full whitespace-delimited numeric token — never a raw
+/// substring match, which would let e.g. `"11 running"` false-positive against
+/// an assertion checking for `"1 running"`.
+#[ cfg( unix ) ]
+fn parse_running_count( stdout : &str ) -> usize
+{
+  let line = caption_line( stdout );
+  let running_pos = line.find( " running" )
+    .unwrap_or_else( || panic!( "caption missing ' running' suffix:\n{line}" ) );
+  line[ ..running_pos ].rsplit( char::is_whitespace ).next()
+    .unwrap_or_else( || panic!( "caption missing N before 'running':\n{line}" ) )
+    .parse().unwrap_or_else( |e| panic!( "N not numeric ({e}):\n{line}" ) )
+}
+
+/// Parse `"Active Sessions · N running (I interactive, P print)"` from `stdout`,
+/// returning `(N, I, P)`. Panics with the full `stdout` on any parse failure so
+/// assertion failures are self-diagnosing.
+#[ cfg( unix ) ]
+fn parse_breakdown_counts( stdout : &str ) -> ( usize, usize, usize )
+{
+  let n = parse_running_count( stdout );
+  let line = caption_line( stdout );
+  let open  = line.find( '(' ).unwrap_or_else( || panic!( "caption missing '(' breakdown:\n{line}" ) );
+  let close = line.find( ')' ).unwrap_or_else( || panic!( "caption missing ')' breakdown:\n{line}" ) );
+  let mut parts = line[ open + 1 .. close ].split( ", " );
+  let i : usize = parts.next().unwrap_or_else( || panic!( "missing interactive part:\n{line}" ) )
+    .split_whitespace().next().unwrap_or_else( || panic!( "missing I number:\n{line}" ) )
+    .parse().unwrap_or_else( |e| panic!( "I not numeric ({e}):\n{line}" ) );
+  let p : usize = parts.next().unwrap_or_else( || panic!( "missing print part:\n{line}" ) )
+    .split_whitespace().next().unwrap_or_else( || panic!( "missing P number:\n{line}" ) )
+    .parse().unwrap_or_else( |e| panic!( "P not numeric ({e}):\n{line}" ) );
+  ( n, i, p )
+}
+
+// ── IT-30 (T01): `--mode all`, 1 interactive + 1 print → breakdown ─────────────
+
+/// IT-30 (T01): 2 active sessions (1 interactive + 1 print), `--mode all` (default)
+/// → caption reads "2 running (1 interactive, 1 print)". AF1: `I + P == N` is
+/// checked by parsing the rendered caption, not just substring matching.
+#[ cfg( unix ) ]
+#[ test ]
+fn it_30_mode_all_breakdown_mixed_interactive_and_print()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg_interactive = spawn_fake_claude( &path_val );
+  let mut bg_print       = spawn_print_claude( &path_val );
+  let proc = make_proc_dir( &[ bg_interactive.id(), bg_print.id() ] );
+
+  let out = run_clr_ps_proc( &path_val, proc.path().to_str().expect( "proc dir UTF-8" ) );
+
+  let _ = bg_interactive.kill();
+  let _ = bg_interactive.wait();
+  let _ = bg_print.kill();
+  let _ = bg_print.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-30: exit 0 expected, got {:?}", out.status.code() );
+  let ( n, i, p ) = parse_breakdown_counts( &stdout );
+  assert_eq!( ( n, i, p ), ( 2, 1, 1 ), "IT-30: expected 2 running (1 interactive, 1 print). Got:\n{stdout}" );
+  assert_eq!( i + p, n, "IT-30 (AF1): I + P must equal N. Got:\n{stdout}" );
+}
+
+// ── IT-31 (T02): `--mode all`, all interactive → breakdown ─────────────────────
+
+/// IT-31 (T02): 3 active sessions, all interactive, `--mode all` (default) →
+/// caption reads "3 running (3 interactive, 0 print)".
+#[ cfg( unix ) ]
+#[ test ]
+fn it_31_mode_all_breakdown_all_interactive()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg : Vec< std::process::Child > = ( 0..3 ).map( |_| spawn_fake_claude( &path_val ) ).collect();
+  let pids : Vec< u32 > = bg.iter().map( std::process::Child::id ).collect();
+  let proc = make_proc_dir( &pids );
+
+  let out = run_clr_ps_proc( &path_val, proc.path().to_str().expect( "proc dir UTF-8" ) );
+
+  for child in &mut bg { let _ = child.kill(); let _ = child.wait(); }
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-31: exit 0 expected, got {:?}", out.status.code() );
+  let ( n, i, p ) = parse_breakdown_counts( &stdout );
+  assert_eq!( ( n, i, p ), ( 3, 3, 0 ), "IT-31: expected 3 running (3 interactive, 0 print). Got:\n{stdout}" );
+  assert_eq!( i + p, n, "IT-31 (AF1): I + P must equal N. Got:\n{stdout}" );
+}
+
+// ── IT-32 (T03): `--mode all`, all print → breakdown ────────────────────────────
+
+/// IT-32 (T03): 3 active sessions, all print, `--mode all` (default) → caption
+/// reads "3 running (0 interactive, 3 print)".
+#[ cfg( unix ) ]
+#[ test ]
+fn it_32_mode_all_breakdown_all_print()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg : Vec< std::process::Child > = ( 0..3 ).map( |_| spawn_print_claude( &path_val ) ).collect();
+  let pids : Vec< u32 > = bg.iter().map( std::process::Child::id ).collect();
+  let proc = make_proc_dir( &pids );
+
+  let out = run_clr_ps_proc( &path_val, proc.path().to_str().expect( "proc dir UTF-8" ) );
+
+  for child in &mut bg { let _ = child.kill(); let _ = child.wait(); }
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-32: exit 0 expected, got {:?}", out.status.code() );
+  let ( n, i, p ) = parse_breakdown_counts( &stdout );
+  assert_eq!( ( n, i, p ), ( 3, 0, 3 ), "IT-32: expected 3 running (0 interactive, 3 print). Got:\n{stdout}" );
+  assert_eq!( i + p, n, "IT-32 (AF1): I + P must equal N. Got:\n{stdout}" );
+}
+
+// ── IT-33 (T04): `--mode interactive`, mixed set → plain caption ───────────────
+
+/// IT-33 (T04): 2 active sessions (1 interactive + 1 print), `--mode interactive`
+/// → only the interactive row is shown; caption reads plain "1 running" with no
+/// breakdown parentheses.
+#[ cfg( unix ) ]
+#[ test ]
+fn it_33_mode_interactive_caption_has_no_breakdown()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg_interactive = spawn_fake_claude( &path_val );
+  let mut bg_print       = spawn_print_claude( &path_val );
+  let proc = make_proc_dir( &[ bg_interactive.id(), bg_print.id() ] );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--mode", "interactive" ] )
+    .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .output()
+    .expect( "run clr ps --mode interactive" );
+
+  let _ = bg_interactive.kill();
+  let _ = bg_interactive.wait();
+  let _ = bg_print.kill();
+  let _ = bg_print.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-33: exit 0 expected, got {:?}", out.status.code() );
+  assert_eq!( parse_running_count( &stdout ), 1, "IT-33: expected exactly 1 running. Got:\n{stdout}" );
+  let caption = caption_line( &stdout );
+  assert!( !caption.contains( '(' ), "IT-33: caption must NOT contain a breakdown. Got: {caption}" );
+}
+
+// ── IT-34 (T05): `--mode print`, mixed set → plain caption ──────────────────────
+
+/// IT-34 (T05): 2 active sessions (1 interactive + 1 print), `--mode print` →
+/// only the print row is shown; caption reads plain "1 running" with no
+/// breakdown parentheses.
+#[ cfg( unix ) ]
+#[ test ]
+fn it_34_mode_print_caption_has_no_breakdown()
+{
+  let ( _dir, path_val ) = fake_claude_binary_dir();
+  let mut bg_interactive = spawn_fake_claude( &path_val );
+  let mut bg_print       = spawn_print_claude( &path_val );
+  let proc = make_proc_dir( &[ bg_interactive.id(), bg_print.id() ] );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "ps", "--mode", "print" ] )
+    .env( "PATH", &path_val )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .output()
+    .expect( "run clr ps --mode print" );
+
+  let _ = bg_interactive.kill();
+  let _ = bg_interactive.wait();
+  let _ = bg_print.kill();
+  let _ = bg_print.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-34: exit 0 expected, got {:?}", out.status.code() );
+  assert_eq!( parse_running_count( &stdout ), 1, "IT-34: expected exactly 1 running. Got:\n{stdout}" );
+  let caption = caption_line( &stdout );
+  assert!( !caption.contains( '(' ), "IT-34: caption must NOT contain a breakdown. Got: {caption}" );
 }

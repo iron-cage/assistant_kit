@@ -16,7 +16,7 @@
 - AC-007: When the `PRO` environment variable is set and a session's working directory starts with that path, the `Absolute Path` column shows the path with the `$PRO` prefix replaced by the literal `"$PRO"` string
 - AC-008: When one or more gate state files exist in `$CLR_GATE_DIR`, `clr ps` prints a queued CLR processes table containing column headers `PID`, `CWD`, and `Waiting`
 - AC-009: When no gate state files exist, `clr ps` output does not contain a queued processes table
-- AC-010: Each table rendered by `clr ps` is preceded by a titled caption rule line: the active sessions table shows `Active Sessions · N running` and the queued processes table shows `Queued · N waiting`
+- AC-010: Each table rendered by `clr ps` is preceded by a titled caption rule line: with `--mode all` (default), the active sessions table shows `Active Sessions · N running (I interactive, P print)` where `I + P == N`; with `--mode interactive` or `--mode print`, the active sessions caption omits the breakdown and shows `Active Sessions · N running`; the queued processes table always shows `Queued · N waiting`
 - AC-011: `clr ps --help` and `clr ps -h` print subcommand help to stdout and exit 0; the positional token `clr ps help` does the same
 - AC-012: Active session rows are ordered by session start time (oldest first); when two or more sessions exist, the row with the longest elapsed time appears at row `#1`
 - AC-013: `clr ps --mode interactive` shows only sessions without `--print`/`-p` in their cmdline arguments; `clr ps --mode print` shows only sessions with `--print`/`-p`; `clr ps --mode all` (default) shows both

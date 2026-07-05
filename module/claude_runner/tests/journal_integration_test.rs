@@ -34,8 +34,8 @@
 //! - EC-22: `CLR_JOURNAL=off` + `CLR_JOURNAL_DIR=<dir>` → no JSONL (off via env)
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ fake_claude_dir, fake_claude_binary_dir };
-use std::process::{ Command, Stdio };
+use cli_binary_test_helpers::{ fake_claude_dir, spawn_print_claude_for };
+use std::process::Command;
 use std::os::unix::fs::PermissionsExt;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -525,25 +525,25 @@ fn ec10_default_journal_dir_is_home_clr_journal()
 
 // ── EC-11: Gate blocks → "type":"gate_wait" emitted ──────────────────────────
 
-/// EC-11: When `--max-sessions 1` and one real ELF `claude` process is already
+/// EC-11: When `--max-sessions 1` and one print-mode `claude` process is already
 /// running, the gate blocks for at least one poll cycle and emits a `"gate_wait"`
 /// event with `"gate_outcome":"acquired"` once the slot is released.
 ///
 /// Root Cause: gate_wait events only emit when `gate_emitted=true` (i.e. ≥1 full
 /// poll cycle elapsed), which requires an actual blocking process to be running.
-/// Why Not Caught: no test spawning a real ELF process before invoking clr
+/// Why Not Caught: no test spawning a real blocking process before invoking clr
 /// Fix Applied: Added fake_proc TempDir + symlink /proc/{child_pid}; .env(CLR_PROC_DIR) on clr
 ///   Command builder — gate now reads synthetic proc dir only (BUG-326)
 /// Prevention: assert "type":"gate_wait" + "gate_outcome":"acquired" appear in JSONL
-/// Pitfall: shell-script fakes appear as `sh` in `/proc/{pid}/cmdline` — invisible to
-/// `find_claude_processes()`.  Must use `fake_claude_binary_dir()` (real ELF).
 /// Pitfall: `_CLR_GATE_POLL_SECS=1` reduces poll interval from 30s to 1s for tests.
 /// Fix(BUG-326): `CLR_PROC_DIR` MUST be set on the `clr` Command builder so that
 /// `find_claude_processes()` reads only the synthetic proc dir, not real `/proc`.
-/// Pitfall: `fake_claude_binary_dir()` provides PATH isolation only — it is NOT a proc
-/// filesystem root.  Use a separate `TempDir` for `CLR_PROC_DIR` with a symlink to
-/// `/proc/{pid}`.  Do NOT use a static `cmdline` file: it persists after child exits,
-/// keeping count=1 forever so the gate never releases and `.output()` deadlocks.
+/// Pitfall: since task 368, the gate counts print-mode processes only (via
+/// `classify_mode()`) — the blocker must carry a `--print` marker in its cmdline
+/// (`spawn_print_claude_for()`'s `arg0("claude")` + trailing `--print` argument), or
+/// the gate excludes it from the count and never blocks. Do NOT use a static
+/// `cmdline` file: it persists after child exits, keeping count=1 forever so the
+/// gate never releases and `.output()` deadlocks.
 #[ cfg( unix ) ]
 #[ test ]
 #[ doc = "bug_reproducer(BUG-326)" ]
@@ -552,17 +552,10 @@ fn ec11_gate_wait_event_emitted_when_gate_blocks()
   let jdir   = tempfile::TempDir::new().expect( "jdir" );
   let jdir_s = jdir.path().to_str().expect( "utf-8" ).to_owned();
 
-  // ELF binary: real executable named "claude" — visible to find_claude_processes().
-  let ( elf_dir, elf_path ) = fake_claude_binary_dir();
-
-  // Spawn background claude that holds the gate slot for ~3 seconds.
-  let mut child = Command::new( "claude" )
-    .env( "PATH", &elf_path )
-    .arg( "3" )
-    .stdout( Stdio::null() )
-    .stderr( Stdio::null() )
-    .spawn()
-    .expect( "spawn gate-blocker" );
+  // Print-mode blocker (task 368: gate counts print-mode processes only) — holds
+  // the gate slot for ~3 seconds; `spawn_print_claude_for()` tags its cmdline with
+  // `--print` so `classify_mode()` counts it toward this `-p` invocation's limit.
+  let mut child = spawn_print_claude_for( &std::env::var( "PATH" ).unwrap_or_default(), 3 );
 
   // Brief delay — let the spawned process register in /proc.
   std::thread::sleep( core::time::Duration::from_millis( 300 ) );
@@ -603,7 +596,6 @@ fn ec11_gate_wait_event_emitted_when_gate_blocks()
 
   // Clean up background process.
   let _ = child.wait();
-  drop( elf_dir );
 
   assert!(
     out.status.success(),

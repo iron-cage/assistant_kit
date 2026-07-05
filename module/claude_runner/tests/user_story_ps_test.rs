@@ -12,7 +12,7 @@
 //! | US-4 | Sessions present: plain-style table with headers   | AC-001,005|
 //! | US-5 | `$PRO` prefix shortened in Absolute Path column   | AC-007    |
 //! | US-6 | Queued CLR shown: PID, CWD, Waiting headers       | AC-008    |
-//! | US-7 | Active table caption: `Active Sessions` + `running` | AC-010  |
+//! | US-7 | Active table caption: `Active Sessions` + interactive/print breakdown | AC-010  |
 //! | US-8 | `clr ps --help` → exit 0, stdout contains help text  | AC-011  |
 //! | US-9 | Active sessions ordered oldest-first (row #1 = longest elapsed) | AC-012 |
 
@@ -188,12 +188,13 @@ fn us_06_queued_clr_shows_queued_headers()
 // ── US-7: Active table caption ────────────────────────────────────────────────
 
 /// US-7 (AC-010): when ≥1 session is active, `clr ps` prefixes the table with
-/// a titled caption rule containing "Active Sessions · N running" above the
-/// column headers.
+/// a titled caption rule containing "Active Sessions · N running (I interactive,
+/// P print)" above the column headers, under the default `--mode all`.
 ///
-/// The heading is emitted by `Heading::new("Active Sessions").with_field(format!("{} running", n))`.
-/// This test confirms the caption text is present in the rendered output so that
-/// AC-010 is machine-verifiable.
+/// The heading is emitted by `Heading::new("Active Sessions").with_field(...)`.
+/// This test confirms the caption text — including the interactive/print
+/// breakdown — is present in the rendered output so that AC-010 is
+/// machine-verifiable.
 ///
 /// `CLR_PROC_DIR` isolates proc scanning to this test's process only.
 #[ cfg( unix ) ]
@@ -211,13 +212,21 @@ fn us_07_active_table_caption()
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
+  let caption = stdout.lines().find( | l | l.contains( "Active Sessions" ) )
+    .unwrap_or_else( || panic!( "US-7: no 'Active Sessions' caption line found in:\n{stdout}" ) );
+
+  // Anchored on the full whitespace-delimited numeric token, not a raw substring
+  // match — otherwise e.g. N=21 would false-pass an assertion checking "1 running"
+  // (since "21 running" contains "1 running" as a trailing substring).
+  let running_pos = caption.find( " running" )
+    .unwrap_or_else( || panic!( "US-7: caption missing ' running' suffix:\n{caption}" ) );
+  let n : usize = caption[ ..running_pos ].rsplit( char::is_whitespace ).next()
+    .unwrap_or_else( || panic!( "US-7: caption missing N before 'running':\n{caption}" ) )
+    .parse().unwrap_or_else( |e| panic!( "US-7: N not numeric ({e}):\n{caption}" ) );
+  assert_eq!( n, 1, "US-7: expected exactly 1 running. Got:\n{caption}" );
   assert!(
-    stdout.contains( "Active Sessions" ),
-    "US-7: active table caption must contain 'Active Sessions', got: {stdout}"
-  );
-  assert!(
-    stdout.contains( "running" ),
-    "US-7: active table caption must contain 'running' count suffix, got: {stdout}"
+    caption.contains( "(1 interactive, 0 print)" ),
+    "US-7: active table caption must contain the interactive/print breakdown, got: {caption}"
   );
 }
 
