@@ -17,7 +17,7 @@
 //! - INT-8: Negative `tail::` is rejected with exit code 1 (also covers EC-4)
 //! - EC-5: Empty value rejected
 //! - EC-7: Non-integer value rejected
-// BUG-002 task/claude_storage/bug/unverified/002_tail_command_cheating_stub_regression.md — real assertions replacing the "didn't hang" cheating tests
+// BUG-002 — real assertions replacing the "didn't hang" cheating tests
 
 mod common;
 

@@ -1,5 +1,5 @@
 //! `.tail` command — display the last N entries of a session.
-// BUG-002 task/claude_storage/bug/unverified/002_tail_command_cheating_stub_regression.md — real implementation replacing the hardcoded-output stub
+// BUG-002 — real implementation replacing the hardcoded-output stub
 
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
 use super::storage::{ create_storage, resolve_path_parameter, find_session_mut };

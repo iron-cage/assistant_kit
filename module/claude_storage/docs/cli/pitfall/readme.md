@@ -14,3 +14,4 @@
 | `01_parameter_validation.md` | Explicit validation required despite defaults |
 | `02_cross_command_propagation.md` | Bug patterns propagate across all commands |
 | `03_test_data_format.md` | Test JSONL must match production format |
+| `04_vacuous_assertions_mask_stubs.md` | Tests must assert real output, not just process liveness |

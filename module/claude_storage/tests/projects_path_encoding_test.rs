@@ -16,10 +16,12 @@
 //! | IT-62 | 035   | Default-topic path shown when absent from disk (T03)          |
 //! | IT-63 | 035   | Base path shown correctly with no topic suffix (T04)          |
 //! | IT-64 | 035   | Double-topic storage key shows both topic components (T05)    |
+//! | IT-65 | BUG-003 | Display resolves a dot-prefixed mid-path component           |
 //!
 //! Note: IT-60..IT-64 follow IT-59 (`scope::around` tests in `projects_scope_around_test.rs`).
 //! IT-27..IT-30 were already allocated in `tests/docs/cli/command/007_projects.md`
-//! for unrelated tests, so the next available block was used here.
+//! for unrelated tests, so the next available block was used here. IT-65 follows
+//! IT-64 (next free ID in the shared `.projects` IT-N sequence).
 #![ cfg( unix ) ]
 
 mod common;
@@ -472,10 +474,11 @@ fn projects_shows_base_path_with_no_topic()
 // ─────────────────────────────────────────────────────────────────────────────
 // Decode Display — Double-Topic Storage Key (issue-035, T05)
 //
-// Root Cause: decode_project_display now unconditionally joins ALL topic
-// components (Fix issue-035). For a storage key `{base}--default-topic--commit`,
-// split_storage_key yields topics ["default-topic", "commit"], and the loop
-// extends: base → base/-default_topic → base/-default_topic/-commit.
+// Root Cause: decode_project_display decodes the full storage key in one
+// call to decode_storage_base (Fix issue-035 / BUG-003). For a storage key
+// `{base}--default-topic--commit`, the naive `claude_storage_core::decode_path`
+// heuristic chains BOTH `--` markers into successive hyphen-prefixed display
+// components on its own: base → base/-default_topic → base/-default_topic/-commit.
 //
 // Why Not Caught: All issue-035 tests used single-topic suffixes only
 // (`--commit` or `--default-topic`). Multiple `--` separators in one key
@@ -485,7 +488,8 @@ fn projects_shows_base_path_with_no_topic()
 // correctly. This test guards against regression.
 //
 // Prevention: Whenever adding topic-extension tests, include a multi-topic
-// variant to verify split_storage_key and the unconditional join loop together.
+// variant to verify the naive heuristic's `--`-chaining handles multiple
+// topic markers in one key.
 //
 // Pitfall: Claude Code could in principle create `{base}--default-topic--commit`
 // for a session from `base/-default_topic/-commit`. Both topic components must
@@ -524,4 +528,59 @@ fn projects_shows_both_topic_components_for_double_topic_key()
     "display path must include second topic '/-commit'; got:\n{s}"
   );
   assert!( s.contains( "session-t05-double-topic" ), "session must appear in output; got:\n{s}" );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Decode Display — Dot-Prefixed Path Component (BUG-003)
+//
+// Root Cause: Fix(BUG-366) generalized encode_path's substitution from
+// `_`-only to the full non-alphanumeric character class, so a dot-prefixed
+// path component (e.g. `.hidden_base`) now produces the identical `--`
+// marker as a genuine `--topic` suffix. `walk_fs` had no DFS option for the
+// empty split piece this produces at a `--` boundary, so it silently dropped
+// the leading special character and could never resolve the real directory.
+//
+// Why Not Caught: IT-23/IT-24 cover underscore-named and hyphen-prefixed
+// components, but neither used a project path with a `.`-prefixed MID-PATH
+// component that is not itself a topic suffix.
+//
+// Fix Applied: `walk_fs` gained option C — on an empty piece, commit the
+// current segment first, then try `.`, `_`, `-` as the candidate first
+// character of the next component, accepting whichever exists on disk.
+//
+// Prevention: Any project path built under a dot/underscore/hyphen-prefixed
+// directory now exercises this path.
+//
+// Pitfall: Use an EXPLICIT dot-prefixed directory name, not
+// `tempfile::TempDir`'s own incidental `.tmpXXXXXX` naming — the test's
+// intent must be self-evident and independent of the temp-file crate's
+// internal naming scheme.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-003)
+fn it_65_decode_display_resolves_dot_prefixed_path_component()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  // Explicit dot-prefixed mid-path component — not a topic suffix.
+  let hidden_base = root.path().join( ".hidden_base" );
+  let project = hidden_base.join( "child" );
+  std::fs::create_dir_all( &project ).expect( "create .hidden_base/child dir" );
+  common::write_path_project_session( &storage_root, &project, "session-it65-dot-prefixed", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "/.hidden_base/child" ),
+    "display path must resolve the dot-prefixed component; got:\n{s}"
+  );
+  assert!( s.contains( "session-it65-dot-prefixed" ), "session must appear; got:\n{s}" );
 }
