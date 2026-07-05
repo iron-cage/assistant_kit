@@ -38,6 +38,7 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 | `verb/` | Shell scripts for each `do` protocol verb. |
 | `runbox/` | Container environment scripts for test execution |
 | `bug/` | Bug reports: open and closed defects for this crate |
+| `task/` | Task tracking: verified and completed work items. |
 
 ### Architecture
 

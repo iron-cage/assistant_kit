@@ -43,7 +43,7 @@
 
 | File | Relationship |
 |------|--------------|
-| [cli/command/001_account.md#command--13-accountrotate](../cli/command/001_account.md#command--13-accountrotate) | CLI command specification |
+| [cli/command/001_account.md#command--13-accountrotate](../cli/command/001_account.md#command-13-accountrotate-deprecated-feature-038) | CLI command specification |
 
 ### Features
 
@@ -57,7 +57,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.rotate`](../cli/command/001_account.md#command--13-accountrotate) | CLI surface for this feature |
+| 1 | [`.account.rotate`](../cli/command/001_account.md#command-13-accountrotate-deprecated-feature-038) | CLI surface for this feature |
 
 ### Sources
 

@@ -31,14 +31,14 @@ name::alice@a.com,bob@b.com,car  → comma-list form (batch owner:: only) → re
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Optional — filter to named account |
-| 2 | [`.account.save`](../command/001_account.md#command--4-accountsave) | Optional/inferred — profile name from email |
-| 3 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Required — target account to activate |
-| 4 | [`.account.delete`](../command/001_account.md#command--6-accountdelete) | Required — account to remove |
-| 5 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | Optional — defaults to active account |
-| 6 | [`.account.relogin`](../command/001_account.md#command--12-accountrelogin) | Optional — defaults to active account |
-| 7 | [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) | Required — target account(s) for renewal |
-| 8 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | Optional — defaults to active account |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Optional — filter to named account |
+| 2 | [`.account.save`](../command/001_account.md#command-4-accountsave) | Optional/inferred — profile name from email |
+| 3 | [`.account.use`](../command/001_account.md#command-5-accountuse) | Required — target account to activate |
+| 4 | [`.account.delete`](../command/001_account.md#command-6-accountdelete) | Required — account to remove |
+| 5 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | Optional — defaults to active account |
+| 6 | [`.account.relogin`](../command/001_account.md#command-12-accountrelogin) | Optional — defaults to active account |
+| 7 | [`.account.renewal`](../command/001_account.md#command-14-accountrenewal) | Required — target account(s) for renewal |
+| 8 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | Optional — defaults to active account |
 
 ### Referenced User Stories
 

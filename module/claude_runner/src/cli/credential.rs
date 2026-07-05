@@ -1,6 +1,6 @@
 use claude_runner_core::{
-  ClaudeCommand, EffortLevel, IsolatedModel, IsolatedRunResult, ISOLATED_CLAUDE_MD,
-  REFRESH_DEFAULT_MODEL, RunnerError, run_isolated_ext, signal_exit_code,
+  ClaudeCommand, DEFAULT_COMPACT_WINDOW, EffortLevel, IsolatedModel, IsolatedRunResult,
+  ISOLATED_CLAUDE_MD, REFRESH_DEFAULT_MODEL, RunnerError, run_isolated_ext, signal_exit_code,
 };
 use claude_journal::{ EventRecord, EventType, JournalWriter };
 
@@ -103,7 +103,7 @@ pub( super ) fn run_isolated_command
   summary_fields    : Option< &str >,
 ) -> !
 {
-  let compact_window : Option< u32 > = if no_compact_window { None } else { Some( 200_000 ) };
+  let compact_window : Option< u32 > = if no_compact_window { None } else { Some( DEFAULT_COMPACT_WINDOW ) };
   // Build the full arg list with all injected defaults prepended before --print.
   // Order: [--no-chrome?] --effort <level> --no-session-persistence
   //        [--dangerously-skip-permissions?] [--print <msg>] [passthrough]

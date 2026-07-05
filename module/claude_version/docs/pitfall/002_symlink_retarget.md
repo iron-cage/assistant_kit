@@ -41,7 +41,7 @@ Cost: purging is destructive. If a different version is needed later, it require
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands/version.rs` | Binary purge logic in perform_install() |
+| `../../../claude_version_core/src/version.rs` | Binary purge logic: `purge_stale_versions()`, called by `perform_install()` |
 
 ### Tests
 

@@ -79,6 +79,11 @@ pub struct ClaudeCommand {
   pub(super) unset_claudecode: bool,
 }
 
+/// Default auto-compaction window in tokens, applied by [`ClaudeCommand::new`] and shared with
+/// the `isolated`/`refresh` CLI paths in `claude_runner::cli::credential` to keep both defaults
+/// in lockstep.
+pub const DEFAULT_COMPACT_WINDOW: u32 = 300_000;
+
 impl ClaudeCommand {
   /// Create a new Claude Code command builder
   ///
@@ -125,7 +130,7 @@ impl ClaudeCommand {
       bash_max_timeout_ms: Some( 7_200_000 ),      // 2 hours (vs 10 min standard)
       auto_continue: Some( true ),                 // Enable automation (vs false standard)
       telemetry: Some( false ),                    // Disable telemetry (vs true standard)
-      compact_window: Some( 200_000 ),             // Limit compaction to 200K (vs model native 200K or 1M)
+      compact_window: Some( DEFAULT_COMPACT_WINDOW ), // Limit compaction to 300K (vs model native 200K or 1M)
 
       skip_permissions: false,
       chrome: Some( true ),  // Enable browser context by default (vs off in raw claude binary)

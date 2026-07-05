@@ -43,7 +43,7 @@ sort::renew prefer::opus         → renew tiebreak uses 7d Left ascending
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Model preference for sort and recommendation heuristics |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Model preference for sort and recommendation heuristics |
 
 ### Referenced User Stories
 

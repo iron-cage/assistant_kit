@@ -41,7 +41,7 @@ no_color::1 get::status -> plain status label: "ok", "warn", or "err"
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Strip emoji and ANSI from quota table output |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Strip emoji and ANSI from quota table output |
 
 ### Referenced User Stories
 
