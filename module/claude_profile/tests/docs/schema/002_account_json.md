@@ -15,7 +15,7 @@ format compliance, and append-only history behavior.
 | SC-3 | `owner` field preserved by unrelated saves | Preserved-Only Fields | ✅ |
 | SC-4 | JSON format: 2-space pretty-print, trailing newline | Encoding | ✅ |
 | SC-5 | `history` array appended — never truncated by successful fetch | Append-Only | ✅ |
-| SC-6 | `_quota_cache` updated atomically on successful API call | Cache Write | ✅ |
+| SC-6 | `cache` updated atomically on successful API call | Cache Write | ✅ |
 
 ---
 
@@ -69,10 +69,10 @@ format compliance, and append-only history behavior.
 
 ---
 
-### SC-6: `_quota_cache` updated atomically on successful API call
+### SC-6: `cache` updated atomically on successful API call
 
-- **Given:** A prior `_quota_cache` exists in `{name}.json`
+- **Given:** A prior `cache` exists in `{name}.json`
 - **When:** A successful `fetch_oauth_usage()` call completes and `write_quota_cache()` is invoked
-- **Then:** All `_quota_cache` subfields (`five_hour`, `seven_day`, `seven_day_sonnet`, `cached_at`) are written as a single coherent object — no partial write leaves mismatched fields
+- **Then:** All `cache` subfields (`fetched_at`, `five_hour`, `seven_day`, `seven_day_sonnet`) are written as a single coherent object — no partial write leaves mismatched fields
 - **Source fn:** `sc6_002_quota_cache_all_subfields_written_atomically` (account_tests.rs)
-- **Source:** [docs/schema/002_account_json.md §Field Table (_quota_cache)](../../../docs/schema/002_account_json.md)
+- **Source:** [docs/schema/002_account_json.md §Field Table (cache)](../../../docs/schema/002_account_json.md)
