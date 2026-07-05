@@ -9,8 +9,10 @@
 
 ### Statement
 
-Both `/` and `_` encode to `-`. The encoding is therefore **lossy**: the stored key does not
-uniquely identify the original path. Decoding is non-deterministic without external context.
+Every non-alphanumeric character — `/`, `_`, `.`, literal `-`, and any other special
+character — encodes to `-` (or `--` when it is the first character of a path component).
+The encoding is therefore **lossy**: the stored key does not uniquely identify the
+original path. Decoding is non-deterministic without external context.
 
 ### Encoding Rule
 
@@ -18,11 +20,16 @@ uniquely identify the original path. Decoding is non-deterministic without exter
 |-----------------|-------------------|
 | `/` | `-` |
 | `_` | `-` |
-| all others | unchanged |
+| `.`, and any other non-alphanumeric character | `-` |
+| a component's first character, when it is `.`, `_`, or literal `-` | `--` (escaped, to stay distinguishable from an ordinary path-separator `-`) |
+| all other (alphanumeric) characters | unchanged |
 
 **Example**:
 - Input path: `/home/alice/projects/my_app/module`
 - Encoded key: `-home-alice-projects-my-app-module`
+
+- Input path: `/home/alice/.config/my_app`
+- Encoded key: `-home-alice--config-my-app`
 
 ### Project Path Format
 

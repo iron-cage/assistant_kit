@@ -723,12 +723,38 @@ mod tests
     assert_eq!( decoded, PathBuf::from( "/commands/-commit_sessions/-plan" ) );
   }
 
-  // BUG-366: encode_path() must generalize to ALL non-alphanumeric characters
-  // (not just '_'), matching the real algorithm's blanket `${path//[^a-zA-Z0-9]/-}`
-  // substitution. Expected values cross-checked against the bash `real_df()`
-  // reference from the bug report's MRE (task/claude_storage_core/bug/unverified/
-  // 366_encode_path_dot_handling_divergence.md).
-
+  // Bug Reproducer (BUG-366): encode_path() diverged from Claude Code's real
+  // path-to-storage-directory encoding for any component containing a
+  // non-alphanumeric character other than `_`/`-`/`/` (most commonly `.`).
+  //
+  // Root Cause: encode_path() only substituted `_` for `-`
+  // (`component.replace('_', "-")`), leaving `.` and every other
+  // non-alphanumeric character untouched. The real algorithm — faithfully
+  // reproduced by this project's `scope_claude.sh:_df()` — performs a
+  // blanket `${path//[^a-zA-Z0-9]/-}` substitution over every character
+  // outside `[a-zA-Z0-9]`, not just `_`.
+  //
+  // Why Not Caught: All ~20 pre-existing unit tests in this module exercised
+  // underscore replacement, hyphen-prefix double-hyphen logic, and path
+  // separators, but none constructed a component containing `.` or any
+  // other non-`_`/`-`/`/` punctuation — the gap was only surfaced by
+  // comparing output against a real, on-disk Claude Code session directory
+  // for a cwd containing a dot component.
+  //
+  // Fix Applied: generalized the substitution from `component.replace('_',
+  // "-")` to `component.chars().map(|c| if c.is_ascii_alphanumeric() { c }
+  // else { '-' }).collect()` — the full non-alphanumeric character class,
+  // matching the real algorithm exactly.
+  //
+  // Prevention: cross-check encode_path() output against `scope_claude.sh`'s
+  // `_df()` byte-for-byte for any new path-shape test, not just internal
+  // self-consistency — see the bug report's Minimum Reproducible Example
+  // (task/claude_storage_core/bug/unverified/366_encode_path_dot_handling_divergence.md).
+  //
+  // Pitfall: don't special-case `.` alone — the real algorithm treats every
+  // non-alphanumeric byte identically, so a fix that only adds `.` handling
+  // would still diverge on other punctuation (spaces, `+`, `~`, `@`, etc.).
+  // test_kind: bug_reproducer(BUG-366)
   #[test]
   fn test_encode_dot_prefixed_component_matches_real_algorithm()
   {
@@ -739,6 +765,7 @@ mod tests
     assert_eq!( encoded, "-tmp--tmp018Vvt--commit" );
   }
 
+  // test_kind: bug_reproducer(BUG-366)
   #[test]
   fn test_encode_dot_mid_component()
   {
@@ -747,6 +774,35 @@ mod tests
     assert_eq!( encoded, "-home-user-file-txt" );
   }
 
+  // Bug Reproducer (BUG-366): encode_path() had no length bound, so encoded
+  // directory names for long paths grew unboundedly instead of matching
+  // Claude Code's own truncate-and-hash scheme.
+  //
+  // Root Cause: the real algorithm (`scope_claude.sh:_df()`) truncates any
+  // encoded result over 200 characters to 200 chars and appends a
+  // djb2-style hash (of the ORIGINAL, pre-truncation path) as a
+  // disambiguating suffix. encode_path() had no length check at all, so two
+  // distinct long paths sharing the same first 200 encoded characters would
+  // have produced colliding, unbounded directory names.
+  //
+  // Why Not Caught: no pre-existing test constructed a path whose encoded
+  // form exceeds 200 characters — all fixtures used short, hand-written
+  // paths.
+  //
+  // Fix Applied: after component assembly, if the result exceeds 200 bytes,
+  // truncate to 200 and append `-<djb2-hash-hex>`, hashing `path_str` (the
+  // original, pre-truncation input), matching `scope_claude.sh:34-43`.
+  //
+  // Prevention: any change to the encoding scheme must re-verify both the
+  // dot-handling and length-fallback cases together — see
+  // `test_encode_dot_prefixed_component_matches_real_algorithm` above; they
+  // were fixed together as one divergence-from-the-real-algorithm defect.
+  //
+  // Pitfall: the hash MUST cover the original path string, not the
+  // truncated encoded result — hashing the truncated `result` would make
+  // every path sharing the same first 200 encoded characters hash
+  // identically, defeating the disambiguation purpose of the suffix.
+  // test_kind: bug_reproducer(BUG-366)
   #[test]
   fn test_encode_long_path_uses_hash_fallback()
   {
@@ -762,6 +818,7 @@ mod tests
     assert_eq!( encoded, format!( "{expected_prefix}-20b35b91c7b33be4" ) );
   }
 
+  // test_kind: bug_reproducer(BUG-366)
   #[test]
   fn test_encode_short_path_unaffected_by_hash_fallback()
   {

@@ -58,10 +58,19 @@ fn common_prefix_len( a : &str, b : &str ) -> usize
 /// Fix: only accept a `--` as a real topic boundary when it falls EXACTLY at
 /// the point where `dir_name` and `encoded_base` diverge (the longest common
 /// prefix). Shared/incidental structure can never BE the divergence point
-/// between two different paths, so this structurally excludes false
-/// positives without relying on filesystem state.
-/// Pitfall: do not reintroduce a blind `rfind("--")`/`split("--")` search —
-/// any boundary search that ignores `encoded_base` re-opens this hole.
+/// between two different paths, so the topic-boundary decision itself is
+/// structurally sound without relying on filesystem state. This guarantee is
+/// scoped to that decision only: the naive literal-prefix check above
+/// (`check(dir_name)`, no topic suffix involved) is intentionally unchanged
+/// and was never filesystem-independent — it can still admit a same-prefix
+/// sibling (e.g. an underscore/dot collision), left for the caller's
+/// `decode_path_via_fs` verification to resolve. See
+/// `docs/invariant/001_path_encoding.md § Contract` for the accepted
+/// multi-candidate tradeoff this depends on.
+/// Pitfall: do not reintroduce a blind `rfind("--")`/`split("--")` search
+/// for the topic-boundary decision — any boundary search that ignores
+/// `encoded_base` re-opens this hole. Also do not assume the naive prefix
+/// check is filesystem-independent-safe; only the topic-boundary alignment is.
 fn is_relevant_encoded( dir_name : &str, encoded_base : &str ) -> bool
 {
   let check = | candidate : &str | -> bool

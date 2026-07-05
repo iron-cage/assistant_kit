@@ -17,11 +17,17 @@
 //! | IT-63 | 035   | Base path shown correctly with no topic suffix (T04)          |
 //! | IT-64 | 035   | Double-topic storage key shows both topic components (T05)    |
 //! | IT-65 | BUG-003 | Display resolves a dot-prefixed mid-path component           |
+//! | IT-67 | BUG-003 | `scope::under` excludes a dot-prefixed similar-named sibling  |
+//! | IT-68 | BUG-003 | `scope::relevant` excludes a dot-prefixed similar-named sibling |
 //!
 //! Note: IT-60..IT-64 follow IT-59 (`scope::around` tests in `projects_scope_around_test.rs`).
 //! IT-27..IT-30 were already allocated in `tests/docs/cli/command/007_projects.md`
 //! for unrelated tests, so the next available block was used here. IT-65 follows
-//! IT-64 (next free ID in the shared `.projects` IT-N sequence).
+//! IT-64 (next free ID in the shared `.projects` IT-N sequence). IT-66 is
+//! allocated to `scope_under_finds_project_with_dot_prefixed_path` in
+//! `projects_scope_test.rs`; IT-67/IT-68 continue the shared sequence from
+//! there — combinatorial gap between IT-25/IT-26 (sibling exclusion, no
+//! dot-prefix) and IT-65/IT-66 (dot-prefix, no sibling collision).
 #![ cfg( unix ) ]
 
 mod common;
@@ -583,4 +589,95 @@ fn it_65_decode_display_resolves_dot_prefixed_path_component()
     "display path must resolve the dot-prefixed component; got:\n{s}"
   );
   assert!( s.contains( "session-it65-dot-prefixed" ), "session must appear; got:\n{s}" );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// scope::under / scope::relevant — dot-prefixed sibling with a similar name
+// (BUG-003 combinatorial gap: it_25/it_26 cover sibling-exclusion without a
+// dot-prefix; it_65 covers dot-prefix without a sibling-name collision. This
+// pair combines both — `.my_config` vs `.my_config_extra` — since neither
+// prior test exercises the interaction between walk_fs option C (dot-prefix
+// resolution) and the sibling-exclusion fs verification in matches_under /
+// matches_relevant. Directories must exist on disk, same as it_25/it_26:
+// decode_path_via_fs uses is_dir()/exists() to walk; without real dirs the
+// walker returns None and the conservative-include fallback would wrongly
+// include the sibling.
+// ─────────────────────────────────────────────────────────────────────────────
+#[ test ]
+// bug_reproducer(BUG-003)
+fn it_67_scope_under_excludes_dot_prefixed_similar_named_sibling()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  // base is `.my_config`; sibling `.my_config_extra` must NOT be treated as
+  // nested under base even though it shares the encoded `-my-config` prefix.
+  let base    = root.path().join( ".my_config" );
+  let sibling = root.path().join( ".my_config_extra" );
+  let child   = base.join( "child" );
+
+  std::fs::create_dir_all( &child ).expect( "create .my_config/child dir" );
+  std::fs::create_dir_all( &sibling ).expect( "create .my_config_extra dir" );
+
+  common::write_path_project_session( &storage_root, &base,    "session-it67-base",    2 );
+  common::write_path_project_session( &storage_root, &sibling, "session-it67-sibling", 2 );
+  common::write_path_project_session( &storage_root, &child,   "session-it67-child",   2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", base.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "session-it67-base" ),  "must include base itself; got:\n{s}" );
+  assert!( s.contains( "session-it67-child" ), "must include child of base; got:\n{s}" );
+  assert!(
+    !s.contains( "session-it67-sibling" ),
+    "scope::under must EXCLUDE dot-prefixed sibling `.my_config_extra`; got:\n{s}"
+  );
+}
+
+#[ test ]
+// bug_reproducer(BUG-003)
+fn it_68_scope_relevant_excludes_dot_prefixed_similar_named_sibling()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  // cwd is deep inside `.my_config_extra`; sibling `.my_config` must NOT be
+  // treated as an ancestor even though its encoded prefix matches.
+  let sibling   = root.path().join( ".my_config" );
+  let base_path = root.path().join( ".my_config_extra" ).join( "sub" );
+  let unrelated = root.path().join( "other" );
+
+  std::fs::create_dir_all( &sibling ).expect( "create .my_config dir" );
+  std::fs::create_dir_all( &base_path ).expect( "create .my_config_extra/sub dir" );
+  std::fs::create_dir_all( &unrelated ).expect( "create other dir" );
+
+  common::write_path_project_session( &storage_root, &sibling,   "session-it68-sibling",   2 );
+  common::write_path_project_session( &storage_root, &base_path, "session-it68-base",      2 );
+  common::write_path_project_session( &storage_root, &unrelated, "session-it68-unrelated", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::relevant" )
+    .arg( format!( "path::{}", base_path.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "session-it68-base" ), "must include base project; got:\n{s}" );
+  assert!(
+    !s.contains( "session-it68-sibling" ),
+    "scope::relevant must EXCLUDE dot-prefixed sibling `.my_config` despite shared encoded prefix; got:\n{s}"
+  );
+  assert!( !s.contains( "session-it68-unrelated" ), "must exclude unrelated project; got:\n{s}" );
 }
