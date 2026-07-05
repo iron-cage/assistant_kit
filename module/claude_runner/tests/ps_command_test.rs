@@ -26,6 +26,15 @@
 //! | IT-18 | `clr ps help` (positional) → exit 0, stdout non-empty         | BUG-294 positional|
 //! | IT-19 | Task column works for CWD with no underscores (regression)     | BUG-295 regression|
 //! | IT-20 | Active sessions ordered oldest-first (row #1 has longest elapsed) | BUG-301 repro   |
+//! | IT-21 | `--mode print` shows only print-mode sessions                  | Mode filter      |
+//! | IT-22 | `--mode interactive` shows only interactive sessions           | Mode filter      |
+//! | IT-23 | `--mode bogus` → exit 1                                        | Mode validation  |
+//! | IT-24 | `--columns pid,path,task` shows custom column subset           | Column select    |
+//! | IT-25 | `--columns bogus` → exit 1                                     | Column validation|
+//! | IT-26 | `--wide` shows all 11 columns                                  | Wide output      |
+//! | IT-27 | `--wide --columns pid,task` → `--columns` wins                 | Precedence       |
+//! | IT-28 | `CLR_PS_MODE=print` env var fallback filters print sessions    | Env var          |
+//! | IT-29 | `CLR_PS_COLUMNS=pid,elapsed` env var fallback selects columns  | Env var          |
 //! | IT-30 | `--mode all`, 1 interactive + 1 print → breakdown "1 interactive, 1 print" | Caption breakdown |
 //! | IT-31 | `--mode all`, 3 interactive → breakdown "3 interactive, 0 print"          | Caption breakdown |
 //! | IT-32 | `--mode all`, 3 print → breakdown "0 interactive, 3 print"                | Caption breakdown |
@@ -286,8 +295,10 @@ fn it_10_gate_file_present_shows_queued_table()
     &gate_file,
     r#"{"cwd":"/tmp/test-project","since":1720000000,"attempt":3,"message":"waiting for session slot"}"#,
   ).expect( "write gate file" );
+  let proc          = make_proc_dir( &[] );
+  let proc_dir_path = proc.path().to_str().expect( "proc dir UTF-8" );
 
-  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ) ] );
+  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ), ( "CLR_PROC_DIR", proc_dir_path ) ] );
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
   assert!( stdout.contains( "PID" ), "missing PID header in queued table: {stdout}" );
@@ -396,6 +407,8 @@ fn it_13_orphaned_gate_file_filtered_out()
 {
   let gate_dir      = tempfile::TempDir::new().expect( "create gate temp dir" );
   let gate_dir_path = gate_dir.path().to_str().expect( "gate dir UTF-8" );
+  let proc          = make_proc_dir( &[] );
+  let proc_dir_path = proc.path().to_str().expect( "proc dir UTF-8" );
 
   // PID 99999999 is guaranteed not to exist (/proc/sys/kernel/pid_max is at most 4194304).
   let orphan_file = gate_dir.path().join( "99999999.json" );
@@ -404,7 +417,7 @@ fn it_13_orphaned_gate_file_filtered_out()
     r#"{"cwd":"/tmp/dead-process","since":1,"attempt":1,"message":"waiting for session slot"}"#,
   ).expect( "write orphan gate file" );
 
-  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ) ] );
+  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ), ( "CLR_PROC_DIR", proc_dir_path ) ] );
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
 
