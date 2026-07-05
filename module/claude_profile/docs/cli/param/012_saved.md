@@ -27,7 +27,7 @@ saved::1   → Saved:   3 account(s)
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Saved account count line visibility |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Saved account count line visibility |
 
 ### Referenced User Stories
 

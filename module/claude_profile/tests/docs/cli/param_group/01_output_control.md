@@ -1,6 +1,6 @@
 # Test: Output Control Group
 
-Integration and edge case coverage for the Output Control parameter group (`format::`). See [parameter_groups.md](../../../../docs/cli/param_group/readme.md#group--1-output-control) for specification.
+Integration and edge case coverage for the Output Control parameter group (`format::`). See [parameter_groups.md](../../../../docs/cli/param_group/001_output_control.md) for specification.
 
 ### Test Case Index
 
@@ -38,7 +38,7 @@ Integration and edge case coverage for the Output Control parameter group (`form
   7. `clp .account.inspect format::json`
 - **Then:** Each produces a valid JSON object or array with all fields present. All exit 0.
 - **Exit:** 0
-- **Source:** [parameter_groups.md — Output Control](../../../../docs/cli/param_group/readme.md#group--1-output-control)
+- **Source:** [parameter_groups.md — Output Control](../../../../docs/cli/param_group/001_output_control.md)
 
 ---
 
@@ -51,7 +51,7 @@ Integration and edge case coverage for the Output Control parameter group (`form
   3. `clp .usage`
 - **Then:** Each produces labeled text output. All exit 0.
 - **Exit:** 0
-- **Source:** [parameter_groups.md — Output Control](../../../../docs/cli/param_group/readme.md#group--1-output-control)
+- **Source:** [parameter_groups.md — Output Control](../../../../docs/cli/param_group/001_output_control.md)
 
 ---
 
@@ -61,7 +61,7 @@ Integration and edge case coverage for the Output Control parameter group (`form
 - **When:** `clp .accounts sub::0 format::json`
 - **Then:** Valid JSON array with `subscription_type` present despite `sub::0`. Exit 0.
 - **Exit:** 0
-- **Source:** [004_parameter_interactions.md — Interaction 2](../../../../docs/cli/004_parameter_interactions.md#interaction--2-formatjson-overrides-field-presence-params)
+- **Source:** [004_parameter_interactions.md — Interaction 2](../../../../docs/cli/004_parameter_interactions.md#interaction-2-formatjson-overrides-field-presence-params)
 
 ---
 
@@ -71,7 +71,7 @@ Integration and edge case coverage for the Output Control parameter group (`form
 - **When:** `clp .credentials.status format::json`
 - **Then:** Valid JSON object with `"file"` key present despite `file::0` default. Exit 0.
 - **Exit:** 0
-- **Source:** [004_parameter_interactions.md — Interaction 2](../../../../docs/cli/004_parameter_interactions.md#interaction--2-formatjson-overrides-field-presence-params)
+- **Source:** [004_parameter_interactions.md — Interaction 2](../../../../docs/cli/004_parameter_interactions.md#interaction-2-formatjson-overrides-field-presence-params)
 
 ---
 
@@ -84,7 +84,7 @@ Integration and edge case coverage for the Output Control parameter group (`form
   3. `clp .account.delete name::test_na@x.com format::json`
 - **Then:** Each mutation command either ignores `format::json` (producing its standard single-line confirmation) or rejects it with an error. The param does not alter mutation output format.
 - **Exit:** 0
-- **Source:** [parameter_groups.md — Output Control](../../../../docs/cli/param_group/readme.md#group--1-output-control)
+- **Source:** [parameter_groups.md — Output Control](../../../../docs/cli/param_group/001_output_control.md)
 
 ---
 
@@ -96,4 +96,4 @@ Integration and edge case coverage for the Output Control parameter group (`form
   2. `clp .token.status format::table`
 - **Then:** `.accounts format::table` exits 0 and produces a titled, aligned table with columns Account, Sub, Tier, Expires, Email (with flag column). `.token.status format::table` exits 1 with an error indicating table is not supported.
 - **Exit:** 0 (`.accounts`), 1 (`.token.status`)
-- **Source:** [commands.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [004_parameter_interactions.md — Interaction 3](../../../../docs/cli/004_parameter_interactions.md#interaction--3-formattable-ignores-field-presence-params)
+- **Source:** [commands.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts), [004_parameter_interactions.md — Interaction 3](../../../../docs/cli/004_parameter_interactions.md#interaction-3-formattable-ignores-field-presence-params)

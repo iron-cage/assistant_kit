@@ -32,7 +32,7 @@ count::1 get::account -> show account name of the first (sorted) row
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Row count limit after filtering and sorting |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Row count limit after filtering and sorting |
 
 ### Referenced User Stories
 

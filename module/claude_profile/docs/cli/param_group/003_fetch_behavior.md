@@ -20,18 +20,18 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | All 9 params |
-| 2 | [`.accounts`](../command/001_account.md#command--3-accounts) | `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::` |
-| 3 | [`.account.use`](../command/001_account.md#command--5-accountuse) | `trace::`, `touch::`, `imodel::`, `effort::` |
-| 4 | [`.account.save`](../command/001_account.md#command--4-accountsave) | `trace::` |
-| 5 | [`.account.delete`](../command/001_account.md#command--6-accountdelete) | `trace::` |
-| 6 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | `trace::` |
-| 7 | [`.account.relogin`](../command/001_account.md#command--12-accountrelogin) | `trace::` |
-| 8 | [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) | `trace::` |
-| 9 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | `refresh::`, `trace::` |
-| 10 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | `trace::` |
-| 11 | [`.paths`](../command/004_paths.md#command--8-paths) | `trace::` |
-| 12 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | `trace::` |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | All 9 params |
+| 2 | [`.accounts`](../command/001_account.md#command-3-accounts) | `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::` |
+| 3 | [`.account.use`](../command/001_account.md#command-5-accountuse) | `trace::`, `touch::`, `imodel::`, `effort::` |
+| 4 | [`.account.save`](../command/001_account.md#command-4-accountsave) | `trace::` |
+| 5 | [`.account.delete`](../command/001_account.md#command-6-accountdelete) | `trace::` |
+| 6 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | `trace::` |
+| 7 | [`.account.relogin`](../command/001_account.md#command-12-accountrelogin) | `trace::` |
+| 8 | [`.account.renewal`](../command/001_account.md#command-14-accountrenewal) | `trace::` |
+| 9 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | `refresh::`, `trace::` |
+| 10 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | `trace::` |
+| 11 | [`.paths`](../command/004_paths.md#command-8-paths) | `trace::` |
+| 12 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | `trace::` |
 
 **Typical Patterns:**
 
@@ -59,7 +59,7 @@ All 9 members pass: `refresh::` (retry strategy on auth error or locally-expired
 
 - `interval::` and `jitter::` are only validated when `live::1`; their values have no effect when `live::0`.
 - `refresh::` is orthogonal to `live::` — both may be set simultaneously without conflict.
-- `live::1 format::json` is rejected before any fetch (see [../004_parameter_interactions.md](../004_parameter_interactions.md#interaction--4-live1-is-incompatible-with-formatjson)).
+- `live::1 format::json` is rejected before any fetch (see [../004_parameter_interactions.md](../004_parameter_interactions.md#interaction-4-live1-is-incompatible-with-formatjson)).
 
 **Cross-References**
 

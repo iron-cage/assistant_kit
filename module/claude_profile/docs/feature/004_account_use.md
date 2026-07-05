@@ -65,7 +65,7 @@
 
 | File | Relationship |
 |------|--------------|
-| [command/001_account.md](../cli/command/001_account.md#command--5-accountuse) | CLI command specification |
+| [command/001_account.md](../cli/command/001_account.md#command-5-accountuse) | CLI command specification |
 
 ### Features
 
@@ -89,7 +89,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.use`](../cli/command/001_account.md#command--5-accountuse) | CLI surface for this feature |
+| 1 | [`.account.use`](../cli/command/001_account.md#command-5-accountuse) | CLI surface for this feature |
 
 ### Sources
 

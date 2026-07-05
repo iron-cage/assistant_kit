@@ -1,6 +1,6 @@
 # Test: `.paths`
 
-Integration test planning for the `.paths` command. See [command/namespace.md](../../../../docs/cli/command/004_paths.md#command--8-paths) for specification.
+Integration test planning for the `.paths` command. See [command/namespace.md](../../../../docs/cli/command/004_paths.md#command-8-paths) for specification.
 
 ### Test Case Index
 
@@ -34,7 +34,7 @@ Integration test planning for the `.paths` command. See [command/namespace.md](.
 - **When:** `clp .paths`
 - **Then:** Seven labeled lines on stdout covering: `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session-env`, `sessions`. Exit 0.; all 7 labeled paths present in output
 - **Exit:** 0
-- **Source:** [command/004_paths.md — .paths](../../../../docs/cli/command/004_paths.md#command--8-paths)
+- **Source:** [command/004_paths.md — .paths](../../../../docs/cli/command/004_paths.md#command-8-paths)
 
 ---
 
@@ -44,7 +44,7 @@ Integration test planning for the `.paths` command. See [command/namespace.md](.
 - **When:** `clp .paths format::json`
 - **Then:** Valid JSON object on stdout with keys for all 7 paths plus `base`, exit 0.; valid JSON object with all expected path keys
 - **Exit:** 0
-- **Source:** [command/004_paths.md — .paths](../../../../docs/cli/command/004_paths.md#command--8-paths)
+- **Source:** [command/004_paths.md — .paths](../../../../docs/cli/command/004_paths.md#command-8-paths)
 
 ---
 
@@ -54,7 +54,7 @@ Integration test planning for the `.paths` command. See [command/namespace.md](.
 - **When:** `env -u HOME clp .paths`
 - **Then:** Error message on stderr indicating `HOME` is not set, exit 2.; stderr contains error about HOME not set
 - **Exit:** 2
-- **Source:** [command/004_paths.md — .paths](../../../../docs/cli/command/004_paths.md#command--8-paths)
+- **Source:** [command/004_paths.md — .paths](../../../../docs/cli/command/004_paths.md#command-8-paths)
 
 ---
 
@@ -64,7 +64,7 @@ Integration test planning for the `.paths` command. See [command/namespace.md](.
 - **When:** `clp .paths`
 - **Then:** Seven labeled lines, each path starting with `/`, exit 0.; all paths are absolute
 - **Exit:** 0
-- **Source:** [command/004_paths.md — .paths](../../../../docs/cli/command/004_paths.md#command--8-paths)
+- **Source:** [command/004_paths.md — .paths](../../../../docs/cli/command/004_paths.md#command-8-paths)
 
 ---
 
@@ -74,7 +74,7 @@ Integration test planning for the `.paths` command. See [command/namespace.md](.
 - **When:** `HOME=/tmp/test_home_12345 clp .paths`
 - **Then:** All paths rooted under `/tmp/test_home_12345/.claude/`, exit 0.; all paths rooted under the custom HOME value
 - **Exit:** 0
-- **Source:** [command/004_paths.md — .paths](../../../../docs/cli/command/004_paths.md#command--8-paths)
+- **Source:** [command/004_paths.md — .paths](../../../../docs/cli/command/004_paths.md#command-8-paths)
 
 ---
 
@@ -106,4 +106,4 @@ Integration test planning for the `.paths` command. See [command/namespace.md](.
 - **When:** `clp .paths no_color::1`
 - **Then:** Seven labeled lines on stdout (identical to IT-1 output). No ANSI color codes present. Exit 0. `.paths` uses plain-text formatting regardless of `no_color::` — the flag is accepted without error.
 - **Exit:** 0
-- **Source:** [command/004_paths.md — .paths](../../../../docs/cli/command/004_paths.md#command--8-paths)
+- **Source:** [command/004_paths.md — .paths](../../../../docs/cli/command/004_paths.md#command-8-paths)

@@ -16,8 +16,8 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.help`](../command/root.md#command--1-help) | Provides discovery of available commands |
-| 2 | [`.status`](../command/root.md#command--2-status) | Delivers the unified environment view |
+| 1 | [`.help`](../command/root.md#command-1-help) | Provides discovery of available commands |
+| 2 | [`.status`](../command/root.md#command-2-status) | Delivers the unified environment view |
 
 ### Referenced Formats
 

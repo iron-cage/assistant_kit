@@ -18,11 +18,11 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.help`](../command/root.md#command--1-help) | Provides discovery of available commands |
-| 2 | [`.version.show`](../command/version.md#command--3-versionshow) | Verifies the active version post-install |
-| 3 | [`.version.install`](../command/version.md#command--4-versioninstall) | Installs the pinned version with 5-layer lock |
-| 4 | [`.version.guard`](../command/version.md#command--5-versionguard) | Watches for drift and restores the pinned version |
-| 5 | [`.version.list`](../command/version.md#command--6-versionlist) | Shows alias-to-version resolution for selection |
+| 1 | [`.help`](../command/root.md#command-1-help) | Provides discovery of available commands |
+| 2 | [`.version.show`](../command/version.md#command-3-versionshow) | Verifies the active version post-install |
+| 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | Installs the pinned version with 5-layer lock |
+| 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | Watches for drift and restores the pinned version |
+| 5 | [`.version.list`](../command/version.md#command-6-versionlist) | Shows alias-to-version resolution for selection |
 
 ### Referenced Formats
 

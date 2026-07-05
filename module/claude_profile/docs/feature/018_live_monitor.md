@@ -101,7 +101,7 @@ In live mode, `format::json` is rejected before the first fetch (see Validation)
 
 | File | Relationship |
 |------|--------------|
-| [command/006_usage.md](../cli/command/006_usage.md#command--9-usage) | `.usage` CLI command specification |
+| [command/006_usage.md](../cli/command/006_usage.md#command-9-usage) | `.usage` CLI command specification |
 
 ### Dependencies
 
@@ -127,7 +127,7 @@ In live mode, `format::json` is rejected before the first fetch (see Validation)
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../cli/command/006_usage.md#command--9-usage) | CLI surface for this feature |
+| 1 | [`.usage`](../cli/command/006_usage.md#command-9-usage) | CLI surface for this feature |
 
 ### Sources
 

@@ -24,7 +24,7 @@ clv.version.guard interval::3600   # check every hour
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`.version.guard`](../command/version.md#command--5-versionguard) | 0 (one-shot) | >0 enables watch mode; loops every N seconds until interrupted |
+| 1 | [`.version.guard`](../command/version.md#command-5-versionguard) | 0 (one-shot) | >0 enables watch mode; loops every N seconds until interrupted |
 
 ### Referenced Type
 
