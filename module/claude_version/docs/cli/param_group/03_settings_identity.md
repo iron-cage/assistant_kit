@@ -30,8 +30,8 @@ clv .settings.set key::theme value::dark
 
 | # | Command | Membership | Excluded Params |
 |---|---------|-----------|----------------|
-| 1 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Partial | `value::` |
-| 2 | [`.settings.set`](../command/settings.md#command--11-settingsset) | Full | — |
+| 1 | [`.settings.get`](../command/settings.md#command-10-settingsget) | Partial | `value::` |
+| 2 | [`.settings.set`](../command/settings.md#command-11-settingsset) | Full | — |
 
 ### Referenced Parameters
 

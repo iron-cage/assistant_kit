@@ -294,6 +294,7 @@ RUN mkdir -p $WORKSPACE_DIR/.claude
 #   root-owned but world-readable from install; chmod -R on tens of thousands of
 #   registry files through fuse-overlayfs overloads the FUSE daemon ("closed pipe").
 #   Testuser only needs write access to $WORKSPACE_DIR for compilation output.
+#
 # Fix(BUG-workspace-chmod-copyup): $WORKSPACE_DIR/target is also excluded here, for a
 # reason distinct from BUG-011's fuse whiteout/FUSE-daemon issues above: on
 # metacopy=false hosts, chown/chmod against a file that already exists in an earlier,

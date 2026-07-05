@@ -28,7 +28,7 @@ clv .config key::model value::claude-haiku-4-5-20251001 scope::project
 
 | # | Command | Via Parameter |
 |---|---------|--------------|
-| 1 | [`.config`](../command/config.md#command--13-config) | `scope::` |
+| 1 | [`.config`](../command/config.md#command-13-config) | `scope::` |
 
 ### Referenced Parameters
 

@@ -1,6 +1,6 @@
 # Test: `.account.limits`
 
-Integration test specifications for the `.account.limits` command. See [command/namespace.md](../../../../docs/cli/command/001_account.md#command--11-accountlimits) and [feature/013_account_limits.md](../../../../docs/feature/013_account_limits.md) for specification.
+Integration test specifications for the `.account.limits` command. See [command/namespace.md](../../../../docs/cli/command/001_account.md#command-11-accountlimits) and [feature/013_account_limits.md](../../../../docs/feature/013_account_limits.md) for specification.
 
 ### Test Case Index
 
@@ -39,7 +39,7 @@ Integration test specifications for the `.account.limits` command. See [command/
 - **When:** `clp .account.limits`
 - **Then:** Exit 0; output contains three utilization lines for session (5h), weekly (all), and weekly (sonnet) with percentage and reset time.; all three utilization categories visible
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.limits](../../../../docs/cli/command/001_account.md#command--11-accountlimits) (FR-18)
+- **Source:** [command/001_account.md — .account.limits](../../../../docs/cli/command/001_account.md#command-11-accountlimits) (FR-18)
 
 ---
 
@@ -59,7 +59,7 @@ Integration test specifications for the `.account.limits` command. See [command/
 - **When:** `clp .account.limits name::work@acme.com`
 - **Then:** Exit 0; output reflects `work` account limits.; named account limits displayed
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.limits](../../../../docs/cli/command/001_account.md#command--11-accountlimits) (FR-18)
+- **Source:** [command/001_account.md — .account.limits](../../../../docs/cli/command/001_account.md#command-11-accountlimits) (FR-18)
 
 ---
 
@@ -69,7 +69,7 @@ Integration test specifications for the `.account.limits` command. See [command/
 - **When:** `clp .account.limits name::ghost@example.com`
 - **Then:** Exit 2; stderr contains `not found` or `ghost@example.com`.; not-found is a runtime error (2), not a usage error (1)
 - **Exit:** 2
-- **Source:** [command/001_account.md — .account.limits](../../../../docs/cli/command/001_account.md#command--11-accountlimits)
+- **Source:** [command/001_account.md — .account.limits](../../../../docs/cli/command/001_account.md#command-11-accountlimits)
 
 ---
 

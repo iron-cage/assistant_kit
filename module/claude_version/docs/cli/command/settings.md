@@ -66,8 +66,8 @@ clv.settings.show format::json
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.settings.get`](#command--10-settings-get) | Reads a single key from the displayed set |
-| 2 | [`.settings.set`](#command--11-settings-set) | Modifies a key from the displayed set |
+| 1 | [`.settings.get`](#command-10-settingsget) | Reads a single key from the displayed set |
+| 2 | [`.settings.set`](#command-11-settingsset) | Modifies a key from the displayed set |
 
 ### Referenced User Stories
 
@@ -144,8 +144,8 @@ clv.settings.get key::autoUpdate format::json
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.settings.show`](#command--9-settings-show) | Shows all settings for broader context |
-| 2 | [`.settings.set`](#command--11-settings-set) | Writes the key that this command reads |
+| 1 | [`.settings.show`](#command-9-settingsshow) | Shows all settings for broader context |
+| 2 | [`.settings.set`](#command-11-settingsset) | Writes the key that this command reads |
 
 ### Referenced User Stories
 
@@ -218,8 +218,8 @@ clv.settings.set key::theme value::dark dry::1
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.settings.get`](#command--10-settings-get) | Reads the key after writing |
-| 2 | [`.settings.show`](#command--9-settings-show) | Verifies full settings after modification |
+| 1 | [`.settings.get`](#command-10-settingsget) | Reads the key after writing |
+| 2 | [`.settings.show`](#command-9-settingsshow) | Verifies full settings after modification |
 
 ### Referenced User Stories
 

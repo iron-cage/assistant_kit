@@ -113,9 +113,9 @@ clv.config key::theme unset::1
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.settings.show`](settings.md#command--9-settings-show) | Deprecated predecessor (show-all mode) |
-| 2 | [`.settings.get`](settings.md#command--10-settings-get) | Deprecated predecessor (get mode) |
-| 3 | [`.settings.set`](settings.md#command--11-settings-set) | Deprecated predecessor (set mode) |
+| 1 | [`.settings.show`](settings.md#command-9-settingsshow) | Deprecated predecessor (show-all mode) |
+| 2 | [`.settings.get`](settings.md#command-10-settingsget) | Deprecated predecessor (get mode) |
+| 3 | [`.settings.set`](settings.md#command-11-settingsset) | Deprecated predecessor (set mode) |
 
 ### Referenced User Stories
 
