@@ -14,10 +14,10 @@
 //! | US-6 | Typo `clr kil` triggers guard                     | AC-006 |
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ run_cli, stderr_str, stdout_str };
+use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
 
 #[ cfg( unix ) ]
-use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+use cli_binary_test_helpers::{ fake_claude_binary_dir, make_proc_dir, spawn_fake_claude };
 
 // ── US-1: Successful kill ─────────────────────────────────────────────────────
 
@@ -30,10 +30,12 @@ fn us_01_successful_kill()
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg  = spawn_fake_claude( &path_val );
   let pid = bg.id();
+  let proc = make_proc_dir( &[ pid ] );
 
   let bin    = env!( "CARGO_BIN_EXE_clr" );
   let result = std::process::Command::new( bin )
     .args( [ "kill", &pid.to_string() ] )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output();
   // Always reap the child before unwrapping the result to avoid zombies.
   let _ = bg.kill();
@@ -56,10 +58,13 @@ fn us_01_successful_kill()
 /// US-2 (AC-002): `clr kill 999999` with a PID that is not a running Claude
 /// process exits 1 and stderr identifies the PID and explains it is not a
 /// Claude session.
+#[ cfg( unix ) ]
 #[ test ]
 fn us_02_non_claude_pid_rejected()
 {
-  let out    = run_cli( &[ "kill", "999999" ] );
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out    = run_cli_with_env( &[ "kill", "999999" ], &[ ( "CLR_PROC_DIR", proc_dir ) ] );
   let stderr = stderr_str( &out );
   assert!( !out.status.success(), "expected non-zero exit" );
   assert!(
