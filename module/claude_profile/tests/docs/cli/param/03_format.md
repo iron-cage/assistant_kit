@@ -131,7 +131,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - **When:** `clp .accounts format::table`
 - **Then:** Stdout contains `Accounts` title, a dash-separated header row with `Account`, `Sub`, `Tier`, `Expires`, `Email` columns, and one data row per account; the active account row has `✓` in the flag column; non-active rows have a blank flag. Exit 0.; table output with fixed columns and aligned rows
 - **Exit:** 0
-- **Source:** [commands.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [commands.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 

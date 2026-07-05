@@ -105,7 +105,7 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 
 | File | Relationship |
 |------|--------------|
-| [cli/command/001_account.md](../cli/command/001_account.md#command--16-accountassign) | CLI command specification |
+| [cli/command/001_account.md](../cli/command/001_account.md#command-16-accountassign-removed-feature-037-migration-path-superseded-feature-064065) | CLI command specification |
 
 ### Features
 

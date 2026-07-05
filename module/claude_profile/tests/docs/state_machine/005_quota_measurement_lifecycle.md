@@ -21,7 +21,7 @@ that governs which measurements contribute to polynomial approximation.
 
 ### AC-1: `empty` — 0 measurements, approximation returns None
 
-- **Given:** An account with a `_quota_cache` entry in `{name}.json` but no `history` array,
+- **Given:** An account with a `cache` entry in `{name}.json` but no `history` array,
   or a `history` array with 0 entries.
 - **When:** `read_cached_quota()` is called for this account.
 - **Then:** Returns `None` (cannot approximate with zero measurements). The ring buffer is in
@@ -34,7 +34,7 @@ that governs which measurements contribute to polynomial approximation.
 
 ### AC-2: `empty` — raw quota returned when no history array
 
-- **Given:** An account with a `_quota_cache` entry that has no `history` key (raw cache only).
+- **Given:** An account with a `cache` entry that has no `history` key (raw cache only).
 - **When:** `read_cached_quota()` is called.
 - **Then:** Returns the raw cached quota value without approximation. `empty` state means
   approximation cannot be applied; raw values from the last successful fetch are used instead.

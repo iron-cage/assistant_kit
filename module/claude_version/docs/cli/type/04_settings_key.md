@@ -22,8 +22,8 @@ clv .settings.get key::api.endpoint   # dot is literal
 
 | # | Command | Via Parameter |
 |---|---------|--------------|
-| 1 | [`.settings.get`](../command/settings.md#command--10-settingsget) | `key::` |
-| 2 | [`.settings.set`](../command/settings.md#command--11-settingsset) | `key::` |
+| 1 | [`.settings.get`](../command/settings.md#command-10-settingsget) | `key::` |
+| 2 | [`.settings.set`](../command/settings.md#command-11-settingsset) | `key::` |
 
 ### Referenced Parameters
 

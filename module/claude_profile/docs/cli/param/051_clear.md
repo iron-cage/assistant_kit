@@ -24,7 +24,7 @@ clp .account.renewal name::alice@acme.com clear::1 dry::1
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) | Remove billing renewal override |
+| 1 | [`.account.renewal`](../command/001_account.md#command-14-accountrenewal) | Remove billing renewal override |
 
 ### Referenced User Stories
 

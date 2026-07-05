@@ -1,4 +1,4 @@
-# Commands Reference
+# Commands
 
 ### Scope
 

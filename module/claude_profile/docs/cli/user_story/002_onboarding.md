@@ -18,12 +18,12 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.save`](../command/001_account.md#command--4-accountsave) | Primary: capture credentials as named profile |
-| 2 | [`.accounts`](../command/001_account.md#command--3-accounts) | Verify: confirm profile appears in store |
-| 3 | [`.account.delete`](../command/001_account.md#command--6-accountdelete) | Cleanup: remove stale or incorrect profiles |
-| 4 | [`.account.relogin`](../command/001_account.md#command--12-accountrelogin) | Recovery: browser re-auth when refresh token is dead |
-| 5 | [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) | Management: set billing renewal timestamp override |
-| 6 | [`.accounts`](../command/001_account.md#command--3-accounts) | Cross-machine: write active-account marker for another host via `assignee::USER@MACHINE name::X` (Feature 065; formerly `.account.assign`) |
+| 1 | [`.account.save`](../command/001_account.md#command-4-accountsave) | Primary: capture credentials as named profile |
+| 2 | [`.accounts`](../command/001_account.md#command-3-accounts) | Verify: confirm profile appears in store |
+| 3 | [`.account.delete`](../command/001_account.md#command-6-accountdelete) | Cleanup: remove stale or incorrect profiles |
+| 4 | [`.account.relogin`](../command/001_account.md#command-12-accountrelogin) | Recovery: browser re-auth when refresh token is dead |
+| 5 | [`.account.renewal`](../command/001_account.md#command-14-accountrenewal) | Management: set billing renewal timestamp override |
+| 6 | [`.accounts`](../command/001_account.md#command-3-accounts) | Cross-machine: write active-account marker for another host via `assignee::USER@MACHINE name::X` (Feature 065; formerly `.account.assign`) |
 
 ### Referenced Parameters
 
