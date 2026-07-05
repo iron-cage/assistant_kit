@@ -22,7 +22,7 @@ clv.config key::theme unset::1 dry::1     # previews removal without changing fi
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`.config`](../command/config.md#command--13-config) | false | Requires key::; mutually exclusive with value:: |
+| 1 | [`.config`](../command/config.md#command-13-config) | false | Requires key::; mutually exclusive with value:: |
 
 ### Referenced Type
 

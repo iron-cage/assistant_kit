@@ -37,7 +37,7 @@
 
 | File | Relationship |
 |------|--------------|
-| [command/001_account.md](../cli/command/001_account.md#command--3-accounts) | CLI command specification |
+| [command/001_account.md](../cli/command/001_account.md#command-3-accounts) | CLI command specification |
 
 ### Features
 
@@ -50,7 +50,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../cli/command/001_account.md#command--3-accounts) | CLI surface for this feature |
+| 1 | [`.accounts`](../cli/command/001_account.md#command-3-accounts) | CLI surface for this feature |
 
 ### Sources
 

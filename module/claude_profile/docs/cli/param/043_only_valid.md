@@ -31,7 +31,7 @@ only_valid::1 count::5   -> first 5 valid accounts
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Filter to valid-token accounts only |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Filter to valid-token accounts only |
 
 ### Referenced User Stories
 

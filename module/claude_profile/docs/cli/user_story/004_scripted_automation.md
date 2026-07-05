@@ -16,10 +16,10 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Primary: quota data via `format::json` / `get::` |
-| 2 | [`.accounts`](../command/001_account.md#command--3-accounts) | Enumerate all accounts as JSON |
-| 3 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | Token validity check in automated health checks |
-| 4 | [`.account.rotate`](../command/001_account.md#command--13-accountrotate) | Automated account selection in pipelines |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Primary: quota data via `format::json` / `get::` |
+| 2 | [`.accounts`](../command/001_account.md#command-3-accounts) | Enumerate all accounts as JSON |
+| 3 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | Token validity check in automated health checks |
+| 4 | [`.account.rotate`](../command/001_account.md#command-13-accountrotate-deprecated-feature-038) | Automated account selection in pipelines |
 
 ### Referenced Parameters
 

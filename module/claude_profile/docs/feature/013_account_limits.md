@@ -50,7 +50,7 @@ These headers are never cached locally — no local file contains them. `stats-c
 
 | File | Relationship |
 |------|--------------|
-| [command/001_account.md](../cli/command/001_account.md#command--11-accountlimits) | CLI command specification |
+| [command/001_account.md](../cli/command/001_account.md#command-11-accountlimits) | CLI command specification |
 
 ### Features
 
@@ -64,7 +64,7 @@ These headers are never cached locally — no local file contains them. `stats-c
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.limits`](../cli/command/001_account.md#command--11-accountlimits) | CLI surface for this feature |
+| 1 | [`.account.limits`](../cli/command/001_account.md#command-11-accountlimits) | CLI surface for this feature |
 
 ### Sources
 

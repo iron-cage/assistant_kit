@@ -200,8 +200,8 @@ pub fn run_isolated
   model            : IsolatedModel,
 ) -> Result< IsolatedRunResult, RunnerError >
 {
-  // Delegate to extended variant; compact_window=Some(200_000) matches ClaudeCommand::new() default.
-  run_isolated_ext( credentials_json, args, timeout_secs, model, Some( 200_000 ) )
+  // Delegate to extended variant; compact_window=Some(DEFAULT_COMPACT_WINDOW) matches ClaudeCommand::new() default.
+  run_isolated_ext( credentials_json, args, timeout_secs, model, Some( crate::DEFAULT_COMPACT_WINDOW ) )
 }
 
 /// Read `subprocess_model` from `~/.clr/prefs.json`, if present and non-empty.
@@ -253,10 +253,10 @@ pub fn read_subprocess_model_pref() -> Option< String >
 ///
 /// Identical to [`run_isolated`] but accepts `compact_window: Option<u32>` to control
 /// `CLAUDE_CODE_AUTO_COMPACT_WINDOW` on the subprocess:
-/// - `Some(n)` — set window to `n` tokens (default via `run_isolated()` is `Some(200_000)`)
+/// - `Some(n)` — set window to `n` tokens (default via `run_isolated()` is `Some(300_000)`)
 /// - `None` — suppress the env var (defer to model native window; up to 1M for extended models)
 ///
-/// Use this when the caller needs to opt out of the 200K cap, e.g. for `--no-compact-window`.
+/// Use this when the caller needs to opt out of the 300K cap, e.g. for `--no-compact-window`.
 ///
 /// # Errors
 ///

@@ -57,7 +57,7 @@ clr isolated "what is 2+2?" -- --no-skip-permissions
 
 **In `module/claude_runner_core/src/isolated.rs::run_isolated()`:**
 - Model: prepended via `IsolatedModel::Default` → `ISOLATED_DEFAULT_MODEL = "opus"` for isolated; `IsolatedModel::Specific(REFRESH_DEFAULT_MODEL)` for refresh where `REFRESH_DEFAULT_MODEL = "claude-sonnet-5"`
-- `CLAUDE_CODE_AUTO_COMPACT_WINDOW`: set to `200000` in subprocess env via `ClaudeCommand::new()` → `compact_window: Some(200_000)`; suppressed by `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` (same as all 4 running commands)
+- `CLAUDE_CODE_AUTO_COMPACT_WINDOW`: set to `300000` in subprocess env via `ClaudeCommand::new()` → `compact_window: Some(DEFAULT_COMPACT_WINDOW)` (`= 300_000`); suppressed by `--no-compact-window` / `CLR_NO_COMPACT_WINDOW` (same as all 4 running commands)
 - CLAUDE.md: written to `claude_dir/CLAUDE.md` before subprocess spawn
 - Timeout=0: deadline is skipped when `timeout_secs == 0` (no watchdog)
 

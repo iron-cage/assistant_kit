@@ -13,13 +13,13 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | `format::` |
-| 2 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | `format::` |
-| 3 | [`.paths`](../command/004_paths.md#command--8-paths) | `format::` |
-| 4 | [`.usage`](../command/006_usage.md#command--9-usage) | `format::`, `get::` |
-| 5 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | `format::` |
-| 6 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | `format::` |
-| 7 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | `format::` |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | `format::` |
+| 2 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | `format::` |
+| 3 | [`.paths`](../command/004_paths.md#command-8-paths) | `format::` |
+| 4 | [`.usage`](../command/006_usage.md#command-9-usage) | `format::`, `get::` |
+| 5 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | `format::` |
+| 6 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | `format::` |
+| 7 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | `format::` |
 
 **Typical Patterns:**
 
@@ -60,8 +60,8 @@ All members pass. No false inclusions.
 
 **Notes**
 
-- `format::json` overrides field-presence params — see [004_parameter_interactions.md](../004_parameter_interactions.md#interaction--2-formatjson-overrides-field-presence-params) for the authoritative rule.
-- `format::table` ignores field-presence params and uses fixed columns — see [004_parameter_interactions.md](../004_parameter_interactions.md#interaction--3-formattable-ignores-field-presence-params). Only accepted by `.accounts`.
+- `format::json` overrides field-presence params — see [004_parameter_interactions.md](../004_parameter_interactions.md#interaction-2-formatjson-overrides-field-presence-params) for the authoritative rule.
+- `format::table` ignores field-presence params and uses fixed columns — see [004_parameter_interactions.md](../004_parameter_interactions.md#interaction-3-formattable-ignores-field-presence-params). Only accepted by `.accounts`.
 - `get::` implies `format::value` — the two parameters are mutually reinforcing when set together, not conflicting.
 - `format::value`, `format::tsv`, `format::plain` are `.usage`-only format values not accepted by other commands.
 - Commands not in this group (`.account.save`, `.account.use`, `.account.delete`, `.account.relogin`) produce fixed single-line confirmation messages not affected by formatting parameters.

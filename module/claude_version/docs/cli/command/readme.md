@@ -1,4 +1,4 @@
-# command/ — clv Command Reference
+# Commands
 
 ### Scope
 

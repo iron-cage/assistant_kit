@@ -59,7 +59,7 @@ Each output line is independently controlled by a boolean param. All default to 
 
 | File | Relationship |
 |------|--------------|
-| [command/002_credentials.md](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI command specification |
+| [command/002_credentials.md](../cli/command/002_credentials.md#command-10-credentialsstatus) | CLI command specification |
 
 ### Features
 
@@ -72,7 +72,7 @@ Each output line is independently controlled by a boolean param. All default to 
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.credentials.status`](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI surface for this feature |
+| 1 | [`.credentials.status`](../cli/command/002_credentials.md#command-10-credentialsstatus) | CLI surface for this feature |
 
 ### Sources
 

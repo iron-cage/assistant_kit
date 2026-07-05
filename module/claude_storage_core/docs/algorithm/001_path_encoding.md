@@ -13,6 +13,8 @@ Claude Code stores CLI sessions in directories whose names are filesystem-safe e
 
 ### Algorithm
 
+<!-- BUG-366 ../../../task/claude_storage_core/bug/unverified/366_encode_path_dot_handling_divergence.md — documents only 3 substitutions (/, _, existing -); missing dot/non-alphanumeric handling and the 200-char/hash fallback the real Claude Code algorithm uses -->
+
 **Encoding:**
 1. Strip leading and trailing `/` from the input path.
 2. Split on `/` into path components. Error if the result is empty (e.g., root path `/`) or the path is not valid UTF-8.

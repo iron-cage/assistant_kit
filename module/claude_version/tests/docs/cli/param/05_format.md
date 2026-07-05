@@ -59,7 +59,7 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 - **When:** `clv .version.guard format::json dry::1`
 - **Then:** exit code 0; stdout starts with `{`.; JSON output
 - **Exit:** 0
-- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/readme.md#command--5-versionguard)
+- **Source:** [command/readme.md — .version.guard](../../../../docs/cli/command/version.md#command-5-versionguard)
 
 ---
 

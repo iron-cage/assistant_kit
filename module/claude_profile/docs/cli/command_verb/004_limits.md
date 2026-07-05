@@ -53,4 +53,4 @@ Reads current rate-limit utilization for an account by making a lightweight HTTP
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | Show rate-limit utilization for named account |
+| 1 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | Show rate-limit utilization for named account |

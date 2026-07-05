@@ -23,9 +23,9 @@ clv.processes.kill force::1           # SIGKILL immediately
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`.version.install`](../command/version.md#command--4-versioninstall) | false | Skip idempotency check; reinstall even if current |
-| 2 | [`.version.guard`](../command/version.md#command--5-versionguard) | false | Reinstall even if version matches preferred |
-| 3 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | false | SIGKILL directly, skipping SIGTERM grace period |
+| 1 | [`.version.install`](../command/version.md#command-4-versioninstall) | false | Skip idempotency check; reinstall even if current |
+| 2 | [`.version.guard`](../command/version.md#command-5-versionguard) | false | Reinstall even if version matches preferred |
+| 3 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | false | SIGKILL directly, skipping SIGTERM grace period |
 
 ### Referenced Type
 

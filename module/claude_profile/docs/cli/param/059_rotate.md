@@ -55,7 +55,7 @@ clp .usage rotate::1 trace::1               # emit trace output during rotation
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Execute account rotation after quota fetch |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Execute account rotation after quota fetch |
 
 ### Referenced User Stories
 

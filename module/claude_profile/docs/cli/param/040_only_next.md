@@ -33,7 +33,7 @@ only_next::1 sort::renews -> recommended row from renews strategy
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Filter to recommended next account row only |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Filter to recommended next account row only |
 
 ### Referenced User Stories
 
