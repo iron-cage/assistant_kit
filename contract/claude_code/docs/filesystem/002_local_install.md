@@ -44,5 +44,5 @@ pre-v1.0 (unverified)
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Filesystem master index: full directory tree, path reference table |
 | settings | [`../settings/003_version_lock.md`](../settings/003_version_lock.md) | Version lock: all 3 layers including this chmod layer |
-| source | `../../../../module/claude_version/src/commands.rs` | `hot_swap_binary()`, `versions_dir_path()` |
+| source | `../../../../module/claude_version_core/src/version.rs` | `hot_swap_binary()`, `versions_dir_path()` |
 | doc | `../../../../module/claude_version/docs/feature/001_version_management.md` | Version management feature doc |
