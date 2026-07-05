@@ -1,11 +1,12 @@
 //! Path encoding/decoding utilities for Claude Code storage
 //!
 //! Claude Code encodes filesystem paths into storage directory names using a **lossy** scheme:
-//! 1. Replace `_` (underscore) with `-` in each path component
+//! 1. Replace every non-alphanumeric character (`_`, `.`, `/`, etc.) with `-` in each path component
 //! 2. Prefix with `-` (hyphen)
 //! 3. Replace `/` (path separator) with `-`
+//! 4. If the result exceeds 200 characters, truncate to 200 and append a `-<djb2-hash>` suffix
 //!
-//! This encoding cannot distinguish between `/`, `_`, and `-` in the original path.
+//! This encoding cannot distinguish between `/`, `_`, `.`, and `-` in the original path.
 //!
 //! # Examples
 //!
@@ -22,6 +23,11 @@
 //! let path = Path::new("/lib/claude_storage/-default_topic");
 //! let encoded = encode_path(path)?;
 //! assert_eq!(encoded, "-lib-claude-storage--default-topic");
+//!
+//! // Dots (and any other non-alphanumeric character) are replaced with hyphens too
+//! let path = Path::new("/home/user/.config/app");
+//! let encoded = encode_path(path)?;
+//! assert_eq!(encoded, "-home-user--config-app");
 //! # Ok::<(), claude_storage_core::Error>(())
 //! ```
 //!
@@ -88,18 +94,20 @@
 //!
 //! See `tests/path_encoding_double_slash_bug.rs` for comprehensive bug reproducer documentation.
 
+use core::fmt::Write as _;
 use std::path::{ Path, PathBuf };
 use crate::{ Error, Result };
 
 /// Encode a filesystem path to a storage directory name
 ///
 /// Encoding algorithm (matches Claude Code's lossy encoding):
-/// 1. Replace `_` with `-` in each component
+/// 1. Replace every non-alphanumeric character (`_`, `.`, etc.) with `-` in each component
 /// 2. Prefix with `-` (hyphen)
 /// 3. Replace `/` with `-` for normal path separators
 /// 4. Replace `/-` with `--` for hyphen-prefixed directory names
+/// 5. If the result exceeds 200 characters, truncate to 200 and append `-<djb2-hash>`
 ///
-/// This creates a lossy encoding that cannot distinguish between `/`, `_`, and `-`
+/// This creates a lossy encoding that cannot distinguish between `/`, `_`, `.`, and `-`
 /// in the original path, matching Claude Code's behavior for compatibility.
 ///
 /// # Errors
@@ -121,6 +129,11 @@ use crate::{ Error, Result };
 /// let path = Path::new("/lib/claude_storage/-default_topic");
 /// let encoded = encode_path(path)?;
 /// assert_eq!(encoded, "-lib-claude-storage--default-topic");
+///
+/// // Dots (and any other non-alphanumeric character) are replaced with hyphens too
+/// let path = Path::new("/home/user/.config/app");
+/// let encoded = encode_path(path)?;
+/// assert_eq!(encoded, "-home-user--config-app");
 /// # Ok::<(), claude_storage_core::Error>(())
 /// ```
 #[inline]
@@ -161,11 +174,21 @@ pub fn encode_path( path : &Path ) -> Result< String >
   for ( i, component ) in components.iter().enumerate()
   {
     // Encoding strategy:
-    // - ALL components: underscores → hyphens (lossy encoding, like `/` → `-`)
+    // - ALL components: non-alphanumeric chars → hyphens (lossy encoding, like `/` → `-`)
     // - The decoder uses different heuristics to decide if hyphens should decode to `/` or `_`
     // - For hyphen-prefixed components, decoder converts ALL hyphens back to underscores
-    // BUG-366 ../../../task/claude_storage_core/bug/unverified/366_encode_path_dot_handling_divergence.md — only substitutes '_', never generalizes to all non-alphanumerics (e.g. '.'); also missing the real algorithm's 200-char/hash-fallback
-    let component_normalized = component.replace( '_', "-" );
+    // Fix(BUG-366): generalized from `component.replace('_', "-")` to a full non-alphanumeric
+    // character class so `.` and other special characters match the real algorithm's
+    // blanket `${path//[^a-zA-Z0-9]/-}` substitution (scope_claude.sh:_df()).
+    // Root cause: only `_` was substituted; any other non-alphanumeric character (most
+    // commonly `.` in dotfile/dotdir components) was left untouched, diverging from the
+    // real on-disk directory name Claude Code actually creates.
+    // Pitfall: don't special-case `.` alone — the real algorithm treats every non-alphanumeric
+    // byte identically, so the fix must generalize to the full character class, not just add `.`.
+    let component_normalized : String = component
+      .chars()
+      .map( | c | if c.is_ascii_alphanumeric() { c } else { '-' } )
+      .collect();
 
     if i > 0
     {
@@ -196,7 +219,34 @@ pub fn encode_path( path : &Path ) -> Result< String >
     }
   }
 
+  // Fix(BUG-366): real algorithm truncates encodings over 200 chars and appends a
+  // djb2-hash suffix, so distinct long paths don't collide into the same directory name.
+  // Root cause: no length cap existed at all — arbitrarily long paths produced arbitrarily
+  // long (and unbounded-filesystem-safe) directory names, diverging from the real behavior.
+  // Pitfall: hash the ORIGINAL path string (`path_str`), not the truncated `result` — the
+  // real algorithm hashes the pre-truncation input so the suffix still disambiguates paths
+  // that share the same first 200 encoded characters.
+  if result.len() > 200
+  {
+    let hash = djb2_hash( path_str );
+    result.truncate( 200 );
+    write!( result, "-{hash:x}" ).expect( "String write! is infallible" );
+  }
+
   Ok( result )
+}
+
+/// djb2 hash variant (XOR-combine, masked to 63 bits every iteration) used for the
+/// long-path fallback, matching Claude Code's `scope_claude.sh:_df()` implementation.
+#[inline]
+fn djb2_hash( input : &str ) -> u64
+{
+  let mut hash : u64 = 5381;
+  for byte in input.bytes()
+  {
+    hash = ( hash.wrapping_mul( 33 ) ^ u64::from( byte ) ) & 0x7FFF_FFFF_FFFF_FFFF;
+  }
+  hash
 }
 
 /// Decode a storage directory name to a filesystem path
@@ -671,5 +721,54 @@ mod tests
 
     let decoded = decode_path( &encoded ).unwrap();
     assert_eq!( decoded, PathBuf::from( "/commands/-commit_sessions/-plan" ) );
+  }
+
+  // BUG-366: encode_path() must generalize to ALL non-alphanumeric characters
+  // (not just '_'), matching the real algorithm's blanket `${path//[^a-zA-Z0-9]/-}`
+  // substitution. Expected values cross-checked against the bash `real_df()`
+  // reference from the bug report's MRE (task/claude_storage_core/bug/unverified/
+  // 366_encode_path_dot_handling_divergence.md).
+
+  #[test]
+  fn test_encode_dot_prefixed_component_matches_real_algorithm()
+  {
+    // Real Claude Code's on-disk directory for this cwd is `-tmp--tmp018Vvt--commit`;
+    // the old '_'-only substitution produced `-tmp-.tmp018Vvt--commit` (dot preserved).
+    let path = Path::new( "/tmp/.tmp018Vvt/-commit" );
+    let encoded = encode_path( path ).unwrap();
+    assert_eq!( encoded, "-tmp--tmp018Vvt--commit" );
+  }
+
+  #[test]
+  fn test_encode_dot_mid_component()
+  {
+    let path = Path::new( "/home/user/file.txt" );
+    let encoded = encode_path( path ).unwrap();
+    assert_eq!( encoded, "-home-user-file-txt" );
+  }
+
+  #[test]
+  fn test_encode_long_path_uses_hash_fallback()
+  {
+    // Real algorithm truncates encodings over 200 chars and appends a
+    // `-<djb2-hash-hex>` suffix instead of leaving the encoding unbounded.
+    let long_component = "b".repeat( 210 );
+    let path_string = format!( "/a/{long_component}" );
+    let path = Path::new( &path_string );
+    let encoded = encode_path( path ).unwrap();
+
+    let expected_prefix = format!( "-a-{}", "b".repeat( 197 ) );
+    assert_eq!( expected_prefix.len(), 200 );
+    assert_eq!( encoded, format!( "{expected_prefix}-20b35b91c7b33be4" ) );
+  }
+
+  #[test]
+  fn test_encode_short_path_unaffected_by_hash_fallback()
+  {
+    // Sanity check: the 200-char threshold must not clip ordinary short paths.
+    let path = Path::new( "/home/user/project" );
+    let encoded = encode_path( path ).unwrap();
+    assert_eq!( encoded, "-home-user-project" );
+    assert!( encoded.len() <= 200 );
   }
 }
