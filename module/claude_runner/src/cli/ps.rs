@@ -537,6 +537,9 @@ fn compute_flags(
   }
 
   // 🐳 Container: working directory is outside $HOME.
+  // BUG-383: raw starts_with has no path-separator boundary test — a cwd that merely
+  // shares home's string prefix (e.g. home=/home/alice, cwd=/home/alice2/x) is wrongly
+  // treated as "inside home", suppressing the flag. Fix not yet applied; see bug file.
   let cwd_str = proc.cwd.to_str().unwrap_or( "" );
   if !home.is_empty() && !cwd_str.starts_with( home )
   {

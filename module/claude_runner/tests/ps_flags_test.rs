@@ -90,6 +90,11 @@ fn it30_flags_column_absent_when_no_flags()
 
 // ── IT-31: 🐳 flag for session cwd outside $HOME ───────────────────────────
 
+// BUG-383: this test (and US-19/US-25 below) builds `home`/`cwd` from two independent
+// TempDir::new() calls, which can never share a string prefix — so none of them exercise
+// the sibling-prefix false-match case (home=/home/alice, cwd=/home/alice2/x). A dedicated
+// sibling-prefix case is still needed; see bug file § Prevention.
+
 /// IT-31: 🐳 flag fires when session cwd is outside `$HOME`.
 ///
 /// Setup: fake `claude` ELF spawned in a temp dir outside the fake HOME;

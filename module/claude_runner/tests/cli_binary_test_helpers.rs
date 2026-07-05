@@ -15,6 +15,8 @@
 //! | `fake_claude_binary_dir` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_flags_test` |
 //! | `fake_claude` (unix) | `execution_mode_test`, `expect_validation_test` |
 //! | `run_with_path` | `execution_mode_test`, `expect_validation_test`, `exit_code_contract_test`, `output_format_test` |
+//! | `run_with_path_proc` (unix) | `expect_validation_test` |
+//! | `make_proc_dir` (unix) | `kill_command_test`, `expect_validation_test` |
 //! | `run_dry` | `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `dry_run_test` |
 //! | `run_ask_dry` | `ask_command_test`, `user_story_creds_isolated_test` |
 //! | `spawn_fake_claude` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_pid_test`, `ps_inspect_test`, `param_group_test`, `ps_flags_test` |
@@ -552,6 +554,39 @@ pub fn run_with_path( args : &[ &str ], path : &str ) -> std::process::Output
   Command::new( bin )
     .args( args )
     .env( "PATH", path )
+    .output()
+    .expect( "Failed to invoke clr binary" )
+}
+
+/// Invoke `clr` binary with `args`, a custom `PATH`, and `CLR_PROC_DIR` proc isolation.
+///
+/// Mirrors `run_clr_ps_proc` — combines `run_with_path`'s PATH injection with a
+/// `CLR_PROC_DIR` override so `find_claude_processes()` sees only the isolated
+/// fixture built by `make_proc_dir`, never the real host `/proc`.  Required for
+/// real (non-dry-run) print-mode invocations, which reach `wait_for_session_slot()`
+/// in `src/cli/gate.rs` — that function calls `find_claude_processes()` directly,
+/// and without `CLR_PROC_DIR` it races against ambient `claude` processes from
+/// concurrent test binaries under nextest's parallel execution.
+///
+/// `proc_dir` must be the path of a dir produced by `make_proc_dir` for the PIDs of
+/// any background processes spawned by the test (empty slice is fine when the test
+/// expects zero visible Claude processes).
+///
+/// # Panics
+///
+/// Panics if the `clr` binary cannot be launched.
+#[ cfg( unix ) ]
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn run_with_path_proc( args : &[ &str ], path : &str, proc_dir : &str ) -> std::process::Output
+{
+  assert_container();
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  Command::new( bin )
+    .args( args )
+    .env( "PATH", path )
+    .env( "CLR_PROC_DIR", proc_dir )
     .output()
     .expect( "Failed to invoke clr binary" )
 }

@@ -38,6 +38,8 @@
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ make_creds_file, make_session_dir, run_cli, run_cli_with_env, run_dry, stderr_str };
+#[ cfg( unix ) ]
+use cli_binary_test_helpers::make_proc_dir;
 
 // ── US01: Interactive REPL ──────────────────────────────────────────────────
 // Source: tests/docs/cli/user_story/01_interactive_repl.md
@@ -329,13 +331,23 @@ fn us05_2_dir_with_session_dir()
 }
 
 /// US-3: --dir with non-existent path → exit non-zero.
+///
+/// This is a real (non-dry-run) `run` invocation with a message, so it reaches
+/// `run_built_command()`'s concurrency gate (`wait_for_session_slot()`) before the
+/// OS-level spawn failure (nonexistent `current_dir`) ever fires — `dispatch_run()`
+/// has no `--dir` existence pre-check (unlike `dispatch_isolated()`).  `CLR_PROC_DIR`
+/// points at an empty proc-isolation dir so `find_claude_processes()` never scans the
+/// real host `/proc` (BUG-326 defect class).
+#[ cfg( unix ) ]
 #[ test ]
 fn us05_3_nonexistent_dir_errors()
 {
-  let out = run_cli( &[
-    "--dir", "/tmp/clr_nonexistent_project_us05_3",
-    "fix it",
-  ] );
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = run_cli_with_env(
+    &[ "--dir", "/tmp/clr_nonexistent_project_us05_3", "fix it" ],
+    &[ ( "CLR_PROC_DIR", proc_dir ) ],
+  );
   assert!(
     !out.status.success(),
     "--dir with non-existent path must exit non-zero. Got exit: {:?}",
@@ -486,10 +498,22 @@ fn us07_4_fresh_session_interactive()
 /// US-1: --trace prints command to stderr before executing.
 ///
 /// PATH=/nonexistent forces exit 1 (claude absent) but trace fires before attempt.
+///
+/// This is a real (non-dry-run) `run` invocation with a message — `--trace` prints
+/// to stderr AFTER the concurrency gate in `run_built_command()` (`wait_for_session_slot()`
+/// runs first), so this still reaches the gate.  `CLR_PROC_DIR` points at an empty
+/// proc-isolation dir so `find_claude_processes()` never scans the real host `/proc`
+/// (BUG-326 defect class).
+#[ cfg( unix ) ]
 #[ test ]
 fn us08_1_trace_prints_command_to_stderr()
 {
-  let out = run_cli_with_env( &[ "--trace", "test message" ], &[ ( "PATH", "/nonexistent" ) ] );
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = run_cli_with_env(
+    &[ "--trace", "test message" ],
+    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ) ],
+  );
   let stderr = stderr_str( &out );
   assert!(
     stderr.contains( "claude" ),
@@ -523,12 +547,19 @@ fn us08_2_trace_on_isolated()
 ///
 /// Trace is a separate channel from runner quiet flag.
 /// PATH=/nonexistent forces exit 1 but trace fires first.
+///
+/// Real (non-dry-run) `run` invocation with a message; reaches the concurrency gate
+/// in `run_built_command()` before `--trace` output fires (same ordering as US-1).
+/// `CLR_PROC_DIR` isolates `find_claude_processes()` from the real host `/proc`.
+#[ cfg( unix ) ]
 #[ test ]
 fn us08_3_trace_independent_of_quiet()
 {
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
   let out = run_cli_with_env(
     &[ "--trace", "--quiet", "test" ],
-    &[ ( "PATH", "/nonexistent" ) ],
+    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ) ],
   );
   let stderr = stderr_str( &out );
   assert!(

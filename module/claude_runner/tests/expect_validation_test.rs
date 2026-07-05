@@ -40,7 +40,7 @@
 #![ cfg( unix ) ]
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ fake_claude, run_cli, run_with_path };
+use cli_binary_test_helpers::{ fake_claude, make_proc_dir, run_cli, run_with_path_proc };
 use std::os::unix::fs::PermissionsExt;
 
 // ── T01: Output matches → exit 0 ─────────────────────────────────────────────
@@ -53,7 +53,9 @@ use std::os::unix::fs::PermissionsExt;
 fn t01_expect_match_exits_0()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho 'yes'" );
-  let out = run_with_path( &[ "-p", "--expect", "yes|no", "answer" ], &path );
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = run_with_path_proc( &[ "-p", "--expect", "yes|no", "answer" ], &path, proc_dir );
   assert_eq!(
     out.status.code(),
     Some( 0 ),
@@ -71,7 +73,9 @@ fn t01_expect_match_exits_0()
 fn t02_expect_mismatch_default_fail_exits_3()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho 'maybe'" );
-  let out = run_with_path( &[ "-p", "--expect", "yes|no", "answer" ], &path );
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = run_with_path_proc( &[ "-p", "--expect", "yes|no", "answer" ], &path, proc_dir );
   assert_eq!(
     out.status.code(),
     Some( 3 ),
@@ -87,7 +91,9 @@ fn t02_expect_mismatch_default_fail_exits_3()
 fn t03_expect_case_insensitive_match()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho 'YES'" );
-  let out = run_with_path( &[ "-p", "--expect", "yes|no", "answer" ], &path );
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = run_with_path_proc( &[ "-p", "--expect", "yes|no", "answer" ], &path, proc_dir );
   assert_eq!(
     out.status.code(),
     Some( 0 ),
@@ -105,7 +111,9 @@ fn t03_expect_case_insensitive_match()
 fn t04_expect_whitespace_trimmed()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\nprintf '  yes  '" );
-  let out = run_with_path( &[ "-p", "--expect", "yes|no", "answer" ], &path );
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = run_with_path_proc( &[ "-p", "--expect", "yes|no", "answer" ], &path, proc_dir );
   assert_eq!(
     out.status.code(),
     Some( 0 ),
@@ -181,9 +189,12 @@ fn t07_retry_matches_on_second_attempt()
   let old_path = std::env::var( "PATH" ).unwrap_or_default();
   let new_path = format!( "{}:{old_path}", tmp.path().display() );
 
-  let out = run_with_path(
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = run_with_path_proc(
     &[ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "--retry-on-validation", "1", "--validation-delay", "0", "answer" ],
     &new_path,
+    proc_dir,
   );
   assert_eq!(
     out.status.code(),
@@ -203,9 +214,12 @@ fn t07_retry_matches_on_second_attempt()
 fn t08_retry_exhausted_exits_3()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho 'maybe'" );
-  let out = run_with_path(
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = run_with_path_proc(
     &[ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "--retry-on-validation", "2", "--validation-delay", "0", "answer" ],
     &path,
+    proc_dir,
   );
   assert_eq!(
     out.status.code(),
@@ -222,9 +236,12 @@ fn t08_retry_exhausted_exits_3()
 fn t09_default_strategy_outputs_fallback_exits_0()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho 'maybe'" );
-  let out = run_with_path(
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = run_with_path_proc(
     &[ "-p", "--expect", "yes|no", "--expect-strategy", "default:no", "answer" ],
     &path,
+    proc_dir,
   );
   assert_eq!(
     out.status.code(),
@@ -297,9 +314,12 @@ fn t13_retries_0_means_single_attempt()
   let old_path = std::env::var( "PATH" ).unwrap_or_default();
   let new_path = format!( "{}:{old_path}", tmp.path().display() );
 
-  let out = run_with_path(
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = run_with_path_proc(
     &[ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "--retry-on-validation", "0", "answer" ],
     &new_path,
+    proc_dir,
   );
   assert_eq!(
     out.status.code(),
@@ -359,9 +379,12 @@ fn t16_retries_3_makes_4_total_attempts()
   let old_path = std::env::var( "PATH" ).unwrap_or_default();
   let new_path = format!( "{}:{old_path}", tmp.path().display() );
 
-  let out = run_with_path(
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out = run_with_path_proc(
     &[ "-p", "--expect", "yes|no", "--expect-strategy", "retry", "--retry-on-validation", "3", "--validation-delay", "0", "answer" ],
     &new_path,
+    proc_dir,
   );
   assert_eq!(
     out.status.code(),

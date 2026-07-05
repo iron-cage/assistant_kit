@@ -699,6 +699,8 @@ fn it_19_task_column_no_underscores()
   let proc = make_proc_dir( &[ bg.id() ] );
 
   // Encode with only '/' → '-' (no underscores to replace; result is same as before fix).
+  // BUG-385: stale hand-rolled encoding diverges from claude_storage_core::encode_path()
+  // for dot-containing CWDs (e.g. tempfile::TempDir's ".tmpXXXXXX"); see Fix Location.
   let encoded      = cwd_str.replace( '/', "-" );
   let home_tmp     = tempfile::TempDir::new().expect( "create temp HOME" );
   let project_path = home_tmp.path()
