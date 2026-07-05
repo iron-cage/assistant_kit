@@ -1,12 +1,14 @@
 # CLI Parameter: --max-sessions
 
-Maximum number of concurrent Claude Code sessions allowed before this invocation blocks.
-When the active session count meets or exceeds this limit, `clr` polls every 30 seconds
+Maximum number of concurrent non-interactive (print-mode) Claude Code sessions allowed
+before this invocation blocks. Interactive invocations are never gated — they proceed
+immediately regardless of this limit or the number of active sessions. When the active
+non-interactive session count meets or exceeds this limit, `clr` polls every 30 seconds
 for up to 100 attempts, then exits with code 1. Setting `0` disables the gate entirely
 (unlimited sessions, no process scan).
 
 - **Type:** u32
-- **Default:** 30
+- **Default:** 10
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **JSON Key:** `"max-sessions"`
 
@@ -19,8 +21,9 @@ clr --max-sessions 3 --dry-run "preview"    # dry-run: gate skipped; shows assem
 ```
 
 **Note:** Session count is determined by scanning `/proc/{pid}/cmdline` for entries
-whose basename is exactly `"claude"`, excluding the calling process. The count reflects
-all running Claude Code processes system-wide, not per-project.
+whose basename is exactly `"claude"`, excluding the calling process, **counting only
+non-interactive (print-mode) processes**. The count reflects all running non-interactive
+Claude Code processes system-wide, not per-project.
 
 **Note:** When the gate waits, `clr` emits a message to stderr each polling cycle (unless `--quiet`):
 `"Info: {count}/{max} sessions active; waiting 30s for a slot... (attempt {n}/{max_attempts})"`.
@@ -35,6 +38,14 @@ is printed immediately without checking or waiting for active sessions.
 **Note:** `0` = unlimited: the gate is completely disabled and `clr` proceeds immediately
 without scanning for active sessions.
 
+**Note:** Interactive invocations (no `-p`/`--print` and no non-interactive `--message`
+dispatch) skip this gate entirely — they proceed immediately without a process scan,
+regardless of `--max-sessions` or the number of active sessions.
+
+> **Implementation status:** Non-interactive scoping and the lowered default of 10 are
+> not yet implemented — see task 001. Current shipped behavior counts all Claude Code
+> processes regardless of mode, with a default of 30.
+
 ### Referenced Parameter Groups
 
 | # | Group | Membership | Co-members |
@@ -45,8 +56,8 @@ without scanning for active sessions.
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`run`](../command/01_run.md) | 30 | Gate applied before subprocess launch |
-| 5 | [`ask`](../command/05_ask.md) | 30 | Same behavior; pure alias for run |
+| 1 | [`run`](../command/01_run.md) | 10 | Gate applied before subprocess launch; non-interactive only |
+| 5 | [`ask`](../command/05_ask.md) | 10 | Same behavior; pure alias for run |
 
 ### Referenced User Stories
 

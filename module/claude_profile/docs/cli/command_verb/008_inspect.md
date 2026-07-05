@@ -57,4 +57,4 @@ Performs a unified live account diagnostic — identity, subscription, org, and 
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | Live identity and subscription diagnostic |
+| 1 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | Live identity and subscription diagnostic |

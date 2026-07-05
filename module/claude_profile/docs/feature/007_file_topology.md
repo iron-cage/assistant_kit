@@ -24,7 +24,7 @@
 
 | File | Relationship |
 |------|--------------|
-| [command/004_paths.md](../cli/command/004_paths.md#command--8-paths) | CLI command specification |
+| [command/004_paths.md](../cli/command/004_paths.md#command-8-paths) | CLI command specification |
 
 ### Invariants
 
@@ -42,7 +42,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.paths`](../cli/command/004_paths.md#command--8-paths) | CLI surface for this feature |
+| 1 | [`.paths`](../cli/command/004_paths.md#command-8-paths) | CLI surface for this feature |
 
 ### Sources
 

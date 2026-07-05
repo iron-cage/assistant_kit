@@ -111,7 +111,7 @@ clp .usage solo::1 only_active::1           # solo + display only active row
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Token-conserving quota fetch for current+owned account only |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Token-conserving quota fetch for current+owned account only |
 
 ### Referenced User Stories
 
