@@ -22,3 +22,4 @@ Test-lens documentation for `docs/algorithm/`. Each spec file covers one algorit
 | 007_sort_strategies.md | AC spec for algorithm 007 — Sort Strategies | ✅ |
 | 008_subprocess_effort_resolution.md | AC spec for algorithm 008 — Subprocess Effort Resolution | ✅ |
 | 009_oauth_usage_response_migration.md | AC spec for algorithm 009 — OAuth Usage Response Dual-Source Parsing | ✅ |
+| 010_renewal_date_computation.md | AC spec for algorithm 010 — Renewal Date Computation | ✅ |
