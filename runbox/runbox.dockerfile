@@ -175,10 +175,18 @@ COPY --from=planner $WORKSPACE_DIR/recipe.json recipe.json
 # cli_fmt is a co-developed companion crate injected via --build-context cli_fmt.
 # Cargo resolves path = "../../wtools/dev/module/core/cli_fmt" from /workspace/ → /wtools/dev/module/core/cli_fmt.
 COPY --from=cli_fmt . /wtools/dev/module/core/cli_fmt/
+# Fix(BUG-workspace-chmod-copyup): chmod folded into the same layer that creates
+# target/'s contents.  Overlayfs copy-up only triggers when a LATER layer
+# metadata-changes a file that already exists in an EARLIER, committed layer — setting
+# a+rwX now, before target/ is ever committed to a layer, is free.  This lets the test
+# stage exclude target/ from its retroactive chmod/chown sweep instead of forcing
+# full-content copy-up of gigabytes of compiled artifacts (see test stage for why that
+# matters on metacopy=false hosts).
 RUN CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 RUSTFLAGS="-D warnings" cargo chef cook \
       --recipe-path recipe.json \
       $CMD_SCOPE \
-      --tests
+      --tests \
+    && chmod -R a+rwX $WORKSPACE_DIR/target
 
 # ── Stage 3: test — compiles crate(s) and runs tests ─────────────────────────
 #
@@ -286,9 +294,25 @@ RUN mkdir -p $WORKSPACE_DIR/.claude
 #   root-owned but world-readable from install; chmod -R on tens of thousands of
 #   registry files through fuse-overlayfs overloads the FUSE daemon ("closed pipe").
 #   Testuser only needs write access to $WORKSPACE_DIR for compilation output.
+# Fix(BUG-workspace-chmod-copyup): $WORKSPACE_DIR/target is also excluded here, for a
+# reason distinct from BUG-011's fuse whiteout/FUSE-daemon issues above: on
+# metacopy=false hosts, chown/chmod against a file that already exists in an earlier,
+# committed layer forces the kernel to copy that file's full byte content into the new
+# layer just to flip metadata bits.  target/ arrives via COPY --from=cook (line ~240)
+# already carrying gigabytes of compiled artifacts from an earlier layer, so sweeping it
+# here duplicated that entire tree on every test run — root cause of an observed ENOSPC
+# build failure.  The cook stage now bakes a+rwX into target/'s content before it is
+# ever committed to a layer, so re-sweeping it here is both unnecessary and expensive.
+# Root cause: retroactive chmod/chown over pre-existing lower-layer content is never
+# free under metacopy=false — scope such sweeps to content actually created in the
+# current layer, or set permissions at creation time instead.
+# Pitfall: do not "fix" this by excluding target/ here without also pre-permissioning it
+# in cook — target/ (unlike /usr/local/cargo) genuinely needs arbitrary-uid write access
+# for compilation output, so a bare exclusion would trade this ENOSPC failure for a
+# consistent permission-denied failure on any host UID that doesn't already own the files.
 RUN [ "$TEST_USER" = "root" ] || ( \
-      chown -R "$TEST_USER":"$TEST_USER" $WORKSPACE_DIR 2>/dev/null || true; \
-      chmod -R a+rwX $WORKSPACE_DIR )
+      chown -R "$TEST_USER":"$TEST_USER" $(find $WORKSPACE_DIR -mindepth 1 -maxdepth 1 -not -name target) 2>/dev/null || true; \
+      chmod -R a+rwX $(find $WORKSPACE_DIR -mindepth 1 -maxdepth 1 -not -name target) )
 USER $TEST_USER
 
 # Offline tests by default — no ~/.claude/ storage or w3 required.
