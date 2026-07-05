@@ -21,3 +21,4 @@
 | 007 | [Sort Strategies](007_sort_strategies.md) | Order account list by configurable sort strategies | ✅ |
 | 008 | [Subprocess Effort Resolution](008_subprocess_effort_resolution.md) | Resolve subprocess effort level from explicit param and account state | ✅ |
 | 009 | [OAuth Usage Response Dual-Source Parsing](009_oauth_usage_response_migration.md) | Parse OAuth usage response from named-field or limits-array format | ✅ |
+| 010 | [Renewal Date Computation](010_renewal_date_computation.md) | Compute seconds until next billing renewal from exact or estimated billing day | ✅ |
