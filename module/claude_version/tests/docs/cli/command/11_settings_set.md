@@ -74,7 +74,6 @@ Integration test planning for the `.settings.set` command. See [command/readme.m
 | IT-2 | `value::0` → stores number `0` (NOT boolean) | P | 0 | F1=set, F2=0 | [mutation_settings_set_test.rs] |
 | IT-10 | `value::42` → stores integer `42` | P | 0 | F1=set, F2=int | [mutation_settings_set_test.rs] |
 | IT-11 | `value::hello` → stores quoted `"hello"` | P | 0 | F1=set, F2=string | [mutation_settings_set_test.rs] |
-| IT-12 | `value::""` → stores empty string `""` | P | 0 | F1=set, F2=empty-string | [mutation_settings_set_test.rs] |
 | IT-13 | Creates file when settings.json absent | P | 0 | F4=missing | [mutation_settings_set_test.rs] |
 | IT-14 | Updates existing key without duplication | P | 0 | F4=existing-with-key | [mutation_settings_set_test.rs] |
 | IT-3 | `dry::1` → shows preview, no file change | P | 0 | F3=1 | [mutation_settings_set_test.rs] |
@@ -95,12 +94,14 @@ Integration test planning for the `.settings.set` command. See [command/readme.m
 | IT-6 | `key::foo` without `value::` → exit 1, value required | N | 1 | F2=absent | new |
 | IT-7 | Creates settings.json when file is absent | P | 0 | F4=missing | new |
 | IT-8 | Updates existing key without duplication | P | 0 | F4=existing-with-key | new |
+| IT-12 | `value::""` (shell-empty) → exit 1, rejected | N | 1 | F1=set, F2=empty-string | [mutation_settings_set_test.rs] |
+| IT-22 | `dry::1` does not bypass empty-value rejection | N | 1 | F2=empty, F3=1 | [mutation_settings_set_test.rs] |
 
 ### Summary
 
-- **Total:** 21 tests (12 positive, 9 negative)
-- **Negative ratio:** 42.9% ✅ (≥40%)
-- **IT range:** IT-1 to IT-21
+- **Total:** 22 tests (11 positive, 11 negative)
+- **Negative ratio:** 50.0% ✅ (≥40%)
+- **IT range:** IT-1 to IT-22
 
 ---
 
@@ -110,8 +111,8 @@ Integration test planning for the `.settings.set` command. See [command/readme.m
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success (write or dry-run) | IT-1 through IT-3, IT-7 through IT-15 |
-| 1 | Invalid arguments | IT-4 through IT-6, IT-16 through IT-19, IT-21 |
+| 0 | Success (write or dry-run) | IT-1 through IT-3, IT-7 through IT-11, IT-13 through IT-15 |
+| 1 | Invalid arguments | IT-4 through IT-6, IT-12, IT-16 through IT-19, IT-21 through IT-22 |
 | 2 | Runtime error (HOME missing) | IT-20 |
 
 ### Type Inference Coverage (FR-07)
@@ -123,10 +124,10 @@ Integration test planning for the `.settings.set` command. See [command/readme.m
 | `"0"` | integer `0` | IT-2 |
 | `"42"` | integer `42` | IT-10 |
 | `"hello"` | string `"hello"` | IT-11 |
-| `""` | string `""` | IT-12 |
 
 **Type precedence** (FR-07): boolean check → i64 check → f64 check → string.
 `"0"` is integer not boolean because i64 check precedes boolean check for numeric strings.
+Empty `value::` is not a type-inference outcome — it is rejected before type inference runs (FR-04; see IT-12).
 
 ### Atomic Write Requirement (FR-06)
 
@@ -255,13 +256,14 @@ IT-15 verifies append to existing file without corruption.
 
 ---
 
-### IT-12: `value::""` → empty string `""`
+### IT-12: `value::""` (shell-empty) → exit 1, rejected
 
 - **Given:** `HOME=<tmp>`; settings absent
-- **When:** `clv .settings.set key::empty value::""`
-- **Then:** exit 0; settings.json has `"empty": ""` (valid empty string)
-- **Exit:** 0
-- **Source:** [mutation_settings_set_test.rs]
+- **When:** `clv .settings.set key::empty value::""` (shell-empty value, equivalent to `value::` with nothing after)
+- **Then:** exit 1; settings.json NOT created; error mentions `value::`
+- **Exit:** 1
+- **Source:** [param/07_value.md — EC-10](../../../../docs/cli/param/07_value.md)
+- **Note:** Bug-driven correction: this case previously claimed exit 0/stored-as-empty-string, contradicting `tc327_settings_set_empty_value_rejected` (the actual passing implementation). Gap Class — a spec case whose documented outcome is not backed by any test exercising that exact scenario, whether the case hedges between outcomes, confidently asserts an outcome contradicted by real behavior, confidently asserts an outcome that happens to be correct but unverified, or is missing from the spec's index entirely despite a passing implementation test existing for it. In every variant, the spec's authoritative record cannot be trusted to catch a future regression in that exact scenario. Source: BUG-006.
 
 ---
 
@@ -352,6 +354,17 @@ IT-15 verifies append to existing file without corruption.
 - **Then:** exit 1; error: key value cannot be empty
 - **Exit:** 1
 - **Source:** [mutation_settings_set_test.rs]
+
+---
+
+### IT-22: `dry::1` does not bypass empty-value rejection
+
+- **Given:** clean environment
+- **When:** `clv .settings.set key::k value:: dry::1`
+- **Then:** exit 1; error mentions `value::`; no file created; validation fires before the dry-run preview branch
+- **Exit:** 1
+- **Source:** [param/07_value.md — EC-10](../../../../docs/cli/param/07_value.md)
+- **Note:** Bug-driven expansion: implemented regression test `tc334_settings_set_empty_value_with_dry_still_rejected` had no corresponding documented case in this spec's Test Case Index. Gap Class — a spec case whose documented outcome is not backed by any test exercising that exact scenario, whether the case hedges between outcomes, confidently asserts an outcome contradicted by real behavior, confidently asserts an outcome that happens to be correct but unverified, or is missing from the spec's index entirely despite a passing implementation test existing for it. In every variant, the spec's authoritative record cannot be trusted to catch a future regression in that exact scenario. Source: BUG-006.
 
 ---
 

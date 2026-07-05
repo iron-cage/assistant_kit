@@ -101,6 +101,7 @@ tests/
 | `cli_cmd_project_exists_test.rs` | Spec-driven integration tests for `.project.exists` command |
 | `cli_cmd_session_dir_test.rs` | Spec-driven integration tests for `.session.dir` command |
 | `cli_cmd_session_ensure_test.rs` | Spec-driven integration tests for `.session.ensure` command |
+| `cli_cmd_tail_test.rs` | Spec-driven integration tests for `.tail` command (INT-1..INT-8) |
 | `cli_param_agent_test.rs` | Edge case tests for `agent::` parameter |
 | `cli_param_case_sensitive_test.rs` | Edge case tests for `case_sensitive::` parameter |
 | `cli_param_count_test.rs` | Edge case tests for `count::` parameter |

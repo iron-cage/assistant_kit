@@ -2,9 +2,6 @@
 
 Edge case coverage for the `--max-sessions` parameter. See [033_max_sessions.md](../../../../docs/cli/param/033_max_sessions.md) for specification.
 
-> **Implementation status:** EC-5, EC-7, and EC-9 reference the target default of 10 —
-> not yet implemented; current shipped default is 30. See task 001.
-
 ## Test Case Index
 
 | ID | Test Name | Category |
@@ -53,7 +50,7 @@ be exercised in this test surface.
 | EC-6 | `us25_1_max_sessions_0_unlimited_no_wait` | `user_story_output_test.rs` |
 | EC-7 | `ec7_max_sessions_no_gate_messages_below_limit` | `param_edge_cases_test.rs` |
 | EC-8 | `us25_1_max_sessions_0_unlimited_no_wait` | `user_story_output_test.rs` |
-| EC-9 | `ec9_max_sessions_help_shows_default_thirty` | `param_edge_cases_test.rs` |
+| EC-9 | `ec9_max_sessions_help_shows_default_ten` | `param_edge_cases_test.rs` |
 
 ---
 
@@ -101,7 +98,7 @@ be exercised in this test surface.
 
 ---
 
-### EC-5: CLR_MAX_SESSIONS=invalid → silently ignored; default 30 used
+### EC-5: CLR_MAX_SESSIONS=invalid → silently ignored; default 10 used
 
 - **Given:** `CLR_MAX_SESSIONS=notanumber` set; no `--max-sessions` CLI flag; `--dry-run` set
 - **When:** `CLR_MAX_SESSIONS=notanumber clr --dry-run "task"`
