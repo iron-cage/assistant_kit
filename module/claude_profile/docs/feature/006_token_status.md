@@ -38,7 +38,7 @@
 
 | File | Relationship |
 |------|--------------|
-| [command/005_token.md](../cli/command/005_token.md#command--7-tokenstatus) | CLI command specification |
+| [command/005_token.md](../cli/command/005_token.md#command-7-tokenstatus) | CLI command specification |
 
 ### Features
 
@@ -50,7 +50,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.token.status`](../cli/command/005_token.md#command--7-tokenstatus) | CLI surface for this feature |
+| 1 | [`.token.status`](../cli/command/005_token.md#command-7-tokenstatus) | CLI surface for this feature |
 
 ### Sources
 

@@ -1,6 +1,6 @@
 # Test: `.account.relogin`
 
-Integration test planning for the `.account.relogin` command. See [command/001_account.md](../../../../docs/cli/command/001_account.md#command--12-accountrelogin) for specification.
+Integration test planning for the `.account.relogin` command. See [command/001_account.md](../../../../docs/cli/command/001_account.md#command-12-accountrelogin) for specification.
 
 ### Test Case Index
 
@@ -59,7 +59,7 @@ interactive TTY and live Anthropic credentials. Those are covered by manual test
 - **When:** `clp .account.relogin name::`
 - **Then:** Error message on stderr indicating empty name, exit 1. No state mutation.
 - **Exit:** 1
-- **Source:** [command/001_account.md — .account.relogin](../../../../docs/cli/command/001_account.md#command--12-accountrelogin)
+- **Source:** [command/001_account.md — .account.relogin](../../../../docs/cli/command/001_account.md#command-12-accountrelogin)
 
 ---
 
@@ -119,4 +119,4 @@ interactive TTY and live Anthropic credentials. Those are covered by manual test
 - **When:** `clp .account.relogin name::bad/name`
 - **Then:** Error message on stderr indicating invalid characters, exit 1. No state mutation.
 - **Exit:** 1
-- **Source:** [command/001_account.md — .account.relogin](../../../../docs/cli/command/001_account.md#command--12-accountrelogin)
+- **Source:** [command/001_account.md — .account.relogin](../../../../docs/cli/command/001_account.md#command-12-accountrelogin)

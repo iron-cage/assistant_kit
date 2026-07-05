@@ -31,7 +31,7 @@ current::0   → line omitted
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Current account match line per stored account |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Current account match line per stored account |
 
 ### Referenced User Stories
 

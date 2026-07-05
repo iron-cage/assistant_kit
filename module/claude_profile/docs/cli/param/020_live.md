@@ -32,7 +32,7 @@ live::1   → continuous refresh loop until Ctrl-C
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Enables continuous quota monitoring loop |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Enables continuous quota monitoring loop |
 
 ### Referenced User Stories
 

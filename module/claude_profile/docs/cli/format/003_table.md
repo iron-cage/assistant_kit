@@ -49,7 +49,7 @@ clp .usage format::table
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Compact aligned table of all accounts |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Compact aligned table of all accounts |
 
 ### Referenced User Stories
 

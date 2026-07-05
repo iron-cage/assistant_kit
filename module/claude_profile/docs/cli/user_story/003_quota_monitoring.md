@@ -17,8 +17,8 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Primary: multi-account quota table with sort/filter/live |
-| 2 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | Secondary: per-account rate-limit header detail |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Primary: multi-account quota table with sort/filter/live |
+| 2 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | Secondary: per-account rate-limit header detail |
 
 ### Referenced Parameters
 

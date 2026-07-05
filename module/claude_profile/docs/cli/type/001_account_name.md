@@ -37,11 +37,11 @@ pub fn new( s : &str ) -> Result< Self, String >
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Optional — account list display |
-| 2 | [`.account.save`](../command/001_account.md#command--4-accountsave) | Persists credential profile keyed by name |
-| 3 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Activates saved account |
-| 4 | [`.account.delete`](../command/001_account.md#command--6-accountdelete) | Removes credential profile |
-| 5 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | Optional — account limits display |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Optional — account list display |
+| 2 | [`.account.save`](../command/001_account.md#command-4-accountsave) | Persists credential profile keyed by name |
+| 3 | [`.account.use`](../command/001_account.md#command-5-accountuse) | Activates saved account |
+| 4 | [`.account.delete`](../command/001_account.md#command-6-accountdelete) | Removes credential profile |
+| 5 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | Optional — account limits display |
 
 ### Referenced User Stories
 

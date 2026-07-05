@@ -14,8 +14,8 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | All 3 sort control params |
-| 2 | [`.accounts`](../command/001_account.md#command--3-accounts) | All 3 sort control params |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | All 3 sort control params |
+| 2 | [`.accounts`](../command/001_account.md#command-3-accounts) | All 3 sort control params |
 
 **Typical Patterns:**
 
