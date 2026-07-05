@@ -8,6 +8,7 @@
 //! - Underscore path encoding: IT-9..IT-13 (`bug_reproducer(issue-024)`)
 //! - UUID project scope exclusion
 //! - Topic-scoped directory matching (`scope::local` + `--{topic}` suffix)
+//! - Dot-prefixed path component: IT-66 (`bug_reproducer(BUG-003)`)
 //!
 //! ## Scope Semantics
 //!
@@ -285,6 +286,53 @@ fn scope_under_finds_project_with_underscore_path()
   );
 }
 
+// IT-66: scope::under finds projects in subtree when base path has a
+// dot-prefixed component
+//
+// The naive `find("--")` boundary search (pre-fix) misidentified a
+// dot-prefixed component's `--` marker as a topic-suffix boundary,
+// truncating the base path and excluding the child project from the
+// subtree match.
+//
+// bug_reproducer(BUG-003)
+#[ test ]
+fn scope_under_finds_project_with_dot_prefixed_path()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let base    = root.path().join( ".hidden_base" );
+  let child   = base.join( "child" );
+  let outside = root.path().join( "other" );
+  common::write_path_project_session( &storage_root, &base,    "session-dotunder-base",    2 );
+  common::write_path_project_session( &storage_root, &child,   "session-dotunder-child",   2 );
+  common::write_path_project_session( &storage_root, &outside, "session-dotunder-outside", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::under" )
+    .arg( format!( "path::{}", base.display() ) )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "session-dotunder-base" ),
+    "scope::under must include dot-prefixed base project itself; got:\n{s}"
+  );
+  assert!(
+    s.contains( "session-dotunder-child" ),
+    "scope::under must include child of dot-prefixed base; got:\n{s}"
+  );
+  assert!(
+    !s.contains( "session-dotunder-outside" ),
+    "scope::under must exclude projects outside base subtree; got:\n{s}"
+  );
+}
+
 // IT-11: scope::relevant finds ancestor when ancestor path has underscores
 //
 // bug_reproducer(issue-024)
@@ -330,7 +378,12 @@ fn scope_relevant_finds_ancestor_with_underscore_path()
 //
 // The ancestor project directory has both underscore encoding in the path AND
 // a topic suffix (stored as `--topic-name`). The is_relevant_encoded helper
-// must strip the topic suffix via rfind("--") before comparing.
+// must recognize the ancestor relationship even though `dir_name` (ancestor +
+// topic) is longer than `encoded_base` (cwd, no topic) — by finding where the
+// two strings diverge (their longest common prefix) and confirming that
+// divergence point lands exactly on the `--` topic marker, not by searching
+// `dir_name` alone for any `--` (BUG-003: that search cannot tell a topic
+// marker apart from an incidental `--` elsewhere in the path).
 //
 // bug_reproducer(issue-024)
 #[ test ]

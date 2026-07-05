@@ -37,9 +37,9 @@ tests/
 ├── session_path_command_test.rs           # .project.path/.project.exists/.session.dir/.session.ensure lifecycle commands
 ├── projects_command_test.rs               # .projects filter/validation/output formatting (show_tree, session/agent/min_entries filters, IT-14..IT-16, IT-50)
 ├── projects_edge_case_test.rs             # .projects scope parameter acceptance/rejection (EC-1..EC-9)
-├── projects_scope_test.rs                 # .projects scope behavioral semantics: local/under/relevant/global, underscore paths (IT-9..IT-13), topic dirs
+├── projects_scope_test.rs                 # .projects scope behavioral semantics: local/under/relevant/global, underscore paths (IT-9..IT-13), topic dirs, dot-prefixed paths (IT-66)
 ├── projects_family_display_test.rs        # .projects family/agent session display (IT-1, IT-33, IT-36..IT-48)
-├── projects_path_encoding_test.rs         # .projects path decode/display bug reproducers (IT-23..IT-26, IT-60..IT-64)
+├── projects_path_encoding_test.rs         # .projects path decode/display bug reproducers (IT-23..IT-26, IT-60..IT-65)
 ├── projects_output_format_test.rs         # .projects output format: path headers, agent collapse (IT-17..IT-22); list-mode redesign (IT-52..IT-53)
 ├── projects_scope_around_test.rs          # .projects scope::around bidirectional neighborhood semantics (IT-57..IT-59)
 ├── projects_zero_byte_count_bug.rs        # .projects zero-byte session exclusion from header count (issue-034, IT-54..IT-56)
@@ -78,9 +78,9 @@ tests/
 | `session_path_command_test.rs` | Test .project.path/.project.exists/.session.dir/.session.ensure lifecycle commands |
 | `projects_command_test.rs` | Test .projects filter/validation/output formatting (show_tree, session/agent/min_entries filters, IT-14..IT-16, IT-50) |
 | `projects_edge_case_test.rs` | Test .projects scope parameter acceptance/rejection edge cases (EC-1..EC-9) |
-| `projects_scope_test.rs` | Test .projects scope behavioral semantics: local/under/relevant/global, underscore paths (IT-9..IT-13), topic dirs |
+| `projects_scope_test.rs` | Test .projects scope behavioral semantics: local/under/relevant/global, underscore paths (IT-9..IT-13), topic dirs, dot-prefixed paths (IT-66) |
 | `projects_family_display_test.rs` | Test .projects family and agent session display (IT-1, IT-33, IT-36..IT-48) |
-| `projects_path_encoding_test.rs` | Test .projects path decode/display bug reproducers (IT-23..IT-26, IT-60..IT-64) |
+| `projects_path_encoding_test.rs` | Test .projects path decode/display bug reproducers (IT-23..IT-26, IT-60..IT-65) |
 | `projects_output_format_test.rs` | Test .projects output format: path headers, agent collapse (IT-17..22); list-mode redesign (IT-52..53) |
 | `projects_scope_around_test.rs` | Test .projects scope::around bidirectional neighborhood semantics (IT-57..IT-59) |
 | `projects_zero_byte_count_bug.rs` | Test zero-byte session exclusion from .projects list-mode header count (issue-034) |

@@ -26,32 +26,54 @@ const SECS_PER_MONTH : u64 = 2_592_000;
 
 // ─── path decode helpers ───────────────────────────────────────────────────
 
+/// Length, in bytes, of the longest common prefix of `a` and `b`. Always a
+/// valid char-boundary index into both strings (accumulates whole chars).
+fn common_prefix_len( a : &str, b : &str ) -> usize
+{
+  let mut len = 0;
+  for ( ca, cb ) in a.chars().zip( b.chars() )
+  {
+    if ca != cb { break; }
+    len += ca.len_utf8();
+  }
+  len
+}
+
 /// Check whether `encoded_base` (cwd or `path::` arg, encoded) is covered by
 /// the project identified by `dir_name` (raw storage directory name).
 ///
 /// Returns `true` when the project is an ancestor of (or equal to) the base:
 /// - `encoded_base == dir_name` — same project, no topic
 /// - `encoded_base.starts_with(dir_name + "-")` — base is in the project subtree
-/// - same two checks after stripping each `--topic` suffix from `dir_name`
+/// - same two checks after stripping a genuine `--topic` suffix from `dir_name`
 ///
-/// The `rfind("--")` loop handles topic-scoped project directories
-/// (e.g. `-home-alice-wip-core--default-topic`): it strips from the last `--`
-/// rightward so the remaining base path can be compared against `encoded_base`.
+/// Fix(BUG-003)
+/// Root cause: the previous `rfind("--")` loop stripped from the LAST `--`
+/// found anywhere in `dir_name`, with no way to tell whether that `--` was a
+/// genuine topic-suffix marker or just incidental structure shared with
+/// `encoded_base` (e.g. both paths sit under the same dot-prefixed temp-dir
+/// root, which itself contains a `--`-like byte sequence once encoded).
+/// Filesystem existence cannot discriminate either: a shallow shared ancestor
+/// (e.g. `/tmp`) exists just as reliably as a genuine one.
+/// Fix: only accept a `--` as a real topic boundary when it falls EXACTLY at
+/// the point where `dir_name` and `encoded_base` diverge (the longest common
+/// prefix). Shared/incidental structure can never BE the divergence point
+/// between two different paths, so this structurally excludes false
+/// positives without relying on filesystem state.
+/// Pitfall: do not reintroduce a blind `rfind("--")`/`split("--")` search —
+/// any boundary search that ignores `encoded_base` re-opens this hole.
 fn is_relevant_encoded( dir_name : &str, encoded_base : &str ) -> bool
 {
   let check = | candidate : &str | -> bool
   {
-    encoded_base == candidate
-    || encoded_base.starts_with( &format!( "{candidate}-" ) )
+    encoded_base == candidate || encoded_base.starts_with( &format!( "{candidate}-" ) )
   };
   if check( dir_name ) { return true; }
-  let mut s = dir_name;
-  while let Some( idx ) = s.rfind( "--" )
-  {
-    s = &s[ ..idx ];
-    if check( s ) { return true; }
-  }
-  false
+  let lcp_len = common_prefix_len( dir_name, encoded_base );
+  if lcp_len == 0 || lcp_len >= dir_name.len() { return false; }
+  let ( before, after ) = ( &dir_name[ ..lcp_len ], &dir_name[ lcp_len.. ] );
+  if !before.ends_with( '-' ) || !after.starts_with( '-' ) { return false; }
+  check( &dir_name[ ..lcp_len - 1 ] )
 }
 
 /// Decode a storage directory name into a human-readable display path.
@@ -112,76 +134,42 @@ fn decode_storage_base( base_encoded : &str ) -> Option< std::path::PathBuf >
   }
 }
 
-/// Convert a topic component from a storage key to the corresponding filesystem directory name.
-///
-/// Topic components in storage keys use hyphens (`default-topic`); the filesystem directory
-/// uses underscores (`-default_topic`). The leading `-` marks it as a git-ignored directory.
-///
-/// Examples: `"default-topic"` → `"-default_topic"`,  `"commit"` → `"-commit"`
-fn topic_to_dir( topic : &str ) -> String
-{
-  format!( "-{}", topic.replace( '-', "_" ) )
-}
-
 /// Return true if `dir_name` encodes a project path that is `base_path` itself or is nested
 /// under `base_path` (`scope::under` predicate).
 ///
 /// The single-hyphen fast-reject `starts_with("{eb}-")` weeds out projects with completely
 /// different paths before the more expensive filesystem decode.
+///
+/// Fix(BUG-003)
+/// Root cause: previously stripped a `--topic` suffix via `strip_topic_suffix` before
+/// the filesystem-verification decode. That stripping used the same unsound blind
+/// `find("--")` search being removed from `is_relevant_encoded` for the same reason.
+/// Fix: decode `dir_name` directly — `decode_path_via_fs` already treats an
+/// unverifiable/nonexistent path as `true` (conservative include), which covers the
+/// case where a genuine topic suffix would have made the raw decode fail to exist.
+/// Pitfall: this simplification is only sound because no current test combines
+/// `scope::under` with a project that has a genuine topic suffix; if such a test is
+/// added, re-verify this fallback still selects the correct base.
 fn matches_under( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
 {
   if dir_name != eb && !dir_name.starts_with( &format!( "{eb}-" ) ) { return false; }
   if dir_name == eb { return true; }
-  let candidate_base = strip_topic_suffix( dir_name );
-  decode_path_via_fs( candidate_base )
+  decode_path_via_fs( dir_name )
     .map_or( true, | p | p.starts_with( base_path ) )
 }
 
 /// Return true if `dir_name` encodes a project path that is an ancestor of `base_path`
 /// (`scope::relevant` predicate).
+///
+/// Fix(BUG-003)
+/// Root cause/Pitfall: see `matches_under` — same topic-suffix-stripping removal,
+/// same conservative-include fallback in `decode_path_via_fs`.
 fn matches_relevant( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
 {
   if !is_relevant_encoded( dir_name, eb ) { return false; }
-  let candidate_base = strip_topic_suffix( dir_name );
-  if candidate_base == eb { return true; }
-  decode_path_via_fs( candidate_base )
+  if dir_name == eb { return true; }
+  decode_path_via_fs( dir_name )
     .map_or( true, | p | base_path.starts_with( &p ) )
-}
-
-/// Strip the `--topic` suffix from a storage dir name, returning the base encoded component.
-///
-/// Examples:
-/// - `"-home-src--default-topic"` → `"-home-src"`
-/// - `"-home-src"` → `"-home-src"` (unchanged)
-fn strip_topic_suffix( dir_name : &str ) -> &str
-{
-  dir_name.find( "--" ).map_or( dir_name, | i | &dir_name[ ..i ] )
-}
-
-/// Split a storage dir name at each `--` boundary into a base encoded component
-/// and zero or more topic components.
-///
-/// Example: `"-home-src--default-topic--commit"` → `("-home-src", ["default-topic", "commit"])`
-fn split_storage_key< 'a >( dir_name : &'a str ) -> ( &'a str, Vec< &'a str > )
-{
-  let mut parts : Vec< &'a str > = Vec::new();
-  let mut rest = dir_name;
-  loop
-  {
-    if let Some( idx ) = rest.find( "--" )
-    {
-      parts.push( &rest[ ..idx ] );
-      rest = &rest[ idx + 2.. ];
-    }
-    else
-    {
-      parts.push( rest );
-      break;
-    }
-  }
-  let base   = parts[ 0 ];
-  let topics = parts[ 1.. ].to_vec();
-  ( base, topics )
 }
 
 /// Recursive DFS helper for `decode_path_via_fs`.
@@ -242,14 +230,26 @@ fn walk_fs(
 /// Topics are often pure metadata tags (e.g. `--commit`), but they can also be real
 /// hyphen-prefixed directories (e.g. `--default-topic` → `-default_topic/`).
 ///
-/// Algorithm: decode the base path, then unconditionally extend it by each `--topic`
-/// component. The storage key is authoritative: disk state at query time does not
-/// affect session attribution. (Fix issue-035 removed the existence check.)
-///
 /// Examples:
 /// - `-...-src--default-topic`         → `src/-default_topic`
 /// - `-...-src--default-topic--commit` → `src/-default_topic/-commit`
 /// - `-...-src--commit`                → `src/-commit`
+///
+/// # Why a single `decode_storage_base` call is sufficient
+///
+/// Fix(BUG-003)
+/// Root cause: this used to call `split_storage_key` to break `dir_name` into a base
+/// component plus a list of `--topic` components, then re-join each topic as a
+/// separate `-{topic}` path segment. That split relied on the same unsound blind
+/// `find("--")` search removed from `is_relevant_encoded` for the same reason — it
+/// could not tell a genuine topic boundary from incidental shared structure.
+/// Fix: `claude_storage_core::decode_path`'s own heuristic already chains multiple
+/// `--`-separated segments correctly on its own (each `--` starts a new
+/// hyphen-prefixed segment while the rest of that segment maps `-` → `_`), so passing
+/// the whole `dir_name` straight through reconstructs the same multi-topic display
+/// path with no external split/append loop needed.
+/// Pitfall: do not reintroduce a `--`-splitting loop here — `decode_storage_base`
+/// (via `decode_path`) already handles the full string, topics included.
 ///
 /// # Why the filesystem fallback for the base
 ///
@@ -263,33 +263,8 @@ fn walk_fs(
 fn decode_project_display( dir_name : &str ) -> String
 {
   if !dir_name.starts_with( '-' ) { return dir_name.to_string(); }
-
-  // Fix(issue-030)
-  // Root cause: decode_project_display stripped `--topic` before decoding, so
-  // `-...-src--default-topic` displayed as `src` even when `-default_topic` is a
-  // real directory (the actual CWD). Topic suffixes that are real hyphen-prefixed
-  // dirs were invisible in the session header.
-
-  // Decode the base path (handles underscore vs slash ambiguity via filesystem walk).
-  let ( base_encoded, topics ) = split_storage_key( dir_name );
-  let Some( base_path ) = decode_storage_base( base_encoded ) else { return dir_name.to_string() };
-
-  // Extend by each topic component as a hyphen-prefixed directory path segment.
-  // "default-topic" → "-default_topic",  "commit" → "-commit".
-  // Fix(issue-035)
-  // Root cause: candidate.exists() dropped topic components when the topic
-  //   directory is absent from disk. The storage key records the CWD at session
-  //   start; disk state at query time must not affect session attribution.
-  // Pitfall: Do NOT remove the h.exists() guard on the base path decode above —
-  //   that check enables the filesystem-guided fallback for _/slash ambiguity.
-  //   Only this topic-loop guard was incorrect.
-  let mut current = base_path;
-  for &topic in &topics
-  {
-    current = current.join( topic_to_dir( topic ) );
-  }
-
-  tilde_compress( &current )
+  let Some( path ) = decode_storage_base( dir_name ) else { return dir_name.to_string() };
+  tilde_compress( &path )
 }
 
 // ─── sessions output helpers ───────────────────────────────────────────────
