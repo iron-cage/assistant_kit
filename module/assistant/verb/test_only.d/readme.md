@@ -4,4 +4,4 @@ Layer scripts for the `test_only` verb dispatcher.
 
 | File | Responsibility |
 |------|----------------|
-| `l1` | Container-internal: `cargo nextest run --workspace --all-features $NEXTEST_FILTER`; entered via `VERB_LAYER=l1`. |
+| `l1` | Container-internal: `cargo nextest run --all-features $NEXTEST_FILTER`; entered via `VERB_LAYER=l1`. |

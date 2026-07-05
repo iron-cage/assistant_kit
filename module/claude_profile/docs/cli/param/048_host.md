@@ -34,8 +34,8 @@ clp .account.save host::laptop role::dev  -> host "laptop", role "dev"
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.save`](../command/001_account.md#command--4-accountsave) | Write host metadata to account profile |
-| 2 | [`.accounts`](../command/001_account.md#command--3-accounts) | Display host column when `cols::+host` |
+| 1 | [`.account.save`](../command/001_account.md#command-4-accountsave) | Write host metadata to account profile |
+| 2 | [`.accounts`](../command/001_account.md#command-3-accounts) | Display host column when `cols::+host` |
 
 ### Referenced User Stories
 

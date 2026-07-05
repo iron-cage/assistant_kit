@@ -78,7 +78,7 @@ mod types;
 pub mod process;
 pub mod session_dir;
 
-pub use crate::command::{ ClaudeCommand, claude_version };
+pub use crate::command::{ ClaudeCommand, claude_version, DEFAULT_COMPACT_WINDOW };
 pub use crate::exit_code::signal_exit_code;
 pub use crate::isolated::{ IsolatedModel, IsolatedRunResult, RunnerError, ISOLATED_DEFAULT_MODEL, ISOLATED_CLAUDE_MD, REFRESH_DEFAULT_MODEL };
 pub use crate::types::{ ActionMode, EffortLevel, ErrorKind, ExecutionOutput, InputFormat, LogLevel, OutputFormat, PermissionMode };
@@ -97,7 +97,7 @@ pub use crate::isolated::run_isolated;
 /// Re-export of [`crate::isolated::run_isolated_ext`].
 ///
 /// Extended variant that accepts `compact_window: Option<u32>` — use when you need to
-/// suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` (`None`) or override the 200K default.
+/// suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` (`None`) or override the 300K default.
 ///
 /// # Warning
 ///

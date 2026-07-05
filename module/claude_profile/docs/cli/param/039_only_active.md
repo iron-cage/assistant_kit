@@ -32,7 +32,7 @@ only_active::1 get::5h_left -> bare 5h Left value for active account
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Filter to active account row only |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Filter to active account row only |
 
 ### Referenced User Stories
 

@@ -1,6 +1,6 @@
 # Test: `.usage`
 
-Integration test planning for the `.usage` command. See [command/namespace.md](../../../../docs/cli/command/006_usage.md#command--9-usage) for specification.
+Integration test planning for the `.usage` command. See [command/namespace.md](../../../../docs/cli/command/006_usage.md#command-9-usage) for specification.
 
 ### Test Case Index
 
@@ -142,7 +142,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage`
 - **Then:** Stdout contains a table with "Quota" heading and rows showing columns: "5h Left", "5h Reset", "7d Left", "7d Reset", "Expires", "~Renews", "→ Next". Column order: quota columns (5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset) appear before billing-metadata columns (Expires, ~Renews, → Next). Exit 0.
 - **Exit:** 0
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 
@@ -162,7 +162,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage`
 - **Then:** That account's row shows `—` for 5h Left and 7d Left; Status column shows an inline error reason. Expires column shows "in" (not "EXPIRED") because token has a future expiry. Exit 0.
 - **Exit:** 0
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 
@@ -182,7 +182,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage`
 - **Then:** Stdout contains `(no accounts configured)`. Exit 0.
 - **Exit:** 0
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 
@@ -192,7 +192,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage`
 - **Then:** Error on stderr. Exit 2.
 - **Exit:** 2
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 
@@ -202,7 +202,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `env -u HOME clp .usage`
 - **Then:** Error on stderr. Exit 2.
 - **Exit:** 2
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 
@@ -212,7 +212,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage`
 - **Then:** Rows appear in order `a@x.com`, `b@x.com`, `c@x.com`. Exit 0.
 - **Exit:** 0
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 
@@ -222,7 +222,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage`
 - **Then:** That account's row shows `—` for quota columns and a missing-token error reason in Status. Exit 0.
 - **Exit:** 0
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 
@@ -232,7 +232,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage`
 - **Then:** That account's row shows `EXPIRED` in the Expires column. The quota columns show `—`. Exit 0.
 - **Exit:** 0
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 
@@ -243,7 +243,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Stdout contains a `·`-delimited footer line matching `Next (renew) ·` and the non-active account name. No table data row contains a bare `→` marker in the flag column. Exit 0.
 - **Exit:** 0
 - **Live:** yes (requires real tokens for both accounts to return quota data)
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 
@@ -254,7 +254,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Stdout contains a `·`-delimited footer line matching `Current · <name> · <model> · N/N` identifying the `✓` account, followed by a `Next (renew) ·` line with the recommended account. Exit 0.
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota headers)
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 
@@ -317,7 +317,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 1. `format::table` is valid only for `.accounts`; all other commands reject it.
 - **Exit:** 1
 - **Source fn:** `it017_format_table_rejected`
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 
@@ -505,7 +505,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0; stderr contains timestamped diagnostic lines including the account name; stdout still shows the account row.
 - **Exit:** 0
 - **Source fn:** `it034_trace_param_writes_to_stderr`
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 
@@ -516,7 +516,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0; stdout (trimmed) equals `[]`; no text-format "no accounts configured" message.
 - **Exit:** 0
 - **Source fn:** `it035_empty_store_json_format`
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 
@@ -527,7 +527,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0; stdout does NOT contain `Current ·` (footer is suppressed when `valid_count < 2`).
 - **Exit:** 0
 - **Source fn:** `it036_no_footer_when_no_valid_accounts`
-- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
+- **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command-9-usage)
 
 ---
 

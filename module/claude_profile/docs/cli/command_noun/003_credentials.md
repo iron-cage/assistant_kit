@@ -95,7 +95,7 @@ The credential lifecycle is managed externally: `clp` reads but never writes `~/
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Show live credential metadata |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Show live credential metadata |
 
 ### Referenced Parameters
 

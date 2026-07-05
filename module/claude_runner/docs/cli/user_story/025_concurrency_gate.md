@@ -1,18 +1,20 @@
 # Gate new invocations when concurrent session limit is reached
 
 **Persona:** Developer or CI system that runs multiple automated `clr` invocations in parallel and needs to avoid hitting Claude API rate limits caused by too many concurrent sessions.
-**Goal:** Limit the number of concurrent Claude Code sessions so that new `clr` invocations wait when the system already has `--max-sessions` active sessions, reducing rate limit errors from parallel pipelines.
+**Goal:** Limit the number of concurrent non-interactive Claude Code sessions so that new `clr` invocations wait when the system already has `--max-sessions` active non-interactive sessions, reducing rate limit errors from parallel pipelines. Interactive invocations are never subject to this gate.
 **Benefit:** Prevents rate-limit errors from parallel automation by serializing new invocations when the session limit is reached.
 **Priority:** Medium
 
 ### Acceptance Criteria
 
-- AC-001: When active Claude processes < `--max-sessions`, `clr` proceeds immediately with no gate messages to stderr
-- AC-002: When active Claude processes >= `--max-sessions`, `clr` emits a waiting message to stderr (unless `--quiet`) and polls every 30 seconds
+- AC-001: When active non-interactive Claude processes < `--max-sessions`, `clr` proceeds immediately with no gate messages to stderr
+- AC-002: When active non-interactive Claude processes >= `--max-sessions`, `clr` emits a waiting message to stderr (unless `--quiet`) and polls every 30 seconds
 - AC-003: When 100 attempts are exhausted without a slot opening, `clr` emits an error message to stderr and exits with code 1
 - AC-004: `--max-sessions 0` disables the gate; `clr` proceeds immediately with no process scan or messages
 - AC-005: `CLR_MAX_SESSIONS=N` is equivalent to `--max-sessions N` when the CLI flag is absent; CLI flag wins when both are present
 - AC-006: In `--dry-run` mode, the gate is not triggered; the command preview is produced immediately
+- AC-007: Interactive invocations are never gated — they proceed immediately regardless of `--max-sessions` or the number of active sessions
+- AC-008: The active session count used for gating counts only non-interactive (print-mode) Claude processes; interactive sessions are excluded from the count
 
 ### Referenced Commands
 
@@ -39,6 +41,10 @@
 2. `CLR_MAX_SESSIONS=3 clr "task"` — apply session limit via environment variable
 3. `clr --max-sessions 0 "task"` — disable the gate; proceed immediately regardless of active sessions
 4. `clr --max-sessions 5 --dry-run "task"` — bypass the gate in dry-run mode
+5. `clr --interactive "task"` (20 non-interactive sessions active, `--max-sessions 10`) — interactive invocations bypass the gate entirely and proceed immediately, regardless of active count
+
+> **Implementation status:** Not yet implemented — see task 001. Current shipped
+> behavior gates all Claude Code sessions regardless of mode.
 
 ### Related User Stories
 

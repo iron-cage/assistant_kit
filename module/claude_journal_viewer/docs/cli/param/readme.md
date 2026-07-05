@@ -1,4 +1,4 @@
-# CLI Parameters
+# Parameters
 
 ### Scope
 
