@@ -248,11 +248,10 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
 
   // Watch mode: loop until interrupted (Ctrl+C).
   // Exception: dry mode runs one iteration and exits — preview mode must not run a daemon.
-  let mut iterations : u64 = 0;
+  let next_check = format_interval( interval_secs );
   loop
   {
-    iterations += 1;
-    let now    = current_timestamp();
+    let ( date, time ) = current_date_time_parts();
     let result = guard_once( dry, force, version_override.as_deref(), opts.verbosity, opts.format );
 
     match result
@@ -260,7 +259,14 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
       Ok( out ) =>
       {
         let status = out.content.trim_end();
-        eprintln!( "[{now}] #{iterations} {status}" );
+        if status == "ok"
+        {
+          eprintln!( "{date} · {time} · ok · next check in {next_check}" );
+        }
+        else
+        {
+          eprintln!( "{date} · {time} · ok · {status} · next check in {next_check}" );
+        }
         if dry { return Ok( out ); }
       }
       Err( e ) =>
@@ -271,7 +277,7 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
         //   binary silently killed the guard after one drift-restore attempt.
         // Pitfall: one-shot mode (interval==0) returns before this loop and still
         //   propagates errors normally — do NOT add a continue/return here.
-        eprintln!( "[{now}] #{iterations} error: {e}" );
+        eprintln!( "{date} · {time} · error · {e} · next check in {next_check}" );
         if dry { return Err( e ); }
       }
     }
@@ -555,8 +561,8 @@ fn days_to_ymd( mut days : u64 ) -> ( u64, u8, u8 )
   ( year, month, u8::try_from( days ).expect( "day of month always 0-30" ) + 1 )
 }
 
-/// UTC timestamp in ISO 8601 format: `YYYY-MM-DDTHH:MM:SSZ` (no chrono crate).
-fn current_timestamp() -> String
+/// Current UTC date and time as separate `YYYY-MM-DD` / `HH:MM:SS` parts (no chrono crate).
+fn current_date_time_parts() -> ( String, String )
 {
   let secs = std::time::SystemTime::now()
     .duration_since( std::time::UNIX_EPOCH )
@@ -566,7 +572,20 @@ fn current_timestamp() -> String
   let m = ( secs / 60 ) % 60;
   let h = ( secs / 3600 ) % 24;
   let ( year, month, day ) = days_to_ymd( secs / 86_400 );
-  format!( "{year:04}-{month:02}-{day:02}T{h:02}:{m:02}:{s:02}Z" )
+  ( format!( "{year:04}-{month:02}-{day:02}" ), format!( "{h:02}:{m:02}:{s:02}" ) )
+}
+
+/// Format a duration in seconds as a human-readable interval: whole minutes as `Nm`, else `Ns`.
+fn format_interval( secs : u64 ) -> String
+{
+  if secs >= 60 && secs % 60 == 0
+  {
+    format!( "{}m", secs / 60 )
+  }
+  else
+  {
+    format!( "{secs}s" )
+  }
 }
 
 /// `.version.list` — list all named version aliases.

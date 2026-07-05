@@ -219,6 +219,29 @@ clv.version.guard [version::SPEC] [dry::1] [force::1] [interval::N] [v::N] [form
 5. Verify post-install version matches preferred; report restore result.
 6. In watch mode (`interval::N>0`): sleep N seconds, loop back to step 2; log transient errors to stderr without terminating.
 
+**Watch Mode Log Format:**
+
+In watch mode, each check emits one line to stderr:
+
+```
+{date} · {time} · ok · {detail} · next check in {duration}
+{date} · {time} · error · {message} · next check in {duration}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `{date}` | `YYYY-MM-DD`, UTC |
+| `{time}` | `HH:MM:SS`, UTC |
+| `ok` / `error` | Outcome of this check |
+| `{detail}` | Check result text (e.g. `2.1.197 matches preferred v2.1.197`); omitted when the result is the bare terse `ok` (`v::0`) |
+| `{duration}` | The `interval::` value formatted as `Ns` or `Nm` |
+
+Example:
+
+```
+2026-07-05 · 16:58:29 · ok · 2.1.197 matches preferred v2.1.197 · next check in 30s
+```
+
 **Examples:**
 
 ```sh

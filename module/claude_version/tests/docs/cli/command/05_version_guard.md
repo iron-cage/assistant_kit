@@ -271,7 +271,7 @@ Integration test planning for the `.version.guard` command. See [command/readme.
 
 - **Given:** `~/.claude/settings.json` contains `preferredVersionSpec="9.9.9"` / `preferredVersionResolved="9.9.9"`; no claude binary installed; empty `PATH` (forces install failure).
 - **When:** `timeout 2 clv .version.guard interval::1`
-- **Then:** Process runs until killed by `timeout` (2 seconds); stderr contains `#1` and `#2` iteration headers.; Process survives first install error; daemon continues watching.
+- **Then:** Process runs until killed by `timeout` (2 seconds); stderr contains at least 2 log lines (each `{date} · {time} · error · {message} · next check in {duration}`), proving the loop survived the first error and ran a second iteration; Process survives first install error; daemon continues watching.
 - **Bug:** `return result` in watch loop error branch — fixed by continuing the loop instead
 - **Exit:** 0
 - **Source:** [commands/version.rs — version_guard_routine watch loop](../../../../src/commands/version.rs), [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
