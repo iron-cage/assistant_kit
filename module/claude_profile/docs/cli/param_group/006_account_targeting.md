@@ -13,8 +13,8 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.save`](../command/001_account.md#command--4-accountsave) | `host::`, `role::` — write metadata to `{name}.json` |
-| 2 | [`.accounts`](../command/001_account.md#command--3-accounts) | `host::` display toggle — opt-in boolean |
+| 1 | [`.account.save`](../command/001_account.md#command-4-accountsave) | `host::`, `role::` — write metadata to `{name}.json` |
+| 2 | [`.accounts`](../command/001_account.md#command-3-accounts) | `host::` display toggle — opt-in boolean |
 
 **Typical Patterns:**
 

@@ -37,8 +37,8 @@ touch::0   → no subprocess spawned; idle accounts remain idle
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Auto-activate idle quota windows during quota fetch |
-| 2 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Activate idle session on switched-to account |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Auto-activate idle quota windows during quota fetch |
+| 2 | [`.account.use`](../command/001_account.md#command-5-accountuse) | Activate idle session on switched-to account |
 
 ### Referenced User Stories
 

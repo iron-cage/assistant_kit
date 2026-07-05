@@ -23,7 +23,7 @@ clv.params                  # absent = all params (default)
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`.params`](../command/params.md#command--14-params) | absent | Ignored when `key::` is also present (single-param mode) |
+| 1 | [`.params`](../command/params.md#command-14-params) | absent | Ignored when `key::` is also present (single-param mode) |
 
 ### Referenced Type
 

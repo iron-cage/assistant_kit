@@ -33,11 +33,11 @@ clv .processes.kill dry::1 force::1  # preview forced kill
 
 | # | Command | Membership | Excluded Params |
 |---|---------|-----------|----------------|
-| 1 | [`.version.install`](../command/version.md#command--4-versioninstall) | Full | — |
-| 2 | [`.version.guard`](../command/version.md#command--5-versionguard) | Full | — |
-| 3 | [`.processes.kill`](../command/processes.md#command--8-processeskill) | Full | — |
-| 4 | [`.settings.set`](../command/settings.md#command--11-settingsset) | Partial | `force::` |
-| 5 | [`.config`](../command/config.md#command--13-config) | Partial | `force::` |
+| 1 | [`.version.install`](../command/version.md#command-4-versioninstall) | Full | — |
+| 2 | [`.version.guard`](../command/version.md#command-5-versionguard) | Full | — |
+| 3 | [`.processes.kill`](../command/processes.md#command-8-processeskill) | Full | — |
+| 4 | [`.settings.set`](../command/settings.md#command-11-settingsset) | Partial | `force::` |
+| 5 | [`.config`](../command/config.md#command-13-config) | Partial | `force::` |
 
 ### Referenced Parameters
 

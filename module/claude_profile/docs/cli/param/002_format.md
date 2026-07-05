@@ -35,13 +35,13 @@ format::plain  → text layout with no emoji or ANSI colors (.usage only; equiva
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Account list output format |
-| 2 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | Token status output format |
-| 3 | [`.paths`](../command/004_paths.md#command--8-paths) | Path resolution output format |
-| 4 | [`.usage`](../command/006_usage.md#command--9-usage) | Usage report output format |
-| 5 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Credential status output format |
-| 6 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | Account limits output format |
-| 7 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | Account inspection output format |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Account list output format |
+| 2 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | Token status output format |
+| 3 | [`.paths`](../command/004_paths.md#command-8-paths) | Path resolution output format |
+| 4 | [`.usage`](../command/006_usage.md#command-9-usage) | Usage report output format |
+| 5 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Credential status output format |
+| 6 | [`.account.limits`](../command/001_account.md#command-11-accountlimits) | Account limits output format |
+| 7 | [`.account.inspect`](../command/001_account.md#command-15-accountinspect) | Account inspection output format |
 
 ### Referenced User Stories
 

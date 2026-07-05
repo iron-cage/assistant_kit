@@ -216,7 +216,7 @@ Next (renew)     · alice@example.com   · sonnet/high · in 3h 47m $ren
 
 | File | Relationship |
 |------|--------------|
-| [command/006_usage.md](../cli/command/006_usage.md#command--9-usage) | CLI command specification |
+| [command/006_usage.md](../cli/command/006_usage.md#command-9-usage) | CLI command specification |
 
 ### Dependencies
 
@@ -255,7 +255,7 @@ Next (renew)     · alice@example.com   · sonnet/high · in 3h 47m $ren
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../cli/command/006_usage.md#command--9-usage) | CLI surface for this feature |
+| 1 | [`.usage`](../cli/command/006_usage.md#command-9-usage) | CLI surface for this feature |
 
 ### Sources
 

@@ -27,7 +27,7 @@ file::1   → File:    /home/user/.claude/.credentials.json
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Credentials file path line visibility |
+| 1 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Credentials file path line visibility |
 
 ### Referenced User Stories
 

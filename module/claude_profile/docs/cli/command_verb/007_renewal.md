@@ -59,4 +59,4 @@ Sets or clears the billing renewal timestamp override (`_renewal_at`) for a name
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) | Set or clear billing renewal timestamp override |
+| 1 | [`.account.renewal`](../command/001_account.md#command-14-accountrenewal) | Set or clear billing renewal timestamp override |
