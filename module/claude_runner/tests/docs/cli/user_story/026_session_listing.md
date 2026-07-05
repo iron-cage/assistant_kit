@@ -12,7 +12,7 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 | US-4 | Sessions present: plain-style table with correct headers | AC-001, AC-005 | ✅ |
 | US-5 | `$PRO` prefix replaced by `"$PRO"` literal in Absolute Path column | AC-007 | ✅ |
 | US-6 | Queued CLR session shown when gate file present | AC-008 | ✅ |
-| US-7 | Active table caption contains `Active Sessions` and count suffix | AC-010 | ✅ |
+| US-7 | Active table caption: `Active Sessions` + count, with `--mode all` interactive/print breakdown | AC-010 | ✅ |
 | US-8 | `clr ps --help` prints help and exits 0 | AC-011 | ✅ |
 | US-9 | Active sessions ordered oldest first | AC-012 | ✅ |
 | US-10 | `--mode print` shows only print-mode sessions | AC-013 | ✅ |
@@ -95,13 +95,14 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 
 ---
 
-### US-7: Active table caption contains `Active Sessions` and count suffix
+### US-7: Active table caption: `Active Sessions` + count, with breakdown under `--mode all`
 
 - **Given:** ≥1 fake `claude` process running; PATH prepended with fake dir
-- **When:** `clr ps`
-- **Then:** Exit 0; stdout contains `Active Sessions` (caption title) and `running` (count suffix from the caption rule line above the column headers)
+- **When:** `clr ps` (default `--mode all`)
+- **Then:** Exit 0; stdout contains `Active Sessions` (caption title) and `running` (count suffix from the caption rule line above the column headers); the caption format supports an `(I interactive, P print)` breakdown suffix where `I + P` equals the running count, though this test's own fixture is single-interactive/zero-print — genuine mixed-population coverage is proven separately by IT-41 (see Note below)
 - **Exit:** 0
 - **Verifies:** AC-010
+- **Note:** Full breakdown behavior (all-interactive, all-print, and the plain no-breakdown caption under `--mode interactive`/`--mode print`) is exercised at the integration level — see `command/06_ps.md` IT-41–IT-45
 
 ---
 

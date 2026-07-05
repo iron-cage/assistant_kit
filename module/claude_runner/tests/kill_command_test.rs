@@ -17,10 +17,10 @@
 //! | IT-9 | `clr kill 1234 extra` → exit 1, unexpected arg    | Extra argument   |
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ run_cli, stderr_str, stdout_str };
+use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
 
 #[ cfg( unix ) ]
-use cli_binary_test_helpers::{ fake_claude_binary_dir, spawn_fake_claude };
+use cli_binary_test_helpers::{ fake_claude_binary_dir, make_proc_dir, spawn_fake_claude };
 
 // ── IT-1: No PID ─────────────────────────────────────────────────────────────
 
@@ -56,10 +56,13 @@ fn it_02_non_numeric_pid()
 
 /// IT-3: `clr kill 999999` with a PID that is certainly not a running `claude`
 /// process → exit 1, stderr mentions the PID and "not a running Claude Code session".
+#[ cfg( unix ) ]
 #[ test ]
 fn it_03_pid_not_a_claude_process()
 {
-  let out    = run_cli( &[ "kill", "999999" ] );
+  let proc     = make_proc_dir( &[] );
+  let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let out    = run_cli_with_env( &[ "kill", "999999" ], &[ ( "CLR_PROC_DIR", proc_dir ) ] );
   let stderr = stderr_str( &out );
   assert!( !out.status.success(), "expected non-zero exit" );
   assert!(
@@ -87,10 +90,12 @@ fn it_04_successful_sigterm_delivery()
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
   let pid = bg.id();
+  let proc = make_proc_dir( &[ pid ] );
 
   let bin    = env!( "CARGO_BIN_EXE_clr" );
   let result = std::process::Command::new( bin )
     .args( [ "kill", &pid.to_string() ] )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
     .output();
   // Always reap the child before unwrapping the result to avoid zombies.
   let _ = bg.kill();
@@ -102,6 +107,10 @@ fn it_04_successful_sigterm_delivery()
   assert!(
     stdout.contains( "Sent SIGTERM" ),
     "stdout must contain 'Sent SIGTERM', got: {stdout}"
+  );
+  assert!(
+    stdout.contains( &pid.to_string() ),
+    "stdout must include the terminated PID, got: {stdout}"
   );
 }
 

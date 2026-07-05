@@ -160,7 +160,7 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 - **Then:** `~Renews` column for `test@example.com` shows `in Xd` format (exact, no `~` prefix) — confirms the value is treated as an exact override even after auto-advance. The stored value is NOT modified; auto-advance is read-only at render.
 - **Exit:** 0
 - **Live:** yes
-- **Note:** this test does not assert day-of-month preservation across auto-advance steps — it only checks the exact-vs-estimate `~` prefix. AC-10 requires the same day-of-month as the original `_renewal_at`; the current implementation violates this on months not exactly 30 days long. See BUG-329 (open, `/home/user1/pro/lib/yrd_core/assistant_kit/task/claude_profile/bug/329_auto_advance_flat_step_drifts_day_of_month.md`) and `docs/algorithm/010_renewal_date_computation.md` for the full mechanism.
+- **Note:** this test does not assert day-of-month preservation across auto-advance steps — it only checks the exact-vs-estimate `~` prefix. AC-10's day-of-month preservation requirement is fixed and covered separately by the BUG-329 regression tests in `tests/usage/format_tests.rs` (see `docs/algorithm/010_renewal_date_computation.md` AC-5/AC-6). See BUG-329 (`/home/user1/pro/lib/yrd_core/assistant_kit/task/claude_profile/bug/329_auto_advance_flat_step_drifts_day_of_month.md`, closed) for the full mechanism and fix history — the underlying defect is fixed and verified in code, and the bug-tracking file's own lifecycle closure is complete.
 - **Source fn:** `it151_past_renewal_at_auto_advances_in_usage` (in `tests/cli/usage_model_test.rs`)
 - **Source:** [030_account_renewal_override.md AC-10](../../../docs/feature/030_account_renewal_override.md)
 
