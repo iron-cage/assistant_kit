@@ -49,8 +49,8 @@ clp .usage set_model::default
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Set session model after account switch |
-| 2 | [`.usage`](../command/006_usage.md#command--9-usage) | Set session model for current account |
+| 1 | [`.account.use`](../command/001_account.md#command-5-accountuse) | Set session model after account switch |
+| 2 | [`.usage`](../command/006_usage.md#command-9-usage) | Set session model for current account |
 
 ### Referenced User Stories
 

@@ -18,8 +18,8 @@
 | # | Command | Role |
 |---|---------|------|
 | 1 | [`.usage rotate::1`](../command/006_usage.md) | Primary: strategy-based selection and switch after quota table render |
-| 2 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Secondary: manual switch to a known account |
-| 3 | [`.accounts`](../command/001_account.md#command--3-accounts) | Supporting: verify account list before rotation |
+| 2 | [`.account.use`](../command/001_account.md#command-5-accountuse) | Secondary: manual switch to a known account |
+| 3 | [`.accounts`](../command/001_account.md#command-3-accounts) | Supporting: verify account list before rotation |
 
 ### Referenced Parameters
 

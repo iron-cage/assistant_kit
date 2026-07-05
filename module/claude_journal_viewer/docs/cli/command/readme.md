@@ -1,4 +1,4 @@
-# Commands (8 total)
+# Commands
 
 ### All Commands
 

@@ -73,7 +73,7 @@
 
 | File | Relationship |
 |------|--------------|
-| [command/001_account.md](../cli/command/001_account.md#command--4-accountsave) | CLI command specification |
+| [command/001_account.md](../cli/command/001_account.md#command-4-accountsave) | CLI command specification |
 
 ### Features
 
@@ -91,7 +91,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.save`](../cli/command/001_account.md#command--4-accountsave) | CLI surface for this feature |
+| 1 | [`.account.save`](../cli/command/001_account.md#command-4-accountsave) | CLI surface for this feature |
 
 ### Sources
 

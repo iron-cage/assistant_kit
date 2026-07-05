@@ -64,8 +64,8 @@ clv.processes format::json
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.processes.kill`](#command--8-processes-kill) | Terminates the listed processes |
-| 2 | [`.status`](root.md#command--2-status) | Includes process count in broader environment snapshot |
+| 1 | [`.processes.kill`](#command-8-processeskill) | Terminates the listed processes |
+| 2 | [`.status`](root.md#command-2-status) | Includes process count in broader environment snapshot |
 
 ### Referenced User Stories
 
@@ -148,8 +148,8 @@ clv.processes.kill force::1  # SIGKILL immediately
 
 | # | Command | Relationship |
 |---|---------|-------------|
-| 1 | [`.processes`](#command--7-processes) | Lists processes before termination |
-| 2 | [`.status`](root.md#command--2-status) | Confirms process count after kill |
+| 1 | [`.processes`](#command-7-processes) | Lists processes before termination |
+| 2 | [`.status`](root.md#command-2-status) | Confirms process count after kill |
 
 ### Referenced User Stories
 

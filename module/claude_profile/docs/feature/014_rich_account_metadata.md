@@ -65,7 +65,7 @@ This label is NOT a separate field param — it is the formatted output of the e
 
 | File | Relationship |
 |------|--------------|
-| [command/002_credentials.md](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI command specification |
+| [command/002_credentials.md](../cli/command/002_credentials.md#command-10-credentialsstatus) | CLI command specification |
 
 ### Features
 
@@ -86,7 +86,7 @@ This label is NOT a separate field param — it is the formatted output of the e
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.credentials.status`](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI surface for this feature |
+| 1 | [`.credentials.status`](../cli/command/002_credentials.md#command-10-credentialsstatus) | CLI surface for this feature |
 
 ### Sources
 

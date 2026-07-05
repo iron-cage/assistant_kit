@@ -1,6 +1,6 @@
 # Test: `.accounts`
 
-Integration test planning for the `.accounts` command. See [command/namespace.md](../../../../docs/cli/command/001_account.md#command--3-accounts) for specification.
+Integration test planning for the `.accounts` command. See [command/namespace.md](../../../../docs/cli/command/001_account.md#command-3-accounts) for specification.
 
 ### Test Case Index
 
@@ -95,7 +95,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts`
 - **Then:** Output contains two indented blocks, one starting with `work@acme.com` and one with `personal@home.com`. Each block has `Owner:`, `Active:`, `Sub:`, `Tier:`, `Expires:`, `Email:` lines.; both accounts listed as indented key-val blocks with Owner column in default set
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -105,7 +105,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts`
 - **Then:** `work@acme.com` block contains `Active:  yes`; `personal@home.com` block contains `Active:  no`.; active/inactive status correctly reported per account
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -115,7 +115,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts`
 - **Then:** `(no accounts configured)` with exit 0.; empty store handled gracefully with advisory message
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -125,7 +125,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts name::work@acme.com`
 - **Then:** A single block for `work@acme.com` with all default fields; no `personal@home.com` entry.; only the named account's block is shown
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -135,7 +135,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts name::ghost@example.com`
 - **Then:** Exit 2; stderr contains `not found` or `ghost@example.com`.; not-found is a runtime error, not a usage error
 - **Exit:** 2
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -145,7 +145,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts name::notanemail`
 - **Then:** Exit 1; stderr contains a validation error about the name format.; invalid name format is a usage error
 - **Exit:** 1
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -155,7 +155,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts cols::-sub,-tier`
 - **Then:** Blocks contain `Owner:`, `Active:`, `Expires:`, `Email:` lines but NOT `Sub:` or `Tier:` lines.; suppressed columns are absent; remaining identity-set columns present
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
@@ -175,7 +175,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts format::json`
 - **Then:** Valid JSON array `[{...},{...}]` with each object containing `name`, `is_active`, `subscription_type`, `rate_limit_tier`, `expires_at_ms`, `email`.; valid JSON array with correct structure and active status
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -185,7 +185,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts cols::-sub,-tier,-active format::json`
 - **Then:** Valid JSON array where each object still contains `subscription_type`, `rate_limit_tier`, `is_active` fields despite those columns being excluded from text output.; `cols::` exclusions do not strip JSON keys
 - **Exit:** 0
-- **Source:** [004_parameter_interactions.md — Interaction 3](../../../../docs/cli/004_parameter_interactions.md#interaction--3-formatjson-overrides-field-presence-params)
+- **Source:** [004_parameter_interactions.md — Interaction 3](../../../../docs/cli/004_parameter_interactions.md#interaction-2-formatjson-overrides-field-presence-params)
 
 ---
 
@@ -195,7 +195,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts`
 - **Then:** `(no accounts configured)` with exit 0. No error about missing directory.; absent store handled gracefully, same as empty store
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -205,7 +205,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts`
 - **Then:** Account blocks appear in alphabetical order: `alice@acme.com` block first, then `mike@acme.com`, then `zed@acme.com`.; accounts sorted alphabetically regardless of creation order
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -215,7 +215,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts`
 - **Then:** Stdout contains `\n\n` (blank-line separator between the two blocks).; blank-line separator present when multiple accounts with fields shown
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -225,7 +225,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts name::alice@home.com`
 - **Then:** Stdout contains `expired`; does NOT contain `in ` (which would indicate leaking the active account's valid expiry).; non-active account shows own stored expiry, never leaking active account's live state
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -235,7 +235,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts`
 - **Then:** Stdout contains `Sub:     N/A`.; missing field shows `N/A` not blank
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -245,7 +245,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts`
 - **Then:** Stdout contains `Tier:    N/A`.; missing field shows `N/A` not blank
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -255,7 +255,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts cols::+display_name`
 - **Then:** Stdout contains `Display: alice`.; display name rendered from saved snapshot via cols:: addition
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
@@ -265,7 +265,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts cols::+role,+billing,+model`
 - **Then:** Stdout contains `Role:    dev`, `Billing: stripe_subscription`, `Model:   sonnet`. `role` value comes from the top-level `"role"` field — not from `oauthAccount.organizationRole`.; all 3 metadata fields rendered via cols:: addition
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
@@ -275,7 +275,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts cols::+display_name,+role,+billing,+model`
 - **Then:** Stdout contains `Display: N/A`, `Role:    N/A`, `Billing: N/A`, `Model:   N/A`.; absent snapshots degrade gracefully
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts), [feature/037_accounts_usage_param_unification.md AC-14](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
@@ -285,7 +285,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts format::json`
 - **Then:** Valid JSON array where each object contains `display_name`, `role`, `billing`, `model` keys.; JSON shape includes all metadata regardless of snapshot presence
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -295,7 +295,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts`
 - **Then:** Stdout does NOT contain `Display:`, `Role:`, `Billing:`, `Model:` lines.; these columns are not in the default identity set — must be added via `cols::+display_name` etc.
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts), [feature/037_accounts_usage_param_unification.md AC-03](../../../../docs/feature/037_accounts_usage_param_unification.md)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts), [feature/037_accounts_usage_param_unification.md AC-03](../../../../docs/feature/037_accounts_usage_param_unification.md)
 
 ---
 
@@ -305,7 +305,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts`
 - **Then:** Stdout contains `Email:   work@acme.com`.; email address populated from saved snapshot (default-on)
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 
@@ -315,7 +315,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When:** `clp .accounts format::table`
 - **Then:** Stdout contains title `Accounts`, a blank line, then a header row with columns `Account`, `Sub`, `Tier`, `Expires`, `Email` (with an unlabelled flag column); `work@acme.com` row has `✓` in the flag column; `personal@home.com` row has a blank flag; both rows appear with aligned columns; field-presence params are irrelevant (table has fixed columns).
 - **Exit:** 0
-- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+- **Source:** [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command-3-accounts)
 
 ---
 

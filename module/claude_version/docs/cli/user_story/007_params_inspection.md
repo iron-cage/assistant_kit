@@ -22,7 +22,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.params`](../command/params.md#command--14-params) | Primary command for parameter discovery and inspection |
+| 1 | [`.params`](../command/params.md#command-14-params) | Primary command for parameter discovery and inspection |
 
 ### Referenced Formats
 

@@ -60,5 +60,5 @@ Field-presence parameters for `.credentials.status` (`account::`, `sub::`, `tier
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | Classify active OAuth token expiry state |
-| 2 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Show live credential metadata with field presence control |
+| 1 | [`.token.status`](../command/005_token.md#command-7-tokenstatus) | Classify active OAuth token expiry state |
+| 2 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Show live credential metadata with field presence control |

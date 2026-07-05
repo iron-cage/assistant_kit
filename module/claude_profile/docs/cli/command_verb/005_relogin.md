@@ -61,4 +61,4 @@ Forces browser re-authentication for an account whose OAuth refresh token has ex
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.relogin`](../command/001_account.md#command--12-accountrelogin) | Force browser re-authentication for named account |
+| 1 | [`.account.relogin`](../command/001_account.md#command-12-accountrelogin) | Force browser re-authentication for named account |

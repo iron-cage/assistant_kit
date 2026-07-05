@@ -49,8 +49,8 @@ effort::max      → always --effort max
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Effort level for touch/refresh subprocesses |
-| 2 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Effort level for post-switch idle activation subprocess |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Effort level for touch/refresh subprocesses |
+| 2 | [`.account.use`](../command/001_account.md#command-5-accountuse) | Effort level for post-switch idle activation subprocess |
 
 ### Referenced User Stories
 

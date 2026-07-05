@@ -1,6 +1,6 @@
 # Test: `interval::`
 
-Edge case coverage for the `interval::` parameter. See [param/readme.md](../../../../docs/cli/param/readme.md#parameter--9-interval) and [type/readme.md](../../../../docs/cli/type/readme.md) for specification.
+Edge case coverage for the `interval::` parameter. See [param/readme.md](../../../../docs/cli/param/08_interval.md) and [type/readme.md](../../../../docs/cli/type/readme.md) for specification.
 
 ### Scope
 
@@ -45,7 +45,7 @@ Edge case coverage for the `interval::` parameter. See [param/readme.md](../../.
 - **When:** `clv .version.guard interval::0`
 - **Then:** output contains "stable" (defaults to stable); process exits immediately.; one-shot behavior; immediate exit
 - **Exit:** 0
-- **Source:** [param/readme.md — interval:: default: 0](../../../../docs/cli/param/readme.md#parameter--9-interval)
+- **Source:** [param/readme.md — interval:: default: 0](../../../../docs/cli/param/08_interval.md)
 
 ---
 
@@ -55,7 +55,7 @@ Edge case coverage for the `interval::` parameter. See [param/readme.md](../../.
 - **When:** `clv .version.guard`
 - **Then:** output contains "stable" (defaults to stable); process exits immediately.; one-shot mode; same as explicit `interval::0`
 - **Exit:** 0
-- **Source:** [param/readme.md — interval:: default](../../../../docs/cli/param/readme.md#parameter--9-interval)
+- **Source:** [param/readme.md — interval:: default](../../../../docs/cli/param/08_interval.md)
 
 ---
 
@@ -65,7 +65,7 @@ Edge case coverage for the `interval::` parameter. See [param/readme.md](../../.
 - **When:** `clv .version.guard interval::`
 - **Then:** stderr: error about `interval::` requiring a value; exit code 1.; usage error
 - **Exit:** 1
-- **Source:** [param/readme.md — interval:: constraints](../../../../docs/cli/param/readme.md#parameter--9-interval)
+- **Source:** [param/readme.md — interval:: constraints](../../../../docs/cli/param/08_interval.md)
 
 ---
 
@@ -75,7 +75,7 @@ Edge case coverage for the `interval::` parameter. See [param/readme.md](../../.
 - **When:** `clv .version.guard interval::-1`
 - **Then:** stderr: error about invalid `interval::` value; exit code 1.; negative value rejected
 - **Exit:** 1
-- **Source:** [param/readme.md — interval:: type: u64](../../../../docs/cli/param/readme.md#parameter--9-interval)
+- **Source:** [param/readme.md — interval:: type: u64](../../../../docs/cli/param/08_interval.md)
 
 ---
 
@@ -85,7 +85,7 @@ Edge case coverage for the `interval::` parameter. See [param/readme.md](../../.
 - **When:** `clv .version.guard interval::abc`
 - **Then:** stderr: error about invalid `interval::` format; exit code 1.; string value rejected
 - **Exit:** 1
-- **Source:** [param/readme.md — interval:: type: u64](../../../../docs/cli/param/readme.md#parameter--9-interval)
+- **Source:** [param/readme.md — interval:: type: u64](../../../../docs/cli/param/08_interval.md)
 
 ---
 
@@ -95,7 +95,7 @@ Edge case coverage for the `interval::` parameter. See [param/readme.md](../../.
 - **When:** `timeout 3 clv .version.guard interval::5`
 - **Then:** Process produces at least one status line; continues running until killed by `timeout`.; Process stays alive; watch mode active
 - **Exit:** 0
-- **Source:** [param/readme.md — interval:: watch mode](../../../../docs/cli/param/readme.md#parameter--9-interval)
+- **Source:** [param/readme.md — interval:: watch mode](../../../../docs/cli/param/08_interval.md)
 
 ---
 
@@ -115,7 +115,7 @@ Edge case coverage for the `interval::` parameter. See [param/readme.md](../../.
 - **When:** `clv .version.install interval::5`
 - **Then:** stderr: error about unknown parameter `interval::`; exit code 1.; parameter rejected by non-guard command
 - **Exit:** 1
-- **Source:** [command/readme.md — .version.install parameters](../../../../docs/cli/command/readme.md#command--5-versioninstall)
+- **Source:** [command/readme.md — .version.install parameters](../../../../docs/cli/command/version.md#command-4-versioninstall)
 
 ---
 

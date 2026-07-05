@@ -124,7 +124,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 29 | `--output-file` | string | — | Any writable path | Write stdout to file in addition to printing (tee behavior) | 2 cmds |
 | 30 | `--expect` | string | — | `val1\|val2\|…` | Pipe-separated enum values; stdout must match one after trim+lowercase | 2 cmds |
 | 31 | `--expect-strategy` | enum | `fail` | `fail`/`retry`/`default:<V>` | Mismatch handling: exit 3, retry N times, or output fallback value | 2 cmds |
-| 33 | `--max-sessions` | u32 | 30 | 0 to 4294967295 | Max concurrent Claude Code sessions before blocking; 0 = unlimited | 2 cmds |
+| 33 | `--max-sessions` | u32 | 10 | 0 to 4294967295 | Max concurrent non-interactive Claude Code sessions before blocking; 0 = unlimited; interactive exempt | 2 cmds |
 | 34 | `--retry-on-transient` | u8 | auto | 0–255 | Transient class retry count (Tier 2) | 2 cmds |
 | 35 | `--transient-delay` | u32 | auto | 0 to 4294967295 | Transient class delay (Tier 2) | 2 cmds |
 | 36 | `--timeout` | u32 | `3600` (print) / `0` (interactive) | 0 to 4294967295 | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only; contrast with param 20) | 2 cmds |
@@ -163,7 +163,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 72 | `--journal` | enum | `full` | `full`/`meta`/`off` | Journal level for clr execution events: `full` captures stdout+stderr (≤1MB each), `meta` omits output, `off` disables | 3 cmds |
 | 73 | `--journal-dir` | path | `~/.clr/journal/` | Any writable path | Directory for journal JSONL files; overrides `CLR_JOURNAL_DIR` | 3 cmds |
 | 74 | `--quiet` | bool | false | present/absent | Suppress non-fatal runner diagnostics (retry/gate/warning messages) | 2 cmds |
-| 75 | `--no-compact-window` | bool | false | present/absent | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=200000` injection into subprocess environment | 4 cmds |
+| 75 | `--no-compact-window` | bool | false | present/absent | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection into subprocess environment | 4 cmds |
 | 76 | `--args-file` | [`FilePath`](../type/12_file_path.md) | — | Any readable file path | Load clr params from JSON config file; stdin JSON auto-detected when no TTY | 4 cmds |
 
 **Total:** 71 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–76 added)

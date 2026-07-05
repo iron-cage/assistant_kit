@@ -65,4 +65,4 @@ See [docs/cli/command_verb/011_unclaim.md](../../../../docs/cli/command_verb/011
 - **When:** `clp .accounts unclaim::1 name::alice@acme.com`
 - **Then:** Exit 1. Migration message: "REMOVED — use `owner::0 name::X`". No file written.
 - **Exit:** 1
-- **Source:** [011_unclaim.md — Migration](../../../../docs/cli/command_verb/011_unclaim.md#migration-feature-037--feature-064)
+- **Source:** [011_unclaim.md — Migration](../../../../docs/cli/command_verb/011_unclaim.md#migration-feature-037-feature-064)

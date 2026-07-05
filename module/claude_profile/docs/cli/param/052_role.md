@@ -34,7 +34,7 @@ clp .account.save host::workstation role::personal  -> host "workstation", role 
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.save`](../command/001_account.md#command--4-accountsave) | Write role metadata label to account profile |
+| 1 | [`.account.save`](../command/001_account.md#command-4-accountsave) | Write role metadata label to account profile |
 
 ### Referenced User Stories
 
