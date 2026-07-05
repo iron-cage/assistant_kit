@@ -16,17 +16,17 @@
 | `pattern/` | Reusable design patterns applied in the crate | [pattern/readme.md](pattern/readme.md) | 1 |
 | `pitfall/` | Confirmed design traps discovered through implementation | [pitfall/readme.md](pitfall/readme.md) | 2 |
 | `runtime_file/` | On-disk files created and managed by clv at known paths | [runtime_file/readme.md](runtime_file/readme.md) | 1 |
-| `tests/docs/algorithm/` | Per-algorithm test case specifications | [../../tests/docs/algorithm/readme.md](../tests/docs/algorithm/readme.md) | 2 |
-| `tests/docs/cli/command/` | Per-command test case specifications | [../../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 15 |
-| `tests/docs/cli/format/` | Per-format output rendering test specifications | [../../tests/docs/cli/format/readme.md](../tests/docs/cli/format/readme.md) | 2 |
-| `tests/docs/cli/param/` | Per-parameter edge case test specifications | [../../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 13 |
-| `tests/docs/cli/param_group/` | Per-group interaction test specifications | [../../tests/docs/cli/param_group/readme.md](../tests/docs/cli/param_group/readme.md) | 4 |
-| `tests/docs/cli/type/` | Per-type test case specifications | [../../tests/docs/cli/type/readme.md](../tests/docs/cli/type/readme.md) | 8 |
-| `tests/docs/cli/user_story/` | Per-user-story acceptance test specifications | [../../tests/docs/cli/user_story/readme.md](../tests/docs/cli/user_story/readme.md) | 7 |
-| `tests/docs/feature/` | Per-feature test case specifications | [../../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 8 |
-| `tests/docs/pattern/` | Per-pattern test case specifications | [../../tests/docs/pattern/readme.md](../tests/docs/pattern/readme.md) | 1 |
-| `tests/docs/pitfall/` | Per-pitfall regression test case specifications | [../../tests/docs/pitfall/readme.md](../tests/docs/pitfall/readme.md) | 2 |
-| `tests/docs/runtime_file/` | Per-runtime-file RF- test case specifications | [../../tests/docs/runtime_file/readme.md](../tests/docs/runtime_file/readme.md) | 1 |
+| `tests/docs/algorithm/` | Per-algorithm test case specifications | [../tests/docs/algorithm/readme.md](../tests/docs/algorithm/readme.md) | 2 |
+| `tests/docs/cli/command/` | Per-command test case specifications | [../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 15 |
+| `tests/docs/cli/format/` | Per-format output rendering test specifications | [../tests/docs/cli/format/readme.md](../tests/docs/cli/format/readme.md) | 2 |
+| `tests/docs/cli/param/` | Per-parameter edge case test specifications | [../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 13 |
+| `tests/docs/cli/param_group/` | Per-group interaction test specifications | [../tests/docs/cli/param_group/readme.md](../tests/docs/cli/param_group/readme.md) | 4 |
+| `tests/docs/cli/type/` | Per-type test case specifications | [../tests/docs/cli/type/readme.md](../tests/docs/cli/type/readme.md) | 8 |
+| `tests/docs/cli/user_story/` | Per-user-story acceptance test specifications | [../tests/docs/cli/user_story/readme.md](../tests/docs/cli/user_story/readme.md) | 7 |
+| `tests/docs/feature/` | Per-feature test case specifications | [../tests/docs/feature/readme.md](../tests/docs/feature/readme.md) | 8 |
+| `tests/docs/pattern/` | Per-pattern test case specifications | [../tests/docs/pattern/readme.md](../tests/docs/pattern/readme.md) | 1 |
+| `tests/docs/pitfall/` | Per-pitfall regression test case specifications | [../tests/docs/pitfall/readme.md](../tests/docs/pitfall/readme.md) | 2 |
+| `tests/docs/runtime_file/` | Per-runtime-file RF- test case specifications | [../tests/docs/runtime_file/readme.md](../tests/docs/runtime_file/readme.md) | 1 |
 
 ## Master Doc Instances Table
 

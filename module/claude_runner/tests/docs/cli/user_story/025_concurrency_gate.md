@@ -2,8 +2,6 @@
 
 Test case spec for [025_concurrency_gate.md](../../../../docs/cli/user_story/025_concurrency_gate.md).
 
-> **Implementation status:** US-5 and US-6 (⏳) are not yet implemented — see task 001.
-
 ## Test Case Index
 
 | ID | Test Name | AC | Status |
@@ -12,8 +10,8 @@ Test case spec for [025_concurrency_gate.md](../../../../docs/cli/user_story/025
 | US-2 | Env-var fallback: `CLR_MAX_SESSIONS=N` equivalent to `--max-sessions N` | AC-005 | ✅ |
 | US-3 | CLI wins: `--max-sessions M` beats `CLR_MAX_SESSIONS=N` | AC-005 | ✅ |
 | US-4 | Dry-run bypass: gate not triggered in `--dry-run` mode | AC-006 | ✅ |
-| US-5 | Interactive invocations bypass the gate entirely, regardless of active session count | AC-007 | ⏳ |
-| US-6 | Gate's active-session count excludes interactive sessions (counts only non-interactive processes) | AC-008 | ⏳ |
+| US-5 | Interactive invocations bypass the gate entirely, regardless of active session count | AC-007 | ✅ |
+| US-6 | Gate's active-session count excludes interactive sessions (counts only non-interactive processes) | AC-008 | ✅ |
 
 ---
 
@@ -59,18 +57,21 @@ Test case spec for [025_concurrency_gate.md](../../../../docs/cli/user_story/025
 
 ### US-5: Interactive invocations bypass the gate entirely
 
-- **Given:** Developer runs `clr` in `--interactive` mode; `--max-sessions 1` set; 20 fake non-interactive Claude processes active (via `$CLR_PROC_DIR` fixture)
+- **Given:** Developer runs `clr` in `--interactive` mode; `--max-sessions 1` set; 15 fake print-mode + 1 fake interactive Claude process active (via `$CLR_PROC_DIR` fixture)
 - **When:** `clr --interactive --max-sessions 1 "task"`
 - **Then:** Exit 0; command proceeds immediately; no "waiting" or gate messages on stderr, regardless of active session count
 - **Exit:** 0
 - **Verifies:** AC-007
+- **Test:** `t03_interactive_invocation_bypasses_gate_with_zero_wait` (`concurrency_gate_test.rs`) — proves zero wait via wall-clock elapsed time (AF1), not just message absence
 
 ---
 
 ### US-6: Gate count excludes interactive sessions
 
-- **Given:** `--max-sessions 2` set; 5 fake interactive Claude processes active and 1 fake non-interactive Claude process active (via `$CLR_PROC_DIR` fixture); non-interactive invocation issued
-- **When:** `clr --max-sessions 2 "task"` (5 interactive + 1 non-interactive active; non-interactive count = 1, below limit of 2)
-- **Then:** Exit 0; command proceeds immediately (1 < 2); interactive fake processes excluded from the count
+- **Given:** `--max-sessions 5` set; 10 fake interactive Claude processes active and 5 fake print-mode Claude processes active (via `$CLR_PROC_DIR` fixture); print-mode invocation issued
+- **When:** `clr -p --max-sessions 5 "task"` (10 interactive + 5 print-mode active; print-mode count = 5, at the limit)
+- **Then:** Exit 0; gate triggers at exactly `5/5` (not `15/5`); interactive fake processes excluded from the count; releases once a short-lived print-mode process self-expires
 - **Exit:** 0
 - **Verifies:** AC-008
+- **Test:** `t04_gate_counts_print_mode_only_excludes_interactive` (`concurrency_gate_test.rs`) — anchored `"Info: 5/5"` assertion prevents an unfiltered `15/5` count from false-passing (AF1)
+- **Note:** Boundary/regression coverage for the same print-mode-only counting behavior — gate triggers at exactly the limit and not below it — is additionally covered by `t01_gate_triggers_at_ten_print_mode_processes` and `t02_gate_does_not_trigger_below_ten_print_mode_processes`; `t06_max_sessions_zero_disables_gate_regardless_of_count` regression-guards US-1 against the print-mode-only counting change (all three in `concurrency_gate_test.rs`)
