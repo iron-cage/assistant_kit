@@ -176,7 +176,24 @@ fn matches_relevant( dir_name : &str, eb : &str, base_path : &std::path::Path ) 
 ///
 /// `segment` accumulates the current unresolved path component. At each step, option A
 /// commits `segment` as a directory and recurses with the next piece; option B appends
-/// `_` + piece to `segment` and recurses. `is_dir()` prunes option A early.
+/// `_` + piece to `segment` and recurses; option C handles an empty piece (a `--`
+/// boundary) by trying `.`/`_`/`-` as the next component's original first character.
+/// `is_dir()` prunes option A (and gates option C) early.
+///
+/// Fix(BUG-003)
+/// Root cause: `encode_path` emits a `--` marker whenever a path component's first
+/// character is normalized away (original `.`, `_`, or literal `-` all become the
+/// marker), so `split('-')` on the storage key produces an EMPTY piece at that
+/// boundary. Options A and B only know how to commit a whole prior segment as a
+/// directory or merge an underscore into the current one — neither ever re-derives
+/// which of `.`/`_`/`-` the marker stood for, so a dot-prefixed component (e.g. a
+/// `TempDir`'s `.tmpXXXXXX` root) can never resolve and the whole walk returns `None`.
+/// Fix: on an empty piece, commit the current segment (or use `base` directly if the
+/// segment is already empty) and try each candidate character as the FIRST character
+/// of a fresh segment for the next piece.
+/// Pitfall: option C must consume the empty piece AND the following piece together
+/// (recurse at `idx + 2`) — treating the empty piece alone as a component would try to
+/// join a bare candidate character with nothing.
 fn walk_fs(
   base    : &std::path::Path,
   pieces  : &[ &str ],
@@ -190,6 +207,32 @@ fn walk_fs(
     return if candidate.exists() { Some( candidate ) } else { None };
   }
   let piece = pieces[ idx ];
+  // Option C — empty piece (`--` boundary): try `.`, `_`, `-` as the original first
+  // character of the next piece's component, starting a fresh segment for it.
+  if piece.is_empty() && idx + 1 < pieces.len()
+  {
+    let commit_base = if segment.is_empty()
+    {
+      Some( base.to_path_buf() )
+    }
+    else
+    {
+      let candidate = base.join( segment );
+      if candidate.is_dir() { Some( candidate ) } else { None }
+    };
+    if let Some( next_base ) = commit_base
+    {
+      let next_piece = pieces[ idx + 1 ];
+      for prefix in [ '.', '_', '-' ]
+      {
+        let fresh_segment = format!( "{prefix}{next_piece}" );
+        if let Some( result ) = walk_fs( &next_base, pieces, idx + 2, &fresh_segment )
+        {
+          return Some( result );
+        }
+      }
+    }
+  }
   // Option A — path separator: commit current segment as a directory, recurse
   if !segment.is_empty()
   {

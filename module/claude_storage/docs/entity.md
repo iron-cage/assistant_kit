@@ -14,7 +14,7 @@
 | `operation/` | Index of operation doc instances covering upgrade and migration procedures | [operation/readme.md](operation/readme.md) | 1 |
 | `algorithm/` | Index of algorithm doc instances covering procedure design and correctness guarantees | [algorithm/readme.md](algorithm/readme.md) | 1 |
 | `invariant/` | System behavioral invariants | [invariant/readme.md](invariant/readme.md) | 3 |
-| `cli/pitfall/` | CLI implementation pitfall documentation | [cli/pitfall/readme.md](cli/pitfall/readme.md) | 3 |
+| `cli/pitfall/` | CLI implementation pitfall documentation | [cli/pitfall/readme.md](cli/pitfall/readme.md) | 4 |
 | `tests/docs/cli/command/` | Index of per-command integration test case files covering command-level behavior | [../../tests/docs/cli/command/readme.md](../tests/docs/cli/command/readme.md) | 12 |
 | `tests/docs/cli/param/` | Index of per-parameter edge case test files covering parameter-level behavior | [../../tests/docs/cli/param/readme.md](../tests/docs/cli/param/readme.md) | 25 |
 | `tests/docs/cli/param_group/` | Index of per-group interaction test files covering parameter group behavior | [../../tests/docs/cli/param_group/readme.md](../tests/docs/cli/param_group/readme.md) | 5 |
@@ -25,7 +25,7 @@
 | `tests/docs/operation/` | OP-prefixed test spec files mirroring each `docs/operation/` instance | [../../tests/docs/operation/readme.md](../tests/docs/operation/readme.md) | 1 |
 | `tests/docs/invariant/` | IN-prefixed contract test spec files mirroring each `docs/invariant/` instance | [../../tests/docs/invariant/readme.md](../tests/docs/invariant/readme.md) | 3 |
 | `tests/docs/algorithm/` | AL-prefixed contract test spec files mirroring each `docs/algorithm/` instance | [../../tests/docs/algorithm/readme.md](../tests/docs/algorithm/readme.md) | 1 |
-| `tests/docs/cli/pitfall/` | PF-prefixed contract test spec files mirroring each `docs/cli/pitfall/` instance | [../../tests/docs/cli/pitfall/readme.md](../tests/docs/cli/pitfall/readme.md) | 3 |
+| `tests/docs/cli/pitfall/` | PF-prefixed contract test spec files mirroring each `docs/cli/pitfall/` instance | [../../tests/docs/cli/pitfall/readme.md](../tests/docs/cli/pitfall/readme.md) | 4 |
 
 ## Master Doc Instances Table
 
@@ -104,3 +104,4 @@
 | cli/pitfall | 01 | Parameter Validation Not Implied By Default | [cli/pitfall/01_parameter_validation.md](cli/pitfall/01_parameter_validation.md) |
 | cli/pitfall | 02 | Cross-Command Bug Propagation | [cli/pitfall/02_cross_command_propagation.md](cli/pitfall/02_cross_command_propagation.md) |
 | cli/pitfall | 03 | Test Data Must Match Production Format | [cli/pitfall/03_test_data_format.md](cli/pitfall/03_test_data_format.md) |
+| cli/pitfall | 04 | Vacuous Assertions Mask Stub Implementations | [cli/pitfall/04_vacuous_assertions_mask_stubs.md](cli/pitfall/04_vacuous_assertions_mask_stubs.md) |
