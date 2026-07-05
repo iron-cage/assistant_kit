@@ -17,6 +17,12 @@
 //! T05 (`clr --help` shows `default: 10`) is covered by
 //! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_ten`.
 
+// BUG-387 task/bug/387_print_mode_concurrency_gate_toctou_race.md — every test above pre-seeds
+// a static synthetic /proc snapshot and invokes exactly one clr binary; none launch N concurrent
+// clr invocations racing each other against a shared, mutating occupier set, so none can exercise
+// the check-then-spawn TOCTOU race. Missing: a T07 launching N concurrent invocations and
+// asserting peak simultaneously-alive count never exceeds --max-sessions.
+
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::
 {
