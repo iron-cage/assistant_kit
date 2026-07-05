@@ -57,4 +57,4 @@ Removes an account profile from the credential store. Deletes `{name}.credential
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.delete`](../command/001_account.md#command--6-accountdelete) | Remove account profile from credential store |
+| 1 | [`.account.delete`](../command/001_account.md#command-6-accountdelete) | Remove account profile from credential store |

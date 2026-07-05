@@ -27,8 +27,8 @@ display_name::1   → Display: alice
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Display name line per stored account |
-| 2 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Display name line for live credentials |
+| 1 | [`.accounts`](../command/001_account.md#command-3-accounts) | Display name line per stored account |
+| 2 | [`.credentials.status`](../command/002_credentials.md#command-10-credentialsstatus) | Display name line for live credentials |
 
 ### Referenced User Stories
 

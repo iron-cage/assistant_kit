@@ -65,4 +65,4 @@ Selects the inactive saved account with the highest `expiresAt` timestamp and ac
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.rotate`](../command/001_account.md#command--13-accountrotate) | Auto-rotate to best inactive account by token expiry |
+| 1 | [`.account.rotate`](../command/001_account.md#command-13-accountrotate-deprecated-feature-038) | Auto-rotate to best inactive account by token expiry |

@@ -35,7 +35,7 @@ Layer 3 of the version lock pattern applies `chmod 555` to `~/.local/share/claud
 
 | File | Relationship |
 |------|-------------|
-| `../../src/commands/version.rs` | chmod 555/755 transitions in perform_install() |
+| `../../../claude_version_core/src/version.rs` | chmod 555/755 transitions: `unlock_versions_dir()` (pre-install 755) and `lock_version()` (post-install 555/755), both called by `perform_install()` |
 
 ### Tests
 

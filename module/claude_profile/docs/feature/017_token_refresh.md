@@ -120,7 +120,7 @@ Two other arg combinations are broken and must not be used:
 
 | File | Relationship |
 |------|--------------|
-| [command/006_usage.md](../cli/command/006_usage.md#command--9-usage) | `.usage` CLI command specification |
+| [command/006_usage.md](../cli/command/006_usage.md#command-9-usage) | `.usage` CLI command specification |
 
 ### Dependencies
 
@@ -151,7 +151,7 @@ Two other arg combinations are broken and must not be used:
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../cli/command/006_usage.md#command--9-usage) | CLI surface for this feature |
+| 1 | [`.usage`](../cli/command/006_usage.md#command-9-usage) | CLI surface for this feature |
 
 ### Sources
 

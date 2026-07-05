@@ -33,7 +33,7 @@ clp .account.renewal name::alice@acme.com from_now::+1d dry::1
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) | Set renewal timestamp as offset from current time |
+| 1 | [`.account.renewal`](../command/001_account.md#command-14-accountrenewal) | Set renewal timestamp as offset from current time |
 
 ### Referenced User Stories
 

@@ -29,7 +29,7 @@ interval::29    → exit 1: "interval must be >= 30" (only when live::1)
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Live mode refresh cycle duration |
+| 1 | [`.usage`](../command/006_usage.md#command-9-usage) | Live mode refresh cycle duration |
 
 ### Referenced User Stories
 
