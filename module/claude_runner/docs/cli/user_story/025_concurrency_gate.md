@@ -43,9 +43,6 @@
 4. `clr --max-sessions 5 --dry-run "task"` — bypass the gate in dry-run mode
 5. `clr --interactive "task"` (20 non-interactive sessions active, `--max-sessions 10`) — interactive invocations bypass the gate entirely and proceed immediately, regardless of active count
 
-> **Implementation status:** Not yet implemented — see task 001. Current shipped
-> behavior gates all Claude Code sessions regardless of mode.
-
 ### Related User Stories
 
 | # | User Story | Relationship |

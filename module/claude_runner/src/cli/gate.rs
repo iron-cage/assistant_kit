@@ -100,7 +100,11 @@ pub( super ) fn wait_for_session_slot(
   {
     for attempt in 1..=max_attempts
     {
-      let count = find_claude_processes().len();
+      // Print-mode only: interactive sessions never contend for a print-mode slot.
+      let count = find_claude_processes()
+        .iter()
+        .filter( | p | super::ps::classify_mode( &p.args ) == "print" )
+        .count();
       if u32::try_from( count ).unwrap_or( u32::MAX ) < max
       {
         // Emit GateWait event if we actually waited at least one poll cycle.

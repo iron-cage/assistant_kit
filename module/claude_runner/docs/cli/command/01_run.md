@@ -152,10 +152,6 @@ clr --dry-run "Run tests" --max-tokens 50000
 
 `--dry-run` takes precedence over execution regardless of other flags. If present, no subprocess is launched.
 
-> **Implementation status:** Step 2's non-interactive scoping and the lowered
-> `--max-sessions` default of 10 are not yet implemented — see task 001. Current shipped
-> behavior counts all `claude` processes regardless of mode, with a default of 30.
-
 ### Related Commands
 
 | # | Command | Relationship |

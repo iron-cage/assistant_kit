@@ -18,7 +18,8 @@
 //! | `run_dry` | `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `dry_run_test` |
 //! | `run_ask_dry` | `ask_command_test`, `user_story_creds_isolated_test` |
 //! | `spawn_fake_claude` (unix) | `ps_command_test`, `user_story_ps_test`, `kill_command_test`, `user_story_kill_test`, `ps_mode_test`, `ps_columns_test`, `ps_wide_test`, `ps_pid_test`, `ps_inspect_test`, `param_group_test`, `ps_flags_test` |
-//! | `spawn_print_claude` (unix) | `ps_command_test`, `user_story_ps_test`, `ps_mode_test`, `ps_columns_test`, `ps_inspect_test`, `param_group_test` |
+//! | `spawn_print_claude` (unix) | `ps_command_test`, `user_story_ps_test`, `ps_mode_test`, `ps_columns_test`, `ps_inspect_test`, `param_group_test`, `concurrency_gate_test` |
+//! | `spawn_print_claude_for` (unix) | `concurrency_gate_test` |
 //! | `run_clr_ps` (unix) | `ps_command_test`, `user_story_ps_test` |
 //! | `run_clr_kill` (unix) | `kill_command_test`, `user_story_kill_test` |
 //! | `run_isolated` | `isolated_test`, `isolated_plan034_test`, `isolated_plan035_test` |
@@ -296,22 +297,59 @@ pub fn spawn_fake_claude( path_val : &str ) -> std::process::Child
   }
 }
 
-/// Spawn a print-mode fake `claude` process (argv contains `--print`).
+/// Spawn a print-mode fake `claude` process that self-exits after `secs` seconds
+/// (argv contains `--print`).
 ///
 /// Uses `/bin/sh` with `arg0` set to `"claude"` and command string
-/// `"sleep 30; :"`.  The `; :` compound prevents the shell from exec-replacing
+/// `"sleep {secs}; :"`.  The `; :` compound prevents the shell from exec-replacing
 /// itself with `sleep` (POSIX shells only exec the last *simple* command, not a
 /// compound list).  The resulting `/proc/{pid}/cmdline` is:
 ///
 /// ```text
-/// ["claude", "-c", "sleep 30; :", "--print"]
+/// ["claude", "-c", "sleep {secs}; :", "--print"]
 /// ```
 ///
 /// `classify_mode()` finds `"--print"` at `args[3]` and returns `"print"`.
 /// The `"--print"` token is the script's `$0` (command name for error messages
 /// in POSIX `-c` semantics) — it is NOT forwarded to `sleep` as an argument.
 ///
-/// The caller must `kill()` + `wait()` the returned child to avoid leaks.
+/// A short `secs` value (e.g. 3-5) lets a gate test observe natural release —
+/// the process count drops once the kernel removes `/proc/{pid}` on exit, without
+/// the caller needing to manually kill it mid-poll.
+///
+/// The caller must `kill()` + `wait()` the returned child to avoid leaks (safe to
+/// call even after natural self-exit — `wait()` still reaps the zombie).
+///
+/// # Panics
+///
+/// Panics if the subprocess cannot be spawned.
+#[ cfg( unix ) ]
+#[ inline ]
+#[ must_use ]
+#[ allow( dead_code ) ]
+pub fn spawn_print_claude_for( path_val : &str, secs : u64 ) -> std::process::Child
+{
+  assert_container();
+  use std::os::unix::process::CommandExt as _;
+  let child = std::process::Command::new( "/bin/sh" )
+    .arg0( "claude" )
+    .arg( "-c" )
+    .arg( format!( "sleep {secs}; :" ) )   // "; :" prevents exec-into-sleep (compound list, not simple command)
+    .arg( "--print" )       // argv[3] = $0 (script name); classify_mode() finds "--print" here
+    .env( "PATH", path_val )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn print-mode fake claude" );
+  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+  child
+}
+
+/// Spawn a print-mode fake `claude` process that sleeps 30 seconds.
+///
+/// Thin wrapper over [`spawn_print_claude_for`] for callers that only need a
+/// long-lived print-mode process (no natural self-expiry within the test).
+/// See [`spawn_print_claude_for`] for the full cmdline/classification contract.
 ///
 /// # Panics
 ///
@@ -322,20 +360,7 @@ pub fn spawn_fake_claude( path_val : &str ) -> std::process::Child
 #[ allow( dead_code ) ]
 pub fn spawn_print_claude( path_val : &str ) -> std::process::Child
 {
-  assert_container();
-  use std::os::unix::process::CommandExt as _;
-  let child = std::process::Command::new( "/bin/sh" )
-    .arg0( "claude" )
-    .arg( "-c" )
-    .arg( "sleep 30; :" )   // "; :" prevents exec-into-sleep (compound list, not simple command)
-    .arg( "--print" )       // argv[3] = $0 (script name); classify_mode() finds "--print" here
-    .env( "PATH", path_val )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::null() )
-    .spawn()
-    .expect( "spawn print-mode fake claude" );
-  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
-  child
+  spawn_print_claude_for( path_val, 30 )
 }
 
 /// Build a proc isolation dir for `CLR_PROC_DIR`: one `/proc/{pid}` symlink per PID.

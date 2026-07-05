@@ -187,10 +187,19 @@ pub( super ) fn run_built_command(
   expected_session_id : Option< &SessionId >,
 )
 {
-  // Concurrency gate: block before subprocess launch when max active claude sessions is reached.
-  // Default limit is 30; 0 = unlimited.  dry-run is bypassed by caller (never reaches here).
-  let max_sessions = cli.max_sessions.unwrap_or( 30 );
-  wait_for_session_slot( max_sessions, cli.quiet, cli, journal );
+  // Print/interactive dispatch decision, computed once and reused for both the
+  // concurrency gate (print-mode only — interactive sessions never contend for
+  // a slot) and the dispatch branch below, so the two can never disagree.
+  let is_print_invocation = cli.print_mode || ( cli.message.is_some() && !cli.interactive );
+
+  // Concurrency gate: block before subprocess launch when max active print-mode
+  // sessions is reached. Default limit is 10; 0 = unlimited.  dry-run is bypassed
+  // by caller (never reaches here).
+  if is_print_invocation
+  {
+    let max_sessions = cli.max_sessions.unwrap_or( 10 );
+    wait_for_session_slot( max_sessions, cli.quiet, cli, journal );
+  }
 
   if cli.trace
   {
@@ -202,7 +211,7 @@ pub( super ) fn run_built_command(
     eprintln!( "{preview}" );
   }
 
-  if cli.print_mode || ( cli.message.is_some() && !cli.interactive )
+  if is_print_invocation
   {
     execution::run_print_mode( builder, cli, journal, expected_session_id );
   }

@@ -42,10 +42,6 @@ without scanning for active sessions.
 dispatch) skip this gate entirely — they proceed immediately without a process scan,
 regardless of `--max-sessions` or the number of active sessions.
 
-> **Implementation status:** Non-interactive scoping and the lowered default of 10 are
-> not yet implemented — see task 001. Current shipped behavior counts all Claude Code
-> processes regardless of mode, with a default of 30.
-
 ### Referenced Parameter Groups
 
 | # | Group | Membership | Co-members |

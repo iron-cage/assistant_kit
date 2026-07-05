@@ -35,7 +35,9 @@ struct PsConfig
 //
 // Must use `args` (NUL-split) — NOT `cmdline` (space-joined) — because a path
 // component could contain the substring "--print" producing a false positive.
-fn classify_mode( args : &[ String ] ) -> &str
+//
+// `pub(super)`: also called from `gate.rs` to count print-mode sessions only.
+pub( super ) fn classify_mode( args : &[ String ] ) -> &str
 {
   if args.iter().any( | a | a == "--print" || a == "-p" )
   {
@@ -658,8 +660,20 @@ fn build_active_table(
     builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
   }
 
+  // Interactive/print breakdown only when unfiltered (AC per task 367) — a mode-filtered
+  // view already restricts rows to one mode, so the breakdown would be redundant.
+  let running_field = if mode == "all"
+  {
+    let interactive = sorted.iter().filter( | p | classify_mode( &p.args ) == "interactive" ).count();
+    let print       = sorted.len() - interactive;
+    format!( "{} running ({interactive} interactive, {print} print)", sorted.len() )
+  }
+  else
+  {
+    format!( "{} running", sorted.len() )
+  };
   let heading = Heading::new( "Active Sessions" )
-    .with_field( format!( "{} running", sorted.len() ) );
+    .with_field( running_field );
   let table_str = render_plain_table( builder, heading );
 
   // Build legend from flags present across all rows (Linux only).

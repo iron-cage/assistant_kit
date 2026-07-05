@@ -51,4 +51,4 @@ pre-v1.0 (unverified)
 | filesystem | [`../filesystem/002_local_install.md`](../filesystem/002_local_install.md) | `~/.local/share/claude/versions/` path and chmod operations |
 | doc | `../../../../module/claude_version/docs/pattern/001_version_lock.md` | Version lock pattern feature doc |
 | doc | [../pattern/001_version_pinning.md](../pattern/001_version_pinning.md) | Full official version-pinning landscape (channels, floors/ceilings, install methods) |
-| source | `../../../../module/claude_version/src/commands.rs` | Version lock implementation |
+| source | `../../../../module/claude_version_core/src/version.rs` | Version lock implementation: `lock_version()`, `unlock_versions_dir()`, called by `perform_install()` |
