@@ -104,6 +104,71 @@ fn t07_gate_state_file_valid_json_for_quoted_cwd()
   );
 }
 
+// ── T13: gate state file stays valid JSON when cwd contains control chars (BUG-384) ──
+
+/// T13 (BUG-384 residual): the gate-state file's `cwd` field must be JSON-escaped for
+/// raw control characters, not just `"` and `\`. Forces the gate to actually block
+/// (`--max-sessions 1` against a single active print-mode occupier) from a
+/// `current_dir` containing a literal BEL (`\u{07}`, no named JSON escape — must fall
+/// back to `\u00XX`) and a literal tab (`\t`, a named JSON escape), then reads the
+/// resulting `$CLR_GATE_DIR/{pid}.json` file directly and asserts it parses as valid
+/// JSON. Prior to this fix, the gate only escaped `"` and `\` via chained `.replace()`
+/// calls, so an embedded raw control byte (legal in a Unix path) produced invalid JSON
+/// (RFC 8259 §7 forbids literal control bytes in a JSON string).
+#[ test ]
+fn t13_gate_state_file_valid_json_for_control_char_cwd()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+
+  let mut occupier = spawn_print_claude( &occupier_path );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+
+  let control_cwd_parent = tempfile::TempDir::new().expect( "control-char cwd parent" );
+  let control_cwd = control_cwd_parent.path().join( "needs\u{07}control\tchar" );
+  std::fs::create_dir_all( &control_cwd ).expect( "create control-char cwd" );
+
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--journal", "off", "x" ] )
+    .current_dir( &control_cwd )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  std::thread::sleep( core::time::Duration::from_millis( 500 ) );
+
+  let entries : Vec< _ > = std::fs::read_dir( gate_dir.path() )
+    .expect( "read gate dir" )
+    .filter_map( Result::ok )
+    .collect();
+
+  let content = entries.first().map( |e| std::fs::read_to_string( e.path() ).unwrap_or_default() );
+
+  let _ = child.kill();
+  let _ = child.wait();
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  assert_eq!( entries.len(), 1, "T13: expected exactly one gate state file to be written" );
+  let content = content.expect( "T13: gate state file content" );
+  assert!(
+    serde_json::from_str::< serde_json::Value >( &content ).is_ok(),
+    "T13 (BUG-384): gate state file must be valid JSON when cwd contains raw control characters. Got:\n{content}"
+  );
+  assert!(
+    content.contains( "needs\\u0007control\\tchar" ),
+    "T13 (BUG-384): escaped BEL (\\u0007) and tab (\\t) must appear in the JSON cwd field. Got:\n{content}"
+  );
+}
+
 // ── T01: gate triggers at exactly 10 print-mode processes (default limit) ──────
 
 /// T01: 10 print-mode processes active (9 long-lived + 1 short-lived), new print-mode
