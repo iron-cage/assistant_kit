@@ -197,14 +197,15 @@ FROM $BASE_IMAGE AS test
 
 ARG WORKSPACE_DIR=/workspace
 ARG RUSTUP_COMPONENTS=clippy
-ARG SYSTEM_PACKAGES=curl procps
+ARG SYSTEM_PACKAGES=curl procps jq
 ARG CARGO_FEATURES=--all-features
 ENV CARGO_FEATURES=$CARGO_FEATURES
 
 # System utilities required by tests (must precede nextest download — curl is used below):
 #   curl   — used by the nextest download step and by claude_version history commands
 #   procps — provides /bin/kill used by send_sigterm / send_sigkill in claude_core::process
-# rust:slim is intentionally minimal and omits both; tests fail with ENOENT without them.
+#   jq     — used by the nextest download step to parse the GitHub releases API response
+# rust:slim is intentionally minimal and omits all three; tests fail with ENOENT without them.
 RUN [ -z "$SYSTEM_PACKAGES" ] || ( \
       apt-get update \
       && apt-get install -y --no-install-recommends $SYSTEM_PACKAGES \
@@ -212,16 +213,21 @@ RUN [ -z "$SYSTEM_PACKAGES" ] || ( \
 
 # nextest: pre-built binary — avoids compiling ~200 crates (saves memory and time).
 # Architecture-aware: CDN (get.nexte.st) serves x86_64 only; aarch64 downloads from GitHub.
-# Version is discovered via a HEAD request to releases/latest (Location header) so both
-# paths always install the same version.
-# Requires curl; SYSTEM_PACKAGES (above) must include it.
+# Version is discovered via the GitHub releases API, filtered (via jq) to the release with
+# the newest created_at among tags matching `cargo-nextest-X.Y.Z` with prerelease=false.
+# This repo interleaves independent release trains for cargo-nextest/nextest-runner/
+# nextest-filtering/nextest-metadata with non-monotonic list ordering across those trains,
+# so releases/latest and naive list-position (e.g. "first tag matching a name pattern")
+# are NOT reliable for finding the latest stable cargo-nextest release.
+# Requires curl, jq; SYSTEM_PACKAGES (above) must include them.
 RUN set -e && \
     ARCH=$(uname -m) && \
     case "$ARCH" in \
       x86_64)  curl -LsSf "https://get.nexte.st/latest/linux" \
                | tar zxf - -C /usr/local/cargo/bin ;; \
-      aarch64) VER=$(curl -sSI "https://github.com/nextest-rs/nextest/releases/latest" \
-                    | grep -i '^location:' | tr -d '\r' | sed 's|.*/cargo-nextest-||') && \
+      aarch64) VER=$(curl -sSf "https://api.github.com/repos/nextest-rs/nextest/releases?per_page=30" \
+                    | jq -r '[.[] | select(.tag_name | startswith("cargo-nextest-")) | select(.prerelease == false)] \
+                             | max_by(.created_at) | .tag_name | ltrimstr("cargo-nextest-")') && \
                curl -LsSf "https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-${VER}/cargo-nextest-${VER}-${ARCH}-unknown-linux-musl.tar.gz" \
                | tar zxf - -C /usr/local/cargo/bin ;; \
       *)       CARGO_BUILD_JOBS=1 cargo install cargo-nextest --locked ;; \
