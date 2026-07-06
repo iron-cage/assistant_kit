@@ -533,7 +533,7 @@ fn us25_5_interactive_bypasses_gate_regardless_of_count()
     .env( "HOME", "/tmp/clr-isolated-home" )
     .env( "PATH", &clr_path )
     .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "_CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_POLL_SECS", "1" )
     .output()
     .expect( "run clr --interactive" );
 
@@ -584,7 +584,7 @@ fn us25_6_gate_count_excludes_interactive_sessions()
     .env( "HOME", "/tmp/clr-isolated-home" )
     .env( "PATH", &clr_path )
     .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "_CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_POLL_SECS", "1" )
     .output()
     .expect( "run clr (print mode, max-sessions 2)" );
 

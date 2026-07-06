@@ -169,7 +169,7 @@ FT-8 requires a fake `claude` subprocess that emits >1 MB of repeated output on 
 ### FT-10: Gate wait event emitted when `wait_for_session_slot()` blocks
 
 - **Given:** ELF fake `claude` binary holding 1 gate slot for ~3 s; separate script fake for the actual subprocess; temporary journal dir
-- **When:** `clr -p --max-sessions 1 --journal full --journal-dir <tmpdir> "x"` with `_CLR_GATE_POLL_SECS=1`
+- **When:** `clr -p --max-sessions 1 --journal full --journal-dir <tmpdir> "x"` with `CLR_GATE_POLL_SECS=1`
 - **Then:** JSONL contains a line with `"type":"gate_wait"` and `"gate_outcome":"acquired"`; `clr` exits 0 once gate releases
 - **Exit:** 0
 - **Source:** [feature/002_journaling_integration.md](../../../docs/feature/002_journaling_integration.md) AC-009

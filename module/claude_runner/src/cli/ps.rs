@@ -537,11 +537,19 @@ fn compute_flags(
   }
 
   // 🐳 Container: working directory is outside $HOME.
-  // BUG-383: raw starts_with has no path-separator boundary test — a cwd that merely
-  // shares home's string prefix (e.g. home=/home/alice, cwd=/home/alice2/x) is wrongly
-  // treated as "inside home", suppressing the flag. Fix not yet applied; see bug file.
+  // Fix(BUG-383): path-component-aware check — cwd is "inside home" only if it
+  // equals home exactly, or the byte immediately after the shared prefix is a
+  // path separator. A plain `starts_with` wrongly matched a sibling directory
+  // like /home/alice2 against home=/home/alice.
+  // Root cause: `starts_with` is a byte-sequence test, not a path-component test.
+  // Pitfall: never use raw `str::starts_with` to test path descendance — always
+  // verify a `/` boundary (or exact equality) after the shared prefix.
   let cwd_str = proc.cwd.to_str().unwrap_or( "" );
-  if !home.is_empty() && !cwd_str.starts_with( home )
+  let is_inside_home = !home.is_empty() && (
+    cwd_str == home
+    || cwd_str.strip_prefix( home ).is_some_and( | rest | rest.starts_with( '/' ) )
+  );
+  if !home.is_empty() && !is_inside_home
   {
     push_flag( &mut flags, '🐳' );
   }
@@ -857,7 +865,10 @@ fn parse_json_str( content : &str, key : &str ) -> Option< String >
 }
 
 // Extract a u64 value for `key` from a compact JSON object in `content`.
-fn parse_json_u64( content : &str, key : &str ) -> Option< u64 >
+//
+// `pub(super)`: also called from `gate.rs` to read a slot reservation file's
+// `pid` field for staleness checks (Fix(BUG-387)).
+pub( super ) fn parse_json_u64( content : &str, key : &str ) -> Option< u64 >
 {
   let marker = format!( r#""{key}":"# );
   let start  = content.find( marker.as_str() )? + marker.len();
@@ -871,9 +882,9 @@ fn parse_json_u64( content : &str, key : &str ) -> Option< u64 >
 // Returns None when the gate dir is absent or contains no .json files.
 //
 // JSON parsing is manual (no serde) to keep dependencies minimal.  Gate files
-// are written by gate.rs using format!(), so the only structural constraint is
-// that `cwd` must not contain a literal `"` character — Unix paths never do,
-// so substring extraction in parse_json_str is safe in practice.
+// are written by gate.rs using format!(), and the writer JSON-escapes `cwd`
+// (Fix(BUG-384)), so substring extraction in parse_json_str is safe even when
+// `cwd` contains a literal `"` character.
 fn build_queued_table() -> Option< String >
 {
   let dir = super::gate::gate_dir();
@@ -883,6 +894,19 @@ fn build_queued_table() -> Option< String >
     .filter( |e|
     {
       if e.path().extension().and_then( |x| x.to_str() ) != Some( "json" )
+      {
+        return false;
+      }
+      // Fix(BUG-387-followup): slot_*.json reservation files are a distinct
+      // Domain Type from the {pid}.json queued-waiter telemetry this table
+      // displays — they record an already-ADMITTED session, not one still
+      // queued. gate.rs::acquire_slot() already owns their entire lifecycle
+      // (claim, liveness check, reclaim) independently. Skip them here
+      // untouched: the liveness filter below parses the *filename* as a PID,
+      // which always fails for "slot_N", so treating them as unparseable
+      // dead gate files would self-heal-delete a live holder's reservation,
+      // reopening the exact check-then-reserve race BUG-387 closed.
+      if e.path().file_stem().and_then( |s| s.to_str() ).is_some_and( |s| s.starts_with( "slot_" ) )
       {
         return false;
       }

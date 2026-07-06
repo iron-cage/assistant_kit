@@ -1,5 +1,6 @@
 use claude_core::process::find_claude_processes;
-use std::path::PathBuf;
+use std::io::Write as _;
+use std::path::{ Path, PathBuf };
 use claude_journal::{ EventRecord, EventType, JournalWriter };
 
 // Return the gate state directory — $CLR_GATE_DIR or <sys-temp>/clr-gate.
@@ -40,15 +41,143 @@ impl Drop for GateFile
 
 /// Return the gate poll interval in seconds.
 ///
-/// In production: always 30 seconds.
-/// In tests: `_CLR_GATE_POLL_SECS` env var overrides so tests don't wait 30s per attempt.
-/// The `_` prefix signals internal/test-only use — not exposed in `--help`.
+/// Default: 30 seconds. `CLR_GATE_POLL_SECS` env var overrides — public,
+/// documented override, no CLI flag, no `--args-file` key. Invalid values fall
+/// back to 30 silently.
 fn gate_poll_secs() -> u64
 {
-  std::env::var( "_CLR_GATE_POLL_SECS" )
+  std::env::var( "CLR_GATE_POLL_SECS" )
     .ok()
     .and_then( | s | s.parse().ok() )
     .unwrap_or( 30 )
+}
+
+/// Attempt limit override for the concurrency gate. Public, documented
+/// override — no CLI flag, no `--args-file` key. Invalid values fall
+/// back to 100 silently.
+fn gate_max_attempts() -> u32
+{
+  std::env::var( "CLR_GATE_MAX_ATTEMPTS" )
+    .ok()
+    .and_then( | s | s.parse().ok() )
+    .unwrap_or( 100 )
+}
+
+// Fix(BUG-387): fixed-index reservation slot backing the concurrency gate.
+//
+// Root cause: the prior admission check (`find_claude_processes().count() < max`)
+// was a pure check-then-act read with no write-side reservation — concurrent
+// `clr` invocations could each observe the same stale sub-limit count before any
+// of their spawned children became /proc-visible, jointly exceeding `max`.
+//
+// Fix: the slot index passed to this function is the SAME count just read by
+// the caller, so concurrent invocations racing on the same stale count all
+// target the identical path — `create_new`'s atomicity then genuinely
+// arbitrates between them (exactly one wins, for any number of racers),
+// rather than being applied to a per-caller-unique path (e.g. PID-keyed)
+// where it would arbitrate nothing. A PID-keyed variant, gated by a preceding
+// non-atomic count check, was independently confirmed still racy for exactly
+// that reason before this index-derived design was adopted.
+//
+// Deriving the index from `find_claude_processes()`'s count — rather than a
+// private `clr`-only counter — is what preserves system-wide accounting:
+// `--max-sessions` counts every `claude` print-mode process on the host,
+// launched via `clr` or not (`docs/cli/param/033_max_sessions.md`), so the
+// gate must keep reading that shared signal rather than substitute a
+// `clr`-only view that would go blind to non-`clr`-launched sessions.
+//
+// Pitfall: the slot file's lifetime must span this process's ENTIRE session,
+// not just the wait — releasing it as soon as `wait_for_session_slot()`
+// returns (e.g. via a Drop guard, mirroring `GateFile`) would free the slot
+// before the child even spawns, reopening the exact race this closes. There
+// is deliberately no Drop guard for it; the file is reclaimed only when a
+// future contender for that same index finds the owning PID no longer alive
+// (mirroring the liveness self-heal `build_queued_table()` already applies
+// to `GateFile` orphans in ps.rs).
+fn slot_path( dir : &Path, index : u32 ) -> PathBuf
+{
+  dir.join( format!( "slot_{index}.json" ) )
+}
+
+// Attempt to atomically create the slot file at `path`, recording the owning
+// PID and timestamp. Returns `true` on success; `false` if the slot is
+// already held (`AlreadyExists`) or any other I/O failure occurs.
+fn claim_slot_file( path : &Path, pid : u32, since : u64 ) -> bool
+{
+  let Ok( mut f ) = std::fs::OpenOptions::new().write( true ).create_new( true ).open( path )
+  else
+  {
+    return false;
+  };
+  let _ = write!( f, r#"{{"pid":{pid},"since":{since}}}"# );
+  true
+}
+
+// Return the PID recorded in a slot file, if the file is readable and well-formed.
+fn read_slot_owner( path : &Path ) -> Option< u32 >
+{
+  let content = std::fs::read_to_string( path ).ok()?;
+  u32::try_from( super::ps::parse_json_u64( &content, "pid" )? ).ok()
+}
+
+// Return whether `pid` is currently alive via `/proc/{pid}` existence —
+// matches the identical liveness convention `build_queued_table()` already
+// uses in `ps.rs` (this module targets Linux hosts only).
+fn pid_alive( pid : u32 ) -> bool
+{
+  Path::new( &format!( "/proc/{pid}" ) ).exists()
+}
+
+// Attempt to claim the reservation slot at `index`, reclaiming it first if
+// its owning PID is no longer alive. Returns `true` if this call now holds
+// the slot — the sole admission decision the caller acts on.
+fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> bool
+{
+  let path = slot_path( dir, index );
+  if claim_slot_file( &path, pid, since )
+  {
+    return true;
+  }
+  if read_slot_owner( &path ).is_some_and( |owner| !pid_alive( owner ) )
+  {
+    let _ = std::fs::remove_file( &path );
+    return claim_slot_file( &path, pid, since );
+  }
+  false
+}
+
+// Fix(BUG-384): escape a string for embedding as a JSON string value, per RFC 8259 §7.
+//
+// Root cause: the gate-state writer originally spliced `cwd` (an OS-controlled string)
+// into a hand-rolled JSON literal with zero escaping. A first fix pass added
+// `.replace('\\', ..).replace('"', ..)`, which closed the two most common cases but left
+// raw control characters (bytes < 0x20 — Unix paths may legally contain a literal
+// newline, tab, or other control byte) completely unescaped, still producing invalid
+// JSON for such a `cwd`. This single-pass escaper closes that gap by handling every
+// JSON-reserved character in one place instead of chaining ad hoc `.replace()` calls.
+//
+// Pitfall: never hand-roll JSON escaping via a growing chain of `.replace()` calls for
+// individual characters — it's easy to cover the common cases (`"`, `\`) and forget the
+// full control-character class the JSON grammar also requires escaping.
+fn json_escape_str( s : &str ) -> String
+{
+  let mut out = String::with_capacity( s.len() );
+  for c in s.chars()
+  {
+    match c
+    {
+      '"' => out.push_str( "\\\"" ),
+      '\\' => out.push_str( "\\\\" ),
+      '\u{08}' => out.push_str( "\\b" ),
+      '\u{0C}' => out.push_str( "\\f" ),
+      '\n' => out.push_str( "\\n" ),
+      '\r' => out.push_str( "\\r" ),
+      '\t' => out.push_str( "\\t" ),
+      c if ( c as u32 ) < 0x20 => out.push_str( &format!( "\\u{:04x}", c as u32 ) ),
+      c => out.push( c ),
+    }
+  }
+  out
 }
 
 /// Block until fewer than `max` `claude` sessions are running, or until the 100-attempt
@@ -72,7 +201,7 @@ pub( super ) fn wait_for_session_slot(
   if max == 0 { return; }
   let poll_secs    = gate_poll_secs();
   let poll         = core::time::Duration::from_secs( poll_secs );
-  let max_attempts = 100_u32;
+  let max_attempts = gate_max_attempts();
 
   // Gate state file — best-effort; I/O failures must not abort the caller.
   let pid        = std::process::id();
@@ -82,10 +211,18 @@ pub( super ) fn wait_for_session_slot(
   let cwd        = std::env::current_dir()
     .map( |p| p.display().to_string() )
     .unwrap_or_default();
+  // Fix(BUG-384): escape reserved JSON characters before interpolating cwd into the
+  // hand-rolled JSON literal below — Unix paths may contain `"`, `\`, or raw control
+  // characters, any of which would otherwise corrupt the gate-state file's JSON.
+  // Root cause: format!() performs no JSON escaping; cwd was spliced in raw.
+  // Pitfall: never hand-roll JSON from an OS-controlled string without escaping —
+  // Unix paths permit any byte except `/` and NUL. See json_escape_str() above for
+  // why a single-pass escaper replaced this fix's first, incomplete `.replace()` chain.
+  let cwd_escaped = json_escape_str( &cwd );
   let since = unix_now();
   let _     = std::fs::write(
     &state_path,
-    format!( r#"{{"cwd":"{cwd}","since":{since},"attempt":0,"message":"waiting for session slot"}}"# ),
+    format!( r#"{{"cwd":"{cwd_escaped}","since":{since},"attempt":0,"message":"waiting for session slot"}}"# ),
   );
 
   // Drop guard ensures the gate file is removed on return, panic, or exit(1).
@@ -105,7 +242,13 @@ pub( super ) fn wait_for_session_slot(
         .iter()
         .filter( | p | super::ps::classify_mode( &p.args ) == "print" )
         .count();
-      if u32::try_from( count ).unwrap_or( u32::MAX ) < max
+      let count_u32 = u32::try_from( count ).unwrap_or( u32::MAX );
+      // Fix(BUG-387): admission now additionally requires winning the atomic
+      // reservation at index `count_u32` — see slot_path() for why the index
+      // is derived from this same count read instead of a separate counter.
+      // A losing race falls through to the existing wait-and-retry tail below,
+      // exactly as the old `count >= max` case already did.
+      if count_u32 < max && acquire_slot( &dir, count_u32, pid, since )
       {
         // Emit GateWait event if we actually waited at least one poll cycle.
         if gate_emitted
@@ -121,7 +264,9 @@ pub( super ) fn wait_for_session_slot(
             let _ = w.append( &ev );
           }
         }
-        return; // _guard.drop() removes the file
+        return; // _guard.drop() removes only the {pid}.json telemetry file —
+                // the slot reservation from acquire_slot() is deliberately
+                // left in place for the rest of this session; see slot_path().
       }
       if attempt == max_attempts
       {
@@ -146,7 +291,7 @@ pub( super ) fn wait_for_session_slot(
       gate_emitted = true;
       let _ = std::fs::write(
         &state_path,
-        format!( r#"{{"cwd":"{cwd}","since":{since},"attempt":{attempt},"message":"waiting for session slot"}}"# ),
+        format!( r#"{{"cwd":"{cwd_escaped}","since":{since},"attempt":{attempt},"message":"waiting for session slot"}}"# ),
       );
       std::thread::sleep( poll );
     }

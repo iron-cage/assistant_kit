@@ -40,6 +40,7 @@
 //! | IT-32 | `--mode all`, 3 print → breakdown "0 interactive, 3 print"                | Caption breakdown |
 //! | IT-33 | `--mode interactive`, mixed set → plain caption, no breakdown             | Caption plain     |
 //! | IT-34 | `--mode print`, mixed set → plain caption, no breakdown                   | Caption plain     |
+//! | IT-35 | Live `slot_{n}.json` reservation file survives a `clr ps` scan             | BUG-387 follow-up |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
@@ -657,24 +658,32 @@ fn it_18_ps_help_positional()
 /// IT-19: `clr ps` Task column works for a session whose CWD contains no
 /// underscores — regression guard for the BUG-295 fix.
 ///
-/// ## Root Cause
-/// The BUG-295 fix adds `replace('_', "-")`. This test verifies the fix does not
-/// break paths that encoded correctly with slash-only replacement.
+/// ## Root Cause (BUG-385, fixture-only — superseded the BUG-295 note below)
+/// This test's own fixture line hand-rolled `cwd_str.replace('/', "-")` instead of
+/// calling `claude_storage_core::encode_path()`. That diverged from production once
+/// `encode_path()` was generalized (BUG-366) to map every non-alphanumeric character,
+/// not just `_`, to `-` — `tempfile::TempDir`'s dot-prefixed names exposed the gap.
 ///
 /// ## Why Not Caught
-/// IT-16 only covered underscore-containing paths; the no-underscore path was
-/// never exercised end-to-end after BUG-295 fix.
+/// IT-16 (line 526) was already updated to call `encode_path()` directly when `ps.rs`
+/// switched to it; this test's separate, duplicate encoding line never was, and no
+/// check enforces that fixture-encoding logic stays in sync with the shared function.
 ///
 /// ## Fix Applied
-/// No fix needed — regression test only. Verifies the two-step replacement chain
-/// is idempotent for paths without underscores.
+/// Replaced the hand-rolled `cwd_str.replace('/', "-")` with a direct call to
+/// `claude_storage_core::encode_path(&cwd)`, matching IT-16's pattern. The `cwd_str`
+/// binding (only used by the old encoding line) was removed as unused.
 ///
 /// ## Prevention
-/// Always include a no-underscore regression test alongside any path-encoding fix.
+/// Never hand-roll production encoding/formatting logic inside a test fixture — call
+/// the shared function directly so the fixture cannot drift when that function's
+/// behavior changes.
 ///
 /// ## Pitfall
-/// The encoded path for a no-underscore CWD is identical whether you apply the
-/// `replace('_', "-")` step or not — so this test confirms there is no regression.
+/// A fixture encoding that matches production "for this specific input" is not proof
+/// it will keep matching — `replace('_', "-")` alone looked equivalent to slash-only
+/// replacement for a no-underscore CWD until `encode_path()`'s substitution scope
+/// widened to cover dots too.
 #[ cfg( unix ) ]
 #[ test ]
 fn it_19_task_column_no_underscores()
@@ -685,7 +694,6 @@ fn it_19_task_column_no_underscores()
   let proj_tmp = tempfile::TempDir::new().expect( "create project tmp" );
   let cwd      = proj_tmp.path().join( "work" ).join( "proj" );
   std::fs::create_dir_all( &cwd ).expect( "create CWD without underscores" );
-  let cwd_str  = cwd.to_str().expect( "CWD UTF-8" );
 
   let mut bg = std::process::Command::new( "claude" )
     .arg( "30" )
@@ -698,10 +706,17 @@ fn it_19_task_column_no_underscores()
   std::thread::sleep( core::time::Duration::from_millis( 200 ) );
   let proc = make_proc_dir( &[ bg.id() ] );
 
-  // Encode with only '/' → '-' (no underscores to replace; result is same as before fix).
-  // BUG-385: stale hand-rolled encoding diverges from claude_storage_core::encode_path()
-  // for dot-containing CWDs (e.g. tempfile::TempDir's ".tmpXXXXXX"); see Fix Location.
-  let encoded      = cwd_str.replace( '/', "-" );
+  // Fix(BUG-385): encode via the same shared function try_jsonl_task() calls in
+  // production — never hand-roll the encoding, so this fixture cannot drift from
+  // real lookup behavior (matches IT-16's already-correct pattern at line 526).
+  // Root cause: this line used to hand-roll `cwd_str.replace('/', "-")`, which
+  // diverged from claude_storage_core::encode_path() once that function was
+  // generalized (BUG-366) to convert every non-alphanumeric character (not just
+  // '_') to '-' — tempfile::TempDir's dot-prefixed names exposed the divergence.
+  // Pitfall: a test fixture that duplicates production encoding logic instead of
+  // calling the shared function directly silently diverges the moment that
+  // function's behavior changes — always call the real function from fixtures.
+  let encoded      = claude_storage_core::encode_path( &cwd ).expect( "encode cwd" );
   let home_tmp     = tempfile::TempDir::new().expect( "create temp HOME" );
   let project_path = home_tmp.path()
     .join( ".claude" ).join( "projects" ).join( &encoded );
@@ -1302,4 +1317,41 @@ fn it_34_mode_print_caption_has_no_breakdown()
   assert_eq!( parse_running_count( &stdout ), 1, "IT-34: expected exactly 1 running. Got:\n{stdout}" );
   let caption = caption_line( &stdout );
   assert!( !caption.contains( '(' ), "IT-34: caption must NOT contain a breakdown. Got: {caption}" );
+}
+
+// ── IT-35: slot reservation file survives a `clr ps` scan (BUG-387 follow-up) ──
+
+/// IT-35: a live BUG-387 slot reservation file (`slot_{n}.json`, written by
+/// `gate.rs::acquire_slot()`) must NOT be deleted by `clr ps`'s queued-table
+/// scan. Regression guard for a gap found during BUG-387's own MAAV
+/// validation: `build_queued_table()`'s liveness filter parses the gate
+/// file's *filename* as a PID (the `{pid}.json` convention used by queued-
+/// waiter telemetry) — for `slot_{n}.json` this always fails to parse, so
+/// the file was wrongly self-healed away by every `clr ps` call regardless
+/// of whether its recorded owner is still alive, silently reopening the
+/// exact check-then-reserve race BUG-387 closed.
+///
+/// Linux-only: the liveness filter probes `/proc/{pid}` which does not exist
+/// on Windows or macOS.
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it_35_slot_reservation_file_not_deleted_by_ps_scan()
+{
+  let gate_dir      = tempfile::TempDir::new().expect( "create gate temp dir" );
+  let gate_dir_path = gate_dir.path().to_str().expect( "gate dir UTF-8" );
+  let live_pid      = std::process::id();
+  let slot_file     = gate_dir.path().join( "slot_0.json" );
+  std::fs::write( &slot_file, format!( r#"{{"pid":{live_pid},"since":1720000000}}"# ) )
+    .expect( "write slot file" );
+  let proc          = make_proc_dir( &[] );
+  let proc_dir_path = proc.path().to_str().expect( "proc dir UTF-8" );
+
+  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ), ( "CLR_PROC_DIR", proc_dir_path ) ] );
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-35: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    slot_file.exists(),
+    "IT-35 (BUG-387 follow-up): live slot reservation file must survive a `clr ps` scan. \
+     build_queued_table() must not misparse slot_*.json as an unparseable/dead gate file. Got stdout:\n{stdout}"
+  );
 }

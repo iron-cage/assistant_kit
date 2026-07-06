@@ -4,20 +4,20 @@
 
 - **Purpose**: Document CLR_* environment variable fallbacks, runtime configuration overrides, and CLAUDE_CODE_* subprocess variables.
 - **Responsibility**: Specify env var names, corresponding CLI parameters, precedence rules, and type handling.
-- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, CLAUDE_CODE_AUTO_COMPACT_WINDOW injected default, precedence, bool/parsed type semantics.
+- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, CLAUDE_CODE_AUTO_COMPACT_WINDOW injected default, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (→ param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (85 total)
+### All Env Parameters (87 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
 | Input (CLR_*) — `run` subcommand | 64 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 13 | Caller env fallbacks for credential operation parameters |
 | Input (CLR_*) — `ps` subcommand | 5 | Caller env fallbacks for session listing display and flag thresholds |
-| Runtime config (CLR_*) | 1 | Runtime configuration overrides (not CLI parameter fallbacks) |
+| Runtime config (CLR_*) | 3 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) — injected | 2 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 85 environment variables
+**Total:** 87 environment variables
 
 ---
 
@@ -219,26 +219,46 @@ clr --max-tokens 50000 --dry-run "test"      # shows: CLAUDE_CODE_MAX_OUTPUT_TOK
 
 ---
 
-### Env Param 5: `CLR_GATE_DIR` — Runtime Configuration
+### Env Param 5: Gate Runtime Configuration
 
-Overrides the default gate state directory used by `gate.rs` (write) and `ps.rs` (read).
-
-When a `clr` process is blocked at the `--max-sessions` concurrency gate, `gate.rs` writes
-a JSON state file to `$CLR_GATE_DIR/{pid}.json`. `clr ps` reads those files to populate the
-queued CLR processes table.
-
-- **Type:** directory path (string)
-- **Default:** `/tmp/clr-gate`
-- **Commands affected:** `run` / `ask` (writes gate files via `gate.rs`), `ps` (reads gate files)
-- **Mechanism:** read by `gate_dir()` in `gate.rs` and `gate_dir_ps()` in `ps.rs` at runtime
-- **Primary use:** test isolation — override in tests to point at a temp dir, preventing
-  cross-test contamination from real gate files in `/tmp/clr-gate/`
+Runtime configuration overrides for the `--max-sessions` concurrency gate (`gate.rs`). None
+of the three variables has a corresponding CLI flag or `--args-file` JSON key — env-var-only,
+matching the `CLR_PS_ANCIENT_SECS`/`CLR_PS_HIGH_RAM_MB` precedent (Env Param 3).
 
 | Variable | Default | Type | Notes |
 |----------|---------|------|-------|
-| `CLR_GATE_DIR` | `/tmp/clr-gate` | path | Override gate state directory for `gate.rs` and `ps.rs` |
+| `CLR_GATE_DIR` | `/tmp/clr-gate` | path | Gate state directory; read by `gate_dir()` in `gate.rs`, called directly by `ps.rs` |
+| `CLR_GATE_POLL_SECS` | `30` | u64 | Poll interval between gate attempts; read by `gate_poll_secs()` in `gate.rs`; invalid values silently fall back to `30` |
+| `CLR_GATE_MAX_ATTEMPTS` | `100` | u32 | Attempt limit before gate exhaustion; read by `gate_max_attempts()` in `gate.rs`; invalid values silently fall back to `100` |
 
-**No precedence rule** — this variable is always applied (there is no corresponding CLI flag).
+**`CLR_GATE_DIR`:** Overrides the default gate state directory used by `gate.rs` (write) and
+`ps.rs` (read). When a `clr` process is blocked at the `--max-sessions` concurrency gate,
+`gate.rs` writes a JSON state file to `$CLR_GATE_DIR/{pid}.json`. `clr ps` reads those files
+to populate the queued CLR processes table. Primary use: test isolation — override in tests
+to point at a temp dir, preventing cross-test contamination from real gate files in
+`/tmp/clr-gate/`.
+
+**`CLR_GATE_POLL_SECS` / `CLR_GATE_MAX_ATTEMPTS`:** Override the gate's poll interval and
+attempt limit (production default: 30s x 100 attempts). `clr` sleeps `poll_secs` between
+attempts but **not after the final attempt** — an `N`-attempt sequence elapses `(N-1) *
+poll_secs` seconds before the gate-exhaustion path fires, since there is no reason to sleep
+immediately before giving up. Exhaustion is then subject to further Runner-class retry via
+`--retry-on-runner`/`--retry-override` (see [param/033_max_sessions.md](param/033_max_sessions.md)
+and [param/054_retry_override.md](param/054_retry_override.md)) before `clr` actually exits.
+Primary use: automation pipelines that want the gate to fail fast instead of waiting up to
+~50 minutes (99 x 30s) for the production defaults.
+
+```sh
+CLR_GATE_POLL_SECS=5 CLR_GATE_MAX_ATTEMPTS=12 clr --max-sessions 1 --retry-override 0 "task"
+# gate exhausts after ~55s (11 sleeps x 5s) instead of ~2970s (99 x 30s); --retry-override 0
+# disables the runner-retry wrapper so exhaustion surfaces on the first pass
+```
+
+**Commands affected:** `run` / `ask` only (`gate.rs` is invoked only from those two commands)
+— `CLR_GATE_DIR` is the sole exception, additionally read by `ps` for display.
+
+**No precedence rule** — all three variables are always applied; there is no corresponding
+CLI flag or JSON key for any of them.
 
 ---
 

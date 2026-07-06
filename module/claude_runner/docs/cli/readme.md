@@ -23,7 +23,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | `001_dictionary.md` | Domain vocabulary for clr CLI concepts |
 | `002_command_defaults.md` | Cross-command parameter default matrix and isolated/refresh design targets |
 | `parity/` | Cross-command behavioral parity comparisons (2 instances) |
-| `003_env_param.md` | CLR_* env var fallbacks, CLR_GATE_DIR runtime config, and CLAUDE_CODE_* subprocess vars (85 vars) |
+| `003_env_param.md` | CLR_* env var fallbacks, gate runtime config (dir/poll/attempts), and CLAUDE_CODE_* subprocess vars (87 vars) |
 | `param_group/` | Logical parameter groupings (6 groups) |
 | `type/` | Semantic type definitions (13 active types; 1 deprecated) |
 | `param/` | Individual parameter reference docs (72 active; 1 deprecated) |
@@ -50,7 +50,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | tests/docs/cli/param/ (72 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param_group/ (6 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/type/ (14 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/env_param/ (2 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/env_param/ (3 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/parity/ (2 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/user_story/ (29 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 
@@ -66,7 +66,7 @@ clr <command> [OPTIONS] [MESSAGE]
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (6 groups)
 - [Dictionary](001_dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — user goals and usage patterns (29 user stories)
-- [Env Parameters](003_env_param.md) — input, runtime config, and subprocess environment variables (85 variables)
+- [Env Parameters](003_env_param.md) — input, runtime config, and subprocess environment variables (87 variables)
 - [Parity](parity/readme.md) — cross-command behavioral parity comparisons (2 instances)
 
 ### See Also

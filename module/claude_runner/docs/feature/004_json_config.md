@@ -251,7 +251,7 @@ The following parameters cannot appear in a JSON config file:
 | `--help` / `-h` | Meta-flag; exits before JSON loading |
 | `--mode`, `--columns`, `--pid`, `--wide`, `--inspect` | `ps` subcommand — not supported by `--args-file` |
 | `CLR_PS_*` env vars | `ps` subcommand only |
-| `CLR_GATE_DIR` | Runtime config; no CLI flag equivalent |
+| `CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS` | Runtime config; no CLI flag equivalent |
 | `CLAUDE_CODE_*` subprocess vars | Subprocess env vars, not clr params |
 
 ### Sources

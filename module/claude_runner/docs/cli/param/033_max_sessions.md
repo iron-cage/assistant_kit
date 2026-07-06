@@ -26,11 +26,17 @@ non-interactive (print-mode) processes**. The count reflects all running non-int
 Claude Code processes system-wide, not per-project.
 
 **Note:** When the gate waits, `clr` emits a message to stderr each polling cycle (unless `--quiet`):
-`"Info: {count}/{max} sessions active; waiting 30s for a slot... (attempt {n}/{max_attempts})"`.
-When a slot opens, `clr` proceeds without a message. After 100 failed attempts (no slot
-opened), `clr` emits:
-`"Error: --max-sessions {count}/{max} active; gave up after {max_attempts} attempts."`
-and exits with code 1.
+`"Info: {count}/{max} sessions active; waiting {poll_secs}s for a slot... (attempt {n}/{max_attempts})"`.
+When a slot opens, `clr` proceeds without a message. After `max_attempts` failed attempts (no slot
+opened), gate exhaustion is routed through the Runner-class retry wrapper (`apply_runner_retry()`):
+on final exhaustion (no retries remaining, e.g. `--retry-override 0`) `clr` emits
+`"Error: [Runner] session gate timed out — {count} active sessions, max-sessions={max} — retries
+exhausted (exit 1)"` and exits with code 1; otherwise it emits a `[Runner] ... — retrying...`
+message and restarts the full `max_attempts`-poll sequence. Both `poll_secs` (default 30) and
+`max_attempts` (default 100) are overridable via `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS`
+env vars (no CLI flag) — see [003_env_param.md](../003_env_param.md#env-param-5-gate-runtime-configuration).
+`clr` sleeps `poll_secs` between attempts but not after the final attempt, so an `N`-attempt
+sequence elapses `(N-1) * poll_secs` seconds before exhaustion fires.
 
 **Note:** In `--dry-run` mode, the session gate is not triggered — the command preview
 is printed immediately without checking or waiting for active sessions.

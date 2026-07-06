@@ -535,7 +535,7 @@ fn ec10_default_journal_dir_is_home_clr_journal()
 /// Fix Applied: Added fake_proc TempDir + symlink /proc/{child_pid}; .env(CLR_PROC_DIR) on clr
 ///   Command builder — gate now reads synthetic proc dir only (BUG-326)
 /// Prevention: assert "type":"gate_wait" + "gate_outcome":"acquired" appear in JSONL
-/// Pitfall: `_CLR_GATE_POLL_SECS=1` reduces poll interval from 30s to 1s for tests.
+/// Pitfall: `CLR_GATE_POLL_SECS=1` reduces poll interval from 30s to 1s for tests.
 /// Fix(BUG-326): `CLR_PROC_DIR` MUST be set on the `clr` Command builder so that
 /// `find_claude_processes()` reads only the synthetic proc dir, not real `/proc`.
 /// Pitfall: since task 368, the gate counts print-mode processes only (via
@@ -586,7 +586,7 @@ fn ec11_gate_wait_event_emitted_when_gate_blocks()
     ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", fake_proc_str )    // BUG-326: isolate gate's proc scan
-    .env( "_CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_POLL_SECS", "1" )
     .env_remove( "CLR_JOURNAL" )
     .env_remove( "CLR_JOURNAL_DIR" )
     .env_remove( "CLR_TIMEOUT" )
