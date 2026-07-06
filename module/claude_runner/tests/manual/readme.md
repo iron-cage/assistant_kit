@@ -1017,17 +1017,17 @@ clr isolated --trace --creds /nonexistent "test"
 `Info: {count}/{max} sessions active; waiting 30s for a slot... (attempt {attempt}/{max_attempts})`
 
 Example with 30 sessions at default limit:
-`Info: 30/30 sessions active; waiting 30s for a slot... (attempt 1/100)`
+`Info: 30/30 sessions active; waiting 30s for a slot... (attempt 1/1000)`
 
 The old format `"X claude session(s) running (limit Y)"` is **not** emitted. The `X/Y` ratio format is the canonical output.
 
-### NC-13: Gate Exhaustion After 100 Attempts
+### NC-13: Gate Exhaustion After 1000 Attempts
 
 **Precondition:** Same as NC-12. Gate must fire and never find a free slot.
 
-**Expected:** After 100 polling cycles (50 minutes total), `clr` emits to stderr:
-`Error: --max-sessions {count}/{max} active; gave up after 100 attempts.`
-Then exits with code 1. The old limit of 50 attempts is **not** used.
+**Expected:** After 1000 polling cycles (500 minutes total), `clr` emits to stderr:
+`Error: --max-sessions {count}/{max} active; gave up after 1000 attempts.`
+Then exits with code 1. The old limits of 50 and 100 attempts are **not** used.
 
 ### NC-14: `clr ps` — Queued CLR Table via `CLR_GATE_DIR`
 

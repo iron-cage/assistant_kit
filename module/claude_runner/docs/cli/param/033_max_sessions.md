@@ -4,11 +4,11 @@ Maximum number of concurrent non-interactive (print-mode) Claude Code sessions a
 before this invocation blocks. Interactive invocations are never gated — they proceed
 immediately regardless of this limit or the number of active sessions. When the active
 non-interactive session count meets or exceeds this limit, `clr` polls every 30 seconds
-for up to 100 attempts, then exits with code 1. Setting `0` disables the gate entirely
+for up to 1000 attempts, then exits with code 1. Setting `0` disables the gate entirely
 (unlimited sessions, no process scan).
 
 - **Type:** u32
-- **Default:** 10
+- **Default:** 6
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **JSON Key:** `"max-sessions"`
 
@@ -33,7 +33,7 @@ on final exhaustion (no retries remaining, e.g. `--retry-override 0`) `clr` emit
 `"Error: [Runner] session gate timed out — {count} active sessions, max-sessions={max} — retries
 exhausted (exit 1)"` and exits with code 1; otherwise it emits a `[Runner] ... — retrying...`
 message and restarts the full `max_attempts`-poll sequence. Both `poll_secs` (default 30) and
-`max_attempts` (default 100) are overridable via `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS`
+`max_attempts` (default 1000) are overridable via `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS`
 env vars (no CLI flag) — see [003_env_param.md](../003_env_param.md#env-param-5-gate-runtime-configuration).
 `clr` sleeps `poll_secs` between attempts but not after the final attempt, so an `N`-attempt
 sequence elapses `(N-1) * poll_secs` seconds before exhaustion fires.
@@ -58,8 +58,8 @@ regardless of `--max-sessions` or the number of active sessions.
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`run`](../command/01_run.md) | 10 | Gate applied before subprocess launch; non-interactive only |
-| 5 | [`ask`](../command/05_ask.md) | 10 | Same behavior; pure alias for run |
+| 1 | [`run`](../command/01_run.md) | 6 | Gate applied before subprocess launch; non-interactive only |
+| 5 | [`ask`](../command/05_ask.md) | 6 | Same behavior; pure alias for run |
 
 ### Referenced User Stories
 

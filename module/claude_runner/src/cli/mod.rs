@@ -193,11 +193,11 @@ pub( super ) fn run_built_command(
   let is_print_invocation = cli.print_mode || ( cli.message.is_some() && !cli.interactive );
 
   // Concurrency gate: block before subprocess launch when max active print-mode
-  // sessions is reached. Default limit is 10; 0 = unlimited.  dry-run is bypassed
+  // sessions is reached. Default limit is 6; 0 = unlimited.  dry-run is bypassed
   // by caller (never reaches here).
   if is_print_invocation
   {
-    let max_sessions = cli.max_sessions.unwrap_or( 10 );
+    let max_sessions = cli.max_sessions.unwrap_or( 6 );
     wait_for_session_slot( max_sessions, cli.quiet, cli, journal );
   }
 

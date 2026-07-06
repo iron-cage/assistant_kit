@@ -8,8 +8,8 @@
 //!
 //! | ID  | Name                                                                      | TSK-368 Row |
 //! |-----|----------------------------------------------------------------------------|-------------|
-//! | T01 | 10 print-mode processes active, print invocation, default → gate triggers at 10 | T01 |
-//! | T02 | 9 print-mode processes active, print invocation, default → gate does not trigger | T02 |
+//! | T01 | 6 print-mode processes active, print invocation, default → gate triggers at 6 | T01 |
+//! | T02 | 5 print-mode processes active, print invocation, default → gate does not trigger | T02 |
 //! | T03 | 15 print-mode + 1 interactive active, interactive invocation → gate skipped, zero wait | T03 |
 //! | T04 | 5 print-mode + 10 interactive active, print invocation, `--max-sessions 5` → print-mode-only count | T04 |
 //! | T06 | `--max-sessions 0`, any process count → gate disabled, unchanged behavior | T06 |
@@ -18,10 +18,10 @@
 //! | T13 | gate state file `cwd` field remains valid JSON when cwd contains raw control characters (BEL, tab), not just `"` (BUG-384 residual) | — |
 //! | T09 | `CLR_GATE_POLL_SECS=1 CLR_GATE_MAX_ATTEMPTS=2` + `--retry-override 0`, 1 permanent occupier → both overrides change real timing; exhausts in ~2s with the exact `[Runner]` message | — |
 //! | T10 | `CLR_GATE_POLL_SECS=notanumber` (+ valid `CLR_GATE_MAX_ATTEMPTS=2`, `--retry-override 0`) → invalid value silently falls back to the 30s default | — |
-//! | T11 | `CLR_GATE_MAX_ATTEMPTS=notanumber` (+ valid `CLR_GATE_POLL_SECS=1`) → invalid value silently falls back to the 100-attempt default | — |
+//! | T11 | `CLR_GATE_MAX_ATTEMPTS=notanumber` (+ valid `CLR_GATE_POLL_SECS=1`) → invalid value silently falls back to the 1000-attempt default | — |
 //!
-//! T05 (`clr --help` shows `default: 10`) is covered by
-//! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_ten`.
+//! T05 (`clr --help` shows `default: 6`) is covered by
+//! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_six`.
 //!
 //! T12 (regression: pre-existing T01/T02/T04/T08 still pass using the renamed
 //! `CLR_GATE_POLL_SECS` var) is covered by those same tests post-rename — no
@@ -169,19 +169,19 @@ fn t13_gate_state_file_valid_json_for_control_char_cwd()
   );
 }
 
-// ── T01: gate triggers at exactly 10 print-mode processes (default limit) ──────
+// ── T01: gate triggers at exactly 6 print-mode processes (default limit) ───────
 
-/// T01: 10 print-mode processes active (9 long-lived + 1 short-lived), new print-mode
-/// invocation, `--max-sessions` unset (default 10) → gate triggers and emits the
-/// "10/10 sessions active; waiting" message, then releases once the short-lived
-/// process self-expires and the count drops below 10.
+/// T01: 6 print-mode processes active (5 long-lived + 1 short-lived), new print-mode
+/// invocation, `--max-sessions` unset (default 6) → gate triggers and emits the
+/// "6/6 sessions active; waiting" message, then releases once the short-lived
+/// process self-expires and the count drops below 6.
 #[ test ]
-fn t01_gate_triggers_at_ten_print_mode_processes()
+fn t01_gate_triggers_at_six_print_mode_processes()
 {
   let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
 
   let mut long_lived : Vec< std::process::Child > =
-    ( 0..9 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
+    ( 0..5 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
   let mut short_lived = spawn_print_claude_for( &occupier_path, 5 );
 
   let mut pids : Vec< u32 > = long_lived.iter().map( std::process::Child::id ).collect();
@@ -211,25 +211,25 @@ fn t01_gate_triggers_at_ten_print_mode_processes()
   );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    // Anchored on "Info: " so a wrong larger count (e.g. "Info: 110/10") can never
-    // false-positive match via the "10/10" tail — AF1.
-    stderr.contains( "Info: 10/10 sessions active; waiting" ),
-    "T01: gate must report 10/10 print-mode sessions active. Got:\n{stderr}"
+    // Anchored on "Info: " so a wrong larger count (e.g. "Info: 16/6") can never
+    // false-positive match via the "6/6" tail — AF1.
+    stderr.contains( "Info: 6/6 sessions active; waiting" ),
+    "T01: gate must report 6/6 print-mode sessions active. Got:\n{stderr}"
   );
 }
 
 // ── T02: gate does not trigger below the limit ──────────────────────────────────
 
-/// T02: 9 print-mode processes active, new print-mode invocation, `--max-sessions`
-/// unset (default 10) → gate does not trigger; the dispatched command proceeds
+/// T02: 5 print-mode processes active, new print-mode invocation, `--max-sessions`
+/// unset (default 6) → gate does not trigger; the dispatched command proceeds
 /// immediately with no wait message on stderr.
 #[ test ]
-fn t02_gate_does_not_trigger_below_ten_print_mode_processes()
+fn t02_gate_does_not_trigger_below_six_print_mode_processes()
 {
   let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
 
   let mut occupiers : Vec< std::process::Child > =
-    ( 0..9 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
+    ( 0..5 ).map( |_| spawn_print_claude( &occupier_path ) ).collect();
   let pids : Vec< u32 > = occupiers.iter().map( std::process::Child::id ).collect();
   let proc = make_proc_dir( &pids );
 
@@ -637,7 +637,7 @@ fn t08_concurrent_clr_invocations_never_exceed_max_sessions()
 /// 50ms between checks. Never blocks past `deadline` — unlike `.output()`
 /// (blocks until natural exit), this lets a test fail fast when the gate is
 /// still reading pre-rename hardcoded defaults instead of hanging for however
-/// long the real 30s/100-attempt production values would otherwise take.
+/// long the real 30s/1000-attempt production values would otherwise take.
 /// Mirrors T08's existing `try_wait()` reap-loop pattern in this same file.
 fn wait_bounded( child : &mut std::process::Child, deadline : std::time::Instant ) -> Option< std::process::ExitStatus >
 {
@@ -654,7 +654,7 @@ fn wait_bounded( child : &mut std::process::Child, deadline : std::time::Instant
 /// print-mode occupier permanently holding the only `--max-sessions 1` slot and
 /// `--retry-override 0` disabling the outer Runner-retry wrapper, the gate must
 /// exhaust after exactly 2 polls at 1-second intervals (~2s total) — not the
-/// production default of 100 attempts × 30s (~50min) — and report the exact
+/// production default of 1000 attempts × 30s (~8.3h) — and report the exact
 /// exhaustion message on stderr. Bounded to a 10s deadline: if gate.rs still
 /// reads the pre-Phase-1 hardcoded defaults, neither override takes effect and
 /// this deadline elapses long before natural exit, failing fast.
@@ -714,9 +714,9 @@ fn t09_gate_env_var_overrides_change_real_poll_timing()
 /// the env var itself — it silently falls back to the 30-second production
 /// default. Paired with a valid, small `CLR_GATE_MAX_ATTEMPTS=2` and
 /// `--retry-override 0` so the gate reaches exhaustion after exactly one 30s
-/// poll instead of the full 100-attempt production ceiling — bounding the wait
-/// to ~30-33s (confirmed via the 40s deadline) rather than the ~50 real minutes
-/// a literal 100-attempt run at the true 30s interval would otherwise take,
+/// poll instead of the full 1000-attempt production ceiling — bounding the wait
+/// to ~30-33s (confirmed via the 40s deadline) rather than the ~8.3 real hours
+/// a literal 1000-attempt run at the true 30s interval would otherwise take,
 /// while still genuinely measuring the fallback poll interval via both the
 /// gate's own stderr message and wall-clock elapsed time.
 ///
@@ -777,7 +777,7 @@ fn t10_invalid_poll_secs_env_var_falls_back_to_default()
 }
 
 /// T11: `CLR_GATE_MAX_ATTEMPTS=notanumber` must not panic or surface any error
-/// about the env var itself — it silently falls back to the 100-attempt
+/// about the env var itself — it silently falls back to the 1000-attempt
 /// production default. Paired with a valid `CLR_GATE_POLL_SECS=1` and a
 /// short-lived occupier (releases after ~3s): once genuinely active, the 1s
 /// poll interval admits within ~10s of the occupier releasing. Bounded to a

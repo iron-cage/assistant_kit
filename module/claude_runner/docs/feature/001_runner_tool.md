@@ -46,10 +46,10 @@ subprocess exit codes. Both parameters are silently ignored in interactive mode.
 `isolated` — with the restriction that `retry` strategy is unsupported (exits 1 with error:
 one-shot semantics have no retry loop); `fail` and `default:<VALUE>` work identically.
 
-**Session concurrency gate:** `--max-sessions <N>` (default 10, 0 = unlimited) counts active
+**Session concurrency gate:** `--max-sessions <N>` (default 6, 0 = unlimited) counts active
 `claude` processes via `/proc` scan before spawning a subprocess. When the live count is at or
 above the limit, the runner emits a waiting message to stderr and polls every 30 seconds until a
-slot opens or the 100-attempt limit is exhausted (fatal exit 1 on exhaustion). Setting `--max-sessions 0`
+slot opens or the 1000-attempt limit is exhausted (fatal exit 1 on exhaustion). Setting `--max-sessions 0`
 disables the gate entirely — the scan is skipped and the subprocess is launched immediately.
 The gate is also skipped in `--dry-run` mode. Provides deterministic backpressure in CI
 environments with parallel `clr` invocations hitting API rate limits. The gate uses

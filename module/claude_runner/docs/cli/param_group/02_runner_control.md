@@ -65,7 +65,7 @@ clr --trace "Fix bug" --dir /project
 | [`--output-file`](../param/029_output_file.md) | string | — | Output sink | Write captured stdout to a file (tee behavior) |
 | [`--expect`](../param/030_expect.md) | string | — | Output validator | Pipe-separated enum values; stdout must match one after trim+lowercase |
 | [`--expect-strategy`](../param/031_expect_strategy.md) | enum | `fail` | Mismatch handler | Mismatch handling: exit 3, retry N times, or output fallback value |
-| [`--max-sessions`](../param/033_max_sessions.md) | u32 | 10 | Concurrency gate | Max concurrent non-interactive Claude Code sessions before blocking; 0 = unlimited; interactive exempt |
+| [`--max-sessions`](../param/033_max_sessions.md) | u32 | 6 | Concurrency gate | Max concurrent non-interactive Claude Code sessions before blocking; 0 = unlimited; interactive exempt |
 | [`--retry-on-transient`](../param/034_retry_on_transient.md) | u8 | auto | Retry (Tier 2) | Transient class retry count; effective default = 2 via fallback |
 | [`--transient-delay`](../param/035_transient_delay.md) | u32 | auto | Retry delay (Tier 2) | Transient class delay; effective default = 30 via fallback |
 | [`--timeout`](../param/036_timeout.md) | u32 | `0` | Execution watchdog | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only) |

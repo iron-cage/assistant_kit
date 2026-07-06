@@ -1,4 +1,5 @@
 use claude_core::process::find_claude_processes;
+use core::fmt::Write as _;
 use std::io::Write as _;
 use std::path::{ Path, PathBuf };
 use claude_journal::{ EventRecord, EventType, JournalWriter };
@@ -54,13 +55,13 @@ fn gate_poll_secs() -> u64
 
 /// Attempt limit override for the concurrency gate. Public, documented
 /// override — no CLI flag, no `--args-file` key. Invalid values fall
-/// back to 100 silently.
+/// back to 1000 silently.
 fn gate_max_attempts() -> u32
 {
   std::env::var( "CLR_GATE_MAX_ATTEMPTS" )
     .ok()
     .and_then( | s | s.parse().ok() )
-    .unwrap_or( 100 )
+    .unwrap_or( 1000 )
 }
 
 // Fix(BUG-387): fixed-index reservation slot backing the concurrency gate.
@@ -173,14 +174,14 @@ fn json_escape_str( s : &str ) -> String
       '\n' => out.push_str( "\\n" ),
       '\r' => out.push_str( "\\r" ),
       '\t' => out.push_str( "\\t" ),
-      c if ( c as u32 ) < 0x20 => out.push_str( &format!( "\\u{:04x}", c as u32 ) ),
+      c if ( c as u32 ) < 0x20 => { let _ = write!( out, "\\u{:04x}", c as u32 ); },
       c => out.push( c ),
     }
   }
   out
 }
 
-/// Block until fewer than `max` `claude` sessions are running, or until the 100-attempt
+/// Block until fewer than `max` `claude` sessions are running, or until the 1000-attempt
 /// limit is exhausted.  `max == 0` means unlimited — returns immediately without checking.
 ///
 /// While waiting, writes a JSON state file to `$CLR_GATE_DIR/{pid}.json` so that
@@ -188,8 +189,8 @@ fn json_escape_str( s : &str ) -> String
 /// is updated each polling iteration and removed automatically by the `GateFile` Drop
 /// guard on both normal and panic exit paths.
 ///
-/// When the 100-attempt limit is reached, applies Runner-class retry via
-/// `apply_runner_retry()` — the entire 100-attempt polling sequence is retried
+/// When the 1000-attempt limit is reached, applies Runner-class retry via
+/// `apply_runner_retry()` — the entire 1000-attempt polling sequence is retried
 /// `--retry-on-runner N` times before giving up.
 pub( super ) fn wait_for_session_slot(
   max   : u32,
@@ -231,7 +232,7 @@ pub( super ) fn wait_for_session_slot(
   let wait_start     = std::time::Instant::now();
   let mut gate_emitted = false;
 
-  // Outer loop: each iteration is one full 100-poll-attempt sequence.
+  // Outer loop: each iteration is one full 1000-poll-attempt sequence.
   // apply_runner_retry() either returns (retries the sequence) or exits.
   loop
   {

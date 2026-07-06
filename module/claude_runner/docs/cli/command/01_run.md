@@ -50,7 +50,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--output-file`](../param/029_output_file.md) | string | — | Write captured stdout to file in addition to printing (tee behavior) |
 | [`--expect`](../param/030_expect.md) | string | — | Pipe-separated enum values; stdout must match one after trim+lowercase |
 | [`--expect-strategy`](../param/031_expect_strategy.md) | enum | `fail` | Mismatch handling: exit 3 (`fail`), retry (`retry`), or fallback (`default:<V>`) |
-| [`--max-sessions`](../param/033_max_sessions.md) | u32 | `10` | Max concurrent non-interactive claude sessions before blocking (0 = unlimited; interactive exempt) |
+| [`--max-sessions`](../param/033_max_sessions.md) | u32 | `6` | Max concurrent non-interactive claude sessions before blocking (0 = unlimited; interactive exempt) |
 | [`--retry-on-transient`](../param/034_retry_on_transient.md) | u8 | auto | Transient class retry count (Tier 2; effective default = 2 via fallback) |
 | [`--transient-delay`](../param/035_transient_delay.md) | u32 | auto | Transient class delay (Tier 2; effective default = 30 via fallback) |
 | [`--timeout`](../param/036_timeout.md) | u32 | `3600` (print-mode) / `0` (interactive) | Seconds before watchdog kills subprocess (absent → `DEFAULT_PRINT_TIMEOUT_SECS` for print-mode; 0 = unlimited) |
@@ -87,7 +87,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 
 **Algorithm (7 steps):**
 1. Parse flags; apply JSON config (from `--args-file`/`CLR_ARGS_FILE`/stdin) for unset parameters; apply CLR_* env var fallbacks for still-unset parameters; if `--model` is still unset, read `subprocess_model` from `~/.clr/prefs.json` via `read_subprocess_model_pref()` (applies to `--model` only — all other parameters stop at the CLR_* env var tier).
-2. If invocation is non-interactive (print mode) and `--max-sessions > 0`, count active non-interactive `claude` processes; block in 30-second polling loop until slot available or 100-attempt limit reached (exit 1 on limit). Interactive invocations skip this step entirely.
+2. If invocation is non-interactive (print mode) and `--max-sessions > 0`, count active non-interactive `claude` processes; block in 30-second polling loop until slot available or 1000-attempt limit reached (exit 1 on limit). Interactive invocations skip this step entirely.
 3. If `--dry-run`, render command preview via `describe()` / `describe_env()`; emit to stdout; exit 0.
 4. Resolve execution directory (`--dir` + `--subdir`); create `/-NAME` subdirectory if `--subdir` set and not `"."`.
 5. Assemble subprocess command with injected defaults (`--dangerously-skip-permissions`, `--effort max`, `ultrathink` suffix, `-c` continuation unless `--new-session`).

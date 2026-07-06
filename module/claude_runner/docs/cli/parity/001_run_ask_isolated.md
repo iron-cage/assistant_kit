@@ -60,7 +60,7 @@
 | Per-class `--retry-on-*` (Tier 2) | Yes (8 params) | Yes | No |
 | `--retry-default` / `--retry-default-delay` (Tier 3) | Yes (default: 2 / 30s) | Yes | No |
 | **--- Concurrency Gate ---** | | | |
-| `--max-sessions` gate | Yes (default: 10) | Yes | No |
+| `--max-sessions` gate | Yes (default: 6) | Yes | No |
 | Blocks when gate hit | Yes (waits for slots) | Yes | No |
 | **--- Credentials ---** | | | |
 | `--creds` flag | No | No | Yes (default: `~/.claude/.credentials.json`) |

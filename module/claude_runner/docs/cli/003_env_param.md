@@ -65,7 +65,7 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 27 | `CLR_OUTPUT_FILE` | [`--output-file`](param/029_output_file.md) | string | `"output-file"` | Applied when `--output-file` absent; value is the output file path |
 | 28 | `CLR_EXPECT` | [`--expect`](param/030_expect.md) | string | `"expect"` | Applied when `--expect` absent; same `val1\|val2\|…` syntax |
 | 29 | `CLR_EXPECT_STRATEGY` | [`--expect-strategy`](param/031_expect_strategy.md) | string | `"expect-strategy"` | Applied when `--expect-strategy` absent; accepts `fail`, `retry`, or `default:<V>` |
-| 30 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | `"max-sessions"` | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 10) |
+| 30 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | `"max-sessions"` | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 6) |
 | 31 | `CLR_RETRY_ON_TRANSIENT` | [`--retry-on-transient`](param/034_retry_on_transient.md) | u8 | `"retry-on-transient"` | Transient class retry count (Tier 2); default auto → fallback |
 | 32 | `CLR_TRANSIENT_DELAY` | [`--transient-delay`](param/035_transient_delay.md) | u32 | `"transient-delay"` | Transient class delay (Tier 2); default auto → fallback |
 | 33 | `CLR_TIMEOUT` | [`--timeout`](param/036_timeout.md) | u32 | `"timeout"` | Applied when `--timeout` absent; `0` = unlimited (no watchdog); invalid values silently ignored. **Cross-command:** also applies to `isolated`/`refresh` via Section 2 (same semantics: `0` = unlimited) |
@@ -229,7 +229,7 @@ matching the `CLR_PS_ANCIENT_SECS`/`CLR_PS_HIGH_RAM_MB` precedent (Env Param 3).
 |----------|---------|------|-------|
 | `CLR_GATE_DIR` | `/tmp/clr-gate` | path | Gate state directory; read by `gate_dir()` in `gate.rs`, called directly by `ps.rs` |
 | `CLR_GATE_POLL_SECS` | `30` | u64 | Poll interval between gate attempts; read by `gate_poll_secs()` in `gate.rs`; invalid values silently fall back to `30` |
-| `CLR_GATE_MAX_ATTEMPTS` | `100` | u32 | Attempt limit before gate exhaustion; read by `gate_max_attempts()` in `gate.rs`; invalid values silently fall back to `100` |
+| `CLR_GATE_MAX_ATTEMPTS` | `1000` | u32 | Attempt limit before gate exhaustion; read by `gate_max_attempts()` in `gate.rs`; invalid values silently fall back to `1000` |
 
 **`CLR_GATE_DIR`:** Overrides the default gate state directory used by `gate.rs` (write) and
 `ps.rs` (read). When a `clr` process is blocked at the `--max-sessions` concurrency gate,
@@ -239,18 +239,18 @@ to point at a temp dir, preventing cross-test contamination from real gate files
 `/tmp/clr-gate/`.
 
 **`CLR_GATE_POLL_SECS` / `CLR_GATE_MAX_ATTEMPTS`:** Override the gate's poll interval and
-attempt limit (production default: 30s x 100 attempts). `clr` sleeps `poll_secs` between
+attempt limit (production default: 30s x 1000 attempts). `clr` sleeps `poll_secs` between
 attempts but **not after the final attempt** — an `N`-attempt sequence elapses `(N-1) *
 poll_secs` seconds before the gate-exhaustion path fires, since there is no reason to sleep
 immediately before giving up. Exhaustion is then subject to further Runner-class retry via
 `--retry-on-runner`/`--retry-override` (see [param/033_max_sessions.md](param/033_max_sessions.md)
 and [param/054_retry_override.md](param/054_retry_override.md)) before `clr` actually exits.
 Primary use: automation pipelines that want the gate to fail fast instead of waiting up to
-~50 minutes (99 x 30s) for the production defaults.
+~500 minutes (999 x 30s) for the production defaults.
 
 ```sh
 CLR_GATE_POLL_SECS=5 CLR_GATE_MAX_ATTEMPTS=12 clr --max-sessions 1 --retry-override 0 "task"
-# gate exhausts after ~55s (11 sleeps x 5s) instead of ~2970s (99 x 30s); --retry-override 0
+# gate exhausts after ~55s (11 sleeps x 5s) instead of ~29970s (999 x 30s); --retry-override 0
 # disables the runner-retry wrapper so exhaustion surfaces on the first pass
 ```
 

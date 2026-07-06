@@ -550,19 +550,19 @@ fn ec1_max_sessions_help_listed()
   );
 }
 
-/// EC-9: `clr --help` shows `default: 10` for `--max-sessions`.
+/// EC-9: `clr --help` shows `default: 6` for `--max-sessions`.
 ///
 /// Prevents regression where help text and code default diverge silently.
 /// Covers `033_max_sessions.md` EC-9.
 #[ test ]
-fn ec9_max_sessions_help_shows_default_ten()
+fn ec9_max_sessions_help_shows_default_six()
 {
   let out = run_cli( &[ "--help" ] );
   assert!( out.status.success(), "clr --help must exit 0" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "default: 10" ),
-    "`clr --help` must show `default: 10` for --max-sessions. Got:\n{stdout}"
+    stdout.contains( "default: 6" ),
+    "`clr --help` must show `default: 6` for --max-sessions. Got:\n{stdout}"
   );
 }
 
