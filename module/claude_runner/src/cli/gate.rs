@@ -41,15 +41,26 @@ impl Drop for GateFile
 
 /// Return the gate poll interval in seconds.
 ///
-/// In production: always 30 seconds.
-/// In tests: `_CLR_GATE_POLL_SECS` env var overrides so tests don't wait 30s per attempt.
-/// The `_` prefix signals internal/test-only use — not exposed in `--help`.
+/// Default: 30 seconds. `CLR_GATE_POLL_SECS` env var overrides — public,
+/// documented override, no CLI flag, no `--args-file` key. Invalid values fall
+/// back to 30 silently.
 fn gate_poll_secs() -> u64
 {
-  std::env::var( "_CLR_GATE_POLL_SECS" )
+  std::env::var( "CLR_GATE_POLL_SECS" )
     .ok()
     .and_then( | s | s.parse().ok() )
     .unwrap_or( 30 )
+}
+
+/// Attempt limit override for the concurrency gate. Public, documented
+/// override — no CLI flag, no `--args-file` key. Invalid values fall
+/// back to 100 silently.
+fn gate_max_attempts() -> u32
+{
+  std::env::var( "CLR_GATE_MAX_ATTEMPTS" )
+    .ok()
+    .and_then( | s | s.parse().ok() )
+    .unwrap_or( 100 )
 }
 
 // Fix(BUG-387): fixed-index reservation slot backing the concurrency gate.
@@ -135,6 +146,40 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> bool
   false
 }
 
+// Fix(BUG-384): escape a string for embedding as a JSON string value, per RFC 8259 §7.
+//
+// Root cause: the gate-state writer originally spliced `cwd` (an OS-controlled string)
+// into a hand-rolled JSON literal with zero escaping. A first fix pass added
+// `.replace('\\', ..).replace('"', ..)`, which closed the two most common cases but left
+// raw control characters (bytes < 0x20 — Unix paths may legally contain a literal
+// newline, tab, or other control byte) completely unescaped, still producing invalid
+// JSON for such a `cwd`. This single-pass escaper closes that gap by handling every
+// JSON-reserved character in one place instead of chaining ad hoc `.replace()` calls.
+//
+// Pitfall: never hand-roll JSON escaping via a growing chain of `.replace()` calls for
+// individual characters — it's easy to cover the common cases (`"`, `\`) and forget the
+// full control-character class the JSON grammar also requires escaping.
+fn json_escape_str( s : &str ) -> String
+{
+  let mut out = String::with_capacity( s.len() );
+  for c in s.chars()
+  {
+    match c
+    {
+      '"' => out.push_str( "\\\"" ),
+      '\\' => out.push_str( "\\\\" ),
+      '\u{08}' => out.push_str( "\\b" ),
+      '\u{0C}' => out.push_str( "\\f" ),
+      '\n' => out.push_str( "\\n" ),
+      '\r' => out.push_str( "\\r" ),
+      '\t' => out.push_str( "\\t" ),
+      c if ( c as u32 ) < 0x20 => out.push_str( &format!( "\\u{:04x}", c as u32 ) ),
+      c => out.push( c ),
+    }
+  }
+  out
+}
+
 /// Block until fewer than `max` `claude` sessions are running, or until the 100-attempt
 /// limit is exhausted.  `max == 0` means unlimited — returns immediately without checking.
 ///
@@ -156,7 +201,7 @@ pub( super ) fn wait_for_session_slot(
   if max == 0 { return; }
   let poll_secs    = gate_poll_secs();
   let poll         = core::time::Duration::from_secs( poll_secs );
-  let max_attempts = 100_u32;
+  let max_attempts = gate_max_attempts();
 
   // Gate state file — best-effort; I/O failures must not abort the caller.
   let pid        = std::process::id();
@@ -167,12 +212,13 @@ pub( super ) fn wait_for_session_slot(
     .map( |p| p.display().to_string() )
     .unwrap_or_default();
   // Fix(BUG-384): escape reserved JSON characters before interpolating cwd into the
-  // hand-rolled JSON literal below — Unix paths may contain `"` or `\`, which would
-  // otherwise prematurely close the string value and corrupt the gate-state file.
+  // hand-rolled JSON literal below — Unix paths may contain `"`, `\`, or raw control
+  // characters, any of which would otherwise corrupt the gate-state file's JSON.
   // Root cause: format!() performs no JSON escaping; cwd was spliced in raw.
   // Pitfall: never hand-roll JSON from an OS-controlled string without escaping —
-  // Unix paths permit any byte except `/` and NUL.
-  let cwd_escaped = cwd.replace( '\\', "\\\\" ).replace( '"', "\\\"" );
+  // Unix paths permit any byte except `/` and NUL. See json_escape_str() above for
+  // why a single-pass escaper replaced this fix's first, incomplete `.replace()` chain.
+  let cwd_escaped = json_escape_str( &cwd );
   let since = unix_now();
   let _     = std::fs::write(
     &state_path,

@@ -15,9 +15,16 @@
 //! | T06 | `--max-sessions 0`, any process count → gate disabled, unchanged behavior | T06 |
 //! | T07 | gate state file `cwd` field remains valid JSON when cwd contains a literal `"` (BUG-384) | — |
 //! | T08 | N concurrent live `clr` invocations racing a shared, dynamically-mutating occupier set → peak admitted count never exceeds `--max-sessions` (BUG-387) | — |
+//! | T09 | `CLR_GATE_POLL_SECS=1 CLR_GATE_MAX_ATTEMPTS=2` + `--retry-override 0`, 1 permanent occupier → both overrides change real timing; exhausts in ~2s with the exact `[Runner]` message | — |
+//! | T10 | `CLR_GATE_POLL_SECS=notanumber` (+ valid `CLR_GATE_MAX_ATTEMPTS=2`, `--retry-override 0`) → invalid value silently falls back to the 30s default | — |
+//! | T11 | `CLR_GATE_MAX_ATTEMPTS=notanumber` (+ valid `CLR_GATE_POLL_SECS=1`) → invalid value silently falls back to the 100-attempt default | — |
 //!
 //! T05 (`clr --help` shows `default: 10`) is covered by
 //! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_ten`.
+//!
+//! T12 (regression: pre-existing T01/T02/T04/T08 still pass using the renamed
+//! `CLR_GATE_POLL_SECS` var) is covered by those same tests post-rename — no
+//! separate function.
 
 // BUG-387 task/bug/387_print_mode_concurrency_gate_toctou_race.md — T01-T07 above all pre-seed
 // a static synthetic /proc snapshot and invoke exactly one clr binary; none launch N concurrent
@@ -123,7 +130,7 @@ fn t01_gate_triggers_at_ten_print_mode_processes()
     .args( [ "-p", "--journal", "off", "x" ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "_CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_POLL_SECS", "1" )
     .output()
     .expect( "invoke clr" );
 
@@ -167,7 +174,7 @@ fn t02_gate_does_not_trigger_below_ten_print_mode_processes()
     .args( [ "-p", "--journal", "off", "x" ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "_CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_POLL_SECS", "1" )
     .output()
     .expect( "invoke clr" );
 
@@ -194,7 +201,7 @@ fn t02_gate_does_not_trigger_below_ten_print_mode_processes()
 /// time around the dispatched invocation only (excluding background-process setup)
 /// and asserting it completes near-instantly rather than blocking for a poll cycle.
 ///
-/// `_CLR_GATE_POLL_SECS` is deliberately left at its 30-second production default:
+/// `CLR_GATE_POLL_SECS` is deliberately left at its 30-second production default:
 /// if the gate were mistakenly entered, the test would take at least 30 real seconds
 /// (the first poll sleep) rather than failing fast — a stronger, unambiguous signal
 /// than a short override would give.
@@ -273,7 +280,7 @@ fn t04_gate_counts_print_mode_only_excludes_interactive()
     .args( [ "-p", "--max-sessions", "5", "--journal", "off", "x" ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
-    .env( "_CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_POLL_SECS", "1" )
     .output()
     .expect( "invoke clr" );
 
@@ -470,7 +477,7 @@ fn t08_concurrent_clr_invocations_never_exceed_max_sessions()
       .env( "PATH", &bin_path )
       .env( "CLR_PROC_DIR", proc_dir.path() )
       .env( "CLR_GATE_DIR", gate_dir.path() )
-      .env( "_CLR_GATE_POLL_SECS", "1" )
+      .env( "CLR_GATE_POLL_SECS", "1" )
       .stdout( std::process::Stdio::null() )
       .stderr( std::process::Stdio::null() )
       .spawn()
@@ -486,15 +493,65 @@ fn t08_concurrent_clr_invocations_never_exceed_max_sessions()
     sync_children_into_proc_dir( &sync_pids, &sync_proc_dir, core::time::Duration::from_secs( 8 ) );
   } );
 
+  // Fix(BUG-387 test): reap every racer via non-blocking, order-independent
+  // `try_wait()` polling for the test's ENTIRE lifetime — both during sampling
+  // and while draining stragglers afterward — never a sequential `.wait()`.
+  //
+  // Root cause (two compounding defects, both in this harness, not in gate.rs):
+  // 1. A `clr` process that has exited but not yet been `wait()`-ed on is a
+  //    zombie, and a zombie still has a `/proc/{pid}` entry — so `pid_alive()`
+  //    (which `gate.rs::acquire_slot()` uses to decide whether a slot is
+  //    reclaimable) sees an unreaped zombie as "still alive" indefinitely.
+  // 2. A sequential `for child in &mut children { child.wait(); }` reaps in
+  //    launch order. If an EARLY-indexed racer is itself still legitimately
+  //    waiting for a slot (never admitted yet), `.wait()` on it blocks forever
+  //    — so LATER-indexed racers that already exited are never reached by the
+  //    loop and sit as permanent zombies, permanently blocking their own held
+  //    slots (defect 1) from ever being reclaimed by the still-waiting racers.
+  //    This head-of-line-blocking deadlock is only ever broken once the stuck
+  //    racer exhausts `apply_runner_retry`'s default 2 retries (100 attempts ×
+  //    1s + 30s backoff, twice) and calls `std::process::exit(1)` — explaining
+  //    the exact, repeatable ~360s runtime observed before this fix.
+  //
+  // Fix: poll every child with `try_wait()` on the same 20ms cadence for as
+  // long as ANY child remains unfinished, with no ordering dependency between
+  // them, so a slot's owner is reaped within milliseconds of actually exiting
+  // — matching how promptly a real shell reaps a foreground child — and a
+  // bounded drain deadline + force-`kill()` safety net so a genuine regression
+  // fails loudly (leftover process / assertion) instead of hanging the suite.
+  //
+  // Pitfall: any harness holding `Child` handles across a polling window must
+  // reap them all on that same cadence and without sequential ordering, or it
+  // silently reintroduces an artificial zombie-accumulation window with a
+  // head-of-line-blocking deadlock that no real caller would ever hit.
   let mut peak = 0usize;
+  let mut finished = vec![ false; children.len() ];
+  let reap = | children : &mut [ std::process::Child ], finished : &mut [ bool ] |
+  {
+    for ( child, done ) in children.iter_mut().zip( finished.iter_mut() )
+    {
+      if !*done && matches!( child.try_wait(), Ok( Some( _ ) ) ) { *done = true; }
+    }
+  };
+
   let sample_deadline = std::time::Instant::now() + core::time::Duration::from_secs( 8 );
   while std::time::Instant::now() < sample_deadline
   {
+    reap( &mut children, &mut finished );
     peak = peak.max( count_live_held_slots( gate_dir.path() ) );
     std::thread::sleep( core::time::Duration::from_millis( 20 ) );
   }
 
-  for child in &mut children { let _ = child.wait(); }
+  let drain_deadline = std::time::Instant::now() + core::time::Duration::from_secs( 30 );
+  while finished.iter().any( | done | !done ) && std::time::Instant::now() < drain_deadline
+  {
+    reap( &mut children, &mut finished );
+    std::thread::sleep( core::time::Duration::from_millis( 20 ) );
+  }
+  for ( child, done ) in children.iter_mut().zip( finished.iter_mut() )
+  {
+    if !*done { let _ = child.kill(); let _ = child.wait(); }
+  }
   let _ = sync_handle.join();
 
   // Final sample after every racer has finished — catches a peak that only
@@ -504,5 +561,209 @@ fn t08_concurrent_clr_invocations_never_exceed_max_sessions()
   assert!(
     peak <= MAX as usize,
     "T08 (BUG-387): peak concurrently-held slots ({peak}) must never exceed --max-sessions ({MAX})"
+  );
+}
+
+// ── T09-T11: `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS` env var overrides ────
+// task/claude_runner/389_gate_poll_secs_max_attempts_env_vars.md
+
+/// Poll `child` with `try_wait()` until it exits or `deadline` passes, sleeping
+/// 50ms between checks. Never blocks past `deadline` — unlike `.output()`
+/// (blocks until natural exit), this lets a test fail fast when the gate is
+/// still reading pre-rename hardcoded defaults instead of hanging for however
+/// long the real 30s/100-attempt production values would otherwise take.
+/// Mirrors T08's existing `try_wait()` reap-loop pattern in this same file.
+fn wait_bounded( child : &mut std::process::Child, deadline : std::time::Instant ) -> Option< std::process::ExitStatus >
+{
+  while std::time::Instant::now() < deadline
+  {
+    if let Ok( Some( status ) ) = child.try_wait() { return Some( status ); }
+    std::thread::sleep( core::time::Duration::from_millis( 50 ) );
+  }
+  None
+}
+
+/// T09: `CLR_GATE_POLL_SECS=1` and `CLR_GATE_MAX_ATTEMPTS=2` together must change
+/// the gate's actual runtime behavior (not just documented intent). With one
+/// print-mode occupier permanently holding the only `--max-sessions 1` slot and
+/// `--retry-override 0` disabling the outer Runner-retry wrapper, the gate must
+/// exhaust after exactly 2 polls at 1-second intervals (~2s total) — not the
+/// production default of 100 attempts × 30s (~50min) — and report the exact
+/// exhaustion message on stderr. Bounded to a 10s deadline: if gate.rs still
+/// reads the pre-Phase-1 hardcoded defaults, neither override takes effect and
+/// this deadline elapses long before natural exit, failing fast.
+///
+/// Source: `task/claude_runner/389_gate_poll_secs_max_attempts_env_vars.md` T09, AC-009/AC-010.
+#[ test ]
+fn t09_gate_env_var_overrides_change_real_poll_timing()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  // T09's 10s deadline is well under spawn_print_claude()'s own 30s self-expiry
+  // (spawn_print_claude_for(_, 30)) — but pin the lifetime explicitly rather
+  // than rely on that margin, so this test never races the occupier's own exit.
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    exited.is_some(),
+    "T09: gate must exhaust within 10s when both overrides are active (2 attempts x 1s poll) \
+     — still running means the overrides are not taking effect. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "T09: exit must be 1 once the gate exhausts. stderr: {stderr}"
+  );
+  assert!(
+    stderr.contains(
+      "Error: [Runner] session gate timed out — 1 active sessions, max-sessions=1 — retries exhausted (exit 1)"
+    ),
+    "T09: exact exhaustion message required. Got:\n{stderr}"
+  );
+}
+
+/// T10: `CLR_GATE_POLL_SECS=notanumber` must not panic or surface any error about
+/// the env var itself — it silently falls back to the 30-second production
+/// default. Paired with a valid, small `CLR_GATE_MAX_ATTEMPTS=2` and
+/// `--retry-override 0` so the gate reaches exhaustion after exactly one 30s
+/// poll instead of the full 100-attempt production ceiling — bounding the wait
+/// to ~30-33s (confirmed via the 40s deadline) rather than the ~50 real minutes
+/// a literal 100-attempt run at the true 30s interval would otherwise take,
+/// while still genuinely measuring the fallback poll interval via both the
+/// gate's own stderr message and wall-clock elapsed time.
+///
+/// Source: `task/claude_runner/389_gate_poll_secs_max_attempts_env_vars.md` T10, AC-009.
+#[ test ]
+fn t10_invalid_poll_secs_env_var_falls_back_to_default()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  // Fix(test bug found during Phase 1 validation): spawn_print_claude() is a thin
+  // wrapper over spawn_print_claude_for(_, 30) — it self-expires at 30s, which
+  // collides with this test's ~30-33s expected exhaustion time (one real 30s
+  // poll sleep). A permanent-looking occupier that dies right as attempt 2's
+  // check runs intermittently frees the slot, making the gate admit (exit 0)
+  // instead of exhaust (exit 1). Pin the lifetime past the 40s deadline instead.
+  let mut occupier = spawn_print_claude_for( &occupier_path, 60 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_POLL_SECS", "notanumber" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 40 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    exited.is_some(),
+    "T10: gate must exhaust within 40s when CLR_GATE_MAX_ATTEMPTS=2 is active \
+     — still running means the override is not taking effect. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 1 ),
+    "T10: exit must be 1 once the gate exhausts. stderr: {stderr}"
+  );
+  assert!(
+    stderr.contains( "waiting 30s for a slot" ),
+    "T10: invalid CLR_GATE_POLL_SECS must fall back to the 30s default. Got:\n{stderr}"
+  );
+  assert!(
+    !stderr.to_lowercase().contains( "panic" ),
+    "T10: invalid value must fail silently — no panic. Got:\n{stderr}"
+  );
+}
+
+/// T11: `CLR_GATE_MAX_ATTEMPTS=notanumber` must not panic or surface any error
+/// about the env var itself — it silently falls back to the 100-attempt
+/// production default. Paired with a valid `CLR_GATE_POLL_SECS=1` and a
+/// short-lived occupier (releases after ~3s): once genuinely active, the 1s
+/// poll interval admits within ~10s of the occupier releasing. Bounded to a
+/// 10s deadline — if gate.rs still reads the pre-Phase-1 hardcoded 30s poll
+/// interval, `CLR_GATE_POLL_SECS=1` has no effect and the first re-check after
+/// the occupier releases doesn't happen until a real 30s sleep elapses, well
+/// past this deadline, failing fast instead of hanging.
+///
+/// Source: `task/claude_runner/389_gate_poll_secs_max_attempts_env_vars.md` T11, AC-010.
+#[ test ]
+fn t11_invalid_max_attempts_env_var_falls_back_to_default()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  let mut occupier = spawn_print_claude_for( &occupier_path, 3 );
+  let proc = make_proc_dir( &[ occupier.id() ] );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "notanumber" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  assert!(
+    exited.is_some(),
+    "T11: gate must admit within 10s once the occupier releases — CLR_GATE_POLL_SECS=1 \
+     must take effect regardless of the invalid CLR_GATE_MAX_ATTEMPTS value. stderr:\n{}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 0 ),
+    "T11: exit must be 0 once the gate admits. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.to_lowercase().contains( "panic" ),
+    "T11: invalid CLR_GATE_MAX_ATTEMPTS must fail silently, no panic. Got:\n{stderr}"
   );
 }

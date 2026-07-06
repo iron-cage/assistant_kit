@@ -40,6 +40,7 @@
 //! | IT-32 | `--mode all`, 3 print → breakdown "0 interactive, 3 print"                | Caption breakdown |
 //! | IT-33 | `--mode interactive`, mixed set → plain caption, no breakdown             | Caption plain     |
 //! | IT-34 | `--mode print`, mixed set → plain caption, no breakdown                   | Caption plain     |
+//! | IT-35 | Live `slot_{n}.json` reservation file survives a `clr ps` scan             | BUG-387 follow-up |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
@@ -1316,4 +1317,41 @@ fn it_34_mode_print_caption_has_no_breakdown()
   assert_eq!( parse_running_count( &stdout ), 1, "IT-34: expected exactly 1 running. Got:\n{stdout}" );
   let caption = caption_line( &stdout );
   assert!( !caption.contains( '(' ), "IT-34: caption must NOT contain a breakdown. Got: {caption}" );
+}
+
+// ── IT-35: slot reservation file survives a `clr ps` scan (BUG-387 follow-up) ──
+
+/// IT-35: a live BUG-387 slot reservation file (`slot_{n}.json`, written by
+/// `gate.rs::acquire_slot()`) must NOT be deleted by `clr ps`'s queued-table
+/// scan. Regression guard for a gap found during BUG-387's own MAAV
+/// validation: `build_queued_table()`'s liveness filter parses the gate
+/// file's *filename* as a PID (the `{pid}.json` convention used by queued-
+/// waiter telemetry) — for `slot_{n}.json` this always fails to parse, so
+/// the file was wrongly self-healed away by every `clr ps` call regardless
+/// of whether its recorded owner is still alive, silently reopening the
+/// exact check-then-reserve race BUG-387 closed.
+///
+/// Linux-only: the liveness filter probes `/proc/{pid}` which does not exist
+/// on Windows or macOS.
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it_35_slot_reservation_file_not_deleted_by_ps_scan()
+{
+  let gate_dir      = tempfile::TempDir::new().expect( "create gate temp dir" );
+  let gate_dir_path = gate_dir.path().to_str().expect( "gate dir UTF-8" );
+  let live_pid      = std::process::id();
+  let slot_file     = gate_dir.path().join( "slot_0.json" );
+  std::fs::write( &slot_file, format!( r#"{{"pid":{live_pid},"since":1720000000}}"# ) )
+    .expect( "write slot file" );
+  let proc          = make_proc_dir( &[] );
+  let proc_dir_path = proc.path().to_str().expect( "proc dir UTF-8" );
+
+  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ), ( "CLR_PROC_DIR", proc_dir_path ) ] );
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "IT-35: exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    slot_file.exists(),
+    "IT-35 (BUG-387 follow-up): live slot reservation file must survive a `clr ps` scan. \
+     build_queued_table() must not misparse slot_*.json as an unparseable/dead gate file. Got stdout:\n{stdout}"
+  );
 }

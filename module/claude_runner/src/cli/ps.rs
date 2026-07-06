@@ -882,9 +882,9 @@ pub( super ) fn parse_json_u64( content : &str, key : &str ) -> Option< u64 >
 // Returns None when the gate dir is absent or contains no .json files.
 //
 // JSON parsing is manual (no serde) to keep dependencies minimal.  Gate files
-// are written by gate.rs using format!(), so the only structural constraint is
-// that `cwd` must not contain a literal `"` character — Unix paths never do,
-// so substring extraction in parse_json_str is safe in practice.
+// are written by gate.rs using format!(), and the writer JSON-escapes `cwd`
+// (Fix(BUG-384)), so substring extraction in parse_json_str is safe even when
+// `cwd` contains a literal `"` character.
 fn build_queued_table() -> Option< String >
 {
   let dir = super::gate::gate_dir();
@@ -894,6 +894,19 @@ fn build_queued_table() -> Option< String >
     .filter( |e|
     {
       if e.path().extension().and_then( |x| x.to_str() ) != Some( "json" )
+      {
+        return false;
+      }
+      // Fix(BUG-387-followup): slot_*.json reservation files are a distinct
+      // Domain Type from the {pid}.json queued-waiter telemetry this table
+      // displays — they record an already-ADMITTED session, not one still
+      // queued. gate.rs::acquire_slot() already owns their entire lifecycle
+      // (claim, liveness check, reclaim) independently. Skip them here
+      // untouched: the liveness filter below parses the *filename* as a PID,
+      // which always fails for "slot_N", so treating them as unparseable
+      // dead gate files would self-heal-delete a live holder's reservation,
+      // reopening the exact check-then-reserve race BUG-387 closed.
+      if e.path().file_stem().and_then( |s| s.to_str() ).is_some_and( |s| s.starts_with( "slot_" ) )
       {
         return false;
       }

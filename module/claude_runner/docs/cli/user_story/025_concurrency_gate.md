@@ -15,6 +15,8 @@
 - AC-006: In `--dry-run` mode, the gate is not triggered; the command preview is produced immediately
 - AC-007: Interactive invocations are never gated — they proceed immediately regardless of `--max-sessions` or the number of active sessions
 - AC-008: The active session count used for gating counts only non-interactive (print-mode) Claude processes; interactive sessions are excluded from the count
+- AC-009: `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS` override the gate's poll interval (default 30s) and attempt limit (default 100) with no corresponding CLI flag or JSON key; invalid values silently fall back to the default
+- AC-010: `clr` sleeps between attempts but not after the final attempt, so an `N`-attempt sequence elapses `(N-1) * poll_secs` seconds before the gate-exhaustion path fires
 
 ### Referenced Commands
 
@@ -42,6 +44,7 @@
 3. `clr --max-sessions 0 "task"` — disable the gate; proceed immediately regardless of active sessions
 4. `clr --max-sessions 5 --dry-run "task"` — bypass the gate in dry-run mode
 5. `clr --interactive "task"` (20 non-interactive sessions active, `--max-sessions 10`) — interactive invocations bypass the gate entirely and proceed immediately, regardless of active count
+6. `CLR_GATE_POLL_SECS=5 CLR_GATE_MAX_ATTEMPTS=12 clr --max-sessions 1 --retry-override 0 "task"` — gate exhausts after ~55s (11 sleeps x 5s) instead of the ~2970s production default; `--retry-override 0` disables the runner-retry wrapper so exhaustion surfaces on the first pass
 
 ### Related User Stories
 
