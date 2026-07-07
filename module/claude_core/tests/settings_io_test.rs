@@ -5,7 +5,7 @@
 //! Verify `get_string_setting` only returns a value when the underlying JSON
 //! type is a plain string, rejecting numbers, bools, null, and nested
 //! objects/arrays as "no preference" (`None`) rather than coercing them to
-//! a string.
+//! a string. Also covers the parser's malformed-value error path.
 //!
 //! ## Coverage
 //!
@@ -13,6 +13,7 @@
 //! - JSON number, bool, null, object, array values → `None`
 //! - Absent key → `None`
 //! - Absent file → `Err(NotFound)`
+//! - Malformed value token (unquoted, non-literal) → `Err(InvalidData)`
 //!
 //! ## Test Matrix
 //!
@@ -26,6 +27,7 @@
 //! | `get_string_setting_rejects_array` | `"k": [1,2]` → `None` |
 //! | `get_string_setting_absent_key_returns_none` | missing key → `None` |
 //! | `get_string_setting_missing_file_returns_not_found` | missing file → `Err(NotFound)` |
+//! | `get_string_setting_malformed_value_returns_invalid_data` | `"k": undefined` → `Err(InvalidData)` |
 
 use claude_core::settings_io::get_string_setting;
 
@@ -99,4 +101,13 @@ fn get_string_setting_missing_file_returns_not_found()
   let path = dir.path().join( "does_not_exist.json" );
   let err  = get_string_setting( &path, "subprocess_model" ).unwrap_err();
   assert_eq!( err.kind(), std::io::ErrorKind::NotFound );
+}
+
+#[test]
+fn get_string_setting_malformed_value_returns_invalid_data()
+{
+  let dir  = tempfile::TempDir::new().expect( "temp dir" );
+  let path = write_settings( dir.path(), r#"{"subprocess_model": undefined}"# );
+  let err  = get_string_setting( &path, "subprocess_model" ).unwrap_err();
+  assert_eq!( err.kind(), std::io::ErrorKind::InvalidData );
 }
