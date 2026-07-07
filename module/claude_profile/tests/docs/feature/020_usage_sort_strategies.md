@@ -26,7 +26,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-12 | `prefer::son` + absent Sonnet tier → `prefer_weekly = 0.0` (not 100.0) | AC-05 | Absent-Sonnet fix |
 | FT-13 | `sort::` drives footer recommendation — top eligible shown in `Next (<strategy>)` line; footer uses `·`-delimited 2-line format | AC-09 | Recommendation + Footer |
 | FT-14 | Green account with divergent `7d/7d_son` passes eligibility gate — model-agnostic `seven_day_left` (BUG-324) | AC-09 | Eligibility + BUG-324 |
-| — | `sort::` + `live::1` stable within each cycle | AC-12 | Live-only (requires `live::1` + real credentials) |
+| — | `sort::` + `live::1` stable within each cycle | AC-10 | Live-only (requires `live::1` + real credentials); no equivalent guarantee for ordinary invocations (BUG-330) |
 
 ### Test Case Index
 

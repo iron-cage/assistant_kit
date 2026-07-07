@@ -277,11 +277,11 @@ fn temperature_one_exact_format_is_integer_string() {
     .describe_env();
 
   let temp_line = env.lines()
-    .find( | l | l.starts_with( "CLAUDE_CODE_TEMPERATURE=" ) )
+    .find( | l | l.starts_with( "export CLAUDE_CODE_TEMPERATURE=" ) )
     .unwrap_or( "NOT_FOUND" );
 
   assert_eq!(
-    temp_line, "CLAUDE_CODE_TEMPERATURE=1",
+    temp_line, "export CLAUDE_CODE_TEMPERATURE=1",
     "temperature=1.0 must produce env var value '1' (not '1.0'): Rust Display format for f64"
   );
 
@@ -304,11 +304,11 @@ fn temperature_zero_exact_format_is_integer_string() {
     .describe_env();
 
   let temp_line = env.lines()
-    .find( | l | l.starts_with( "CLAUDE_CODE_TEMPERATURE=" ) )
+    .find( | l | l.starts_with( "export CLAUDE_CODE_TEMPERATURE=" ) )
     .unwrap_or( "NOT_FOUND" );
 
   assert_eq!(
-    temp_line, "CLAUDE_CODE_TEMPERATURE=0",
+    temp_line, "export CLAUDE_CODE_TEMPERATURE=0",
     "temperature=0.0 must produce env var value '0' (not '0.0'): Rust Display format for f64"
   );
 }
@@ -321,11 +321,11 @@ fn top_p_one_exact_format_is_integer_string() {
     .describe_env();
 
   let top_p_line = env.lines()
-    .find( | l | l.starts_with( "CLAUDE_CODE_TOP_P=" ) )
+    .find( | l | l.starts_with( "export CLAUDE_CODE_TOP_P=" ) )
     .unwrap_or( "NOT_FOUND" );
 
   assert_eq!(
-    top_p_line, "CLAUDE_CODE_TOP_P=1",
+    top_p_line, "export CLAUDE_CODE_TOP_P=1",
     "top_p=1.0 must produce env var value '1' (not '1.0')"
   );
 }
@@ -338,11 +338,11 @@ fn top_p_zero_exact_format_is_integer_string() {
     .describe_env();
 
   let top_p_line = env.lines()
-    .find( | l | l.starts_with( "CLAUDE_CODE_TOP_P=" ) )
+    .find( | l | l.starts_with( "export CLAUDE_CODE_TOP_P=" ) )
     .unwrap_or( "NOT_FOUND" );
 
   assert_eq!(
-    top_p_line, "CLAUDE_CODE_TOP_P=0",
+    top_p_line, "export CLAUDE_CODE_TOP_P=0",
     "top_p=0.0 must produce env var value '0' (not '0.0')"
   );
 }

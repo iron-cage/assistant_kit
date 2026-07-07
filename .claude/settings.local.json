@@ -1,0 +1,7 @@
+{
+  "env": {
+    "BASH_MAX_TIMEOUT_MS": "1800000",
+    "BASH_DEFAULT_TIMEOUT_MS": "300000",
+    "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "0"
+  }
+}

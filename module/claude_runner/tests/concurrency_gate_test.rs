@@ -20,6 +20,8 @@
 //! | T10 | `CLR_GATE_POLL_SECS=notanumber` (+ valid `CLR_GATE_MAX_ATTEMPTS=2`, `--retry-override 0`) → invalid value silently falls back to the 30s default | — |
 //! | T11 | `CLR_GATE_MAX_ATTEMPTS=notanumber` (+ valid `CLR_GATE_POLL_SECS=1`) → invalid value silently falls back to the 1000-attempt default | — |
 //! | T14 | N concurrent live `clr` invocations racing a single pre-seeded dead-owner slot → peak concurrently-admitted children never exceeds 1 (BUG-392) | — |
+//! | T15 | 2 racers, `--max-sessions 1`, 0 pre-existing occupiers → loser's wait message names "slot held by another session", not "at capacity" or a reclaim race (BUG-393/BUG-396) | — |
+//! | T16 | 2 racers, `--max-sessions 1`, pre-seeded confirmed-dead owner → loser's wait message names "lost reservation race", not "at capacity" or a live hold (BUG-396) | — |
 //!
 //! T05 (`clr --help` shows `default: 6`) is covered by
 //! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_six`.
@@ -1003,5 +1005,250 @@ fn t14_reclaim_race_admits_at_most_one_caller_for_a_dead_owners_slot()
     "T14 (BUG-392): peak concurrently-alive dispatched children sharing one \
      contested dead-owner slot ({peak}) must never exceed 1 — acquire_slot()'s \
      reclaim branch admitted more than one caller for the same slot"
+  );
+}
+
+// ── T15: slot-wait message names a live hold, not a race (BUG-393/BUG-396) ───
+
+/// T15 (BUG-393, corrected by BUG-396): races exactly 2 concurrent `clr`
+/// invocations against `--max-sessions 1` with zero pre-existing occupiers,
+/// so both racers read `count_u32 = 0 < max = 1` on their very first attempt
+/// and contend for the same reservation index. Captures both racers' stderr
+/// directly (not `Stdio::null()`, unlike T08/T14) and asserts the losing
+/// racer's message names the cause as the slot being held by another
+/// session, and that neither racer's message claims capacity exhaustion or a
+/// reclaim race.
+///
+/// ## Root Cause
+/// `wait_for_session_slot()`'s admission check at `gate.rs:334` is a compound
+/// condition, `has_capacity && acquire_slot(...)`. Originally (BUG-393) this
+/// test's docs assumed the losing racer's non-admission was itself a "race" —
+/// but the loser's `pid_alive(owner)` check observes the WINNING racer's own
+/// PID, and that racer remains present in `/proc` (at minimum as a zombie,
+/// since this test's harness does not reap either racer until the 2s
+/// deadline below) for the entire observation window. The loser therefore
+/// always takes `acquire_slot()`'s `HeldByLive` branch — it never contends
+/// for anything, because it never even attempts a reclaim; the winner's slot
+/// is simply, unambiguously "held by a live session" from the loser's very
+/// first check onward. See BUG-396 for the genuine reclaim-race scenario
+/// (T16), which requires a pre-seeded, CONFIRMED-dead owner instead.
+///
+/// ## Why Not Caught
+/// BUG-393's own fix shipped with this test asserting `"lost reservation
+/// race"` for the loser, and it passed — because at the time, `acquire_slot()`
+/// collapsed `HeldByLive` and `LostReclaimRace` into the same bare `false`,
+/// so both this test's scenario AND a genuine reclaim race produced
+/// identical output. The mislabeling was only exposed by production
+/// evidence (job #40: `has_capacity` true, message claimed a "race", but the
+/// recorded slot owner was directly confirmed alive via `/proc` — no reclaim
+/// was ever attempted).
+///
+/// ## Fix Applied
+/// `acquire_slot()` now returns `Result<(), SlotDenialCause>` with
+/// `HeldByLive` and `LostReclaimRace` as distinct variants (`gate.rs`);
+/// `wait_for_session_slot()` matches on the variant to choose the cause
+/// suffix, rather than collapsing every non-admission under `has_capacity`
+/// into one label.
+///
+/// ## Prevention
+/// A test asserting on `acquire_slot()`'s denial-cause message must confirm
+/// which branch it actually exercises by reasoning about `pid_alive()`'s
+/// observable inputs (is the checked PID a fresh racer that may still be a
+/// zombie, or a genuinely pre-reaped dead process?), not by assuming
+/// "not admitted" implies any particular cause.
+///
+/// ## Pitfall
+/// Do not reuse T08/T14's 8-racer, compiled-sleeper-binary infrastructure for
+/// this — it is sized for peak-concurrency sampling, not message-content
+/// capture, and switching its uniform `Stdio::null()` to per-child `piped()`
+/// would need individual incremental reads threaded through its careful
+/// non-blocking reap loop. A minimal 2-racer, `--max-sessions 1` fixture
+/// isolates the same branches with far less moving parts.
+// test_kind: bug_reproducer(BUG-393)
+#[ test ]
+fn t15_slot_wait_message_names_live_hold_when_owner_alive()
+{
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 pre-existing occupiers
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let spawn_racer = | label : &str |
+  {
+    Command::new( bin )
+      .args( [ "-p", "--max-sessions", "1", "--journal", "off", label ] )
+      .env( "PATH", &script_path )
+      .env( "CLR_PROC_DIR", proc_dir.path() )
+      .env( "CLR_GATE_DIR", gate_dir.path() )
+      .env( "CLR_GATE_POLL_SECS", "1" )
+      .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
+      .stdout( std::process::Stdio::null() )
+      .stderr( std::process::Stdio::piped() )
+      .spawn()
+      .expect( "spawn racing clr" )
+  };
+
+  let mut racer_a = spawn_racer( "race-a" );
+  let mut racer_b = spawn_racer( "race-b" );
+
+  // Both racers read count_u32=0 < max=1 on attempt 1 and contend for the same
+  // reservation index; the loser's message prints immediately (no delay before
+  // the first poll's eprintln). 2s is a generous margin before either racer
+  // could reach CLR_GATE_MAX_ATTEMPTS=5's own timeout/retry path, and is also
+  // why the winner is still present in `/proc` (unreaped by this harness) for
+  // the loser's entire observation window — see `## Root Cause` above.
+  std::thread::sleep( core::time::Duration::from_secs( 2 ) );
+  let _ = racer_a.kill();
+  let _ = racer_b.kill();
+  let out_a = racer_a.wait_with_output().expect( "reap racer a" );
+  let out_b = racer_b.wait_with_output().expect( "reap racer b" );
+
+  let stderr_a = String::from_utf8_lossy( &out_a.stderr );
+  let stderr_b = String::from_utf8_lossy( &out_b.stderr );
+
+  let a_held = stderr_a.contains( "slot held by another session" );
+  let b_held = stderr_b.contains( "slot held by another session" );
+  assert!(
+    a_held != b_held,
+    "T15 (BUG-393/396): exactly one racer must report the slot held by \
+     another (live) session. stderr_a:\n{stderr_a}\nstderr_b:\n{stderr_b}"
+  );
+  assert!(
+    !stderr_a.contains( "at capacity" ) && !stderr_b.contains( "at capacity" ),
+    "T15 (BUG-393/396): neither racer should report capacity exhaustion when both \
+     read count_u32=0 < max=1 on the racing attempt. stderr_a:\n{stderr_a}\n\
+     stderr_b:\n{stderr_b}"
+  );
+  assert!(
+    !stderr_a.contains( "lost reservation race" ) && !stderr_b.contains( "lost reservation race" ),
+    "T15 (BUG-393/396): neither racer should claim a reclaim race — the loser \
+     never attempts a reclaim because the observed owner (the winning racer) \
+     is alive. stderr_a:\n{stderr_a}\nstderr_b:\n{stderr_b}"
+  );
+}
+
+// ── T16: slot-wait message names a genuine reclaim race (BUG-396) ──────────
+
+/// T16 (BUG-396): races exactly 2 concurrent `clr` invocations against a
+/// pre-seeded, CONFIRMED-dead slot owner — mirroring T14's dead-owner
+/// technique: a real short-lived process is spawned and reaped so
+/// `/proc/{dead_pid}` is genuinely absent, not a lingering zombie — with
+/// `--max-sessions 1` so `has_capacity` is true for both racers on every
+/// attempt (`CLR_PROC_DIR` stays empty and static throughout). Both racers
+/// observe the identical dead owner and both attempt the reclaim-ticket
+/// path; exactly one wins the ticket (admitted via reclaim, no wait message
+/// at all), the other loses the ticket race. Captures the loser's stderr
+/// directly and asserts it names the cause as a lost reservation race — the
+/// one `acquire_slot()` code path where that label is actually accurate —
+/// and that it does NOT claim capacity exhaustion or a live-held slot,
+/// distinguishing it from T15's scenario.
+///
+/// ## Root Cause
+/// See `Fix(BUG-396)` on `acquire_slot()`/`SlotDenialCause` in `gate.rs`:
+/// prior to that fix, `HeldByLive` and `LostReclaimRace` were both a bare
+/// `false`, so the message site could not tell them apart.
+///
+/// ## Why Not Caught
+/// T15 was believed to already cover "lost reservation race", but its
+/// 2-fresh-racer fixture never exercises the reclaim-ticket path at all (see
+/// T15's `## Root Cause`, above) — it always takes the `HeldByLive` branch.
+/// T14 exercises the true dead-owner reclaim path but discards every
+/// racer's stderr via `Stdio::null()`, so no test asserted on this specific
+/// message content before now.
+///
+/// ## Fix Applied
+/// `acquire_slot()` now returns `Result<(), SlotDenialCause>`;
+/// `wait_for_session_slot()` matches `SlotDenialCause::LostReclaimRace`
+/// specifically for this path, separately from `HeldByLive`.
+///
+/// ## Prevention
+/// Any test claiming to cover "lost reservation race" must pre-seed a
+/// confirmed-dead owner (spawn + reap a real process, as T14 and this test
+/// do) rather than relying on two fresh racers racing an empty path.
+///
+/// ## Pitfall
+/// Do not assume `acquire_slot()` returning an `Err` means a race occurred —
+/// verify which `SlotDenialCause` variant fired. Only `LostReclaimRace`
+/// involves any actual contention; `HeldByLive` is simply "someone else has
+/// this index," which may be a session that started microseconds or hours
+/// ago — the code cannot tell, and the message must not claim it can.
+// test_kind: bug_reproducer(BUG-396)
+#[ test ]
+fn t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner()
+{
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers throughout
+
+  // Pre-seed a slot file owned by a definitely-dead PID, mirroring T14: spawn
+  // a real, immediately-exiting process and reap it so `/proc/{dead_pid}` is
+  // confirmed absent (not a lingering zombie) from this point on.
+  let mut dead = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
+  let dead_pid = dead.id();
+  let _ = dead.wait();
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{dead_pid},"since":0}}"# ),
+  ).expect( "pre-seed dead-owner slot file" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let spawn_racer = | label : &str |
+  {
+    Command::new( bin )
+      // count_u32 stays 0 throughout (proc_dir is empty and static), so both
+      // racers read has_capacity=true and target index 0 — the pre-seeded
+      // dead-owner slot — on every attempt.
+      .args( [ "-p", "--max-sessions", "1", "--journal", "off", label ] )
+      .env( "PATH", &script_path )
+      .env( "CLR_PROC_DIR", proc_dir.path() )
+      .env( "CLR_GATE_DIR", gate_dir.path() )
+      .env( "CLR_GATE_POLL_SECS", "1" )
+      .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
+      // Widen the reclaim race window deterministically (see
+      // reclaim_test_delay() in gate.rs), matching T14, so this test forces
+      // genuine ticket contention on every run instead of depending on
+      // incidental OS scheduling jitter between the two racers.
+      .env( "CLR_GATE_RECLAIM_TEST_DELAY_MS", "50" )
+      .stdout( std::process::Stdio::null() )
+      .stderr( std::process::Stdio::piped() )
+      .spawn()
+      .expect( "spawn racing clr" )
+  };
+
+  let mut racer_a = spawn_racer( "race-a" );
+  let mut racer_b = spawn_racer( "race-b" );
+
+  std::thread::sleep( core::time::Duration::from_secs( 2 ) );
+  let _ = racer_a.kill();
+  let _ = racer_b.kill();
+  let out_a = racer_a.wait_with_output().expect( "reap racer a" );
+  let out_b = racer_b.wait_with_output().expect( "reap racer b" );
+
+  let stderr_a = String::from_utf8_lossy( &out_a.stderr );
+  let stderr_b = String::from_utf8_lossy( &out_b.stderr );
+
+  // The winner is admitted on attempt 1 and returns immediately — it never
+  // reaches the `!quiet` message block on any attempt, so its stderr is
+  // empty. The loser, however, polls more than once within the 2s window
+  // (CLR_GATE_POLL_SECS=1): its FIRST attempt is the genuine reclaim-ticket
+  // race this test targets, but by its SECOND attempt the winner's own slot
+  // record is in place and alive, so the loser legitimately (and correctly)
+  // shifts to reporting "slot held by another session" from then on. Only
+  // the loser's first message is this test's subject.
+  let loser_stderr = if stderr_a.trim().is_empty() { stderr_b.as_ref() } else { stderr_a.as_ref() };
+  let first_line   = loser_stderr.lines().next().unwrap_or_default();
+  assert!(
+    first_line.contains( "lost reservation race" ),
+    "T16 (BUG-396): the losing racer's FIRST poll attempt must report losing the \
+     reclaim-ticket race for the pre-seeded dead owner — later attempts may \
+     legitimately shift to \"slot held by another session\" once the winner's own \
+     slot record is alive and observed on a subsequent poll. stderr_a:\n{stderr_a}\n\
+     stderr_b:\n{stderr_b}"
+  );
+  assert!(
+    !stderr_a.contains( "at capacity" ) && !stderr_b.contains( "at capacity" ),
+    "T16 (BUG-396): neither racer should report capacity exhaustion — \
+     has_capacity is true for both throughout. stderr_a:\n{stderr_a}\n\
+     stderr_b:\n{stderr_b}"
   );
 }

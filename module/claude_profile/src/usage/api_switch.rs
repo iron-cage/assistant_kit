@@ -240,6 +240,7 @@ pub fn apply_model_override(
   // Pitfall: use override_session_model_to_sonnet() to avoid redundant writes when already "sonnet".
   if let Some( ref sonnet ) = quota.seven_day_sonnet
   {
+    // BUG-331 — compares raw sonnet_left against threshold but rounds only for trace display (raw-vs-rounded mismatch)
     let sonnet_left = 100.0 - sonnet.utilization;
     if sonnet_left < OPUS_OVERRIDE_THRESHOLD
     {

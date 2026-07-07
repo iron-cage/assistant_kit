@@ -89,7 +89,7 @@ clv.version.show format::json
 
 ### Command :: 4. `.version.install`
 
-Download and install a Claude Code version via the official installer (curl). Supports hot-swap and 5-layer version locking (Layers 1–4 prevent auto-updates; Layer 5 stores the preferred version as a recovery signal for `.version.guard`). Accepts named aliases (`stable`, `latest`, `month`) and semver strings. Already-at-target is a no-op (exit 0) unless `force::1` is set.
+Download and install a Claude Code version via the official installer (curl). Supports hot-swap and 8-layer version locking (Layers 1–4, 6, and 8 prevent unwanted version changes via auto-update, manual update, or channel drift; Layer 5 stores the preferred version as a recovery signal for `.version.guard`; Layer 7 enforces a minimum-version floor). Accepts named aliases (`stable`, `latest`, `month`) and semver strings. Already-at-target is a no-op (exit 0) unless `force::1` is set.
 
 -- **Parameters:** version::, dry::, force::, v::, format::
 -- **Exit Codes:** 0 (success) | 1 (invalid version spec) | 2 (installer failure)

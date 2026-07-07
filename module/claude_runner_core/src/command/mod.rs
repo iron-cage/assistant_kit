@@ -84,6 +84,16 @@ pub struct ClaudeCommand {
 /// in lockstep.
 pub const DEFAULT_COMPACT_WINDOW: u32 = 300_000;
 
+/// One token in the invocation's flag/arg sequence.
+///
+/// Distinguishes the message — which needs shell-quoting for display but is passed to the
+/// subprocess unquoted — from every other token, which is used as-is in both display and
+/// execution. See [`ClaudeCommand::arg_tokens`].
+enum ArgToken {
+  Plain( String ),
+  Message( String ),
+}
+
 impl ClaudeCommand {
   /// Create a new Claude Code command builder
   ///
@@ -154,6 +164,107 @@ impl ClaudeCommand {
     }
   }
 
+  /// Ordered list of `(env var name, value)` pairs this command will set on the subprocess.
+  ///
+  /// SINGLE SOURCE OF TRUTH for environment variables: both [`build_command`](Self::build_command)
+  /// (real execution — applies each pair via `Command::env`) and [`describe_env`](Self::describe_env)
+  /// (trace/dry-run display — formats each pair as a text line) iterate this same list. A new
+  /// env-var-producing field is added here exactly once and automatically appears in both real
+  /// execution and display — there is no second call site to remember to update, so the two can
+  /// never diverge.
+  #[inline]
+  fn env_pairs( &self ) -> Vec< ( &'static str, String ) > {
+    let mut pairs = Vec::new();
+
+    if let Some( tokens ) = self.max_output_tokens {
+      pairs.push( ( "CLAUDE_CODE_MAX_OUTPUT_TOKENS", tokens.to_string() ) );
+    }
+    if let Some( window ) = self.compact_window {
+      pairs.push( ( "CLAUDE_CODE_AUTO_COMPACT_WINDOW", window.to_string() ) );
+    }
+    if let Some( timeout ) = self.bash_default_timeout_ms {
+      pairs.push( ( "CLAUDE_CODE_BASH_TIMEOUT", timeout.to_string() ) );
+    }
+    if let Some( max_timeout ) = self.bash_max_timeout_ms {
+      pairs.push( ( "CLAUDE_CODE_BASH_MAX_TIMEOUT", max_timeout.to_string() ) );
+    }
+    if let Some( auto_continue ) = self.auto_continue {
+      pairs.push( ( "CLAUDE_CODE_AUTO_CONTINUE", auto_continue.to_string() ) );
+    }
+    if let Some( telemetry ) = self.telemetry {
+      pairs.push( ( "CLAUDE_CODE_TELEMETRY", telemetry.to_string() ) );
+    }
+    if let Some( approve ) = self.auto_approve_tools {
+      pairs.push( ( "CLAUDE_CODE_AUTO_APPROVE_TOOLS", approve.to_string() ) );
+    }
+    if let Some( mode ) = self.action_mode {
+      pairs.push( ( "CLAUDE_CODE_ACTION_MODE", mode.as_str().to_string() ) );
+    }
+    if let Some( level ) = self.log_level {
+      pairs.push( ( "CLAUDE_CODE_LOG_LEVEL", level.as_str().to_string() ) );
+    }
+    if let Some( temp ) = self.temperature {
+      pairs.push( ( "CLAUDE_CODE_TEMPERATURE", temp.to_string() ) );
+    }
+    if let Some( sandbox ) = self.sandbox_mode {
+      pairs.push( ( "CLAUDE_CODE_SANDBOX_MODE", sandbox.to_string() ) );
+    }
+    if let Some( ref dir ) = self.session_dir {
+      pairs.push( ( "CLAUDE_CODE_SESSION_DIR", dir.display().to_string() ) );
+    }
+    if let Some( top_p ) = self.top_p {
+      pairs.push( ( "CLAUDE_CODE_TOP_P", top_p.to_string() ) );
+    }
+    if let Some( top_k ) = self.top_k {
+      pairs.push( ( "CLAUDE_CODE_TOP_K", top_k.to_string() ) );
+    }
+    if let Some( ref home ) = self.home_override {
+      pairs.push( ( "HOME", home.display().to_string() ) );
+    }
+
+    pairs
+  }
+
+  /// Ordered list of CLI argument tokens — after the `claude`/`env -u CLAUDECODE claude` prefix,
+  /// before any stdin-redirect notation — that this command will pass to the subprocess.
+  ///
+  /// SINGLE SOURCE OF TRUTH for typed-field CLI flags: both [`build_command`](Self::build_command)
+  /// (real execution — applies each token via `Command::arg`) and [`describe`](Self::describe)
+  /// (trace/dry-run display — renders each token as text, shell-quoting the message) iterate this
+  /// same list. A new typed-field flag is added here exactly once and automatically appears in
+  /// both real execution and display — there is no second call site to remember to update, so the
+  /// two can never diverge. Flags pushed via `self.args` are already covered here too; only
+  /// `self.message` needs the `ArgToken::Message` distinction, since it is quoted for display but
+  /// passed to the subprocess unquoted.
+  #[inline]
+  fn arg_tokens( &self ) -> Vec< ArgToken > {
+    let mut tokens = Vec::new();
+
+    if self.skip_permissions {
+      tokens.push( ArgToken::Plain( "--dangerously-skip-permissions".to_string() ) );
+    }
+
+    match self.chrome {
+      Some( true )  => tokens.push( ArgToken::Plain( "--chrome".to_string() ) ),
+      Some( false ) => tokens.push( ArgToken::Plain( "--no-chrome".to_string() ) ),
+      None          => {}
+    }
+
+    for arg in &self.args {
+      tokens.push( ArgToken::Plain( arg.clone() ) );
+    }
+
+    if self.continue_conversation {
+      tokens.push( ArgToken::Plain( "-c".to_string() ) );
+    }
+
+    if let Some( ref msg ) = self.message {
+      tokens.push( ArgToken::Message( msg.clone() ) );
+    }
+
+    tokens
+  }
+
   /// Describe only the invocation line (no `cd` prefix)
   ///
   /// Unlike `describe()`, this always returns a single line (without the leading `cd /dir` line).
@@ -214,17 +325,15 @@ impl ClaudeCommand {
   /// This matters when writing tests that assert the exact output string (e.g. `assert_eq!`).
   /// Use `contains` assertions for individual flags when order is not the subject of the test.
   ///
-  /// # Critical: Must Mirror `build_command()`
+  /// # Single Source Of Truth With `build_command()`
   ///
-  /// `describe()` reconstructs the command string independently of `build_command()`. Every CLI
-  /// flag that `build_command()` emits from a **typed field** (not from `self.args`) MUST also
-  /// appear in `describe()` at the corresponding position.
-  ///
-  /// Typed-field flags (currently `skip_permissions`, `chrome`, `continue_conversation`) are
-  /// emitted directly in `build_command()` — NOT via `self.args`. Updating `build_command()`
-  /// without updating `describe()` causes dry-run output to diverge from the actual command.
-  ///
-  /// Pitfall: always update both methods when adding a new typed-field CLI parameter.
+  /// `describe()` renders [`arg_tokens()`](Self::arg_tokens) for display; `build_command()`
+  /// applies the same list via `Command::arg`. Every typed-field CLI flag is enumerated exactly
+  /// once, in `arg_tokens()` — adding a new one automatically appears in both real execution and
+  /// display, so the two cannot structurally diverge. Only the `env -u CLAUDECODE` prefix, the
+  /// leading `cd` line, and the message's shell-quoting are handled locally in `describe()`
+  /// (execution-only concerns like `env_remove` or display-only concerns like quoting for paste
+  /// safety, neither of which has a `build_command()` counterpart to drift from).
   ///
   /// # Example
   ///
@@ -253,8 +362,6 @@ impl ClaudeCommand {
     //   trace/dry-run output is WYSIWYG — what you see is what subprocess actually runs.
     // Root cause: describe() started with "claude" unconditionally; env_remove("CLAUDECODE")
     //   in build_command() is an OS-level call invisible in the displayed command string.
-    // Pitfall: both describe() and build_command() must be kept in sync — every env
-    //   manipulation in build_command() must appear in describe() output at the same position.
     let mut parts = if self.unset_claudecode
     {
       vec![ "env".to_string(), "-u".to_string(), "CLAUDECODE".to_string(), "claude".to_string() ]
@@ -264,35 +371,23 @@ impl ClaudeCommand {
       vec![ "claude".to_string() ]
     };
 
-    if self.skip_permissions {
-      parts.push( "--dangerously-skip-permissions".to_string() );
+    for token in self.arg_tokens() {
+      match token {
+        ArgToken::Plain( s ) => parts.push( s ),
+        ArgToken::Message( msg ) => {
+          // Fix(issue-describe-backslash-escape): Escape `\` before `"` to prevent malformed shell output
+          // Root cause: Only `"` was escaped, not `\`. Messages containing `\"` produced `\\"` in output
+          // which shell parses as a closing double-quote, breaking the command representation.
+          // Pitfall: Always escape `\` first, then `"`, when quoting for double-quoted shell strings.
+          let escaped = msg.replace( '\\', "\\\\" ).replace( '"', "\\\"" );
+          parts.push( format!( "\"{escaped}\"" ) );
+        }
+      }
     }
 
-    // Emit chrome flag from typed field (default: Some(true) → --chrome)
-    match self.chrome {
-      Some( true )  => parts.push( "--chrome".to_string() ),
-      Some( false ) => parts.push( "--no-chrome".to_string() ),
-      None          => {}
-    }
-
-    for arg in &self.args {
-      parts.push( arg.clone() );
-    }
-
-    if self.continue_conversation {
-      parts.push( "-c".to_string() );
-    }
-
-    if let Some( ref msg ) = self.message {
-      // Fix(issue-describe-backslash-escape): Escape `\` before `"` to prevent malformed shell output
-      // Root cause: Only `"` was escaped, not `\`. Messages containing `\"` produced `\\"` in output
-      // which shell parses as a closing double-quote, breaking the command representation.
-      // Pitfall: Always escape `\` first, then `"`, when quoting for double-quoted shell strings.
-      let escaped = msg.replace( '\\', "\\\\" ).replace( '"', "\\\"" );
-      parts.push( format!( "\"{escaped}\"" ) );
-    }
-
-    // stdin redirect notation appended to the invocation line (P1: must mirror build_command)
+    // stdin redirect notation appended to the invocation line (display-only: stdin_file is wired
+    // onto the spawned Command by execute()/execute_interactive()/spawn_piped()/spawn_tty(),
+    // not by build_command() itself, so there is no arg_tokens()-style shared list for it).
     if let Some( ref path ) = self.stdin_file
     {
       parts.push( format!( "< {}", path.display() ) );
@@ -304,9 +399,19 @@ impl ClaudeCommand {
 
   /// Describe environment variables that would be set
   ///
-  /// Returns one `NAME=VALUE` line per configured environment variable.
-  /// Only includes variables that have been explicitly set (via defaults
-  /// or builder methods). Omits `None` values.
+  /// Returns one `export NAME=VALUE` line per configured environment variable, sourced from
+  /// [`env_pairs()`](Self::env_pairs) — the same list `build_command()` applies to the real
+  /// subprocess. Only includes variables that have been explicitly set (via defaults or builder
+  /// methods). Omits `None` values.
+  ///
+  /// # Why `export`, Not Bare `NAME=VALUE`
+  ///
+  /// A bare `NAME=VALUE` line only scopes to a command written on the *same* shell input line —
+  /// pasted on its own line, it silently sets nothing but a local shell variable that never
+  /// reaches the subsequent `claude` invocation. `export` persists for the rest of the shell
+  /// session, so this output — and [`describe_full()`](Self::describe_full), which combines it
+  /// with the invocation line — remains copy-paste-safe regardless of blank lines or line
+  /// ordering between the env block and the command.
   ///
   /// # Example
   ///
@@ -315,61 +420,46 @@ impl ClaudeCommand {
   ///
   /// let env = ClaudeCommand::new().describe_env();
   ///
-  /// assert!( env.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ) );
-  /// assert!( env.contains( "CLAUDE_CODE_BASH_TIMEOUT=3600000" ) );
+  /// assert!( env.contains( "export CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ) );
+  /// assert!( env.contains( "export CLAUDE_CODE_BASH_TIMEOUT=3600000" ) );
   /// ```
   #[inline]
   #[must_use]
   pub fn describe_env( &self ) -> String {
-    let mut lines = Vec::new();
+    self.env_pairs()
+      .into_iter()
+      .map( | ( key, value ) | format!( "export {key}={value}" ) )
+      .collect::< Vec< _ > >()
+      .join( "\n" )
+  }
 
-    if let Some( tokens ) = self.max_output_tokens {
-      lines.push( format!( "CLAUDE_CODE_MAX_OUTPUT_TOKENS={tokens}" ) );
-    }
-    if let Some( window ) = self.compact_window {
-      lines.push( format!( "CLAUDE_CODE_AUTO_COMPACT_WINDOW={window}" ) );
-    }
-    if let Some( timeout ) = self.bash_default_timeout_ms {
-      lines.push( format!( "CLAUDE_CODE_BASH_TIMEOUT={timeout}" ) );
-    }
-    if let Some( max_timeout ) = self.bash_max_timeout_ms {
-      lines.push( format!( "CLAUDE_CODE_BASH_MAX_TIMEOUT={max_timeout}" ) );
-    }
-    if let Some( auto_continue ) = self.auto_continue {
-      lines.push( format!( "CLAUDE_CODE_AUTO_CONTINUE={auto_continue}" ) );
-    }
-    if let Some( telemetry ) = self.telemetry {
-      lines.push( format!( "CLAUDE_CODE_TELEMETRY={telemetry}" ) );
-    }
-    if let Some( approve ) = self.auto_approve_tools {
-      lines.push( format!( "CLAUDE_CODE_AUTO_APPROVE_TOOLS={approve}" ) );
-    }
-    if let Some( mode ) = self.action_mode {
-      lines.push( format!( "CLAUDE_CODE_ACTION_MODE={}", mode.as_str() ) );
-    }
-    if let Some( level ) = self.log_level {
-      lines.push( format!( "CLAUDE_CODE_LOG_LEVEL={}", level.as_str() ) );
-    }
-    if let Some( temp ) = self.temperature {
-      lines.push( format!( "CLAUDE_CODE_TEMPERATURE={temp}" ) );
-    }
-    if let Some( sandbox ) = self.sandbox_mode {
-      lines.push( format!( "CLAUDE_CODE_SANDBOX_MODE={sandbox}" ) );
-    }
-    if let Some( ref dir ) = self.session_dir {
-      lines.push( format!( "CLAUDE_CODE_SESSION_DIR={}", dir.display() ) );
-    }
-    if let Some( top_p ) = self.top_p {
-      lines.push( format!( "CLAUDE_CODE_TOP_P={top_p}" ) );
-    }
-    if let Some( top_k ) = self.top_k {
-      lines.push( format!( "CLAUDE_CODE_TOP_K={top_k}" ) );
-    }
-    if let Some( ref home ) = self.home_override {
-      lines.push( format!( "HOME={}", home.display() ) );
-    }
-
-    lines.join( "\n" )
+  /// Full copy-paste-safe preview block: env-var exports, a blank line, then the invocation line(s).
+  ///
+  /// SINGLE SOURCE OF TRUTH for preview formatting. Every call site that shows a user a preview of
+  /// what will run — `--dry-run`, `--trace`, and the `isolated`/`refresh` credential preview in
+  /// `claude_runner::cli::credential` — calls this method rather than combining
+  /// [`describe_env()`](Self::describe_env) and [`describe()`](Self::describe) itself. Combining
+  /// them ad-hoc at each call site is what previously let the blank-line/export formatting drift
+  /// between `--dry-run` and `--trace`; routing every call site through one method makes that
+  /// drift structurally impossible.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// use claude_runner_core::ClaudeCommand;
+  ///
+  /// let full = ClaudeCommand::new().with_message( "hi" ).describe_full();
+  /// let mut lines = full.lines();
+  ///
+  /// assert!( lines.next().unwrap().starts_with( "export CLAUDE_CODE_MAX_OUTPUT_TOKENS=" ) );
+  /// assert!( full.contains( "\n\nenv -u CLAUDECODE claude" ), "blank line must separate env block from invocation" );
+  /// ```
+  #[inline]
+  #[must_use]
+  pub fn describe_full( &self ) -> String {
+    let env = self.describe_env();
+    let command = self.describe();
+    if env.is_empty() { command } else { format!( "{env}\n\n{command}" ) }
   }
 
   /// Execute the Claude Code command and capture output (non-interactive mode)
@@ -518,11 +608,11 @@ impl ClaudeCommand {
   ///
   /// SINGLE EXECUTION POINT: This is the ONLY location where `Command::new("claude")` appears
   ///
-  /// Pitfall: any typed-field CLI flag OR env manipulation added here MUST also
-  /// appear in `describe()` at the same relative position — otherwise dry-run/trace diverges.
-  /// Typed-field flags: `skip_permissions`, `chrome`, `continue_conversation` (see `describe()`).
-  /// Env manipulations: `unset_claudecode` → `cmd.env_remove("CLAUDECODE")` → shown as `env -u CLAUDECODE` prefix.
-  /// Flags pushed via `self.args` are automatically mirrored; only typed fields need manual sync.
+  /// Env vars and typed-field CLI flags come from [`env_pairs()`](Self::env_pairs) and
+  /// [`arg_tokens()`](Self::arg_tokens) — the same two lists `describe_env()` and `describe()`
+  /// render for display. A new typed-field parameter is added to one of those two methods and
+  /// automatically applies here too; there is no separate list to duplicate in this method, so
+  /// dry-run/trace cannot structurally diverge from what actually executes.
   #[inline]
   fn build_command( &self ) -> std::process::Command {
     use std::process::Command;
@@ -535,68 +625,8 @@ impl ClaudeCommand {
       cmd.current_dir( dir );
     }
 
-    // Set max output tokens (fixes token limit bug: 32K → 200K)
-    if let Some( tokens ) = self.max_output_tokens {
-      cmd.env( "CLAUDE_CODE_MAX_OUTPUT_TOKENS", tokens.to_string() );
-    }
-
-    if let Some( window ) = self.compact_window {
-      cmd.env( "CLAUDE_CODE_AUTO_COMPACT_WINDOW", window.to_string() );
-    }
-
-    // Tier 1: Critical parameters with different defaults
-    if let Some( timeout ) = self.bash_default_timeout_ms {
-      cmd.env( "CLAUDE_CODE_BASH_TIMEOUT", timeout.to_string() );
-    }
-
-    if let Some( max_timeout ) = self.bash_max_timeout_ms {
-      cmd.env( "CLAUDE_CODE_BASH_MAX_TIMEOUT", max_timeout.to_string() );
-    }
-
-    if let Some( auto_continue ) = self.auto_continue {
-      cmd.env( "CLAUDE_CODE_AUTO_CONTINUE", auto_continue.to_string() );
-    }
-
-    if let Some( telemetry ) = self.telemetry {
-      cmd.env( "CLAUDE_CODE_TELEMETRY", telemetry.to_string() );
-    }
-
-    // Tier 2: Essential parameters (security-sensitive)
-    if let Some( approve ) = self.auto_approve_tools {
-      cmd.env( "CLAUDE_CODE_AUTO_APPROVE_TOOLS", approve.to_string() );
-    }
-
-    if let Some( mode ) = self.action_mode {
-      cmd.env( "CLAUDE_CODE_ACTION_MODE", mode.as_str() );
-    }
-
-    if let Some( level ) = self.log_level {
-      cmd.env( "CLAUDE_CODE_LOG_LEVEL", level.as_str() );
-    }
-
-    if let Some( temp ) = self.temperature {
-      cmd.env( "CLAUDE_CODE_TEMPERATURE", temp.to_string() );
-    }
-
-    // Tier 3: Optional parameters
-    if let Some( sandbox ) = self.sandbox_mode {
-      cmd.env( "CLAUDE_CODE_SANDBOX_MODE", sandbox.to_string() );
-    }
-
-    if let Some( ref dir ) = self.session_dir {
-      cmd.env( "CLAUDE_CODE_SESSION_DIR", dir.to_string_lossy().as_ref() );
-    }
-
-    if let Some( top_p ) = self.top_p {
-      cmd.env( "CLAUDE_CODE_TOP_P", top_p.to_string() );
-    }
-
-    if let Some( top_k ) = self.top_k {
-      cmd.env( "CLAUDE_CODE_TOP_K", top_k.to_string() );
-    }
-
-    if let Some( ref home ) = self.home_override {
-      cmd.env( "HOME", home );
+    for ( key, value ) in self.env_pairs() {
+      cmd.env( key, value );
     }
 
     if self.unset_claudecode
@@ -604,31 +634,10 @@ impl ClaudeCommand {
       cmd.env_remove( "CLAUDECODE" );
     }
 
-    // Add skip-permissions flag before custom args
-    if self.skip_permissions {
-      cmd.arg( "--dangerously-skip-permissions" );
-    }
-
-    // Emit chrome flag from typed field (default: Some(true) → --chrome)
-    match self.chrome {
-      Some( true )  => { cmd.arg( "--chrome" ); }
-      Some( false ) => { cmd.arg( "--no-chrome" ); }
-      None          => {}
-    }
-
-    // Add custom arguments
-    for arg in &self.args {
-      cmd.arg( arg );
-    }
-
-    // Add continuation flag if requested
-    if self.continue_conversation {
-      cmd.arg( "-c" );
-    }
-
-    // Add message last if provided
-    if let Some( ref msg ) = self.message {
-      cmd.arg( msg );
+    for token in self.arg_tokens() {
+      match token {
+        ArgToken::Plain( s ) | ArgToken::Message( s ) => { cmd.arg( s ); }
+      }
     }
 
     cmd

@@ -50,7 +50,18 @@ fn extract_str( s : &str, key : &str ) -> Option< String >
     if c == '"'  { return Some( out ); }
     out.push( c );
   }
-  Some( out )
+  // Fix(BUG-395): loop exhausted `inner.chars()` without ever seeing an
+  // unescaped closing quote — the value is truncated/malformed, not a
+  // legitimately short string. Every OTHER malformed-input path in this
+  // function already returns `None` (absent key, `null`, non-string value);
+  // only this fallthrough returned the success value `Some(out)`.
+  // Root cause: the loop's only early-return was on finding the closing
+  // quote; falling off the end of a `for` loop is ordinary control flow with
+  // no compiler-enforced obligation to handle "exhausted without finding it".
+  // Pitfall: a scan-for-terminator loop's post-loop code is the
+  // "terminator never found" path — it must be a failure value (`None`),
+  // never a success value, or exhaustion silently reads as a valid short match.
+  None
 }
 
 /// Extract a `u64` JSON number for `key`.
@@ -195,6 +206,33 @@ fn extract_json_value( s : &str, key : &str ) -> Option< String >
   None
 }
 
+/// Find the byte offset of the next *unescaped* `"` in `s` — the correct way to locate
+/// the end of a JSON string value, since JSON always represents a literal `"` inside a
+/// string as the escape sequence `\"`.
+///
+/// Fix(BUG-394): three call sites (`ps.rs::try_jsonl_task`, `ps.rs::parse_json_str`,
+/// and this file's `render_summary()` `model_name` extraction) each hand-rolled a bare
+/// `.find('"')` terminator search with no escape-state tracking, so an escaped `\"`
+/// inside the value terminated extraction early instead of at the true closing quote.
+/// Root cause: none of the three sites adopted the escape-tracking loop already proven
+/// correct by `extract_str` (above) and `extract_json_value`'s string-value branch —
+/// each was written to solve a narrower, seemingly-simple parsing need in isolation.
+/// Pitfall: a bare `.find('"')` is only safe when the searched text is guaranteed to
+/// contain no escaped quotes before the true terminator — never assume that for
+/// user-influenced content (message text, filesystem paths) or JSON object keys that
+/// could themselves have been JSON-escaped.
+pub( super ) fn find_unescaped_quote( s : &str ) -> Option< usize >
+{
+  let mut escaped = false;
+  for ( i, c ) in s.char_indices()
+  {
+    if escaped { escaped = false; continue; }
+    if c == '\\' { escaped = true; continue; }
+    if c == '"' { return Some( i ); }
+  }
+  None
+}
+
 // ── Field constants ──────────────────────────────────────────────────────────────
 
 /// All 32 renderable CLR envelope fields in canonical order.
@@ -324,12 +362,16 @@ pub fn render_summary( json : &str, fields : Option< &str > ) -> Option< String 
   let eph_5m    = cc_str.and_then( |s| extract_u64( s, "ephemeral_5m_input_tokens" ) ).unwrap_or( 0 );
 
   // modelUsage — first model's stats
+  // Fix(BUG-394): both quote searches now route through find_unescaped_quote()
+  // instead of a bare .find('"') — the model-name key could itself have been
+  // JSON-escaped, and q2's terminator search is the same "stops at the first
+  // escaped quote" defect class as ps.rs's try_jsonl_task()/parse_json_str().
   let mu_marker  = "\"modelUsage\":{";
   let mu_str     = json.find( mu_marker ).map( |p| &json[ p + mu_marker.len() .. ] );
   let model_name = mu_str.and_then( |s| {
-    let q1    = s.find( '"' )?;
+    let q1    = find_unescaped_quote( s )?;
     let inner = &s[ q1 + 1 .. ];
-    let q2    = inner.find( '"' )?;
+    let q2    = find_unescaped_quote( inner )?;
     Some( inner[ ..q2 ].to_string() )
   } ).unwrap_or_default();
   let mu_inner   = mu_str.and_then( |s| s.find( '{' ).map( |p| &s[ p + 1 .. ] ) );

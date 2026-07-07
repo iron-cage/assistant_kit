@@ -6,7 +6,7 @@ Edge case coverage for the `format::` parameter. See [param/05_format.md](../../
 
 - **Purpose**: Edge case tests for the `format::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `format::`.
-- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`, `.config`, `.params`
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`, `.config`, `.params`, `.paths`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 

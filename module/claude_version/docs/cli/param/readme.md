@@ -36,7 +36,7 @@
 | 3 | [`force::`](03_force.md) | bool | false | Execution Control | `.version.install`, `.version.guard`, `.processes.kill` |
 | 4 | [`v::`](04_v.md) | `VerbosityLevel` | 1 | Output Control | all output-supporting commands |
 | 5 | [`format::`](05_format.md) | `OutputFormat` | text | Output Control | all output-supporting commands |
-| 6 | [`key::`](06_key.md) | `SettingsKey` | — (opt. in .config) | Settings Identity, Config Identity | `.settings.get`, `.settings.set`, `.config`, `.params` |
+| 6 | [`key::`](06_key.md) | `SettingsKey` | — (opt. in .config) | Settings Identity, Config Identity | `.settings.get`, `.settings.set`, `.config`, `.params`, `.paths` |
 | 7 | [`value::`](07_value.md) | `SettingsValue` | — (opt. in .config) | Settings Identity, Config Identity | `.settings.set`, `.config` |
 | 8 | [`interval::`](08_interval.md) | u64 | 0 | — | `.version.guard` |
 | 9 | [`count::`](09_count.md) | u64 | 10 | Output Control | `.version.history` |

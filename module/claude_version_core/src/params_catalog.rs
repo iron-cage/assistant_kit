@@ -82,6 +82,14 @@ pub fn params_catalog() -> &'static [ ParamDef ]
   static ENTRIES : &[ ParamDef ] = &[
     ParamDef
     {
+      name       : "action_mode",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_ACTION_MODE" ),
+      config_key : None,
+      default    : Some( "Ask" ),
+    },
+    ParamDef
+    {
       name       : "add_dir",
       cli_flag   : Some( "--add-dir" ),
       env_var    : None,
@@ -90,10 +98,42 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
+      name       : "agent",
+      cli_flag   : Some( "--agent" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "agents",
+      cli_flag   : Some( "--agents" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "allow_dangerously_skip_permissions",
+      cli_flag   : Some( "--allow-dangerously-skip-permissions" ),
+      env_var    : None,
+      config_key : None,
+      default    : Some( "off" ),
+    },
+    ParamDef
+    {
       name       : "allowed_tools",
-      cli_flag   : None,
+      cli_flag   : Some( "--allowed-tools" ),
       env_var    : None,
       config_key : Some( "allowedTools" ),
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "api_force_idle_timeout",
+      cli_flag   : None,
+      env_var    : Some( "API_FORCE_IDLE_TIMEOUT" ),
+      config_key : None,
       default    : None,
     },
     ParamDef
@@ -122,6 +162,30 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
+      name       : "auto_approve_tools",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_AUTO_APPROVE_TOOLS" ),
+      config_key : None,
+      default    : Some( "false" ),
+    },
+    ParamDef
+    {
+      name       : "auto_compact_window",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_AUTO_COMPACT_WINDOW" ),
+      config_key : None,
+      default    : Some( "200000" ),
+    },
+    ParamDef
+    {
+      name       : "auto_continue",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_AUTO_CONTINUE" ),
+      config_key : None,
+      default    : Some( "false" ),
+    },
+    ParamDef
+    {
       name       : "auto_updates",
       cli_flag   : None,
       env_var    : None,
@@ -130,11 +194,91 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
+      name       : "auto_updates_channel",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "autoUpdatesChannel" ),
+      default    : Some( "latest" ),
+    },
+    ParamDef
+    {
+      name       : "autocompact_pct_override",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "bash_default_timeout_ms",
+      cli_flag   : None,
+      env_var    : Some( "BASH_DEFAULT_TIMEOUT_MS" ),
+      config_key : None,
+      default    : Some( "120000" ),
+    },
+    ParamDef
+    {
+      name       : "bash_max_output_length",
+      cli_flag   : None,
+      env_var    : Some( "BASH_MAX_OUTPUT_LENGTH" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "bash_max_timeout",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_BASH_MAX_TIMEOUT" ),
+      config_key : None,
+      default    : Some( "600000" ),
+    },
+    ParamDef
+    {
+      name       : "bash_max_timeout_ms",
+      cli_flag   : None,
+      env_var    : Some( "BASH_MAX_TIMEOUT_MS" ),
+      config_key : None,
+      default    : Some( "600000" ),
+    },
+    ParamDef
+    {
       name       : "bash_timeout",
       cli_flag   : None,
       env_var    : Some( "CLAUDE_CODE_BASH_TIMEOUT" ),
       config_key : None,
       default    : Some( "120000" ),
+    },
+    ParamDef
+    {
+      name       : "betas",
+      cli_flag   : Some( "--betas" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "brief",
+      cli_flag   : Some( "--brief" ),
+      env_var    : None,
+      config_key : None,
+      default    : Some( "off" ),
+    },
+    ParamDef
+    {
+      name       : "chrome",
+      cli_flag   : Some( "--chrome / --no-chrome" ),
+      env_var    : None,
+      config_key : None,
+      default    : Some( "off" ),
+    },
+    ParamDef
+    {
+      name       : "client_presence_file",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CLIENT_PRESENCE_FILE" ),
+      config_key : None,
+      default    : None,
     },
     ParamDef
     {
@@ -147,7 +291,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     ParamDef
     {
       name       : "continue_session",
-      cli_flag   : Some( "--continue" ),
+      cli_flag   : Some( "-c / --continue" ),
       env_var    : None,
       config_key : None,
       default    : None,
@@ -172,7 +316,31 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     {
       name       : "debug",
       cli_flag   : Some( "--debug" ),
-      env_var    : Some( "ANTHROPIC_DEBUG" ),
+      env_var    : None,
+      config_key : None,
+      default    : Some( "off" ),
+    },
+    ParamDef
+    {
+      name       : "debug_file",
+      cli_flag   : Some( "--debug-file" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "default_sonnet_model",
+      cli_flag   : None,
+      env_var    : Some( "ANTHROPIC_DEFAULT_SONNET_MODEL" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_auto_compact",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_AUTO_COMPACT" ),
       config_key : None,
       default    : None,
     },
@@ -186,6 +354,166 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
+      name       : "disable_bundled_skills",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_DISABLE_BUNDLED_SKILLS" ),
+      config_key : Some( "disableBundledSkills" ),
+      default    : Some( "false" ),
+    },
+    ParamDef
+    {
+      name       : "disable_compact",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_COMPACT" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_cost_warnings",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_COST_WARNINGS" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_doctor_command",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_DOCTOR_COMMAND" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_error_reporting",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_ERROR_REPORTING" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_extra_usage_command",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_EXTRA_USAGE_COMMAND" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_feedback_command",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_FEEDBACK_COMMAND" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_growthbook",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_GROWTHBOOK" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_install_github_app_command",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_INSTALL_GITHUB_APP_COMMAND" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_installation_checks",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_INSTALLATION_CHECKS" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_interleaved_thinking",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_INTERLEAVED_THINKING" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_login_command",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_LOGIN_COMMAND" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_logout_command",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_LOGOUT_COMMAND" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_nonessential_traffic",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_prompt_caching",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_PROMPT_CACHING" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_prompt_caching_fable",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_PROMPT_CACHING_FABLE" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_prompt_caching_haiku",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_PROMPT_CACHING_HAIKU" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_prompt_caching_opus",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_PROMPT_CACHING_OPUS" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_prompt_caching_sonnet",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_PROMPT_CACHING_SONNET" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_slash_commands",
+      cli_flag   : Some( "--disable-slash-commands" ),
+      env_var    : None,
+      config_key : None,
+      default    : Some( "off" ),
+    },
+    ParamDef
+    {
       name       : "disable_telemetry",
       cli_flag   : None,
       env_var    : Some( "CLAUDE_CODE_DISABLE_TELEMETRY" ),
@@ -194,10 +522,106 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
-      name       : "disallowed_tools",
+      name       : "disable_updates",
       cli_flag   : None,
+      env_var    : Some( "DISABLE_UPDATES" ),
+      config_key : Some( "env.DISABLE_UPDATES" ),
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disable_upgrade_command",
+      cli_flag   : None,
+      env_var    : Some( "DISABLE_UPGRADE_COMMAND" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "disallowed_tools",
+      cli_flag   : Some( "--disallowed-tools" ),
       env_var    : None,
       config_key : Some( "disallowedTools" ),
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "effort",
+      cli_flag   : Some( "--effort" ),
+      env_var    : None,
+      config_key : Some( "effortLevel" ),
+      default    : Some( "medium" ),
+    },
+    ParamDef
+    {
+      name       : "enable_auto_mode",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_ENABLE_AUTO_MODE" ),
+      config_key : None,
+      default    : Some( "false" ),
+    },
+    ParamDef
+    {
+      name       : "enabled_plugins",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "enabledPlugins" ),
+      default    : Some( "{}" ),
+    },
+    ParamDef
+    {
+      name       : "env_overrides",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "env" ),
+      default    : Some( "{}" ),
+    },
+    ParamDef
+    {
+      name       : "experimental_agent_teams",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" ),
+      config_key : None,
+      default    : Some( "false" ),
+    },
+    ParamDef
+    {
+      name       : "fallback_model",
+      cli_flag   : Some( "--fallback-model" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "file",
+      cli_flag   : Some( "--file" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "file_checkpointing_enabled",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "fileCheckpointingEnabled" ),
+      default    : Some( "false" ),
+    },
+    ParamDef
+    {
+      name       : "fork_session",
+      cli_flag   : Some( "--fork-session" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "from_pr",
+      cli_flag   : Some( "--from-pr" ),
+      env_var    : None,
+      config_key : None,
       default    : None,
     },
     ParamDef
@@ -210,6 +634,22 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
+      name       : "hooks",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "hooks" ),
+      default    : Some( "{}" ),
+    },
+    ParamDef
+    {
+      name       : "ide",
+      cli_flag   : Some( "--ide" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
       name       : "ide_hint",
       cli_flag   : None,
       env_var    : Some( "CLAUDE_CODE_IDE_HINT" ),
@@ -218,8 +658,48 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
+      name       : "include_partial_messages",
+      cli_flag   : Some( "--include-partial-messages" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
       name       : "input_format",
       cli_flag   : Some( "--input-format" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "json_schema",
+      cli_flag   : Some( "--json-schema" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "language",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "language" ),
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "log_level",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_LOG_LEVEL" ),
+      config_key : None,
+      default    : Some( "Info" ),
+    },
+    ParamDef
+    {
+      name       : "max_budget_usd",
+      cli_flag   : Some( "--max-budget-usd" ),
       env_var    : None,
       config_key : None,
       default    : None,
@@ -250,6 +730,22 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
+      name       : "mcp_config",
+      cli_flag   : Some( "--mcp-config" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "mcp_debug",
+      cli_flag   : Some( "--mcp-debug" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
       name       : "mcp_server",
       cli_flag   : Some( "--mcp-server" ),
       env_var    : None,
@@ -258,10 +754,34 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
+      name       : "mcp_servers",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "mcpServers" ),
+      default    : Some( "{}" ),
+    },
+    ParamDef
+    {
       name       : "mcp_timeout",
       cli_flag   : None,
       env_var    : Some( "CLAUDE_CODE_MCP_TIMEOUT" ),
       config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "mcp_tool_timeout",
+      cli_flag   : None,
+      env_var    : Some( "MCP_TOOL_TIMEOUT" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "minimum_version",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "minimumVersion" ),
       default    : None,
     },
     ParamDef
@@ -282,9 +802,33 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
+      name       : "no_session_persistence",
+      cli_flag   : Some( "--no-session-persistence" ),
+      env_var    : None,
+      config_key : None,
+      default    : Some( "off" ),
+    },
+    ParamDef
+    {
       name       : "output_format",
       cli_flag   : Some( "--output-format" ),
       env_var    : None,
+      config_key : None,
+      default    : Some( "text" ),
+    },
+    ParamDef
+    {
+      name       : "output_style",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "outputStyle" ),
+      default    : Some( "default" ),
+    },
+    ParamDef
+    {
+      name       : "package_manager_auto_update",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE" ),
       config_key : None,
       default    : None,
     },
@@ -293,8 +837,32 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       name       : "permission_mode",
       cli_flag   : Some( "--permission-mode" ),
       env_var    : None,
+      config_key : Some( "permissionMode" ),
+      default    : Some( "default" ),
+    },
+    ParamDef
+    {
+      name       : "permissions",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "permissions" ),
+      default    : Some( "{}" ),
+    },
+    ParamDef
+    {
+      name       : "plugin_dir",
+      cli_flag   : Some( "--plugin-dir" ),
+      env_var    : None,
       config_key : None,
       default    : None,
+    },
+    ParamDef
+    {
+      name       : "plugin_prefer_https",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_PLUGIN_PREFER_HTTPS" ),
+      config_key : None,
+      default    : Some( "false" ),
     },
     ParamDef
     {
@@ -330,6 +898,22 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
+      name       : "prompt",
+      cli_flag   : Some( "<message> (positional)" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "ps_execution_policy",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_POWERSHELL_RESPECT_EXECUTION_POLICY" ),
+      config_key : None,
+      default    : Some( "false" ),
+    },
+    ParamDef
+    {
       name       : "quiet",
       cli_flag   : Some( "--quiet" ),
       env_var    : None,
@@ -338,17 +922,137 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
+      name       : "remote_control_at_startup",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "remoteControlAtStartup" ),
+      default    : Some( "false" ),
+    },
+    ParamDef
+    {
+      name       : "replay_user_messages",
+      cli_flag   : Some( "--replay-user-messages" ),
+      env_var    : None,
+      config_key : None,
+      default    : Some( "off" ),
+    },
+    ParamDef
+    {
+      name       : "required_maximum_version",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "requiredMaximumVersion" ),
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "required_minimum_version",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "requiredMinimumVersion" ),
+      default    : None,
+    },
+    ParamDef
+    {
       name       : "resume",
-      cli_flag   : Some( "--resume" ),
+      cli_flag   : Some( "-r / --resume" ),
       env_var    : None,
       config_key : None,
       default    : None,
     },
     ParamDef
     {
+      name       : "safe_mode",
+      cli_flag   : Some( "--safe-mode" ),
+      env_var    : Some( "CLAUDE_CODE_SAFE_MODE" ),
+      config_key : None,
+      default    : Some( "false" ),
+    },
+    ParamDef
+    {
+      name       : "sandbox_allow_apple_events",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "sandbox.allowAppleEvents" ),
+      default    : Some( "false" ),
+    },
+    ParamDef
+    {
+      name       : "sandbox_mode",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_SANDBOX_MODE" ),
+      config_key : None,
+      default    : Some( "true" ),
+    },
+    ParamDef
+    {
+      name       : "session_dir",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_SESSION_DIR" ),
+      config_key : None,
+      default    : Some( "auto" ),
+    },
+    ParamDef
+    {
+      name       : "session_id",
+      cli_flag   : Some( "--session-id" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "setting_sources",
+      cli_flag   : Some( "--setting-sources" ),
+      env_var    : None,
+      config_key : None,
+      default    : Some( "all" ),
+    },
+    ParamDef
+    {
+      name       : "settings",
+      cli_flag   : Some( "--settings" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "skip_dangerous_mode_permission_prompt",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "skipDangerousModePermissionPrompt" ),
+      default    : Some( "false" ),
+    },
+    ParamDef
+    {
       name       : "skip_permissions",
       cli_flag   : Some( "--dangerously-skip-permissions" ),
       env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "stop_hook_block_cap",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_STOP_HOOK_BLOCK_CAP" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "strict_mcp_config",
+      cli_flag   : Some( "--strict-mcp-config" ),
+      env_var    : None,
+      config_key : None,
+      default    : Some( "off" ),
+    },
+    ParamDef
+    {
+      name       : "subagent_model",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_SUBAGENT_MODEL" ),
       config_key : None,
       default    : None,
     },
@@ -362,11 +1066,75 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
+      name       : "telemetry",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_TELEMETRY" ),
+      config_key : None,
+      default    : Some( "true" ),
+    },
+    ParamDef
+    {
+      name       : "temperature",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_TEMPERATURE" ),
+      config_key : None,
+      default    : Some( "1.0" ),
+    },
+    ParamDef
+    {
       name       : "theme",
       cli_flag   : None,
       env_var    : None,
       config_key : Some( "theme" ),
       default    : Some( "system" ),
+    },
+    ParamDef
+    {
+      name       : "thinking_disabled_display",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "thinking.disabled.display" ),
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "tmpdir",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_TMPDIR" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "tmux",
+      cli_flag   : Some( "--tmux" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "tools",
+      cli_flag   : Some( "--tools" ),
+      env_var    : None,
+      config_key : None,
+      default    : Some( "default" ),
+    },
+    ParamDef
+    {
+      name       : "top_k",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_TOP_K" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "top_p",
+      cli_flag   : None,
+      env_var    : Some( "CLAUDE_CODE_TOP_P" ),
+      config_key : None,
+      default    : None,
     },
     ParamDef
     {
@@ -382,6 +1150,38 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : None,
       env_var    : None,
       config_key : Some( "voiceEnabled" ),
+      default    : Some( "false" ),
+    },
+    ParamDef
+    {
+      name       : "wheel_scroll_accel",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "wheelScrollAccelerationEnabled" ),
+      default    : Some( "false" ),
+    },
+    ParamDef
+    {
+      name       : "workspace_id",
+      cli_flag   : None,
+      env_var    : Some( "ANTHROPIC_WORKSPACE_ID" ),
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "worktree",
+      cli_flag   : Some( "-w / --worktree" ),
+      env_var    : None,
+      config_key : None,
+      default    : None,
+    },
+    ParamDef
+    {
+      name       : "worktree_bg_isolation",
+      cli_flag   : None,
+      env_var    : None,
+      config_key : Some( "worktree.bgIsolation" ),
       default    : Some( "false" ),
     },
   ];

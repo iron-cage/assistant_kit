@@ -15,5 +15,7 @@
 | `account_inspect_render.rs` | Formatting helpers for `.account.inspect` detail view. |
 | `limits.rs` | `.account.limits` API rate-limit fetch routine. |
 | `model.rs` | `.model` get/set session model routine. |
+| `model_select.rs` | `.model.select` get/set/reset subprocess model preference routine. |
+| `models.rs` | `.models` list available Claude models routine. |
 | `token_paths.rs` | `.token.status` and `.paths` command routines. |
 | `dot.rs` | `.` dot-shorthand command routine. |

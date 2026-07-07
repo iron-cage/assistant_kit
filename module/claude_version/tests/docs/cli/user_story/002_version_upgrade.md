@@ -48,7 +48,7 @@ Acceptance tests for User Story 002. See [user_story/002_version_upgrade.md](../
 
 - **Given:** Claude Code is installed at version X; target version Y is available
 - **When:** `clv .version.install version::Y`
-- **Then:** exit 0; version Y installed; 5-layer version lock applied
+- **Then:** exit 0; version Y installed; 8-layer version lock applied
 - **Exit:** 0
 - **Source:** [user_story/002 -- AC bullet 2](../../../../docs/cli/user_story/002_version_upgrade.md)
 

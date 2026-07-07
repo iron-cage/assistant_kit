@@ -9,7 +9,7 @@
 
 - [ ] `clv .version.list` shows stable, month, and latest aliases with their resolved versions.
 - [ ] `clv .version.install version::month dry::1` shows the install plan for the monthly baseline.
-- [ ] `clv .version.install version::month` installs and applies 5-layer lock.
+- [ ] `clv .version.install version::month` installs and applies 8-layer lock.
 - [ ] If currently at the pinned version, install is a no-op (exits 0).
 - [ ] `clv .version.show` after install confirms the pinned version is active.
 - [ ] `clv .version.guard interval::N` watches for drift and restores the pinned version automatically.
@@ -20,7 +20,7 @@
 |---|---------|------|
 | 1 | [`.help`](../command/root.md#command-1-help) | Provides discovery of available commands |
 | 2 | [`.version.show`](../command/version.md#command-3-versionshow) | Verifies the active version post-install |
-| 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | Installs the pinned version with 5-layer lock |
+| 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | Installs the pinned version with 8-layer lock |
 | 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | Watches for drift and restores the pinned version |
 | 5 | [`.version.list`](../command/version.md#command-6-versionlist) | Shows alias-to-version resolution for selection |
 

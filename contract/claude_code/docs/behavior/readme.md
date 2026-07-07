@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Catalog observed and confirmed external behaviors of the `claude` binary spanning session lifecycle, storage, runtime process model, subagent context, and tool availability.
-- **Responsibility**: Master file for the `behavior` collection — lists all 36 behavior instances (B1–B35 + B16h), provides the shared evidence table (E1–E61), and links to invalidation test files.
-- **In Scope**: Session continuation, flag semantics, agent layouts, entry threading, storage path encoding, cross-session relationship absence (conversation chain foundations); runtime process model (agent subagent identity, bash subprocess identity, env propagation); subagent context inheritance (CLAUDE.md injection, conversation absence, scope propagation); subagent tool availability per type (tool set differences, parent-exclusive tools); context loading (CLAUDE.md @-reference path filter, content pipeline transformations, silent failure and truncation modes).
+- **Responsibility**: Master file for the `behavior` collection — lists all 37 behavior instances (B1–B36 + B16h), provides the shared evidence table (E1–E66), and links to invalidation test files.
+- **In Scope**: Session continuation, flag semantics, agent layouts, entry threading, storage path encoding, cross-session relationship absence (conversation chain foundations); runtime process model (agent subagent identity, bash subprocess identity, env propagation); subagent context inheritance (CLAUDE.md injection, conversation absence, scope propagation); subagent tool availability per type (tool set differences, parent-exclusive tools); context loading (CLAUDE.md @-reference path filter, content pipeline transformations, silent failure and truncation modes); background task lifecycle (classifier model selection, idle-state reporting, exit-handoff survival, memory-pressure reaping, print-mode wait ceiling).
 - **Out of Scope**: Entry-level JSONL schema (→ [`../jsonl/`](../jsonl/readme.md)); storage directory architecture (→ [`../storage/`](../storage/readme.md)); filesystem paths (→ [`../filesystem/`](../filesystem/readme.md)); settings format (→ [`../settings/`](../settings/readme.md)); ancillary file formats (→ [`../format/`](../format/readme.md)); concept taxonomy (→ [`../taxonomy/`](../taxonomy/readme.md)).
 
 ### Overview Table
@@ -62,6 +62,7 @@ Adapted from hypothesis table format. Status reflects certainty of the observati
 | [B33](033_b33_claudemd_loading_limits.md) | CLAUDE.md loading fails silently for ENOENT/EISDIR/EACCES and non-whitelisted extensions; `Xm=40,000` chars is a UI-warning-only threshold (file fully injected — ~10k tokens — but interactive status bar warns); hard limits: 200-line MEMORY.md cap (`$P`), 5-level @-include depth (`ny4`), 3,000-char ultra-memory (`QKT`) | Context Loading | ✅ | 99% | UNVERIFIED | v2.1.74 | E59 |
 | [B34](034_b34_claudemd_content_pipeline.md) | HTML comments stripped (`Kp6`), YAML frontmatter processed as conditional globs not injected as content, GFM disabled in @-ref lexer; `tengu_paper_halyard` Statsig flag silently drops all Project/Local CLAUDE.md; User type always bypasses external-include dialog | Context Loading | ✅ | 99% | UNVERIFIED | v2.1.74 | E60 |
 | [B35](035_b35_automemory_search_context_flag.md) | `tengu_coral_fern` Statsig flag (default false) gates a `## Searching past context` section in the auto-memory system prompt — provides grep commands for memory topic files and session JSONL transcripts; absent when flag is false | Auto-Memory | ✅ | 99% | UNVERIFIED | v2.1.74 | E61 |
+| [B36](036_b36_background_task_lifecycle.md) | Five env vars gate the background-task lifecycle: `CLAUDE_CODE_BG_CLASSIFIER_MODEL` (classifier model override), `CLAUDE_CODE_BG_TASKS_REPORT_RUNNING` (idle-state reporting), `CLAUDE_CODE_DISABLE_BG_EXIT_HANDOFF` (exit-survival, excludes `agentId`-bearing jobs from `shells`), `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP` (memory-pressure reaping), `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` (print-mode wait ceiling, default 600000ms) | Background Tasks | ✅ | 85% | UNVERIFIED | ≤v2.1.197 | E62, E63, E64, E65, E66 |
 
 ---
 
@@ -132,6 +133,11 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | E59 | B33 | Code | Binary analysis — `strings /home/user1/.local/share/claude/versions/2.1.74` — v2.1.74 session (2026-06-29) | `Kf_()` and `WN()` at strings line 492301; constants at line 492298 | Error handling: `if(K==="ENOENT"\|\|K==="EISDIR")return null; if(K==="EACCES")Q("tengu_claude_md_permission_error",...)`. Constants: `L1="MEMORY.md"`, `$P=200` (line 492298); `ny4=5` (WN depth check: `if(q.has(A)\|\|O>=ny4)return[]`); `Xm=40000` (MAX_MEMORY_CHARACTER_COUNT); `QKT=3000`. Extension whitelist `Qy4=new Set([".md",".txt",...])` at line 492307, ~50+ types. MEMORY.md warning text confirmed verbatim. Empty-content guard: `if(!D\|\|!D.content.trim())return[]`. |
 | E60 | B34 | Code | Binary analysis — `strings /home/user1/.local/share/claude/versions/2.1.74` — v2.1.74 session (2026-06-29) | `K2q()`, `S1()`, `ry4()` at lines 492298–492307 | `K2q()` assembly: `let q=Wq("tengu_paper_halyard",!1); for(let K of T){if(q&&(K.type==="Project"\|\|K.type==="Local"))continue;}`. User bypass: `q.push(...WN(J,"User",K,!0))` — always `includeExternal=true`. `ry4()` exclusion: `_p6.default.isMatch(O,R,{dot:!0})` (micromatch). Session disable: `a$()` checks `CLAUDE_CODE_DISABLE_CLAUDE_MDS\|\|sT(CLAUDE_CODE_SIMPLE)`. HTML strip: `Kp6` in `Rp6` module exports `{stripHtmlComments:()=>Kp6}`. GFM-off: `new $X({gfm:!1})` in `iy4()`. YAML frontmatter: `ly4()` processes `paths:` conditionals, content not passed to model. |
 | E61 | B35 | Code | Binary analysis — `strings /home/user1/.local/share/claude/versions/2.1.74` — v2.1.74 session (2026-06-29) | `VfT()` adjacent to auto-memory functions `cy4`, `om6` | Full function: `function VfT(T){if(!Wq("tengu_coral_fern",!1))return[];let _=qw(R8()),q=Yz(),K=q?grep -rn... --include="*.md":${GR} with pattern=...; return["## Searching past context","","When looking for past context:","1. Search topic files...","2. Session transcript logs (last resort — large files, slow):","...","Use narrow search terms..."]}`. Default confirmed false via `Wq("tengu_coral_fern",!1)` — second arg is the fallback. Also confirmed: `function so(){return null}` — `QKT=3000` ultra-memory constant inoperative; all three `so()` call sites short-circuit on null in v2.1.74. |
+| E62 | B36 | Code | Binary analysis — `strings -a -n 8` + `grep -aoP` on `~/.local/share/claude/versions/2.1.197` — this session (2026-07-07) | `strings`-output line 122948 (bare name) and line 272025 (export map) | `CLAUDE_CODE_BG_CLASSIFIER_MODEL:()=>KDu` in module export map, adjacent to `ANTHROPIC_SMALL_FAST_MODEL`, `CLAUDE_CODE_AUTO_MODE_MODEL`, `CLAUDE_CODE_ALWAYS_ENABLE_EFFORT`; schema declaration `KDu=Ue.str()` found in the same settings-schema object as `JDu=Ue.bool()`, `QDu=Ue.bool()`, etc. No direct `KDu(...)` call site found. |
+| E63 | B36 | Code | Binary analysis — same binary/method — this session (2026-07-07) | `strings`-output line 296515/296542, functions `S3c`/`b3c` | `function b3c({inputClosed:e,runningTasks:t}){return e&&t.some((n)=>XX(n)&&wv(n))}function S3c({inputClosed:e,currentState:t,hasRunningBgTasks:n}){if(n&&Fe.CLAUDE_CODE_BG_TASKS_REPORT_RUNNING)return!1;return!e&&t==="running"}` — full function bodies recovered verbatim. |
+| E64 | B36 | Code | Binary analysis — same binary/method — this session (2026-07-07) | `strings`-output line 274061, functions `_Ha`/`bHa` | `function _Ha(e){if(!yi()\|\|!Fe.CLAUDE_JOB_DIR\|\|Fe.CLAUDE_CODE_DISABLE_BG_EXIT_HANDOFF)return{shells:[],workflows:[]};let t=nEe(e),n=Object.values(e);return{shells:n.filter((r)=>Tbo(r,t)&&r.agentId===void 0),workflows:n.filter((r)=>Ebo(r,t))}}function bHa({shells:e,workflows:t}){let n=Fe.CLAUDE_JOB_DIR;for(let o of t)o.abortController...` (truncated by strings extraction after `abortController`). Confirms `agentId===void 0` as an explicit filter condition on the `shells` survivor set. |
+| E65 | B36 | Code + Doc | Binary analysis (same method, this session, 2026-07-07) + official changelog `../version/091_v2_1_193.md` | `strings`-output line 277007, function `u0l`; changelog entry v2.1.193 | `function u0l(e,t,n,r,o,s){Pve(s,\`bash:${e}\`,n);let i;if(s===void 0&&!xr()&&!Fe.CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP){let a=()=>{let l=n.get(e);if(l?.status!=="running"\|\|l.notified\|\|Date.now()-NA()<Exm\|\|gEr()\|\|yKe(n.all()))return;Ie("task_local_shell_pressure_reap"),tYt(e,t,"killed",void 0,n,r,o,s),nve(e,n)};process.on("memoryPressure",a),i=()=>process.off("memory...` (truncated). Changelog: "Added automatic memory-pressure reaping for idle background shell commands (disable with `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP=1`)" — the only one of the five vars officially documented. |
+| E66 | B36 | Code | Binary analysis — same binary/method — this session (2026-07-07) | `strings`-output line 296515/296542, functions `E3c`/`v3c`/`w3c`; constants `KFf`, `tZo` | `function E3c(){return Fe.CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS??KFf}` plus full `v3c()`/`w3c()` bodies (see [036_b36_background_task_lifecycle.md](036_b36_background_task_lifecycle.md)). Constants independently confirmed via `grep -aoP "(?<![a-zA-Z0-9_])KFf\s*=\s*[0-9]+"` → `KFf=600000`; same technique → `tZo=5000`. |
 
 ---
 
@@ -139,13 +145,13 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 
 | Status | Count | IDs |
 |--------|-------|-----|
-| ✅ Confirmed | 20 | B1, B2, B3, B6, B7, B9, B10, B12, B13, B14, B16, B27, B28, B29, B30, B31, B32, B33, B34, B35 |
+| ✅ Confirmed | 21 | B1, B2, B3, B6, B7, B9, B10, B12, B13, B14, B16, B27, B28, B29, B30, B31, B32, B33, B34, B35, B36 |
 | 🎯 Observed | 14 | B4, B5, B8, B11, B15, B18, B19, B20, B21, B22, B23, B24, B25, B26 |
 | ⚠️ Exception noted | 1 | B17 (self-contained except at context-compaction boundaries; < 0.2% violation rate) |
 | ❓ Uncertain | 1 | B16h |
 
-**Total behaviors:** 36 (B1–B35 + B16h sub-hypothesis; B16h shares B16's row index)
-**Confirmed (≥90% certainty):** 20
+**Total behaviors:** 37 (B1–B36 + B16h sub-hypothesis; B16h shares B16's row index)
+**Confirmed (≥90% certainty):** 20 (B36 is Confirmed status at 85% certainty — below the 90% threshold, included in the Confirmed row above by evidence type but excluded from this ≥90% count)
 **Lowest certainty:** B5 (60% — current session selection mechanism)
 **Investigation priority:** B5 — can be confirmed by reading Claude Code changelog or source
 
@@ -155,10 +161,10 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | VALIDATED† | 1 | B5 (distinct mtimes proven; mtime-as-selection-key unproven) |
 | FLAG-VFY | 8 | B3, B4, B16, B19, B20, B21, B22, B24 |
 | NEG-ONLY | 4 | B11, B23, B25, B26 |
-| UNVERIFIED | 10 | B8, B27, B28, B29, B30, B31, B32, B33, B34, B35 |
+| UNVERIFIED | 11 | B8, B27, B28, B29, B30, B31, B32, B33, B34, B35, B36 |
 | MEASURE | 1 | B16h (lim_it; runs by default in container) |
 
-**Validation gap:** 12 of 36 behaviors are fully validated with behavioral assertions.
+**Validation gap:** 12 of 37 behaviors are fully validated with behavioral assertions.
 
 ---
 
@@ -204,6 +210,7 @@ Each behavior instance has a corresponding invalidation test in `contract/claude
 | `b33_claudemd_loading_limits.rs` | B33 | UNVERIFIED (no automated test yet) |
 | `b34_claudemd_content_pipeline.rs` | B34 | UNVERIFIED (no automated test yet) |
 | `b35_automemory_search_context_flag.rs` | B35 | UNVERIFIED (no automated test yet) |
+| `b36_background_task_lifecycle.rs` | B36 | UNVERIFIED (no automated test yet) |
 
 To run:
 ```bash
