@@ -71,6 +71,23 @@ fn df( path : &str ) -> String
   result
 }
 
+/// BUG-391 regression guard: `df()` must match production `encode_path()` for a
+/// dot-containing path (e.g. `tempfile::TempDir::new()`'s literal `.tmp` prefix) —
+/// mirrors `scope_command_test.rs`'s BUG-386 regression guard exactly.
+#[ test ]
+fn df_matches_production_encode_path_for_dot_containing_path()
+{
+  let path = "/tmp/.tmpAbCdEfGh/proj";
+  let test_encoded = df( path );
+  let real_encoded = claude_storage_core::encode_path( std::path::Path::new( path ) )
+    .expect( "encode_path" );
+  assert_eq!(
+    test_encoded, real_encoded,
+    "test df() helper must match production encode_path() for dot-containing paths \
+     (BUG-391 regression guard)"
+  );
+}
+
 /// Create `<claude_home>/projects/<df(src)>/<uuid>.jsonl`; return the `.jsonl` path.
 fn make_session_for( claude_home : &std::path::Path, src : &str, uuid : &str ) -> std::path::PathBuf
 {
