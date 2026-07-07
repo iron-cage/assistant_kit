@@ -439,6 +439,7 @@ pub fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) 
   {
     util.map_or_else( || dash.clone(), |u| format!( "{:.0}%", 100.0 - u ) )
   };
+  // BUG-331 — compares raw `left` against threshold but rounds only for display (raw-vs-rounded mismatch)
   let pct_emoji = |util : Option< f64 >, threshold : f64| -> String
   {
     util.map_or_else( || dash.clone(), |u|
