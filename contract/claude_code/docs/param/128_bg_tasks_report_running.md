@@ -27,12 +27,17 @@ only via string/reference inspection of the installed binary)
 
 ### Description
 
-Decompiled logic (minified, function name not preserved) resolves to:
+Decompiled logic, confirmed verbatim against the installed v2.1.197 binary
+(minified names `S3c`/`b3c` preserved as shipped, `Fe` is the process-env
+accessor object used throughout this binary):
 
 ```js
-function reportRunningGate({ inputClosed, currentState, hasRunningBgTasks }) {
-  if (hasRunningBgTasks && CLAUDE_CODE_BG_TASKS_REPORT_RUNNING) return false;
-  return !inputClosed && currentState === "running";
+function b3c({ inputClosed: e, runningTasks: t }) {
+  return e && t.some((n) => XX(n) && wv(n));
+}
+function S3c({ inputClosed: e, currentState: t, hasRunningBgTasks: n }) {
+  if (n && Fe.CLAUDE_CODE_BG_TASKS_REPORT_RUNNING) return !1;
+  return !e && t === "running";
 }
 ```
 
