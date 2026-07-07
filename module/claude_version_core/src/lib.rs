@@ -9,7 +9,7 @@
 //! - [`config_catalog`]: Known settings catalog (`SettingDef` registry)
 //! - [`config_resolve`]: 4-layer effective-value resolution engine
 //! - [`params_catalog`]: Observable Claude Code params catalog (`ParamDef` registry)
-//! - [`settings_io`]: Read and write `~/.claude/settings.json`
+//! - [`settings_io`]: Read and write `~/.claude/settings.json` (re-exports [`claude_core::settings_io`])
 //! - [`version`]: Detect, install, resolve, and validate Claude Code versions
 //!
 //! # Error Handling

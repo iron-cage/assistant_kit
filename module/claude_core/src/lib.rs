@@ -8,11 +8,13 @@
 //!
 //! - [`paths`]: [`ClaudePaths`] — all `~/.claude/` canonical paths from `HOME`
 //! - [`process`]: [`ProcessInfo`], [`ProcessMetrics`] (Linux), and process signal utilities
+//! - [`settings_io`]: Atomic read/write of flat-JSON key-value files (e.g. `settings.json`, `prefs.json`)
 
 #![ cfg_attr( not( feature = "enabled" ), allow( unused ) ) ]
 #![ warn( missing_docs ) ]
 
 pub mod paths;
 pub mod process;
+pub mod settings_io;
 
 pub use paths::ClaudePaths;
