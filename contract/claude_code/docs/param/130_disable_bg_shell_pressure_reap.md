@@ -42,6 +42,38 @@ appears to have been killed mid-run with no corresponding process-exit event —
 this is the mechanism to rule out first in that scenario, before suspecting
 exit handoff.
 
+Decompiled logic, confirmed verbatim against the installed v2.1.197 binary
+(minified name `u0l` preserved as shipped; `Fe` is the process-env accessor
+object used throughout this binary):
+
+```js
+function u0l(e, t, n, r, o, s) {
+  Pve(s, `bash:${e}`, n);
+  let i;
+  if (s === void 0 && !xr() && !Fe.CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP) {
+    let a = () => {
+      let l = n.get(e);
+      if (l?.status !== "running" || l.notified || Date.now() - NA() < Exm || gEr() || yKe(n.all()))
+        return;
+      Ie("task_local_shell_pressure_reap");
+      tYt(e, t, "killed", void 0, n, r, o, s);
+      nve(e, n);
+    };
+    process.on("memoryPressure", a);
+    i = () => process.off("memoryPressure", a); // inferred symmetric teardown; exact call truncated in strings extraction
+  }
+}
+```
+
+The guard before reaping fires is stricter than "idle": the shell must be
+`status === "running"`, not already `notified`, have had no activity for at
+least `Exm` (elapsed-time threshold, exact value not decompiled) per `NA()`
+(last-activity timestamp accessor), and two further predicates `gEr()`/`yKe(n.all())`
+must both be false (exact semantics not decompiled — plausibly "any foreground
+dependents" / "any other shell already mid-reap"). Reaping is wired through
+Node's own `"memoryPressure"` process event, not a poll loop. The telemetry
+event fired on an actual reap is `task_local_shell_pressure_reap`.
+
 ### Cross-References
 
 | Type | File | Responsibility |

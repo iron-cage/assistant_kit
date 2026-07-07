@@ -27,34 +27,45 @@ only via string/reference inspection of the installed binary)
 ### Description
 
 Gates the handoff function that runs when the Claude Code process exits (e.g.
-between conversation turns, or on restart). Decompiled logic (minified, function
-name not preserved):
+between conversation turns, or on restart). Decompiled logic, confirmed
+verbatim against the installed v2.1.197 binary (minified names `_Ha`/`bHa`
+preserved as shipped; `Fe` is the process-env accessor object used throughout
+this binary):
 
 ```js
-function computeHandoff(jobs) {
-  if (!isBackgroundCapable() || !CLAUDE_JOB_DIR || CLAUDE_CODE_DISABLE_BG_EXIT_HANDOFF)
+function _Ha(e) {
+  if (!yi() || !Fe.CLAUDE_JOB_DIR || Fe.CLAUDE_CODE_DISABLE_BG_EXIT_HANDOFF)
     return { shells: [], workflows: [] };
-  // otherwise: partition `jobs` into surviving `shells` (plain Bash background
-  // commands with no agentId) and `workflows`, to be resumed by the next process
-  ...
+  let t = nEe(e), n = Object.values(e);
+  return {
+    shells: n.filter((r) => Tbo(r, t) && r.agentId === void 0),
+    workflows: n.filter((r) => Ebo(r, t)),
+  };
+}
+function bHa({ shells: e, workflows: t }) {
+  let n = Fe.CLAUDE_JOB_DIR;
+  for (let o of t) o.abortController /* ...truncated in strings extraction */;
 }
 ```
 
-When this var is set, the function returns immediately with empty lists — no
-in-flight background work is handed off, so it is simply abandoned when the
-process exits. When unset (default), the handoff computation runs normally.
+When this var is set, `_Ha` returns immediately with empty lists — no in-flight
+background work is handed off, so it is simply abandoned when the process
+exits. When unset (default), `_Ha` computes the survivor sets normally and
+`bHa` consumes them (against `CLAUDE_JOB_DIR`) to resume on the next process.
 
-Note the `shells` partition is filtered to entries with `agentId === undefined`
-— i.e. plain `Bash` background commands. Background `Agent`-tool subagents and
-`Workflow`-tool runs are tracked through separate paths (`workflows`, and
-whatever governs bare Agent-tool dispatches). This session independently
-observed plain background `Bash` commands surviving a process exit correctly
-(the output file was intact and readable after an ambiguous "stopped"
-notification), while background `Agent`-tool subagents were reported as having
-"lost" their in-process state entirely across the same kind of boundary —
-consistent with those two job kinds having different handoff robustness, though
-this was not confirmed against source, only inferred from observed behavior
-plus this static analysis.
+Confirmed: the `shells` partition requires both `Tbo(r, t)` (predicate,
+exact semantics not decompiled) AND `r.agentId === void 0` — i.e. plain `Bash`
+background commands only. Background `Agent`-tool subagents carry a non-undefined
+`agentId` and so can never qualify as a surviving `shell`; they fall instead
+under `workflows` (`Ebo(r, t)`) or under no survival path at all, depending on
+how the job was created. This session independently observed plain background
+`Bash` commands surviving a process exit correctly (the output file was intact
+and readable after an ambiguous "stopped" notification), while background
+`Agent`-tool subagents were reported as having "lost" their in-process state
+entirely across the same kind of boundary — consistent with, though not fully
+proven by, this `agentId` exclusion (whether Agent-tool jobs are excluded
+entirely or merely routed through the separately-gated `workflows`/`Ebo` path
+was not resolved from static analysis alone).
 
 ### Cross-References
 

@@ -30,11 +30,43 @@ In `-p`/`--print` mode (see [051_print.md](051_print.md)) — where the process 
 expected to exit once its main turn completes rather than stay interactive —
 this value caps how long the process will keep waiting for outstanding
 background shells, agents, or workflows before it finalizes exit anyway.
-Decompiled logic (minified, function names not preserved) confirms the
-constant is read once as a ceiling and combined with `runningBackgroundTasks`,
-`hasActiveTeammates`, `hasPendingNotification`, and a `deadline`/`swept` state
-machine to decide, each tick, whether to keep waiting or to sweep (finalize)
-the outstanding work and exit.
+Decompiled logic, confirmed verbatim against the installed v2.1.197 binary
+(minified names `E3c`/`v3c`/`w3c` preserved as shipped; `Fe` is the
+process-env accessor object used throughout this binary):
+
+```js
+function E3c() {
+  return Fe.CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS ?? KFf; // KFf = 600000
+}
+function v3c({ runningBackgroundTasks: e, inputClosed: t, hasMainThreadQueued: n,
+               hasActiveTeammates: r, hasPendingNotification: o, ceilingExceeded: s,
+               deadline: i, swept: a, now: l }) {
+  if (!(t && !n && !r && e.length > 0 && (s || (!o && !e.some(XX)))))
+    return { deadline: null, swept: false, shouldSweep: false };
+  if (i === null)
+    return { deadline: s ? l : l + tZo, swept: s, shouldSweep: s }; // tZo = 5000
+  if (l < i)
+    return { deadline: i, swept: a, shouldSweep: false };
+  return { deadline: i, swept: true, shouldSweep: !a };
+}
+function w3c(e, t) {
+  for (let n of e)
+    if (Dw(n)) w(`print wind-down: killing background shell ${n.id} ("...`); // truncated
+}
+```
+
+`E3c()` reads this env var with `KFf` (`600000`, i.e. 10 minutes) as the
+fallback. `v3c()` is the tick function: the deadline clock only starts once
+stdin is closed, no main-thread work is queued, no active teammates/subagents
+remain, at least one background task is still running, and either the ceiling
+was already exceeded or there is no pending notification and no task matches
+predicate `XX` (exact semantics not decompiled — plausibly "is blocking/
+foreground-relevant"). Once started, the deadline is `now + tZo` (`5000` ms —
+a 5-second grace period) unless the ceiling was already exceeded, in which case
+the deadline is immediate. `w3c()` is the actual sweep executor invoked once
+`shouldSweep` is true: it iterates running background tasks and kills each one
+matching predicate `Dw(n)`, logging `print wind-down: killing background shell
+{id} (...)`.
 
 A sibling project in this same workspace (`claude_storage/.claude/settings.local.json`)
 already sets this to `"0"` — i.e. do not wait at all for background work in

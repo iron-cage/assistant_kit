@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: PT- test cases for the 5-layer version lock strategy applied after pinned installs.
+- **Purpose**: PT- test cases for the 8-layer version lock strategy applied after pinned installs.
 - **Responsibility**: Verify that dry-run previews reflect the correct lock/unlock behavior for pinned vs latest versions.
 - **In Scope**: Layer 1 (`autoUpdates`), Layer 2 (`DISABLE_AUTOUPDATER`), Layer 4 (purge preview), lock inversion for `latest`.
 - **Out of Scope**: Actual file writes and chmod operations (-> source integration tests), guard recovery behavior (-> `../feature/01_version_management.md`).
