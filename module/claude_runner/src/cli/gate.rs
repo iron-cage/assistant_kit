@@ -194,39 +194,76 @@ fn reclaim_test_delay()
 // of extension — so a `slot_`-prefixed ticket or temp file would be
 // miscounted as an extra concurrently-admitted session for the brief window
 // it exists, even though it represents no admission at all.
-fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> bool
+// Fix(BUG-396): distinguish "this index is currently held by a live session"
+// from "this index's owner is dead, but I lost the atomic reclaim-ticket race
+// to another concurrent reclaimer" — acquire_slot() previously collapsed both
+// outcomes into a bare `false`, so wait_for_session_slot() could not tell them
+// apart either. See SlotDenialCause and its call site below.
+// Root cause: the two non-admission returns below (owner alive; ticket/rename
+// lost) are mechanistically different — the first never contends with
+// anything (the slot is legitimately in active use by another session, for
+// however long that session runs), the second genuinely races another
+// caller over a dead slot's reclaim ticket — but both discarded that
+// distinction the moment they returned a bare bool.
+// Pitfall: "I lost a race" and "someone else already legitimately holds this"
+// are not the same fact, even though both currently collapse to a
+// `false`-shaped non-admission — collapsing them erases information the
+// caller needs to build an accurate diagnostic (see wait_for_session_slot()).
+enum SlotDenialCause
+{
+  /// The recorded owner of this index is alive — no reservation was
+  /// contested; the slot is simply in active use for however long that
+  /// session runs.
+  HeldByLive,
+  /// The recorded owner was dead, but another concurrent caller won the
+  /// atomic reclaim-ticket race for this same index first.
+  LostReclaimRace,
+}
+
+fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (), SlotDenialCause >
 {
   let path = slot_path( dir, index );
   if claim_slot_file( &path, pid, since )
   {
-    return true;
+    return Ok( () );
   }
   let Some( ( owner, owner_since ) ) = read_slot_owner_record( &path )
   else
   {
-    return false;
+    // Fix(BUG-396): an unreadable record here is NOT a corrupt/stale file —
+    // claim_slot_file()'s create_new() and its content write() are two
+    // separate steps, so the only way this path exists but fails to parse is
+    // that some OTHER caller's claim_slot_file() just won create_new() and
+    // hasn't finished writing yet. That caller is, by construction,
+    // definitely alive right now. Empirically confirmed via T15: classifying
+    // this as LostReclaimRace produced intermittent "lost reservation race"
+    // output for a scenario with no dead owner and no reclaim attempt at all.
+    return Err( SlotDenialCause::HeldByLive );
   };
   if pid_alive( owner )
   {
-    return false;
+    return Err( SlotDenialCause::HeldByLive );
   }
   reclaim_test_delay();
   let ticket = dir.join( format!( "reclaim_{index}_{owner}_{owner_since}.lock" ) );
   if !claim_slot_file( &ticket, pid, since )
   {
-    return false;
+    return Err( SlotDenialCause::LostReclaimRace );
   }
   let tmp = dir.join( format!( "reclaim_tmp_{index}_{pid}" ) );
   if !claim_slot_file( &tmp, pid, since )
   {
-    return false;
+    return Err( SlotDenialCause::LostReclaimRace );
   }
-  let claimed = std::fs::rename( &tmp, &path ).is_ok();
-  if !claimed
+  if std::fs::rename( &tmp, &path ).is_ok()
+  {
+    Ok( () )
+  }
+  else
   {
     let _ = std::fs::remove_file( &tmp );
+    Err( SlotDenialCause::LostReclaimRace )
   }
-  claimed
 }
 
 // Fix(BUG-384): escape a string for embedding as a JSON string value, per RFC 8259 §7.
@@ -332,7 +369,8 @@ pub( super ) fn wait_for_session_slot(
       // A losing race falls through to the existing wait-and-retry tail below,
       // exactly as the old `count >= max` case already did.
       let has_capacity = count_u32 < max;
-      if has_capacity && acquire_slot( &dir, count_u32, pid, since )
+      let claim = if has_capacity { Some( acquire_slot( &dir, count_u32, pid, since ) ) } else { None };
+      if let Some( Ok( () ) ) = claim
       {
         // Emit GateWait event if we actually waited at least one poll cycle.
         if gate_emitted
@@ -369,23 +407,47 @@ pub( super ) fn wait_for_session_slot(
       if !quiet
       {
         // Fix(BUG-393): distinguish global exhaustion (no slot numerically free)
-        // from local race-loss (a slot was free but another racer's acquire_slot()
-        // won the same index first) — both previously produced byte-identical
-        // text since the message only interpolated the count/max counters shared
-        // across every false-branch of the compound admission condition above.
-        // Root cause: the eprintln! captured no field recording which disjunct
-        // of the admission condition produced this non-admission — the
-        // distinguishing information existed transiently at `has_capacity` but
-        // was discarded before the message was constructed.
-        // Pitfall: a diagnostic built only from counters shared across every
-        // false-branch of a compound condition silently erases which branch
-        // fired — capture the branch itself at the point of construction, or
-        // the distinction is unrecoverable downstream. The cause suffix is
+        // from every other non-admission cause — both previously produced
+        // byte-identical text since the message only interpolated the
+        // count/max counters shared across every false-branch of the
+        // compound admission condition above.
+        // Fix(BUG-396): the has_capacity-true branch itself further splits
+        // into "another live session already holds this index" (confirmed
+        // via production evidence to be the overwhelmingly common case: job
+        // #40 reported "lost reservation race" at 4/6 sessions while
+        // slot_4.json's recorded owner was actually alive — no reclaim was
+        // ever attempted, so no race occurred) versus "the recorded owner
+        // was dead but I lost the reclaim-ticket race to another concurrent
+        // reclaimer" (the only scenario that is genuinely a race; see T14's
+        // dead-owner fixture). BUG-393's original fix distinguished capacity
+        // from non-capacity only, and mislabeled every non-capacity denial a
+        // "race" regardless of which of acquire_slot()'s two distinct
+        // `Err` branches actually produced it.
+        // Root cause: acquire_slot() returned a bare `bool`, discarding which
+        // of its 2 internal denial branches fired; the message site then had
+        // no way to tell "owner alive, no race occurred" apart from "owner
+        // dead, ticket race lost" and defaulted to naming both a "race".
+        // Pitfall: a diagnostic that names a specific mechanism ("race") must
+        // be verified against every code path that reaches it — the
+        // overwhelmingly common non-admission cause (an unrelated live
+        // session already owns this index) never contends with anything at
+        // all, and calling it a "race" actively misleads an operator into
+        // expecting imminent, capacity-unrelated resolution that may not
+        // arrive until that specific session ends. The cause suffix is
         // appended AFTER the pre-existing "active; waiting" text, not spliced
         // inside it — every prior assertion pattern-matching that substring
         // (5 sites here: T01/T04 positive, T02/T03/T06 negative-absence; 5 more
         // positive sites in config_file_test.rs) depends on it staying intact.
-        let cause = if has_capacity { "lost reservation race" } else { "at capacity" };
+        let cause = match claim
+        {
+          Some( Err( SlotDenialCause::HeldByLive ) )        => "slot held by another session",
+          Some( Err( SlotDenialCause::LostReclaimRace ) )   => "lost reservation race",
+          // None: has_capacity was false. Some(Ok(())): unreachable — the
+          // admitted branch already returned above — but required for
+          // match exhaustiveness, so it shares the "at capacity" arm rather
+          // than duplicating it (clippy::match_same_arms).
+          None | Some( Ok( () ) )                           => "at capacity",
+        };
         eprintln!(
           "Info: {count}/{max} sessions active; waiting {poll_secs}s for a slot... (attempt {attempt}/{max_attempts}) [{cause}]"
         );

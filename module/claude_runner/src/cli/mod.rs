@@ -58,10 +58,7 @@ pub( super ) use help::print_help;
 // Pitfall: Verbosity gates runner diagnostics only, never core feature output like --dry-run
 pub( super ) fn handle_dry_run( builder : &ClaudeCommand )
 {
-  let env = builder.describe_env();
-  let command = builder.describe();
-  if !env.is_empty() { println!( "{env}" ); }
-  println!( "{command}" );
+  println!( "{}", builder.describe_full() );
 }
 
 // Fix(BUG-212): `run` was absent; typing `clr running` produced no helpful error.
@@ -209,12 +206,7 @@ pub( super ) fn run_built_command(
 
   if cli.trace
   {
-    let env     = builder.describe_env();
-    let command = builder.describe();
-    let mut preview = String::new();
-    if !env.is_empty() { preview.push_str( &env ); preview.push( '\n' ); }
-    preview.push_str( &command );
-    eprintln!( "{preview}" );
+    eprintln!( "{}", builder.describe_full() );
   }
 
   if is_print_invocation

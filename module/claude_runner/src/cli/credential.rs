@@ -8,7 +8,9 @@ use claude_journal::{ EventRecord, EventType, JournalWriter };
 ///
 /// Reconstructs the `ClaudeCommand` exactly as `run_isolated_ext()` would build it
 /// (model flag prepended, then `with_home(&temp_dir)`, `with_compact_window(compact_window)`,
-/// then `with_args(args)`) and prints `describe_env()` + `describe()`.
+/// then `with_args(args)`) and prints `describe_full()` — the same single preview-formatting
+/// method used by `handle_dry_run` and the `--trace` branch in `run_built_command`, so the
+/// blank-line/export formatting can never drift between the three call sites.
 ///
 /// `to_stdout`: `true` for `--dry-run` (user-facing preview → stdout, like `handle_dry_run`);
 /// `false` for `--trace` (diagnostic → stderr).
@@ -46,20 +48,17 @@ fn emit_credential_trace
     .with_home( &temp_dir )
     .with_compact_window( compact_window )
     .with_args( full_args.iter().cloned() );
-  let env_out = preview.describe_env();
-  let cmd_out = preview.describe();
+  let block = preview.describe_full();
   if to_stdout
   {
-    if !env_out.is_empty() { println!( "{env_out}" ); }
-    println!( "{cmd_out}" );
+    println!( "{block}" );
   }
   else
   {
     eprintln!( "# clr {label}" );
     eprintln!( "# creds: {creds_path}" );
     eprintln!( "# timeout: {timeout_secs}s" );
-    if !env_out.is_empty() { eprintln!( "{env_out}" ); }
-    eprintln!( "{cmd_out}" );
+    eprintln!( "{block}" );
   }
 }
 

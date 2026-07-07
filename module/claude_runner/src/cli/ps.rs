@@ -847,7 +847,12 @@ fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
   let marker     = r#""content":""#;
   let text_start = last_user.find( marker ).map( | i | i + marker.len() )?;
   let rest       = &last_user[ text_start .. ];
-  let text_end   = rest.find( '"' )?;
+  // Fix(BUG-394): a bare rest.find('"') stops at the first escaped `\"` inside
+  // the human's message text (e.g. `He said \"hi\"`), truncating well before the
+  // true closing quote. Root cause: no escape-state tracking at this site, unlike
+  // summary.rs's extract_str()/extract_json_value(). Pitfall: never assume
+  // user-authored message text cannot contain a literal `"`.
+  let text_end   = super::summary::find_unescaped_quote( rest )?;
   let text       = &rest[ .. text_end ];
   let truncated  : String = text.chars().take( 35 ).collect();
   if truncated.is_empty() { return None; }
@@ -855,12 +860,20 @@ fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
 }
 
 // Extract a string value for `key` from a compact JSON object in `content`.
+//
+// Fix(BUG-394): this is the unpaired read side of a round-trip whose write side
+// (gate.rs's json_escape_str(), Fix(BUG-384)) already escapes `cwd` correctly —
+// a bare rest.find('"') stopped at the first escaped quote instead of reversing
+// that escaping, silently truncating a quote-containing cwd in the "Queued CLR
+// Processes" table. Root cause: no escape-state tracking at this site. Pitfall:
+// fixing a JSON round-trip's write side does not imply the read side correctly
+// reverses it — each direction must be independently verified.
 fn parse_json_str( content : &str, key : &str ) -> Option< String >
 {
   let marker = format!( r#""{key}":""# );
   let start  = content.find( marker.as_str() )? + marker.len();
   let rest   = &content[ start.. ];
-  let end    = rest.find( '"' )?;
+  let end    = super::summary::find_unescaped_quote( rest )?;
   Some( rest[ ..end ].to_string() )
 }
 

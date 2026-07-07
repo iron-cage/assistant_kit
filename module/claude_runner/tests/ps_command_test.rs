@@ -41,6 +41,8 @@
 //! | IT-33 | `--mode interactive`, mixed set → plain caption, no breakdown             | Caption plain     |
 //! | IT-34 | `--mode print`, mixed set → plain caption, no breakdown                   | Caption plain     |
 //! | IT-35 | Live `slot_{n}.json` reservation file survives a `clr ps` scan             | BUG-387 follow-up |
+//! | IT-36 | Task column: escaped `"` in Form A content is not truncated at the escaped quote | BUG-394 site 1 |
+//! | IT-37 | Queued table CWD column: escaped `"` in gate-state `cwd` is not truncated at the escaped quote | BUG-394 site 2 |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
@@ -1353,5 +1355,135 @@ fn it_35_slot_reservation_file_not_deleted_by_ps_scan()
     slot_file.exists(),
     "IT-35 (BUG-387 follow-up): live slot reservation file must survive a `clr ps` scan. \
      build_queued_table() must not misparse slot_*.json as an unparseable/dead gate file. Got stdout:\n{stdout}"
+  );
+}
+
+// ── IT-36: Task column — escaped quote in Form A content not truncated (BUG-394) ──
+
+/// IT-36 (BUG-394 site 1): `try_jsonl_task()`'s Task column preview is not truncated at
+/// an escaped `"` inside the human's Form A message text.
+///
+/// ## Root Cause
+/// `try_jsonl_task()` used a bare `rest.find('"')` to locate the content value's closing
+/// quote, stopping at the first escaped `\"` inside the message text instead of the true
+/// terminator.
+///
+/// ## Why Not Caught
+/// IT-16/IT-17's fixtures (`"fix the auth module"`, `"the actual task"`) contain no quote
+/// character at all, so the naive `.find('"')` always happened to land on the true
+/// terminator by coincidence.
+///
+/// ## Fix Applied
+/// `try_jsonl_task()` now uses `find_unescaped_quote()` (escape-aware scan) in place of
+/// the bare `rest.find('"')`.
+///
+/// ## Prevention
+/// See `docs/invariant/014_json_string_extraction_escape_handling.md` IN-1.
+///
+/// ## Pitfall
+/// Never assume user-authored message text cannot contain a literal `"` — the extracted
+/// text is not unescaped, so the correctly-bounded result still contains literal
+/// backslashes exactly as they appear in the on-disk JSONL text.
+// test_kind: bug_reproducer(BUG-394)
+#[ cfg( unix ) ]
+#[ test ]
+fn it_36_task_column_escaped_quote_not_truncated()
+{
+  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+
+  let proj_tmp = tempfile::TempDir::new().expect( "create project tmp" );
+  let cwd      = proj_tmp.path().join( "proj" );
+  std::fs::create_dir_all( &cwd ).expect( "create CWD" );
+  let mut bg = std::process::Command::new( "claude" )
+    .arg( "30" )
+    .env( "PATH", &path_val )
+    .current_dir( &cwd )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn fake claude" );
+  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+  let proc = make_proc_dir( &[ bg.id() ] );
+
+  let encoded      = claude_storage_core::encode_path( &cwd ).expect( "encode cwd" );
+  let home_tmp     = tempfile::TempDir::new().expect( "create temp HOME" );
+  let project_path = home_tmp.path()
+    .join( ".claude" ).join( "projects" ).join( &encoded );
+  std::fs::create_dir_all( &project_path ).expect( "create project path" );
+  std::fs::write(
+    project_path.join( "session.jsonl" ),
+    r#"{"type":"user","message":{"role":"user","content":"He said \"hi\" and left"}}"#,
+  ).expect( "write JSONL" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .arg( "ps" )
+    .env( "PATH", &path_val )
+    .env( "HOME", home_tmp.path() )
+    .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .output()
+    .expect( "run clr ps" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( r#"He said \"hi\" and left"# ),
+    "IT-36 (BUG-394): Task column must show the full content bounded at the true closing \
+     quote, not truncated at the escaped quote 9 bytes in (`He said \\`). Got:\n{stdout}"
+  );
+}
+
+// ── IT-37: Queued table CWD — escaped quote in gate-state cwd not truncated (BUG-394) ──
+
+/// IT-37 (BUG-394 site 2): `parse_json_str()`'s "Queued CLR Processes" CWD column is not
+/// truncated at an escaped `"` inside the gate-state file's `cwd` field.
+///
+/// ## Root Cause
+/// `parse_json_str()` used a bare `rest.find('"')` to locate the `cwd` value's closing
+/// quote, stopping at the first escaped `\"` instead of the true terminator — the
+/// unpaired read side of a round-trip whose write side (`gate.rs::json_escape_str()`,
+/// BUG-384) already escapes `cwd` correctly.
+///
+/// ## Why Not Caught
+/// T07/T13 (BUG-384, `tests/concurrency_gate_test.rs`) assert only that the gate-state
+/// file's on-disk JSON is well-formed on write; neither invokes `clr ps` to verify the
+/// read side correctly reverses that escaping.
+///
+/// ## Fix Applied
+/// `parse_json_str()` now uses `find_unescaped_quote()` (escape-aware scan) in place of
+/// the bare `rest.find('"')`.
+///
+/// ## Prevention
+/// See `docs/invariant/014_json_string_extraction_escape_handling.md` IN-2.
+///
+/// ## Pitfall
+/// Fixing a JSON round-trip's write side does not imply the read side correctly reverses
+/// it — each direction must be independently verified.
+// test_kind: bug_reproducer(BUG-394)
+#[ cfg( target_os = "linux" ) ]
+#[ test ]
+fn it_37_queued_table_cwd_escaped_quote_not_truncated()
+{
+  let gate_dir      = tempfile::TempDir::new().expect( "create gate temp dir" );
+  let gate_dir_path = gate_dir.path().to_str().expect( "gate dir UTF-8" );
+  let live_pid      = std::process::id();
+  let gate_file     = gate_dir.path().join( format!( "{live_pid}.json" ) );
+  std::fs::write(
+    &gate_file,
+    r#"{"cwd":"/tmp/proj-\"quoted\"-dir","since":1720000000,"attempt":2,"message":"waiting for session slot"}"#,
+  ).expect( "write gate file" );
+  let proc          = make_proc_dir( &[] );
+  let proc_dir_path = proc.path().to_str().expect( "proc dir UTF-8" );
+
+  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ), ( "CLR_PROC_DIR", proc_dir_path ) ] );
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( r#"/tmp/proj-\"quoted\"-dir"# ),
+    "IT-37 (BUG-394): CWD column must show the full path bounded at the true closing \
+     quote, not truncated at the escaped quote. Got:\n{stdout}"
   );
 }
