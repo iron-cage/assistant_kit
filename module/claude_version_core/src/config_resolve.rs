@@ -5,7 +5,7 @@
 
 use std::path::{ Path, PathBuf };
 use crate::config_catalog::SettingDef;
-use crate::settings_io::read_all_settings;
+use crate::settings_io::{ read_all_settings, json_parse_flat_object };
 
 /// The layer that supplied the resolved value for a settings key.
 ///
@@ -96,7 +96,22 @@ pub fn resolve(
   let user_settings = home_dir.join( ".claude" ).join( "settings.json" );
   if let Ok( pairs ) = read_all_settings( &user_settings )
   {
-    if let Some( ( _, v ) ) = pairs.into_iter().find( | ( k, _ ) | k == key )
+    // Dotted `env.*` catalog keys live inside the nested "env" sub-object,
+    // not as flat top-level keys — look inside it instead of flat-matching.
+    if let Some( suffix ) = key.strip_prefix( "env." )
+    {
+      if let Some( ( _, env_raw ) ) = pairs.into_iter().find( | ( k, _ ) | k == "env" )
+      {
+        if let Ok( env_pairs ) = json_parse_flat_object( &env_raw )
+        {
+          if let Some( ( _, v, _ ) ) = env_pairs.into_iter().find( | ( k, _, _ ) | k == suffix )
+          {
+            return ResolvedValue { value : Some( v ), source : Layer::User };
+          }
+        }
+      }
+    }
+    else if let Some( ( _, v ) ) = pairs.into_iter().find( | ( k, _ ) | k == key )
     {
       return ResolvedValue { value : Some( v ), source : Layer::User };
     }
@@ -180,7 +195,7 @@ fn find_in_project_config( key : &str, cwd : &Path ) -> Option< String >
 /// - Filesystem root.
 ///
 /// Returns `None` if no project config is found before the boundary.
-fn find_project_config_file( cwd : &Path ) -> Option< PathBuf >
+pub( crate ) fn find_project_config_file( cwd : &Path ) -> Option< PathBuf >
 {
   let mut dir = cwd.to_path_buf();
   loop

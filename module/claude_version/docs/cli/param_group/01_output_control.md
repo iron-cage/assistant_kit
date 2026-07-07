@@ -42,7 +42,7 @@ clv .processes format::json v::2
 | 10 | [`.version.history`](../command/version.md#command-12-versionhistory) | Full | — |
 | 11 | [`.config`](../command/config.md#command-13-config) | Partial | `count::` |
 | 12 | [`.params`](../command/params.md#command-14-params) | Partial | `count::` |
-| 13 | [`.paths`](../command/paths.md#command--16-paths) | Partial | `count::` |
+| 13 | [`.paths`](../command/paths.md#command-16-paths) | Partial | `count::` |
 
 ### Referenced Parameters
 

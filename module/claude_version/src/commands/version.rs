@@ -188,6 +188,9 @@ fn install_dry_content(
           "[dry-run] would install {label}\n\
            [dry-run] would set autoUpdates = {auto_label}\n\
            [dry-run] would remove env.DISABLE_AUTOUPDATER\n\
+           [dry-run] would remove env.DISABLE_UPDATES\n\
+           [dry-run] would remove autoUpdatesChannel\n\
+           [dry-run] would remove minimumVersion\n\
            [dry-run] would leave versions dir unlocked\n\
            [dry-run] would store preferred version = {version_spec}\n"
         )
@@ -198,6 +201,9 @@ fn install_dry_content(
           "[dry-run] would install {label}\n\
            [dry-run] would set autoUpdates = {auto_label}\n\
            [dry-run] would set env.DISABLE_AUTOUPDATER = 1\n\
+           [dry-run] would set env.DISABLE_UPDATES = 1\n\
+           [dry-run] would set autoUpdatesChannel = stable\n\
+           [dry-run] would set minimumVersion = {resolved}\n\
            [dry-run] would chmod 555 versions dir (hard lock)\n\
            [dry-run] would purge stale cached binaries (keep v{resolved})\n\
            [dry-run] would store preferred version = {version_spec} (v{resolved})\n"

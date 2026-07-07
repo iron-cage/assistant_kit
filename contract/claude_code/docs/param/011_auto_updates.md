@@ -35,4 +35,4 @@ Controls whether Claude Code automatically updates its binary on startup. When t
 | doc | [121_auto_updates_channel.md](121_auto_updates_channel.md) | Release channel selector (latest/stable) |
 | doc | [../subcommand/004_doctor.md](../subcommand/004_doctor.md) | Auto-updater health check |
 | doc | [../subcommand/009_update.md](../subcommand/009_update.md) | Manual update subcommand |
-| doc | [../../../../module/claude_version/docs/pattern/001_version_lock.md](../../../../module/claude_version/docs/pattern/001_version_lock.md) | This repo's own tooling that sets this key as Layer 1 of its 5-layer pin |
+| doc | [../../../../module/claude_version/docs/pattern/001_version_lock.md](../../../../module/claude_version/docs/pattern/001_version_lock.md) | This repo's own tooling that sets this key as Layer 1 of its 8-layer pin |

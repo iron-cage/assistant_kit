@@ -249,7 +249,7 @@ fn atomic_write( path : &Path, content : &str ) -> Result< (), io::Error >
     f.write_all( content.as_bytes() )?;
     f.flush()?;
   }
-  eprintln!( "atomic_write: {path:?}" );
+  eprintln!( "atomic_write: {}", path.display() );
   std::fs::rename( &tmp_path, path )
 }
 

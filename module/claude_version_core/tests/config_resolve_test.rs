@@ -23,12 +23,13 @@
 //! | AT-04 | Catalog default → Default source | `at04_002_catalog_default_returned` |
 //! | AT-05 | Absent everywhere → Absent source | `at05_002_all_layers_absent` |
 //! | AT-06 | Project config overrides user config | `at06_002_project_overrides_user` |
+//! | T06 | nested `env.*` catalog keys resolve via User layer, not Absent | `at07_002_lock_version_nested_env_resolves` |
 
 use std::path::Path;
 use tempfile::TempDir;
 use claude_version_core::config_catalog::catalog;
 use claude_version_core::config_resolve::{ resolve, Layer };
-use claude_version_core::settings_io::set_setting;
+use claude_version_core::settings_io::{ set_setting, set_env_var };
 
 // Helper: write a settings.json with a single key→value into {dir}/.claude/settings.json.
 fn write_settings( dir : &Path, key : &str, value : &str )
@@ -157,4 +158,30 @@ fn at06_002_project_overrides_user()
 
   assert_eq!( rv.source, Layer::Project, "Project must override User source" );
   assert_eq!( rv.value.as_deref(), Some( "dark" ), "project value must win over user value" );
+}
+
+// ─── T06: nested env.* keys resolve via User layer ────────────────────────────
+
+// T06: env.DISABLE_AUTOUPDATER and env.DISABLE_UPDATES live inside the nested
+// "env" sub-object, not as flat top-level keys — resolve() must look inside it
+// rather than falling through to Absent (regression guard for the Step 3 fix).
+#[ test ]
+fn at07_002_lock_version_nested_env_resolves()
+{
+  let home_dir    = TempDir::new().unwrap();
+  let no_project  = TempDir::new().unwrap();
+
+  let claude_dir = home_dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  let settings_file = claude_dir.join( "settings.json" );
+  set_env_var( &settings_file, "DISABLE_AUTOUPDATER", "1" ).unwrap();
+  set_env_var( &settings_file, "DISABLE_UPDATES", "1" ).unwrap();
+
+  let rv1 = resolve( "env.DISABLE_AUTOUPDATER", home_dir.path(), no_project.path(), catalog() );
+  assert_eq!( rv1.source, Layer::User, "env.DISABLE_AUTOUPDATER must resolve via User layer, not Absent" );
+  assert_eq!( rv1.value.as_deref(), Some( "1" ) );
+
+  let rv2 = resolve( "env.DISABLE_UPDATES", home_dir.path(), no_project.path(), catalog() );
+  assert_eq!( rv2.source, Layer::User, "env.DISABLE_UPDATES must resolve via User layer, not Absent" );
+  assert_eq!( rv2.value.as_deref(), Some( "1" ) );
 }
