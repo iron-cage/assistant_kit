@@ -33,6 +33,7 @@ clv.settings.show format::text
 | 10 | [`.version.history`](../command/version.md#command-12-versionhistory) | text | |
 | 11 | [`.config`](../command/config.md#command-13-config) | text | |
 | 12 | [`.params`](../command/params.md#command-14-params) | text | |
+| 13 | [`.paths`](../command/paths.md#command--16-paths) | text | |
 
 ### Referenced Parameter Groups
 
@@ -57,3 +58,4 @@ clv.settings.show format::text
 | 5 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
 | 6 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |
 | 7 | [007 Params Inspection](../user_story/007_params_inspection.md) | Developer (config inspector) |
+| 8 | [008 Path Discovery](../user_story/008_path_discovery.md) | Developer (path discovery and scripting) |

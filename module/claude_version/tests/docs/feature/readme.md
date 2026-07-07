@@ -4,7 +4,7 @@
 
 - **Purpose**: Test case specifications for claude_version feature doc instances.
 - **Responsibility**: Per-feature test specs covering acceptance criteria and behavioral verification.
-- **In Scope**: Feature test planning (FT- prefix, min 4 cases per spec). All 8 features.
+- **In Scope**: Feature test planning (FT- prefix, min 4 cases per spec). All 9 features.
 - **Out of Scope**: CLI command tests (-> `cli/command/`), parameter edge cases (-> `cli/param/`).
 
 ### Overview Table
@@ -19,4 +19,5 @@
 | 006_config_command.md | FT- test cases for `.config` command: show-all/get/set/unset/resolution/catalog | ✅ |
 | 007_params_command.md | FT- test cases for `.params` command: show-all/single/kind-filter/format/errors | ✅ |
 | 008_runtime_file_discovery.md | FT- test cases for `.runtime_files` command: path output, format, HOME dependency | ✅ |
+| 009_path_discovery.md | FT- test cases for `.paths` command: show-all, single-key, verbosity tiers, errors | ✅ |
 | procedure.md | Workflow for creating and updating feature test specs | ✅ |

@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_version
-  node_count: 31
-  edge_count: 79
+  node_count: 35
+  edge_count: 96
   component_count: 2
-  generated: 2026-07-02
+  generated: 2026-07-07
 
 nodes:
   - id: algorithm/001
@@ -111,6 +111,11 @@ nodes:
     label: Runtime File Discovery
     entity: feature
 
+  - id: feature/009
+    file: feature/009_path_discovery.md
+    label: Path Discovery
+    entity: feature
+
   - id: pattern/001
     file: pattern/001_version_lock.md
     label: Version Lock
@@ -129,6 +134,16 @@ nodes:
   - id: runtime_file/001
     file: runtime_file/001_version_history_cache.md
     label: Version History Cache
+    entity: runtime_file
+
+  - id: runtime_file/002
+    file: runtime_file/002_versions_directory.md
+    label: Versions Directory
+    entity: runtime_file
+
+  - id: runtime_file/003
+    file: runtime_file/003_binary_symlink.md
+    label: Binary Symlink
     entity: runtime_file
 
   - id: user_story/001
@@ -159,6 +174,11 @@ nodes:
   - id: user_story/007
     file: cli/user_story/007_params_inspection.md
     label: "US: Params Inspection"
+    entity: user_story
+
+  - id: user_story/008
+    file: cli/user_story/008_path_discovery.md
+    label: "US: Path Discovery"
     entity: user_story
 
 edges:
@@ -332,6 +352,23 @@ edges:
     to: runtime_file/001
     via: runtime_files
 
+  # feature/009 Path Discovery
+  - from: feature/009
+    to: runtime_file/001
+    via: runtime_files
+
+  - from: feature/009
+    to: runtime_file/002
+    via: runtime_files
+
+  - from: feature/009
+    to: runtime_file/003
+    via: runtime_files
+
+  - from: feature/009
+    to: feature/008
+    via: features
+
   # runtime_file/001 Version History Cache
   - from: runtime_file/001
     to: feature/001
@@ -341,8 +378,46 @@ edges:
     to: feature/008
     via: features
 
+  - from: runtime_file/001
+    to: feature/009
+    via: features
+
   - from: feature/001
     to: runtime_file/001
+    via: runtime_files
+
+  # runtime_file/002 Versions Directory
+  - from: runtime_file/002
+    to: feature/001
+    via: features
+
+  - from: runtime_file/002
+    to: feature/009
+    via: features
+
+  - from: feature/001
+    to: runtime_file/002
+    via: runtime_files
+
+  # runtime_file/003 Binary Symlink
+  - from: runtime_file/003
+    to: feature/001
+    via: features
+
+  - from: runtime_file/003
+    to: feature/009
+    via: features
+
+  - from: runtime_file/003
+    to: pitfall/002
+    via: pitfalls
+
+  - from: feature/001
+    to: runtime_file/003
+    via: runtime_files
+
+  - from: pitfall/002
+    to: runtime_file/003
     via: runtime_files
 
   # cli/001 Commands
@@ -368,6 +443,10 @@ edges:
 
   - from: cli/001
     to: feature/008
+    via: features
+
+  - from: cli/001
+    to: feature/009
     via: features
 
   # cli/007 Environment Parameters
@@ -476,6 +555,16 @@ edges:
     to: user_story/007
     via: user_stories
 
+  # format/01 Text Format → user_story/008
+  - from: format/01
+    to: user_story/008
+    via: user_stories
+
+  # format/02 JSON Format → user_story/008
+  - from: format/02
+    to: user_story/008
+    via: user_stories
+
   # user_story/001-006,007 → commands
   - from: user_story/001
     to: cli/001
@@ -505,10 +594,14 @@ edges:
     to: cli/001
     via: commands
 
+  - from: user_story/008
+    to: cli/001
+    via: commands
+
 components:
   - id: 1
     label: Main corpus
-    size: 30
+    size: 34
     isolated: false
     nodes:
       - algorithm/001
@@ -528,12 +621,15 @@ components:
       - feature/006
       - feature/007
       - feature/008
+      - feature/009
       - format/01
       - format/02
       - pattern/001
       - pitfall/001
       - pitfall/002
       - runtime_file/001
+      - runtime_file/002
+      - runtime_file/003
       - user_story/001
       - user_story/002
       - user_story/003
@@ -541,6 +637,7 @@ components:
       - user_story/005
       - user_story/006
       - user_story/007
+      - user_story/008
 
   - id: 2
     label: Config Parameters
