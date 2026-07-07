@@ -190,12 +190,14 @@ fn t01_gate_triggers_at_six_print_mode_processes()
 
   // Dispatched command's own fake claude — fast, exits immediately once the gate releases.
   let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
     .args( [ "-p", "--journal", "off", "x" ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
     .env( "CLR_GATE_POLL_SECS", "1" )
     .output()
     .expect( "invoke clr" );
@@ -234,12 +236,14 @@ fn t02_gate_does_not_trigger_below_six_print_mode_processes()
   let proc = make_proc_dir( &pids );
 
   let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
     .args( [ "-p", "--journal", "off", "x" ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
     .env( "CLR_GATE_POLL_SECS", "1" )
     .output()
     .expect( "invoke clr" );
@@ -285,6 +289,7 @@ fn t03_interactive_invocation_bypasses_gate_with_zero_wait()
   let proc = make_proc_dir( &pids );
 
   let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let start = std::time::Instant::now();
@@ -292,6 +297,7 @@ fn t03_interactive_invocation_bypasses_gate_with_zero_wait()
     .args( [ "--interactive", "--max-sessions", "1", "--journal", "off", "x" ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
     .output()
     .expect( "invoke clr" );
   let elapsed = start.elapsed();
@@ -340,12 +346,14 @@ fn t04_gate_counts_print_mode_only_excludes_interactive()
   let proc = make_proc_dir( &pids );
 
   let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
     .args( [ "-p", "--max-sessions", "5", "--journal", "off", "x" ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
     .env( "CLR_GATE_POLL_SECS", "1" )
     .output()
     .expect( "invoke clr" );
@@ -671,12 +679,14 @@ fn t09_gate_env_var_overrides_change_real_poll_timing()
   let proc = make_proc_dir( &[ occupier.id() ] );
 
   let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let mut child = Command::new( bin )
     .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
     .env( "CLR_GATE_POLL_SECS", "1" )
     .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
     .stdout( std::process::Stdio::null() )
@@ -735,12 +745,14 @@ fn t10_invalid_poll_secs_env_var_falls_back_to_default()
   let proc = make_proc_dir( &[ occupier.id() ] );
 
   let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let mut child = Command::new( bin )
     .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
     .env( "CLR_GATE_POLL_SECS", "notanumber" )
     .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
     .stdout( std::process::Stdio::null() )
@@ -795,12 +807,14 @@ fn t11_invalid_max_attempts_env_var_falls_back_to_default()
   let proc = make_proc_dir( &[ occupier.id() ] );
 
   let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let mut child = Command::new( bin )
     .args( [ "-p", "--max-sessions", "1", "--journal", "off", "x" ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
     .env( "CLR_GATE_POLL_SECS", "1" )
     .env( "CLR_GATE_MAX_ATTEMPTS", "notanumber" )
     .stdout( std::process::Stdio::null() )

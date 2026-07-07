@@ -23,7 +23,8 @@ clr <command> [OPTIONS] [MESSAGE]
 | `001_dictionary.md` | Domain vocabulary for clr CLI concepts |
 | `002_command_defaults.md` | Cross-command parameter default matrix and isolated/refresh design targets |
 | `parity/` | Cross-command behavioral parity comparisons (2 instances) |
-| `003_env_param.md` | CLR_* env var fallbacks, gate runtime config (dir/poll/attempts), and CLAUDE_CODE_* subprocess vars (87 vars) |
+| `003_env_param.md` | CLR_* env var fallbacks, gate runtime config (dir/poll/attempts/config-dir), and CLAUDE_CODE_* subprocess vars (88 vars) |
+| `config_param.md` | Config-file parameter tier: eligible parameters, TOML key reference, discovery/precedence |
 | `param_group/` | Logical parameter groupings (6 groups) |
 | `type/` | Semantic type definitions (13 active types; 1 deprecated) |
 | `param/` | Individual parameter reference docs (72 active; 1 deprecated) |
@@ -42,7 +43,7 @@ clr <command> [OPTIONS] [MESSAGE]
 | user_story/ (29 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | 003_env_param.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | parity/ (2 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| config_param.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — JSON config documented in feature/004 and param/075 |
+| config_param.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — no named output formats |
 | tests/docs/cli/readme.md | ➖ | ➖ | ➖ | ✅ | ➖ | Complete |
 | tests/docs/cli/dictionary.md | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
@@ -66,7 +67,8 @@ clr <command> [OPTIONS] [MESSAGE]
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (6 groups)
 - [Dictionary](001_dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — user goals and usage patterns (29 user stories)
-- [Env Parameters](003_env_param.md) — input, runtime config, and subprocess environment variables (87 variables)
+- [Env Parameters](003_env_param.md) — input, runtime config, and subprocess environment variables (88 variables)
+- [Config File Parameters](config_param.md) — TOML config-file parameter tier (38 eligible parameters)
 - [Parity](parity/readme.md) — cross-command behavioral parity comparisons (2 instances)
 
 ### See Also

@@ -578,12 +578,18 @@ fn us25_6_gate_count_excludes_interactive_sessions()
   let proc = make_proc_dir( &pids );
 
   let ( _clr_claude_dir, clr_path ) = fake_claude_dir( "printf 'ok\\n'" );
+  // Isolate the slot-reservation directory so this test's admission check never
+  // collides with another concurrently-running test's slot files in the shared
+  // system-default gate dir (BUG-387's reservation scheme is keyed by count-derived
+  // index, not by test — two unrelated tests can otherwise claim the same index).
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
     .args( [ "--max-sessions", "2", "task" ] )
     .env( "HOME", "/tmp/clr-isolated-home" )
     .env( "PATH", &clr_path )
     .env( "CLR_PROC_DIR", proc.path().to_str().expect( "proc dir UTF-8" ) )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
     .env( "CLR_GATE_POLL_SECS", "1" )
     .output()
     .expect( "run clr (print mode, max-sessions 2)" );

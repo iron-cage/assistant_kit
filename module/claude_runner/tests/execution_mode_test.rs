@@ -47,7 +47,7 @@ use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, make_session_dir, r
 #[ test ]
 fn e01_interactive_binary_not_found()
 {
-  let out = run_with_path( &[ "test message" ], "/nonexistent" );
+  let out = run_with_path( &[ "--max-sessions", "0", "test message" ], "/nonexistent" );
   assert!( !out.status.success(), "must exit non-zero when claude not found" );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
@@ -60,7 +60,7 @@ fn e01_interactive_binary_not_found()
 #[ test ]
 fn e02_print_binary_not_found()
 {
-  let out = run_with_path( &[ "-p", "test message" ], "/nonexistent" );
+  let out = run_with_path( &[ "-p", "--max-sessions", "0", "test message" ], "/nonexistent" );
   assert!( !out.status.success(), "must exit non-zero when claude not found" );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
@@ -103,7 +103,7 @@ fn e04_print_exit_nonzero_stderr_forwarded()
 fn e05_print_stderr_forwarded()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho STDERR_MARKER >&2\necho STDOUT_OK\n" );
-  let out = run_with_path( &[ "-p", "test" ], &path );
+  let out = run_with_path( &[ "-p", "--max-sessions", "0", "test" ], &path );
   assert!( out.status.success(), "must exit 0" );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
@@ -117,7 +117,7 @@ fn e05_print_stderr_forwarded()
 fn e06_print_stdout_captured()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho CAPTURED_OUTPUT\n" );
-  let out = run_with_path( &[ "-p", "test" ], &path );
+  let out = run_with_path( &[ "-p", "--max-sessions", "0", "test" ], &path );
   assert!( out.status.success(), "must exit 0" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
@@ -133,7 +133,7 @@ fn e07_interactive_not_found_quiet_flag()
 {
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( [ "--quiet", "test" ] )
+    .args( [ "--quiet", "--max-sessions", "0", "test" ] )
     .env( "PATH", "/nonexistent" )
     .env_remove( "CLR_TRACE" ) // prevent trace output from contaminating stderr
     .output()
@@ -157,7 +157,7 @@ fn e08_print_not_found_quiet_flag()
 {
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( [ "--quiet", "-p", "test" ] )
+    .args( [ "--quiet", "-p", "--max-sessions", "0", "test" ] )
     .env( "PATH", "/nonexistent" )
     .env_remove( "CLR_TRACE" ) // prevent trace output from contaminating stderr
     .output()
@@ -191,7 +191,7 @@ fn e10_interactive_message_forwarded()
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( [ "--session-dir", &session_path, "hello world" ] )
+    .args( [ "--session-dir", &session_path, "--max-sessions", "0", "hello world" ] )
     .env( "PATH", &path )
     .output()
     .expect( "invoke" );
@@ -221,7 +221,7 @@ fn e11_new_session_does_not_pass_continue()
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( [ "--new-session", "hello world" ] )
+    .args( [ "--new-session", "--max-sessions", "0", "hello world" ] )
     .env( "PATH", &path )
     .output()
     .expect( "invoke" );
@@ -247,7 +247,7 @@ fn e12_message_without_print_flag_uses_print_mode()
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( [ "Fix the bug" ] )
+    .args( [ "--max-sessions", "0", "Fix the bug" ] )
     .env( "PATH", &path )
     .output()
     .expect( "invoke" );
@@ -341,7 +341,7 @@ fn s76_strip_fences_applied_to_captured_output()
   let script = "#!/bin/sh\nprintf '```rust\\nfn main(){}\\n```\\n'\n";
   let ( _tmp, path ) = fake_claude( script );
   let out = run_with_path(
-    &[ "--strip-fences", "--no-ultrathink", "t" ],
+    &[ "--strip-fences", "--no-ultrathink", "--max-sessions", "0", "t" ],
     &path,
   );
   assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
@@ -364,7 +364,7 @@ fn s77_keep_claudecode_preserves_env_in_subprocess()
   let ( _tmp, path ) = fake_claude( script );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( [ "--keep-claudecode", "--no-ultrathink", "t" ] )
+    .args( [ "--keep-claudecode", "--no-ultrathink", "--max-sessions", "0", "t" ] )
     .env( "PATH", &path )
     .env( "CLAUDECODE", "test_val" )
     .output()
@@ -386,7 +386,7 @@ fn s78_file_content_piped_to_subprocess_stdin()
   let input_file = tempfile::NamedTempFile::new().expect( "create temp" );
   std::fs::write( input_file.path(), "piped_content_s78" ).expect( "write" );
   let out = run_with_path(
-    &[ "--no-ultrathink", "--file", input_file.path().to_str().unwrap(), "t" ],
+    &[ "--no-ultrathink", "--max-sessions", "0", "--file", input_file.path().to_str().unwrap(), "t" ],
     &path,
   );
   assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
@@ -403,7 +403,7 @@ fn s80_file_nonexistent_path_errors()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho ok\n" );
   let out = run_with_path(
-    &[ "--no-ultrathink", "--file", "/tmp/nonexistent_99999.txt", "t" ],
+    &[ "--no-ultrathink", "--max-sessions", "0", "--file", "/tmp/nonexistent_99999.txt", "t" ],
     &path,
   );
   assert!( !out.status.success(), "--file with nonexistent path must fail" );

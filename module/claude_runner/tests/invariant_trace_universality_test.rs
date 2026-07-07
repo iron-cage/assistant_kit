@@ -34,9 +34,10 @@ fn it_01_run_trace_stderr_output()
   // Without this, an installed claude binary would open an interactive TTY and hang forever.
   let proc     = make_proc_dir( &[] );
   let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
   let out    = cli_binary_test_helpers::run_cli_with_env(
     &[ "--trace", "Fix bug" ],
-    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ) ],
+    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ), ( "CLR_GATE_DIR", gate_dir.path().to_str().expect( "gate dir UTF-8" ) ) ],
   );
   let stderr = stderr_str( &out );
   assert!(
@@ -74,9 +75,10 @@ fn it_02_ask_trace_stderr_output()
 {
   let proc     = make_proc_dir( &[] );
   let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
   let out    = cli_binary_test_helpers::run_cli_with_env(
     &[ "ask", "--trace", "What is X?" ],
-    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ) ],
+    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ), ( "CLR_GATE_DIR", gate_dir.path().to_str().expect( "gate dir UTF-8" ) ) ],
   );
   let stderr = stderr_str( &out );
   assert!(

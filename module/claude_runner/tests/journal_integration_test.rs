@@ -574,6 +574,7 @@ fn ec11_gate_wait_event_emitted_when_gate_blocks()
 
   // Shell-script fake claude for the actual subprocess that clr runs (exits 0).
   let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
@@ -586,6 +587,7 @@ fn ec11_gate_wait_event_emitted_when_gate_blocks()
     ] )
     .env( "PATH", &script_path )
     .env( "CLR_PROC_DIR", fake_proc_str )    // BUG-326: isolate gate's proc scan
+    .env( "CLR_GATE_DIR", gate_dir.path() )
     .env( "CLR_GATE_POLL_SECS", "1" )
     .env_remove( "CLR_JOURNAL" )
     .env_remove( "CLR_JOURNAL_DIR" )

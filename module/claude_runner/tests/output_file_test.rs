@@ -133,7 +133,7 @@ fn ec4_strip_fences_and_output_file_same_content()
   let bin = env!( "CARGO_BIN_EXE_clr" );
 
   let out = Command::new( bin )
-    .args( [ "-p", "--strip-fences", "--output-file", out_path_str, "task" ] )
+    .args( [ "-p", "--max-sessions", "0", "--strip-fences", "--output-file", out_path_str, "task" ] )
     .env( "PATH", &new_path )
     .output()
     .expect( "invoke clr" );

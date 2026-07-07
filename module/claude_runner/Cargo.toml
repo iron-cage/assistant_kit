@@ -53,6 +53,8 @@ enabled = [
   "cli_fmt/cli_help_template",
   "dep:claude_journal",
   "dep:serde_json",
+  "dep:serde",
+  "dep:toml",
 ]
 
 [dependencies]
@@ -65,6 +67,8 @@ data_fmt            = { workspace = true, optional = true }
 cli_fmt             = { workspace = true, optional = true }
 claude_journal      = { workspace = true, optional = true }
 serde_json          = { workspace = true, optional = true }
+serde               = { workspace = true, optional = true, features = [ "std", "derive" ] }
+toml                = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

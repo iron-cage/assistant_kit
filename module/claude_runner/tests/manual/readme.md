@@ -230,7 +230,7 @@ cargo run -p claude_runner -- --trace "test" 2>/tmp/trace29_err.txt; echo "exit:
 
 **Expected:** Command preview (env vars + command) written to stderr. Invocation attempt made (may fail if Claude binary absent). Exit code 0 on success, non-zero if Claude not found.
 
-**Precondition:** Requires fewer than `--max-sessions` live claude sessions on the host. If the gate fires (e.g., 10/10 sessions running), the gate-wait message appears on stderr BEFORE the trace block runs — this is correct gate-before-trace ordering by design. Test in container where session count is 0 for reliable results.
+**Precondition:** Requires fewer than `--max-sessions` live claude sessions on the host. If the gate fires (e.g., 6/6 sessions running), the gate-wait message appears on stderr BEFORE the trace block runs — this is correct gate-before-trace ordering by design. Test in container where session count is 0 for reliable results.
 
 ### TC-30: No-Skip-Permissions in Dry-Run
 ```sh
@@ -743,7 +743,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-87:** `--retry-on-validation 256 --dry-run "test"` → exit 1; error "invalid --retry-on-validation value"
 - **CC-88:** `--max-sessions 5 --dry-run "test"` → exit 0
 - **CC-89:** `--max-sessions 0 --dry-run "test"` → exit 0 (gate disabled)
-- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 30 used)
+- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 6 used)
 - Automated in: `output_file_test.rs`, `expect_validation_test.rs`, `param_edge_cases_test.rs`, `env_var_ext_test.rs`
 
 ### Env vars for expect/output-file params
@@ -1011,13 +1011,13 @@ clr isolated --trace --creds /nonexistent "test"
 
 ### NC-12: Gate Waiting Message Format — `X/Y sessions active`
 
-**Precondition:** Requires ≥30 live claude sessions running on the host (or use `--max-sessions N` with N sessions already running). Gate-blocked: cannot be tested in container (0 sessions).
+**Precondition:** Requires ≥6 live claude sessions running on the host (or use `--max-sessions N` with N sessions already running). Gate-blocked: cannot be tested in container (0 sessions).
 
 **Expected:** When the gate is triggered, each polling cycle emits to stderr:
 `Info: {count}/{max} sessions active; waiting 30s for a slot... (attempt {attempt}/{max_attempts})`
 
-Example with 30 sessions at default limit:
-`Info: 30/30 sessions active; waiting 30s for a slot... (attempt 1/1000)`
+Example with 6 sessions at default limit:
+`Info: 6/6 sessions active; waiting 30s for a slot... (attempt 1/1000)`
 
 The old format `"X claude session(s) running (limit Y)"` is **not** emitted. The `X/Y` ratio format is the canonical output.
 

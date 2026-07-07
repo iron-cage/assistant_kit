@@ -344,9 +344,10 @@ fn us05_3_nonexistent_dir_errors()
 {
   let proc     = make_proc_dir( &[] );
   let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
   let out = run_cli_with_env(
     &[ "--dir", "/tmp/clr_nonexistent_project_us05_3", "fix it" ],
-    &[ ( "CLR_PROC_DIR", proc_dir ) ],
+    &[ ( "CLR_PROC_DIR", proc_dir ), ( "CLR_GATE_DIR", gate_dir.path().to_str().expect( "gate dir UTF-8" ) ) ],
   );
   assert!(
     !out.status.success(),
@@ -510,9 +511,10 @@ fn us08_1_trace_prints_command_to_stderr()
 {
   let proc     = make_proc_dir( &[] );
   let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
   let out = run_cli_with_env(
     &[ "--trace", "test message" ],
-    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ) ],
+    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ), ( "CLR_GATE_DIR", gate_dir.path().to_str().expect( "gate dir UTF-8" ) ) ],
   );
   let stderr = stderr_str( &out );
   assert!(
@@ -557,9 +559,10 @@ fn us08_3_trace_independent_of_quiet()
 {
   let proc     = make_proc_dir( &[] );
   let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
   let out = run_cli_with_env(
     &[ "--trace", "--quiet", "test" ],
-    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ) ],
+    &[ ( "PATH", "/nonexistent" ), ( "CLR_PROC_DIR", proc_dir ), ( "CLR_GATE_DIR", gate_dir.path().to_str().expect( "gate dir UTF-8" ) ) ],
   );
   let stderr = stderr_str( &out );
   assert!(
