@@ -1,7 +1,7 @@
 # Parameter: `extra_build_context`
 
-- **Status:** ✅ Configured — via `runbox.yml`; default: `""` (disabled — no extra context passed)
-- **Current State:** `cli_fmt=../../../../../wtools/dev/module/core/cli_fmt` (module runboxes) / `cli_fmt=../../../wtools/dev/module/core/cli_fmt` (workspace runbox) — injects the co-developed `cli_fmt` companion crate; needed because `cli_fmt` is a path dependency that lives outside `WORKSPACE_ROOT`, so Docker cannot reach it via the primary build context; the Dockerfile's `COPY --from=cli_fmt . /wtools/dev/module/core/cli_fmt/` populates the path Cargo resolves to from `/workspace/`
+- **Status:** ⬜ Not Configured — default: `""` (disabled — no extra context passed); not currently in use by any workspace
+- **Current State:** Not set. (Historical: previously injected the co-developed `cli_fmt` companion crate before it was migrated to a crates.io registry dependency; the Docker build-context plumbing that supported the path dependency was removed once the migration made it dead code.)
 - **Where It Flows:** `runbox.yml extra_build_context:` → `EXTRA_BUILD_CONTEXT` in `runbox-run` → parsed as `name=relpath`, `relpath` resolved to absolute path relative to `CONFIG_DIR` → `--build-context name=abspath` appended to `$CONTAINER_CMD build`
 
 ### Notes
@@ -14,7 +14,7 @@ Use this when a Dockerfile stage needs to copy files from a directory that lives
 
 Only one extra context is supported. If multiple external directories are needed, structure them under a common parent and pass the parent as the context.
 
-**External path dep + named build context pattern:** When a workspace crate depends on a crate via a `path =` dependency that points outside `WORKSPACE_ROOT`, Docker cannot reach that path via the primary build context. Use `extra_build_context` to inject the external directory under a name matching the `COPY --from=` reference in the Dockerfile. The Dockerfile then copies the source to the path Cargo resolves to inside the container (e.g., `COPY --from=cli_fmt . /wtools/dev/module/core/cli_fmt/` when WORKDIR is `/workspace/` and `path = "../../wtools/dev/module/core/cli_fmt"`).
+**External path dep + named build context pattern:** When a workspace crate depends on a crate via a `path =` dependency that points outside `WORKSPACE_ROOT`, Docker cannot reach that path via the primary build context. Use `extra_build_context` to inject the external directory under a name matching the `COPY --from=` reference in the Dockerfile. The Dockerfile then copies the source to the path Cargo resolves to inside the container. (Historical example: this project used to do exactly this for the `cli_fmt` crate — `COPY --from=cli_fmt . /wtools/dev/module/core/cli_fmt/` with `path = "../../wtools/dev/module/core/cli_fmt"` — until `cli_fmt` was migrated to a crates.io registry dependency and the plumbing was removed as dead code. The generic `shared`/`helper` example below demonstrates the pattern for a hypothetical live case.)
 
 ### Example
 
