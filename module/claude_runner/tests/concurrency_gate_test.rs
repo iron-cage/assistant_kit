@@ -19,6 +19,7 @@
 //! | T09 | `CLR_GATE_POLL_SECS=1 CLR_GATE_MAX_ATTEMPTS=2` + `--retry-override 0`, 1 permanent occupier → both overrides change real timing; exhausts in ~2s with the exact `[Runner]` message | — |
 //! | T10 | `CLR_GATE_POLL_SECS=notanumber` (+ valid `CLR_GATE_MAX_ATTEMPTS=2`, `--retry-override 0`) → invalid value silently falls back to the 30s default | — |
 //! | T11 | `CLR_GATE_MAX_ATTEMPTS=notanumber` (+ valid `CLR_GATE_POLL_SECS=1`) → invalid value silently falls back to the 1000-attempt default | — |
+//! | T14 | N concurrent live `clr` invocations racing a single pre-seeded dead-owner slot → peak concurrently-admitted children never exceeds 1 (BUG-392) | — |
 //!
 //! T05 (`clr --help` shows `default: 6`) is covered by
 //! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_six`.
@@ -27,11 +28,12 @@
 //! `CLR_GATE_POLL_SECS` var) is covered by those same tests post-rename — no
 //! separate function.
 
-// BUG-387 task/bug/387_print_mode_concurrency_gate_toctou_race.md — T01-T07 above all pre-seed
-// a static synthetic /proc snapshot and invoke exactly one clr binary; none launch N concurrent
-// clr invocations racing each other against a shared, mutating occupier set, so none could exercise
-// the check-then-spawn TOCTOU race. T08 below closes that gap: it launches N concurrent live `clr`
-// invocations and asserts peak simultaneously-admitted count never exceeds --max-sessions.
+// BUG-387 — T01-T07 above all pre-seed a static synthetic /proc snapshot and
+// invoke exactly one clr binary; none launch N concurrent clr invocations
+// racing each other against a shared, mutating occupier set, so none could
+// exercise the check-then-spawn TOCTOU race. T08 below closes that gap: it
+// launches N concurrent live `clr` invocations and asserts peak
+// simultaneously-admitted count never exceeds --max-sessions.
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::
@@ -845,5 +847,161 @@ fn t11_invalid_max_attempts_env_var_falls_back_to_default()
   assert!(
     !stderr.to_lowercase().contains( "panic" ),
     "T11: invalid CLR_GATE_MAX_ATTEMPTS must fail silently, no panic. Got:\n{stderr}"
+  );
+}
+
+// ── T14: reclaim-branch race admits at most one caller for a dead owner's
+//         slot (BUG-392, residual of BUG-387) ──────────────────────────────
+// BUG-392 — acquire_slot()'s dead-owner reclaim branch was non-atomic (TOCTOU)
+
+/// T14 (BUG-392): pre-seeds `gate_dir` with a slot file owned by a PID
+/// confirmed dead (a real process, spawned then reaped, so `/proc/{pid}` is
+/// genuinely absent — not a made-up number), keeps `CLR_PROC_DIR` permanently
+/// empty so every racer's live print-mode count reads 0 for the entire run —
+/// forcing all racers toward the SAME index-0 reclaim rather than T08's
+/// fresh-claim path — then launches 8 concurrent `clr` racers with
+/// `--max-sessions 1` against it. Tracks each racer's own dispatched child (a
+/// slow argv-tolerant sleeper) directly via
+/// `/proc/{clr_pid}/task/{clr_pid}/children`, independent of `CLR_PROC_DIR`,
+/// and samples how many are alive at once, asserting the peak never exceeds
+/// 1 — the exact invariant the pre-fix `remove_file()` + `claim_slot_file()`
+/// reclaim sequence in `acquire_slot()` could violate.
+///
+/// Root Cause: `acquire_slot()`'s reclaim branch treated "the previous owner
+/// is dead" as a fact stable across two subsequent, independently-fallible
+/// I/O calls (`remove_file()` then `claim_slot_file()`), with no
+/// synchronization between racers who observed the identical dead-owner
+/// record. `remove_file()` unconditionally unlinks whatever currently
+/// occupies the path, so a second racer's `remove_file()` could delete a
+/// first racer's freshly-reclaimed file out from under it — both then
+/// returned `true` for the same index.
+///
+/// Why Not Caught: T08 (the existing concurrency regression test, added by
+/// BUG-387's own fix) exercises the gate exclusively via live, healthy
+/// occupier processes — it never constructs a slot file whose recorded owner
+/// has actually died before a second caller races the reclaim. The
+/// crash-recovery reclaim branch this test targets was entirely unexercised
+/// by the existing suite.
+///
+/// Fix Applied: `acquire_slot()`'s reclaim branch now gates the actual
+/// remove/recreate behind its own atomic arbitration — a ticket file keyed
+/// by (index, dead owner pid, dead owner since), claimed via the same
+/// `create_new` atomicity already used for the fresh-claim path — so exactly
+/// one racer wins the right to reclaim. Only the winner writes to the
+/// original slot path, via `rename()` from a per-caller-unique temp file
+/// (atomic replace, no observably-absent gap). See `Fix(BUG-392)` on
+/// `acquire_slot()` in `src/cli/gate.rs` for the full explanation.
+///
+/// Prevention: this test — asserts peak concurrently-alive dispatched
+/// children sharing one contested, dead-owned slot never exceeds 1, under
+/// genuine concurrent OS scheduling with 8 real racing `clr` processes.
+///
+/// Pitfall: a test asserting this property must never reuse
+/// `count_live_held_slots()` (defined above for T08) — it treats ANY file
+/// whose stem starts with `slot_` as a held slot regardless of extension.
+/// The fix's ticket and temp files are deliberately named with a `reclaim_`
+/// prefix instead (never `slot_`) for exactly this reason: an earlier
+/// revision of this fix used a `slot_`-prefixed name for both, and while
+/// that stayed invisible to `ps.rs::build_queued_table()` (which filters on
+/// the `.json` extension first), `count_live_held_slots()` has no such
+/// extension check — it counted the ticket and temp files as extra held
+/// slots for the brief window they existed, intermittently failing T08 with
+/// an inflated peak even though only one session was genuinely admitted.
+/// This test sidesteps the whole class of helper-miscount risk by tracking
+/// each racer's own real OS child process directly instead.
+#[ test ]
+fn t14_reclaim_race_admits_at_most_one_caller_for_a_dead_owners_slot()
+{
+  const N : usize = 8;
+
+  let ( _bin_dir, bin_path ) = build_argv_tolerant_sleeper( 3 );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // deliberately static/empty
+
+  // Pre-seed a slot file owned by a definitely-dead PID: spawn a real,
+  // immediately-exiting process and reap it, so /proc/{dead_pid} is confirmed
+  // absent from this point on — a real crash-recovery precondition rather
+  // than a made-up PID number.
+  let mut dead = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
+  let dead_pid = dead.id();
+  let _ = dead.wait();
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{dead_pid},"since":0}}"# ),
+  ).expect( "pre-seed dead-owner slot file" );
+
+  let mut children : Vec< std::process::Child > = ( 0..N ).map( | i |
+  {
+    Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+      .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", &format!( "race-{i}" ) ] )
+      .env( "PATH", &bin_path )
+      .env( "CLR_PROC_DIR", proc_dir.path() )
+      .env( "CLR_GATE_DIR", gate_dir.path() )
+      .env( "CLR_GATE_POLL_SECS", "1" )
+      .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
+      // Widen the reclaim race window deterministically (see reclaim_test_delay()
+      // in gate.rs) so this test forces genuine contention on every run instead
+      // of depending on incidental OS scheduling jitter between racers.
+      .env( "CLR_GATE_RECLAIM_TEST_DELAY_MS", "50" )
+      .stdout( std::process::Stdio::null() )
+      .stderr( std::process::Stdio::null() )
+      .spawn()
+      .expect( "spawn racing clr" )
+  } ).collect();
+
+  let clr_pids : Vec< u32 > = children.iter().map( std::process::Child::id ).collect();
+
+  // Independent of CLR_PROC_DIR (which stays empty throughout — see doc
+  // comment above): track each racer's own dispatched child directly, so an
+  // over-admission shows up as 2+ concurrently-alive children regardless of
+  // what the gate's own (deliberately blinded) live-count read believes.
+  let mut known_children : std::collections::HashSet< u32 > = std::collections::HashSet::new();
+  let mut peak = 0usize;
+  let mut finished = vec![ false; children.len() ];
+  let reap = | children : &mut [ std::process::Child ], finished : &mut [ bool ] |
+  {
+    for ( child, done ) in children.iter_mut().zip( finished.iter_mut() )
+    {
+      if !*done && matches!( child.try_wait(), Ok( Some( _ ) ) ) { *done = true; }
+    }
+  };
+
+  let sample_deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  while std::time::Instant::now() < sample_deadline
+  {
+    reap( &mut children, &mut finished );
+    for &parent in &clr_pids
+    {
+      if let Ok( raw ) = std::fs::read_to_string( format!( "/proc/{parent}/task/{parent}/children" ) )
+      {
+        for child_pid in raw.split_whitespace().filter_map( |t| t.parse::< u32 >().ok() )
+        {
+          known_children.insert( child_pid );
+        }
+      }
+    }
+    let live_now = known_children.iter()
+      .filter( |&&pid| std::path::Path::new( &format!( "/proc/{pid}" ) ).exists() )
+      .count();
+    peak = peak.max( live_now );
+    std::thread::sleep( core::time::Duration::from_millis( 20 ) );
+  }
+
+  let drain_deadline = std::time::Instant::now() + core::time::Duration::from_secs( 30 );
+  while finished.iter().any( | done | !done ) && std::time::Instant::now() < drain_deadline
+  {
+    reap( &mut children, &mut finished );
+    std::thread::sleep( core::time::Duration::from_millis( 20 ) );
+  }
+  for ( child, done ) in children.iter_mut().zip( finished.iter_mut() )
+  {
+    if !*done { let _ = child.kill(); let _ = child.wait(); }
+  }
+
+  assert!(
+    peak <= 1,
+    "T14 (BUG-392): peak concurrently-alive dispatched children sharing one \
+     contested dead-owner slot ({peak}) must never exceed 1 — acquire_slot()'s \
+     reclaim branch admitted more than one caller for the same slot"
   );
 }

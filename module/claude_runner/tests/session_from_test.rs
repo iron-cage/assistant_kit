@@ -38,7 +38,8 @@ fn container_check()
 ///
 /// - Strip leading `/`, split on `/`, replace `_` with `-` per component.
 /// - Prepend `-`; use `--` separator for hyphen-leading components.
-// BUG-366 ../../../task/claude_storage_core/bug/unverified/366_encode_path_dot_handling_divergence.md — duplicate hand-rolled encoder shares encode_path()'s dot-blind, no-length-fallback bug; needs sweeping once the fix lands
+// BUG-366 — duplicate hand-rolled encoder shares encode_path()'s dot-blind,
+// no-length-fallback bug; needs sweeping once the fix lands
 fn df( path : &str ) -> String
 {
   let stripped    = path.trim_start_matches( '/' );
