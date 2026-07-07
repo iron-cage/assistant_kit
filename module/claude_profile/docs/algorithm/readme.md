@@ -22,3 +22,5 @@
 | 008 | [Subprocess Effort Resolution](008_subprocess_effort_resolution.md) | Resolve subprocess effort level from explicit param and account state | ✅ |
 | 009 | [OAuth Usage Response Dual-Source Parsing](009_oauth_usage_response_migration.md) | Parse OAuth usage response from named-field or limits-array format | ✅ |
 | 010 | [Renewal Date Computation](010_renewal_date_computation.md) | Compute seconds until next billing renewal from exact or estimated billing day | ✅ |
+| 011 | [Rounding-Boundary Classification Hazards](011_rounding_boundary_classification_hazards.md) | Document classification hazards when color/branch decisions and rounded display share the same raw float | ✅ |
+| 012 | [Refresh Trace Reason Classification](012_refresh_trace_reason_classification.md) | Select a single human-readable reason string from ownership, cache, occupancy, and result state | ✅ |

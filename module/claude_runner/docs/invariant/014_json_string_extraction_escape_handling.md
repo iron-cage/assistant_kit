@@ -48,8 +48,8 @@ BUG-394 and BUG-395 were filed and verified as two separate bug reports because 
 **Requirement 1 (escape-aware bounding) — shared helper, all 3 BUG-394 sites:**
 
 ```rust
-// Candidate shared helper — mirrors extract_json_value's already-correct pattern.
-fn find_unescaped_quote( s : &str ) -> Option< usize >
+// src/cli/summary.rs — applied helper, mirrors extract_json_value's already-correct pattern.
+pub( super ) fn find_unescaped_quote( s : &str ) -> Option< usize >
 {
   let mut escaped = false;
   for ( i, c ) in s.char_indices()
@@ -62,7 +62,7 @@ fn find_unescaped_quote( s : &str ) -> Option< usize >
 }
 ```
 
-`ps.rs:850`'s `try_jsonl_task()` and `ps.rs:863`'s `parse_json_str()` must replace `rest.find( '"' )` with `find_unescaped_quote( rest )`. `summary.rs:330,332`'s two-call `model_name` extraction (`s.find('"')` then `inner.find('"')`) must apply the same substitution to both calls. Note: replacing only the terminator search bounds the value correctly but does not unescape the captured slice's own contents — whether a given caller additionally needs the captured value unescaped (as `extract_str` does) or only correctly bounded (sufficient for `parse_json_str`'s and `try_jsonl_task`'s truncate-to-35-chars display use) is a per-call-site decision, not part of this invariant.
+`ps.rs:850`'s `try_jsonl_task()` and `ps.rs:863`'s `parse_json_str()` now call `super::summary::find_unescaped_quote( rest )` (this crate's established cross-file `pub(super)` convention, mirroring `parse_json_u64`) in place of `rest.find( '"' )`. `summary.rs`'s two-call `model_name` extraction (`s.find('"')` then `inner.find('"')`) applies the same substitution to both calls. Note: replacing only the terminator search bounds the value correctly but does not unescape the captured slice's own contents — whether a given caller additionally needs the captured value unescaped (as `extract_str` does) or only correctly bounded (sufficient for `parse_json_str`'s and `try_jsonl_task`'s truncate-to-35-chars display use) is a per-call-site decision, not part of this invariant. All 3 sites need only the bounded (not unescaped) form.
 
 **Requirement 2 (fail-closed on exhaustion) — `extract_str()`:**
 
@@ -102,16 +102,15 @@ Every OTHER malformed-input path in `extract_str()` already correctly returns `N
 
 | File | Notes |
 |------|-------|
-| `../../tests/ps_command_test.rs` | Existing `it_16_task_column_form_a` harness (site 1) — requires an escaped-quote content fixture to exercise req. 1 |
-| `../../tests/concurrency_gate_test.rs` | T07/T13 (BUG-384) exercise the write side only; requires a `clr ps`-invoking variant to exercise `parse_json_str()`'s read side (site 2, req. 1) |
-| `../../tests/summary_unit_test.rs` | Existing unit tests for `summary.rs`'s extraction helpers; requires an escaped-quote `modelUsage` key fixture (site 3, req. 1) and an unterminated-string fixture for `extract_str` (req. 2) |
+| `../../tests/ps_command_test.rs` | `it_36_task_column_escaped_quote_not_truncated` (site 1, req. 1); `it_37_queued_table_cwd_escaped_quote_not_truncated` (site 2, req. 1) — both added 2026-07-07. Site 2's coverage lands here rather than in `concurrency_gate_test.rs`: it reuses the simpler direct-gate-file-write pattern (`it_10_gate_file_present_shows_queued_table`) instead of racing real spawned/blocked `clr` subprocesses, since both exercise the identical `parse_json_str()` read path. |
+| `../../tests/summary_unit_test.rs` | `render_summary_model_name_escaped_quote_not_truncated` (site 3, req. 1); `extract_str_result_field_escaped_quote_not_truncated` (req. 1 regression guard, via `render_summary`'s `"result"` field — `extract_str` itself is private); `render_summary_result_field_unterminated_falls_back_to_empty` (site 4/`extract_str`, req. 2). All added 2026-07-07. |
 
 ### Provenance
 
 | Source | Notes |
 |--------|-------|
-| BUG-394 | Root bug for requirement 1: 3 sites (`ps.rs:850`, `ps.rs:863`, `summary.rs:330,332`) each hand-roll `.find('"')` with no escape tracking. Verified 2026-07-07; fix not yet applied — this invariant documents the required (not yet implemented) behavior. |
-| BUG-395 | Root bug for requirement 2: `extract_str()` (`summary.rs:22-54`) falls through to `Some(<truncated>)` instead of `None` when its scan exhausts without finding a closing quote. Verified 2026-07-07; fix not yet applied — this invariant documents the required (not yet implemented) behavior. |
+| BUG-394 | Root bug for requirement 1: 3 sites (`ps.rs:850`, `ps.rs:863`, `summary.rs:330,332`) each hand-roll `.find('"')` with no escape tracking. Verified 2026-07-07, fixed 2026-07-07 — all 3 sites now route through the shared `find_unescaped_quote()` helper. |
+| BUG-395 | Root bug for requirement 2: `extract_str()` (`summary.rs:22-54`) falls through to `Some(<truncated>)` instead of `None` when its scan exhausts without finding a closing quote. Verified 2026-07-07, fixed 2026-07-07 — explicit `None` added after the loop. |
 | BUG-384 | Prior, closed bug hardening the write side (`gate.rs::json_escape_str()`) of the exact round-trip BUG-394 site 2 is the unpaired read side of. |
 
 ### Invariants

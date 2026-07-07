@@ -40,7 +40,7 @@
 //!
 //! ## Bug History
 //!
-//! **BUG-325 (2026-07-02):** Maintenance protocol originally listed only three update sites,
+//! **BUG-325 (2026-07-02):** Maintenance protocol originally listed only two update sites,
 //! omitting the Test Matrix table as a required location.  When `.models` (TSK-007) and
 //! `.model.select` (TSK-008) were added, `dot04`'s `visible` array was not extended — it
 //! stayed at 16 entries while `dot05` correctly asserted 18 rows.  The gap meant

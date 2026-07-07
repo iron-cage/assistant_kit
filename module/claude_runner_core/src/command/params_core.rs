@@ -299,4 +299,31 @@ impl ClaudeCommand {
     self.compact_window = tokens;
     self
   }
+
+  /// Set print-mode background-task wait ceiling in milliseconds
+  ///
+  /// Default: `0` (exit immediately, no wait). Standard `claude` default:
+  /// 600,000 ms (10 minutes).
+  ///
+  /// Controls `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`. Bounds how long `-p`/`--print`
+  /// mode waits for outstanding background shells/agents/workflows before sweeping
+  /// them and exiting. `clr` defaults this to `0` because it already owns
+  /// background-task waiting at the wrapper level via its own `gate_poll_secs`/
+  /// `gate_max_attempts` polling — leaving `claude`'s own internal wait active
+  /// would duplicate that logic and delay `clr`'s own exit unnecessarily.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// use claude_runner_core::ClaudeCommand;
+  ///
+  /// let cmd = ClaudeCommand::new()
+  ///   .with_print_bg_wait_ceiling_ms(600_000);  // opt back into the binary's own 10-minute wait
+  /// ```
+  #[inline]
+  #[must_use]
+  pub fn with_print_bg_wait_ceiling_ms( mut self, ceiling_ms: u32 ) -> Self {
+    self.print_bg_wait_ceiling_ms = Some( ceiling_ms );
+    self
+  }
 }

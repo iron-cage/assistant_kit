@@ -1,7 +1,7 @@
 meta:
   description: Cross-reference graph for feature/ and invariant/ doc instances in claude_profile
-  node_count: 56
-  edge_count: 250
+  node_count: 59
+  edge_count: 256
   component_count: 2
   generated: 2026-07-04
   scope_note: >
@@ -294,6 +294,21 @@ nodes:
   - id: invariant/009
     file: invariant/009_container_only_test_execution.md
     label: Container-Only Test Execution
+    entity: invariant
+
+  - id: invariant/010
+    file: invariant/010_floating_point_comparison_vs_display_consistency.md
+    label: Floating-Point Comparison vs. Display Consistency
+    entity: invariant
+
+  - id: invariant/011
+    file: invariant/011_shared_predicate_consistency.md
+    label: Shared Predicate Consistency
+    entity: invariant
+
+  - id: invariant/012
+    file: invariant/012_label_selection_requires_cooccurrence_coverage.md
+    label: Label-Selection Requires Co-Occurrence Coverage
     entity: invariant
 
 edges:
@@ -617,6 +632,21 @@ edges:
 
   - {from: invariant/009, to: invariant/004, label: "structural peer — no process execution in production; all test execution in container"}
 
+  # ── invariant/010: Floating-Point Comparison vs. Display Consistency (BUG-331) ──
+
+  - {from: invariant/010, to: feature/009, label: "AC-35: 5h Left/7d Left color and session-model-override branch must classify from the same rounded value as the displayed/logged text"}
+  - {from: feature/009, to: invariant/010, label: "AC-35 implements this invariant"}
+
+  # ── invariant/011: Shared Predicate Consistency (BUG-332) ──────────────────
+
+  - {from: invariant/011, to: feature/009, label: "AC-31: render/TSV layers must not re-derive billing_type==\"none\" without the paired result state already applied by the fetch-layer override"}
+  - {from: feature/009, to: invariant/011, label: "AC-31 render-layer consistency requirement implements this invariant"}
+
+  # ── invariant/012: Label-Selection Requires Co-Occurrence Coverage (BUG-333) ──
+
+  - {from: invariant/012, to: feature/036, label: "AC-25: reason_label() test coverage must include every co-occurring branch-condition combination, not each condition in isolation"}
+  - {from: feature/036, to: invariant/012, label: "AC-25 implements this invariant"}
+
   # ── cross-references declared in features' own "### Features" tables, absent above ──
 
   # feature/001 ↔ feature/010: shared $PRO/$HOME resolution chain
@@ -766,7 +796,7 @@ edges:
 
 components:
   - id: 1
-    size: 55
+    size: 58
     isolated: false
     nodes:
       - feature/001
@@ -824,6 +854,9 @@ components:
       - invariant/007
       - invariant/008
       - invariant/009
+      - invariant/010
+      - invariant/011
+      - invariant/012
 
   - id: 2
     size: 1

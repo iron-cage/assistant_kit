@@ -11,7 +11,7 @@
 | `settings` | Settings file structure and protocols: global, project, version lock | [settings/readme.md](settings/readme.md) | 3 |
 | `formats` | Data formats: file formats, output schemas — history, credentials, debug, shell-snapshots, todos, commands, JSON response | [format/readme.md](format/readme.md) | 7 |
 | `taxonomy` | Four-level concept hierarchy: Project, Conversation, Session, Entry | [taxonomy/readme.md](taxonomy/readme.md) | 3 |
-| `params` | CLI parameter specifications for the `claude` binary | [param/readme.md](param/readme.md) | 126 |
+| `params` | CLI parameter specifications for the `claude` binary | [param/readme.md](param/readme.md) | 140 |
 | `tool` | Built-in tools available in Claude Code sessions | [tool/readme.md](tool/readme.md) | 40 |
 | `endpoint` | Wire contracts for Anthropic HTTP endpoints consumed by workspace crates | [endpoint/readme.md](endpoint/readme.md) | 11 |
 | `subcommand` | CLI subcommands: agents, auth, auto-mode, doctor, install, mcp, plugin, setup-token, update | [subcommand/readme.md](subcommand/readme.md) | 9 |
@@ -155,7 +155,7 @@
 | 008 | setup-token | [subcommand/008_setup_token.md](subcommand/008_setup_token.md) |
 | 009 | update | [subcommand/009_update.md](subcommand/009_update.md) |
 
-> `params` instances (126 files) use numbered naming and are enumerated in their master file: [param/readme.md](param/readme.md).
+> `params` instances (140 files) use numbered naming and are enumerated in their master file: [param/readme.md](param/readme.md).
 >
 > `tool` instances (40 files) use numbered naming and are enumerated in their master file: [tool/readme.md](tool/readme.md).
 >

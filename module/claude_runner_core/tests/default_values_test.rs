@@ -90,6 +90,22 @@ fn default_chrome_is_on() {
 }
 
 #[test]
+fn default_print_bg_wait_ceiling_ms_is_zero() {
+  // print_bg_wait_ceiling_ms defaults to 0 (exit print mode immediately) — clr owns
+  // background-task waiting itself via gate_poll_secs/gate_max_attempts, so claude's
+  // own internal print-mode wait would duplicate that logic and is disabled by default.
+  let cmd_builder = ClaudeCommand::new();
+  let cmd = cmd_builder.build_command_for_test();
+
+  let debug = format!( "{cmd:?}" );
+  assert!( debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS" ), "print_bg_wait_ceiling_ms not set" );
+  assert!(
+    debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=\"0\"" ),
+    "Incorrect default: expected 0 (immediate exit), got: {debug}"
+  );
+}
+
+#[test]
 fn tier2_tier3_defaults_are_none() {
   // Tier 2 & 3 should be None (inherit standard defaults)
   let cmd_builder = ClaudeCommand::new();
@@ -121,9 +137,10 @@ fn all_tier1_defaults_set_together() {
   let has_auto_continue = debug.contains( "CLAUDE_CODE_AUTO_CONTINUE" );
   let has_telemetry = debug.contains( "CLAUDE_CODE_TELEMETRY" );
   let has_chrome = debug.contains( "--chrome" );
+  let has_print_bg_wait_ceiling = debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS" );
 
   assert!(
-    has_bash_timeout && has_bash_max_timeout && has_auto_continue && has_telemetry && has_chrome,
-    "All Tier 1 defaults must be set: bash_timeout={has_bash_timeout}, bash_max_timeout={has_bash_max_timeout}, auto_continue={has_auto_continue}, telemetry={has_telemetry}, chrome={has_chrome}"
+    has_bash_timeout && has_bash_max_timeout && has_auto_continue && has_telemetry && has_chrome && has_print_bg_wait_ceiling,
+    "All Tier 1 defaults must be set: bash_timeout={has_bash_timeout}, bash_max_timeout={has_bash_max_timeout}, auto_continue={has_auto_continue}, telemetry={has_telemetry}, chrome={has_chrome}, print_bg_wait_ceiling_ms={has_print_bg_wait_ceiling}"
   );
 }

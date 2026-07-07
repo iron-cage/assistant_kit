@@ -191,3 +191,143 @@ fn extract_session_id_returns_none_when_session_id_absent()
   let result = extract_session_id( json );
   assert!( result.is_none(), "must return None when session_id field is absent; got Some" );
 }
+
+/// IT-11: `"session_id"` value truncated before its closing quote returns `None`, not
+/// `Some(<partial>)` (BUG-395).
+///
+/// # Root Cause
+/// `extract_str()`'s char-by-char scan (which `extract_session_id` thinly wraps for the
+/// `"session_id"` key) has no post-loop fallback for input exhausted before an unescaped
+/// closing quote — the loop's only early return is on finding one, so exhaustion silently
+/// fell through to the success value `Some(out)` instead of `None`.
+///
+/// # Why Not Caught
+/// Every existing `extract_session_id` test (IT-8–IT-10) uses a complete, well-formed
+/// `session_id` value; none construct an envelope truncated mid-value the way a `claude`
+/// subprocess killed or cut off mid-stream would produce.
+///
+/// # Fix Applied
+/// `extract_str()` now returns `None` (not `Some(out)`) when its scan loop exhausts the
+/// input without finding an unescaped closing quote.
+///
+/// # Prevention
+/// This is the direct-unit-test regression guard for the fix; the consequence this bug's
+/// own Impact section documents (a false-positive BUG-320 session-mismatch warning) is a
+/// mechanical result of `extract_session_id` now correctly returning `None` here — Rust's
+/// `if let Some(actual) = extract_session_id(...)` simply does not execute for `None`, so
+/// no separate execution.rs-level test is needed to prove that consequence.
+///
+/// # Pitfall
+/// Don't mistake a truncated/malformed field value for a legitimately short one — a scan
+/// loop's post-loop fallthrough must be a failure value whenever the loop's only early
+/// return is "found the terminator".
+// test_kind: bug_reproducer(BUG-395)
+#[ test ]
+fn extract_session_id_returns_none_for_unterminated_session_id()
+{
+  let json   = r#"{"type":"result","subtype":"success","is_error":false,"session_id":"abc-123"#;
+  let result = extract_session_id( json );
+  assert!(
+    result.is_none(),
+    "must return None when the session_id value is truncated before its closing quote \
+     (unterminated string), not Some(<partial>); got {result:?}"
+  );
+}
+
+// ── BUG-394 requirement-1 (escape-aware bounding) tests (IN-3, IN-4) ────────────
+
+/// IN-3: `render_summary()`'s inline `model_name` extraction is not truncated at an
+/// escaped `"` inside the `modelUsage` object's key.
+///
+/// # Root Cause
+/// The two-call `model_name` extraction (`s.find('"')` then `inner.find('"')`) had no
+/// escape-state tracking on either call, stopping at the first escaped `\"` inside the
+/// model-identifier key instead of the true closing quote.
+///
+/// # Why Not Caught
+/// Every existing fixture's `modelUsage` key (e.g. `claude-opus-4-8`) contains no quote
+/// character at all, so the naive `.find('"')` always happened to land on the true
+/// terminator by coincidence.
+///
+/// # Fix Applied
+/// Both quote searches now route through `find_unescaped_quote()` (escape-aware scan)
+/// instead of a bare `.find('"')`.
+///
+/// # Prevention
+/// See `docs/invariant/014_json_string_extraction_escape_handling.md` IN-3.
+///
+/// # Pitfall
+/// A two-call first/next `.find('"')` pattern is exactly as escape-unaware as a single
+/// bare `.find('"')` — neither tracks whether the preceding character was an unescaped
+/// backslash.
+// test_kind: bug_reproducer(BUG-394)
+#[ test ]
+fn render_summary_model_name_escaped_quote_not_truncated()
+{
+  let json     = r#"{"type":"result","subtype":"success","is_error":false,"result":"hello","modelUsage":{"He said \"hi\"-model":{"inputTokens":10,"outputTokens":20,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":0.01,"contextWindow":200000,"maxOutputTokens":32000}}}"#;
+  let rendered = render_summary( json, None ).expect( "must parse" );
+  assert!(
+    rendered.contains( "He said \\\"hi\\\"-model" ),
+    "model name must be bounded at the true closing quote, not truncated at the escaped \
+     quote (model_name is not unescaped, so the literal backslashes are expected in the \
+     rendered form). Got:\n{rendered}"
+  );
+}
+
+/// IN-4 (regression guard): `extract_str()`'s pre-existing escape-aware bounding for the
+/// `"result"` field must not regress when BUG-395's fail-closed-on-exhaustion fix is
+/// applied to the same function's loop body — `extract_str()` was already correct for
+/// requirement 1 (escape-aware bounding); only requirement 2 (fail-closed on exhaustion)
+/// was broken (see the unterminated-string tests above and below).
+#[ test ]
+fn extract_str_result_field_escaped_quote_not_truncated()
+{
+  let json     = r#"{"type":"result","subtype":"success","is_error":false,"result":"He said \"hi\" to me","usage":{"input_tokens":0,"output_tokens":0},"total_cost_usd":0.0}"#;
+  let rendered = render_summary( json, None ).expect( "must parse" );
+  assert!(
+    rendered.contains( "He said \"hi\" to me" ),
+    "result field must be correctly unescaped and bounded at the true closing quote, not \
+     truncated at the escaped quote. Got:\n{rendered}"
+  );
+}
+
+// ── BUG-395 downstream consumer test (IN-7) ─────────────────────────────────────
+
+/// IN-7: `render_summary()`'s `"result"` field falls back to an empty string — not a
+/// truncated partial value — when its value is unterminated.
+///
+/// # Root Cause
+/// See the unterminated-session_id test above (`extract_str()`'s post-loop fallthrough).
+/// `render_summary()`'s `"result"` extraction is `.unwrap_or_default()`-bounded, so a
+/// requirement-2 violation here degrades display quality only; it does not gate the
+/// overall `Some`/`None` return the way `extract_session_id()`'s `?`-propagation does.
+///
+/// # Why Not Caught
+/// No existing `render_summary()` test constructs an envelope with a truncated/
+/// unterminated `"result"` value; all prior fixtures close every string field.
+///
+/// # Fix Applied
+/// Same fix as the unterminated-session_id case — `extract_str()` now returns `None` on
+/// scan-loop exhaustion, so `.unwrap_or_default()` now correctly yields `""` instead of
+/// the pre-fix partial text.
+///
+/// # Prevention
+/// See `docs/invariant/014_json_string_extraction_escape_handling.md` IN-7.
+///
+/// # Pitfall
+/// An `.unwrap_or_default()`-guarded call site silently masks a requirement-2 violation
+/// as a display quirk (partial text) rather than a control-flow bug — easy to miss
+/// without an explicit test for the unterminated case.
+// test_kind: bug_reproducer(BUG-395)
+#[ test ]
+fn render_summary_result_field_unterminated_falls_back_to_empty()
+{
+  let json     = r#"{"type":"result","subtype":"success","is_error":false,"duration_ms":1,"duration_api_ms":1,"num_turns":1,"result":"partial text that never closes"#;
+  let rendered = render_summary( json, None )
+    .expect( "type gate must still pass; result field is unwrap_or_default-bounded" );
+  assert!(
+    !rendered.contains( "partial text that never closes" ),
+    "result field must NOT show truncated partial text when its value is unterminated. \
+     Got:\n{rendered}"
+  );
+}

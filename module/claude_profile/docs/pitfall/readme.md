@@ -18,3 +18,4 @@
 | 004 | [Account Identity Pitfalls](004_account_identity_pitfalls.md) | Account identity resolution and marker matching pitfalls | ✅ |
 | 005 | [Ownership Gate Pitfalls](005_ownership_gate_pitfalls.md) | Ownership gate enforcement edge cases and bypass scenarios | ✅ |
 | 006 | [Model Override Pitfalls](006_model_override_pitfalls.md) | Model override ordering and settings persistence pitfalls | ✅ |
+| 007 | [Label Selection Branch-Priority Pitfalls](007_label_selection_branch_priority_pitfalls.md) | Branch-priority label functions silently mask one true condition behind another checked earlier | ✅ |

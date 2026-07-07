@@ -4,7 +4,7 @@
 
 - **Purpose**: Guarantee that the `--max-sessions` concurrency gate never admits more concurrent print-mode sessions than the configured limit, even when multiple `clr` invocations race the admission check simultaneously — on both the fresh-claim path and the dead-owner reclaim path.
 - **Responsibility**: State the atomic reservation mechanism that closes the check-then-act race, which function owns it, and why the reservation must outlive the wait loop itself.
-- **In Scope**: `slot_path()`, `claim_slot_file()`, `acquire_slot()`, the admission condition in `wait_for_session_slot()`, the index-derivation rule that makes atomicity meaningful across racers, and the ticket-arbitrated reclaim of dead-owner slots (self-healing, and atomic against concurrent reclaimers — see Provenance : BUG-392).
+- **In Scope**: `slot_path()`, `claim_slot_file()`, `acquire_slot()`, the admission condition in `wait_for_session_slot()`, the index-derivation rule that makes atomicity meaningful across racers, and the ticket-arbitrated reclaim of dead-owner slots (atomic against concurrent reclaimers, and self-healing only when the reclaiming caller itself completes without interruption — see Provenance : BUG-392, BUG-402).
 - **Out of Scope**: Gate poll interval / attempt-limit configuration (→ `cli/003_env_param.md` Env Param 5), gate-state JSON escaping (→ BUG-384, `json_escape_str()`), `clr ps` queued-table display of gate files (→ `ps.rs` `build_queued_table()` directly), gate-timeout retry behavior (→ `006_exit_codes.md`).
 
 ### Invariant Statement
@@ -16,7 +16,10 @@ When `wait_for_session_slot()` evaluates admission for a candidate slot index, i
 | Live count `< max` AND slot reservation at that index succeeds | Admitted — proceed to spawn the session |
 | Live count `>= max` | Not admitted — no reservation attempted; falls to wait-and-retry |
 | Live count `< max` BUT slot reservation at that index fails (another racer already holds it) | Not admitted — falls to wait-and-retry exactly as the `>= max` case does |
-| A losing reservation attempt finds the existing slot's owning PID no longer alive | Slot is reclaimed via a ticket-arbitrated atomic handoff in the same call — self-healing, and race-free against other simultaneous reclaimers (see Provenance : BUG-392) |
+| A losing reservation attempt finds the existing slot's owning PID no longer alive | Slot is reclaimed via a ticket-arbitrated atomic handoff in the same call — race-free against other simultaneous reclaimers, and self-healing **only when the reclaiming caller completes the handoff without interruption** (see Provenance : BUG-392, BUG-402) |
+
+<!-- BUG-400 — this table defines only two owner states (alive/dead); no third alive-but-stalled category exists, so a live-but-non-progressing owner blocks reclaim indefinitely with no staleness escape hatch -->
+<!-- BUG-402 — "self-healing" above is not unconditional: if the reclaiming caller itself dies between winning the ticket and completing rename(), the ticket is never cleaned up (by design) and no liveness recheck exists on the ticket's own claimant, so that slot index is permanently and unrecoverably blocked, not merely self-healed on the next attempt -->
 
 **Reservation lifetime:** once acquired, a slot is held for the entire remaining lifetime of the session — not just the polling wait. There is deliberately no `Drop` guard releasing it when `wait_for_session_slot()` returns. Releasing early would free the slot before the admitted child process becomes `/proc`-visible, reopening the exact race this invariant closes.
 
@@ -129,6 +132,12 @@ If the reclaim branch reverts to `remove_file()` + `claim_slot_file()` without t
 If the reclaim's ticket or temp files are cleaned up after a successful `rename()`:
 - A later caller could win a "new" ticket keyed to the same `(index, pid, since)` and clobber the legitimate current holder via its own `rename()` — this is why both are left in place permanently rather than deleted.
 
+If the reclaim-eligibility test remains `pid_alive(owner)` alone, with no supplementary staleness/elapsed-time condition:
+- A slot owner that is alive but has stopped making forward progress (hung, deadlocked, suspended) is functionally equivalent to a dead one from the gate's perspective — it never releases capacity — but the current design has no path to reclaim from it. A waiter whose recomputed index collides with that owner is blocked for as long as the owner remains alive, independent of how low the aggregate live count drops (see Provenance : BUG-400).
+
+If a reclaim ticket's own claimant terminates before completing the `rename()` handoff, with no liveness recheck on the ticket's own claimant:
+- The ticket is never cleaned up (by design, to close the PID/timestamp-recycling hazard the Fix(BUG-392) comment describes), and every later caller targeting that index recomputes the identical ticket path and fails at the identical `claim_slot_file()` call — permanently, independent of how long ago the original dead owner exited and independent of how many later callers try. Unlike the BUG-400 scenario above, this block never self-resolves: it does not depend on any process remaining alive, and each additional occurrence permanently consumes a distinct slot index, monotonically shrinking effective capacity (see Provenance : BUG-402).
+
 ### Sources
 
 | File | Notes |
@@ -148,6 +157,8 @@ If the reclaim's ticket or temp files are cleaned up after a successful `rename(
 |--------|-------|
 | BUG-387 | Root bug: `find_claude_processes().count() < max` was a pure check-then-act read with no write-side reservation — concurrent invocations could jointly exceed `max`. Fix: index-derived atomic slot reservation documented above. |
 | BUG-392 | Residual bug: the reclaim branch added by BUG-387's own fix was itself non-atomic for the crash-recovery case (`read_slot_owner()` → `remove_file()` → `claim_slot_file()`, three independently-fallible steps). Fixed: ticket-arbitrated atomic handoff — see Enforcement Mechanism : 3 above. |
+| BUG-400 | Open (filed, not yet fixed): the reclaim-eligibility test (`pid_alive(owner)` alone) has no staleness/elapsed-time supplementary condition, so a live-but-stalled owner (hung, deadlocked, suspended) blocks reclaim indefinitely — the Invariant Statement's two-state owner model (alive/dead) has no third alive-but-stalled category. |
+| BUG-402 | Open (filed, not yet fixed): the reclaim ticket built by BUG-392's own fix has no liveness recheck on its own claimant — if that claimant dies between winning the ticket and completing `rename()`, the ticket is never cleaned up (by design) and the slot index is permanently and unrecoverably blocked, not merely self-healed on the next attempt. Distinct from BUG-400: requires the *original* owner to be dead (BUG-400 requires it alive). |
 
 ### Features
 
