@@ -17,6 +17,11 @@
 //! | 416 | `version::latest dry::1` override → "no version pin to guard" | P | 0 |
 //! | 417 | `dry::1 v::0` → output shorter than `v::1` | P | 0 |
 //! | 418 | `format::json` watch mode → raw JSON passthrough, no dot separator | P | 124 |
+//! | 419 | `hot_swap_binary` trace fires when a live claude process is detected (task 313 T01) | P | 1 |
+//! | 420 | `unlock_versions_dir` trace fires on install (task 313 T03) | P | 1 |
+//! | 421 | `lock_version` trace fires via curated bash-only PATH (task 313 T04) | P | 0 |
+//! | 422 | `perform_install` trace fires on install (task 313 T05) | P | 1 |
+//! | 423 | `store_preferred_version` trace fires via idempotent-skip (task 313 T06) | P | 0 |
 
 use tempfile::TempDir;
 
@@ -472,4 +477,176 @@ fn tc418_watch_mode_json_format_passthrough()
       "expected a matched (ok) status in the JSON passthrough line, got: {line:?}"
     );
   }
+}
+
+// ─── Task 313: parameter-trace subprocess-isolated tests (T01, T03-T06) ────
+
+// TC-419 (task 313 T01): hot_swap_binary trace fires when a live claude
+// process is detected.
+//
+// Combines process_isolation_test.rs's dummy-live-process technique
+// (symlinked claude -> sleep, augmented spawn-time PATH) so
+// find_claude_processes() detects a real live process via /proc, with a
+// no-preference-set HOME so `.version.guard interval::0` finds nothing
+// installed and proceeds to perform_install. The CLI subprocess itself runs
+// with an empty PATH so the subsequent curl|bash spawn fails fast — no real
+// network call — after hot_swap_binary's trace has already fired
+// unconditionally.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc419_hot_swap_binary_traces_with_live_process()
+{
+  let tmp_bin     = TempDir::new().unwrap();
+  let tmp_bin_dir = tmp_bin.path();
+  let sleep_bin   = if std::path::Path::new( "/usr/bin/sleep" ).exists() { "/usr/bin/sleep" } else { "/bin/sleep" };
+  std::os::unix::fs::symlink( sleep_bin, tmp_bin_dir.join( "claude" ) ).unwrap();
+
+  let orig_path = std::env::var( "PATH" ).unwrap_or_default();
+  let aug_path  = format!( "{}:{}", tmp_bin_dir.display(), orig_path );
+
+  let mut dummy = std::process::Command::new( "claude" )
+    .arg( "300" )
+    .env( "PATH", &aug_path )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "failed to spawn dummy claude process" );
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+
+  let out = run_clv_with_env(
+    &[ ".version.guard", "interval::0" ],
+    &[ ( "HOME", home ), ( "PATH", "" ) ],
+  );
+  let err = stderr( &out );
+
+  // Clean up dummy process before asserting so it never leaks on failure.
+  let _ = dummy.kill();
+  let _ = dummy.wait();
+
+  assert!(
+    err.contains( "hot_swap_binary" ),
+    "stderr must contain hot_swap_binary trace line when a live claude process is detected: {err}"
+  );
+}
+
+// TC-420 (task 313 T03): unlock_versions_dir trace fires on install.
+//
+// unlock_versions_dir() runs unconditionally near the top of
+// perform_install(), before the curl|bash pipe. An empty PATH forces bash
+// itself to be not-found, so perform_install fails fast with no real network
+// call (same technique as TC-415), after the trace has already fired.
+#[ test ]
+fn tc420_unlock_versions_dir_traces_on_install()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+
+  let out = run_clv_with_env(
+    &[ ".version.install", "version::stable" ],
+    &[ ( "HOME", home ), ( "PATH", "" ) ],
+  );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "unlock_versions_dir" ),
+    "stderr must contain unlock_versions_dir trace line: {err}"
+  );
+}
+
+// TC-421 (task 313 T04): lock_version trace fires via a curated bash-only
+// PATH.
+//
+// A curated PATH containing only a real `bash` binary (no `curl`) lets the
+// curl|bash pipe's second stage still exit 0 (POSIX last-command-wins,
+// absent pipefail) even though `curl` itself is not-found — so
+// perform_install's status.success() is true with zero real network
+// contact, reaching lock_version safely.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc421_lock_version_traces_via_curated_path()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+
+  let real_bash     = if std::path::Path::new( "/usr/bin/bash" ).exists() { "/usr/bin/bash" } else { "/bin/bash" };
+  let bash_only_dir = TempDir::new().unwrap();
+  std::os::unix::fs::symlink( real_bash, bash_only_dir.path().join( "bash" ) ).unwrap();
+
+  let out = run_clv_with_env(
+    &[ ".version.install", "version::stable" ],
+    &[ ( "HOME", home ), ( "PATH", bash_only_dir.path().to_str().unwrap() ) ],
+  );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "lock_version" ),
+    "stderr must contain lock_version trace line: {err}"
+  );
+}
+
+// TC-422 (task 313 T05): perform_install trace fires on install.
+//
+// Empty PATH forces bash itself to be not-found, so perform_install fails
+// fast with no real network call (same technique as TC-415), after the
+// trace has already fired as the function's first statement.
+#[ test ]
+fn tc422_perform_install_traces_on_install()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+
+  let out = run_clv_with_env(
+    &[ ".version.install", "version::stable" ],
+    &[ ( "HOME", home ), ( "PATH", "" ) ],
+  );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "perform_install" ),
+    "stderr must contain perform_install trace line: {err}"
+  );
+}
+
+// TC-423 (task 313 T06): store_preferred_version trace fires via the
+// idempotent-skip path.
+//
+// Reuses process_isolation_test.rs's deterministic version-symlink technique
+// (lines 86-108) rather than tc358's ambient-system-state technique (which
+// is non-deterministic): resolve stable's pinned semver at test time, write
+// a real empty file named that version into an isolated HOME's
+// `.local/bin/`, symlink claude to it. get_installed_version()'s symlink
+// check then deterministically matches resolved, forcing the
+// idempotent-skip branch (commands/version.rs:110), which calls
+// store_preferred_version without ever entering perform_install — no real
+// network call.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc423_store_preferred_version_traces_on_idempotent_skip()
+{
+  let stable_ver = claude_version_core::version::VERSION_ALIASES
+    .iter()
+    .find( | a | a.name == "stable" )
+    .map( | a | a.value )
+    .expect( "stable alias not found in VERSION_ALIASES" );
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path();
+  let local_bin = home.join( ".local" ).join( "bin" );
+  std::fs::create_dir_all( &local_bin ).unwrap();
+  std::fs::write( local_bin.join( stable_ver ), "" ).unwrap();
+  std::os::unix::fs::symlink( stable_ver, local_bin.join( "claude" ) ).unwrap();
+  write_settings( home, &[] );
+
+  let out = run_clv_with_env(
+    &[ ".version.install", "version::stable" ],
+    &[ ( "HOME", home.to_str().unwrap() ), ( "PATH", "" ) ],
+  );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "store_preferred_version" ),
+    "stderr must contain store_preferred_version trace line via the idempotent-skip path: {err}"
+  );
 }
