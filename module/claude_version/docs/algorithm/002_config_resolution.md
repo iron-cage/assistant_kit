@@ -26,7 +26,8 @@ Look up the env var mapping for K from the catalog:
 | Key | Env var |
 |-----|---------|
 | `model` | `CLAUDE_MODEL` |
-| `CLAUDE_CODE_AUTO_CONTINUE` | (no mapping — env-only key, not in settings.json) |
+
+`model` is the only catalog entry with an env var mapping; the other 6 entries (`preferredVersionSpec`, `preferredVersionResolved`, `autoUpdates`, `theme`, `hasCompletedOnboarding`, `env.DISABLE_AUTOUPDATER`) all have `env_var: None` in `config_catalog.rs`.
 
 If the catalog maps K to an env var E, read `std::env::var(E)`:
 - If set and non-empty → return `ResolvedValue { value: Some(v), source: Env }`. Stop.
