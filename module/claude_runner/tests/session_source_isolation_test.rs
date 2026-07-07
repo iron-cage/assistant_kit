@@ -41,33 +41,64 @@ fn container_check()
   );
 }
 
-/// `Df()` path encoder (see `algorithm/001_path_encoding.md`).
-// BUG-366 ../../../task/claude_storage_core/bug/unverified/366_encode_path_dot_handling_divergence.md — duplicate hand-rolled encoder shares encode_path()'s dot-blind, no-length-fallback bug; needs sweeping once the fix lands
+/// Encode a path using the `Df()` algorithm from `algorithm/001_path_encoding.md`.
+///
+/// Delegates to the real production encoder — see `Fix(BUG-391)` below.
+// Fix(BUG-391): delegate to the real production encoder instead of reimplementing
+// it — the prior hand-rolled body only substituted '_', which diverged from
+// claude_storage_core::encode_path()'s full non-alphanumeric substitution the
+// moment a fixture (e.g. tempfile::TempDir's ".tmp"-prefixed path) contained a '.'.
+// Root cause: this was a duplicate encoder (also flagged by BUG-366, already fixed
+// for scope_command_test.rs by BUG-386) reimplementing production logic instead of
+// calling it, so it silently diverged when encode_path()'s substitution scope widened.
+// Pitfall: never hand-roll a test-local copy of a production encoding/formatting
+// function — call the real function so the fixture cannot drift from production.
 fn df( path : &str ) -> String
 {
-  let stripped    = path.trim_start_matches( '/' );
-  let components : Vec<String> = stripped.split( '/' )
-    .map( | c | c.replace( '_', "-" ) )
-    .collect();
-  let mut result = String::from( "-" );
-  if let Some( ( first, rest ) ) = components.split_first()
-  {
-    result.push_str( first );
-    for comp in rest
-    {
-      if let Some( body ) = comp.strip_prefix( '-' )
-      {
-        result.push_str( "--" );
-        result.push_str( body );
-      }
-      else
-      {
-        result.push( '-' );
-        result.push_str( comp );
-      }
-    }
-  }
-  result
+  claude_storage_core::encode_path( std::path::Path::new( path ) )
+    .expect( "df(): path must encode successfully in test fixtures" )
+}
+
+/// BUG-391 regression guard: `df()` must match production `encode_path()` for a
+/// dot-containing path (e.g. `tempfile::TempDir::new()`'s literal `.tmp` prefix) —
+/// the exact input class that exposed the two encoders' prior divergence.
+///
+/// ## Root Cause
+/// `df()` hand-rolled a duplicate of `claude_storage_core::encode_path()`, only
+/// substituting `_`→`-`. Once `encode_path()` was generalized (BUG-366) to map
+/// every non-alphanumeric character to `-`, the two encoders diverged for any
+/// dot-containing path — exactly what `tempfile::TempDir::new()` always produces.
+///
+/// ## Why Not Caught
+/// No test asserted parity between `df()` and `encode_path()` in this file; every
+/// existing fixture's input happened to avoid the divergent class until BUG-366
+/// widened `encode_path()`'s substitution scope.
+///
+/// ## Fix Applied
+/// `df()` now delegates to `claude_storage_core::encode_path()` directly instead
+/// of reimplementing it, so it cannot drift from production behavior.
+///
+/// ## Prevention
+/// This test locks in parity for the specific input class (dot-containing paths)
+/// that caused the original divergence — a future reimplementation regressing
+/// `df()` back to a hand-rolled encoder would fail here immediately.
+///
+/// ## Pitfall
+/// A duplicate encoder can pass indefinitely against fixtures that avoid the
+/// divergent input class, then silently fail the moment a fixture's shape changes
+/// (here: `tempfile::TempDir`'s literal `.tmp` prefix) with no code change to explain it.
+#[ test ]
+fn df_matches_production_encode_path_for_dot_containing_path()
+{
+  let path = "/tmp/.tmpAbCdEfGh/proj";
+  let test_encoded = df( path );
+  let real_encoded = claude_storage_core::encode_path( std::path::Path::new( path ) )
+    .expect( "encode_path" );
+  assert_eq!(
+    test_encoded, real_encoded,
+    "test df() helper must match production encode_path() for dot-containing paths \
+     (BUG-391 regression guard)"
+  );
 }
 
 /// Create `<claude_home>/projects/<df(src)>/<uuid>.jsonl`; return the `.jsonl` path.

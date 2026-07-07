@@ -53,15 +53,24 @@ fn gate_poll_secs() -> u64
     .unwrap_or( 30 )
 }
 
+/// Resolve the attempt-limit override from a raw env var string. Pure — no I/O —
+/// so the parse-or-default fallback can be unit-tested directly. This crate's
+/// tests never call `std::env::set_var` (see `tests/env_var_test.rs`); taking the raw
+/// value as a parameter instead of reading the environment internally is what makes
+/// that possible here, and means `remove_var` is never needed either.
+#[ inline ]
+#[ must_use ]
+pub fn gate_max_attempts_from( raw : Option< &str > ) -> u32
+{
+  raw.and_then( | s | s.parse().ok() ).unwrap_or( 1000 )
+}
+
 /// Attempt limit override for the concurrency gate. Public, documented
 /// override — no CLI flag, no `--args-file` key. Invalid values fall
 /// back to 1000 silently.
 fn gate_max_attempts() -> u32
 {
-  std::env::var( "CLR_GATE_MAX_ATTEMPTS" )
-    .ok()
-    .and_then( | s | s.parse().ok() )
-    .unwrap_or( 1000 )
+  gate_max_attempts_from( std::env::var( "CLR_GATE_MAX_ATTEMPTS" ).ok().as_deref() )
 }
 
 // Fix(BUG-387): fixed-index reservation slot backing the concurrency gate.
@@ -114,11 +123,15 @@ fn claim_slot_file( path : &Path, pid : u32, since : u64 ) -> bool
   true
 }
 
-// Return the PID recorded in a slot file, if the file is readable and well-formed.
-fn read_slot_owner( path : &Path ) -> Option< u32 >
+// Return the (pid, since) recorded in a slot file, if the file is readable and
+// well-formed. Fix(BUG-392) needs `since` in addition to `pid` to key the
+// reclaim ticket path deterministically — see acquire_slot() below.
+fn read_slot_owner_record( path : &Path ) -> Option< ( u32, u64 ) >
 {
   let content = std::fs::read_to_string( path ).ok()?;
-  u32::try_from( super::ps::parse_json_u64( &content, "pid" )? ).ok()
+  let pid     = u32::try_from( super::ps::parse_json_u64( &content, "pid" )? ).ok()?;
+  let since   = super::ps::parse_json_u64( &content, "since" )?;
+  Some( ( pid, since ) )
 }
 
 // Return whether `pid` is currently alive via `/proc/{pid}` existence —
@@ -129,9 +142,58 @@ fn pid_alive( pid : u32 ) -> bool
   Path::new( &format!( "/proc/{pid}" ) ).exists()
 }
 
-// Attempt to claim the reservation slot at `index`, reclaiming it first if
-// its owning PID is no longer alive. Returns `true` if this call now holds
-// the slot — the sole admission decision the caller acts on.
+// Test-only injection point, same idiom as `gate_dir()`'s `$CLR_GATE_DIR`
+// override above: widen the reclaim race window on demand so a regression
+// test can force many concurrent racers to all observe the same dead-owner
+// record before any of them acts on it, rather than relying on incidental
+// OS scheduling jitter. Unset (production default): zero delay.
+fn reclaim_test_delay()
+{
+  if let Some( ms ) = std::env::var( "CLR_GATE_RECLAIM_TEST_DELAY_MS" ).ok().and_then( |s| s.parse::< u64 >().ok() )
+  {
+    std::thread::sleep( core::time::Duration::from_millis( ms ) );
+  }
+}
+
+// Fix(BUG-392): atomic ticket-arbitrated handoff for the dead-owner reclaim branch.
+//
+// Root cause: the prior reclaim sequence — read_slot_owner() -> remove_file() ->
+// claim_slot_file() — was three sequential, independently-fallible operations
+// with no synchronization across them. remove_file() unconditionally unlinks
+// whatever currently occupies the path; it cannot tell "is this still the same
+// dead-owner file I read a moment ago". Two callers observing the identical
+// dead owner could both run remove-then-recreate, with the second caller's
+// remove_file() deleting the first caller's freshly-reclaimed file — both
+// acquire_slot() calls then returned `true` for the same index.
+//
+// Fix: every racer that observes the same dead-owner record — keyed by
+// (index, owner pid, owner since), identical for all racers reading the same
+// file — computes the identical ticket path and calls claim_slot_file() on
+// it. That reuses the SAME create_new/O_CREAT|O_EXCL primitive that already
+// arbitrates the fresh-claim path above, so exactly one racer wins the
+// ticket. Only the ticket winner writes a per-caller-unique temp file and
+// atomically rename()s it onto the shared slot path — POSIX rename(2) is an
+// atomic replace, so the destination is never observably absent (unlike
+// remove_file() + claim_slot_file(), which has a window where the path
+// doesn't exist at all). Losers return `false` and fall through to the
+// existing wait-and-retry tail in wait_for_session_slot().
+//
+// Pitfall: the ticket file is deliberately never cleaned up. If it were
+// removed after a successful rename, a later caller — observing a dead-owner
+// record for some other, later generation that happened to hash to the same
+// key — could win a "new" ticket and clobber the legitimate current holder
+// via its own rename(). The (index, pid, since) key is only reused if the OS
+// recycles the exact same PID at the exact same `since` timestamp for the
+// exact same slot index — effectively never — so leaving the ticket in place
+// permanently costs one small file and closes that reopening path entirely.
+// Ticket and temp filenames deliberately start with `reclaim_`, never
+// `slot_`, and avoid the `.json` extension: ps.rs's build_queued_table()
+// only scans `.json` files, and this crate's own T08 regression test
+// (`count_live_held_slots()` in concurrency_gate_test.rs) separately treats
+// ANY file whose stem starts with `slot_` as a held session slot regardless
+// of extension — so a `slot_`-prefixed ticket or temp file would be
+// miscounted as an extra concurrently-admitted session for the brief window
+// it exists, even though it represents no admission at all.
 fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> bool
 {
   let path = slot_path( dir, index );
@@ -139,12 +201,32 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> bool
   {
     return true;
   }
-  if read_slot_owner( &path ).is_some_and( |owner| !pid_alive( owner ) )
+  let Some( ( owner, owner_since ) ) = read_slot_owner_record( &path )
+  else
   {
-    let _ = std::fs::remove_file( &path );
-    return claim_slot_file( &path, pid, since );
+    return false;
+  };
+  if pid_alive( owner )
+  {
+    return false;
   }
-  false
+  reclaim_test_delay();
+  let ticket = dir.join( format!( "reclaim_{index}_{owner}_{owner_since}.lock" ) );
+  if !claim_slot_file( &ticket, pid, since )
+  {
+    return false;
+  }
+  let tmp = dir.join( format!( "reclaim_tmp_{index}_{pid}" ) );
+  if !claim_slot_file( &tmp, pid, since )
+  {
+    return false;
+  }
+  let claimed = std::fs::rename( &tmp, &path ).is_ok();
+  if !claimed
+  {
+    let _ = std::fs::remove_file( &tmp );
+  }
+  claimed
 }
 
 // Fix(BUG-384): escape a string for embedding as a JSON string value, per RFC 8259 §7.

@@ -20,6 +20,11 @@ mod config;
 #[ allow( unused_imports ) ]
 pub use summary::{ render_summary, resolve_fields, extract_session_id };
 
+// gate_unit_test.rs (external test) imports gate_max_attempts_from via the public API.
+// Same false-positive unused_imports rationale as the summary re-export above.
+#[ allow( unused_imports ) ]
+pub use gate::gate_max_attempts_from;
+
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
 use claude_storage_core::SessionId;
 use parse::CliArgs;

@@ -25,6 +25,7 @@ enabled = []
 
 [dev-dependencies]
 test_tools = { workspace = true, features = [ "full" ] }
+tempfile   = { workspace = true }
 
 [package.metadata.cargo-udeps.ignore]
 development = [ "test_tools" ]
