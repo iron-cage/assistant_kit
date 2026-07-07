@@ -25,13 +25,10 @@ bin_plugin_volume: /tmp/will_test_targets
 # .test mounts as required+rw; .shell mounts as optional+ro
 plugin_mount: ~/.claude:/workspace/.claude:directory
 
-# cli_fmt is a co-developed companion crate; passed as a named build context (--build-context cli_fmt).
-# Path is resolved relative to this file's directory (run/).
-extra_build_context: cli_fmt=../../../../../wtools/dev/module/core/cli_fmt
 
 # ── Formerly hardcoded parameters (now configurable) ─────────────────────────
 # base_image: rust:slim          # FROM for chef and test stages
 # rustup_components: clippy      # space-separated; e.g. "clippy rustfmt"
-system_packages: curl procps
+system_packages: curl procps jq
 # cargo_features: --all-features # passed to nextest list and offline run CMD
 # workspace_dir: /workspace      # container WORKDIR; must match in runbox/runbox.dockerfile and runbox-run

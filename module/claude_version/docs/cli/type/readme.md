@@ -21,6 +21,7 @@
 | 06_config_scope.md | `ConfigScope` — enum user\|project, write target for `.config` |
 | 07_config_key.md | `ConfigKey` — String with catalog context; known + arbitrary keys |
 | 08_param_kind.md | `ParamKind` — enum config\|env, kind filter for `.params` show-all |
+| 09_path_key.md | `PathKey` — enum with 5 variants, path key filter for `.paths` |
 
 ### All Types
 
@@ -34,6 +35,7 @@
 | 6 | [`ConfigScope`](06_config_scope.md) | String enum | [`scope::`](../param/11_scope.md) | Write target: user or project |
 | 7 | [`ConfigKey`](07_config_key.md) | String | [`key::`](../param/06_key.md) | Config key with catalog context |
 | 8 | [`ParamKind`](08_param_kind.md) | enum | [`kind::`](../param/13_kind.md) | Param kind filter for `.params` show-all |
+| 9 | [`PathKey`](09_path_key.md) | enum | [`key::`](../param/06_key.md) | Path key filter for `.paths` single-path mode |
 
 ### See Also
 

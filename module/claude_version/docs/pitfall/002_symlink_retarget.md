@@ -37,6 +37,12 @@ Cost: purging is destructive. If a different version is needed later, it require
 |------|-------------|
 | [feature/001_version_management.md](../feature/001_version_management.md) | .version.install implements the purge |
 
+### Runtime Files
+
+| File | Relationship |
+|------|-------------|
+| [runtime_file/003_binary_symlink.md](../runtime_file/003_binary_symlink.md) | The symlink this pitfall describes the retarget vector for |
+
 ### Sources
 
 | File | Relationship |

@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration test cases for each clv command.
 - **Responsibility**: Index of per-command integration test case files covering command-level behavior.
-- **In Scope**: All 15 clv command test files.
+- **In Scope**: All 16 clv command test files.
 - **Out of Scope**: Per-parameter edge cases (→ `param/`), parameter group interactions (→ `param_group/`).
 
 ### Overview Table
@@ -26,4 +26,5 @@
 | 13_config.md | Integration tests for `.config` command (show-all/get/set/unset modes) | ✅ |
 | 14_params.md | Integration tests for `.params` command (show-all/single/kind-filter modes) | ✅ |
 | 15_runtime_files.md | Integration tests for `.runtime_files` command (path enumeration, HOME, exit codes) | ✅ |
+| 16_paths.md | Integration tests for `.paths` command (show-all/single-key/format/verbosity modes) | ✅ |
 | procedure.md | Workflow for creating and updating command test specs | ✅ |
