@@ -199,6 +199,44 @@ off all background-task wait behavior to its own wrapper-level
 `gate_poll_secs`/`gate_max_attempts` polling instead of the binary's internal
 ceiling, so `claude` itself should never wait.
 
+### Cross-Layer Default Consistency Analysis
+
+Comparing the table above against `claude_runner`'s own wrapper-level timeout
+and concurrency-admission mechanisms (`module/claude_runner/src/cli/execution.rs`,
+`module/claude_runner/src/cli/gate.rs`,
+`module/claude_runner/docs/invariant/012_gate_slot_atomicity.md`) surfaces two
+open issues not visible from either layer in isolation.
+
+**Finding 1 — `clr`'s own print-mode watchdog is lower than the ceiling it
+grants the child.** `execution.rs:578` sets `DEFAULT_PRINT_TIMEOUT_SECS = 3600`
+(1 hr) as the default `--timeout` for print-mode `clr` invocations absent an
+explicit override — a hard kill of the whole `clr` process (exit code 2). The
+same invocation sets `bash_max_timeout` (row 50) to `7200000` ms (2 hr) on the
+`claude` subprocess it spawns. A Bash tool call inside `claude` that
+legitimately uses the full 2-hour ceiling `clr` granted it will be killed by
+`clr`'s own 1-hour outer watchdog an hour early.
+
+**Finding 2 — the `print_bg_wait_ceiling_ms=0` rationale above rests on a
+mechanism that does not do what the rationale claims.** Per
+`module/claude_runner/docs/invariant/012_gate_slot_atomicity.md`, the
+`gate_poll_secs`/`gate_max_attempts` mechanism governs only `--max-sessions`
+concurrency admission control — how many concurrent `clr`/`claude` processes
+may run at once, host-wide. It has no relationship to waiting for a specific
+session's own backgrounded work (Bash `run_in_background`, subagents,
+workflows) to finish before that session's `clr` process exits; no
+wrapper-level mechanism in `module/claude_runner/src` waits for a session's
+own background tasks to complete. Setting `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`
+may cause `clr` print-mode invocations to exit while the `claude` subprocess
+still has genuinely outstanding background work — the failure this default
+was intended to avoid.
+
+| # | Parameter | Current Default | Issue | Recommended |
+|---|-----------|-----------------|-------|-------------|
+| — | `clr`'s own `--timeout` (print mode, `execution.rs:578`) | `3600` s (1 hr) | Lower than `bash_max_timeout` (2 hr) granted to the child | Raise to ≥ 2 hr + margin, or lower `bash_max_timeout_ms` to ≤ 1 hr, so the outer watchdog never fires before the inner ceiling it promises |
+| 62 | `print_bg_wait_ceiling_ms` | `0` (exit immediately) | Rationale cites the `--max-sessions` gate/slot mechanism, which does not wait for a session's own background tasks | Implement a genuine wrapper-level background-task-completion wait, or set a bounded non-zero ceiling (e.g. matching the binary's own `600000` ms) as a safety net, or document this as a deliberately accepted risk rather than a mitigated one |
+
+**Status:** analysis only — not yet filed as a bug or applied as a fix.
+
 ### Notes
 
 - **Builder defaults vs claude defaults**: see [§ Parameters `clr` Sets By Default](#parameters-clr-sets-by-default) above for the complete table.
