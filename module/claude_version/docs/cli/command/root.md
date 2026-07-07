@@ -63,10 +63,10 @@ clv.status .help  # .help anywhere in argv triggers help (FR-02)
 
 ### Command :: 2. `.status`
 
-Aggregates the three most important operational signals — installed version, running session count, and active account — into a single composited view. Use this as the first check when diagnosing a Claude Code environment.
+Aggregates the three most important operational signals — installed version, running session count, and active account — into a single composited view, plus the preferred version spec when one is stored. Use this as the first check when diagnosing a Claude Code environment.
 
 -- **Parameters:** v::, format::
--- **Exit Codes:** 0 (success) | 2 (runtime error)
+-- **Exit Codes:** 0 (always — read-only, never fails; see Degradation Semantics in `tests/docs/cli/command/02_status.md`) | 1 (invalid `v::`/`format::` value, or unknown parameter)
 
 **Syntax:**
 
@@ -81,10 +81,11 @@ clv.status [v::N] [format::FMT]
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
-**Algorithm (3 steps):**
-1. Invoke `claude --version` to detect the currently installed binary version.
+**Algorithm (4 steps):**
+1. Invoke `claude --version` to detect the currently installed binary version (reports "not found" rather than failing if absent).
 2. Scan `/proc/*/cmdline` for running Claude Code processes and count matches.
-3. Render aggregated status view (version, process count, active account) in the requested format.
+3. Read the active account and, if stored, the preferred version spec (`preferredVersionSpec`) — shown as a `Preferred:` line only when set.
+4. Render aggregated status view (version, process count, account, optional preferred-version line) in the requested format; exits 1 first if `v::`/`format::` is out of range or an unknown parameter is present.
 
 **Examples:**
 

@@ -32,11 +32,13 @@ Two keys written by `.version.install` on every successful exit (including idemp
 
 ### Install Sequence
 
-`.version.install` follows this order:
-1. Unlock Layer 3: `chmod 755` on versions directory
-2. Run installer (downloads and installs binary)
-3. Write `preferredVersionSpec` and `preferredVersionResolved` to settings
-4. If pinned: apply Layer 1 (`autoUpdates: false`), Layer 2 (`DISABLE_AUTOUPDATER=1`), and re-lock Layer 3 (`chmod 555`)
+`.version.install` follows this order (`perform_install()`'s own doc comment: "hot-swap → unlock → curl → purge → lock"):
+1. If Claude processes are currently running: hot-swap the binary (`hot_swap_binary()`) — the old binary is removed so running sessions keep their open file descriptor (Unix semantics) while new sessions use the newly installed binary
+2. Unlock Layer 3: `chmod 755` on versions directory (`unlock_versions_dir()`)
+3. Run installer (downloads and installs binary)
+4. If pinned: purge all other cached binaries from the versions directory (`purge_stale_versions()`) — must run before Layer 3 is re-locked, since purging after `chmod 555` would fail
+5. If pinned: apply Layer 1 (`autoUpdates: false`), Layer 2 (`DISABLE_AUTOUPDATER=1`), and re-lock Layer 3 (`chmod 555`) via `lock_version()`; if `latest`: reverse (`autoUpdates: true`, remove `DISABLE_AUTOUPDATER`, `chmod 755` to unlock)
+6. Write `preferredVersionSpec` and `preferredVersionResolved` to settings (`store_preferred_version()`, called after `perform_install()` returns success — including on the idempotent-skip path that never calls `perform_install()` at all)
 
 ### Since
 
