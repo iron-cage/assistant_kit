@@ -21,6 +21,7 @@
 //! | IT-12 | `key::NONEXISTENT_KEY` → exit 2 | — | 2 |
 //! | IT-13 | `kind::badvalue` → exit 1 | — | 1 |
 //! | IT-14 | `format::xml` → exit 1 | — | 1 |
+//! | IT-15 | `key::disable_updates` → shows config form env.DISABLE_UPDATES | single | 0 |
 
 use tempfile::TempDir;
 
@@ -308,4 +309,23 @@ fn it14_params_invalid_format_exits_1()
     err.contains( "text" ) || err.contains( "json" ),
     "exit 1 must mention valid format values (text, json): {err}"
   );
+}
+
+// ─── IT-15: key::disable_updates → shows config form env.DISABLE_UPDATES ─────
+
+// IT-15: key::disable_updates → config form env.DISABLE_UPDATES now registered; exit 0
+#[ test ]
+fn it15_params_disable_updates_shows_config_form()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_clv_with_env(
+    &[ ".params", "key::disable_updates" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "DISABLE_UPDATES" ),      "must show env form DISABLE_UPDATES: {text}" );
+  assert!( text.contains( "env.DISABLE_UPDATES" ),  "must show config form env.DISABLE_UPDATES: {text}" );
 }

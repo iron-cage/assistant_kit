@@ -17,6 +17,7 @@ Workspace-level behavioral requirements, structural patterns, integration contra
 | `error/` | Claude Code error message catalog |
 | `entity.md` | Doc Entity index for all documentation scopes in this workspace |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |
+| `claude_code_background_task_env_vars.md` | Claude Code CLI background-task env var reference |
 
 ## Doc Entity Index
 

@@ -3,7 +3,8 @@
 //! ## Purpose
 //!
 //! Verify `infer_type`, `json_escape`, and the round-trip behaviour of
-//! `set_setting` / `get_setting` / `read_all_settings` using temp files.
+//! `set_setting` / `get_setting` / `read_all_settings` / `remove_setting`
+//! using temp files.
 //!
 //! ## Coverage
 //!
@@ -13,6 +14,7 @@
 //! - `set_setting` creates a file and stores the value correctly
 //! - `get_setting` reads an existing key and returns `None` for absent keys
 //! - `read_all_settings` reads back all pairs in insertion order
+//! - `remove_setting` deletes an existing key and no-ops on absent key/file
 //! - Nested `env` round-trips through `set_env_var` / `remove_env_var`
 //!
 //! ## Test Matrix
@@ -31,10 +33,13 @@
 //! | `set_and_get_setting_round_trip` | write+read returns same value |
 //! | `get_setting_absent_key_returns_none` | missing key → None |
 //! | `read_all_settings_preserves_pairs` | all pairs returned |
+//! | `remove_setting_deletes_existing_key` | removed key gone, others untouched |
+//! | `remove_setting_missing_key_is_noop` | absent key → no-op, file unchanged |
+//! | `remove_setting_missing_file_is_noop` | absent file → no-op, no error |
 //! | `set_env_var_and_remove_env_var_round_trip` | env sub-object round-trip |
 
 use claude_version_core::settings_io::{
-  infer_type, json_escape, set_setting, get_setting, read_all_settings,
+  infer_type, json_escape, set_setting, get_setting, read_all_settings, remove_setting,
   set_env_var, remove_env_var, StoredAs,
 };
 
@@ -156,6 +161,39 @@ fn read_all_settings_preserves_pairs()
   let keys : Vec< &str > = pairs.iter().map( |( k, _ )| k.as_str() ).collect();
   assert!( keys.contains( &"alpha" ), "expected alpha in pairs" );
   assert!( keys.contains( &"beta"  ), "expected beta in pairs"  );
+}
+
+#[test]
+fn remove_setting_deletes_existing_key()
+{
+  let ( _dir, path ) = new_settings_path();
+  set_setting( &path, "alpha", "1" ).expect( "set alpha" );
+  set_setting( &path, "beta",  "2" ).expect( "set beta"  );
+  remove_setting( &path, "alpha" ).expect( "remove alpha" );
+
+  let got = get_setting( &path, "alpha" ).expect( "get alpha" );
+  assert_eq!( got, None, "alpha should be removed" );
+  let kept = get_setting( &path, "beta" ).expect( "get beta" );
+  assert_eq!( kept, Some( "2".to_string() ), "beta should remain untouched" );
+}
+
+#[test]
+fn remove_setting_missing_key_is_noop()
+{
+  let ( _dir, path ) = new_settings_path();
+  set_setting( &path, "alpha", "1" ).expect( "set alpha" );
+  remove_setting( &path, "does_not_exist" ).expect( "remove absent key is a no-op" );
+
+  let got = get_setting( &path, "alpha" ).expect( "get alpha" );
+  assert_eq!( got, Some( "1".to_string() ), "existing key must be unaffected" );
+}
+
+#[test]
+fn remove_setting_missing_file_is_noop()
+{
+  let dir  = tempfile::TempDir::new().expect( "temp dir" );
+  let path = dir.path().join( "does_not_exist.json" );
+  remove_setting( &path, "any_key" ).expect( "remove on missing file is a no-op, not an error" );
 }
 
 #[test]

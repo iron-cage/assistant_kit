@@ -70,6 +70,7 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 | IT-9 | `v::0` → compact one-line-per-param output | show-all | 0 | F4=0 |
 | IT-10 | `key::model` no env no config → default with (default) annotation | single | 0 | F5=unset |
 | IT-11 | Show-all output is alphabetically sorted | show-all | 0 | F1=no-key |
+| IT-15 | `key::disable_updates` → shows config form env.DISABLE_UPDATES | single | 0 | F1=key-known |
 
 ### Negative Tests
 
@@ -81,9 +82,9 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 
 ### Summary
 
-- **Total:** 14 tests (11 positive, 3 negative)
-- **Negative ratio:** 21.4% (error paths are structurally limited for a read-only command)
-- **TC range:** IT-1 to IT-14
+- **Total:** 15 tests (12 positive, 3 negative)
+- **Negative ratio:** 20.0% (error paths are structurally limited for a read-only command)
+- **TC range:** IT-1 to IT-15
 
 ---
 
@@ -93,7 +94,7 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success | IT-1 through IT-11 |
+| 0 | Success | IT-1 through IT-11, IT-15 |
 | 1 | Invalid arguments | IT-13, IT-14 |
 | 2 | Key not in catalog | IT-12 |
 
@@ -102,7 +103,7 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 | Mode | Tests |
 |------|-------|
 | show-all | IT-1, IT-3, IT-4, IT-7, IT-9, IT-11 |
-| single | IT-2, IT-5, IT-6, IT-8, IT-10 |
+| single | IT-2, IT-5, IT-6, IT-8, IT-10, IT-15 |
 
 ---
 
@@ -237,6 +238,15 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 
 ---
 
+### IT-15: key::disable_updates → shows config form env.DISABLE_UPDATES
+
+- **Given:** `HOME=<tmp>` (no settings.json)
+- **When:** `clv.params key::disable_updates`
+- **Then:** exit 0; stdout shows `DISABLE_UPDATES` env form and `env.DISABLE_UPDATES` config form (registered alongside Task 312's version-lock catalog work)
+- **Exit:** 0
+
+---
+
 ## Source Functions Table
 
 | Function | File | Test Cases |
@@ -255,3 +265,4 @@ Integration test planning for `.params`. See [command/params.md](../../../../doc
 | `it12_params_unknown_key_exits_2` | `tests/cli/params_command_test.rs` | IT-12 |
 | `it13_params_invalid_kind_exits_1` | `tests/cli/params_command_test.rs` | IT-13 |
 | `it14_params_invalid_format_exits_1` | `tests/cli/params_command_test.rs` | IT-14 |
+| `it15_params_disable_updates_shows_config_form` | `tests/cli/params_command_test.rs` | IT-15 |

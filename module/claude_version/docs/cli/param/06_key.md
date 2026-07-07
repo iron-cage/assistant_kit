@@ -25,7 +25,7 @@ clv.settings.set key::theme value::dark
 | 2 | [`.settings.set`](../command/settings.md#command-11-settingsset) | (required) | Identifies entry to write |
 | 3 | [`.config`](../command/config.md#command-13-config) | — | Absent = show-all mode; present = get/set/unset mode |
 | 4 | [`.params`](../command/params.md#command-14-params) | — | Absent = show-all; present = single-param deep-dive |
-| 5 | [`.paths`](../command/paths.md#command--16-paths) | — | Absent = show-all; present = single-path lookup |
+| 5 | [`.paths`](../command/paths.md#command-16-paths) | — | Absent = show-all; present = single-path lookup |
 
 ### Referenced Parameter Groups
 

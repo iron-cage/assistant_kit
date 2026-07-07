@@ -294,7 +294,17 @@ fn atomic_write( path : &Path, content : &str ) -> Result< (), io::Error >
 /// Scalar values are returned as their unquoted/parsed string form, tagged
 /// with the JSON type they were parsed as.  Nested objects and arrays are
 /// captured as raw JSON strings (verbatim), tagged `Raw`.
-fn json_parse_flat_object( src : &str ) -> Result< Vec< ( String, String, StoredAs ) >, io::Error >
+///
+/// Public so callers (e.g. `config_resolve::resolve()`) can parse an
+/// already-fetched nested sub-object (like the `"env"` block) without
+/// re-reading the file from disk.
+///
+/// # Errors
+///
+/// Returns `Err(InvalidData)` if `src` is not a well-formed flat JSON object
+/// (missing surrounding braces, an unquoted key, or a missing `:` after a key).
+#[ inline ]
+pub fn json_parse_flat_object( src : &str ) -> Result< Vec< ( String, String, StoredAs ) >, io::Error >
 {
   let s = src.trim();
   if !s.starts_with( '{' ) || !s.ends_with( '}' )

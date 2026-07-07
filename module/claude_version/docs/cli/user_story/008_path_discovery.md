@@ -17,7 +17,7 @@
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.paths`](../command/paths.md#command--16-paths) | Reports all clv-managed filesystem paths |
+| 1 | [`.paths`](../command/paths.md#command-16-paths) | Reports all clv-managed filesystem paths |
 
 ### Referenced Formats
 

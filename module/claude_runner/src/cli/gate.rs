@@ -383,7 +383,8 @@ pub( super ) fn wait_for_session_slot(
         // the distinction is unrecoverable downstream. The cause suffix is
         // appended AFTER the pre-existing "active; waiting" text, not spliced
         // inside it — every prior assertion pattern-matching that substring
-        // (T01/T04 here, 5 more in config_file_test.rs) depends on it staying intact.
+        // (5 sites here: T01/T04 positive, T02/T03/T06 negative-absence; 5 more
+        // positive sites in config_file_test.rs) depends on it staying intact.
         let cause = if has_capacity { "lost reservation race" } else { "at capacity" };
         eprintln!(
           "Info: {count}/{max} sessions active; waiting {poll_secs}s for a slot... (attempt {attempt}/{max_attempts}) [{cause}]"

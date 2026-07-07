@@ -16,7 +16,7 @@ Acceptance tests for User Story 005. See [user_story/005_version_pinning.md](../
 |----|-----------|----------|
 | US-1 | `.version.list` shows aliases with resolved versions | Acceptance: alias listing |
 | US-2 | Dry-run preview for monthly baseline | Acceptance: preview |
-| US-3 | Install monthly baseline applies 5-layer lock | Acceptance: install |
+| US-3 | Install monthly baseline applies 8-layer lock | Acceptance: install |
 | US-4 | Already-at-pinned-version is no-op | Acceptance: idempotency |
 | US-5 | `.version.show` confirms pinned version active | Acceptance: verification |
 | US-6 | `.version.guard interval::N` watches for drift | Acceptance: drift watch |
@@ -54,11 +54,11 @@ Acceptance tests for User Story 005. See [user_story/005_version_pinning.md](../
 
 ---
 
-### US-3: Install monthly baseline applies 5-layer lock
+### US-3: Install monthly baseline applies 8-layer lock
 
 - **Given:** Claude Code installed; monthly baseline version available
 - **When:** `clv .version.install version::month`
-- **Then:** exit 0; monthly version installed; 5-layer version lock applied
+- **Then:** exit 0; monthly version installed; 8-layer version lock applied
 - **Exit:** 0
 - **Source:** [user_story/005 -- AC bullet 3](../../../../docs/cli/user_story/005_version_pinning.md)
 

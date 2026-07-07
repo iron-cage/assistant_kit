@@ -123,7 +123,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     ParamDef
     {
       name       : "allowed_tools",
-      cli_flag   : None,
+      cli_flag   : Some( "--allowed-tools" ),
       env_var    : None,
       config_key : Some( "allowedTools" ),
       default    : None,
@@ -291,7 +291,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     ParamDef
     {
       name       : "continue_session",
-      cli_flag   : Some( "--continue" ),
+      cli_flag   : Some( "-c / --continue" ),
       env_var    : None,
       config_key : None,
       default    : None,
@@ -316,9 +316,9 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     {
       name       : "debug",
       cli_flag   : Some( "--debug" ),
-      env_var    : Some( "ANTHROPIC_DEBUG" ),
+      env_var    : None,
       config_key : None,
-      default    : None,
+      default    : Some( "off" ),
     },
     ParamDef
     {
@@ -525,7 +525,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       name       : "disable_updates",
       cli_flag   : None,
       env_var    : Some( "DISABLE_UPDATES" ),
-      config_key : None,
+      config_key : Some( "env.DISABLE_UPDATES" ),
       default    : None,
     },
     ParamDef
@@ -539,7 +539,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     ParamDef
     {
       name       : "disallowed_tools",
-      cli_flag   : None,
+      cli_flag   : Some( "--disallowed-tools" ),
       env_var    : None,
       config_key : Some( "disallowedTools" ),
       default    : None,
@@ -806,7 +806,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : Some( "--no-session-persistence" ),
       env_var    : None,
       config_key : None,
-      default    : None,
+      default    : Some( "off" ),
     },
     ParamDef
     {
@@ -814,7 +814,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : Some( "--output-format" ),
       env_var    : None,
       config_key : None,
-      default    : None,
+      default    : Some( "text" ),
     },
     ParamDef
     {
@@ -838,7 +838,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : Some( "--permission-mode" ),
       env_var    : None,
       config_key : Some( "permissionMode" ),
-      default    : None,
+      default    : Some( "default" ),
     },
     ParamDef
     {
@@ -934,7 +934,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : Some( "--replay-user-messages" ),
       env_var    : None,
       config_key : None,
-      default    : None,
+      default    : Some( "off" ),
     },
     ParamDef
     {
@@ -955,7 +955,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     ParamDef
     {
       name       : "resume",
-      cli_flag   : Some( "--resume" ),
+      cli_flag   : Some( "-r / --resume" ),
       env_var    : None,
       config_key : None,
       default    : None,
@@ -990,7 +990,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : None,
       env_var    : Some( "CLAUDE_CODE_SESSION_DIR" ),
       config_key : None,
-      default    : None,
+      default    : Some( "auto" ),
     },
     ParamDef
     {
@@ -1006,7 +1006,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : Some( "--setting-sources" ),
       env_var    : None,
       config_key : None,
-      default    : None,
+      default    : Some( "all" ),
     },
     ParamDef
     {
@@ -1046,7 +1046,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : Some( "--strict-mcp-config" ),
       env_var    : None,
       config_key : None,
-      default    : None,
+      default    : Some( "off" ),
     },
     ParamDef
     {
