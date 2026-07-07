@@ -51,7 +51,7 @@ clv <.command> [param::value ...]
 
 **Current Level:** L5 (Test Detail Complete)
 **Design Completeness:** 100%
-**Implementation Status:** Complete
+**Implementation Status:** 15/16 commands implemented — `.paths` specified, implementation pending
 
 ### Navigation
 

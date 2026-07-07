@@ -525,7 +525,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       name       : "disable_updates",
       cli_flag   : None,
       env_var    : Some( "DISABLE_UPDATES" ),
-      config_key : None,
+      config_key : Some( "env.DISABLE_UPDATES" ),
       default    : None,
     },
     ParamDef

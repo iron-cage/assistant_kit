@@ -35,6 +35,9 @@ pub fn catalog() -> &'static [ SettingDef ]
     SettingDef { key : "theme",                    env_var : None,                  default : Some( "system" )           },
     SettingDef { key : "hasCompletedOnboarding",   env_var : None,                  default : Some( "false" )            },
     SettingDef { key : "env.DISABLE_AUTOUPDATER",  env_var : None,                  default : None                       },
+    SettingDef { key : "autoUpdatesChannel",       env_var : None,                  default : None                       },
+    SettingDef { key : "minimumVersion",           env_var : None,                  default : None                       },
+    SettingDef { key : "env.DISABLE_UPDATES",      env_var : None,                  default : None                       },
   ];
   ENTRIES
 }

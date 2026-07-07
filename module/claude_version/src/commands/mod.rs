@@ -20,6 +20,7 @@
 mod config;
 mod history;
 mod params;
+mod paths;
 mod process;
 mod runtime_files;
 mod settings;
@@ -29,6 +30,7 @@ mod version;
 pub use config::config_routine;
 pub use history::version_history_routine;
 pub use params::params_routine;
+pub use paths::paths_routine;
 pub use runtime_files::runtime_files_routine;
 pub use process::{ processes_kill_routine, processes_routine };
 pub use settings::{ settings_get_routine, settings_set_routine, settings_show_routine };

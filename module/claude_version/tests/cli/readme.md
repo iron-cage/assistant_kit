@@ -44,3 +44,5 @@ Module files for CLI tests, organised by domain. All files are included by `test
 | `params_command_test.rs` | IT- integration tests for the `.params` command (IT-1 through IT-14) |
 | `kind_param_test.rs` | EC- and TC- tests for the `kind::` parameter and `ParamKind` type |
 | `runtime_files_test.rs` | Integration tests for `.runtime_files` (IT-1..IT-9, FT-1..FT-5) |
+| `paths_test.rs` | Integration tests for `.paths` (IT-1..IT-11, FT-1..FT-7) |
+| `path_key_test.rs` | TC- type compliance tests for `PathKey` (TC-1..TC-9) |

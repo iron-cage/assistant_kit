@@ -5,7 +5,7 @@
 - **Purpose**: Document the Claude Code version installation, inspection, and guard commands.
 - **Responsibility**: Describe version install, show, list, guard, history, alias resolution, hot-swap behavior, and idempotency rules.
 - **In Scope**: `.version.install`, `.version.show`, `.version.list`, `.version.guard`, `.version.history`, version aliases, hot-swap, preferred version persistence.
-- **Out of Scope**: 5-layer version lock design (→ `pattern/001_version_lock.md`), process listing (→ `feature/002_process_lifecycle.md`).
+- **Out of Scope**: 8-layer version lock design (→ `pattern/001_version_lock.md`), process listing (→ `feature/002_process_lifecycle.md`).
 
 ### Design
 
@@ -60,12 +60,14 @@ Optional `version::SPEC` overrides the stored preference for a single invocation
 | File | Relationship |
 |------|-------------|
 | [runtime_file/001_version_history_cache.md](../runtime_file/001_version_history_cache.md) | Cache file written by .version.history |
+| [runtime_file/002_versions_directory.md](../runtime_file/002_versions_directory.md) | Directory created/purged/locked by .version.install and .version.guard |
+| [runtime_file/003_binary_symlink.md](../runtime_file/003_binary_symlink.md) | Symlink retargeted by .version.install and .version.guard |
 
 ### Patterns
 
 | File | Relationship |
 |------|-------------|
-| [pattern/001_version_lock.md](../pattern/001_version_lock.md) | 5-layer lock applied after successful install |
+| [pattern/001_version_lock.md](../pattern/001_version_lock.md) | 8-layer lock applied after successful install |
 | [../../../../contract/claude_code/docs/pattern/001_version_pinning.md](../../../../contract/claude_code/docs/pattern/001_version_pinning.md) | Official upstream pinning landscape this feature's `.version.install`/`.version.guard` operate within |
 
 ### Pitfalls

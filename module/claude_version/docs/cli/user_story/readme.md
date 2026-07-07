@@ -20,6 +20,7 @@
 | 005_version_pinning.md | Pin team-wide Claude Code version |
 | 006_config_management.md | Inspect and modify config via `.config` |
 | 007_params_inspection.md | Discover Claude Code params and inspect current observable values |
+| 008_path_discovery.md | Discover on-disk paths clv manages |
 
 ### Overview Table
 
@@ -32,3 +33,4 @@
 | [005_version_pinning.md](005_version_pinning.md) | 005 | Version Pinning | team lead | `.version.list`, `.version.install`, `.version.show`, `.version.guard` |
 | [006_config_management.md](006_config_management.md) | 006 | Config Management | developer | `.config` |
 | [007_params_inspection.md](007_params_inspection.md) | 007 | Params Inspection | developer | `.params` |
+| [008_path_discovery.md](008_path_discovery.md) | 008 | Path Discovery | developer | `.paths` |

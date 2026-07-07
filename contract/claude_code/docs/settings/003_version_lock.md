@@ -2,20 +2,23 @@
 
 ### Scope
 
-- **Purpose**: Document the version lock protocol — the 3-layer protection system and preferred version storage keys.
-- **Responsibility**: Authoritative instance for version lock operations — all 3 layers, the `preferredVersionSpec`/`preferredVersionResolved` keys, and the install/guard workflow.
-- **In Scope**: Layer 1 (`autoUpdates: false`), Layer 2 (`env.DISABLE_AUTOUPDATER`), Layer 3 (chmod 555 on versions dir); `preferredVersionSpec` and `preferredVersionResolved` keys; install/guard sequence.
+- **Purpose**: Document the version lock protocol — the 6-layer protection system and preferred version storage keys.
+- **Responsibility**: Authoritative instance for version lock operations — all 6 layers, the `preferredVersionSpec`/`preferredVersionResolved` keys, and the install/guard workflow.
+- **In Scope**: Layer 1 (`autoUpdates: false`), Layer 2 (`env.DISABLE_AUTOUPDATER`), Layer 3 (chmod 555 on versions dir), Layer 4 (`autoUpdatesChannel`), Layer 5 (`minimumVersion`), Layer 6 (`env.DISABLE_UPDATES`); `preferredVersionSpec` and `preferredVersionResolved` keys; install/guard sequence.
 - **Out of Scope**: `~/.local/share/claude/versions/` path (→ [`../filesystem/002_local_install.md`](../filesystem/002_local_install.md)); atomic write protocol (→ [001_global_settings.md](001_global_settings.md)).
 
 ### Version Lock Filesystem Operations
 
-Pinned versions apply three protection layers:
+Pinned versions apply six protection layers:
 
 | Layer | Path | Operation | Pinned | Latest |
 |-------|------|-----------|--------|--------|
 | 1 | `~/.claude/settings.json` | Set `autoUpdates` | `false` | `true` |
 | 2 | `~/.claude/settings.json` | Set `env.DISABLE_AUTOUPDATER` | `"1"` | (removed) |
 | 3 | `~/.local/share/claude/versions/` | `chmod` | `555` (locked) | `755` (unlocked) |
+| 4 | `~/.claude/settings.json` | Set `autoUpdatesChannel` | `"stable"` | (removed) |
+| 5 | `~/.claude/settings.json` | Set `minimumVersion` | resolved semver | (removed) |
+| 6 | `~/.claude/settings.json` | Set `env.DISABLE_UPDATES` | `"1"` | (removed) |
 
 Before any install, Layer 3 is always unlocked (`chmod 755`) so the installer can write. After install, it is re-locked for pinned versions.
 
@@ -37,7 +40,7 @@ Two keys written by `.version.install` on every successful exit (including idemp
 2. Unlock Layer 3: `chmod 755` on versions directory (`unlock_versions_dir()`)
 3. Run installer (downloads and installs binary)
 4. If pinned: purge all other cached binaries from the versions directory (`purge_stale_versions()`) — must run before Layer 3 is re-locked, since purging after `chmod 555` would fail
-5. If pinned: apply Layer 1 (`autoUpdates: false`), Layer 2 (`DISABLE_AUTOUPDATER=1`), and re-lock Layer 3 (`chmod 555`) via `lock_version()`; if `latest`: reverse (`autoUpdates: true`, remove `DISABLE_AUTOUPDATER`, `chmod 755` to unlock)
+5. If pinned: apply Layer 1 (`autoUpdates: false`), Layer 2 (`DISABLE_AUTOUPDATER=1`), Layer 4 (`autoUpdatesChannel="stable"`), Layer 5 (`minimumVersion=<resolved>`), Layer 6 (`DISABLE_UPDATES=1`), and re-lock Layer 3 (`chmod 555`) via `lock_version()`; if `latest`: reverse (`autoUpdates: true`, remove `DISABLE_AUTOUPDATER`/`DISABLE_UPDATES`/`autoUpdatesChannel`/`minimumVersion`, `chmod 755` to unlock)
 6. Write `preferredVersionSpec` and `preferredVersionResolved` to settings (`store_preferred_version()`, called after `perform_install()` returns success — including on the idempotent-skip path that never calls `perform_install()` at all)
 
 ### Since

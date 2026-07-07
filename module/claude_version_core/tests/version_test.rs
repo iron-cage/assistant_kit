@@ -40,11 +40,18 @@
 //! | `purge_stale_versions_noop_on_empty_dir`                   | empty dir: read_dir ok, iterator empty, no-op |
 //! | `purge_stale_versions_skips_subdirectories`                | subdir with version name survives (remove_file fails silently) |
 //! | `purge_stale_versions_deletes_all_stale_when_keep_not_present` | keep file absent: all version files deleted, non-version survives |
+//! | `lock_version_pin_writes_all_five_keys` | T01: pin writes autoUpdates/autoUpdatesChannel/minimumVersion/env.DISABLE_AUTOUPDATER/env.DISABLE_UPDATES |
+//! | `lock_version_unpin_removes_all_five_keys` | T02: unpin resets/removes all 5 keys |
+//! | `lock_version_repin_updates_minimum_version` | T03: re-pin to a different version updates minimumVersion, not stale |
+//! | `lock_version_pin_all_five_keys_resolve_with_user_source` | T04: all 5 keys resolve with source: user after a pinned install |
 
 use claude_version_core::version::{
   extract_semver, validate_version_spec, resolve_version_spec, VERSION_ALIASES,
-  purge_stale_versions,
+  purge_stale_versions, lock_version,
 };
+use claude_version_core::settings_io::get_setting;
+use claude_version_core::config_resolve::{ resolve, Layer };
+use claude_version_core::config_catalog::catalog;
 
 // ─── extract_semver ───────────────────────────────────────────────────────────
 
@@ -244,4 +251,100 @@ fn purge_stale_versions_deletes_all_stale_when_keep_not_present()
   assert!( !p.join( "2.1.73" ).exists(), "stale 2.1.73 deleted" );
   assert!( !p.join( "2.1.74" ).exists(), "stale 2.1.74 deleted" );
   assert!(  p.join( "lock"   ).exists(), "non-version file survives" );
+}
+
+// ─── lock_version ─────────────────────────────────────────────────────────────
+
+#[test]
+fn lock_version_pin_writes_all_five_keys()
+{
+  let home       = tempfile::tempdir().unwrap();
+  let no_project = tempfile::tempdir().unwrap();
+  std::env::set_var( "HOME", home.path() );
+
+  lock_version( false, "2.1.78" );
+
+  let settings_file = home.path().join( ".claude" ).join( "settings.json" );
+  assert_eq!(
+    get_setting( &settings_file, "autoUpdates" ).unwrap().as_deref(),
+    Some( "false" ), "autoUpdates must be false when pinned"
+  );
+  assert_eq!(
+    get_setting( &settings_file, "autoUpdatesChannel" ).unwrap().as_deref(),
+    Some( "stable" ), "autoUpdatesChannel must be stable when pinned"
+  );
+  assert_eq!(
+    get_setting( &settings_file, "minimumVersion" ).unwrap().as_deref(),
+    Some( "2.1.78" ), "minimumVersion must be the resolved pinned semver"
+  );
+
+  let auto_updater = resolve( "env.DISABLE_AUTOUPDATER", home.path(), no_project.path(), catalog() );
+  assert_eq!( auto_updater.value.as_deref(), Some( "1" ), "env.DISABLE_AUTOUPDATER must be set to 1" );
+
+  let disable_updates = resolve( "env.DISABLE_UPDATES", home.path(), no_project.path(), catalog() );
+  assert_eq!( disable_updates.value.as_deref(), Some( "1" ), "env.DISABLE_UPDATES must be set to 1" );
+}
+
+#[test]
+fn lock_version_unpin_removes_all_five_keys()
+{
+  let home       = tempfile::tempdir().unwrap();
+  let no_project = tempfile::tempdir().unwrap();
+  std::env::set_var( "HOME", home.path() );
+
+  // Pin first so all 5 keys are set, then unpin.
+  lock_version( false, "2.1.78" );
+  lock_version( true, "" );
+
+  let settings_file = home.path().join( ".claude" ).join( "settings.json" );
+  assert_eq!(
+    get_setting( &settings_file, "autoUpdates" ).unwrap().as_deref(),
+    Some( "true" ), "autoUpdates must reset to true when unpinned"
+  );
+  assert_eq!(
+    get_setting( &settings_file, "autoUpdatesChannel" ).unwrap(),
+    None, "autoUpdatesChannel must be removed when unpinned"
+  );
+  assert_eq!(
+    get_setting( &settings_file, "minimumVersion" ).unwrap(),
+    None, "minimumVersion must be removed when unpinned"
+  );
+
+  let auto_updater = resolve( "env.DISABLE_AUTOUPDATER", home.path(), no_project.path(), catalog() );
+  assert!( auto_updater.value.is_none(), "env.DISABLE_AUTOUPDATER must be removed when unpinned" );
+
+  let disable_updates = resolve( "env.DISABLE_UPDATES", home.path(), no_project.path(), catalog() );
+  assert!( disable_updates.value.is_none(), "env.DISABLE_UPDATES must be removed when unpinned" );
+}
+
+#[test]
+fn lock_version_repin_updates_minimum_version()
+{
+  let home = tempfile::tempdir().unwrap();
+  std::env::set_var( "HOME", home.path() );
+
+  lock_version( false, "2.1.78" );
+  lock_version( false, "2.1.90" );
+
+  let settings_file = home.path().join( ".claude" ).join( "settings.json" );
+  assert_eq!(
+    get_setting( &settings_file, "minimumVersion" ).unwrap().as_deref(),
+    Some( "2.1.90" ), "minimumVersion must update on re-pin, not remain stale at prior value"
+  );
+}
+
+#[test]
+fn lock_version_pin_all_five_keys_resolve_with_user_source()
+{
+  let home       = tempfile::tempdir().unwrap();
+  let no_project = tempfile::tempdir().unwrap();
+  std::env::set_var( "HOME", home.path() );
+
+  lock_version( false, "2.1.78" );
+
+  for key in [ "autoUpdates", "autoUpdatesChannel", "minimumVersion", "env.DISABLE_AUTOUPDATER", "env.DISABLE_UPDATES" ]
+  {
+    let rv = resolve( key, home.path(), no_project.path(), catalog() );
+    assert_eq!( rv.source, Layer::User, "{key} must resolve with source: user after a pinned install" );
+  }
 }
