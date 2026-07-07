@@ -28,6 +28,10 @@
 //! | `get_string_setting_absent_key_returns_none` | missing key → `None` |
 //! | `get_string_setting_missing_file_returns_not_found` | missing file → `Err(NotFound)` |
 //! | `get_string_setting_malformed_value_returns_invalid_data` | `"k": undefined` → `Err(InvalidData)` |
+//! | `set_setting_traces_function_and_parameters` | parameter-trace structural guard (task 313, T07): first statement is `eprintln!` naming the function, `path`, `key`, `raw_value` |
+//! | `remove_setting_traces_function_and_parameters` | parameter-trace structural guard (task 313, T08): first statement is `eprintln!` naming the function, `path`, `key` |
+//! | `set_env_var_traces_function_and_parameters` | parameter-trace structural guard (task 313, T09): first statement is `eprintln!` naming the function, `path`, `key`, `value` |
+//! | `remove_env_var_traces_function_and_parameters` | parameter-trace structural guard (task 313, T10): first statement is `eprintln!` naming the function, `path`, `key` |
 
 use claude_core::settings_io::get_string_setting;
 
@@ -110,4 +114,121 @@ fn get_string_setting_malformed_value_returns_invalid_data()
   let path = write_settings( dir.path(), r#"{"subprocess_model": undefined}"# );
   let err  = get_string_setting( &path, "subprocess_model" ).unwrap_err();
   assert_eq!( err.kind(), std::io::ErrorKind::InvalidData );
+}
+
+// ─── Parameter-trace structural guards (Task 313: T07-T10) ────────────────────
+
+/// Extract the body of `fn {name}(...) { ... }` from `src` via brace-depth
+/// counting. A naive "scan to next `pub fn`" heuristic is fragile when the
+/// next function is hundreds of lines away with no other `eprintln!` between
+/// — brace counting finds the exact matching close-brace instead.
+fn extract_fn_body<'a>( src : &'a str, name : &str ) -> &'a str
+{
+  let sig        = format!( "fn {name}(" );
+  let fn_start   = src.find( &sig ).unwrap_or_else( || panic!( "{name} not found in source" ) );
+  let brace_start = src[ fn_start.. ].find( '{' )
+    .unwrap_or_else( || panic!( "{name} body opening brace not found" ) ) + fn_start;
+
+  let mut depth = 0usize;
+  let mut end   = brace_start;
+  for ( i, ch ) in src[ brace_start.. ].char_indices()
+  {
+    match ch
+    {
+      '{' => depth += 1,
+      '}' =>
+      {
+        depth -= 1;
+        if depth == 0 { end = brace_start + i; break; }
+      }
+      _ => {}
+    }
+  }
+  &src[ brace_start + 1..end ]
+}
+
+#[test]
+fn set_setting_traces_function_and_parameters()
+{
+  let src        = include_str!( "../src/settings_io.rs" );
+  let body       = extract_fn_body( src, "set_setting" );
+  let first_stmt = body.trim_start().split( ';' ).next().unwrap().trim();
+
+  assert!(
+    first_stmt.starts_with( "eprintln!" ),
+    "set_setting must emit eprintln! as its first statement, got: {first_stmt:?}"
+  );
+  assert!(
+    first_stmt.contains( "set_setting" ) && first_stmt.contains( "path" )
+      && first_stmt.contains( "key" ) && first_stmt.contains( "raw_value" ),
+    "trace line must name the function and all 3 parameters (path, key, raw_value): {first_stmt:?}"
+  );
+  assert_eq!(
+    body.matches( "eprintln!" ).count(), 1,
+    "set_setting must have exactly one eprintln! call, found {}", body.matches( "eprintln!" ).count()
+  );
+}
+
+#[test]
+fn remove_setting_traces_function_and_parameters()
+{
+  let src        = include_str!( "../src/settings_io.rs" );
+  let body       = extract_fn_body( src, "remove_setting" );
+  let first_stmt = body.trim_start().split( ';' ).next().unwrap().trim();
+
+  assert!(
+    first_stmt.starts_with( "eprintln!" ),
+    "remove_setting must emit eprintln! as its first statement, got: {first_stmt:?}"
+  );
+  assert!(
+    first_stmt.contains( "remove_setting" ) && first_stmt.contains( "path" ) && first_stmt.contains( "key" ),
+    "trace line must name the function and both parameters (path, key): {first_stmt:?}"
+  );
+  assert_eq!(
+    body.matches( "eprintln!" ).count(), 1,
+    "remove_setting must have exactly one eprintln! call, found {}", body.matches( "eprintln!" ).count()
+  );
+}
+
+#[test]
+fn set_env_var_traces_function_and_parameters()
+{
+  let src        = include_str!( "../src/settings_io.rs" );
+  let body       = extract_fn_body( src, "set_env_var" );
+  let first_stmt = body.trim_start().split( ';' ).next().unwrap().trim();
+
+  assert!(
+    first_stmt.starts_with( "eprintln!" ),
+    "set_env_var must emit eprintln! as its first statement, got: {first_stmt:?}"
+  );
+  assert!(
+    first_stmt.contains( "set_env_var" ) && first_stmt.contains( "path" )
+      && first_stmt.contains( "key" ) && first_stmt.contains( "value" ),
+    "trace line must name the function and all 3 parameters (path, key, value): {first_stmt:?}"
+  );
+  assert_eq!(
+    body.matches( "eprintln!" ).count(), 1,
+    "set_env_var must have exactly one eprintln! call, found {}", body.matches( "eprintln!" ).count()
+  );
+}
+
+#[test]
+fn remove_env_var_traces_function_and_parameters()
+{
+  let src        = include_str!( "../src/settings_io.rs" );
+  let body       = extract_fn_body( src, "remove_env_var" );
+  let first_stmt = body.trim_start().split( ';' ).next().unwrap().trim();
+
+  assert!(
+    first_stmt.starts_with( "eprintln!" ),
+    "remove_env_var must emit eprintln! as its first statement, got: {first_stmt:?}"
+  );
+  assert!(
+    first_stmt.contains( "remove_env_var" ) && first_stmt.contains( "path" ) && first_stmt.contains( "key" ),
+    "trace line must name the function and both parameters (path, key): {first_stmt:?}"
+  );
+  assert_eq!(
+    body.matches( "eprintln!" ).count(), 1,
+    "remove_env_var must have exactly one eprintln! call, found {}", body.matches( "eprintln!" ).count()
+  );
 }
