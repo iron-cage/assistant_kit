@@ -1,5 +1,6 @@
 // Integration tests for sort.rs — sort_indices, status_group_of, StatusGroup.
 // Accesses pub(crate) items through claude_profile::usage::test_bridge (testing feature).
+// BUG-330 — ordinary-invocation row-order/is_current stability has no test coverage (doc/spec gap, not implemented here)
 
 use claude_profile::usage::test_bridge::{
   sort_indices, status_group_of, StatusGroup,

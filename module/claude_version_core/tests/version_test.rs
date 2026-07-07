@@ -44,6 +44,7 @@
 //! | `lock_version_unpin_removes_all_five_keys` | T02: unpin resets/removes all 5 keys |
 //! | `lock_version_repin_updates_minimum_version` | T03: re-pin to a different version updates minimumVersion, not stale |
 //! | `lock_version_pin_all_five_keys_resolve_with_user_source` | T04: all 5 keys resolve with source: user after a pinned install |
+//! | `purge_stale_versions_traces_function_and_parameters` | parameter-trace structural guard (task 313): first statement is `eprintln!` naming the function and both parameters |
 
 use claude_version_core::version::{
   extract_semver, validate_version_spec, resolve_version_spec, VERSION_ALIASES,
@@ -347,4 +348,56 @@ fn lock_version_pin_all_five_keys_resolve_with_user_source()
     let rv = resolve( key, home.path(), no_project.path(), catalog() );
     assert_eq!( rv.source, Layer::User, "{key} must resolve with source: user after a pinned install" );
   }
+}
+
+// ─── purge_stale_versions: parameter-trace structural guard (Task 313) ────────
+
+/// Extract the body of `fn {name}(...) { ... }` from `src` via brace-depth
+/// counting. A naive "scan to next `pub fn`" heuristic is fragile when the
+/// next function is hundreds of lines away with no other `eprintln!` between
+/// — brace counting finds the exact matching close-brace instead.
+fn extract_fn_body<'a>( src : &'a str, name : &str ) -> &'a str
+{
+  let sig        = format!( "fn {name}(" );
+  let fn_start   = src.find( &sig ).unwrap_or_else( || panic!( "{name} not found in source" ) );
+  let brace_start = src[ fn_start.. ].find( '{' )
+    .unwrap_or_else( || panic!( "{name} body opening brace not found" ) ) + fn_start;
+
+  let mut depth = 0usize;
+  let mut end   = brace_start;
+  for ( i, ch ) in src[ brace_start.. ].char_indices()
+  {
+    match ch
+    {
+      '{' => depth += 1,
+      '}' =>
+      {
+        depth -= 1;
+        if depth == 0 { end = brace_start + i; break; }
+      }
+      _ => {}
+    }
+  }
+  &src[ brace_start + 1..end ]
+}
+
+#[test]
+fn purge_stale_versions_traces_function_and_parameters()
+{
+  let src        = include_str!( "../src/version.rs" );
+  let body       = extract_fn_body( src, "purge_stale_versions" );
+  let first_stmt = body.trim_start().split( ';' ).next().unwrap().trim();
+
+  assert!(
+    first_stmt.starts_with( "eprintln!" ),
+    "purge_stale_versions must emit eprintln! as its first statement, got: {first_stmt:?}"
+  );
+  assert!(
+    first_stmt.contains( "purge_stale_versions" ) && first_stmt.contains( "versions_dir" ) && first_stmt.contains( "keep" ),
+    "trace line must name the function and both parameters (versions_dir, keep): {first_stmt:?}"
+  );
+  assert_eq!(
+    body.matches( "eprintln!" ).count(), 1,
+    "purge_stale_versions must have exactly one eprintln! call, found {}", body.matches( "eprintln!" ).count()
+  );
 }

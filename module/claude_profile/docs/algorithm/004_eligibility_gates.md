@@ -66,3 +66,9 @@ An occupied-elsewhere account cannot be selected by `find_next_for_strategy()` u
 |------|-------------|
 | [algorithm/003](003_quota_status_groups.md) | Status groups — same 5h/7d thresholds; cancelled gate parallel |
 | [algorithm/005](005_next_account_selection.md) | Positive selection uses these gates |
+
+### Invariants
+
+| File | Relationship |
+|------|-------------|
+| [invariant/011](../invariant/011_shared_predicate_consistency.md) | `billing_type=="none"` must pair with `result` when answering "no active subscription" (BUG-332) — this file's Gate 3b is a correctly-scoped exception |

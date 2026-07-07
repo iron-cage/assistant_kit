@@ -6,7 +6,7 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `algorithm/` | Decision algorithm references (model selection, quota classification, sort, approximation) | [algorithm/readme.md](../algorithm/readme.md) | 10 |
+| `algorithm/` | Decision algorithm references (model selection, quota classification, sort, approximation) | [algorithm/readme.md](../algorithm/readme.md) | 12 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](../cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](../cli/command/readme.md) | 8 |
 | `cli/command_noun/` | Domain noun documentation (account, token, credentials) | [cli/command_noun/readme.md](../cli/command_noun/readme.md) | 3 |
@@ -17,8 +17,8 @@
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](../cli/type/readme.md) | 4 |
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
 | `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 47 |
-| `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 9 |
-| `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 6 |
+| `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 12 |
+| `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 7 |
 | `research_interactive/` | Investigation findings on Claude binary behavior | [research_interactive/readme.md](../research_interactive/readme.md) | 1 |
 | `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 8 |
 | `state_machine/` | Domain lifecycle state machines (account, token, session window, ownership, quota measurement) | [state_machine/readme.md](../state_machine/readme.md) | 5 |
@@ -210,6 +210,9 @@
 | invariant | 007 | JSON Storage Format | [invariant/007_json_storage_format.md](../invariant/007_json_storage_format.md) |
 | invariant | 008 | Single Token Refresh Entry Point | [invariant/008_single_token_refresh_entry.md](../invariant/008_single_token_refresh_entry.md) |
 | invariant | 009 | Container-Only Test Execution | [invariant/009_container_only_test_execution.md](../invariant/009_container_only_test_execution.md) |
+| invariant | 010 | Floating-Point Comparison vs. Display Consistency | [invariant/010_floating_point_comparison_vs_display_consistency.md](../invariant/010_floating_point_comparison_vs_display_consistency.md) |
+| invariant | 011 | Shared Predicate Consistency | [invariant/011_shared_predicate_consistency.md](../invariant/011_shared_predicate_consistency.md) |
+| invariant | 012 | Label-Selection Requires Co-Occurrence Coverage | [invariant/012_label_selection_requires_cooccurrence_coverage.md](../invariant/012_label_selection_requires_cooccurrence_coverage.md) |
 | research_interactive | 001 | Claude Interactive Session Control | [research_interactive/001_claude_interactive_session_control.md](../research_interactive/001_claude_interactive_session_control.md) |
 | schema | 001 | Credential Snapshot (`{name}.credentials.json`) | [schema/001_credentials_json.md](../schema/001_credentials_json.md) |
 | schema | 002 | Account Metadata (`{name}.json`) — unified field table | [schema/002_account_json.md](../schema/002_account_json.md) |
@@ -229,6 +232,8 @@
 | algorithm | 008 | Subprocess Effort Resolution | [algorithm/008_subprocess_effort_resolution.md](../algorithm/008_subprocess_effort_resolution.md) |
 | algorithm | 009 | OAuth Usage Response Dual-Source Parsing | [algorithm/009_oauth_usage_response_migration.md](../algorithm/009_oauth_usage_response_migration.md) |
 | algorithm | 010 | Renewal Date Computation | [algorithm/010_renewal_date_computation.md](../algorithm/010_renewal_date_computation.md) |
+| algorithm | 011 | Rounding-Boundary Classification Hazards | [algorithm/011_rounding_boundary_classification_hazards.md](../algorithm/011_rounding_boundary_classification_hazards.md) |
+| algorithm | 012 | Refresh Trace Reason Classification | [algorithm/012_refresh_trace_reason_classification.md](../algorithm/012_refresh_trace_reason_classification.md) |
 | subprocess | 001 | `run_isolated()` Contract | [subprocess/001_run_isolated_contract.md](../subprocess/001_run_isolated_contract.md) |
 | subprocess | 002 | Credential Write-Back Protocol | [subprocess/002_credential_writeback.md](../subprocess/002_credential_writeback.md) |
 | subprocess | 003 | Token Refresh Invocation | [subprocess/003_token_refresh_invocation.md](../subprocess/003_token_refresh_invocation.md) |
@@ -245,3 +250,4 @@
 | pitfall | 004 | Account Identity Pitfalls | [pitfall/004_account_identity_pitfalls.md](../pitfall/004_account_identity_pitfalls.md) |
 | pitfall | 005 | Ownership Gate Pitfalls | [pitfall/005_ownership_gate_pitfalls.md](../pitfall/005_ownership_gate_pitfalls.md) |
 | pitfall | 006 | Model Override Pitfalls | [pitfall/006_model_override_pitfalls.md](../pitfall/006_model_override_pitfalls.md) |
+| pitfall | 007 | Label Selection Branch-Priority Pitfalls | [pitfall/007_label_selection_branch_priority_pitfalls.md](../pitfall/007_label_selection_branch_priority_pitfalls.md) |
