@@ -124,6 +124,8 @@ table with Name, Category, and Description columns. Static data sourced from
 | [invariant/008_render_summary_gate.md](../invariant/008_render_summary_gate.md) | `render_summary()` must gate on `"type":"result"`; optional fields use `.unwrap_or_default()` |
 | [invariant/009_session_mismatch_detection.md](../invariant/009_session_mismatch_detection.md) | Diagnostic warning when `-c` resumes a different session than expected |
 | [invariant/010_container_only_test_execution.md](../invariant/010_container_only_test_execution.md) | All tests run inside runbox container; host-native execution is a hard error |
+| [invariant/011_session_source_isolation.md](../invariant/011_session_source_isolation.md) | `--session-from` reads session from source dir, writes to target dir; source files never modified |
+| [invariant/012_gate_slot_atomicity.md](../invariant/012_gate_slot_atomicity.md) | Atomic fixed-index slot reservation closing the `--max-sessions` check-then-act race, including the ticket-arbitrated dead-owner reclaim path (BUG-392) |
 
 ### Sources
 
