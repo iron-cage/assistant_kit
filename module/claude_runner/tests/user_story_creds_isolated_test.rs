@@ -140,9 +140,10 @@ fn us11_3_nonreadable_file_errors()
 {
   let proc     = make_proc_dir( &[] );
   let proc_dir = proc.path().to_str().expect( "proc dir UTF-8" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
   let out = run_cli_with_env(
     &[ "--file", "/tmp/clr_us11_nonexistent_99999.txt", "test" ],
-    &[ ( "CLR_PROC_DIR", proc_dir ) ],
+    &[ ( "CLR_PROC_DIR", proc_dir ), ( "CLR_GATE_DIR", gate_dir.path().to_str().expect( "gate dir UTF-8" ) ) ],
   );
   assert!(
     !out.status.success(),

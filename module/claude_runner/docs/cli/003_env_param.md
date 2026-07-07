@@ -4,20 +4,20 @@
 
 - **Purpose**: Document CLR_* environment variable fallbacks, runtime configuration overrides, and CLAUDE_CODE_* subprocess variables.
 - **Responsibility**: Specify env var names, corresponding CLI parameters, precedence rules, and type handling.
-- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, CLAUDE_CODE_AUTO_COMPACT_WINDOW injected default, precedence, bool/parsed type semantics.
-- **Out of Scope**: CLI parameter descriptions (→ param/), subprocess behavior beyond env injection.
+- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`, `CLR_CONFIG_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, CLAUDE_CODE_AUTO_COMPACT_WINDOW injected default, precedence, bool/parsed type semantics.
+- **Out of Scope**: CLI parameter descriptions (→ param/), subprocess behavior beyond env injection, config-file TOML key reference (→ [config_param.md](config_param.md)).
 
-### All Env Parameters (87 total)
+### All Env Parameters (88 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
 | Input (CLR_*) — `run` subcommand | 64 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 13 | Caller env fallbacks for credential operation parameters |
 | Input (CLR_*) — `ps` subcommand | 5 | Caller env fallbacks for session listing display and flag thresholds |
-| Runtime config (CLR_*) | 3 | Runtime configuration overrides (not CLI parameter fallbacks) |
+| Runtime config (CLR_*) | 4 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) — injected | 2 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 87 environment variables
+**Total:** 88 environment variables
 
 ---
 
@@ -101,14 +101,15 @@ invalid values (parse failure → field stays at default). Exception: `CLR_RETRY
 | 63 | `CLR_ARGS_FILE` | [`--args-file`](param/075_args_file.md) | string | `"args-file"` | Path to a JSON config file; applied when `--args-file` absent from CLI; JSON source overrides all other CLR_* vars but is overridden by explicit CLI flags. **Cross-command:** applies to `run`, `ask`, `isolated`, and `refresh` subcommands |
 | 64 | `CLR_NO_COMPACT_WINDOW` | `--no-compact-window` | bool | `"no-compact-window"` | Suppresses `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection — subprocess inherits caller env or uses model native window |
 
-**Precedence (current — 4 tiers):**
+**Precedence (current — 5 levels):**
 
 1. CLI flag (wins unconditionally when provided)
 2. JSON config (from `--args-file`, `CLR_ARGS_FILE`, or stdin JSON pipe — see [feature/004_json_config.md](../feature/004_json_config.md))
 3. `CLR_*` env var (applied when CLI field absent and no JSON source)
-4. Built-in default
+4. Config file — project `.clr.toml` (cwd), then user `~/.clr/config.toml` (or `$CLR_CONFIG_DIR/config.toml`); applied only when CLI, JSON, and env are all absent — see [config_param.md](config_param.md)
+5. Built-in default
 
-**Discovery:** Use `--dry-run` or `--trace` to see effective values after env var application.
+**Discovery:** Use `--dry-run` or `--trace` to see effective values after env var and config-file application.
 
 ```sh
 CLR_MODEL=sonnet clr --dry-run "task"           # shows: claude --model sonnet ...
@@ -290,6 +291,33 @@ context does not persist between invocations.
 
 **Cross-reference:** `contract/claude_code/docs/param/074_auto_compact_window.md` — canonical
 parameter spec (type, default, since, description, behavioral contract).
+
+---
+
+### Env Param 7: `CLR_CONFIG_DIR` — Config File Discovery
+
+Overrides the default user-level config directory used by `config.rs` when discovering
+`config.toml`. Mirrors the `CLR_GATE_DIR` pattern (Env Param 5): a test-injection point,
+not a user-facing feature in its own right.
+
+- **Type:** directory path (string)
+- **Default:** `$HOME/.clr`
+- **Commands affected:** `run` / `ask` (`load_config()` in `config.rs` is called only from
+  `dispatch_run()`); project-level `.clr.toml` discovery in the current directory is
+  unaffected by this variable
+- **Mechanism:** read by `user_config_dir()` in `config.rs`; an unset or empty value falls
+  back to `$HOME/.clr`
+- **Primary use:** test isolation — override in tests to point user-level config discovery
+  at a temp dir, preventing cross-test contamination from a real `~/.clr/config.toml`
+
+| Variable | Default | Type | Notes |
+|----------|---------|------|-------|
+| `CLR_CONFIG_DIR` | `$HOME/.clr` | path | Overrides user-level `config.toml` directory for `config.rs`; project `.clr.toml` discovery is separate and unaffected |
+
+**No precedence rule** — this variable is always applied (there is no corresponding CLI flag).
+
+**Full parameter list, TOML key reference, and the config-file precedence tier itself:**
+see [config_param.md](config_param.md).
 
 ### Provenance
 

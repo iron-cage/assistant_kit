@@ -38,7 +38,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 | E27 | `CLAUDECODE=1 CLR_KEEP_CLAUDECODE=1` preserves env var | `CLR_KEEP_CLAUDECODE` | subprocess env contains `CLAUDECODE` (same as `--keep-claudecode`) |
 | E28 | `CLR_TRACE` enables trace for `isolated`/`refresh` | `CLR_TRACE` | trace output appears in stderr for credential ops (cross-command) |
 | E29 | `CLR_SUBDIR=NAME` appends subdirectory to base dir | `CLR_SUBDIR` | dry-run output contains effective dir ending in `/-NAME` |
-| E30 | `CLR_MAX_SESSIONS=N` sets session limit; invalid value silently ignored | `CLR_MAX_SESSIONS` | gate uses N as limit; invalid value → default 30 used; CLI wins |
+| E30 | `CLR_MAX_SESSIONS=N` sets session limit; invalid value silently ignored | `CLR_MAX_SESSIONS` | gate uses N as limit; invalid value → default 6 used; CLI wins |
 | E31 | `CLR_OUTPUT_FILE=<path>` sets output file path | `CLR_OUTPUT_FILE` | dry-run exits 0; CLI flag wins over env var |
 | E32 | `CLR_EXPECT=val1\|val2` sets expect pattern | `CLR_EXPECT` | dry-run exits 0; CLI flag wins; same `|`-separated syntax |
 | E33 | `CLR_EXPECT_STRATEGY=<strategy>` sets mismatch handler | `CLR_EXPECT_STRATEGY` | dry-run exits 0; CLI flag wins; invalid value rejected |
@@ -370,7 +370,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `CLR_MAX_SESSIONS=3 clr --dry-run task`
 - **Then:** exit 0; env var applied (gate uses 3 as limit in a live run); dry-run skips gate and produces output immediately
 - **Exit:** 0
-- **Invalid-ignored:** `CLR_MAX_SESSIONS=notanumber` → parse failure silently ignored; default 30 used; `--dry-run` exits 0 normally
+- **Invalid-ignored:** `CLR_MAX_SESSIONS=notanumber` → parse failure silently ignored; default 6 used; `--dry-run` exits 0 normally
 - **CLI-wins:** `clr --max-sessions 5 --dry-run task` with `CLR_MAX_SESSIONS=2` → CLI value 5 used; env var 2 ignored
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
 

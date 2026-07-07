@@ -144,7 +144,7 @@ fn qt6_quiet_fatal_error_still_on_stderr()
 {
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = std::process::Command::new( bin )
-    .args( [ "--quiet", "-p", "Fix bug" ] )
+    .args( [ "--quiet", "-p", "--max-sessions", "0", "Fix bug" ] )
     .env( "PATH", "/nonexistent" )
     .output()
     .expect( "failed to invoke clr" );

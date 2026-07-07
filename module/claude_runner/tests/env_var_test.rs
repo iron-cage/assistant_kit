@@ -331,7 +331,7 @@ fn e13_clr_trace_prints_command_to_stderr()
   // PATH=/nonexistent: trace fires first, then spawn fails immediately.
   // Without this, an installed claude binary opens an interactive session and hangs.
   let out = run_cli_with_env(
-    &[ "task" ],
+    &[ "--max-sessions", "0", "task" ],
     &[ ( "CLR_TRACE", "1" ), ( "PATH", "/nonexistent" ) ],
   );
   let stderr = String::from_utf8_lossy( &out.stderr );

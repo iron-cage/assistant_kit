@@ -13,6 +13,7 @@ mod tools;
 mod scope;
 mod summary;
 mod json_config;
+mod config;
 // summary_unit_test.rs (external test) imports render_summary/resolve_fields via the public API.
 // The unused_imports lint fires for pub use in private modules when no code in the lib crate itself
 // references the re-exported path — but the test file consumer is invisible at lib-compile time.
@@ -259,6 +260,21 @@ pub( super ) fn dispatch_run( tokens : &[ String ] ) -> !
   {
     eprintln!( "Error: {e}" );
     std::process::exit( 1 );
+  }
+  // Config-file tier 4: `.clr.toml` (project) / `~/.clr/config.toml` (user), applied
+  // AFTER CLR_* env vars (tier 3) but BEFORE the BUG-008 model-pref fallback below —
+  // apply_config_defaults' is_none() / !bool checks ensure higher tiers are never overwritten.
+  match config::load_config()
+  {
+    Ok( config ) =>
+    {
+      if let Err( e ) = config::apply_config_defaults( &mut cli, &config )
+      {
+        eprintln!( "Error: {e}" );
+        std::process::exit( 1 );
+      }
+    }
+    Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
   }
 
   // Fix(BUG-008): read subprocess model preference when no explicit --model / CLR_MODEL given.

@@ -573,13 +573,13 @@ fn ec9_max_sessions_help_shows_default_six()
 ///
 /// Dry-run is used here to isolate the dry-run-bypass code path specifically. The divergence
 /// from EC-2 (max=0) is at the code-path level: max=0 bypasses `find_claude_processes()`
-/// entirely; max=10 (default) enters the gate code path in non-dry-run execution. Live
+/// entirely; max=6 (default) enters the gate code path in non-dry-run execution. Live
 /// gate-triggered behavior (waiting messages when sessions ≥ limit) is covered by
 /// `concurrency_gate_test.rs` via synthetic proc-dir process simulation.
 #[ test ]
 fn ec7_max_sessions_no_gate_messages_below_limit()
 {
-  // No --max-sessions override → default 10; dry-run skips gate entirely.
+  // No --max-sessions override → default 6; dry-run skips gate entirely.
   let out = run_cli( &[ "--dry-run", "task" ] );
   assert!( out.status.success(), "dry-run with default max must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
   let stderr = String::from_utf8_lossy( &out.stderr );

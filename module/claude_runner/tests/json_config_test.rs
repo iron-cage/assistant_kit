@@ -479,11 +479,13 @@ fn jc8b_boolean_false_is_noop_subprocess_spawned()
   let ( _dir, path ) = fake_claude_dir( "echo 'jc8b_invoked'" );
   let proc           = make_proc_dir( &[] );
   let proc_dir       = proc.path().to_str().expect( "proc dir UTF-8" );
+  let gate_dir       = tempfile::TempDir::new().expect( "gate dir" );
   let bin            = env!( "CARGO_BIN_EXE_clr" );
   let out            = std::process::Command::new( bin )
     .args( [ "--args-file", json_path, "task" ] )
     .env( "PATH", &path )
     .env( "CLR_PROC_DIR", proc_dir )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
     .output()
     .expect( "invoke clr for jc8b" );
   let stdout = stdout_str( &out );

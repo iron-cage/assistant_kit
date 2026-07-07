@@ -218,6 +218,9 @@ default-features = false
 version = "^0.4"
 default-features = false
 
+[workspace.dependencies.toml]
+version = "^1"
+
 ## Dev dependencies
 
 [workspace.dependencies.tempfile]

@@ -349,7 +349,7 @@ fn e29_clr_subdir_sets_effective_dir()
 /// E30: `CLR_MAX_SESSIONS=N` sets the session concurrency limit.
 ///
 /// Dry-run bypasses the gate so we can verify parsing without blocking.
-/// Invalid value silently ignored (parse failure → default 10 used).
+/// Invalid value silently ignored (parse failure → default 6 used).
 /// CLI wins: `--max-sessions 5` overrides `CLR_MAX_SESSIONS=2`.
 ///
 /// Spec: `tests/docs/cli/env_param/02_clr_input_vars.md` E30
