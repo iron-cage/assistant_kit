@@ -64,6 +64,8 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 
 **Out of scope:** Job queue management, AI orchestration, orchestration daemon integration, and any consumer-workspace-specific types (WorkDir, TopicName, JobId). If a feature requires knowing about queues, topics, or jobs, it does not belong here.
 
+<!-- BUG-398 task/claude_runner/bug/cancelled/398_bug_txt_external_wplan_artifact_misattributed.md — cited as evidence this out-of-scope boundary is correctly designed; no content change required -->
+
 **Performance characteristics:** See [invariant/004_performance.md](../invariant/004_performance.md) for the fast-path vs full-parse cost model, concrete measurements, and avoidance rules.
 
 ### Integrations

@@ -8,7 +8,7 @@ parameter in this directory.
 
 - **Purpose**: Authoritative flat reference for every parameter the `claude` binary accepts at runtime.
 - **Responsibility**: Master table and per-parameter detail files for CLI flags, env vars, and settings config keys.
-- **In Scope**: All 131 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `MCP_*` env vars, `API_*` env vars, `CLAUDE_CLIENT_*` env vars, `BASH_*` env vars, `DISABLE_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys, `managed-settings.json` config keys.
+- **In Scope**: All 140 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `MCP_*` env vars, `API_*` env vars, `CLAUDE_CLIENT_*` env vars, `BASH_*` env vars, `DISABLE_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys, `managed-settings.json` config keys.
 - **Out of Scope**: Builder-API defaults and Rust `with_*()` methods (→ `module/claude_runner_core/docs/claude_param/`); Claude API protocol (→ Anthropic docs).
 
 ### Responsibility Table
@@ -147,6 +147,15 @@ parameter in this directory.
 | 129_disable_bg_exit_handoff.md | `CLAUDE_CODE_DISABLE_BG_EXIT_HANDOFF` — disable handing off in-flight background work across a process exit |
 | 130_disable_bg_shell_pressure_reap.md | `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP` — disable memory-pressure reaping of idle background shells |
 | 131_print_bg_wait_ceiling_ms.md | `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` — ceiling on print-mode wait for outstanding background tasks |
+| 132_claudecode.md | `CLAUDECODE` — broadest marker set in any Claude-Code-spawned subprocess |
+| 133_child_session.md | `CLAUDE_CODE_CHILD_SESSION` — precise nested-claude-process marker |
+| 134_entrypoint.md | `CLAUDE_CODE_ENTRYPOINT` — launching-wrapper classifier (vscode/remote/sdk/teams) |
+| 135_force_session_persistence.md | `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE` — override child-session exclusion false positives |
+| 136_disable_background_tasks.md | `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` — disable all background task functionality |
+| 137_job_dir.md | `CLAUDE_JOB_DIR` — internal supervisor/agent-view job directory marker |
+| 138_disable_adopt.md | `CLAUDE_DISABLE_ADOPT` — stop in-flight work carrying over when backgrounding a session |
+| 139_async_agent_stall_timeout_ms.md | `CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS` — stall timeout for background subagents |
+| 140_auto_background_tasks.md | `CLAUDE_AUTO_BACKGROUND_TASKS` — force-enable automatic backgrounding heuristic |
 
 ### Parameter Table
 
@@ -286,6 +295,15 @@ Precedence: CLI arg > env var > settings config.
 | 129 | [disable_bg_exit_handoff](129_disable_bg_exit_handoff.md) | — | `CLAUDE_CODE_DISABLE_BG_EXIT_HANDOFF` | — | bool | false | ≤v2.1.197 (undocumented) | Disable handoff of in-flight background shells/workflows across a process exit |
 | 130 | [disable_bg_shell_pressure_reap](130_disable_bg_shell_pressure_reap.md) | — | `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP` | — | bool | false | v2.1.193 | Disable memory-pressure reaping of idle background shells |
 | 131 | [print_bg_wait_ceiling_ms](131_print_bg_wait_ceiling_ms.md) | — | `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` | — | integer ms | `600000` | ≤v2.1.197 (undocumented) | Ceiling on print-mode wait for outstanding background tasks |
+| 132 | [claudecode](132_claudecode.md) | — | `CLAUDECODE` | — | bool | false | pre-v1.0 (documented) | Broadest marker: set in any subprocess Claude Code spawns |
+| 133 | [child_session](133_child_session.md) | — | `CLAUDE_CODE_CHILD_SESSION` | — | bool | false | v2.1.172+ | Precise marker for a nested `claude` process Claude Code itself launched |
+| 134 | [entrypoint](134_entrypoint.md) | — | `CLAUDE_CODE_ENTRYPOINT` | — | enum (string) | unset | ≤v2.1.197 (undocumented) | Classifies the launching wrapper (vscode/remote/sdk/teams variants) |
+| 135 | [force_session_persistence](135_force_session_persistence.md) | — | `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE` | — | bool | false | ≤v2.1.197 (documented) | Override `CLAUDE_CODE_CHILD_SESSION` exclusion for false positives (e.g. `screen`) |
+| 136 | [disable_background_tasks](136_disable_background_tasks.md) | — | `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` | — | bool | false | ≤v2.1.197 (documented) | Disable all background task functionality (`run_in_background`, auto-background, Ctrl+B) |
+| 137 | [job_dir](137_job_dir.md) | — | `CLAUDE_JOB_DIR` | — | string (dir path) | unset | ≤v2.1.197 (undocumented) | Internal marker for supervisor/agent-view architecture; precondition for exit handoff |
+| 138 | [disable_adopt](138_disable_adopt.md) | — | `CLAUDE_DISABLE_ADOPT` | — | bool | false | v2.1.195+ | Stop in-flight work from carrying over when a session is backgrounded (`←`/`/background`) |
+| 139 | [async_agent_stall_timeout_ms](139_async_agent_stall_timeout_ms.md) | — | `CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS` | — | integer ms | `600000` | ≤v2.1.197 (documented) | Stall/no-progress timeout for background subagents, resets on progress |
+| 140 | [auto_background_tasks](140_auto_background_tasks.md) | — | `CLAUDE_AUTO_BACKGROUND_TASKS` | — | bool | false | ≤v2.1.197 (documented; no `_CODE_` infix) | Force-enable automatic backgrounding of long-running agent tasks |
 
 ### Cross-References
 

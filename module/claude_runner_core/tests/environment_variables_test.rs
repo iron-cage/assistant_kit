@@ -158,6 +158,18 @@ fn top_k_sets_env_var() {
 }
 
 #[test]
+fn print_bg_wait_ceiling_ms_sets_env_var() {
+  let cmd_builder = ClaudeCommand::new()
+    .with_print_bg_wait_ceiling_ms(600_000);
+
+  let cmd = cmd_builder.build_command_for_test();
+
+  let debug = format!( "{cmd:?}" );
+  assert!( debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS" ), "Missing CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS env var" );
+  assert!( debug.contains( "600000" ), "Incorrect print_bg_wait_ceiling_ms value" );
+}
+
+#[test]
 fn defaults_set_tier1_env_vars() {
   // Verify Tier 1 defaults are set (different from standard)
   let cmd_builder = ClaudeCommand::new();
@@ -177,6 +189,9 @@ fn defaults_set_tier1_env_vars() {
 
   assert!( debug.contains( "CLAUDE_CODE_TELEMETRY" ), "Default telemetry not set" );
   assert!( debug.contains( "false" ), "Incorrect default telemetry" );
+
+  assert!( debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS" ), "Default print_bg_wait_ceiling_ms not set" );
+  assert!( debug.contains( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=\"0\"" ), "Incorrect default print_bg_wait_ceiling_ms: expected 0" );
 }
 
 #[test]

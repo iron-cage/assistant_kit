@@ -47,6 +47,7 @@ pub struct ClaudeCommand {
   pub(super) auto_continue: Option<bool>,
   pub(super) telemetry: Option<bool>,
   pub(super) compact_window: Option<u32>,
+  pub(super) print_bg_wait_ceiling_ms: Option<u32>,
 
   // Tier 2: Essential parameters with standard defaults (security-sensitive)
   pub(super) auto_approve_tools: Option<bool>,
@@ -131,6 +132,7 @@ impl ClaudeCommand {
       auto_continue: Some( true ),                 // Enable automation (vs false standard)
       telemetry: Some( false ),                    // Disable telemetry (vs true standard)
       compact_window: Some( DEFAULT_COMPACT_WINDOW ), // Limit compaction to 300K (vs model native 200K or 1M)
+      print_bg_wait_ceiling_ms: Some( 0 ),             // Exit print mode immediately (vs 600000/10min standard) — clr's own gate_poll_secs/gate_max_attempts already own background-task waiting, so claude's internal wait would be redundant
 
       skip_permissions: false,
       chrome: Some( true ),  // Enable browser context by default (vs off in raw claude binary)
@@ -334,6 +336,9 @@ impl ClaudeCommand {
     }
     if let Some( max_timeout ) = self.bash_max_timeout_ms {
       lines.push( format!( "CLAUDE_CODE_BASH_MAX_TIMEOUT={max_timeout}" ) );
+    }
+    if let Some( ceiling ) = self.print_bg_wait_ceiling_ms {
+      lines.push( format!( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS={ceiling}" ) );
     }
     if let Some( auto_continue ) = self.auto_continue {
       lines.push( format!( "CLAUDE_CODE_AUTO_CONTINUE={auto_continue}" ) );
@@ -551,6 +556,10 @@ impl ClaudeCommand {
 
     if let Some( max_timeout ) = self.bash_max_timeout_ms {
       cmd.env( "CLAUDE_CODE_BASH_MAX_TIMEOUT", max_timeout.to_string() );
+    }
+
+    if let Some( ceiling ) = self.print_bg_wait_ceiling_ms {
+      cmd.env( "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS", ceiling.to_string() );
     }
 
     if let Some( auto_continue ) = self.auto_continue {

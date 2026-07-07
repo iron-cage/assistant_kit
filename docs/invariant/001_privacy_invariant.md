@@ -21,6 +21,8 @@ This workspace has zero knowledge of any upstream private workspace.
 - Any type, trait, or concept specific to a consumer workspace's internal job queue, orchestration, or agent layer
 - Out-of-workspace path dependencies without a `version` field (makes the depending crate unpublishable)
 
+<!-- BUG-398 task/claude_runner/bug/cancelled/398_bug_txt_external_wplan_artifact_misattributed.md — cited as evidence this forbidden-vocabulary invariant is correctly enforced; no content change required -->
+
 ### Enforcement Mechanism
 
 The workspace `Cargo.toml` lists no path deps to any private workspace. Each crate's `Cargo.toml` must not introduce such path deps.
