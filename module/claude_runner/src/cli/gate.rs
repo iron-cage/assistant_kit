@@ -331,7 +331,8 @@ pub( super ) fn wait_for_session_slot(
       // is derived from this same count read instead of a separate counter.
       // A losing race falls through to the existing wait-and-retry tail below,
       // exactly as the old `count >= max` case already did.
-      if count_u32 < max && acquire_slot( &dir, count_u32, pid, since )
+      let has_capacity = count_u32 < max;
+      if has_capacity && acquire_slot( &dir, count_u32, pid, since )
       {
         // Emit GateWait event if we actually waited at least one poll cycle.
         if gate_emitted
@@ -367,8 +368,25 @@ pub( super ) fn wait_for_session_slot(
       }
       if !quiet
       {
+        // Fix(BUG-393): distinguish global exhaustion (no slot numerically free)
+        // from local race-loss (a slot was free but another racer's acquire_slot()
+        // won the same index first) — both previously produced byte-identical
+        // text since the message only interpolated the count/max counters shared
+        // across every false-branch of the compound admission condition above.
+        // Root cause: the eprintln! captured no field recording which disjunct
+        // of the admission condition produced this non-admission — the
+        // distinguishing information existed transiently at `has_capacity` but
+        // was discarded before the message was constructed.
+        // Pitfall: a diagnostic built only from counters shared across every
+        // false-branch of a compound condition silently erases which branch
+        // fired — capture the branch itself at the point of construction, or
+        // the distinction is unrecoverable downstream. The cause suffix is
+        // appended AFTER the pre-existing "active; waiting" text, not spliced
+        // inside it — every prior assertion pattern-matching that substring
+        // (T01/T04 here, 5 more in config_file_test.rs) depends on it staying intact.
+        let cause = if has_capacity { "lost reservation race" } else { "at capacity" };
         eprintln!(
-          "Info: {count}/{max} sessions active; waiting {poll_secs}s for a slot... (attempt {attempt}/{max_attempts})"
+          "Info: {count}/{max} sessions active; waiting {poll_secs}s for a slot... (attempt {attempt}/{max_attempts}) [{cause}]"
         );
       }
       gate_emitted = true;

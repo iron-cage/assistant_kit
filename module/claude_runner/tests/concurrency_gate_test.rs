@@ -20,6 +20,7 @@
 //! | T10 | `CLR_GATE_POLL_SECS=notanumber` (+ valid `CLR_GATE_MAX_ATTEMPTS=2`, `--retry-override 0`) → invalid value silently falls back to the 30s default | — |
 //! | T11 | `CLR_GATE_MAX_ATTEMPTS=notanumber` (+ valid `CLR_GATE_POLL_SECS=1`) → invalid value silently falls back to the 1000-attempt default | — |
 //! | T14 | N concurrent live `clr` invocations racing a single pre-seeded dead-owner slot → peak concurrently-admitted children never exceeds 1 (BUG-392) | — |
+//! | T15 | 2 racers, `--max-sessions 1`, 0 pre-existing occupiers → loser's wait message names "lost reservation race", not "at capacity" (BUG-393) | — |
 //!
 //! T05 (`clr --help` shows `default: 6`) is covered by
 //! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_six`.
@@ -1003,5 +1004,113 @@ fn t14_reclaim_race_admits_at_most_one_caller_for_a_dead_owners_slot()
     "T14 (BUG-392): peak concurrently-alive dispatched children sharing one \
      contested dead-owner slot ({peak}) must never exceed 1 — acquire_slot()'s \
      reclaim branch admitted more than one caller for the same slot"
+  );
+}
+
+// ── T15: slot-wait message distinguishes race-loss from exhaustion (BUG-393) ───
+
+/// T15 (BUG-393): races exactly 2 concurrent `clr` invocations against
+/// `--max-sessions 1` with zero pre-existing occupiers, so both racers read
+/// `count_u32 = 0 < max = 1` on their very first attempt and contend for the
+/// same reservation index — guaranteeing one wins immediately (admitted, no
+/// wait message at all) and the other loses the atomic reservation race
+/// (`acquire_slot()` returns `false` while `has_capacity` is `true`). Captures
+/// both racers' stderr directly (not `Stdio::null()`, unlike T08/T14) and
+/// asserts the loser's wait message names the cause as a lost reservation
+/// race, and that neither racer's message claims capacity exhaustion — the
+/// distinction `gate.rs:368-373`'s `eprintln!` previously could not make.
+///
+/// ## Root Cause
+/// `wait_for_session_slot()`'s admission check at `gate.rs:334` is a compound
+/// condition, `has_capacity && acquire_slot(...)`, with two independent
+/// false-branches: `count_u32 >= max` (global exhaustion) and `count_u32 <
+/// max` but `acquire_slot()` loses the atomic race (local race-loss). Both
+/// branches fell through to the identical `eprintln!` at `gate.rs:370-373`,
+/// which interpolated only `count`/`max`/`poll_secs`/`attempt`/`max_attempts`
+/// — counters identical across both branches — with no field recording which
+/// disjunct actually produced the non-admission.
+///
+/// ## Why Not Caught
+/// T08 and T14 (this same file) both already force real racers through both
+/// branches of `gate.rs:334` — T08 via general multi-racer contention, T14 via
+/// the dead-owner reclaim path — but both route every racer's stderr to
+/// `Stdio::null()` (T08: lines 557-558; T14: lines 946-947), discarding
+/// exactly the diagnostic text this defect lives in before any assertion
+/// could observe it.
+///
+/// ## Fix Applied
+/// `gate.rs:334`'s condition is now bound to a named `has_capacity` boolean
+/// before the admission check (preserving identical short-circuit
+/// evaluation), and the `!quiet` message block at `gate.rs:368-373` appends a
+/// `[lost reservation race]` / `[at capacity]` cause suffix derived from that
+/// same boolean — after, not within, the pre-existing `"{count}/{max}
+/// sessions active; waiting ..."` text, so the literal substring every prior
+/// assertion (T01, T04, `config_file_test.rs` ×5) depends on is unchanged.
+///
+/// ## Prevention
+/// Any diagnostic message built from a compound admission condition's shared
+/// counters must be paired with a test that captures (not discards) stderr
+/// for at least one confirmed instance of each false-branch, asserting the
+/// resulting text actually differs between them.
+///
+/// ## Pitfall
+/// Do not reuse T08/T14's 8-racer, compiled-sleeper-binary infrastructure for
+/// this — it is sized for peak-concurrency sampling, not message-content
+/// capture, and switching its uniform `Stdio::null()` to per-child `piped()`
+/// would need individual incremental reads threaded through its careful
+/// non-blocking reap loop. A minimal 2-racer, `--max-sessions 1` fixture
+/// isolates the same two branches with far less moving parts.
+// test_kind: bug_reproducer(BUG-393)
+#[ test ]
+fn t15_slot_wait_message_distinguishes_race_loss_from_exhaustion()
+{
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 pre-existing occupiers
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let spawn_racer = | label : &str |
+  {
+    Command::new( bin )
+      .args( [ "-p", "--max-sessions", "1", "--journal", "off", label ] )
+      .env( "PATH", &script_path )
+      .env( "CLR_PROC_DIR", proc_dir.path() )
+      .env( "CLR_GATE_DIR", gate_dir.path() )
+      .env( "CLR_GATE_POLL_SECS", "1" )
+      .env( "CLR_GATE_MAX_ATTEMPTS", "5" )
+      .stdout( std::process::Stdio::null() )
+      .stderr( std::process::Stdio::piped() )
+      .spawn()
+      .expect( "spawn racing clr" )
+  };
+
+  let mut racer_a = spawn_racer( "race-a" );
+  let mut racer_b = spawn_racer( "race-b" );
+
+  // Both racers read count_u32=0 < max=1 on attempt 1 and contend for the same
+  // reservation index; the loser's message prints immediately (no delay before
+  // the first poll's eprintln). 2s is a generous margin before either racer
+  // could reach CLR_GATE_MAX_ATTEMPTS=5's own timeout/retry path.
+  std::thread::sleep( core::time::Duration::from_millis( 2000 ) );
+  let _ = racer_a.kill();
+  let _ = racer_b.kill();
+  let out_a = racer_a.wait_with_output().expect( "reap racer a" );
+  let out_b = racer_b.wait_with_output().expect( "reap racer b" );
+
+  let stderr_a = String::from_utf8_lossy( &out_a.stderr );
+  let stderr_b = String::from_utf8_lossy( &out_b.stderr );
+
+  let a_lost = stderr_a.contains( "lost reservation race" );
+  let b_lost = stderr_b.contains( "lost reservation race" );
+  assert!(
+    a_lost != b_lost,
+    "T15 (BUG-393): exactly one racer must report losing the reservation race. \
+     stderr_a:\n{stderr_a}\nstderr_b:\n{stderr_b}"
+  );
+  assert!(
+    !stderr_a.contains( "at capacity" ) && !stderr_b.contains( "at capacity" ),
+    "T15 (BUG-393): neither racer should report capacity exhaustion when both \
+     read count_u32=0 < max=1 on the racing attempt. stderr_a:\n{stderr_a}\n\
+     stderr_b:\n{stderr_b}"
   );
 }
