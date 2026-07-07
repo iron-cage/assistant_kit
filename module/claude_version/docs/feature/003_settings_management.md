@@ -47,7 +47,7 @@
 
 | File | Relationship |
 |------|-------------|
-| `../../../claude_version_core/src/settings_io.rs` | Settings JSON read/write implementation |
+| `../../../claude_core/src/settings_io.rs` | Settings JSON read/write implementation |
 
 ### Provenance
 

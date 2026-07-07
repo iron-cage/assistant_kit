@@ -171,6 +171,30 @@ fn tc353_version_install_dry_latest_shows_unlock()
   assert!( text.contains( "unlocked" ), "latest must show unlocked: {text}" );
 }
 
+// TC-513: version::2.1.78 dry::1 → previews all 3 new pin keys
+#[ test ]
+fn tc513_version_install_dry_pinned_shows_new_lock_keys()
+{
+  let out = run_clv( &[ ".version.install", "version::2.1.78", "dry::1" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "env.DISABLE_UPDATES = 1" ), "pinned dry-run must preview DISABLE_UPDATES: {text}" );
+  assert!( text.contains( "autoUpdatesChannel = stable" ), "pinned dry-run must preview autoUpdatesChannel: {text}" );
+  assert!( text.contains( "minimumVersion = 2.1.78" ), "pinned dry-run must preview minimumVersion: {text}" );
+}
+
+// TC-514: version::latest dry::1 → previews removal of all 3 new pin keys
+#[ test ]
+fn tc514_version_install_dry_latest_shows_new_lock_key_removal()
+{
+  let out = run_clv( &[ ".version.install", "version::latest", "dry::1" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "remove env.DISABLE_UPDATES" ), "latest dry-run must preview DISABLE_UPDATES removal: {text}" );
+  assert!( text.contains( "remove autoUpdatesChannel" ), "latest dry-run must preview autoUpdatesChannel removal: {text}" );
+  assert!( text.contains( "remove minimumVersion" ), "latest dry-run must preview minimumVersion removal: {text}" );
+}
+
 // TC-354: version::01.02.03 → leading zeros rejected, exit 1
 //
 // test_kind: bug_reproducer(leading-zeros)

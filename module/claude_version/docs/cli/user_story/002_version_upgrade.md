@@ -8,7 +8,7 @@
 ### Acceptance Criteria
 
 - [ ] `clv .version.install version::X dry::1` shows the full install plan without executing.
-- [ ] `clv .version.install version::X` installs, applies 5-layer version lock, and exits 0.
+- [ ] `clv .version.install version::X` installs, applies 8-layer version lock, and exits 0.
 - [ ] Already-at-target is a no-op (exits 0) unless `force::1` is set.
 - [ ] `clv .version.show` after install prints the newly installed version.
 - [ ] `clv .version.history` shows recent releases with summaries to aid version selection.
@@ -20,7 +20,7 @@
 |---|---------|------|
 | 1 | [`.help`](../command/root.md#command-1-help) | Provides discovery of available commands |
 | 2 | [`.version.show`](../command/version.md#command-3-versionshow) | Confirms installed version before and after install |
-| 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | Installs target version with 5-layer lock |
+| 3 | [`.version.install`](../command/version.md#command-4-versioninstall) | Installs target version with 8-layer lock |
 | 4 | [`.version.guard`](../command/version.md#command-5-versionguard) | Detects and restores preferred version on drift |
 | 5 | [`.version.history`](../command/version.md#command-12-versionhistory) | Lists recent releases for version selection |
 

@@ -8,7 +8,7 @@ parameter in this directory.
 
 - **Purpose**: Authoritative flat reference for every parameter the `claude` binary accepts at runtime.
 - **Responsibility**: Master table and per-parameter detail files for CLI flags, env vars, and settings config keys.
-- **In Scope**: All 126 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `MCP_*` env vars, `API_*` env vars, `CLAUDE_CLIENT_*` env vars, `BASH_*` env vars, `DISABLE_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys, `managed-settings.json` config keys.
+- **In Scope**: All 131 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `MCP_*` env vars, `API_*` env vars, `CLAUDE_CLIENT_*` env vars, `BASH_*` env vars, `DISABLE_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys, `managed-settings.json` config keys.
 - **Out of Scope**: Builder-API defaults and Rust `with_*()` methods (→ `module/claude_runner_core/docs/claude_param/`); Claude API protocol (→ Anthropic docs).
 
 ### Responsibility Table
@@ -142,6 +142,11 @@ parameter in this directory.
 | 124_required_maximum_version.md | `requiredMaximumVersion` managed config key — startup ceiling |
 | 125_package_manager_auto_update.md | `CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE` — auto-run brew/winget upgrade |
 | 126_disable_nonessential_traffic.md | `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` — combined disable of 4 vars |
+| 127_bg_classifier_model.md | `CLAUDE_CODE_BG_CLASSIFIER_MODEL` — model override for background-task classifier calls |
+| 128_bg_tasks_report_running.md | `CLAUDE_CODE_BG_TASKS_REPORT_RUNNING` — keep session reported "running" while background tasks are outstanding |
+| 129_disable_bg_exit_handoff.md | `CLAUDE_CODE_DISABLE_BG_EXIT_HANDOFF` — disable handing off in-flight background work across a process exit |
+| 130_disable_bg_shell_pressure_reap.md | `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP` — disable memory-pressure reaping of idle background shells |
+| 131_print_bg_wait_ceiling_ms.md | `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` — ceiling on print-mode wait for outstanding background tasks |
 
 ### Parameter Table
 
@@ -276,6 +281,11 @@ Precedence: CLI arg > env var > settings config.
 | 124 | [required_maximum_version](124_required_maximum_version.md) | — | — | `requiredMaximumVersion` | string (semver) | — | v2.1.163 | Managed-only startup ceiling; exits at launch if newer |
 | 125 | [package_manager_auto_update](125_package_manager_auto_update.md) | — | `CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE` | — | bool | off | v2.1.129 | Auto-run brew/winget upgrade in background |
 | 126 | [disable_nonessential_traffic](126_disable_nonessential_traffic.md) | — | `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | — | bool | off | pre-v1.0 | Equivalent to 4 DISABLE_* vars combined |
+| 127 | [bg_classifier_model](127_bg_classifier_model.md) | — | `CLAUDE_CODE_BG_CLASSIFIER_MODEL` | — | string | binary default | ≤v2.1.197 (undocumented) | Model override for background-task classifier calls |
+| 128 | [bg_tasks_report_running](128_bg_tasks_report_running.md) | — | `CLAUDE_CODE_BG_TASKS_REPORT_RUNNING` | — | bool | false | ≤v2.1.197 (undocumented) | Keep session reported "running" while background tasks are outstanding |
+| 129 | [disable_bg_exit_handoff](129_disable_bg_exit_handoff.md) | — | `CLAUDE_CODE_DISABLE_BG_EXIT_HANDOFF` | — | bool | false | ≤v2.1.197 (undocumented) | Disable handoff of in-flight background shells/workflows across a process exit |
+| 130 | [disable_bg_shell_pressure_reap](130_disable_bg_shell_pressure_reap.md) | — | `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP` | — | bool | false | v2.1.193 | Disable memory-pressure reaping of idle background shells |
+| 131 | [print_bg_wait_ceiling_ms](131_print_bg_wait_ceiling_ms.md) | — | `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` | — | integer ms | `600000` | ≤v2.1.197 (undocumented) | Ceiling on print-mode wait for outstanding background tasks |
 
 ### Cross-References
 

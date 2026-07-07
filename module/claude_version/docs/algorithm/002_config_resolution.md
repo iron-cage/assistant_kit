@@ -27,7 +27,7 @@ Look up the env var mapping for K from the catalog:
 |-----|---------|
 | `model` | `CLAUDE_MODEL` |
 
-`model` is the only catalog entry with an env var mapping; the other 6 entries (`preferredVersionSpec`, `preferredVersionResolved`, `autoUpdates`, `theme`, `hasCompletedOnboarding`, `env.DISABLE_AUTOUPDATER`) all have `env_var: None` in `config_catalog.rs`.
+`model` is the only catalog entry with an env var mapping; the other 9 entries (`preferredVersionSpec`, `preferredVersionResolved`, `autoUpdates`, `theme`, `hasCompletedOnboarding`, `env.DISABLE_AUTOUPDATER`, `autoUpdatesChannel`, `minimumVersion`, `env.DISABLE_UPDATES`) all have `env_var: None` in `config_catalog.rs`.
 
 If the catalog maps K to an env var E, read `std::env::var(E)`:
 - If set and non-empty → return `ResolvedValue { value: Some(v), source: Env }`. Stop.
@@ -50,7 +50,8 @@ Search for `.claude/settings.json` starting from W, walking up to filesystem roo
 **Step 3 — User config check:**
 
 Read `~/.claude/settings.json` (requires HOME set; if HOME unset → treat as absent, proceed to Step 4):
-- If K is present → return `ResolvedValue { value: Some(v), source: User }`. Stop.
+- If K has an `env.` prefix: look up the remainder inside the nested `"env"` sub-object (parsed via `json_parse_flat_object`) instead of flat-matching the whole dotted key — `env.DISABLE_AUTOUPDATER` and `env.DISABLE_UPDATES` are stored as nested fields of the `env` object, not as flat top-level keys.
+- If K is present (flat, or inside the nested `env` object for `env.`-prefixed keys) → return `ResolvedValue { value: Some(v), source: User }`. Stop.
 - If file absent or K absent → proceed to Step 4.
 
 ---
@@ -67,7 +68,7 @@ Look up K in the known settings catalog:
 
 The known settings catalog is implemented in `claude_version_core::config_catalog`. Each entry defines a settings.json key with its optional env var mapping and catalog default. The catalog is the source of truth for which keys appear in `.config show-all` even when absent from all config files.
 
-**Current catalog (7 entries — partial, expansion planned in Task 001):**
+**Current catalog (10 entries — partial, expansion planned in Task 001):**
 
 | Key | Type | Env var | Default | Notes |
 |-----|------|---------|---------|-------|
@@ -78,8 +79,11 @@ The known settings catalog is implemented in `claude_version_core::config_catalo
 | `theme` | String | — | `system` | UI theme: system/light/dark |
 | `hasCompletedOnboarding` | Bool | — | `false` | First-run onboarding flag |
 | `env.DISABLE_AUTOUPDATER` | String | — | — (absent) | Disable autoupdate via settings env block |
+| `autoUpdatesChannel` | String | — | — (absent) | Version lock Layer 6: pins the update channel while pinned |
+| `minimumVersion` | String | — | — (absent) | Version lock Layer 7: soft update floor set to the resolved pinned semver |
+| `env.DISABLE_UPDATES` | String | — | — (absent) | Version lock Layer 8: suppresses manual `claude update`, independent of `DISABLE_AUTOUPDATER` |
 
-**Known gap:** The catalog covers 7 of ~21 settings.json config keys. The following keys are MISSING from the catalog and therefore absent from `.config show-all` unless a user has written them to a config file:
+**Known gap:** The catalog covers 10 of ~21 settings.json config keys. The following keys are MISSING from the catalog and therefore absent from `.config show-all` unless a user has written them to a config file:
 
 | Missing key | Type | Default | CLI flag override |
 |-------------|------|---------|------------------|

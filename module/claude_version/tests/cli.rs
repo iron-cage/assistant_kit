@@ -112,3 +112,9 @@ mod kind_param_test;
 
 #[ path = "cli/runtime_files_test.rs" ]
 mod runtime_files_test;
+
+#[ path = "cli/paths_test.rs" ]
+mod paths_test;
+
+#[ path = "cli/path_key_test.rs" ]
+mod path_key_test;

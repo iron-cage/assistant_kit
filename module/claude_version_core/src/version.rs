@@ -5,7 +5,7 @@
 
 use claude_core::ClaudePaths;
 use claude_core::process::find_claude_processes;
-use crate::settings_io::{ get_setting, set_setting, set_env_var, remove_env_var };
+use crate::settings_io::{ get_setting, set_setting, remove_setting, set_env_var, remove_env_var };
 use crate::CoreError;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -77,8 +77,8 @@ pub fn extract_semver( raw : &str ) -> &str
 #[ must_use ]
 pub fn get_version_from_symlink() -> Option< String >
 {
-  let home = std::env::var( "HOME" ).ok().filter( | h | !h.is_empty() )?;
-  let link = format!( "{home}/.local/bin/claude" );
+  std::env::var( "HOME" ).ok().filter( | h | !h.is_empty() )?;
+  let link = binary_symlink_path();
   let target = std::fs::read_link( &link ).ok()?;
   let name = target.file_name()?.to_str()?;
   if !name.is_empty() && name.chars().all( | c | c.is_ascii_digit() || c == '.' )
@@ -184,11 +184,7 @@ pub fn hot_swap_binary()
   .ok()
   .filter( | o | o.status.success() )
   .map_or_else(
-    ||
-    {
-      let home = std::env::var( "HOME" ).unwrap_or_default();
-      format!( "{home}/.local/bin/claude" )
-    },
+    binary_symlink_path,
     | o | String::from_utf8_lossy( &o.stdout ).trim().to_string(),
   );
 
@@ -205,6 +201,24 @@ pub fn versions_dir_path() -> String
 {
   let home = std::env::var( "HOME" ).unwrap_or_default();
   format!( "{home}/.local/share/claude/versions" )
+}
+
+/// Return the path to the `~/.local/bin/claude` hot-swap symlink.
+#[ inline ]
+#[ must_use ]
+pub fn binary_symlink_path() -> String
+{
+  let home = std::env::var( "HOME" ).unwrap_or_default();
+  format!( "{home}/.local/bin/claude" )
+}
+
+/// Return the path to the `~/.claude/.transient/version_history_cache.json` cache file.
+#[ inline ]
+#[ must_use ]
+pub fn version_history_cache_path() -> String
+{
+  let home = std::env::var( "HOME" ).unwrap_or_default();
+  format!( "{home}/.claude/.transient/version_history_cache.json" )
 }
 
 /// Purge all cached binaries from `versions_dir` except `keep`.
@@ -247,11 +261,15 @@ pub fn unlock_versions_dir()
 
 /// Apply version lock (pinned) or unlock (latest) after a successful install.
 ///
-/// Sets or removes `env.DISABLE_AUTOUPDATER` and updates `autoUpdates` in
-/// `~/.claude/settings.json`. For pinned versions, also `chmod 555` the
-/// versions directory to prevent silent auto-updates.
+/// Sets or removes 5 self-service bypass vectors in `~/.claude/settings.json`:
+/// `autoUpdates`, `env.DISABLE_AUTOUPDATER`, `autoUpdatesChannel`,
+/// `minimumVersion`, `env.DISABLE_UPDATES`. For pinned versions, also
+/// `chmod 555` the versions directory to prevent silent auto-updates.
+///
+/// `resolved` is the resolved semver string written to `minimumVersion` for
+/// pinned installs; ignored when `is_latest` is `true`.
 #[ inline ]
-pub fn lock_version( is_latest : bool )
+pub fn lock_version( is_latest : bool, resolved : &str )
 {
   if let Some( paths ) = ClaudePaths::new()
   {
@@ -267,10 +285,16 @@ pub fn lock_version( is_latest : bool )
     if is_latest
     {
       let _ = remove_env_var( &settings_file, "DISABLE_AUTOUPDATER" );
+      let _ = remove_env_var( &settings_file, "DISABLE_UPDATES" );
+      let _ = remove_setting( &settings_file, "autoUpdatesChannel" );
+      let _ = remove_setting( &settings_file, "minimumVersion" );
     }
     else
     {
       let _ = set_env_var( &settings_file, "DISABLE_AUTOUPDATER", "1" );
+      let _ = set_env_var( &settings_file, "DISABLE_UPDATES", "1" );
+      let _ = set_setting( &settings_file, "autoUpdatesChannel", "stable" );
+      let _ = set_setting( &settings_file, "minimumVersion", resolved );
     }
   }
 
@@ -331,7 +355,7 @@ pub fn perform_install( resolved : &str, is_latest : bool ) -> Result< (), CoreE
   {
     purge_stale_versions( &versions_dir_path(), resolved );
   }
-  lock_version( is_latest );
+  lock_version( is_latest, resolved );
   Ok( () )
 }
 

@@ -5,7 +5,7 @@
 - **Purpose**: Ensure all `.json` files written by `clp` are human-readable and diff-friendly.
 - **Responsibility**: Documents the 2-space pretty-print + trailing-newline requirement for every `serde_json` file write across `claude_profile_core` and its test infrastructure.
 - **In Scope**: All `std::fs::write` / `std::fs::rename` calls that produce `.json` files — credential snapshots (`{name}.json`), `~/.claude.json`, `~/.claude/settings.json`.
-- **Out of Scope**: In-memory serialization for HTTP request bodies; hand-rolled formatters (e.g., `json_serialize_flat_object` in `settings_io.rs` already produces pretty output).
+- **Out of Scope**: In-memory serialization for HTTP request bodies; hand-rolled formatters (e.g., `json_serialize_flat_object` in `claude_core/src/settings_io.rs` already produces pretty output).
 
 ### Invariant Statement
 
@@ -19,7 +19,7 @@ Expected result: no matches.
 
 **Guarantee:** All `.json` files on disk are multi-line, 2-space-indented, and end with a single newline — consistent with `git diff` line-diff expectations and manual readability.
 
-**Known exceptions:** `json_serialize_flat_object` in `module/claude_version_core/src/settings_io.rs` uses a hand-rolled formatter (single-level object, `"{\n  key: val,\n  ...\n}"`). This already produces pretty output and is exempt from the `to_string_pretty` rule.
+**Known exceptions:** `json_serialize_flat_object` in `module/claude_core/src/settings_io.rs` uses a hand-rolled formatter (single-level object, `"{\n  key: val,\n  ...\n}"`). This already produces pretty output and is exempt from the `to_string_pretty` rule.
 
 ### Enforcement Mechanism
 
@@ -41,7 +41,7 @@ Expected result: no matches.
 | File | Relationship |
 |------|-------------|
 | `module/claude_profile_core/src/account.rs` | 10 JSON write sites requiring `to_string_pretty` |
-| `module/claude_version_core/src/settings_io.rs` | `json_serialize_flat_object` — hand-rolled pretty formatter; permitted exception |
+| `module/claude_core/src/settings_io.rs` | `json_serialize_flat_object` — hand-rolled pretty formatter; permitted exception |
 
 ### Features
 

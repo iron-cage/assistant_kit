@@ -24,7 +24,7 @@ clv.paths key::Settings              # error: case-sensitive
 
 | # | Command | Via Parameter |
 |---|---------|--------------|
-| 1 | [`.paths`](../command/paths.md#command--16-paths) | `key::` |
+| 1 | [`.paths`](../command/paths.md#command-16-paths) | `key::` |
 
 ### Referenced Parameters
 

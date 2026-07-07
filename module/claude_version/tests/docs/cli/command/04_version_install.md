@@ -4,7 +4,7 @@
 
 - **Purpose**: Integration test cases for the `.version.install` command.
 - **Responsibility**: Test factor analysis, case index, and expected behavior for version installation.
-- **In Scope**: Version aliases, semver validation, dry-run, force, idempotency, 5-layer lock.
+- **In Scope**: Version aliases, semver validation, dry-run, force, idempotency, 8-layer lock.
 - **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`).
 
 Integration test planning for the `.version.install` command. See [command/readme.md](../../../../docs/cli/command/readme.md) for specification.
@@ -58,7 +58,7 @@ Boundary set: `0.0.0`, `latest`, two-part, leading-zeros.
 
 | Version type | Lock behavior | Description |
 |-------------|---------------|-------------|
-| pinned alias / semver | autoUpdates=false, DISABLE_AUTOUPDATER=1, chmod 555, purge stale binaries, store preferredVersionSpec/Resolved | 5-layer lock |
+| pinned alias / semver | autoUpdates=false, DISABLE_AUTOUPDATER=1, chmod 555, purge stale binaries, store preferredVersionSpec/Resolved, autoUpdatesChannel=stable, minimumVersion=resolved, DISABLE_UPDATES=1 | 8-layer lock |
 | `latest` | autoUpdates=true, remove DISABLE_AUTOUPDATER, chmod 755 | Unlock |
 
 ### Factor 6: Preference storage
@@ -161,8 +161,8 @@ IT-19 verifies dry-run has zero side effects on settings.
 
 | Scenario | Lock Status | Test |
 |----------|-------------|------|
-| pinned semver (2.1.50) | 5-layer lock | IT-15, IT-21 (layers 1–4), IT-18 (layer 5) |
-| stable alias | 5-layer lock | IT-14, IT-21 (layers 1–4), IT-18 (layer 5) |
+| pinned semver (2.1.50) | 8-layer lock | IT-15, IT-21 (layers 1–4), IT-18 (layer 5) |
+| stable alias | 8-layer lock | IT-14, IT-21 (layers 1–4), IT-18 (layer 5) |
 | latest alias | Remove all locks | IT-13, IT-16 |
 
 ### Preference Storage Coverage (FR-17)
@@ -353,7 +353,7 @@ IT-19 verifies dry-run has zero side effects on settings.
 
 - **Given:** clean environment
 - **When:** `clv .version.install version::2.1.50 dry::1`
-- **Then:** exit 0; preview shows lock action; semver triggers 5-layer lock
+- **Then:** exit 0; preview shows lock action; semver triggers 8-layer lock
 - **Exit:** 0
 - **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
 
@@ -413,7 +413,7 @@ IT-19 verifies dry-run has zero side effects on settings.
 
 - **Given:** clean environment
 - **When:** `clv .version.install version::stable dry::1`
-- **Then:** exit 0; stdout includes a purge/cleanup step (layer 4 of 5-layer lock)
+- **Then:** exit 0; stdout includes a purge/cleanup step (layer 4 of 8-layer lock)
 - **Exit:** 0
 - **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
 
