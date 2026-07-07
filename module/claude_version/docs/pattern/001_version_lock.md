@@ -107,7 +107,7 @@ This repo's lock additionally applies enforcement with no official upstream equi
 | File | Relationship |
 |------|-------------|
 | `../../../claude_version_core/src/version.rs` | Lock application: `perform_install()` calls `lock_version()` |
-| `../../../claude_version_core/src/settings_io.rs` | `settings.json` read/write primitives used by layers 1, 2, 5, 6, 7, 8 |
+| `../../../claude_core/src/settings_io.rs` | `settings.json` read/write primitives used by layers 1, 2, 5, 6, 7, 8 |
 
 ### Provenance
 
