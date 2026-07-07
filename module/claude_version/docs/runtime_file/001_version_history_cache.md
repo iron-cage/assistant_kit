@@ -46,3 +46,4 @@ A missing or corrupt cache file causes one additional GitHub API call on the nex
 |------|-------------|
 | [feature/001_version_management.md](../feature/001_version_management.md) | `.version.history` command that reads and writes this cache |
 | [feature/008_runtime_file_discovery.md](../feature/008_runtime_file_discovery.md) | `.runtime_files` command that enumerates this path |
+| [feature/009_path_discovery.md](../feature/009_path_discovery.md) | `.paths` command that reports this path |

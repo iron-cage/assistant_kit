@@ -60,6 +60,8 @@ Optional `version::SPEC` overrides the stored preference for a single invocation
 | File | Relationship |
 |------|-------------|
 | [runtime_file/001_version_history_cache.md](../runtime_file/001_version_history_cache.md) | Cache file written by .version.history |
+| [runtime_file/002_versions_directory.md](../runtime_file/002_versions_directory.md) | Directory created/purged/locked by .version.install and .version.guard |
+| [runtime_file/003_binary_symlink.md](../runtime_file/003_binary_symlink.md) | Symlink retargeted by .version.install and .version.guard |
 
 ### Patterns
 

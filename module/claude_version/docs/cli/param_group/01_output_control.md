@@ -42,6 +42,7 @@ clv .processes format::json v::2
 | 10 | [`.version.history`](../command/version.md#command-12-versionhistory) | Full | — |
 | 11 | [`.config`](../command/config.md#command-13-config) | Partial | `count::` |
 | 12 | [`.params`](../command/params.md#command-14-params) | Partial | `count::` |
+| 13 | [`.paths`](../command/paths.md#command--16-paths) | Partial | `count::` |
 
 ### Referenced Parameters
 
@@ -62,3 +63,4 @@ clv .processes format::json v::2
 | 5 | [005 Version Pinning](../user_story/005_version_pinning.md) | Team lead (version pinning) |
 | 6 | [006 Config Management](../user_story/006_config_management.md) | Developer (config management) |
 | 7 | [007 Params Inspection](../user_story/007_params_inspection.md) | Developer (config inspector) |
+| 8 | [008 Path Discovery](../user_story/008_path_discovery.md) | Developer (path discovery and scripting) |
