@@ -301,8 +301,7 @@ fn atomic_write( path : &Path, content : &str ) -> Result< (), io::Error >
 ///
 /// # Errors
 ///
-/// Returns `Err(InvalidData)` if `src` is not a well-formed flat JSON object
-/// (missing surrounding braces, an unquoted key, or a missing `:` after a key).
+/// Returns `Err(InvalidData)` if `src` is not a well-formed flat JSON object.
 #[ inline ]
 pub fn json_parse_flat_object( src : &str ) -> Result< Vec< ( String, String, StoredAs ) >, io::Error >
 {
