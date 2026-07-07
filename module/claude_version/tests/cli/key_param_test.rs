@@ -71,7 +71,7 @@ fn key_ec7_key_with_spaces_behavior()
   );
   assert_exit( &get_out, 0 );
   let text = stdout( &get_out );
-  assert!( text.contains( "x" ), "key 'a b c' round-trip must return x: {text}" );
+  assert!( text.contains( 'x' ), "key 'a b c' round-trip must return x: {text}" );
 }
 
 /// EC-8: `key::foo.bar` (dot in key name) → stored and retrieved as given

@@ -206,8 +206,10 @@ pub fn run_isolated
 
 /// Read `subprocess_model` from `~/.clr/prefs.json`, if present and non-empty.
 ///
-/// Returns `Some(id)` when a pinned model is stored; `None` when the file is
-/// absent, unreadable, or the key is missing or empty.  Called by
+/// Returns `Some(id)` when a pinned model is stored as a JSON string; `None`
+/// when the file is absent, unreadable, or the key is missing, empty, or not
+/// a JSON string (a number/bool/null/object/array is treated as "no
+/// preference" rather than coerced to a string).  Called by
 /// `run_isolated_ext()` to override `IsolatedModel::Default` without requiring
 /// the caller to read prefs directly.
 #[ cfg( feature = "enabled" ) ]
@@ -215,38 +217,12 @@ pub fn run_isolated
 #[ inline ]
 pub fn read_subprocess_model_pref() -> Option< String >
 {
-  let home      = std::env::var( "HOME" ).ok()?;
-  let prefs     = std::path::Path::new( &home ).join( ".clr" ).join( "prefs.json" );
-  let content   = std::fs::read_to_string( prefs ).ok()?;
-  // Locate "subprocess_model" key at a JSON key boundary (preceded by `{` or `,`).
-  // A boundary check prevents false matches when the key name appears inside a value.
-  let key     = "\"subprocess_model\"";
-  let key_pos =
-  {
-    let mut found = None;
-    let mut start = 0usize;
-    while let Some( rel ) = content[ start.. ].find( key )
-    {
-      let abs = start + rel;
-      if content[ ..abs ].trim_end().ends_with( ['{', ','] )
-      {
-        found = Some( abs );
-        break;
-      }
-      start = abs + key.len();
-      if start >= content.len() { break; }
-    }
-    found
-  }?;
-  let after_key = &content[ key_pos + key.len().. ];
-  let colon_pos = after_key.find( ':' )?;
-  let after_colon = after_key[ colon_pos + 1.. ].trim_start();
-  if !after_colon.starts_with( '"' ) { return None; }
-  let inner     = &after_colon[ 1.. ];
-  let end_quote = inner.find( '"' )?;
-  let value     = &inner[ ..end_quote ];
-  if value.is_empty() { return None; }
-  Some( value.to_string() )
+  let home  = std::env::var( "HOME" ).ok()?;
+  let prefs = std::path::Path::new( &home ).join( ".clr" ).join( "prefs.json" );
+  claude_core::settings_io::get_string_setting( &prefs, "subprocess_model" )
+    .ok()
+    .flatten()
+    .filter( |v| !v.is_empty() )
 }
 
 /// Spawn Claude in an isolated `HOME` with an explicit compact-window override.
