@@ -493,6 +493,7 @@ fn test_quota_text_cells_five_hour_none_shows_dash()
   );
 }
 
+// BUG-331 — this test covers the exact-integer threshold boundary but not floating-point-noise-perturbed near-boundary values (raw-vs-rounded mismatch)
 /// FT-11 of feature/009 — per-column emoji prefix in `5h Left` cell values.
 ///
 /// `quota_text_cells` must attach `🟢` prefix when `5h_left` > 15%, `🟡` when ≤ 15%.

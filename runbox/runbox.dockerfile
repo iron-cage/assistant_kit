@@ -143,9 +143,6 @@ FROM chef AS planner
 ARG WORKSPACE_DIR=/workspace
 WORKDIR $WORKSPACE_DIR
 COPY . .
-# cli_fmt is a co-developed companion crate injected via --build-context cli_fmt.
-# Cargo resolves path = "../../wtools/dev/module/core/cli_fmt" from /workspace/ → /wtools/dev/module/core/cli_fmt.
-COPY --from=cli_fmt . /wtools/dev/module/core/cli_fmt/
 RUN cargo chef prepare --recipe-path recipe.json
 
 # ── Stage 2: cook — compiles dependencies ─────────────────────────────────────
@@ -172,9 +169,6 @@ ARG WORKSPACE_DIR=/workspace
 ARG CMD_SCOPE=--workspace
 WORKDIR $WORKSPACE_DIR
 COPY --from=planner $WORKSPACE_DIR/recipe.json recipe.json
-# cli_fmt is a co-developed companion crate injected via --build-context cli_fmt.
-# Cargo resolves path = "../../wtools/dev/module/core/cli_fmt" from /workspace/ → /wtools/dev/module/core/cli_fmt.
-COPY --from=cli_fmt . /wtools/dev/module/core/cli_fmt/
 # Fix(BUG-workspace-chmod-copyup): chmod folded into the same layer that creates
 # target/'s contents.  Overlayfs copy-up only triggers when a LATER layer
 # metadata-changes a file that already exists in an EARLIER, committed layer — setting
@@ -255,9 +249,6 @@ COPY --from=cook $WORKSPACE_DIR/target     $WORKSPACE_DIR/target
 
 # Full workspace source (includes test_script paths invoked by cmd_test).
 COPY . .
-# cli_fmt is a co-developed companion crate injected via --build-context cli_fmt.
-# Cargo resolves path = "../../wtools/dev/module/core/cli_fmt" from /workspace/ → /wtools/dev/module/core/cli_fmt.
-COPY --from=cli_fmt . /wtools/dev/module/core/cli_fmt/
 
 # Populate the full workspace dep registry so nextest can run `cargo metadata --offline`
 # without network access.  The cook stage only compiles deps for CMD_SCOPE (e.g.
