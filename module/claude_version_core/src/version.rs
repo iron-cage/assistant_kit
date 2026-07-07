@@ -178,6 +178,7 @@ pub fn validate_version_spec( spec : &str ) -> Result< (), CoreError >
 #[ inline ]
 pub fn hot_swap_binary()
 {
+  eprintln!( "hot_swap_binary()" );
   let claude_path = std::process::Command::new( "which" )
   .arg( "claude" )
   .output()
@@ -201,6 +202,68 @@ pub fn versions_dir_path() -> String
 {
   let home = std::env::var( "HOME" ).unwrap_or_default();
   format!( "{home}/.local/share/claude/versions" )
+}
+
+/// The current filesystem lock state of the versions directory, inferred
+/// from its `chmod` mode.
+#[ derive( Debug, Clone, Copy, PartialEq, Eq ) ]
+pub enum VersionsDirLockMode
+{
+  /// Mode `555` (read + execute only) — matches a pinned install.
+  Locked,
+  /// Mode `755` (read + write + execute) — matches an unpinned (`latest`) install.
+  Unlocked,
+  /// Directory absent, or mode neither `555` nor `755`.
+  Unknown,
+}
+
+impl core::fmt::Display for VersionsDirLockMode
+{
+  #[ inline ]
+  fn fmt( &self, f : &mut core::fmt::Formatter< '_ > ) -> core::fmt::Result
+  {
+    f.write_str( match self
+    {
+      Self::Locked   => "555",
+      Self::Unlocked => "755",
+      Self::Unknown  => "unknown",
+    } )
+  }
+}
+
+/// Read the current `chmod` mode of the versions directory.
+///
+/// Read-only — performs no mutation, so it is NOT one of the 10 traced
+/// mutating functions (see `docs/pattern/002_parameter_trace.md`).
+#[ inline ]
+#[ must_use ]
+#[ cfg( unix ) ]
+pub fn read_versions_dir_lock_mode() -> VersionsDirLockMode
+{
+  use std::os::unix::fs::PermissionsExt;
+  let dir = versions_dir_path();
+  match std::fs::metadata( &dir )
+  {
+    Ok( meta ) => match meta.permissions().mode() & 0o777
+    {
+      0o555 => VersionsDirLockMode::Locked,
+      0o755 => VersionsDirLockMode::Unlocked,
+      _     => VersionsDirLockMode::Unknown,
+    },
+    Err( _ ) => VersionsDirLockMode::Unknown,
+  }
+}
+
+/// Read the current `chmod` mode of the versions directory.
+///
+/// Non-Unix fallback: file mode bits are not available, so this always
+/// reports `Unknown`.
+#[ inline ]
+#[ must_use ]
+#[ cfg( not( unix ) ) ]
+pub fn read_versions_dir_lock_mode() -> VersionsDirLockMode
+{
+  VersionsDirLockMode::Unknown
 }
 
 /// Return the path to the `~/.local/bin/claude` hot-swap symlink.
@@ -235,6 +298,7 @@ pub fn version_history_cache_path() -> String
 #[ inline ]
 pub fn purge_stale_versions( versions_dir : &str, keep : &str )
 {
+  eprintln!( "purge_stale_versions(versions_dir={versions_dir:?}, keep={keep:?})" );
   let Ok( entries ) = std::fs::read_dir( versions_dir ) else { return; };
   for entry in entries.flatten()
   {
@@ -250,6 +314,7 @@ pub fn purge_stale_versions( versions_dir : &str, keep : &str )
 #[ inline ]
 pub fn unlock_versions_dir()
 {
+  eprintln!( "unlock_versions_dir()" );
   let dir = versions_dir_path();
   if std::path::Path::new( &dir ).exists()
   {
@@ -271,6 +336,7 @@ pub fn unlock_versions_dir()
 #[ inline ]
 pub fn lock_version( is_latest : bool, resolved : &str )
 {
+  eprintln!( "lock_version(is_latest={is_latest}, resolved={resolved:?})" );
   if let Some( paths ) = ClaudePaths::new()
   {
     let settings_file = paths.settings_file();
@@ -324,6 +390,7 @@ pub fn lock_version( is_latest : bool, resolved : &str )
 #[ inline ]
 pub fn perform_install( resolved : &str, is_latest : bool ) -> Result< (), CoreError >
 {
+  eprintln!( "perform_install(resolved={resolved:?}, is_latest={is_latest})" );
   if !find_claude_processes().is_empty()
   {
     hot_swap_binary();
@@ -392,6 +459,7 @@ pub fn read_preferred_version() -> Option< ( String, Option< String > ) >
 #[ inline ]
 pub fn store_preferred_version( spec : &str, resolved : &str, is_latest : bool ) -> Result< (), CoreError >
 {
+  eprintln!( "store_preferred_version(spec={spec:?}, resolved={resolved:?}, is_latest={is_latest})" );
   let paths = ClaudePaths::new().ok_or_else( ||
     CoreError::ProcessError( "HOME environment variable not set".to_string() )
   )?;

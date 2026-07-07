@@ -4,7 +4,7 @@
 
 - **Purpose**: Integration test cases for the `.status` command.
 - **Responsibility**: Test factor analysis, case index, and expected behavior for status output.
-- **In Scope**: Verbosity levels, output formats, PATH/HOME scenarios, degradation semantics.
+- **In Scope**: Verbosity levels, output formats, PATH/HOME scenarios, degradation semantics, lock-state compliance visibility.
 - **Out of Scope**: Parameter edge cases (→ `../param/`), group interactions (→ `../param_group/`).
 
 Integration test planning for the `.status` command. See [command/readme.md](../../../../docs/cli/command/readme.md) for specification.
@@ -63,6 +63,15 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 | none | No unknown params | Happy path |
 | present | e.g. `bogus::x` | Invalid: exit 1 |
 
+### Factor 7: Lock-state compliance (State, visible at `v::2`+ text or any `format::json`)
+
+| Level | Description | Equivalence Class |
+|-------|-------------|-------------------|
+| pinned, compliant | All 5 settings keys + `chmod` match pinned expectation | No mismatch |
+| pinned, `chmod` drifted | Versions dir mode is `755` instead of the pinned `555` | Mismatch flagged |
+| pinned, `autoUpdates` drifted | Value is `true` instead of the pinned `false` | Mismatch flagged |
+| unpinned, compliant | No pin keys set, `chmod` is `755` | No mismatch |
+
 ---
 
 ## Test Matrix
@@ -80,22 +89,29 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 | IT-7 | `.status` HOME not set → account "unknown", no crash | P | 0 | F4=empty | [read_status_test.rs] |
 | IT-8 | `.status` with no preference → no "Preferred" line | P | 0 | F5=absent | [read_status_test.rs] |
 | IT-9 | `.status` with preference → shows "Preferred" line | P | 0 | F5=set | [read_status_test.rs] |
+| IT-13 | `.status v::2` pinned, all compliant → `Lock:` section, no mismatch | P | 0 | F7=pinned compliant | [read_status_test.rs] |
+| IT-14 | `.status v::2` pinned, `chmod` drifted → mismatch flagged | P | 0 | F7=chmod drifted | [read_status_test.rs] |
+| IT-15 | `.status v::2` pinned, `autoUpdates` drifted → mismatch flagged | P | 0 | F7=autoUpdates drifted | [read_status_test.rs] |
+| IT-16 | `.status v::2` unpinned, compliant → `Lock:` section, no mismatch | P | 0 | F7=unpinned compliant | [read_status_test.rs] |
+| IT-17 | `.status v::0`/`v::1` output unchanged by the Lock: feature | P | 0 | F1=0,1 | [read_status_test.rs] |
+| IT-18 | `.status format::json` pinned, compliant → `"lock"` object present | P | 0 | F2=json, F7=pinned compliant | [read_status_test.rs] |
 
 ### Negative Tests
 
 | TC | Description | P/N | Exit | Factors | Source |
 |----|-------------|-----|------|---------|--------|
 | IT-10 | `.status format::xml` → exit 1 | N | 1 | F2=xml | new |
-| IT-11 | `.status v::3` → exit 1, out of range | N | 1 | F1=3 | new |
+| IT-11 | `.status v::3` → exit 1, out of range | N | 1 | F1=3 | [read_status_test.rs] |
 | IT-12 | `.status bogus::x` → exit 1 | N | 1 | F6=present | new |
+| IT-19 | `.status v::3` → exit 1 (Task 314 regression check; same requirement as IT-11, verified independently as part of the Lock-state visibility feature's no-regression scope) | N | 1 | F1=3 | [read_status_test.rs] |
 
 ### Summary
 
-- **Total:** 12 tests (9 positive, 3 negative)
-- **Negative ratio:** 25.0% (command-specific only) — below ≥40% threshold; 4 additional cross-cutting tests in `read_status_test.rs` also apply to `.status` among other commands: 3 negative (`tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`) and 1 positive (`tc245_last_occurrence_wins_for_verbosity` — exit 0, verifies last-`v::`-wins precedence, not an error case)
+- **Total:** 19 tests (15 positive, 4 negative)
+- **Negative ratio:** 21.1% (command-specific only) — below ≥40% threshold; 4 additional cross-cutting tests in `read_status_test.rs` also apply to `.status` among other commands: 3 negative (`tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`) and 1 positive (`tc245_last_occurrence_wins_for_verbosity` — exit 0, verifies last-`v::`-wins precedence, not an error case)
 - **Existing cross-cutting negatives applying to `.status`:** `tc242` (`format::xml`), `tc243` (`format::JSON`), `tc244` (`format::`)
-- **Combined negative count (command-specific + cross-cutting):** 6/16 = 37.5% ❌ (below ≥40% threshold; informational metric only, not a blocking gate for this spec)
-- **TC range:** IT-1 to IT-12
+- **Combined negative count (command-specific + cross-cutting):** 7/23 = 30.4% ❌ (below ≥40% threshold; informational metric only, not a blocking gate for this spec)
+- **TC range:** IT-1 to IT-19
 
 ---
 
@@ -105,8 +121,8 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success (always — .status never errors) | IT-1 through IT-7, IT-8, IT-9 |
-| 1 | Invalid arguments | IT-10 through IT-12 |
+| 0 | Success (always — .status never errors) | IT-1 through IT-9, IT-13 through IT-18 |
+| 1 | Invalid arguments | IT-10 through IT-12, IT-19 |
 | 2 | Not applicable (.status always exits 0 for any valid state) | — |
 
 ### Degradation Semantics
@@ -119,12 +135,13 @@ rather than exit 2. This is by design (FR-01: status is read-only, never fails).
 
 | Factor | Positive Coverage | Negative Coverage |
 |--------|-------------------|-------------------|
-| F1 (v::) | IT-3 (v=0), IT-4 (v=1), IT-1 (absent) | IT-11 (v::3) |
+| F1 (v::) | IT-3 (v=0), IT-4 (v=1), IT-1 (absent), IT-17 (v::0/1 unchanged) | IT-11, IT-19 (v::3) |
 | F2 (format) | IT-5 (json) | IT-10 (xml) |
 | F3 (PATH) | IT-1 (found), IT-2 (empty) | — |
 | F4 (HOME) | IT-1 (set), IT-7 (empty) | — |
 | F5 (preference) | IT-8 (absent), IT-9 (set) | — |
 | F6 (unknown params) | — | IT-12 |
+| F7 (lock-state) | IT-13 (pinned compliant), IT-14 (chmod drift), IT-15 (autoUpdates drift), IT-16 (unpinned compliant), IT-18 (json) | — |
 
 ---
 
@@ -228,6 +245,64 @@ rather than exit 2. This is by design (FR-01: status is read-only, never fails).
 
 ---
 
+### IT-13: Pinned, all compliant → `Lock:` section, no mismatch
+
+- **Given:** `HOME=<tmp>`; `settings.json` has all 5 pin keys (`preferredVersionSpec`, `preferredVersionResolved`, `autoUpdates=false`, `autoUpdatesChannel=stable`, `minimumVersion`, nested `env.DISABLE_AUTOUPDATER=1`/`env.DISABLE_UPDATES=1`); versions dir `chmod 555`.
+- **When:** `clv .status v::2`
+- **Then:** exit 0; output contains `Lock:` and all 6 keys (5 settings + `chmod`); no `MISMATCH` marker
+
+---
+
+### IT-14: Pinned, `chmod` drifted → mismatch flagged
+
+- **Given:** Same as IT-13 but versions dir is `chmod 755` (should be `555`).
+- **When:** `clv .status v::2`
+- **Then:** exit 0; the `chmod` row shows actual `755`, expected `555`, and `MISMATCH`
+
+---
+
+### IT-15: Pinned, `autoUpdates` drifted → mismatch flagged
+
+- **Given:** Same as IT-13 but `autoUpdates=true` (should be `false`).
+- **When:** `clv .status v::2`
+- **Then:** exit 0; the `autoUpdates` row shows `MISMATCH`
+
+---
+
+### IT-16: Unpinned, compliant → `Lock:` section, no mismatch
+
+- **Given:** `HOME=<tmp>` with empty settings (no preference stored); versions dir `chmod 755`.
+- **When:** `clv .status v::2`
+- **Then:** exit 0; output contains `Lock:`; no `MISMATCH` marker
+
+---
+
+### IT-17: `v::0`/`v::1` output unchanged by the Lock: feature
+
+- **Given:** `HOME=<tmp>` with empty settings.
+- **When:** `clv .status v::0` and `clv .status v::1`
+- **Then:** exit 0 for both; neither contains `Lock:`; `v::0` still exactly 3 lines; `v::1` still shows `Version:`/`Processes:`/`Account:` labels
+
+---
+
+### IT-18: `format::json` pinned, compliant → `"lock"` object present
+
+- **Given:** Same fixture as IT-13.
+- **When:** `clv .status format::json`
+- **Then:** exit 0; JSON contains a `"lock"` object with all 6 keys, each entry showing `"compliant":true`
+
+---
+
+### IT-19: `v::3` → exit 1 (Task 314 regression check)
+
+Same requirement as IT-11 (F1's out-of-range boundary), verified independently as part of Task 314's own no-regression scope for the Lock-state visibility feature — the Lock: section is only reachable at `v::2`+, so Task 314 needed its own confirmation that `v::3` still rejects rather than silently falling into the same catch-all branch as `v::2`.
+
+- **Given:** clean environment
+- **When:** `clv .status v::3`
+- **Then:** exit 1; out-of-range verbosity rejected
+
+---
+
 ### Source Functions
 
 | Function | File |
@@ -242,3 +317,10 @@ rather than exit 2. This is by design (FR-01: status is read-only, never fails).
 | `tc419_status_no_preference_no_preferred_line` | `tests/cli/read_status_test.rs` |
 | `tc420_status_with_preference_shows_preferred` | `tests/cli/read_status_test.rs` |
 | `tc255_status_v0_fewer_lines_than_v1` | `tests/cli/cross_cutting_test.rs` |
+| `tc515_status_lock_pinned_all_compliant` | `tests/cli/read_status_test.rs` |
+| `tc516_status_lock_chmod_drift_flagged` | `tests/cli/read_status_test.rs` |
+| `tc517_status_lock_autoupdates_drift_flagged` | `tests/cli/read_status_test.rs` |
+| `tc518_status_lock_unpinned_all_compliant` | `tests/cli/read_status_test.rs` |
+| `tc519_status_v0_v1_unchanged_by_lock_feature` | `tests/cli/read_status_test.rs` |
+| `tc520_status_v3_out_of_range_exits_1` | `tests/cli/read_status_test.rs` |
+| `tc521_status_lock_json_object_present` | `tests/cli/read_status_test.rs` |
