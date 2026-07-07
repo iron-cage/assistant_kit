@@ -5,7 +5,7 @@
 - **Purpose**: FT- test cases for version install, guard, history, and alias resolution.
 - **Responsibility**: Acceptance criteria verifying version alias resolution, idempotency, guard defaults, and preferred version persistence.
 - **In Scope**: `.version.install`, `.version.guard`, alias resolution (stable/month/latest), idempotency, preference persistence.
-- **Out of Scope**: 5-layer version lock (-> `../../pattern/01_version_lock.md`), dry-run semantics (-> `04_dry_run.md`).
+- **Out of Scope**: 8-layer version lock (-> `../../pattern/01_version_lock.md`), dry-run semantics (-> `04_dry_run.md`).
 
 Feature test surface for version management. See [feature/001_version_management.md](../../../docs/feature/001_version_management.md) for specification.
 
