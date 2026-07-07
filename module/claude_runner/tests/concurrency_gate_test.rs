@@ -1045,7 +1045,8 @@ fn t14_reclaim_race_admits_at_most_one_caller_for_a_dead_owners_slot()
 /// `[lost reservation race]` / `[at capacity]` cause suffix derived from that
 /// same boolean — after, not within, the pre-existing `"{count}/{max}
 /// sessions active; waiting ..."` text, so the literal substring every prior
-/// assertion (T01, T04, `config_file_test.rs` ×5) depends on is unchanged.
+/// assertion depends on is unchanged: T01/T04 (positive) and T02/T03/T06
+/// (negative-absence) here, plus 5 positive sites in `config_file_test.rs`.
 ///
 /// ## Prevention
 /// Any diagnostic message built from a compound admission condition's shared
@@ -1091,7 +1092,7 @@ fn t15_slot_wait_message_distinguishes_race_loss_from_exhaustion()
   // reservation index; the loser's message prints immediately (no delay before
   // the first poll's eprintln). 2s is a generous margin before either racer
   // could reach CLR_GATE_MAX_ATTEMPTS=5's own timeout/retry path.
-  std::thread::sleep( core::time::Duration::from_millis( 2000 ) );
+  std::thread::sleep( core::time::Duration::from_secs( 2 ) );
   let _ = racer_a.kill();
   let _ = racer_b.kill();
   let out_a = racer_a.wait_with_output().expect( "reap racer a" );

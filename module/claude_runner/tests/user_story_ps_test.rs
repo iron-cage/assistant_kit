@@ -1,6 +1,6 @@
 //! User-story-level integration tests for `clr ps` (Session Listing).
 //!
-//! Test spec: [`tests/docs/cli/user_story/26_session_listing.md`](docs/cli/user_story/26_session_listing.md).
+//! Test spec: [`tests/docs/cli/user_story/026_session_listing.md`](docs/cli/user_story/026_session_listing.md).
 //!
 //! # Test Case Index
 //!
@@ -15,6 +15,14 @@
 //! | US-7 | Active table caption: `Active Sessions` + interactive/print breakdown | AC-010  |
 //! | US-8 | `clr ps --help` → exit 0, stdout contains help text  | AC-011  |
 //! | US-9 | Active sessions ordered oldest-first (row #1 = longest elapsed) | AC-012 |
+//! | US-10 | `--mode print` filters to print-mode sessions only | AC-013 |
+//! | US-11 | `--mode bogus` exits 1 with error message | AC-014 |
+//! | US-12 | `--columns pid,path,task` shows PID, Absolute Path, Task | AC-015 |
+//! | US-13 | `--columns bogus` exits 1 with error listing valid keys | AC-016 |
+//! | US-14 | `--wide` shows all 11 columns including Mode, Command, Binary | AC-017 |
+//! | US-15 | `--wide --columns pid,task` → only PID and Task visible | AC-018 |
+//! | US-16 | `CLR_PS_MODE=print` env var shows only print-mode sessions | AC-019 |
+//! | US-17 | `CLR_PS_COLUMNS=pid,elapsed` env var shows PID and Elapsed only | AC-020 |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
