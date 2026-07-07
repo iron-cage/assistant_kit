@@ -32,7 +32,7 @@ The `versions/` directory is subject to chmod-based version locking (layer 3 of 
 
 Before any install, layer 3 is always unlocked (`chmod 755`) so the installer can write. After install, it is re-locked if a pinned version is configured.
 
-See [`../settings/003_version_lock.md`](../settings/003_version_lock.md) for the full 3-layer version lock protocol.
+See [`../settings/003_version_lock.md`](../settings/003_version_lock.md) for the full 6-layer version lock protocol.
 
 ### Since
 
@@ -43,6 +43,6 @@ pre-v1.0 (unverified)
 | Type | File | Responsibility |
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Filesystem master index: full directory tree, path reference table |
-| settings | [`../settings/003_version_lock.md`](../settings/003_version_lock.md) | Version lock: all 3 layers including this chmod layer |
+| settings | [`../settings/003_version_lock.md`](../settings/003_version_lock.md) | Version lock: all 6 layers including this chmod layer |
 | source | `../../../../module/claude_version_core/src/version.rs` | `hot_swap_binary()`, `versions_dir_path()` |
 | doc | `../../../../module/claude_version/docs/feature/001_version_management.md` | Version management feature doc |
