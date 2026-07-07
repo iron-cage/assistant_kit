@@ -92,9 +92,9 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 ### Summary
 
 - **Total:** 12 tests (9 positive, 3 negative)
-- **Negative ratio:** 25.0% — below ≥40% threshold; covered by cross-cutting `tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`, `tc245_last_occurrence_wins_for_verbosity` in `read_status_test.rs` which apply to `.status` among other commands
-- **Existing cross-cutting negatives applying to `.status`:** `tc242` (`format::xml`), `tc243` (`format::JSON`), `tc244` (`format::`), `tc245` (`v::` duplication)
-- **Combined negative count (command-specific + cross-cutting):** 7/16 = 43.8% ✅
+- **Negative ratio:** 25.0% (command-specific only) — below ≥40% threshold; 4 additional cross-cutting tests in `read_status_test.rs` also apply to `.status` among other commands: 3 negative (`tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`) and 1 positive (`tc245_last_occurrence_wins_for_verbosity` — exit 0, verifies last-`v::`-wins precedence, not an error case)
+- **Existing cross-cutting negatives applying to `.status`:** `tc242` (`format::xml`), `tc243` (`format::JSON`), `tc244` (`format::`)
+- **Combined negative count (command-specific + cross-cutting):** 6/16 = 37.5% ❌ (below ≥40% threshold; informational metric only, not a blocking gate for this spec)
 - **TC range:** IT-1 to IT-12
 
 ---

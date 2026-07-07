@@ -11,9 +11,9 @@ Range 0–2 with different semantics from claude_runner's 0–5 range.
 - **Base type:** u8
 - **Constraints:** 0 to 2
 - **Default:** 1 (normal)
-- **Validation errors:**
-  - Non-integer: `"verbosity must be 0, 1, or 2, got: '{raw}'"`
-  - Out of range: `"verbosity out of range: {n} (max 2)"`
+- **Validation errors** (`{key}` is whichever alias was used — `v` or `verbosity` — always followed by `::`, per `normalise_verbosity()`):
+  - Non-integer: `"{key}:: must be 0, 1, or 2, got: '{raw}'"`
+  - Out of range: `"{key}:: out of range: {n} (max 2)"`
 
 **Level Semantics:**
 
