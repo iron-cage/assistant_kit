@@ -60,6 +60,10 @@ Fits quadratic `u = a0 + a1*t + a2*t^2` via normal equations. Uses Cramer's rule
 
 Up to 10 measurements per account stored in `{name}.json → history` array. New measurements appended; oldest discarded when count exceeds 10. See [schema/002](../schema/002_account_json.md).
 
+#### Downstream Rounding-Boundary Hazard (BUG-331)
+
+The raw `f64` percentage this algorithm produces — particularly via `quadratic_fit()`'s least-squares arithmetic, which can differ from the "true" flat value by as little as the 13th-14th significant decimal digit — feeds directly into downstream classification logic (`pct_emoji`, `apply_model_override`) that compares the raw value against an exact-integer threshold while separately rounding that same value for display or trace logging. When the raw noise lands within the rounding half-interval of such a threshold, two accounts with visually identical rounded percentages can receive different classifications (colors, override branches). This algorithm is not itself defective — the noise is an expected consequence of least-squares fitting — but it is the confirmed noise source for BUG-331. See [011_rounding_boundary_classification_hazards.md](011_rounding_boundary_classification_hazards.md) for the affected downstream functions, and [invariant/010_floating_point_comparison_vs_display_consistency.md](../invariant/010_floating_point_comparison_vs_display_consistency.md) for the formal consistency invariant they must satisfy.
+
 ### Features
 
 | File | Relationship |
