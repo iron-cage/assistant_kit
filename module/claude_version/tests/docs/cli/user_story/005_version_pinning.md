@@ -58,7 +58,7 @@ Acceptance tests for User Story 005. See [user_story/005_version_pinning.md](../
 
 - **Given:** Claude Code installed; monthly baseline version available
 - **When:** `clv .version.install version::month`
-- **Then:** exit 0; monthly version installed; 5-layer version lock applied
+- **Then:** exit 0; monthly version installed; 8-layer version lock applied
 - **Exit:** 0
 - **Source:** [user_story/005 -- AC bullet 3](../../../../docs/cli/user_story/005_version_pinning.md)
 
