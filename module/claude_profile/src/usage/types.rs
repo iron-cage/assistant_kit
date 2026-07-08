@@ -79,7 +79,7 @@ pub struct ColsVisibility
   pub h5_reset     : bool,
   /// `7d Left` weekly quota remaining (default ON).
   pub d7_left      : bool,
-  /// `7d(Son)` Sonnet-only weekly quota remaining (default ON).
+  /// `7d(Son)` Sonnet-only weekly quota remaining (default OFF).
   pub d7_son       : bool,
   /// `7d Reset` weekly reset countdown (default ON).
   pub d7_reset     : bool,
@@ -97,6 +97,13 @@ pub struct ColsVisibility
 
 impl ColsVisibility
 {
+  // Fix(BUG-334): d7_son defaulted to true, but seven_day_sonnet has been universally None
+  //   for every account since Anthropic's 2026-06-25 API restructuring, so the 7d(Son) column
+  //   always rendered blank.
+  //   Root cause: default visibility was never re-audited after the underlying data source
+  //   was deprecated by the upstream API change.
+  //   Pitfall: do not flip this back to true unless Anthropic restores the underlying field —
+  //   re-enable per-invocation via `cols::+7d_son` instead.
   pub fn default_set() -> Self
   {
     Self
@@ -108,7 +115,7 @@ impl ColsVisibility
       h5_left      : true,
       h5_reset     : true,
       d7_left      : true,
-      d7_son       : true,
+      d7_son       : false,
       d7_reset     : true,
       d7_son_reset : false,
       host         : false,
@@ -199,6 +206,27 @@ pub struct AccountQuota
   pub is_owned              : bool,
   /// Raw owner identity string from `{name}.json`; empty when unset.
   pub owner                 : String,
+}
+
+impl AccountQuota
+{
+  // Fix(BUG-332): render.rs/render_tsv.rs independently re-derived `billing_type == "none"` as
+  //   a "no active subscription" proxy without the `result.is_err()` conjunct that fetch.rs:255
+  //   (BUG-236/TSK-242) already requires — live non-Stripe accounts with `result=Ok(...)` and a
+  //   real renewal date incorrectly showed "—" at all 3 render-layer sites.
+  //   Root cause: 3 call sites duplicated the literal condition instead of sharing one predicate
+  //   with the fetch layer's guarantee.
+  //   Pitfall: any future "no active subscription" check must call this method, not re-derive
+  //   the literal `billing_type == "none"` condition — that silently drops the `result.is_err()`
+  //   conjunct and regresses BUG-332.
+  /// `true` when the account has no active subscription: `billing_type == "none"` AND the
+  /// quota fetch itself failed. Both conjuncts are required — `billing_type == "none"` alone
+  /// does not imply "no active subscription" when a live quota fetch succeeded.
+  #[ must_use ]
+  pub fn is_no_subscription( &self ) -> bool
+  {
+    self.account.as_ref().is_some_and( |a| a.billing_type == "none" ) && self.result.is_err()
+  }
 }
 
 // ── Command handler ────────────────────────────────────────────────────────────

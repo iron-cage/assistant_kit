@@ -180,4 +180,4 @@ Test-injection override for user-level discovery only — mirrors the existing `
 
 | File | Relationship |
 |------|--------------|
-| `../../tests/config_file_test.rs` | T01–T12: precedence (CLI/JSON/env/config/default), project-over-user, `CLR_CONFIG_DIR` scope, malformed TOML, unknown key, dry-run reflection |
+| `../../tests/config_file_test.rs` | T01–T15: precedence (CLI/JSON/env/config/default), project-over-user, `CLR_CONFIG_DIR` scope, malformed TOML, unknown key, dry-run reflection, invalid `output_style`/`journal`/`summary_fields` rejection |

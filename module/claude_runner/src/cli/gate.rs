@@ -155,6 +155,25 @@ fn reclaim_test_delay()
   }
 }
 
+// Test-only injection point, same idiom as reclaim_test_delay() above: force
+// the ticket-win branch's tmp-claim to fail exactly once, deterministically
+// simulating a transient fs fault (disk full, permission race, etc.) on a
+// caller that has just won a reclaim ticket — used by the BUG-405 regression
+// test to prove the self-collision fix (see acquire_slot() below) survives a
+// real forced failure. One-shot: the SAME process's later retries (same
+// pid/since, per wait_for_session_slot()'s fixed binding across polling
+// attempts) see the fault has cleared, matching a real transient fault's
+// lifecycle. Unset (production default): never forces failure.
+static FORCE_TMP_CLAIM_FAIL_ARMED : core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new( true );
+fn force_tmp_claim_fail_once() -> bool
+{
+  if std::env::var( "CLR_GATE_FORCE_TMP_CLAIM_FAIL_ONCE" ).is_err()
+  {
+    return false;
+  }
+  FORCE_TMP_CLAIM_FAIL_ARMED.swap( false, core::sync::atomic::Ordering::SeqCst )
+}
+
 // Fix(BUG-392): atomic ticket-arbitrated handoff for the dead-owner reclaim branch.
 //
 // Root cause: the prior reclaim sequence — read_slot_owner() -> remove_file() ->
@@ -209,29 +228,6 @@ fn reclaim_test_delay()
 // are not the same fact, even though both currently collapse to a
 // `false`-shaped non-admission — collapsing them erases information the
 // caller needs to build an accurate diagnostic (see wait_for_session_slot()).
-// Fix(BUG-402): a pre-existing ticket is not necessarily a live contender —
-// it may be orphaned by a PREVIOUS ticket-winner that crashed after winning
-// the ticket's create_new() here but before completing its own rename()
-// below. The prior code treated every non-empty ticket as "someone else is
-// racing me right now," with no liveness recheck on the ticket's own
-// claimant, so an orphaned ticket denied every future caller identically,
-// forever.
-// Root cause: the ticket file is (by design — see Pitfall above) never
-// cleaned up, but nothing ever re-examined whether ITS claimant was still
-// alive the way the original slot owner already was. A dead ticket
-// claimant is exactly as reclaimable as a dead slot owner, but the code
-// never asked the question.
-// Pitfall: this fix closes the single-crash scenario BUG-402 reports. It
-// does NOT protect against a second crash during the takeover attempt
-// itself — seeing this SAME situation recur one level down is a
-// structurally identical permanent block, not something the outer poll
-// loop in wait_for_session_slot() bounds or resolves (a fresh call
-// re-executes this identical single-level check and dead-ends identically
-// against an orphaned takeover marker, forever). Accepted as a probability
-// reduction — now requires two independent crashes on the same index
-// instead of one — not a structural close; see BUG-402's `## Fix Location`
-// for the bounded chain-chase alternative this deliberately defers, and why
-// (no occurrence of the compounding case has ever been observed).
 enum SlotDenialCause
 {
   /// The recorded owner of this index is alive — no reservation was
@@ -241,17 +237,67 @@ enum SlotDenialCause
   /// The recorded owner was dead, but another concurrent caller won the
   /// atomic reclaim-ticket race for this same index first.
   LostReclaimRace,
-  /// Fix(BUG-402): the ticket's own recorded claimant was ALSO dead (the
-  /// ticket was orphaned by a prior crash), but another concurrent caller
-  /// won the atomic takeover race for that orphaned ticket first. Kept
-  /// distinct from `LostReclaimRace` rather than reused for it: collapsing
-  /// a first-level ticket race and a second-level takeover-of-an-orphan
-  /// race into identical operator-facing text would repeat the exact
-  /// mistake BUG-396 was filed to fix, even though both are mechanically
-  /// races — see the doc comment above `acquire_slot()`'s reclaim branch.
-  LostTakeoverRace,
 }
 
+// Fix(BUG-402): walk the reclaim-ticket chain instead of treating a single
+// existing ticket as permanent defeat.
+//
+// Root cause: the original single-shot check — claim_slot_file( &ticket )
+// fails, therefore LostReclaimRace, unconditionally — conflated "another
+// caller is actively reclaiming this slot right now" with "a previous
+// reclaimer won this exact ticket and then died before completing its
+// rename". Per the BUG-392 Pitfall above, the ticket file is permanent by
+// design, so once any reclaimer crashes between winning its ticket and
+// renaming, every later caller observes an occupied ticket forever —
+// acquire_slot() returned LostReclaimRace on every call, and nothing on
+// disk would ever change to make a later call succeed.
+// wait_for_session_slot()'s poll-and-retry tail cannot recover from a
+// deterministically-repeating denial; it only helps when the blocking
+// condition can plausibly clear between polls.
+//
+// Fix: when a ticket's own recorded claimant is also dead, that claimant
+// never reached rename() — the slot record is unchanged and the slot is
+// genuinely still up for grabs. Advance to the NEXT ticket, keyed by the
+// dead claimant's own (pid, since), and retry the identical atomic
+// create_new() arbitration. Every concurrent caller that observes the same
+// dead claimant computes the identical next-generation ticket path, so
+// exactly one of them wins it — the single-winner invariant BUG-392
+// established for the first generation holds at every generation the loop
+// walks. The loop can only advance as many times as there are pre-existing
+// dead-claimant ticket files already on disk for this index — a finite,
+// already-written chain — so it always terminates.
+//
+// Pitfall: re-check the slot's CURRENT owner (not just the ticket
+// claimant's liveness) before advancing generations. A concurrent caller
+// can win an earlier generation and complete its rename while this call is
+// still walking the chain; once that happens the slot legitimately belongs
+// to someone new and this call must report HeldByLive, not keep chasing a
+// chain that no longer leads anywhere.
+//
+// Fix(BUG-405): a caller that wins its own reclaim ticket but then fails to
+// complete admission must not permanently self-deny on retry.
+//
+// Root cause: the ticket-win branch below returned LostReclaimRace on tmp-
+// claim or rename failure without removing the ticket it had just won.
+// Since pid/since are fixed for this caller's entire wait_for_session_slot()
+// call (never reset across polling attempts), the next retry recomputes the
+// identical ticket path, finds it already claimed by ITSELF, reads back its
+// own (pid, since) as next_claimant, and pid_alive() reports true — a
+// caller can never lose a fair race to its own still-running self, so every
+// subsequent retry repeats the identical false denial forever, for that
+// specific slot index.
+//
+// Fix: remove the ticket on both non-admission paths (tmp-claim failure,
+// rename failure) before returning LostReclaimRace, so the next retry
+// re-contends this same generation fresh instead of reading back its own
+// abandoned claim.
+//
+// Pitfall: distinct from the Fix(BUG-392) Pitfall above — that pitfall
+// concerns cleanup after a SUCCESSFUL rename (removing it there could let a
+// later, unrelated generation collide with a recycled PID/timestamp key);
+// this cleanup only fires when the winner is confirmed to have never
+// completed admission, so no legitimate holder's ticket is ever disturbed
+// and the permanent-retention guarantee for SUCCESSFUL claims is unchanged.
 fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (), SlotDenialCause >
 {
   let path = slot_path( dir, index );
@@ -277,54 +323,50 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (
     return Err( SlotDenialCause::HeldByLive );
   }
   reclaim_test_delay();
-  let ticket = dir.join( format!( "reclaim_{index}_{owner}_{owner_since}.lock" ) );
-  if !claim_slot_file( &ticket, pid, since )
+  let mut ticket_owner = owner;
+  let mut ticket_since = owner_since;
+  loop
   {
-    // Fix(BUG-402): the ticket already exists — but that no longer means an
-    // unconditional loss. Check the ticket's OWN recorded claimant's
-    // liveness first, exactly as already done for the original slot owner
-    // above, instead of assuming every pre-existing ticket means a live
-    // contender.
-    let Some( ( ticket_claimant, ticket_claimant_since ) ) = read_slot_owner_record( &ticket )
+    let ticket = dir.join( format!( "reclaim_{index}_{ticket_owner}_{ticket_since}.lock" ) );
+    if claim_slot_file( &ticket, pid, since )
+    {
+      let tmp = dir.join( format!( "reclaim_tmp_{index}_{pid}" ) );
+      if force_tmp_claim_fail_once() || !claim_slot_file( &tmp, pid, since )
+      {
+        let _ = std::fs::remove_file( &ticket );
+        return Err( SlotDenialCause::LostReclaimRace );
+      }
+      return if std::fs::rename( &tmp, &path ).is_ok()
+      {
+        Ok( () )
+      }
+      else
+      {
+        let _ = std::fs::remove_file( &tmp );
+        let _ = std::fs::remove_file( &ticket );
+        Err( SlotDenialCause::LostReclaimRace )
+      };
+    }
+    let Some( ( next_claimant, next_claimant_since ) ) = read_slot_owner_record( &ticket )
     else
     {
-      // Mirrors the None-handling above: the only way this path exists but
-      // fails to parse is that some OTHER caller's claim_slot_file() just
-      // won create_new() on it and hasn't finished writing yet — definitely
-      // alive right now, same reasoning as the original owner's None case.
-      return Err( SlotDenialCause::HeldByLive );
+      return Err( SlotDenialCause::LostReclaimRace );
     };
-    if pid_alive( ticket_claimant )
+    if pid_alive( next_claimant )
     {
       return Err( SlotDenialCause::LostReclaimRace );
     }
-    // The ticket's own claimant is dead: it was orphaned by a crash between
-    // winning the ticket and completing rename() below. Atomically claim
-    // ONE additional takeover marker, keyed off the ticket's own (dead)
-    // claimant identity so every racer observing the same orphaned ticket
-    // computes the identical takeover path — the same create_new
-    // arbitration already used for the ticket itself decides exactly one
-    // successor, which then proceeds through the unchanged tmp+rename tail
-    // below.
-    let takeover = dir.join( format!( "reclaim_takeover_{index}_{ticket_claimant}_{ticket_claimant_since}.lock" ) );
-    if !claim_slot_file( &takeover, pid, since )
+    let Some( ( current_owner, _ ) ) = read_slot_owner_record( &path )
+    else
     {
-      return Err( SlotDenialCause::LostTakeoverRace );
+      return Err( SlotDenialCause::HeldByLive );
+    };
+    if current_owner != owner
+    {
+      return Err( SlotDenialCause::HeldByLive );
     }
-  }
-  let tmp = dir.join( format!( "reclaim_tmp_{index}_{pid}" ) );
-  if !claim_slot_file( &tmp, pid, since )
-  {
-    return Err( SlotDenialCause::LostReclaimRace );
-  }
-  if std::fs::rename( &tmp, &path ).is_ok()
-  {
-    Ok( () )
-  }
-  else
-  {
-    let _ = std::fs::remove_file( &tmp );
-    Err( SlotDenialCause::LostReclaimRace )
+    ticket_owner = next_claimant;
+    ticket_since = next_claimant_since;
   }
 }
 
@@ -431,7 +473,38 @@ pub( super ) fn wait_for_session_slot(
       // A losing race falls through to the existing wait-and-retry tail below,
       // exactly as the old `count >= max` case already did.
       let has_capacity = count_u32 < max;
-      let claim = if has_capacity { Some( acquire_slot( &dir, count_u32, pid, since ) ) } else { None };
+      // Fix(BUG-404): a denial at the single count-derived index does NOT mean
+      // no index anywhere is available — count_u32 is just the live process
+      // count, unrelated to which of the 0..max slot indices are actually
+      // free or dead-and-reclaimable at this instant. Try count_u32 first
+      // (preserves BUG-387's shared-stale-count arbitration for the common
+      // contested-same-index case — concurrent racers observing the same
+      // stale count still contend for the same primary index first), then
+      // fall back to every other index in 0..max before giving up on this
+      // attempt.
+      // Root cause: wait_for_session_slot() computed and tried exactly one
+      // candidate index per attempt; a live (even perfectly healthy) owner at
+      // that one index starved the waiter even while other indices sat
+      // completely free or dead — confirmed empirically in production (4 of 6
+      // real /tmp/clr-gate slots dead-and-untried during a live user report).
+      // Pitfall: each acquire_slot() call is independently atomic
+      // (create_new); trying several within one attempt introduces no new
+      // race — it only widens which single index this attempt can land on.
+      let claim = if has_capacity
+      {
+        let mut result = acquire_slot( &dir, count_u32, pid, since );
+        if result.is_err()
+        {
+          for candidate in 0..max
+          {
+            if candidate == count_u32 { continue; }
+            result = acquire_slot( &dir, candidate, pid, since );
+            if result.is_ok() { break; }
+          }
+        }
+        Some( result )
+      }
+      else { None };
       if let Some( Ok( () ) ) = claim
       {
         // Emit GateWait event if we actually waited at least one poll cycle.
@@ -500,16 +573,10 @@ pub( super ) fn wait_for_session_slot(
         // inside it — every prior assertion pattern-matching that substring
         // (5 sites here: T01/T04 positive, T02/T03/T06 negative-absence; 5 more
         // positive sites in config_file_test.rs) depends on it staying intact.
-        // Fix(BUG-402): LostTakeoverRace gets its own arm rather than
-        // reusing LostReclaimRace's text — collapsing a first-level ticket
-        // race and a second-level takeover-of-an-orphan race into identical
-        // operator-facing text would repeat this exact section's own BUG-396
-        // lesson, even though both are mechanically races.
         let cause = match claim
         {
           Some( Err( SlotDenialCause::HeldByLive ) )        => "slot held by another session",
           Some( Err( SlotDenialCause::LostReclaimRace ) )   => "lost reservation race",
-          Some( Err( SlotDenialCause::LostTakeoverRace ) )  => "lost takeover race",
           // None: has_capacity was false. Some(Ok(())): unreachable — the
           // admitted branch already returned above — but required for
           // match exhaustiveness, so it shares the "at capacity" arm rather
