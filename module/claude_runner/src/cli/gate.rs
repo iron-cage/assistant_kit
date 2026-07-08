@@ -155,6 +155,25 @@ fn reclaim_test_delay()
   }
 }
 
+// Test-only injection point, same idiom as reclaim_test_delay() above: force
+// the ticket-win branch's tmp-claim to fail exactly once, deterministically
+// simulating a transient fs fault (disk full, permission race, etc.) on a
+// caller that has just won a reclaim ticket — used by the BUG-405 regression
+// test to prove the self-collision fix (see acquire_slot() below) survives a
+// real forced failure. One-shot: the SAME process's later retries (same
+// pid/since, per wait_for_session_slot()'s fixed binding across polling
+// attempts) see the fault has cleared, matching a real transient fault's
+// lifecycle. Unset (production default): never forces failure.
+static FORCE_TMP_CLAIM_FAIL_ARMED : core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new( true );
+fn force_tmp_claim_fail_once() -> bool
+{
+  if std::env::var( "CLR_GATE_FORCE_TMP_CLAIM_FAIL_ONCE" ).is_err()
+  {
+    return false;
+  }
+  FORCE_TMP_CLAIM_FAIL_ARMED.swap( false, core::sync::atomic::Ordering::SeqCst )
+}
+
 // Fix(BUG-392): atomic ticket-arbitrated handoff for the dead-owner reclaim branch.
 //
 // Root cause: the prior reclaim sequence — read_slot_owner() -> remove_file() ->
@@ -254,6 +273,31 @@ enum SlotDenialCause
 // still walking the chain; once that happens the slot legitimately belongs
 // to someone new and this call must report HeldByLive, not keep chasing a
 // chain that no longer leads anywhere.
+//
+// Fix(BUG-405): a caller that wins its own reclaim ticket but then fails to
+// complete admission must not permanently self-deny on retry.
+//
+// Root cause: the ticket-win branch below returned LostReclaimRace on tmp-
+// claim or rename failure without removing the ticket it had just won.
+// Since pid/since are fixed for this caller's entire wait_for_session_slot()
+// call (never reset across polling attempts), the next retry recomputes the
+// identical ticket path, finds it already claimed by ITSELF, reads back its
+// own (pid, since) as next_claimant, and pid_alive() reports true — a
+// caller can never lose a fair race to its own still-running self, so every
+// subsequent retry repeats the identical false denial forever, for that
+// specific slot index.
+//
+// Fix: remove the ticket on both non-admission paths (tmp-claim failure,
+// rename failure) before returning LostReclaimRace, so the next retry
+// re-contends this same generation fresh instead of reading back its own
+// abandoned claim.
+//
+// Pitfall: distinct from the Fix(BUG-392) Pitfall above — that pitfall
+// concerns cleanup after a SUCCESSFUL rename (removing it there could let a
+// later, unrelated generation collide with a recycled PID/timestamp key);
+// this cleanup only fires when the winner is confirmed to have never
+// completed admission, so no legitimate holder's ticket is ever disturbed
+// and the permanent-retention guarantee for SUCCESSFUL claims is unchanged.
 fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (), SlotDenialCause >
 {
   let path = slot_path( dir, index );
@@ -287,8 +331,9 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (
     if claim_slot_file( &ticket, pid, since )
     {
       let tmp = dir.join( format!( "reclaim_tmp_{index}_{pid}" ) );
-      if !claim_slot_file( &tmp, pid, since )
+      if force_tmp_claim_fail_once() || !claim_slot_file( &tmp, pid, since )
       {
+        let _ = std::fs::remove_file( &ticket );
         return Err( SlotDenialCause::LostReclaimRace );
       }
       return if std::fs::rename( &tmp, &path ).is_ok()
@@ -298,6 +343,7 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (
       else
       {
         let _ = std::fs::remove_file( &tmp );
+        let _ = std::fs::remove_file( &ticket );
         Err( SlotDenialCause::LostReclaimRace )
       };
     }
