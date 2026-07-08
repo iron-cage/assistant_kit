@@ -22,6 +22,7 @@
 //! | T14 | N concurrent live `clr` invocations racing a single pre-seeded dead-owner slot → peak concurrently-admitted children never exceeds 1 (BUG-392) | — |
 //! | T15 | 2 racers, `--max-sessions 1`, 0 pre-existing occupiers → loser's wait message names "slot held by another session", not "at capacity" or a reclaim race (BUG-393/BUG-396) | — |
 //! | T16 | 2 racers, `--max-sessions 1`, pre-seeded confirmed-dead owner → loser's wait message names "lost reservation race", not "at capacity" or a live hold (BUG-396) | — |
+//! | T17 | pre-seeded dead-owner slot + its own orphaned reclaim ticket (ticket's recorded claimant also dead), single caller, no live contender → still admitted promptly, not permanently blocked (BUG-402) | — |
 //!
 //! T05 (`clr --help` shows `default: 6`) is covered by
 //! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_six`.
@@ -1250,5 +1251,99 @@ fn t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner()
     "T16 (BUG-396): neither racer should report capacity exhaustion — \
      has_capacity is true for both throughout. stderr_a:\n{stderr_a}\n\
      stderr_b:\n{stderr_b}"
+  );
+}
+
+// ── T17: an orphaned reclaim ticket must not permanently block the slot (BUG-402) ──
+
+/// T17 (BUG-402): pre-seeds `gate_dir` with a dead-owner slot file AND its exact
+/// reclaim ticket already on disk, keyed and content-shaped exactly as
+/// `acquire_slot()` would have left it had a PREVIOUS ticket-winner crashed after
+/// winning the ticket's `create_new()` but before completing `rename()` onto the
+/// slot path — the ticket's own recorded claimant (`dead_claimant_pid`) is a
+/// second, independently confirmed-dead PID, distinct from the slot's recorded
+/// owner (`dead_owner_pid`). `CLR_PROC_DIR` stays empty for the whole run (0
+/// counted occupiers), so the single `clr` invocation below always targets index
+/// 0. Bounds the wait via a small `CLR_GATE_MAX_ATTEMPTS`/`CLR_GATE_POLL_SECS`
+/// pair plus `--retry-override 0` (mirroring T09), so this test fails fast
+/// rather than hanging if the bug reproduces.
+///
+/// Asserts the invocation is admitted (exit 0 — the fake `claude` script's own
+/// exit code) instead of exhausting the gate-wait budget and exiting 1 with
+/// "session gate timed out" — the permanent-block symptom BUG-402 describes.
+/// Current `acquire_slot()` (`src/cli/gate.rs`) has no liveness recheck on the
+/// ticket's own claimant, so this reproduces the bug as written: this test is
+/// expected to FAIL until that gap is fixed.
+///
+/// Bug file: `task/claude_runner/402_orphaned_reclaim_ticket_permanent_slot_block.md`.
+// test_kind: bug_reproducer(BUG-402)
+#[ test ]
+fn t17_orphaned_reclaim_ticket_does_not_permanently_block_slot()
+{
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers throughout
+
+  // Two distinct, confirmed-dead PIDs — one for the slot's recorded owner, one
+  // for the reclaim ticket's recorded claimant — mirroring T14/T16's spawn+reap
+  // pattern so /proc/{pid} is genuinely absent for both, not a made-up number.
+  let mut dead_owner = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
+  let dead_owner_pid = dead_owner.id();
+  let _ = dead_owner.wait();
+
+  let mut dead_claimant = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
+  let dead_claimant_pid = dead_claimant.id();
+  let _ = dead_claimant.wait();
+
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{dead_owner_pid},"since":0}}"# ),
+  ).expect( "pre-seed dead-owner slot file" );
+
+  // The orphaned reclaim ticket: exactly the file acquire_slot() would have left
+  // behind had dead_claimant_pid won the ticket's create_new() and then crashed
+  // before rename() — keyed by (index=0, dead_owner_pid, owner_since=0), matching
+  // acquire_slot()'s own `reclaim_{index}_{owner}_{owner_since}.lock` naming.
+  std::fs::write(
+    gate_dir.path().join( format!( "reclaim_0_{dead_owner_pid}_0.lock" ) ),
+    format!( r#"{{"pid":{dead_claimant_pid},"since":0}}"# ),
+  ).expect( "pre-seed orphaned reclaim ticket" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+
+  assert!(
+    exited.is_some(),
+    "T17 (BUG-402): clr must exit within 10s — still running past the 2-attempt, \
+     1s-poll gate budget means the process is stuck outside the gate-wait loop \
+     entirely. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 0 ),
+    "T17 (BUG-402): a fresh caller must still acquire slot 0 promptly when the only \
+     obstruction is an ORPHANED reclaim ticket (its own recorded claimant is also \
+     dead, not a live contender) — acquire_slot() must not treat a pre-existing \
+     ticket as \"lost the race to a live reclaimer\" forever. Got exit {:?}, stderr:\n{stderr}",
+    exited.and_then( |s| s.code() )
+  );
+  assert!(
+    !stderr.contains( "session gate timed out" ),
+    "T17 (BUG-402): must not exhaust the gate-wait budget — stderr:\n{stderr}"
   );
 }
