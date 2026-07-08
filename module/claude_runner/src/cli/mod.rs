@@ -172,8 +172,8 @@ fn resolve_journal_dir( journal_dir : Option< &str > ) -> std::path::PathBuf
 /// The directory is created if it does not exist. I/O errors during directory creation are
 /// silently ignored — journaling is best-effort and must not abort the runner.
 pub( super ) fn resolve_journal_writer(
-  journal     : Option< &str >,
-  journal_dir : Option< &str >,
+  journal     : Option< &str >,   // journal level; "off" disables journaling entirely
+  journal_dir : Option< &str >,   // --journal-dir override; falls back to CLR_JOURNAL_DIR then ~/.clr/journal/
 ) -> Option< claude_journal::JournalWriter >
 {
   let level = journal.unwrap_or( "full" );

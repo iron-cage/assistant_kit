@@ -220,6 +220,40 @@ enum SlotDenialCause
   LostReclaimRace,
 }
 
+// Fix(BUG-402): walk the reclaim-ticket chain instead of treating a single
+// existing ticket as permanent defeat.
+//
+// Root cause: the original single-shot check — claim_slot_file( &ticket )
+// fails, therefore LostReclaimRace, unconditionally — conflated "another
+// caller is actively reclaiming this slot right now" with "a previous
+// reclaimer won this exact ticket and then died before completing its
+// rename". Per the BUG-392 Pitfall above, the ticket file is permanent by
+// design, so once any reclaimer crashes between winning its ticket and
+// renaming, every later caller observes an occupied ticket forever —
+// acquire_slot() returned LostReclaimRace on every call, and nothing on
+// disk would ever change to make a later call succeed.
+// wait_for_session_slot()'s poll-and-retry tail cannot recover from a
+// deterministically-repeating denial; it only helps when the blocking
+// condition can plausibly clear between polls.
+//
+// Fix: when a ticket's own recorded claimant is also dead, that claimant
+// never reached rename() — the slot record is unchanged and the slot is
+// genuinely still up for grabs. Advance to the NEXT ticket, keyed by the
+// dead claimant's own (pid, since), and retry the identical atomic
+// create_new() arbitration. Every concurrent caller that observes the same
+// dead claimant computes the identical next-generation ticket path, so
+// exactly one of them wins it — the single-winner invariant BUG-392
+// established for the first generation holds at every generation the loop
+// walks. The loop can only advance as many times as there are pre-existing
+// dead-claimant ticket files already on disk for this index — a finite,
+// already-written chain — so it always terminates.
+//
+// Pitfall: re-check the slot's CURRENT owner (not just the ticket
+// claimant's liveness) before advancing generations. A concurrent caller
+// can win an earlier generation and complete its rename while this call is
+// still walking the chain; once that happens the slot legitimately belongs
+// to someone new and this call must report HeldByLive, not keep chasing a
+// chain that no longer leads anywhere.
 fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (), SlotDenialCause >
 {
   let path = slot_path( dir, index );
@@ -245,24 +279,48 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (
     return Err( SlotDenialCause::HeldByLive );
   }
   reclaim_test_delay();
-  let ticket = dir.join( format!( "reclaim_{index}_{owner}_{owner_since}.lock" ) );
-  if !claim_slot_file( &ticket, pid, since )
+  let mut ticket_owner = owner;
+  let mut ticket_since = owner_since;
+  loop
   {
-    return Err( SlotDenialCause::LostReclaimRace );
-  }
-  let tmp = dir.join( format!( "reclaim_tmp_{index}_{pid}" ) );
-  if !claim_slot_file( &tmp, pid, since )
-  {
-    return Err( SlotDenialCause::LostReclaimRace );
-  }
-  if std::fs::rename( &tmp, &path ).is_ok()
-  {
-    Ok( () )
-  }
-  else
-  {
-    let _ = std::fs::remove_file( &tmp );
-    Err( SlotDenialCause::LostReclaimRace )
+    let ticket = dir.join( format!( "reclaim_{index}_{ticket_owner}_{ticket_since}.lock" ) );
+    if claim_slot_file( &ticket, pid, since )
+    {
+      let tmp = dir.join( format!( "reclaim_tmp_{index}_{pid}" ) );
+      if !claim_slot_file( &tmp, pid, since )
+      {
+        return Err( SlotDenialCause::LostReclaimRace );
+      }
+      return if std::fs::rename( &tmp, &path ).is_ok()
+      {
+        Ok( () )
+      }
+      else
+      {
+        let _ = std::fs::remove_file( &tmp );
+        Err( SlotDenialCause::LostReclaimRace )
+      };
+    }
+    let Some( ( next_claimant, next_claimant_since ) ) = read_slot_owner_record( &ticket )
+    else
+    {
+      return Err( SlotDenialCause::LostReclaimRace );
+    };
+    if pid_alive( next_claimant )
+    {
+      return Err( SlotDenialCause::LostReclaimRace );
+    }
+    let Some( ( current_owner, _ ) ) = read_slot_owner_record( &path )
+    else
+    {
+      return Err( SlotDenialCause::HeldByLive );
+    };
+    if current_owner != owner
+    {
+      return Err( SlotDenialCause::HeldByLive );
+    }
+    ticket_owner = next_claimant;
+    ticket_since = next_claimant_since;
   }
 }
 
@@ -369,7 +427,38 @@ pub( super ) fn wait_for_session_slot(
       // A losing race falls through to the existing wait-and-retry tail below,
       // exactly as the old `count >= max` case already did.
       let has_capacity = count_u32 < max;
-      let claim = if has_capacity { Some( acquire_slot( &dir, count_u32, pid, since ) ) } else { None };
+      // Fix(BUG-404): a denial at the single count-derived index does NOT mean
+      // no index anywhere is available — count_u32 is just the live process
+      // count, unrelated to which of the 0..max slot indices are actually
+      // free or dead-and-reclaimable at this instant. Try count_u32 first
+      // (preserves BUG-387's shared-stale-count arbitration for the common
+      // contested-same-index case — concurrent racers observing the same
+      // stale count still contend for the same primary index first), then
+      // fall back to every other index in 0..max before giving up on this
+      // attempt.
+      // Root cause: wait_for_session_slot() computed and tried exactly one
+      // candidate index per attempt; a live (even perfectly healthy) owner at
+      // that one index starved the waiter even while other indices sat
+      // completely free or dead — confirmed empirically in production (4 of 6
+      // real /tmp/clr-gate slots dead-and-untried during a live user report).
+      // Pitfall: each acquire_slot() call is independently atomic
+      // (create_new); trying several within one attempt introduces no new
+      // race — it only widens which single index this attempt can land on.
+      let claim = if has_capacity
+      {
+        let mut result = acquire_slot( &dir, count_u32, pid, since );
+        if result.is_err()
+        {
+          for candidate in 0..max
+          {
+            if candidate == count_u32 { continue; }
+            result = acquire_slot( &dir, candidate, pid, since );
+            if result.is_ok() { break; }
+          }
+        }
+        Some( result )
+      }
+      else { None };
       if let Some( Ok( () ) ) = claim
       {
         // Emit GateWait event if we actually waited at least one poll cycle.

@@ -80,26 +80,26 @@ fn emit_credential_trace
 #[ allow( clippy::too_many_arguments, clippy::fn_params_excessive_bools, clippy::too_many_lines ) ]
 pub( super ) fn run_isolated_command
 (
-  label             : &str,
-  creds_path        : &str,
-  timeout_secs      : u64,
-  trace             : bool,
-  dry_run           : bool,
-  no_compact_window : bool,
-  model             : IsolatedModel,
-  effort            : EffortLevel,
-  message           : Option< &str >,
-  passthrough_args  : &[ String ],
-  skip_perms        : bool,
-  no_chrome         : bool,
-  file_path         : Option< &str >,
-  expect            : Option< &str >,
-  expect_strategy   : Option< &str >,
-  journal           : Option< JournalWriter >,
-  output_file       : Option< &str >,
-  do_strip_fences   : bool,
-  output_style      : Option< &str >,
-  summary_fields    : Option< &str >,
+  label             : &str,                    // "isolated" or "refresh" — subcommand name for trace/error/journal text
+  creds_path        : &str,                    // credentials file path: read before run, written back after refresh
+  timeout_secs      : u64,                     // subprocess timeout in seconds
+  trace             : bool,                    // print diagnostic trace to stderr before running
+  dry_run           : bool,                    // print preview to stdout and exit 0 without running
+  no_compact_window : bool,                    // true disables the compact window (omits --compact-window)
+  model             : IsolatedModel,            // model to invoke; injects --model when specific
+  effort            : EffortLevel,              // injected as --effort <level>
+  message           : Option< &str >,           // injected as --print <message> when Some
+  passthrough_args  : &[ String ],              // appended after injected flags; can override via last-wins
+  skip_perms        : bool,                     // injects --dangerously-skip-permissions
+  no_chrome         : bool,                     // injects --no-chrome
+  file_path         : Option< &str >,           // when Some, routes through run_isolated_with_stdin_file
+  expect            : Option< &str >,           // --expect pattern validated against stdout on success
+  expect_strategy   : Option< &str >,           // mismatch handling: fail (default) / default:V / retry
+  journal           : Option< JournalWriter >,  // event log for the credential operation
+  output_file       : Option< &str >,           // optional path to also write stdout to
+  do_strip_fences   : bool,                     // strip markdown code fences from stdout before output
+  output_style      : Option< &str >,           // e.g. "summary" — post-processes stdout before printing
+  summary_fields    : Option< &str >,           // field list forwarded to summary rendering
 ) -> !
 {
   let compact_window : Option< u32 > = if no_compact_window { None } else { Some( DEFAULT_COMPACT_WINDOW ) };
@@ -233,7 +233,12 @@ pub( super ) fn run_isolated_command
 /// - `fail` (or no strategy) → exit 3.
 /// - `default:<V>` → print `<V>` to stdout, exit 0.
 /// - `retry` → exit 1 (explicitly unsupported for isolated's one-shot semantics).
-fn apply_isolated_expect( stdout : &str, expect : Option< &str >, strategy : Option< &str > ) -> String
+fn apply_isolated_expect
+(
+  stdout   : &str,             // subprocess stdout to validate and, on match, return unchanged
+  expect   : Option< &str >,   // pipe-separated pattern of accepted values; None skips validation
+  strategy : Option< &str >,   // mismatch handling: fail (default) / default:V / retry
+) -> String
 {
   let Some( pattern ) = expect else { return stdout.to_string(); };
   let allowed : Vec< String > = pattern.split( '|' )
@@ -277,12 +282,12 @@ fn apply_isolated_expect( stdout : &str, expect : Option< &str >, strategy : Opt
 #[ allow( clippy::too_many_lines ) ] // subprocess lifecycle — setup, spawn, drain, and cleanup steps cannot be split without losing clarity
 fn run_isolated_with_stdin_file
 (
-  credentials_json : &str,
-  args             : Vec< String >,
-  timeout_secs     : u64,
-  model            : IsolatedModel,
-  file_path        : &str,
-  compact_window   : Option< u32 >,
+  credentials_json : &str,             // credentials file contents written into the temp HOME
+  args             : Vec< String >,    // arg list assembled by the caller (model flag not yet included)
+  timeout_secs     : u64,              // subprocess timeout in seconds
+  model            : IsolatedModel,    // model whose --model flag (if any) is prepended to args
+  file_path        : &str,             // file piped as stdin to the subprocess
+  compact_window   : Option< u32 >,    // forwarded to with_compact_window() on the command
 ) -> Result< IsolatedRunResult, RunnerError >
 {
   use core::time::Duration;
@@ -436,12 +441,12 @@ fn run_isolated_with_stdin_file
 /// This function never returns; it always calls `std::process::exit`.
 pub( super ) fn run_refresh_command
 (
-  creds_path        : &str,
-  timeout_secs      : u64,
-  trace             : bool,
-  dry_run           : bool,
-  no_compact_window : bool,
-  journal           : Option< JournalWriter >,
+  creds_path        : &str,                     // credentials file path: read before run, written back after
+  timeout_secs      : u64,                       // subprocess timeout in seconds
+  trace             : bool,                      // print diagnostic trace to stderr before running
+  dry_run           : bool,                      // print preview to stdout and exit 0 without running
+  no_compact_window : bool,                      // true disables the compact window (omits --compact-window)
+  journal           : Option< JournalWriter >,   // event log for the credential operation
 ) -> !
 {
   run_isolated_command(

@@ -23,6 +23,7 @@
 //! | T15 | 2 racers, `--max-sessions 1`, 0 pre-existing occupiers → loser's wait message names "slot held by another session", not "at capacity" or a reclaim race (BUG-393/BUG-396) | — |
 //! | T16 | 2 racers, `--max-sessions 1`, pre-seeded confirmed-dead owner → loser's wait message names "lost reservation race", not "at capacity" or a live hold (BUG-396) | — |
 //! | T17 | pre-seeded dead-owner slot + its own orphaned reclaim ticket (ticket's recorded claimant also dead), single caller, no live contender → still admitted promptly, not permanently blocked (BUG-402) | — |
+//! | T18 | `--max-sessions 2`, count-derived index (1) pre-seeded genuinely `HeldByLive`, other index (0) left completely free → still admitted promptly via fallback scan, not gate-wait exhaustion (BUG-404) | — |
 //!
 //! T05 (`clr --help` shows `default: 6`) is covered by
 //! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_six`.
@@ -1266,14 +1267,56 @@ fn t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner()
 /// counted occupiers), so the single `clr` invocation below always targets index
 /// 0. Bounds the wait via a small `CLR_GATE_MAX_ATTEMPTS`/`CLR_GATE_POLL_SECS`
 /// pair plus `--retry-override 0` (mirroring T09), so this test fails fast
-/// rather than hanging if the bug reproduces.
+/// rather than hanging if the bug reproduces. Asserts the invocation is
+/// admitted (exit 0 — the fake `claude` script's own exit code) instead of
+/// exhausting the gate-wait budget and exiting 1 with "session gate timed
+/// out" — the permanent-block symptom BUG-402 describes.
 ///
-/// Asserts the invocation is admitted (exit 0 — the fake `claude` script's own
-/// exit code) instead of exhausting the gate-wait budget and exiting 1 with
-/// "session gate timed out" — the permanent-block symptom BUG-402 describes.
-/// Current `acquire_slot()` (`src/cli/gate.rs`) has no liveness recheck on the
-/// ticket's own claimant, so this reproduces the bug as written: this test is
-/// expected to FAIL until that gap is fixed.
+/// Root Cause: `acquire_slot()`'s reclaim branch treated ANY pre-existing
+/// ticket file as unconditional proof that a live reclaimer was already
+/// contending for the slot — `claim_slot_file(&ticket, ..)` failing (because
+/// the ticket already exists) went straight to `LostReclaimRace` with no
+/// check of the ticket's OWN recorded claimant. A claimant that won the
+/// ticket and then crashed before `rename()` leaves that ticket on disk
+/// forever (tickets are deliberately never deleted — see the `Fix(BUG-392)`
+/// Pitfall on `acquire_slot()`), so every subsequent caller hit the same
+/// false denial, with nothing on disk ever going to change.
+///
+/// Why Not Caught: T14 (BUG-392's own regression test) and T08 both exercise
+/// the reclaim path only through its single-generation happy path — a racer
+/// either wins the one ticket outright or loses to a still-live winner that
+/// finishes its rename shortly after. Neither constructs a ticket whose own
+/// claimant has *also* already died, so the permanently-orphaned-ticket case
+/// — a second, independent crash on top of the first — was entirely
+/// unexercised.
+///
+/// Fix Applied: `acquire_slot()`'s reclaim branch now walks the reclaim-
+/// ticket chain instead of stopping at the first existing ticket — when a
+/// ticket's own recorded claimant is dead AND the slot record hasn't moved
+/// on from the original dead owner, it advances to a new ticket keyed by
+/// that dead claimant's own (pid, since) and retries the same atomic
+/// `create_new()` arbitration, repeating until it either wins an unclaimed
+/// generation or hits a live claimant / already-reclaimed slot. See
+/// `Fix(BUG-402)` on `acquire_slot()` in `src/cli/gate.rs` for the full
+/// explanation.
+///
+/// Prevention: this test — a fresh caller must still acquire the slot
+/// promptly, well inside the bounded gate-wait budget, when the only
+/// obstruction is an orphaned reclaim ticket, instead of exhausting its
+/// retries and exiting with "session gate timed out".
+///
+/// Pitfall: any future change to this branch must preserve the exact
+/// two-variant `SlotDenialCause` diagnostic contract (`HeldByLive` → "slot
+/// held by another session", `LostReclaimRace` → "lost reservation race") —
+/// T15 and T16 in this same file assert these exact message suffixes
+/// verbatim (`config_file_test.rs` asserts only the older, generic
+/// "N/N sessions active; waiting" wait-message shape, not these cause
+/// suffixes). A ticket-chain fix must also re-check the
+/// slot's CURRENT owner before advancing generations, not just each
+/// generation's ticket-claimant liveness — otherwise a concurrent caller
+/// that completes its own rename mid-walk would be silently missed, and
+/// this call would report a stale verdict instead of reflecting the slot's
+/// true, just-changed state.
 ///
 /// Bug file: `task/claude_runner/402_orphaned_reclaim_ticket_permanent_slot_block.md`.
 // test_kind: bug_reproducer(BUG-402)
@@ -1345,5 +1388,89 @@ fn t17_orphaned_reclaim_ticket_does_not_permanently_block_slot()
   assert!(
     !stderr.contains( "session gate timed out" ),
     "T17 (BUG-402): must not exhaust the gate-wait budget — stderr:\n{stderr}"
+  );
+}
+
+// ── T18: gate must scan other free indices, not just the count-derived one (BUG-404) ──
+
+/// T18 (BUG-404): a fresh caller must not starve when its single, count-derived
+/// candidate index (`count_u32`) collides with a live, genuinely-active owner
+/// while ANOTHER index within `0..max` sits completely free. `--max-sessions 2`
+/// creates two indices (0, 1); one real print-mode occupier is spawned and
+/// registered via `make_proc_dir` so `count_u32` is always `1` — the pre-fix
+/// algorithm's single candidate is always index 1. `slot_1.json` is pre-seeded
+/// with that same occupier's own (genuinely alive) PID as owner, so index 1 is
+/// legitimately `HeldByLive` on every attempt. `slot_0.json` is left completely
+/// unclaimed.
+///
+/// Prior to the fix, `wait_for_session_slot()` (`src/cli/gate.rs`) computed and
+/// tried only the single index `count_u32`; it never scanned `0..max` for a
+/// different available index. Asserts the invocation is admitted (exit 0 — the
+/// fake `claude` script's own exit code) instead of exhausting the gate-wait
+/// budget and exiting non-zero with "session gate timed out" — the starvation
+/// symptom BUG-404 describes.
+///
+/// Bug file: `task/claude_runner/bug/unverified/404_gate_single_candidate_index_no_scan.md`.
+// test_kind: bug_reproducer(BUG-404)
+#[ test ]
+fn t18_gate_tries_other_free_index_when_count_derived_index_is_live_held()
+{
+  let ( _script_dir, script_path )     = fake_claude_dir( "exit 0" );
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+
+  let mut occupier   = spawn_print_claude_for( &occupier_path, 10 );
+  let occupier_pid   = occupier.id();
+  let proc           = make_proc_dir( &[ occupier_pid ] );
+
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+
+  // Index 1 is exactly the index count_u32=1 will always compute to (one live
+  // print-mode occupier registered above) — seed it as HeldByLive by the SAME
+  // real, genuinely-alive occupier PID. Index 0 is left completely unclaimed.
+  std::fs::write(
+    gate_dir.path().join( "slot_1.json" ),
+    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
+  ).expect( "pre-seed live-owner slot file at index 1" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "2", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out    = child.wait_with_output().expect( "reap clr" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  assert!(
+    exited.is_some(),
+    "T18 (BUG-404): clr must exit within 10s — still running past the 2-attempt, \
+     1s-poll gate budget means the process is stuck outside the gate-wait loop \
+     entirely. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 0 ),
+    "T18 (BUG-404): a fresh caller must acquire the FREE index 0 promptly even \
+     though its count-derived candidate index (1) is genuinely held by a live \
+     session — the gate must scan for any available index, not try only the \
+     single count-derived one. Got exit {:?}, stderr:\n{stderr}",
+    exited.and_then( |s| s.code() )
+  );
+  assert!(
+    !stderr.contains( "session gate timed out" ),
+    "T18 (BUG-404): must not exhaust the gate-wait budget while index 0 sits \
+     completely free — stderr:\n{stderr}"
   );
 }

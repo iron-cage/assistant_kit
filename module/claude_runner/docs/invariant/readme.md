@@ -22,7 +22,7 @@
 | 009 | [Session Mismatch Detection](009_session_mismatch_detection.md) | Diagnostic warning when `-c` resumes a different session than expected (BUG-320 hardening) | ✅ |
 | 010 | [Container-Only Test Execution](010_container_only_test_execution.md) | All tests run inside runbox; host-native execution is a hard error at shell and nextest layers | ✅ |
 | 011 | [Session Source Isolation](011_session_source_isolation.md) | `--session-from` reads session from source dir, writes to target dir; source files never modified | ✅ |
-| 012 | [Gate Slot Atomicity](012_gate_slot_atomicity.md) | Atomic fixed-index slot reservation closing the `--max-sessions` check-then-act race (BUG-387), including the ticket-arbitrated dead-owner reclaim path (BUG-392) | ✅ |
+| 012 | [Gate Slot Atomicity](012_gate_slot_atomicity.md) | Atomic fixed-index slot reservation closing the `--max-sessions` check-then-act race (BUG-387), including the ticket-arbitrated dead-owner reclaim path (BUG-392), its orphaned-ticket chain walk (BUG-402), and the fallback scan across free indices (BUG-404) | ✅ |
 | 013 | [Slot-Wait Message Differentiation](013_slot_wait_message_differentiation.md) | Operator-facing wait diagnostic must name which non-admission cause fired: `[lost reservation race]` vs `[at capacity]` (BUG-393) | ✅ |
 | 014 | [JSON String Extraction Escape Handling](014_json_string_extraction_escape_handling.md) | Every hand-rolled JSON string-value scan must be escape-aware and fail-closed on an unterminated value (BUG-394, BUG-395) | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating invariant doc instances | ✅ |
