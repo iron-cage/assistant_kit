@@ -439,12 +439,20 @@ pub fn quota_text_cells( data : &claude_quota::OauthUsageData, now_secs : u64 ) 
   {
     util.map_or_else( || dash.clone(), |u| format!( "{:.0}%", 100.0 - u ) )
   };
-  // BUG-331 — compares raw `left` against threshold but rounds only for display (raw-vs-rounded mismatch)
+  // Fix(BUG-331): compared raw `left` against threshold but rounded only for display, so any
+  //   account whose raw `left` landed within floating-point noise of a threshold could show
+  //   identical rounded percentage text with a different color than another account on the
+  //   opposite side of the same noise band.
+  //   Root cause: `left` was computed once but consumed twice — raw for the comparison,
+  //   rounded for the `{left:.0}%` display — letting the two diverge at sub-percent precision.
+  //   Pitfall: always round once and reuse the rounded value for both the threshold comparison
+  //   and the display text; never compare a raw float against a threshold when the display
+  //   shows a rounded value derived from the same float.
   let pct_emoji = |util : Option< f64 >, threshold : f64| -> String
   {
     util.map_or_else( || dash.clone(), |u|
     {
-      let left  = 100.0 - u;
+      let left  = ( 100.0 - u ).round();
       let emoji = if left > threshold { "🟢" } else { "🟡" };
       format!( "{emoji} {left:.0}%" )
     } )

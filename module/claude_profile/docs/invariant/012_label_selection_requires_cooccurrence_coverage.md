@@ -4,7 +4,7 @@
 
 - **Purpose**: Guarantee that any function selecting a single label from multiple independent boolean conditions is tested against every combination of conditions that can co-occur in production, not just each condition in isolation.
 - **Responsibility**: Documents the formal co-occurrence coverage invariant for branch-priority label-selection functions, its detection procedure, and the enforcement gap that let the same violation recur four times in `reason_label()`.
-- **In Scope**: Any function of the shape "branch over N independent boolean flags, return the first matching label" — specifically `reason_label(aq, now_secs)` in `src/usage/refresh.rs:25-44`; the general test-matrix requirement (`2^n` combinations) for such functions.
+- **In Scope**: Any function of the shape "branch over N independent boolean flags, return the first matching label" — specifically `reason_label(aq, now_secs)` in `src/usage/refresh.rs:32-51`; the general test-matrix requirement (`2^n` combinations) for such functions.
 - **Out of Scope**: Control-flow predicates that gate behavior (`should_refresh()` in `refresh_predicate.rs` — governed by the G1–G8 gate contract in feature/036, not this invariant); functions with mutually-exclusive-by-construction flags (no co-occurrence risk); trace-string formatting mechanics unrelated to branch selection (→ algorithm/012).
 
 ### Invariant Statement
@@ -27,7 +27,7 @@ This is the formal statement BUG-333 codified as its own "Generalized Version" (
 
 ### Why Branch/Line Coverage Tooling Does Not Detect This
 
-Standard coverage tools report a branch as "hit" the first time execution passes through it, regardless of which other flags were true or false at that moment. `reason_label()`'s `cached` branch (line 31 in `src/usage/refresh.rs`) shows 100% branch coverage from `reason_label_cached_valid` and `reason_label_cached_expired` alone (`tests/usage/refresh_tests_b.rs:741,760`) — both tests hold `is_occupied_elsewhere: false`. The `is_occupied_elsewhere` branch (line 36) shows 100% coverage from `mre_bug306_refresh_trace_reason_occupied_elsewhere` (`tests/usage/refresh_tests_b.rs:701`) alone — that test holds `cached: false`. Both branches report "covered." The co-occurring case (`cached: true` AND `is_occupied_elsewhere: true`) — the actual defect BUG-333 found — is never constructed by any test, and no coverage percentage reflects that gap. Co-occurrence coverage is a distinct measurement dimension from branch coverage; a function can be 100% branch-covered and 0% co-occurrence-covered simultaneously.
+Standard coverage tools report a branch as "hit" the first time execution passes through it, regardless of which other flags were true or false at that moment. `reason_label()`'s `cached` branch (line 42 in `src/usage/refresh.rs`) shows 100% branch coverage from `reason_label_cached_valid` and `reason_label_cached_expired` alone (`tests/usage/refresh_tests_b.rs:817,798`) — both tests hold `is_occupied_elsewhere: false`. The `is_occupied_elsewhere` branch (line 38) shows 100% coverage from `mre_bug306_refresh_trace_reason_occupied_elsewhere` (`tests/usage/refresh_tests_b.rs:701`) alone — that test holds `cached: false`. Both branches report "covered." The co-occurring case (`cached: true` AND `is_occupied_elsewhere: true`) — the actual defect BUG-333 found — is never constructed by any test, and no coverage percentage reflects that gap. Co-occurrence coverage is a distinct measurement dimension from branch coverage; a function can be 100% branch-covered and 0% co-occurrence-covered simultaneously.
 
 ### Enforcement Procedure
 
@@ -39,28 +39,28 @@ Standard coverage tools report a branch as "hit" the first time execution passes
 
 ### Application to `reason_label()`
 
-`reason_label(aq, now_secs)` (`src/usage/refresh.rs:25-44`) branches over four conditions in priority order: `!aq.is_owned` → `aq.cached` (nested: token-expired sub-branch) → `aq.is_occupied_elsewhere` → `else` (result-derived). Per `feature/036_account_ownership.md` G1b, `aq.cached` and `aq.is_occupied_elsewhere` are set by two unrelated data sources (`read_cached_quota()`/cache-fallback logic, and `other_machines_active()` marker-file detection respectively) and are producible simultaneously — G1b's own design routes owned+occupied-elsewhere accounts through `approximate_quota()`, which independently determines both flags. This is not a hypothetical combination; per BUG-333's Impact section, it is "the DEFAULT/near-universal outcome for any occupied-elsewhere account after its first fetch."
+`reason_label(aq, now_secs)` (`src/usage/refresh.rs:32-51`) branches over four conditions in priority order: `!aq.is_owned` → `aq.is_occupied_elsewhere` → `aq.cached` (nested: token-expired sub-branch) → `else` (result-derived) — reordered by BUG-333's fix from the original `!aq.is_owned` → `aq.cached` → `aq.is_occupied_elsewhere` → `else` sequence that let `cached` mask `is_occupied_elsewhere` whenever both were true. Per `feature/036_account_ownership.md` G1b, `aq.cached` and `aq.is_occupied_elsewhere` are set by two unrelated data sources (`read_cached_quota()`/cache-fallback logic, and `other_machines_active()` marker-file detection respectively) and are producible simultaneously — G1b's own design routes owned+occupied-elsewhere accounts through `approximate_quota()`, which independently determines both flags. This is not a hypothetical combination; per BUG-333's Impact section, it was "the DEFAULT/near-universal outcome for any occupied-elsewhere account after its first fetch."
 
 Prior to BUG-333, the test suite (`tests/usage/refresh_tests_b.rs`) held one of these two flags at its type-default `false` in every single test — `reason_label_cached_valid`/`reason_label_cached_expired` fix `is_occupied_elsewhere: false`; `mre_bug306_refresh_trace_reason_occupied_elsewhere` fixes `cached: false`. Zero tests constructed `cached: true` with `is_occupied_elsewhere: true` together. This is the exact violation this invariant targets: full single-flag coverage, zero co-occurrence coverage, on a function where the co-occurrence is the common case in production.
 
 ### Violation Consequences
 
 - A branch-priority label function silently returns a less-informative label whenever a higher-priority (earlier-checked) condition co-occurs with a lower-priority (later-checked) one that the reader needed to see — no crash, no test failure, no functional regression; the defect is invisible to every mechanical check except a co-occurrence-aware test.
-- The gap compounds across maintenance cycles: each time a new condition is added to the function (a new predicate gate, per feature/036's "Predicate–reason contract"), the natural instinct is to add one new isolated test for the new branch — which raises branch coverage to 100% again without ever testing the new condition against the conditions already covered. This is precisely how the same defect pattern recurred across six bug filings against the same function/seam (BUG-295, BUG-298, BUG-303, BUG-305, BUG-306, BUG-333 — see `pitfall/007_label_selection_branch_priority_pitfalls.md` for the full per-bug history).
-- A prior fix's doc comment asserting a branch order as intentional (e.g., `refresh_tests_b.rs:696-698`'s "Branch order matters: `is_occupied_elsewhere` must come after `cached` because cached accounts have their own trace reason regardless of occupancy status") can read as settled precedent to future maintainers, discouraging further co-occurrence testing — this rationalization was BUG-333's own H2 hypothesis, disproved: an assumption asserted in a comment is not evidence the co-occurring case was deliberately evaluated.
+- The gap compounds across maintenance cycles: each time a new condition is added to the function (a new predicate gate, per feature/036's "Predicate–reason contract"), the natural instinct is to add one new isolated test for the new branch — which raises branch coverage to 100% again without ever testing the new condition against the conditions already covered. This is precisely how the same defect pattern recurred across four bug filings against the same function/seam (BUG-295, BUG-298, BUG-306, BUG-333 — see `pitfall/007_label_selection_branch_priority_pitfalls.md` for the full per-bug history).
+- A prior fix's doc comment asserting a branch order as intentional (e.g., `refresh_tests_b.rs:697-698`'s "Branch order matters: `is_occupied_elsewhere` must come after `cached` because cached accounts have their own trace reason regardless of occupancy status") can read as settled precedent to future maintainers, discouraging further co-occurrence testing — this rationalization was BUG-333's own H2 hypothesis, disproved: an assumption asserted in a comment is not evidence the co-occurring case was deliberately evaluated.
 
 ### Sources
 
 | File | Relationship |
 |------|-------------|
-| `src/usage/refresh.rs:25-44` | `reason_label()` — the four-branch label-selection function this invariant currently governs |
+| `src/usage/refresh.rs:32-51` | `reason_label()` — the four-branch label-selection function this invariant currently governs |
 | `src/usage/fetch.rs:161-167` (G1b) | Unconditionally routes owned+non-current+occupied-elsewhere accounts through `approximate_quota()`, which independently sets `cached` and `is_occupied_elsewhere` — the producing site that makes the co-occurrence the default case |
 
 ### Tests
 
 | File | Relationship |
 |------|--------------|
-| `tests/usage/refresh_tests_b.rs` | `reason_label_cached_valid`, `reason_label_cached_expired`, `mre_bug306_refresh_trace_reason_occupied_elsewhere` — pre-BUG-333 single-flag-isolation tests that satisfied branch coverage while leaving the `cached ∧ is_occupied_elsewhere` co-occurrence untested; any BUG-333 fix/regression test added to close this gap belongs in this file |
+| `tests/usage/refresh_tests_b.rs` | `reason_label_cached_valid`, `reason_label_cached_expired`, `mre_bug306_refresh_trace_reason_occupied_elsewhere` — pre-BUG-333 single-flag-isolation tests that satisfied branch coverage while leaving the `cached ∧ is_occupied_elsewhere` co-occurrence untested. `mre_bug333_occupied_elsewhere_not_masked_by_cached` (added 2026-07-08) closes this gap — constructs `cached: true` ∧ `is_occupied_elsewhere: true` together and asserts `"occupied elsewhere"` |
 
 ### Algorithms
 

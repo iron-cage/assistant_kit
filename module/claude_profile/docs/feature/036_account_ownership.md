@@ -57,7 +57,7 @@ An account is "owned by this machine" when: (a) owner is empty or absent (no enf
 
 - **G1 (not owned):** `... · fetch  <name>  skipped (reason: not owned)` — Fix(BUG-295): reason from ownership gate, not `aq.result`.
 - **G1b (occupied elsewhere):** `... · fetch  <name>  skipped (reason: occupied elsewhere)` — Fix(BUG-305): occupancy gate, not `aq.result`.
-- **G3 (via G2):** `... · refresh  <name>  should_retry=false (reason: <reason>)` where reason is derived in a dedicated `reason_label(aq, now_secs)` function that mirrors all G2 gate branches — `"not owned"` (Fix BUG-295), `"cached-expired"` when cached AND token expired (Fix BUG-298), `"cached"` when cached but token still valid (rate-limited), `"occupied elsewhere"` (Fix BUG-306), or `aq.result.err().map_or("ok", ...)` when no gate fired.
+- **G3 (via G2):** `... · refresh  <name>  should_retry=false (reason: <reason>)` where reason is derived in a dedicated `reason_label(aq, now_secs)` function that mirrors all G2 gate branches — `"not owned"` (Fix BUG-295), `"occupied elsewhere"` (Fix BUG-306, checked before `cached` per Fix BUG-333), `"cached-expired"` when cached AND token expired (Fix BUG-298), `"cached"` when cached but token still valid (rate-limited), or `aq.result.err().map_or("ok", ...)` when no gate fired.
 - **G4 (not owned or occupied):** `... · touch  <name>  skipped (reason: not owned)` when `!is_owned`; `... · touch  <name>  skipped (reason: occupied elsewhere)` when `is_occupied_elsewhere`.
 
 **Predicate–reason contract:** Every early-return gate in `should_refresh()` (`refresh_predicate.rs`) must have a corresponding branch in `reason_label(aq, now_secs)` (`refresh.rs`). The function is extracted specifically to enforce this contract and make the 1:1 mapping testable directly. When a new predicate gate is added, the matching reason branch is a mandatory co-change.
@@ -84,18 +84,18 @@ The tables below show which token operations fire per account state across all C
 | Cache read (`{name}.json`) | G1/G1b fallback | conditional | ✅ always — `read_cached_quota()` | ✅ always — `approximate_quota()` |
 | Refresh sub | `apply_refresh()` via G2 | conditional | ❌ G2: `!is_owned` | ❌ G2: `is_occupied_elsewhere` |
 | Touch sub (Claude API quota) | `apply_touch()` via G4 | conditional | ❌ G4: `!is_owned` | ❌ G4: `is_occupied_elsewhere` |
-| Token read inside touch | `touch.rs:147` | conditional | ❌ G4 | ❌ G4 |
-| Quota API re-fetch after touch | `touch.rs:148` | conditional | ❌ G4 | ❌ G4 |
-| Account API re-fetch after touch | `touch.rs:164` | conditional | ❌ G4 | ❌ G4 |
+| Token read inside touch | `touch.rs:150` | conditional | ❌ G4 | ❌ G4 |
+| Quota API re-fetch after touch | `touch.rs:151` | conditional | ❌ G4 | ❌ G4 |
+| Account API re-fetch after touch | `touch.rs:167` | conditional | ❌ G4 | ❌ G4 |
 
-¹ Code comment at `fetch.rs:136`: *"the read here is token-comparison only, not credential-consuming in the network sense."*
+¹ Code comment at `fetch.rs:141-142`: *"the read here is token-comparison only, not credential-consuming in the network sense."*
 
 #### Display and recommendation
 
 | Operation | Context | Normal | Non-owned | Occupied-elsewhere |
 |---|---|---|---|---|
 | Shown in display output | render | ✅ live data | ✅ cached (`~` prefix) or `—` | ✅ approximated |
-| Footer "Next (strategy):" line | `render.rs:241` `gate_ownership=false` | N/A | ✅ ownership not checked ⚠ | ❌ Gate 3 unconditional |
+| Footer "Next (strategy):" line | `render.rs:251` `gate_ownership=false` | N/A | ✅ ownership not checked ⚠ | ❌ Gate 3 unconditional |
 
 ⚠ Known inconsistency: footer uses `gate_ownership=false` while auto-switch uses `gate_ownership=true`. A non-owned account can appear as the footer recommendation during `.usage rotate::1` even though auto-switch selects a different (owned) account.
 
@@ -103,8 +103,8 @@ The tables below show which token operations fire per account state across all C
 
 | Token operation | Gate | Normal | Non-owned | Occupied-elsewhere |
 |---|---|---|---|---|
-| `only_next::1` filter selection | `api.rs:835` `gate_ownership=rotate && !force` | ✅ | ❌ when `rotate::1` | ❌ Gate 3 always |
-| Auto-switch winner selection | `api.rs:935` `gate_ownership=!force` | ✅ | ❌ Gate 8 rejects | ❌ Gate 3 always — unconditional |
+| `only_next::1` filter selection | `api.rs:188` `gate_ownership=rotate && !force` | ✅ | ❌ when `rotate::1` | ❌ Gate 3 always |
+| Auto-switch winner selection | `api.rs:290` `gate_ownership=!force` | ✅ | ❌ Gate 8 rejects | ❌ Gate 3 always — unconditional |
 | Selected as winner with `force::1` | Gate 8 bypassed | ✅ | ✅ | ❌ Gate 3 still fires — `force::1` does not bypass Gate 3 |
 | Cred copy on winner | `switch_account()` | ✅ | ❌ never winner | ❌ never winner |
 | Touch sub on winner (`solo::1` off) | `apply_touch()` on winner | conditional | ❌ | ❌ |
@@ -165,8 +165,8 @@ Note: `rotate::1 solo::1` is rejected at parse time by `parse_usage_params()` (`
 - **AC-21**: `force::1` with `dry::1` on any G5–G8 command bypasses the ownership gate (no exit 1) but still previews without writing — `[dry-run]` message is printed and exits 0. Ownership check is bypassed; write suppression is not.
 - **AC-22**: `apply_refresh()` emits `... · refresh  <name>  should_retry=false (reason: not owned)` when `trace::1` is set and `aq.is_owned == false`. The reason string is `"not owned"` — derived from the ownership gate decision, not from `aq.result`. Consistent with AC-07 (`apply_touch` trace pattern).
 - **AC-23**: For an owned account where `is_occupied_elsewhere == true` and `is_current == false`, `fetch_quota_for_list()` does NOT read the credential file and does NOT call `fetch_oauth_usage`. It calls `approximate_quota()` to return cached or polynomial-approximated data (same path as solo gate, Feature 061). When `trace::1`, emits `... · fetch  <name>  skipped (reason: occupied elsewhere)` before calling `approximate_quota()`. The `is_current` account is never skipped by G1b. Gate condition: `is_owned && is_occupied_elsewhere && !is_current` (i.e., after G1 passes, check occupancy before token read). Fix(BUG-305).
-- **AC-24**: `apply_refresh()` emits `... · refresh  <name>  should_retry=false (reason: occupied elsewhere)` when `trace::1` is set, `aq.is_owned == true`, `aq.cached == false`, and `aq.is_occupied_elsewhere == true`. The `reason_label(aq, now_secs)` function is extracted from `apply_refresh()` and returns `"occupied elsewhere"` for this combination — the fourth branch after `"not owned"`, `"cached-expired"`/`"cached"`, before the `else` result-derived branch. The function is directly testable. Fix(BUG-306).
-- **AC-25**: `reason_label(aq, now_secs)` test coverage must include every combination of its branch conditions that can co-occur in production, not just each condition in isolation — per BUG-333, `aq.cached == true` AND `aq.is_occupied_elsewhere == true` is the near-universal state for any occupied-elsewhere account with a prior cache entry (G1b routes such accounts through `approximate_quota()`, which sets both flags independently), yet no test constructed this combination before BUG-333. A test asserting `reason_label`'s output for `cached: true, is_occupied_elsewhere: true` (and any other producible flag combination for this function) must exist and must not be satisfied merely by tests covering each flag individually. See invariant/012 and pitfall/007 for the general requirement and full recurrence history.
+- **AC-24**: `apply_refresh()` emits `... · refresh  <name>  should_retry=false (reason: occupied elsewhere)` when `trace::1` is set, `aq.is_owned == true`, and `aq.is_occupied_elsewhere == true` — regardless of `aq.cached` (Fix BUG-333, see AC-25). The `reason_label(aq, now_secs)` function is extracted from `apply_refresh()` and returns `"occupied elsewhere"` for this combination — the second branch, checked immediately after `"not owned"` and before `"cached-expired"`/`"cached"` and the `else` result-derived branch. The function is directly testable. Fix(BUG-306); reordered ahead of `cached` by Fix(BUG-333).
+- **AC-25**: `reason_label(aq, now_secs)` test coverage must include every combination of its branch conditions that can co-occur in production, not just each condition in isolation — per BUG-333, `aq.cached == true` AND `aq.is_occupied_elsewhere == true` is the near-universal state for any occupied-elsewhere account with a prior cache entry (G1b routes such accounts through `approximate_quota()`, which sets both flags independently), yet no test constructed this combination before BUG-333. A test asserting `reason_label`'s output for `cached: true, is_occupied_elsewhere: true` (and any other producible flag combination for this function) must exist and must not be satisfied merely by tests covering each flag individually. `mre_bug333_occupied_elsewhere_not_masked_by_cached` (`tests/usage/refresh_tests_b.rs`, added 2026-07-08) now satisfies this for the `cached ∧ is_occupied_elsewhere` combination. See invariant/012 and pitfall/007 for the general requirement and full recurrence history.
 
 ### Bugs
 
