@@ -240,8 +240,16 @@ pub fn apply_model_override(
   // Pitfall: use override_session_model_to_sonnet() to avoid redundant writes when already "sonnet".
   if let Some( ref sonnet ) = quota.seven_day_sonnet
   {
-    // BUG-331 — compares raw sonnet_left against threshold but rounds only for trace display (raw-vs-rounded mismatch)
-    let sonnet_left = 100.0 - sonnet.utilization;
+    // Fix(BUG-331): compared raw `sonnet_left` against threshold but rounded only for the trace
+    //   messages, so the logged percentage could read identically regardless of which branch
+    //   actually fired — and unlike the display-only pct_emoji case, the wrong branch here has
+    //   a real side effect (it flips the session model).
+    //   Root cause: same class as pct_emoji — `sonnet_left` computed once but consumed twice,
+    //   raw for the comparison, rounded for the `{sonnet_left:.0}%` trace text.
+    //   Pitfall: always round once and reuse the rounded value for both the branch comparison
+    //   and the trace text; never compare a raw float against a threshold when the log shows
+    //   a rounded value derived from the same float.
+    let sonnet_left = ( 100.0 - sonnet.utilization ).round();
     if sonnet_left < OPUS_OVERRIDE_THRESHOLD
     {
       let overrode = crate::account::override_session_model_to_opus( paths );

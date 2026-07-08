@@ -26,6 +26,8 @@
 //! | T18 | `--max-sessions 2`, count-derived index (1) pre-seeded genuinely `HeldByLive`, other index (0) left completely free → still admitted promptly via fallback scan, not gate-wait exhaustion (BUG-404) | — |
 //! | T19 | `CLR_GATE_CLAIM_TEST_DELAY_MS` widens `claim_slot_file()`'s internal claim window → slot file must never be observed existing-but-unparseable during that window, only fully absent or fully valid (BUG-407) | — |
 //! | T20 | pre-seeded slot owned by a genuinely alive PID with `since=0` (maximally stale) → `CLR_GATE_STALE_SECS` unset denies reclaim (default/backward-compatible); set below elapsed duration, reclaim succeeds and the waiter is admitted immediately (BUG-400) | — |
+//! | T21 | pre-seeded dead-owner slot, no pre-existing ticket, forced one-time tmp-claim failure via `CLR_GATE_FORCE_TMP_CLAIM_FAIL_ONCE` → ticket winner that fails own admission still acquires the slot on retry, no permanent self-denial (BUG-405) | — |
+//! | T22 | three-generation orphaned reclaim-ticket chain (two dead claimants stacked before an unclaimed generation) → `acquire_slot()` walks past both, admitting a fresh caller (BUG-402 chain-walk depth) | — |
 //!
 //! T05 (`clr --help` shows `default: 6`) is covered by
 //! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_six`.
@@ -1743,5 +1745,231 @@ fn t20_gate_reclaims_stale_live_owner_when_threshold_set()
     !stderr_b.contains( "slot held by another session" ) && !stderr_b.contains( "session gate timed out" ),
     "T20 (BUG-400) phase B: waiter must be admitted immediately via the reclaim \
      path, not fall back to the live-hold denial or exhaust the gate. stderr:\n{stderr_b}"
+  );
+}
+
+// ── T21: a caller that wins its own reclaim ticket but fails to complete
+// admission must not permanently self-deny on retry (BUG-405) ──
+
+/// T21 (BUG-405): pre-seeds `gate_dir` with a dead-owner slot file (no
+/// pre-existing ticket — this caller will be the FIRST to reach the ticket
+/// for this generation, unlike T17 which pre-seeds a ticket already
+/// orphaned by a DIFFERENT dead process). Sets
+/// `CLR_GATE_FORCE_TMP_CLAIM_FAIL_ONCE` so the single `clr` invocation's
+/// FIRST attempt at winning the ticket deterministically fails its own
+/// tmp-claim step, simulating a transient fs fault — exactly the scenario
+/// where the pre-fix code left the ticket behind, keyed by this same
+/// process's own (pid, since), causing every subsequent retry within the
+/// SAME invocation to read back its own still-alive pid and self-deny
+/// forever. `CLR_GATE_MAX_ATTEMPTS=3` gives the invocation two more
+/// attempts after the forced failure to prove it recovers. `CLR_PROC_DIR`
+/// stays empty (0 counted occupiers), so the invocation always targets
+/// index 0.
+///
+/// Root Cause: the ticket-win branch in `acquire_slot()` returned
+/// `LostReclaimRace` on tmp-claim or rename failure without removing the
+/// ticket it had just won. Because `pid`/`since` are fixed for this
+/// caller's entire `wait_for_session_slot()` call, every later retry
+/// recomputes the identical ticket path, finds it already claimed by
+/// ITSELF, reads back its own `(pid, since)` as `next_claimant`, and
+/// `pid_alive()` reports `true` — a caller can never lose a fair race to
+/// its own still-running self, so the false denial repeats on every
+/// subsequent attempt for that specific slot index, indefinitely.
+///
+/// Why Not Caught: T17 (BUG-402's own regression test) pre-seeds a ticket
+/// already orphaned by a DIFFERENT, already-dead process — it never
+/// exercises the case where the CURRENT invocation is itself the one that
+/// wins a ticket and then fails to complete it. T14 races several live
+/// concurrent callers to completion and never induces a tmp-claim or
+/// rename failure on any of them. No existing test forced a caller to
+/// collide with its own abandoned ticket.
+///
+/// Fix Applied: the ticket-win branch now removes the ticket it just won on
+/// both non-admission paths (tmp-claim failure, rename failure) before
+/// returning `LostReclaimRace`, so the next retry re-contends the same
+/// generation fresh instead of reading back its own abandoned claim. See
+/// `Fix(BUG-405)` on `acquire_slot()` in `src/cli/gate.rs`.
+///
+/// Prevention: this test — a caller whose own tmp-claim transiently fails
+/// once must still acquire the slot within its bounded gate-wait budget on
+/// a later attempt, instead of self-denying for the rest of its own
+/// invocation.
+///
+/// Pitfall: `CLR_GATE_FORCE_TMP_CLAIM_FAIL_ONCE` is a one-shot, in-process
+/// injection (an `AtomicBool` consumed on first check) — it fires exactly
+/// once regardless of how many `acquire_slot()` calls precede it, matching
+/// a real transient fault's lifecycle (occurs once, then clears). A test
+/// relying on this env var must not assume it fires on every attempt.
+///
+/// Bug file: `task/claude_runner/bug/closed/405_reclaim_ticket_winner_self_collision_denial.md`.
+// test_kind: bug_reproducer(BUG-405)
+#[ test ]
+fn t21_ticket_winner_that_fails_own_admission_does_not_self_deny_forever()
+{
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers throughout
+
+  let mut dead_owner = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
+  let dead_owner_pid = dead_owner.id();
+  let _ = dead_owner.wait();
+
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{dead_owner_pid},"since":0}}"# ),
+  ).expect( "pre-seed dead-owner slot file" );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "3" )
+    .env( "CLR_GATE_FORCE_TMP_CLAIM_FAIL_ONCE", "1" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+
+  assert!(
+    exited.is_some(),
+    "T21 (BUG-405): clr must exit within 10s — still running past the 3-attempt, \
+     1s-poll gate budget means the process is stuck outside the gate-wait loop \
+     entirely. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 0 ),
+    "T21 (BUG-405): a caller whose own tmp-claim fails once (forced) must still \
+     acquire slot 0 on a later attempt — acquire_slot() must not leave its own \
+     abandoned ticket behind to self-deny every subsequent retry. Got exit {:?}, \
+     stderr:\n{stderr}",
+    exited.and_then( |s| s.code() )
+  );
+  assert!(
+    !stderr.contains( "session gate timed out" ),
+    "T21 (BUG-405): must not exhaust the gate-wait budget — stderr:\n{stderr}"
+  );
+}
+
+// ── T22: acquire_slot() walks an arbitrarily deep reclaim-ticket chain, not
+// just a single orphaned ticket (BUG-402 chain-walk capability) ──
+
+/// T22 (BUG-402): extends T17's single-orphaned-ticket scenario to a THREE-
+/// generation chain — `slot_0.json` records a dead owner
+/// (`dead_owner_pid`); its reclaim ticket
+/// (`reclaim_0_{dead_owner_pid}_0.lock`) is pre-seeded as already claimed by
+/// a second, independently-confirmed-dead PID (`dead_claimant_1`); THAT
+/// claimant's own ticket (`reclaim_0_{dead_claimant_1}_0.lock`) is in turn
+/// pre-seeded as claimed by a THIRD independently-confirmed-dead PID
+/// (`dead_claimant_2`) — two full orphaned generations stacked before any
+/// live contender ever runs. Only the third generation's ticket
+/// (`reclaim_0_{dead_claimant_2}_0.lock`) is left genuinely unclaimed, for
+/// the real `clr` invocation to win fresh. Proves `acquire_slot()`'s loop
+/// walks past MULTIPLE dead generations in one call, not merely the single
+/// extra hop T17 exercises — the capability the chain-walk design in
+/// `Fix(BUG-402)` is specifically built to provide, per its own rationale
+/// comment on `acquire_slot()` in `gate.rs`. `CLR_PROC_DIR` stays empty
+/// throughout (0 counted occupiers), so the invocation always targets
+/// index 0.
+///
+/// Prevention: this test — a fresh caller must still acquire the slot
+/// promptly when TWO full orphaned-ticket generations precede it, not just
+/// one, proving the chain-walk loop's depth is not silently bounded to a
+/// single hop.
+///
+/// Pitfall: each generation's ticket key is derived from the PRIOR
+/// generation's own (pid, since) — `reclaim_{index}_{claimant}_{since}.lock`
+/// — so the three ticket paths in this test must be constructed in the
+/// exact same chained order `acquire_slot()` computes them, not assembled
+/// independently, or the test would silently exercise a different, shorter
+/// chain than intended.
+///
+/// Bug file: `task/claude_runner/bug/402_orphaned_reclaim_ticket_permanent_slot_block.md`.
+// test_kind: bug_reproducer(BUG-402)
+#[ test ]
+fn t22_acquire_slot_walks_multi_generation_reclaim_ticket_chain()
+{
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers throughout
+
+  // Three distinct, confirmed-dead PIDs, chained exactly as acquire_slot()'s
+  // loop would advance through them — mirrors T17/T14's spawn+reap pattern.
+  let mut dead_owner = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
+  let dead_owner_pid = dead_owner.id();
+  let _ = dead_owner.wait();
+
+  let mut dead_claimant_1 = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
+  let dead_claimant_1_pid = dead_claimant_1.id();
+  let _ = dead_claimant_1.wait();
+
+  let mut dead_claimant_2 = Command::new( "true" ).spawn().expect( "spawn short-lived process" );
+  let dead_claimant_2_pid = dead_claimant_2.id();
+  let _ = dead_claimant_2.wait();
+
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{dead_owner_pid},"since":0}}"# ),
+  ).expect( "pre-seed dead-owner slot file" );
+
+  // Generation 1's ticket: claimed by dead_claimant_1 (also dead).
+  std::fs::write(
+    gate_dir.path().join( format!( "reclaim_0_{dead_owner_pid}_0.lock" ) ),
+    format!( r#"{{"pid":{dead_claimant_1_pid},"since":0}}"# ),
+  ).expect( "pre-seed generation-1 ticket" );
+
+  // Generation 2's ticket: claimed by dead_claimant_2 (also dead) — keyed by
+  // generation 1's own claimant, exactly as acquire_slot() would advance.
+  std::fs::write(
+    gate_dir.path().join( format!( "reclaim_0_{dead_claimant_1_pid}_0.lock" ) ),
+    format!( r#"{{"pid":{dead_claimant_2_pid},"since":0}}"# ),
+  ).expect( "pre-seed generation-2 ticket" );
+
+  // Generation 3's ticket is deliberately left unclaimed — the real `clr`
+  // invocation below must walk past both dead generations and win it fresh.
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out = child.wait_with_output().expect( "reap clr" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+
+  assert!(
+    exited.is_some(),
+    "T22 (BUG-402): clr must exit within 10s — still running past the 2-attempt, \
+     1s-poll gate budget means the process is stuck outside the gate-wait loop \
+     entirely. stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 0 ),
+    "T22 (BUG-402): a fresh caller must still acquire slot 0 promptly when TWO \
+     full orphaned reclaim-ticket generations precede it — acquire_slot() must \
+     walk the entire chain, not just a single hop. Got exit {:?}, stderr:\n{stderr}",
+    exited.and_then( |s| s.code() )
+  );
+  assert!(
+    !stderr.contains( "session gate timed out" ),
+    "T22 (BUG-402): must not exhaust the gate-wait budget — stderr:\n{stderr}"
   );
 }

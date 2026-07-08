@@ -442,6 +442,103 @@ fn test_ft23_009_renews_dash_for_cancelled_subscription()
   );
 }
 
+/// BUG-332 — render layer's `billing_type=="none"` gate must also require `result.is_err()`
+/// (matching `fetch.rs:255`'s BUG-236 conjunction), not `billing_type` alone.
+///
+/// # Root Cause
+/// `render.rs:108`, `render.rs:374` (`GetField::Renews`), and `render_tsv.rs:72` all blanked
+/// `~Renews` to "—" whenever `billing_type == "none"`, regardless of `aq.result`. BUG-236
+/// already established that `billing_type == "none"` alone is not sufficient proof of "no
+/// active subscription" — it must be conjoined with `result.is_err()`. The render layer
+/// never inherited that conjunction, so a live non-stripe account with `result = Ok(...)`
+/// and a real renewal date still showed "—" instead of the actual date.
+///
+/// # Why Not Caught
+/// All prior `billing_type == "none"` render tests (`test_ft23_009_renews_dash_for_cancelled_subscription`)
+/// paired it with `result: Err(...)`. No test paired `billing_type == "none"` with `result: Ok(...)`.
+///
+/// # Fix Applied
+/// Extracted `AccountQuota::is_no_subscription()` encoding the full conjunction
+/// (`billing_type == "none" && result.is_err()`) and applied it at all 3 render-layer sites.
+///
+/// # Prevention
+/// Any new `billing_type=="none"` call site in the render layer must call
+/// `is_no_subscription()`, never re-derive the literal condition.
+///
+/// # Pitfall
+/// `billing_type == "none"` alone is NOT sufficient — the conjunction with `result.is_err()`
+/// is what BUG-236 proved necessary at the fetch layer; the render layer must match it.
+///
+/// Spec: [`docs/invariant/011_shared_predicate_consistency.md`]
+#[ doc = "bug_reproducer(BUG-332)" ]
+#[ test ]
+fn mre_bug332_renews_shown_for_billing_none_with_ok_result()
+{
+  let aq = AccountQuota
+  {
+    name                  : "live@test.com".to_string(),
+    is_current            : false,
+    is_active             : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms         : FAR_FUTURE_MS,
+    result                : Ok( claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : Some( "2099-01-01T00:00:00Z".to_string() ) } ),
+      seven_day        : Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : Some( "2099-01-01T00:00:00Z".to_string() ) } ),
+      seven_day_sonnet : None,
+    } ),
+    account               : Some( claude_quota::OauthAccountData
+    {
+      tagged_id       : String::new(),
+      uuid            : String::new(),
+      email_address   : String::new(),
+      full_name       : String::new(),
+      display_name    : String::new(),
+      billing_type    : "none".to_string(),
+      has_max         : false,
+      capabilities    : vec![],
+      rate_limit_tier : String::new(),
+      org_created_at  : "2024-01-15T00:00:00Z".to_string(),
+      memberships     : vec![],
+    } ),
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
+    cached                : false,
+    cache_age_secs        : None,
+    is_owned              : true,
+    owner                 : String::new(),
+  };
+  let accounts = vec![ aq ];
+  let cols     = ColsVisibility::default_set();
+
+  // text renderer: ~Renews must show a real date, NOT "—". `seven_day` is populated (unlike
+  // `seven_day_sonnet`, irrelevant here) so 7d Left/7d Reset don't contribute an unrelated
+  // legitimate em-dash — the only em-dash this row could show is a buggy ~Renews.
+  let text = render_text(
+    &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols, None, None, None, None, false,
+  );
+  assert!(
+    !text.contains( "\u{2014}" ),
+    "BUG-332: render_text must NOT show em-dash for ~Renews when result=Ok and billing_type=none; got:\n{text}",
+  );
+
+  // TSV renderer: renews column must show a real date, not "—".
+  let tsv       = render_tsv( &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols );
+  let mut lines = tsv.lines();
+  let header    = lines.next().expect( "BUG-332: TSV must have header row" );
+  let data_row  = lines.next().expect( "BUG-332: TSV must have data row" );
+  let headers   : Vec< &str > = header.split( '\t' ).collect();
+  let fields    : Vec< &str > = data_row.split( '\t' ).collect();
+  let renews_idx = headers.iter().position( |h| *h == "renews" )
+    .expect( "BUG-332: renews column must be present in TSV header" );
+  let renews_val = fields.get( renews_idx ).copied().unwrap_or( "" );
+  assert_ne!(
+    renews_val, "\u{2014}",
+    "BUG-332: TSV ~Renews must NOT be em-dash when result=Ok and billing_type=none; got: {renews_val:?}",
+  );
+}
+
 // ── Non-owned account display ─────────────────────────────────────────────
 
 /// FT-05 (AC-05): Non-owned account display — `~` prefix when cache present; Err when absent.

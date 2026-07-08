@@ -528,7 +528,7 @@ fn apply_touch_skips_after_refresh_none()
 /// `aq.is_owned == true`, `aq.cached == true`, and `aq.result` is `Ok(cached_data)`.
 ///
 /// # Root Cause
-/// `fetch.rs:229-240` cache fallback converts `Err→Ok` and sets `aq.cached = true`. The
+/// `fetch.rs:306-313` cache fallback converts `Err→Ok` and sets `aq.cached = true`. The
 /// original trace reason expression `aq.result.as_ref().err().map_or("ok", …)` calls `.err()`
 /// on the now-`Ok` result — returning `None` — and produces the constant label `"ok"`. This is
 /// misleading: the actual trigger is the BUG-255 guard (`aq.cached && expired`), not a healthy
@@ -718,6 +718,63 @@ fn mre_bug306_refresh_trace_reason_occupied_elsewhere()
     owner                 : String::new(),
   };
   assert_eq!( claude_profile::usage::test_bridge::reason_label( &aq, 0 ), "occupied elsewhere" );
+}
+
+// ── BUG-333 reproducer ───────────────────────────────────────────────────
+
+/// BUG-333 — `reason_label()` must check `is_occupied_elsewhere` BEFORE `cached`; an account
+/// can be both cached AND occupied-elsewhere, and the reader needs the occupancy signal.
+///
+/// # Root Cause
+/// The three-branch order (`!is_owned` → `cached` → `is_occupied_elsewhere` → else) predates
+/// the occupancy predicate gate (BUG-303); no branch reorder happened when co-occurrence
+/// became the near-universal case (feature/036 G1b) for occupied-elsewhere accounts after
+/// their first fetch — such accounts read from cache on every subsequent call, so `cached`
+/// is almost always `true` too, and the old order silently dropped the occupancy signal.
+///
+/// # Why Not Caught
+/// No existing test constructed `cached: true` AND `is_occupied_elsewhere: true` together —
+/// all prior tests (`reason_label_cached_expired`, `mre_bug306_*`) set only one flag at a time.
+///
+/// # Fix Applied
+/// Reordered `reason_label()`'s branches: `is_occupied_elsewhere` now checked before `cached`.
+///
+/// # Prevention
+/// Branch-priority label functions must be re-audited for co-occurrence whenever a new
+/// predicate gate is added — coverage of each flag in isolation is not sufficient.
+///
+/// # Pitfall
+/// This is the fourth recurrence against this same function/seam (BUG-295, BUG-298, BUG-306
+/// are the three prior masked-label instances; see `docs/pitfall/007_label_selection_branch_priority_pitfalls.md`).
+///
+/// Spec: [`docs/invariant/012_label_selection_requires_cooccurrence_coverage.md`]
+#[ doc = "bug_reproducer(BUG-333)" ]
+#[ test ]
+fn mre_bug333_occupied_elsewhere_not_masked_by_cached()
+{
+  let aq = AccountQuota
+  {
+    name                  : "occ-cached@example.com".to_string(),
+    is_current            : false,
+    is_active             : false,
+    is_occupied_elsewhere : true,
+    expires_at_ms         : 0, // expired → would say "cached-expired" if cached is checked first
+    result                : Ok( claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
+    account               : None,
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
+    cached                : true,
+    cache_age_secs        : Some( 999 ),
+    is_owned              : true,
+    owner                 : String::new(),
+  };
+  assert_eq!(
+    claude_profile::usage::test_bridge::reason_label( &aq, 1 ),
+    "occupied elsewhere",
+    "BUG-333: reason_label must return 'occupied elsewhere' even when cached=true; \
+     an account can be both cached AND occupied-elsewhere, and the occupancy signal must win",
+  );
 }
 
 /// Regression — `reason_label` returns `"not owned"` for non-owned account.
