@@ -184,10 +184,10 @@ pub( super ) fn resolve_journal_writer(
 }
 
 pub( super ) fn run_built_command(
-  builder             : &ClaudeCommand,
-  cli                 : &CliArgs,
-  journal             : Option< &claude_journal::JournalWriter >,
-  expected_session_id : Option< &SessionId >,
+  builder             : &ClaudeCommand,                            // assembled command to trace (--trace) and execute
+  cli                 : &CliArgs,                                  // parsed flags driving the gate/trace/dispatch decisions below
+  journal             : Option< &claude_journal::JournalWriter >,  // optional event log, forwarded to the gate wait and execution paths
+  expected_session_id : Option< &SessionId >,                      // session id used downstream to detect a `-c` resume mismatch
 )
 {
   // Print/interactive dispatch decision, computed once and reused for both the
