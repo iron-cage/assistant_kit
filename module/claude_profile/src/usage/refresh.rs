@@ -22,20 +22,27 @@ use claude_profile_core::account::trace_ts;
 //   was introduced.
 //   Pitfall: every new predicate gate in should_refresh must have a corresponding
 //   branch in reason_label — the predicate–reason 1:1 contract.
+// Fix(BUG-333): cached was checked before is_occupied_elsewhere, so an account satisfying
+//   both conditions returned "cached"/"cached-expired" and silently dropped the occupancy
+//   signal — the near-universal case for occupied-elsewhere accounts after their first fetch.
+//   Root cause: branch order predates co-occurrence becoming the default outcome (feature/036
+//   G1b); no reorder happened when that changed.
+//   Pitfall: is_occupied_elsewhere must be checked BEFORE cached — an account can be both, and
+//   the occupancy signal is the more informative of the two.
 pub fn reason_label( aq : &AccountQuota, now_secs : u64 ) -> &str
 {
   if !aq.is_owned
   {
     "not owned"
   }
+  else if aq.is_occupied_elsewhere
+  {
+    "occupied elsewhere"
+  }
   else if aq.cached
   {
     if ( aq.expires_at_ms / 1000 ) <= now_secs { "cached-expired" }
     else { "cached" }
-  }
-  else if aq.is_occupied_elsewhere
-  {
-    "occupied elsewhere"
   }
   else
   {
@@ -96,7 +103,7 @@ pub fn apply_refresh(
     //   for non-owned accounts (G1 sets result=Ok(cached_data) for them).
     //   Root cause: ownership gate fires before result is ever an error for non-owned accts.
     //   Pitfall: check !aq.is_owned BEFORE consulting aq.result.err() at trace sites.
-    // Fix(BUG-298): owned+cached accounts also have result=Ok (fetch.rs:229-240 cache fallback
+    // Fix(BUG-298): owned+cached accounts also have result=Ok (fetch.rs:306-313 cache fallback
     //   converts Err→Ok and sets aq.cached=true); .err() on Ok returns None → constant "ok".
     //   Real trigger: BUG-255 guard (cached && expired). Check aq.cached before aq.result.err().
     //   Pitfall: any trigger path that converts Err→Ok must add its own reason branch here.

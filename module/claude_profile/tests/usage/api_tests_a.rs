@@ -107,6 +107,75 @@ fn mre_bug238_model_override_fires_for_active_account()
   );
 }
 
+/// `bug_reproducer(BUG-331)` — `apply_model_override` must not diverge in override decision
+/// when two raw `sonnet_left` values are within floating-point noise of `OPUS_OVERRIDE_THRESHOLD`
+/// (10.0) but log the identical rounded percentage text.
+///
+/// # Root Cause
+/// `apply_model_override` computed `let sonnet_left = 100.0 - sonnet.utilization;` once, then
+/// used the RAW value for the `if sonnet_left < OPUS_OVERRIDE_THRESHOLD` branch decision but
+/// only rounded it for the trace `writeln!` messages. Two utilizations whose raw `sonnet_left`
+/// straddles `10.0` by less than `1e-9` — `89.999999999999716` (`sonnet_left≈10.000000000000284`,
+/// NOT < 10.0 → no override) and `90.000000000000510` (`sonnet_left≈9.999999999999489`,
+/// < 10.0 → override fires) — both log the identical `"10%"` text but select OPPOSITE
+/// branches; unlike the display-only `pct_emoji` case, the wrong branch here has a real side
+/// effect — it flips the live session model.
+///
+/// # Why Not Caught
+/// No existing `apply_model_override` test constructed a near-boundary pair this close to
+/// `OPUS_OVERRIDE_THRESHOLD`; all existing tests (`mre_bug238`, `mre_bug300`, etc.) use inputs
+/// far from the `9.5–10.5` noise band.
+///
+/// # Fix Applied
+/// `apply_model_override` now rounds `sonnet_left` exactly once — `let sonnet_left =
+/// ( 100.0 - sonnet.utilization ).round();` — before the branch comparison, so both the
+/// override decision and the trace text consume the identical rounded value.
+///
+/// # Prevention
+/// This test locks in that any two inputs logging the same displayed percentage must always
+/// select the same override branch, regardless of which side of the raw threshold they fall on.
+///
+/// # Pitfall
+/// Do not "fix" this by increasing trace display precision instead — the observed divergence
+/// is 13 decimal places deep; the branch comparison itself must consume the rounded value.
+#[ doc = "bug_reproducer(BUG-331)" ]
+#[ test ]
+fn mre_bug331_apply_model_override_branch_matches_rounded_log_at_threshold_boundary()
+{
+  use claude_quota::{ OauthUsageData, PeriodUsage };
+
+  let run = |util : f64| -> bool
+  {
+    let dir   = TempDir::new().unwrap();
+    let paths = claude_profile::ClaudePaths::with_home( dir.path() );
+    std::fs::create_dir_all( paths.base() ).unwrap();
+
+    let quota = OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : None,
+      seven_day_sonnet : Some( PeriodUsage { utilization : util, resets_at : None } ),
+    };
+    apply_model_override( &quota, &paths, false, "account.use", "test-account" );
+
+    std::fs::read_to_string( paths.settings_file() )
+      .map( |content| content.contains( "\"opus\"" ) )
+      .unwrap_or( false )
+  };
+
+  // Raw sonnet_left ≈ 10.000000000000284 — strictly NOT < 10.0 under raw comparison.
+  let overrode_a = run( 89.999999999999716 );
+  // Raw sonnet_left ≈ 9.999999999999489 — strictly < 10.0 under raw comparison.
+  let overrode_b = run( 90.000000000000510 );
+
+  assert_eq!(
+    overrode_a, overrode_b,
+    "both inputs must select the same override branch once sonnet_left is rounded once and \
+     reused for both the branch decision and the trace text (BUG-331); got {overrode_a} vs {overrode_b}",
+  );
+  assert!( !overrode_a, "post-fix: both round to sonnet_left=10.0, which is NOT < threshold 10.0 → no override" );
+}
+
 /// `mre_bug286` — full model ID `"claude-opus-4-8"` in settings.json must be
 /// normalized to shorthand `"opus"` by `apply_model_override`.
 ///

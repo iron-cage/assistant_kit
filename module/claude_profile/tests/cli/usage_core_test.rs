@@ -41,7 +41,8 @@ fn it001_lim_it_quota_heading_and_columns()
   assert!( text.contains( "5h Left" ),  "must contain '5h Left' column, got:\n{text}" );
   assert!( text.contains( "5h Reset" ), "must contain '5h Reset' column, got:\n{text}" );
   assert!( text.contains( "7d Left" ),  "must contain '7d Left' column, got:\n{text}" );
-  assert!( text.contains( "7d(Son)" ),  "must contain '7d(Son)' column, got:\n{text}" );
+  // Fix(BUG-334): 7d(Son) is hidden by default (cols::+7d_son re-enables it) — no longer
+  // asserted here, matching its already-hidden-by-default siblings Sub and 7d Son Reset.
   assert!( text.contains( "7d Reset" ), "must contain '7d Reset' column, got:\n{text}" );
   assert!(
     !text.contains( "Session (5h)" ),

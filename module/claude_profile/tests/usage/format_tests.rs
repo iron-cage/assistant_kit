@@ -526,6 +526,65 @@ fn test_ft11_009_per_column_emoji_prefix_three_cases()
   assert_eq!( cells_c[ 0 ], "🟡 15%", "Pct C (exactly 15% left) must have 🟡 prefix — boundary inclusive (FT-11/009)" );
 }
 
+/// `bug_reproducer(BUG-331)` — `pct_emoji` (inside `quota_text_cells`) must not diverge in
+/// color when two raw `left` values are within floating-point noise of `WEEKLY_EXHAUSTION_THRESHOLD`
+/// (5.0) but format to the identical rounded percentage text.
+///
+/// # Root Cause
+/// `pct_emoji`'s closure computed `let left = 100.0 - u;` once, then used the RAW `left` for
+/// the `if left > threshold` color decision but only rounded `left` for the `{left:.0}%` display
+/// text. Two utilizations whose raw `left` straddles `5.0` by less than `1e-9` —
+/// `94.999999999999716` (`left≈5.000000000000284`, > 5.0 → 🟢) and `95.000000000000510`
+/// (`left≈4.999999999999489`, ≤ 5.0 → 🟡) — both format to the identical `"5%"` text but
+/// received opposite colors, confirmed in production via 3 accounts simultaneously showing
+/// `5%` with a 2-green/1-yellow split.
+///
+/// # Why Not Caught
+/// No existing test constructed a near-boundary pair this close to a threshold; the only
+/// boundary test (`test_ft11_009_...` above) uses an exact-integer boundary (`util=85.0`),
+/// which has no floating-point noise to divide raw comparison from rounded display.
+///
+/// # Fix Applied
+/// `pct_emoji` now rounds `left` exactly once — `let left = ( 100.0 - u ).round();` — before
+/// the threshold comparison, so both the color decision and the display text consume the
+/// identical rounded value.
+///
+/// # Prevention
+/// This test locks in that any two inputs formatting to the same displayed percentage must
+/// always receive the same color, regardless of which side of the raw threshold they fall on.
+///
+/// # Pitfall
+/// Do not "fix" this by increasing display precision instead — the observed divergence is 13
+/// decimal places deep and would remain invisible at any reasonable display precision; the
+/// comparison itself must consume the rounded value, not just the display.
+#[ doc = "bug_reproducer(BUG-331)" ]
+#[ test ]
+fn mre_bug331_pct_emoji_color_matches_rounded_display_at_threshold_boundary()
+{
+  let mk_7d = |util : f64| -> claude_quota::OauthUsageData
+  {
+    claude_quota::OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : Some( claude_quota::PeriodUsage { utilization : util, resets_at : None } ),
+      seven_day_sonnet : None,
+    }
+  };
+
+  // Raw left ≈ 5.000000000000284 — strictly > 5.0 under raw comparison.
+  let cells_over = quota_text_cells( &mk_7d( 94.999999999999716 ), 0 );
+  // Raw left ≈ 4.999999999999489 — strictly ≤ 5.0 under raw comparison.
+  let cells_under = quota_text_cells( &mk_7d( 95.000000000000510 ), 0 );
+
+  assert_eq!(
+    cells_over[ 2 ], cells_under[ 2 ],
+    "both inputs must format identically once left is rounded once and reused for both the \
+     color decision and the display text (BUG-331); got {:?} vs {:?}",
+    cells_over[ 2 ], cells_under[ 2 ],
+  );
+  assert_eq!( cells_over[ 2 ], "🟡 5%", "post-fix: both round to left=5.0, which is NOT > threshold 5.0 → 🟡" );
+}
+
 // ── renews_label (Phase 3 RED gate — TSK-227) ─────────────────────────────
 
 /// FT-17 — `renews_label` exact: `_renewal_at` set, result has no `~` prefix.

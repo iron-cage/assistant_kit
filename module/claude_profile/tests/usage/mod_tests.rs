@@ -426,3 +426,54 @@ fn test_ft28_009_footer_model_label()
     "FT-28 scenario 2: footer line 2 must show '· opus' when sonnet_left=9% < 10%; got:\n{output}",
   );
 }
+
+// ── BUG-334 reproducer ────────────────────────────────────────────────────
+
+/// BUG-334 — `ColsVisibility::default_set()` must hide the dead `7d(Son)` column by default.
+///
+/// # Root Cause
+/// `seven_day_sonnet` has been universally `None` for every account since Anthropic's
+/// 2026-06-25 API restructuring (`docs/algorithm/009_oauth_usage_response_migration.md`),
+/// yet `default_set()` still set `d7_son: true`, so the column was shown by default and
+/// always rendered blank.
+///
+/// # Why Not Caught
+/// No test asserted `default_set().d7_son`'s value directly; the column's blank rendering
+/// was indistinguishable from a legitimately-absent-but-shown column in visual inspection.
+///
+/// # Fix Applied
+/// Flipped `default_set()`'s `d7_son` field from `true` to `false`, matching the already-
+/// hidden-by-default siblings `sub` and `7d Son Reset`. Re-enabled via `cols::+7d_son`.
+///
+/// # Prevention
+/// A column's default visibility must be re-audited whenever its underlying data source
+/// is deprecated — an always-true default silently ages into an always-blank column.
+///
+/// # Pitfall
+/// Do not re-enable `d7_son` by default even if convenient — only flip it back if Anthropic
+/// restores the underlying API field (out of scope until that happens).
+///
+/// Spec: [`docs/feature/009_token_usage.md` AC-22]
+#[ doc = "bug_reproducer(BUG-334)" ]
+#[ test ]
+fn mre_bug334_d7_son_hidden_by_default()
+{
+  assert!(
+    !ColsVisibility::default_set().d7_son,
+    "BUG-334: d7_son must be hidden by default — seven_day_sonnet has been universally \
+     None since the 2026-06-25 API restructuring; showing it by default always renders blank",
+  );
+}
+
+/// `cols::+7d_son` override re-enables the `7d(Son)` column — zero prior coverage of this
+/// specific override existed before BUG-334 (its sibling `7d_son_reset` override is covered
+/// elsewhere; this is a distinct field with its own `apply_modifier` match arm).
+#[ test ]
+fn cols_plus_7d_son_override_shows_column()
+{
+  let cols = ColsVisibility::parse( "+7d_son" ).expect( "cols::+7d_son must parse" );
+  assert!(
+    cols.d7_son,
+    "cols::+7d_son must re-enable the 7d(Son) column even though it is hidden by default",
+  );
+}

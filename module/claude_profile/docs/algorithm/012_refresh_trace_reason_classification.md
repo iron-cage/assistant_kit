@@ -9,15 +9,15 @@
 
 ### Abstract
 
-`reason_label()` answers one question for `apply_refresh()`'s trace output: given an account's current ownership, cache, occupancy, and result state, which single string best explains why `should_retry` came out the way it did? Four conditions are checked in a fixed priority order, and the first one that matches wins — every condition after the first match is never evaluated, meaning its information is silently dropped whenever it also happens to be true. The function was extracted from an inline three-branch block (feature/036 AC-24, Fix BUG-306) specifically to make the predicate–reason 1:1 contract unit-testable; BUG-333 confirmed that the branch priority itself introduces the co-occurrence hazard this doc formalizes, independent of whether the function is extracted or inline.
+`reason_label()` answers one question for `apply_refresh()`'s trace output: given an account's current ownership, cache, occupancy, and result state, which single string best explains why `should_retry` came out the way it did? Four conditions are checked in a fixed priority order, and the first one that matches wins — every condition after the first match is never evaluated, meaning its information is silently dropped whenever it also happens to be true. The function was extracted from an inline three-branch block (feature/036 AC-24, Fix BUG-306) specifically to make the predicate–reason 1:1 contract unit-testable; BUG-333 confirmed that the branch priority itself had introduced the co-occurrence hazard this doc formalizes, independent of whether the function is extracted or inline, and its fix reordered the two affected branches to close the gap (see § The Co-Occurrence Hazard below).
 
 ### Algorithm
 
 #### Entry Point
 
-`claude_profile/src/usage/refresh.rs:25` — `pub fn reason_label( aq : &AccountQuota, now_secs : u64 ) -> &str`
+`claude_profile/src/usage/refresh.rs:32` — `pub fn reason_label( aq : &AccountQuota, now_secs : u64 ) -> &str`
 
-Called from `apply_refresh()` at `refresh.rs:105`, once per account per invocation, immediately after `should_refresh(aq, now_secs)` is evaluated and only when `trace` is enabled:
+Called from `apply_refresh()` at `refresh.rs:112`, once per account per invocation, immediately after `should_refresh(aq, now_secs)` is evaluated and only when `trace` is enabled:
 
 ```rust
 let should_retry = should_refresh( aq, now_secs );
@@ -33,12 +33,12 @@ if trace
 
 | Priority | Branch (`refresh.rs` line) | Condition | Returns | Condition source (upstream) |
 |----------|---------------------------|-----------|---------|------------------------------|
-| 1 | 27 | `!aq.is_owned` | `"not owned"` | `is_owned(account)` predicate (feature/036) — ownership comparison against `current_identity()` |
-| 2 | 31–34 | `aq.cached` (nested: `(aq.expires_at_ms / 1000) <= now_secs`) | `"cached-expired"` (token also expired) or `"cached"` (token still valid) | `aq.cached` set by cache-fallback logic in `fetch.rs` (G1/G1b path or 429+cache fallback, `fetch.rs:229-240`) |
-| 3 | 36–39 | `aq.is_occupied_elsewhere` | `"occupied elsewhere"` | `other_machines_active()` marker-file detection, assigned at `fetch.rs:122`/`fetch.rs:337` |
-| 4 | 40–43 (`else`) | — (residual) | `aq.result.as_ref().err().map_or("ok", String::as_str)` | `aq.result` — live fetch/refresh outcome |
+| 1 | 34 | `!aq.is_owned` | `"not owned"` | `is_owned(account)` predicate (feature/036) — ownership comparison against `current_identity()` |
+| 2 | 38–41 | `aq.is_occupied_elsewhere` | `"occupied elsewhere"` | `other_machines_active()` marker-file detection, assigned at `fetch.rs:117,188,321` |
+| 3 | 42–46 | `aq.cached` (nested: `(aq.expires_at_ms / 1000) <= now_secs`) | `"cached-expired"` (token also expired) or `"cached"` (token still valid) | `aq.cached` set by cache-fallback logic in `fetch.rs` (G1/G1b path or 429+cache fallback, `fetch.rs:306-313`) |
+| 4 | 47–50 (`else`) | — (residual) | `aq.result.as_ref().err().map_or("ok", String::as_str)` | `aq.result` — live fetch/refresh outcome |
 
-Branches are checked top-to-bottom; the first matching condition returns immediately. Priorities 2 and 3 are independently-set boolean flags (see column 5) — nothing in either flag's assignment logic prevents both from being `true` simultaneously for the same account.
+Branches are checked top-to-bottom; the first matching condition returns immediately. Priorities 2 and 3 are independently-set boolean flags (see column 5) — nothing in either flag's assignment logic prevents both from being `true` simultaneously for the same account. BUG-333's fix reordered these two branches from their pre-fix sequence (`cached` checked before `is_occupied_elsewhere`) to the current one (`is_occupied_elsewhere` checked before `cached`) — see § The Co-Occurrence Hazard below.
 
 #### The Co-Occurrence Hazard (BUG-333)
 
@@ -47,7 +47,7 @@ Per `feature/036_account_ownership.md` G1b, `fetch_quota_for_list()` uncondition
 - `aq.cached` — from `read_cached_quota()` / cache-history presence (Feature 040 approximation availability)
 - `aq.is_occupied_elsewhere` — hardcoded `true` by the caller, since G1b only fires when this is already known to be true
 
-These are two unrelated data sources evaluated in the same call. Consequently, **any occupied-elsewhere account with a prior cache entry — the common case after its first fetch — has both `cached = true` and `is_occupied_elsewhere = true` when `reason_label()` runs.** Because Priority 2 (`cached`) is checked before Priority 3 (`is_occupied_elsewhere`), the function returns `"cached"` or `"cached-expired"` and the occupancy information is silently dropped — even though `fetch`/`touch` trace lines for the same account in the same invocation correctly report `"occupied elsewhere"` (BUG-333 Symptom, verbatim transcript):
+These are two unrelated data sources evaluated in the same call. Consequently, **any occupied-elsewhere account with a prior cache entry — the common case after its first fetch — has both `cached = true` and `is_occupied_elsewhere = true` when `reason_label()` runs.** Prior to BUG-333's fix, `cached` (then Priority 2) was checked before `is_occupied_elsewhere` (then Priority 3), so the function returned `"cached"` or `"cached-expired"` and the occupancy information was silently dropped — even though `fetch`/`touch` trace lines for the same account in the same invocation correctly reported `"occupied elsewhere"` (BUG-333 Symptom, verbatim transcript captured pre-fix):
 
 ```
 2026-07-06 · 17:23:20 · fetch     i13@wbox.pro  skipped (reason: occupied elsewhere)
@@ -55,7 +55,7 @@ These are two unrelated data sources evaluated in the same call. Consequently, *
 2026-07-06 · 17:23:26 · touch     i13@wbox.pro  skipped (reason: occupied elsewhere)
 ```
 
-This is purely a diagnostic/trace-string defect (BUG-333 Severity: Low) — `should_refresh()`'s own occupancy gate (feature/036 G2: `!is_owned || is_occupied_elsewhere`) already independently returns `false` for this account regardless of what `reason_label()` reports, so no quota value, credential mutation, or renewal date is affected. See `invariant/012_label_selection_requires_cooccurrence_coverage.md` for the formal invariant this hazard violates, and `pitfall/007_label_selection_branch_priority_pitfalls.md` for the six-bug recurrence history of this same function/seam.
+BUG-333's fix reordered the two branches so `is_occupied_elsewhere` (now Priority 2) is checked before `cached` (now Priority 3), and the function now correctly returns `"occupied elsewhere"` for this co-occurring case. This was purely a diagnostic/trace-string defect (BUG-333 Severity: Low) — `should_refresh()`'s own occupancy gate (feature/036 G2: `!is_owned || is_occupied_elsewhere`) already independently returned `false` for this account regardless of what `reason_label()` reported, so no quota value, credential mutation, or renewal date was ever affected. See `invariant/012_label_selection_requires_cooccurrence_coverage.md` for the formal invariant this hazard violates, and `pitfall/007_label_selection_branch_priority_pitfalls.md` for the four-bug recurrence history of this same function/seam.
 
 ### Features
 
@@ -67,8 +67,8 @@ This is purely a diagnostic/trace-string defect (BUG-333 Severity: Low) — `sho
 
 | File | Relationship |
 |------|--------------|
-| `src/usage/refresh.rs:25-44` | `reason_label()` — the four-branch function this doc describes |
-| `src/usage/refresh.rs:69-194` | `apply_refresh()` — sole caller, line 105 |
+| `src/usage/refresh.rs:32-51` | `reason_label()` — the four-branch function this doc describes |
+| `src/usage/refresh.rs:76-201` | `apply_refresh()` — sole caller, line 112 |
 | `src/usage/fetch.rs:161-167,415-448` | G1b gate and `approximate_quota()` — the production site where `cached` and `is_occupied_elsewhere` are independently set on the same account |
 | `src/usage/refresh_predicate.rs` | `should_refresh()` — the separate, independently-evaluated control-flow predicate `reason_label()`'s output does not feed into |
 
@@ -76,7 +76,7 @@ This is purely a diagnostic/trace-string defect (BUG-333 Severity: Low) — `sho
 
 | File | Relationship |
 |------|--------------|
-| `tests/usage/refresh_tests_b.rs` | `reason_label_not_owned`, `reason_label_cached_expired`, `reason_label_cached_valid`, `reason_label_ok`, `reason_label_err`, `mre_bug298_apply_refresh_trace_reason_cached_expired`, `mre_bug_gap20_refresh_trace_reason_ok_owned_non_cached_ok`, `mre_bug306_refresh_trace_reason_occupied_elsewhere` — single-flag-isolation coverage of each branch; none construct the `cached ∧ is_occupied_elsewhere` co-occurrence (BUG-333 gap, per invariant/012) |
+| `tests/usage/refresh_tests_b.rs` | `reason_label_not_owned`, `reason_label_cached_expired`, `reason_label_cached_valid`, `reason_label_ok`, `reason_label_err`, `mre_bug298_apply_refresh_trace_reason_cached_expired`, `mre_bug_gap20_refresh_trace_reason_ok_owned_non_cached_ok`, `mre_bug306_refresh_trace_reason_occupied_elsewhere` — single-flag-isolation coverage of each branch, none construct the `cached ∧ is_occupied_elsewhere` co-occurrence; `mre_bug333_occupied_elsewhere_not_masked_by_cached` (added 2026-07-08) closes that gap — constructs `cached: true` ∧ `is_occupied_elsewhere: true` together and asserts `"occupied elsewhere"` (per invariant/012) |
 
 ### Invariants
 

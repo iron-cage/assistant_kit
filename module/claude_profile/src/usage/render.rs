@@ -105,7 +105,7 @@ pub fn render_text(
     // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
     // Pitfall: org_created_at may be present even when subscription is cancelled; must check
     //   billing_type BEFORE passing org_created_at to renews_label.
-    let renews_str = if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" )
+    let renews_str = if aq.is_no_subscription()
     {
       "\u{2014}".to_string()
     }
@@ -371,7 +371,7 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
     // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
     // Pitfall: org_created_at may be present even when subscription is cancelled; must check
     //   billing_type BEFORE passing org_created_at to renews_label.
-    GetField::Renews => if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" )
+    GetField::Renews => if aq.is_no_subscription()
     {
       "\u{2014}".to_string()
     }
