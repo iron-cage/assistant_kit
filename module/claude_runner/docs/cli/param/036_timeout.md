@@ -52,6 +52,10 @@ values are silently ignored (parse failure → field stays at `None`, resolved t
 `DEFAULT_PRINT_TIMEOUT_SECS` for print-mode or `0` for interactive). CLI flag
 wins when both are present.
 
+<!-- BUG-399 (task/claude_runner/bug/unverified/399_timeout_gate_wait_undocumented.md) —
+     --timeout does not bound the --max-sessions gate-wait phase, by design; this doc did
+     not cross-reference that boundary. See 025_concurrency_gate.md and 033_max_sessions.md. -->
+
 ### Referenced Parameter Groups
 
 | # | Group | Membership | Co-members |

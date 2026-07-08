@@ -1266,14 +1266,67 @@ fn t16_slot_wait_message_names_genuine_reclaim_race_for_dead_owner()
 /// counted occupiers), so the single `clr` invocation below always targets index
 /// 0. Bounds the wait via a small `CLR_GATE_MAX_ATTEMPTS`/`CLR_GATE_POLL_SECS`
 /// pair plus `--retry-override 0` (mirroring T09), so this test fails fast
-/// rather than hanging if the bug reproduces.
+/// rather than hanging if the bug reproduces. Asserts the invocation is admitted
+/// (exit 0 — the fake `claude` script's own exit code) instead of exhausting the
+/// gate-wait budget and exiting 1 with "session gate timed out" — the
+/// permanent-block symptom BUG-402 describes.
 ///
-/// Asserts the invocation is admitted (exit 0 — the fake `claude` script's own
-/// exit code) instead of exhausting the gate-wait budget and exiting 1 with
-/// "session gate timed out" — the permanent-block symptom BUG-402 describes.
-/// Current `acquire_slot()` (`src/cli/gate.rs`) has no liveness recheck on the
-/// ticket's own claimant, so this reproduces the bug as written: this test is
-/// expected to FAIL until that gap is fixed.
+/// ## Root Cause
+/// `acquire_slot()`'s reclaim branch, upon losing the initial ticket claim,
+/// treated ANY pre-existing ticket file as "a live contender is racing me right
+/// now" — with no check on whether the ticket's OWN recorded claimant was still
+/// alive. A ticket is written the instant a racer wins its `create_new()`, before
+/// that racer has done anything else; if that racer is then killed before
+/// completing its own `rename()`, the ticket persists forever (by design — see
+/// the "never cleaned up" `Pitfall` on `acquire_slot()`'s doc comment, added for
+/// an unrelated PID-recycling hazard), and every subsequent caller recomputes
+/// the identical ticket path from the still-untouched slot record and loses the
+/// claim identically, forever.
+///
+/// ## Why Not Caught
+/// T14 (BUG-392) and T16 (BUG-396) both exercise the reclaim-ticket path, but
+/// only ever with LIVE, concurrently-racing callers that are all part of the
+/// same test run — none of them pre-seed a ticket whose claimant is ALREADY
+/// dead before any contender in the test even starts. That is precisely BUG-402's
+/// scenario: no live racer at all, just a single caller facing a ticket
+/// abandoned by a process that is not part of this (or any) test run. No
+/// existing test could have caught this gap.
+///
+/// ## Fix Applied
+/// `acquire_slot()` now, upon losing the initial ticket claim, reads the
+/// ticket's own recorded `(pid, since)` via `read_slot_owner_record()` (which
+/// works unmodified on a ticket path — `claim_slot_file()` writes the identical
+/// `{"pid":...,"since":...}` shape to every file it creates) and checks that
+/// claimant's liveness exactly as already done for the slot's original owner.
+/// If also dead, it atomically claims one additional "takeover" marker keyed off
+/// the ticket's own (dead) claimant identity, via the same `create_new`
+/// atomicity — every racer observing the same orphaned ticket computes the
+/// identical takeover path, so exactly one successor wins; the winner proceeds
+/// through the existing `tmp`+`rename` tail unchanged. A new
+/// `SlotDenialCause::LostTakeoverRace` variant reports the takeover-race-lost
+/// case distinctly from `LostReclaimRace`, rather than reusing it — collapsing
+/// the two would repeat BUG-396's exact "operationally-different facts,
+/// identical text" mistake one level down. See `Fix(BUG-402)` on
+/// `acquire_slot()`/`SlotDenialCause` in `src/cli/gate.rs` for the full
+/// mechanism.
+///
+/// ## Prevention
+/// This test — pre-seeds a slot AND its own orphaned reclaim ticket with no live
+/// contender racing it, then asserts a fresh caller still acquires the slot
+/// promptly instead of reproducing the permanent-timeout symptom.
+///
+/// ## Pitfall
+/// This test proves the single-crash scenario is fixed — it does NOT prove
+/// `SlotDenialCause::LostTakeoverRace`'s own message text ("lost takeover race")
+/// is correct, since its one caller here is the takeover WINNER, not a loser; no
+/// live second racer contends for the takeover marker in this fixture. Asserting
+/// the loser-side message would need a T14/T16-style multi-racer fixture around
+/// an already-orphaned ticket instead of this single-caller one — deliberately
+/// left as future work, not required by BUG-402's own MRE scope. Separately,
+/// this fix does not close a SECOND-level crash (one occurring during the
+/// takeover attempt itself) — see `Fix(BUG-402)`'s own `Pitfall` on
+/// `acquire_slot()` in `src/cli/gate.rs` for why that residual is accepted as a
+/// probability reduction, not closed structurally.
 ///
 /// Bug file: `task/claude_runner/402_orphaned_reclaim_ticket_permanent_slot_block.md`.
 // test_kind: bug_reproducer(BUG-402)

@@ -38,6 +38,10 @@ env vars (no CLI flag) — see [003_env_param.md](../003_env_param.md#env-param-
 `clr` sleeps `poll_secs` between attempts but not after the final attempt, so an `N`-attempt
 sequence elapses `(N-1) * poll_secs` seconds before exhaustion fires.
 
+<!-- BUG-399 (task/claude_runner/bug/unverified/399_timeout_gate_wait_undocumented.md) —
+     --timeout does not bound this gate-wait phase, by design; this doc did not
+     cross-reference that boundary. See 036_timeout.md and user_story/025_concurrency_gate.md. -->
+
 **Note:** In `--dry-run` mode, the session gate is not triggered — the command preview
 is printed immediately without checking or waiting for active sessions.
 

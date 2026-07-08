@@ -209,6 +209,29 @@ fn reclaim_test_delay()
 // are not the same fact, even though both currently collapse to a
 // `false`-shaped non-admission — collapsing them erases information the
 // caller needs to build an accurate diagnostic (see wait_for_session_slot()).
+// Fix(BUG-402): a pre-existing ticket is not necessarily a live contender —
+// it may be orphaned by a PREVIOUS ticket-winner that crashed after winning
+// the ticket's create_new() here but before completing its own rename()
+// below. The prior code treated every non-empty ticket as "someone else is
+// racing me right now," with no liveness recheck on the ticket's own
+// claimant, so an orphaned ticket denied every future caller identically,
+// forever.
+// Root cause: the ticket file is (by design — see Pitfall above) never
+// cleaned up, but nothing ever re-examined whether ITS claimant was still
+// alive the way the original slot owner already was. A dead ticket
+// claimant is exactly as reclaimable as a dead slot owner, but the code
+// never asked the question.
+// Pitfall: this fix closes the single-crash scenario BUG-402 reports. It
+// does NOT protect against a second crash during the takeover attempt
+// itself — seeing this SAME situation recur one level down is a
+// structurally identical permanent block, not something the outer poll
+// loop in wait_for_session_slot() bounds or resolves (a fresh call
+// re-executes this identical single-level check and dead-ends identically
+// against an orphaned takeover marker, forever). Accepted as a probability
+// reduction — now requires two independent crashes on the same index
+// instead of one — not a structural close; see BUG-402's `## Fix Location`
+// for the bounded chain-chase alternative this deliberately defers, and why
+// (no occurrence of the compounding case has ever been observed).
 enum SlotDenialCause
 {
   /// The recorded owner of this index is alive — no reservation was
@@ -218,6 +241,15 @@ enum SlotDenialCause
   /// The recorded owner was dead, but another concurrent caller won the
   /// atomic reclaim-ticket race for this same index first.
   LostReclaimRace,
+  /// Fix(BUG-402): the ticket's own recorded claimant was ALSO dead (the
+  /// ticket was orphaned by a prior crash), but another concurrent caller
+  /// won the atomic takeover race for that orphaned ticket first. Kept
+  /// distinct from `LostReclaimRace` rather than reused for it: collapsing
+  /// a first-level ticket race and a second-level takeover-of-an-orphan
+  /// race into identical operator-facing text would repeat the exact
+  /// mistake BUG-396 was filed to fix, even though both are mechanically
+  /// races — see the doc comment above `acquire_slot()`'s reclaim branch.
+  LostTakeoverRace,
 }
 
 fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (), SlotDenialCause >
@@ -248,7 +280,37 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (
   let ticket = dir.join( format!( "reclaim_{index}_{owner}_{owner_since}.lock" ) );
   if !claim_slot_file( &ticket, pid, since )
   {
-    return Err( SlotDenialCause::LostReclaimRace );
+    // Fix(BUG-402): the ticket already exists — but that no longer means an
+    // unconditional loss. Check the ticket's OWN recorded claimant's
+    // liveness first, exactly as already done for the original slot owner
+    // above, instead of assuming every pre-existing ticket means a live
+    // contender.
+    let Some( ( ticket_claimant, ticket_claimant_since ) ) = read_slot_owner_record( &ticket )
+    else
+    {
+      // Mirrors the None-handling above: the only way this path exists but
+      // fails to parse is that some OTHER caller's claim_slot_file() just
+      // won create_new() on it and hasn't finished writing yet — definitely
+      // alive right now, same reasoning as the original owner's None case.
+      return Err( SlotDenialCause::HeldByLive );
+    };
+    if pid_alive( ticket_claimant )
+    {
+      return Err( SlotDenialCause::LostReclaimRace );
+    }
+    // The ticket's own claimant is dead: it was orphaned by a crash between
+    // winning the ticket and completing rename() below. Atomically claim
+    // ONE additional takeover marker, keyed off the ticket's own (dead)
+    // claimant identity so every racer observing the same orphaned ticket
+    // computes the identical takeover path — the same create_new
+    // arbitration already used for the ticket itself decides exactly one
+    // successor, which then proceeds through the unchanged tmp+rename tail
+    // below.
+    let takeover = dir.join( format!( "reclaim_takeover_{index}_{ticket_claimant}_{ticket_claimant_since}.lock" ) );
+    if !claim_slot_file( &takeover, pid, since )
+    {
+      return Err( SlotDenialCause::LostTakeoverRace );
+    }
   }
   let tmp = dir.join( format!( "reclaim_tmp_{index}_{pid}" ) );
   if !claim_slot_file( &tmp, pid, since )
@@ -438,10 +500,16 @@ pub( super ) fn wait_for_session_slot(
         // inside it — every prior assertion pattern-matching that substring
         // (5 sites here: T01/T04 positive, T02/T03/T06 negative-absence; 5 more
         // positive sites in config_file_test.rs) depends on it staying intact.
+        // Fix(BUG-402): LostTakeoverRace gets its own arm rather than
+        // reusing LostReclaimRace's text — collapsing a first-level ticket
+        // race and a second-level takeover-of-an-orphan race into identical
+        // operator-facing text would repeat this exact section's own BUG-396
+        // lesson, even though both are mechanically races.
         let cause = match claim
         {
           Some( Err( SlotDenialCause::HeldByLive ) )        => "slot held by another session",
           Some( Err( SlotDenialCause::LostReclaimRace ) )   => "lost reservation race",
+          Some( Err( SlotDenialCause::LostTakeoverRace ) )  => "lost takeover race",
           // None: has_capacity was false. Some(Ok(())): unreachable — the
           // admitted branch already returned above — but required for
           // match exhaustiveness, so it shares the "at capacity" arm rather

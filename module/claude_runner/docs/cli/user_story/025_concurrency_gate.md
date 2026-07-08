@@ -18,6 +18,10 @@
 - AC-009: `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS` override the gate's poll interval (default 30s) and attempt limit (default 1000) with no corresponding CLI flag or JSON key; invalid values silently fall back to the default
 - AC-010: `clr` sleeps between attempts but not after the final attempt, so an `N`-attempt sequence elapses `(N-1) * poll_secs` seconds before the gate-exhaustion path fires
 
+<!-- BUG-399 (task/claude_runner/bug/unverified/399_timeout_gate_wait_undocumented.md) —
+     --timeout does not bound this gate-wait phase, by design; this doc did not
+     cross-reference that boundary. See 036_timeout.md and param/033_max_sessions.md. -->
+
 ### Referenced Commands
 
 | # | Command | Role |
