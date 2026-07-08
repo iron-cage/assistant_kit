@@ -213,8 +213,13 @@ pub enum VersionsDirLockMode
   Locked,
   /// Mode `755` (read + write + execute) — matches an unpinned (`latest`) install.
   Unlocked,
-  /// Directory absent, or mode neither `555` nor `755`.
+  /// Directory exists but its mode is neither `555` nor `755` — a genuine
+  /// permission anomaly, distinct from `Absent`.
   Unknown,
+  /// Directory does not exist (nothing installed yet), or this platform
+  /// cannot report POSIX mode bits — no reliable compliance signal either
+  /// way, so callers must not treat this as a mismatch.
+  Absent,
 }
 
 impl core::fmt::Display for VersionsDirLockMode
@@ -227,6 +232,7 @@ impl core::fmt::Display for VersionsDirLockMode
       Self::Locked   => "555",
       Self::Unlocked => "755",
       Self::Unknown  => "unknown",
+      Self::Absent   => "absent",
     } )
   }
 }
@@ -250,6 +256,11 @@ pub fn read_versions_dir_lock_mode() -> VersionsDirLockMode
       0o755 => VersionsDirLockMode::Unlocked,
       _     => VersionsDirLockMode::Unknown,
     },
+    // Only a genuinely missing directory is `Absent` (no install has happened
+    // yet). Any other I/O error (e.g. permission denied on a parent directory)
+    // is a real, investigation-worthy anomaly, not "nothing to see here" — it
+    // falls into `Unknown` so it is flagged rather than silently swallowed.
+    Err( e ) if e.kind() == std::io::ErrorKind::NotFound => VersionsDirLockMode::Absent,
     Err( _ ) => VersionsDirLockMode::Unknown,
   }
 }
@@ -257,13 +268,13 @@ pub fn read_versions_dir_lock_mode() -> VersionsDirLockMode
 /// Read the current `chmod` mode of the versions directory.
 ///
 /// Non-Unix fallback: file mode bits are not available, so this always
-/// reports `Unknown`.
+/// reports `Absent` — no reliable compliance signal either way.
 #[ inline ]
 #[ must_use ]
 #[ cfg( not( unix ) ) ]
 pub fn read_versions_dir_lock_mode() -> VersionsDirLockMode
 {
-  VersionsDirLockMode::Unknown
+  VersionsDirLockMode::Absent
 }
 
 /// Return the path to the `~/.local/bin/claude` hot-swap symlink.

@@ -85,7 +85,7 @@ clv.status [v::N] [format::FMT]
 1. Invoke `claude --version` to detect the currently installed binary version (reports "not found" rather than failing if absent).
 2. Scan `/proc/*/cmdline` for running Claude Code processes and count matches.
 3. Read the active account and, if stored, the preferred version spec (`preferredVersionSpec`) — shown as a `Preferred:` line only when set.
-4. At `v::2`+ (text) or any `format::json`: resolve `autoUpdates`, `autoUpdatesChannel`, `minimumVersion`, `env.DISABLE_AUTOUPDATER`, `env.DISABLE_UPDATES`, and the versions directory's `chmod` mode; compare each against what the current pin state implies and render a `Lock:` section (`"lock"` object in JSON), flagging any drifted key as `MISMATCH`. Read-only — never mutates settings or file permissions.
+4. At `v::2`+ (text) or any `format::json`: resolve `autoUpdates`, `autoUpdatesChannel`, `minimumVersion`, `env.DISABLE_AUTOUPDATER`, `env.DISABLE_UPDATES`, and the versions directory's `chmod` mode; compare each against what the current pin state implies and render a `Lock:` section (`"lock"` object in JSON), flagging any drifted key as `MISMATCH`. A `chmod` value of `absent` (versions directory not yet created — e.g. a fresh install) is never flagged as a mismatch, since there is no reliable drift signal to compare. Read-only — never mutates settings or file permissions.
 5. Render aggregated status view (version, process count, account, optional preferred-version line, Lock: section) in the requested format; exits 1 first if `v::`/`format::` is out of range or an unknown parameter is present.
 
 **Examples:**

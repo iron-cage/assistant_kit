@@ -71,6 +71,7 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 | pinned, `chmod` drifted | Versions dir mode is `755` instead of the pinned `555` | Mismatch flagged |
 | pinned, `autoUpdates` drifted | Value is `true` instead of the pinned `false` | Mismatch flagged |
 | unpinned, compliant | No pin keys set, `chmod` is `755` | No mismatch |
+| unpinned, versions dir absent | No pin keys set, versions directory was never created (fresh install) | No mismatch (absent ≠ drift) |
 
 ---
 
@@ -95,6 +96,7 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 | IT-16 | `.status v::2` unpinned, compliant → `Lock:` section, no mismatch | P | 0 | F7=unpinned compliant | [read_status_test.rs] |
 | IT-17 | `.status v::0`/`v::1` output unchanged by the Lock: feature | P | 0 | F1=0,1 | [read_status_test.rs] |
 | IT-18 | `.status format::json` pinned, compliant → `"lock"` object present | P | 0 | F2=json, F7=pinned compliant | [read_status_test.rs] |
+| IT-20 | `.status v::2` unpinned, versions dir never created (fresh install) → `chmod: absent`, no false mismatch | P | 0 | F7=unpinned, dir absent | [read_status_test.rs] |
 
 ### Negative Tests
 
@@ -107,11 +109,11 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 
 ### Summary
 
-- **Total:** 19 tests (15 positive, 4 negative)
-- **Negative ratio:** 21.1% (command-specific only) — below ≥40% threshold; 4 additional cross-cutting tests in `read_status_test.rs` also apply to `.status` among other commands: 3 negative (`tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`) and 1 positive (`tc245_last_occurrence_wins_for_verbosity` — exit 0, verifies last-`v::`-wins precedence, not an error case)
+- **Total:** 20 tests (16 positive, 4 negative)
+- **Negative ratio:** 20.0% (command-specific only) — below ≥40% threshold; 4 additional cross-cutting tests in `read_status_test.rs` also apply to `.status` among other commands: 3 negative (`tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`) and 1 positive (`tc245_last_occurrence_wins_for_verbosity` — exit 0, verifies last-`v::`-wins precedence, not an error case)
 - **Existing cross-cutting negatives applying to `.status`:** `tc242` (`format::xml`), `tc243` (`format::JSON`), `tc244` (`format::`)
-- **Combined negative count (command-specific + cross-cutting):** 7/23 = 30.4% ❌ (below ≥40% threshold; informational metric only, not a blocking gate for this spec)
-- **TC range:** IT-1 to IT-19
+- **Combined negative count (command-specific + cross-cutting):** 7/24 = 29.2% ❌ (below ≥40% threshold; informational metric only, not a blocking gate for this spec)
+- **TC range:** IT-1 to IT-20
 
 ---
 
@@ -121,7 +123,7 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success (always — .status never errors) | IT-1 through IT-9, IT-13 through IT-18 |
+| 0 | Success (always — .status never errors) | IT-1 through IT-9, IT-13 through IT-18, IT-20 |
 | 1 | Invalid arguments | IT-10 through IT-12, IT-19 |
 | 2 | Not applicable (.status always exits 0 for any valid state) | — |
 
@@ -141,7 +143,7 @@ rather than exit 2. This is by design (FR-01: status is read-only, never fails).
 | F4 (HOME) | IT-1 (set), IT-7 (empty) | — |
 | F5 (preference) | IT-8 (absent), IT-9 (set) | — |
 | F6 (unknown params) | — | IT-12 |
-| F7 (lock-state) | IT-13 (pinned compliant), IT-14 (chmod drift), IT-15 (autoUpdates drift), IT-16 (unpinned compliant), IT-18 (json) | — |
+| F7 (lock-state) | IT-13 (pinned compliant), IT-14 (chmod drift), IT-15 (autoUpdates drift), IT-16 (unpinned compliant), IT-18 (json), IT-20 (dir absent) | — |
 
 ---
 
@@ -303,6 +305,16 @@ Same requirement as IT-11 (F1's out-of-range boundary), verified independently a
 
 ---
 
+### IT-20: Unpinned, versions dir absent (fresh install) → no false mismatch
+
+MAAV-found regression case: a genuinely fresh install (nothing ever run through `.version.install`) has no versions directory at all. The `chmod` row's underlying `VersionsDirLockMode::Absent` must be treated as "no reliable signal," not compared against `"755"`/`"555"` as if it were a real-but-wrong value — otherwise every fresh install falsely shows a `chmod MISMATCH`, undermining the entire purpose of the `Lock:` section.
+
+- **Given:** `HOME=<tmp>` with empty settings (no preference stored); the versions directory is never created.
+- **When:** `clv .status v::2`
+- **Then:** exit 0; the `chmod` row shows `absent (expected: 755)` with no `MISMATCH` marker; no `MISMATCH` appears anywhere in the output
+
+---
+
 ### Source Functions
 
 | Function | File |
@@ -324,3 +336,4 @@ Same requirement as IT-11 (F1's out-of-range boundary), verified independently a
 | `tc519_status_v0_v1_unchanged_by_lock_feature` | `tests/cli/read_status_test.rs` |
 | `tc520_status_v3_out_of_range_exits_1` | `tests/cli/read_status_test.rs` |
 | `tc521_status_lock_json_object_present` | `tests/cli/read_status_test.rs` |
+| `tc522_status_lock_chmod_absent_dir_not_flagged` | `tests/cli/read_status_test.rs` |

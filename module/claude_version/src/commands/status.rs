@@ -1,5 +1,6 @@
 //! `.status` — installation state, process count, active account, and lock-state visibility.
 
+use core::fmt::Write as _;
 use unilang::data::{ ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
@@ -11,7 +12,7 @@ use claude_version_core::config_resolve::resolve;
 use claude_version_core::settings_io::get_setting;
 use claude_version_core::version::{
   extract_semver, get_claude_version_raw, get_installed_version, read_preferred_version,
-  read_versions_dir_lock_mode,
+  read_versions_dir_lock_mode, VersionsDirLockMode,
 };
 
 /// Read the active account name from the credential store `_active` marker.
@@ -58,7 +59,8 @@ fn compute_lock_rows( is_pinned : bool, resolved_version : Option< &str > ) -> V
     .and_then( | ( home, cwd ) | resolve( "env.DISABLE_AUTOUPDATER", home, cwd, catalog() ).value );
   let disable_updates_actual = resolve_ctx.as_ref()
     .and_then( | ( home, cwd ) | resolve( "env.DISABLE_UPDATES", home, cwd, catalog() ).value );
-  let chmod_actual = Some( read_versions_dir_lock_mode().to_string() );
+  let chmod_mode   = read_versions_dir_lock_mode();
+  let chmod_actual = Some( chmod_mode.to_string() );
 
   // `autoUpdates` is the one key `lock_version()` always sets explicitly (never
   // removes it) — but a never-pinned install that predates any `.version.install`
@@ -84,7 +86,16 @@ fn compute_lock_rows( is_pinned : bool, resolved_version : Option< &str > ) -> V
   let minimum_version_compliant      = minimum_version_actual == minimum_version_expected;
   let disable_autoupdater_compliant  = disable_autoupdater_actual == disable_autoupdater_expected;
   let disable_updates_compliant      = disable_updates_actual == disable_updates_expected;
-  let chmod_compliant                = chmod_actual == chmod_expected;
+  // `Absent` means no versions directory exists yet (nothing installed) or
+  // this platform can't report POSIX modes — no reliable drift signal either
+  // way, so it must not be flagged as a false mismatch. A genuinely wrong
+  // mode on a directory that DOES exist (`Unknown`) still falls through to
+  // the normal comparison and is correctly flagged.
+  let chmod_compliant = match chmod_mode
+  {
+    VersionsDirLockMode::Absent => true,
+    _ => chmod_actual == chmod_expected,
+  };
 
   vec!
   [
@@ -111,7 +122,7 @@ fn render_lock_text( rows : &[ LockRow ] ) -> String
     let actual   = row.actual.as_deref().unwrap_or( "absent" );
     let expected = row.expected.as_deref().unwrap_or( "absent" );
     let marker   = if row.compliant { "" } else { " MISMATCH" };
-    out.push_str( &format!( "  {}: {actual} (expected: {expected}){marker}\n", row.key ) );
+    let _ = writeln!( out, "  {}: {actual} (expected: {expected}){marker}", row.key );
   }
   out
 }

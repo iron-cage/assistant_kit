@@ -34,6 +34,7 @@
 //! | TC-519 | `v::0`/`v::1` output unchanged by the Lock: feature | P | 0 |
 //! | TC-520 | `v::3` continues to exit 1 as out-of-range (IT-11 regression) | N | 1 |
 //! | TC-521 | `format::json`, pinned, all compliant → `"lock"` object present | P | 0 |
+//! | TC-522 | unpinned install, versions dir never created (fresh install) → `chmod: absent`, no false mismatch | P | 0 |
 
 use tempfile::TempDir;
 
@@ -390,4 +391,113 @@ fn tc521_status_lock_json_object_present()
     assert!( text.contains( key ), "lock JSON object missing key {key}: {text}" );
   }
   assert!( text.contains( "\"compliant\":true" ), "expected compliant:true entries in lock JSON: {text}" );
+}
+
+// TC-522 (bugfix, MAAV-found): unpinned install with the versions directory
+// never created (genuinely fresh install, nothing ever run through
+// `.version.install`) → the `chmod` row must report "absent" rather than a
+// false `MISMATCH`. Regression test for the case `write_versions_dir` is
+// deliberately NOT called — T04/TC-518 always pre-creates the directory, so
+// it never exercised this branch.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc522_status_lock_chmod_absent_dir_not_flagged()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+  // Deliberately no write_versions_dir( .. ) call — directory does not exist.
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let chmod_line = text.lines().find( | l | l.contains( "chmod" ) )
+    .unwrap_or_else( || panic!( "no chmod line in output: {text}" ) );
+  assert!(
+    chmod_line.contains( "absent" ) && !chmod_line.contains( "MISMATCH" ),
+    "chmod line must report absent without a false mismatch when the versions dir doesn't exist: {chmod_line}"
+  );
+  assert!( !text.contains( "MISMATCH" ), "expected no mismatch anywhere for a fresh install: {text}" );
+}
+
+// ADVERSARIAL PROBE (temporary, MAAV Round 1) — project `.claude/settings.json`
+// in `cwd` shadows the nested `env.DISABLE_AUTOUPDATER`/`env.DISABLE_UPDATES`
+// rows via `config_resolve::resolve()`'s Project layer, which sits ABOVE the
+// User (home) layer. Unpinned home state (no env keys) + a project config
+// declaring env.DISABLE_AUTOUPDATER=1 should, if the Lock: feature is
+// comparing against true home-level lock state, still see "actual: absent"
+// for that row (unpinned expects None/absent) OR should legitimately flag it
+// -- either way we need to observe what actually happens on the 2 keys that
+// route through resolve() vs the 3 keys that route through direct get_setting().
+#[ cfg( unix ) ]
+#[ test ]
+fn probe_status_lock_project_config_shadow()
+{
+  let home_dir = TempDir::new().unwrap();
+  let home = home_dir.path().to_str().unwrap();
+  // Unpinned home: no preference, no lock keys at all.
+  write_settings( home_dir.path(), &[] );
+  write_versions_dir( home_dir.path(), 0o755 ); // compliant unpinned chmod
+
+  // Project dir (acts as cwd) with its own .claude/settings.json declaring
+  // env.DISABLE_AUTOUPDATER=1 -- simulates a repo-level config a user's cwd
+  // might have for unrelated reasons (team policy, etc.), while the user's
+  // real HOME/pin-state is genuinely unpinned & compliant.
+  let project_dir = TempDir::new().unwrap();
+  let proj_claude = project_dir.path().join( ".claude" );
+  std::fs::create_dir_all( &proj_claude ).unwrap();
+  std::fs::write(
+    proj_claude.join( "settings.json" ),
+    "{\n  \"env\": {\"DISABLE_AUTOUPDATER\": \"1\"}\n}",
+  ).unwrap();
+
+  let bin = env!( "CARGO_BIN_EXE_claude_version" );
+  let out = std::process::Command::new( bin )
+    .args( [ ".status", "v::2" ] )
+    .env( "HOME", home )
+    .current_dir( project_dir.path() )
+    .output()
+    .expect( "failed to execute claude_version binary" );
+
+  let text = stdout( &out );
+  eprintln!( "=== PROBE OUTPUT ===\n{text}\n=== END PROBE OUTPUT ===" );
+  // Deliberately no assertion yet -- this is observational. The eprintln
+  // output is what we need to inspect.
+}
+
+// ADVERSARIAL PROBE 2 (temporary, MAAV Round 1) -- a genuinely pinned install
+// (chmod 555 on the versions dir, real pin state) whose settings.json becomes
+// corrupted/truncated AFTER the pin was applied (disk write torn by crash,
+// power loss, concurrent writer, etc.). `get_setting()` returns `Err` for
+// invalid JSON; `status.rs` collapses that `Err` via `.ok().flatten()` to
+// `None` for every settings-derived actual, AND `read_preferred_version()`
+// (which also calls `get_setting` and propagates `Err` through `?`) returns
+// `None`, forcing `is_pinned = false`. If that reasoning is right, `chmod`
+// gets compared against the UNPINNED expectation (755) even though the real
+// on-disk mode is still 555 (correctly locked, unchanged) -- producing a
+// false MISMATCH on a directory that is not actually out of compliance.
+#[ cfg( unix ) ]
+#[ test ]
+fn probe_status_lock_corrupted_settings_pinned_chmod()
+{
+  let home_dir = TempDir::new().unwrap();
+  let home = home_dir.path().to_str().unwrap();
+
+  // Real pin state on disk: chmod 555 (as lock_version() would have set for a
+  // pinned install).
+  write_versions_dir( home_dir.path(), 0o555 );
+
+  // Settings file exists but is corrupted (truncated mid-write) --
+  // NOT valid JSON, NOT even a parseable partial object.
+  let claude_dir = home_dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write(
+    claude_dir.join( "settings.json" ),
+    "{\n  \"preferredVersionSpec\": \"stable\",\n  \"preferredVersionResolved\": \"2.1.7", // truncated
+  ).unwrap();
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  let text = stdout( &out );
+  eprintln!( "=== PROBE 2 OUTPUT (exit={:?}) ===\n{text}\n=== END PROBE 2 OUTPUT ===",
+    out.status.code() );
 }
