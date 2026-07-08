@@ -24,6 +24,8 @@
 //! | T16 | 2 racers, `--max-sessions 1`, pre-seeded confirmed-dead owner → loser's wait message names "lost reservation race", not "at capacity" or a live hold (BUG-396) | — |
 //! | T17 | pre-seeded dead-owner slot + its own orphaned reclaim ticket (ticket's recorded claimant also dead), single caller, no live contender → still admitted promptly, not permanently blocked (BUG-402) | — |
 //! | T18 | `--max-sessions 2`, count-derived index (1) pre-seeded genuinely `HeldByLive`, other index (0) left completely free → still admitted promptly via fallback scan, not gate-wait exhaustion (BUG-404) | — |
+//! | T19 | `CLR_GATE_CLAIM_TEST_DELAY_MS` widens `claim_slot_file()`'s internal claim window → slot file must never be observed existing-but-unparseable during that window, only fully absent or fully valid (BUG-407) | — |
+//! | T20 | pre-seeded slot owned by a genuinely alive PID with `since=0` (maximally stale) → `CLR_GATE_STALE_SECS` unset denies reclaim (default/backward-compatible); set below elapsed duration, reclaim succeeds and the waiter is admitted immediately (BUG-400) | — |
 //!
 //! T05 (`clr --help` shows `default: 6`) is covered by
 //! `param_edge_cases_test.rs::ec9_max_sessions_help_shows_default_six`.
@@ -1472,5 +1474,274 @@ fn t18_gate_tries_other_free_index_when_count_derived_index_is_live_held()
     !stderr.contains( "session gate timed out" ),
     "T18 (BUG-404): must not exhaust the gate-wait budget while index 0 sits \
      completely free — stderr:\n{stderr}"
+  );
+}
+
+// ── T19: claim_slot_file() must publish its content atomically with its claim (BUG-407) ──
+
+/// T19 (BUG-407): a slot file must never be observable on disk in an
+/// existing-but-unparseable state — the state a crash between
+/// `claim_slot_file()`'s `create_new()` and its content `write!()` leaves
+/// behind, which `acquire_slot()` then classifies as a permanent denial
+/// (`HeldByLive` at the primary slot, `LostReclaimRace` at a reclaim ticket)
+/// with no liveness recheck and no reclaim path, because no owner PID was
+/// ever parsed out of the empty content.
+///
+/// `CLR_GATE_CLAIM_TEST_DELAY_MS` widens the window `claim_slot_file()`
+/// leaves open around its content becoming durable — pre-fix, between
+/// `create_new()` succeeding and `write!()` completing; post-fix, between
+/// its temp file being fully written and `hard_link()` publishing it. While
+/// a single `clr` invocation is inside that widened window, this test polls
+/// the slot file directly from the test harness (the crash-mid-write state
+/// is a pure filesystem artifact — no second racer is needed to observe it)
+/// and asserts it is always either fully absent or fully parseable, never
+/// present-but-unparseable.
+///
+/// Root Cause: `claim_slot_file()`'s `create_new(true).open(path)` and its
+/// subsequent `write!()` are two independent, non-atomic steps
+/// (`src/cli/gate.rs:115-124`) — `path` becomes visible to concurrent
+/// readers the instant `create_new()` succeeds, before its content is
+/// written.
+///
+/// Why Not Caught: no existing test pre-seeds or observes an
+/// existing-but-empty slot/ticket file — T15/T17/T18 all exercise a
+/// *readable* pre-existing record (dead owner, orphaned ticket, live
+/// owner); none constructs, or waits to observe, a file that exists but
+/// fails to parse.
+///
+/// Fix Applied: see `Fix(BUG-407)` on `claim_slot_file()` in `src/cli/gate.rs`.
+///
+/// Prevention: this test — with the window widened to 1s, a single fresh
+/// claim on an empty gate dir must never leave the slot file observable in
+/// an unparseable state at any point during its own claim.
+///
+/// Pitfall: this test polls tightly (5ms) throughout a generous 6s window
+/// specifically to catch a transient bad state a slower or shorter poll
+/// could miss — a passing result without ever observing a fully-valid
+/// record would not actually prove the widened window was exercised.
+///
+/// Bug file: `task/claude_runner/bug/closed/407_claim_slot_file_non_atomic_create_then_write.md`.
+// test_kind: bug_reproducer(BUG-407)
+#[ test ]
+fn t19_claim_slot_file_publish_is_atomic_under_widened_window()
+{
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" ); // empty: 0 counted occupiers
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut child = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_CLAIM_TEST_DELAY_MS", "1000" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn clr" );
+
+  let slot_path      = gate_dir.path().join( "slot_0.json" );
+  let poll_deadline  = std::time::Instant::now() + core::time::Duration::from_secs( 6 );
+  let mut saw_unparseable = false;
+  let mut saw_valid       = false;
+  while std::time::Instant::now() < poll_deadline
+  {
+    match std::fs::read_to_string( &slot_path )
+    {
+      Ok( content ) if slot_owner_pid( &content ).is_some() =>
+      {
+        saw_valid = true;
+        break;
+      }
+      Ok( _empty_or_malformed ) =>
+      {
+        saw_unparseable = true;
+        break;
+      }
+      Err( _not_yet_created ) => {}
+    }
+    std::thread::sleep( core::time::Duration::from_millis( 5 ) );
+  }
+
+  let deadline = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited = wait_bounded( &mut child, deadline );
+  if exited.is_none() { let _ = child.kill(); }
+  let out    = child.wait_with_output().expect( "reap clr" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+
+  assert!(
+    !saw_unparseable,
+    "T19 (BUG-407): observed slot_0.json existing but NOT yet parseable during \
+     claim_slot_file()'s widened claim window — this is exactly the on-disk state \
+     a crash between create_new() and write!() leaves behind, which acquire_slot() \
+     then classifies as a permanent denial. stderr:\n{stderr}"
+  );
+  assert!(
+    saw_valid,
+    "T19 (BUG-407): never observed slot_0.json in a fully-valid state within the \
+     poll window — the widened claim window may not have been exercised at all. \
+     stderr:\n{stderr}"
+  );
+  assert_eq!(
+    exited.and_then( |s| s.code() ), Some( 0 ),
+    "T19 (BUG-407): the claim must still succeed once its widened window elapses. \
+     Got exit {:?}, stderr:\n{stderr}",
+    exited.and_then( |s| s.code() )
+  );
+}
+
+// ── T20: reclaim gate has no staleness check for a live-but-stalled owner (BUG-400) ──
+
+/// T20 (BUG-400): pre-seeds `slot_0.json` with a genuinely alive occupier PID and
+/// `since=0` — the earliest representable timestamp, i.e. maximally stale by any
+/// real-world threshold — then races a single waiter against it twice against the
+/// SAME pre-seeded file. `since=0` (rather than a delay-based near-past timestamp)
+/// makes the elapsed-duration comparison deterministic: `unix_now() - 0` is always
+/// far larger than any small test threshold, with no dependency on real wall-clock
+/// timing precision or scheduling jitter.
+///
+/// Phase A: `CLR_GATE_STALE_SECS` unset — `acquire_slot()`'s only reclaim-eligibility
+/// test is `pid_alive(owner)`, so a live owner blocks the waiter indefinitely
+/// regardless of how stale `since` is; asserts the pre-fix/default behavior is
+/// unchanged (denied, gate exhausts) — this must remain true after the fix too,
+/// since an unset threshold means `is_stale` is always `false` (backward compatible).
+/// Also confirms Phase A does not mutate the pre-seeded slot file, since Phase B
+/// reuses it.
+///
+/// Phase B: `CLR_GATE_STALE_SECS=10`, well below the effectively-infinite elapsed
+/// duration since `since=0` — the owner is live but now ALSO stale, so the fixed
+/// `acquire_slot()` must fall through into the existing dead-owner reclaim-ticket
+/// path (the same machinery BUG-392/396/402 already established) and admit the
+/// waiter on its very first attempt.
+///
+/// ## Root Cause
+/// `acquire_slot()`'s reclaim-eligibility branch (`src/cli/gate.rs`, `if
+/// pid_alive( owner )`) is a single binary condition with no elapsed-time
+/// comparison against the recorded `owner_since` anywhere — a live-but-stalled
+/// (hung/deadlocked/SIGSTOPped) slot holder blocks a waiter forever even when
+/// aggregate capacity exists elsewhere, because the waiter's candidate index is
+/// deterministically re-derived from the same live count every poll, making the
+/// collision sticky rather than a one-off.
+///
+/// ## Why Not Caught
+/// T15/T18 both pre-seed a live owner, but neither varies `since` or exercises any
+/// staleness comparison — no prior test asserts on elapsed-time-based reclaim
+/// eligibility at all; the feature does not exist yet.
+///
+/// ## Fix Applied
+/// See `Fix(BUG-400)` on `acquire_slot()`/`gate_stale_secs()` in `src/cli/gate.rs`.
+///
+/// ## Prevention
+/// Any future reclaim-eligibility change must be re-verified against both an
+/// unset threshold (Phase A: denied) and a set, exceeded threshold (Phase B:
+/// admitted) — collapsing either direction silently reopens either the
+/// starvation bug (BUG-400) or a backward-compatibility regression.
+///
+/// ## Pitfall
+/// Do not replace `since=0` with a delay-based near-past timestamp (e.g.
+/// `unix_now() - 2` paired with a 2s `std::thread::sleep`) — that reintroduces
+/// exactly the wall-clock-precision flakiness this test's `since=0` choice avoids.
+///
+/// Bug file: `task/claude_runner/bug/closed/400_gate_reclaim_no_staleness_check.md`.
+// test_kind: bug_reproducer(BUG-400)
+#[ test ]
+fn t20_gate_reclaims_stale_live_owner_when_threshold_set()
+{
+  let ( _occupier_dir, occupier_path ) = fake_claude_binary_dir();
+  // 30s: comfortably longer than both phases' bounded runs combined, so the
+  // occupier's own self-expiry never races either waiter's observation window.
+  let mut occupier = spawn_print_claude_for( &occupier_path, 30 );
+  let occupier_pid = occupier.id();
+
+  let gate_dir = tempfile::TempDir::new().expect( "gate dir" );
+  // Empty: the occupier is deliberately NOT registered here — its liveness is
+  // checked directly against real /proc by pid_alive(), independent of the
+  // synthetic process count this dir backs (mirrors T15/T16's convention).
+  let proc_dir = tempfile::TempDir::new().expect( "proc dir" );
+
+  std::fs::write(
+    gate_dir.path().join( "slot_0.json" ),
+    format!( r#"{{"pid":{occupier_pid},"since":0}}"# ),
+  ).expect( "pre-seed live-but-stale owner slot file at index 0" );
+
+  let ( _script_dir, script_path ) = fake_claude_dir( "exit 0" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  // ── Phase A: unset CLR_GATE_STALE_SECS -> denied, gate exhausts ──
+  let mut waiter_a = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn waiter phase A" );
+
+  let deadline_a = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited_a = wait_bounded( &mut waiter_a, deadline_a );
+  if exited_a.is_none() { let _ = waiter_a.kill(); }
+  let out_a    = waiter_a.wait_with_output().expect( "reap waiter phase A" );
+  let stderr_a = String::from_utf8_lossy( &out_a.stderr );
+
+  assert!(
+    stderr_a.contains( "slot held by another session" ),
+    "T20 (BUG-400) phase A: default/unset CLR_GATE_STALE_SECS must preserve \
+     current behavior — a live owner (even one recorded since=0, i.e. maximally \
+     stale) is never reclaimed. stderr:\n{stderr_a}"
+  );
+  assert_eq!(
+    exited_a.and_then( |s| s.code() ), Some( 1 ),
+    "T20 (BUG-400) phase A: waiter must exhaust the gate (exit 1), never be \
+     admitted, while CLR_GATE_STALE_SECS is unset. Got exit {:?}, stderr:\n{stderr_a}",
+    exited_a.and_then( |s| s.code() )
+  );
+
+  let still_owned_by_occupier = std::fs::read_to_string( gate_dir.path().join( "slot_0.json" ) )
+    .ok()
+    .is_some_and( |c| c.contains( &occupier_pid.to_string() ) );
+  assert!(
+    still_owned_by_occupier,
+    "T20 (BUG-400): phase A (a pure denial, no reclaim attempted) must not mutate \
+     the pre-seeded slot file — phase B below reuses it."
+  );
+
+  // ── Phase B: CLR_GATE_STALE_SECS below the elapsed duration -> reclaim succeeds ──
+  let mut waiter_b = Command::new( bin )
+    .args( [ "-p", "--max-sessions", "1", "--retry-override", "0", "--journal", "off", "x" ] )
+    .env( "PATH", &script_path )
+    .env( "CLR_PROC_DIR", proc_dir.path() )
+    .env( "CLR_GATE_DIR", gate_dir.path() )
+    .env( "CLR_GATE_POLL_SECS", "1" )
+    .env( "CLR_GATE_MAX_ATTEMPTS", "2" )
+    .env( "CLR_GATE_STALE_SECS", "10" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::piped() )
+    .spawn()
+    .expect( "spawn waiter phase B" );
+
+  let deadline_b = std::time::Instant::now() + core::time::Duration::from_secs( 10 );
+  let exited_b = wait_bounded( &mut waiter_b, deadline_b );
+  if exited_b.is_none() { let _ = waiter_b.kill(); }
+  let out_b    = waiter_b.wait_with_output().expect( "reap waiter phase B" );
+  let stderr_b = String::from_utf8_lossy( &out_b.stderr );
+
+  let _ = occupier.kill();
+  let _ = occupier.wait();
+
+  assert_eq!(
+    exited_b.and_then( |s| s.code() ), Some( 0 ),
+    "T20 (BUG-400) phase B: once CLR_GATE_STALE_SECS is set below the elapsed \
+     duration, a live-but-stale owner must be reclaimed on the very first \
+     attempt, admitting the waiter immediately. Got exit {:?}, stderr:\n{stderr_b}",
+    exited_b.and_then( |s| s.code() )
+  );
+  assert!(
+    !stderr_b.contains( "slot held by another session" ) && !stderr_b.contains( "session gate timed out" ),
+    "T20 (BUG-400) phase B: waiter must be admitted immediately via the reclaim \
+     path, not fall back to the live-hold denial or exhaust the gate. stderr:\n{stderr_b}"
   );
 }

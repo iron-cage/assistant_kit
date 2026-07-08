@@ -4,7 +4,7 @@
 
 - **Purpose**: Guarantee that the `--max-sessions` concurrency gate never admits more concurrent print-mode sessions than the configured limit, even when multiple `clr` invocations race the admission check simultaneously — on both the fresh-claim path and the dead-owner reclaim path.
 - **Responsibility**: State the atomic reservation mechanism that closes the check-then-act race, which function owns it, and why the reservation must outlive the wait loop itself.
-- **In Scope**: `slot_path()`, `claim_slot_file()`, `acquire_slot()`, the admission condition in `wait_for_session_slot()`, the index-derivation rule that makes atomicity meaningful across racers, the fallback scan across every other index when the count-derived candidate is unavailable (see Provenance : BUG-404), and the ticket-arbitrated reclaim of dead-owner slots — including walking a chain of orphaned reclaim tickets left behind by a claimant that died before completing its own handoff, so the reclaim path self-heals from an interrupted reclaimer just as it self-heals from an interrupted original owner (see Provenance : BUG-392, BUG-402).
+- **In Scope**: `slot_path()`, `claim_slot_file()`, `acquire_slot()`, the admission condition in `wait_for_session_slot()`, the index-derivation rule that makes atomicity meaningful across racers, the fallback scan across every other index when the count-derived candidate is unavailable (see Provenance : BUG-404), the ticket-arbitrated reclaim of dead-owner slots — including walking a chain of orphaned reclaim tickets left behind by a claimant that died before completing its own handoff, so the reclaim path self-heals from an interrupted reclaimer just as it self-heals from an interrupted original owner (see Provenance : BUG-392, BUG-402) — and `claim_slot_file()`'s own guarantee that a claim and its content are published together, so no path it claims is ever observable existing-but-empty (see Provenance : BUG-407).
 - **Out of Scope**: Gate poll interval / attempt-limit configuration (→ `cli/003_env_param.md` Env Param 5), gate-state JSON escaping (→ BUG-384, `json_escape_str()`), `clr ps` queued-table display of gate files (→ `ps.rs` `build_queued_table()` directly), gate-timeout retry behavior (→ `006_exit_codes.md`).
 
 ### Invariant Statement
@@ -42,20 +42,23 @@ fn slot_path( dir : &Path, index : u32 ) -> PathBuf
 }
 ```
 
-**2. `claim_slot_file()` — atomic kernel-arbitrated claim:**
+**2. `claim_slot_file()` — atomic kernel-arbitrated claim, published as one unit with its content:**
 ```rust
 fn claim_slot_file( path : &Path, pid : u32, since : u64 ) -> bool
 {
-  let Ok( mut f ) = std::fs::OpenOptions::new().write( true ).create_new( true ).open( path )
-  else
+  let content = format!( r#"{{"pid":{pid},"since":{since}}}"# );
+  let dir     = path.parent().unwrap_or_else( || Path::new( "." ) );
+  let tmp     = dir.join( format!( "claim_tmp_{pid}_{since}" ) );
+  if std::fs::write( &tmp, &content ).is_err()
   {
     return false;
-  };
-  let _ = write!( f, r#"{{"pid":{pid},"since":{since}}}"# );
-  true
+  }
+  let claimed = std::fs::hard_link( &tmp, path ).is_ok();
+  let _ = std::fs::remove_file( &tmp );
+  claimed
 }
 ```
-`create_new(true)` maps to `O_CREAT | O_EXCL` — the file's creation and existence-check are a single atomic kernel operation. No separate exists-check precedes it; that separation is exactly what the pre-fix race exploited.
+The content is written to a uniquely-named temp file FIRST; only once it is fully durable does `hard_link()` publish it at `path`. `hard_link()` fails with `AlreadyExists` exactly like `create_new()` does (Fix(BUG-407)) — preserving the same single-atomic-kernel-operation arbitration property `create_new` alone provided — but now `path` never becomes visible to a concurrent reader before its content is complete. The pre-fix version called `create_new(true).open(path)` directly, then wrote the content as a separate, subsequent statement — `path` became visible to concurrent readers the instant the create succeeded, before its content existed; a process killed in between left `path` permanently existing but empty (see Provenance : BUG-407).
 
 **3. `acquire_slot()` — claim, or reclaim a dead owner's slot by walking the reclaim-ticket chain via atomic handoff:**
 ```rust
@@ -192,6 +195,9 @@ If a reclaim ticket's own claimant terminates before completing the `rename()` h
 If the admission call site reverts to trying only the count-derived index, with no fallback scan of the other indices in `0..max`:
 - A waiter whose single computed index collides with ANY unavailable slot — even one held by a perfectly healthy, actively-progressing session — starves for as long as the live process count stays at a value mapping to that same index, regardless of how many other indices sit completely free or dead-and-reclaimable the entire time. Because each live process holds at most one slot, whenever `count < max` at least `max - count` indices are guaranteed free-or-dead — a single-index-only design ignores that guarantee entirely (see Provenance : BUG-404).
 
+If `claim_slot_file()` reverts to `create_new()` directly on `path` followed by a separate content write, instead of publishing via write-to-temp-then-`hard_link`:
+- A process killed between the two steps leaves `path` existing on disk permanently, with no (or truncated) content. `read_slot_owner_record()` then returns `None` for every future reader, and every call site in `acquire_slot()` classifies that `None` as an unconditional, unrecheckable denial (`HeldByLive` at the primary slot, `LostReclaimRace` at a reclaim ticket) — with no owner PID ever parsed out, so `pid_alive()` is never even reached and no liveness recheck or reclaim path can ever engage. This differs from every other failure mode above in requiring no dead owner and no contending reclaimer as a precondition — it is reachable from the single most common path through `acquire_slot()`, a fresh uncontested claim (see Provenance : BUG-407).
+
 ### Sources
 
 | File | Notes |
@@ -206,6 +212,7 @@ If the admission call site reverts to trying only the count-derived index, with 
 | `../../tests/concurrency_gate_test.rs` | T14: pre-seeds a slot owned by a PID confirmed dead, then races 8 concurrent `clr` invocations against that single dead-owner slot; asserts peak concurrently-admitted children never exceeds 1 (BUG-392) |
 | `../../tests/concurrency_gate_test.rs` | T17: pre-seeds a slot owned by one confirmed-dead PID and an orphaned reclaim ticket claimed by a second, independently confirmed-dead PID; asserts a fresh caller still acquires the slot promptly instead of being permanently blocked (BUG-402) |
 | `../../tests/concurrency_gate_test.rs` | T18: `--max-sessions 2` with the count-derived index (1) pre-seeded as genuinely `HeldByLive` and the other index (0) left completely free; asserts prompt admission via the fallback scan rather than gate-wait exhaustion (BUG-404) |
+| `../../tests/concurrency_gate_test.rs` | T19: widens `claim_slot_file()`'s internal claim-to-publish window via `CLR_GATE_CLAIM_TEST_DELAY_MS` and polls the target slot path throughout; asserts it is never observed existing-but-unparseable, only fully absent or fully valid (BUG-407) |
 
 ### Provenance
 
@@ -216,6 +223,7 @@ If the admission call site reverts to trying only the count-derived index, with 
 | BUG-400 | Open (filed, not yet fixed): the reclaim-eligibility test (`pid_alive(owner)` alone) has no staleness/elapsed-time supplementary condition, so a live-but-stalled owner (hung, deadlocked, suspended) blocks reclaim indefinitely — the Invariant Statement's two-state owner model (alive/dead) has no third alive-but-stalled category. |
 | BUG-402 | Fixed: `acquire_slot()` now walks the reclaim-ticket chain, rechecking each next claimant's liveness before advancing (see Enforcement Mechanism : 3 above), so a reclaiming caller's own death no longer permanently blocks the slot index. Distinct from BUG-400: requires the *original* owner to be dead (BUG-400 requires it alive). The regression test (T17) passes reliably, confirmed across repeated full-suite runs. |
 | BUG-404 | Fixed: the admission call site tried only the single count-derived index per attempt, with no fallback to any other index in `0..max` — a waiter starved whenever that one index collided with an unavailable slot, even while other indices sat completely free or dead-and-reclaimable (confirmed empirically in production: 4 of 6 real slots dead-and-untried during a live user report). Fix: try the count-derived index first, then scan every other index before giving up on the attempt — see Enforcement Mechanism : 4 above. Architecturally prior to and broader than BUG-400 (which addresses only the staleness of the one targeted index); fixing this also resolves BUG-400's reported scenario in the common case, though BUG-400 remains independently valid when the live count itself plateaus at `max`. |
+| BUG-407 | Fixed: `claim_slot_file()`'s `create_new()` and its content `write!()` were two independent, non-atomic steps — a process killed between them left its claimed path permanently existing but empty, which `acquire_slot()` classified as an unconditional, unrecheckable denial with no dead-owner or contending-reclaimer precondition required. Fix: write the full content to a uniquely-named temp file first, then publish atomically via `hard_link()` — see Enforcement Mechanism : 2 above. One level beneath, and orthogonal to, BUG-392/BUG-402 (which hardened `acquire_slot()`'s own reclaim-branch sequencing on top of `claim_slot_file()`, not `claim_slot_file()`'s own internal atomicity). |
 
 ### Features
 

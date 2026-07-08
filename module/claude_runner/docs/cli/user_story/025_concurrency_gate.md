@@ -17,8 +17,11 @@
 - AC-008: The active session count used for gating counts only non-interactive (print-mode) Claude processes; interactive sessions are excluded from the count
 - AC-009: `CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS` override the gate's poll interval (default 30s) and attempt limit (default 1000) with no corresponding CLI flag or JSON key; invalid values silently fall back to the default
 - AC-010: `clr` sleeps between attempts but not after the final attempt, so an `N`-attempt sequence elapses `(N-1) * poll_secs` seconds before the gate-exhaustion path fires
+- AC-011: `--timeout` does not bound gate-wait duration — the gate's poll/attempt ceiling
+  (`CLR_GATE_POLL_SECS`/`CLR_GATE_MAX_ATTEMPTS`, default ~8.3h) is fully independent of
+  whatever `--timeout` value is set; see [036_timeout.md](../param/036_timeout.md)
 
-<!-- BUG-399 (task/claude_runner/bug/unverified/399_timeout_gate_wait_undocumented.md) —
+<!-- BUG-399 (task/claude_runner/bug/closed/399_timeout_gate_wait_undocumented.md) —
      --timeout does not bound this gate-wait phase, by design; this doc did not
      cross-reference that boundary. See 036_timeout.md and param/033_max_sessions.md. -->
 

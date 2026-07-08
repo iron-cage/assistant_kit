@@ -1,6 +1,5 @@
 use claude_core::process::find_claude_processes;
 use core::fmt::Write as _;
-use std::io::Write as _;
 use std::path::{ Path, PathBuf };
 use claude_journal::{ EventRecord, EventType, JournalWriter };
 
@@ -73,6 +72,30 @@ fn gate_max_attempts() -> u32
   gate_max_attempts_from( std::env::var( "CLR_GATE_MAX_ATTEMPTS" ).ok().as_deref() )
 }
 
+// Fix(BUG-400): staleness threshold for reclaiming a live-but-stalled slot owner.
+//
+// Root cause: acquire_slot()'s reclaim-eligibility test was the single binary
+// condition `pid_alive(owner)`, with no elapsed-time comparison against the
+// recorded `owner_since` anywhere — a live-but-stalled (hung/deadlocked/
+// SIGSTOPped) slot holder blocked a waiter indefinitely even when aggregate
+// capacity existed elsewhere, because the waiter's candidate index is
+// deterministically re-derived from the same live count every poll, making
+// the collision sticky rather than a one-off.
+//
+// Pitfall: unlike `gate_poll_secs()`/`gate_max_attempts()` above, unset or
+// invalid input must resolve to `None` (feature off), never a numeric
+// fallback — there is no safe default staleness threshold that would not
+// risk reclaiming a legitimately long-running session.
+
+/// Staleness threshold in seconds for reclaiming a live slot owner. Public,
+/// documented override — no CLI flag, no `--args-file` key. `None` (unset or
+/// invalid) disables staleness-based reclaim entirely, preserving prior
+/// behavior exactly.
+fn gate_stale_secs() -> Option< u64 >
+{
+  std::env::var( "CLR_GATE_STALE_SECS" ).ok().and_then( | s | s.parse().ok() )
+}
+
 // Fix(BUG-387): fixed-index reservation slot backing the concurrency gate.
 //
 // Root cause: the prior admission check (`find_claude_processes().count() < max`)
@@ -109,18 +132,45 @@ fn slot_path( dir : &Path, index : u32 ) -> PathBuf
   dir.join( format!( "slot_{index}.json" ) )
 }
 
-// Attempt to atomically create the slot file at `path`, recording the owning
-// PID and timestamp. Returns `true` on success; `false` if the slot is
-// already held (`AlreadyExists`) or any other I/O failure occurs.
+// Fix(BUG-407): publish the claim and its content as one atomic unit.
+// Root cause: `create_new(path)` then a separate `write!()` left `path`
+// observable to concurrent readers the instant the create succeeded, before
+// its content existed — a process killed between the two steps left `path`
+// permanently existing but empty/truncated, which every future reader
+// parsed as `None` and every caller in `acquire_slot()` then classified as
+// a permanent, unrecheckable denial.
+// Pitfall: the temp filename is derived purely from this call's own
+// `(pid, since)`, never from `path`'s own filename — deriving it from
+// `path` (e.g. appending a suffix to `slot_0.json`) would produce a
+// `slot_`-prefixed temp filename, miscounted by `count_live_held_slots()`
+// (see the `Fix(BUG-392)` Pitfall above) for the brief window it exists.
 fn claim_slot_file( path : &Path, pid : u32, since : u64 ) -> bool
 {
-  let Ok( mut f ) = std::fs::OpenOptions::new().write( true ).create_new( true ).open( path )
-  else
+  let content = format!( r#"{{"pid":{pid},"since":{since}}}"# );
+  let dir     = path.parent().unwrap_or_else( || Path::new( "." ) );
+  let tmp     = dir.join( format!( "claim_tmp_{pid}_{since}" ) );
+  if std::fs::write( &tmp, &content ).is_err()
   {
     return false;
-  };
-  let _ = write!( f, r#"{{"pid":{pid},"since":{since}}}"# );
-  true
+  }
+  claim_test_delay();
+  let claimed = std::fs::hard_link( &tmp, path ).is_ok();
+  let _ = std::fs::remove_file( &tmp );
+  claimed
+}
+
+// Test-only injection point, same idiom as `reclaim_test_delay()` above:
+// widen the window between `claim_slot_file()`'s temp file being fully
+// written and its publish via `hard_link()`, so a regression test can
+// deterministically observe that `path` never becomes visible before its
+// content is complete, rather than relying on incidental OS scheduling
+// jitter. Unset (production default): zero delay.
+fn claim_test_delay()
+{
+  if let Some( ms ) = std::env::var( "CLR_GATE_CLAIM_TEST_DELAY_MS" ).ok().and_then( |s| s.parse::< u64 >().ok() )
+  {
+    std::thread::sleep( core::time::Duration::from_millis( ms ) );
+  }
 }
 
 // Return the (pid, since) recorded in a slot file, if the file is readable and
@@ -274,7 +324,12 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (
     // output for a scenario with no dead owner and no reclaim attempt at all.
     return Err( SlotDenialCause::HeldByLive );
   };
-  if pid_alive( owner )
+  // Fix(BUG-400): a live owner is reclaim-eligible once also stale — see
+  // gate_stale_secs() above. Unset (default): is_stale is always false,
+  // preserving pre-fix behavior exactly (pid_alive(owner) alone gates).
+  let is_stale = gate_stale_secs()
+    .is_some_and( | threshold | unix_now().saturating_sub( owner_since ) > threshold );
+  if pid_alive( owner ) && !is_stale
   {
     return Err( SlotDenialCause::HeldByLive );
   }
