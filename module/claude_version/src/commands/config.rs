@@ -104,7 +104,7 @@ pub fn config_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resul
   {
     ( None, None, false ) =>
     {
-      let ( home_dir, cwd ) = config_resolve_context()?;
+      let ( home_dir, cwd ) = super::config_resolve_context()?;
       let all     = resolve_all( &home_dir, &cwd, catalog() );
       let content = render_config_show_all( &all, &opts );
       Ok( OutputData::new( content, "text" ) )
@@ -112,7 +112,7 @@ pub fn config_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resul
 
     ( Some( key ), None, false ) =>
     {
-      let ( home_dir, cwd ) = config_resolve_context()?;
+      let ( home_dir, cwd ) = super::config_resolve_context()?;
       let resolved = resolve( key, &home_dir, &cwd, catalog() );
       let content  = render_config_get( key, &resolved, &opts );
       Ok( OutputData::new( content, "text" ) )
@@ -172,19 +172,6 @@ pub fn config_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resul
 
     _ => unreachable!( "all invalid combinations rejected above" ),
   }
-}
-
-/// Resolve home directory and cwd for config resolution operations.
-///
-/// Returns `(home_dir, cwd)`. Falls back to home dir if `current_dir` fails.
-fn config_resolve_context() -> Result< ( std::path::PathBuf, std::path::PathBuf ), ErrorData >
-{
-  let paths    = super::require_claude_paths()?;
-  let home_dir = paths.base().parent()
-    .expect( "ClaudePaths base always has HOME as parent" )
-    .to_path_buf();
-  let cwd = std::env::current_dir().unwrap_or_else( | _ | home_dir.clone() );
-  Ok( ( home_dir, cwd ) )
 }
 
 /// Resolve the settings file path for a given scope string.

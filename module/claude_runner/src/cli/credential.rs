@@ -25,13 +25,13 @@ use claude_journal::{ EventRecord, EventType, JournalWriter };
 /// and `with_args()`, this trace will diverge — update both together.
 fn emit_credential_trace
 (
-  label          : &str,
-  creds_path     : &str,
-  model          : &IsolatedModel,
-  args           : &[ String ],
-  timeout_secs   : u64,
-  compact_window : Option< u32 >,
-  to_stdout      : bool,
+  label          : &str,             // subcommand name shown in the "# clr {label}" trace header
+  creds_path     : &str,             // credentials file path shown in the "# creds:" trace header
+  model          : &IsolatedModel,   // model whose --model flag (if any) is prepended to args
+  args           : &[ String ],      // fully-assembled arg list the real invocation will receive
+  timeout_secs   : u64,              // subprocess timeout shown in the "# timeout: Ns" trace header
+  compact_window : Option< u32 >,    // forwarded to with_compact_window() on the preview command
+  to_stdout      : bool,             // true: --dry-run → stdout only; false: --trace → stderr, with headers
 )
 {
   // Reproduce the exact temp dir path and arg list that run_isolated_ext() will create.

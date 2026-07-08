@@ -150,6 +150,7 @@ fn read_all_settings_typed( path : &Path ) -> Result< Vec< ( String, String, Sto
 #[ inline ]
 pub fn set_setting( path : &Path, key : &str, raw_value : &str ) -> Result< StoredAs, io::Error >
 {
+  eprintln!( "set_setting(path={}, key={key:?}, raw_value={raw_value:?})", path.display() );
   let mut pairs = read_or_empty( path )?;
   upsert_pair( &mut pairs, key, raw_value );
   let stored_as = infer_type( raw_value );
@@ -168,6 +169,7 @@ pub fn set_setting( path : &Path, key : &str, raw_value : &str ) -> Result< Stor
 #[ inline ]
 pub fn remove_setting( path : &Path, key : &str ) -> Result< (), io::Error >
 {
+  eprintln!( "remove_setting(path={}, key={key:?})", path.display() );
   let mut pairs = match read_all_settings( path )
   {
     Ok( p )  => p,
@@ -194,6 +196,7 @@ pub fn remove_setting( path : &Path, key : &str ) -> Result< (), io::Error >
 #[ inline ]
 pub fn set_env_var( path : &Path, key : &str, value : &str ) -> Result< (), io::Error >
 {
+  eprintln!( "set_env_var(path={}, key={key:?}, value={value:?})", path.display() );
   let mut pairs = read_or_empty( path )?;
   let env_idx   = pairs.iter().position( |( k, _ )| k == "env" );
 
@@ -225,6 +228,7 @@ pub fn set_env_var( path : &Path, key : &str, value : &str ) -> Result< (), io::
 #[ inline ]
 pub fn remove_env_var( path : &Path, key : &str ) -> Result< (), io::Error >
 {
+  eprintln!( "remove_env_var(path={}, key={key:?})", path.display() );
   let mut pairs = match read_all_settings( path )
   {
     Ok( p )  => p,

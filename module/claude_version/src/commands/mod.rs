@@ -91,3 +91,17 @@ fn require_claude_paths() -> Result< claude_core::ClaudePaths, ErrorData >
     Err( _ ) => Err( ErrorData::new( ErrorCode::InternalError, "HOME environment variable not set".to_string() ) ),
   }
 }
+
+/// Resolve home directory and cwd for config resolution operations.
+///
+/// Returns `(home_dir, cwd)`. Falls back to home dir if `current_dir` fails.
+/// Shared by `.config` and `.status` — both call `config_resolve::resolve()`.
+fn config_resolve_context() -> Result< ( std::path::PathBuf, std::path::PathBuf ), ErrorData >
+{
+  let paths    = require_claude_paths()?;
+  let home_dir = paths.base().parent()
+    .expect( "ClaudePaths base always has HOME as parent" )
+    .to_path_buf();
+  let cwd = std::env::current_dir().unwrap_or_else( | _ | home_dir.clone() );
+  Ok( ( home_dir, cwd ) )
+}

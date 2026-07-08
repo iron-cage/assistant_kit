@@ -13,7 +13,7 @@
 | `cli/type/` | Semantic type definitions for clv parameter values | [cli/type/readme.md](cli/type/readme.md) | 9 |
 | `cli/user_story/` | User story catalog with persona-goal scenarios | [cli/user_story/readme.md](cli/user_story/readme.md) | 8 |
 | `feature/` | Behavioral requirements for claude_version capabilities | [feature/readme.md](feature/readme.md) | 9 |
-| `pattern/` | Reusable design patterns applied in the crate | [pattern/readme.md](pattern/readme.md) | 1 |
+| `pattern/` | Reusable design patterns applied in the crate | [pattern/readme.md](pattern/readme.md) | 2 |
 | `pitfall/` | Confirmed design traps discovered through implementation | [pitfall/readme.md](pitfall/readme.md) | 2 |
 | `runtime_file/` | On-disk files created and managed by clv at known paths | [runtime_file/readme.md](runtime_file/readme.md) | 3 |
 | `tests/docs/algorithm/` | Per-algorithm test case specifications | [../tests/docs/algorithm/readme.md](../tests/docs/algorithm/readme.md) | 2 |
@@ -58,6 +58,7 @@
 | feature | 008 | Runtime File Discovery | [feature/008_runtime_file_discovery.md](feature/008_runtime_file_discovery.md) |
 | feature | 009 | Path Discovery | [feature/009_path_discovery.md](feature/009_path_discovery.md) |
 | pattern | 001 | Version Lock | [pattern/001_version_lock.md](pattern/001_version_lock.md) |
+| pattern | 002 | Parameter Trace | [pattern/002_parameter_trace.md](pattern/002_parameter_trace.md) |
 | pitfall | 001 | Version Lock chmod Side Effects | [pitfall/001_version_lock_chmod.md](pitfall/001_version_lock_chmod.md) |
 | pitfall | 002 | Auto-Updater Symlink Retarget | [pitfall/002_symlink_retarget.md](pitfall/002_symlink_retarget.md) |
 | runtime_file | 001 | Version History Cache | [runtime_file/001_version_history_cache.md](runtime_file/001_version_history_cache.md) |

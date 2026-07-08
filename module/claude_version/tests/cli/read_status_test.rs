@@ -23,10 +23,55 @@
 //! | TC-243 | `format::JSON` (uppercase) → exit 1 | N | 1 |
 //! | TC-244 | `format::` (empty) → exit 1 | N | 1 |
 //! | TC-245 | Last `v::` wins when duplicated | P | 0 |
+//!
+//! ## Lock-state visibility (Task 314)
+//! | TC | Description | P/N | Exit |
+//! |----|-------------|-----|------|
+//! | TC-515 | pinned install, all keys compliant → `Lock:` section, no mismatch | P | 0 |
+//! | TC-516 | pinned install, `chmod` drifted to 755 → flagged mismatch | P | 0 |
+//! | TC-517 | pinned install, `autoUpdates` flipped to true → flagged mismatch | P | 0 |
+//! | TC-518 | unpinned install → `Lock:` section, all compliant | P | 0 |
+//! | TC-519 | `v::0`/`v::1` output unchanged by the Lock: feature | P | 0 |
+//! | TC-520 | `v::3` continues to exit 1 as out-of-range (IT-11 regression) | N | 1 |
+//! | TC-521 | `format::json`, pinned, all compliant → `"lock"` object present | P | 0 |
 
 use tempfile::TempDir;
 
 use crate::subprocess_helpers::{ assert_exit, run_clv, run_clv_with_env, stdout, write_settings };
+
+/// Create the versions directory under `home_dir` with the given `chmod` mode.
+///
+/// # Panics
+///
+/// Panics if the directory cannot be created or its permissions cannot be set.
+#[ cfg( unix ) ]
+fn write_versions_dir( home_dir : &std::path::Path, mode : u32 )
+{
+  use std::os::unix::fs::PermissionsExt;
+  let dir = home_dir.join( ".local" ).join( "share" ).join( "claude" ).join( "versions" );
+  std::fs::create_dir_all( &dir ).unwrap();
+  std::fs::set_permissions( &dir, std::fs::Permissions::from_mode( mode ) ).unwrap();
+}
+
+/// Write a full pinned-install `settings.json` fixture with all 5 lock-mechanism
+/// keys (`autoUpdates`, `autoUpdatesChannel`, `minimumVersion`, and the nested
+/// `env.DISABLE_AUTOUPDATER`/`env.DISABLE_UPDATES` pair).
+///
+/// `auto_updates` is parameterized so tests can simulate drift in that one key
+/// while keeping the rest compliant.
+///
+/// # Panics
+///
+/// Panics if the directory cannot be created or the file cannot be written.
+fn write_pinned_settings( home_dir : &std::path::Path, resolved_version : &str, auto_updates : &str )
+{
+  let dir = home_dir.join( ".claude" );
+  std::fs::create_dir_all( &dir ).unwrap();
+  let json = format!(
+    "{{\n  \"preferredVersionSpec\": \"stable\",\n  \"preferredVersionResolved\": \"{resolved_version}\",\n  \"autoUpdates\": \"{auto_updates}\",\n  \"autoUpdatesChannel\": \"stable\",\n  \"minimumVersion\": \"{resolved_version}\",\n  \"env\": {{\"DISABLE_AUTOUPDATER\": \"1\", \"DISABLE_UPDATES\": \"1\"}}\n}}"
+  );
+  std::fs::write( dir.join( "settings.json" ), json ).unwrap();
+}
 
 // ─── E2: status ──────────────────────────────────────────────────────────────
 
@@ -209,4 +254,140 @@ fn tc245_last_occurrence_wins_for_verbosity()
     !text.contains( "Version:" ),
     "v::0 (last-wins) must produce bare output, got: {text}"
   );
+}
+
+// ─── Lock-state visibility (Task 314) ────────────────────────────────────────
+
+// TC-515 (T01): pinned install, all keys compliant → Lock: section, no mismatch
+#[ cfg( unix ) ]
+#[ test ]
+fn tc515_status_lock_pinned_all_compliant()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_pinned_settings( dir.path(), "2.1.78", "false" );
+  write_versions_dir( dir.path(), 0o555 );
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Lock:" ), "missing Lock: section: {text}" );
+  for key in [ "autoUpdates", "autoUpdatesChannel", "minimumVersion", "env.DISABLE_AUTOUPDATER", "env.DISABLE_UPDATES", "chmod" ]
+  {
+    assert!( text.contains( key ), "Lock: section missing key {key}: {text}" );
+  }
+  assert!( !text.contains( "MISMATCH" ), "expected no mismatch for fully compliant pinned install: {text}" );
+}
+
+// TC-516 (T02): pinned install, chmod drifted to 755 → flagged mismatch
+#[ cfg( unix ) ]
+#[ test ]
+fn tc516_status_lock_chmod_drift_flagged()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_pinned_settings( dir.path(), "2.1.78", "false" );
+  write_versions_dir( dir.path(), 0o755 ); // drifted — pinned expects 555
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let chmod_line = text.lines().find( | l | l.contains( "chmod" ) )
+    .unwrap_or_else( || panic!( "no chmod line in output: {text}" ) );
+  assert!(
+    chmod_line.contains( "755" ) && chmod_line.contains( "555" ) && chmod_line.contains( "MISMATCH" ),
+    "chmod line must show actual 755, expected 555, and MISMATCH: {chmod_line}"
+  );
+}
+
+// TC-517 (T03): pinned install, autoUpdates flipped to true → flagged mismatch
+#[ cfg( unix ) ]
+#[ test ]
+fn tc517_status_lock_autoupdates_drift_flagged()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_pinned_settings( dir.path(), "2.1.78", "true" ); // drifted — pinned expects false
+  write_versions_dir( dir.path(), 0o555 );
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let auto_updates_line = text.lines().find( | l | l.contains( "autoUpdates:" ) )
+    .unwrap_or_else( || panic!( "no autoUpdates line in output: {text}" ) );
+  assert!(
+    auto_updates_line.contains( "MISMATCH" ),
+    "autoUpdates line must show MISMATCH when flipped to true: {auto_updates_line}"
+  );
+}
+
+// TC-518 (T04): unpinned (no preference set) install → Lock: section, all compliant
+#[ cfg( unix ) ]
+#[ test ]
+fn tc518_status_lock_unpinned_all_compliant()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+  write_versions_dir( dir.path(), 0o755 );
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Lock:" ), "missing Lock: section for unpinned install: {text}" );
+  assert!( !text.contains( "MISMATCH" ), "expected no mismatch for compliant unpinned install: {text}" );
+}
+
+// TC-519 (T05): v::0 / v::1 output unchanged by the Lock: feature (no regression)
+#[ test ]
+fn tc519_status_v0_v1_unchanged_by_lock_feature()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_settings( dir.path(), &[] );
+
+  let out0 = run_clv_with_env( &[ ".status", "v::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out0, 0 );
+  let text0 = stdout( &out0 );
+  assert!( !text0.contains( "Lock:" ), "v::0 must not show Lock: section: {text0}" );
+  let lines0 : Vec< &str > = text0.lines().collect();
+  assert_eq!( lines0.len(), 3, "v::0 must still produce exactly 3 lines: {text0:?}" );
+
+  let out1 = run_clv_with_env( &[ ".status", "v::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out1, 0 );
+  let text1 = stdout( &out1 );
+  assert!( !text1.contains( "Lock:" ), "v::1 must not show Lock: section: {text1}" );
+  assert!(
+    text1.contains( "Version:" ) && text1.contains( "Processes:" ) && text1.contains( "Account:" ),
+    "v::1 must still show labeled lines: {text1}"
+  );
+}
+
+// TC-520 (T06): v::3 continues to exit 1 as out-of-range (IT-11 regression check)
+#[ test ]
+fn tc520_status_v3_out_of_range_exits_1()
+{
+  let out = run_clv( &[ ".status", "v::3" ] );
+  assert_exit( &out, 1 );
+}
+
+// TC-521 (T07): format::json, pinned, all compliant → "lock" object present
+#[ cfg( unix ) ]
+#[ test ]
+fn tc521_status_lock_json_object_present()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_pinned_settings( dir.path(), "2.1.78", "false" );
+  write_versions_dir( dir.path(), 0o555 );
+
+  let out = run_clv_with_env( &[ ".status", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"lock\"" ), "missing lock object in JSON: {text}" );
+  for key in [ "autoUpdates", "autoUpdatesChannel", "minimumVersion", "env.DISABLE_AUTOUPDATER", "env.DISABLE_UPDATES", "chmod" ]
+  {
+    assert!( text.contains( key ), "lock JSON object missing key {key}: {text}" );
+  }
+  assert!( text.contains( "\"compliant\":true" ), "expected compliant:true entries in lock JSON: {text}" );
 }
