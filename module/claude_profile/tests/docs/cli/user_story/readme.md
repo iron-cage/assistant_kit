@@ -8,6 +8,13 @@ correctness from the persona's perspective.
 registered in `test_surface.rulebook.md` (that file is outside the `module/claude_profile/`
 package scope). This directory is the authorizing source for the UA- prefix.
 
+### Scope
+
+- **Purpose**: Document UA-N acceptance test specs for each clp CLI user story.
+- **Responsibility**: Index of per-story user acceptance test case planning files covering end-to-end scenario correctness.
+- **In Scope**: All 5 user stories from `docs/cli/user_story/` — Automatic Account Rotation, Account Onboarding and Lifecycle Management, Multi-Account Quota Monitoring, Scripted Pipeline Automation, and Credential Diagnostics.
+- **Out of Scope**: Per-command tests (→ `../command/`), per-parameter edge cases (→ `../param/`), per-type boundary tests (→ `../type/`).
+
 ### Responsibility Table
 
 | File | Story | Persona | UA-N Cases |

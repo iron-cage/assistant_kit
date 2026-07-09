@@ -6,7 +6,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 - **Purpose**: Document FT-N test cases for each feature behavioral requirement.
 - **Responsibility**: Index of per-feature test case planning files covering AC coverage.
-- **In Scope**: All feature doc instances in `docs/feature/` that have been validated or are under active work.
+- **In Scope**: All 50 specs enumerated in the Responsibility Table below — the collection-level `000_doc_structure.md` (DT cases) plus per-feature FT specs for Features 001–040 and 061–069 (Feature 023 deprecated, absorbed into Feature 020). The Responsibility Table is the authoritative enumeration of covered elements; the Coverage Summary table below cross-references each entry to its source feature doc and case range.
 - **Out of Scope**: CLI command tests (→ `cli/command/`), parameter edge cases (→ `cli/param/`), automated test implementations (→ `tests/cli/`).
 
 ### Responsibility Table

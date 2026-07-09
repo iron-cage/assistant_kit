@@ -23,3 +23,5 @@ Test-lens documentation for `docs/algorithm/`. Each spec file covers one algorit
 | 008_subprocess_effort_resolution.md | AC spec for algorithm 008 — Subprocess Effort Resolution | ✅ |
 | 009_oauth_usage_response_migration.md | AC spec for algorithm 009 — OAuth Usage Response Dual-Source Parsing | ✅ |
 | 010_renewal_date_computation.md | AC spec for algorithm 010 — Renewal Date Computation | ✅ |
+| 011_rounding_boundary_classification_hazards.md | AC spec for algorithm 011 — Rounding-Boundary Classification Hazards | ✅ |
+| 012_refresh_trace_reason_classification.md | AC spec for algorithm 012 — Refresh Trace Reason Classification | ✅ |

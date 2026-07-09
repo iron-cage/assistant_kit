@@ -10,7 +10,8 @@ Each spec covers one pitfall document instance and asserts that the described gu
 - **Responsibility**: Index of per-pitfall guard verification files (PP-N entries).
 - **Case prefix**: `PP-` (Pitfall Protection)
 - **Min cases**: 2 per spec
-- **In Scope**: Pitfall instances from `docs/pitfall/` that have been guarded and verified.
+- **In Scope**: All 7 pitfall instances from `docs/pitfall/` (001–007) — every one guarded and
+  verified by a corresponding PP-N spec file in this directory.
 - **Out of Scope**: Feature behavior (→ `../feature/`), CLI edge cases (→ `../cli/`).
 
 ### Responsibility Table
@@ -23,6 +24,7 @@ Each spec covers one pitfall document instance and asserts that the described gu
 | `004_account_identity_pitfalls.md` | PP- spec for account identity pitfall guards (Pitfalls 1–2) |
 | `005_ownership_gate_pitfalls.md` | PP- spec for ownership gate pitfall guards (Pitfalls 1–4) |
 | `006_model_override_pitfalls.md` | PP- spec for model override pitfall guards (Pitfalls 1–4) |
+| `007_label_selection_branch_priority_pitfalls.md` | PP- spec for label selection branch-priority pitfall guards (Pitfalls 1–4) |
 
 ### Coverage Summary
 
@@ -34,3 +36,4 @@ Each spec covers one pitfall document instance and asserts that the described gu
 | [004_account_identity_pitfalls.md](../../../docs/pitfall/004_account_identity_pitfalls.md) | [004_account_identity_pitfalls.md](004_account_identity_pitfalls.md) | PP-1 … PP-2 | ✅ |
 | [005_ownership_gate_pitfalls.md](../../../docs/pitfall/005_ownership_gate_pitfalls.md) | [005_ownership_gate_pitfalls.md](005_ownership_gate_pitfalls.md) | PP-1 … PP-4 | ✅ |
 | [006_model_override_pitfalls.md](../../../docs/pitfall/006_model_override_pitfalls.md) | [006_model_override_pitfalls.md](006_model_override_pitfalls.md) | PP-1 … PP-4 | ✅ |
+| [007_label_selection_branch_priority_pitfalls.md](../../../docs/pitfall/007_label_selection_branch_priority_pitfalls.md) | [007_label_selection_branch_priority_pitfalls.md](007_label_selection_branch_priority_pitfalls.md) | PP-1 … PP-4 | ✅ |

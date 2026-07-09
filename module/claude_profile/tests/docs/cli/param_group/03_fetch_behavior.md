@@ -45,6 +45,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** One saved account whose `fetch_oauth_usage()` returns `Err` containing `"401"`.
 - **When:** `clp .usage refresh::1`
 - **Then:** Token refresh subprocess is launched for that account; quota fetch is retried once.
+- **Exit:** 0
 
 ---
 
@@ -53,6 +54,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** One saved account whose `fetch_oauth_usage()` returns `Err` containing `"403"`.
 - **When:** `clp .usage refresh::1`
 - **Then:** Token refresh subprocess is launched for that account; quota fetch is retried once.
+- **Exit:** 0
 
 ---
 
@@ -61,6 +63,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** One saved account whose `fetch_oauth_usage()` returns `Err` containing `"429"`; account's `expiresAt` is in the future (local token not expired).
 - **When:** `clp .usage refresh::1`
 - **Then:** No subprocess is launched. The 429 error appears directly as an error row in the table. No 30-second subprocess timeout is incurred. (Note: 429 with a locally-expired `expiresAt` DOES trigger a refresh attempt — see param 019.)
+- **Exit:** 0
 
 ---
 
@@ -69,6 +72,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** One saved account returning an auth error.
 - **When:** `clp .usage refresh::0`
 - **Then:** Error appears in the account's row with no retry. Exit 0.
+- **Exit:** 0
 
 ---
 
@@ -77,6 +81,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** Any credential state.
 - **When:** `clp .usage live::1 format::json`
 - **Then:** Exits 1 before any fetch with message `"live monitor mode is incompatible with format::json"`.
+- **Exit:** 1
 
 ---
 
@@ -85,6 +90,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** Any credential state.
 - **When:** `clp .usage interval::5 jitter::999`
 - **Then:** Exits 0. Neither `interval::` nor `jitter::` value is validated. Single fetch proceeds normally.
+- **Exit:** 0
 
 ---
 
@@ -93,6 +99,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** Any credential state.
 - **When:** `clp .usage live::1 interval::29`
 - **Then:** Exits 1 with error indicating `interval::` must be ≥ 30.
+- **Exit:** 1
 
 ---
 
@@ -101,6 +108,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** Any credential state.
 - **When:** `clp .usage live::1 interval::30 jitter::31`
 - **Then:** Exits 1 with error indicating `jitter::` must not exceed `interval::`.
+- **Exit:** 1
 
 ---
 
@@ -109,6 +117,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** `live::1` loop runs multiple cycles; one account has an auth error on cycle 1 but succeeds after refresh.
 - **When:** `clp .usage live::1 refresh::1 interval::30`
 - **Then:** On cycle 1, auth error triggers refresh + retry for that account. On cycle 2, updated token is used. No conflict between the two parameters.
+- **Exit:** 0
 
 ---
 
@@ -117,6 +126,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** One saved account with valid quota data.
 - **When:** `clp .usage trace::1`
 - **Then:** stderr contains timestamped diagnostic lines for credential read, API call, and result. stdout contains the normal quota table unchanged.
+- **Exit:** 0
 
 ---
 
@@ -125,6 +135,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** One saved account with valid quota data.
 - **When:** `clp .usage` (no `trace::1`)
 - **Then:** stderr is empty. stdout contains the normal quota table.
+- **Exit:** 0
 
 ---
 
@@ -133,6 +144,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** One saved account returning a 401 error.
 - **When:** `clp .usage refresh::1 trace::1`
 - **Then:** stderr contains timestamped diagnostic lines showing: credential read, API call attempt, 401 result, subprocess launch, credential re-read, retry API call, retry result. All steps visible per account.
+- **Exit:** 0
 
 ---
 
@@ -141,6 +153,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** One account with expired token (quota would fail with 401); after token refresh, `five_hour.resets_at` is present (session activated by refresh). `refresh::1 touch::1 trace::1`.
 - **When:** `clp .usage refresh::1 touch::1 trace::1`
 - **Then:** stderr timestamped diagnostic lines show refresh lifecycle completing first. Touch then evaluates post-refresh quota: since `resets_at` is now present (session started by refresh), touch correctly SKIPS the account (already active). No redundant double-subprocess. Trace shows `skipped (reason: already active)`.
+- **Exit:** 0
 - **Source:** [feature/024_session_touch.md AC-05](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -150,4 +163,5 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** One account with valid quota data and `five_hour.resets_at` absent (idle — no active 5h window). `touch::1 trace::1`.
 - **When:** `clp .usage touch::1 trace::1`
 - **Then:** stderr contains timestamped diagnostic lines for the touch subprocess lifecycle (same format as refresh) with per-step elapsed time. Lines include account name and subprocess status. stdout contains the normal quota table unchanged.
+- **Exit:** 0
 - **Source:** [feature/024_session_touch.md AC-09](../../../../docs/feature/024_session_touch.md)
