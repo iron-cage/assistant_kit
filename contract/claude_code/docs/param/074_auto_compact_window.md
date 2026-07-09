@@ -30,12 +30,18 @@ Only a value **lower** than the model's actual context window is meaningful — 
 
 Introduced in Claude Code v2.1.75 (2026-03-13), alongside 1M context window support for Opus 4.6 on Max, Team, and Enterprise plans.
 
+Naming note: unlike this variable, its sibling
+[`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`](075_autocompact_pct_override.md) has
+**no** `_CODE_` infix and joins `AUTOCOMPACT` as one word rather than
+`AUTO_COMPACT` — do not assume the two share a naming pattern just because
+they are used together and documented side by side.
+
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
-| doc | [075_autocompact_pct_override.md](075_autocompact_pct_override.md) | Percentage applied to this window value |
+| doc | [075_autocompact_pct_override.md](075_autocompact_pct_override.md) | Percentage applied to this window value — naming pattern differs, see note above |
 | behavior | [../behavior/025_b25_auto_compact_window.md](../behavior/025_b25_auto_compact_window.md) | Behavioral contract: env var acceptance |
 | doc | [100_disable_auto_compact.md](100_disable_auto_compact.md) | Disable auto-compaction entirely |
 | doc | [101_disable_compact.md](101_disable_compact.md) | Disable all compaction |

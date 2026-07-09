@@ -68,6 +68,18 @@ If `run_interactive()` adopts the 1-hour default:
 |------|--------------|
 | [feature/001_runner_tool.md](../feature/001_runner_tool.md) | Defines the print-mode and interactive execution paths that this invariant governs |
 
+**Not to be confused with:** this is clr's own *outer* watchdog — it kills the
+entire `claude` subprocess unconditionally once `DEFAULT_PRINT_TIMEOUT_SECS`
+(or an explicit `--timeout`/`CLR_TIMEOUT`) elapses, regardless of any
+background work in flight. It is independent of the *inner* layer, claude's
+own `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` (which clr sets to `0` — see
+[cli/003_env_param.md § Env Param 10](../cli/003_env_param.md)), which governs
+how long claude's own print-mode wind-down waits for backgrounded
+subagents/workflows before *its* internal sweep logic runs. Disabling or
+raising one does not affect the other — a long-running background agent can
+still be killed by this outer watchdog even when the inner ceiling has been
+neutralized.
+
 ### Sources
 
 | File | Relationship |
