@@ -35,6 +35,13 @@
 //! | TC-520 | `v::3` continues to exit 1 as out-of-range (IT-11 regression) | N | 1 |
 //! | TC-521 | `format::json`, pinned, all compliant → `"lock"` object present | P | 0 |
 //! | TC-522 | unpinned install, versions dir never created (fresh install) → `chmod: absent`, no false mismatch | P | 0 |
+//! | TC-523 | settings.json corrupted, versions dir genuinely locked (555) → all 6 rows UNVERIFIABLE, no false mismatch | P | 0 |
+//! | TC-524 | `format::json`, settings.json corrupted → `"compliant":null` for every key, never `false` | P | 0 |
+//! | TC-525 | settings.json permission-denied (mode 000), versions dir genuinely locked (555) → all 6 rows UNVERIFIABLE, no false mismatch | P | 0 |
+//! | TC-526 | pinned install, `autoUpdatesChannel` drifted → flagged mismatch | P | 0 |
+//! | TC-527 | pinned install, `minimumVersion` drifted → flagged mismatch | P | 0 |
+//! | TC-528 | pinned install, `env.DISABLE_AUTOUPDATER` drifted → flagged mismatch | P | 0 |
+//! | TC-529 | pinned install, `env.DISABLE_UPDATES` drifted → flagged mismatch | P | 0 |
 
 use tempfile::TempDir;
 
@@ -56,22 +63,44 @@ fn write_versions_dir( home_dir : &std::path::Path, mode : u32 )
 
 /// Write a full pinned-install `settings.json` fixture with all 5 lock-mechanism
 /// keys (`autoUpdates`, `autoUpdatesChannel`, `minimumVersion`, and the nested
-/// `env.DISABLE_AUTOUPDATER`/`env.DISABLE_UPDATES` pair).
+/// `env.DISABLE_AUTOUPDATER`/`env.DISABLE_UPDATES` pair) individually
+/// parameterized, so a test can plant drift in exactly one key while keeping
+/// the other 4 compliant — isolating which row's comparison logic is under
+/// test, the same discipline `tc516`/`tc517` already apply to `chmod`/`autoUpdates`.
 ///
-/// `auto_updates` is parameterized so tests can simulate drift in that one key
-/// while keeping the rest compliant.
+/// # Panics
+///
+/// Panics if the directory cannot be created or the file cannot be written.
+#[ allow( clippy::too_many_arguments ) ]
+fn write_pinned_settings_with_drift(
+  home_dir             : &std::path::Path,
+  resolved_version     : &str,
+  auto_updates         : &str,
+  auto_updates_channel : &str,
+  minimum_version      : &str,
+  disable_autoupdater  : &str,
+  disable_updates      : &str,
+)
+{
+  let dir = home_dir.join( ".claude" );
+  std::fs::create_dir_all( &dir ).unwrap();
+  let json = format!(
+    "{{\n  \"preferredVersionSpec\": \"stable\",\n  \"preferredVersionResolved\": \"{resolved_version}\",\n  \"autoUpdates\": \"{auto_updates}\",\n  \"autoUpdatesChannel\": \"{auto_updates_channel}\",\n  \"minimumVersion\": \"{minimum_version}\",\n  \"env\": {{\"DISABLE_AUTOUPDATER\": \"{disable_autoupdater}\", \"DISABLE_UPDATES\": \"{disable_updates}\"}}\n}}"
+  );
+  std::fs::write( dir.join( "settings.json" ), json ).unwrap();
+}
+
+/// Write a fully-compliant pinned-install `settings.json` fixture, with only
+/// `auto_updates` parameterized so tests can simulate drift in that one key.
 ///
 /// # Panics
 ///
 /// Panics if the directory cannot be created or the file cannot be written.
 fn write_pinned_settings( home_dir : &std::path::Path, resolved_version : &str, auto_updates : &str )
 {
-  let dir = home_dir.join( ".claude" );
-  std::fs::create_dir_all( &dir ).unwrap();
-  let json = format!(
-    "{{\n  \"preferredVersionSpec\": \"stable\",\n  \"preferredVersionResolved\": \"{resolved_version}\",\n  \"autoUpdates\": \"{auto_updates}\",\n  \"autoUpdatesChannel\": \"stable\",\n  \"minimumVersion\": \"{resolved_version}\",\n  \"env\": {{\"DISABLE_AUTOUPDATER\": \"1\", \"DISABLE_UPDATES\": \"1\"}}\n}}"
+  write_pinned_settings_with_drift(
+    home_dir, resolved_version, auto_updates, "stable", resolved_version, "1", "1",
   );
-  std::fs::write( dir.join( "settings.json" ), json ).unwrap();
 }
 
 // ─── E2: status ──────────────────────────────────────────────────────────────
@@ -418,4 +447,205 @@ fn tc522_status_lock_chmod_absent_dir_not_flagged()
     "chmod line must report absent without a false mismatch when the versions dir doesn't exist: {chmod_line}"
   );
   assert!( !text.contains( "MISMATCH" ), "expected no mismatch anywhere for a fresh install: {text}" );
+}
+
+/// Extract the `"key":{...}` entry substring for one lock key from the
+/// single-line `"lock"` JSON object, so a per-key assertion can't be
+/// silently satisfied by a sibling key's entry (each entry has no nested
+/// braces, so the first `}` after the key's opening brace closes it).
+///
+/// # Panics
+///
+/// Panics if `key`'s entry is not found in `json`.
+fn lock_json_entry<'a>( json : &'a str, key : &str ) -> &'a str
+{
+  let needle = format!( "\"{key}\":{{" );
+  let start = json.find( &needle ).unwrap_or_else( || panic!( "key {key} not found in {json}" ) );
+  let end = json[ start.. ].find( '}' )
+    .unwrap_or_else( || panic!( "unterminated entry for {key} in {json}" ) ) + start;
+  &json[ start..=end ]
+}
+
+// TC-523 (bugfix, MAAV-found): settings.json exists but could not be read
+// (invalid JSON), on an install whose versions directory is genuinely locked
+// (555). `is_pinned` silently degrades to `false` when settings.json can't
+// be read (see `read_preferred_version`, which swallows the read error via
+// `.ok()`), so without this fix a genuinely-pinned-and-locked install would
+// be compared against the unpinned (755) expectation and misreport a false
+// `MISMATCH` on every settings-derived row. Every row must instead report
+// `UNVERIFIABLE`.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc523_status_lock_corrupted_settings_reports_unverifiable()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( "settings.json" ), "{ not valid json" ).unwrap();
+  write_versions_dir( dir.path(), 0o555 ); // genuinely locked
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Lock:" ), "missing Lock: section: {text}" );
+  assert!(
+    text.contains( "could not be read" ),
+    "expected explanatory note about unreadable settings.json: {text}"
+  );
+  assert!( !text.contains( "MISMATCH" ), "corrupted settings must never assert a MISMATCH: {text}" );
+  for key in [ "autoUpdates", "autoUpdatesChannel", "minimumVersion", "env.DISABLE_AUTOUPDATER", "env.DISABLE_UPDATES", "chmod" ]
+  {
+    let line = text.lines().find( | l | l.contains( &format!( "{key}:" ) ) )
+      .unwrap_or_else( || panic!( "no {key} line in output: {text}" ) );
+    assert!( line.contains( "UNVERIFIABLE" ), "{key} line must report UNVERIFIABLE: {line}" );
+  }
+}
+
+// TC-524: format::json variant of TC-523 — `"compliant"` must serialize as
+// JSON `null` (not `false`) for every one of the 6 keys individually (not
+// merely "at least one key shows null, none shows false" — a whole-blob
+// check would still pass if 5 of 6 rows regressed to `true`/`false` while
+// only one correctly showed `null`), so machine consumers don't mistake an
+// unverifiable row for a confirmed mismatch.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc524_status_lock_json_corrupted_settings_compliant_null()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( "settings.json" ), "{ not valid json" ).unwrap();
+  write_versions_dir( dir.path(), 0o555 );
+
+  let out = run_clv_with_env( &[ ".status", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"lock\"" ), "missing lock object in JSON: {text}" );
+  for key in [ "autoUpdates", "autoUpdatesChannel", "minimumVersion", "env.DISABLE_AUTOUPDATER", "env.DISABLE_UPDATES", "chmod" ]
+  {
+    let entry = lock_json_entry( &text, key );
+    assert!(
+      entry.contains( "\"compliant\":null" ),
+      "{key} entry must report compliant:null when settings.json is corrupted, got: {entry}"
+    );
+  }
+}
+
+// TC-525 (bugfix, MAAV-found): settings.json exists, is valid JSON, and is
+// genuinely pinned+locked, but becomes unreadable due to a permissions error
+// (mode 000) rather than a parse failure. `read_preferred_version` swallows
+// ANY read error via `.ok()`, not just parse failures, so a fix that only
+// special-cased `ErrorKind::InvalidData` would still misreport a false
+// `MISMATCH` here. Must be treated identically to TC-523: every row
+// `UNVERIFIABLE`. Permissions are restored before assertions so `TempDir`
+// cleanup succeeds even when a panic occurs mid-test.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc525_status_lock_unreadable_settings_permission_denied_reports_unverifiable()
+{
+  use std::os::unix::fs::PermissionsExt;
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_pinned_settings( dir.path(), "2.1.78", "false" ); // genuinely pinned, valid JSON
+  write_versions_dir( dir.path(), 0o555 ); // genuinely locked
+
+  let settings_file = dir.path().join( ".claude" ).join( "settings.json" );
+  std::fs::set_permissions( &settings_file, std::fs::Permissions::from_mode( 0o000 ) ).unwrap();
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+
+  // Restore before any assertion so TempDir cleanup can delete the directory.
+  std::fs::set_permissions( &settings_file, std::fs::Permissions::from_mode( 0o644 ) ).unwrap();
+
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "MISMATCH" ), "unreadable settings must never assert a MISMATCH: {text}" );
+  for key in [ "autoUpdates", "autoUpdatesChannel", "minimumVersion", "env.DISABLE_AUTOUPDATER", "env.DISABLE_UPDATES", "chmod" ]
+  {
+    let line = text.lines().find( | l | l.contains( &format!( "{key}:" ) ) )
+      .unwrap_or_else( || panic!( "no {key} line in output: {text}" ) );
+    assert!(
+      line.contains( "UNVERIFIABLE" ),
+      "{key} line must report UNVERIFIABLE when settings.json is permission-denied: {line}"
+    );
+  }
+}
+
+// TC-526 (MAAV-found gap): `write_pinned_settings` hardcoded `autoUpdatesChannel`
+// to the always-correct "stable", so no test could ever distinguish a working
+// comparison from a `disable_autoupdater_status`-style hardcoded-Compliant bug
+// in this row. Plants drift in `autoUpdatesChannel` alone, mirroring `tc517`'s
+// discipline for `autoUpdates`.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc526_status_lock_autoupdates_channel_drift_flagged()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_pinned_settings_with_drift( dir.path(), "2.1.78", "false", "beta", "2.1.78", "1", "1" ); // drifted — pinned expects stable
+  write_versions_dir( dir.path(), 0o555 );
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let line = text.lines().find( | l | l.contains( "autoUpdatesChannel:" ) )
+    .unwrap_or_else( || panic!( "no autoUpdatesChannel line in output: {text}" ) );
+  assert!( line.contains( "MISMATCH" ), "autoUpdatesChannel line must show MISMATCH when drifted: {line}" );
+}
+
+// TC-527 (MAAV-found gap): same rationale as TC-526, for `minimumVersion`.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc527_status_lock_minimum_version_drift_flagged()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_pinned_settings_with_drift( dir.path(), "2.1.78", "false", "stable", "2.1.70", "1", "1" ); // drifted — pinned expects 2.1.78
+  write_versions_dir( dir.path(), 0o555 );
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let line = text.lines().find( | l | l.contains( "minimumVersion:" ) )
+    .unwrap_or_else( || panic!( "no minimumVersion line in output: {text}" ) );
+  assert!( line.contains( "MISMATCH" ), "minimumVersion line must show MISMATCH when drifted: {line}" );
+}
+
+// TC-528 (MAAV-found gap): same rationale as TC-526, for `env.DISABLE_AUTOUPDATER`.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc528_status_lock_disable_autoupdater_drift_flagged()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_pinned_settings_with_drift( dir.path(), "2.1.78", "false", "stable", "2.1.78", "0", "1" ); // drifted — pinned expects 1
+  write_versions_dir( dir.path(), 0o555 );
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let line = text.lines().find( | l | l.contains( "env.DISABLE_AUTOUPDATER:" ) )
+    .unwrap_or_else( || panic!( "no env.DISABLE_AUTOUPDATER line in output: {text}" ) );
+  assert!( line.contains( "MISMATCH" ), "env.DISABLE_AUTOUPDATER line must show MISMATCH when drifted: {line}" );
+}
+
+// TC-529 (MAAV-found gap): same rationale as TC-526, for `env.DISABLE_UPDATES`.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc529_status_lock_disable_updates_drift_flagged()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_pinned_settings_with_drift( dir.path(), "2.1.78", "false", "stable", "2.1.78", "1", "0" ); // drifted — pinned expects 1
+  write_versions_dir( dir.path(), 0o555 );
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let line = text.lines().find( | l | l.contains( "env.DISABLE_UPDATES:" ) )
+    .unwrap_or_else( || panic!( "no env.DISABLE_UPDATES line in output: {text}" ) );
+  assert!( line.contains( "MISMATCH" ), "env.DISABLE_UPDATES line must show MISMATCH when drifted: {line}" );
 }

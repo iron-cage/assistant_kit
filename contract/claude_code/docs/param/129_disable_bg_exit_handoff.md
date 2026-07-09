@@ -67,6 +67,13 @@ proven by, this `agentId` exclusion (whether Agent-tool jobs are excluded
 entirely or merely routed through the separately-gated `workflows`/`Ebo` path
 was not resolved from static analysis alone).
 
+Naming note: this variable's closest semantic sibling,
+[`CLAUDE_DISABLE_ADOPT`](138_disable_adopt.md) (a different lifecycle point
+— user-initiated backgrounding rather than process-exit handoff), has **no**
+`_CODE_` infix despite this variable carrying one. Easy to mix up when
+writing either name from memory, since the two are documented and used
+together.
+
 ### Cross-References
 
 | Type | File | Responsibility |

@@ -39,10 +39,18 @@ backgrounding via `←`/`/background` still hands work off normally unless
 this separate variable is also set. Setting `CLAUDE_DISABLE_ADOPT` turns off
 both handoff paths at once.
 
+Naming note: this variable has **no** `_CODE_` infix (`CLAUDE_DISABLE_ADOPT`,
+not `CLAUDE_CODE_DISABLE_ADOPT`) — easily confused with its closest semantic
+sibling [`CLAUDE_CODE_DISABLE_BG_EXIT_HANDOFF`](129_disable_bg_exit_handoff.md),
+which does carry the infix, since the two are documented and used together.
+See [140_auto_background_tasks.md](140_auto_background_tasks.md) for the
+full list of siblings sharing this trap.
+
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|-----------------|
 | doc | [readme.md](readme.md) | Master parameter table |
-| doc | [129_disable_bg_exit_handoff.md](129_disable_bg_exit_handoff.md) | Sibling variable — process-exit handoff instead of user-initiated backgrounding |
+| doc | [129_disable_bg_exit_handoff.md](129_disable_bg_exit_handoff.md) | Sibling variable — process-exit handoff instead of user-initiated backgrounding; naming pattern differs, see note above |
 | doc | [137_job_dir.md](137_job_dir.md) | Precondition marker for the exit-handoff path this variable also disables |
+| doc | [140_auto_background_tasks.md](140_auto_background_tasks.md) | Sibling no-`_CODE_`-infix variable |

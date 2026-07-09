@@ -32,8 +32,11 @@
 //! | `remove_setting_traces_function_and_parameters` | parameter-trace structural guard (task 313, T08): first statement is `eprintln!` naming the function, `path`, `key` |
 //! | `set_env_var_traces_function_and_parameters` | parameter-trace structural guard (task 313, T09): first statement is `eprintln!` naming the function, `path`, `key`, `value` |
 //! | `remove_env_var_traces_function_and_parameters` | parameter-trace structural guard (task 313, T10): first statement is `eprintln!` naming the function, `path`, `key` |
+//! | `json_parse_flat_object_parses_mixed_types` | `{"a":"s","b":42,"c":true,"d":{"n":1}}` → 4 entries tagged `Str`/`Number`/`Bool`/`Raw` |
+//! | `json_parse_flat_object_empty_object_returns_empty_vec` | `{}` → `Ok(vec![])` |
+//! | `json_parse_flat_object_rejects_non_object` | `"not an object"` (no braces) → `Err(InvalidData)` |
 
-use claude_core::settings_io::get_string_setting;
+use claude_core::settings_io::{ get_string_setting, json_parse_flat_object, StoredAs };
 
 fn write_settings( dir : &std::path::Path, raw_json : &str ) -> std::path::PathBuf
 {
@@ -113,6 +116,31 @@ fn get_string_setting_malformed_value_returns_invalid_data()
   let dir  = tempfile::TempDir::new().expect( "temp dir" );
   let path = write_settings( dir.path(), r#"{"subprocess_model": undefined}"# );
   let err  = get_string_setting( &path, "subprocess_model" ).unwrap_err();
+  assert_eq!( err.kind(), std::io::ErrorKind::InvalidData );
+}
+
+#[test]
+fn json_parse_flat_object_parses_mixed_types()
+{
+  let entries = json_parse_flat_object( r#"{"a": "s", "b": 42, "c": true, "d": {"n": 1}}"# ).unwrap();
+  assert_eq!( entries.len(), 4 );
+  assert_eq!( entries[ 0 ], ( "a".to_string(), "s".to_string(), StoredAs::Str ) );
+  assert_eq!( entries[ 1 ], ( "b".to_string(), "42".to_string(), StoredAs::Number ) );
+  assert_eq!( entries[ 2 ], ( "c".to_string(), "true".to_string(), StoredAs::Bool ) );
+  assert_eq!( entries[ 3 ].0, "d" );
+  assert_eq!( entries[ 3 ].2, StoredAs::Raw );
+}
+
+#[test]
+fn json_parse_flat_object_empty_object_returns_empty_vec()
+{
+  assert_eq!( json_parse_flat_object( "{}" ).unwrap(), vec![] );
+}
+
+#[test]
+fn json_parse_flat_object_rejects_non_object()
+{
+  let err = json_parse_flat_object( r#""not an object""# ).unwrap_err();
   assert_eq!( err.kind(), std::io::ErrorKind::InvalidData );
 }
 

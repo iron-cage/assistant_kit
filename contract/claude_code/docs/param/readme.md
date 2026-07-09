@@ -238,7 +238,7 @@ Precedence: CLI arg > env var > settings config.
 | 72 | [file_checkpointing_enabled](028_file_checkpointing_enabled.md) | — | — | `fileCheckpointingEnabled` | bool | `false` | pre-v1.0 | Save file checkpoint before each edit |
 | 73 | [remote_control_at_startup](053_remote_control_at_startup.md) | — | — | `remoteControlAtStartup` | bool | `false` | pre-v1.0 | Open remote-control channel on startup |
 | 74 | [auto_compact_window](074_auto_compact_window.md) | — | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | — | integer (tokens) | `200 000` / `1 000 000` | v2.1.75 | Context window in tokens for auto-compaction threshold; capped at model limit |
-| 75 | [autocompact_pct_override](075_autocompact_pct_override.md) | — | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | — | integer (1–100) | auto | v2.1.75 | Compaction trigger as percentage of `CLAUDE_CODE_AUTO_COMPACT_WINDOW` |
+| 75 | [autocompact_pct_override](075_autocompact_pct_override.md) | — | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | — | integer (1–100) | auto | v2.1.75 (no `_CODE_` infix) | Compaction trigger as percentage of `CLAUDE_CODE_AUTO_COMPACT_WINDOW` |
 | 76 | [max_turns](076_max_turns.md) | `--max-turns <n>` | — | — | integer | — | pre-v1.0 | Max agentic turns per session; unset = unlimited |
 | 77 | [safe_mode](077_safe_mode.md) | `--safe-mode` | `CLAUDE_CODE_SAFE_MODE` | — | bool | off | v2.1.169 | Disable bundled skills and experimental features |
 | 78 | [disable_bundled_skills](078_disable_bundled_skills.md) | — | `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` | `disableBundledSkills` | bool | false | v2.1.169 | Disable all built-in slash command skills |
@@ -300,9 +300,9 @@ Precedence: CLI arg > env var > settings config.
 | 134 | [entrypoint](134_entrypoint.md) | — | `CLAUDE_CODE_ENTRYPOINT` | — | enum (string) | unset | ≤v2.1.197 (undocumented) | Classifies the launching wrapper (vscode/remote/sdk/teams variants) |
 | 135 | [force_session_persistence](135_force_session_persistence.md) | — | `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE` | — | bool | false | ≤v2.1.197 (documented) | Override `CLAUDE_CODE_CHILD_SESSION` exclusion for false positives (e.g. `screen`) |
 | 136 | [disable_background_tasks](136_disable_background_tasks.md) | — | `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` | — | bool | false | ≤v2.1.197 (documented) | Disable all background task functionality (`run_in_background`, auto-background, Ctrl+B) |
-| 137 | [job_dir](137_job_dir.md) | — | `CLAUDE_JOB_DIR` | — | string (dir path) | unset | ≤v2.1.197 (undocumented) | Internal marker for supervisor/agent-view architecture; precondition for exit handoff |
-| 138 | [disable_adopt](138_disable_adopt.md) | — | `CLAUDE_DISABLE_ADOPT` | — | bool | false | v2.1.195+ | Stop in-flight work from carrying over when a session is backgrounded (`←`/`/background`) |
-| 139 | [async_agent_stall_timeout_ms](139_async_agent_stall_timeout_ms.md) | — | `CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS` | — | integer ms | `600000` | ≤v2.1.197 (documented) | Stall/no-progress timeout for background subagents, resets on progress |
+| 137 | [job_dir](137_job_dir.md) | — | `CLAUDE_JOB_DIR` | — | string (dir path) | unset | ≤v2.1.197 (undocumented; no `_CODE_` infix) | Internal marker for supervisor/agent-view architecture; precondition for exit handoff |
+| 138 | [disable_adopt](138_disable_adopt.md) | — | `CLAUDE_DISABLE_ADOPT` | — | bool | false | v2.1.195+ (no `_CODE_` infix) | Stop in-flight work from carrying over when a session is backgrounded (`←`/`/background`) |
+| 139 | [async_agent_stall_timeout_ms](139_async_agent_stall_timeout_ms.md) | — | `CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS` | — | integer ms | `600000` | ≤v2.1.197 (documented; no `_CODE_` infix) | Stall/no-progress timeout for background subagents, resets on progress |
 | 140 | [auto_background_tasks](140_auto_background_tasks.md) | — | `CLAUDE_AUTO_BACKGROUND_TASKS` | — | bool | false | ≤v2.1.197 (documented; no `_CODE_` infix) | Force-enable automatic backgrounding of long-running agent tasks |
 
 ### Cross-References
