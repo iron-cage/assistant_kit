@@ -70,6 +70,10 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 | pinned, compliant | All 5 settings keys + `chmod` match pinned expectation | No mismatch |
 | pinned, `chmod` drifted | Versions dir mode is `755` instead of the pinned `555` | Mismatch flagged |
 | pinned, `autoUpdates` drifted | Value is `true` instead of the pinned `false` | Mismatch flagged |
+| pinned, `autoUpdatesChannel` drifted | Value is `beta` instead of the pinned `stable` | Mismatch flagged |
+| pinned, `minimumVersion` drifted | Value diverges from the pinned resolved version | Mismatch flagged |
+| pinned, `env.DISABLE_AUTOUPDATER` drifted | Value is `0` instead of the pinned `1` | Mismatch flagged |
+| pinned, `env.DISABLE_UPDATES` drifted | Value is `0` instead of the pinned `1` | Mismatch flagged |
 | unpinned, compliant | No pin keys set, `chmod` is `755` | No mismatch |
 | unpinned, versions dir absent | No pin keys set, versions directory was never created (fresh install) | No mismatch (absent ≠ drift) |
 | settings.json corrupted | `settings.json` exists but fails to parse (invalid JSON) | All 6 rows `UNVERIFIABLE` (never a false mismatch or false compliant) |
@@ -102,6 +106,10 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 | IT-21 | `.status v::2` settings.json corrupted, versions dir genuinely locked (555) → all 6 rows `UNVERIFIABLE`, no false mismatch | P | 0 | F7=settings corrupted | [read_status_test.rs] |
 | IT-22 | `.status format::json` settings.json corrupted → `"compliant":null` for every key, never `false` | P | 0 | F2=json, F7=settings corrupted | [read_status_test.rs] |
 | IT-23 | `.status v::2` settings.json permission-denied (mode 000), versions dir genuinely locked (555) → all 6 rows `UNVERIFIABLE`, no false mismatch | P | 0 | F7=settings permission-denied | [read_status_test.rs] |
+| IT-24 | `.status v::2` pinned, `autoUpdatesChannel` drifted → mismatch flagged | P | 0 | F7=autoUpdatesChannel drifted | [read_status_test.rs] |
+| IT-25 | `.status v::2` pinned, `minimumVersion` drifted → mismatch flagged | P | 0 | F7=minimumVersion drifted | [read_status_test.rs] |
+| IT-26 | `.status v::2` pinned, `env.DISABLE_AUTOUPDATER` drifted → mismatch flagged | P | 0 | F7=env.DISABLE_AUTOUPDATER drifted | [read_status_test.rs] |
+| IT-27 | `.status v::2` pinned, `env.DISABLE_UPDATES` drifted → mismatch flagged | P | 0 | F7=env.DISABLE_UPDATES drifted | [read_status_test.rs] |
 
 ### Negative Tests
 
@@ -114,11 +122,11 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 
 ### Summary
 
-- **Total:** 23 tests (19 positive, 4 negative)
-- **Negative ratio:** 17.4% (command-specific only) — below ≥40% threshold; 4 additional cross-cutting tests in `read_status_test.rs` also apply to `.status` among other commands: 3 negative (`tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`) and 1 positive (`tc245_last_occurrence_wins_for_verbosity` — exit 0, verifies last-`v::`-wins precedence, not an error case)
+- **Total:** 27 tests (23 positive, 4 negative)
+- **Negative ratio:** 14.8% (command-specific only) — below ≥40% threshold; 4 additional cross-cutting tests in `read_status_test.rs` also apply to `.status` among other commands: 3 negative (`tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`) and 1 positive (`tc245_last_occurrence_wins_for_verbosity` — exit 0, verifies last-`v::`-wins precedence, not an error case)
 - **Existing cross-cutting negatives applying to `.status`:** `tc242` (`format::xml`), `tc243` (`format::JSON`), `tc244` (`format::`)
-- **Combined negative count (command-specific + cross-cutting):** 7/27 = 25.9% ❌ (below ≥40% threshold; informational metric only, not a blocking gate for this spec)
-- **TC range:** IT-1 to IT-23
+- **Combined negative count (command-specific + cross-cutting):** 7/31 = 22.6% ❌ (below ≥40% threshold; informational metric only, not a blocking gate for this spec)
+- **TC range:** IT-1 to IT-27
 
 ---
 
@@ -128,7 +136,7 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success (always — .status never errors) | IT-1 through IT-9, IT-13 through IT-18, IT-20 through IT-23 |
+| 0 | Success (always — .status never errors) | IT-1 through IT-9, IT-13 through IT-18, IT-20 through IT-27 |
 | 1 | Invalid arguments | IT-10 through IT-12, IT-19 |
 | 2 | Not applicable (.status always exits 0 for any valid state) | — |
 
@@ -151,7 +159,7 @@ guessing at a possibly-wrong compliance verdict (IT-21 through IT-23).
 | F4 (HOME) | IT-1 (set), IT-7 (empty) | — |
 | F5 (preference) | IT-8 (absent), IT-9 (set) | — |
 | F6 (unknown params) | — | IT-12 |
-| F7 (lock-state) | IT-13 (pinned compliant), IT-14 (chmod drift), IT-15 (autoUpdates drift), IT-16 (unpinned compliant), IT-18 (json), IT-20 (dir absent), IT-21 (settings corrupted), IT-22 (settings corrupted, json), IT-23 (settings permission-denied) | — |
+| F7 (lock-state) | IT-13 (pinned compliant), IT-14 (chmod drift), IT-15 (autoUpdates drift), IT-16 (unpinned compliant), IT-18 (json), IT-20 (dir absent), IT-21 (settings corrupted), IT-22 (settings corrupted, json), IT-23 (settings permission-denied), IT-24 (autoUpdatesChannel drift), IT-25 (minimumVersion drift), IT-26 (env.DISABLE_AUTOUPDATER drift), IT-27 (env.DISABLE_UPDATES drift) | — |
 
 ---
 
@@ -366,6 +374,48 @@ a normal, non-corrupted state) as untrustworthy.
 
 ---
 
+### IT-24: `autoUpdatesChannel` drifted → mismatch flagged
+
+MAAV-found coverage gap: prior to this test, `write_pinned_settings` hardcoded `autoUpdatesChannel` to
+the always-correct `"stable"`, so no test could distinguish a working comparison from a hardcoded-Compliant
+bug in this row specifically (a defect here would have been silently invisible to the whole suite).
+
+- **Given:** `HOME=<tmp>`; pinned install; `autoUpdatesChannel` is `"beta"` instead of the pinned `"stable"`; all other keys compliant.
+- **When:** `clv .status v::2`
+- **Then:** exit 0; `autoUpdatesChannel` line shows `MISMATCH`
+
+---
+
+### IT-25: `minimumVersion` drifted → mismatch flagged
+
+Same MAAV-found coverage gap as IT-24, for `minimumVersion`.
+
+- **Given:** `HOME=<tmp>`; pinned install; `minimumVersion` is `"2.1.70"` instead of the pinned resolved version `"2.1.78"`; all other keys compliant.
+- **When:** `clv .status v::2`
+- **Then:** exit 0; `minimumVersion` line shows `MISMATCH`
+
+---
+
+### IT-26: `env.DISABLE_AUTOUPDATER` drifted → mismatch flagged
+
+Same MAAV-found coverage gap as IT-24, for `env.DISABLE_AUTOUPDATER`.
+
+- **Given:** `HOME=<tmp>`; pinned install; `env.DISABLE_AUTOUPDATER` is `"0"` instead of the pinned `"1"`; all other keys compliant.
+- **When:** `clv .status v::2`
+- **Then:** exit 0; `env.DISABLE_AUTOUPDATER` line shows `MISMATCH`
+
+---
+
+### IT-27: `env.DISABLE_UPDATES` drifted → mismatch flagged
+
+Same MAAV-found coverage gap as IT-24, for `env.DISABLE_UPDATES`.
+
+- **Given:** `HOME=<tmp>`; pinned install; `env.DISABLE_UPDATES` is `"0"` instead of the pinned `"1"`; all other keys compliant.
+- **When:** `clv .status v::2`
+- **Then:** exit 0; `env.DISABLE_UPDATES` line shows `MISMATCH`
+
+---
+
 ### Source Functions
 
 | Function | File |
@@ -391,6 +441,10 @@ a normal, non-corrupted state) as untrustworthy.
 | `tc523_status_lock_corrupted_settings_reports_unverifiable` | `tests/cli/read_status_test.rs` |
 | `tc524_status_lock_json_corrupted_settings_compliant_null` | `tests/cli/read_status_test.rs` |
 | `tc525_status_lock_unreadable_settings_permission_denied_reports_unverifiable` | `tests/cli/read_status_test.rs` |
+| `tc526_status_lock_autoupdates_channel_drift_flagged` | `tests/cli/read_status_test.rs` |
+| `tc527_status_lock_minimum_version_drift_flagged` | `tests/cli/read_status_test.rs` |
+| `tc528_status_lock_disable_autoupdater_drift_flagged` | `tests/cli/read_status_test.rs` |
+| `tc529_status_lock_disable_updates_drift_flagged` | `tests/cli/read_status_test.rs` |
 | `tc242_unknown_format_exits_1` | `tests/cli/read_status_test.rs` |
 | `tc243_uppercase_format_exits_1` | `tests/cli/read_status_test.rs` |
 | `tc244_empty_format_exits_1` | `tests/cli/read_status_test.rs` |
