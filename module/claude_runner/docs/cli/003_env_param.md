@@ -4,20 +4,20 @@
 
 - **Purpose**: Document CLR_* environment variable fallbacks, runtime configuration overrides, and CLAUDE_CODE_* subprocess variables.
 - **Responsibility**: Specify env var names, corresponding CLI parameters, precedence rules, and type handling.
-- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`, `CLR_CONFIG_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, CLAUDE_CODE_AUTO_COMPACT_WINDOW injected default, precedence, bool/parsed type semantics.
+- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`, `CLR_GATE_STALE_SECS`, `CLR_CONFIG_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, CLAUDE_CODE_AUTO_COMPACT_WINDOW injected default, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (→ param/), subprocess behavior beyond env injection, config-file TOML key reference (→ [config_param.md](config_param.md)).
 
-### All Env Parameters (88 total)
+### All Env Parameters (89 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
 | Input (CLR_*) — `run` subcommand | 64 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 13 | Caller env fallbacks for credential operation parameters |
 | Input (CLR_*) — `ps` subcommand | 5 | Caller env fallbacks for session listing display and flag thresholds |
-| Runtime config (CLR_*) | 4 | Runtime configuration overrides (not CLI parameter fallbacks) |
+| Runtime config (CLR_*) | 5 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) — injected | 2 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 88 environment variables
+**Total:** 89 environment variables
 
 ---
 
@@ -223,7 +223,7 @@ clr --max-tokens 50000 --dry-run "test"      # shows: CLAUDE_CODE_MAX_OUTPUT_TOK
 ### Env Param 5: Gate Runtime Configuration
 
 Runtime configuration overrides for the `--max-sessions` concurrency gate (`gate.rs`). None
-of the three variables has a corresponding CLI flag or `--args-file` JSON key — env-var-only,
+of the four variables has a corresponding CLI flag or `--args-file` JSON key — env-var-only,
 matching the `CLR_PS_ANCIENT_SECS`/`CLR_PS_HIGH_RAM_MB` precedent (Env Param 3).
 
 | Variable | Default | Type | Notes |
@@ -231,6 +231,7 @@ matching the `CLR_PS_ANCIENT_SECS`/`CLR_PS_HIGH_RAM_MB` precedent (Env Param 3).
 | `CLR_GATE_DIR` | `/tmp/clr-gate` | path | Gate state directory; read by `gate_dir()` in `gate.rs`, called directly by `ps.rs` |
 | `CLR_GATE_POLL_SECS` | `30` | u64 | Poll interval between gate attempts; read by `gate_poll_secs()` in `gate.rs`; invalid values silently fall back to `30` |
 | `CLR_GATE_MAX_ATTEMPTS` | `1000` | u32 | Attempt limit before gate exhaustion; read by `gate_max_attempts()` in `gate.rs`; invalid values silently fall back to `1000` |
+| `CLR_GATE_STALE_SECS` | unset (`None`) | u64, optional | Staleness threshold for reclaiming a live-but-stalled slot owner; read by `gate_stale_secs()` in `gate.rs`; unset or invalid values resolve to `None` (feature off) — never a numeric fallback (BUG-400) |
 
 **`CLR_GATE_DIR`:** Overrides the default gate state directory used by `gate.rs` (write) and
 `ps.rs` (read). When a `clr` process is blocked at the `--max-sessions` concurrency gate,
@@ -255,10 +256,26 @@ CLR_GATE_POLL_SECS=5 CLR_GATE_MAX_ATTEMPTS=12 clr --max-sessions 1 --retry-overr
 # disables the runner-retry wrapper so exhaustion surfaces on the first pass
 ```
 
+**`CLR_GATE_STALE_SECS`:** Opt-in staleness threshold for reclaiming a slot from a live-but-stalled
+owner (hung, deadlocked, or `SIGSTOP`ped — a process that never releases its slot but is not
+dead either). Unset by default: `is_stale` is always `false`, so a live owner blocks reclaim
+exactly as it did before this variable existed. When set, a losing reservation attempt whose
+existing owner is alive AND whose recorded claim time exceeds the threshold treats that owner
+as reclaim-eligible — it falls through into the same ticket-arbitrated reclaim path a dead
+owner already uses (no separate mechanism). Unlike `CLR_GATE_POLL_SECS` / `CLR_GATE_MAX_ATTEMPTS`,
+an invalid value does **not** fall back to a numeric default — it resolves to `None`, the same
+as unset, because there is no safe universal staleness threshold that would not risk reclaiming
+a legitimately long-running session.
+
+```sh
+CLR_GATE_STALE_SECS=300 clr --max-sessions 1 "task"
+# a slot owner alive for > 300s is now reclaim-eligible even though its PID is still alive
+```
+
 **Commands affected:** `run` / `ask` only (`gate.rs` is invoked only from those two commands)
 — `CLR_GATE_DIR` is the sole exception, additionally read by `ps` for display.
 
-**No precedence rule** — all three variables are always applied; there is no corresponding
+**No precedence rule** — all four variables are always applied; there is no corresponding
 CLI flag or JSON key for any of them.
 
 ---
