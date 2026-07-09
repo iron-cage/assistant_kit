@@ -72,9 +72,25 @@ fn gate_max_attempts() -> u32
   gate_max_attempts_from( std::env::var( "CLR_GATE_MAX_ATTEMPTS" ).ok().as_deref() )
 }
 
-/// Opt-in staleness threshold for reclaim eligibility. `None` when unset or
-/// unparseable — unlike `gate_poll_secs()`, this has no hardcoded default,
-/// since the feature must not activate unless an operator explicitly sets it.
+// Fix(BUG-400): staleness threshold for reclaiming a live-but-stalled slot owner.
+//
+// Root cause: acquire_slot()'s reclaim-eligibility test was the single binary
+// condition `pid_alive(owner)`, with no elapsed-time comparison against the
+// recorded `owner_since` anywhere — a live-but-stalled (hung/deadlocked/
+// SIGSTOPped) slot holder blocked a waiter indefinitely even when aggregate
+// capacity existed elsewhere, because the waiter's candidate index is
+// deterministically re-derived from the same live count every poll, making
+// the collision sticky rather than a one-off.
+//
+// Pitfall: unlike `gate_poll_secs()`/`gate_max_attempts()` above, unset or
+// invalid input must resolve to `None` (feature off), never a numeric
+// fallback — there is no safe default staleness threshold that would not
+// risk reclaiming a legitimately long-running session.
+
+/// Staleness threshold in seconds for reclaiming a live slot owner. Public,
+/// documented override — no CLI flag, no `--args-file` key. `None` (unset or
+/// invalid) disables staleness-based reclaim entirely, preserving prior
+/// behavior exactly.
 fn gate_stale_secs() -> Option< u64 >
 {
   std::env::var( "CLR_GATE_STALE_SECS" )
@@ -143,6 +159,12 @@ fn slot_path( dir : &Path, index : u32 ) -> PathBuf
 // own temp files from colliding with each other; each racer cleans up only
 // its own uniquely-named temp file regardless of whether it won.
 //
+// Pitfall: the temp filename is derived purely from this call's own
+// `(pid, since)`, never from `path`'s own filename — deriving it from
+// `path` (e.g. appending a suffix to `slot_0.json`) would produce a
+// `slot_`-prefixed temp filename, miscounted by `count_live_held_slots()`
+// (see the `Fix(BUG-392)` Pitfall above) for the brief window it exists.
+//
 // Pitfall: this is a pure internal change — the external bool contract (true =
 // this call created it now, false = it already existed) is unchanged, so none
 // of this function's call sites, acquire_slot()'s branch logic, or
@@ -158,17 +180,30 @@ fn slot_path( dir : &Path, index : u32 ) -> PathBuf
 fn claim_slot_file( path : &Path, pid : u32, since : u64 ) -> bool
 {
   let content = format!( r#"{{"pid":{pid},"since":{since}}}"# );
-  let tmp = path.with_file_name( format!(
-    "{}.tmp.{pid}.{since}",
-    path.file_name().map_or_else( Default::default, | n | n.to_string_lossy().into_owned() )
-  ) );
+  let dir     = path.parent().unwrap_or_else( || Path::new( "." ) );
+  let tmp     = dir.join( format!( "claim_tmp_{pid}_{since}" ) );
   if std::fs::write( &tmp, &content ).is_err()
   {
     return false;
   }
+  claim_test_delay();
   let claimed = std::fs::hard_link( &tmp, path ).is_ok();
   let _ = std::fs::remove_file( &tmp );
   claimed
+}
+
+// Test-only injection point, same idiom as `reclaim_test_delay()` below:
+// widen the window between `claim_slot_file()`'s temp file being fully
+// written and its publish via `hard_link()`, so a regression test can
+// deterministically observe that `path` never becomes visible before its
+// content is complete, rather than relying on incidental OS scheduling
+// jitter. Unset (production default): zero delay.
+fn claim_test_delay()
+{
+  if let Some( ms ) = std::env::var( "CLR_GATE_CLAIM_TEST_DELAY_MS" ).ok().and_then( |s| s.parse::< u64 >().ok() )
+  {
+    std::thread::sleep( core::time::Duration::from_millis( ms ) );
+  }
 }
 
 // Return the (pid, since) recorded in a slot file, if the file is readable and
@@ -372,12 +407,9 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (
     // residual, not a live in-progress writer.
     return Err( SlotDenialCause::HeldByLive );
   };
-  // Fix(BUG-400): opt-in staleness threshold for reclaim eligibility.
-  // Root cause: a live owner denied reclaim unconditionally and indefinitely —
-  // a hung-but-alive session could hold its slot forever with no escape hatch.
-  // Pitfall: stays a no-op by default (gate_stale_secs() returns None unless
-  // CLR_GATE_STALE_SECS is explicitly set) — must not change behavior for any
-  // caller that has not opted in.
+  // Fix(BUG-400): a live owner is reclaim-eligible once also stale — see
+  // gate_stale_secs() above. Unset (default): is_stale is always false,
+  // preserving pre-fix behavior exactly (pid_alive(owner) alone gates).
   let is_stale = gate_stale_secs()
     .is_some_and( | threshold | unix_now().saturating_sub( owner_since ) > threshold );
   if pid_alive( owner ) && !is_stale

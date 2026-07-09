@@ -4,7 +4,7 @@
 
 - **Purpose**: Document CLR_* environment variable fallbacks, runtime configuration overrides, and CLAUDE_CODE_* subprocess variables.
 - **Responsibility**: Specify env var names, corresponding CLI parameters, precedence rules, and type handling.
-- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`, `CLR_GATE_STALE_SECS`, `CLR_CONFIG_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, CLAUDE_CODE_AUTO_COMPACT_WINDOW injected default, precedence, bool/parsed type semantics.
+- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`, `CLR_GATE_POLL_SECS`, `CLR_GATE_MAX_ATTEMPTS`, `CLR_GATE_STALE_SECS`, `CLR_CONFIG_DIR`), and the 5 `CLAUDE_CODE_*` subprocess variables `clr` injects by default (`CLAUDE_CODE_MAX_OUTPUT_TOKENS`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `CLAUDE_CODE_BASH_TIMEOUT`, `CLAUDE_CODE_BASH_MAX_TIMEOUT`, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`), precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (→ param/), subprocess behavior beyond env injection, config-file TOML key reference (→ [config_param.md](config_param.md)).
 
 ### All Env Parameters (89 total)
@@ -15,9 +15,9 @@
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 13 | Caller env fallbacks for credential operation parameters |
 | Input (CLR_*) — `ps` subcommand | 5 | Caller env fallbacks for session listing display and flag thresholds |
 | Runtime config (CLR_*) | 5 | Runtime configuration overrides (not CLI parameter fallbacks) |
-| Subprocess (CLAUDE_CODE_*) — injected | 2 | Set by `clr` before spawning the `claude` subprocess |
+| Subprocess (CLAUDE_CODE_*) — injected | 5 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 89 environment variables
+**Total:** 92 environment variables
 
 ---
 
@@ -231,7 +231,7 @@ matching the `CLR_PS_ANCIENT_SECS`/`CLR_PS_HIGH_RAM_MB` precedent (Env Param 3).
 | `CLR_GATE_DIR` | `/tmp/clr-gate` | path | Gate state directory; read by `gate_dir()` in `gate.rs`, called directly by `ps.rs` |
 | `CLR_GATE_POLL_SECS` | `30` | u64 | Poll interval between gate attempts; read by `gate_poll_secs()` in `gate.rs`; invalid values silently fall back to `30` |
 | `CLR_GATE_MAX_ATTEMPTS` | `1000` | u32 | Attempt limit before gate exhaustion; read by `gate_max_attempts()` in `gate.rs`; invalid values silently fall back to `1000` |
-| `CLR_GATE_STALE_SECS` | _unset_ (feature disabled) | u64 | Staleness threshold for reclaim eligibility; read by `gate_stale_secs()` in `gate.rs`; unset or invalid values leave the feature disabled — a live owner denies unconditionally, exactly as before this variable existed |
+| `CLR_GATE_STALE_SECS` | unset (`None`) | u64, optional | Staleness threshold for reclaiming a live-but-stalled slot owner; read by `gate_stale_secs()` in `gate.rs`; unset or invalid values resolve to `None` (feature off) — a live owner denies unconditionally, exactly as before this variable existed; never a numeric fallback (BUG-400) |
 
 **`CLR_GATE_DIR`:** Overrides the default gate state directory used by `gate.rs` (write) and
 `ps.rs` (read). When a `clr` process is blocked at the `--max-sessions` concurrency gate,
@@ -256,14 +256,18 @@ CLR_GATE_POLL_SECS=5 CLR_GATE_MAX_ATTEMPTS=12 clr --max-sessions 1 --retry-overr
 # disables the runner-retry wrapper so exhaustion surfaces on the first pass
 ```
 
-**`CLR_GATE_STALE_SECS`:** Opt-in staleness threshold for reclaim eligibility, checked in
-`acquire_slot()` alongside `pid_alive(owner)`. Unlike the other three variables, it has no
-numeric default — unset or unparseable means the feature stays off and a live owner denies
-reclaim unconditionally (pre-existing behavior, unchanged). When set, a slot whose recorded
-owner is still alive but whose `since` timestamp is older than this many seconds becomes
-reclaim-eligible via the same ticket-arbitrated handoff a dead owner's slot already uses —
-closing the gap where a hung-but-alive session could hold its slot forever with no escape
-hatch (see `docs/invariant/012_gate_slot_atomicity.md` Provenance : BUG-400).
+**`CLR_GATE_STALE_SECS`:** Opt-in staleness threshold for reclaiming a slot from a live-but-stalled
+owner (hung, deadlocked, or `SIGSTOP`ped — a process that never releases its slot but is not dead
+either), checked in `acquire_slot()` alongside `pid_alive(owner)`. Unset by default: `is_stale` is
+always `false`, so a live owner denies reclaim unconditionally, exactly as before this variable
+existed. When set, a slot whose recorded owner is still alive but whose `since` timestamp exceeds
+this many seconds becomes reclaim-eligible — it falls through into the same ticket-arbitrated
+handoff a dead owner's slot already uses (no separate mechanism), closing the gap where a
+hung-but-alive session could hold its slot forever with no escape hatch (see
+`docs/invariant/012_gate_slot_atomicity.md` Provenance : BUG-400). Unlike `CLR_GATE_POLL_SECS` /
+`CLR_GATE_MAX_ATTEMPTS`, an invalid value does **not** fall back to a numeric default — it resolves
+to `None`, the same as unset, because there is no safe universal staleness threshold that would not
+risk reclaiming a legitimately long-running session.
 
 ```sh
 CLR_GATE_STALE_SECS=1800 clr --max-sessions 3 "task"
@@ -335,6 +339,94 @@ not a user-facing feature in its own right.
 
 **Full parameter list, TOML key reference, and the config-file precedence tier itself:**
 see [config_param.md](config_param.md).
+
+---
+
+### Env Param 8: `CLAUDE_CODE_BASH_TIMEOUT` — Injected Default
+
+Set by `clr` before spawning any `claude` subprocess. Raises the default
+per-command Bash tool timeout from the binary's own 2-minute default to 1 hour.
+
+- **Type:** integer (milliseconds)
+- **Injected value:** `3 600 000` (1 hour) — field `bash_default_timeout_ms` in `ClaudeCommand::new()`
+- **Binary default (unset):** `120 000` (2 minutes)
+- **Mechanism:** injected via `env_pairs()` in `claude_runner_core/src/command/mod.rs`
+- **Scope:** subprocess-only; not read by `clr` itself
+- **Rationale (source comment):** standard 2-minute default causes premature
+  timeout in real automation workflows
+
+| Variable | Injected value | Binary default | Opt-out |
+|----------|-----------------|-----------------|---------|
+| `CLAUDE_CODE_BASH_TIMEOUT` | `3 600 000` | `120 000` | none exposed — always injected |
+
+**Cross-reference:** `contract/claude_code/docs/param/013_bash_timeout.md` — canonical parameter spec.
+
+---
+
+### Env Param 9: `CLAUDE_CODE_BASH_MAX_TIMEOUT` — Injected Default
+
+Set by `clr` before spawning any `claude` subprocess. Raises the ceiling on
+model-requested Bash timeouts from the binary's own 10-minute default to 2 hours.
+
+- **Type:** integer (milliseconds)
+- **Injected value:** `7 200 000` (2 hours) — field `bash_max_timeout_ms` in `ClaudeCommand::new()`
+- **Binary default (unset):** `600 000` (10 minutes)
+- **Mechanism:** injected via `env_pairs()` in `claude_runner_core/src/command/mod.rs`
+- **Scope:** subprocess-only; not read by `clr` itself
+
+| Variable | Injected value | Binary default | Opt-out |
+|----------|-----------------|-----------------|---------|
+| `CLAUDE_CODE_BASH_MAX_TIMEOUT` | `7 200 000` | `600 000` | none exposed — always injected |
+
+**Cross-reference:** `contract/claude_code/docs/param/012_bash_max_timeout.md` — canonical parameter spec.
+
+---
+
+### Env Param 10: `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` — Injected Default
+
+Set by `clr` before spawning any `claude` subprocess in print mode. Disables
+the binary's own internal ceiling-exceeded sweep for outstanding background
+tasks.
+
+- **Type:** integer (milliseconds)
+- **Injected value:** `0` — field `print_bg_wait_ceiling_ms` in `ClaudeCommand::new()`
+- **Binary default (unset):** `600 000` (10 minutes)
+- **Mechanism:** injected via `env_pairs()` in `claude_runner_core/src/command/mod.rs`
+- **Scope:** subprocess-only; not read by `clr` itself
+
+**What `0` actually does (do not assume "exit immediately"):** the binary's
+internal `ceilingExceeded` computation requires the ceiling to be `> 0` as a
+precondition — `0` fails that guard permanently, which disables the
+ceiling-based forced sweep rather than triggering it instantly. See
+`contract/claude_code/docs/param/131_print_bg_wait_ceiling_ms.md` for the
+full decompiled evidence, and `docs/claude_code_background_task_env_vars.md`
+(repo root) for independent, empirically-tested (live-process) confirmation
+that `0` behaves as "wait indefinitely" for this path. A separate, fixed
+~5-second grace period governs plain background Bash tasks regardless of
+this setting.
+
+**Relationship to clr's own timeout layer:** this is an *inner* layer —
+claude's own internal wait logic for background work during its print-mode
+wind-down. It is independent of clr's *outer* layer:
+[`run_print_mode()`'s own 1-hour watchdog](../invariant/007_print_mode_timeout.md)
+(`DEFAULT_PRINT_TIMEOUT_SECS`), which unconditionally kills the entire
+`claude` subprocess after `--timeout`/`CLR_TIMEOUT` (default 3600s) regardless
+of what the inner ceiling is doing. Setting
+`CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0` does not remove clr's outer bound —
+a genuinely long-running background agent can still be killed by the outer
+watchdog even though the inner ceiling has been neutralized. For a session
+expected to run background work past 1 hour, `--timeout 0` /
+`CLR_TIMEOUT=0` (unlimited) is the relevant lever, not this variable.
+
+| Variable | Injected value | Binary default | Opt-out |
+|----------|-----------------|-----------------|---------|
+| `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` | `0` | `600 000` | none exposed — override the outer bound instead via `--timeout 0` / `CLR_TIMEOUT=0` |
+
+**Cross-reference:** `contract/claude_code/docs/param/131_print_bg_wait_ceiling_ms.md`
+— canonical parameter spec (includes the corrected `ra>0` guard evidence).
+[`invariant/007_print_mode_timeout.md`](../invariant/007_print_mode_timeout.md)
+— clr's own outer watchdog, the more likely cause of "background work
+dropped before finishing" for genuinely long-running tasks.
 
 ### Provenance
 

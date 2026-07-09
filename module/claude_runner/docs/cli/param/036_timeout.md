@@ -52,9 +52,18 @@ values are silently ignored (parse failure → field stays at `None`, resolved t
 `DEFAULT_PRINT_TIMEOUT_SECS` for print-mode or `0` for interactive). CLI flag
 wins when both are present.
 
-<!-- BUG-399 (task/claude_runner/bug/unverified/399_timeout_gate_wait_undocumented.md) —
+<!-- BUG-399 (task/claude_runner/bug/closed/399_timeout_gate_wait_undocumented.md) —
      --timeout does not bound the --max-sessions gate-wait phase, by design; this doc did
      not cross-reference that boundary. See 025_concurrency_gate.md and 033_max_sessions.md. -->
+
+**Note — does not bound gate-wait:** `--timeout` governs only the subprocess-execution
+phase, AFTER an invocation has already been admitted past the `--max-sessions` concurrency
+gate. If the invocation is still queued waiting for a session slot, `--timeout` has no
+effect: gate-wait is bounded independently by `CLR_GATE_POLL_SECS` x `CLR_GATE_MAX_ATTEMPTS`
+(default 30s x 1000 = ~8.3h). Total wall-clock exposure for a queued-then-executing
+invocation is gate-wait time PLUS `--timeout` — no single flag bounds the sum. See
+[025_concurrency_gate.md](../user_story/025_concurrency_gate.md) and
+[033_max_sessions.md](033_max_sessions.md) for gate-wait mechanics.
 
 ### Referenced Parameter Groups
 
