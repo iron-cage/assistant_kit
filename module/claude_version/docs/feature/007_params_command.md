@@ -34,7 +34,7 @@
 | Env-var param | Yes — `clv` reads env at startup | Forms + live env value (set or unset) + default |
 | CLI-flag-only param | No — per-invocation to `claude` binary | Forms + default; marks value as `(CLI-only, unobservable)` |
 
-**Params catalog:** A static registry (`params_catalog.rs` in `claude_version_core`) covering all Claude Code parameters that have at least one observable form. Catalog totals 138 entries — 32 with a config key, 61 with an env var, and 54 with a CLI flag (many entries have more than one form). Each entry defines:
+**Params catalog:** A static registry (`params_catalog.rs` in `claude_version_core`) covering all Claude Code parameters that have at least one observable form. Catalog totals 138 entries — 33 with a config key, 60 with an env var, and 54 with a CLI flag (many entries have more than one form). Each entry defines:
 
 | Field | Description |
 |-------|-------------|
