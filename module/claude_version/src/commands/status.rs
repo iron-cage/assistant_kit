@@ -9,7 +9,7 @@ use crate::output::{ OutputFormat, OutputOptions, json_escape };
 use claude_runner_core::process::find_claude_processes;
 use claude_version_core::config_catalog::catalog;
 use claude_version_core::config_resolve::resolve;
-use claude_version_core::settings_io::get_setting;
+use claude_version_core::settings_io::{ get_setting, read_all_settings };
 use claude_version_core::version::{
   extract_semver, get_claude_version_raw, get_installed_version, read_preferred_version,
   read_versions_dir_lock_mode, VersionsDirLockMode,
@@ -29,25 +29,75 @@ fn get_active_account() -> Option< String >
   .filter( | s | !s.is_empty() )
 }
 
+/// Compliance verdict for one `LockRow`.
+#[ derive( Debug, Clone, Copy, PartialEq, Eq ) ]
+enum LockStatus
+{
+  /// Actual value matches what the current pin state implies.
+  Compliant,
+  /// Actual value diverges from what the current pin state implies — real drift.
+  Mismatch,
+  /// `settings.json` exists but could not be read (parse failure, permission
+  /// error, or any other I/O error short of simply not existing), so the pin
+  /// state itself is unreliable (see `read_preferred_version`) — asserting
+  /// `Compliant` or `Mismatch` against a possibly-wrong pin state would
+  /// itself be a false signal, so the verdict is withheld instead.
+  Unverifiable,
+}
+
 /// One row of the `Lock:` compliance report — a single lock-mechanism key's
 /// actual value compared against what the current pin state implies.
 struct LockRow
 {
-  key       : &'static str,
-  actual    : Option< String >,
-  expected  : Option< String >,
-  compliant : bool,
+  key      : &'static str,
+  actual   : Option< String >,
+  expected : Option< String >,
+  status   : LockStatus,
+}
+
+/// Resolve a row's compliance, short-circuiting to `Unverifiable` when
+/// `settings.json` itself could not be read — computing the normal
+/// comparison in that case would assert a possibly-false Compliant/Mismatch
+/// verdict against an untrustworthy pin state.
+fn lock_status( settings_unreadable : bool, compliant : impl FnOnce() -> bool ) -> LockStatus
+{
+  if settings_unreadable
+  {
+    LockStatus::Unverifiable
+  }
+  else if compliant()
+  {
+    LockStatus::Compliant
+  }
+  else
+  {
+    LockStatus::Mismatch
+  }
 }
 
 /// Compute the 6 lock-mechanism rows (5 settings keys + `chmod`) for the
 /// current pin state.
 ///
 /// Degrades to `None`/absent actual values if `HOME` cannot be resolved —
-/// `.status` never fails (FR-01).
+/// `.status` never fails (FR-01). If `settings.json` exists but could not be
+/// read — malformed JSON (`InvalidData`), a permission error (`chmod 000`,
+/// ownership/ACL change), or any other I/O error short of the file simply
+/// not existing (`NotFound`) — every row is forced to
+/// `LockStatus::Unverifiable`. `NotFound` alone is excluded because
+/// `read_preferred_version` (and therefore `is_pinned`) treats *every*
+/// non-`NotFound` read failure identically to "key absent" via `.ok()` —
+/// so a `chmod` row that is actually correctly locked could otherwise be
+/// compared against the wrong (unpinned) expectation and misreport a false
+/// `MISMATCH`, regardless of which specific I/O error caused the
+/// degradation.
 fn compute_lock_rows( is_pinned : bool, resolved_version : Option< &str > ) -> Vec< LockRow >
 {
   let settings_file = super::require_claude_paths().ok().map( | p | p.settings_file() );
   let resolve_ctx    = super::config_resolve_context().ok();
+
+  let settings_unreadable = settings_file.as_deref().is_some_and( | f |
+    matches!( read_all_settings( f ), Err( e ) if e.kind() != std::io::ErrorKind::NotFound )
+  );
 
   let auto_updates_actual = settings_file.as_deref()
     .and_then( | f | get_setting( f, "autoUpdates" ).ok().flatten() );
@@ -66,15 +116,15 @@ fn compute_lock_rows( is_pinned : bool, resolved_version : Option< &str > ) -> V
   // removes it) — but a never-pinned install that predates any `.version.install`
   // call also has no `autoUpdates` key at all. `absent` and `"true"` both mean
   // "not locked" when unpinned, so both are accepted as compliant in that case.
-  let auto_updates_expected  = Some( if is_pinned { "false" } else { "true" }.to_string() );
-  let auto_updates_compliant = if is_pinned
+  let auto_updates_expected = Some( if is_pinned { "false" } else { "true" }.to_string() );
+  let auto_updates_status = lock_status( settings_unreadable, || if is_pinned
   {
     auto_updates_actual.as_deref() == Some( "false" )
   }
   else
   {
     auto_updates_actual.is_none() || auto_updates_actual.as_deref() == Some( "true" )
-  };
+  } );
 
   let auto_updates_channel_expected = if is_pinned { Some( "stable".to_string() ) } else { None };
   let minimum_version_expected      = if is_pinned { resolved_version.map( str::to_string ) } else { None };
@@ -82,52 +132,76 @@ fn compute_lock_rows( is_pinned : bool, resolved_version : Option< &str > ) -> V
   let disable_updates_expected      = if is_pinned { Some( "1".to_string() ) } else { None };
   let chmod_expected                = Some( if is_pinned { "555" } else { "755" }.to_string() );
 
-  let auto_updates_channel_compliant = auto_updates_channel_actual == auto_updates_channel_expected;
-  let minimum_version_compliant      = minimum_version_actual == minimum_version_expected;
-  let disable_autoupdater_compliant  = disable_autoupdater_actual == disable_autoupdater_expected;
-  let disable_updates_compliant      = disable_updates_actual == disable_updates_expected;
+  let auto_updates_channel_status = lock_status( settings_unreadable,
+    || auto_updates_channel_actual == auto_updates_channel_expected );
+  let minimum_version_status = lock_status( settings_unreadable,
+    || minimum_version_actual == minimum_version_expected );
+  let disable_autoupdater_status = lock_status( settings_unreadable,
+    || disable_autoupdater_actual == disable_autoupdater_expected );
+  let disable_updates_status = lock_status( settings_unreadable,
+    || disable_updates_actual == disable_updates_expected );
   // `Absent` means no versions directory exists yet (nothing installed) or
   // this platform can't report POSIX modes — no reliable drift signal either
-  // way, so it must not be flagged as a false mismatch. A genuinely wrong
-  // mode on a directory that DOES exist (`Unknown`) still falls through to
-  // the normal comparison and is correctly flagged.
-  let chmod_compliant = match chmod_mode
+  // way, so it must not be flagged as a mismatch. A genuinely wrong mode on a
+  // directory that DOES exist (`Unknown`) still falls through to the normal
+  // comparison and is correctly flagged — unless settings are unreadable, in
+  // which case `is_pinned` (and therefore `chmod_expected`) can't be trusted.
+  let chmod_status = lock_status( settings_unreadable, || match chmod_mode
   {
     VersionsDirLockMode::Absent => true,
     _ => chmod_actual == chmod_expected,
-  };
+  } );
 
   vec!
   [
     LockRow { key : "autoUpdates", actual : auto_updates_actual,
-      expected : auto_updates_expected, compliant : auto_updates_compliant },
+      expected : auto_updates_expected, status : auto_updates_status },
     LockRow { key : "autoUpdatesChannel", actual : auto_updates_channel_actual,
-      expected : auto_updates_channel_expected, compliant : auto_updates_channel_compliant },
+      expected : auto_updates_channel_expected, status : auto_updates_channel_status },
     LockRow { key : "minimumVersion", actual : minimum_version_actual,
-      expected : minimum_version_expected, compliant : minimum_version_compliant },
+      expected : minimum_version_expected, status : minimum_version_status },
     LockRow { key : "env.DISABLE_AUTOUPDATER", actual : disable_autoupdater_actual,
-      expected : disable_autoupdater_expected, compliant : disable_autoupdater_compliant },
+      expected : disable_autoupdater_expected, status : disable_autoupdater_status },
     LockRow { key : "env.DISABLE_UPDATES", actual : disable_updates_actual,
-      expected : disable_updates_expected, compliant : disable_updates_compliant },
-    LockRow { key : "chmod", actual : chmod_actual, expected : chmod_expected, compliant : chmod_compliant },
+      expected : disable_updates_expected, status : disable_updates_status },
+    LockRow { key : "chmod", actual : chmod_actual, expected : chmod_expected, status : chmod_status },
   ]
 }
 
 /// Render the `Lock:` section for text-mode output at `v >= 2`.
+///
+/// When any row is `Unverifiable` (settings.json could not be read), an
+/// explanatory line is prepended so the `UNVERIFIABLE` markers below are not
+/// mistaken for silent compliance — the reader needs to know the whole
+/// section's verdicts are withheld, not merely absent.
 fn render_lock_text( rows : &[ LockRow ] ) -> String
 {
   let mut out = String::from( "Lock:\n" );
+  if rows.iter().any( | row | row.status == LockStatus::Unverifiable )
+  {
+    out.push_str( "  (settings.json could not be read — lock-state compliance cannot be verified)\n" );
+  }
   for row in rows
   {
     let actual   = row.actual.as_deref().unwrap_or( "absent" );
     let expected = row.expected.as_deref().unwrap_or( "absent" );
-    let marker   = if row.compliant { "" } else { " MISMATCH" };
+    let marker   = match row.status
+    {
+      LockStatus::Compliant    => "",
+      LockStatus::Mismatch     => " MISMATCH",
+      LockStatus::Unverifiable => " UNVERIFIABLE",
+    };
     let _ = writeln!( out, "  {}: {actual} (expected: {expected}){marker}", row.key );
   }
   out
 }
 
 /// Render the `"lock"` JSON object.
+///
+/// `"compliant"` is `true`/`false` for `Compliant`/`Mismatch`, and `null` for
+/// `Unverifiable` — a consumer that treats `null` as falsy would otherwise
+/// read an unverifiable row as a confirmed drift, which is not what the
+/// state means.
 fn render_lock_json( rows : &[ LockRow ] ) -> String
 {
   let entries : Vec< String > = rows.iter().map( | row |
@@ -136,9 +210,15 @@ fn render_lock_json( rows : &[ LockRow ] ) -> String
       .map_or( "null".to_string(), | v | format!( "\"{}\"", json_escape( v ) ) );
     let expected = row.expected.as_deref()
       .map_or( "null".to_string(), | v | format!( "\"{}\"", json_escape( v ) ) );
+    let compliant = match row.status
+    {
+      LockStatus::Compliant    => "true",
+      LockStatus::Mismatch     => "false",
+      LockStatus::Unverifiable => "null",
+    };
     format!(
-      "\"{}\":{{\"actual\":{actual},\"expected\":{expected},\"compliant\":{}}}",
-      json_escape( row.key ), row.compliant
+      "\"{}\":{{\"actual\":{actual},\"expected\":{expected},\"compliant\":{compliant}}}",
+      json_escape( row.key )
     )
   } ).collect();
   format!( "{{{}}}", entries.join( "," ) )

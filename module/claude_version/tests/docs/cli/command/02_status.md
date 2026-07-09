@@ -72,6 +72,8 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 | pinned, `autoUpdates` drifted | Value is `true` instead of the pinned `false` | Mismatch flagged |
 | unpinned, compliant | No pin keys set, `chmod` is `755` | No mismatch |
 | unpinned, versions dir absent | No pin keys set, versions directory was never created (fresh install) | No mismatch (absent ≠ drift) |
+| settings.json corrupted | `settings.json` exists but fails to parse (invalid JSON) | All 6 rows `UNVERIFIABLE` (never a false mismatch or false compliant) |
+| settings.json permission-denied | `settings.json` exists, valid JSON, but unreadable (mode 000) | All 6 rows `UNVERIFIABLE` (same as corrupted — any non-`NotFound` read error is untrusted) |
 
 ---
 
@@ -97,6 +99,9 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 | IT-17 | `.status v::0`/`v::1` output unchanged by the Lock: feature | P | 0 | F1=0,1 | [read_status_test.rs] |
 | IT-18 | `.status format::json` pinned, compliant → `"lock"` object present | P | 0 | F2=json, F7=pinned compliant | [read_status_test.rs] |
 | IT-20 | `.status v::2` unpinned, versions dir never created (fresh install) → `chmod: absent`, no false mismatch | P | 0 | F7=unpinned, dir absent | [read_status_test.rs] |
+| IT-21 | `.status v::2` settings.json corrupted, versions dir genuinely locked (555) → all 6 rows `UNVERIFIABLE`, no false mismatch | P | 0 | F7=settings corrupted | [read_status_test.rs] |
+| IT-22 | `.status format::json` settings.json corrupted → `"compliant":null` for every key, never `false` | P | 0 | F2=json, F7=settings corrupted | [read_status_test.rs] |
+| IT-23 | `.status v::2` settings.json permission-denied (mode 000), versions dir genuinely locked (555) → all 6 rows `UNVERIFIABLE`, no false mismatch | P | 0 | F7=settings permission-denied | [read_status_test.rs] |
 
 ### Negative Tests
 
@@ -109,11 +114,11 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 
 ### Summary
 
-- **Total:** 20 tests (16 positive, 4 negative)
-- **Negative ratio:** 20.0% (command-specific only) — below ≥40% threshold; 4 additional cross-cutting tests in `read_status_test.rs` also apply to `.status` among other commands: 3 negative (`tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`) and 1 positive (`tc245_last_occurrence_wins_for_verbosity` — exit 0, verifies last-`v::`-wins precedence, not an error case)
+- **Total:** 23 tests (19 positive, 4 negative)
+- **Negative ratio:** 17.4% (command-specific only) — below ≥40% threshold; 4 additional cross-cutting tests in `read_status_test.rs` also apply to `.status` among other commands: 3 negative (`tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`) and 1 positive (`tc245_last_occurrence_wins_for_verbosity` — exit 0, verifies last-`v::`-wins precedence, not an error case)
 - **Existing cross-cutting negatives applying to `.status`:** `tc242` (`format::xml`), `tc243` (`format::JSON`), `tc244` (`format::`)
-- **Combined negative count (command-specific + cross-cutting):** 7/24 = 29.2% ❌ (below ≥40% threshold; informational metric only, not a blocking gate for this spec)
-- **TC range:** IT-1 to IT-20
+- **Combined negative count (command-specific + cross-cutting):** 7/27 = 25.9% ❌ (below ≥40% threshold; informational metric only, not a blocking gate for this spec)
+- **TC range:** IT-1 to IT-23
 
 ---
 
@@ -123,7 +128,7 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success (always — .status never errors) | IT-1 through IT-9, IT-13 through IT-18, IT-20 |
+| 0 | Success (always — .status never errors) | IT-1 through IT-9, IT-13 through IT-18, IT-20 through IT-23 |
 | 1 | Invalid arguments | IT-10 through IT-12, IT-19 |
 | 2 | Not applicable (.status always exits 0 for any valid state) | — |
 
@@ -131,7 +136,10 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 
 `.status` exhibits unique behavior: it always exits 0 regardless of environment state.
 Missing claude, missing HOME, or missing accounts produce informational "not found"/"unknown" output
-rather than exit 2. This is by design (FR-01: status is read-only, never fails).
+rather than exit 2. This is by design (FR-01: status is read-only, never fails). The same principle
+extends to the `Lock:` section: a `settings.json` that could not be read — malformed JSON or a
+permission error alike — degrades every row to `UNVERIFIABLE` rather than propagating an error or
+guessing at a possibly-wrong compliance verdict (IT-21 through IT-23).
 
 ### Factor Coverage
 
@@ -143,7 +151,7 @@ rather than exit 2. This is by design (FR-01: status is read-only, never fails).
 | F4 (HOME) | IT-1 (set), IT-7 (empty) | — |
 | F5 (preference) | IT-8 (absent), IT-9 (set) | — |
 | F6 (unknown params) | — | IT-12 |
-| F7 (lock-state) | IT-13 (pinned compliant), IT-14 (chmod drift), IT-15 (autoUpdates drift), IT-16 (unpinned compliant), IT-18 (json), IT-20 (dir absent) | — |
+| F7 (lock-state) | IT-13 (pinned compliant), IT-14 (chmod drift), IT-15 (autoUpdates drift), IT-16 (unpinned compliant), IT-18 (json), IT-20 (dir absent), IT-21 (settings corrupted), IT-22 (settings corrupted, json), IT-23 (settings permission-denied) | — |
 
 ---
 
@@ -315,6 +323,49 @@ MAAV-found regression case: a genuinely fresh install (nothing ever run through 
 
 ---
 
+### IT-21: settings.json corrupted, versions dir genuinely locked → all rows `UNVERIFIABLE`
+
+MAAV-found regression case (independently rediscovered by two adversarial agents in the same
+validation round): `read_preferred_version` silently degrades to "no preference" (`is_pinned =
+false`) when `settings.json` cannot be read, via `.ok()` on the underlying read error. Without this
+fix, a genuinely-pinned-and-locked install (`chmod 555`) would be compared against the *unpinned*
+(`755`) expectation and misreport a false `MISMATCH` on `chmod` — and a false `Compliant` verdict on
+the 5 settings-derived rows, since their `None` actual values would coincidentally match the
+unpinned expectation. Every row must instead report `UNVERIFIABLE`, with an explanatory note.
+
+- **Given:** `HOME=<tmp>`; `settings.json` contains invalid JSON (`{ not valid json`); versions dir `chmod 555` (genuinely locked).
+- **When:** `clv .status v::2`
+- **Then:** exit 0; output contains `Lock:` and an explanatory note ("could not be read"); all 6 rows show `UNVERIFIABLE`; no `MISMATCH` appears anywhere
+
+---
+
+### IT-22: `format::json` variant — `"compliant":null` for every key, never `false`
+
+Verifies each of the 6 keys' own JSON entry individually (not merely "somewhere in the blob"), since
+a whole-text substring check could pass even if only one of six rows correctly showed `null` while
+the rest regressed to `true`/`false`.
+
+- **Given:** Same fixture as IT-21.
+- **When:** `clv .status format::json`
+- **Then:** exit 0; JSON contains a `"lock"` object; every one of the 6 keys' own entry shows `"compliant":null`
+
+---
+
+### IT-23: settings.json permission-denied (mode 000), versions dir genuinely locked → all rows `UNVERIFIABLE`
+
+MAAV-found regression case, distinct from IT-21: `read_preferred_version` swallows *any* read error
+via `.ok()`, not just a JSON parse failure — so a fix that only special-cased
+`ErrorKind::InvalidData` would still misreport a false `MISMATCH` when `settings.json` is unreadable
+for a different reason (e.g. a permission/ownership/ACL change instead of malformed content). The
+detection was broadened to treat any error other than `ErrorKind::NotFound` (file genuinely absent —
+a normal, non-corrupted state) as untrustworthy.
+
+- **Given:** `HOME=<tmp>`; `settings.json` is valid JSON, genuinely pinned; file mode `000` (unreadable); versions dir `chmod 555` (genuinely locked).
+- **When:** `clv .status v::2`
+- **Then:** exit 0; all 6 rows show `UNVERIFIABLE`; no `MISMATCH` appears anywhere
+
+---
+
 ### Source Functions
 
 | Function | File |
@@ -337,3 +388,10 @@ MAAV-found regression case: a genuinely fresh install (nothing ever run through 
 | `tc520_status_v3_out_of_range_exits_1` | `tests/cli/read_status_test.rs` |
 | `tc521_status_lock_json_object_present` | `tests/cli/read_status_test.rs` |
 | `tc522_status_lock_chmod_absent_dir_not_flagged` | `tests/cli/read_status_test.rs` |
+| `tc523_status_lock_corrupted_settings_reports_unverifiable` | `tests/cli/read_status_test.rs` |
+| `tc524_status_lock_json_corrupted_settings_compliant_null` | `tests/cli/read_status_test.rs` |
+| `tc525_status_lock_unreadable_settings_permission_denied_reports_unverifiable` | `tests/cli/read_status_test.rs` |
+| `tc242_unknown_format_exits_1` | `tests/cli/read_status_test.rs` |
+| `tc243_uppercase_format_exits_1` | `tests/cli/read_status_test.rs` |
+| `tc244_empty_format_exits_1` | `tests/cli/read_status_test.rs` |
+| `tc245_last_occurrence_wins_for_verbosity` | `tests/cli/read_status_test.rs` |

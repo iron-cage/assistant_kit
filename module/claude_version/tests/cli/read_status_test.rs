@@ -35,6 +35,9 @@
 //! | TC-520 | `v::3` continues to exit 1 as out-of-range (IT-11 regression) | N | 1 |
 //! | TC-521 | `format::json`, pinned, all compliant → `"lock"` object present | P | 0 |
 //! | TC-522 | unpinned install, versions dir never created (fresh install) → `chmod: absent`, no false mismatch | P | 0 |
+//! | TC-523 | settings.json corrupted, versions dir genuinely locked (555) → all 6 rows UNVERIFIABLE, no false mismatch | P | 0 |
+//! | TC-524 | `format::json`, settings.json corrupted → `"compliant":null` for every key, never `false` | P | 0 |
+//! | TC-525 | settings.json permission-denied (mode 000), versions dir genuinely locked (555) → all 6 rows UNVERIFIABLE, no false mismatch | P | 0 |
 
 use tempfile::TempDir;
 
@@ -418,4 +421,129 @@ fn tc522_status_lock_chmod_absent_dir_not_flagged()
     "chmod line must report absent without a false mismatch when the versions dir doesn't exist: {chmod_line}"
   );
   assert!( !text.contains( "MISMATCH" ), "expected no mismatch anywhere for a fresh install: {text}" );
+}
+
+/// Extract the `"key":{...}` entry substring for one lock key from the
+/// single-line `"lock"` JSON object, so a per-key assertion can't be
+/// silently satisfied by a sibling key's entry (each entry has no nested
+/// braces, so the first `}` after the key's opening brace closes it).
+///
+/// # Panics
+///
+/// Panics if `key`'s entry is not found in `json`.
+fn lock_json_entry<'a>( json : &'a str, key : &str ) -> &'a str
+{
+  let needle = format!( "\"{key}\":{{" );
+  let start = json.find( &needle ).unwrap_or_else( || panic!( "key {key} not found in {json}" ) );
+  let end = json[ start.. ].find( '}' )
+    .unwrap_or_else( || panic!( "unterminated entry for {key} in {json}" ) ) + start;
+  &json[ start..=end ]
+}
+
+// TC-523 (bugfix, MAAV-found): settings.json exists but could not be read
+// (invalid JSON), on an install whose versions directory is genuinely locked
+// (555). `is_pinned` silently degrades to `false` when settings.json can't
+// be read (see `read_preferred_version`, which swallows the read error via
+// `.ok()`), so without this fix a genuinely-pinned-and-locked install would
+// be compared against the unpinned (755) expectation and misreport a false
+// `MISMATCH` on every settings-derived row. Every row must instead report
+// `UNVERIFIABLE`.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc523_status_lock_corrupted_settings_reports_unverifiable()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( "settings.json" ), "{ not valid json" ).unwrap();
+  write_versions_dir( dir.path(), 0o555 ); // genuinely locked
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Lock:" ), "missing Lock: section: {text}" );
+  assert!(
+    text.contains( "could not be read" ),
+    "expected explanatory note about unreadable settings.json: {text}"
+  );
+  assert!( !text.contains( "MISMATCH" ), "corrupted settings must never assert a MISMATCH: {text}" );
+  for key in [ "autoUpdates", "autoUpdatesChannel", "minimumVersion", "env.DISABLE_AUTOUPDATER", "env.DISABLE_UPDATES", "chmod" ]
+  {
+    let line = text.lines().find( | l | l.contains( &format!( "{key}:" ) ) )
+      .unwrap_or_else( || panic!( "no {key} line in output: {text}" ) );
+    assert!( line.contains( "UNVERIFIABLE" ), "{key} line must report UNVERIFIABLE: {line}" );
+  }
+}
+
+// TC-524: format::json variant of TC-523 — `"compliant"` must serialize as
+// JSON `null` (not `false`) for every one of the 6 keys individually (not
+// merely "at least one key shows null, none shows false" — a whole-blob
+// check would still pass if 5 of 6 rows regressed to `true`/`false` while
+// only one correctly showed `null`), so machine consumers don't mistake an
+// unverifiable row for a confirmed mismatch.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc524_status_lock_json_corrupted_settings_compliant_null()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( "settings.json" ), "{ not valid json" ).unwrap();
+  write_versions_dir( dir.path(), 0o555 );
+
+  let out = run_clv_with_env( &[ ".status", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"lock\"" ), "missing lock object in JSON: {text}" );
+  for key in [ "autoUpdates", "autoUpdatesChannel", "minimumVersion", "env.DISABLE_AUTOUPDATER", "env.DISABLE_UPDATES", "chmod" ]
+  {
+    let entry = lock_json_entry( &text, key );
+    assert!(
+      entry.contains( "\"compliant\":null" ),
+      "{key} entry must report compliant:null when settings.json is corrupted, got: {entry}"
+    );
+  }
+}
+
+// TC-525 (bugfix, MAAV-found): settings.json exists, is valid JSON, and is
+// genuinely pinned+locked, but becomes unreadable due to a permissions error
+// (mode 000) rather than a parse failure. `read_preferred_version` swallows
+// ANY read error via `.ok()`, not just parse failures, so a fix that only
+// special-cased `ErrorKind::InvalidData` would still misreport a false
+// `MISMATCH` here. Must be treated identically to TC-523: every row
+// `UNVERIFIABLE`. Permissions are restored before assertions so `TempDir`
+// cleanup succeeds even when a panic occurs mid-test.
+#[ cfg( unix ) ]
+#[ test ]
+fn tc525_status_lock_unreadable_settings_permission_denied_reports_unverifiable()
+{
+  use std::os::unix::fs::PermissionsExt;
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_pinned_settings( dir.path(), "2.1.78", "false" ); // genuinely pinned, valid JSON
+  write_versions_dir( dir.path(), 0o555 ); // genuinely locked
+
+  let settings_file = dir.path().join( ".claude" ).join( "settings.json" );
+  std::fs::set_permissions( &settings_file, std::fs::Permissions::from_mode( 0o000 ) ).unwrap();
+
+  let out = run_clv_with_env( &[ ".status", "v::2" ], &[ ( "HOME", home ) ] );
+
+  // Restore before any assertion so TempDir cleanup can delete the directory.
+  std::fs::set_permissions( &settings_file, std::fs::Permissions::from_mode( 0o644 ) ).unwrap();
+
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "MISMATCH" ), "unreadable settings must never assert a MISMATCH: {text}" );
+  for key in [ "autoUpdates", "autoUpdatesChannel", "minimumVersion", "env.DISABLE_AUTOUPDATER", "env.DISABLE_UPDATES", "chmod" ]
+  {
+    let line = text.lines().find( | l | l.contains( &format!( "{key}:" ) ) )
+      .unwrap_or_else( || panic!( "no {key} line in output: {text}" ) );
+    assert!(
+      line.contains( "UNVERIFIABLE" ),
+      "{key} line must report UNVERIFIABLE when settings.json is permission-denied: {line}"
+    );
+  }
 }
