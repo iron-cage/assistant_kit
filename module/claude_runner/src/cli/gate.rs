@@ -1,6 +1,5 @@
 use claude_core::process::find_claude_processes;
 use core::fmt::Write as _;
-use std::io::Write as _;
 use std::path::{ Path, PathBuf };
 use claude_journal::{ EventRecord, EventType, JournalWriter };
 
@@ -73,6 +72,16 @@ fn gate_max_attempts() -> u32
   gate_max_attempts_from( std::env::var( "CLR_GATE_MAX_ATTEMPTS" ).ok().as_deref() )
 }
 
+/// Opt-in staleness threshold for reclaim eligibility. `None` when unset or
+/// unparseable — unlike `gate_poll_secs()`, this has no hardcoded default,
+/// since the feature must not activate unless an operator explicitly sets it.
+fn gate_stale_secs() -> Option< u64 >
+{
+  std::env::var( "CLR_GATE_STALE_SECS" )
+    .ok()
+    .and_then( | s | s.parse().ok() )
+}
+
 // Fix(BUG-387): fixed-index reservation slot backing the concurrency gate.
 //
 // Root cause: the prior admission check (`find_claude_processes().count() < max`)
@@ -109,18 +118,57 @@ fn slot_path( dir : &Path, index : u32 ) -> PathBuf
   dir.join( format!( "slot_{index}.json" ) )
 }
 
-// Attempt to atomically create the slot file at `path`, recording the owning
-// PID and timestamp. Returns `true` on success; `false` if the slot is
-// already held (`AlreadyExists`) or any other I/O failure occurs.
+// Fix(BUG-407): publish the claim and its content as one atomic unit.
+//
+// Root cause: the prior implementation's create_new(true).open(path) and its
+// subsequent write!() were two independently-fallible, non-atomic steps — the
+// create succeeded and became observable to any concurrent reader before the
+// content write had even been attempted. A process terminated between them
+// (SIGKILL, OOM, host crash, container preemption) left `path` existing on
+// disk, permanently, with no (or truncated) content — read_slot_owner_record()
+// returns None for it forever, and acquire_slot()'s None arm denies HeldByLive
+// unconditionally, with no owner PID to check liveness of and no reclaim path
+// ever engaging.
+//
+// Fix: write the full content to a uniquely-named temporary file first (same
+// directory, so the eventual link is same-filesystem), then publish it
+// atomically via hard_link() instead of create_new() directly on the target
+// path. hard_link() fails with AlreadyExists exactly like create_new() did —
+// preserving the existing exactly-one-winner arbitration semantics all call
+// sites depend on — but by the instant the link succeeds, path's content (the
+// linked inode) is already complete, because it was fully written to tmp
+// before the link was attempted. There is no window where path exists with
+// incomplete content, because path does not exist at all until the content
+// behind it is already whole. The pid/since suffix keeps concurrent racers'
+// own temp files from colliding with each other; each racer cleans up only
+// its own uniquely-named temp file regardless of whether it won.
+//
+// Pitfall: this is a pure internal change — the external bool contract (true =
+// this call created it now, false = it already existed) is unchanged, so none
+// of this function's call sites, acquire_slot()'s branch logic, or
+// SlotDenialCause need to change. A path that ALREADY exists before this call
+// (e.g. a leftover artifact from a crash under a pre-upgrade binary) is NOT
+// repaired by this fix — hard_link(), like create_new(), cannot claim a path
+// that already exists, so that scenario still denies via acquire_slot()'s
+// unconditional None -> HeldByLive branch. This is an explicitly accepted
+// residual (see T24 in concurrency_gate_test.rs), not a regression: this fix
+// closes the window where claim_slot_file() itself could CREATE a new
+// incomplete file; it adds no repair path for content that was already
+// unparseable before claim_slot_file() was ever called.
 fn claim_slot_file( path : &Path, pid : u32, since : u64 ) -> bool
 {
-  let Ok( mut f ) = std::fs::OpenOptions::new().write( true ).create_new( true ).open( path )
-  else
+  let content = format!( r#"{{"pid":{pid},"since":{since}}}"# );
+  let tmp = path.with_file_name( format!(
+    "{}.tmp.{pid}.{since}",
+    path.file_name().map_or_else( Default::default, | n | n.to_string_lossy().into_owned() )
+  ) );
+  if std::fs::write( &tmp, &content ).is_err()
   {
     return false;
-  };
-  let _ = write!( f, r#"{{"pid":{pid},"since":{since}}}"# );
-  true
+  }
+  let claimed = std::fs::hard_link( &tmp, path ).is_ok();
+  let _ = std::fs::remove_file( &tmp );
+  claimed
 }
 
 // Return the (pid, since) recorded in a slot file, if the file is readable and
@@ -308,17 +356,31 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (
   let Some( ( owner, owner_since ) ) = read_slot_owner_record( &path )
   else
   {
-    // Fix(BUG-396): an unreadable record here is NOT a corrupt/stale file —
-    // claim_slot_file()'s create_new() and its content write() are two
-    // separate steps, so the only way this path exists but fails to parse is
-    // that some OTHER caller's claim_slot_file() just won create_new() and
-    // hasn't finished writing yet. That caller is, by construction,
-    // definitely alive right now. Empirically confirmed via T15: classifying
-    // this as LostReclaimRace produced intermittent "lost reservation race"
-    // output for a scenario with no dead owner and no reclaim attempt at all.
+    // Fix(BUG-396): an unreadable record here is classified HeldByLive, not
+    // LostReclaimRace — empirically confirmed via T15: classifying this as
+    // LostReclaimRace produced intermittent "lost reservation race" output
+    // for a scenario with no dead owner and no reclaim attempt at all.
+    // Fix(BUG-407): claim_slot_file() now publishes via write-to-temp-then-
+    // hard_link(), so a path can no longer exist with content mid-write — it
+    // becomes visible only once its content is already complete. An
+    // unreadable record here therefore means the path already existed with
+    // unparseable content BEFORE this call (e.g. a leftover artifact from a
+    // crash under a pre-upgrade binary, or an out-of-band write) — genuine
+    // on-disk corruption unrelated to the create-then-populate race this fix
+    // closes. Recovering from that pre-existing corruption is out of scope
+    // for this fix (see T24 in concurrency_gate_test.rs); it is a documented
+    // residual, not a live in-progress writer.
     return Err( SlotDenialCause::HeldByLive );
   };
-  if pid_alive( owner )
+  // Fix(BUG-400): opt-in staleness threshold for reclaim eligibility.
+  // Root cause: a live owner denied reclaim unconditionally and indefinitely —
+  // a hung-but-alive session could hold its slot forever with no escape hatch.
+  // Pitfall: stays a no-op by default (gate_stale_secs() returns None unless
+  // CLR_GATE_STALE_SECS is explicitly set) — must not change behavior for any
+  // caller that has not opted in.
+  let is_stale = gate_stale_secs()
+    .is_some_and( | threshold | unix_now().saturating_sub( owner_since ) > threshold );
+  if pid_alive( owner ) && !is_stale
   {
     return Err( SlotDenialCause::HeldByLive );
   }
