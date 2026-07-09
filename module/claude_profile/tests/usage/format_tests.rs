@@ -572,9 +572,9 @@ fn mre_bug331_pct_emoji_color_matches_rounded_display_at_threshold_boundary()
   };
 
   // Raw left ≈ 5.000000000000284 — strictly > 5.0 under raw comparison.
-  let cells_over = quota_text_cells( &mk_7d( 94.999999999999716 ), 0 );
+  let cells_over = quota_text_cells( &mk_7d( 94.999_999_999_999_72 ), 0 );
   // Raw left ≈ 4.999999999999489 — strictly ≤ 5.0 under raw comparison.
-  let cells_under = quota_text_cells( &mk_7d( 95.000000000000510 ), 0 );
+  let cells_under = quota_text_cells( &mk_7d( 95.000_000_000_000_51 ), 0 );
 
   assert_eq!(
     cells_over[ 2 ], cells_under[ 2 ],
