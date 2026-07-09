@@ -314,8 +314,16 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
+      name       : "dangerously_skip_permissions",
+      cli_flag   : Some( "--dangerously-skip-permissions" ),
+      env_var    : None,
+      config_key : None,
+      default    : Some( "off" ),
+    },
+    ParamDef
+    {
       name       : "debug",
-      cli_flag   : Some( "--debug" ),
+      cli_flag   : Some( "-d / --debug" ),
       env_var    : None,
       config_key : None,
       default    : Some( "off" ),
@@ -614,7 +622,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : Some( "--fork-session" ),
       env_var    : None,
       config_key : None,
-      default    : None,
+      default    : Some( "off" ),
     },
     ParamDef
     {
@@ -662,7 +670,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : Some( "--include-partial-messages" ),
       env_var    : None,
       config_key : None,
-      default    : None,
+      default    : Some( "off" ),
     },
     ParamDef
     {
@@ -670,7 +678,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : Some( "--input-format" ),
       env_var    : None,
       config_key : None,
-      default    : None,
+      default    : Some( "text" ),
     },
     ParamDef
     {
@@ -710,7 +718,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : None,
       env_var    : Some( "CLAUDE_CODE_MAX_OUTPUT_TOKENS" ),
       config_key : None,
-      default    : None,
+      default    : Some( "32000" ),
     },
     ParamDef
     {
@@ -788,9 +796,9 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     {
       name       : "model",
       cli_flag   : Some( "--model" ),
-      env_var    : Some( "CLAUDE_MODEL" ),
+      env_var    : None,
       config_key : Some( "model" ),
-      default    : Some( "claude-sonnet-5" ),
+      default    : Some( "claude-sonnet-4-6" ),
     },
     ParamDef
     {
@@ -878,7 +886,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : None,
       env_var    : None,
       config_key : Some( "preferredVersionSpec" ),
-      default    : Some( "stable" ),
+      default    : None,
     },
     ParamDef
     {
@@ -1026,14 +1034,6 @@ pub fn params_catalog() -> &'static [ ParamDef ]
     },
     ParamDef
     {
-      name       : "skip_permissions",
-      cli_flag   : Some( "--dangerously-skip-permissions" ),
-      env_var    : None,
-      config_key : None,
-      default    : None,
-    },
-    ParamDef
-    {
       name       : "stop_hook_block_cap",
       cli_flag   : None,
       env_var    : Some( "CLAUDE_CODE_STOP_HOOK_BLOCK_CAP" ),
@@ -1086,7 +1086,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : None,
       env_var    : None,
       config_key : Some( "theme" ),
-      default    : Some( "system" ),
+      default    : Some( "dark" ),
     },
     ParamDef
     {
@@ -1110,7 +1110,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : Some( "--tmux" ),
       env_var    : None,
       config_key : None,
-      default    : None,
+      default    : Some( "off" ),
     },
     ParamDef
     {
@@ -1142,7 +1142,7 @@ pub fn params_catalog() -> &'static [ ParamDef ]
       cli_flag   : Some( "--verbose" ),
       env_var    : None,
       config_key : None,
-      default    : None,
+      default    : Some( "off" ),
     },
     ParamDef
     {

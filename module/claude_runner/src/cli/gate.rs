@@ -93,7 +93,9 @@ fn gate_max_attempts() -> u32
 /// behavior exactly.
 fn gate_stale_secs() -> Option< u64 >
 {
-  std::env::var( "CLR_GATE_STALE_SECS" ).ok().and_then( | s | s.parse().ok() )
+  std::env::var( "CLR_GATE_STALE_SECS" )
+    .ok()
+    .and_then( | s | s.parse().ok() )
 }
 
 // Fix(BUG-387): fixed-index reservation slot backing the concurrency gate.
@@ -133,17 +135,48 @@ fn slot_path( dir : &Path, index : u32 ) -> PathBuf
 }
 
 // Fix(BUG-407): publish the claim and its content as one atomic unit.
-// Root cause: `create_new(path)` then a separate `write!()` left `path`
-// observable to concurrent readers the instant the create succeeded, before
-// its content existed — a process killed between the two steps left `path`
-// permanently existing but empty/truncated, which every future reader
-// parsed as `None` and every caller in `acquire_slot()` then classified as
-// a permanent, unrecheckable denial.
+//
+// Root cause: the prior implementation's create_new(true).open(path) and its
+// subsequent write!() were two independently-fallible, non-atomic steps — the
+// create succeeded and became observable to any concurrent reader before the
+// content write had even been attempted. A process terminated between them
+// (SIGKILL, OOM, host crash, container preemption) left `path` existing on
+// disk, permanently, with no (or truncated) content — read_slot_owner_record()
+// returns None for it forever, and acquire_slot()'s None arm denies HeldByLive
+// unconditionally, with no owner PID to check liveness of and no reclaim path
+// ever engaging.
+//
+// Fix: write the full content to a uniquely-named temporary file first (same
+// directory, so the eventual link is same-filesystem), then publish it
+// atomically via hard_link() instead of create_new() directly on the target
+// path. hard_link() fails with AlreadyExists exactly like create_new() did —
+// preserving the existing exactly-one-winner arbitration semantics all call
+// sites depend on — but by the instant the link succeeds, path's content (the
+// linked inode) is already complete, because it was fully written to tmp
+// before the link was attempted. There is no window where path exists with
+// incomplete content, because path does not exist at all until the content
+// behind it is already whole. The pid/since suffix keeps concurrent racers'
+// own temp files from colliding with each other; each racer cleans up only
+// its own uniquely-named temp file regardless of whether it won.
+//
 // Pitfall: the temp filename is derived purely from this call's own
 // `(pid, since)`, never from `path`'s own filename — deriving it from
 // `path` (e.g. appending a suffix to `slot_0.json`) would produce a
 // `slot_`-prefixed temp filename, miscounted by `count_live_held_slots()`
 // (see the `Fix(BUG-392)` Pitfall above) for the brief window it exists.
+//
+// Pitfall: this is a pure internal change — the external bool contract (true =
+// this call created it now, false = it already existed) is unchanged, so none
+// of this function's call sites, acquire_slot()'s branch logic, or
+// SlotDenialCause need to change. A path that ALREADY exists before this call
+// (e.g. a leftover artifact from a crash under a pre-upgrade binary) is NOT
+// repaired by this fix — hard_link(), like create_new(), cannot claim a path
+// that already exists, so that scenario still denies via acquire_slot()'s
+// unconditional None -> HeldByLive branch. This is an explicitly accepted
+// residual (see T24 in concurrency_gate_test.rs), not a regression: this fix
+// closes the window where claim_slot_file() itself could CREATE a new
+// incomplete file; it adds no repair path for content that was already
+// unparseable before claim_slot_file() was ever called.
 fn claim_slot_file( path : &Path, pid : u32, since : u64 ) -> bool
 {
   let content = format!( r#"{{"pid":{pid},"since":{since}}}"# );
@@ -159,7 +192,7 @@ fn claim_slot_file( path : &Path, pid : u32, since : u64 ) -> bool
   claimed
 }
 
-// Test-only injection point, same idiom as `reclaim_test_delay()` above:
+// Test-only injection point, same idiom as `reclaim_test_delay()` below:
 // widen the window between `claim_slot_file()`'s temp file being fully
 // written and its publish via `hard_link()`, so a regression test can
 // deterministically observe that `path` never becomes visible before its
@@ -358,14 +391,20 @@ fn acquire_slot( dir : &Path, index : u32, pid : u32, since : u64 ) -> Result< (
   let Some( ( owner, owner_since ) ) = read_slot_owner_record( &path )
   else
   {
-    // Fix(BUG-396): an unreadable record here is NOT a corrupt/stale file —
-    // claim_slot_file()'s create_new() and its content write() are two
-    // separate steps, so the only way this path exists but fails to parse is
-    // that some OTHER caller's claim_slot_file() just won create_new() and
-    // hasn't finished writing yet. That caller is, by construction,
-    // definitely alive right now. Empirically confirmed via T15: classifying
-    // this as LostReclaimRace produced intermittent "lost reservation race"
-    // output for a scenario with no dead owner and no reclaim attempt at all.
+    // Fix(BUG-396): an unreadable record here is classified HeldByLive, not
+    // LostReclaimRace — empirically confirmed via T15: classifying this as
+    // LostReclaimRace produced intermittent "lost reservation race" output
+    // for a scenario with no dead owner and no reclaim attempt at all.
+    // Fix(BUG-407): claim_slot_file() now publishes via write-to-temp-then-
+    // hard_link(), so a path can no longer exist with content mid-write — it
+    // becomes visible only once its content is already complete. An
+    // unreadable record here therefore means the path already existed with
+    // unparseable content BEFORE this call (e.g. a leftover artifact from a
+    // crash under a pre-upgrade binary, or an out-of-band write) — genuine
+    // on-disk corruption unrelated to the create-then-populate race this fix
+    // closes. Recovering from that pre-existing corruption is out of scope
+    // for this fix (see T24 in concurrency_gate_test.rs); it is a documented
+    // residual, not a live in-progress writer.
     return Err( SlotDenialCause::HeldByLive );
   };
   // Fix(BUG-400): a live owner is reclaim-eligible once also stale — see

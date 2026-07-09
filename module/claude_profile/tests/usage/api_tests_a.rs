@@ -159,14 +159,13 @@ fn mre_bug331_apply_model_override_branch_matches_rounded_log_at_threshold_bound
     apply_model_override( &quota, &paths, false, "account.use", "test-account" );
 
     std::fs::read_to_string( paths.settings_file() )
-      .map( |content| content.contains( "\"opus\"" ) )
-      .unwrap_or( false )
+      .is_ok_and( |content| content.contains( "\"opus\"" ) )
   };
 
   // Raw sonnet_left ≈ 10.000000000000284 — strictly NOT < 10.0 under raw comparison.
-  let overrode_a = run( 89.999999999999716 );
+  let overrode_a = run( 89.999_999_999_999_72 );
   // Raw sonnet_left ≈ 9.999999999999489 — strictly < 10.0 under raw comparison.
-  let overrode_b = run( 90.000000000000510 );
+  let overrode_b = run( 90.000_000_000_000_51 );
 
   assert_eq!(
     overrode_a, overrode_b,

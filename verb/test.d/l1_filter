@@ -20,8 +20,8 @@ export CARGO_TARGET_DIR=/workspace/target
 # See verb/test.d/l1 for full rationale.
 export NO_COLOR=1
 export RUSTFLAGS="-D warnings"
-# Scoped to the claude_runner package: this workspace checkout bundles every
+# Scoped to the claude_profile package: this workspace checkout bundles every
 # assistant_kit module in one Cargo workspace, and an unscoped run compiles
 # unrelated sibling crates (e.g. claude_storage) that this module does not
 # depend on. This script is this workspace's own copy — module-specific.
-exec cargo nextest run -p claude_runner --all-features --no-fail-fast -E "$FILTER"
+exec cargo nextest run -p claude_profile --all-features --no-fail-fast -E "$FILTER"

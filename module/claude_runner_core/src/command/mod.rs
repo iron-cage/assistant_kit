@@ -142,7 +142,7 @@ impl ClaudeCommand {
       auto_continue: Some( true ),                 // Enable automation (vs false standard)
       telemetry: Some( false ),                    // Disable telemetry (vs true standard)
       compact_window: Some( DEFAULT_COMPACT_WINDOW ), // Limit compaction to 300K (vs model native 200K or 1M)
-      print_bg_wait_ceiling_ms: Some( 0 ),             // Exit print mode immediately (vs 600000/10min standard) — clr's own gate_poll_secs/gate_max_attempts already own background-task waiting, so claude's internal wait would be redundant
+      print_bg_wait_ceiling_ms: Some( 0 ),             // Disables claude's own ceiling-exceeded sweep (0 fails its `ra>0` guard — not an instant-kill; see contract/claude_code/docs/param/131_print_bg_wait_ceiling_ms.md) — clr owns background-task waiting via run_print_mode()'s watchdog + gate_poll_secs/gate_max_attempts, so a second internal wait layer would be redundant
 
       skip_permissions: false,
       chrome: Some( true ),  // Enable browser context by default (vs off in raw claude binary)

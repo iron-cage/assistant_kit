@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # l0 — host-native test execution is disabled.
 # Tests must run inside the runbox container.
-# Standard invocation: cd claude_storage && ./verb/test
+# Standard invocation: cd claude_profile && ./verb/test
 set -euo pipefail
 echo "ERROR: host-native test execution (l0) is disabled." >&2
-echo "Standard invocation: cd claude_storage && ./verb/test" >&2
+echo "Standard invocation: cd claude_profile && ./verb/test" >&2
 exit 1
