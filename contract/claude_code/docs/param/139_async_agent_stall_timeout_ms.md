@@ -38,6 +38,13 @@ the middle of an otherwise-healthy session, well before exit, specifically
 because an agent has gone quiet — not because it has run long in absolute
 terms.
 
+Naming note: this variable also has no `_CODE_` infix
+(`CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS`, not
+`CLAUDE_CODE_ASYNC_AGENT_STALL_TIMEOUT_MS`), despite sitting among
+`CLAUDE_CODE_BG_*`-prefixed siblings in this same background-task cluster.
+See [140_auto_background_tasks.md](140_auto_background_tasks.md) for the
+full list of siblings sharing this trap.
+
 ### Cross-References
 
 | Type | File | Responsibility |
@@ -45,3 +52,4 @@ terms.
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [131_print_bg_wait_ceiling_ms.md](131_print_bg_wait_ceiling_ms.md) | Distinct timeout axis — total print-mode exit wait, not stall detection |
 | doc | [003_agent.md](003_agent.md) | The Agent tool whose background dispatches this timeout governs |
+| doc | [140_auto_background_tasks.md](140_auto_background_tasks.md) | Sibling no-`_CODE_`-infix variable |

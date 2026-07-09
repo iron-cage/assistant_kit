@@ -68,14 +68,46 @@ the deadline is immediate. `w3c()` is the actual sweep executor invoked once
 matching predicate `Dw(n)`, logging `print wind-down: killing background shell
 {id} (...)`.
 
-A sibling project in this same workspace (`claude_storage/.claude/settings.local.json`)
-already sets this to `"0"` — i.e. do not wait at all for background work in
-print mode, exit immediately. That is a real precedent for headless/CI-style
-invocations that would rather abandon outstanding background work than block
-the parent process; `claude_runner` itself does not currently set this (it
-invokes `claude` as a subprocess and manages its own timeout via
-`CLR_TIMEOUT`/`gate_poll_secs`/`gate_max_attempts` instead — see
-`module/claude_runner/docs/cli/003_env_param.md`).
+Both `claude_storage/.claude/settings.local.json` (a sibling project in this
+workspace) and `claude_runner` itself set this to `0` — confirmed for
+`claude_runner` via direct read of `claude_runner_core/src/command/mod.rs`:
+`ClaudeCommand::new()` sets `print_bg_wait_ceiling_ms: Some(0)`
+unconditionally, injected as `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0` by
+`env_pairs()` on every invocation (see
+[`module/claude_runner/docs/cli/003_env_param.md`](../../../../module/claude_runner/docs/cli/003_env_param.md)
+for clr's own default-injection documentation of this and 4 sibling
+`CLAUDE_CODE_*` variables).
+
+**Corrected interpretation of `0`** (an earlier version of this document
+asserted the opposite — retracted below): the `ra > 0` guard is the critical
+detail. The caller that feeds `v3c()` computes `ceilingExceeded` as
+`ra > 0 && So !== null && Zr - So >= ra`, where `ra = E3c()` is this
+variable's resolved value and `So` is the timestamp the process entered the
+wind-down state. Setting the ceiling to `0` makes `ra > 0` permanently false,
+so `ceilingExceeded` can never become true: **the ceiling-based forced-sweep
+path is disabled, not instant-triggered.** This document previously read `0`
+as "do not wait at all for background work in print mode, exit immediately"
+— that reading does not survive tracing the actual conjunction and is
+retracted.
+
+This does not mean unconditional infinite waiting, though: `v3c()`'s entry
+condition is `(s || (!o && !e.some(XX)))` — with `s` (`ceilingExceeded`)
+pinned false by the guard above, entry can still occur via the second
+disjunct (no pending notification AND no running background task matches
+undecompiled predicate `XX`), which still drives a sweep after a fixed `tZo`
+(`5000`ms) grace period, independent of this variable's value entirely.
+Whether typical background Bash/Agent work matches `XX` is not resolved from
+static analysis alone.
+
+Independent corroboration: [`docs/claude_code_background_task_env_vars.md`](../../../../docs/claude_code_background_task_env_vars.md)
+(repo root) documents this same variable from the official docs, an
+independent community mirror, and **direct causal testing against a live
+process** — concluding "`0` = wait indefinitely" for Agent/Workflow dispatches
+specifically, and separately confirming a fixed ~5-second grace period for
+plain background Bash tasks that this ceiling variable does not affect. That
+empirical result and this session's static decompilation agree on the same
+two-path structure: a ceiling-gated path for agent/workflow work, and a
+separate fixed-grace path for plain background shells.
 
 ### Cross-References
 
@@ -84,4 +116,5 @@ invokes `claude` as a subprocess and manages its own timeout via
 | doc | [readme.md](readme.md) | Master parameter table |
 | doc | [051_print.md](051_print.md) | `-p`/`--print` mode this ceiling applies to |
 | doc | [128_bg_tasks_report_running.md](128_bg_tasks_report_running.md) | Related "is a background task still outstanding" signal consumed by the same wait/sweep logic |
-| doc | [../../../../module/claude_runner/docs/cli/003_env_param.md](../../../../module/claude_runner/docs/cli/003_env_param.md) | `claude_runner`'s own `CLR_*` timeout/gate vars — the runner-native analogue of this upstream ceiling |
+| doc | [../../../../module/claude_runner/docs/cli/003_env_param.md](../../../../module/claude_runner/docs/cli/003_env_param.md) | `claude_runner`'s own injected-default documentation for this and 4 sibling `CLAUDE_CODE_*` variables |
+| doc | [../../../../docs/claude_code_background_task_env_vars.md](../../../../docs/claude_code_background_task_env_vars.md) | Independent, empirically-tested (live-process) confirmation of the `0` = wait-indefinitely reading |
