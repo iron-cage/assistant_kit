@@ -113,6 +113,7 @@ fn ast_usage_command_accepted()
 }
 
 /// Verify `.paths` is routed through `ast` via profile's programmatic registration.
+#[ doc = "bug_reproducer(BUG-015)" ]
 #[test]
 fn ast_paths_command_accepted()
 {

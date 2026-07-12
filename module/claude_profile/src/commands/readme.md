@@ -8,6 +8,7 @@
 | `credentials.rs` | `.credentials.status` command routine. |
 | `accounts.rs` | `.accounts` list command routine. |
 | `accounts_render.rs` | Account list renderers and column-visibility for `.accounts`. |
+| `accounts_help.rs` | Grouped, `::`-aligned help rendering for `.accounts.help`. |
 | `account_ops.rs` | `.account.save/.use/.delete/.rotate` command routines. |
 | `account_relogin.rs` | `.account.relogin` interactive re-authentication routine. |
 | `account_renewal.rs` | `.account.renewal` subscription renewal check routine. |

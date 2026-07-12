@@ -29,6 +29,6 @@ plugin_mount: ~/.claude:/workspace/.claude:directory
 # ── Formerly hardcoded parameters (now configurable) ─────────────────────────
 # base_image: rust:slim          # FROM for chef and test stages
 # rustup_components: clippy      # space-separated; e.g. "clippy rustfmt"
-system_packages: curl procps
+system_packages: curl procps jq
 # cargo_features: --all-features # passed to nextest list and offline run CMD
 # workspace_dir: /workspace      # container WORKDIR; must match in runbox/runbox.dockerfile and runbox-run

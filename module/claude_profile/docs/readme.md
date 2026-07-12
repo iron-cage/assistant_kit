@@ -17,6 +17,7 @@
 | schema/ | On-disk file format schema doc instances |
 | subprocess/ | Subprocess layer API contract doc instances |
 | pitfall/ | Recurring design pitfall and trap doc instances |
+| pattern/ | Reusable design solution doc instances |
 | entity/ | Master index of all doc entities and instances |
 | doc_graph.yml | Cross-reference graph for feature/ and invariant/ doc instances |
 | research_interactive/ | Investigation findings on Claude binary behavior and interaction modes |

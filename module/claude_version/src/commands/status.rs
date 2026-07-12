@@ -90,6 +90,8 @@ fn lock_status( settings_unreadable : bool, compliant : impl FnOnce() -> bool ) 
 /// compared against the wrong (unpinned) expectation and misreport a false
 /// `MISMATCH`, regardless of which specific I/O error caused the
 /// degradation.
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 fn compute_lock_rows( is_pinned : bool, resolved_version : Option< &str > ) -> Vec< LockRow >
 {
   let settings_file = super::require_claude_paths().ok().map( | p | p.settings_file() );

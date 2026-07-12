@@ -110,6 +110,21 @@ clp .accounts assignee::bob@laptop name::alice@acme.com
 - G8 ownership gate evaluates BEFORE `dry::1` on `owner::0 name::X` (Feature 064) — a non-owner gets exit 1 even in dry-run mode.
 - `current::` field (in text mode) shows `Current: yes` for the account whose `accessToken` matches `~/.claude/.credentials.json`. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
 
+**Help Rendering Scheme:**
+
+`.accounts.help` renders the 30 parameters above as 6 presentation groups — a command-specific rendering taxonomy, distinct from the 4 `param_group/` cross-command semantic groups referenced below (see [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md) for why these differ):
+
+| Group | Parameters |
+|-------|-----------|
+| Core | `name::`, `format::`, `dry::` |
+| Account Ownership | `owner::`, `assignee::`, `force::` |
+| Sort Control | `sort::`, `desc::`, `prefer::` |
+| Row Filtering & Pagination | `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `only_valid::`, `exclude_exhausted::`, `min_5h::`, `min_7d::` |
+| Display Rendering | `abs::`, `no_color::`, `get::` |
+| Refresh & Subprocess Control | `trace::`, `refresh::`, `touch::`, `imodel::`, `effort::`, `set_model::`, `live::`, `interval::`, `jitter::` |
+
+Each group header renders bold/colored with no bracket punctuation on a TTY, falling back to a single trailing colon (e.g. `Core:`) in plain text. Every boolean parameter's signature is shown bare (`dry::0`, never `dry::0|1`); accepted values and the default are stated once in a blanket line rather than per row. Enum-valued parameters (`imodel::`, `effort::`, `set_model::`, `format::`, `sort::`, `prefer::`) show an uppercase placeholder in the signature (e.g. `imodel::MODEL`) with actual values spelled out in the description column. The name / `::` / value signature sub-columns are independently padded so the `::` delimiter aligns vertically across all 30 rows. No version banner and no information about REMOVED parameters appear in `.accounts.help` output — the REMOVED_TOGGLE stubs (`assign::`, `for::`, `unclaim::`, `active::`) keep their existing runtime redirect-error behavior (see Notes above); they are simply invisible from `.help` text. Full rationale and general rendering rules: [pattern/001_grouped_help_rendering.md](../../pattern/001_grouped_help_rendering.md).
+
 ### Referenced Parameters
 
 | # | Parameter | Role |
@@ -185,6 +200,12 @@ clp .accounts assignee::bob@laptop name::alice@acme.com
 | 1 | [text](../format/001_text.md) | `format::text` (default) |
 | 2 | [json](../format/002_json.md) | `format::json` |
 | 3 | [table](../format/003_table.md) | `format::table` |
+
+### Referenced Patterns
+
+| # | Pattern | Role |
+|---|---------|------|
+| 1 | [Grouped Column-Aligned Help Rendering](../../pattern/001_grouped_help_rendering.md) | `.accounts.help` rendering scheme (6 presentation groups, `::` alignment) |
 
 ---
 

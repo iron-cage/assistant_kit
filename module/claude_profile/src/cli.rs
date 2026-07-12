@@ -1,7 +1,7 @@
 //! CLI pipeline: adapter → parser → semantic analysis → execution.
 
 use crate::adapter::argv_to_unilang_tokens;
-use crate::commands::dot_routine;
+use crate::commands::{ dot_routine, print_accounts_help };
 use unilang::data::{ CommandDefinition, ErrorCode };
 use unilang::interpreter::{ ExecutionContext, Interpreter };
 use unilang::parser::{ Parser, UnilangParserOptions };
@@ -162,6 +162,15 @@ pub( super ) fn run( binary : &str, argv : &[ String ] )
   if needs_help
   {
     print_usage( binary );
+    return;
+  }
+
+  // `.accounts.help` bypasses unilang's flat auto-generated help in favor of a
+  // grouped, `::`-aligned rendering — see
+  // docs/cli/command/001_account.md § Help Rendering Scheme.
+  if tokens.first().map( String::as_str ) == Some( ".accounts.help" )
+  {
+    print_accounts_help( binary );
     return;
   }
 
