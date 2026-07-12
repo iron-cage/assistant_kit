@@ -329,6 +329,8 @@ pub fn save(
 ///
 /// Returns `NotFound` if the account does not exist.
 #[ inline ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 pub fn check_switch_preconditions( name : &str, credential_store : &Path ) -> Result< (), std::io::Error >
 {
   validate_name( name )?;
@@ -645,6 +647,8 @@ pub fn get_session_effort( paths : &ClaudePaths ) -> Option< String >
 ///
 /// Returns `NotFound` if the account does not exist.
 #[ inline ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 pub fn check_delete_preconditions( name : &str, credential_store : &Path ) -> Result< (), std::io::Error >
 {
   validate_name( name )?;
@@ -1091,6 +1095,8 @@ pub fn is_owned( owner : &str ) -> bool
 ///
 /// Returns `std::io::Error` if the JSON file cannot be written.
 #[ inline ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 pub fn write_owner(
   name             : &str,
   credential_store : &Path,
@@ -1188,6 +1194,8 @@ pub enum RenewalOperation
 /// Returns `NotFound` if `{name}.credentials.json` does not exist.
 /// Returns I/O errors on file read/write failure.
 #[ inline ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 pub fn account_renewal(
   name             : &str,
   credential_store : &Path,
@@ -1367,6 +1375,8 @@ pub fn credential_stem( path : &Path ) -> Option< String >
 
 #[ doc( hidden ) ]
 #[ inline ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 pub fn validate_name( name : &str ) -> Result< (), std::io::Error >
 {
   // Account names must be valid email addresses (local@domain) so they can be

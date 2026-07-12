@@ -16,7 +16,7 @@ string (full model ID)
 
 ### Default
 
-Latest Sonnet model (e.g. `claude-sonnet-4-6`)
+Latest Sonnet model (e.g. `claude-sonnet-5`)
 
 ### Since
 

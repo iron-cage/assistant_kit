@@ -110,12 +110,13 @@ clv.version.install [version::VER] [dry::1] [force::1] [v::N] [format::FMT]
 | [`v::`](../param/04_v.md) | [`VerbosityLevel`](../type/01_verbosity_level.md) | 1 | No | Output detail level |
 | [`format::`](../param/05_format.md) | [`OutputFormat`](../type/02_output_format.md) | text | No | Output format |
 
-**Algorithm (5 steps):**
+**Algorithm (6 steps):**
 1. Resolve `version::` alias (`stable`, `latest`, `month`) or validate the semver string against known patterns.
-2. Compare resolved target against installed version; exit 0 (no-op) if equal and `force::0`.
-3. Apply all 5 version-lock layers (chmod 555, symlink guard, preference storage, etc.).
-4. Execute the official curl installer for the resolved version.
-5. Verify installed version matches target; store preferred version for `.version.guard` recovery.
+2. Compare resolved target against installed version; exit 0 (no-op) if equal and `force::0` — the preferred version is still stored on this path.
+3. Store the preferred version spec and resolved value in `settings.json`. Recorded before the lock mechanism is applied (step 6) so that a crash partway through install leaves a true, not false, mismatch signal in `.status`'s `Lock:` section — see `tests/docs/cli/command/02_status.md` IT-24–IT-27 and TC-530.
+4. Hot-swap the running binary if any Claude Code process is active, then unlock the versions directory so the installer can write to it.
+5. Execute the official curl installer for the resolved version; purge stale cached binaries afterward for pinned installs (skipped for `latest`, so version history remains available for rollback).
+6. Apply the lock mechanism for pinned installs — `autoUpdates`, `autoUpdatesChannel`, `minimumVersion`, `env.DISABLE_AUTOUPDATER`, `env.DISABLE_UPDATES`, and `chmod 555` on the versions directory — or leave unlocked (`autoUpdates` true, the other 4 keys removed, `chmod 755`) for `latest`.
 
 **Examples:**
 

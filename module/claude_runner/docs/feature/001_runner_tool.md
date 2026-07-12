@@ -80,9 +80,15 @@ identified by PID. Validates the PID belongs to a running `claude` process via
 `find_claude_processes()`. Exits 0 on success, 1 if PID not found or not a `claude` process.
 Typo guard: `clr kil` and `clr killl` trigger "Did you mean 'kill'?" and exit 1.
 
-**Tool listing (`clr tools`):** Lists all 26 Claude Code built-in tools in a plain-style
-table with Name, Category, and Description columns. Static data sourced from
-`contract/claude_code/docs/tool/readme.md`. Unknown arguments exit 1.
+**Tool listing (`clr tools`):** Lists Claude Code built-in tools in a plain-style table with
+Name, Category, and Description columns (or a projected/bare-value/record view — see below).
+Static data sourced from `contract/claude_code/docs/tool/readme.md`, kept in sync via the
+bijection invariant in [invariant/015_tools_array_doc_sync.md](../invariant/015_tools_array_doc_sync.md).
+Supports `--name`/`--category` substring filters (AND logic, case-insensitive), `--columns`
+projection (shared key vocabulary with `ps`: `idx`, `name`, `category`, `desc`), `--value <key>`
+for bare single-column output, and `--inspect` for key:value record blocks (`--value`/`--inspect`
+mutually exclusive; `--columns` ignored when either is active). Zero matches after filtering is
+not an error. Unknown arguments exit 1. See [cli/command/08_tools.md](../cli/command/08_tools.md).
 
 **3-tier retry hierarchy:** When a subprocess exits with a classifiable error, the runner retries according to a 3-tier resolution: Tier 1 (`--retry-override`) forces count/delay for all classes; Tier 2 (`--retry-on-<class>`/`--<class>-delay`) overrides per error class; Tier 3 (`--retry-default`/`--retry-default-delay`) provides fallback defaults (count=2, delay=30s). All 8 error classes use the same 3-tier resolution with no class-level default overrides. The 8 error classes are Transient, Account, Auth, Service, Process, Validation, Runner, and Unknown. Each class maps from `ErrorKind` via `classify_to_class()` in `execution.rs`. Stderr error labels use `[Class]` prefix for traceability (e.g., `"[Account] You've hit your limit · resets 2:40pm — retrying in 30s (attempt 1/3)…"`). Validation class retries are only active when `--expect-strategy retry` is set. Parameters 040–057 cover all 20 retry flags; each has a `CLR_*` env var fallback. See [feature/003_retry_hierarchy.md](003_retry_hierarchy.md).
 

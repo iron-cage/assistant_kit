@@ -41,7 +41,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [OPTIONS] [MESSAGE] [-- PASSTHR
 1. Resolve credentials path: `--creds` if given, else `$HOME/.claude/.credentials.json`; exit 1 if file not found.
 2. Create temporary HOME directory; write `.claude/.credentials.json` from resolved credentials.
 3. Write minimal `~/.claude/CLAUDE.md` to temp HOME to suppress interactive prompts.
-4. Build subprocess command with injected defaults (`--model "opus"` alias, `--effort max`, `--no-session-persistence`, `--dangerously-skip-permissions` when message present); prepend before `--print` and message; passthrough args appended last for last-wins override.
+4. Build subprocess command with injected defaults (`--model` from `~/.clr/prefs.json`'s `subprocess_model` when set, else `"opus"` alias; `--effort max`; `--no-session-persistence`; `--dangerously-skip-permissions` when message present); prepend before `--print` and message; passthrough args appended last for last-wins override.
 5. Spawn `claude` with `HOME=<temp>`; wait up to `--timeout` seconds (0 = unlimited).
 6. If credentials were refreshed at startup, write updated file back to `--creds`; delete temp HOME unconditionally; propagate subprocess exit code (or exit 2 on timeout without refresh).
 
@@ -77,7 +77,7 @@ clr isolated --creds /path/to/creds.json
 The isolated subprocess has no access to the caller's real `$HOME` — no `~/.claude/settings.json`, no previous conversation state. A minimal `~/.claude/CLAUDE.md` is written to the temp HOME before spawn instructing the subprocess to execute immediately without asking clarifying questions or requesting confirmation.
 
 Subprocess injected defaults (see [`invariant/005_isolated_subprocess_defaults.md`](../../invariant/005_isolated_subprocess_defaults.md)):
-- `--model "opus"` (`ISOLATED_DEFAULT_MODEL` — Opus alias; binary resolves to latest Opus)
+- `--model` — `subprocess_model` from `~/.clr/prefs.json` when set (via `clr .model.select`); else `"opus"` (`ISOLATED_DEFAULT_MODEL` — Opus alias; binary resolves to latest Opus). Config file (`.clr.toml`/`~/.clr/config.toml`) is not consulted for this default, unlike `run`/`ask` — see [`parity/001_run_ask_isolated.md`](../parity/001_run_ask_isolated.md).
 - `--effort max` (maximum reasoning effort)
 - `--no-session-persistence` (temp HOME is discarded after every run; session writes are waste)
 - `--dangerously-skip-permissions` — injected when `[MESSAGE]` is present; omitted in interactive mode (no message)

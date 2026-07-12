@@ -18,6 +18,7 @@
 | `cli/user_story/` | Canonical user stories mapping personas and goals to commands | [cli/user_story/readme.md](../cli/user_story/readme.md) | 5 |
 | `feature/` | Functional requirements for claude_profile capabilities | [readme.md](../feature/readme.md) | 47 |
 | `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](../invariant/readme.md) | 12 |
+| `pattern/` | Reusable design solutions applied at more than one call site | [pattern/readme.md](../pattern/readme.md) | 1 |
 | `pitfall/` | Systemic pitfall catalog — recurring design traps revealed by bug history | [pitfall/readme.md](../pitfall/readme.md) | 7 |
 | `research_interactive/` | Investigation findings on Claude binary behavior | [research_interactive/readme.md](../research_interactive/readme.md) | 1 |
 | `schema/` | On-disk file format definitions (credentials, metadata, paths, settings) | [schema/readme.md](../schema/readme.md) | 8 |
@@ -251,3 +252,4 @@
 | pitfall | 005 | Ownership Gate Pitfalls | [pitfall/005_ownership_gate_pitfalls.md](../pitfall/005_ownership_gate_pitfalls.md) |
 | pitfall | 006 | Model Override Pitfalls | [pitfall/006_model_override_pitfalls.md](../pitfall/006_model_override_pitfalls.md) |
 | pitfall | 007 | Label Selection Branch-Priority Pitfalls | [pitfall/007_label_selection_branch_priority_pitfalls.md](../pitfall/007_label_selection_branch_priority_pitfalls.md) |
+| pattern | 001 | Grouped Column-Aligned Help Rendering | [pattern/001_grouped_help_rendering.md](../pattern/001_grouped_help_rendering.md) |

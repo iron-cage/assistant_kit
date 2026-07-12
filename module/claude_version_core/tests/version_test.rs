@@ -50,7 +50,7 @@ use claude_version_core::version::{
   extract_semver, validate_version_spec, resolve_version_spec, VERSION_ALIASES,
   purge_stale_versions, lock_version,
 };
-use claude_version_core::settings_io::get_setting;
+use claude_core::settings_io::get_setting;
 use claude_version_core::config_resolve::{ resolve, Layer };
 use claude_version_core::config_catalog::catalog;
 

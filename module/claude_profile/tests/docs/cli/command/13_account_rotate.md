@@ -1,91 +1,70 @@
 # Command :: 13. `.account.rotate` — Integration Tests
 
-> **DEPRECATED** — `.account.rotate` is now a redirector (Feature 016). Always exits 1 with migration message. Rotation moved to `.usage rotate::1` (Feature 038). Test cases below verify redirector behavior only.
+> **REMOVED** — `.account.rotate` was a redirector (Feature 016) that always exited 1 with a migration message. Task 409 deleted the redirector function backing `.account.rotate` and its registration entirely; rotation lives at `.usage rotate::1` (Feature 038). `clp .account.rotate` now fails at the CLI-parse stage with a generic unknown-command error, identical to any other unrecognized command name — none of the redirector-specific behavior IT-1 through IT-7 below documented is observable any longer. See [command_verb/006_rotate.md](../../../../docs/cli/command_verb/006_rotate.md).
 
 | # | Test | Conditions | Exit |
 |---|------|-----------|------|
-| IT-1 | Always exits 1 | Any invocation of `.account.rotate` | 1 |
-| IT-2 | Error message references `.usage rotate` | No args; stderr/stdout contains `.usage rotate` | 1 |
-| IT-3 | No mutation on exit 1 | Two accounts present; `_active` unchanged after deprecated call | 1 |
-| IT-4 | `dry::1` ignored — no registered params, still exits 1 | `dry::1` passed to a zero-param command; identical outcome to no-arg call | 1 |
-| IT-5 | Exits 1 with zero/one accounts (not exit 2) | Single active account, no inactive accounts; old "no inactive account" precondition never evaluated | 1 |
-| IT-6 | Exact migration message text | Full literal stderr/stdout string matches redirector message verbatim | 1 |
-| IT-7 | Repeated invocation is idempotent | Two consecutive calls produce identical exit code, identical message, no state drift | 1 |
-| IT-8 | N/A — no further distinguishing surface | See N/A entry below | 1 |
+| IT-1 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-2 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-3 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-4 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-5 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-6 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-7 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
+| IT-8 | N/A — redirector fully removed (Task 409) | See N/A entry below | — |
 
 ---
 
-### IT-1: Always exits 1
+### IT-1: N/A — redirector fully removed (Task 409)
 
-- **Given:** Any credential store state (zero or more accounts)
-- **When:** `clp .account.rotate`
-- **Then:** Exits 1. Command is DEPRECATED — always redirects with exit code 1.
-- **Exit:** 1
-- **Source:** [command_verb/006_rotate.md](../../../../docs/cli/command_verb/006_rotate.md)
+> **N/A** — This case verified that the redirector always exited 1 for any invocation. Task 409 deleted the redirector function backing `.account.rotate` and its registration entirely; the command now fails at the CLI-parse stage with a generic unknown-command error before any command-specific code runs, so there is no redirector behavior left to assert.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-2: Error message references `.usage rotate`
+### IT-2: N/A — redirector fully removed (Task 409)
 
-- **Given:** Any credential store state
-- **When:** `clp .account.rotate` (no arguments)
-- **Then:** Exits 1. stderr or stdout contains the string `.usage rotate`.
-- **Exit:** 1
-- **Source:** [command_verb/006_rotate.md](../../../../docs/cli/command_verb/006_rotate.md), [feature/038_usage_strategy_rotate.md](../../../../docs/feature/038_usage_strategy_rotate.md)
+> **N/A** — This case verified the error message referenced `.usage rotate`. The redirector that emitted that message no longer exists; the generic unknown-command error is framework-produced and identical across every unregistered command name, carrying no `.usage rotate`-specific text.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-3: No mutation on exit 1
+### IT-3: N/A — redirector fully removed (Task 409)
 
-- **Given:** Two accounts saved; one is active (has `_active` per-machine marker set)
-- **When:** `clp .account.rotate`
-- **Then:** Exits 1. The `_active` marker is unchanged — no account file was mutated.
-- **Exit:** 1
-- **Source:** [command_verb/006_rotate.md](../../../../docs/cli/command_verb/006_rotate.md)
+> **N/A** — This case verified no account-store mutation occurred on the redirector's exit-1 path. With the command fully deregistered, the CLI-parse stage rejects the invocation before any command routine — redirector or otherwise — could run, so there is no command-specific code path left whose mutation behavior could be asserted.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-4: `dry::1` ignored — no registered params, still exits 1
+### IT-4: N/A — redirector fully removed (Task 409)
 
-- **Given:** `.account.rotate` is registered with zero declared parameters (`vec![]` in `registry.rs`); credential store has at least one active and one inactive account
-- **When:** `clp .account.rotate dry::1`
-- **Then:** Exits 1 — identical to the no-arg invocation. `dry::1` is not a registered parameter for this command and has no effect on the outcome; the redirector short-circuits before any parameter is consulted.
-- **Exit:** 1
-- **Source:** [command_verb/006_rotate.md](../../../../docs/cli/command_verb/006_rotate.md); `src/registry.rs` line 216 (`vec![]`) confirms zero declared params; proven by `rotation_ua3_dry_run_previews_without_switching` in `tests/cli/user_story_test.rs`
+> **N/A** — This case verified `dry::1` was accepted but ignored because the redirector was registered with zero declared parameters. Registration itself is gone — `dry::1` is no longer a recognized parameter for a nonexistent command, and the CLI-parse-stage rejection does not distinguish between argument sets.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-5: Exits 1 with zero/one accounts (not exit 2)
+### IT-5: N/A — redirector fully removed (Task 409)
 
-- **Given:** Exactly one account saved and active; zero inactive accounts exist in the credential store
-- **When:** `clp .account.rotate`
-- **Then:** Exits 1 — not exit 2 (the pre-deprecation rotation algorithm's "at least one inactive account" precondition is never evaluated because the redirector returns before any account-state logic runs).
-- **Exit:** 1
-- **Source:** [command_verb/006_rotate.md](../../../../docs/cli/command_verb/006_rotate.md) § Behavioral Contract (documents the old precondition, now unreachable); proven by `rotation_ua5_no_inactive_accounts_exits_2` in `tests/cli/user_story_test.rs` and `rotate_bv3_no_inactive_accounts_exits_2` in `tests/cli/command_verb_test.rs`
+> **N/A** — This case verified the redirector exited 1 (not the pre-deprecation algorithm's exit 2) regardless of account-store shape. There is no command-specific exit code left to distinguish — every invocation now fails identically at the CLI-parse stage regardless of how many accounts exist.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-6: Exact migration message text
+### IT-6: N/A — redirector fully removed (Task 409)
 
-- **Given:** Any credential store state
-- **When:** `clp .account.rotate`
-- **Then:** Exits 1. stderr/stdout contains the complete literal message `'.account.rotate' is deprecated — use '.usage rotate::1' instead` verbatim (not merely the `.usage rotate` substring already covered by IT-2).
-- **Exit:** 1
-- **Source:** `src/registry.rs` line 34 (`account_rotate_redirector` — exact `ErrorData::new` message string)
+> **N/A** — This case verified the exact literal migration-hint message text. The redirector function that produced that exact string has been deleted from `src/registry.rs`; no code path in the crate emits that message any longer.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-7: Repeated invocation is idempotent
+### IT-7: N/A — redirector fully removed (Task 409)
 
-- **Given:** Two accounts saved; one active
-- **When:** `clp .account.rotate` invoked twice in sequence
-- **Then:** Both calls exit 1 with the identical message; the `_active` marker file is byte-identical before the first call, between the two calls, and after the second call — no cumulative side effects across repetition.
-- **Exit:** 1
-- **Source:** [command_verb/006_rotate.md](../../../../docs/cli/command_verb/006_rotate.md); routine ignores `_cmd`/`_ctx` entirely (`src/registry.rs` lines 30-36), so repetition cannot introduce state drift by construction
+> **N/A** — This case verified repeated invocation produced identical output with no state drift. With no redirector code path remaining, there is no command-specific output or state to compare across repeated calls — only the framework's generic unknown-command error, already covered structurally by IT-1's former scope.
+> Becomes testable when: no committed task.
 
 ---
 
-### IT-8: N/A — no further distinguishing surface
+### IT-8: N/A — redirector fully removed (Task 409)
 
-> **N/A** — The redirector is a pure, argument-independent function (`_cmd`/`_ctx` unused, always the same `Err`) already exercised by IT-1 through IT-7 (default invocation, message substring, no-mutation, ignored-parameter, zero-account edge, exact message text, and idempotency); no further genuinely distinguishable behavior exists to test without inventing an unsubstantiated claim (e.g., malformed positional-argument parsing was investigated but no direct evidence was found for a zero-declared-parameter command, so it is not asserted here).
+> **N/A** — This case was already N/A before Task 409 (the redirector was a pure, argument-independent function with no further distinguishable behavior beyond IT-1 through IT-7). Task 409 has since deleted the redirector itself, so the original reasoning is superseded by the same full-removal rationale as IT-1 through IT-7 above.
 > Becomes testable when: no committed task.
