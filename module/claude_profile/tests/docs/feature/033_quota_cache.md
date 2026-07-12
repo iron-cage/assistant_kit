@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for quota cache fallback behavior — write-on-success, read-on-failure, staleness display, and side-effect persistence.
 - **Source**: `docs/feature/033_quota_cache.md`
-- **Covers**: AC-01 through AC-12
+- **Covers**: AC-01 through AC-14
 
 ### Test Cases
 
@@ -22,6 +22,7 @@
 | FT-10 | AC-10 | Cached+expired account triggers `should_refresh()` | `mre_bug255_cache_defeats_refresh` |
 | FT-11 | AC-11 | After retry OK, `cached` flag cleared and cache file written with fresh data | `mre_bug256_retry_ok_stale_cached_metadata` |
 | FT-12 | AC-12 | HTTP 401 / 403 auth errors bypass cache fallback — `Err` propagates | `mre_bug296_cached_non_expired_401_no_refresh` |
+| FT-14 | AC-14 | Cache-fallback row preserves the original failure reason and surfaces it via `shorten_error()` in text, TSV, and JSON render formats | *(planned — not yet implemented; MRE for BUG-335)* |
 
 ### Notes
 
@@ -31,6 +32,7 @@
 - FT-10 is implemented as a unit test in `src/usage/refresh_predicate.rs` `#[cfg(test)]` module. MRE for BUG-255.
 - FT-11 is a unit test in `tests/usage/refresh_tests_b.rs`. Verifies the retry OK arm clears `aq.cached`/`aq.cache_age_secs` and writes the quota cache file. MRE for BUG-256.
 - FT-12 is a unit test in `tests/usage/fetch_tests.rs`. Verifies that the cache fallback match guard `Err( ref e ) if !e.contains("401") && !e.contains("403")` is present, and that a catch-all `Err` arm propagates auth errors without cache conversion. MRE for BUG-296.
+- FT-14 is not yet implemented — no test currently exercises the display-layer round trip from a cache-fallback-substituted `Ok` row through to its rendered failure-reason visibility (confirmed gap: `grep -n "shorten_error" src/usage/render.rs` shows exactly one call site, inside `Err(reason)` only). Planned across `tests/usage/fetch_tests.rs` (fallback_reason population on the `AccountQuota`) and `tests/usage/render_tests_a.rs` / `render_tests_b.rs` (text/TSV/JSON surfacing). MRE for BUG-335.
 
 ---
 
