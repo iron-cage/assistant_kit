@@ -78,6 +78,7 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 | unpinned, versions dir absent | No pin keys set, versions directory was never created (fresh install) | No mismatch (absent ≠ drift) |
 | settings.json corrupted | `settings.json` exists but fails to parse (invalid JSON) | All 6 rows `UNVERIFIABLE` (never a false mismatch or false compliant) |
 | settings.json permission-denied | `settings.json` exists, valid JSON, but unreadable (mode 000) | All 6 rows `UNVERIFIABLE` (same as corrupted — any non-`NotFound` read error is untrusted) |
+| install interrupted (preference recorded, mechanism not yet applied) | `preferredVersionSpec`/`preferredVersionResolved` are set but the lock-mechanism keys and `chmod` are still at unpinned defaults | True mismatch flagged on all 6 rows — never `UNVERIFIABLE` (settings.json is fully readable) and never silently `Compliant` |
 
 ---
 
@@ -110,6 +111,7 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 | IT-25 | `.status v::2` pinned, `minimumVersion` drifted → mismatch flagged | P | 0 | F7=minimumVersion drifted | [read_status_test.rs] |
 | IT-26 | `.status v::2` pinned, `env.DISABLE_AUTOUPDATER` drifted → mismatch flagged | P | 0 | F7=env.DISABLE_AUTOUPDATER drifted | [read_status_test.rs] |
 | IT-27 | `.status v::2` pinned, `env.DISABLE_UPDATES` drifted → mismatch flagged | P | 0 | F7=env.DISABLE_UPDATES drifted | [read_status_test.rs] |
+| IT-28 | `.status v::2` install interrupted after preference stored but before mechanism applied → all 6 rows report TRUE mismatch, none `UNVERIFIABLE` | P | 0 | F7=install interrupted | [read_status_test.rs] |
 
 ### Negative Tests
 
@@ -122,11 +124,11 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 
 ### Summary
 
-- **Total:** 27 tests (23 positive, 4 negative)
-- **Negative ratio:** 14.8% (command-specific only) — below ≥40% threshold; 4 additional cross-cutting tests in `read_status_test.rs` also apply to `.status` among other commands: 3 negative (`tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`) and 1 positive (`tc245_last_occurrence_wins_for_verbosity` — exit 0, verifies last-`v::`-wins precedence, not an error case)
+- **Total:** 28 tests (24 positive, 4 negative)
+- **Negative ratio:** 14.3% (command-specific only) — below ≥40% threshold; 4 additional cross-cutting tests in `read_status_test.rs` also apply to `.status` among other commands: 3 negative (`tc242_unknown_format_exits_1`, `tc243_uppercase_format_exits_1`, `tc244_empty_format_exits_1`) and 1 positive (`tc245_last_occurrence_wins_for_verbosity` — exit 0, verifies last-`v::`-wins precedence, not an error case)
 - **Existing cross-cutting negatives applying to `.status`:** `tc242` (`format::xml`), `tc243` (`format::JSON`), `tc244` (`format::`)
-- **Combined negative count (command-specific + cross-cutting):** 7/31 = 22.6% ❌ (below ≥40% threshold; informational metric only, not a blocking gate for this spec)
-- **TC range:** IT-1 to IT-27
+- **Combined negative count (command-specific + cross-cutting):** 7/32 = 21.9% ❌ (below ≥40% threshold; informational metric only, not a blocking gate for this spec)
+- **TC range:** IT-1 to IT-28
 
 ---
 
@@ -136,7 +138,7 @@ Boundary set: 0, 1, 2, 3 (out-of-range).
 
 | Exit Code | Meaning | Tests |
 |-----------|---------|-------|
-| 0 | Success (always — .status never errors) | IT-1 through IT-9, IT-13 through IT-18, IT-20 through IT-27 |
+| 0 | Success (always — .status never errors) | IT-1 through IT-9, IT-13 through IT-18, IT-20 through IT-28 |
 | 1 | Invalid arguments | IT-10 through IT-12, IT-19 |
 | 2 | Not applicable (.status always exits 0 for any valid state) | — |
 
@@ -159,7 +161,7 @@ guessing at a possibly-wrong compliance verdict (IT-21 through IT-23).
 | F4 (HOME) | IT-1 (set), IT-7 (empty) | — |
 | F5 (preference) | IT-8 (absent), IT-9 (set) | — |
 | F6 (unknown params) | — | IT-12 |
-| F7 (lock-state) | IT-13 (pinned compliant), IT-14 (chmod drift), IT-15 (autoUpdates drift), IT-16 (unpinned compliant), IT-18 (json), IT-20 (dir absent), IT-21 (settings corrupted), IT-22 (settings corrupted, json), IT-23 (settings permission-denied), IT-24 (autoUpdatesChannel drift), IT-25 (minimumVersion drift), IT-26 (env.DISABLE_AUTOUPDATER drift), IT-27 (env.DISABLE_UPDATES drift) | — |
+| F7 (lock-state) | IT-13 (pinned compliant), IT-14 (chmod drift), IT-15 (autoUpdates drift), IT-16 (unpinned compliant), IT-18 (json), IT-20 (dir absent), IT-21 (settings corrupted), IT-22 (settings corrupted, json), IT-23 (settings permission-denied), IT-24 (autoUpdatesChannel drift), IT-25 (minimumVersion drift), IT-26 (env.DISABLE_AUTOUPDATER drift), IT-27 (env.DISABLE_UPDATES drift), IT-28 (install interrupted) | — |
 
 ---
 
@@ -416,6 +418,26 @@ Same MAAV-found coverage gap as IT-24, for `env.DISABLE_UPDATES`.
 
 ---
 
+### IT-28: Install interrupted after preference stored but before mechanism applied → all rows report a TRUE mismatch
+
+MAAV Fresh Challenger finding (Round 4, B1): `version_install_routine` previously called `perform_install()`
+(which ends by applying the lock mechanism — `autoUpdates`/`autoUpdatesChannel`/`minimumVersion`/the two
+`env.DISABLE_*` keys/`chmod`) *before* `store_preferred_version()` recorded the pin intent. A crash or kill
+in the window between those two calls left the mechanism genuinely applied but `preferredVersionSpec`
+unset, so `is_pinned` read `false` and `.status` compared the (now-locked) actual state against the
+*unpinned* expectation — reporting a false `MISMATCH` on all 6 rows despite the install having actually
+succeeded. The fix reorders the two calls so the preference is recorded first; this test instead reproduces
+the *other* half of the interrupted window under the corrected order — preference recorded, mechanism not
+yet applied — and confirms that state now correctly reports a **true** mismatch (the user's recorded intent
+genuinely isn't enforced yet), not a false one, and never `UNVERIFIABLE` (settings.json is fully valid and
+readable throughout). See `Fix(MAAV-found, Task 314 Round 4 Fresh Challenger)` in `commands/version.rs`.
+
+- **Given:** `HOME=<tmp>`; `settings.json` contains only `preferredVersionSpec`/`preferredVersionResolved` (valid JSON, fully readable); versions dir `chmod 755` (mechanism not yet applied — still at the unpinned default).
+- **When:** `clv .status v::2`
+- **Then:** exit 0; no row shows `UNVERIFIABLE`; all 6 rows (`autoUpdates`, `autoUpdatesChannel`, `minimumVersion`, `env.DISABLE_AUTOUPDATER`, `env.DISABLE_UPDATES`, `chmod`) show `MISMATCH`
+
+---
+
 ### Source Functions
 
 | Function | File |
@@ -445,6 +467,7 @@ Same MAAV-found coverage gap as IT-24, for `env.DISABLE_UPDATES`.
 | `tc527_status_lock_minimum_version_drift_flagged` | `tests/cli/read_status_test.rs` |
 | `tc528_status_lock_disable_autoupdater_drift_flagged` | `tests/cli/read_status_test.rs` |
 | `tc529_status_lock_disable_updates_drift_flagged` | `tests/cli/read_status_test.rs` |
+| `tc530_status_lock_interrupted_install_reports_true_mismatch` | `tests/cli/read_status_test.rs` |
 | `tc242_unknown_format_exits_1` | `tests/cli/read_status_test.rs` |
 | `tc243_uppercase_format_exits_1` | `tests/cli/read_status_test.rs` |
 | `tc244_empty_format_exits_1` | `tests/cli/read_status_test.rs` |
