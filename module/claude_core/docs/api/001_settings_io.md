@@ -9,7 +9,7 @@
 
 ### Abstract
 
-`claude_core::settings_io` is the shared Layer 0 primitive for reading and writing Claude Code's flat-JSON settings files (`settings.json`, `~/.clr/prefs.json`, and similar). It hand-rolls its own JSON parsing to avoid extra dependencies, infers scalar JSON types (`Bool`/`Number`/`Str`) from raw string input, preserves nested objects/arrays verbatim as opaque raw text across round-trips, and writes atomically (temp file + rename) to prevent partial-write corruption. Originally implemented in `claude_version_core`, relocated here so `claude_profile` and `claude_runner_core` can depend on the same engine without a workspace-crate dependency; `claude_version_core::settings_io` now re-exports this module for source compatibility.
+`claude_core::settings_io` is the shared Layer 0 primitive for reading and writing Claude Code's flat-JSON settings files (`settings.json`, `~/.clr/prefs.json`, and similar). It hand-rolls its own JSON parsing to avoid extra dependencies, infers scalar JSON types (`Bool`/`Number`/`Str`) from raw string input, preserves nested objects/arrays verbatim as opaque raw text across round-trips, and writes atomically (temp file + rename) to prevent partial-write corruption. Originally implemented in `claude_version_core`, relocated here so `claude_profile` and `claude_runner_core` can depend on the same engine without a workspace-crate dependency.
 
 ### Operations
 
@@ -66,14 +66,12 @@ All fallible operations return `std::io::Error`. Read operations (`read_all_sett
 - `StoredAs`'s four variants (`Bool`, `Number`, `Str`, `Raw`) are stable; `"0"`/`"1"` classify as `Number`, never `Bool`.
 - All read functions accept any well-formed flat JSON object; nested objects/arrays always round-trip verbatim (byte-for-byte within whitespace normalization), never partially interpreted.
 - All write functions (`set_setting`, `remove_setting`, `set_env_var`, `remove_env_var`) are atomic — a crash mid-write never leaves a partially-written settings file.
-- `claude_version_core::settings_io` re-exports this module in full (`pub use claude_core::settings_io::*`) as a **migration bridge, not a permanent guarantee** — it exists so pre-relocation call sites keep compiling while they migrate to `claude_core::settings_io` directly; once all internal callers migrate, the shim is scheduled for removal (unlike the stable operations above, which are the permanent contract).
 
 ### Sources
 
 | File | Relationship |
 |------|--------------|
 | `../../src/settings_io.rs` | `StoredAs`, all operations, hand-rolled JSON parser/serializer |
-| `../../../claude_version_core/src/settings_io.rs` | Re-export shim preserving `claude_version_core::settings_io::*` call sites |
 
 ### Tests
 

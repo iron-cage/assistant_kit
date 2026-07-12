@@ -5,7 +5,7 @@ use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 
 use crate::output::{ OutputFormat, OutputOptions, json_escape };
-use claude_version_core::settings_io::{ StoredAs, get_setting, infer_type, read_all_settings, set_setting };
+use claude_core::settings_io::{ StoredAs, get_setting, infer_type, read_all_settings, set_setting };
 
 /// `.settings.show` — print all entries from `~/.claude/settings.json`.
 ///

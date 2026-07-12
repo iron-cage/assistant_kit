@@ -15,7 +15,6 @@
 | `account_renewal_test_b.rs` | Late save tests as23–as35+ (Part B). |
 | `account_ownership_test.rs` | Account ownership gates + unclaim tests (ao01–ao11, it01–it11). |
 | `account_owner_param_test.rs` | `owner::` parameter EC tests (ft01–ft11, ec01–ec20). |
-| `account_rotate_test.rs` | `.account.rotate` redirector tests (DEPRECATED Feature 038; rot01–rot03). |
 | `usage_rotate_test.rs` | Feature 038 `rotate::1` on `.usage` — strategy-driven rotation (FT-01–FT-10, EC-05–EC-07). |
 | `token_paths_test.rs` | Token status classification and paths output tests. |
 | `cross_cutting_test.rs` | Cross-cutting and environment behavior tests. |
