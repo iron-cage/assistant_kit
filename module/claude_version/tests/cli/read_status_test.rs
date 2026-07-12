@@ -653,15 +653,25 @@ fn tc529_status_lock_disable_updates_drift_flagged()
   assert!( line.contains( "MISMATCH" ), "env.DISABLE_UPDATES line must show MISMATCH when drifted: {line}" );
 }
 
-// TC-530 (regression, MAAV-found B1): simulates a crash during `perform_install()`
-// after `store_preferred_version()` already ran (the corrected call order — see
-// Fix(MAAV-found) in `commands/version.rs`) but before `lock_version()` applied
-// the mechanism. `preferredVersionSpec`/`preferredVersionResolved` are recorded
-// while every lock-mechanism key is still absent and the versions dir is still
-// at its unpinned default mode — the state a real interrupted install leaves on
-// disk. Must report a MISMATCH on every row (a TRUE one: the recorded intent
-// genuinely isn't enforced yet), never silently `Compliant` and never
-// `UNVERIFIABLE` (settings.json is fully valid and readable here).
+// TC-530 (regression, MAAV-found B1): hand-constructs the on-disk state left by
+// a crash during `perform_install()` after `store_preferred_version()` already
+// ran (the corrected call order — see `Fix(MAAV-found)` in `commands/version.rs`)
+// but before `lock_version()` applied the mechanism, and verifies `status.rs`
+// classifies it correctly. `preferredVersionSpec`/`preferredVersionResolved` are
+// recorded while every lock-mechanism key is still absent and the versions dir
+// is still at its unpinned default mode. Must report a MISMATCH on every row (a
+// TRUE one: the recorded intent genuinely isn't enforced yet), never silently
+// `Compliant` and never `UNVERIFIABLE` (settings.json is fully valid and
+// readable here).
+//
+// Scope note (MAAV Round 5, A9): this test only proves `status.rs` classifies
+// this fixture correctly — the identical fixture is also reachable via the
+// unrelated idempotency-skip branch regardless of whether the reorder fix is
+// present, so it does NOT by itself prove `version_install_routine` actually
+// produces this state via the corrected call order. TC-533 (in
+// `mutation_version_install_test.rs`) supplies that missing evidence by
+// invoking the real `.version.install` command and observing the reordered
+// write path directly.
 #[ cfg( unix ) ]
 #[ test ]
 fn tc530_status_lock_interrupted_install_reports_true_mismatch()
