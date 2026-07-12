@@ -9,15 +9,11 @@
 //!
 //! ## Test Matrix
 //!
-//! ### Story 1 — Automatic Account Rotation (UA-1..5)
+//! ### Story 1 — Automatic Account Rotation (UA-4)
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | UA-1 | `rotation_ua1_rotate_selects_highest_expiry_inactive` | deprecated → exits 1 | N |
-//! | UA-2 | `rotation_ua2_switch_is_atomic` | deprecated → exits 1; credentials unchanged | N |
-//! | UA-3 | `rotation_ua3_dry_run_previews_without_switching` | deprecated → exits 1 | N |
 //! | UA-4 | `rotation_ua4_manual_use_switches_account` | `.account.use` manual rotation | P |
-//! | UA-5 | `rotation_ua5_no_inactive_accounts_exits_2` | deprecated → exits 1 (not 2) | N |
 //!
 //! ### Story 2 — Account Onboarding and Lifecycle Management (UA-1..6)
 //!
@@ -71,59 +67,6 @@ use super::cli_runner::
 
 // ── Story 1: Automatic Account Rotation ──────────────────────────────────────
 
-// UA-1: `.account.rotate` is deprecated — always exits 1.
-#[ test ]
-fn rotation_ua1_rotate_selects_highest_expiry_inactive()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS,              false );
-  write_account( dir.path(), "bob@acme.com",   "max", "default", FAR_FUTURE_MS - 14_400_000, true  );
-
-  let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 1 );
-}
-
-// UA-2: `.account.rotate` is deprecated — exits 1; credentials file is not modified.
-#[ test ]
-fn rotation_ua2_switch_is_atomic()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  let bob_exp : u64 = FAR_FUTURE_MS - 3_600_000;
-  write_credentials( dir.path(), "max", "default", bob_exp );
-  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, false );
-  write_account( dir.path(), "bob@acme.com",   "max", "default", bob_exp,       true  );
-
-  let creds_path      = dir.path().join( ".claude" ).join( ".credentials.json" );
-  let content_before  = std::fs::read_to_string( &creds_path ).unwrap();
-
-  let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 1 );
-
-  // Credentials must be unchanged — redirector does not switch.
-  let content_after = std::fs::read_to_string( &creds_path ).unwrap();
-  assert_eq!(
-    content_before, content_after,
-    "deprecated `.account.rotate` must not modify credentials",
-  );
-}
-
-// UA-3: `.account.rotate dry::1` is deprecated — exits 1 regardless of dry flag.
-#[ test ]
-fn rotation_ua3_dry_run_previews_without_switching()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "max", "default", FAR_FUTURE_MS );
-  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS,              false );
-  write_account( dir.path(), "bob@acme.com",   "max", "default", FAR_FUTURE_MS - 3_600_000,  true  );
-
-  let out = run_cs_with_env( &[ ".account.rotate", "dry::1" ], &[ ( "HOME", home ) ] );
-  // Deprecated redirector accepts no params — exits 1.
-  assert_exit( &out, 1 );
-}
-
 // UA-4: .account.use name::X enables manual rotation to a known account
 #[ test ]
 fn rotation_ua4_manual_use_switches_account()
@@ -150,21 +93,6 @@ fn rotation_ua4_manual_use_switches_account()
     creds.contains( "\"pro\"" ),
     "manual use must switch to alice's credentials (pro): {creds}",
   );
-}
-
-// UA-5: `.account.rotate` is deprecated — exits 1 (not 2) even with single active account.
-#[ test ]
-fn rotation_ua5_no_inactive_accounts_exits_2()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, true );
-
-  let out = run_cs_with_env( &[ ".account.rotate" ], &[ ( "HOME", home ) ] );
-  // Deprecated redirector always exits 1 — "no inactive" condition is never reached.
-  assert_exit( &out, 1 );
-  let err_text = stderr( &out );
-  assert!( !err_text.is_empty(), "deprecation message must be present" );
 }
 
 // ── Story 2: Account Onboarding and Lifecycle Management ─────────────────────

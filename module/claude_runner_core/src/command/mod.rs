@@ -489,6 +489,8 @@ impl ClaudeCommand {
   /// println!( "{}", result.stdout );
   /// # Ok::<(), Box<dyn std::error::Error>>(())
   /// ```
+  // core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+  #[ allow( clippy::std_instead_of_core ) ]
   #[inline]
   pub fn execute( &self ) -> Result< crate::types::ExecutionOutput > {
     if self.dry_run {
@@ -560,6 +562,8 @@ impl ClaudeCommand {
   ///   .execute_interactive()?;
   /// # Ok::<(), Box<dyn std::error::Error>>(())
   /// ```
+  // core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+  #[ allow( clippy::std_instead_of_core ) ]
   #[inline]
   pub fn execute_interactive( &self ) -> Result< std::process::ExitStatus > {
     if self.dry_run {

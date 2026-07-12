@@ -124,6 +124,8 @@ fn p02_pro_unset_home_set_base_under_home()
 
 /// p03 — both `$PRO` and `$HOME` unset → `Err`
 #[ test ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 fn p03_both_unset_returns_err()
 {
   let _lock = lock();

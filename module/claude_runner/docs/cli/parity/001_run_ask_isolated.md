@@ -38,7 +38,7 @@
 | `--chrome` | Yes in interactive / No in print (auto-suppressed; `--no-chrome` opt-out) | No (always print) | Yes (ClaudeCommand default; no suppression flag) |
 | Ultrathink suffix on MESSAGE | Yes (suppressed by `--no-ultrathink`) | Yes | No |
 | `--no-session-persistence` | Via `--no-persist` flag | Via `--no-persist` | Always injected |
-| Default model injection | Reads `subprocess_model` from `~/.clr/prefs.json` when set (BUG-008); uses claude binary default otherwise | Reads `subprocess_model` from `~/.clr/prefs.json` when set (BUG-008); uses claude binary default otherwise | Yes — `opus` (`ISOLATED_DEFAULT_MODEL`) |
+| Default model injection | Reads `model` from config file (`.clr.toml`/`~/.clr/config.toml`) when set; else `subprocess_model` from `~/.clr/prefs.json` when set (BUG-008); uses claude binary default otherwise | Reads `model` from config file (`.clr.toml`/`~/.clr/config.toml`) when set; else `subprocess_model` from `~/.clr/prefs.json` when set (BUG-008); uses claude binary default otherwise | Reads `subprocess_model` from `~/.clr/prefs.json` when set; else `opus` alias (`ISOLATED_DEFAULT_MODEL`) — config file not consulted |
 | Minimal `CLAUDE.md` written to HOME | No | No | Yes (instructs: execute immediately, no clarifying questions, no confirmation) |
 | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | `200,000` | `200,000` | `200,000` |
 | **--- Execution Modes ---** | | | |
@@ -69,7 +69,7 @@
 | Temp HOME cleanup | No | No | Yes (unconditional delete after subprocess exits) |
 | **--- Model & Effort ---** | | | |
 | `--model` flag | Yes | Yes | No (override via passthrough `-- --model`) |
-| Default model | prefs.json `subprocess_model` if set; otherwise claude binary default | prefs.json `subprocess_model` if set; otherwise claude binary default | `claude-opus-4-8` (hardcoded) |
+| Default model | config-file `model` if set; else prefs.json `subprocess_model` if set; otherwise claude binary default | config-file `model` if set; else prefs.json `subprocess_model` if set; otherwise claude binary default | prefs.json `subprocess_model` if set; otherwise `opus` alias (`ISOLATED_DEFAULT_MODEL`) — config file not consulted |
 | `--fallback-model` | Yes | Yes | No |
 | `--effort` flag | Yes | Yes | No (override via passthrough `-- --effort`) |
 | Default effort | `max` (injected) | `max` (injected) | `max` (always injected) |
@@ -122,7 +122,7 @@
 
 ### Key Takeaways
 
-- `run` and `ask` read `subprocess_model` from `~/.clr/prefs.json` as a fourth model-resolution tier when `--model` is absent and `CLR_MODEL` is unset (BUG-008 fix); `isolated` always uses `ISOLATED_DEFAULT_MODEL` (`opus`) as its default model regardless of prefs.json.
+- `run` and `ask` resolve `model` from the config file (project `.clr.toml` overriding user `~/.clr/config.toml`) as a fourth tier, then `subprocess_model` from `~/.clr/prefs.json` as a fifth tier, when `--model` is absent and `CLR_MODEL` is unset (BUG-008 fix); `isolated` also reads `subprocess_model` from `~/.clr/prefs.json` when set (same BUG-008 mechanism, wired directly into `IsolatedModel::Default`), falling back to `ISOLATED_DEFAULT_MODEL` (`opus` alias) only when prefs.json has no value — but unlike `run`/`ask`, `isolated` does NOT consult the config file at all; a `model` set only in `config.toml` is invisible to `isolated`.
 - `run` vs `ask` — zero behavioral difference; `ask` is a pure documentation signal for "this is a question".
 - `isolated` shares 9 params with `run`/`ask` (`MESSAGE`, `--trace`, `--dry-run`, `--dir`, `--add-dir`, `--file`, `--expect`, `--expect-strategy`, `--journal*`); everything else is stripped down or hardcoded.
 - The defining `isolated`-specific behaviors: temp HOME lifecycle, credential writeback, timeout exits as `2` (not `4`), and `--dangerously-skip-permissions` conditional on MESSAGE presence.

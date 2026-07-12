@@ -77,6 +77,9 @@
 | 075_args_file.md | `--args-file` parameter spec |
 | 076_session_from.md | `--session-from` / `--from` parameter spec (session cross-loading source dir) |
 | 077_no_compact_window.md | `--no-compact-window` flag spec (suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW` injection) |
+| 078_name.md | `--name` parameter spec (tools name filter) |
+| 079_category.md | `--category` parameter spec (tools category filter) |
+| 080_value.md | `--value` parameter spec (tools single-column bare output) |
 
 ### Retired Parameter IDs
 
@@ -89,7 +92,7 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 038 | Retired — parameter removed; gap predates current tracking |
 | 039 | Retired — parameter removed; gap predates current tracking |
 
-### All Parameters (70 total)
+### All Parameters (75 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -166,10 +169,13 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 | 75 | `--args-file` | [`FilePath`](../type/12_file_path.md) | — | Any readable file path | Load clr params from JSON config file; stdin JSON auto-detected when no TTY | 4 cmds |
 | 76 | `--session-from` | [`DirectoryPath`](../type/02_directory_path.md) | absent | Any existing directory path | Cross-load most recent session UUID from another directory's session dir | 2 cmds |
 | 77 | `--no-compact-window` | bool | false | present/absent | Suppress `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` injection into subprocess environment | 4 cmds |
+| 78 | `--name` | string | — | Any substring | Filter `clr tools` by tool name (case-insensitive substring) | 1 cmd |
+| 79 | `--category` | string | — | Any substring | Filter `clr tools` by category (case-insensitive substring) | 1 cmd |
+| 80 | `--value` | string | — | `idx`/`name`/`category`/`desc` | Print only the named column's value for each matching tool, one per line | 1 cmd |
 
-**Total:** 72 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added)
+**Total:** 75 parameters (param 12 deprecated → replaced by 74; net count unchanged for that swap; params 75–77 added; params 78–80 added for the `clr tools` filter/projection redesign)
 
-**Groups:** Parameters 2–4, 17, 23, 24, and 61–67 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–76 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 77 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md).
+**Groups:** Parameters 2–4, 17, 23, 24, and 61–67 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–11, 13, 14, 18, 21, 22, 25–36, 40–57, 70–76 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md). Parameters 58–60, 68–69 form [Session Listing](../param_group/05_session_listing.md). Parameter 77 (and `--timeout`, `--trace`, `--dry-run`, `--journal`, `--journal-dir`) form [Running Commands](../param_group/06_running_commands.md). Parameters 78–80 (plus shared members 59 `--columns` and 69 `--inspect`) form [Tool Listing](../param_group/07_tool_listing.md).
 
 ### Navigation
 
@@ -246,6 +252,9 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 - [`--args-file`](075_args_file.md)
 - [`--session-from`](076_session_from.md)
 - [`--no-compact-window`](077_no_compact_window.md)
+- [`--name`](078_name.md)
+- [`--category`](079_category.md)
+- [`--value`](080_value.md)
 
 ### Quick Reference
 
@@ -255,4 +264,4 @@ These parameter IDs exist in the sequence but have no corresponding file. The ID
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 64, `ask` = 64, `ps` = 5, `isolated` = 18, `refresh` = 8, `kill` = 0, `tools` = 0, `help` = 0.
+**Commands by parameter count:** `run` = 64, `ask` = 64, `ps` = 5, `isolated` = 18, `refresh` = 8, `kill` = 0, `tools` = 5, `help` = 0.

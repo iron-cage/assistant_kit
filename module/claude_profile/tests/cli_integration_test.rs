@@ -40,7 +40,6 @@
 //! | `credentials_test_b` | .credentials.status cred24+ Part B | cred |
 //! | `credentials_status_help_test` | .credentials.status.help descriptions | csh |
 //! | `account_limits_test` | .account.limits error paths | lim |
-//! | `account_rotate_test` | .account.rotate redirector (DEPRECATED) | ROT |
 //! | `usage_rotate_test` | Feature 038 `.usage rotate::1` strategy-driven rotation | FT |
 //! | `dot_test` | `.` / `.help` help output | dot |
 //! | `param_help_test` | convenience closure param descriptions + optionality | phd, pho |
@@ -158,9 +157,6 @@ mod credentials_status_help_test;
 
 #[ path = "cli/account_limits_test.rs" ]
 mod account_limits_test;
-
-#[ path = "cli/account_rotate_test.rs" ]
-mod account_rotate_test;
 
 #[ path = "cli/usage_rotate_test.rs" ]
 mod usage_rotate_test;

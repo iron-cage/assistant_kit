@@ -245,6 +245,8 @@ pub fn read_subprocess_model_pref() -> Option< String >
 #[ cfg( feature = "enabled" ) ]
 #[ inline ]
 #[ allow( clippy::too_many_lines ) ]
+// core::io::ErrorKind requires the unstable `core_io` feature (rust-lang/rust#154046) — not usable on stable.
+#[ allow( clippy::std_instead_of_core ) ]
 pub fn run_isolated_ext
 (
   credentials_json : &str,
@@ -375,10 +377,7 @@ pub fn run_isolated_ext
   //          may have been written before the subprocess started blocking.
   let credentials = std::fs::read_to_string( &creds_path )
     .ok()
-    .and_then( |new|
-    {
-      if new.as_bytes() == credentials_json.as_bytes() { None } else { Some( new ) }
-    } );
+    .filter( |new| new.as_bytes() != credentials_json.as_bytes() );
 
   // Step 7: Unconditional cleanup — no early return may appear before this line.
   let _ = std::fs::remove_dir_all( &temp_dir );

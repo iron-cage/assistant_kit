@@ -74,7 +74,6 @@ tests/
 │   ├── account_renewal_test_b.rs         # late save tests as23–as35+ (Part B)
 │   ├── account_ownership_test.rs         # account ownership gates + unclaim (ao01–ao11, it01–it11)
 │   ├── account_owner_param_test.rs       # owner:: parameter EC tests (ft01–ft11, ec01–ec20)
-│   ├── account_rotate_test.rs            # .account.rotate deprecated redirector (rot01–rot03)
 │   ├── token_paths_test.rs               # token status + paths commands
 │   ├── cross_cutting_test.rs             # idempotency, param order, exit codes
 │   ├── usage_core_test.rs                # .usage core display: heading, JSON, error paths (IT-01–IT-20)
@@ -176,7 +175,6 @@ tests/
 | Account renewal CLI (B) | `cli/account_renewal_test_b.rs` | late save tests (as23–as35+) |
 | Account ownership CLI | `cli/account_ownership_test.rs` | ownership gates + unclaim (ao01–ao11, it01–it11) |
 | Account owner:: param CLI | `cli/account_owner_param_test.rs` | owner:: EC tests (ft01–ft11, ec01–ec20) |
-| Account rotate CLI | `cli/account_rotate_test.rs` | .account.rotate deprecated redirector, rot01–rot03 |
 | Token status + paths CLI | `cli/token_paths_test.rs` | .token.status and .paths all verbosity/format |
 | Cross-cutting CLI | `cli/cross_cutting_test.rs` | idempotency, param order, exit code contracts, env |
 | Usage core CLI | `cli/usage_core_test.rs` | .usage heading, JSON, error paths (IT-01–IT-20) |
