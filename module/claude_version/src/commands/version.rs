@@ -8,7 +8,7 @@ use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 
 use crate::output::{ OutputFormat, OutputOptions, json_escape };
-use claude_version_core::settings_io::{ get_setting, set_setting };
+use claude_core::settings_io::{ get_setting, set_setting };
 use claude_version_core::version::{
   VERSION_ALIASES,
   get_installed_version,

@@ -9,7 +9,7 @@ use crate::output::{ OutputFormat, OutputOptions, json_escape };
 use claude_runner_core::process::find_claude_processes;
 use claude_version_core::config_catalog::catalog;
 use claude_version_core::config_resolve::resolve;
-use claude_version_core::settings_io::{ get_setting, read_all_settings };
+use claude_core::settings_io::{ get_setting, read_all_settings };
 use claude_version_core::version::{
   extract_semver, get_claude_version_raw, get_installed_version, read_preferred_version,
   read_versions_dir_lock_mode, VersionsDirLockMode,

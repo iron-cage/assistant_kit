@@ -1,6 +1,6 @@
-# Verb: rotate *(DEPRECATED — Feature 038)*
+# Verb: rotate *(REMOVED — Feature 038)*
 
-> **DEPRECATED** — The `rotate` verb and `.account.rotate` command are retained only as a hidden redirector stub that always exits 1 with a migration notice; the rotation logic described below has been removed from the live code path. Use `clp .usage rotate::1` (with optional `sort::` strategy) instead. See [feature/038_usage_strategy_rotate.md](../../feature/038_usage_strategy_rotate.md).
+> **REMOVED.** `.account.rotate` was removed as a standalone command (the migration-hint redirector stub is gone too); the rotation logic described below has been removed from the live code path. `clp .account.rotate` now exits with a generic CLI "unknown command" error (fully deregistered), not the prior migration-hint message. Use `clp .usage rotate::1` (with optional `sort::` strategy) instead. See [feature/038_usage_strategy_rotate.md](../../feature/038_usage_strategy_rotate.md).
 
 Selects the inactive saved account with the highest `expiresAt` timestamp and activates it. Designed for automated rotation workflows where maintaining a valid active session is critical. Skips the currently active account and any accounts with exhausted or expired tokens.
 
