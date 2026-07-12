@@ -21,7 +21,7 @@
 | 08_tools.md | Command spec: list Claude Code tools with version information |
 | 09_scope.md | Command spec: print all 6 CLAUDE_* path variables for a directory |
 
-### All Commands (8 total)
+### All Commands (9 total)
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
@@ -32,7 +32,7 @@
 | 5 | `ask` | Semantic alias for run (identical defaults) | 63 | `clr ask "What does X do?"` |
 | 6 | `ps` | List running Claude Code sessions | 5 | `clr ps` |
 | 7 | `kill` | Terminate a running Claude Code session by PID | 0 | `clr kill 12345` |
-| 8 | `tools` | List Claude Code tools with version info | 0 | `clr tools` |
+| 8 | `tools` | List Claude Code tools with filter/projection/inspect controls | 5 | `clr tools --category Web --inspect` |
 | 9 | `scope` | Print all 6 CLAUDE_* path variables for a directory | 1 | `clr scope --dir /project` |
 
 **Total:** 9 commands
